@@ -1,0 +1,863 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ProgramSettingsDialog</class>
+ <widget class="QDialog" name="ProgramSettingsDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>354</width>
+    <height>485</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>16777215</width>
+    <height>16777215</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Settings</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="13" column="0">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab1">
+      <attribute name="title">
+       <string>General</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout1" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0" columnstretch="0,0,0,1">
+       <property name="leftMargin">
+        <number>15</number>
+       </property>
+       <property name="topMargin">
+        <number>8</number>
+       </property>
+       <property name="rightMargin">
+        <number>15</number>
+       </property>
+       <property name="bottomMargin">
+        <number>15</number>
+       </property>
+       <property name="spacing">
+        <number>6</number>
+       </property>
+       <item row="0" column="0" colspan="3">
+        <widget class="QLabel" name="label_10">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Rendering</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>10</width>
+           <height>24</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLabel" name="label">
+         <property name="toolTip">
+          <string>Specify the block resolution used to split images into 
+parallel workloads (default: 32x32). If chosen too small, 
+excessive block management may slow down the rendering.
+Only applies to some integrators. </string>
+         </property>
+         <property name="text">
+          <string>Block size: </string>
+         </property>
+         <property name="buddy">
+          <cstring>blockSizeBox</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2" colspan="2">
+        <widget class="QComboBox" name="blockSizeBox">
+         <property name="toolTip">
+          <string>Specify the block resolution used to split images into 
+parallel workloads (default: 32x32). If chosen too small, 
+excessive block management may slow down the rendering.
+Only applies to some integrators. </string>
+         </property>
+         <item>
+          <property name="text">
+           <string>2x2</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>4x4</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>8x8</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>16x16</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>32x32</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>64x64</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>128x128</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="label_2">
+         <property name="toolTip">
+          <string>Specifies the number of local worker threads. The default is to use
+all local cores (including virtual cores on Hyper-threading-enabled 
+machines). Setting this value lower can be useful to reduce the 
+system load, especially when much of the work is done over the network.</string>
+         </property>
+         <property name="text">
+          <string>Worker threads :</string>
+         </property>
+         <property name="buddy">
+          <cstring>localWorkerBox</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2" colspan="2">
+        <widget class="QSpinBox" name="localWorkerBox">
+         <property name="toolTip">
+          <string>Specifies the number of local worker threads. The default is to use
+all local cores (including virtual cores on Hyper-threading-enabled 
+machines). Setting this value lower can be useful to reduce the 
+system load, especially when much of the work is done over the network.</string>
+         </property>
+         <property name="value">
+          <number>2</number>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="0" colspan="4">
+        <widget class="QLabel" name="label_3">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Search paths</string>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="1" colspan="3">
+        <layout class="QHBoxLayout" name="buttonsLayout1" stretch="0,0,0">
+         <property name="spacing">
+          <number>6</number>
+         </property>
+         <item>
+          <spacer name="horizontalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>118</width>
+             <height>17</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="removePathButton">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Remove the selected search path</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/resources/remove.png</normaloff>:/resources/remove.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>16</width>
+             <height>16</height>
+            </size>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="addPathButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Add a search path</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/resources/add.png</normaloff>:/resources/add.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>16</width>
+             <height>16</height>
+            </size>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="8" column="1">
+        <widget class="QLabel" name="label_5">
+         <property name="toolTip">
+          <string>Specifies the threshold for displaying log messages.
+For instance, setting this to &quot;Info&quot; means that everything 
+above and including &quot;Info&quot; is written to the console.</string>
+         </property>
+         <property name="text">
+          <string>Log verbosity :</string>
+         </property>
+         <property name="buddy">
+          <cstring>logVerbosityBox</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="2" colspan="2">
+        <widget class="QComboBox" name="logVerbosityBox">
+         <property name="toolTip">
+          <string>Specifies the threshold for displaying log messages.
+For instance, setting this to &quot;Info&quot; means that everything 
+above and including &quot;Info&quot; is written to the console.</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Trace</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Debug</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Info</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Warn</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="3">
+        <widget class="QLabel" name="label_11">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Other</string>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="1" colspan="3">
+        <widget class="QListWidget" name="searchPathList">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
+           <horstretch>0</horstretch>
+           <verstretch>1</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>70</width>
+           <height>70</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>List of additional directories that will be searched
+for resources, such as geometry data, textures, etc.</string>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Sunken</enum>
+         </property>
+         <property name="resizeMode">
+          <enum>QListView::Adjust</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="2">
+        <widget class="QCheckBox" name="checkForUpdatesBox">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="toolTip">
+          <string>If active, Mitsuba will try to determine the most recent
+release via Internet every time it is started.</string>
+         </property>
+         <property name="autoFillBackground">
+          <bool>false</bool>
+         </property>
+         <property name="styleSheet">
+          <string/>
+         </property>
+         <property name="text">
+          <string>Check at startup</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <property name="tristate">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLabel" name="label_7">
+         <property name="toolTip">
+          <string>If active, Mitsuba will try to determine the most recent
+release via Internet every time it is started.</string>
+         </property>
+         <property name="text">
+          <string>Updates :</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="2" colspan="2">
+        <widget class="QSlider" name="sensitivitySlider">
+         <property name="toolTip">
+          <string>Specifies how sensitive the mouse should react to 
+movements while navigating in the realt-time preview.</string>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>10</number>
+         </property>
+         <property name="singleStep">
+          <number>1</number>
+         </property>
+         <property name="pageStep">
+          <number>1</number>
+         </property>
+         <property name="value">
+          <number>3</number>
+         </property>
+         <property name="sliderPosition">
+          <number>3</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="tickPosition">
+          <enum>QSlider::TicksAbove</enum>
+         </property>
+         <property name="tickInterval">
+          <number>1</number>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QLabel" name="label_8">
+         <property name="toolTip">
+          <string>Specifies how sensitive the mouse should react to 
+movements while navigating in the realt-time preview.</string>
+         </property>
+         <property name="text">
+          <string>Sensitivity :</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLabel" name="label_12">
+         <property name="toolTip">
+          <string>Should the preview navigation flip the Y axis of the mouse?</string>
+         </property>
+         <property name="text">
+          <string>Mouse :</string>
+         </property>
+         <property name="buddy">
+          <cstring>invertMouseBox</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="2">
+        <widget class="QCheckBox" name="invertMouseBox">
+         <property name="toolTip">
+          <string>Should the preview navigation flip the Y axis of the mouse?</string>
+         </property>
+         <property name="autoFillBackground">
+          <bool>false</bool>
+         </property>
+         <property name="styleSheet">
+          <string/>
+         </property>
+         <property name="text">
+          <string>Invert</string>
+         </property>
+         <property name="tristate">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab2">
+      <attribute name="title">
+       <string>Network</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout2" rowstretch="0,0,0,0,0,1,0,0,0,0" columnstretch="0,0,1">
+       <property name="leftMargin">
+        <number>15</number>
+       </property>
+       <property name="topMargin">
+        <number>8</number>
+       </property>
+       <property name="rightMargin">
+        <number>15</number>
+       </property>
+       <property name="bottomMargin">
+        <number>15</number>
+       </property>
+       <property name="spacing">
+        <number>6</number>
+       </property>
+       <item row="0" column="0" colspan="3">
+        <widget class="QLabel" name="label_4">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Server settings</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLabel" name="label_13">
+         <property name="toolTip">
+          <string>When the server feature is used, this field specifies the
+hostname and associated network interface, on which
+to wait for incoming connections.</string>
+         </property>
+         <property name="text">
+          <string>Listen address :</string>
+         </property>
+         <property name="buddy">
+          <cstring>nodeName</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLineEdit" name="nodeName">
+         <property name="toolTip">
+          <string>When the server feature is used, this field specifies the
+hostname and associated network interface, on which
+to wait for incoming connections.</string>
+         </property>
+         <property name="text">
+          <string>localhost</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="3">
+        <widget class="QLabel" name="label_9">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Network render nodes</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1" colspan="2">
+        <widget class="QListWidget" name="connectionList">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>70</width>
+           <height>70</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1" colspan="2">
+        <layout class="QHBoxLayout" name="buttonsLayout2" stretch="0,0,0">
+         <item>
+          <spacer name="horizontalSpacer_4">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>118</width>
+             <height>17</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="removeConnectionButton">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Remove a render node</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/resources/remove.png</normaloff>:/resources/remove.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>16</width>
+             <height>16</height>
+            </size>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="addConnectionButton">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Add a render node</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/resources/add.png</normaloff>:/resources/add.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>16</width>
+             <height>16</height>
+            </size>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="7" column="0" colspan="3">
+        <widget class="QLabel" name="label_6">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Computational resources</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1" colspan="2">
+        <widget class="QLabel" name="statsLabel1">
+         <property name="text">
+          <string>Cores attached via network: 0</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="1" colspan="2">
+        <widget class="QLabel" name="statsLabel2">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Total number of attached cores: 0</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLineEdit" name="listenPort">
+         <property name="toolTip">
+          <string>When the server feature is used, this number specifies
+the port at which Mitsuba should listen for incoming
+connections. The default setting is 7554.</string>
+         </property>
+         <property name="text">
+          <string>7554</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="label_14">
+         <property name="toolTip">
+          <string>When the server feature is used, this number specifies
+the port at which Mitsuba should listen for incoming
+connections. The default setting is 7554.</string>
+         </property>
+         <property name="text">
+          <string>Listen port :</string>
+         </property>
+         <property name="buddy">
+          <cstring>listenPort</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <spacer name="horizontalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>10</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>blockSizeBox</tabstop>
+  <tabstop>localWorkerBox</tabstop>
+  <tabstop>checkForUpdatesBox</tabstop>
+  <tabstop>invertMouseBox</tabstop>
+  <tabstop>sensitivitySlider</tabstop>
+  <tabstop>logVerbosityBox</tabstop>
+  <tabstop>searchPathList</tabstop>
+  <tabstop>removePathButton</tabstop>
+  <tabstop>addPathButton</tabstop>
+  <tabstop>buttonBox</tabstop>
+  <tabstop>nodeName</tabstop>
+  <tabstop>listenPort</tabstop>
+  <tabstop>connectionList</tabstop>
+  <tabstop>removeConnectionButton</tabstop>
+  <tabstop>addConnectionButton</tabstop>
+  <tabstop>tabWidget</tabstop>
+ </tabstops>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>ProgramSettingsDialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>280</x>
+     <y>412</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>141</x>
+     <y>421</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>ProgramSettingsDialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>309</x>
+     <y>412</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>318</x>
+     <y>421</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>localWorkerBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>ProgramSettingsDialog</receiver>
+   <slot>refresh()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>271</x>
+     <y>114</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2</x>
+     <y>346</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>listenPort</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>ProgramSettingsDialog</receiver>
+   <slot>refresh()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>175</x>
+     <y>100</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>26</x>
+     <y>2</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>nodeName</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>ProgramSettingsDialog</receiver>
+   <slot>refresh()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>224</x>
+     <y>74</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>291</x>
+     <y>4</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <signal>signal1()</signal>
+  <slot>refresh()</slot>
+ </slots>
+</ui>

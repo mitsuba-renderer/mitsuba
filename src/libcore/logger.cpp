@@ -1,0 +1,98 @@
+#include <mitsuba/mitsuba.h>
+#include <stdexcept>
+#include <stdarg.h>
+
+MTS_NAMESPACE_BEGIN
+
+Logger::Logger(ELogLevel level)
+ : m_logLevel(level) {
+	m_mutex = new Mutex();
+}
+
+Logger::~Logger() {
+	for (unsigned int i=0; i<m_appenders.size(); ++i)
+		m_appenders[i]->decRef();
+}
+
+void Logger::setFormatter(Formatter *formatter) {
+	m_mutex->lock();
+	m_formatter = formatter;
+	m_mutex->unlock();
+}
+
+void Logger::setLogLevel(ELogLevel level) {
+	m_logLevel = level;
+}
+
+void Logger::log(ELogLevel level, const Class *theClass, 
+	const char *file, int line, const char *fmt, ...) {
+
+	if (level < m_logLevel)
+		return;
+
+	char tmp[2048];
+	va_list iterator;
+	va_start(iterator, fmt);
+	vsnprintf(tmp, 2048, fmt, iterator);
+	va_end(iterator);
+
+	if (m_formatter == NULL) {
+		std::cerr << "PANIC: Logging has not been properly initialized!" << std::endl;
+		exit(-1);
+	}
+
+	std::string text = m_formatter->format(level, theClass, 
+		Thread::getThread(), tmp, file, line);
+
+	if (level < EError) {
+		m_mutex->lock();
+		for (unsigned int i=0; i<m_appenders.size(); ++i)
+			m_appenders[i]->append(level, text);
+		m_mutex->unlock();
+	} else {
+#ifdef MTS_DEBUG_TRAP
+		__asm__ ("int $3");
+#endif
+		throw std::runtime_error(text);
+	}
+}
+
+void Logger::logProgress(Float progress, const std::string &name,
+	const std::string &formatted, const std::string &eta, const void *ptr) {
+	m_mutex->lock();
+	for (unsigned int i=0; i<m_appenders.size(); ++i)
+		m_appenders[i]->logProgress(
+			progress, name, formatted, eta, ptr);
+	m_mutex->unlock();
+}
+
+void Logger::addAppender(Appender *appender) {
+	appender->incRef();
+	m_mutex->lock();
+	m_appenders.push_back(appender);
+	m_mutex->unlock();
+}
+
+void Logger::removeAppender(Appender *appender) {
+	m_mutex->lock();
+	m_appenders.erase(std::remove(m_appenders.begin(), 
+		m_appenders.end(), appender), m_appenders.end());
+	m_mutex->unlock();
+	appender->decRef();
+}
+
+void Logger::staticInitialization() {
+	Logger *logger = new Logger(EInfo);
+	ref<Appender> appender = new StreamAppender(&std::cout);
+	ref<Formatter> formatter = new DefaultFormatter();
+	logger->addAppender(appender);
+	logger->setFormatter(formatter);
+	Thread::getThread()->setLogger(logger);
+}
+
+void Logger::staticShutdown() {
+	Thread::getThread()->setLogger(NULL);
+}
+
+MTS_IMPLEMENT_CLASS(Logger, false, Object)
+MTS_NAMESPACE_END

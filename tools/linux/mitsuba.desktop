@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Mitsuba
+GenericName=Mitsuba Renderer
+Comment=A physically based rendering system
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Categories=Graphics
+Exec=mtsgui %U
+TryExec=mtsgui
+Terminal=false
+StartupNotify=true
+MimeType=application/xml
+Icon=mitsuba48.png
