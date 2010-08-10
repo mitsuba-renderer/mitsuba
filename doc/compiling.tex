@@ -1,1 +1,117 @@
 \section{Compiling the renderer}
+To compile Mitsuba, you will need a recent C++ compiler (e.g. GCC 4.1+ or 
+Visual Studio 2005+) and some additional libraries, which Mitsuba uses internally. 
+Builds on all three supported platforms are performed in a unified manner
+using SCons (\url{http://www.scons.org}), a flexible python-based 
+software construction tool. There are some minor differences between operating systems though: for
+more details, please refer to one of the next sections depending on which one you use.
+
+\subsection{Common steps}
+To get started, you will need to download a recent version of Mitsuba: make sure that you have the Mercurial (\url{http://mercurial.selenic.com/})
+versioning system installed and enter the following at the command prompt:
+\begin{shell}
+$\texttt{\$}$ hg clone https://www.mitsuba-renderer.org/hg/mitsuba
+\end{shell}
+On Windows, you can instead use the more convenient TortoiseHG shell extension (\url{http://tortoisehg.bitbucket.org/}) 
+to do this directly from the Explorer.
+
+Common to all platforms is that a build configuration file must be chosen: amongst the
+following, please copy the best matching file into a new file to the root of the Mitsuba
+directory and rename it into \code{config.py}.
+\begin{shell}
+config/config-linux.py  
+config/config-darwin-x86_64.py  
+config/config-darwin-x86.py  
+config/config-darwin-universal.py  
+config/config-msvc2005-win32.py  
+config/config-msvc2005-win64.py
+\end{shell}
+
+Some minor adjustments may have to be made to this file based on your configuration. 
+You may also set adjust certain compilation flags here:
+\begin{description}
+\item[\texttt{MTS\_DEBUG}] Enable assertions etc. Usually a good idea.
+\item[\texttt{SINGLE\_PRECISION}] Do all computation in single precision. This is usually sufficient.
+\item[\texttt{DOUBLE\_PRECISION}] Do all computation in double precision. Incompatible with
+\texttt{MTS\_SSE}, \texttt{MTS\_HAS\_COHERENT\_RT}, and \texttt{MTS\_DEBUG\_FP}.
+\item[\texttt{MTS\_SSE}]Activate optimized SSE routines.
+\item[\texttt{MTS\_HAS\_COHERENT\_RT}]Include coherent ray tracing support (depends on \texttt{MTS\_SSE}).
+\item[\texttt{MTS\_DEBUG\_FP}]Generated NaNs will cause floating point exceptions, which can be caught in a debugger. Warning: This is slow!
+\end{description}
+All default configurations use the flags \code{MTS\_DEBUG}, \code{SINGLE\_PRECISION}, \code{MTS\_SSE}, \code{MTS\_HAS\_COHERENT\_RT}.
+Initially, it is a good idea to just leave the configuration the way it is.
+
+\subsection{Building on Linux}
+On Linux, you'll first need to install a whole bunch of dependencies. It is assumed here
+that you are using Ubuntu Linux, hence some of the package may be named differently if you are 
+using another distribution.
+
+First, run
+\begin{shell}
+$\text{\$}$ apt-get install build-essential scons qt4-dev-tools scons libpng12-dev libjpeg62-dev libilmbase-dev libopenexr-dev libxerces-c2-dev libboost-dev libglewmx1.5-dev libxxf86vm-dev libboost-system-dev libboost-filesystem-dev
+\end{shell}
+To get COLLADA support, you will also need to install the \texttt{collada-dom} packages or build them from scratch. Here, we install the \code{x86\_64} binaries and development headers included with Mitsuba:
+\begin{shell}
+$\text{\$}$ dpkg --install tools/linux/collada-dom2.2_2.2-1_amd64.deb tools/linux/collada-dom-dev_2.2-1_amd64.deb
+\end{shell}
+Afterwards, simply run
+\begin{shell}
+$\text{\$}$ scons
+\end{shell}
+inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
+If all goes well, SCons should finish successfully within a few minutes:
+\begin{shell}
+scons: $\texttt{done}$ building targets.
+\end{shell}
+To be able to run the renderer from the command line, you will also have to import it into your path:
+\begin{shell}
+$\text{\$}$ . setpath.sh
+\end{shell}
+(note the period at the beginning -- this assumes that you are using \code{bash}).
+
+\subsection{Building on Windows}
+This section assumes that Visual Studio 2008 is installed, but the instructions should work equally well with other versions.
+On the Windows platform, Mitsuba already includes most of the dependencies in precompiled form.
+You will still need to set up a few things though: first, you need to install Python 
+(\url{www.python.org}) and SCons (\url{http://www.scons.org}) and ensure that they are contained
+in the \code{\%PATH\%} environment variable so that entering \code{scons} on the command prompt
+(\code{cmd.exe}) launches the build system (it will complain about not finding a project file though).
+\begin{shell}
+C:\Users\Wenzel>scons
+scons: ** No SConstruct file found.
+\end{shell}
+Next, install Qt (\url{http://qt.nokia.com/downloads/windows-cpp-vs2008} -- you should get the release for Visual Studio 2008). Again, you need to make sure that the 
+Qt utilities are reachable through the \code{\%PATH\%} environment variable so that you can for example launch \code{moc.exe} from the command line.
+
+Because the official release of Qt currently only contains 32-bit binaries, you will accordingly have to 
+build Mitsuba in 32-bit mode (i.e. you should use the configuration file \code{config-msvc2005-win32.py}). If you would rather like compile it in 64-bit mode, you have to create
+your own 64-bit Qt binaries.
+
+Having installed these dependencies, run the ``Visual Studio 2008 Command 
+Prompt'' from the Start Menu (pick the \code{x86} version if you have the choice beetween \code{x86} and \code{x64}). Afterwards,
+navigate to the Mitsuba directory and run \code{scons}. 
+In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the \code{scons} command.
+If all goes well, the build process will finish after a few
+minutes and the newly created binaries can be found in the \code{dist} directory.
+
+\subsection{Building on Mac OS X}
+On Mac OS X, you will need to install both scons (\code{www.scons.org}) and 
+a recent release of XCode. You will also need to get Qt 4.7.0 Beta 2 or a newer version.
+As of this writing, 4.7.0 Beta 2 is still the most recent release and can be found here: \url{http://qt.nokia.com/developer/qt-qtcreator-prerelease#download}
+--- make sure that you get the normal Cocoa release (i.e. \emph{not} the one based on Carbon). All of the
+other dependencies are already included in precompiled form.
+
+Now open a Terminal and run
+\begin{shell}
+$\text{\$}$ scons
+\end{shell}
+inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
+If all goes well, SCons should finish successfully within a few minutes:
+\begin{shell}
+scons: $\texttt{done}$ building targets.
+\end{shell}
+To be able to run the renderer from the command line, you will have to import it into your path:
+\begin{shell}
+$\text{\$}$ . setpath.sh
+\end{shell}
+(note the period at the beginning -- this assumes that you are using \code{bash}).
