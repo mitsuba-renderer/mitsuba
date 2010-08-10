@@ -1,7 +1,13 @@
 Mitsuba.app
 .*\.os$
+.*\.so$
 .*\.pyc$
 .*\.o$
+^doc/.*\.aux$
+^doc/.*\.log$
+^doc/.*\.out$
+^doc/.*\.pdf$
+^doc/.*\.toc$
 .*ui_.*\.h$
 .*moc_.*\.cc$
 .*qrc_.*\.cc$
