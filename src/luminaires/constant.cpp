@@ -1,4 +1,5 @@
 #include <mitsuba/render/scene.h>
+#include <mitsuba/hw/gpuprogram.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -9,7 +10,7 @@ class ConstantLuminaire : public Luminaire {
 public:
 	ConstantLuminaire(const Properties &props) : Luminaire(props) {
 		m_intensity = props.getSpectrum("intensity", 1.0f);
-		m_type = EDiffuseDirection | EOnSurface;
+		m_type = EOnSurface;
 	}
 
 	ConstantLuminaire(Stream *stream, InstanceManager *manager) 
@@ -26,7 +27,7 @@ public:
 	void preprocess(const Scene *scene) {
 		/* Get the scene's bounding sphere and slightly enlarge it */
 		m_bsphere = scene->getBSphere();
-		m_bsphere.radius *= 1.01f;
+		m_bsphere.radius *= 2.0f;
 		m_surfaceArea = m_bsphere.radius * m_bsphere.radius * M_PI;
 	}
 
@@ -87,6 +88,7 @@ public:
 	 */
 	void sampleEmission(EmissionRecord &eRec, 
 		const Point2 &sample1, const Point2 &sample2) const {
+		Assert(eRec.type == EmissionRecord::ENormal);
 		/* Chord model - generate the ray passing through two uniformly
 		   distributed points on a sphere containing the scene */
 		Vector d = squareToSphere(sample1);
@@ -109,15 +111,23 @@ public:
 	}
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
+		Float radius = m_bsphere.radius;
+		if (eRec.type == EmissionRecord::EPreview) {
+			/* This is more suitable for VPL-based rendering */
+			radius *= 10;
+		}
 		Vector d = squareToSphere(sample);
-		eRec.sRec.p = m_bsphere.center + d * m_bsphere.radius;
+		eRec.sRec.p = m_bsphere.center + d * radius;
 		eRec.sRec.n = Normal(-d);
-		eRec.pdfArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
+		eRec.pdfArea = 1.0f / (4 * M_PI * radius * radius);
 		eRec.P = m_intensity * M_PI;
 	}
 
 	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {
-		Point p2 = m_bsphere.center + squareToSphere(sample) * m_bsphere.radius;
+		Float radius = m_bsphere.radius;
+		if (eRec.type == EmissionRecord::EPreview) 
+			radius *= 10;
+		Point p2 = m_bsphere.center + squareToSphere(sample) * radius;
 		eRec.d = p2 - eRec.sRec.p;
 		Float length = eRec.d.length();
 
@@ -132,6 +142,7 @@ public:
 	}
 
 	void pdfEmission(EmissionRecord &eRec) const {
+		Assert(eRec.type == EmissionRecord::ENormal);
 		Float dp = dot(eRec.sRec.n, eRec.d);
 		if (dp > 0)
 			eRec.pdfDir = INV_PI * dp;
@@ -143,7 +154,7 @@ public:
 	Spectrum f(const EmissionRecord &eRec) const {
 		return Spectrum(INV_PI);
 	}
-	
+
 	Spectrum fArea(const EmissionRecord &eRec) const {
 		return m_intensity * M_PI;
 	}
@@ -160,6 +171,8 @@ public:
 			<< "]";
 		return oss.str();
 	}
+	
+	Shader *createShader(Renderer *renderer) const;
 
 	MTS_DECLARE_CLASS()
 private:
@@ -167,6 +180,46 @@ private:
 	BSphere m_bsphere;
 };
 
+// ================ Hardware shader implementation ================ 
+
+class ConstantLuminaireShader : public Shader {
+public:
+	ConstantLuminaireShader(Renderer *renderer, const Spectrum &intensity) 
+		: Shader(renderer, ELuminaireShader), m_emittance(intensity * M_PI) {
+	}
+	
+	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_emittance", false));
+	}
+
+	void generateCode(std::ostringstream &oss, const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "uniform vec3 " << evalName << "_emittance;" << endl
+			<< endl
+			<< "vec3 " << evalName << "_dir(vec3 wo) {" << endl
+			<< "    return vec3(0.31831);" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "_background(vec3 wo) {" << endl
+			<< "    return " << evalName << "_emittance * 0.31831;" << endl
+			<< "}" << endl;
+	}
+
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
+		int &textureUnitOffset) const {
+		program->setParameter(parameterIDs[0], m_emittance);
+	}
+
+	MTS_DECLARE_CLASS()
+private:
+	Spectrum m_emittance;
+};
+
+Shader *ConstantLuminaire::createShader(Renderer *renderer) const { 
+	return new ConstantLuminaireShader(renderer, m_intensity);
+}
+
 MTS_IMPLEMENT_CLASS_S(ConstantLuminaire, false, Luminaire)
+MTS_IMPLEMENT_CLASS(ConstantLuminaireShader, false, Shader)
 MTS_EXPORT_PLUGIN(ConstantLuminaire, "Constant background luminaire");
 MTS_NAMESPACE_END

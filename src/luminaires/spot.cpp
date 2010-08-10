@@ -1,5 +1,6 @@
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/texture.h>
+#include <mitsuba/hw/gpuprogram.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -27,6 +28,7 @@ public:
 		m_texture = new ConstantTexture(
 			props.getSpectrum("texture", Spectrum(1.0f)));
 		m_uvFactor = std::tan(m_beamWidth/2);
+		m_invTransitionWidth = 1.0 / (m_cutoffAngle - m_beamWidth);
 	}
 
 	SpotLuminaire(Stream *stream, InstanceManager *manager) 
@@ -39,6 +41,7 @@ public:
 		m_cosCutoffAngle = std::cos(m_cutoffAngle);
 		m_position = m_luminaireToWorld(Point(0, 0, 0));
 		m_uvFactor = std::tan(m_beamWidth/2);
+		m_invTransitionWidth = 1.0 / (m_cutoffAngle - m_beamWidth);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -65,6 +68,9 @@ public:
 		Spectrum result(throughputOnly ? Spectrum(1.0f) : m_intensity);
 		Vector localDir = m_worldToLuminaire(d);
 		const Float cosTheta = localDir.z;
+		
+		if (cosTheta < m_cosCutoffAngle)
+			return Spectrum(0.0f);
 
 		if (m_texture->getClass() != ConstantTexture::m_theClass) {
 			Intersection its;
@@ -74,17 +80,12 @@ public:
 			result *= m_texture->getValue(its);
 		}
 
-		if (cosTheta < m_cosCutoffAngle)
-			return Spectrum(0.0f);
 		if (cosTheta > m_cosBeamWidth)
 			return result;
-		return result * ((m_cutoffAngle - std::acos(cosTheta))
-			/ (m_cutoffAngle - m_beamWidth));
+		return result * ((m_cutoffAngle - std::acos(cosTheta)) * m_invTransitionWidth);
 	}
 
 	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
-		if (lRec.sRec.p == m_position)
-			return m_intensity * falloffCurve(lRec.d);
 		return Spectrum(0.0f);
 	}
 
@@ -171,15 +172,100 @@ public:
 		return oss.str();
 	}
 
+	Shader *createShader(Renderer *renderer) const;
+
 	MTS_DECLARE_CLASS()
 private:
 	Spectrum m_intensity;
 	ref<Texture> m_texture;
 	Float m_beamWidth, m_cutoffAngle, m_uvFactor;
-	Float m_cosBeamWidth, m_cosCutoffAngle;
+	Float m_cosBeamWidth, m_cosCutoffAngle, m_invTransitionWidth;
 	Point m_position;
 };
 
+// ================ Hardware shader implementation ================ 
+
+class SpotLuminaireShader : public Shader {
+public:
+	SpotLuminaireShader(Renderer *renderer, Transform worldToLuminaire, 
+		Float invTransitionWidth, Float cutoffAngle, Float cosCutoffAngle, 
+		Float cosBeamWidth, Float uvFactor, const Texture *texture) 
+		: Shader(renderer, ELuminaireShader), m_worldToLuminaire(worldToLuminaire),
+		  m_invTransitionWidth(invTransitionWidth), m_cutoffAngle(cutoffAngle), 
+		  m_cosCutoffAngle(cosCutoffAngle), m_cosBeamWidth(cosBeamWidth), 
+		  m_uvFactor(uvFactor), m_texture(texture) {
+		m_textureShader = renderer->registerShaderForResource(m_texture.get());
+	}
+
+	bool isComplete() const {
+		return m_textureShader.get() != NULL;
+	}
+
+	void cleanup(Renderer *renderer) {
+		renderer->unregisterShaderForResource(m_texture.get());
+	}
+
+	void putDependencies(std::vector<Shader *> &deps) {
+		deps.push_back(m_textureShader.get());
+	}
+
+	void generateCode(std::ostringstream &oss, const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "uniform float " << evalName << "_invTransitionWidth;" << endl
+			<< "uniform float " << evalName << "_cutoffAngle;" << endl
+			<< "uniform float " << evalName << "_cosCutoffAngle;" << endl
+			<< "uniform float " << evalName << "_cosBeamWidth;" << endl
+			<< "uniform float " << evalName << "_uvFactor;" << endl
+			<< "uniform mat4 " << evalName << "_worldToLuminaire;" << endl
+			<< "vec3 " << evalName << "_dir(vec3 wo) {" << endl
+			<< "    vec3 localDir = (" << evalName << "_worldToLuminaire * vec4(wo, 0)).xyz;" << endl
+			<< "    float cosTheta = localDir.z;" << endl
+			<< "    if (cosTheta < " << evalName << "_cosCutoffAngle)" << endl
+			<< "        return vec3(0.0);" << endl
+			<< "    vec2 uv = 0.5 + (localDir.xy / localDir.z * " << evalName << "_uvFactor);" << endl
+			<< "    vec3 color = " << depNames[0] << "(uv);" << endl
+			<< "    if (cosTheta > " << evalName << "_cosBeamWidth)" << endl
+			<< "        return color;" << endl
+			<< "    return color * ((" << evalName << "_cutoffAngle - acos(cosTheta))" << endl
+			<< "           * " << evalName << "_invTransitionWidth);" << endl
+			<< "}" << endl;
+	}
+
+	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_worldToLuminaire", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_invTransitionWidth", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_cutoffAngle", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_cosCutoffAngle", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_cosBeamWidth", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_uvFactor", false));
+	}
+
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
+		program->setParameter(parameterIDs[0], m_worldToLuminaire);
+		program->setParameter(parameterIDs[1], m_invTransitionWidth);
+		program->setParameter(parameterIDs[2], m_cutoffAngle);
+		program->setParameter(parameterIDs[3], m_cosCutoffAngle);
+		program->setParameter(parameterIDs[4], m_cosBeamWidth);
+		program->setParameter(parameterIDs[5], m_uvFactor);
+	}
+
+	MTS_DECLARE_CLASS()
+private:
+	Transform m_worldToLuminaire;
+	Float m_invTransitionWidth;
+	Float m_cutoffAngle, m_cosCutoffAngle;
+	Float m_cosBeamWidth, m_uvFactor;
+	ref<const Texture> m_texture;
+	ref<Shader> m_textureShader;
+};
+	
+Shader *SpotLuminaire::createShader(Renderer *renderer) const { 
+	return new SpotLuminaireShader(renderer, m_worldToLuminaire,
+		m_invTransitionWidth, m_cutoffAngle, m_cosCutoffAngle,
+		m_cosBeamWidth, m_uvFactor, m_texture.get());
+}
+
+MTS_IMPLEMENT_CLASS(SpotLuminaireShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(SpotLuminaire, false, Luminaire)
 MTS_EXPORT_PLUGIN(SpotLuminaire, "Spot light");
 MTS_NAMESPACE_END

@@ -488,14 +488,14 @@ void MainWindow::onProgressMessage(const RenderJob *job, const QString &name,
 }
 void MainWindow::on_actionOpen_triggered() {
 	QFileDialog *dialog = new QFileDialog(this, Qt::Sheet);
-	dialog->setNameFilter(tr("Mitsuba scenes (*.xml)"));
+	dialog->setNameFilter(tr("Mitsuba scenes (*.xml);;EXR images (*.exr)"));
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
 	dialog->setAcceptMode(QFileDialog::AcceptOpen);
 	dialog->setViewMode(QFileDialog::Detail);
 	dialog->setWindowModality(Qt::WindowModal);
 	QSettings settings("mitsuba-renderer.org", "qtgui");
 	dialog->restoreState(settings.value("fileDialogState").toByteArray());
-	connect(dialog, SIGNAL(finished(int)), this, SLOT(onFileDialogClose(int)));
+	connect(dialog, SIGNAL(finished(int)), this, SLOT(onOpenDialogClose(int)));
 	m_currentChild = dialog;
 	// prevent a tab drawing artifact on Qt/OSX
 	m_activeWindowHack = true;
@@ -504,7 +504,7 @@ void MainWindow::on_actionOpen_triggered() {
 	m_activeWindowHack = false;
 }
 
-void MainWindow::onFileDialogClose(int reason) {
+void MainWindow::onOpenDialogClose(int reason) {
 	QSettings settings("mitsuba-renderer.org", "qtgui");
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;
@@ -534,7 +534,6 @@ void MainWindow::onClearRecent() {
 }
 
 SceneContext *MainWindow::loadScene(const QString &qFileName) {
-	/* Prepare for parsing scene descriptions */
 	ref<FileResolver> resolver = FileResolver::getInstance();
 	std::string filename = resolver->resolveAbsolute(qFileName.toStdString());
 	std::string filePath = resolver->pathFromFile(filename);
@@ -644,14 +643,15 @@ void MainWindow::updateUI() {
 
 	SceneContext *context = hasTab ? m_context[index] : NULL;
 	bool isRendering = hasTab ? context->renderJob != NULL : false;
-	bool isInactiveScene = hasTab ? context->renderJob == NULL : false;
+	bool hasScene = hasTab && context->scene != NULL;
+	bool isInactiveScene = (hasTab && hasScene) ? context->renderJob == NULL : false;
 
 	ui->actionStop->setEnabled(isRendering);
 	ui->actionRender->setEnabled(isInactiveScene);
 	ui->actionRefresh->setEnabled(isInactiveScene);
 	ui->actionRenderSettings->setEnabled(isInactiveScene);
-	ui->actionSave->setEnabled(hasTab);
-	ui->actionSaveAs->setEnabled(hasTab);
+	ui->actionSave->setEnabled(hasScene);
+	ui->actionSaveAs->setEnabled(hasScene);
 	ui->actionExportImage->setEnabled(hasTab);
 	ui->actionClose->setEnabled(hasTab);
 	ui->actionDuplicateTab->setEnabled(hasTab);
@@ -910,7 +910,6 @@ void MainWindow::on_actionPreviewSettings_triggered() {
 	connect(&d, SIGNAL(reinhardBurnChanged(Float)), ui->glView, SLOT(setReinhardBurn(Float)));
 	connect(&d, SIGNAL(previewMethodChanged(EPreviewMethod)), ui->glView, SLOT(setPreviewMethod(EPreviewMethod)));
 	connect(&d, SIGNAL(toneMappingMethodChanged(EToneMappingMethod)), ui->glView, SLOT(setToneMappingMethod(EToneMappingMethod)));
-	d.setWindowModality(Qt::NonModal);
 	d.setMaximumSize(d.minimumSize());
 	d.exec();
 	QSettings settings("mitsuba-renderer.org", "qtgui");
@@ -1241,6 +1240,7 @@ void MainWindow::on_actionExportImage_triggered() {
 					source += 4;
 				}
 			}
+			temp->setGamma(ctx->srgb ? -1 : ctx->gamma);
 			temp->save(format, fs);
 		}
 	}
@@ -1252,29 +1252,42 @@ void MainWindow::on_actionSave_triggered() {
 }
 
 void MainWindow::on_actionSaveAs_triggered() {
+	QFileDialog *dialog = new QFileDialog(this, tr("Save as .."),
+		"", tr("Mitsuba scenes (*.xml)"));
+
+	m_currentChild = dialog;
+	QSettings settings("mitsuba-renderer.org", "qtgui");
+	dialog->setAttribute(Qt::WA_DeleteOnClose);
+	dialog->setViewMode(QFileDialog::Detail);
+	dialog->setAcceptMode(QFileDialog::AcceptSave);
+	dialog->restoreState(settings.value("fileDialogState").toByteArray());
+	dialog->setWindowModality(Qt::WindowModal);
+	connect(dialog, SIGNAL(finished(int)), this, SLOT(onSaveAsDialogClose(int)));
+	m_currentChild = dialog;
+	// prevent a tab drawing artifact on Qt/OSX
+	m_activeWindowHack = true;
+	dialog->show();
+	qApp->processEvents();
+	m_activeWindowHack = false;
+}
+
+void MainWindow::onSaveAsDialogClose(int reason) {
 	int currentIndex = ui->tabBar->currentIndex();
 	SceneContext *context = m_context[currentIndex];
 
-	QFileDialog dialog(this, tr("Save as .."),
-		"", tr("Mitsuba scenes (*.xml)"));
-	
-	m_currentChild = &dialog;
 	QSettings settings("mitsuba-renderer.org", "qtgui");
-	dialog.setViewMode(QFileDialog::Detail);
-	dialog.setAcceptMode(QFileDialog::AcceptSave);
-	dialog.restoreState(settings.value("fileDialogState").toByteArray());
-
-    if (dialog.exec() == QDialog::Accepted) {
+	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
+	m_currentChild = NULL;
+	if (reason == QDialog::Accepted) {
 		m_currentChild = NULL;
-        QString fileName = dialog.selectedFiles().value(0);
-		settings.setValue("fileDialogState", dialog.saveState());
+        QString fileName = dialog->selectedFiles().value(0);
+		settings.setValue("fileDialogState", dialog->saveState());
 		saveScene(this, context, fileName);
 		context->fileName = fileName;
 		context->shortName = QFileInfo(fileName).fileName();
 		ui->tabBar->setTabText(currentIndex, context->shortName);
 		addRecentFile(fileName);
 	}
-	m_currentChild = NULL;
 }
 
 void MainWindow::on_actionNavigationControls_triggered() {
@@ -1397,7 +1410,10 @@ void MainWindow::onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu
 	if (isCurrentView)
 		emit updateView();
 }
-
+	
+void MainWindow::on_glView_loadFileRequest(const QString &string) {
+	loadFile(string);
+}
 
 void MainWindow::onWorkEnd(const RenderJob *job, const ImageBlock *block) {
 	int ox = block->getOffset().x, oy = block->getOffset().y,
@@ -1501,52 +1517,58 @@ QString ServerConnection::toString() const {
 }
 
 SceneContext::SceneContext(SceneContext *ctx) {
-	scene = new Scene(ctx->scene);
-	ref<PluginManager> pluginMgr = PluginManager::getInstance();
-	ref<PinholeCamera> oldCamera = static_cast<PinholeCamera *>(ctx->scene->getCamera());
-	ref<PinholeCamera> camera = static_cast<PinholeCamera *> 
-		(pluginMgr->createObject(Camera::m_theClass, oldCamera->getProperties()));
-	ref<Sampler> sampler = static_cast<Sampler *> 
-		(pluginMgr->createObject(Sampler::m_theClass, ctx->scene->getSampler()->getProperties()));
-	ref<Film> film = static_cast<Film *> 
-		(pluginMgr->createObject(Film::m_theClass, oldCamera->getFilm()->getProperties()));
-	const Integrator *oldIntegrator = ctx->scene->getIntegrator();
-	ref<Integrator> currentIntegrator;
+	if (ctx->scene) {
+		scene = new Scene(ctx->scene);
+		ref<PluginManager> pluginMgr = PluginManager::getInstance();
+		ref<PinholeCamera> oldCamera = static_cast<PinholeCamera *>(ctx->scene->getCamera());
+		ref<PinholeCamera> camera = static_cast<PinholeCamera *> 
+			(pluginMgr->createObject(Camera::m_theClass, oldCamera->getProperties()));
+		ref<Sampler> sampler = static_cast<Sampler *> 
+			(pluginMgr->createObject(Sampler::m_theClass, ctx->scene->getSampler()->getProperties()));
+		ref<Film> film = static_cast<Film *> 
+			(pluginMgr->createObject(Film::m_theClass, oldCamera->getFilm()->getProperties()));
+		const Integrator *oldIntegrator = ctx->scene->getIntegrator();
+		ref<Integrator> currentIntegrator;
 
-	int depth = 0;
-	std::vector<Integrator *> integratorList;
-	while (oldIntegrator != NULL) {
-		ref<Integrator> integrator = static_cast<Integrator *> (pluginMgr->createObject(
-			Integrator::m_theClass, oldIntegrator->getProperties()));
-		if (depth++ == 0) 
-			scene->setIntegrator(integrator);
-		else 
-			currentIntegrator->addChild("", integrator);
-		currentIntegrator = integrator;
-		integratorList.push_back(integrator);
-		oldIntegrator = oldIntegrator->getSubIntegrator();
+		int depth = 0;
+		std::vector<Integrator *> integratorList;
+		while (oldIntegrator != NULL) {
+			ref<Integrator> integrator = static_cast<Integrator *> (pluginMgr->createObject(
+				Integrator::m_theClass, oldIntegrator->getProperties()));
+			if (depth++ == 0) 
+				scene->setIntegrator(integrator);
+			else 
+				currentIntegrator->addChild("", integrator);
+			currentIntegrator = integrator;
+			integratorList.push_back(integrator);
+			oldIntegrator = oldIntegrator->getSubIntegrator();
+		}
+
+		for (int i=(int) integratorList.size()-1; i>=0; --i)
+			integratorList[i]->configure();
+
+		ref<ReconstructionFilter> rfilter = static_cast<ReconstructionFilter *> 
+			(pluginMgr->createObject(ReconstructionFilter::m_theClass, oldCamera->getFilm()->
+				getReconstructionFilter()->getProperties()));
+
+		rfilter->configure();
+		film->addChild("", rfilter);
+		film->configure();
+		sampler->configure();
+		camera->addChild("", sampler);
+		camera->addChild("", film);
+		camera->setViewTransform(oldCamera->getViewTransform());
+		camera->setFov(oldCamera->getFov());
+		camera->configure();
+		scene->setCamera(camera);
+		scene->setSampler(sampler);
+		scene->configure();
+		sceneResID = ctx->sceneResID;
+		Scheduler::getInstance()->retainResource(sceneResID);
+	} else {
+		sceneResID = -1;
+		renderJob = NULL;
 	}
-
-	for (int i=(int) integratorList.size()-1; i>=0; --i)
-		integratorList[i]->configure();
-
-	ref<ReconstructionFilter> rfilter = static_cast<ReconstructionFilter *> 
-		(pluginMgr->createObject(ReconstructionFilter::m_theClass, oldCamera->getFilm()->
-			getReconstructionFilter()->getProperties()));
-
-	rfilter->configure();
-	film->addChild("", rfilter);
-	film->configure();
-	sampler->configure();
-	camera->addChild("", sampler);
-	camera->addChild("", film);
-	camera->setViewTransform(oldCamera->getViewTransform());
-	camera->setFov(oldCamera->getFov());
-	camera->configure();
-	scene->setCamera(camera);
-	scene->setSampler(sampler);
-	scene->configure();
-	sceneResID = ctx->sceneResID;
 	fileName = ctx->fileName;
 	shortName = ctx->shortName;
 	movementScale = ctx->movementScale;
@@ -1554,10 +1576,8 @@ SceneContext::SceneContext(SceneContext *ctx) {
 	renderJob = NULL;
 	cancelled = false;
 	progress = 0.0f;
-	framebuffer = new Bitmap(ctx->framebuffer->getWidth(),
-		ctx->framebuffer->getHeight(), 128);
-	framebuffer->clear();
-	mode = EPreview;
+	framebuffer = ctx->framebuffer->clone();
+	mode = ctx->renderJob ? EPreview : ctx->mode;
 	gamma = ctx->gamma;
 	exposure = ctx->exposure;
 	clamping = ctx->clamping;
@@ -1571,11 +1591,10 @@ SceneContext::SceneContext(SceneContext *ctx) {
 	scrollOffset = ctx->scrollOffset;
 	reinhardKey = ctx->reinhardKey;
 	reinhardBurn = ctx->reinhardBurn;
-	Scheduler::getInstance()->retainResource(sceneResID);
 }
 
 SceneContext::~SceneContext() {
-	if (sceneResID != -1)
+	if (scene && sceneResID != -1)
 		Scheduler::getInstance()->unregisterResource(sceneResID);
 	if (previewBuffer.buffer) {
 		previewBuffer.buffer->disassociate();
@@ -1586,6 +1605,9 @@ SceneContext::~SceneContext() {
 }
 
 int SceneContext::detectPathLength() const {
+	if (!scene)
+		return 2;
+
 	const Integrator *integrator = scene->getIntegrator();
 	int extraDepth = 0;
 

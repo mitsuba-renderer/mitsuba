@@ -32,8 +32,11 @@ public:
 
 	/// Draw the full scene using additive blending and shadow maps
 	void drawShadowedScene(const Scene *scene, const VPL &vpl) {
+		const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>(scene->getCamera());
 		Point2 jitter(0.5f - m_random->nextFloat(), 0.5f - m_random->nextFloat());
-		m_renderer->setCamera(static_cast<const ProjectiveCamera *>(scene->getCamera()), jitter);
+		Transform projectionTransform = camera->getGLProjectionTransform(jitter);
+		m_renderer->setCamera(projectionTransform.getMatrix(), camera->getViewTransform().getMatrix());
+		Transform clipToWorld = camera->getViewTransform().inverse() * projectionTransform.inverse();
 		const std::vector<TriMesh *> meshes = scene->getMeshes();
 		Point camPos = scene->getCamera()->getPosition();
 
@@ -45,6 +48,7 @@ public:
 			m_shaderManager->unbind();
 		}
 		m_renderer->endDrawingMeshes();
+		m_shaderManager->drawBackground(clipToWorld, camPos);
 	}
 
 	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
@@ -130,8 +134,7 @@ public:
 			m_renderer->setDepthMask(true);
 			m_renderer->setDepthTest(true);
 			m_renderer->setBlendMode(Renderer::EBlendNone);
-			if (!m_shaderManager->setVPL(vpl))
-				continue;
+			m_shaderManager->setVPL(vpl);
 
 			m_framebuffer->activateTarget();
 			m_framebuffer->clear();

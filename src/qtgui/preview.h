@@ -55,9 +55,9 @@ protected:
 	/// Virtual destructure
 	virtual ~PreviewThread();
 	/// Render a single VPL using OpenGL
-	bool oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl);
+	void oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl);
 	/// Render a single VPL using real-time coherent ray tracing
-	bool rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl);
+	void rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl);
 private:
 	ref<Session> m_session;
 	ref<Device> m_device, m_parentDevice;

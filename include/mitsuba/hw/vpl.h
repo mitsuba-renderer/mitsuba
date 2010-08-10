@@ -25,11 +25,14 @@ public:
 	void init();
 
 	/// Generate the shadow map for a particular VPL
-	bool setVPL(const VPL &vpl);
+	void setVPL(const VPL &vpl);
 
 	/// Prepare for rendering a material with BSDF 'bsdf' illuminated by VPL 'vpl'.
 	void configure(const VPL &vpl, const BSDF *bsdf, 
 		const Luminaire *luminaire, const Point &camPos);
+
+	/// Draw the background if there is an environment luminaire
+	void drawBackground(const Transform &clipToWorld, const Point &camPos);
 
 	/// Release bound resources
 	void unbind();
@@ -229,6 +232,8 @@ private:
 	std::map<std::string, ProgramAndConfiguration> m_programs;
 	ProgramAndConfiguration m_current;
 	VPLProgramConfiguration m_targetConfig;
+	ref<GPUProgram> m_backgroundProgram;
+	VPLDependencyNode m_backgroundDependencies;
 };
 
 MTS_NAMESPACE_END

@@ -331,6 +331,7 @@ void GLTexture::configureTexture() {
 	switch (getWrapType()) {
 		case EClamp: wrap = GL_CLAMP; break;
 		case EClampToEdge: wrap = GL_CLAMP_TO_EDGE; break;
+		case EClampToBorder: wrap = GL_CLAMP_TO_BORDER; break;
 		case ERepeat: wrap = GL_REPEAT; break;
 		case EMirroredRepeat: wrap = GL_MIRRORED_REPEAT_ARB; break;
 		default: Log(EError, "Invalid texture wrap type specified"); return;

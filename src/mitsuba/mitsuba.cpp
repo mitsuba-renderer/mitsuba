@@ -358,6 +358,13 @@ int main(int argc, char **argv) {
 	resolver->addPath("/usr/share/mitsuba");
 #endif
 
+#if defined(__OSX__)
+	MTS_AUTORELEASE_BEGIN()
+	FileResolver *resolver = FileResolver::getInstance();
+	resolver->addPath(__ubi_bundlepath());
+	MTS_AUTORELEASE_END() 
+#endif
+
 	/* Initialize Xerces-C */
 	try {
 		XMLPlatformUtils::Initialize();

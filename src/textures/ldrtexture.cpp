@@ -11,7 +11,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Gamma-corrected bitmap texture using the JPG file format
+ * Gamma-corrected bitmap texture using the JPG or PNG file format
  */
 class LDRTexture : public Texture {
 public:
@@ -233,6 +233,7 @@ public:
 		m_gpuTexture->setWrapType(GPUTexture::ERepeat);
 		m_gpuTexture->setMaxAnisotropy(8);
 		m_gpuTexture->init();
+		/* Release the memory on the host side */
 		m_gpuTexture->setBitmap(0, NULL);
 	}
 

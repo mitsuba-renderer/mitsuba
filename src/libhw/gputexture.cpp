@@ -132,6 +132,7 @@ static const char *toString(GPUTexture::EWrapType wrap) {
     switch (wrap) {		
 		case GPUTexture::EClamp: return "clamp";
 		case GPUTexture::EClampToEdge: return "clampToEdge";
+		case GPUTexture::EClampToBorder: return "clampToBorder";
 		case GPUTexture::ERepeat: return "repeat";
 		case GPUTexture::EMirroredRepeat: return "mirroredRepeat";
         default: SLog(EError, "Invalid texture wrap type"); return NULL;

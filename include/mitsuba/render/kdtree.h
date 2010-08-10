@@ -81,7 +81,7 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER KDTree : public Object {
 public:
-	/// Construct a new, unbuilt kd-tree
+	/// Construct a new kd-tree in an unbuilt state
 	KDTree();
 
 	/// Add geometry to the kd-tree
@@ -424,7 +424,7 @@ protected:
 	 */
 	bool rayIntersect(const Ray &ray, Intersection &its, Float mint, Float maxt, 
 		bool shadowRay, unsigned int &shapeIndex, unsigned int &primIndex) const;
-
+	
 	/// Recursive tree-building algorithm
 	void buildTree(int nodeIndex, int depth, int badRefines,
 		int numPrims, const AABB &aabb, EdgeEventVec3 &allEvents);

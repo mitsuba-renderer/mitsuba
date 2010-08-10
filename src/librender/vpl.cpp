@@ -8,6 +8,7 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 	ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 		createObject(Sampler::m_theClass, Properties("halton")));
 	EmissionRecord eRec;
+	eRec.type = EmissionRecord::EPreview;
 	Ray ray;
 	Intersection its;
 	Spectrum weight, bsdfVal;

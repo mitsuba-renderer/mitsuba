@@ -276,6 +276,7 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 			glTexCoordPointer(2, dataType, sizeof(Vertex), 
 				vertices + sizeof(Float) * 6);
+
 			/* Pass 'dpdu' as second set of texture coordinates */
 			glClientActiveTexture(GL_TEXTURE1);
 			glTexCoordPointer(3, dataType, sizeof(Vertex), 
@@ -367,14 +368,15 @@ void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
 		if (flipVertically)
 			std::swap(upperLeft.y, lowerRight.y);
 
+		const Float zDepth = -1.0f; // just before the far plane
 		glTexCoord2f(0.0f, 0.0f);
-		glVertex2f(upperLeft.x, upperLeft.y);
+		glVertex3f(upperLeft.x, upperLeft.y, zDepth);
 		glTexCoord2f(1.0f, 0.0f);
-		glVertex2f(lowerRight.x, upperLeft.y);
+		glVertex3f(lowerRight.x, upperLeft.y, zDepth);
 		glTexCoord2f(1.0f, 1.0f);
-		glVertex2f(lowerRight.x, lowerRight.y);
+		glVertex3f(lowerRight.x, lowerRight.y, zDepth);
 		glTexCoord2f(0.0f, 1.0f);
-		glVertex2f(upperLeft.x, lowerRight.y);
+		glVertex3f(upperLeft.x, lowerRight.y, zDepth);
 		glEnd();
 	} else if (tex->getType() == GPUTexture::ETextureCubeMap) {
 		glMatrixMode(GL_PROJECTION);
@@ -457,15 +459,16 @@ void GLRenderer::blitQuad(bool flipVertically) {
 	glOrtho(0, scrSize.x, scrSize.y, 0, -1, 1);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+	const Float zDepth = -1.0f;
 	glBegin(GL_QUADS);
 	glTexCoord2f(0.0f, flipVertically ? 1.0f : 0.0f);
-	glVertex2f(0.0f, 0.0f);
+	glVertex3f(0.0f, 0.0f, zDepth);
 	glTexCoord2f(1.0f, flipVertically ? 1.0f : 0.0f);
-	glVertex2f(scrSize.x, 0.0f);
+	glVertex3f(scrSize.x, 0.0f, zDepth);
 	glTexCoord2f(1.0f, flipVertically ? 0.0f : 1.0f);
-	glVertex2f(scrSize.x, scrSize.y);
+	glVertex3f(scrSize.x, scrSize.y, zDepth);
 	glTexCoord2f(0.0f, flipVertically ? 0.0f : 1.0f);
-	glVertex2f(0.0f, scrSize.y);
+	glVertex3f(0.0f, scrSize.y, zDepth);
 	glEnd();
 }
 

@@ -238,10 +238,12 @@ std::string getFQDN() {
 	hints.ai_protocol = IPPROTO_TCP;
 
 	int retVal = getaddrinfo(getHostName().c_str(), NULL, &hints, &addrInfo);
-	if (addrInfo == NULL || retVal != 0)
-		SLog(EError, "Could not retrieve the computer's fully "
+	if (addrInfo == NULL || retVal != 0) {
+		SLog(EWarn, "Could not retrieve the computer's fully "
 			"qualified domain name: could not resolve host address \"%s\"!",
 			getHostName().c_str());
+		return getHostName();
+	}
 
 	char fqdn[NI_MAXHOST];
 	retVal = getnameinfo(addrInfo->ai_addr, sizeof(struct sockaddr_in), 
@@ -249,12 +251,13 @@ std::string getFQDN() {
 	if (retVal != 0) {
 		freeaddrinfo(addrInfo);
 #if defined(WIN32)
-		SLog(EError, "Could not retrieve the computer's fully "
+		SLog(EWarn, "Could not retrieve the computer's fully "
 			"qualified domain name: error %i!", WSAGetLastError());
 #else
-		SLog(EError, "Could not retrieve the computer's fully "
+		SLog(EWarn, "Could not retrieve the computer's fully "
 			"qualified domain name: error %i!", gai_strerror(retVal));
 #endif
+		return getHostName();
 	}
 		
 	freeaddrinfo(addrInfo);

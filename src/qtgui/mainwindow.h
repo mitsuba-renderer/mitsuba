@@ -109,6 +109,7 @@ private slots:
 	bool on_tabBar_tabCloseRequested(int index);
 	void on_tabBar_tabMoved(int from, int to);
 	void on_tabBar_customContextMenuRequested(const QPoint &pt);
+	void on_glView_loadFileRequest(const QString &string);
 	void onOpenRecent();
 	void onClearRecent();
 	void onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
@@ -125,7 +126,8 @@ private slots:
 	void updateUI();
 	void updateStatus();
 	void onPreviewSettingsClose();
-	void onFileDialogClose(int reason);
+	void onOpenDialogClose(int reason);
+	void onSaveAsDialogClose(int reason);
 	void onRenderSettingsClose(int reason);
 
 private:

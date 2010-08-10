@@ -223,7 +223,7 @@
 			<xsd:element name="scale" type="scale"/>
 			<xsd:element name="matrix" type="matrix"/>
 		</xsd:choice>
-		<xsd:attribute name="name" type="xsd:string"/>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
 	</xsd:complexType>
 	<xsd:complexType name="translate">
 		<xsd:attribute name="x" type="doubleType"/>

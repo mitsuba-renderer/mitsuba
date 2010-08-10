@@ -110,12 +110,9 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 	QDomElement camera = findUniqueChild(root, "camera");
 	if (camera.isNull()) {
-		QMessageBox::critical(parent, parent->tr("Unable to save"),
-			parent->tr("Unable to save changes: could not find the camera descriptor in "
-			"<b>%1</b>. If you are using include files, make sure that the camera "
-			"descriptor is located within the main scene file.").arg(ctx->fileName),
-			QMessageBox::Ok);
-		return;
+		camera = doc.createElement("camera");
+		camera.setAttribute("type", "perspective");
+		root.insertAfter(camera, QDomNode());
 	}
 	const PinholeCamera *sceneCamera = static_cast<const PinholeCamera *>(ctx->scene->getCamera());
 	
@@ -130,6 +127,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	QDomElement cameraTransform = findUniqueChild(camera, "transform");
 	if (cameraTransform.isNull()) {
 		cameraTransform = doc.createElement("transform");
+		cameraTransform.setAttribute("name", "toWorld");
 		camera.insertBefore(cameraTransform, QDomNode());
 	}
 
@@ -142,7 +140,10 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	Point t, p = sceneCamera->getInverseViewTransform()(Point(0,0,0));
 
 	if (sceneCamera->getViewTransform().det3x3() > 0) {
-		p.z = -p.z; direction.z = -direction.z; u = -u;
+		p.z = -p.z; direction.z = -direction.z; 
+		QDomElement scale = doc.createElement("scale");
+		cameraTransform.insertAfter(scale, lookAt);
+		scale.setAttribute("z", "-1");
 	}
 	t = p + direction;
 
@@ -178,12 +179,9 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 	QDomElement film = findUniqueChild(camera, "film");
 	if (film.isNull()) {
-		QMessageBox::critical(parent, parent->tr("Unable to save"),
-			parent->tr("Unable to save changes: could not find the film descriptor in "
-			"<b>%1</b>. If you are using include files, make sure that the film "
-			"descriptor is located within the main scene file.").arg(ctx->fileName),
-			QMessageBox::Ok);
-		return;
+		film = doc.createElement("film");
+		film.setAttribute("type", "exrfilm");
+		camera.insertAfter(film, QDomNode());
 	}
 	QDomElement widthProperty = findProperty(film, "width");
 	QDomElement heightProperty = findProperty(film, "height");

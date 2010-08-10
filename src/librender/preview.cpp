@@ -89,6 +89,7 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 			} else {
 				EmissionRecord eRec(m_vpl.luminaire, 
 					ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), toIts);
+				eRec.type = EmissionRecord::EPreview;
 				value += m_vpl.P * bsdfVal * m_vpl.luminaire->f(eRec) * 
 					((m_vpl.luminaire->getType() == Luminaire::EOnSurface ? 
 						(Float) 1 : dot(m_vpl.its.shFrame.n, toIts)) / (length*length));
@@ -331,6 +332,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 						} else {
 							EmissionRecord eRec(m_vpl.luminaire, 
 								ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), wi);
+							eRec.type = EmissionRecord::EPreview;
 							vplWeight = m_vpl.luminaire->f(eRec) * m_vpl.P;
 						}
 					}

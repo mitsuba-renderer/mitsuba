@@ -79,14 +79,16 @@ void ProjectiveCamera::configure() {
 		/* Instantiate an EXR film by default */
 		m_film = static_cast<Film*> (PluginManager::getInstance()->
 			createObject(Film::m_theClass, Properties("exrfilm")));
+		m_film->configure();
 	}
 
 	if (m_sampler == NULL) {
 		/* No sampler has been selected - load an independent filter with 4 samples/pixel by default */
 		Properties props("independent");
-		props.setInteger("samplesPerPixel", 4);
+		props.setInteger("sampleCount", 4);
 		m_sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 				createObject(Sampler::m_theClass, props));
+		m_sampler->configure();
 	}
 	m_aspect = (Float) m_film->getSize().x / (Float) m_film->getSize().y;
 }

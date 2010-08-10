@@ -221,8 +221,6 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 		unsigned int shapeIndex, primIndex;
 		if (rayIntersect(ray, its, mint, maxt, false, shapeIndex, primIndex)) {
 			const Shape *shape = m_shapes[shapeIndex];
-			its.shape = shape;
-
 			if (EXPECT_NOT_TAKEN(its.t < mint || its.t > maxt)) // double-check without epsilons
 				return false;
 
@@ -266,6 +264,8 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 				its.dpdu = v0.dpdu * b.x + v1.dpdu * b.y + v2.dpdu * b.z;
 				its.dpdv = v0.dpdv * b.x + v1.dpdv * b.y + v2.dpdv * b.z;
 				its.geoFrame.n = faceNormal;
+				its.shape = shape;
+
 				coordinateSystem(its.geoFrame.n, its.geoFrame.s, its.geoFrame.t);
 				its.shFrame.n = normalize(v0.n * b.x + v1.n * b.y + v2.n * b.z);
 				its.shFrame.s = normalize(its.dpdu - its.shFrame.n 

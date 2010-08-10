@@ -176,12 +176,33 @@ void Scene::wakeup(std::map<std::string, SerializableObject *> &params) {
 }
 
 void Scene::configure() {
-	if (m_integrator == NULL)
-		Log(EError, "No integrator has been specified!");
-	if (m_camera == NULL)
-		Log(EError, "No camera has been specified!");
+	if (m_integrator == NULL) {
+		/* Create a direct integrator by default */
+		m_integrator = static_cast<Integrator *> (PluginManager::getInstance()->
+				createObject(Integrator::m_theClass, Properties("direct")));
+		m_integrator->configure();
+	}
+	if (m_camera == NULL) {
+		Properties props("perspective");
+		/* Create a perspective camera with 45deg. FOV, which can see the whole scene */
+		AABB aabb;
+		for (size_t i=0; i<m_shapes.size(); ++i)
+			aabb.expandBy(m_shapes[i]->getAABB());
+		Point center = aabb.getCenter();
+		Vector extents = aabb.getExtents();
+		Float maxExtents = std::max(extents.x, extents.y);
+		Float distance = maxExtents/(2.0f * std::tan(45 * .5f * M_PI/180));
+
+		props.setTransform("toWorld", Transform::translate(Vector(center.x, center.y, aabb.getMinimum().x - distance)));
+		props.setFloat("fov", 45.0f);
+
+		m_camera = static_cast<Camera *> (PluginManager::getInstance()->createObject(Camera::m_theClass, props));
+		m_camera->configure();
+		m_sampler = m_camera->getSamplerX();
+	}
+
 	if (m_media.size() > 1)
-		Log(EError, "Scenes are currently restricted to at most one medium.");
+		Log(EError, "Scenes are currently restricted to at most one participating medium.");
 
 	m_integrator->configureSampler(m_sampler);
 

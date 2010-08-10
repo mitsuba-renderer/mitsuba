@@ -132,7 +132,6 @@ void KDTree::rayIntersectPacket(const Ray *rays, Intersection *its) const {
 				const uint32_t shapeIndex = its4.shapeIndex.i[i];
 				const uint32_t primIndex = its4.primIndex.i[i];
 				const Shape *shape = m_shapes[shapeIndex];
-				it.shape = shape;
 
 				if (EXPECT_TAKEN(primIndex != KNoTriangleFlag)) {
 					const TriMesh *triMesh = static_cast<const TriMesh *>(m_shapes[shapeIndex]);
@@ -166,6 +165,7 @@ void KDTree::rayIntersectPacket(const Ray *rays, Intersection *its) const {
 					it.geoFrame.t = cross(it.shFrame.n, it.shFrame.s);
 					it.wi = it.toLocal(-rayD);
 					it.hasUVPartials = false;
+					it.shape = shape;
 				} else {
 					/* Non-triangle shape: intersect again to fill in details */
 					shape->rayIntersect(rays[i], it);

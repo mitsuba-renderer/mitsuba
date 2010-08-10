@@ -172,18 +172,25 @@ public:
 
 struct MTS_EXPORT_RENDER EmissionRecord {
 public:
+	enum ESamplingType {
+		ENormal,
+		EPreview
+	};
+
 	/// Construct a luminaire sampling record that can be used to query a luminaire
 	inline EmissionRecord(const Luminaire *luminaire, 
 			const ShapeSamplingRecord &sRec, const Vector &d) 
-		: luminaire(luminaire), sRec(sRec), d(d) { }
+		: luminaire(luminaire), type(ENormal), sRec(sRec), d(d) { }
 
-	inline EmissionRecord() : luminaire(NULL) { }
+	inline EmissionRecord() : luminaire(NULL), type(ENormal) { }
 
 	/// Return a string representation
 	std::string toString() const;
 public:
 	/// Associated luminaire
 	const Luminaire *luminaire;
+
+	ESamplingType type;
 
 	/// Data record of the associated shape sample
 	ShapeSamplingRecord sRec;

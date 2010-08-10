@@ -67,8 +67,10 @@ public:
 	enum EWrapType {
 		/// Clamp the coordinates to [0, 1]
 		EClamp = 0,
-		/// Clamp the coordinates to [2n, 1-2n] (Avoids edge artifacts) 
+		/// Similar to EClamp, but prevents mixing at the edges
 		EClampToEdge,
+		/// Similar to EClamp
+		EClampToBorder,
 		/// Modulo 1 operation (default)
 		ERepeat,
 		/// Mirror the coordinates at the edges

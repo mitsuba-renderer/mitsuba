@@ -9,9 +9,9 @@
  * - Arbitrary polygonal meshes
  * - Lambert and Phong materials (allowed to be textured)
  * - Cameras
- * - Spot and Point lights
+ * - Spot and Point and Ambient lights
  *
- * When exporting from Maya/FBX, be sure to have it convert all NURBS surfaces into
+ * When exporting using Maya/FBX, be sure to have it convert all NURBS surfaces into
  * "Software Render Meshes". Triangulation is not required (the code below does this
  * automatically for arbitrary polygonal meshes). The Light and camera export options
  * should be activated, since they are off by default. While modeling the scene, it is
@@ -183,7 +183,7 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 			result->offsetToType[offset] = ENormal;
 			result->typeToOffset[ENormal] = offset;
 		} else if (!strcmp(inputs[i]->getSemantic(), "TEXCOORD")) {
-			SAssert(accessor->getStride() == 2);
+			SAssert(accessor->getStride() == 2 || accessor->getStride() == 3);
 			if (result->typeToOffset[EUV] == -1) {
 				result->hasUVs = true;
 				result->offsetToType[offset] = EUV;
@@ -294,9 +294,11 @@ void writeGeometry(std::string id, int geomIndex, std::string matID, Transform t
 
 	os << "\t<shape id=\"" << id << "\" type=\"serialized\">" << endl;
 	os << "\t\t<string name=\"filename\" value=\"" << filename.c_str() << "\"/>" << endl;
-	os << "\t\t<transform name=\"toWorld\">" << endl;
-	os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
-	os << "\t\t</transform>" << endl;
+	if (!transform.isIdentity()) {
+		os << "\t\t<transform name=\"toWorld\">" << endl;
+		os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
+		os << "\t\t</transform>" << endl;
+	}
 	os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
 	os << "\t</shape>" << endl << endl;
 }
@@ -357,7 +359,7 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 			gluTessEndPolygon(tess);
 			delete[] temp;
 		}
-		
+	
 		if (polygons->getMaterial() == NULL) 
 			SLog(EError, "No material reference specified!");
 
@@ -365,6 +367,46 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 			SLog(EError, "Referenced material could not be found!");
 
 		writeGeometry(xmlName, geomIndex, matLookupTable[polygons->getMaterial()], transform, os, data);
+		delete data;
+		++geomIndex;
+	}
+
+	domPolylist_Array &polylistArray = mesh->getPolylist_array();
+	for (size_t i=0; i<polylistArray.getCount(); ++i) {
+		domPolylist *polylist = polylistArray[i];
+		domInputLocalOffset_Array &inputs = polylist->getInput_array();
+		VertexData *data = fetchVertexData(transform, os, vertInputs, inputs);
+		domListOfUInts &vcount = polylist->getVcount()->getValue();
+		domListOfUInts &indexArray = polylist->getP()->getValue();
+		int posOffset = data->typeToOffset[EPosition], indexOffset = 0;
+		tess_data.clear();
+		tess_nSources = data->nSources;
+
+		for (size_t j=0; j<vcount.getCount(); ++j) {
+			size_t vertexCount = vcount.get(i);
+
+			domUint *temp = new domUint[vertexCount * data->nSources];
+			for (size_t l = 0; l<vertexCount * data->nSources; ++l)
+				temp[l] = indexArray.get(indexOffset++);
+
+			gluTessBeginPolygon(tess, NULL);
+			gluTessBeginContour(tess);
+
+			for (size_t k=0; k<vertexCount*data->nSources; k+=data->nSources) 
+				gluTessVertex(tess, &data->glPos[temp[k+posOffset]*3], (GLvoid *) (k+temp));
+
+			gluTessEndContour(tess);
+			gluTessEndPolygon(tess);
+			delete[] temp;
+		}
+
+		if (polylist->getMaterial() == NULL) 
+			SLog(EError, "No material reference specified!");
+
+		if (matLookupTable.find(polylist->getMaterial()) == matLookupTable.end())
+			SLog(EError, "Referenced material could not be found!");
+
+		writeGeometry(xmlName, geomIndex, matLookupTable[polylist->getMaterial()], transform, os, data);
 		delete data;
 		++geomIndex;
 	}
@@ -511,9 +553,15 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 		os << "\t\t</transform>" << endl;
 		os << "\t</luminaire>" << endl << endl;
 	}
-	if (!point && !spot) {
-		SLog(EWarn, "Encountered an unknown light type!");
+	domLight::domTechnique_common::domAmbient *ambient = light.getTechnique_common()->getAmbient().cast();
+	if (ambient) {
+		domFloat3 &color = ambient->getColor()->getValue();
+		os << "\t<luminaire id=\"" << light.getId() << "\" type=\"constant\">" << endl;
+		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
+		os << "\t</luminaire>" << endl << endl;
 	}
+	if (!point && !spot && !ambient)
+		SLog(EWarn, "Encountered an unknown light type!");
 }
 
 void loadImage(std::ostream &os, domImage &image, StringMap &idToTexture, StringMap &fileToId) {
@@ -667,6 +715,8 @@ void loadNode(Transform transform, std::ostream &os, domNode &node) {
 			matLookupTable[instMat->getSymbol()] = material->getId();
 		}
 
+		if (!geom)
+			SLog(EError, "Could not find a referenced geometry object!");
 		loadGeometry(node.getName(), transform, os, *geom, matLookupTable);
 	}
 	
@@ -675,6 +725,8 @@ void loadNode(Transform transform, std::ostream &os, domNode &node) {
 	for (size_t i=0; i<instanceLights.getCount(); ++i) {
 		domInstance_light *inst = instanceLights[i];
 		domLight *light = daeSafeCast<domLight>(inst->getUrl().getElement());
+		if (!light)
+			SLog(EError, "Could not find a referenced light!");
 		loadLight(transform, os, *light);
 	}
 
@@ -683,6 +735,8 @@ void loadNode(Transform transform, std::ostream &os, domNode &node) {
 	for (size_t i=0; i<instanceCameras.getCount(); ++i) {
 		domInstance_camera *inst = instanceCameras[i];
 		domCamera *camera = daeSafeCast<domCamera>(inst->getUrl().getElement());
+		if (camera == NULL)
+			SLog(EError, "Could not find a referenced camera!");
 		loadCamera(transform, os, *camera);
 	}
 

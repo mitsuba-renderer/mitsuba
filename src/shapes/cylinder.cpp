@@ -122,6 +122,7 @@ public:
 		its.shFrame = its.geoFrame;
 		its.wi = its.toLocal(-ray.d);
 		its.hasUVPartials = false;
+		its.shape = this;
 
 		/* Intersection refinement step */
 		Vector2 localDir(normalize(Vector2(local.x, local.y)));

@@ -73,6 +73,7 @@ public:
 			phi += 2*M_PI;
 		its.uv.x = theta / M_PI;
 		its.uv.y = phi / (2*M_PI);
+		its.shape = this;
 		Float zrad = std::sqrt(local.x*local.x + local.y*local.y);
 
 		its.geoFrame.n = Normal(normalize(its.p - m_center));

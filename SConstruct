@@ -2,6 +2,7 @@ import SCons
 import sys
 import glob
 import os
+import fnmatch
 
 if not os.path.exists('config.py'):
 	print 'A configuration file must be selected! Have a look at \"README\"'
@@ -142,7 +143,7 @@ if not conf.CheckCXXHeader('dae.h'):
 	hasCollada = False
 	print 'COLLADA DOM is missing: not building the COLLADA importer'
 if not conf.CheckCXXHeader('boost/math/distributions/students_t.hpp'):
-	print 'Boost is missing (install libboost1.37-dev and libboost-math1.37-dev)!'
+	print 'Boost is missing (install libboost1.40-dev and libboost-math1.40-dev)!'
 	Exit(1)
 if sys.platform == 'win32':
 	if not (conf.CheckCHeader(['windows.h', 'GL/gl.h']) and conf.CheckCHeader(['windows.h', 'GL/glu.h']) and conf.CheckCHeader(['windows.h', 'GL/gl.h', 'GL/glext.h'])):
@@ -469,6 +470,7 @@ plugins += env.SharedLibrary('plugins/serialized', ['src/shapes/serialized.cpp']
 plugins += env.SharedLibrary('plugins/sphere', ['src/shapes/sphere.cpp'])
 plugins += env.SharedLibrary('plugins/cylinder', ['src/shapes/cylinder.cpp'])
 plugins += env.SharedLibrary('plugins/hair', ['src/shapes/hair.cpp'])
+#plugins += env.SharedLibrary('plugins/group', ['src/shapes/group.cpp'])
 
 # Samplers
 plugins += env.SharedLibrary('plugins/independent', ['src/samplers/independent.cpp'])
@@ -671,7 +673,9 @@ elif sys.platform == 'darwin':
 		installTargets += env.Install('Mitsuba.app/Contents/Resources/PreviewSettings.nib', 'tools/darwin/PreviewSettings.nib/keyedobjects.nib')
 		installTargets += env.Install('Mitsuba.app/Contents/Resources', 'tools/darwin/qt.conf')
 		installTargets += env.Install('Mitsuba.app/Contents/Frameworks/BWToolkitFramework.framework/Versions/A', 'tools/darwin/BWToolkitFramework.framework/Versions/A/BWToolkitFramework')
-		installTargets += env.Install('Mitsuba.app/Contents/Frameworks/BWToolkitFramework.framework', 'tools/darwin/BWToolkitFramework.framework/Versions/A/Resources')
+		for file in os.listdir('tools/darwin/BWToolkitFramework.framework/Versions/A/Resources'):
+			if fnmatch.fnmatch(file, '*.pdf') or fnmatch.fnmatch(file, '*.tiff') or fnmatch.fnmatch(file, '*.tif') or fnmatch.fnmatch(file, '*.png') or fnmatch.fnmatch(file, '*.rtf') or fnmatch.fnmatch(file, '*.plist'):
+				installTargets += env.Install('Mitsuba.app/Contents/Frameworks/BWToolkitFramework.framework/Resources', 'tools/darwin/BWToolkitFramework.framework/Versions/A/Resources/' + file)
 
 if dist:
 	if sys.platform == 'win32':

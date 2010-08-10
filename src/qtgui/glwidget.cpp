@@ -33,6 +33,7 @@ GLWidget::GLWidget(QWidget *parent) :
 	m_didSetCursor = false;
 	m_ignoreResizeEvents = false;
 	m_ignoreScrollEvents = false;
+	setAcceptDrops(true);
 }
 
 GLWidget::~GLWidget() {
@@ -243,17 +244,16 @@ void GLWidget::initializeGL() {
 void GLWidget::setScene(SceneContext *context) {
 	if (m_movementTimer->isActive())
 		m_movementTimer->stop();
-	
-	bool contextSwitch = m_context != NULL && context != NULL;
-	m_preview->setSceneContext(context, contextSwitch, false);
 	m_context = context;
+
+	if (context && context->scene == NULL)
+		context = NULL;
+	m_preview->setSceneContext(context, true, false);
 	m_framebufferChanged = true;
 	m_mouseButtonDown = false;
 	m_leftKeyDown = m_rightKeyDown = m_upKeyDown = m_downKeyDown = false;
 	updateGeometry();
 	updateScrollBars();
-	if (!contextSwitch)
-		resetPreview();
 }
 
 void GLWidget::refreshScene() {
@@ -280,7 +280,7 @@ void GLWidget::setShadowMapResolution(int res) {
 }
 
 void GLWidget::setPreviewMethod(EPreviewMethod method) {
-	if (method != m_context->clamping) {
+	if (method != m_context->previewMethod) {
 		m_context->previewMethod = method;
 		resetPreview();
 	}
@@ -333,7 +333,7 @@ void GLWidget::downloadFramebuffer() {
 	bool createdFramebuffer = false;
 
 	makeCurrent();
-	if (m_framebuffer == NULL || true || 
+	if (m_framebuffer == NULL || 
 		m_framebuffer->getBitmap() != m_context->framebuffer) {
 		if (m_framebuffer)
 			m_framebuffer->cleanup();
@@ -376,9 +376,8 @@ void GLWidget::downloadFramebuffer() {
 QSize GLWidget::sizeHint() const {
 	QSize minimumSize(440, 170);
 	if (m_context) {
-		Vector2i size = m_context->scene->getCamera()->getFilm()->getSize();
-		return QSize(std::max(minimumSize.width(), size.x), 
-					 std::max(minimumSize.height(), size.y));
+		return QSize(std::max(minimumSize.width(), m_context->framebuffer->getWidth()), 
+					 std::max(minimumSize.height(), m_context->framebuffer->getHeight()));
 	} else {
 		return minimumSize;
 	}
@@ -391,7 +390,7 @@ void GLWidget::focusOutEvent(QFocusEvent *event) {
 }
 	
 void GLWidget::timerImpulse() {
-	if (!m_context) {
+	if (!m_context || !m_context->scene) {
 		m_movementTimer->stop();
 		return;
 	}
@@ -429,8 +428,10 @@ void GLWidget::timerImpulse() {
 }
 
 void GLWidget::resetPreview() {
+	if (!m_context || !m_context->scene)
+		return;
 	bool motion = m_leftKeyDown || m_rightKeyDown || 
-		m_upKeyDown || m_downKeyDown || m_mouseButtonDown;
+	m_upKeyDown || m_downKeyDown || m_mouseButtonDown;
 	m_preview->setSceneContext(m_context, false, motion);
 	updateGL();
 }
@@ -497,7 +498,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		   rel         = event->pos() - m_mousePos;
 	m_mousePos = event->pos();
 
-	if (!m_context || !m_mouseButtonDown || rel == QPoint(0,0))
+	if (!m_context || !m_context->scene || !m_mouseButtonDown || rel == QPoint(0,0))
 		return;
 
 	//	if (m_ignoreMouseEvent == rel) {
@@ -526,15 +527,14 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		Transform trafo = Transform::rotate(Vector(0,1,0), yaw)
 				* Transform::rotate(Vector(1,0,0), pitch)
 				* camera->getViewTransform();
+		direction = trafo.inverse()(Vector(0,0,1));
 
 		if (camera->getViewTransform().det3x3() < 0) {
-			direction = trafo.inverse()(Vector(0,0,1));
 			camera->setInverseViewTransform(Transform::lookAt(p, p+direction, m_context->up));
 		} else {
-			direction = trafo.inverse()(Vector(0,0,1));
 			p.z = -p.z; direction.z = -direction.z;
 			camera->setInverseViewTransform(Transform::scale(Vector(1,1,-1)) *
-				Transform::lookAt(p, p+direction, -m_context->up));
+				Transform::lookAt(p, p+direction, m_context->up));
 		}
 		didMove = true;
 	}
@@ -549,10 +549,10 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		} else {
 			p.z = -p.z; direction.z = -direction.z;
 			camera->setInverseViewTransform(Transform::scale(Vector(1,1,-1)) *
-				Transform::lookAt(p, p+direction, -m_context->up));
+				Transform::lookAt(p, p+direction, m_context->up));
 		}
 
-		camera->setFov(std::min(std::max(1.0f, camera->getFov() + fovChange), 100.0f));
+		camera->setFov(std::min(std::max((Float) 1.0f, camera->getFov() + fovChange), (Float) 100.0f));
 		camera->configure();
 
 		didMove = true;
@@ -638,7 +638,7 @@ void exportPNG(const char *name, GPUTexture *buffer, bool downsample) {
 				if (ch == 3)
 					value = 1;
 				else
-					value = std::pow(value, 1/2.2f);
+					value = std::pow(value, (Float) (1/2.2f));
 				target[(x + y*size.x)*4 + ch] = (uint8_t) std::min(std::max((int) (value* 255), 0), 255);
 			}
 		}
@@ -719,7 +719,7 @@ void GLWidget::paintGL() {
 					m_luminanceBuffer[i]->init();
 				}
 			}
-			
+
 			Float multiplier = 1.0;
 			if (m_context->mode == EPreview)
 				multiplier /= entry.vplSampleOffset;
@@ -761,6 +761,10 @@ void GLWidget::paintGL() {
 			Float logLuminance, maxLuminance, unused;
 			m_luminanceBuffer[target]->getPixel(0, 0).toLinearRGB(logLuminance, maxLuminance, unused);
 			logLuminance = std::exp(logLuminance / (size.x*size.y));
+			if (std::isnan(logLuminance) || std::isinf(logLuminance)) {
+				SLog(EWarn, "Could not determine the average log-luminance, since the image contains NaNs/infs/negative values");
+				logLuminance = 1;
+			}
 
 			buffer->bind();
 			m_reinhardTonemap->bind();
@@ -897,7 +901,21 @@ void GLWidget::onScroll() {
 	m_context->scrollOffset.y = m_vScroll->value();
 	updateGL();
 }
-	
+
+void GLWidget::dragEnterEvent(QDragEnterEvent *event) {
+    if (event->mimeData()->hasFormat("text/uri-list")) {
+		event->setDropAction(Qt::CopyAction);
+		event->acceptProposedAction();
+	}
+}
+
+void GLWidget::dropEvent(QDropEvent *event) {
+    QList<QUrl> urls = event->mimeData()->urls();
+	for (int i=0; i<urls.size(); ++i)
+		emit loadFileRequest(urls[i].toLocalFile());
+	event->acceptProposedAction();
+}
+
 void GLWidget::resumePreview() {
 	m_preview->resume();
 }

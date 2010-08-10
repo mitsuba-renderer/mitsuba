@@ -445,6 +445,7 @@ void Bitmap::savePNG(Stream *stream) const {
 		png_destroy_write_struct(&png_ptr, &info_ptr);
 		Log(EError, "Error writing the PNG file");
 	}
+
 	png_set_write_fn(png_ptr, stream, (png_rw_ptr) png_write_data, (png_flush_ptr) png_flush_data);
 //	png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
 	png_set_compression_level(png_ptr, 5);

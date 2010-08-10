@@ -6,6 +6,7 @@ Mitsuba.app
 .*moc_.*\.cc$
 .*qrc_.*\.cc$
 .*\.dylib$
+\.DS_Store
 sconf_temp
 mitsuba
 mtsgui

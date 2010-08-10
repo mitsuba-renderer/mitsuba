@@ -37,11 +37,13 @@ public:
 	void setScrollBars(QScrollBar *hScroll, QScrollBar *vScroll);
 	inline void ignoreResizeEvents(bool value) { m_ignoreResizeEvents = value; }
 	void updateScrollBars();
+
 signals:
 	void beginRendering();
 	void stopRendering();
 	void quit();
 	void statusMessage(const QString &status);
+	void loadFileRequest(const QString &fileName);
 
 public slots:
 	void timerImpulse();
@@ -71,6 +73,8 @@ protected:
 	void resetPreview();
 	void resizeEvent(QResizeEvent *event);
 	void wheelEvent(QWheelEvent *event);
+	void dragEnterEvent(QDragEnterEvent *event);
+	void dropEvent(QDropEvent *event);
 
 	/* Masquerade QGLWidget as a GL device for libhw */
 #if defined(WIN32)

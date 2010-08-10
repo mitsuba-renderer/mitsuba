@@ -120,10 +120,7 @@ public:
 
 	void generateCode(std::ostringstream &oss, const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		oss << "vec3 " << evalName << "_area(vec2 uv) {" << endl
-			<< "    return vec3(0.0); /* Won't ever be used */ " << endl
-			<< "}" << endl << endl
-			<< "vec3 " << evalName << "_dir(vec3 wo) {" << endl
+		oss << "vec3 " << evalName << "_dir(vec3 wo) {" << endl
 			<< "    return vec3(0.079577);" << endl
 			<< "}" << endl;
 	}

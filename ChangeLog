@@ -1,3 +1,30 @@
+2010-08-05  Wenzel Jakob <wenzel@cs.cornell.edu>
+	
+	* constant.cpp, src/libhw/vpl.cpp: Support for image environment 
+		sources and spot lights in the real-time preview.
+
+2010-08-03  Wenzel Jakob <wenzel@cs.cornell.edu>
+
+	* mitsuba.cpp: Ability to run the 'mitsuba' execubable in arbitrary
+		locations on OSX while ensuring that it still finds all plugins etc.
+
+	* mtsimport: COLLADA importer support for ambient lights and 'polylist' meshes.
+
+	* scene.cpp: Create a default camera when none is specified in the XML file.
+
+	* constant.cpp, src/libhw/vpl.cpp: Support for rendering constant environment 
+		sources in the real-time preview.
+
+2010-07-21  Wenzel Jakob <wenzel@cs.cornell.edu>
+
+	* glwidget.cpp, mainwindow.cpp: Support for Drag & Drop
+
+	* glwidget.cpp, mainwindow.cpp: The Mitsuba user interface now also
+		doubles as an EXR viewer / tonemapper. Drag an EXR file onto the
+		UI or open it using the File menu, and the image opens in a new
+		tab. Afterwards, it is possible to export the image as a tonemapped
+		8-bit PNG image.
+
 2010-07-19  Wenzel Jakob <wenzel@cs.cornell.edu>
 
 	* include/mitsuba/mitsuba.h: First semi-official external release 0.1.1

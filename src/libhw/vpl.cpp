@@ -106,12 +106,47 @@ void VPLShaderManager::init() {
 		if (shader != NULL && !shader->isComplete())
 			m_renderer->unregisterShaderForResource(meshes[i]->getBSDF());
 	}
+
 	for (size_t i=0; i<luminaires.size(); ++i)
 		m_renderer->registerShaderForResource(luminaires[i]);
+
+	if (m_scene->hasBackgroundLuminaire() && 
+		m_renderer->getShaderForResource(m_scene->getBackgroundLuminaire()) != NULL) {
+		Shader *shader = m_renderer->getShaderForResource(m_scene->getBackgroundLuminaire());
+		m_backgroundDependencies = VPLDependencyNode(shader);
+		int id = 0;
+		std::ostringstream oss;
+		std::string evalName = m_backgroundDependencies.recursiveGenerateCode(oss, id);
+
+		m_backgroundProgram = m_renderer->createGPUProgram("Background program");
+		m_backgroundProgram->setSource(GPUProgram::EVertexProgram,
+			"uniform mat4 clipToWorld;\n"
+			"varying vec3 d;\n"
+			"void main() {\n"
+			"	gl_Position = ftransform();\n"
+			"	vec4 tmp = clipToWorld * (gl_ModelViewProjectionMatrix * gl_Vertex);\n"
+			"   d = tmp.xyz/tmp.w;"
+			"}\n"
+		);
+
+		oss << "varying vec3 d;" << endl
+			<< "uniform vec3 camPos;" << endl
+			<< "void main() {" << endl
+			<< "  gl_FragColor.rgb = " << evalName << "_background(normalize(d - camPos));" << endl
+			<< "  gl_FragColor.a = 1.0;" << endl
+			<< "}" << endl;
+
+		m_backgroundProgram->setSource(GPUProgram::EFragmentProgram, oss.str());
+		m_backgroundProgram->init();
+
+		id = 0;
+		m_backgroundDependencies.recursiveResolve(m_backgroundProgram, id);
+	}
+
 	m_initialized = true;
 }
 
-bool VPLShaderManager::setVPL(const VPL &vpl) {
+void VPLShaderManager::setVPL(const VPL &vpl) {
 	Point p = vpl.its.p + vpl.its.shFrame.n * 0.01;
 	Intersection its;
 
@@ -154,8 +189,12 @@ bool VPLShaderManager::setVPL(const VPL &vpl) {
 	nearClip = std::min(nearClip, (Float) 0.001f);
 	farClip = std::min(farClip * 1.5f, m_maxClipDist);
 
-	if (farClip < 0 || nearClip >= farClip)
-		return false;
+	if (farClip < 0 || nearClip >= farClip) {
+		/* Unable to find any surface - just default values based on the scene size */
+		nearClip = 1e-3 * m_scene->getBSphere().radius;
+		farClip = 1e3 * m_scene->getBSphere().radius;
+		m_minDist = 0;
+	}
 
 	m_nearClip = nearClip;
 	m_invClipRange = 1/(farClip-nearClip);
@@ -164,8 +203,8 @@ bool VPLShaderManager::setVPL(const VPL &vpl) {
 	m_shadowMap->activateTarget();
 	if (m_singlePass && m_shadowProgram != NULL) {
 		/* "Fancy": render the whole cube map in a single pass using 
-		  a geometry program. On anything but brand-new hardware, this 
-		  is actually slower. */
+		   a geometry program. On anything but brand-new hardware, this 
+		   is actually slower. */
 
 		m_shadowMap->activateSide(-1);
 		m_shadowMap->clear();
@@ -221,8 +260,6 @@ bool VPLShaderManager::setVPL(const VPL &vpl) {
 		m_altShadowProgram->unbind();
 	}
 	m_shadowMap->releaseTarget();
-
-	return true;
 }
 
 void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminaire *luminaire, const Point &camPos) {
@@ -319,6 +356,8 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "   vec3 wi = vec3(dot(S, nCamVec)," << endl
 			<< "                  dot(T, nCamVec)," << endl
 			<< "                  dot(N, nCamVec));" << endl
+			<< "   if (wi.z < 0)" << endl
+			<< "      discard;" << endl
 			<< "   vec3 vplWo = -vec3(dot(vplS, nLightVec)," << endl
 			<< "                      dot(vplT, nLightVec)," << endl
 			<< "                      dot(vplN, nLightVec));" << endl
@@ -331,7 +370,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 				oss << "                      * " << vplEvalName << "_dir(vplWo)" << endl;
 			if (vpl.type == ESurfaceVPL || (vpl.type == ELuminaireVPL 
 					&& (vpl.luminaire->getType() & Luminaire::EOnSurface)))
-				oss << "                      * vplPower * shadow * abs(cosTheta(wo)*cosTheta(vplWo)) / (d*d)";
+				oss << "                      * vplPower * shadow * abs(cosTheta(wo) * cosTheta(vplWo)) / (d*d)";
 			else 
 				oss << "                      * vplPower * shadow * abs(cosTheta(wo)) / (d*d)";
 		if (luminaire != NULL) {
@@ -343,6 +382,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 		}
 		oss << "   gl_FragColor.a = 1.0;" << endl
 			<< "}" << endl;
+
 		program->setSource(GPUProgram::EFragmentProgram, oss.str());
 		program->init();
 
@@ -389,6 +429,20 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 	m_targetConfig.bind(program, config, textureUnitOffset);
 }
 
+void VPLShaderManager::drawBackground(const Transform &clipToWorld, const Point &camPos) {
+	if (m_backgroundProgram == NULL)
+		return;
+	int textureUnitOffset = 0;	
+	m_backgroundProgram->bind();
+	m_backgroundDependencies.recursiveBind(m_backgroundProgram, 
+		m_backgroundDependencies, textureUnitOffset);
+	m_backgroundProgram->setParameter("clipToWorld", clipToWorld, false);
+	m_backgroundProgram->setParameter("camPos", camPos, false);
+	m_renderer->blitQuad(false);
+	m_backgroundProgram->unbind();
+	m_backgroundDependencies.recursiveUnbind();
+}
+
 void VPLShaderManager::unbind() {
 	if (m_current.program && m_current.program->isBound()) {
 		m_targetConfig.unbind();
@@ -406,6 +460,11 @@ void VPLShaderManager::cleanup() {
 
 	if (m_shadowMap)
 		m_shadowMap->cleanup();
+
+	if (m_backgroundProgram) {
+		m_backgroundProgram->cleanup();
+		m_backgroundProgram = NULL;
+	}
 
 	const std::vector<TriMesh *> meshes = m_scene->getMeshes();
 	const std::vector<Luminaire *> luminaires = m_scene->getLuminaires();

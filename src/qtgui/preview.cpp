@@ -117,18 +117,21 @@ void PreviewThread::setSceneContext(SceneContext *context, bool swapContext, boo
 		m_queueCV->wait();
 	}
 
-	if (swapContext) {
+	if (swapContext && m_context) {
 		m_context->vpls = m_vpls;
 		m_context->previewBuffer = temp[0];
 		m_context->previewBuffer.buffer->disassociate();
 		m_recycleQueue.push_back(PreviewQueueEntry(m_queueEntryIndex++));
+		
+		/* Put back all buffers */
+		for (size_t i=1; i<temp.size(); ++i)
+			m_recycleQueue.push_back(temp[i]);
+	} else {
+		for (size_t i=0; i<temp.size(); ++i)
+			m_recycleQueue.push_back(temp[i]);
 	}
 
-	/* Put back all buffers */
-	for (size_t i=swapContext? 1 : 0; i<temp.size(); ++i)
-		m_recycleQueue.push_back(temp[i]);
-
-	if (swapContext && context->previewBuffer.vplSampleOffset > 0) {
+	if (swapContext && context && context->previewBuffer.vplSampleOffset > 0) {
 		/* Resume from a stored state */
 		m_vplSampleOffset = context->previewBuffer.vplSampleOffset;
 		m_vpls = context->vpls;
@@ -155,7 +158,6 @@ void PreviewThread::setSceneContext(SceneContext *context, bool swapContext, boo
 		m_vplSampleOffset = 0;
 		m_vpls.clear();
 		m_accumBuffer = NULL;
-		swapContext = false;
 	}
 
 	if (m_context != context)
@@ -323,25 +325,14 @@ void PreviewThread::run() {
 					m_timer->reset();
 				}
 
-				int unsuccessfulAttempts = 0;
-				while (true) {
-					if (m_vpls.empty())
-						m_vplSampleOffset = generateVPLs(m_context->scene, m_vplSampleOffset,
-							1, m_context->pathLength, m_vpls);
+				if (m_vpls.empty())
+					m_vplSampleOffset = generateVPLs(m_context->scene, m_vplSampleOffset,
+						1, m_context->pathLength, m_vpls);
 
-					VPL vpl = m_vpls.front();
-					m_vpls.pop_front();
+				VPL vpl = m_vpls.front();
+				m_vpls.pop_front();
 
-					if (rtrtRenderVPL(target, vpl)) {
-						break;
-					} else {
-						if (unsuccessfulAttempts++ > 50) {
-							Log(EError, "Something is fishy about this scene -- unable to "
-								" render 50 VPLs in a row, disabling the preview feature."); 
-						}
-					}
-				}
-
+				rtrtRenderVPL(target, vpl);
 			} else {
 				if (m_shaderManager == NULL || m_shaderManager->getScene() != m_context->scene) {
 					if (m_shaderManager) {
@@ -370,24 +361,15 @@ void PreviewThread::run() {
 					m_timer->reset();
 				}
 
-				int unsuccessfulAttempts = 0;
-				while (true) {
-					if (m_vpls.empty())
-						m_vplSampleOffset = generateVPLs(m_context->scene, m_vplSampleOffset,
-							1, m_context->pathLength, m_vpls);
+				if (m_vpls.empty())
+					m_vplSampleOffset = generateVPLs(m_context->scene, m_vplSampleOffset,
+						1, m_context->pathLength, m_vpls);
 
-					VPL vpl = m_vpls.front();
-					m_vpls.pop_front();
+				VPL vpl = m_vpls.front();
+				m_vpls.pop_front();
 
-					if (oglRenderVPL(target, vpl)) {
-						break;
-					} else {
-						if (unsuccessfulAttempts++ > 50) {
-							Log(EError, "Something is fishy about this scene -- unable to "
-								" render 50 VPLs in a row, disabling the preview feature."); 
-						}
-					}
-				}
+				oglRenderVPL(target, vpl);
+				
 				if (m_useSync)
 					target.sync->init(); 
 			}
@@ -454,11 +436,10 @@ void PreviewThread::run() {
 	MTS_AUTORELEASE_END()
 }
 
-bool PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
+void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	const std::vector<TriMesh *> meshes = m_context->scene->getMeshes();
 
-	if (!m_shaderManager->setVPL(vpl)) 
-		return false;
+	m_shaderManager->setVPL(vpl);
 
 	Point2 jitter(.5f, .5f);
 	if (!m_motion)
@@ -467,12 +448,15 @@ bool PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	m_mutex->lock();
 	const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>
 		(m_context->scene->getCamera());
-	m_renderer->setCamera(camera->getGLProjectionTransform(jitter).getMatrix(),
-		m_camViewTransform.getMatrix());
+	Transform projectionTransform = camera->getGLProjectionTransform(jitter);
+	m_renderer->setCamera(projectionTransform.getMatrix(), m_camViewTransform.getMatrix());
+	Transform clipToWorld = m_camViewTransform.inverse() 
+		* Transform::scale(Vector(1, 1, -1)) * projectionTransform.inverse();
+
 	target.vplSampleOffset = m_vplSampleOffset;
 	Point camPos = m_camPos;
 	m_mutex->unlock();
-	
+
 	m_framebuffer->activateTarget();
 	m_framebuffer->clear();
 	m_renderer->beginDrawingMeshes();
@@ -482,8 +466,9 @@ bool PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 		m_renderer->drawTriMesh(meshes[j]);
 		m_shaderManager->unbind();
 	}
-	m_framebuffer->releaseTarget();
 	m_renderer->endDrawingMeshes();
+	m_shaderManager->drawBackground(clipToWorld, camPos);
+	m_framebuffer->releaseTarget();
 
 	target.buffer->activateTarget();
 	m_renderer->setDepthMask(false);
@@ -521,10 +506,9 @@ bool PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 			m_renderer->finish();
 		}
 	}
-	return true;
 }
 
-bool PreviewThread::rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
+void PreviewThread::rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	Float nearClip =  std::numeric_limits<Float>::infinity(),
 		  farClip  = -std::numeric_limits<Float>::infinity();
 
@@ -549,10 +533,14 @@ bool PreviewThread::rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 		}
 	}
 
-	if (nearClip >= farClip)
-		return false;
-
 	Float minDist = nearClip + (farClip - nearClip) * m_context->clamping;
+
+	if (nearClip >= farClip) {
+		/* Unable to find any surface - just default values based on the scene size */
+		nearClip = 1e-3 * m_context->scene->getBSphere().radius;
+		farClip = 1e3 * m_context->scene->getBSphere().radius;
+		minDist = 0;
+	}
 
 	Point2 jitter(.5f, .5f);
 	if (!m_motion)
@@ -574,6 +562,4 @@ bool PreviewThread::rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	target.vplSampleOffset = m_vplSampleOffset;
 	m_raysPerSecond += m_previewProc->getRayCount();
 	m_accumBuffer = target.buffer;
-
-	return true;
 }
