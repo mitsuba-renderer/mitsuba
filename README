@@ -103,7 +103,7 @@ Getting started:
     this can be done using the script "setpath.sh":
 
         $ . setpath.sh
-	
+
 	On Windows, all relevant files are installed to 'dist' and the binaries
 	should be executed from there. 
 
@@ -112,7 +112,7 @@ Getting started:
         $ mtsgui scenes/cornell/box.xml
 
     Rendering can be started by pressing the 'r' key. 
-	
+
 	The 'mitsuba' binary is an alternative non-interactive rendering 
 	frontend for command-line use and batch job operation.
 

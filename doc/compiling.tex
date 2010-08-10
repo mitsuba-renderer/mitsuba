@@ -1,8 +1,8 @@
 \section{Compiling the renderer}
 To compile Mitsuba, you will need a recent C++ compiler (e.g. GCC 4.1+ or 
 Visual Studio 2005+) and some additional libraries, which Mitsuba uses internally. 
-Builds on all three supported platforms are performed in a unified manner
-using SCons (\url{http://www.scons.org}), a flexible python-based 
+Builds on all three supported platforms are done using a unified system
+based on SCons (\url{http://www.scons.org}), a flexible python-based 
 software construction tool. There are some minor differences between operating systems though: for
 more details, please refer to one of the next sections depending on which one you use.
 
@@ -91,8 +91,10 @@ Having installed these dependencies, run the ``Visual Studio 2008 Command
 Prompt'' from the Start Menu (pick the \code{x86} version if you have the choice beetween \code{x86} and \code{x64}). Afterwards,
 navigate to the Mitsuba directory and run \code{scons}. 
 In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the \code{scons} command.
-If all goes well, the build process will finish after a few
-minutes and the newly created binaries can be found in the \code{dist} directory.
+
+If all goes well, the build process will finish successfully after a few
+minutes. In comparison to the other platforms, you don't have to run the \code{setpath.sh} script at this point. 
+All binaries are now located in the \code{dist} directory, and they should be executed directly from there.
 
 \subsection{Building on Mac OS X}
 On Mac OS X, you will need to install both scons (\code{www.scons.org}) and 

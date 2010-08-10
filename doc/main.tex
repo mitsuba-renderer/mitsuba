@@ -88,6 +88,8 @@
 	{}
 \lstnewenvironment{shell}{\lstset{language=bash}}
 	{}
+\lstnewenvironment{console}[1][]{\lstset{basicstyle=\footnotesize\ttfamily, float, #1}}
+	{}
 
 % ----- 8< ----- 8< ------
 
@@ -102,12 +104,15 @@
 \clearpage
 \ofoot[\pagemark]{\pagemark}
 
+\tableofcontents
+
 \include{introduction}
 \include{compiling}
 \include{basics}
+\include{format}
 \include{integrator}
 \include{parallelization}
+\include{acknowledgements}
 
-\tableofcontents
 
 \end{document}
