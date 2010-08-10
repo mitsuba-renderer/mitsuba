@@ -19,6 +19,7 @@ public:
 
 	inline const QString &getName() const { return m_itemName; }
 	inline int getImportance() const { return m_importance; }
+	inline void setValue(const QVariant &value) { m_itemValue = value; }
 
 	void appendChild(TreeItem *child);
 	void removeChild(TreeItem *child);

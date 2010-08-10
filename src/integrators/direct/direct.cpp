@@ -7,8 +7,7 @@ MTS_NAMESPACE_BEGIN
  * the power heuristic. Takes a user-specifiable amount of luminaire
  * and BSDF samples By setting one of the strategies to zero, this 
  * class can effectively be turned into a luminaire sampling or
- * BSDF sampling-based integrator. Ignores participating media if
- * they are present.
+ * BSDF sampling-based integrator. Ignores participating media.
  */
 class MIDirectIntegrator : public SampleIntegrator {
 public:

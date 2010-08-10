@@ -1,3 +1,8 @@
+2010-08-09  Wenzel Jakob <wenzel@cs.cornell.edu>
+
+	* rendersettingsdlg.cpp: Try to maintain the number of 
+		samples/pixel when switching between different samplers.
+
 2010-08-05  Wenzel Jakob <wenzel@cs.cornell.edu>
 	
 	* constant.cpp, src/libhw/vpl.cpp: Support for image environment 
