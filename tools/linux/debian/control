@@ -1,0 +1,21 @@
+Source: mitsuba
+Section: graphics
+Priority: optional
+Maintainer: Wenzel Jakob <wenzel@cs.cornell.edu>
+Build-Depends: debhelper (>= 7), build-essential, scons, qt4-dev-tools,
+	libpng12-dev, libjpeg62-dev, libilmbase-dev, libopenexr-dev, 
+	libxerces-c2-dev, libboost-dev, libglewmx1.5-dev, libxxf86vm-dev,
+	collada-dom-dev, libboost-system-dev, libboost-filesystem-dev
+Standards-Version: 3.8.3
+Homepage: http://www.mitsuba-renderer.org
+
+Package: mitsuba
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libqt4-core, libqt4-gui, libqt4-network, libqt4-opengl, libqt4-xml, libpng12-0, libjpeg62, 
+	libilmbase6, libopenexr6, libxerces-c28, libboost-filesystem1.40.0, libboost-system1.40.0, libglewmx1.5, libxxf86vm1, collada-dom2.2
+Description: 
+ Mitsuba is an extensible rendering framework written in portable C++. It implements unbiased as well as biased techniques and contains heavy optimizations targeted towards current CPU architectures. 
+ .
+ The program currently runs on Linux, MacOS X and Microsoft Windows and makes use of SSE2 optimizations on x86 and x86_64 platforms. So far, its main use has been as a testbed for algorithm development in computer graphics, but there are many other interesting applications.
+ .
+ Mitsuba comes with a command-line interface as well as a graphical frontend to interactively explore scenes. While navigating, a rough preview is shown that becomes increasingly accurate as soon as all movements are stopped. Once a viewpoint has been chosen, a wide range of rendering techniques can be used to generate images, and their parameters can be tuned from within the program. 
