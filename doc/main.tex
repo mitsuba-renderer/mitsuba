@@ -1,0 +1,108 @@
+\documentclass[footexclude,12pt,DIV11]{scrartcl}
+
+% Wenzel's standard prelude
+% ----- 8< ----- 8< ------
+
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{lmodern}
+\usepackage{charter}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{color}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{enumerate}
+\usepackage[utf8]{inputenc}
+
+\setcounter{tocdepth}{2}
+
+\usepackage[
+	bookmarks
+	,bookmarksnumbered
+	,colorlinks
+	,linkcolor=myblue
+	,urlcolor=myblue
+	,citecolor=myblue
+	,pdfpagelabels
+	,pdftitle={Mitsuba documentation}
+	,pdfauthor={Wenzel Jakob}
+	,pdfstartview=FitH
+]{hyperref}
+
+\typearea[current]{last}
+\raggedbottom
+
+\usepackage[expansion=false]{microtype}
+%\UseMicrotypeSet[protrusion]{basictext}
+
+\renewcommand*\ttdefault{txtt}
+
+\usepackage{scrpage2}
+\ofoot[]{}
+\cfoot[]{}
+\ihead{\sc\leftmark}
+\ohead{\sc\rightmark}
+\chead{}
+\setheadsepline{.2pt}
+\automark[section]{chapter}
+\setkomafont{pagenumber}{\normalfont}
+\addtokomafont{sectioning}{\color{myblue}\rmfamily}
+\addtokomafont{descriptionlabel}{\rmfamily}
+\pagestyle{scrheadings}
+
+\definecolor{myblue}{rgb}{0,.1,.6}
+\definecolor{myred}{rgb}{0.63,.16,.16}
+\definecolor{lstshade}{gray}{0.94}
+\definecolor{lstframe}{gray}{0.75}
+\definecolor{lstcomment}{gray}{0.5}
+
+% Citations
+\newcommand{\cfig}[1]{\mbox{Figure \ref{fig:#1}}}
+\newcommand{\clst}[1]{\mbox{Listing \ref{lst:#1}}}
+
+\newcommand{\code}[1]{\texttt{#1}}
+
+% Listings settings
+\lstset{
+	mathescape = true,
+	captionpos = b,
+	frame = single,
+	backgroundcolor = \color{lstshade},
+	rulecolor = \color{lstframe},
+	tabsize = 4,
+	columns = flexible,
+	keepspaces,
+	belowskip = \smallskipamount,
+	keywordstyle = \bfseries,
+	commentstyle=\color{lstcomment}\itshape,
+	basicstyle = \small\ttfamily,
+	breaklines = true
+}
+
+\lstnewenvironment{cpp}{\lstset{language=c++}}
+	{}
+\lstnewenvironment{xml}{\lstset{language=xml}}
+	{}
+
+% ----- 8< ----- 8< ------
+
+\title{
+	Mitsuba Documentation
+}
+\author{Wenzel Jakob}
+\date{\today}
+
+\begin{document}
+\maketitle
+\clearpage
+\ofoot[\pagemark]{\pagemark}
+
+\include{integrator}
+\include{parallelization}
+
+\tableofcontents
+
+\end{document}
