@@ -172,7 +172,7 @@ void RenderSettingsDialog::update() {
 		if (samplerProps.hasProperty("sampleCount"))
 			sampleCount = samplerProps.getInteger("sampleCount");
 		else if (samplerProps.hasProperty("resolution"))
-			sampleCount = std::pow(samplerProps.getInteger("resolution"), 2);
+			sampleCount = (int) std::pow((Float) samplerProps.getInteger("resolution"), (Float) 2);
 	}
 	
 	m_integratorNode = m_model->updateClass(m_integratorNode,
@@ -208,7 +208,7 @@ void RenderSettingsDialog::update() {
 			if (treeItem->getName() == "sampleCount") {
 				treeItem->setValue(sampleCount);
 			} else if (treeItem->getName() == "resolution") {
-				treeItem->setValue((int) std::sqrt(sampleCount));
+				treeItem->setValue((int) std::sqrt((Float) sampleCount));
 			}
 		}
 	}
