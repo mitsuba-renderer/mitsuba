@@ -299,7 +299,8 @@ void writeGeometry(std::string id, int geomIndex, std::string matID, Transform t
 		os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
 		os << "\t\t</transform>" << endl;
 	}
-	os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
+	if (matID != "") 
+		os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
 	os << "\t</shape>" << endl << endl;
 }
 
@@ -326,9 +327,12 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 		tess_nSources = data->nSources;
 		for (size_t j=0; j<indices.getCount(); ++j)
 			tess_data.push_back(indices[j]);
-		if (matLookupTable.find(triangles->getMaterial()) == matLookupTable.end())
-			SLog(EError, "Referenced material could not be found!");
-		writeGeometry(xmlName, geomIndex, matLookupTable[triangles->getMaterial()], transform, os, data);
+		std::string matID;
+		if (triangles->getMaterial() == NULL || matLookupTable.find(triangles->getMaterial()) == matLookupTable.end())
+			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
+		else
+			matID = matLookupTable[triangles->getMaterial()];
+		writeGeometry(xmlName, geomIndex, matID, transform, os, data);
 		delete data;
 		++geomIndex;
 	}
@@ -359,14 +363,14 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 			gluTessEndPolygon(tess);
 			delete[] temp;
 		}
-	
-		if (polygons->getMaterial() == NULL) 
-			SLog(EError, "No material reference specified!");
 
-		if (matLookupTable.find(polygons->getMaterial()) == matLookupTable.end())
-			SLog(EError, "Referenced material could not be found!");
+		std::string matID;
+		if (polygons->getMaterial() == NULL || matLookupTable.find(polygons->getMaterial()) == matLookupTable.end())
+			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
+		else
+			matID = matLookupTable[polygons->getMaterial()];
 
-		writeGeometry(xmlName, geomIndex, matLookupTable[polygons->getMaterial()], transform, os, data);
+		writeGeometry(xmlName, geomIndex, matID, transform, os, data);
 		delete data;
 		++geomIndex;
 	}
@@ -400,13 +404,13 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 			delete[] temp;
 		}
 
-		if (polylist->getMaterial() == NULL) 
-			SLog(EError, "No material reference specified!");
+		std::string matID;
+		if (polylist->getMaterial() == NULL || matLookupTable.find(polylist->getMaterial()) == matLookupTable.end())
+			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
+		else
+			matID = polylist->getMaterial();
 
-		if (matLookupTable.find(polylist->getMaterial()) == matLookupTable.end())
-			SLog(EError, "Referenced material could not be found!");
-
-		writeGeometry(xmlName, geomIndex, matLookupTable[polylist->getMaterial()], transform, os, data);
+		writeGeometry(xmlName, geomIndex, matID, transform, os, data);
 		delete data;
 		++geomIndex;
 	}
@@ -692,27 +696,29 @@ void loadNode(Transform transform, std::ostream &os, domNode &node) {
 			);
 		}
 	}
-	
+
 	/* Iterate over all geometry references */
 	domInstance_geometry_Array &instanceGeometries = node.getInstance_geometry_array();
 	for (size_t i=0; i<instanceGeometries.getCount(); ++i) {
 		domInstance_geometry *inst = instanceGeometries[i];
 		domGeometry *geom = daeSafeCast<domGeometry>(inst->getUrl().getElement());
 		domBind_material *bmat = inst->getBind_material();
-		if (!bmat)
-			SLog(EError, "instance_geometry does not contain a <bind_material> element!");
-		domBind_material::domTechnique_common *technique = bmat->getTechnique_common();
-		if (!technique)
-			SLog(EError, "bind_material does not contain a <technique_common> element!");
-		domInstance_material_Array &instMaterials = technique->getInstance_material_array();
-
 		StringMap matLookupTable;
-		for (size_t i=0; i<instMaterials.getCount(); ++i) {
-			domInstance_material *instMat = instMaterials[i];
-			daeURI &matRef = instMat->getTarget();
-			matRef.resolveElement();
-			domMaterial *material = daeSafeCast<domMaterial>(matRef.getElement());
-			matLookupTable[instMat->getSymbol()] = material->getId();
+		if (bmat) {
+			domBind_material::domTechnique_common *technique = bmat->getTechnique_common();
+			if (!technique)
+				SLog(EError, "bind_material does not contain a <technique_common> element!");
+			domInstance_material_Array &instMaterials = technique->getInstance_material_array();
+
+			for (size_t i=0; i<instMaterials.getCount(); ++i) {
+				domInstance_material *instMat = instMaterials[i];
+				daeURI &matRef = instMat->getTarget();
+				matRef.resolveElement();
+				domMaterial *material = daeSafeCast<domMaterial>(matRef.getElement());
+				matLookupTable[instMat->getSymbol()] = material->getId();
+			}
+		} else {
+			SLog(EWarn, "instance_geometry does not contain a <bind_material> element!");
 		}
 
 		if (!geom)
