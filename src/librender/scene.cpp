@@ -183,6 +183,8 @@ void Scene::configure() {
 		m_integrator->configure();
 	}
 	if (m_camera == NULL) {
+		Log(EWarn, "No camera found -- adding a default camera");
+
 		Properties props("perspective");
 		/* Create a perspective camera with 45deg. FOV, which can see the whole scene */
 		AABB aabb;
@@ -199,6 +201,11 @@ void Scene::configure() {
 		m_camera = static_cast<Camera *> (PluginManager::getInstance()->createObject(Camera::m_theClass, props));
 		m_camera->configure();
 		m_sampler = m_camera->getSamplerX();
+	}
+	
+	if (m_luminaires.size() == 0) {
+		Log(EWarn, "No luminaires found -- adding a constant environment source");
+		addChild("", PluginManager::getInstance()->createObject(Luminaire::m_theClass, Properties("constant")));
 	}
 
 	if (m_media.size() > 1)

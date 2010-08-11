@@ -1,1 +1,123 @@
 \section{Scene file format}
+Mitsuba uses a very simple and general XML-based format to represent scenes.  
+The framework's underlying approach is to represents discrete blocks of functionality as plugins, 
+hence a scene file can essentially be interpreted as description that determines which 
+plugins should be instantiated and how they should be interface with each other.
+In the following, we'll look at a few examples to get a feeling for the scope of the
+format.
+
+An simple scene might looks like this
+\begin{xml}
+<?xml version="1.0" encoding="utf-8"?>
+<scene>
+	<shape type="obj">
+		<string name="filename" value="dragon.obj"/>
+	</shape>
+</scene>
+\end{xml}
+This example already contains the most important things to know about format: you can have
+\emph{objects} (such as the objects instantiated by the \code{scene} or \code{shape} tags), which are allowed to be nested within
+each other. Each object optionally accepts \emph{properties} (such as \code{string}),
+which further characterize its behavior. All objects except for the root object (the \code{scene})
+cause the renderer to load and instantiate a plugin, hence you must provide the plugin name using
+\code{type=".."} parameter. 
+
+The tags let the renderer know what kind of object is to be instantiated: for instance \code{obj} is a
+WaveFront OBJ loader, which conforms to the \emph{Shape} interface. Similarly,
+you could write
+\begin{xml}
+<?xml version="1.0" encoding="utf-8"?>
+<scene>
+	<shape type="sphere">
+		<float name="radius" value="10"/>
+	</shape>
+</scene>
+\end{xml}
+This loads a different plugin (\code{sphere}) which is still a \emph{Shape}, but instead represents 
+a sphere configured with a radius of 10 world-space units. Mitsuba ships with 
+a large number of plugins; please refer to the next chapter for a reference.
+
+The most common scene setup is to declare an integrator, some geometry, a camera, a film, a sampler  
+and one or more luminaires. Here is a more complex example:
+\begin{xml}
+<?xml version="1.0" encoding="utf-8"?>
+<scene>
+	<integrator type="path"> <!-- Path trace an 8-bounce GI solution -->
+		<integer name="maxDepth" value="8"/>
+	</integrator>
+
+	
+	<!-- Instantiate a perspective camera with 45 degrees field of view -->
+	<camera type="perspective">
+		<!-- Rotate the camera around the Y axis by 180 degrees -->
+		<transform name="toWorld">
+			<rotate y="1" angle="180"/>
+		</transform>
+		<float name="fov" value="45"/>
+
+		<!-- Render with 32 samples per pixel using a basic
+             independent sampling strategy -->
+		<sampler type="independent">
+			<integer name="sampleCount" value="32"/>
+		</sampler>
+
+		<!-- Generate an EXR image at HD resolution -->
+		<film type="exrfilm">
+			<integer name="width" value="1920"/>
+			<integer name="height" value="1080"/>
+		</film>
+	</camera>
+
+	<!-- Add a dragon mesh made of rough glass (stored as OBJ) -->
+	<shape type="obj">
+		<string name="filename" value="dragon.obj"/>
+
+		<bsdf type="roughglass">
+			<!-- Tweak the roughness parameter of the material -->
+			<float name="alphaB" value="0.01"/>
+		</bsdf>
+	</shape>
+
+	<!-- Add a mesh stored using a more compact representation -->
+	<shape type="serialized">
+		<string name="filename" value="lightsource.serialized"/>
+		<transform name="toWorld">
+			<translate x="5" x="-3" z="1"/>
+		</transform>
+
+		<!-- This mesh is an area luminaire -->
+		<luminaire type="area">
+			<rgb name="intensity" value="100,400,100"/>
+		</luminaire>
+	</shape>
+</scene>
+\end{xml}
+This example introduces several new object types (\code{integrator, camera, sampler, film, bsdf}, and \code{luminaire})
+and a few property types (\code{integer}, \code{transform}, and \code{rgb}). 
+Objects are usually declared at the top level except if there is some
+inherent relation that links them to another object. For example, BSDFs are usually specific to a certain geometric object, so 
+they appear as a child object of a shape. Similarly, the sampler and film both affect the way in which
+rays are generated from the camera, hence they are nested inside it.
+
+Note that you should always put properties before nested child objects, otherwise you'll see something like the following slightly cryptic
+ XML validation error. For instance,
+\begin{xml}
+...
+	<shape type="obj">
+		<bsdf type="phong"/>
+		<string name="filename" value="lucy.obj"/>
+	</shape>
+...
+\end{xml}
+produces 
+\begin{shell}
+Caught a critical exeption: 2010-08-11 03:23:31 ERROR main [src/mitsuba/shandler.cpp:359] Error in file "/home/wenzel/mitsuba/test.xml" (line 63): Element 'string' is not valid $\texttt{for}$ content model: '(((integer|float|point|vector|boolean|transform|string|spectrum|rgb)|blackbody),((bsdf|subsurface|ref)|luminaire))'
+\end{shell}
+\subsection{Property types}
+\subsubsection{Numbers}
+\subsubsection{Spectra}
+\subsubsection{Transformations}
+\subsubsection{Vectors, Positions}
+\subsubsection{Strings}
+\subsection{Instancing materials}
+\subsection{Including external files}
