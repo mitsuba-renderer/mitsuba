@@ -543,6 +543,18 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 		os << "\t\t</transform>" << endl;
 		os << "\t</luminaire>" << endl << endl;
 	}
+
+	domLight::domTechnique_common::domDirectional *directional = light.getTechnique_common()->getDirectional().cast();
+	if (directional) {
+		domFloat3 &color = directional->getColor()->getValue();
+		os << "\t<luminaire id=\"" << light.getId() << "\" type=\"directional\">" << endl;
+		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
+		os << "\t\t<transform name=\"toWorld\">" << endl;
+		os << "\t\t\t<lookAt ox=\"" << pos.x << "\" oy=\"" << pos.y << "\" oz=\"" << pos.z << "\" tx=\"" << target.x << "\" ty=\"" << target.y << "\" tz=\"" << target.z << "\"/>" << endl;
+		os << "\t\t</transform>" << endl << endl;
+		os << "\t</luminaire>" << endl << endl;
+	}
+
 	domLight::domTechnique_common::domSpot *spot = light.getTechnique_common()->getSpot().cast();
 	if (spot) {
 		domFloat3 &color = spot->getColor()->getValue();
@@ -564,7 +576,7 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
 		os << "\t</luminaire>" << endl << endl;
 	}
-	if (!point && !spot && !ambient)
+	if (!point && !spot && !ambient && !directional)
 		SLog(EWarn, "Encountered an unknown light type!");
 }
 
