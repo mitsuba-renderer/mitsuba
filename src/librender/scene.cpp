@@ -202,11 +202,6 @@ void Scene::configure() {
 		m_camera->configure();
 		m_sampler = m_camera->getSamplerX();
 	}
-	
-	if (m_luminaires.size() == 0) {
-		Log(EWarn, "No luminaires found -- adding a constant environment source");
-		addChild("", PluginManager::getInstance()->createObject(Luminaire::m_theClass, Properties("constant")));
-	}
 
 	if (m_media.size() > 1)
 		Log(EError, "Scenes are currently restricted to at most one participating medium.");
@@ -245,8 +240,10 @@ void Scene::initialize() {
 	}
 
 	if (!m_luminairePDF.isReady()) {
-		if (m_luminaires.size() == 0)
-			Log(EError, "The scene contains no light sources! Aborting..");
+		if (m_luminaires.size() == 0) {
+			Log(EWarn, "No luminaires found -- adding a constant environment source");
+			addChild("", PluginManager::getInstance()->createObject(Luminaire::m_theClass, Properties("constant")));
+		}
 
 		/* Calculate a discrete PDF to importance sample luminaires */
 		for (std::vector<Luminaire *>::iterator it = m_luminaires.begin();

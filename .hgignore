@@ -38,3 +38,6 @@
 ^plugins/.*\.lib$
 ^plugins/.*\.dll$
 tools/windows/mitsuba_res.res
+^meshes/.*$
+^textures/.*$
+^mitsuba.*.log$
