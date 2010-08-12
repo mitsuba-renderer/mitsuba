@@ -7,6 +7,7 @@
 #include "logwidget.h"
 #include "navdlg.h"
 #include "aboutdlg.h"
+#include "importdlg.h"
 #include "server.h"
 #include "save.h"
 #include <QtNetwork>
@@ -425,9 +426,19 @@ void MainWindow::onBugReportSubmitted() {
 }
 
 void MainWindow::on_actionImport_triggered() {
-	QMessageBox::information(this, tr("Import"),
-		QString("No user interface is has been written yet. Please use the command-line importer for now."),
-		QMessageBox::Ok);
+	ImportDialog *dialog = new ImportDialog(this);
+	dialog->setAttribute(Qt::WA_DeleteOnClose);
+	connect(dialog, SIGNAL(finished(int)), this, SLOT(onImportDialogClose(int)));
+	m_currentChild = dialog;
+	// prevent a tab drawing artifact on Qt/OSX
+	m_activeWindowHack = true;
+	dialog->show();
+	qApp->processEvents();
+	m_activeWindowHack = false;
+}
+
+void MainWindow::onImportDialogClose(int reason) {
+	m_currentChild = NULL;
 }
 
 void MainWindow::on_actionDuplicateTab_triggered() {

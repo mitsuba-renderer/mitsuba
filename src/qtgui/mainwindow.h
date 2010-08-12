@@ -129,6 +129,7 @@ private slots:
 	void onOpenDialogClose(int reason);
 	void onSaveAsDialogClose(int reason);
 	void onRenderSettingsClose(int reason);
+	void onImportDialogClose(int reason);
 
 private:
     Ui::MainWindow *ui;
