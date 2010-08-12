@@ -326,7 +326,7 @@
 			encoding to reduce the storage footprint of photons.
 		</descr>
 		<param name="directSamples" readableName="Direct samples" type="integer" default="1">Number of luminaire samples for direct illumination</param>
-		<param name="glossySamples" readableName="Glossy samples" type="integer" default="1">Number of glossy samples for direct illumination</param>
+		<param name="glossySamples" readableName="Glossy samples" type="integer" default="32">Number of glossy samples for direct illumination</param>
 		<param name="maxDepth" readableName="Maximum depth" type="integer" default="40">Depth cutoff when tracing photons</param>
 		<param name="maxSpecularDepth" readableName="Max. specular bounces" type="integer" default="6">Depth cutoff when recursively tracing specular materials</param>
 		<param name="granularity" readableName="Work unit granularity" importance="1" type="integer" default="1000">Granularity of photon tracing work units (in shot particles)</param>

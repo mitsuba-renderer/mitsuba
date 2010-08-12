@@ -12,6 +12,13 @@ class ImportDialog : public QDialog {
 public:
 	ImportDialog(QWidget *parent);
 	~ImportDialog();
+public slots:
+	void accept();
+protected slots:
+	void on_inputBrowse_clicked(bool checked);
+	void on_directoryBrowse_clicked(bool checked);
+	void on_adjustmentBrowse_clicked(bool checked);
+	void refresh();
 protected:
     void changeEvent(QEvent *e);
 private:

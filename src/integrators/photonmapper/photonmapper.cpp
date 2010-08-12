@@ -14,7 +14,7 @@ public:
 		/* Number of luminaire samples for direct illumination */
 		m_directSamples = props.getInteger("directSamples", 1);
 		/* Number of BSDF samples when intersecting a glossy material */
-		m_glossySamples = props.getInteger("glossySamples", 1);
+		m_glossySamples = props.getInteger("glossySamples", 32);
 		/* Depth to start using russian roulette when tracing photons */
 		m_rrDepth = props.getInteger("rrDepth", 10);
 		/* Depth cutoff when tracing photons */

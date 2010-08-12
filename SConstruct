@@ -408,7 +408,8 @@ if hasCollada:
 		colladaEnv.Append(LIBPATH=env['COLLADALIBDIR'])
 	if env.has_key('COLLADALIB'):
 		colladaEnv.Append(LIBS=env['COLLADALIB'])
-	colladaEnv.Program('mtsimport', darwinStub + ['src/collada/main.cpp'])
+	colladaConverter = colladaEnv.StaticObject('src/collada/converter.cpp')
+	colladaEnv.Program('mtsimport', darwinStub + ['src/collada/main.cpp', colladaConverter])
 
 if hasQt:
 	qtEnv = mainEnv.Clone()

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>358</width>
+    <width>357</width>
     <height>250</height>
    </rect>
   </property>
@@ -67,14 +67,14 @@
     </spacer>
    </item>
    <item row="1" column="4">
-    <widget class="QLineEdit" name="lineEdit">
+    <widget class="QLineEdit" name="inputEdit">
      <property name="readOnly">
       <bool>true</bool>
      </property>
     </widget>
    </item>
    <item row="1" column="5">
-    <widget class="QPushButton" name="pushButton">
+    <widget class="QPushButton" name="inputBrowse">
      <property name="maximumSize">
       <size>
        <width>30</width>
@@ -94,9 +94,9 @@
     </widget>
    </item>
    <item row="2" column="4">
-    <widget class="QLineEdit" name="lineEdit_2">
+    <widget class="QLineEdit" name="directoryEdit">
      <property name="enabled">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="readOnly">
       <bool>true</bool>
@@ -104,9 +104,9 @@
     </widget>
    </item>
    <item row="2" column="5">
-    <widget class="QPushButton" name="pushButton_2">
+    <widget class="QPushButton" name="directoryBrowse">
      <property name="enabled">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -128,39 +128,17 @@
    <item row="3" column="1">
     <widget class="QLabel" name="label_3">
      <property name="text">
-      <string>Target scene :</string>
+      <string>Target scene file :</string>
      </property>
     </widget>
    </item>
    <item row="3" column="4">
-    <widget class="QLineEdit" name="lineEdit_3">
+    <widget class="QLineEdit" name="sceneEdit">
      <property name="enabled">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="readOnly">
       <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="5">
-    <widget class="QPushButton" name="pushButton_4">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>30</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>...</string>
      </property>
     </widget>
    </item>
@@ -179,15 +157,18 @@
    </item>
    <item row="5" column="1" colspan="2">
     <widget class="QLabel" name="label_6">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
      <property name="text">
       <string>Adjustment file :</string>
      </property>
     </widget>
    </item>
    <item row="5" column="4">
-    <widget class="QLineEdit" name="lineEdit_4">
+    <widget class="QLineEdit" name="adjustmentEdit">
      <property name="enabled">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="readOnly">
       <bool>true</bool>
@@ -195,9 +176,9 @@
     </widget>
    </item>
    <item row="5" column="5">
-    <widget class="QPushButton" name="pushButton_3">
+    <widget class="QPushButton" name="adjustmentBrowse">
      <property name="enabled">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
