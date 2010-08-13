@@ -362,6 +362,10 @@ int main(int argc, char **argv) {
 		SLog(EError, "Could not find the required version of winsock.dll!");
 #endif
 
+#if !defined(WIN32)
+	setlocale(LC_NUMERIC, "C");
+#endif
+
 #ifdef __LINUX__
 	FileResolver *resolver = FileResolver::getInstance();
 	resolver->addPath("/usr/share/mitsuba");

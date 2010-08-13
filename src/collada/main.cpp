@@ -53,19 +53,37 @@ void help() {
 		<< "Options/Arguments:" << endl
 		<<  "   -h          Display this help text" << endl << endl
 		<<  "   -s          Assume that colors are in sRGB space." << endl << endl
+		<<  "   -m          Map the larger image side to the full field of view" << endl << endl
+		<<  "   -r <w>x<h>  Override the image resolution to e.g. 1920×1080" << endl << endl
 		<< "Please see the documentation for more information." << endl;
 }
 
 int colladaMain(int argc, char **argv) {
-	bool srgb = false;
-	char optchar;
-	
+	bool srgb = false, mapSmallerSide = true;
+	char optchar, *end_ptr = NULL;
+	int xres = -1, yres = -1;
+
 	optind = 1;
 
-	while ((optchar = getopt(argc, argv, "sh")) != -1) {
+	while ((optchar = getopt(argc, argv, "shmr:")) != -1) {
 		switch (optchar) {
 			case 's':
 				srgb = true;
+				break;
+			case 'm':
+				mapSmallerSide = false;
+				break;
+			case 'r': {
+					std::vector<std::string> tokens = tokenize(optarg, "x");
+					if (tokens.size() != 2)
+						SLog(EError, "Invalid resolution argument supplied!");
+					xres = strtol(tokens[0].c_str(), &end_ptr, 10);
+					if (*end_ptr != '\0')
+						SLog(EError, "Invalid resolution argument supplied!");
+					yres = strtol(tokens[1].c_str(), &end_ptr, 10);
+					if (*end_ptr != '\0')
+						SLog(EError, "Invalid resolution argument supplied!");
+				}
 				break;
 			case 'h':
 			default:
@@ -81,6 +99,8 @@ int colladaMain(int argc, char **argv) {
 
 	ConsoleColladaConverter converter;
 	converter.setSRGB(srgb);
+	converter.setResolution(xres, yres);
+	converter.setMapSmallerSide(mapSmallerSide);
 	converter.convert(argv[optind], "", argv[optind+1], argc > optind+2 ? argv[optind+2] : "");
 
 	return 0;
@@ -129,6 +149,10 @@ int ubi_main(int argc, char **argv) {
 	MTS_AUTORELEASE_END() 
 #endif
 
+#if !defined(WIN32)
+	setlocale(LC_ALL, "C");
+#endif
+
 	try {
 		/* An OpenGL context may be required for the GLU tesselator */
 		ref<Session> session = Session::create();
@@ -149,9 +173,6 @@ int ubi_main(int argc, char **argv) {
 		renderer->shutdown();
 		device->shutdown();
 		session->shutdown();
-	} catch (const std::exception &e) {
-		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
-		retval = -1;
 	} catch(const XMLException &toCatch) {
 		SLog(EError, "Caught a Xerces exception: %s",
 			XMLString::transcode(toCatch.getMessage()));
@@ -159,9 +180,6 @@ int ubi_main(int argc, char **argv) {
 	} catch(const DOMException &toCatch) {
 		SLog(EError, "Caught a Xerces exception: %s",
 			XMLString::transcode(toCatch.getMessage()));
-		retval = -1;
-	} catch (...) {
-		std::cerr << "Caught a critical exeption of unknown type!" << endl;
 		retval = -1;
 	}
 	

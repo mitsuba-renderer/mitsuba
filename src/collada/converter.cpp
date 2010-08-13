@@ -369,7 +369,18 @@ void writeGeometry(std::string id, int geomIndex, std::string matID, Transform t
 
 void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, domGeometry &geom, 
 		StringMap &matLookupTable) {
-	SLog(EInfo, "Converting geometry \"%s\" (instantiated by %s)..", geom.getName(), nodeName.c_str());
+	std::string geomName;
+	if (geom.getName() != NULL) {
+		geomName = geom.getName();
+	} else {
+		if (geom.getId() != NULL) {
+			geomName = geom.getId();
+		} else {
+			static int unnamedGeomCtr = 0;
+			geomName = formatString("unnamedGeom_%i", unnamedGeomCtr);
+		}
+	}
+	SLog(EInfo, "Converting geometry \"%s\" (instantiated by %s)..", geomName.c_str(), nodeName.c_str());
 
 	domMesh *mesh = geom.getMesh().cast();
 	if (!mesh)
@@ -718,7 +729,7 @@ void loadImage(ColladaConverter *cvt, std::ostream &os, domImage &image, StringM
 	os << "\t</texture>" << endl << endl;
 }
 
-void loadCamera(Transform transform, std::ostream &os, domCamera &camera) {
+void loadCamera(ColladaConverter *cvt, Transform transform, std::ostream &os, domCamera &camera) {
 	SLog(EInfo, "Converting camera \"%s\" ..", camera.getName());
 	Float aspect = 1.0f;
 	int xres=768;
@@ -737,6 +748,10 @@ void loadCamera(Transform transform, std::ostream &os, domCamera &camera) {
 	if (ortho) {
 		if (ortho->getAspect_ratio().cast() != 0)
 			aspect = (Float) ortho->getAspect_ratio()->getValue();
+		if (cvt->m_xres != -1) {
+			xres = cvt->m_xres;
+			aspect = (Float) cvt->m_xres / (Float) cvt->m_yres;
+		}
 		os << "\t<camera id=\"" << camera.getId() << "\" type=\"orthographic\">" << endl;
 	}
 
@@ -745,6 +760,10 @@ void loadCamera(Transform transform, std::ostream &os, domCamera &camera) {
 	if (persp) {
 		if (persp->getAspect_ratio().cast() != 0)
 			aspect = (Float) persp->getAspect_ratio()->getValue();
+		if (cvt->m_xres != -1) {
+			xres = cvt->m_xres;
+			aspect = (Float) cvt->m_xres / (Float) cvt->m_yres;
+		}
 		os << "\t<camera id=\"" << camera.getId() << "\" type=\"perspective\">" << endl;
 		if (persp->getXfov().cast()) {
 			Float yFov = radToDeg(2 * std::atan(std::tan(degToRad((Float) persp->getXfov()->getValue())/2) / aspect));
@@ -754,6 +773,7 @@ void loadCamera(Transform transform, std::ostream &os, domCamera &camera) {
 				os << "\t\t<float name=\"fov\" value=\"" << yFov << "\"/>" << endl;
 			os << "\t\t<float name=\"nearClip\" value=\"" << persp->getZnear()->getValue() << "\"/>" << endl;
 			os << "\t\t<float name=\"farClip\" value=\"" << persp->getZfar()->getValue() << "\"/>" << endl;
+			os << "\t\t<boolean name=\"mapSmallerSide\" value=\"" <<*(cvt->m_mapSmallerSide ? "true" : "false") << "\"/>" << endl;
 		} else if (persp->getYfov().cast()) {
 			Float xFov = radToDeg(2 * std::atan(std::tan(degToRad((Float) persp->getYfov()->getValue())/2) * aspect));
 			if (aspect > 1.0f)
@@ -762,6 +782,7 @@ void loadCamera(Transform transform, std::ostream &os, domCamera &camera) {
 				os << "\t\t<float name=\"fov\" value=\"" << xFov << "\"/>" << endl;
 			os << "\t\t<float name=\"nearClip\" value=\"" << persp->getZnear()->getValue() << "\"/>" << endl;
 			os << "\t\t<float name=\"farClip\" value=\"" << persp->getZfar()->getValue() << "\"/>" << endl;
+			os << "\t\t<boolean name=\"mapSmallerSide\" value=\"" << (cvt->m_mapSmallerSide ? "true" : "false") << "\"/>" << endl;
 		}
 	}
 
@@ -780,8 +801,19 @@ void loadCamera(Transform transform, std::ostream &os, domCamera &camera) {
 	os << "\t</camera>" << endl << endl;
 }
 
-void loadNode(Transform transform, std::ostream &os, domNode &node) {
-	SLog(EInfo, "Converting node \"%s\" ..", node.getName());
+void loadNode(ColladaConverter *cvt, Transform transform, std::ostream &os, domNode &node) {
+	std::string nodeName;
+	if (node.getName() != NULL) {
+		nodeName = node.getName();
+	} else {
+		if (node.getId() != NULL) {
+			nodeName = node.getId();
+		} else {
+			static int unnamedNodeCtr = 0;
+			nodeName = formatString("unnamedNode_%i", unnamedNodeCtr);
+		}
+	}
+	SLog(EInfo, "Converting node \"%s\" ..", nodeName.c_str());
 
 	daeTArray<daeSmartRef<daeElement> > children = node.getChildren();
 	/* Parse transformations */
@@ -840,7 +872,7 @@ void loadNode(Transform transform, std::ostream &os, domNode &node) {
 
 		if (!geom)
 			SLog(EError, "Could not find a referenced geometry object!");
-		loadGeometry(node.getName(), transform, os, *geom, matLookupTable);
+		loadGeometry(nodeName, transform, os, *geom, matLookupTable);
 	}
 	
 	/* Iterate over all light references */
@@ -860,13 +892,13 @@ void loadNode(Transform transform, std::ostream &os, domNode &node) {
 		domCamera *camera = daeSafeCast<domCamera>(inst->getUrl().getElement());
 		if (camera == NULL)
 			SLog(EError, "Could not find a referenced camera!");
-		loadCamera(transform, os, *camera);
+		loadCamera(cvt, transform, os, *camera);
 	}
 
 	/* Recursively iterate through sub-nodes */
 	domNode_Array &nodes = node.getNode_array();
 	for (size_t i=0; i<nodes.getCount(); ++i) 
-		loadNode(transform, os, *nodes[i]);
+		loadNode(cvt, transform, os, *nodes[i]);
 
 	/* Recursively iterate through <instance_node> elements */
 	domInstance_node_Array &instanceNodes = node.getInstance_node_array();
@@ -874,7 +906,7 @@ void loadNode(Transform transform, std::ostream &os, domNode &node) {
 		domNode *node = daeSafeCast<domNode>(instanceNodes[i]->getUrl().getElement());
 		if (!node)
 			SLog(EError, "Could not find a referenced node!");
-		loadNode(transform, os, *node);
+		loadNode(cvt, transform, os, *node);
 	}
 }
 
@@ -980,7 +1012,7 @@ void ColladaConverter::convert(const std::string &inputFile,
 	os << "\tAutomatically converted from COLLADA" << endl << endl;
 	os << "-->" << endl << endl;
 	os << "<scene>" << endl;
-	os << "\t<integrator type=\"direct\"/>" << endl << endl;
+	os << "\t<integrator id=\"integrator\" type=\"direct\"/>" << endl << endl;
 
 	SLog(EInfo, "Converting to \"%s\" ..", outputFile.c_str());
 
@@ -1000,7 +1032,7 @@ void ColladaConverter::convert(const std::string &inputFile,
 	}
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
-		loadNode(Transform(), os, *nodes[i]);
+		loadNode(this, Transform(), os, *nodes[i]);
 
 	os << "</scene>" << endl;
 

@@ -3,6 +3,8 @@
 
 MTS_NAMESPACE_BEGIN
 
+const bool importanceSampleComponents = false;
+
 /**
  * Models an interface between two materials with non-matched indices of refraction.
  * The microscopic surface structure is assumed to be perfectly flat, resulting 
@@ -169,15 +171,15 @@ public:
 		/* Calculate the refracted/reflected vectors+coefficients */
 		if (sampleTransmission && sampleReflection) {
 			/* Importance sample according to the reflectance/transmittance */
-			if (bRec.sample.x < fr) {
+			if (bRec.sample.x < importanceSampleComponents ? fr : 0.5f) {
 				reflect(bRec.wi, bRec.wo);
 				bRec.sampledComponent = 0;
 				bRec.sampledType = EDeltaReflection;
-				pdf = fr * std::abs(Frame::cosTheta(bRec.wo));
+				pdf = (importanceSampleComponents ? fr : 0.5f) * std::abs(Frame::cosTheta(bRec.wo));
 				/* Cancel out the cosine term */
 				return m_reflectance * fr;
 			} else {
-				pdf = 1-fr;
+				pdf = importanceSampleComponents ? (1-fr) : 0.5f;
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDeltaTransmission;
 
@@ -217,11 +219,15 @@ public:
 
 		Float result = 0.0f;
 		if (sampleTransmission && sampleReflection) {
-			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-			if (reflection)
-				result = fr;
-			else
-				result = 1-fr;
+			if (!importanceSampleComponents) {
+				result = 0.f;
+			} else {
+				Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+				if (reflection)
+					result = fr;
+				else
+					result = 1-fr;
+			}
 		} else if (sampleReflection) {
 			result = reflection ? 1.0f : 0.0f;
 		} else if (sampleTransmission) {

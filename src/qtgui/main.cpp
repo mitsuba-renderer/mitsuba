@@ -129,6 +129,10 @@ int main(int argc, char *argv[]) {
 #endif
 
 #if !defined(WIN32)
+	setlocale(LC_NUMERIC, "C");
+#endif
+
+#if !defined(WIN32)
 	/* Avoid zombies processes when running the server */
 	struct sigaction sa;
 	sa.sa_handler = collect_zombies;

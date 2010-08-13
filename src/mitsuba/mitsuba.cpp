@@ -364,6 +364,10 @@ int main(int argc, char **argv) {
 	resolver->addPath(__ubi_bundlepath());
 	MTS_AUTORELEASE_END() 
 #endif
+		
+#if !defined(WIN32)
+	setlocale(LC_NUMERIC, "C");
+#endif
 
 	/* Initialize Xerces-C */
 	try {
