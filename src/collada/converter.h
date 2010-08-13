@@ -8,6 +8,7 @@ public:
 		m_srgb = false;
 		m_mapSmallerSide = true;
 		m_xres = m_yres = -1;
+		m_samplesPerPixel = 8;
 	}
 
 	void convert(const std::string &inputFile, 
@@ -17,10 +18,13 @@ public:
 
 	virtual std::string locateResource(const std::string &resource) = 0;
 
-	void setSRGB(bool srgb) { m_srgb = srgb; }
-	void setMapSmallerSide(bool mapSmallerSide) { m_mapSmallerSide = mapSmallerSide; }
-	void setResolution(int xres, int yres) { m_xres = xres; m_yres = yres; }
+	inline void setSRGB(bool srgb) { m_srgb = srgb; }
+	inline void setMapSmallerSide(bool mapSmallerSide) { m_mapSmallerSide = mapSmallerSide; }
+	inline void setResolution(int xres, int yres) { m_xres = xres; m_yres = yres; }
+	inline void setSamplesPerPixel(int samplesPerPixel) { m_samplesPerPixel = samplesPerPixel; }
+	inline const std::string &getFilename() const { return m_filename; }
 public:
 	bool m_srgb, m_mapSmallerSide;
-	int m_xres, m_yres;
+	int m_xres, m_yres, m_samplesPerPixel;
+	std::string m_filename;
 };

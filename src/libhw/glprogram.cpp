@@ -173,10 +173,11 @@ void GLProgram::setParameter(int id, const GPUTexture *value) {
 	if (id == -1)
 		return;
 	const std::set<int> &units = value->getTextureUnits();
-	Assert(units.size() > 0);
-	int unit = *(units.begin());
-
-	glUniform1i(id, unit);
+	if (units.size() > 0) 
+		glUniform1i(id, *(units.begin()));
+	else
+		Log(EWarn, "Unable to supply unbound texture \"%s\" to shader \"%s\"",
+			value->getName().c_str(), getName().c_str());
 }
 
 void GLProgram::setParameter(int id, const Transform &trafo) {

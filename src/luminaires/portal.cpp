@@ -67,7 +67,7 @@ public:
 			parent->configure();
 			m_surfaceArea = m_shape->getSurfaceArea();
 		} else {
-			Log(EError, "An portal light source must be child of a shape instance");
+			Log(EError, "A portal light source must be child of a shape instance");
 		}
 	}
 

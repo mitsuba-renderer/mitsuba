@@ -4,9 +4,9 @@ MTS_NAMESPACE_BEGIN
 
  /**
   * Extended path tracer -- uses multiple importance sampling to combine 
-  * two sampling strategies, namely BSDF and luminaire sampling. This class also
-  * supports volumetric absorption, but does not attempt to solve the
-  * full radiative transfer equation (see <tt>volpath</tt> if this is needed).
+  * two sampling strategies, namely BSDF and luminaire sampling. 
+  * This class does not attempt to solve the full radiative transfer 
+  * equation (see <tt>volpath</tt> if this is needed).
   */
 class MIPathTracer : public MonteCarloIntegrator {
 public:
@@ -63,7 +63,7 @@ public:
 
 			/* Estimate the direct illumination if this is requested */
 			if (rRec.type & RadianceQueryRecord::EDirectRadiance && 
-				scene->sampleLuminaireAttenuated(its, lRec, rRec.nextSample2D())) {
+				scene->sampleLuminaire(its, lRec, rRec.nextSample2D())) {
 				/* Allocate a record for querying the BSDF */
 				const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
 
@@ -101,7 +101,6 @@ public:
 			bool hitLuminaire = false;
 			if (scene->rayIntersect(ray, its)) {
 				ray.mint = 0; ray.maxt = its.t; 
-				pathThroughput *= scene->getAttenuation(ray);
 				/* Intersected something - check if it was a luminaire */
 				if (its.isLuminaire()) {
 					lRec = LuminaireSamplingRecord(its, -ray.d);
@@ -114,7 +113,6 @@ public:
 					lRec.luminaire = scene->getBackgroundLuminaire();
 					lRec.d = -ray.d;
 					hitLuminaire = true;
-					pathThroughput *= scene->getAttenuation(ray);
 				} else {
 					break;
 				}

@@ -431,6 +431,14 @@ if hasQt:
 	qtResources = [qtEnv.Qrc(qrc) for qrc in scanFiles('src/qtgui', ['*.qrc'])]
 
 	qtgui_files = scanFiles('src/qtgui', ['*.cpp']) + qtResources + shandler + resources
+	
+	if hasCollada:
+		qtgui_files += colladaConverter
+		if env.has_key('COLLADALIBDIR'):
+			qtEnv.Append(LIBPATH=env['COLLADALIBDIR'])
+		if env.has_key('COLLADALIB'):
+			qtEnv.Append(LIBS=env['COLLADALIB'])
+
 	if sys.platform == 'darwin':
 		qtEnv_osx = qtEnv.Clone();
 		qtEnv_osx['CXXFLAGS'].remove('-fstrict-aliasing');

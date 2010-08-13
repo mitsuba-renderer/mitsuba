@@ -791,7 +791,7 @@ void loadCamera(ColladaConverter *cvt, Transform transform, std::ostream &os, do
 	os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
 	os << "\t\t</transform>" << endl << endl;
 	os << "\t\t<sampler type=\"ldsampler\">" << endl;
-	os << "\t\t\t<integer name=\"sampleCount\" value=\"8\"/>" << endl;
+	os << "\t\t\t<integer name=\"sampleCount\" value=\"" << cvt->m_samplesPerPixel << "\"/>" << endl;
 	os << "\t\t</sampler>" << endl << endl;
 	os << "\t\t<film type=\"exrfilm\">" << endl;
 	os << "\t\t\t<integer name=\"width\" value=\"" << xres << "\"/>" << endl;
@@ -1093,7 +1093,7 @@ void ColladaConverter::convert(const std::string &inputFile,
 		serializer->setErrorHandler(&errorHandler);
 		XMLFormatTarget *target = new LocalFileFormatTarget(outputFile.c_str());
 		serializer->writeNode(target, *doc);
-
+		delete target;
 		delete wrapper;
 		delete memBufIS;
 		delete serializer;
@@ -1105,5 +1105,6 @@ void ColladaConverter::convert(const std::string &inputFile,
 		ofile << os.str();
 		ofile.close();
 	}
+	m_filename = outputFile;
 }
 
