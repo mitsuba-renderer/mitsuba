@@ -236,6 +236,29 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		specValue.fromLinearRGB(value[0], value[1], value[2]);
 		context.parent->properties.setSpectrum(context.attributes["name"],
 			specValue);
+	} else if (name == "srgb") {
+		std::string valueStr = context.attributes["value"];
+		std::vector<std::string> tokens = tokenize(valueStr, ", ");
+		Float value[3];
+		if (tokens.size() == 1 && tokens[0].length() == 7 && tokens[0][0] == '#') {
+			char *end_ptr = NULL;
+			/* Parse HTML-style hexadecimal colors */
+			int encoded = strtol(tokens[0].c_str()+1, &end_ptr, 16);
+			if (*end_ptr != '\0')
+				SLog(EError, "Invalid sRGB value specified (in <%s>)", context.attributes["name"].c_str());
+			value[0] = ((encoded & 0xFF0000) >> 16) / 255.0f;
+			value[1] = ((encoded & 0x00FF00) >> 8) / 255.0f;
+			value[2] =  (encoded & 0x0000FF) / 255.0f;
+		} else {
+			if (tokens.size() != 3)
+				SLog(EError, "Invalid RGB value specified");
+			for (int i=0; i<3; i++) 
+				value[i] = parseFloat(name, tokens[i]);
+		}
+		Spectrum specValue;
+		specValue.fromSRGB(value[0], value[1], value[2]);
+		context.parent->properties.setSpectrum(context.attributes["name"],
+			specValue);
 	} else if (name == "blackbody") {
 		Float temperature = parseFloat(name, context.attributes["temperature"]);
 		BlackBodySpectrum *spec = new BlackBodySpectrum(temperature);

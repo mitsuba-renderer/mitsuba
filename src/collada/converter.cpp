@@ -1,6 +1,20 @@
 #define BOOST_FILESYSTEM_NO_LIB 
 #define BOOST_SYSTEM_NO_LIB 
 
+#include <xercesc/dom/DOM.hpp>
+#include <xercesc/dom/DOMDocument.hpp>
+#include <xercesc/dom/DOMDocumentType.hpp>
+#include <xercesc/dom/DOMElement.hpp>
+#include <xercesc/dom/DOMImplementation.hpp>
+#include <xercesc/dom/DOMImplementationLS.hpp>
+#include <xercesc/dom/DOMNodeIterator.hpp>
+#include <xercesc/dom/DOMNodeList.hpp>
+#include <xercesc/parsers/XercesDOMParser.hpp>
+#include <xercesc/framework/MemBufInputSource.hpp>
+#include <xercesc/framework/Wrapper4DOMInputSource.hpp>
+#include <xercesc/framework/Wrapper4InputSource.hpp>
+#include <xercesc/framework/LocalFileFormatTarget.hpp>
+#include <xercesc/util/XMLUni.hpp>
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/fresolver.h>
@@ -18,6 +32,8 @@
 #else
 #include <GL/glu.h>
 #endif
+
+XERCES_CPP_NAMESPACE_USE
 
 #include "converter.h"
 
@@ -80,7 +96,87 @@ struct VertexData {
 			delete[] glPos;
 	}
 };
-	
+
+class ImporterDOMErrorHandler : public DOMErrorHandler {
+public:
+	inline ImporterDOMErrorHandler() { }
+
+	bool handleError(const DOMError& domError) {
+		ELogLevel logLevel;
+
+		if (domError.getSeverity() == DOMError::DOM_SEVERITY_WARNING)
+			logLevel = EWarn;
+		else
+			logLevel = EError;
+
+		SLog(logLevel, "%s (line %i, char %i): %s",
+			XMLString::transcode(domError.getLocation()->getURI()),
+			domError.getLocation()->getLineNumber(),
+			domError.getLocation()->getColumnNumber(),
+			XMLString::transcode(domError.getMessage()));
+		return true;
+	}
+};
+
+void findRemovals(DOMNode *node, std::set<std::string> &removals) {
+	if (node) {
+		if (node->getNodeType() == DOMNode::ELEMENT_NODE && node->hasAttributes()) {
+			DOMNamedNodeMap *attributes = node->getAttributes();
+			for (size_t i=0; i<attributes->getLength(); ++i) {
+				DOMAttr *attribute = (DOMAttr*) attributes->item(i);
+				char *name = XMLString::transcode(attribute->getName());
+				char *value = XMLString::transcode(attribute->getValue());
+
+				if (strcmp(name, "id") == 0)
+					removals.insert(value);
+
+				XMLString::release(&name);
+				XMLString::release(&value);
+			}
+		}
+		for (DOMNode *child = node->getFirstChild(); child != 0; child=child->getNextSibling())
+			findRemovals(child, removals);
+	}
+}
+
+bool cleanupPass(DOMNode *node, const std::set<std::string> &removals) {
+	if (node) {
+		char *nodeName = XMLString::transcode(node->getNodeName());
+		if (strcmp(nodeName, "ref") == 0) {
+			XMLString::release(&nodeName);
+			return false;
+		}
+				
+		if (node->getNodeType() == DOMNode::ELEMENT_NODE && node->hasAttributes()) {
+			DOMNamedNodeMap *attributes = node->getAttributes();
+			for (size_t i=0; i<attributes->getLength(); ++i) {
+				DOMAttr *attribute = (DOMAttr*) attributes->item(i);
+				char *name = XMLString::transcode(attribute->getName());
+				char *value = XMLString::transcode(attribute->getValue());
+
+				if (strcmp(name, "id") == 0 && removals.find(value) != removals.end()) {
+					XMLString::release(&name);
+					XMLString::release(&value);
+					return true; /* Remove this node */
+				}
+
+				XMLString::release(&name);
+				XMLString::release(&value);
+			}
+			XMLString::release(&nodeName);
+		}
+		DOMNode *child = node->getFirstChild();
+		while (child) {
+			DOMNode *next = child->getNextSibling();
+			bool doRemove = cleanupPass(child, removals);
+			if (doRemove)
+				node->removeChild(child);
+			child = next;
+		}
+	}
+	return false;
+}
+
 /* This code is not thread-safe for now */
 GLUtesselator *tess = NULL;
 std::vector<domUint> tess_data;
@@ -383,7 +479,7 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 	}
 }
 
-void loadMaterialParam(std::ostream &os, const std::string &name, StringMap &idToTexture, 
+void loadMaterialParam(ColladaConverter *cvt, std::ostream &os, const std::string &name, StringMap &idToTexture, 
 		domCommon_color_or_texture_type *value, bool handleRefs) {
 	if (!value)
 		return;
@@ -393,8 +489,11 @@ void loadMaterialParam(std::ostream &os, const std::string &name, StringMap &idT
 		value->getTexture().cast();
 	if (color && !handleRefs) {
 		domFloat4 &colValue = color->getValue();
-		os << "\t\t<rgb name=\"" << name << "\" value=\""
-		   << colValue.get(0) << " " << colValue.get(1) << " " 
+		if (cvt->m_srgb)
+			os << "\t\t<srgb name=\"" << name << "\" value=\"";
+		else
+			os << "\t\t<rgb name=\"" << name << "\" value=\"";
+		os << colValue.get(0) << " " << colValue.get(1) << " " 
 		   << colValue.get(2) << "\"/>" << endl;
 	} else if (texture && handleRefs) {
 		if (idToTexture.find(texture->getTexture()) == idToTexture.end()) {
@@ -406,7 +505,7 @@ void loadMaterialParam(std::ostream &os, const std::string &name, StringMap &idT
 	}
 }
 
-void loadMaterialParam(std::ostream &os, const std::string &name, StringMap &,
+void loadMaterialParam(ColladaConverter *cvt, std::ostream &os, const std::string &name, StringMap &,
 		domCommon_float_or_param_type *value, bool handleRef) {
 	if (!value)
 		return;
@@ -417,7 +516,7 @@ void loadMaterialParam(std::ostream &os, const std::string &name, StringMap &,
 	}
 }
 
-void loadMaterial(std::ostream &os, domMaterial &mat, StringMap &_idToTexture) {
+void loadMaterial(ColladaConverter *cvt, std::ostream &os, domMaterial &mat, StringMap &_idToTexture) {
 	SLog(EInfo, "Converting material \"%s\" ..", mat.getName());
 	StringMap idToTexture = _idToTexture;
 
@@ -485,24 +584,24 @@ void loadMaterial(std::ostream &os, domMaterial &mat, StringMap &_idToTexture) {
 		}
 		if (isDiffuse) {
 			os << "\t<bsdf id=\"" << mat.getId() << "\" type=\"lambertian\">" << endl;
-			loadMaterialParam(os, "reflectance", idToTexture, diffuse, false);
-			loadMaterialParam(os, "reflectance", idToTexture, diffuse, true);
+			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
+			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
 			os << "\t</bsdf>" << endl << endl;
 		} else {
 			os << "\t<bsdf id=\"" << mat.getId() << "\" type=\"phong\">" << endl;
-			loadMaterialParam(os, "diffuseReflectance", idToTexture, diffuse, false);
-			loadMaterialParam(os, "specularReflectance", idToTexture, specular, false);
-			loadMaterialParam(os, "exponent", idToTexture, shininess, false);
-			loadMaterialParam(os, "diffuseReflectance", idToTexture, diffuse, true);
-			loadMaterialParam(os, "specularReflectance", idToTexture, specular, true);
-			loadMaterialParam(os, "exponent", idToTexture, shininess, true);
+			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, false);
+			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, false);
+			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, false);
+			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, true);
+			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, true);
+			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, true);
 			os << "\t</bsdf>" << endl << endl;
 		}
 	} else if (lambert) {
 		domCommon_color_or_texture_type* diffuse = lambert->getDiffuse();
 		os << "\t<bsdf id=\"" << mat.getId() << "\" type=\"lambertian\">" << endl;
-		loadMaterialParam(os, "reflectance", idToTexture, diffuse, false);
-		loadMaterialParam(os, "reflectance", idToTexture, diffuse, true);
+		loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
+		loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
 		os << "\t</bsdf>" << endl << endl;
 	} else {
 		SLog(EError, "Material type not supported! (must be Lambertian/Phong)");
@@ -670,8 +769,9 @@ void loadCamera(Transform transform, std::ostream &os, domCamera &camera) {
 	os << "\t\t<transform name=\"toWorld\">" << endl;
 	os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
 	os << "\t\t</transform>" << endl << endl;
-
-	os << "\t\t<sampler type=\"stratified\"/>" << endl << endl;
+	os << "\t\t<sampler type=\"ldsampler\">" << endl;
+	os << "\t\t\t<integer name=\"sampleCount\" value=\"8\"/>" << endl;
+	os << "\t\t</sampler>" << endl << endl;
 	os << "\t\t<film type=\"exrfilm\">" << endl;
 	os << "\t\t\t<integer name=\"width\" value=\"" << xres << "\"/>" << endl;
 	os << "\t\t\t<integer name=\"height\" value=\"" << (int) (xres/aspect) << "\"/>" << endl;
@@ -876,8 +976,8 @@ void ColladaConverter::convert(const std::string &inputFile,
 
 	domNode_Array &nodes = visualScene->getNode_array();
 	os << "<?xml version=\"1.0\" encoding=\"utf-8\"?>" << endl << endl;
-	os << "<!--" << endl;
-	os << "\tAutomatically converted from COLLADA" << endl;
+	os << "<!--" << endl << endl;
+	os << "\tAutomatically converted from COLLADA" << endl << endl;
 	os << "-->" << endl << endl;
 	os << "<scene>" << endl;
 	os << "\t<integrator type=\"direct\"/>" << endl << endl;
@@ -896,7 +996,7 @@ void ColladaConverter::convert(const std::string &inputFile,
 	for (size_t i=0; i<libraryMaterials.getCount(); ++i) {
 		domMaterial_Array &materials = libraryMaterials[i]->getMaterial_array();
 		for (size_t j=0; j<materials.getCount(); ++j) 
-			loadMaterial(os, *materials.get(j), idToTexture);
+			loadMaterial(this, os, *materials.get(j), idToTexture);
 	}
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
@@ -906,11 +1006,72 @@ void ColladaConverter::convert(const std::string &inputFile,
 
 	gluDeleteTess(tess);
 	delete dae;
+
+	if (adjustmentFile != "") {
+		SLog(EInfo, "Applying adjustments ..");
+		static const XMLCh gLS[] = { chLatin_L, chLatin_S, chNull };
+		DOMImplementation *impl = DOMImplementationRegistry::getDOMImplementation(gLS);
+		DOMBuilder *parser = ((DOMImplementationLS*) impl)->createDOMBuilder(DOMImplementationLS::MODE_SYNCHRONOUS, 0);
+
+		ImporterDOMErrorHandler errorHandler;
+		parser->setErrorHandler(&errorHandler);
+
+		std::string xmlString = os.str();
+		MemBufInputSource* memBufIS = new MemBufInputSource((const XMLByte*) xmlString.c_str(), 
+			xmlString.length(), "bufID", false);
+		Wrapper4InputSource *wrapper = new Wrapper4InputSource(memBufIS, false);
+		DOMDocument *doc = parser->parse(*wrapper);
+		DOMDocument *adj = parser->parseURI(adjustmentFile.c_str());
 	
-	std::ofstream ofile(outputFile.c_str());
-	if (ofile.fail())
-		SLog(EError, "Could not write to \"%s\"!", outputFile.c_str());
-	ofile << os.str();
-	ofile.close();
+		std::set<std::string> removals;
+		findRemovals(adj, removals);
+		cleanupPass(doc, removals);
+
+		DOMElement *docRoot = doc->getDocumentElement();
+		DOMElement *adjRoot = adj->getDocumentElement();
+
+		DOMNode *insertBeforeNode = NULL;
+		for (DOMNode *child = docRoot->getFirstChild(); child != 0; child=child->getNextSibling()) {
+			char *name = XMLString::transcode(child->getNodeName());
+			if (strcmp(name, "shape") == 0) {
+				insertBeforeNode = child;
+				break;
+			}
+			XMLString::release(&name);
+		}
+
+		if (insertBeforeNode == NULL) {
+			/* No shape node found, use the camera node instead */
+			for (DOMNode *child = docRoot->getFirstChild(); child != 0; child=child->getNextSibling()) {
+				char *name = XMLString::transcode(child->getNodeName());
+				if (strcmp(name, "camera") == 0) {
+					insertBeforeNode = child;
+					break;
+				}
+				XMLString::release(&name);
+			}
+			SAssertEx(insertBeforeNode != NULL, "Internal error while applying adjustments: cannot find shape/camera node");
+		}
+
+		for (DOMNode *child = adjRoot->getFirstChild(); child != 0; child=child->getNextSibling())
+			docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
+
+		DOMWriter *serializer = ((DOMImplementationLS*)impl)->createDOMWriter();
+		serializer->setFeature(XMLUni::fgDOMWRTFormatPrettyPrint, true);
+		serializer->setErrorHandler(&errorHandler);
+		XMLFormatTarget *target = new LocalFileFormatTarget(outputFile.c_str());
+		serializer->writeNode(target, *doc);
+
+		delete wrapper;
+		delete memBufIS;
+		delete serializer;
+		parser->release();
+	} else {
+		std::ofstream ofile(outputFile.c_str());
+		if (ofile.fail())
+			SLog(EError, "Could not write to \"%s\"!", outputFile.c_str());
+		ofile << os.str();
+		ofile.close();
+	}
 }
 

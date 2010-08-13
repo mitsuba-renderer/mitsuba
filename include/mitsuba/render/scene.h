@@ -216,7 +216,7 @@ public:
 	 * will be stored in <tt>eRec</tt>.
 	 */
 	void sampleEmissionArea(EmissionRecord &lRec, Point2 &sample) const;
-	
+
 	/**
 	 * As above, but handles only the directional part. Must be called *after*
 	 * sampleEmissionArea(). The return value is to be understood as a BRDF,

@@ -1,5 +1,5 @@
-#include <QtGui/QtGui>
 #include <xercesc/parsers/SAXParser.hpp>
+#include <QtGui/QtGui>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/sched.h>
 #if defined(__OSX__)

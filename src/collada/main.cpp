@@ -29,9 +29,13 @@
  * (e.g. using Lighting/shading -> Batch bake in Maya).
  */
 
+#include <xercesc/parsers/SAXParser.hpp>
+#include <xercesc/dom/DOMException.hpp>
 #include "converter.h"
 #include <mitsuba/hw/glrenderer.h>
 #include <mitsuba/core/fresolver.h>
+
+XERCES_CPP_NAMESPACE_USE
 
 class ConsoleColladaConverter : public ColladaConverter {
 public:
@@ -43,21 +47,57 @@ public:
 	}
 };
 
+void help() {
+	cout << "COLLADA 1.4 Importer, Version " MTS_VERSION ", Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl
+		<< "Syntax: mtsimport [options] <DAE source file> <XML destination file> [Adjustment file]" << endl
+		<< "Options/Arguments:" << endl
+		<<  "   -h          Display this help text" << endl << endl
+		<<  "   -s          Assume that colors are in sRGB space." << endl << endl
+		<< "Please see the documentation for more information." << endl;
+}
+
 int colladaMain(int argc, char **argv) {
-	if (argc < 3) {
-		cout << "Syntax: mtsimport <DAE source file URL> <XML destination file> [Adjustment file]" << endl
-			 << "Please see the documentation for more information." << endl;
+	bool srgb = false;
+	char optchar;
+	
+	optind = 1;
+
+	while ((optchar = getopt(argc, argv, "sh")) != -1) {
+		switch (optchar) {
+			case 's':
+				srgb = true;
+				break;
+			case 'h':
+			default:
+				help();
+				return -1;
+	}
+	};
+
+	if (argc-optind < 2) {
+		help();
 		return -1;
 	}
 
 	ConsoleColladaConverter converter;
-	converter.convert(argv[1], "", argv[2], argc > 3 ? argv[3] : "");
+	converter.setSRGB(srgb);
+	converter.convert(argv[optind], "", argv[optind+1], argc > optind+2 ? argv[optind+2] : "");
 
 	return 0;
 }
 
 int ubi_main(int argc, char **argv) {
 	int retval;
+	
+	/* Initialize Xerces-C */
+	try {
+		XMLPlatformUtils::Initialize();
+	} catch(const XMLException &toCatch) {
+		fprintf(stderr, "Error during Xerces initialization: %s",
+			XMLString::transcode(toCatch.getMessage()));
+		return -1;
+	}
+
 	/* Initialize the core framework */
 	Class::staticInitialization();
 	Statistics::staticInitialization();
@@ -112,10 +152,20 @@ int ubi_main(int argc, char **argv) {
 	} catch (const std::exception &e) {
 		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
 		retval = -1;
+	} catch(const XMLException &toCatch) {
+		SLog(EError, "Caught a Xerces exception: %s",
+			XMLString::transcode(toCatch.getMessage()));
+		retval = -1;
+	} catch(const DOMException &toCatch) {
+		SLog(EError, "Caught a Xerces exception: %s",
+			XMLString::transcode(toCatch.getMessage()));
+		retval = -1;
 	} catch (...) {
 		std::cerr << "Caught a critical exeption of unknown type!" << endl;
 		retval = -1;
 	}
+	
+	XMLPlatformUtils::Terminate();
 
 	/* Shutdown the core framework */
 	Spectrum::staticShutdown();

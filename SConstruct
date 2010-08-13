@@ -409,7 +409,7 @@ if hasCollada:
 	if env.has_key('COLLADALIB'):
 		colladaEnv.Append(LIBS=env['COLLADALIB'])
 	colladaConverter = colladaEnv.StaticObject('src/collada/converter.cpp')
-	colladaEnv.Program('mtsimport', darwinStub + ['src/collada/main.cpp', colladaConverter])
+	colladaEnv.Program('mtsimport', darwinStub + ['src/collada/main.cpp', colladaConverter] + resources)
 
 if hasQt:
 	qtEnv = mainEnv.Clone()
@@ -529,6 +529,7 @@ plugins += env.SharedLibrary('plugins/spot', ['src/luminaires/spot.cpp'])
 plugins += env.SharedLibrary('plugins/point', ['src/luminaires/point.cpp'])
 plugins += env.SharedLibrary('plugins/collimated', ['src/luminaires/collimated.cpp'])
 plugins += env.SharedLibrary('plugins/directional', ['src/luminaires/directional.cpp'])
+plugins += env.SharedLibrary('plugins/portal', ['src/luminaires/portal.cpp'])
 
 # Integrators
 plugins += env.SharedLibrary('plugins/direct', ['src/integrators/direct/direct.cpp'])

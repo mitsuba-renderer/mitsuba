@@ -133,10 +133,11 @@ Passing strings is very straightforward:
 \end{xml}
 \subsubsection{Color spectra}
 There are several different ways of passing color spectra to objects, which can be used interchangeably.
-The most basic one is to supply linear RGB values as floating-point triplets or hex values
+The most basic one is to supply linear RGB or sRGB values as floating-point triplets or hex values
 \begin{xml}
 <rgb name="spectrumProperty" value="0.2, 0.8, 0.4"/>
-<rgb name="spectrumProperty" value="#f9aa34"/>
+<srgb name="spectrumProperty" value="0.4, 0.3, 0.2"/>
+<srgb name="spectrumProperty" value="#f9aa34"/>
 \end{xml}
 When Mitsuba is compiled with the default settings, it internally uses linear RGB to represent colors, so
 these values are directly used. The renderer can also be configured to sample the color spectrum using a specified

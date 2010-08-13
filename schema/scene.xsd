@@ -22,6 +22,7 @@
 				<xsd:element name="string" type="string"/>
 				<xsd:element name="spectrum" type="string"/>
 				<xsd:element name="rgb" type="string"/>
+				<xsd:element name="srgb" type="string"/>
 				<xsd:element name="blackbody" type="blackbody"/>
 			</xsd:choice>
 		</xsd:complexType>
@@ -40,6 +41,7 @@
 			<xsd:element name="string" type="string"/>
 			<xsd:element name="spectrum" type="string"/>
 			<xsd:element name="rgb" type="string"/>
+			<xsd:element name="srgb" type="string"/>
 			<xsd:element name="blackbody" type="blackbody"/>
 		</xsd:choice>
 		<xsd:attribute name="type" type="xsd:string" use="required"/>
@@ -83,6 +85,7 @@
 			<xsd:extension base="object">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
 					<xsd:element name="texture" type="object"/>
+					<xsd:element name="luminaire" type="luminaire"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
@@ -97,7 +100,7 @@
 					<xsd:element name="bsdf" type="bsdf"/>
 					<xsd:element name="subsurface" type="object"/>
 					<xsd:element name="ref" type="reference"/>
-					<xsd:element name="luminaire" type="object"/>
+					<xsd:element name="luminaire" type="luminaire"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>

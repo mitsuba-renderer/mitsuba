@@ -231,6 +231,18 @@ public:
 
 		return Spectrum(0.0f);
 	}
+	
+	void addChild(const std::string &name, ConfigurableObject *child) {
+		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "diffuseReflectance") {
+			m_diffuseReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "specularReflectance") {
+			m_specularReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+		} else {
+			BSDF::addChild(name, child);
+		}
+	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
