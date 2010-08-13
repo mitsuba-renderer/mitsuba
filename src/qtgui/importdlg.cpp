@@ -3,6 +3,7 @@
 #include "acknowledgmentdlg.h"
 #include "../collada/converter.h"
 #include "mainwindow.h"
+#include "locateresourcedlg.h"
 
 class GUIColladaConverter : public ColladaConverter {
 public:
@@ -10,6 +11,11 @@ public:
 	}
 
 	std::string locateResource(const std::string &resource) {
+		LocateResourceDialog locateResource(m_parent, resource.c_str());
+		locateResource.setWindowModality(Qt::ApplicationModal);
+		if (locateResource.exec()) 
+			return locateResource.getFilename().toStdString();
+
 		return "";
 	}
 private:

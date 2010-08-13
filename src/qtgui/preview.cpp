@@ -553,7 +553,8 @@ void PreviewThread::rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	m_mutex->lock();
 	m_previewProc->configure(vpl, minDist, jitter, 
 		m_accumBuffer ? m_accumBuffer->getBitmap() : NULL, 
-		target.buffer->getBitmap(), m_context->previewMethod == ERayTraceCoherent);
+		target.buffer->getBitmap(), 
+		m_context->previewMethod == ERayTraceCoherent);
 	m_mutex->unlock();
 
 	ref<Scheduler> sched = Scheduler::getInstance();
