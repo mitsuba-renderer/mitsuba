@@ -3,7 +3,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-const bool importanceSampleComponents = false;
+const bool importanceSampleComponents = true;
 
 /**
  * Models an interface between two materials with non-matched indices of refraction.
@@ -171,7 +171,7 @@ public:
 		/* Calculate the refracted/reflected vectors+coefficients */
 		if (sampleTransmission && sampleReflection) {
 			/* Importance sample according to the reflectance/transmittance */
-			if (bRec.sample.x < importanceSampleComponents ? fr : 0.5f) {
+			if (bRec.sample.x < (importanceSampleComponents ? fr : 0.5f)) {
 				reflect(bRec.wi, bRec.wo);
 				bRec.sampledComponent = 0;
 				bRec.sampledType = EDeltaReflection;
@@ -220,7 +220,7 @@ public:
 		Float result = 0.0f;
 		if (sampleTransmission && sampleReflection) {
 			if (!importanceSampleComponents) {
-				result = 0.f;
+				result = 0.5f;
 			} else {
 				Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
 				if (reflection)
