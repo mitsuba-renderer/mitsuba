@@ -14,7 +14,7 @@ public:
 		m_intensity = props.getSpectrum("intensity", power / m_surfaceArea);
 		m_invSurfaceArea = 1 / m_surfaceArea;
 		m_direction = m_luminaireToWorld(Vector(0, 0, 1));
-		m_type = EDeltaDirection | EDeltaPosition;
+		m_type = EDeltaDirection;
 	}
 
 	CollimatedBeamLuminaire(Stream *stream, InstanceManager *manager) 

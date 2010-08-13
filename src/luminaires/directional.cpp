@@ -8,27 +8,39 @@ MTS_NAMESPACE_BEGIN
 class DirectionalLuminaire : public Luminaire {
 public:
 	DirectionalLuminaire(const Properties &props) : Luminaire(props) {
-		m_radius = props.getFloat("radius", 0.01f);
-		m_surfaceArea = m_radius * m_radius * M_PI;
-		Spectrum power = props.getSpectrum("power", 1);
-		m_intensity = props.getSpectrum("intensity", power / m_surfaceArea);
-		m_invSurfaceArea = 1 / m_surfaceArea;
-		m_direction = m_luminaireToWorld(Vector(0, 0, 1));
-		m_type = EDeltaDirection | EDeltaPosition;
+		m_intensity = props.getSpectrum("intensity", Spectrum(1.0f));
+		m_diskRadius = 0;
+		m_type = EDeltaDirection;
 	}
 
 	DirectionalLuminaire(Stream *stream, InstanceManager *manager) 
 		: Luminaire(stream, manager) {
 		m_intensity = Spectrum(stream);
-		m_radius = stream->readFloat();
-		m_invSurfaceArea = 1 / m_surfaceArea;
-		m_direction = m_luminaireToWorld(Vector(0, 0, 1));
+		m_diskOrigin = Point(stream);
+		m_diskRadius = stream->readFloat();
+		configure();
+	}
+
+	void configure() {
+		m_direction = normalize(m_luminaireToWorld(Vector(0, 0, 1)));
+		m_surfaceArea = m_diskRadius * m_diskRadius * M_PI;
+		m_invSurfaceArea = 1.0f / m_surfaceArea;
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Luminaire::serialize(stream, manager);
 		m_intensity.serialize(stream);
-		stream->writeFloat(m_radius);
+		m_diskOrigin.serialize(stream);
+		stream->writeFloat(m_diskRadius);
+	}
+
+	void preprocess(const Scene *scene) {
+		/* Get the scene's bounding sphere and slightly enlarge it */
+		BSphere bsphere = scene->getBSphere();
+		m_diskRadius = bsphere.radius;
+		m_diskOrigin = bsphere.center - m_direction * bsphere.radius;
+
+		configure();
 	}
 
 	Spectrum getPower() const {
@@ -36,7 +48,7 @@ public:
 	}
 
 	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
-		/* Collimated beam is not part of the scene */
+		/* Directional luminaire is not part of the scene */
 		Log(EWarn, "This function should never be called.");
 		return Spectrum(0.0f);
 	}
@@ -53,18 +65,11 @@ public:
 
 	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
-		Point local = m_worldToLuminaire(p);
-		Vector2 planeProjection = Vector2(local.x, local.y);
-
-		if (planeProjection.length() > m_radius || local.z < 0) {
-			lRec.pdf = 0.0f;
-		} else {
-			lRec.sRec.p = m_luminaireToWorld(Point(local.x, local.y, 0));
-			lRec.d = m_direction;
-			lRec.luminaire = this;
-			lRec.pdf = 1.0f;
-			lRec.Le = m_intensity;
-		}
+		lRec.sRec.p = p - m_direction * (2 * m_diskRadius);
+		lRec.d = m_direction;
+		lRec.luminaire = this;
+		lRec.pdf = 1.0f;
+		lRec.Le = m_intensity;
 	}
 
 	void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
@@ -73,8 +78,8 @@ public:
 	}
 
 	void sampleEmission(EmissionRecord &eRec, const Point2 &sample1, const Point2 &sample2) const {
-		Point2 posOnDisk = squareToDiskConcentric(sample1) * m_radius;
-		eRec.sRec.p = m_luminaireToWorld(Point(posOnDisk.x, posOnDisk.y, 0));
+		Point2 posOnDisk = squareToDiskConcentric(sample1) * m_diskRadius;
+		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Point(posOnDisk.x, posOnDisk.y, 0));
 		eRec.d = m_direction;
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.pdfDir = 1;
@@ -82,8 +87,8 @@ public:
 	}
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
-		Point2 posOnDisk = squareToDiskConcentric(sample) * m_radius;
-		eRec.sRec.p = m_luminaireToWorld(Point(posOnDisk.x, posOnDisk.y, 0));
+		Point2 posOnDisk = squareToDiskConcentric(sample) * m_diskRadius;
+		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Point(posOnDisk.x, posOnDisk.y, 0));
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.P = m_intensity;
 	}
@@ -99,7 +104,7 @@ public:
 	}
 
 	Spectrum f(const EmissionRecord &eRec) const {
-		/* Collimated beam is not part of the scene */
+		/* Directional luminaire beam is not part of the scene */
 		Log(EWarn, "This function should never be called.");
 		return Spectrum(0.0f);
 	}
@@ -115,9 +120,7 @@ public:
 		oss << "DirectionalLuminaire[" << std::endl
 			<< "  intensity = " << m_intensity.toString() << "," << std::endl
 			<< "  power = " << getPower().toString() << "," << std::endl
-			<< "  position = " << m_luminaireToWorld(Point(0, 0, 0)).toString() << "," << std::endl
-			<< "  direction = " << m_direction.toString() << "," << std::endl
-			<< "  radius = " << m_radius << std::endl
+			<< "  direction = " << m_direction.toString() 
 			<< "]";
 		return oss.str();
 	}
@@ -127,7 +130,8 @@ private:
 	Spectrum m_intensity;
 	Vector m_direction;
 	Float m_invSurfaceArea;
-	Float m_radius;
+	Float m_diskRadius;
+	Point m_diskOrigin;
 };
 
 MTS_IMPLEMENT_CLASS_S(DirectionalLuminaire, false, Luminaire)
