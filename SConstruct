@@ -467,6 +467,7 @@ plugins += env.SharedLibrary('plugins/phong', ['src/bsdfs/phong.cpp'])
 plugins += env.SharedLibrary('plugins/microfacet', ['src/bsdfs/microfacet.cpp'])
 plugins += env.SharedLibrary('plugins/roughglass', ['src/bsdfs/roughglass.cpp'])
 plugins += env.SharedLibrary('plugins/roughmetal', ['src/bsdfs/roughmetal.cpp'])
+plugins += env.SharedLibrary('plugins/composite', ['src/bsdfs/composite.cpp'])
 
 # Phase functions
 plugins += env.SharedLibrary('plugins/isotropic', ['src/phase/isotropic.cpp'])

@@ -67,7 +67,7 @@ public:
 		m_ready = true;
 		return m_originalSum;
 	}
-	
+
 	/**
 	 * Transform a uniformly distributed sample. Returns the
 	 * PDF entry index.

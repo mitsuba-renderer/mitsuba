@@ -226,11 +226,14 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			value[0] = ((encoded & 0xFF0000) >> 16) / 255.0f;
 			value[1] = ((encoded & 0x00FF00) >> 8) / 255.0f;
 			value[2] =  (encoded & 0x0000FF) / 255.0f;
-		} else {
-			if (tokens.size() != 3)
-				SLog(EError, "Invalid RGB value specified");
+		} else if (tokens.size() == 1) {
+			value[0] = value[1] = value[2] = parseFloat(name, tokens[0]);
+		} else if (tokens.size() == 3) {
 			for (int i=0; i<3; i++) 
 				value[i] = parseFloat(name, tokens[i]);
+		} else {
+			value[0] = value[1] = value[2] = 0; // avoid warning
+			SLog(EError, "Invalid RGB value specified");
 		}
 		Spectrum specValue;
 		specValue.fromLinearRGB(value[0], value[1], value[2]);
@@ -249,11 +252,14 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			value[0] = ((encoded & 0xFF0000) >> 16) / 255.0f;
 			value[1] = ((encoded & 0x00FF00) >> 8) / 255.0f;
 			value[2] =  (encoded & 0x0000FF) / 255.0f;
-		} else {
-			if (tokens.size() != 3)
-				SLog(EError, "Invalid RGB value specified");
+		} else if (tokens.size() == 1) {
+			value[0] = value[1] = value[2] = parseFloat(name, tokens[0]);
+		} else if (tokens.size() == 3) {
 			for (int i=0; i<3; i++) 
 				value[i] = parseFloat(name, tokens[i]);
+		} else {
+			value[0] = value[1] = value[2] = 0; // avoid warning
+			SLog(EError, "Invalid sRGB value specified");
 		}
 		Spectrum specValue;
 		specValue.fromSRGB(value[0], value[1], value[2]);

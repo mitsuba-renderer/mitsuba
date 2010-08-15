@@ -3,11 +3,11 @@
 MTS_NAMESPACE_BEGIN
 
 BSDF::BSDF(const Properties &props)
- : ConfigurableObject(props) {
+ : ConfigurableObject(props), m_type(NULL) {
 }
 
 BSDF::BSDF(Stream *stream, InstanceManager *manager) 
- : ConfigurableObject(stream, manager) {
+ : ConfigurableObject(stream, manager), m_type(NULL) {
 }
 
 BSDF::~BSDF() {
