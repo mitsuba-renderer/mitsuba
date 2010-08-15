@@ -773,7 +773,7 @@ void loadCamera(ColladaConverter *cvt, Transform transform, std::ostream &os, do
 				os << "\t\t<float name=\"fov\" value=\"" << yFov << "\"/>" << endl;
 			os << "\t\t<float name=\"nearClip\" value=\"" << persp->getZnear()->getValue() << "\"/>" << endl;
 			os << "\t\t<float name=\"farClip\" value=\"" << persp->getZfar()->getValue() << "\"/>" << endl;
-			os << "\t\t<boolean name=\"mapSmallerSide\" value=\"" <<*(cvt->m_mapSmallerSide ? "true" : "false") << "\"/>" << endl;
+			os << "\t\t<boolean name=\"mapSmallerSide\" value=\"" <<(cvt->m_mapSmallerSide ? "true" : "false") << "\"/>" << endl;
 		} else if (persp->getYfov().cast()) {
 			Float xFov = radToDeg(2 * std::atan(std::tan(degToRad((Float) persp->getYfov()->getValue())/2) * aspect));
 			if (aspect > 1.0f)
