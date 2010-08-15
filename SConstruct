@@ -462,6 +462,7 @@ plugins = []
 plugins += env.SharedLibrary('plugins/lambertian', ['src/bsdfs/lambertian.cpp'])
 plugins += env.SharedLibrary('plugins/dielectric', ['src/bsdfs/dielectric.cpp'])
 plugins += env.SharedLibrary('plugins/mirror', ['src/bsdfs/mirror.cpp'])
+plugins += env.SharedLibrary('plugins/transparent', ['src/bsdfs/transparent.cpp'])
 plugins += env.SharedLibrary('plugins/ward', ['src/bsdfs/ward.cpp'])
 plugins += env.SharedLibrary('plugins/phong', ['src/bsdfs/phong.cpp'])
 plugins += env.SharedLibrary('plugins/microfacet', ['src/bsdfs/microfacet.cpp'])

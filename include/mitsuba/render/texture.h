@@ -10,6 +10,7 @@ class MTS_EXPORT_RENDER Texture : public ConfigurableObject, public HWResource {
 public:
 	virtual Spectrum getValue(const Intersection &its) const = 0;
 	virtual Spectrum getAverage() const = 0;
+	virtual Spectrum getMaximum() const = 0; /* Component-wise maximum */
 	virtual bool usesRayDifferentials() const = 0;
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
@@ -34,6 +35,10 @@ public:
 	}
 	
 	inline Spectrum getAverage() const {
+		return m_value;
+	}
+	
+	inline Spectrum getMaximum() const {
 		return m_value;
 	}
 

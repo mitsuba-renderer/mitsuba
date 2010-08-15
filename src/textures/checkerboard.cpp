@@ -37,6 +37,10 @@ public:
 	Spectrum getAverage() const {
 		return m_reflectance * .5f;
 	}
+	
+	Spectrum getMaximum() const {
+		return m_reflectance;
+	}
 
 	std::string toString() const {
 		return "Checkerboard[]";

@@ -175,6 +175,7 @@ public:
 	
 		m_mipmap = MIPMap::fromBitmap(corrected);
 		m_average = m_mipmap->triangle(m_mipmap->getLevels()-1, 0, 0);
+		m_maximum = m_mipmap->getMaximum();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -201,6 +202,10 @@ public:
 		return m_average;
 	}
 
+	Spectrum getMaximum() const {
+		return m_maximum;
+	}
+
 	bool usesRayDifferentials() const {
 		return true;
 	}
@@ -219,7 +224,7 @@ protected:
 	ref<MemoryStream> m_stream;
 	std::string m_filename;
 	Bitmap::EFileFormat m_format;
-	Spectrum m_average;
+	Spectrum m_average, m_maximum;
 	Float m_gamma;
 };
 

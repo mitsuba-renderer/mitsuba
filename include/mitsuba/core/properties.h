@@ -23,15 +23,20 @@ public:
 	};
 
 	/// Construct an empty property container
-	Properties() { }
+	Properties() : m_id("unnamed") { }
 
 	/// Construct an empty property container and set the plugin name
-	Properties(const std::string &pluginName) : m_pluginName(pluginName) { }
+	Properties(const std::string &pluginName) : m_pluginName(pluginName), m_id("unnamed") { }
 
 	/// Set the associated plugin name
 	inline void setPluginName(const std::string &name) { m_pluginName = name; }
 	/// Get the associated plugin name
 	inline const std::string &getPluginName() const { return m_pluginName; }
+	
+	/// Returns the associated ID (or the string "unnamed")
+	inline const std::string &getID() const { return m_id; }
+	/// Set the associated ID
+	inline void setID(const std::string &id) { m_id = id; }
 
 	/// Set a boolean value
 	void setBoolean(const std::string &name, bool value, bool warnDuplicates = true);
@@ -129,7 +134,7 @@ private:
 	};
 
 	std::map<std::string, Element> m_elements;
-	std::string m_pluginName;
+	std::string m_pluginName, m_id;
 };
 
 MTS_NAMESPACE_END

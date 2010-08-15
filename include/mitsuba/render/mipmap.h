@@ -49,6 +49,9 @@ public:
 	/// Return a pointer to internal image representation at full resolution
 	inline const Spectrum *getImageData() const { return m_pyramid[0]; }
 
+	/// Get the component-wise maximum at the zero level
+	Spectrum getMaximum() const;
+
 	/// Return a bitmap representation of the full-resolution image
 	Bitmap *getBitmap() const;
 

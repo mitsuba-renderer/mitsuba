@@ -120,6 +120,12 @@ public:
 
 void findRemovals(DOMNode *node, std::set<std::string> &removals) {
 	if (node) {
+		char *nodeName = XMLString::transcode(node->getNodeName());
+		if (strcmp(nodeName, "ref") == 0) {
+			XMLString::release(&nodeName);
+			return;
+		}
+		XMLString::release(&nodeName);
 		if (node->getNodeType() == DOMNode::ELEMENT_NODE && node->hasAttributes()) {
 			DOMNamedNodeMap *attributes = node->getAttributes();
 			for (size_t i=0; i<attributes->getLength(); ++i) {
@@ -146,7 +152,7 @@ bool cleanupPass(DOMNode *node, const std::set<std::string> &removals) {
 			XMLString::release(&nodeName);
 			return false;
 		}
-				
+
 		if (node->getNodeType() == DOMNode::ELEMENT_NODE && node->hasAttributes()) {
 			DOMNamedNodeMap *attributes = node->getAttributes();
 			for (size_t i=0; i<attributes->getLength(); ++i) {
@@ -600,11 +606,13 @@ void loadMaterial(ColladaConverter *cvt, std::ostream &os, domMaterial &mat, Str
 			os << "\t</bsdf>" << endl << endl;
 		} else {
 			os << "\t<bsdf id=\"" << mat.getId() << "\" type=\"phong\">" << endl;
-			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, false);
-			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, false);
+			os << "\t\t<float name=\"specularReflectance\" value=\"1\"/>" << endl;
+			os << "\t\t<float name=\"diffuseReflectance\" value=\"1\"/>" << endl;
+			loadMaterialParam(cvt, os, "diffuseColor", idToTexture, diffuse, false);
+			loadMaterialParam(cvt, os, "specularColor", idToTexture, specular, false);
 			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, false);
-			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, true);
-			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, true);
+			loadMaterialParam(cvt, os, "diffuseColor", idToTexture, diffuse, true);
+			loadMaterialParam(cvt, os, "specularColor", idToTexture, specular, true);
 			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, true);
 			os << "\t</bsdf>" << endl << endl;
 		}

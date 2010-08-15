@@ -102,7 +102,22 @@ MIPMap::~MIPMap() {
 	delete[] m_levelWidth;
 	delete[] m_pyramid;
 }
-		
+
+Spectrum MIPMap::getMaximum() const {
+	Spectrum max(0.0f);
+	int height = m_levelHeight[0];
+	int width = m_levelWidth[0];
+	Spectrum *pixels = m_pyramid[0];
+	for (int y=0; y<height; ++y) {
+		for (int x=0; x<width; ++x) {
+			Spectrum value = *pixels++;
+			for (int j=0; j<SPECTRUM_SAMPLES; ++j)
+				max[j] = std::max(max[j], value[j]);
+		}
+	}
+	return max;
+}
+	
 ref<MIPMap> MIPMap::fromBitmap(Bitmap *bitmap) {
 	int width = bitmap->getWidth();
 	int height = bitmap->getHeight();

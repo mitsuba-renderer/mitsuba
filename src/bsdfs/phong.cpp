@@ -13,19 +13,27 @@ class Phong : public BSDF {
 public:
 	Phong(const Properties &props) 
 		: BSDF(props) {
-		m_diffuseReflectance = new ConstantTexture(
-			props.getSpectrum("diffuseReflectance", Spectrum(.5f)));
-		m_specularReflectance = new ConstantTexture(
-			props.getSpectrum("specularReflectance", Spectrum(.2f)));
-		m_kd = m_diffuseReflectance->getAverage().average();
-		m_ks = m_specularReflectance->getAverage().average();
+		m_diffuseColor = new ConstantTexture(
+			props.getSpectrum("diffuseColor", Spectrum(1.0f)));
+		m_specularColor = new ConstantTexture(
+			props.getSpectrum("specularColor", Spectrum(1.0f)));
+
+		m_kd = props.getFloat("diffuseReflectance", 0.5f);
+		m_ks = props.getFloat("specularReflectance", 0.2f);
+
+		Float avgDiffReflectance = m_diffuseColor->getAverage().average() * m_kd;
+		Float avgSpecularReflectance = m_specularColor->getAverage().average() * m_ks;
+
 		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", 
-			m_ks / (m_kd+m_ks));
+			avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance));
 		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
 		m_exponent = props.getFloat("exponent", 10.0f);
 
-		if (m_kd + m_ks > 1.0f)
-			Log(EWarn, "Energy conservation is violated!");
+		if (m_kd * m_diffuseColor->getMaximum().max() + m_ks * m_specularColor->getMaximum().max() > 1.0f) {
+			Log(EWarn, "%s: Energy conservation is violated!", props.getID().c_str());
+			Log(EWarn, "%s: Max. diffuse reflectance = %f * %f", m_kd, m_diffuseColor->getMaximum().max());
+			Log(EWarn, "%s: Max. specular reflectance = %f * %f", m_ks, m_specularColor->getMaximum().max());
+		}
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
@@ -37,8 +45,8 @@ public:
 
 	Phong(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
-		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
-		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
+		m_diffuseColor = static_cast<Texture *>(manager->getInstance(stream));
+		m_specularColor = static_cast<Texture *>(manager->getInstance(stream));
 		m_exponent = stream->readFloat();
 		m_kd = stream->readFloat();
 		m_ks = stream->readFloat();
@@ -51,8 +59,8 @@ public:
 		m_type[1] = EGlossyReflection;
 		m_combinedType = m_type[0] | m_type[1];
 		m_usesRayDifferentials = 
-			m_diffuseReflectance->usesRayDifferentials() ||
-			m_specularReflectance->usesRayDifferentials();
+			m_diffuseColor->usesRayDifferentials() ||
+			m_specularColor->usesRayDifferentials();
 	}
 
 	virtual ~Phong() {
@@ -60,7 +68,7 @@ public:
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_diffuseReflectance->getValue(its);
+		return m_diffuseColor->getValue(its) * m_kd;
 	}
 
 	Spectrum f(const BSDFQueryRecord &bRec) const {
@@ -83,12 +91,12 @@ public:
 				specRef = 0.0f;
 			else
 				specRef = (m_exponent + 2) * INV_TWOPI
-					* std::pow(alpha, m_exponent);
-			result += m_specularReflectance->getValue(bRec.its) * specRef;
+					* std::pow(alpha, m_exponent) * m_ks;
+			result += m_specularColor->getValue(bRec.its) * specRef;
 		}
 
 		if (hasDiffuse) 
-			result += m_diffuseReflectance->getValue(bRec.its) * INV_PI;
+			result += m_diffuseColor->getValue(bRec.its) * (INV_PI * m_kd);
 		return result;
 	}
 
@@ -144,11 +152,7 @@ public:
 		if (bRec.wo.z <= 0) 
 			return Spectrum(0.0f);
 
-		if (m_diffuseSamplingWeight == 0) {
-			return m_specularReflectance->getValue(bRec.its) * (m_exponent+2)/(m_exponent+1);
-		} else {
-			return f(bRec) / pdf(bRec);
-		}
+		return f(bRec) / pdf(bRec);
 	}
 
 	inline Float pdfDiffuse(const BSDFQueryRecord &bRec) const {
@@ -192,12 +196,12 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "diffuseReflectance") {
-			m_diffuseReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "specularReflectance") {
-			m_specularReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "diffuseColor") {
+			m_diffuseColor = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_diffuseColor->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "specularColor") {
+			m_specularColor = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_specularColor->usesRayDifferentials();
 		} else {
 			BSDF::addChild(name, child);
 		}
@@ -206,8 +210,8 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
-		manager->serialize(stream, m_diffuseReflectance.get());
-		manager->serialize(stream, m_specularReflectance.get());
+		manager->serialize(stream, m_diffuseColor.get());
+		manager->serialize(stream, m_specularColor.get());
 		stream->writeFloat(m_exponent);
 		stream->writeFloat(m_kd);
 		stream->writeFloat(m_ks);
@@ -220,8 +224,8 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Phong["
-			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
-			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
+			<< "  diffuseColor = " << indent(m_diffuseColor->toString()) << "," << endl
+			<< "  specularColor = " << indent(m_specularColor->toString()) << "," << endl
 			<< "  exponent = " << m_exponent << endl
 			<< "]";
 		return oss.str();
@@ -230,8 +234,8 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	ref<Texture> m_diffuseReflectance;
-	ref<Texture> m_specularReflectance;
+	ref<Texture> m_diffuseColor;
+	ref<Texture> m_specularColor;
 	Float m_exponent;
 	Float m_kd, m_ks;
 	Float m_specularSamplingWeight;
@@ -243,35 +247,39 @@ private:
 class PhongShader : public Shader {
 public:
 	PhongShader(Renderer *renderer, 
-			const Texture *diffuseReflectance,
-			const Texture *specularReflectance,
+			const Texture *diffuseColor,
+			const Texture *specularColor,
+			Float ks, Float kd,
 			Float exponent) : Shader(renderer, EBSDFShader), 
-			m_diffuseReflectance(diffuseReflectance),
-			m_specularReflectance(specularReflectance),
+			m_diffuseColor(diffuseColor),
+			m_specularColor(specularColor),
+			m_ks(ks), m_kd(kd),
 			m_exponent(exponent) {
-		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
-		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
+		m_diffuseColorShader = renderer->registerShaderForResource(m_diffuseColor.get());
+		m_specularColorShader = renderer->registerShaderForResource(m_specularColor.get());
 	}
 
 	bool isComplete() const {
-		return m_diffuseReflectanceShader.get() != NULL &&
-			   m_specularReflectanceShader.get() != NULL;
+		return m_diffuseColorShader.get() != NULL &&
+			   m_specularColorShader.get() != NULL;
 	}
 
 	void putDependencies(std::vector<Shader *> &deps) {
-		deps.push_back(m_diffuseReflectanceShader.get());
-		deps.push_back(m_specularReflectanceShader.get());
+		deps.push_back(m_diffuseColorShader.get());
+		deps.push_back(m_specularColorShader.get());
 	}
 
 	void cleanup(Renderer *renderer) {
-		renderer->unregisterShaderForResource(m_diffuseReflectance.get());
-		renderer->unregisterShaderForResource(m_specularReflectance.get());
+		renderer->unregisterShaderForResource(m_diffuseColor.get());
+		renderer->unregisterShaderForResource(m_specularColor.get());
 	}
 
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
 		oss << "uniform float " << evalName << "_exponent;" << endl
+			<< "uniform float " << evalName << "_ks;" << endl
+			<< "uniform float " << evalName << "_kd;" << endl
 			<< endl
 			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    if (wi.z < 0.0 || wo.z < 0.0)" << endl
@@ -281,32 +289,37 @@ public:
 			<< "    if (alpha < 0.0)" << endl 
 			<< "       return vec3(0.0);" << endl 
 			<< "    float specRef = pow(alpha, " << evalName << "_exponent) * " << endl
-			<< "      (" << evalName << "_exponent + 2) * 0.15915;" << endl
-			<< "    return " << depNames[0] << "(uv) * 0.31831" << endl
+			<< "      (" << evalName << "_exponent + 2) * 0.15915 * " << evalName << "_ks;" << endl
+			<< "    return " << depNames[0] << "(uv) * (0.31831 * " << evalName << "_kd)" << endl
 			<< "           + " << depNames[1] << "(uv) * specRef;" << endl
 			<< "}" << endl;
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
 		parameterIDs.push_back(program->getParameterID(evalName + "_exponent"));
+		parameterIDs.push_back(program->getParameterID(evalName + "_ks"));
+		parameterIDs.push_back(program->getParameterID(evalName + "_kd"));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
 		program->setParameter(parameterIDs[0], m_exponent);
+		program->setParameter(parameterIDs[1], m_ks);
+		program->setParameter(parameterIDs[2], m_kd);
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	ref<const Texture> m_diffuseReflectance;
-	ref<const Texture> m_specularReflectance;
-	ref<Shader> m_diffuseReflectanceShader;
-	ref<Shader> m_specularReflectanceShader;
+	ref<const Texture> m_diffuseColor;
+	ref<const Texture> m_specularColor;
+	ref<Shader> m_diffuseColorShader;
+	ref<Shader> m_specularColorShader;
+	Float m_ks, m_kd;
 	Float m_exponent;
 };
 
 Shader *Phong::createShader(Renderer *renderer) const { 
-	return new PhongShader(renderer, m_diffuseReflectance.get(),
-		m_specularReflectance.get(), m_exponent);
+	return new PhongShader(renderer, m_diffuseColor.get(),
+		m_specularColor.get(), m_ks, m_kd, m_exponent);
 }
 
 MTS_IMPLEMENT_CLASS(PhongShader, false, Shader)

@@ -41,8 +41,12 @@ public:
 		return false;
 	}
 
-	Spectrum getAverage() const {
+	Spectrum getMaximum() const {
 		return m_reflectance;
+	}
+
+	Spectrum getAverage() const {
+		return m_reflectance; // that's not quite right
 	}
 
 	std::string toString() const {

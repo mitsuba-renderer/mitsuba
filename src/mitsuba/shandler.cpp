@@ -79,6 +79,8 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 	ParseContext &context = m_context.top();
 	std::string type = context.attributes["type"];
 	context.properties.setPluginName(type);
+	if (context.attributes.find("id") != context.attributes.end())
+		context.properties.setID(context.attributes["id"]);
 
 	ref<ConfigurableObject> object = NULL;
 

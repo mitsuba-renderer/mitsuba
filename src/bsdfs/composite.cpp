@@ -11,8 +11,7 @@ MTS_NAMESPACE_BEGIN
 class Composite : public BSDF {
 public:
 	Composite(const Properties &props) 
-		: BSDF(props), m_bsdfWeight(NULL) {
-
+		: BSDF(props), m_bsdfCount(0), m_bsdfWeight(NULL) {
 		/* Parse the weight parameter */
 		std::vector<std::string> weights = 
 			tokenize(props.getString("weights", ""), " ,;");
@@ -37,7 +36,7 @@ public:
 	}
 
 	Composite(Stream *stream, InstanceManager *manager) 
-	 : BSDF(stream, manager), m_bsdfWeight(NULL) {
+	 : BSDF(stream, manager), m_bsdfCount(0), m_bsdfWeight(NULL) {
 		m_bsdfCount = stream->readInt();
 		m_bsdfWeight = new Float[m_bsdfCount];
 		m_bsdfOffset = new int[m_bsdfCount];
@@ -51,7 +50,7 @@ public:
 	}
 
 	virtual ~Composite() {
-		for (int i=0; i<m_bsdfCount; ++i)
+		for (size_t i=0; i<m_bsdfs.size(); ++i)
 			m_bsdfs[i]->decRef();
 		if (m_type)
 			delete[] m_type;
@@ -109,7 +108,7 @@ public:
 		return result;
 	}
 
-	inline Spectrum f(const BSDFQueryRecord &bRec) const {
+	Spectrum f(const BSDFQueryRecord &bRec) const {
 		Spectrum result(0.0f);
 
 		if (bRec.component == -1) {
@@ -125,6 +124,28 @@ public:
 				BSDFQueryRecord bRec2(bRec);
 				bRec2.component = component;
 				return m_bsdfs[i]->f(bRec2) * m_bsdfWeight[i];
+			}
+		}
+
+		return result;
+	}
+
+	Spectrum fDelta(const BSDFQueryRecord &bRec) const {
+		Spectrum result(0.0f);
+
+		if (bRec.component == -1) {
+			for (int i=0; i<m_bsdfCount; ++i)
+				result += m_bsdfs[i]->fDelta(bRec) * m_bsdfWeight[i];
+		} else {
+			/* Pick out an individual component */
+			for (int i=0; i<m_bsdfCount; ++i) {
+				int component = bRec.component - m_bsdfOffset[i];
+				if (component < 0 || component >= m_bsdfs[i]->getComponentCount())
+					continue;
+
+				BSDFQueryRecord bRec2(bRec);
+				bRec2.component = component;
+				return m_bsdfs[i]->fDelta(bRec2) * m_bsdfWeight[i];
 			}
 		}
 
@@ -153,6 +174,28 @@ public:
 		return result;
 	}
 	
+	Float pdfDelta(const BSDFQueryRecord &bRec) const {
+		Float result = 0.0f;
+
+		if (bRec.component == -1) {
+			for (int i=0; i<m_bsdfCount; ++i)
+				result += m_bsdfs[i]->pdfDelta(bRec) * m_pdf[i];
+		} else {
+			/* Pick out an individual component */
+			for (int i=0; i<m_bsdfCount; ++i) {
+				int component = bRec.component - m_bsdfOffset[i];
+				if (component < 0 || component >= m_bsdfs[i]->getComponentCount())
+					continue;
+
+				BSDFQueryRecord bRec2(bRec);
+				bRec2.component = component;
+				return m_bsdfs[i]->pdfDelta(bRec2);
+			}
+		}
+
+		return result;
+	}
+
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf) const {
 		if (bRec.component == -1) {
 			Float componentPDF;

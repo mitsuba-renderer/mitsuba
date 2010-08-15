@@ -21,6 +21,7 @@ public:
 		ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, fs);
 		m_mipmap = MIPMap::fromBitmap(bitmap);
 		m_average = m_mipmap->triangle(m_mipmap->getLevels()-1, 0, 0);
+		m_maximum = m_mipmap->getMaximum();
 	}
 	
 	EXRTexture(Stream *stream, InstanceManager *manager) 
@@ -34,6 +35,7 @@ public:
 		ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, mStream);
 		m_mipmap = MIPMap::fromBitmap(bitmap);
 		m_average = m_mipmap->triangle(m_mipmap->getLevels()-1, 0, 0);
+		m_maximum = m_mipmap->getMaximum();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -46,6 +48,10 @@ public:
 
 	Spectrum getValue(const Intersection &its) const {
 		return m_mipmap->getValue(its);
+	}
+
+	Spectrum getMaximum() const {
+		return m_maximum;
 	}
 
 	Spectrum getAverage() const {
@@ -66,7 +72,7 @@ public:
 protected:
 	ref<MIPMap> m_mipmap;
 	std::string m_filename;
-	Spectrum m_average;
+	Spectrum m_average, m_maximum;
 };
 
 MTS_IMPLEMENT_CLASS_S(EXRTexture, false, Texture)
