@@ -231,16 +231,6 @@ public:
 		}
 	}
 
-	Spectrum Li(const Ray &ray, const Normal &n) const {
-		if (!m_ready)
-			return Spectrum(0.0f);
-		RadianceQuery rQuery(m_zr, m_zv, m_sigmaTr, m_mfp, m_D, m_Fdt, ray.o, n);
-		m_octree->execute(rQuery);
-		Spectrum R2 = rQuery.diff(-ray.d) * INV_PI;
-		Spectrum R = rQuery.getRadiance(-ray.d);
-		return R2;
-	}
-
 	void configure() {
 		m_sigmaSPrime = m_sigmaS * (1-m_g);
 		m_sigmaTPrime = m_sigmaSPrime + m_sigmaA;

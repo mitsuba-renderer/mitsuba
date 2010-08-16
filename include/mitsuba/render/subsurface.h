@@ -28,14 +28,7 @@ public:
 	inline const std::vector<Shape *> getShapes() const { return m_shapes; }
 
 	/// Get the exitant radiance for a point on the surface
-	virtual Spectrum Lo(const Intersection &its,
-		const Vector &d) const = 0;
-	
-	/**
-	 * Query the the readiance function inside the object. Requires a surface
-	 * normal used to create a slab approximation
-	 */
-	virtual Spectrum Li(const Ray &ray, const Normal &n) const = 0;
+	virtual Spectrum Lo(const Intersection &its, const Vector &d) const = 0;
 
 	/// Serialize this subsurface integrator to a binary data stream
 	void serialize(Stream *stream, InstanceManager *manager) const;
