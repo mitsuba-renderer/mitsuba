@@ -8,12 +8,12 @@
 #include <mitsuba/render/renderjob.h>
 #include <fstream>
 #include <stdexcept>
-#include <dirent.h>
 #include <sys/types.h>
 #include "shandler.h"
 
 #if !defined(WIN32)
 #include <dlfcn.h>
+#include <dirent.h>
 #endif
 
 #if defined(WIN32)
@@ -166,22 +166,31 @@ void help() {
 	cout <<  "   -v          Be more verbose" << endl << endl;
 
 	FileResolver *resolver = FileResolver::getInstance();
+	cout << "The following utilities are available:" << endl << endl;
+	std::string dirPath = resolver->resolveAbsolute("plugins");
+
+#if !defined(WIN32)
 	DIR *directory;
 	struct dirent *dirinfo;
-	std::string dirPath = resolver->resolveAbsolute("plugins");
 
 	if ((directory = opendir(dirPath.c_str())) == NULL)
 		SLog(EInfo, "Could not open plugin directory");
 
-	cout << "The following utilities are available:" << endl << endl;
 	while ((dirinfo = readdir(directory)) != NULL) {
 		std::string fname(dirinfo->d_name);
-		if (!endsWith(fname, ".dylib") && !endsWith(fname, ".dll") && !endsWith(fname, ".so"))
+		if (!endsWith(fname, ".dylib") !endsWith(fname, ".so"))
 			continue;
-#if defined(WIN32)
-		std::string fullName = dirPath + "\\" + fname;
-#else
 		std::string fullName = dirPath + "/" + fname;
+#else
+	HANDLE hFind;
+	WIN32_FIND_DATA findFileData;
+
+	if ((hFind = FindFirstFile((dirPath + "\\*.dll").c_str(), &findFileData)) == INVALID_HANDLE_VALUE)
+		SLog(EInfo, "Could not open plugin directory");
+	
+	do {
+		std::string fname = findFileData.cFileName;
+		std::string fullName = dirPath + "\\" + fname;
 #endif
 		UtilityPlugin utility(fullName);
 		if (!utility.isUtility())
@@ -191,7 +200,12 @@ void help() {
 		for (int i=0; i<22-(int) shortName.length(); ++i)
 			cout << ' ';
 		cout  << utility.getDescription() << endl;
+#if !defined(WIN32)	
 	}
+#else
+	} while (FindNextFile(hFind, &findFileData));
+	FindClose(hFind);
+#endif
 }
 
 

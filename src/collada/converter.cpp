@@ -1104,8 +1104,8 @@ void ColladaConverter::convert(const std::string &inputFile,
 		MemBufInputSource* memBufIS = new MemBufInputSource((const XMLByte*) xmlString.c_str(), 
 			xmlString.length(), "bufID", false);
 		Wrapper4InputSource *wrapper = new Wrapper4InputSource(memBufIS, false);
-		DOMDocument *doc = parser->parse(wrapper);
-		DOMDocument *adj = parser->parseURI(adjustmentFile.c_str());
+		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *doc = parser->parse(wrapper);
+		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.c_str());
 	
 		std::set<std::string> removals;
 		findRemovals(adj, removals);
