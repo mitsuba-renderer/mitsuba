@@ -461,7 +461,7 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 		tess_nSources = data->nSources;
 
 		for (size_t j=0; j<vcount.getCount(); ++j) {
-			size_t vertexCount = vcount.get(i);
+			size_t vertexCount = vcount.get(j);
 
 			domUint *temp = new domUint[vertexCount * data->nSources];
 			for (size_t l = 0; l<vertexCount * data->nSources; ++l)
@@ -470,8 +470,8 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 			gluTessBeginPolygon(tess, NULL);
 			gluTessBeginContour(tess);
 
-			for (size_t k=0; k<vertexCount*data->nSources; k+=data->nSources) 
-				gluTessVertex(tess, &data->glPos[temp[k+posOffset]*3], (GLvoid *) (k+temp));
+			for (size_t k=0; k<vertexCount; k++) 
+				gluTessVertex(tess, &data->glPos[temp[k*data->nSources+posOffset]*3], (GLvoid *) (temp + k*data->nSources));
 
 			gluTessEndContour(tess);
 			gluTessEndPolygon(tess);
@@ -958,7 +958,7 @@ GLvoid __stdcall tessBegin(GLenum type) {
 
 GLvoid __stdcall tessVertex(void *data) {
 	const domUint *raw = (domUint *) data;
-	for (size_t i=0; i<tess_nSources; ++i) 
+	for (size_t i=0; i<tess_nSources; ++i)
 		tess_data.push_back(raw[i]);
 }
 
