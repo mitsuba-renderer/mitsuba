@@ -4,10 +4,17 @@
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/shvector.h>
+#include <mitsuba/render/util.h>
 #include <mitsuba/render/renderjob.h>
 #include <fstream>
 #include <stdexcept>
+#include <dirent.h>
+#include <sys/types.h>
 #include "shandler.h"
+
+#if !defined(WIN32)
+#include <dlfcn.h>
+#endif
 
 #if defined(WIN32)
 #include "getopt.h"
@@ -17,19 +24,114 @@
 
 using namespace mitsuba;
 
+class UtilityPlugin {
+public:
+	UtilityPlugin(const std::string &path) : m_path(path) {
+#if defined(WIN32)
+		m_handle = LoadLibrary(path.c_str());
+		if (!m_handle) {
+			SLog(EError, "Error while loading plugin \"%s\": %s", m_path.c_str(),
+					lastErrorText().c_str());
+		}
+#else
+		m_handle = dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL);
+		if (!m_handle) {
+			SLog(EError, "Error while loading plugin \"%s\": %s", m_path.c_str(),
+					dlerror());
+		}
+#endif
+
+		try {
+			m_getDescription = (GetDescriptionFunc) getSymbol("GetDescription");
+		} catch (...) {
+#if defined(WIN32)
+			FreeLibrary(m_handle);
+#else
+			dlclose(m_handle);
+#endif
+			throw;
+		}
+
+		m_isUtility = true;
+		try {
+			m_createUtility = (CreateUtilityFunc) getSymbol("CreateUtility");
+		} catch (...) {
+			m_isUtility = false;
+		}
+
+		/* New classes must be registered within the class hierarchy */
+		Class::staticInitialization();
+	}
+
+	inline bool isUtility() const {
+		return m_isUtility;
+	}
+
+	void *getSymbol(const std::string &sym) {
+#if defined(WIN32)
+		void *data = GetProcAddress(m_handle, sym.c_str());
+		if (!data) {
+			SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
+				sym.c_str(), m_path.c_str(), lastErrorText().c_str());
+		}
+#else
+		void *data = dlsym(m_handle, sym.c_str());
+		if (!data) {
+			SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
+				sym.c_str(), m_path.c_str(), dlerror());
+		}
+#endif
+		return data;
+	}
+
+	Utility *createUtility(UtilityServices *us) const {
+		return (Utility *) m_createUtility(us);
+	}
+
+	std::string getDescription() const {
+		return m_getDescription();
+	}
+
+	~UtilityPlugin() {
+#if defined(WIN32)
+		FreeLibrary(m_handle);
+#else
+		dlclose(m_handle);
+#endif
+	}
+private:
+	typedef void *(*CreateUtilityFunc)(UtilityServices *us);
+	typedef char *(*GetDescriptionFunc)();
+	CreateUtilityFunc m_createUtility;
+	GetDescriptionFunc m_getDescription;
+	std::string m_path;
+	bool m_isUtility;
+#if defined(WIN32)
+	HMODULE m_handle;
+#else
+	void *m_handle;
+#endif
+};
+
+class UtilityServicesImpl : public UtilityServices {
+public:
+	Scene *loadScene(const std::string &filename) {
+		cout << "asdf" << endl;
+		return NULL;
+	}
+};
+
 void help() {
 	cout <<  "Mitsuba version " MTS_VERSION ", Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl;
-	cout <<  "Usage: mitsuba [options] <One or more scene XML files>" << endl;
+	cout <<  "Usage: mtsutil [mtsutil options] <utility name> [arguments]" << endl;
 	cout <<  "Options/Arguments:" << endl;
 	cout <<  "   -h          Display this help text" << endl << endl;
-	cout <<  "   -D key=val  Define a constant, which can referenced as \"$key\" in the scene" << endl << endl;
-	cout <<  "   -o fname    Write the output image to the file denoted by \"fname\"" << endl << endl;
 	cout <<  "   -a p1;p2;.. Add one or more entries to the resource search path" << endl << endl;
 	cout <<  "   -p count    Override the detected number of processors. Useful for reducing" << endl;
 	cout <<  "               the load or creating scheduling-only nodes in conjunction with"  << endl;
 	cout <<  "               the -c and -s parameters, e.g. -p 0 -c host1;host2;host3,..." << endl << endl;
 	cout <<  "   -q          Quiet mode - do not print any log messages to stdout" << endl << endl;
-	cout <<  "   -c hosts    Network rendering: connect to mtssrv instances over a network." << endl;
+	cout <<  "   -c hosts    Network processing: connect to mtssrv instances over a network." << endl;
 	cout <<  "               Requires a semicolon-separated list of host names of the form" << endl;
 	cout <<  "                       host.domain[:port] for a direct connection" << endl;
 	cout <<  "                 or" << endl;
@@ -38,46 +140,50 @@ void help() {
 	cout <<  "                       out -- by default, \"~/mitsuba\" is used)" << endl << endl;
 	cout <<  "   -s file     Connect to additional Mitsuba servers specified in a file" << endl;
 	cout <<  "               with one name per line (same format as in -c)" << endl<< endl;
-	cout <<  "   -j count    Simultaneously schedule several scenes. Can sometimes accelerate" << endl;
-	cout <<  "               rendering when large amounts of processing power are available" << endl;
-	cout <<  "               (e.g. when running Mitsuba on a cluster. Default: 1)" << endl << endl;
 	cout <<  "   -n name     Assign a node name to this instance (Default: host name)" << endl << endl;
-	cout <<  "   -t          Test case mode (see Mitsuba docs for more information)" << endl << endl;
-	cout <<  "   -x          Skip rendering of files where output already exists" << endl << endl;
-	cout <<  "   -b res      Specify the block resolution used to split images into parallel" << endl;
-	cout <<  "               workloads (default: 32). Only applies to some integrators." << endl << endl;
 	cout <<  "   -v          Be more verbose" << endl << endl;
-	cout <<  "   -b          Disable progress bars" << endl << endl;
-	cout <<  " The README file included with the distribution contains further information." << endl;
-}
 
-ref<RenderQueue> renderQueue = NULL;
+	FileResolver *resolver = FileResolver::getInstance();
+	DIR *directory;
+	struct dirent *dirinfo;
+	std::string dirPath = resolver->resolveAbsolute("plugins");
 
-#if !defined(WIN32)
-/* Handle the hang-up signal and write a partially rendered image to disk */
-void signalHandler(int signal) {
-	if (signal == SIGHUP && renderQueue.get()) {
-		renderQueue->flush();
-	} else if (signal == SIGFPE) {
-		SLog(EWarn, "Caught a floating-point exception!");
+	if ((directory = opendir(dirPath.c_str())) == NULL)
+		SLog(EInfo, "Could not open plugin directory");
+
+	cout << "The following utilities are available:" << endl << endl;
+	while ((dirinfo = readdir(directory)) != NULL) {
+		std::string fname(dirinfo->d_name);
+		if (!endsWith(fname, ".dylib") && !endsWith(fname, ".dll") && !endsWith(fname, ".dylib"))
+			continue;
+#if defined(WIN32)
+		std::string fullName = dirPath + "\\" + fname;
+#else
+		std::string fullName = dirPath + "/" + fname;
+#endif
+		UtilityPlugin utility(fullName);
+		if (!utility.isUtility())
+			continue;
+		std::string shortName = fname.substr(0, strrchr(fname.c_str(), '.') - fname.c_str());
+		cout << "\t" << shortName;
+		for (int i=0; i<22-(int) shortName.length(); ++i)
+			cout << ' ';
+		cout  << utility.getDescription() << endl;
 	}
 }
-#endif
+
 
 int ubi_main(int argc, char **argv) {
 	char optchar, *end_ptr = NULL;
 
 	try {
 		/* Default settings */
-		int nprocs = getProcessorCount(), numParallelScenes = 1;
+		int nprocs = getProcessorCount();
 		std::string nodeName = getHostName(),
 					networkHosts = "", destFile="";
-		bool quietMode = false, progressBars = true, skipExisting = false;
+		bool quietMode = false;
 		ELogLevel logLevel = EInfo;
 		FileResolver *resolver = FileResolver::getInstance();
-		bool testCaseMode = false;
-		std::map<std::string, std::string> parameters;
-		int blockSize = 32;
 
 		if (argc < 2) {
 			help();
@@ -86,7 +192,7 @@ int ubi_main(int argc, char **argv) {
 
 		optind = 1;
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "a:c:D:s:j:n:o:b:p:qhzvtx")) != -1) {
+		while ((optchar = getopt(argc, argv, "a:c:s:n:p:qhv")) != -1) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
@@ -96,13 +202,6 @@ int ubi_main(int argc, char **argv) {
 					break;
 				case 'c':
 					networkHosts = networkHosts + std::string(";") + std::string(optarg);
-					break;
-				case 'D': {
-						std::vector<std::string> param = tokenize(optarg, "=");
-						if (param.size() != 2)
-							SLog(EError, "Invalid parameter specification \"%s\"", optarg);
-						parameters[param[0]] = param[1];
-					}
 					break;
 				case 's': {
 						std::ifstream is(optarg);
@@ -119,37 +218,13 @@ int ubi_main(int argc, char **argv) {
 				case 'n':
 					nodeName = optarg;
 					break;
-				case 'o':
-					destFile = optarg;
-					break;
 				case 'v':
 					logLevel = EDebug;
-					break;
-				case 't':
-					testCaseMode = true;
-					break;
-				case 'x':
-					skipExisting = true;
 					break;
 				case 'p':
 					nprocs = strtol(optarg, &end_ptr, 10);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the processor count!");
-					break;
-				case 'j':
-					numParallelScenes = strtol(optarg, &end_ptr, 10);
-					if (*end_ptr != '\0')
-						SLog(EError, "Could not parse the parallel scene count!");
-					break;
-				case 'b':
-					blockSize = strtol(optarg, &end_ptr, 10);
-					if (*end_ptr != '\0')
-						SLog(EError, "Could not parse the block size!");
-					if (blockSize < 2 || blockSize > 64)
-						SLog(EError, "Invalid block size (should be in the range 2-64)");
-					break;
-				case 'z':
-					progressBars = false;
 					break;
 				case 'q':
 					quietMode = true;
@@ -160,8 +235,6 @@ int ubi_main(int argc, char **argv) {
 					return 0;
 			}
 		}
-
-		ProgressReporter::setEnabled(progressBars);
 
 		/* Configure the logging subsystem */
 		ref<Logger> log = Thread::getThread()->getLogger();
@@ -232,83 +305,35 @@ int ubi_main(int argc, char **argv) {
 
 		scheduler->start();
 
-#if !defined(WIN32)
-			/* Initialize signal handlers */
-			struct sigaction sa;
-			sa.sa_handler = signalHandler;
-			sigemptyset(&sa.sa_mask);
-			sa.sa_flags = 0;
-			if (sigaction(SIGHUP, &sa, NULL)) 
-				SLog(EError, "Could not install a custom signal handler!");
-			if (sigaction(SIGFPE, &sa, NULL)) 
-				SLog(EError, "Could not install a custom signal handler!");
-#endif
-
-		/* Prepare for parsing scene descriptions */
-		SAXParser* parser = new SAXParser();
-		std::string schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
-
-		/* Check against the 'scene.xsd' XML Schema */
-		parser->setDoSchema(true);
-		parser->setValidationSchemaFullChecking(true);
-		parser->setValidationScheme(SAXParser::Val_Always);
-		parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
-
-		/* Set the handler */
-		SceneHandler *handler = new SceneHandler(parameters);
-		parser->setDoNamespaces(true);
-		parser->setDocumentHandler(handler);
-		parser->setErrorHandler(handler);
-
-		renderQueue = new RenderQueue();
-	
-		ref<TestSupervisor> testSupervisor;
-
-		if (testCaseMode)
-			testSupervisor = new TestSupervisor(argc-optind);
-
-		int jobIdx = 0;
-		for (int i=optind; i<argc; ++i) {
-			std::string inputFile = argv[i], filePath = resolver->pathFromFile(inputFile);
-			if (!resolver->contains(filePath))
-				resolver->addPath(filePath);
-				
-			std::string filename = resolver->resolve(inputFile);
-			resolver->setCurrentDirectoryFromFile(filename);
-			std::string filenameWithoutExtension = resolver->resolveDest( 
-				FileResolver::getFilenameWithoutExtension(filename));
-
-			SLog(EInfo, "Parsing scene description from \"%s\" ..", inputFile.c_str());
-
-			parser->parse(inputFile.c_str());
-			ref<Scene> scene = handler->getScene();
-
-			scene->setSourceFile(inputFile);
-			scene->setDestinationFile(destFile.length() > 0 ? destFile 
-				: filenameWithoutExtension);
-			scene->setBlockSize(blockSize);
-
-			if (scene->destinationExists() && skipExisting)
-				continue;
-
-			ref<RenderJob> thr = new RenderJob(formatString("ren%i", jobIdx++), 
-				scene, renderQueue, testSupervisor);
-			thr->start();
-
-			renderQueue->waitLeft(numParallelScenes-1);
+		if (argc <= optind) {
+			std::cerr << "A utility name must be supplied!" << endl;
+			return -1;
 		}
 
-		/* Wait for all render processes to finish */
-		renderQueue->waitLeft(0);
-		renderQueue = NULL;
+		/* Build the full plugin file name */
+#if defined(WIN32)
+		std::string shortName = std::string("plugins/") + argv[optind] + std::string(".dll");
+#elif defined(__OSX__)
+		std::string shortName = std::string("plugins/") + argv[optind] + std::string(".dylib");
+#else
+		std::string shortName = std::string("plugins/") + argv[optind] + std::string(".so");
+#endif
+		std::string fullName = resolver->resolve(shortName);
 
-		delete handler;
-		delete parser;
+		if (!FileStream::exists(fullName)) {
+			/* Plugin not found! */
+			SLog(EError, "Utility \"%s\" not found (run \"mtsutil\" without arguments to "
+				"see a list of available utilities)", fullName.c_str());
+		}
+		SLog(EInfo, "Loading utility \"%s\" ..", argv[optind]);
+		UtilityPlugin *plugin = new UtilityPlugin(fullName);
+		if (!plugin->isUtility())
+			SLog(EError, "This plugin does not implement the 'Utility' interface!");
 
-		Statistics::getInstance()->printStats();
+		UtilityServices *utilityServices = new UtilityServicesImpl();
+		Utility *utility = plugin->createUtility(utilityServices);
 
-		if (testCaseMode) 
-			testSupervisor->printSummary();
+		return utility->run(argc-optind, argv+optind);
 	} catch (const std::exception &e) {
 		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
 	} catch (...) {
@@ -364,7 +389,7 @@ int main(int argc, char **argv) {
 	resolver->addPath(__ubi_bundlepath());
 	MTS_AUTORELEASE_END() 
 #endif
-
+		
 #if !defined(WIN32)
 	/* Correct number parsing on some locales (e.g. ru_RU) */
 	setlocale(LC_NUMERIC, "C");

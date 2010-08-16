@@ -8,6 +8,7 @@ To launch the interactive frontend, run \code{Mitsuba.app} on MacOS,
 You can also drag and drop scene files onto the application icon or the running program to open them.
 A quick video tutorial on using the GUI can be found here: \url{http://vimeo.com/13480342}.
 \subsection{Command line interface}
+\label{sec:mitsuba}
 The \texttt{mitsuba} binary is an alternative non-interactive rendering 
 frontend for command-line use and batch job operation.
 To get a listing of the parameters it supports, run
@@ -186,3 +187,52 @@ Options/Arguments:
 
  The README file included with the distribution contains further information.
 \end{console}
+\subsection{Direct connection server}
+A Mitsuba compute node can be created using the \code{mtssrv} executable. By default,
+it will listen on port 7554:
+\begin{shell}
+$\texttt{\$}$ mtssrv
+..
+maxwell: Listening on port 7554.. Send Ctrl-C or SIGTERM to stop.
+\end{shell}
+Type \code{mtssrv -h} to see a list of available options.
+If you find yourself unable to connect to the server, \code{mtssrv} is probably listening on
+the wrong interface. In this case, please specify an explicit IP address or hostname:
+\begin{shell}
+$\texttt{\$}$ mtssrv -i maxwell.cs.cornell.edu
+\end{shell}
+As advised in Section~\ref{sec:mitsuba}, it is advised to run \code{mtssrv} \emph{only} in trusted networks.
+
+One nice feature of \code{mtssrv} is that it (like \code{mitsuba}) also supports the \code{-c} and \code{-s} 
+parameters, which can be used to connect to additional compute servers. 
+This allows building large hierarchies of nodes,
+where communication occurs only amongst neighbors and the root node presents itself as
+a computer with hundreds of cores.
+Connecting clients will not be able to distinguish additional cores obtained in this manner  
+from the actual server cores. 
+
+Such hierarchies are mainly useful to reduce communication bottlenecks when distributing
+large resources (such as scenes) to remote machines. Imagine the following hypothetical scenario:
+you would like to render a 50MB-sized scene while at home, but rendering is too slow. 
+You decide to tap into some extra machines available
+at your workplace, but this usually doesn't make things much faster because of the relatively slow broadband
+connection and the need to transmit your scene to every single compute node involved. 
+
+Using \code{mtssrv}, you can
+instead designate a central scheduling node at your workplace, which accepts connections and delegates
+rendering tasks to the other machines. In this case, you will only have to transmit the scene once,
+and the remaining distribution happens over the comparatively fast ethernet at your workplace.
+\subsection{Utility launcher}
+\label{sec:mtsutil}
+When working on a larger project, one often needs to implement various utility programs that 
+perform simple tasks, such as applying a filter to an image or processing
+a matrix stored in a file. In a framework like Mitsuba, this unfortunately involves 
+a significant coding overhead in initializing the necessary APIs on all supported platforms. 
+To reduce this tedious work on the side of the programmer, Mitsuba comes with a utility launcher
+called \code{mtsutil}.
+
+The general usage of this command is
+\begin{shell}
+$\texttt{\$}$ mtsutil [options] <utility name> [arguments]
+\end{shell}
+For a listing of all supported options and utilities, enter the command without parameters.

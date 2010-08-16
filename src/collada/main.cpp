@@ -166,7 +166,8 @@ int ubi_main(int argc, char **argv) {
 #endif
 
 #if !defined(WIN32)
-	setlocale(LC_ALL, "C");
+	/* Correct number parsing on some locales (e.g. ru_RU) */
+	setlocale(LC_NUMERIC, "C");
 #endif
 
 	try {
@@ -190,12 +191,18 @@ int ubi_main(int argc, char **argv) {
 		device->shutdown();
 		session->shutdown();
 	} catch(const XMLException &toCatch) {
-		SLog(EError, "Caught a Xerces exception: %s",
-			XMLString::transcode(toCatch.getMessage()));
+		cout << "Caught a Xerces exception: " << 
+			XMLString::transcode(toCatch.getMessage()) << endl;
 		retval = -1;
 	} catch(const DOMException &toCatch) {
-		SLog(EError, "Caught a Xerces exception: %s",
-			XMLString::transcode(toCatch.getMessage()));
+		cout << "Caught a Xerces exception: " << 
+			XMLString::transcode(toCatch.getMessage()) << endl;
+		retval = -1;
+	} catch (const std::exception &e) {
+		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
+		retval = -1;
+	} catch (...) {
+		std::cerr << "Caught a critical exeption of unknown type!" << endl;
 		retval = -1;
 	}
 	
