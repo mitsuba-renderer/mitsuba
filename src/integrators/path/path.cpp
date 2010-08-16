@@ -52,7 +52,7 @@ public:
 
 			/* Include radiance from a subsurface integrator if requested */
 			if (its.hasSubsurface() && (rRec.type & RadianceQueryRecord::ESubsurfaceRadiance))
-				Li += pathThroughput * its.LoSub(-ray.d);
+				Li += pathThroughput * its.LoSub(scene, -ray.d);
 
 			if (m_maxDepth > 0 && rRec.depth >= m_maxDepth)
 				break;

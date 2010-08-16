@@ -215,7 +215,7 @@ public:
 		stream->writeInt(m_octreeIndex);
 	}
 
-	Spectrum Lo(const Intersection &its, const Vector &d) const {
+	Spectrum Lo(const Scene *scene, const Intersection &its, const Vector &d) const {
 		if (!m_ready || m_ssFactor.isBlack())
 			return Spectrum(0.0f);
 		IsotropicDipoleQuery query(m_zr, m_zv, m_sigmaTr, m_Fdt, its.p);

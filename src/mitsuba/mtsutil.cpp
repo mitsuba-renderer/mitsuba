@@ -154,7 +154,7 @@ void help() {
 	cout << "The following utilities are available:" << endl << endl;
 	while ((dirinfo = readdir(directory)) != NULL) {
 		std::string fname(dirinfo->d_name);
-		if (!endsWith(fname, ".dylib") && !endsWith(fname, ".dll") && !endsWith(fname, ".dylib"))
+		if (!endsWith(fname, ".dylib") && !endsWith(fname, ".dll") && !endsWith(fname, ".so"))
 			continue;
 #if defined(WIN32)
 		std::string fullName = dirPath + "\\" + fname;

@@ -75,7 +75,7 @@ public:
 
 		/* Include radiance from a subsurface integrator if requested */
 		if (its.hasSubsurface() && (rRec.type & RadianceQueryRecord::ESubsurfaceRadiance))
-			Li += its.LoSub(-ray.d);
+			Li += its.LoSub(scene, -ray.d);
 
 		/* Leave here if direct illumination was not requested */
 		if (!(rRec.type & RadianceQueryRecord::EDirectRadiance))

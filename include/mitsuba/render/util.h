@@ -21,7 +21,7 @@ public:
 class MTS_EXPORT_RENDER Utility : public Object {
 public:
 	inline Utility(UtilityServices *services) 
-		: m_services(services) { }
+		: m_utilityServices(services) { }
 
 	/**
 	 * Run the utility. The supplied <tt>argc</tt>
@@ -36,8 +36,13 @@ public:
 protected:
 	/// Virtual destructor
 	virtual ~Utility() { }
+
+	/// Load a scene
+	inline Scene *loadScene(const std::string &fname) {
+		return m_utilityServices->loadScene(fname);
+	}
 private:
-	UtilityServices *m_services;
+	UtilityServices *m_utilityServices;
 };
 
 #define MTS_EXPORT_UTILITY(name, descr) \

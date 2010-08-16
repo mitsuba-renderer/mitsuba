@@ -74,7 +74,7 @@ public:
 	 * Should only be called if the intersected
 	 * shape does indeed have a subsurface integrator!
 	 */
-	inline Spectrum LoSub(const Vector &d) const;
+	inline Spectrum LoSub(const Scene *scene, const Vector &d) const;
 
 	/// Computes texture coordinate partials
 	void computePartials(const RayDifferential &ray);

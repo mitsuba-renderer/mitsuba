@@ -20,7 +20,7 @@ public:
 		Float weight2 = (Float) strtod(argv[3], &end_ptr);
 		if (*end_ptr != '\0')
 			SLog(EError, "Could not parse floating point value");
-		
+
 		ref<FileStream> aFile   = new FileStream(argv[2], FileStream::EReadOnly);
 		ref<FileStream> bFile   = new FileStream(argv[4], FileStream::EReadOnly);
 		ref<FileStream> outFile = new FileStream(argv[5], FileStream::ETruncReadWrite);
