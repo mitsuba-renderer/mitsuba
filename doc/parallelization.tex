@@ -1,27 +1,223 @@
 \section{Parallelization layer}
-Mitsuba is built on top of a flexible parallelization layer, which can spread out
+Mitsuba is built on top of a flexible parallelization layer, which spreads out
 various types of computation over local and remote cores.
 The guiding principle is that if an operation can potentially take longer than a
 few seconds, it ought to use all the cores it can get.
 
-Here, we will go through a simple example, which will hopefully provide sufficient intuition
+Here, we will go through a basic example, which will hopefully provide sufficient intuition
 to realize more complex tasks. 
 To obtain good (i.e. close to linear) speedups, the parallelization layer depends on
 several key assumptions of the task to be parallelized:
 \begin{itemize}
-\item The task can easily be split up into a discrete number of work units, which requires a negligible amount of computation.
+\item The task can easily be split up into a discrete number of \emph{work units}, which requires a negligible amount of computation.
 \item Each work unit is small in footprint so that it can easily be transferred over the network or shared memory. 
 \item A work unit constitutes a significant amount of computation, which by far outweighs the cost of transmitting it to another node.
-\item The `work result' obtained by processing a work unit is again small in footprint, so that it can easily be transferred back.
-\item Merging all `work results' to a solution of the whole problem requires a negligible amount of additional computation.
+\item The \emph{work result} obtained by processing a work unit is again small in footprint, so that it can easily be transferred back.
+\item Merging all work results to a solution of the whole problem requires a negligible amount of additional computation.
 \end{itemize}
-This essentially corresponds to a parallel version of \emph{Map} (as in \emph{Map\&Reduce}), which is very
-well-suited for many rendering workloads. 
+This essentially corresponds to a parallel version of \emph{Map} (one part of \emph{Map\&Reduce}) and is 
+ideally suited for most rendering workloads. 
 
 The example we consider here computes a \code{ROT13} ``encryption'' of a string, which 
-most certainly violates the `significant amount of computation' assumption. Nevertheless, 
-the inherent parallelism and simplicity of this task make it a good example.
+most certainly violates the ``significant amount of computation'' assumption.
+It was chosen mainly due to the inherent parallelism and simplicity of this task.
+While of course over-engineered to the extreme, the example hopefully 
+communicates how this framework might be used in more complex scenarios.
+
+We will implement this program as a plugin for the utility launcher \code{mtsutil}, which
+frees us from having to write lots of code to set up the framework, prepare the
+scheduler, etc.
+
+We start by creating the utility skeleton file \code{src/utils/rot13.cpp}:
+\begin{cpp}
+#include <mitsuba/render/util.h>
+
+MTS_NAMESPACE_BEGIN
+
+class ROT13Encoder : public Utility {
+public:
+	ROT13Encoder(UtilityServices *us) : Utility(us) { }
+
+	int run(int argc, char **argv) {
+		cout << "Hello world!" << endl;
+		return 0;
+	}
+
+	MTS_DECLARE_CLASS()
+};
+
+MTS_IMPLEMENT_CLASS(ROT13Encoder, false, Utility)
+MTS_EXPORT_UTILITY(ROT13Encoder, "Perform a ROT13 encryption of a string")
+MTS_NAMESPACE_END
+\end{cpp}
+The file must also be added to the build system: insert the line
+\begin{shell}
+plugins += $\texttt{env}$.SharedLibrary('plugins/rot13', ['src/utils/rot13.cpp'])
+\end{shell}
+into the SConscript (near the comment ``\code{Build the plugins -- utilities}''). After compiling
+using \code{scons}, the \code{mtsutil} binary should automatically pick up your new utility plugin:
+\begin{shell}
+$\texttt{\$}$ mtsutil
+..
+The following utilities are available:
+
+	addimages             Generate linear combinations of EXR images
+	rot13                 Perform a ROT13 encryption of a string
+\end{shell}
+It can be executed as follows:
+\begin{shell}
+$\texttt{\$}$ mtsutil rot13
+2010-08-16 18:38:27 INFO  main [src/mitsuba/mtsutil.cpp:276] Mitsuba version 0.1.1, Copyright (c) 2010 Wenzel Jakob
+2010-08-16 18:38:27 INFO  main [src/mitsuba/mtsutil.cpp:350] Loading utility "rot13" ..
+Hello world!
+\end{shell}
+
+Our approach for implementing distributed ROT13 will be to treat each character as an 
+indpendent work unit. Since the ordering is lost when sending out work units, we must
+also include the position of the character in both the work units and the work results.
 
 All of the relevant interfaces are contained in \code{include/mitsuba/core/sched.h}.
+For reference, here are the interfaces of \code{WorkUnit} and \code{WorkResult}:
+\newpage
+\begin{cpp}
+/**
+ * Abstract work unit. Represents a small amount of information
+ * that encodes part of a larger processing task. 
+ */
+class MTS_EXPORT_CORE WorkUnit : public Object {
+public:
+	/// Copy the content of another work unit of the same type
+	virtual void set(const WorkUnit *workUnit) = 0;
 
+	/// Fill the work unit with content acquired from a binary data stream
+	virtual void load(Stream *stream) = 0;
 
+	/// Serialize a work unit to a binary data stream
+	virtual void save(Stream *stream) const = 0;
+
+	/// Return a string representation
+	virtual std::string toString() const = 0;
+
+	MTS_DECLARE_CLASS()
+protected:
+	/// Virtual destructor
+	virtual ~WorkUnit() { }
+};
+/**
+ * Abstract work result. Represents the information that encodes 
+ * the result of a processed <tt>WorkUnit</tt> instance.
+ */
+class MTS_EXPORT_CORE WorkResult : public Object {
+public:
+	/// Fill the work result with content acquired from a binary data stream
+	virtual void load(Stream *stream) = 0;
+
+	/// Serialize a work result to a binary data stream
+	virtual void save(Stream *stream) const = 0;
+
+	/// Return a string representation
+	virtual std::string toString() const = 0;
+
+	MTS_DECLARE_CLASS()
+protected:
+	/// Virtual destructor
+	virtual ~WorkResult() { }
+};
+\end{cpp}
+\newpage
+In our case, the \code{WorkUnit} implementation then looks like this:
+\begin{cpp}
+class ROT13WorkUnit : public WorkUnit {
+public:
+	void set(const WorkUnit *workUnit) {
+		const ROT13WorkUnit *wu = 
+			static_cast<const ROT13WorkUnit *>(workUnit);
+		m_char = wu->m_char;
+		m_pos = wu->m_pos;
+	}
+
+	void load(Stream *stream) {
+		m_char = stream->readChar();
+		m_pos = stream->readInt();
+	}
+	
+	void save(Stream *stream) const {
+		stream->writeChar(m_char);
+		stream->writeInt(m_pos); 
+	}
+
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "ROT13WorkUnit[" << endl
+			<< "  char = '" << m_char << "'," << endl
+			<< "  pos = " << m_pos << endl
+			<< "]";
+		return oss.str();
+	}
+
+	inline char getChar() const { return m_char; }
+	inline void setChar(char value) { m_char = value; }
+	inline int getPos() const { return m_pos; }
+	inline void setPos(int value) { m_pos = value; }
+
+	MTS_DECLARE_CLASS()
+private:
+	char m_char;
+	int m_pos;
+};
+
+MTS_IMPLEMENT_CLASS(ROT13WorkUnit, false, WorkUnit)
+\end{cpp}
+The \code{ROT13WorkResult} implementation is not reproduced since it is almost identical 
+(except that it doesn't need the \code{set} method).
+The similarity is not true in general: for most algorithms, the work unit and result 
+will look completely different.
+
+Next, we need a class, which does the actual work of turning a work unit into a work result
+(a subclass of \code{WorkProcessor}). Again, we need to implement a range of support
+methods to enable the various ways in which work processor instances will be submitted to 
+remote worker nodes and replicated amongst local threads.
+\begin{cpp}
+class ROT13WorkProcessor : public WorkProcessor {
+public:
+	/// Construct a new work processor
+	ROT13WorkProcessor() : WorkProcessor() { }
+
+	/// Unserialize from a binary data stream (nothing to do for now)
+	ROT13WorkProcessor(Stream *stream, InstanceManager *manager)
+		: WorkProcessor(stream, manager) { }
+
+	/// Serialize to a binary data stream (nothing to do for now)
+	void serialize(Stream *stream, InstanceManager *manager) const {
+		WorkProcessor::serialize(stream, manager);
+	}
+
+	ref<WorkUnit> createWorkUnit() const {
+		return new ROT13WorkUnit();
+	}
+
+	ref<WorkResult> createWorkResult() const { 
+		return new ROT13WorkResult();
+	}
+
+	ref<WorkProcessor> clone() const {
+		return new ROT13WorkProcessor(); /* No state to clone for now */
+	}
+
+	/// No internal state, thus no preparation is necessary
+	void prepare() { }
+
+	/// Do the actual computation
+	void process(const WorkUnit *workUnit, WorkResult *workResult, 
+				 const bool &stop) {
+		const ROT13WorkUnit *wu 
+			= static_cast<const ROT13WorkUnit *>(workUnit);
+		ROT13WorkResult *wr = static_cast<ROT13WorkResult *>(workResult);
+		wr->setPos(wu->getPos());
+		wr->setChar((std::toupper(wu->getChar()) - 'A' + 13) % 26 + 'A');
+	}
+	MTS_DECLARE_CLASS()
+};
+\end{cpp}
+Since our work processor has no state, most of the implementations
+are rather trivial.

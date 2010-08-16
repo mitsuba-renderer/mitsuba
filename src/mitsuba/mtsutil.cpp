@@ -178,7 +178,7 @@ void help() {
 
 	while ((dirinfo = readdir(directory)) != NULL) {
 		std::string fname(dirinfo->d_name);
-		if (!endsWith(fname, ".dylib") !endsWith(fname, ".so"))
+		if (!endsWith(fname, ".dylib") && !endsWith(fname, ".so"))
 			continue;
 		std::string fullName = dirPath + "/" + fname;
 #else
