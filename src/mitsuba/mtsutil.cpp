@@ -4,9 +4,12 @@
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/shvector.h>
+#include <mitsuba/render/util.h>
 #include <mitsuba/render/renderjob.h>
 #include <fstream>
 #include <stdexcept>
+#include <dirent.h>
+#include <sys/types.h>
 #include "shandler.h"
 
 #if !defined(WIN32)
@@ -20,6 +23,103 @@
 #endif
 
 using namespace mitsuba;
+
+class UtilityPlugin {
+public:
+	UtilityPlugin(const std::string &path) : m_path(path) {
+#if defined(WIN32)
+		m_handle = LoadLibrary(path.c_str());
+		if (!m_handle) {
+			SLog(EError, "Error while loading plugin \"%s\": %s", m_path.c_str(),
+					lastErrorText().c_str());
+		}
+#else
+		m_handle = dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL);
+		if (!m_handle) {
+			SLog(EError, "Error while loading plugin \"%s\": %s", m_path.c_str(),
+					dlerror());
+		}
+#endif
+
+		try {
+			m_getDescription = (GetDescriptionFunc) getSymbol("GetDescription");
+		} catch (...) {
+#if defined(WIN32)
+			FreeLibrary(m_handle);
+#else
+			dlclose(m_handle);
+#endif
+			throw;
+		}
+
+		m_isUtility = true;
+		try {
+			m_createUtility = (CreateUtilityFunc) getSymbol("CreateUtility");
+		} catch (...) {
+			m_isUtility = false;
+		}
+
+		/* New classes must be registered within the class hierarchy */
+		Class::staticInitialization();
+	}
+
+	inline bool isUtility() const {
+		return m_isUtility;
+	}
+
+	void *getSymbol(const std::string &sym) {
+#if defined(WIN32)
+		void *data = GetProcAddress(m_handle, sym.c_str());
+		if (!data) {
+			SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
+				sym.c_str(), m_path.c_str(), lastErrorText().c_str());
+		}
+#else
+		void *data = dlsym(m_handle, sym.c_str());
+		if (!data) {
+			SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
+				sym.c_str(), m_path.c_str(), dlerror());
+		}
+#endif
+		return data;
+	}
+
+	Utility *createUtility(UtilityServices *us) const {
+		return (Utility *) m_createUtility(us);
+	}
+
+	std::string getDescription() const {
+		return m_getDescription();
+	}
+
+	~UtilityPlugin() {
+#if defined(WIN32)
+		FreeLibrary(m_handle);
+#else
+		dlclose(m_handle);
+#endif
+	}
+private:
+	typedef void *(*CreateUtilityFunc)(UtilityServices *us);
+	typedef char *(*GetDescriptionFunc)();
+	CreateUtilityFunc m_createUtility;
+	GetDescriptionFunc m_getDescription;
+	std::string m_path;
+	bool m_isUtility;
+#if defined(WIN32)
+	HMODULE m_handle;
+#else
+	void *m_handle;
+#endif
+};
+
+class UtilityServicesImpl : public UtilityServices {
+public:
+	Scene *loadScene(const std::string &filename) {
+		cout << "asdf" << endl;
+		return NULL;
+	}
+};
 
 void help() {
 	cout <<  "Mitsuba version " MTS_VERSION ", Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl;
@@ -42,78 +142,36 @@ void help() {
 	cout <<  "               with one name per line (same format as in -c)" << endl<< endl;
 	cout <<  "   -n name     Assign a node name to this instance (Default: host name)" << endl << endl;
 	cout <<  "   -v          Be more verbose" << endl << endl;
+
+	FileResolver *resolver = FileResolver::getInstance();
+	DIR *directory;
+	struct dirent *dirinfo;
+	std::string dirPath = resolver->resolveAbsolute("plugins");
+
+	if ((directory = opendir(dirPath.c_str())) == NULL)
+		SLog(EInfo, "Could not open plugin directory");
+
+	cout << "The following utilities are available:" << endl << endl;
+	while ((dirinfo = readdir(directory)) != NULL) {
+		std::string fname(dirinfo->d_name);
+		if (!endsWith(fname, ".dylib") && !endsWith(fname, ".dll") && !endsWith(fname, ".dylib"))
+			continue;
+#if defined(WIN32)
+		std::string fullName = dirPath + "\\" + fname;
+#else
+		std::string fullName = dirPath + "/" + fname;
+#endif
+		UtilityPlugin utility(fullName);
+		if (!utility.isUtility())
+			continue;
+		std::string shortName = fname.substr(0, strrchr(fname.c_str(), '.') - fname.c_str());
+		cout << "\t" << shortName;
+		for (int i=0; i<22-(int) shortName.length(); ++i)
+			cout << ' ';
+		cout  << utility.getDescription() << endl;
+	}
 }
 
-class UtilityPlugin {
-	typedef void *(*CreateUtilityFunc)(UtilityServices *us);
-	typedef char *(*GetDescriptionFunc)();
-	CreateInstanceFunc m_createInstance;
-	GetDescriptionFunc m_getDescription;
-
-	UtilityPlugin(const std::string &path) {
-#if defined(WIN32)
-		m_handle = LoadLibrary(path.c_str());
-		if (!m_handle) {
-			SLog(EError, "Error while loading plugin \"%s\": %s", m_path.c_str(),
-					lastErrorText().c_str());
-		}
-#else
-		m_handle = dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL);
-		if (!m_handle) {
-			SLog(EError, "Error while loading plugin \"%s\": %s", m_path.c_str(),
-					dlerror());
-		}
-#endif
-
-		try {
-			m_getDescription = (GetDescriptionFunc) getSymbol("GetDescription");
-			m_createInstance = (CreateInstanceFunc) getSymbol("CreateInstance");
-		} catch (...) {
-#if defined(WIN32)
-			FreeLibrary(m_handle);
-#else
-			dlclose(m_handle);
-#endif
-			throw;
-		}
-
-		/* New classes must be registered within the class hierarchy */
-		Class::staticInitialization();
-	}
-
-	void *getSymbol(const std::string &sym) {
-#if defined(WIN32)
-		void *data = GetProcAddress(m_handle, sym.c_str());
-		if (!data) {
-			SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
-				sym.c_str(), m_path.c_str(), lastErrorText().c_str());
-		}
-#else
-		void *data = dlsym(m_handle, sym.c_str());
-		if (!data) {
-			SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
-				sym.c_str(), m_path.c_str(), dlerror());
-		}
-#endif
-		return data;
-	}
-
-	ConfigurableObject *createInstance(UtilityServices *us) const {
-		return (ConfigurableObject *) m_createUtility(us);
-	}
-
-	std::string Plugin::getDescription() const {
-		return m_getDescription();
-	}
-
-	UtilityPlugin::~UtilityPlugin() {
-#if defined(WIN32)
-		FreeLibrary(m_handle);
-#else
-		dlclose(m_handle);
-#endif
-	}
-};
 
 int ubi_main(int argc, char **argv) {
 	char optchar, *end_ptr = NULL;
@@ -252,10 +310,30 @@ int ubi_main(int argc, char **argv) {
 			return -1;
 		}
 
-		static_cast<Utility *>(argv[optind])
-		Uitility *utility = static_cast<utility *> (PluginManager::getInstance()->
-				createObject(utility::m_theClass, Properties("gaussian")));
+		/* Build the full plugin file name */
+#if defined(WIN32)
+		std::string shortName = std::string("plugins/") + argv[optind] + std::string(".dll");
+#elif defined(__OSX__)
+		std::string shortName = std::string("plugins/") + argv[optind] + std::string(".dylib");
+#else
+		std::string shortName = std::string("plugins/") + argv[optind] + std::string(".so");
+#endif
+		std::string fullName = resolver->resolve(shortName);
 
+		if (!FileStream::exists(fullName)) {
+			/* Plugin not found! */
+			SLog(EError, "Utility \"%s\" not found (run \"mtsutil\" without arguments to "
+				"see a list of available utilities)", fullName.c_str());
+		}
+		SLog(EInfo, "Loading utility \"%s\" ..", argv[optind]);
+		UtilityPlugin *plugin = new UtilityPlugin(fullName);
+		if (!plugin->isUtility())
+			SLog(EError, "This plugin does not implement the 'Utility' interface!");
+
+		UtilityServices *utilityServices = new UtilityServicesImpl();
+		Utility *utility = plugin->createUtility(utilityServices);
+
+		return utility->run(argc-optind, argv+optind);
 	} catch (const std::exception &e) {
 		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
 	} catch (...) {

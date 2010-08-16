@@ -390,7 +390,6 @@ if sys.platform == 'darwin':
 
 env.Program('src/utils/utils_test', ['src/utils/utils_test.cpp'])
 env.Program('src/utils/joinrgb', ['src/utils/joinrgb.cpp'])
-env.Program('src/utils/addimages', ['src/utils/addimages.cpp'])
 env.Program('src/utils/ssalbedo', ['src/utils/ssalbedo.cpp'])
 env.Program('src/utils/dumpimage', ['src/utils/dumpimage.cpp'])
 env.Program('src/utils/ttest', ['src/utils/ttest.cpp'])
@@ -459,7 +458,10 @@ if hasQt:
 
 plugins = []
 
-# Build the plugins -- BSDFs
+# Build the plugins -- Utilities
+plugins += env.SharedLibrary('plugins/addimages', ['src/utils/addimages.cpp'])
+
+# BSDFs
 plugins += env.SharedLibrary('plugins/lambertian', ['src/bsdfs/lambertian.cpp'])
 plugins += env.SharedLibrary('plugins/dielectric', ['src/bsdfs/dielectric.cpp'])
 plugins += env.SharedLibrary('plugins/mirror', ['src/bsdfs/mirror.cpp'])
@@ -469,6 +471,7 @@ plugins += env.SharedLibrary('plugins/microfacet', ['src/bsdfs/microfacet.cpp'])
 plugins += env.SharedLibrary('plugins/roughglass', ['src/bsdfs/roughglass.cpp'])
 plugins += env.SharedLibrary('plugins/roughmetal', ['src/bsdfs/roughmetal.cpp'])
 plugins += env.SharedLibrary('plugins/composite', ['src/bsdfs/composite.cpp'])
+
 
 # Phase functions
 plugins += env.SharedLibrary('plugins/isotropic', ['src/phase/isotropic.cpp'])
