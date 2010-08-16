@@ -155,7 +155,7 @@ std::string indent(const std::string &string, int amount) {
 
 bool endsWith(const std::string& str, const std::string& end) {
 	std::string::size_type pos = str.rfind(end);
-	return (pos == str.size() - end.size());
+	return (pos == str.size() - end.size()) && str.length() >= end.length();
 }
 
 void * __restrict allocAligned(size_t size) {

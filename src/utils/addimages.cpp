@@ -1,69 +1,61 @@
+#include <mitsuba/render/util.h>
 #include <mitsuba/core/bitmap.h>
-#include <mitsuba/core/fstream.h>
 
-using namespace mitsuba;
+MTS_NAMESPACE_BEGIN
 
-void addImages(Float weight1, const std::string &s1, Float weight2, const std::string &s2, const std::string &s3) {
-	ref<FileStream> aFile   = new FileStream(s1, FileStream::EReadOnly);
-	ref<FileStream> bFile   = new FileStream(s2, FileStream::EReadOnly);
-	ref<FileStream> outFile = new FileStream(s3, FileStream::ETruncReadWrite);
+class AddImages : public Utility {
+public:
+	AddImages(UtilityServices *us) : Utility(us) { }
 
-	ref<Bitmap> aBitmap = new Bitmap(Bitmap::EEXR, aFile);
-	ref<Bitmap> bBitmap = new Bitmap(Bitmap::EEXR, bFile);
-	ref<Bitmap> outBitmap = new Bitmap(aBitmap->getWidth(), aBitmap->getHeight(), 128);
-
-	float *aData = aBitmap->getFloatData();
-	float *bData = bBitmap->getFloatData();
-	float *outData = outBitmap->getFloatData();
-	int width = aBitmap->getWidth();
-
-	for (int y=0; y<aBitmap->getHeight(); ++y) {
-		for (int x=0; x<aBitmap->getWidth(); ++x) {
-			Float ra = aData[(x + y * width) * 4] * weight1;
-			Float ga = aData[(x + y * width) * 4 + 1] * weight1;
-			Float ba = aData[(x + y * width) * 4 + 2] * weight1;
-			Float rb = bData[(x + y * width) * 4] * weight2;
-			Float gb = bData[(x + y * width) * 4 + 1] * weight2;
-			Float bb = bData[(x + y * width) * 4 + 2] * weight2;
-			outData[(x+y * width) * 4 + 0] = std::max((Float) 0, ra + rb);
-			outData[(x+y * width) * 4 + 1] = std::max((Float) 0, ga + gb);
-			outData[(x+y * width) * 4 + 2] = std::max((Float) 0, ba + bb);
-			outData[(x+y * width) * 4 + 3] = 1;
-		}
-	}
-
-	outBitmap->save(Bitmap::EEXR, outFile);
-}
-
-int main(int argc, char **argv) {
-	Class::staticInitialization();
-	Thread::staticInitialization();
-	Logger::staticInitialization();
-	Spectrum::staticInitialization();
-	char *end_ptr = NULL;
-	try {
+	int run(int argc, char **argv) {
 		if (argc != 6) {
 			cout << "Add the weighted pixel values of two EXR images to produce a new one" << endl;
-			cout << "Syntax: addimages <weight 1> <image 1.exr> <weight 2> <image 2.exr> <target.exr>" << endl;
-		} else {
-			Float weight1 = (Float) strtod(argv[1], &end_ptr);
-			if (*end_ptr != '\0')
-				SLog(EError, "Could not parse floating point value");
-			Float weight2 = (Float) strtod(argv[3], &end_ptr);
-			if (*end_ptr != '\0')
-				SLog(EError, "Could not parse floating point value");
-			addImages(weight1, argv[2], weight2, argv[4], argv[5]);
+			cout << "Syntax: mtsutil addimages <weight 1> <image 1.exr> <weight 2> <image 2.exr> <target.exr>" << endl;
+			return -1;
 		}
-	} catch (const std::exception &e) {
-		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
-		exit(-1);
-	} catch (...) {
-		std::cerr << "Caught a critical exeption of unknown type! " << std::endl;
-		exit(-1);
+		char *end_ptr = NULL;
+		Float weight1 = (Float) strtod(argv[1], &end_ptr);
+		if (*end_ptr != '\0')
+			SLog(EError, "Could not parse floating point value");
+		Float weight2 = (Float) strtod(argv[3], &end_ptr);
+		if (*end_ptr != '\0')
+			SLog(EError, "Could not parse floating point value");
+
+		ref<FileStream> aFile   = new FileStream(argv[2], FileStream::EReadOnly);
+		ref<FileStream> bFile   = new FileStream(argv[4], FileStream::EReadOnly);
+		ref<FileStream> outFile = new FileStream(argv[5], FileStream::ETruncReadWrite);
+
+		ref<Bitmap> aBitmap = new Bitmap(Bitmap::EEXR, aFile);
+		ref<Bitmap> bBitmap = new Bitmap(Bitmap::EEXR, bFile);
+		ref<Bitmap> outBitmap = new Bitmap(aBitmap->getWidth(), aBitmap->getHeight(), 128);
+
+		float *aData = aBitmap->getFloatData();
+		float *bData = bBitmap->getFloatData();
+		float *outData = outBitmap->getFloatData();
+		int width = aBitmap->getWidth();
+
+		for (int y=0; y<aBitmap->getHeight(); ++y) {
+			for (int x=0; x<aBitmap->getWidth(); ++x) {
+				Float ra = aData[(x + y * width) * 4] * weight1;
+				Float ga = aData[(x + y * width) * 4 + 1] * weight1;
+				Float ba = aData[(x + y * width) * 4 + 2] * weight1;
+				Float rb = bData[(x + y * width) * 4] * weight2;
+				Float gb = bData[(x + y * width) * 4 + 1] * weight2;
+				Float bb = bData[(x + y * width) * 4 + 2] * weight2;
+				outData[(x+y * width) * 4 + 0] = std::max((Float) 0, ra + rb);
+				outData[(x+y * width) * 4 + 1] = std::max((Float) 0, ga + gb);
+				outData[(x+y * width) * 4 + 2] = std::max((Float) 0, ba + bb);
+				outData[(x+y * width) * 4 + 3] = 1;
+			}
+		}
+
+		outBitmap->save(Bitmap::EEXR, outFile);
+		return 0;
 	}
-	Spectrum::staticShutdown();
-	Logger::staticShutdown();
-	Thread::staticShutdown();
-	Class::staticShutdown();
-	return 0;
-}
+
+	MTS_DECLARE_CLASS()
+};
+
+MTS_IMPLEMENT_CLASS(AddImages, false, Utility)
+MTS_EXPORT_UTILITY(AddImages, "Generate linear combinations of EXR images")
+MTS_NAMESPACE_END

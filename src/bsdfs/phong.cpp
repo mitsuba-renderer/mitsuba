@@ -223,7 +223,7 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Phong["
+		oss << "Phong[" << endl
 			<< "  diffuseColor = " << indent(m_diffuseColor->toString()) << "," << endl
 			<< "  specularColor = " << indent(m_specularColor->toString()) << "," << endl
 			<< "  exponent = " << m_exponent << endl

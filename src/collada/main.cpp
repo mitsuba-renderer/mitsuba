@@ -56,6 +56,7 @@ void help() {
 		<<  "   -s          Assume that colors are in sRGB space." << endl << endl
 		<<  "   -m          Map the larger image side to the full field of view" << endl << endl
 		<<  "   -r <w>x<h>  Override the image resolution to e.g. 1920×1080" << endl << endl
+		<<  "   -f <fov>    Override the field of view to the given value specified in degrees." << endl << endl
 		<< "Please see the documentation for more information." << endl;
 }
 
@@ -64,10 +65,11 @@ int colladaMain(int argc, char **argv) {
 	char optchar, *end_ptr = NULL;
 	int xres = -1, yres = -1;
 	int samplesPerPixel = 8;
+	Float fov = -1;
 
 	optind = 1;
 
-	while ((optchar = getopt(argc, argv, "shmr:p:")) != -1) {
+	while ((optchar = getopt(argc, argv, "shmr:p:f:")) != -1) {
 		switch (optchar) {
 			case 's':
 				srgb = true;
@@ -79,6 +81,11 @@ int colladaMain(int argc, char **argv) {
 				samplesPerPixel = strtol(optarg, &end_ptr, 10);
 				if (*end_ptr != '\0')
 					SLog(EError, "Invalid number of samples per pixel!");
+				break;
+			case 'f':
+				fov = strtod(optarg, &end_ptr);
+				if (*end_ptr != '\0')
+					SLog(EError, "Invalid field of view value!");
 				break;
 			case 'r': {
 					std::vector<std::string> tokens = tokenize(optarg, "x");
@@ -109,6 +116,7 @@ int colladaMain(int argc, char **argv) {
 	converter.setResolution(xres, yres);
 	converter.setMapSmallerSide(mapSmallerSide);
 	converter.setSamplesPerPixel(samplesPerPixel);
+	converter.setFov(fov);
 	converter.convert(argv[optind], "", argv[optind+1], argc > optind+2 ? argv[optind+2] : "");
 
 	return 0;
@@ -158,7 +166,8 @@ int ubi_main(int argc, char **argv) {
 #endif
 
 #if !defined(WIN32)
-	setlocale(LC_ALL, "C");
+	/* Correct number parsing on some locales (e.g. ru_RU) */
+	setlocale(LC_NUMERIC, "C");
 #endif
 
 	try {
@@ -182,12 +191,18 @@ int ubi_main(int argc, char **argv) {
 		device->shutdown();
 		session->shutdown();
 	} catch(const XMLException &toCatch) {
-		SLog(EError, "Caught a Xerces exception: %s",
-			XMLString::transcode(toCatch.getMessage()));
+		cout << "Caught a Xerces exception: " << 
+			XMLString::transcode(toCatch.getMessage()) << endl;
 		retval = -1;
 	} catch(const DOMException &toCatch) {
-		SLog(EError, "Caught a Xerces exception: %s",
-			XMLString::transcode(toCatch.getMessage()));
+		cout << "Caught a Xerces exception: " << 
+			XMLString::transcode(toCatch.getMessage()) << endl;
+		retval = -1;
+	} catch (const std::exception &e) {
+		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
+		retval = -1;
+	} catch (...) {
+		std::cerr << "Caught a critical exeption of unknown type!" << endl;
 		retval = -1;
 	}
 	
