@@ -1,2 +1,27 @@
 \section{Parallelization layer}
-TBD
+Mitsuba is built on top of a flexible parallelization layer, which can spread out
+various types of computation over local and remote cores.
+The guiding principle is that if an operation can potentially take longer than a
+few seconds, it ought to use all the cores it can get.
+
+Here, we will go through a simple example, which will hopefully provide sufficient intuition
+to realize more complex tasks. 
+To obtain good (i.e. close to linear) speedups, the parallelization layer depends on
+several key assumptions of the task to be parallelized:
+\begin{itemize}
+\item The task can easily be split up into a discrete number of work units, which requires a negligible amount of computation.
+\item Each work unit is small in footprint so that it can easily be transferred over the network or shared memory. 
+\item A work unit constitutes a significant amount of computation, which by far outweighs the cost of transmitting it to another node.
+\item The `work result' obtained by processing a work unit is again small in footprint, so that it can easily be transferred back.
+\item Merging all `work results' to a solution of the whole problem requires a negligible amount of additional computation.
+\end{itemize}
+This essentially corresponds to a parallel version of \emph{Map} (as in \emph{Map\&Reduce}), which is very
+well-suited for many rendering workloads. 
+
+The example we consider here computes a \code{ROT13} ``encryption'' of a string, which 
+most certainly violates the `significant amount of computation' assumption. Nevertheless, 
+the inherent parallelism and simplicity of this task make it a good example.
+
+All of the relevant interfaces are contained in \code{include/mitsuba/core/sched.h}.
+
+

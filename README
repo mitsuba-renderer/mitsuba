@@ -188,7 +188,7 @@ Network rendering:
 	entails installing a suitable "~/.ssh/authorized_keys2" file on the server
 	and running "ssh-agent" on the client. On Windows, the situation is a bit
 	more complicated because it does not come with a suitable SSH client by
-	default. To get SSH to work, biquaque requires plink.exe (from PUTTY) to
+	default. To get SSH to work, Mitsuba requires plink.exe (from PUTTY) to
 	be on the $PATH. For passwordless authentication with a Linux/OSX-based
 	server, convert your private key to PuTTY's format (with the help 
 	of puttygen.exe). Afterwards, pageant.exe is required to load and 

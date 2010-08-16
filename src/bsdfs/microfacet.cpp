@@ -260,7 +260,7 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Microfacet["
+		oss << "Microfacet[" << endl
 			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl

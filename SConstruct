@@ -136,8 +136,8 @@ if not conf.CheckCHeader(['stdio.h', 'jpeglib.h']):
 if not conf.CheckCXXHeader('ImfRgba.h'):
 	print 'OpenEXR is missing (install libopenexr-dev)'
 	Exit(1)
-if not conf.CheckCXXHeader('xercesc/util/PlatformUtils.hpp'):
-	print 'Xerces-C must be installed (install libxerces-c2-dev)!'
+if not conf.CheckCXXHeader('xercesc/dom/DOMLSParser.hpp'):
+	print 'Xerces-C++ 3.x must be installed (install libxerces-c-dev)!'
 	Exit(1)
 if not conf.CheckCXXHeader('dae.h'):
 	hasCollada = False
@@ -379,6 +379,7 @@ shandler = mainEnv.StaticObject('src/mitsuba/shandler.cpp')
 # Build the command-line+GUI interface
 mainEnv.Program('mtssrv', resources + ['src/mitsuba/mtssrv.cpp'])
 mainEnv.Program('mitsuba', resources + ['src/mitsuba/mitsuba.cpp', shandler])
+mainEnv.Program('mtsutil', resources + ['src/mitsuba/mtsutil.cpp', shandler])
 
 if sys.platform == 'darwin':
 	mainEnv_osx = mainEnv.Clone();
@@ -389,7 +390,6 @@ if sys.platform == 'darwin':
 
 env.Program('src/utils/utils_test', ['src/utils/utils_test.cpp'])
 env.Program('src/utils/joinrgb', ['src/utils/joinrgb.cpp'])
-env.Program('src/utils/addimages', ['src/utils/addimages.cpp'])
 env.Program('src/utils/ssalbedo', ['src/utils/ssalbedo.cpp'])
 env.Program('src/utils/dumpimage', ['src/utils/dumpimage.cpp'])
 env.Program('src/utils/ttest', ['src/utils/ttest.cpp'])
@@ -458,7 +458,10 @@ if hasQt:
 
 plugins = []
 
-# Build the plugins -- BSDFs
+# Build the plugins -- Utilities
+plugins += env.SharedLibrary('plugins/addimages', ['src/utils/addimages.cpp'])
+
+# BSDFs
 plugins += env.SharedLibrary('plugins/lambertian', ['src/bsdfs/lambertian.cpp'])
 plugins += env.SharedLibrary('plugins/dielectric', ['src/bsdfs/dielectric.cpp'])
 plugins += env.SharedLibrary('plugins/mirror', ['src/bsdfs/mirror.cpp'])
@@ -469,6 +472,7 @@ plugins += env.SharedLibrary('plugins/microfacet', ['src/bsdfs/microfacet.cpp'])
 plugins += env.SharedLibrary('plugins/roughglass', ['src/bsdfs/roughglass.cpp'])
 plugins += env.SharedLibrary('plugins/roughmetal', ['src/bsdfs/roughmetal.cpp'])
 plugins += env.SharedLibrary('plugins/composite', ['src/bsdfs/composite.cpp'])
+
 
 # Phase functions
 plugins += env.SharedLibrary('plugins/isotropic', ['src/phase/isotropic.cpp'])
@@ -610,6 +614,7 @@ if sys.platform == 'win32':
 		dllprefix='tools/windows/lib32/'
 	installTargets += env.Install('dist', 'mitsuba.exe')
 	installTargets += env.Install('dist', 'mtssrv.exe')
+	installTargets += env.Install('dist', 'mtsutil.exe')
 	installTargets += env.Install('dist', 'mtsimport.exe')
 	installTargets += env.Install('dist', 'mtsgui.exe')
 	installTargets += env.Install('dist', 'src/libcore/libcore.dll')
@@ -649,6 +654,7 @@ elif sys.platform == 'darwin':
 		installTargets += env.Install('Mitsuba.app/plugins', i)
 	installTargets += env.Install('Mitsuba.app/schema', 'schema/scene.xsd')
 	installTargets += env.Install('Mitsuba.app/Contents/MacOS', 'mtssrv')
+	installTargets += env.Install('Mitsuba.app/Contents/MacOS', 'mtsutil')
 	installTargets += env.Install('Mitsuba.app/Contents/MacOS', 'mitsuba')
 	installTargets += env.Install('Mitsuba.app/Contents/MacOS', 'mtsimport')
 	plist = env.Install('Mitsuba.app/Contents', 'tools/darwin/Info.plist')
