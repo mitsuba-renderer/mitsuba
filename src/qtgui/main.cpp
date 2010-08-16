@@ -174,6 +174,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 #if !defined(WIN32)
+		/* Correct number parsing on some locales (e.g. ru_RU) */
 		setlocale(LC_NUMERIC, "C");
 #endif
 

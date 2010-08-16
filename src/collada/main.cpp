@@ -158,7 +158,8 @@ int ubi_main(int argc, char **argv) {
 #endif
 
 #if !defined(WIN32)
-	setlocale(LC_ALL, "C");
+	/* Correct number parsing on some locales (e.g. ru_RU) */
+	setlocale(LC_NUMERIC, "C");
 #endif
 
 	try {
