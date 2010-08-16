@@ -11,7 +11,6 @@
 #include <xercesc/dom/DOMNodeList.hpp>
 #include <xercesc/parsers/XercesDOMParser.hpp>
 #include <xercesc/framework/MemBufInputSource.hpp>
-#include <xercesc/framework/Wrapper4DOMInputSource.hpp>
 #include <xercesc/framework/Wrapper4InputSource.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
 #include <xercesc/util/XMLUni.hpp>
@@ -1042,17 +1041,24 @@ void ColladaConverter::convert(const std::string &inputFile,
 	if (adjustmentFile != "") {
 		SLog(EInfo, "Applying adjustments ..");
 		static const XMLCh gLS[] = { chLatin_L, chLatin_S, chNull };
-		DOMImplementation *impl = DOMImplementationRegistry::getDOMImplementation(gLS);
-		DOMBuilder *parser = ((DOMImplementationLS*) impl)->createDOMBuilder(DOMImplementationLS::MODE_SYNCHRONOUS, 0);
+		DOMImplementationLS *impl = DOMImplementationRegistry::getDOMImplementation(gLS);
 
+#if 0
+		DOMBuilder *parser = ((DOMImplementationLS*) impl)->createDOMBuilder(DOMImplementationLS::MODE_SYNCHRONOUS, 0);
 		ImporterDOMErrorHandler errorHandler;
 		parser->setErrorHandler(&errorHandler);
+#else
+		DOMLSParser *parser = impl->createLSParser(DOMImplementationLS::MODE_SYNCHRONOUS, 0);
+		DOMConfiguration *conf(parser->getDomConfig());
+		ImporterDOMErrorHandler errorHandler;
+		conf->setParameter(XMLUni::fgDOMErrorHandler, &errorHandler);
+#endif
 
 		std::string xmlString = os.str();
 		MemBufInputSource* memBufIS = new MemBufInputSource((const XMLByte*) xmlString.c_str(), 
 			xmlString.length(), "bufID", false);
 		Wrapper4InputSource *wrapper = new Wrapper4InputSource(memBufIS, false);
-		DOMDocument *doc = parser->parse(*wrapper);
+		DOMDocument *doc = parser->parse(wrapper);
 		DOMDocument *adj = parser->parseURI(adjustmentFile.c_str());
 	
 		std::set<std::string> removals;
@@ -1088,11 +1094,15 @@ void ColladaConverter::convert(const std::string &inputFile,
 		for (DOMNode *child = adjRoot->getFirstChild(); child != 0; child=child->getNextSibling())
 			docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
 
-		DOMWriter *serializer = ((DOMImplementationLS*)impl)->createDOMWriter();
-		serializer->setFeature(XMLUni::fgDOMWRTFormatPrettyPrint, true);
-		serializer->setErrorHandler(&errorHandler);
+		DOMLSSerializer *serializer = impl->createLSSerializer();
+		DOMConfiguration *serConf(serializer->getDomConfig());
+		DOMLSOutput *output = impl->createLSOutput();
+		serConf->setParameter(XMLUni::fgDOMErrorHandler, &errorHandler);
+		serConf->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
 		XMLFormatTarget *target = new LocalFileFormatTarget(outputFile.c_str());
-		serializer->writeNode(target, *doc);
+		output->setByteStream(target);
+		serializer->write(doc, output);
+		delete output;
 		delete target;
 		delete wrapper;
 		delete memBufIS;
