@@ -189,7 +189,6 @@ public:
 
 	/// Serialize to a binary data stream (nothing to do in our case)
 	void serialize(Stream *stream, InstanceManager *manager) const {
-		WorkProcessor::serialize(stream, manager);
 	}
 
 	ref<WorkUnit> createWorkUnit() const {
@@ -218,6 +217,7 @@ public:
 	}
 	MTS_DECLARE_CLASS()
 };
+MTS_IMPLEMENT_CLASS_S(ROT13WorkProcessor, false, WorkProcessor)
 \end{cpp}
 Since our work processor has no state, most of the implementations
 are rather trivial. Note the \code{stop} field in the \code{process}
@@ -229,4 +229,107 @@ instance, which is responsible for creating work units and stitching
 work results back into a solution of the whole problem. The \code{ROT13}
 implementation might look as follows:
 \begin{cpp}
+class ROT13Process : public ParallelProcess {
+public:
+	ROT13Process(const std::string &input) : m_input(input), m_pos(0) {
+		m_output.resize(m_input.length());
+	}
+
+	ref<WorkProcessor> createWorkProcessor() const {
+		return new ROT13WorkProcessor();
+	}
+
+	std::vector<std::string> getRequiredPlugins() {
+		std::vector<std::string> result;
+		result.push_back("rot13");
+		return result;
+	}
+
+	EStatus generateWork(WorkUnit *unit, int worker /* unused */) {
+		if (m_pos >= (int) m_input.length())
+			return EFailure;
+		ROT13WorkUnit *wu = static_cast<ROT13WorkUnit *>(unit);
+
+		wu->setPos(m_pos);
+		wu->setChar(m_input[m_pos++]);
+
+		return ESuccess;
+	}
+
+	void processResult(const WorkResult *result, bool cancelled) {
+		if (cancelled) // indicates a work unit, which was 
+			return;    // cancelled partly through its execution
+		const ROT13WorkResult *wr = 
+			static_cast<const ROT13WorkResult *>(result);
+		m_output[wr->getPos()] = wr->getChar();
+	}
+
+	inline const std::string &getOutput() {
+		return m_output;
+	}
+
+	MTS_DECLARE_CLASS()
+public:
+	std::string m_input;
+	std::string m_output;
+	int m_pos;
+};
+MTS_IMPLEMENT_CLASS(ROT13Process, false, ParallelProcess)
 \end{cpp}
+The \code{generateWork} method produces work units until we have moved past
+the end of the string, after which it returns the status code \code{EFailure}.
+Note the method \code{getRequiredPlugins()}: this is necessary to use 
+the utility across
+machines. When communicating with another node, it ensures that the remote side
+loads the \code{ROT13*} classes at the right moment.
+
+To actually use the \code{ROT13} encoder, we must first launch the newly created parallel process
+from the main utility function (the `Hello World' code we wrote earlier). We can adapt it as follows:
+\begin{cpp}
+	int run(int argc, char **argv) {
+		if (argc < 2) {
+			cout << "Syntax: mtsutil rot13 <text>" << endl;
+			return -1;
+		}
+
+		ref<ROT13Process> proc = new ROT13Process(argv[1]);
+		ref<Scheduler> sched = Scheduler::getInstance();
+
+		/* Submit the encryption job to the scheduler */
+		sched->schedule(proc);
+
+		/* Wait for its completion */
+		sched->wait(proc);
+
+		cout << "Result: " << proc->getOutput() << endl;
+
+		return 0;
+	}
+\end{cpp}
+After compiling everything using \code{scons}, an exemplary usage
+would be to encode a string (e.g. \code{SECUREBYDESIGN}), while 
+forwarding all computation to a network machine. (\code{-p0} disables
+all local worker threads). Adding a verbose flag (\code{-v}) shows 
+some additional scheduling information:
+\begin{shell}
+$\texttt{\$}$ mtsutil -vc feynman -p0 rot13 SECUREBYDESIGN
+2010-08-17 01:35:46 INFO  main [src/mitsuba/mtsutil.cpp:201] Mitsuba version 0.1.1, Copyright (c) 2010 Wenzel Jakob
+2010-08-17 01:35:46 INFO  main [SocketStream] Connecting to "feynman:7554"
+2010-08-17 01:35:46 DEBUG main [Thread] Spawning thread "net0_r"
+2010-08-17 01:35:46 DEBUG main [RemoteWorker] Connection to "feynman" established (2 cores).
+2010-08-17 01:35:46 DEBUG main [Scheduler] Starting ..
+2010-08-17 01:35:46 DEBUG main [Thread] Spawning thread "net0"
+2010-08-17 01:35:46 INFO  main [src/mitsuba/mtsutil.cpp:275] Loading utility "rot13" ..
+2010-08-17 01:35:46 DEBUG main [Scheduler] Scheduling process 0: ROT13Process[unknown]..
+2010-08-17 01:35:46 DEBUG main [Scheduler] Waiting $\texttt{for}$ process 0
+2010-08-17 01:35:46 DEBUG net0 [Scheduler] Process 0 has finished generating work
+2010-08-17 01:35:46 DEBUG net0_r[Scheduler] Process 0 is $\texttt{complete}$.
+Result: FRPHEROLQRFVTA
+2010-08-17 01:35:46 DEBUG main [Scheduler] Pausing ..
+2010-08-17 01:35:46 DEBUG net0 [Thread] Thread "net0" has finished
+2010-08-17 01:35:46 DEBUG main [Scheduler] Stopping ..
+2010-08-17 01:35:46 DEBUG main [RemoteWorker] Shutting down
+2010-08-17 01:35:46 DEBUG net0_r[Thread] Thread "net0_r" has finished
+\end{shell}
+\subsection{Global Resources}
+TBD.
