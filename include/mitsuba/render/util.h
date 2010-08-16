@@ -11,7 +11,7 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER UtilityServices {
 public:
-	virtual Scene *loadScene(const std::string &filename) = 0;
+	virtual ref<Scene> loadScene(const std::string &filename) = 0;
 };
 
 /** \brief Abstract utility class -- can be used to implement
@@ -38,7 +38,7 @@ protected:
 	virtual ~Utility() { }
 
 	/// Load a scene
-	inline Scene *loadScene(const std::string &fname) {
+	inline ref<Scene> loadScene(const std::string &fname) {
 		return m_utilityServices->loadScene(fname);
 	}
 private:

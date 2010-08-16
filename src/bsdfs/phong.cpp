@@ -219,7 +219,7 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Phong["
+		oss << "Phong[" << endl
 			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  exponent = " << m_exponent << endl

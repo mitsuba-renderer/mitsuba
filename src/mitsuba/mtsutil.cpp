@@ -115,9 +115,31 @@ private:
 
 class UtilityServicesImpl : public UtilityServices {
 public:
-	Scene *loadScene(const std::string &filename) {
-		cout << "asdf" << endl;
-		return NULL;
+	ref<Scene> loadScene(const std::string &filename) {
+		/* Prepare for parsing scene descriptions */
+		FileResolver *resolver = FileResolver::getInstance();
+		SAXParser* parser = new SAXParser();
+		std::string schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
+
+		/* Check against the 'scene.xsd' XML Schema */
+		parser->setDoSchema(true);
+		parser->setValidationSchemaFullChecking(true);
+		parser->setValidationScheme(SAXParser::Val_Always);
+		parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
+
+		std::map<std::string, std::string> parameters;
+		SceneHandler *handler = new SceneHandler(parameters);
+		parser->setDoNamespaces(true);
+		parser->setDocumentHandler(handler);
+		parser->setErrorHandler(handler);
+			
+		parser->parse(filename.c_str());
+		ref<Scene> scene = handler->getScene();
+
+		delete parser;
+		delete handler;
+
+		return scene;
 	}
 };
 

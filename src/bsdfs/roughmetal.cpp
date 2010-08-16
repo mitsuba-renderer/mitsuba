@@ -3,7 +3,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Microfacet BRDF model based on
+ * Rough metal BRDF model based on
  * "Microfacet Models for Refraction through Rough Surfaces"
  * by Bruce Walter, Stephen R. Marschner, Hongsong Li
  * and Kenneth E. Torrance.
@@ -11,9 +11,9 @@ MTS_NAMESPACE_BEGIN
  * This is similar to the 'microfacet' implementation, but
  * the Fresnel term is now that of a conductor.
  */
-class Microfacet : public BSDF {
+class RoughMetal : public BSDF {
 public:
-	Microfacet(const Properties &props) 
+	RoughMetal(const Properties &props) 
 		: BSDF(props) {
 		m_specularReflectance = props.getSpectrum("specularReflectance", 
 			Spectrum(1.0f));
@@ -27,7 +27,7 @@ public:
 		m_usesRayDifferentials = false;
 	}
 
-	Microfacet(Stream *stream, InstanceManager *manager) 
+	RoughMetal(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
 		m_specularReflectance = Spectrum(stream);
 		m_alphaB = stream->readFloat();
@@ -40,7 +40,7 @@ public:
 		m_usesRayDifferentials = false;
 	}
 
-	virtual ~Microfacet() {
+	virtual ~RoughMetal() {
 		delete[] m_type;
 	}
 
@@ -156,7 +156,7 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Microfacet["
+		oss << "RoughMetal[" << endl
 			<< "  specularReflectance=" << m_specularReflectance.toString() << "," << std::endl
 			<< ", ior=" << m_ior.toString() << "," << std::endl
 			<< ", k=" << m_k.toString() << "," << std::endl
@@ -172,6 +172,6 @@ private:
 	Spectrum m_ior, m_k;
 };
 
-MTS_IMPLEMENT_CLASS_S(Microfacet, false, BSDF)
-MTS_EXPORT_PLUGIN(Microfacet, "Microfacet BRDF");
+MTS_IMPLEMENT_CLASS_S(RoughMetal, false, BSDF)
+MTS_EXPORT_PLUGIN(RoughMetal, "Rough metal BRDF");
 MTS_NAMESPACE_END
