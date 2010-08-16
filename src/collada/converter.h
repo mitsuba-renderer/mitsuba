@@ -9,6 +9,7 @@ public:
 		m_mapSmallerSide = true;
 		m_xres = m_yres = -1;
 		m_samplesPerPixel = 8;
+		m_fov = -1;
 	}
 
 	void convert(const std::string &inputFile, 
@@ -22,9 +23,11 @@ public:
 	inline void setMapSmallerSide(bool mapSmallerSide) { m_mapSmallerSide = mapSmallerSide; }
 	inline void setResolution(int xres, int yres) { m_xres = xres; m_yres = yres; }
 	inline void setSamplesPerPixel(int samplesPerPixel) { m_samplesPerPixel = samplesPerPixel; }
+	inline void setFov(Float fov) { m_fov = fov; }
 	inline const std::string &getFilename() const { return m_filename; }
 public:
 	bool m_srgb, m_mapSmallerSide;
 	int m_xres, m_yres, m_samplesPerPixel;
+	Float m_fov;
 	std::string m_filename;
 };

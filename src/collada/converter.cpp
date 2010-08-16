@@ -645,6 +645,15 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 
 	domLight::domTechnique_common::domPoint *point = light.getTechnique_common()->getPoint().cast();
 	if (point) {
+		bool notQuadratic = false;
+		if (point->getConstant_attenuation() && point->getConstant_attenuation()->getValue() != 1)
+			notQuadratic = true;
+		if (point->getLinear_attenuation() && point->getLinear_attenuation()->getValue() != 0)
+			notQuadratic = true;
+		if (point->getQuadratic_attenuation() && point->getQuadratic_attenuation()->getValue() != 1)
+			notQuadratic = true;
+		if (notQuadratic)
+			SLog(EWarn, "Point light \"%s\" is not a quadratic light! Treating it as one -- expect problems.", light.getId());
 		domFloat3 &color = point->getColor()->getValue();
 		os << "\t<luminaire id=\"" << light.getId() << "\" type=\"point\">" << endl;
 		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
@@ -667,6 +676,15 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 
 	domLight::domTechnique_common::domSpot *spot = light.getTechnique_common()->getSpot().cast();
 	if (spot) {
+		bool notQuadratic = false;
+		if (spot->getConstant_attenuation() && spot->getConstant_attenuation()->getValue() != 1)
+			notQuadratic = true;
+		if (spot->getLinear_attenuation() && spot->getLinear_attenuation()->getValue() != 0)
+			notQuadratic = true;
+		if (spot->getQuadratic_attenuation() && spot->getQuadratic_attenuation()->getValue() != 1)
+			notQuadratic = true;
+		if (notQuadratic)
+			SLog(EWarn, "Spot light \"%s\" is not a quadratic light! Treating it as one -- expect problems.", light.getId());
 		domFloat3 &color = spot->getColor()->getValue();
 		Float falloffAngle = 180.0f;
 		if (spot->getFalloff_angle())
@@ -758,32 +776,52 @@ void loadCamera(ColladaConverter *cvt, Transform transform, std::ostream &os, do
 	domCamera::domOptics::domTechnique_common::domPerspective* persp = camera.getOptics()->
 		getTechnique_common()->getPerspective().cast();
 	if (persp) {
-		if (persp->getAspect_ratio().cast() != 0)
-			aspect = (Float) persp->getAspect_ratio()->getValue();
 		if (cvt->m_xres != -1) {
 			xres = cvt->m_xres;
 			aspect = (Float) cvt->m_xres / (Float) cvt->m_yres;
+		} else {
+			if (persp->getAspect_ratio().cast() != 0) {
+				aspect = (Float) persp->getAspect_ratio()->getValue();
+				if (std::abs(aspect-0.1) < Epsilon) {
+					SLog(EWarn, "Found the suspicious aspect ratio \"0.1\", which is likely due to a bug in Blender 2.5"
+						" - setting to 1.0. Please use the \"-r\" parameter to override the resolution.");
+					aspect = 1.0f;
+				}
+			}
 		}
 		os << "\t<camera id=\"" << camera.getId() << "\" type=\"perspective\">" << endl;
 		if (persp->getXfov().cast()) {
-			Float yFov = radToDeg(2 * std::atan(std::tan(degToRad((Float) persp->getXfov()->getValue())/2) / aspect));
+			Float xFov = persp->getXfov()->getValue();
+			if (std::abs(xFov-1.0f) < Epsilon && cvt->m_fov == -1) {
+				SLog(EWarn, "Found the suspicious field of view value \"1.0\", which is likely due to a bug in Blender 2.5"
+					" - setting to 45deg. Please use the \"-f\" parameter to override this.");
+				xFov = 45.0f;
+			}
+			Float yFov = radToDeg(2 * std::atan(std::tan(degToRad(xFov)/1) / aspect));
+			if (cvt->m_fov != -1)
+				xFov = yFov = cvt->m_fov;
 			if (aspect <= 1.0f)
-				os << "\t\t<float name=\"fov\" value=\"" << persp->getXfov()->getValue() << "\"/>" << endl;
+				os << "\t\t<float name=\"fov\" value=\"" << xFov << "\"/>" << endl;
 			else
 				os << "\t\t<float name=\"fov\" value=\"" << yFov << "\"/>" << endl;
-			os << "\t\t<float name=\"nearClip\" value=\"" << persp->getZnear()->getValue() << "\"/>" << endl;
-			os << "\t\t<float name=\"farClip\" value=\"" << persp->getZfar()->getValue() << "\"/>" << endl;
-			os << "\t\t<boolean name=\"mapSmallerSide\" value=\"" <<(cvt->m_mapSmallerSide ? "true" : "false") << "\"/>" << endl;
 		} else if (persp->getYfov().cast()) {
-			Float xFov = radToDeg(2 * std::atan(std::tan(degToRad((Float) persp->getYfov()->getValue())/2) * aspect));
+			Float yFov = persp->getYfov()->getValue();
+			if (std::abs(yFov-1.0) < Epsilon && cvt->m_fov == -1) {
+				SLog(EWarn, "Found the suspicious field of view value \"1.0\", which is likely due to a bug in Blender 2.5"
+					" - setting to 45deg. Please use the \"-f\" parameter to override this.");
+				yFov = 45.0f;
+			}
+			Float xFov = radToDeg(2 * std::atan(std::tan(degToRad(yFov)/2) * aspect));
+			if (cvt->m_fov != -1)
+				xFov = yFov = cvt->m_fov;
 			if (aspect > 1.0f)
-				os << "\t\t<float name=\"fov\" value=\"" << persp->getYfov()->getValue() << "\"/>" << endl;
+				os << "\t\t<float name=\"fov\" value=\"" << yFov << "\"/>" << endl;
 			else
 				os << "\t\t<float name=\"fov\" value=\"" << xFov << "\"/>" << endl;
-			os << "\t\t<float name=\"nearClip\" value=\"" << persp->getZnear()->getValue() << "\"/>" << endl;
-			os << "\t\t<float name=\"farClip\" value=\"" << persp->getZfar()->getValue() << "\"/>" << endl;
-			os << "\t\t<boolean name=\"mapSmallerSide\" value=\"" << (cvt->m_mapSmallerSide ? "true" : "false") << "\"/>" << endl;
 		}
+		os << "\t\t<float name=\"nearClip\" value=\"" << persp->getZnear()->getValue() << "\"/>" << endl;
+		os << "\t\t<float name=\"farClip\" value=\"" << persp->getZfar()->getValue() << "\"/>" << endl;
+		os << "\t\t<boolean name=\"mapSmallerSide\" value=\"" << (cvt->m_mapSmallerSide ? "true" : "false") << "\"/>" << endl;
 	}
 
 	os << endl;
