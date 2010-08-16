@@ -34,6 +34,9 @@
 #include "converter.h"
 #include <mitsuba/hw/glrenderer.h>
 #include <mitsuba/core/fresolver.h>
+#if defined(WIN32)
+#include "../mitsuba/getopt.h"
+#endif
 
 XERCES_CPP_NAMESPACE_USE
 
