@@ -460,7 +460,6 @@ plugins = []
 
 # Build the plugins -- utilities
 plugins += env.SharedLibrary('plugins/addimages', ['src/utils/addimages.cpp'])
-plugins += env.SharedLibrary('plugins/rot13', ['src/utils/rot13.cpp'])
 
 # BSDFs
 plugins += env.SharedLibrary('plugins/lambertian', ['src/bsdfs/lambertian.cpp'])
