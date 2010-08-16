@@ -136,8 +136,8 @@ if not conf.CheckCHeader(['stdio.h', 'jpeglib.h']):
 if not conf.CheckCXXHeader('ImfRgba.h'):
 	print 'OpenEXR is missing (install libopenexr-dev)'
 	Exit(1)
-if not conf.CheckCXXHeader('xercesc/util/PlatformUtils.hpp'):
-	print 'Xerces-C must be installed (install libxerces-c2-dev)!'
+if not conf.CheckCXXHeader('xercesc/dom/DOMLSParser.hpp'):
+	print 'Xerces-C++ 3.x must be installed (install libxerces-c-dev)!'
 	Exit(1)
 if not conf.CheckCXXHeader('dae.h'):
 	hasCollada = False
