@@ -20,7 +20,7 @@ ideally suited for most rendering workloads.
 
 The example we consider here computes a \code{ROT13} ``encryption'' of a string, which 
 most certainly violates the ``significant amount of computation'' assumption.
-It was chosen mainly due to the inherent parallelism and simplicity of this task.
+It was chosen due to the inherent parallelism and simplicity of this task.
 While of course over-engineered to the extreme, the example hopefully 
 communicates how this framework might be used in more complex scenarios.
 
@@ -183,11 +183,11 @@ public:
 	/// Construct a new work processor
 	ROT13WorkProcessor() : WorkProcessor() { }
 
-	/// Unserialize from a binary data stream (nothing to do for now)
+	/// Unserialize from a binary data stream (nothing to do in our case)
 	ROT13WorkProcessor(Stream *stream, InstanceManager *manager)
 		: WorkProcessor(stream, manager) { }
 
-	/// Serialize to a binary data stream (nothing to do for now)
+	/// Serialize to a binary data stream (nothing to do in our case)
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		WorkProcessor::serialize(stream, manager);
 	}
@@ -201,7 +201,7 @@ public:
 	}
 
 	ref<WorkProcessor> clone() const {
-		return new ROT13WorkProcessor(); /* No state to clone for now */
+		return new ROT13WorkProcessor(); // No state to clone in our case
 	}
 
 	/// No internal state, thus no preparation is necessary
@@ -220,4 +220,13 @@ public:
 };
 \end{cpp}
 Since our work processor has no state, most of the implementations
-are rather trivial.
+are rather trivial. Note the \code{stop} field in the \code{process}
+method. This field is used to abort running jobs at the users requests, hence
+it is a good idea to periodically check its value during lengthy computations.
+
+Finally, we need a called \emph{parallel process}
+instance, which is responsible for creating work units and stitching
+work results back into a solution of the whole problem. The \code{ROT13}
+implementation might look as follows:
+\begin{cpp}
+\end{cpp}

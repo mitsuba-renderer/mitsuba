@@ -28,9 +28,27 @@ Plugin::Plugin(const std::string &shortName, const std::string &path)
 				dlerror());
 	}
 #endif
+	try {
+		m_getDescription = (GetDescriptionFunc) getSymbol("GetDescription");
+	} catch (...) {
+#if defined(WIN32)
+		FreeLibrary(m_handle);
+#else
+		dlclose(m_handle);
+#endif
+		throw;
+	}
 
-	m_getDescription = (GetDescriptionFunc) getSymbol("GetDescription");
-	m_createInstance = (CreateInstanceFunc) getSymbol("CreateInstance");
+	m_createInstance = NULL;
+	m_createUtility = NULL;
+	m_isUtility = false;
+
+	try {
+		m_createInstance = (CreateInstanceFunc) getSymbol("CreateInstance");
+	} catch (const std::exception &ex) {
+		m_createUtility = (CreateUtilityFunc) getSymbol("CreateUtility");
+		m_isUtility = true;
+	}
 	Statistics::getInstance()->logPlugin(shortName, getDescription());
 
 	/* New classes must be registered within the class hierarchy */
@@ -56,6 +74,10 @@ void *Plugin::getSymbol(const std::string &sym) {
 
 ConfigurableObject *Plugin::createInstance(const Properties &props) const {
 	return (ConfigurableObject *) m_createInstance(props);
+}
+
+Utility *Plugin::createUtility(UtilityServices *us) const {
+	return (Utility *) m_createUtility(us);
 }
 
 std::string Plugin::getDescription() const {

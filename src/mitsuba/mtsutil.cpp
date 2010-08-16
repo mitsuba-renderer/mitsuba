@@ -24,95 +24,6 @@
 
 using namespace mitsuba;
 
-class UtilityPlugin {
-public:
-	UtilityPlugin(const std::string &path) : m_path(path) {
-#if defined(WIN32)
-		m_handle = LoadLibrary(path.c_str());
-		if (!m_handle) {
-			SLog(EError, "Error while loading plugin \"%s\": %s", m_path.c_str(),
-					lastErrorText().c_str());
-		}
-#else
-		m_handle = dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL);
-		if (!m_handle) {
-			SLog(EError, "Error while loading plugin \"%s\": %s", m_path.c_str(),
-					dlerror());
-		}
-#endif
-
-		try {
-			m_getDescription = (GetDescriptionFunc) getSymbol("GetDescription");
-		} catch (...) {
-#if defined(WIN32)
-			FreeLibrary(m_handle);
-#else
-			dlclose(m_handle);
-#endif
-			throw;
-		}
-
-		m_isUtility = true;
-		try {
-			m_createUtility = (CreateUtilityFunc) getSymbol("CreateUtility");
-		} catch (...) {
-			m_isUtility = false;
-		}
-
-		/* New classes must be registered within the class hierarchy */
-		Class::staticInitialization();
-	}
-
-	inline bool isUtility() const {
-		return m_isUtility;
-	}
-
-	void *getSymbol(const std::string &sym) {
-#if defined(WIN32)
-		void *data = GetProcAddress(m_handle, sym.c_str());
-		if (!data) {
-			SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
-				sym.c_str(), m_path.c_str(), lastErrorText().c_str());
-		}
-#else
-		void *data = dlsym(m_handle, sym.c_str());
-		if (!data) {
-			SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
-				sym.c_str(), m_path.c_str(), dlerror());
-		}
-#endif
-		return data;
-	}
-
-	Utility *createUtility(UtilityServices *us) const {
-		return (Utility *) m_createUtility(us);
-	}
-
-	std::string getDescription() const {
-		return m_getDescription();
-	}
-
-	~UtilityPlugin() {
-#if defined(WIN32)
-		FreeLibrary(m_handle);
-#else
-		dlclose(m_handle);
-#endif
-	}
-private:
-	typedef void *(*CreateUtilityFunc)(UtilityServices *us);
-	typedef char *(*GetDescriptionFunc)();
-	CreateUtilityFunc m_createUtility;
-	GetDescriptionFunc m_getDescription;
-	std::string m_path;
-	bool m_isUtility;
-#if defined(WIN32)
-	HMODULE m_handle;
-#else
-	void *m_handle;
-#endif
-};
-
 class UtilityServicesImpl : public UtilityServices {
 public:
 	ref<Scene> loadScene(const std::string &filename) {
@@ -192,10 +103,10 @@ void help() {
 		std::string fname = findFileData.cFileName;
 		std::string fullName = dirPath + "\\" + fname;
 #endif
-		UtilityPlugin utility(fullName);
+		std::string shortName = fname.substr(0, strrchr(fname.c_str(), '.') - fname.c_str());
+		Plugin utility(shortName, fullName);
 		if (!utility.isUtility())
 			continue;
-		std::string shortName = fname.substr(0, strrchr(fname.c_str(), '.') - fname.c_str());
 		cout << "\t" << shortName;
 		for (int i=0; i<22-(int) shortName.length(); ++i)
 			cout << ' ';
@@ -362,10 +273,11 @@ int ubi_main(int argc, char **argv) {
 				"see a list of available utilities)", fullName.c_str());
 		}
 		SLog(EInfo, "Loading utility \"%s\" ..", argv[optind]);
-		UtilityPlugin *plugin = new UtilityPlugin(fullName);
+		Plugin *plugin = new Plugin(argv[optind], fullName);
 		if (!plugin->isUtility())
 			SLog(EError, "This plugin does not implement the 'Utility' interface!");
-
+		Statistics::getInstance()->logPlugin(argv[optind], plugin->getDescription());
+	
 		UtilityServices *utilityServices = new UtilityServicesImpl();
 		Utility *utility = plugin->createUtility(utilityServices);
 
