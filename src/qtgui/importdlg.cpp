@@ -28,6 +28,7 @@ ImportDialog::ImportDialog(QWidget *parent) :
 	ui->setupUi(this);
 	connect(ui->sceneEdit, SIGNAL(textChanged(const QString &)),
 		this, SLOT(refresh()));
+	refresh();
 }
 
 ImportDialog::~ImportDialog() {
