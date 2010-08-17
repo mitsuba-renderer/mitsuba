@@ -282,10 +282,15 @@ MainWindow::MainWindow(QWidget *parent) :
 	}
 #endif
 
+	if (ui->glView->isUsingSoftwareFallback())
+		QMessageBox::warning(this, tr("Insufficient OpenGL capabilities"),
+			ui->glView->getErrorString(), QMessageBox::Ok);
+
 	connect(m_networkManager, SIGNAL(finished(QNetworkReply *)), this, SLOT(onNetworkFinished(QNetworkReply *)));
 	m_checkForUpdates = settings.value("checkForUpdates", true).toBool();
 	if (m_checkForUpdates)
 		checkForUpdates(false);
+
 	QStringList args = qApp->arguments();
 	for (int i=1; i<args.count(); ++i)
 		loadFile(args[i]);
@@ -656,6 +661,7 @@ void MainWindow::updateUI() {
 	bool isRendering = hasTab ? context->renderJob != NULL : false;
 	bool hasScene = hasTab && context->scene != NULL;
 	bool isInactiveScene = (hasTab && hasScene) ? context->renderJob == NULL : false;
+	bool fallback = ui->glView->isUsingSoftwareFallback();
 
 	ui->actionStop->setEnabled(isRendering);
 	ui->actionRender->setEnabled(isInactiveScene);
@@ -668,10 +674,10 @@ void MainWindow::updateUI() {
 	ui->actionDuplicateTab->setEnabled(hasTab);
 	ui->actionAdjustSize->setEnabled(hasTab);
 #if !defined(__OSX__)
-	ui->actionPreviewSettings->setEnabled(hasTab);
+	ui->actionPreviewSettings->setEnabled(!fallback && hasTab);
 #else
 	bool isVisible = m_previewSettings != NULL && m_previewSettings->isVisible();
-	ui->actionPreviewSettings->setEnabled(hasTab && !isVisible);
+	ui->actionPreviewSettings->setEnabled(hasTab && !isVisible && !fallback);
 #endif
 
 	if (isRendering) {

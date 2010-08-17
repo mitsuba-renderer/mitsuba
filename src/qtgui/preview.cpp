@@ -120,9 +120,10 @@ void PreviewThread::setSceneContext(SceneContext *context, bool swapContext, boo
 	if (swapContext && m_context) {
 		m_context->vpls = m_vpls;
 		m_context->previewBuffer = temp[0];
-		m_context->previewBuffer.buffer->disassociate();
+		if (m_context->previewBuffer.buffer)
+			m_context->previewBuffer.buffer->disassociate();
 		m_recycleQueue.push_back(PreviewQueueEntry(m_queueEntryIndex++));
-		
+
 		/* Put back all buffers */
 		for (size_t i=1; i<temp.size(); ++i)
 			m_recycleQueue.push_back(temp[i]);

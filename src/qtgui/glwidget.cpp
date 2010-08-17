@@ -31,6 +31,7 @@ GLWidget::GLWidget(QWidget *parent) :
 	m_invertMouse = false;
 	m_ignoreMouseEvent = QPoint(0, 0);
 	m_didSetCursor = false;
+	m_softwareFallback = false;
 	m_ignoreResizeEvents = false;
 	m_ignoreScrollEvents = false;
 	setAcceptDrops(true);
@@ -58,6 +59,11 @@ void GLWidget::initializeGL() {
 	m_logoSize = Vector2(bitmap->getWidth(), bitmap->getHeight());
 	m_device->init();
 	m_renderer->init(m_device);
+	m_logoTexture = m_renderer->createGPUTexture("Logo", bitmap);
+	m_logoTexture->setFilterType(GPUTexture::ENearest);
+	m_logoTexture->setMipMapped(false);
+	m_logoTexture->init();
+
 	std::vector<std::string> missingExtensions;
 
 	if (!m_renderer->getCapabilities()->isSupported(
@@ -75,170 +81,175 @@ void GLWidget::initializeGL() {
 	if (!m_renderer->getCapabilities()->isSupported(
 		RendererCapabilities::EVertexBufferObjects))
 		missingExtensions.push_back("Vertex buffer objects");
+
 	if (missingExtensions.size() > 0) {
 		std::ostringstream oss;
+		oss << "You machine is missing the following required "
+			"OpenGL capabilities: ";
 		for (size_t i=0; i<missingExtensions.size(); ++i) {
 			oss << missingExtensions[i];
 			if (i+1 < missingExtensions.size())
 				oss << ", ";
 		}
-		SLog(EError, "You machine is missing the following required OpenGL "
-			"capabilities: %s. Please make sure that you are using the most "
-			"recent graphics drivers.", oss.str().c_str());
-	}
+		oss << ". Please make sure that you are using the most "
+			<< "recent graphics drivers.\n\nMitsuba will now switch "
+			<< "to a slow software fallback mode, which only supports "
+			<< "the rendering preview but no tonemapping and no "
+			<< "real-time preview/navigation.";
+		m_errorString = QString(oss.str().c_str());
+		// Don't redraw as often, since this is now quite costly
+		m_redrawTimer->setInterval(1000);
+		m_softwareFallback = true;
+	} else {
+		m_gammaTonemap = m_renderer->createGPUProgram("Tonemapper [Gamma]");
+		m_reinhardTonemap = m_renderer->createGPUProgram("Tonemapper [Reinhard et al. 2002]");
 
-	m_logoTexture = m_renderer->createGPUTexture("Logo", bitmap);
-	m_logoTexture->setFilterType(GPUTexture::ENearest);
-	m_logoTexture->setMipMapped(false);
-	m_gammaTonemap = m_renderer->createGPUProgram("Tonemapper [Gamma]");
-	m_reinhardTonemap = m_renderer->createGPUProgram("Tonemapper [Reinhard et al. 2002]");
+		m_gammaTonemap->setSource(GPUProgram::EVertexProgram,
+			"void main() {\n"
+			"	gl_Position = ftransform();\n"
+			"   gl_TexCoord[0]  = gl_MultiTexCoord0;\n"
+			"}\n"
+		);
+
+		m_gammaTonemap->setSource(GPUProgram::EFragmentProgram,
+			"uniform sampler2D source;\n"
+			"uniform float invWhitePoint, invGamma;\n"
+			"uniform bool sRGB;\n"
+			"\n"
+			"float toSRGB(float value) {\n"
+			"	if (value < 0.0031308)\n"
+			"		return 12.92 * value;\n"
+			"	return 1.055 * pow(value, 0.41666) - 0.055;\n"
+			"}\n"
+			"\n"
+			"void main() {\n"
+			"	vec4 color = texture2D(source, gl_TexCoord[0].xy) * invWhitePoint;\n"
+			"	if (sRGB)\n"
+			"		gl_FragColor = vec4(toSRGB(color.r), toSRGB(color.g), toSRGB(color.b), 1);"
+			"	else\n"
+			"		gl_FragColor = vec4(pow(color.rgb, vec3(invGamma)), 1);\n"
+			"}\n"
+		);
+		
+
+		m_reinhardTonemap->setSource(GPUProgram::EVertexProgram,
+			"void main() {\n"
+			"	gl_Position = ftransform();\n"
+			"   gl_TexCoord[0]  = gl_MultiTexCoord0;\n"
+			"}\n"
+		);
+
+		m_reinhardTonemap->setSource(GPUProgram::EFragmentProgram,
+			"uniform sampler2D source;\n"
+			"uniform float key, invWpSqr, invGamma, multiplier;\n"
+			"uniform bool sRGB;\n"
+			"\n"
+			"float toSRGB(float value) {\n"
+			"	if (value < 0.0031308)\n"
+			"		return 12.92 * value;\n"
+			"	return 1.055 * pow(value, 0.41666) - 0.055;\n"
+			"}\n"
+			"\n"
+			"void main() {\n"
+			"	const mat3 rgb2xyz = mat3(0.412453,  0.357580,  0.180423,\n"
+			"                             0.212671,  0.715160,  0.072169,\n"
+			"					          0.019334,  0.119193,  0.950227);\n"
+			"\n"
+			"	const mat3 xyz2rgb = mat3(3.240479, -1.537150, -0.498535,\n"
+			"                            -0.969256,  1.875991,  0.041556,\n"
+			"					          0.055648, -0.204043,  1.057311);\n"
+			"\n"
+			"	vec4 color = texture2D(source, gl_TexCoord[0].xy)*multiplier;\n"
+			"   vec3 xyz = rgb2xyz * color.rgb;\n"
+			"   float normalization = 1.0/(xyz.x + xyz.y + xyz.z);\n"
+			"   vec3 Yxy = vec3(xyz.x*normalization, xyz.y*normalization, xyz.y);\n"
+			"   float Lp = Yxy.z*key;\n"
+			"   Yxy.z = Lp * (1.0 + Lp*invWpSqr) / (1.0+Lp);\n"
+			"   xyz = vec3(Yxy.x * (Yxy.z/Yxy.y), Yxy.z, (Yxy.z/Yxy.y) * (1.0 - Yxy.x - Yxy.y));\n"
+			"	color.rgb = xyz2rgb * xyz;\n"
+			"	if (sRGB)\n"
+			"		gl_FragColor = vec4(toSRGB(color.r), toSRGB(color.g), toSRGB(color.b), 1);\n"
+			"	else\n"
+			"		gl_FragColor = vec4(pow(color.rgb, vec3(invGamma)), 1);\n"
+			"}\n"
+		);
+
+		m_luminanceProgram = m_renderer->createGPUProgram("Log-luminance program");
+		m_luminanceProgram->setSource(GPUProgram::EVertexProgram,
+			"void main() {\n"
+			"	gl_Position = ftransform();\n"
+			"   gl_TexCoord[0]  = gl_MultiTexCoord0;\n"
+			"}\n"
+		);
+
+		m_luminanceProgram->setSource(GPUProgram::EFragmentProgram,
+			"uniform sampler2D source;\n"
+			"uniform float multiplier;\n"
+			"\n"
+			"void main() {\n"
+			"	vec4 color = texture2D(source, gl_TexCoord[0].xy);\n"
+			"	float luminance = multiplier * (color.r * 0.212671 + color.g * 0.715160 + color.b * 0.072169);\n"
+			"	if (luminance < 0.0 || luminance != luminance) luminance = 0.0; // catch NaNs and negative numbers\n"
+			"	float logLuminance = log(0.001+luminance);\n"
+			"	gl_FragColor = vec4(logLuminance, luminance, 0.0, 1.0);"
+			"}\n"
+		);
+
+		m_downsamplingProgram = m_renderer->createGPUProgram("Downsampling program");
+		m_downsamplingProgram->setSource(GPUProgram::EVertexProgram,
+			"uniform vec2 targetSize;\n"
+			"void main() {\n"
+			"	gl_Position = ftransform();\n"
+			"   gl_TexCoord[0].xy = vec2(gl_MultiTexCoord0.x * targetSize.x, \n"
+			"                            gl_MultiTexCoord0.y * targetSize.y);\n"
+			"}\n"
+		);
+
+		m_downsamplingProgram->setSource(GPUProgram::EFragmentProgram,
+			"uniform sampler2D source;\n"
+			"uniform vec2 activeRegionSize;\n"
+			"uniform vec2 invSourceSize;\n"
+			"\n"
+			"/* Perform a texture lookup by pixel coordinates */\n"
+			"vec4 lookupPixel(vec2 coords) {\n"
+			"   coords = coords + vec2(0.5, 0.5);\n"
+			"	if (coords.x < 0.0 || coords.y < 0.0 ||\n"
+			"		coords.x > activeRegionSize.x || coords.y > activeRegionSize.y)\n"
+			"		return vec4(0);\n"
+			"	else\n"
+			"		return texture2D(source, coords*invSourceSize);\n"
+			"}\n"
+			"\n"
+			"/* Find the max. luminance and the sum of all log-luminance values */\n"
+			"void main() {\n"
+			"   vec2 pos = (gl_TexCoord[0].xy-vec2(.5, .5))*2.0;\n"
+			"	vec2 pixel0 = lookupPixel(pos).rg,\n"
+			"        pixel1 = lookupPixel(pos + vec2(1, 0)).rg,\n"
+			"        pixel2 = lookupPixel(pos + vec2(0, 1)).rg,\n"
+			"        pixel3 = lookupPixel(pos + vec2(1, 1)).rg;\n"
+			"	gl_FragColor.r = pixel0.r + pixel1.r + pixel2.r + pixel3.r;\n"
+			"	gl_FragColor.g = max(pixel0.g, max(pixel1.g, max(pixel2.g, pixel3.g)));\n"
+			"	gl_FragColor.ba = vec2(0, 1);\n"
+			"}\n"
+		);
+
+		if (!m_preview->isRunning()) {
+#if defined(WIN32)
+			wglMakeCurrent(NULL, NULL);
+#endif
+			m_preview->start();
+			m_preview->waitUntilStarted();
+#if defined(WIN32)
+			makeCurrent();
+#endif
+		}
+
+		m_gammaTonemap->init();
+		m_reinhardTonemap->init();
+		m_downsamplingProgram->init();
+		m_luminanceProgram->init();
+	}
 	m_redrawTimer->start();
-
-	m_gammaTonemap->setSource(GPUProgram::EVertexProgram,
-		"void main() {\n"
-		"	gl_Position = ftransform();\n"
-		"   gl_TexCoord[0]  = gl_MultiTexCoord0;\n"
-		"}\n"
-	);
-
-	m_gammaTonemap->setSource(GPUProgram::EFragmentProgram,
-		"uniform sampler2D source;\n"
-		"uniform float invWhitePoint, invGamma;\n"
-		"uniform bool sRGB;\n"
-		"\n"
-		"float toSRGB(float value) {\n"
-		"	if (value < 0.0031308)\n"
-		"		return 12.92 * value;\n"
-		"	return 1.055 * pow(value, 0.41666) - 0.055;\n"
-		"}\n"
-		"\n"
-		"void main() {\n"
-		"	vec4 color = texture2D(source, gl_TexCoord[0].xy) * invWhitePoint;\n"
-		"	if (sRGB)\n"
-		"		gl_FragColor = vec4(toSRGB(color.r), toSRGB(color.g), toSRGB(color.b), 1);"
-		"	else\n"
-		"		gl_FragColor = vec4(pow(color.rgb, vec3(invGamma)), 1);\n"
-		"}\n"
-	);
-	
-
-	m_reinhardTonemap->setSource(GPUProgram::EVertexProgram,
-		"void main() {\n"
-		"	gl_Position = ftransform();\n"
-		"   gl_TexCoord[0]  = gl_MultiTexCoord0;\n"
-		"}\n"
-	);
-
-	m_reinhardTonemap->setSource(GPUProgram::EFragmentProgram,
-		"uniform sampler2D source;\n"
-		"uniform float key, invWpSqr, invGamma, multiplier;\n"
-		"uniform bool sRGB;\n"
-		"\n"
-		"float toSRGB(float value) {\n"
-		"	if (value < 0.0031308)\n"
-		"		return 12.92 * value;\n"
-		"	return 1.055 * pow(value, 0.41666) - 0.055;\n"
-		"}\n"
-		"\n"
-		"void main() {\n"
-		"	const mat3 rgb2xyz = mat3(0.412453,  0.357580,  0.180423,\n"
-		"                             0.212671,  0.715160,  0.072169,\n"
-		"					          0.019334,  0.119193,  0.950227);\n"
-		"\n"
-		"	const mat3 xyz2rgb = mat3(3.240479, -1.537150, -0.498535,\n"
-		"                            -0.969256,  1.875991,  0.041556,\n"
-		"					          0.055648, -0.204043,  1.057311);\n"
-		"\n"
-		"	vec4 color = texture2D(source, gl_TexCoord[0].xy)*multiplier;\n"
-		"   vec3 xyz = rgb2xyz * color.rgb;\n"
-		"   float normalization = 1.0/(xyz.x + xyz.y + xyz.z);\n"
-		"   vec3 Yxy = vec3(xyz.x*normalization, xyz.y*normalization, xyz.y);\n"
-		"   float Lp = Yxy.z*key;\n"
-		"   Yxy.z = Lp * (1.0 + Lp*invWpSqr) / (1.0+Lp);\n"
-		"   xyz = vec3(Yxy.x * (Yxy.z/Yxy.y), Yxy.z, (Yxy.z/Yxy.y) * (1.0 - Yxy.x - Yxy.y));\n"
-		"	color.rgb = xyz2rgb * xyz;\n"
-		"	if (sRGB)\n"
-		"		gl_FragColor = vec4(toSRGB(color.r), toSRGB(color.g), toSRGB(color.b), 1);\n"
-		"	else\n"
-		"		gl_FragColor = vec4(pow(color.rgb, vec3(invGamma)), 1);\n"
-		"}\n"
-	);
-
-	m_luminanceProgram = m_renderer->createGPUProgram("Log-luminance program");
-	m_luminanceProgram->setSource(GPUProgram::EVertexProgram,
-		"void main() {\n"
-		"	gl_Position = ftransform();\n"
-		"   gl_TexCoord[0]  = gl_MultiTexCoord0;\n"
-		"}\n"
-	);
-
-	m_luminanceProgram->setSource(GPUProgram::EFragmentProgram,
-		"uniform sampler2D source;\n"
-		"uniform float multiplier;\n"
-		"\n"
-		"void main() {\n"
-		"	vec4 color = texture2D(source, gl_TexCoord[0].xy);\n"
-		"	float luminance = multiplier * (color.r * 0.212671 + color.g * 0.715160 + color.b * 0.072169);\n"
-		"	if (luminance < 0.0 || luminance != luminance) luminance = 0.0; // catch NaNs and negative numbers\n"
-		"	float logLuminance = log(0.001+luminance);\n"
-		"	gl_FragColor = vec4(logLuminance, luminance, 0.0, 1.0);"
-		"}\n"
-	);
-
-	m_downsamplingProgram = m_renderer->createGPUProgram("Downsampling program");
-	m_downsamplingProgram->setSource(GPUProgram::EVertexProgram,
-		"uniform vec2 targetSize;\n"
-		"void main() {\n"
-		"	gl_Position = ftransform();\n"
-		"   gl_TexCoord[0].xy = vec2(gl_MultiTexCoord0.x * targetSize.x, \n"
-		"                            gl_MultiTexCoord0.y * targetSize.y);\n"
-		"}\n"
-	);
-
-	m_downsamplingProgram->setSource(GPUProgram::EFragmentProgram,
-		"uniform sampler2D source;\n"
-		"uniform vec2 activeRegionSize;\n"
-		"uniform vec2 invSourceSize;\n"
-		"\n"
-		"/* Perform a texture lookup by pixel coordinates */\n"
-		"vec4 lookupPixel(vec2 coords) {\n"
-		"   coords = coords + vec2(0.5, 0.5);\n"
-		"	if (coords.x < 0.0 || coords.y < 0.0 ||\n"
-		"		coords.x > activeRegionSize.x || coords.y > activeRegionSize.y)\n"
-		"		return vec4(0);\n"
-		"	else\n"
-		"		return texture2D(source, coords*invSourceSize);\n"
-		"}\n"
-		"\n"
-		"/* Find the max. luminance and the sum of all log-luminance values */\n"
-		"void main() {\n"
-		"   vec2 pos = (gl_TexCoord[0].xy-vec2(.5, .5))*2.0;\n"
-		"	vec2 pixel0 = lookupPixel(pos).rg,\n"
-		"        pixel1 = lookupPixel(pos + vec2(1, 0)).rg,\n"
-		"        pixel2 = lookupPixel(pos + vec2(0, 1)).rg,\n"
-		"        pixel3 = lookupPixel(pos + vec2(1, 1)).rg;\n"
-		"	gl_FragColor.r = pixel0.r + pixel1.r + pixel2.r + pixel3.r;\n"
-		"	gl_FragColor.g = max(pixel0.g, max(pixel1.g, max(pixel2.g, pixel3.g)));\n"
-		"	gl_FragColor.ba = vec2(0, 1);\n"
-		"}\n"
-	);
-
-	if (!m_preview->isRunning()) {
-#if defined(WIN32)
-		wglMakeCurrent(NULL, NULL);
-#endif
-		m_preview->start();
-		m_preview->waitUntilStarted();
-#if defined(WIN32)
-		makeCurrent();
-#endif
-	}
-
-	m_logoTexture->init();
-	m_gammaTonemap->init();
-	m_reinhardTonemap->init();
-	m_downsamplingProgram->init();
-	m_luminanceProgram->init();
 }
 
 void GLWidget::setScene(SceneContext *context) {
@@ -254,6 +265,7 @@ void GLWidget::setScene(SceneContext *context) {
 	m_leftKeyDown = m_rightKeyDown = m_upKeyDown = m_downKeyDown = false;
 	updateGeometry();
 	updateScrollBars();
+	updateGL();
 }
 
 void GLWidget::refreshScene() {
@@ -332,6 +344,11 @@ void GLWidget::setReinhardBurn(Float value) {
 void GLWidget::downloadFramebuffer() {
 	bool createdFramebuffer = false;
 
+	if (!m_preview->isRunning()) {
+		m_context->framebuffer->clear();
+		return;
+	}
+
 	makeCurrent();
 	if (m_framebuffer == NULL || 
 		m_framebuffer->getBitmap() != m_context->framebuffer) {
@@ -390,7 +407,7 @@ void GLWidget::focusOutEvent(QFocusEvent *event) {
 }
 	
 void GLWidget::timerImpulse() {
-	if (!m_context || !m_context->scene) {
+	if (!m_context || !m_context->scene || !m_preview->isRunning()) {
 		m_movementTimer->stop();
 		return;
 	}
@@ -428,7 +445,7 @@ void GLWidget::timerImpulse() {
 }
 
 void GLWidget::resetPreview() {
-	if (!m_context || !m_context->scene)
+	if (!m_context || !m_context->scene || !m_preview->isRunning())
 		return;
 	bool motion = m_leftKeyDown || m_rightKeyDown || 
 	m_upKeyDown || m_downKeyDown || m_mouseButtonDown;
@@ -468,7 +485,7 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 }
 
 void GLWidget::keyReleaseEvent(QKeyEvent *event) {
-	if (event->isAutoRepeat() || !m_context)
+	if (event->isAutoRepeat() || !m_context || !m_preview->isRunning())
 		return;
 	switch (event->key()) {
 		case Qt::Key_A:
@@ -494,6 +511,9 @@ void GLWidget::keyReleaseEvent(QKeyEvent *event) {
 }
 
 void GLWidget::mouseMoveEvent(QMouseEvent *event) {
+	if (!m_preview->isRunning())
+		return;
+
 	QPoint previousPos = m_mousePos, 
 		   rel         = event->pos() - m_mousePos;
 	m_mousePos = event->pos();
@@ -585,11 +605,11 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 void GLWidget::wheelEvent(QWheelEvent *event) {
 	QScrollBar *bar = event->orientation() == Qt::Vertical
 		? m_vScroll : m_hScroll;
-	int oldStep = bar->singleStep();
 
-	if (!bar->isVisible())
+	if (!bar->isVisible() || !m_preview->isRunning())
 		return;
-
+	
+	int oldStep = bar->singleStep();
 	bar->setSingleStep(event->delta()/4);
 #if defined(__OSX__)
 	/* Support two-finger swipes */
@@ -605,12 +625,16 @@ void GLWidget::wheelEvent(QWheelEvent *event) {
 }
 
 void GLWidget::mousePressEvent(QMouseEvent *event) {
+	if (!m_preview->isRunning())
+		return;
 	m_mousePos = event->pos();
 	m_initialMousePos = mapToGlobal(m_mousePos);
 	m_mouseButtonDown = true;
 }
 
 void GLWidget::mouseReleaseEvent(QMouseEvent *event) {
+	if (!m_preview->isRunning())
+		return;
 	if (event->buttons() == 0) {
 		if (m_didSetCursor) {
 			m_mouseButtonDown = false;
@@ -620,31 +644,6 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *event) {
 			m_didSetCursor = false;
 		}
 	}
-}
-
-void exportPNG(const char *name, GPUTexture *buffer, bool downsample) {
-	buffer->download();
-	ref<Bitmap> texture = buffer->getBitmap();
-	float *source = texture->getFloatData();
-	Point3i size = buffer->getSize();
-
-	ref<Bitmap> ldrVersion = new Bitmap(size.x, size.y, 32);
-	ldrVersion->clear();
-	uint8_t *target = ldrVersion->getData();
-	for (int y=0; y<size.y; ++y) {
-		for (int x=0; x<size.x; ++x) {
-			for (int ch=0; ch<4; ++ch) {
-				Float value = source[(x + y*size.x)*4 + ch];
-				if (ch == 3)
-					value = 1;
-				else
-					value = std::pow(value, (Float) (1/2.2f));
-				target[(x + y*size.x)*4 + ch] = (uint8_t) std::min(std::max((int) (value* 255), 0), 255);
-			}
-		}
-	}
-	ref<FileStream> fs = new FileStream(name, FileStream::ETruncReadWrite);
-	ldrVersion->save(Bitmap::EPNG, fs);
 }
 
 void GLWidget::paintGL() {
@@ -664,6 +663,11 @@ void GLWidget::paintGL() {
 		GPUTexture *buffer = NULL;
 
 		if (m_context->mode == EPreview) {
+			if (!m_preview->isRunning()) {
+				/* No preview thread running - just show a grey screen */
+				swapBuffers();
+				return;
+			}
 			bool motion = m_leftKeyDown || m_rightKeyDown || 
 				m_upKeyDown || m_downKeyDown || m_mouseButtonDown;
 			entry = m_preview->acquireBuffer(motion ? -1 : 50);
@@ -676,22 +680,58 @@ void GLWidget::paintGL() {
 			buffer = entry.buffer;
 		} else if (m_context->mode == ERender) {
 			if (m_framebuffer == NULL ||
-				m_framebuffer->getBitmap() != m_context->framebuffer) {
+				m_framebuffer->getBitmap()->getWidth() != m_context->framebuffer->getWidth() ||
+				m_framebuffer->getBitmap()->getHeight() != m_context->framebuffer->getHeight()) {
 				if (m_framebuffer)
 					m_framebuffer->cleanup();
-				m_framebuffer = m_renderer->createGPUTexture("Framebuffer", 
-					m_context->framebuffer);
+				if (!m_softwareFallback) {
+					m_framebuffer = m_renderer->createGPUTexture("Framebuffer", 
+						m_context->framebuffer);
+				} else {
+					m_fallbackBitmap = new Bitmap(m_context->framebuffer->getWidth(),
+						m_context->framebuffer->getHeight(), 24);
+					m_fallbackBitmap->clear();
+					m_framebuffer = m_renderer->createGPUTexture("Framebuffer", 
+						m_fallbackBitmap);
+				}
 				m_framebuffer->setMipMapped(false);
 				m_framebuffer->setFilterType(GPUTexture::ENearest);
 				m_framebuffer->init();
-			} else if (m_framebufferChanged) {
-				m_framebuffer->refresh();
 			}
+
+			if (m_framebufferChanged) {
+				if (m_softwareFallback) {
+					/* Manually generate a gamma-corrected image 
+					   on the CPU (with gamma=2.2) - this will be slow! */
+					Bitmap *source = m_context->framebuffer;
+					float *sourceData = source->getFloatData();
+					uint8_t *targetData = m_fallbackBitmap->getData();
+					for (int y=0; y<source->getHeight(); ++y) {
+						for (int x=0; x<source->getWidth(); ++x) {
+							const Float invGammaValue = 0.45455;
+							*targetData++ = (uint8_t) std::max(std::min(std::pow(*sourceData++, invGammaValue) * 255.0f, 255.0f), 0.0f);
+							*targetData++ = (uint8_t) std::max(std::min(std::pow(*sourceData++, invGammaValue) * 255.0f, 255.0f), 0.0f);
+							*targetData++ = (uint8_t) std::max(std::min(std::pow(*sourceData++, invGammaValue) * 255.0f, 255.0f), 0.0f);
+							sourceData++;
+						}
+					}
+				}
+				m_framebuffer->refresh();
+				m_framebufferChanged = false;
+			}
+
 			size = m_framebuffer->getSize();
 			buffer = m_framebuffer;
 		}
 
-		if (m_context->toneMappingMethod == EGamma) {
+		if (m_softwareFallback) {
+			buffer->bind();
+			m_renderer->setColor(Spectrum(1.0f));
+			m_renderer->blitTexture(buffer, false,
+				!m_hScroll->isVisible(), !m_vScroll->isVisible(),
+				-m_context->scrollOffset);
+			buffer->unbind();
+		} else if (m_context->toneMappingMethod == EGamma) {
 			Float invWhitePoint = std::pow((Float) 2.0f, m_context->exposure);
 			if (m_context->mode == EPreview)
 				invWhitePoint /= entry.vplSampleOffset;
@@ -917,7 +957,8 @@ void GLWidget::dropEvent(QDropEvent *event) {
 }
 
 void GLWidget::resumePreview() {
-	m_preview->resume();
+	if (m_preview->isRunning())
+		m_preview->resume();
 }
 
 void GLWidget::onUpdateView() {

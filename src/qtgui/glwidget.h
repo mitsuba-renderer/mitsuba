@@ -37,6 +37,8 @@ public:
 	void setScrollBars(QScrollBar *hScroll, QScrollBar *vScroll);
 	inline void ignoreResizeEvents(bool value) { m_ignoreResizeEvents = value; }
 	void updateScrollBars();
+	inline const QString &getErrorString() const { return m_errorString; }
+	inline bool isUsingSoftwareFallback() const { return m_softwareFallback; }
 
 signals:
 	void beginRendering();
@@ -117,7 +119,9 @@ private:
 	ref<Timer> m_clock;
 	bool m_invertMouse, m_didSetCursor;
 	bool m_ignoreScrollEvents, m_ignoreResizeEvents;
-	int m_mouseSensitivity;
+	int m_mouseSensitivity, m_softwareFallback;
+	ref<Bitmap> m_fallbackBitmap;
+	QString m_errorString;
 };
 
 #endif /* __GLWIDGET_H */
