@@ -87,7 +87,7 @@ void GLTexture::init() {
 						Assert(m_size.x == m_size.y && isPowerOfTwo(m_size.x));
 
 						for (int i=0; i<6; i++) 
-							glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X_EXT + i, 0, m_internalFormat, m_size.x, m_size.y,
+							glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, m_internalFormat, m_size.x, m_size.y,
 								0, m_format, m_dataFormat, NULL);
 
 						if (isMipMapped())
@@ -100,7 +100,7 @@ void GLTexture::init() {
 						glTexParameteri(m_glType, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 						for (int i=0; i<6; i++) 
-							glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X_EXT + i, 0, GL_DEPTH_COMPONENT24, m_size.x, m_size.y,
+							glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT24, m_size.x, m_size.y,
 								0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 
 						if (glewIsSupported("GL_EXT_geometry_shader4"))
@@ -131,7 +131,7 @@ void GLTexture::init() {
 				} else if (m_type == ETextureCubeMap) {
 					Assert(m_size.x == m_size.y && isPowerOfTwo(m_size.x));
 					for (int i=0; i<6; i++)
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X_EXT + i, 0, m_internalFormat, m_size.x, m_size.y,
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, m_internalFormat, m_size.x, m_size.y,
 							0, m_format, m_dataFormat, NULL);
 
 					if (glewIsSupported("GL_EXT_geometry_shader4"))
@@ -236,8 +236,8 @@ void GLTexture::refresh() {
 
 			GLuint pos;
 			switch (i) {
-				case ECubeMapPositiveX: pos = GL_TEXTURE_CUBE_MAP_POSITIVE_X_EXT; break;
-				case ECubeMapNegativeX: pos = GL_TEXTURE_CUBE_MAP_NEGATIVE_X_EXT; break;
+				case ECubeMapPositiveX: pos = GL_TEXTURE_CUBE_MAP_POSITIVE_X; break;
+				case ECubeMapNegativeX: pos = GL_TEXTURE_CUBE_MAP_NEGATIVE_X; break;
 				case ECubeMapPositiveY: pos = GL_TEXTURE_CUBE_MAP_POSITIVE_Y_EXT; break;
 				case ECubeMapNegativeY: pos = GL_TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT; break;
 				case ECubeMapPositiveZ: pos = GL_TEXTURE_CUBE_MAP_POSITIVE_Z_EXT; break;
@@ -466,10 +466,13 @@ void GLTexture::activateSide(int side) {
 		}
 	} else {
 		if (m_fbType == EColorBuffer) {
-			glFramebufferTextureFaceEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, m_id, 0,  GL_TEXTURE_CUBE_MAP_POSITIVE_X_EXT + side);
-			glFramebufferTextureFaceEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, m_extraId, 0, GL_TEXTURE_CUBE_MAP_POSITIVE_X_EXT + side);
+			//glFramebufferTextureFaceEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, m_id, 0,  GL_TEXTURE_CUBE_MAP_POSITIVE_X + side);
+			//glFramebufferTextureFaceEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, m_extraId, 0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + side);
+			glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + side, m_id, 0);
+			glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + side, m_extraId, 0);
 		} else {
-			glFramebufferTextureFaceEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, m_id, 0, GL_TEXTURE_CUBE_MAP_POSITIVE_X_EXT + side);
+			//glFramebufferTextureFaceEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, m_id, 0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + side);
+			glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + side, m_id, 0);
 		}
 	}
 }
