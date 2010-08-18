@@ -46,6 +46,7 @@ public:
 			} else {
 				std::istringstream iss(line);
 				iss >> p.x >> p.y >> p.z;
+				m_aabb.expandBy(m_objectToWorld(p));
 
 				if (segments++ > 0) 
 					m_segments.push_back(HairSegment(prev, p));
@@ -53,6 +54,8 @@ public:
 				prev = p;
 			}
 		}
+		m_aabb.min -= Vector(m_radius, m_radius, m_radius);
+		m_aabb.max += Vector(m_radius, m_radius, m_radius);
 
 		Log(EDebug, "Read %i hair segments.", m_segments.size());
 	}
