@@ -69,7 +69,6 @@ void GLWidget::initializeGL() {
 	m_logoTexture = m_renderer->createGPUTexture("Logo", bitmap);
 	m_logoTexture->setFilterType(GPUTexture::ENearest);
 	m_logoTexture->setMipMapped(false);
-	m_logoTexture->init();
 
 	std::vector<std::string> missingExtensions;
 
@@ -255,6 +254,7 @@ void GLWidget::initializeGL() {
 		m_downsamplingProgram->init();
 		m_luminanceProgram->init();
 	}
+	m_logoTexture->init();
 	m_redrawTimer->start();
 }
 

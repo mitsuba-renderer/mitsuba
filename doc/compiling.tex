@@ -80,6 +80,7 @@ in the \code{\%PATH\%} environment variable so that entering \code{scons} on the
 C:\Users\Wenzel>scons
 scons: ** No SConstruct file found.
 \end{shell}
+\emph{Note: }On some setups, the precompiled SCons binaries generate a warning about not finding SCons in the registry. In this case, you can instead run \code{python setup.py install} within the source release of SCons.
 Next, install Qt (\url{http://qt.nokia.com/downloads/windows-cpp-vs2008} -- you should get the release for Visual Studio 2008). Again, you need to make sure that the 
 Qt utilities are reachable through the \code{\%PATH\%} environment variable so that you can for example launch \code{moc.exe} from the command line.
 
