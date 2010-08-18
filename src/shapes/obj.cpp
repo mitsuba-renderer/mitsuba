@@ -1,5 +1,6 @@
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/plugin.h>
 #include <fstream>
 
 MTS_NAMESPACE_BEGIN
@@ -31,6 +32,7 @@ public:
 		std::vector<OBJTriangle> triangles;
 		bool hasNormals = false, hasTexcoords = false;
 		bool firstVertex = true;
+		BSDF *currentMaterial = NULL;
 
 		std::string name = m_name;
 
@@ -43,15 +45,13 @@ public:
 				if (firstVertex) {
 					if (triangles.size() > 0) {
 						generateGeometry(name, vertices, normals, texcoords, 
-							triangles, hasNormals, hasTexcoords);
+							triangles, hasNormals, hasTexcoords, currentMaterial);
 						triangles.clear();
 					}
 					hasNormals = false;
 					hasTexcoords = false;
 					firstVertex = false;
 				}
-			} else if (buf == "mtllib") {
-				cout << "Got mtllib" << endl;
 			} else if (buf == "vn") {
 				Normal n;
 				is >> n.x >> n.y >> n.z;
@@ -64,6 +64,25 @@ public:
 				std::string line;
 				std::getline(is, line);
 				name = line.substr(1, line.length()-2);
+			} else if (buf == "usemtl") {
+				std::string line;
+				std::getline(is, line);
+				std::string materialName = line.substr(1, line.length()-2);
+				if (m_materials.find(materialName) != m_materials.end())
+					currentMaterial = m_materials[materialName];
+				else
+					currentMaterial = NULL;
+			} else if (buf == "mtllib") {
+				std::string line;
+				std::getline(is, line);
+				std::string mtlName = line.substr(1, line.length()-2);
+				ref<FileResolver> fRes = FileResolver::getInstance()->clone();
+				fRes->addPathFromFile(fRes->resolveAbsolute(props.getString("filename")));
+				std::string fullMtlName = fRes->resolve(mtlName);
+				if (FileStream::exists(fullMtlName))
+					parseMaterials(fullMtlName);
+				else
+					Log(EWarn, "Could not find referenced material library '%s'", mtlName.c_str());
 			} else if (buf == "vt") {
 				std::string line;
 				Float u, v, w;
@@ -89,11 +108,15 @@ public:
 					std::swap(t.n[0], t.n[1]);
 					triangles.push_back(t);
 				}
+			} else {
+				/* Ignore */
+				std::string line;
+				std::getline(is, line);
 			}
 		}
 
 		generateGeometry(name, vertices, normals, texcoords, 
-			triangles, hasNormals, hasTexcoords);
+			triangles, hasNormals, hasTexcoords, currentMaterial);
 	}
 
 	void parse(OBJTriangle &t, int i, const std::string &str) {
@@ -117,13 +140,52 @@ public:
 		}
 	}
 
+	void parseMaterials(const std::string &mtlFileName) {
+		Log(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.c_str());
+		std::ifstream is(mtlFileName.c_str());
+		if (is.bad() || is.fail())
+			Log(EError, "Unexpected I/O error while accessing material file '%s'!", mtlFileName.c_str());
+		std::string buf;
+		std::string mtlName;
+		Spectrum diffuse;
+
+		while (is >> buf) {
+			if (buf == "newmtl") {
+				if (mtlName != "") 
+					addMaterial(mtlName, diffuse);
+
+				std::string line, tmp;
+				std::getline(is, line);
+				mtlName = line.substr(1, line.length()-2);
+			} else if (buf == "Kd") {
+				Float r, g, b;
+				is >> r >> g >> b;
+				diffuse.fromSRGB(r, g, b);
+			} else {
+				/* Ignore */
+				std::string line;
+				std::getline(is, line);
+			}
+		}
+		addMaterial(mtlName, diffuse);
+	}
+
+	void addMaterial(const std::string &name, const Spectrum &diffuse) {
+		Properties props("lambertian");
+		props.setSpectrum("reflectance", diffuse);
+		BSDF *bsdf = static_cast<BSDF *> (PluginManager::getInstance()->
+			createObject(BSDF::m_theClass, props));
+		bsdf->incRef();
+		m_materials[name] = bsdf;
+	}
 
 	void generateGeometry(const std::string &name,
 			const std::vector<Point> &vertices,
 			const std::vector<Normal> &normals,
 			const std::vector<Point2> &texcoords,
 			const std::vector<OBJTriangle> &triangles,
-			bool hasNormals, bool hasTexcoords) {
+			bool hasNormals, bool hasTexcoords,
+			BSDF *currentMaterial) {
 		if (triangles.size() == 0)
 			return;
 		Log(EInfo, "Creating geometry \"%s\"", name.c_str());
@@ -187,15 +249,21 @@ public:
 			triangles.size(), vertexArray, vertexBuffer.size());
 		mesh->incRef();
 		mesh->calculateTangentSpaceBasis(hasNormals, hasTexcoords);
+		if (currentMaterial)
+			mesh->addChild("", currentMaterial);
 		m_meshes.push_back(mesh);
 	}
-	
+
 	WavefrontOBJ(Stream *stream, InstanceManager *manager) : TriMesh(stream, manager) {
 	}
 
 	virtual ~WavefrontOBJ() {
 		for (size_t i=0; i<m_meshes.size(); ++i)
 			m_meshes[i]->decRef();
+		for (std::map<std::string, BSDF *>::iterator it = m_materials.begin();
+			it != m_materials.end(); ++it) {
+			(*it).second->decRef();
+		}
 	}
 	
 	void configure() {
@@ -207,7 +275,7 @@ public:
 			m_aabb.expandBy(m_meshes[i]->getAABB());
 		}
 	}
-	
+
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		const Class *cClass = child->getClass();
 		if (cClass->derivesFrom(BSDF::m_theClass)) {
@@ -246,6 +314,7 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	std::vector<TriMesh *> m_meshes;
+	std::map<std::string, BSDF *> m_materials;
 };
 
 MTS_IMPLEMENT_CLASS_S(WavefrontOBJ, false, TriMesh)
