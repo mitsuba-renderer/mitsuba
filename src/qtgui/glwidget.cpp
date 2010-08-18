@@ -558,9 +558,10 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		if (camera->getViewTransform().det3x3() < 0) {
 			camera->setInverseViewTransform(Transform::lookAt(p, p+direction, m_context->up));
 		} else {
-			p.z = -p.z; direction.z = -direction.z;
-			camera->setInverseViewTransform(Transform::scale(Vector(1,1,-1)) *
-				Transform::lookAt(p, p+direction, m_context->up));
+			camera->setInverseViewTransform(
+				Transform::lookAt(p, p+direction, m_context->up) *
+				Transform::scale(Vector(-1,1,1))
+			);
 		}
 		didMove = true;
 	}
@@ -568,14 +569,16 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 	if (event->buttons() & Qt::RightButton) {
 		Float roll = rel.x() * m_mouseSensitivity * .02f;
 		Float fovChange = rel.y() * m_mouseSensitivity * .03f;
-		m_context->up = Transform::rotate(direction, roll)(m_context->up);
 
 		if (camera->getViewTransform().det3x3() < 0) {
+			m_context->up = Transform::rotate(direction, roll)(m_context->up);
 			camera->setInverseViewTransform(Transform::lookAt(p, p+direction, m_context->up));
 		} else {
-			p.z = -p.z; direction.z = -direction.z;
-			camera->setInverseViewTransform(Transform::scale(Vector(1,1,-1)) *
-				Transform::lookAt(p, p+direction, m_context->up));
+			m_context->up = Transform::rotate(direction, -roll)(m_context->up);
+			camera->setInverseViewTransform(
+				Transform::lookAt(p, p+direction, m_context->up) *
+				Transform::scale(Vector(-1,1,1))
+			);
 		}
 
 		camera->setFov(std::min(std::max((Float) 1.0f, camera->getFov() + fovChange), (Float) 100.0f));
@@ -587,8 +590,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 	if (event->buttons() & Qt::MidButton) {
 		camera->setViewTransform(
 			Transform::translate(Vector(-(Float) rel.x(), (Float) rel.y(), 0) 
-				* m_mouseSensitivity * .6f
-				* m_context->movementScale)
+				* m_mouseSensitivity * .6f * m_context->movementScale)
 			* camera->getViewTransform());
 		didMove = true;
 	}
@@ -688,7 +690,8 @@ void GLWidget::paintGL() {
 			if (m_framebuffer == NULL ||
 				m_framebuffer->getBitmap()->getWidth() != m_context->framebuffer->getWidth() ||
 				m_framebuffer->getBitmap()->getHeight() != m_context->framebuffer->getHeight() ||
-				(m_softwareFallback && m_framebuffer->getBitmap() != m_fallbackBitmap)) {
+				(m_softwareFallback && m_framebuffer->getBitmap() != m_fallbackBitmap) ||
+				(!m_softwareFallback && m_framebuffer->getBitmap() != m_context->framebuffer)) {
 				if (m_framebuffer)
 					m_framebuffer->cleanup();
 				if (!m_softwareFallback) {
@@ -722,6 +725,7 @@ void GLWidget::paintGL() {
 							sourceData++;
 						}
 					}
+				} else {
 				}
 				m_framebuffer->refresh();
 				m_framebufferChanged = false;
