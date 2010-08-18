@@ -43,9 +43,16 @@ GLWidget::~GLWidget() {
 }
 
 void GLWidget::onException(const QString &what) {
+	QString errorString("A critical exception occurred in the preview rendering thread. "
+			"Please make sure that you are using the most recent graphics drivers. "
+			"Mitsuba will now switch "
+			"to a slow software fallback mode, which only supports "
+			"the rendering preview but no tonemapping and no "
+			"real-time preview/navigation. "
+			"The encountered error was:\n\n%1");
 	QMessageBox::critical(this, tr("Critical exception"),
-		what, QMessageBox::Ok);
-	qApp->exit(-1);
+		errorString.arg(what), QMessageBox::Ok);
+	m_softwareFallback = true;
 }
 
 void GLWidget::initializeGL() {
@@ -130,7 +137,6 @@ void GLWidget::initializeGL() {
 			"		gl_FragColor = vec4(pow(color.rgb, vec3(invGamma)), 1);\n"
 			"}\n"
 		);
-		
 
 		m_reinhardTonemap->setSource(GPUProgram::EVertexProgram,
 			"void main() {\n"
@@ -681,7 +687,8 @@ void GLWidget::paintGL() {
 		} else if (m_context->mode == ERender) {
 			if (m_framebuffer == NULL ||
 				m_framebuffer->getBitmap()->getWidth() != m_context->framebuffer->getWidth() ||
-				m_framebuffer->getBitmap()->getHeight() != m_context->framebuffer->getHeight()) {
+				m_framebuffer->getBitmap()->getHeight() != m_context->framebuffer->getHeight() ||
+				(m_softwareFallback && m_framebuffer->getBitmap() != m_fallbackBitmap)) {
 				if (m_framebuffer)
 					m_framebuffer->cleanup();
 				if (!m_softwareFallback) {

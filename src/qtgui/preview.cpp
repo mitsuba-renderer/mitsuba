@@ -92,6 +92,9 @@ void PreviewThread::quit() {
 }
 
 void PreviewThread::setSceneContext(SceneContext *context, bool swapContext, bool motion) {
+	if (!isRunning())
+		return;
+
 	std::vector<PreviewQueueEntry> temp;
 	temp.reserve(m_bufferCount);
 
