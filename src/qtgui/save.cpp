@@ -164,7 +164,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	QDomElement newSampler, sampler = findUniqueChild(camera, "sampler");
 	if (sampler.isNull()) {
 		newSampler = doc.createElement("sampler");
-		camera.appendChild(sampler);
+		camera.appendChild(newSampler);
 	} else {
 		newSampler = doc.createElement("sampler");
 		camera.insertAfter(newSampler, sampler);
@@ -224,16 +224,13 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	// ====================================================================
 
 	QDomElement oldIntegratorNode = findUniqueChild(root, "integrator");
-	if (oldIntegratorNode.isNull()) {
-		QMessageBox::critical(parent, parent->tr("Unable to save"),
-			parent->tr("Unable to save changes: could not find the integrator descriptor in "
-			"<b>%1</b>. If you are using include files, make sure that the integrator "
-			"descriptor is located within the main scene file.").arg(ctx->fileName),
-			QMessageBox::Ok);
-		return;
-	}
-
 	QDomElement newIntegratorNode = doc.createElement("integrator");
+	if (oldIntegratorNode.isNull()) {
+		film.appendChild(oldIntegratorNode);
+	} else {
+		film.insertAfter(newIntegratorNode, oldIntegratorNode);
+		film.removeChild(oldIntegratorNode);
+	}
 
 	const Integrator *integrator = ctx->scene->getIntegrator();
 	setProperties(doc, newIntegratorNode, integrator->getProperties());

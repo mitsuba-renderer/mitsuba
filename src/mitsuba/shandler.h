@@ -39,9 +39,9 @@ public:
 	inline Scene *getScene() { return m_scene; }
 
 	inline std::string transcode(const XMLCh * const xmlName) const {
-		const char *value = XMLString::transcode(xmlName);
+		char *value = XMLString::transcode(xmlName);
 		std::string result(value);
-		delete[] value;
+		XMLString::release(&value);
 		return result;
 	}
 

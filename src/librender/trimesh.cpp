@@ -8,10 +8,20 @@
 MTS_NAMESPACE_BEGIN
 
 TriMesh::TriMesh(size_t triangleCount, size_t vertexCount) 
- : Shape(Properties()), m_triangleCount(triangleCount), m_vertexCount(vertexCount) {
+ : Shape(Properties()), m_triangleCount(triangleCount),
+ 		m_vertexCount(vertexCount), m_flipNormals(false) {
 	m_triangles = new Triangle[m_triangleCount];
 	m_vertexBuffer = new Vertex[m_vertexCount];
-	m_flipNormals = false;
+}
+	
+TriMesh::TriMesh(const std::string &name, Transform worldToObject, Triangle *triangles, 
+	size_t triangleCount, Vertex *vertexBuffer, size_t vertexCount) 
+	: Shape(Properties()), m_triangles(triangles), m_triangleCount(triangleCount), 
+	m_vertexBuffer(vertexBuffer), m_vertexCount(vertexCount), m_flipNormals(false) {
+	m_name = name;
+	m_worldToObject = worldToObject;
+	m_objectToWorld.inverse();
+
 }
 
 TriMesh::TriMesh(const Properties &props) 

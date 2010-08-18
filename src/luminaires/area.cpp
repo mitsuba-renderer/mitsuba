@@ -117,10 +117,17 @@ public:
 	}
 
 	void setParent(ConfigurableObject *parent) {
-		ConfigurableObject::setParent(parent);
-
 		if (parent->getClass()->derivesFrom(Shape::m_theClass)) {
-			m_shape = static_cast<Shape *>(parent);
+			Shape *shape = static_cast<Shape *>(parent);
+			if (shape->isCompound())
+				return;
+
+			if (m_parent)
+				Log(EError, "An area light source cannot be parent of multiple shapes");
+			
+			ConfigurableObject::setParent(shape);
+
+			m_shape = shape;
 			parent->configure();
 			m_surfaceArea = m_shape->getSurfaceArea();
 		} else {

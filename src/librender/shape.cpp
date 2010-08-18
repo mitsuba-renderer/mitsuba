@@ -91,7 +91,7 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 		Log(EError, "Shape: Invalid child node!");
 	}
 }
-	
+
 /// Ray intersection test
 bool Shape::rayIntersect(const Ray &ray, Intersection &its) const {
 	Log(EError, "Not implemented!");

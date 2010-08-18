@@ -184,13 +184,17 @@ void Scene::configure() {
 		m_integrator->configure();
 	}
 	if (m_camera == NULL) {
-		Log(EWarn, "No camera found -- adding a default camera");
+		Log(EWarn, "No camera found! Adding a default camera.");
 
 		Properties props("perspective");
 		/* Create a perspective camera with 45deg. FOV, which can see the whole scene */
 		AABB aabb;
 		for (size_t i=0; i<m_shapes.size(); ++i)
 			aabb.expandBy(m_shapes[i]->getAABB());
+		for (size_t i=0; i<m_media.size(); ++i)
+			aabb.expandBy(m_media[i]->getAABB());
+		if (!aabb.isValid())
+			Log(EError, "Unable to set up a default camera -- does the scene contain anything at all?");
 		Point center = aabb.getCenter();
 		Vector extents = aabb.getExtents();
 		Float maxExtents = std::max(extents.x, extents.y);

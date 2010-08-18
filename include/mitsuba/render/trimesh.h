@@ -14,6 +14,11 @@ public:
 	/// Create a new, empty triangle mesh with the given triangle and vertex count
 	TriMesh(size_t triangleCount, size_t vertexCount);
 
+	/// Create a new, empty triangle mesh with the specified data
+	TriMesh(const std::string &name, Transform worldToObject,
+		Triangle *triangles, size_t triangleCount, 
+		Vertex *vertexBuffer, size_t vertexCount);
+
 	/// Unserialize a triangle mesh
 	TriMesh(Stream *stream, InstanceManager *manager);
 
