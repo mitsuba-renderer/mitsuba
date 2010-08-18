@@ -124,7 +124,7 @@ void GLTexture::init() {
 					glTexImage2D(m_glType, 0, m_internalFormat, 
 						m_size.x, m_size.y, 0, GL_DEPTH_COMPONENT, 
 						GL_UNSIGNED_BYTE, NULL);
-				
+
 					/* Attach the texture as a depth target */
 					glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, 
 						GL_DEPTH_ATTACHMENT_EXT, m_glType, m_id, 0);

@@ -33,6 +33,7 @@
 ^mtssrv$
 ^mtsgui$
 ^mtsimport$
+^mtsutil$
 ^src/.*\.lib$
 ^src/.*\.dll$
 ^plugins/.*\.lib$
