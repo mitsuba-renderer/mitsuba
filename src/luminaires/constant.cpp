@@ -27,7 +27,7 @@ public:
 	void preprocess(const Scene *scene) {
 		/* Get the scene's bounding sphere and slightly enlarge it */
 		m_bsphere = scene->getBSphere();
-		m_bsphere.radius *= 2.0f;
+		m_bsphere.radius *= 1.01f;
 		m_surfaceArea = m_bsphere.radius * m_bsphere.radius * M_PI;
 	}
 
@@ -114,7 +114,7 @@ public:
 		Float radius = m_bsphere.radius;
 		if (eRec.type == EmissionRecord::EPreview) {
 			/* This is more suitable for VPL-based rendering */
-			radius *= 10;
+			radius *= 1.5;
 		}
 		Vector d = squareToSphere(sample);
 		eRec.sRec.p = m_bsphere.center + d * radius;
@@ -126,7 +126,7 @@ public:
 	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {
 		Float radius = m_bsphere.radius;
 		if (eRec.type == EmissionRecord::EPreview) 
-			radius *= 10;
+			radius *= 1.5f;
 		Point p2 = m_bsphere.center + squareToSphere(sample) * radius;
 		eRec.d = p2 - eRec.sRec.p;
 		Float length = eRec.d.length();
