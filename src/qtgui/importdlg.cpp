@@ -1,13 +1,13 @@
 #include "ui_importdlg.h"
 #include "importdlg.h"
 #include "acknowledgmentdlg.h"
-#include "../collada/converter.h"
+#include "../converter/converter.h"
 #include "mainwindow.h"
 #include "locateresourcedlg.h"
 
-class GUIColladaConverter : public ColladaConverter {
+class GUIGeometryConverter : public GeometryConverter {
 public:
-	inline GUIColladaConverter(QWidget *parent) : m_parent(parent) {
+	inline GUIGeometryConverter(QWidget *parent) : m_parent(parent) {
 	}
 
 	std::string locateResource(const std::string &resource) {
@@ -48,7 +48,7 @@ void ImportDialog::changeEvent(QEvent *e) {
 
 void ImportDialog::on_inputBrowse_clicked(bool checked) {
 	QFileDialog dialog(this);
-	dialog.setNameFilter(tr("COLLADA scenes (*.dae)"));
+	dialog.setNameFilter(tr("COLLADA 1.4 scenes (*.dae);; Wavefront OBJ scenes (*.obj)"));
 	dialog.setAcceptMode(QFileDialog::AcceptOpen);
 	dialog.setViewMode(QFileDialog::Detail);
 	dialog.setWindowModality(Qt::ApplicationModal);
@@ -108,7 +108,7 @@ void ImportDialog::accept() {
 	QString targetScene = ui->sceneEdit->text();
 	QString adjustmentFile = ui->adjustmentEdit->text();
 
-	GUIColladaConverter cvt(this);
+	GUIGeometryConverter cvt(this);
 	cvt.setSRGB(ui->sRGBButton->isChecked());
 
 	try {
@@ -117,7 +117,7 @@ void ImportDialog::accept() {
 		((MainWindow *) parent())->loadFile(QString(cvt.getFilename().c_str()));
 	} catch (const std::exception &ex) {
 		SLog(EWarn, "Conversion failed: %s", ex.what());
-		QMessageBox::critical(this, tr("COLLADA 1.4 import"),
+		QMessageBox::critical(this, tr("Scene Import"),
 			tr("Conversion failed -- please see the log for details."),
 			QMessageBox::Ok);
 	}

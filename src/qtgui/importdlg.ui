@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Import COLLADA 1.4 ..</string>
+   <string>Import COLLADA 1.4 / Wavefront OBJ wa..</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0" colspan="5">
@@ -46,7 +46,7 @@
    <item row="1" column="1">
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>COLLADA input :</string>
+      <string>Input scene :</string>
      </property>
     </widget>
    </item>

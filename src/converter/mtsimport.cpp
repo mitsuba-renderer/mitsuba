@@ -1,7 +1,7 @@
 /**
- * Mitsuba COLLADA -> XML converter
+ * Mitsuba COLLADA 1.4 and Wavefront OBJ -> XML converter
  * 
- * Takes a DAE file and turns it into a scene description and separate mesh files
+ * Takes a DAE or OBJ file and turns it into a scene description and separate mesh files
  * using a compact binary format. All associated files are copied into newly created 
  * 'textures' and 'meshes' directories
  *
@@ -11,7 +11,7 @@
  * - Cameras
  * - Spot and Point and Ambient lights
  *
- * When exporting using Maya/FBX, be sure to have it convert all NURBS surfaces into
+ * When exporting DAE using Maya/FBX, be sure to have it convert all NURBS surfaces into
  * "Software Render Meshes". Triangulation is not required (the code below does this
  * automatically for arbitrary polygonal meshes). The Light and camera export options
  * should be activated, since they are off by default. While modeling the scene, it is
@@ -40,9 +40,9 @@
 
 XERCES_CPP_NAMESPACE_USE
 
-class ConsoleColladaConverter : public ColladaConverter {
+class ConsoleGeometryConverter : public GeometryConverter {
 public:
-	inline ConsoleColladaConverter() {
+	inline ConsoleGeometryConverter() {
 	}
 
 	std::string locateResource(const std::string &resource) {
@@ -51,8 +51,8 @@ public:
 };
 
 void help() {
-	cout << "COLLADA 1.4 Importer, Version " MTS_VERSION ", Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl
-		<< "Syntax: mtsimport [options] <DAE source file> <XML destination file> [Adjustment file]" << endl
+	cout << "COLLADA 1.4 & WaveFront OBJ Importer, Version " MTS_VERSION ", Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl
+		<< "Syntax: mtsimport [options] <DAE or OBJ scene> <XML destination file> [Adjustment file]" << endl
 		<< "Options/Arguments:" << endl
 		<<  "   -h          Display this help text" << endl << endl
 		<<  "   -p <num>    Use the specified number of samples per pixel." << endl << endl
@@ -114,7 +114,7 @@ int colladaMain(int argc, char **argv) {
 		return -1;
 	}
 
-	ConsoleColladaConverter converter;
+	ConsoleGeometryConverter converter;
 	converter.setSRGB(srgb);
 	converter.setResolution(xres, yres);
 	converter.setMapSmallerSide(mapSmallerSide);

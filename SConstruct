@@ -408,8 +408,13 @@ if hasCollada:
 		colladaEnv.Append(LIBPATH=env['COLLADALIBDIR'])
 	if env.has_key('COLLADALIB'):
 		colladaEnv.Append(LIBS=env['COLLADALIB'])
-	colladaConverter = colladaEnv.StaticObject('src/collada/converter.cpp')
-	colladaEnv.Program('mtsimport', darwinStub + ['src/collada/main.cpp', colladaConverter] + resources)
+	converter_objects = [
+		colladaEnv.StaticObject('src/converter/collada.cpp'),
+		colladaEnv.StaticObject('src/converter/obj.cpp'),
+		colladaEnv.StaticObject('src/converter/converter.cpp')
+	]
+	colladaEnv.Program('mtsimport', darwinStub + ['src/converter/mtsimport.cpp'] 
+		+ resources + converter_objects)
 
 if hasQt:
 	qtEnv = mainEnv.Clone()
@@ -433,7 +438,7 @@ if hasQt:
 	qtgui_files = scanFiles('src/qtgui', ['*.cpp']) + qtResources + shandler + resources
 	
 	if hasCollada:
-		qtgui_files += colladaConverter
+		qtgui_files += converter_objects
 		if env.has_key('COLLADALIBDIR'):
 			qtEnv.Append(LIBPATH=env['COLLADALIBDIR'])
 		if env.has_key('COLLADALIB'):

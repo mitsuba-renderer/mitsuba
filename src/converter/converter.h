@@ -2,9 +2,9 @@
 
 using namespace mitsuba;
 
-class ColladaConverter {
+class GeometryConverter {
 public:
-	inline ColladaConverter() {
+	inline GeometryConverter() {
 		m_srgb = false;
 		m_mapSmallerSide = true;
 		m_xres = m_yres = -1;
@@ -25,6 +25,13 @@ public:
 	inline void setSamplesPerPixel(int samplesPerPixel) { m_samplesPerPixel = samplesPerPixel; }
 	inline void setFov(Float fov) { m_fov = fov; }
 	inline const std::string &getFilename() const { return m_filename; }
+private:
+	void convertCollada(const std::string &inputFile, std::ostream &os,
+		const std::string &textureDirectory,
+		const std::string &meshesDirectory);
+	void convertOBJ(const std::string &inputFile, std::ostream &os,
+		const std::string &textureDirectory,
+		const std::string &meshesDirectory);
 public:
 	bool m_srgb, m_mapSmallerSide;
 	int m_xres, m_yres, m_samplesPerPixel;

@@ -1,19 +1,6 @@
 #define BOOST_FILESYSTEM_NO_LIB 
 #define BOOST_SYSTEM_NO_LIB 
 
-#include <xercesc/dom/DOM.hpp>
-#include <xercesc/dom/DOMDocument.hpp>
-#include <xercesc/dom/DOMDocumentType.hpp>
-#include <xercesc/dom/DOMElement.hpp>
-#include <xercesc/dom/DOMImplementation.hpp>
-#include <xercesc/dom/DOMImplementationLS.hpp>
-#include <xercesc/dom/DOMNodeIterator.hpp>
-#include <xercesc/dom/DOMNodeList.hpp>
-#include <xercesc/parsers/XercesDOMParser.hpp>
-#include <xercesc/framework/MemBufInputSource.hpp>
-#include <xercesc/framework/Wrapper4InputSource.hpp>
-#include <xercesc/framework/LocalFileFormatTarget.hpp>
-#include <xercesc/util/XMLUni.hpp>
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/fresolver.h>
@@ -31,8 +18,6 @@
 #else
 #include <GL/glu.h>
 #endif
-
-XERCES_CPP_NAMESPACE_USE
 
 #include "converter.h"
 
@@ -95,92 +80,6 @@ struct VertexData {
 			delete[] glPos;
 	}
 };
-
-class ImporterDOMErrorHandler : public DOMErrorHandler {
-public:
-	inline ImporterDOMErrorHandler() { }
-
-	bool handleError(const DOMError& domError) {
-		ELogLevel logLevel;
-
-		if (domError.getSeverity() == DOMError::DOM_SEVERITY_WARNING)
-			logLevel = EWarn;
-		else
-			logLevel = EError;
-
-		SLog(logLevel, "%s (line %i, char %i): %s",
-			XMLString::transcode(domError.getLocation()->getURI()),
-			domError.getLocation()->getLineNumber(),
-			domError.getLocation()->getColumnNumber(),
-			XMLString::transcode(domError.getMessage()));
-		return true;
-	}
-};
-
-void findRemovals(DOMNode *node, std::set<std::string> &removals) {
-	if (node) {
-		char *nodeName = XMLString::transcode(node->getNodeName());
-		if (strcmp(nodeName, "ref") == 0) {
-			XMLString::release(&nodeName);
-			return;
-		}
-		XMLString::release(&nodeName);
-		if (node->getNodeType() == DOMNode::ELEMENT_NODE && node->hasAttributes()) {
-			DOMNamedNodeMap *attributes = node->getAttributes();
-			for (size_t i=0; i<attributes->getLength(); ++i) {
-				DOMAttr *attribute = (DOMAttr*) attributes->item(i);
-				char *name = XMLString::transcode(attribute->getName());
-				char *value = XMLString::transcode(attribute->getValue());
-
-				if (strcmp(name, "id") == 0)
-					removals.insert(value);
-
-				XMLString::release(&name);
-				XMLString::release(&value);
-			}
-		}
-		for (DOMNode *child = node->getFirstChild(); child != 0; child=child->getNextSibling())
-			findRemovals(child, removals);
-	}
-}
-
-bool cleanupPass(DOMNode *node, const std::set<std::string> &removals) {
-	if (node) {
-		char *nodeName = XMLString::transcode(node->getNodeName());
-		if (strcmp(nodeName, "ref") == 0) {
-			XMLString::release(&nodeName);
-			return false;
-		}
-
-		if (node->getNodeType() == DOMNode::ELEMENT_NODE && node->hasAttributes()) {
-			DOMNamedNodeMap *attributes = node->getAttributes();
-			for (size_t i=0; i<attributes->getLength(); ++i) {
-				DOMAttr *attribute = (DOMAttr*) attributes->item(i);
-				char *name = XMLString::transcode(attribute->getName());
-				char *value = XMLString::transcode(attribute->getValue());
-
-				if (strcmp(name, "id") == 0 && removals.find(value) != removals.end()) {
-					XMLString::release(&name);
-					XMLString::release(&value);
-					return true; /* Remove this node */
-				}
-
-				XMLString::release(&name);
-				XMLString::release(&value);
-			}
-			XMLString::release(&nodeName);
-		}
-		DOMNode *child = node->getFirstChild();
-		while (child) {
-			DOMNode *next = child->getNextSibling();
-			bool doRemove = cleanupPass(child, removals);
-			if (doRemove)
-				node->removeChild(child);
-			child = next;
-		}
-	}
-	return false;
-}
 
 /* This code is not thread-safe for now */
 GLUtesselator *tess = NULL;
@@ -298,7 +197,8 @@ public:
 	}
 };
 
-void writeGeometry(std::string id, int geomIndex, std::string matID, Transform transform, std::ostream &os, VertexData *vData) {
+void writeGeometry(std::string id, int geomIndex, std::string matID, Transform transform, 
+		std::ostream &os, VertexData *vData, const std::string &meshesDirectory) {
 	std::vector<Vertex> vertexBuffer;
 	std::vector<Triangle> triangles;
 	std::map<Vertex, int, vertex_key_order> vertexMap;
@@ -348,7 +248,7 @@ void writeGeometry(std::string id, int geomIndex, std::string matID, Transform t
 	std::copy(vertexBuffer.begin(), vertexBuffer.end(), mesh->getVertexBuffer());
 	mesh->calculateTangentSpaceBasis(vData->typeToOffset[ENormal]!=-1, vData->typeToOffset[EUV]!=-1);
 
-	std::string filename = formatString("meshes/%s.serialized", id.c_str());
+	std::string filename = meshesDirectory + id;
 	ref<FileStream> stream = new FileStream(filename, FileStream::ETruncReadWrite);
 	stream->setByteOrder(Stream::ENetworkByteOrder);
 	mesh->serialize(stream);
@@ -373,7 +273,7 @@ void writeGeometry(std::string id, int geomIndex, std::string matID, Transform t
 }
 
 void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, domGeometry &geom, 
-		StringMap &matLookupTable) {
+		StringMap &matLookupTable, const std::string &meshesDir) {
 	std::string geomName;
 	if (geom.getName() != NULL) {
 		geomName = geom.getName();
@@ -411,7 +311,7 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
 		else
 			matID = matLookupTable[triangles->getMaterial()];
-		writeGeometry(xmlName, geomIndex, matID, transform, os, data);
+		writeGeometry(xmlName, geomIndex, matID, transform, os, data, meshesDir);
 		delete data;
 		++geomIndex;
 	}
@@ -449,7 +349,7 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 		else
 			matID = matLookupTable[polygons->getMaterial()];
 
-		writeGeometry(xmlName, geomIndex, matID, transform, os, data);
+		writeGeometry(xmlName, geomIndex, matID, transform, os, data, meshesDir);
 		delete data;
 		++geomIndex;
 	}
@@ -489,13 +389,13 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 		else
 			matID = polylist->getMaterial();
 
-		writeGeometry(xmlName, geomIndex, matID, transform, os, data);
+		writeGeometry(xmlName, geomIndex, matID, transform, os, data, meshesDir);
 		delete data;
 		++geomIndex;
 	}
 }
 
-void loadMaterialParam(ColladaConverter *cvt, std::ostream &os, const std::string &name, StringMap &idToTexture, 
+void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const std::string &name, StringMap &idToTexture, 
 		domCommon_color_or_texture_type *value, bool handleRefs) {
 	if (!value)
 		return;
@@ -521,7 +421,7 @@ void loadMaterialParam(ColladaConverter *cvt, std::ostream &os, const std::strin
 	}
 }
 
-void loadMaterialParam(ColladaConverter *cvt, std::ostream &os, const std::string &name, StringMap &,
+void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const std::string &name, StringMap &,
 		domCommon_float_or_param_type *value, bool handleRef) {
 	if (!value)
 		return;
@@ -532,7 +432,7 @@ void loadMaterialParam(ColladaConverter *cvt, std::ostream &os, const std::strin
 	}
 }
 
-void loadMaterial(ColladaConverter *cvt, std::ostream &os, domMaterial &mat, StringMap &_idToTexture) {
+void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, StringMap &_idToTexture) {
 	SLog(EInfo, "Converting material \"%s\" ..", mat.getName());
 	StringMap idToTexture = _idToTexture;
 
@@ -715,7 +615,8 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 		SLog(EWarn, "Encountered an unknown light type!");
 }
 
-void loadImage(ColladaConverter *cvt, std::ostream &os, domImage &image, StringMap &idToTexture, StringMap &fileToId) {
+void loadImage(GeometryConverter *cvt, std::ostream &os, const std::string &textureDir, 
+		domImage &image, StringMap &idToTexture, StringMap &fileToId) {
 	SLog(EInfo, "Converting texture \"%s\" ..", image.getName());
 
 	std::string filename = cdom::uriToFilePath(image.getInit_from()->getValue().str());
@@ -746,15 +647,15 @@ void loadImage(ColladaConverter *cvt, std::ostream &os, domImage &image, StringM
 	}
 
 	ref<FileStream> input = new FileStream(filename, FileStream::EReadOnly);
-	ref<FileStream> output = new FileStream(formatString("textures/%s", leaf.c_str()), FileStream::ETruncReadWrite);
+	ref<FileStream> output = new FileStream(textureDir + leaf.c_str(), FileStream::ETruncReadWrite);
 	input->copyTo(output);
 
 	os << "\t<texture id=\"" << image.getId() << "\" type=\"ldrtexture\">" << endl;
-	os << "\t\t<string name=\"filename\" value=\"textures/" << leaf << "\"/>" << endl;
+	os << "\t\t<string name=\"filename\" value=\"" << textureDir + leaf << "\"/>" << endl;
 	os << "\t</texture>" << endl << endl;
 }
 
-void loadCamera(ColladaConverter *cvt, Transform transform, std::ostream &os, domCamera &camera) {
+void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, domCamera &camera) {
 	SLog(EInfo, "Converting camera \"%s\" ..", camera.getName());
 	Float aspect = 1.0f;
 	int xres=768;
@@ -846,7 +747,8 @@ void loadCamera(ColladaConverter *cvt, Transform transform, std::ostream &os, do
 	os << "\t</camera>" << endl << endl;
 }
 
-void loadNode(ColladaConverter *cvt, Transform transform, std::ostream &os, domNode &node) {
+void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os, 
+		domNode &node, const std::string &meshesDir) {
 	std::string nodeName;
 	if (node.getName() != NULL) {
 		nodeName = node.getName();
@@ -917,7 +819,7 @@ void loadNode(ColladaConverter *cvt, Transform transform, std::ostream &os, domN
 
 		if (!geom)
 			SLog(EError, "Could not find a referenced geometry object!");
-		loadGeometry(nodeName, transform, os, *geom, matLookupTable);
+		loadGeometry(nodeName, transform, os, *geom, matLookupTable, meshesDir);
 	}
 	
 	/* Iterate over all light references */
@@ -943,7 +845,7 @@ void loadNode(ColladaConverter *cvt, Transform transform, std::ostream &os, domN
 	/* Recursively iterate through sub-nodes */
 	domNode_Array &nodes = node.getNode_array();
 	for (size_t i=0; i<nodes.getCount(); ++i) 
-		loadNode(cvt, transform, os, *nodes[i]);
+		loadNode(cvt, transform, os, *nodes[i], meshesDir);
 
 	/* Recursively iterate through <instance_node> elements */
 	domInstance_node_Array &instanceNodes = node.getInstance_node_array();
@@ -951,7 +853,7 @@ void loadNode(ColladaConverter *cvt, Transform transform, std::ostream &os, domN
 		domNode *node = daeSafeCast<domNode>(instanceNodes[i]->getUrl().getElement());
 		if (!node)
 			SLog(EError, "Could not find a referenced node!");
-		loadNode(cvt, transform, os, *node);
+		loadNode(cvt, transform, os, *node, meshesDir);
 	}
 }
 
@@ -984,10 +886,10 @@ GLvoid __stdcall tessError(GLenum error) {
 GLvoid __stdcall tessEdgeFlag(GLboolean) {
 }
 
-void ColladaConverter::convert(const std::string &inputFile, 
-	const std::string &outputDirectory, 
-	const std::string &sceneName,
-	const std::string &adjustmentFile) {
+void GeometryConverter::convertCollada(const std::string &inputFile, 
+	std::ostream &os,
+	const std::string &textureDirectory,
+	const std::string &meshesDirectory) {
 #if defined(__LINUX__)
 	std::string path = std::string("file://") +
 		FileResolver::getInstance()->resolveAbsolute(inputFile);
@@ -1000,8 +902,6 @@ void ColladaConverter::convert(const std::string &inputFile,
 	if (dae->load(path.c_str()) != DAE_OK) 
 		SLog(EError, "Could not load \"%s\"!", path.c_str());
 
-	std::ostringstream os;
-
 	domCOLLADA *document = dae->getDom(path.c_str());
 	domVisual_scene *visualScene = daeSafeCast<domVisual_scene>
 		(document->getDescendant("visual_scene"));
@@ -1012,37 +912,6 @@ void ColladaConverter::convert(const std::string &inputFile,
 	tess = gluNewTess();
 	if (!tess) 
 		SLog(EError, "Could not allocate a GLU tesselator!");
-
-	std::string textureDirectory = "textures";
-	std::string meshesDirectory = "meshes";
-	std::string outputFile = sceneName;
-#ifndef WIN32
-	if (outputDirectory != "") {
-		textureDirectory = outputDirectory + "/textures";
-		meshesDirectory = outputDirectory + "/meshes";
-		outputFile = outputDirectory + std::string("/") + sceneName;
-	}
-
-	int status = mkdir(textureDirectory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	if (status != 0 && errno != EEXIST)
-		SLog(EError, "Could not create the directory \"textures\"");
-	status = mkdir(meshesDirectory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	if (status != 0 && errno != EEXIST)
-		SLog(EError, "Could not create the directory \"meshes\"");
-#else
-	if (outputDirectory != "") {
-		textureDirectory = textureDirectory + "\\textures";
-		meshesDirectory = meshesDirectory + "\\meshes";
-		outputFile = outputDirectory + std::string("\\") + sceneName;
-	}
-
-	int status = CreateDirectory(textureDirectory.c_str(), NULL);
-	if (status == 0 && GetLastError() != ERROR_ALREADY_EXISTS)
-		SLog(EError, "Could not create the directory \"textures\"");
-	status = CreateDirectory(meshesDirectory.c_str(), NULL);
-	if (status == 0 && GetLastError() != ERROR_ALREADY_EXISTS)
-		SLog(EError, "Could not create the directory \"meshes\"");
-#endif
 
 	gluTessCallback(tess, GLU_TESS_VERTEX, reinterpret_cast<GLvoid (__stdcall *)()>(&tessVertex));
 	gluTessCallback(tess, GLU_TESS_BEGIN, reinterpret_cast<GLvoid (__stdcall *)()>(&tessBegin));
@@ -1059,14 +928,12 @@ void ColladaConverter::convert(const std::string &inputFile,
 	os << "<scene>" << endl;
 	os << "\t<integrator id=\"integrator\" type=\"direct\"/>" << endl << endl;
 
-	SLog(EInfo, "Converting to \"%s\" ..", outputFile.c_str());
-
 	StringMap idToTexture, fileToId;
 	domLibrary_images_Array &libraryImages = document->getLibrary_images_array();
 	for (size_t i=0; i<libraryImages.getCount(); ++i) {
 		domImage_Array &images = libraryImages[i]->getImage_array();
 		for (size_t j=0; j<images.getCount(); ++j) 
-			loadImage(this, os, *images.get(j), idToTexture, fileToId);
+			loadImage(this, os, textureDirectory, *images.get(j), idToTexture, fileToId);
 	}
 
 	domLibrary_materials_Array &libraryMaterials = document->getLibrary_materials_array();
@@ -1077,90 +944,11 @@ void ColladaConverter::convert(const std::string &inputFile,
 	}
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
-		loadNode(this, Transform(), os, *nodes[i]);
+		loadNode(this, Transform(), os, *nodes[i], meshesDirectory);
 
 	os << "</scene>" << endl;
 
 	gluDeleteTess(tess);
 	delete dae;
-
-	if (adjustmentFile != "") {
-		SLog(EInfo, "Applying adjustments ..");
-		static const XMLCh gLS[] = { chLatin_L, chLatin_S, chNull };
-		DOMImplementationLS *impl = DOMImplementationRegistry::getDOMImplementation(gLS);
-
-#if 0
-		DOMBuilder *parser = ((DOMImplementationLS*) impl)->createDOMBuilder(DOMImplementationLS::MODE_SYNCHRONOUS, 0);
-		ImporterDOMErrorHandler errorHandler;
-		parser->setErrorHandler(&errorHandler);
-#else
-		DOMLSParser *parser = impl->createLSParser(DOMImplementationLS::MODE_SYNCHRONOUS, 0);
-		DOMConfiguration *conf(parser->getDomConfig());
-		ImporterDOMErrorHandler errorHandler;
-		conf->setParameter(XMLUni::fgDOMErrorHandler, &errorHandler);
-#endif
-
-		std::string xmlString = os.str();
-		MemBufInputSource* memBufIS = new MemBufInputSource((const XMLByte*) xmlString.c_str(), 
-			xmlString.length(), "bufID", false);
-		Wrapper4InputSource *wrapper = new Wrapper4InputSource(memBufIS, false);
-		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *doc = parser->parse(wrapper);
-		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.c_str());
-	
-		std::set<std::string> removals;
-		findRemovals(adj, removals);
-		cleanupPass(doc, removals);
-
-		DOMElement *docRoot = doc->getDocumentElement();
-		DOMElement *adjRoot = adj->getDocumentElement();
-
-		DOMNode *insertBeforeNode = NULL;
-		for (DOMNode *child = docRoot->getFirstChild(); child != 0; child=child->getNextSibling()) {
-			char *name = XMLString::transcode(child->getNodeName());
-			if (strcmp(name, "shape") == 0) {
-				insertBeforeNode = child;
-				break;
-			}
-			XMLString::release(&name);
-		}
-
-		if (insertBeforeNode == NULL) {
-			/* No shape node found, use the camera node instead */
-			for (DOMNode *child = docRoot->getFirstChild(); child != 0; child=child->getNextSibling()) {
-				char *name = XMLString::transcode(child->getNodeName());
-				if (strcmp(name, "camera") == 0) {
-					insertBeforeNode = child;
-					break;
-				}
-				XMLString::release(&name);
-			}
-			SAssertEx(insertBeforeNode != NULL, "Internal error while applying adjustments: cannot find shape/camera node");
-		}
-
-		for (DOMNode *child = adjRoot->getFirstChild(); child != 0; child=child->getNextSibling())
-			docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
-
-		DOMLSSerializer *serializer = impl->createLSSerializer();
-		DOMConfiguration *serConf(serializer->getDomConfig());
-		DOMLSOutput *output = impl->createLSOutput();
-		serConf->setParameter(XMLUni::fgDOMErrorHandler, &errorHandler);
-		serConf->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
-		XMLFormatTarget *target = new LocalFileFormatTarget(outputFile.c_str());
-		output->setByteStream(target);
-		serializer->write(doc, output);
-		delete output;
-		delete target;
-		delete wrapper;
-		delete memBufIS;
-		delete serializer;
-		parser->release();
-	} else {
-		std::ofstream ofile(outputFile.c_str());
-		if (ofile.fail())
-			SLog(EError, "Could not write to \"%s\"!", outputFile.c_str());
-		ofile << os.str();
-		ofile.close();
-	}
-	m_filename = outputFile;
 }
 
