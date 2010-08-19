@@ -124,6 +124,12 @@ public:
 	/// Evaluate the transfport from wi to wo -- 0D (discrete) component
 	virtual Spectrum fDelta(const BSDFQueryRecord &bRec) const;
 
+	/// Return the name of this BSDF
+	inline const std::string &getName() const { return m_name; }
+
+	/// Set the name of this BSDF
+	inline void setName(const std::string &name) { m_name = name; }
+
 	/// Add a child object
 	virtual void addChild(const std::string &string, ConfigurableObject *obj);
 
@@ -145,6 +151,7 @@ protected:
 	unsigned int m_combinedType;
 	int m_componentCount;
 	bool m_usesRayDifferentials;
+	std::string m_name;
 };
 
 MTS_NAMESPACE_END

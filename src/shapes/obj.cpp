@@ -63,7 +63,10 @@ public:
 			} else if (buf == "g") {
 				std::string line;
 				std::getline(is, line);
-				name = line.substr(1, line.length()-2);
+				if (line.length() > 2) {
+					name = line.substr(1, line.length()-2);
+					Log(EInfo, "Loading geometry \"%s\"", name.c_str());
+				}
 			} else if (buf == "usemtl") {
 				std::string line;
 				std::getline(is, line);
@@ -173,11 +176,37 @@ public:
 	void addMaterial(const std::string &name, const Spectrum &diffuse) {
 		Properties props("lambertian");
 		props.setSpectrum("reflectance", diffuse);
+		props.setID(name);
 		BSDF *bsdf = static_cast<BSDF *> (PluginManager::getInstance()->
 			createObject(BSDF::m_theClass, props));
 		bsdf->incRef();
 		m_materials[name] = bsdf;
 	}
+	
+	/// For using vertices as keys in an associative structure
+	struct vertex_key_order : public 
+		std::binary_function<Vertex, Vertex, bool> {
+	public:
+		bool operator()(const Vertex &v1, const Vertex &v2) const {
+			if (v1.v.x < v2.v.x) return true;
+			else if (v1.v.x > v2.v.x) return false;
+			if (v1.v.y < v2.v.y) return true;
+			else if (v1.v.y > v2.v.y) return false;
+			if (v1.v.z < v2.v.z) return true;
+			else if (v1.v.z > v2.v.z) return false;
+			if (v1.n.x < v2.n.x) return true;
+			else if (v1.n.x > v2.n.x) return false;
+			if (v1.n.y < v2.n.y) return true;
+			else if (v1.n.y > v2.n.y) return false;
+			if (v1.n.z < v2.n.z) return true;
+			else if (v1.n.z > v2.n.z) return false;
+			if (v1.uv.x < v2.uv.x) return true;
+			else if (v1.uv.x > v2.uv.x) return false;
+			if (v1.uv.y < v2.uv.y) return true;
+			else if (v1.uv.y > v2.uv.y) return false;
+			return false;
+		}
+	};
 
 	void generateGeometry(const std::string &name,
 			const std::vector<Point> &vertices,
@@ -188,14 +217,10 @@ public:
 			BSDF *currentMaterial) {
 		if (triangles.size() == 0)
 			return;
-		Log(EInfo, "Creating geometry \"%s\"", name.c_str());
-		std::vector<Vertex> vertexBuffer(vertices.size());
-		std::vector<bool> touched(vertices.size());
-		for (unsigned int i=0; i<vertices.size(); i++) {
-			vertexBuffer[i].v = vertices[i];
-			vertexBuffer[i].n = Normal(0, 0, 1);
-			touched[i] = false;
-		}
+	
+		std::map<Vertex, int, vertex_key_order> vertexMap;
+		std::vector<Vertex> vertexBuffer;
+		size_t numMerged = 0;
 
 		/* Collapse the mesh into a more usable form */
 		Triangle *triangleArray = new Triangle[triangles.size()];
@@ -205,38 +230,25 @@ public:
 				unsigned int vertexId = triangles[i].v[j];
 				unsigned int normalId = triangles[i].n[j];
 				unsigned int uvId = triangles[i].uv[j];
+				int key;
 
-				if (touched[vertexId] == false) {
-					if (hasNormals)
-						vertexBuffer[vertexId].n = normals.at(normalId);
-					if (hasTexcoords)
-						vertexBuffer[vertexId].uv = texcoords.at(uvId);
-					touched[vertexId] = true;
-					tri.idx[j] = vertexId;
+				Vertex vertex;
+				vertex.v = vertices.at(vertexId);
+				if (hasNormals)
+					vertex.n = normals.at(normalId);
+				if (hasTexcoords)
+					vertex.uv = texcoords.at(uvId);
+
+				if (vertexMap.find(vertex) != vertexMap.end()) {
+					key = vertexMap[vertex];
+					numMerged++;
 				} else {
-					bool safe = true;
-					if (hasNormals && vertexBuffer.at(vertexId).n 
-							!= normals.at(normalId))
-						safe = false;
-					if (hasTexcoords && vertexBuffer.at(vertexId).uv 
-							!= texcoords.at(uvId))
-						safe = false;
-					if (!safe) {
-						/* This vertex was used in conjunction with a different
-						   normal / texture coordinate. Now we have to duplicate
-						   it. */
-						Vertex vertex;
-						vertex.v = vertices.at(vertexId);
-						if (hasNormals)
-							vertex.n = normals.at(normalId);
-						if (hasTexcoords)
-							vertex.uv = texcoords.at(uvId);
-						tri.idx[j] = vertexBuffer.size();
-						vertexBuffer.push_back(vertex);
-					} else {
-						tri.idx[j] = vertexId;
-					}
+					key = (int) vertexBuffer.size();
+					vertexMap[vertex] = (int) key;
+					vertexBuffer.push_back(vertex);
 				}
+
+				tri.idx[j] = key;
 			}
 			triangleArray[i] = tri;
 		}
@@ -252,6 +264,9 @@ public:
 		if (currentMaterial)
 			mesh->addChild("", currentMaterial);
 		m_meshes.push_back(mesh);
+		SLog(EInfo, "%s: Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
+			" vertices (merged " SIZE_T_FMT " vertices).", name.c_str(),
+			triangles.size(), vertexBuffer.size(), numMerged);
 	}
 
 	WavefrontOBJ(Stream *stream, InstanceManager *manager) : TriMesh(stream, manager) {

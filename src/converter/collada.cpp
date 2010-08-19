@@ -248,7 +248,7 @@ void writeGeometry(std::string id, int geomIndex, std::string matID, Transform t
 	std::copy(vertexBuffer.begin(), vertexBuffer.end(), mesh->getVertexBuffer());
 	mesh->calculateTangentSpaceBasis(vData->typeToOffset[ENormal]!=-1, vData->typeToOffset[EUV]!=-1);
 
-	std::string filename = meshesDirectory + id;
+	std::string filename = meshesDirectory + id + std::string(".serialized");
 	ref<FileStream> stream = new FileStream(filename, FileStream::ETruncReadWrite);
 	stream->setByteOrder(Stream::ENetworkByteOrder);
 	mesh->serialize(stream);

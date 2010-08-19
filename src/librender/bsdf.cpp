@@ -3,11 +3,12 @@
 MTS_NAMESPACE_BEGIN
 
 BSDF::BSDF(const Properties &props)
- : ConfigurableObject(props), m_type(NULL) {
+ : ConfigurableObject(props), m_type(NULL), m_name(props.getID()) {
 }
 
 BSDF::BSDF(Stream *stream, InstanceManager *manager) 
  : ConfigurableObject(stream, manager), m_type(NULL) {
+	m_name = stream->readString();
 }
 
 BSDF::~BSDF() {
@@ -29,6 +30,7 @@ Spectrum BSDF::sample(BSDFQueryRecord &bRec, Float &_pdf) const {
 
 void BSDF::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
+	stream->writeString(m_name);
 }
 
 void BSDF::addChild(const std::string &name, ConfigurableObject *obj) {

@@ -51,15 +51,15 @@ public:
 };
 
 void help() {
-	cout << "COLLADA 1.4 & WaveFront OBJ Importer, Version " MTS_VERSION ", Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl
-		<< "Syntax: mtsimport [options] <DAE or OBJ scene> <XML destination file> [Adjustment file]" << endl
+	cout << "COLLADA 1.4 & Wavefront OBJ Importer, Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl
+		<< "Syntax: mtsimport [options] <DAE/OBJ scene> <XML output file> [Adjustment file]" << endl
 		<< "Options/Arguments:" << endl
 		<<  "   -h          Display this help text" << endl << endl
 		<<  "   -p <num>    Use the specified number of samples per pixel." << endl << endl
 		<<  "   -s          Assume that colors are in sRGB space." << endl << endl
 		<<  "   -m          Map the larger image side to the full field of view" << endl << endl
 		<<  "   -r <w>x<h>  Override the image resolution to e.g. 1920×1080" << endl << endl
-		<<  "   -f <fov>    Override the field of view to the given value specified in degrees." << endl << endl
+		<<  "   -f <fov>    Override the field of view to the given value in degrees." << endl << endl
 		<< "Please see the documentation for more information." << endl;
 }
 

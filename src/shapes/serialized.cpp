@@ -23,12 +23,14 @@ public:
 		memcpy(m_vertexBuffer, mesh->getVertexBuffer(), sizeof(Vertex) * m_vertexCount);
 		memcpy(m_triangles, mesh->getTriangles(), sizeof(Triangle) * m_triangleCount);
 
-		for (size_t i=0; i<m_vertexCount; ++i) {
-			Vertex &vertex = m_vertexBuffer[i];
-			vertex.v = m_objectToWorld(vertex.v);
-			vertex.n = m_objectToWorld(vertex.n);
-			vertex.dpdu = m_objectToWorld(vertex.dpdu);
-			vertex.dpdv = m_objectToWorld(vertex.dpdv);
+		if (!m_objectToWorld.isIdentity()) {
+			for (size_t i=0; i<m_vertexCount; ++i) {
+				Vertex &vertex = m_vertexBuffer[i];
+				vertex.v = m_objectToWorld(vertex.v);
+				vertex.n = m_objectToWorld(vertex.n);
+				vertex.dpdu = m_objectToWorld(vertex.dpdu);
+				vertex.dpdv = m_objectToWorld(vertex.dpdv);
+			}
 		}
 	}
 
