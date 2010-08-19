@@ -290,10 +290,6 @@ MainWindow::MainWindow(QWidget *parent) :
 	m_checkForUpdates = settings.value("checkForUpdates", true).toBool();
 	if (m_checkForUpdates)
 		checkForUpdates(false);
-
-	QStringList args = qApp->arguments();
-	for (int i=1; i<args.count(); ++i)
-		loadFile(args[i]);
 }
 
 MainWindow::~MainWindow() {
@@ -365,6 +361,10 @@ void MainWindow::initWorkers() {
 			QMessageBox::Ok);
 		scheduler->registerWorker(new LocalWorker(formatString("wrk%i", localWorkerCtr++)));
 	}
+	
+	QStringList args = qApp->arguments();
+	for (int i=1; i<args.count(); ++i)
+		loadFile(args[i]);
 
 	scheduler->start();
 	raise();

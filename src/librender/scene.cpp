@@ -247,7 +247,9 @@ void Scene::initialize() {
 	if (!m_luminairePDF.isReady()) {
 		if (m_luminaires.size() == 0) {
 			Log(EWarn, "No luminaires found -- adding a constant environment source");
-			addChild("", PluginManager::getInstance()->createObject(Luminaire::m_theClass, Properties("constant")));
+			Properties constantProps("constant");
+			constantProps.setSpectrum("intensity", Spectrum(0.5f));
+			addChild("", PluginManager::getInstance()->createObject(Luminaire::m_theClass, constantProps));
 		}
 
 		/* Calculate a discrete PDF to importance sample luminaires */

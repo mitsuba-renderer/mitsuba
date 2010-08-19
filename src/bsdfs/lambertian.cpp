@@ -146,5 +146,5 @@ Shader *Lambertian::createShader(Renderer *renderer) const {
 
 MTS_IMPLEMENT_CLASS(LambertianShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(Lambertian, false, BSDF)
-MTS_EXPORT_PLUGIN(Lambertian, "Lambertian BRDF");
+MTS_EXPORT_PLUGIN(Lambertian, "Lambertian BRDF")
 MTS_NAMESPACE_END

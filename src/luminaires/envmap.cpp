@@ -195,7 +195,7 @@ public:
 		} else {
 			/* Preview mode, which is more suitable for VPL-based rendering: approximate 
 			   the infinitely far-away source with set of diffuse point sources */
-			const Float radius = m_bsphere.radius * 10;
+			const Float radius = m_bsphere.radius * 1.5f;
 			Vector d = squareToSphere(sample);
 			eRec.sRec.p = m_bsphere.center + d * radius;
 			eRec.sRec.n = Normal(-d);
@@ -207,7 +207,7 @@ public:
 	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {
 		Float radius = m_bsphere.radius;
 		if (eRec.type == EmissionRecord::EPreview) 
-			radius *= 10;
+			radius *= 1.5f;
 		Point p2 = m_bsphere.center + squareToSphere(sample) * radius;
 		eRec.d = p2 - eRec.sRec.p;
 		Float length = eRec.d.length();

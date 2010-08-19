@@ -67,6 +67,8 @@ Shader *Renderer::getShaderForResource(const HWResource *resource) {
 }
 
 void Renderer::unregisterShaderForResource(const HWResource *resource) {
+	if (resource == NULL)
+		return;
 	if (m_shaders.find(resource) == m_shaders.end())
 		return;
 	ShaderRecord &sRec = m_shaders[resource];
