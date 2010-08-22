@@ -150,9 +150,11 @@ Bitmap::Bitmap(int width, int height, int bpp)
 	m_data = static_cast<unsigned char *>(allocAligned(m_size));
 }
 
-Bitmap::Bitmap(EFileFormat format, Stream *stream) {
+Bitmap::Bitmap(EFileFormat format, Stream *stream) : m_data(NULL) {
 	if (format == EPNG)
 		loadPNG(stream);
+	else if (format == ETGA)
+		loadTGA(stream);
 	else if (format == EJPEG)
 		loadJPEG(stream);
 	else if (format == EEXR)
@@ -189,6 +191,40 @@ void Bitmap::loadEXR(Stream *stream) {
 	delete[] rgba;
 }
 
+void Bitmap::loadTGA(Stream *stream) {
+	int headerSize = stream->readUChar();
+	if (stream->readUChar() != 0)
+		Log(EError, "Invalid TGA format -- only raw (non-RLE encoded) RGB is supported for now");
+	if (stream->readUChar() != 2)
+		Log(EError, "Invalid TGA format -- only raw (non-RLE encoded) RGB is supported for now");
+	stream->setPos(8);
+	int x1 = stream->readShort();
+	int y1 = stream->readShort();
+	int x2 = stream->readShort();
+	int y2 = stream->readShort();
+	m_width = x2-x1;
+	m_height = y2-y1;
+	Log(EInfo, "Reading %ix%i TGA file", m_width, m_height);
+
+	stream->setPos(16);
+	m_bpp = stream->readUChar();
+	if (m_bpp != 24 && m_bpp != 32)
+		Log(EError, "Invalid TGA format -- only 24 or 32 bpp images are supported for now");
+
+	m_gamma = -1;
+	int channels = m_bpp / 8;
+	m_size = m_width * m_height * channels;
+	m_data = static_cast<unsigned char *>(allocAligned(m_size));
+	stream->setPos(18 + headerSize);
+	stream->read(m_data, m_size);
+
+	/* Convert BGR to RGB */
+	for (size_t i=0; i<m_size; i += channels) {
+		uint8_t tmp = m_data[i];
+		m_data[i] = m_data[i+2];
+		m_data[i+2] = tmp;
+	}
+}
 
 void Bitmap::loadPNG(Stream *stream) {
 	png_structp png_ptr;
@@ -357,7 +393,8 @@ void Bitmap::loadJPEG(Stream *stream) {
 }
 
 Bitmap::~Bitmap() {
-	freeAligned(m_data);
+	if (m_data)
+		freeAligned(m_data);
 }
 
 void Bitmap::clear() {

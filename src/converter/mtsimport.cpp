@@ -55,6 +55,8 @@ void help() {
 		<< "Syntax: mtsimport [options] <DAE/OBJ scene> <XML output file> [Adjustment file]" << endl
 		<< "Options/Arguments:" << endl
 		<<  "   -h          Display this help text" << endl << endl
+		<<  "   -a p1;p2;.. Add one or more entries to the resource search path" << endl << endl
+		<<  "   -v          Be more verbose" << endl << endl
 		<<  "   -p <num>    Use the specified number of samples per pixel." << endl << endl
 		<<  "   -s          Assume that colors are in sRGB space." << endl << endl
 		<<  "   -m          Map the larger image side to the full field of view" << endl << endl
@@ -69,11 +71,19 @@ int colladaMain(int argc, char **argv) {
 	int xres = -1, yres = -1;
 	int samplesPerPixel = 8;
 	Float fov = -1;
+	FileResolver *resolver = FileResolver::getInstance();
+	ELogLevel logLevel = EInfo;
 
 	optind = 1;
 
-	while ((optchar = getopt(argc, argv, "shmr:p:f:")) != -1) {
+	while ((optchar = getopt(argc, argv, "svhmr:a:p:f:")) != -1) {
 		switch (optchar) {
+			case 'a': {
+					std::vector<std::string> paths = tokenize(optarg, ";");
+					for (unsigned int i=0; i<paths.size(); ++i) 
+						resolver->addPath(paths[i]);
+				}
+				break;
 			case 's':
 				srgb = true;
 				break;
@@ -84,6 +94,9 @@ int colladaMain(int argc, char **argv) {
 				samplesPerPixel = strtol(optarg, &end_ptr, 10);
 				if (*end_ptr != '\0')
 					SLog(EError, "Invalid number of samples per pixel!");
+				break;
+			case 'v':
+				logLevel = EDebug;
 				break;
 			case 'f':
 				fov = strtod(optarg, &end_ptr);
@@ -113,6 +126,9 @@ int colladaMain(int argc, char **argv) {
 		help();
 		return -1;
 	}
+		
+	ref<Logger> log = Thread::getThread()->getLogger();
+	log->setLogLevel(logLevel);
 
 	ConsoleGeometryConverter converter;
 	converter.setSRGB(srgb);

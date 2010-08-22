@@ -17,6 +17,7 @@ public:
 	enum EFileFormat {
 		EPNG = 0,
 		EEXR,
+		ETGA,
 		EJPEG
 	};
 
@@ -100,6 +101,9 @@ protected:
 
 	/// Load a file stored using the PNG file format
 	void loadPNG(Stream *stream);
+	
+	/// Load a file stored using the TGA file format
+	void loadTGA(Stream *stream);
 
 	/// Load a file stored using the JPEG file format
 	void loadJPEG(Stream *stream);
