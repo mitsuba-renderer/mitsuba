@@ -82,7 +82,7 @@ public:
 		if (sampleTransmission && sampleNested) {
 			if (bRec.sample.x <= probBSDF) {
 				bRec.sample.x /= probBSDF;
-				result = m_nestedBSDF->sample(bRec) / probBSDF;
+				result = m_nestedBSDF->sample(bRec);
 			} else {
 				transmit(bRec.wi, bRec.wo);
 				bRec.sampledComponent = m_nestedBSDF->getComponentCount();
@@ -114,7 +114,7 @@ public:
 		if (sampleTransmission && sampleNested) {
 			if (bRec.sample.x <= probBSDF) {
 				bRec.sample.x /= probBSDF;
-				result = m_nestedBSDF->sample(bRec, pdf);
+				result = m_nestedBSDF->sample(bRec, pdf) * probBSDF;
 				pdf *= probBSDF;
 			} else {
 				transmit(bRec.wi, bRec.wo);

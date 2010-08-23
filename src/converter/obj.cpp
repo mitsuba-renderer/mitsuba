@@ -48,22 +48,38 @@ std::string copyTexture(GeometryConverter *cvt, const std::string &textureDir, s
 
 void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mtlName,
 		const std::string &texturesDir, const Spectrum &diffuseValue, 
-		const std::string &diffuseMap) {
+		const std::string &diffuseMap, const std::string maskMap) {
 	if (mtlName == "") 
 		return;
 	SLog(EInfo, "Copying material \"%s\" ..", mtlName.c_str());
-	os << "\t<bsdf id=\"" << mtlName << "\" type=\"lambertian\">" << endl;
+	std::string indent = "";
+
+	if (maskMap != "") {
+		indent = "\t";
+		os << "\t<bsdf id=\"" << mtlName << "\" type=\"mask\">" << endl;
+		os << "\t\t<texture name=\"opacity\" type=\"ldrtexture\">" << endl;
+		os << "\t\t\t<string name=\"filename\" value=\"" << copyTexture(cvt, texturesDir, maskMap) << "\"/>" << endl;
+		os << "\t\t</texture>" << endl;
+		os << "\t\t<bsdf type=\"lambertian\">" << endl;
+	} else {
+		os << "\t<bsdf id=\"" << mtlName << "\" type=\"lambertian\">" << endl;
+	}
+
 	if (diffuseMap == "") {
 		Float r, g, b;
 		diffuseValue.toLinearRGB(r, g, b);
-		os << "\t\t<rgb name=\"reflectance\" value=\"" 
+		os << indent << "\t\t<rgb name=\"reflectance\" value=\"" 
 			<< r << " " << g << " " << b << "\"/>" << endl;
 	} else {
-		os << "\t\t<texture name=\"reflectance\" type=\"ldrtexture\">" << endl
-		   << "\t\t\t<string name=\"filename\" value=\"" << copyTexture(cvt, texturesDir, diffuseMap) << "\"/>" << endl
-		   << "\t\t</texture>" << endl;
+		os << indent << "\t\t<texture name=\"reflectance\" type=\"ldrtexture\">" << endl
+		   << indent << "\t\t\t<string name=\"filename\" value=\"" << copyTexture(cvt, texturesDir, diffuseMap) << "\"/>" << endl
+		   << indent << "\t\t</texture>" << endl;
 	}
-	os << "\t</bsdf>" << endl << endl;
+
+	os << indent << "\t</bsdf>" << endl << endl;
+
+	if (maskMap != "") 
+		os << "\t</bsdf>" << endl;
 }
 
 void parseMaterials(GeometryConverter *cvt, std::ostream &os, const std::string &texturesDir, 
@@ -75,15 +91,16 @@ void parseMaterials(GeometryConverter *cvt, std::ostream &os, const std::string 
 	std::string buf, line;
 	std::string mtlName;
 	Spectrum diffuse(0.0f);
-	std::string diffuseMap;
+	std::string diffuseMap, maskMap;
 
 	while (is >> buf) {
 		if (buf == "newmtl") {
-			addMaterial(cvt, os, mtlName, texturesDir, diffuse, diffuseMap);
+			addMaterial(cvt, os, mtlName, texturesDir, diffuse, diffuseMap, maskMap);
 			std::getline(is, line);
 			mtlName = line.substr(1, line.length()-2);
 			diffuse = Spectrum(0.0f);
 			diffuseMap = "";
+			maskMap = "";
 		} else if (buf == "Kd") {
 			Float r, g, b;
 			is >> r >> g >> b;
@@ -94,12 +111,15 @@ void parseMaterials(GeometryConverter *cvt, std::ostream &os, const std::string 
 		} else if (buf == "map_Kd") {
 			std::getline(is, line);
 			diffuseMap = line.substr(1, line.length()-2);
+		} else if (buf == "map_d") {
+			std::getline(is, line);
+			maskMap = line.substr(1, line.length()-2);
 		} else {
 			/* Ignore */
 			std::getline(is, line);
 		}
 	}
-	addMaterial(cvt, os, mtlName, texturesDir, diffuse, diffuseMap);
+	addMaterial(cvt, os, mtlName, texturesDir, diffuse, diffuseMap, maskMap);
 }
 
 void GeometryConverter::convertOBJ(const std::string &inputFile, 
