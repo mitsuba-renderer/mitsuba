@@ -8,7 +8,6 @@ MTS_NAMESPACE_BEGIN
 /**
  * Simple one-sided Lambertian (i.e. perfectly diffuse) material
  */
-class LambertianShader;
 class Lambertian : public BSDF {
 public:
 	Lambertian(const Properties &props) 
@@ -63,7 +62,7 @@ public:
 		return m_reflectance->getValue(bRec.its) / Frame::cosTheta(bRec.wo);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float pdf) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf) const {
 		if (!(bRec.typeMask & m_combinedType) || bRec.wi.z <= 0)
 			return Spectrum(0.0f);
 		bRec.wo = squareToHemispherePSA(bRec.sample);

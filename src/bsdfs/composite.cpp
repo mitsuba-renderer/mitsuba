@@ -201,6 +201,7 @@ public:
 			Float componentPDF;
 			int entry = m_pdf.sampleReuse(bRec.sample.x, componentPDF);
 			Spectrum result = m_bsdfs[entry]->sample(bRec, pdf);
+			bRec.sampledComponent += m_bsdfOffset[entry];
 			pdf *= componentPDF;
 			return result;
 		} else {
@@ -210,9 +211,12 @@ public:
 				if (component < 0 || component >= m_bsdfs[i]->getComponentCount())
 					continue;
 
-				BSDFQueryRecord bRec2(bRec);
-				bRec2.component = component;
-				return m_bsdfs[i]->sample(bRec2, pdf);
+				int tempComponent = bRec.component;
+				bRec.component = component;
+				Spectrum result = m_bsdfs[i]->sample(bRec, pdf);
+				bRec.component = bRec.sampledComponent = tempComponent;
+
+				return result;
 			}
 		}
 		Log(EError, "Internal error!");
@@ -225,6 +229,7 @@ public:
 			int entry = m_pdf.sampleReuse(bRec.sample.x, componentPDF);
 			Spectrum result = m_bsdfs[entry]->sample(bRec);
 			result /= componentPDF;
+			bRec.sampledComponent += m_bsdfOffset[entry];
 			return result;
 		} else {
 			/* Pick out an individual component */
@@ -233,9 +238,12 @@ public:
 				if (component < 0 || component >= m_bsdfs[i]->getComponentCount())
 					continue;
 
-				BSDFQueryRecord bRec2(bRec);
-				bRec2.component = component;
-				return m_bsdfs[i]->sample(bRec2);
+				int tempComponent = bRec.component;
+				bRec.component = component;
+				Spectrum result = m_bsdfs[i]->sample(bRec);
+				bRec.component = bRec.sampledComponent = tempComponent;
+
+				return result;
 			}
 		}
 		Log(EError, "Internal error!");

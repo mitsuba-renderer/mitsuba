@@ -706,7 +706,7 @@ void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, d
 					" - setting to 45deg. Please use the \"-f\" parameter to override this.");
 				xFov = 45.0f;
 			}
-			Float yFov = radToDeg(2 * std::atan(std::tan(degToRad(xFov)/1) / aspect));
+			Float yFov = radToDeg(2 * std::atan(std::tan(degToRad(xFov)/2) / aspect));
 			if (cvt->m_fov != -1)
 				xFov = yFov = cvt->m_fov;
 			if (aspect <= 1.0f)

@@ -50,12 +50,17 @@ public:
 	}
 
 	inline void transmit(const Vector &wi, Vector &wo) const {
-		wo = Vector(wi.x, wi.y, -wi.z);
+		wo = Vector(-wi.x, -wi.y, -wi.z);
 	}
 
-	inline Spectrum sample(BSDFQueryRecord &bRec) const {
-		Float pdf;
-		return Transparent::sample(bRec, pdf);
+	Spectrum sample(BSDFQueryRecord &bRec) const {
+		if (!(bRec.typeMask & m_combinedType))
+			return Spectrum(0.0f);
+		transmit(bRec.wi, bRec.wo);
+		bRec.sampledComponent = 0;
+		bRec.sampledType = EDeltaTransmission;
+		return m_transmission / 
+			std::abs(Frame::cosTheta(bRec.wo));
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf) const {
@@ -83,5 +88,5 @@ protected:
 
 
 MTS_IMPLEMENT_CLASS_S(Transparent, false, BSDF)
-MTS_EXPORT_PLUGIN(Transparent, "Transparent BRDF");
+MTS_EXPORT_PLUGIN(Transparent, "Transparent BSDF");
 MTS_NAMESPACE_END

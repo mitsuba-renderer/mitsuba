@@ -179,7 +179,7 @@ public:
 			Point2 newSample = bRec.sample;
 
 			if (bRec.sample.x <= m_specularSamplingWeight) {
-				bRec.sample.x = bRec.sample.x / m_specularSamplingWeight;
+				bRec.sample.x /= m_specularSamplingWeight;
 				return sampleSpecular(bRec);
 			} else {
 				bRec.sample.x = (bRec.sample.x - m_specularSamplingWeight)
