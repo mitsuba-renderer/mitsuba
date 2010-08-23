@@ -1,0 +1,5 @@
+import os
+
+env = Environment(ENV = os.environ, tools=['default'])
+env['SHLIBPREFIX'] = ''
+env.SharedLibrary('plugins/myutil', ['myutil.cpp'])
