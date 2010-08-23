@@ -1,9 +1,10 @@
 mitsuba /usr/bin
 mtssrv /usr/bin
 mtsgui /usr/bin
-src/libhw/libhw.so /usr/lib
-src/librender/librender.so /usr/lib
-src/libcore/libcore.so /usr/lib
+mtsimport /usr/bin
+src/libhw/libmitsuba-hw.so /usr/lib
+src/librender/libmitsuba-render.so /usr/lib
+src/libcore/libmitsuba-core.so /usr/lib
 schema/scene.xsd /usr/share/mitsuba/schema
 plugins/* /usr/share/mitsuba/plugins
 src/qtgui/resources/mitsuba48.png /usr/share/pixmaps

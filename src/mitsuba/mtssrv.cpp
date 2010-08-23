@@ -78,11 +78,18 @@ int ubi_main(int argc, char **argv) {
 		bool quietMode = false;
 		ELogLevel logLevel = EInfo;
 		std::string hostName = getFQDN();
+		FileResolver *resolver = FileResolver::getInstance();
 
 		optind = 1;
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "c:s:n:p:i:l:qhv")) != -1) {
+		while ((optchar = getopt(argc, argv, "a:c:s:n:p:i:l:qhv")) != -1) {
 			switch (optchar) {
+				case 'a': {
+						std::vector<std::string> paths = tokenize(optarg, ";");
+						for (unsigned int i=0; i<paths.size(); ++i) 
+							resolver->addPath(paths[i]);
+					}
+					break;
 				case 'c':
 					networkHosts = networkHosts + std::string(";") + std::string(optarg);
 					break;
@@ -131,6 +138,7 @@ int ubi_main(int argc, char **argv) {
 					cout <<  "Usage: mtssrv [options]" << endl;
 					cout <<  "Options/Arguments:" << endl;
 					cout <<  "   -h          Display this help text" << endl << endl;
+					cout <<  "   -a p1;p2;.. Add one or more entries to the resource search path" << endl << endl;
 					cout <<  "   -p count    Override the detected number of processors. Useful for reducing" << endl;
 					cout <<  "               the load or creating scheduling-only nodes in conjunction with"  << endl;
 					cout <<  "               the -c and -s parameters, e.g. -p 0 -c host1;host2;host3,..." << endl << endl;
@@ -354,6 +362,15 @@ int main(int argc, char **argv) {
 	SHVector::staticInitialization();
 
 #ifdef WIN32
+	char lpFilename[1024];
+	if (GetModuleFileNameA(NULL,
+		lpFilename, sizeof(lpFilename))) {
+		FileResolver *resolver = FileResolver::getInstance();
+		resolver->addPathFromFile(lpFilename);
+	} else {
+		SLog(EWarn, "Could not determine the executable path");
+	}
+
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
@@ -362,13 +379,29 @@ int main(int argc, char **argv) {
 		SLog(EError, "Could not find the required version of winsock.dll!");
 #endif
 
-#if !defined(WIN32)
-	setlocale(LC_NUMERIC, "C");
+#ifdef __LINUX__
+	char exePath[PATH_MAX];
+	memset(exePath, 0, PATH_MAX);
+	FileResolver *resolver = FileResolver::getInstance();
+	if (readlink("/proc/self/exe", exePath, PATH_MAX) != -1) {
+		resolver->addPathFromFile(exePath);
+	} else {
+		SLog(EWarn, "Could not determine the executable path");
+	}
+	resolver->addPath("/usr/share/mitsuba");
 #endif
 
-#ifdef __LINUX__
+
+#if defined(__OSX__)
+	MTS_AUTORELEASE_BEGIN()
 	FileResolver *resolver = FileResolver::getInstance();
-	resolver->addPath("/usr/share/mitsuba");
+	resolver->addPath(__ubi_bundlepath());
+	MTS_AUTORELEASE_END() 
+#endif
+
+
+#if !defined(WIN32)
+	setlocale(LC_NUMERIC, "C");
 #endif
 
 	int retval = ubi_main(argc, argv);

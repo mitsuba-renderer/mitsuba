@@ -16,6 +16,7 @@ MTS_NAMESPACE_BEGIN
 
 class RemoteWorkerReader;
 class StreamBackend;
+class FileResolver;
 
 /**
  * Remote worker thread. Acquires work from the scheduler and forwards
@@ -205,6 +206,7 @@ private:
 	std::map<int, RemoteProcess *> m_processes;
 	std::map<int, int> m_resources;
 	ref<Mutex> m_sendMutex;
+	ref<FileResolver> m_resolver;
 	bool m_detach;
 };
 

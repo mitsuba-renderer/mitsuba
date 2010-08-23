@@ -106,6 +106,21 @@ public:
 		}
 		return path;
 	}
+	
+	/// Try to resolve all paths to an existing file
+	inline std::vector<std::string> resolveAll(const std::string &path) const {
+		std::vector<std::string> result;
+
+		if (FileStream::exists(path)) 
+			result.push_back(path);
+
+		for (unsigned int i=0; i<m_paths.size(); i++) {
+			std::string testPath = m_paths[i] + "/" + path;
+			if (FileStream::exists(testPath))
+				result.push_back(testPath);
+		}
+		return result;
+	}
 
 	/**
 	 * Try to resolve a path to an existing file (returns an
@@ -113,6 +128,21 @@ public:
 	 */
 	inline std::string resolveAbsolute(const std::string &path) const {
 		return makeAbsolute(resolve(path));
+	}
+	
+	/// Try to resolve all paths to an existing file (returns absolute paths)
+	inline std::vector<std::string> resolveAllAbsolute(const std::string &path) const {
+		std::vector<std::string> result;
+
+		if (FileStream::exists(path)) 
+			result.push_back(makeAbsolute(path));
+
+		for (unsigned int i=0; i<m_paths.size(); i++) {
+			std::string testPath = m_paths[i] + "/" + path;
+			if (FileStream::exists(testPath))
+				result.push_back(makeAbsolute(testPath));
+		}
+		return result;
 	}
 
 	/**

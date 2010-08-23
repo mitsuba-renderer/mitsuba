@@ -78,45 +78,54 @@ void help() {
 
 	FileResolver *resolver = FileResolver::getInstance();
 	cout << "The following utilities are available:" << endl << endl;
-	std::string dirPath = resolver->resolveAbsolute("plugins");
+
+	std::vector<std::string> dirPaths = resolver->resolveAllAbsolute("plugins");
+	std::set<std::string> seen;
+
+	for (size_t i=0; i<dirPaths.size(); ++i) {
+		std::string dirPath = dirPaths[i];
 
 #if !defined(WIN32)
-	DIR *directory;
-	struct dirent *dirinfo;
+		DIR *directory;
+		struct dirent *dirinfo;
 
-	if ((directory = opendir(dirPath.c_str())) == NULL)
-		SLog(EInfo, "Could not open plugin directory");
+		if ((directory = opendir(dirPath.c_str())) == NULL)
+			SLog(EInfo, "Could not open plugin directory");
 
-	while ((dirinfo = readdir(directory)) != NULL) {
-		std::string fname(dirinfo->d_name);
-		if (!endsWith(fname, ".dylib") && !endsWith(fname, ".so"))
-			continue;
-		std::string fullName = dirPath + "/" + fname;
+		while ((dirinfo = readdir(directory)) != NULL) {
+			std::string fname(dirinfo->d_name);
+			if (!endsWith(fname, ".dylib") && !endsWith(fname, ".so"))
+				continue;
+			std::string fullName = dirPath + "/" + fname;
 #else
-	HANDLE hFind;
-	WIN32_FIND_DATA findFileData;
+		HANDLE hFind;
+		WIN32_FIND_DATA findFileData;
 
-	if ((hFind = FindFirstFile((dirPath + "\\*.dll").c_str(), &findFileData)) == INVALID_HANDLE_VALUE)
-		SLog(EInfo, "Could not open plugin directory");
-	
-	do {
-		std::string fname = findFileData.cFileName;
-		std::string fullName = dirPath + "\\" + fname;
+		if ((hFind = FindFirstFile((dirPath + "\\*.dll").c_str(), &findFileData)) == INVALID_HANDLE_VALUE)
+			SLog(EInfo, "Could not open plugin directory");
+		
+		do {
+			std::string fname = findFileData.cFileName;
+			std::string fullName = dirPath + "\\" + fname;
 #endif
-		std::string shortName = fname.substr(0, strrchr(fname.c_str(), '.') - fname.c_str());
-		Plugin utility(shortName, fullName);
-		if (!utility.isUtility())
-			continue;
-		cout << "\t" << shortName;
-		for (int i=0; i<22-(int) shortName.length(); ++i)
-			cout << ' ';
-		cout  << utility.getDescription() << endl;
+			std::string shortName = fname.substr(0, strrchr(fname.c_str(), '.') - fname.c_str());
+			if (seen.find(shortName) != seen.end())
+				continue;
+			seen.insert(shortName);
+			Plugin utility(shortName, fullName);
+			if (!utility.isUtility())
+				continue;
+			cout << "\t" << shortName;
+			for (int i=0; i<22-(int) shortName.length(); ++i)
+				cout << ' ';
+			cout  << utility.getDescription() << endl;
 #if !defined(WIN32)	
-	}
+		}
 #else
-	} while (FindNextFile(hFind, &findFileData));
-	FindClose(hFind);
+		} while (FindNextFile(hFind, &findFileData));
+		FindClose(hFind);
 #endif
+	}
 }
 
 

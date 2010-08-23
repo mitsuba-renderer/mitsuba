@@ -265,19 +265,19 @@ if sys.platform == 'darwin':
 	coreEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing');
 	libcore_objects += coreEnv_osx.SharedObject('src/libcore/darwin.mm')
 
-libcore = coreEnv.SharedLibrary('src/libcore/core', libcore_objects);
+libcore = coreEnv.SharedLibrary('src/libcore/mitsuba-core', libcore_objects);
 
 if sys.platform == "darwin":
 	coreEnv.AddPostAction(libcore, 'install_name_tool -id @executable_path/../Frameworks/libcore.dylib $TARGET')
 
 env = env.Clone()
-env.Append(LIBS=['core'])
+env.Append(LIBS=['mitsuba-core'])
 env.Append(LIBPATH=['src/libcore'])
 
 # Rendering-specific library
 renderEnv = env.Clone()
 renderEnv.Append(CPPDEFINES = {'MTS_BUILD_MODULE' : 'MTS_MODULE_RENDER'} )
-librender = renderEnv.SharedLibrary('src/librender/render', [
+librender = renderEnv.SharedLibrary('src/librender/mitsuba-render', [
 	'src/librender/bsdf.cpp', 'src/librender/camera.cpp',
 	'src/librender/film.cpp', 'src/librender/integrator.cpp',
 	'src/librender/kdtree.cpp', 'src/librender/kdtree_coherent.cpp',
@@ -301,7 +301,7 @@ librender = renderEnv.SharedLibrary('src/librender/render', [
 if sys.platform == "darwin":
 	renderEnv.AddPostAction(librender, 'install_name_tool -id @executable_path/../Frameworks/librender.dylib $TARGET')
 
-env.Append(LIBS=['render'])
+env.Append(LIBS=['mitsuba-render'])
 env.Append(LIBPATH=['src/librender'])
 
 libhw_objects = ['src/libhw/session.cpp', 'src/libhw/device.cpp',
@@ -342,12 +342,12 @@ if sys.platform == 'darwin':
 		'src/libhw/nsgldevice.mm',
 		'src/libhw/nsglrenderer.mm'])
 
-libhw = glEnv.SharedLibrary('src/libhw/hw', libhw_objects)
+libhw = glEnv.SharedLibrary('src/libhw/mitsuba-hw', libhw_objects)
 if sys.platform == "darwin":
 	glEnv.AddPostAction(libhw, 'install_name_tool -id @executable_path/../Frameworks/libhw.dylib $TARGET')
 
 env = env.Clone()
-env.Append(LIBS=['hw'])
+env.Append(LIBS=['mitsuba-hw'])
 env.Append(LIBPATH=['src/libhw'])
 env['SHLIBPREFIX']=''
 
@@ -624,9 +624,9 @@ if sys.platform == 'win32':
 	installTargets += env.Install('dist', 'mtsutil.exe')
 	installTargets += env.Install('dist', 'mtsimport.exe')
 	installTargets += env.Install('dist', 'mtsgui.exe')
-	installTargets += env.Install('dist', 'src/libcore/libcore.dll')
-	installTargets += env.Install('dist', 'src/libhw/libhw.dll')
-	installTargets += env.Install('dist', 'src/librender/librender.dll')
+	installTargets += env.Install('dist', 'src/libcore/libmitsuba-core.dll')
+	installTargets += env.Install('dist', 'src/libhw/libmitsuba-hw.dll')
+	installTargets += env.Install('dist', 'src/librender/libmitsuba-render.dll')
 	installTargets += env.Install('dist', dllprefix + 'Iex.dll')
 	installTargets += env.Install('dist', dllprefix + 'Half.dll')
 	installTargets += env.Install('dist', dllprefix + 'IlmThread.dll')
@@ -669,9 +669,9 @@ elif sys.platform == 'darwin':
 	installTargets += env.AddPostAction(plist, 'perl -pi -e "s/MTS_VERSION/%s/" $TARGET' % MTS_VERSION)
 	installTargets += env.Install('Mitsuba.app/Contents', 'tools/darwin/PkgInfo')
 	installTargets += env.Install('Mitsuba.app/Contents/Resources', 'tools/darwin/Resources/mitsuba.icns')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'src/librender/librender.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'src/libcore/libcore.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'src/libhw/libhw.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'src/librender/libmitsuba-render.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'src/libcore/libmitsuba-core.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'src/libhw/libmitsuba-hw.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/GLEW.framework/Resources/libs/libGLEW.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/OpenEXR.framework/Resources/lib/libHalf.6.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/OpenEXR.framework/Resources/lib/libIex.6.dylib')

@@ -1,6 +1,7 @@
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/fresolver.h>
 #include <stdexcept>
 
 MTS_NAMESPACE_BEGIN
@@ -313,6 +314,7 @@ StreamBackend::StreamBackend(const std::string &thrName, Scheduler *scheduler,
 	m_sendMutex = new Mutex();
 	m_memStream = new MemoryStream();
 	m_memStream->setByteOrder(Stream::ENetworkByteOrder);
+	m_resolver = FileResolver::getInstance();
 }
 
 StreamBackend::~StreamBackend() {
@@ -367,6 +369,8 @@ void StreamBackend::run() {
 	m_memStream->copyTo(m_stream);
 	m_stream->flush();
 	bool running = true;
+	
+	FileResolver::setInstance(m_resolver);
 
 	try {
 		while (running) {

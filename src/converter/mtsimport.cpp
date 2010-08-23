@@ -178,6 +178,7 @@ int ubi_main(int argc, char **argv) {
 	} else {
 		SLog(EWarn, "Could not determine the executable path");
 	}
+	resolver->addPath("/usr/share/mitsuba");
 #else
 	MTS_AUTORELEASE_BEGIN()
 	resolver->addPath(__ubi_bundlepath());
