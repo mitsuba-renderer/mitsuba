@@ -1,6 +1,7 @@
 mitsuba /usr/bin
 mtssrv /usr/bin
 mtsgui /usr/bin
+mtsutil /usr/bin
 mtsimport /usr/bin
 src/libhw/libmitsuba-hw.so /usr/lib
 src/librender/libmitsuba-render.so /usr/lib
