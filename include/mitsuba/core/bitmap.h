@@ -120,7 +120,7 @@ protected:
 	int m_width;
 	int m_height;
 	int m_bpp;
-	int m_size;
+	size_t m_size;
 	unsigned char *m_data;
 	std::string m_title;
 	std::string m_author;

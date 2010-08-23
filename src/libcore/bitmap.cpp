@@ -146,7 +146,7 @@ Bitmap::Bitmap(int width, int height, int bpp)
 		m_gamma = -1.0f; // sRGB
 
 	// 1-bit masks are stored in a packed format. 
-	m_size = (int) std::ceil((m_width * m_height * m_bpp) / 8.0f);
+	m_size = (size_t) std::ceil((m_width * m_height * m_bpp) / 8.0f);
 	m_data = static_cast<unsigned char *>(allocAligned(m_size));
 }
 
@@ -309,7 +309,7 @@ void Bitmap::loadPNG(Stream *stream) {
 			&colortype, &interlacetype, &compressiontype, &filtertype);
 	m_width = width; m_height = height;
 
-	m_size = (int) std::ceil((m_width * m_height * m_bpp) / 8.0f);
+	m_size = (size_t) std::ceil((m_width * m_height * m_bpp) / 8.0f);
 	m_data = static_cast<unsigned char *>(allocAligned(m_size));
 
 	rows = new png_bytep[m_height];
