@@ -2,6 +2,7 @@
 #include <QtGui/QtGui>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/sched.h>
+#include <mitsuba/core/plugin.h>
 #if defined(__OSX__)
 #include <ApplicationServices/ApplicationServices.h>
 #endif
@@ -77,6 +78,7 @@ int main(int argc, char *argv[]) {
 
 	/* Initialize the core framework */
 	Class::staticInitialization();
+	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
@@ -204,6 +206,7 @@ int main(int argc, char *argv[]) {
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();
+	PluginManager::staticShutdown();
 	Class::staticShutdown();
 
 	return retval;

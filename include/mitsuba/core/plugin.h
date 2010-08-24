@@ -79,6 +79,12 @@ public:
 		const Properties &props
 	);
 
+	/// Initializes the global plugin manager instance
+	static void staticInitialization();
+
+	/// Free the memory taken by staticInitialization()
+	static void staticShutdown();
+
 	MTS_DECLARE_CLASS()
 protected:
 	PluginManager();

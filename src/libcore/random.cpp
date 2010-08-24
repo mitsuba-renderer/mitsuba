@@ -63,11 +63,15 @@ Random::Random() {
 #if defined(WIN32)
 	seed();
 #else
+#if 0
 	uint64_t buf[MT_N];
+	memset(buf, 0, MT_N * sizeof(uint64_t)); /* Make GCC happy */
 	ref<FileStream> urandom = new FileStream("/dev/urandom", FileStream::EReadOnly);
 	urandom->readULongArray(buf, MT_N);
-//	seed(buf, MT_N);
+	seed(buf, MT_N);
+#else
 	seed();
+#endif
 #endif
 }
 

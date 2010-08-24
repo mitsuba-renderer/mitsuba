@@ -96,7 +96,7 @@ Plugin::~Plugin() {
 //  Plugin manager
 // -----------------------------------------------------------------------
 
-ref<PluginManager> PluginManager::m_instance = new PluginManager();
+ref<PluginManager> PluginManager::m_instance = NULL;
 
 PluginManager::PluginManager() {
 	m_mutex = new Mutex();
@@ -170,6 +170,14 @@ void PluginManager::ensurePluginLoaded(const std::string &name) {
 
 	/* Plugin not found! */
 	Log(EError, "Plugin \"%s\" not found!", name.c_str());
+}
+
+void PluginManager::staticInitialization() {
+	m_instance = new PluginManager();
+}
+
+void PluginManager::staticShutdown() {
+	m_instance = NULL;
 }
 
 MTS_IMPLEMENT_CLASS(PluginManager, false, Object)

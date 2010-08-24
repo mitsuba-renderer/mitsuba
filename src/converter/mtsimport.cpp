@@ -34,6 +34,7 @@
 #include "converter.h"
 #include <mitsuba/hw/glrenderer.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/plugin.h>
 #if defined(WIN32)
 #include "../mitsuba/getopt.h"
 #endif
@@ -155,6 +156,7 @@ int ubi_main(int argc, char **argv) {
 
 	/* Initialize the core framework */
 	Class::staticInitialization();
+	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
@@ -195,6 +197,8 @@ int ubi_main(int argc, char **argv) {
 		ref<Session> session = Session::create();
 		ref<Device> device = Device::create(session);
 		ref<Renderer> renderer = Renderer::create(session);
+		renderer->setLogLevel(ETrace);
+		renderer->setWarnLogLevel(ETrace);
 
 		session->init();
 		device->init();
@@ -233,6 +237,7 @@ int ubi_main(int argc, char **argv) {
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();
+	PluginManager::staticShutdown();
 	Class::staticShutdown();
 	
 	return retval;

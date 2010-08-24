@@ -57,6 +57,8 @@ public:
 
 	/// Return a bitmap representation of the full-resolution image (8 bit/color)
 	Bitmap *getLDRBitmap() const;
+
+	MTS_DECLARE_CLASS()
 protected:
 	struct ResampleWeight {
 		int firstTexel;
@@ -78,8 +80,6 @@ protected:
 
 	/* Virtual destructor */
 	virtual ~MIPMap();
-
-	MTS_DECLARE_CLASS()
 private:
 	int m_width, m_height;
 	int m_levels;

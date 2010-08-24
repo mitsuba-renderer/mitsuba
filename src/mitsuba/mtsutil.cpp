@@ -303,6 +303,7 @@ int ubi_main(int argc, char **argv) {
 int main(int argc, char **argv) {
 	/* Initialize the core framework */
 	Class::staticInitialization();
+	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
@@ -372,6 +373,7 @@ int main(int argc, char **argv) {
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();
+	PluginManager::staticShutdown();
 	Class::staticShutdown();
 	
 #ifdef WIN32
