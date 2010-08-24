@@ -629,27 +629,31 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const std::string &text
 	fileToId[filename] = image.getId();
 
 	boost::filesystem::path path = boost::filesystem::path(filename, boost::filesystem::native);
-	ref<FileResolver> fRes = FileResolver::getInstance();
-	std::string resolved = fRes->resolve(path.leaf());
+	std::string targetPath = textureDir + path.leaf();
 
-	if (endsWith(resolved, ".rgb")) 
+	if (endsWith(filename, ".rgb")) 
 		SLog(EWarn, "Maya RGB images must be converted to PNG, EXR or JPEG! The 'imgcvt' "
 		"utility found in the Maya binary directory can be used to do this.");
 
-	if (!FileStream::exists(filename)) {
-		if (!FileStream::exists(resolved)) {
-			SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.c_str());
-			filename = cvt->locateResource(filename);
-			if (filename == "")
-				SLog(EError, "Unable to locate a resource -- aborting conversion.");
-		} else {
-			filename = resolved;
+	if (!FileStream::exists(targetPath)) {
+		ref<FileResolver> fRes = FileResolver::getInstance();
+		std::string resolved = fRes->resolve(path.leaf());
+		if (!FileStream::exists(filename)) {
+			if (!FileStream::exists(resolved)) {
+				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.c_str());
+				filename = cvt->locateResource(filename);
+				if (filename == "")
+					SLog(EError, "Unable to locate a resource -- aborting conversion.");
+			} else {
+				filename = resolved;
+			}
 		}
+		ref<FileStream> input = new FileStream(filename, FileStream::EReadOnly);
+		ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
+		input->copyTo(output);
+		input->close();
+		output->close();
 	}
-
-	ref<FileStream> input = new FileStream(filename, FileStream::EReadOnly);
-	ref<FileStream> output = new FileStream(textureDir + path.leaf(), FileStream::ETruncReadWrite);
-	input->copyTo(output);
 
 	os << "\t<texture id=\"" << image.getId() << "\" type=\"ldrtexture\">" << endl;
 	os << "\t\t<string name=\"filename\" value=\"" << textureDir + path.leaf() << "\"/>" << endl;

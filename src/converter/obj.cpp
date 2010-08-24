@@ -11,6 +11,7 @@
 
 std::string copyTexture(GeometryConverter *cvt, const std::string &textureDir, std::string filename) {
 	SLog(EInfo, "Copying texture \"%s\" ..", filename.c_str());
+
 #if defined(WIN32)
 	for (size_t i=0; i<filename.length(); ++i)
 		if (filename[i] == '/')
@@ -20,28 +21,30 @@ std::string copyTexture(GeometryConverter *cvt, const std::string &textureDir, s
 		if (filename[i] == '\\')
 			filename[i] = '/';
 #endif
-	boost::filesystem::path path = boost::filesystem::path(filename, boost::filesystem::native);
-	ref<FileResolver> fRes = FileResolver::getInstance();
-	std::string resolved = fRes->resolve(path.leaf());
-	if (!FileStream::exists(filename)) {
-		if (!FileStream::exists(resolved)) {
-			SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.c_str());
-			filename = cvt->locateResource(filename);
-			if (filename == "")
-				SLog(EError, "Unable to locate a resource -- aborting conversion.");
-		} else {
-			filename = resolved;
-		}
-	}
-
 	
+	boost::filesystem::path path = boost::filesystem::path(filename, boost::filesystem::native);
 	std::string targetPath = textureDir + path.leaf();
 
-	ref<FileStream> input = new FileStream(filename, FileStream::EReadOnly);
-	ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
-	input->copyTo(output);
-	output->close();
-	input->close();
+	if (!FileStream::exists(targetPath)) {
+		ref<FileResolver> fRes = FileResolver::getInstance();
+		std::string resolved = fRes->resolve(path.leaf());
+		if (!FileStream::exists(filename)) {
+			if (!FileStream::exists(resolved)) {
+				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.c_str());
+				filename = cvt->locateResource(filename);
+				if (filename == "")
+					SLog(EError, "Unable to locate a resource -- aborting conversion.");
+			} else {
+				filename = resolved;
+			}
+		}	
+
+		ref<FileStream> input = new FileStream(filename, FileStream::EReadOnly);
+		ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
+		input->copyTo(output);
+		output->close();
+		input->close();
+	}
 
 	return targetPath;
 }
