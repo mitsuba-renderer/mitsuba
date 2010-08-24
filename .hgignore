@@ -42,3 +42,4 @@ tools/windows/mitsuba_res.res
 ^meshes/.*$
 ^textures/.*$
 ^mitsuba.*.log$
+^doc/doxygen/.*$
