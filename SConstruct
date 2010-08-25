@@ -268,7 +268,7 @@ if sys.platform == 'darwin':
 libcore = coreEnv.SharedLibrary('src/libcore/mitsuba-core', libcore_objects);
 
 if sys.platform == "darwin":
-	coreEnv.AddPostAction(libcore, 'install_name_tool -id @executable_path/../Frameworks/libcore.dylib $TARGET')
+	coreEnv.AddPostAction(libcore, 'install_name_tool -id @executable_path/../Frameworks/libmitsuba-core.dylib $TARGET')
 
 env = env.Clone()
 env.Append(LIBS=['mitsuba-core'])
@@ -299,7 +299,7 @@ librender = renderEnv.SharedLibrary('src/librender/mitsuba-render', [
 ])
 
 if sys.platform == "darwin":
-	renderEnv.AddPostAction(librender, 'install_name_tool -id @executable_path/../Frameworks/librender.dylib $TARGET')
+	renderEnv.AddPostAction(librender, 'install_name_tool -id @executable_path/../Frameworks/libmitsuba-render.dylib $TARGET')
 
 env.Append(LIBS=['mitsuba-render'])
 env.Append(LIBPATH=['src/librender'])
@@ -344,7 +344,7 @@ if sys.platform == 'darwin':
 
 libhw = glEnv.SharedLibrary('src/libhw/mitsuba-hw', libhw_objects)
 if sys.platform == "darwin":
-	glEnv.AddPostAction(libhw, 'install_name_tool -id @executable_path/../Frameworks/libhw.dylib $TARGET')
+	glEnv.AddPostAction(libhw, 'install_name_tool -id @executable_path/../Frameworks/libmitsuba-hw.dylib $TARGET')
 
 env = env.Clone()
 env.Append(LIBS=['mitsuba-hw'])
@@ -400,7 +400,7 @@ if hasCollada:
 	colladaEnv = mainEnv.Clone()
 	temp = colladaEnv['CXXFLAGS']
 	colladaEnv['CXXFLAGS'] = temp
-	colladaEnv.Append(LIBS=['hw'])
+	colladaEnv.Append(LIBS=['mitsuba-hw'])
 	colladaEnv.Append(LIBPATH=['src/libhw'])
 	if env.has_key('COLLADAINCLUDE'):
 		colladaEnv.Append(CPPPATH=env['COLLADAINCLUDE'])
