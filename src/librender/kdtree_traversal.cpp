@@ -243,7 +243,9 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 					its.t = std::numeric_limits<Float>::infinity(); 
 					return false;
 				}
+#endif
 
+#if 0
 				/* Slightly offset along the normal to avoid surface acne.
 				   The offset is dependent on the magnitude of each component */
 				if (dot(faceNormal, ray.d) < 0) {

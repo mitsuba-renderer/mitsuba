@@ -248,7 +248,7 @@ void Scene::initialize() {
 		if (m_luminaires.size() == 0) {
 			Log(EWarn, "No luminaires found -- adding a constant environment source");
 			Properties constantProps("constant");
-			constantProps.setSpectrum("intensity", Spectrum(0.5f));
+			constantProps.setSpectrum("intensity", Spectrum(0.8f));
 			addChild("", PluginManager::getInstance()->createObject(Luminaire::m_theClass, constantProps));
 		}
 
