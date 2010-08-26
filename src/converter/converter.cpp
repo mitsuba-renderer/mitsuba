@@ -118,7 +118,7 @@ void GeometryConverter::convert(const std::string &inputFile,
 	std::string meshesDirectory = "meshes";
 	std::string outputFile = sceneName;
 
-#ifndef WIN32
+#if !defined(WIN32)
 	if (outputDirectory != "") {
 		textureDirectory = outputDirectory + "/textures";
 		meshesDirectory = outputDirectory + "/meshes";
@@ -127,26 +127,26 @@ void GeometryConverter::convert(const std::string &inputFile,
 
 	int status = mkdir(textureDirectory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	if (status != 0 && errno != EEXIST)
-		SLog(EError, "Could not create the directory \"textures\"");
+		SLog(EError, "Could not create the directory \"%s\"", textureDirectory.c_str());
 	status = mkdir(meshesDirectory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	if (status != 0 && errno != EEXIST)
-		SLog(EError, "Could not create the directory \"meshes\"");
+		SLog(EError, "Could not create the directory \"%s\"", meshesDirectory.c_str());
 	
 	textureDirectory += "/";
 	meshesDirectory += "/";
 #else
 	if (outputDirectory != "") {
-		textureDirectory = textureDirectory + "\\textures";
-		meshesDirectory = meshesDirectory + "\\meshes";
+		textureDirectory = outputDirectory + "\\textures";
+		meshesDirectory = outputDirectory + "\\meshes";
 		outputFile = outputDirectory + std::string("\\") + sceneName;
 	}
 
 	int status = CreateDirectory(textureDirectory.c_str(), NULL);
 	if (status == 0 && GetLastError() != ERROR_ALREADY_EXISTS)
-		SLog(EError, "Could not create the directory \"textures\"");
+		SLog(EError, "Could not create the directory \"%s\"", textureDirectory.c_str());
 	status = CreateDirectory(meshesDirectory.c_str(), NULL);
 	if (status == 0 && GetLastError() != ERROR_ALREADY_EXISTS)
-		SLog(EError, "Could not create the directory \"meshes\"");
+		SLog(EError, "Could not create the directory \"%s\"", meshesDirectory.c_str());
 
 	textureDirectory += "\\";
 	meshesDirectory += "\\";

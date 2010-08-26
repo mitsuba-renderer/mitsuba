@@ -122,12 +122,31 @@ std::vector<std::string> tokenize(const std::string &string, const std::string &
 	return tokens;
 }
 
-std::string toLowerCase(const std::string &pString) {
-	std::string result;
-	result.reserve(pString.length());
+std::string trim(const std::string& str) {
+	std::string::size_type 
+		start = str.find_first_not_of(" \t\r\n"),
+		end = str.find_last_not_of(" \t\r\n");
 
-	for (unsigned int i=0; i<pString.length(); i++)
-		result += std::tolower(pString[i]);
+	return str.substr(start == std::string::npos ? 0 : start, 
+			end == std::string::npos ? str.length() - 1 : end - start + 1);
+}
+
+std::string toLowerCase(const std::string &string) {
+	std::string result;
+	result.reserve(string.length());
+
+	for (unsigned int i=0; i<string.length(); i++)
+		result += std::tolower(string[i]);
+
+	return result;
+}
+
+std::string toUpperCase(const std::string &string) {
+	std::string result;
+	result.reserve(string.length());
+
+	for (unsigned int i=0; i<string.length(); i++)
+		result += toupper(string[i]);
 
 	return result;
 }

@@ -30,6 +30,12 @@ extern MTS_EXPORT_CORE std::string timeToString(Float time);
 /// Convert a string to lower case
 extern MTS_EXPORT_CORE std::string toLowerCase(const std::string &string);
 
+/// Convert a string to upper case
+extern MTS_EXPORT_CORE std::string toUpperCase(const std::string &string);
+
+/// Trim spaces (' ', '\n', '\r', '\t') from the ends of a string
+extern MTS_EXPORT_CORE std::string trim(const std::string& str);
+
 /// Determines whether a string ends with the string given as second parameter
 extern MTS_EXPORT_CORE bool endsWith(const std::string& str, const std::string& end);
 

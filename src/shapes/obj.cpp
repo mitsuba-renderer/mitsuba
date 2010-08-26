@@ -64,13 +64,13 @@ public:
 				std::string line;
 				std::getline(is, line);
 				if (line.length() > 2) {
-					name = line.substr(1, line.length()-2);
+					name = trim(line.substr(1, line.length()-1));
 					Log(EInfo, "Loading geometry \"%s\"", name.c_str());
 				}
 			} else if (buf == "usemtl") {
 				std::string line;
 				std::getline(is, line);
-				std::string materialName = line.substr(1, line.length()-2);
+				std::string materialName = trim(line.substr(1, line.length()-1));
 				if (m_materials.find(materialName) != m_materials.end())
 					currentMaterial = m_materials[materialName];
 				else
@@ -78,7 +78,7 @@ public:
 			} else if (buf == "mtllib") {
 				std::string line;
 				std::getline(is, line);
-				std::string mtlName = line.substr(1, line.length()-2);
+				std::string mtlName = trim(line.substr(1, line.length()-1));
 				ref<FileResolver> fRes = FileResolver::getInstance()->clone();
 				fRes->addPathFromFile(fRes->resolveAbsolute(props.getString("filename")));
 				std::string fullMtlName = fRes->resolve(mtlName);
@@ -159,7 +159,7 @@ public:
 
 				std::string line, tmp;
 				std::getline(is, line);
-				mtlName = line.substr(1, line.length()-2);
+				mtlName = trim(line.substr(1, line.length()-1));
 			} else if (buf == "Kd") {
 				Float r, g, b;
 				is >> r >> g >> b;
