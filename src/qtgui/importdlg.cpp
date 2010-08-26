@@ -108,6 +108,22 @@ void ImportDialog::accept() {
 	QString targetScene = ui->sceneEdit->text();
 	QString adjustmentFile = ui->adjustmentEdit->text();
 
+	QDialog *dialog = new QDialog(this);
+	dialog->setWindowModality(Qt::WindowModal);
+	dialog->setWindowTitle("Converting ..");
+	QVBoxLayout *layout = new QVBoxLayout(dialog);
+	QProgressBar *progressBar = new QProgressBar(dialog);
+	dialog->resize(200, 50);
+	layout->addWidget(progressBar);
+	progressBar->setTextVisible(false);
+	progressBar->setValue(1);
+	progressBar->setRange(0, 0);
+	dialog->show();
+	progressBar->show();
+
+	for (int i=0; i<10; ++i)
+		QCoreApplication::processEvents();
+
 	GUIGeometryConverter cvt(this);
 	cvt.setSRGB(ui->sRGBButton->isChecked());
 
@@ -115,7 +131,11 @@ void ImportDialog::accept() {
 		cvt.convert(sourceFile.toStdString(), directory.toStdString(),
 			targetScene.toStdString(), adjustmentFile.toStdString());
 		((MainWindow *) parent())->loadFile(QString(cvt.getFilename().c_str()));
+		dialog->hide();
+		delete dialog;
 	} catch (const std::exception &ex) {
+		dialog->hide();
+		delete dialog;
 		SLog(EWarn, "Conversion failed: %s", ex.what());
 		QMessageBox::critical(this, tr("Scene Import"),
 			tr("Conversion failed -- please see the log for details."),
