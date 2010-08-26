@@ -108,7 +108,7 @@ void ImportDialog::accept() {
 	QString targetScene = ui->sceneEdit->text();
 	QString adjustmentFile = ui->adjustmentEdit->text();
 
-	QDialog *dialog = new QDialog(this);
+	QDialog *dialog = new QDialog(static_cast<QWidget *>(parent()));
 	dialog->setWindowModality(Qt::WindowModal);
 	dialog->setWindowTitle("Converting ..");
 	QVBoxLayout *layout = new QVBoxLayout(dialog);
@@ -130,9 +130,9 @@ void ImportDialog::accept() {
 	try {
 		cvt.convert(sourceFile.toStdString(), directory.toStdString(),
 			targetScene.toStdString(), adjustmentFile.toStdString());
-		((MainWindow *) parent())->loadFile(QString(cvt.getFilename().c_str()));
 		dialog->hide();
 		delete dialog;
+		((MainWindow *) parent())->loadFile(QString(cvt.getFilename().c_str()));
 	} catch (const std::exception &ex) {
 		dialog->hide();
 		delete dialog;

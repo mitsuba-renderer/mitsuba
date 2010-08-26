@@ -31,8 +31,11 @@ public:
 
 		if (m_kd * m_diffuseColor->getMaximum().max() + m_ks * m_specularColor->getMaximum().max() > 1.0f) {
 			Log(EWarn, "%s: Energy conservation is violated!", props.getID().c_str());
-			Log(EWarn, "%s: Max. diffuse reflectance = %f * %f", m_kd, m_diffuseColor->getMaximum().max());
-			Log(EWarn, "%s: Max. specular reflectance = %f * %f", m_ks, m_specularColor->getMaximum().max());
+			Log(EWarn, "Max. diffuse reflectance = %f * %f", m_kd, m_diffuseColor->getMaximum().max());
+			Log(EWarn, "Max. specular reflectance = %f * %f", m_ks, m_specularColor->getMaximum().max());
+			Float normalization = 1/(m_kd * m_diffuseColor->getMaximum().max() + m_ks * m_specularColor->getMaximum().max());
+			Log(EWarn, "Reducing the albedo to %.1f%% of the original value", normalization * 100);
+			m_kd *= normalization; m_ks *= normalization;
 		}
 
 		m_componentCount = 2;
