@@ -118,6 +118,7 @@ void GeometryConverter::convert(const std::string &inputFile,
 	std::string meshesDirectory = "meshes";
 	std::string outputFile = sceneName;
 
+	SLog(EInfo, "Creating directories ..");
 #if !defined(WIN32)
 	if (outputDirectory != "") {
 		textureDirectory = outputDirectory + "/textures";
@@ -154,6 +155,7 @@ void GeometryConverter::convert(const std::string &inputFile,
 
 	std::ostringstream os;
 
+	SLog(EInfo, "Beginning conversion ..");
 	if (endsWith(toLowerCase(inputFile), ".dae")) {
 		convertCollada(inputFile, os, textureDirectory, meshesDirectory);
 	} else if (endsWith(toLowerCase(inputFile), ".obj")) {
