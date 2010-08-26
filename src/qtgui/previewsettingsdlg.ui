@@ -45,6 +45,15 @@
    </item>
    <item row="1" column="1">
     <widget class="QLabel" name="label_3">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;OpenGL&lt;/span&gt; and &lt;span style=&quot; font-weight:600;&quot;&gt;OpenGL (single pass)&lt;/span&gt; use the graphics card to draw an approximate preview of the scene, which is usually preferable for performance reasons. The single pass variant makes heavy use on geometry shaders to further accelerate rendering, but for this to be actually faster, the card must be &lt;span style=&quot; font-style:italic;&quot;&gt;very&lt;/span&gt; recent (e.g. Fermi and above).&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;The &lt;span style=&quot; font-weight:600;&quot;&gt;Ray Tracing&lt;/span&gt; strategies are preferable when the scene contains non-triangular shapes, which cannot easily be rendered by graphics hardware, such as quadrics. The &lt;span style=&quot; font-weight:600;&quot;&gt;Coherent Ray Tracing&lt;/span&gt; technique traces four rays at a time using SSE2.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
       <string>&amp;Method :</string>
      </property>
@@ -54,10 +63,27 @@
     </widget>
    </item>
    <item row="1" column="2" colspan="2">
-    <widget class="QComboBox" name="previewMethodCombo"/>
+    <widget class="QComboBox" name="previewMethodCombo">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;OpenGL&lt;/span&gt; and &lt;span style=&quot; font-weight:600;&quot;&gt;OpenGL (single pass)&lt;/span&gt; use the graphics card to draw an approximate preview of the scene, which is usually preferable for performance reasons. The single pass variant makes heavy use on geometry shaders to further accelerate rendering, but for this to be actually faster, the card must be &lt;span style=&quot; font-style:italic;&quot;&gt;very&lt;/span&gt; recent (e.g. Fermi and above).&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;The &lt;span style=&quot; font-weight:600;&quot;&gt;Ray Tracing&lt;/span&gt; strategies are preferable when the scene contains non-triangular shapes, which cannot easily be rendered by graphics hardware, such as quadrics. The &lt;span style=&quot; font-weight:600;&quot;&gt;Coherent Ray Tracing&lt;/span&gt; technique traces four rays at a time using SSE2.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
    </item>
    <item row="2" column="1">
     <widget class="QLabel" name="label">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Highest path length to visualize in the preview. A value of &lt;span style=&quot; font-weight:600;&quot;&gt;2&lt;/span&gt; corresponds to direct illumination, &lt;span style=&quot; font-weight:600;&quot;&gt;3&lt;/span&gt; is one-bounce global illumination, etc.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
       <string>Path &amp;length :</string>
      </property>
@@ -68,6 +94,13 @@
    </item>
    <item row="2" column="2">
     <widget class="QSlider" name="pathLengthSlider">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Highest path length to visualize in the preview. A value of &lt;span style=&quot; font-weight:600;&quot;&gt;2&lt;/span&gt; corresponds to direct illumination, &lt;span style=&quot; font-weight:600;&quot;&gt;3&lt;/span&gt; is one-bounce global illumination, etc.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="minimum">
       <number>2</number>
      </property>
@@ -112,8 +145,17 @@
    </item>
    <item row="3" column="1">
     <widget class="QLabel" name="label_7">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Clamping changes the influence radius of photons used to render the preview.&lt;span style=&quot; font-weight:600;&quot;&gt; &lt;/span&gt;A too small value will cause bright blotches to appear in the preview, whereas a too large value will artificially darken the image.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;A good approach is to set this slider as low as possible without seeing disturbing blotches in the image.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
-      <string>&amp;Clamping</string>
+      <string>&amp;Clamping :</string>
      </property>
      <property name="buddy">
       <cstring>clampingSlider</cstring>
@@ -122,6 +164,15 @@
    </item>
    <item row="3" column="2" colspan="2">
     <widget class="QSlider" name="clampingSlider">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Clamping changes the influence radius of photons used to render the preview.&lt;span style=&quot; font-weight:600;&quot;&gt; &lt;/span&gt;A too small value will cause bright blotches to appear in the preview, whereas a too large value will artificially darken the image.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;A good approach is to set this slider as low as possible without seeing disturbing blotches in the image.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="maximum">
       <number>100</number>
      </property>
@@ -132,6 +183,13 @@
    </item>
    <item row="4" column="1">
     <widget class="QLabel" name="shadowResolutionLabel">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;The two OpenGL preview techniques use shadow mapping to compute the light transport in a scene. This parameter allows choosing the resolution of the associated shadow maps, which is useful when the shadow quality is too low (for example when jagged edges are visible in the image). The higher this value, the slower the preview will converge. A value of &lt;span style=&quot; font-weight:600;&quot;&gt;256&lt;/span&gt; or &lt;span style=&quot; font-weight:600;&quot;&gt;512&lt;/span&gt; is usually a good start.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
       <string>&amp;Shadow maps :</string>
      </property>
@@ -142,6 +200,13 @@
    </item>
    <item row="4" column="2" colspan="2">
     <widget class="QComboBox" name="shadowResolutionCombo">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;The two OpenGL preview techniques use shadow mapping to compute the light transport in a scene. This parameter allows choosing the resolution of the associated shadow maps, which is useful when the shadow quality is too low (for example when jagged edges are visible in the image). The higher this value, the slower the preview will converge. A value of &lt;span style=&quot; font-weight:600;&quot;&gt;256&lt;/span&gt; or &lt;span style=&quot; font-weight:600;&quot;&gt;512&lt;/span&gt; is usually a good start.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <item>
       <property name="text">
        <string>64x64</string>
@@ -174,7 +239,7 @@
      </item>
     </widget>
    </item>
-   <item row="5" column="0" colspan="2">
+   <item row="6" column="0" colspan="2">
     <widget class="QLabel" name="label_4">
      <property name="font">
       <font>
@@ -187,8 +252,19 @@
      </property>
     </widget>
    </item>
-   <item row="6" column="1">
+   <item row="7" column="1">
     <widget class="QLabel" name="label_5">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;A tonemapping method is necessary to translate physical radiance values into pixel intensities. The technique chosen here is used &lt;span style=&quot; font-style:italic;&quot;&gt;both&lt;/span&gt; for the preview and rendered images.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Gamma correction&lt;/span&gt; is the default and well-suited if the dynamic range of your scene is not too great.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;[Reinhard. et al 2002]&lt;/span&gt; works well for scenes with a high dynamic range. Note that this technique continually adapts to the overall image brightness, which may produce unexpected behavior together with the realtime preview: when turning to face a dark region of the scene, the tonemapper will change the exposure to maintain the same overall brightness.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
       <string>Method :</string>
      </property>
@@ -197,8 +273,19 @@
      </property>
     </widget>
    </item>
-   <item row="6" column="2" colspan="2">
+   <item row="7" column="2" colspan="2">
     <widget class="QComboBox" name="toneMappingMethodCombo">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;A tonemapping method is necessary to translate physical radiance values into pixel intensities. The technique chosen here is used &lt;span style=&quot; font-style:italic;&quot;&gt;both&lt;/span&gt; for the preview and rendered images.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Gamma correction&lt;/span&gt; is the default and well-suited if the dynamic range of your scene is not too great.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;[Reinhard. et al 2002]&lt;/span&gt; works well for scenes with a high dynamic range. Note that this technique continually adapts to the overall image brightness, which may produce unexpected behavior together with the realtime preview: when turning to face a dark region of the scene, the tonemapper will change the exposure to maintain the same overall brightness.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <item>
       <property name="text">
        <string>Gamma correction</string>
@@ -211,7 +298,7 @@
      </item>
     </widget>
    </item>
-   <item row="8" column="2" rowspan="2" colspan="2">
+   <item row="9" column="2" rowspan="2" colspan="2">
     <layout class="QGridLayout" name="subGridLayout">
      <item row="0" column="0">
       <widget class="QDoubleSpinBox" name="exposureSpinBox">
@@ -259,6 +346,13 @@
      </item>
      <item row="1" column="0">
       <widget class="QDoubleSpinBox" name="gammaSpinBox">
+       <property name="toolTip">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Gamma of the viewing device (usually 2.2).&lt;span style=&quot; font-weight:600;&quot;&gt; &lt;/span&gt;When sRGB is selected, this value is ignored.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="decimals">
         <number>2</number>
        </property>
@@ -278,6 +372,13 @@
      </item>
      <item row="1" column="1">
       <widget class="QCheckBox" name="sRGBCheckBox">
+       <property name="toolTip">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Does the viewing device have an sRGB response curve?&lt;span style=&quot; font-weight:600;&quot;&gt; &lt;/span&gt;For most monitors and LCD screens on the market, this is the case.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>sRGB</string>
        </property>
@@ -285,7 +386,7 @@
      </item>
     </layout>
    </item>
-   <item row="10" column="1">
+   <item row="11" column="1">
     <spacer name="verticalSpacer_2">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -298,7 +399,7 @@
      </property>
     </spacer>
    </item>
-   <item row="11" column="0" colspan="4">
+   <item row="12" column="0" colspan="4">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QPushButton" name="resetButton">
@@ -365,14 +466,14 @@
      </item>
     </layout>
    </item>
-   <item row="7" column="1">
+   <item row="8" column="1">
     <widget class="QLabel" name="keyLabel">
      <property name="text">
       <string>Key value : </string>
      </property>
     </widget>
    </item>
-   <item row="7" column="2" colspan="2">
+   <item row="8" column="2" colspan="2">
     <widget class="QSlider" name="keySlider">
      <property name="maximum">
       <number>100</number>
@@ -382,7 +483,7 @@
      </property>
     </widget>
    </item>
-   <item row="8" column="1">
+   <item row="9" column="1">
     <widget class="QLabel" name="exposureLabel">
      <property name="text">
       <string>E&amp;xposure : 2 ^</string>
@@ -392,7 +493,7 @@
      </property>
     </widget>
    </item>
-   <item row="9" column="1">
+   <item row="10" column="1">
     <widget class="QLabel" name="gammaLabel">
      <property name="text">
       <string>&amp;Gamma :</string>
@@ -402,8 +503,59 @@
      </property>
     </widget>
    </item>
+   <item row="5" column="2" colspan="2">
+    <widget class="QCheckBox" name="nonDiffuseBox">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;When a scene contains many glossy surfaces, the real-time visualization can sometimes produce disturbing image artifacts (bright blotches).&lt;span style=&quot; font-weight:600;&quot;&gt; &lt;/span&gt;These eventually disappear as the preview converges, but waiting for a long time may be undesirable.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;For this reason, the real-time visualiztaion will by default treat glossy surfaces at the second bounce as if they were diffuse, which is usually perfectly fine for previewing purposes. This behavior can optionally be disabled using this switch.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Allow non-diffuse point sources</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1">
+    <widget class="QLabel" name="label_6">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;When a scene contains many glossy surfaces, the real-time visualization can sometimes produce disturbing image artifacts (bright blotches).&lt;span style=&quot; font-weight:600;&quot;&gt; &lt;/span&gt;These eventually disappear as the preview converges, but waiting for a long time may be undesirable.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;For this reason, the real-time visualiztaion will by default treat glossy surfaces at the second bounce as if they were diffuse, which is usually perfectly fine for previewing purposes. This behavior can optionally be disabled using this switch.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>&amp;Other :</string>
+     </property>
+     <property name="buddy">
+      <cstring>nonDiffuseBox</cstring>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>previewMethodCombo</tabstop>
+  <tabstop>pathLengthSlider</tabstop>
+  <tabstop>pathLengthEdit</tabstop>
+  <tabstop>clampingSlider</tabstop>
+  <tabstop>shadowResolutionCombo</tabstop>
+  <tabstop>nonDiffuseBox</tabstop>
+  <tabstop>toneMappingMethodCombo</tabstop>
+  <tabstop>keySlider</tabstop>
+  <tabstop>exposureSpinBox</tabstop>
+  <tabstop>exposureSlider</tabstop>
+  <tabstop>gammaSpinBox</tabstop>
+  <tabstop>sRGBCheckBox</tabstop>
+  <tabstop>resetButton</tabstop>
+  <tabstop>closeButton</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
