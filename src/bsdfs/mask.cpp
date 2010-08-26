@@ -1,5 +1,6 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/texture.h>
+#include <mitsuba/hw/renderer.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -146,13 +147,63 @@ public:
 		}
 	}
 
+	Shader *createShader(Renderer *renderer) const;
+
 	MTS_DECLARE_CLASS()
 protected:
 	ref<Texture> m_opacity;
 	ref<BSDF> m_nestedBSDF;
 };
 
+// ================ Hardware shader implementation ================ 
 
+class MaskShader : public Shader {
+public:
+	MaskShader(Renderer *renderer, const Texture *opacity, const BSDF *bsdf) 
+		: Shader(renderer, EBSDFShader), m_opacity(opacity), m_bsdf(bsdf), m_complete(false) {
+		m_opacityShader = renderer->registerShaderForResource(opacity);
+		m_bsdfShader = renderer->registerShaderForResource(bsdf);
+		if (m_bsdfShader && m_opacityShader)
+			m_complete = true;
+	}
+
+	bool isComplete() const {
+		return m_complete;
+	}
+
+	void cleanup(Renderer *renderer) {
+		renderer->unregisterShaderForResource(m_opacity);
+		renderer->unregisterShaderForResource(m_bsdf);
+	}
+
+	void putDependencies(std::vector<Shader *> &deps) {
+		deps.push_back(m_opacityShader);
+		deps.push_back(m_bsdfShader);
+	}
+
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		Assert(m_complete);
+		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return " << depNames[0] << "(uv) * " << depNames[1] << "(uv, wi, wo);" << endl
+			<< "}" << endl;
+	}
+
+	MTS_DECLARE_CLASS()
+private:
+	ref<const Texture> m_opacity;
+	ref<Shader> m_opacityShader;
+	ref<const BSDF> m_bsdf;
+	ref<Shader> m_bsdfShader;
+	bool m_complete;
+};
+
+Shader *Mask::createShader(Renderer *renderer) const { 
+	return new MaskShader(renderer, m_opacity.get(), m_nestedBSDF.get());
+}
+
+MTS_IMPLEMENT_CLASS(MaskShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(Mask, false, BSDF)
 MTS_EXPORT_PLUGIN(Mask, "Mask BSDF");
 MTS_NAMESPACE_END

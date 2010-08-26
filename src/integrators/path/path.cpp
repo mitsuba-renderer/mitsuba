@@ -100,7 +100,6 @@ public:
 			ray = Ray(its.p, its.toWorld(bRec.wo));
 			bool hitLuminaire = false;
 			if (scene->rayIntersect(ray, its)) {
-				ray.mint = 0; ray.maxt = its.t; 
 				/* Intersected something - check if it was a luminaire */
 				if (its.isLuminaire()) {
 					lRec = LuminaireSamplingRecord(its, -ray.d);
