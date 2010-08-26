@@ -132,6 +132,7 @@ struct SceneContext {
 	QSize windowSize, sizeIncrease;
 	Vector2i scrollOffset;
 	Float reinhardKey, reinhardBurn;
+	bool allowNonDiffuseVPLs;
 
 	/* Preview state */
 	std::deque<VPL> vpls;

@@ -504,7 +504,7 @@ p, li { white-space: pre-wrap; }
     </widget>
    </item>
    <item row="5" column="2" colspan="2">
-    <widget class="QCheckBox" name="nonDiffuseBox">
+    <widget class="QCheckBox" name="nonDiffuseVPLBox">
      <property name="toolTip">
       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
@@ -534,7 +534,7 @@ p, li { white-space: pre-wrap; }
       <string>&amp;Other :</string>
      </property>
      <property name="buddy">
-      <cstring>nonDiffuseBox</cstring>
+      <cstring>nonDiffuseVPLBox</cstring>
      </property>
     </widget>
    </item>
@@ -546,7 +546,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>pathLengthEdit</tabstop>
   <tabstop>clampingSlider</tabstop>
   <tabstop>shadowResolutionCombo</tabstop>
-  <tabstop>nonDiffuseBox</tabstop>
+  <tabstop>nonDiffuseVPLBox</tabstop>
   <tabstop>toneMappingMethodCombo</tabstop>
   <tabstop>keySlider</tabstop>
   <tabstop>exposureSpinBox</tabstop>

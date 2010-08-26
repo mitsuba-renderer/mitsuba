@@ -297,6 +297,14 @@ void GLWidget::setShadowMapResolution(int res) {
 	}
 }
 
+void GLWidget::setAllowNonDiffuseVPLs(bool value) {
+	if (value != m_context->allowNonDiffuseVPLs) {
+		m_context->allowNonDiffuseVPLs = value;
+		resetPreview();
+	}
+}
+
+
 void GLWidget::setPreviewMethod(EPreviewMethod method) {
 	if (method != m_context->previewMethod) {
 		m_context->previewMethod = method;

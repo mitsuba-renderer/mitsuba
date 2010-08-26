@@ -56,6 +56,7 @@ PreviewSettingsDialog::PreviewSettingsDialog(QWidget *parent, SceneContext *ctx,
 	ui->clampingSlider->setValue(clamping);
 	ui->gammaSpinBox->setValue(ctx->gamma);
 	ui->sRGBCheckBox->setCheckState(ctx->srgb ? Qt::Checked : Qt::Unchecked);
+	ui->nonDiffuseVPLBox->setCheckState(ctx->allowNonDiffuseVPLs ? Qt::Checked : Qt::Unchecked);
 	ui->previewMethodCombo->setModel(new MethodModel(this, 
 		cap->isSupported(RendererCapabilities::EGeometryShaders)));
 	ui->previewMethodCombo->setCurrentIndex(ctx->previewMethod);
@@ -87,6 +88,7 @@ void PreviewSettingsDialog::on_resetButton_clicked() {
 	ui->keySlider->setValue((int) ((0.18-REINHARD_MIN)/REINHARD_RANGE * 100));
 
 	ui->sRGBCheckBox->setCheckState(Qt::Checked);
+	ui->nonDiffuseVPLBox->setCheckState(Qt::Unchecked);
 }
 
 void PreviewSettingsDialog::on_keySlider_valueChanged(int value) {
@@ -135,6 +137,10 @@ void PreviewSettingsDialog::on_gammaSpinBox_valueChanged(double value) {
 void PreviewSettingsDialog::on_sRGBCheckBox_stateChanged(int state) {
 	ui->gammaSpinBox->setEnabled(state == Qt::Unchecked);
 	emit gammaChanged(state == Qt::Checked, (Float) ui->gammaSpinBox->value());
+}
+
+void PreviewSettingsDialog::on_nonDiffuseVPLBox_stateChanged(int state) {
+	emit allowNonDiffuseVPLsChanged(state == Qt::Checked);
 }
 
 void PreviewSettingsDialog::on_previewMethodCombo_activated(int index) {

@@ -356,6 +356,7 @@ void PreviewThread::run() {
 				m_shaderManager->setShadowMapResolution(m_context->shadowMapResolution);
 				m_shaderManager->setClamping(m_context->clamping);
 				m_shaderManager->setSinglePass(m_context->previewMethod == EOpenGLSinglePass);
+				m_shaderManager->setAllowNonDiffuseVPLs(m_context->allowNonDiffuseVPLs);
 
 				if (m_timer->getMilliseconds() > 1000) {
 					Float count = m_vplsPerSecond / (Float) m_timer->getMilliseconds() * 1000;

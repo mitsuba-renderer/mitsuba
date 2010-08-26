@@ -46,6 +46,12 @@ public:
 	/// Is shadow map generation generation performed in a single pass?
 	inline bool isSinglePass() const { return m_singlePass; }
 
+	/// Set whether or not non-diffuse VPLs are permitted
+	inline void setAllowNonDiffuseVPLs(bool allowNonDiffuseVPLs) { m_allowNonDiffuseVPLs = allowNonDiffuseVPLs; }
+
+	/// Are non-diffuse VPLs permitted? This is more realistic, but can take a long time to converge.
+	inline bool allowNonDiffuseVPLs() const { return m_allowNonDiffuseVPLs; }
+
 	/// Set the current shadow map resolution
 	inline void setShadowMapResolution(int resolution) { m_shadowMapResolution = resolution; }
 
@@ -144,7 +150,7 @@ private:
 		bool hasLuminaire;
 		int param_shadowMap, param_vplPos, param_camPos, param_vplPower;
 		int param_vplN, param_vplS, param_vplT, param_vplWi, param_vplUV;
-		int param_nearClip, param_invClipRange, param_minDist;
+		int param_nearClip, param_invClipRange, param_minDist, param_allowNonDiffuseVPLs;
 
 		inline VPLProgramConfiguration() { }
 
@@ -226,7 +232,7 @@ private:
 	ref<GPUTexture> m_shadowMap;
 	Float m_nearClip, m_invClipRange;
 	int m_shadowMapResolution;
-	bool m_singlePass;
+	bool m_singlePass, m_allowNonDiffuseVPLs;
 
 	/* Rendering related */
 	std::map<std::string, ProgramAndConfiguration> m_programs;

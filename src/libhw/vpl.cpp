@@ -8,7 +8,7 @@ MTS_NAMESPACE_BEGIN
 VPLShaderManager::VPLShaderManager(const Scene *scene, Renderer *renderer)
 	 : m_scene(scene), m_renderer(renderer), m_clamping(0.1f),
  	   m_maxClipDist(std::numeric_limits<Float>::infinity()), m_initialized(false), 
-	   m_shadowMapResolution(512), m_singlePass(false) {
+	   m_shadowMapResolution(512), m_singlePass(false), m_allowNonDiffuseVPLs(false) {
 }
 
 VPLShaderManager::~VPLShaderManager() {
@@ -320,6 +320,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "uniform vec3 vplPower, vplS, vplT, vplN, vplWi;" << endl
 			<< "uniform float nearClip, invClipRange, minDist;" << endl
 			<< "uniform vec2 vplUV;" << endl
+			<< "uniform bool allowNonDiffuseVPLs;" << endl
 			<< endl
 			<< "/* Inputs <- Vertex program */" << endl
 			<< "varying vec3 normal, tangent, lightVec, camVec;" << endl
@@ -361,18 +362,20 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "   vec3 vplWo = -vec3(dot(vplS, nLightVec)," << endl
 			<< "                      dot(vplT, nLightVec)," << endl
 			<< "                      dot(vplN, nLightVec));" << endl
-			<< "   if (d < minDist) d = minDist;" << endl
-			<< "   gl_FragColor.rgb = "   << bsdfEvalName << "(uv, wi, wo)" << endl;
-
+			<< "   vec3 vplLo = vplPower;" << endl
+			<< "   if (allowNonDiffuseVPLs)" << endl 
+			<< "      vplLo *= " << vplEvalName;
 			if (vpl.type == ESurfaceVPL)
-				oss << "                      * " << vplEvalName << "(vplUV, vplWi, vplWo)" << endl;
+				oss << "(vplUV, vplWi, vplWo);" << endl;
 			else
-				oss << "                      * " << vplEvalName << "_dir(vplWo)" << endl;
+				oss << "_dir(vplWo);" << endl;
+		oss << "   if (d < minDist) d = minDist;" << endl
+			<< "   gl_FragColor.rgb = vplLo * " << bsdfEvalName << "(uv, wi, wo)" << endl;
 			if (vpl.type == ESurfaceVPL || (vpl.type == ELuminaireVPL 
 					&& (vpl.luminaire->getType() & Luminaire::EOnSurface)))
-				oss << "                      * vplPower * shadow * abs(cosTheta(wo) * cosTheta(vplWo)) / (d*d)";
+				oss << "                      * (shadow * abs(cosTheta(wo) * cosTheta(vplWo)) / (d*d))";
 			else 
-				oss << "                      * vplPower * shadow * abs(cosTheta(wo)) / (d*d)";
+				oss << "                      * (shadow * abs(cosTheta(wo)) / (d*d))";
 		if (luminaire != NULL) {
 			oss << endl;
 			oss << "                      + " << lumEvalName << "_area(uv)"
@@ -399,6 +402,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 		m_targetConfig.param_nearClip = program->getParameterID("nearClip", false);
 		m_targetConfig.param_invClipRange = program->getParameterID("invClipRange", false);
 		m_targetConfig.param_minDist = program->getParameterID("minDist", false);
+		m_targetConfig.param_allowNonDiffuseVPLs = program->getParameterID("allowNonDiffuseVPLs", false);
 		m_current.program = program;
 		m_current.config = m_targetConfig;
 		m_programs[configName] = m_current;
@@ -413,14 +417,19 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 	program->setParameter(config.param_shadowMap, m_shadowMap);
 	program->setParameter(config.param_vplPos, vpl.its.p);
 	program->setParameter(config.param_camPos, camPos);
-	program->setParameter(config.param_vplPower, vpl.P);
 	program->setParameter(config.param_vplN, vpl.its.shFrame.n);
 	program->setParameter(config.param_vplS, vpl.its.shFrame.s);
 	program->setParameter(config.param_vplT, vpl.its.shFrame.t);
 	if (vpl.type == ESurfaceVPL) {
 		program->setParameter(config.param_vplWi, vpl.its.wi);
 		program->setParameter(config.param_vplUV, vpl.its.uv);
+		program->setParameter(config.param_allowNonDiffuseVPLs, m_allowNonDiffuseVPLs);
 	}
+	if (!m_allowNonDiffuseVPLs && vpl.type == ESurfaceVPL)
+		program->setParameter(config.param_vplPower, vpl.P 
+			* vpl.its.shape->getBSDF()->getDiffuseReflectance(vpl.its) * INV_PI);
+	else
+		program->setParameter(config.param_vplPower, vpl.P);
 	program->setParameter(config.param_nearClip, m_nearClip);
 	program->setParameter(config.param_invClipRange, m_invClipRange);
 	program->setParameter(config.param_minDist, m_minDist);

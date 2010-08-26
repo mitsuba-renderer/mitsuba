@@ -26,6 +26,7 @@ signals:
 	void toneMappingMethodChanged(EToneMappingMethod method);
 	void reinhardKeyChanged(Float key);
 	void reinhardBurnChanged(Float burn);
+	void allowNonDiffuseVPLsChanged(bool);
 
 protected slots:
 	void on_pathLengthSlider_valueChanged(int value);
@@ -35,6 +36,7 @@ protected slots:
 	void on_exposureSpinBox_valueChanged(double value);
 	void on_gammaSpinBox_valueChanged(double value);
 	void on_sRGBCheckBox_stateChanged(int state);
+	void on_nonDiffuseVPLBox_stateChanged(int state);
 	void on_resetButton_clicked();
 	void on_previewMethodCombo_activated(int index);
 	void on_toneMappingMethodCombo_activated(int index);
