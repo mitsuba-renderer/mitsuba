@@ -28,9 +28,10 @@ void ServerThread::run() {
 	int rv, one = 1;
 	m_socket = INVALID_SOCKET;
 	m_active = true;
+	bool hostNameSet = m_nodeName != getFQDN();
 
 	snprintf(portName, sizeof(portName), "%i", m_listenPort); 
-	if ((rv = getaddrinfo(m_nodeName.c_str(), portName, &hints, &servinfo)) != 0) 
+	if ((rv = getaddrinfo(hostNameSet ? m_nodeName.c_str() : NULL, portName, &hints, &servinfo)) != 0) 
 		SLog(EError, "Error in getaddrinfo(%s:%i): %s", m_nodeName.c_str(), m_listenPort, gai_strerror(rv));
 
 	for (p = servinfo; p != NULL; p = p->ai_next) {

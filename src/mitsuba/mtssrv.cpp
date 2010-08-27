@@ -80,6 +80,7 @@ int ubi_main(int argc, char **argv) {
 		ELogLevel logLevel = EInfo;
 		std::string hostName = getFQDN();
 		FileResolver *resolver = FileResolver::getInstance();
+		bool hostNameSet = false;
 
 		optind = 1;
 		/* Parse command-line arguments */
@@ -96,6 +97,7 @@ int ubi_main(int argc, char **argv) {
 					break;
 				case 'i':
 					hostName = optarg;
+					hostNameSet = true;
 					break;
 				case 's': {
 						std::ifstream is(optarg);
@@ -255,7 +257,7 @@ int ubi_main(int argc, char **argv) {
 		sock = INVALID_SOCKET;
 
 		snprintf(portName, sizeof(portName), "%i", listenPort); 
-		if ((rv = getaddrinfo(hostName.c_str(), portName, &hints, &servinfo)) != 0) 
+		if ((rv = getaddrinfo(hostNameSet ? hostName.c_str() : NULL, portName, &hints, &servinfo)) != 0) 
 			SLog(EError, "Error in getaddrinfo(%s:%i): %s", hostName.c_str(), listenPort, gai_strerror(rv));
 
 		for (p = servinfo; p != NULL; p = p->ai_next) {

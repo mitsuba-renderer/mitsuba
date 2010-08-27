@@ -188,9 +188,9 @@ void GLProgram::setParameter(int id, const Transform &trafo) {
 		(trafo.getMatrix()->m));
 #else
 	GLfloat tmp[16];
-	int i, j, idx=0;
-	for (i=0; i<4; i++)
-		for (j=0; j<4; j++)
+	int idx=0;
+	for (int i=0; i<4; i++)
+		for (int j=0; j<4; j++)
 			tmp[idx++] = (GLfloat) trafo.getMatrix()->m[i][j];
 	glUniformMatrix4fv(id, 1, true, tmp);
 #endif
