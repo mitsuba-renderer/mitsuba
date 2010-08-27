@@ -10,6 +10,12 @@ ImportDialog::ImportDialog(QWidget *parent, FileResolver *resolver) :
 	connect(ui->sceneEdit, SIGNAL(textChanged(const QString &)),
 		this, SLOT(refresh()));
 	refresh();
+
+#if defined(__OSX__)
+	ui->inputBrowse->setMaximumSize(24, 24);
+	ui->directoryBrowse->setMaximumSize(24, 24);
+	ui->adjustmentBrowse->setMaximumSize(24, 24);
+#endif
 }
 
 ImportDialog::~ImportDialog() {
