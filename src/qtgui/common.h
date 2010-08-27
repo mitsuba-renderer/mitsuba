@@ -149,4 +149,14 @@ struct SceneContext {
 	~SceneContext();
 };
 
+class NonClosableDialog : public QDialog {
+public:
+	NonClosableDialog(QWidget *parent) : QDialog(parent) {
+	}
+
+	void closeEvent(QCloseEvent *e) {
+		e->ignore();
+	}
+};
+
 #endif // QTGUI_COMMON_H

@@ -27,16 +27,6 @@
 #include "previewsettingsdlg.h"
 #endif
 
-class NonClosableDialog : public QDialog {
-public:
-	NonClosableDialog(QWidget *parent) : QDialog(parent) {
-	}
-
-	void closeEvent(QCloseEvent *e) {
-		e->ignore();
-	}
-};
-
 class ProgramVersion {
 public:
 	ProgramVersion(const QString &versionString) {
@@ -431,7 +421,12 @@ void MainWindow::onBugReportSubmitted() {
 }
 
 void MainWindow::on_actionImport_triggered() {
-	ImportDialog *dialog = new ImportDialog(this);
+	ref<FileResolver> resolver = FileResolver::getInstance();
+	ref<FileResolver> newResolver = resolver->clone();
+	for (int i=0; i<m_searchPaths.size(); ++i)
+		newResolver->addPath(m_searchPaths[i].toStdString());
+
+	ImportDialog *dialog = new ImportDialog(this, newResolver);
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
 	connect(dialog, SIGNAL(finished(int)), this, SLOT(onImportDialogClose(int)));
 	m_currentChild = dialog;

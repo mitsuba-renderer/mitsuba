@@ -10,7 +10,7 @@ namespace Ui {
 class ImportDialog : public QDialog {
     Q_OBJECT
 public:
-	ImportDialog(QWidget *parent);
+	ImportDialog(QWidget *parent, FileResolver *resolver);
 	~ImportDialog();
 public slots:
 	void accept();
@@ -23,6 +23,7 @@ protected:
     void changeEvent(QEvent *e);
 private:
 	Ui::ImportDialog *ui;
+	ref<FileResolver> m_resolver;
 };
 
 #endif // __IMPORTDLG_H

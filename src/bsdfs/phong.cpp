@@ -20,13 +20,6 @@ public:
 
 		m_kd = props.getFloat("diffuseReflectance", 0.5f);
 		m_ks = props.getFloat("specularReflectance", 0.2f);
-
-		Float avgDiffReflectance = m_diffuseColor->getAverage().average() * m_kd;
-		Float avgSpecularReflectance = m_specularColor->getAverage().average() * m_ks;
-
-		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", 
-			avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance));
-		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
 		m_exponent = props.getFloat("exponent", 10.0f);
 
 		if (m_kd * m_diffuseColor->getMaximum().max() + m_ks * m_specularColor->getMaximum().max() > 1.0f) {
@@ -37,6 +30,13 @@ public:
 			Log(EWarn, "Reducing the albedo to %.1f%% of the original value", normalization * 100);
 			m_kd *= normalization; m_ks *= normalization;
 		}
+
+		Float avgDiffReflectance = m_diffuseColor->getAverage().average() * m_kd;
+		Float avgSpecularReflectance = m_specularColor->getAverage().average() * m_ks;
+		
+		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", 
+			avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance));
+		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];

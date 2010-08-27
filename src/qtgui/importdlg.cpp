@@ -1,30 +1,11 @@
 #include "ui_importdlg.h"
 #include "importdlg.h"
 #include "acknowledgmentdlg.h"
-#include "../converter/converter.h"
 #include "mainwindow.h"
-#include "locateresourcedlg.h"
+#include "sceneimporter.h"
 
-class GUIGeometryConverter : public GeometryConverter {
-public:
-	inline GUIGeometryConverter(QWidget *parent) : m_parent(parent) {
-	}
-
-	std::string locateResource(const std::string &resource) {
-		LocateResourceDialog locateResource(m_parent, resource.c_str());
-		locateResource.setWindowModality(Qt::ApplicationModal);
-		if (locateResource.exec()) 
-			return locateResource.getFilename().toStdString();
-
-		return "";
-	}
-private:
-	QWidget *m_parent;
-};
-
-ImportDialog::ImportDialog(QWidget *parent) :
-		QDialog(parent, Qt::Sheet),
-	ui(new Ui::ImportDialog) {
+ImportDialog::ImportDialog(QWidget *parent, FileResolver *resolver) :
+	QDialog(parent, Qt::Sheet), ui(new Ui::ImportDialog), m_resolver(resolver) {
 	ui->setupUi(this);
 	connect(ui->sceneEdit, SIGNAL(textChanged(const QString &)),
 		this, SLOT(refresh()));
@@ -102,13 +83,13 @@ void ImportDialog::refresh() {
 
 void ImportDialog::accept() {
 	QDialog::accept();
-
 	QString sourceFile = ui->inputEdit->text();
+
 	QString directory = ui->directoryEdit->text();
 	QString targetScene = ui->sceneEdit->text();
 	QString adjustmentFile = ui->adjustmentEdit->text();
 
-	QDialog *dialog = new QDialog(static_cast<QWidget *>(parent()));
+	NonClosableDialog *dialog = new NonClosableDialog(static_cast<QWidget *>(parent()));
 	dialog->setWindowModality(Qt::WindowModal);
 	dialog->setWindowTitle("Converting ..");
 	QVBoxLayout *layout = new QVBoxLayout(dialog);
@@ -121,24 +102,29 @@ void ImportDialog::accept() {
 	dialog->show();
 	progressBar->show();
 
-	for (int i=0; i<10; ++i)
+	std::string filePath = m_resolver->pathFromFile(sourceFile.toStdString());
+	if (!m_resolver->contains(filePath))
+		m_resolver->addPath(filePath);
+
+	ref<SceneImporter> importingThread = new SceneImporter(this,
+		m_resolver, sourceFile.toStdString(), directory.toStdString(),
+		targetScene.toStdString(), adjustmentFile.toStdString(),
+		ui->sRGBButton->isChecked());
+	importingThread->start();
+
+	while (importingThread->isRunning()) {
 		QCoreApplication::processEvents();
+		importingThread->wait(20);
+	}
+	importingThread->join();
 
-	GUIGeometryConverter cvt(this);
-	cvt.setSRGB(ui->sRGBButton->isChecked());
-
-	try {
-		cvt.convert(sourceFile.toStdString(), directory.toStdString(),
-			targetScene.toStdString(), adjustmentFile.toStdString());
-		dialog->hide();
-		delete dialog;
-		((MainWindow *) parent())->loadFile(QString(cvt.getFilename().c_str()));
-	} catch (const std::exception &ex) {
-		dialog->hide();
-		delete dialog;
-		SLog(EWarn, "Conversion failed: %s", ex.what());
+	dialog->hide();
+	delete dialog;
+	
+	if (importingThread->getResult().length() > 0)
+		((MainWindow *) parent())->loadFile(QString(importingThread->getResult().c_str()));
+	else 
 		QMessageBox::critical(this, tr("Scene Import"),
 			tr("Conversion failed -- please see the log for details."),
 			QMessageBox::Ok);
-	}
 }
