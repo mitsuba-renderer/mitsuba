@@ -4,6 +4,9 @@
 
 SceneHandler::SceneHandler() : m_isIncludedFile(false) {
 	m_pluginManager = PluginManager::getInstance();
+#if !defined(WIN32)
+	setlocale(LC_NUMERIC, "C");
+#endif
 }
 
 SceneHandler::SceneHandler(const std::map<std::string, std::string> &params,
