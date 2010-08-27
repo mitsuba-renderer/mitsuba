@@ -58,12 +58,12 @@ void InstanceManager::serialize(Stream *stream, const SerializableObject *inst) 
 	} else if (m_objToId.find(inst) != m_objToId.end()) {
 		stream->writeUInt(m_objToId[inst]);
 	} else {
-		stream->writeUInt(++m_counter);
-		stream->writeString(inst->getClass()->getName());
-		m_objToId[inst]=m_counter;
 #ifdef DEBUG_SERIALIZATION
 		Log(EDebug, "Serializing a class of type '%s'", inst->getClass()->getName().c_str());
 #endif
+		stream->writeUInt(++m_counter);
+		stream->writeString(inst->getClass()->getName());
+		m_objToId[inst]=m_counter;
 		inst->serialize(stream, this);
 	}
 }

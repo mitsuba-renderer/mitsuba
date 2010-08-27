@@ -64,7 +64,7 @@ private:
 static int localWorkerCtr = 0, remoteWorkerCtr = 0;
 
 MainWindow::MainWindow(QWidget *parent) :
-	QMainWindow(parent), ui(new Ui::MainWindow) {
+	QMainWindow(parent), ui(new Ui::MainWindow), m_activeWindowHack(false) {
 	Logger *logger = Thread::getThread()->getLogger();
 
 #if defined(__OSX__)
@@ -110,7 +110,6 @@ MainWindow::MainWindow(QWidget *parent) :
 #endif
 	m_serverWidget = NULL;
 	m_contextIndex = -1;
-	m_activeWindowHack = false;
 
 	for (int i = 0; i < MAX_RECENT_FILES; ++i) {
 		m_actRecent[i] = new QAction(this);

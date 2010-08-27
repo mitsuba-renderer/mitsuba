@@ -8,7 +8,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * Wavefront OBJ triangle mesh loader
  */
-class WavefrontOBJ : public TriMesh {
+class WavefrontOBJ : public Shape {
 public:
 	struct OBJTriangle {
 		unsigned int v[3];
@@ -16,7 +16,7 @@ public:
 		unsigned int uv[3];
 	};
 
-	WavefrontOBJ(const Properties &props) : TriMesh(props) {
+	WavefrontOBJ(const Properties &props) : Shape(props) {
 		m_name = FileResolver::getInstance()->resolve(props.getString("filename"));
 
 		/* Load the geometry */
@@ -120,6 +120,24 @@ public:
 
 		generateGeometry(name, vertices, normals, texcoords, 
 			triangles, hasNormals, hasTexcoords, currentMaterial);
+	}
+
+	WavefrontOBJ(Stream *stream, InstanceManager *manager) : Shape(stream, manager) {
+		unsigned int meshCount = stream->readUInt();
+		m_meshes.resize(meshCount);
+	
+		for (unsigned int i=0; i<meshCount; ++i) {
+			m_meshes[i] = static_cast<TriMesh *>(manager->getInstance(stream));
+			m_meshes[i]->incRef();
+		}
+	}
+
+	void serialize(Stream *stream, InstanceManager *manager) const {
+		Shape::serialize(stream, manager);
+
+		stream->writeUInt((unsigned int) m_meshes.size());
+		for (size_t i=0; i<m_meshes.size(); ++i)
+			manager->serialize(stream, m_meshes[i]);
 	}
 
 	void parse(OBJTriangle &t, int i, const std::string &str) {
@@ -269,9 +287,6 @@ public:
 			triangles.size(), vertexBuffer.size(), numMerged);
 	}
 
-	WavefrontOBJ(Stream *stream, InstanceManager *manager) : TriMesh(stream, manager) {
-	}
-
 	virtual ~WavefrontOBJ() {
 		for (size_t i=0; i<m_meshes.size(); ++i)
 			m_meshes[i]->decRef();
@@ -297,6 +312,8 @@ public:
 			m_bsdf = static_cast<BSDF *>(child);
 			for (size_t i=0; i<m_meshes.size(); ++i) 
 				m_meshes[i]->addChild(name, child);
+			Assert(m_meshes.size() > 0);
+			m_bsdf->setParent(NULL);
 		} else if (cClass->derivesFrom(Luminaire::m_theClass)) {
 			Assert(m_luminaire == NULL && m_meshes.size() == 1);
 			m_luminaire = static_cast<Luminaire *>(child);
@@ -323,7 +340,17 @@ public:
 	Shape *getElement(int index) {
 		if (index >= (int) m_meshes.size())
 			return NULL;
-		return m_meshes[index];
+		Shape *shape = m_meshes[index];
+		BSDF *bsdf = shape->getBSDF();
+		Luminaire *luminaire = shape->getLuminaire();
+		Subsurface *subsurface = shape->getSubsurface();
+		if (bsdf)
+			bsdf->setParent(shape);
+		if (luminaire)
+			luminaire->setParent(shape);
+		if (subsurface)
+			subsurface->setParent(shape);
+		return shape;
 	}
 
 	MTS_DECLARE_CLASS()
@@ -332,6 +359,6 @@ private:
 	std::map<std::string, BSDF *> m_materials;
 };
 
-MTS_IMPLEMENT_CLASS_S(WavefrontOBJ, false, TriMesh)
+MTS_IMPLEMENT_CLASS_S(WavefrontOBJ, false, Shape)
 MTS_EXPORT_PLUGIN(WavefrontOBJ, "OBJ triangle mesh loader");
 MTS_NAMESPACE_END

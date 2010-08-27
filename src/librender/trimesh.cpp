@@ -21,7 +21,6 @@ TriMesh::TriMesh(const std::string &name, Transform worldToObject, Triangle *tri
 	m_name = name;
 	m_worldToObject = worldToObject;
 	m_objectToWorld.inverse();
-
 }
 
 TriMesh::TriMesh(const Properties &props) 

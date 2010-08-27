@@ -80,6 +80,8 @@ public:
 
 	/// Return the shape's BSDF
 	inline const BSDF *getBSDF() const { return m_bsdf.get(); }
+	/// Return the shape's BSDF
+	inline BSDF *getBSDF() { return m_bsdf.get(); }
 
 	/// Return the name of this shape
 	inline const std::string &getName() const { return m_name; }
