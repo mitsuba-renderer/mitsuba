@@ -56,7 +56,8 @@ PreviewSettingsDialog::PreviewSettingsDialog(QWidget *parent, SceneContext *ctx,
 	ui->clampingSlider->setValue(clamping);
 	ui->gammaSpinBox->setValue(ctx->gamma);
 	ui->sRGBCheckBox->setCheckState(ctx->srgb ? Qt::Checked : Qt::Unchecked);
-	ui->nonDiffuseVPLBox->setCheckState(ctx->allowNonDiffuseVPLs ? Qt::Checked : Qt::Unchecked);
+	ui->diffuseSourcesBox->setCheckState(ctx->diffuseSources ? Qt::Checked : Qt::Unchecked);
+	ui->diffuseReceiversBox->setCheckState(ctx->diffuseReceivers ? Qt::Checked : Qt::Unchecked);
 	ui->previewMethodCombo->setModel(new MethodModel(this, 
 		cap->isSupported(RendererCapabilities::EGeometryShaders)));
 	ui->previewMethodCombo->setCurrentIndex(ctx->previewMethod);
@@ -65,6 +66,7 @@ PreviewSettingsDialog::PreviewSettingsDialog(QWidget *parent, SceneContext *ctx,
 		? ctx->exposure : ctx->reinhardBurn)*100));
 	m_ignoreEvent = false;
 	ui->keySlider->setValue((int) ((ctx->reinhardKey-REINHARD_MIN)/REINHARD_RANGE * 100));
+	ui->diffuseReceiversBox->setEnabled(ui->diffuseSourcesBox->isChecked());
 
 	on_previewMethodCombo_activated(ctx->previewMethod);
 	on_toneMappingMethodCombo_activated(ctx->toneMappingMethod);
@@ -88,7 +90,8 @@ void PreviewSettingsDialog::on_resetButton_clicked() {
 	ui->keySlider->setValue((int) ((0.18-REINHARD_MIN)/REINHARD_RANGE * 100));
 
 	ui->sRGBCheckBox->setCheckState(Qt::Checked);
-	ui->nonDiffuseVPLBox->setCheckState(Qt::Unchecked);
+	ui->diffuseSourcesBox->setCheckState(Qt::Checked);
+	ui->diffuseReceiversBox->setCheckState(Qt::Unchecked);
 }
 
 void PreviewSettingsDialog::on_keySlider_valueChanged(int value) {
@@ -139,8 +142,17 @@ void PreviewSettingsDialog::on_sRGBCheckBox_stateChanged(int state) {
 	emit gammaChanged(state == Qt::Checked, (Float) ui->gammaSpinBox->value());
 }
 
-void PreviewSettingsDialog::on_nonDiffuseVPLBox_stateChanged(int state) {
-	emit allowNonDiffuseVPLsChanged(state == Qt::Checked);
+void PreviewSettingsDialog::on_diffuseReceiversBox_stateChanged(int state) {
+	emit diffuseReceiversChanged(state == Qt::Checked);
+}
+
+void PreviewSettingsDialog::on_diffuseSourcesBox_stateChanged(int state) {
+	emit diffuseSourcesChanged(state == Qt::Checked);
+	if (state == Qt::Unchecked && ui->diffuseReceiversBox->isChecked()) {
+		emit diffuseReceiversChanged(Qt::Unchecked);
+		ui->diffuseReceiversBox->setCheckState(Qt::Unchecked);
+	}
+	ui->diffuseReceiversBox->setEnabled(state == Qt::Checked);
 }
 
 void PreviewSettingsDialog::on_previewMethodCombo_activated(int index) {

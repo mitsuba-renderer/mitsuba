@@ -8,7 +8,8 @@ MTS_NAMESPACE_BEGIN
 VPLShaderManager::VPLShaderManager(const Scene *scene, Renderer *renderer)
 	 : m_scene(scene), m_renderer(renderer), m_clamping(0.1f),
  	   m_maxClipDist(std::numeric_limits<Float>::infinity()), m_initialized(false), 
-	   m_shadowMapResolution(512), m_singlePass(false), m_allowNonDiffuseVPLs(false) {
+	   m_shadowMapResolution(512), m_singlePass(false), 
+	   m_diffuseSources(false), m_diffuseReceivers(false) {
 }
 
 VPLShaderManager::~VPLShaderManager() {
@@ -320,7 +321,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "uniform vec3 vplPower, vplS, vplT, vplN, vplWi;" << endl
 			<< "uniform float nearClip, invClipRange, minDist;" << endl
 			<< "uniform vec2 vplUV;" << endl
-			<< "uniform bool allowNonDiffuseVPLs;" << endl
+			<< "uniform bool diffuseSources, diffuseReceivers;" << endl
 			<< endl
 			<< "/* Inputs <- Vertex program */" << endl
 			<< "varying vec3 normal, tangent, lightVec, camVec;" << endl
@@ -363,7 +364,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "                      dot(vplT, nLightVec)," << endl
 			<< "                      dot(vplN, nLightVec));" << endl
 			<< "   vec3 vplLo = vplPower;" << endl
-			<< "   if (allowNonDiffuseVPLs)" << endl 
+			<< "   if (!diffuseSources)" << endl 
 			<< "      vplLo *= " << vplEvalName;
 			if (vpl.type == ESurfaceVPL)
 				oss << "(vplUV, vplWi, vplWo);" << endl;
@@ -402,7 +403,8 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 		m_targetConfig.param_nearClip = program->getParameterID("nearClip", false);
 		m_targetConfig.param_invClipRange = program->getParameterID("invClipRange", false);
 		m_targetConfig.param_minDist = program->getParameterID("minDist", false);
-		m_targetConfig.param_allowNonDiffuseVPLs = program->getParameterID("allowNonDiffuseVPLs", false);
+		m_targetConfig.param_diffuseSources = program->getParameterID("diffuseSources", false);
+		m_targetConfig.param_diffuseReceivers = program->getParameterID("diffuseReceivers", false);
 		m_current.program = program;
 		m_current.config = m_targetConfig;
 		m_programs[configName] = m_current;
@@ -423,13 +425,13 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 	if (vpl.type == ESurfaceVPL) {
 		program->setParameter(config.param_vplWi, vpl.its.wi);
 		program->setParameter(config.param_vplUV, vpl.its.uv);
-		program->setParameter(config.param_allowNonDiffuseVPLs, m_allowNonDiffuseVPLs);
+		program->setParameter(config.param_diffuseSources, m_diffuseSources);
 	}
-	if (!m_allowNonDiffuseVPLs && vpl.type == ESurfaceVPL)
-		program->setParameter(config.param_vplPower, vpl.P 
-			* vpl.its.shape->getBSDF()->getDiffuseReflectance(vpl.its) * INV_PI);
-	else
-		program->setParameter(config.param_vplPower, vpl.P);
+	Spectrum power = vpl.P;
+	if (m_diffuseSources && vpl.type == ESurfaceVPL)
+		power *= vpl.its.shape->getBSDF()->getDiffuseReflectance(vpl.its) * INV_PI;
+	program->setParameter(config.param_vplPower, power);
+	program->setParameter(config.param_diffuseReceivers, m_diffuseReceivers);
 	program->setParameter(config.param_nearClip, m_nearClip);
 	program->setParameter(config.param_invClipRange, m_invClipRange);
 	program->setParameter(config.param_minDist, m_minDist);

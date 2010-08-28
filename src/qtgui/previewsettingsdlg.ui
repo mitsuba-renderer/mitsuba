@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>414</width>
-    <height>382</height>
+    <width>428</width>
+    <height>379</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -239,6 +239,27 @@ p, li { white-space: pre-wrap; }
      </item>
     </widget>
    </item>
+   <item row="5" column="1">
+    <widget class="QLabel" name="label_6">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;When a scene contains many glossy surfaces, the real-time visualization can sometimes produce disturbing image artifacts (bright blotches).&lt;span style=&quot; font-weight:600;&quot;&gt; &lt;/span&gt;These eventually disappear as the preview converges, but waiting for a long time may be undesirable. The following options are meant to reduce such issues:&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Diffuse sources&lt;/span&gt;: treat glossy surfaces at the second bounce as if they were diffuse. This is usually perfectly fine for previewing purposes and is thus turned on by default.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Diffuse receivers&lt;/span&gt;: treat directly visible surfaces as if they were diffuse. This is leads to a much more approximate result -- essentially, a clay version of the scene is being rendered.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>&amp;Force diffuse :</string>
+     </property>
+     <property name="buddy">
+      <cstring>diffuseSourcesBox</cstring>
+     </property>
+    </widget>
+   </item>
    <item row="6" column="0" colspan="2">
     <widget class="QLabel" name="label_4">
      <property name="font">
@@ -296,6 +317,33 @@ p, li { white-space: pre-wrap; }
        <string>Reinhard et al. 2002</string>
       </property>
      </item>
+    </widget>
+   </item>
+   <item row="8" column="1">
+    <widget class="QLabel" name="keyLabel">
+     <property name="text">
+      <string>Key value : </string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="2" colspan="2">
+    <widget class="QSlider" name="keySlider">
+     <property name="maximum">
+      <number>100</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="1">
+    <widget class="QLabel" name="exposureLabel">
+     <property name="text">
+      <string>E&amp;xposure : 2 ^</string>
+     </property>
+     <property name="buddy">
+      <cstring>exposureSpinBox</cstring>
+     </property>
     </widget>
    </item>
    <item row="9" column="2" rowspan="2" colspan="2">
@@ -386,6 +434,16 @@ p, li { white-space: pre-wrap; }
      </item>
     </layout>
    </item>
+   <item row="10" column="1">
+    <widget class="QLabel" name="gammaLabel">
+     <property name="text">
+      <string>&amp;Gamma :</string>
+     </property>
+     <property name="buddy">
+      <cstring>gammaSpinBox</cstring>
+     </property>
+    </widget>
+   </item>
    <item row="11" column="1">
     <spacer name="verticalSpacer_2">
      <property name="orientation">
@@ -466,77 +524,51 @@ p, li { white-space: pre-wrap; }
      </item>
     </layout>
    </item>
-   <item row="8" column="1">
-    <widget class="QLabel" name="keyLabel">
-     <property name="text">
-      <string>Key value : </string>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="2" colspan="2">
-    <widget class="QSlider" name="keySlider">
-     <property name="maximum">
-      <number>100</number>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="9" column="1">
-    <widget class="QLabel" name="exposureLabel">
-     <property name="text">
-      <string>E&amp;xposure : 2 ^</string>
-     </property>
-     <property name="buddy">
-      <cstring>exposureSpinBox</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="1">
-    <widget class="QLabel" name="gammaLabel">
-     <property name="text">
-      <string>&amp;Gamma :</string>
-     </property>
-     <property name="buddy">
-      <cstring>gammaSpinBox</cstring>
-     </property>
-    </widget>
-   </item>
    <item row="5" column="2" colspan="2">
-    <widget class="QCheckBox" name="nonDiffuseVPLBox">
-     <property name="toolTip">
-      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QCheckBox" name="diffuseSourcesBox">
+       <property name="toolTip">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;When a scene contains many glossy surfaces, the real-time visualization can sometimes produce disturbing image artifacts (bright blotches).&lt;span style=&quot; font-weight:600;&quot;&gt; &lt;/span&gt;These eventually disappear as the preview converges, but waiting for a long time may be undesirable.&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;When a scene contains many glossy surfaces, the real-time visualization can sometimes produce disturbing image artifacts (bright blotches).&lt;span style=&quot; font-weight:600;&quot;&gt; &lt;/span&gt;These eventually disappear as the preview converges, but waiting for a long time may be undesirable. The following options are meant to reduce such issues:&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;For this reason, the real-time visualiztaion will by default treat glossy surfaces at the second bounce as if they were diffuse, which is usually perfectly fine for previewing purposes. This behavior can optionally be disabled using this switch.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Allow non-diffuse point sources</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="1">
-    <widget class="QLabel" name="label_6">
-     <property name="toolTip">
-      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Diffuse sources&lt;/span&gt;: treat glossy surfaces at the second bounce as if they were diffuse. This is usually perfectly fine for previewing purposes and is thus turned on by default.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Diffuse receivers&lt;/span&gt;: treat directly visible surfaces as if they were diffuse. This is leads to a much more approximate result -- essentially, a clay version of the scene is being rendered.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Sources</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="diffuseReceiversBox">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="toolTip">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;When a scene contains many glossy surfaces, the real-time visualization can sometimes produce disturbing image artifacts (bright blotches).&lt;span style=&quot; font-weight:600;&quot;&gt; &lt;/span&gt;These eventually disappear as the preview converges, but waiting for a long time may be undesirable.&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;When a scene contains many glossy surfaces, the real-time visualization can sometimes produce disturbing image artifacts (bright blotches).&lt;span style=&quot; font-weight:600;&quot;&gt; &lt;/span&gt;These eventually disappear as the preview converges, but waiting for a long time may be undesirable. The following options are meant to reduce such issues:&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;For this reason, the real-time visualiztaion will by default treat glossy surfaces at the second bounce as if they were diffuse, which is usually perfectly fine for previewing purposes. This behavior can optionally be disabled using this switch.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>&amp;Other :</string>
-     </property>
-     <property name="buddy">
-      <cstring>nonDiffuseVPLBox</cstring>
-     </property>
-    </widget>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Diffuse sources&lt;/span&gt;: treat glossy surfaces at the second bounce as if they were diffuse. This is usually perfectly fine for previewing purposes and is thus turned on by default.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Diffuse receivers&lt;/span&gt;: treat directly visible surfaces as if they were diffuse. This is leads to a much more approximate result -- essentially, a clay version of the scene is being rendered.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Receivers</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
@@ -546,7 +578,8 @@ p, li { white-space: pre-wrap; }
   <tabstop>pathLengthEdit</tabstop>
   <tabstop>clampingSlider</tabstop>
   <tabstop>shadowResolutionCombo</tabstop>
-  <tabstop>nonDiffuseVPLBox</tabstop>
+  <tabstop>diffuseSourcesBox</tabstop>
+  <tabstop>diffuseReceiversBox</tabstop>
   <tabstop>toneMappingMethodCombo</tabstop>
   <tabstop>keySlider</tabstop>
   <tabstop>exposureSpinBox</tabstop>
@@ -565,8 +598,8 @@ p, li { white-space: pre-wrap; }
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>403</x>
-     <y>371</y>
+     <x>417</x>
+     <y>368</y>
     </hint>
     <hint type="destinationlabel">
      <x>167</x>

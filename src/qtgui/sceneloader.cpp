@@ -31,7 +31,8 @@ void SceneLoader::run() {
 		m_result->clamping = (Float) settings.value("preview_clamping", 0.1f).toDouble();
 		m_result->previewMethod = (EPreviewMethod) settings.value("preview_previewMethod", EOpenGL).toInt();
 		m_result->toneMappingMethod = (EToneMappingMethod) settings.value("preview_toneMappingMethod", EGamma).toInt();
-		m_result->allowNonDiffuseVPLs = settings.value("preview_allowNonDiffuseVPLs", false).toBool();
+		m_result->diffuseSources = settings.value("preview_diffuseSources", true).toBool();
+		m_result->diffuseReceivers = settings.value("preview_diffuseReceivers", false).toBool();
 
 		if (endsWith(lowerCase, ".exr")) {
 			/* This is an image, not a scene */

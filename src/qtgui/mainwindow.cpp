@@ -921,7 +921,8 @@ void MainWindow::on_actionPreviewSettings_triggered() {
 	connect(&d, SIGNAL(reinhardBurnChanged(Float)), ui->glView, SLOT(setReinhardBurn(Float)));
 	connect(&d, SIGNAL(previewMethodChanged(EPreviewMethod)), ui->glView, SLOT(setPreviewMethod(EPreviewMethod)));
 	connect(&d, SIGNAL(toneMappingMethodChanged(EToneMappingMethod)), ui->glView, SLOT(setToneMappingMethod(EToneMappingMethod)));
-	connect(&d, SIGNAL(allowNonDiffuseVPLsChanged(bool)), ui->glView, SLOT(setAllowNonDiffuseVPLs(bool)));
+	connect(&d, SIGNAL(diffuseReceiversChanged(bool)), ui->glView, SLOT(setDiffuseReceivers(bool)));
+	connect(&d, SIGNAL(diffuseSourcesChanged(bool)), ui->glView, SLOT(setDiffuseSources(bool)));
 	d.setMaximumSize(d.minimumSize());
 	d.exec();
 	QSettings settings("mitsuba-renderer.org", "qtgui");
@@ -934,7 +935,8 @@ void MainWindow::on_actionPreviewSettings_triggered() {
 	settings.setValue("preview_clamping", context->clamping);
 	settings.setValue("preview_previewMethod", context->previewMethod);
 	settings.setValue("preview_toneMappingMethod", context->toneMappingMethod);
-	settings.setValue("preview_allowNonDiffuseVPLs", context->allowNonDiffuseVPLs);
+	settings.setValue("preview_diffuseReceivers", context->diffuseReceivers);
+	settings.setValue("preview_diffuseSources", context->diffuseSources);
 #else
 	if (!m_previewSettings) {
 		m_previewSettings = new PreviewSettingsDlg(this);
@@ -974,7 +976,8 @@ void MainWindow::onPreviewSettingsClose() {
 		settings.setValue("preview_clamping", context->clamping);
 		settings.setValue("preview_previewMethod", context->previewMethod);
 		settings.setValue("preview_toneMappingMethod", context->toneMappingMethod);
-		settings.setValue("preview_allowNonDiffuseVPLs", context->allowNonDiffuseVPLs);
+		settings.setValue("preview_diffuseSources", context->diffuseSources);
+		settings.setValue("preview_diffuseReceivers", context->diffuseReceivers);
 	}
 }
 
@@ -1605,7 +1608,8 @@ SceneContext::SceneContext(SceneContext *ctx) {
 	scrollOffset = ctx->scrollOffset;
 	reinhardKey = ctx->reinhardKey;
 	reinhardBurn = ctx->reinhardBurn;
-	allowNonDiffuseVPLs = ctx->allowNonDiffuseVPLs;
+	diffuseReceivers = ctx->diffuseReceivers;
+	diffuseSources = ctx->diffuseSources;
 }
 
 SceneContext::~SceneContext() {

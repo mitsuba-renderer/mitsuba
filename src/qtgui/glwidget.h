@@ -58,7 +58,8 @@ public slots:
 	void setGamma(bool srgb, Float gamma);
 	void setReinhardKey(Float value);
 	void setReinhardBurn(Float value);
-	void setAllowNonDiffuseVPLs(bool value);
+	void setDiffuseSources(bool value);
+	void setDiffuseReceivers(bool value);
 	void setExposure(Float exposure);
 	void onException(const QString &what);
 	void onScroll();

@@ -46,11 +46,17 @@ public:
 	/// Is shadow map generation generation performed in a single pass?
 	inline bool isSinglePass() const { return m_singlePass; }
 
-	/// Set whether or not non-diffuse VPLs are permitted
-	inline void setAllowNonDiffuseVPLs(bool allowNonDiffuseVPLs) { m_allowNonDiffuseVPLs = allowNonDiffuseVPLs; }
+	/// Set whether or not non-diffuse VPLs are used
+	inline void setDiffuseSources(bool diffuseSources) { m_diffuseSources = diffuseSources; }
 
-	/// Are non-diffuse VPLs permitted? This is more realistic, but can take a long time to converge.
-	inline bool allowNonDiffuseVPLs() const { return m_allowNonDiffuseVPLs; }
+	/// Return whether or not non-diffuse VPLs are used
+	inline bool getDiffuseSources() const { return m_diffuseSources; }
+	
+	/// Set whether or not surfaces are drawn assumed to be diffuse
+	inline void setDiffuseReceivers(bool diffuseReceivers) { m_diffuseReceivers = diffuseReceivers; }
+
+	/// Return whether or not surfaces are assumed to be diffuse
+	inline bool getDiffuseReceivers() const { return m_diffuseReceivers; }
 
 	/// Set the current shadow map resolution
 	inline void setShadowMapResolution(int resolution) { m_shadowMapResolution = resolution; }
@@ -150,7 +156,8 @@ private:
 		bool hasLuminaire;
 		int param_shadowMap, param_vplPos, param_camPos, param_vplPower;
 		int param_vplN, param_vplS, param_vplT, param_vplWi, param_vplUV;
-		int param_nearClip, param_invClipRange, param_minDist, param_allowNonDiffuseVPLs;
+		int param_nearClip, param_invClipRange, param_minDist;
+		int param_diffuseSources, param_diffuseReceivers;
 
 		inline VPLProgramConfiguration() { }
 
@@ -232,7 +239,8 @@ private:
 	ref<GPUTexture> m_shadowMap;
 	Float m_nearClip, m_invClipRange;
 	int m_shadowMapResolution;
-	bool m_singlePass, m_allowNonDiffuseVPLs;
+	bool m_singlePass;
+	bool m_diffuseSources, m_diffuseReceivers;
 
 	/* Rendering related */
 	std::map<std::string, ProgramAndConfiguration> m_programs;

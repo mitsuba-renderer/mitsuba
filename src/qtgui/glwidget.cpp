@@ -297,13 +297,19 @@ void GLWidget::setShadowMapResolution(int res) {
 	}
 }
 
-void GLWidget::setAllowNonDiffuseVPLs(bool value) {
-	if (value != m_context->allowNonDiffuseVPLs) {
-		m_context->allowNonDiffuseVPLs = value;
+void GLWidget::setDiffuseSources(bool value) {
+	if (value != m_context->diffuseSources) {
+		m_context->diffuseSources = value;
 		resetPreview();
 	}
 }
 
+void GLWidget::setDiffuseReceivers(bool value) {
+	if (value != m_context->diffuseReceivers) {
+		m_context->diffuseReceivers = value;
+		resetPreview();
+	}
+}
 
 void GLWidget::setPreviewMethod(EPreviewMethod method) {
 	if (method != m_context->previewMethod) {
