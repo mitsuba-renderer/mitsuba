@@ -295,6 +295,11 @@ public:
 			<< "      (" << evalName << "_exponent + 2) * 0.15915 * " << evalName << "_ks;" << endl
 			<< "    return " << depNames[0] << "(uv) * (0.31831 * " << evalName << "_kd)" << endl
 			<< "           + " << depNames[1] << "(uv) * specRef;" << endl
+			<< "}" << endl
+			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    if (wi.z < 0.0 || wo.z < 0.0)" << endl
+			<< "    	return vec3(0.0);" << endl
+			<< "    return " << depNames[0] << "(uv) * (0.31831 * " << evalName << "_kd);" << endl
 			<< "}" << endl;
 	}
 

@@ -347,8 +347,23 @@ public:
 							  << evalName << "_weight_" << ctr;
 			ctr++;
 		}
-		oss << ";" << endl;
-		oss << "}" << endl;
+		oss << ";" << endl << "}" << endl << endl;
+		oss << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return ";
+		ctr = 0;
+		for (size_t i=0; i<m_bsdfs.size(); ++i) {
+			if (!m_bsdfShader[i])
+				continue;
+			oss << endl << "      ";
+			if (ctr != 0)
+				oss << "+ ";
+			else
+				oss << "  ";
+			oss << depNames[ctr] << "_diffuse(uv, wi, wo) * "
+							  << evalName << "_weight_" << ctr;
+			ctr++;
+		}
+		oss << ";" << endl << "}" << endl;
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {

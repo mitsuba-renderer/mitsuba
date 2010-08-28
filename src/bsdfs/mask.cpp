@@ -187,6 +187,9 @@ public:
 		Assert(m_complete);
 		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    return " << depNames[0] << "(uv) * " << depNames[1] << "(uv, wi, wo);" << endl
+			<< "}" << endl
+			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return " << depNames[0] << "(uv) * " << depNames[1] << "_diffuse(uv, wi, wo);" << endl
 			<< "}" << endl;
 	}
 

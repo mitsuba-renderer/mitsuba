@@ -363,20 +363,24 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "   vec3 vplWo = -vec3(dot(vplS, nLightVec)," << endl
 			<< "                      dot(vplT, nLightVec)," << endl
 			<< "                      dot(vplN, nLightVec));" << endl
-			<< "   vec3 vplLo = vplPower;" << endl
+			<< "   vec3 contrib = vplPower;" << endl
 			<< "   if (!diffuseSources)" << endl 
-			<< "      vplLo *= " << vplEvalName;
+			<< "      contrib *= " << vplEvalName;
 			if (vpl.type == ESurfaceVPL)
 				oss << "(vplUV, vplWi, vplWo);" << endl;
 			else
 				oss << "_dir(vplWo);" << endl;
 		oss << "   if (d < minDist) d = minDist;" << endl
-			<< "   gl_FragColor.rgb = vplLo * " << bsdfEvalName << "(uv, wi, wo)" << endl;
-			if (vpl.type == ESurfaceVPL || (vpl.type == ELuminaireVPL 
-					&& (vpl.luminaire->getType() & Luminaire::EOnSurface)))
-				oss << "                      * (shadow * abs(cosTheta(wo) * cosTheta(vplWo)) / (d*d))";
-			else 
-				oss << "                      * (shadow * abs(cosTheta(wo)) / (d*d))";
+			<< "   if (!diffuseReceivers)" << endl
+			<< "      contrib *= "<< bsdfEvalName << "(uv, wi, wo);" << endl
+			<< "   else" << endl
+			<< "      contrib *= " << bsdfEvalName << "_diffuse(uv, wi, wo);" << endl
+			<< "   gl_FragColor.rgb = contrib";
+		if (vpl.type == ESurfaceVPL || (vpl.type == ELuminaireVPL 
+				&& (vpl.luminaire->getType() & Luminaire::EOnSurface)))
+			oss << " * (shadow * abs(cosTheta(wo) * cosTheta(vplWo)) / (d*d))";
+		else 
+			oss << " * (shadow * abs(cosTheta(wo)) / (d*d))";
 		if (luminaire != NULL) {
 			oss << endl;
 			oss << "                      + " << lumEvalName << "_area(uv)"

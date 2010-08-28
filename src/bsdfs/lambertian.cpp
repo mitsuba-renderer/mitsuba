@@ -130,6 +130,9 @@ public:
 			<< "    if (wi.z < 0.0 || wo.z < 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
 			<< "    return " << depNames[0] << "(uv) * 0.31831;" << endl
+			<< "}" << endl
+			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return " << evalName << "(uv, wi, wo);" << endl
 			<< "}" << endl;
 	}
 
