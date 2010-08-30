@@ -50,8 +50,17 @@ void Logger::log(ELogLevel level, const Class *theClass,
 			m_appenders[i]->append(level, text);
 		m_mutex->unlock();
 	} else {
-#ifdef MTS_DEBUG_TRAP
-		__asm__ ("int $3");
+#if defined(__LINUX__)
+		/* A critical error occurred: trap if we're running in a debugger */
+		
+		char exePath[PATH_MAX];
+		pid_t ppid = getppid();
+		memset(exePath, 0, PATH_MAX);
+		if (readlink(formatString("/proc/%i/exe", ppid).c_str(), exePath, PATH_MAX) != -1) {
+			if (!strcmp(exePath, "/usr/bin/gdb")) {
+				__asm__ ("int $3");
+			}
+		}
 #endif
 		throw std::runtime_error(text);
 	}
