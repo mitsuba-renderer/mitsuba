@@ -1,7 +1,7 @@
 /**
  * Mitsuba COLLADA 1.4 and Wavefront OBJ -> XML converter
  * 
- * Takes a DAE or OBJ file and turns it into a scene description and separate mesh files
+ * Takes a DAE, ZAE or OBJ file and turns it into a scene description and separate mesh files
  * using a compact binary format. All associated files are copied into newly created 
  * 'textures' and 'meshes' directories
  *
@@ -53,7 +53,7 @@ public:
 
 void help() {
 	cout << "COLLADA 1.4 & Wavefront OBJ Importer, Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl
-		<< "Syntax: mtsimport [options] <DAE/OBJ scene> <XML output file> [Adjustment file]" << endl
+		<< "Syntax: mtsimport [options] <DAE/ZAE/OBJ scene> <XML output file> [Adjustment file]" << endl
 		<< "Options/Arguments:" << endl
 		<<  "   -h          Display this help text" << endl << endl
 		<<  "   -a p1;p2;.. Add one or more entries to the resource search path" << endl << endl

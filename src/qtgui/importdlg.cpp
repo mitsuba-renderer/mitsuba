@@ -35,7 +35,7 @@ void ImportDialog::changeEvent(QEvent *e) {
 
 void ImportDialog::on_inputBrowse_clicked(bool checked) {
 	QFileDialog dialog(this);
-	dialog.setNameFilter(tr("COLLADA 1.4 scenes (*.dae);; Wavefront OBJ scenes (*.obj)"));
+	dialog.setNameFilter(tr("COLLADA 1.4 scenes (*.dae *.zae);; Wavefront OBJ scenes (*.obj)"));
 	dialog.setAcceptMode(QFileDialog::AcceptOpen);
 	dialog.setViewMode(QFileDialog::Detail);
 	dialog.setWindowModality(Qt::ApplicationModal);

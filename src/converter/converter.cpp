@@ -158,12 +158,12 @@ void GeometryConverter::convert(const std::string &inputFile,
 	std::ostringstream os;
 
 	SLog(EInfo, "Beginning conversion ..");
-	if (endsWith(toLowerCase(inputFile), ".dae")) {
+	if (endsWith(toLowerCase(inputFile), ".dae") || endsWith(toLowerCase(inputFile), ".zae")) {
 		convertCollada(inputFile, os, textureDirectory, meshesDirectory);
 	} else if (endsWith(toLowerCase(inputFile), ".obj")) {
 		convertOBJ(inputFile, os, textureDirectory, meshesDirectory);
 	} else {
-		SLog(EError, "Unknown input format (must end in either .DAE or .OBJ)");
+		SLog(EError, "Unknown input format (must end in either .DAE, .ZAE or .OBJ)");
 	}
 
 	if (adjustmentFile != "") {
