@@ -163,7 +163,7 @@ void GeometryConverter::convert(const std::string &inputFile,
 	} else if (endsWith(toLowerCase(inputFile), ".obj")) {
 		convertOBJ(inputFile, os, textureDirectory, meshesDirectory);
 	} else {
-		SLog(EError, "Unknown input format (must end in either .DAE or .OBJ");
+		SLog(EError, "Unknown input format (must end in either .DAE or .OBJ)");
 	}
 
 	if (adjustmentFile != "") {
