@@ -146,19 +146,21 @@ Bitmap::Bitmap(int width, int height, int bpp)
 		m_gamma = -1.0f; // sRGB
 
 	// 1-bit masks are stored in a packed format. 
-	m_size = (size_t) std::ceil((m_width * m_height * m_bpp) / 8.0f);
+	m_size = (size_t) std::ceil((m_width * m_height * m_bpp) / 8.0);
 	m_data = static_cast<unsigned char *>(allocAligned(m_size));
 }
 
 Bitmap::Bitmap(EFileFormat format, Stream *stream) : m_data(NULL) {
 	if (format == EPNG)
 		loadPNG(stream);
-	else if (format == ETGA)
-		loadTGA(stream);
 	else if (format == EJPEG)
 		loadJPEG(stream);
 	else if (format == EEXR)
 		loadEXR(stream);
+	else if (format == ETGA)
+		loadTGA(stream);
+	else if (format == EBMP)
+		loadBMP(stream);
 	else
 		Log(EError, "Bitmap: Invalid file format!");
 }
@@ -224,6 +226,73 @@ void Bitmap::loadTGA(Stream *stream) {
 		m_data[i] = m_data[i+2];
 		m_data[i+2] = tmp;
 	}
+}
+
+void Bitmap::loadBMP(Stream *stream) {
+#if defined(WIN32)
+#pragma pack(push, 1)
+#endif
+	struct {
+		uint16_t magic;
+		uint32_t size;
+		uint16_t creator1, creator2;
+		uint32_t offset;
+	} BMPFileHeader
+#if !defined(WIN32)
+		__attribute__((__packed__))
+#endif
+	;
+
+	struct {
+		uint32_t header_sz;
+		uint32_t width;
+		uint32_t height;
+		uint16_t nplanes;
+		uint16_t bitspp;
+		uint32_t compress_type;
+		uint32_t bmp_bytesz;
+		uint32_t hres;
+		uint32_t vres;
+		uint32_t ncolors;
+		uint32_t nimpcolors;
+	} DIBHeader
+#if defined(WIN32)
+	;
+#pragma pack(pop)
+#else
+	__attribute__((__packed__));
+#endif
+
+	Assert(sizeof(BMPFileHeader) == 14);
+	Assert(sizeof(DIBHeader) == 40);
+
+	stream->read(&BMPFileHeader, sizeof(BMPFileHeader));
+
+	if (memcmp(&BMPFileHeader.magic, "BM", 2) != 0)
+		Log(EError, "Unsupported BMP format encountered (invalid file header)!");
+
+	stream->read(&DIBHeader, sizeof(DIBHeader));
+
+	if (DIBHeader.header_sz != 40 || DIBHeader.nplanes != 1)
+		Log(EError, "Unsupported BMP format encountered (strange DIB header)!");
+
+	if (DIBHeader.ncolors != 0)
+		Log(EError, "Only BMP images without a palette are supported for now");
+
+	if (DIBHeader.bitspp != 8 && DIBHeader.bitspp != 24)
+		Log(EError, "Only 8- and 24-bit BMP images are supported for now");
+
+	m_width = DIBHeader.width;
+	m_height = DIBHeader.height;
+	m_bpp = DIBHeader.bitspp;
+
+	m_size = m_width * m_height * (m_bpp / 8);
+	m_data = static_cast<unsigned char *>(allocAligned(m_size));
+
+	Log(ETrace, "Reading %ix%ix%i PNG file", m_width, m_height, m_bpp);
+
+	if (DIBHeader.compress_type != 0)
+		Log(EError, "Only uncompressed BMP images are supported for now");
 }
 
 void Bitmap::loadPNG(Stream *stream) {
@@ -309,7 +378,7 @@ void Bitmap::loadPNG(Stream *stream) {
 			&colortype, &interlacetype, &compressiontype, &filtertype);
 	m_width = width; m_height = height;
 
-	m_size = (size_t) std::ceil((m_width * m_height * m_bpp) / 8.0f);
+	m_size = (size_t) std::ceil((m_width * m_height * m_bpp) / 8.0);
 	m_data = static_cast<unsigned char *>(allocAligned(m_size));
 
 	rows = new png_bytep[m_height];

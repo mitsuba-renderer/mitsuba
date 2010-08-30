@@ -112,6 +112,9 @@ void ImportDialog::accept() {
 	if (!m_resolver->contains(filePath))
 		m_resolver->addPath(filePath);
 
+	const Logger *logger = Thread::getThread()->getLogger();
+	size_t initialWarningCount = logger->getWarningCount();
+
 	ref<SceneImporter> importingThread = new SceneImporter(this,
 		m_resolver, sourceFile.toStdString(), directory.toStdString(),
 		targetScene.toStdString(), adjustmentFile.toStdString(),
@@ -122,15 +125,22 @@ void ImportDialog::accept() {
 		QCoreApplication::processEvents();
 		importingThread->wait(20);
 	}
+
 	importingThread->join();
 
 	dialog->hide();
 	delete dialog;
 	
-	if (importingThread->getResult().length() > 0)
+	if (importingThread->getResult().length() > 0) {
+		size_t warningCount = logger->getWarningCount() - initialWarningCount;
+		if (warningCount > 0)
+			QMessageBox::warning(this, tr("Scene Import"),
+				tr("Encountered %1 warnings while importing -- please see "
+				"the log for details.").arg(warningCount), QMessageBox::Ok);
 		((MainWindow *) parent())->loadFile(QString(importingThread->getResult().c_str()));
-	else 
+	} else {
 		QMessageBox::critical(this, tr("Scene Import"),
 			tr("Conversion failed -- please see the log for details."),
 			QMessageBox::Ok);
+	}
 }

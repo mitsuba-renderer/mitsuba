@@ -137,7 +137,15 @@ int colladaMain(int argc, char **argv) {
 	converter.setMapSmallerSide(mapSmallerSide);
 	converter.setSamplesPerPixel(samplesPerPixel);
 	converter.setFov(fov);
+
+	const Logger *logger = Thread::getThread()->getLogger();
+	size_t initialWarningCount = logger->getWarningCount();
 	converter.convert(argv[optind], "", argv[optind+1], argc > optind+2 ? argv[optind+2] : "");
+	size_t warningCount = logger->getWarningCount() - initialWarningCount;
+
+	if (warningCount > 0)
+		SLog(EInfo, "Encountered " SIZE_T_FMT " warnings -- please check the "
+			"messages above for details.", warningCount);
 
 	return 0;
 }

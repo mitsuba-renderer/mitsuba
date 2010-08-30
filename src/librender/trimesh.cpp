@@ -142,6 +142,8 @@ Float TriMesh::sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const
 
 void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, bool complain) {
 	/* Calculate smooth normals if there aren't any */
+	int zeroArea = 0, zeroNormals = 0;
+
 	if (!hasNormals) {
 		for (unsigned int i=0; i<m_vertexCount; i++)
 			m_vertexBuffer[i].n = Normal(0.0, 0.0f, 0.0f);
@@ -153,8 +155,8 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 			Float length = n.length();
 			if (length != 0)
 				n /= length;
-			else if (complain)
-				Log(EWarn, "Invalid geometry - cannot calculate normals");
+			else
+				zeroArea++;
 			m_vertexBuffer[m_triangles[i].idx[0]].n += n;
 			m_vertexBuffer[m_triangles[i].idx[1]].n += n;
 			m_vertexBuffer[m_triangles[i].idx[2]].n += n;
@@ -182,8 +184,7 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 		   for isotropic BxDFs) */
 		for (unsigned int i=0; i<m_vertexCount; i++) {
 			if (m_vertexBuffer[i].n.isZero()) {
-				if (complain)
-					Log(EWarn, "Mesh has zero normals!");
+				zeroNormals++;
 				m_vertexBuffer[i].n = Normal(1, 0, 0);
 			}
 			coordinateSystem(m_vertexBuffer[i].n, m_vertexBuffer[i].dpdu, m_vertexBuffer[i].dpdv);
@@ -196,8 +197,7 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 			m_vertexBuffer[i].dpdu = Vector(0.0, 0.0f, 0.0f);
 			m_vertexBuffer[i].dpdv = Vector(0.0, 0.0f, 0.0f);
 			if (m_vertexBuffer[i].n.isZero()) {
-				if (complain)
-					Log(EWarn, "Mesh has zero normals!");
+				zeroNormals++;
 				m_vertexBuffer[i].n = Normal(1, 0, 0);
 			}
 			sharers[i] = 0;
@@ -230,8 +230,8 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 				Float length = n.length();
 				if (length != 0)
 					n /= length;
-				else if (complain)
-					Log(EWarn, "Mesh contains invalid geometry!");
+				else
+					zeroArea++;
 				dpdu = cross(n, dpdv);
 
 				if (dpdu.length() == 0.0f) {
@@ -246,8 +246,8 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 				Float length = n.length();
 				if (length != 0)
 					n /= length;
-				else if (complain)
-					Log(EWarn, "Mesh contains invalid geometry!");
+				else
+					zeroArea++;
 				dpdv = cross(dpdu, n);
 
 				if (dpdv.length() == 0.0f) {
@@ -265,6 +265,7 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 			m_vertexBuffer[idx2].dpdv += dpdv;
 			sharers[idx0]++; sharers[idx1]++; sharers[idx2]++;
 		}
+					
 		/* Orthogonalization + Normalization pass */
 		for (unsigned int i=0; i<m_vertexCount; i++) {
 			Vector dpdu = m_vertexBuffer[i].dpdu;
@@ -286,6 +287,10 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 		}
 		delete[] sharers;
 	}
+
+	if (complain && (zeroArea > 0 || zeroNormals > 0))
+		Log(EWarn, "Mesh contains invalid geometry: %i zero area triangles "
+			"and %i zero normals found!", zeroArea, zeroNormals);
 }
 
 void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {

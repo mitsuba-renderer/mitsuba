@@ -111,6 +111,9 @@ public:
 	/// Return the logger's formatter implementation
 	inline Formatter *getFormatter() { return m_formatter; }
 
+	/// Return the number of warnings reported so far
+	inline size_t getWarningCount() const { return m_warningCount; }
+
 	/// Initialize logging
 	static void staticInitialization();
 	
@@ -126,6 +129,7 @@ protected:
 	ref<Formatter> m_formatter;
 	ref<Mutex> m_mutex;
 	std::vector<Appender *> m_appenders;
+	size_t m_warningCount;
 };
 		
 MTS_NAMESPACE_END

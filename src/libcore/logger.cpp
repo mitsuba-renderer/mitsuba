@@ -5,7 +5,7 @@
 MTS_NAMESPACE_BEGIN
 
 Logger::Logger(ELogLevel level)
- : m_logLevel(level) {
+ : m_logLevel(level), m_warningCount(0) {
 	m_mutex = new Mutex();
 }
 
@@ -46,6 +46,8 @@ void Logger::log(ELogLevel level, const Class *theClass,
 
 	if (level < EError) {
 		m_mutex->lock();
+		if (level >= EWarn)
+			m_warningCount++;
 		for (unsigned int i=0; i<m_appenders.size(); ++i)
 			m_appenders[i]->append(level, text);
 		m_mutex->unlock();

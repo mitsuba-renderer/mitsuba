@@ -101,18 +101,22 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 	result->typeToOffset.resize(ELast);
 	for (int i=0; i<ELast; ++i)
 		result->typeToOffset[i] = -1;
+	int vertInputIndex = 0;
 
 	for (size_t i=0; i<inputs.getCount(); ++i) {
 		int offset = (int) inputs[i]->getOffset();
 		daeURI &sourceRef = inputs[i]->getSource();
 		sourceRef.resolveElement();
 		domSource *source = daeSafeCast<domSource>(sourceRef.getElement());
+		std::string semantic = inputs[i]->getSemantic();
 
-		if (!strcmp(inputs[i]->getSemantic(), "VERTEX")) {
-			SAssert(vertInputs.getCount() == 1);
-			sourceRef = vertInputs[0]->getSource();
+		if (semantic == "VERTEX") {
+			sourceRef = vertInputs[vertInputIndex]->getSource();
 			sourceRef.resolveElement();
 			source = daeSafeCast<domSource>(sourceRef.getElement());
+			semantic = vertInputs[vertInputIndex]->getSemantic();
+			if (++vertInputIndex < (int) vertInputs.getCount())
+				--i;
 		}
 
 		domListOfFloats &floatArray = source->getFloat_array()->getValue();
@@ -128,14 +132,13 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 		SAssert(nParams <= 4);
 
 		Vec4 *target = new Vec4[size];
-		for (int j=0; j<size; ++j) {
+		for (int j=0; j<size; ++j)
 			for (int k=0; k<nParams; ++k)
 				target[j][k] = (Float) floatArray[j*stride+k];
-		}
 
 		result->data[offset] = target;
 
-		if (!strcmp(inputs[i]->getSemantic(), "VERTEX")) {
+		if (semantic == "POSITION") {
 			SAssert(accessor->getStride() == 3);
 			SAssert(result->typeToOffset[EPosition] == -1);
 			result->offsetToType[offset] = EPosition;
@@ -143,28 +146,28 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 			result->glPos = new GLdouble[3*size];
 			for (int k=0; k<3*size; ++k)
 				result->glPos[k] = floatArray[k];
-		} else if (!strcmp(inputs[i]->getSemantic(), "NORMAL")) {
+		} else if (semantic == "NORMAL") {
 			SAssert(accessor->getStride() == 3);
 			SAssert(result->typeToOffset[ENormal] == -1);
 			result->hasNormals = true;
 			result->offsetToType[offset] = ENormal;
 			result->typeToOffset[ENormal] = offset;
-		} else if (!strcmp(inputs[i]->getSemantic(), "TEXCOORD")) {
+		} else if (semantic == "TEXCOORD") {
 			SAssert(accessor->getStride() == 2 || accessor->getStride() == 3);
 			if (result->typeToOffset[EUV] == -1) {
 				result->hasUVs = true;
 				result->offsetToType[offset] = EUV;
 				result->typeToOffset[EUV] = offset;
 			} else {
-				SLog(EWarn, "Found multiple texture coordinate records - ignoring!");
+				SLog(EWarn, "Found multiple sets of texture coordinates - ignoring!");
 			}
-		} else if (!strcmp(inputs[i]->getSemantic(), "COLOR")) {
-			SLog(EWarn, "Found per-vertex colors - ignoring. Please bake into a texture (Lighting/shading -> Batch Bake in Maya)");
+		} else if (semantic == "COLOR") {
+			SLog(EWarn, "Found per-vertex colors - ignoring. Please bake into a texture "
+				"(Lighting/shading -> Batch Bake in Maya)");
 			result->offsetToType[offset] = EVertexColors;
 			result->typeToOffset[EVertexColors] = offset;
 		} else {
-			SLog(EError, "Encountered an unknown source semantic: %s", 
-				inputs[i]->getSemantic());
+			SLog(EError, "Encountered an unknown source semantic: %s", semantic.c_str());
 		}
 	}
 	SAssert(result->typeToOffset[EPosition] != -1);
@@ -272,20 +275,21 @@ void writeGeometry(std::string id, int geomIndex, std::string matID, Transform t
 	os << "\t</shape>" << endl << endl;
 }
 
-void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, domGeometry &geom, 
+void loadGeometry(std::string prefixName, Transform transform, std::ostream &os, domGeometry &geom, 
 		StringMap &matLookupTable, const std::string &meshesDir) {
-	std::string geomName;
-	if (geom.getName() != NULL) {
-		geomName = geom.getName();
+	std::string identifier;
+	if (geom.getId() != NULL) {
+		identifier = geom.getId();
 	} else {
-		if (geom.getId() != NULL) {
-			geomName = geom.getId();
+		if (geom.getName() != NULL) {
+			identifier = geom.getName();
 		} else {
-			static int unnamedGeomCtr = 0;
-			geomName = formatString("unnamedGeom_%i", unnamedGeomCtr);
+			static int unnamedCtr = 0;
+			identifier = formatString("unnamedGeom_%i", unnamedCtr++);
 		}
 	}
-	SLog(EInfo, "Converting geometry \"%s\" (instantiated by %s)..", geomName.c_str(), nodeName.c_str());
+
+	SLog(EInfo, "Converting geometry \"%s\" (instantiated by %s)..", identifier.c_str(), prefixName.c_str());
 
 	domMesh *mesh = geom.getMesh().cast();
 	if (!mesh)
@@ -293,7 +297,7 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 
 	const domInputLocal_Array &vertInputs = mesh->getVertices()->getInput_array();
 
-	std::string xmlName = nodeName + std::string("_") + geom.getId();
+	std::string xmlName = prefixName + identifier;
 	int geomIndex = 0;
 
 	domTriangles_Array &trianglesArray = mesh->getTriangles_array();
@@ -366,7 +370,7 @@ void loadGeometry(std::string nodeName, Transform transform, std::ostream &os, d
 		tess_nSources = data->nSources;
 
 		for (size_t j=0; j<vcount.getCount(); ++j) {
-			size_t vertexCount = vcount.get(j);
+			size_t vertexCount = (size_t) vcount.get(j);
 
 			domUint *temp = new domUint[vertexCount * data->nSources];
 			for (size_t l = 0; l<vertexCount * data->nSources; ++l)
@@ -433,7 +437,17 @@ void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const std::stri
 }
 
 void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, StringMap &_idToTexture) {
-	SLog(EInfo, "Converting material \"%s\" ..", mat.getName());
+	std::string identifier;
+	if (mat.getId() != NULL) {
+		identifier = mat.getId();
+	} else {
+		if (mat.getName() != NULL) {
+			identifier = mat.getName();
+		} else {
+			static int unnamedCtr = 0;
+			identifier = formatString("unnamedMat_%i", unnamedCtr++);
+		}
+	}
 	StringMap idToTexture = _idToTexture;
 
 	daeURI &effRef = mat.getInstance_effect()->getUrl();
@@ -483,7 +497,9 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 		SLog(EError, "The technique element is missing!");
 
 	domProfile_COMMON::domTechnique::domPhong* phong = technique->getPhong();
+	domProfile_COMMON::domTechnique::domBlinn* blinn = technique->getBlinn();
 	domProfile_COMMON::domTechnique::domLambert* lambert = technique->getLambert();
+	domProfile_COMMON::domTechnique::domConstant* constant = technique->getConstant();
 
 	if (phong) {
 		domCommon_color_or_texture_type* diffuse = phong->getDiffuse();
@@ -499,12 +515,12 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 				isDiffuse = true;
 		}
 		if (isDiffuse) {
-			os << "\t<bsdf id=\"" << mat.getId() << "\" type=\"lambertian\">" << endl;
+			os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
 			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
 			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
 			os << "\t</bsdf>" << endl << endl;
 		} else {
-			os << "\t<bsdf id=\"" << mat.getId() << "\" type=\"phong\">" << endl;
+			os << "\t<bsdf id=\"" << identifier << "\" type=\"phong\">" << endl;
 			os << "\t\t<float name=\"specularReflectance\" value=\"1\"/>" << endl;
 			os << "\t\t<float name=\"diffuseReflectance\" value=\"1\"/>" << endl;
 			loadMaterialParam(cvt, os, "diffuseColor", idToTexture, diffuse, false);
@@ -517,17 +533,65 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 		}
 	} else if (lambert) {
 		domCommon_color_or_texture_type* diffuse = lambert->getDiffuse();
-		os << "\t<bsdf id=\"" << mat.getId() << "\" type=\"lambertian\">" << endl;
+		os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
 		loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
 		loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
 		os << "\t</bsdf>" << endl << endl;
+	} else if (blinn) {
+		SLog(EWarn, "\"%s\": Encountered a \"blinn\" COLLADA material, which is currently "
+			"unsupported in Mitsuba -- replacing it using a Phong material.", identifier.c_str());
+		domCommon_color_or_texture_type* diffuse = blinn->getDiffuse();
+		domCommon_color_or_texture_type* specular = blinn->getSpecular();
+		domCommon_float_or_param_type* shininess = blinn->getShininess();
+		bool isDiffuse = false;
+
+		if (specular->getColor().cast()) {
+			domFloat4 &colValue = specular->getColor()->getValue();
+			if (colValue.get(0) == colValue.get(1) &&
+				colValue.get(1) == colValue.get(2) &&
+				colValue.get(2) == 0)
+				isDiffuse = true;
+		}
+		if (isDiffuse) {
+			os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
+			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
+			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
+			os << "\t</bsdf>" << endl << endl;
+		} else {
+			os << "\t<bsdf id=\"" << identifier << "\" type=\"blinn\">" << endl;
+			os << "\t\t<float name=\"specularReflectance\" value=\"1\"/>" << endl;
+			os << "\t\t<float name=\"diffuseReflectance\" value=\"1\"/>" << endl;
+			loadMaterialParam(cvt, os, "diffuseColor", idToTexture, diffuse, false);
+			loadMaterialParam(cvt, os, "specularColor", idToTexture, specular, false);
+			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, false);
+			loadMaterialParam(cvt, os, "diffuseColor", idToTexture, diffuse, true);
+			loadMaterialParam(cvt, os, "specularColor", idToTexture, specular, true);
+			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, true);
+			os << "\t</bsdf>" << endl << endl;
+		}
+	} else if (constant) {
+		SLog(EWarn, "\"%s\": Encountered a \"constant\" COLLADA material, which is currently "
+			"unsupported in Mitsuba -- replacing it using a Lambertian material.", identifier.c_str());
+		os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\"/>" << endl << endl;
 	} else {
-		SLog(EError, "Material type not supported! (must be Lambertian/Phong)");
+		SLog(EError, "Material type not supported! (must be Lambertian/Phong/Blinn/Constant)");
 	}
 }
 
 void loadLight(Transform transform, std::ostream &os, domLight &light) {
-	SLog(EInfo, "Converting light \"%s\" ..", light.getName());
+	std::string identifier;
+	if (light.getId() != NULL) {
+		identifier = light.getId();
+	} else {
+		if (light.getName() != NULL) {
+			identifier = light.getName();
+		} else {
+			static int unnamedCtr = 0;
+			identifier = formatString("unnamedLight_%i", unnamedCtr++);
+		}
+	}
+
+	SLog(EInfo, "Converting light \"%s\" ..", identifier.c_str());
 	char *end_ptr = NULL;
 
 	// Lights in Mitsuba point along the positive Z axis (COLLADA: neg. Z)
@@ -560,9 +624,9 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 		if (point->getQuadratic_attenuation() && point->getQuadratic_attenuation()->getValue() != 1)
 			notQuadratic = true;
 		if (notQuadratic)
-			SLog(EWarn, "Point light \"%s\" is not a quadratic light! Treating it as one -- expect problems.", light.getId());
+			SLog(EWarn, "Point light \"%s\" is not a quadratic light! Treating it as one -- expect problems.", identifier.c_str());
 		domFloat3 &color = point->getColor()->getValue();
-		os << "\t<luminaire id=\"" << light.getId() << "\" type=\"point\">" << endl;
+		os << "\t<luminaire id=\"" << identifier << "\" type=\"point\">" << endl;
 		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
 		os << "\t\t<transform name=\"toWorld\">" << endl;
 		os << "\t\t\t<translate x=\"" << pos.x << "\" y=\"" << pos.y << "\" z=\"" << pos.z << "\"/>" << endl;
@@ -573,7 +637,7 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 	domLight::domTechnique_common::domDirectional *directional = light.getTechnique_common()->getDirectional().cast();
 	if (directional) {
 		domFloat3 &color = directional->getColor()->getValue();
-		os << "\t<luminaire id=\"" << light.getId() << "\" type=\"directional\">" << endl;
+		os << "\t<luminaire id=\"" << identifier << "\" type=\"directional\">" << endl;
 		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
 		os << "\t\t<transform name=\"toWorld\">" << endl;
 		os << "\t\t\t<lookAt ox=\"" << pos.x << "\" oy=\"" << pos.y << "\" oz=\"" << pos.z << "\" tx=\"" << target.x << "\" ty=\"" << target.y << "\" tz=\"" << target.z << "\"/>" << endl;
@@ -591,12 +655,12 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 		if (spot->getQuadratic_attenuation() && spot->getQuadratic_attenuation()->getValue() != 1)
 			notQuadratic = true;
 		if (notQuadratic)
-			SLog(EWarn, "Spot light \"%s\" is not a quadratic light! Treating it as one -- expect problems.", light.getId());
+			SLog(EWarn, "Spot light \"%s\" is not a quadratic light! Treating it as one -- expect problems.", identifier.c_str());
 		domFloat3 &color = spot->getColor()->getValue();
 		Float falloffAngle = 180.0f;
 		if (spot->getFalloff_angle())
 			falloffAngle = (Float) spot->getFalloff_angle()->getValue();
-		os << "\t<luminaire id=\"" << light.getId() << "\" type=\"spot\">" << endl;
+		os << "\t<luminaire id=\"" << identifier << "\" type=\"spot\">" << endl;
 		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
 		os << "\t\t<float name=\"cutoffAngle\" value=\"" << falloffAngle/2 << "\"/>" << endl << endl;
 		os << "\t\t<transform name=\"toWorld\">" << endl;
@@ -607,7 +671,7 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 	domLight::domTechnique_common::domAmbient *ambient = light.getTechnique_common()->getAmbient().cast();
 	if (ambient) {
 		domFloat3 &color = ambient->getColor()->getValue();
-		os << "\t<luminaire id=\"" << light.getId() << "\" type=\"constant\">" << endl;
+		os << "\t<luminaire id=\"" << identifier << "\" type=\"constant\">" << endl;
 		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
 		os << "\t</luminaire>" << endl << endl;
 	}
@@ -617,16 +681,28 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 
 void loadImage(GeometryConverter *cvt, std::ostream &os, const std::string &textureDir, 
 		domImage &image, StringMap &idToTexture, StringMap &fileToId) {
-	SLog(EInfo, "Converting texture \"%s\" ..", image.getName());
+	std::string identifier;
+	if (image.getId() != NULL) {
+		identifier = image.getId();
+	} else {
+		if (image.getName() != NULL) {
+			identifier = image.getName();
+		} else {
+			static int unnamedCtr = 0;
+			identifier = formatString("unnamedTexture_%i", unnamedCtr++);
+		}
+	}
+
+	SLog(EInfo, "Converting texture \"%s\" ..", identifier.c_str());
 
 	std::string filename = cdom::uriToFilePath(image.getInit_from()->getValue().str());
 	if (fileToId.find(filename) != fileToId.end()) {
-		idToTexture[image.getId()] = fileToId[filename];
+		idToTexture[identifier] = fileToId[filename];
 		return;
 	}
 
-	idToTexture[image.getId()] = image.getId();
-	fileToId[filename] = image.getId();
+	idToTexture[identifier] = identifier;
+	fileToId[filename] = identifier;
 
 	boost::filesystem::path path = boost::filesystem::path(filename, boost::filesystem::native);
 	std::string targetPath = textureDir + path.leaf();
@@ -655,13 +731,25 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const std::string &text
 		output->close();
 	}
 
-	os << "\t<texture id=\"" << image.getId() << "\" type=\"ldrtexture\">" << endl;
+	os << "\t<texture id=\"" << identifier << "\" type=\"ldrtexture\">" << endl;
 	os << "\t\t<string name=\"filename\" value=\"" << textureDir + path.leaf() << "\"/>" << endl;
 	os << "\t</texture>" << endl << endl;
 }
 
 void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, domCamera &camera) {
-	SLog(EInfo, "Converting camera \"%s\" ..", camera.getName());
+	std::string identifier;
+	if (camera.getId() != NULL) {
+		identifier = camera.getId();
+	} else {
+		if (camera.getName() != NULL) {
+			identifier = camera.getName();
+		} else {
+			static int unnamedCtr = 0;
+			identifier = formatString("unnamedCamera_%i", unnamedCtr++);
+		}
+	}
+
+	SLog(EInfo, "Converting camera \"%s\" ..", identifier.c_str());
 	Float aspect = 1.0f;
 	int xres=768;
 
@@ -683,7 +771,7 @@ void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, d
 			xres = cvt->m_xres;
 			aspect = (Float) cvt->m_xres / (Float) cvt->m_yres;
 		}
-		os << "\t<camera id=\"" << camera.getId() << "\" type=\"orthographic\">" << endl;
+		os << "\t<camera id=\"" << identifier << "\" type=\"orthographic\">" << endl;
 	}
 
 	domCamera::domOptics::domTechnique_common::domPerspective* persp = camera.getOptics()->
@@ -702,9 +790,9 @@ void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, d
 				}
 			}
 		}
-		os << "\t<camera id=\"" << camera.getId() << "\" type=\"perspective\">" << endl;
+		os << "\t<camera id=\"" << identifier << "\" type=\"perspective\">" << endl;
 		if (persp->getXfov().cast()) {
-			Float xFov = persp->getXfov()->getValue();
+			Float xFov = (Float) persp->getXfov()->getValue();
 			if (std::abs(xFov-1.0f) < Epsilon && cvt->m_fov == -1) {
 				SLog(EWarn, "Found the suspicious field of view value \"1.0\", which is likely due to a bug in Blender 2.5"
 					" - setting to 45deg. Please use the \"-f\" parameter to override this.");
@@ -718,7 +806,7 @@ void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, d
 			else
 				os << "\t\t<float name=\"fov\" value=\"" << yFov << "\"/>" << endl;
 		} else if (persp->getYfov().cast()) {
-			Float yFov = persp->getYfov()->getValue();
+			Float yFov = (Float) persp->getYfov()->getValue();
 			if (std::abs(yFov-1.0) < Epsilon && cvt->m_fov == -1) {
 				SLog(EWarn, "Found the suspicious field of view value \"1.0\", which is likely due to a bug in Blender 2.5"
 					" - setting to 45deg. Please use the \"-f\" parameter to override this.");
@@ -753,19 +841,19 @@ void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, d
 }
 
 void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os, 
-		domNode &node, const std::string &meshesDir) {
-	std::string nodeName;
-	if (node.getName() != NULL) {
-		nodeName = node.getName();
+		domNode &node, std::string prefixName, const std::string &meshesDir) {
+	std::string identifier;
+	if (node.getId() != NULL) {
+		identifier = node.getId();
 	} else {
-		if (node.getId() != NULL) {
-			nodeName = node.getId();
+		if (node.getName() != NULL) {
+			identifier = node.getName();
 		} else {
-			static int unnamedNodeCtr = 0;
-			nodeName = formatString("unnamedNode_%i", unnamedNodeCtr);
+			static int unnamedCtr = 0;
+			identifier = formatString("unnamedNode_%i", unnamedCtr);
 		}
 	}
-	SLog(EInfo, "Converting node \"%s\" ..", nodeName.c_str());
+	SLog(EInfo, "Converting node \"%s\" ..", identifier.c_str());
 
 	daeTArray<daeSmartRef<daeElement> > children = node.getChildren();
 	/* Parse transformations */
@@ -824,7 +912,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 
 		if (!geom)
 			SLog(EError, "Could not find a referenced geometry object!");
-		loadGeometry(nodeName, transform, os, *geom, matLookupTable, meshesDir);
+		loadGeometry(prefixName, transform, os, *geom, matLookupTable, meshesDir);
 	}
 	
 	/* Iterate over all light references */
@@ -850,7 +938,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 	/* Recursively iterate through sub-nodes */
 	domNode_Array &nodes = node.getNode_array();
 	for (size_t i=0; i<nodes.getCount(); ++i) 
-		loadNode(cvt, transform, os, *nodes[i], meshesDir);
+		loadNode(cvt, transform, os, *nodes[i], prefixName + identifier + "_" , meshesDir);
 
 	/* Recursively iterate through <instance_node> elements */
 	domInstance_node_Array &instanceNodes = node.getInstance_node_array();
@@ -858,7 +946,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 		domNode *node = daeSafeCast<domNode>(instanceNodes[i]->getUrl().getElement());
 		if (!node)
 			SLog(EError, "Could not find a referenced node!");
-		loadNode(cvt, transform, os, *node, meshesDir);
+		loadNode(cvt, transform, os, *node, prefixName + identifier + "_", meshesDir);
 	}
 }
 
@@ -949,7 +1037,7 @@ void GeometryConverter::convertCollada(const std::string &inputFile,
 	}
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
-		loadNode(this, Transform(), os, *nodes[i], meshesDirectory);
+		loadNode(this, Transform(), os, *nodes[i], "", meshesDirectory);
 
 	os << "</scene>" << endl;
 

@@ -18,6 +18,7 @@ public:
 		EPNG = 0,
 		EEXR,
 		ETGA,
+		EBMP,
 		EJPEG
 	};
 
@@ -104,6 +105,9 @@ protected:
 	
 	/// Load a file stored using the TGA file format
 	void loadTGA(Stream *stream);
+	
+	/// Load a file stored using the BMP file format
+	void loadBMP(Stream *stream);
 
 	/// Load a file stored using the JPEG file format
 	void loadJPEG(Stream *stream);

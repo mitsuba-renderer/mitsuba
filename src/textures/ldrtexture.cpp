@@ -11,7 +11,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Gamma-corrected bitmap texture using the JPG, TGA or PNG file format
+ * Gamma-corrected bitmap texture using the JPG, PNG, TGA or BMP
  */
 class LDRTexture : public Texture {
 public:
@@ -30,6 +30,8 @@ public:
 			m_format = Bitmap::EPNG;
 		else if (endsWith(lower, ".tga"))
 			m_format = Bitmap::ETGA;
+		else if (endsWith(lower, ".bmp"))
+			m_format = Bitmap::EBMP;
 		else
 			Log(EError, "Cannot deduce the file type of '%s'!", m_filename.c_str());
 
@@ -282,5 +284,5 @@ Shader *LDRTexture::createShader(Renderer *renderer) const {
 
 MTS_IMPLEMENT_CLASS_S(LDRTexture, false, Texture)
 MTS_IMPLEMENT_CLASS(LDRTextureShader, false, Shader)
-MTS_EXPORT_PLUGIN(LDRTexture, "LDR texture (JPG/TGA/PNG)");
+MTS_EXPORT_PLUGIN(LDRTexture, "LDR texture (JPG/PNG/TGA/BMP)");
 MTS_NAMESPACE_END
