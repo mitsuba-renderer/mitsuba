@@ -96,6 +96,8 @@ bool cleanupPass(DOMNode *node, const std::set<std::string> &removals) {
 				XMLString::release(&value);
 			}
 			XMLString::release(&nodeName);
+		} else if (node->getNodeType() == DOMNode::TEXT_NODE) {
+			return true;
 		}
 		DOMNode *child = node->getFirstChild();
 		while (child) {
@@ -181,7 +183,8 @@ void GeometryConverter::convert(const std::string &inputFile,
 		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *doc = parser->parse(wrapper);
 		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.c_str());
 	
-		std::set<std::string> removals;
+		std::set<std::string> removals, emptyList;
+		cleanupPass(adj, emptyList);
 		findRemovals(adj, removals);
 		cleanupPass(doc, removals);
 
@@ -212,7 +215,8 @@ void GeometryConverter::convert(const std::string &inputFile,
 		}
 
 		for (DOMNode *child = adjRoot->getFirstChild(); child != 0; child=child->getNextSibling())
-			docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
+			if (child->getNodeType() == DOMNode::ELEMENT_NODE)
+				docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
 
 		DOMLSSerializer *serializer = impl->createLSSerializer();
 		DOMConfiguration *serConf(serializer->getDomConfig());

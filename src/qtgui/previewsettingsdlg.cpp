@@ -62,9 +62,9 @@ PreviewSettingsDialog::PreviewSettingsDialog(QWidget *parent, SceneContext *ctx,
 		cap->isSupported(RendererCapabilities::EGeometryShaders)));
 	ui->previewMethodCombo->setCurrentIndex(ctx->previewMethod);
 	ui->toneMappingMethodCombo->setCurrentIndex(ctx->toneMappingMethod);
+	m_ignoreEvent = false;
 	ui->exposureSlider->setValue((int) ((ctx->toneMappingMethod == EGamma 
 		? ctx->exposure : ctx->reinhardBurn)*100));
-	m_ignoreEvent = false;
 	ui->keySlider->setValue((int) ((ctx->reinhardKey-REINHARD_MIN)/REINHARD_RANGE * 100));
 	ui->diffuseReceiversBox->setEnabled(ui->diffuseSourcesBox->isChecked());
 

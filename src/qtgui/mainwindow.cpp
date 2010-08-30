@@ -64,7 +64,8 @@ private:
 static int localWorkerCtr = 0, remoteWorkerCtr = 0;
 
 MainWindow::MainWindow(QWidget *parent) :
-	QMainWindow(parent), ui(new Ui::MainWindow), m_activeWindowHack(false) {
+	QMainWindow(parent), ui(new Ui::MainWindow), 
+	m_networkReply(NULL), m_activeWindowHack(false) {
 	Logger *logger = Thread::getThread()->getLogger();
 
 #if defined(__OSX__)
@@ -289,6 +290,8 @@ MainWindow::~MainWindow() {
 		ServerConnection &c = m_connections[i];
 		scheduler->unregisterWorker(c.worker);
 	}
+	if (m_networkReply)
+		m_networkReply->abort();
 #if defined(__OSX__)
 	delete ui->menuBar;
 #endif
@@ -381,7 +384,7 @@ void MainWindow::adjustSize() {
 
 void MainWindow::checkForUpdates(bool notifyIfNone) {
 	m_notifyIfNoUpdates = notifyIfNone;
-	m_networkManager->get(QNetworkRequest(QUrl("http://www.mitsuba-renderer.org/version")));
+	m_networkReply = m_networkManager->get(QNetworkRequest(QUrl("http://www.mitsuba-renderer.org/version")));
 }
 
 void MainWindow::onNetworkFinished(QNetworkReply *reply) {

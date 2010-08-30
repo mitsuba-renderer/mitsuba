@@ -145,6 +145,7 @@ private:
 	ServerWidget *m_serverWidget;
 	ref<QConsoleAppender> m_consoleAppender;
 	QNetworkAccessManager *m_networkManager;
+	QNetworkReply *m_networkReply;
 	QProgressBar *m_progress;
 	QLabel *m_progressLabel;
 	QWidget *m_progressWidget;
