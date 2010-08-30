@@ -85,7 +85,7 @@ void FileStream::open(const std::string &filename, EFileMode mode) {
 		Log(EError, "Unknown file mode");
 		break;
 	}
-	
+
 	m_file = CreateFile(filename.c_str(), dwDesiredAccess, 
 		FILE_SHARE_WRITE | FILE_SHARE_READ, 0, 
 		dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, 0);

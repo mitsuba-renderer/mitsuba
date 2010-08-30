@@ -256,7 +256,7 @@ libcore_objects = [
 	'src/libcore/cstream.cpp', 'src/libcore/mstream.cpp', 
 	'src/libcore/sched.cpp', 'src/libcore/sched_remote.cpp',
 	'src/libcore/sshstream.cpp', 'src/libcore/wavelet.cpp',
-	'src/libcore/shvector.cpp'
+	'src/libcore/zstream.cpp', 'src/libcore/shvector.cpp'
 ]
 if sys.platform == 'darwin':
 	coreEnv_osx = coreEnv.Clone();

@@ -10,7 +10,7 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE MemoryStream : public Stream {
 public:
-	/// Create a new console stream
+	/// Create a new memory stream
 	MemoryStream(size_t initialSize = 512);
 
 	/// Return the underlying data
@@ -40,11 +40,7 @@ public:
 protected:
 	void resize(size_t newSize);
 
-	/** \brief Virtual destructor
-	 *
-	 * The destructor frees all resources and closes
-	 * the socket if it is still open
-	 */
+	// \brief Virtual destructor
 	virtual ~MemoryStream();
 protected:
 	size_t m_capacity;

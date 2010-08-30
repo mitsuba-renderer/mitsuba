@@ -1,9 +1,11 @@
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/random.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/zstream.h>
 
-#define MTS_FILEFORMAT_HEADER  0x041C
-#define MTS_FILEFORMAT_VERSION 0x01
+#define MTS_FILEFORMAT_HEADER 0x041C
+#define MTS_FILEFORMAT_VERSION_V1 0x01
+#define MTS_FILEFORMAT_VERSION_V2 0x02
 
 MTS_NAMESPACE_BEGIN
 
@@ -46,7 +48,9 @@ TriMesh::TriMesh(Stream *stream, InstanceManager *manager)
 	configure();
 }
 	
-TriMesh::TriMesh(Stream *stream) : Shape(Properties()) {
+TriMesh::TriMesh(Stream *_stream) : Shape(Properties()) {
+	ref<Stream> stream = _stream;
+
 	Assert(sizeof(Vertex) == 14*sizeof(Float));
 	Assert(sizeof(Triangle) == 3*sizeof(int));	
 	if (stream->getByteOrder() != Stream::ENetworkByteOrder) 
@@ -61,8 +65,14 @@ TriMesh::TriMesh(Stream *stream) : Shape(Properties()) {
 	if (stream->readShort() != MTS_FILEFORMAT_HEADER)
 		Log(EError, "Encountered an invalid file format!");
 
-	if (stream->readShort() != MTS_FILEFORMAT_VERSION)
+	short version = stream->readShort();
+
+	if (version != MTS_FILEFORMAT_VERSION_V1 &&
+		version != MTS_FILEFORMAT_VERSION_V2)
 		Log(EError, "Encountered an incompatible file version!");
+
+	if (version == MTS_FILEFORMAT_VERSION_V2)
+		stream = new ZStream(stream);
 
 	bool fileDoublePrecision = stream->readBool();
 	m_vertexCount = (size_t) stream->readULong();
@@ -291,7 +301,9 @@ void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
 		m_triangleCount * sizeof(Triangle)/sizeof(int));
 }
 
-void TriMesh::serialize(Stream *stream) const {
+void TriMesh::serialize(Stream *_stream) const {
+	ref<Stream> stream = _stream;
+
 	Assert(sizeof(Vertex) == 14*sizeof(Float));
 	Assert(sizeof(Triangle) == 3*sizeof(int));
 
@@ -306,7 +318,9 @@ void TriMesh::serialize(Stream *stream) const {
 #endif
 
 	stream->writeShort(MTS_FILEFORMAT_HEADER);
-	stream->writeShort(MTS_FILEFORMAT_VERSION);
+	stream->writeShort(MTS_FILEFORMAT_VERSION_V2);
+
+	stream = new ZStream(stream, Z_BEST_COMPRESSION);
 	stream->writeBool(doublePrecision);
 	stream->writeULong(m_vertexCount);
 	stream->writeFloatArray(reinterpret_cast<Float *>(m_vertexBuffer), 
