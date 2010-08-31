@@ -220,7 +220,7 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 
 	for (size_t i=0; i<tess_data.size(); i+=tess_nSources) {
 		Vertex vertex;
-		domUint posRef = tess_data[i+vData->typeToOffset[EPosition]];
+		domUint posRef = tess_data[i+vData->typeToOffsetInStream[EPosition]];
 		vertex.v = vData->data[vData->typeToOffset[EPosition]][posRef].toPoint();
 
 		if (vData->typeToOffset[ENormal] != -1) {
