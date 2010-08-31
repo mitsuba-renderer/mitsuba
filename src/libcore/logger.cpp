@@ -64,6 +64,15 @@ void Logger::log(ELogLevel level, const Class *theClass,
 			}
 		}
 #endif
+
+#if defined(WIN32)
+		if (IsDebuggerPresent()) {
+			__asm {
+				int 0x03
+			}
+		}
+#endif
+
 		throw std::runtime_error(text);
 	}
 }

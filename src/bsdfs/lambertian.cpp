@@ -57,8 +57,6 @@ public:
 		bRec.wo = squareToHemispherePSA(bRec.sample);
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
-		if (Frame::cosTheta(bRec.wo) == 0)
-			return Spectrum(0.0f);
 		return m_reflectance->getValue(bRec.its) / Frame::cosTheta(bRec.wo);
 	}
 
@@ -69,8 +67,6 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
 		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-		if (Frame::cosTheta(bRec.wo) == 0)
-			return Spectrum(0.0f);
 		return m_reflectance->getValue(bRec.its) * INV_PI;
 	}
 		

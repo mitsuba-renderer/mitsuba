@@ -219,7 +219,7 @@ public:
  * choosing a point on the in-scattering line integral (while solving 
  * the radiative transfer equation using Monte Carlo methods).
  */
-struct MediumSamplingRecord {
+struct MTS_EXPORT_RENDER MediumSamplingRecord {
 public:
 	inline MediumSamplingRecord() : medium(NULL) { }
 
@@ -433,7 +433,7 @@ public:
  * Data structure, which contains all information required to
  * sample or query a BSDF. 
  */
-struct BSDFQueryRecord {
+struct MTS_EXPORT_RENDER BSDFQueryRecord {
 public:
 	/**
 	 * Given a surface interaction and an incident direction 

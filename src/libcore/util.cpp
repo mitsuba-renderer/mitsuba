@@ -459,6 +459,12 @@ Vector squareToHemispherePSA(const Point2 &sample) {
 	Float dirY = r * std::sin(phi);
 	Float z = std::sqrt(1 - std::min((Float) 1, dirX*dirX + dirY*dirY));
 
+	if (EXPECT_NOT_TAKEN(z == 0)) {
+		/* Guard against numerical imprecisions */
+		return normalize(Vector(
+			dirX, dirY, Epsilon));
+	}
+
 	return Vector(
 		dirX, dirY, z
 	);

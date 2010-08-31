@@ -23,6 +23,7 @@
     <file>resources/showStats.png</file>
     <file>resources/remove.png</file>
     <file>resources/preview.png</file>
+    <file>resources/fpreview.png</file>
     <file>resources/branch-open.png</file>
     <file>resources/clone.png</file>
     <file>resources/server.png</file>
