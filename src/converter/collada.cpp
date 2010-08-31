@@ -396,7 +396,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 		if (polylist->getMaterial() == NULL || matLookupTable.find(polylist->getMaterial()) == matLookupTable.end())
 			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
 		else
-			matID = polylist->getMaterial();
+			matID = matLookupTable[polylist->getMaterial()];
 
 		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, meshesDir);
 		delete data;
