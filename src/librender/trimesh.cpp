@@ -143,7 +143,7 @@ Float TriMesh::sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const
 void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, bool complain) {
 	/* Calculate smooth normals if there aren't any */
 	int zeroArea = 0, zeroNormals = 0;
-
+		
 	if (!hasNormals) {
 		for (unsigned int i=0; i<m_vertexCount; i++)
 			m_vertexBuffer[i].n = Normal(0.0, 0.0f, 0.0f);

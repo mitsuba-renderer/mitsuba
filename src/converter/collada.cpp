@@ -65,8 +65,8 @@ struct VertexData {
 	bool hasUVs;
 	GLdouble *glPos;
 	std::vector<Vec4 *> data;
-	std::vector<ESourceType> offsetToType;
 	std::vector<int> typeToOffset;
+	std::vector<int> typeToOffsetInStream;
 
 	VertexData() : glPos(NULL) {
 	}
@@ -94,17 +94,18 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 	result->hasNormals = false;
 	result->hasUVs = false;
 	result->nSources = inputs.getCount();
-	result->data.resize(inputs.getCount());
-	for (size_t i=0; i<inputs.getCount(); ++i)
+	result->data.resize(result->nSources);
+	for (size_t i=0; i<result->nSources; ++i)
 		result->data[i] = NULL;
-	result->offsetToType.resize(inputs.getCount());
 	result->typeToOffset.resize(ELast);
+	result->typeToOffsetInStream.resize(ELast);
 	for (int i=0; i<ELast; ++i)
-		result->typeToOffset[i] = -1;
+		result->typeToOffset[i] = result->typeToOffsetInStream[i] = -1;
 	int vertInputIndex = 0;
 
 	for (size_t i=0; i<inputs.getCount(); ++i) {
-		int offset = (int) inputs[i]->getOffset();
+		int offsetInStream = (int) inputs[i]->getOffset(),
+		    offset = offsetInStream;
 		daeURI &sourceRef = inputs[i]->getSource();
 		sourceRef.resolveElement();
 		domSource *source = daeSafeCast<domSource>(sourceRef.getElement());
@@ -115,6 +116,13 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 			sourceRef.resolveElement();
 			source = daeSafeCast<domSource>(sourceRef.getElement());
 			semantic = vertInputs[vertInputIndex]->getSemantic();
+
+			if (vertInputIndex > 0) {
+				offset = result->data.size();
+				result->data.resize(result->data.size()+1);
+				result->data[offset] = NULL;
+			}
+
 			if (++vertInputIndex < (int) vertInputs.getCount())
 				--i;
 		}
@@ -141,8 +149,8 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 		if (semantic == "POSITION") {
 			SAssert(accessor->getStride() == 3);
 			SAssert(result->typeToOffset[EPosition] == -1);
-			result->offsetToType[offset] = EPosition;
 			result->typeToOffset[EPosition] = offset;
+			result->typeToOffsetInStream[EPosition] = offsetInStream;
 			result->glPos = new GLdouble[3*size];
 			for (int k=0; k<3*size; ++k)
 				result->glPos[k] = floatArray[k];
@@ -150,22 +158,22 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 			SAssert(accessor->getStride() == 3);
 			SAssert(result->typeToOffset[ENormal] == -1);
 			result->hasNormals = true;
-			result->offsetToType[offset] = ENormal;
 			result->typeToOffset[ENormal] = offset;
+			result->typeToOffsetInStream[ENormal] = offsetInStream;
 		} else if (semantic == "TEXCOORD") {
 			SAssert(accessor->getStride() == 2 || accessor->getStride() == 3);
 			if (result->typeToOffset[EUV] == -1) {
 				result->hasUVs = true;
-				result->offsetToType[offset] = EUV;
 				result->typeToOffset[EUV] = offset;
+				result->typeToOffsetInStream[EUV] = offsetInStream;
 			} else {
 				SLog(EWarn, "Found multiple sets of texture coordinates - ignoring!");
 			}
 		} else if (semantic == "COLOR") {
 			SLog(EWarn, "Found per-vertex colors - ignoring. Please bake into a texture "
 				"(Lighting/shading -> Batch Bake in Maya)");
-			result->offsetToType[offset] = EVertexColors;
 			result->typeToOffset[EVertexColors] = offset;
+			result->typeToOffsetInStream[EVertexColors] = offsetInStream;
 		} else {
 			SLog(EError, "Encountered an unknown source semantic: %s", semantic.c_str());
 		}
@@ -200,7 +208,7 @@ public:
 	}
 };
 
-void writeGeometry(std::string id, int geomIndex, std::string matID, Transform transform, 
+void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::string matID, Transform transform, 
 		std::ostream &os, VertexData *vData, const std::string &meshesDirectory) {
 	std::vector<Vertex> vertexBuffer;
 	std::vector<Triangle> triangles;
@@ -216,12 +224,12 @@ void writeGeometry(std::string id, int geomIndex, std::string matID, Transform t
 		vertex.v = vData->data[vData->typeToOffset[EPosition]][posRef].toPoint();
 
 		if (vData->typeToOffset[ENormal] != -1) {
-			domUint normalRef = tess_data[i+vData->typeToOffset[ENormal]];
+			domUint normalRef = tess_data[i+vData->typeToOffsetInStream[ENormal]];
 			vertex.n = vData->data[vData->typeToOffset[ENormal]][normalRef].toNormal();
 		}
 		
 		if (vData->typeToOffset[EUV] != -1) {
-			domUint uvRef = tess_data[i+vData->typeToOffset[EUV]];
+			domUint uvRef = tess_data[i+vData->typeToOffsetInStream[EUV]];
 			vertex.uv = vData->data[vData->typeToOffset[EUV]][uvRef].toPoint2();
 		}
 
@@ -263,8 +271,8 @@ void writeGeometry(std::string id, int geomIndex, std::string matID, Transform t
 			matrix << transform.getMatrix()->m[i][j] << " ";
 	std::string matrixValues = matrix.str();
 
-	os << "\t<shape id=\"" << id << "\" type=\"serialized\">" << endl;
-	os << "\t\t<string name=\"filename\" value=\"" << filename.c_str() << "\"/>" << endl;
+	os << "\t<shape id=\"" << prefixName << "/" << id << "\" type=\"serialized\">" << endl;
+	os << "\t\t<string name=\"filename\" value=\"" << filename << "\"/>" << endl;
 	if (!transform.isIdentity()) {
 		os << "\t\t<transform name=\"toWorld\">" << endl;
 		os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
@@ -290,14 +298,12 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 	}
 
 	SLog(EInfo, "Converting geometry \"%s\" (instantiated by %s)..", identifier.c_str(), prefixName.c_str());
-
 	domMesh *mesh = geom.getMesh().cast();
 	if (!mesh)
 		SLog(EError, "Invalid geometry type encountered (must be a <mesh>)!");
 
 	const domInputLocal_Array &vertInputs = mesh->getVertices()->getInput_array();
 
-	std::string xmlName = prefixName + identifier;
 	int geomIndex = 0;
 
 	domTriangles_Array &trianglesArray = mesh->getTriangles_array();
@@ -315,7 +321,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
 		else
 			matID = matLookupTable[triangles->getMaterial()];
-		writeGeometry(xmlName, geomIndex, matID, transform, os, data, meshesDir);
+		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, meshesDir);
 		delete data;
 		++geomIndex;
 	}
@@ -353,7 +359,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 		else
 			matID = matLookupTable[polygons->getMaterial()];
 
-		writeGeometry(xmlName, geomIndex, matID, transform, os, data, meshesDir);
+		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, meshesDir);
 		delete data;
 		++geomIndex;
 	}
@@ -393,7 +399,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 		else
 			matID = polylist->getMaterial();
 
-		writeGeometry(xmlName, geomIndex, matID, transform, os, data, meshesDir);
+		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, meshesDir);
 		delete data;
 		++geomIndex;
 	}
@@ -914,7 +920,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 			SLog(EError, "Could not find a referenced geometry object!");
 		loadGeometry(prefixName, transform, os, *geom, matLookupTable, meshesDir);
 	}
-	
+
 	/* Iterate over all light references */
 	domInstance_light_Array &instanceLights = node.getInstance_light_array();
 	for (size_t i=0; i<instanceLights.getCount(); ++i) {
@@ -938,7 +944,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 	/* Recursively iterate through sub-nodes */
 	domNode_Array &nodes = node.getNode_array();
 	for (size_t i=0; i<nodes.getCount(); ++i) 
-		loadNode(cvt, transform, os, *nodes[i], prefixName + identifier + "_" , meshesDir);
+		loadNode(cvt, transform, os, *nodes[i], prefixName + std::string("/") + identifier, meshesDir);
 
 	/* Recursively iterate through <instance_node> elements */
 	domInstance_node_Array &instanceNodes = node.getInstance_node_array();
@@ -946,7 +952,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 		domNode *node = daeSafeCast<domNode>(instanceNodes[i]->getUrl().getElement());
 		if (!node)
 			SLog(EError, "Could not find a referenced node!");
-		loadNode(cvt, transform, os, *node, prefixName + identifier + "_", meshesDir);
+		loadNode(cvt, transform, os, *node, prefixName + std::string("/") + identifier, meshesDir);
 	}
 }
 

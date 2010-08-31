@@ -232,18 +232,22 @@ void Bitmap::loadBMP(Stream *stream) {
 #if defined(WIN32)
 #pragma pack(push, 1)
 #endif
-	struct {
+	struct 
+#if !defined(WIN32)
+		__attribute__((__packed__))
+#endif
+	{
 		uint16_t magic;
 		uint32_t size;
 		uint16_t creator1, creator2;
 		uint32_t offset;
-	} BMPFileHeader
-#if !defined(WIN32)
-		__attribute__((__packed__))
-#endif
-	;
+	} BMPFileHeader;
 
-	struct {
+	struct 
+#if !defined(WIN32)
+	__attribute__((__packed__))
+#endif
+	{
 		uint32_t header_sz;
 		uint32_t width;
 		uint32_t height;
@@ -255,12 +259,9 @@ void Bitmap::loadBMP(Stream *stream) {
 		uint32_t vres;
 		uint32_t ncolors;
 		uint32_t nimpcolors;
-	} DIBHeader
+	} DIBHeader;
 #if defined(WIN32)
-	;
 #pragma pack(pop)
-#else
-	__attribute__((__packed__));
 #endif
 
 	Assert(sizeof(BMPFileHeader) == 14);
