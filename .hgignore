@@ -5,6 +5,7 @@
 .*\.pyc$
 .*\.o$
 .*\.exe$
+.*\.pdb$
 .*\.manifest$
 .*\.exp$
 .*\.dylib$

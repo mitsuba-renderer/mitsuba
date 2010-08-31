@@ -143,7 +143,7 @@ Float TriMesh::sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const
 void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, bool complain) {
 	/* Calculate smooth normals if there aren't any */
 	int zeroArea = 0, zeroNormals = 0;
-		
+	
 	if (!hasNormals) {
 		for (unsigned int i=0; i<m_vertexCount; i++)
 			m_vertexBuffer[i].n = Normal(0.0, 0.0f, 0.0f);
@@ -153,13 +153,14 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 			const Point &v2 = m_vertexBuffer[m_triangles[i].idx[2]].v;
 			Normal n = Normal(cross(v1 - v0, v2 - v0));
 			Float length = n.length();
-			if (length != 0)
+			if (length != 0) {
 				n /= length;
-			else
+				m_vertexBuffer[m_triangles[i].idx[0]].n += n;
+				m_vertexBuffer[m_triangles[i].idx[1]].n += n;
+				m_vertexBuffer[m_triangles[i].idx[2]].n += n;
+			} else {
 				zeroArea++;
-			m_vertexBuffer[m_triangles[i].idx[0]].n += n;
-			m_vertexBuffer[m_triangles[i].idx[1]].n += n;
-			m_vertexBuffer[m_triangles[i].idx[2]].n += n;
+			}
 		}
 		for (unsigned int i=0; i<m_vertexCount; i++) {
 			Float length = m_vertexBuffer[i].n.length();
@@ -228,32 +229,32 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 				/* Recovery - required to recover from invalid geometry */
 				Normal n = Normal(cross(v1 - v0, v2 - v0));
 				Float length = n.length();
-				if (length != 0)
+				if (length != 0) {
 					n /= length;
-				else
+					dpdu = cross(n, dpdv);
+					if (dpdu.length() == 0.0f) {
+						/* At least create some kind of tangent space basis 
+						(fair enough for isotropic BxDFs) */
+						coordinateSystem(n, dpdu, dpdv);
+					}
+				} else {
 					zeroArea++;
-				dpdu = cross(n, dpdv);
-
-				if (dpdu.length() == 0.0f) {
-					/* At least create some kind of tangent space basis 
-					   (fair enough for isotropic BxDFs) */
-					coordinateSystem(n, dpdu, dpdv);
 				}
 			}
 
 			if (dpdv.length() == 0.0f) {
 				Normal n = Normal(cross(v1 - v0, v2 - v0));
 				Float length = n.length();
-				if (length != 0)
+				if (length != 0) {
 					n /= length;
-				else
+					dpdv = cross(dpdu, n);
+					if (dpdv.length() == 0.0f) {
+						/* At least create some kind of tangent space basis 
+						   (fair enough for isotropic BxDFs) */
+						coordinateSystem(n, dpdu, dpdv);
+					}
+				} else {
 					zeroArea++;
-				dpdv = cross(dpdu, n);
-
-				if (dpdv.length() == 0.0f) {
-					/* At least create some kind of tangent space basis 
-					   (fair enough for isotropic BxDFs) */
-					coordinateSystem(n, dpdu, dpdv);
 				}
 			}
 
@@ -271,7 +272,7 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 			Vector dpdu = m_vertexBuffer[i].dpdu;
 			Vector dpdv = m_vertexBuffer[i].dpdv;
  
-			if (dpdu.length() == 0.0f || dpdv.length() == 0.0f) {
+			if (dpdu.lengthSquared() == 0.0f || dpdv.lengthSquared() == 0.0f) {
 				/* At least create some kind of tangent space basis 
 				   (fair enough for isotropic BxDFs) */
 				coordinateSystem(m_vertexBuffer[i].n, dpdu, dpdv);

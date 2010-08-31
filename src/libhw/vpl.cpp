@@ -192,8 +192,8 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 
 	if (farClip < 0 || nearClip >= farClip) {
 		/* Unable to find any surface - just default values based on the scene size */
-		nearClip = 1e-3 * m_scene->getBSphere().radius;
-		farClip = 1e3 * m_scene->getBSphere().radius;
+		nearClip = 1e-3f * m_scene->getBSphere().radius;
+		farClip = 1e3f * m_scene->getBSphere().radius;
 		m_minDist = 0;
 	}
 
@@ -358,8 +358,8 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "   vec3 wi = vec3(dot(S, nCamVec)," << endl
 			<< "                  dot(T, nCamVec)," << endl
 			<< "                  dot(N, nCamVec));" << endl
-			<< "   if (wi.z < 0)" << endl
-			<< "      discard;" << endl
+//			<< "   if (wi.z < 0)" << endl
+//			<< "      discard;" << endl
 			<< "   vec3 vplWo = -vec3(dot(vplS, nLightVec)," << endl
 			<< "                      dot(vplT, nLightVec)," << endl
 			<< "                      dot(vplN, nLightVec));" << endl

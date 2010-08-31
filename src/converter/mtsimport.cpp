@@ -61,7 +61,7 @@ void help() {
 		<<  "   -p <num>    Use the specified number of samples per pixel." << endl << endl
 		<<  "   -s          Assume that colors are in sRGB space." << endl << endl
 		<<  "   -m          Map the larger image side to the full field of view" << endl << endl
-		<<  "   -r <w>x<h>  Override the image resolution to e.g. 1920×1080" << endl << endl
+		<<  "   -r <w>x<h>  Override the image resolution to e.g. 1920x1080" << endl << endl
 		<<  "   -f <fov>    Override the field of view to the given value in degrees." << endl << endl
 		<< "Please see the documentation for more information." << endl;
 }
