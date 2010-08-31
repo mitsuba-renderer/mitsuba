@@ -120,6 +120,8 @@ void TriMesh::configure() {
 
 	if (m_areaPDF.isReady())
 		return;
+
+	AssertEx(m_triangleCount > 0, "Encountered an empty triangle mesh!");
 	for (size_t i=0; i<m_triangleCount; i++)
 		m_areaPDF.put(m_triangles[i].surfaceArea(m_vertexBuffer));
 	m_surfaceArea = m_areaPDF.build();
