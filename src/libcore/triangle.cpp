@@ -132,10 +132,12 @@ AABB Triangle::getClippedAABB(const Vertex *buffer, const AABB &aabb) const {
 		result.expandBy(vertices[i]);
 
 	/* Cover up some numerical imprecisions */
+
 	for (int i=0; i<3; ++i)
-		result.min[i] -= Epsilon;
+		result.min[i] -= Epsilon * std::abs(result.min[i]);
 	for (int i=0; i<3; ++i)
-		result.max[i] += Epsilon;
+		result.max[i] += Epsilon * std::abs(result.max[i]);
+
 	result.clip(aabb);
 
 	return result;

@@ -119,8 +119,7 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 
 			if (vertInputIndex > 0) {
 				offset = result->data.size();
-				result->data.resize(result->data.size()+1);
-				result->data[offset] = NULL;
+				result->data.push_back(NULL);
 			}
 
 			if (++vertInputIndex < (int) vertInputs.getCount())
@@ -227,7 +226,7 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 			domUint normalRef = tess_data[i+vData->typeToOffsetInStream[ENormal]];
 			vertex.n = vData->data[vData->typeToOffset[ENormal]][normalRef].toNormal();
 		}
-		
+
 		if (vData->typeToOffset[EUV] != -1) {
 			domUint uvRef = tess_data[i+vData->typeToOffsetInStream[EUV]];
 			vertex.uv = vData->data[vData->typeToOffset[EUV]][uvRef].toPoint2();
@@ -889,8 +888,18 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 					Point((Float) value.get(3), (Float) value.get(4), (Float) value.get(5)),
 					Vector((Float) value.get(6), (Float) value.get(7), (Float) value.get(8))
 			);
+		} else if (element->typeID() == domMatrix::ID()) {
+			daeTArray<double> value = daeSafeCast<domMatrix>(element)->getValue();
+			ref<Matrix4x4> matrix = new Matrix4x4(
+				(Float) value.get(0), (Float) value.get(1), (Float) value.get(2), (Float) value.get(3), 
+				(Float) value.get(4), (Float) value.get(5), (Float) value.get(6), (Float) value.get(7), 
+				(Float) value.get(8), (Float) value.get(9), (Float) value.get(10), (Float) value.get(11), 
+				(Float) value.get(12), (Float) value.get(13), (Float) value.get(14), (Float) value.get(15)
+			);
+			transform = transform * Transform(matrix);
 		}
 	}
+
 
 	/* Iterate over all geometry references */
 	domInstance_geometry_Array &instanceGeometries = node.getInstance_geometry_array();

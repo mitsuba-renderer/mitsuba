@@ -294,7 +294,7 @@ void KDTree::buildTree(int nodeIndex, int depth, int badRefines,
 	Float invSA = 1.0f / aabb.getSurfaceArea();
 	Float nodeCost = m_intersectionCost * numPrims;
 	Score bestSplit;
-
+	
 	if (depth >= m_maxDepth || numPrims <= m_stopPrims) {
 		createLeaf(nodeIndex, depth, numPrims, allEvents);
 		return;

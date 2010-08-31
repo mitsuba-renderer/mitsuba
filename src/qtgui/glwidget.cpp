@@ -732,7 +732,7 @@ void GLWidget::paintGL() {
 					uint8_t *targetData = m_fallbackBitmap->getData();
 					for (int y=0; y<source->getHeight(); ++y) {
 						for (int x=0; x<source->getWidth(); ++x) {
-							const Float invGammaValue = 0.45455;
+							const float invGammaValue = 0.45455f;
 							*targetData++ = (uint8_t) std::max(std::min(std::pow(*sourceData++, invGammaValue) * 255.0f, 255.0f), 0.0f);
 							*targetData++ = (uint8_t) std::max(std::min(std::pow(*sourceData++, invGammaValue) * 255.0f, 255.0f), 0.0f);
 							*targetData++ = (uint8_t) std::max(std::min(std::pow(*sourceData++, invGammaValue) * 255.0f, 255.0f), 0.0f);
