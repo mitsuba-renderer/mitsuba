@@ -972,6 +972,8 @@ void MainWindow::on_actionPreviewSettings_triggered() {
 		connect(m_previewSettings, SIGNAL(previewMethodChanged(EPreviewMethod)), ui->glView, SLOT(setPreviewMethod(EPreviewMethod)));
 		connect(m_previewSettings, SIGNAL(toneMappingMethodChanged(EToneMappingMethod)), ui->glView, SLOT(setToneMappingMethod(EToneMappingMethod)));
 		connect(m_previewSettings, SIGNAL(close()), this, SLOT(onPreviewSettingsClose()));
+		connect(m_previewSettings, SIGNAL(diffuseReceiversChanged(bool)), ui->glView, SLOT(setDiffuseReceivers(bool)));
+		connect(m_previewSettings, SIGNAL(diffuseSourcesChanged(bool)), ui->glView, SLOT(setDiffuseSources(bool)));
 	}
 	SceneContext *ctx = NULL;
 	if (ui->tabBar->currentIndex() != -1)
