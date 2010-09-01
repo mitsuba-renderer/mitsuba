@@ -456,9 +456,12 @@ void GLWidget::timerImpulse() {
 	if (m_context->renderJob) {
 		m_context->renderJob->cancel();
 		m_context->cancelled = true;
+		m_context->cancelMode = EPreview;
 		return;
-	} else {
+	} else if (m_context->mode != EPreview) {
 		m_context->mode = EPreview;
+		// causes updateUI to be called in the main window
+		emit stopRendering(); 
 	}
 
 	resetPreview();
@@ -468,7 +471,7 @@ void GLWidget::resetPreview() {
 	if (!m_context || !m_context->scene || !m_preview->isRunning())
 		return;
 	bool motion = m_leftKeyDown || m_rightKeyDown || 
-	m_upKeyDown || m_downKeyDown || m_mouseButtonDown;
+		m_upKeyDown || m_downKeyDown || m_mouseButtonDown;
 	m_preview->setSceneContext(m_context, false, motion);
 	updateGL();
 }
@@ -658,8 +661,8 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *event) {
 	if (!m_preview->isRunning())
 		return;
 	if (event->buttons() == 0) {
+		m_mouseButtonDown = false;
 		if (m_didSetCursor) {
-			m_mouseButtonDown = false;
 			resetPreview();
 			QApplication::restoreOverrideCursor();
 			QCursor::setPos(m_initialMousePos);

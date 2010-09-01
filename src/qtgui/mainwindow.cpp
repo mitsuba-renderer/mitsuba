@@ -181,7 +181,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 	QToolButton *previewButton = static_cast<QToolButton *>(ui->toolBar->widgetForAction(ui->actionPreviewSettings));
 	previewButton->setStyleSheet("margin-left: -5px; margin-right:-5px");
-
+	
 	/* Weird Qt/OSX bug -- moving while a window while it is invisible causes 
 	   it to appear move up by 65 pixels (this is related to the unified toolbar) */
 	move(windowPos + QPoint(0, 65));
@@ -499,6 +499,7 @@ void MainWindow::onProgressMessage(const RenderJob *job, const QString &name,
 	context->progressName = name + ": ";
 	updateUI();
 }
+
 void MainWindow::on_actionOpen_triggered() {
 	QFileDialog *dialog = new QFileDialog(this, Qt::Sheet);
 	dialog->setNameFilter(tr("Mitsuba scenes (*.xml);;EXR images (*.exr)"));
@@ -662,23 +663,10 @@ void MainWindow::updateUI() {
 	bool fallback = ui->glView->isUsingSoftwareFallback();
 
 	ui->actionStop->setEnabled(isShowingRendering);
-	if (isShowingRendering && !isRendering) {
-		if (ui->actionStop->text() != tr("Preview")) {
-			QIcon icon;
-			ui->actionStop->setText(tr("Preview"));
-			ui->actionStop->setToolTip(tr("Return to the realtime preview"));
-			icon.addFile(QString::fromUtf8(":/resources/fpreview.png"), QSize(), QIcon::Normal, QIcon::Off);
-			ui->actionStop->setIcon(icon);
-		}
-	} else {
-		if (ui->actionStop->text() != tr("Stop")) {
-			QIcon icon;
-			ui->actionStop->setText(tr("Stop"));
-			ui->actionStop->setToolTip(tr("Stop rendering"));
-			icon.addFile(QString::fromUtf8(":/resources/stop.png"), QSize(), QIcon::Normal, QIcon::Off);
-			ui->actionStop->setIcon(icon);
-		}
-	}
+	if (isShowingRendering && !isRendering)
+		ui->actionStop->setToolTip(tr("Return to the realtime preview"));
+	else
+		ui->actionStop->setToolTip(tr("Stop rendering"));
 
 	ui->actionRender->setEnabled(isInactiveScene);
 	ui->actionRefresh->setEnabled(isInactiveScene);
@@ -1133,6 +1121,7 @@ void MainWindow::on_actionRender_triggered() {
 	scene->setBlockSize(m_blockSize);
 	context->renderJob = new RenderJob("rend", scene, m_renderQueue, NULL, 
 		context->sceneResID, -1, -1, false);
+	context->cancelMode = ERender;
 	if (context->mode != ERender)
 		ui->glView->downloadFramebuffer();
 	context->cancelled = false;
@@ -1358,6 +1347,7 @@ void MainWindow::onJobFinished(const RenderJob *job, bool cancelled) {
 				tr("The rendering job did not complete successfully. Please check the log."), 
 				QMessageBox::Ok);
 		} else {
+			context->mode = context->cancelMode;
 			if (ui->tabBar->currentIndex() != -1 &&
 				m_context[ui->tabBar->currentIndex()] == context)
 				ui->glView->resumePreview();

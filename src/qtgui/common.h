@@ -123,7 +123,7 @@ struct SceneContext {
 	float progress;
 	QString eta, progressName;
 	ref<Bitmap> framebuffer;
-	EMode mode;
+	EMode mode, cancelMode;
 	Float gamma, exposure, clamping;
 	bool srgb;
 	int pathLength, shadowMapResolution;
