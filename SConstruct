@@ -491,7 +491,7 @@ plugins += env.SharedLibrary('plugins/obj', ['src/shapes/obj.cpp'])
 plugins += env.SharedLibrary('plugins/serialized', ['src/shapes/serialized.cpp'])
 plugins += env.SharedLibrary('plugins/sphere', ['src/shapes/sphere.cpp'])
 plugins += env.SharedLibrary('plugins/cylinder', ['src/shapes/cylinder.cpp'])
-plugins += env.SharedLibrary('plugins/hair', ['src/shapes/hair.cpp'])
+plugins += env.SharedLibrary('plugins/hair', ['src/shapes/hair.cpp', 'src/shapes/miterseg.cpp'])
 #plugins += env.SharedLibrary('plugins/group', ['src/shapes/group.cpp'])
 
 # Samplers
