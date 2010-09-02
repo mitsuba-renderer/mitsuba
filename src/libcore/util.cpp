@@ -177,6 +177,10 @@ bool endsWith(const std::string& str, const std::string& end) {
 	return (pos == str.size() - end.size()) && str.length() >= end.length();
 }
 
+bool startsWith(const std::string& str, const std::string& start) {
+	return str.find(start) == 0;
+}
+
 void * __restrict allocAligned(size_t size) {
 #if defined(WIN32)
 	return _aligned_malloc(size, L1_CACHE_LINE_SIZE);

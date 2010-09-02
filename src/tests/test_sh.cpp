@@ -1,0 +1,84 @@
+#include <mitsuba/render/testcase.h>
+#include <mitsuba/core/shvector.h>
+
+MTS_NAMESPACE_BEGIN
+
+class TestSphericalHarmonics : public TestCase {
+public:
+	MTS_BEGIN_TESTCASE()
+	MTS_DECLARE_TEST(test01_shRotation)
+	MTS_DECLARE_TEST(test02_shSampler)
+	MTS_END_TESTCASE()
+
+	void test01_shRotation() {
+		/* Generate a random SH expansion, rotate it and 
+		   spot-check 100 times against the original */
+
+		ref<Random> random = new Random();
+		int bands = 8;
+
+		SHVector vec1(bands);
+		for (int l=0; l<bands; ++l)
+			for (int m=-l; m<=l; ++m)
+				vec1(l, m) = random->nextFloat();
+
+		Vector axis(squareToSphere(Point2(random->nextFloat(), random->nextFloat())));
+		Transform trafo = Transform::rotate(axis, random->nextFloat()*360);
+		Transform inv = trafo.inverse();
+		SHRotation rot(vec1.getBands());
+
+		SHVector::rotation(trafo, rot);
+		SHVector vec2(bands);
+
+		rot(vec1, vec2);
+
+		for (int i=0; i<100; ++i) {
+			Vector dir1(squareToSphere(Point2(random->nextFloat(), random->nextFloat()))), dir2;
+			trafo(dir1, dir2);
+
+			Float value1 = vec1.eval(dir2);
+			Float value2 = vec2.eval(dir1);
+			Assert(std::abs(value1-value2) < Epsilon);
+		}
+	}
+
+	struct ClampedCos {
+		Vector axis;
+		ClampedCos(Vector axis) : axis(axis) { }
+		Float operator()(const Vector &w) const { return std::max((Float) 0, dot(w, axis)); }
+	};
+
+	void test02_shSampler() {
+		/* Draw 100 samples from a SH expansion of a clamped cosine-shaped
+		   distribution and verify the returned probabilities */
+		int bands = 13, numSamples = 100, depth = 12;
+
+		Vector v = normalize(Vector(1, 2, 3));
+		ref<Random> random = new Random();
+		SHVector clampedCos = SHVector(bands);
+		clampedCos.project(ClampedCos(v), numSamples);
+		//Float clampedCosError = clampedCos.l2Error(ClampedCos(v), numSamples);
+		clampedCos.normalize();
+
+		//cout << "Projection error = " << clampedCosError << endl;
+		//cout << "Precomputing mip-maps" << endl;
+		ref<SHSampler> sampler = new SHSampler(bands, depth);
+		//cout << "Done: "<< sampler->toString() << endl;
+		Float accum = 0;
+		int nsamples = 100, nInAvg = 0;
+		for (int i=0; i<=nsamples; ++i) {
+			Point2 sample(random->nextFloat(), random->nextFloat());
+			Float pdf1 = sampler->warp(clampedCos, sample);
+			Float pdf2 = dot(v, sphericalDirection(sample.x, sample.y))/M_PI;
+			Float relerr = std::abs(pdf1-pdf2)/pdf2;
+			if (pdf2 > 0.01) {
+				accum += relerr; ++nInAvg;
+				Assert(relerr < 0.08);
+			}
+		}
+		Assert(accum / nInAvg < 0.01);
+	}
+};
+
+MTS_EXPORT_TESTCASE(TestSphericalHarmonics, "Testcase for Spherical Harmonics code")
+MTS_NAMESPACE_END

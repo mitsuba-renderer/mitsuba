@@ -36,6 +36,9 @@ extern MTS_EXPORT_CORE std::string toUpperCase(const std::string &string);
 /// Trim spaces (' ', '\n', '\r', '\t') from the ends of a string
 extern MTS_EXPORT_CORE std::string trim(const std::string& str);
 
+/// Determines whether a string starts with the string given as second parameter
+extern MTS_EXPORT_CORE bool startsWith(const std::string& str, const std::string& start);
+
 /// Determines whether a string ends with the string given as second parameter
 extern MTS_EXPORT_CORE bool endsWith(const std::string& str, const std::string& end);
 

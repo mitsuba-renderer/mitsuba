@@ -5,9 +5,9 @@
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/render/renderjob.h>
+#include <mitsuba/render/shandler.h>
 #include <fstream>
 #include <stdexcept>
-#include "shandler.h"
 
 #if defined(WIN32)
 #include "getopt.h"

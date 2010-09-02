@@ -234,7 +234,7 @@ public:
 
 				Float value = f(sphericalDirection(theta, phi))*std::sin(theta)
 					* weightExt*weightInt;
-				
+
 				for (int l=0; l<m_bands; ++l) {
 					for (int m=1; m<=l; ++m) {
 						Float L = legendre(l, m, cosTheta) * normalization(l, m);

@@ -635,5 +635,4 @@ std::string Scene::toString() const {
 }
 
 MTS_IMPLEMENT_CLASS_S(Scene, false, ConfigurableObject)
-MTS_IMPLEMENT_CLASS(Utility, true, Object)
 MTS_NAMESPACE_END

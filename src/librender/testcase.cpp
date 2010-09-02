@@ -5,6 +5,9 @@
 
 MTS_NAMESPACE_BEGIN
 
+void TestCase::init() { }
+void TestCase::shutdown() { }
+
 struct Sample {
 	Float value;
 	Float variance;
@@ -169,4 +172,5 @@ void TestSupervisor::printSummary() const {
 }
 
 MTS_IMPLEMENT_CLASS(TestSupervisor, false, Object)
+MTS_IMPLEMENT_CLASS(TestCase, false, Utility)
 MTS_NAMESPACE_END

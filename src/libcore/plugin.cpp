@@ -76,8 +76,8 @@ ConfigurableObject *Plugin::createInstance(const Properties &props) const {
 	return (ConfigurableObject *) m_createInstance(props);
 }
 
-Utility *Plugin::createUtility(UtilityServices *us) const {
-	return (Utility *) m_createUtility(us);
+Utility *Plugin::createUtility() const {
+	return (Utility *) m_createUtility();
 }
 
 std::string Plugin::getDescription() const {

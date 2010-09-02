@@ -277,6 +277,12 @@ env.Append(LIBPATH=['src/libcore'])
 # Rendering-specific library
 renderEnv = env.Clone()
 renderEnv.Append(CPPDEFINES = {'MTS_BUILD_MODULE' : 'MTS_MODULE_RENDER'} )
+if renderEnv.has_key('XERCESINCLUDE'):
+	renderEnv.Append(CPPPATH=renderEnv['XERCESINCLUDE'])
+if renderEnv.has_key('XERCESLIBDIR'):
+	renderEnv.Append(LIBPATH=renderEnv['XERCESLIBDIR'])
+if renderEnv.has_key('XERCESLIB'):
+	renderEnv.Append(LIBS=renderEnv['XERCESLIB'])
 librender = renderEnv.SharedLibrary('src/librender/mitsuba-render', [
 	'src/librender/bsdf.cpp', 'src/librender/camera.cpp',
 	'src/librender/film.cpp', 'src/librender/integrator.cpp',
@@ -295,7 +301,8 @@ librender = renderEnv.SharedLibrary('src/librender/mitsuba-render', [
 	'src/librender/preview.cpp', 'src/librender/photonmap.cpp',
 	'src/librender/gatherproc.cpp', 'src/librender/mipmap3d.cpp',
 	'src/librender/volume.cpp', 'src/librender/vpl.cpp',
-	'src/librender/shader.cpp'
+	'src/librender/shader.cpp', 'src/librender/shandler.cpp',
+	'src/librender/util.cpp'
 ])
 
 if sys.platform == "darwin":
@@ -353,12 +360,6 @@ env['SHLIBPREFIX']=''
 
 # Environment with Xerces + wxWidgets
 mainEnv = env.Clone()
-if mainEnv.has_key('XERCESINCLUDE'):
-	mainEnv.Append(CPPPATH=mainEnv['XERCESINCLUDE'])
-if mainEnv.has_key('XERCESLIBDIR'):
-	mainEnv.Append(LIBPATH=mainEnv['XERCESLIBDIR'])
-if mainEnv.has_key('XERCESLIB'):
-	mainEnv.Append(LIBS=mainEnv['XERCESLIB'])
 if mainEnv.has_key('GLLIB'):
 	mainEnv.Append(LIBS=mainEnv['GLLIB'])
 if mainEnv.has_key('GLLIBDIR'):
@@ -374,12 +375,11 @@ darwinStub = []
 if sys.platform == 'win32':
 	resources += [env.RES('tools/windows/mitsuba_res.rc'),
 		env.StaticObject('src/mitsuba/getopt.c')]
-shandler = mainEnv.StaticObject('src/mitsuba/shandler.cpp')
 
 # Build the command-line+GUI interface
 mainEnv.Program('mtssrv', resources + ['src/mitsuba/mtssrv.cpp'])
-mainEnv.Program('mitsuba', resources + ['src/mitsuba/mitsuba.cpp', shandler])
-mainEnv.Program('mtsutil', resources + ['src/mitsuba/mtsutil.cpp', shandler])
+mainEnv.Program('mitsuba', resources + ['src/mitsuba/mitsuba.cpp'])
+mainEnv.Program('mtsutil', resources + ['src/mitsuba/mtsutil.cpp'])
 
 if sys.platform == 'darwin':
 	mainEnv_osx = mainEnv.Clone();
@@ -388,7 +388,6 @@ if sys.platform == 'darwin':
 	mainEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing');
 	darwinStub += [mainEnv_osx.StaticObject('src/mitsuba/darwin_stub.mm')]
 
-env.Program('src/utils/utils_test', ['src/utils/utils_test.cpp'])
 env.Program('src/utils/joinrgb', ['src/utils/joinrgb.cpp'])
 env.Program('src/utils/ttest', ['src/utils/ttest.cpp'])
 env.Program('src/utils/createvol', ['src/utils/createvol.cpp'])
@@ -433,7 +432,7 @@ if hasQt:
 	qtInterfaces = [qtEnv.Uic4(uic) for uic in scanFiles('src/qtgui', ['*.ui'])]
 	qtResources = [qtEnv.Qrc(qrc) for qrc in scanFiles('src/qtgui', ['*.qrc'])]
 
-	qtgui_files = scanFiles('src/qtgui', ['*.cpp']) + qtResources + shandler + resources
+	qtgui_files = scanFiles('src/qtgui', ['*.cpp']) + qtResources + resources
 	
 	if hasCollada:
 		qtgui_files += converter_objects
@@ -598,6 +597,11 @@ plugins += env.SharedLibrary('plugins/vpl', ['src/integrators/vpl/vpl.cpp'])
 #	'src/integrators/bidir/mlt_proc.cpp',
 #	pathvertex_mlt, path_mlt
 #])
+
+# Testcases
+for plugin in glob.glob('src/tests/test_*.cpp'):
+	name = os.path.basename(plugin)
+	plugins += env.SharedLibrary('plugins/' + name[0:len(name)-4], plugin)
 
 installTargets = []
 
