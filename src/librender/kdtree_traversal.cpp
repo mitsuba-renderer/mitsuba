@@ -211,8 +211,15 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 	++raysTraced;
 	if (m_rootBounds.rayIntersect(ray, mint, maxt)) {
 		its.t = std::numeric_limits<Float>::infinity(); 
-		if (ray.mint > mint)
-			mint = ray.mint;
+		
+		/* Adaptive ray epsilon */
+		Float rayMinT = ray.mint;
+		if (rayMinT == Epsilon)
+			rayMinT *= std::max(std::max(std::abs(ray.o.x), 
+				std::abs(ray.o.y)), std::abs(ray.o.z));
+		
+		if (rayMinT > mint)
+			mint = rayMinT;
 		if (ray.maxt < maxt)
 			maxt = ray.maxt;
 		if (maxt <= mint)
