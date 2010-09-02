@@ -252,20 +252,6 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 				}
 #endif
 
-#if 0
-				/* Slightly offset along the normal to avoid surface acne.
-				   The offset is dependent on the magnitude of each component */
-				if (dot(faceNormal, ray.d) < 0) {
-					its.p.x += faceNormal.x * std::abs(its.p.x) * 1e-6f;
-					its.p.y += faceNormal.y * std::abs(its.p.y) * 1e-6f;
-					its.p.z += faceNormal.z * std::abs(its.p.z) * 1e-6f;
-				} else {
-					its.p.x -= faceNormal.x * std::abs(its.p.x) * 1e-6f;
-					its.p.y -= faceNormal.y * std::abs(its.p.y) * 1e-6f;
-					its.p.z -= faceNormal.z * std::abs(its.p.z) * 1e-6f;
-				}
-#endif
-
 				const Vector b(1 - its.uv.x - its.uv.y,
 					its.uv.x, its.uv.y);
 
