@@ -390,8 +390,6 @@ if sys.platform == 'darwin':
 
 env.Program('src/utils/utils_test', ['src/utils/utils_test.cpp'])
 env.Program('src/utils/joinrgb', ['src/utils/joinrgb.cpp'])
-env.Program('src/utils/ssalbedo', ['src/utils/ssalbedo.cpp'])
-env.Program('src/utils/dumpimage', ['src/utils/dumpimage.cpp'])
 env.Program('src/utils/ttest', ['src/utils/ttest.cpp'])
 env.Program('src/utils/createvol', ['src/utils/createvol.cpp'])
 
