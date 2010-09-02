@@ -48,7 +48,10 @@ void help() {
 	cout <<  "   -v          Be more verbose" << endl << endl;
 
 	FileResolver *resolver = FileResolver::getInstance();
-	cout << "The following utilities are available:" << endl << endl;
+	std::ostringstream utilities, testcases;
+
+	testcases << "The following testcases are available:" << endl << endl;
+	utilities << endl << "The following utilities are available:" << endl << endl;
 
 	std::vector<std::string> dirPaths = resolver->resolveAllAbsolute("plugins");
 	std::set<std::string> seen;
@@ -86,10 +89,17 @@ void help() {
 			Plugin utility(shortName, fullName);
 			if (!utility.isUtility())
 				continue;
-			cout << "\t" << shortName;
-			for (int i=0; i<22-(int) shortName.length(); ++i)
-				cout << ' ';
-			cout  << utility.getDescription() << endl;
+			if (startsWith(shortName, "test_")) {
+				testcases << "\t" << shortName;
+				for (int i=0; i<22-(int) shortName.length(); ++i)
+					testcases << ' ';
+				testcases << utility.getDescription() << endl;
+			} else {
+				utilities << "\t" << shortName;
+				for (int i=0; i<22-(int) shortName.length(); ++i)
+					utilities << ' ';
+				utilities << utility.getDescription() << endl;
+			}
 #if !defined(WIN32)	
 		}
 #else
@@ -97,6 +107,8 @@ void help() {
 		FindClose(hFind);
 #endif
 	}
+
+	cout << testcases.str() << utilities.str();
 }
 
 
@@ -294,7 +306,7 @@ int ubi_main(int argc, char **argv) {
 #endif
 			}
 
-			SLog(EError, "Ran %i tests, %i succeeded, %i failed.", executed, succeeded, executed-succeeded);
+			SLog(EInfo, "Ran %i tests, %i succeeded, %i failed.", executed, succeeded, executed-succeeded);
 		} else {
 			if (argc <= optind) {
 				std::cerr << "A utility name must be supplied!" << endl;
