@@ -346,7 +346,7 @@ void TriMesh::serialize(Stream *_stream) const {
 	stream->writeShort(MTS_FILEFORMAT_HEADER);
 	stream->writeShort(MTS_FILEFORMAT_VERSION_V2);
 
-	stream = new ZStream(stream, Z_BEST_COMPRESSION);
+	stream = new ZStream(stream);
 	stream->writeBool(doublePrecision);
 	stream->writeULong(m_vertexCount);
 	stream->writeFloatArray(reinterpret_cast<Float *>(m_vertexBuffer), 
