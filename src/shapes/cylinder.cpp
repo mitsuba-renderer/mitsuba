@@ -69,29 +69,35 @@ public:
 	}
 
 	bool rayIntersect(const Ray &_ray, Float start, Float end, Float &t) const {
-		Float nearT, farT; Ray ray;
+		double nearT, farT; Ray ray;
 
 		/* Transform into the local coordinate system and normalize */
 		m_worldToObject(_ray, ray);
+		
+		const double
+			ox = ray.o.x,
+			oy = ray.o.y,
+			dx = ray.d.x, 
+			dy = ray.d.y;
 
-		const Float A = ray.d.x*ray.d.x + ray.d.y*ray.d.y;
-		const Float B = 2 * (ray.d.x*ray.o.x + ray.d.y*ray.o.y);
-		const Float C = ray.o.x*ray.o.x + ray.o.y*ray.o.y - m_radius*m_radius;
+		const double A = dx*dx + dy*dy;
+		const double B = 2 * (dx*ox + dy*oy);
+		const double C = ox*ox + oy*oy - m_radius*m_radius;
 
-		if (!solveQuadratic(A, B, C, nearT, farT))
+		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
 		if (nearT > end || farT < start)
 			return false;
 
-		const Float zPosNear = ray.o.z + ray.d.z * nearT;
-		const Float zPosFar = ray.o.z + ray.d.z * farT;
+		const double zPosNear = ray.o.z + ray.d.z * nearT;
+		const double zPosFar = ray.o.z + ray.d.z * farT;
 		if (zPosNear >= 0 && zPosNear <= m_length && nearT >= start) {
-			t = nearT;
+			t = (Float) nearT;
 		} else if (zPosFar >= 0 && zPosFar <= m_length) {
 			if (farT > end)
 				return false;
-			t = farT;
+			t = (Float) farT;
 		} else {
 			return false;
 		}
@@ -123,20 +129,6 @@ public:
 		its.wi = its.toLocal(-ray.d);
 		its.hasUVPartials = false;
 		its.shape = this;
-
-		/* Intersection refinement step */
-		Vector2 localDir(normalize(Vector2(local.x, local.y)));
-		Vector rel = its.p - m_objectToWorld(Point(m_radius  * localDir.x, 
-			m_radius * localDir.y, local.z));
-		Float correction = -dot(rel, its.geoFrame.n)/dot(ray.d, its.geoFrame.n);
-
-		its.t += correction;
-		if (its.t < ray.mint || its.t > ray.maxt) {
-			its.t = std::numeric_limits<Float>::infinity(); 
-			return false;
-		}
-
-		its.p += ray.d * correction;
 
 		return true;
 	}

@@ -6,10 +6,10 @@
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/render/util.h>
 #include <mitsuba/render/renderjob.h>
+#include <mitsuba/render/shandler.h>
 #include <fstream>
 #include <stdexcept>
 #include <sys/types.h>
-#include "shandler.h"
 
 #if !defined(WIN32)
 #include <dlfcn.h>
@@ -23,36 +23,6 @@
 #endif
 
 using namespace mitsuba;
-
-class UtilityServicesImpl : public UtilityServices {
-public:
-	ref<Scene> loadScene(const std::string &filename) {
-		/* Prepare for parsing scene descriptions */
-		FileResolver *resolver = FileResolver::getInstance();
-		SAXParser* parser = new SAXParser();
-		std::string schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
-
-		/* Check against the 'scene.xsd' XML Schema */
-		parser->setDoSchema(true);
-		parser->setValidationSchemaFullChecking(true);
-		parser->setValidationScheme(SAXParser::Val_Always);
-		parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
-
-		std::map<std::string, std::string> parameters;
-		SceneHandler *handler = new SceneHandler(parameters);
-		parser->setDoNamespaces(true);
-		parser->setDocumentHandler(handler);
-		parser->setErrorHandler(handler);
-			
-		parser->parse(filename.c_str());
-		ref<Scene> scene = handler->getScene();
-
-		delete parser;
-		delete handler;
-
-		return scene;
-	}
-};
 
 void help() {
 	cout <<  "Mitsuba version " MTS_VERSION ", Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl;
@@ -74,10 +44,14 @@ void help() {
 	cout <<  "   -s file     Connect to additional Mitsuba servers specified in a file" << endl;
 	cout <<  "               with one name per line (same format as in -c)" << endl<< endl;
 	cout <<  "   -n name     Assign a node name to this instance (Default: host name)" << endl << endl;
+	cout <<  "   -t          Execute all testcases" << endl << endl;
 	cout <<  "   -v          Be more verbose" << endl << endl;
 
 	FileResolver *resolver = FileResolver::getInstance();
-	cout << "The following utilities are available:" << endl << endl;
+	std::ostringstream utilities, testcases;
+
+	testcases << "The following testcases are available:" << endl << endl;
+	utilities << endl << "The following utilities are available:" << endl << endl;
 
 	std::vector<std::string> dirPaths = resolver->resolveAllAbsolute("plugins");
 	std::set<std::string> seen;
@@ -115,10 +89,17 @@ void help() {
 			Plugin utility(shortName, fullName);
 			if (!utility.isUtility())
 				continue;
-			cout << "\t" << shortName;
-			for (int i=0; i<22-(int) shortName.length(); ++i)
-				cout << ' ';
-			cout  << utility.getDescription() << endl;
+			if (startsWith(shortName, "test_")) {
+				testcases << "\t" << shortName;
+				for (int i=0; i<22-(int) shortName.length(); ++i)
+					testcases << ' ';
+				testcases << utility.getDescription() << endl;
+			} else {
+				utilities << "\t" << shortName;
+				for (int i=0; i<22-(int) shortName.length(); ++i)
+					utilities << ' ';
+				utilities << utility.getDescription() << endl;
+			}
 #if !defined(WIN32)	
 		}
 #else
@@ -126,6 +107,8 @@ void help() {
 		FindClose(hFind);
 #endif
 	}
+
+	cout << testcases.str() << utilities.str();
 }
 
 
@@ -140,6 +123,7 @@ int ubi_main(int argc, char **argv) {
 		bool quietMode = false;
 		ELogLevel logLevel = EInfo;
 		FileResolver *resolver = FileResolver::getInstance();
+		bool testCaseMode = false;
 
 		if (argc < 2) {
 			help();
@@ -148,7 +132,7 @@ int ubi_main(int argc, char **argv) {
 
 		optind = 1;
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "a:c:s:n:p:qhv")) != -1) {
+		while ((optchar = getopt(argc, argv, "a:c:s:n:p:qhvt")) != -1) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
@@ -158,6 +142,9 @@ int ubi_main(int argc, char **argv) {
 					break;
 				case 'c':
 					networkHosts = networkHosts + std::string(";") + std::string(optarg);
+					break;
+				case 't':
+					testCaseMode = true;
 					break;
 				case 's': {
 						std::ifstream is(optarg);
@@ -261,36 +248,96 @@ int ubi_main(int argc, char **argv) {
 
 		scheduler->start();
 
-		if (argc <= optind) {
-			std::cerr << "A utility name must be supplied!" << endl;
-			return -1;
-		}
+		if (testCaseMode) {
+			std::vector<std::string> dirPaths = resolver->resolveAllAbsolute("plugins");
+			std::set<std::string> seen;
+			int executed = 0, succeeded = 0;
 
-		/* Build the full plugin file name */
-#if defined(WIN32)
-		std::string shortName = std::string("plugins/") + argv[optind] + std::string(".dll");
-#elif defined(__OSX__)
-		std::string shortName = std::string("plugins/") + argv[optind] + std::string(".dylib");
+			for (size_t i=0; i<dirPaths.size(); ++i) {
+				std::string dirPath = dirPaths[i];
+
+#if !defined(WIN32)
+				DIR *directory;
+				struct dirent *dirinfo;
+
+				if ((directory = opendir(dirPath.c_str())) == NULL)
+					SLog(EInfo, "Could not open plugin directory");
+
+				while ((dirinfo = readdir(directory)) != NULL) {
+					std::string fname(dirinfo->d_name);
+					if (!endsWith(fname, ".dylib") && !endsWith(fname, ".so"))
+						continue;
+					std::string fullName = dirPath + "/" + fname;
 #else
-		std::string shortName = std::string("plugins/") + argv[optind] + std::string(".so");
+				HANDLE hFind;
+				WIN32_FIND_DATA findFileData;
+
+				if ((hFind = FindFirstFile((dirPath + "\\*.dll").c_str(), &findFileData)) == INVALID_HANDLE_VALUE)
+					SLog(EInfo, "Could not open plugin directory");
+				
+				do {
+					std::string fname = findFileData.cFileName;
+					std::string fullName = dirPath + "\\" + fname;
 #endif
-		std::string fullName = resolver->resolve(shortName);
+					std::string shortName = fname.substr(0, strrchr(fname.c_str(), '.') - fname.c_str());
+					if (!startsWith(shortName, "test_") || seen.find(shortName) != seen.end())
+						continue;
+					seen.insert(shortName);
+					Plugin plugin(shortName, fullName);
+					if (!plugin.isUtility())
+						continue;
 
-		if (!FileStream::exists(fullName)) {
-			/* Plugin not found! */
-			SLog(EError, "Utility \"%s\" not found (run \"mtsutil\" without arguments to "
-				"see a list of available utilities)", fullName.c_str());
+					ref<Utility> utility = plugin.createUtility();
+					
+					TestCase *testCase = static_cast<TestCase *>(utility.get());
+					if (!utility->getClass()->derivesFrom(TestCase::m_theClass))
+						SLog(EError, "This is not a test case!");
+
+					if (testCase->run(argc-optind, argv+optind) != 0)
+						SLog(EError, "Testcase unexpectedly returned with a nonzero value.");
+
+					executed += testCase->getExecuted();
+					succeeded += testCase->getSucceeded();
+#if !defined(WIN32)	
+				}
+#else
+				} while (FindNextFile(hFind, &findFileData));
+				FindClose(hFind);
+#endif
+			}
+
+			SLog(EInfo, "Ran %i tests, %i succeeded, %i failed.", executed, succeeded, executed-succeeded);
+		} else {
+			if (argc <= optind) {
+				std::cerr << "A utility name must be supplied!" << endl;
+				return -1;
+			}
+
+			/* Build the full plugin file name */
+#if defined(WIN32)
+			std::string shortName = std::string("plugins/") + argv[optind] + std::string(".dll");
+#elif defined(__OSX__)
+			std::string shortName = std::string("plugins/") + argv[optind] + std::string(".dylib");
+#else
+			std::string shortName = std::string("plugins/") + argv[optind] + std::string(".so");
+#endif
+			std::string fullName = resolver->resolve(shortName);
+
+			if (!FileStream::exists(fullName)) {
+				/* Plugin not found! */
+				SLog(EError, "Utility \"%s\" not found (run \"mtsutil\" without arguments to "
+					"see a list of available utilities)", fullName.c_str());
+			}
+			SLog(EInfo, "Loading utility \"%s\" ..", argv[optind]);
+			Plugin *plugin = new Plugin(argv[optind], fullName);
+			if (!plugin->isUtility())
+				SLog(EError, "This plugin does not implement the 'Utility' interface!");
+			Statistics::getInstance()->logPlugin(argv[optind], plugin->getDescription());
+		
+			ref<Utility> utility = plugin->createUtility();
+
+			return utility->run(argc-optind, argv+optind);
 		}
-		SLog(EInfo, "Loading utility \"%s\" ..", argv[optind]);
-		Plugin *plugin = new Plugin(argv[optind], fullName);
-		if (!plugin->isUtility())
-			SLog(EError, "This plugin does not implement the 'Utility' interface!");
-		Statistics::getInstance()->logPlugin(argv[optind], plugin->getDescription());
-	
-		UtilityServices *utilityServices = new UtilityServicesImpl();
-		Utility *utility = plugin->createUtility(utilityServices);
-
-		return utility->run(argc-optind, argv+optind);
 	} catch (const std::exception &e) {
 		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
 	} catch (...) {

@@ -36,17 +36,14 @@ MTS_NAMESPACE_BEGIN
 
 class ROT13Encoder : public Utility {
 public:
-	ROT13Encoder(UtilityServices *us) : Utility(us) { }
-
 	int run(int argc, char **argv) {
 		cout << "Hello world!" << endl;
 		return 0;
 	}
 
-	MTS_DECLARE_CLASS()
+	MTS_DECLARE_UTILITY()
 };
 
-MTS_IMPLEMENT_CLASS(ROT13Encoder, false, Utility)
 MTS_EXPORT_UTILITY(ROT13Encoder, "Perform a ROT13 encryption of a string")
 MTS_NAMESPACE_END
 \end{cpp}

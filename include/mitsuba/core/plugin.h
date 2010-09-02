@@ -6,7 +6,6 @@
 MTS_NAMESPACE_BEGIN
 
 class Utility;
-class UtilityServices;
 
 /**
  * Abstract plugin class -- can represent loadable configurable objects
@@ -15,7 +14,7 @@ class UtilityServices;
  */
 class MTS_EXPORT_CORE Plugin {
 	typedef void *(*CreateInstanceFunc)(const Properties &props);
-	typedef void *(*CreateUtilityFunc)(UtilityServices *us);
+	typedef void *(*CreateUtilityFunc)();
 	typedef char *(*GetDescriptionFunc)();
 public:
 	/// Load a plugin from the supplied path
@@ -31,7 +30,7 @@ public:
 	ConfigurableObject *createInstance(const Properties &props) const;
 
 	/// Return an utility instance (if this is an utility plugin)
-	Utility *createUtility(UtilityServices *us) const;
+	Utility *createUtility() const;
 
 	/// Return a description of this plugin
 	std::string getDescription() const;

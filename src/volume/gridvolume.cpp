@@ -124,6 +124,18 @@ public:
 		m_filename = filename;
 		m_fromStream = false;
 
+		char header[3];
+		stream->read(header, 3);
+		if (header[0] != 'V' || header[1] != 'O' || header[2] != 'L')
+			Log(EError, "Encountered an invalid volume data file (incorrect header identifier)");
+		uint8_t version;
+		stream->read(&version, 1);
+		if (version != 3)
+			Log(EError, "Encountered an invalid volume data file (incorrect file version)");
+		int type = stream->readInt();
+		if (type != 1)
+			Log(EError, "Encountered an invalid volume data file (incorrect data type)");
+
 		int xres = stream->readInt(), yres=stream->readInt(), zres=stream->readInt();
 		m_res = Vector3i(xres, yres, zres);
 		m_channels = stream->readInt();
@@ -142,11 +154,11 @@ public:
 		int fd = open(resolved.c_str(), O_RDONLY);
 		if (fd == -1)
 			Log(EError, "Could not open \"%s\"!", m_filename.c_str());
-		m_mmapSize = (nEntries+10)*sizeof(float);
+		m_mmapSize = (nEntries+12)*sizeof(float);
 		m_mmapPtr = mmap(NULL, m_mmapSize, PROT_READ, MAP_SHARED, fd, 0);
 		if (m_mmapPtr == NULL)
 			Log(EError, "Could not map \"%s\" to memory!", m_filename.c_str());
-		m_data = ((float *) m_mmapPtr) + 10;
+		m_data = ((float *) m_mmapPtr) + 12;
 		if (close(fd) != 0)
 			Log(EError, "close(): unable to close file!");
 #elif defined(WIN32)

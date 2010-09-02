@@ -108,9 +108,7 @@ public:
 
 	/// Cast a shadow ray
 	inline bool isOccluded(const Point &p1, const Point &p2) const {
-		Intersection its;
-		Vector direction = p2 - p1;
-		Ray ray(p1, direction);
+		Ray ray(p1, p2-p1);
 		ray.mint = ShadowEpsilon;
 		ray.maxt = 1-ShadowEpsilon;
 		return m_kdtree->rayIntersect(ray);

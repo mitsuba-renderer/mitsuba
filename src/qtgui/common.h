@@ -10,8 +10,13 @@
 using namespace mitsuba;
 
 enum EConnectionType {
-	ESSHConnection,
+	ESSHConnection = 0,
 	EDirectConnection
+};
+
+enum ENavigationMode {
+	EFlythroughFixedYaw = 0,
+	EFlythrough
 };
 
 namespace mitsuba {
@@ -123,7 +128,7 @@ struct SceneContext {
 	float progress;
 	QString eta, progressName;
 	ref<Bitmap> framebuffer;
-	EMode mode;
+	EMode mode, cancelMode;
 	Float gamma, exposure, clamping;
 	bool srgb;
 	int pathLength, shadowMapResolution;
