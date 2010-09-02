@@ -38,14 +38,16 @@ public:
 
 	bool rayIntersect(const Ray &ray, Float start, Float end, Float &t) const {
 		/* Transform into the local coordinate system and normalize */
-		Float nearT, farT;
-		const Float ox = ray.o.x - m_center.x, oy = ray.o.y - m_center.y, 
-			oz = ray.o.z - m_center.z;
-		const Float A = ray.d.x*ray.d.x + ray.d.y*ray.d.y + ray.d.z*ray.d.z;
-		const Float B = 2 * (ray.d.x*ox + ray.d.y*oy + ray.d.z*oz);
-		const Float C = ox*ox + oy*oy + oz*oz - m_radius * m_radius;
+		double nearT, farT;
+		const double ox = (double) ray.o.x - (double) m_center.x, 
+			oy = (double) ray.o.y - (double) m_center.y, 
+			oz = (double) ray.o.z - (double) m_center.z;
+		const double dx = ray.d.x, dy = ray.d.y, dz = ray.d.z;
+		const double A = dx*dx + dy*dy + dz*dz;
+		const double B = 2 * (dx*ox + dy*oy + dz*oz);
+		const double C = ox*ox + oy*oy + oz*oz - m_radius * m_radius;
 
-		if (!solveQuadratic(A, B, C, nearT, farT))
+		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
 		if (nearT > end || farT < start)
@@ -53,9 +55,9 @@ public:
 		if (nearT < start) {
 			if (farT > end)
 				return false;
-			t = farT;		
+			t = (Float) farT;		
 		} else {
-			t = nearT;
+			t = (Float) nearT;
 		}
 		return true;
 	}
@@ -99,19 +101,6 @@ public:
 			coordinateSystem(its.geoFrame.n, its.geoFrame.s, its.geoFrame.t);
 		}
 
-		/* Intersection refinement step */
-		Vector rel = its.p - (m_center + its.geoFrame.n * m_radius);
-		Float correction = -dot(rel, its.geoFrame.n)/dot(ray.d, its.geoFrame.n);
-
-		/* Move outside of the object */
-		its.t += correction;
-
-		if (its.t < ray.mint || its.t > ray.maxt) {
-			its.t = std::numeric_limits<Float>::infinity(); 
-			return false;
-		}
-
-		its.p += ray.d * correction;
  		its.shFrame = its.geoFrame;
  		its.wi = its.toLocal(-ray.d);
  		its.hasUVPartials = false;
