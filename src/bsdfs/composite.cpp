@@ -221,7 +221,7 @@ public:
 			Spectrum result = m_bsdfs[entry]->sample(bRec, pdf);
 			bRec.sampledComponent += m_bsdfOffset[entry];
 			pdf *= componentPDF;
-			return result;
+			return result * m_bsdfWeight[entry];
 		} else {
 			/* Pick out an individual component */
 			for (int i=0; i<m_bsdfCount; ++i) {
@@ -234,7 +234,7 @@ public:
 				Spectrum result = m_bsdfs[i]->sample(bRec, pdf);
 				bRec.component = bRec.sampledComponent = tempComponent;
 
-				return result;
+				return result * m_bsdfWeight[i];
 			}
 		}
 		Log(EError, "Internal error!");
@@ -248,7 +248,7 @@ public:
 			Spectrum result = m_bsdfs[entry]->sample(bRec);
 			result /= componentPDF;
 			bRec.sampledComponent += m_bsdfOffset[entry];
-			return result;
+			return result * m_bsdfWeight[entry];
 		} else {
 			/* Pick out an individual component */
 			for (int i=0; i<m_bsdfCount; ++i) {
@@ -261,7 +261,7 @@ public:
 				Spectrum result = m_bsdfs[i]->sample(bRec);
 				bRec.component = bRec.sampledComponent = tempComponent;
 
-				return result;
+				return result * m_bsdfWeight[i];
 			}
 		}
 		Log(EError, "Internal error!");
