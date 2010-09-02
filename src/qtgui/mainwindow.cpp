@@ -146,6 +146,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	/* Load defaults from app settings file */
 	ui->glView->setInvertMouse(settings.value("invertMouse", false).toBool());
 	ui->glView->setMouseSensitivity(settings.value("mouseSensitivity", 3).toInt());
+	ui->glView->setNavigationMode((ENavigationMode) settings.value("navigationMode", 
+		EFlythroughFixedYaw).toInt());
 	m_searchPaths = settings.value("searchPaths", QStringList()).toStringList();
 	m_blockSize = settings.value("blockSize", 32).toInt();
 	m_listenPort = settings.value("listenPort", MTS_DEFAULT_PORT).toInt();
@@ -1016,6 +1018,7 @@ void MainWindow::on_actionSettings_triggered() {
 	d.setWindowModality(Qt::ApplicationModal);
 	d.setLogLevel(logger->getLogLevel());
 	d.setInvertMouse(ui->glView->getInvertMouse());
+	d.setNavigationMode(ui->glView->getNavigationMode());
 	d.setMouseSensitivity(ui->glView->getMouseSensitivity());
 	d.setBlockSize(m_blockSize);
 	d.setSearchPaths(m_searchPaths);
@@ -1042,10 +1045,12 @@ void MainWindow::on_actionSettings_triggered() {
 		settings.setValue("mouseSensitivity", d.getMouseSensitivity());
 		settings.setValue("listenPort", d.getListenPort());
 		settings.setValue("nodeName", d.getNodeName());
+		settings.setValue("navigationMode", (int) d.getNavigationMode());
 
 		logger->setLogLevel(d.getLogLevel());
 		ui->glView->setInvertMouse(d.getInvertMouse());
 		ui->glView->setMouseSensitivity(d.getMouseSensitivity());
+		ui->glView->setNavigationMode(d.getNavigationMode());
 		m_blockSize = d.getBlockSize();
 		m_searchPaths = d.getSearchPaths();
 		m_checkForUpdates = d.getCheckForUpdates();

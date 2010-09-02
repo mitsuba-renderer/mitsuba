@@ -37,6 +37,14 @@ public:
 		return ui->invertMouseBox->checkState() == Qt::Checked;
 	}
 	
+	inline ENavigationMode getNavigationMode() const {
+		return (ENavigationMode) ui->navigationModeBox->currentIndex();
+	}
+	
+	inline void setNavigationMode(ENavigationMode mode) const {
+		ui->navigationModeBox->setCurrentIndex(mode);
+	}
+
 	inline void setInvertMouse(bool value) {
 		ui->invertMouseBox->setCheckState(value ? Qt::Checked : Qt::Unchecked);
 	}

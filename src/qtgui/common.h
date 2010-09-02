@@ -10,8 +10,13 @@
 using namespace mitsuba;
 
 enum EConnectionType {
-	ESSHConnection,
+	ESSHConnection = 0,
 	EDirectConnection
+};
+
+enum ENavigationMode {
+	EFlythroughFixedYaw = 0,
+	EFlythrough
 };
 
 namespace mitsuba {

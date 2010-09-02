@@ -32,6 +32,8 @@ public:
 
 	inline bool getInvertMouse() const { return m_invertMouse; }
 	void setInvertMouse(bool invert) { m_invertMouse = invert; }
+	inline ENavigationMode getNavigationMode() const { return m_navigationMode; }
+	void setNavigationMode(ENavigationMode mode) { m_navigationMode = mode; }
 	inline int getMouseSensitivity() const { return m_mouseSensitivity; }
 	void setMouseSensitivity(int sensitivity) { m_mouseSensitivity = sensitivity; }
 	void setScrollBars(QScrollBar *hScroll, QScrollBar *vScroll);
@@ -119,6 +121,7 @@ private:
 	QTimer *m_movementTimer, *m_redrawTimer;
 	QScrollBar *m_hScroll, *m_vScroll;
 	ref<Timer> m_clock;
+	ENavigationMode m_navigationMode;
 	bool m_invertMouse, m_didSetCursor;
 	bool m_ignoreScrollEvents, m_ignoreResizeEvents;
 	int m_mouseSensitivity, m_softwareFallback;

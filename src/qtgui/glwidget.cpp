@@ -29,6 +29,7 @@ GLWidget::GLWidget(QWidget *parent) :
 	connect(m_preview, SIGNAL(statusMessage(const QString &)), 
 		this, SIGNAL(statusMessage(const QString &)), Qt::QueuedConnection);
 	m_invertMouse = false;
+	m_navigationMode = EFlythroughFixedYaw;
 	m_ignoreMouseEvent = QPoint(0, 0);
 	m_didSetCursor = false;
 	m_softwareFallback = false;
@@ -558,6 +559,14 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 	PinholeCamera *camera = static_cast<PinholeCamera *>(m_context->scene->getCamera());
 	Point p = camera->getInverseViewTransform()(Point(0,0,0));
 	Vector direction = camera->getInverseViewTransform()(Vector(0,0,1));
+	Vector up;
+	
+	if (m_navigationMode == EFlythrough)
+		up = camera->getInverseViewTransform()(Vector(0,1,0));
+	else if (m_navigationMode == EFlythroughFixedYaw)
+		up = m_context->up;
+	else
+		SLog(EError, "Unknown navigation mode encountered!");
 
 	bool didMove = false;
 
@@ -573,10 +582,10 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		direction = trafo.inverse()(Vector(0,0,1));
 
 		if (camera->getViewTransform().det3x3() < 0) {
-			camera->setInverseViewTransform(Transform::lookAt(p, p+direction, m_context->up));
+			camera->setInverseViewTransform(Transform::lookAt(p, p+direction, up));
 		} else {
 			camera->setInverseViewTransform(
-				Transform::lookAt(p, p+direction, m_context->up) *
+				Transform::lookAt(p, p+direction, up) *
 				Transform::scale(Vector(-1,1,1))
 			);
 		}
@@ -588,10 +597,10 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		Float fovChange = rel.y() * m_mouseSensitivity * .03f;
 
 		if (camera->getViewTransform().det3x3() < 0) {
-			m_context->up = Transform::rotate(direction, roll)(m_context->up);
+			m_context->up = Transform::rotate(direction, roll)(up);
 			camera->setInverseViewTransform(Transform::lookAt(p, p+direction, m_context->up));
 		} else {
-			m_context->up = Transform::rotate(direction, -roll)(m_context->up);
+			m_context->up = Transform::rotate(direction, -roll)(up);
 			camera->setInverseViewTransform(
 				Transform::lookAt(p, p+direction, m_context->up) *
 				Transform::scale(Vector(-1,1,1))
@@ -633,7 +642,7 @@ void GLWidget::wheelEvent(QWheelEvent *event) {
 
 	if (!bar->isVisible() || !m_preview->isRunning())
 		return;
-	
+
 	int oldStep = bar->singleStep();
 	bar->setSingleStep(event->delta()/4);
 #if defined(__OSX__)

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>354</width>
-    <height>485</height>
+    <width>377</width>
+    <height>480</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -51,7 +51,7 @@
       <attribute name="title">
        <string>General</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout1" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0" columnstretch="0,0,0,1">
+      <layout class="QGridLayout" name="gridLayout1" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0" columnstretch="0,0,0,1">
        <property name="leftMargin">
         <number>15</number>
        </property>
@@ -186,7 +186,7 @@ system load, especially when much of the work is done over the network.</string>
          </property>
         </widget>
        </item>
-       <item row="10" column="0" colspan="4">
+       <item row="13" column="0" colspan="4">
         <widget class="QLabel" name="label_3">
          <property name="font">
           <font>
@@ -199,7 +199,7 @@ system load, especially when much of the work is done over the network.</string>
          </property>
         </widget>
        </item>
-       <item row="12" column="1" colspan="3">
+       <item row="15" column="1" colspan="3">
         <layout class="QHBoxLayout" name="buttonsLayout1" stretch="0,0,0">
          <property name="spacing">
           <number>6</number>
@@ -286,50 +286,6 @@ system load, especially when much of the work is done over the network.</string>
          </item>
         </layout>
        </item>
-       <item row="8" column="1">
-        <widget class="QLabel" name="label_5">
-         <property name="toolTip">
-          <string>Specifies the threshold for displaying log messages.
-For instance, setting this to &quot;Info&quot; means that everything 
-above and including &quot;Info&quot; is written to the console.</string>
-         </property>
-         <property name="text">
-          <string>Log verbosity :</string>
-         </property>
-         <property name="buddy">
-          <cstring>logVerbosityBox</cstring>
-         </property>
-        </widget>
-       </item>
-       <item row="8" column="2" colspan="2">
-        <widget class="QComboBox" name="logVerbosityBox">
-         <property name="toolTip">
-          <string>Specifies the threshold for displaying log messages.
-For instance, setting this to &quot;Info&quot; means that everything 
-above and including &quot;Info&quot; is written to the console.</string>
-         </property>
-         <item>
-          <property name="text">
-           <string>Trace</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Debug</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Info</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Warn</string>
-          </property>
-         </item>
-        </widget>
-       </item>
        <item row="3" column="0" colspan="3">
         <widget class="QLabel" name="label_11">
          <property name="font">
@@ -343,7 +299,7 @@ above and including &quot;Info&quot; is written to the console.</string>
          </property>
         </widget>
        </item>
-       <item row="11" column="1" colspan="3">
+       <item row="14" column="1" colspan="3">
         <widget class="QListWidget" name="searchPathList">
          <property name="enabled">
           <bool>true</bool>
@@ -415,7 +371,7 @@ release via Internet every time it is started.</string>
          </property>
         </widget>
        </item>
-       <item row="7" column="2" colspan="2">
+       <item row="10" column="2" colspan="2">
         <widget class="QSlider" name="sensitivitySlider">
          <property name="toolTip">
           <string>Specifies how sensitive the mouse should react to 
@@ -450,7 +406,7 @@ movements while navigating in the realt-time preview.</string>
          </property>
         </widget>
        </item>
-       <item row="7" column="1">
+       <item row="10" column="1">
         <widget class="QLabel" name="label_8">
          <property name="toolTip">
           <string>Specifies how sensitive the mouse should react to 
@@ -461,7 +417,7 @@ movements while navigating in the realt-time preview.</string>
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
+       <item row="8" column="1">
         <widget class="QLabel" name="label_12">
          <property name="toolTip">
           <string>Should the preview navigation flip the Y axis of the mouse?</string>
@@ -474,7 +430,7 @@ movements while navigating in the realt-time preview.</string>
          </property>
         </widget>
        </item>
-       <item row="6" column="2">
+       <item row="8" column="2">
         <widget class="QCheckBox" name="invertMouseBox">
          <property name="toolTip">
           <string>Should the preview navigation flip the Y axis of the mouse?</string>
@@ -490,6 +446,96 @@ movements while navigating in the realt-time preview.</string>
          </property>
          <property name="tristate">
           <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QLabel" name="label_15">
+         <property name="toolTip">
+          <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Lucida Grande'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;This option specifies the camera behavior when navigating within the realtime preview.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Fly-through (Fix yaw)&lt;/span&gt;: Always yaw around a fixed &amp;quot;up&amp;quot; axis, which is determined when a scene is loaded. This is intuitive and similar to a person walking through a scene, but assumes that the camera has already been set up correctly.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Fly-through&lt;/span&gt;: Always yaw around the current camera &amp;quot;up&amp;quot; axis.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string>Navigation :</string>
+         </property>
+         <property name="buddy">
+          <cstring>navigationModeBox</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="2" colspan="2">
+        <widget class="QComboBox" name="navigationModeBox">
+         <property name="toolTip">
+          <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Lucida Grande'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;This option specifies the camera behavior when navigating within the realtime preview.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Fly-through (Fix yaw)&lt;/span&gt;: Always yaw around a fixed &amp;quot;up&amp;quot; axis, which is determined when a scene is loaded. This is intuitive and similar to a person walking through a scene, but assumes that the camera has already been set up correctly.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Fly-through&lt;/span&gt;: Always yaw around the current camera &amp;quot;up&amp;quot; axis.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Fly-through (Fix yaw)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Fly-through</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="6" column="2" colspan="2">
+        <widget class="QComboBox" name="logVerbosityBox">
+         <property name="toolTip">
+          <string>Specifies the threshold for displaying log messages.
+For instance, setting this to &quot;Info&quot; means that everything 
+above and including &quot;Info&quot; is written to the console.</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Trace</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Debug</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Info</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Warn</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLabel" name="label_5">
+         <property name="toolTip">
+          <string>Specifies the threshold for displaying log messages.
+For instance, setting this to &quot;Info&quot; means that everything 
+above and including &quot;Info&quot; is written to the console.</string>
+         </property>
+         <property name="text">
+          <string>Log verbosity :</string>
+         </property>
+         <property name="buddy">
+          <cstring>logVerbosityBox</cstring>
          </property>
         </widget>
        </item>
@@ -757,9 +803,10 @@ connections. The default setting is 7554.</string>
   <tabstop>blockSizeBox</tabstop>
   <tabstop>localWorkerBox</tabstop>
   <tabstop>checkForUpdatesBox</tabstop>
+  <tabstop>logVerbosityBox</tabstop>
+  <tabstop>navigationModeBox</tabstop>
   <tabstop>invertMouseBox</tabstop>
   <tabstop>sensitivitySlider</tabstop>
-  <tabstop>logVerbosityBox</tabstop>
   <tabstop>searchPathList</tabstop>
   <tabstop>removePathButton</tabstop>
   <tabstop>addPathButton</tabstop>
@@ -782,8 +829,8 @@ connections. The default setting is 7554.</string>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>280</x>
-     <y>412</y>
+     <x>286</x>
+     <y>475</y>
     </hint>
     <hint type="destinationlabel">
      <x>141</x>
@@ -798,8 +845,8 @@ connections. The default setting is 7554.</string>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>309</x>
-     <y>412</y>
+     <x>315</x>
+     <y>475</y>
     </hint>
     <hint type="destinationlabel">
      <x>318</x>
@@ -831,7 +878,7 @@ connections. The default setting is 7554.</string>
    <hints>
     <hint type="sourcelabel">
      <x>175</x>
-     <y>100</y>
+     <y>90</y>
     </hint>
     <hint type="destinationlabel">
      <x>26</x>
@@ -846,8 +893,8 @@ connections. The default setting is 7554.</string>
    <slot>refresh()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>224</x>
-     <y>74</y>
+     <x>175</x>
+     <y>62</y>
     </hint>
     <hint type="destinationlabel">
      <x>291</x>
