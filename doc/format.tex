@@ -155,6 +155,10 @@ the internal spectral representation as the scene is loaded.
 <spectrum name="spectrumProperty" value="400:0.56, 500:0.18, 600:0.58, 700:0.24"/>
 \end{xml}
 This is essentially a mapping from wavelength in nanometers (before the colon) to a reflectance or intensity value (after the colon). Missing values are linearly interpolated from the two closest neighbors.
+To specify a constant spectrum, simply provide just one value
+\begin{xml}
+<spectrum name="spectrumProperty" value="0.56"/>
+\end{xml}
 
 Finally, it is also possible to specify the spectral distribution of a black body emitter, where the temperature is given in Kelvin.
 \begin{xml}
