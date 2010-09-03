@@ -1185,6 +1185,7 @@ void MainWindow::on_actionRefresh_triggered() {
 	m_contextMutex.lock();
 	m_context[index] = newContext;
 	m_contextMutex.unlock();
+	qApp->processEvents();
 	on_tabBar_currentChanged(index);
 }
 

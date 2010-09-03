@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/texture.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -32,19 +33,36 @@ class Ward : public BSDF {
 public:
 	Ward(const Properties &props) 
 		: BSDF(props) {
-		m_diffuseReflectance = props.getSpectrum("diffuseReflectance", 
-			Spectrum(0.5f));
-		m_specularReflectance = props.getSpectrum("specularReflectance", 
-			Spectrum(.2f));
-		m_kd = m_diffuseReflectance.average();
-		m_ks = m_specularReflectance.average();
+		m_diffuseReflectance = new ConstantTexture(
+			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
+		m_specularReflectance = new ConstantTexture(
+			props.getSpectrum("specularReflectance", Spectrum(0.2f)));
+		
+		m_kd = props.getFloat("diffuseAmount", 1.0f);
+		m_ks = props.getFloat("specularAmount", 1.0f);
+
+		bool verifyEnergyConservation = props.getBoolean("verifyEnergyConservation", true);
+
+		if (verifyEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
+				+ m_ks * m_specularReflectance->getMaximum().max() > 1.0f)) {
+			Log(EWarn, "%s: Energy conservation is potentially violated!", props.getID().c_str());
+			Log(EWarn, "Max. diffuse reflectance = %f * %f = %f", m_kd, m_diffuseReflectance->getMaximum().max(), m_kd*m_diffuseReflectance->getMaximum().max());
+			Log(EWarn, "Max. specular reflectance = %f * %f = %f", m_ks, m_specularReflectance->getMaximum().max(), m_ks*m_specularReflectance->getMaximum().max());
+			Float normalization = 1/(m_kd * m_diffuseReflectance->getMaximum().max() + m_ks * m_specularReflectance->getMaximum().max());
+			Log(EWarn, "Reducing the albedo to %.1f%% of the original value to be on the safe side. "
+				"Specify verifyEnergyConservation=false to prevent this.", normalization * 100);
+			m_kd *= normalization; m_ks *= normalization;
+		}
+
+		Float avgDiffReflectance = m_diffuseReflectance->getAverage().average() * m_kd;
+		Float avgSpecularReflectance = m_specularReflectance->getAverage().average() * m_ks;
+
 		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", 
-			m_ks / (m_kd+m_ks));
+			avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance));
 		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
+
 		m_alphaX = props.getFloat("alphaX", .1f);
 		m_alphaY = props.getFloat("alphaY", .1f);
-		/* Energy conservation! */
-		Assert(m_kd + m_ks <= 1.0f);
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
 		m_type[0] = EDiffuseReflection;
@@ -55,8 +73,8 @@ public:
 
 	Ward(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
-		m_diffuseReflectance = Spectrum(stream);
-		m_specularReflectance = Spectrum(stream);
+		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
+		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_alphaX = stream->readFloat();
 		m_alphaY = stream->readFloat();
 		m_kd = stream->readFloat();
@@ -69,7 +87,9 @@ public:
 		m_type[0] = EDiffuseReflection;
 		m_type[1] = EGlossyReflection;
 		m_combinedType = m_type[0] | m_type[1];
-		m_usesRayDifferentials = false;
+		m_usesRayDifferentials = 
+			m_diffuseReflectance->usesRayDifferentials() ||
+			m_specularReflectance->usesRayDifferentials();
 	}
 
 	virtual ~Ward() {
@@ -77,7 +97,7 @@ public:
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_diffuseReflectance;
+		return m_diffuseReflectance->getValue(its) * m_kd;
 	}
 
 	Spectrum f(const BSDFQueryRecord &bRec) const {
@@ -97,12 +117,13 @@ public:
 				std::sqrt(Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo)));
 			Float factor2 = H.x / m_alphaX, factor3 = H.y / m_alphaY;
 			Float exponent = -(factor2*factor2+factor3*factor3)/(H.z*H.z);
-			Float specRef = factor1 * std::exp(exponent);
-			result += m_specularReflectance * specRef;
+			Float specRef = factor1 * std::exp(exponent) * m_ks;
+			result += m_specularReflectance->getValue(bRec.its) * specRef;
 		}
 
 		if (hasDiffuse) 
-			result += m_diffuseReflectance * INV_PI;
+			result += m_diffuseReflectance->getValue(bRec.its) * (INV_PI * m_kd);
+
 		return result;
 	}
 		
@@ -160,15 +181,7 @@ public:
 		if (Frame::cosTheta(bRec.wo) <= 0.0f)
 			return Spectrum(0.0f);
 
-		if (m_diffuseSamplingWeight == 0) {
-			return m_specularReflectance * (dot(H, bRec.wi) 
-				* std::pow(Frame::cosTheta(H), 3) 
-				* std::sqrt(Frame::cosTheta(bRec.wi)
-				  	/ Frame::cosTheta(bRec.wo))
-			);
-		} else {
-			return f(bRec) / pdf(bRec);
-		}
+		return f(bRec) / pdf(bRec);
 	}
 
 	inline Float pdfLambertian(const BSDFQueryRecord &bRec) const {
@@ -208,12 +221,25 @@ public:
 
 		return Spectrum(0.0f);
 	}
+	
+	void addChild(const std::string &name, ConfigurableObject *child) {
+		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "diffuseColor") {
+			m_diffuseReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "specularColor") {
+			m_specularReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+		} else {
+			BSDF::addChild(name, child);
+		}
+	}
+
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
-		m_diffuseReflectance.serialize(stream);
-		m_specularReflectance.serialize(stream);
+		manager->serialize(stream, m_diffuseReflectance.get());
+		manager->serialize(stream, m_specularReflectance.get());
 		stream->writeFloat(m_alphaX);
 		stream->writeFloat(m_alphaY);
 		stream->writeFloat(m_kd);
@@ -224,19 +250,19 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Ward[diffuseReflectance="
-			<< m_diffuseReflectance.toString()
-			<< ", specularReflectance="
-			<< m_specularReflectance.toString()
-			<< ", alphaX=" << m_alphaX
-			<< ", alphaY=" << m_alphaY << "]";
+		oss << "Ward[" << endl
+			<< "  diffuseColor = " << indent(m_diffuseReflectance->toString()) << "," << endl
+			<< "  specularColor = " << indent(m_specularReflectance->toString()) << "," << endl
+			<< "  alphaX = " << m_alphaX << "," << endl
+			<< "  alphaY = " << m_alphaY << endl
+			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	Spectrum m_diffuseReflectance;
-	Spectrum m_specularReflectance;
+	ref<const Texture> m_diffuseReflectance;
+	ref<const Texture> m_specularReflectance;
 	Float m_alphaX, m_alphaY;
 	Float m_kd, m_ks;
 	Float m_specularSamplingWeight;

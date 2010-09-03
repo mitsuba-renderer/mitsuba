@@ -406,8 +406,8 @@ public:
 			<< "    vec3 hr = normalize(wi + wo);" << endl
 			<< "    float Fr = " << evalName << "_fresnel(wi, hr, " << evalName << "_etaExt, " << evalName << "_etaInt);"<< endl 
 			<< "    float Ft = 1-Fr;"<< endl 
-			<< "    return " << depNames[0] << "(uv) * (0.31831 * Ft) * " << evalName << "_kd" << endl
-			<< "           + " << depNames[1] << "(uv) * (" << evalName << "_fSpec(wi, wo, hr) * Fr) * " << evalName << "_ks" << endl
+			<< "    return " << depNames[0] << "(uv) * (0.31831 * Ft * " << evalName << "_kd)" << endl
+			<< "           + " << depNames[1] << "(uv) * (" << evalName << "_fSpec(wi, wo, hr) * Fr * " << evalName << "_ks);" << endl
 			<< "}" << endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    if (wi.z <= 0 || wo.z <= 0)" << endl
