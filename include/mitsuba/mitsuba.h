@@ -33,7 +33,7 @@
 #include <string.h>
 #include <limits>
 
-#define MTS_VERSION "0.1.1"
+#define MTS_VERSION "0.1.2"
 #define MTS_YEAR "2010"
 #define MTS_DEFAULT_PORT 7554
 
