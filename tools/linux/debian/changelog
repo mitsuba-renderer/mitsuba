@@ -1,3 +1,29 @@
+mitsuba (0.1.2-1) unstable; urgency=low
+
+  * Numerous bugfixes
+  * Vastly improved COLLADA importer
+  * Basic user interface for running the importer
+  * Support for environment sources in the realtime preview
+  * When pressing the stop button while rendering, the partially rendered
+    scene now remains on the screen. Pressing the stop button a second time
+    switches back to the realtime preview.
+  * The user interface now has a fallback mode when the graphics card
+    is lacking some required OpenGL features.
+  * Create default cameras/lightsources if none are specified in a scene
+  * Support for drag & drop in the user interface
+  * The Mitsuba user interface now also doubles as an EXR viewer / tonemapper. 
+    Drag an EXR file onto the UI or open it using the File menu, and the image 
+    opens in a new tab. Afterwards, it is possible to export the image as a tonemapped
+    8-bit PNG image.
+  * The realtime preview now has a 'force diffuse' feature to improve
+    convergence in scenes with lots of glossy materials.
+  * Two different navigation modes can now be chosen in the program settings
+  * New material types: composite, difftrans, transparent, mask.
+  * ldrtexture: support for loading BMP and TGA images.
+  * Switch to Xerces-C++ 3
+
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Fri, 3 Sep 2010 17:16:03 -0400
+
 mitsuba (0.1.1-1) unstable; urgency=low
 
   * Initial release 
