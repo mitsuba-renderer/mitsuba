@@ -59,7 +59,7 @@
 /**
  * Pre-defined max. stack size for the ray traversal algorithm
  */
-#define MTS_KD_MAXDEPTH 30
+#define MTS_KD_MAXDEPTH 35
 
 MTS_NAMESPACE_BEGIN
 
