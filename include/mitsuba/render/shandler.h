@@ -34,7 +34,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * XML parser for mitsuba scene files. Uses Xerces-C and SAX
  */
-class SceneHandler : public HandlerBase {
+class MTS_EXPORT_RENDER SceneHandler : public HandlerBase {
 public:
 	SceneHandler();
 	SceneHandler(const std::map<std::string, std::string> &params,

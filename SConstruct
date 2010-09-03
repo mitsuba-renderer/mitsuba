@@ -360,6 +360,12 @@ env['SHLIBPREFIX']=''
 
 # Environment with Xerces + wxWidgets
 mainEnv = env.Clone()
+if mainEnv.has_key('XERCESINCLUDE'):
+	mainEnv.Append(CPPPATH=mainEnv['XERCESINCLUDE'])
+if mainEnv.has_key('XERCESLIBDIR'):
+	mainEnv.Append(LIBPATH=mainEnv['XERCESLIBDIR'])
+if mainEnv.has_key('XERCESLIB'):
+	mainEnv.Append(LIBS=mainEnv['XERCESLIB'])
 if mainEnv.has_key('GLLIB'):
 	mainEnv.Append(LIBS=mainEnv['GLLIB'])
 if mainEnv.has_key('GLLIBDIR'):
