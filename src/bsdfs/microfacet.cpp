@@ -40,9 +40,30 @@ public:
 			props.getSpectrum("diffuseReflectance", Spectrum(0.0f)));
 		m_specularReflectance = new ConstantTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
+
+		m_kd = props.getFloat("diffuseAmount", 1.0f);
+		m_ks = props.getFloat("specularAmount", 1.0f);
+
+		bool verifyEnergyConservation = props.getBoolean("verifyEnergyConservation", true);
+
+		if (verifyEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
+				+ m_ks * m_specularReflectance->getMaximum().max() > 1.0f)) {
+			Log(EWarn, "%s: Energy conservation is potentially violated!", props.getID().c_str());
+			Log(EWarn, "Max. diffuse reflectance = %f * %f = %f", m_kd, m_diffuseReflectance->getMaximum().max(), m_kd*m_diffuseReflectance->getMaximum().max());
+			Log(EWarn, "Max. specular reflectance = %f * %f = %f", m_ks, m_specularReflectance->getMaximum().max(), m_ks*m_specularReflectance->getMaximum().max());
+			Float normalization = 1/(m_kd * m_diffuseReflectance->getMaximum().max() + m_ks * m_specularReflectance->getMaximum().max());
+			Log(EWarn, "Reducing the albedo to %.1f%% of the original value to be on the safe side. "
+				"Specify verifyEnergyConservation=false to prevent this.", normalization * 100);
+			m_kd *= normalization; m_ks *= normalization;
+		}
+
+		Float avgDiffReflectance = m_diffuseReflectance->getAverage().average() * m_kd;
+		Float avgSpecularReflectance = m_specularReflectance->getAverage().average() * m_ks;
+
 		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", 
-			std::max((Float) 0.3, 1-2*m_diffuseReflectance->getAverage().average()));
+			avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance));
 		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
+
 		m_alphaB = props.getFloat("alphaB", .1f);
 		m_intIOR = props.getFloat("intIOR", 1.5f);
 		m_extIOR = props.getFloat("extIOR", 1.0f);
@@ -62,6 +83,8 @@ public:
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_alphaB = stream->readFloat();
+		m_kd = stream->readFloat();
+		m_ks = stream->readFloat();
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
 		m_specularSamplingWeight = stream->readFloat();
@@ -82,7 +105,7 @@ public:
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_diffuseReflectance->getValue(its);
+		return m_diffuseReflectance->getValue(its) * m_kd;
 	}
 
 	/**
@@ -162,9 +185,9 @@ public:
 		Float F = fresnel(dot(bRec.wi, Hr), m_extIOR, m_intIOR);
 
 		if (hasGlossy)
-			result += fSpec(bRec, Hr) * F;
+			result += fSpec(bRec, Hr) * (F * m_ks);
 		if (hasDiffuse)
-			result += m_diffuseReflectance->getValue(bRec.its) * INV_PI * (1-F);
+			result += m_diffuseReflectance->getValue(bRec.its) * (INV_PI * (1-F) * m_kd);
 
 		return result;
 	}
@@ -268,6 +291,8 @@ public:
 		manager->serialize(stream, m_diffuseReflectance.get());
 		manager->serialize(stream, m_specularReflectance.get());
 		stream->writeFloat(m_alphaB);
+		stream->writeFloat(m_kd);
+		stream->writeFloat(m_ks);
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
 		stream->writeFloat(m_specularSamplingWeight);
@@ -295,6 +320,7 @@ private:
 	Float m_alphaB, m_intIOR, m_extIOR;
 	Float m_specularSamplingWeight;
 	Float m_diffuseSamplingWeight;
+	Float m_ks, m_kd;
 };
 
 // ================ Hardware shader implementation ================ 
@@ -304,10 +330,12 @@ public:
 	MicrofacetShader(Renderer *renderer, 
 			const Texture *diffuseReflectance,
 			const Texture *specularReflectance,
-			Float alphaB, Float etaInt, Float etaExt) : Shader(renderer, EBSDFShader), 
+			Float alphaB, Float etaInt, Float etaExt,
+			Float ks, Float kd) : Shader(renderer, EBSDFShader), 
 			m_diffuseReflectance(diffuseReflectance),
 			m_specularReflectance(specularReflectance),
-			m_alphaB(alphaB), m_etaInt(etaInt), m_etaExt(etaExt) {
+			m_alphaB(alphaB), m_etaInt(etaInt), m_etaExt(etaExt),
+			m_ks(ks), m_kd(kd) {
 		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
 		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
 	}
@@ -333,6 +361,8 @@ public:
 		oss << "uniform float " << evalName << "_alphaB;" << endl
 			<< "uniform float " << evalName << "_etaInt;" << endl
 			<< "uniform float " << evalName << "_etaExt;" << endl
+			<< "uniform float " << evalName << "_ks;" << endl
+			<< "uniform float " << evalName << "_kd;" << endl
 			<< endl
 			<< "float " << evalName << "_beckmannD(vec3 m) {" << endl
 			<< "   float ex = tanTheta(m) / " << evalName << "_alphaB;" << endl
@@ -376,8 +406,8 @@ public:
 			<< "    vec3 hr = normalize(wi + wo);" << endl
 			<< "    float Fr = " << evalName << "_fresnel(wi, hr, " << evalName << "_etaExt, " << evalName << "_etaInt);"<< endl 
 			<< "    float Ft = 1-Fr;"<< endl 
-			<< "    return " << depNames[0] << "(uv) * (0.31831 * Ft)" << endl
-			<< "           + " << depNames[1] << "(uv) * (" << evalName << "_fSpec(wi, wo, hr) * Fr);" << endl
+			<< "    return " << depNames[0] << "(uv) * (0.31831 * Ft) * " << evalName << "_kd" << endl
+			<< "           + " << depNames[1] << "(uv) * (" << evalName << "_fSpec(wi, wo, hr) * Fr) * " << evalName << "_ks" << endl
 			<< "}" << endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    if (wi.z <= 0 || wo.z <= 0)" << endl
@@ -390,12 +420,16 @@ public:
 		parameterIDs.push_back(program->getParameterID(evalName + "_alphaB", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_etaInt", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_etaExt", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_ks", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_kd", false));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
 		program->setParameter(parameterIDs[0], m_alphaB);
 		program->setParameter(parameterIDs[1], m_etaInt);
 		program->setParameter(parameterIDs[2], m_etaExt);
+		program->setParameter(parameterIDs[3], m_ks);
+		program->setParameter(parameterIDs[4], m_kd);
 	}
 
 	MTS_DECLARE_CLASS()
@@ -404,12 +438,13 @@ private:
 	ref<const Texture> m_specularReflectance;
 	ref<Shader> m_diffuseReflectanceShader;
 	ref<Shader> m_specularReflectanceShader;
-	Float m_alphaB, m_etaInt, m_etaExt;
+	Float m_alphaB, m_etaInt, m_etaExt, m_ks, m_kd;
 };
 
 Shader *Microfacet::createShader(Renderer *renderer) const { 
 	return new MicrofacetShader(renderer, m_diffuseReflectance.get(),
-		m_specularReflectance.get(), m_alphaB, m_intIOR, m_extIOR);
+		m_specularReflectance.get(), m_alphaB, m_intIOR, m_extIOR,
+		m_ks, m_kd);
 }
 
 MTS_IMPLEMENT_CLASS(MicrofacetShader, false, Shader)

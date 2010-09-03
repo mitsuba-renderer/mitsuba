@@ -31,27 +31,32 @@ class Phong : public BSDF {
 public:
 	Phong(const Properties &props) 
 		: BSDF(props) {
-		m_diffuseColor = new ConstantTexture(
-			props.getSpectrum("diffuseColor", Spectrum(1.0f)));
-		m_specularColor = new ConstantTexture(
-			props.getSpectrum("specularColor", Spectrum(1.0f)));
+		m_diffuseReflectance = new ConstantTexture(
+			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
+		m_specularReflectance = new ConstantTexture(
+			props.getSpectrum("specularReflectance", Spectrum(0.2f)));
 
-		m_kd = props.getFloat("diffuseReflectance", 0.5f);
-		m_ks = props.getFloat("specularReflectance", 0.2f);
+		m_kd = props.getFloat("diffuseAmount", 1.0f);
+		m_ks = props.getFloat("specularAmount", 1.0f);
+
 		m_exponent = props.getFloat("exponent", 10.0f);
 
-		if (m_kd * m_diffuseColor->getMaximum().max() + m_ks * m_specularColor->getMaximum().max() > 1.0f) {
-			Log(EWarn, "%s: Energy conservation is violated!", props.getID().c_str());
-			Log(EWarn, "Max. diffuse reflectance = %f * %f", m_kd, m_diffuseColor->getMaximum().max());
-			Log(EWarn, "Max. specular reflectance = %f * %f", m_ks, m_specularColor->getMaximum().max());
-			Float normalization = 1/(m_kd * m_diffuseColor->getMaximum().max() + m_ks * m_specularColor->getMaximum().max());
-			Log(EWarn, "Reducing the albedo to %.1f%% of the original value", normalization * 100);
+		bool verifyEnergyConservation = props.getBoolean("verifyEnergyConservation", true);
+
+		if (verifyEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
+				+ m_ks * m_specularReflectance->getMaximum().max() > 1.0f)) {
+			Log(EWarn, "%s: Energy conservation is potentially violated!", props.getID().c_str());
+			Log(EWarn, "Max. diffuse reflectance = %f * %f = %f", m_kd, m_diffuseReflectance->getMaximum().max(), m_kd*m_diffuseReflectance->getMaximum().max());
+			Log(EWarn, "Max. specular reflectance = %f * %f = %f", m_ks, m_specularReflectance->getMaximum().max(), m_ks*m_specularReflectance->getMaximum().max());
+			Float normalization = 1/(m_kd * m_diffuseReflectance->getMaximum().max() + m_ks * m_specularReflectance->getMaximum().max());
+			Log(EWarn, "Reducing the albedo to %.1f%% of the original value to be on the safe side. "
+				"Specify verifyEnergyConservation=false to prevent this.", normalization * 100);
 			m_kd *= normalization; m_ks *= normalization;
 		}
 
-		Float avgDiffReflectance = m_diffuseColor->getAverage().average() * m_kd;
-		Float avgSpecularReflectance = m_specularColor->getAverage().average() * m_ks;
-		
+		Float avgDiffReflectance = m_diffuseReflectance->getAverage().average() * m_kd;
+		Float avgSpecularReflectance = m_specularReflectance->getAverage().average() * m_ks;
+
 		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", 
 			avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance));
 		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
@@ -66,8 +71,8 @@ public:
 
 	Phong(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
-		m_diffuseColor = static_cast<Texture *>(manager->getInstance(stream));
-		m_specularColor = static_cast<Texture *>(manager->getInstance(stream));
+		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
+		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_exponent = stream->readFloat();
 		m_kd = stream->readFloat();
 		m_ks = stream->readFloat();
@@ -80,8 +85,8 @@ public:
 		m_type[1] = EGlossyReflection;
 		m_combinedType = m_type[0] | m_type[1];
 		m_usesRayDifferentials = 
-			m_diffuseColor->usesRayDifferentials() ||
-			m_specularColor->usesRayDifferentials();
+			m_diffuseReflectance->usesRayDifferentials() ||
+			m_specularReflectance->usesRayDifferentials();
 	}
 
 	virtual ~Phong() {
@@ -89,7 +94,7 @@ public:
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_diffuseColor->getValue(its) * m_kd;
+		return m_diffuseReflectance->getValue(its) * m_kd;
 	}
 
 	Spectrum f(const BSDFQueryRecord &bRec) const {
@@ -113,11 +118,11 @@ public:
 			else
 				specRef = (m_exponent + 2) * INV_TWOPI
 					* std::pow(alpha, m_exponent) * m_ks;
-			result += m_specularColor->getValue(bRec.its) * specRef;
+			result += m_specularReflectance->getValue(bRec.its) * specRef;
 		}
 
 		if (hasDiffuse) 
-			result += m_diffuseColor->getValue(bRec.its) * (INV_PI * m_kd);
+			result += m_diffuseReflectance->getValue(bRec.its) * (INV_PI * m_kd);
 		return result;
 	}
 
@@ -155,7 +160,7 @@ public:
 	inline Spectrum sampleSpecular(BSDFQueryRecord &bRec) const {
 		Vector R = Vector(-bRec.wi.x, -bRec.wi.y, bRec.wi.z);
 
-		/* Sample a cosine lobe centered around the normal */
+		/* Sample from a Phong lobe centered around (0, 0, 1) */
 		Float sinAlpha = std::sqrt(1-std::pow(bRec.sample.y, 2/(m_exponent + 1)));
 		Float cosAlpha = std::pow(bRec.sample.y, 1/(m_exponent + 1));
 		Float phi = (2.0f * M_PI) * bRec.sample.x;
@@ -218,11 +223,11 @@ public:
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "diffuseColor") {
-			m_diffuseColor = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_diffuseColor->usesRayDifferentials();
+			m_diffuseReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
 		} else if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "specularColor") {
-			m_specularColor = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_specularColor->usesRayDifferentials();
+			m_specularReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
 		} else {
 			BSDF::addChild(name, child);
 		}
@@ -231,8 +236,8 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
-		manager->serialize(stream, m_diffuseColor.get());
-		manager->serialize(stream, m_specularColor.get());
+		manager->serialize(stream, m_diffuseReflectance.get());
+		manager->serialize(stream, m_specularReflectance.get());
 		stream->writeFloat(m_exponent);
 		stream->writeFloat(m_kd);
 		stream->writeFloat(m_ks);
@@ -245,8 +250,8 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Phong[" << endl
-			<< "  diffuseColor = " << indent(m_diffuseColor->toString()) << "," << endl
-			<< "  specularColor = " << indent(m_specularColor->toString()) << "," << endl
+			<< "  diffuseColor = " << indent(m_diffuseReflectance->toString()) << "," << endl
+			<< "  specularColor = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  exponent = " << m_exponent << endl
 			<< "]";
 		return oss.str();
@@ -255,8 +260,8 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	ref<Texture> m_diffuseColor;
-	ref<Texture> m_specularColor;
+	ref<Texture> m_diffuseReflectance;
+	ref<Texture> m_specularReflectance;
 	Float m_exponent;
 	Float m_kd, m_ks;
 	Float m_specularSamplingWeight;
@@ -272,27 +277,27 @@ public:
 			const Texture *specularColor,
 			Float ks, Float kd,
 			Float exponent) : Shader(renderer, EBSDFShader), 
-			m_diffuseColor(diffuseColor),
-			m_specularColor(specularColor),
+			m_diffuseReflectance(diffuseColor),
+			m_specularReflectance(specularColor),
 			m_ks(ks), m_kd(kd),
 			m_exponent(exponent) {
-		m_diffuseColorShader = renderer->registerShaderForResource(m_diffuseColor.get());
-		m_specularColorShader = renderer->registerShaderForResource(m_specularColor.get());
+		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
+		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
 	}
 
 	bool isComplete() const {
-		return m_diffuseColorShader.get() != NULL &&
-			   m_specularColorShader.get() != NULL;
+		return m_diffuseReflectanceShader.get() != NULL &&
+			   m_specularReflectanceShader.get() != NULL;
 	}
 
 	void putDependencies(std::vector<Shader *> &deps) {
-		deps.push_back(m_diffuseColorShader.get());
-		deps.push_back(m_specularColorShader.get());
+		deps.push_back(m_diffuseReflectanceShader.get());
+		deps.push_back(m_specularReflectanceShader.get());
 	}
 
 	void cleanup(Renderer *renderer) {
-		renderer->unregisterShaderForResource(m_diffuseColor.get());
-		renderer->unregisterShaderForResource(m_specularColor.get());
+		renderer->unregisterShaderForResource(m_diffuseReflectance.get());
+		renderer->unregisterShaderForResource(m_specularReflectance.get());
 	}
 
 	void generateCode(std::ostringstream &oss,
@@ -335,17 +340,17 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	ref<const Texture> m_diffuseColor;
-	ref<const Texture> m_specularColor;
-	ref<Shader> m_diffuseColorShader;
-	ref<Shader> m_specularColorShader;
+	ref<const Texture> m_diffuseReflectance;
+	ref<const Texture> m_specularReflectance;
+	ref<Shader> m_diffuseReflectanceShader;
+	ref<Shader> m_specularReflectanceShader;
 	Float m_ks, m_kd;
 	Float m_exponent;
 };
 
 Shader *Phong::createShader(Renderer *renderer) const { 
-	return new PhongShader(renderer, m_diffuseColor.get(),
-		m_specularColor.get(), m_ks, m_kd, m_exponent);
+	return new PhongShader(renderer, m_diffuseReflectance.get(),
+		m_specularReflectance.get(), m_ks, m_kd, m_exponent);
 }
 
 MTS_IMPLEMENT_CLASS(PhongShader, false, Shader)
