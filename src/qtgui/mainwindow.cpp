@@ -443,6 +443,7 @@ void MainWindow::onBugReportSubmitted() {
 }
 
 void MainWindow::on_actionImport_triggered() {
+#if defined(MTS_HAS_COLLADA)
 	ref<FileResolver> resolver = FileResolver::getInstance();
 	ref<FileResolver> newResolver = resolver->clone();
 	for (int i=0; i<m_searchPaths.size(); ++i)
@@ -457,6 +458,13 @@ void MainWindow::on_actionImport_triggered() {
 	dialog->show();
 	qApp->processEvents();
 	m_activeWindowHack = false;
+#else
+	QMessageBox::critical(this, tr("Importer disabled"),
+		tr("The importer is disabled in this build. To use it, you will need "
+		"to install COLLADA-DOM and recompile Mitsuba -- please see the "
+		"documentation for more details."), 
+		QMessageBox::Ok);
+#endif
 }
 
 void MainWindow::onImportDialogClose(int reason) {

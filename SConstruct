@@ -3,6 +3,7 @@ import sys
 import glob
 import os
 import fnmatch
+import multiprocessing
 
 if not os.path.exists('config.py'):
 	print 'A configuration file must be selected! Have a look at \"README\"'
@@ -65,6 +66,10 @@ if env.has_key('BOOSTINCLUDE'):
 	env.Append(CPPPATH=env['BOOSTINCLUDE'])
 if env.has_key('BASELIBDIR'):
 	env.Append(LIBPATH=env['BASELIBDIR'])
+
+env.Decider('MD5-timestamp')
+
+env.SetOption('num_jobs', multiprocessing.cpu_count())
 
 AddOption("--dist", dest="dist", type="string", nargs=0, action='store', help='Make an official release')
 
@@ -205,6 +210,9 @@ def osxlibinst_build_function(self, target, source, pkgname = None, use_own = No
 env.__class__.StripInst = stripinst_build_function
 env.__class__.OSXLibInst = osxlibinst_build_function
 
+if hasCollada:
+	env.Append(CPPDEFINES = [['MTS_HAS_COLLADA', 1]] )
+
 env.SConsignFile()
 
 # MSVC: Embed the manifest
@@ -240,7 +248,7 @@ if coreEnv.has_key('JPEGINCLUDE'):
 if coreEnv.has_key('JPEGLIB'):
 	coreEnv.Append(LIBS=env['JPEGLIB'])
 
-coreEnv.Append(CPPDEFINES = {'MTS_BUILD_MODULE' : 'MTS_MODULE_CORE'} )
+coreEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_CORE']])
 libcore_objects = [
 	'src/libcore/class.cpp', 'src/libcore/object.cpp', 
 	'src/libcore/statistics.cpp', 'src/libcore/thread.cpp',
@@ -276,7 +284,7 @@ env.Append(LIBPATH=['src/libcore'])
 
 # Rendering-specific library
 renderEnv = env.Clone()
-renderEnv.Append(CPPDEFINES = {'MTS_BUILD_MODULE' : 'MTS_MODULE_RENDER'} )
+renderEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_RENDER']] )
 if renderEnv.has_key('XERCESINCLUDE'):
 	renderEnv.Append(CPPPATH=renderEnv['XERCESINCLUDE'])
 if renderEnv.has_key('XERCESLIBDIR'):
@@ -330,7 +338,7 @@ elif sys.platform == 'linux2':
 		'src/libhw/glxrenderer.cpp']
 
 glEnv = env.Clone()
-glEnv.Append(CPPDEFINES = {'MTS_BUILD_MODULE' : 'MTS_MODULE_HW'} )
+glEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_HW']] )
 if glEnv.has_key('GLLIB'):
 	glEnv.Append(LIBS=glEnv['GLLIB'])
 if glEnv.has_key('GLLIBDIR'):
@@ -423,6 +431,7 @@ if hasQt:
 	qtEnv = mainEnv.Clone()
 	qtEnv.Append(CPPPATH=['src/qtgui'])
 	qtEnv.EnableQt4Modules(['QtGui', 'QtCore', 'QtOpenGL', 'QtXml', 'QtNetwork'])
+	print(qtEnv.Dump())
 	if sys.platform == 'win32':
 		index = qtEnv['CXXFLAGS'].index('_CONSOLE')
 		del qtEnv['CXXFLAGS'][index-1]
@@ -449,6 +458,7 @@ if hasQt:
 
 	if sys.platform == 'darwin':
 		qtEnv_osx = qtEnv.Clone();
+		# Objective C++ does not permit the following optimization flags
 		qtEnv_osx['CXXFLAGS'].remove('-fstrict-aliasing');
 		qtEnv_osx['CXXFLAGS'].remove('-ftree-vectorize');
 		qtEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing');

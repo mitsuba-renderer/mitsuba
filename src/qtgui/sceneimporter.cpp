@@ -52,6 +52,7 @@ SceneImporter::~SceneImporter() {
 
 void SceneImporter::run() {
 	FileResolver::setInstance(m_resolver);
+#if defined(MTS_HAS_COLLADA)
 	try {
 		GUIGeometryConverter cvt(m_parent);
 		cvt.setSRGB(m_srgb);
@@ -62,6 +63,9 @@ void SceneImporter::run() {
 	} catch (...) {
 		SLog(EWarn, "An unknown type of error occurred!");
 	}
+#else
+	SLog(EWarn, "The importer was disabled in this build!");
+#endif
 	m_wait->set(true);
 }
 
