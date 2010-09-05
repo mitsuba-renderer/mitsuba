@@ -167,6 +167,9 @@ elif sys.platform == 'linux2':
 	if not conf.CheckType('GLEWContext', '#include <GL/glew.h>'):
 		print 'GLEW-MX must be present!'
 		Exit(1)
+	if not conf.TryCompile("#include <GL/glew.h>\n int i = GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV;", '.cpp'):
+		print 'Your version of GLEW-MX seems to be outdated!'
+		Exit(1)
 elif sys.platform == 'darwin':
 	if not (conf.CheckCHeader('OpenGL/gl.h') and conf.CheckCHeader('OpenGL/glu.h') and conf.CheckCHeader(['OpenGL/gl.h', 'OpenGL/glext.h'])):
 		print 'OpenGL headers are missing!'
