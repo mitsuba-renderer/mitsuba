@@ -23,6 +23,16 @@
 
 MTS_NAMESPACE_BEGIN
 
+#if defined(MTS_TESTCASE)
+/**
+ * When a testcase is being compiled, define the following preprocessor macros for convenience
+ */
+#define assertEquals(expected, actual) assertEqualsImpl(expected, actual, Epsilon, __FILE__, __LINE__)
+#define assertEqualsEpsilon(expected, actual, epsilon) assertEqualsImpl(expected, actual, epsilon, __FILE__, __LINE__)
+#define assertTrue(expr) assertTrueImpl(expr, #expr, __FILE__, __LINE__)
+#define assertFalse(expr) assertFalseImpl(expr, #expr, __FILE__, __LINE__)
+#endif
+
 /** \brief Base class of all testcases. Implementations of this
  * interface can be executed using the 'mtsutil' command. The execution
  * order is as follows: after initializaiton using init(), any tests
@@ -54,6 +64,36 @@ public:
 protected:
 	/// Virtual destructor
 	virtual ~TestCase() { }
+
+	/// Asserts that the two integer values are equal
+	void assertEqualsImpl(int expected, int actual, const char *file, int line);
+
+	/// Asserts that the two floating point values are equal
+	void assertEqualsImpl(Float expected, Float actual, Float epsilon, const char *file, int line);
+
+	/// Asserts that the two 2D vectors are equal
+	void assertEqualsImpl(const Vector2 &expected, const Vector2 &actual, Float epsilon, const char *file, int line);
+
+	/// Asserts that the two 3D vectors are equal
+	void assertEqualsImpl(const Vector &expected, const Vector &actual, Float epsilon, const char *file, int line);
+
+	/// Asserts that the two 4D vectors are equal
+	void assertEqualsImpl(const Vector4 &expected, const Vector4 &actual, Float epsilon, const char *file, int line);
+
+	/// Asserts that the two 2D points are equal
+	void assertEqualsImpl(const Point2 &expected, const Point2 &actual, Float epsilon, const char *file, int line);
+
+	/// Asserts that the two 3D points are equal
+	void assertEqualsImpl(const Point &expected, const Point &actual, Float epsilon, const char *file, int line);
+
+	/// Asserts that the two 4x4 matrices are equal
+	void assertEqualsImpl(const Matrix4x4 *expected, const Matrix4x4 *actual, Float epsilon, const char *file, int line);
+
+	/// Asserts that a condition is true
+	void assertTrueImpl(bool condition, const char *expr, const char *file, int line);
+
+	/// Asserts that a condition is false
+	void assertFalseImpl(bool condition, const char *expr, const char *file, int line);
 protected:
 	int m_executed, m_succeeded;
 };

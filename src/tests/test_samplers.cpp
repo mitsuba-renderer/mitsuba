@@ -46,7 +46,7 @@ public:
 		sampler->generate();
 		for (int i=0; i<5; ++i) {
 			for (int j=0; j<5; ++j)
-				Assert(std::abs(sampler->next1D() - comparison[pos++]) < 1e-7);
+				assertEqualsEpsilon(sampler->next1D(), comparison[pos++], 1e-7);
 			sampler->advance();
 		}
 	}
@@ -70,7 +70,7 @@ public:
 		sampler->generate();
 		for (int i=0; i<5; ++i) {
 			for (int j=0; j<6; ++j) 
-				Assert(std::abs(sampler->next1D() - comparison[pos++]) < 1e-7);
+				assertEqualsEpsilon(sampler->next1D(), comparison[pos++], 1e-7);
 			sampler->advance();
 		}
 	}
@@ -79,7 +79,7 @@ public:
 		Float x = 0.0f;
 
 		for (int i=0; i<20; ++i) {
-			Assert(x == radicalInverse(2, i));
+			assertEqualsEpsilon(x, radicalInverse(2, i), 0);
 			x = radicalInverseIncremental(2, x);
 		}
 	}

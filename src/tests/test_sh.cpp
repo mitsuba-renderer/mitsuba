@@ -56,7 +56,7 @@ public:
 
 			Float value1 = vec1.eval(dir2);
 			Float value2 = vec2.eval(dir1);
-			Assert(std::abs(value1-value2) < Epsilon);
+			assertEquals(value1, value2);
 		}
 	}
 
@@ -91,10 +91,10 @@ public:
 			Float relerr = std::abs(pdf1-pdf2)/pdf2;
 			if (pdf2 > 0.01) {
 				accum += relerr; ++nInAvg;
-				Assert(relerr < 0.08);
+				assertTrue(relerr < 0.08);
 			}
 		}
-		Assert(accum / nInAvg < 0.01);
+		assertTrue(accum / nInAvg < 0.01);
 	}
 };
 

@@ -431,7 +431,6 @@ if hasQt:
 	qtEnv = mainEnv.Clone()
 	qtEnv.Append(CPPPATH=['src/qtgui'])
 	qtEnv.EnableQt4Modules(['QtGui', 'QtCore', 'QtOpenGL', 'QtXml', 'QtNetwork'])
-	print(qtEnv.Dump())
 	if sys.platform == 'win32':
 		index = qtEnv['CXXFLAGS'].index('_CONSOLE')
 		del qtEnv['CXXFLAGS'][index-1]
@@ -615,9 +614,11 @@ plugins += env.SharedLibrary('plugins/vpl', ['src/integrators/vpl/vpl.cpp'])
 #])
 
 # Testcases
+testEnv = env.Clone()
+testEnv.Append(CPPDEFINES = [['MTS_TESTCASE', '1']])
 for plugin in glob.glob('src/tests/test_*.cpp'):
 	name = os.path.basename(plugin)
-	plugins += env.SharedLibrary('plugins/' + name[0:len(name)-4], plugin)
+	plugins += testEnv.SharedLibrary('plugins/' + name[0:len(name)-4], plugin)
 
 installTargets = []
 
