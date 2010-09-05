@@ -126,7 +126,7 @@ void ImportDialog::accept() {
 	dialog->show();
 	progressBar->show();
 
-	std::string filePath = m_resolver->pathFromFile(sourceFile.toStdString());
+	std::string filePath = m_resolver->getParentDirectory(sourceFile.toStdString());
 	if (!m_resolver->contains(filePath))
 		m_resolver->addPath(filePath);
 

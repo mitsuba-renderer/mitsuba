@@ -578,7 +578,7 @@ void MainWindow::onClearRecent() {
 SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	ref<FileResolver> resolver = FileResolver::getInstance();
 	std::string filename = resolver->resolveAbsolute(qFileName.toStdString());
-	std::string filePath = resolver->pathFromFile(filename);
+	std::string filePath = resolver->getParentDirectory(filename);
 	ref<FileResolver> newResolver = resolver->clone();
 	if (!newResolver->contains(filePath))
 		newResolver->addPath(filePath);

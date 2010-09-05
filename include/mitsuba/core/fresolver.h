@@ -89,16 +89,16 @@ public:
 	
 	/// Set the current directory by stripping away the last component
 	inline void setCurrentDirectoryFromFile(const std::string &cwd) {
-		m_currentDirectory = pathFromFile(cwd);
+		m_currentDirectory = getParentDirectory(cwd);
 	}
 
 	/// Adds a path while stripping away the last component
 	inline void addPathFromFile(const std::string &path) {
-		addPath(pathFromFile(path));
+		addPath(getParentDirectory(path));
 	}
 
 	/// Strip the last component from a path
-	inline std::string pathFromFile(const std::string &path) const {
+	inline std::string getParentDirectory(const std::string &path) const {
 		std::vector<std::string> components = tokenize(path, "/\\");
 		if (components.size() == 1)
 			return ".";
@@ -112,6 +112,11 @@ public:
 		return newPath;
 	}
 
+	/// Return the last component of a path
+	inline std::string getChild(const std::string &path) const {
+		std::vector<std::string> components = tokenize(path, "/\\");
+		return components[components.size()-1];
+	}
 
 	/// Try to resolve a path to an existing file
 	inline std::string resolve(const std::string &path) const {

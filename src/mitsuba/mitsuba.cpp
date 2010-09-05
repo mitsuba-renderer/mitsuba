@@ -287,7 +287,7 @@ int ubi_main(int argc, char **argv) {
 
 		int jobIdx = 0;
 		for (int i=optind; i<argc; ++i) {
-			std::string inputFile = argv[i], filePath = resolver->pathFromFile(inputFile);
+			std::string inputFile = argv[i], filePath = resolver->getParentDirectory(inputFile);
 			if (!resolver->contains(filePath))
 				resolver->addPath(filePath);
 				
