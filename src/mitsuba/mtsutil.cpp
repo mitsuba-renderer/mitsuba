@@ -120,6 +120,7 @@ void help() {
 			}
 #if !defined(WIN32)	
 		}
+		closedir(directory);
 #else
 		} while (FindNextFile(hFind, &findFileData));
 		FindClose(hFind);
@@ -318,6 +319,7 @@ int ubi_main(int argc, char **argv) {
 					succeeded += testCase->getSucceeded();
 #if !defined(WIN32)	
 				}
+				closedir(directory);
 #else
 				} while (FindNextFile(hFind, &findFileData));
 				FindClose(hFind);

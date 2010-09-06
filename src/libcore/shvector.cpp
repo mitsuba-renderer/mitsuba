@@ -480,8 +480,8 @@ SHSampler::~SHSampler() {
 	for (int i=0; i<=m_depth; ++i) {
 		int res = 1 << i;
 		for (int j=0; j<res; ++j) {
-			delete m_phiMap[i][j];
-			delete m_legendreMap[i][j];
+			delete[] m_phiMap[i][j];
+			delete[] m_legendreMap[i][j];
 		}
 		delete[] m_phiMap[i];
 		delete[] m_legendreMap[i];

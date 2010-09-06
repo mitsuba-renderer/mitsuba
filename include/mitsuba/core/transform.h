@@ -53,9 +53,12 @@ public:
 	/// Return the determinant of the upper left 3x3 sub-matrix
 	Float det3x3() const;
 
+	/// Perform a symmetric 4x4 eigendecomposition into Q and D.
+	void symmEigenDecomp(Matrix4x4 *Q, Vector4 &d);
+
 	/// Return the inverse of this matrix
 	ref<Matrix4x4> inverse() const;
-	
+
 	/// Return the transpose of this matrix
 	ref<Matrix4x4> transpose() const;
 

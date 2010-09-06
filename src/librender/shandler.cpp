@@ -100,7 +100,7 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 void SceneHandler::endElement(const XMLCh* const xmlName) {
 	std::string name = transcode(xmlName);
 	ParseContext &context = m_context.top();
-	std::string type = context.attributes["type"];
+	std::string type = toLowerCase(context.attributes["type"]);
 	context.properties.setPluginName(type);
 	if (context.attributes.find("id") != context.attributes.end())
 		context.properties.setID(context.attributes["id"]);
