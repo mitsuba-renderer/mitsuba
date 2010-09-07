@@ -193,9 +193,9 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 		Vector dir;
 		Point2 seed(i*invSampleCount, radicalInverse(2, i)); // Hammersley seq.
 		if (vpl.type == ELuminaireVPL && vpl.luminaire->getType() & Luminaire::EOnSurface)
-			dir = squareToSphere(seed);
-		else
 			dir = vpl.its.shFrame.toWorld(squareToHemispherePSA(seed));
+		else
+			dir = squareToSphere(seed);
 		ray.setDirection(dir);
 		if (m_scene->rayIntersect(ray, its)) {
 			nearClip = std::min(nearClip, its.t);
