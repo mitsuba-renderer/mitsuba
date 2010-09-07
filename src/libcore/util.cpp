@@ -311,13 +311,25 @@ Float log2(Float value) {
 	return std::log(value) * invLn2;
 }
 
-std::string formatString(const char *pFmt, ...) {
-	char tmp[2048]; /* Limited to 2k */
+std::string formatString(const char *fmt, ...) {
+	char tmp[512];
 	va_list iterator;
 
-	va_start(iterator, pFmt);
-	vsnprintf(tmp, 2048, pFmt, iterator);
+	va_start(iterator, fmt);
+	size_t size = vsnprintf(tmp, sizeof(tmp), fmt, iterator);
 	va_end(iterator);
+
+	if (size >= sizeof(tmp)) {
+		/* Overflow! -- dynamically allocate memory */
+		char *dest = new char[size+1];
+		va_start(iterator, fmt);
+		vsnprintf(dest, size+1, fmt, iterator);
+		va_end(iterator);
+
+		std::string result(dest);
+		delete[] dest;
+		return result;
+	}
 
 	return std::string(tmp);
 }

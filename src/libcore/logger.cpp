@@ -48,11 +48,19 @@ void Logger::log(ELogLevel level, const Class *theClass,
 	if (level < m_logLevel)
 		return;
 
-	char tmp[2048];
+	char tmp[512], *msg = tmp;
 	va_list iterator;
 	va_start(iterator, fmt);
-	vsnprintf(tmp, 2048, fmt, iterator);
+	size_t size = vsnprintf(tmp, sizeof(tmp), fmt, iterator);
 	va_end(iterator);
+
+	if (size >= sizeof(tmp)) {
+		/* Overflow! -- dynamically allocate memory */
+		msg = new char[size+1];
+		va_start(iterator, fmt);
+		vsnprintf(msg, size+1, fmt, iterator);
+		va_end(iterator);
+	}
 
 	if (m_formatter == NULL) {
 		std::cerr << "PANIC: Logging has not been properly initialized!" << std::endl;
@@ -60,7 +68,10 @@ void Logger::log(ELogLevel level, const Class *theClass,
 	}
 
 	std::string text = m_formatter->format(level, theClass, 
-		Thread::getThread(), tmp, file, line);
+		Thread::getThread(), msg, file, line);
+
+	if (msg != tmp)
+		delete[] msg;
 
 	if (level < EError) {
 		m_mutex->lock();
