@@ -67,7 +67,7 @@ void GLGeometry::refresh() {
 		vertices[pos++] = (float) vtx.uv.y;
 		vertices[pos++] = (float) vtx.dpdu.x;
 		vertices[pos++] = (float) vtx.dpdu.y;
-		vertices[pos++] = (float) vtx.dpdu.y;
+		vertices[pos++] = (float) vtx.dpdu.z;
 	}
 
 	bind();
