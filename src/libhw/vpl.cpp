@@ -365,7 +365,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "   float d = length(lightVec);" << endl
 			<< "   vec3 nLightVec = lightVec/d, absLightVec = abs(lightVec);" << endl
 			<< "   float depth = max(max(absLightVec.x, absLightVec.y), absLightVec.z);" << endl
-			<< "   depth = (depth-nearClip) * invClipRange - 0.001;" << endl
+			<< "   depth = (depth-nearClip) * invClipRange - 0.005;" << endl
 			<< "   float shadow = textureCube(shadowMap, nLightVec).r > depth ? 1.0 : 0.0;" << endl
 			<< endl
 			<< "   /* Shading */" << endl
