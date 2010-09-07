@@ -32,9 +32,11 @@ Hair::Hair(const Properties &props) : Shape(props) {
 		} else {
 			std::istringstream iss(line);
 			iss >> p.x >> p.y >> p.z;
-			m_vertices.push_back(p);
-			m_startFiber.push_back(newFiber);
-			newFiber = false;
+			if (iss.good()) {
+				m_vertices.push_back(p);
+				m_startFiber.push_back(newFiber);
+				newFiber = false;
+			}
 		}
 	}
 	m_startFiber.push_back(true);
@@ -52,8 +54,8 @@ Hair::Hair(Stream *stream, InstanceManager *manager) : Shape(stream, manager) {
 	for (size_t i=0; i<segmentCount; ++i)
 		m_vertices.push_back(Point(stream));
 
-	m_startFiber.reserve(segmentCount);
-	for (size_t i=0; i<segmentCount; ++i)
+	m_startFiber.reserve(segmentCount+1);
+	for (size_t i=0; i<segmentCount+1; ++i)
 		m_startFiber.push_back(stream->readBool());
 
 	buildSegIndex();
