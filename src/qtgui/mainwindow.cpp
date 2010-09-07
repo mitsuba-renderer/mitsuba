@@ -146,6 +146,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	/* Load defaults from app settings file */
 	ui->glView->setInvertMouse(settings.value("invertMouse", false).toBool());
 	ui->glView->setMouseSensitivity(settings.value("mouseSensitivity", 3).toInt());
+	ui->glView->setNavigationMode((ENavigationMode) settings.value("navigationMode", 
+		EFlythroughFixedYaw).toInt());
 	m_searchPaths = settings.value("searchPaths", QStringList()).toStringList();
 	m_blockSize = settings.value("blockSize", 32).toInt();
 	m_listenPort = settings.value("listenPort", MTS_DEFAULT_PORT).toInt();
@@ -181,7 +183,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 	QToolButton *previewButton = static_cast<QToolButton *>(ui->toolBar->widgetForAction(ui->actionPreviewSettings));
 	previewButton->setStyleSheet("margin-left: -5px; margin-right:-5px");
-
+	
 	/* Weird Qt/OSX bug -- moving while a window while it is invisible causes 
 	   it to appear move up by 65 pixels (this is related to the unified toolbar) */
 	move(windowPos + QPoint(0, 65));
@@ -499,6 +501,7 @@ void MainWindow::onProgressMessage(const RenderJob *job, const QString &name,
 	context->progressName = name + ": ";
 	updateUI();
 }
+
 void MainWindow::on_actionOpen_triggered() {
 	QFileDialog *dialog = new QFileDialog(this, Qt::Sheet);
 	dialog->setNameFilter(tr("Mitsuba scenes (*.xml);;EXR images (*.exr)"));
@@ -662,23 +665,10 @@ void MainWindow::updateUI() {
 	bool fallback = ui->glView->isUsingSoftwareFallback();
 
 	ui->actionStop->setEnabled(isShowingRendering);
-	if (isShowingRendering && !isRendering) {
-		if (ui->actionStop->text() != tr("Preview")) {
-			QIcon icon;
-			ui->actionStop->setText(tr("Preview"));
-			ui->actionStop->setToolTip(tr("Return to the realtime preview"));
-			icon.addFile(QString::fromUtf8(":/resources/fpreview.png"), QSize(), QIcon::Normal, QIcon::Off);
-			ui->actionStop->setIcon(icon);
-		}
-	} else {
-		if (ui->actionStop->text() != tr("Stop")) {
-			QIcon icon;
-			ui->actionStop->setText(tr("Stop"));
-			ui->actionStop->setToolTip(tr("Stop rendering"));
-			icon.addFile(QString::fromUtf8(":/resources/stop.png"), QSize(), QIcon::Normal, QIcon::Off);
-			ui->actionStop->setIcon(icon);
-		}
-	}
+	if (isShowingRendering && !isRendering)
+		ui->actionStop->setToolTip(tr("Return to the realtime preview"));
+	else
+		ui->actionStop->setToolTip(tr("Stop rendering"));
 
 	ui->actionRender->setEnabled(isInactiveScene);
 	ui->actionRefresh->setEnabled(isInactiveScene);
@@ -972,6 +962,8 @@ void MainWindow::on_actionPreviewSettings_triggered() {
 		connect(m_previewSettings, SIGNAL(previewMethodChanged(EPreviewMethod)), ui->glView, SLOT(setPreviewMethod(EPreviewMethod)));
 		connect(m_previewSettings, SIGNAL(toneMappingMethodChanged(EToneMappingMethod)), ui->glView, SLOT(setToneMappingMethod(EToneMappingMethod)));
 		connect(m_previewSettings, SIGNAL(close()), this, SLOT(onPreviewSettingsClose()));
+		connect(m_previewSettings, SIGNAL(diffuseReceiversChanged(bool)), ui->glView, SLOT(setDiffuseReceivers(bool)));
+		connect(m_previewSettings, SIGNAL(diffuseSourcesChanged(bool)), ui->glView, SLOT(setDiffuseSources(bool)));
 	}
 	SceneContext *ctx = NULL;
 	if (ui->tabBar->currentIndex() != -1)
@@ -1026,6 +1018,7 @@ void MainWindow::on_actionSettings_triggered() {
 	d.setWindowModality(Qt::ApplicationModal);
 	d.setLogLevel(logger->getLogLevel());
 	d.setInvertMouse(ui->glView->getInvertMouse());
+	d.setNavigationMode(ui->glView->getNavigationMode());
 	d.setMouseSensitivity(ui->glView->getMouseSensitivity());
 	d.setBlockSize(m_blockSize);
 	d.setSearchPaths(m_searchPaths);
@@ -1052,10 +1045,12 @@ void MainWindow::on_actionSettings_triggered() {
 		settings.setValue("mouseSensitivity", d.getMouseSensitivity());
 		settings.setValue("listenPort", d.getListenPort());
 		settings.setValue("nodeName", d.getNodeName());
+		settings.setValue("navigationMode", (int) d.getNavigationMode());
 
 		logger->setLogLevel(d.getLogLevel());
 		ui->glView->setInvertMouse(d.getInvertMouse());
 		ui->glView->setMouseSensitivity(d.getMouseSensitivity());
+		ui->glView->setNavigationMode(d.getNavigationMode());
 		m_blockSize = d.getBlockSize();
 		m_searchPaths = d.getSearchPaths();
 		m_checkForUpdates = d.getCheckForUpdates();
@@ -1131,6 +1126,7 @@ void MainWindow::on_actionRender_triggered() {
 	scene->setBlockSize(m_blockSize);
 	context->renderJob = new RenderJob("rend", scene, m_renderQueue, NULL, 
 		context->sceneResID, -1, -1, false);
+	context->cancelMode = ERender;
 	if (context->mode != ERender)
 		ui->glView->downloadFramebuffer();
 	context->cancelled = false;
@@ -1356,6 +1352,7 @@ void MainWindow::onJobFinished(const RenderJob *job, bool cancelled) {
 				tr("The rendering job did not complete successfully. Please check the log."), 
 				QMessageBox::Ok);
 		} else {
+			context->mode = context->cancelMode;
 			if (ui->tabBar->currentIndex() != -1 &&
 				m_context[ui->tabBar->currentIndex()] == context)
 				ui->glView->resumePreview();

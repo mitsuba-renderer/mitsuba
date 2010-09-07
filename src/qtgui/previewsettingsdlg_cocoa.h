@@ -19,6 +19,8 @@ class PreviewSettingsDlg;
 	IBOutlet BWTransparentSlider *exposure;
 	IBOutlet BWTransparentSlider *gamma;
 	IBOutlet BWTransparentCheckbox *sRGB;
+	IBOutlet BWTransparentCheckbox *diffuseSourcesBox;
+	IBOutlet BWTransparentCheckbox *diffuseReceiversBox;
 	IBOutlet NSTextField *shadowMapLabel;
 	IBOutlet NSTextField *reinhardKeyLabel;
 	IBOutlet NSTextField *gammaLabel;
@@ -40,6 +42,8 @@ class PreviewSettingsDlg;
 - (IBAction) exposureChanged: (id) sender;
 - (IBAction) gammaChanged: (id) sender;
 - (IBAction) sRGBChanged: (id) sender;
+- (IBAction) diffuseSourcesChanged: (id) sender;
+- (IBAction) diffuseReceiversChanged: (id) sender;
 - (IBAction) reset: (id) sender;
 - (void) updateUI;
 - (void) showAt: (NSPoint) point;
@@ -87,6 +91,12 @@ public:
 	void triggerReinhardBurnChanged(float burn) {
 		emit reinhardBurnChanged(burn);
 	}
+	void triggerDiffuseReceiversChanged(bool value) {
+		emit diffuseReceiversChanged(value);
+	}
+	void triggerDiffuseSourcesChanged(bool value) {
+		emit diffuseSourcesChanged(value);
+	}
 	void triggerClose() {
 		emit close();
 	}
@@ -101,6 +111,8 @@ signals:
 	void reinhardKeyChanged(Float key);
 	void reinhardBurnChanged(Float burn);
 	void close();
+	void diffuseReceiversChanged(bool);
+	void diffuseSourcesChanged(bool);
 private:
 	CocoaRenderSettingsDlg *m_dlg;
 };

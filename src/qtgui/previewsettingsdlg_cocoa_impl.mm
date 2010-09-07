@@ -54,6 +54,7 @@
 	bool hasShadowMaps = (sel_previewMethod == EOpenGL || sel_previewMethod == EOpenGLSinglePass);
 	bool hasKey = (sel_toneMappingMethod == EReinhard);
 	bool hasGamma = [sRGB state] == NSOffState;
+	bool hasDiffuseSources = [diffuseSourcesBox state] == NSOnState;
 	std::string gammaStr = formatString("%.1f", [gamma floatValue]);
 	std::string exposureStr = formatString("%.1f", [exposure floatValue]);
 
@@ -69,6 +70,8 @@
 	[[gamma animator] setAlphaValue: hasGamma ? 1.0f : 0.5f];
 	[gammaValueLabel setStringValue: [NSString stringWithCString: gammaStr.c_str() encoding: NSASCIIStringEncoding]];
 	[exposureValueLabel setStringValue: [NSString stringWithCString: exposureStr.c_str() encoding: NSASCIIStringEncoding]];
+	[diffuseReceiversBox setEnabled: (BOOL) hasDiffuseSources];
+	[[diffuseReceiversBox animator] setAlphaValue: hasDiffuseSources ? 1.0f : 0.5f];
 }
 
 - (IBAction) previewMethodChanged: (id) sender {
@@ -110,6 +113,15 @@
 	[self updateUI];
 }
 
+- (IBAction) diffuseSourcesChanged: (id) sender {
+	delegate->triggerDiffuseSourcesChanged([diffuseSourcesBox state] == NSOnState);
+	[self updateUI];
+}
+
+- (IBAction) diffuseReceiversChanged: (id) sender {
+	delegate->triggerDiffuseReceiversChanged([diffuseReceiversBox state] == NSOnState);
+}
+
 - (IBAction) shadowMapResolutionChanged: (id) sender {
 	int res, index = [shadowMapResolution indexOfSelectedItem];
 	switch (index) {
@@ -144,6 +156,8 @@
 	[exposure setFloatValue: 0.0];
 	[reinhardKey setFloatValue: 0.18];
 	[sRGB setState: NSOnState];
+	[diffuseSourcesBox setState: NSOnState];
+	[diffuseReceiversBox setState: NSOffState];
 	[self previewMethodChanged: self];
 	[self toneMappingMethodChanged: self];
 	[self shadowMapResolutionChanged: self];
@@ -151,6 +165,8 @@
 	[self exposureChanged: self];
 	[self clampingChanged: self];
 	[self gammaChanged: self];
+	[self diffuseSourcesChanged: self];
+	[self diffuseReceiversChanged: self];
 }
 
 - (void) setContext: (SceneContext *) ctx {
@@ -161,6 +177,8 @@
 	[clamping setFloatValue: (float) ctx->clamping];
 	[gamma setFloatValue: (float) ctx->gamma];
 	[sRGB setState: ctx->srgb ? NSOnState : NSOffState];
+	[diffuseSourcesBox setState: ctx->diffuseSources ? NSOnState : NSOffState];
+	[diffuseReceiversBox setState: ctx->diffuseReceivers ? NSOnState : NSOffState];
 
 	if (ctx->toneMappingMethod == EGamma)
 		[exposure setFloatValue: (float) ctx->exposure];

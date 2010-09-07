@@ -1,7 +1,7 @@
 #include <xercesc/parsers/SAXParser.hpp>
 #include "glwidget.h"
 #include "sceneloader.h"
-#include "../mitsuba/shandler.h"
+#include <mitsuba/render/shandler.h>
 
 SceneLoader::SceneLoader(FileResolver *resolver, const std::string &filename) 
 	: Thread("load"), m_resolver(resolver), m_filename(filename) {

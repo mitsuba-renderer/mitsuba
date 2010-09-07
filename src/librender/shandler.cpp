@@ -1,6 +1,8 @@
 #include <mitsuba/core/platform.h>
 #include <xercesc/parsers/SAXParser.hpp>
-#include "shandler.h"
+#include <mitsuba/render/shandler.h>
+
+MTS_NAMESPACE_BEGIN
 
 SceneHandler::SceneHandler() : m_isIncludedFile(false) {
 	m_pluginManager = PluginManager::getInstance();
@@ -399,3 +401,4 @@ void SceneHandler::fatalError(const SAXParseException& e) {
 		transcode(e.getMessage()).c_str());
 }
 
+MTS_NAMESPACE_END

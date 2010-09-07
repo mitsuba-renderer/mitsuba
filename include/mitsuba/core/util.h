@@ -36,6 +36,9 @@ extern MTS_EXPORT_CORE std::string toUpperCase(const std::string &string);
 /// Trim spaces (' ', '\n', '\r', '\t') from the ends of a string
 extern MTS_EXPORT_CORE std::string trim(const std::string& str);
 
+/// Determines whether a string starts with the string given as second parameter
+extern MTS_EXPORT_CORE bool startsWith(const std::string& str, const std::string& start);
+
 /// Determines whether a string ends with the string given as second parameter
 extern MTS_EXPORT_CORE bool endsWith(const std::string& str, const std::string& end);
 
@@ -85,6 +88,12 @@ extern MTS_EXPORT_CORE Float lanczosSinc(Float t, Float tau = 2);
  * Returns true if a solution could be found
  */
 extern MTS_EXPORT_CORE bool solveQuadratic(Float a, Float b, Float c, Float &x0, Float &x1);
+
+/**
+ * \brief Similar to solveQuadratic(), but always uses double precision independent
+ * of the chosen compile-time precision.
+ */
+extern MTS_EXPORT_CORE bool solveQuadraticDouble(double a, double b, double c, double &x0, double &x1);
 
 /**
  * \brief Solve a 2x2 linear equation system using basic linear algebra

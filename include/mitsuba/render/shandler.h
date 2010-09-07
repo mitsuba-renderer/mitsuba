@@ -11,7 +11,7 @@
 #include <map>
 
 XERCES_CPP_NAMESPACE_USE
-using namespace mitsuba;
+MTS_NAMESPACE_BEGIN
 
 /**
  * XML parser for mitsuba scene files. Uses Xerces-C and SAX
@@ -71,5 +71,7 @@ private:
 	Transform m_transform;
 	bool m_isIncludedFile;
 };
+
+MTS_NAMESPACE_END
 
 #endif /* __SHANDLER_H */

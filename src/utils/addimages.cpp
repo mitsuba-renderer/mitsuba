@@ -5,8 +5,6 @@ MTS_NAMESPACE_BEGIN
 
 class AddImages : public Utility {
 public:
-	AddImages(UtilityServices *us) : Utility(us) { }
-
 	int run(int argc, char **argv) {
 		if (argc != 6) {
 			cout << "Add the weighted pixel values of two EXR images to produce a new one" << endl;
@@ -53,9 +51,8 @@ public:
 		return 0;
 	}
 
-	MTS_DECLARE_CLASS()
+	MTS_DECLARE_UTILITY()
 };
 
-MTS_IMPLEMENT_CLASS(AddImages, false, Utility)
 MTS_EXPORT_UTILITY(AddImages, "Generate linear combinations of EXR images")
 MTS_NAMESPACE_END

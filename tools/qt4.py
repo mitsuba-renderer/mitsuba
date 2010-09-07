@@ -203,9 +203,9 @@ def _detect(env):
 	moc = env.WhereIs('moc-qt4') or env.WhereIs('moc4') or env.WhereIs('moc')
 	if moc:
 		QTDIR = os.path.dirname(os.path.dirname(moc))
-		SCons.Warnings.warn(
-			QtdirNotFound,
-			"QTDIR variable is not defined, using moc executable as a hint (QTDIR=%s)" % QTDIR)
+		#SCons.Warnings.warn(
+		#	QtdirNotFound,
+		#	"QTDIR variable is not defined, using moc executable as a hint (QTDIR=%s)" % QTDIR)
 		return QTDIR
 
 	raise SCons.Errors.StopError(
