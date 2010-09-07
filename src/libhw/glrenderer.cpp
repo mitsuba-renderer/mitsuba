@@ -212,7 +212,6 @@ void GLRenderer::checkError(bool onlyWarn) {
 
 void GLRenderer::beginDrawingMeshes(bool transmitOnlyPositions) {
 	m_transmitOnlyPositions = transmitOnlyPositions;
-
 	glEnableClientState(GL_VERTEX_ARRAY);
 
 	if (!transmitOnlyPositions) {
@@ -278,8 +277,8 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 		}
 
 		/* Draw all triangles */
-		glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount()*3), 
-			GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount() * 3), 
+			GL_UNSIGNED_INT, (GLvoid *) 0);
 	} else {
 		/* Draw the old-fashioned way without VBOs */
 		const GLchar *vertices = (const GLchar *) mesh->getVertexBuffer();
@@ -287,7 +286,7 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 		GLenum dataType = sizeof(Float) == 4 ? GL_FLOAT : GL_DOUBLE;
 
 		glVertexPointer(3, dataType, sizeof(Vertex), vertices);
-		
+
 		if (!m_transmitOnlyPositions) {
 			glNormalPointer(dataType, sizeof(Vertex), 
 				vertices + sizeof(Float) * 3);
@@ -327,7 +326,7 @@ void GLRenderer::endDrawingMeshes() {
 }
 	
 void GLRenderer::drawAll() {
-	GLRenderer::beginDrawingMeshes(false);
+	GLRenderer::beginDrawingMeshes(true);
 	std::map<const TriMesh *, GPUGeometry *>::iterator it;
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
 		for (it = m_geometry.begin(); it != m_geometry.end(); ++it) {
@@ -351,7 +350,7 @@ void GLRenderer::drawAll() {
 			/* Set up the vertex/normal arrays */
 			glVertexPointer(3, GL_FLOAT, sizeof(GLfloat) * 11, (GLfloat *) 0);
 			glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount()*3), 
-				GL_UNSIGNED_INT, 0);
+				GL_UNSIGNED_INT, (GLvoid *) 0);
 		}
 	}
 	GLRenderer::endDrawingMeshes();

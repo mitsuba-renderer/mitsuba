@@ -376,8 +376,6 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "   vec3 wi = vec3(dot(S, nCamVec)," << endl
 			<< "                  dot(T, nCamVec)," << endl
 			<< "                  dot(N, nCamVec));" << endl
-//			<< "   if (wi.z < 0)" << endl
-//			<< "      discard;" << endl
 			<< "   vec3 vplWo = -vec3(dot(vplS, nLightVec)," << endl
 			<< "                      dot(vplT, nLightVec)," << endl
 			<< "                      dot(vplN, nLightVec));" << endl
