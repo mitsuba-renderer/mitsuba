@@ -410,7 +410,12 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "}" << endl;
 
 		program->setSource(GPUProgram::EFragmentProgram, oss.str());
-		program->init();
+		try {
+			program->init();
+		} catch (const std::exception &ex) {
+			Log(EWarn, "Unable to compile the following VPL program:\n%s", oss.str().c_str());
+			throw;
+		}
 
 		m_targetConfig.resolve(program);
 		m_targetConfig.param_shadowMap = program->getParameterID("shadowMap", false);
