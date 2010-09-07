@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/texture.h>
+#include <mitsuba/hw/gpuprogram.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -250,6 +251,8 @@ public:
 		stream->writeFloat(m_diffuseSamplingWeight);
 	}
 
+	Shader *createShader(Renderer *renderer) const; 
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Ward[" << endl
@@ -275,6 +278,95 @@ private:
 	bool m_verifyEnergyConservation;
 };
 
+// ================ Hardware shader implementation ================ 
+
+class WardShader : public Shader {
+public:
+	WardShader(Renderer *renderer, 
+			const Texture *diffuseColor,
+			const Texture *specularColor,
+			Float ks, Float kd,
+			Float alphaX, Float alphaY) : Shader(renderer, EBSDFShader), 
+			m_diffuseReflectance(diffuseColor),
+			m_specularReflectance(specularColor),
+			m_ks(ks), m_kd(kd), m_alphaX(alphaX), m_alphaY(alphaY) {
+		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
+		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
+	}
+
+	bool isComplete() const {
+		return m_diffuseReflectanceShader.get() != NULL &&
+			   m_specularReflectanceShader.get() != NULL;
+	}
+
+	void putDependencies(std::vector<Shader *> &deps) {
+		deps.push_back(m_diffuseReflectanceShader.get());
+		deps.push_back(m_specularReflectanceShader.get());
+	}
+
+	void cleanup(Renderer *renderer) {
+		renderer->unregisterShaderForResource(m_diffuseReflectance.get());
+		renderer->unregisterShaderForResource(m_specularReflectance.get());
+	}
+
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "uniform float " << evalName << "_alphaX;" << endl
+			<< "uniform float " << evalName << "_alphaY;" << endl
+			<< "uniform float " << evalName << "_ks;" << endl
+			<< "uniform float " << evalName << "_kd;" << endl
+			<< endl
+			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    if (wi.z <= 0.0 || wo.z <= 0.0)" << endl
+			<< "    	return vec3(0.0);" << endl
+			<< "    vec3 H = normalize(wi + wo);" << endl
+			<< "    float factor1 = 1/(12.566 * " << evalName << "_alphaX * " 
+			<< "                    " << evalName << "_alphaY * sqrt(wi.z * wo.z));" << endl
+			<< "    float factor2 = H.x / " << evalName << "_alphaX;" << endl
+			<< "    float factor3 = H.y / " << evalName << "_alphaY;" << endl
+			<< "    float exponent = -(factor2*factor2 + factor3*factor3)/(H.z*H.z);" << endl
+			<< "    float specRef = factor1 * exp(exponent) * " << evalName << "_ks;" << endl 
+			<< "    return " << depNames[0] << "(uv) * (0.31831 * " << evalName << "_kd)" << endl
+			<< "           + " << depNames[1] << "(uv) * specRef;" << endl
+			<< "}" << endl
+			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    if (wi.z < 0.0 || wo.z < 0.0)" << endl
+			<< "    	return vec3(0.0);" << endl
+			<< "    return " << depNames[0] << "(uv) * (0.31831 * " << evalName << "_kd);" << endl
+			<< "}" << endl;
+	}
+
+	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_alphaX"));
+		parameterIDs.push_back(program->getParameterID(evalName + "_alphaY"));
+		parameterIDs.push_back(program->getParameterID(evalName + "_ks"));
+		parameterIDs.push_back(program->getParameterID(evalName + "_kd"));
+	}
+
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
+		program->setParameter(parameterIDs[0], m_alphaX);
+		program->setParameter(parameterIDs[1], m_alphaY);
+		program->setParameter(parameterIDs[2], m_ks);
+		program->setParameter(parameterIDs[3], m_kd);
+	}
+
+	MTS_DECLARE_CLASS()
+private:
+	ref<const Texture> m_diffuseReflectance;
+	ref<const Texture> m_specularReflectance;
+	ref<Shader> m_diffuseReflectanceShader;
+	ref<Shader> m_specularReflectanceShader;
+	Float m_ks, m_kd;
+	Float m_alphaX, m_alphaY;
+};
+
+Shader *Ward::createShader(Renderer *renderer) const { 
+	return new WardShader(renderer, m_diffuseReflectance.get(),
+		m_specularReflectance.get(), m_ks, m_kd, m_alphaX, m_alphaY);
+}
+
+MTS_IMPLEMENT_CLASS(WardShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(Ward, false, BSDF);
 MTS_EXPORT_PLUGIN(Ward, "Anisotropic Ward BRDF");
 MTS_NAMESPACE_END
