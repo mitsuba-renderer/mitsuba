@@ -72,7 +72,8 @@ void PreviewProcess::processResult(const WorkResult *result, bool cancelled) {
 }
 
 void PreviewProcess::configure(const VPL &vpl, Float minDist, const Point2 &jitter, 
-		const Bitmap *source, Bitmap *target, bool coherent) {
+		const Bitmap *source, Bitmap *target, bool coherent, bool diffuseSources,
+		bool diffuseReceivers) {
 	BlockedImageProcess::init(m_film->getCropOffset(), m_film->getCropSize(), m_blockSize);
 	m_source = source;
 	m_target = target;
@@ -80,6 +81,8 @@ void PreviewProcess::configure(const VPL &vpl, Float minDist, const Point2 &jitt
 	m_vpl = &vpl;
 	m_minDist = minDist;
 	m_coherent = coherent;
+	m_diffuseSources = diffuseSources;
+	m_diffuseReceivers = diffuseReceivers;
 
 	/* It is not necessary to shoot normalized rays. Instead, interpolate: 
 	   here, we generate the upper left corner ray as well as the 
@@ -104,7 +107,8 @@ void PreviewProcess::configure(const VPL &vpl, Float minDist, const Point2 &jitt
 
 ref<WorkProcessor> PreviewProcess::createWorkProcessor() const {
 	return new PreviewWorker(m_blockSize, m_cameraO, m_cameraTL,
-		m_cameraDx, m_cameraDy, *m_vpl, m_minDist, m_coherent);
+		m_cameraDx, m_cameraDy, *m_vpl, m_minDist, m_coherent,
+		m_diffuseSources, m_diffuseReceivers);
 }
 
 

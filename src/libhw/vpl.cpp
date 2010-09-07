@@ -192,7 +192,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 	for (int i=1; i<=sampleCount; ++i) {
 		Vector dir;
 		Point2 seed(i*invSampleCount, radicalInverse(2, i)); // Hammersley seq.
-		if (vpl.type == ELuminaireVPL && vpl.luminaire->getType() & Luminaire::EOnSurface)
+		if (vpl.type == ESurfaceVPL || vpl.luminaire->getType() & Luminaire::EOnSurface)
 			dir = vpl.its.shFrame.toWorld(squareToHemispherePSA(seed));
 		else
 			dir = squareToSphere(seed);

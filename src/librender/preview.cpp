@@ -108,9 +108,10 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 				EmissionRecord eRec(m_vpl.luminaire, 
 					ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), toIts);
 				eRec.type = EmissionRecord::EPreview;
-				value += m_vpl.P * bsdfVal * m_vpl.luminaire->f(eRec) * 
-					((m_vpl.luminaire->getType() == Luminaire::EOnSurface ? 
-						(Float) 1 : dot(m_vpl.its.shFrame.n, toIts)) / (length*length));
+				value += m_vpl.P * bsdfVal * m_vpl.luminaire->f(eRec) 
+					* ((m_vpl.luminaire->getType() & Luminaire::EOnSurface ?
+					dot(m_vpl.its.shFrame.n, toIts) : (Float) 1)
+					/ (length*length));
 			}
 			block->setPixel(pos++, value);
 		}
@@ -178,7 +179,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 	bool diffuseVPL = false, vplOnSurface = false;
 	Spectrum vplWeight;
 
-	if (m_vpl.type == ESurfaceVPL && m_vpl.its.shape->getBSDF()->getType() == BSDF::EDiffuseReflection) {
+	if (m_vpl.type == ESurfaceVPL && (m_diffuseSources || m_vpl.its.shape->getBSDF()->getType() == BSDF::EDiffuseReflection)) {
 		diffuseVPL = true;
 		vplOnSurface = true;
 		vplWeight = m_vpl.its.shape->getBSDF()->getDiffuseReflectance(m_vpl.its) * m_vpl.P / M_PI;
@@ -324,7 +325,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					/* Fast path */
 					direct[idx] = (bsdf->getDiffuseReflectance(its) * vplWeight)
 						* (std::max((Float) 0.0f, dot(wo, its.shFrame.n))
-						* (vplOnSurface ? std::max(cosThetaLight.f[idx], (Float) 0.0f) * INV_PI : 0.0f)
+						* (vplOnSurface ? std::max(cosThetaLight.f[idx], (Float) 0.0f) * INV_PI : 1.0f)
 						* invLengthSquared.f[idx]);
 				} else {
 					wi.x = -primRay4.d[0].f[idx];
@@ -355,7 +356,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 						}
 					}
 
-					if (EXPECT_TAKEN(ctLight > 0)) {
+					if (EXPECT_TAKEN(ctLight >= 0)) {
 						direct[idx] = (bsdf->fCos(BSDFQueryRecord(its, wo)) * vplWeight
 							* ((vplOnSurface ? std::max(ctLight, (Float) 0.0f) : 1.0f) * invLengthSquared.f[idx]));
 					} else {
@@ -402,7 +403,8 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 
 ref<WorkProcessor> PreviewWorker::clone() const {
 	return new PreviewWorker(m_blockSize, m_cameraO, m_cameraTL, 
-		m_cameraDx, m_cameraDy, m_vpl, m_minDist, m_coherent);
+		m_cameraDx, m_cameraDy, m_vpl, m_minDist, m_coherent,
+		m_diffuseSources, m_diffuseReceivers);
 }
 
 MTS_IMPLEMENT_CLASS(PreviewWorker, false, WorkProcessor)
