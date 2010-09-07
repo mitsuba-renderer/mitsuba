@@ -90,16 +90,16 @@ public:
 	void initializeFrom(Bitmap *bitmap) {
 		ref<Bitmap> corrected = new Bitmap(bitmap->getWidth(), bitmap->getHeight(), 128);
 
-		Float tbl[256];
+		float tbl[256];
 		if (m_gamma == -1) {
-			for (int i=0; i<255; ++i)
+			for (int i=0; i<256; ++i) 
 				tbl[i] = fromSRGBComponent(i/255.0f);
 		} else {
-			for (int i=0; i<255; ++i)
+			for (int i=0; i<256; ++i)
 				tbl[i] = std::pow(i/255.0f, m_gamma);
 		}
 
-		unsigned char *data = bitmap->getData();
+		uint8_t *data = bitmap->getData();
 		float *flData = corrected->getFloatData();
 		if (bitmap->getBitsPerPixel() == 32) {
 			for (int y=0; y<bitmap->getHeight(); ++y) {
