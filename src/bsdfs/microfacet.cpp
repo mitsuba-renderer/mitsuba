@@ -44,25 +44,8 @@ public:
 		m_kd = props.getFloat("diffuseAmount", 1.0f);
 		m_ks = props.getFloat("specularAmount", 1.0f);
 
-		bool verifyEnergyConservation = props.getBoolean("verifyEnergyConservation", true);
-
-		if (verifyEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
-				+ m_ks * m_specularReflectance->getMaximum().max() > 1.0f)) {
-			Log(EWarn, "%s: Energy conservation is potentially violated!", props.getID().c_str());
-			Log(EWarn, "Max. diffuse reflectance = %f * %f = %f", m_kd, m_diffuseReflectance->getMaximum().max(), m_kd*m_diffuseReflectance->getMaximum().max());
-			Log(EWarn, "Max. specular reflectance = %f * %f = %f", m_ks, m_specularReflectance->getMaximum().max(), m_ks*m_specularReflectance->getMaximum().max());
-			Float normalization = 1/(m_kd * m_diffuseReflectance->getMaximum().max() + m_ks * m_specularReflectance->getMaximum().max());
-			Log(EWarn, "Reducing the albedo to %.1f%% of the original value to be on the safe side. "
-				"Specify verifyEnergyConservation=false to prevent this.", normalization * 100);
-			m_kd *= normalization; m_ks *= normalization;
-		}
-
-		Float avgDiffReflectance = m_diffuseReflectance->getAverage().average() * m_kd;
-		Float avgSpecularReflectance = m_specularReflectance->getAverage().average() * m_ks;
-
-		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", 
-			avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance));
-		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
+		m_verifyEnergyConservation = props.getBoolean("verifyEnergyConservation", true);
+		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", -1);
 
 		m_alphaB = props.getFloat("alphaB", .1f);
 		m_intIOR = props.getFloat("intIOR", 1.5f);
@@ -102,6 +85,26 @@ public:
 
 	virtual ~Microfacet() {
 		delete[] m_type;
+	}
+
+	void configure() {
+		if (m_verifyEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
+				+ m_ks * m_specularReflectance->getMaximum().max() > 1.0f)) {
+			Log(EWarn, "Material \"%s\": Energy conservation is potentially violated!", getName().c_str());
+			Log(EWarn, "Max. diffuse reflectance = %f * %f = %f", m_kd, m_diffuseReflectance->getMaximum().max(), m_kd*m_diffuseReflectance->getMaximum().max());
+			Log(EWarn, "Max. specular reflectance = %f * %f = %f", m_ks, m_specularReflectance->getMaximum().max(), m_ks*m_specularReflectance->getMaximum().max());
+			Float normalization = 1/(m_kd * m_diffuseReflectance->getMaximum().max() + m_ks * m_specularReflectance->getMaximum().max());
+			Log(EWarn, "Reducing the albedo to %.1f%% of the original value to be on the safe side. "
+				"Specify verifyEnergyConservation=false to prevent this.", normalization * 100);
+			m_kd *= normalization; m_ks *= normalization;
+		}
+
+		if (m_specularSamplingWeight == -1) {
+			Float avgDiffReflectance = m_diffuseReflectance->getAverage().average() * m_kd;
+			Float avgSpecularReflectance = m_specularReflectance->getAverage().average() * m_ks;
+			m_specularSamplingWeight = avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance);
+		}
+		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
@@ -306,6 +309,9 @@ public:
 		oss << "Microfacet[" << endl
 			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
+			<< "  diffuseAmount = " << m_kd << "," << endl
+			<< "  specularAmount = " << m_ks << "," << endl
+			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl
 			<< "  extIOR = " << m_extIOR << "," << endl
 			<< "  alphaB = " << m_alphaB << endl
@@ -321,6 +327,7 @@ private:
 	Float m_specularSamplingWeight;
 	Float m_diffuseSamplingWeight;
 	Float m_ks, m_kd;
+	bool m_verifyEnergyConservation;
 };
 
 // ================ Hardware shader implementation ================ 

@@ -41,25 +41,8 @@ public:
 		m_kd = props.getFloat("diffuseAmount", 1.0f);
 		m_ks = props.getFloat("specularAmount", 1.0f);
 
-		bool verifyEnergyConservation = props.getBoolean("verifyEnergyConservation", true);
-
-		if (verifyEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
-				+ m_ks * m_specularReflectance->getMaximum().max() > 1.0f)) {
-			Log(EWarn, "%s: Energy conservation is potentially violated!", props.getID().c_str());
-			Log(EWarn, "Max. diffuse reflectance = %f * %f = %f", m_kd, m_diffuseReflectance->getMaximum().max(), m_kd*m_diffuseReflectance->getMaximum().max());
-			Log(EWarn, "Max. specular reflectance = %f * %f = %f", m_ks, m_specularReflectance->getMaximum().max(), m_ks*m_specularReflectance->getMaximum().max());
-			Float normalization = 1/(m_kd * m_diffuseReflectance->getMaximum().max() + m_ks * m_specularReflectance->getMaximum().max());
-			Log(EWarn, "Reducing the albedo to %.1f%% of the original value to be on the safe side. "
-				"Specify verifyEnergyConservation=false to prevent this.", normalization * 100);
-			m_kd *= normalization; m_ks *= normalization;
-		}
-
-		Float avgDiffReflectance = m_diffuseReflectance->getAverage().average() * m_kd;
-		Float avgSpecularReflectance = m_specularReflectance->getAverage().average() * m_ks;
-
-		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", 
-			avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance));
-		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
+		m_verifyEnergyConservation = props.getBoolean("verifyEnergyConservation", true);
+		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", -1);
 
 		m_alphaX = props.getFloat("alphaX", .1f);
 		m_alphaY = props.getFloat("alphaY", .1f);
@@ -94,6 +77,26 @@ public:
 
 	virtual ~Ward() {
 		delete[] m_type;
+	}
+
+	void configure() {
+		if (m_verifyEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
+				+ m_ks * m_specularReflectance->getMaximum().max() > 1.0f)) {
+			Log(EWarn, "Material \"%s\": Energy conservation is potentially violated!", getName().c_str());
+			Log(EWarn, "Max. diffuse reflectance = %f * %f = %f", m_kd, m_diffuseReflectance->getMaximum().max(), m_kd*m_diffuseReflectance->getMaximum().max());
+			Log(EWarn, "Max. specular reflectance = %f * %f = %f", m_ks, m_specularReflectance->getMaximum().max(), m_ks*m_specularReflectance->getMaximum().max());
+			Float normalization = 1/(m_kd * m_diffuseReflectance->getMaximum().max() + m_ks * m_specularReflectance->getMaximum().max());
+			Log(EWarn, "Reducing the albedo to %.1f%% of the original value to be on the safe side. "
+				"Specify verifyEnergyConservation=false to prevent this.", normalization * 100);
+			m_kd *= normalization; m_ks *= normalization;
+		}
+
+		if (m_specularSamplingWeight == -1) {
+			Float avgDiffReflectance = m_diffuseReflectance->getAverage().average() * m_kd;
+			Float avgSpecularReflectance = m_specularReflectance->getAverage().average() * m_ks;
+			m_specularSamplingWeight = avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance);
+		}
+		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
@@ -223,17 +226,16 @@ public:
 	}
 	
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "diffuseColor") {
+		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "diffuseReflectance") {
 			m_diffuseReflectance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "specularColor") {
+		} else if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "specularReflectance") {
 			m_specularReflectance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
 		} else {
 			BSDF::addChild(name, child);
 		}
 	}
-
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
@@ -251,8 +253,11 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Ward[" << endl
-			<< "  diffuseColor = " << indent(m_diffuseReflectance->toString()) << "," << endl
-			<< "  specularColor = " << indent(m_specularReflectance->toString()) << "," << endl
+			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
+			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
+			<< "  diffuseAmount = " << m_kd << "," << endl
+			<< "  specularAmount = " << m_ks << "," << endl
+			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  alphaX = " << m_alphaX << "," << endl
 			<< "  alphaY = " << m_alphaY << endl
 			<< "]";
@@ -267,6 +272,7 @@ private:
 	Float m_kd, m_ks;
 	Float m_specularSamplingWeight;
 	Float m_diffuseSamplingWeight;
+	bool m_verifyEnergyConservation;
 };
 
 MTS_IMPLEMENT_CLASS_S(Ward, false, BSDF);

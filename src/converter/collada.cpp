@@ -658,11 +658,11 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 			os << "\t<bsdf id=\"" << identifier << "\" type=\"blinn\">" << endl;
 			os << "\t\t<float name=\"specularReflectance\" value=\"1\"/>" << endl;
 			os << "\t\t<float name=\"diffuseReflectance\" value=\"1\"/>" << endl;
-			loadMaterialParam(cvt, os, "diffuseColor", idToTexture, diffuse, false);
-			loadMaterialParam(cvt, os, "specularColor", idToTexture, specular, false);
+			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, false);
+			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, false);
 			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, false);
-			loadMaterialParam(cvt, os, "diffuseColor", idToTexture, diffuse, true);
-			loadMaterialParam(cvt, os, "specularColor", idToTexture, specular, true);
+			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, true);
+			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, true);
 			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, true);
 			os << "\t</bsdf>" << endl << endl;
 		}

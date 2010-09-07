@@ -90,108 +90,67 @@ public:
 	void initializeFrom(Bitmap *bitmap) {
 		ref<Bitmap> corrected = new Bitmap(bitmap->getWidth(), bitmap->getHeight(), 128);
 
+		Float tbl[256];
+		if (m_gamma == -1) {
+			for (int i=0; i<255; ++i)
+				tbl[i] = fromSRGBComponent(i/255.0f);
+		} else {
+			for (int i=0; i<255; ++i)
+				tbl[i] = std::pow(i/255.0f, m_gamma);
+		}
+
 		unsigned char *data = bitmap->getData();
 		float *flData = corrected->getFloatData();
-		Spectrum spec;
 		if (bitmap->getBitsPerPixel() == 32) {
 			for (int y=0; y<bitmap->getHeight(); ++y) {
 				for (int x=0; x<bitmap->getWidth(); ++x) {
-					if (m_gamma == -1) {
-						Float r = (*data++)/255.0f,
-							  g = (*data++)/255.0f,
-							  b = (*data++)/255.0f,
-							  a = (*data++)/255.0f;
-						spec.fromSRGB(r, g, b);
-						spec.toLinearRGB(r, g, b);
-
-						*flData++ = r;
-						*flData++ = g;
-						*flData++ = b;
-						*flData++ = a;
-					} else {
-						Float r = std::pow((Float) (*data++)/255.0f, m_gamma),
-							  g = std::pow((Float) (*data++)/255.0f, m_gamma),
-							  b = std::pow((Float) (*data++)/255.0f, m_gamma),
-							  a = (*data++)/255.0f;
-
-						*flData++ = r;
-						*flData++ = g;
-						*flData++ = b;
-						*flData++ = a;
-					}
+					float
+						r = tbl[*data++],
+						g = tbl[*data++],
+						b = tbl[*data++],
+						a = *data++ / 255.0f;
+					*flData++ = r;
+					*flData++ = g;
+					*flData++ = b;
+					*flData++ = a;
 				}
 			}
 		} else if (bitmap->getBitsPerPixel() == 24) {
 			for (int y=0; y<bitmap->getHeight(); ++y) {
 				for (int x=0; x<bitmap->getWidth(); ++x) {
-					if (m_gamma == -1) {
-						Float r = (*data++)/255.0f,
-							  g = (*data++)/255.0f,
-							  b = (*data++)/255.0f;
-						spec.fromSRGB(r, g, b);
-						spec.toLinearRGB(r, g, b);
-
-						*flData++ = r;
-						*flData++ = g;
-						*flData++ = b;
-						*flData++ = 1.0f;
-					} else {
-						Float r = std::pow((Float) (*data++)/255.0f, m_gamma),
-							  g = std::pow((Float) (*data++)/255.0f, m_gamma),
-							  b = std::pow((Float) (*data++)/255.0f, m_gamma);
-
-						*flData++ = r;
-						*flData++ = g;
-						*flData++ = b;
-						*flData++ = 1.0f;
-					}
+					float
+						r = tbl[*data++],
+						g = tbl[*data++],
+						b = tbl[*data++];
+					*flData++ = r;
+					*flData++ = g;
+					*flData++ = b;
+					*flData++ = 1.0f;
 				}
 			}
 		} else if (bitmap->getBitsPerPixel() == 16) {
 			for (int y=0; y<bitmap->getHeight(); ++y) {
 				for (int x=0; x<bitmap->getWidth(); ++x) {
-					if (m_gamma == -1) {
-						Float col = (*data++)/255.0f,
-							  a = (*data++)/255.0f;
-						col = fromSRGBComponent(col);
-
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = a;
-					} else {
-						Float col = std::pow((Float) (*data++)/255.0f, m_gamma),
-							  a = (*data++)/255.0f;
-
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = a;
-					}
+					float col = tbl[*data++],
+						a = *data++ / 255.0f;
+					*flData++ = col;
+					*flData++ = col;
+					*flData++ = col;
+					*flData++ = a;
 				}
 			}
 		} else if (bitmap->getBitsPerPixel() == 8) {
 			for (int y=0; y<bitmap->getHeight(); ++y) {
 				for (int x=0; x<bitmap->getWidth(); ++x) {
-					if (m_gamma == -1) {
-						Float col = (*data++)/255.0f;
-						col = fromSRGBComponent(col);
-
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = 1.0f;
-					} else {
-						Float col = std::pow((Float) (*data++)/255.0f, m_gamma);
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = 1.0f;
-					}
+					float col = tbl[*data++];
+					*flData++ = col;
+					*flData++ = col;
+					*flData++ = col;
+					*flData++ = 1.0f;
 				}
 			}
 		} else {
-			Log(EError, "%i bpp JPG/PNGs are currently not supported!", bitmap->getBitsPerPixel());
+			Log(EError, "%i bpp images are currently not supported!", bitmap->getBitsPerPixel());
 		}
 	
 		m_mipmap = MIPMap::fromBitmap(corrected);
@@ -218,7 +177,7 @@ public:
 	Spectrum getValue(const Intersection &its) const {
 		return m_mipmap->getValue(its);
 	}
-	
+
 	Spectrum getAverage() const {
 		return m_average;
 	}

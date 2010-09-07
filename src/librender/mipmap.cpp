@@ -129,8 +129,9 @@ Spectrum MIPMap::getMaximum() const {
 	for (int y=0; y<height; ++y) {
 		for (int x=0; x<width; ++x) {
 			Spectrum value = *pixels++;
-			for (int j=0; j<SPECTRUM_SAMPLES; ++j)
+			for (int j=0; j<SPECTRUM_SAMPLES; ++j) {
 				max[j] = std::max(max[j], value[j]);
+			}
 		}
 	}
 	return max;
