@@ -318,10 +318,9 @@ public:
 			<< "    if (wi.z < 0.0 || wo.z < 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
 			<< "    vec3 R = vec3(-wi.x, -wi.y, wi.z);" << endl
-			<< "    float alpha = dot(R, wo);" << endl 
-			<< "    if (alpha < 0.0)" << endl 
-			<< "       return vec3(0.0);" << endl 
-			<< "    float specRef = pow(alpha, " << evalName << "_exponent) * " << endl
+			<< "    float specRef = 0.0, alpha = dot(R, wo);" << endl 
+			<< "    if (alpha > 0.0)" << endl 
+			<< "    	specRef = pow(alpha, " << evalName << "_exponent) * " << endl
 			<< "      (" << evalName << "_exponent + 2) * 0.15915 * " << evalName << "_ks;" << endl
 			<< "    return " << depNames[0] << "(uv) * (0.31831 * " << evalName << "_kd)" << endl
 			<< "           + " << depNames[1] << "(uv) * specRef;" << endl
