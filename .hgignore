@@ -17,7 +17,7 @@
 .*ui_.*\.h$
 .*moc_.*\.cc$
 .*qrc_.*\.cc$
-.*/\.DS_Store^
+\.DS_Store
 ^\.sconf_temp/.*$
 ^config.py$
 ^config.log$
