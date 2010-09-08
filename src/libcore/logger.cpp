@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/mitsuba.h>
 #include <stdexcept>
 #include <stdarg.h>
@@ -30,11 +48,19 @@ void Logger::log(ELogLevel level, const Class *theClass,
 	if (level < m_logLevel)
 		return;
 
-	char tmp[2048];
+	char tmp[512], *msg = tmp;
 	va_list iterator;
 	va_start(iterator, fmt);
-	vsnprintf(tmp, 2048, fmt, iterator);
+	size_t size = vsnprintf(tmp, sizeof(tmp), fmt, iterator);
 	va_end(iterator);
+
+	if (size >= sizeof(tmp)) {
+		/* Overflow! -- dynamically allocate memory */
+		msg = new char[size+1];
+		va_start(iterator, fmt);
+		vsnprintf(msg, size+1, fmt, iterator);
+		va_end(iterator);
+	}
 
 	if (m_formatter == NULL) {
 		std::cerr << "PANIC: Logging has not been properly initialized!" << std::endl;
@@ -42,7 +68,10 @@ void Logger::log(ELogLevel level, const Class *theClass,
 	}
 
 	std::string text = m_formatter->format(level, theClass, 
-		Thread::getThread(), tmp, file, line);
+		Thread::getThread(), msg, file, line);
+
+	if (msg != tmp)
+		delete[] msg;
 
 	if (level < EError) {
 		m_mutex->lock();

@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/fstream.h>
 
@@ -250,7 +268,7 @@ void Bitmap::loadBMP(Stream *stream) {
 	{
 		uint32_t header_sz;
 		uint32_t width;
-		uint32_t height;
+		int32_t height;
 		uint16_t nplanes;
 		uint16_t bitspp;
 		uint32_t compress_type;
@@ -283,17 +301,41 @@ void Bitmap::loadBMP(Stream *stream) {
 	if (DIBHeader.bitspp != 8 && DIBHeader.bitspp != 24)
 		Log(EError, "Only 8- and 24-bit BMP images are supported for now");
 
+	if (DIBHeader.compress_type != 0)
+		Log(EError, "Only uncompressed BMP images are supported for now");
+
 	m_width = DIBHeader.width;
-	m_height = DIBHeader.height;
+	m_height = std::abs(DIBHeader.height);
 	m_bpp = DIBHeader.bitspp;
 
 	m_size = m_width * m_height * (m_bpp / 8);
 	m_data = static_cast<unsigned char *>(allocAligned(m_size));
+	Log(ETrace, "Reading %ix%ix%i BMP file", m_width, m_height, m_bpp);
 
-	Log(ETrace, "Reading %ix%ix%i PNG file", m_width, m_height, m_bpp);
+	int nChannels = m_bpp / 8;
+	int lineWidth = m_width * nChannels; 
+	int paddedLineWidth = lineWidth + lineWidth % 4;
 
-	if (DIBHeader.compress_type != 0)
-		Log(EError, "Only uncompressed BMP images are supported for now");
+	uint8_t *line = new uint8_t[paddedLineWidth];
+
+	for (int y=0; y<m_height; ++y) {
+		stream->read(line, paddedLineWidth);
+
+		int targetY = y;
+
+		if (DIBHeader.height > 0)
+			targetY = m_height - 1 - y; // inverted rows
+
+		memcpy(&m_data[targetY * m_width * nChannels], line, lineWidth);
+	
+		if (nChannels == 3) {
+			for (int x=0; x<m_width; ++x)
+				std::swap(m_data[(targetY * m_width + x) * nChannels], 
+						  m_data[(targetY * m_width + x) * nChannels + 2]);
+		}
+	}
+
+	delete[] line;
 }
 
 void Bitmap::loadPNG(Stream *stream) {

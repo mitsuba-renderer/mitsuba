@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/random.h>
 #include <mitsuba/core/plugin.h>
@@ -328,7 +346,7 @@ void TriMesh::serialize(Stream *_stream) const {
 	stream->writeShort(MTS_FILEFORMAT_HEADER);
 	stream->writeShort(MTS_FILEFORMAT_VERSION_V2);
 
-	stream = new ZStream(stream, Z_BEST_COMPRESSION);
+	stream = new ZStream(stream);
 	stream->writeBool(doublePrecision);
 	stream->writeULong(m_vertexCount);
 	stream->writeFloatArray(reinterpret_cast<Float *>(m_vertexBuffer), 

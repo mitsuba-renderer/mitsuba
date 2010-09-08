@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/core/platform.h>
 #include <xercesc/parsers/SAXParser.hpp>
 #include <mitsuba/render/shandler.h>
@@ -82,7 +100,7 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 void SceneHandler::endElement(const XMLCh* const xmlName) {
 	std::string name = transcode(xmlName);
 	ParseContext &context = m_context.top();
-	std::string type = context.attributes["type"];
+	std::string type = toLowerCase(context.attributes["type"]);
 	context.properties.setPluginName(type);
 	if (context.attributes.find("id") != context.attributes.end())
 		context.properties.setID(context.attributes["id"]);

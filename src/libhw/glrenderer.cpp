@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/mitsuba.h>
 #if defined(__OSX__)
 #include <OpenGL/glew.h>
@@ -194,7 +212,6 @@ void GLRenderer::checkError(bool onlyWarn) {
 
 void GLRenderer::beginDrawingMeshes(bool transmitOnlyPositions) {
 	m_transmitOnlyPositions = transmitOnlyPositions;
-
 	glEnableClientState(GL_VERTEX_ARRAY);
 
 	if (!transmitOnlyPositions) {
@@ -260,8 +277,8 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 		}
 
 		/* Draw all triangles */
-		glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount()*3), 
-			GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount() * 3), 
+			GL_UNSIGNED_INT, (GLvoid *) 0);
 	} else {
 		/* Draw the old-fashioned way without VBOs */
 		const GLchar *vertices = (const GLchar *) mesh->getVertexBuffer();
@@ -269,7 +286,7 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 		GLenum dataType = sizeof(Float) == 4 ? GL_FLOAT : GL_DOUBLE;
 
 		glVertexPointer(3, dataType, sizeof(Vertex), vertices);
-		
+
 		if (!m_transmitOnlyPositions) {
 			glNormalPointer(dataType, sizeof(Vertex), 
 				vertices + sizeof(Float) * 3);
@@ -309,7 +326,7 @@ void GLRenderer::endDrawingMeshes() {
 }
 	
 void GLRenderer::drawAll() {
-	GLRenderer::beginDrawingMeshes(false);
+	GLRenderer::beginDrawingMeshes(true);
 	std::map<const TriMesh *, GPUGeometry *>::iterator it;
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
 		for (it = m_geometry.begin(); it != m_geometry.end(); ++it) {
@@ -333,7 +350,7 @@ void GLRenderer::drawAll() {
 			/* Set up the vertex/normal arrays */
 			glVertexPointer(3, GL_FLOAT, sizeof(GLfloat) * 11, (GLfloat *) 0);
 			glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount()*3), 
-				GL_UNSIGNED_INT, 0);
+				GL_UNSIGNED_INT, (GLvoid *) 0);
 		}
 	}
 	GLRenderer::endDrawingMeshes();

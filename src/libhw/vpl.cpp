@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/hw/vpl.h>
 #include <mitsuba/hw/gpuprogram.h>
@@ -174,10 +192,10 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 	for (int i=1; i<=sampleCount; ++i) {
 		Vector dir;
 		Point2 seed(i*invSampleCount, radicalInverse(2, i)); // Hammersley seq.
-		if (vpl.type == ELuminaireVPL && vpl.luminaire->getType() & Luminaire::EOnSurface)
-			dir = squareToSphere(seed);
-		else
+		if (vpl.type == ESurfaceVPL || vpl.luminaire->getType() & Luminaire::EOnSurface)
 			dir = vpl.its.shFrame.toWorld(squareToHemispherePSA(seed));
+		else
+			dir = squareToSphere(seed);
 		ray.setDirection(dir);
 		if (m_scene->rayIntersect(ray, its)) {
 			nearClip = std::min(nearClip, its.t);
@@ -347,7 +365,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "   float d = length(lightVec);" << endl
 			<< "   vec3 nLightVec = lightVec/d, absLightVec = abs(lightVec);" << endl
 			<< "   float depth = max(max(absLightVec.x, absLightVec.y), absLightVec.z);" << endl
-			<< "   depth = (depth-nearClip) * invClipRange - 0.001;" << endl
+			<< "   depth = (depth-nearClip) * invClipRange - 0.005;" << endl
 			<< "   float shadow = textureCube(shadowMap, nLightVec).r > depth ? 1.0 : 0.0;" << endl
 			<< endl
 			<< "   /* Shading */" << endl
@@ -358,8 +376,6 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "   vec3 wi = vec3(dot(S, nCamVec)," << endl
 			<< "                  dot(T, nCamVec)," << endl
 			<< "                  dot(N, nCamVec));" << endl
-//			<< "   if (wi.z < 0)" << endl
-//			<< "      discard;" << endl
 			<< "   vec3 vplWo = -vec3(dot(vplS, nLightVec)," << endl
 			<< "                      dot(vplT, nLightVec)," << endl
 			<< "                      dot(vplN, nLightVec));" << endl
@@ -392,7 +408,12 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "}" << endl;
 
 		program->setSource(GPUProgram::EFragmentProgram, oss.str());
-		program->init();
+		try {
+			program->init();
+		} catch (const std::exception &ex) {
+			Log(EWarn, "Unable to compile the following VPL program:\n%s", oss.str().c_str());
+			throw;
+		}
 
 		m_targetConfig.resolve(program);
 		m_targetConfig.param_shadowMap = program->getParameterID("shadowMap", false);

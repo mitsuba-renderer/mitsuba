@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "rendersettingsdlg.h"
@@ -425,6 +443,7 @@ void MainWindow::onBugReportSubmitted() {
 }
 
 void MainWindow::on_actionImport_triggered() {
+#if defined(MTS_HAS_COLLADA)
 	ref<FileResolver> resolver = FileResolver::getInstance();
 	ref<FileResolver> newResolver = resolver->clone();
 	for (int i=0; i<m_searchPaths.size(); ++i)
@@ -439,6 +458,13 @@ void MainWindow::on_actionImport_triggered() {
 	dialog->show();
 	qApp->processEvents();
 	m_activeWindowHack = false;
+#else
+	QMessageBox::critical(this, tr("Importer disabled"),
+		tr("The importer is disabled in this build. To use it, you will need "
+		"to install COLLADA-DOM and recompile Mitsuba -- please see the "
+		"documentation for more details."), 
+		QMessageBox::Ok);
+#endif
 }
 
 void MainWindow::onImportDialogClose(int reason) {
@@ -552,7 +578,7 @@ void MainWindow::onClearRecent() {
 SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	ref<FileResolver> resolver = FileResolver::getInstance();
 	std::string filename = resolver->resolveAbsolute(qFileName.toStdString());
-	std::string filePath = resolver->pathFromFile(filename);
+	std::string filePath = resolver->getParentDirectory(filename);
 	ref<FileResolver> newResolver = resolver->clone();
 	if (!newResolver->contains(filePath))
 		newResolver->addPath(filePath);
@@ -1167,6 +1193,7 @@ void MainWindow::on_actionRefresh_triggered() {
 	m_contextMutex.lock();
 	m_context[index] = newContext;
 	m_contextMutex.unlock();
+	qApp->processEvents();
 	on_tabBar_currentChanged(index);
 }
 

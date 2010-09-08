@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "sceneimporter.h"
 #include "../converter/converter.h"
 #include "locateresourcedlg.h"
@@ -34,6 +52,7 @@ SceneImporter::~SceneImporter() {
 
 void SceneImporter::run() {
 	FileResolver::setInstance(m_resolver);
+#if defined(MTS_HAS_COLLADA)
 	try {
 		GUIGeometryConverter cvt(m_parent);
 		cvt.setSRGB(m_srgb);
@@ -44,6 +63,9 @@ void SceneImporter::run() {
 	} catch (...) {
 		SLog(EWarn, "An unknown type of error occurred!");
 	}
+#else
+	SLog(EWarn, "The importer was disabled in this build!");
+#endif
 	m_wait->set(true);
 }
 

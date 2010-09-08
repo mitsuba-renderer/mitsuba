@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/render/testcase.h>
 #include <mitsuba/core/shvector.h>
 
@@ -38,7 +56,7 @@ public:
 
 			Float value1 = vec1.eval(dir2);
 			Float value2 = vec2.eval(dir1);
-			Assert(std::abs(value1-value2) < Epsilon);
+			assertEquals(value1, value2);
 		}
 	}
 
@@ -73,10 +91,10 @@ public:
 			Float relerr = std::abs(pdf1-pdf2)/pdf2;
 			if (pdf2 > 0.01) {
 				accum += relerr; ++nInAvg;
-				Assert(relerr < 0.08);
+				assertTrue(relerr < 0.08);
 			}
 		}
-		Assert(accum / nInAvg < 0.01);
+		assertTrue(accum / nInAvg < 0.01);
 	}
 };
 

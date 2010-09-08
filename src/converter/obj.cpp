@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #define BOOST_FILESYSTEM_NO_LIB 
 #define BOOST_SYSTEM_NO_LIB 
 
@@ -21,7 +39,7 @@ std::string copyTexture(GeometryConverter *cvt, const std::string &textureDir, s
 		if (filename[i] == '\\')
 			filename[i] = '/';
 #endif
-	
+
 	boost::filesystem::path path = boost::filesystem::path(filename, boost::filesystem::native);
 	std::string targetPath = textureDir + path.leaf();
 
@@ -46,7 +64,7 @@ std::string copyTexture(GeometryConverter *cvt, const std::string &textureDir, s
 		input->close();
 	}
 
-	return targetPath;
+	return path.leaf();
 }
 
 void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mtlName,
@@ -61,7 +79,7 @@ void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mt
 		indent = "\t";
 		os << "\t<bsdf id=\"" << mtlName << "\" type=\"mask\">" << endl;
 		os << "\t\t<texture name=\"opacity\" type=\"ldrtexture\">" << endl;
-		os << "\t\t\t<string name=\"filename\" value=\"" << copyTexture(cvt, texturesDir, maskMap) << "\"/>" << endl;
+		os << "\t\t\t<string name=\"filename\" value=\"textures/" << copyTexture(cvt, texturesDir, maskMap) << "\"/>" << endl;
 		os << "\t\t</texture>" << endl;
 		os << "\t\t<bsdf type=\"lambertian\">" << endl;
 	} else {
@@ -75,7 +93,7 @@ void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mt
 			<< r << " " << g << " " << b << "\"/>" << endl;
 	} else {
 		os << indent << "\t\t<texture name=\"reflectance\" type=\"ldrtexture\">" << endl
-		   << indent << "\t\t\t<string name=\"filename\" value=\"" << copyTexture(cvt, texturesDir, diffuseMap) << "\"/>" << endl
+		   << indent << "\t\t\t<string name=\"filename\" value=\"textures/" << copyTexture(cvt, texturesDir, diffuseMap) << "\"/>" << endl
 		   << indent << "\t\t</texture>" << endl;
 	}
 
@@ -171,14 +189,14 @@ void GeometryConverter::convertOBJ(const std::string &inputFile,
 		TriMesh *mesh = static_cast<TriMesh *>(rootShape->getElement(ctr++));
 		if (!mesh)
 			break;
-		std::string filename = meshesDirectory + mesh->getName() + std::string(".serialized");
+		std::string filename = mesh->getName() + std::string(".serialized");
 		SLog(EInfo, "Saving \"%s\"", filename.c_str());
-		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncReadWrite);
+		ref<FileStream> stream = new FileStream(meshesDirectory + filename, FileStream::ETruncReadWrite);
 		stream->setByteOrder(Stream::ENetworkByteOrder);
 		mesh->serialize(stream);
 		stream->close();
 		os << "\t<shape id=\"" << mesh->getName() << "\" type=\"serialized\">" << endl;
-		os << "\t\t<string name=\"filename\" value=\"" << filename.c_str() << "\"/>" << endl;
+		os << "\t\t<string name=\"filename\" value=\"meshes/" << filename.c_str() << "\"/>" << endl;
 		if (mesh->getBSDF() != NULL) { 
 			const std::string &matID = mesh->getBSDF()->getName();
 			os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;

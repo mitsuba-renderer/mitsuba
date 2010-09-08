@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/render/imageproc_wu.h>
 #include "preview_proc.h"
 
@@ -54,7 +72,8 @@ void PreviewProcess::processResult(const WorkResult *result, bool cancelled) {
 }
 
 void PreviewProcess::configure(const VPL &vpl, Float minDist, const Point2 &jitter, 
-		const Bitmap *source, Bitmap *target, bool coherent) {
+		const Bitmap *source, Bitmap *target, bool coherent, bool diffuseSources,
+		bool diffuseReceivers) {
 	BlockedImageProcess::init(m_film->getCropOffset(), m_film->getCropSize(), m_blockSize);
 	m_source = source;
 	m_target = target;
@@ -62,6 +81,8 @@ void PreviewProcess::configure(const VPL &vpl, Float minDist, const Point2 &jitt
 	m_vpl = &vpl;
 	m_minDist = minDist;
 	m_coherent = coherent;
+	m_diffuseSources = diffuseSources;
+	m_diffuseReceivers = diffuseReceivers;
 
 	/* It is not necessary to shoot normalized rays. Instead, interpolate: 
 	   here, we generate the upper left corner ray as well as the 
@@ -86,7 +107,8 @@ void PreviewProcess::configure(const VPL &vpl, Float minDist, const Point2 &jitt
 
 ref<WorkProcessor> PreviewProcess::createWorkProcessor() const {
 	return new PreviewWorker(m_blockSize, m_cameraO, m_cameraTL,
-		m_cameraDx, m_cameraDy, *m_vpl, m_minDist, m_coherent);
+		m_cameraDx, m_cameraDy, *m_vpl, m_minDist, m_coherent,
+		m_diffuseSources, m_diffuseReceivers);
 }
 
 

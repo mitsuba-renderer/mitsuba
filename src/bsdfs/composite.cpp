@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/texture.h>
 #include <mitsuba/hw/gpuprogram.h>
@@ -203,7 +221,7 @@ public:
 			Spectrum result = m_bsdfs[entry]->sample(bRec, pdf);
 			bRec.sampledComponent += m_bsdfOffset[entry];
 			pdf *= componentPDF;
-			return result;
+			return result * m_bsdfWeight[entry];
 		} else {
 			/* Pick out an individual component */
 			for (int i=0; i<m_bsdfCount; ++i) {
@@ -216,7 +234,7 @@ public:
 				Spectrum result = m_bsdfs[i]->sample(bRec, pdf);
 				bRec.component = bRec.sampledComponent = tempComponent;
 
-				return result;
+				return result * m_bsdfWeight[i];
 			}
 		}
 		Log(EError, "Internal error!");
@@ -230,7 +248,7 @@ public:
 			Spectrum result = m_bsdfs[entry]->sample(bRec);
 			result /= componentPDF;
 			bRec.sampledComponent += m_bsdfOffset[entry];
-			return result;
+			return result * m_bsdfWeight[entry];
 		} else {
 			/* Pick out an individual component */
 			for (int i=0; i<m_bsdfCount; ++i) {
@@ -243,7 +261,7 @@ public:
 				Spectrum result = m_bsdfs[i]->sample(bRec);
 				bRec.component = bRec.sampledComponent = tempComponent;
 
-				return result;
+				return result * m_bsdfWeight[i];
 			}
 		}
 		Log(EError, "Internal error!");

@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/render/preview.h>
 #include <mitsuba/render/imageproc_wu.h>
 
@@ -90,9 +108,10 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 				EmissionRecord eRec(m_vpl.luminaire, 
 					ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), toIts);
 				eRec.type = EmissionRecord::EPreview;
-				value += m_vpl.P * bsdfVal * m_vpl.luminaire->f(eRec) * 
-					((m_vpl.luminaire->getType() == Luminaire::EOnSurface ? 
-						(Float) 1 : dot(m_vpl.its.shFrame.n, toIts)) / (length*length));
+				value += m_vpl.P * bsdfVal * m_vpl.luminaire->f(eRec) 
+					* ((m_vpl.luminaire->getType() & Luminaire::EOnSurface ?
+					dot(m_vpl.its.shFrame.n, toIts) : (Float) 1)
+					/ (length*length));
 			}
 			block->setPixel(pos++, value);
 		}
@@ -160,7 +179,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 	bool diffuseVPL = false, vplOnSurface = false;
 	Spectrum vplWeight;
 
-	if (m_vpl.type == ESurfaceVPL && m_vpl.its.shape->getBSDF()->getType() == BSDF::EDiffuseReflection) {
+	if (m_vpl.type == ESurfaceVPL && (m_diffuseSources || m_vpl.its.shape->getBSDF()->getType() == BSDF::EDiffuseReflection)) {
 		diffuseVPL = true;
 		vplOnSurface = true;
 		vplWeight = m_vpl.its.shape->getBSDF()->getDiffuseReflectance(m_vpl.its) * m_vpl.P / M_PI;
@@ -280,7 +299,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					its.shFrame.n = normalize(v0.n * alpha + v1.n * beta + v2.n * gamma);
 					its.uv = v0.uv * alpha + v1.uv * beta + v2.uv * gamma;
 
-					if (EXPECT_NOT_TAKEN(bsdf->getType() != BSDF::EDiffuseReflection) || !diffuseVPL) {
+					if (EXPECT_NOT_TAKEN(bsdf->getType() != BSDF::EDiffuseReflection || !diffuseVPL)) {
 						its.dpdu = v0.dpdu * alpha + v1.dpdu * beta + v2.dpdu * gamma;
 						its.dpdv = v0.dpdv * alpha + v1.dpdv * beta + v2.dpdv * gamma;
 					}
@@ -302,11 +321,11 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					emitted[idx] = shape->getLuminaire()->Le(lRec);
 				}
 
-				if (EXPECT_TAKEN(bsdf->getType() == BSDF::EDiffuseReflection) && diffuseVPL) {
+				if (EXPECT_TAKEN(bsdf->getType() == BSDF::EDiffuseReflection && diffuseVPL)) {
 					/* Fast path */
 					direct[idx] = (bsdf->getDiffuseReflectance(its) * vplWeight)
 						* (std::max((Float) 0.0f, dot(wo, its.shFrame.n))
-						* (vplOnSurface ? std::max(cosThetaLight.f[idx], (Float) 0.0f) * INV_PI : 0.0f)
+						* (vplOnSurface ? (std::max(cosThetaLight.f[idx], (Float) 0.0f) * INV_PI) : INV_PI)
 						* invLengthSquared.f[idx]);
 				} else {
 					wi.x = -primRay4.d[0].f[idx];
@@ -337,7 +356,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 						}
 					}
 
-					if (EXPECT_TAKEN(ctLight > 0)) {
+					if (EXPECT_TAKEN(ctLight >= 0)) {
 						direct[idx] = (bsdf->fCos(BSDFQueryRecord(its, wo)) * vplWeight
 							* ((vplOnSurface ? std::max(ctLight, (Float) 0.0f) : 1.0f) * invLengthSquared.f[idx]));
 					} else {
@@ -384,7 +403,8 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 
 ref<WorkProcessor> PreviewWorker::clone() const {
 	return new PreviewWorker(m_blockSize, m_cameraO, m_cameraTL, 
-		m_cameraDx, m_cameraDy, m_vpl, m_minDist, m_coherent);
+		m_cameraDx, m_cameraDy, m_vpl, m_minDist, m_coherent,
+		m_diffuseSources, m_diffuseReceivers);
 }
 
 MTS_IMPLEMENT_CLASS(PreviewWorker, false, WorkProcessor)

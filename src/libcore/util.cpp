@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/core/random.h>
 #include <mitsuba/core/fresolver.h>
 #include <stdarg.h>
@@ -293,13 +311,25 @@ Float log2(Float value) {
 	return std::log(value) * invLn2;
 }
 
-std::string formatString(const char *pFmt, ...) {
-	char tmp[2048]; /* Limited to 2k */
+std::string formatString(const char *fmt, ...) {
+	char tmp[512];
 	va_list iterator;
 
-	va_start(iterator, pFmt);
-	vsnprintf(tmp, 2048, pFmt, iterator);
+	va_start(iterator, fmt);
+	size_t size = vsnprintf(tmp, sizeof(tmp), fmt, iterator);
 	va_end(iterator);
+
+	if (size >= sizeof(tmp)) {
+		/* Overflow! -- dynamically allocate memory */
+		char *dest = new char[size+1];
+		va_start(iterator, fmt);
+		vsnprintf(dest, size+1, fmt, iterator);
+		va_end(iterator);
+
+		std::string result(dest);
+		delete[] dest;
+		return result;
+	}
 
 	return std::string(tmp);
 }

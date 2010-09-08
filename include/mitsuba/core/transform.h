@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #if !defined(__TRANSFORM_H)
 #define __TRANSFORM_H
 
@@ -35,9 +53,12 @@ public:
 	/// Return the determinant of the upper left 3x3 sub-matrix
 	Float det3x3() const;
 
+	/// Perform a symmetric 4x4 eigendecomposition into Q and D.
+	void symmEigenDecomp(Matrix4x4 *Q, Vector4 &d);
+
 	/// Return the inverse of this matrix
 	ref<Matrix4x4> inverse() const;
-	
+
 	/// Return the transpose of this matrix
 	ref<Matrix4x4> transpose() const;
 

@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #define BOOST_FILESYSTEM_NO_LIB 
 #define BOOST_SYSTEM_NO_LIB 
 
@@ -185,34 +203,72 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 /// For using vertices as keys in an associative structure
 struct vertex_key_order : public 
 	std::binary_function<Vertex, Vertex, bool> {
-public:
+	static int compare(const Vertex &v1, const Vertex &v2) {
+		if (v1.v.x < v2.v.x) return -1;
+		else if (v1.v.x > v2.v.x) return 1;
+		if (v1.v.y < v2.v.y) return -1;
+		else if (v1.v.y > v2.v.y) return 1;
+		if (v1.v.z < v2.v.z) return -1;
+		else if (v1.v.z > v2.v.z) return 1;
+		if (v1.n.x < v2.n.x) return -1;
+		else if (v1.n.x > v2.n.x) return 1;
+		if (v1.n.y < v2.n.y) return -1;
+		else if (v1.n.y > v2.n.y) return 1;
+		if (v1.n.z < v2.n.z) return -1;
+		else if (v1.n.z > v2.n.z) return 1;
+		if (v1.uv.x < v2.uv.x) return -1;
+		else if (v1.uv.x > v2.uv.x) return 1;
+		if (v1.uv.y < v2.uv.y) return -1;
+		else if (v1.uv.y > v2.uv.y) return 1;
+		return 0;
+	}
+
 	bool operator()(const Vertex &v1, const Vertex &v2) const {
-		if (v1.v.x < v2.v.x) return true;
-		else if (v1.v.x > v2.v.x) return false;
-		if (v1.v.y < v2.v.y) return true;
-		else if (v1.v.y > v2.v.y) return false;
-		if (v1.v.z < v2.v.z) return true;
-		else if (v1.v.z > v2.v.z) return false;
-		if (v1.n.x < v2.n.x) return true;
-		else if (v1.n.x > v2.n.x) return false;
-		if (v1.n.y < v2.n.y) return true;
-		else if (v1.n.y > v2.n.y) return false;
-		if (v1.n.z < v2.n.z) return true;
-		else if (v1.n.z > v2.n.z) return false;
-		if (v1.uv.x < v2.uv.x) return true;
-		else if (v1.uv.x > v2.uv.x) return false;
-		if (v1.uv.y < v2.uv.y) return true;
-		else if (v1.uv.y > v2.uv.y) return false;
+		return compare(v1, v2) < 0;
+	}
+};
+
+struct SimpleTriangle {
+	Point p0, p1, p2;
+
+	inline SimpleTriangle() { }
+	inline SimpleTriangle(const Point &p0, const Point &p1, const Point &p2)
+		: p0(p0), p1(p1), p2(p2) { }
+};
+	
+struct triangle_key_order : public std::binary_function<SimpleTriangle, SimpleTriangle, bool> {
+	static int compare(const Point &v1, const Point &v2) {
+		if (v1.x < v2.x) return -1;
+		else if (v1.x > v2.x) return 1;
+		if (v1.y < v2.y) return -1;
+		else if (v1.y > v2.y) return 1;
+		if (v1.z < v2.z) return -1;
+		else if (v1.z > v2.z) return 1;
+		return 0;
+	}
+	bool operator()(const SimpleTriangle &t1, const SimpleTriangle &t2) const {
+		int result;
+		result = compare(t1.p0, t2.p0);
+		if (result == -1) return true;
+		if (result ==  1) return false;
+		result = compare(t1.p1, t2.p1);
+		if (result == -1) return true;
+		if (result ==  1) return false;
+		result = compare(t1.p2, t2.p2);
+		if (result == -1) return true;
+		if (result ==  1) return false;
 		return false;
 	}
 };
 
+typedef std::map<SimpleTriangle, bool, triangle_key_order> TriangleMap;
+
 void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::string matID, Transform transform, 
-		std::ostream &os, VertexData *vData, const std::string &meshesDirectory) {
+		std::ostream &os, VertexData *vData, TriangleMap &triMap, const std::string &meshesDirectory) {
 	std::vector<Vertex> vertexBuffer;
 	std::vector<Triangle> triangles;
 	std::map<Vertex, int, vertex_key_order> vertexMap;
-	size_t numMerged = 0, triangleIdx = 0;
+	size_t numMerged = 0, triangleIdx = 0, duplicates = 0;
 	Triangle triangle;
 	if (tess_data.size() == 0)
 		return;
@@ -245,8 +301,35 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 		}
 		triangle.idx[triangleIdx++] = key;
 		if (triangleIdx == 3) {
-			triangles.push_back(triangle);
+			Point p0 = vertexBuffer[triangle.idx[0]].v,
+				p1 = vertexBuffer[triangle.idx[1]].v,
+				p2 = vertexBuffer[triangle.idx[2]].v;
+			if (triMap.find(SimpleTriangle(p0, p1, p2)) != triMap.end() ||
+				triMap.find(SimpleTriangle(p2, p0, p1)) != triMap.end() ||
+				triMap.find(SimpleTriangle(p1, p2, p0)) != triMap.end() ||
+				triMap.find(SimpleTriangle(p1, p0, p2)) != triMap.end() ||
+				triMap.find(SimpleTriangle(p0, p2, p1)) != triMap.end() ||
+				triMap.find(SimpleTriangle(p2, p1, p0)) != triMap.end()) {
+				/* This triangle is a duplicate from another one which exists
+				   in the same geometry group -- we may be dealing with SketchUp,
+				   which sometimes exports every face TWICE! */
+				duplicates++;
+			} else {
+				triMap[SimpleTriangle(p0, p1, p2)] = true;
+				triangles.push_back(triangle);
+			}
 			triangleIdx = 0;
+		}
+	}
+
+	if (duplicates > 0) {
+		if (triangles.size() == 0) {
+			SLog(EWarn, "%s: Only contains duplicates of already-existing geometry. Ignoring.");
+			os << "\t<!-- Ignored shape \"" << prefixName << "/" 
+				<< id << "\" (mat=\"" << matID << "\"), since it only contains duplicate geometry. -->" << endl << endl;
+			return;
+		} else {
+			SLog(EWarn, "Geometry contains %i duplicate triangles!", duplicates);
 		}
 	}
 
@@ -260,8 +343,8 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	std::copy(vertexBuffer.begin(), vertexBuffer.end(), mesh->getVertexBuffer());
 	mesh->calculateTangentSpaceBasis(vData->typeToOffset[ENormal]!=-1, vData->typeToOffset[EUV]!=-1);
 
-	std::string filename = meshesDirectory + id + std::string(".serialized");
-	ref<FileStream> stream = new FileStream(filename, FileStream::ETruncReadWrite);
+	std::string filename = id + std::string(".serialized");
+	ref<FileStream> stream = new FileStream(meshesDirectory + filename, FileStream::ETruncReadWrite);
 	stream->setByteOrder(Stream::ENetworkByteOrder);
 	mesh->serialize(stream);
 	stream->close();
@@ -273,7 +356,7 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	std::string matrixValues = matrix.str();
 
 	os << "\t<shape id=\"" << prefixName << "/" << id << "\" type=\"serialized\">" << endl;
-	os << "\t\t<string name=\"filename\" value=\"" << filename << "\"/>" << endl;
+	os << "\t\t<string name=\"filename\" value=\"meshes/" << filename << "\"/>" << endl;
 	if (!transform.isIdentity()) {
 		os << "\t\t<transform name=\"toWorld\">" << endl;
 		os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
@@ -297,8 +380,10 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 			identifier = formatString("unnamedGeom_%i", unnamedCtr++);
 		}
 	}
+	TriangleMap triMap;
 
-	SLog(EInfo, "Converting geometry \"%s\" (instantiated by %s)..", identifier.c_str(), prefixName.c_str());
+	SLog(EInfo, "Converting geometry \"%s\" (instantiated by %s)..", identifier.c_str(), 
+		prefixName == "" ? "/" : prefixName.c_str());
 	domMesh *mesh = geom.getMesh().cast();
 	if (!mesh)
 		SLog(EError, "Invalid geometry type encountered (must be a <mesh>)!");
@@ -322,7 +407,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
 		else
 			matID = matLookupTable[triangles->getMaterial()];
-		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, meshesDir);
+		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
 		delete data;
 		++geomIndex;
 	}
@@ -360,7 +445,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 		else
 			matID = matLookupTable[polygons->getMaterial()];
 
-		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, meshesDir);
+		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
 		delete data;
 		++geomIndex;
 	}
@@ -400,7 +485,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 		else
 			matID = matLookupTable[polylist->getMaterial()];
 
-		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, meshesDir);
+		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
 		delete data;
 		++geomIndex;
 	}
@@ -528,13 +613,11 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 			os << "\t</bsdf>" << endl << endl;
 		} else {
 			os << "\t<bsdf id=\"" << identifier << "\" type=\"phong\">" << endl;
-			os << "\t\t<float name=\"specularReflectance\" value=\"1\"/>" << endl;
-			os << "\t\t<float name=\"diffuseReflectance\" value=\"1\"/>" << endl;
-			loadMaterialParam(cvt, os, "diffuseColor", idToTexture, diffuse, false);
-			loadMaterialParam(cvt, os, "specularColor", idToTexture, specular, false);
+			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, false);
+			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, false);
 			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, false);
-			loadMaterialParam(cvt, os, "diffuseColor", idToTexture, diffuse, true);
-			loadMaterialParam(cvt, os, "specularColor", idToTexture, specular, true);
+			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, true);
+			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, true);
 			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, true);
 			os << "\t</bsdf>" << endl << endl;
 		}
@@ -575,11 +658,11 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 			os << "\t<bsdf id=\"" << identifier << "\" type=\"blinn\">" << endl;
 			os << "\t\t<float name=\"specularReflectance\" value=\"1\"/>" << endl;
 			os << "\t\t<float name=\"diffuseReflectance\" value=\"1\"/>" << endl;
-			loadMaterialParam(cvt, os, "diffuseColor", idToTexture, diffuse, false);
-			loadMaterialParam(cvt, os, "specularColor", idToTexture, specular, false);
+			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, false);
+			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, false);
 			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, false);
-			loadMaterialParam(cvt, os, "diffuseColor", idToTexture, diffuse, true);
-			loadMaterialParam(cvt, os, "specularColor", idToTexture, specular, true);
+			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, true);
+			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, true);
 			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, true);
 			os << "\t</bsdf>" << endl << endl;
 		}
@@ -753,7 +836,7 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const std::string &text
 	}
 
 	os << "\t<texture id=\"" << identifier << "\" type=\"ldrtexture\">" << endl;
-	os << "\t\t<string name=\"filename\" value=\"" << textureDir + path.leaf() << "\"/>" << endl;
+	os << "\t\t<string name=\"filename\" value=\"textures/" << path.leaf() << "\"/>" << endl;
 	os << "\t</texture>" << endl << endl;
 }
 

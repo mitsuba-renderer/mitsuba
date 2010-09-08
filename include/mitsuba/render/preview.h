@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #if !defined(__PREVIEW_H)
 #define __PREVIEW_H
 
@@ -13,10 +31,12 @@ MTS_NAMESPACE_BEGIN
 class MTS_EXPORT_RENDER PreviewWorker : public WorkProcessor {
 public:
 	inline PreviewWorker(int blockSize, Point cameraO, Vector cameraTL, 
-		Vector cameraDx, Vector cameraDy, const VPL &vpl, Float minDist, bool coherent) 
+		Vector cameraDx, Vector cameraDy, const VPL &vpl, Float minDist, bool coherent,
+		bool diffuseSources, bool diffuseReceivers) 
 		: m_blockSize(blockSize), m_cameraO(cameraO), m_cameraTL(cameraTL),
 		m_cameraDx(cameraDx), m_cameraDy(cameraDy), m_vpl(vpl), 
-		m_minDist(minDist), m_coherent(coherent) {
+		m_minDist(minDist), m_coherent(coherent), m_diffuseSources(diffuseSources),
+		m_diffuseReceivers(diffuseReceivers) {
 	}
 
 	void processIncoherent(const WorkUnit *workUnit, WorkResult *workResult, 
@@ -50,6 +70,7 @@ private:
 	Float m_minDist;
 	const std::vector<const Shape *> *m_shapes;
 	bool m_coherent;
+	bool m_diffuseSources, m_diffuseReceivers;
 };
 
 MTS_NAMESPACE_END

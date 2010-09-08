@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/render/testcase.h>
 #include <mitsuba/core/plugin.h>
 
@@ -28,7 +46,7 @@ public:
 		sampler->generate();
 		for (int i=0; i<5; ++i) {
 			for (int j=0; j<5; ++j)
-				Assert(std::abs(sampler->next1D() - comparison[pos++]) < 1e-7);
+				assertEqualsEpsilon(sampler->next1D(), comparison[pos++], 1e-7);
 			sampler->advance();
 		}
 	}
@@ -52,7 +70,7 @@ public:
 		sampler->generate();
 		for (int i=0; i<5; ++i) {
 			for (int j=0; j<6; ++j) 
-				Assert(std::abs(sampler->next1D() - comparison[pos++]) < 1e-7);
+				assertEqualsEpsilon(sampler->next1D(), comparison[pos++], 1e-7);
 			sampler->advance();
 		}
 	}
@@ -61,7 +79,7 @@ public:
 		Float x = 0.0f;
 
 		for (int i=0; i<20; ++i) {
-			Assert(x == radicalInverse(2, i));
+			assertEqualsEpsilon(x, radicalInverse(2, i), 0);
 			x = radicalInverseIncremental(2, x);
 		}
 	}

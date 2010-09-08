@@ -17,7 +17,8 @@ public:
 	PreviewProcess(const Scene *scene, int sceneResID, int blockSize);
 
 	void configure(const VPL &vpl, Float minDist, const Point2 &jitter, 
-		const Bitmap *source, Bitmap *target, bool coherent); 
+		const Bitmap *source, Bitmap *target, bool coherent,
+		bool diffuseSources, bool diffuseReceivers); 
 	inline int getRayCount() const { return m_numRays; }
 	inline const Scene *getScene() const { return m_scene; }
 
@@ -42,6 +43,8 @@ private:
 	const VPL *m_vpl;
 	Float m_minDist;
 	bool m_coherent;
+	bool m_diffuseSources;
+	bool m_diffuseReceivers;
 };
 
 #endif /* __PREVIEW_PROC_H */

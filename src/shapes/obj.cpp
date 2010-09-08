@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/plugin.h>
@@ -17,13 +35,15 @@ public:
 	};
 
 	WavefrontOBJ(const Properties &props) : Shape(props) {
-		m_name = FileResolver::getInstance()->resolve(props.getString("filename"));
+		ref<FileResolver> fresolver = FileResolver::getInstance();
+		std::string path = fresolver->resolve(props.getString("filename"));
+		m_name = fresolver->getChild(path);
 
 		/* Load the geometry */
-		Log(EInfo, "Loading geometry from \"%s\" ..", m_name.c_str());
-		std::ifstream is(m_name.c_str());
+		Log(EInfo, "Loading geometry from \"%s\" ..", path.c_str());
+		std::ifstream is(path.c_str());
 		if (is.bad() || is.fail())
-			Log(EError, "Geometry file '%s' not found!", m_name.c_str());
+			Log(EError, "Geometry file '%s' not found!", path.c_str());
 
 		std::string buf;
 		std::vector<Point> vertices;

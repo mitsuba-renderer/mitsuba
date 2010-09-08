@@ -1,3 +1,21 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "glwidget.h"
 #include "preview.h"
 
@@ -527,10 +545,10 @@ void PreviewThread::rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	for (int i=1; i<=sampleCount; ++i) {
 		Vector dir;
 		Point2 seed(i*invSampleCount, radicalInverse(2, i)); // Hammersley seq.
-		if (vpl.type == ELuminaireVPL && vpl.luminaire->getType() == Luminaire::EDeltaPosition)
-			dir = squareToSphere(seed);
-		else
+		if (vpl.type == ESurfaceVPL || vpl.luminaire->getType() & Luminaire::EOnSurface)
 			dir = vpl.its.shFrame.toWorld(squareToHemispherePSA(seed));
+		else
+			dir = squareToSphere(seed);
 		ray.setDirection(dir);
 
 		if (m_context->scene->rayIntersect(ray, its)) {
@@ -560,7 +578,9 @@ void PreviewThread::rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	m_previewProc->configure(vpl, minDist, jitter, 
 		m_accumBuffer ? m_accumBuffer->getBitmap() : NULL, 
 		target.buffer->getBitmap(), 
-		m_context->previewMethod == ERayTraceCoherent);
+		m_context->previewMethod == ERayTraceCoherent,
+		m_context->diffuseSources,
+		m_context->diffuseReceivers);
 	m_mutex->unlock();
 
 	ref<Scheduler> sched = Scheduler::getInstance();
