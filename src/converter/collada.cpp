@@ -343,8 +343,8 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	std::copy(vertexBuffer.begin(), vertexBuffer.end(), mesh->getVertexBuffer());
 	mesh->calculateTangentSpaceBasis(vData->typeToOffset[ENormal]!=-1, vData->typeToOffset[EUV]!=-1);
 
-	std::string filename = meshesDirectory + id + std::string(".serialized");
-	ref<FileStream> stream = new FileStream(filename, FileStream::ETruncReadWrite);
+	std::string filename = id + std::string(".serialized");
+	ref<FileStream> stream = new FileStream(meshesDirectory + filename, FileStream::ETruncReadWrite);
 	stream->setByteOrder(Stream::ENetworkByteOrder);
 	mesh->serialize(stream);
 	stream->close();
@@ -356,7 +356,7 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	std::string matrixValues = matrix.str();
 
 	os << "\t<shape id=\"" << prefixName << "/" << id << "\" type=\"serialized\">" << endl;
-	os << "\t\t<string name=\"filename\" value=\"" << filename << "\"/>" << endl;
+	os << "\t\t<string name=\"filename\" value=\"meshes/" << filename << "\"/>" << endl;
 	if (!transform.isIdentity()) {
 		os << "\t\t<transform name=\"toWorld\">" << endl;
 		os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
@@ -836,7 +836,7 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const std::string &text
 	}
 
 	os << "\t<texture id=\"" << identifier << "\" type=\"ldrtexture\">" << endl;
-	os << "\t\t<string name=\"filename\" value=\"" << textureDir + path.leaf() << "\"/>" << endl;
+	os << "\t\t<string name=\"filename\" value=\"textures/" << path.leaf() << "\"/>" << endl;
 	os << "\t</texture>" << endl << endl;
 }
 
