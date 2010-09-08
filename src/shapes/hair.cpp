@@ -32,7 +32,7 @@ Hair::Hair(const Properties &props) : Shape(props) {
 		} else {
 			std::istringstream iss(line);
 			iss >> p.x >> p.y >> p.z;
-			if (iss.good()) {
+			if (!iss.fail()) {
 				m_vertices.push_back(p);
 				m_startFiber.push_back(newFiber);
 				newFiber = false;
