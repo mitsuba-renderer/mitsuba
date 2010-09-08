@@ -299,7 +299,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					its.shFrame.n = normalize(v0.n * alpha + v1.n * beta + v2.n * gamma);
 					its.uv = v0.uv * alpha + v1.uv * beta + v2.uv * gamma;
 
-					if (EXPECT_NOT_TAKEN(bsdf->getType() != BSDF::EDiffuseReflection) || !diffuseVPL) {
+					if (EXPECT_NOT_TAKEN(bsdf->getType() != BSDF::EDiffuseReflection || !diffuseVPL)) {
 						its.dpdu = v0.dpdu * alpha + v1.dpdu * beta + v2.dpdu * gamma;
 						its.dpdv = v0.dpdv * alpha + v1.dpdv * beta + v2.dpdv * gamma;
 					}
@@ -321,11 +321,11 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					emitted[idx] = shape->getLuminaire()->Le(lRec);
 				}
 
-				if (EXPECT_TAKEN(bsdf->getType() == BSDF::EDiffuseReflection) && diffuseVPL) {
+				if (EXPECT_TAKEN(bsdf->getType() == BSDF::EDiffuseReflection && diffuseVPL)) {
 					/* Fast path */
 					direct[idx] = (bsdf->getDiffuseReflectance(its) * vplWeight)
 						* (std::max((Float) 0.0f, dot(wo, its.shFrame.n))
-						* (vplOnSurface ? std::max(cosThetaLight.f[idx], (Float) 0.0f) * INV_PI : 1.0f)
+						* (vplOnSurface ? (std::max(cosThetaLight.f[idx], (Float) 0.0f) * INV_PI) : INV_PI)
 						* invLengthSquared.f[idx]);
 				} else {
 					wi.x = -primRay4.d[0].f[idx];
