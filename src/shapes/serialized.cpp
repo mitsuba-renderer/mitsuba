@@ -27,11 +27,12 @@ MTS_NAMESPACE_BEGIN
 class SerializedMesh : public TriMesh {
 public:
 	SerializedMesh(const Properties &props) : TriMesh(props) {
-		m_name = FileResolver::getInstance()->resolve(props.getString("filename"));
+		m_name = props.getString("filename");
+		std::string filePath = FileResolver::getInstance()->resolve(m_name);
 
 		/* Load the geometry */
 		Log(EInfo, "Loading geometry from \"%s\" ..", m_name.c_str());
-		ref<FileStream> stream = new FileStream(m_name, FileStream::EReadOnly);
+		ref<FileStream> stream = new FileStream(filePath.c_str(), FileStream::EReadOnly);
 		stream->setByteOrder(Stream::ENetworkByteOrder);
 		ref<TriMesh> mesh = new TriMesh(stream);
 		m_triangleCount = mesh->getTriangleCount();
