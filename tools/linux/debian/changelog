@@ -1,3 +1,15 @@
+mitsuba (0.1.3-1) unstable; urgency=low
+
+  This is mainly a bugfix release to address a serious regression in the 
+  material system. Other notable changes are: 
+
+  * Imported scenes now store relative paths
+  * OBJ importing works on Windows
+  * Realtime preview (OpenGL + RTRT) fixed for point sources
+  * The anisotropic Ward BRDF is now supported in the preview
+  * Faster texture loading
+  * The renderer now has a testcase framework similar to JUnit
+
 mitsuba (0.1.2-1) unstable; urgency=low
 
   * Numerous bugfixes
