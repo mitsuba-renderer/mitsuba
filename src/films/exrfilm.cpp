@@ -17,8 +17,8 @@
 */
 
 #include <mitsuba/render/film.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/bitmap.h>
-#include <mitsuba/core/fresolver.h>
 #include "banner.h"
 
 MTS_NAMESPACE_BEGIN

@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/kdtree.h>
+#include <mitsuba/render/triaccel.h>
 #include <mitsuba/core/timer.h>
 
 MTS_NAMESPACE_BEGIN

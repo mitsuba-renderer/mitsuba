@@ -20,6 +20,7 @@
 #define __WAVELET_H
 
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/core/serialization.h>
 
 //#define USE_GOOGLE_SPARSE_HASHMAP 1
 //#define USE_GOOGLE_DENSE_HASHMAP 1
@@ -101,6 +102,7 @@ protected:
 	/// Virtual destructor
 	virtual ~Wavelet2D();
 protected:
+	/// \cond
 	struct coeff_t {
 		inline coeff_t() { } 
 		inline coeff_t(size_t index, float value)
@@ -112,10 +114,10 @@ protected:
 		size_t index;
 		float value;
 	};
+	/// \endcond
 protected:
 	float *m_data;
 	float *m_temp;
-	Vector2 m_range;
 	size_t m_size;
 };
 
@@ -169,6 +171,7 @@ protected:
 	/// Virtual destructor
 	virtual ~Wavelet3D();
 protected:
+	/// \cond
 	struct coeff_t {
 		inline coeff_t() { } 
 		inline coeff_t(size_t index, float value)
@@ -182,10 +185,10 @@ protected:
 		size_t index;
 		float value;
 	};
+	/// \endcond
 protected:
 	float *m_data;
 	float *m_temp;
-	Vector2 m_range;
 	size_t m_size, m_slab;
 };
 
@@ -194,6 +197,7 @@ protected:
  */
 class MTS_EXPORT_CORE SparseWavelet2D : public SerializableObject {
 public:
+	/// 2D wavelet coefficient index for \ref SparseWavelet2D
 	struct Key {
 		uint16_t empty;
 		uint8_t level; // level in the hierarchy
@@ -350,6 +354,9 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
+	/// Virtual destructor
+	virtual ~SparseWaveletOctree() { }
+private:
 	struct Node {
 		inline Node(float value) : value(value) {
 			for (int i=0; i<8; ++i)
@@ -363,9 +370,6 @@ protected:
 	Float lineIntegral(int32_t idx,
 		Float tx0, Float ty0, Float tz0,
 		Float tx1, Float ty1, Float tz1, uint8_t a) const;
-
-	/// Virtual destructor
-	virtual ~SparseWaveletOctree() { }
 private:
 	Node *m_root;
 	std::vector<Node> m_nodes;

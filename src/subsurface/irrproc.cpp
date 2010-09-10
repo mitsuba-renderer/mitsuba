@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/render/range.h>
 #include "irrproc.h"
 

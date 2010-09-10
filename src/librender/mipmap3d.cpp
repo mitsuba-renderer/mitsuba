@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/mipmap3d.h>
+#include <mitsuba/core/timer.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -24,7 +25,7 @@ SparseMipmap3D::SparseMipmap3D(const AABB &aabb, size_t size, const float *data,
 		Float maxError, Float offset)  : m_aabb(aabb), m_size(size) {
 	Assert(isPowerOfTwo(m_size));
 	m_levels = 1 + log2i(m_size);
-	m_aabbSum = m_aabb.min + m_aabb.max;
+	m_aabbSum = Vector(m_aabb.min + m_aabb.max);
 
 	float **pyramid = new float*[m_levels];
 
@@ -162,7 +163,7 @@ SparseMipmap3D::SparseMipmap3D(Stream *stream, InstanceManager *manager) {
 	}
 
 	m_levels = 1 + log2i(m_size);
-	m_aabbSum = m_aabb.min + m_aabb.max;
+	m_aabbSum = Vector(m_aabb.min + m_aabb.max);
 }
 
 void SparseMipmap3D::serialize(Stream *stream, InstanceManager *manager) const {

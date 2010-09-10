@@ -20,6 +20,10 @@
 #include <mitsuba/core/random.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/zstream.h>
+#include <mitsuba/core/properties.h>
+#include <mitsuba/render/subsurface.h>
+#include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/luminaire.h>
 
 #define MTS_FILEFORMAT_HEADER 0x041C
 #define MTS_FILEFORMAT_VERSION_V1 0x01

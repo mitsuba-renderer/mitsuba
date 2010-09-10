@@ -19,14 +19,9 @@
 #if !defined(__SUBSURFACE_H)
 #define __SUBSURFACE_H
 
-#include <mitsuba/render/records.h>
 #include <mitsuba/core/netobject.h>
 
 MTS_NAMESPACE_BEGIN
-
-class Scene;
-class RenderQueue;
-class RenderJob;
 
 /**
  * Abstract subsurface integrator -- can be attached to an arbitrary 

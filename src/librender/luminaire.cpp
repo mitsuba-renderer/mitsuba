@@ -16,8 +16,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/core/properties.h>
 #include <mitsuba/render/luminaire.h>
-#include <mitsuba/render/shape.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -60,6 +60,31 @@ bool Luminaire::isBackgroundLuminaire() const {
 
 Spectrum Luminaire::Le(const Ray &ray) const {
 	return Spectrum(0.0f);
+}
+
+std::string EmissionRecord::toString() const {
+	std::ostringstream oss;
+	oss << "EmissionRecord[" << std::endl
+		<< "  sRec = " << indent(sRec.toString()) << "," << std::endl
+		<< "  d = " << d.toString() << "," << std::endl
+		<< "  P = " << P.toString() << "," << std::endl
+		<< "  pdfArea = " << pdfArea << "," << std::endl
+		<< "  pdfDir = " << pdfDir << "," << std::endl
+		<< "  luminaire = " << ((luminaire == NULL ) ? "null" : indent(((Object *) luminaire)->toString()).c_str()) << std::endl
+		<< "]";
+	return oss.str();
+}
+
+std::string LuminaireSamplingRecord::toString() const {
+	std::ostringstream oss;
+	oss << "LuminaireSamplingRecord[" << std::endl
+		<< "  sRec = " << indent(sRec.toString()) << "," << std::endl
+		<< "  d = " << d.toString() << "," << std::endl
+		<< "  pdf = " << pdf << "," << std::endl
+		<< "  Le = " << Le.toString() << "," << std::endl
+		<< "  luminaire = " << ((luminaire == NULL ) ? "null" : indent(((Object *) luminaire)->toString()).c_str()) << std::endl
+		<< "]";
+	return oss.str();
 }
 
 MTS_IMPLEMENT_CLASS(Luminaire, true, ConfigurableObject)

@@ -19,30 +19,24 @@
 #if !defined(__NETOBJECT_H)
 #define __NETOBJECT_H
 
-#include <mitsuba/core/sched.h>
+#include <mitsuba/core/cobject.h>
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Interface of an abstract object referencing
- * globally shared resources. When it is serialized for use in a
- * parallel process executed on several machines, the object
- * is first given the opportunity to bind named resources to 
- * the process, which will then be distributed to all participating 
- * compute servers. Once unserialized on the remote side, 
- * <tt>wakeup</tt> is called to let the object re-associate
- * with the shared resources.
+/** \brief Abstract interface for objects that reference shared network resources.
+ * 
+ * When a networked object is serialized as part of a parallel process executed on 
+ * multiple machines, the object is first given the opportunity to bind named resources
+ * to the process (by a call to <tt>\ref bindUsedResources()</tt>). These will then be 
+ * distributed to all participating compute servers. Once unserialized on the remote side, 
+ * <tt>\ref wakeup()</tt> is called to let the object re-associate with the shared resources.
  */
 class MTS_EXPORT_CORE NetworkedObject : public ConfigurableObject {
 public:
-	/// Constructor
-	inline NetworkedObject(const Properties &props) : ConfigurableObject(props) { }
-
-	/// Unserialize a configurable object
-	inline NetworkedObject(Stream *stream, InstanceManager *manager) 
-	 : ConfigurableObject(stream, manager) {
-	}
-
+	/// Bind any used resources to the process \a proc
 	virtual void bindUsedResources(ParallelProcess *proc) const;
+
+	/// Retrieve any required resources
 	virtual void wakeup(std::map<std::string, SerializableObject *> &params);
 
 	/// Serialize this object to a stream
@@ -52,6 +46,14 @@ public:
 protected:
 	/// Virtual destructor
 	virtual ~NetworkedObject() { }
+
+	/// Constructor
+	inline NetworkedObject(const Properties &props) : ConfigurableObject(props) { }
+
+	/// Unserialize a configurable object
+	inline NetworkedObject(Stream *stream, InstanceManager *manager) 
+	 : ConfigurableObject(stream, manager) {
+	}
 };
 
 MTS_NAMESPACE_END

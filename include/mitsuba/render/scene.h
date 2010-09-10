@@ -19,11 +19,17 @@
 #if !defined(__SCENE_H)
 #define __SCENE_H
 
-#include <mitsuba/core/fresolver.h>
-#include <mitsuba/render/camera.h>
+#include <mitsuba/core/netobject.h>
+#include <mitsuba/core/pdf.h>
+#include <mitsuba/core/aabb.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/render/kdtree.h>
+#include <mitsuba/render/camera.h>
+#include <mitsuba/render/luminaire.h>
 #include <mitsuba/render/integrator.h>
+#include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/subsurface.h>
+#include <mitsuba/render/texture.h>
 #include <mitsuba/render/medium.h>
 
 MTS_NAMESPACE_BEGIN

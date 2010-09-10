@@ -26,9 +26,11 @@ MTS_NAMESPACE_BEGIN
 class Utility;
 
 /**
- * Abstract plugin class -- can represent loadable configurable objects
- * and utilities. Please see the <tt>ConfigurableObject</tt> and
- * <tt>Utility</tt> class for details
+ * \brief Abstract plugin class -- represents loadable configurable objects
+ * and utilities.
+ * 
+ * Please see the <tt>\ref ConfigurableObject</tt> and
+ * <tt>\ref Utility</tt> classes for details
  */
 class MTS_EXPORT_CORE Plugin {
 	typedef void *(*CreateInstanceFunc)(const Properties &props);
@@ -75,8 +77,11 @@ private:
 	CreateUtilityFunc m_createUtility;
 };
 
-class FileResolver;
 
+/**
+ * \brief The plugin manager is responsible for resolving and
+ * loading external plugins.
+ */
 class MTS_EXPORT_CORE PluginManager : public Object {
 public:
 	/// Return the global plugin manager
@@ -90,7 +95,15 @@ public:
 	/// Return the list of loaded plugins
 	std::vector<std::string> getLoadedPlugins() const;
 
-	/// Instantiate an object
+	/**
+	 * \brief Instantiate an object using a plugin
+	 * \param classType Expected type of the plugin. An
+	 *    exception will be thrown if it turns out not
+	 *    to derive from this class.
+	 * \param props A \ref Properties instance containing
+	 *    all information required to find and construct 
+	 *    the plugin.
+	 */
 	ConfigurableObject *createObject(
 		const Class *classType,
 		const Properties &props

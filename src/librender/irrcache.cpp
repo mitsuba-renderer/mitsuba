@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/irrcache.h>
+#include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -286,14 +287,14 @@ IrradianceCache::Record *IrradianceCache::put(const RayDifferential &ray, const 
 	/* Clamping suggested by Tabellion and Lamourlette ("An Approximate Global 
 	   Illumination System for Computer Generated Films") */
 	if (m_clampScreen && ray.hasDifferentials) {
-		const Float d = -dot(its.geoFrame.n, its.p);
+		const Float d = -dot(its.geoFrame.n, Vector(its.p));
 		const Float txRecip = dot(its.geoFrame.n, ray.rx.d),
 		            tyRecip = dot(its.geoFrame.n, ray.ry.d);
 		if (txRecip != 0 && tyRecip != 0) {
 			// Ray distances traveled 
-			const Float tx = -(dot(its.geoFrame.n, ray.rx.o) + d) / 
+			const Float tx = -(dot(its.geoFrame.n, Vector(ray.rx.o)) + d) / 
 				txRecip;
-			const Float ty = -(dot(its.geoFrame.n, ray.ry.o) + d) / 
+			const Float ty = -(dot(its.geoFrame.n, Vector(ray.ry.o)) + d) / 
 				tyRecip;
 			Point px = ray.rx(tx), py = ray.ry(ty);
 			Float sqrtArea = std::sqrt(cross(px-its.p, py-its.p).length())*2;

@@ -20,7 +20,6 @@
 #define __GRID_H
 
 #include <mitsuba/mitsuba.h>
-#include <stdexcept>
 
 MTS_NAMESPACE_BEGIN
 

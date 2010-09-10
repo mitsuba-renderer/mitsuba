@@ -39,8 +39,6 @@ RenderJob::RenderJob(const std::string &threadName,
 	ref<Camera> camera = m_scene->getCamera();
 	ref<Sampler> sampler = m_scene->getSampler();
 
-	m_fileResolver = FileResolver::getInstance();
-
 	/* Register the scene with the scheduler if needed */
 	if (sceneResID == -1) {
 		m_sceneResID = sched->registerResource(m_scene);
@@ -91,8 +89,6 @@ RenderJob::~RenderJob() {
 void RenderJob::run() {
 	ref<Film> film = m_scene->getFilm();
 	ref<Sampler> sampler = m_scene->getSampler();
-
-	FileResolver::setInstance(m_fileResolver);
 
 	if (m_testSupervisor.get()) {
 		if (film->getClass()->getName() != "MFilm")

@@ -19,7 +19,8 @@
 #if !defined(__SCHED_H)
 #define __SCHED_H
 
-#include <mitsuba/core/mstream.h>
+#include <mitsuba/core/serialization.h>
+#include <mitsuba/core/lock.h>
 #include <set>
 #include <deque>
 
@@ -401,6 +402,8 @@ public:
 
 	MTS_DECLARE_CLASS()
 public:
+	// Public, but shouldn't be part of the documentation
+	/// \cond
 	struct ProcessRecord {
 		/* Unique ID value assigned to this process */
 		int id;
@@ -476,6 +479,8 @@ public:
 		/// The scheduler is shutting down
 		EStop
 	};
+	/// \endcond
+
 	/// Look up a resource by ID & core index
 	SerializableObject *getResource(int id, int coreIndex = -1);
 
@@ -490,6 +495,7 @@ public:
 protected:
 	/// Protected constructor
 	Scheduler();
+
 	/// Virtual destructor
 	virtual ~Scheduler();
 

@@ -187,6 +187,36 @@ void GLProgram::setParameter(int id, const Vector4 &value) {
 	glUniform4f(id, (GLfloat) value.x, (GLfloat) value.y, (GLfloat) value.z, (GLfloat) value.w);
 }
 
+void GLProgram::setParameter(int id, const Point &value) {
+	if (id == -1)
+		return;
+	glUniform3f(id, (GLfloat) value.x, (GLfloat) value.y, (GLfloat) value.z);
+}
+
+void GLProgram::setParameter(int id, const Point3i &value) {
+	if (id == -1)
+		return;
+	glUniform3i(id, value.x, value.y, value.z);
+}
+
+void GLProgram::setParameter(int id, const Point2 &value) {
+	if (id == -1)
+		return;
+	glUniform2f(id, (GLfloat) value.x, (GLfloat) value.y);
+}
+
+void GLProgram::setParameter(int id, const Point2i &value) {
+	if (id == -1)
+		return;
+	glUniform2i(id, value.x, value.y);
+}
+
+void GLProgram::setParameter(int id, const Point4 &value) {
+	if (id == -1)
+		return;
+	glUniform4f(id, (GLfloat) value.x, (GLfloat) value.y, (GLfloat) value.z, (GLfloat) value.w);
+}
+
 void GLProgram::setParameter(int id, const GPUTexture *value) {
 	if (id == -1)
 		return;

@@ -19,15 +19,127 @@
 #if !defined(__SHAPE_H)
 #define __SHAPE_H
 
-#include <mitsuba/core/bsphere.h>
+#include <mitsuba/core/cobject.h>
+#include <mitsuba/core/transform.h>
+#include <mitsuba/core/frame.h>
 #include <mitsuba/core/aabb.h>
-#include <mitsuba/core/serialization.h>
-#include <mitsuba/render/records.h>
-#include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/luminaire.h>
-#include <mitsuba/render/subsurface.h>
 
 MTS_NAMESPACE_BEGIN
+
+/** \brief Data record, which holds sampling-related information
+ *  for a shape.
+ */
+struct MTS_EXPORT_RENDER ShapeSamplingRecord {
+public:
+	/// Create a sampling record (does no initialization!)
+	inline ShapeSamplingRecord() { }
+
+	/// Create a sampling record with the specified position and normal
+	inline ShapeSamplingRecord(const Point &p, const Normal &n)
+		: p(p), n(n) { }
+
+	/// Return a string representation
+	std::string toString() const;
+public:
+	/// Sampled surface position
+	Point p;
+
+	/// Sampled surface normal
+	Normal n;
+};
+
+/** \brief Container for all information related to
+ * a surface intersection
+ */
+struct MTS_EXPORT_RENDER Intersection {
+public:
+	inline Intersection() : t(std::numeric_limits<Float>::infinity()), shape(NULL) {
+	}
+
+	/* Convert a vector expressed inside the shading frame into world
+	   coordinates */
+	inline Vector toWorld(const Vector &v) const {
+		return shFrame.toWorld(v);
+	}
+
+	/* Convert a vector expressed inside world coordinates frame into 
+	   shading frame coordinates */
+	inline Vector toLocal(const Vector &v) const {
+		return shFrame.toLocal(v);
+	}
+
+	/// Is the current intersection valid?
+	inline bool isValid() const {
+		return t != std::numeric_limits<Float>::infinity();
+	}
+
+	/// Is the intersected shape also a luminaire?
+	inline bool isLuminaire() const;
+
+	/// Does the intersected shape have a subsurface integrator?
+	inline bool hasSubsurface() const;
+
+	/**
+	 * Returns the BSDF of the intersected shape. The
+	 * parameter ray must match the one used to create
+	 * the intersection record. Computes texture coordinate
+	 * partials if this is required by the BSDF.
+	 * Should only be called if there is a valid
+	 * intersection!
+	 */
+	inline const BSDF *getBSDF(const RayDifferential &ray);
+
+	/**
+	 * Returns radiance emitted into direction d.
+	 * Should only be called if the intersected
+	 * shape is indeed a luminaire!
+	 */
+	inline Spectrum Le(const Vector &d) const;
+
+	/**
+	 * Returns radiance from a subsurface integrator
+	 * emitted into direction d.
+	 * Should only be called if the intersected
+	 * shape does indeed have a subsurface integrator!
+	 */
+	inline Spectrum LoSub(const Scene *scene, const Vector &d) const;
+
+	/// Computes texture coordinate partials
+	void computePartials(const RayDifferential &ray);
+
+	/* Return a string representation */
+	std::string toString() const;
+public:
+	/* Incident direction in the local frame */
+	Vector wi;
+
+	/* Distance traveled along the ray */
+	Float t;
+
+	/* Intersection point in 3D coordinates */
+	Point p;
+
+	/* Geometry frame */
+	Frame geoFrame;
+
+	/* Shading frame */
+	Frame shFrame;
+
+	/* UV surface coordinates */
+	Point2 uv;
+
+	/* Position partials wrt. to changes in texture-space */
+	Vector dpdu, dpdv;
+
+	/* Texture coordinate mapping partials wrt. changes in screen-space */
+	Float dudx, dudy, dvdx, dvdy;
+
+	/* Affected shape */
+	const Shape *shape;
+
+	/* Have texture coordinate partials been computed */
+	bool hasUVPartials;
+};
 
 /** \brief Abstract base class of all shapes
  */
@@ -82,16 +194,15 @@ public:
 
 	/**
 	 * Sample a point on the shape - should be uniform
-	 * wrt. solid angle. Returns the associated probability
+	 * wrt. solid angle as seen from \a x. Returns the associated probability
 	 * density
 	 */
-	virtual Float sampleSolidAngle(ShapeSamplingRecord &sRec, const Point &from, const Point2 &sample) const;
+	virtual Float sampleSolidAngle(ShapeSamplingRecord &sRec, const Point &x, const Point2 &sample) const;
 
 	/**
-	 * Return the probability density of sampling the 
-	 * given point using sampleSolidAngle()
+	 * Return the probability density of sampling the given point using sampleSolidAngle()
 	 */
-	virtual Float pdfSolidAngle(const ShapeSamplingRecord &sRec, const Point &from) const;
+	virtual Float pdfSolidAngle(const ShapeSamplingRecord &sRec, const Point &x) const;
 
 	/// Return the shape's surface area
 	inline Float getSurfaceArea() const { return m_surfaceArea; }
@@ -150,3 +261,5 @@ protected:
 MTS_NAMESPACE_END
 
 #endif /* __SHAPE_H */
+
+

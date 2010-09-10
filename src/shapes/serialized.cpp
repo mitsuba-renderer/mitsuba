@@ -17,7 +17,6 @@
 */
 
 #include <mitsuba/render/trimesh.h>
-#include <mitsuba/core/fresolver.h>
 
 MTS_NAMESPACE_BEGIN
 

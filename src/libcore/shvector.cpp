@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/core/shvector.h>
+#include <mitsuba/core/transform.h>
 #include <boost/math/special_functions/factorials.hpp>
 
 MTS_NAMESPACE_BEGIN

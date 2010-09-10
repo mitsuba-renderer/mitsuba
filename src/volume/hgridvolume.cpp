@@ -17,7 +17,6 @@
 */
 
 #include <mitsuba/render/volume.h>
-#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/plugin.h>
 
 MTS_NAMESPACE_BEGIN

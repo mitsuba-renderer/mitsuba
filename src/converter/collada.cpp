@@ -22,6 +22,7 @@
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
 #include <dae.h>
 #include <dom/domCOLLADA.h>
 #include <dom/domProfile_COMMON.h>
@@ -264,7 +265,7 @@ struct triangle_key_order : public std::binary_function<SimpleTriangle, SimpleTr
 typedef std::map<SimpleTriangle, bool, triangle_key_order> TriangleMap;
 
 void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::string matID, Transform transform, 
-		std::ostream &os, VertexData *vData, TriangleMap &triMap, const std::string &meshesDirectory) {
+		std::ostream &os, VertexData *vData, TriangleMap &triMap, const fs::path &meshesDirectory) {
 	std::vector<Vertex> vertexBuffer;
 	std::vector<Triangle> triangles;
 	std::map<Vertex, int, vertex_key_order> vertexMap;
@@ -344,7 +345,7 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	mesh->calculateTangentSpaceBasis(vData->typeToOffset[ENormal]!=-1, vData->typeToOffset[EUV]!=-1);
 
 	std::string filename = id + std::string(".serialized");
-	ref<FileStream> stream = new FileStream(meshesDirectory + filename, FileStream::ETruncReadWrite);
+	ref<FileStream> stream = new FileStream(meshesDirectory / filename, FileStream::ETruncReadWrite);
 	stream->setByteOrder(Stream::ENetworkByteOrder);
 	mesh->serialize(stream);
 	stream->close();
@@ -368,7 +369,7 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 }
 
 void loadGeometry(std::string prefixName, Transform transform, std::ostream &os, domGeometry &geom, 
-		StringMap &matLookupTable, const std::string &meshesDir) {
+		StringMap &matLookupTable, const fs::path &meshesDir) {
 	std::string identifier;
 	if (geom.getId() != NULL) {
 		identifier = geom.getId();
@@ -491,7 +492,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 	}
 }
 
-void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const std::string &name, StringMap &idToTexture, 
+void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const fs::path &name, StringMap &idToTexture, 
 		domCommon_color_or_texture_type *value, bool handleRefs) {
 	if (!value)
 		return;
@@ -517,7 +518,7 @@ void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const std::stri
 	}
 }
 
-void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const std::string &name, StringMap &,
+void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const fs::path &name, StringMap &,
 		domCommon_float_or_param_type *value, bool handleRef) {
 	if (!value)
 		return;
@@ -702,7 +703,7 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 	transform = transform * Transform::scale(Vector(1, 1, -1));
 
 	Point pos = transform(Point(0, 0, 0));
-	Vector target = transform(Point(0, 0, 1));
+	Point target = transform(Point(0, 0, 1));
 
 	Float intensity = 1;
 	const domTechnique_Array &techniques = light.getTechnique_array();
@@ -783,7 +784,7 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 		SLog(EWarn, "Encountered an unknown light type!");
 }
 
-void loadImage(GeometryConverter *cvt, std::ostream &os, const std::string &textureDir, 
+void loadImage(GeometryConverter *cvt, std::ostream &os, const fs::path &textureDir, 
 		domImage &image, StringMap &idToTexture, StringMap &fileToId) {
 	std::string identifier;
 	if (image.getId() != NULL) {
@@ -809,26 +810,26 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const std::string &text
 	fileToId[filename] = identifier;
 
 	boost::filesystem::path path = boost::filesystem::path(filename, boost::filesystem::native);
-	std::string targetPath = textureDir + path.leaf();
+	fs::path targetPath = textureDir / path.leaf();
+	fs::path resolved = filename;
 
 	if (endsWith(filename, ".rgb")) 
 		SLog(EWarn, "Maya RGB images must be converted to PNG, EXR or JPEG! The 'imgcvt' "
 		"utility found in the Maya binary directory can be used to do this.");
 
-	if (!FileStream::exists(targetPath)) {
-		ref<FileResolver> fRes = FileResolver::getInstance();
-		std::string resolved = fRes->resolve(path.leaf());
-		if (!FileStream::exists(filename)) {
-			if (!FileStream::exists(resolved)) {
-				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.c_str());
-				filename = cvt->locateResource(filename);
-				if (filename == "")
+	if (!fs::exists(targetPath)) {
+		ref<FileResolver> fRes = Thread::getThread()->getFileResolver();
+		if (!fs::exists(resolved)) {
+			resolved = fRes->resolve(path.leaf());
+			if (!fs::exists(resolved)) {
+				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
+				std::string result = cvt->locateResource(filename);
+				if (result == "")
 					SLog(EError, "Unable to locate a resource -- aborting conversion.");
-			} else {
-				filename = resolved;
+				resolved = result;
 			}
 		}
-		ref<FileStream> input = new FileStream(filename, FileStream::EReadOnly);
+		ref<FileStream> input = new FileStream(resolved, FileStream::EReadOnly);
 		ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
 		input->copyTo(output);
 		input->close();
@@ -945,7 +946,7 @@ void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, d
 }
 
 void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os, 
-		domNode &node, std::string prefixName, const std::string &meshesDir) {
+		domNode &node, std::string prefixName, const fs::path &meshesDir) {
 	std::string identifier;
 	if (node.getId() != NULL) {
 		identifier = node.getId();
@@ -1095,21 +1096,14 @@ GLvoid __stdcall tessEdgeFlag(GLboolean) {
 
 void GeometryConverter::convertCollada(const std::string &inputFile, 
 	std::ostream &os,
-	const std::string &textureDirectory,
-	const std::string &meshesDirectory) {
-#if defined(__LINUX__)
-	std::string path = std::string("file://") +
-		FileResolver::getInstance()->resolveAbsolute(inputFile);
-#else
-	std::string path = inputFile;
-#endif
-
+	const fs::path &textureDirectory,
+	const fs::path &meshesDirectory) {
 	DAE *dae = new DAE();
-	SLog(EInfo, "Loading \"%s\" ..", path.c_str());
-	if (dae->load(path.c_str()) != DAE_OK) 
-		SLog(EError, "Could not load \"%s\"!", path.c_str());
+	SLog(EInfo, "Loading \"%s\" ..", inputFile.c_str());
+	if (dae->load(inputFile.c_str()) != DAE_OK) 
+		SLog(EError, "Could not load \"%s\"!", inputFile.c_str());
 
-	domCOLLADA *document = dae->getDom(path.c_str());
+	domCOLLADA *document = dae->getDom(inputFile.c_str());
 	domVisual_scene *visualScene = daeSafeCast<domVisual_scene>
 		(document->getDescendant("visual_scene"));
 	if (!visualScene)

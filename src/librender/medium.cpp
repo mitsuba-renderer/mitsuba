@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/medium.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/properties.h>
+#include <mitsuba/render/medium.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -82,6 +83,19 @@ void Medium::serialize(Stream *stream, InstanceManager *manager) const {
 Float PhaseFunction::pdf(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const {
 	/* Assumes that the returned value is uniform */
 	return f(mRec, wi, wo)[0];
+}
+
+std::string MediumSamplingRecord::toString() const {
+	std::ostringstream oss;
+	oss << "MediumSamplingRecord[" << std::endl
+		<< "  t = " << t << "," << std::endl
+		<< "  p = " << p.toString() << "," << std::endl
+		<< "  sigmaA = " << sigmaA.toString() << "," << std::endl
+		<< "  sigmaS = " << sigmaS.toString() << "," << std::endl
+		<< "  pdf = " << pdf << "," << std::endl
+		<< "  medium = " << indent(((Object *) medium)->toString()) << std::endl
+		<< "]";
+	return oss.str();
 }
 
 MTS_IMPLEMENT_CLASS(Medium, true, NetworkedObject)

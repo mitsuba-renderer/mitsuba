@@ -69,7 +69,7 @@ if env.has_key('BASELIBDIR'):
 
 env.Decider('MD5-timestamp')
 
-env.SetOption('num_jobs', multiprocessing.cpu_count())
+#env.SetOption('num_jobs', multiprocessing.cpu_count())
 
 AddOption("--dist", dest="dist", type="string", nargs=0, action='store', help='Make an official release')
 
@@ -267,7 +267,8 @@ libcore_objects = [
 	'src/libcore/cstream.cpp', 'src/libcore/mstream.cpp', 
 	'src/libcore/sched.cpp', 'src/libcore/sched_remote.cpp',
 	'src/libcore/sshstream.cpp', 'src/libcore/wavelet.cpp',
-	'src/libcore/zstream.cpp', 'src/libcore/shvector.cpp'
+	'src/libcore/zstream.cpp', 'src/libcore/shvector.cpp',
+	'src/libcore/fresolver.cpp'
 ]
 if sys.platform == 'darwin':
 	coreEnv_osx = coreEnv.Clone();
@@ -307,13 +308,12 @@ librender = renderEnv.SharedLibrary('src/librender/mitsuba-render', [
 	'src/librender/scene.cpp',  'src/librender/subsurface.cpp', 
 	'src/librender/texture.cpp', 'src/librender/shape.cpp', 
 	'src/librender/trimesh.cpp', 'src/librender/rfilter.cpp', 
-	'src/librender/sampler.cpp', 'src/librender/records.cpp', 
+	'src/librender/sampler.cpp', 'src/librender/util.cpp',
 	'src/librender/irrcache.cpp', 'src/librender/testcase.cpp',
 	'src/librender/preview.cpp', 'src/librender/photonmap.cpp',
 	'src/librender/gatherproc.cpp', 'src/librender/mipmap3d.cpp',
 	'src/librender/volume.cpp', 'src/librender/vpl.cpp',
-	'src/librender/shader.cpp', 'src/librender/shandler.cpp',
-	'src/librender/util.cpp'
+	'src/librender/shader.cpp', 'src/librender/shandler.cpp'
 ])
 
 if sys.platform == "darwin":

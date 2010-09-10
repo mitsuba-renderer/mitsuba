@@ -29,8 +29,8 @@
 #include <xercesc/framework/Wrapper4InputSource.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
 #include <xercesc/util/XMLUni.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <mitsuba/mitsuba.h>
-#include <mitsuba/core/fresolver.h>
 #include <fstream>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -134,47 +134,26 @@ void GeometryConverter::convert(const std::string &inputFile,
 	const std::string &sceneName,
 	const std::string &adjustmentFile) {
 
-	std::string textureDirectory = "textures";
-	std::string meshesDirectory = "meshes";
-	std::string outputFile = sceneName;
+	fs::path textureDirectory = "textures";
+	fs::path meshesDirectory = "meshes";
+	fs::path outputFile = sceneName;
+
+	if (outputDirectory != "") {
+		fs::path outPath (outputDirectory);
+
+		textureDirectory = outPath / "textures";
+		meshesDirectory = outPath / "meshes";
+		outputFile = outPath / sceneName;
+	}
 
 	SLog(EInfo, "Creating directories ..");
-#if !defined(WIN32)
-	if (outputDirectory != "") {
-		textureDirectory = outputDirectory + "/textures";
-		meshesDirectory = outputDirectory + "/meshes";
-		outputFile = outputDirectory + std::string("/") + sceneName;
-	}
+	if (!fs::exists(textureDirectory))
+		fs::create_directory(textureDirectory);
 
-	int status = mkdir(textureDirectory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	if (status != 0 && errno != EEXIST)
-		SLog(EError, "Could not create the directory \"%s\"", textureDirectory.c_str());
-	status = mkdir(meshesDirectory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	if (status != 0 && errno != EEXIST)
-		SLog(EError, "Could not create the directory \"%s\"", meshesDirectory.c_str());
-	
-	textureDirectory += "/";
-	meshesDirectory += "/";
-#else
-	if (outputDirectory != "") {
-		textureDirectory = outputDirectory + "\\textures";
-		meshesDirectory = outputDirectory + "\\meshes";
-		outputFile = outputDirectory + std::string("\\") + sceneName;
-	}
-
-	int status = CreateDirectory(textureDirectory.c_str(), NULL);
-	if (status == 0 && GetLastError() != ERROR_ALREADY_EXISTS)
-		SLog(EError, "Could not create the directory \"%s\"", textureDirectory.c_str());
-	status = CreateDirectory(meshesDirectory.c_str(), NULL);
-	if (status == 0 && GetLastError() != ERROR_ALREADY_EXISTS)
-		SLog(EError, "Could not create the directory \"%s\"", meshesDirectory.c_str());
-
-	textureDirectory += "\\";
-	meshesDirectory += "\\";
-#endif
+	if (!fs::exists(meshesDirectory))
+		fs::create_directory(meshesDirectory);
 
 	std::ostringstream os;
-
 	SLog(EInfo, "Beginning conversion ..");
 	if (endsWith(toLowerCase(inputFile), ".dae") || endsWith(toLowerCase(inputFile), ".zae")) {
 		convertCollada(inputFile, os, textureDirectory, meshesDirectory);
@@ -241,7 +220,7 @@ void GeometryConverter::convert(const std::string &inputFile,
 		DOMLSOutput *output = impl->createLSOutput();
 		serConf->setParameter(XMLUni::fgDOMErrorHandler, &errorHandler);
 		serConf->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
-		XMLFormatTarget *target = new LocalFileFormatTarget(outputFile.c_str());
+		XMLFormatTarget *target = new LocalFileFormatTarget(outputFile.file_string().c_str());
 		output->setByteStream(target);
 		serializer->write(doc, output);
 		delete output;
@@ -251,12 +230,12 @@ void GeometryConverter::convert(const std::string &inputFile,
 		delete serializer;
 		parser->release();
 	} else {
-		std::ofstream ofile(outputFile.c_str());
+		fs::ofstream ofile(outputFile);
 		if (ofile.fail())
-			SLog(EError, "Could not write to \"%s\"!", outputFile.c_str());
+			SLog(EError, "Could not write to \"%s\"!", outputFile.file_string().c_str());
 		ofile << os.str();
 		ofile.close();
 	}
-	m_filename = outputFile;
+	m_filename = outputFile.file_string();
 }
 

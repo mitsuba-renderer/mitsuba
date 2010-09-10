@@ -18,6 +18,7 @@
 
 #include "glwidget.h"
 #include "preview.h"
+#include <mitsuba/core/timer.h>
 
 PreviewThread::PreviewThread(Device *parentDevice, Renderer *parentRenderer)
 	: Thread("prev"), m_parentDevice(parentDevice), m_parentRenderer(parentRenderer), 
@@ -36,7 +37,6 @@ PreviewThread::PreviewThread(Device *parentDevice, Renderer *parentRenderer)
 	m_accumBuffer = NULL;
 	m_sleep = false;
 	m_started = new WaitFlag();
-	m_fileResolver = FileResolver::getInstance();
 
 	m_accumProgram = m_renderer->createGPUProgram("Accumulation program");
 	m_accumProgram->setSource(GPUProgram::EVertexProgram,
@@ -257,7 +257,6 @@ void PreviewThread::run() {
 	MTS_AUTORELEASE_BEGIN()
 
 	bool initializedGraphics = false;
-	FileResolver::setInstance(m_fileResolver);
 
 	try {
 		m_device->init(m_parentDevice);
@@ -467,7 +466,7 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 
 	Point2 jitter(.5f, .5f);
 	if (!m_motion)
-		jitter -= Point2(m_random->nextFloat(), m_random->nextFloat());
+		jitter -= Vector2(m_random->nextFloat(), m_random->nextFloat());
 
 	m_mutex->lock();
 	const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>

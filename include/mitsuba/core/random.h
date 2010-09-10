@@ -20,7 +20,7 @@
 #define __RANDOM_H
 
 #include <mitsuba/mitsuba.h>
-#include <algorithm>
+#include <mitsuba/core/cobject.h>
 
 /* 
    A C-program for MT19937-64 (2004/9/29 version).

@@ -16,6 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/core/timer.h>
 #include <mitsuba/render/renderjob.h>
 
 MTS_NAMESPACE_BEGIN

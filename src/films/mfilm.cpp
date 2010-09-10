@@ -18,7 +18,6 @@
 
 #include <mitsuba/render/film.h>
 #include <mitsuba/core/bitmap.h>
-#include <mitsuba/core/fresolver.h>
 
 MTS_NAMESPACE_BEGIN
 

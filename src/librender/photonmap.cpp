@@ -17,8 +17,7 @@
 */
 
 #include <mitsuba/render/photonmap.h>
-#include <mitsuba/render/shape.h>
-#include <mitsuba/render/medium.h>
+#include <mitsuba/render/scene.h>
 #include <fstream>
 
 MTS_NAMESPACE_BEGIN

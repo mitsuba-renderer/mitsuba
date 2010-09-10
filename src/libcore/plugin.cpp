@@ -16,10 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/mitsuba.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/statistics.h>
+#include <mitsuba/core/properties.h>
+#include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
-#include <stdexcept>
+#include <mitsuba/core/cobject.h>
 
 #if !defined(WIN32)
 #include <dlfcn.h>
@@ -177,12 +179,12 @@ void PluginManager::ensurePluginLoaded(const std::string &name) {
 #else
 	std::string shortName = std::string("plugins/") + name + std::string(".so");
 #endif
-	FileResolver *resolver = FileResolver::getInstance();
-	std::string fullName = resolver->resolve(shortName);
+	const FileResolver *resolver = Thread::getThread()->getFileResolver();
+	fs::path path = resolver->resolve(shortName);
 
-	if (FileStream::exists(fullName)) {
+	if (fs::exists(path)) {
 		Log(EInfo, "Loading plugin \"%s\" ..", shortName.c_str());
-		m_plugins[name] = new Plugin(shortName, fullName);
+		m_plugins[name] = new Plugin(shortName, path.file_string());
 		return;
 	}
 

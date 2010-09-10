@@ -19,8 +19,8 @@
 #if !defined(__TRANSFORM_H)
 #define __TRANSFORM_H
 
+#include <mitsuba/mitsuba.h>
 #include <mitsuba/core/ray.h>
-#include <mitsuba/core/normal.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -79,8 +79,7 @@ protected:
 struct Frame;
 
 /**
- * \brief Transform class encapsulating a linear affine
- * transformation (using homogenous coordinates) and its inverse
+ * \brief Encapsulates a 4x4 linear transformation and its inverse
  */
 class MTS_EXPORT_CORE Transform {
 public:
@@ -264,47 +263,47 @@ public:
 	
 	/** \brief Create a perspective transformation.
 	 *   (Maps [near, far] to [0, 1])
-	 * @param fov Field of view in degrees
-	 * @param clipNear Near clipping plane
-	 * @param clipFar Far clipping plane
+	 * \param fov Field of view in degrees
+	 * \param clipNear Near clipping plane
+	 * \param clipFar Far clipping plane
 	 */
 	static Transform perspective(Float fov, Float clipNear, Float clipFar);
 	
 	/** \brief Create a perspective transformation for OpenGL.
 	 *   (Maps [near, far] to [-1, 1])
-	 * @param fov Field of view in degrees
-	 * @param clipNear Near clipping plane distance
-	 * @param clipFar Far clipping plane distance
+	 * \param fov Field of view in degrees
+	 * \param clipNear Near clipping plane distance
+	 * \param clipFar Far clipping plane distance
 	 */
 	static Transform glPerspective(Float fov, Float clipNear, Float clipFar);
 
 	/** \brief Create a perspective transformation for OpenGL.
-	 * @param left Left clipping plane coordinate
-	 * @param right Right clipping plane coordinate
-	 * @param top Top clipping plane coordinate
-	 * @param bottom Bottom clipping plane coordinate
-	 * @param clipNear Near clipping plane distance
-	 * @param clipFar Far clipping plane distance
+	 * \param left Left clipping plane coordinate
+	 * \param right Right clipping plane coordinate
+	 * \param top Top clipping plane coordinate
+	 * \param bottom Bottom clipping plane coordinate
+	 * \param nearVal Near clipping plane distance
+	 * \param farVal Far clipping plane distance
 	 */
 	static Transform glFrustum(Float left, Float right, Float bottom, Float top, Float nearVal, Float farVal);
 
 	/** \brief Create an orthographic transformation, which maps Z to [0,1]
 	 * and leaves the X and Y coordinates untouched.
-	 * @param clipNear Near clipping plane
-	 * @param clipFar Far clipping plane
+	 * \param clipNear Near clipping plane
+	 * \param clipFar Far clipping plane
 	 */
 	static Transform orthographic(Float clipNear, Float clipFar);
 	
 	/** \brief Create an orthographic transformation for OpenGL
-	 * @param clipNear Near clipping plane
-	 * @param clipFar Far clipping plane
+	 * \param clipNear Near clipping plane
+	 * \param clipFar Far clipping plane
 	 */
 	static Transform glOrthographic(Float clipNear, Float clipFar);
 
 	/** \brief Create a look-at camera transformation
-	 * @param p Camera position
-	 * @param t Target vector
-	 * @param u Up vector
+	 * \param p Camera position
+	 * \param t Target vector
+	 * \param u Up vector
 	 */
 	static Transform lookAt(const Point &p, const Point &t, const Vector &u);
 

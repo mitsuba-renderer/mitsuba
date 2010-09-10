@@ -17,8 +17,8 @@
 */
 
 #include <mitsuba/mitsuba.h>
-#include <stdarg.h>
-#include <stdexcept>
+#include <mitsuba/core/statistics.h>
+#include <mitsuba/core/lock.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -118,7 +118,7 @@ bool StatsCounter::operator<(const StatsCounter &v) const {
 ref<Statistics> Statistics::m_instance = new Statistics();
 	
 void Statistics::staticInitialization() {
-	/* Do nothing */
+	SAssert(sizeof(CacheLineCounter) == 128);
 }
 
 void Statistics::staticShutdown() {

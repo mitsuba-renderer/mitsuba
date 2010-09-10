@@ -19,7 +19,8 @@
 #if !defined(__RFILTER_H)
 #define __RFILTER_H
 
-#include <mitsuba/mitsuba.h>
+#include <mitsuba/core/cobject.h>
+#include <mitsuba/core/properties.h>
 
 MTS_NAMESPACE_BEGIN
 

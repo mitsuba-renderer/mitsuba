@@ -33,6 +33,8 @@
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
 
 #if !defined(WIN32)
 #include <QX11Info>
@@ -444,7 +446,7 @@ void MainWindow::onBugReportSubmitted() {
 
 void MainWindow::on_actionImport_triggered() {
 #if defined(MTS_HAS_COLLADA)
-	ref<FileResolver> resolver = FileResolver::getInstance();
+	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
 	ref<FileResolver> newResolver = resolver->clone();
 	for (int i=0; i<m_searchPaths.size(); ++i)
 		newResolver->addPath(m_searchPaths[i].toStdString());
@@ -576,17 +578,15 @@ void MainWindow::onClearRecent() {
 }
 
 SceneContext *MainWindow::loadScene(const QString &qFileName) {
-	ref<FileResolver> resolver = FileResolver::getInstance();
-	std::string filename = resolver->resolveAbsolute(qFileName.toStdString());
-	std::string filePath = resolver->getParentDirectory(filename);
+	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
+	fs::path filename = resolver->resolve(qFileName.toStdString());
+	fs::path filePath = fs::complete(filename).parent_path();
 	ref<FileResolver> newResolver = resolver->clone();
-	if (!newResolver->contains(filePath))
-		newResolver->addPath(filePath);
+	newResolver->addPath(filePath);
 	for (int i=0; i<m_searchPaths.size(); ++i)
 		newResolver->addPath(m_searchPaths[i].toStdString());
-	newResolver->setCurrentDirectoryFromFile(filename);
 
-	ref<SceneLoader> loadingThread = new SceneLoader(newResolver, filename);
+	ref<SceneLoader> loadingThread = new SceneLoader(newResolver, filename.file_string());
 	loadingThread->start();
 
 	QDialog *dialog = new NonClosableDialog(this);
@@ -1232,7 +1232,8 @@ void MainWindow::on_actionExportImage_triggered() {
 			return;
 		}
 
-		ref<FileStream> fs = new FileStream(qPrintable(fileName), FileStream::ETruncReadWrite);
+		ref<FileStream> fs = new FileStream(qPrintable(fileName), 
+			FileStream::ETruncReadWrite);
 
 		if (ctx->mode == EPreview)
 			ui->glView->downloadFramebuffer();

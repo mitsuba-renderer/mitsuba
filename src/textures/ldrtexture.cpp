@@ -17,7 +17,6 @@
 */
 
 #include <mitsuba/core/bitmap.h>
-#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/mstream.h>
 #include <mitsuba/core/sched.h>
 #include <mitsuba/render/texture.h>

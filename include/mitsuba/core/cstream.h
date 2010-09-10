@@ -46,11 +46,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	/** \brief Virtual destructor
-	 *
-	 * The destructor frees all resources and closes
-	 * the socket if it is still open
-	 */
+	/// Virtual destructor
 	virtual ~ConsoleStream();
 };
 

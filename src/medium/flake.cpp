@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/core/shvector4d.h>
+#include <mitsuba/core/fstream.h>
 #include <boost/numeric/ublas/symmetric.hpp>
 #ifdef MTS_HAVE_LAPACK
 #include <boost/numeric/bindings/lapack/syev.hpp>

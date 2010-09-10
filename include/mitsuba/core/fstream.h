@@ -21,46 +21,43 @@
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/stream.h>
+#include <boost/filesystem.hpp>
+	
+namespace fs = boost::filesystem;
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Simple Stream implementation which can be used to access files.
+/** \brief Simple \ref Stream implementation for accessing files.
  *
- * This class uses streams on posix platforms and the native
- * WIN32 API when used on windows.
+ * This class uses POSIX streams on Linux and OSX and the native
+ * WIN32 API when used on Windows.
  */
 class MTS_EXPORT_CORE FileStream : public Stream {
 public:
 	/// File opening modes
 	enum EFileMode {
-		/// rb
-		EReadOnly = 0,
-		/// rb+
-		EReadWrite,
-		/// wb
-		ETruncWrite,
-		/// wb+
-		ETruncReadWrite,
-		/// ab
-		EAppendWrite,
-		/// ab+
-		EAppendReadWrite
+		EReadOnly = 0,   ///< rb
+		EReadWrite,      ///< rb+
+		ETruncWrite,     ///< wb
+		ETruncReadWrite, ///< wb+
+		EAppendWrite,    ///< ab
+		EAppendReadWrite ///< ab+
 	};
 
 	/// Create a file stream class with no file open
 	FileStream();
 
 	/// Create a file stream class and open a file with a given EFileMode
-	FileStream(const std::string &filename, EFileMode mode = EReadOnly);
+	explicit FileStream(const fs::path &path, EFileMode mode = EReadOnly);
 
-	/// Return the file name
-	inline const std::string &getFileName() const { return m_filename; }
+	/// Return the file path
+	inline const fs::path &getPath() const { return m_path; }
 
 	/// Check whether a file exists
 	static bool exists(const std::string &filename);
 
 	/// Open a file with a given open mode
-	void open(const std::string &filename, EFileMode mode = EReadOnly);
+	void open(const fs::path &filename, EFileMode mode = EReadOnly);
 
 	/// Close the current file
 	void close();
@@ -99,7 +96,7 @@ protected:
 	bool m_write;
 	bool m_read;
 	EFileMode m_mode;
-	std::string m_filename;
+	fs::path m_path;
 };
 
 MTS_NAMESPACE_END

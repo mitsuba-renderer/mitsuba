@@ -62,7 +62,6 @@ private:
 	ref<Scene> m_scene;
 	ref<RenderQueue> m_queue;
 	ref<TestSupervisor> m_testSupervisor;
-	ref<FileResolver> m_fileResolver;
 	int m_sceneResID, m_samplerResID, m_cameraResID;
 	bool m_ownsSceneResource;
 	bool m_ownsCameraResource;

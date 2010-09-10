@@ -21,6 +21,7 @@
 #include "acknowledgmentdlg.h"
 #include "mainwindow.h"
 #include "sceneimporter.h"
+#include <mitsuba/core/fresolver.h>
 
 ImportDialog::ImportDialog(QWidget *parent, FileResolver *resolver) :
 	QDialog(parent, Qt::Sheet), ui(new Ui::ImportDialog), m_resolver(resolver) {
@@ -126,15 +127,15 @@ void ImportDialog::accept() {
 	dialog->show();
 	progressBar->show();
 
-	std::string filePath = m_resolver->getParentDirectory(sourceFile.toStdString());
-	if (!m_resolver->contains(filePath))
-		m_resolver->addPath(filePath);
+	fs::path filePath = fs::complete(fs::path(sourceFile.toStdString())).parent_path();
+	ref<FileResolver> resolver = m_resolver->clone();
+	resolver->addPath(filePath);
 
 	const Logger *logger = Thread::getThread()->getLogger();
 	size_t initialWarningCount = logger->getWarningCount();
 
 	ref<SceneImporter> importingThread = new SceneImporter(this,
-		m_resolver, sourceFile.toStdString(), directory.toStdString(),
+		resolver, sourceFile.toStdString(), directory.toStdString(),
 		targetScene.toStdString(), adjustmentFile.toStdString(),
 		ui->sRGBButton->isChecked());
 	importingThread->start();

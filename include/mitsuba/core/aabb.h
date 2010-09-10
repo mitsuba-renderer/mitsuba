@@ -23,25 +23,35 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Axis-aligned bounding box data structure
+/**
+ * \brief Axis-aligned bounding box data structure in three dimensions
+ * 
+ * Maintains a component-wise minimum and maximum position and provides
+ * various convenience functions to query or change them.
  */
 struct MTS_EXPORT_CORE AABB {
 public:
-	Point min;
-	Point max;
+	Point min; ///< Component-wise minimum 
+	Point max; ///< Component-wise maximum 
 
-	/// Construct an invalid bounding box
+	/** 
+	 * \brief Construct an invalid bounding box
+	 * 
+	 * The minimum and maximum positions will be
+	 * initialized to \f$(\infty,\infty,\infty)\f$ 
+	 * and \f$(-\infty, -\infty, -\infty)\f$, respectively.
+	 */
 	inline AABB() {
 		reset();
 	}
 
-	/// Unserialize an AABB from a stream
+	/// Unserialize a bounding box from a binary data stream
 	inline AABB(Stream *stream) {
 		min = Point(stream);
 		max = Point(stream);
 	}
 
-	/// Create a bounding box from two 3-dimension vectors
+	/// Create a bounding box from two 3D positions
 	inline AABB(const Point &min, const Point &max)
 		: min(min), max(max) {
 		SAssert(min.x <= max.x
@@ -61,33 +71,30 @@ public:
 		return *this;
 	}
 
-	/// Equal operator
+	/// Equality test
 	inline bool operator==(const AABB &aabb) const {
 		return min == aabb.min && max == aabb.max;
 	}
 
-	/// Not equal operator
+	/// Inequality test
 	inline bool operator!=(const AABB &aabb) const {
 		return min != aabb.min || max != aabb.max;
 	}
 
-	/// Mark the bounding box as invalid
+	/** 
+	 * \brief Mark the bounding box as invalid.
+	 * 
+	 * This operation sets the
+	 * minimum position to \f$(\infty,\infty,\infty)\f$ and the
+	 * maximum position to \f$(-\infty, -\infty, -\infty)\f$.
+	 */
 	inline void reset() {
 		const Float inf = std::numeric_limits<Float>::infinity();
 		min = Point(inf, inf, inf);
 		max = Point(-inf, -inf, -inf);
 	}
 
-	/// Calculate the volume of the bounding box
-	inline Float getVolume() const {
-		Float x = max.x - min.x;
-		Float y = max.y - min.y;
-		Float z = max.z - min.z;
-
-		return x*x + y*y + z*z;
-	}
-
-	/// Clip to another AABB
+	/// Clip to another bounding box
 	inline void clip(const AABB &aabb) {
 		min.x = std::max(min.x, aabb.min.x);
 		min.y = std::max(min.y, aabb.min.y);
@@ -99,21 +106,33 @@ public:
 
 	/// Return the center point
 	inline Point getCenter() const {
-		return max*.5f + min*.5f;
+		return (max + min) * (Float) 0.5;
+	}
+
+	/// Calculate the volume of the bounding box
+	inline Float getVolume() const {
+		Float x = max.x - min.x;
+		Float y = max.y - min.y;
+		Float z = max.z - min.z;
+
+		return x*x + y*y + z*z;
 	}
 
 	/// Calculate the surface area of the bounding box
 	inline Float getSurfaceArea() const {
 		Vector d = max - min;
-		return 2.0f * (d.x*d.y + d.x*d.z + d.y*d.z);
+		return (Float) 2.0 * (d.x*d.y + d.x*d.z + d.y*d.z);
 	}
-	
-	/// Calculate the AABB extents
+
+	/**
+	 * \brief Calculate the bounding box extents
+	 * \return max-min
+	 */
 	inline Vector getExtents() const {
 		return max - min;
 	}
 
-	/// Return the axis with the largest corresponding AABB side
+	/// Return the axis index with the largest associated side length
 	inline int getLargestAxis() const {
 		Vector d = max - min;
 		if (d.x >= d.y && d.x >= d.z)
@@ -124,7 +143,7 @@ public:
 			return 2;
 	}
 
-	/// Return the axis with the smallest corresponding AABB side
+	/// Return the axis index with the smallest associated side length
 	inline int getSmallestAxis() const {
 		Vector d = max - min;
 		if (d.x <= d.y && d.x <= d.z)
@@ -141,8 +160,8 @@ public:
 	}
 
 	/**
-	 * Return whether this bounding box covers a non-zero
-	 * amount of space
+	 * \brief Return whether or not this bounding box covers a 
+	 * nonzero amount of space
 	 */
 	inline bool isEmpty() const {
 		return max.x <= min.x
@@ -151,47 +170,41 @@ public:
 	}
 
 
-	/// Return the minimum vector of the bounding box
+	/// Return the component-wise minimum point of the bounding box
 	inline const Point &getMinimum() const {
 		return min;
 	}
 
-	/// Return the maximum vector of the bounding box
+	/// Return the component-wise maximum point of the bounding box
 	inline const Point &getMaximum() const {
 		return max;
 	}
 
-	/// Return the middle point
-	Point getMidPoint() const;
-
-	/** \brief Return the vector coordinates of a bounding
-	 * box corner
-	 * @param corner Corner index (0..7)
+	/**
+	 * \brief Return the position of a bounding box corner
+	 * \param corner Requested corner index (0..7)
 	 */
 	Point getCorner(uint8_t corner) const;
 
-	/// Checks whether a vector is inside the bounding box
+	/// Check whether a point lies on or inside the bounding box
 	bool contains(const Point &vec) const;
 
-	/// Bounding sphere-AABB overlap test
-	inline bool overlaps(const BSphere &sphere) const {
-		Float distance = 0;
-		for (int i=0; i<3; ++i) {
-			if (sphere.center[i] < min[i]) {
-				Float d = sphere.center[i]-min[i];
-				distance += d*d;
-			} else if (sphere.center[i] > max[i]) {
-				Float d = sphere.center[i]-max[i];
-				distance += d*d;
-			}
-		}
-		return distance < sphere.radius*sphere.radius;
-	}
+	/**
+	 * \brief Bounding sphere-box overlap test
+	 *
+	 * Implements the technique proposed by Jim Arvo in
+	 * "A simple method for box-sphere intersection testing"
+	 * (Graphics Gems, 1990)
+	 */
+	bool overlaps(const BSphere &sphere) const;
 
-	/// Expands the bounding box to contain another vector
+	/// Axis-aligned bounding box overlap test
+	bool overlaps(const AABB &saabb) const;
+
+	/// Expand the bounding box to contain another point
 	void expandBy(const Point &vec);
 
-	/// Expands the bounding box to contain another bounding box
+	/// Expand the bounding box to contain another bounding box
 	void expandBy(const AABB &aabb);
 
 	/// Calculate the point-AABB distance
@@ -237,19 +250,22 @@ public:
 
 #ifdef MTS_SSE
 	/**
-	 * Intersect against a packet of four rays. Returns false if none of 
-	 * the rays intersect.
+	 * \brief Intersect against a packet of four rays. 
+	 * \return \a false if none of the rays intersect.
 	 */
 	FINLINE bool rayIntersectPacket(const RayPacket4 &ray, RayInterval4 &interval) const;
 #endif
 
-	/// Serialize this AABB to a stream
+	/// Create a bounding sphere, which contains the axis-aligned box
+	BSphere getBSphere() const;
+
+	/// Serialize this bounding box to a binary data stream
 	inline void serialize(Stream *stream) const {
 		min.serialize(stream);
 		max.serialize(stream);
 	}
 
-	/// Returns a string representation of the bounding box
+	/// Return a string representation of the bounding box
 	std::string toString() const;
 };
 

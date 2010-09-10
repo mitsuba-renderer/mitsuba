@@ -171,7 +171,7 @@ inline int TriAccel4::load(const Point *A, const Point *B, const Point *C,
 		   constants */
 		nu[i]   =  N[u] / n_k;
 		nv[i]   =  N[v] / n_k;
-		nd[i]   =  dot(A[i], N) / n_k;
+		nd[i]   =  dot(Vector(A[i]), N) / n_k;
 		bnu[i]  =  b[u] / denom;
 		bnv[i]  = -b[v] / denom;
 		au[i]   =  A[i][u];

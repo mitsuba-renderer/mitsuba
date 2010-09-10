@@ -18,8 +18,6 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/renderjob.h>
-#include <mitsuba/render/texture.h>
-#include <mitsuba/render/util.h>
 #include <mitsuba/core/plugin.h>
 
 MTS_NAMESPACE_BEGIN

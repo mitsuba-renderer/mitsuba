@@ -374,7 +374,7 @@ void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
 		glLoadIdentity();
 		glBegin(GL_QUADS);
 
-		Vector2i upperLeft, lowerRight;
+		Vector2i upperLeft(0), lowerRight(0);
 		if (centerHoriz)
 			upperLeft.x = (scrSize.x - texSize.x)/2;
 		if (centerVert)

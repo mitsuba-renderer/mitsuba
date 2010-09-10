@@ -16,7 +16,10 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/core/triangle.h>
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/render/kdtree.h>
+#include <mitsuba/render/triaccel.h>
 
 MTS_NAMESPACE_BEGIN
 

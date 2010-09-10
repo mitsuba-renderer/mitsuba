@@ -19,6 +19,7 @@
 #include <mitsuba/core/platform.h>
 #include <xercesc/parsers/SAXParser.hpp>
 #include <mitsuba/render/shandler.h>
+#include <mitsuba/core/fresolver.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -206,8 +207,8 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 
 		if (u.lengthSquared() == 0) {
 			/* If 'up' was not specified, use an arbitrary axis */
-			Vector v;
-			coordinateSystem(normalize(t-o), u, v);
+			Vector unused;
+			coordinateSystem(normalize(t-o), u, unused);
 		}
 
 		Transform lookAt = Transform::lookAt(o, t, u);
@@ -292,10 +293,10 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			specValue);
 	} else if (name == "blackbody") {
 		Float temperature = parseFloat(name, context.attributes["temperature"]);
-		BlackBodySpectrum *spec = new BlackBodySpectrum(temperature);
-		context.parent->properties.setSpectrum(context.attributes["name"],
-			Spectrum(spec));
-		delete spec;
+		BlackBodySpectrum bb(temperature);
+		Spectrum discrete;
+		discrete.fromSmoothSpectrum(&bb);
+		context.parent->properties.setSpectrum(context.attributes["name"], discrete);
 	} else if (name == "spectrum") {
 		std::vector<std::string> tokens = tokenize(
 			context.attributes["value"], ", ");
@@ -306,7 +307,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				Spectrum(value[0]));
 		} else {
 			if (tokens[0].find(':') != std::string::npos) {
-				InterpolatedSpectrum spec(tokens.size());
+				InterpolatedSpectrum interp(tokens.size());
 				/* Wavelength -> Value mapping */
 				for (size_t i=0; i<tokens.size(); i++) {
 					std::vector<std::string> tokens2 = tokenize(tokens[i], ":");
@@ -314,10 +315,12 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 						SLog(EError, "Invalid spectrum->value mapping specified");
 					Float wavelength = parseFloat(name, tokens2[0]);
 					Float value = parseFloat(name, tokens2[1]);
-					spec.appendSample(wavelength, value);
+					interp.appendSample(wavelength, value);
 				}
+				Spectrum discrete;
+				discrete.fromSmoothSpectrum(&interp);
 				context.parent->properties.setSpectrum(context.attributes["name"],
-					Spectrum(&spec));
+					discrete);
 			} else {
 				if (tokens.size() != SPECTRUM_SAMPLES)
 					SLog(EError, "Invalid spectrum value specified (incorrect length)");
@@ -333,23 +336,23 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		/* Do nothing */
 	} else if (name == "include") {
 		SAXParser* parser = new SAXParser();
-		FileResolver *resolver = FileResolver::getInstance();
-		std::string schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
+		FileResolver *resolver = Thread::getThread()->getFileResolver();
+		fs::path schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
 
 		/* Check against the 'scene.xsd' XML Schema */
 		parser->setDoSchema(true);
 		parser->setValidationSchemaFullChecking(true);
 		parser->setValidationScheme(SAXParser::Val_Always);
-		parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
+		parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 
 		/* Set the handler and start parsing */
 		SceneHandler *handler = new SceneHandler(m_params, true);
 		parser->setDoNamespaces(true);
 		parser->setDocumentHandler(handler);
 		parser->setErrorHandler(handler);
-		std::string filename = resolver->resolve(context.attributes["filename"]);
-		SLog(EInfo, "Parsing included file \"%s\" ..", filename.c_str());
-		parser->parse(filename.c_str());
+		fs::path path = resolver->resolve(context.attributes["filename"]);
+		SLog(EInfo, "Parsing included file \"%s\" ..", path.filename().c_str());
+		parser->parse(path.file_string().c_str());
 
 		object = handler->getScene();
 		delete parser;

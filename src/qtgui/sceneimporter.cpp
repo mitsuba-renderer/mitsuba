@@ -51,7 +51,7 @@ SceneImporter::~SceneImporter() {
 }
 
 void SceneImporter::run() {
-	FileResolver::setInstance(m_resolver);
+	Thread::getThread()->setFileResolver(m_resolver);
 #if defined(MTS_HAS_COLLADA)
 	try {
 		GUIGeometryConverter cvt(m_parent);

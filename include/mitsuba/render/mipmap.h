@@ -19,8 +19,8 @@
 #if !defined(__MIPMAP_H)
 #define __MIPMAP_H
 
-#include <mitsuba/render/records.h>
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/render/shape.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -78,10 +78,12 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
+	/// \cond
 	struct ResampleWeight {
 		int firstTexel;
 		Float weight[4];
 	};
+	/// \endcond
 
 	/// Calculate weights for up-sampling a texture
 	ResampleWeight *resampleWeights(int oldRes, int newRes) const;

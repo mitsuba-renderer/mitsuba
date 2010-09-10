@@ -17,7 +17,6 @@
 */
 
 #include <mitsuba/core/random.h>
-#include <mitsuba/core/fresolver.h>
 #include <stdarg.h>
 #include <iomanip>
 #include <errno.h>
@@ -801,7 +800,4 @@ double normalQuantile(double p) {
 	}
 }
 
-ThreadLocal<FileResolver> FileResolver::m_tls;
-
-MTS_IMPLEMENT_CLASS(FileResolver, false, Object)
 MTS_NAMESPACE_END

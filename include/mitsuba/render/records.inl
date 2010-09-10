@@ -2,6 +2,33 @@
 #define __RECORDS_INLINE_H
 
 MTS_NAMESPACE_BEGIN
+	
+inline BSDFQueryRecord::BSDFQueryRecord(RadianceQueryRecord &rRec, 
+	const Intersection &its, Point2 sample): rRec(&rRec), 
+	its(its), wi(its.wi), sample(sample), quantity(ERadiance),
+	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
+}
+
+inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, Point2 sample)
+	: rRec(NULL), its(its), wi(its.wi), sample(sample), quantity(ERadiance),
+	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
+}
+
+inline BSDFQueryRecord::BSDFQueryRecord(RadianceQueryRecord &rRec, 
+		const Intersection &its, const Vector &wo)
+	: rRec(&rRec), its(its), wi(its.wi), wo(wo), sample(sample), quantity(ERadiance),
+	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
+}
+	
+inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wo)	  
+	: rRec(NULL), its(its), wi(its.wi), wo(wo), sample(sample), quantity(ERadiance),
+    typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
+}
+	
+inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wi, const Vector &wo) 
+  : rRec(NULL), its(its), wi(wi), wo(wo), sample(sample), quantity(ERadiance),
+  typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
+}
 
 inline bool Intersection::hasSubsurface() const {
 	return shape->hasSubsurface();

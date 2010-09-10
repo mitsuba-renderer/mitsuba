@@ -23,34 +23,55 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Abstract seekable stream class which defines
- * all functions to be implemented by stream subclasses,
- * such as <tt>FileStream</tt>, <tt>MemoryStream</tt>,
- * <tt>SocketStream</tt>, <tt>ConsoleStream</tt> or
- * <tt>SSHStream</tt>.
+/** \brief Abstract seekable stream class
  *
- * Also supports platform-independent reads and writes 
- * (automatic endianness conversion).
+ * Specifies all functions to be implemented by stream 
+ * subclasses and provides various convenience functions
+ * based on them.
+ *
+ * All read<b>X</b>() and write<b>X</b>() methods support transparent
+ * endianness conversion based on the endianness of the underlying 
+ * system and the value passed to \ref setByteOrder().
+ *
+ * \sa FileStream, MemoryStream, SocketStream, 
+ *     ConsoleStream, SSHStream, ZStream
  */
 class MTS_EXPORT_CORE Stream : public Object {
 public:
 	/// Defines the byte order to use in this Stream
 	enum EByteOrder {
-		/// PowerPC, SPARC, Motorola 68K
-		EBigEndian = 0,
-		/// x86
-		ELittleEndian = 1,
-		/// Network byte order
-		ENetworkByteOrder = EBigEndian
+		EBigEndian = 0,                ///< PowerPC, SPARC, Motorola 68K
+		ELittleEndian = 1,             ///< x86, x86_64
+		ENetworkByteOrder = EBigEndian ///< Network byte order (an alias for big endian)
 	};
 
-	/// Create a new stream
+	/**
+	 * \brief Create a new stream. 
+	 * 
+	 * By default, it assumes the byte order of the 
+	 * underlying system, i.e. no endianness conversion 
+	 * is performed.
+	 */
 	Stream();
+	
+	/// Set the stream byte order
+	void setByteOrder(EByteOrder byteOrder);
 
-	/// Read data from the stream
+	/// Return the byte order of this stream
+	inline EByteOrder getByteOrder() const { return m_byteOrder; }
+
+	/// Return the byte order of the underlying machine
+	inline EByteOrder getHostByteOrder() { return m_hostByteOrder; }
+
+	/// Return a string representation
+	virtual std::string toString() const;
+
+	/// @{ \name Abstract methods to be implemented by subclasses
+
+	/// Read a specified amount of data from the stream
 	virtual void read(void *ptr, size_t size) = 0;
 
-	/// Write data into the stream
+	/// Write a specified amount of data into the stream
 	virtual void write(const void *ptr, size_t size) = 0;
 
 	/// Seek to a position inside the stream
@@ -62,7 +83,7 @@ public:
 	/// Get the current position inside the stream
 	virtual size_t getPos() const = 0;
 
-	/// Return the current size of the stream
+	/// Return the size of the stream
 	virtual size_t getSize() const = 0;
 
 	/// Flush the stream's buffers
@@ -73,6 +94,10 @@ public:
 
 	/// Can we read from the stream?
 	virtual bool canRead() const = 0;
+
+	/// @}
+	
+	/// @{ \name Convenience functions
 
 	/// Skip the given number of bytes
 	void skip(size_t amount);
@@ -123,32 +148,32 @@ public:
 	inline void writeBool(bool value) { writeUChar(value); }
 	
 	/// Write a single-precision floating point number (32 bit) to the stream
-	void writeSingle(float pFloat);
+	void writeSingle(float value);
 	
 	/// Write a single-precision floating point array (32 bit) to the stream
-	void writeSingleArray(const float *pFloat, size_t size);
+	void writeSingleArray(const float *data, size_t size);
 
 	/// Write a double-precision floating point number (64 bit) to the stream
-	void writeDouble(double pDouble);
+	void writeDouble(double value);
 	
 	/// Write a double-precision floating point array (64 bit) to the stream
-	void writeDoubleArray(const double *pDouble, size_t size);
+	void writeDoubleArray(const double *data, size_t size);
 
 	/// Write a floating point number (configured precision) to the stream
-	inline void writeFloat(Float pFloat) {
+	inline void writeFloat(Float value) {
 #ifdef SINGLE_PRECISION
-		writeSingle(pFloat);
+		writeSingle(value);
 #else
-		writeDouble(pFloat);
+		writeDouble(value);
 #endif
 	}
 
 	/// Write an array of floating point values (configured precision) to the stream
-	inline void writeFloatArray(const Float *pFloat, size_t size) {
+	inline void writeFloatArray(const Float *data, size_t size) {
 #ifdef SINGLE_PRECISION
-		writeSingleArray(pFloat, size);
+		writeSingleArray(data, size);
 #else
-		writeDoubleArray(pFloat, size);
+		writeDoubleArray(data, size);
 #endif
 	}
 
@@ -204,13 +229,13 @@ public:
 	float readSingle();
 
 	/// Read a double-precision floating point array (64 bit) from the stream
-	void readSingleArray(float *pDouble, size_t size);
+	void readSingleArray(float *data, size_t size);
 
 	/// Read a double-precision floating point number (64 bit) from the stream
 	double readDouble();
 
 	/// Read a double-precision floating point array (64 bit) from the stream
-	void readDoubleArray(double *pDouble, size_t size);
+	void readDoubleArray(double *data, size_t size);
 
 	/// Write a floating point number (configured precision) to the stream
 	inline Float readFloat() {
@@ -222,33 +247,30 @@ public:
 	}
 
 	/// Write an array of floating point values (configured precision) to the stream
-	inline void readFloatArray(Float *pFloat, size_t size) {
+	inline void readFloatArray(Float *data, size_t size) {
 #ifdef SINGLE_PRECISION
-		readSingleArray(pFloat, size);
+		readSingleArray(data, size);
 #else
-		readDoubleArray(pFloat, size);
+		readDoubleArray(data, size);
 #endif
 	}
 
 	/**
-	 * Copy content from this stream into another stream
-	 * @param numBytes 
+	 * \brief Copy content from this stream into another stream
+	 * \param stream Destination stream
+	 * \param numBytes 
 	 * 		The number of bytes to copy. When -1 is specified,
 	 * 		copying proceeds until the end of the source stream.
 	 */
 	void copyTo(Stream *stream, int64_t numBytes = -1);
 
-	/// Return a string representation
-	virtual std::string toString() const;
+	/// Read an element from the stream (uses partial template specialization)
+	template <typename T> T readElement();
 
-	/// Set the stream byte order
-	void setByteOrder(EByteOrder byteOrder);
+	/// Write an element to the stream (uses partial template specialization)
+	template <typename T> void writeElement(T value);
 
-	/// Return the stream byte order
-	inline EByteOrder getByteOrder() const { return m_byteOrder; }
-
-	/// Return the host byte order
-	inline EByteOrder getHostByteOrder() { return m_hostByteOrder; }
+	/// @}
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -258,6 +280,43 @@ private:
 	static EByteOrder m_hostByteOrder;
 	EByteOrder m_byteOrder;
 };
+
+
+template <typename T> inline T Stream::readElement() {
+	Log(EError, "Stream::readElement<T>: not implemented!");
+}
+
+template <typename T> inline void Stream::writeElement(T value) {
+	Log(EError, "Stream::writeElement<T>: not implemented!");
+}
+
+/// \cond
+template <> inline float Stream::readElement() { return readSingle(); }
+template <> inline double Stream::readElement() { return readDouble(); }
+template <> inline char Stream::readElement() { return readChar(); }
+template <> inline unsigned char Stream::readElement() { return readUChar(); }
+template <> inline bool Stream::readElement() { return readBool(); }
+template <> inline int16_t Stream::readElement() { return readShort(); }
+template <> inline uint16_t Stream::readElement() { return readUShort(); }
+template <> inline int32_t Stream::readElement() { return readInt(); }
+template <> inline uint32_t Stream::readElement() { return readUInt(); }
+template <> inline int64_t Stream::readElement() { return readLong(); }
+template <> inline uint64_t Stream::readElement() { return readULong(); }
+template <> inline std::string Stream::readElement() { return readString(); }
+
+template <> inline void Stream::writeElement(float val) { return writeSingle(val); }
+template <> inline void Stream::writeElement(double val) { return writeDouble(val); }
+template <> inline void Stream::writeElement(char val) { return writeChar(val); }
+template <> inline void Stream::writeElement(unsigned char val) { return writeUChar(val); }
+template <> inline void Stream::writeElement(bool val) { return writeBool(val); }
+template <> inline void Stream::writeElement(int16_t val) { return writeShort(val); }
+template <> inline void Stream::writeElement(uint16_t val) { return writeUShort(val); }
+template <> inline void Stream::writeElement(int32_t val) { return writeInt(val); }
+template <> inline void Stream::writeElement(uint32_t val) { return writeUInt(val); }
+template <> inline void Stream::writeElement(int64_t val) { return writeLong(val); }
+template <> inline void Stream::writeElement(uint64_t val) { return writeULong(val); }
+template <> inline void Stream::writeElement(const std::string &val) { return writeString(val); }
+/// \endcond
 
 MTS_NAMESPACE_END
 

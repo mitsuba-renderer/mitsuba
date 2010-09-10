@@ -17,9 +17,8 @@
 */
 
 #include <mitsuba/render/trimesh.h>
-#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/plugin.h>
-#include <fstream>
+#include <boost/filesystem/fstream.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -35,15 +34,15 @@ public:
 	};
 
 	WavefrontOBJ(const Properties &props) : Shape(props) {
-		ref<FileResolver> fresolver = FileResolver::getInstance();
-		std::string path = fresolver->resolve(props.getString("filename"));
-		m_name = fresolver->getChild(path);
+		ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
+		fs::path path = fresolver->resolve(props.getString("filename"));
+		m_name = path.filename();
 
 		/* Load the geometry */
-		Log(EInfo, "Loading geometry from \"%s\" ..", path.c_str());
-		std::ifstream is(path.c_str());
+		Log(EInfo, "Loading geometry from \"%s\" ..", m_name.c_str());
+		std::ifstream is(path);
 		if (is.bad() || is.fail())
-			Log(EError, "Geometry file '%s' not found!", path.c_str());
+			Log(EError, "Geometry file '%s' not found!", path.file_string().c_str());
 
 		std::string buf;
 		std::vector<Point> vertices;
@@ -99,13 +98,14 @@ public:
 				std::string line;
 				std::getline(is, line);
 				std::string mtlName = trim(line.substr(1, line.length()-1));
-				ref<FileResolver> fRes = FileResolver::getInstance()->clone();
-				fRes->addPathFromFile(fRes->resolveAbsolute(props.getString("filename")));
-				std::string fullMtlName = fRes->resolve(mtlName);
-				if (FileStream::exists(fullMtlName))
-					parseMaterials(fullMtlName);
+				ref<FileResolver> frClone = fResolver->clone();
+				frClone->addPathFromFile(path);
+				fs::path mtlName = frClone->resolve(mtlName);
+				if (fs::exists(mtlName))
+					parseMaterials(mtlName);
 				else
-					Log(EWarn, "Could not find referenced material library '%s'", mtlName.c_str());
+					Log(EWarn, "Could not find referenced material library '%s'", 
+						mtlName.file_string().c_str());
 			} else if (buf == "vt") {
 				std::string line;
 				Float u, v, w;
@@ -181,9 +181,9 @@ public:
 		}
 	}
 
-	void parseMaterials(const std::string &mtlFileName) {
-		Log(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.c_str());
-		std::ifstream is(mtlFileName.c_str());
+	void parseMaterials(const fs::path &mtlPath) {
+		Log(EInfo, "Loading OBJ materials from \"%s\" ..", mtlPath.filename().c_str());
+		std::ifstream is(mtlPath);
 		if (is.bad() || is.fail())
 			Log(EError, "Unexpected I/O error while accessing material file '%s'!", mtlFileName.c_str());
 		std::string buf;

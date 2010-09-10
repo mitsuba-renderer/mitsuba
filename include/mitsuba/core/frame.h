@@ -24,36 +24,32 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * This data structure stores an arbitrary three-dimensional cartesian 
- * coordinate system and provides routines to convert coordinates and
- * efficiently compute several other quantities.
+ * \brief Stores a three-dimensional orthonormal coordinate frame
+ *
+ * This class is mostly used to quickly convert between different
+ * cartesian coordinate systems and to efficiently compute certain
+ * quantities (e.g. \ref cosTheta(), \ref tanTheta, ..).
  */
 struct Frame {
 	Vector s, t;
 	Normal n;
 
-	/// Default constructor
-	inline Frame() {
-	}
+	/// Default constructor -- performs no initialization!
+	inline Frame() { }
 
 	/// Given a normal and tangent vectors, construct a new coordinate frame
 	inline Frame(const Vector &s, const Vector &t, const Normal &n)
 	 : s(s), t(t), n(n) {
 	}
 
-	/// Construct a frame from the given cartesian coordinate system
+	/// Construct a frame from the given orthonormal vectors
 	inline Frame(const Vector &x, const Vector &y, const Vector &z)
-	 : s(x), t(y), n(Normal(z)) {
+	 : s(x), t(y), n(z) {
 	}
 
 	/// Construct a new coordinate frame from a single vector
-	inline Frame(const Vector &n) : n(Normal(n)) {
+	inline Frame(const Vector &n) : n(n) {
 		coordinateSystem(n, s, t);
-	}
-
-	/// Construct a new coordinate frame from a single normal vector
-	inline Frame(const Normal &n) : n(n) {
-		coordinateSystem(Vector(n), s, t);
 	}
 
 	/// Unserialize from a binary data stream

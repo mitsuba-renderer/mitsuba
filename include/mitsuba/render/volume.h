@@ -19,7 +19,7 @@
 #if !defined(__VOLUME_H)
 #define __VOLUME_H
 
-#include <mitsuba/core/fstream.h>
+#include <mitsuba/core/cobject.h>
 #include <mitsuba/core/aabb.h>
 
 MTS_NAMESPACE_BEGIN

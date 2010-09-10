@@ -19,6 +19,8 @@
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/mipmap.h>
 #include <mitsuba/core/mstream.h>
+#include <mitsuba/core/fstream.h>
+#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/sched.h>
 #include <mitsuba/hw/gputexture.h>
 #include <mitsuba/hw/gpuprogram.h>
@@ -35,9 +37,9 @@ class EnvMapLuminaire : public Luminaire {
 public:
 	EnvMapLuminaire(const Properties &props) : Luminaire(props) {
 		m_intensityScale = props.getFloat("intensityScale", 1);
-		m_filename = FileResolver::getInstance()->resolve(props.getString("filename"));
-		Log(EInfo, "Loading environment map \"%s\"", m_filename.c_str());
-		ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
+		m_path = Thread::getThread()->getFileResolver()->resolve(props.getString("filename"));
+		Log(EInfo, "Loading environment map \"%s\"", m_path.leaf().c_str());
+		ref<Stream> is = new FileStream(m_path, FileStream::EReadOnly);
 		ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, is);
 
 		m_mipmap = MIPMap::fromBitmap(bitmap);
@@ -48,8 +50,8 @@ public:
 	EnvMapLuminaire(Stream *stream, InstanceManager *manager) 
 		: Luminaire(stream, manager) {
 		m_intensityScale = stream->readFloat();
-		m_filename = stream->readString();
-		Log(EInfo, "Unserializing environment map \"%s\"", m_filename.c_str());
+		m_path = stream->readString();
+		Log(EInfo, "Unserializing environment map \"%s\"", m_path.leaf().c_str());
 		uint32_t size = stream->readUInt();
 		ref<MemoryStream> mStream = new MemoryStream(size);
 		stream->copyTo(mStream, size);
@@ -59,7 +61,7 @@ public:
 		m_average = m_mipmap->triangle(m_mipmap->getLevels()-1, 0, 0) * m_intensityScale;
 
 		if (Scheduler::getInstance()->hasRemoteWorkers()
-			&& !FileStream::exists(m_filename)) {
+			&& !fs::exists(m_path)) {
 			/* This code is running on a machine different from
 			   the one that created the stream. Because we might
 			   later have to handle a call to serialize(), the
@@ -71,13 +73,13 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Luminaire::serialize(stream, manager);
 		stream->writeFloat(m_intensityScale);
-		stream->writeString(m_filename);
+		stream->writeString(m_path.file_string());
 
 		if (m_stream.get()) {
 			stream->writeUInt((unsigned int) m_stream->getSize());
 			stream->write(m_stream->getData(), m_stream->getSize());
 		} else {
-			ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
+			ref<Stream> is = new FileStream(m_path, FileStream::EReadOnly);
 			stream->writeUInt((uint32_t) is->getSize());
 			is->copyTo(stream);
 		}
@@ -272,7 +274,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "EnvMapLuminaire[" << std::endl
-			<< "  filename = \"" << m_filename << "\"," << std::endl
+			<< "  path = \"" << m_path << "\"," << std::endl
 			<< "  intensityScale = " << m_intensityScale << "," << std::endl
 			<< "  power = " << getPower().toString() << "," << std::endl
 			<< "  bsphere = " << m_bsphere.toString() << std::endl
@@ -287,7 +289,7 @@ private:
 	Spectrum m_average;
 	BSphere m_bsphere;
 	Float m_intensityScale;
-	std::string m_filename;
+	fs::path m_path;
 	ref<MIPMap> m_mipmap;
 	ref<MemoryStream> m_stream;
 };
@@ -296,9 +298,9 @@ private:
 
 class EnvMapLuminaireShader : public Shader {
 public:
-	EnvMapLuminaireShader(Renderer *renderer, const std::string &filename, ref<Bitmap> bitmap, 
+	EnvMapLuminaireShader(Renderer *renderer, const fs::path &filename, ref<Bitmap> bitmap, 
 			Float intensityScale, const Transform &worldToLuminaire) : Shader(renderer, ELuminaireShader) {
-		m_gpuTexture = renderer->createGPUTexture(filename, bitmap);
+		m_gpuTexture = renderer->createGPUTexture(filename.leaf(), bitmap);
 		m_gpuTexture->setWrapType(GPUTexture::ERepeat);
 		m_gpuTexture->setMaxAnisotropy(8);
 		m_gpuTexture->init();
@@ -361,7 +363,7 @@ private:
 };
 
 Shader *EnvMapLuminaire::createShader(Renderer *renderer) const { 
-	return new EnvMapLuminaireShader(renderer, m_filename, m_mipmap->getBitmap(), 
+	return new EnvMapLuminaireShader(renderer, m_path, m_mipmap->getBitmap(), 
 			m_intensityScale, m_worldToLuminaire);
 }
 

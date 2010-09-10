@@ -96,7 +96,7 @@ public:
 private:
 	/// Virtual destructor
 	virtual ~RenderQueue();
-protected:
+private:
 	struct JobRecord {
 		/* Only starting time for now */
 		unsigned int startTime;

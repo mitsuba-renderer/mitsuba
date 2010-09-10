@@ -18,6 +18,7 @@
 
 #include <mitsuba/core/platform.h>
 #include <xercesc/parsers/SAXParser.hpp>
+#include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/util.h>
 #include <mitsuba/render/shandler.h>
 
@@ -25,15 +26,15 @@ MTS_NAMESPACE_BEGIN
 
 ref<Scene> Utility::loadScene(const std::string &filename) {
 	/* Prepare for parsing scene descriptions */
-	FileResolver *resolver = FileResolver::getInstance();
+	FileResolver *resolver = Thread::getThread()->getFileResolver();
 	SAXParser* parser = new SAXParser();
-	std::string schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
+	fs::path schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
 
 	/* Check against the 'scene.xsd' XML Schema */
 	parser->setDoSchema(true);
 	parser->setValidationSchemaFullChecking(true);
 	parser->setValidationScheme(SAXParser::Val_Always);
-	parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
+	parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 
 	std::map<std::string, std::string> parameters;
 	SceneHandler *handler = new SceneHandler(parameters);

@@ -20,6 +20,7 @@
 #define __MIPMAP3D_H
 
 #include <mitsuba/core/aabb.h>
+#include <mitsuba/core/cobject.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -82,6 +83,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
+	/// \cond
 	struct QueryContext {
 		uint8_t a;  // ray directionality flag
 		Float maxt;	
@@ -99,6 +101,7 @@ protected:
 		int32_t child[8];
 		float value;
 	};
+	/// \endcond
 
 	uint32_t build(int level, const Point3i &p, float **pyramid, 
 		std::vector<bool> *bitPyramid);
