@@ -112,6 +112,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->hScrollBar->setVisible(false);
 	ui->vScrollBar->setVisible(false);
 	ui->actionUpdateCheck->setMenuRole(QAction::ApplicationSpecificRole);
+	ui->actionFeedback->setMenuRole(QAction::ApplicationSpecificRole);
+	ui->actionReportBug->setMenuRole(QAction::ApplicationSpecificRole);
 	m_progressWidget = new QWidget(centralWidget());
 	m_progressLabel = new QLabel(m_progressWidget);
 	m_progress = new QProgressBar(m_progressWidget);
