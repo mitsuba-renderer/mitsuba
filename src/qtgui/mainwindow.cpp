@@ -1413,6 +1413,14 @@ void MainWindow::on_actionStartServer_triggered() {
 	m_serverWidget->show();
 }
 
+void MainWindow::on_actionReportBug_triggered() {
+	QDesktopServices::openUrl(QUrl("https://www.mitsuba-renderer.org/bugtracker/projects/mitsuba"));
+}
+
+void MainWindow::on_actionFeedback_triggered() {
+	QDesktopServices::openUrl(QUrl("mailto:Wenzel%20Jakob%20<wenzel@cs.cornell.edu>?subject=Feedback%20on%20Mitsuba"));
+}
+
 void MainWindow::onServerClosed() {
 	delete m_serverWidget;
 	m_serverWidget = NULL;

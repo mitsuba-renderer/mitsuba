@@ -100,7 +100,7 @@
      <x>0</x>
      <y>0</y>
      <width>605</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -136,6 +136,10 @@
     </property>
     <addaction name="actionReferenceManual"/>
     <addaction name="actionNavigationControls"/>
+    <addaction name="separator"/>
+    <addaction name="actionFeedback"/>
+    <addaction name="actionReportBug"/>
+    <addaction name="separator"/>
     <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuTools">
@@ -436,6 +440,16 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="actionFeedback">
+   <property name="text">
+    <string>Report &amp;Feedback</string>
+   </property>
+  </action>
+  <action name="actionReportBug">
+   <property name="text">
+    <string>Report a &amp;Bug</string>
    </property>
   </action>
  </widget>
