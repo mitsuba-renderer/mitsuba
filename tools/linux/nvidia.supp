@@ -1,7 +1,7 @@
 {
    <insert_a_suppression_name_here>
    Memcheck:Cond
-   obj:/usr/lib/libGLcore.so.195.36.31
+   obj:/usr/lib/libnvidia-glcore.so.256.44
    obj:*
    obj:*
    obj:*
@@ -14,7 +14,7 @@
    <insert_a_suppression_name_here>
    Memcheck:Cond
    fun:strcpy
-   obj:/usr/lib/libGLcore.so.195.36.31
+   obj:/usr/lib/libnvidia-glcore.so.256.44
    obj:*
    obj:*
    obj:*
@@ -26,7 +26,7 @@
 {
    <insert_a_suppression_name_here>
    Memcheck:Value8
-   obj:/usr/lib/libGLcore.so.195.36.31
+   obj:/usr/lib/libnvidia-glcore.so.256.44
    obj:*
    obj:*
    obj:*
@@ -39,7 +39,7 @@
    <insert_a_suppression_name_here>
    Memcheck:Cond
    fun:strcmp
-   obj:/usr/lib/libGLcore.so.195.36.31
+   obj:/usr/lib/libnvidia-glcore.so.256.44
    obj:*
    obj:*
    obj:*
@@ -52,7 +52,7 @@
    <insert_a_suppression_name_here>
    Memcheck:Cond
    fun:strlen
-   obj:/usr/lib/libGLcore.so.195.36.31
+   obj:/usr/lib/libnvidia-glcore.so.256.44
    obj:*
    obj:*
    obj:*
@@ -64,23 +64,23 @@
 {
    <insert_a_suppression_name_here>
    Memcheck:Cond
-   obj:/usr/lib/libGLcore.so.195.36.31
+   obj:/usr/lib/libnvidia-glcore.so.256.44
 }
 {
    <insert_a_suppression_name_here>
    Memcheck:Param
    ioctl(generic)
    fun:ioctl
-   obj:/usr/lib/libGLcore.so.195.36.31
-   obj:/usr/lib/libGLcore.so.195.36.31
+   obj:/usr/lib/libnvidia-glcore.so.256.44
+   obj:/usr/lib/libnvidia-glcore.so.256.44
 }
 {
    <insert_a_suppression_name_here>
    Memcheck:Param
    ioctl(generic)
    fun:ioctl
-   obj:/usr/lib/libGLcore.so.195.36.31
-   obj:/usr/lib/libGLcore.so.195.36.31
+   obj:/usr/lib/libnvidia-glcore.so.256.44
+   obj:/usr/lib/libnvidia-glcore.so.256.44
    obj:*
    obj:*
    obj:*

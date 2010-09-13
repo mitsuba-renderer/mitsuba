@@ -95,7 +95,7 @@ int ubi_main(int argc, char **argv) {
 					networkHosts = "", destFile="";
 		bool quietMode = false, progressBars = true, skipExisting = false;
 		ELogLevel logLevel = EInfo;
-		FileResolver *fileResolver = Thread::getThread()->getFileResolver();
+		ref<FileResolver> fileResolver = Thread::getThread()->getFileResolver();
 		bool testCaseMode = false;
 		std::map<std::string, std::string> parameters;
 		int blockSize = 32;
@@ -296,6 +296,7 @@ int ubi_main(int argc, char **argv) {
 				baseName = fs::basename(filename);
 			ref<FileResolver> frClone = fileResolver->clone();
 			frClone->addPath(filePath);
+			Thread::getThread()->setFileResolver(frClone);
 
 			SLog(EInfo, "Parsing scene description from \"%s\" ..", argv[i]);
 

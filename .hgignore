@@ -60,3 +60,4 @@ tools/windows/mitsuba_res.res
 ^.externalToolBuilders/.*$
 ^.settings/.*$
 ^.cproject$
+^.project$

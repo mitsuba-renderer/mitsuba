@@ -277,8 +277,12 @@ public:
 				vertex.v = vertices.at(vertexId);
 				if (hasNormals)
 					vertex.n = normals.at(normalId);
+				else
+					vertex.n = Normal(0.0f);
 				if (hasTexcoords)
 					vertex.uv = texcoords.at(uvId);
+				else
+					vertex.uv = Point2(0.0f);
 
 				if (vertexMap.find(vertex) != vertexMap.end()) {
 					key = vertexMap[vertex];
