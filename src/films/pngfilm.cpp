@@ -18,6 +18,8 @@
 
 #include <mitsuba/render/film.h>
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/core/fstream.h>
+#include <boost/algorithm/string.hpp>
 #include "banner.h"
 
 MTS_NAMESPACE_BEGIN
@@ -180,7 +182,7 @@ public:
 			- (Float) 0.055;
 	}
 
-	void develop(const std::string &destFile) {
+	void develop(const fs::path &destFile) {
 		Log(EDebug, "Developing film ..");
 		ref<Bitmap> bitmap = new Bitmap(m_cropSize.x, m_cropSize.y, m_bpp);
 		uint8_t *targetPixels = bitmap->getData();
@@ -314,22 +316,24 @@ public:
 			}
 		}
 
-		std::string filename = destFile;
-		if (!endsWith(filename, ".png"))
-			filename += ".png";
+		fs::path filename = destFile;
+		std::string extension = boost::to_lower_copy(fs::extension(filename));
+		if (extension != ".png")
+			filename.replace_extension(".png");
 
-		Log(EInfo, "Writing image to \"%s\" ..", filename.c_str());
+		Log(EInfo, "Writing image to \"%s\" ..", filename.leaf().c_str());
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
 		bitmap->setGamma(m_gamma);
 		bitmap->save(Bitmap::EPNG, stream);
 	}
 
-	bool destinationExists(const std::string &baseName) const {
-		std::string filename = baseName;
-		if (!endsWith(filename, ".png"))
-			filename += ".png";
-		return FileStream::exists(filename);
+	bool destinationExists(const fs::path &baseName) const {
+		fs::path filename = baseName;
+		if (boost::to_lower_copy(filename.extension()) != ".png")
+			filename.replace_extension(".png");
+		return fs::exists(filename);
 	}
+
 
 	std::string toString() const {
 		std::ostringstream oss;

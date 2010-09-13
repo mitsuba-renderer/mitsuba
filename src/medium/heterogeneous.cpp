@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/scene.h>
+#include <mitsuba/core/fresolver.h>
 #include <fstream>
 
 MTS_NAMESPACE_BEGIN
@@ -95,16 +96,16 @@ public:
 		}
 
 	
-		std::string volData = props.getString("filename");
-		volData = FileResolver::getInstance()->resolve(volData);
+		fs::path volData = Thread::getThread()->getFileResolver()->resolve(
+			props.getString("filename"));
 
 		/* Medium to world transformation - can't have nonuniform scales. Also note 
 		   that a uniform scale factor of 100 will not reduce densities by that 
 		   amount */
 		m_mediumToWorld = props.getTransform("toWorld", Transform());
 
-		Log(EInfo, "Loading volume data from \"%s\" ..", volData.c_str());
-		std::ifstream is(volData.c_str());
+		Log(EInfo, "Loading volume data from \"%s\" ..", volData.file_string().c_str());
+		fs::ifstream is(volData);
 		if (is.bad() || is.fail())
 			Log(EError, "Invalid medium data file specified");
 

@@ -21,7 +21,6 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/properties.h>
-#include <boost/filesystem/fstream.hpp>
 
 MTS_NAMESPACE_BEGIN
 

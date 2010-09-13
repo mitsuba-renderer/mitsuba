@@ -16,6 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/hw/vpl.h>
 #include <mitsuba/hw/session.h>
 #include <mitsuba/hw/device.h>

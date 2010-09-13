@@ -28,6 +28,7 @@
 #include <mitsuba/render/util.h>
 #include <mitsuba/render/renderjob.h>
 #include <mitsuba/render/shandler.h>
+#include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <stdexcept>
 #include <sys/types.h>
@@ -89,7 +90,7 @@ void help() {
 
 		while ((dirinfo = readdir(directory)) != NULL) {
 			std::string fname(dirinfo->d_name);
-			if (!endsWith(fname, ".dylib") && !endsWith(fname, ".so"))
+			if (!boost::ends_with(fname, ".dylib") && !boost::ends_with(fname, ".so"))
 				continue;
 			std::string fullName = dirPath + "/" + fname;
 #else
@@ -110,7 +111,7 @@ void help() {
 			Plugin utility(shortName, fullName);
 			if (!utility.isUtility())
 				continue;
-			if (startsWith(shortName, "test_")) {
+			if (boost::starts_with(shortName, "test_")) {
 				testcases << "\t" << shortName;
 				for (int i=0; i<22-(int) shortName.length(); ++i)
 					testcases << ' ';
@@ -287,7 +288,7 @@ int ubi_main(int argc, char **argv) {
 
 				while ((dirinfo = readdir(directory)) != NULL) {
 					std::string fname(dirinfo->d_name);
-					if (!endsWith(fname, ".dylib") && !endsWith(fname, ".so"))
+					if (!boost::ends_with(fname, ".dylib") && !boost::ends_with(fname, ".so"))
 						continue;
 					std::string fullName = dirPath + "/" + fname;
 #else
@@ -302,7 +303,7 @@ int ubi_main(int argc, char **argv) {
 					std::string fullName = dirPath + "\\" + fname;
 #endif
 					std::string shortName = fname.substr(0, strrchr(fname.c_str(), '.') - fname.c_str());
-					if (!startsWith(shortName, "test_") || seen.find(shortName) != seen.end())
+					if (!boost::starts_with(shortName, "test_") || seen.find(shortName) != seen.end())
 						continue;
 					seen.insert(shortName);
 					Plugin plugin(shortName, fullName);

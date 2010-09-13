@@ -48,21 +48,6 @@ std::string FileStream::toString() const {
 	return oss.str();
 }
 
-bool FileStream::exists(const std::string &filename) {
-#ifdef WIN32
-	WIN32_FIND_DATA lpFindFileData;
-	HANDLE hFind = FindFirstFile(filename.c_str(), &lpFindFileData);
-	if (hFind == INVALID_HANDLE_VALUE) {
-		return false;
-	} else {
-		FindClose(hFind);
-		return true;
-	}
-#else
-	return (access(filename.c_str(), F_OK) == 0);
-#endif
-}
-
 void FileStream::open(const fs::path &path, EFileMode mode) {
 	AssertEx(m_file == 0, "A file has already been opened using this stream");
 

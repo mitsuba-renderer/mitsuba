@@ -17,6 +17,8 @@
 */
 
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/mstream.h>
 #include <mitsuba/core/sched.h>
 #include <mitsuba/render/texture.h>
@@ -24,6 +26,7 @@
 #include <mitsuba/hw/renderer.h>
 #include <mitsuba/hw/gputexture.h>
 #include <mitsuba/hw/gpuprogram.h>
+#include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -33,24 +36,24 @@ MTS_NAMESPACE_BEGIN
 class LDRTexture : public Texture {
 public:
 	LDRTexture(const Properties &props) : Texture(props) {
-		m_filename = props.getString("filename");
-		m_filename = FileResolver::getInstance()->resolve(m_filename);
+		m_filename = Thread::getThread()->getFileResolver()->resolve(
+			props.getString("filename"));
 		m_gamma = props.getFloat("gamma", -1); /* -1 means sRGB */
-		Log(EInfo, "Loading texture \"%s\"", m_filename.c_str());
+		Log(EInfo, "Loading texture \"%s\"", m_filename.leaf().c_str());
 
 		ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
-		std::string lower = toLowerCase(m_filename);
+		std::string extension = boost::to_lower_copy(m_filename.extension());
 	
-		if (endsWith(lower, ".jpg") || endsWith(lower, ".jpeg"))
+		if (extension == ".jpg" || extension == ".jpeg")
 			m_format = Bitmap::EJPEG;
-		else if (endsWith(lower, ".png"))
+		else if (extension == ".png")
 			m_format = Bitmap::EPNG;
-		else if (endsWith(lower, ".tga"))
+		else if (extension == ".tga")
 			m_format = Bitmap::ETGA;
-		else if (endsWith(lower, ".bmp"))
+		else if (extension == ".bmp")
 			m_format = Bitmap::EBMP;
 		else
-			Log(EError, "Cannot deduce the file type of '%s'!", m_filename.c_str());
+			Log(EError, "Cannot deduce the file type of '%s'!", m_filename.file_string().c_str());
 
 		ref<Bitmap> bitmap = new Bitmap(m_format, fs);
 		initializeFrom(bitmap);
@@ -59,7 +62,7 @@ public:
 	LDRTexture(Stream *stream, InstanceManager *manager) 
 	 : Texture(stream, manager) {
 		m_filename = stream->readString();
-		Log(EInfo, "Unserializing texture \"%s\"", m_filename.c_str());
+		Log(EInfo, "Unserializing texture \"%s\"", m_filename.leaf().c_str());
 		m_gamma = stream->readFloat();
 		m_format = static_cast<Bitmap::EFileFormat>(stream->readInt());
 		unsigned int size = stream->readUInt();
@@ -70,7 +73,7 @@ public:
 		initializeFrom(bitmap);
 
 		if (Scheduler::getInstance()->hasRemoteWorkers()
-			&& !FileStream::exists(m_filename)) {
+			&& !fs::exists(m_filename)) {
 			/* This code is running on a machine different from
 			   the one that created the stream. Because we might
 			   later have to handle a call to serialize(), the
@@ -159,7 +162,7 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Texture::serialize(stream, manager);
-		stream->writeString(m_filename);
+		stream->writeString(m_filename.file_string());
 		stream->writeFloat(m_gamma);
 		stream->writeInt(m_format);
 		if (m_stream.get()) {
@@ -201,7 +204,7 @@ public:
 protected:
 	ref<MIPMap> m_mipmap;
 	ref<MemoryStream> m_stream;
-	std::string m_filename;
+	fs::path m_filename;
 	Bitmap::EFileFormat m_format;
 	Spectrum m_average, m_maximum;
 	Float m_gamma;
@@ -255,7 +258,7 @@ private:
 };
 
 Shader *LDRTexture::createShader(Renderer *renderer) const {
-	return new LDRTextureShader(renderer, m_filename, m_mipmap->getLDRBitmap());
+	return new LDRTextureShader(renderer, m_filename.leaf(), m_mipmap->getLDRBitmap());
 }
 
 MTS_IMPLEMENT_CLASS_S(LDRTexture, false, Texture)

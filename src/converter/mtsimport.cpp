@@ -46,8 +46,8 @@ public:
 	inline ConsoleGeometryConverter() {
 	}
 
-	std::string locateResource(const std::string &resource) {
-		return "";
+	fs::path locateResource(const fs::path &resource) {
+		return fs::path(); 
 	}
 };
 

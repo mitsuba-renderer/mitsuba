@@ -122,7 +122,7 @@ protected:
 private:
 	struct TestResult {
 		bool success;
-		std::string input, output;
+		fs::path input, output;
 		std::string message;
 	};
 

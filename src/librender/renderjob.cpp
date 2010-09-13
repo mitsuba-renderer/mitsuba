@@ -112,7 +112,7 @@ void RenderJob::run() {
 		if (!m_scene->render(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID)) {
 			cancelled = true;
 			Log(EWarn, "Rendering of scene \"%s\" did not complete successfully!",
-				m_scene->getSourceFile().c_str());
+				m_scene->getSourceFile().leaf().c_str());
 		}
 		m_scene->postprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID);
 
@@ -120,7 +120,7 @@ void RenderJob::run() {
 			m_testSupervisor->analyze(m_scene);
 	} catch (const std::exception &ex) {
 		Log(EWarn, "Rendering of scene \"%s\" did not complete successfully, caught exception: %s",
-			m_scene->getSourceFile().c_str(), ex.what());
+			m_scene->getSourceFile().leaf().c_str(), ex.what());
 		cancelled = true;
 	}
 

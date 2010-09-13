@@ -148,26 +148,6 @@ std::string trim(const std::string& str) {
 			end == std::string::npos ? str.length() - 1 : end - start + 1);
 }
 
-std::string toLowerCase(const std::string &string) {
-	std::string result;
-	result.reserve(string.length());
-
-	for (unsigned int i=0; i<string.length(); i++)
-		result += std::tolower(string[i]);
-
-	return result;
-}
-
-std::string toUpperCase(const std::string &string) {
-	std::string result;
-	result.reserve(string.length());
-
-	for (unsigned int i=0; i<string.length(); i++)
-		result += toupper(string[i]);
-
-	return result;
-}
-
 std::string indent(const std::string &string, int amount) {
 	/* This could probably be done faster (is not
 	   really speed-critical though) */

@@ -18,7 +18,10 @@
 
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/plugin.h>
-#include <boost/filesystem/fstream.hpp>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/subsurface.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -34,13 +37,13 @@ public:
 	};
 
 	WavefrontOBJ(const Properties &props) : Shape(props) {
-		ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
-		fs::path path = fresolver->resolve(props.getString("filename"));
-		m_name = path.filename();
+		FileResolver *fResolver = Thread::getThread()->getFileResolver();
+		fs::path path = fResolver->resolve(props.getString("filename"));
+		m_name = path.stem();
 
 		/* Load the geometry */
-		Log(EInfo, "Loading geometry from \"%s\" ..", m_name.c_str());
-		std::ifstream is(path);
+		Log(EInfo, "Loading geometry from \"%s\" ..", path.leaf().c_str());
+		fs::ifstream is(path);
 		if (is.bad() || is.fail())
 			Log(EError, "Geometry file '%s' not found!", path.file_string().c_str());
 
@@ -97,10 +100,9 @@ public:
 			} else if (buf == "mtllib") {
 				std::string line;
 				std::getline(is, line);
-				std::string mtlName = trim(line.substr(1, line.length()-1));
 				ref<FileResolver> frClone = fResolver->clone();
-				frClone->addPathFromFile(path);
-				fs::path mtlName = frClone->resolve(mtlName);
+				frClone->addPath(fs::complete(path).parent_path());
+				fs::path mtlName = frClone->resolve(trim(line.substr(1, line.length()-1)));
 				if (fs::exists(mtlName))
 					parseMaterials(mtlName);
 				else
@@ -183,9 +185,10 @@ public:
 
 	void parseMaterials(const fs::path &mtlPath) {
 		Log(EInfo, "Loading OBJ materials from \"%s\" ..", mtlPath.filename().c_str());
-		std::ifstream is(mtlPath);
+		fs::ifstream is(mtlPath);
 		if (is.bad() || is.fail())
-			Log(EError, "Unexpected I/O error while accessing material file '%s'!", mtlFileName.c_str());
+			Log(EError, "Unexpected I/O error while accessing material file '%s'!", 
+				mtlPath.file_string().c_str());
 		std::string buf;
 		std::string mtlName;
 		Spectrum diffuse;

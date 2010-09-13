@@ -150,13 +150,13 @@ void ImportDialog::accept() {
 	dialog->hide();
 	delete dialog;
 	
-	if (importingThread->getResult().length() > 0) {
+	if (!importingThread->getResult().empty()) {
 		size_t warningCount = logger->getWarningCount() - initialWarningCount;
 		if (warningCount > 0)
 			QMessageBox::warning(this, tr("Scene Import"),
 				tr("Encountered %1 warnings while importing -- please see "
 				"the log for details.").arg(warningCount), QMessageBox::Ok);
-		((MainWindow *) parent())->loadFile(QString(importingThread->getResult().c_str()));
+		((MainWindow *) parent())->loadFile(QString(importingThread->getResult().file_string().c_str()));
 	} else {
 		QMessageBox::critical(this, tr("Scene Import"),
 			tr("Conversion failed -- please see the log for details."),

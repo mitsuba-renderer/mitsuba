@@ -372,13 +372,13 @@ public:
 	inline const std::vector<ConfigurableObject *> &getReferencedObjects() const { return m_objects; }
 
 	/// Return the name of the file containing the original description of this scene
-	inline const std::string getSourceFile() const { return m_sourceFile; }
+	inline const fs::path getSourceFile() const { return m_sourceFile; }
 	/// Set the name of the file containing the original description of this scene
-	void setSourceFile(const std::string &name) { m_sourceFile = name; }
+	void setSourceFile(const fs::path &name) { m_sourceFile = name; }
 	/// Return the render output filename
-	inline const std::string getDestinationFile() const { return m_destinationFile; }
+	inline const fs::path getDestinationFile() const { return m_destinationFile; }
 	/// Set the render output filename
-	void setDestinationFile(const std::string &name) { m_destinationFile = name; }
+	void setDestinationFile(const fs::path &name) { m_destinationFile = name; }
 	/// Does the destination file already exist?
 	inline bool destinationExists() const { return m_camera->getFilm()->destinationExists(m_destinationFile); }
 
@@ -416,8 +416,8 @@ private:
 	std::vector<Subsurface *> m_ssIntegrators;
 	std::vector<ConfigurableObject *> m_objects;
 	std::vector<NetworkedObject *> m_netObjects;
-	std::string m_sourceFile;
-	std::string m_destinationFile;
+	fs::path m_sourceFile;
+	fs::path m_destinationFile;
 	DiscretePDF m_luminairePDF;
 	AABB m_aabb;
 	BSphere m_bsphere;

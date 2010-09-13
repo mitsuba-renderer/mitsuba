@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/volume.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/shvector4d.h>
 #include <fstream>
 
@@ -164,7 +165,7 @@ public:
 		Log(EInfo, "     sampling recursions = %i", m_samplingRecursions);
 
 		bool computePhaseProjection = true;
-		if (FileStream::exists("flake-phase.dat")) {
+		if (fs::exists("flake-phase.dat")) {
 			/* Avoid recomputing this every time */
 			stream = new FileStream("flake-phase.dat", FileStream::EReadOnly);
 			unsigned int header = stream->readUInt();

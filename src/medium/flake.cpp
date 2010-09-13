@@ -238,7 +238,7 @@ public:
 		m_D.normalize();
 
 		SHVector4D phaseExpansion;
-		if (FileStream::exists("flake-phase.dat")) {
+		if (fs::exists("flake-phase.dat")) {
 			stream = new FileStream("flake-phase.dat", FileStream::EReadOnly);
 			phaseExpansion = SHVector4D(stream);
 			stream->close();

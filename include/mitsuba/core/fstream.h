@@ -22,7 +22,7 @@
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/stream.h>
 #include <boost/filesystem.hpp>
-	
+
 namespace fs = boost::filesystem;
 
 MTS_NAMESPACE_BEGIN
@@ -52,9 +52,6 @@ public:
 
 	/// Return the file path
 	inline const fs::path &getPath() const { return m_path; }
-
-	/// Check whether a file exists
-	static bool exists(const std::string &filename);
 
 	/// Open a file with a given open mode
 	void open(const fs::path &filename, EFileMode mode = EReadOnly);

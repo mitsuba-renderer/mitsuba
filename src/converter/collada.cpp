@@ -26,11 +26,9 @@
 #include <dae.h>
 #include <dom/domCOLLADA.h>
 #include <dom/domProfile_COMMON.h>
-#include <boost/filesystem.hpp>
-#include <fstream>
+#include <boost/algorithm/string.hpp>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <errno.h>
 
 #if defined(__OSX__)
 #include <OpenGL/glu.h>
@@ -809,11 +807,12 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const fs::path &texture
 	idToTexture[identifier] = identifier;
 	fileToId[filename] = identifier;
 
-	boost::filesystem::path path = boost::filesystem::path(filename, boost::filesystem::native);
+	fs::path path = fs::path(filename);
 	fs::path targetPath = textureDir / path.leaf();
 	fs::path resolved = filename;
 
-	if (endsWith(filename, ".rgb")) 
+	std::string extension = boost::to_lower_copy(fs::extension(path));
+	if (extension == ".rgb") 
 		SLog(EWarn, "Maya RGB images must be converted to PNG, EXR or JPEG! The 'imgcvt' "
 		"utility found in the Maya binary directory can be used to do this.");
 
@@ -823,10 +822,9 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const fs::path &texture
 			resolved = fRes->resolve(path.leaf());
 			if (!fs::exists(resolved)) {
 				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
-				std::string result = cvt->locateResource(filename);
-				if (result == "")
+				resolved = cvt->locateResource(filename);
+				if (resolved.empty())
 					SLog(EError, "Unable to locate a resource -- aborting conversion.");
-				resolved = result;
 			}
 		}
 		ref<FileStream> input = new FileStream(resolved, FileStream::EReadOnly);
@@ -1094,16 +1092,17 @@ GLvoid __stdcall tessError(GLenum error) {
 GLvoid __stdcall tessEdgeFlag(GLboolean) {
 }
 
-void GeometryConverter::convertCollada(const std::string &inputFile, 
+void GeometryConverter::convertCollada(const fs::path &inputFile, 
 	std::ostream &os,
 	const fs::path &textureDirectory,
 	const fs::path &meshesDirectory) {
 	DAE *dae = new DAE();
-	SLog(EInfo, "Loading \"%s\" ..", inputFile.c_str());
-	if (dae->load(inputFile.c_str()) != DAE_OK) 
-		SLog(EError, "Could not load \"%s\"!", inputFile.c_str());
+	SLog(EInfo, "Loading \"%s\" ..", inputFile.leaf().c_str());
+	if (dae->load(inputFile.file_string().c_str()) != DAE_OK) 
+		SLog(EError, "Could not load \"%s\"!", 
+			inputFile.file_string().c_str());
 
-	domCOLLADA *document = dae->getDom(inputFile.c_str());
+	domCOLLADA *document = dae->getDom(inputFile.file_string().c_str());
 	domVisual_scene *visualScene = daeSafeCast<domVisual_scene>
 		(document->getDescendant("visual_scene"));
 	if (!visualScene)

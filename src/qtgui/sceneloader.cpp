@@ -22,6 +22,7 @@
 #include <mitsuba/render/shandler.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
+#include <boost/algorithm/string.hpp>
 
 SceneLoader::SceneLoader(FileResolver *resolver, const std::string &filename) 
 	: Thread("load"), m_resolver(resolver), m_filename(filename) {
@@ -54,7 +55,7 @@ void SceneLoader::run() {
 		m_result->diffuseSources = settings.value("preview_diffuseSources", true).toBool();
 		m_result->diffuseReceivers = settings.value("preview_diffuseReceivers", false).toBool();
 
-		if (endsWith(lowerCase, ".exr")) {
+		if (boost::ends_with(lowerCase, ".exr")) {
 			/* This is an image, not a scene */
 			ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
 			ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, fs);

@@ -29,12 +29,10 @@
 #include <xercesc/framework/Wrapper4InputSource.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
 #include <xercesc/util/XMLUni.hpp>
-#include <boost/filesystem/fstream.hpp>
-#include <mitsuba/mitsuba.h>
-#include <fstream>
+#include <mitsuba/core/fresolver.h>
+#include <boost/algorithm/string.hpp>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <errno.h>
 #include <set>
 
 XERCES_CPP_NAMESPACE_USE
@@ -129,21 +127,19 @@ bool cleanupPass(DOMNode *node, const std::set<std::string> &removals) {
 	return false;
 }
 
-void GeometryConverter::convert(const std::string &inputFile, 
-	const std::string &outputDirectory, 
-	const std::string &sceneName,
-	const std::string &adjustmentFile) {
+void GeometryConverter::convert(const fs::path &inputFile, 
+	const fs::path &outputDirectory, 
+	const fs::path &sceneName,
+	const fs::path &adjustmentFile) {
 
 	fs::path textureDirectory = "textures";
 	fs::path meshesDirectory = "meshes";
 	fs::path outputFile = sceneName;
 
-	if (outputDirectory != "") {
-		fs::path outPath (outputDirectory);
-
-		textureDirectory = outPath / "textures";
-		meshesDirectory = outPath / "meshes";
-		outputFile = outPath / sceneName;
+	if (!outputDirectory.empty()) {
+		textureDirectory = outputDirectory / "textures";
+		meshesDirectory = outputDirectory / "meshes";
+		outputFile = outputDirectory / sceneName;
 	}
 
 	SLog(EInfo, "Creating directories ..");
@@ -155,15 +151,18 @@ void GeometryConverter::convert(const std::string &inputFile,
 
 	std::ostringstream os;
 	SLog(EInfo, "Beginning conversion ..");
-	if (endsWith(toLowerCase(inputFile), ".dae") || endsWith(toLowerCase(inputFile), ".zae")) {
+
+	std::string extension = boost::to_lower_copy(fs::extension(inputFile));
+
+	if (extension == ".dae" || extension == ".zae") {
 		convertCollada(inputFile, os, textureDirectory, meshesDirectory);
-	} else if (endsWith(toLowerCase(inputFile), ".obj")) {
+	} else if (extension == ".obj") {
 		convertOBJ(inputFile, os, textureDirectory, meshesDirectory);
 	} else {
 		SLog(EError, "Unknown input format (must end in either .DAE, .ZAE or .OBJ)");
 	}
 
-	if (adjustmentFile != "") {
+	if (adjustmentFile.empty()) {
 		SLog(EInfo, "Applying adjustments ..");
 		static const XMLCh gLS[] = { chLatin_L, chLatin_S, chNull };
 		DOMImplementationLS *impl = DOMImplementationRegistry::getDOMImplementation(gLS);
@@ -178,8 +177,8 @@ void GeometryConverter::convert(const std::string &inputFile,
 			xmlString.length(), "bufID", false);
 		Wrapper4InputSource *wrapper = new Wrapper4InputSource(memBufIS, false);
 		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *doc = parser->parse(wrapper);
-		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.c_str());
-	
+		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.file_string().c_str());
+
 		std::set<std::string> removals, emptyList;
 		cleanupPass(adj, emptyList);
 		findRemovals(adj, removals);
@@ -236,6 +235,6 @@ void GeometryConverter::convert(const std::string &inputFile,
 		ofile << os.str();
 		ofile.close();
 	}
-	m_filename = outputFile.file_string();
+	m_filename = outputFile;
 }
 

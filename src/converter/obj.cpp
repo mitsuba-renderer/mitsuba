@@ -28,7 +28,7 @@
 std::string copyTexture(GeometryConverter *cvt, const fs::path &textureDir, std::string filename) {
 	SLog(EInfo, "Copying texture \"%s\" ..", filename.c_str());
 
-	boost::filesystem::path path = boost::filesystem::path(filename, boost::filesystem::native);
+	boost::filesystem::path path = boost::filesystem::path(filename);
 	fs::path targetPath = textureDir / path.leaf();
 	fs::path resolved = filename;
 
@@ -38,10 +38,9 @@ std::string copyTexture(GeometryConverter *cvt, const fs::path &textureDir, std:
 			resolved = fRes->resolve(path.leaf());
 			if (!fs::exists(resolved)) {
 				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
-				std::string result = cvt->locateResource(filename);
-				if (result == "")
+				resolved = cvt->locateResource(filename);
+				if (resolved.empty())
 					SLog(EError, "Unable to locate a resource -- aborting conversion.");
-				resolved = result;
 			}
 		}	
 
@@ -132,22 +131,22 @@ void parseMaterials(GeometryConverter *cvt, std::ostream &os, const fs::path &te
 	addMaterial(cvt, os, mtlName, texturesDir, diffuse, diffuseMap, maskMap);
 }
 
-void GeometryConverter::convertOBJ(const std::string &inputFile, 
+void GeometryConverter::convertOBJ(const fs::path &inputFile, 
 	std::ostream &os,
 	const fs::path &textureDirectory,
 	const fs::path &meshesDirectory) {
 
-	std::ifstream is(inputFile.c_str());
+	fs::ifstream is(inputFile);
 	if (is.bad() || is.fail())
-		SLog(EError, "Could not open OBJ file '%s'!", inputFile.c_str());
-	
+		SLog(EError, "Could not open OBJ file '%s'!", inputFile.file_string().c_str());
+
 	os << "<?xml version=\"1.0\" encoding=\"utf-8\"?>" << endl << endl;
 	os << "<!--" << endl << endl;
 	os << "\tAutomatically converted from Wavefront OBJ" << endl << endl;
 	os << "-->" << endl << endl;
 	os << "<scene>" << endl;
 	os << "\t<integrator id=\"integrator\" type=\"direct\"/>" << endl << endl;
-	
+
 	std::string buf, line;
 	while (is >> buf) {
 		if (buf == "mtllib") {
@@ -167,7 +166,7 @@ void GeometryConverter::convertOBJ(const std::string &inputFile,
 	}
 
 	Properties objProps("obj");
-	objProps.setString("filename", inputFile);
+	objProps.setString("filename", inputFile.file_string());
 
 	ref<Shape> rootShape = static_cast<Shape *> (PluginManager::getInstance()->
 			createObject(Shape::m_theClass, objProps));

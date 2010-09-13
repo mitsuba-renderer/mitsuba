@@ -18,6 +18,8 @@
 
 #include <mitsuba/render/medium.h>
 #include <mitsuba/core/random.h>
+#include <mitsuba/core/properties.h>
+#include <mitsuba/core/frame.h>
 #include <boost/math/special_functions/gamma.hpp>
 
 MTS_NAMESPACE_BEGIN
