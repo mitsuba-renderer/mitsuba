@@ -90,7 +90,7 @@ public:
 		m_running = false;
 	}
 
-	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 			int sceneResID, int cameraResID, int samplerResID) {
 		Integrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
 
@@ -102,6 +102,7 @@ public:
 
 			m_initialRadius = std::min(rad / filmSize.x, rad / filmSize.y) * 5;
 		}
+		return true;
 	}
 
 	bool render(Scene *scene, RenderQueue *queue, 

@@ -107,14 +107,20 @@ void RenderJob::run() {
 	bool cancelled = false;
 	m_scene->initialize();
 	try {
-		m_scene->preprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID);
-
-		if (!m_scene->render(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID)) {
+		if (!m_scene->preprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID)) {
 			cancelled = true;
-			Log(EWarn, "Rendering of scene \"%s\" did not complete successfully!",
+			Log(EWarn, "Preprocessing of scene \"%s\" did not complete successfully!",
 				m_scene->getSourceFile().leaf().c_str());
 		}
-		m_scene->postprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID);
+
+		if (!cancelled) {
+			if (!m_scene->render(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID)) {
+				cancelled = true;
+				Log(EWarn, "Rendering of scene \"%s\" did not complete successfully!",
+					m_scene->getSourceFile().leaf().c_str());
+			}
+			m_scene->postprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID);
+		}
 
 		if (m_testSupervisor.get()) 
 			m_testSupervisor->analyze(m_scene);

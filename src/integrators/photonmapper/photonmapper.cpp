@@ -114,7 +114,7 @@ public:
 		sampler->request2DArray(m_glossySamples);
 	}
 
-	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job, 
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job, 
 			int sceneResID, int cameraResID, int samplerResID) {
 		SampleIntegrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
 		/* Create a deterministic sampler for the photon gathering step */
@@ -151,8 +151,13 @@ public:
 			proc->bindResource("scene", sceneResID);
 			proc->bindResource("sampler", qmcSamplerID);
 
+			m_proc = proc;
 			sched->schedule(proc);
 			sched->wait(proc);
+			m_proc = NULL;
+
+			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
+				return false;
 
 			m_globalPhotonMap = proc->getPhotonMap();
 			m_globalPhotonMap->setScale(1 / (Float) proc->getShotPhotons());
@@ -175,8 +180,13 @@ public:
 			proc->bindResource("scene", sceneResID);
 			proc->bindResource("sampler", qmcSamplerID);
 
+			m_proc = proc;
 			sched->schedule(proc);
 			sched->wait(proc);
+			m_proc = NULL;
+	
+			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
+				return false;
 
 			m_causticPhotonMap = proc->getPhotonMap();
 			m_causticPhotonMap->setScale(1 / (Float) proc->getShotPhotons());
@@ -199,8 +209,13 @@ public:
 			proc->bindResource("scene", sceneResID);
 			proc->bindResource("sampler", qmcSamplerID);
 
+			m_proc = proc;
 			sched->schedule(proc);
 			sched->wait(proc);
+			m_proc = NULL;
+
+			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
+				return false;
 
 			m_volumePhotonMap = proc->getPhotonMap();
 			m_volumePhotonMap->setScale(1 / (Float) proc->getShotPhotons());
@@ -212,6 +227,7 @@ public:
 		}
 
 		sched->unregisterResource(qmcSamplerID);
+		return true;
 	}
 
 	/// Specify globally shared resources
@@ -238,6 +254,12 @@ public:
 		else
 			m_parentIntegrator = this;
 
+	}
+
+	void cancel() {
+		SampleIntegrator::cancel();
+		if (m_proc)
+			Scheduler::getInstance()->cancel(m_proc);
 	}
 
 	Spectrum Li(const RayDifferential &ray, RadianceQueryRecord &rRec) const {
@@ -375,6 +397,7 @@ private:
 	ref<PhotonMap> m_globalPhotonMap;
 	ref<PhotonMap> m_causticPhotonMap;
 	ref<PhotonMap> m_volumePhotonMap;
+	ref<ParallelProcess> m_proc;
 	SampleIntegrator *m_parentIntegrator;
 	int m_globalPhotonMapID, m_causticPhotonMapID, m_volumePhotonMapID;
 	size_t m_globalPhotons, m_causticPhotons, m_volumePhotons;

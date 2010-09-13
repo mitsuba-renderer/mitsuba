@@ -32,8 +32,8 @@ Integrator::Integrator(Stream *stream, InstanceManager *manager)
  : NetworkedObject(stream, manager) {
 }
 
-void Integrator::preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
-		int sceneResID, int cameraResID, int samplerResID) { }
+bool Integrator::preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+		int sceneResID, int cameraResID, int samplerResID) { return true; }
 void Integrator::postprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int samplerResID) { }
 void Integrator::configureSampler(Sampler *sampler) { }
@@ -98,7 +98,8 @@ Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n
 }
 
 void SampleIntegrator::cancel() {
-	Scheduler::getInstance()->cancel(m_process);
+	if (m_process)
+		Scheduler::getInstance()->cancel(m_process);
 }
 
 bool SampleIntegrator::render(Scene *scene,

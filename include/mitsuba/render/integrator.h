@@ -41,7 +41,7 @@ public:
 	 * which have been made available to all local and remote workers.
 	 * The default implementation simply returns.
 	 */
-	virtual void preprocess(const Scene *scene, RenderQueue *queue, 
+	virtual bool preprocess(const Scene *scene, RenderQueue *queue, 
 		const RenderJob *job, int sceneResID, int cameraResID, 
 		int samplerResID);
 

@@ -86,7 +86,7 @@ public:
 	 * which have been made available to  all local and remote workers.
 	 * Returns true upon successful completion.
 	 */
-	void preprocess(RenderQueue *queue, const RenderJob *job,
+	bool preprocess(RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int samplerResID);
 
 	/**

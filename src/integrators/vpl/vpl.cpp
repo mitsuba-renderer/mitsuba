@@ -70,7 +70,7 @@ public:
 		m_shaderManager->drawBackground(clipToWorld, camPos);
 	}
 
-	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int samplerResID) {
 		Integrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
 
@@ -80,6 +80,7 @@ public:
 				m_vpls[i].P *= normalization;
 			Log(EInfo, "Generated %i virtual point lights", m_vpls.size());
 		}
+		return true;
 	}
 
 	void cancel() {

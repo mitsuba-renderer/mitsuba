@@ -239,10 +239,10 @@ public:
 		return 0.5f * temp1 * temp1 * (1.0f + temp2 * temp2);
 	}
 
-	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int samplerResID) {
 		if (m_ready)
-			return;
+			return true;
 
 		if (!scene->getIntegrator()->getClass()
 				->derivesFrom(SampleIntegrator::m_theClass)) {
@@ -280,8 +280,12 @@ public:
 
 		proc->bindResource("scene", sceneResID);
 		scene->bindUsedResources(proc);
+		m_proc = proc;
 		sched->schedule(proc);
 		sched->wait(proc);
+		m_proc = NULL;
+		if (proc->getReturnStatus() != ParallelProcess::ESuccess)
+			return false;
 
 		const IrradianceRecordVector &results = *proc->getSamples();
 		for (size_t i=0; i<results.size(); ++i) 
@@ -291,6 +295,7 @@ public:
 		m_octreeResID = Scheduler::getInstance()->registerResource(m_octree);
 
 		m_ready = true;
+		return false;
 	}
 
 	void wakeup(std::map<std::string, SerializableObject *> &params) {
@@ -301,6 +306,10 @@ public:
 		}
 	}
 
+	void cancel() {
+		Scheduler::getInstance()->cancel(m_proc);
+	}
+
 	MTS_DECLARE_CLASS()
 private:
 	Float m_minMFP, m_sampleMultiplier;
@@ -308,6 +317,7 @@ private:
 	Spectrum m_mfp, m_sigmaTr, m_zr, m_zv, m_alphaPrime;
 	Spectrum m_sigmaSPrime, m_sigmaTPrime, m_D, m_ssFactor;
 	ref<IrradianceOctree> m_octree;
+	ref<ParallelProcess> m_proc;
 	int m_octreeResID, m_octreeIndex;
 	int m_maxDepth;
 	bool m_ready, m_requireSample;

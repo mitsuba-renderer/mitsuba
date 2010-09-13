@@ -34,8 +34,11 @@ public:
 	 * resource IDs of the associated scene, camera and sample generator,
 	 * which have been made available to all local and remote workers.
 	 */
-	virtual void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+	virtual bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int samplerResID) = 0;
+
+	/// Cancel any running pre-process tasks
+	virtual void cancel() = 0;
 
 	/// Return the list of shapes associated with this subsurface integrator
 	inline const std::vector<Shape *> getShapes() const { return m_shapes; }
