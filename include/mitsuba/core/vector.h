@@ -98,10 +98,8 @@ public:
 	/// Divide the vector by the given scalar
 	TVector2 operator/(T f) const {
 #ifdef MTS_DEBUG
-		if (f == 0) {
+		if (f == 0)
 			SLog(EWarn, "Vector2: Division by zero!");
-			//exit(-1);
-		}
 #endif
 		T recip = (T) 1 / f;
 		return TVector2(x * recip, y * recip);
@@ -109,10 +107,8 @@ public:
 
 	TVector2 &operator/=(T f) {
 #ifdef MTS_DEBUG
-		if (f == 0) {
+		if (f == 0)
 			SLog(EWarn, "Vector2: Division by zero!");
-			//exit(-1);
-		}
 #endif
 		T recip = (T) 1 / f;
 		x *= recip; y *= recip; 
@@ -182,6 +178,25 @@ template <typename T> inline T absDot(const TVector2<T> &v1, const TVector2<T> &
 
 template <typename T> inline TVector2<T> normalize(const TVector2<T> &v) {
 	return v / v.length();
+}
+
+template <> inline TVector2<int> TVector2<int>::operator/(int s) const {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector2i: Division by zero!");
+#endif
+	return TVector2(x/s, y/s);
+}
+
+template <> inline TVector2<int> &TVector2<int>::operator/=(int s) {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector2i: Division by zero!");
+#endif
+
+	x /= s;
+	y /= s;
+	return *this;
 }
 
 /**
@@ -260,10 +275,8 @@ public:
 	/// Divide the vector by the given scalar
 	TVector3 operator/(T f) const {
 #ifdef MTS_DEBUG
-		if (f == 0) {
+		if (f == 0)
 			SLog(EWarn, "Vector3: Division by zero!");
-			//exit(-1);
-		}
 #endif
 		T recip = (T) 1 / f;
 		return TVector3(x * recip, y * recip, z * recip);
@@ -271,10 +284,8 @@ public:
 
 	TVector3 &operator/=(T f) {
 #ifdef MTS_DEBUG
-		if (f == 0) {
+		if (f == 0)
 			SLog(EWarn, "Vector3: Division by zero!");
-			//exit(-1);
-		}
 #endif
 		T recip = (T) 1 / f;
 		x *= recip; y *= recip; z *= recip;
@@ -356,6 +367,27 @@ template <typename T> inline TVector3<T> normalize(const TVector3<T> &v) {
 	return v / v.length();
 }
 
+template <> inline TVector3<int> TVector3<int>::operator/(int s) const {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector3i: Division by zero!");
+#endif
+	return TVector3(x/s, y/s, z/s);
+}
+
+template <> inline TVector3<int> &TVector3<int>::operator/=(int s) {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector3i: Division by zero!");
+#endif
+
+	x /= s;
+	y /= s;
+	z /= s;
+	return *this;
+}
+
+
 /**
  * \headerfile mitsuba/core/vector.h mitsuba/mitsuba.h
  * \brief Parameterizable four-dimensional vector data structure
@@ -433,10 +465,8 @@ public:
 	/// Divide the vector by the given scalar
 	TVector4 operator/(T f) const {
 #ifdef MTS_DEBUG
-		if (f == 0) {
+		if (f == 0)
 			SLog(EWarn, "Vector4: Division by zero!");
-			//exit(-1);
-		}
 #endif
 		T recip = (T) 1 / f;
 		return TVector4(x * recip, y * recip, z * recip, w * recip);
@@ -444,10 +474,8 @@ public:
 
 	TVector4 &operator/=(T f) {
 #ifdef MTS_DEBUG
-		if (f == 0) {
+		if (f == 0)
 			SLog(EWarn, "Vector4: Division by zero!");
-			//exit(-1);
-		}
 #endif
 		T recip = (T) 1 / f;
 		x *= recip; y *= recip; z *= recip; w *= recip;
@@ -519,6 +547,27 @@ template <typename T> inline T absDot(const TVector4<T> &v1, const TVector4<T> &
 
 template <typename T> inline TVector4<T> normalize(const TVector4<T> &v) {
 	return v / v.length();
+}
+
+template <> inline TVector4<int> TVector4<int>::operator/(int s) const {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector4i: Division by zero!");
+#endif
+	return TVector4(x/s, y/s, z/s, w/s);
+}
+
+template <> inline TVector4<int> &TVector4<int>::operator/=(int s) {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector4i: Division by zero!");
+#endif
+
+	x /= s;
+	y /= s;
+	z /= s;
+	w /= s;
+	return *this;
 }
 
 MTS_NAMESPACE_END
