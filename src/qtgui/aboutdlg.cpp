@@ -50,6 +50,10 @@ AboutDialog::AboutDialog(QWidget *parent) :
 	configFlags += "MTS_HAS_COHERENT_RT ";
 #endif
 
+#if defined(MTS_HAS_COLLADA)
+	configFlags += "MTS_HAS_COLLADA ";
+#endif
+
 	ui->label1->setText(ui->label1->text().replace("MTS_VERSION", MTS_VERSION));
 	ui->label1->setText(ui->label1->text().replace("CONFIG_FLAGS", configFlags));
 #if defined(__OSX__)
