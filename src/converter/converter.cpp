@@ -162,7 +162,7 @@ void GeometryConverter::convert(const fs::path &inputFile,
 		SLog(EError, "Unknown input format (must end in either .DAE, .ZAE or .OBJ)");
 	}
 
-	if (adjustmentFile.empty()) {
+	if (!adjustmentFile.empty()) {
 		SLog(EInfo, "Applying adjustments ..");
 		static const XMLCh gLS[] = { chLatin_L, chLatin_S, chNull };
 		DOMImplementationLS *impl = DOMImplementationRegistry::getDOMImplementation(gLS);

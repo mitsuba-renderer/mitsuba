@@ -181,7 +181,7 @@ struct clamp_neighbors_functor {
 /* Irradiance interpolation functor */
 struct irr_interp_functor {
 	irr_interp_functor(const Intersection &its, Float kappa, bool gradients) : its(its), 
-		kappa(kappa), weightSum(0), gradients(gradients) {
+		kappa(kappa), weightSum(0), gradients(gradients), E(0.0f) {
 	}
 
 	void operator()(const IrradianceCache::Record *sample) {

@@ -39,7 +39,7 @@ public:
 		Float N;
 		int depth;
 
-		inline GatherPoint() : N(0) {
+		inline GatherPoint() : weight(0.0f), flux(0.0f), emission(0.0f), N(0.0f) {
 		}
 	};
 

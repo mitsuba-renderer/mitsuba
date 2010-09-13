@@ -40,13 +40,13 @@ public:
 		int depth;
 		Point2i pos;
 
-		inline GatherPoint() : N(0) {
+		inline GatherPoint() : weight(0.0f), flux(0.0f), emission(0.0f), N(0.0f) {
 		}
 	};
 
 	StochasticProgressivePhotonMapIntegrator(const Properties &props) : Integrator(props) {
 		/* Initial photon query radius (0 = infer based on scene size and camera resolution) */
-		m_initialRadius = props.getFloat("initialRadius", .2);
+		m_initialRadius = props.getFloat("initialRadius", 0);
 		/* Alpha parameter from the paper (influences the speed, at which the photon radius is reduced) */
 		m_alpha = props.getFloat("alpha", .7);
 		/* Number of photons to shoot in each iteration */
@@ -265,12 +265,12 @@ public:
 		#pragma omp parallel for schedule(dynamic)
 		for (int blockIdx = 0; blockIdx<(int) m_gatherBlocks.size(); ++blockIdx) {
 			std::vector<GatherPoint> &gatherPoints = m_gatherBlocks[blockIdx];
-			Spectrum flux, contrib;
 
 			float *target = m_bitmap->getFloatData();
 			for (size_t i=0; i<gatherPoints.size(); ++i) {
 				GatherPoint &gp = gatherPoints[i];
 				Float M, N = gp.N;
+				Spectrum flux, contrib;
 
 				if (gp.depth != -1) {
 					M = photonMap->estimateRadianceRaw(
@@ -288,11 +288,8 @@ public:
 						gp.emission * proc->getShotPhotons() * M_PI * gp.radius*gp.radius)) * ratio;
 					gp.radius = gp.radius * std::sqrt(ratio);
 					gp.N = N + m_alpha * M;
+					contrib = gp.flux / ((Float) m_totalEmitted * gp.radius*gp.radius * M_PI);
 				}
-				contrib = gp.flux / ((Float) m_totalEmitted * gp.radius*gp.radius * M_PI);
-
-				
-
 
 				Float r, g, b;
 				contrib.toLinearRGB(r, g, b);
