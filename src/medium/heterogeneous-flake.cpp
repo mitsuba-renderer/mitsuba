@@ -575,7 +575,7 @@ Spectrum FlakePhaseFunction::f(const MediumSamplingRecord &mRec, const Vector &_
 		return Spectrum(0.0f);
 	else
 		H /= length;
-	return (D(H) + D(-H)) * m_normalization / (2*sigmaT);
+	return Spectrum((D(H) + D(-H)) * m_normalization / (2*sigmaT));
 #endif
 }
 

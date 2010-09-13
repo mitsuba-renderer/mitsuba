@@ -212,6 +212,7 @@ public:
 	 */
 	inline Spectrum sampleCos(BSDFQueryRecord &bRec, Float &pdf) const {
 		Spectrum bsdfVal(sample(bRec, pdf));
+		cout << bsdfVal.toString() << endl;
 		return bsdfVal * std::abs(Frame::cosTheta(bRec.wo));
 	}
 

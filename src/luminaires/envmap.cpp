@@ -264,7 +264,7 @@ public:
 
 	Spectrum fArea(const EmissionRecord &eRec) const {
 		Assert(eRec.type == EmissionRecord::ENormal);
-		return M_PI;
+		return Spectrum(M_PI);
 	}
 
 	bool isBackgroundLuminaire() const {

@@ -56,8 +56,8 @@ public:
 		m_sigma = props.getFloat("sigma", -1); // for the manual strategy
 		Assert(m_channel >= 0 && m_channel < SPECTRUM_SAMPLES);
 		if (props.getBoolean("mono", false)) {
-			m_sigmaA = m_sigmaA[m_channel];
-			m_sigmaS = m_sigmaS[m_channel];
+			m_sigmaA = Spectrum(m_sigmaA[m_channel]);
+			m_sigmaS = Spectrum(m_sigmaS[m_channel]);
 			m_sigmaT = m_sigmaA + m_sigmaS;
 		}
 

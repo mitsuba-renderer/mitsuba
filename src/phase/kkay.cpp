@@ -125,7 +125,7 @@ public:
 	Spectrum f(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const {
 		Frame frame(mRec.orientation);
 		if (mRec.orientation.length() == 0)
-			return m_kd / (4*M_PI);
+			return Spectrum(m_kd / (4*M_PI));
 
 		Vector orientation = normalize(mRec.orientation);
 		Vector reflectedLocal = frame.toLocal(wo);
@@ -136,8 +136,8 @@ public:
 		reflectedLocal.x *= a;
 		Vector R = frame.toWorld(reflectedLocal);
 
-		return (std::pow(std::max((Float) 0, dot(R, wo)), m_exponent))
-			* m_normalization * m_ks + m_kd / (4*M_PI);
+		return Spectrum((std::pow(std::max((Float) 0, dot(R, wo)), m_exponent))
+			* m_normalization * m_ks + m_kd / (4*M_PI));
 	}
 
 	std::string toString() const {

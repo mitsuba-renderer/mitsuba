@@ -203,13 +203,13 @@ public:
 				block->normalize(x, y, 1.0f / sampleIndex);
 
 				if (block->collectStatistics())
-					block->setVariance(x, y, meanSqr / (sampleIndex-1), sampleIndex);
+					block->setVariance(x, y, Spectrum(meanSqr / (sampleIndex-1)), sampleIndex);
 				cameraRays += sampleIndex;
 				++pixelsRendered;
 			}
 		}
 	}
-	
+
 	Spectrum Li(const RayDifferential &ray, RadianceQueryRecord &rRec) const {
 		return m_subIntegrator->Li(ray, rRec);
 	}

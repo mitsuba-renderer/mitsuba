@@ -107,19 +107,19 @@ public:
 	inline Spectrum() { }
 
 	/// Create a new spectral power distribution with all samples set to the given value
-	inline Spectrum(Float v) {
+	explicit inline Spectrum(Float v) {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			s[i] = v;
 	}
 
 	/// Copy a spectral power distribution
-	inline Spectrum(Float spd[SPECTRUM_SAMPLES]) {
+	explicit inline Spectrum(Float spd[SPECTRUM_SAMPLES]) {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			s[i] = spd[i];
 	}
 
 	/// Unserialize a spectral power distribution from a binary data stream
-	inline Spectrum(Stream *stream) {
+	explicit inline Spectrum(Stream *stream) {
 		stream->readFloatArray(s, SPECTRUM_SAMPLES);
 	}
 

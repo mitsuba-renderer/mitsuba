@@ -83,8 +83,8 @@ public:
 	}
 
 	Spectrum f(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const {
-		return 1/(4*M_PI) * (1 - m_g*m_g) /
-			std::pow(1.f + m_g*m_g - 2.f * m_g * dot(wi, wo), (Float) 1.5f);
+		return Spectrum(1/(4*M_PI) * (1 - m_g*m_g) /
+			std::pow(1.f + m_g*m_g - 2.f * m_g * dot(wi, wo), (Float) 1.5f));
 	}
 
 	std::string toString() const {

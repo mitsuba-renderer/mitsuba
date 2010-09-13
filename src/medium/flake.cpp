@@ -397,7 +397,7 @@ public:
 			}
 		}
 
-		return sigmaT * coveredLength;
+		return Spectrum(sigmaT * coveredLength);
 	}
 
 	bool sampleDistance(const Ray &theRay, Float distSurf, 
@@ -429,8 +429,8 @@ public:
 				if (its.t > distMed && distMed < distSurf) {
 					/* A medium interaction occurred */
 					mRec.p = ray(distMed);
-					mRec.sigmaA = sigmaA;
-					mRec.sigmaS = sigmaS;
+					mRec.sigmaA = Spectrum(sigmaA);
+					mRec.sigmaS = Spectrum(sigmaS);
 					mRec.albedo = m_albedo;
 					mRec.medium = this;
 					mRec.attenuation = (Spectrum(sigmaT) * (-distMed)).exp();

@@ -460,7 +460,7 @@ bool Scene::sampleDistance(const Ray &ray, Float maxDist, MediumSamplingRecord &
 	} else {
 		mRec.pdf = 1.0f;
 		mRec.miWeight = 1.0f;
-		mRec.attenuation = 1.0f;
+		mRec.attenuation = Spectrum(1.0f);
 		return false;
 	}
 }
