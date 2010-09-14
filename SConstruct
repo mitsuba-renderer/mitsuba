@@ -45,7 +45,9 @@ vars.Add('GLLIB',         'OpenGL+GLEW libraries')
 vars.Add('GLINCLUDE',     'OpenGL+GLEW include path')
 vars.Add('GLFLAGS',       'OpenGL+GLEW-related compiler flags')
 vars.Add('GLLIBDIR',      'OpenGL+GLEW library path')
-vars.Add('BOOSTINCLUDE',  'BOOST include path')
+vars.Add('BOOSTINCLUDE',  'boost include path')
+vars.Add('BOOSTLIB',      'boost libraries')
+vars.Add('BOOSTLIBDIR',   'boost library path')
 vars.Add('TARGET_ARCH',   'Target architecture')
 
 try:
@@ -64,6 +66,10 @@ env.Append(LIBPATH=[])
 env.Append(LIBS=env['BASELIB'])
 if env.has_key('BOOSTINCLUDE'):
 	env.Append(CPPPATH=env['BOOSTINCLUDE'])
+if env.has_key('BOOSTLIBDIR'):
+	env.Append(LIBPATH=env['BOOSTLIBDIR'])
+if env.has_key('BOOSTLIB'):
+	env.Append(LIBS=env['BOOSTLIB'])
 if env.has_key('BASELIBDIR'):
 	env.Append(LIBPATH=env['BASELIBDIR'])
 
@@ -703,7 +709,8 @@ elif sys.platform == 'darwin':
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/Xerces-C.framework/Resources/lib/libxerces-c-3.0.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libpng.framework/Resources/lib/libpng.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libjpeg.framework/Resources/lib/libjpeg.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/Collada14Dom.framework/Resources/lib/libCollada14Dom.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libboost.framework/Resources/lib/libboost_system-xgcc42-mt-1_39.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libboost.framework/Resources/lib/libboost_filesystem-xgcc42-mt-1_39.dylib')
 	if hasQt:
 		installTargets += env.Install('Mitsuba.app/Contents/MacOS', 'mtsgui')
 		installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtCore.framework/Versions/4/QtCore')
