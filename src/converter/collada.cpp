@@ -445,7 +445,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 					domUint idx = indices.get(l+offset);
 					if (idx >= count) {
 						SLog(EWarn, "Encountered the invalid polygon index %i "
-							"(must be in [0, " SIZE_T_FMT "]) -- ignoring polygon!", (domInt) idx, count);
+							"(must be in [0, " SIZE_T_FMT "]) -- ignoring polygon!", (domInt) idx, count-1);
 						invalid = true;
 						break;
 					}
@@ -506,7 +506,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 					domUint idx = indexArray.get(l*data->nSources+offset);
 					if (idx >= count) {
 						SLog(EWarn, "Encountered the invalid polygon index %i "
-							"(must be in [0, " SIZE_T_FMT "]) -- ignoring polygon!", (domInt) idx, count);
+							"(must be in [0, " SIZE_T_FMT "]) -- ignoring polygon!", (domInt) idx, count-1);
 						invalid = true;
 						break;
 					}
