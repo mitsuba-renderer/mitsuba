@@ -162,7 +162,7 @@ public:
 			/* Russian roulette - Possibly stop the recursion */
 			if (rRec.depth >= m_rrDepth) {
 				/* Assuming that BSDF importance sampling is perfect,
-				   the following should equal the maximum albedo
+				   'bsdfVal.max()' should equal the maximum albedo
 				   over all spectral samples */
 				Float approxAlbedo = std::min((Float) 0.9f, bsdfVal.max());
 				if (rRec.nextSample1D() > approxAlbedo)
