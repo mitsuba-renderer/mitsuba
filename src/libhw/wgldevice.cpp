@@ -66,7 +66,7 @@ LONG WINAPI WGLDevice::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			device->initPixelFormat(hWnd);
 			break;
 		case WM_SIZE: 
-			device->m_dimension = Point2i(LOWORD(lParam), HIWORD(lParam));
+			device->m_dimension = Vector2i(LOWORD(lParam), HIWORD(lParam));
 			break;
 		case WM_PAINT:
 			BeginPaint(hWnd, &ps);
@@ -424,7 +424,7 @@ bool WGLDevice::translateMouse(UINT uMsg, WPARAM wParam, DeviceEvent &event) {
 	if (m_mouse != Point2i(-1, -1)) {
 		event.setMouseRelative(event.getMousePosition() - m_mouse);
 	} else {
-		event.setMouseRelative(Point2i(0, 0));
+		event.setMouseRelative(Vector2i(0, 0));
 	}
 
 	m_mouse = event.getMousePosition();

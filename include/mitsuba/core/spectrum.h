@@ -101,7 +101,7 @@ private:
  * When SPECTRUM_SAMPLES is set to 3 (the default), this class 
  * falls back to linear RGB as its internal representation.
  */
-class MTS_EXPORT_CORE Spectrum {
+struct MTS_EXPORT_CORE Spectrum {
 public:
 	/// Create a new spectral power distribution, but don't initialize the contents
 	inline Spectrum() { }
@@ -446,7 +446,9 @@ protected:
 	static const int   CIE_end   = 830;
 	static const int   CIE_count = CIE_end - CIE_start + 1;
 	static const Float CIE_normalization;
-	static const Float CIE_X[CIE_count], CIE_Y[CIE_count], CIE_Z[CIE_count];
+	static const Float CIE_X[CIE_count];
+	static const Float CIE_Y[CIE_count];
+	static const Float CIE_Z[CIE_count];
 	/// @}
 };
 

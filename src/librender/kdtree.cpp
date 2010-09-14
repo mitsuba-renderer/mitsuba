@@ -18,7 +18,6 @@
 
 #include <mitsuba/render/kdtree.h>
 #include <mitsuba/render/trimesh.h>
-#include <mitsuba/render/triaccel.h>
 
 MTS_NAMESPACE_BEGIN
 

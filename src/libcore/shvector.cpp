@@ -73,7 +73,7 @@ Float SHVector::eval(Float theta, Float phi) const {
 }
 
 Float SHVector::findMinimum(int res = 32) const {
-	Float hExt = M_PI / res, hInt = (2*M_PI)/(res*2);
+	Float hExt = (Float) M_PI / res, hInt = (2 * (Float) M_PI)/(res*2);
 	Float minimum = std::numeric_limits<Float>::infinity();
 
 	for (int i=0; i<=res; ++i) {
@@ -88,7 +88,7 @@ Float SHVector::findMinimum(int res = 32) const {
 }
 
 void SHVector::offset(Float value) {
-	operator()(0, 0) += 2 * value * std::sqrt(M_PI);
+	operator()(0, 0) += 2 * value * (Float) std::sqrt(M_PI);
 }
 
 Float SHVector::eval(const Vector &v) const {
@@ -160,7 +160,7 @@ Float SHVector::legendre(int l, int m, Float x) {
 }
 
 void SHVector::normalize() {
-	Float correction = 1/(2*std::sqrt(M_PI)*operator()(0,0));
+	Float correction = 1/(2 * (Float) std::sqrt(M_PI)*operator()(0,0));
 
 	for (size_t i=0; i<m_coeffs.size(); ++i)
 		m_coeffs[i] *= correction;
@@ -170,7 +170,7 @@ void SHVector::convolve(const SHVector &kernel) {
 	SAssert(kernel.getBands() == m_bands);
 
 	for (int l=0; l<m_bands; ++l) {
-		Float alpha = std::sqrt(4*M_PI / (2*l + 1));
+		Float alpha = std::sqrt(4 * (Float) M_PI / (2*l + 1));
 		for (int m=-l; m<=l; ++m) 
 			operator()(l, m) *= alpha * kernel(l, 0);
 	}
@@ -199,7 +199,7 @@ ublas::matrix<Float> SHVector::mu2() const {
 		result(2, 2) += 2*sqrto3*operator()(2,0);
 	}
 
-	return result * (2*std::sqrt(M_PI/15));
+	return result * (2*std::sqrt((Float) M_PI / 15));
 }
 	
 std::string SHVector::toString() const {
@@ -225,7 +225,7 @@ Float SHVector::computeNormalization(int l, int m) {
 	SAssert(m>=0);
 	return std::sqrt(
 			((2*l+1) * boost::math::factorial<Float>(l-m))
-		/    (4*M_PI * boost::math::factorial<Float>(l+m)));
+		/    (4 * (Float) M_PI * boost::math::factorial<Float>(l+m)));
 }
 
 void SHVector::staticInitialization() {
@@ -392,7 +392,7 @@ SHSampler::SHSampler(int bands, int depth) : m_bands(bands), m_depth(depth) {
 	for (int i=0; i<=depth; ++i) {
 		int res = 1 << i;
 		Float zStep  = -2 / (Float) res;
-		Float phiStep = 2*M_PI / (Float) res;
+		Float phiStep = 2 * (Float) M_PI / (Float) res;
 		m_phiMap[i] = new Float*[res];
 		m_legendreMap[i] = new Float*[res];
 
@@ -406,7 +406,7 @@ SHSampler::SHSampler(int bands, int depth) : m_bands(bands), m_depth(depth) {
 		for (int m=0; m<=l; ++m) {
 			Float normFactor = boost::math::tgamma_delta_ratio(
 				(Float) (l - m + 1), (Float) (2 * m), boost::math::policies::policy<>());
-			normFactor = std::sqrt(normFactor * (2 * l + 1) / (4 * M_PI));
+			normFactor = std::sqrt(normFactor * (2 * l + 1) / (4 * (Float) M_PI));
 			if (m != 0)
 				normFactor *= SQRT_TWO;
 			m_normalization[I(l, m)] = normFactor;
@@ -461,7 +461,7 @@ Float SHSampler::warp(const SHVector &f, Point2 &sample) const {
 	}
 
 	Float zStep = -2 / (Float) (1 << m_depth);
-	Float phiStep = 2 * M_PI / (Float) (1 << m_depth);
+	Float phiStep = 2 * (Float) M_PI / (Float) (1 << m_depth);
 	i >>= 1; j >>= 1;
 
 	Float z = 1 + zStep * i + zStep * sample.x;

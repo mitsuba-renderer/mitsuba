@@ -16,9 +16,6 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define BOOST_FILESYSTEM_NO_LIB 
-#define BOOST_SYSTEM_NO_LIB 
-
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/fresolver.h>
@@ -154,9 +151,9 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 		domAccessor *accessor = techniqueCommon->getAccessor();
 		if (!accessor)
 			SLog(EError, "Data source does not have a <accessor> tag!");
-		unsigned int nParams = accessor->getParam_array().getCount(),
-			         stride  = accessor->getStride();
-		size_t size = accessor->getCount();
+		unsigned int nParams = (unsigned int) accessor->getParam_array().getCount(),
+			         stride  = (unsigned int) accessor->getStride();
+		size_t size = (size_t) accessor->getCount();
 		SAssert(nParams <= 4);
 
 		Vec4 *target = new Vec4[size];

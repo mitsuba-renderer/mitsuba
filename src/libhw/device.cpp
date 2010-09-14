@@ -38,7 +38,7 @@ Device::Device(Session *name) {
 	m_fullscreen = false;
 	m_fsaa = 1;
 	m_dimension = Vector2i(640, 480);
-	m_position = Vector2i(0, 0);
+	m_position = Point2i(0, 0);
 	m_center = true;
 	m_session = name;
 	m_showFPS = true;

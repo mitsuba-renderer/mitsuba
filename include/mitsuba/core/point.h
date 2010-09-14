@@ -44,8 +44,13 @@ template <typename T> struct TPoint2 {
 	/// Initialize the point with the specified X, Y and Z components
 	TPoint2(T x, T y) : x(x), y(y) {  }
 	
-	/// Initialize the point from a point data structure
-	TPoint2(const TVector2<T> &vec) : x(vec.x), y(vec.y) {  }
+	/// Initialize the point with the components of another point
+	template <typename T2> explicit TPoint2(const TPoint2<T2> &p) 
+		: x((T) p.x), y((T) p.y) { }
+
+	/// Initialize the point with the components of a vector data structure
+	template <typename T2> explicit TPoint2(const TVector2<T2> &v) 
+		: x((T) v.x), y((T) v.y) { }
 
 	/// Initialize all components of the the point with the specified value
 	explicit TPoint2(T val) : x(val), y(val) { }
@@ -110,7 +115,7 @@ template <typename T> struct TPoint2 {
 		return TPoint2(-x, -y);
 	}
 
-	/// Divide the point's coordinates by the given scalar
+	/// Divide the point's coordinates by the given scalar and return the result
 	TPoint2 operator/(T f) const {
 #ifdef MTS_DEBUG
 		if (f == 0) 
@@ -120,6 +125,7 @@ template <typename T> struct TPoint2 {
 		return TPoint2(x * recip, y * recip);
 	}
 
+	/// Divide the point's coordinates by the given scalar
 	TPoint2 &operator/=(T f) {
 #ifdef MTS_DEBUG
 		if (f == 0) 
@@ -173,10 +179,6 @@ template <typename T> inline TPoint2<T> operator*(T f, const TPoint2<T> &v) {
 	return v*f;
 }
 
-template <typename T> inline TVector2<T>::TVector2(const TPoint2<T> &p) 
-	: x(p.x), y(p.y) { }
-
-
 template <typename T> inline T distance(const TPoint2<T> &p1, const TPoint2<T> &p2) {
 	return (p1-p2).length();
 }
@@ -224,8 +226,13 @@ template <typename T> struct TPoint3 {
 	/// Initialize the point with the specified X, Y and Z components
 	TPoint3(T x, T y, T z) : x(x), y(y), z(z) {  }
 	
-	/// Initialize the point from a point data structure
-	TPoint3(const TVector3<T> &vec) : x(vec.x), y(vec.y), z(vec.z) {  }
+	/// Initialize the point with the components of another point
+	template <typename T2> explicit TPoint3(const TPoint3<T2> &p) 
+		: x((T) p.x), y((T) p.y), z((T) p.z) { }
+
+	/// Initialize the point with the components of a vector data structure
+	template <typename T2> explicit TPoint3(const TVector3<T2> &v) 
+		: x((T) v.x), y((T) v.y), z((T) v.z) { }
 
 	/// Initialize all components of the the point with the specified value
 	explicit TPoint3(T val) : x(val), y(val), z(val) { }
@@ -291,7 +298,7 @@ template <typename T> struct TPoint3 {
 		return TPoint3(-x, -y, -z);
 	}
 
-	/// Divide the point's coordinates by the given scalar
+	/// Divide the point's coordinates by the given scalar and return the result
 	TPoint3 operator/(T f) const {
 #ifdef MTS_DEBUG
 		if (f == 0) 
@@ -301,6 +308,7 @@ template <typename T> struct TPoint3 {
 		return TPoint3(x * recip, y * recip, z * recip);
 	}
 
+	/// Divide the point's coordinates by the given scalar
 	TPoint3 &operator/=(T f) {
 #ifdef MTS_DEBUG
 		if (f == 0) 
@@ -355,10 +363,6 @@ template <typename T> inline TPoint3<T> operator*(T f, const TPoint3<T> &v) {
 	return v*f;
 }
 
-template <typename T> inline TVector3<T>::TVector3(const TPoint3<T> &p) 
-	: x(p.x), y(p.y), z(p.z) { }
-
-
 template <typename T> inline T distance(const TPoint3<T> &p1, const TPoint3<T> &p2) {
 	return (p1-p2).length();
 }
@@ -406,9 +410,14 @@ template <typename T> struct TPoint4 {
 
 	/// Initialize the point with the specified X, Y and Z components
 	TPoint4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {  }
-	
-	/// Initialize the point from a point data structure
-	TPoint4(const TVector4<T> &vec) : x(vec.x), y(vec.y), z(vec.z), w(vec.w) {  }
+
+	/// Initialize the point with the components of another point
+	template <typename T2> explicit TPoint4(const TPoint4<T2> &p) 
+		: x((T) p.x), y((T) p.y), z((T) p.z), w((T) p.w) { }
+
+	/// Initialize the point with the components of a vector data structure
+	template <typename T2> explicit TPoint4(const TVector4<T2> &v) 
+		: x((T) v.x), y((T) v.y), z((T) v.z), w((T) v.w) { }
 
 	/// Initialize all components of the the point with the specified value
 	explicit TPoint4(T val) : x(val), y(val), z(val), w(val) { }
@@ -475,7 +484,7 @@ template <typename T> struct TPoint4 {
 		return TPoint4(-x, -y, -z, -w);
 	}
 
-	/// Divide the point's coordinates by the given scalar
+	/// Divide the point's coordinates by the given scalar and return the result
 	TPoint4 operator/(T f) const {
 #ifdef MTS_DEBUG
 		if (f == 0) 
@@ -485,6 +494,7 @@ template <typename T> struct TPoint4 {
 		return TPoint4(x * recip, y * recip, z * recip, w * recip);
 	}
 
+	/// Divide the point's coordinates by the given scalar
 	TPoint4 &operator/=(T f) {
 #ifdef MTS_DEBUG
 		if (f == 0) 
@@ -539,10 +549,6 @@ template <typename T> struct TPoint4 {
 template <typename T> inline TPoint4<T> operator*(T f, const TPoint4<T> &v) {
 	return v*f;
 }
-
-template <typename T> inline TVector4<T>::TVector4(const TPoint4<T> &p) 
-	: x(p.x), y(p.y), z(p.z), w(p.w) { }
-
 
 template <typename T> inline T distance(const TPoint4<T> &p1, const TPoint4<T> &p2) {
 	return (p1-p2).length();

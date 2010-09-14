@@ -100,7 +100,7 @@ int colladaMain(int argc, char **argv) {
 				logLevel = EDebug;
 				break;
 			case 'f':
-				fov = strtod(optarg, &end_ptr);
+				fov = (Float) strtod(optarg, &end_ptr);
 				if (*end_ptr != '\0')
 					SLog(EError, "Invalid field of view value!");
 				break;

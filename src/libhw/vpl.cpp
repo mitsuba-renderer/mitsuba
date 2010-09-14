@@ -409,7 +409,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 		program->setSource(GPUProgram::EFragmentProgram, oss.str());
 		try {
 			program->init();
-		} catch (const std::exception &ex) {
+		} catch (const std::exception &) {
 			Log(EWarn, "Unable to compile the following VPL program:\n%s", oss.str().c_str());
 			throw;
 		}

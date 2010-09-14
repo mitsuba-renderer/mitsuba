@@ -385,7 +385,7 @@ void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
 		if (flipVertically)
 			std::swap(upperLeft.y, lowerRight.y);
 
-		const Float zDepth = -1.0f; // just before the far plane
+		const float zDepth = -1.0f; // just before the far plane
 		glTexCoord2f(0.0f, 0.0f);
 		glVertex3f(upperLeft.x, upperLeft.y, zDepth);
 		glTexCoord2f(1.0f, 0.0f);

@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
  * This class can be used to transform uniformly distributed samples
  * so that they match the stored distribution.
  */
-class DiscretePDF {
+struct DiscretePDF {
 public:
 	/// Allocate a PDF with the given number of entries
 	explicit inline DiscretePDF(int nEntries = 0) : m_ready(false) {

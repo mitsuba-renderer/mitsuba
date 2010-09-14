@@ -65,7 +65,7 @@ Plugin::Plugin(const std::string &shortName, const fs::path &path)
 
 	try {
 		m_createInstance = (CreateInstanceFunc) getSymbol("CreateInstance");
-	} catch (const std::exception &ex) {
+	} catch (const std::exception &) {
 		m_createUtility = (CreateUtilityFunc) getSymbol("CreateUtility");
 		m_isUtility = true;
 	}

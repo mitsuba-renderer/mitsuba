@@ -28,7 +28,7 @@
 
 using namespace mitsuba;
 
-class SceneContext;
+struct SceneContext;
 
 /**
  * Asynchronous preview rendering thread

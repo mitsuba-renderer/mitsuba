@@ -53,6 +53,8 @@
 #define MTS_USE_MT 1
 #endif
 
+#include <mitsuba/render/triaccel.h>
+
 /**
  * Pre-defined max. stack size for the ray traversal algorithm
  */

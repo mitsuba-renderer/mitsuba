@@ -583,13 +583,13 @@ Point2 squareToDiskConcentric(const Point2 &sample) {
 }
 
 Float squareToConePdf(Float cosCutoff) {
-	return 1 / (2 * (Float) M_PI * (1 - cosCutoff));
+	return 1 / (2 * M_PI * (1 - cosCutoff));
 }
 
 Vector squareToCone(Float cosCutoff, const Point2 &sample) {
 	Float cosTheta = (1-sample.x) + sample.x * cosCutoff;
 	Float sinTheta = std::sqrt(1 - cosTheta * cosTheta);
-	Float phi = sample.y * (2 * (Float) M_PI);
+	Float phi = sample.y * (2 * M_PI);
 	return Vector(std::cos(phi) * sinTheta,
 		std::sin(phi) * sinTheta, cosTheta);
 }

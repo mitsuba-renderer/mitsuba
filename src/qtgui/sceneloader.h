@@ -22,7 +22,7 @@
 #include <QtGui>
 #include <mitsuba/mitsuba.h>
 
-class SceneContext;
+struct SceneContext;
 
 using namespace mitsuba;
 

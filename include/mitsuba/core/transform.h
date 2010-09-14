@@ -76,12 +76,10 @@ protected:
 	virtual ~Matrix4x4() { }
 };
 	
-struct Frame;
-
 /**
  * \brief Encapsulates a 4x4 linear transformation and its inverse
  */
-class MTS_EXPORT_CORE Transform {
+struct MTS_EXPORT_CORE Transform {
 public:
 	/// Create an identity transformation
 	Transform();

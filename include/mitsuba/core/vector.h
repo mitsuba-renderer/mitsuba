@@ -48,8 +48,13 @@ public:
 	/// Initialize all components of the the vector with the specified value
 	explicit TVector2(T val) : x(val), y(val) { }
 
-	/// Initialize a vector with the components of a point data structure
-	explicit TVector2(const TPoint2<T> &point);
+	/// Initialize the vector with the components of a point data structure
+	template <typename T2> explicit TVector2(const TVector2<T2> &v) 
+		: x((T) v.x), y((T) v.y) { }
+
+	/// Initialize the vector with the components of another vector data structure
+	template <typename T2> explicit TVector2(const TPoint2<T2> &p) 
+		: x((T) p.x), y((T) p.y) { }
 
 	/// Unserialize a vector from a binary data stream
 	TVector2(Stream *stream) {
@@ -95,7 +100,7 @@ public:
 		return TVector2(-x, -y);
 	}
 
-	/// Divide the vector by the given scalar
+	/// Divide the vector by the given scalar and return the result
 	TVector2 operator/(T f) const {
 #ifdef MTS_DEBUG
 		if (f == 0)
@@ -105,6 +110,7 @@ public:
 		return TVector2(x * recip, y * recip);
 	}
 
+	/// Divide the vector by the given scalar
 	TVector2 &operator/=(T f) {
 #ifdef MTS_DEBUG
 		if (f == 0)
@@ -224,8 +230,13 @@ public:
 	/// Initialize all components of the the vector with the specified value
 	explicit TVector3(T val) : x(val), y(val), z(val) { }
 
-	/// Initialize a vector with the components of a point data structure
-	explicit TVector3(const TPoint3<T> &point);
+	/// Initialize the vector with the components of a point data structure
+	template <typename T2> explicit TVector3(const TVector3<T2> &v) 
+		: x((T) v.x), y((T) v.y), z((T) v.z) { }
+
+	/// Initialize the vector with the components of another vector data structure
+	template <typename T2> explicit TVector3(const TPoint3<T2> &p) 
+		: x((T) p.x), y((T) p.y), z((T) p.z) { }
 
 	/// Unserialize a vector from a binary data stream
 	TVector3(Stream *stream) {
@@ -272,7 +283,7 @@ public:
 		return TVector3(-x, -y, -z);
 	}
 
-	/// Divide the vector by the given scalar
+	/// Divide the vector by the given scalar and return the result
 	TVector3 operator/(T f) const {
 #ifdef MTS_DEBUG
 		if (f == 0)
@@ -282,6 +293,7 @@ public:
 		return TVector3(x * recip, y * recip, z * recip);
 	}
 
+	/// Divide the vector by the given scalar
 	TVector3 &operator/=(T f) {
 #ifdef MTS_DEBUG
 		if (f == 0)
@@ -413,8 +425,13 @@ public:
 	/// Initialize all components of the the vector with the specified value
 	explicit TVector4(T val) : x(val), y(val), z(val), w(val) { }
 
-	/// Initialize a vector with the components of a point data structure
-	explicit TVector4(const TPoint4<T> &point);
+	/// Initialize the vector with the components of a point data structure
+	template <typename T2> explicit TVector4(const TVector4<T2> &v) 
+		: x((T) v.x), y((T) v.y), z((T) v.z), w((T) v.w) { }
+
+	/// Initialize the vector with the components of another vector data structure
+	template <typename T2> explicit TVector4(const TPoint4<T2> &p) 
+		: x((T) p.x), y((T) p.y), z((T) p.z), w((T) p.w) { }
 
 	/// Unserialize a vector from a binary data stream
 	TVector4(Stream *stream) {
@@ -462,7 +479,7 @@ public:
 		return TVector4(-x, -y, -z, -w);
 	}
 
-	/// Divide the vector by the given scalar
+	/// Divide the vector by the given scalar and return the result
 	TVector4 operator/(T f) const {
 #ifdef MTS_DEBUG
 		if (f == 0)
@@ -472,6 +489,7 @@ public:
 		return TVector4(x * recip, y * recip, z * recip, w * recip);
 	}
 
+	/// Divide the vector by the given scalar
 	TVector4 &operator/=(T f) {
 #ifdef MTS_DEBUG
 		if (f == 0)

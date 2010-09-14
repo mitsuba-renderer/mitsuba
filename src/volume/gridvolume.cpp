@@ -187,7 +187,7 @@ public:
 			m_res.x, m_res.y, m_res.z, m_channels, nEntries*sizeof(float)/1024,
 			m_originalAABB.toString().c_str());
 		stream->close();
-		m_file = CreateFile(resolved.c_str(), GENERIC_READ, 
+		m_file = CreateFile(resolved.file_string().c_str(), GENERIC_READ, 
 			FILE_SHARE_READ, NULL, OPEN_EXISTING, 
 			FILE_ATTRIBUTE_NORMAL, NULL);
 		if (m_file == INVALID_HANDLE_VALUE)
@@ -213,9 +213,9 @@ public:
 	}
 
 	/**
-	* This is needed since Mitsuba might be 
-	* compiled with either single/double precision
-	*/
+	 * This is needed since Mitsuba might be 
+	 * compiled with either single/double precision
+	 */
 	struct float3 {
 		float value[3];
 

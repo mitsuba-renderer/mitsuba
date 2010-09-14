@@ -164,12 +164,12 @@ extern MTS_EXPORT_CORE Point2 squareToTriangle(const Point2 &sample);
 
 /// Convert radians to degrees
 inline Float radToDeg(Float rad) {
-    return 180.0f*rad/M_PI;
+    return 180.0f * rad / M_PI;
 }
 
 /// Convert degrees to radians
 inline Float degToRad(Float deg) {
-    return deg*M_PI/180.0f;
+    return deg * M_PI / 180.0f;
 }
 
 /// Simple floating point clamping function
