@@ -24,8 +24,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-class RenderJob;
-
 /** 
  * Abstract render listener - can be used to react to 
  * progress messages (e.g. in a GUI)

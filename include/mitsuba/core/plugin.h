@@ -23,8 +23,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-class Utility;
-
 /**
  * \brief Abstract plugin class -- represents loadable configurable objects
  * and utilities.

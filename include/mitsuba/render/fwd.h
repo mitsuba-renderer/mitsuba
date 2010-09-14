@@ -74,6 +74,7 @@ class Texture;
 struct TriAccel;
 struct TriAccel4;
 class TriMesh;
+class Utility;
 class VolumeDataSource;
 struct VPL;
 
