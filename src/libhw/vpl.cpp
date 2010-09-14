@@ -250,7 +250,6 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 		m_shadowProgram->unbind();
 	} else {
 		/* Old-fashioned: render 6 times, once for each cube map face */
-
 		m_altShadowProgram->bind();
 		for (int i=0; i<6; ++i) {
 			switch (i) {

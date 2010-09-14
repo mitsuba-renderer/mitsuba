@@ -968,8 +968,16 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 			if (element->hasAttribute("sid") && element->getAttribute("sid") == "post-rotationY") 
 				continue;
 			daeTArray<double> value = daeSafeCast<domRotate>(element)->getValue();
-			transform = transform *
-				Transform::rotate(Vector((Float) value.get(0), (Float) value.get(1), (Float) value.get(2)), (Float) value.get(3));
+			Vector axis((Float) value.get(0), (Float) value.get(1), (Float) value.get(2));
+			Float angle = (Float) value.get(3);
+			if (angle != 0) {
+				if (axis.isZero()) {
+					SLog(EWarn, "Encountered a rotation around a zero vector -- ignoring!");
+				} else {
+					transform = transform *
+						Transform::rotate(axis, (Float) value.get(3));
+				}
+			}
 		} else if (element->typeID() == domTranslate::ID()) {
 			daeTArray<double> value = daeSafeCast<domTranslate>(element)->getValue();
 			transform = transform *

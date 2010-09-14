@@ -408,7 +408,7 @@ void Scene::sampleEmission(EmissionRecord &eRec, Point2 &sample1, Point2 &sample
 	luminaire->sampleEmission(eRec, sample1, sample2);
 	eRec.pdfArea *= lumPdf;
 	eRec.luminaire = luminaire;
-	Float cosTheta = eRec.sRec.n.isZero() ? (Float) 1 : absDot(eRec.sRec.n, eRec.d);
+	Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface) ? absDot(eRec.sRec.n, eRec.d) : 1;
 	eRec.P *= cosTheta / (eRec.pdfArea * eRec.pdfDir);
 }
 
