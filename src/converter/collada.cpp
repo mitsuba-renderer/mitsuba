@@ -874,7 +874,7 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const fs::path &texture
 			resolved = fRes->resolve(path.leaf());
 			if (!fs::exists(resolved)) {
 				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
-				resolved = cvt->locateResource(filename);
+				resolved = cvt->locateResource(path.leaf());
 				if (resolved.empty())
 					SLog(EError, "Unable to locate a resource -- aborting conversion.");
 			}
