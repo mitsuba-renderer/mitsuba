@@ -142,12 +142,15 @@ void GeometryConverter::convert(const fs::path &inputFile,
 		outputFile = outputDirectory / sceneName;
 	}
 
-	SLog(EInfo, "Creating directories ..");
-	if (!fs::exists(textureDirectory))
+	if (!fs::exists(textureDirectory)) {
+		SLog(EInfo, "Creating directory \"%s\" ..", textureDirectory.file_string().c_str());
 		fs::create_directory(textureDirectory);
+	}
 
-	if (!fs::exists(meshesDirectory))
+	if (!fs::exists(meshesDirectory)) {
+		SLog(EInfo, "Creating directory \"%s\" ..", meshesDirectory.file_string().c_str());
 		fs::create_directory(meshesDirectory);
+	}
 
 	std::ostringstream os;
 	SLog(EInfo, "Beginning conversion ..");

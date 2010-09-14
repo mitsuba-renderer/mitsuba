@@ -47,7 +47,7 @@ enum ESourceType {
 	EVertexColors = 3,
 	ELast
 };
-		
+
 struct Vec4 {
 	Float x, y, z, w;
 
@@ -84,6 +84,7 @@ struct VertexData {
 	std::vector<Vec4 *> data;
 	std::vector<int> typeToOffset;
 	std::vector<int> typeToOffsetInStream;
+	std::vector<size_t> typeToCount;
 
 	VertexData() : glPos(NULL) {
 	}
@@ -115,9 +116,12 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 	for (size_t i=0; i<result->nSources; ++i)
 		result->data[i] = NULL;
 	result->typeToOffset.resize(ELast);
+	result->typeToCount.resize(ELast);
 	result->typeToOffsetInStream.resize(ELast);
-	for (int i=0; i<ELast; ++i)
+	for (int i=0; i<ELast; ++i) {
 		result->typeToOffset[i] = result->typeToOffsetInStream[i] = -1;
+		result->typeToCount[i] = 0;
+	}
 	int vertInputIndex = 0;
 
 	for (size_t i=0; i<inputs.getCount(); ++i) {
@@ -150,14 +154,14 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 		domAccessor *accessor = techniqueCommon->getAccessor();
 		if (!accessor)
 			SLog(EError, "Data source does not have a <accessor> tag!");
-		int nParams = (int) accessor->getParam_array().getCount(),
-			stride  = (int) accessor->getStride(),
-			size    = (int) accessor->getCount();
+		unsigned int nParams = accessor->getParam_array().getCount(),
+			         stride  = accessor->getStride();
+		size_t size = accessor->getCount();
 		SAssert(nParams <= 4);
 
 		Vec4 *target = new Vec4[size];
-		for (int j=0; j<size; ++j)
-			for (int k=0; k<nParams; ++k)
+		for (size_t j=0; j<size; ++j)
+			for (unsigned int k=0; k<nParams; ++k)
 				target[j][k] = (Float) floatArray[j*stride+k];
 
 		result->data[offset] = target;
@@ -166,9 +170,10 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 			SAssert(accessor->getStride() == 3);
 			SAssert(result->typeToOffset[EPosition] == -1);
 			result->typeToOffset[EPosition] = offset;
+			result->typeToCount[EPosition] = size;
 			result->typeToOffsetInStream[EPosition] = offsetInStream;
 			result->glPos = new GLdouble[3*size];
-			for (int k=0; k<3*size; ++k)
+			for (size_t k=0; k<3*size; ++k)
 				result->glPos[k] = floatArray[k];
 		} else if (semantic == "NORMAL") {
 			SAssert(accessor->getStride() == 3);
@@ -176,12 +181,14 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 			result->hasNormals = true;
 			result->typeToOffset[ENormal] = offset;
 			result->typeToOffsetInStream[ENormal] = offsetInStream;
+			result->typeToCount[ENormal] = size;
 		} else if (semantic == "TEXCOORD") {
 			SAssert(accessor->getStride() == 2 || accessor->getStride() == 3);
 			if (result->typeToOffset[EUV] == -1) {
 				result->hasUVs = true;
 				result->typeToOffset[EUV] = offset;
 				result->typeToOffsetInStream[EUV] = offsetInStream;
+				result->typeToCount[EUV] = size;
 			} else {
 				SLog(EWarn, "Found multiple sets of texture coordinates - ignoring!");
 			}
@@ -190,6 +197,7 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 				"(Lighting/shading -> Batch Bake in Maya)");
 			result->typeToOffset[EVertexColors] = offset;
 			result->typeToOffsetInStream[EVertexColors] = offsetInStream;
+			result->typeToCount[EVertexColors] = size;
 		} else {
 			SLog(EError, "Encountered an unknown source semantic: %s", semantic.c_str());
 		}
@@ -298,6 +306,7 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 			vertexMap[vertex] = (int) key;
 			vertexBuffer.push_back(vertex);
 		}
+
 		triangle.idx[triangleIdx++] = key;
 		if (triangleIdx == 3) {
 			Point p0 = vertexBuffer[triangle.idx[0]].v,
@@ -323,7 +332,8 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 
 	if (duplicates > 0) {
 		if (triangles.size() == 0) {
-			SLog(EWarn, "%s: Only contains duplicates of already-existing geometry. Ignoring.");
+			SLog(EWarn, "\"%s/%s\": Only contains duplicates (%i triangles) of already-existing geometry. Ignoring.", 
+				prefixName.c_str(), id.c_str(), duplicates);
 			os << "\t<!-- Ignored shape \"" << prefixName << "/" 
 				<< id << "\" (mat=\"" << matID << "\"), since it only contains duplicate geometry. -->" << endl << endl;
 			return;
@@ -333,8 +343,8 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	}
 
 	SAssert(triangleIdx == 0);
-	SLog(EInfo, "%s: Converted " SIZE_T_FMT " triangles, " SIZE_T_FMT 
-		" vertices (merged " SIZE_T_FMT " vertices).", id.c_str(),
+	SLog(EInfo, "\"%s/%s\": Converted " SIZE_T_FMT " triangles, " SIZE_T_FMT 
+		" vertices (merged " SIZE_T_FMT " vertices).", prefixName.c_str(), id.c_str(),
 		triangles.size(), vertexBuffer.size(), numMerged);
 	
 	ref<TriMesh> mesh = new TriMesh(triangles.size(), vertexBuffer.size());
@@ -424,14 +434,35 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 		for (size_t j=0; j<indexArray.getCount(); ++j) {
 			domListOfUInts &indices = indexArray[j]->getValue();
 			domUint *temp = new domUint[indices.getCount()];
-			for (size_t l = 0; l<indices.getCount(); ++l)
+			bool invalid = false;
+
+			for (int m=0; m<ELast; ++m) {
+				int offset = data->typeToOffsetInStream[m];
+				if (offset == -1)
+					continue;
+				size_t count  = data->typeToCount[m];
+				for (size_t l = 0; l < indices.getCount(); l+=data->nSources) {
+					domUint idx = indices.get(l+offset);
+					if (idx >= count) {
+						SLog(EWarn, "Encountered the invalid polygon index %i "
+							"(must be in [0, " SIZE_T_FMT "]) -- ignoring polygon!", (domInt) idx, count);
+						invalid = true;
+						break;
+					}
+				}
+			}
+
+			if (invalid)
+				continue;
+
+			for (size_t l = 0; l<indices.getCount(); ++l) 
 				temp[l] = indices.get(l);
 
 			gluTessBeginPolygon(tess, NULL);
 			gluTessBeginContour(tess);
 
 			for (size_t k=0; k<indices.getCount(); k+=data->nSources) 
-				gluTessVertex(tess, &data->glPos[temp[k+posOffset]*3], (GLvoid *) (k+temp));
+				gluTessVertex(tess, &data->glPos[3*temp[k+posOffset]], (GLvoid *) (temp+k));
 
 			gluTessEndContour(tess);
 			gluTessEndPolygon(tess);
@@ -462,8 +493,29 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 
 		for (size_t j=0; j<vcount.getCount(); ++j) {
 			size_t vertexCount = (size_t) vcount.get(j);
-
 			domUint *temp = new domUint[vertexCount * data->nSources];
+
+			bool invalid = false;
+
+			for (int m=0; m<ELast; ++m) {
+				int offset = data->typeToOffsetInStream[m];
+				if (offset == -1)
+					continue;
+				size_t count  = data->typeToCount[m];
+				for (size_t l = 0; l < vertexCount; ++l) {
+					domUint idx = indexArray.get(l*data->nSources+offset);
+					if (idx >= count) {
+						SLog(EWarn, "Encountered the invalid polygon index %i "
+							"(must be in [0, " SIZE_T_FMT "]) -- ignoring polygon!", (domInt) idx, count);
+						invalid = true;
+						break;
+					}
+				}
+			}
+
+			if (invalid)
+				continue;
+
 			for (size_t l = 0; l<vertexCount * data->nSources; ++l)
 				temp[l] = indexArray.get(indexOffset++);
 
@@ -963,8 +1015,8 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 	for (size_t i=0; i<children.getCount(); ++i) {
 		daeElement *element = children.get(i);
 		if (element->typeID() == domRotate::ID()) {
-			/* Skip rotations labeled as "post-rotationY". Maya exports these with some cameras,
-			   which introduces an incorrect 90 degree rotation unless ignored */
+			/* Skip rotations labeled as "post-rotationY". Maya and 3ds max export these with some 
+			   cameras, which introduces an incorrect 90 degree rotation unless ignored */
 			if (element->hasAttribute("sid") && element->getAttribute("sid") == "post-rotationY") 
 				continue;
 			daeTArray<double> value = daeSafeCast<domRotate>(element)->getValue();
@@ -1087,7 +1139,7 @@ GLvoid __stdcall tessVertex(void *data) {
 
 GLvoid __stdcall tessCombine(GLdouble coords[3], void *vertex_data[4], 
 	GLfloat weight[4], void **outData) {
-	SLog(EWarn, "Detected a self-intersecting polygon!");
+	SLog(EWarn, "Detected a degenerate or self-intersecting polygon!");
 }
 
 GLvoid __stdcall tessEnd() {
