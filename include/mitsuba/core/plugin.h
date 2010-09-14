@@ -20,6 +20,9 @@
 #define __PLUGIN_H
 
 #include <mitsuba/mitsuba.h>
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
 
 MTS_NAMESPACE_BEGIN
 
@@ -36,7 +39,7 @@ class MTS_EXPORT_CORE Plugin {
 	typedef char *(*GetDescriptionFunc)();
 public:
 	/// Load a plugin from the supplied path
-	Plugin(const std::string &shortName, const std::string &path);
+	Plugin(const std::string &shortName, const fs::path &path);
 
 	/// Virtual destructor
 	virtual ~Plugin();
@@ -54,7 +57,7 @@ public:
 	std::string getDescription() const;
 	
 	/// Return the path of this plugin
-	inline const std::string &getPath() const { return m_path; }
+	inline const fs::path &getPath() const { return m_path; }
 	
 	/// Return a short name of this plugin
 	inline const std::string &getShortName() const { return m_shortName; }
@@ -68,7 +71,7 @@ private:
 	void *m_handle;
 #endif
 	std::string m_shortName;
-	std::string m_path;
+	fs::path m_path;
 	bool m_isUtility;
 	GetDescriptionFunc m_getDescription;
 	CreateInstanceFunc m_createInstance;
