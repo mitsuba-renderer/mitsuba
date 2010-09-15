@@ -38,9 +38,10 @@ MTS_NAMESPACE_BEGIN
 class MTS_EXPORT_CORE FileResolver : public Object {
 public:
 	/**
-	 * Create a new file resolver containing the
-	 * current working directory as the initial 
-	 * search path.
+	 * \brief Create a new file resolver with the default settings
+	 *
+	 * Create a new file resolver containing the current working 
+	 * directory as the initial search path.
 	 */
 	FileResolver();
 

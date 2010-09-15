@@ -32,7 +32,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Abstract work unit. Represents a small amount of information
+ * \brief Abstract work unit -- represents a small amount of information 
  * that encodes part of a larger processing task. 
  */
 class MTS_EXPORT_CORE WorkUnit : public Object {
@@ -56,8 +56,8 @@ protected:
 };
 
 /**
- * Abstract work result. Represents the information that encodes 
- * the result of a processed <tt>WorkUnit</tt> instance.
+ * \brief Abstract work result -- represents the result of a 
+ * processed <tt>\ref WorkUnit</tt> instance.
  */
 class MTS_EXPORT_CORE WorkResult : public Object {
 public:
@@ -77,30 +77,28 @@ protected:
 };
 
 /**
- * Abstract work processor. Takes work units and turns them into 
- * <tt>WorkResult</tt> instances. The class is serializable so that 
- * it can be sent over the network if required. It is possible to
- * keep local state in <tt>WorkProcessor</tt> instances (e.g. scratch
- * space for computations), though anything not returned in the form 
- * of <tt>WorkResult</tt>s will eventually be lost. Each worker 
- * (both locally and remotely) has its own <tt>WorkProcessor</tt>, 
- * and therefore no form of locking is required.
+ * \brief Abstract work processor -- takes work units and turns them into 
+ * <tt>WorkResult</tt> instances.
+ * 
+ * The class is serializable so that it can be sent over the network if 
+ * required. It is possible to keep local state in <tt>WorkProcessor</tt> 
+ * instances (e.g. scratch space for computations), though anything not 
+ * returned in the form of <tt>WorkResult</tt>s will eventually be lost. 
+ * Each worker (both locally and remotely) has its own <tt>WorkProcessor</tt>, 
+ * and therefore no form of locking is required within instances of this class.
  */
 class MTS_EXPORT_CORE WorkProcessor : public SerializableObject {
 	friend class Scheduler;
 public:
-	/**
-	 * Create a work unit of the proper type and size.
-	 */
+	/// Create a work unit of the proper type and size.
 	virtual ref<WorkUnit> createWorkUnit() const = 0;
 
-	/**
-	 * Create a work result of the proper type and size
-	 */
+	/// Create a work result of the proper type and size
 	virtual ref<WorkResult> createWorkResult() const = 0;
 
 	/**
-	 * Create a copy of this work processor instance. 
+	 * \brief Create a copy of this work processor instance. 
+	 *
 	 * Note: Before the cloned work processor is used, its 
 	 * prepare() method will be called - therefore, state 
 	 * that is initialized there does not have to be copied.
@@ -108,22 +106,23 @@ public:
 	virtual ref<WorkProcessor> clone() const = 0;
 
 	/**
-	 * Called once before processing starts. This is useful for allocating
-	 * scratch space or resolving references to resource objects. Lengthy
-	 * computations should be performed in process() instead of here, since 
-	 * this this method will be called while the central scheduler lock
-	 * is held. A thrown exception will lead to the termination of the parallel 
-	 * process.
+	 * \brief Called once before processing starts. 
+	 * 
+	 * This is useful for allocating scratch space or resolving references 
+	 * to resource objects. Lengthy computations should be performed in 
+	 * process() instead of here, since this this method will be called
+	 * while the central scheduler lock is held. A thrown exception will 
+	 * lead to the termination of the parallel process.
 	 */
 	virtual void prepare() = 0;
 
 	/**
-	 * Process a work unit and store the computed results. The <tt>active</tt> 
-	 * parameter can be used to signal a premature stop of the execution flow. 
-	 * In this case, the work result is allowed to be undefined (it will 
-	 * simply be ignored).
-	 * A thrown exception will lead to the termination of the parallel 
-	 * process.
+	 * \brief Process a work unit and store the computed results.
+	 * 
+	 * The <tt>active</tt> parameter can be used to signal a premature 
+	 * stop of the execution flow. In this case, the work result is allowed 
+	 * to be undefined (it will simply be ignored). A thrown exception will
+	 * lead to the termination of the parallel process.
 	 */
 	virtual void process(const WorkUnit *workUnit, WorkResult *workResult, 
 		const bool &stop) = 0;
@@ -138,9 +137,10 @@ protected:
 		: SerializableObject(stream, manager) { }
 
 	/**
-	 * Look up a named resource, which has been bound to the associated
-	 * parallel process. Throws an exception if the resource is not 
-	 * known / bound.
+	 * \brief Look up a named resource, which has been bound to 
+	 * the associated parallel process.
+	 *
+	 * Throws an exception if the resource is not known / bound.
 	 */
 	SerializableObject *getResource(const std::string &name);
 protected:
@@ -148,114 +148,143 @@ protected:
 };
 
 /**
- * Abstract parallelizable task. Models a larger piece of work that
- * can be split into independent `units' and subsequently farmed
- * out over a cluster or processed locally. After the work units have
- * been completed, the results are pieced back together to a solution of
- * the original large-scale problem. This class implements the core logic
- * running on the central scheduling server, i.e. the part that is
- * responsible for generating work units and accepting their results.
- * The module that performs the actual computation is an instance of
- * <tt>WorkProcessor</tt>, which is also specified here.
+ * \brief Abstract parallelizable task. 
+ *
+ * Models a larger piece of work that can be split into independent 
+ * `units' and subsequently farmed out over a cluster or processed locally.
+ * After the work units have been completed, the results are pieced back 
+ * together to a solution of the original large-scale problem. This class 
+ * implements the core logic running on the central scheduling server, 
+ * i.e. the part that is responsible for generating work units and 
+ * accepting their results. The module that performs the actual computation 
+ * is an instance of <tt>WorkProcessor</tt>, which is also specified here.
  * Finally, the this class references `resources', which denote 
  * chunks of globally shared read-only data required during execution.
  */
 class MTS_EXPORT_CORE ParallelProcess : public Object {
 	friend class Scheduler;
 public:
+	/// Binding from local resource names to global resource IDs
 	typedef std::map<std::string, int> ResourceBindings;
 
 	/// Return codes used by generateWork() and getReturnStatus()
 	enum EStatus {
-		EUnknown,
-		EPause,
-		ESuccess,
-		EFailure
+		EUnknown, ///< Unknown return status
+		EPause,   ///< Temporarily, no work units can be created
+		ESuccess, ///< The process finished / a piece of work was generated
+		EFailure  ///< The process failed / no more work is available
 	};
 
 	/**
-	 * Generate a piece of work. Takes a pre-allocated <tt>WorkUnit</tt>
-	 * instance of the appropriate sub-type and size (as specified by
-	 * <tt>ParallelProcess::getWorkUnitName</tt>) and fills it with the
-	 * appropriate content. Returns ESuccess on success and EFailure or EPause 
-	 * when no more work is left -- in that case, the work unit will 
-	 * be ignored and the process completed (EFailure) or temporarily
-	 * paused (EPause). When EPause was used, resubmission via 
-	 * <tt>Scheduler::schedule()</tt> will be required once more work 
-	 * is available. In some cases, it is useful to distribute 'nearby'
-	 * pieces of work to the same processor -- the <tt>worker</tt>
-	 * parameter can be used to implement this.
-	 * This function should run as quickly as possible, since it will 
-	 * be executed while the scheduler mutex is held. A thrown exception
-	 * will lead to the termination of the parallel process.
+	 * \brief Generate a piece of work.
+	 *
+	 * Takes a pre-allocated <tt>\ref WorkUnit</tt> instance of 
+	 * the appropriate sub-type and size (as specified by 
+	 * <tt>\ref ParallelProcess::getWorkUnitName()</tt>) and 
+	 * fills it with the appropriate content. Returns ESuccess
+	 * on success and EFailure or EPause when no more work is
+	 * left -- in that case, the work unit will be ignored and 
+	 * the process completed (\ref EFailure) or temporarily 
+	 * paused (\ref EPause). When \ref EPause was used, 
+	 * resubmission via <tt>\ref Scheduler::schedule()</tt> will 
+	 * be required once more work is available. In some cases, it 
+	 * is useful to distribute 'nearby' pieces of work to the same
+	 * processor -- the <tt>worker</tt> parameter can be used to 
+	 * implement this.
+	 * This function should run as quickly as possible, since it 
+	 * will be executed while the scheduler mutex is held. A 
+	 * thrown exception will lead to the termination of the 
+	 * parallel process.
+	 *
+	 * \param unit   Work unit data structure to be filled
+	 * \param worker ID of the worker executing this function
 	 */
 	virtual EStatus generateWork(WorkUnit *unit, int worker) = 0;
 
 	/**
-	 * Called whenever a work unit has been completed. Note 
-	 * that this may be executed by different threads and 
-	 * likely out of order (some sort of locking will 
-	 * generally be required when modifying data structures).
+	 * \brief Called whenever a work unit has been completed.
+	 *
+	 * Note that this function may concurrently be executed by 
+	 * multiple threads. Also, processing of work results will
+	 * generally be out of order with respect to the creation
+	 * in \ref generateWork().
+	 *
 	 * When a work unit is only partially completed due to
 	 * a call to <tt>Scheduler::cancel</tt>, the second
 	 * parameter is set to true.
 	 * A thrown exception will lead to the termination of 
 	 * the parallel process.
+	 *
+	 * \param result Work result to be processed
+	 * \param cancelled Was the associated work unit not fully completed
 	 */
 	virtual void processResult(const WorkResult *result,	
 		bool cancelled) = 0;
 
 	/**
-	 * Called when the parallel process is canceled
-	 * by Scheduler::cancel(). The default implementation 
-	 * does nothing.
+	 * \brief Called when the parallel process is canceled by 
+	 * \ref Scheduler::cancel().
+	 *
+	 * The default implementation does nothing.
 	 */
 	virtual void handleCancellation();
 
 	/**
-	 * After a process has finished excecution, its return
-	 * status can be queried through this method. 
-	 * Returns one of <tt>Success, Failure or Unknown</tt> 
-	 * (EUnknown means that the process is either still running 
+	 * \brief Query the return status of a process after its
+	 * execution has finished.
+	 * 
+	 * Returns one of <tt>\ref Success, \ref Failure or \ref Unknown</tt> 
+	 * (\ref EUnknown means that the process is either still running 
 	 * or has never been scheduled).
 	 */
 	inline EStatus getReturnStatus() const { return m_returnStatus; }
 
 	/**
-	 * Create an instance of the algorithm responsible
+	 * \brief Create an instance of the algorithm responsible
 	 * for executing the work units of this parallel process.
 	 */
 	virtual ref<WorkProcessor> createWorkProcessor() const = 0;
 
 	/**
-	 * Bind a resource to this parallel process. Takes a resource
-	 * ID as given by the scheduler and associates it with a name.
-	 * This name can later be used by the work processor to access
-	 * the resource data.
+	 * \brief Bind a resource to this parallel process.
+	 *
+	 * Takes a resource ID as given by the scheduler and associates it 
+	 * with a name. This name can later be used by the work processor 
+	 * to access the resource data.
+	 * 
+	 * \param name Process-specific name of the resource
+	 * \param id Resource ID as returned by \ref Scheduler::registerResource()
+	 * \sa WorkProcessor::getResource
 	 */
 	virtual void bindResource(const std::string &name, int id);
 
 	/**
-	 * Is this process local, i.e. not distributed to remote 
-	 * processing nodes? The default implementation returs false.
+	 * \brief Is this process strictly local?
+	 *
+	 * If a process is marked as local, it shouldn't be distributed 
+	 * to remote processing nodes? The default implementation 
+	 * returns false.
 	 */
 	virtual bool isLocal() const;
 
 	/**
-	 * Return the log level for events associated with this process.
+	 * \brief Return the log level for events associated with this process.
+	 *
 	 * By default, this is set to EDebug
 	 */
 	inline ELogLevel getLogLevel() const { return m_logLevel; }
 
 	/**
-	 * Return a list of the bound resources
+	 * \brief Return a list of all bound resources
 	 */
 	inline const ResourceBindings &getResourceBindings() const { return m_bindings; }
 
 	/**
-	 * Return a list of plugins required by this parallel process. 
-	 * The default implementation just returns all plugins that are 
-	 * loaded in the current application image.
+	 * \brief Return a list of plugins required by this parallel process. 
+	 *
+	 * This is required so that remote machines can load the plugins before
+	 * they accept work from this process. The default implementation just 
+	 * returns all plugins that are loaded in the current application.
 	 */
 	virtual std::vector<std::string> getRequiredPlugins();
 
@@ -275,35 +304,40 @@ protected:
 class Worker;
 
 /**
- * Centralized task scheduler implementation. Accepts parallelizable 
- * jobs and distributes their computational load both locally and remotely. 
- * This is done by associating different types of <tt>Worker</tt>s with 
- * the scheduler. These try to acquire work units from the scheduler, 
- * which are then executed on the current machine or sent to remote 
- * nodes over a network connection.
+ * \brief Centralized task scheduler implementation.
+ *
+ * Accepts parallelizable jobs and distributes their computational load 
+ * both locally and remotely. This is done by associating different types 
+ * of <tt>\ref Worker</tt>s with the scheduler. These try to acquire work 
+ * units from the scheduler, which are then executed on the current machine 
+ * or sent to remote nodes over a network connection.
  */
 class MTS_EXPORT_CORE Scheduler : public Object {
 	friend class Worker;
 public:
 	/**
-	 * Schedule a parallelizable process for execution. If the
-	 * scheduler is currently running and idle, its execution 
-	 * will begin immediately. Returns false if the process
-	 * is already scheduled and has not yet terminated.
+	 * \brief Schedule a parallelizable process for execution.
+	 *
+	 * If the scheduler is currently running and idle, its execution 
+	 * will begin immediately. Returns \a false if the process
+	 * is already scheduled and has not yet terminated and \a true
+	 * in any other case.
 	 */
 	bool schedule(ParallelProcess *process);
 
 	/**
-	 * Block until the process has successfully been completed
-	 * or canceled prematurely. Returns false if the process
-	 * does not exist or has already finished by the time
-	 * <tt>wait()</tt> is invoked.
+	 * \brief Block until the process has successfully been completed
+	 * or canceled prematurely. 
+	 *
+	 * Returns false if the process does not exist or has already 
+	 * finished by the time <tt>\ref wait()</tt> is invoked.
 	 */
 	bool wait(const ParallelProcess *process);
 
 	/**
-	 * Cancel the execution of a parallelizable process. Upon
-	 * return, no more work from this process is running.
+	 * \brief Cancel the execution of a parallelizable process. 
+	 *
+	 * Upon return, no more work from this process is running.
 	 * Returns false if the process does not exist (anymore).
 	 */
 	inline bool cancel(ParallelProcess *proc) {
@@ -311,41 +345,48 @@ public:
 	}
 
 	/**
-	 * Register a serializable resource with the scheduler. This should be
-	 * thought of as a constant state that is shared amongst all processing
-	 * nodes. Resources can be reused by subsequent parallel processes, and
-	 * consequently do not have to be re-transmitted over the network. Returns
-	 * a resource ID, which can be used to reference the associated data.
+	 * \brief Register a serializable resource with the scheduler.
+	 *
+	 * A resource should be thought of as a constant state that is shared 
+	 * amongst all processing nodes. Resources can be reused by 
+	 * subsequent parallel processes, and consequently do not have to be 
+	 * re-transmitted over the network. Returns a resource ID, which can be 
+	 * used to reference the associated data.
 	 */
 	int registerResource(SerializableObject *resource);
 
 	/**
-	 * Register a 'manifold' resource with the scheduler. Manifold means that
-	 * in comparison to the previous method, a separate instance is provided 
-	 * for every core. An example where this is useful is to distribute
-	 * random generator state when performing parallel Monte Carlo simulations. 
-	 * <tt>resources</tt> must be a vector whose length is equal 
-	 * to <tt>getCoreCount()</tt>.
+	 * \brief Register a \a manifold resource with the scheduler. 
+	 * Manifold means that in comparison to the previous method, a separate 
+	 * instance is provided  for every core. An example where this is useful 
+	 * is to distribute random generator state when performing parallel 
+	 * Monte Carlo simulations. <tt>resources</tt> must be a vector whose 
+	 * length is equal to <tt>\ref getCoreCount()</tt>.
 	 */
 	int registerManifoldResource(std::vector<SerializableObject *> &resources);
 
 	/**
-	 * Increase the reference count of a previously registered resource.
+	 * \brief Increase the reference count of a previously registered resource.
+	 *
 	 * The resource must be unregistered an additional time after calling
 	 * this function.
+	 *
+	 * \sa unregisterResource
 	 */
 	void retainResource(int resourceID);
 
 	/** 
-	 * Unregister a resource from the scheduler (takes the previously 
-	 * created ID). Note that the resource's won't be removed
-	 * until all processes using it have terminated)
+	 * \brief Unregister a resource from the scheduler 
+	 * 
+	 * Note that the resource's won't be removed until all processes using 
+	 * it have terminated)
 	 */
 	void unregisterResource(int id);
 
 	/**
-	 * Return the ID of a registered resource. Throws an exception
-	 * if the resource cannot be found.
+	 * \brief Return the ID of a registered resource
+	 *
+	 * Throws an exception if the resource cannot be found.
 	 */
 	int getResourceID(const SerializableObject *resource) const;
 
@@ -365,15 +406,15 @@ public:
 	void start();
 
 	/**
-	 * Puase the distribution of work units and shut down all running workers.
-	 * Any currently scheduled work units are still completed. Processing can
-	 * be resumed via <tt>start()</tt>.
+	 * \brief Pause the distribution of work units and shut down all 
+	 * running workers.
+	 *
+	 * Any currently scheduled work units are still completed.
+	 * Processing can be resumed via <tt>\ref start()</tt>.
 	 */
 	void pause();
-	
-	/**
-	 * Cancel all running processes and free memory used by resources
-	 */
+
+	/// Cancel all running processes and free memory used by resources
 	void stop();
 
 	/// Return the total number of cores exposed through this scheduler
@@ -525,7 +566,7 @@ protected:
 			signalProcessTermination(item.proc, item.rec);
 		m_mutex->unlock();
 	}
-	
+
 	/**
 	 * Cancel the execution of a parallelizable process. Upon
 	 * return, no more work from this process is running. When
@@ -589,7 +630,7 @@ private:
 };
 
 /**
- * Base class of all worker implementations
+ * \brief Base class of all worker implementations
  */
 class MTS_EXPORT_CORE Worker : public Thread {
 	friend class Scheduler;
@@ -615,20 +656,22 @@ protected:
 		int workerIndex, int coreOffset);
 
 	/**
-	 * Called to inform a worker that a resource is no longer in use. The
-	 * remote worker uses this to notify the machine on the other end that
+	 * \brief Called to inform a worker that a resource is no longer in use.
+	 *
+	 * The remote worker uses this to notify the machine on the other end that
 	 * the memory used by this resource can now be released.
 	 */
 	virtual void signalResourceExpiration(int id) = 0;
 
 	/**
-	 * Called to inform a worker that a process has been cancelled
+	 * \brief Called to inform a worker that a process has been cancelled
+	 *
 	 * Guaranteed to be called while the Scheduler's main lock is held. 
 	 */
 	virtual void signalProcessCancellation(int id) = 0;
 
 	/**
-	 * Called to inform a worker that a process has successfully been
+	 * \brief Called to inform a worker that a process has successfully been
 	 * completed and any associated resources can be freed.
 	 */
 	virtual void signalProcessTermination(int id) = 0;
@@ -669,7 +712,7 @@ protected:
 };
 
 /**
- * Local worker thread. Acquires work from the scheduler and executes 
+ * \brief Acquires work from the scheduler and executes 
  * it locally.
  */
 class MTS_EXPORT_CORE LocalWorker : public Worker {

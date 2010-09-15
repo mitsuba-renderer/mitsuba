@@ -25,14 +25,15 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Mesh vertex data structure. Stores 3D coordinates,
- * vertex normals, UV coordinates and a tangent frame
+ * \brief Mesh vertex data structure. Stores 3D coordinates,
+ * vertex normals, UV coordinates and a tangent frame.
  */
 struct Vertex {
-	Point v;
-	Normal n;
-	Point2 uv;
-	Vector dpdu, dpdv;
+	Point v;     ///< %Vertex position
+	Normal n;    ///< %Vertex normal
+	Point2 uv;   ///< %Texture coordinates
+	Vector dpdu; ///< Partial derivative of the position with respect to \a u.
+	Vector dpdv; ///< Partial derivative of the position with respect to \a v.
 
 	inline bool operator==(const Vertex &vert) const {
 		return (v == vert.v && n == vert.n && uv == vert.uv 
@@ -44,26 +45,29 @@ struct Vertex {
 	}
 };
 
-/** \brief Triangle class including a collection of routines 
- *   for analysis and transformation. Triangles are stored as
- *   indices into a vertex array
+/** 
+ * \brief Simple triangle class including a collection of routines 
+ * for analysis and transformation. 
+ *
+ * Triangles are stored as indices into a vertex array
  */
 struct MTS_EXPORT_CORE Triangle {
-	/* Indices into a vertex buffer */
+	/// Indices into a vertex buffer
 	unsigned int idx[3];
 
 	/// Construct an axis-aligned box, which contains the triangle
 	AABB getAABB(const Vertex *buffer) const;
 
 	/**
-	 * Returns the axis-aligned bounding box of a triangle after it has 
-	 * clipped to the extends of another, given AABB. This function uses the 
-	 * Sutherland-Hodgman algorithm to calculate the convex polygon, which
-	 * is created when applying all 6 AABB splitting planes to the triangle.
-	 * Afterwards, the AABB of the newly created convex polygon is returned.
-	 * This function is an important component for efficiently creating
-	 * 'Perfect Split' KD-trees. For more detail, see
-	 * "On building fast kd-Trees for Ray Tracing, and on doing 
+	 * \brief Returns the axis-aligned bounding box of a triangle after it has 
+	 * clipped to the extends of another, given AABB. 
+	 *
+	 * This function uses the Sutherland-Hodgman algorithm to calculate the 
+	 * convex polygon, which is created when applying all 6 AABB splitting 
+	 * planes to the triangle. Afterwards, the AABB of the newly created 
+	 * convex polygon is returned. This function is an important component 
+	 * for efficiently creating 'Perfect Split' KD-trees. For more detail, 
+	 * see "On building fast kd-Trees for Ray Tracing, and on doing 
 	 * that in O(N log N)" by Ingo Wald and Vlastimil Havran
 	 */
 	AABB getClippedAABB(const Vertex *buffer, const AABB &aabb) const;
@@ -73,8 +77,8 @@ struct MTS_EXPORT_CORE Triangle {
 	 * Uses the algorithm presented by Moeller and Trumbore at
 	 * http://www.acm.org/jgt/papers/MollerTrumbore97/code.html
 	 * Returns true if an intersection has been detected
-	 * On success, pT contains the distance from the ray origin to the
-	 * intersection point and pUV contains the intersection point in
+	 * On success, \a t contains the distance from the ray origin to the
+	 * intersection point, and \a u and \a v contain the intersection point in
 	 * the local triangle coordinate system
 	 */
 	bool rayIntersect(const Vertex *buffer, const Ray &ray, Float &u, 

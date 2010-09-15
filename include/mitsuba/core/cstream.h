@@ -23,7 +23,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Console stream
+/** \brief Interface to the default stdin/stdout console streams
  */
 class MTS_EXPORT_CORE ConsoleStream : public Stream {
 public:

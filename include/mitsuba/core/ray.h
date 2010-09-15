@@ -102,7 +102,7 @@ struct Ray {
 	}
 };
 
-/** \brief Ray differential -- enhances the basic ray class with 
+/** \brief %Ray differential -- enhances the basic ray class with 
    information about the rays of adjacent pixels on the view plane */
 struct RayDifferential : public Ray {
 	bool hasDifferentials;
@@ -119,16 +119,29 @@ struct RayDifferential : public Ray {
 	inline explicit RayDifferential(const Ray &ray) 
 		: Ray(ray), hasDifferentials(false) {
 	}
-	
+
 	inline RayDifferential(const RayDifferential &ray) 
 		: Ray(ray), hasDifferentials(ray.hasDifferentials), rx(ray.rx), ry(ray.ry) {
 	}
+	
+	inline void operator=(const RayDifferential &ray) {
+		o = ray.o;
+		mint = ray.mint;
+		d = ray.d;
+		maxt = ray.maxt;
+		dRcp = ray.dRcp;
+		hasDifferentials = ray.hasDifferentials;
+		rx = ray.rx;
+		ry = ray.ry;
+	}
 
 	inline void operator=(const Ray &ray) {
-		setOrigin(ray.o);
-		setDirection(ray.d);
+		o = ray.o;
 		mint = ray.mint;
+		d = ray.d;
 		maxt = ray.maxt;
+		dRcp = ray.dRcp;
+		hasDifferentials = false;
 	}
 };
 

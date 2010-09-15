@@ -25,9 +25,10 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Templated multiple-reference octree. Based on the excellent 
- * implementation in PBRT. Modifications are the addition of a 
- * bounding sphere query and support for multithreading.
+ * \brief Generic multiple-reference octree.
+ *
+ * Based on the excellent implementation in PBRT. Modifications are 
+ * the addition of a bounding sphere query and support for multithreading.
  */
 template <typename T> class Octree {
 public:

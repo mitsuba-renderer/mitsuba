@@ -21,11 +21,11 @@
 
 #include <mitsuba/core/sched.h>
 
-/* How many work units should be sent to a remote worker
+/** How many work units should be sent to a remote worker
    at a time? This is a multiple of the worker's core count */
 #define BACKLOG_FACTOR 3
 
-/* Once the back log factor drops below this value (also a
+/** Once the back log factor drops below this value (also a
    multiple of the core size), the stream processor will
    continue sending batches of work units */
 #define CONTINUE_FACTOR 2
@@ -36,13 +36,16 @@ class RemoteWorkerReader;
 class StreamBackend;
 
 /**
- * Remote worker thread. Acquires work from the scheduler and forwards
- * it to a processing node reachable over some form of stream (usually
- * a <tt>SocketStream</tt>).
+ * \brief Acquires work from the scheduler and forwards
+ * it to a processing node reachable through a \ref Stream.
  */
 class MTS_EXPORT_CORE RemoteWorker : public Worker {
 	friend class RemoteWorkerReader;
 public:
+	/**
+	 * \brief Construct a new remote worker with the given name and 
+	 * communication stream
+	 */
 	RemoteWorker(const std::string &name, Stream *stream);
 
 	/// Return the name of the node on the other side
@@ -84,8 +87,9 @@ protected:
 };
 
 /**
- * Remote worker helper thread - constantly waits for finished
- * work units sent by the processing node.
+ * \brief Communication helper thread required by \ref RemoteWorker.
+ * 
+ * Constantly waits for finished work units sent by the processing node.
  */
 class MTS_EXPORT_CORE RemoteWorkerReader : public Thread {
 	friend class RemoteWorker;
@@ -110,11 +114,19 @@ private:
 };
 
 /**
- * 'Fake' parallel process used to insert work units from a
+ * \brief Parallel process facade used to insert work units from a
  * remote scheduler into the local one.
  */
 class MTS_EXPORT_CORE RemoteProcess : public ParallelProcess {
 public:
+	/**
+	 * \brief Create a new remote process
+	 *
+	 * \param id        Identification number for this process
+	 * \param logLevel  Log level for events associated with this process
+	 * \param backend   The responsible server-side communication backend
+	 * \param proc      Work processor instance for use with this process
+	 */
 	RemoteProcess(int id, ELogLevel logLevel, 
 		StreamBackend *backend, WorkProcessor *proc);
 
@@ -125,6 +137,7 @@ public:
 	ref<WorkProcessor> createWorkProcessor() const;
 	void handleCancellation();
 
+	/// Get an empty work unit from the process (or create one)
 	inline WorkUnit *getEmptyWorkUnit() {
 		ref<WorkUnit> wu;
 		m_mutex->lock();
@@ -139,12 +152,14 @@ public:
 		return wu;
 	}
 
+	/// Make a full work unit available to the process
 	inline void putFullWorkUnit(WorkUnit *wu) {
 		m_mutex->lock();
 		m_full.push_back(wu);
 		m_mutex->unlock();
 	}
 
+	/// Mark the process as finished
 	inline void setDone() {
 		m_mutex->lock();
 		m_done = true;
@@ -166,9 +181,10 @@ private:
 };
 
 /**
- * Stream backend - attaches to the end of a stream, accepts work units
- * and forwards them to the local scheduler. Can be used to create
- * remote processing nodes.
+ * \brief Network processing communication backend
+ *
+ * Attaches to the end of a stream, accepts work units and forwards 
+ * them to the local scheduler. Can be used to create network processing nodes.
  */
 class MTS_EXPORT_CORE StreamBackend : public Thread {
 	friend class RemoteProcess;
@@ -192,7 +208,7 @@ public:
 	};
 
 	/**
-	 * Create a new stream backend
+	 * \brief Create a new stream backend
 	 *
 	 * @param name
 	 *    Name of the created thread

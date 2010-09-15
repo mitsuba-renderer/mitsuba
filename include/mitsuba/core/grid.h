@@ -24,8 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Uniform 3D grid for storing arbitrary quantities, which can 
- * be queried and updated by rasterizing rays to the grid.
+ * \brief Uniform 3D grid for storing and manipulating arbitrary quantities
  */
 template <typename ValueType> class Grid {
 public:
@@ -82,7 +81,7 @@ public:
 
 	/// Return the grid AABB
 	inline const AABB &getAABB() const { return m_aabb; }
-	
+
 	/// Return the grid resolution
 	inline const Vector3i &getResolution() const { return m_res; }
 
@@ -98,7 +97,7 @@ public:
 	inline const ValueType &operator()(int x, int y, int z) const {
 		return m_cells[x + y*m_res.x + z*m_slab];
 	}
-	/// Return the underlying array
+	/// Return a pointer to the underlying array
 	inline ValueType *getData() const { return m_cells; }
 
 	/// Return a string representation
@@ -172,7 +171,10 @@ public:
 		return true;
 	}
 
-	/// Rasterize a ray to the grid
+	/**
+	 * \brief Rasterize a ray to the grid and apply the functor to 
+	 * every traversed cell
+	 */
 	template <typename Functor> void rasterize(const Ray &ray, Functor &functor) {
 		Float mint, maxt, t;
 
