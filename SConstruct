@@ -711,6 +711,8 @@ elif sys.platform == 'darwin':
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libjpeg.framework/Resources/lib/libjpeg.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libboost.framework/Resources/lib/libboost_system-xgcc42-mt-1_39.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libboost.framework/Resources/lib/libboost_filesystem-xgcc42-mt-1_39.dylib')
+	if hasCollada:
+		installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/Collada14Dom.framework/Resources/lib/libCollada14Dom.dylib')
 	if hasQt:
 		installTargets += env.Install('Mitsuba.app/Contents/MacOS', 'mtsgui')
 		installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtCore.framework/Versions/4/QtCore')
