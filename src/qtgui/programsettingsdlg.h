@@ -91,6 +91,7 @@ public:
 			case EDebug: ui->logVerbosityBox->setCurrentIndex(1); break;
 			case EInfo: ui->logVerbosityBox->setCurrentIndex(2); break;
 			case EWarn: ui->logVerbosityBox->setCurrentIndex(3); break;
+			case EError: ui->logVerbosityBox->setCurrentIndex(4); break;
 			default:
 				SLog(EError, "Unknown verbosity level!");
 		}
@@ -102,6 +103,7 @@ public:
 			case 1: return EDebug;
 			case 2: return EInfo;
 			case 3: return EWarn;
+			case 4: return EError;
 			default:
 				SLog(EError, "Unknown verbosity level!");
 				return EDebug;

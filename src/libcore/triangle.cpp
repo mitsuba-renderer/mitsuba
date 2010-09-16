@@ -22,9 +22,9 @@ MTS_NAMESPACE_BEGIN
 
 bool Triangle::rayIntersect(const Vertex *buffer, const Ray &ray,
 	Float &u, Float &v, Float &t) const {
-	const Point &v0 = buffer[idx[0]].v;
-	const Point &v1 = buffer[idx[1]].v;
-	const Point &v2 = buffer[idx[2]].v;
+	const Point &v0 = buffer[idx[0]].p;
+	const Point &v1 = buffer[idx[1]].p;
+	const Point &v2 = buffer[idx[2]].p;
 
 	/* find vectors for two edges sharing v[0] */
 	Vector edge1 = v1 - v0, edge2 = v2 - v0;
@@ -63,9 +63,9 @@ bool Triangle::rayIntersect(const Vertex *buffer, const Ray &ray,
 
 Point Triangle::sample(const Vertex *buffer, Normal &normal, 
 	const Point2 &sample) const {
-	const Point &v0 = buffer[idx[0]].v;
-	const Point &v1 = buffer[idx[1]].v;
-	const Point &v2 = buffer[idx[2]].v;
+	const Point &v0 = buffer[idx[0]].p;
+	const Point &v1 = buffer[idx[1]].p;
+	const Point &v2 = buffer[idx[2]].p;
 	const Normal &n0 = buffer[idx[0]].n;
 	const Normal &n1 = buffer[idx[1]].n;
 	const Normal &n2 = buffer[idx[2]].n;
@@ -82,9 +82,9 @@ Point Triangle::sample(const Vertex *buffer, Normal &normal,
 }
 
 Float Triangle::surfaceArea(const Vertex *buffer) const {
-	const Point &v0 = buffer[idx[0]].v;
-	const Point &v1 = buffer[idx[1]].v;
-	const Point &v2 = buffer[idx[2]].v;
+	const Point &v0 = buffer[idx[0]].p;
+	const Point &v1 = buffer[idx[1]].p;
+	const Point &v2 = buffer[idx[2]].p;
 	Vector sideA = v1 - v0, sideB = v2 - v0;
 	return 0.5f * cross(sideA, sideB).length();
 }
@@ -92,7 +92,7 @@ Float Triangle::surfaceArea(const Vertex *buffer) const {
 AABB Triangle::getAABB(const Vertex *buffer) const {
 	AABB aabb;
 	for (int k=0; k<3; k++)
-		aabb.expandBy(buffer[idx[k]].v);
+		aabb.expandBy(buffer[idx[k]].p);
 	return aabb;
 }
 
@@ -144,7 +144,7 @@ AABB Triangle::getClippedAABB(const Vertex *buffer, const AABB &aabb) const {
 	int nVertices = 3;
 
 	for (int i=0; i<3; ++i)
-		vertices1[i] = buffer[idx[i]].v;
+		vertices1[i] = buffer[idx[i]].p;
 
 	for (int axis=0; axis<3; ++axis) {
 		nVertices = sutherlandHodgman(vertices1, nVertices, vertices2, axis, aabb.min[axis], true);
@@ -155,11 +155,10 @@ AABB Triangle::getClippedAABB(const Vertex *buffer, const AABB &aabb) const {
 	for (int i=0; i<nVertices; ++i)
 		result.expandBy(vertices1[i]);
 
-	/* Cover up some numerical imprecisions */
-	for (int i=0; i<3; ++i) {
-		result.min[i] -= Epsilon * std::abs(result.min[i]);
-		result.max[i] += Epsilon * std::abs(result.max[i]);
-	}
+	// Cover up some floating point imprecisions
+	Vector error = aabb.getExtents() * Epsilon;
+	result.min -= error;
+	result.max += error;
 
 	result.clip(aabb);
 

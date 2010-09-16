@@ -522,6 +522,11 @@ above and including &quot;Info&quot; is written to the console.</string>
            <string>Warn</string>
           </property>
          </item>
+         <item>
+          <property name="text">
+           <string>Error</string>
+          </property>
+         </item>
         </widget>
        </item>
        <item row="6" column="1">

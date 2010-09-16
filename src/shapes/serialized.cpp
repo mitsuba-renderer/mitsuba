@@ -48,7 +48,7 @@ public:
 		if (!m_objectToWorld.isIdentity()) {
 			for (size_t i=0; i<m_vertexCount; ++i) {
 				Vertex &vertex = m_vertexBuffer[i];
-				vertex.v = m_objectToWorld(vertex.v);
+				vertex.p = m_objectToWorld(vertex.p);
 				vertex.n = m_objectToWorld(vertex.n);
 				vertex.dpdu = m_objectToWorld(vertex.dpdu);
 				vertex.dpdv = m_objectToWorld(vertex.dpdv);

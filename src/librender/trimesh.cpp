@@ -151,10 +151,10 @@ void TriMesh::configure() {
 	/* Generate a bounding sphere */
 	m_aabb.reset();
 	for (size_t i=0; i<m_vertexCount; i++) 
-		m_aabb.expandBy(m_vertexBuffer[i].v);
+		m_aabb.expandBy(m_vertexBuffer[i].p);
 	m_bsphere.center = m_aabb.getCenter();
 	for (size_t i=0; i<m_vertexCount; i++) 
-		m_bsphere.expandBy(m_vertexBuffer[i].v);
+		m_bsphere.expandBy(m_vertexBuffer[i].p);
 }
 
 Float TriMesh::sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
@@ -172,9 +172,9 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 		for (unsigned int i=0; i<m_vertexCount; i++)
 			m_vertexBuffer[i].n = Normal(0.0, 0.0f, 0.0f);
 		for (unsigned int i=0; i<m_triangleCount; i++) {
-			const Point &v0 = m_vertexBuffer[m_triangles[i].idx[0]].v;
-			const Point &v1 = m_vertexBuffer[m_triangles[i].idx[1]].v;
-			const Point &v2 = m_vertexBuffer[m_triangles[i].idx[2]].v;
+			const Point &v0 = m_vertexBuffer[m_triangles[i].idx[0]].p;
+			const Point &v1 = m_vertexBuffer[m_triangles[i].idx[1]].p;
+			const Point &v2 = m_vertexBuffer[m_triangles[i].idx[2]].p;
 			Normal n = Normal(cross(v1 - v0, v2 - v0));
 			Float length = n.length();
 			if (length != 0) {
@@ -232,9 +232,9 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 			unsigned int idx0 = m_triangles[i].idx[0],
 						 idx1 = m_triangles[i].idx[1],
 						 idx2 = m_triangles[i].idx[2];
-			const Point &v0 = m_vertexBuffer[idx0].v;
-			const Point &v1 = m_vertexBuffer[idx1].v;
-			const Point &v2 = m_vertexBuffer[idx2].v;
+			const Point &v0 = m_vertexBuffer[idx0].p;
+			const Point &v1 = m_vertexBuffer[idx1].p;
+			const Point &v2 = m_vertexBuffer[idx2].p;
 			const Point2 &uv0 = m_vertexBuffer[idx0].uv;
 			const Point2 &uv1 = m_vertexBuffer[idx1].uv;
 			const Point2 &uv2 = m_vertexBuffer[idx2].uv;

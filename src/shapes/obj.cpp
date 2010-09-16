@@ -31,7 +31,7 @@ MTS_NAMESPACE_BEGIN
 class WavefrontOBJ : public Shape {
 public:
 	struct OBJTriangle {
-		unsigned int v[3];
+		unsigned int p[3];
 		unsigned int n[3];
 		unsigned int uv[3];
 	};
@@ -128,7 +128,7 @@ public:
 				triangles.push_back(t);
 				if (iss >> tmp) {
 					parse(t, 1, tmp);
-					std::swap(t.v[0], t.v[1]);
+					std::swap(t.p[0], t.p[1]);
 					std::swap(t.uv[0], t.uv[1]);
 					std::swap(t.n[0], t.n[1]);
 					triangles.push_back(t);
@@ -165,17 +165,17 @@ public:
 	void parse(OBJTriangle &t, int i, const std::string &str) {
 		std::vector<std::string> tokens = tokenize(str, "/");
 		if (tokens.size() == 1) {
-			t.v[i] = atoi(tokens[0].c_str())-1;
+			t.p[i] = atoi(tokens[0].c_str())-1;
 		} else if (tokens.size() == 2) {
 			if (str.find("//") == std::string::npos) {
-				t.v[i]  = atoi(tokens[0].c_str())-1;
+				t.p[i]  = atoi(tokens[0].c_str())-1;
 				t.uv[i] = atoi(tokens[1].c_str())-1;
 			} else {
-				t.v[i] = atoi(tokens[0].c_str())-1;
+				t.p[i] = atoi(tokens[0].c_str())-1;
 				t.n[i] = atoi(tokens[1].c_str())-1;
 			}
 		} else if (tokens.size() == 3) {
-			t.v[i] = atoi(tokens[0].c_str())-1;
+			t.p[i] = atoi(tokens[0].c_str())-1;
 			t.uv[i] = atoi(tokens[1].c_str())-1;
 			t.n[i] = atoi(tokens[2].c_str())-1;
 		} else {
@@ -229,12 +229,12 @@ public:
 		std::binary_function<Vertex, Vertex, bool> {
 	public:
 		bool operator()(const Vertex &v1, const Vertex &v2) const {
-			if (v1.v.x < v2.v.x) return true;
-			else if (v1.v.x > v2.v.x) return false;
-			if (v1.v.y < v2.v.y) return true;
-			else if (v1.v.y > v2.v.y) return false;
-			if (v1.v.z < v2.v.z) return true;
-			else if (v1.v.z > v2.v.z) return false;
+			if (v1.p.x < v2.p.x) return true;
+			else if (v1.p.x > v2.p.x) return false;
+			if (v1.p.y < v2.p.y) return true;
+			else if (v1.p.y > v2.p.y) return false;
+			if (v1.p.z < v2.p.z) return true;
+			else if (v1.p.z > v2.p.z) return false;
 			if (v1.n.x < v2.n.x) return true;
 			else if (v1.n.x > v2.n.x) return false;
 			if (v1.n.y < v2.n.y) return true;
@@ -268,13 +268,13 @@ public:
 		for (unsigned int i=0; i<triangles.size(); i++) {
 			Triangle tri;
 			for (unsigned int j=0; j<3; j++) {
-				unsigned int vertexId = triangles[i].v[j];
+				unsigned int vertexId = triangles[i].p[j];
 				unsigned int normalId = triangles[i].n[j];
 				unsigned int uvId = triangles[i].uv[j];
 				int key;
 
 				Vertex vertex;
-				vertex.v = vertices.at(vertexId);
+				vertex.p = vertices.at(vertexId);
 				if (hasNormals)
 					vertex.n = normals.at(normalId);
 				else

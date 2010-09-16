@@ -183,7 +183,7 @@ void KDTree::build() {
 			const Vertex *vb = mesh->getVertexBuffer();
 			const Triangle &tri = mesh->getTriangles()[ta.index];
 			for (int j=0; j<3; j++)
-				m_bsphere.expandBy(vb[tri.idx[j]].v);
+				m_bsphere.expandBy(vb[tri.idx[j]].p);
 		}
 	}
 
@@ -215,9 +215,9 @@ void KDTree::build() {
 		const TriMesh *mesh = static_cast<const TriMesh *>(m_shapes[ta.shapeIndex]);
 		const Vertex *vertices = mesh->getVertexBuffer();
 		const Triangle &tri = mesh->getTriangles()[ta.index];
-		Point A = vertices[tri.idx[0]].v,
-			  B = vertices[tri.idx[1]].v,
-			  C = vertices[tri.idx[2]].v;
+		Point A = vertices[tri.idx[0]].p,
+			  B = vertices[tri.idx[1]].p,
+			  C = vertices[tri.idx[2]].p;
 		m_failures += ta.load(A, B, C);
 	}
 #endif
@@ -670,9 +670,9 @@ void KDTree::createLeaf(int nodeIndex, int depth, int numPrims, EdgeEventVec3 &a
 				const TriMesh *mesh = static_cast<const TriMesh *>(m_shapes[t.shapeIndex]);
 				const Vertex *vertices = mesh->getVertexBuffer();
 				const Triangle &tri = mesh->getTriangles()[t.index];
-				A[packIndex] = vertices[tri.idx[0]].v;
-				B[packIndex] = vertices[tri.idx[1]].v;
-				C[packIndex] = vertices[tri.idx[2]].v;
+				A[packIndex] = vertices[tri.idx[0]].p;
+				B[packIndex] = vertices[tri.idx[1]].p;
+				C[packIndex] = vertices[tri.idx[2]].p;
 			} else {
 				nonTriFlag = true;
 			}

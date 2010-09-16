@@ -29,14 +29,14 @@ MTS_NAMESPACE_BEGIN
  * vertex normals, UV coordinates and a tangent frame.
  */
 struct Vertex {
-	Point v;     ///< %Vertex position
-	Normal n;    ///< %Vertex normal
+	Point p;     ///< %Position
+	Normal n;    ///< %Normal
 	Point2 uv;   ///< %Texture coordinates
 	Vector dpdu; ///< Partial derivative of the position with respect to \a u.
 	Vector dpdv; ///< Partial derivative of the position with respect to \a v.
 
 	inline bool operator==(const Vertex &vert) const {
-		return (v == vert.v && n == vert.n && uv == vert.uv 
+		return (p == vert.p && n == vert.n && uv == vert.uv 
 			     && dpdu == vert.dpdu && dpdv == vert.dpdv);
 	}
 	

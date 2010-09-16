@@ -208,12 +208,12 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 struct vertex_key_order : public 
 	std::binary_function<Vertex, Vertex, bool> {
 	static int compare(const Vertex &v1, const Vertex &v2) {
-		if (v1.v.x < v2.v.x) return -1;
-		else if (v1.v.x > v2.v.x) return 1;
-		if (v1.v.y < v2.v.y) return -1;
-		else if (v1.v.y > v2.v.y) return 1;
-		if (v1.v.z < v2.v.z) return -1;
-		else if (v1.v.z > v2.v.z) return 1;
+		if (v1.p.x < v2.p.x) return -1;
+		else if (v1.p.x > v2.p.x) return 1;
+		if (v1.p.y < v2.p.y) return -1;
+		else if (v1.p.y > v2.p.y) return 1;
+		if (v1.p.z < v2.p.z) return -1;
+		else if (v1.p.z > v2.p.z) return 1;
 		if (v1.n.x < v2.n.x) return -1;
 		else if (v1.n.x > v2.n.x) return 1;
 		if (v1.n.y < v2.n.y) return -1;
@@ -282,7 +282,7 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	for (size_t i=0; i<tess_data.size(); i+=tess_nSources) {
 		Vertex vertex;
 		domUint posRef = tess_data[i+vData->typeToOffsetInStream[EPosition]];
-		vertex.v = vData->data[vData->typeToOffset[EPosition]][posRef].toPoint();
+		vertex.p = vData->data[vData->typeToOffset[EPosition]][posRef].toPoint();
 
 		if (vData->typeToOffset[ENormal] != -1) {
 			domUint normalRef = tess_data[i+vData->typeToOffsetInStream[ENormal]];
@@ -306,9 +306,9 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 
 		triangle.idx[triangleIdx++] = key;
 		if (triangleIdx == 3) {
-			Point p0 = vertexBuffer[triangle.idx[0]].v,
-				p1 = vertexBuffer[triangle.idx[1]].v,
-				p2 = vertexBuffer[triangle.idx[2]].v;
+			Point p0 = vertexBuffer[triangle.idx[0]].p,
+				  p1 = vertexBuffer[triangle.idx[1]].p,
+				  p2 = vertexBuffer[triangle.idx[2]].p;
 			if (triMap.find(SimpleTriangle(p0, p1, p2)) != triMap.end() ||
 				triMap.find(SimpleTriangle(p2, p0, p1)) != triMap.end() ||
 				triMap.find(SimpleTriangle(p1, p2, p0)) != triMap.end() ||
