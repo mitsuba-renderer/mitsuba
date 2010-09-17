@@ -596,8 +596,8 @@ Spectrum FlakePhaseFunction::sample(const MediumSamplingRecord &mRec, const Vect
 
 	Vector wo = sphericalDirection(sample.x, sample.y);
 	_wo = frame.toWorld(wo);
-	return Spectrum(std::max((Float) 0, temp.eval(sample.x, sample.y)));
-//	return f(mRec, _wi, _wo);
+//	return Spectrum(std::max((Float) 0, temp.eval(sample.x, sample.y)));
+	return f(mRec, _wi, _wo);
 #else
 	/* Uniform sampling */
 	_wo = squareToSphere(_sample);

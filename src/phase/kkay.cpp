@@ -111,7 +111,7 @@ public:
 			ESampledType &sampledType, const Point2 &sample) const {
 		wo = squareToSphere(sample);
 		sampledType = ENormal;
-		return Spectrum(1.0f);
+		return f(mRec, wi, wo) / (4 * M_PI);
 	}
 
 	Spectrum sample(const MediumSamplingRecord &mRec, const Vector &wi, Vector &wo, 
@@ -119,17 +119,17 @@ public:
 		wo = squareToSphere(sample);
 		sampledType = ENormal;
 		pdf = 1/(4 * (Float) M_PI);
-		return Spectrum(pdf);
+		return f(mRec, wi, wo);
 	}
 
 	Spectrum f(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const {
-		Frame frame(mRec.orientation);
 		if (mRec.orientation.length() == 0)
 			return Spectrum(m_kd / (4*M_PI));
 
-		Vector orientation = normalize(mRec.orientation);
+		Frame frame(normalize(mRec.orientation));
 		Vector reflectedLocal = frame.toLocal(wo);
-		reflectedLocal.z = -dot(wi, orientation);
+
+		reflectedLocal.z = -dot(wi, frame.n);
 		Float a = std::sqrt((1-reflectedLocal.z*reflectedLocal.z) / 
 			(reflectedLocal.x*reflectedLocal.x + reflectedLocal.y*reflectedLocal.y));
 		reflectedLocal.y *= a;

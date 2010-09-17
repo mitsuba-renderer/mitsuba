@@ -74,7 +74,10 @@ public:
 	Float miWeight;
 };
 
-/** \brief Abstract phase function
+/** \brief Abstract phase function.
+ *
+ * The convention used here is that the incident and exitant
+ * direction arguments point away from the scattering event (similar to BSDFs).
  */
 class MTS_EXPORT_RENDER PhaseFunction : public ConfigurableObject {
 public:
@@ -83,7 +86,7 @@ public:
 		EDelta
 	};
 
-	/// Evaluate the phase function for a pair of directions (wi, wo)
+	/// Evaluate the phase function for an outward-pointing pair of directions (wi, wo)
 	virtual Spectrum f(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const = 0;
 
 	/**

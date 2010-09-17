@@ -56,19 +56,18 @@ public:
 		if (std::abs(m_g) < Epsilon) {
 			cosTheta = 1 - 2*sample.x;
 		} else {
-			Float sqrTerm = (1 - m_g * m_g) /
-				(1 - m_g + 2 * m_g * sample.x);
+			Float sqrTerm = (1 - m_g * m_g) / (1 - m_g + 2 * m_g * sample.x);
 			cosTheta = (1 + m_g * m_g - sqrTerm * sqrTerm) / (2 * m_g);
 		}
 
-		Float sinTheta = std::sqrt(std::max((Float) 0, 1-cosTheta*cosTheta));
+		Float sinTheta = std::sqrt(std::max((Float) 0, 1.0f-cosTheta*cosTheta));
 		Float phi = 2*M_PI*sample.y, cosPhi = std::cos(phi), sinPhi = std::sin(phi);
 
 		Vector dir(
 			sinTheta * cosPhi,
 			sinTheta * sinPhi,
 			cosTheta);
-		wo = Frame(wi).toWorld(dir);
+		wo = Frame(-wi).toWorld(dir);
 		
 		sampledType = ENormal;
 		return Spectrum(1.0f);
@@ -84,7 +83,7 @@ public:
 
 	Spectrum f(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const {
 		return Spectrum(1/(4*M_PI) * (1 - m_g*m_g) /
-			std::pow(1.f + m_g*m_g - 2.f * m_g * dot(wi, wo), (Float) 1.5f));
+			std::pow(1.f + m_g*m_g - 2.f * m_g * dot(-wi, wo), (Float) 1.5f));
 	}
 
 	std::string toString() const {
