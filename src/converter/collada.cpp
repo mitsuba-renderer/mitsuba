@@ -292,6 +292,9 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 		if (vData->typeToOffset[EUV] != -1) {
 			domUint uvRef = tess_data[i+vData->typeToOffsetInStream[EUV]];
 			vertex.uv = vData->data[vData->typeToOffset[EUV]][uvRef].toPoint2();
+#if 1
+			vertex.uv.y = 1-vertex.uv.y; // Invert the V coordinate
+#endif
 		}
 
 		int key = -1;
@@ -670,18 +673,11 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 			os << "\t</bsdf>" << endl << endl;
 		}
 	} else if (lambert) {
-		domCommon_float_or_param_type* transparency = lambert->getTransparency();
-		domCommon_float_or_param_type::domFloat *transparencyValue = 
-				transparency ? transparency->getFloat() : NULL;
-		if (transparencyValue && transparencyValue->getValue() > 0.5) {
-			os << "\t<bsdf id=\"" << identifier << "\" type=\"dielectric\"/>" << endl << endl;
-		} else {
-			domCommon_color_or_texture_type* diffuse = lambert->getDiffuse();
-			os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
-			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
-			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
-			os << "\t</bsdf>" << endl << endl;
-		}
+		domCommon_color_or_texture_type* diffuse = lambert->getDiffuse();
+		os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
+		loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
+		loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
+		os << "\t</bsdf>" << endl << endl;
 	} else if (blinn) {
 		SLog(EWarn, "\"%s\": Encountered a \"blinn\" COLLADA material, which is currently "
 			"unsupported in Mitsuba -- replacing it using a Phong material.", identifier.c_str());

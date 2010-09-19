@@ -28,18 +28,21 @@ MTS_NAMESPACE_BEGIN
 class GridTexture : public Texture {
 public:
 	GridTexture(const Properties &props) : Texture(props) {
-		m_reflectance = props.getSpectrum("reflectance", Spectrum(.5f));
+		m_brightReflectance = props.getSpectrum("brightReflectance", Spectrum(.4f));
+		m_darkReflectance = props.getSpectrum("darkReflectance", Spectrum(.2f));
 		m_width = props.getFloat("width", .01f);
 	}
 
 	GridTexture(Stream *stream, InstanceManager *manager) 
 	 : Texture(stream, manager) {
-		m_reflectance = Spectrum(stream);
+		m_brightReflectance = Spectrum(stream);
+		m_darkReflectance = Spectrum(stream);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Texture::serialize(stream, manager);
-		m_reflectance.serialize(stream);
+		m_brightReflectance.serialize(stream);
+		m_darkReflectance.serialize(stream);
 	}
 
 	Spectrum getValue(const Intersection &its) const {
@@ -52,9 +55,9 @@ public:
 			y-=1;
 
 		if (std::abs(x) < m_width || std::abs(y) < m_width)
-			return Spectrum(0.0f);
+			return m_darkReflectance;
 		else
-			return m_reflectance;
+			return m_brightReflectance;
 	}
 
 	bool usesRayDifferentials() const {
@@ -62,11 +65,11 @@ public:
 	}
 
 	Spectrum getMaximum() const {
-		return m_reflectance;
+		return m_brightReflectance;
 	}
 
 	Spectrum getAverage() const {
-		return m_reflectance; // that's not quite right
+		return m_brightReflectance; // that's not quite right
 	}
 
 	std::string toString() const {
@@ -75,7 +78,8 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	Spectrum m_reflectance;
+	Spectrum m_brightReflectance;
+	Spectrum m_darkReflectance;
 	Float m_width;
 };
 
