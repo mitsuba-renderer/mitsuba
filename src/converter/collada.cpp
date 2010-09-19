@@ -283,10 +283,13 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 		Vertex vertex;
 		domUint posRef = tess_data[i+vData->typeToOffsetInStream[EPosition]];
 		vertex.p = vData->data[vData->typeToOffset[EPosition]][posRef].toPoint();
+		vertex.dpdu = vertex.dpdv = Vector(0.0f);
 
 		if (vData->typeToOffset[ENormal] != -1) {
 			domUint normalRef = tess_data[i+vData->typeToOffsetInStream[ENormal]];
 			vertex.n = vData->data[vData->typeToOffset[ENormal]][normalRef].toNormal();
+		} else {
+			vertex.n = Normal(0.0f);
 		}
 
 		if (vData->typeToOffset[EUV] != -1) {
@@ -295,6 +298,8 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 #if 1
 			vertex.uv.y = 1-vertex.uv.y; // Invert the V coordinate
 #endif
+		} else {
+			vertex.uv = Point2(0.0f);
 		}
 
 		int key = -1;
