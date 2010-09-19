@@ -357,7 +357,8 @@ public:
 
 	/**
 	 * \brief Register a \a manifold resource with the scheduler. 
-	 * Manifold means that in comparison to the previous method, a separate 
+	 *
+	 * \a Manifold means that in comparison to the previous method, a separate 
 	 * instance is provided  for every core. An example where this is useful 
 	 * is to distribute random generator state when performing parallel 
 	 * Monte Carlo simulations. <tt>resources</tt> must be a vector whose 
@@ -529,8 +530,8 @@ public:
 	const MemoryStream *getResourceStream(int id);
 
 	/**
-	 * Test whether a resource is marked as manifold, 
-	 * i.e. different for every core
+	 * \brief Test whether a resource is marked as manifold, 
+	 * i.e. different for every core.
 	 */
 	bool isManifoldResource(int id) const;
 protected:
