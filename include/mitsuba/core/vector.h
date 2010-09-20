@@ -40,7 +40,11 @@ public:
 	 * computations involving uninitialized memory, which will probably
 	 * lead to a difficult-to-find bug.
 	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
 	TVector2() { }
+#else
+	TVector2() { x = y = std::numeric_limits<double>::quiet_NaN(); }
+#endif
 
 	/// Initialize the vector with the specified X and Z components
 	TVector2(T x, T y) : x(x), y(y) {  }
@@ -222,7 +226,11 @@ public:
 	 * computations involving uninitialized memory, which will probably
 	 * lead to a difficult-to-find bug.
 	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
 	TVector3() { }
+#else
+	TVector3() { x = y = z = std::numeric_limits<double>::quiet_NaN(); }
+#endif
 
 	/// Initialize the vector with the specified X, Y and Z components
 	TVector3(T x, T y, T z) : x(x), y(y), z(z) {  }
@@ -417,7 +425,11 @@ public:
 	 * computations involving uninitialized memory, which will probably
 	 * lead to a difficult-to-find bug.
 	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
 	TVector4() { }
+#else
+	TVector4() { x = y = z = w = std::numeric_limits<double>::quiet_NaN(); }
+#endif
 
 	/// Initialize the vector with the specified X, Y and Z components
 	TVector4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {  }

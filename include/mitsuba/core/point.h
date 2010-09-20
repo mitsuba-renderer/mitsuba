@@ -39,7 +39,11 @@ template <typename T> struct TPoint2 {
 	 * computations involving uninitialized memory, which will probably
 	 * lead to a difficult-to-find bug.
 	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
 	TPoint2() { }
+#else
+	TPoint2() { x = y = std::numeric_limits<double>::quiet_NaN(); }
+#endif
 
 	/// Initialize the point with the specified X, Y and Z components
 	TPoint2(T x, T y) : x(x), y(y) {  }
@@ -221,7 +225,11 @@ template <typename T> struct TPoint3 {
 	 * computations involving uninitialized memory, which will probably
 	 * lead to a difficult-to-find bug.
 	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
 	TPoint3() { }
+#else
+	TPoint3() { x = y = z = std::numeric_limits<double>::quiet_NaN(); }
+#endif
 
 	/// Initialize the point with the specified X, Y and Z components
 	TPoint3(T x, T y, T z) : x(x), y(y), z(z) {  }
@@ -406,7 +414,11 @@ template <typename T> struct TPoint4 {
 	 * computations involving uninitialized memory, which will probably
 	 * lead to a difficult-to-find bug.
 	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
 	TPoint4() { }
+#else
+	TPoint4() { x = y = z = w = std::numeric_limits<double>::quiet_NaN(); }
+#endif
 
 	/// Initialize the point with the specified X, Y and Z components
 	TPoint4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {  }

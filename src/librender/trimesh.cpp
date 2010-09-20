@@ -170,7 +170,7 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 	
 	if (!hasNormals) {
 		for (unsigned int i=0; i<m_vertexCount; i++)
-			m_vertexBuffer[i].n = Normal(0.0, 0.0f, 0.0f);
+			m_vertexBuffer[i].n = Normal(0.0f);
 		for (unsigned int i=0; i<m_triangleCount; i++) {
 			const Point &v0 = m_vertexBuffer[m_triangles[i].idx[0]].p;
 			const Point &v1 = m_vertexBuffer[m_triangles[i].idx[1]].p;
@@ -219,11 +219,11 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 		int *sharers = new int[m_vertexCount];
 
 		for (unsigned int i=0; i<m_vertexCount; i++) {
-			m_vertexBuffer[i].dpdu = Vector(0.0, 0.0f, 0.0f);
-			m_vertexBuffer[i].dpdv = Vector(0.0, 0.0f, 0.0f);
+			m_vertexBuffer[i].dpdu = Vector(0.0f);
+			m_vertexBuffer[i].dpdv = Vector(0.0f);
 			if (m_vertexBuffer[i].n.isZero()) {
 				zeroNormals++;
-				m_vertexBuffer[i].n = Normal(1, 0, 0);
+				m_vertexBuffer[i].n = Normal(1.0f, 0.0f, 0.0f);
 			}
 			sharers[i] = 0;
 		}
@@ -290,7 +290,7 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 			m_vertexBuffer[idx2].dpdv += dpdv;
 			sharers[idx0]++; sharers[idx1]++; sharers[idx2]++;
 		}
-					
+
 		/* Orthogonalization + Normalization pass */
 		for (unsigned int i=0; i<m_vertexCount; i++) {
 			Vector dpdu = m_vertexBuffer[i].dpdu;

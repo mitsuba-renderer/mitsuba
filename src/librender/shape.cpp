@@ -179,7 +179,7 @@ std::string Intersection::toString() const {
 
 void Intersection::computePartials(const RayDifferential &ray) {
 	/* Compute the texture coordinates partials wrt. 
-		changes in the screen-space position. Based on PBRT */
+	   changes in the screen-space position. Based on PBRT */
 	if (hasUVPartials)
 		return;
 	hasUVPartials = true;
@@ -210,14 +210,17 @@ void Intersection::computePartials(const RayDifferential &ray) {
 	Point px = ray.rx(tx), py = ray.ry(ty);
 
 	/* Calculate the U and V partials by solving two out
-		of a set of 3 equations in an overconstrained system */
+	   of a set of 3 equations in an overconstrained system */
 	Float A[2][2], Bx[2], By[2], x[2];
 	int axes[2];
 
-	if (std::abs(geoFrame.n.x) > std::abs(geoFrame.n.y)
-		&& std::abs(geoFrame.n.x) > std::abs(geoFrame.n.z)) {
+	Float absX = std::abs(geoFrame.n.x),
+		  absY = std::abs(geoFrame.n.y),
+		  absZ = std::abs(geoFrame.n.z);
+
+	if (absX > absY && absX > absZ) {
 		axes[0] = 1; axes[1] = 2;
-	} else if (std::abs(geoFrame.n.y) > std::abs(geoFrame.n.z)) {
+	} else if (absY > absZ) {
 		axes[0] = 0; axes[1] = 2;
 	} else {
 		axes[0] = 0; axes[1] = 1;
@@ -227,6 +230,7 @@ void Intersection::computePartials(const RayDifferential &ray) {
 	A[0][1] = dpdv[axes[0]];
 	A[1][0] = dpdu[axes[1]];
 	A[1][1] = dpdv[axes[1]];
+
 	Bx[0] = px[axes[0]] - p[axes[0]];
 	Bx[1] = px[axes[1]] - p[axes[1]];
 	By[0] = py[axes[0]] - p[axes[0]];

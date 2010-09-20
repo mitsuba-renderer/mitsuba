@@ -104,7 +104,15 @@ private:
 struct MTS_EXPORT_CORE Spectrum {
 public:
 	/// Create a new spectral power distribution, but don't initialize the contents
+#if !defined(MTS_DEBUG_UNINITIALIZED)
 	inline Spectrum() { }
+#else
+	inline Spectrum() {
+		for (int i=0; i<SPECTRUM_SAMPLES; i++)
+			s[i] = std::numeric_limits<double>::quiet_NaN();
+	}
+#endif
+
 
 	/// Create a new spectral power distribution with all samples set to the given value
 	explicit inline Spectrum(Float v) {
