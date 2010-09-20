@@ -19,6 +19,7 @@
 #include <mitsuba/render/texture.h>
 #include <mitsuba/render/shape.h>
 #include <mitsuba/core/properties.h>
+#include <mitsuba/hw/gpuprogram.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -76,6 +77,8 @@ public:
 		return "GridTexture[]";
 	}
 
+	Shader *createShader(Renderer *renderer) const;
+
 	MTS_DECLARE_CLASS()
 protected:
 	Spectrum m_brightReflectance;
@@ -83,6 +86,59 @@ protected:
 	Float m_width;
 };
 
+// ================ Hardware shader implementation ================ 
+
+class GridTextureShader : public Shader {
+public:
+	GridTextureShader(Renderer *renderer, const Spectrum &brightReflectance, 
+		const Spectrum &darkReflectance, Float width) : Shader(renderer, ETextureShader),
+		m_brightReflectance(brightReflectance), m_darkReflectance(darkReflectance), m_width(width) {
+	}
+
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "uniform vec3 " << evalName << "_brightReflectance;" << endl
+			<< "uniform vec3 " << evalName << "_darkReflectance;" << endl
+			<< "uniform float " << evalName << "_width;" << endl
+			<< endl
+			<< "vec3 " << evalName << "(vec2 uv) {" << endl
+			<< "    float x = uv.x - floor(uv.x);" << endl
+			<< "    float y = uv.y - floor(uv.y);" << endl
+			<< "    if (x > .5) x -= 1.0;" << endl
+			<< "    if (y > .5) y -= 1.0;" << endl
+			<< "    if (abs(x) < " << evalName << "_width || abs(y) < " << evalName << "_width)" << endl
+			<< "        return " << evalName << "_darkReflectance;" << endl
+			<< "    else" << endl
+			<< "        return " << evalName << "_brightReflectance;" << endl
+			<< "}" << endl;
+	}
+
+	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_brightReflectance", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_darkReflectance", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_width", false));
+	}
+
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
+		int &textureUnitOffset) const {
+		program->setParameter(parameterIDs[0], m_brightReflectance);
+		program->setParameter(parameterIDs[1], m_darkReflectance);
+		program->setParameter(parameterIDs[2], m_width);
+	}
+
+	MTS_DECLARE_CLASS()
+private:
+	Spectrum m_brightReflectance;
+	Spectrum m_darkReflectance;
+	Float m_width;
+};
+
+Shader *GridTexture::createShader(Renderer *renderer) const {
+	return new GridTextureShader(renderer, m_brightReflectance, m_darkReflectance, m_width);
+}
+	
+MTS_IMPLEMENT_CLASS(GridTextureShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(GridTexture, false, Texture)
 MTS_EXPORT_PLUGIN(GridTexture, "Grid texture");
 MTS_NAMESPACE_END

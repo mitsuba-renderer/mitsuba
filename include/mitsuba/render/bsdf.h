@@ -192,6 +192,8 @@ public:
 	 */
 	inline Spectrum sampleCos(BSDFQueryRecord &bRec) const {
 		Spectrum bsdfVal = sample(bRec);
+		if (bsdfVal.isBlack())
+			return bsdfVal; // bRec.wo is undefined, play safe
 		return bsdfVal * std::abs(Frame::cosTheta(bRec.wo));
 	}
 
@@ -212,6 +214,8 @@ public:
 	 */
 	inline Spectrum sampleCos(BSDFQueryRecord &bRec, Float &pdf) const {
 		Spectrum bsdfVal(sample(bRec, pdf));
+		if (bsdfVal.isBlack())
+			return bsdfVal; // bRec.wo is undefined, play safe
 		return bsdfVal * std::abs(Frame::cosTheta(bRec.wo));
 	}
 
