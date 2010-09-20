@@ -1,11 +1,5 @@
-#ifndef BOOST_SMART_PTR_DETAIL_SPINLOCK_W32_HPP_INCLUDED
-#define BOOST_SMART_PTR_DETAIL_SPINLOCK_W32_HPP_INCLUDED
-
-// MS compatible compilers support #pragma once
-
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
-# pragma once
-#endif
+#ifndef BOOST_SMART_PTR_DETAIL_SPINLOCK_GCC_ARM_HPP_INCLUDED
+#define BOOST_SMART_PTR_DETAIL_SPINLOCK_GCC_ARM_HPP_INCLUDED
 
 //
 //  Copyright (c) 2008 Peter Dimov
@@ -15,33 +9,7 @@
 //  http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include <boost/detail/interlocked.hpp>
 #include <boost/smart_ptr/detail/yield_k.hpp>
-
-// BOOST_COMPILER_FENCE
-
-#if defined(__INTEL_COMPILER)
-
-#define BOOST_COMPILER_FENCE __memory_barrier();
-
-#elif defined( _MSC_VER ) && _MSC_VER >= 1310
-
-extern "C" void _ReadWriteBarrier();
-#pragma intrinsic( _ReadWriteBarrier )
-
-#define BOOST_COMPILER_FENCE _ReadWriteBarrier();
-
-#elif defined(__GNUC__)
-
-#define BOOST_COMPILER_FENCE __asm__ __volatile__( "" : : : "memory" );
-
-#else
-
-#define BOOST_COMPILER_FENCE
-
-#endif
-
-//
 
 namespace boost
 {
@@ -53,15 +21,19 @@ class spinlock
 {
 public:
 
-    long v_;
+    int v_;
 
 public:
 
     bool try_lock()
     {
-        long r = BOOST_INTERLOCKED_EXCHANGE( &v_, 1 );
+        int r;
 
-        BOOST_COMPILER_FENCE
+        __asm__ __volatile__(
+            "swp %0, %1, [%2]":
+            "=&r"( r ): // outputs
+            "r"( 1 ), "r"( &v_ ): // inputs
+            "memory", "cc" );
 
         return r == 0;
     }
@@ -76,8 +48,8 @@ public:
 
     void unlock()
     {
-        BOOST_COMPILER_FENCE
-        *const_cast< long volatile* >( &v_ ) = 0;
+        __asm__ __volatile__( "" ::: "memory" );
+        *const_cast< int volatile* >( &v_ ) = 0;
     }
 
 public:
@@ -110,4 +82,4 @@ public:
 
 #define BOOST_DETAIL_SPINLOCK_INIT {0}
 
-#endif // #ifndef BOOST_SMART_PTR_DETAIL_SPINLOCK_W32_HPP_INCLUDED
+#endif // #ifndef BOOST_SMART_PTR_DETAIL_SPINLOCK_GCC_ARM_HPP_INCLUDED

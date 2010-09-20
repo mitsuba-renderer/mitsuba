@@ -19,7 +19,9 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/render/gatherproc.h>
 #include <mitsuba/render/renderqueue.h>
+#if !defined(__OSX__)
 #include <omp.h>
+#endif
 
 MTS_NAMESPACE_BEGIN
 
@@ -121,9 +123,10 @@ public:
 
 		Vector2i cropSize = film->getCropSize();
 		Point2i cropOffset = film->getCropOffset();
-		
-		omp_set_num_threads(nCores);
 
+#if !defined(__OSX__)
+		omp_set_num_threads(nCores);
+#endif
 		m_gatherPoints.clear();
 		m_running = true;
 		for (size_t i=0; i<m_blocks.size(); ++i)

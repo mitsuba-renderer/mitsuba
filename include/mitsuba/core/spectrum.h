@@ -39,6 +39,8 @@ public:
 	 * at the given wavelength.
 	 */
 	virtual Float eval(Float lambda) const = 0;
+	
+	virtual ~SmoothSpectrum() { }
 };
 
 /**
@@ -56,6 +58,8 @@ public:
 	inline BlackBodySpectrum(Float temperature) {
 		m_temperature = temperature;
 	}
+
+	virtual ~BlackBodySpectrum() { }
 
 	/** \brief Return the value of the spectral power distribution
 	 * at the given wavelength.
@@ -91,6 +95,8 @@ public:
 	 * at the given wavelength.
 	 */
 	virtual Float eval(Float lambda) const;
+	
+	virtual ~InterpolatedSpectrum() { }
 private:
 	std::vector<Float> m_wavelength, m_value;
 };

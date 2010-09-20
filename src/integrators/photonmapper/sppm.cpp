@@ -20,7 +20,9 @@
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/render/gatherproc.h>
 #include <mitsuba/render/renderqueue.h>
+#if !defined(__OSX__)
 #include <omp.h>
+#endif
 
 MTS_NAMESPACE_BEGIN
 
@@ -148,7 +150,9 @@ public:
 		int samplerResID = sched->registerManifoldResource(
 			static_cast<std::vector<SerializableObject*> &>(samplers)); 
 
+#if !defined(__OSX__)
 		omp_set_num_threads(nCores);
+#endif
 
 		int it=0;
 		while (m_running) { 
@@ -174,7 +178,11 @@ public:
 		#pragma omp parallel for schedule(dynamic)
 		for (int i=-1; i<(int) m_gatherBlocks.size(); ++i) {
 			std::vector<GatherPoint> &gatherPoints = m_gatherBlocks[i];
+#if !defined(__OSX__)
 			Sampler *sampler = static_cast<Sampler *>(samplers[omp_get_thread_num()]);
+#else
+			Sampler *sampler = static_cast<Sampler *>(samplers[0]);
+#endif
 			int xofs = m_offset[i].x, yofs = m_offset[i].y;
 			int index = 0;
 			for (int yofsInt = 0; yofsInt < m_blockSize; ++yofsInt) {
