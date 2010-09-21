@@ -44,18 +44,15 @@ public:
 	inline ImporterDOMErrorHandler() { }
 
 	bool handleError(const DOMError& domError) {
-		ELogLevel logLevel;
-
-		if (domError.getSeverity() == DOMError::DOM_SEVERITY_WARNING)
-			logLevel = EWarn;
-		else
-			logLevel = EError;
-
-		SLog(logLevel, "%s (line %i, char %i): %s",
+		SLog(EWarn, "%s (line %i, char %i): %s",
 			XMLString::transcode(domError.getLocation()->getURI()),
 			domError.getLocation()->getLineNumber(),
 			domError.getLocation()->getColumnNumber(),
 			XMLString::transcode(domError.getMessage()));
+
+		if (domError.getSeverity() != DOMError::DOM_SEVERITY_WARNING)
+			SLog(EError, "Encountered a critical DOM error -- giving up!");
+
 		return true;
 	}
 };
@@ -181,6 +178,8 @@ void GeometryConverter::convert(const fs::path &inputFile,
 		Wrapper4InputSource *wrapper = new Wrapper4InputSource(memBufIS, false);
 		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *doc = parser->parse(wrapper);
 		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.file_string().c_str());
+		if (adj == NULL)
+			SLog(EError, "Could not parse adjustments file!");
 
 		std::set<std::string> removals, emptyList;
 		cleanupPass(adj, emptyList);
