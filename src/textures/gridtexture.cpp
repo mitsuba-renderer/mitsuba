@@ -38,12 +38,14 @@ public:
 	 : Texture(stream, manager) {
 		m_brightReflectance = Spectrum(stream);
 		m_darkReflectance = Spectrum(stream);
+		m_width = stream->readFloat();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Texture::serialize(stream, manager);
 		m_brightReflectance.serialize(stream);
 		m_darkReflectance.serialize(stream);
+		stream->writeFloat(m_width);
 	}
 
 	Spectrum getValue(const Intersection &its) const {
