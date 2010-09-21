@@ -25,8 +25,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-class RenderJob;
-
 /**
  * Parallel process for rendering with sampling-based integrators. Splits
  * an image into square pixel regions, which can be processed independently.

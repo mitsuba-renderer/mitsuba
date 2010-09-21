@@ -17,8 +17,9 @@
 */
 
 #include <mitsuba/render/film.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/bitmap.h>
-#include <mitsuba/core/fresolver.h>
+#include <boost/algorithm/string.hpp>
 #include "banner.h"
 
 MTS_NAMESPACE_BEGIN
@@ -152,7 +153,7 @@ public:
 		}
 	}
 	
-	void develop(const std::string &destFile) {
+	void develop(const fs::path &destFile) {
 		Log(EDebug, "Developing film ..");
 		ref<Bitmap> bitmap = new Bitmap(m_cropSize.x, m_cropSize.y, 128);
 		float *targetPixels = bitmap->getFloatData();
@@ -190,19 +191,21 @@ public:
 			}
 		}
 
-		std::string filename = destFile;
-		if (!endsWith(filename, ".exr"))
-			filename += ".exr";
-		Log(EInfo, "Writing image to \"%s\" ..", filename.c_str());
+		fs::path filename = destFile;
+		std::string extension = boost::to_lower_copy(fs::extension(filename));
+		if (extension != ".exr")
+			filename.replace_extension(".exr");
+
+		Log(EInfo, "Writing image to \"%s\" ..", filename.leaf().c_str());
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
 		bitmap->save(Bitmap::EEXR, stream);
 	}
 	
-	bool destinationExists(const std::string &baseName) const {
-		std::string filename = baseName;
-		if (!endsWith(filename, ".exr"))
-			filename += ".exr";
-		return FileStream::exists(filename);
+	bool destinationExists(const fs::path &baseName) const {
+		fs::path filename = baseName;
+		if (boost::to_lower_copy(filename.extension()) != ".exr")
+			filename.replace_extension(".exr");
+		return fs::exists(filename);
 	}
 
 	std::string toString() const {

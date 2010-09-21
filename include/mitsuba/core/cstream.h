@@ -23,7 +23,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Console stream
+/** \brief Interface to the default stdin/stdout console streams
  */
 class MTS_EXPORT_CORE ConsoleStream : public Stream {
 public:
@@ -46,11 +46,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	/** \brief Virtual destructor
-	 *
-	 * The destructor frees all resources and closes
-	 * the socket if it is still open
-	 */
+	/// Virtual destructor
 	virtual ~ConsoleStream();
 };
 

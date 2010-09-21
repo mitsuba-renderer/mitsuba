@@ -20,7 +20,7 @@
 #define __RANDOM_H
 
 #include <mitsuba/mitsuba.h>
-#include <algorithm>
+#include <mitsuba/core/cobject.h>
 
 /* 
    A C-program for MT19937-64 (2004/9/29 version).
@@ -86,12 +86,17 @@
 
 MTS_NAMESPACE_BEGIN
 
-
+/**
+ * \brief %Random number generator based on Mersenne Twister
+ * by Takuji Nishimura and Makoto Matsumoto.
+ */
 class MTS_EXPORT_CORE Random : public SerializableObject {
 public:
 	/**
-	 * Construct a new seeded random generator. Uses the default
-	 * seed on Windows and '/dev/urandom' on OSX and Linux.
+	 * \brief Construct a new seeded random generator.
+	 *
+	 * Uses the default seed on Windows and '/dev/urandom' 
+	 * on OSX and Linux.
 	 */
 	Random();
 
@@ -123,8 +128,10 @@ public:
 	Float nextFloat();
 
 	/**
-	 * Draw a uniformly distributed permutation and permute the given STL container
-	 * (see Knuth, TAoCP Vol. 2 (3rd 3d), Section 3.4.2)
+	 * \brief Draw a uniformly distributed permutation and permute the 
+	 * given STL container.
+	 *
+	 * See Knuth, TAoCP Vol. 2 (3rd 3d), Section 3.4.2.
 	 */
 	template <typename Iterator> void shuffle(Iterator it1, Iterator it2) {
 		for (Iterator it = it2 - 1; it > it1; --it) 

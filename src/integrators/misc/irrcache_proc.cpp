@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/statistics.h>
 #include "irrcache_proc.h"
 
 MTS_NAMESPACE_BEGIN

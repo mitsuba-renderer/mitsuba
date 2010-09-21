@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/core/shvector4d.h>
+#include <mitsuba/core/fstream.h>
 #include <boost/numeric/ublas/symmetric.hpp>
 #ifdef MTS_HAVE_LAPACK
 #include <boost/numeric/bindings/lapack/syev.hpp>
@@ -237,7 +238,7 @@ public:
 		m_D.normalize();
 
 		SHVector4D phaseExpansion;
-		if (FileStream::exists("flake-phase.dat")) {
+		if (fs::exists("flake-phase.dat")) {
 			stream = new FileStream("flake-phase.dat", FileStream::EReadOnly);
 			phaseExpansion = SHVector4D(stream);
 			stream->close();
@@ -396,7 +397,7 @@ public:
 			}
 		}
 
-		return sigmaT * coveredLength;
+		return Spectrum(sigmaT * coveredLength);
 	}
 
 	bool sampleDistance(const Ray &theRay, Float distSurf, 
@@ -428,8 +429,8 @@ public:
 				if (its.t > distMed && distMed < distSurf) {
 					/* A medium interaction occurred */
 					mRec.p = ray(distMed);
-					mRec.sigmaA = sigmaA;
-					mRec.sigmaS = sigmaS;
+					mRec.sigmaA = Spectrum(sigmaA);
+					mRec.sigmaS = Spectrum(sigmaS);
 					mRec.albedo = m_albedo;
 					mRec.medium = this;
 					mRec.attenuation = (Spectrum(sigmaT) * (-distMed)).exp();

@@ -17,6 +17,7 @@
 */
 
 #include "irrtree.h"
+#include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -84,13 +85,13 @@ void IrradianceOctree::addSample(OctreeNode *node, const IrradianceSample &sampl
 	for (sample_iterator it = node->samples.begin();
 		it != node->samples.end(); ++it) {
 		const IrradianceSample &s = *it;
-		Point midPoint = node->aabb.getMidPoint();
-		int nodeId = (s.p.x > midPoint.x ? 1 : 0) +
-			(s.p.y > midPoint.y ? 2 : 0) +
-			(s.p.z > midPoint.z ? 4 : 0);
+		Point center = node->aabb.getCenter();
+		int nodeId = (s.p.x > center.x ? 1 : 0) +
+			(s.p.y > center.y ? 2 : 0) +
+			(s.p.z > center.z ? 4 : 0);
 
 		if (!node->children[nodeId]) {
-			AABB childAABB(midPoint, midPoint);
+			AABB childAABB(center, center);
 			childAABB.expandBy(node->aabb.getCorner(nodeId));
 			node->children[nodeId] = new OctreeNode(childAABB);
 			++nodesCreated;

@@ -50,12 +50,12 @@ void Spectrum::staticShutdown() {
 	/* Do nothing */
 }
 
-Spectrum::Spectrum(const SmoothSpectrum *smooth) {
+void Spectrum::fromSmoothSpectrum(const SmoothSpectrum *smooth) {
 #if SPECTRUM_SAMPLES == 3
 	int index = 0;
 	Float x=0, y=0, z=0, ySum=0;
 	for (int lambda=CIE_start; lambda<=CIE_end; ++lambda) {
-		const Float value = smooth->sample((Float) lambda);
+		const Float value = smooth->eval((Float) lambda);
 		x += CIE_X[index] * value;
 		y += CIE_Y[index] * value;
 		z += CIE_Z[index] * value;
@@ -66,13 +66,13 @@ Spectrum::Spectrum(const SmoothSpectrum *smooth) {
 	fromXYZ(x, y, z);
 #else
 	for (int i=0; i<SPECTRUM_SAMPLES; i++)
-		s[i] = smooth->sample(m_wavelengths[i]);
+		s[i] = smooth->eval(m_wavelengths[i]);
 #endif
 }
 
-Float Spectrum::sample(Float lambda) const {
+Float Spectrum::eval(Float lambda) const {
 #if SPECTRUM_SAMPLES == 3
-	SLog(EError, "Spectrum::sample() is not supported when "
+	SLog(EError, "Spectrum::eval() is not supported when "
 		"using RGB rendering");
 #else
 	const Float pos = SPECTRUM_SAMPLES * (lambda - 
@@ -108,7 +108,7 @@ void Spectrum::toXYZ(Float &x, Float &y, Float &z) const {
 	int index = 0;
 	x = y = z = 0.0f;
 	for (int lambda=CIE_start; lambda<=CIE_end; ++lambda) {
-		const Float value = sample(lambda);
+		const Float value = eval(lambda);
 		x += CIE_X[index] * value;
 		y += CIE_Y[index] * value;
 		z += CIE_Z[index] * value;
@@ -123,7 +123,7 @@ Float Spectrum::getLuminance() const {
 	Float luminance = 0.0f;
 	int index = 0;
 	for (int lambda=CIE_start; lambda<=CIE_end; ++lambda) 
-		luminance += (CIE_Y[index++] * sample(lambda)) * CIE_normalization;
+		luminance += (CIE_Y[index++] * eval(lambda)) * CIE_normalization;
 	return luminance;
 }
 
@@ -257,7 +257,7 @@ std::string Spectrum::toString() const {
 	return oss.str();
 }
 
-Float BlackBodySpectrum::sample(Float l) const {
+Float BlackBodySpectrum::eval(Float l) const {
 	/* Convert inputs to meters and kelvins */
 	const double lambda = l * 1e-9;
 	const double c = 299792458;
@@ -275,7 +275,7 @@ void InterpolatedSpectrum::appendSample(Float lambda, Float value) {
 	m_value.push_back(value);
 }
 
-Float InterpolatedSpectrum::sample(Float lambda) const {
+Float InterpolatedSpectrum::eval(Float lambda) const {
 	typedef std::vector<Float>::const_iterator it;
 	SAssert(m_wavelength.size() > 0);
 	if (lambda < m_wavelength[0] || lambda > m_wavelength[m_wavelength.size()-1])

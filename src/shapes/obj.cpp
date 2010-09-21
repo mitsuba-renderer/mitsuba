@@ -17,9 +17,11 @@
 */
 
 #include <mitsuba/render/trimesh.h>
-#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/plugin.h>
-#include <fstream>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/subsurface.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -29,21 +31,21 @@ MTS_NAMESPACE_BEGIN
 class WavefrontOBJ : public Shape {
 public:
 	struct OBJTriangle {
-		unsigned int v[3];
+		unsigned int p[3];
 		unsigned int n[3];
 		unsigned int uv[3];
 	};
 
 	WavefrontOBJ(const Properties &props) : Shape(props) {
-		ref<FileResolver> fresolver = FileResolver::getInstance();
-		std::string path = fresolver->resolve(props.getString("filename"));
-		m_name = fresolver->getChild(path);
+		FileResolver *fResolver = Thread::getThread()->getFileResolver();
+		fs::path path = fResolver->resolve(props.getString("filename"));
+		m_name = path.stem();
 
 		/* Load the geometry */
-		Log(EInfo, "Loading geometry from \"%s\" ..", path.c_str());
-		std::ifstream is(path.c_str());
+		Log(EInfo, "Loading geometry from \"%s\" ..", path.leaf().c_str());
+		fs::ifstream is(path);
 		if (is.bad() || is.fail())
-			Log(EError, "Geometry file '%s' not found!", path.c_str());
+			Log(EError, "Geometry file '%s' not found!", path.file_string().c_str());
 
 		std::string buf;
 		std::vector<Point> vertices;
@@ -98,14 +100,14 @@ public:
 			} else if (buf == "mtllib") {
 				std::string line;
 				std::getline(is, line);
-				std::string mtlName = trim(line.substr(1, line.length()-1));
-				ref<FileResolver> fRes = FileResolver::getInstance()->clone();
-				fRes->addPathFromFile(fRes->resolveAbsolute(props.getString("filename")));
-				std::string fullMtlName = fRes->resolve(mtlName);
-				if (FileStream::exists(fullMtlName))
-					parseMaterials(fullMtlName);
+				ref<FileResolver> frClone = fResolver->clone();
+				frClone->addPath(fs::complete(path).parent_path());
+				fs::path mtlName = frClone->resolve(trim(line.substr(1, line.length()-1)));
+				if (fs::exists(mtlName))
+					parseMaterials(mtlName);
 				else
-					Log(EWarn, "Could not find referenced material library '%s'", mtlName.c_str());
+					Log(EWarn, "Could not find referenced material library '%s'", 
+						mtlName.file_string().c_str());
 			} else if (buf == "vt") {
 				std::string line;
 				Float u, v, w;
@@ -126,7 +128,7 @@ public:
 				triangles.push_back(t);
 				if (iss >> tmp) {
 					parse(t, 1, tmp);
-					std::swap(t.v[0], t.v[1]);
+					std::swap(t.p[0], t.p[1]);
 					std::swap(t.uv[0], t.uv[1]);
 					std::swap(t.n[0], t.n[1]);
 					triangles.push_back(t);
@@ -163,17 +165,17 @@ public:
 	void parse(OBJTriangle &t, int i, const std::string &str) {
 		std::vector<std::string> tokens = tokenize(str, "/");
 		if (tokens.size() == 1) {
-			t.v[i] = atoi(tokens[0].c_str())-1;
+			t.p[i] = atoi(tokens[0].c_str())-1;
 		} else if (tokens.size() == 2) {
 			if (str.find("//") == std::string::npos) {
-				t.v[i]  = atoi(tokens[0].c_str())-1;
+				t.p[i]  = atoi(tokens[0].c_str())-1;
 				t.uv[i] = atoi(tokens[1].c_str())-1;
 			} else {
-				t.v[i] = atoi(tokens[0].c_str())-1;
+				t.p[i] = atoi(tokens[0].c_str())-1;
 				t.n[i] = atoi(tokens[1].c_str())-1;
 			}
 		} else if (tokens.size() == 3) {
-			t.v[i] = atoi(tokens[0].c_str())-1;
+			t.p[i] = atoi(tokens[0].c_str())-1;
 			t.uv[i] = atoi(tokens[1].c_str())-1;
 			t.n[i] = atoi(tokens[2].c_str())-1;
 		} else {
@@ -181,11 +183,12 @@ public:
 		}
 	}
 
-	void parseMaterials(const std::string &mtlFileName) {
-		Log(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.c_str());
-		std::ifstream is(mtlFileName.c_str());
+	void parseMaterials(const fs::path &mtlPath) {
+		Log(EInfo, "Loading OBJ materials from \"%s\" ..", mtlPath.filename().c_str());
+		fs::ifstream is(mtlPath);
 		if (is.bad() || is.fail())
-			Log(EError, "Unexpected I/O error while accessing material file '%s'!", mtlFileName.c_str());
+			Log(EError, "Unexpected I/O error while accessing material file '%s'!", 
+				mtlPath.file_string().c_str());
 		std::string buf;
 		std::string mtlName;
 		Spectrum diffuse;
@@ -226,12 +229,12 @@ public:
 		std::binary_function<Vertex, Vertex, bool> {
 	public:
 		bool operator()(const Vertex &v1, const Vertex &v2) const {
-			if (v1.v.x < v2.v.x) return true;
-			else if (v1.v.x > v2.v.x) return false;
-			if (v1.v.y < v2.v.y) return true;
-			else if (v1.v.y > v2.v.y) return false;
-			if (v1.v.z < v2.v.z) return true;
-			else if (v1.v.z > v2.v.z) return false;
+			if (v1.p.x < v2.p.x) return true;
+			else if (v1.p.x > v2.p.x) return false;
+			if (v1.p.y < v2.p.y) return true;
+			else if (v1.p.y > v2.p.y) return false;
+			if (v1.p.z < v2.p.z) return true;
+			else if (v1.p.z > v2.p.z) return false;
 			if (v1.n.x < v2.n.x) return true;
 			else if (v1.n.x > v2.n.x) return false;
 			if (v1.n.y < v2.n.y) return true;
@@ -265,17 +268,21 @@ public:
 		for (unsigned int i=0; i<triangles.size(); i++) {
 			Triangle tri;
 			for (unsigned int j=0; j<3; j++) {
-				unsigned int vertexId = triangles[i].v[j];
+				unsigned int vertexId = triangles[i].p[j];
 				unsigned int normalId = triangles[i].n[j];
 				unsigned int uvId = triangles[i].uv[j];
 				int key;
 
 				Vertex vertex;
-				vertex.v = vertices.at(vertexId);
+				vertex.p = vertices.at(vertexId);
 				if (hasNormals)
 					vertex.n = normals.at(normalId);
+				else
+					vertex.n = Normal(0.0f);
 				if (hasTexcoords)
 					vertex.uv = texcoords.at(uvId);
+				else
+					vertex.uv = Point2(0.0f);
 
 				if (vertexMap.find(vertex) != vertexMap.end()) {
 					key = vertexMap[vertex];

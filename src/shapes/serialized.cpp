@@ -17,6 +17,8 @@
 */
 
 #include <mitsuba/render/trimesh.h>
+#include <mitsuba/core/properties.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
 
 MTS_NAMESPACE_BEGIN
@@ -27,12 +29,13 @@ MTS_NAMESPACE_BEGIN
 class SerializedMesh : public TriMesh {
 public:
 	SerializedMesh(const Properties &props) : TriMesh(props) {
-		m_name = props.getString("filename");
-		std::string filePath = FileResolver::getInstance()->resolve(m_name);
+		fs::path filePath = Thread::getThread()->getFileResolver()->resolve(
+			props.getString("filename"));
+		m_name = filePath.stem();
 
 		/* Load the geometry */
-		Log(EInfo, "Loading geometry from \"%s\" ..", m_name.c_str());
-		ref<FileStream> stream = new FileStream(filePath.c_str(), FileStream::EReadOnly);
+		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.leaf().c_str());
+		ref<FileStream> stream = new FileStream(filePath, FileStream::EReadOnly);
 		stream->setByteOrder(Stream::ENetworkByteOrder);
 		ref<TriMesh> mesh = new TriMesh(stream);
 		m_triangleCount = mesh->getTriangleCount();
@@ -45,7 +48,7 @@ public:
 		if (!m_objectToWorld.isIdentity()) {
 			for (size_t i=0; i<m_vertexCount; ++i) {
 				Vertex &vertex = m_vertexBuffer[i];
-				vertex.v = m_objectToWorld(vertex.v);
+				vertex.p = m_objectToWorld(vertex.p);
 				vertex.n = m_objectToWorld(vertex.n);
 				vertex.dpdu = m_objectToWorld(vertex.dpdu);
 				vertex.dpdv = m_objectToWorld(vertex.dpdv);

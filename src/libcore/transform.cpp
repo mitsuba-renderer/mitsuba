@@ -16,7 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/mitsuba.h>
+#include <mitsuba/core/transform.h>
 #include <mitsuba/core/frame.h>
 
 MTS_NAMESPACE_BEGIN

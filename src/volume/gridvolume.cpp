@@ -17,7 +17,9 @@
 */
 
 #include <mitsuba/render/volume.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/properties.h>
 
 #if defined(__LINUX__) || defined(__OSX__)
 #include <sys/mman.h>
@@ -86,7 +88,8 @@ public:
 		if (m_fromStream) {
 			delete[] m_data;
 		} else {
-			Log(EDebug, "Unmapping \"%s\" from memory", m_filename.c_str()); 
+			Log(EDebug, "Unmapping \"%s\" from memory", 
+				m_filename.file_string().c_str()); 
 			int retval = munmap(m_mmapPtr, m_mmapSize);
 			if (retval != 0)
 				Log(EError, "munmap(): unable to unmap memory!");
@@ -114,11 +117,11 @@ public:
 		if (m_sendData) {
 			m_res.serialize(stream);
 			stream->writeInt(m_channels);
-			stream->writeString(m_filename);
+			stream->writeString(m_filename.file_string());
 			size_t nEntries = m_res.x*m_res.y*m_res.z*m_channels;
 			stream->writeSingleArray(m_data, nEntries);
 		} else {
-			stream->writeString(m_filename);
+			stream->writeString(m_filename.file_string());
 		}
 	}
 		
@@ -136,7 +139,7 @@ public:
 	}
 
 	void loadFromFile(const std::string &filename) {
-		std::string resolved = FileResolver::getInstance()->resolve(filename);
+		fs::path resolved = Thread::getThread()->getFileResolver()->resolve(filename);
 		ref<FileStream> stream = new FileStream(resolved, FileStream::EReadOnly);
 		stream->setByteOrder(Stream::ELittleEndian);
 		m_filename = filename;
@@ -169,13 +172,13 @@ public:
 			m_res.x, m_res.y, m_res.z, m_channels, nEntries*sizeof(float)/1024,
 			m_originalAABB.toString().c_str());
 		stream->close();
-		int fd = open(resolved.c_str(), O_RDONLY);
+		int fd = open(resolved.file_string().c_str(), O_RDONLY);
 		if (fd == -1)
-			Log(EError, "Could not open \"%s\"!", m_filename.c_str());
+			Log(EError, "Could not open \"%s\"!", m_filename.file_string().c_str());
 		m_mmapSize = (nEntries+12)*sizeof(float);
 		m_mmapPtr = mmap(NULL, m_mmapSize, PROT_READ, MAP_SHARED, fd, 0);
 		if (m_mmapPtr == NULL)
-			Log(EError, "Could not map \"%s\" to memory!", m_filename.c_str());
+			Log(EError, "Could not map \"%s\" to memory!", m_filename.file_string().c_str());
 		m_data = ((float *) m_mmapPtr) + 12;
 		if (close(fd) != 0)
 			Log(EError, "close(): unable to close file!");
@@ -184,18 +187,20 @@ public:
 			m_res.x, m_res.y, m_res.z, m_channels, nEntries*sizeof(float)/1024,
 			m_originalAABB.toString().c_str());
 		stream->close();
-		m_file = CreateFile(resolved.c_str(), GENERIC_READ, 
+		m_file = CreateFile(resolved.file_string().c_str(), GENERIC_READ, 
 			FILE_SHARE_READ, NULL, OPEN_EXISTING, 
 			FILE_ATTRIBUTE_NORMAL, NULL);
 		if (m_file == INVALID_HANDLE_VALUE)
-			Log(EError, "Could not open \"%s\": %s", m_filename.c_str(),
+			Log(EError, "Could not open \"%s\": %s", m_filename.file_string().c_str(),
 				lastErrorText().c_str());
 		m_fileMapping = CreateFileMapping(m_file, NULL, PAGE_READONLY, 0, 0, NULL);
 		if (m_fileMapping == NULL)
-			Log(EError, "CreateFileMapping: Could not map \"%s\" to memory: %s", m_filename.c_str(), lastErrorText().c_str());
+			Log(EError, "CreateFileMapping: Could not map \"%s\" to memory: %s", 
+				m_filename.file_string().c_str(), lastErrorText().c_str());
 		m_mmapPtr = (float *) MapViewOfFile(m_fileMapping, FILE_MAP_READ, 0, 0, 0);
 		if (m_mmapPtr == NULL)
-			Log(EError, "MapViewOfFile: Could not map \"%s\" to memory: %s", m_filename.c_str(), lastErrorText().c_str());
+			Log(EError, "MapViewOfFile: Could not map \"%s\" to memory: %s", 
+				m_filename.file_string().c_str(), lastErrorText().c_str());
 		m_data = ((float *) m_mmapPtr) + 10;
 #else
 		Log(EInfo, "Loading \"%s\": %ix%ix%i (%i channels), %i KiB, %s", filename.c_str(), 
@@ -208,9 +213,9 @@ public:
 	}
 
 	/**
-	* This is needed since Mitsuba might be 
-	* compiled with either single/double precision
-	*/
+	 * This is needed since Mitsuba might be 
+	 * compiled with either single/double precision
+	 */
 	struct float3 {
 		float value[3];
 
@@ -372,7 +377,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	std::string m_filename;
+	fs::path m_filename;
 	float *m_data;
 	bool m_fromStream, m_sendData;
 	Vector3i m_res;

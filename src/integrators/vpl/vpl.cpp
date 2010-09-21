@@ -16,6 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/hw/vpl.h>
 #include <mitsuba/hw/session.h>
 #include <mitsuba/hw/device.h>
@@ -69,7 +70,7 @@ public:
 		m_shaderManager->drawBackground(clipToWorld, camPos);
 	}
 
-	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int samplerResID) {
 		Integrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
 
@@ -79,6 +80,7 @@ public:
 				m_vpls[i].P *= normalization;
 			Log(EInfo, "Generated %i virtual point lights", m_vpls.size());
 		}
+		return true;
 	}
 
 	void cancel() {

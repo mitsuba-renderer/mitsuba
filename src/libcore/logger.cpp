@@ -17,7 +17,8 @@
 */
 
 #include <mitsuba/mitsuba.h>
-#include <stdexcept>
+#include <mitsuba/core/appender.h>
+#include <mitsuba/core/lock.h>
 #include <stdarg.h>
 
 MTS_NAMESPACE_BEGIN

@@ -45,7 +45,9 @@ vars.Add('GLLIB',         'OpenGL+GLEW libraries')
 vars.Add('GLINCLUDE',     'OpenGL+GLEW include path')
 vars.Add('GLFLAGS',       'OpenGL+GLEW-related compiler flags')
 vars.Add('GLLIBDIR',      'OpenGL+GLEW library path')
-vars.Add('BOOSTINCLUDE',  'BOOST include path')
+vars.Add('BOOSTINCLUDE',  'boost include path')
+vars.Add('BOOSTLIB',      'boost libraries')
+vars.Add('BOOSTLIBDIR',   'boost library path')
 vars.Add('TARGET_ARCH',   'Target architecture')
 
 try:
@@ -64,12 +66,16 @@ env.Append(LIBPATH=[])
 env.Append(LIBS=env['BASELIB'])
 if env.has_key('BOOSTINCLUDE'):
 	env.Append(CPPPATH=env['BOOSTINCLUDE'])
+if env.has_key('BOOSTLIBDIR'):
+	env.Append(LIBPATH=env['BOOSTLIBDIR'])
+if env.has_key('BOOSTLIB'):
+	env.Append(LIBS=env['BOOSTLIB'])
 if env.has_key('BASELIBDIR'):
 	env.Append(LIBPATH=env['BASELIBDIR'])
 
 env.Decider('MD5-timestamp')
 
-env.SetOption('num_jobs', multiprocessing.cpu_count())
+#env.SetOption('num_jobs', multiprocessing.cpu_count())
 
 AddOption("--dist", dest="dist", type="string", nargs=0, action='store', help='Make an official release')
 
@@ -267,7 +273,8 @@ libcore_objects = [
 	'src/libcore/cstream.cpp', 'src/libcore/mstream.cpp', 
 	'src/libcore/sched.cpp', 'src/libcore/sched_remote.cpp',
 	'src/libcore/sshstream.cpp', 'src/libcore/wavelet.cpp',
-	'src/libcore/zstream.cpp', 'src/libcore/shvector.cpp'
+	'src/libcore/zstream.cpp', 'src/libcore/shvector.cpp',
+	'src/libcore/fresolver.cpp'
 ]
 if sys.platform == 'darwin':
 	coreEnv_osx = coreEnv.Clone();
@@ -307,13 +314,13 @@ librender = renderEnv.SharedLibrary('src/librender/mitsuba-render', [
 	'src/librender/scene.cpp',  'src/librender/subsurface.cpp', 
 	'src/librender/texture.cpp', 'src/librender/shape.cpp', 
 	'src/librender/trimesh.cpp', 'src/librender/rfilter.cpp', 
-	'src/librender/sampler.cpp', 'src/librender/records.cpp', 
+	'src/librender/sampler.cpp', 'src/librender/util.cpp',
 	'src/librender/irrcache.cpp', 'src/librender/testcase.cpp',
 	'src/librender/preview.cpp', 'src/librender/photonmap.cpp',
 	'src/librender/gatherproc.cpp', 'src/librender/mipmap3d.cpp',
 	'src/librender/volume.cpp', 'src/librender/vpl.cpp',
 	'src/librender/shader.cpp', 'src/librender/shandler.cpp',
-	'src/librender/util.cpp'
+	'src/librender/intersection.cpp'
 ])
 
 if sys.platform == "darwin":
@@ -480,6 +487,7 @@ plugins = []
 
 # Build the plugins -- utilities
 plugins += env.SharedLibrary('plugins/addimages', ['src/utils/addimages.cpp'])
+plugins += env.SharedLibrary('plugins/kdbench', ['src/utils/kdbench.cpp'])
 
 # BSDFs
 plugins += env.SharedLibrary('plugins/lambertian', ['src/bsdfs/lambertian.cpp'])
@@ -703,7 +711,10 @@ elif sys.platform == 'darwin':
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/Xerces-C.framework/Resources/lib/libxerces-c-3.0.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libpng.framework/Resources/lib/libpng.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libjpeg.framework/Resources/lib/libjpeg.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/Collada14Dom.framework/Resources/lib/libCollada14Dom.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libboost.framework/Resources/lib/libboost_system-xgcc42-mt-1_39.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libboost.framework/Resources/lib/libboost_filesystem-xgcc42-mt-1_39.dylib')
+	if hasCollada:
+		installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/Collada14Dom.framework/Resources/lib/libCollada14Dom.dylib')
 	if hasQt:
 		installTargets += env.Install('Mitsuba.app/Contents/MacOS', 'mtsgui')
 		installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtCore.framework/Versions/4/QtCore')

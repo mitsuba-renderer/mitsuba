@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/hw/device.h>
+#include <mitsuba/core/timer.h>
 #if defined(WIN32)
 #include <mitsuba/hw/wgldevice.h>
 #elif defined(__OSX__)
@@ -36,7 +37,7 @@ Device::Device(Session *name) {
 	m_doubleBuffer = true;
 	m_fullscreen = false;
 	m_fsaa = 1;
-	m_dimension = Point2i(640, 480);
+	m_dimension = Vector2i(640, 480);
 	m_position = Point2i(0, 0);
 	m_center = true;
 	m_session = name;

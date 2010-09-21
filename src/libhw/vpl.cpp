@@ -250,7 +250,6 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 		m_shadowProgram->unbind();
 	} else {
 		/* Old-fashioned: render 6 times, once for each cube map face */
-
 		m_altShadowProgram->bind();
 		for (int i=0; i<6; ++i) {
 			switch (i) {
@@ -410,7 +409,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 		program->setSource(GPUProgram::EFragmentProgram, oss.str());
 		try {
 			program->init();
-		} catch (const std::exception &ex) {
+		} catch (const std::exception &) {
 			Log(EWarn, "Unable to compile the following VPL program:\n%s", oss.str().c_str());
 			throw;
 		}

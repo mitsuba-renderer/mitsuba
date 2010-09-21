@@ -18,8 +18,6 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/renderjob.h>
-#include <mitsuba/render/texture.h>
-#include <mitsuba/render/util.h>
 #include <mitsuba/core/plugin.h>
 
 MTS_NAMESPACE_BEGIN
@@ -284,23 +282,26 @@ void Scene::initialize() {
 	}
 }
 
-void Scene::preprocess(RenderQueue *queue, const RenderJob *job, 
+bool Scene::preprocess(RenderQueue *queue, const RenderJob *job, 
 		int sceneResID, int cameraResID, int samplerResID) {
 	/* Pre-process step for the main scene integrator */
-	m_integrator->preprocess(this, queue, job,
-		sceneResID, cameraResID, samplerResID);
+	if (!m_integrator->preprocess(this, queue, job,
+		sceneResID, cameraResID, samplerResID))
+		return false;
 
 	/* Pre-process step for all sub-surface integrators */
 	for (std::vector<Subsurface *>::iterator it = m_ssIntegrators.begin();
 		it != m_ssIntegrators.end(); ++it) 
-		(*it)->preprocess(this, queue, job, 
-			sceneResID, cameraResID, samplerResID);
+		if (!(*it)->preprocess(this, queue, job, 
+			sceneResID, cameraResID, samplerResID))
+			return false;
 
 	/* Pre-process step for all participating media */
 	for (std::vector<Medium *>::iterator it = m_media.begin();
 		it != m_media.end(); ++it) 
 		(*it)->preprocess(this, queue, job,
 			sceneResID, cameraResID, samplerResID);
+	return true;
 }
 
 bool Scene::render(RenderQueue *queue, const RenderJob *job,
@@ -311,6 +312,9 @@ bool Scene::render(RenderQueue *queue, const RenderJob *job,
 }
 
 void Scene::cancel() {
+	for (std::vector<Subsurface *>::iterator it = m_ssIntegrators.begin();
+		it != m_ssIntegrators.end(); ++it) 
+		(*it)->cancel();
 	m_integrator->cancel();
 }
 
@@ -404,7 +408,7 @@ void Scene::sampleEmission(EmissionRecord &eRec, Point2 &sample1, Point2 &sample
 	luminaire->sampleEmission(eRec, sample1, sample2);
 	eRec.pdfArea *= lumPdf;
 	eRec.luminaire = luminaire;
-	Float cosTheta = eRec.sRec.n.isZero() ? (Float) 1 : absDot(eRec.sRec.n, eRec.d);
+	Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface) ? absDot(eRec.sRec.n, eRec.d) : 1;
 	eRec.P *= cosTheta / (eRec.pdfArea * eRec.pdfDir);
 }
 
@@ -462,7 +466,7 @@ bool Scene::sampleDistance(const Ray &ray, Float maxDist, MediumSamplingRecord &
 	} else {
 		mRec.pdf = 1.0f;
 		mRec.miWeight = 1.0f;
-		mRec.attenuation = 1.0f;
+		mRec.attenuation = Spectrum(1.0f);
 		return false;
 	}
 }

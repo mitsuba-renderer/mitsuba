@@ -16,7 +16,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/scene.h>
+#include <mitsuba/core/statistics.h>
+#include <mitsuba/render/integrator.h>
 #include <mitsuba/render/renderproc.h>
 
 MTS_NAMESPACE_BEGIN
@@ -31,8 +32,8 @@ Integrator::Integrator(Stream *stream, InstanceManager *manager)
  : NetworkedObject(stream, manager) {
 }
 
-void Integrator::preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
-		int sceneResID, int cameraResID, int samplerResID) { }
+bool Integrator::preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+		int sceneResID, int cameraResID, int samplerResID) { return true; }
 void Integrator::postprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int samplerResID) { }
 void Integrator::configureSampler(Sampler *sampler) { }
@@ -97,7 +98,8 @@ Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n
 }
 
 void SampleIntegrator::cancel() {
-	Scheduler::getInstance()->cancel(m_process);
+	if (m_process)
+		Scheduler::getInstance()->cancel(m_process);
 }
 
 bool SampleIntegrator::render(Scene *scene,
@@ -238,6 +240,30 @@ void MonteCarloIntegrator::serialize(Stream *stream, InstanceManager *manager) c
 	stream->writeInt(m_rrDepth);
 	stream->writeInt(m_maxDepth);
 }
+
+std::string RadianceQueryRecord::toString() const {
+	std::ostringstream oss;
+	oss << "RadianceQueryRecord[" << std::endl
+		<< "  type = { ";
+	if (type & EEmittedRadiance) oss << "emitted ";
+	if (type & ESubsurfaceRadiance) oss << "subsurface ";
+	if (type & EDirectRadiance) oss << "direct ";
+	if (type & EIndirectRadiance) oss << "indirect ";
+	if (type & ECausticRadiance) oss << "caustic ";
+	if (type & EInscatteredDirectRadiance) oss << "inscatteredDirect ";
+	if (type & EInscatteredIndirectRadiance) oss << "inscatteredIndirect ";
+	if (type & EDistance) oss << "distance ";
+	if (type & EOpacity) oss << "opacity ";
+	if (type & EIntersection) oss << "intersection ";
+	oss << "}," << std::endl
+		<< "  depth = " << depth << "," << std::endl
+		<< "  its = " << indent(its.toString()) << std::endl
+		<< "  alpha = " << alpha << "," << std::endl
+		<< "  extra = " << extra << "," << std::endl
+		<< "]" << std::endl;
+	return oss.str();
+}
+
 
 MTS_IMPLEMENT_CLASS(Integrator, true, NetworkedObject)
 MTS_IMPLEMENT_CLASS(SampleIntegrator, true, Integrator)

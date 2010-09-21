@@ -78,7 +78,7 @@ public:
 
 		if (!its.isValid()) {
 			/* If no intersection could be found, possibly return 
-			   attenuated radiance from a background luminaire */
+			   radiance from a background luminaire */
 			if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
 				return scene->LeBackground(ray);
 			else
@@ -97,7 +97,7 @@ public:
 
 		/* Leave here if direct illumination was not requested */
 		if (!(rRec.type & RadianceQueryRecord::EDirectRadiance))
-			return Li * rRec.attenuation;
+			return Li;
 
 		/* ==================================================================== */
 		/*                          Luminaire sampling                          */

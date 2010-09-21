@@ -19,24 +19,18 @@
 #if !defined(__RAY_H)
 #define __RAY_H
 
-#include <mitsuba/core/point.h>
+#include <mitsuba/mitsuba.h>
 
 MTS_NAMESPACE_BEGIN
 
 /** \brief Simple three-dimensional ray class with
    minimum / maximum extent information */
-class Ray {
-public:
-	/// Ray origin
-	Point o;
-	/// Minimum range for intersection tests
-	Float mint;
-	/// Ray direction
-	Vector d;
-	/// Maximum range for intersection tests
-	Float maxt;
-	/// Ray direction reciprocal
-	Vector dRcp;
+struct Ray {
+	Point o;     ///< Ray origin
+	Float mint;  ///< Minimum range for intersection tests
+	Vector d;    ///< Ray direction
+	Float maxt;  ///< Maximum range for intersection tests
+	Vector dRcp; ///< Componentwise reciprocals of the ray direction
 
 	/// Construct a new ray
 	inline Ray() : mint(Epsilon), maxt(std::numeric_limits<Float>::infinity()) {
@@ -108,10 +102,9 @@ public:
 	}
 };
 
-/** \brief Ray differential -- enhances the basic ray class with 
+/** \brief %Ray differential -- enhances the basic ray class with 
    information about the rays of adjacent pixels on the view plane */
-class RayDifferential : public Ray {
-public:
+struct RayDifferential : public Ray {
 	bool hasDifferentials;
 	Ray rx, ry;
 
@@ -126,16 +119,29 @@ public:
 	inline explicit RayDifferential(const Ray &ray) 
 		: Ray(ray), hasDifferentials(false) {
 	}
-	
+
 	inline RayDifferential(const RayDifferential &ray) 
 		: Ray(ray), hasDifferentials(ray.hasDifferentials), rx(ray.rx), ry(ray.ry) {
 	}
+	
+	inline void operator=(const RayDifferential &ray) {
+		o = ray.o;
+		mint = ray.mint;
+		d = ray.d;
+		maxt = ray.maxt;
+		dRcp = ray.dRcp;
+		hasDifferentials = ray.hasDifferentials;
+		rx = ray.rx;
+		ry = ray.ry;
+	}
 
 	inline void operator=(const Ray &ray) {
-		setOrigin(ray.o);
-		setDirection(ray.d);
+		o = ray.o;
 		mint = ray.mint;
+		d = ray.d;
 		maxt = ray.maxt;
+		dRcp = ray.dRcp;
+		hasDifferentials = false;
 	}
 };
 

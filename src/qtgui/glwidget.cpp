@@ -26,6 +26,8 @@
 #include "glwidget.h"
 #include "preview.h"
 #include <mitsuba/render/renderjob.h>
+#include <mitsuba/core/timer.h>
+#include <mitsuba/core/mstream.h>
 
 GLWidget::GLWidget(QWidget *parent) :
 	QGLWidget(parent), m_context(NULL) {
@@ -1022,6 +1024,6 @@ void GLWidget::onUpdateView() {
 
 void GLWidget::resizeGL(int width, int height) {
 	glViewport(0, 0, (GLint) width, (GLint) height);
-	m_device->setDimension(Point2i(width, height));
+	m_device->setDimension(Vector2i(width, height));
 }
 

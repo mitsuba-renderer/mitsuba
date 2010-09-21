@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/util.h>
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/core/fstream.h>
 
 MTS_NAMESPACE_BEGIN
 

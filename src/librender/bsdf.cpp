@@ -16,7 +16,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/scene.h>
+#include <mitsuba/render/bsdf.h>
+#include <mitsuba/core/frame.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -63,5 +64,28 @@ Spectrum BSDF::fDelta(const BSDFQueryRecord &bRec) const {
 	return Spectrum(0.0f);
 }
 
+void operator<<(const ETransportQuantity &quantity, std::ostream &os) {
+	switch (quantity) {
+		case EImportance: os << "importance"; break;
+		case ERadiance:   os << "radiance"; break;
+		default: os << "invalid"; break;
+	};
+}
+
+std::string BSDFQueryRecord::toString() const {
+	std::ostringstream oss;
+	oss << "BSDFQueryRecord[" << std::endl
+		<< "  wi = " << wi.toString() << "," << std::endl
+		<< "  wo = " << wo.toString() << "," << std::endl
+		<< "  sample = " << sample.toString() << "," << std::endl
+		<< "  quantity = " << quantity << "," << std::endl
+		<< "  typeMask = " << typeMask << "," << std::endl
+		<< "  sampledType = " << sampledType << "," << std::endl
+		<< "  component = " << component << "," << std::endl
+		<< "  sampledComponent = " << sampledComponent << "," << std::endl
+		<< "]";
+	return oss.str();
+}
+	
 MTS_IMPLEMENT_CLASS(BSDF, true, ConfigurableObject)
 MTS_NAMESPACE_END

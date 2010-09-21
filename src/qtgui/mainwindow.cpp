@@ -33,6 +33,8 @@
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
 
 #if !defined(WIN32)
 #include <QX11Info>
@@ -110,6 +112,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->hScrollBar->setVisible(false);
 	ui->vScrollBar->setVisible(false);
 	ui->actionUpdateCheck->setMenuRole(QAction::ApplicationSpecificRole);
+	ui->actionFeedback->setMenuRole(QAction::ApplicationSpecificRole);
+	ui->actionReportBug->setMenuRole(QAction::ApplicationSpecificRole);
 	m_progressWidget = new QWidget(centralWidget());
 	m_progressLabel = new QLabel(m_progressWidget);
 	m_progress = new QProgressBar(m_progressWidget);
@@ -444,7 +448,7 @@ void MainWindow::onBugReportSubmitted() {
 
 void MainWindow::on_actionImport_triggered() {
 #if defined(MTS_HAS_COLLADA)
-	ref<FileResolver> resolver = FileResolver::getInstance();
+	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
 	ref<FileResolver> newResolver = resolver->clone();
 	for (int i=0; i<m_searchPaths.size(); ++i)
 		newResolver->addPath(m_searchPaths[i].toStdString());
@@ -576,17 +580,15 @@ void MainWindow::onClearRecent() {
 }
 
 SceneContext *MainWindow::loadScene(const QString &qFileName) {
-	ref<FileResolver> resolver = FileResolver::getInstance();
-	std::string filename = resolver->resolveAbsolute(qFileName.toStdString());
-	std::string filePath = resolver->getParentDirectory(filename);
+	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
+	fs::path filename = resolver->resolve(qFileName.toStdString());
+	fs::path filePath = fs::complete(filename).parent_path();
 	ref<FileResolver> newResolver = resolver->clone();
-	if (!newResolver->contains(filePath))
-		newResolver->addPath(filePath);
+	newResolver->addPath(filePath);
 	for (int i=0; i<m_searchPaths.size(); ++i)
 		newResolver->addPath(m_searchPaths[i].toStdString());
-	newResolver->setCurrentDirectoryFromFile(filename);
 
-	ref<SceneLoader> loadingThread = new SceneLoader(newResolver, filename);
+	ref<SceneLoader> loadingThread = new SceneLoader(newResolver, filename.file_string());
 	loadingThread->start();
 
 	QDialog *dialog = new NonClosableDialog(this);
@@ -1232,7 +1234,8 @@ void MainWindow::on_actionExportImage_triggered() {
 			return;
 		}
 
-		ref<FileStream> fs = new FileStream(qPrintable(fileName), FileStream::ETruncReadWrite);
+		ref<FileStream> fs = new FileStream(qPrintable(fileName), 
+			FileStream::ETruncReadWrite);
 
 		if (ctx->mode == EPreview)
 			ui->glView->downloadFramebuffer();
@@ -1410,6 +1413,14 @@ void MainWindow::on_actionStartServer_triggered() {
 	ui->actionStartServer->setEnabled(false);
 	connect(m_serverWidget, SIGNAL(closed()), this, SLOT(onServerClosed()));
 	m_serverWidget->show();
+}
+
+void MainWindow::on_actionReportBug_triggered() {
+	QDesktopServices::openUrl(QUrl("https://www.mitsuba-renderer.org/bugtracker/projects/mitsuba"));
+}
+
+void MainWindow::on_actionFeedback_triggered() {
+	QDesktopServices::openUrl(QUrl("mailto:Wenzel%20Jakob%20<wenzel@cs.cornell.edu>?subject=Feedback%20on%20Mitsuba"));
 }
 
 void MainWindow::onServerClosed() {

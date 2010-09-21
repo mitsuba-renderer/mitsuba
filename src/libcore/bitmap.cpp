@@ -21,7 +21,7 @@
 
 #if defined(WIN32)
 #undef _CRT_SECURE_NO_WARNINGS
-#define _USE_MATH_DEFINES
+#define _MATH_DEFINES_DEFINED
 #endif
 
 #include <ImfRgba.h>

@@ -17,6 +17,7 @@
 */
 
 #include "logwidget.h"
+#include <mitsuba/core/statistics.h>
 
 LogWidget::LogWidget(QWidget *parent) 
  : QMainWindow(parent) {

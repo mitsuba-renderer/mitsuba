@@ -18,6 +18,7 @@
 
 #include <mitsuba/core/sched.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/mstream.h>
 
 MTS_NAMESPACE_BEGIN
 

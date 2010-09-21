@@ -23,164 +23,47 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Simple three-dimensional normal class using floating point values.
- * This class is different from the Vector class in how it is treated
- * by linear transformations.
+/**
+ * \headerfile mitsuba/core/normal.h mitsuba/mitsuba.h
+ * \brief Three-dimensional normal data structure
+ *
+ * Internally represented using floating point numbers of the chosen 
+ * compile-time precision. The main difference in comparison to <tt>TVector3&lt;Float&gt;</tt>
+ * is in how instances of <tt>Normal</tt> are treated by linear transformations.
  */
-class Normal {
-public:
-	Float x, y, z;
+struct Normal : public TVector3<Float> {
+	/** \brief Construct a new normal without initializing it.
+	 * 
+	 * This construtor is useful when the normal will either not
+	 * be used at all (it might be part of a larger data structure)
+	 * or initialized at a later point in time. Always make sure
+	 * that one of the two is the case! Otherwise your program will do
+	 * computations involving uninitialized memory, which will probably
+	 * lead to a difficult-to-find bug.
+	 */
+	Normal() { }
 
-	inline Normal(Float _x = 0.0f, Float _y = 0.0f, Float _z = 0.0f)
-		: x(_x), y(_y), z(_z) {
+	/// Initialize the vector with the specified X and Z components
+	Normal(Float x, Float y, Float z) : TVector3<Float>(x, y, z) { }
+
+	/// Initialize all components of the the normal with the specified value
+	explicit Normal(Float val) : TVector3<Float>(val) { }
+
+	/// Unserialize a normal from a binary data stream
+	Normal(Stream *stream) {
+		x = stream->readElement<Float>();
+		y = stream->readElement<Float>();
+		z = stream->readElement<Float>();
 	}
 
-	explicit inline Normal(const Vector &v)
-		: x(v.x), y(v.y), z(v.z) {
-	}
+	/// Construct a normal from a vector data structure
+	Normal(const TVector3<Float> &v) : TVector3<Float>(v.x, v.y, v.z) { }
 
-	inline Normal(Stream *stream) {
-		x = stream->readFloat();
-		y = stream->readFloat();
-		z = stream->readFloat();
-	}
-
-	inline Normal operator+(const Normal &v) const {
-		return Normal(x + v.x, y + v.y, z + v.z);
-	}
-
-	inline Normal operator-(const Normal &v) const {
-		return Normal(x - v.x, y - v.y, z - v.z);
-	}
-
-	inline Normal& operator+=(const Normal &v) {
-		x += v.x; y += v.y; z += v.z;
-		return *this;
-	}
-
-	inline Normal& operator-=(const Normal &v) {
-		x -= v.x; y -= v.y; z -= v.z;
-		return *this;
-	}
-
-	inline Normal operator*(Float f) const {
-		return Normal(x*f, y*f, z*f);
-	}
-
-	inline Normal &operator*=(Float f) {
-		x *= f;
-		y *= f;
-		z *= f;
-		return *this;
-	}
-
-	inline Normal operator-() const {
-		return Normal(-x, -y, -z);
-	}
-
-	inline Normal operator/(Float f) const {
-#ifdef MTS_DEBUG
-		if (f == 0)
-			SLog(EWarn, "Normal: Division by zero!");
-#endif
-		Float r = 1.0f / f;
-		return Normal(x * r, y * r, z * r);
-	}
-
-	inline Normal &operator/=(Float f) {
-#ifdef MTS_DEBUG
-		if (f == 0)
-			SLog(EWarn, "Normal: Division by zero!");
-#endif
-		Float r = 1.0f / f;
-		x *= r;
-		y *= r;
-		z *= r;
-		return *this;
-	}
-
-	inline Float operator[](int i) const {
-		return (&x)[i];
-	}
-
-	inline Float &operator[](int i) {
-		return (&x)[i];
-	}
-
-	inline bool isZero() const {
-		return x==0 && y == 0 && z == 0;
-	}
-
-	inline Float lengthSquared() const {
-		return x*x + y*y + z*z;
-	}
-
-	inline Float length() const {
-		return std::sqrt(lengthSquared());
-	}
-
-	inline bool operator==(const Normal &v) const {
-		return (v.x == x && v.y == y && v.z == z);
-	}
-	
-	inline bool operator!=(const Normal &v) const {
-		return !operator==(v);
-	}
-
-	inline void serialize(Stream *stream) const {
-		stream->writeFloat(x);
-		stream->writeFloat(y);
-		stream->writeFloat(z);
-	}
-
-	inline std::string toString() const {
-		std::ostringstream oss;
-		oss << "[" << x << ", " << y << ", " << z << "]";
-		return oss.str();
+	/// Assign a vector to this normal
+	void operator=(const TVector3<Float> &v) {
+		x = v.x; y = v.y; z = v.z;
 	}
 };
-
-inline Float dot(const Normal &v1, const Normal &v2) {
-	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-}
-
-inline Float dot(const Vector &v1, const Normal &v2) {
-	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-}
-
-inline Float dot(const Normal &v1, const Vector &v2) {
-	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-}
-
-inline Float absDot(const Normal &v1, const Normal &v2) {
-	return std::abs(dot(v1, v2));
-}
-
-inline Float absDot(const Vector &v1, const Normal &v2) {
-	return std::abs(dot(v1, v2));
-}
-
-inline Float absDot(const Normal &v1, const Vector &v2) {
-	return std::abs(dot(v1, v2));
-}
-
-inline Normal normalize(const Normal &n) {
-	Float length = n.length();
-#ifdef MTS_DEBUG
-	if (length == 0.0f) {
-		SLog(EWarn, "Zero-length normal encountered!");
-		return n;
-	} else {
-		return n / length;
-	}
-#else
-	return n / length;
-#endif
-}
-
-inline Vector::Vector(const Normal &n)
- : x(n.x), y(n.y), z(n.z) {
-}
 
 MTS_NAMESPACE_END
 

@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/irrcache.h>
+#include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -180,7 +181,7 @@ struct clamp_neighbors_functor {
 /* Irradiance interpolation functor */
 struct irr_interp_functor {
 	irr_interp_functor(const Intersection &its, Float kappa, bool gradients) : its(its), 
-		kappa(kappa), weightSum(0), gradients(gradients) {
+		kappa(kappa), weightSum(0), gradients(gradients), E(0.0f) {
 	}
 
 	void operator()(const IrradianceCache::Record *sample) {
@@ -286,14 +287,14 @@ IrradianceCache::Record *IrradianceCache::put(const RayDifferential &ray, const 
 	/* Clamping suggested by Tabellion and Lamourlette ("An Approximate Global 
 	   Illumination System for Computer Generated Films") */
 	if (m_clampScreen && ray.hasDifferentials) {
-		const Float d = -dot(its.geoFrame.n, its.p);
+		const Float d = -dot(its.geoFrame.n, Vector(its.p));
 		const Float txRecip = dot(its.geoFrame.n, ray.rx.d),
 		            tyRecip = dot(its.geoFrame.n, ray.ry.d);
 		if (txRecip != 0 && tyRecip != 0) {
 			// Ray distances traveled 
-			const Float tx = -(dot(its.geoFrame.n, ray.rx.o) + d) / 
+			const Float tx = -(dot(its.geoFrame.n, Vector(ray.rx.o)) + d) / 
 				txRecip;
-			const Float ty = -(dot(its.geoFrame.n, ray.ry.o) + d) / 
+			const Float ty = -(dot(its.geoFrame.n, Vector(ray.ry.o)) + d) / 
 				tyRecip;
 			Point px = ray.rx(tx), py = ray.ry(ty);
 			Float sqrtArea = std::sqrt(cross(px-its.p, py-its.p).length())*2;

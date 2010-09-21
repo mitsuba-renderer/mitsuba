@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/preview.h>
+#include <mitsuba/render/triaccel.h>
 #include <mitsuba/render/imageproc_wu.h>
 
 MTS_NAMESPACE_BEGIN

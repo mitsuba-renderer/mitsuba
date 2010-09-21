@@ -19,9 +19,7 @@
 #if !defined(__KD_TREE_H)
 #define __KD_TREE_H
 
-#include <mitsuba/render/trimesh.h>
-#include <mitsuba/render/triaccel.h>
-#include <mitsuba/core/aabb.h>
+#include <mitsuba/render/shape.h>
 
 /**
  * First, some default configuration definitions:
@@ -36,7 +34,6 @@
 #define MTS_USE_TRIACCEL 1
 #else
 #define MTS_USE_TRIACCEL 1
-#include <mitsuba/render/triaccel.h>
 #endif
 
 #if defined(MTS_HAS_COHERENT_RT)
@@ -55,6 +52,8 @@
 /* Switch to Moeller-Trumbore if neither TriAccel4 nor TriAccel is selected */
 #define MTS_USE_MT 1
 #endif
+
+#include <mitsuba/render/triaccel.h>
 
 /**
  * Pre-defined max. stack size for the ray traversal algorithm
@@ -189,6 +188,8 @@ public:
 protected:
 	/// Virtual destructor
 	virtual ~KDTree();
+
+	/// \cond
 
 	/// KD-tree node in 8 bytes
 	struct KDNode {
@@ -435,6 +436,7 @@ protected:
 		const KDNode * __restrict node;
 	};
 #endif
+	/// \endcond
 
 	/**
 	 * Intersection method from Vlastimil Havran's 
@@ -470,7 +472,7 @@ protected:
 	/* Pointers to all contained shapes */
 	std::vector<const Shape *> m_shapes;
 	/// Storage for kd-tree nodes
-	std::vector<KDNode, std::aligned_allocator<KDNode> > m_nodes;
+	std::vector<KDNode, aligned_allocator<KDNode> > m_nodes;
 #if defined(MTS_USE_TRIACCEL4)
 	/// Explicitly store per-leaf quad-packed triangles
 	TriAccel4 *m_packedTriangles;

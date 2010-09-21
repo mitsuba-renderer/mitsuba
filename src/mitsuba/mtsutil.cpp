@@ -22,17 +22,15 @@
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/shvector.h>
+#include <mitsuba/core/statistics.h>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/appender.h>
 #include <mitsuba/render/util.h>
 #include <mitsuba/render/renderjob.h>
 #include <mitsuba/render/shandler.h>
+#include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <stdexcept>
-#include <sys/types.h>
-
-#if !defined(WIN32)
-#include <dlfcn.h>
-#include <dirent.h>
-#endif
 
 #if defined(WIN32)
 #include "getopt.h"
@@ -65,49 +63,47 @@ void help() {
 	cout <<  "   -t          Execute all testcases" << endl << endl;
 	cout <<  "   -v          Be more verbose" << endl << endl;
 
-	FileResolver *resolver = FileResolver::getInstance();
+	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 	std::ostringstream utilities, testcases;
 
 	testcases << "The following testcases are available:" << endl << endl;
 	utilities << endl << "The following utilities are available:" << endl << endl;
 
-	std::vector<std::string> dirPaths = resolver->resolveAllAbsolute("plugins");
+	std::vector<fs::path> dirPaths = fileResolver->resolveAll("plugins");
 	std::set<std::string> seen;
 
 	for (size_t i=0; i<dirPaths.size(); ++i) {
-		std::string dirPath = dirPaths[i];
+		fs::path dirPath = fs::complete(dirPaths[i]);
 
-#if !defined(WIN32)
-		DIR *directory;
-		struct dirent *dirinfo;
+		if (!fs::exists(dirPath) || !fs::is_directory(dirPath))
+			break;
 
-		if ((directory = opendir(dirPath.c_str())) == NULL)
-			SLog(EInfo, "Could not open plugin directory");
+		fs::directory_iterator end, it(dirPath);
 
-		while ((dirinfo = readdir(directory)) != NULL) {
-			std::string fname(dirinfo->d_name);
-			if (!endsWith(fname, ".dylib") && !endsWith(fname, ".so"))
+		for (; it != end; ++it) {
+			if (!fs::is_regular_file(it->status()))
 				continue;
-			std::string fullName = dirPath + "/" + fname;
+			std::string extension(boost::to_lower_copy(it->path().extension()));
+#if defined(WIN32)
+			if (extension != ".dll")
+				continue;
+#elif defined(__OSX__)
+			if (extension != ".dylib")
+				continue;
+#elif defined(__LINUX__)
+			if (extension != ".so")
+				continue;
 #else
-		HANDLE hFind;
-		WIN32_FIND_DATA findFileData;
-
-		if ((hFind = FindFirstFile((dirPath + "\\*.dll").c_str(), &findFileData)) == INVALID_HANDLE_VALUE)
-			SLog(EInfo, "Could not open plugin directory");
-		
-		do {
-			std::string fname = findFileData.cFileName;
-			std::string fullName = dirPath + "\\" + fname;
+#error Unknown operating system!
 #endif
-			std::string shortName = fname.substr(0, strrchr(fname.c_str(), '.') - fname.c_str());
+			std::string shortName = it->path().stem();
 			if (seen.find(shortName) != seen.end())
 				continue;
 			seen.insert(shortName);
-			Plugin utility(shortName, fullName);
+			Plugin utility(shortName, it->path());
 			if (!utility.isUtility())
 				continue;
-			if (startsWith(shortName, "test_")) {
+			if (boost::starts_with(shortName, "test_")) {
 				testcases << "\t" << shortName;
 				for (int i=0; i<22-(int) shortName.length(); ++i)
 					testcases << ' ';
@@ -118,13 +114,7 @@ void help() {
 					utilities << ' ';
 				utilities << utility.getDescription() << endl;
 			}
-#if !defined(WIN32)	
 		}
-		closedir(directory);
-#else
-		} while (FindNextFile(hFind, &findFileData));
-		FindClose(hFind);
-#endif
 	}
 
 	cout << testcases.str() << utilities.str();
@@ -141,7 +131,7 @@ int ubi_main(int argc, char **argv) {
 					networkHosts = "", destFile="";
 		bool quietMode = false;
 		ELogLevel logLevel = EInfo;
-		FileResolver *resolver = FileResolver::getInstance();
+		FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 		bool testCaseMode = false;
 
 		if (argc < 2) {
@@ -156,7 +146,7 @@ int ubi_main(int argc, char **argv) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
 						for (unsigned int i=0; i<paths.size(); ++i) 
-							resolver->addPath(paths[i]);
+							fileResolver->addPath(paths[i]);
 					}
 					break;
 				case 'c':
@@ -268,46 +258,44 @@ int ubi_main(int argc, char **argv) {
 		scheduler->start();
 
 		if (testCaseMode) {
-			std::vector<std::string> dirPaths = resolver->resolveAllAbsolute("plugins");
+			std::vector<fs::path> dirPaths = fileResolver->resolveAll("plugins");
 			std::set<std::string> seen;
 			int executed = 0, succeeded = 0;
-
+		
 			for (size_t i=0; i<dirPaths.size(); ++i) {
-				std::string dirPath = dirPaths[i];
+				fs::path dirPath = fs::complete(dirPaths[i]);
 
-#if !defined(WIN32)
-				DIR *directory;
-				struct dirent *dirinfo;
+				if (!fs::exists(dirPath) || !fs::is_directory(dirPath))
+					break;
 
-				if ((directory = opendir(dirPath.c_str())) == NULL)
-					SLog(EInfo, "Could not open plugin directory");
+				fs::directory_iterator end, it(dirPath);
 
-				while ((dirinfo = readdir(directory)) != NULL) {
-					std::string fname(dirinfo->d_name);
-					if (!endsWith(fname, ".dylib") && !endsWith(fname, ".so"))
+				for (; it != end; ++it) {
+					if (!fs::is_regular_file(it->status()))
 						continue;
-					std::string fullName = dirPath + "/" + fname;
+					std::string extension(boost::to_lower_copy(it->path().extension()));
+#if defined(WIN32)
+					if (extension != ".dll")
+						continue;
+#elif defined(__OSX__)
+					if (extension != ".dylib")
+						continue;
+#elif defined(__LINUX__)
+					if (extension != ".so")
+						continue;
 #else
-				HANDLE hFind;
-				WIN32_FIND_DATA findFileData;
-
-				if ((hFind = FindFirstFile((dirPath + "\\*.dll").c_str(), &findFileData)) == INVALID_HANDLE_VALUE)
-					SLog(EInfo, "Could not open plugin directory");
-				
-				do {
-					std::string fname = findFileData.cFileName;
-					std::string fullName = dirPath + "\\" + fname;
+#error Unknown operating system!
 #endif
-					std::string shortName = fname.substr(0, strrchr(fname.c_str(), '.') - fname.c_str());
-					if (!startsWith(shortName, "test_") || seen.find(shortName) != seen.end())
+					std::string shortName = it->path().stem();
+					if (seen.find(shortName) != seen.end() || !boost::starts_with(shortName, "test_"))
 						continue;
 					seen.insert(shortName);
-					Plugin plugin(shortName, fullName);
+					Plugin plugin(shortName, it->path());
 					if (!plugin.isUtility())
 						continue;
 
 					ref<Utility> utility = plugin.createUtility();
-					
+
 					TestCase *testCase = static_cast<TestCase *>(utility.get());
 					if (!utility->getClass()->derivesFrom(TestCase::m_theClass))
 						SLog(EError, "This is not a test case!");
@@ -317,13 +305,7 @@ int ubi_main(int argc, char **argv) {
 
 					executed += testCase->getExecuted();
 					succeeded += testCase->getSucceeded();
-#if !defined(WIN32)	
 				}
-				closedir(directory);
-#else
-				} while (FindNextFile(hFind, &findFileData));
-				FindClose(hFind);
-#endif
 			}
 
 			SLog(EInfo, "Ran %i tests, %i succeeded, %i failed.", executed, succeeded, executed-succeeded);
@@ -332,22 +314,26 @@ int ubi_main(int argc, char **argv) {
 				std::cerr << "A utility name must be supplied!" << endl;
 				return -1;
 			}
+			fs::path pluginName(argv[optind]);
 
 			/* Build the full plugin file name */
 #if defined(WIN32)
-			std::string shortName = std::string("plugins/") + argv[optind] + std::string(".dll");
+			pluginName.replace_extension(".dll");
 #elif defined(__OSX__)
-			std::string shortName = std::string("plugins/") + argv[optind] + std::string(".dylib");
+			pluginName.replace_extension(".dylib");
+#elif defined(__LINUX__)
+			pluginName.replace_extension(".so");
 #else
-			std::string shortName = std::string("plugins/") + argv[optind] + std::string(".so");
+#error Unknown operating system!
 #endif
-			std::string fullName = resolver->resolve(shortName);
+			fs::path fullName = fileResolver->resolve(fs::path("plugins") / pluginName);
 
-			if (!FileStream::exists(fullName)) {
+			if (!fs::exists(fullName)) {
 				/* Plugin not found! */
 				SLog(EError, "Utility \"%s\" not found (run \"mtsutil\" without arguments to "
-					"see a list of available utilities)", fullName.c_str());
+					"see a list of available utilities)", fullName.file_string().c_str());
 			}
+
 			SLog(EInfo, "Loading utility \"%s\" ..", argv[optind]);
 			Plugin *plugin = new Plugin(argv[optind], fullName);
 			if (!plugin->isUtility())
@@ -379,15 +365,6 @@ int main(int argc, char **argv) {
 	SHVector::staticInitialization();
 
 #ifdef WIN32
-	char lpFilename[1024];
-	if (GetModuleFileNameA(NULL,
-		lpFilename, sizeof(lpFilename))) {
-		FileResolver *resolver = FileResolver::getInstance();
-		resolver->addPathFromFile(lpFilename);
-	} else {
-		SLog(EWarn, "Could not determine the executable path");
-	}
-
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
@@ -397,21 +374,12 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef __LINUX__
-	char exePath[PATH_MAX];
-	memset(exePath, 0, PATH_MAX);
-	FileResolver *resolver = FileResolver::getInstance();
-	if (readlink("/proc/self/exe", exePath, PATH_MAX) != -1) {
-		resolver->addPathFromFile(exePath);
-	} else {
-		SLog(EWarn, "Could not determine the executable path");
-	}
-	resolver->addPath("/usr/share/mitsuba");
+	Thread::getThread()->getFileResolver()->addPath(MTS_RESOURCE_DIR);
 #endif
 
 #if defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
-	FileResolver *resolver = FileResolver::getInstance();
-	resolver->addPath(__ubi_bundlepath());
+	Thread::getThread()->getFileResolver()->addPath(__ubi_bundlepath());
 	MTS_AUTORELEASE_END() 
 #endif
 		

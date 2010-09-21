@@ -16,8 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/shape.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/properties.h>
+#include <mitsuba/render/shape.h>
+#include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/subsurface.h>
+#include <mitsuba/render/luminaire.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -144,6 +148,15 @@ void Shape::serialize(Stream *stream, InstanceManager *manager) const {
 	manager->serialize(stream, m_bsdf.get());
 	manager->serialize(stream, m_subsurface.get());
 	manager->serialize(stream, m_luminaire.get());
+}
+
+std::string ShapeSamplingRecord::toString() const {
+	std::ostringstream oss;
+	oss << "ShapeSamplingRecord[" << std::endl
+		<< "  p = " << p.toString() << "," << std::endl
+		<< "  n = " << n.toString() << std::endl
+		<< "]";
+	return oss.str();
 }
 
 MTS_IMPLEMENT_CLASS(Shape, true, ConfigurableObject)

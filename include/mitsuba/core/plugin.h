@@ -20,15 +20,18 @@
 #define __PLUGIN_H
 
 #include <mitsuba/mitsuba.h>
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
 
 MTS_NAMESPACE_BEGIN
 
-class Utility;
-
 /**
- * Abstract plugin class -- can represent loadable configurable objects
- * and utilities. Please see the <tt>ConfigurableObject</tt> and
- * <tt>Utility</tt> class for details
+ * \brief Abstract plugin class -- represents loadable configurable objects
+ * and utilities.
+ * 
+ * Please see the <tt>\ref ConfigurableObject</tt> and
+ * <tt>\ref Utility</tt> classes for details
  */
 class MTS_EXPORT_CORE Plugin {
 	typedef void *(*CreateInstanceFunc)(const Properties &props);
@@ -36,7 +39,7 @@ class MTS_EXPORT_CORE Plugin {
 	typedef char *(*GetDescriptionFunc)();
 public:
 	/// Load a plugin from the supplied path
-	Plugin(const std::string &shortName, const std::string &path);
+	Plugin(const std::string &shortName, const fs::path &path);
 
 	/// Virtual destructor
 	virtual ~Plugin();
@@ -54,7 +57,7 @@ public:
 	std::string getDescription() const;
 	
 	/// Return the path of this plugin
-	inline const std::string &getPath() const { return m_path; }
+	inline const fs::path &getPath() const { return m_path; }
 	
 	/// Return a short name of this plugin
 	inline const std::string &getShortName() const { return m_shortName; }
@@ -68,15 +71,18 @@ private:
 	void *m_handle;
 #endif
 	std::string m_shortName;
-	std::string m_path;
+	fs::path m_path;
 	bool m_isUtility;
 	GetDescriptionFunc m_getDescription;
 	CreateInstanceFunc m_createInstance;
 	CreateUtilityFunc m_createUtility;
 };
 
-class FileResolver;
 
+/**
+ * \brief The plugin manager is responsible for resolving and
+ * loading external plugins.
+ */
 class MTS_EXPORT_CORE PluginManager : public Object {
 public:
 	/// Return the global plugin manager
@@ -90,7 +96,15 @@ public:
 	/// Return the list of loaded plugins
 	std::vector<std::string> getLoadedPlugins() const;
 
-	/// Instantiate an object
+	/**
+	 * \brief Instantiate an object using a plugin
+	 * \param classType Expected type of the plugin. An
+	 *    exception will be thrown if it turns out not
+	 *    to derive from this class.
+	 * \param props A \ref Properties instance containing
+	 *    all information required to find and construct 
+	 *    the plugin.
+	 */
 	ConfigurableObject *createObject(
 		const Class *classType,
 		const Properties &props

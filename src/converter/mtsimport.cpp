@@ -1,21 +1,3 @@
-/*
-    This file is part of Mitsuba, a physically based rendering system.
-
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
-
-    Mitsuba is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License Version 3
-    as published by the Free Software Foundation.
-
-    Mitsuba is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
-
 /**
  * Mitsuba COLLADA 1.4 and Wavefront OBJ -> XML converter
  * 
@@ -51,8 +33,8 @@
 #include <xercesc/dom/DOMException.hpp>
 #include "converter.h"
 #include <mitsuba/hw/glrenderer.h>
-#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/statistics.h>
 #if defined(WIN32)
 #include "../mitsuba/getopt.h"
 #endif
@@ -64,8 +46,8 @@ public:
 	inline ConsoleGeometryConverter() {
 	}
 
-	std::string locateResource(const std::string &resource) {
-		return "";
+	fs::path locateResource(const fs::path &resource) {
+		return fs::path(); 
 	}
 };
 
@@ -90,7 +72,7 @@ int colladaMain(int argc, char **argv) {
 	int xres = -1, yres = -1;
 	int samplesPerPixel = 8;
 	Float fov = -1;
-	FileResolver *resolver = FileResolver::getInstance();
+	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 	ELogLevel logLevel = EInfo;
 
 	optind = 1;
@@ -100,7 +82,7 @@ int colladaMain(int argc, char **argv) {
 			case 'a': {
 					std::vector<std::string> paths = tokenize(optarg, ";");
 					for (unsigned int i=0; i<paths.size(); ++i) 
-						resolver->addPath(paths[i]);
+						fileResolver->addPath(paths[i]);
 				}
 				break;
 			case 's':
@@ -118,7 +100,7 @@ int colladaMain(int argc, char **argv) {
 				logLevel = EDebug;
 				break;
 			case 'f':
-				fov = strtod(optarg, &end_ptr);
+				fov = (Float) strtod(optarg, &end_ptr);
 				if (*end_ptr != '\0')
 					SLog(EError, "Invalid field of view value!");
 				break;
@@ -190,26 +172,13 @@ int ubi_main(int argc, char **argv) {
 
 	Thread::getThread()->getLogger()->setLogLevel(EInfo);
 
-	FileResolver *resolver = FileResolver::getInstance();
-#if defined(WIN32)
-	char lpFilename[1024];
-	if (GetModuleFileNameA(NULL,
-		lpFilename, sizeof(lpFilename))) {
-		resolver->addPathFromFile(lpFilename);
-	} else {
-		SLog(EWarn, "Could not determine the executable path");
-	}
-#elif defined(__LINUX__)
-	char exePath[PATH_MAX];
-	if (getcwd(exePath, PATH_MAX)) {
-		resolver->addPathFromFile(exePath);
-	} else {
-		SLog(EWarn, "Could not determine the executable path");
-	}
-	resolver->addPath("/usr/share/mitsuba");
-#else
+	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
+
+#if defined(__LINUX__)
+	fileResolver->addPath(MTS_RESOURCE_DIR);
+#elif defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
-	resolver->addPath(__ubi_bundlepath());
+	fileResolver->addPath(__ubi_bundlepath());
 	MTS_AUTORELEASE_END() 
 #endif
 

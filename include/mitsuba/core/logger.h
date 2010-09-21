@@ -20,13 +20,12 @@
 #define __LOGGER_H
 
 #include <mitsuba/core/formatter.h>
-#include <mitsuba/core/appender.h>
-
-MTS_NAMESPACE_BEGIN
 
 // -----------------------------------------------------------------------
 //  Logging
 // -----------------------------------------------------------------------
+
+MTS_NAMESPACE_BEGIN
 
 /// Write a Log message to the console (to be used within subclasses of <tt>Object</tt>)
 #define Log(level, fmt, ...) Thread::getThread()->getLogger()->log(level, m_theClass, \
@@ -68,35 +67,39 @@ MTS_NAMESPACE_BEGIN
 	} while (0)
 #endif
 
-/** \brief The logger is the class responsible for the propagation of
- * debug information. It invokes a Formatter implementation to convert
- * events into a human-readable form and then sends this information to
- * every registered Appender implementation.
+/** 
+ * \headerfile mitsuba/core/logger.h mitsuba/mitsuba.h
+ * \brief Responsible for processing log messages
+ * 
+ * Upon receiving a log message, the Logger class invokes 
+ * a Formatter to convert it into a human-readable form.
+ * Following that, it sends this information to every 
+ * registered Appender.
  */
 class MTS_EXPORT_CORE Logger : public Object {
 public:
-	/// Construct a new logger
+	/// Construct a new logger with the given minimum log level
 	Logger(ELogLevel logLevel = EDebug);
 
 	/**
-	 * Process a log message
-	 * @param level Log level of the message
-	 * @param theClass Class descriptor of the message creator
-	 * @param fileName Source file of the message creator
-	 * @param lineNumber Source line number of the message creator
-	 * @param fmt printf-style string formatter
+	 * \brief Process a log message
+	 * \param level Log level of the message
+	 * \param theClass Class descriptor of the message creator
+	 * \param fileName Source file of the message creator
+	 * \param lineNumber Source line number of the message creator
+	 * \param fmt printf-style string formatter
 	 */
 	void log(ELogLevel level, const Class *theClass, 
 		const char *fileName, int lineNumber, 
 		const char *fmt, ...);
 
 	/**
-	 * Process a progress message
-	 * @param progress Percentage value in [0,100]
-	 * @param name Title of the progress message
-	 * @param formatted Formatted string representation of the message
-	 * @param eta Estimated time until 100% is reached.
-	 * @param ptr Custom pointer payload
+	 * \brief Process a progress message
+	 * \param progress Percentage value in [0,100]
+	 * \param name Title of the progress message
+	 * \param formatted Formatted string representation of the message
+	 * \param eta Estimated time until 100% is reached.
+	 * \param ptr Custom pointer payload
 	 */
 	void logProgress(Float progress, const std::string &name,
 		const std::string &formatted, const std::string &eta,
@@ -142,7 +145,7 @@ public:
 protected:
 	/// Virtual destructor
 	virtual ~Logger();
-protected:
+private:
 	ELogLevel m_logLevel;
 	ref<Formatter> m_formatter;
 	ref<Mutex> m_mutex;

@@ -19,8 +19,8 @@
 #if !defined(__PHOTONMAP_H)
 #define __PHOTONMAP_H
 
+#include <mitsuba/core/serialization.h>
 #include <mitsuba/core/aabb.h>
-#include <mitsuba/render/records.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -313,7 +313,9 @@ public:
 #if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
 			return power;
 #else
-			return Spectrum(power);
+			Spectrum result;
+			result.fromRGBE(power);
+			return result;
 #endif
 		}
 
@@ -358,6 +360,7 @@ protected:
 	typedef std::vector<photon_ptr>::iterator photon_iterator;
 	typedef std::pair<float, const_photon_ptr> search_result;
 
+	/// \cond
 	/* Photon position comparison functor (< comparison). */
 	struct comparePhotonLess : public std::unary_function<photon_ptr, bool> {
 	public:
@@ -397,6 +400,8 @@ protected:
 			return a.first <= b.first;
 		}
 	};
+
+	/// \endcond
 protected:
     /* ===================================================================== */
     /*                         Protected subroutines                         */
@@ -466,11 +471,10 @@ protected:
 	inline size_t rightChild(size_t index) const { return 2*index + 1; }
 	inline bool isInnerNode(size_t index) const { return index <= m_lastInnerNode; }
 	inline bool hasRightChild(size_t index) const { return index <= m_lastRChildNode; }
-protected:
+private:
     /* ===================================================================== */
     /*                        Protected attributes                           */
     /* ===================================================================== */
-
 	struct ThreadContext {
 		AABB aabb;
 		int photonOffset;

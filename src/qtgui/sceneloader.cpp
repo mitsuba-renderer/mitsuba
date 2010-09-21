@@ -20,6 +20,9 @@
 #include "glwidget.h"
 #include "sceneloader.h"
 #include <mitsuba/render/shandler.h>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
+#include <boost/algorithm/string.hpp>
 
 SceneLoader::SceneLoader(FileResolver *resolver, const std::string &filename) 
 	: Thread("load"), m_resolver(resolver), m_filename(filename) {
@@ -30,7 +33,7 @@ SceneLoader::~SceneLoader() {
 }
 
 void SceneLoader::run() {
-	FileResolver::setInstance(m_resolver);
+	Thread::getThread()->setFileResolver(m_resolver);
 	SAXParser* parser = new SAXParser();
 	std::string lowerCase = m_filename;
 	for(size_t i=0; i<m_filename.size();++i)
@@ -52,7 +55,7 @@ void SceneLoader::run() {
 		m_result->diffuseSources = settings.value("preview_diffuseSources", true).toBool();
 		m_result->diffuseReceivers = settings.value("preview_diffuseReceivers", false).toBool();
 
-		if (endsWith(lowerCase, ".exr")) {
+		if (boost::ends_with(lowerCase, ".exr")) {
 			/* This is an image, not a scene */
 			ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
 			ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, fs);
@@ -63,28 +66,29 @@ void SceneLoader::run() {
 			m_result->shortName = QFileInfo(m_filename.c_str()).fileName();
 			m_result->pathLength = 2;
 		} else {
-			std::string schemaPath = m_resolver->resolveAbsolute("schema/scene.xsd");
+			fs::path schemaPath = m_resolver->resolveAbsolute("schema/scene.xsd");
 
 			/* Check against the 'scene.xsd' XML Schema */
 			parser->setDoSchema(true);
 			parser->setValidationSchemaFullChecking(true);
 			parser->setValidationScheme(SAXParser::Val_Always);
-			parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
+			parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 
 			/* Set the SAX handler */
 			parser->setDoNamespaces(true);
 			parser->setDocumentHandler(handler);
 			parser->setErrorHandler(handler);
 
-			std::string filenameWithoutExtension = m_resolver->resolveDest( 
-				FileResolver::getFilenameWithoutExtension(m_filename));
+			fs::path 
+				filename = m_filename,
+				baseName = fs::basename(filename);
 
 			SLog(EInfo, "Parsing scene description from \"%s\" ..", m_filename.c_str());
 			parser->parse(m_filename.c_str());
 			ref<Scene> scene = handler->getScene();
 
-			scene->setSourceFile(m_filename.c_str());
-			scene->setDestinationFile(filenameWithoutExtension);
+			scene->setSourceFile(m_filename);
+			scene->setDestinationFile(baseName.file_string());
 			scene->initialize();
 
 			if (scene->getIntegrator() == NULL)

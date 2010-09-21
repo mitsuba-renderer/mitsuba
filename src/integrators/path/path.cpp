@@ -51,7 +51,7 @@ public:
 		/* Perform the first ray intersection (or ignore if the 
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
-		Spectrum pathThroughput(rRec.attenuation);
+		Spectrum pathThroughput(1.0f);
 
 		while (rRec.depth <= m_maxDepth || m_maxDepth < 0) {
 			if (!its.isValid()) {
@@ -162,7 +162,7 @@ public:
 			/* Russian roulette - Possibly stop the recursion */
 			if (rRec.depth >= m_rrDepth) {
 				/* Assuming that BSDF importance sampling is perfect,
-				   the following should equal the maximum albedo
+				   'bsdfVal.max()' should equal the maximum albedo
 				   over all spectral samples */
 				Float approxAlbedo = std::min((Float) 0.9f, bsdfVal.max());
 				if (rRec.nextSample1D() > approxAlbedo)

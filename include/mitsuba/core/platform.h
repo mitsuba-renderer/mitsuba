@@ -90,6 +90,8 @@
 	#endif
 
 	#define SIZE_T_FMT "%Iu"
+	#define BOOST_FILESYSTEM_NO_LIB 
+	#define BOOST_SYSTEM_NO_LIB 
 #else
 	#define MTS_EXPORT
 	#define MTS_EXPORT_CORE

@@ -25,16 +25,24 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Templated multiple-reference octree. Based on the excellent 
- * implementation in PBRT. Modifications are the addition of a 
- * bounding sphere query and support for multithreading.
+ * \brief Generic multiple-reference octree.
+ *
+ * Based on the excellent implementation in PBRT. Modifications are 
+ * the addition of a bounding sphere query and support for multithreading.
  */
 template <typename T> class Octree {
 public:
+	/**
+	 * \brief Create a new octree
+	 *
+	 * By default, the maximum tree depth is set to 16
+	 */
+
 	inline Octree(const AABB &aabb, int maxDepth = 16) 
 	 : m_aabb(aabb), m_maxDepth(maxDepth) {
 	}
 
+	/// Insert an item with the specified cell coverage
 	inline void insert(const T &value, const AABB &coverage) {
 		insert(&m_root, m_aabb, value, coverage,
 			coverage.getExtents().lengthSquared(), 0);

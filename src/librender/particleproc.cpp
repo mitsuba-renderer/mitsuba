@@ -16,7 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/render/particleproc.h>
+#include <mitsuba/render/medium.h>
 #include <mitsuba/render/range.h>
 
 MTS_NAMESPACE_BEGIN

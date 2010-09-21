@@ -19,6 +19,8 @@
 #if !defined(__APPENDER_H)
 #define __APPENDER_H
 
+#include <mitsuba/mitsuba.h>
+
 MTS_NAMESPACE_BEGIN
 
 /** \brief This class defines an abstract destination
@@ -26,16 +28,16 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE Appender : public Object {
 public:
-	/// Append a line of text
-	virtual void append(ELogLevel level, const std::string &pText) = 0;
+	/// Append a line of text with the given log level
+	virtual void append(ELogLevel level, const std::string &text) = 0;
 
 	/**
-	 * Process a progress message
-	 * @param progress Percentage value in [0,100]
-	 * @param name Title of the progress message
-	 * @param formatted Formatted string representation of the message
-	 * @param eta Estimated time until 100% is reached.
-	 * @param ptr Custom pointer payload
+	 * \brief Process a progress message
+	 * \param progress Percentage value in [0,100]
+	 * \param name Title of the progress message
+	 * \param formatted Formatted string representation of the message
+	 * \param eta Estimated time until 100% is reached.
+	 * \param ptr Custom pointer payload
 	 */
 	virtual void logProgress(Float progress, const std::string &name,
 		const std::string &formatted, const std::string &eta, const void *ptr) = 0;
@@ -46,7 +48,7 @@ protected:
 	virtual ~Appender() { }
 };
 
-/** \brief Appender implementation which writes to an
+/** \brief Appender implementation, which writes to an
  * arbitrary C++ stream
  */
 class MTS_EXPORT_CORE StreamAppender : public Appender {
@@ -82,7 +84,7 @@ private:
 	bool m_lastMessageWasProgress;
 };
 
-/** \brief Appender implementation which writes to an
+/** \brief Appender implementation, which writes to an
  * unbuffered file descriptor.
  */
 class MTS_EXPORT_CORE UnbufferedAppender : public Appender {

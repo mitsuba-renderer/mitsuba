@@ -30,49 +30,53 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Abstract smooth spectral power distribution data type,
- * which supports sampling at arbitrary wavelengths
+ * which supports evaluation at arbitrary wavelengths
  */
 class MTS_EXPORT_CORE SmoothSpectrum {
 public:
 	/**
-	 * Return the value of the spectral power distribution
-	 * for the given wavelength.
+	 * Evaluate the value of the spectral power distribution
+	 * at the given wavelength.
 	 */
-	virtual Float sample(Float lambda) const = 0;
+	virtual Float eval(Float lambda) const = 0;
+	
+	virtual ~SmoothSpectrum() { }
 };
 
 /**
- * This class uses Plank's black body law to compute the
- * spectral power distribution of a black body with the 
- * given temperature.
+ * \brief Spectral power distribution based on Planck's black body law
+ *
+ * Computes the spectral power distribution of a black body of the 
+ * specified temperature.
  */
 class MTS_EXPORT_CORE BlackBodySpectrum : public SmoothSpectrum {
 public:
 	/**
-	 * Construct a new black body spectrum given the emitter's
-	 * temperature in kelvin.
+	 * \brief Construct a new black body spectrum given the emitter's
+	 * temperature in Kelvin.
 	 */
 	inline BlackBodySpectrum(Float temperature) {
 		m_temperature = temperature;
 	}
 
-	/**
-	 * Return the value of the spectral power distribution
-	 * for the given wavelength.
+	virtual ~BlackBodySpectrum() { }
+
+	/** \brief Return the value of the spectral power distribution
+	 * at the given wavelength.
 	 */
-	virtual Float sample(Float lambda) const;
+	virtual Float eval(Float lambda) const;
 private:
 	Float m_temperature;
 };
 
 /**
- * Linearly interpolated spectral power distribution
+ * \brief Linearly interpolated spectral power distribution
  */
 class MTS_EXPORT_CORE InterpolatedSpectrum : public SmoothSpectrum {
 public:
 	/**
-	 * Construct a new black body spectrum given the emitter's
-	 * temperature in kelvin.
+	 * \brief Create a new interpolated spectrum with space 
+	 * for the specified number of samples
 	 */
 	inline InterpolatedSpectrum(size_t size = 0) {
 		m_wavelength.reserve(size);
@@ -80,49 +84,56 @@ public:
 	}
 
 	/**
-	 * Append an entry to the spectral power distribution. Entries
-	 * must be added in order of increasing wavelength
+	 * \brief Append an entry to the spectral power distribution.
+	 *
+	 * Entries must be added in order of increasing wavelength
 	 */
 	void appendSample(Float lambda, Float value);
 
 	/**
-	 * Return the value of the spectral power distribution
-	 * for the given wavelength.
+	 * \brief Return the value of the spectral power distribution
+	 * at the given wavelength.
 	 */
-	virtual Float sample(Float lambda) const;
+	virtual Float eval(Float lambda) const;
+	
+	virtual ~InterpolatedSpectrum() { }
 private:
 	std::vector<Float> m_wavelength, m_value;
 };
 
-/** \brief Spectral power distribution data type
- * using a fixed number of wavelength samples. When
- * SPECTRUM_SAMPLES is set to 3, the class falls back
- * to linear RGB.
+/** \brief Discrete spectral power distribution 
+ * based on a (usually small) number of wavelength samples. 
+ *
+ * When SPECTRUM_SAMPLES is set to 3 (the default), this class 
+ * falls back to linear RGB as its internal representation.
  */
-class MTS_EXPORT_CORE Spectrum {
+struct MTS_EXPORT_CORE Spectrum {
 public:
-	/// Set all samples to the given value
-	inline Spectrum(Float v = 0.0f) {
+	/// Create a new spectral power distribution, but don't initialize the contents
+#if !defined(MTS_DEBUG_UNINITIALIZED)
+	inline Spectrum() { }
+#else
+	inline Spectrum() {
+		for (int i=0; i<SPECTRUM_SAMPLES; i++)
+			s[i] = std::numeric_limits<double>::quiet_NaN();
+	}
+#endif
+
+
+	/// Create a new spectral power distribution with all samples set to the given value
+	explicit inline Spectrum(Float v) {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			s[i] = v;
 	}
 
-	/// Initialize with spectral values from a smooth spectrum
-	Spectrum(const SmoothSpectrum *smooth);
-
-	/// Convert from RGBE
-	inline Spectrum(const uint8_t rgbe[4]) {
-		fromRGBE(rgbe);
-	}
-
-	/// Copy a spectrum
-	inline Spectrum(Float spd[SPECTRUM_SAMPLES]) {
+	/// Copy a spectral power distribution
+	explicit inline Spectrum(Float spd[SPECTRUM_SAMPLES]) {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			s[i] = spd[i];
 	}
 
-	/// Unserialize a spectrum
-	inline Spectrum(Stream *stream) {
+	/// Unserialize a spectral power distribution from a binary data stream
+	explicit inline Spectrum(Stream *stream) {
 		stream->readFloatArray(s, SPECTRUM_SAMPLES);
 	}
 
@@ -134,7 +145,7 @@ public:
 		return value;
 	}
 
-	/// Add two spectral power distributions
+	/// Add a spectral power distribution to this instance
 	inline Spectrum& operator+=(const Spectrum &spd) {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			s[i] += spd.s[i];
@@ -149,14 +160,14 @@ public:
 		return value;
 	}
 
-	/// Subtract a spectral power distribution
+	/// Subtract a spectral power distribution from this instance
 	inline Spectrum& operator-=(const Spectrum &spd) {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			s[i] -= spd.s[i];
 		return *this;
 	}
 
-	/// Multiplication with a scalar
+	/// Multiply by a scalar
 	inline Spectrum operator*(Float f) const {
 		Spectrum value = *this;
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
@@ -164,19 +175,19 @@ public:
 		return value;
 	}
 
-	/// Multiplication with a scalar
+	/// Multiply by a scalar
 	inline friend Spectrum operator*(Float f, Spectrum &spd) {
 		return spd * f;
 	}
 
-	/// Multiplication with a scalar
+	/// Multiply by a scalar
 	inline Spectrum& operator*=(Float f) {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			s[i] *= f;
 		return *this;
 	}
 
-	/// Multiplication with another spectrum
+	/// Perform a component-wise multiplication by another spectrum
 	inline Spectrum operator*(const Spectrum &spd) const {
 		Spectrum value = *this;
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
@@ -184,21 +195,29 @@ public:
 		return value;
 	}
 
-	/// Multiplication with another spectrum
+	/// Perform a component-wise multiplication by another spectrum
 	inline Spectrum& operator*=(const Spectrum &spd) {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			s[i] *= spd.s[i];
 		return *this;
 	}
 	
-	/// Component-wise division by another spectrum
+	/// Perform a component-wise division by another spectrum
 	inline Spectrum& operator/=(const Spectrum &spd) {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			s[i] /= spd.s[i];
 		return *this;
 	}
+	
+	/// Perform a component-wise division by another spectrum
+	inline Spectrum operator/(Spectrum spd) const {
+		Spectrum value = *this;
+		for (int i=0; i<SPECTRUM_SAMPLES; i++)
+			value.s[i] /= spd.s[i];
+		return value;
+	}
 
-	/// Division by a scalar
+	/// Divide by a scalar
 	inline Spectrum operator/(Float f) const {
 		Spectrum value = *this;
 #ifdef MTS_DEBUG
@@ -213,15 +232,7 @@ public:
 		return value;
 	}
 
-	/// Component-wise division by another spectrum
-	inline Spectrum operator/(Spectrum spd) const {
-		Spectrum value = *this;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] /= spd.s[i];
-		return value;
-	}
-	
-	/// Component-wise comparison against another spectrum
+	/// Equality test
 	inline bool operator==(Spectrum spd) const {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++) {
 			if (s[i] != spd.s[i])
@@ -230,17 +241,17 @@ public:
 		return true;
 	}
 
-	/// Component-wise comparison against another spectrum
+	/// Inequality test
 	inline bool operator!=(Spectrum spd) const {
 		return !operator==(spd);
 	}
 
-	/// Division by a scalar
+	/// Divide by a scalar
 	inline friend Spectrum operator/(Float f, Spectrum &spd) {
 		return spd / f;
 	}
 
-	/// Division by a scalar
+	/// Divide by a scalar
 	inline Spectrum& operator/=(Float f) {
 #ifdef MTS_DEBUG
 		if (f == 0) {
@@ -262,7 +273,7 @@ public:
 		return false;
 	}
 
-	/// Returns whether the spectrum only contains valid non-negative samples
+	/// Returns whether the spectrum only contains valid (non-NaN, nonnegative) samples
 	inline bool isValid() const {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			if (ubi_isnan(s[i]) || s[i] < 0.0f)
@@ -270,7 +281,7 @@ public:
 		return true;
 	}
 
-	/// Multiply-accumulate operation
+	/// Multiply-accumulate operation, adds \a weight * \a spd
 	inline void addWeighted(Float weight, const Spectrum &spd) {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			s[i] += weight * spd.s[i];
@@ -352,10 +363,10 @@ public:
 	bool isBlack() const;
 
 	/**
-	 * Sample the SPD at an arbitrary wavelength
+	 * \brief Evaluate the SPD at an arbitrary wavelength
 	 * (uses interpolation)
 	 */
-	Float sample(Float lambda) const;
+	Float eval(Float lambda) const;
 
 	/// Return the luminance in candelas.
 #if SPECTRUM_SAMPLES == 3
@@ -400,13 +411,14 @@ public:
 	/// Convert from sRGB
 	void fromSRGB(Float r, Float g, Float b);
 
-	/** Linear RGBE conversion based on Bruce Walter's and Greg Ward's code
-	  -> http://www.graphics.cornell.edu/online/formats/rgbe/rgbe.c */
+	/// Linear RGBE conversion based on Bruce Walter's and Greg Ward's code
 	void fromRGBE(const uint8_t rgbe[4]);
 
-	/** Linear RGBE conversion based on Bruce Walter's and Greg Ward's code
-	  -> http://www.graphics.cornell.edu/online/formats/rgbe/rgbe.c */
+	/// Linear RGBE conversion based on Bruce Walter's and Greg Ward's code 
 	void toRGBE(uint8_t rgbe[4]) const;
+
+	/// Initialize with spectral values from a smooth spectrum representation
+	void fromSmoothSpectrum(const SmoothSpectrum *smooth);
 
 	/// Serialize this spectrum to a stream
 	inline void serialize(Stream *stream) const {
@@ -434,12 +446,16 @@ protected:
 	/// Configured wavelengths in nanometers
 	static Float m_wavelengths[SPECTRUM_SAMPLES];
 
-	/// Normalization factors for XYZ<->RGB conversion
+	/// Normalization factor for XYZ<->RGB conversion
 	static Float m_normalization;
+
+	/// Inverse of \ref m_normalization
 	static Float m_invNormalization;
 
-	/* CIE 1931 XYZ color matching functions from 
-	   http://www.cvrl.org/database/data/cmfs/ciexyz31_1.txt */
+	/**
+	 * @{ \name CIE 1931 XYZ color matching functions. 
+	 * From http://www.cvrl.org/database/data/cmfs/ciexyz31_1.txt
+	 */
 	static const int   CIE_start = 360;
 	static const int   CIE_end   = 830;
 	static const int   CIE_count = CIE_end - CIE_start + 1;
@@ -447,6 +463,7 @@ protected:
 	static const Float CIE_X[CIE_count];
 	static const Float CIE_Y[CIE_count];
 	static const Float CIE_Z[CIE_count];
+	/// @}
 };
 
 MTS_NAMESPACE_END

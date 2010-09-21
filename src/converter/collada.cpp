@@ -16,20 +16,16 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define BOOST_FILESYSTEM_NO_LIB 
-#define BOOST_SYSTEM_NO_LIB 
-
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
 #include <dae.h>
 #include <dom/domCOLLADA.h>
 #include <dom/domProfile_COMMON.h>
-#include <boost/filesystem.hpp>
-#include <fstream>
+#include <boost/algorithm/string.hpp>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <errno.h>
 
 #if defined(__OSX__)
 #include <OpenGL/glu.h>
@@ -48,7 +44,7 @@ enum ESourceType {
 	EVertexColors = 3,
 	ELast
 };
-		
+
 struct Vec4 {
 	Float x, y, z, w;
 
@@ -85,6 +81,7 @@ struct VertexData {
 	std::vector<Vec4 *> data;
 	std::vector<int> typeToOffset;
 	std::vector<int> typeToOffsetInStream;
+	std::vector<size_t> typeToCount;
 
 	VertexData() : glPos(NULL) {
 	}
@@ -116,9 +113,12 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 	for (size_t i=0; i<result->nSources; ++i)
 		result->data[i] = NULL;
 	result->typeToOffset.resize(ELast);
+	result->typeToCount.resize(ELast);
 	result->typeToOffsetInStream.resize(ELast);
-	for (int i=0; i<ELast; ++i)
+	for (int i=0; i<ELast; ++i) {
 		result->typeToOffset[i] = result->typeToOffsetInStream[i] = -1;
+		result->typeToCount[i] = 0;
+	}
 	int vertInputIndex = 0;
 
 	for (size_t i=0; i<inputs.getCount(); ++i) {
@@ -151,14 +151,14 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 		domAccessor *accessor = techniqueCommon->getAccessor();
 		if (!accessor)
 			SLog(EError, "Data source does not have a <accessor> tag!");
-		int nParams = (int) accessor->getParam_array().getCount(),
-			stride  = (int) accessor->getStride(),
-			size    = (int) accessor->getCount();
+		unsigned int nParams = (unsigned int) accessor->getParam_array().getCount(),
+			         stride  = (unsigned int) accessor->getStride();
+		size_t size = (size_t) accessor->getCount();
 		SAssert(nParams <= 4);
 
 		Vec4 *target = new Vec4[size];
-		for (int j=0; j<size; ++j)
-			for (int k=0; k<nParams; ++k)
+		for (size_t j=0; j<size; ++j)
+			for (unsigned int k=0; k<nParams; ++k)
 				target[j][k] = (Float) floatArray[j*stride+k];
 
 		result->data[offset] = target;
@@ -167,9 +167,10 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 			SAssert(accessor->getStride() == 3);
 			SAssert(result->typeToOffset[EPosition] == -1);
 			result->typeToOffset[EPosition] = offset;
+			result->typeToCount[EPosition] = size;
 			result->typeToOffsetInStream[EPosition] = offsetInStream;
 			result->glPos = new GLdouble[3*size];
-			for (int k=0; k<3*size; ++k)
+			for (size_t k=0; k<3*size; ++k)
 				result->glPos[k] = floatArray[k];
 		} else if (semantic == "NORMAL") {
 			SAssert(accessor->getStride() == 3);
@@ -177,12 +178,14 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 			result->hasNormals = true;
 			result->typeToOffset[ENormal] = offset;
 			result->typeToOffsetInStream[ENormal] = offsetInStream;
+			result->typeToCount[ENormal] = size;
 		} else if (semantic == "TEXCOORD") {
 			SAssert(accessor->getStride() == 2 || accessor->getStride() == 3);
 			if (result->typeToOffset[EUV] == -1) {
 				result->hasUVs = true;
 				result->typeToOffset[EUV] = offset;
 				result->typeToOffsetInStream[EUV] = offsetInStream;
+				result->typeToCount[EUV] = size;
 			} else {
 				SLog(EWarn, "Found multiple sets of texture coordinates - ignoring!");
 			}
@@ -191,6 +194,7 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 				"(Lighting/shading -> Batch Bake in Maya)");
 			result->typeToOffset[EVertexColors] = offset;
 			result->typeToOffsetInStream[EVertexColors] = offsetInStream;
+			result->typeToCount[EVertexColors] = size;
 		} else {
 			SLog(EError, "Encountered an unknown source semantic: %s", semantic.c_str());
 		}
@@ -204,12 +208,12 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 struct vertex_key_order : public 
 	std::binary_function<Vertex, Vertex, bool> {
 	static int compare(const Vertex &v1, const Vertex &v2) {
-		if (v1.v.x < v2.v.x) return -1;
-		else if (v1.v.x > v2.v.x) return 1;
-		if (v1.v.y < v2.v.y) return -1;
-		else if (v1.v.y > v2.v.y) return 1;
-		if (v1.v.z < v2.v.z) return -1;
-		else if (v1.v.z > v2.v.z) return 1;
+		if (v1.p.x < v2.p.x) return -1;
+		else if (v1.p.x > v2.p.x) return 1;
+		if (v1.p.y < v2.p.y) return -1;
+		else if (v1.p.y > v2.p.y) return 1;
+		if (v1.p.z < v2.p.z) return -1;
+		else if (v1.p.z > v2.p.z) return 1;
 		if (v1.n.x < v2.n.x) return -1;
 		else if (v1.n.x > v2.n.x) return 1;
 		if (v1.n.y < v2.n.y) return -1;
@@ -264,7 +268,7 @@ struct triangle_key_order : public std::binary_function<SimpleTriangle, SimpleTr
 typedef std::map<SimpleTriangle, bool, triangle_key_order> TriangleMap;
 
 void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::string matID, Transform transform, 
-		std::ostream &os, VertexData *vData, TriangleMap &triMap, const std::string &meshesDirectory) {
+		std::ostream &os, VertexData *vData, TriangleMap &triMap, const fs::path &meshesDirectory) {
 	std::vector<Vertex> vertexBuffer;
 	std::vector<Triangle> triangles;
 	std::map<Vertex, int, vertex_key_order> vertexMap;
@@ -278,16 +282,24 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	for (size_t i=0; i<tess_data.size(); i+=tess_nSources) {
 		Vertex vertex;
 		domUint posRef = tess_data[i+vData->typeToOffsetInStream[EPosition]];
-		vertex.v = vData->data[vData->typeToOffset[EPosition]][posRef].toPoint();
+		vertex.p = vData->data[vData->typeToOffset[EPosition]][posRef].toPoint();
+		vertex.dpdu = vertex.dpdv = Vector(0.0f);
 
 		if (vData->typeToOffset[ENormal] != -1) {
 			domUint normalRef = tess_data[i+vData->typeToOffsetInStream[ENormal]];
 			vertex.n = vData->data[vData->typeToOffset[ENormal]][normalRef].toNormal();
+		} else {
+			vertex.n = Normal(0.0f);
 		}
 
 		if (vData->typeToOffset[EUV] != -1) {
 			domUint uvRef = tess_data[i+vData->typeToOffsetInStream[EUV]];
 			vertex.uv = vData->data[vData->typeToOffset[EUV]][uvRef].toPoint2();
+#if 1
+			vertex.uv.y = 1-vertex.uv.y; // Invert the V coordinate
+#endif
+		} else {
+			vertex.uv = Point2(0.0f);
 		}
 
 		int key = -1;
@@ -299,11 +311,12 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 			vertexMap[vertex] = (int) key;
 			vertexBuffer.push_back(vertex);
 		}
+
 		triangle.idx[triangleIdx++] = key;
 		if (triangleIdx == 3) {
-			Point p0 = vertexBuffer[triangle.idx[0]].v,
-				p1 = vertexBuffer[triangle.idx[1]].v,
-				p2 = vertexBuffer[triangle.idx[2]].v;
+			Point p0 = vertexBuffer[triangle.idx[0]].p,
+				  p1 = vertexBuffer[triangle.idx[1]].p,
+				  p2 = vertexBuffer[triangle.idx[2]].p;
 			if (triMap.find(SimpleTriangle(p0, p1, p2)) != triMap.end() ||
 				triMap.find(SimpleTriangle(p2, p0, p1)) != triMap.end() ||
 				triMap.find(SimpleTriangle(p1, p2, p0)) != triMap.end() ||
@@ -324,7 +337,8 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 
 	if (duplicates > 0) {
 		if (triangles.size() == 0) {
-			SLog(EWarn, "%s: Only contains duplicates of already-existing geometry. Ignoring.");
+			SLog(EWarn, "\"%s/%s\": Only contains duplicates (%i triangles) of already-existing geometry. Ignoring.", 
+				prefixName.c_str(), id.c_str(), duplicates);
 			os << "\t<!-- Ignored shape \"" << prefixName << "/" 
 				<< id << "\" (mat=\"" << matID << "\"), since it only contains duplicate geometry. -->" << endl << endl;
 			return;
@@ -334,8 +348,8 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	}
 
 	SAssert(triangleIdx == 0);
-	SLog(EInfo, "%s: Converted " SIZE_T_FMT " triangles, " SIZE_T_FMT 
-		" vertices (merged " SIZE_T_FMT " vertices).", id.c_str(),
+	SLog(EInfo, "\"%s/%s\": Converted " SIZE_T_FMT " triangles, " SIZE_T_FMT 
+		" vertices (merged " SIZE_T_FMT " vertices).", prefixName.c_str(), id.c_str(),
 		triangles.size(), vertexBuffer.size(), numMerged);
 	
 	ref<TriMesh> mesh = new TriMesh(triangles.size(), vertexBuffer.size());
@@ -344,7 +358,7 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	mesh->calculateTangentSpaceBasis(vData->typeToOffset[ENormal]!=-1, vData->typeToOffset[EUV]!=-1);
 
 	std::string filename = id + std::string(".serialized");
-	ref<FileStream> stream = new FileStream(meshesDirectory + filename, FileStream::ETruncReadWrite);
+	ref<FileStream> stream = new FileStream(meshesDirectory / filename, FileStream::ETruncReadWrite);
 	stream->setByteOrder(Stream::ENetworkByteOrder);
 	mesh->serialize(stream);
 	stream->close();
@@ -368,7 +382,7 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 }
 
 void loadGeometry(std::string prefixName, Transform transform, std::ostream &os, domGeometry &geom, 
-		StringMap &matLookupTable, const std::string &meshesDir) {
+		StringMap &matLookupTable, const fs::path &meshesDir) {
 	std::string identifier;
 	if (geom.getId() != NULL) {
 		identifier = geom.getId();
@@ -425,14 +439,35 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 		for (size_t j=0; j<indexArray.getCount(); ++j) {
 			domListOfUInts &indices = indexArray[j]->getValue();
 			domUint *temp = new domUint[indices.getCount()];
-			for (size_t l = 0; l<indices.getCount(); ++l)
+			bool invalid = false;
+
+			for (int m=0; m<ELast; ++m) {
+				int offset = data->typeToOffsetInStream[m];
+				if (offset == -1)
+					continue;
+				size_t count  = data->typeToCount[m];
+				for (size_t l = 0; l < indices.getCount(); l+=data->nSources) {
+					domUint idx = indices.get(l+offset);
+					if (idx >= count) {
+						SLog(EWarn, "Encountered the invalid polygon index %i "
+							"(must be in [0, " SIZE_T_FMT "]) -- ignoring polygon!", (domInt) idx, count-1);
+						invalid = true;
+						break;
+					}
+				}
+			}
+
+			if (invalid)
+				continue;
+
+			for (size_t l = 0; l<indices.getCount(); ++l) 
 				temp[l] = indices.get(l);
 
 			gluTessBeginPolygon(tess, NULL);
 			gluTessBeginContour(tess);
 
 			for (size_t k=0; k<indices.getCount(); k+=data->nSources) 
-				gluTessVertex(tess, &data->glPos[temp[k+posOffset]*3], (GLvoid *) (k+temp));
+				gluTessVertex(tess, &data->glPos[3*temp[k+posOffset]], (GLvoid *) (temp+k));
 
 			gluTessEndContour(tess);
 			gluTessEndPolygon(tess);
@@ -463,8 +498,29 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 
 		for (size_t j=0; j<vcount.getCount(); ++j) {
 			size_t vertexCount = (size_t) vcount.get(j);
-
 			domUint *temp = new domUint[vertexCount * data->nSources];
+
+			bool invalid = false;
+
+			for (int m=0; m<ELast; ++m) {
+				int offset = data->typeToOffsetInStream[m];
+				if (offset == -1)
+					continue;
+				size_t count  = data->typeToCount[m];
+				for (size_t l = 0; l < vertexCount; ++l) {
+					domUint idx = indexArray.get(l*data->nSources+offset);
+					if (idx >= count) {
+						SLog(EWarn, "Encountered the invalid polygon index %i "
+							"(must be in [0, " SIZE_T_FMT "]) -- ignoring polygon!", (domInt) idx, count-1);
+						invalid = true;
+						break;
+					}
+				}
+			}
+
+			if (invalid)
+				continue;
+
 			for (size_t l = 0; l<vertexCount * data->nSources; ++l)
 				temp[l] = indexArray.get(indexOffset++);
 
@@ -491,7 +547,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 	}
 }
 
-void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const std::string &name, StringMap &idToTexture, 
+void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const fs::path &name, StringMap &idToTexture, 
 		domCommon_color_or_texture_type *value, bool handleRefs) {
 	if (!value)
 		return;
@@ -517,7 +573,7 @@ void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const std::stri
 	}
 }
 
-void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const std::string &name, StringMap &,
+void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const fs::path &name, StringMap &,
 		domCommon_float_or_param_type *value, bool handleRef) {
 	if (!value)
 		return;
@@ -622,18 +678,11 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 			os << "\t</bsdf>" << endl << endl;
 		}
 	} else if (lambert) {
-		domCommon_float_or_param_type* transparency = lambert->getTransparency();
-		domCommon_float_or_param_type::domFloat *transparencyValue = 
-				transparency ? transparency->getFloat() : NULL;
-		if (transparencyValue && transparencyValue->getValue() > 0.5) {
-			os << "\t<bsdf id=\"" << identifier << "\" type=\"dielectric\"/>" << endl << endl;
-		} else {
-			domCommon_color_or_texture_type* diffuse = lambert->getDiffuse();
-			os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
-			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
-			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
-			os << "\t</bsdf>" << endl << endl;
-		}
+		domCommon_color_or_texture_type* diffuse = lambert->getDiffuse();
+		os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
+		loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
+		loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
+		os << "\t</bsdf>" << endl << endl;
 	} else if (blinn) {
 		SLog(EWarn, "\"%s\": Encountered a \"blinn\" COLLADA material, which is currently "
 			"unsupported in Mitsuba -- replacing it using a Phong material.", identifier.c_str());
@@ -702,7 +751,7 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 	transform = transform * Transform::scale(Vector(1, 1, -1));
 
 	Point pos = transform(Point(0, 0, 0));
-	Vector target = transform(Point(0, 0, 1));
+	Point target = transform(Point(0, 0, 1));
 
 	Float intensity = 1;
 	const domTechnique_Array &techniques = light.getTechnique_array();
@@ -783,7 +832,7 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 		SLog(EWarn, "Encountered an unknown light type!");
 }
 
-void loadImage(GeometryConverter *cvt, std::ostream &os, const std::string &textureDir, 
+void loadImage(GeometryConverter *cvt, std::ostream &os, const fs::path &textureDir, 
 		domImage &image, StringMap &idToTexture, StringMap &fileToId) {
 	std::string identifier;
 	if (image.getId() != NULL) {
@@ -808,27 +857,27 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const std::string &text
 	idToTexture[identifier] = identifier;
 	fileToId[filename] = identifier;
 
-	boost::filesystem::path path = boost::filesystem::path(filename, boost::filesystem::native);
-	std::string targetPath = textureDir + path.leaf();
+	fs::path path = fs::path(filename);
+	fs::path targetPath = textureDir / path.leaf();
+	fs::path resolved = filename;
 
-	if (endsWith(filename, ".rgb")) 
+	std::string extension = boost::to_lower_copy(fs::extension(path));
+	if (extension == ".rgb") 
 		SLog(EWarn, "Maya RGB images must be converted to PNG, EXR or JPEG! The 'imgcvt' "
 		"utility found in the Maya binary directory can be used to do this.");
 
-	if (!FileStream::exists(targetPath)) {
-		ref<FileResolver> fRes = FileResolver::getInstance();
-		std::string resolved = fRes->resolve(path.leaf());
-		if (!FileStream::exists(filename)) {
-			if (!FileStream::exists(resolved)) {
-				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.c_str());
-				filename = cvt->locateResource(filename);
-				if (filename == "")
+	if (!fs::exists(targetPath)) {
+		ref<FileResolver> fRes = Thread::getThread()->getFileResolver();
+		if (!fs::exists(resolved)) {
+			resolved = fRes->resolve(path.leaf());
+			if (!fs::exists(resolved)) {
+				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
+				resolved = cvt->locateResource(path.leaf());
+				if (resolved.empty())
 					SLog(EError, "Unable to locate a resource -- aborting conversion.");
-			} else {
-				filename = resolved;
 			}
 		}
-		ref<FileStream> input = new FileStream(filename, FileStream::EReadOnly);
+		ref<FileStream> input = new FileStream(resolved, FileStream::EReadOnly);
 		ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
 		input->copyTo(output);
 		input->close();
@@ -945,7 +994,7 @@ void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, d
 }
 
 void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os, 
-		domNode &node, std::string prefixName, const std::string &meshesDir) {
+		domNode &node, std::string prefixName, const fs::path &meshesDir) {
 	std::string identifier;
 	if (node.getId() != NULL) {
 		identifier = node.getId();
@@ -964,13 +1013,21 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 	for (size_t i=0; i<children.getCount(); ++i) {
 		daeElement *element = children.get(i);
 		if (element->typeID() == domRotate::ID()) {
-			/* Skip rotations labeled as "post-rotationY". Maya exports these with some cameras,
-			   which introduces an incorrect 90 degree rotation unless ignored */
+			/* Skip rotations labeled as "post-rotationY". Maya and 3ds max export these with some 
+			   cameras, which introduces an incorrect 90 degree rotation unless ignored */
 			if (element->hasAttribute("sid") && element->getAttribute("sid") == "post-rotationY") 
 				continue;
 			daeTArray<double> value = daeSafeCast<domRotate>(element)->getValue();
-			transform = transform *
-				Transform::rotate(Vector((Float) value.get(0), (Float) value.get(1), (Float) value.get(2)), (Float) value.get(3));
+			Vector axis((Float) value.get(0), (Float) value.get(1), (Float) value.get(2));
+			Float angle = (Float) value.get(3);
+			if (angle != 0) {
+				if (axis.isZero()) {
+					SLog(EWarn, "Encountered a rotation around a zero vector -- ignoring!");
+				} else {
+					transform = transform *
+						Transform::rotate(axis, (Float) value.get(3));
+				}
+			}
 		} else if (element->typeID() == domTranslate::ID()) {
 			daeTArray<double> value = daeSafeCast<domTranslate>(element)->getValue();
 			transform = transform *
@@ -1080,7 +1137,7 @@ GLvoid __stdcall tessVertex(void *data) {
 
 GLvoid __stdcall tessCombine(GLdouble coords[3], void *vertex_data[4], 
 	GLfloat weight[4], void **outData) {
-	SLog(EWarn, "Detected a self-intersecting polygon!");
+	SLog(EWarn, "Detected a degenerate or self-intersecting polygon!");
 }
 
 GLvoid __stdcall tessEnd() {
@@ -1093,23 +1150,17 @@ GLvoid __stdcall tessError(GLenum error) {
 GLvoid __stdcall tessEdgeFlag(GLboolean) {
 }
 
-void GeometryConverter::convertCollada(const std::string &inputFile, 
+void GeometryConverter::convertCollada(const fs::path &inputFile, 
 	std::ostream &os,
-	const std::string &textureDirectory,
-	const std::string &meshesDirectory) {
-#if defined(__LINUX__)
-	std::string path = std::string("file://") +
-		FileResolver::getInstance()->resolveAbsolute(inputFile);
-#else
-	std::string path = inputFile;
-#endif
-
+	const fs::path &textureDirectory,
+	const fs::path &meshesDirectory) {
 	DAE *dae = new DAE();
-	SLog(EInfo, "Loading \"%s\" ..", path.c_str());
-	if (dae->load(path.c_str()) != DAE_OK) 
-		SLog(EError, "Could not load \"%s\"!", path.c_str());
+	SLog(EInfo, "Loading \"%s\" ..", inputFile.leaf().c_str());
+	if (dae->load(inputFile.file_string().c_str()) != DAE_OK) 
+		SLog(EError, "Could not load \"%s\"!", 
+			inputFile.file_string().c_str());
 
-	domCOLLADA *document = dae->getDom(path.c_str());
+	domCOLLADA *document = dae->getDom(inputFile.file_string().c_str());
 	domVisual_scene *visualScene = daeSafeCast<domVisual_scene>
 		(document->getDescendant("visual_scene"));
 	if (!visualScene)

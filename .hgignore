@@ -1,46 +1,63 @@
-^Mitsuba.app/.*$
-.*\.obj$
-.*\.os$
-.*\.so$
-.*\.pyc$
-.*\.o$
-.*\.exe$
-.*\.pdb$
-.*\.manifest$
-.*\.exp$
-.*\.dylib$
+# Documentation
+^doc/doxygen/.*$
 ^doc/.*\.aux$
 ^doc/.*\.log$
 ^doc/.*\.out$
 ^doc/.*\.pdf$
 ^doc/.*\.toc$
+
+# Qt-related
 .*ui_.*\.h$
 .*moc_.*\.cc$
 .*qrc_.*\.cc$
-\.DS_Store
+
+# SCons-related
 ^\.sconf_temp/.*$
+^.sconsign.dblite$
 ^config.py$
 ^config.log$
-^.sconsign.dblite$
-^src/utils/addimages$
+.*\.pyc$
+
+# OSX binaries and byproducts
+^Mitsuba.app/.*$
+\.DS_Store
+.*\.dylib$
+
+# Linux binaries and byproducts
 ^src/utils/createvol$
 ^src/utils/dumpimage$
 ^src/utils/joinrgb$
-^src/utils/ssalbedo$
 ^src/utils/ttest$
-^src/utils/utils_test$
-^dist/.*$
 ^mitsuba$
 ^mtssrv$
 ^mtsgui$
 ^mtsimport$
 ^mtsutil$
+.*\.so$
+.*\.os$
+.*\.o$
+
+
+# Windows binaries and byproducts
+.*\.exe$
+.*\.obj$
 ^src/.*\.lib$
 ^src/.*\.dll$
 ^plugins/.*\.lib$
 ^plugins/.*\.dll$
+^dist/.*$
 tools/windows/mitsuba_res.res
+.*\.pdb$
+.*\.manifest$
+.*\.exp$
+
+# Imported geometry
 ^meshes/.*$
 ^textures/.*$
 ^mitsuba.*.log$
-^doc/doxygen/.*$
+
+# Eclipse CDT project files
+^.externalToolBuilders/.*$
+^.settings/.*$
+^.cproject$
+^.project$

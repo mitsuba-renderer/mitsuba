@@ -16,6 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/render/renderproc.h>
 #include <mitsuba/render/imageproc_wu.h>
 

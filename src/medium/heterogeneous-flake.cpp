@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/volume.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/shvector4d.h>
 #include <fstream>
 
@@ -164,7 +165,7 @@ public:
 		Log(EInfo, "     sampling recursions = %i", m_samplingRecursions);
 
 		bool computePhaseProjection = true;
-		if (FileStream::exists("flake-phase.dat")) {
+		if (fs::exists("flake-phase.dat")) {
 			/* Avoid recomputing this every time */
 			stream = new FileStream("flake-phase.dat", FileStream::EReadOnly);
 			unsigned int header = stream->readUInt();
@@ -574,7 +575,7 @@ Spectrum FlakePhaseFunction::f(const MediumSamplingRecord &mRec, const Vector &_
 		return Spectrum(0.0f);
 	else
 		H /= length;
-	return (D(H) + D(-H)) * m_normalization / (2*sigmaT);
+	return Spectrum((D(H) + D(-H)) * m_normalization / (2*sigmaT));
 #endif
 }
 
@@ -595,8 +596,8 @@ Spectrum FlakePhaseFunction::sample(const MediumSamplingRecord &mRec, const Vect
 
 	Vector wo = sphericalDirection(sample.x, sample.y);
 	_wo = frame.toWorld(wo);
-	return Spectrum(std::max((Float) 0, temp.eval(sample.x, sample.y)));
-//	return f(mRec, _wi, _wo);
+//	return Spectrum(std::max((Float) 0, temp.eval(sample.x, sample.y)));
+	return f(mRec, _wi, _wo);
 #else
 	/* Uniform sampling */
 	_wo = squareToSphere(_sample);

@@ -80,7 +80,7 @@ public:
 		stream->writeBool(m_multipleScattering);
 	}
 
-	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 			int sceneResID, int cameraResID, int samplerResID) {
 		Integrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
 
@@ -91,6 +91,7 @@ public:
 		if (scene->getSubsurfaceIntegrators().size() > 0)
 			Log(EError, "Subsurface integrators are not supported by the particle tracer!");
 		m_sampleCount = scene->getSampler()->getSampleCount() * size.x * size.y;
+		return true;
 	}
 
 	void cancel() {

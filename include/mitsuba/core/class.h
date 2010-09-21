@@ -21,43 +21,63 @@
 
 MTS_NAMESPACE_BEGIN
 
-/* Forward declarations */
-class Stream;
-class Object;
-class InstanceManager;
-
-/** \brief Universal class descriptor.
- * @see ref, Object
+/**
+ * \headerfile mitsuba/core/class.h mitsuba/mitsuba.h
+ * \brief Stores meta-information about \ref Object instances.
+ *
+ * This class provides a thin layer of RTTI (run-time type information),
+ * which is useful for doing things like:
+ *
+ * <ul>
+ *    <li> Checking if an object derives from a certain class </li>
+ *    <li> Determining the parent of a class at runtime </li>
+ *    <li> Instantiating a class by name </li>
+ *    <li> Unserializing a class from a binary data stream </li>
+ * </ul>
+ *
+ * \sa ref, Object
  */
 class MTS_EXPORT_CORE Class {
 public:
-	/// Construct a new class descriptor
+	/**
+	 * \brief Construct a new class descriptor
+	 *
+	 * This method should never be called manually. Instead, use
+	 * one of the  \ref MTS_IMPLEMENT_CLASS, \ref MTS_IMPLEMENT_CLASS_S,
+	 * \ref MTS_IMPLEMENT_CLASS_I or \ref MTS_IMPLEMENT_CLASS_IS macros
+	 * to automatically do this for you.
+	 *
+	 * \param name Name of the class
+	 * \param abstract \a true if the class contains pure virtual methods
+	 * \param superClassName Name of the parent class
+	 * \param instPtr Pointer to an instantiation function
+	 * \param unSerPtr Pointer to an unserialization function
+	 */
 	Class(const std::string &name, bool abstract, const std::string &superClassName, 
 		void *instPtr = NULL, void *unSerPtr = NULL);
 
-	/// Return the class' name
+	/// Return the name of the represented class
 	inline const std::string &getName() const { return m_name; }
 
-	/** \brief Return whether the class represented
-	 * by this Class object is abstract
+	/**
+	 * \brief Return whether or not the class represented
+	 * by this Class object contains pure virtual methods
 	 */
 	inline bool isAbstract() const { return m_abstract; }
 
-	/** \brief Does the class support instantiation over RTTI?
-	 */
+	/// Does the class support instantiation over RTTI?
 	inline bool isInstantiable() const { return m_instPtr != NULL; }
 
-	/** \brief Does the class support serialization?
-	 */
+	/// Does the class support serialization?
 	inline bool isSerializable() const { return m_unSerPtr != NULL; }
 
-	/** \brief Return this class' super class or NULL
-	 * if it has no super class
+	/** \brief Return the Class object associated with the parent
+	 * class of NULL if it does not have one.
 	 */
 	inline const Class *getSuperClass() const { return m_superClass; }
 
-	/// Check whether this class derives from pClass
-	bool derivesFrom(const Class *pClass) const;
+	/// Check whether this class derives from \a theClass
+	bool derivesFrom(const Class *theClass) const;
 
 	/// Look up a class by its name
 	static const Class *forName(const std::string &name);
@@ -68,11 +88,11 @@ public:
 	static const Class *forName(const char *name);
 
 	/** \brief Unserialize an instance of the class (if this is
-	 * supported by the class).
+	 * supported).
 	 */
 	Object *unserialize(Stream *stream = NULL, InstanceManager *manager = NULL) const;
 
-	/// Generate an instance of this class (if supported)
+	/// Generate an instance of this class (if this is supported)
 	Object *instantiate() const;
 
 	/** \brief Initializes the built-in RTTI and creates
@@ -95,20 +115,34 @@ private:
 	void *m_instPtr, *m_unSerPtr;
 };
 
-/* Class instantiation macros */
+/**
+ * \brief This macro must be used in the declaration of 
+ * all classes derived from \ref Object.
+ */
 #define MTS_DECLARE_CLASS() \
 	virtual const Class *getClass() const; \
 public: \
 	static Class *m_theClass; 
 
-// basic RTTI support for a class
+/**
+ * \brief Creates basic RTTI support for a class
+ * \param name Name of the class
+ * \param abstract \a true if the class contains pure virtual methods
+ * \param super Name of the parent class
+ */
 #define MTS_IMPLEMENT_CLASS(name, abstract, super) \
 	Class *name::m_theClass = new Class(#name, abstract, #super); \
 	const Class *name::getClass() const { \
 		return m_theClass;\
 	}
 
-// Extended version, records that the class supports instantiation by name
+/**
+ * \brief Creates basic RTTI support for a class. Assumes that
+ * the class can be instantiated by name.
+ * \param name Name of the class
+ * \param abstract \a true if the class contains pure virtual methods
+ * \param super Name of the parent class
+ */
 #define MTS_IMPLEMENT_CLASS_I(name, abstract, super) \
 	Object *__##name ##_inst() { \
 		return new name(); \
@@ -118,7 +152,13 @@ public: \
 		return m_theClass;\
 	}
 
-// Extended version, records that the class can be unserialized from a binary data stream
+/**
+ * \brief Creates basic RTTI support for a class. Assumes that
+ * the class can be unserialized from a binary data stream.
+ * \param name Name of the class
+ * \param abstract \a true if the class contains pure virtual methods
+ * \param super Name of the parent class
+ */
 #define MTS_IMPLEMENT_CLASS_S(name, abstract, super) \
 	Object *__##name ##_unSer(Stream *stream, InstanceManager *manager) { \
 		return new name(stream, manager); \
@@ -128,7 +168,14 @@ public: \
 		return m_theClass;\
 	}
 
-// Extended version, records that the class can be unserialized from a binary data stream as well as instantiated by name
+/**
+ * \brief Creates basic RTTI support for a class. Assumes that
+ * the class can be unserialized from a binary data stream as well
+ * as instantiated by name.
+ * \param name Name of the class
+ * \param abstract \a true if the class contains pure virtual methods
+ * \param super Name of the parent class
+ */
 #define MTS_IMPLEMENT_CLASS_IS(name, abstract, super) \
 	Object *__##name ##_unSer(Stream *stream, InstanceManager *manager) { \
 		return new name(stream, manager); \

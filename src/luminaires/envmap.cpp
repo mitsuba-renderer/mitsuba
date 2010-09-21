@@ -19,9 +19,13 @@
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/mipmap.h>
 #include <mitsuba/core/mstream.h>
+#include <mitsuba/core/fstream.h>
+#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/sched.h>
 #include <mitsuba/hw/gputexture.h>
 #include <mitsuba/hw/gpuprogram.h>
+
+//#define SAMPLE_UNIFORMLY 1
 
 MTS_NAMESPACE_BEGIN
 
@@ -35,9 +39,9 @@ class EnvMapLuminaire : public Luminaire {
 public:
 	EnvMapLuminaire(const Properties &props) : Luminaire(props) {
 		m_intensityScale = props.getFloat("intensityScale", 1);
-		m_filename = FileResolver::getInstance()->resolve(props.getString("filename"));
-		Log(EInfo, "Loading environment map \"%s\"", m_filename.c_str());
-		ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
+		m_path = Thread::getThread()->getFileResolver()->resolve(props.getString("filename"));
+		Log(EInfo, "Loading environment map \"%s\"", m_path.leaf().c_str());
+		ref<Stream> is = new FileStream(m_path, FileStream::EReadOnly);
 		ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, is);
 
 		m_mipmap = MIPMap::fromBitmap(bitmap);
@@ -48,8 +52,8 @@ public:
 	EnvMapLuminaire(Stream *stream, InstanceManager *manager) 
 		: Luminaire(stream, manager) {
 		m_intensityScale = stream->readFloat();
-		m_filename = stream->readString();
-		Log(EInfo, "Unserializing environment map \"%s\"", m_filename.c_str());
+		m_path = stream->readString();
+		Log(EInfo, "Unserializing environment map \"%s\"", m_path.leaf().c_str());
 		uint32_t size = stream->readUInt();
 		ref<MemoryStream> mStream = new MemoryStream(size);
 		stream->copyTo(mStream, size);
@@ -59,28 +63,48 @@ public:
 		m_average = m_mipmap->triangle(m_mipmap->getLevels()-1, 0, 0) * m_intensityScale;
 
 		if (Scheduler::getInstance()->hasRemoteWorkers()
-			&& !FileStream::exists(m_filename)) {
+			&& !fs::exists(m_path)) {
 			/* This code is running on a machine different from
 			   the one that created the stream. Because we might
 			   later have to handle a call to serialize(), the
 			   whole bitmap must be kept in memory */
 			m_stream = mStream;
 		}
+		configure();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Luminaire::serialize(stream, manager);
 		stream->writeFloat(m_intensityScale);
-		stream->writeString(m_filename);
+		stream->writeString(m_path.file_string());
 
 		if (m_stream.get()) {
 			stream->writeUInt((unsigned int) m_stream->getSize());
 			stream->write(m_stream->getData(), m_stream->getSize());
 		} else {
-			ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
+			ref<Stream> is = new FileStream(m_path, FileStream::EReadOnly);
 			stream->writeUInt((uint32_t) is->getSize());
 			is->copyTo(stream);
 		}
+	}
+
+	void configure() {
+		int mipMapLevel = std::min(3, m_mipmap->getLevels()-1);
+		m_pdfResolution = m_mipmap->getLevelResolution(mipMapLevel);
+		m_pdfInvResolution = Vector2(1.0f / m_pdfResolution.x, 1.0f / m_pdfResolution.y);
+
+		Log(EDebug, "Creating a %ix%i sampling density", m_pdfResolution.x, m_pdfResolution.y);
+		const Spectrum *coarseImage = m_mipmap->getImageData(mipMapLevel);
+		int index = 0;
+		m_pdf = DiscretePDF(m_pdfResolution.x * m_pdfResolution.y);
+		for (int y=0; y<m_pdfResolution.y; ++y) {
+			float sinFactor = std::sin(M_PI * (y + .5f) / m_pdfResolution.y);
+
+			for (int x=0; x<m_pdfResolution.x; ++x)
+				m_pdf[index++] = coarseImage[x + y * m_pdfResolution.x].getLuminance() * sinFactor;
+		}
+		m_pdfPixelSize = Vector2(2 * M_PI / m_pdfResolution.x, M_PI / m_pdfResolution.y);
+		m_pdf.build();
 	}
 
 	void preprocess(const Scene *scene) {
@@ -93,6 +117,29 @@ public:
 	Spectrum getPower() const {
 		return m_average * (M_PI * 4 * M_PI
 			* m_bsphere.radius * m_bsphere.radius);
+	}
+
+	Vector sampleDirection(Point2 sample, Float &pdf, Spectrum &value) const {
+#if defined(SAMPLE_UNIFORMLY)
+		pdf = 1.0f / (4*M_PI);
+		Vector d = squareToSphere(sample);
+		value = Le(-d);
+		return d;
+#else
+		int idx = m_pdf.sampleReuse(sample.x, pdf);
+		int row = idx / m_pdfResolution.x;
+		int col = idx - m_pdfResolution.x * row;
+		Float x = col + sample.x, y = row + sample.y;
+		value = m_mipmap->triangle(0, x * m_pdfInvResolution.x, y * m_pdfInvResolution.y) 
+			* m_intensityScale;
+		Float theta = m_pdfPixelSize.y * y, phi = m_pdfPixelSize.x * x - M_PI;
+		Float sinTheta = std::sin(theta), cosTheta = std::cos(theta);
+		Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
+		pdf = pdf / (m_pdfPixelSize.x * m_pdfPixelSize.y * sinTheta);
+
+		return m_luminaireToWorld(Vector(
+			-sinTheta * sinPhi, -cosTheta, sinTheta*cosPhi));
+#endif
 	}
 
 	inline Spectrum Le(const Vector &direction) const {
@@ -112,62 +159,36 @@ public:
 
 	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
-		lRec.d = squareToSphere(sample);
+		lRec.d = sampleDirection(sample, lRec.pdf, lRec.Le);
 		lRec.sRec.p = p - lRec.d * (2 * m_bsphere.radius);
-		lRec.pdf = 1.0f / (4*M_PI);
-		lRec.Le = Le(-lRec.d);
 	}
 
 	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec) const {
+#if defined(SAMPLE_UNIFORMLY)
 		return 1.0f / (4*M_PI);
+#else
+		const Vector d = m_worldToLuminaire(-lRec.d);
+		const Float x = .5f * (1 + std::atan2(d.x,-d.z) / M_PI) * m_pdfResolution.x;
+		const Float y = std::acos(std::max((Float) -1.0f, std::min((Float) 1.0f, d.y))) 
+			/ M_PI * m_pdfResolution.y;
+		int xPos = std::min(std::max((int) std::floor(x), 0), m_pdfResolution.x-1);
+		int yPos = std::min(std::max((int) std::floor(y), 0), m_pdfResolution.y-1);
+
+		Float pdf = m_pdf[xPos + yPos * m_pdfResolution.x];
+		Float sinTheta = std::sqrt(std::max(0.0f, 1-d.y*d.y));
+
+		return pdf / (m_pdfPixelSize.x * m_pdfPixelSize.y * sinTheta);
+#endif
 	}
 
 	/* Sampling routine for surfaces */
 	void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
-		const Point2 &sample_) const {
-		int bsdfType = its.shape->getBSDF()->getType();
-
-		Float zSign;
-		Point2 sample(sample_);
-		if ((bsdfType & BSDF::EReflection) && (bsdfType & BSDF::ETransmission)) {
-			/* Sample a side and reuse the random number */
-			if (sample.x < 0.5f) {
-				zSign = -1;
-				sample.x *= 2;
-			} else {
-				zSign = 1;
-				sample.x = 2 * (sample.x - 0.5f);
-			}
-			lRec.pdf = 0.5f;
-		} else if (bsdfType & BSDF::EReflection) {
-			/* Sample upper hemisphere */
-			zSign = 1; lRec.pdf = 1;
-		} else {
-			/* Sample lower hemisphere */
-			zSign = -1; lRec.pdf = 1;
-		}
-
-		Point2 diskSample = squareToDiskConcentric(sample);
-		Vector direction(diskSample.x, diskSample.y, 
-			std::sqrt(std::max((Float) 0, 1 - diskSample.x*diskSample.x 
-				- diskSample.y*diskSample.y))*zSign
-		);
-	
-		lRec.pdf *= std::abs(direction.z) * INV_PI;
-		lRec.d = -its.toWorld(direction);
-		lRec.sRec.p = its.p - lRec.d * (2 * m_bsphere.radius);
-		lRec.Le = Le(-lRec.d);
+			const Point2 &sample) const {
+		EnvMapLuminaire::sample(its.p, lRec, sample);
 	}
 
-	inline Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec) const {
-		int bsdfType = its.shape->getBSDF()->getType();
-
-		if ((bsdfType & BSDF::EReflection) && (bsdfType & BSDF::ETransmission))
-			return absDot(its.shFrame.n, lRec.d) / (2 * M_PI);
-		else if (bsdfType & BSDF::EReflection)
-			return std::max((Float) 0, -dot(its.shFrame.n, lRec.d) / M_PI);
-		else
-			return std::max((Float) 0, dot(its.shFrame.n, lRec.d) / M_PI);
+	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec) const {
+		return EnvMapLuminaire::pdf(its.p, lRec);
 	}
 
 	/**
@@ -262,7 +283,7 @@ public:
 
 	Spectrum fArea(const EmissionRecord &eRec) const {
 		Assert(eRec.type == EmissionRecord::ENormal);
-		return M_PI;
+		return Spectrum(M_PI);
 	}
 
 	bool isBackgroundLuminaire() const {
@@ -272,7 +293,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "EnvMapLuminaire[" << std::endl
-			<< "  filename = \"" << m_filename << "\"," << std::endl
+			<< "  path = \"" << m_path << "\"," << std::endl
 			<< "  intensityScale = " << m_intensityScale << "," << std::endl
 			<< "  power = " << getPower().toString() << "," << std::endl
 			<< "  bsphere = " << m_bsphere.toString() << std::endl
@@ -287,18 +308,22 @@ private:
 	Spectrum m_average;
 	BSphere m_bsphere;
 	Float m_intensityScale;
-	std::string m_filename;
+	fs::path m_path;
 	ref<MIPMap> m_mipmap;
 	ref<MemoryStream> m_stream;
+	DiscretePDF m_pdf;
+	Vector2i m_pdfResolution;
+	Vector2 m_pdfInvResolution;
+	Vector2 m_pdfPixelSize;
 };
 
 // ================ Hardware shader implementation ================ 
 
 class EnvMapLuminaireShader : public Shader {
 public:
-	EnvMapLuminaireShader(Renderer *renderer, const std::string &filename, ref<Bitmap> bitmap, 
+	EnvMapLuminaireShader(Renderer *renderer, const fs::path &filename, ref<Bitmap> bitmap, 
 			Float intensityScale, const Transform &worldToLuminaire) : Shader(renderer, ELuminaireShader) {
-		m_gpuTexture = renderer->createGPUTexture(filename, bitmap);
+		m_gpuTexture = renderer->createGPUTexture(filename.leaf(), bitmap);
 		m_gpuTexture->setWrapType(GPUTexture::ERepeat);
 		m_gpuTexture->setMaxAnisotropy(8);
 		m_gpuTexture->init();
@@ -361,7 +386,7 @@ private:
 };
 
 Shader *EnvMapLuminaire::createShader(Renderer *renderer) const { 
-	return new EnvMapLuminaireShader(renderer, m_filename, m_mipmap->getBitmap(), 
+	return new EnvMapLuminaireShader(renderer, m_path, m_mipmap->getBitmap(), 
 			m_intensityScale, m_worldToLuminaire);
 }
 

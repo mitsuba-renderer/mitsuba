@@ -19,15 +19,11 @@
 #if !defined(__INTEGRATOR_H)
 #define __INTEGRATOR_H
 
-#include <mitsuba/render/sampler.h>
 #include <mitsuba/core/netobject.h>
+#include <mitsuba/core/properties.h>
+#include <mitsuba/render/shape.h>
 
 MTS_NAMESPACE_BEGIN
-
-class Scene;
-class Camera;
-class RenderQueue;
-class RenderJob;
 
 /**
  * Abstract integrator base-class. Does not make any assumptions on
@@ -45,7 +41,7 @@ public:
 	 * which have been made available to all local and remote workers.
 	 * The default implementation simply returns.
 	 */
-	virtual void preprocess(const Scene *scene, RenderQueue *queue, 
+	virtual bool preprocess(const Scene *scene, RenderQueue *queue, 
 		const RenderJob *job, int sceneResID, int cameraResID, 
 		int samplerResID);
 
@@ -108,6 +104,170 @@ protected:
 	virtual ~Integrator() { }
 protected:
 	Properties m_properties;
+};
+
+struct MTS_EXPORT_RENDER RadianceQueryRecord {
+public:
+	/**
+	 * List of suported query types. These can be combined by a binary OR.
+	 */
+	enum ERadianceQuery {
+		/* Emitted radiance from a luminaire intersected by the ray */
+		EEmittedRadiance     = 0x0001,
+
+		/* Emitted radiance from a subsurface integrator */
+		ESubsurfaceRadiance  = 0x0002,
+
+		/* Direct (surface) radiance */
+		EDirectRadiance      = 0x0004,
+
+		/* Indirect (surface) radiance, where the last bounce did not go
+		   through a Dirac delta BSDF */
+		EIndirectRadiance    = 0x0008,
+
+		/* Indirect (surface) radiance, where the last bounce went
+		   through a Dirac delta BSDF */
+		ECausticRadiance     = 0x0010,
+
+		/* In-scattered radiance due to volumetric scattering (direct) */
+		EInscatteredDirectRadiance = 0x0020,
+
+		/* In-scattered radiance due to volumetric scattering (indirect) */
+		EInscatteredIndirectRadiance = 0x0040,
+
+		/* Distance to the next surface intersection */
+		EDistance            = 0x0080,
+
+		/* Opacity value: 1 when a surface was hit, 0 when the ray leads
+		   into empty space. When there is a participating medium,
+		   this can also take on fractional values. */
+		EOpacity             = 0x0100,
+
+		/* A ray intersection may need to be performed. This can be set to 
+		   zero if the caller has already provided the intersection */
+		EIntersection        = 0x0200,
+
+		/* Radiance from volumes */
+		EVolumeRadiance      = EInscatteredDirectRadiance | EInscatteredIndirectRadiance,
+
+		/* Radiance query without emitted radiance, ray intersection required */
+		ERadianceNoEmission  = ESubsurfaceRadiance | EDirectRadiance | EIndirectRadiance
+			| ECausticRadiance | EInscatteredDirectRadiance | EInscatteredIndirectRadiance | EIntersection,
+
+		/* Default radiance query, ray intersection required */
+		ERadiance = ERadianceNoEmission | EEmittedRadiance,
+
+		/* Radiance + opacity */
+		ECameraRay = ERadiance | EOpacity
+	};
+
+	/// Construct an invalid radiance query record
+	inline RadianceQueryRecord() 
+	 : type(0), scene(NULL), sampler(NULL),
+	   depth(0), alpha(0), dist(-1), wavelength(-1), extra(0) {
+	}
+
+	/// Construct a radiance query record for the given scene and sampler
+	inline RadianceQueryRecord(const Scene *scene, Sampler *sampler) 
+	 : type(0), scene(scene), sampler(sampler), 
+	   depth(0), alpha(0), dist(-1), wavelength(-1), extra(0) {
+	}
+	
+	/// Copy constructor
+	inline RadianceQueryRecord(const RadianceQueryRecord &rRec) 
+	 : type(rRec.type), scene(rRec.scene), sampler(rRec.sampler), 
+	   depth(rRec.depth), alpha(rRec.alpha), dist(rRec.dist),
+	   wavelength(rRec.wavelength), extra(rRec.extra) {
+	}
+
+	/// Begin a new query of the given type
+	inline void newQuery(int _type) {
+		type = _type;
+		depth = 1;
+		wavelength = -1;
+		extra = 0;
+	}
+
+	/// Initialize the query record for a recursive query
+	inline void recursiveQuery(const RadianceQueryRecord &parent, int _type) {
+		type = _type;
+		scene = parent.scene;
+		sampler = parent.sampler;
+		depth = parent.depth+1;
+		wavelength = parent.wavelength;
+		extra = 0;
+	}
+
+	/**
+	 * Search for a ray intersection. This
+	 * does several things at once - if the intersection has 
+	 * already been provided, the function returns.
+	 * Otherwise, it
+	 * - performs the ray intersection
+	 * - computes the attenuation due to participating media
+	 *   and stores it in <tt>attenuation</tt>.
+	 * - sets the alpha value (if <tt>EAlpha</tt> is set in <tt>type</tt>)
+	 * - sets the distance value (if <tt>EDistance</tt> is set in <tt>type</tt>)
+	 * - clears the <tt>EIntersection</tt> flag in <tt>type</tt>
+	 * Returns true if there is a valid intersection.
+	 */
+	inline bool rayIntersect(const RayDifferential &ray);
+
+	/// Retrieve a 2D sample
+	inline Point2 nextSample2D();
+
+	/// Retrieve a 1D sample
+	inline Float nextSample1D();
+
+	/// Return a string representation
+	std::string toString() const;
+public:
+	// An asterisk (*) marks entries, which may be overwritten
+	// by the callee.
+
+	/// Query type (*)
+	int type;
+
+	/// Pointer to the associated scene
+	const Scene *scene;
+
+	/// Sample generator
+	Sampler *sampler;
+
+	/// Current depth value (# of light bounces) (*)
+	int depth;
+
+	/// Surface interaction data structure (*)
+	Intersection its;
+
+	/// Attenuation along the current ray (*)
+	Spectrum attenuation;
+
+	/// Opacity value of the associated pixel (*)
+	Float alpha;
+
+	/**
+	 * Ray distance to the first surface interaction 
+	 * (if requested by the query type EDistance) (*)
+	 */
+	Float dist;
+
+	/**
+	 * In some cases, the integrator may be forced to restrict
+	 * radiance computations to one wavelength (e.g. when intersecting
+	 * a dielectric material with dispersion or while path
+	 * tracing through a highly scattering medium with a non-constant
+	 * scattering coefficient). This attribute is used to store the
+	 * chosen wavelength. (*)
+	 */
+	int wavelength;
+
+	/**
+	 * Internal flag, which can be used to pass additional information 
+	 * amonst recursive calls inside an integrator. The use
+	 * is dependent on the particular integrator implementation. (*)
+	 */
+	int extra;
 };
 
 /** \brief Abstract base class, which describes integrators

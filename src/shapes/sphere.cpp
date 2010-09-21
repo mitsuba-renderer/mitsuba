@@ -17,6 +17,10 @@
 */
 
 #include <mitsuba/render/shape.h>
+#include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/subsurface.h>
+#include <mitsuba/core/properties.h>
 
 MTS_NAMESPACE_BEGIN
 

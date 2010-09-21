@@ -57,9 +57,9 @@ void GLGeometry::refresh() {
 	int pos = 0;
 	for (size_t i=0; i<m_mesh->getVertexCount(); ++i) {
 		const Vertex &vtx = source[i];
-		vertices[pos++] = (float) vtx.v.x;
-		vertices[pos++] = (float) vtx.v.y;
-		vertices[pos++] = (float) vtx.v.z;
+		vertices[pos++] = (float) vtx.p.x;
+		vertices[pos++] = (float) vtx.p.y;
+		vertices[pos++] = (float) vtx.p.z;
 		vertices[pos++] = (float) vtx.n.x;
 		vertices[pos++] = (float) vtx.n.y;
 		vertices[pos++] = (float) vtx.n.z;

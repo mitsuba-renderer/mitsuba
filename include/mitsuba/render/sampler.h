@@ -21,6 +21,7 @@
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/random.h>
+#include <mitsuba/core/properties.h>
 
 MTS_NAMESPACE_BEGIN
 

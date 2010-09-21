@@ -47,13 +47,13 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 		weight = eRec.P / eRec.pdfArea;
 		VPL lumVPL(ELuminaireVPL, weight);
 		lumVPL.its.p = eRec.sRec.p;
-		lumVPL.its.shFrame = eRec.luminaire->getType() == Luminaire::EDeltaPosition 
-			? stdFrame : Frame(eRec.sRec.n);
+		lumVPL.its.shFrame = (eRec.luminaire->getType() & Luminaire::EOnSurface)
+			? Frame(eRec.sRec.n) : stdFrame;
 		lumVPL.luminaire = eRec.luminaire;
 		vpls.push_back(lumVPL);
 
 		weight *= scene->sampleEmissionDirection(eRec, dirSample);
-		Float cosTheta = eRec.sRec.n.isZero() ? (Float) 1 : absDot(eRec.sRec.n, eRec.d);
+		Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface) ? absDot(eRec.sRec.n, eRec.d) : 1;
 		weight *= cosTheta / eRec.pdfDir;
 		ray = Ray(eRec.sRec.p, eRec.d);
 

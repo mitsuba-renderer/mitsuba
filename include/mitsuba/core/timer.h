@@ -19,6 +19,8 @@
 #if !defined(__TIMER_H)
 #define __TIMER_H
 
+#include <mitsuba/mitsuba.h>
+
 #ifndef WIN32
 #include <sys/time.h>
 #endif

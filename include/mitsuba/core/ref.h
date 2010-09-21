@@ -21,8 +21,16 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief A simple wrapper class which takes care of
- * referencing and unreferencing objects
+/**
+ * \headerfile mitsuba/core/ref.h mitsuba/mitsuba.h
+ * \brief Reference counting helper
+ * 
+ * The \a ref refeference template is a simple wrapper to store a 
+ * pointer to an object. It takes care of increasing and decreasing
+ * the reference count of the object. When the last reference goes
+ * out of scope, the associated object will be deallocated.
+ * 
+ * \author Wenzel Jakob
  */
 template <typename T> class ref {
 public:
@@ -30,13 +38,13 @@ public:
 	ref() : m_ptr(NULL) { }
 
 	/// Construct a reference from a pointer
-	ref(T *ptr) : m_ptr(ptr) { if (m_ptr) m_ptr->incRef(); }
-	
+	ref(T *ptr) : m_ptr(ptr) { if (m_ptr) ((Object *) m_ptr)->incRef(); }
+
 	/// Copy-constructor
-	ref(const ref &pRef) : m_ptr(pRef.m_ptr) { if (m_ptr) m_ptr->incRef(); }
+	ref(const ref &pRef) : m_ptr(pRef.m_ptr) { if (m_ptr) ((Object *) m_ptr)->incRef(); }
 
 	/// Destroy this reference
-	~ref() { if (m_ptr) m_ptr->decRef(); }
+	~ref() { if (m_ptr) ((Object *) m_ptr)->decRef(); }
 
 	/// Overwrite this reference with another reference
 	inline ref& operator= (const ref& pref) {
@@ -45,9 +53,9 @@ public:
 		T* tmp = m_ptr;
 		m_ptr = pref.m_ptr;
 		if (m_ptr)
-			m_ptr->incRef();
+			((Object *) m_ptr)->incRef();
 		if (tmp)
-			tmp->decRef();
+			((Object *) tmp)->decRef();
 		return *this;
 	}
 	
@@ -58,9 +66,9 @@ public:
 		T* tmp = m_ptr;
 		m_ptr = ptr;
 		if (m_ptr)
-			m_ptr->incRef();
+			((Object *) m_ptr)->incRef();
 		if (tmp)
-			tmp->decRef();
+			((Object *) tmp)->decRef();
 		return *this;
 	}
 

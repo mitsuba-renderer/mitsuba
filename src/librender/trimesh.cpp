@@ -20,6 +20,10 @@
 #include <mitsuba/core/random.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/zstream.h>
+#include <mitsuba/core/properties.h>
+#include <mitsuba/render/subsurface.h>
+#include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/luminaire.h>
 
 #define MTS_FILEFORMAT_HEADER 0x041C
 #define MTS_FILEFORMAT_VERSION_V1 0x01
@@ -147,10 +151,10 @@ void TriMesh::configure() {
 	/* Generate a bounding sphere */
 	m_aabb.reset();
 	for (size_t i=0; i<m_vertexCount; i++) 
-		m_aabb.expandBy(m_vertexBuffer[i].v);
+		m_aabb.expandBy(m_vertexBuffer[i].p);
 	m_bsphere.center = m_aabb.getCenter();
 	for (size_t i=0; i<m_vertexCount; i++) 
-		m_bsphere.expandBy(m_vertexBuffer[i].v);
+		m_bsphere.expandBy(m_vertexBuffer[i].p);
 }
 
 Float TriMesh::sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
@@ -166,11 +170,11 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 	
 	if (!hasNormals) {
 		for (unsigned int i=0; i<m_vertexCount; i++)
-			m_vertexBuffer[i].n = Normal(0.0, 0.0f, 0.0f);
+			m_vertexBuffer[i].n = Normal(0.0f);
 		for (unsigned int i=0; i<m_triangleCount; i++) {
-			const Point &v0 = m_vertexBuffer[m_triangles[i].idx[0]].v;
-			const Point &v1 = m_vertexBuffer[m_triangles[i].idx[1]].v;
-			const Point &v2 = m_vertexBuffer[m_triangles[i].idx[2]].v;
+			const Point &v0 = m_vertexBuffer[m_triangles[i].idx[0]].p;
+			const Point &v1 = m_vertexBuffer[m_triangles[i].idx[1]].p;
+			const Point &v2 = m_vertexBuffer[m_triangles[i].idx[2]].p;
 			Normal n = Normal(cross(v1 - v0, v2 - v0));
 			Float length = n.length();
 			if (length != 0) {
@@ -215,11 +219,11 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 		int *sharers = new int[m_vertexCount];
 
 		for (unsigned int i=0; i<m_vertexCount; i++) {
-			m_vertexBuffer[i].dpdu = Vector(0.0, 0.0f, 0.0f);
-			m_vertexBuffer[i].dpdv = Vector(0.0, 0.0f, 0.0f);
+			m_vertexBuffer[i].dpdu = Vector(0.0f);
+			m_vertexBuffer[i].dpdv = Vector(0.0f);
 			if (m_vertexBuffer[i].n.isZero()) {
 				zeroNormals++;
-				m_vertexBuffer[i].n = Normal(1, 0, 0);
+				m_vertexBuffer[i].n = Normal(1.0f, 0.0f, 0.0f);
 			}
 			sharers[i] = 0;
 		}
@@ -228,9 +232,9 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 			unsigned int idx0 = m_triangles[i].idx[0],
 						 idx1 = m_triangles[i].idx[1],
 						 idx2 = m_triangles[i].idx[2];
-			const Point &v0 = m_vertexBuffer[idx0].v;
-			const Point &v1 = m_vertexBuffer[idx1].v;
-			const Point &v2 = m_vertexBuffer[idx2].v;
+			const Point &v0 = m_vertexBuffer[idx0].p;
+			const Point &v1 = m_vertexBuffer[idx1].p;
+			const Point &v2 = m_vertexBuffer[idx2].p;
 			const Point2 &uv0 = m_vertexBuffer[idx0].uv;
 			const Point2 &uv1 = m_vertexBuffer[idx1].uv;
 			const Point2 &uv2 = m_vertexBuffer[idx2].uv;
@@ -286,7 +290,7 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 			m_vertexBuffer[idx2].dpdv += dpdv;
 			sharers[idx0]++; sharers[idx1]++; sharers[idx2]++;
 		}
-					
+
 		/* Orthogonalization + Normalization pass */
 		for (unsigned int i=0; i<m_vertexCount; i++) {
 			Vector dpdu = m_vertexBuffer[i].dpdu;

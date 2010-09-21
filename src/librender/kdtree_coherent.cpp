@@ -16,6 +16,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/core/triangle.h>
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/render/kdtree.h>
 
 MTS_NAMESPACE_BEGIN
@@ -162,12 +164,12 @@ void KDTree::rayIntersectPacket(const Ray *rays, Intersection *its) const {
 					const Vector &rayD = rays[i].d;
 					it.p = rays[i].o + it.t * rayD;
 
-					Normal faceNormal(normalize(cross(v1.v-v0.v, v2.v-v0.v)));
+					Normal faceNormal(normalize(cross(v1.p-v0.p, v2.p-v0.p)));
 					it.geoFrame.n = faceNormal;
 					coordinateSystem(it.geoFrame.n, it.geoFrame.s, it.geoFrame.t);
 
 					/* Intersection refinement step */
-					Vector rel = it.p - v0.v;
+					Vector rel = it.p - v0.p;
 					Float correction = -dot(rel, faceNormal)/dot(rayD, faceNormal);
 					it.t += correction;
 					it.p += rayD * correction;

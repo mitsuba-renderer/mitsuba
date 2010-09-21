@@ -23,470 +23,572 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Simple three-dimensional point class using floating point values.
- * This class is different from the Vector class in how it is treated
- * by linear transformations.
+/**
+ * \headerfile mitsuba/core/point.h mitsuba/mitsuba.h
+ * \brief Parameterizable two-dimensional point data structure
  */
-class Point {
-public:
-	Float x, y, z;
+template <typename T> struct TPoint2 {
+	T x, y;
 
-	inline Point(Float _x = 0.0f, Float _y = 0.0f, Float _z = 0.0f)
-		: x(_x), y(_y), z(_z) {
-	}
-
-	inline Point(Stream *stream) {
-		x = stream->readFloat();
-		y = stream->readFloat();
-		z = stream->readFloat();
-	}
-
-	explicit inline Point(const Vector &v) 
-		: x(v.x), y(v.y), z(v.z) {
-	}
-
-	inline Point operator+(const Vector &v) const {
-		return Point(x + v.x, y + v.y, z + v.z);
-	}
-
-	inline Point operator-(const Vector &v) const {
-		return Point(x - v.x, y - v.y, z - v.z);
-	}
-
-	inline Vector operator-(const Point &p) const {
-		return Vector(x - p.x, y - p.y, z - p.z);
-	}
-	
-	inline Point operator+(const Point &p) const {
-			return Point(x + p.x, y + p.y, z + p.z);
-		}
-	
-	inline Point& operator+=(const Point &p) {
-		x += p.x; y += p.y; z += p.z;
-		return *this;
-	}
-
-	inline Point& operator+=(const Vector &v) {
-		x += v.x; y += v.y; z += v.z;
-		return *this;
-	}
-
-	inline Point& operator-=(const Vector &v) {
-		x -= v.x; y -= v.y; z -= v.z;
-		return *this;
-	}
-
-	inline Point operator*(Float f) const {
-		return Point(x*f, y*f, z*f);
-	}
-
-	inline Point &operator*=(Float f) {
-		x *= f;
-		y *= f;
-		z *= f;
-		return *this;
-	}
-
-	inline Point operator/(Float f) const {
-#ifdef MTS_DEBUG
-		if (f == 0)
-			SLog(EWarn, "Point: Division by zero!");
+	/** \brief Construct a new point without initializing it.
+	 * 
+	 * This construtor is useful when the point will either not
+	 * be used at all (it might be part of a larger data structure)
+	 * or initialized at a later point in time. Always make sure
+	 * that one of the two is the case! Otherwise your program will do
+	 * computations involving uninitialized memory, which will probably
+	 * lead to a difficult-to-find bug.
+	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
+	TPoint2() { }
+#else
+	TPoint2() { x = y = std::numeric_limits<double>::quiet_NaN(); }
 #endif
-		Float r = 1.0f / f;
-		return Point(x * r, y * r, z * r);
+
+	/// Initialize the point with the specified X, Y and Z components
+	TPoint2(T x, T y) : x(x), y(y) {  }
+	
+	/// Initialize the point with the components of another point
+	template <typename T2> explicit TPoint2(const TPoint2<T2> &p) 
+		: x((T) p.x), y((T) p.y) { }
+
+	/// Initialize the point with the components of a vector data structure
+	template <typename T2> explicit TPoint2(const TVector2<T2> &v) 
+		: x((T) v.x), y((T) v.y) { }
+
+	/// Initialize all components of the the point with the specified value
+	explicit TPoint2(T val) : x(val), y(val) { }
+
+	/// Unserialize a point from a binary data stream
+	TPoint2(Stream *stream) {
+		x = stream->readElement<T>();
+		y = stream->readElement<T>();
 	}
 
-	inline Point &operator/=(Float f) {
-#ifdef MTS_DEBUG
-		if (f == 0)
-			SLog(EWarn, "Point: Division by zero!");
-#endif
-		Float r = 1.0f / f;
-		x *= r;
-		y *= r;
-		z *= r;
+	/// Add a vector to a point and return the result
+	TPoint2 operator+(const TVector2<T> &v) const {
+		return TPoint2(x + v.x, y + v.y);
+	}
+
+	/// Add two points and return the result (e.g. to compute a weighted position)
+	TPoint2 operator+(const TPoint2 &p) const {
+		return TPoint2(x + p.x, y + p.y);
+	}
+
+	/// Add a vector to this one (e.g. to compute a weighted position)
+	TPoint2& operator+=(const TVector2<T> &v) {
+		x += v.x; y += v.y; 
 		return *this;
 	}
 
-	inline Float operator[](int i) const {
-		return (&x)[i];
-	}
-
-	inline Float &operator[](int i) {
-		return (&x)[i];
-	}
-
-	inline bool operator==(const Point &v) const {
-		return (v.x == x && v.y == y && v.z == z);
-	}
-	
-	inline bool operator!=(const Point &v) const {
-		return !operator==(v);
-	}
-	
-	inline bool isZero() const {
-		return x==0 && y == 0 && z == 0;
-	}
-
-	inline void serialize(Stream *stream) const {
-		stream->writeFloat(x);
-		stream->writeFloat(y);
-		stream->writeFloat(z);
-	}
-
-	inline std::string toString() const {
-		std::ostringstream oss;
-		oss << "[" << x << ", " << y << ", " << z << "]";
-		return oss.str();
-	}
-};
-
-class Point2 {
-public:
-	Float x, y;
-
-	inline Point2(Float _x = 0.0f, Float _y = 0.0f)
-		: x(_x), y(_y) {
-	}
-
-	inline Point2(Stream *stream) {
-		x = stream->readFloat();
-		y = stream->readFloat();
-	}
-
-	inline Point2 operator*(Float f) const {
-		return Point2(x*f, y*f);
-	}
-
-	inline Point2 &operator*=(Float f) {
-		x *= f;
-		y *= f;
-		return *this;
-	}
-	
-	inline Point2 operator+(const Point2 &p) const {
-		return Point2(x + p.x, y + p.y);
-	}
-	
-	inline Point2 operator+(const Vector2 &p) const {
-		return Point2(x + p.x, y + p.y);
-	}
-
-	inline Point2& operator+=(const Point2 &p) {
-		x += p.x; y += p.y;
-		return *this;
-	}
-	
-	inline Point2& operator+=(const Vector2 &p) {
+	/// Add a point to this one (e.g. to compute a weighted position)
+	TPoint2& operator+=(const TPoint2 &p) {
 		x += p.x; y += p.y;
 		return *this;
 	}
 
-	inline Vector2 operator-(const Point2 &p) const {
-		return Vector2(x - p.x, y - p.y);
-	}
-	
-	inline Point2 operator-(const Vector2 &p) const {
-		return Point2(x - p.x, y - p.y);
+	/// Subtract a vector from this point
+	TPoint2 operator-(const TVector2<T> &v) const {
+		return TPoint2(x - v.x, y - v.y);
 	}
 
-	inline Point2& operator-=(const Point2 &p) {
-		x -= p.x; y -= p.y;
-		return *this;
-	}
-	
-	inline Point2& operator-=(const Vector2 &p) {
-		x -= p.x; y -= p.y;
-		return *this;
+	/// Subtract two points from each other and return the difference as a vector
+	TVector2<T> operator-(const TPoint2 &p) const {
+		return TVector2<T>(x - p.x, y - p.y);
 	}
 
-	inline Point2 operator/(Float f) const {
-		Float r = 1.0f / f;
-		return Point2(x * r, y * r);
-	}
-
-	inline Point2 &operator/=(Float f) {
-		Float r = 1.0f / f;
-		x *= r;
-		y *= r;
-		return *this;
-	}
-
-	inline Float operator[](int i) const {
-		return (&x)[i];
-	}
-
-	inline Float &operator[](int i) {
-		return (&x)[i];
-	}
-
-	inline bool operator==(const Point2 &v) const {
-		return (v.x == x && v.y == y);
-	}
-	
-	inline bool operator!=(const Point2 &v) const {
-		return !operator==(v);
-	}
-	
-	inline bool isZero() const {
-		return x==0 && y == 0;
-	}
-
-	inline void serialize(Stream *stream) const {
-		stream->writeFloat(x);
-		stream->writeFloat(y);
-	}
-
-	inline std::string toString() const {
-		std::ostringstream oss;
-		oss << "[" << x << ", " << y << "]";
-		return oss.str();
-	}
-};
-
-class Point3i {
-public:
-	int x, y, z;
-
-	inline Point3i(int _x = 0, int _y = 0, int _z = 0)
-		: x(_x), y(_y), z(_z) {
-	}
-
-	inline Point3i(Stream *stream) {
-		x = stream->readInt();
-		y = stream->readInt();
-		z = stream->readInt();
-	}
-
-	explicit inline Point3i(const Vector3i &v) 
-		: x(v.x), y(v.y), z(v.z) {
-	}
-
-	inline Point3i operator+(const Vector3i &v) const {
-		return Point3i(x + v.x, y + v.y, z + v.z);
-	}
-
-	inline Point3i operator-(const Vector3i &v) const {
-		return Point3i(x - v.x, y - v.y, z - v.z);
-	}
-
-	inline Vector3i operator-(const Point3i &p) const {
-		return Vector3i(x - p.x, y - p.y, z - p.z);
-	}
-	
-	inline Point3i operator+(const Point3i &p) const {
-			return Point3i(x + p.x, y + p.y, z + p.z);
-		}
-	
-	inline Point3i& operator+=(const Point3i &p) {
-		x += p.x; y += p.y; z += p.z;
-		return *this;
-	}
-
-	inline Point3i& operator+=(const Vector3i &v) {
-		x += v.x; y += v.y; z += v.z;
-		return *this;
-	}
-
-	inline Point3i& operator-=(const Vector3i &v) {
-		x -= v.x; y -= v.y; z -= v.z;
-		return *this;
-	}
-
-	inline Point3i operator*(int f) const {
-		return Point3i(x*f, y*f, z*f);
-	}
-
-	inline Point3i &operator*=(int f) {
-		x *= f;
-		y *= f;
-		z *= f;
-		return *this;
-	}
-
-	inline Point3i operator/(int i) const {
-#ifdef MTS_DEBUG
-		if (i == 0)
-			SLog(EWarn, "Point3i: Division by zero!");
-#endif
-		return Point3i(x / i, y / i, z / i);
-	}
-
-	inline Point3i &operator/=(int i) {
-#ifdef MTS_DEBUG
-		if (i == 0)
-			SLog(EWarn, "Point3i: Division by zero!");
-#endif
-		x /= i;
-		y /= i;
-		z /= i;
-		return *this;
-	}
-
-	inline int operator[](int i) const {
-		return (&x)[i];
-	}
-
-	inline int &operator[](int i) {
-		return (&x)[i];
-	}
-
-	inline bool operator==(const Point3i &v) const {
-		return (v.x == x && v.y == y && v.z == z);
-	}
-	
-	inline bool operator!=(const Point3i &v) const {
-		return !operator==(v);
-	}
-	
-	inline bool isZero() const {
-		return x==0 && y == 0 && z == 0;
-	}
-
-	inline void serialize(Stream *stream) const {
-		stream->writeInt(x);
-		stream->writeInt(y);
-		stream->writeInt(z);
-	}
-
-	inline std::string toString() const {
-		std::ostringstream oss;
-		oss << "[" << x << ", " << y << ", " << z << "]";
-		return oss.str();
-	}
-};
-
-class Point2i {
-public:
-	int x, y;
-
-	inline Point2i(int _x = 0, int _y = 0)
-		: x(_x), y(_y) {
-	}
-	
-	explicit inline Point2i(const Vector2i &v) 
-		: x(v.x), y(v.y) {
-	}
-	
-	inline Point2i(Stream *stream) {
-		x = stream->readInt();
-		y = stream->readInt();
-	}
-
-	inline Point2i operator*(int i) const {
-		return Point2i(x*i, y*i);
-	}
-
-	inline Point2i &operator*=(int i) {
-		x *= i;
-		y *= i;
-		return *this;
-	}
-	
-	inline Point2i operator+(const Point2i &p) const {
-		return Point2i(x + p.x, y + p.y);
-	}
-	
-	inline Point2i operator+(const Vector2i &v) const {
-		return Point2i(x + v.x, y + v.y);
-	}
-
-	inline Point2i& operator+=(const Point2i &p) {
-		x += p.x; y += p.y;
-		return *this;
-	}
-	
-	inline Point2i& operator+=(const Vector2i &v) {
-		x += v.x; y += v.y;
-		return *this;
-	}
-
-	inline Point2i operator-(const Point2i &p) const {
-		return Point2i(x - p.x, y - p.y);
-	}
-	
-	inline Point2i operator-(const Vector2i &v) const {
-		return Point2i(x - v.x, y - v.y);
-	}
-
-	inline Point2i& operator-=(const Point2i &p) {
-		x -= p.x; y -= p.y;
-		return *this;
-	}
-
-	inline Point2i& operator-=(const Vector2i &v) {
+	/// Subtract a vector from this point
+	TPoint2& operator-=(const TVector2<T> &v) {
 		x -= v.x; y -= v.y;
 		return *this;
 	}
 
-	inline Point2i operator/(int i) const {
-		return Point2i(x / i, y / i);
+	/// Scale the point's coordinates by the given scalar and return the result
+	TPoint2 operator*(T f) const {
+		return TPoint2(x * f, y * f);
 	}
 
-	inline Point2i &operator/=(int i) {
-		x /= i;
-		y /= i;
+	/// Scale the point's coordinates by the given scalar
+	TPoint2 &operator*=(T f) {
+		x *= f; y *= f;
 		return *this;
 	}
 
-	int operator[](int i) const {
+	/// Return a version of the point, which has been flipped along the origin
+	TPoint2 operator-() const {
+		return TPoint2(-x, -y);
+	}
+
+	/// Divide the point's coordinates by the given scalar and return the result
+	TPoint2 operator/(T f) const {
+#ifdef MTS_DEBUG
+		if (f == 0) 
+			SLog(EWarn, "Point2: Division by zero!");
+#endif
+		T recip = (T) 1 / f;
+		return TPoint2(x * recip, y * recip);
+	}
+
+	/// Divide the point's coordinates by the given scalar
+	TPoint2 &operator/=(T f) {
+#ifdef MTS_DEBUG
+		if (f == 0) 
+			SLog(EWarn, "Point2: Division by zero!");
+#endif
+		T recip = (T) 1 / f;
+		x *= recip; y *= recip;
+		return *this;
+	}
+
+	/// Index into the point's components
+	T &operator[](int i) {
 		return (&x)[i];
 	}
 
-	int &operator[](int i) {
+	/// Index into the point's components (const version)
+	T operator[](int i) const {
 		return (&x)[i];
 	}
 
-	inline bool operator==(const Point2i &v) const {
+	/// Return whether or not this point is identically zero
+	bool isZero() const {
+		return x == 0 && y == 0;
+	}
+
+	/// Equality test
+	bool operator==(const TPoint2 &v) const {
 		return (v.x == x && v.y == y);
 	}
-	
-	inline bool operator!=(const Point2i &v) const {
-		return !operator==(v);
+
+	/// Inequality test
+	bool operator!=(const TPoint2 &v) const {
+		return v.x != x || v.y != y;
 	}
 
-	inline bool isZero() const {
-		return x==0 && y == 0;
+	/// Serialize this point to a binary data stream
+	void serialize(Stream *stream) const {
+		stream->writeElement<T>(x);
+		stream->writeElement<T>(y);
 	}
 
-	inline void serialize(Stream *stream) const {
-		stream->writeInt(x);
-		stream->writeInt(y);
-	}
-
-	inline std::string toString() const {
+	/// Return a readable string representation of this point
+	std::string toString() const {
 		std::ostringstream oss;
 		oss << "[" << x << ", " << y << "]";
 		return oss.str();
 	}
 };
 
-inline Vector::Vector(const Point3i &p)
- : x((Float) p.x), y((Float) p.y), z((Float) p.z) {
+template <typename T> inline TPoint2<T> operator*(T f, const TPoint2<T> &v) {
+	return v*f;
 }
 
-inline Vector3i::Vector3i(const Point3i &p)
- : x(p.x), y(p.y), z(p.z) {
+template <typename T> inline T distance(const TPoint2<T> &p1, const TPoint2<T> &p2) {
+	return (p1-p2).length();
 }
 
-inline Vector::Vector(const Point &p)
- : x(p.x), y(p.y), z(p.z) {
+template <typename T> inline T distanceSquared(const TPoint2<T> &p1, const TPoint2<T> &p2) {
+	return (p1-p2).lengthSquared();
 }
 
-inline Vector2::Vector2(const Point2 &p)
- : x(p.x), y(p.y) {
+template <> inline TPoint2<int> TPoint2<int>::operator/(int s) const {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Point2i: Division by zero!");
+#endif
+	return TPoint2(x/s, y/s);
 }
 
-inline Vector2i::Vector2i(const Point2i &p)
- : x(p.x), y(p.y) {
+template <> inline TPoint2<int> &TPoint2<int>::operator/=(int s) {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Point2i: Division by zero!");
+#endif
+	x /= s;
+	y /= s;
+	return *this;
 }
 
-inline Float distance(const Point &p1, const Point &p2) {
-	return (p1 - p2).length();
+/**
+ * \headerfile mitsuba/core/point.h mitsuba/mitsuba.h
+ * \brief Parameterizable three-dimensional point data structure
+ */
+template <typename T> struct TPoint3 {
+	T x, y, z;
+
+	/** \brief Construct a new point without initializing it.
+	 * 
+	 * This construtor is useful when the point will either not
+	 * be used at all (it might be part of a larger data structure)
+	 * or initialized at a later point in time. Always make sure
+	 * that one of the two is the case! Otherwise your program will do
+	 * computations involving uninitialized memory, which will probably
+	 * lead to a difficult-to-find bug.
+	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
+	TPoint3() { }
+#else
+	TPoint3() { x = y = z = std::numeric_limits<double>::quiet_NaN(); }
+#endif
+
+	/// Initialize the point with the specified X, Y and Z components
+	TPoint3(T x, T y, T z) : x(x), y(y), z(z) {  }
+	
+	/// Initialize the point with the components of another point
+	template <typename T2> explicit TPoint3(const TPoint3<T2> &p) 
+		: x((T) p.x), y((T) p.y), z((T) p.z) { }
+
+	/// Initialize the point with the components of a vector data structure
+	template <typename T2> explicit TPoint3(const TVector3<T2> &v) 
+		: x((T) v.x), y((T) v.y), z((T) v.z) { }
+
+	/// Initialize all components of the the point with the specified value
+	explicit TPoint3(T val) : x(val), y(val), z(val) { }
+
+	/// Unserialize a point from a binary data stream
+	TPoint3(Stream *stream) {
+		x = stream->readElement<T>();
+		y = stream->readElement<T>();
+		z = stream->readElement<T>();
+	}
+
+	/// Add a vector to a point and return the result
+	TPoint3 operator+(const TVector3<T> &v) const {
+		return TPoint3(x + v.x, y + v.y, z + v.z);
+	}
+
+	/// Add two points and return the result (e.g. to compute a weighted position)
+	TPoint3 operator+(const TPoint3 &p) const {
+		return TPoint3(x + p.x, y + p.y, z + p.z);
+	}
+
+	/// Add a vector to this one (e.g. to compute a weighted position)
+	TPoint3& operator+=(const TVector3<T> &v) {
+		x += v.x; y += v.y; z += v.z;
+		return *this;
+	}
+
+	/// Add a point to this one (e.g. to compute a weighted position)
+	TPoint3& operator+=(const TPoint3 &p) {
+		x += p.x; y += p.y; z += p.z; 
+		return *this;
+	}
+
+	/// Subtract a vector from this point
+	TPoint3 operator-(const TVector3<T> &v) const {
+		return TPoint3(x - v.x, y - v.y, z - v.z);
+	}
+
+	/// Subtract two points from each other and return the difference as a vector
+	TVector3<T> operator-(const TPoint3 &p) const {
+		return TVector3<T>(x - p.x, y - p.y, z - p.z);
+	}
+
+	/// Subtract a vector from this point
+	TPoint3& operator-=(const TVector3<T> &v) {
+		x -= v.x; y -= v.y; z -= v.z; 
+		return *this;
+	}
+
+	/// Scale the point's coordinates by the given scalar and return the result
+	TPoint3 operator*(T f) const {
+		return TPoint3(x * f, y * f, z * f);
+	}
+
+	/// Scale the point's coordinates by the given scalar
+	TPoint3 &operator*=(T f) {
+		x *= f; y *= f; z *= f; 
+		return *this;
+	}
+
+	/// Return a version of the point, which has been flipped along the origin
+	TPoint3 operator-() const {
+		return TPoint3(-x, -y, -z);
+	}
+
+	/// Divide the point's coordinates by the given scalar and return the result
+	TPoint3 operator/(T f) const {
+#ifdef MTS_DEBUG
+		if (f == 0) 
+			SLog(EWarn, "Point3: Division by zero!");
+#endif
+		T recip = (T) 1 / f;
+		return TPoint3(x * recip, y * recip, z * recip);
+	}
+
+	/// Divide the point's coordinates by the given scalar
+	TPoint3 &operator/=(T f) {
+#ifdef MTS_DEBUG
+		if (f == 0) 
+			SLog(EWarn, "Point3: Division by zero!");
+#endif
+		T recip = (T) 1 / f;
+		x *= recip; y *= recip; z *= recip; 
+		return *this;
+	}
+
+	/// Index into the point's components
+	T &operator[](int i) {
+		return (&x)[i];
+	}
+
+	/// Index into the point's components (const version)
+	T operator[](int i) const {
+		return (&x)[i];
+	}
+
+	/// Return whether or not this point is identically zero
+	bool isZero() const {
+		return x == 0 && y == 0 && z == 0;
+	}
+
+	/// Equality test
+	bool operator==(const TPoint3 &v) const {
+		return (v.x == x && v.y == y && v.z == z);
+	}
+
+	/// Inequality test
+	bool operator!=(const TPoint3 &v) const {
+		return v.x != x || v.y != y || v.z != z;
+	}
+
+	/// Serialize this point to a binary data stream
+	void serialize(Stream *stream) const {
+		stream->writeElement<T>(x);
+		stream->writeElement<T>(y);
+		stream->writeElement<T>(z);
+	}
+
+	/// Return a readable string representation of this point
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "[" << x << ", " << y << ", " << z << "]";
+		return oss.str();
+	}
+};
+
+template <typename T> inline TPoint3<T> operator*(T f, const TPoint3<T> &v) {
+	return v*f;
 }
 
-inline Float distanceSquared(const Point &p1, const Point &p2) {
-	return (p1 - p2).lengthSquared();
+template <typename T> inline T distance(const TPoint3<T> &p1, const TPoint3<T> &p2) {
+	return (p1-p2).length();
+}
+
+template <typename T> inline T distanceSquared(const TPoint3<T> &p1, const TPoint3<T> &p2) {
+	return (p1-p2).lengthSquared();
+}
+
+template <> inline TPoint3<int> TPoint3<int>::operator/(int s) const {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Point3i: Division by zero!");
+#endif
+	return TPoint3(x/s, y/s, z/s);
+}
+
+template <> inline TPoint3<int> &TPoint3<int>::operator/=(int s) {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Point3i: Division by zero!");
+#endif
+	x /= s;
+	y /= s;
+	z /= s;
+	return *this;
+}
+
+/**
+ * \headerfile mitsuba/core/point.h mitsuba/mitsuba.h
+ * \brief Parameterizable four-dimensional point data structure
+ */
+template <typename T> struct TPoint4 {
+	T x, y, z, w;
+
+	/** \brief Construct a new point without initializing it.
+	 * 
+	 * This construtor is useful when the point will either not
+	 * be used at all (it might be part of a larger data structure)
+	 * or initialized at a later point in time. Always make sure
+	 * that one of the two is the case! Otherwise your program will do
+	 * computations involving uninitialized memory, which will probably
+	 * lead to a difficult-to-find bug.
+	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
+	TPoint4() { }
+#else
+	TPoint4() { x = y = z = w = std::numeric_limits<double>::quiet_NaN(); }
+#endif
+
+	/// Initialize the point with the specified X, Y and Z components
+	TPoint4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {  }
+
+	/// Initialize the point with the components of another point
+	template <typename T2> explicit TPoint4(const TPoint4<T2> &p) 
+		: x((T) p.x), y((T) p.y), z((T) p.z), w((T) p.w) { }
+
+	/// Initialize the point with the components of a vector data structure
+	template <typename T2> explicit TPoint4(const TVector4<T2> &v) 
+		: x((T) v.x), y((T) v.y), z((T) v.z), w((T) v.w) { }
+
+	/// Initialize all components of the the point with the specified value
+	explicit TPoint4(T val) : x(val), y(val), z(val), w(val) { }
+
+	/// Unserialize a point from a binary data stream
+	TPoint4(Stream *stream) {
+		x = stream->readElement<T>();
+		y = stream->readElement<T>();
+		z = stream->readElement<T>();
+		w = stream->readElement<T>();
+	}
+
+	/// Add a vector to a point and return the result
+	TPoint4 operator+(const TVector4<T> &v) const {
+		return TPoint4(x + v.x, y + v.y, z + v.z, w + v.w);
+	}
+
+	/// Add two points and return the result (e.g. to compute a weighted position)
+	TPoint4 operator+(const TPoint4 &p) const {
+		return TPoint4(x + p.x, y + p.y, z + p.z, w + p.w);
+	}
+
+	/// Add a vector to this one (e.g. to compute a weighted position)
+	TPoint4& operator+=(const TVector4<T> &v) {
+		x += v.x; y += v.y; z += v.z; w += v.w;
+		return *this;
+	}
+
+	/// Add a point to this one (e.g. to compute a weighted position)
+	TPoint4& operator+=(const TPoint4 &p) {
+		x += p.x; y += p.y; z += p.z; w += p.w;
+		return *this;
+	}
+
+	/// Subtract a vector from this point
+	TPoint4 operator-(const TVector4<T> &v) const {
+		return TPoint4(x - v.x, y - v.y, z - v.z, w - v.w);
+	}
+
+	/// Subtract two points from each other and return the difference as a vector
+	TVector4<T> operator-(const TPoint4 &p) const {
+		return TVector4<T>(x - p.x, y - p.y, z - p.z, w - p.w);
+	}
+
+	/// Subtract a vector from this point
+	TPoint4& operator-=(const TVector4<T> &v) {
+		x -= v.x; y -= v.y; z -= v.z; w -= v.w;
+		return *this;
+	}
+
+	/// Scale the point's coordinates by the given scalar and return the result
+	TPoint4 operator*(T f) const {
+		return TPoint4(x * f, y * f, z * f, w * f);
+	}
+
+	/// Scale the point's coordinates by the given scalar
+	TPoint4 &operator*=(T f) {
+		x *= f; y *= f; z *= f; w *= f;
+		return *this;
+	}
+
+	/// Return a version of the point, which has been flipped along the origin
+	TPoint4 operator-() const {
+		return TPoint4(-x, -y, -z, -w);
+	}
+
+	/// Divide the point's coordinates by the given scalar and return the result
+	TPoint4 operator/(T f) const {
+#ifdef MTS_DEBUG
+		if (f == 0) 
+			SLog(EWarn, "Point4: Division by zero!");
+#endif
+		T recip = (T) 1 / f;
+		return TPoint4(x * recip, y * recip, z * recip, w * recip);
+	}
+
+	/// Divide the point's coordinates by the given scalar
+	TPoint4 &operator/=(T f) {
+#ifdef MTS_DEBUG
+		if (f == 0) 
+			SLog(EWarn, "Point4: Division by zero!");
+#endif
+		T recip = (T) 1 / f;
+		x *= recip; y *= recip; z *= recip; w *= recip;
+		return *this;
+	}
+
+	/// Index into the point's components
+	T &operator[](int i) {
+		return (&x)[i];
+	}
+
+	/// Index into the point's components (const version)
+	T operator[](int i) const {
+		return (&x)[i];
+	}
+
+	/// Return whether or not this point is identically zero
+	bool isZero() const {
+		return x == 0 && y == 0 && z == 0 && w == 0;
+	}
+
+	/// Equality test
+	bool operator==(const TPoint4 &v) const {
+		return (v.x == x && v.y == y && v.z == z && v.w == w);
+	}
+
+	/// Inequality test
+	bool operator!=(const TPoint4 &v) const {
+		return v.x != x || v.y != y || v.z != z || v.w != w;
+	}
+
+	/// Serialize this point to a binary data stream
+	void serialize(Stream *stream) const {
+		stream->writeElement<T>(x);
+		stream->writeElement<T>(y);
+		stream->writeElement<T>(z);
+		stream->writeElement<T>(w);
+	}
+
+	/// Return a readable string representation of this point
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "[" << x << ", " << y << ", " << z << ", " << w << "]";
+		return oss.str();
+	}
+};
+
+template <typename T> inline TPoint4<T> operator*(T f, const TPoint4<T> &v) {
+	return v*f;
+}
+
+template <typename T> inline T distance(const TPoint4<T> &p1, const TPoint4<T> &p2) {
+	return (p1-p2).length();
+}
+
+template <typename T> inline T distanceSquared(const TPoint4<T> &p1, const TPoint4<T> &p2) {
+	return (p1-p2).lengthSquared();
+}
+
+template <> inline TPoint4<int> TPoint4<int>::operator/(int s) const {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Point4i: Division by zero!");
+#endif
+	return TPoint4(x/s, y/s, z/s, w/s);
+}
+
+template <> inline TPoint4<int> &TPoint4<int>::operator/=(int s) {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Point4i: Division by zero!");
+#endif
+
+	x /= s;
+	y /= s;
+	z /= s;
+	w /= s;
+	return *this;
 }
 
 MTS_NAMESPACE_END

@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/scene.h>
+#include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/mipmap3d.h>
 #include <fstream>
 
@@ -28,7 +29,7 @@ class AdaptiveMedium : public Medium {
 public:
 	AdaptiveMedium(const Properties &props) : Medium(props) {
 		std::string volData = props.getString("filename");
-		volData = FileResolver::getInstance()->resolve(volData);
+		volData = Thread::getThread()->getFileResolver()->resolve(volData).file_string();
 
 		m_mediumToWorld = props.getTransform("toWorld", Transform());
 		m_worldToMedium = m_mediumToWorld.inverse();

@@ -164,11 +164,11 @@ public:
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		eRec.pdfArea = m_shape->sampleArea(eRec.sRec, sample);
-		eRec.P = 1.0f;
+		eRec.P = Spectrum(1.0f);
 	}
 
 	Spectrum fArea(const EmissionRecord &eRec) const {
-		return 1.0f;
+		return Spectrum(1.0f);
 	}
 
 	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {

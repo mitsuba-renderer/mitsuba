@@ -97,7 +97,7 @@ public:
 
 	void sampleEmission(EmissionRecord &eRec, const Point2 &sample1, const Point2 &sample2) const {
 		Point2 posOnDisk = squareToDiskConcentric(sample1) * m_diskRadius;
-		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Point(posOnDisk.x, posOnDisk.y, 0));
+		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Vector(posOnDisk.x, posOnDisk.y, 0));
 		eRec.d = m_direction;
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.pdfDir = 1;
@@ -106,7 +106,7 @@ public:
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		Point2 posOnDisk = squareToDiskConcentric(sample) * m_diskRadius;
-		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Point(posOnDisk.x, posOnDisk.y, 0));
+		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Vector(posOnDisk.x, posOnDisk.y, 0));
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.P = m_intensity;
 	}

@@ -19,33 +19,37 @@
 #if !defined(__FORMATTER_H)
 #define __FORMATTER_H
 
+#include <mitsuba/mitsuba.h>
+
 MTS_NAMESPACE_BEGIN
 
 /// Available Log message types
 enum ELogLevel {
-	/// Trace message, for extremely verbose debugging
-	ETrace = 0,
-	/// Debug message, usually turned off
-	EDebug = 100,
-	/// More relevant debug / information message
-	EInfo = 200,
-	/// Warning message
-	EWarn = 300,
-	/// Error message, causes an exception to be thrown
-	EError = 400
+	ETrace = 0,   ///< Trace message, for extremely verbose debugging
+	EDebug = 100, ///< Debug message, usually turned off
+	EInfo = 200,  ///< More relevant debug / information message
+	EWarn = 300,  ///< Warning message
+	EError = 400  ///< Error message, causes an exception to be thrown
 };
 
-class Thread;
-
-/** \brief The Formatter class defines an interface for converting
- * log information into a human-readable format
+/** \brief Abstract interface for converting log information into 
+ * a human-readable format
  */
 class MTS_EXPORT_CORE Formatter : public Object {
 public:
-	/// Format a line of text
-	virtual std::string format(ELogLevel pLogLevel, const Class *pClass,
-			const Thread *pThread, const std::string &pText, 
-			const char *pFile, int pLine) = 0;
+	/**
+	 * \brief Turn a log message into a human-readable format
+	 * \param logLevel  The importance of the debug message
+	 * \param theClass  Originating class or NULL
+	 * \param thread    Thread, which is reponsible for creating the message
+	 * \param text      Text content associated with the log message
+	 * \param file      File, which is responsible for creating the message
+	 * \param line      Associated line within the source file
+	 */
+
+	virtual std::string format(ELogLevel logLevel, const Class *theClass,
+			const Thread *thread, const std::string &text, 
+			const char *file, int line) = 0;
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -53,19 +57,19 @@ protected:
 	virtual ~Formatter() { }
 };
 
-/** \brief The default formatter implementation
+/** \brief The default formatter used to turn log messages into
+ * a human-readable form
  */
 class MTS_EXPORT_CORE DefaultFormatter : public Formatter {
 public:
 	/// Create a new default formatter
 	DefaultFormatter();
 
-	/// Format a line of text
-	std::string format(ELogLevel pLogLevel, const Class *pClass,
-			const Thread *pThread, const std::string &pText, 
-			const char *pFile, int pLine);
+	std::string format(ELogLevel logLevel, const Class *theClass,
+			const Thread *thread, const std::string &text, 
+			const char *file, int line);
 
-	/// Should the date be included?
+	/// Should date information be included? The default is yes.
 	inline void setHaveDate(bool value) { m_haveDate = value; }
 
 	MTS_DECLARE_CLASS()

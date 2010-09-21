@@ -17,9 +17,10 @@
 */
 
 #include <mitsuba/render/shape.h>
+#include <mitsuba/render/bsdf.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/fresolver.h>
-#include <fstream>
+#include <mitsuba/core/properties.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -42,19 +43,20 @@ class Hair : public Shape {
 	std::vector<HairSegment> m_segments;
 public:
 	Hair(const Properties &props) : Shape(props) {
-		std::string filename = props.getString("filename");
+		fs::path filename = Thread::getThread()->getFileResolver()->resolve(
+			props.getString("filename"));
 		m_radius = (Float) props.getFloat("radius", 0.05f);
-		m_name = FileResolver::getInstance()->resolve(filename);
+		m_name = filename.leaf();
 
 		Log(EInfo, "Loading hair geometry from \"%s\" ..", m_name.c_str());
 
-		std::ifstream is(m_name.c_str());
+		fs::ifstream is(m_name.c_str());
 		if (is.fail())
 			Log(EError, "Could not open \"%s\"!", m_name.c_str());
 
 		std::string line;
 		int segments = 0;
-		Point p, prev;
+		Point p(0.0f) , prev(0.0f);
 		while (is.good()) {
 			std::getline(is, line);
 			if (line.length() > 0 && line[0] == '#')
@@ -117,7 +119,7 @@ public:
 
 		Transform trafo = 
 			m_objectToWorld
-			* Transform::translate(start)
+			* Transform::translate(Vector(start))
 			* Transform::rotate(rotAxis, rotAngle);
 
 		if ((_index % 2) == 0) {
