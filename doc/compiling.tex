@@ -41,8 +41,8 @@ You may also set adjust certain compilation flags here:
 All default configurations use the flags \code{MTS\_DEBUG}, \code{SINGLE\_PRECISION}, \code{MTS\_SSE}, \code{MTS\_HAS\_COHERENT\_RT}.
 Initially, it is a good idea to just leave the configuration the way it is.
 
-\subsection{Building on Linux}
-On Linux, you'll first need to install a whole bunch of dependencies. It is assumed here
+\subsection{Building on Ubuntu Linux}
+You'll first need to install a number of dependencies. It is assumed here
 that you are using Ubuntu Linux, hence some of the package may be named differently if you are 
 using another distribution.
 
@@ -68,6 +68,32 @@ To be able to run the renderer from the command line, you will also have to impo
 $\text{\$}$ . setpath.sh
 \end{shell}
 (note the period at the beginning -- this assumes that you are using \code{bash}).
+
+\subsection{Building on Fedora Core}
+You'll first need to install a number of dependencies. It is assumed here
+that you are using Fedora Core, hence some of the package may be named differently if you are 
+using another distribution.
+
+First, run
+\begin{shell}
+$\text{\$}$ yum install mercurial gcc-c++ boost-devel qt4-devel OpenEXR-devel xerces-c-devel
+\end{shell}
+You will also need the \texttt{glew-mx} and \texttt{collada-dom} packages, which are not included in the Fedora package repository. You can grab source and \texttt{i386} binary \texttt{RPM} files here: \texttt{http://www.mitsuba-renderer.org/release}.
+Afterwards, simply run
+\begin{shell}
+$\text{\$}$ scons
+\end{shell}
+inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
+If all goes well, SCons should finish successfully within a few minutes:
+\begin{shell}
+scons: $\texttt{done}$ building targets.
+\end{shell}
+To be able to run the renderer from the command line, you will also have to import it into your path:
+\begin{shell}
+$\text{\$}$ . setpath.sh
+\end{shell}
+(note the period at the beginning -- this assumes that you are using \code{bash}).
+
 
 \subsection{Building on Windows}
 This section assumes that Visual Studio 2008 is installed, but the instructions should work equally well with other versions.
