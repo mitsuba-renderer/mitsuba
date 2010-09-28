@@ -50,6 +50,10 @@ AboutDialog::AboutDialog(QWidget *parent) :
 	configFlags += "MTS_HAS_COHERENT_RT ";
 #endif
 
+#if defined(MTS_HAS_VERTEX_COLORS)
+	configFlags += "MTS_HAS_VERTEX_COLORS ";
+#endif
+
 #if defined(MTS_HAS_COLLADA)
 	configFlags += "MTS_HAS_COLLADA ";
 #endif

@@ -35,6 +35,8 @@ You may also set adjust certain compilation flags here:
 \item[\texttt{DOUBLE\_PRECISION}] Do all computation in double precision. Incompatible with
 \texttt{MTS\_SSE}, \texttt{MTS\_HAS\_COHERENT\_RT}, and \texttt{MTS\_DEBUG\_FP}.
 \item[\texttt{MTS\_SSE}]Activate optimized SSE routines.
+\item[\texttt{MTS\_HAS\_VERTEX\_COLORS}]Compile support for vertex colors. Turned off by
+default.
 \item[\texttt{MTS\_HAS\_COHERENT\_RT}]Include coherent ray tracing support (depends on \texttt{MTS\_SSE}).
 \item[\texttt{MTS\_DEBUG\_FP}]Generated NaNs will cause floating point exceptions, which can be caught in a debugger. Warning: This is slow!
 \end{description}
@@ -48,7 +50,7 @@ using another distribution.
 
 First, run
 \begin{shell}
-$\text{\$}$ apt-get install build-essential scons qt4-dev-tools scons libpng12-dev libjpeg62-dev libilmbase-dev libopenexr-dev libxerces-c2-dev libboost-dev libglewmx1.5-dev libxxf86vm-dev libboost-system-dev libboost-filesystem-dev
+$\text{\$}$ apt-get install build-essential scons qt4-dev-tools scons libpng12-dev libjpeg62-dev libilmbase-dev libopenexr-dev libxerces-c-dev libboost-dev libglewmx1.5-dev libxxf86vm-dev libboost-system-dev libboost-filesystem-dev
 \end{shell}
 To get COLLADA support, you will also need to install the \texttt{collada-dom} packages or build them from scratch. Here, we install the \code{x86\_64} binaries and development headers included with Mitsuba:
 \begin{shell}

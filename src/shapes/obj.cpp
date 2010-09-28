@@ -309,7 +309,7 @@ public:
 		if (currentMaterial)
 			mesh->addChild("", currentMaterial);
 		m_meshes.push_back(mesh);
-		SLog(EInfo, "%s: Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
+		Log(EInfo, "%s: Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
 			" vertices (merged " SIZE_T_FMT " vertices).", name.c_str(),
 			triangles.size(), vertexBuffer.size(), numMerged);
 	}

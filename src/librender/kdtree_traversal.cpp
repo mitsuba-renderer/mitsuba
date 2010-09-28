@@ -278,6 +278,7 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 				its.uv = v0.uv * b.x + v1.uv * b.y + v2.uv * b.z;
 				its.dpdu = v0.dpdu * b.x + v1.dpdu * b.y + v2.dpdu * b.z;
 				its.dpdv = v0.dpdv * b.x + v1.dpdv * b.y + v2.dpdv * b.z;
+
 				its.geoFrame.n = faceNormal;
 				its.shape = shape;
 
@@ -288,6 +289,14 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 				its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
 				its.wi = its.toLocal(-ray.d);
 				its.hasUVPartials = false;
+
+#if defined(MTS_HAS_VERTEX_COLORS)
+				its.color.fromLinearRGB(
+					v0.color[0] * b.x + v1.color[0] * b.y + v2.color[0] * b.z,
+					v0.color[1] * b.x + v1.color[1] * b.y + v2.color[1] * b.z,
+					v0.color[2] * b.x + v1.color[2] * b.y + v2.color[2] * b.z
+				);
+#endif
 			} else {
 				/* Non-triangle shape: intersect again to fill in details */
 				if (!shape->rayIntersect(ray, its))

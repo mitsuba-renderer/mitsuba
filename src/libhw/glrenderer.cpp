@@ -220,10 +220,17 @@ void GLRenderer::beginDrawingMeshes(bool transmitOnlyPositions) {
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 		glClientActiveTexture(GL_TEXTURE1);
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+#if defined(MTS_HAS_VERTEX_COLORS)
+		glEnableClientState(GL_COLOR_ARRAY);
+#endif
 	}
 
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
+#if defined(MTS_HAS_VERTEX_COLORS)
+		const int stride = sizeof(GLfloat) * 14;
+#else
 		const int stride = sizeof(GLfloat) * 11;
+#endif
 		glEnableClientState(GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV);
 		glEnableClientState(GL_ELEMENT_ARRAY_UNIFIED_NV);
 		glVertexFormatNV(3, GL_FLOAT, stride);
@@ -233,6 +240,7 @@ void GLRenderer::beginDrawingMeshes(bool transmitOnlyPositions) {
 			glTexCoordFormatNV(2, GL_FLOAT, stride);
 			glClientActiveTexture(GL_TEXTURE1);
 			glTexCoordFormatNV(3, GL_FLOAT, stride);
+			glColorFormatNV(3, GL_FLOAT, stride);
 		}
 	}
 }
@@ -252,11 +260,19 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 					geometry->m_vertexSize - 6*sizeof(GLfloat));
 				glBufferAddressRangeNV(GL_TEXTURE_COORD_ARRAY_ADDRESS_NV, 1, geometry->m_vertexAddr+8*sizeof(GLfloat), 
 					geometry->m_vertexSize - 8*sizeof(GLfloat));
+#if defined(MTS_HAS_VERTEX_COLORS)
+				glBufferAddressRangeNV(GL_COLOR_ARRAY_ADDRESS_NV, 0, geometry->m_vertexAddr+11*sizeof(GLfloat),
+					geometry->m_vertexSize - 11*sizeof(GLfloat));
+#endif
 			}
 			glBufferAddressRangeNV(GL_ELEMENT_ARRAY_ADDRESS_NV, 0, 
 				geometry->m_indexAddr, geometry->m_indexSize);
 		} else {
+#if defined(MTS_HAS_VERTEX_COLORS)
+			const int stride = sizeof(GLfloat) * 14;
+#else
 			const int stride = sizeof(GLfloat) * 11;
+#endif
 
 			glBindBuffer(GL_ARRAY_BUFFER, geometry->m_vertexID);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry->m_indexID);
@@ -273,12 +289,21 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 				/* Pass 'dpdu' as second set of texture coordinates */
 				glClientActiveTexture(GL_TEXTURE1);
 				glTexCoordPointer(3, GL_FLOAT, stride, (GLfloat *) 0 + 8);
+
+#if defined(MTS_HAS_VERTEX_COLORS)
+				glColorPointer(3, GL_FLOAT, stride, (GLfloat *) 0 + 11);
+#endif
 			}
 		}
 
 		/* Draw all triangles */
 		glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount() * 3), 
 			GL_UNSIGNED_INT, (GLvoid *) 0);
+	
+		if (!m_capabilities->isSupported(RendererCapabilities::EBindless)) {
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		}
 	} else {
 		/* Draw the old-fashioned way without VBOs */
 		const GLchar *vertices = (const GLchar *) mesh->getVertexBuffer();
@@ -290,7 +315,12 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 		if (!m_transmitOnlyPositions) {
 			glNormalPointer(dataType, sizeof(Vertex), 
 				vertices + sizeof(Float) * 3);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+#if defined(MTS_HAS_VERTEX_COLORS)
+			glColorPointer(3, GL_FLOAT, sizeof(Vertex),
+				vertices + sizeof(Float) * 14);
+#endif
+			glClientActiveTexture(GL_TEXTURE0);
 			glTexCoordPointer(2, dataType, sizeof(Vertex), 
 				vertices + sizeof(Float) * 6);
 
@@ -309,13 +339,16 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 void GLRenderer::endDrawingMeshes() {
 	glDisableClientState(GL_VERTEX_ARRAY);
 	if (!m_transmitOnlyPositions) {
+#if defined(MTS_HAS_VERTEX_COLORS)
+		glDisableClientState(GL_COLOR_ARRAY);
+#endif
 		glDisableClientState(GL_NORMAL_ARRAY);
 		glClientActiveTexture(GL_TEXTURE1);
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 		glClientActiveTexture(GL_TEXTURE0);
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	}
-	
+
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
 		glDisableClientState(GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV);
 		glDisableClientState(GL_ELEMENT_ARRAY_UNIFIED_NV);
@@ -326,6 +359,8 @@ void GLRenderer::endDrawingMeshes() {
 }
 	
 void GLRenderer::drawAll() {
+	if (true)
+		return;
 	GLRenderer::beginDrawingMeshes(true);
 	std::map<const TriMesh *, GPUGeometry *>::iterator it;
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {

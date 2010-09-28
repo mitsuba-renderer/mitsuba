@@ -178,14 +178,21 @@ void KDTree::rayIntersectPacket(const Ray *rays, Intersection *its) const {
 					it.dpdu = v0.dpdu * b.x + v1.dpdu * b.y + v2.dpdu * b.z;
 					it.dpdv = v0.dpdv * b.x + v1.dpdv * b.y + v2.dpdv * b.z;
 					it.shFrame.n = normalize(v0.n * b.x + v1.n * b.y + v2.n * b.z);
-				
-				
+
 					it.shFrame.s = normalize(it.dpdu - it.shFrame.n 
 						* dot(it.shFrame.n, it.dpdu));
 					it.geoFrame.t = cross(it.shFrame.n, it.shFrame.s);
 					it.wi = it.toLocal(-rayD);
 					it.hasUVPartials = false;
 					it.shape = shape;
+
+#if defined(MTS_HAS_VERTEX_COLORS)
+					it.color.fromLinearRGB(
+						v0.color[0] * b.x + v1.color[0] * b.y + v2.color[0] * b.z,
+						v0.color[1] * b.x + v1.color[1] * b.y + v2.color[1] * b.z,
+						v0.color[2] * b.x + v1.color[2] * b.y + v2.color[2] * b.z
+					);
+#endif
 				} else {
 					/* Non-triangle shape: intersect again to fill in details */
 					shape->rayIntersect(rays[i], it);
