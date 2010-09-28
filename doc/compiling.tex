@@ -35,6 +35,8 @@ You may also set adjust certain compilation flags here:
 \item[\texttt{DOUBLE\_PRECISION}] Do all computation in double precision. Incompatible with
 \texttt{MTS\_SSE}, \texttt{MTS\_HAS\_COHERENT\_RT}, and \texttt{MTS\_DEBUG\_FP}.
 \item[\texttt{MTS\_SSE}]Activate optimized SSE routines.
+\item[\texttt{MTS\_HAS\_VERTEX\_COLORS}]Compile support for vertex colors. Turned off by
+default.
 \item[\texttt{MTS\_HAS\_COHERENT\_RT}]Include coherent ray tracing support (depends on \texttt{MTS\_SSE}).
 \item[\texttt{MTS\_DEBUG\_FP}]Generated NaNs will cause floating point exceptions, which can be caught in a debugger. Warning: This is slow!
 \end{description}

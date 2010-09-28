@@ -300,6 +300,14 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					its.shFrame.n = normalize(v0.n * alpha + v1.n * beta + v2.n * gamma);
 					its.uv = v0.uv * alpha + v1.uv * beta + v2.uv * gamma;
 
+#if defined(MTS_HAS_VERTEX_COLORS)
+					its.color.fromLinearRGB(
+						v0.color[0] * alpha + v1.color[0] * beta + v2.color[0] * gamma,
+						v0.color[1] * alpha + v1.color[1] * beta + v2.color[1] * gamma,
+						v0.color[2] * alpha + v1.color[2] * beta + v2.color[2] * gamma
+					);
+#endif
+
 					if (EXPECT_NOT_TAKEN(bsdf->getType() != BSDF::EDiffuseReflection || !diffuseVPL)) {
 						its.dpdu = v0.dpdu * alpha + v1.dpdu * beta + v2.dpdu * gamma;
 						its.dpdv = v0.dpdv * alpha + v1.dpdv * beta + v2.dpdv * gamma;

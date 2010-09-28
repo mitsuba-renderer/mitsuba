@@ -107,37 +107,42 @@ public:
 	/// Computes texture coordinate partials
 	void computePartials(const RayDifferential &ray);
 
-	/* Return a string representation */
+	/// Return a string representation
 	std::string toString() const;
 public:
-	/* Incident direction in the local frame */
+	/// Incident direction in the local frame
 	Vector wi;
 
-	/* Distance traveled along the ray */
+	/// Distance traveled along the ray
 	Float t;
 
 	/* Intersection point in 3D coordinates */
 	Point p;
 
-	/* Geometry frame */
+	/// Geometry frame
 	Frame geoFrame;
 
-	/* Shading frame */
+	/// Shading frame
 	Frame shFrame;
 
-	/* UV surface coordinates */
+	/// UV surface coordinates
 	Point2 uv;
 
-	/* Position partials wrt. to changes in texture-space */
+	/// Position partials wrt. to changes in texture-space
 	Vector dpdu, dpdv;
 
-	/* Texture coordinate mapping partials wrt. changes in screen-space */
+	/// Texture coordinate mapping partials wrt. changes in screen-space
 	Float dudx, dudy, dvdx, dvdy;
 
-	/* Affected shape */
+#if defined(MTS_HAS_VERTEX_COLORS)
+	/// Interpolated vertex color (if enabled)
+	Spectrum color;
+#endif
+
+	/// Affected shape
 	const Shape *shape;
 
-	/* Have texture coordinate partials been computed */
+	/// Have texture coordinate partials been computed
 	bool hasUVPartials;
 };
 

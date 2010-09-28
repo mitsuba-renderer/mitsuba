@@ -511,6 +511,8 @@ plugins += env.SharedLibrary('plugins/kkay', ['src/phase/kkay.cpp'])
 
 # Shapes and triangle mesh loaders
 plugins += env.SharedLibrary('plugins/obj', ['src/shapes/obj.cpp'])
+plugins += env.SharedLibrary('plugins/ply', ['src/shapes/ply/ply.cpp', 'src/shapes/ply/ply_parser.cpp'],
+	CPPPATH = env['CPPPATH'] + ['src/shapes/ply'])
 plugins += env.SharedLibrary('plugins/serialized', ['src/shapes/serialized.cpp'])
 plugins += env.SharedLibrary('plugins/sphere', ['src/shapes/sphere.cpp'])
 plugins += env.SharedLibrary('plugins/cylinder', ['src/shapes/cylinder.cpp'])
@@ -564,6 +566,7 @@ plugins += env.SharedLibrary('plugins/exrtexture', ['src/textures/exrtexture.cpp
 plugins += env.SharedLibrary('plugins/ldrtexture', ['src/textures/ldrtexture.cpp'])
 plugins += env.SharedLibrary('plugins/gridtexture', ['src/textures/gridtexture.cpp'])
 plugins += env.SharedLibrary('plugins/checkerboard', ['src/textures/checkerboard.cpp'])
+plugins += env.SharedLibrary('plugins/vertexcolors', ['src/textures/vertexcolors.cpp'])
 
 # Light sources
 plugins += env.SharedLibrary('plugins/area', ['src/luminaires/area.cpp'])

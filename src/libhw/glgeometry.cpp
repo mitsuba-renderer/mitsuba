@@ -41,7 +41,14 @@ void GLGeometry::init() {
 }
 void GLGeometry::refresh() {
 	Assert(m_vertexID != 0 && m_indexID != 0);
-	m_vertexSize = m_mesh->getVertexCount() * sizeof(GLfloat) * 11;
+#if defined(MTS_HAS_VERTEX_COLORS)
+	const int floatsPerVertex = 14;
+#else
+	const int floatsPerVertex = 11;
+#endif
+
+	m_vertexSize = m_mesh->getVertexCount() * sizeof(GLfloat) *
+		floatsPerVertex;
 	m_indexSize = m_mesh->getTriangleCount() * sizeof(GLuint) * 3;
 
 	Log(EDebug, "Uploading a GPU geometry object (\"%s\", " SIZE_T_FMT 
@@ -51,7 +58,7 @@ void GLGeometry::refresh() {
 		m_mesh->getTriangleCount(),
 		(m_vertexSize + m_indexSize) / 1024.0f);
 
-	GLfloat *vertices = new GLfloat[m_mesh->getVertexCount() * 11];
+	GLfloat *vertices = new GLfloat[m_mesh->getVertexCount() * floatsPerVertex];
 	GLuint *indices = (GLuint *) m_mesh->getTriangles();
 	const Vertex *source = m_mesh->getVertexBuffer();
 	int pos = 0;
@@ -68,6 +75,11 @@ void GLGeometry::refresh() {
 		vertices[pos++] = (float) vtx.dpdu.x;
 		vertices[pos++] = (float) vtx.dpdu.y;
 		vertices[pos++] = (float) vtx.dpdu.z;
+#if defined(MTS_HAS_VERTEX_COLORS)
+		vertices[pos++] = (float) vtx.color[0];
+		vertices[pos++] = (float) vtx.color[1];
+		vertices[pos++] = (float) vtx.color[2];
+#endif
 	}
 
 	bind();
