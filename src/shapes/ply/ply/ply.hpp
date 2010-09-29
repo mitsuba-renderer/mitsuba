@@ -1,16 +1,16 @@
 #ifndef PLY_PLY_HPP_INCLUDED
 #define PLY_PLY_HPP_INCLUDED
 
-#include <tr1/cstdint>
+#include <boost/cstdint.hpp>
 
 namespace ply {
 
-typedef std::tr1::int8_t int8;
-typedef std::tr1::int16_t int16;
-typedef std::tr1::int32_t int32;
-typedef std::tr1::uint8_t uint8;
-typedef std::tr1::uint16_t uint16;
-typedef std::tr1::uint32_t uint32;
+typedef boost::int8_t int8;
+typedef boost::int16_t int16;
+typedef boost::int32_t int32;
+typedef boost::uint8_t uint8;
+typedef boost::uint16_t uint16;
+typedef boost::uint32_t uint32;
 typedef float float32;
 typedef double float64;
 
