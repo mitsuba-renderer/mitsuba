@@ -37,6 +37,11 @@ public:
 		fs::path filePath = Thread::getThread()->getFileResolver()->resolve(
 			props.getString("filename"));
 		m_name = filePath.stem();
+
+		/* Determines whether vertex colors should be 
+		   treated as linear RGB or sRGB. */
+		m_sRGB = props.getBoolean("srgb", true);
+
 		/* Load the geometry */
 		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.leaf().c_str());
 		m_triangleCount = m_vertexCount = 0;
@@ -49,6 +54,7 @@ public:
 		loadPLY(filePath);
 		if (m_triangleCount == 0 || m_vertexCount == 0)
 			Log(EError, "Unable to load \"%s\" (no triangles or vertices found)!");
+
 		Assert(m_triangleCtr == m_triangleCount);
 		Assert(m_vertexCtr == m_vertexCount);
 
@@ -64,7 +70,7 @@ public:
 		Log(EInfo, "\"%s\" [line %i] info: %s", filename.c_str(), line_number,
 			message.c_str());
 	}
-	
+
 	void warning_callback(const std::string& filename, std::size_t line_number,
 			const std::string& message) {
 		Log(EWarn, "\"%s\" [line %i] warning: %s", filename.c_str(), line_number,
@@ -76,9 +82,14 @@ public:
 		Log(EError, "\"%s\" [line %i] error: %s", filename.c_str(), line_number,
 			message.c_str());
 	}
-	
+
 	template<typename ValueType> std::tr1::function <void (ValueType)> 
 		scalar_property_definition_callback(const std::string& element_name, 
+		const std::string& property_name);
+
+	template<typename SizeType, typename IndexType> std::tr1::tuple<std::tr1::function<void (SizeType)>, 
+		std::tr1::function<void (IndexType)>, std::tr1::function<void ()> > 
+		list_property_definition_callback(const std::string& element_name,
 		const std::string& property_name);
 
 	std::tr1::tuple<std::tr1::function<void()>, std::tr1::function<void()> > 
@@ -106,25 +117,6 @@ public:
 		}
 	}
 
-	std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
-		std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> > 
-		list_property_definition_callback(const std::string& element_name,
-		const std::string& property_name) {
-		if ((element_name == "face") && (property_name == "vertex_indices")) {
-			return std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
-				std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> >(
-				std::tr1::bind(&PLYLoader::face_vertex_indices_begin, this, _1),
-				std::tr1::bind(&PLYLoader::face_vertex_indices_element, this, _1),
-				std::tr1::bind(&PLYLoader::face_vertex_indices_end, this)
-			);
-		} else {
-			return std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
-				std::tr1::function<void (ply::int32)>, 
-				std::tr1::function<void ()> >(0, 0, 0);
-		}
-	}
-
-	void vertex_begin_callback() { }
 	void vertex_x_callback(ply::float32 x) { m_position.x = x; }
 	void vertex_y_callback(ply::float32 y) { m_position.y = y; }
 	void vertex_z_callback(ply::float32 z) { m_position.z = z; }
@@ -134,6 +126,14 @@ public:
 	void texcoord_u_callback(ply::float32 x) { m_uv.x = x; }
 	void texcoord_v_callback(ply::float32 y) { m_uv.y = y; }
 
+	inline Float fromSRGBComponent(Float value) {
+		if (value <= (Float) 0.04045)
+			return value / (Float) 12.92;
+		return std::pow((value + (Float) 0.055)
+			/ (Float) (1.0 + 0.055), (Float) 2.4);
+	}
+
+	void vertex_begin_callback() { }
 	void vertex_end_callback() {
 		m_vertexBuffer[m_vertexCtr].p = m_position;
 		m_vertexBuffer[m_vertexCtr].n = m_normal;
@@ -141,6 +141,11 @@ public:
 		m_vertexBuffer[m_vertexCtr].dpdu = Vector(0.0f);
 		m_vertexBuffer[m_vertexCtr].dpdv = Vector(0.0f);
 #if defined(MTS_HAS_VERTEX_COLORS)
+		if (m_sRGB) {
+			m_red = fromSRGBComponent(m_red);
+			m_green = fromSRGBComponent(m_green);
+			m_blue = fromSRGBComponent(m_blue);
+		}
 		m_vertexBuffer[m_vertexCtr].color[0] = m_red;
 		m_vertexBuffer[m_vertexCtr].color[1] = m_green;
 		m_vertexBuffer[m_vertexCtr].color[2] = m_blue;
@@ -148,14 +153,23 @@ public:
 		m_vertexCtr++;
 	}
 
-	void diffuse_red_callback(ply::uint8 r) { m_red = r / 255.0f; }
-	void diffuse_green_callback(ply::uint8 g) { m_green = g / 255.0f; }
-	void diffuse_blue_callback(ply::uint8 b) { m_blue = b / 255.0f; }
+	void red_callback_uint8(ply::uint8 r) { m_red = r / 255.0f; }
+	void green_callback_uint8(ply::uint8 g) { m_green = g / 255.0f; }
+	void blue_callback_uint8(ply::uint8 b) { m_blue = b / 255.0f; }
+
+	void red_callback(ply::float32 r) { m_red = r; }
+	void green_callback(ply::float32 g) { m_green = g; }
+	void blue_callback(ply::float32 b) { m_blue = b; }
 
 	void face_begin_callback() { }
 	void face_end_callback() { }
 
-	void face_vertex_indices_begin(ply::uint8 size) { 
+	void face_vertex_indices_begin_uint8(ply::uint8 size) { 
+		AssertEx(size == 3, "Only triangle PLY meshes are supported for now.");
+		m_triangleIdxCtr = 0;
+	}
+
+	void face_vertex_indices_begin_uint32(ply::uint32 size) { 
 		AssertEx(size == 3, "Only triangle PLY meshes are supported for now.");
 		m_triangleIdxCtr = 0;
 	}
@@ -180,6 +194,7 @@ private:
 	Triangle m_triangle;
 	bool m_hasNormals, m_hasTexCoords;
 	Point2 m_uv;
+	bool m_sRGB;
 };
 	
 template<> std::tr1::function <void (ply::float32)> 
@@ -204,6 +219,12 @@ template<> std::tr1::function <void (ply::float32)>
 			return std::tr1::bind(&PLYLoader::texcoord_u_callback, this,  _1);
 		} else if (property_name == "v") {
 			return std::tr1::bind(&PLYLoader::texcoord_v_callback, this,  _1);
+		} else if (property_name == "diffuse_red" || property_name == "red") {
+			return std::tr1::bind(&PLYLoader::red_callback, this,  _1);
+		} else if (property_name == "diffuse_green" || property_name == "green") {
+			return std::tr1::bind(&PLYLoader::green_callback, this,  _1);
+		} else if (property_name == "diffuse_blue" || property_name == "blue") {
+			return std::tr1::bind(&PLYLoader::blue_callback, this,  _1);
 		}
 	}
 	return 0;
@@ -214,16 +235,52 @@ template<> std::tr1::function <void (ply::uint8)>
 	const std::string& property_name) {
 	if (element_name == "vertex") {
 		if (property_name == "diffuse_red" || property_name == "red") {
-			return std::tr1::bind(&PLYLoader::diffuse_red_callback, this,  _1);
+			return std::tr1::bind(&PLYLoader::red_callback_uint8, this,  _1);
 		} else if (property_name == "diffuse_green" || property_name == "green") {
-			return std::tr1::bind(&PLYLoader::diffuse_green_callback, this,  _1);
+			return std::tr1::bind(&PLYLoader::green_callback_uint8, this,  _1);
 		} else if (property_name == "diffuse_blue" || property_name == "blue") {
-			return std::tr1::bind(&PLYLoader::diffuse_blue_callback, this,  _1);
+			return std::tr1::bind(&PLYLoader::blue_callback_uint8, this,  _1);
 		}
 	}
 	return 0;
 }
-	
+
+template<> std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
+	std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> > 
+	PLYLoader::list_property_definition_callback(const std::string& element_name,
+	const std::string& property_name) {
+	if ((element_name == "face") && (property_name == "vertex_indices")) {
+		return std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
+			std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> >(
+			std::tr1::bind(&PLYLoader::face_vertex_indices_begin_uint8, this, _1),
+			std::tr1::bind(&PLYLoader::face_vertex_indices_element, this, _1),
+			std::tr1::bind(&PLYLoader::face_vertex_indices_end, this)
+		);
+	} else {
+		return std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
+			std::tr1::function<void (ply::int32)>, 
+			std::tr1::function<void ()> >(0, 0, 0);
+	}
+}
+
+template<> std::tr1::tuple<std::tr1::function<void (ply::uint32)>, 
+	std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> > 
+	PLYLoader::list_property_definition_callback(const std::string& element_name,
+	const std::string& property_name) {
+	if ((element_name == "face") && (property_name == "vertex_indices")) {
+		return std::tr1::tuple<std::tr1::function<void (ply::uint32)>, 
+			std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> >(
+			std::tr1::bind(&PLYLoader::face_vertex_indices_begin_uint32, this, _1),
+			std::tr1::bind(&PLYLoader::face_vertex_indices_element, this, _1),
+			std::tr1::bind(&PLYLoader::face_vertex_indices_end, this)
+		);
+	} else {
+		return std::tr1::tuple<std::tr1::function<void (ply::uint32)>, 
+			std::tr1::function<void (ply::int32)>, 
+			std::tr1::function<void ()> >(0, 0, 0);
+	}
+}
+
 void PLYLoader::loadPLY(const fs::path &path) {
 	ply::ply_parser ply_parser;
 	ply_parser.info_callback(std::tr1::bind(&PLYLoader::info_callback,
@@ -245,8 +302,11 @@ void PLYLoader::loadPLY(const fs::path &path) {
 	ply::at<ply::uint8>(scalar_property_definition_callbacks) = std::tr1::bind(
 		&PLYLoader::scalar_property_definition_callback<ply::uint8>, this, _1, _2);
 
-	ply::at<ply::uint8, ply::int32>(list_property_definition_callbacks) =std::tr1::bind(
-		&PLYLoader::list_property_definition_callback, this, _1, _2);
+	ply::at<ply::uint8, ply::int32>(list_property_definition_callbacks) = std::tr1::bind(
+		&PLYLoader::list_property_definition_callback<ply::uint8, ply::int32>, this, _1, _2);
+
+	ply::at<ply::uint32, ply::int32>(list_property_definition_callbacks) = std::tr1::bind(
+		&PLYLoader::list_property_definition_callback<ply::uint32, ply::int32>, this, _1, _2);
 
 	ply_parser.scalar_property_definition_callbacks(scalar_property_definition_callbacks);
 	ply_parser.list_property_definition_callbacks(list_property_definition_callbacks);
