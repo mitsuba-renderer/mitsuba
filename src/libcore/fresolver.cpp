@@ -4,6 +4,25 @@ MTS_NAMESPACE_BEGIN
 
 FileResolver::FileResolver() {
 	m_paths.push_back(fs::current_path());
+#if defined(__LINUX__)
+	char exePath[PATH_MAX];
+	memset(exePath, 0, PATH_MAX);
+	if (readlink("/proc/self/exe", exePath, PATH_MAX) != -1) 
+		addPath(fs::path(exePath).parent_path());
+	else
+		Log(EError, "Could not detect the executable path!");
+	addPath(MTS_RESOURCE_DIR);
+#elif defined(__OSX__)
+	MTS_AUTORELEASE_BEGIN()
+	Thread::getThread()->getFileResolver()->addPath(__ubi_bundlepath());
+	MTS_AUTORELEASE_END() 
+#elif defined(WIN32)
+	char lpFilename[1024];
+	if (GetModuleFileNameA(NULL, lpFilename, sizeof(lpFilename)))
+		addPath(fs::path(lpFilename).parent_path());
+	else
+		Log(EError, "Could not detect the executable path!");
+#endif
 }
 
 FileResolver *FileResolver::clone() const {

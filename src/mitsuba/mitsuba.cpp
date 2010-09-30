@@ -267,6 +267,7 @@ int ubi_main(int argc, char **argv) {
 
 		/* Prepare for parsing scene descriptions */
 		SAXParser* parser = new SAXParser();
+		cout << fileResolver->toString() << endl;
 		fs::path schemaPath = fileResolver->resolveAbsolute("schema/scene.xsd");
 
 		/* Check against the 'scene.xsd' XML Schema */
@@ -356,16 +357,6 @@ int main(int argc, char **argv) {
 		SLog(EError, "Could not initialize WinSock2!");
 	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
 		SLog(EError, "Could not find the required version of winsock.dll!");
-#endif
-
-#ifdef __LINUX__
-	Thread::getThread()->getFileResolver()->addPath(MTS_RESOURCE_DIR);
-#endif
-
-#if defined(__OSX__)
-	MTS_AUTORELEASE_BEGIN()
-	Thread::getThread()->getFileResolver()->addPath(__ubi_bundlepath());
-	MTS_AUTORELEASE_END() 
 #endif
 
 #if !defined(WIN32)
