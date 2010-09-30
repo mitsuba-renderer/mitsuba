@@ -267,7 +267,6 @@ int ubi_main(int argc, char **argv) {
 
 		/* Prepare for parsing scene descriptions */
 		SAXParser* parser = new SAXParser();
-		cout << fileResolver->toString() << endl;
 		fs::path schemaPath = fileResolver->resolveAbsolute("schema/scene.xsd");
 
 		/* Check against the 'scene.xsd' XML Schema */
