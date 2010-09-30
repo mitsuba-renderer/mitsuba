@@ -135,8 +135,8 @@ public:
 
 	void vertex_begin_callback() { }
 	void vertex_end_callback() {
-		m_vertexBuffer[m_vertexCtr].p = m_position;
-		m_vertexBuffer[m_vertexCtr].n = m_normal;
+		m_vertexBuffer[m_vertexCtr].p = m_objectToWorld(m_position);
+		m_vertexBuffer[m_vertexCtr].n = m_objectToWorld(m_normal);
 		m_vertexBuffer[m_vertexCtr].uv = m_uv;
 		m_vertexBuffer[m_vertexCtr].dpdu = Vector(0.0f);
 		m_vertexBuffer[m_vertexCtr].dpdv = Vector(0.0f);
