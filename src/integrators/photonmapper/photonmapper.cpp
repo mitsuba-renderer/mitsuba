@@ -227,6 +227,7 @@ public:
 		}
 
 		sched->unregisterResource(qmcSamplerID);
+		m_parentIntegrator = static_cast<SampleIntegrator *>(getParent());
 		return true;
 	}
 
