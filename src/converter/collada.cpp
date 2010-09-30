@@ -20,8 +20,9 @@
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
-#include <dae.h>
 #include <dom/domCOLLADA.h>
+#include <dae.h>
+#include <dae/daeErrorHandler.h>
 #include <dom/domProfile_COMMON.h>
 #include <boost/algorithm/string.hpp>
 #include <sys/stat.h>
@@ -262,6 +263,18 @@ struct triangle_key_order : public std::binary_function<SimpleTriangle, SimpleTr
 		if (result == -1) return true;
 		if (result ==  1) return false;
 		return false;
+	}
+};
+
+
+class CustomErrorHandler : public daeErrorHandler {
+public:
+	void handleError(daeString msg) {
+		SLog(EWarn, "Critical COLLADA error: %s", msg);
+	}
+
+	void handleWarning(daeString msg) {
+		SLog(EWarn, "COLLADA warning: %s", msg);
 	}
 };
 
@@ -1154,6 +1167,8 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	std::ostream &os,
 	const fs::path &textureDirectory,
 	const fs::path &meshesDirectory) {
+	CustomErrorHandler errorHandler;
+	daeErrorHandler::setErrorHandler(&errorHandler);
 	DAE *dae = new DAE();
 	SLog(EInfo, "Loading \"%s\" ..", inputFile.leaf().c_str());
 	if (dae->load(inputFile.file_string().c_str()) != DAE_OK) 
@@ -1207,6 +1222,7 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	os << "</scene>" << endl;
 
 	gluDeleteTess(tess);
+	daeErrorHandler::setErrorHandler(NULL);
 	delete dae;
 }
 
