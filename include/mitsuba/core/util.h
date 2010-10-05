@@ -19,6 +19,8 @@
 #if !defined(__UTIL_H)
 #define __UTIL_H
 
+#include <boost/static_assert.hpp>
+
 MTS_NAMESPACE_BEGIN
 
 // -----------------------------------------------------------------------
@@ -255,6 +257,18 @@ extern MTS_EXPORT_CORE Float radicalInverseIncremental(int b, Float x);
  * \author Peter J. Acklam
  */
 extern MTS_EXPORT_CORE double normalQuantile(double p);
+
+/// Cast between types, which have an identical binary representation.
+template<typename T, typename U> inline T union_cast(const U &val) {
+	BOOST_STATIC_ASSERT(sizeof(T) == sizeof(U));
+
+	union {
+		U u;
+		T t;
+	} caster = {val};
+
+	return caster.t;
+}
 
 MTS_NAMESPACE_END
 
