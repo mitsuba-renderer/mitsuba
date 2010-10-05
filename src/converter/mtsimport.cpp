@@ -174,14 +174,6 @@ int ubi_main(int argc, char **argv) {
 
 	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 
-#if defined(__LINUX__)
-	fileResolver->addPath(MTS_RESOURCE_DIR);
-#elif defined(__OSX__)
-	MTS_AUTORELEASE_BEGIN()
-	fileResolver->addPath(__ubi_bundlepath());
-	MTS_AUTORELEASE_END() 
-#endif
-
 #if !defined(WIN32)
 	/* Correct number parsing on some locales (e.g. ru_RU) */
 	setlocale(LC_NUMERIC, "C");

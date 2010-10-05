@@ -318,6 +318,9 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "uniform vec3 vplPos, camPos;" << endl
 			<< "varying vec3 normal, tangent, lightVec, camVec;" << endl
 			<< "varying vec2 uv;" << endl
+#if defined(MTS_HAS_VERTEX_COLORS)
+			<< "varying vec3 vertexColor;" << endl
+#endif
 			<< endl
 			<< "void main() {" << endl
 			<< "   normal = gl_Normal;" << endl
@@ -326,6 +329,9 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "   camVec = camPos - gl_Vertex.xyz;" << endl
 			<< "   lightVec = vplPos - gl_Vertex.xyz;" << endl
             << "   gl_Position = ftransform();" << endl
+#if defined(MTS_HAS_VERTEX_COLORS)
+            << "   vertexColor = gl_Color.rgb;" << endl
+#endif
 			<< "}" << endl;
 
 		program->setSource(GPUProgram::EVertexProgram, oss.str());
@@ -339,6 +345,9 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "uniform float nearClip, invClipRange, minDist;" << endl
 			<< "uniform vec2 vplUV;" << endl
 			<< "uniform bool diffuseSources, diffuseReceivers;" << endl
+#if defined(MTS_HAS_VERTEX_COLORS)
+			<< "varying vec3 vertexColor;" << endl
+#endif
 			<< endl
 			<< "/* Inputs <- Vertex program */" << endl
 			<< "varying vec3 normal, tangent, lightVec, camVec;" << endl

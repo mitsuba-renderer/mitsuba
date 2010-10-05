@@ -34,10 +34,21 @@ struct Vertex {
 	Point2 uv;   ///< %Texture coordinates
 	Vector dpdu; ///< Partial derivative of the position with respect to \a u.
 	Vector dpdv; ///< Partial derivative of the position with respect to \a v.
+#if defined(MTS_HAS_VERTEX_COLORS)
+	Float color[3];
+#endif
 
 	inline bool operator==(const Vertex &vert) const {
+#if defined(MTS_HAS_VERTEX_COLORS)
+		return (p == vert.p && n == vert.n && uv == vert.uv 
+			     && dpdu == vert.dpdu && dpdv == vert.dpdv
+				 && color[0] == vert.color[0]
+				 && color[1] == vert.color[1]
+				 && color[2] == vert.color[2]);
+#else
 		return (p == vert.p && n == vert.n && uv == vert.uv 
 			     && dpdu == vert.dpdu && dpdv == vert.dpdv);
+#endif
 	}
 	
 	inline bool operator!=(const Vertex &vert) const {

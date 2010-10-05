@@ -109,12 +109,10 @@ int main(int argc, char *argv[]) {
 
 #if defined(__LINUX__)
 	XInitThreads();
-	Thread::getThread()->getFileResolver()->addPath(MTS_RESOURCE_DIR);
 #endif
 
 #if defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
-	Thread::getThread()->getFileResolver()->addPath(__ubi_bundlepath());
 	/* Required for the mouse relocation in GLWidget */
 	CGSetLocalEventsSuppressionInterval(0.0f);
 	MTS_AUTORELEASE_END() 

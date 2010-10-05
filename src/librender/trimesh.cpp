@@ -144,8 +144,10 @@ void TriMesh::configure() {
 		return;
 
 	AssertEx(m_triangleCount > 0, "Encountered an empty triangle mesh!");
-	for (size_t i=0; i<m_triangleCount; i++)
+
+	for (size_t i=0; i<m_triangleCount; i++) 
 		m_areaPDF.put(m_triangles[i].surfaceArea(m_vertexBuffer));
+
 	m_surfaceArea = m_areaPDF.build();
 	m_invSurfaceArea = 1.0f / m_surfaceArea;
 	/* Generate a bounding sphere */
@@ -166,7 +168,7 @@ Float TriMesh::sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const
 
 void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, bool complain) {
 	/* Calculate smooth normals if there aren't any */
-	int zeroArea = 0, zeroNormals = 0;
+	int zeroArea = 0, zeroNormals = 0, invalidNormals = 0;
 	
 	if (!hasNormals) {
 		for (unsigned int i=0; i<m_vertexCount; i++)
@@ -192,12 +194,15 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 				m_vertexBuffer[i].n /= length;
 			} else {
 				/* Choose some bogus value */
-				if (complain)
-					Log(EWarn, "Could not generate correct mesh normals!");
+				invalidNormals++;
 				m_vertexBuffer[i].n = Normal(1, 0, 0);
 			}
 		}
 	}
+
+	if (complain && invalidNormals > 0)
+		Log(EWarn, "\"%s\": mesh contains invalid geometry: unable "
+			"to generate %i normals!", m_name.c_str(), invalidNormals);
 
 	if (m_flipNormals) {
 		for (unsigned int i=0; i<m_vertexCount; i++)
@@ -314,8 +319,8 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 	}
 
 	if (complain && (zeroArea > 0 || zeroNormals > 0))
-		Log(EWarn, "Mesh contains invalid geometry: %i zero area triangles "
-			"and %i zero normals found!", zeroArea, zeroNormals);
+		Log(EWarn, "\"%s\": mesh contains invalid geometry: %i zero area triangles "
+			"and %i zero normals found!", m_name.c_str(), zeroArea, zeroNormals);
 }
 
 void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
