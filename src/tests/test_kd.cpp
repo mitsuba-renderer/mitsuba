@@ -25,11 +25,13 @@ class TestKDTree : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
 	MTS_DECLARE_TEST(test01_sutherlandHodgman)
-	MTS_DECLARE_TEST(test02_buildSimple)
+	MTS_DECLARE_TEST(test02_sutherlandHodgman)
+	MTS_DECLARE_TEST(test03_sutherlandHodgman)
+	MTS_DECLARE_TEST(test04_buildSimple)
 	MTS_END_TESTCASE()
 
 	void test01_sutherlandHodgman() {
-		/* Test the triangle clipping algorithm */
+		/* Test the triangle clipping algorithm on the unit triangle */
 		Vertex vertices[3];
 		vertices[0].p = Point(0, 0, 0);
 		vertices[1].p = Point(1, 0, 0);
@@ -54,10 +56,56 @@ public:
 		assertEquals(clippedAABB.max, expectedResult.max);
 	}
 
+	void test02_sutherlandHodgman() {
+		/* Verify that a triangle can be completely clipped away */
+		Vertex vertices[3];
+		vertices[0].p = Point(0, 0, 0);
+		vertices[1].p = Point(1, 0, 0);
+		vertices[2].p = Point(1, 1, 0);
+
+		AABB clipAABB(
+			Point(2, 2, 2),
+			Point(3, 3, 3)
+		);
+
+		Triangle t;
+		t.idx[0] = 0; t.idx[1] = 1; t.idx[2] = 2;
+
+		AABB clippedAABB = t.getClippedAABB(vertices, clipAABB);
+
+		assertFalse(clippedAABB.isValid());
+	}
+
+	void test03_sutherlandHodgman() {
+		/* Verify that a no clipping happens when the AABB fully contains a triangle */
+		Vertex vertices[3];
+		vertices[0].p = Point(0, 0, 0);
+		vertices[1].p = Point(1, 0, 0);
+		vertices[2].p = Point(1, 1, 0);
+
+		AABB clipAABB(
+			Point(-1, -1, -1),
+			Point(1, 1, 1)
+		);
+		
+		AABB expectedResult(
+			Point(0, 0, 0),
+			Point(1, 1, 0)
+		);
+
+		Triangle t;
+		t.idx[0] = 0; t.idx[1] = 1; t.idx[2] = 2;
+
+		AABB clippedAABB = t.getClippedAABB(vertices, clipAABB);
+
+		assertEquals(clippedAABB.min, expectedResult.min);
+		assertEquals(clippedAABB.max, expectedResult.max);
+	}
+
 	class TriKDTree : GenericKDTree<Triangle> {
 	};
 
-	void test02_buildSimple() {
+	void test04_buildSimple() {
 		TriKDTree tree;
 		std::vector<Triangle> tris;
 	}

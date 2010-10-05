@@ -155,12 +155,15 @@ AABB Triangle::getClippedAABB(const Vertex *buffer, const AABB &aabb) const {
 	for (int i=0; i<nVertices; ++i)
 		result.expandBy(vertices1[i]);
 
+#if 0
 	// Cover up some floating point imprecisions
 	Vector error = aabb.getExtents() * Epsilon;
 	result.min -= error;
 	result.max += error;
 
 	result.clip(aabb);
+#endif
+	SAssert(aabb.contains(result));
 
 	return result;
 }

@@ -28,9 +28,16 @@ Point AABB::getCorner(uint8_t corner) const {
 
 bool AABB::contains(const Point &vec) const {
 	return isValid() &&
-		(vec.x >= min.x && vec.x <= max.x) &&
-		(vec.y >= min.y && vec.y <= max.y) &&
-		(vec.z >= min.z && vec.z <= max.z);
+		vec.x >= min.x && vec.x <= max.x &&
+		vec.y >= min.y && vec.y <= max.y &&
+		vec.z >= min.z && vec.z <= max.z;
+}
+
+bool AABB::contains(const AABB &aabb) const {
+	return isValid() &&
+	    min.x <= aabb.min.x && max.x >= aabb.max.x &&
+		min.y <= aabb.min.y && max.y >= aabb.max.y &&
+		min.z <= aabb.min.z && max.z >= aabb.max.z;
 }
 
 void AABB::expandBy(const Point &vec) {

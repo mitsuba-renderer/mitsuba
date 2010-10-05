@@ -24,6 +24,7 @@
 
 #define MTS_KD_MAX_DEPTH 48   ///< Compile-time KD-tree depth limit
 #define MTS_KD_STATISTICS 1   ///< Collect statistics during building/traversal 
+#define MTS_KD_DEBUG          ///< Enable serious KD-tree debugging (slow)
 #define MTS_KD_MINMAX_BINS 30
 
 MTS_NAMESPACE_BEGIN
@@ -35,12 +36,14 @@ MTS_NAMESPACE_BEGIN
  * 
  */
 template <typename ShapeType> class GenericKDTree : public Object {
+public:
 	typedef uint32_t index_type; ///< Index number format (max 2^32 prims)
 	typedef uint32_t size_type;  ///< Size number format
 
 	GenericKDTree() {
 		m_traversalCost = 15;
 		m_intersectionCost = 20;
+		m_emptySpaceBonus = 0.8f;
 	}
 
 	/**
@@ -201,9 +204,8 @@ protected:
 	 * @tparam BinCount Number of bins to be allocated
 	 */
 	template <int BinCount = 32> struct MinMaxBins {
-		MinMaxBins(AABB &aabb) : aabb(aabb) {
-			for (int dim=0; dim<3; ++dim)
-				invBinSize[dim] = BinCount / (aabb.max[dim]-aabb.min[dim]);
+		MinMaxBins(AABB &aabb) : m_aabb(aabb) {
+			m_binSize = m_aabb.getExtents() / BinCount;
 		}
 
 		/**
@@ -211,21 +213,24 @@ protected:
 		 *
 		 * \param func Functor to be used to determine the AABB for
 		 *     a given list of primitives
-		 * \param primCount Number of primitives
+		 * \param count Number of primitives
 		 */
 		template <typename AABBFunctor> void bin(
 				const AABBFunctor &func,
 				size_type count) {
-			primCount = count;
-			memset(minBins, 0, sizeof(size_type) * 3 * BinCount);
-			memset(maxBins, 0, sizeof(size_type) * 3 * BinCount);
-			for (size_type i=0; i<primCount; ++i) {
+			m_primCount = count;
+			memset(m_minBins, 0, sizeof(size_type) * 3 * BinCount);
+			memset(m_maxBins, 0, sizeof(size_type) * 3 * BinCount);
+			Vector invBinSize;
+			for (int dim=0; dim<3; ++dim) 
+				invBinSize[dim] = 1/m_binSize[dim];
+			for (size_type i=0; i<m_primCount; ++i) {
 				AABB aabb = func(i);
 				for (int dim=0; dim<3; ++dim) {
 					int minIdx = (aabb.min[dim] - aabb.min[dim]) * invBinSize[dim];
 					int maxIdx = (aabb.max[dim] - aabb.min[dim]) * invBinSize[dim];
-					maxBins[dim * BinCount + std::min(std::max(maxIdx, 0), BinCount-1)]++;
-					minBins[dim * BinCount + std::min(std::max(minIdx, 0), BinCount-1)]++;
+					m_maxBins[dim * BinCount + std::min(std::max(maxIdx, 0), BinCount-1)]++;
+					m_minBins[dim * BinCount + std::min(std::max(minIdx, 0), BinCount-1)]++;
 				}
 			}
 		}
@@ -237,58 +242,68 @@ protected:
 		 */
 		MinMaxBins& operator+=(const MinMaxBins &otherBins) {
 			for (int i=0; i<3*BinCount; ++i) {
-				minBins[i] += otherBins.minBins[i];
-				maxBins[i] += otherBins.maxBins[i];
+				m_minBins[i] += otherBins.m_minBins[i];
+				m_maxBins[i] += otherBins.m_maxBins[i];
 			}
 			return *this;
-		}
-
-		/**
-		 * \brief Turn the bin counts into proper primitive numbers
-		 */
-		void computePrimitiveCounts() {
-			int minIdx = 0, maxIdx = 3*BinCount-1;
-			for (int j=0; j<3; ++j) {
-				size_type minAccum = 0, maxAccum = 0;
-				for (int i=0; i<BinCount; ++i) {
-					minBins[minIdx++] += minAccum;
-					maxBins[maxIdx--] += maxAccum;
-					minAccum = minBins[minIdx];
-					maxAccum = maxBins[maxIdx];
-				}
-				Assert(maxBins[maxIdx] == primCount);
-				Assert(minBins[minIdx] == primCount);
-			}
 		}
 
 		/**
 		 * \brief Evaluate the surface area heuristic at each bin boundary
 		 * and return the maximizer for the given cost constants.
 		 */
-		void maximizeSAH(Float traversalCost, Float intersectionCost) {
-			int binIdx = 0;
-			for (int dim=0; dim<3; ++dim) {
-				AABB leftAABB, rightAABB;
-				for (int i=0; i<BinCount-1; ++i) {
-					size_type leftCount = minBins[binIdx];
-					size_type rightCount = maxBins[binIdx+1];
+		void maximizeSAH(Float traversalCost, Float intersectionCost, Float emptySpaceBonus) {
+			Float bestCost = std::numeric_limits<Float>::infinity(), bestPos = 0;
+			Float normalization = 2.0f / m_aabb.getSurfaceArea();
+			int binIdx = 0, bestAxis = -1;
 
-					float cost = traversalCost + intersectionCost 
-						* (pA * leftCount + pB * rightCount);
+			for (int dim=0; dim<3; ++dim) {
+				Vector extents = m_aabb.getExtents();
+				size_type numLeft = 0, numRight = m_primCount;
+				Float leftWidth = 0, rightWidth = extents[dim];
+				const Float binSize = m_binSize[dim];
+
+				for (int i=0; i<BinCount-1; ++i) {
+					numLeft  += m_minBins[binIdx];
+					numRight -= m_maxBins[binIdx];
+					leftWidth += binSize;
+					rightWidth -= binSize;
+
+					extents[dim] = leftWidth;
+					Float pLeft = normalization * (extents.x*extents.y 
+							+ extents.x*extents.z + extents.y*extents.z);
+
+					extents[dim] = rightWidth;
+					Float pRight = normalization * (extents.x*extents.y 
+							+ extents.x*extents.z + extents.y*extents.z);
+
+					Float cost = traversalCost + intersectionCost 
+						* (pLeft * numLeft + pRight * numRight);
+
+					if (numLeft == 0 || numRight == 0)
+						cost *= emptySpaceBonus;
+
+					if (cost < bestCost) {
+						bestCost = cost;
+						bestAxis = dim;
+						bestPos = m_aabb.min[dim] + leftWidth;
+					}
 
 					binIdx++;
 				}
 				binIdx++;
 			}
+
+			Assert(bestCost != std::numeric_limits<Float>::infinity());
 		}
 	private:
-		size_type minBins[3*BinCount], maxBins[3*BinCount];
-		AABB aabb;
-		Vector invBinSize;
-		size_type primCount;
+		size_type m_minBins[3*BinCount], m_maxBins[3*BinCount];
+		size_type m_primCount;
+		AABB m_aabb;
+		Vector m_binSize;
 	};
 private:
-	Float m_traversalCost, m_intersectionCost;
+	Float m_traversalCost, m_intersectionCost, m_emptySpaceBonus;
 	int m_maxDepth;
 };
 

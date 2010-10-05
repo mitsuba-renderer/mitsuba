@@ -189,6 +189,9 @@ public:
 	/// Check whether a point lies on or inside the bounding box
 	bool contains(const Point &vec) const;
 
+	/// Check whether a given bounding box is contained within this one
+	bool contains(const AABB &aabb) const;
+
 	/**
 	 * \brief Bounding sphere-box overlap test
 	 *
