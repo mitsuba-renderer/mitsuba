@@ -50,11 +50,11 @@ using another distribution.
 
 First, run
 \begin{shell}
-$\text{\$}$ apt-get install build-essential scons qt4-dev-tools scons libpng12-dev libjpeg62-dev libilmbase-dev libopenexr-dev libxerces-c-dev libboost-dev libglewmx1.5-dev libxxf86vm-dev libboost-system-dev libboost-filesystem-dev
+$\text{\$}$ sudo apt-get install build-essential scons qt4-dev-tools scons libpng12-dev libjpeg62-dev libilmbase-dev libopenexr-dev libxerces-c-dev libboost-dev libglewmx1.5-dev libxxf86vm-dev libboost-system-dev libboost-filesystem-dev
 \end{shell}
 To get COLLADA support, you will also need to install the \texttt{collada-dom} packages or build them from scratch. Here, we install the \code{x86\_64} binaries and development headers included with Mitsuba:
 \begin{shell}
-$\text{\$}$ dpkg --install tools/linux/collada-dom2.2_2.2-1_amd64.deb tools/linux/collada-dom-dev_2.2-1_amd64.deb
+$\text{\$}$ sudo dpkg --install tools/linux/collada-dom2.2_2.2-1_amd64.deb tools/linux/collada-dom-dev_2.2-1_amd64.deb
 \end{shell}
 Afterwards, simply run
 \begin{shell}
@@ -80,7 +80,37 @@ First, run
 \begin{shell}
 $\text{\$}$ yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel
 \end{shell}
-You will also need the \texttt{glew-mx} and \texttt{collada-dom} packages, which are not included in the Fedora package repository. You can grab source and \texttt{i386} binary \texttt{RPM} files here: \texttt{http://www.mitsuba-renderer.org/releases}.
+You will also need the \texttt{glew-mx} and \texttt{collada-dom} packages, which are not included in the Fedora package repository. 
+You can grab source, \texttt{i386}, and \text{x86\_64} \texttt{RPM} files here: \texttt{http://www.mitsuba-renderer.org/releases}.
+Afterwards, simply run
+\begin{shell}
+$\text{\$}$ scons
+\end{shell}
+inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
+If all goes well, SCons should finish successfully within a few minutes:
+\begin{shell}
+scons: $\texttt{done}$ building targets.
+\end{shell}
+To be able to run the renderer from the command line, you will also have to import it into your path:
+\begin{shell}
+$\text{\$}$ . setpath.sh
+\end{shell}
+(note the period at the beginning -- this assumes that you are using \code{bash}).
+
+\subsection{Building on Arch Linux}
+You'll first need to install a number of dependencies.
+
+First, run
+\begin{shell}
+$\text{\$}$ pacman -S mercurial openexr gcc xerces-c boost libjpeg libpng qt libxmu libxi mesa pcre libxml2 scons
+\end{shell}
+Some of the extra dependencies must be built manually:
+\begin{shell}
+$\text{\$}$ wget https://www.mitsuba-renderer.org/releases/contrib/archlinux/glewmx/PKGBUILD
+$\text{\$}$ makepkg
+$\text{\$}$ sudo pacman -U glewmx-*.xz
+\end{shell}
+and similar for \texttt{https://www.mitsuba-renderer.org/releases/contrib/archlinux/collada-dom/PKGBUILD}
 Afterwards, simply run
 \begin{shell}
 $\text{\$}$ scons
