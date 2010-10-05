@@ -154,7 +154,7 @@ public:
 
 				block->snapshot(x, y);
 				while (!stop) {
-					rRec.newQuery(RadianceQueryRecord::ERadiance);
+					rRec.newQuery(RadianceQueryRecord::ECameraRay);
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
 					sample = rRec.nextSample2D();
