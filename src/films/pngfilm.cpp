@@ -46,7 +46,9 @@ protected:
 	int m_bpp;
 	bool m_hasBanner;
 	bool m_hasAlpha;
-	Float m_gamma;
+	Float m_gamma, m_exposure;
+	std::string m_toneMappingMethod;
+	Float m_reinhardKey, m_reinhardBurn;
 public:
 	PNGFilm(const Properties &props) : Film(props) {
 		m_pixels = new Pixel[m_cropSize.x * m_cropSize.y];
@@ -58,6 +60,17 @@ public:
 		m_bpp = props.getInteger("bpp", -1);
 		/* Gamma value for the correction. Negative values switch to sRGB */
 		m_gamma = props.getFloat("gamma", -1.0); // -1: sRGB. 
+		/* Exposure factor in f-stops */
+		m_exposure = props.getFloat("exposure", 0.0);
+		/* Tone mapping method ("gamma" or "reinhard") */
+		m_toneMappingMethod = props.getString("toneMappingMethod", "gamma");
+		/* Reinhard "burn" parameter */
+		m_reinhardBurn = props.getFloat("reinhardBurn", 0.0f);
+		/* Reinhard "key" parameter */
+		m_reinhardKey = props.getFloat("reinhardKey", 0.18f);
+
+		if (m_toneMappingMethod != "gamma" && m_toneMappingMethod != "reinhard") 
+			Log(EError, "Unknown tone mapping method specified (must be 'gamma' or 'reinhard')");
 
 		if (m_bpp == -1)
 			m_bpp = m_hasAlpha ? 32 : 24;
@@ -78,6 +91,10 @@ public:
 		m_hasAlpha = stream->readBool();
 		m_bpp = stream->readInt();
 		m_gamma = stream->readFloat();
+		m_toneMappingMethod = stream->readString();
+		m_reinhardKey = stream->readFloat();
+		m_reinhardBurn = stream->readFloat();
+		m_exposure = stream->readFloat();
 		m_gamma = 1.0f / m_gamma;
 		m_pixels = new Pixel[m_cropSize.x * m_cropSize.y];
 	}
@@ -88,6 +105,10 @@ public:
 		stream->writeBool(m_hasAlpha);
 		stream->writeInt(m_bpp);
 		stream->writeFloat(m_gamma);
+		stream->writeString(m_toneMappingMethod);
+		stream->writeFloat(m_reinhardKey);
+		stream->writeFloat(m_reinhardBurn);
+		stream->writeFloat(m_exposure);
 	}
 
 	virtual ~PNGFilm() {
@@ -144,7 +165,7 @@ public:
 			return Spectrum(0.0f);
 		}
 		Pixel &pixel = m_pixels[xPixel + yPixel * m_cropSize.x];
-		return pixel.spec / pixel.weight;
+		return pixel.weight != 0 ? pixel.spec / pixel.weight : Spectrum(0.0f);
 	}
 
 	void putImageBlock(const ImageBlock *block) {
@@ -189,6 +210,28 @@ public:
 		Float r, g, b;
 		int pos = 0;
 
+		Float exposure = std::pow(2.0f, (Float) m_exposure);
+		Float invWpSqr = std::pow((Float) 2, (Float) m_reinhardBurn);
+		Float reinhardKey = 0;
+		bool reinhard = false;
+
+		if (m_toneMappingMethod == "reinhard") {
+			Float avgLogLuminance = 0.0f;
+			for (int y=0; y<m_cropSize.y; ++y) {
+				for (int x=0; x<m_cropSize.x; ++x) {
+					Pixel &pixel = m_pixels[pos++];
+					Float invWeight = 1.0f;
+					if (pixel.weight != 0.0f)
+						invWeight = 1.0f / pixel.weight;
+					avgLogLuminance += std::log(0.001f + (pixel.spec * invWeight).getLuminance());
+				}
+			}
+			avgLogLuminance = std::exp(avgLogLuminance/(m_cropSize.x*m_cropSize.y));
+			reinhardKey = m_reinhardKey / avgLogLuminance;
+			reinhard = true;
+			pos = 0;
+		}
+
 		if (m_bpp == 32) {
 			for (int y=0; y<m_cropSize.y; y++) {
 				for (int x=0; x<m_cropSize.x; x++) {
@@ -197,10 +240,24 @@ public:
 					Float invWeight = 1.0f;
 					if (pixel.weight != 0.0f)
 						invWeight = 1.0f / pixel.weight;
+					Spectrum spec = pixel.spec * (invWeight * exposure);
+
+					if (reinhard) {
+						Float X, Y, Z;
+						spec.toXYZ(X, Y, Z);
+						Float normalization = 1/(X + Y + Z);
+						Float x = X*normalization, y = Y*normalization;
+						Float Lp = Y * reinhardKey;
+						Y = Lp * (1.0f + Lp*invWpSqr) / (1.0f + Lp);
+						X = x * (Y/y); 
+						Z = (Y/y) * (1.0 - x - y);
+						spec.fromXYZ(X, Y, Z);
+					}
+
 					if (m_gamma < 0)
-						(pixel.spec * invWeight).toSRGB(r, g, b);
+						spec.toSRGB(r, g, b);
 					else
-						(pixel.spec * invWeight).pow(m_gamma).toLinearRGB(r, g, b);
+						spec.pow(m_gamma).toLinearRGB(r, g, b);
 
 					targetPixels[4*pos+0] = (uint8_t) clamp((int) (r * 255), 0, 255);
 					targetPixels[4*pos+1] = (uint8_t) clamp((int) (g * 255), 0, 255);
@@ -232,10 +289,24 @@ public:
 					Float invWeight = 1.0f;
 					if (pixel.weight != 0.0f)
 						invWeight = 1.0f / pixel.weight;
+					Spectrum spec = pixel.spec * (invWeight * exposure);
+
+					if (reinhard) {
+						Float X, Y, Z;
+						spec.toXYZ(X, Y, Z);
+						Float normalization = 1/(X + Y + Z);
+						Float x = X*normalization, y = Y*normalization;
+						Float Lp = Y * reinhardKey;
+						Y = Lp * (1.0f + Lp*invWpSqr) / (1.0f + Lp);
+						X = x * (Y/y); 
+						Z = (Y/y) * (1.0 - x - y);
+						spec.fromXYZ(X, Y, Z);
+					}
+
 					if (m_gamma < 0)
-						(pixel.spec * invWeight).toSRGB(r, g, b);
+						spec.toSRGB(r, g, b);
 					else
-						(pixel.spec * invWeight).pow(m_gamma).toLinearRGB(r, g, b);
+						spec.pow(m_gamma).toLinearRGB(r, g, b);
 
 					targetPixels[3*pos+0] = (uint8_t) clamp((int) (r * 255), 0, 255);
 					targetPixels[3*pos+1] = (uint8_t) clamp((int) (g * 255), 0, 255);
@@ -264,7 +335,11 @@ public:
 					Float invWeight = 1.0f;
 					if (pixel.weight != 0.0f)
 						invWeight = 1.0f / pixel.weight;
-					Float luminance = (pixel.spec * invWeight).getLuminance();
+					Float luminance = (pixel.spec * (invWeight * exposure)).getLuminance();
+					if (reinhard) {
+						Float Lp = luminance * reinhardKey;
+						luminance = Lp * (1.0f + Lp*invWpSqr) / (1.0f + Lp);
+					}
 					if (m_gamma < 0)
 						luminance = toSRGBComponent(luminance);
 					else
@@ -295,7 +370,11 @@ public:
 					Float invWeight = 1.0f;
 					if (pixel.weight != 0.0f)
 						invWeight = 1.0f / pixel.weight;
-					Float luminance = (pixel.spec * invWeight).getLuminance();
+					Float luminance = (pixel.spec * (invWeight * exposure)).getLuminance();
+					if (reinhard) {
+						Float Lp = luminance * reinhardKey;
+						luminance = Lp * (1.0f + Lp*invWpSqr) / (1.0f + Lp);
+					}
 					if (m_gamma < 0)
 						luminance = toSRGBComponent(luminance);
 					else
