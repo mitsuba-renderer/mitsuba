@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/consttexture.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -33,8 +34,8 @@ class RoughMetal : public BSDF {
 public:
 	RoughMetal(const Properties &props) 
 		: BSDF(props) {
-		m_specularReflectance = props.getSpectrum("specularReflectance", 
-			Spectrum(1.0f));
+		m_specularReflectance = new ConstantTexture(
+			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 		m_alphaB = props.getFloat("alphaB", .1f);
 		m_ior = props.getSpectrum("ior", Spectrum(0.370f));  /* Gold */
 		m_k = props.getSpectrum("k", Spectrum(2.820f));
@@ -47,7 +48,7 @@ public:
 
 	RoughMetal(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
-		m_specularReflectance = Spectrum(stream);
+		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_alphaB = stream->readFloat();
 		m_ior = Spectrum(stream);
 		m_k = Spectrum(stream);
@@ -55,7 +56,8 @@ public:
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
 		m_combinedType = m_type[0] = EGlossyReflection;
-		m_usesRayDifferentials = false;
+		m_usesRayDifferentials = 
+			m_specularReflectance->usesRayDifferentials();
 	}
 
 	virtual ~RoughMetal() {
@@ -132,7 +134,7 @@ public:
 		Spectrum specRef = F * (D * G / 
 			(4.0f * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo)));
 
-		return m_specularReflectance * specRef; 
+		return m_specularReflectance->getValue(bRec.its) * specRef; 
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec) const {
@@ -166,11 +168,21 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
-		m_specularReflectance.serialize(stream);
+		manager->serialize(stream, m_specularReflectance.get());
 		stream->writeFloat(m_alphaB);
 		m_ior.serialize(stream);
 		m_k.serialize(stream);
 	}
+	
+	void addChild(const std::string &name, ConfigurableObject *child) {
+		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "specularReflectance") {
+			m_specularReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+		} else {
+			BSDF::addChild(name, child);
+		}
+	}
+
 
 	std::string toString() const {
 		std::ostringstream oss;
@@ -185,7 +197,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	Spectrum m_specularReflectance;
+	ref<Texture> m_specularReflectance;
 	Float m_alphaB;
 	Spectrum m_ior, m_k;
 };
