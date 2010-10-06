@@ -56,7 +56,7 @@ public:
 
 			Float value1 = vec1.eval(dir2);
 			Float value2 = vec2.eval(dir1);
-			assertEquals(value1, value2);
+			assertEqualsEpsilon(value1, value2, Epsilon);
 		}
 	}
 

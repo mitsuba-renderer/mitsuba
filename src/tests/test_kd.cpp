@@ -70,6 +70,15 @@ public:
 		));
 		assertEquals(Point(0, 0, 0), clippedAABB.min);
 		assertEquals(Point(1, 1, 0), clippedAABB.max);
+
+		/* Verify that a triangle just touching the clip AABB leads to a
+		   collapsed point AABB */
+		clippedAABB = t.getClippedAABB(vertices, AABB(
+			Point(0,1, 0),
+			Point(1,2, 0)
+		));
+		assertEquals(Point(1, 1, 0), clippedAABB.min);
+		assertEquals(Point(1, 1, 0), clippedAABB.max);
 	}
 
 	class TriKDTree : GenericKDTree<Triangle> {
@@ -108,7 +117,7 @@ public:
 
 	void test02_buildSimple() {
 		Properties bunnyProps("ply");
-		bunnyProps.setString("filename", "tools/tests/lucy.ply");
+		bunnyProps.setString("filename", "tools/tests/bunny.ply");
 
 		ref<TriMesh> mesh = static_cast<TriMesh *> (PluginManager::getInstance()->
 				createObject(TriMesh::m_theClass, bunnyProps));

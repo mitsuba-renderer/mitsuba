@@ -74,6 +74,7 @@ if env.has_key('BASELIBDIR'):
 	env.Append(LIBPATH=env['BASELIBDIR'])
 
 env.Decider('MD5-timestamp')
+env.SetOption('implicit_cache', 1)
 
 #env.SetOption('num_jobs', multiprocessing.cpu_count())
 

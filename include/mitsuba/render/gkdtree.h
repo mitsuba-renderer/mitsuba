@@ -80,6 +80,18 @@ public:
 		Log(EInfo, "Performing initial clustering ..");
 		MinMaxBins<MTS_KD_MINMAX_BINS> bins(m_aabb);
 		bins.bin(aabbFunctor);
+		split_candidate candidate = bins.maximizeSAH(m_traversalCost,
+			m_intersectionCost, m_emptySpaceBonus);
+		
+		cout << "originalCost = " << aabbFunctor.getPrimitiveCount() * m_intersectionCost << endl;
+
+		cout << "bestCost = " 
+			<< boost::get<0>(candidate) 
+			<< ", bestPos = "
+			<< boost::get<1>(candidate) 
+			<< ", bestAxis = "
+			<< boost::get<2>(candidate) 
+			<< endl;
 		Log(EInfo, "Initial clustering took %i ms", timer->getMilliseconds());
 	}
 protected:
@@ -318,7 +330,7 @@ protected:
 
 			Assert(bestCost != std::numeric_limits<Float>::infinity());
 
-			return boost::make_tuple(bestCost, bestAxis, bestPos);
+			return boost::make_tuple(bestCost, bestPos, bestAxis);
 		}
 	private:
 		size_type m_minBins[3*BinCount], m_maxBins[3*BinCount];

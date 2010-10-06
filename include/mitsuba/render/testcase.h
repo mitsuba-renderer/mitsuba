@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * When a testcase is being compiled, define the following preprocessor macros for convenience
  */
-#define assertEquals(expected, actual) assertEqualsImpl(expected, actual, Epsilon, __FILE__, __LINE__)
+#define assertEquals(expected, actual) assertEqualsImpl(expected, actual, 0, __FILE__, __LINE__)
 #define assertEqualsEpsilon(expected, actual, epsilon) assertEqualsImpl(expected, actual, epsilon, __FILE__, __LINE__)
 #define assertTrue(expr) assertTrueImpl(expr, #expr, __FILE__, __LINE__)
 #define assertFalse(expr) assertFalseImpl(expr, #expr, __FILE__, __LINE__)
