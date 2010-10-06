@@ -238,6 +238,10 @@ std::string Thread::toString() const {
 }
 
 void Thread::staticInitialization() {
+#if defined(__OSX__)
+	__ubi_autorelease_init();
+#endif
+
 	m_self = new ThreadLocal<Thread>();
 #if defined(__LINUX__) || defined(__OSX__)
 	m_idMutex = new Mutex();
@@ -252,7 +256,6 @@ void Thread::staticInitialization() {
 	m_self->set(mainThread);
 #if defined(__OSX__)
 	mainThread->m_id = 0;
-	__ubi_autorelease_init();
 #elif defined(__LINUX__)
 	m_id = 0;
 #endif

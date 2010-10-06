@@ -14,7 +14,7 @@ FileResolver::FileResolver() {
 	addPath(MTS_RESOURCE_DIR);
 #elif defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
-	Thread::getThread()->getFileResolver()->addPath(__ubi_bundlepath());
+	addPath(__ubi_bundlepath());
 	MTS_AUTORELEASE_END() 
 #elif defined(WIN32)
 	char lpFilename[1024];
