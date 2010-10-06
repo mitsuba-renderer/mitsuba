@@ -169,9 +169,9 @@ Float TriMesh::sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const
 void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, bool complain) {
 	/* Calculate smooth normals if there aren't any */
 	int zeroArea = 0, zeroNormals = 0, invalidNormals = 0;
-	
+
 	if (!hasNormals) {
-		for (unsigned int i=0; i<m_vertexCount; i++)
+		for (unsigned int i=0; i<m_vertexCount; i++) 
 			m_vertexBuffer[i].n = Normal(0.0f);
 		for (unsigned int i=0; i<m_triangleCount; i++) {
 			const Point &v0 = m_vertexBuffer[m_triangles[i].idx[0]].p;
@@ -201,8 +201,8 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 	}
 
 	if (complain && invalidNormals > 0)
-		Log(EWarn, "\"%s\": mesh contains invalid geometry: unable "
-			"to generate %i normals!", m_name.c_str(), invalidNormals);
+		Log(EWarn, "\"%s\": Unable to generate %i vertex normals", 
+			m_name.c_str(), invalidNormals);
 
 	if (m_flipNormals) {
 		for (unsigned int i=0; i<m_vertexCount; i++)
@@ -217,7 +217,9 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 				zeroNormals++;
 				m_vertexBuffer[i].n = Normal(1, 0, 0);
 			}
-			coordinateSystem(m_vertexBuffer[i].n, m_vertexBuffer[i].dpdu, m_vertexBuffer[i].dpdv);
+			coordinateSystem(m_vertexBuffer[i].n, 
+					m_vertexBuffer[i].dpdu,
+					m_vertexBuffer[i].dpdv);
 		}
 	} else {
 		/* No. of triangles sharing a vertex */
@@ -319,7 +321,7 @@ void TriMesh::calculateTangentSpaceBasis(bool hasNormals, bool hasTexCoords, boo
 	}
 
 	if (complain && (zeroArea > 0 || zeroNormals > 0))
-		Log(EWarn, "\"%s\": mesh contains invalid geometry: %i zero area triangles "
+		Log(EWarn, "\"%s\": Mesh contains invalid geometry: %i zero area triangles "
 			"and %i zero normals found!", m_name.c_str(), zeroArea, zeroNormals);
 }
 

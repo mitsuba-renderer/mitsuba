@@ -313,7 +313,8 @@ void PLYLoader::loadPLY(const fs::path &path) {
 	ply_parser.parse(path.file_string());
 
 	Log(EInfo, "\"%s\": Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
-			" vertices.", m_name.c_str(), m_triangleCount, m_vertexCount);
+			" vertices (%.2f KiB).", m_name.c_str(), m_triangleCount, m_vertexCount,
+			(sizeof(uint32_t) * m_triangleCount * 3 + sizeof(Vertex) * m_vertexCount) / 1024.0f);
 }
 
 

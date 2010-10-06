@@ -19,13 +19,14 @@
 #if !defined(__KDTREE_GENERIC_H)
 #define __KDTREE_GENERIC_H
 
-#include <mitsuba/mitsuba.h>
+#include <mitsuba/core/timer.h>
 #include <boost/static_assert.hpp>
+#include <boost/tuple/tuple.hpp>
 
 #define MTS_KD_MAX_DEPTH 48   ///< Compile-time KD-tree depth limit
 #define MTS_KD_STATISTICS 1   ///< Collect statistics during building/traversal 
 #define MTS_KD_DEBUG          ///< Enable serious KD-tree debugging (slow)
-#define MTS_KD_MINMAX_BINS 30
+#define MTS_KD_MINMAX_BINS 32
 
 MTS_NAMESPACE_BEGIN
 
@@ -37,8 +38,12 @@ MTS_NAMESPACE_BEGIN
  */
 template <typename ShapeType> class GenericKDTree : public Object {
 public:
-	typedef uint32_t index_type; ///< Index number format (max 2^32 prims)
-	typedef uint32_t size_type;  ///< Size number format
+	/// Data type of split candidates computed by the SAH optimization routines
+	typedef boost::tuple<Float, Float, int> split_candidate;
+	/// Index number format (max 2^32 prims)
+	typedef uint32_t index_type;
+	/// Size number format
+	typedef uint32_t size_type;
 
 	GenericKDTree() {
 		m_traversalCost = 15;
@@ -51,16 +56,31 @@ public:
 	 * boxes.
 	 */
 	template <typename AABBFunctor>
-	void build(const AABBFunctor &aabbFunctor, size_type primCount) {
+	void build(const AABBFunctor &aabbFunctor) {
 		/* Establish an ad-hoc depth cutoff value (Formula from PBRT) */
-		m_maxDepth = std::min((int) (8 + 1.3f * log2i(primCount)),
+		m_maxDepth = std::min((int) (8 + 1.3f * log2i(aabbFunctor.getPrimitiveCount())),
 			MTS_KD_MAX_DEPTH);
 
-		Log(EDebug, "kd-tree configuration:");
-		Log(EDebug, "   Traversal cost         : %.2f", m_traversalCost);
-		Log(EDebug, "   Intersection cost      : %.2f", m_intersectionCost);
-		Log(EDebug, "   Max. tree depth        : %i", m_maxDepth);
+		m_aabb.reset();
+		for (size_type i=0; i<aabbFunctor.getPrimitiveCount(); ++i)
+			m_aabb.expandBy(aabbFunctor(i));
 
+		Log(EDebug, "kd-tree configuration:");
+		Log(EDebug, "   Traversal cost           : %.2f", m_traversalCost);
+		Log(EDebug, "   Intersection cost        : %.2f", m_intersectionCost);
+		Log(EDebug, "   Empty space bonus        : %.2f", m_emptySpaceBonus);
+		Log(EDebug, "   Max. tree depth          : %i", m_maxDepth);
+		Log(EDebug, "   Scene bounding box (min) : %s", m_aabb.min.toString().c_str());
+		Log(EDebug, "   Scene bounding box (max) : %s", m_aabb.max.toString().c_str());
+	
+		Log(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", 
+				aabbFunctor.getPrimitiveCount());
+
+		ref<Timer> timer = new Timer();
+		Log(EInfo, "Performing initial clustering ..");
+		MinMaxBins<MTS_KD_MINMAX_BINS> bins(m_aabb);
+		bins.bin(aabbFunctor);
+		Log(EInfo, "Initial clustering took %i ms", timer->getMilliseconds());
 	}
 protected:
 	/**
@@ -195,6 +215,8 @@ protected:
 
 	BOOST_STATIC_ASSERT(sizeof(KDNode) == 8);
 
+
+
 	/**
 	 * \brief Min-max binning as described in
 	 * "Highly Parallel Fast KD-tree Construction for Interactive
@@ -216,21 +238,20 @@ protected:
 		 * \param count Number of primitives
 		 */
 		template <typename AABBFunctor> void bin(
-				const AABBFunctor &func,
-				size_type count) {
-			m_primCount = count;
+				const AABBFunctor &functor) {
+			m_primCount = functor.getPrimitiveCount();
 			memset(m_minBins, 0, sizeof(size_type) * 3 * BinCount);
 			memset(m_maxBins, 0, sizeof(size_type) * 3 * BinCount);
 			Vector invBinSize;
-			for (int dim=0; dim<3; ++dim) 
-				invBinSize[dim] = 1/m_binSize[dim];
+			for (int axis=0; axis<3; ++axis) 
+				invBinSize[axis] = 1/m_binSize[axis];
 			for (size_type i=0; i<m_primCount; ++i) {
-				AABB aabb = func(i);
-				for (int dim=0; dim<3; ++dim) {
-					int minIdx = (aabb.min[dim] - aabb.min[dim]) * invBinSize[dim];
-					int maxIdx = (aabb.max[dim] - aabb.min[dim]) * invBinSize[dim];
-					m_maxBins[dim * BinCount + std::min(std::max(maxIdx, 0), BinCount-1)]++;
-					m_minBins[dim * BinCount + std::min(std::max(minIdx, 0), BinCount-1)]++;
+				const AABB aabb = functor(i);
+				for (int axis=0; axis<3; ++axis) {
+					int minIdx = (aabb.min[axis] - aabb.min[axis]) * invBinSize[axis];
+					int maxIdx = (aabb.max[axis] - aabb.min[axis]) * invBinSize[axis];
+					m_maxBins[axis * BinCount + std::min(std::max(maxIdx, 0), BinCount-1)]++;
+					m_minBins[axis * BinCount + std::min(std::max(minIdx, 0), BinCount-1)]++;
 				}
 			}
 		}
@@ -252,16 +273,17 @@ protected:
 		 * \brief Evaluate the surface area heuristic at each bin boundary
 		 * and return the maximizer for the given cost constants.
 		 */
-		void maximizeSAH(Float traversalCost, Float intersectionCost, Float emptySpaceBonus) {
+		split_candidate maximizeSAH(Float traversalCost,
+				Float intersectionCost, Float emptySpaceBonus) {
 			Float bestCost = std::numeric_limits<Float>::infinity(), bestPos = 0;
 			Float normalization = 2.0f / m_aabb.getSurfaceArea();
 			int binIdx = 0, bestAxis = -1;
 
-			for (int dim=0; dim<3; ++dim) {
+			for (int axis=0; axis<3; ++axis) {
 				Vector extents = m_aabb.getExtents();
 				size_type numLeft = 0, numRight = m_primCount;
-				Float leftWidth = 0, rightWidth = extents[dim];
-				const Float binSize = m_binSize[dim];
+				Float leftWidth = 0, rightWidth = extents[axis];
+				const Float binSize = m_binSize[axis];
 
 				for (int i=0; i<BinCount-1; ++i) {
 					numLeft  += m_minBins[binIdx];
@@ -269,11 +291,11 @@ protected:
 					leftWidth += binSize;
 					rightWidth -= binSize;
 
-					extents[dim] = leftWidth;
+					extents[axis] = leftWidth;
 					Float pLeft = normalization * (extents.x*extents.y 
 							+ extents.x*extents.z + extents.y*extents.z);
 
-					extents[dim] = rightWidth;
+					extents[axis] = rightWidth;
 					Float pRight = normalization * (extents.x*extents.y 
 							+ extents.x*extents.z + extents.y*extents.z);
 
@@ -285,8 +307,8 @@ protected:
 
 					if (cost < bestCost) {
 						bestCost = cost;
-						bestAxis = dim;
-						bestPos = m_aabb.min[dim] + leftWidth;
+						bestAxis = axis;
+						bestPos = m_aabb.min[axis] + leftWidth;
 					}
 
 					binIdx++;
@@ -295,6 +317,8 @@ protected:
 			}
 
 			Assert(bestCost != std::numeric_limits<Float>::infinity());
+
+			return boost::make_tuple(bestCost, bestAxis, bestPos);
 		}
 	private:
 		size_type m_minBins[3*BinCount], m_maxBins[3*BinCount];
@@ -304,6 +328,7 @@ protected:
 	};
 private:
 	Float m_traversalCost, m_intersectionCost, m_emptySpaceBonus;
+	AABB m_aabb;
 	int m_maxDepth;
 };
 

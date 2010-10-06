@@ -16,6 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/core/plugin.h>
 #include <mitsuba/render/testcase.h>
 #include <mitsuba/render/gkdtree.h>
 
@@ -25,9 +26,7 @@ class TestKDTree : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
 	MTS_DECLARE_TEST(test01_sutherlandHodgman)
-	MTS_DECLARE_TEST(test02_sutherlandHodgman)
-	MTS_DECLARE_TEST(test03_sutherlandHodgman)
-	MTS_DECLARE_TEST(test04_buildSimple)
+	MTS_DECLARE_TEST(test02_buildSimple)
 	MTS_END_TESTCASE()
 
 	void test01_sutherlandHodgman() {
@@ -36,78 +35,86 @@ public:
 		vertices[0].p = Point(0, 0, 0);
 		vertices[1].p = Point(1, 0, 0);
 		vertices[2].p = Point(1, 1, 0);
+		Triangle t;
+		t.idx[0] = 0; t.idx[1] = 1; t.idx[2] = 2;
 
-		AABB clipAABB(
+		/* Split the triangle in half and verify the clipped AABB */
+		AABB clippedAABB = t.getClippedAABB(vertices, AABB(
 			Point(0, .5, -1),
 			Point(1, 1, 1)
-		);
-		
-		AABB expectedResult(
-			Point(.5, .5, 0),
-			Point(1, 1, 0)
-		);
+		));
 
-		Triangle t;
-		t.idx[0] = 0; t.idx[1] = 1; t.idx[2] = 2;
+		assertEquals(Point(.5, .5, 0), clippedAABB.min);
+		assertEquals(Point(1, 1, 0), clippedAABB.max);
 
-		AABB clippedAABB = t.getClippedAABB(vertices, clipAABB);
-
-		assertEquals(clippedAABB.min, expectedResult.min);
-		assertEquals(clippedAABB.max, expectedResult.max);
-	}
-
-	void test02_sutherlandHodgman() {
 		/* Verify that a triangle can be completely clipped away */
-		Vertex vertices[3];
-		vertices[0].p = Point(0, 0, 0);
-		vertices[1].p = Point(1, 0, 0);
-		vertices[2].p = Point(1, 1, 0);
-
-		AABB clipAABB(
+		clippedAABB = t.getClippedAABB(vertices, AABB(
 			Point(2, 2, 2),
 			Point(3, 3, 3)
-		);
-
-		Triangle t;
-		t.idx[0] = 0; t.idx[1] = 1; t.idx[2] = 2;
-
-		AABB clippedAABB = t.getClippedAABB(vertices, clipAABB);
-
+		));
 		assertFalse(clippedAABB.isValid());
-	}
 
-	void test03_sutherlandHodgman() {
-		/* Verify that a no clipping happens when the AABB fully contains a triangle */
-		Vertex vertices[3];
-		vertices[0].p = Point(0, 0, 0);
-		vertices[1].p = Point(1, 0, 0);
-		vertices[2].p = Point(1, 1, 0);
-
-		AABB clipAABB(
+		/* Verify that a no clipping whatsoever happens when 
+		   the AABB fully contains a triangle */
+		clippedAABB = t.getClippedAABB(vertices, AABB(
 			Point(-1, -1, -1),
 			Point(1, 1, 1)
-		);
-		
-		AABB expectedResult(
-			Point(0, 0, 0),
-			Point(1, 1, 0)
-		);
+		));
+		assertEquals(Point(0, 0, 0), clippedAABB.min);
+		assertEquals(Point(1, 1, 0), clippedAABB.max);
 
-		Triangle t;
-		t.idx[0] = 0; t.idx[1] = 1; t.idx[2] = 2;
-
-		AABB clippedAABB = t.getClippedAABB(vertices, clipAABB);
-
-		assertEquals(clippedAABB.min, expectedResult.min);
-		assertEquals(clippedAABB.max, expectedResult.max);
+		/* Verify that a triangle within a flat cell won't be clipped away */
+		clippedAABB = t.getClippedAABB(vertices, AABB(
+			Point(-100,-100, 0),
+			Point( 100, 100, 0)
+		));
+		assertEquals(Point(0, 0, 0), clippedAABB.min);
+		assertEquals(Point(1, 1, 0), clippedAABB.max);
 	}
 
 	class TriKDTree : GenericKDTree<Triangle> {
+	public:
+		struct AABBFunctor {
+			inline AABBFunctor(const Triangle *triangles,
+					           const Vertex *vertexBuffer,
+							   uint32_t primitiveCount)
+				: m_triangles(triangles),
+				  m_vertexBuffer(vertexBuffer),
+				  m_primitiveCount(primitiveCount) { }
+
+			inline uint32_t getPrimitiveCount() const {
+				return m_primitiveCount;
+			}
+
+			inline AABB operator()(uint32_t idx) const {
+				return m_triangles[idx].getAABB(m_vertexBuffer);
+			}
+
+			const Triangle *m_triangles;
+			const Vertex *m_vertexBuffer;
+			const uint32_t m_primitiveCount;
+		};
+
+		void build(const Triangle *triangles,
+				   const Vertex *vertexBuffer,
+				   uint32_t primitiveCount) {
+			GenericKDTree<Triangle>::build(
+				AABBFunctor(triangles, vertexBuffer, primitiveCount)
+			);
+		}
+	private:
 	};
 
-	void test04_buildSimple() {
+
+	void test02_buildSimple() {
+		Properties bunnyProps("ply");
+		bunnyProps.setString("filename", "tools/tests/lucy.ply");
+
+		ref<TriMesh> mesh = static_cast<TriMesh *> (PluginManager::getInstance()->
+				createObject(TriMesh::m_theClass, bunnyProps));
+		mesh->configure();
 		TriKDTree tree;
-		std::vector<Triangle> tris;
+		tree.build(mesh->getTriangles(), mesh->getVertexBuffer(), mesh->getTriangleCount());
 	}
 };
 

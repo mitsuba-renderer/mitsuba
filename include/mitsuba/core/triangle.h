@@ -64,10 +64,15 @@ struct Vertex {
  */
 struct MTS_EXPORT_CORE Triangle {
 	/// Indices into a vertex buffer
-	unsigned int idx[3];
+	uint32_t idx[3];
 
 	/// Construct an axis-aligned box, which contains the triangle
-	AABB getAABB(const Vertex *buffer) const;
+	inline AABB getAABB(const Vertex *buffer) const {
+		AABB result(buffer[idx[0]].p);
+		result.expandBy(buffer[idx[1]].p);
+		result.expandBy(buffer[idx[2]].p);
+		return result;
+	}
 
 	/**
 	 * \brief Returns the axis-aligned bounding box of a triangle after it has 

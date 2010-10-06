@@ -50,6 +50,10 @@ public:
 		min = Point(stream);
 		max = Point(stream);
 	}
+	
+	/// Create a collapsed AABB from a single point
+	inline AABB(const Point &p) 
+		: min(p), max(p) { }
 
 	/// Create a bounding box from two 3D positions
 	inline AABB(const Point &min, const Point &max)

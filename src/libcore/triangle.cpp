@@ -89,13 +89,6 @@ Float Triangle::surfaceArea(const Vertex *buffer) const {
 	return 0.5f * cross(sideA, sideB).length();
 }
 
-AABB Triangle::getAABB(const Vertex *buffer) const {
-	AABB aabb;
-	for (int k=0; k<3; k++)
-		aabb.expandBy(buffer[idx[k]].p);
-	return aabb;
-}
-
 #define MAX_VERTS 10
 
 static int sutherlandHodgman(Point *input, int inCount, Point *output, int axis, 
