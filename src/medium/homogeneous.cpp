@@ -275,7 +275,7 @@ public:
 
 	void setParent(ConfigurableObject *parent) {
 		if (parent->getClass()->derivesFrom(Shape::m_theClass))
-			Log(EError, "Medium shape cannot be part of the scene");
+			Log(EError, "Medium cannot be a parent of a shape");
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
@@ -305,7 +305,8 @@ public:
 			<< "  sigmaA = " << m_sigmaA.toString() << "," << std::endl
 			<< "  sigmaS = " << m_sigmaS.toString() << "," << std::endl
 			<< "  sigmaT = " << m_sigmaT.toString() << "," << std::endl
-			<< "  phase = " << indent(m_phaseFunction->toString()) 
+			<< "  phase = " << indent(m_phaseFunction->toString()) << "," << std::endl 
+			<< "  shapes = " << indent(listToString(m_shapes)) << std::endl
 			<< "]";
 		return oss.str();
 	}

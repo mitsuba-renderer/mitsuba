@@ -620,20 +620,6 @@ void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 		manager->serialize(stream, m_netObjects[i]);
 }
 
-template<class T> std::string listToString(const std::vector<T> &vec) {
-	std::ostringstream oss;
-	oss << "{" << endl;
-	for (size_t i=0; i<vec.size(); ++i) {
-		oss << "  " << indent(vec[i]->toString());
-		if (i != vec.size()-1)
-			oss << "," << endl;
-		else
-			oss << endl;
-	}
-	oss << "}";
-	return oss.str();
-}
-
 std::string Scene::toString() const {
 	std::ostringstream oss;
 

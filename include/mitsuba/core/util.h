@@ -270,6 +270,21 @@ template<typename T, typename U> inline T union_cast(const U &val) {
 	return caster.t;
 }
 
+/// Return a string representation of a list of objects
+template<class T> std::string listToString(const std::vector<T> &vec) {
+	std::ostringstream oss;
+	oss << "{" << endl;
+	for (size_t i=0; i<vec.size(); ++i) {
+		oss << "  " << indent(vec[i]->toString());
+		if (i != vec.size()-1)
+			oss << "," << endl;
+		else
+			oss << endl;
+	}
+	oss << "}";
+	return oss.str();
+}
+
 MTS_NAMESPACE_END
 
 #endif /* __UTIL_H */
