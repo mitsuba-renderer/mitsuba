@@ -69,9 +69,11 @@ public:
 		m_maxDepth = std::min((int) (8 + 1.3f * log2i(functor.getPrimitiveCount())),
 			MTS_KD_MAX_DEPTH);
 
+		ref<Timer> timer = new Timer();
 		m_aabb.reset();
 		for (size_type i=0; i<functor.getPrimitiveCount(); ++i)
 			m_aabb.expandBy(functor.getAABB(i));
+		Log(EInfo, "Computed scene bounds in %i ms", timer->getMilliseconds());
 
 		Log(EDebug, "kd-tree configuration:");
 		Log(EDebug, "   Traversal cost           : %.2f", m_traversalCost);
@@ -84,7 +86,8 @@ public:
 		Log(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", 
 				functor.getPrimitiveCount());
 
-		ref<Timer> timer = new Timer();
+		timer->reset();
+
 		Log(EInfo, "Performing initial clustering ..");
 		MinMaxBins<MTS_KD_MINMAX_BINS> bins(m_aabb);
 		bins.bin(functor);
@@ -243,6 +246,12 @@ protected:
 	};
 
 	BOOST_STATIC_ASSERT(sizeof(KDNode) == 8);
+
+	class ChunkAllocator {
+	public:
+		ChunkAllocator() {
+		}
+	};
 
 	/**
 	 * \brief Min-max binning as described in
