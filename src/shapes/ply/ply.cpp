@@ -165,16 +165,24 @@ public:
 	void face_end_callback() { }
 
 	void face_vertex_indices_begin_uint8(ply::uint8 size) { 
-		AssertEx(size == 3, "Only triangle PLY meshes are supported for now.");
+		if (size != 3)
+			Log(EError, "Only triangle PLY meshes are supported for now.");
 		m_triangleIdxCtr = 0;
 	}
 
 	void face_vertex_indices_begin_uint32(ply::uint32 size) { 
-		AssertEx(size == 3, "Only triangle PLY meshes are supported for now.");
+		if (size != 3)
+			Log(EError, "Only triangle PLY meshes are supported for now.");
 		m_triangleIdxCtr = 0;
 	}
 
-	void face_vertex_indices_element(ply::int32 element) {
+	void face_vertex_indices_element_int32(ply::int32 element) {
+		Assert(m_triangleIdxCtr < 3);
+		Assert((size_t) element < m_vertexCount);
+		m_triangle.idx[m_triangleIdxCtr++] = element;
+	}
+
+	void face_vertex_indices_element_uint32(ply::uint32 element) {
 		Assert(m_triangleIdxCtr < 3);
 		Assert((size_t) element < m_vertexCount);
 		m_triangle.idx[m_triangleIdxCtr++] = element;
@@ -253,7 +261,7 @@ template<> std::tr1::tuple<std::tr1::function<void (ply::uint8)>,
 		return std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
 			std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> >(
 			std::tr1::bind(&PLYLoader::face_vertex_indices_begin_uint8, this, _1),
-			std::tr1::bind(&PLYLoader::face_vertex_indices_element, this, _1),
+			std::tr1::bind(&PLYLoader::face_vertex_indices_element_int32, this, _1),
 			std::tr1::bind(&PLYLoader::face_vertex_indices_end, this)
 		);
 	} else {
@@ -271,7 +279,7 @@ template<> std::tr1::tuple<std::tr1::function<void (ply::uint32)>,
 		return std::tr1::tuple<std::tr1::function<void (ply::uint32)>, 
 			std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> >(
 			std::tr1::bind(&PLYLoader::face_vertex_indices_begin_uint32, this, _1),
-			std::tr1::bind(&PLYLoader::face_vertex_indices_element, this, _1),
+			std::tr1::bind(&PLYLoader::face_vertex_indices_element_int32, this, _1),
 			std::tr1::bind(&PLYLoader::face_vertex_indices_end, this)
 		);
 	} else {
@@ -280,6 +288,43 @@ template<> std::tr1::tuple<std::tr1::function<void (ply::uint32)>,
 			std::tr1::function<void ()> >(0, 0, 0);
 	}
 }
+
+template<> std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
+	std::tr1::function<void (ply::uint32)>, std::tr1::function<void ()> > 
+	PLYLoader::list_property_definition_callback(const std::string& element_name,
+	const std::string& property_name) {
+	if ((element_name == "face") && (property_name == "vertex_indices")) {
+		return std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
+			std::tr1::function<void (ply::uint32)>, std::tr1::function<void ()> >(
+			std::tr1::bind(&PLYLoader::face_vertex_indices_begin_uint8, this, _1),
+			std::tr1::bind(&PLYLoader::face_vertex_indices_element_uint32, this, _1),
+			std::tr1::bind(&PLYLoader::face_vertex_indices_end, this)
+		);
+	} else {
+		return std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
+			std::tr1::function<void (ply::uint32)>, 
+			std::tr1::function<void ()> >(0, 0, 0);
+	}
+}
+
+template<> std::tr1::tuple<std::tr1::function<void (ply::uint32)>, 
+	std::tr1::function<void (ply::uint32)>, std::tr1::function<void ()> > 
+	PLYLoader::list_property_definition_callback(const std::string& element_name,
+	const std::string& property_name) {
+	if ((element_name == "face") && (property_name == "vertex_indices")) {
+		return std::tr1::tuple<std::tr1::function<void (ply::uint32)>, 
+			std::tr1::function<void (ply::uint32)>, std::tr1::function<void ()> >(
+			std::tr1::bind(&PLYLoader::face_vertex_indices_begin_uint32, this, _1),
+			std::tr1::bind(&PLYLoader::face_vertex_indices_element_uint32, this, _1),
+			std::tr1::bind(&PLYLoader::face_vertex_indices_end, this)
+		);
+	} else {
+		return std::tr1::tuple<std::tr1::function<void (ply::uint32)>, 
+			std::tr1::function<void (ply::uint32)>, 
+			std::tr1::function<void ()> >(0, 0, 0);
+	}
+}
+
 
 void PLYLoader::loadPLY(const fs::path &path) {
 	ply::ply_parser ply_parser;
@@ -307,6 +352,12 @@ void PLYLoader::loadPLY(const fs::path &path) {
 
 	ply::at<ply::uint32, ply::int32>(list_property_definition_callbacks) = std::tr1::bind(
 		&PLYLoader::list_property_definition_callback<ply::uint32, ply::int32>, this, _1, _2);
+	
+	ply::at<ply::uint8, ply::uint32>(list_property_definition_callbacks) = std::tr1::bind(
+		&PLYLoader::list_property_definition_callback<ply::uint8, ply::uint32>, this, _1, _2);
+
+	ply::at<ply::uint32, ply::uint32>(list_property_definition_callbacks) = std::tr1::bind(
+		&PLYLoader::list_property_definition_callback<ply::uint32, ply::uint32>, this, _1, _2);
 
 	ply_parser.scalar_property_definition_callbacks(scalar_property_definition_callbacks);
 	ply_parser.list_property_definition_callbacks(list_property_definition_callbacks);
