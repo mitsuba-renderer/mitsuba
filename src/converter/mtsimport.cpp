@@ -172,8 +172,6 @@ int ubi_main(int argc, char **argv) {
 
 	Thread::getThread()->getLogger()->setLogLevel(EInfo);
 
-	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
-
 #if !defined(WIN32)
 	/* Correct number parsing on some locales (e.g. ru_RU) */
 	setlocale(LC_NUMERIC, "C");

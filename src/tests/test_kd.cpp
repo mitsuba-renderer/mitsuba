@@ -95,7 +95,7 @@ public:
 				return m_primitiveCount;
 			}
 
-			inline AABB operator()(uint32_t idx) const {
+			inline AABB getAABB(uint32_t idx) const {
 				return m_triangles[idx].getAABB(m_vertexBuffer);
 			}
 

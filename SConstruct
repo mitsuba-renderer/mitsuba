@@ -277,12 +277,15 @@ libcore_objects = [
 	'src/libcore/zstream.cpp', 'src/libcore/shvector.cpp',
 	'src/libcore/fresolver.cpp'
 ]
+
 if sys.platform == 'darwin':
 	coreEnv_osx = coreEnv.Clone();
 	coreEnv_osx['CXXFLAGS'].remove('-fstrict-aliasing');
 	coreEnv_osx['CXXFLAGS'].remove('-ftree-vectorize');
 	coreEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing');
-	libcore_objects += coreEnv_osx.SharedObject('src/libcore/darwin.mm')
+	libcore_objects += coreEnv_osx.SharedObject('src/libcore/platform_darwin.mm')
+elif sys.platform == 'win32':
+	libcore_objects += coreEnv_osx.SharedObject('src/libcore/platform_win32.cpp')
 
 libcore = coreEnv.SharedLibrary('src/libcore/mitsuba-core', libcore_objects);
 

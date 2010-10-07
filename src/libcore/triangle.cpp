@@ -136,8 +136,17 @@ AABB Triangle::getClippedAABB(const Vertex *buffer, const AABB &aabb) const {
 	Point vertices1[MAX_VERTS], vertices2[MAX_VERTS];
 	int nVertices = 3;
 
-	for (int i=0; i<3; ++i)
+#if defined(MTS_DEBUG_KD)
+	AABB origAABB;
+#endif
+
+
+	for (int i=0; i<3; ++i) {
 		vertices1[i] = buffer[idx[i]].p;
+#if defined(MTS_DEBUG_KD)
+		origAABB.expandBy(vertices1[i]);
+#endif
+	}
 
 	for (int axis=0; axis<3; ++axis) {
 		nVertices = sutherlandHodgman(vertices1, nVertices, vertices2, axis, aabb.min[axis], true);
@@ -156,7 +165,11 @@ AABB Triangle::getClippedAABB(const Vertex *buffer, const AABB &aabb) const {
 
 	result.clip(aabb);
 #endif
+
+#if defined(MTS_DEBUG_KD)
 	SAssert(aabb.contains(result));
+	SAssert(origAABB.contains(result));
+#endif
 
 	return result;
 }
