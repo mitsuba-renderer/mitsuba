@@ -66,14 +66,15 @@ public:
 			coeffs[i] = m_sigmaT[i];
 
 		m_maxExpDist = new MaxExpDist(coeffs);
+		m_kdTree = new KDTree();
 	}
 
 	HomogeneousMedium(Stream *stream, InstanceManager *manager)
 		: Medium(stream, manager) {
-		m_shape = static_cast<Shape *>(manager->getInstance(stream));
 		m_kdTree = new KDTree();
-		m_kdTree->addShape(m_shape.get());
-		m_kdTree->build();
+		size_t shapeCount = stream->readUInt();
+		for (size_t i=0; i<shapeCount; ++i) 
+			addChild("", static_cast<Shape *>(manager->getInstance(stream)));
 		m_channel = stream->readInt();
 		m_strategy = (ESamplingStrategy) stream->readInt();
 		m_sigma = stream->readFloat();
@@ -82,16 +83,21 @@ public:
 		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
 			coeffs[i] = m_sigmaT[i];
 
+		configure();
 		m_maxExpDist = new MaxExpDist(coeffs);
 	}
 
 	virtual ~HomogeneousMedium() {
+		for (size_t i=0; i<m_shapes.size(); ++i)
+			m_shapes[i]->decRef();
 		delete m_maxExpDist;
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Medium::serialize(stream, manager);
-		manager->serialize(stream, m_shape.get());
+		stream->writeUInt((uint32_t) m_shapes.size());
+		for (size_t i=0; i<m_shapes.size(); ++i)
+			manager->serialize(stream, m_shapes[i]);
 		stream->writeInt(m_channel);
 		stream->writeInt(m_strategy);
 		stream->writeFloat(m_sigma);
@@ -99,8 +105,10 @@ public:
 	
 	void configure() {
 		Medium::configure();
-		if (m_shape.get() == NULL)
-			Log(EError, "This medium requires a Shape instance as a child ");
+		if (m_shapes.size() == 0)
+			Log(EError, "This medium requires one or more Shape instance as a child");
+		m_kdTree->build();
+		m_aabb = m_kdTree->getAABB();
 	}
 
 	bool isInside(const Ray &r) const {
@@ -267,17 +275,25 @@ public:
 
 	void setParent(ConfigurableObject *parent) {
 		if (parent->getClass()->derivesFrom(Shape::m_theClass))
-			Log(EError, "Medium shape cannot be part of the scene");
+			Log(EError, "Medium cannot be a parent of a shape");
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(Shape::m_theClass)) {
-			Assert(m_shape == NULL);
-			m_shape = static_cast<Shape *>(child);
-			m_kdTree = new KDTree();
-			m_kdTree->addShape(m_shape.get());
-			m_kdTree->build();
-			m_aabb = m_kdTree->getAABB();
+			Shape *shape = static_cast<Shape *>(child);
+			if (shape->isCompound()) {
+				int ctr = 0;
+				while (true) {
+					ref<Shape> childShape = shape->getElement(ctr++);
+					if (!childShape)
+						break;
+					addChild("", childShape);
+				}
+			} else {
+				m_kdTree->addShape(shape);
+				shape->incRef();
+				m_shapes.push_back(shape);
+			}
 		} else {
 			Medium::addChild(name, child);
 		}
@@ -289,16 +305,16 @@ public:
 			<< "  sigmaA = " << m_sigmaA.toString() << "," << std::endl
 			<< "  sigmaS = " << m_sigmaS.toString() << "," << std::endl
 			<< "  sigmaT = " << m_sigmaT.toString() << "," << std::endl
-			<< "  phase = " << indent(m_phaseFunction->toString()) << "," << std::endl
-			<< "  shape = " << indent(m_shape->toString()) << std::endl
+			<< "  phase = " << indent(m_phaseFunction->toString()) << "," << std::endl 
+			<< "  shapes = " << indent(listToString(m_shapes)) << std::endl
 			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	ref<Shape> m_shape;
 	ref<KDTree> m_kdTree;
+	std::vector<Shape *> m_shapes;
 	int m_channel;
 	Float m_sigma;
 	ESamplingStrategy m_strategy;

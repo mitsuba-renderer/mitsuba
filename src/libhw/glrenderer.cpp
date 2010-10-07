@@ -359,8 +359,6 @@ void GLRenderer::endDrawingMeshes() {
 }
 	
 void GLRenderer::drawAll() {
-	if (true)
-		return;
 	GLRenderer::beginDrawingMeshes(true);
 	std::map<const TriMesh *, GPUGeometry *>::iterator it;
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {

@@ -225,7 +225,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	/* Submit crash reports on OSX */
 	QDir crashDir = QDir::home();
 	crashDir.cd("Library/Logs/CrashReporter");
-	QFileInfoList crashReports = crashDir.entryInfoList(QStringList("qtgui_*"), 
+	QFileInfoList crashReports = crashDir.entryInfoList(QStringList("mtsgui_*"), 
 			QDir::Files, QDir::Name);
 
 	if (crashReports.size() > 0) {
@@ -292,6 +292,15 @@ MainWindow::MainWindow(QWidget *parent) :
 				QMessageBox::information(this, tr("Crash reporter"),
 					tr("All crash reports have been submitted. Thank you!"),
 					QMessageBox::Ok);
+		} else {
+			for (int i=0; i<crashReports.size(); ++i) {
+				QFile file(crashReports[i].absoluteFilePath());
+				if (!file.remove()) {
+					QMessageBox::critical(this, tr("Unable to submitted crash report"),
+						tr("Unable to delete a crash report -- please check the file permissions in ~/Library/Logs/CrashReporter."), QMessageBox::Ok);
+					break;
+				}
+			}
 		}
 	}
 #endif
@@ -534,7 +543,8 @@ void MainWindow::onProgressMessage(const RenderJob *job, const QString &name,
 
 void MainWindow::on_actionOpen_triggered() {
 	QFileDialog *dialog = new QFileDialog(this, Qt::Sheet);
-	dialog->setNameFilter(tr("Mitsuba scenes (*.xml);;EXR images (*.exr)"));
+	dialog->setNameFilter(tr("All supported formats (*.xml *.exr);;"
+			"Mitsuba scenes (*.xml);;EXR images (*.exr)"));
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
 	dialog->setAcceptMode(QFileDialog::AcceptOpen);
 	dialog->setViewMode(QFileDialog::Detail);
@@ -1208,7 +1218,8 @@ inline float toSRGB(float value) {
 void MainWindow::on_actionExportImage_triggered() {
 	SceneContext *ctx = m_context[ui->tabBar->currentIndex()];
 	QFileDialog dialog(this, tr("Export image .."),
-		"", tr("Linear EXR Image (*.exr);; Tonemapped 8-bit PNG Image (*.png)"));
+		"", tr("All supported formats (*.exr *.png);;Linear EXR Image (*.exr)"
+			";; Tonemapped 8-bit PNG Image (*.png)"));
 
 	QSettings settings("mitsuba-renderer.org", "qtgui");
 	dialog.setViewMode(QFileDialog::Detail);

@@ -11,8 +11,9 @@
 .*moc_.*\.cc$
 .*qrc_.*\.cc$
 
-# SCons-related
+# Build-related
 ^\.sconf_temp/.*$
+^debian/.*$
 ^.sconsign.dblite$
 ^config.py$
 ^config.log$
