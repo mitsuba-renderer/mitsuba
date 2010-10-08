@@ -25,7 +25,7 @@
 
 #define MTS_KD_MAX_DEPTH 48   ///< Compile-time KD-tree depth limit
 #define MTS_KD_STATISTICS 1   ///< Collect statistics during building/traversal 
-#define MTS_KD_MINMAX_BINS 10 ///< Min-max bins resolution
+#define MTS_KD_MINMAX_BINS 32 ///< Min-max bin count
 #define MTS_KD_MINMAX_DEPTH 4 ///< Use min-max binning for the first 4 levels
 #define MTS_KD_MIN_ALLOC 128  ///< Allocate memory in 128 KB chunks
 
@@ -336,6 +336,8 @@ public:
 	Float buildTree(BuildContext &ctx, unsigned int depth, KDNode *node, 
 			const AABB &nodeAABB, const AABB &tightAABB, index_type *indices,
 			size_type primCount, bool isLeftChild) {
+		Assert(nodeAABB.contains(tightAABB));
+
 		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
 			return createLeaf(ctx, node, primCount);
 		}
@@ -708,6 +710,21 @@ protected:
 			int idx     = (int) ((split - min) * invBinSize);
 			int idxNext = (int) ((splitNext - min) * invBinSize);
 
+			Assert(split > min && split < m_aabb.max[axis]);
+
+			if (split <= min || split >= m_aabb.max[axis]) {
+				cout << "Ran into some problems!" << endl;
+				cout << "AABB = " << m_aabb.toString() << endl;
+				cout << "candidate axis = " << candidate.axis << endl;
+				cout << "candidate cost = " << candidate.cost << endl;
+				cout << "prims = " << m_primCount << endl;
+				cout << "invBinSize = " << invBinSize << endl;
+				cout << "split pos = " << split << endl;
+				cout << "left bin = " << leftBin << endl;
+				cout << "idx = " << idx << ", " << idxNext << endl;
+				exit(-1);
+			}
+
 			/**
 			 * The split plane should be along the last discrete floating
 			 * floating position, which would still be classified into
@@ -721,6 +738,7 @@ protected:
 					direction = -std::numeric_limits<float>::max();
 				else
 					direction = std::numeric_limits<float>::max();
+				int it = 0;
 
 				while (true) {
 					split     = nextafterf(split, direction);
@@ -730,8 +748,14 @@ protected:
 					idxNext = (int) ((splitNext - min) * invBinSize);
 					if (idx == leftBin && idxNext > leftBin)
 						break;
+					++it;
+					if (it % 100 == 0)
+						cout << "In iteration " << it << endl;
 				}
+
 			}
+
+			Assert(split > m_aabb.min[axis] && split < m_aabb.max[axis]);
 
 			candidate.pos = split;
 
@@ -784,6 +808,9 @@ protected:
 				}
 			}
 
+			leftBounds.clip(m_aabb);
+			rightBounds.clip(m_aabb);
+
 			Assert(numLeft == split.numLeft);
 			Assert(numRight == split.numRight);
 
@@ -822,11 +849,19 @@ protected:
 					* (pLeft2 * numLeft + pRight2 * numRight);
 
 				if (sahCost1 <= sahCost2) {
-					Assert(sahCost1 <= split.cost);
+					if (sahCost1 > split.cost) {
+						cout << "Original splitting cost = " << split.cost << endl;
+						cout << "New splitting cost      = " << sahCost1 << endl;
+					}
+///					Assert(sahCost1 <= split.cost);
 					split.cost = sahCost1;
 					split.pos = leftBounds.max[axis];
 				} else {
-					Assert(sahCost2 <= split.cost);
+					if (sahCost2 > split.cost) {
+						cout << "Original splitting cost = " << split.cost << endl;
+						cout << "New splitting cost      = " << sahCost2 << endl;
+					}
+//					Assert(sahCost2 <= split.cost);
 					split.cost = sahCost2;
 					split.pos = rightBounds.min[axis];
 				}
