@@ -282,8 +282,8 @@ public:
 				ctx.nodeAlloc.getChunkCount(), ctx.nodeAlloc.getSize() / 1024.0f);
 		Log(EDebug, "Detailed kd-tree statistics:");
 		Log(EDebug, "   Final SAH cost    : %.2f", finalSAHCost);
-		Log(EDebug, "   # of Leaf nodes   : %i", m_leafNodeCount);
-		Log(EDebug, "   # of Inner nodes  : %i", m_innerNodeCount);
+		Log(EDebug, "   # of leaf nodes   : %i", m_leafNodeCount);
+		Log(EDebug, "   # of inner nodes  : %i", m_innerNodeCount);
 		Log(EDebug, "   # of bad splits   : %i", m_badSplits);
 		Log(EDebug, "   Indirection table : " SIZE_T_FMT " entries",
 				m_indirectionTable.size());
@@ -730,19 +730,6 @@ protected:
 
 			Assert(split > min && split < m_aabb.max[axis]);
 
-			if (split <= min || split >= m_aabb.max[axis]) {
-				cout << "Ran into some problems!" << endl;
-				cout << "AABB = " << m_aabb.toString() << endl;
-				cout << "candidate axis = " << candidate.axis << endl;
-				cout << "candidate cost = " << candidate.sahCost << endl;
-				cout << "prims = " << m_primCount << endl;
-				cout << "invBinSize = " << invBinSize << endl;
-				cout << "split pos = " << split << endl;
-				cout << "left bin = " << leftBin << endl;
-				cout << "idx = " << idx << ", " << idxNext << endl;
-				exit(-1);
-			}
-
 			/**
 			 * The split plane should be along the last discrete floating
 			 * floating position, which would still be classified into
@@ -750,12 +737,13 @@ protected:
 			 */
 			if (!(idx == leftBin && idxNext > leftBin)) {
 				float direction;
-				
+
 				/* First, determine the search direction */
-				if (idx > leftBin)
+				if (idx > leftBin) {
 					direction = -std::numeric_limits<float>::max();
-				else
+				} else {
 					direction = std::numeric_limits<float>::max();
+				}
 				int it = 0;
 
 				while (true) {
@@ -766,9 +754,26 @@ protected:
 					idxNext = (int) ((splitNext - min) * invBinSize);
 					if (idx == leftBin && idxNext > leftBin)
 						break;
+
+					/* In very rare cases, it can happen that the split
+					   position cannot be represented using the available
+					   precision. */
+					if (idxNext - idx > 1) {
+						cout << "Uh oh!" << endl;
+					}
+
+					if (it > 10000) {
+						cout << m_aabb.min[axis] << "->" << m_aabb.max[axis] << endl;
+						cout << "MinBins: ";
+						for (int i=0; i<BinCount; ++i)
+							cout << m_minBins[axis*BinCount+i] << " ";
+						cout << endl;
+						cout << "MaxBins: ";
+						for (int i=0; i<BinCount; ++i)
+							cout << m_maxBins[axis*BinCount+i] << " ";
+						cout << endl;
+					}
 					++it;
-					if (it % 100 == 0)
-						cout << "In iteration " << it << endl;
 				}
 
 			}
