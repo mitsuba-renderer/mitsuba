@@ -203,8 +203,12 @@ public:
 		m_stopPrims = 2;
 		m_badSplits = 0;
 		m_leafNodeCount = 0;
+		m_nonemptyLeafNodeCount = 0;
 		m_innerNodeCount = 0;
 		m_maxBadRefines = 3;
+		m_expTraversalSteps = 0;
+		m_expLeavesVisited = 0;
+		m_expPrimitivesIntersected = 0;
 	}
 
 	/// Cast to the derived class
@@ -269,6 +273,11 @@ public:
 		Assert(ctx.rightAlloc.getUsed() == 0);
 		Assert(ctx.tempAlloc.getUsed() == 0);
 
+		Float rootSA = m_aabb.getSurfaceArea();
+		m_expTraversalSteps /= rootSA;
+		m_expLeavesVisited /= rootSA;
+		m_expPrimitivesIntersected /= rootSA;
+
 		Log(EInfo, "Finished -- took %i ms.", timer->getMilliseconds());
 
 		Log(EDebug, "Chunk allocator statistics");
@@ -281,16 +290,21 @@ public:
 		Log(EDebug, "   Nodes: " SIZE_T_FMT " chunks (%.2f KiB)",
 				ctx.nodeAlloc.getChunkCount(), ctx.nodeAlloc.getSize() / 1024.0f);
 		Log(EDebug, "Detailed kd-tree statistics:");
-		Log(EDebug, "   Final SAH cost    : %.2f", finalSAHCost);
-		Log(EDebug, "   # of leaf nodes   : %i", m_leafNodeCount);
-		Log(EDebug, "   # of inner nodes  : %i", m_innerNodeCount);
-		Log(EDebug, "   # of bad splits   : %i", m_badSplits);
-		Log(EDebug, "   Indirection table : " SIZE_T_FMT " entries",
+		Log(EDebug, "   Final SAH cost           : %.2f", finalSAHCost);
+		Log(EDebug, "   # of inner nodes         : %i", m_innerNodeCount);
+		Log(EDebug, "   # of leaf nodes          : %i", m_leafNodeCount);
+		Log(EDebug, "   # of nonempty leaf nodes : %i", m_nonemptyLeafNodeCount);
+		Log(EDebug, "   # of bad splits          : %i", m_badSplits);
+		Log(EDebug, "   Exp. # of traversals     : %.2f", m_expTraversalSteps);
+		Log(EDebug, "   Exp. # of leaf visits    : %.2f", m_expLeavesVisited);
+		Log(EDebug, "   Exp. # of intersections  : %.2f", m_expPrimitivesIntersected);
+		Log(EDebug, "   Indirection table        : " SIZE_T_FMT " entries",
 				m_indirectionTable.size());
-
+	
 		ctx.leftAlloc.cleanup();
 		ctx.rightAlloc.cleanup();
 		ctx.tempAlloc.cleanup();
+		m_aabb.getSurfaceArea();
 	}
 
 	/**
@@ -303,9 +317,13 @@ public:
 	 * \param primCount
 	 *     Total primitive count for the current node
 	 */
-	void createLeaf(BuildContext &ctx, KDNode *node, size_type primCount) {
+	void createLeaf(BuildContext &ctx, KDNode *node, const AABB &nodeAABB, size_type primCount) {
 		node->initLeafNode(0, primCount);
 		m_leafNodeCount++;
+		m_expLeavesVisited += nodeAABB.getSurfaceArea();
+		m_expPrimitivesIntersected += primCount * nodeAABB.getSurfaceArea();
+		if (primCount > 0)
+			m_nonemptyLeafNodeCount++;
 	}
 
 	/**
@@ -344,7 +362,7 @@ public:
 
 		Float leafCost = primCount * m_intersectionCost;
 		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
-			createLeaf(ctx, node, primCount);
+			createLeaf(ctx, node, nodeAABB, primCount);
 			return leafCost;
 		}
 
@@ -356,8 +374,9 @@ public:
 		/* "Bad refines" heuristic from PBRT */
 		if (bestSplit.sahCost >= leafCost) {
 			if ((bestSplit.sahCost > 4 * leafCost && primCount < 16)
-					|| badRefines >= m_maxBadRefines) {
-				createLeaf(ctx, node, primCount);
+				|| bestSplit.sahCost == std::numeric_limits<Float>::infinity()
+				|| badRefines >= m_maxBadRefines) {
+				createLeaf(ctx, node, nodeAABB, primCount);
 				return leafCost;
 			}
 			++badRefines;
@@ -378,7 +397,6 @@ public:
 					initialIndirectionTableSize);
 			m_indirectionTable.push_back(children);
 		}
-		m_innerNodeCount++;
 
 		AABB childAABB(nodeAABB);
 		childAABB.max[bestSplit.axis] = bestSplit.pos;
@@ -409,6 +427,8 @@ public:
 			ctx.leftAlloc.release(boost::get<1>(partition));	
 
 		if (finalSAHCost < primCount * m_intersectionCost) {
+			m_expTraversalSteps += nodeAABB.getSurfaceArea();
+			m_innerNodeCount++;
 			return finalSAHCost;
 		} else {
 			/* In the end, splitting didn't help to reduce the SAH cost.
@@ -417,8 +437,7 @@ public:
 				m_indirectionTable.resize(initialIndirectionTableSize);
 			tearUp(ctx, node);
 			m_badSplits++;
-			--m_innerNodeCount;
-			createLeaf(ctx, node, primCount);
+			createLeaf(ctx, node, nodeAABB, primCount);
 			return leafCost;
 		}
 	}
@@ -728,24 +747,21 @@ protected:
 			int idx     = (int) ((split - min) * invBinSize);
 			int idxNext = (int) ((splitNext - min) * invBinSize);
 
-			Assert(split > min && split < m_aabb.max[axis]);
-
 			/**
 			 * The split plane should be along the last discrete floating
 			 * floating position, which would still be classified into
 			 * the left bin.
 			 */
-			if (!(idx == leftBin && idxNext > leftBin)) {
+			if (!(idx <= leftBin && idxNext > leftBin)) {
 				float direction;
 
 				/* First, determine the search direction */
-				if (idx > leftBin) {
+				if (idx > leftBin) 
 					direction = -std::numeric_limits<float>::max();
-				} else {
+				else
 					direction = std::numeric_limits<float>::max();
-				}
-				int it = 0;
 
+				int it = 0;
 				while (true) {
 					split     = nextafterf(split, direction);
 					splitNext = nextafterf(split, 
@@ -754,31 +770,20 @@ protected:
 					idxNext = (int) ((splitNext - min) * invBinSize);
 					if (idx == leftBin && idxNext > leftBin)
 						break;
-
-					/* In very rare cases, it can happen that the split
-					   position cannot be represented using the available
-					   precision. */
-					if (idxNext - idx > 1) {
-						cout << "Uh oh!" << endl;
+					if (idx < leftBin && idxNext > leftBin) {
+						/* Insufficient floating point resolution -- a leaf will be created. */
+						candidate.sahCost = std::numeric_limits<Float>::infinity();
+						break;
 					}
 
-					if (it > 10000) {
-						cout << m_aabb.min[axis] << "->" << m_aabb.max[axis] << endl;
-						cout << "MinBins: ";
-						for (int i=0; i<BinCount; ++i)
-							cout << m_minBins[axis*BinCount+i] << " ";
-						cout << endl;
-						cout << "MaxBins: ";
-						for (int i=0; i<BinCount; ++i)
-							cout << m_maxBins[axis*BinCount+i] << " ";
-						cout << endl;
-					}
 					++it;
 				}
-
 			}
 
-			Assert(split > m_aabb.min[axis] && split < m_aabb.max[axis]);
+			if (split <= m_aabb.min[axis] || split > m_aabb.max[axis]) {
+				/* Insufficient floating point resolution -- a leaf will be created. */
+				candidate.sahCost = std::numeric_limits<Float>::infinity();
+			}
 
 			candidate.pos = split;
 
@@ -872,19 +877,12 @@ protected:
 					* (pLeft2 * numLeft + pRight2 * numRight);
 
 				if (sahCost1 <= sahCost2) {
-					if (sahCost1 > split.sahCost) 
-						printf("%.30f should have been less than %.30f\n", sahCost1, split.sahCost);
-///					Assert(sahCost1 <= split.sahCost);
 					split.sahCost = sahCost1;
 					split.pos = leftBounds.max[axis];
 				} else {
-					if (sahCost2 > split.sahCost) 
-						printf("%.30f should have been less than %.30f\n", sahCost2, split.sahCost);
-//					Assert(sahCost2 <= split.sahCost);
 					split.sahCost = sahCost2;
 					split.pos = rightBounds.min[axis];
 				}
-				cout << "Good!" << endl;
 			}
 
 			return boost::make_tuple(leftBounds, leftIndices,
@@ -908,9 +906,13 @@ private:
 	size_type m_maxDepth;
 	size_type m_stopPrims;
 	size_type m_leafNodeCount;
+	size_type m_nonemptyLeafNodeCount;
 	size_type m_innerNodeCount;
 	size_type m_badSplits;
 	size_type m_maxBadRefines;
+	Float m_expTraversalSteps;
+	Float m_expLeavesVisited;
+	Float m_expPrimitivesIntersected;
 };
 
 MTS_NAMESPACE_END
