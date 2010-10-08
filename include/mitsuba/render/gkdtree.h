@@ -171,6 +171,10 @@ private:
 template <typename Derived> class GenericKDTree : public Object {
 protected:
 	struct KDNode;
+	struct EdgeEvent;
+	typedef EdgeEvent *EdgeEventPtr;
+	typedef EdgeEventPtr EdgeEventPtr3[3];
+
 public:
 	/// Index number format (max 2^32 prims)
 	typedef uint32_t index_type;
@@ -327,7 +331,7 @@ public:
 	}
 
 	/**
-	 * \brief Build helper function
+	 * \brief Build helper function (min-max binning)
 	 *
 	 * \param ctx 
 	 *     Thread-specific build context containing allocators etc.
@@ -366,10 +370,18 @@ public:
 			return leafCost;
 		}
 
+		/* ==================================================================== */
+	    /*                              Binning                                 */
+	    /* ==================================================================== */
+
 		MinMaxBins<MTS_KD_MINMAX_BINS> bins(tightAABB);
 		bins.bin(downCast(), indices, primCount);
+
+		/* ==================================================================== */
+	    /*                        Split candidate search                        */
+    	/* ==================================================================== */
 		SplitCandidate bestSplit = bins.maximizeSAH(m_traversalCost,
-			m_intersectionCost, m_emptySpaceBonus);
+			m_intersectionCost);
 
 		/* "Bad refines" heuristic from PBRT */
 		if (bestSplit.sahCost >= leafCost) {
@@ -381,6 +393,10 @@ public:
 			}
 			++badRefines;
 		}
+	
+		/* ==================================================================== */
+	    /*                            Partitioning                              */
+	    /* ==================================================================== */
 
 		boost::tuple<AABB, index_type *, AABB, index_type *> partition = 
 			bins.partition(ctx, downCast(), indices, bestSplit, isLeftChild, 
@@ -397,6 +413,10 @@ public:
 					initialIndirectionTableSize);
 			m_indirectionTable.push_back(children);
 		}
+	
+		/* ==================================================================== */
+	    /*                              Recursion                               */
+	    /* ==================================================================== */
 
 		AABB childAABB(nodeAABB);
 		childAABB.max[bestSplit.axis] = bestSplit.pos;
@@ -440,6 +460,88 @@ public:
 			createLeaf(ctx, node, nodeAABB, primCount);
 			return leafCost;
 		}
+	}
+	
+	Float buildTreeSAH(BuildContext &ctx, unsigned int depth, const KDNode *node,
+		const AABB &nodeAABB, EdgeEventPtr3 firstEventByAxis, 
+		EdgeEventPtr3 lastEventByAxis, size_type primCount, bool isLeftChild,
+		size_type badRefines) {
+
+		Float leafCost = primCount * m_intersectionCost;
+		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
+			createLeaf(ctx, node, nodeAABB, primCount);
+			return leafCost;
+		}
+	
+		/* ==================================================================== */
+	    /*                        Split candidate search                        */
+    	/* ==================================================================== */
+
+		/* First, find the optimal splitting plane according to the
+		   surface area heuristic. To do this in O(n), the search is
+		   implemented as a sweep over the edge events */
+		for (int axis=0; axis<3; axis++) {
+			/* Initially, the split plane is placed left of the scene
+			   and thus all geometry is on its right side */
+			int numLeft = 0, numPlanar = 0, numRight = primCount;
+			const EdgeEvent *firstEvent = firstEventByAxis[axis];
+			const EdgeEvent *lastEvent = lastEventByAxis[axis];
+	
+			/* Iterate over all events on the current axis */
+			for (EdgeEvent *event = firstEvent; event < lastEvent; ++event) {
+				/* Record the current position and count all 
+				   other events, which are also here */
+				Float t = event->t;
+				int numStart = 0, numEnd = 0;
+
+				/* Count "end" events */
+				while (event != lastEvent && event->t == t 
+					&& event->type == EdgeEvent::EEdgeEnd) {
+					++numEnd; ++event;
+				}
+
+				/* Count "planar" events */
+				while (event != lastEvent && event->t == t 
+					&& event->type == EdgeEvent::EEdgePlanar) {
+					++numPlanar; ++event;
+				}
+	
+				/* Count "start" events */
+				while (event != lastEvent && event->t == t 
+					&& event->type == EdgeEvent::EEdgeStart) {
+					++numStart; ++event;
+				}
+
+				/* The split plane can now be moved onto 't'. 
+				   Accordingly, all planar and ending primitives
+				   are removed from the right side */
+				numRight -= numPlanar; numRight -= numEnd;
+	
+				/* Calculate a score using the surface area heuristic */
+				if (t >= nodeAABB.min[axis] && t <= nodeAABB.max[axis]) {
+/*					Score score = SAH(axis, invSA, aabb, t, numLeft, 	
+						numRight, numPlanar);
+					if (score < bestSplit) {
+						bestSplit = score;
+					}*/
+				} else {
+					/* When primitive clipping is active, this should 
+					   never happen! */
+					AssertEx(!m_clip, "Internal error: edge event is out of bounds");
+				}
+	
+				/* The split plane is moved past 't'. All prims,
+				   which were planar on 't', are moved to the left
+				   side. Also, starting prims are now also left of
+				   the split plane. */
+				numLeft += numStart; numLeft += numPlanar;
+				numPlanar = 0;
+			}
+			/* Sanity checks. Everything should now be on the 
+			   left side of the split plane */
+			Assert(numRight == 0 && numLeft == primCount);
+		}
+
 	}
 
 	/**
