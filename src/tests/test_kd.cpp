@@ -81,49 +81,41 @@ public:
 		assertEquals(Point(1, 1, 0), clippedAABB.max);
 	}
 
-	class TriKDTree : GenericKDTree<Triangle> {
+	class TriKDTree : public GenericKDTree<TriKDTree> {
 	public:
-		struct AABBFunctor {
-			inline AABBFunctor(const Triangle *triangles,
-					           const Vertex *vertexBuffer,
-							   uint32_t primitiveCount)
-				: m_triangles(triangles),
-				  m_vertexBuffer(vertexBuffer),
-				  m_primitiveCount(primitiveCount) { }
-
-			inline uint32_t getPrimitiveCount() const {
-				return m_primitiveCount;
-			}
-
-			inline AABB getAABB(uint32_t idx) const {
-				return m_triangles[idx].getAABB(m_vertexBuffer);
-			}
-
-			const Triangle *m_triangles;
-			const Vertex *m_vertexBuffer;
-			const uint32_t m_primitiveCount;
-		};
-
-		void build(const Triangle *triangles,
-				   const Vertex *vertexBuffer,
-				   uint32_t primitiveCount) {
-			GenericKDTree<Triangle>::build(
-				AABBFunctor(triangles, vertexBuffer, primitiveCount)
-			);
+		TriKDTree(const Triangle *triangles,
+				  const Vertex *vertexBuffer,
+				  size_type triangleCount) 
+			: m_triangles(triangles),
+		      m_vertexBuffer(vertexBuffer),
+			  m_triangleCount(triangleCount) {
 		}
+
+		inline AABB getAABB(index_type idx) const {
+			return m_triangles[idx].getAABB(m_vertexBuffer);
+		}
+
+		inline size_type getPrimitiveCount() const {
+			return m_triangleCount;
+		}
+
 	private:
+		const Triangle *m_triangles;
+		const Vertex *m_vertexBuffer;
+		size_type m_triangleCount;
 	};
 
 
 	void test02_buildSimple() {
 		Properties bunnyProps("ply");
-		bunnyProps.setString("filename", "tools/tests/menger.ply");
+		bunnyProps.setString("filename", "tools/tests/happy.ply");
 
 		ref<TriMesh> mesh = static_cast<TriMesh *> (PluginManager::getInstance()->
 				createObject(TriMesh::m_theClass, bunnyProps));
 		mesh->configure();
-		TriKDTree tree;
-		tree.build(mesh->getTriangles(), mesh->getVertexBuffer(), mesh->getTriangleCount());
+		TriKDTree tree(mesh->getTriangles(), 
+			mesh->getVertexBuffer(), mesh->getTriangleCount());
+		tree.build();
 	}
 };
 
