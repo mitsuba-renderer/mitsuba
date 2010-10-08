@@ -290,15 +290,15 @@ public:
 		Log(EDebug, "   Nodes: " SIZE_T_FMT " chunks (%.2f KiB)",
 				ctx.nodeAlloc.getChunkCount(), ctx.nodeAlloc.getSize() / 1024.0f);
 		Log(EDebug, "Detailed kd-tree statistics:");
-		Log(EDebug, "   Final SAH cost           : %.2f", finalSAHCost);
-		Log(EDebug, "   # of inner nodes         : %i", m_innerNodeCount);
-		Log(EDebug, "   # of leaf nodes          : %i", m_leafNodeCount);
-		Log(EDebug, "   # of nonempty leaf nodes : %i", m_nonemptyLeafNodeCount);
-		Log(EDebug, "   # of bad splits          : %i", m_badSplits);
-		Log(EDebug, "   Exp. # of traversals     : %.2f", m_expTraversalSteps);
-		Log(EDebug, "   Exp. # of leaf visits    : %.2f", m_expLeavesVisited);
-		Log(EDebug, "   Exp. # of intersections  : %.2f", m_expPrimitivesIntersected);
-		Log(EDebug, "   Indirection table        : " SIZE_T_FMT " entries",
+		Log(EDebug, "   Final SAH cost      : %.2f", finalSAHCost);
+		Log(EDebug, "   Inner nodes         : %i", m_innerNodeCount);
+		Log(EDebug, "   Leaf nodes          : %i", m_leafNodeCount);
+		Log(EDebug, "   Nonempty leaf nodes : %i", m_nonemptyLeafNodeCount);
+		Log(EDebug, "   Bad splits          : %i", m_badSplits);
+		Log(EDebug, "   Exp. traversals     : %.2f", m_expTraversalSteps);
+		Log(EDebug, "   Exp. leaf visits    : %.2f", m_expLeavesVisited);
+		Log(EDebug, "   Exp. intersections  : %.2f", m_expPrimitivesIntersected);
+		Log(EDebug, "   Indirection table   : " SIZE_T_FMT " entries",
 				m_indirectionTable.size());
 	
 		ctx.leftAlloc.cleanup();
@@ -672,10 +672,11 @@ protected:
 
 		/**
 		 * \brief Evaluate the surface area heuristic at each bin boundary
-		 * and return the maximizer for the given cost constants.
+		 * and return the maximizer for the given cost constants. Min-max
+		 * binning uses no "empty space bonus" since it cannot create such
+		 * splits.
 		 */
-		SplitCandidate maximizeSAH(Float traversalCost,
-				Float intersectionCost, Float emptySpaceBonus) {
+		SplitCandidate maximizeSAH(Float traversalCost, Float intersectionCost) {
 			SplitCandidate candidate;
 			Float normalization = 2.0f / m_aabb.getSurfaceArea();
 			int binIdx = 0, leftBin = 0;
@@ -704,9 +705,6 @@ protected:
 
 					Float sahCost = traversalCost + intersectionCost 
 						* (pLeft * numLeft + pRight * numRight);
-
-					if (numLeft == 0 || numRight == 0)
-						sahCost *= emptySpaceBonus;
 
 					if (sahCost < candidate.sahCost) {
 						candidate.sahCost = sahCost;
