@@ -25,7 +25,7 @@
 
 #define MTS_KD_MAX_DEPTH 48   ///< Compile-time KD-tree depth limit
 #define MTS_KD_STATISTICS 1   ///< Collect statistics during building/traversal 
-#define MTS_KD_MINMAX_BINS 32 ///< Min-max bins resolution
+#define MTS_KD_MINMAX_BINS 10 ///< Min-max bins resolution
 #define MTS_KD_MINMAX_DEPTH 4 ///< Use min-max binning for the first 4 levels
 #define MTS_KD_MIN_ALLOC 128  ///< Allocate memory in 128 KB chunks
 
@@ -47,7 +47,7 @@ MTS_NAMESPACE_BEGIN
  */
 class OrderedChunkAllocator {
 public:
-	inline OrderedChunkAllocator(const std::string &name) : m_name(name) {
+	inline OrderedChunkAllocator() {
 		m_chunks.reserve(16);
 	}
 
@@ -67,8 +67,7 @@ public:
 	 * free memory. If no chunk could be found, a new one is created.
 	 */
 	template <typename T> T *allocate(size_t size) {
-		cout << m_name << ":" << " alloc(" << size << ")" << endl;
-
+		size *= sizeof(T);
 		for (std::vector<Chunk>::iterator it = m_chunks.begin();
 				it != m_chunks.end(); ++it) {
 			Chunk &chunk = *it;
@@ -98,7 +97,6 @@ public:
 			Chunk &chunk = *it;
 			if ((uint8_t *) ptr >= chunk.start && 
 				(uint8_t *) ptr < chunk.start + chunk.size) {
-				cout << m_name << ":" << " release(" << (chunk.cur - (uint8_t *) ptr) << ")" << endl;
 				chunk.cur = (uint8_t *) ptr;
 				return;
 			}
@@ -111,12 +109,12 @@ public:
 	 * \brief Shrink the size of the last allocated chunk
 	 */
 	template <typename T> void shrinkAllocation(T *ptr, size_t newSize) {
+		newSize *= sizeof(T);
 		for (std::vector<Chunk>::iterator it = m_chunks.begin();
 				it != m_chunks.end(); ++it) {
 			Chunk &chunk = *it;
 			if ((uint8_t *) ptr >= chunk.start &&
 				(uint8_t *) ptr < chunk.start + chunk.size) {
-				cout << m_name << ":" << " shrink(" << (chunk.cur - (uint8_t *) ptr) << " -> " << newSize << ")" << endl;
 				chunk.cur = (uint8_t *) ptr + newSize;
 				return;
 			}
@@ -162,7 +160,6 @@ private:
 		}
 	};
 
-	std::string m_name;
 	std::vector<Chunk> m_chunks;
 };
 
@@ -172,6 +169,8 @@ private:
  * shapes.
  */
 template <typename Derived> class GenericKDTree : public Object {
+protected:
+	struct KDNode;
 public:
 	/// Index number format (max 2^32 prims)
 	typedef uint32_t index_type;
@@ -194,17 +193,17 @@ public:
 	struct BuildContext {
 		OrderedChunkAllocator leftAlloc, rightAlloc;
 		OrderedChunkAllocator tempAlloc, nodeAlloc;
-
-		inline BuildContext() : leftAlloc("left"), rightAlloc("right"),
-			tempAlloc("temp"), nodeAlloc("node") { }
 	};
 
-	GenericKDTree() {
+	GenericKDTree() : m_root(NULL) {
 		m_traversalCost = 15;
 		m_intersectionCost = 20;
 		m_emptySpaceBonus = 0.8f;
 		m_clip = true;
-		m_stopPrims = 4;
+		m_stopPrims = 2;
+		m_badSplits = 0;
+		m_leafNodeCount = 0;
+		m_innerNodeCount = 0;
 	}
 
 	/// Cast to the derived class
@@ -218,10 +217,12 @@ public:
 	}
 
 	/**
-	 * \brief Build a KD-tree over the supplied axis-aligned bounding
-	 * boxes.
+	 * \brief Build a KD-tree over supplied geometry
 	 */
 	void build() {
+		if (m_root != NULL)
+			Log(EError, "KD-tree has already been built!");
+
 		BuildContext ctx;
 		size_type primCount = downCast()->getPrimitiveCount();
 
@@ -229,11 +230,10 @@ public:
 		m_maxDepth = std::min((int) (8 + 1.3f * log2i(primCount)), MTS_KD_MAX_DEPTH);
 
 		Log(EDebug, "Creating a preliminary index list (%.2f KiB)", 
-				primCount * sizeof(index_type) / 1024.0f);
+			primCount * sizeof(index_type) / 1024.0f);
 
-		OrderedChunkAllocator &leftAlloc = ctx.leftAlloc;
-		index_type *indices = leftAlloc.allocate<index_type>(
-				primCount * sizeof(index_type));
+		OrderedChunkAllocator &leftAlloc = ctx.leftAlloc, &nodeAlloc = ctx.nodeAlloc;
+		index_type *indices = leftAlloc.allocate<index_type>(primCount);
 
 		ref<Timer> timer = new Timer();
 		m_aabb.reset();
@@ -256,16 +256,19 @@ public:
 		Log(EDebug, "   Exact SAH eval. depth    : %i", MTS_KD_MINMAX_DEPTH);
 		Log(EDebug, "   Perfect splits           : %s", m_clip ? "yes" : "no");
 
-		Log(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount); 
+		Log(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
 
-		buildTree(ctx, 1, m_aabb, indices, primCount, true);
+		m_root = nodeAlloc.allocate<KDNode>(1);
+		Float finalSAHCost
+			= buildTree(ctx, 1, m_root, m_aabb, m_aabb, indices, primCount, true);
+
 		ctx.leftAlloc.release(indices);
 
 		Assert(ctx.leftAlloc.getUsed() == 0);
 		Assert(ctx.rightAlloc.getUsed() == 0);
 		Assert(ctx.tempAlloc.getUsed() == 0);
 
-		Log(EInfo, "Finished. Construction took %i ms.", timer->getMilliseconds());
+		Log(EInfo, "Finished -- took %i ms.", timer->getMilliseconds());
 
 		Log(EDebug, "Chunk allocator statistics");
 		Log(EDebug, "   Left:  " SIZE_T_FMT " chunks (%.2f KiB)",
@@ -276,48 +279,148 @@ public:
 				ctx.tempAlloc.getChunkCount(), ctx.tempAlloc.getSize() / 1024.0f);
 		Log(EDebug, "   Nodes: " SIZE_T_FMT " chunks (%.2f KiB)",
 				ctx.nodeAlloc.getChunkCount(), ctx.nodeAlloc.getSize() / 1024.0f);
+		Log(EDebug, "Detailed kd-tree statistics:");
+		Log(EDebug, "   Final SAH cost    : %.2f", finalSAHCost);
+		Log(EDebug, "   # of Leaf nodes   : %i", m_leafNodeCount);
+		Log(EDebug, "   # of Inner nodes  : %i", m_innerNodeCount);
+		Log(EDebug, "   # of bad splits   : %i", m_badSplits);
+		Log(EDebug, "   Indirection table : " SIZE_T_FMT " entries",
+				m_indirectionTable.size());
 
 		ctx.leftAlloc.cleanup();
 		ctx.rightAlloc.cleanup();
 		ctx.tempAlloc.cleanup();
 	}
 
-	void buildTree(BuildContext &ctx, unsigned int depth, const AABB &aabb, 
-			index_type *indices, size_type primCount, bool isLeftChild) {
-		if (primCount <= m_stopPrims || depth >= m_maxDepth) 
-			return;
+	/**
+	 * \brief Leaf node creation helper function
+	 *
+	 * \param ctx 
+	 *     Thread-specific build context containing allocators etc.
+	 * \param node
+	 *     KD-tree node entry to be filled
+	 * \param primCount
+	 *     Total primitive count for the current node
+	 *
+	 * \returns 
+	 */
+	Float createLeaf(BuildContext &ctx, KDNode *node, size_type primCount) {
+		node->initLeafNode(0, primCount);
+		m_leafNodeCount++;
+		return m_intersectionCost * primCount;
+	}
 
-		MinMaxBins<MTS_KD_MINMAX_BINS> bins(aabb);
+	/**
+	 * \brief Build helper function
+	 *
+	 * \param ctx 
+	 *     Thread-specific build context containing allocators etc.
+	 * \param depth 
+	 *     Current tree depth (1 == root node)
+	 * \param node
+	 *     KD-tree node entry to be filled
+	 * \param nodeAABB
+	 *     Axis-aligned bounding box of the current node
+	 * \param tightAABB
+	 *     Tight bounding box of the contained geometry (for min-max binning)
+	 * \param indices
+	 *     Index list of all triangles in the current node (for min-max binning)
+	 * \param primCount
+	 *     Total primitive count for the current node
+	 * \param isLeftChild
+	 *     Is this node the left child of its parent? This is important for
+	 *     memory management.
+	 * \returns 
+	 *     A tuple specifying the final SAH cost and a pointer to the node.
+	 */
+	Float buildTree(BuildContext &ctx, unsigned int depth, KDNode *node, 
+			const AABB &nodeAABB, const AABB &tightAABB, index_type *indices,
+			size_type primCount, bool isLeftChild) {
+		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
+			return createLeaf(ctx, node, primCount);
+		}
+
+		MinMaxBins<MTS_KD_MINMAX_BINS> bins(tightAABB);
 		bins.bin(downCast(), indices, primCount);
-		SplitCandidate candidate = bins.maximizeSAH(m_traversalCost,
+		SplitCandidate split = bins.maximizeSAH(m_traversalCost,
 			m_intersectionCost, m_emptySpaceBonus);
 
-		const Float originalCost = primCount * m_intersectionCost;
-
-		cout << "originalCost = " << originalCost << endl;
-
-		cout << "bestCost = " 
-			<< candidate.cost
-			<< ", bestPos = "
-			<< candidate.pos
-			<< ", bestAxis = "
-			<< candidate.axis
-			<< ", numLeft = "
-			<< candidate.numLeft
-			<< ", numRight = "
-			<< candidate.numRight
-			<< endl;
-
 		boost::tuple<AABB, index_type *, AABB, index_type *> partition = 
-			bins.partition(ctx, downCast(), indices, candidate, isLeftChild, 
+			bins.partition(ctx, downCast(), indices, split, isLeftChild, 
 			m_traversalCost, m_intersectionCost);
 
-		buildTree(ctx, depth+1, boost::get<0>(partition), boost::get<1>(partition),
-				candidate.numLeft, true);
-		buildTree(ctx, depth+1, boost::get<2>(partition), boost::get<3>(partition),
-				candidate.numLeft, false);
+		OrderedChunkAllocator &nodeAlloc = ctx.nodeAlloc;
+		KDNode *children = nodeAlloc.allocate<KDNode>(2);
 
-		ctx.rightAlloc.release(boost::get<3>(partition));
+		size_t initialIndirectionTableSize = m_indirectionTable.size();
+		if (!node->initInnerNode(split.axis, split.pos, children-node)) {
+			/* Unable to store relative offset -- create an indirection
+			   table entry */
+			node->initIndirectionNode(split.axis, split.pos, 
+					initialIndirectionTableSize);
+			m_indirectionTable.push_back(children);
+		}
+		m_innerNodeCount++;
+
+		AABB childAABB(nodeAABB);
+		childAABB.max[split.axis] = split.pos;
+		Float saLeft = childAABB.getSurfaceArea();
+
+		Float leftSAHCost = buildTree(ctx, depth+1, children,
+				childAABB, boost::get<0>(partition), boost::get<1>(partition), 
+				split.numLeft, true);
+
+		childAABB.min[split.axis] = split.pos;
+		childAABB.max[split.axis] = nodeAABB.max[split.axis];
+		Float saRight = childAABB.getSurfaceArea();
+
+		Float rightSAHCost = buildTree(ctx, depth+1, children + 1,
+				childAABB, boost::get<2>(partition), boost::get<3>(partition), 
+				split.numRight, false);
+
+		/* Compute the final SAH cost given the updated cost 
+		   values received from the children */
+		Float finalSAHCost = m_traversalCost + 
+			(saLeft * leftSAHCost + saRight * rightSAHCost)
+			/ nodeAABB.getSurfaceArea();
+
+		/* Release the index lists not needed by the children anymore */
+		if (isLeftChild)
+			ctx.rightAlloc.release(boost::get<3>(partition));
+		else
+			ctx.leftAlloc.release(boost::get<1>(partition));	
+
+		if (finalSAHCost < primCount * m_intersectionCost) {
+			return finalSAHCost;
+		} else {
+			/* In the end, splitting didn't help to reduce the SAH cost.
+			   Tear up everything below this node and create a leaf */
+			if (m_indirectionTable.size() > initialIndirectionTableSize)
+				m_indirectionTable.resize(initialIndirectionTableSize);
+			tearUp(ctx, node);
+			m_badSplits++;
+			return createLeaf(ctx, node, primCount);
+		}
+	}
+
+	/**
+	 * \brief Tear up a subtree after a split did not reduce the SAH cost
+	 */
+	void tearUp(BuildContext &ctx, KDNode *node) {
+		if (node->isLeaf()) {
+			/// XXX Create primitive list for leaf
+		} else {
+			KDNode *left;
+			if (EXPECT_TAKEN(!node->isIndirection()))
+				left = node->getLeft();
+			else
+				left = m_indirectionTable[node->getIndirectionIndex()];
+
+			tearUp(ctx, left);
+			tearUp(ctx, left+1);
+
+			ctx.nodeAlloc.release(left);
+		}
 	}
 protected:
 	/**
@@ -367,8 +470,9 @@ protected:
 			struct {
 				/* Bit layout:
 				   31   : False (inner node)
-				   30-3 : Offset to the right child
-				   3-0  : Split axis
+				   30   : Indirection node flag
+				   29-3 : Offset to the left child
+				   2-0  : Split axis
 				*/
 				uint32_t combined;
 
@@ -391,26 +495,52 @@ protected:
 
 		enum EMask {
 			ETypeMask = 1 << 31,
+			EIndirectionMask = 1 << 30,
 			ELeafOffsetMask = ~ETypeMask,
 			EInnerAxisMask = 0x3,
-			EInnerOffsetMask = ~EInnerAxisMask
+			EInnerOffsetMask = ~(EInnerAxisMask + EIndirectionMask),
+			ERelOffsetLimit = (1<<28) - 1
 		};
 
 		/// Initialize a leaf kd-Tree node
-		inline void setLeaf(unsigned int offset, unsigned int numPrims) {
+		inline void initLeafNode(unsigned int offset, unsigned int numPrims) {
 			leaf.combined = ETypeMask | offset;
 			leaf.end = offset + numPrims;
 		}
 
-		/// Initialize an interior kd-Tree node
-		inline void setInner(int axis, unsigned int offset, Float split) {
-			inner.combined = axis | (offset << 2);
-			inner.split = (float) split;
+		/**
+		 * Initialize an interior kd-Tree node. Reports a failure if the
+		 * relative offset to the left child node is too large.
+		 */
+		inline bool initInnerNode(int axis, float split, ptrdiff_t relOffset) {
+			if (relOffset < 0 || relOffset > ERelOffsetLimit)
+				return false;
+			inner.combined = axis | ((uint32_t) relOffset << 2);
+			inner.split = split;
+			return true;
+		}
+
+		/**
+		 * \brief Initialize an interior indirection node.
+		 *
+		 * Indirections are necessary whenever the children cannot be 
+		 * referenced using a relative pointer, which can happen when 
+		 * they lie in different memory chunks. In this case, the node
+		 * stores an index into a globally shared pointer list.
+		 */
+		inline void initIndirectionNode(int axis, float split, uint32_t indirectionEntry) {
+			inner.combined = EIndirectionMask | axis | ((uint32_t) indirectionEntry << 2);
+			inner.split = split;
 		}
 
 		/// Is this a leaf node?
 		FINLINE bool isLeaf() const {
 			return leaf.combined & ETypeMask;
+		}
+
+		/// Is this an indirection node?
+		FINLINE bool isIndirection() const {
+			return leaf.combined & EIndirectionMask;
 		}
 
 		/// Assuming this is a leaf node, return the first primitive index
@@ -422,10 +552,10 @@ protected:
 		FINLINE index_type getPrimEnd() const {
 			return leaf.end;
 		}
-		
-		/// Return the sibling of this node
-		FINLINE const KDNode * __restrict getSibling() const {
-			return (const KDNode *) ((ptrdiff_t) this ^ (ptrdiff_t) 8);
+				
+		/// Return the index of an indirection node
+		FINLINE index_type getIndirectionIndex() const {
+			return(inner.combined & EInnerOffsetMask) >> 2;
 		}
 
 		/// Return the left child (assuming that this is an interior node)
@@ -433,12 +563,18 @@ protected:
 			return this + 
 				((inner.combined & EInnerOffsetMask) >> 2);
 		}
-		
-		/// Return the right child (assuming that this is an interior node)
+
+		/// Return the left child (assuming that this is an interior node)
+		FINLINE KDNode * __restrict getLeft() {
+			return this + 
+				((inner.combined & EInnerOffsetMask) >> 2);
+		}
+
+		/// Return the left child (assuming that this is an interior node)
 		FINLINE const KDNode * __restrict getRight() const {
 			return getLeft() + 1;
 		}
-
+		
 		/// Return the split plane location (assuming that this is an interior node)
 		FINLINE float getSplit() const {
 			return inner.split;
@@ -489,9 +625,8 @@ protected:
 							* invBinSize[axis]);
 					int maxIdx = (int) ((aabb.max[axis] - m_aabb.min[axis]) 
 							* invBinSize[axis]);
-					Assert(minIdx >= 0 && maxIdx >= 0);
-					m_maxBins[axis * BinCount + std::min(maxIdx, BinCount-1)]++;
-					m_minBins[axis * BinCount + std::min(minIdx, BinCount-1)]++;
+					m_maxBins[axis * BinCount + std::max(0, std::min(maxIdx, BinCount-1))]++;
+					m_minBins[axis * BinCount + std::max(0, std::min(minIdx, BinCount-1))]++;
 				}
 			}
 		}
@@ -620,12 +755,10 @@ protected:
 			if (isLeftChild) {
 				OrderedChunkAllocator &rightAlloc = ctx.rightAlloc;
 				leftIndices = primIndices;
-				rightIndices = rightAlloc.allocate<index_type>(
-					sizeof(index_type) * split.numRight);
+				rightIndices = rightAlloc.allocate<index_type>(split.numRight);
 			} else {
 				OrderedChunkAllocator &leftAlloc = ctx.leftAlloc;
-				leftIndices = leftAlloc.allocate<index_type>(
-					sizeof(index_type) * split.numLeft);
+				leftIndices = leftAlloc.allocate<index_type>(split.numLeft);
 				rightIndices = primIndices;
 			}
 
@@ -637,7 +770,7 @@ protected:
 					Assert(numLeft < split.numLeft);
 					leftBounds.expandBy(aabb);
 					leftIndices[numLeft++] = primIndex;
-				} else if (aabb.min[axis] >= splitPos) {
+				} else if (aabb.min[axis] > splitPos) {
 					Assert(numRight < split.numRight);
 					rightBounds.expandBy(aabb);
 					rightIndices[numRight++] = primIndex;
@@ -656,26 +789,19 @@ protected:
 
 			/// Release the unused memory regions
 			if (isLeftChild)
-				ctx.leftAlloc.shrinkAllocation(leftIndices, 
-						split.numLeft * sizeof(index_type));
+				ctx.leftAlloc.shrinkAllocation(leftIndices, split.numLeft);
 			else
-				ctx.rightAlloc.shrinkAllocation(rightIndices, 
-						split.numRight * sizeof(index_type));
+				ctx.rightAlloc.shrinkAllocation(rightIndices, split.numRight);
 
 			leftBounds.max[axis] = std::min(leftBounds.max[axis], (Float) splitPos);
 			rightBounds.min[axis] = std::max(rightBounds.min[axis], (Float) splitPos);
 
-			if (leftBounds.max[axis] != rightBounds.min[axis] && false) {
+			if (leftBounds.max[axis] != rightBounds.min[axis]) {
 				/* There is some space between the child nodes -- move
 				   the split plane onto one of the AABBs so that the
 				   surface area heuristic is minimized */
 				Float normalization = 2.0f / m_aabb.getSurfaceArea();
 				Vector extents = m_aabb.getExtents();
-
-				cout << "There is some space (split=" << splitPos << ") :" << endl;
-				cout << m_aabb.toString() << endl;
-				cout << leftBounds.toString() << endl;
-				cout << rightBounds.toString() << endl;
 
 				extents[axis] = leftBounds.max[axis] - m_aabb.min[axis];
 				Float pLeft1 = normalization * (extents.x*extents.y 
@@ -696,11 +822,11 @@ protected:
 					* (pLeft2 * numLeft + pRight2 * numRight);
 
 				if (sahCost1 <= sahCost2) {
-					cout << "Adjusting cost from " << split.cost << " to " << sahCost1 << endl;
+					Assert(sahCost1 <= split.cost);
 					split.cost = sahCost1;
 					split.pos = leftBounds.max[axis];
 				} else {
-					cout << "Adjusting cost from " << split.cost << " to " << sahCost2 << endl;
+					Assert(sahCost2 <= split.cost);
 					split.cost = sahCost2;
 					split.pos = rightBounds.min[axis];
 				}
@@ -717,6 +843,8 @@ protected:
 	};
 
 private:
+	KDNode *m_root;
+	std::vector<KDNode *> m_indirectionTable;
 	Float m_traversalCost;
 	Float m_intersectionCost;
 	Float m_emptySpaceBonus;
@@ -724,6 +852,9 @@ private:
 	AABB m_aabb;
 	size_type m_maxDepth;
 	size_type m_stopPrims;
+	size_type m_leafNodeCount;
+	size_type m_innerNodeCount;
+	size_type m_badSplits;
 };
 
 MTS_NAMESPACE_END
