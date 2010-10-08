@@ -183,7 +183,7 @@ public:
 	 * the SAH optimization routines.
 	 * */
 	struct SplitCandidate {
-		Float cost;
+		Float sahCost;
 		float pos;
 		int axis;
 		int numLeft, numRight;
@@ -204,6 +204,7 @@ public:
 		m_badSplits = 0;
 		m_leafNodeCount = 0;
 		m_innerNodeCount = 0;
+		m_maxBadRefines = 3;
 	}
 
 	/// Cast to the derived class
@@ -221,7 +222,7 @@ public:
 	 */
 	void build() {
 		if (m_root != NULL)
-			Log(EError, "KD-tree has already been built!");
+			Log(EError, "The kd-tree has already been built!");
 
 		BuildContext ctx;
 		size_type primCount = downCast()->getPrimitiveCount();
@@ -259,8 +260,8 @@ public:
 		Log(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
 
 		m_root = nodeAlloc.allocate<KDNode>(1);
-		Float finalSAHCost
-			= buildTree(ctx, 1, m_root, m_aabb, m_aabb, indices, primCount, true);
+		Float finalSAHCost = buildTree(ctx, 1, m_root, 
+			m_aabb, m_aabb, indices, primCount, true, 0);
 
 		ctx.leftAlloc.release(indices);
 
@@ -301,13 +302,10 @@ public:
 	 *     KD-tree node entry to be filled
 	 * \param primCount
 	 *     Total primitive count for the current node
-	 *
-	 * \returns 
 	 */
-	Float createLeaf(BuildContext &ctx, KDNode *node, size_type primCount) {
+	void createLeaf(BuildContext &ctx, KDNode *node, size_type primCount) {
 		node->initLeafNode(0, primCount);
 		m_leafNodeCount++;
-		return m_intersectionCost * primCount;
 	}
 
 	/**
@@ -329,56 +327,74 @@ public:
 	 *     Total primitive count for the current node
 	 * \param isLeftChild
 	 *     Is this node the left child of its parent? This is important for
-	 *     memory management.
+	 *     memory management using the \ref OrderedChunkAllocator.
+	 * \param badRefines
+	 *     Number of "probable bad refines" further up the tree. This makes
+	 *     it possible to split along an initially bad-looking candidate in
+	 *     the hope that the SAH cost was significantly overestimated. The
+	 *     counter makes sure that only a limited number of such splits can
+	 *     happen in succession.
 	 * \returns 
 	 *     A tuple specifying the final SAH cost and a pointer to the node.
 	 */
 	Float buildTree(BuildContext &ctx, unsigned int depth, KDNode *node, 
 			const AABB &nodeAABB, const AABB &tightAABB, index_type *indices,
-			size_type primCount, bool isLeftChild) {
+			size_type primCount, bool isLeftChild, size_type badRefines) {
 		Assert(nodeAABB.contains(tightAABB));
 
+		Float leafCost = primCount * m_intersectionCost;
 		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
-			return createLeaf(ctx, node, primCount);
+			createLeaf(ctx, node, primCount);
+			return leafCost;
 		}
 
 		MinMaxBins<MTS_KD_MINMAX_BINS> bins(tightAABB);
 		bins.bin(downCast(), indices, primCount);
-		SplitCandidate split = bins.maximizeSAH(m_traversalCost,
+		SplitCandidate bestSplit = bins.maximizeSAH(m_traversalCost,
 			m_intersectionCost, m_emptySpaceBonus);
 
+		/* "Bad refines" heuristic from PBRT */
+		if (bestSplit.sahCost >= leafCost) {
+			if ((bestSplit.sahCost > 4 * leafCost && primCount < 16)
+					|| badRefines >= m_maxBadRefines) {
+				createLeaf(ctx, node, primCount);
+				return leafCost;
+			}
+			++badRefines;
+		}
+
 		boost::tuple<AABB, index_type *, AABB, index_type *> partition = 
-			bins.partition(ctx, downCast(), indices, split, isLeftChild, 
+			bins.partition(ctx, downCast(), indices, bestSplit, isLeftChild, 
 			m_traversalCost, m_intersectionCost);
 
 		OrderedChunkAllocator &nodeAlloc = ctx.nodeAlloc;
 		KDNode *children = nodeAlloc.allocate<KDNode>(2);
 
 		size_t initialIndirectionTableSize = m_indirectionTable.size();
-		if (!node->initInnerNode(split.axis, split.pos, children-node)) {
+		if (!node->initInnerNode(bestSplit.axis, bestSplit.pos, children-node)) {
 			/* Unable to store relative offset -- create an indirection
 			   table entry */
-			node->initIndirectionNode(split.axis, split.pos, 
+			node->initIndirectionNode(bestSplit.axis, bestSplit.pos, 
 					initialIndirectionTableSize);
 			m_indirectionTable.push_back(children);
 		}
 		m_innerNodeCount++;
 
 		AABB childAABB(nodeAABB);
-		childAABB.max[split.axis] = split.pos;
+		childAABB.max[bestSplit.axis] = bestSplit.pos;
 		Float saLeft = childAABB.getSurfaceArea();
 
 		Float leftSAHCost = buildTree(ctx, depth+1, children,
 				childAABB, boost::get<0>(partition), boost::get<1>(partition), 
-				split.numLeft, true);
+				bestSplit.numLeft, true, badRefines);
 
-		childAABB.min[split.axis] = split.pos;
-		childAABB.max[split.axis] = nodeAABB.max[split.axis];
+		childAABB.min[bestSplit.axis] = bestSplit.pos;
+		childAABB.max[bestSplit.axis] = nodeAABB.max[bestSplit.axis];
 		Float saRight = childAABB.getSurfaceArea();
 
 		Float rightSAHCost = buildTree(ctx, depth+1, children + 1,
 				childAABB, boost::get<2>(partition), boost::get<3>(partition), 
-				split.numRight, false);
+				bestSplit.numRight, false, badRefines);
 
 		/* Compute the final SAH cost given the updated cost 
 		   values received from the children */
@@ -401,7 +417,9 @@ public:
 				m_indirectionTable.resize(initialIndirectionTableSize);
 			tearUp(ctx, node);
 			m_badSplits++;
-			return createLeaf(ctx, node, primCount);
+			--m_innerNodeCount;
+			createLeaf(ctx, node, primCount);
+			return leafCost;
 		}
 	}
 
@@ -643,7 +661,7 @@ protected:
 			Float normalization = 2.0f / m_aabb.getSurfaceArea();
 			int binIdx = 0, leftBin = 0;
 			candidate.planarLeft = false;
-			candidate.cost = std::numeric_limits<Float>::infinity();
+			candidate.sahCost = std::numeric_limits<Float>::infinity();
 
 			for (int axis=0; axis<3; ++axis) {
 				Vector extents = m_aabb.getExtents();
@@ -665,14 +683,14 @@ protected:
 					Float pRight = normalization * (extents.x*extents.y 
 							+ extents.x*extents.z + extents.y*extents.z);
 
-					Float cost = traversalCost + intersectionCost 
+					Float sahCost = traversalCost + intersectionCost 
 						* (pLeft * numLeft + pRight * numRight);
 
 					if (numLeft == 0 || numRight == 0)
-						cost *= emptySpaceBonus;
+						sahCost *= emptySpaceBonus;
 
-					if (cost < candidate.cost) {
-						candidate.cost = cost;
+					if (sahCost < candidate.sahCost) {
+						candidate.sahCost = sahCost;
 						candidate.axis = axis;
 						candidate.numLeft = numLeft;
 						candidate.numRight = numRight;
@@ -684,7 +702,7 @@ protected:
 				binIdx++;
 			}
 			
-			Assert(candidate.cost != std::numeric_limits<Float>::infinity());
+			Assert(candidate.sahCost != std::numeric_limits<Float>::infinity());
 
 			const int axis = candidate.axis;
 			const float min = m_aabb.min[axis];
@@ -716,7 +734,7 @@ protected:
 				cout << "Ran into some problems!" << endl;
 				cout << "AABB = " << m_aabb.toString() << endl;
 				cout << "candidate axis = " << candidate.axis << endl;
-				cout << "candidate cost = " << candidate.cost << endl;
+				cout << "candidate cost = " << candidate.sahCost << endl;
 				cout << "prims = " << m_primCount << endl;
 				cout << "invBinSize = " << invBinSize << endl;
 				cout << "split pos = " << split << endl;
@@ -849,22 +867,19 @@ protected:
 					* (pLeft2 * numLeft + pRight2 * numRight);
 
 				if (sahCost1 <= sahCost2) {
-					if (sahCost1 > split.cost) {
-						cout << "Original splitting cost = " << split.cost << endl;
-						cout << "New splitting cost      = " << sahCost1 << endl;
-					}
-///					Assert(sahCost1 <= split.cost);
-					split.cost = sahCost1;
+					if (sahCost1 > split.sahCost) 
+						printf("%.30f should have been less than %.30f\n", sahCost1, split.sahCost);
+///					Assert(sahCost1 <= split.sahCost);
+					split.sahCost = sahCost1;
 					split.pos = leftBounds.max[axis];
 				} else {
-					if (sahCost2 > split.cost) {
-						cout << "Original splitting cost = " << split.cost << endl;
-						cout << "New splitting cost      = " << sahCost2 << endl;
-					}
-//					Assert(sahCost2 <= split.cost);
-					split.cost = sahCost2;
+					if (sahCost2 > split.sahCost) 
+						printf("%.30f should have been less than %.30f\n", sahCost2, split.sahCost);
+//					Assert(sahCost2 <= split.sahCost);
+					split.sahCost = sahCost2;
 					split.pos = rightBounds.min[axis];
 				}
+				cout << "Good!" << endl;
 			}
 
 			return boost::make_tuple(leftBounds, leftIndices,
@@ -890,6 +905,7 @@ private:
 	size_type m_leafNodeCount;
 	size_type m_innerNodeCount;
 	size_type m_badSplits;
+	size_type m_maxBadRefines;
 };
 
 MTS_NAMESPACE_END
