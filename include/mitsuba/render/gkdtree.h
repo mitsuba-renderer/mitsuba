@@ -164,6 +164,51 @@ private:
 };
 
 /**
+ * \brief Compact storage for primitive classifcation
+ *
+ * When classifying primitives with respect to a split plane,
+ * a data structure is needed to hold the tertiary result of
+ * this operation. This class implements a compact storage
+ * (2 bits per entry) in the spirit of the std::vector<bool> 
+ * specialization.
+ */
+class ClassificationStorage {
+public:
+	inline ClassificationStorage() : m_buffer(NULL),
+		m_bufferSize(0) {
+	}
+
+	inline ClassificationStorage(size_t size) {
+		m_buffer = new uint8_t[m_bufferSize];
+		m_bufferSize = size/4;
+	}
+
+	inline ~ClassificationStorage() {
+		if (m_buffer)
+			delete[] m_buffer;
+	}
+
+	inline void set(uint32_t index, uint8_t value) {
+		uint8_t *ptr = m_buffer + (index >> 2);
+		uint8_t shift = (index & 3) << 1;
+		*ptr = (*ptr & ~(3 << shift)) | (value << shift);
+	}
+
+	inline uint8_t get(uint32_t index) const {
+		uint8_t *ptr = m_buffer + (index >> 2);
+		uint8_t shift = (index & 3) << 1;
+		return (*ptr >> shift) & 3;
+	}
+
+	inline size_t getSize() const {
+		return m_bufferSize;
+	}
+private:
+	uint8_t *m_buffer;
+	size_t m_bufferSize;
+};
+
+/**
  * \brief Generic kd-tree for data structure used to accelerate 
  * ray intersections against large amounts of three-dimensional
  * shapes.
@@ -172,8 +217,6 @@ template <typename Derived> class GenericKDTree : public Object {
 protected:
 	struct KDNode;
 	struct EdgeEvent;
-	typedef EdgeEvent *EdgeEventPtr;
-	typedef EdgeEventPtr EdgeEventPtr3[3];
 
 public:
 	/// Index number format (max 2^32 prims)
@@ -197,6 +240,7 @@ public:
 	struct BuildContext {
 		OrderedChunkAllocator leftAlloc, rightAlloc;
 		OrderedChunkAllocator tempAlloc, nodeAlloc;
+		ClassificationStorage storage;
 	};
 
 	GenericKDTree() : m_root(NULL) {
@@ -267,6 +311,7 @@ public:
 
 		Log(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
 
+		ctx.storage = ClassificationStorage(primCount);
 		m_root = nodeAlloc.allocate<KDNode>(1);
 		Float finalSAHCost = buildTree(ctx, 1, m_root, 
 			m_aabb, m_aabb, indices, primCount, true, 0);
@@ -293,6 +338,8 @@ public:
 				ctx.tempAlloc.getChunkCount(), ctx.tempAlloc.getSize() / 1024.0f);
 		Log(EDebug, "   Nodes: " SIZE_T_FMT " chunks (%.2f KiB)",
 				ctx.nodeAlloc.getChunkCount(), ctx.nodeAlloc.getSize() / 1024.0f);
+		Log(EDebug, "   Classification storage : %.2f KiB", ctx.storage.getSize() / 1024.0f);
+
 		Log(EDebug, "Detailed kd-tree statistics:");
 		Log(EDebug, "   Final SAH cost      : %.2f", finalSAHCost);
 		Log(EDebug, "   Inner nodes         : %i", m_innerNodeCount);
@@ -304,12 +351,189 @@ public:
 		Log(EDebug, "   Exp. intersections  : %.2f", m_expPrimitivesIntersected);
 		Log(EDebug, "   Indirection table   : " SIZE_T_FMT " entries",
 				m_indirectionTable.size());
-	
+
 		ctx.leftAlloc.cleanup();
 		ctx.rightAlloc.cleanup();
 		ctx.tempAlloc.cleanup();
 		m_aabb.getSurfaceArea();
 	}
+protected:
+	/// Primitive classification during tree-construction
+	enum EClassificationResult {
+		EBothSides = 0,
+		ELeftSide = 1,
+		ERightSide = 2
+	};
+
+	/**
+	 * \brief Describes the beginning or end of a primitive
+	 * when projected onto a certain dimension.
+	 */
+	struct EdgeEvent {
+		/// Possible event types
+		enum EEventType {
+			EEdgeEnd = 0,
+			EEdgePlanar = 1,
+			EEdgeStart = 2
+		};
+	
+		/// Dummy constructor
+		inline EdgeEvent() { }
+
+		/// Create a new edge event
+		inline EdgeEvent(int type, float t, index_type index)
+		 : t(t), index(index), type(type) { }
+
+		/// Plane position
+		float t;
+		/// Primitive index
+		index_type index;
+		/// Event type: end/planar/start
+		uint16_t type;
+		/// Event dimension
+		uint16_t dim;
+	};
+
+	BOOST_STATIC_ASSERT(sizeof(EdgeEvent) == 12);
+
+	/// Edge event comparison functor
+	struct EdgeEventOrdering : public std::binary_function<EdgeEvent, EdgeEvent, bool> {
+		inline bool operator()(const EdgeEvent &a, const EdgeEvent &b) const {
+			if (a.dim != b.dim)
+				return a.dim < b.dim;
+			if (a.t != b.t)
+				return a.t < b.t;
+			return a.type < b.type;
+		}
+	};
+
+	/**
+	 * \brief KD-tree node in 8 bytes. 
+	 */
+	struct KDNode {
+		union {
+			/* Inner node */
+			struct {
+				/* Bit layout:
+				   31   : False (inner node)
+				   30   : Indirection node flag
+				   29-3 : Offset to the left child
+				   2-0  : Split axis
+				*/
+				uint32_t combined;
+
+				/// Split plane coordinate
+				float split;
+			} inner;
+
+			/* Leaf node */
+			struct {
+				/* Bit layout:
+				   31   : True (leaf node)
+				   30-0 : Offset to the node's primitive list
+				*/
+				uint32_t combined;
+
+				/// End offset of the primitive list
+				uint32_t end;
+			} leaf;
+		};
+
+		enum EMask {
+			ETypeMask = 1 << 31,
+			EIndirectionMask = 1 << 30,
+			ELeafOffsetMask = ~ETypeMask,
+			EInnerAxisMask = 0x3,
+			EInnerOffsetMask = ~(EInnerAxisMask + EIndirectionMask),
+			ERelOffsetLimit = (1<<28) - 1
+		};
+
+		/// Initialize a leaf kd-Tree node
+		inline void initLeafNode(unsigned int offset, unsigned int numPrims) {
+			leaf.combined = ETypeMask | offset;
+			leaf.end = offset + numPrims;
+		}
+
+		/**
+		 * Initialize an interior kd-Tree node. Reports a failure if the
+		 * relative offset to the left child node is too large.
+		 */
+		inline bool initInnerNode(int axis, float split, ptrdiff_t relOffset) {
+			if (relOffset < 0 || relOffset > ERelOffsetLimit)
+				return false;
+			inner.combined = axis | ((uint32_t) relOffset << 2);
+			inner.split = split;
+			return true;
+		}
+
+		/**
+		 * \brief Initialize an interior indirection node.
+		 *
+		 * Indirections are necessary whenever the children cannot be 
+		 * referenced using a relative pointer, which can happen when 
+		 * they lie in different memory chunks. In this case, the node
+		 * stores an index into a globally shared pointer list.
+		 */
+		inline void initIndirectionNode(int axis, float split, uint32_t indirectionEntry) {
+			inner.combined = EIndirectionMask | axis | ((uint32_t) indirectionEntry << 2);
+			inner.split = split;
+		}
+
+		/// Is this a leaf node?
+		FINLINE bool isLeaf() const {
+			return leaf.combined & ETypeMask;
+		}
+
+		/// Is this an indirection node?
+		FINLINE bool isIndirection() const {
+			return leaf.combined & EIndirectionMask;
+		}
+
+		/// Assuming this is a leaf node, return the first primitive index
+		FINLINE index_type getPrimStart() const {
+			return leaf.combined & ELeafOffsetMask;
+		}
+
+		/// Assuming this is a leaf node, return the last primitive index
+		FINLINE index_type getPrimEnd() const {
+			return leaf.end;
+		}
+				
+		/// Return the index of an indirection node
+		FINLINE index_type getIndirectionIndex() const {
+			return(inner.combined & EInnerOffsetMask) >> 2;
+		}
+
+		/// Return the left child (assuming that this is an interior node)
+		FINLINE const KDNode * __restrict getLeft() const {
+			return this + 
+				((inner.combined & EInnerOffsetMask) >> 2);
+		}
+
+		/// Return the left child (assuming that this is an interior node)
+		FINLINE KDNode * __restrict getLeft() {
+			return this + 
+				((inner.combined & EInnerOffsetMask) >> 2);
+		}
+
+		/// Return the left child (assuming that this is an interior node)
+		FINLINE const KDNode * __restrict getRight() const {
+			return getLeft() + 1;
+		}
+		
+		/// Return the split plane location (assuming that this is an interior node)
+		FINLINE float getSplit() const {
+			return inner.split;
+		}
+
+		/// Return the split axis (assuming that this is an interior node)
+		FINLINE int getAxis() const {
+			return inner.combined & EInnerAxisMask;
+		}
+	};
+
+	BOOST_STATIC_ASSERT(sizeof(KDNode) == 8);
+
 
 	/**
 	 * \brief Leaf node creation helper function
@@ -461,18 +685,21 @@ public:
 			return leafCost;
 		}
 	}
-	
+
 	Float buildTreeSAH(BuildContext &ctx, unsigned int depth, const KDNode *node,
-		const AABB &nodeAABB, EdgeEventPtr3 firstEventByAxis, 
-		EdgeEventPtr3 lastEventByAxis, size_type primCount, bool isLeftChild,
-		size_type badRefines) {
+		const AABB &nodeAABB, EdgeEvent *firstEvent, EdgeEvent *lastEvent, 
+		size_type primCount, bool isLeftChild, size_type badRefines) {
 
 		Float leafCost = primCount * m_intersectionCost;
 		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
 			createLeaf(ctx, node, nodeAABB, primCount);
 			return leafCost;
 		}
-	
+
+		Float invSA = 1.0f / nodeAABB.getSurfaceArea();
+		SplitCandidate bestSplit;
+		bestSplit.sahCost = std::numeric_limits<Float>::infinity();
+
 		/* ==================================================================== */
 	    /*                        Split candidate search                        */
     	/* ==================================================================== */
@@ -480,67 +707,185 @@ public:
 		/* First, find the optimal splitting plane according to the
 		   surface area heuristic. To do this in O(n), the search is
 		   implemented as a sweep over the edge events */
-		for (int axis=0; axis<3; axis++) {
-			/* Initially, the split plane is placed left of the scene
-			   and thus all geometry is on its right side */
-			int numLeft = 0, numPlanar = 0, numRight = primCount;
-			const EdgeEvent *firstEvent = firstEventByAxis[axis];
-			const EdgeEvent *lastEvent = lastEventByAxis[axis];
-	
-			/* Iterate over all events on the current axis */
-			for (EdgeEvent *event = firstEvent; event < lastEvent; ++event) {
-				/* Record the current position and count all 
-				   other events, which are also here */
-				Float t = event->t;
-				int numStart = 0, numEnd = 0;
-
-				/* Count "end" events */
-				while (event != lastEvent && event->t == t 
-					&& event->type == EdgeEvent::EEdgeEnd) {
-					++numEnd; ++event;
-				}
-
-				/* Count "planar" events */
-				while (event != lastEvent && event->t == t 
-					&& event->type == EdgeEvent::EEdgePlanar) {
-					++numPlanar; ++event;
-				}
-	
-				/* Count "start" events */
-				while (event != lastEvent && event->t == t 
-					&& event->type == EdgeEvent::EEdgeStart) {
-					++numStart; ++event;
-				}
-
-				/* The split plane can now be moved onto 't'. 
-				   Accordingly, all planar and ending primitives
-				   are removed from the right side */
-				numRight -= numPlanar; numRight -= numEnd;
-	
-				/* Calculate a score using the surface area heuristic */
-				if (t >= nodeAABB.min[axis] && t <= nodeAABB.max[axis]) {
-/*					Score score = SAH(axis, invSA, aabb, t, numLeft, 	
-						numRight, numPlanar);
-					if (score < bestSplit) {
-						bestSplit = score;
-					}*/
-				} else {
-					/* When primitive clipping is active, this should 
-					   never happen! */
-					AssertEx(!m_clip, "Internal error: edge event is out of bounds");
-				}
-	
-				/* The split plane is moved past 't'. All prims,
-				   which were planar on 't', are moved to the left
-				   side. Also, starting prims are now also left of
-				   the split plane. */
-				numLeft += numStart; numLeft += numPlanar;
-				numPlanar = 0;
-			}
-			/* Sanity checks. Everything should now be on the 
-			   left side of the split plane */
-			Assert(numRight == 0 && numLeft == primCount);
+			
+		/* Initially, the split plane is placed left of the scene
+		   and thus all geometry is on its right side */
+		size_type numLeft[3], numRight[3];
+		AABB aabb(nodeAABB);
+		for (int i=0; i<3; ++i) {
+			numLeft[i] = 0;
+			numRight[i] = primCount;
 		}
+		EdgeEvent *eventsByAxis[3];
+		int eventsByAxisCtr = 1;
+		eventsByAxis[0] = firstEvent;
+
+		/* Iterate over all events on the current axis */
+		for (EdgeEvent *event = firstEvent; event < lastEvent; ++event) {
+			/* Record the current position and count all 
+				other events, which are also here */
+			uint16_t axis = event->axis;
+			Float t = event->t;
+			size_type numStart = 0, numEnd = 0, numPlanar = 0;
+
+			/* Count "end" events */
+			while (event != lastEvent && event->t == t && event->axis == axis 
+				&& event->type == EdgeEvent::EEdgeEnd) {
+				++numEnd; ++event;
+			}
+
+			/* Count "planar" events */
+			while (event != lastEvent && event->t == t && event->axis == axis 
+				&& event->type == EdgeEvent::EEdgePlanar) {
+				++numPlanar; ++event;
+			}
+
+			/* Count "start" events */
+			while (event != lastEvent && event->t == t && event->axis == axis 
+				&& event->type == EdgeEvent::EEdgeStart) {
+				++numStart; ++event;
+			}
+
+			if (event < lastEvent && event->axis != axis) {
+				Assert(eventsByAxisCtr < 3);
+				/* Keep track of the beginning of dimensions */
+				eventsByAxis[eventsByAxisCtr++] = event;
+			}
+
+			/* The split plane can now be moved onto 't'. Accordingly, all planar 
+			   and ending primitives are removed from the right side */
+			numRight[axis] -= numPlanar + numEnd;
+
+			/* Calculate a score using the surface area heuristic */
+			if (EXPECT_TAKEN(t >= nodeAABB.min[axis] && t <= nodeAABB.max[axis])) {
+				Float tmp = m_aabb.max[axis];
+				aabb.max[axis] = t;
+				Float pLeft = invSA * aabb.getSurfaceArea();
+				aabb.max[axis] = tmp;
+				tmp = aabb.min[axis];
+				aabb.min[axis] = t;
+				Float pRight = invSA * aabb.getSurfaceArea();
+				aabb.min[axis] = tmp;
+				Float sahCostPlanarLeft = m_traversalCost + m_intersectionCost 
+					* (pLeft * (numLeft[axis] + numPlanar) + pRight * numRight[axis]);
+				Float sahCostPlanarRight = m_traversalCost + m_intersectionCost 
+					* (pLeft * numLeft[axis] + pRight * (numRight[axis] + numPlanar));
+
+				if (sahCostPlanarLeft < bestSplit.sahCost || sahCostPlanarRight < bestSplit.sahCost) {
+					bestSplit.pos = t;
+					bestSplit.axis = axis;
+					if (sahCostPlanarLeft < sahCostPlanarRight) {
+						bestSplit.sahCost = sahCostPlanarLeft;
+						bestSplit.numLeft = numLeft[axis] + numPlanar;
+						bestSplit.numRight = numRight[axis];
+						bestSplit.planarLeft = true;
+					} else {
+						bestSplit.sahCost = sahCostPlanarRight;
+						bestSplit.numLeft = numLeft[axis];
+						bestSplit.numRight = numRight[axis] + numPlanar;
+						bestSplit.planarLeft = false;
+					}
+				}
+			} else {
+				/* When primitive clipping is active, this should 
+					never happen! */
+				AssertEx(!m_clip, "Internal error: edge event is out of bounds");
+			}
+
+			/* The split plane is moved past 't'. All prims,
+				which were planar on 't', are moved to the left
+				side. Also, starting prims are now also left of
+				the split plane. */
+			numLeft[axis] += numStart + numPlanar;
+		}
+
+		/* Sanity checks. Everything should now be left of the split plane */
+		Assert(numRight[0] == 0 && numLeft[0] == primCount &&
+			   numRight[1] == 0 && numLeft[1] == primCount &&
+			   numRight[2] == 0 && numLeft[2] == primCount);
+
+		Assert(eventsByAxis[1]->axis == 1 && (eventsByAxis[1]-1)->axis == 0);
+		Assert(eventsByAxis[1]->axis == 2 && (eventsByAxis[1]-1)->axis == 1);
+
+		Assert(bestSplit.sahCost != std::numeric_limits<Float>::infinity());
+
+		/* "Bad refines" heuristic from PBRT */
+		if (bestSplit.sahCost >= leafCost) {
+			if ((bestSplit.sahCost > 4 * leafCost && primCount < 16)
+				|| badRefines >= m_maxBadRefines) {
+				createLeaf(ctx, node, nodeAABB, primCount);
+				return leafCost;
+			}
+			++badRefines;
+		}
+
+		/* ==================================================================== */
+		/*                      Primitive Classification                        */
+		/* ==================================================================== */
+
+		ClassificationStorage &storage = ctx.storage;
+
+		/* Initially mark all prims as being located on both sides */
+		for (EdgeEvent *event = eventsByAxis[bestSplit.axis]; 
+			 event < lastEvent && event->axis == bestSplit.axis; ++event)
+			storage.set(event->index, EBothSides);
+
+		size_type primsLeft = 0, primsRight = 0, primsBoth = primCount;
+		/* Sweep over all edge events and classify the primitives wrt. the split */
+		for (EdgeEvent *event = eventsByAxis[bestSplit.axis]; 
+			 event < lastEvent && event->axis == bestSplit.axis; ++event) {
+			if (event->type == EdgeEvent::EEdgeEnd && event.t <= bestSplit.pos) {
+				/* The primitive's interval ends before or on the split plane
+				   -> classify to the left side */
+				Assert(storage.get(event.index) == EBothSides);
+				storage.set(event.index, ELeftSide);
+				primsBoth--;
+				primsLeft++;
+			} else if (event->type == EdgeEvent::EEdgeStart
+					&& event.t >= bestSplit.pos) {
+				/* The primitive's interval starts after or on the split plane
+				   -> classify to the right side */
+				Assert(storage.get(event.index) == EBothSides);
+				storage.set(event.index, ERightSide);
+				primsBoth--;
+				primsRight++;
+			} else if (event.type == EdgeEvent::EEdgePlanar) {
+				/* If the planar primitive is not on the split plane, the
+				   classification is easy. Otherwise, place it on the side with
+				   the better SAH score */
+				Assert(storage.get(event.index) == EBothSides);
+				if (event.t < bestSplit.t || (event.t == bestSplit.pos
+						&& bestSplit.planarLeft)) {
+					storage.set(event.index, ELeftSide);
+					primsBoth--;
+					primsLeft++;
+				} else if (event.t > bestSplit.t || (event.t == bestSplit.pos && 
+					!bestSplit.planarLeft)) {
+					storage.set(event.index, ERightSide);
+					primsBoth--;
+					primsRight++;
+				} else {
+					AssertEx(false, "Internal error!");
+				}
+			}
+		}
+	
+		/* Some sanity checks */
+		Assert(primsLeft + primsRight + primsBoth == primCount);
+		Assert(primsLeft + primsBoth == bestSplit.nLeft);
+		Assert(primsRight + primsBoth == bestSplit.nRight);
+
+		EdgeEvent *leftEvents, *rightEvents;
+		if (isLeftChild) {
+			OrderedChunkAllocator &rightAlloc = ctx.rightAlloc;
+			leftEvents = firstEvent;
+			rightEvents = rightAlloc.allocate<EdgeEvent>(bestSplit.numRight * 6);
+		} else {
+			OrderedChunkAllocator &leftAlloc = ctx.leftAlloc;
+			leftEvents = leftAlloc.allocate<EdgeEvent>(bestSplit.numLeft * 6);
+			rightEvents = firstEvent;
+		}
+
 
 	}
 
@@ -563,172 +908,7 @@ public:
 			ctx.nodeAlloc.release(left);
 		}
 	}
-protected:
-	/**
-	 * \brief Describes the beginning or end of a primitive
-	 * when projected onto a certain dimension.
-	 */
-	struct EdgeEvent {
-		/// Possible event types
-		enum EEventType {
-			EEdgeEnd = 0,
-			EEdgePlanar = 1,
-			EEdgeStart = 2
-		};
 	
-		/// Dummy constructor
-		inline EdgeEvent() { }
-
-		/// Create a new edge event
-		inline EdgeEvent(int type, float t, index_type index)
-		 : t(t), index(index), type(type) { }
-
-		/// Plane position
-		float t;
-		/// Primitive index
-		index_type index;
-		/// Event type: end/planar/start
-		int type;
-	};
-
-	BOOST_STATIC_ASSERT(sizeof(EdgeEvent) == 12);
-
-	/// Edge event comparison functor
-	struct EdgeEventOrdering : public std::binary_function<EdgeEvent, EdgeEvent, bool> {
-		inline bool operator()(const EdgeEvent &a, const EdgeEvent &b) const {
-			if (a.t != b.t)
-				return a.t < b.t;
-			return a.type < b.type;
-		}
-	};
-
-	/**
-	 * \brief KD-tree node in 8 bytes. 
-	 */
-	struct KDNode {
-		union {
-			/* Inner node */
-			struct {
-				/* Bit layout:
-				   31   : False (inner node)
-				   30   : Indirection node flag
-				   29-3 : Offset to the left child
-				   2-0  : Split axis
-				*/
-				uint32_t combined;
-
-				/// Split plane coordinate
-				float split;
-			} inner;
-
-			/* Leaf node */
-			struct {
-				/* Bit layout:
-				   31   : True (leaf node)
-				   30-0 : Offset to the node's primitive list
-				*/
-				uint32_t combined;
-
-				/// End offset of the primitive list
-				uint32_t end;
-			} leaf;
-		};
-
-		enum EMask {
-			ETypeMask = 1 << 31,
-			EIndirectionMask = 1 << 30,
-			ELeafOffsetMask = ~ETypeMask,
-			EInnerAxisMask = 0x3,
-			EInnerOffsetMask = ~(EInnerAxisMask + EIndirectionMask),
-			ERelOffsetLimit = (1<<28) - 1
-		};
-
-		/// Initialize a leaf kd-Tree node
-		inline void initLeafNode(unsigned int offset, unsigned int numPrims) {
-			leaf.combined = ETypeMask | offset;
-			leaf.end = offset + numPrims;
-		}
-
-		/**
-		 * Initialize an interior kd-Tree node. Reports a failure if the
-		 * relative offset to the left child node is too large.
-		 */
-		inline bool initInnerNode(int axis, float split, ptrdiff_t relOffset) {
-			if (relOffset < 0 || relOffset > ERelOffsetLimit)
-				return false;
-			inner.combined = axis | ((uint32_t) relOffset << 2);
-			inner.split = split;
-			return true;
-		}
-
-		/**
-		 * \brief Initialize an interior indirection node.
-		 *
-		 * Indirections are necessary whenever the children cannot be 
-		 * referenced using a relative pointer, which can happen when 
-		 * they lie in different memory chunks. In this case, the node
-		 * stores an index into a globally shared pointer list.
-		 */
-		inline void initIndirectionNode(int axis, float split, uint32_t indirectionEntry) {
-			inner.combined = EIndirectionMask | axis | ((uint32_t) indirectionEntry << 2);
-			inner.split = split;
-		}
-
-		/// Is this a leaf node?
-		FINLINE bool isLeaf() const {
-			return leaf.combined & ETypeMask;
-		}
-
-		/// Is this an indirection node?
-		FINLINE bool isIndirection() const {
-			return leaf.combined & EIndirectionMask;
-		}
-
-		/// Assuming this is a leaf node, return the first primitive index
-		FINLINE index_type getPrimStart() const {
-			return leaf.combined & ELeafOffsetMask;
-		}
-
-		/// Assuming this is a leaf node, return the last primitive index
-		FINLINE index_type getPrimEnd() const {
-			return leaf.end;
-		}
-				
-		/// Return the index of an indirection node
-		FINLINE index_type getIndirectionIndex() const {
-			return(inner.combined & EInnerOffsetMask) >> 2;
-		}
-
-		/// Return the left child (assuming that this is an interior node)
-		FINLINE const KDNode * __restrict getLeft() const {
-			return this + 
-				((inner.combined & EInnerOffsetMask) >> 2);
-		}
-
-		/// Return the left child (assuming that this is an interior node)
-		FINLINE KDNode * __restrict getLeft() {
-			return this + 
-				((inner.combined & EInnerOffsetMask) >> 2);
-		}
-
-		/// Return the left child (assuming that this is an interior node)
-		FINLINE const KDNode * __restrict getRight() const {
-			return getLeft() + 1;
-		}
-		
-		/// Return the split plane location (assuming that this is an interior node)
-		FINLINE float getSplit() const {
-			return inner.split;
-		}
-
-		/// Return the split axis (assuming that this is an interior node)
-		FINLINE int getAxis() const {
-			return inner.combined & EInnerAxisMask;
-		}
-	};
-
-	BOOST_STATIC_ASSERT(sizeof(KDNode) == 8);
-
 	/**
 	 * \brief Min-max binning as described in
 	 * "Highly Parallel Fast KD-tree Construction for Interactive
