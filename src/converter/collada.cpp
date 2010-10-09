@@ -550,7 +550,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 
 		std::string matID;
 		if (polylist->getMaterial() == NULL || matLookupTable.find(polylist->getMaterial()) == matLookupTable.end())
-			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
+			SLog(EWarn, "Referenced material \"%s\" could not be found, substituting a lambertian BRDF.", polylist->getMaterial());
 		else
 			matID = matLookupTable[polylist->getMaterial()];
 
