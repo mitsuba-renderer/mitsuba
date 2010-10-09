@@ -102,9 +102,10 @@ class MTS_EXPORT_CORE ConditionVariable : public Object {
 public:
 	/**
 	 * \brief Create a new condition variable. Also takes a 
-	 * mutex, which is later used by wait().
+	 * mutex, which is later used by wait(). If none is specified,
+	 * a new mutex instance will be created.
 	 */
-	ConditionVariable(Mutex *mutex);
+	ConditionVariable(Mutex *mutex = NULL);
 
 	/**
 	 * \brief Send a signal, which wakes up at least one of 

@@ -55,7 +55,8 @@ Mutex::~Mutex() {
 	}
 }
 
-ConditionVariable::ConditionVariable(Mutex *mutex) : m_mutex(mutex) {
+ConditionVariable::ConditionVariable(Mutex *mutex) {
+	m_mutex = mutex != NULL ? mutex : new Mutex();
 	pthread_cond_init(&m_cond, NULL);
 }
 

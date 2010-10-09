@@ -179,8 +179,8 @@ public:
 	}
 
 	inline ClassificationStorage(size_t size) {
-		m_buffer = new uint8_t[m_bufferSize];
 		m_bufferSize = size/4;
+		m_buffer = new uint8_t[m_bufferSize];
 	}
 
 	inline ~ClassificationStorage() {
@@ -226,49 +226,18 @@ public:
 	typedef uint32_t size_type;
 
 	/**
-	 * \brief Data type for split candidates computed by 
-	 * the SAH optimization routines.
-	 * */
-	struct SplitCandidate {
-		Float sahCost;
-		float pos;
-		int axis;
-		int numLeft, numRight;
-		bool planarLeft;
-	};
-
-	struct BuildContext {
-		OrderedChunkAllocator leftAlloc, rightAlloc;
-		OrderedChunkAllocator tempAlloc, nodeAlloc;
-		ClassificationStorage storage;
-	};
-
+	 * \brief Create a new kd-tree instance initialized with 
+	 * the default parameters.
+	 */
 	GenericKDTree() : m_root(NULL) {
 		m_traversalCost = 15;
 		m_intersectionCost = 20;
 		m_emptySpaceBonus = 0.8f;
 		m_clip = true;
 		m_stopPrims = 2;
-		m_badSplits = 0;
-		m_leafNodeCount = 0;
-		m_nonemptyLeafNodeCount = 0;
-		m_innerNodeCount = 0;
 		m_maxBadRefines = 3;
-		m_expTraversalSteps = 0;
-		m_expLeavesVisited = 0;
-		m_expPrimitivesIntersected = 0;
 	}
-
-	/// Cast to the derived class
-	inline Derived *downCast() {
-		return static_cast<Derived *>(this);
-	}
-
-	/// Cast to the derived class (const version)
-	inline const Derived *downCast() const {
-		return static_cast<Derived *>(this);
-	}
-
+		
 	/**
 	 * \brief Build a KD-tree over supplied geometry
 	 */
@@ -276,8 +245,8 @@ public:
 		if (m_root != NULL)
 			Log(EError, "The kd-tree has already been built!");
 
-		BuildContext ctx;
 		size_type primCount = downCast()->getPrimitiveCount();
+		BuildContext ctx(primCount);
 
 		/* Establish an ad-hoc depth cutoff value (Formula from PBRT) */
 		m_maxDepth = std::min((int) (8 + 1.3f * log2i(primCount)), MTS_KD_MAX_DEPTH);
@@ -308,53 +277,67 @@ public:
 		Log(EDebug, "   Min-max bins             : %i", MTS_KD_MINMAX_BINS);
 		Log(EDebug, "   Exact SAH eval. depth    : %i", MTS_KD_MINMAX_DEPTH);
 		Log(EDebug, "   Perfect splits           : %s", m_clip ? "yes" : "no");
+		Log(EDebug, "");
+
+		size_type procCount = getProcessorCount();
+		m_builders.resize(procCount);
+		for (size_type i=0; i<procCount; ++i) {
+			m_builders[i] = new SAHTreeBuilder(i, primCount, m_interface);
+			m_builders[i]->start();
+		}
 
 		Log(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
 
-		ctx.storage = ClassificationStorage(primCount);
 		m_root = nodeAlloc.allocate<KDNode>(1);
-		Float finalSAHCost = buildTree(ctx, 1, m_root, 
+		Float finalSAHCost = buildTreeMinMax(ctx, 1, m_root, 
 			m_aabb, m_aabb, indices, primCount, true, 0);
 
 		ctx.leftAlloc.release(indices);
 
 		Assert(ctx.leftAlloc.getUsed() == 0);
 		Assert(ctx.rightAlloc.getUsed() == 0);
-		Assert(ctx.tempAlloc.getUsed() == 0);
-
-		Float rootSA = m_aabb.getSurfaceArea();
-		m_expTraversalSteps /= rootSA;
-		m_expLeavesVisited /= rootSA;
-		m_expPrimitivesIntersected /= rootSA;
 
 		Log(EInfo, "Finished -- took %i ms.", timer->getMilliseconds());
+		m_interface.done = true;
+		m_interface.cond->broadcast();
+		for (size_type i=0; i<procCount; ++i)
+			m_builders[i]->join();
+		Log(EDebug, "");
 
-		Log(EDebug, "Chunk allocator statistics");
-		Log(EDebug, "   Left:  " SIZE_T_FMT " chunks (%.2f KiB)",
-				ctx.leftAlloc.getChunkCount(), ctx.leftAlloc.getSize() / 1024.0f);
-		Log(EDebug, "   Right: " SIZE_T_FMT " chunks (%.2f KiB)",
-				ctx.rightAlloc.getChunkCount(), ctx.rightAlloc.getSize() / 1024.0f);
-		Log(EDebug, "   Temp:  " SIZE_T_FMT " chunks (%.2f KiB)",
-				ctx.tempAlloc.getChunkCount(), ctx.tempAlloc.getSize() / 1024.0f);
-		Log(EDebug, "   Nodes: " SIZE_T_FMT " chunks (%.2f KiB)",
-				ctx.nodeAlloc.getChunkCount(), ctx.nodeAlloc.getSize() / 1024.0f);
-		Log(EDebug, "   Classification storage : %.2f KiB", ctx.storage.getSize() / 1024.0f);
+		Log(EDebug, "Memory allocation statistics:");
+		Log(EDebug, "   Classification storage : %.2f KiB", 
+				(ctx.storage.getSize() * (1+procCount)) / 1024.0f);
+
+		ctx.printStats();
+
+		for (size_type i=0; i<procCount; ++i) {
+			Log(EDebug, "Thread %i:", i);
+			BuildContext &subCtx = m_builders[i]->getContext();
+			ctx.accumulateStatistics(subCtx);
+			subCtx.printStats();
+		}
+		Log(EDebug, "");
+
+		Float rootSA = m_aabb.getSurfaceArea();
+		ctx.expTraversalSteps /= rootSA;
+		ctx.expLeavesVisited /= rootSA;
+		ctx.expPrimitivesIntersected /= rootSA;
 
 		Log(EDebug, "Detailed kd-tree statistics:");
 		Log(EDebug, "   Final SAH cost      : %.2f", finalSAHCost);
-		Log(EDebug, "   Inner nodes         : %i", m_innerNodeCount);
-		Log(EDebug, "   Leaf nodes          : %i", m_leafNodeCount);
-		Log(EDebug, "   Nonempty leaf nodes : %i", m_nonemptyLeafNodeCount);
-		Log(EDebug, "   Bad splits          : %i", m_badSplits);
-		Log(EDebug, "   Exp. traversals     : %.2f", m_expTraversalSteps);
-		Log(EDebug, "   Exp. leaf visits    : %.2f", m_expLeavesVisited);
-		Log(EDebug, "   Exp. intersections  : %.2f", m_expPrimitivesIntersected);
+		Log(EDebug, "   Inner nodes         : %i", ctx.innerNodeCount);
+		Log(EDebug, "   Leaf nodes          : %i", ctx.leafNodeCount);
+		Log(EDebug, "   Nonempty leaf nodes : %i", ctx.nonemptyLeafNodeCount);
+		Log(EDebug, "   Retracted splits    : %i", ctx.retractedSplits);
+		Log(EDebug, "   Exp. traversals     : %.2f", ctx.expTraversalSteps);
+		Log(EDebug, "   Exp. leaf visits    : %.2f", ctx.expLeavesVisited);
+		Log(EDebug, "   Exp. intersections  : %.2f", ctx.expPrimitivesIntersected);
 		Log(EDebug, "   Indirection table   : " SIZE_T_FMT " entries",
 				m_indirectionTable.size());
+		Log(EDebug, "");
 
 		ctx.leftAlloc.cleanup();
 		ctx.rightAlloc.cleanup();
-		ctx.tempAlloc.cleanup();
 		m_aabb.getSurfaceArea();
 	}
 protected:
@@ -381,8 +364,8 @@ protected:
 		inline EdgeEvent() { }
 
 		/// Create a new edge event
-		inline EdgeEvent(int type, float t, index_type index)
-		 : t(t), index(index), type(type) { }
+		inline EdgeEvent(uint16_t type, uint16_t axis, float t, index_type index)
+		 : t(t), index(index), type(type), axis(axis) { }
 
 		/// Plane position
 		float t;
@@ -390,8 +373,8 @@ protected:
 		index_type index;
 		/// Event type: end/planar/start
 		uint16_t type;
-		/// Event dimension
-		uint16_t dim;
+		/// Event axis
+		uint16_t axis;
 	};
 
 	BOOST_STATIC_ASSERT(sizeof(EdgeEvent) == 12);
@@ -399,11 +382,95 @@ protected:
 	/// Edge event comparison functor
 	struct EdgeEventOrdering : public std::binary_function<EdgeEvent, EdgeEvent, bool> {
 		inline bool operator()(const EdgeEvent &a, const EdgeEvent &b) const {
-			if (a.dim != b.dim)
-				return a.dim < b.dim;
+			if (a.axis != b.axis)
+				return a.axis < b.axis;
 			if (a.t != b.t)
 				return a.t < b.t;
 			return a.type < b.type;
+		}
+	};
+
+	/**
+	 * \brief Data type for split candidates computed by 
+	 * the SAH optimization routines.
+	 * */
+	struct SplitCandidate {
+		Float sahCost;
+		float pos;
+		int axis;
+		int numLeft, numRight;
+		bool planarLeft;
+	};
+
+
+	/**
+	 * \brief Per-thread context used to manage memory allocations,
+	 * also records some useful statistics.
+	 */
+	struct BuildContext {
+		OrderedChunkAllocator leftAlloc, rightAlloc, nodeAlloc;
+		ClassificationStorage storage;
+	
+		size_type leafNodeCount;
+		size_type nonemptyLeafNodeCount;
+		size_type innerNodeCount;
+		size_type retractedSplits;
+		Float expTraversalSteps;
+		Float expLeavesVisited;
+		Float expPrimitivesIntersected;
+
+		inline BuildContext(size_type primCount) : storage(primCount) {
+			retractedSplits = 0;
+			leafNodeCount = 0;
+			nonemptyLeafNodeCount = 0;
+			innerNodeCount = 0;
+			expTraversalSteps = 0;
+			expLeavesVisited = 0;
+			expPrimitivesIntersected = 0;
+		}
+
+		void printStats() {
+			Log(EDebug, "   Left:  " SIZE_T_FMT " chunks (%.2f KiB)",
+					leftAlloc.getChunkCount(), leftAlloc.getSize() / 1024.0f);
+			Log(EDebug, "   Right: " SIZE_T_FMT " chunks (%.2f KiB)",
+					rightAlloc.getChunkCount(), rightAlloc.getSize() / 1024.0f);
+			Log(EDebug, "   Nodes: " SIZE_T_FMT " chunks (%.2f KiB)",
+					nodeAlloc.getChunkCount(), nodeAlloc.getSize() / 1024.0f);
+		}
+
+		void accumulateStatistics(const BuildContext &ctx) {
+			leafNodeCount += ctx.leafNodeCount;
+			nonemptyLeafNodeCount += ctx.nonemptyLeafNodeCount;
+			innerNodeCount += ctx.innerNodeCount;
+			retractedSplits += ctx.retractedSplits;
+			expTraversalSteps += ctx.expTraversalSteps;
+			expLeavesVisited += ctx.expLeavesVisited;
+			expPrimitivesIntersected += ctx.expPrimitivesIntersected;
+		}
+	};
+
+	/**
+	 * \brief Communication data structure used to pass jobs to
+	 * SAH kd-tree builder threads
+	 */
+	struct BuildInterface {
+		/* Communcation */
+		ref<Mutex> mutex;
+		ref<ConditionVariable> cond;
+		bool done;
+
+		/* Job description for building a subtree */
+		int depth;
+		KDNode *node;
+		AABB nodeAABB;
+		EdgeEvent *firstEvent, *lastEvent;
+		size_t primCount;
+		int badRefines;
+
+		inline BuildInterface() {
+			mutex = new Mutex();
+			cond = new ConditionVariable(mutex);
+			done = false;
 		}
 	};
 
@@ -534,6 +601,73 @@ protected:
 
 	BOOST_STATIC_ASSERT(sizeof(KDNode) == 8);
 
+	/**
+	 * \brief SAH kd-tree builder thread
+	 */
+	class SAHTreeBuilder : public Thread {
+	public:
+		SAHTreeBuilder(size_type idx, size_type primCount, BuildInterface &interface) 
+			: Thread(formatString("bld%i", idx)), m_context(primCount), m_interface(interface) { }
+
+		void run() {
+			m_interface.mutex->lock();
+			while (!m_interface.done) {
+				m_interface.cond->wait();
+			}
+			m_interface.mutex->unlock();
+		}
+
+		inline BuildContext &getContext() {
+			return m_context;
+		}
+
+	private:
+		BuildContext m_context;
+		BuildInterface &m_interface;
+	};
+
+	/// Cast to the derived class
+	inline Derived *downCast() {
+		return static_cast<Derived *>(this);
+	}
+
+	/// Cast to the derived class (const version)
+	inline const Derived *downCast() const {
+		return static_cast<Derived *>(this);
+	}
+
+	/**
+	 * \brief Create an edge event list for a given list of primitives. 
+	 *
+	 * This is necessary when passing from Min-Max binning to the more 
+	 * accurate SAH-based optimizier.
+	 */
+	boost::tuple<EdgeEvent *, EdgeEvent *> createEventList(BuildContext &ctx, 
+			index_type *prims, size_type primCount) {
+		OrderedChunkAllocator &leftAlloc = ctx.leftAlloc;
+		EdgeEvent *firstEvent = leftAlloc.allocate<EdgeEvent>(primCount*6);
+		EdgeEvent *lastEvent = firstEvent;
+
+		for (size_type i=0; i<primCount; ++i) {
+			index_type index = prims[i];
+			AABB aabb = downCast()->getAABB(index);
+
+			for (int axis=0; axis<3; ++axis) {
+				Float min = aabb.min[axis], max = aabb.max[axis];
+
+				if (min == max) {
+					*lastEvent++ = EdgeEvent(EdgeEvent::EEdgePlanar, axis, min, index);
+				} else {
+					*lastEvent++ = EdgeEvent(EdgeEvent::EEdgeStart, axis, min, index);
+					*lastEvent++ = EdgeEvent(EdgeEvent::EEdgeEnd, axis, max, index);
+				}
+			}
+		}
+
+		leftAlloc.shrinkAllocation<EdgeEvent>(ctx.firstEvent, ctx.firstEvent-lastEvent);
+
+		return boost::make_tuple(firstEvent, lastEvent);
+	}
 
 	/**
 	 * \brief Leaf node creation helper function
@@ -547,11 +681,11 @@ protected:
 	 */
 	void createLeaf(BuildContext &ctx, KDNode *node, const AABB &nodeAABB, size_type primCount) {
 		node->initLeafNode(0, primCount);
-		m_leafNodeCount++;
-		m_expLeavesVisited += nodeAABB.getSurfaceArea();
-		m_expPrimitivesIntersected += primCount * nodeAABB.getSurfaceArea();
+		ctx.leafNodeCount++;
+		ctx.expLeavesVisited += nodeAABB.getSurfaceArea();
+		ctx.expPrimitivesIntersected += primCount * nodeAABB.getSurfaceArea();
 		if (primCount > 0)
-			m_nonemptyLeafNodeCount++;
+			ctx.nonemptyLeafNodeCount++;
 	}
 
 	/**
@@ -583,7 +717,7 @@ protected:
 	 * \returns 
 	 *     A tuple specifying the final SAH cost and a pointer to the node.
 	 */
-	Float buildTree(BuildContext &ctx, unsigned int depth, KDNode *node, 
+	Float buildTreeMinMax(BuildContext &ctx, unsigned int depth, KDNode *node, 
 			const AABB &nodeAABB, const AABB &tightAABB, index_type *indices,
 			size_type primCount, bool isLeftChild, size_type badRefines) {
 		Assert(nodeAABB.contains(tightAABB));
@@ -646,7 +780,7 @@ protected:
 		childAABB.max[bestSplit.axis] = bestSplit.pos;
 		Float saLeft = childAABB.getSurfaceArea();
 
-		Float leftSAHCost = buildTree(ctx, depth+1, children,
+		Float leftSAHCost = buildTreeMinMax(ctx, depth+1, children,
 				childAABB, boost::get<0>(partition), boost::get<1>(partition), 
 				bestSplit.numLeft, true, badRefines);
 
@@ -654,7 +788,7 @@ protected:
 		childAABB.max[bestSplit.axis] = nodeAABB.max[bestSplit.axis];
 		Float saRight = childAABB.getSurfaceArea();
 
-		Float rightSAHCost = buildTree(ctx, depth+1, children + 1,
+		Float rightSAHCost = buildTreeMinMax(ctx, depth+1, children + 1,
 				childAABB, boost::get<2>(partition), boost::get<3>(partition), 
 				bestSplit.numRight, false, badRefines);
 
@@ -671,8 +805,8 @@ protected:
 			ctx.leftAlloc.release(boost::get<1>(partition));	
 
 		if (finalSAHCost < primCount * m_intersectionCost) {
-			m_expTraversalSteps += nodeAABB.getSurfaceArea();
-			m_innerNodeCount++;
+			ctx.expTraversalSteps += nodeAABB.getSurfaceArea();
+			ctx.innerNodeCount++;
 			return finalSAHCost;
 		} else {
 			/* In the end, splitting didn't help to reduce the SAH cost.
@@ -680,13 +814,13 @@ protected:
 			if (m_indirectionTable.size() > initialIndirectionTableSize)
 				m_indirectionTable.resize(initialIndirectionTableSize);
 			tearUp(ctx, node);
-			m_badSplits++;
+			ctx.retractedSplits++;
 			createLeaf(ctx, node, nodeAABB, primCount);
 			return leafCost;
 		}
 	}
 
-	Float buildTreeSAH(BuildContext &ctx, unsigned int depth, const KDNode *node,
+	Float buildTreeSAH(BuildContext &ctx, unsigned int depth, KDNode *node,
 		const AABB &nodeAABB, EdgeEvent *firstEvent, EdgeEvent *lastEvent, 
 		size_type primCount, bool isLeftChild, size_type badRefines) {
 
@@ -885,8 +1019,6 @@ protected:
 			leftEvents = leftAlloc.allocate<EdgeEvent>(bestSplit.numLeft * 6);
 			rightEvents = firstEvent;
 		}
-
-
 	}
 
 	/**
@@ -908,7 +1040,7 @@ protected:
 			ctx.nodeAlloc.release(left);
 		}
 	}
-	
+
 	/**
 	 * \brief Min-max binning as described in
 	 * "Highly Parallel Fast KD-tree Construction for Interactive
@@ -1185,14 +1317,9 @@ private:
 	AABB m_aabb;
 	size_type m_maxDepth;
 	size_type m_stopPrims;
-	size_type m_leafNodeCount;
-	size_type m_nonemptyLeafNodeCount;
-	size_type m_innerNodeCount;
-	size_type m_badSplits;
 	size_type m_maxBadRefines;
-	Float m_expTraversalSteps;
-	Float m_expLeavesVisited;
-	Float m_expPrimitivesIntersected;
+	std::vector<SAHTreeBuilder *> m_builders;
+	BuildInterface m_interface;
 };
 
 MTS_NAMESPACE_END
