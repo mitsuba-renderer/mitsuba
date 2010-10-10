@@ -109,6 +109,13 @@ public:
 				return;
 			}
 		}
+		/* Uh oh, allocation could not be found. Check if it has size==0 */
+		for (std::vector<Chunk>::iterator it = m_chunks.begin();
+				it != m_chunks.end(); ++it) {
+			const Chunk &chunk = *it;
+			if ((uint8_t *) ptr == chunk.start + chunk.size) 
+				return;
+		}
 		SLog(EError, "OrderedChunkAllocator: Internal error while"
 			" releasing memory");
 	}
@@ -127,6 +134,15 @@ public:
 				return;
 			}
 		}
+		/* Uh oh, allocation could not be found. Check if it has size==0 */
+		if (newSize == 0) {
+			for (std::vector<Chunk>::iterator it = m_chunks.begin();
+					it != m_chunks.end(); ++it) {
+				const Chunk &chunk = *it;
+				if ((uint8_t *) ptr == chunk.start + chunk.size) 
+					return;
+			}
+		}
 		SLog(EError, "OrderedChunkAllocator: Internal error in shrinkAllocation");
 	}
 
@@ -135,7 +151,7 @@ public:
 	/**
 	 * \brief Return the total amount of chunk memory in bytes
 	 */
-	inline size_t getSize() const {
+	size_t getSize() const {
 		size_t result = 0;
 		for (std::vector<Chunk>::const_iterator it = m_chunks.begin();
 				it != m_chunks.end(); ++it)
@@ -146,12 +162,24 @@ public:
 	/**
 	 * \brief Return the total amount of used memory in bytes
 	 */
-	inline size_t getUsed() const {
+	size_t getUsed() const {
 		size_t result = 0;
 		for (std::vector<Chunk>::const_iterator it = m_chunks.begin();
 				it != m_chunks.end(); ++it)
 			result += (*it).getUsed();
 		return result;
+	}
+	
+	/**
+	 * \brief Return a string representation of the chunks
+	 */
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "OrderedChunkAllocator[" << endl;
+		for (size_t i=0; i<m_chunks.size(); ++i)
+			oss << "    Chunk " << i << ": " << m_chunks[i].toString() << endl;
+		oss << "]";
+		return oss.str();
 	}
 
 private:
@@ -165,6 +193,12 @@ private:
 
 		inline size_t getRemainder() const {
 			return size - getUsed();
+		}
+
+		std::string toString() const {
+			return formatString("0x%llx-0x%llx (size=" SIZE_T_FMT 
+					", used=" SIZE_T_FMT ")", start, start+size, 
+					size, getUsed());
 		}
 	};
 
@@ -246,7 +280,7 @@ public:
 		m_stopPrims = 2;
 		m_maxBadRefines = 3;
 		m_exactDepth = 1;
-		m_maxDepth = 7;
+		m_maxDepth = 100;
 	}
 		
 	/**
@@ -831,11 +865,12 @@ protected:
 			++badRefines;
 		}
 
-		
+#if 0
 		cout << "Depth " << depth << endl;
 		cout << "AABB: " << nodeAABB.toString() << endl;
 		cout << "SAH cost: " << leafCost << " -> " << bestSplit.toString() << endl;
 		cout << endl;
+#endif
 
 		/* ==================================================================== */
 	    /*                            Partitioning                              */
@@ -1087,10 +1122,12 @@ protected:
 
 		Assert(bestSplit.sahCost != std::numeric_limits<Float>::infinity());
 
+#if 0
 		cout << "Depth " << depth << endl;
 		cout << "AABB: " << nodeAABB.toString() << endl;
 		cout << "SAH cost: " << leafCost << " -> " << bestSplit.toString() << endl;
 		cout << endl;
+#endif
 
 		/* "Bad refines" heuristic from PBRT */
 		if (bestSplit.sahCost >= leafCost) {
@@ -1099,7 +1136,6 @@ protected:
 				createLeaf(ctx, node, nodeAABB, primCount);
 				return leafCost;
 			}
-			cout << "Increasing bad refines " << primCount << ", leafCost=" << leafCost << ", sahCost=" << bestSplit.sahCost << endl;
 			++badRefines;
 		}
 
@@ -1306,12 +1342,12 @@ protected:
 
 		/* Shrink the edge event storage now that we know exactly how 
 		   many are on each side */
-//		ctx.leftAlloc.shrinkAllocation(leftEventsStart, 
-//				leftEventsEnd - leftEventsStart);
+		ctx.leftAlloc.shrinkAllocation(leftEventsStart, 
+				leftEventsEnd - leftEventsStart);
 
-//		ctx.rightAlloc.shrinkAllocation(rightEventsStart, 
-//				rightEventsEnd - rightEventsStart);
-	
+		ctx.rightAlloc.shrinkAllocation(rightEventsStart, 
+				rightEventsEnd - rightEventsStart);
+
 		/* ==================================================================== */
 		/*                              Recursion                               */
 		/* ==================================================================== */
