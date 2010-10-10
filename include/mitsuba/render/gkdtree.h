@@ -288,7 +288,7 @@ public:
 		m_clip = true;
 		m_stopPrims = 1;
 		m_maxBadRefines = 2;
-		m_exactPrimThreshold = 1024;
+		m_exactPrimThreshold = 4096;
 		m_maxDepth = 0;
 		m_retract = true;
 	}
@@ -748,15 +748,22 @@ protected:
 	 * This is necessary when passing from Min-Max binning to the more 
 	 * accurate SAH-based optimizier.
 	 */
-	boost::tuple<EdgeEvent *, EdgeEvent *> createEventList(
+	boost::tuple<EdgeEvent *, EdgeEvent *, size_type> createEventList(
 			OrderedChunkAllocator &alloc, const AABB &nodeAABB, index_type *prims, size_type primCount) {
-		size_type initialSize = primCount * 6;
+		size_type initialSize = primCount * 6, actualPrimCount = 0;
 		EdgeEvent *eventStart = alloc.allocate<EdgeEvent>(initialSize);
 		EdgeEvent *eventEnd = eventStart;
 
 		for (size_type i=0; i<primCount; ++i) {
 			index_type index = prims[i];
-			AABB aabb = downCast()->getClippedAABB(index, nodeAABB);
+			AABB aabb;
+			if (m_clip) {
+				aabb = downCast()->getClippedAABB(index, nodeAABB);
+				if (!aabb.isValid() || aabb.getSurfaceArea() == 0)
+					continue;
+			} else {
+				aabb = downCast()->getAABB(index);
+			}
 
 			for (int axis=0; axis<3; ++axis) {
 				float min = (float) aabb.min[axis], max = (float) aabb.max[axis];
@@ -768,13 +775,14 @@ protected:
 					*eventEnd++ = EdgeEvent(EdgeEvent::EEdgeEnd, axis, max, index);
 				}
 			}
+			++actualPrimCount;
 		}
 
 		size_type newSize = eventEnd - eventStart;
 		if (newSize != initialSize)
 			alloc.shrinkAllocation<EdgeEvent>(eventStart, newSize);
 
-		return boost::make_tuple(eventStart, eventEnd);
+		return boost::make_tuple(eventStart, eventEnd, actualPrimCount);
 	}
 
 	/**
@@ -839,13 +847,13 @@ protected:
 
 		if (primCount <= m_exactPrimThreshold) {
 			OrderedChunkAllocator &alloc = isLeftChild ? ctx.leftAlloc : ctx.rightAlloc;
-			boost::tuple<EdgeEvent *, EdgeEvent *> events  
+			boost::tuple<EdgeEvent *, EdgeEvent *, size_type> events  
 					= createEventList(alloc, nodeAABB, indices, primCount);
 		
 			std::sort(boost::get<0>(events), boost::get<1>(events), EdgeEventOrdering());
 
 			Float sahCost = buildTreeSAH(ctx, depth, node, nodeAABB,
-					boost::get<0>(events), boost::get<1>(events), primCount, 
+					boost::get<0>(events), boost::get<1>(events), boost::get<2>(events), 
 					isLeftChild, badRefines);
 
 			alloc.release(boost::get<0>(events));
