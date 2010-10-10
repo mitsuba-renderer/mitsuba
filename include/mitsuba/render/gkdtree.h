@@ -178,7 +178,7 @@ public:
 	}
 
 	inline ClassificationStorage(size_t size) {
-		m_bufferSize = size/4;
+		m_bufferSize = size/4 + ((size % 4) > 0 ? 1 : 0);
 		m_buffer = new uint8_t[m_bufferSize];
 	}
 
@@ -188,12 +188,14 @@ public:
 	}
 
 	inline void set(uint32_t index, uint8_t value) {
+		SAssert((index >> 2) < m_bufferSize);
 		uint8_t *ptr = m_buffer + (index >> 2);
 		uint8_t shift = (index & 3) << 1;
 		*ptr = (*ptr & ~(3 << shift)) | (value << shift);
 	}
 
 	inline uint8_t get(uint32_t index) const {
+		SAssert((index >> 2) < m_bufferSize);
 		uint8_t *ptr = m_buffer + (index >> 2);
 		uint8_t shift = (index & 3) << 1;
 		return (*ptr >> shift) & 3;
@@ -232,7 +234,7 @@ public:
 		m_traversalCost = 15;
 		m_intersectionCost = 20;
 		m_emptySpaceBonus = 0.8f;
-		m_clip = true;
+		m_clip = false;
 		m_stopPrims = 2;
 		m_maxBadRefines = 3;
 		m_exactDepth = 1;
@@ -1072,10 +1074,10 @@ protected:
 		Assert(primsLeft + primsBoth == bestSplit.numLeft);
 		Assert(primsRight + primsBoth == bestSplit.numRight);
 
-		EdgeEvent *leftEventsStart, *rightEventsStart;
 		OrderedChunkAllocator &leftAlloc = ctx.leftAlloc,
 			&rightAlloc = ctx.rightAlloc;
 
+		EdgeEvent *leftEventsStart, *rightEventsStart;
 		if (isLeftChild) {
 			leftEventsStart = eventStart;
 			rightEventsStart = rightAlloc.allocate<EdgeEvent>(bestSplit.numRight * 6);
@@ -1084,47 +1086,46 @@ protected:
 			rightEventsStart = eventStart;
 		}
 
-		EdgeEvent *leftEventsTempStart = leftAlloc.allocate<EdgeEvent>(primsLeft * 6);
-		EdgeEvent *rightEventsTempStart = rightAlloc.allocate<EdgeEvent>(primsRight * 6);
-		EdgeEvent *newEventsLeftStart = NULL, *newEventsRightStart = NULL;
-
-		if (m_clip) {
-			newEventsLeftStart = leftAlloc.allocate<EdgeEvent>(primsBoth * 6);
-			newEventsRightStart = rightAlloc.allocate<EdgeEvent>(primsBoth * 6);
-		}
-
-		EdgeEvent *leftEventsTempEnd = leftEventsTempStart, 
-				  *rightEventsTempEnd = rightEventsTempStart,
-				  *newEventsLeftEnd = newEventsLeftStart,
-				  *newEventsRightEnd = newEventsRightStart;
-
-		/* ==================================================================== */
-		/*                            Partitioning                              */
-		/* ==================================================================== */
+		EdgeEvent *leftEventsEnd = leftEventsStart, *rightEventsEnd = rightEventsStart;
 
 		AABB leftNodeAABB = nodeAABB, rightNodeAABB = nodeAABB;
 		leftNodeAABB.max[bestSplit.axis] = bestSplit.pos;
 		rightNodeAABB.min[bestSplit.axis] = bestSplit.pos;
 
-		for (EdgeEvent *event = eventStart; event<eventEnd; ++event) {
-			uint8_t classification = storage.get(event->index);
-			if (classification == ELeftSide) {
-				/* Left-only primitive. Move to the left list and advance */
-				*leftEventsTempEnd++ = *event;
-			} else if (classification == ERightSide) {
-				/* Right-only primitive. Move to the right list and advance */
-				*rightEventsTempEnd++ = *event;
-			} else if (classification == EBothSides) {
-				/* The primitive overlaps the split plane. Its edge events
-				   must be added to both lists. */
-				if (!m_clip) {
+		/* ==================================================================== */
+		/*                            Partitioning                              */
+		/* ==================================================================== */
+
+		if (m_clip) {
+			EdgeEvent *leftEventsTempStart = leftAlloc.allocate<EdgeEvent>(primsLeft * 6),
+					  *rightEventsTempStart = rightAlloc.allocate<EdgeEvent>(primsRight * 6),
+					  *newEventsLeftStart = leftAlloc.allocate<EdgeEvent>(primsBoth * 6),
+					  *newEventsRightStart = rightAlloc.allocate<EdgeEvent>(primsBoth * 6);
+
+			EdgeEvent *leftEventsTempEnd = leftEventsTempStart, 
+					*rightEventsTempEnd = rightEventsTempStart,
+					*newEventsLeftEnd = newEventsLeftStart,
+					*newEventsRightEnd = newEventsRightStart;
+
+			for (EdgeEvent *event = eventStart; event<eventEnd; ++event) {
+				Assert(leftEventsTempEnd - leftEventsTempStart <= primsLeft * 6);//XXX XXX XXX
+				Assert(rightEventsTempEnd - rightEventsTempStart <= primsRight * 6);
+				Assert(newEventsLeftEnd - newEventsLeftStart <= primsBoth * 6);
+				Assert(newEventsRightEnd - newEventsRightStart <= primsBoth * 6);
+
+				uint8_t classification = storage.get(event->index);
+				if (classification == ELeftSide) {
+					/* Left-only primitive. Move to the left list and advance */
 					*leftEventsTempEnd++ = *event;
+				} else if (classification == ERightSide) {
+					/* Right-only primitive. Move to the right list and advance */
 					*rightEventsTempEnd++ = *event;
-					continue;
-				} else {
+				} else if (classification == EBothSides) {
+					/* The primitive overlaps the split plane. Re-clip and
+					   generate new events for each side */
 					index_type index = event->index;
 					/* Mark this primitive as processed so that clipping 
-					   is only done once */
+						is only done once */
 					storage.set(event->index, EBothSidesProcessed);
 
 					AABB clippedLeft = downCast()->clip(event->index, leftNodeAABB);
@@ -1161,46 +1162,55 @@ protected:
 					}
 				}
 			}
-		}
 
-		Assert(leftEventsTempEnd - leftEventsTempStart <= primsLeft * 6);
-		Assert(rightEventsTempEnd - rightEventsTempStart <= primsRight * 6);
-		Assert(newEventsLeftEnd - newEventsLeftStart <= primsBoth * 6);
-		Assert(newEventsRightEnd - newEventsRightStart <= primsBoth * 6);
+			Assert(leftEventsTempEnd - leftEventsTempStart <= primsLeft * 6);
+			Assert(rightEventsTempEnd - rightEventsTempStart <= primsRight * 6);
+			Assert(newEventsLeftEnd - newEventsLeftStart <= primsBoth * 6);
+			Assert(newEventsRightEnd - newEventsRightStart <= primsBoth * 6);
 
-		/* Sort the events from overlapping prims */
-		std::sort(newEventsLeftStart, newEventsLeftEnd, EdgeEventOrdering());
-		std::sort(newEventsRightStart, newEventsRightEnd, EdgeEventOrdering());
-
-		/* Merge the left list */
-		std::merge(leftEventsTempStart, leftEventsTempEnd,
-				newEventsLeftStart, newEventsLeftEnd,
+			/* Sort the events from overlapping prims */
+			std::sort(newEventsLeftStart, newEventsLeftEnd, EdgeEventOrdering());
+			std::sort(newEventsRightStart, newEventsRightEnd, EdgeEventOrdering());
+		
+			/* Merge the left list */
+			leftEventsEnd = std::merge(leftEventsTempStart, 
+				leftEventsTempEnd, newEventsLeftStart, newEventsLeftEnd,
 				leftEventsStart, EdgeEventOrdering());
 
-		/* Merge the right list */
-		std::merge(rightEventsTempStart, rightEventsTempEnd,
-				newEventsRightStart, newEventsRightEnd,
+			/* Merge the right list */
+			rightEventsEnd = std::merge(rightEventsTempStart,
+				rightEventsTempEnd, newEventsRightStart, newEventsRightEnd,
 				rightEventsStart, EdgeEventOrdering());
 
-		/* Release temporary memory */
-		if (m_clip) {
+			/* Release temporary memory */
 			leftAlloc.release(newEventsLeftStart);
+			leftAlloc.release(leftEventsTempStart);
 			rightAlloc.release(newEventsRightStart);
+			rightAlloc.release(rightEventsTempStart);
+		} else {
+			for (EdgeEvent *event = eventStart; event<eventEnd; ++event) {
+				uint8_t classification = storage.get(event->index);
+				if (classification == ELeftSide) {
+					/* Left-only primitive. Move to the left list and advance */
+					*leftEventsEnd++ = *event;
+				} else if (classification == ERightSide) {
+					/* Right-only primitive. Move to the right list and advance */
+					*rightEventsEnd++ = *event;
+				} else if (classification == EBothSides) {
+					/* The primitive overlaps the split plane. Its edge events
+					   must be added to both lists. */
+					*leftEventsEnd++ = *event;
+					*rightEventsEnd++ = *event;
+				}
+			}
 		}
-		leftAlloc.release(leftEventsTempStart);
-		rightAlloc.release(rightEventsTempStart);
+
 
 		/* Shrink the edge event storage now that we know exactly how 
 		   many are on each side */
-		EdgeEvent *leftEventsEnd = leftEventsStart 
-			+ (leftEventsTempEnd - leftEventsTempStart)
-			+ (newEventsLeftEnd - newEventsLeftStart);
 		ctx.leftAlloc.shrinkAllocation(leftEventsStart, 
 				leftEventsEnd - leftEventsStart);
 
-		EdgeEvent *rightEventsEnd = rightEventsStart 
-			+ (rightEventsTempEnd - rightEventsTempStart)
-			+ (newEventsRightEnd - newEventsRightStart);
 		ctx.rightAlloc.shrinkAllocation(rightEventsStart, 
 				rightEventsEnd - rightEventsStart);
 	
