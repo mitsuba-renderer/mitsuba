@@ -865,13 +865,6 @@ protected:
 			++badRefines;
 		}
 
-#if 0
-		cout << "Depth " << depth << endl;
-		cout << "AABB: " << nodeAABB.toString() << endl;
-		cout << "SAH cost: " << leafCost << " -> " << bestSplit.toString() << endl;
-		cout << endl;
-#endif
-
 		/* ==================================================================== */
 	    /*                            Partitioning                              */
 	    /* ==================================================================== */
@@ -982,33 +975,6 @@ protected:
 			createLeaf(ctx, node, nodeAABB, primCount);
 			return leafCost;
 		}
-
-#if 0
-		EdgeEventOrdering ord;
-		int primCounts[3];
-		primCounts[0] = 0;
-		primCounts[1] = 0;
-		primCounts[2] = 0;
-		for (EdgeEvent *event = eventStart; event < eventEnd; ++event) {
-			Assert(event->axis >= 0 && event->axis < 3);
-			Assert(event->type >= 0 && event->type < 3);
-			if (event->type == EdgeEvent::EEdgePlanar
-				|| event->type == EdgeEvent::EEdgeStart)
-				primCounts[event->axis]++;
-			EdgeEvent *next = event+1;
-			if (next < eventEnd) {
-				if (!ord(*event, *next)) {
-					cout << event->toString() << endl;
-					cout << next->toString() << endl;
-					Assert(false);
-				}
-			}
-		}
-
-		Assert(primCounts[0] == primCount);
-		Assert(primCounts[1] == primCount);
-		Assert(primCounts[2] == primCount);
-#endif
 
 		SplitCandidate bestSplit;
 		Float invSA = 1.0f / nodeAABB.getSurfaceArea();
@@ -1122,13 +1088,6 @@ protected:
 
 		Assert(bestSplit.sahCost != std::numeric_limits<Float>::infinity());
 
-#if 0
-		cout << "Depth " << depth << endl;
-		cout << "AABB: " << nodeAABB.toString() << endl;
-		cout << "SAH cost: " << leafCost << " -> " << bestSplit.toString() << endl;
-		cout << endl;
-#endif
-
 		/* "Bad refines" heuristic from PBRT */
 		if (bestSplit.sahCost >= leafCost) {
 			if ((bestSplit.sahCost > 4 * leafCost && primCount < 16)
@@ -1231,11 +1190,6 @@ protected:
 					*newEventsRightEnd = newEventsRightStart;
 
 			for (EdgeEvent *event = eventStart; event<eventEnd; ++event) {
-				Assert(leftEventsTempEnd - leftEventsTempStart <= primsLeft * 6);//XXX XXX XXX
-				Assert(rightEventsTempEnd - rightEventsTempStart <= primsRight * 6);
-				Assert(newEventsLeftEnd - newEventsLeftStart <= primsBoth * 6);
-				Assert(newEventsRightEnd - newEventsRightStart <= primsBoth * 6);
-
 				uint8_t classification = storage.get(event->index);
 				if (classification == ELeftSide) {
 					/* Left-only primitive. Move to the left list and advance */
