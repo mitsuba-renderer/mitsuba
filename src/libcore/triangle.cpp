@@ -115,12 +115,16 @@ static int sutherlandHodgman(Point *input, int inCount, Point *output, int axis,
 			/* Going outside -- add the intersection */
 			Float t = (splitPos - cur[axis]) / (next[axis] - cur[axis]);
 			SAssertEx(outCount + 1 < MAX_VERTS, "Overflow in sutherlandHodgman()!");
-			output[outCount++] = cur + (next - cur) * t;
+			Point p = cur + (next - cur) * t;
+			p[axis] = splitPos; // Avoid roundoff errors
+			output[outCount++] = p;
 		} else if (!curIsInside && nextIsInside) {
 			/* Coming back inside -- add the intersection + next vertex */
 			Float t = (splitPos - cur[axis]) / (next[axis] - cur[axis]);
 			SAssertEx(outCount + 2 < MAX_VERTS, "Overflow in sutherlandHodgman()!");
-			output[outCount++] = cur + (next - cur) * t;
+			Point p = cur + (next - cur) * t;
+			p[axis] = splitPos; // Avoid roundoff errors
+			output[outCount++] = p;
 			output[outCount++] = next;
 		} else {
 			/* Entirely outside - do not add anything */
@@ -154,22 +158,9 @@ AABB Triangle::getClippedAABB(const Vertex *buffer, const AABB &aabb) const {
 	}
 
 	AABB result;
-	for (int i=0; i<nVertices; ++i)
+	for (int i=0; i<nVertices; ++i) 
 		result.expandBy(vertices1[i]);
-
-#if 0
-	// Cover up some floating point imprecisions
-	Vector error = aabb.getExtents() * Epsilon;
-	result.min -= error;
-	result.max += error;
-
 	result.clip(aabb);
-#endif
-
-#if defined(MTS_DEBUG_KD)
-	SAssert(aabb.contains(result));
-	SAssert(origAABB.contains(result));
-#endif
 
 	return result;
 }

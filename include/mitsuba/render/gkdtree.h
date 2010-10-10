@@ -25,7 +25,7 @@
 
 #define MTS_KD_MAX_DEPTH 48     ///< Compile-time KD-tree depth limit
 #define MTS_KD_STATISTICS 1     ///< Collect statistics during building/traversal 
-#define MTS_KD_MINMAX_BINS 1024 ///< Min-max bin count
+#define MTS_KD_MINMAX_BINS 32   ///< Min-max bin count
 #define MTS_KD_MIN_ALLOC 128    ///< Allocate memory in 128 KB chunks
 
 MTS_NAMESPACE_BEGIN
@@ -276,13 +276,13 @@ public:
 		m_traversalCost = 15;
 		m_intersectionCost = 20;
 		m_emptySpaceBonus = 0.8f;
-		m_clip = false;
+		m_clip = true;
 		m_stopPrims = 2;
 		m_maxBadRefines = 3;
 		m_exactDepth = 1;
 		m_maxDepth = 100;
 	}
-		
+
 	/**
 	 * \brief Build a KD-tree over supplied geometry
 	 */
@@ -1213,6 +1213,8 @@ protected:
 		leftNodeAABB.max[bestSplit.axis] = bestSplit.pos;
 		rightNodeAABB.min[bestSplit.axis] = bestSplit.pos;
 
+		size_type prunedLeft = 0, prunedRight = 0;
+
 		/* ==================================================================== */
 		/*                            Partitioning                              */
 		/* ==================================================================== */
@@ -1244,13 +1246,13 @@ protected:
 				} else if (classification == EBothSides) {
 					/* The primitive overlaps the split plane. Re-clip and
 					   generate new events for each side */
-					index_type index = event->index;
-					/* Mark this primitive as processed so that clipping 
-						is only done once */
-					storage.set(event->index, EBothSidesProcessed);
+					const index_type index = event->index;
 
-					AABB clippedLeft = downCast()->clip(event->index, leftNodeAABB);
-					AABB clippedRight = downCast()->clip(event->index, rightNodeAABB);
+					AABB clippedLeft = downCast()->clip(index, leftNodeAABB);
+					AABB clippedRight = downCast()->clip(index, rightNodeAABB);
+
+					Assert(leftNodeAABB.contains(clippedLeft));
+					Assert(rightNodeAABB.contains(clippedRight));
 
 					if (clippedLeft.isValid() && clippedLeft.getSurfaceArea() > 0) {
 						for (int axis=0; axis<3; ++axis) {
@@ -1264,7 +1266,7 @@ protected:
 							}
 						}
 					} else {
-						ctx.pruned++;
+						prunedLeft++;
 					}
 
 					if (clippedRight.isValid() && clippedRight.getSurfaceArea() > 0) {
@@ -1279,8 +1281,12 @@ protected:
 							}
 						}
 					} else {
-						ctx.pruned++;
+						prunedRight++;
 					}
+
+					/* Mark this primitive as processed so that clipping 
+						is only done once */
+					storage.set(index, EBothSidesProcessed);
 				}
 			}
 
@@ -1288,6 +1294,7 @@ protected:
 			Assert(rightEventsTempEnd - rightEventsTempStart <= primsRight * 6);
 			Assert(newEventsLeftEnd - newEventsLeftStart <= primsBoth * 6);
 			Assert(newEventsRightEnd - newEventsRightStart <= primsBoth * 6);
+			ctx.pruned += prunedLeft + prunedRight;
 
 			/* Sort the events from overlapping prims */
 			std::sort(newEventsLeftStart, newEventsLeftEnd, EdgeEventOrdering());
@@ -1313,27 +1320,15 @@ protected:
 				uint8_t classification = storage.get(event->index);
 				if (classification == ELeftSide) {
 					/* Left-only primitive. Move to the left list and advance */
-					if (leftEventsEnd == event)
-						leftEventsEnd++;
-					else
-						*leftEventsEnd++ = *event;
+					*leftEventsEnd++ = *event;
 				} else if (classification == ERightSide) {
 					/* Right-only primitive. Move to the right list and advance */
-					if (rightEventsEnd == event)
-						rightEventsEnd++;
-					else
-						*rightEventsEnd++ = *event;
+					*rightEventsEnd++ = *event;
 				} else if (classification == EBothSides) {
 					/* The primitive overlaps the split plane. Its edge events
 					   must be added to both lists. */
-					if (leftEventsEnd == event)
-						leftEventsEnd++;
-					else
-						*leftEventsEnd++ = *event;
-					if (rightEventsEnd == event)
-						rightEventsEnd++;
-					else
-						*rightEventsEnd++ = *event;
+					*leftEventsEnd++ = *event;
+					*rightEventsEnd++ = *event;
 				}
 			}
 			Assert(leftEventsEnd - leftEventsStart <= bestSplit.numLeft * 6);
@@ -1366,11 +1361,11 @@ protected:
 
 		Float leftSAHCost = buildTreeSAH(ctx, depth+1, children,
 				leftNodeAABB, leftEventsStart, leftEventsEnd,
-				bestSplit.numLeft, true, badRefines);
+				bestSplit.numLeft - prunedLeft, true, badRefines);
 
 		Float rightSAHCost = buildTreeSAH(ctx, depth+1, children+1,
 				rightNodeAABB, rightEventsStart, rightEventsEnd,
-				bestSplit.numRight, false, badRefines);
+				bestSplit.numRight - prunedRight, false, badRefines);
 
 		Float saLeft = leftNodeAABB.getSurfaceArea();
 		Float saRight = rightNodeAABB.getSurfaceArea();
