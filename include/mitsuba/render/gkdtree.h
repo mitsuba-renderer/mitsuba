@@ -790,6 +790,10 @@ protected:
 			bins.partition(ctx, downCast(), indices, bestSplit, isLeftChild, 
 			m_traversalCost, m_intersectionCost);
 
+		/* ==================================================================== */
+	    /*                              Recursion                               */
+	    /* ==================================================================== */
+
 		OrderedChunkAllocator &nodeAlloc = ctx.nodeAlloc;
 		KDNode *children = nodeAlloc.allocate<KDNode>(2);
 
@@ -802,10 +806,6 @@ protected:
 			m_indirectionTable.push_back(children);
 		}
 	
-		/* ==================================================================== */
-	    /*                              Recursion                               */
-	    /* ==================================================================== */
-
 		AABB childAABB(nodeAABB);
 		childAABB.max[bestSplit.axis] = bestSplit.pos;
 		Float saLeft = childAABB.getSurfaceArea();
@@ -833,6 +833,10 @@ protected:
 			ctx.rightAlloc.release(boost::get<3>(partition));
 		else
 			ctx.leftAlloc.release(boost::get<1>(partition));	
+
+		/* ==================================================================== */
+	    /*                           Final decision                             */
+	    /* ==================================================================== */
 
 		if (finalSAHCost < primCount * m_intersectionCost) {
 			ctx.expTraversalSteps += nodeAABB.getSurfaceArea();
@@ -882,6 +886,7 @@ protected:
 	Float buildTreeSAH(BuildContext &ctx, unsigned int depth, KDNode *node,
 		const AABB &nodeAABB, EdgeEvent *eventStart, EdgeEvent *eventEnd, 
 		size_type primCount, bool isLeftChild, size_type badRefines) {
+		cout << "Depth: " << depth << endl;
 
 		Float leafCost = primCount * m_intersectionCost;
 		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
@@ -1068,27 +1073,28 @@ protected:
 		Assert(primsRight + primsBoth == bestSplit.numRight);
 
 		EdgeEvent *leftEventsStart, *rightEventsStart;
-		EdgeEvent *newEventsLeftStart = NULL, *newEventsRightStart = NULL;
-		OrderedChunkAllocator &leftAlloc = ctx.leftAlloc, &rightAlloc = ctx.rightAlloc;
+		OrderedChunkAllocator &leftAlloc = ctx.leftAlloc,
+			&rightAlloc = ctx.rightAlloc;
 
 		if (isLeftChild) {
 			leftEventsStart = eventStart;
 			rightEventsStart = rightAlloc.allocate<EdgeEvent>(bestSplit.numRight * 6);
-			if (m_clip) {
-				newEventsLeftStart = rightAlloc.allocate<EdgeEvent>(primsBoth * 6);
-				newEventsRightStart = rightAlloc.allocate<EdgeEvent>(primsBoth * 6);
-			}
 		} else {
 			leftEventsStart = leftAlloc.allocate<EdgeEvent>(bestSplit.numLeft * 6);
 			rightEventsStart = eventStart;
-			if (m_clip) {
-				newEventsLeftStart = leftAlloc.allocate<EdgeEvent>(primsBoth * 6);
-				newEventsRightStart = leftAlloc.allocate<EdgeEvent>(primsBoth * 6);
-			}
 		}
 
-		EdgeEvent *leftEventsEnd = leftEventsStart, 
-				  *rightEventsEnd = rightEventsStart,
+		EdgeEvent *leftEventsTempStart = leftAlloc.allocate<EdgeEvent>(primsLeft * 6);
+		EdgeEvent *rightEventsTempStart = rightAlloc.allocate<EdgeEvent>(primsRight * 6);
+		EdgeEvent *newEventsLeftStart = NULL, *newEventsRightStart = NULL;
+
+		if (m_clip) {
+			newEventsLeftStart = leftAlloc.allocate<EdgeEvent>(primsBoth * 6);
+			newEventsRightStart = rightAlloc.allocate<EdgeEvent>(primsBoth * 6);
+		}
+
+		EdgeEvent *leftEventsTempEnd = leftEventsTempStart, 
+				  *rightEventsTempEnd = rightEventsTempStart,
 				  *newEventsLeftEnd = newEventsLeftStart,
 				  *newEventsRightEnd = newEventsRightStart;
 
@@ -1104,16 +1110,16 @@ protected:
 			uint8_t classification = storage.get(event->index);
 			if (classification == ELeftSide) {
 				/* Left-only primitive. Move to the left list and advance */
-				*leftEventsEnd++ = *event;
+				*leftEventsTempEnd++ = *event;
 			} else if (classification == ERightSide) {
 				/* Right-only primitive. Move to the right list and advance */
-				*rightEventsEnd++ = *event;
+				*rightEventsTempEnd++ = *event;
 			} else if (classification == EBothSides) {
 				/* The primitive overlaps the split plane. Its edge events
 				   must be added to both lists. */
 				if (!m_clip) {
-					*leftEventsEnd++ = *event;
-					*rightEventsEnd++ = *event;
+					*leftEventsTempEnd++ = *event;
+					*rightEventsTempEnd++ = *event;
 					continue;
 				} else {
 					index_type index = event->index;
@@ -1156,40 +1162,104 @@ protected:
 				}
 			}
 		}
-	
+
+		Assert(leftEventsTempEnd - leftEventsTempStart <= primsLeft * 6);
+		Assert(rightEventsTempEnd - rightEventsTempStart <= primsRight * 6);
+		Assert(newEventsLeftEnd - newEventsLeftStart <= primsBoth * 6);
+		Assert(newEventsRightEnd - newEventsRightStart <= primsBoth * 6);
+
 		/* Sort the events from overlapping prims */
 		std::sort(newEventsLeftStart, newEventsLeftEnd, EdgeEventOrdering());
 		std::sort(newEventsRightStart, newEventsRightEnd, EdgeEventOrdering());
 
-		/* Remove the 'processed' flag */
-		/*
-		for (EdgeEventVec::const_iterator it = events.begin(); 
-			it != events.end(); ++it) {
-			if (m_triangles[(*it).index].k == EBothSidesProcessed) 
-				m_triangles[(*it).index].k = EBothSides;
-		}*/
+		/* Merge the left list */
+		std::merge(leftEventsTempStart, leftEventsTempEnd,
+				newEventsLeftStart, newEventsLeftEnd,
+				leftEventsStart, EdgeEventOrdering());
 
-		/* Release memory used by the new edge events */
+		/* Merge the right list */
+		std::merge(rightEventsTempStart, rightEventsTempEnd,
+				newEventsRightStart, newEventsRightEnd,
+				rightEventsStart, EdgeEventOrdering());
+
+		/* Release temporary memory */
 		if (m_clip) {
-			if (isLeftChild) {
-				rightAlloc.release(newEventsLeftStart);
-				rightAlloc.release(newEventsRightStart);
-			} else {
-				leftAlloc.release(newEventsLeftStart);
-				leftAlloc.release(newEventsRightStart);
-			}
+			leftAlloc.release(newEventsLeftStart);
+			rightAlloc.release(newEventsRightStart);
 		}
+		leftAlloc.release(leftEventsTempStart);
+		rightAlloc.release(rightEventsTempStart);
 
 		/* Shrink the edge event storage now that we know exactly how 
 		   many are on each side */
-		ctx.leftAlloc.shrinkAllocation(leftEventsStart, leftEventsEnd - leftEventsStart);
-		ctx.rightAlloc.shrinkAllocation(rightEventsStart, rightEventsEnd - rightEventsStart);
+		EdgeEvent *leftEventsEnd = leftEventsStart 
+			+ (leftEventsTempEnd - leftEventsTempStart)
+			+ (newEventsLeftEnd - newEventsLeftStart);
+		ctx.leftAlloc.shrinkAllocation(leftEventsStart, 
+				leftEventsEnd - leftEventsStart);
+
+		EdgeEvent *rightEventsEnd = rightEventsStart 
+			+ (rightEventsTempEnd - rightEventsTempStart)
+			+ (newEventsRightEnd - newEventsRightStart);
+		ctx.rightAlloc.shrinkAllocation(rightEventsStart, 
+				rightEventsEnd - rightEventsStart);
+	
+		/* ==================================================================== */
+		/*                              Recursion                               */
+		/* ==================================================================== */
+
+		OrderedChunkAllocator &nodeAlloc = ctx.nodeAlloc;
+		KDNode *children = nodeAlloc.allocate<KDNode>(2);
+
+		size_t initialIndirectionTableSize = m_indirectionTable.size();
+		if (!node->initInnerNode(bestSplit.axis, bestSplit.pos, children-node)) {
+			/* Unable to store relative offset -- create an indirection
+			   table entry */
+			node->initIndirectionNode(bestSplit.axis, bestSplit.pos, 
+					initialIndirectionTableSize);
+			m_indirectionTable.push_back(children);
+		}
+
+		Float leftSAHCost = buildTreeSAH(ctx, depth+1, children,
+				leftNodeAABB, leftEventsStart, leftEventsEnd,
+				bestSplit.numLeft, true, badRefines);
+
+		Float rightSAHCost = buildTreeSAH(ctx, depth+1, children+1,
+				rightNodeAABB, rightEventsStart, rightEventsEnd,
+				bestSplit.numRight, false, badRefines);
+
+		Float saLeft = leftNodeAABB.getSurfaceArea();
+		Float saRight = rightNodeAABB.getSurfaceArea();
+
+		/* Compute the final SAH cost given the updated cost 
+		   values received from the children */
+		Float finalSAHCost = m_traversalCost + 
+			(saLeft * leftSAHCost + saRight * rightSAHCost) * invSA;
 
 		/* Release the index lists not needed by the children anymore */
 		if (isLeftChild)
 			ctx.rightAlloc.release(rightEventsStart);
 		else
 			ctx.leftAlloc.release(leftEventsStart);
+
+		/* ==================================================================== */
+	    /*                           Final decision                             */
+	    /* ==================================================================== */
+
+		if (finalSAHCost < primCount * m_intersectionCost) {
+			ctx.expTraversalSteps += nodeAABB.getSurfaceArea();
+			ctx.innerNodeCount++;
+			return finalSAHCost;
+		} else {
+			/* In the end, splitting didn't help to reduce the SAH cost.
+			   Tear up everything below this node and create a leaf */
+			if (m_indirectionTable.size() > initialIndirectionTableSize)
+				m_indirectionTable.resize(initialIndirectionTableSize);
+			tearUp(ctx, node);
+			ctx.retractedSplits++;
+			createLeaf(ctx, node, nodeAABB, primCount);
+			return leafCost;
+		}
 
 		return bestSplit.sahCost;
 	}
