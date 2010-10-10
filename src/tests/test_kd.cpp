@@ -95,7 +95,7 @@ public:
 			return m_triangles[idx].getAABB(m_vertexBuffer);
 		}
 		
-		inline AABB clip(index_type idx, const AABB &aabb) const {
+		inline AABB getClippedAABB(index_type idx, const AABB &aabb) const {
 			return m_triangles[idx].getClippedAABB(m_vertexBuffer, aabb);
 		}
 

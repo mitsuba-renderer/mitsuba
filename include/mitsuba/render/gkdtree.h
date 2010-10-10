@@ -28,6 +28,14 @@
 #define MTS_KD_MINMAX_BINS 32   ///< Min-max bin count
 #define MTS_KD_MIN_ALLOC 128    ///< Allocate memory in 128 KB chunks
 
+#if 1
+#define KDAssert(expr) Assert(expr)
+#define KDAssertEx(expr, text) AssertEx(expr, text)
+#else
+#define KDAssert(expr) 
+#define KDAssertEx(expr, text) 
+#endif
+
 MTS_NAMESPACE_BEGIN
 
 /**
@@ -143,7 +151,8 @@ public:
 					return;
 			}
 		}
-		SLog(EError, "OrderedChunkAllocator: Internal error in shrinkAllocation");
+		SLog(EError, "OrderedChunkAllocator: Internal error while"
+			" releasing memory");
 	}
 
 	inline size_t getChunkCount() const { return m_chunks.size(); }
@@ -279,8 +288,9 @@ public:
 		m_clip = true;
 		m_stopPrims = 1;
 		m_maxBadRefines = 2;
-		m_exactDepth = 1;
-		m_maxDepth = 100;
+		m_exactPrimThreshold = 1024;
+		m_maxDepth = 0;
+		m_retract = true;
 	}
 
 	/**
@@ -323,8 +333,9 @@ public:
 		Log(EDebug, "   Scene bounding box (min) : %s", m_aabb.min.toString().c_str());
 		Log(EDebug, "   Scene bounding box (max) : %s", m_aabb.max.toString().c_str());
 		Log(EDebug, "   Min-max bins             : %i", MTS_KD_MINMAX_BINS);
-		Log(EDebug, "   Greedy SAH optimization  : >= level %i", m_exactDepth);
+		Log(EDebug, "   Greedy SAH optimization  : <= %i primitives", m_exactPrimThreshold);
 		Log(EDebug, "   Perfect splits           : %s", m_clip ? "yes" : "no");
+		Log(EDebug, "   Retract bad splits       : %s", m_retract ? "yes" : "no");
 		Log(EDebug, "");
 
 		size_type procCount = getProcessorCount();
@@ -342,8 +353,8 @@ public:
 			m_aabb, m_aabb, indices, primCount, true, 0);
 		ctx.leftAlloc.release(indices);
 
-		Assert(ctx.leftAlloc.getUsed() == 0);
-		Assert(ctx.rightAlloc.getUsed() == 0);
+		KDAssert(ctx.leftAlloc.getUsed() == 0);
+		KDAssert(ctx.rightAlloc.getUsed() == 0);
 
 		m_interface.done = true;
 		m_interface.cond->broadcast();
@@ -738,14 +749,14 @@ protected:
 	 * accurate SAH-based optimizier.
 	 */
 	boost::tuple<EdgeEvent *, EdgeEvent *> createEventList(
-			OrderedChunkAllocator &alloc, index_type *prims, size_type primCount) {
+			OrderedChunkAllocator &alloc, const AABB &nodeAABB, index_type *prims, size_type primCount) {
 		size_type initialSize = primCount * 6;
 		EdgeEvent *eventStart = alloc.allocate<EdgeEvent>(initialSize);
 		EdgeEvent *eventEnd = eventStart;
 
 		for (size_type i=0; i<primCount; ++i) {
 			index_type index = prims[i];
-			AABB aabb = downCast()->getAABB(index);
+			AABB aabb = downCast()->getClippedAABB(index, nodeAABB);
 
 			for (int axis=0; axis<3; ++axis) {
 				float min = (float) aabb.min[axis], max = (float) aabb.max[axis];
@@ -818,7 +829,7 @@ protected:
 	Float buildTreeMinMax(BuildContext &ctx, unsigned int depth, KDNode *node, 
 			const AABB &nodeAABB, const AABB &tightAABB, index_type *indices,
 			size_type primCount, bool isLeftChild, size_type badRefines) {
-		Assert(nodeAABB.contains(tightAABB));
+		KDAssert(nodeAABB.contains(tightAABB));
 
 		Float leafCost = primCount * m_intersectionCost;
 		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
@@ -826,10 +837,10 @@ protected:
 			return leafCost;
 		}
 
-		if (depth == m_exactDepth) {
+		if (primCount <= m_exactPrimThreshold) {
 			OrderedChunkAllocator &alloc = isLeftChild ? ctx.leftAlloc : ctx.rightAlloc;
 			boost::tuple<EdgeEvent *, EdgeEvent *> events  
-					= createEventList(alloc, indices, primCount);
+					= createEventList(alloc, nodeAABB, indices, primCount);
 		
 			std::sort(boost::get<0>(events), boost::get<1>(events), EdgeEventOrdering());
 
@@ -888,6 +899,7 @@ protected:
 					initialIndirectionTableSize);
 			m_indirectionTable.push_back(children);
 		}
+		ctx.innerNodeCount++;
 	
 		AABB childAABB(nodeAABB);
 		childAABB.max[bestSplit.axis] = bestSplit.pos;
@@ -921,9 +933,8 @@ protected:
 	    /*                           Final decision                             */
 	    /* ==================================================================== */
 
-		if (finalSAHCost < primCount * m_intersectionCost) {
+		if (!m_retract || finalSAHCost < primCount * m_intersectionCost) {
 			ctx.expTraversalSteps += nodeAABB.getSurfaceArea();
-			ctx.innerNodeCount++;
 			return finalSAHCost;
 		} else {
 			/* In the end, splitting didn't help to reduce the SAH cost.
@@ -1027,7 +1038,7 @@ protected:
 
 			/* Keep track of the beginning of dimensions */
 			if (event < eventEnd && event->axis != axis) {
-				Assert(eventsByAxisCtr < 3);
+				KDAssert(eventsByAxisCtr < 3);
 				eventsByAxis[eventsByAxisCtr++] = event;
 			}
 
@@ -1073,7 +1084,7 @@ protected:
 			} else {
 				/* When primitive clipping is active, this should 
 					never happen! */
-				AssertEx(!m_clip, "Internal error: edge event is out of bounds");
+				KDAssertEx(!m_clip, "Internal error: edge event is out of bounds");
 			}
 
 			/* The split plane is moved past 't'. All prims,
@@ -1084,14 +1095,14 @@ protected:
 		}
 
 		/* Sanity checks. Everything should now be left of the split plane */
-		Assert(numRight[0] == 0 && numLeft[0] == primCount &&
+		KDAssert(numRight[0] == 0 && numLeft[0] == primCount &&
 			   numRight[1] == 0 && numLeft[1] == primCount &&
 			   numRight[2] == 0 && numLeft[2] == primCount);
 
-		Assert(eventsByAxis[1]->axis == 1 && (eventsByAxis[1]-1)->axis == 0);
-		Assert(eventsByAxis[2]->axis == 2 && (eventsByAxis[2]-1)->axis == 1);
+		KDAssert(eventsByAxis[1]->axis == 1 && (eventsByAxis[1]-1)->axis == 0);
+		KDAssert(eventsByAxis[2]->axis == 2 && (eventsByAxis[2]-1)->axis == 1);
 
-		Assert(bestSplit.sahCost != std::numeric_limits<Float>::infinity());
+		KDAssert(bestSplit.sahCost != std::numeric_limits<Float>::infinity());
 
 		/* "Bad refines" heuristic from PBRT */
 		if (bestSplit.sahCost >= leafCost) {
@@ -1121,7 +1132,7 @@ protected:
 			if (event->type == EdgeEvent::EEdgeEnd && event->pos <= bestSplit.pos) {
 				/* The primitive's interval ends before or on the split plane
 				   -> classify to the left side */
-				Assert(storage.get(event->index) == EBothSides);
+				KDAssert(storage.get(event->index) == EBothSides);
 				storage.set(event->index, ELeftSide);
 				primsBoth--;
 				primsLeft++;
@@ -1129,7 +1140,7 @@ protected:
 					&& event->pos >= bestSplit.pos) {
 				/* The primitive's interval starts after or on the split plane
 				   -> classify to the right side */
-				Assert(storage.get(event->index) == EBothSides);
+				KDAssert(storage.get(event->index) == EBothSides);
 				storage.set(event->index, ERightSide);
 				primsBoth--;
 				primsRight++;
@@ -1137,7 +1148,7 @@ protected:
 				/* If the planar primitive is not on the split plane, the
 				   classification is easy. Otherwise, place it on the side with
 				   the better SAH score */
-				Assert(storage.get(event->index) == EBothSides);
+				KDAssert(storage.get(event->index) == EBothSides);
 				if (event->pos < bestSplit.pos || (event->pos == bestSplit.pos
 						&& bestSplit.planarLeft)) {
 					storage.set(event->index, ELeftSide);
@@ -1149,15 +1160,15 @@ protected:
 					primsBoth--;
 					primsRight++;
 				} else {
-					AssertEx(false, "Internal error!");
+					KDAssertEx(false, "Internal error!");
 				}
 			}
 		}
 	
 		/* Some sanity checks */
-		Assert(primsLeft + primsRight + primsBoth == primCount);
-		Assert(primsLeft + primsBoth == bestSplit.numLeft);
-		Assert(primsRight + primsBoth == bestSplit.numRight);
+		KDAssert(primsLeft + primsRight + primsBoth == primCount);
+		KDAssert(primsLeft + primsBoth == bestSplit.numLeft);
+		KDAssert(primsRight + primsBoth == bestSplit.numRight);
 
 		OrderedChunkAllocator &leftAlloc = ctx.leftAlloc,
 			&rightAlloc = ctx.rightAlloc;
@@ -1207,11 +1218,11 @@ protected:
 					   generate new events for each side */
 					const index_type index = event->index;
 
-					AABB clippedLeft = downCast()->clip(index, leftNodeAABB);
-					AABB clippedRight = downCast()->clip(index, rightNodeAABB);
+					AABB clippedLeft = downCast()->getClippedAABB(index, leftNodeAABB);
+					AABB clippedRight = downCast()->getClippedAABB(index, rightNodeAABB);
 
-					Assert(leftNodeAABB.contains(clippedLeft));
-					Assert(rightNodeAABB.contains(clippedRight));
+					KDAssert(leftNodeAABB.contains(clippedLeft));
+					KDAssert(rightNodeAABB.contains(clippedRight));
 
 					if (clippedLeft.isValid() && clippedLeft.getSurfaceArea() > 0) {
 						for (int axis=0; axis<3; ++axis) {
@@ -1249,10 +1260,10 @@ protected:
 				}
 			}
 
-			Assert(leftEventsTempEnd - leftEventsTempStart <= primsLeft * 6);
-			Assert(rightEventsTempEnd - rightEventsTempStart <= primsRight * 6);
-			Assert(newEventsLeftEnd - newEventsLeftStart <= primsBoth * 6);
-			Assert(newEventsRightEnd - newEventsRightStart <= primsBoth * 6);
+			KDAssert(leftEventsTempEnd - leftEventsTempStart <= primsLeft * 6);
+			KDAssert(rightEventsTempEnd - rightEventsTempStart <= primsRight * 6);
+			KDAssert(newEventsLeftEnd - newEventsLeftStart <= primsBoth * 6);
+			KDAssert(newEventsRightEnd - newEventsRightStart <= primsBoth * 6);
 			ctx.pruned += prunedLeft + prunedRight;
 
 			/* Sort the events from overlapping prims */
@@ -1290,8 +1301,8 @@ protected:
 					*rightEventsEnd++ = *event;
 				}
 			}
-			Assert(leftEventsEnd - leftEventsStart <= bestSplit.numLeft * 6);
-			Assert(rightEventsEnd - rightEventsStart <= bestSplit.numRight * 6);
+			KDAssert(leftEventsEnd - leftEventsStart <= bestSplit.numLeft * 6);
+			KDAssert(rightEventsEnd - rightEventsStart <= bestSplit.numRight * 6);
 		}
 
 		/* Shrink the edge event storage now that we know exactly how 
@@ -1317,6 +1328,7 @@ protected:
 					initialIndirectionTableSize);
 			m_indirectionTable.push_back(children);
 		}
+		ctx.innerNodeCount++;
 
 		Float leftSAHCost = buildTreeSAH(ctx, depth+1, children,
 				leftNodeAABB, leftEventsStart, leftEventsEnd,
@@ -1344,9 +1356,8 @@ protected:
 	    /*                           Final decision                             */
 	    /* ==================================================================== */
 
-		if (finalSAHCost < primCount * m_intersectionCost) {
+		if (!m_retract || finalSAHCost < primCount * m_intersectionCost) {
 			ctx.expTraversalSteps += nodeAABB.getSurfaceArea();
-			ctx.innerNodeCount++;
 			return finalSAHCost;
 		} else {
 			/* In the end, splitting didn't help to reduce the SAH cost.
@@ -1367,9 +1378,13 @@ protected:
 	 */
 	void tearUp(BuildContext &ctx, KDNode *node) {
 		if (node->isLeaf()) {
+			if (node->getPrimStart() != node->getPrimEnd())
+				ctx.nonemptyLeafNodeCount--;
+			ctx.leafNodeCount--;
 			/// XXX Create primitive list for leaf
 		} else {
 			KDNode *left;
+			ctx.innerNodeCount--;
 			if (EXPECT_TAKEN(!node->isIndirection()))
 				left = node->getLeft();
 			else
@@ -1472,7 +1487,7 @@ protected:
 				binIdx++;
 			}
 			
-			Assert(candidate.sahCost != std::numeric_limits<Float>::infinity());
+			KDAssert(candidate.sahCost != std::numeric_limits<Float>::infinity());
 
 			const int axis = candidate.axis;
 			const float min = m_aabb.min[axis];
@@ -1570,18 +1585,18 @@ protected:
 				const AABB aabb = derived->getAABB(primIndex);
 
 				if (aabb.max[axis] <= splitPos) {
-					Assert(numLeft < split.numLeft);
+					KDAssert(numLeft < split.numLeft);
 					leftBounds.expandBy(aabb);
 					leftIndices[numLeft++] = primIndex;
 				} else if (aabb.min[axis] > splitPos) {
-					Assert(numRight < split.numRight);
+					KDAssert(numRight < split.numRight);
 					rightBounds.expandBy(aabb);
 					rightIndices[numRight++] = primIndex;
 				} else {
 					leftBounds.expandBy(aabb);
 					rightBounds.expandBy(aabb);
-					Assert(numLeft < split.numLeft);
-					Assert(numRight < split.numRight);
+					KDAssert(numLeft < split.numLeft);
+					KDAssert(numRight < split.numRight);
 					leftIndices[numLeft++] = primIndex;
 					rightIndices[numRight++] = primIndex;
 				}
@@ -1590,8 +1605,8 @@ protected:
 			leftBounds.clip(m_aabb);
 			rightBounds.clip(m_aabb);
 
-			Assert(numLeft == split.numLeft);
-			Assert(numRight == split.numRight);
+			KDAssert(numLeft == split.numLeft);
+			KDAssert(numRight == split.numRight);
 
 			/// Release the unused memory regions
 			if (isLeftChild)
@@ -1652,12 +1667,12 @@ private:
 	Float m_traversalCost;
 	Float m_intersectionCost;
 	Float m_emptySpaceBonus;
-	bool m_clip;
+	bool m_clip, m_retract;
 	AABB m_aabb;
 	size_type m_maxDepth;
 	size_type m_stopPrims;
 	size_type m_maxBadRefines;
-	size_type m_exactDepth;
+	size_type m_exactPrimThreshold;
 	std::vector<SAHTreeBuilder *> m_builders;
 	BuildInterface m_interface;
 };
