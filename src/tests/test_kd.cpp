@@ -94,6 +94,10 @@ public:
 		inline AABB getAABB(index_type idx) const {
 			return m_triangles[idx].getAABB(m_vertexBuffer);
 		}
+		
+		inline AABB clip(index_type idx, const AABB &aabb) const {
+			return m_triangles[idx].getClippedAABB(m_vertexBuffer, aabb);
+		}
 
 		inline size_type getPrimitiveCount() const {
 			return m_triangleCount;
