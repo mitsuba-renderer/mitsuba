@@ -275,10 +275,10 @@ public:
 	GenericKDTree() : m_root(NULL) {
 		m_traversalCost = 15;
 		m_intersectionCost = 20;
-		m_emptySpaceBonus = 0.8f;
+		m_emptySpaceBonus = 0.9f;
 		m_clip = true;
-		m_stopPrims = 2;
-		m_maxBadRefines = 3;
+		m_stopPrims = 1;
+		m_maxBadRefines = 2;
 		m_exactDepth = 1;
 		m_maxDepth = 100;
 	}
@@ -1037,6 +1037,7 @@ protected:
 
 			/* Calculate a score using the surface area heuristic */
 			if (EXPECT_TAKEN(pos >= nodeAABB.min[axis] && pos <= nodeAABB.max[axis])) {
+				size_type nL = numLeft[axis], nR = numRight[axis];
 				Float tmp = nodeAABB.max[axis];
 				aabb.max[axis] = pos;
 				Float pLeft = invSA * aabb.getSurfaceArea();
@@ -1046,22 +1047,26 @@ protected:
 				Float pRight = invSA * aabb.getSurfaceArea();
 				aabb.min[axis] = tmp;
 				Float sahCostPlanarLeft = m_traversalCost + m_intersectionCost 
-					* (pLeft * (numLeft[axis] + numPlanar) + pRight * numRight[axis]);
+					* (pLeft * (nL + numPlanar) + pRight * nR);
 				Float sahCostPlanarRight = m_traversalCost + m_intersectionCost 
-					* (pLeft * numLeft[axis] + pRight * (numRight[axis] + numPlanar));
+					* (pLeft * nL + pRight * (nR + numPlanar));
+				if (nL + numPlanar == 0 || nR == 0)
+					sahCostPlanarLeft *= m_emptySpaceBonus;
+				if (nL == 0 || nR + numPlanar == 0)
+					sahCostPlanarRight *= m_emptySpaceBonus;
 
 				if (sahCostPlanarLeft < bestSplit.sahCost || sahCostPlanarRight < bestSplit.sahCost) {
 					bestSplit.pos = pos;
 					bestSplit.axis = axis;
 					if (sahCostPlanarLeft < sahCostPlanarRight) {
 						bestSplit.sahCost = sahCostPlanarLeft;
-						bestSplit.numLeft = numLeft[axis] + numPlanar;
-						bestSplit.numRight = numRight[axis];
+						bestSplit.numLeft = nL + numPlanar;
+						bestSplit.numRight = nR;
 						bestSplit.planarLeft = true;
 					} else {
 						bestSplit.sahCost = sahCostPlanarRight;
-						bestSplit.numLeft = numLeft[axis];
-						bestSplit.numRight = numRight[axis] + numPlanar;
+						bestSplit.numLeft = nL;
+						bestSplit.numRight = nR + numPlanar;
 						bestSplit.planarLeft = false;
 					}
 				}
