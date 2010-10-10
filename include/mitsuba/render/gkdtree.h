@@ -23,10 +23,10 @@
 #include <boost/static_assert.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#define MTS_KD_MAX_DEPTH 48   ///< Compile-time KD-tree depth limit
-#define MTS_KD_STATISTICS 1   ///< Collect statistics during building/traversal 
-#define MTS_KD_MINMAX_BINS 32 ///< Min-max bin count
-#define MTS_KD_MIN_ALLOC 128  ///< Allocate memory in 128 KB chunks
+#define MTS_KD_MAX_DEPTH 48     ///< Compile-time KD-tree depth limit
+#define MTS_KD_STATISTICS 1     ///< Collect statistics during building/traversal 
+#define MTS_KD_MINMAX_BINS 1024 ///< Min-max bin count
+#define MTS_KD_MIN_ALLOC 128    ///< Allocate memory in 128 KB chunks
 
 MTS_NAMESPACE_BEGIN
 
@@ -53,10 +53,19 @@ public:
 	/**
 	 * \brief Release all memory used by the allocator
 	 */
-	inline void cleanup() {
+	void cleanup() {
 		for (std::vector<Chunk>::iterator it = m_chunks.begin();
 				it != m_chunks.end(); ++it)
 			freeAligned((*it).start);
+	}
+	
+	/**
+	 * \brief Merge the chunks of another allocator into this one
+	 */
+	void merge(const OrderedChunkAllocator &other) {
+		m_chunks.reserve(m_chunks.size() + other.m_chunks.size());
+		m_chunks.insert(m_chunks.end(), other.m_chunks.begin(), 
+				other.m_chunks.end());
 	}
 
 	/**
@@ -65,7 +74,7 @@ public:
 	 * Walks through the list of chunks to find one with enough
 	 * free memory. If no chunk could be found, a new one is created.
 	 */
-	template <typename T> T *allocate(size_t size) {
+	template <typename T> T * __restrict__ allocate(size_t size) {
 		size *= sizeof(T);
 		for (std::vector<Chunk>::iterator it = m_chunks.begin();
 				it != m_chunks.end(); ++it) {
@@ -118,7 +127,7 @@ public:
 				return;
 			}
 		}
-		SLog(EError, "OrderedChunkAllocator: Internal error in shrinkLast");
+		SLog(EError, "OrderedChunkAllocator: Internal error in shrinkAllocation");
 	}
 
 	inline size_t getChunkCount() const { return m_chunks.size(); }
@@ -188,14 +197,12 @@ public:
 	}
 
 	inline void set(uint32_t index, uint8_t value) {
-		SAssert((index >> 2) < m_bufferSize);
 		uint8_t *ptr = m_buffer + (index >> 2);
 		uint8_t shift = (index & 3) << 1;
 		*ptr = (*ptr & ~(3 << shift)) | (value << shift);
 	}
 
 	inline uint8_t get(uint32_t index) const {
-		SAssert((index >> 2) < m_bufferSize);
 		uint8_t *ptr = m_buffer + (index >> 2);
 		uint8_t shift = (index & 3) << 1;
 		return (*ptr >> shift) & 3;
@@ -218,6 +225,7 @@ template <typename Derived> class GenericKDTree : public Object {
 protected:
 	struct KDNode;
 	struct EdgeEvent;
+	struct EdgeEventOrdering;
 
 public:
 	/// Index number format (max 2^32 prims)
@@ -238,9 +246,9 @@ public:
 		m_stopPrims = 2;
 		m_maxBadRefines = 3;
 		m_exactDepth = 1;
-		m_maxDepth = 0;
+		m_maxDepth = 7;
 	}
-
+		
 	/**
 	 * \brief Build a KD-tree over supplied geometry
 	 */
@@ -253,7 +261,8 @@ public:
 
 		/* Establish an ad-hoc depth cutoff value (Formula from PBRT) */
 		if (m_maxDepth == 0)
-			m_maxDepth = std::min((int) (8 + 1.3f * log2i(primCount)), MTS_KD_MAX_DEPTH);
+			m_maxDepth = (int) (8 + 1.3f * log2i(primCount));
+		m_maxDepth = std::min(m_maxDepth, (size_type) MTS_KD_MAX_DEPTH);
 
 		Log(EDebug, "Creating a preliminary index list (%.2f KiB)", 
 			primCount * sizeof(index_type) / 1024.0f);
@@ -288,6 +297,7 @@ public:
 		m_builders.resize(procCount);
 		for (size_type i=0; i<procCount; ++i) {
 			m_builders[i] = new SAHTreeBuilder(i+1, primCount, m_interface);
+			m_builders[i]->incRef();
 			m_builders[i]->start();
 		}
 
@@ -301,12 +311,12 @@ public:
 		Assert(ctx.leftAlloc.getUsed() == 0);
 		Assert(ctx.rightAlloc.getUsed() == 0);
 
-		Log(EInfo, "Finished -- took %i ms.", timer->getMilliseconds());
 		m_interface.done = true;
 		m_interface.cond->broadcast();
-		for (size_type i=0; i<procCount; ++i)
+		for (size_type i=0; i<procCount; ++i) 
 			m_builders[i]->join();
 		Log(EDebug, "");
+		Log(EInfo, "Finished -- took %i ms.", timer->getMilliseconds());
 
 		Log(EDebug, "Memory allocation statistics:");
 		Log(EDebug, "   Classification storage : %.2f KiB", 
@@ -318,9 +328,12 @@ public:
 		for (size_type i=0; i<procCount; ++i) {
 			Log(EDebug, "   Thread %i:", i+1);
 			BuildContext &subCtx = m_builders[i]->getContext();
-			ctx.accumulateStatistics(subCtx);
 			subCtx.printStats();
+			ctx.accumulateStatistics(subCtx);
+			ctx.nodeAlloc.merge(subCtx.nodeAlloc);
+			m_builders[i]->decRef();
 		}
+		m_builders.clear();
 		Log(EDebug, "");
 
 		Float rootSA = m_aabb.getSurfaceArea();
@@ -374,6 +387,27 @@ protected:
 		inline EdgeEvent(uint16_t type, uint16_t axis, float pos, index_type index)
 		 : pos(pos), index(index), type(type), axis(axis) { }
 
+		/// Return a string representation
+		std::string toString() const {
+			std::ostringstream oss;
+			oss << "EdgeEvent[" << endl
+				<< "  pos = " << pos << "," << endl
+				<< "  index = " << index << "," << endl
+				<< "  type = ";
+			if (type == EEdgeEnd)
+				oss << "end";
+			else if (type == EEdgePlanar)
+				oss << "planar";
+			else if (type == EEdgeStart)
+				oss << "start";
+			else
+				oss << "unknown!";
+			oss << "," << endl
+				<< "  axis = " << axis << endl
+				<<"]";
+			return oss.str();
+		}
+
 		/// Plane position
 		float pos;
 		/// Primitive index
@@ -411,6 +445,19 @@ protected:
 		inline SplitCandidate() :
 			sahCost(std::numeric_limits<Float>::infinity()),
 			pos(0), axis(0), numLeft(0), numRight(0), planarLeft(false) {
+		}
+
+		std::string toString() const {
+			std::ostringstream oss;
+			oss << "SplitCandidate[" << endl
+				<< "  sahCost=" << sahCost << "," << endl
+				<< "  pos=" << pos << "," << endl
+				<< "  axis=" << axis << "," << endl
+				<< "  numLeft=" << numLeft << "," << endl
+				<< "  numRight=" << numRight << "," << endl
+				<< "  planarLeft=" << (planarLeft ? "yes" : "no") << endl
+				<< "]";
+			return oss.str();
 		}
 	};
 
@@ -783,7 +830,13 @@ protected:
 			}
 			++badRefines;
 		}
-	
+
+		
+		cout << "Depth " << depth << endl;
+		cout << "AABB: " << nodeAABB.toString() << endl;
+		cout << "SAH cost: " << leafCost << " -> " << bestSplit.toString() << endl;
+		cout << endl;
+
 		/* ==================================================================== */
 	    /*                            Partitioning                              */
 	    /* ==================================================================== */
@@ -888,13 +941,39 @@ protected:
 	Float buildTreeSAH(BuildContext &ctx, unsigned int depth, KDNode *node,
 		const AABB &nodeAABB, EdgeEvent *eventStart, EdgeEvent *eventEnd, 
 		size_type primCount, bool isLeftChild, size_type badRefines) {
-		cout << "Depth: " << depth << endl;
 
 		Float leafCost = primCount * m_intersectionCost;
 		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
 			createLeaf(ctx, node, nodeAABB, primCount);
 			return leafCost;
 		}
+
+#if 0
+		EdgeEventOrdering ord;
+		int primCounts[3];
+		primCounts[0] = 0;
+		primCounts[1] = 0;
+		primCounts[2] = 0;
+		for (EdgeEvent *event = eventStart; event < eventEnd; ++event) {
+			Assert(event->axis >= 0 && event->axis < 3);
+			Assert(event->type >= 0 && event->type < 3);
+			if (event->type == EdgeEvent::EEdgePlanar
+				|| event->type == EdgeEvent::EEdgeStart)
+				primCounts[event->axis]++;
+			EdgeEvent *next = event+1;
+			if (next < eventEnd) {
+				if (!ord(*event, *next)) {
+					cout << event->toString() << endl;
+					cout << next->toString() << endl;
+					Assert(false);
+				}
+			}
+		}
+
+		Assert(primCounts[0] == primCount);
+		Assert(primCounts[1] == primCount);
+		Assert(primCounts[2] == primCount);
+#endif
 
 		SplitCandidate bestSplit;
 		Float invSA = 1.0f / nodeAABB.getSurfaceArea();
@@ -928,19 +1007,19 @@ protected:
 			size_type numStart = 0, numEnd = 0, numPlanar = 0;
 
 			/* Count "end" events */
-			while (event != eventEnd && event->pos == pos && event->axis == axis 
+			while (event < eventEnd && event->pos == pos && event->axis == axis 
 				&& event->type == EdgeEvent::EEdgeEnd) {
 				++numEnd; ++event;
 			}
 
 			/* Count "planar" events */
-			while (event != eventEnd && event->pos == pos && event->axis == axis 
+			while (event < eventEnd && event->pos == pos && event->axis == axis 
 				&& event->type == EdgeEvent::EEdgePlanar) {
 				++numPlanar; ++event;
 			}
 
 			/* Count "start" events */
-			while (event != eventEnd && event->pos == pos && event->axis == axis 
+			while (event < eventEnd && event->pos == pos && event->axis == axis 
 				&& event->type == EdgeEvent::EEdgeStart) {
 				++numStart; ++event;
 			}
@@ -957,7 +1036,7 @@ protected:
 
 			/* Calculate a score using the surface area heuristic */
 			if (EXPECT_TAKEN(pos >= nodeAABB.min[axis] && pos <= nodeAABB.max[axis])) {
-				Float tmp = m_aabb.max[axis];
+				Float tmp = nodeAABB.max[axis];
 				aabb.max[axis] = pos;
 				Float pLeft = invSA * aabb.getSurfaceArea();
 				aabb.max[axis] = tmp;
@@ -1008,6 +1087,11 @@ protected:
 
 		Assert(bestSplit.sahCost != std::numeric_limits<Float>::infinity());
 
+		cout << "Depth " << depth << endl;
+		cout << "AABB: " << nodeAABB.toString() << endl;
+		cout << "SAH cost: " << leafCost << " -> " << bestSplit.toString() << endl;
+		cout << endl;
+
 		/* "Bad refines" heuristic from PBRT */
 		if (bestSplit.sahCost >= leafCost) {
 			if ((bestSplit.sahCost > 4 * leafCost && primCount < 16)
@@ -1015,6 +1099,7 @@ protected:
 				createLeaf(ctx, node, nodeAABB, primCount);
 				return leafCost;
 			}
+			cout << "Increasing bad refines " << primCount << ", leafCost=" << leafCost << ", sahCost=" << bestSplit.sahCost << endl;
 			++badRefines;
 		}
 
@@ -1188,31 +1273,44 @@ protected:
 			rightAlloc.release(newEventsRightStart);
 			rightAlloc.release(rightEventsTempStart);
 		} else {
-			for (EdgeEvent *event = eventStart; event<eventEnd; ++event) {
+			for (EdgeEvent *event = eventStart; event < eventEnd; ++event) {
 				uint8_t classification = storage.get(event->index);
 				if (classification == ELeftSide) {
 					/* Left-only primitive. Move to the left list and advance */
-					*leftEventsEnd++ = *event;
+					if (leftEventsEnd == event)
+						leftEventsEnd++;
+					else
+						*leftEventsEnd++ = *event;
 				} else if (classification == ERightSide) {
 					/* Right-only primitive. Move to the right list and advance */
-					*rightEventsEnd++ = *event;
+					if (rightEventsEnd == event)
+						rightEventsEnd++;
+					else
+						*rightEventsEnd++ = *event;
 				} else if (classification == EBothSides) {
 					/* The primitive overlaps the split plane. Its edge events
 					   must be added to both lists. */
-					*leftEventsEnd++ = *event;
-					*rightEventsEnd++ = *event;
+					if (leftEventsEnd == event)
+						leftEventsEnd++;
+					else
+						*leftEventsEnd++ = *event;
+					if (rightEventsEnd == event)
+						rightEventsEnd++;
+					else
+						*rightEventsEnd++ = *event;
 				}
 			}
+			Assert(leftEventsEnd - leftEventsStart <= bestSplit.numLeft * 6);
+			Assert(rightEventsEnd - rightEventsStart <= bestSplit.numRight * 6);
 		}
-
 
 		/* Shrink the edge event storage now that we know exactly how 
 		   many are on each side */
-		ctx.leftAlloc.shrinkAllocation(leftEventsStart, 
-				leftEventsEnd - leftEventsStart);
+//		ctx.leftAlloc.shrinkAllocation(leftEventsStart, 
+//				leftEventsEnd - leftEventsStart);
 
-		ctx.rightAlloc.shrinkAllocation(rightEventsStart, 
-				rightEventsEnd - rightEventsStart);
+//		ctx.rightAlloc.shrinkAllocation(rightEventsStart, 
+//				rightEventsEnd - rightEventsStart);
 	
 		/* ==================================================================== */
 		/*                              Recursion                               */
