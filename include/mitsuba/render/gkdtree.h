@@ -174,7 +174,7 @@ public:
 			}
 		}
 #if defined(MTS_KD_DEBUG)
-		/* Uh oh, allocation could not be found. Check if it has size==0 */
+		/* Uh oh, allocation could not be found. Check if it has size == 0 */
 		if (newSize == 0) {
 			for (std::vector<Chunk>::iterator it = m_chunks.begin();
 					it != m_chunks.end(); ++it) {
@@ -476,14 +476,171 @@ public:
 		m_exactPrimThreshold = 65536;
 		m_maxDepth = 0;
 		m_retract = true;
-		m_parallel = true;
+		m_parallelBuild = true;
 	}
 
+	/**
+	 * \brief Release all memory
+	 */
 	virtual ~GenericKDTree() {
 		if (m_indices)
 			delete[] m_indices;
 		if (m_nodes)
 			delete[] m_nodes;
+	}
+
+	/**
+	 * \brief Set the traversal cost used by the surface area heuristic
+	 */
+	inline void setTraversalCost(Float traversalCost) {
+		m_traversalCost = traversalCost;
+	}
+
+	/**
+	 * \brief Return the traversal cost used by the surface area heuristic
+	 */
+	inline Float getTraversalCost() const {
+		return m_traversalCost;
+	}
+
+	/**
+	 * \brief Set the intersection cost used by the surface area heuristic
+	 */
+	inline void setIntersectionCost(Float intersectionCost) {
+		m_intersectionCost = intersectionCost;
+	}
+
+	/**
+	 * \brief Return the intersection cost used by the surface area heuristic
+	 */
+	inline Float getIntersectionCost() const {
+		return m_intersectionCost;
+	}
+
+	/**
+	 * \brief Set the bonus factor for empty space used by the
+	 * surface area heuristic
+	 */
+	inline void setEmptySpaceBonus(Float emptySpaceBonus) {
+		m_emptySpaceBonus = emptySpaceBonus;
+	}
+
+	/**
+	 * \brief Return the bonus factor for empty space used by the
+ 	 * surface area heuristic
+	 */
+	inline Float getEmptySpaceBonus() const {
+		return m_emptySpaceBonus;
+	}
+
+	/**
+	 * \brief Set the maximum tree depth (0 = use heuristic)
+	 */
+	inline void setMaxDepth(size_type maxDepth) {
+		m_maxDepth = maxDepth;
+	}
+
+	/**
+	 * \brief Return maximum tree depth (0 = use heuristic)
+	 */
+	inline size_type getMaxDepth() const {
+		return m_maxDepth;
+	}
+	
+	/**
+	 * \brief Specify whether or not to use primitive clipping will
+	 * be used in the tree construction.
+	 */
+	inline void setClip(bool clip) {
+		m_clip = clip;
+	}
+
+	/**
+	 * \brief Return whether or not to use primitive clipping will
+	 * be used in the tree construction.
+	 */
+	inline bool getClip() const {
+		return m_clip;
+	}
+
+	/**
+	 * \brief Specify whether or not bad splits can be "retracted".
+	 */
+	inline void setRetract(bool retract) {
+		m_retract = retract;
+	}
+
+	/**
+	 * \brief Return whether or not bad splits can be "retracted".
+	 */
+	inline bool getRetract() const {
+		return m_retract;
+	}
+
+	/**
+	 * \brief Set the number of bad refines allowed to happen
+	 * in succession before a leaf node will be created.
+	 */
+	inline void setMaxBadRefines(size_type maxBadRefines) {
+		m_maxBadRefines = maxBadRefines;
+	}
+
+	/**
+	 * \brief Return the number of bad refines allowed to happen
+	 * in succession before a leaf node will be created.
+	 */
+	inline size_type getMaxBadRefines() const {
+		return m_maxBadRefines;
+	}
+
+	/**
+	 * \brief Set the number of primitives, at which recursion will
+	 * stop when building the tree.
+	 */
+	inline void setStopPrims(size_type stopPrims) {
+		m_stopPrims = stopPrims;
+	}
+
+	/**
+	 * \brief Return the number of primitives, at which recursion will
+	 * stop when building the tree.
+	 */
+	inline size_type getStopPrims() const {
+		return m_stopPrims;
+	}
+
+	/**
+	 * \brief Specify whether or not tree construction
+	 * should run in parallel.
+	 */
+	inline void setParallelBuild(bool parallel) {
+		m_parallelBuild = parallel;
+	}
+
+	/**
+	 * \brief Return whether or not tree construction
+	 * will run in parallel.
+	 */
+	inline bool getParallelBuild() const {
+		return m_parallelBuild;
+	}
+
+	/**
+	 * \brief Specify the number of primitives, at which the builder will switch
+	 * from (approximate) Min-Max binning to the accurate O(n log n) SAH-based 
+	 * optimization method.
+	 */
+	inline void setExactPrimitiveThreshold(bool exactPrimThreshold) {
+		m_exactPrimThreshold = exactPrimThreshold;
+	}
+
+	/**
+	 * \brief Return the number of primitives, at which the builder will switch
+	 * from (approximate) Min-Max binning to the accurate O(n log n) SAH-based 
+	 * optimization method.
+	 */
+	inline bool getExactPrimitiveThreshold() const {
+		return m_exactPrimThreshold;
 	}
 
 	/**
@@ -525,7 +682,8 @@ public:
 		Log(EDebug, "   Scene bounding box (min) : %s", m_aabb.min.toString().c_str());
 		Log(EDebug, "   Scene bounding box (max) : %s", m_aabb.max.toString().c_str());
 		Log(EDebug, "   Min-max bins             : %i", MTS_KD_MINMAX_BINS);
-		Log(EDebug, "   Greedy SAH optimization  : use for <= %i primitives", m_exactPrimThreshold);
+		Log(EDebug, "   Greedy SAH optimization  : use for <= %i primitives", 
+				m_exactPrimThreshold);
 		Log(EDebug, "   Perfect splits           : %s", m_clip ? "yes" : "no");
 		Log(EDebug, "   Retract bad splits       : %s", m_retract ? "yes" : "no");
 		Log(EDebug, "   Stopping primitive count : %i", m_stopPrims);
@@ -533,9 +691,9 @@ public:
 
 		size_type procCount = getProcessorCount();
 		if (procCount == 1)
-			m_parallel = false;
+			m_parallelBuild = false;
 
-		if (m_parallel) {
+		if (m_parallelBuild) {
 			m_builders.resize(procCount);
 			for (size_type i=0; i<procCount; ++i) {
 				m_builders[i] = new SAHTreeBuilder(i, this);
@@ -555,7 +713,7 @@ public:
 		KDAssert(ctx.leftAlloc.used() == 0);
 		KDAssert(ctx.rightAlloc.used() == 0);
 
-		if (m_parallel) {
+		if (m_parallelBuild) {
 			m_interface.done = true;
 			m_interface.cond->broadcast();
 			for (size_type i=0; i<m_builders.size(); ++i) 
@@ -652,7 +810,8 @@ public:
 				float split = node->getSplit();
 				bool result = target->initInnerNode(axis, split, children - target);
 				if (!result)
-					Log(EError, "Cannot represent relative pointer -- too many primitives?");
+					Log(EError, "Cannot represent relative pointer -- "
+						"too many primitives?");
 
 				Float tmp = aabb.min[axis];
 				aabb.min[axis] = split;
@@ -861,10 +1020,12 @@ protected:
 					leftAlloc.getChunkCount(), memString(leftAlloc.size()).c_str());
 			Log(EDebug, "      Right events  : " SIZE_T_FMT " chunks (%s)",
 					rightAlloc.getChunkCount(), memString(rightAlloc.size()).c_str());
-			Log(EDebug, "      kd-tree nodes : " SIZE_T_FMT " entries, " SIZE_T_FMT " blocks (%s)",
-					nodes.size(), nodes.blockCount(), memString(nodes.capacity() * sizeof(KDNode)).c_str());
-			Log(EDebug, "      Indices       : " SIZE_T_FMT " entries, " SIZE_T_FMT " blocks (%s)",
-					indices.size(), indices.blockCount(), memString(indices.capacity() * sizeof(index_type)).c_str());
+			Log(EDebug, "      kd-tree nodes : " SIZE_T_FMT " entries, " SIZE_T_FMT 
+					" blocks (%s)", nodes.size(), nodes.blockCount(), 
+					memString(nodes.capacity() * sizeof(KDNode)).c_str());
+			Log(EDebug, "      Indices       : " SIZE_T_FMT " entries, " SIZE_T_FMT 
+					" blocks (%s)", indices.size(), indices.blockCount(), 
+					memString(indices.capacity() * sizeof(index_type)).c_str());
 		}
 
 		void accumulateStatisticsFrom(const BuildContext &ctx) {
@@ -915,7 +1076,8 @@ protected:
 				/* Bit layout:
 				   31   : False (inner node)
 				   30   : Indirection node flag
-				   29-3 : Offset to the left child
+				   29-3 : Offset to the left child 
+				          or indirection table entry
 				   2-0  : Split axis
 				*/
 				uint32_t combined;
@@ -972,8 +1134,11 @@ protected:
 		 * they lie in different memory chunks. In this case, the node
 		 * stores an index into a globally shared pointer list.
 		 */
-		inline void initIndirectionNode(int axis, float split, uint32_t indirectionEntry) {
-			inner.combined = EIndirectionMask | axis | ((uint32_t) indirectionEntry << 2);
+		inline void initIndirectionNode(int axis, float split, 
+				uint32_t indirectionEntry) {
+			inner.combined = EIndirectionMask 
+				| ((uint32_t) indirectionEntry << 2)
+				| axis;
 			inner.split = split;
 		}
 
@@ -1069,7 +1234,8 @@ protected:
 				int badRefines = m_interface.badRefines;
 				EdgeEvent *eventStart = leftAlloc.allocate<EdgeEvent>(eventCount),
 						  *eventEnd = eventStart + eventCount;
-				memcpy(eventStart, m_interface.eventStart, eventCount * sizeof(EdgeEvent));
+				memcpy(eventStart, m_interface.eventStart, 
+						eventCount * sizeof(EdgeEvent));
 				m_interface.threadMap[node] = m_id;
 				m_interface.node = NULL;
 				m_interface.condJobTaken->signal();
@@ -1110,7 +1276,8 @@ protected:
 	 * accurate SAH-based optimizier.
 	 */
 	boost::tuple<EdgeEvent *, EdgeEvent *, size_type> createEventList(
-			OrderedChunkAllocator &alloc, const AABB &nodeAABB, index_type *prims, size_type primCount) {
+			OrderedChunkAllocator &alloc, const AABB &nodeAABB, 
+			index_type *prims, size_type primCount) {
 		size_type initialSize = primCount * 6, actualPrimCount = 0;
 		EdgeEvent *eventStart = alloc.allocate<EdgeEvent>(initialSize);
 		EdgeEvent *eventEnd = eventStart;
@@ -1296,11 +1463,12 @@ protected:
 		}
 
 		if (primCount <= m_exactPrimThreshold) {
-			OrderedChunkAllocator &alloc = isLeftChild ? ctx.leftAlloc : ctx.rightAlloc;
+			OrderedChunkAllocator &alloc = isLeftChild 
+					? ctx.leftAlloc : ctx.rightAlloc;
 			boost::tuple<EdgeEvent *, EdgeEvent *, size_type> events  
 					= createEventList(alloc, nodeAABB, indices, primCount);
 			Float sahCost;
-			if (m_parallel) {
+			if (m_parallelBuild) {
 				m_interface.mutex->lock();
 				m_interface.depth = depth;
 				m_interface.node = node;
@@ -1320,10 +1488,11 @@ protected:
 				// Never tear down this subtree (return a SAH cost of -infinity)
 				sahCost = -std::numeric_limits<Float>::infinity();
 			} else {
-				std::sort(boost::get<0>(events), boost::get<1>(events), EdgeEventOrdering());
+				std::sort(boost::get<0>(events), boost::get<1>(events), 
+						EdgeEventOrdering());
 
 				sahCost = buildTreeSAH(ctx, depth, node, nodeAABB,
-					boost::get<0>(events), boost::get<1>(events), boost::get<2>(events), 
+					boost::get<0>(events), boost::get<1>(events), boost::get<2>(events),
 					isLeftChild, badRefines);
 			}
 			alloc.release(boost::get<0>(events));
@@ -1572,7 +1741,8 @@ protected:
 						sahCostPlanarLeft *= m_emptySpaceBonus;
 					if (nL == 0 || nR + numPlanar == 0)
 						sahCostPlanarRight *= m_emptySpaceBonus;
-					if (sahCostPlanarLeft < bestSplit.sahCost || sahCostPlanarRight < bestSplit.sahCost) {
+					if (sahCostPlanarLeft < bestSplit.sahCost ||
+						sahCostPlanarRight < bestSplit.sahCost) {
 						bestSplit.pos = pos;
 						bestSplit.axis = axis;
 						if (sahCostPlanarLeft < sahCostPlanarRight) {
@@ -1660,8 +1830,8 @@ protected:
 					storage.set(event->index, ELeftSide);
 					primsBoth--;
 					primsLeft++;
-				} else if (event->pos > bestSplit.pos || (event->pos == bestSplit.pos && 
-					!bestSplit.planarLeft)) {
+				} else if (event->pos > bestSplit.pos 
+					   || (event->pos == bestSplit.pos && !bestSplit.planarLeft)) {
 					storage.set(event->index, ERightSide);
 					primsBoth--;
 					primsRight++;
@@ -1701,10 +1871,11 @@ protected:
 		/* ==================================================================== */
 
 		if (m_clip) {
-			EdgeEvent *leftEventsTempStart = leftAlloc.allocate<EdgeEvent>(primsLeft * 6),
-					  *rightEventsTempStart = rightAlloc.allocate<EdgeEvent>(primsRight * 6),
-					  *newEventsLeftStart = leftAlloc.allocate<EdgeEvent>(primsBoth * 6),
-					  *newEventsRightStart = rightAlloc.allocate<EdgeEvent>(primsBoth * 6);
+			EdgeEvent
+			  *leftEventsTempStart = leftAlloc.allocate<EdgeEvent>(primsLeft * 6),
+			  *rightEventsTempStart = rightAlloc.allocate<EdgeEvent>(primsRight * 6),
+			  *newEventsLeftStart = leftAlloc.allocate<EdgeEvent>(primsBoth * 6),
+			  *newEventsRightStart = rightAlloc.allocate<EdgeEvent>(primsBoth * 6);
 
 			EdgeEvent *leftEventsTempEnd = leftEventsTempStart, 
 					*rightEventsTempEnd = rightEventsTempStart,
@@ -1732,13 +1903,17 @@ protected:
 
 					if (clippedLeft.isValid() && clippedLeft.getSurfaceArea() > 0) {
 						for (int axis=0; axis<3; ++axis) {
-							float min = (float) clippedLeft.min[axis], max = (float) clippedLeft.max[axis];
+							float min = (float) clippedLeft.min[axis],
+								  max = (float) clippedLeft.max[axis];
 
 							if (min == max) {
-								*newEventsLeftEnd++ = EdgeEvent(EdgeEvent::EEdgePlanar, axis, min, index);
+								*newEventsLeftEnd++ = EdgeEvent(EdgeEvent::EEdgePlanar, 
+										axis, min, index);
 							} else {
-								*newEventsLeftEnd++ = EdgeEvent(EdgeEvent::EEdgeStart, axis, min, index);
-								*newEventsLeftEnd++ = EdgeEvent(EdgeEvent::EEdgeEnd, axis, max, index);
+								*newEventsLeftEnd++ = EdgeEvent(EdgeEvent::EEdgeStart, 
+										axis, min, index);
+								*newEventsLeftEnd++ = EdgeEvent(EdgeEvent::EEdgeEnd, 
+										axis, max, index);
 							}
 						}
 					} else {
@@ -1747,13 +1922,17 @@ protected:
 
 					if (clippedRight.isValid() && clippedRight.getSurfaceArea() > 0) {
 						for (int axis=0; axis<3; ++axis) {
-							float min = (float) clippedRight.min[axis], max = (float) clippedRight.max[axis];
+							float min = (float) clippedRight.min[axis],
+								  max = (float) clippedRight.max[axis];
 
 							if (min == max) {
-								*newEventsRightEnd++ = EdgeEvent(EdgeEvent::EEdgePlanar, axis, min, index);
+								*newEventsRightEnd++ = EdgeEvent(EdgeEvent::EEdgePlanar,
+										axis, min, index);
 							} else {
-								*newEventsRightEnd++ = EdgeEvent(EdgeEvent::EEdgeStart, axis, min, index);
-								*newEventsRightEnd++ = EdgeEvent(EdgeEvent::EEdgeEnd, axis, max, index);
+								*newEventsRightEnd++ = EdgeEvent(EdgeEvent::EEdgeStart, 
+										axis, min, index);
+								*newEventsRightEnd++ = EdgeEvent(EdgeEvent::EEdgeEnd,
+										axis, max, index);
 							}
 						}
 					} else {
@@ -1922,8 +2101,10 @@ protected:
 							* invBinSize[axis]);
 					int maxIdx = (int) ((aabb.max[axis] - m_aabb.min[axis]) 
 							* invBinSize[axis]);
-					m_maxBins[axis * BinCount + std::max(0, std::min(maxIdx, BinCount-1))]++;
-					m_minBins[axis * BinCount + std::max(0, std::min(minIdx, BinCount-1))]++;
+					m_maxBins[axis * BinCount 
+						+ std::max(0, std::min(maxIdx, BinCount-1))]++;
+					m_minBins[axis * BinCount 
+						+ std::max(0, std::min(minIdx, BinCount-1))]++;
 				}
 			}
 		}
@@ -2025,7 +2206,8 @@ protected:
 					if (idx == leftBin && idxNext > leftBin)
 						break;
 					if (idx < leftBin && idxNext > leftBin) {
-						/* Insufficient floating point resolution -- a leaf will be created. */
+						/* Insufficient floating point resolution
+						   -> a leaf will be created. */
 						candidate.sahCost = std::numeric_limits<Float>::infinity();
 						break;
 					}
@@ -2035,7 +2217,8 @@ protected:
 			}
 
 			if (split <= m_aabb.min[axis] || split > m_aabb.max[axis]) {
-				/* Insufficient floating point resolution -- a leaf will be created. */
+				/* Insufficient floating point resolution 
+				   -> a leaf will be created. */
 				candidate.sahCost = std::numeric_limits<Float>::infinity();
 			}
 
@@ -2051,7 +2234,8 @@ protected:
 		 */
 		boost::tuple<AABB, index_type *, AABB, index_type *> partition(
 				BuildContext &ctx, const Derived *derived, index_type *primIndices,
-				SplitCandidate &split, bool isLeftChild, Float traversalCost, Float intersectionCost) {
+				SplitCandidate &split, bool isLeftChild, Float traversalCost, 
+				Float intersectionCost) {
 			const float splitPos = split.pos;
 			const int axis = split.axis;
 			size_type numLeft = 0, numRight = 0;
@@ -2155,7 +2339,7 @@ private:
 	Float m_traversalCost;
 	Float m_intersectionCost;
 	Float m_emptySpaceBonus;
-	bool m_clip, m_retract, m_parallel;
+	bool m_clip, m_retract, m_parallelBuild;
 	AABB m_aabb;
 	size_type m_maxDepth;
 	size_type m_stopPrims;
