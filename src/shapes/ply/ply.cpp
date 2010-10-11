@@ -367,7 +367,7 @@ void PLYLoader::loadPLY(const fs::path &path) {
 	ply_parser.parse(path.file_string());
 
 	Log(EInfo, "\"%s\": Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
-			" vertices (%s, %i ms).", m_name.c_str(), m_triangleCount, m_vertexCount,
+			" vertices (%s in %i ms).", m_name.c_str(), m_triangleCount, m_vertexCount,
 			memString(sizeof(uint32_t) * m_triangleCount * 3 + sizeof(Vertex) * m_vertexCount).c_str(),
 			timer->getMilliseconds());
 }

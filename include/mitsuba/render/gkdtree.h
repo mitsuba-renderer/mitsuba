@@ -473,7 +473,7 @@ public:
 		m_clip = true;
 		m_stopPrims = 4;
 		m_maxBadRefines = 3;
-		m_exactPrimThreshold = 16384;
+		m_exactPrimThreshold = 65536;
 		m_maxDepth = 0;
 		m_retract = true;
 		m_parallel = true;
