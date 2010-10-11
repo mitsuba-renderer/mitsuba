@@ -25,18 +25,22 @@
 
 /// Compile-time KD-tree depth limit
 #define MTS_KD_MAX_DEPTH 48     
+
 /// Collect statistics during building/traversal 
 #define MTS_KD_STATISTICS 1     
+
 /// Min-max bin count
 #define MTS_KD_MINMAX_BINS 32   
+
 /// BlockedMemoryAllocator: don't create chunks smaller than 512KiB
 #define MTS_KD_MIN_ALLOC 512*1024
+
 /// Allocate nodes & index lists in chunks of 512 KiB
 #define MTS_KD_BLOCKSIZE_KD  (512*1024/sizeof(KDNode))
 #define MTS_KD_BLOCKSIZE_IDX (512*1024/sizeof(uint32_t))
+
 /// Allocate indirection lists in chunks of 1 KiB 
 #define MTS_KD_BLOCKSIZE_IND (1024/sizeof(KDNode *))
-
 
 #if MTS_KD_DEBUG
 #define KDAssert(expr) Assert(expr)
@@ -441,8 +445,8 @@ public:
 		m_clip = true;
 		m_stopPrims = 4;
 		m_maxBadRefines = 2;
-		m_exactPrimThreshold = 4096;
-		m_maxDepth = 0;
+		m_exactPrimThreshold = 1409600;
+		m_maxDepth = 1024;
 		m_retract = true;
 		m_parallel = false;
 	}
@@ -549,7 +553,9 @@ public:
 		}
 		
 		Log(EDebug, "");
-		Log(EDebug, "Flattening node and index data structures ..");
+		timer->reset();
+		Log(EDebug, "Optimizing node and index data structures ..");
+		Log(EDebug, "Finished -- took %i ms.", timer->getMilliseconds());
 
 		ctx.nodes.clear();
 		ctx.indices.clear();
@@ -567,7 +573,7 @@ public:
 
 		Log(EDebug, "");
 
-		Float rootSA = m_aabb.getSurfaceArea();
+//		Float rootSA = m_aabb.getSurfaceArea();
 //		expTraversalSteps /= rootSA;
 //		expLeavesVisited /= rootSA;
 //		expPrimitivesIntersected /= rootSA;
@@ -984,20 +990,114 @@ protected:
 	 *     Thread-specific build context containing allocators etc.
 	 * \param node
 	 *     KD-tree node entry to be filled
+	 * \param eventStart
+	 *     Start pointer of an edge event list
+	 * \param eventEnd
+	 *     End pointer of an edge event list
 	 * \param primCount
 	 *     Total primitive count for the current node
 	 */
-	void createLeaf(BuildContext &ctx, KDNode *node, const AABB &nodeAABB, size_type primCount) {
-		node->initLeafNode(0, primCount);
+	void createLeaf(BuildContext &ctx, KDNode *node, EdgeEvent *eventStart, 
+			EdgeEvent *eventEnd, size_type primCount) {
+		node->initLeafNode(ctx.indices.size(), primCount);
 		if (primCount > 0) {
+			size_type seenPrims = 0;
 			ctx.nonemptyLeafNodeCount++;
-
-			//OrderedChunkAllocator &alloc = ctx.indexAlloc;
-			//index_type *alloc = alloc.allocate<index_type>(primCount);
+			for (EdgeEvent *event = eventStart; event != eventEnd 
+					&& event->axis == 0; ++event) {
+				if (event->type == EdgeEvent::EEdgeStart ||
+					event->type == EdgeEvent::EEdgePlanar) {
+					ctx.indices.push_back(event->index);
+					seenPrims++;
+				}
+			}
+			KDAssert(seenPrims == primCount);
 		}
 		ctx.leafNodeCount++;
 	}
-		
+
+	/**
+	 * \brief Leaf node creation helper function
+	 *
+	 * \param ctx 
+	 *     Thread-specific build context containing allocators etc.
+	 * \param node
+	 *     KD-tree node entry to be filled
+	 * \param indices
+	 *     Start pointer of an index list
+	 * \param primCount
+	 *     Total primitive count for the current node
+	 */
+	void createLeaf(BuildContext &ctx, KDNode *node, size_type *indices,
+			size_type primCount) {
+		node->initLeafNode(ctx.indices.size(), primCount);
+		if (primCount > 0) {
+			ctx.nonemptyLeafNodeCount++;
+			for (size_type i=0; i<primCount; ++i) 
+				ctx.indices.push_back(indices[i]);
+		}
+		ctx.leafNodeCount++;
+	}
+
+	/**
+	 * \brief Leaf node creation helper function. 
+	 *
+	 * Creates a unique index list by collapsing
+	 * a subtree with a bad SAH cost.
+	 *
+	 * \param ctx 
+	 *     Thread-specific build context containing allocators etc.
+	 * \param node
+	 *     KD-tree node entry to be filled
+	 * \param start
+	 *     Start pointer of the subtree indices
+	 * \param primCount
+	 *     Total primitive count for the current node
+	 */
+	void createLeafAfterRetraction(BuildContext &ctx, KDNode *node, 
+			size_type start, size_type primCount) {
+		node->initLeafNode(start, primCount);
+		size_t actualCount = ctx.indices.size() - start;
+
+		if (actualCount != primCount) {
+			KDAssert(primCount > 0);
+			ctx.nonemptyLeafNodeCount++;
+			OrderedChunkAllocator &alloc = ctx.leftAlloc;
+
+			/* Create a unique index list */
+			index_type *tempStart = alloc.allocate<index_type>(actualCount);
+			index_type *tempEnd = tempStart;
+
+			cout << endl;
+			cout << "Before (" << actualCount << ") = ";
+
+			for (size_type i=start, end = start + actualCount; i<end; ++i) {
+				cout << ctx.indices[i] << " ";
+				*tempEnd++ = ctx.indices[i];
+			}
+
+			cout <<endl;
+
+			std::sort(tempStart, tempEnd, std::less<index_type>());
+			index_type *ptr = tempStart;
+			cout << "After (" << primCount << ") = ";
+
+			for (size_type i=0; i<primCount; ++i) {
+				KDAssert(ptr < tempEnd);
+				ctx.indices[i] = *ptr++;
+				cout << ctx.indices[i] << " " ;
+				while (ptr < tempEnd && *ptr != ctx.indices[i])
+					++ptr;
+			}
+			
+			cout << endl;
+
+			ctx.indices.resize(start + primCount);
+			alloc.release(tempStart);
+		}
+
+		ctx.leafNodeCount++;
+	}
 
 	/**
 	 * \brief Build helper function (min-max binning)
@@ -1035,7 +1135,7 @@ protected:
 
 		Float leafCost = primCount * m_intersectionCost;
 		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
-			createLeaf(ctx, node, nodeAABB, primCount);
+			createLeaf(ctx, node, indices, primCount);
 			return leafCost;
 		}
 
@@ -1072,7 +1172,7 @@ protected:
 			if ((bestSplit.sahCost > 4 * leafCost && primCount < 16)
 				|| bestSplit.sahCost == std::numeric_limits<Float>::infinity()
 				|| badRefines >= m_maxBadRefines) {
-				createLeaf(ctx, node, nodeAABB, primCount);
+				createLeaf(ctx, node, indices, primCount);
 				return leafCost;
 			}
 			++badRefines;
@@ -1092,9 +1192,13 @@ protected:
 
 		KDNode *children = ctx.nodes.allocate(2);
 
-		size_t nodePosBeforeSplit = ctx.nodes.size();
-		size_t indexPosBeforeSplit = ctx.indices.size();
-		size_t indirectionsPosBeforeSplit = ctx.indirections.size();
+		size_type nodePosBeforeSplit = ctx.nodes.size();
+		size_type indexPosBeforeSplit = ctx.indices.size();
+		size_type indirectionsPosBeforeSplit = ctx.indirections.size();
+		size_type leafNodeCountBeforeSplit = ctx.leafNodeCount;
+		size_type nonemptyLeafNodeCountBeforeSplit = ctx.nonemptyLeafNodeCount;
+		size_type innerNodeCountBeforeSplit = ctx.innerNodeCount;
+
 		if (!node->initInnerNode(bestSplit.axis, bestSplit.pos, children-node)) {
 			ctx.indirections.push_back(children);
 			/* Unable to store relative offset -- create an indirection
@@ -1143,11 +1247,12 @@ protected:
 			   Tear up everything below this node and create a leaf */
 
 			ctx.nodes.resize(nodePosBeforeSplit);
-			ctx.indices.resize(indexPosBeforeSplit);
 			ctx.indirections.resize(indirectionsPosBeforeSplit);
-	
 			ctx.retractedSplits++;
-			createLeaf(ctx, node, nodeAABB, primCount);
+			ctx.leafNodeCount = leafNodeCountBeforeSplit;
+			ctx.nonemptyLeafNodeCount = nonemptyLeafNodeCountBeforeSplit;
+			ctx.innerNodeCount = innerNodeCountBeforeSplit;
+			createLeafAfterRetraction(ctx, node, indexPosBeforeSplit, primCount);
 			return leafCost;
 		}
 	}
@@ -1187,7 +1292,7 @@ protected:
 
 		Float leafCost = primCount * m_intersectionCost;
 		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
-			createLeaf(ctx, node, nodeAABB, primCount);
+			createLeaf(ctx, node, eventStart, eventEnd, primCount);
 			return leafCost;
 		}
 
@@ -1311,7 +1416,7 @@ protected:
 			if ((bestSplit.sahCost > 4 * leafCost && primCount < 16)
 				|| badRefines >= m_maxBadRefines
 				|| bestSplit.sahCost == std::numeric_limits<Float>::infinity()) {
-				createLeaf(ctx, node, nodeAABB, primCount);
+				createLeaf(ctx, node, eventStart, eventEnd, primCount);
 				return leafCost;
 			}
 			++badRefines;
@@ -1522,9 +1627,13 @@ protected:
 
 		KDNode *children = ctx.nodes.allocate(2);
 
-		size_t nodePosBeforeSplit = ctx.nodes.size();
-		size_t indexPosBeforeSplit = ctx.indices.size();
-		size_t indirectionsPosBeforeSplit = ctx.indirections.size();
+		size_type nodePosBeforeSplit = ctx.nodes.size();
+		size_type indexPosBeforeSplit = ctx.indices.size();
+		size_type indirectionsPosBeforeSplit = ctx.indirections.size();
+		size_type leafNodeCountBeforeSplit = ctx.leafNodeCount;
+		size_type nonemptyLeafNodeCountBeforeSplit = ctx.nonemptyLeafNodeCount;
+		size_type innerNodeCountBeforeSplit = ctx.innerNodeCount;
+
 		if (!node->initInnerNode(bestSplit.axis, bestSplit.pos, children-node)) {
 			ctx.indirections.push_back(children);
 
@@ -1568,11 +1677,12 @@ protected:
 			   Tear up everything below this node and create a leaf */
 
 			ctx.nodes.resize(nodePosBeforeSplit);
-			ctx.indices.resize(indexPosBeforeSplit);
 			ctx.indirections.resize(indirectionsPosBeforeSplit);
-
 			ctx.retractedSplits++;
-			createLeaf(ctx, node, nodeAABB, primCount);
+			ctx.leafNodeCount = leafNodeCountBeforeSplit;
+			ctx.nonemptyLeafNodeCount = nonemptyLeafNodeCountBeforeSplit;
+			ctx.innerNodeCount = innerNodeCountBeforeSplit;
+			createLeafAfterRetraction(ctx, node, indexPosBeforeSplit, primCount);
 			return leafCost;
 		}
 
