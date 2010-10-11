@@ -91,16 +91,65 @@ public:
 			  m_triangleCount(triangleCount) {
 		}
 
-		inline AABB getAABB(index_type idx) const {
+		FINLINE AABB getAABB(index_type idx) const {
 			return m_triangles[idx].getAABB(m_vertexBuffer);
 		}
 		
-		inline AABB getClippedAABB(index_type idx, const AABB &aabb) const {
+		FINLINE AABB getClippedAABB(index_type idx, const AABB &aabb) const {
 			return m_triangles[idx].getClippedAABB(m_vertexBuffer, aabb);
 		}
 
-		inline size_type getPrimitiveCount() const {
+		FINLINE size_type getPrimitiveCount() const {
 			return m_triangleCount;
+		}
+
+		FINLINE EIntersectionResult intersect(index_type idx, const Ray &ray, Float mint, 
+				Float maxt, Float &t, void *tmp) {
+			Float tempT, tempU, tempV;
+			if (m_triangles[idx].rayIntersect(m_vertexBuffer, ray, tempU, tempV, tempT)) {
+				if (tempT >= mint && tempT <= maxt) {
+					index_type *indexPtr = reinterpret_cast<index_type *>(tmp);
+					Float *floatPtr = reinterpret_cast<Float *>(indexPtr + 1);
+
+					t = tempT;
+					*indexPtr = idx;
+					*floatPtr++ = tempU;
+					*floatPtr++ = tempV;
+
+					return EYes;
+				}
+				return ENo;
+			} else {
+				return ENever;
+			}
+		}
+
+		FINLINE void fillIntersectionDetails(const Ray &ray, 
+				Float t, const void *tmp, Intersection &its) const {
+			its.p = ray(t);
+
+			const index_type *indexPtr = reinterpret_cast<const index_type *>(tmp);
+			const Float *floatPtr = reinterpret_cast<const Float *>(indexPtr + 1);
+
+			const Triangle &tri = m_triangles[*indexPtr];
+			const Vertex &v0 = m_vertexBuffer[tri.idx[0]];
+			const Vertex &v1 = m_vertexBuffer[tri.idx[1]];
+			const Vertex &v2 = m_vertexBuffer[tri.idx[2]];
+
+			const Float u = *floatPtr++, v = *floatPtr++;
+			const Vector b(1 - u - v, u, v);
+
+			its.uv = v0.uv * b.x + v1.uv * b.y + v2.uv * b.z;
+			its.dpdu = v0.dpdu * b.x + v1.dpdu * b.y + v2.dpdu * b.z;
+			its.dpdv = v0.dpdv * b.x + v1.dpdv * b.y + v2.dpdv * b.z;
+
+			its.geoFrame = Frame(normalize(cross(v1.p-v0.p, v2.p-v0.p)));
+			its.shFrame.n = normalize(v0.n * b.x + v1.n * b.y + v2.n * b.z);
+			its.shFrame.s = normalize(its.dpdu - its.shFrame.n 
+				* dot(its.shFrame.n, its.dpdu));
+			its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
+			its.wi = its.toLocal(-ray.d);
+			its.hasUVPartials = false;
 		}
 
 	private:

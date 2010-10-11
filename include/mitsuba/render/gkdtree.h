@@ -26,11 +26,9 @@
 /// Activate lots of extra checks
 #define MTS_KD_DEBUG 1
 
-/// Compile-time KD-tree depth limit
-#define MTS_KD_MAX_DEPTH 48     
-
-/// Collect statistics during building/traversal 
-#define MTS_KD_STATISTICS 1     
+/** Compile-time KD-tree depth limit. Allows to put certain
+    data structures on the stack */
+#define MTS_KD_MAX_DEPTH 48
 
 /// Min-max bin count
 #define MTS_KD_MINMAX_BINS 128
@@ -41,6 +39,13 @@
 /// Allocate nodes & index lists in blocks of 512 KiB
 #define MTS_KD_BLOCKSIZE_KD  (512*1024/sizeof(KDNode))
 #define MTS_KD_BLOCKSIZE_IDX (512*1024/sizeof(uint32_t))
+
+/// 8*4=32 byte temporary storage for intersection computations 
+#define MTS_KD_INTERSECTION_TEMP 8
+
+/// Use a simple hashed 8-entry mailbox per thread
+#define MTS_KD_MAILBOX_SIZE 8
+#define MTS_KD_MAILBOX_MASK (MTS_KD_MAILBOX_SIZE-1)
 
 #if defined(MTS_KD_DEBUG)
 #define KDAssert(expr) Assert(expr)
@@ -421,18 +426,29 @@ private:
  * \brief SAH KD-tree acceleration data structure for fast ray-object 
  * intersection computations.
  *
- * The code in this class is fully generic and can theoretically 
- * support any kind of shape. Subclasses need to provide the following 
- * signatures for a functional implementation:
+ * The code in this class is a fully generic kd-tree implementation, which
+ * can theoretically support any kind of shape. However, subclasses still
+ * need to provide the following signatures for a functional implementation:
  *
  * /// Return the total number of primitives
  * inline size_type getPrimitiveCount() const;
  *
- * /// Return an axis-aligned bounding box of a certain primitive
+ * /// Return the axis-aligned bounding box of a certain primitive
  * inline AABB getAABB(index_type primIdx) const;
  *
- * /// Return an AABB of a primitive when clipped to another AABB
+ * /// Return the AABB of a primitive when clipped to another AABB
  * inline AABB getClippedAABB(index_type primIdx, const AABB &aabb) const;
+ *
+ * /// Check whether a primitive is intersected by the given ray. Some
+ * /// temporary space is supplied, which can be used to store information
+ * /// to be used in \ref fillIntersectionDetails.
+ * EIntersectionResult intersect(const Ray &ray, index_type idx, Float mint, 
+ *		Float maxt, Float &t, void *tmp);
+ *
+ * /// After having found a unique intersection, fill a proper record
+ * /// using the temporary information collected in \ref intersect()
+ * void fillIntersectionDetails(const Ray &ray, Float t, const void *tmp, 
+ * 		Intersection &its) const;
  *
  * This class follows the "Curiously recurring template" design pattern so that
  * the above functions can be inlined (no virtual calls will be necessary!).
@@ -440,6 +456,10 @@ private:
  * The kd-tree construction algorithm creates 'perfect split' trees as 
  * outlined in the paper "On Building fast kd-Trees for Ray Tracing, and on
  * doing that in O(N log N)" by Ingo Wald and Vlastimil Havran. 
+ * For polygonal meshes, the involved Sutherland-Hodgman iterations can be 
+ * quite expensive in terms of the overall construction time. The \ref setClip
+ * method can be used to deactivate perfect splits at the cost of a 
+ * lower-quality tree.
  *
  * Because the O(N log N) construction algorithm tends to cause many
  * incoherent memory accesses, a fast approximate technique (Min-max binning)
@@ -447,7 +467,10 @@ private:
  * Once the input data has been narrowed down to a reasonable amount, the
  * implementation switches over to the O(N log N) builder. When multiple
  * processors are available, the build process runs in parallel.
-* 
+ *
+ * This implementation also provides an optimized ray traversal algorithm 
+ * (TA^B_{rec}), which is explained in Vlastimil Havran's PhD thesis 
+ * "Heuristic Ray Shooting Algorithms". 
  */
 template <typename Derived> class GenericKDTree : public Object {
 protected:
@@ -486,7 +509,7 @@ public:
 		if (m_indices)
 			delete[] m_indices;
 		if (m_nodes)
-			delete[] m_nodes;
+			freeAligned(m_nodes);
 	}
 
 	/**
@@ -642,12 +665,19 @@ public:
 	inline bool getExactPrimitiveThreshold() const {
 		return m_exactPrimThreshold;
 	}
+	
+	/**
+	 * \brief Return whether or not the kd-tree has been built
+	 */
+	inline bool isBuilt() const {
+		return m_nodes != NULL;
+	}
 
 	/**
 	 * \brief Build a KD-tree over supplied geometry
 	 */
 	void build() {
-		if (m_nodes != NULL)
+		if (isBuilt()) 
 			Log(EError, "The kd-tree has already been built!");
 
 		size_type primCount = cast()->getPrimitiveCount();
@@ -762,7 +792,8 @@ public:
 		Float sahCost = 0;
 		size_type nodePtr = 0, indexPtr = 0;
 
-		m_nodes = new KDNode[ctx.innerNodeCount + ctx.leafNodeCount];
+		m_nodes = static_cast<KDNode *> (allocAligned(
+				ctx.innerNodeCount + ctx.leafNodeCount));
 		m_indices = new index_type[ctx.primIndexCount];
 
 		stack.push(boost::make_tuple(prelimRoot, &m_nodes[nodePtr++], &ctx, m_aabb));
@@ -871,22 +902,76 @@ public:
 		Log(EDebug, "   Expected prim. visits/ray : %.2f", expPrimitivesIntersected);
 		Log(EDebug, "   Final SAH cost            : %.2f", sahCost);
 		Log(EDebug, "");
-
-
-
 	}
+
+	/**
+	 * \brief Intersect a ray against all primitives stored in the kd-tree
+	 */
+	bool rayIntersect(const Ray &ray, Intersection &its) {
+		uint32_t temp[MTS_KD_INTERSECTION_TEMP];
+		its.t = std::numeric_limits<Float>::infinity(); 
+		Float mint, maxt;
+
+		if (m_aabb.rayIntersect(ray, mint, maxt)) {
+			if (ray.mint > mint) mint = ray.mint;
+			if (ray.maxt < maxt) maxt = ray.maxt;
+
+			if (EXPECT_TAKEN(maxt > mint)) {
+				if (rayIntersect<false>(ray, mint, maxt, its.t, temp)) {
+					cast()->fillIntersectionDetails(ray, its.t, temp, its);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * \brief Test a ray for intersection against all primitives stored in the kd-tree
+	 */
+	bool rayIntersect(const Ray &ray) {
+		uint32_t temp[MTS_KD_INTERSECTION_TEMP];
+		Float mint, maxt, t;
+
+		if (m_aabb.rayIntersect(ray, mint, maxt)) {
+			if (ray.mint > mint) mint = ray.mint;
+			if (ray.maxt < maxt) maxt = ray.maxt;
+
+			if (EXPECT_TAKEN(maxt > mint)) 
+				if (rayIntersect<true>(ray, mint, maxt, t, temp)) 
+					return true;
+		}
+		return false;
+	}
+
 protected:
 	/// Primitive classification during tree-construction
 	enum EClassificationResult {
-		///< Straddling primitive
+		/// Straddling primitive
 		EBothSides = 0,
-		///< Primitive is entirely on the left side of the split
+		/// Primitive is entirely on the left side of the split
 		ELeftSide = 1,
-		///< Primitive is entirely on the right side of the split
+		/// Primitive is entirely on the right side of the split
 		ERightSide = 2,
-		//< Edge events have been generated for the straddling primitive
+		/// Edge events have been generated for the straddling primitive
 		EBothSidesProcessed = 3
 	};
+
+
+	/// Documents the possible outcomes of a ray-primitive intersection
+	enum EIntersectionResult {
+		/// An intersection was found on the specified interval
+		EYes,
+
+		/** While an intersection could not be found on the specified 
+		    interval, the primitive might still intersect the ray if a
+			larger interval was considered */
+		ENo,
+
+		/// The primitive will never intersect the ray in question
+		ENever
+	};
+
 
 	/**
 	 * \brief Describes the beginning or end of a primitive
@@ -1196,6 +1281,25 @@ protected:
 	};
 
 	BOOST_STATIC_ASSERT(sizeof(KDNode) == 8);
+
+	/**
+	 * \brief Hashed mailbox implementation
+	 */
+	struct MailBox {
+		MailBox() {
+			memset(entries, 0xFF, sizeof(index_type)*MTS_KD_MAILBOX_SIZE);
+		}
+
+		inline void put(index_type primIndex) {
+			entries[primIndex & MTS_KD_MAILBOX_MASK] = primIndex;
+		}
+
+		inline bool contains(index_type primIndex) const {
+			return entries[primIndex & MTS_KD_MAILBOX_MASK] == primIndex;
+		}
+
+		index_type entries[MTS_KD_MAILBOX_SIZE];
+	};
 
 	/**
 	 * \brief SAH kd-tree builder thread
@@ -2332,6 +2436,29 @@ protected:
 		AABB m_aabb;
 		Vector m_binSize;
 	};
+
+	/// Ray traversal stack entry for incoherent ray tracing
+	struct KDStackEntry {
+		/* Pointer to the far child */
+		const KDNode * __restrict node;
+		/* Distance traveled along the ray (entry or exit) */
+		Float t;
+		/* Previous stack item */
+		uint32_t prev;
+		/* Associated point */
+		Point pb;
+	};
+
+	/**
+	 * \brief Internal kd-tree traversal implementation
+	 */
+	template<bool shadowRay> FINLINE bool rayIntersect(const Ray &ray, 
+			Float mint, Float maxt, Float &t, void *temp) {
+		KDStackEntry stack[MTS_KD_MAXDEPTH];
+		const KDNode * __restrict farChild,
+					 * __restrict currNode = m_nodes;
+		return false;
+	}
 
 private:
 	KDNode *m_nodes;
