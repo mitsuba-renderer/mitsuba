@@ -20,6 +20,7 @@
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/fstream.h>
+#include <mitsuba/core/timer.h>
 #include <ply/ply_parser.hpp>
 #include <tr1/functional>
 
@@ -367,7 +368,7 @@ void PLYLoader::loadPLY(const fs::path &path) {
 
 	Log(EInfo, "\"%s\": Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
 			" vertices (%s, %i ms).", m_name.c_str(), m_triangleCount, m_vertexCount,
-			memString(sizeof(uint32_t) * m_triangleCount * 3 + sizeof(Vertex) * m_vertexCount).str(),
+			memString(sizeof(uint32_t) * m_triangleCount * 3 + sizeof(Vertex) * m_vertexCount).c_str(),
 			timer->getMilliseconds());
 }
 
