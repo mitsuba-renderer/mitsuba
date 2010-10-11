@@ -361,11 +361,14 @@ void PLYLoader::loadPLY(const fs::path &path) {
 
 	ply_parser.scalar_property_definition_callbacks(scalar_property_definition_callbacks);
 	ply_parser.list_property_definition_callbacks(list_property_definition_callbacks);
+
+	ref<Timer> timer = new Timer();
 	ply_parser.parse(path.file_string());
 
 	Log(EInfo, "\"%s\": Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
-			" vertices (%.2f KiB).", m_name.c_str(), m_triangleCount, m_vertexCount,
-			(sizeof(uint32_t) * m_triangleCount * 3 + sizeof(Vertex) * m_vertexCount) / 1024.0f);
+			" vertices (%s, %i ms).", m_name.c_str(), m_triangleCount, m_vertexCount,
+			memString(sizeof(uint32_t) * m_triangleCount * 3 + sizeof(Vertex) * m_vertexCount).str(),
+			timer->getMilliseconds());
 }
 
 

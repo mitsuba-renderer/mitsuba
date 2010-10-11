@@ -169,13 +169,16 @@ std::string indent(const std::string &string, int amount) {
 	return oss.str();
 }
 
-bool endsWith(const std::string& str, const std::string& end) {
-	std::string::size_type pos = str.rfind(end);
-	return (pos == str.size() - end.size()) && str.length() >= end.length();
-}
-
-bool startsWith(const std::string& str, const std::string& start) {
-	return str.find(start) == 0;
+std::string memString(size_t size) {
+	Float value = (Float) size;
+	const char *prefixes[] = {
+		"B", "KiB", "MiB", "GiB", "TiB"
+	};
+	int prefix = 0;
+	while (prefix < 4 && value > 1024.0f) {
+		value /= 1024.0f; ++prefix;
+	}
+	return formatString("%.2f %s", value, prefixes[prefix]);
 }
 
 void * __restrict allocAligned(size_t size) {

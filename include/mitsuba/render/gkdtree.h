@@ -1103,19 +1103,6 @@ protected:
 		return static_cast<Derived *>(this);
 	}
 	
-	/// Turn a memory size into a human-readable string
-	inline static std::string memString(size_t size) {
-		Float value = (Float) size;
-		const char *prefixes[] = {
-			"B", "KiB", "MiB", "GiB", "TiB"
-		};
-		int prefix = 0;
-		while (prefix < 4 && value > 1024.0f) {
-			value /= 1024.0f; ++prefix;
-		}
-		return formatString("%.2f %s", value, prefixes[prefix]);
-	}
-
 	/**
 	 * \brief Create an edge event list for a given list of primitives. 
 	 *

@@ -284,6 +284,9 @@ template<class T> std::string listToString(const std::vector<T> &vec) {
 	oss << "}";
 	return oss.str();
 }
+	
+/// Turn a memory size into a human-readable string
+extern MTS_EXPORT std::string memString(size_t size);
 
 MTS_NAMESPACE_END
 
