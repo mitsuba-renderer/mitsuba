@@ -30,7 +30,7 @@
 #define MTS_KD_STATISTICS 1     
 
 /// Min-max bin count
-#define MTS_KD_MINMAX_BINS 32   
+#define MTS_KD_MINMAX_BINS 128
 
 /// OrderedChunkAllocator: don't create chunks smaller than 512KiB
 #define MTS_KD_MIN_ALLOC 512*1024
@@ -415,9 +415,36 @@ private:
 };
 
 /**
- * \brief Generic kd-tree for data structure used to accelerate 
- * ray intersections against large amounts of three-dimensional
- * shapes.
+ * \brief SAH KD-tree acceleration data structure for fast ray-object 
+ * intersection computations.
+ *
+ * The code in this class is fully generic and can theoretically 
+ * support any kind of shape. Subclasses need to provide the following 
+ * signatures for a functional implementation:
+ *
+ * /// Return the total number of primitives
+ * inline size_type getPrimitiveCount() const;
+ *
+ * /// Return an axis-aligned bounding box of a certain primitive
+ * inline AABB getAABB(index_type primIdx) const;
+ *
+ * /// Return an AABB of a primitive when clipped to another AABB
+ * inline AABB getClippedAABB(index_type primIdx, const AABB &aabb) const;
+ *
+ * This class follows the "Curiously recurring template" design pattern so that
+ * the above functions can be inlined (no virtual calls will be necessary!).
+ *
+ * The kd-tree construction algorithm creates 'perfect split' trees as 
+ * outlined in the paper "On Building fast kd-Trees for Ray Tracing, and on
+ * doing that in O(N log N)" by Ingo Wald and Vlastimil Havran. 
+ *
+ * Because the O(N log N) construction algorithm tends to cause many
+ * incoherent memory accesses, a fast approximate technique (Min-max binning)
+ * is used near the top of the tree, which significantly reduces cache misses.
+ * Once the input data has been narrowed down to a reasonable amount, the
+ * implementation switches over to the O(N log N) builder. When multiple
+ * processors are available, the build process runs in parallel.
+* 
  */
 template <typename Derived> class GenericKDTree : public Object {
 protected:
@@ -436,7 +463,7 @@ public:
 	 * \brief Create a new kd-tree instance initialized with 
 	 * the default parameters.
 	 */
-	GenericKDTree() : m_root(NULL), m_primIndices(NULL) {
+	GenericKDTree() : m_nodes(NULL), m_primIndices(NULL) {
 		m_traversalCost = 15;
 		m_intersectionCost = 20;
 		m_emptySpaceBonus = 0.9f;
@@ -446,22 +473,24 @@ public:
 		m_exactPrimThreshold = 16384;
 		m_maxDepth = 1024;
 		m_retract = true;
-		m_parallel = false;
+		m_parallel = true;
 	}
 
 	virtual ~GenericKDTree() {
 		if (m_primIndices)
 			delete[] m_primIndices;
+		if (m_nodes)
+			delete[] m_nodes;
 	}
 
 	/**
 	 * \brief Build a KD-tree over supplied geometry
 	 */
 	void build() {
-		if (m_root != NULL)
+		if (m_nodes != NULL)
 			Log(EError, "The kd-tree has already been built!");
 
-		size_type primCount = downCast()->getPrimitiveCount();
+		size_type primCount = cast()->getPrimitiveCount();
 		BuildContext ctx(primCount);
 
 		/* Establish an ad-hoc depth cutoff value (Formula from PBRT) */
@@ -478,7 +507,7 @@ public:
 		ref<Timer> timer = new Timer();
 		m_aabb.reset();
 		for (index_type i=0; i<primCount; ++i) {
-			m_aabb.expandBy(downCast()->getAABB(i));
+			m_aabb.expandBy(cast()->getAABB(i));
 			indices[i] = i;
 		}
 
@@ -506,7 +535,7 @@ public:
 		if (m_parallel) {
 			m_builders.resize(procCount);
 			for (size_type i=0; i<procCount; ++i) {
-				m_builders[i] = new SAHTreeBuilder(i+1, primCount, m_interface);
+				m_builders[i] = new SAHTreeBuilder(i, this);
 				m_builders[i]->incRef();
 				m_builders[i]->start();
 			}
@@ -515,11 +544,10 @@ public:
 		Log(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
 
 		m_indirectionLock = new Mutex();
-		m_root = ctx.nodes.allocate(1);
-		Float finalSAHCost = buildTreeMinMax(ctx, 1, m_root, 
+		KDNode *prelimRoot = ctx.nodes.allocate(1);
+		Float finalSAHCost = buildTreeMinMax(ctx, 1, prelimRoot, 
 			m_aabb, m_aabb, indices, primCount, true, 0);
 		ctx.leftAlloc.release(indices);
-		m_indirectionLock = NULL;
 
 		KDAssert(ctx.leftAlloc.getUsed() == 0);
 		KDAssert(ctx.rightAlloc.getUsed() == 0);
@@ -530,6 +558,7 @@ public:
 			for (size_type i=0; i<m_builders.size(); ++i) 
 				m_builders[i]->join();
 		}
+
 		Log(EInfo, "Finished -- took %i ms.", timer->getMilliseconds());
 		Log(EDebug, "");
 
@@ -557,42 +586,62 @@ public:
 
 		Log(EDebug, "");
 		timer->reset();
-		Log(EDebug, "Optimizing data structure layout ..");
-		std::stack<boost::tuple<const KDNode *, AABB> > stack;
-		stack.push(boost::make_tuple(m_root, m_aabb));
+		Log(EDebug, "Optimizing memory layout ..");
+
+		std::stack<boost::tuple<const KDNode *, KDNode *, BuildContext *, AABB> > stack;
 
 		Float expTraversalSteps = 0;
 		Float expLeavesVisited = 0;
 		Float expPrimitivesIntersected = 0;
+		size_type nodePtr = 0, indexPtr = 0;
+
+		m_nodes = new KDNode[ctx.innerNodeCount + ctx.leafNodeCount];
+		m_primIndices = new index_type[ctx.primIndexCount];
+
+		stack.push(boost::make_tuple(prelimRoot, &m_nodes[nodePtr++], &ctx, m_aabb));
 		while (!stack.empty()) {
 			const KDNode *node = boost::get<0>(stack.top());
-			AABB aabb = boost::get<1>(stack.top());
+			KDNode *target = boost::get<1>(stack.top());
+			BuildContext *context = boost::get<2>(stack.top());
+			AABB aabb = boost::get<3>(stack.top());
 			stack.pop();
 
 			if (node->isLeaf()) {
 				size_t primCount = node->getPrimEnd() - node->getPrimStart();
 				expLeavesVisited += aabb.getSurfaceArea();
 				expPrimitivesIntersected += aabb.getSurfaceArea() * primCount;
+				target->initLeafNode(indexPtr, primCount);
+				indexPtr += primCount;
 			} else {
 				expTraversalSteps += aabb.getSurfaceArea();
 				const KDNode *left;
 				if (EXPECT_TAKEN(!node->isIndirection()))
 					left = node->getLeft();
-				else
+				else 
 					left = m_indirections[node->getIndirectionIndex()];
-
+				KDNode *children = &m_nodes[nodePtr];
+				nodePtr += 2;
 				uint8_t axis = node->getAxis();
+				float split = node->getSplit();
+				bool result = target->initInnerNode(axis, split, children - target);
+				if (!result)
+					Log(EError, "Cannot represent relative pointer -- too many primitives?");
+
 				Float tmp = aabb.min[axis];
-				aabb.min[axis] = node->getSplit();
-				stack.push(boost::make_tuple(left+1, aabb));
+				aabb.min[axis] = split;
+				stack.push(boost::make_tuple(left+1, children+1, context, aabb));
 				aabb.min[axis] = tmp;
-				aabb.max[axis] = node->getSplit();
-				stack.push(boost::make_tuple(left, aabb));
+				aabb.max[axis] = split;
+				stack.push(boost::make_tuple(left, children, context, aabb));
 			}
 		}
 
+		KDAssert(nodePtr == ctx.innerNodeCount + ctx.leafNodeCount);
+		KDAssert(indexPtr == ctx.primIndexCount);
+
 		Log(EDebug, "Finished -- took %i ms.", timer->getMilliseconds());
 
+		/* Free some more memory */
 		ctx.nodes.clear();
 		ctx.indices.clear();
 		for (size_type i=0; i<m_builders.size(); ++i) {
@@ -600,6 +649,8 @@ public:
 			subCtx.nodes.clear();
 			subCtx.indices.clear();
 		}
+		m_indirectionLock = NULL;
+		std::vector<KDNode *>().swap(m_indirections);
 
 		if (m_builders.size() > 0) {
 			for (size_type i=0; i<m_builders.size(); ++i)
@@ -615,15 +666,19 @@ public:
 		expPrimitivesIntersected /= rootSA;
 
 		Log(EDebug, "Detailed kd-tree statistics:");
-		Log(EDebug, "   Final SAH cost        : %.2f", finalSAHCost);
 		Log(EDebug, "   Inner nodes           : %i", ctx.innerNodeCount);
 		Log(EDebug, "   Leaf nodes            : %i", ctx.leafNodeCount);
 		Log(EDebug, "   Nonempty leaf nodes   : %i", ctx.nonemptyLeafNodeCount);
+		Log(EDebug, "   Node storage cost     : %.2f KiB", 
+				(nodePtr * sizeof(KDNode)) / 1024.0f);
+		Log(EDebug, "   Index storage cost    : %.2f KiB", 
+				(indexPtr * sizeof(index_type)) / 1024.0f);
 		Log(EDebug, "   Retracted splits      : %i", ctx.retractedSplits);
 		Log(EDebug, "   Pruned primitives     : %i", ctx.pruned);
 		Log(EDebug, "   Exp. traversals/ray   : %.2f", expTraversalSteps);
 		Log(EDebug, "   Exp. leaf visits/ray  : %.2f", expLeavesVisited);
 		Log(EDebug, "   Exp. prim. visits/ray : %.2f", expPrimitivesIntersected);
+		Log(EDebug, "   Final SAH cost        : %.2f", finalSAHCost);
 		Log(EDebug, "");
 
 
@@ -748,15 +803,17 @@ protected:
 		size_type leafNodeCount;
 		size_type nonemptyLeafNodeCount;
 		size_type innerNodeCount;
+		size_type primIndexCount;
 		size_type retractedSplits;
 		size_type pruned;
 
 		BuildContext(size_type primCount) : classStorage(primCount) {
 			classStorage.setPrimitiveCount(primCount);
-			retractedSplits = 0;
 			leafNodeCount = 0;
 			nonemptyLeafNodeCount = 0;
 			innerNodeCount = 0;
+			primIndexCount = 0;
+			retractedSplits = 0;
 			pruned = 0;
 		}
 
@@ -775,6 +832,7 @@ protected:
 			leafNodeCount += ctx.leafNodeCount;
 			nonemptyLeafNodeCount += ctx.nonemptyLeafNodeCount;
 			innerNodeCount += ctx.innerNodeCount;
+			primIndexCount += ctx.primIndexCount;
 			retractedSplits += ctx.retractedSplits;
 			pruned += ctx.pruned;
 		}
@@ -787,7 +845,7 @@ protected:
 	struct BuildInterface {
 		/* Communcation */
 		ref<Mutex> mutex;
-		ref<ConditionVariable> cond;
+		ref<ConditionVariable> cond, condJobTaken;
 		bool done;
 
 		/* Job description for building a subtree */
@@ -801,6 +859,8 @@ protected:
 		inline BuildInterface() {
 			mutex = new Mutex();
 			cond = new ConditionVariable(mutex);
+			condJobTaken = new ConditionVariable(mutex);
+			node = NULL;
 			done = false;
 		}
 	};
@@ -937,21 +997,47 @@ protected:
 	 */
 	class SAHTreeBuilder : public Thread {
 	public:
-		SAHTreeBuilder(size_type idx, size_type primCount, BuildInterface &interface) 
-			: Thread(formatString("bld%i", idx)), m_context(primCount), m_interface(interface) {
+		SAHTreeBuilder(size_type idx, GenericKDTree *parent) 
+			: Thread(formatString("bld%i", idx+1)),
+			m_parent(parent),
+			m_context(parent->cast()->getPrimitiveCount()),
+			m_interface(parent->m_interface) {
+			setCritical(true);
 		}
-		
+
 		~SAHTreeBuilder() {
 			KDAssert(m_context.leftAlloc.getUsed() == 0);
 			KDAssert(m_context.rightAlloc.getUsed() == 0);
 		}
 
 		void run() {
-			m_interface.mutex->lock();
-			while (!m_interface.done) {
-				m_interface.cond->wait();
+			OrderedChunkAllocator &leftAlloc = m_context.leftAlloc;
+			while (true) {
+				m_interface.mutex->lock();
+				while (!m_interface.done && !m_interface.node)
+					m_interface.cond->wait();
+				if (m_interface.done) {
+					m_interface.mutex->unlock();
+					break;
+				}
+				int depth = m_interface.depth;
+				KDNode *node = m_interface.node;
+				AABB nodeAABB = m_interface.nodeAABB;
+				size_t eventCount = m_interface.eventEnd - m_interface.eventStart;
+				size_type primCount = m_interface.primCount;
+				int badRefines = m_interface.badRefines;
+				EdgeEvent *eventStart = leftAlloc.allocate<EdgeEvent>(eventCount),
+						  *eventEnd = eventStart + eventCount;
+				memcpy(eventStart, m_interface.eventStart, eventCount * sizeof(EdgeEvent));
+				m_interface.node = NULL;
+				m_interface.condJobTaken->signal();
+				m_interface.mutex->unlock();
+
+				std::sort(eventStart, eventEnd, EdgeEventOrdering());
+				m_parent->buildTreeSAH(m_context, depth, node,
+					nodeAABB, eventStart, eventEnd, primCount, true, badRefines);
+				leftAlloc.release(eventStart);
 			}
-			m_interface.mutex->unlock();
 		}
 
 		inline BuildContext &getContext() {
@@ -959,17 +1045,18 @@ protected:
 		}
 
 	private:
+		GenericKDTree *m_parent;
 		BuildContext m_context;
 		BuildInterface &m_interface;
 	};
 
 	/// Cast to the derived class
-	inline Derived *downCast() {
+	inline Derived *cast() {
 		return static_cast<Derived *>(this);
 	}
 
 	/// Cast to the derived class (const version)
-	inline const Derived *downCast() const {
+	inline const Derived *cast() const {
 		return static_cast<Derived *>(this);
 	}
 
@@ -989,11 +1076,11 @@ protected:
 			index_type index = prims[i];
 			AABB aabb;
 			if (m_clip) {
-				aabb = downCast()->getClippedAABB(index, nodeAABB);
+				aabb = cast()->getClippedAABB(index, nodeAABB);
 				if (!aabb.isValid() || aabb.getSurfaceArea() == 0)
 					continue;
 			} else {
-				aabb = downCast()->getAABB(index);
+				aabb = cast()->getAABB(index);
 			}
 
 			for (int axis=0; axis<3; ++axis) {
@@ -1045,6 +1132,7 @@ protected:
 				}
 			}
 			KDAssert(seenPrims == primCount);
+			ctx.primIndexCount += primCount;
 		}
 		ctx.leafNodeCount++;
 	}
@@ -1068,6 +1156,7 @@ protected:
 			ctx.nonemptyLeafNodeCount++;
 			for (size_type i=0; i<primCount; ++i) 
 				ctx.indices.push_back(indices[i]);
+			ctx.primIndexCount += primCount;
 		}
 		ctx.leafNodeCount++;
 	}
@@ -1114,6 +1203,7 @@ protected:
 			}
 
 			ctx.indices.resize(start + primCount);
+			ctx.primIndexCount = ctx.primIndexCount - actualCount + primCount;
 			alloc.release(tempStart);
 		}
 
@@ -1164,13 +1254,32 @@ protected:
 			OrderedChunkAllocator &alloc = isLeftChild ? ctx.leftAlloc : ctx.rightAlloc;
 			boost::tuple<EdgeEvent *, EdgeEvent *, size_type> events  
 					= createEventList(alloc, nodeAABB, indices, primCount);
-		
-			std::sort(boost::get<0>(events), boost::get<1>(events), EdgeEventOrdering());
+			Float sahCost;
+			if (m_parallel) {
+				m_interface.mutex->lock();
+				m_interface.depth = depth;
+				m_interface.node = node;
+				m_interface.nodeAABB = nodeAABB;
+				m_interface.eventStart = boost::get<0>(events);
+				m_interface.eventEnd = boost::get<1>(events);
+				m_interface.primCount = boost::get<2>(events);
+				badRefines = badRefines;
+				m_interface.cond->signal();
 
-			Float sahCost = buildTreeSAH(ctx, depth, node, nodeAABB,
+				/* Wait for a worker thread to take this job */
+				while (m_interface.node)
+					m_interface.condJobTaken->wait();
+				m_interface.mutex->unlock();
+
+				// Never tear down this subtree (return a SAH cost of -infinity)
+				sahCost = -std::numeric_limits<Float>::infinity();
+			} else {
+				std::sort(boost::get<0>(events), boost::get<1>(events), EdgeEventOrdering());
+
+				sahCost = buildTreeSAH(ctx, depth, node, nodeAABB,
 					boost::get<0>(events), boost::get<1>(events), boost::get<2>(events), 
 					isLeftChild, badRefines);
-
+			}
 			alloc.release(boost::get<0>(events));
 			return sahCost;
 		}
@@ -1180,7 +1289,7 @@ protected:
 	    /* ==================================================================== */
 
 		MinMaxBins<MTS_KD_MINMAX_BINS> bins(tightAABB);
-		bins.bin(downCast(), indices, primCount);
+		bins.bin(cast(), indices, primCount);
 
 		/* ==================================================================== */
 	    /*                        Split candidate search                        */
@@ -1204,7 +1313,7 @@ protected:
 	    /* ==================================================================== */
 
 		boost::tuple<AABB, index_type *, AABB, index_type *> partition = 
-			bins.partition(ctx, downCast(), indices, bestSplit, isLeftChild, 
+			bins.partition(ctx, cast(), indices, bestSplit, isLeftChild, 
 			m_traversalCost, m_intersectionCost);
 
 		/* ==================================================================== */
@@ -1547,8 +1656,8 @@ protected:
 					   generate new events for each side */
 					const index_type index = event->index;
 
-					AABB clippedLeft = downCast()->getClippedAABB(index, leftNodeAABB);
-					AABB clippedRight = downCast()->getClippedAABB(index, rightNodeAABB);
+					AABB clippedLeft = cast()->getClippedAABB(index, leftNodeAABB);
+					AABB clippedRight = cast()->getClippedAABB(index, rightNodeAABB);
 
 					KDAssert(leftNodeAABB.contains(clippedLeft));
 					KDAssert(rightNodeAABB.contains(clippedRight));
@@ -1714,7 +1823,7 @@ protected:
 	 *  Ray Tracing of Dynamic Scenes"
 	 * by M. Shevtsov, A. Soupikov and A. Kapustin
 	 *
-	 * @tparam BinCount Number of bins to be allocated
+	 * \tparam BinCount Number of bins to be allocated
 	 */
 	template <int BinCount> struct MinMaxBins {
 		MinMaxBins(const AABB &aabb) : m_aabb(aabb) {
@@ -1973,7 +2082,7 @@ protected:
 	};
 
 private:
-	KDNode *m_root;
+	KDNode *m_nodes;
 	index_type *m_primIndices;
 	Float m_traversalCost;
 	Float m_intersectionCost;
