@@ -32,15 +32,12 @@
 /// Min-max bin count
 #define MTS_KD_MINMAX_BINS 32   
 
-/// BlockedMemoryAllocator: don't create chunks smaller than 512KiB
+/// OrderedChunkAllocator: don't create chunks smaller than 512KiB
 #define MTS_KD_MIN_ALLOC 512*1024
 
-/// Allocate nodes & index lists in chunks of 512 KiB
+/// Allocate nodes & index lists in blocks of 512 KiB
 #define MTS_KD_BLOCKSIZE_KD  (512*1024/sizeof(KDNode))
 #define MTS_KD_BLOCKSIZE_IDX (512*1024/sizeof(uint32_t))
-
-/// Allocate indirection lists in chunks of 1 KiB 
-#define MTS_KD_BLOCKSIZE_IND (1024/sizeof(KDNode *))
 
 #if MTS_KD_DEBUG
 #define KDAssert(expr) Assert(expr)
@@ -275,7 +272,7 @@ public:
 		m_blocks[blockIdx][offset] = value;
 		m_pos++;
 	}
-	
+
 	/**
 	 * \brief Allocate a certain number of elements and
 	 * return a pointer to the first one.
@@ -306,6 +303,17 @@ public:
 		}
 		return result;
 	}
+
+	inline T &operator[](size_t index) {
+		return *(m_blocks[index / BlockSize] +
+			(index % BlockSize));
+	}
+
+	inline const T &operator[](size_t index) const {
+		return *(m_blocks[index / BlockSize] +
+			(index % BlockSize));
+	}
+
 
 	/**
 	 * \brief Return the currently used number of items
@@ -342,23 +350,13 @@ public:
 		m_pos = pos;
 	}
 
-	inline T &operator[](size_t index) {
-		return *(m_blocks[index / BlockSize] +
-			(index / BlockSize));
-	}
-
-	inline const T &operator[](size_t index) const {
-		return *(m_blocks[index / BlockSize] +
-			(index / BlockSize));
-	}
-
 	/**
 	 * \brief Release all memory
 	 */
 	void clear() {
 		for (typename std::vector<T *>::iterator it = m_blocks.begin(); 
 				it != m_blocks.end(); ++it)
-			delete *it;
+			delete[] *it;
 		m_blocks.clear();
 		m_pos = 0;
 	}
@@ -444,8 +442,8 @@ public:
 		m_emptySpaceBonus = 0.9f;
 		m_clip = true;
 		m_stopPrims = 4;
-		m_maxBadRefines = 2;
-		m_exactPrimThreshold = 1409600;
+		m_maxBadRefines = 3;
+		m_exactPrimThreshold = 16384;
 		m_maxDepth = 1024;
 		m_retract = true;
 		m_parallel = false;
@@ -492,13 +490,13 @@ public:
 		Log(EDebug, "   Intersection cost        : %.2f", m_intersectionCost);
 		Log(EDebug, "   Empty space bonus        : %.2f", m_emptySpaceBonus);
 		Log(EDebug, "   Max. tree depth          : %i", m_maxDepth);
-		Log(EDebug, "   Stopping primitive count : %i", m_stopPrims);
 		Log(EDebug, "   Scene bounding box (min) : %s", m_aabb.min.toString().c_str());
 		Log(EDebug, "   Scene bounding box (max) : %s", m_aabb.max.toString().c_str());
 		Log(EDebug, "   Min-max bins             : %i", MTS_KD_MINMAX_BINS);
 		Log(EDebug, "   Greedy SAH optimization  : <= %i primitives", m_exactPrimThreshold);
 		Log(EDebug, "   Perfect splits           : %s", m_clip ? "yes" : "no");
 		Log(EDebug, "   Retract bad splits       : %s", m_retract ? "yes" : "no");
+		Log(EDebug, "   Stopping primitive count : %i", m_stopPrims);
 		Log(EDebug, "");
 
 		size_type procCount = getProcessorCount();
@@ -516,10 +514,12 @@ public:
 
 		Log(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
 
+		m_indirectionLock = new Mutex();
 		m_root = ctx.nodes.allocate(1);
 		Float finalSAHCost = buildTreeMinMax(ctx, 1, m_root, 
 			m_aabb, m_aabb, indices, primCount, true, 0);
 		ctx.leftAlloc.release(indices);
+		m_indirectionLock = NULL;
 
 		KDAssert(ctx.leftAlloc.getUsed() == 0);
 		KDAssert(ctx.rightAlloc.getUsed() == 0);
@@ -533,28 +533,64 @@ public:
 		Log(EInfo, "Finished -- took %i ms.", timer->getMilliseconds());
 		Log(EDebug, "");
 
-		Log(EDebug, "Memory allocation statistics:");
-		Log(EDebug, "   Temporary classification storage : %.2f KiB", 
+		Log(EDebug, "Temporary memory statistics:");
+		Log(EDebug, "   Classification storage : %.2f KiB", 
 				(ctx.classStorage.getSize() * (1+procCount)) / 1024.0f);
+		Log(EDebug, "   Indirection entries    : " SIZE_T_FMT " (%.2f KiB)", 
+				m_indirections.size(),m_indirections.capacity()
+				* sizeof(KDNode *) / 1024.0f);
 
-		Log(EDebug, "   Main:");
+		Log(EDebug, "   Main thread:");
 		ctx.printStats();
 
 		/// Clean up event lists and print statistics
 		ctx.leftAlloc.cleanup();
 		ctx.rightAlloc.cleanup();
 		for (size_type i=0; i<m_builders.size(); ++i) {
-			Log(EDebug, "   Thread %i:", i+1);
+			Log(EDebug, "   Worker thread %i:", i+1);
 			BuildContext &subCtx = m_builders[i]->getContext();
 			subCtx.printStats();
 			subCtx.leftAlloc.cleanup();
 			subCtx.rightAlloc.cleanup();
 			ctx.accumulateStatisticsFrom(subCtx);
 		}
-		
+
 		Log(EDebug, "");
 		timer->reset();
-		Log(EDebug, "Optimizing node and index data structures ..");
+		Log(EDebug, "Optimizing data structure layout ..");
+		std::stack<boost::tuple<const KDNode *, AABB> > stack;
+		stack.push(boost::make_tuple(m_root, m_aabb));
+
+		Float expTraversalSteps = 0;
+		Float expLeavesVisited = 0;
+		Float expPrimitivesIntersected = 0;
+		while (!stack.empty()) {
+			const KDNode *node = boost::get<0>(stack.top());
+			AABB aabb = boost::get<1>(stack.top());
+			stack.pop();
+
+			if (node->isLeaf()) {
+				size_t primCount = node->getPrimEnd() - node->getPrimStart();
+				expLeavesVisited += aabb.getSurfaceArea();
+				expPrimitivesIntersected += aabb.getSurfaceArea() * primCount;
+			} else {
+				expTraversalSteps += aabb.getSurfaceArea();
+				const KDNode *left;
+				if (EXPECT_TAKEN(!node->isIndirection()))
+					left = node->getLeft();
+				else
+					left = m_indirections[node->getIndirectionIndex()];
+
+				uint8_t axis = node->getAxis();
+				Float tmp = aabb.min[axis];
+				aabb.min[axis] = node->getSplit();
+				stack.push(boost::make_tuple(left+1, aabb));
+				aabb.min[axis] = tmp;
+				aabb.max[axis] = node->getSplit();
+				stack.push(boost::make_tuple(left, aabb));
+			}
+		}
+
 		Log(EDebug, "Finished -- took %i ms.", timer->getMilliseconds());
 
 		ctx.nodes.clear();
@@ -573,21 +609,21 @@ public:
 
 		Log(EDebug, "");
 
-//		Float rootSA = m_aabb.getSurfaceArea();
-//		expTraversalSteps /= rootSA;
-//		expLeavesVisited /= rootSA;
-//		expPrimitivesIntersected /= rootSA;
+		Float rootSA = m_aabb.getSurfaceArea();
+		expTraversalSteps /= rootSA;
+		expLeavesVisited /= rootSA;
+		expPrimitivesIntersected /= rootSA;
 
 		Log(EDebug, "Detailed kd-tree statistics:");
-		Log(EDebug, "   Final SAH cost       : %.2f", finalSAHCost);
-		Log(EDebug, "   Inner nodes          : %i", ctx.innerNodeCount);
-		Log(EDebug, "   Leaf nodes           : %i", ctx.leafNodeCount);
-		Log(EDebug, "   Nonempty leaf nodes  : %i", ctx.nonemptyLeafNodeCount);
-		Log(EDebug, "   Retracted splits     : %i", ctx.retractedSplits);
-		Log(EDebug, "   Pruned primitives    : %i", ctx.pruned);
-//		Log(EDebug, "   Exp. traversals      : %.2f", expTraversalSteps);
-//		Log(EDebug, "   Exp. leaf visits     : %.2f", expLeavesVisited);
-//		Log(EDebug, "   Exp. intersections   : %.2f", expPrimitivesIntersected);
+		Log(EDebug, "   Final SAH cost        : %.2f", finalSAHCost);
+		Log(EDebug, "   Inner nodes           : %i", ctx.innerNodeCount);
+		Log(EDebug, "   Leaf nodes            : %i", ctx.leafNodeCount);
+		Log(EDebug, "   Nonempty leaf nodes   : %i", ctx.nonemptyLeafNodeCount);
+		Log(EDebug, "   Retracted splits      : %i", ctx.retractedSplits);
+		Log(EDebug, "   Pruned primitives     : %i", ctx.pruned);
+		Log(EDebug, "   Exp. traversals/ray   : %.2f", expTraversalSteps);
+		Log(EDebug, "   Exp. leaf visits/ray  : %.2f", expLeavesVisited);
+		Log(EDebug, "   Exp. prim. visits/ray : %.2f", expPrimitivesIntersected);
 		Log(EDebug, "");
 
 
@@ -707,7 +743,6 @@ protected:
 		OrderedChunkAllocator leftAlloc, rightAlloc;
 		BlockedVector<KDNode, MTS_KD_BLOCKSIZE_KD> nodes;
 		BlockedVector<index_type, MTS_KD_BLOCKSIZE_IDX> indices;
-		BlockedVector<KDNode *, MTS_KD_BLOCKSIZE_IND> indirections;
 		ClassificationStorage classStorage;
 
 		size_type leafNodeCount;
@@ -734,8 +769,6 @@ protected:
 					nodes.size(), nodes.blockCount(), (nodes.capacity() * sizeof(KDNode)) / 1024.0f);
 			Log(EDebug, "      Indices       : " SIZE_T_FMT " entries, " SIZE_T_FMT " blocks (%.2f KiB)",
 					indices.size(), indices.blockCount(), (indices.capacity() * sizeof(index_type)) / 1024.0f);
-			Log(EDebug, "      Indirections  : " SIZE_T_FMT " entries, " SIZE_T_FMT " blocks (%.2f KiB)",
-					indirections.size(), indirections.blockCount(), (indirections.capacity() * sizeof(KDNode *)) / 1024.0f);
 		}
 
 		void accumulateStatisticsFrom(const BuildContext &ctx) {
@@ -1064,33 +1097,21 @@ protected:
 			ctx.nonemptyLeafNodeCount++;
 			OrderedChunkAllocator &alloc = ctx.leftAlloc;
 
-			/* Create a unique index list */
+			/* A temporary list is allocated to do the sorting (the indices
+			   are not guaranteed to be contiguous in memory) */
 			index_type *tempStart = alloc.allocate<index_type>(actualCount);
-			index_type *tempEnd = tempStart;
+			index_type *tempEnd = tempStart, *ptr = tempStart;
 
-			cout << endl;
-			cout << "Before (" << actualCount << ") = ";
-
-			for (size_type i=start, end = start + actualCount; i<end; ++i) {
-				cout << ctx.indices[i] << " ";
+			for (size_type i=start, end = start + actualCount; i<end; ++i)
 				*tempEnd++ = ctx.indices[i];
-			}
-
-			cout <<endl;
 
 			std::sort(tempStart, tempEnd, std::less<index_type>());
-			index_type *ptr = tempStart;
-			cout << "After (" << primCount << ") = ";
 
-			for (size_type i=0; i<primCount; ++i) {
-				KDAssert(ptr < tempEnd);
+			for (size_type i=start, end = start + primCount; i<end; ++i) {
 				ctx.indices[i] = *ptr++;
-				cout << ctx.indices[i] << " " ;
-				while (ptr < tempEnd && *ptr != ctx.indices[i])
+				while (ptr < tempEnd && *ptr == ctx.indices[i])
 					++ptr;
 			}
-			
-			cout << endl;
 
 			ctx.indices.resize(start + primCount);
 			alloc.release(tempStart);
@@ -1194,17 +1215,18 @@ protected:
 
 		size_type nodePosBeforeSplit = ctx.nodes.size();
 		size_type indexPosBeforeSplit = ctx.indices.size();
-		size_type indirectionsPosBeforeSplit = ctx.indirections.size();
 		size_type leafNodeCountBeforeSplit = ctx.leafNodeCount;
 		size_type nonemptyLeafNodeCountBeforeSplit = ctx.nonemptyLeafNodeCount;
 		size_type innerNodeCountBeforeSplit = ctx.innerNodeCount;
 
 		if (!node->initInnerNode(bestSplit.axis, bestSplit.pos, children-node)) {
-			ctx.indirections.push_back(children);
+			m_indirectionLock->lock();
+			size_t indirectionIdx = m_indirections.size();
+			m_indirections.push_back(children);
 			/* Unable to store relative offset -- create an indirection
 			   table entry */
-			node->initIndirectionNode(bestSplit.axis, bestSplit.pos, 
-					indirectionsPosBeforeSplit);
+			node->initIndirectionNode(bestSplit.axis, bestSplit.pos, indirectionIdx);
+			m_indirectionLock->unlock();
 		}
 		ctx.innerNodeCount++;
 	
@@ -1247,7 +1269,6 @@ protected:
 			   Tear up everything below this node and create a leaf */
 
 			ctx.nodes.resize(nodePosBeforeSplit);
-			ctx.indirections.resize(indirectionsPosBeforeSplit);
 			ctx.retractedSplits++;
 			ctx.leafNodeCount = leafNodeCountBeforeSplit;
 			ctx.nonemptyLeafNodeCount = nonemptyLeafNodeCountBeforeSplit;
@@ -1306,7 +1327,7 @@ protected:
 		/* First, find the optimal splitting plane according to the
 		   surface area heuristic. To do this in O(n), the search is
 		   implemented as a sweep over the edge events */
-			
+
 		/* Initially, the split plane is placed left of the scene
 		   and thus all geometry is on its right side */
 		size_type numLeft[3], numRight[3];
@@ -1629,18 +1650,18 @@ protected:
 
 		size_type nodePosBeforeSplit = ctx.nodes.size();
 		size_type indexPosBeforeSplit = ctx.indices.size();
-		size_type indirectionsPosBeforeSplit = ctx.indirections.size();
 		size_type leafNodeCountBeforeSplit = ctx.leafNodeCount;
 		size_type nonemptyLeafNodeCountBeforeSplit = ctx.nonemptyLeafNodeCount;
 		size_type innerNodeCountBeforeSplit = ctx.innerNodeCount;
 
 		if (!node->initInnerNode(bestSplit.axis, bestSplit.pos, children-node)) {
-			ctx.indirections.push_back(children);
-
+			m_indirectionLock->lock();
+			size_t indirectionIdx = m_indirections.size();
+			m_indirections.push_back(children);
 			/* Unable to store relative offset -- create an indirection
 			   table entry */
-			node->initIndirectionNode(bestSplit.axis, bestSplit.pos, 
-					indirectionsPosBeforeSplit);
+			node->initIndirectionNode(bestSplit.axis, bestSplit.pos, indirectionIdx);
+			m_indirectionLock->unlock();
 		}
 		ctx.innerNodeCount++;
 	
@@ -1675,9 +1696,7 @@ protected:
 		} else {
 			/* In the end, splitting didn't help to reduce the SAH cost.
 			   Tear up everything below this node and create a leaf */
-
 			ctx.nodes.resize(nodePosBeforeSplit);
-			ctx.indirections.resize(indirectionsPosBeforeSplit);
 			ctx.retractedSplits++;
 			ctx.leafNodeCount = leafNodeCountBeforeSplit;
 			ctx.nonemptyLeafNodeCount = nonemptyLeafNodeCountBeforeSplit;
@@ -1966,6 +1985,8 @@ private:
 	size_type m_maxBadRefines;
 	size_type m_exactPrimThreshold;
 	std::vector<SAHTreeBuilder *> m_builders;
+	std::vector<KDNode *> m_indirections;
+	ref<Mutex> m_indirectionLock;
 	BuildInterface m_interface;
 };
 

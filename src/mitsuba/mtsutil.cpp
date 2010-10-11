@@ -342,7 +342,10 @@ int ubi_main(int argc, char **argv) {
 		
 			ref<Utility> utility = plugin->createUtility();
 
-			return utility->run(argc-optind, argv+optind);
+			int retval = utility->run(argc-optind, argv+optind);
+			utility = NULL;
+			delete plugin;
+			return retval;
 		}
 	} catch (const std::exception &e) {
 		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
