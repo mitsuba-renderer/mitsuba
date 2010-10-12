@@ -2590,7 +2590,7 @@ protected:
 	};
 
 	/**
-	 * \brief Internal kd-tree traversal implementation (Havran variant)
+	 * \brief Internal kd-tree traversal implementation (Plain variant)
 	 */
 	template<bool shadowRay> FINLINE bool rayIntersectPlain(const Ray &ray, 
 			Float mint_, Float maxt_, Float &t, void *temp) const {
