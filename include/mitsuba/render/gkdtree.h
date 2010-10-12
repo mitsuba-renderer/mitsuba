@@ -930,12 +930,12 @@ public:
 	/**
 	 * \brief Intersect a ray against all primitives stored in the kd-tree
 	 */
-	bool rayIntersect(const Ray &ray, Intersection &its);
+	bool rayIntersect(const Ray &ray, Intersection &its) const;
 
 	/**
 	 * \brief Test a ray for intersection against all primitives stored in the kd-tree
 	 */
-	bool rayIntersect(const Ray &ray);
+	bool rayIntersect(const Ray &ray) const;
 
 protected:
 	/// Primitive classification during tree-construction
@@ -1364,7 +1364,7 @@ protected:
 
 	/// Cast to the derived class (const version)
 	inline const Derived *cast() const {
-		return static_cast<Derived *>(this);
+		return static_cast<const Derived *>(this);
 	}
 	
 	/**
@@ -2447,7 +2447,7 @@ protected:
 	 * \brief Internal kd-tree traversal implementation (Havran variant)
 	 */
 	template<bool shadowRay> FINLINE bool rayIntersectHavran(const Ray &ray, 
-			Float mint, Float maxt, Float &t, void *temp) {
+			Float mint, Float maxt, Float &t, void *temp) const {
 		KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
 		const KDNode * __restrict farChild,
 					 * __restrict currNode = m_nodes;
@@ -2542,8 +2542,6 @@ protected:
 
 			/* Floating-point arithmetic.. - use both absolute and relative 
 			   epsilons when looking for intersections in the subinterval */
-//			const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);
-//			Float searchEnd = std::min(maxt, stack[exPt].t * p_eps + eps);
 			const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);
 			Float searchEnd = std::min(maxt, stack[exPt].t * p_eps + eps);
 
@@ -2594,20 +2592,89 @@ protected:
 	/**
 	 * \brief Internal kd-tree traversal implementation (Havran variant)
 	 */
-	template<bool shadowRay> FINLINE bool rayIntersect(const Ray &ray, 
-			Float mint, Float maxt, Float &t, void *temp) {
+	template<bool shadowRay> FINLINE bool rayIntersectPlain(const Ray &ray, 
+			Float mint_, Float maxt_, Float &t, void *temp) const {
 		KDStackEntry stack[MTS_KD_MAXDEPTH];
 		int stackPos = 0;
-		KDNode *node = m_nodes;
+		Float mint = mint_, maxt = maxt_;
+		const KDNode *node = m_nodes;
+
+		#if defined(MTS_KD_MAILBOX_ENABLED)
+		HashedMailbox mailbox;
+		#endif
+
+		const int signs[3] = {
+			ray.d[0] >= 0 ? 1 : 0,
+			ray.d[1] >= 0 ? 1 : 0,
+			ray.d[2] >= 0 ? 1 : 0
+		};
 
 		while (node != NULL) {
 			if (EXPECT_TAKEN(!node->isLeaf())) {
-				float split = (Float) node->getSplit();
-				int axis = node->getAxis();
-				float t = (split - ray.o[axis]) * ray.dRcp[axis];
+				const float split = (Float) node->getSplit();
+				const int axis = node->getAxis();
+				const float t = (split - ray.o[axis]) * ray.dRcp[axis];
 
-				const KDNode * __restrict first, * __restrict second;
+				int sign = signs[axis];
 
+				const KDNode * __restrict base = node->getLeft();
+				const KDNode * __restrict first = base + (sign^1);
+				const KDNode * __restrict second = base + sign;
+
+				node = first;
+
+				bool front = t > maxt,
+					 back = t < mint;
+
+				if (front) {
+					;
+				} else if (back) {
+					node = second;
+				} else {
+					stack[stackPos].node = second;
+					stack[stackPos].mint = t;
+					stack[stackPos].maxt = maxt;
+					maxt = t;
+					++stackPos;
+				}
+			} else {
+				bool foundIntersection = false;
+				for (unsigned int entry=node->getPrimStart(),
+						last = node->getPrimEnd(); entry != last; entry++) {
+					const index_type primIdx = m_indices[entry];
+
+					#if defined(MTS_KD_MAILBOX_ENABLED)
+					if (mailbox.contains(primIdx)) 
+						continue;
+					#endif
+
+					EIntersectionResult result = cast()->intersect(ray, 
+							primIdx, mint, maxt, t, temp);
+
+					if (result == EYes) {
+						if (shadowRay)
+							return true;
+						maxt = t;
+						foundIntersection = true;
+					}
+
+					#if defined(MTS_KD_MAILBOX_ENABLED)
+					else if (result == ENever) 
+						mailbox.put(primIdx);
+					#endif
+				}
+
+				if (foundIntersection) 
+					return true;
+
+				if (stackPos > 0) {
+					--stackPos;
+					node = stack[stackPos].node;
+					mint = stack[stackPos].mint;
+					maxt = stack[stackPos].maxt;
+				} else {
+					break;
+				}
 			}
 		}
 		return false;
@@ -2633,7 +2700,7 @@ private:
 
 
 template <typename Derived> bool GenericKDTree<Derived>::rayIntersect(
-		const Ray &ray, Intersection &its) {
+		const Ray &ray, Intersection &its) const {
 
 	uint32_t temp[MTS_KD_INTERSECTION_TEMP];
 	its.t = std::numeric_limits<Float>::infinity(); 
@@ -2654,7 +2721,7 @@ template <typename Derived> bool GenericKDTree<Derived>::rayIntersect(
 }
 
 template <typename Derived> bool GenericKDTree<Derived>::rayIntersect(
-		const Ray &ray) {
+		const Ray &ray) const {
 	uint32_t temp[MTS_KD_INTERSECTION_TEMP];
 	Float mint, maxt, t;
 

@@ -104,7 +104,7 @@ public:
 		}
 
 		FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx,
-				Float mint, Float maxt, Float &t, void *tmp) {
+				Float mint, Float maxt, Float &t, void *tmp) const {
 			Float tempT, tempU, tempV;
 			if (m_triangles[idx].rayIntersect(m_vertexBuffer, ray, tempU, tempV, tempT)) {
 				if (tempT >= mint && tempT <= maxt) {
@@ -175,13 +175,13 @@ public:
 		/*
 		ref<KDTree> oldTree = new KDTree();
 		oldTree->addShape(mesh);
-		oldTree->build();
-		*/
+		oldTree->build(); */
 
 		for (int j=0; j<3; ++j) {
 			ref<Random> random = new Random();
 			ref<Timer> timer = new Timer();
-			size_t nRays = 10000000, nIntersections = 0;
+			size_t nRays = 10000000;
+			size_t nIntersections = 0;
 
 			Log(EInfo, "Bounding sphere: %s", bsphere.toString().c_str());
 			Log(EInfo, "Shooting " SIZE_T_FMT " rays ..", nRays);
