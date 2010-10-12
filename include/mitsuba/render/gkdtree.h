@@ -785,7 +785,7 @@ public:
 		Log(EDebug, "Optimizing memory layout ..");
 
 		std::stack<boost::tuple<const KDNode *, KDNode *, 
-			const BuildContext *, AABB> > stack;
+				const BuildContext *, AABB> > stack;
 
 		Float expTraversalSteps = 0;
 		Float expLeavesVisited = 0;
@@ -830,6 +830,7 @@ public:
 				Float sa = aabb.getSurfaceArea();
 				expTraversalSteps += sa;
 				sahCost += sa * m_traversalCost;
+
 				const KDNode *left;
 				if (EXPECT_TAKEN(!node->isIndirection()))
 					left = node->getLeft();
@@ -2460,7 +2461,7 @@ protected:
 		static const int prevAxisTable[] = { 2, 0, 1 };
 		static const int nextAxisTable[] = { 1, 2, 0 };
 
-		KDStackEntry stack[MTS_KD_MAXDEPTH];
+		KDStackEntry stack[MTS_KD_MAXDEPTH*2];
 		const KDNode * __restrict farChild,
 					 * __restrict currNode = m_nodes;
 
@@ -2469,12 +2470,12 @@ protected:
 		#endif
 
 		/* Set up the entry point */
-		int enPt = 0;
+		uint32_t enPt = 0;
 		stack[enPt].t = mint;
 		stack[enPt].p = ray(mint);
 
 		/* Set up the exit point */
-		int exPt = 1;
+		uint32_t exPt = 1;
 		stack[exPt].t = maxt;
 		stack[exPt].p = ray(maxt);
 		stack[exPt].node = NULL;

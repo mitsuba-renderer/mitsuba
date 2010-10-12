@@ -161,7 +161,7 @@ public:
 
 	void test02_buildSimple() {
 		Properties bunnyProps("ply");
-		bunnyProps.setString("filename", "tools/tests/happy.ply");
+		bunnyProps.setString("filename", "tools/tests/bunny.ply");
 
 		ref<TriMesh> mesh = static_cast<TriMesh *> (PluginManager::getInstance()->
 				createObject(TriMesh::m_theClass, bunnyProps));
