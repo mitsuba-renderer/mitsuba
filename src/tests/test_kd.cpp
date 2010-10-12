@@ -103,8 +103,8 @@ public:
 			return m_triangleCount;
 		}
 
-		FINLINE EIntersectionResult intersect(index_type idx, const Ray &ray, Float mint, 
-				Float maxt, Float &t, void *tmp) {
+		FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx,
+				Float mint, Float maxt, Float &t, void *tmp) {
 			Float tempT, tempU, tempV;
 			if (m_triangles[idx].rayIntersect(m_vertexBuffer, ray, tempU, tempV, tempT)) {
 				if (tempT >= mint && tempT <= maxt) {
@@ -169,6 +169,33 @@ public:
 		TriKDTree tree(mesh->getTriangles(), 
 			mesh->getVertexBuffer(), mesh->getTriangleCount());
 		tree.build();
+		BSphere bsphere(mesh->getBSphere());
+
+		for (int j=0; j<3; ++j) {
+			ref<Random> random = new Random();
+			ref<Timer> timer = new Timer();
+			size_t nRays = 5000000, nIntersections = 0;
+
+			Log(EInfo, "Bounding sphere: %s", bsphere.toString().c_str());
+			Log(EInfo, "Shooting " SIZE_T_FMT " rays ..", nRays);
+
+			for (size_t i=0; i<nRays; ++i) {
+				Point2 sample1(random->nextFloat(), random->nextFloat()),
+					sample2(random->nextFloat(), random->nextFloat());
+				Point p1 = bsphere.center + squareToSphere(sample1) * bsphere.radius;
+				Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
+				Ray r(p1, normalize(p2-p1));
+
+				Intersection its;
+				if (tree.rayIntersect(r, its))
+					nIntersections++;
+			}
+
+			Log(EInfo, "Found " SIZE_T_FMT " intersections in %i ms",
+				nIntersections, timer->getMilliseconds());
+			Log(EInfo, "%.3f MRays/s", 
+				nRays / (timer->getMilliseconds() * (Float) 1000));
+		}
 	}
 };
 

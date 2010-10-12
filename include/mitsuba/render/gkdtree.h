@@ -44,8 +44,9 @@
 #define MTS_KD_INTERSECTION_TEMP 8
 
 /// Use a simple hashed 8-entry mailbox per thread
-#define MTS_KD_MAILBOX_SIZE 8
-#define MTS_KD_MAILBOX_MASK (MTS_KD_MAILBOX_SIZE-1)
+//#define MTS_KD_MAILBOX_ENABLED 1
+//#define MTS_KD_MAILBOX_SIZE 8
+//#define MTS_KD_MAILBOX_MASK (MTS_KD_MAILBOX_SIZE-1)
 
 #if defined(MTS_KD_DEBUG)
 #define KDAssert(expr) Assert(expr)
@@ -793,7 +794,7 @@ public:
 		size_type nodePtr = 0, indexPtr = 0;
 
 		m_nodes = static_cast<KDNode *> (allocAligned(
-				ctx.innerNodeCount + ctx.leafNodeCount));
+				sizeof(KDNode) * (ctx.innerNodeCount + ctx.leafNodeCount)));
 		m_indices = new index_type[ctx.primIndexCount];
 
 		stack.push(boost::make_tuple(prelimRoot, &m_nodes[nodePtr++], &ctx, m_aabb));
@@ -1282,11 +1283,12 @@ protected:
 
 	BOOST_STATIC_ASSERT(sizeof(KDNode) == 8);
 
+#if defined(MTS_KD_MAILBOX_ENABLED)
 	/**
 	 * \brief Hashed mailbox implementation
 	 */
-	struct MailBox {
-		MailBox() {
+	struct HashedMailbox {
+		HashedMailbox() {
 			memset(entries, 0xFF, sizeof(index_type)*MTS_KD_MAILBOX_SIZE);
 		}
 
@@ -1300,6 +1302,7 @@ protected:
 
 		index_type entries[MTS_KD_MAILBOX_SIZE];
 	};
+#endif
 
 	/**
 	 * \brief SAH kd-tree builder thread
@@ -2446,7 +2449,7 @@ protected:
 		/* Previous stack item */
 		uint32_t prev;
 		/* Associated point */
-		Point pb;
+		Point p;
 	};
 
 	/**
@@ -2454,9 +2457,136 @@ protected:
 	 */
 	template<bool shadowRay> FINLINE bool rayIntersect(const Ray &ray, 
 			Float mint, Float maxt, Float &t, void *temp) {
+		static const int prevAxisTable[] = { 2, 0, 1 };
+		static const int nextAxisTable[] = { 1, 2, 0 };
+
 		KDStackEntry stack[MTS_KD_MAXDEPTH];
 		const KDNode * __restrict farChild,
 					 * __restrict currNode = m_nodes;
+
+		#if defined(MTS_KD_MAILBOX_ENABLED)
+		HashedMailbox mailbox;
+		#endif
+
+		/* Set up the entry point */
+		int enPt = 0;
+		stack[enPt].t = mint;
+		stack[enPt].p = ray(mint);
+
+		/* Set up the exit point */
+		int exPt = 1;
+		stack[exPt].t = maxt;
+		stack[exPt].p = ray(maxt);
+		stack[exPt].node = NULL;
+	
+		while (currNode != NULL) {
+			while (EXPECT_TAKEN(!currNode->isLeaf())) {
+				const Float splitVal = (Float) currNode->getSplit();
+				const int axis = currNode->getAxis();
+
+				if (stack[enPt].p[axis] <= splitVal) {
+					if (stack[exPt].p[axis] <= splitVal) {
+						/* Cases N1, N2, N3, P5, Z2 and Z3 (see thesis) */
+						currNode = currNode->getLeft();
+						continue;
+					}
+
+					/* Typo in Havran's thesis:
+					   (it specifies "stack[exPt].p == splitVal", which
+					    is clearly incorrect) */
+					if (stack[enPt].p[axis] == splitVal) {
+						/* Case Z1 */
+						currNode = currNode->getRight();
+						continue;
+					}
+
+					/* Case N4 */
+					currNode = currNode->getLeft();
+					farChild = currNode + 1; // getRight()
+				} else { /* stack[enPt].p[axis] > splitVal */
+					if (splitVal < stack[exPt].p[axis]) {
+						/* Cases P1, P2, P3 and N5 */
+						currNode = currNode->getRight();
+						continue;
+					}
+					/* Case P4 */
+					farChild = currNode->getLeft();
+					currNode = farChild + 1; // getRight()
+				}
+
+				/* Cases P4 and N4 -- calculate the distance to the split plane */
+				t = (splitVal - ray.o[axis]) * ray.dRcp[axis];
+
+				/* Set up a new exit point */
+				const uint32_t tmp = exPt++;
+				if (exPt == enPt) /* Do not overwrite the entry point */
+					++exPt;
+
+				KDAssert(exPt < MTS_KD_MAX_DEPTH);
+				stack[exPt].prev = tmp;
+				stack[exPt].t = t;
+				stack[exPt].node = farChild;
+#if 1
+				const int nextAxis = nextAxisTable[axis];
+				const int prevAxis = prevAxisTable[axis];
+				stack[exPt].p[nextAxis] = ray.o[nextAxis] + t*ray.d[nextAxis];
+				stack[exPt].p[prevAxis] = ray.o[prevAxis] + t*ray.d[prevAxis];
+#else
+				stack[exPt].p = ray(t);
+#endif
+				stack[exPt].p[axis] = splitVal;
+			}
+
+			#if defined(SINGLE_PRECISION)
+				const Float eps = 1e-3;
+			#else
+				const Float eps = 1e-5;
+			#endif
+			const Float m_eps = 1-eps, p_eps = 1+eps;
+
+			/* Floating-point arithmetic.. - use both absolute and relative 
+			   epsilons when looking for intersections in the subinterval */
+			const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);
+			Float searchEnd = std::min(maxt, stack[exPt].t * p_eps + eps);
+
+			/* Reached a leaf node */
+			bool foundIntersection = false;
+			for (unsigned int entry=currNode->getPrimStart(),
+					last = currNode->getPrimEnd(); entry != last; entry++) {
+				const index_type primIdx = m_indices[entry];
+
+				#if defined(MTS_KD_MAILBOX_ENABLED)
+				if (mailbox.get(primIdx))
+					continue;
+				#endif
+
+				EIntersectionResult result = cast()->intersect(ray, 
+						primIdx, searchStart, searchEnd, t, temp);
+		
+				if (result == EYes) {
+					if (shadowRay)
+						return true;
+					searchEnd = t;
+					foundIntersection = true;
+				}
+
+				#if defined(MTS_KD_MAILBOX_ENABLED)
+				if (result == ENever)
+					mailbox.put(primIdx);
+				#endif
+			}
+
+			if (foundIntersection) {
+				t = searchEnd;
+				return true;
+			}
+
+			/* Pop from the stack and advance to the next node on the interval */
+			enPt = exPt;
+			currNode = stack[exPt].node;
+			exPt = stack[enPt].prev;
+		}
+
 		return false;
 	}
 
