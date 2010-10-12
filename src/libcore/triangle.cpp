@@ -35,7 +35,7 @@ bool Triangle::rayIntersect(const Vertex *buffer, const Ray &ray,
 	/* if determinant is near zero, ray lies in plane of triangle */
 	Float det = dot(edge1, pvec);
 
-	if (det > -Epsilon && det < Epsilon)
+	if (det > -1e-8f && det < 1e-8f)
 		return false;
 	Float inv_det = 1.0f / det;
 

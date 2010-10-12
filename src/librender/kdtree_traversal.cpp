@@ -186,7 +186,7 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its, Float mint, Float m
 			   Moeller and Trumbore (without having done any pre-computation) */
 			const KDTriangle &kdTri = m_triangles[m_indices[entry]];
 			if (EXPECT_TAKEN(kdTri.index != KNoTriangleFlag)) {
-				const TriMesh *mesh = m_meshes[kdTri.shapeIndex];
+				const TriMesh *mesh = (const TriMesh *) m_shapes[kdTri.shapeIndex];
 				const Triangle &tri = mesh->getTriangles()[kdTri.index];
 				if (tri.rayIntersect(mesh->getVertexBuffer(), ray, u, v, t)) {
 					if (t >= searchStart && t < searchEnd) {
@@ -202,7 +202,7 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its, Float mint, Float m
 					}
 				}
 			} else {
-				if (m_shapes[kdTri.shapeIndex].rayIntersect(ray, searchStart, searchEnd, t)) {
+				if (m_shapes[kdTri.shapeIndex]->rayIntersect(ray, searchStart, searchEnd, t)) {
 					if (shadowRay)
 						return true;
 					foundIntersection = true;
