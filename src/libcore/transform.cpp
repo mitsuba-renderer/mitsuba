@@ -232,6 +232,12 @@ Matrix4x4::Matrix4x4() {
 			m[i][j] = (i == j) ? 1.0f : 0.0f;
 }
 
+Matrix4x4::Matrix4x4(Float value) {
+	for (int i=0; i<4; i++)
+		for (int j=0; j<4; j++)
+			m[i][j] = value;
+}
+
 Matrix4x4::Matrix4x4(Float _m[4][4]) {
 	memcpy(m, _m, sizeof(Float) * 16);
 }

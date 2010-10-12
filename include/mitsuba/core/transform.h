@@ -33,6 +33,9 @@ public:
 	/// Initialize with the identity matrix
 	Matrix4x4();
 
+	/// Initialize the matrix with constant entries
+	Matrix4x4(Float value);
+
 	/// Unserialize a matrix from a stream
 	Matrix4x4(Stream *stream);
 
@@ -227,6 +230,31 @@ public:
 			   + m_invTransform->m[2][1] * v.z;
 		dest.z = m_invTransform->m[0][2] * v.x + m_invTransform->m[1][2] * v.y
 			   + m_invTransform->m[2][2] * v.z;
+	}
+	
+	/// 4D matrix-vector multiplication
+	inline Vector4 operator()(const Vector4 &v) const {
+		Float x = m_transform->m[0][0] * v.x + m_transform->m[0][1] * v.y
+				+ m_transform->m[0][2] * v.z + m_transform->m[0][3] * v.w;
+		Float y = m_transform->m[1][0] * v.x + m_transform->m[1][1] * v.y
+				+ m_transform->m[1][2] * v.z + m_transform->m[1][3] * v.w;
+		Float z = m_transform->m[2][0] * v.x + m_transform->m[2][1] * v.y
+				+ m_transform->m[2][2] * v.z + m_transform->m[2][3] * v.w;
+		Float w = m_transform->m[3][0] * v.x + m_transform->m[3][1] * v.y
+				+ m_transform->m[3][2] * v.z + m_transform->m[3][3] * v.w;
+		return Vector4(x,y,z,w);
+	}
+
+	/// 4D matrix-vector multiplication
+	inline void operator()(const Vector4 &v, Vector4 &dest) const {
+		dest.x = m_transform->m[0][0] * v.x + m_transform->m[0][1] * v.y
+			   + m_transform->m[0][2] * v.z + m_transform->m[0][3] * v.w;
+		dest.y = m_transform->m[1][0] * v.x + m_transform->m[1][1] * v.y
+			   + m_transform->m[1][2] * v.z + m_transform->m[1][3] * v.w;
+		dest.z = m_transform->m[2][0] * v.x + m_transform->m[2][1] * v.y
+			   + m_transform->m[2][2] * v.z + m_transform->m[2][3] * v.w;
+		dest.w = m_transform->m[3][0] * v.x + m_transform->m[3][1] * v.y
+			   + m_transform->m[3][2] * v.z + m_transform->m[3][3] * v.w;
 	}
 
 	/// Transform a ray. Assumes that there is no scaling

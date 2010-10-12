@@ -24,7 +24,7 @@
 #include <boost/tuple/tuple.hpp>
 
 /// Activate lots of extra checks
-#define MTS_KD_DEBUG 1
+//#define MTS_KD_DEBUG 1
 
 /** Compile-time KD-tree depth limit. Allows to put certain
     data structures on the stack */
@@ -584,7 +584,7 @@ public:
 	inline size_type getMaxDepth() const {
 		return m_maxDepth;
 	}
-	
+
 	/**
 	 * \brief Specify whether or not to use primitive clipping will
 	 * be used in the tree construction.
@@ -680,7 +680,7 @@ public:
 	inline bool getExactPrimitiveThreshold() const {
 		return m_exactPrimThreshold;
 	}
-	
+
 	/**
 	 * \brief Return whether or not the kd-tree has been built
 	 */
@@ -689,9 +689,29 @@ public:
 	}
 
 	/**
-	 * \brief Build a KD-tree over supplied geometry
+	 * \brief Intersect a ray against all primitives stored in the kd-tree
 	 */
-	void build() {
+	bool rayIntersect(const Ray &ray, Intersection &its) const;
+
+	/**
+	 * \brief Test a ray for intersection against all primitives stored in the kd-tree
+	 */
+	bool rayIntersect(const Ray &ray) const;
+
+	/**
+	 * \brief Empirically find the best traversal and intersection cost values
+	 *
+	 * This is done by running the traversal code on random rays and fitting 
+	 * the SAH cost model to the collected statistics.
+	 */
+	void findCosts(Float &traversalCost, Float &intersectionCost);
+protected:
+	/**
+	 * \brief Build a KD-tree over the supplied geometry
+	 *
+	 * To be called by the subclass.
+	 */
+	void buildInternal() {
 		if (isBuilt()) 
 			Log(EError, "The kd-tree has already been built!");
 
@@ -806,6 +826,10 @@ public:
 		Float expPrimitivesIntersected = 0;
 		Float sahCost = 0;
 		size_type nodePtr = 0, indexPtr = 0;
+		size_type maxPrimsInLeaf = 0;
+		const size_type primBucketCount = 16;
+		size_type primBuckets[primBucketCount];
+		memset(primBuckets, 0, sizeof(size_type)*primBucketCount);
 
 		m_nodes = static_cast<KDNode *> (allocAligned(
 				sizeof(KDNode) * (ctx.innerNodeCount + ctx.leafNodeCount)));
@@ -829,7 +853,11 @@ public:
 				expLeavesVisited += aabb.getSurfaceArea();
 				expPrimitivesIntersected += weightedSA;
 				sahCost += weightedSA * m_intersectionCost;
-		
+				if (primCount < primBucketCount)
+					primBuckets[primCount]++;
+				if (primCount > maxPrimsInLeaf)
+					maxPrimsInLeaf = primCount;
+
 				const BlockedVector<index_type, MTS_KD_BLOCKSIZE_IDX> &indices 
 					= context->indices;
 				for (size_type idx = primStart; idx<primEnd; ++idx)
@@ -898,7 +926,7 @@ public:
 		expLeavesVisited /= rootSA;
 		expPrimitivesIntersected /= rootSA;
 		sahCost /= rootSA;
-	
+
 		/* Slightly enlarge the bounding box 
 		   (necessary e.g. when the scene is planar) */
 		m_aabb.min -= (m_aabb.max-m_aabb.min) * Epsilon
@@ -906,18 +934,33 @@ public:
 		m_aabb.max += (m_aabb.max-m_aabb.min) * Epsilon
 			+ Vector(Epsilon, Epsilon, Epsilon);
 
-		Log(EDebug, "Detailed kd-tree statistics:");
-		Log(EDebug, "   Inner nodes               : %i", ctx.innerNodeCount);
-		Log(EDebug, "   Leaf nodes                : %i", ctx.leafNodeCount);
-		Log(EDebug, "   Nonempty leaf nodes       : %i", ctx.nonemptyLeafNodeCount);
+		Log(EDebug, "Structural kd-tree statistics:");
+		Log(EDebug, "   Parallel work units       : " SIZE_T_FMT, 
+				m_interface.threadMap.size());
 		Log(EDebug, "   Node storage cost         : %s", 
 				memString(nodePtr * sizeof(KDNode)).c_str());
 		Log(EDebug, "   Index storage cost        : %s", 
 				memString(indexPtr * sizeof(index_type)).c_str());
-		Log(EDebug, "   Parallel work units       : " SIZE_T_FMT, 
-				m_interface.threadMap.size());
+		Log(EDebug, "   Inner nodes               : %i", ctx.innerNodeCount);
+		Log(EDebug, "   Leaf nodes                : %i", ctx.leafNodeCount);
+		Log(EDebug, "   Nonempty leaf nodes       : %i", ctx.nonemptyLeafNodeCount);
+		std::ostringstream oss;
+		oss << "   Leaf node histogram       : ";
+		for (int i=0; i<primBucketCount; i++) {
+			oss << i << "(" << primBuckets[i] << ") ";
+			if ((i+1)%4==0 && i+1<primBucketCount) {
+				Log(EDebug, "%s", oss.str().c_str());
+				oss.str("");
+				oss << "                               ";
+			}
+		}
+		Log(EDebug, "%s", oss.str().c_str());
+		Log(EDebug, "");
+		Log(EDebug, "Qualitative kd-tree statistics:");
 		Log(EDebug, "   Retracted splits          : %i", ctx.retractedSplits);
 		Log(EDebug, "   Pruned primitives         : %i", ctx.pruned);
+		Log(EDebug, "   Largest leaf node         : %i primitives",
+				maxPrimsInLeaf);
 		Log(EDebug, "   Avg. prims/nonempty leaf  : %.2f", 
 				ctx.primIndexCount / (Float) ctx.nonemptyLeafNodeCount);
 		Log(EDebug, "   Expected traversals/ray   : %.2f", expTraversalSteps);
@@ -926,16 +969,6 @@ public:
 		Log(EDebug, "   Final SAH cost            : %.2f", sahCost);
 		Log(EDebug, "");
 	}
-
-	/**
-	 * \brief Intersect a ray against all primitives stored in the kd-tree
-	 */
-	bool rayIntersect(const Ray &ray, Intersection &its) const;
-
-	/**
-	 * \brief Test a ray for intersection against all primitives stored in the kd-tree
-	 */
-	bool rayIntersect(const Ray &ray) const;
 
 protected:
 	/// Primitive classification during tree-construction
@@ -1366,7 +1399,7 @@ protected:
 	inline const Derived *cast() const {
 		return static_cast<const Derived *>(this);
 	}
-	
+
 	/**
 	 * \brief Create an edge event list for a given list of primitives. 
 	 *
@@ -2449,8 +2482,6 @@ protected:
 	template<bool shadowRay> FINLINE bool rayIntersectHavran(const Ray &ray, 
 			Float mint, Float maxt, Float &t, void *temp) const {
 		KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
-		const KDNode * __restrict farChild,
-					 * __restrict currNode = m_nodes;
 		#if 0
 		static const int prevAxisTable[] = { 2, 0, 1 };
 		static const int nextAxisTable[] = { 1, 2, 0 };
@@ -2470,11 +2501,13 @@ protected:
 		stack[exPt].t = maxt;
 		stack[exPt].p = ray(maxt);
 		stack[exPt].node = NULL;
-	
+
+		const KDNode * __restrict currNode = m_nodes;
 		while (currNode != NULL) {
 			while (EXPECT_TAKEN(!currNode->isLeaf())) {
 				const Float splitVal = (Float) currNode->getSplit();
 				const int axis = currNode->getAxis();
+				const KDNode * __restrict farChild;
 
 				if (stack[enPt].p[axis] <= splitVal) {
 					if (stack[exPt].p[axis] <= splitVal) {
@@ -2558,7 +2591,7 @@ protected:
 
 				EIntersectionResult result = cast()->intersect(ray, 
 						primIdx, searchStart, searchEnd, t, temp);
-		
+
 				if (result == EYes) {
 					if (shadowRay)
 						return true;
@@ -2582,6 +2615,131 @@ protected:
 		}
 
 		return false;
+	}
+
+	/**
+	 * \brief Internal kd-tree traversal implementation (Havran variant)
+	 *
+	 * This method is almost identical to \ref rayIntersectHavran, except
+	 * that it additionally returns statistics on the number of traversed
+	 * nodes, intersected shapes, as well as the time taken to do this
+	 * (measured using rtdsc).
+	 */
+	FINLINE boost::tuple<bool, uint32_t, uint32_t, uint64_t> 
+			rayIntersectHavranCollectStatistics(const Ray &ray, 
+			Float mint, Float maxt, Float &t, void *temp) const {
+		KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
+
+		/* Set up the entry point */
+		uint32_t enPt = 0;
+		stack[enPt].t = mint;
+		stack[enPt].p = ray(mint);
+
+		/* Set up the exit point */
+		uint32_t exPt = 1;
+		stack[exPt].t = maxt;
+		stack[exPt].p = ray(maxt);
+		stack[exPt].node = NULL;
+
+		uint32_t numTraversals = 0;
+		uint32_t numIntersections = 0;
+		uint64_t timer = rdtsc();
+
+		const KDNode * __restrict currNode = m_nodes;
+		while (currNode != NULL) {
+			while (EXPECT_TAKEN(!currNode->isLeaf())) {
+				const Float splitVal = (Float) currNode->getSplit();
+				const int axis = currNode->getAxis();
+				const KDNode * __restrict farChild;
+
+				++numTraversals;
+				if (stack[enPt].p[axis] <= splitVal) {
+					if (stack[exPt].p[axis] <= splitVal) {
+						/* Cases N1, N2, N3, P5, Z2 and Z3 (see thesis) */
+						currNode = currNode->getLeft();
+						continue;
+					}
+
+					/* Typo in Havran's thesis:
+					   (it specifies "stack[exPt].p == splitVal", which
+					    is clearly incorrect) */
+					if (stack[enPt].p[axis] == splitVal) {
+						/* Case Z1 */
+						currNode = currNode->getRight();
+						continue;
+					}
+
+					/* Case N4 */
+					currNode = currNode->getLeft();
+					farChild = currNode + 1; // getRight()
+				} else { /* stack[enPt].p[axis] > splitVal */
+					if (splitVal < stack[exPt].p[axis]) {
+						/* Cases P1, P2, P3 and N5 */
+						currNode = currNode->getRight();
+						continue;
+					}
+					/* Case P4 */
+					farChild = currNode->getLeft();
+					currNode = farChild + 1; // getRight()
+				}
+
+				/* Cases P4 and N4 -- calculate the distance to the split plane */
+				t = (splitVal - ray.o[axis]) * ray.dRcp[axis];
+
+				/* Set up a new exit point */
+				const uint32_t tmp = exPt++;
+				if (exPt == enPt) /* Do not overwrite the entry point */
+					++exPt;
+
+				KDAssert(exPt < MTS_KD_MAX_DEPTH);
+				stack[exPt].prev = tmp;
+				stack[exPt].t = t;
+				stack[exPt].node = farChild;
+				stack[exPt].p = ray(t);
+				stack[exPt].p[axis] = splitVal;
+			}
+
+			#if defined(SINGLE_PRECISION)
+				const Float eps = 1e-3;
+			#else
+				const Float eps = 1e-5;
+			#endif
+			const Float m_eps = 1-eps, p_eps = 1+eps;
+
+			/* Floating-point arithmetic.. - use both absolute and relative 
+			   epsilons when looking for intersections in the subinterval */
+			const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);
+			Float searchEnd = std::min(maxt, stack[exPt].t * p_eps + eps);
+
+			/* Reached a leaf node */
+			bool foundIntersection = false;
+			for (unsigned int entry=currNode->getPrimStart(),
+					last = currNode->getPrimEnd(); entry != last; entry++) {
+				const index_type primIdx = m_indices[entry];
+
+				++numIntersections;
+				EIntersectionResult result = cast()->intersect(ray, 
+						primIdx, searchStart, searchEnd, t, temp);
+
+				if (result == EYes) {
+					searchEnd = t;
+					foundIntersection = true;
+				}
+			}
+
+			if (foundIntersection)
+				return boost::make_tuple(true, numTraversals, 
+						numIntersections, rdtsc() - timer);
+
+
+			/* Pop from the stack and advance to the next node on the interval */
+			enPt = exPt;
+			currNode = stack[exPt].node;
+			exPt = stack[enPt].prev;
+		}
+
+		return boost::make_tuple(false, numTraversals, 
+				numIntersections, rdtsc() - timer);
 	}
 
 	struct KDStackEntry {
@@ -2734,6 +2892,94 @@ template <typename Derived> bool GenericKDTree<Derived>::rayIntersect(
 				return true;
 	}
 	return false;
+}
+	
+template <typename Derived> void GenericKDTree<Derived>::findCosts(
+		Float &traversalCost, Float &intersectionCost) {
+	ref<Random> random = new Random();
+	uint32_t temp[MTS_KD_INTERSECTION_TEMP];
+	BSphere bsphere = m_aabb.getBSphere();
+	const size_t nRays = 10000000, warmup = nRays/4;
+	Vector *A = new Vector[nRays-warmup];
+	Float *b = new Float[nRays-warmup];
+	size_t nIntersections = 0, idx = 0;
+
+	for (size_t i=0; i<nRays; ++i) {
+		Point2 sample1(random->nextFloat(), random->nextFloat()),
+			sample2(random->nextFloat(), random->nextFloat());
+		Point p1 = bsphere.center + squareToSphere(sample1) * bsphere.radius;
+		Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
+		Ray ray(p1, normalize(p2-p1));
+		Float mint, maxt, t;
+		if (ray.mint > mint) mint = ray.mint;
+		if (ray.maxt < maxt) maxt = ray.maxt;
+		if (m_aabb.rayIntersect(ray, mint, maxt)) {
+			if (EXPECT_TAKEN(maxt > mint)) {
+				boost::tuple<bool, uint32_t, uint32_t, uint64_t> statistics =
+					rayIntersectHavranCollectStatistics(ray, mint, maxt, t, temp);
+				if (boost::get<0>(statistics))
+					nIntersections++;
+				if (i > warmup) {
+					A[idx].x = 1;
+					A[idx].y = boost::get<1>(statistics);
+					A[idx].z = boost::get<2>(statistics);
+					b[idx]   = boost::get<3>(statistics);
+					idx++;
+				}
+			}
+		}
+	}
+
+	Log(EDebug, "Fitting to " SIZE_T_FMT " samples (" SIZE_T_FMT 
+			" intersections)", idx, nIntersections);
+
+	/* Solve using normal equations */
+	ref<Matrix4x4> M = new Matrix4x4(0.0f);
+	Vector4 rhs(0.0f), x;
+
+	for (size_t i=0; i<3; ++i) {
+		for (size_t j=0; j<3; ++j) 
+			for (size_t k=0; k<idx; ++k) 
+				M->m[i][j] += A[k][i]*A[k][j];
+		for (size_t k=0; k<idx; ++k) 
+			rhs[i] += A[k][i]*b[k];
+	}
+	M->m[3][3] = 1.0f;
+
+	Transform(M->inverse())(rhs, x);
+	
+	Float avgRdtsc = 0, avgResidual = 0;
+	for (size_t i=0; i<idx; ++i) {
+		avgRdtsc += b[i];
+		Float model = x[0] * A[i][0]
+			+ x[1] * A[i][1]
+			+ x[2] * A[i][2];
+		//cout << b[i] << " vs " << (int) model << endl;
+		avgResidual += std::abs(b[i] - model);
+	}
+	avgRdtsc /= idx;
+	avgResidual /= idx;
+	
+	for (size_t k=0; k<idx; ++k) 
+		avgRdtsc += b[k];
+	avgRdtsc /= idx;
+
+	Log(EDebug, "Least squares fit:");
+	Log(EDebug, "   Constant overhead    = %.2f", x[0]);
+	Log(EDebug, "   Traversal cost       = %.2f", x[1]);
+	Log(EDebug, "   Intersection cost    = %.2f", x[2]);
+	Log(EDebug, "   Average rdtsc value  = %.2f", avgRdtsc);
+	Log(EDebug, "   Avg. residual        = %.2f", avgResidual);
+	x *= 10/x[1];
+	Log(EDebug, "Re-scaled:");
+	Log(EDebug, "   Constant overhead    = %.2f", x[0]);
+	Log(EDebug, "   Traversal cost       = %.2f", x[1]);
+	Log(EDebug, "   Intersection cost    = %.2f", x[2]);
+
+	delete[] A;
+	delete[] b;
+	traversalCost = x[1];
+	intersectionCost = x[2];
 }
 
 MTS_NAMESPACE_END

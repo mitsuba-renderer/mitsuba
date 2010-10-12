@@ -21,6 +21,103 @@
 #include <mitsuba/render/gkdtree.h>
 
 MTS_NAMESPACE_BEGIN
+	
+class TriKDTree : public GenericKDTree<TriKDTree> {
+public:
+	TriKDTree(const Triangle *triangles,
+				const Vertex *vertexBuffer,
+				size_type triangleCount) 
+		: m_triangles(triangles),
+			m_vertexBuffer(vertexBuffer),
+			m_triangleCount(triangleCount) {
+	}
+
+	FINLINE AABB getAABB(index_type idx) const {
+		return m_triangles[idx].getAABB(m_vertexBuffer);
+	}
+
+	FINLINE AABB getClippedAABB(index_type idx, const AABB &aabb) const {
+		return m_triangles[idx].getClippedAABB(m_vertexBuffer, aabb);
+	}
+
+	FINLINE size_type getPrimitiveCount() const {
+		return m_triangleCount;
+	}
+
+	FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx,
+			Float mint, Float maxt, Float &t, void *tmp) const {
+		Float tempT, tempU, tempV;
+#if 0
+		if (m_triangles[idx].rayIntersect(m_vertexBuffer, ray, tempU, tempV, tempT)) {
+			if (tempT < mint && tempT > maxt)
+				return ENo;
+#else
+		if (m_triAccel[idx].rayIntersect(ray, mint, maxt, tempU, tempV, tempT)) {
+#endif
+			index_type *indexPtr = reinterpret_cast<index_type *>(tmp);
+			Float *floatPtr = reinterpret_cast<Float *>(indexPtr + 1);
+
+			t = tempT;
+			*indexPtr = idx;
+			*floatPtr++ = tempU;
+			*floatPtr++ = tempV;
+
+			return EYes;
+		}
+		return ENo;
+	}
+
+	void build() {
+		buildInternal();
+		Log(EInfo, "Precomputing triangle intersection information (%s)",
+				memString(sizeof(TriAccel)*m_triangleCount).c_str());
+		m_triAccel = static_cast<TriAccel *>(allocAligned(m_triangleCount * sizeof(TriAccel)));
+		for (size_t i=0; i<m_triangleCount; ++i) {
+			const Triangle &tri = m_triangles[i];
+			const Vertex &v0 = m_vertexBuffer[tri.idx[0]];
+			const Vertex &v1 = m_vertexBuffer[tri.idx[1]];
+			const Vertex &v2 = m_vertexBuffer[tri.idx[2]];
+
+			m_triAccel[i].load(v0.p, v1.p, v2.p);
+		}
+	}
+
+	FINLINE void fillIntersectionDetails(const Ray &ray, 
+			Float t, const void *tmp, Intersection &its) const {
+		its.p = ray(t);
+
+		//const index_type *indexPtr = reinterpret_cast<const index_type *>(tmp);
+		//const Float *floatPtr = reinterpret_cast<const Float *>(indexPtr + 1);
+
+		//const Triangle &tri = m_triangles[*indexPtr];
+		//const Vertex &v0 = m_vertexBuffer[tri.idx[0]];
+		//const Vertex &v1 = m_vertexBuffer[tri.idx[1]];
+		//const Vertex &v2 = m_vertexBuffer[tri.idx[2]];
+
+		//const Float u = *floatPtr++, v = *floatPtr++;
+		//const Vector b(1 - u - v, u, v);
+/*
+		its.uv = v0.uv * b.x + v1.uv * b.y + v2.uv * b.z;
+		its.dpdu = v0.dpdu * b.x + v1.dpdu * b.y + v2.dpdu * b.z;
+		its.dpdv = v0.dpdv * b.x + v1.dpdv * b.y + v2.dpdv * b.z;
+
+		its.geoFrame = Frame(normalize(cross(v1.p-v0.p, v2.p-v0.p)));
+		its.shFrame.n = normalize(v0.n * b.x + v1.n * b.y + v2.n * b.z);
+		its.shFrame.s = normalize(its.dpdu - its.shFrame.n 
+			* dot(its.shFrame.n, its.dpdu));
+		its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
+		its.wi = its.toLocal(-ray.d);
+*/
+		its.hasUVPartials = false;
+	}
+
+private:
+	const Triangle *m_triangles;
+	const Vertex *m_vertexBuffer;
+	TriAccel *m_triAccel;
+	size_type m_triangleCount;
+};
+
 
 class TestKDTree : public TestCase {
 public:
@@ -81,85 +178,6 @@ public:
 		assertEquals(Point(1, 1, 0), clippedAABB.max);
 	}
 
-	class TriKDTree : public GenericKDTree<TriKDTree> {
-	public:
-		TriKDTree(const Triangle *triangles,
-				  const Vertex *vertexBuffer,
-				  size_type triangleCount) 
-			: m_triangles(triangles),
-		      m_vertexBuffer(vertexBuffer),
-			  m_triangleCount(triangleCount) {
-		}
-
-		FINLINE AABB getAABB(index_type idx) const {
-			return m_triangles[idx].getAABB(m_vertexBuffer);
-		}
-		
-		FINLINE AABB getClippedAABB(index_type idx, const AABB &aabb) const {
-			return m_triangles[idx].getClippedAABB(m_vertexBuffer, aabb);
-		}
-
-		FINLINE size_type getPrimitiveCount() const {
-			return m_triangleCount;
-		}
-
-		FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx,
-				Float mint, Float maxt, Float &t, void *tmp) const {
-			Float tempT, tempU, tempV;
-			if (m_triangles[idx].rayIntersect(m_vertexBuffer, ray, tempU, tempV, tempT)) {
-				if (tempT >= mint && tempT <= maxt) {
-					index_type *indexPtr = reinterpret_cast<index_type *>(tmp);
-					Float *floatPtr = reinterpret_cast<Float *>(indexPtr + 1);
-
-					t = tempT;
-					*indexPtr = idx;
-					*floatPtr++ = tempU;
-					*floatPtr++ = tempV;
-
-					return EYes;
-				}
-				return ENo;
-			} else {
-				return ENever;
-			}
-		}
-
-		FINLINE void fillIntersectionDetails(const Ray &ray, 
-				Float t, const void *tmp, Intersection &its) const {
-			its.p = ray(t);
-
-			//const index_type *indexPtr = reinterpret_cast<const index_type *>(tmp);
-			//const Float *floatPtr = reinterpret_cast<const Float *>(indexPtr + 1);
-
-			//const Triangle &tri = m_triangles[*indexPtr];
-			//const Vertex &v0 = m_vertexBuffer[tri.idx[0]];
-			//const Vertex &v1 = m_vertexBuffer[tri.idx[1]];
-			//const Vertex &v2 = m_vertexBuffer[tri.idx[2]];
-
-			//const Float u = *floatPtr++, v = *floatPtr++;
-			//const Vector b(1 - u - v, u, v);
-/*
-			its.uv = v0.uv * b.x + v1.uv * b.y + v2.uv * b.z;
-			its.dpdu = v0.dpdu * b.x + v1.dpdu * b.y + v2.dpdu * b.z;
-			its.dpdv = v0.dpdv * b.x + v1.dpdv * b.y + v2.dpdv * b.z;
-
-			its.geoFrame = Frame(normalize(cross(v1.p-v0.p, v2.p-v0.p)));
-			its.shFrame.n = normalize(v0.n * b.x + v1.n * b.y + v2.n * b.z);
-			its.shFrame.s = normalize(its.dpdu - its.shFrame.n 
-				* dot(its.shFrame.n, its.dpdu));
-			its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
-			its.wi = its.toLocal(-ray.d);
-*/
-			its.hasUVPartials = false;
-		}
-
-	private:
-		const Triangle *m_triangles;
-		const Vertex *m_vertexBuffer;
-		size_type m_triangleCount;
-	};
-
-
 	void test02_buildSimple() {
 		Properties bunnyProps("ply");
 		bunnyProps.setString("filename", "tools/tests/bunny.ply");
@@ -169,13 +187,17 @@ public:
 		mesh->configure();
 		TriKDTree tree(mesh->getTriangles(), 
 			mesh->getVertexBuffer(), mesh->getTriangleCount());
+		tree.setTraversalCost(10);
+		tree.setIntersectionCost(17);
 		tree.build();
 		BSphere bsphere(mesh->getBSphere());
 
-		/*
+		Float intersectionCost, traversalCost;
+		tree.findCosts(intersectionCost, traversalCost);
+
 		ref<KDTree> oldTree = new KDTree();
 		oldTree->addShape(mesh);
-		oldTree->build(); */
+		oldTree->build(); 
 
 		for (int j=0; j<3; ++j) {
 			ref<Random> random = new Random();
@@ -203,7 +225,7 @@ public:
 				nIntersections, timer->getMilliseconds());
 			Log(EInfo, "New: %.3f MRays/s", 
 				nRays / (timer->getMilliseconds() * (Float) 1000));
-/*
+
 			random = new Random();
 			timer->reset();
 			nIntersections=0;
@@ -224,7 +246,6 @@ public:
 				nIntersections, timer->getMilliseconds());
 			Log(EInfo, "Old: %.3f MRays/s", 
 				nRays / (timer->getMilliseconds() * (Float) 1000));
-*/
 		}
 	}
 };

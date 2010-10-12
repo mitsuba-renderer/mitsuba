@@ -57,7 +57,7 @@ struct TriAccel4 {
 
 FINLINE __m128 TriAccel::rayIntersectPacket(const RayPacket4 &packet, 
 	__m128 mint, __m128 maxt, __m128 inactive, Intersection4 &its) const {
-	static const int waldModulo[4] = { 1, 2, 0, 1 };
+	static const MM_ALIGN16 int waldModulo[4] = { 1, 2, 0, 1 };
 	const int ku = waldModulo[k], kv = waldModulo[k+1];
 
 	/* Get the u and v components */

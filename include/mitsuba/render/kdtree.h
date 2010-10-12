@@ -30,10 +30,10 @@
  * whole following block:
  */
 #ifdef MTS_SSE
-//#define MTS_USE_TRIACCEL4 1
-//#define MTS_USE_TRIACCEL 1
+#define MTS_USE_TRIACCEL4 1
+#define MTS_USE_TRIACCEL 1
 #else
-//#define MTS_USE_TRIACCEL 1
+#define MTS_USE_TRIACCEL 1
 #endif
 
 #if defined(MTS_HAS_COHERENT_RT)

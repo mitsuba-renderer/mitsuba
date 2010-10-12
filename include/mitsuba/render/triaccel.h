@@ -95,15 +95,46 @@ inline int TriAccel::load(const Point &A, const Point &B, const Point &C) {
 
 FINLINE bool TriAccel::rayIntersect(const Ray &ray, Float mint, Float maxt,
 	Float &u, Float &v, Float &t) const {
-	static const int waldModulo[4] = { 1, 2, 0, 1 };
-	const int ku = waldModulo[k], kv = waldModulo[k+1];
 
+#if 0
+	static const MM_ALIGN16 int waldModulo[4] = { 1, 2, 0, 1 };
+	const int ku = waldModulo[k], kv = waldModulo[k+1];
 	/* Get the u and v components */
 	const Float o_u = ray.o[ku], o_v = ray.o[kv], o_k = ray.o[k],
 				d_u = ray.d[ku], d_v = ray.d[kv], d_k = ray.d[k];
+#else
+	Float o_u, o_v, o_k, d_u, d_v, d_k;
+	switch (k) {
+		case 0:
+			o_u = ray.o[1];
+			o_v = ray.o[2];
+			o_k = ray.o[0];
+			d_u = ray.d[1];
+			d_v = ray.d[2];
+			d_k = ray.d[0];
+			break;
+		case 1:
+			o_u = ray.o[2];
+			o_v = ray.o[0];
+			o_k = ray.o[1];
+			d_u = ray.d[2];
+			d_v = ray.d[0];
+			d_k = ray.d[1];
+			break;
+		case 2:
+			o_u = ray.o[0];
+			o_v = ray.o[1];
+			o_k = ray.o[2];
+			d_u = ray.d[0];
+			d_v = ray.d[1];
+			d_k = ray.d[2];
+			break;
+	}
+#endif
 
 	/* Calculate the plane intersection (Typo in the thesis?) */
-	t = (n_d - o_u*n_u - o_v*n_v - o_k) / (d_u * n_u + d_v * n_v + d_k);
+	Float recip = 1.0f / (d_u * n_u + d_v * n_v + d_k);
+	t = (n_d - o_u*n_u - o_v*n_v - o_k) * recip;
 
 	if (t < mint || t > maxt)
 		return false;
@@ -115,8 +146,7 @@ FINLINE bool TriAccel::rayIntersect(const Ray &ray, Float mint, Float maxt,
 	/* In barycentric coordinates */
 	u = hv * b_nu + hu * b_nv;
 	v = hu * c_nu + hv * c_nv;
-
-	return (u >= 0 && v >= 0 &&  u+v <= 1.0f);
+	return u >= 0 && v >= 0 && u+v <= 1.0f;
 }
 
 MTS_NAMESPACE_END
