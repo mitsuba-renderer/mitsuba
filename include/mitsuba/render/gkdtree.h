@@ -505,8 +505,8 @@ public:
 	 * the default parameters.
 	 */
 	GenericKDTree() : m_nodes(NULL), m_indices(NULL) {
-		m_traversalCost = 15;
-		m_intersectionCost = 20;
+		m_traversalCost = 10;
+		m_intersectionCost = 17;
 		m_emptySpaceBonus = 0.9f;
 		m_clip = true;
 		m_stopPrims = 4;
@@ -946,7 +946,7 @@ protected:
 		Log(EDebug, "   Nonempty leaf nodes       : %i", ctx.nonemptyLeafNodeCount);
 		std::ostringstream oss;
 		oss << "   Leaf node histogram       : ";
-		for (int i=0; i<primBucketCount; i++) {
+		for (size_type i=0; i<primBucketCount; i++) {
 			oss << i << "(" << primBuckets[i] << ") ";
 			if ((i+1)%4==0 && i+1<primBucketCount) {
 				Log(EDebug, "%s", oss.str().c_str());
@@ -2479,8 +2479,9 @@ protected:
 	/**
 	 * \brief Internal kd-tree traversal implementation (Havran variant)
 	 */
-	template<bool shadowRay> FINLINE bool rayIntersectHavran(const Ray &ray, 
-			Float mint, Float maxt, Float &t, void *temp) const {
+	template<bool shadowRay> FINLINE
+			bool rayIntersectHavran(const Ray &ray, Float mint, Float maxt, 
+			Float &t, void *temp) const {
 		KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
 		#if 0
 		static const int prevAxisTable[] = { 2, 0, 1 };
@@ -2565,7 +2566,10 @@ protected:
 
 				stack[exPt].p[axis] = splitVal;
 			}
+			/* Reached a leaf node */
 
+			/* Floating-point arithmetic.. - use both absolute and relative 
+			   epsilons when looking for intersections in the subinterval */
 			#if defined(SINGLE_PRECISION)
 				const Float eps = 1e-3;
 			#else
@@ -2573,13 +2577,10 @@ protected:
 			#endif
 			const Float m_eps = 1-eps, p_eps = 1+eps;
 
-			/* Floating-point arithmetic.. - use both absolute and relative 
-			   epsilons when looking for intersections in the subinterval */
 			const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);
 			Float searchEnd = std::min(maxt, stack[exPt].t * p_eps + eps);
-
-			/* Reached a leaf node */
 			bool foundIntersection = false;
+
 			for (unsigned int entry=currNode->getPrimStart(),
 					last = currNode->getPrimEnd(); entry != last; entry++) {
 				const index_type primIdx = m_indices[entry];
@@ -2616,6 +2617,123 @@ protected:
 
 		return false;
 	}
+
+	/**
+	 * \brief Internal kd-tree traversal implementation (Havran variant)
+	 *
+	 * This method is almost identical to \ref rayIntersectHavran, except
+	 * that it forwards all ray-leaf intersections to a specified handler.
+	 */
+	template<typename LeafHandler> FINLINE
+			bool rayIntersectHavranCustom(const LeafHandler &leafHandler,
+			const Ray &ray, Float mint, Float maxt, 
+			Float &t, void *temp) const {
+		KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
+		#if 0
+		static const int prevAxisTable[] = { 2, 0, 1 };
+		static const int nextAxisTable[] = { 1, 2, 0 };
+		#endif
+
+		/* Set up the entry point */
+		uint32_t enPt = 0;
+		stack[enPt].t = mint;
+		stack[enPt].p = ray(mint);
+
+		/* Set up the exit point */
+		uint32_t exPt = 1;
+		stack[exPt].t = maxt;
+		stack[exPt].p = ray(maxt);
+		stack[exPt].node = NULL;
+
+		const KDNode * __restrict currNode = m_nodes;
+		while (currNode != NULL) {
+			while (EXPECT_TAKEN(!currNode->isLeaf())) {
+				const Float splitVal = (Float) currNode->getSplit();
+				const int axis = currNode->getAxis();
+				const KDNode * __restrict farChild;
+
+				if (stack[enPt].p[axis] <= splitVal) {
+					if (stack[exPt].p[axis] <= splitVal) {
+						/* Cases N1, N2, N3, P5, Z2 and Z3 (see thesis) */
+						currNode = currNode->getLeft();
+						continue;
+					}
+
+					/* Typo in Havran's thesis:
+					   (it specifies "stack[exPt].p == splitVal", which
+					    is clearly incorrect) */
+					if (stack[enPt].p[axis] == splitVal) {
+						/* Case Z1 */
+						currNode = currNode->getRight();
+						continue;
+					}
+
+					/* Case N4 */
+					currNode = currNode->getLeft();
+					farChild = currNode + 1; // getRight()
+				} else { /* stack[enPt].p[axis] > splitVal */
+					if (splitVal < stack[exPt].p[axis]) {
+						/* Cases P1, P2, P3 and N5 */
+						currNode = currNode->getRight();
+						continue;
+					}
+					/* Case P4 */
+					farChild = currNode->getLeft();
+					currNode = farChild + 1; // getRight()
+				}
+
+				/* Cases P4 and N4 -- calculate the distance to the split plane */
+				t = (splitVal - ray.o[axis]) * ray.dRcp[axis];
+
+				/* Set up a new exit point */
+				const uint32_t tmp = exPt++;
+				if (exPt == enPt) /* Do not overwrite the entry point */
+					++exPt;
+
+				KDAssert(exPt < MTS_KD_MAX_DEPTH);
+				stack[exPt].prev = tmp;
+				stack[exPt].t = t;
+				stack[exPt].node = farChild;
+
+				#if 1
+				/* Faster than the original code with the 
+				   prevAxis & nextAxis table */
+				stack[exPt].p = ray(t);
+				#else
+				const int nextAxis = nextAxisTable[axis];
+				const int prevAxis = prevAxisTable[axis];
+				stack[exPt].p[nextAxis] = ray.o[nextAxis] + t*ray.d[nextAxis];
+				stack[exPt].p[prevAxis] = ray.o[prevAxis] + t*ray.d[prevAxis];
+				#endif
+
+				stack[exPt].p[axis] = splitVal;
+			}
+			/* Reached a leaf node */
+
+			/* Floating-point arithmetic.. - use both absolute and relative 
+			   epsilons when looking for intersections in the subinterval */
+			#if defined(SINGLE_PRECISION)
+				const Float eps = 1e-3;
+			#else
+				const Float eps = 1e-5;
+			#endif
+			const Float m_eps = 1-eps, p_eps = 1+eps;
+
+			const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);
+			Float searchEnd = std::min(maxt, stack[exPt].t * p_eps + eps);
+
+			if (leafHandler(currNode, ray, searchStart, searchEnd, t, temp))
+				return true;
+
+			/* Pop from the stack and advance to the next node on the interval */
+			enPt = exPt;
+			currNode = stack[exPt].node;
+			exPt = stack[enPt].prev;
+		}
+
+		return false;
+	}
+
 
 	/**
 	 * \brief Internal kd-tree traversal implementation (Havran variant)
@@ -2838,7 +2956,7 @@ protected:
 		return false;
 	}
 
-private:
+protected:
 	KDNode *m_nodes;
 	index_type *m_indices;
 	Float m_traversalCost;
@@ -2893,7 +3011,7 @@ template <typename Derived> bool GenericKDTree<Derived>::rayIntersect(
 	}
 	return false;
 }
-	
+
 template <typename Derived> void GenericKDTree<Derived>::findCosts(
 		Float &traversalCost, Float &intersectionCost) {
 	ref<Random> random = new Random();
@@ -2947,7 +3065,7 @@ template <typename Derived> void GenericKDTree<Derived>::findCosts(
 	M->m[3][3] = 1.0f;
 
 	Transform(M->inverse())(rhs, x);
-	
+
 	Float avgRdtsc = 0, avgResidual = 0;
 	for (size_t i=0; i<idx; ++i) {
 		avgRdtsc += b[i];
@@ -2959,7 +3077,7 @@ template <typename Derived> void GenericKDTree<Derived>::findCosts(
 	}
 	avgRdtsc /= idx;
 	avgResidual /= idx;
-	
+
 	for (size_t k=0; k<idx; ++k) 
 		avgRdtsc += b[k];
 	avgRdtsc /= idx;

@@ -21,15 +21,36 @@
 #include <mitsuba/render/gkdtree.h>
 
 MTS_NAMESPACE_BEGIN
-	
+
 class TriKDTree : public GenericKDTree<TriKDTree> {
 public:
 	TriKDTree(const Triangle *triangles,
 				const Vertex *vertexBuffer,
 				size_type triangleCount) 
 		: m_triangles(triangles),
-			m_vertexBuffer(vertexBuffer),
-			m_triangleCount(triangleCount) {
+		  m_vertexBuffer(vertexBuffer),
+		  m_triangleCount(triangleCount) {
+	}
+	
+	bool rayIntersect(const Ray &ray, Intersection &its) const {
+		uint32_t temp[MTS_KD_INTERSECTION_TEMP];
+		its.t = std::numeric_limits<Float>::infinity(); 
+		Float mint, maxt;
+		TriAccelHandler handler(m_indices, m_triAccel);
+
+		if (m_aabb.rayIntersect(ray, mint, maxt)) {
+			if (ray.mint > mint) mint = ray.mint;
+			if (ray.maxt < maxt) maxt = ray.maxt;
+
+			if (EXPECT_TAKEN(maxt > mint)) {
+				if (rayIntersectHavranCustom(handler,
+							ray, mint, maxt, its.t, temp)) {
+					fillIntersectionDetails(ray, its.t, temp, its);
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	FINLINE AABB getAABB(index_type idx) const {
@@ -43,7 +64,7 @@ public:
 	FINLINE size_type getPrimitiveCount() const {
 		return m_triangleCount;
 	}
-
+#if 0
 	FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx,
 			Float mint, Float maxt, Float &t, void *tmp) const {
 		Float tempT, tempU, tempV;
@@ -66,6 +87,7 @@ public:
 		}
 		return ENo;
 	}
+#endif
 
 	void build() {
 		buildInternal();
@@ -110,6 +132,36 @@ public:
 */
 		its.hasUVPartials = false;
 	}
+
+protected:
+	struct TriAccelHandler {
+		FINLINE TriAccelHandler(const index_type *indices, const TriAccel *triAccel)
+			: m_indices(indices), m_triAccel(triAccel) { }
+
+		FINLINE bool operator()(const KDNode *node, const Ray &ray, Float searchStart,
+			Float searchEnd, Float &t, void *temp) const {
+			bool foundIntersection = false;
+			for (unsigned int entry=node->getPrimStart(),
+					last = node->getPrimEnd(); entry != last; entry++) {
+				const index_type primIdx = m_indices[entry];
+				Float tempT, tempU, tempV;
+
+				if (m_triAccel[primIdx].rayIntersect(ray, searchStart, searchEnd, tempU, tempV, tempT)) {
+					index_type *indexPtr = reinterpret_cast<index_type *>(temp);
+					Float *floatPtr = reinterpret_cast<Float *>(indexPtr + 1);
+					t = searchEnd = tempT;
+					*indexPtr = primIdx;
+					*floatPtr++ = tempU;
+					*floatPtr++ = tempV;
+					foundIntersection = true;
+				}
+			}
+			return foundIntersection;
+		}
+	private:
+		const index_type *m_indices;
+		const TriAccel *m_triAccel;
+	};
 
 private:
 	const Triangle *m_triangles;
@@ -187,13 +239,11 @@ public:
 		mesh->configure();
 		TriKDTree tree(mesh->getTriangles(), 
 			mesh->getVertexBuffer(), mesh->getTriangleCount());
-		tree.setTraversalCost(10);
-		tree.setIntersectionCost(17);
 		tree.build();
 		BSphere bsphere(mesh->getBSphere());
 
-		Float intersectionCost, traversalCost;
-		tree.findCosts(intersectionCost, traversalCost);
+		//Float intersectionCost, traversalCost;
+		//tree.findCosts(intersectionCost, traversalCost);
 
 		ref<KDTree> oldTree = new KDTree();
 		oldTree->addShape(mesh);
@@ -218,7 +268,6 @@ public:
 
 				if (tree.rayIntersect(r, its))
 					nIntersections++;
-
 			}
 
 			Log(EInfo, "New: Found " SIZE_T_FMT " intersections in %i ms",
