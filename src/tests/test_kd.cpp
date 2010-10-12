@@ -107,6 +107,7 @@ public:
 				Float mint, Float maxt, Float &t, void *tmp) {
 			Float tempT, tempU, tempV;
 			if (m_triangles[idx].rayIntersect(m_vertexBuffer, ray, tempU, tempV, tempT)) {
+				cout << "Got one!" << endl;
 				if (tempT >= mint && tempT <= maxt) {
 					index_type *indexPtr = reinterpret_cast<index_type *>(tmp);
 					Float *floatPtr = reinterpret_cast<Float *>(indexPtr + 1);
@@ -171,13 +172,18 @@ public:
 		tree.build();
 		BSphere bsphere(mesh->getBSphere());
 
+		ref<KDTree> oldTree = new KDTree();
+		oldTree->addShape(mesh);
+		oldTree->build();
+
 		for (int j=0; j<3; ++j) {
 			ref<Random> random = new Random();
 			ref<Timer> timer = new Timer();
-			size_t nRays = 5000000, nIntersections = 0;
+			size_t nRays = 100, nIntersections = 0, nIntersectionsBF = 0, nIntersectionsOld = 0;
 
 			Log(EInfo, "Bounding sphere: %s", bsphere.toString().c_str());
 			Log(EInfo, "Shooting " SIZE_T_FMT " rays ..", nRays);
+			uint32_t tmp[8];
 
 			for (size_t i=0; i<nRays; ++i) {
 				Point2 sample1(random->nextFloat(), random->nextFloat()),
@@ -185,14 +191,25 @@ public:
 				Point p1 = bsphere.center + squareToSphere(sample1) * bsphere.radius;
 				Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
 				Ray r(p1, normalize(p2-p1));
-
 				Intersection its;
+
+				for (uint32_t j=0; j<tree.getPrimitiveCount(); ++j)
+					if (tree.intersect(r, j, r.mint, r.maxt, its.t, tmp) == TriKDTree::EYes)
+						nIntersectionsBF++;
+
 				if (tree.rayIntersect(r, its))
 					nIntersections++;
+
+				if (oldTree->rayIntersect(r, its))
+					nIntersectionsOld++;
 			}
 
-			Log(EInfo, "Found " SIZE_T_FMT " intersections in %i ms",
+			Log(EInfo, "KD:  Found " SIZE_T_FMT " intersections in %i ms",
 				nIntersections, timer->getMilliseconds());
+			Log(EInfo, "BF:  Found " SIZE_T_FMT " intersections in %i ms",
+				nIntersectionsBF, timer->getMilliseconds());
+			Log(EInfo, "Old: Found " SIZE_T_FMT " intersections in %i ms",
+				nIntersectionsOld, timer->getMilliseconds());
 			Log(EInfo, "%.3f MRays/s", 
 				nRays / (timer->getMilliseconds() * (Float) 1000));
 		}

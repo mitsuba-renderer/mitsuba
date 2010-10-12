@@ -486,6 +486,20 @@ public:
 	/// Size number format
 	typedef uint32_t size_type;
 
+	/// Documents the possible outcomes of a single ray-primitive intersection
+	enum EIntersectionResult {
+		/// An intersection was found on the specified interval
+		EYes = 0,
+
+		/** While an intersection could not be found on the specified 
+		    interval, the primitive might still intersect the ray if a
+			larger interval was considered */
+		ENo,
+
+		/// The primitive will never intersect the ray in question
+		ENever
+	};
+
 	/**
 	 * \brief Create a new kd-tree instance initialized with 
 	 * the default parameters.
@@ -498,7 +512,7 @@ public:
 		m_stopPrims = 4;
 		m_maxBadRefines = 3;
 		m_exactPrimThreshold = 65536;
-		m_maxDepth = 0;
+		m_maxDepth = 1;
 		m_retract = true;
 		m_parallelBuild = true;
 	}
@@ -959,22 +973,6 @@ protected:
 		EBothSidesProcessed = 3
 	};
 
-
-	/// Documents the possible outcomes of a ray-primitive intersection
-	enum EIntersectionResult {
-		/// An intersection was found on the specified interval
-		EYes,
-
-		/** While an intersection could not be found on the specified 
-		    interval, the primitive might still intersect the ray if a
-			larger interval was considered */
-		ENo,
-
-		/// The primitive will never intersect the ray in question
-		ENever
-	};
-
-
 	/**
 	 * \brief Describes the beginning or end of a primitive
 	 * when projected onto a certain dimension.
@@ -1279,6 +1277,21 @@ protected:
 		/// Return the split axis (assuming that this is an interior node)
 		FINLINE int getAxis() const {
 			return inner.combined & EInnerAxisMask;
+		}
+
+		/// Return a string representation
+		std::string toString() const {
+			std::ostringstream oss;
+			if (isLeaf()) {
+				oss << "KDNode[leaf, primStart=" << getPrimStart() 
+					<< ", primCount=" << getPrimEnd()-getPrimStart() << "]";
+			} else {
+				oss << "KDNode[interior, axis=" << getAxis() 
+					<< ", split=" << getAxis() 
+					<< ", leftOffset=" << ((inner.combined & EInnerOffsetMask) >> 2)
+					<< "]";
+			}
+			return oss.str();
 		}
 	};
 

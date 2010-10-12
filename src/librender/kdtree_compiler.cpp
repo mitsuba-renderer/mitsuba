@@ -203,7 +203,7 @@ void KDTree::build() {
 	m_rootBounds.min -= (m_rootBounds.max-m_rootBounds.min) * 0.01f + Vector(Epsilon, Epsilon, Epsilon);
 
 	/* Recursively build the tree */
-	buildTree(1, 0, 0, m_primitiveCount, m_rootBounds, m_events);
+	Float sahCost = buildTree(1, 0, 0, m_primitiveCount, m_rootBounds, m_events);
 
 #ifdef MTS_USE_TRIACCEL
 	Log(EDebug, "Pre-computing triangle intersection information ..");
@@ -254,6 +254,7 @@ void KDTree::build() {
 	Log(EDebug, "   Max. leaf depth        : %i", m_actualMaxDepth);
 	Log(EDebug, "   Avg. leaf depth        : %.2f", 
 		(Float) m_totalLeafDepth / (Float) m_leafNodes);
+	Log(EDebug, "   Final SAH cost         : %.2f", sahCost); 
 	size_t nBytes = sizeof(KDNode) * m_nodes.size();
 
 #if defined(MTS_USE_TRIACCEL4)
@@ -307,7 +308,7 @@ void KDTree::build() {
 	m_built = true;
 }
 
-void KDTree::buildTree(int nodeIndex, int depth, int badRefines,
+Float KDTree::buildTree(int nodeIndex, int depth, int badRefines,
 		int numPrims, const AABB &aabb, EdgeEventVec3 &allEvents) {
 	Float invSA = 1.0f / aabb.getSurfaceArea();
 	Float nodeCost = m_intersectionCost * numPrims;
@@ -315,7 +316,7 @@ void KDTree::buildTree(int nodeIndex, int depth, int badRefines,
 	
 	if (depth >= m_maxDepth || numPrims <= m_stopPrims) {
 		createLeaf(nodeIndex, depth, numPrims, allEvents);
-		return;
+		return nodeCost;
 	}
 
 	/* ==================================================================== */
@@ -394,7 +395,7 @@ void KDTree::buildTree(int nodeIndex, int depth, int badRefines,
 				|| badRefines >= m_maxBadRefines
 				|| bestSplit.score == std::numeric_limits<Float>::infinity()) {
 			createLeaf(nodeIndex, depth, numPrims, allEvents);
-			return;
+			return nodeCost;
 		}
 		++badRefines; ++m_badRefines;
 	}
@@ -624,10 +625,14 @@ void KDTree::buildTree(int nodeIndex, int depth, int badRefines,
 
 	/* Update the current node and recurse */
 	m_nodes[nodeIndex].setInner(bestSplit.axis, leftNodeIndex-nodeIndex, bestSplit.t);
-	buildTree(leftNodeIndex, depth+1, badRefines, primsLeft + primsBoth, 
+	Float leftCost = buildTree(leftNodeIndex, depth+1, badRefines, primsLeft + primsBoth, 
 		leftAABB, allEvents);
-	buildTree(rightNodeIndex, depth+1, badRefines, primsRight + primsBoth,
+	Float rightCost = buildTree(rightNodeIndex, depth+1, badRefines, primsRight + primsBoth,
 		rightAABB, m_rightEvents[depth]);
+
+	return m_traversalCost + invSA *
+		(leftAABB.getSurfaceArea()*leftCost
+		+ rightAABB.getSurfaceArea()*rightCost);
 }
 
 void KDTree::createLeaf(int nodeIndex, int depth, int numPrims, EdgeEventVec3 &allEvents) {

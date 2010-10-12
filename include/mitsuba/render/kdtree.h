@@ -446,7 +446,7 @@ protected:
 		bool shadowRay, unsigned int &shapeIndex, unsigned int &primIndex) const;
 	
 	/// Recursive tree-building algorithm
-	void buildTree(int nodeIndex, int depth, int badRefines,
+	Float buildTree(int nodeIndex, int depth, int badRefines,
 		int numPrims, const AABB &aabb, EdgeEventVec3 &allEvents);
 
 	/// Create a leaf kd-tree node
