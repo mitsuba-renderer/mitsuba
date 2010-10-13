@@ -104,7 +104,8 @@ enum EMode {
 };
 
 enum EPreviewMethod {
-	EOpenGL = 0,
+	EDisabled = 0,
+	EOpenGL,
 	EOpenGLSinglePass,
 	ERayTraceCoherent,
 	ERayTrace

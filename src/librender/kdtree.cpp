@@ -20,13 +20,18 @@
 
 MTS_NAMESPACE_BEGIN
 
-KDTree::KDTree() : m_triAccel(NULL) {
+KDTree::KDTree() {
+#if !defined(MTS_KD_CONSERVE_MEMORY)
+	m_triAccel = NULL;
+#endif
 	m_shapeMap.push_back(0);
 }
 
 KDTree::~KDTree() {
+#if !defined(MTS_KD_CONSERVE_MEMORY)
 	if (m_triAccel)
 		freeAligned(m_triAccel);
+#endif
 }
 
 void KDTree::addShape(const Shape *shape) {
@@ -53,6 +58,7 @@ void KDTree::build() {
 
 	buildInternal();
 
+#if !defined(MTS_KD_CONSERVE_MEMORY)
 	ref<Timer> timer = new Timer();
 	size_type primCount = getPrimitiveCount();
 	Log(EDebug, "Precomputing triangle intersection information (%s)",
@@ -84,7 +90,8 @@ void KDTree::build() {
 	}
 	Log(EDebug, "Finished -- took %i ms.", timer->getMilliseconds());
 	Log(EDebug, "");
-	Assert(idx == primCount);
+	KDAssert(idx == primCount);
+#endif
 }
 
 bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {

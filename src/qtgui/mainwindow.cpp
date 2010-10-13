@@ -122,6 +122,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	hlayout->addWidget(m_progressLabel);
 	hlayout->addWidget(m_progress);
 	m_progressWidget->setLayout(hlayout);
+
 #if defined(__OSX__)
 	m_progressWidget->setStyleSheet("QWidget#progressWidget {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, "
 		"stop:0 palette(dark), stop: 1 palette(mid)); border-top: 1px solid palette(mid); margin: 0px; spacing: 15px; }");
@@ -131,6 +132,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	m_progress->setAttribute(Qt::WA_MacSmallSize, true);
 	m_progressLabel->setAttribute(Qt::WA_MacSmallSize, true);
 #endif
+
 	m_serverWidget = NULL;
 	m_contextIndex = -1;
 
@@ -983,7 +985,7 @@ void MainWindow::on_actionPreviewSettings_triggered() {
 	settings.setValue("preview_reinhardKey", context->reinhardKey);
 	settings.setValue("preview_reinhardBurn", context->reinhardBurn);
 	settings.setValue("preview_clamping", context->clamping);
-	settings.setValue("preview_previewMethod", context->previewMethod);
+	settings.setValue("preview_method", context->previewMethod);
 	settings.setValue("preview_toneMappingMethod", context->toneMappingMethod);
 	settings.setValue("preview_diffuseReceivers", context->diffuseReceivers);
 	settings.setValue("preview_diffuseSources", context->diffuseSources);
@@ -1026,7 +1028,7 @@ void MainWindow::onPreviewSettingsClose() {
 		settings.setValue("preview_reinhardKey", context->reinhardKey);
 		settings.setValue("preview_reinhardBurn", context->reinhardBurn);
 		settings.setValue("preview_clamping", context->clamping);
-		settings.setValue("preview_previewMethod", context->previewMethod);
+		settings.setValue("preview_method", context->previewMethod);
 		settings.setValue("preview_toneMappingMethod", context->toneMappingMethod);
 		settings.setValue("preview_diffuseSources", context->diffuseSources);
 		settings.setValue("preview_diffuseReceivers", context->diffuseReceivers);

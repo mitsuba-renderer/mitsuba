@@ -33,6 +33,8 @@ You may also set adjust certain compilation flags here:
 \item[\texttt{MTS\_DEBUG}] Enable assertions etc. Usually a good idea.
 \item[\texttt{MTS\_KD\_DEBUG}] Enable additional checks in the kd-Tree. This
 is quite slow and mainly useful to track down bugs when they are suspected.
+\item[\texttt{MTS\_KD\_CONSERVE\_MEMORY}] Use less memory for storing geometry (at the cost of speed).
+Off by default.
 \item[\texttt{SINGLE\_PRECISION}] Do all computation in single precision. This is usually sufficient.
 \item[\texttt{DOUBLE\_PRECISION}] Do all computation in double precision. Incompatible with
 \texttt{MTS\_SSE}, \texttt{MTS\_HAS\_COHERENT\_RT}, and \texttt{MTS\_DEBUG\_FP}.

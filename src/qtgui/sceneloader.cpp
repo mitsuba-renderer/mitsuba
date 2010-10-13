@@ -50,7 +50,7 @@ void SceneLoader::run() {
 		m_result->exposure = (Float) settings.value("preview_exposure", 0).toDouble();
 		m_result->shadowMapResolution = settings.value("preview_shadowMapResolution", 256).toInt();
 		m_result->clamping = (Float) settings.value("preview_clamping", 0.1f).toDouble();
-		m_result->previewMethod = (EPreviewMethod) settings.value("preview_previewMethod", EOpenGL).toInt();
+		m_result->previewMethod = (EPreviewMethod) settings.value("preview_method", EOpenGL).toInt();
 		m_result->toneMappingMethod = (EToneMappingMethod) settings.value("preview_toneMappingMethod", EGamma).toInt();
 		m_result->diffuseSources = settings.value("preview_diffuseSources", true).toBool();
 		m_result->diffuseReceivers = settings.value("preview_diffuseReceivers", false).toBool();

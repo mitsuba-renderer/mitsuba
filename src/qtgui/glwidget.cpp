@@ -385,7 +385,8 @@ void GLWidget::setReinhardBurn(Float value) {
 void GLWidget::downloadFramebuffer() {
 	bool createdFramebuffer = false;
 
-	if (!m_preview->isRunning()) {
+	if (!m_preview->isRunning()
+		|| m_context->previewMethod == EDisabled) {
 		m_context->framebuffer->clear();
 		return;
 	}
@@ -717,7 +718,7 @@ void GLWidget::paintGL() {
 		GPUTexture *buffer = NULL;
 
 		if (m_context->mode == EPreview) {
-			if (!m_preview->isRunning()) {
+			if (!m_preview->isRunning() || m_context->previewMethod == EDisabled) {
 				/* No preview thread running - just show a grey screen */
 				swapBuffers();
 				return;
@@ -771,7 +772,6 @@ void GLWidget::paintGL() {
 							sourceData++;
 						}
 					}
-				} else {
 				}
 				m_framebuffer->refresh();
 				m_framebufferChanged = false;

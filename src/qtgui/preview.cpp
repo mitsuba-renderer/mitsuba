@@ -281,7 +281,8 @@ void PreviewThread::run() {
 			PreviewQueueEntry target;
 
 			m_mutex->lock();
-			while (!(m_quit || (m_context != NULL && m_context->mode == EPreview 
+			while (!(m_quit || (m_context != NULL && m_context->mode == EPreview
+					&& m_context->previewMethod != EDisabled 
 					&& ((m_readyQueue.size() != 0 && !m_motion) || m_recycleQueue.size() != 0))))
 				m_queueCV->wait();
 
@@ -332,7 +333,9 @@ void PreviewThread::run() {
 				target.sync->incRef();
 			}
 
-			if (m_context->previewMethod == ERayTrace || m_context->previewMethod == ERayTraceCoherent) {
+			if (m_context->previewMethod == EDisabled) {
+				/* Do nothing, fall asleep in the next iteration */
+			} else if (m_context->previewMethod == ERayTrace || m_context->previewMethod == ERayTraceCoherent) {
 				if (m_previewProc == NULL || m_previewProc->getScene() != m_context->scene) 
 					m_previewProc = new PreviewProcess(m_context->scene, m_context->sceneResID, 32);
 

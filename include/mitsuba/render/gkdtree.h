@@ -2503,7 +2503,7 @@ protected:
 			bool rayIntersectHavran(const Ray &ray, Float mint, Float maxt, 
 			Float &t, void *temp) const {
 		KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
-		#if 1
+		#if 0
 		static const int prevAxisTable[] = { 2, 0, 1 };
 		static const int nextAxisTable[] = { 1, 2, 0 };
 		#endif
@@ -2573,7 +2573,7 @@ protected:
 				stack[exPt].t = distToSplit;
 				stack[exPt].node = farChild;
 
-				#if 0
+				#if 1
 				/* Faster than the original code with the 
 				   prevAxis & nextAxis table */
 				stack[exPt].p = ray(distToSplit);
@@ -2591,11 +2591,11 @@ protected:
 
 			/* Floating-point arithmetic.. - use both absolute and relative 
 			   epsilons when looking for intersections in the subinterval */
-#if defined(SINGLE_PRECISION)
+			#if defined(SINGLE_PRECISION)
 			const Float eps = 1e-3;
-#else
+			#else
 			const Float eps = 1e-5;
-#endif
+			#endif
 			const Float m_eps = 1-eps, p_eps = 1+eps;
 
 			const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);

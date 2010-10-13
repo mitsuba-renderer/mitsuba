@@ -138,23 +138,8 @@ protected:
 	FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx, Float mint, 
 		Float maxt, Float &t, void *temp) const {
 		Float tempU, tempV, tempT;
-#if 1
-		if (EXPECT_TAKEN(m_triAccel[idx].k != KNoTriangleFlag)) {
-			const TriAccel &ta = m_triAccel[idx];
-			if (ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT)) {
-				IntersectionCache *cache = static_cast<IntersectionCache *>(temp);
-				t = tempT;
-				cache->shapeIndex = ta.shapeIndex;
-				cache->index = ta.index;
-				cache->u = tempU;
-				cache->v = tempV;
-				return EYes;
-			}
-		} else {
-			cout << "Encountered a non-triangle shape!" << endl;
-			//int shape = m_triAccel[idx].shapeIndex;
-		}
-#else
+	
+#if defined(MTS_KD_CONSERVE_MEMORY)
 		index_type shapeIdx = findShape(idx);
 		if (EXPECT_TAKEN(m_triangleFlag[shapeIdx])) {
 			const TriMesh *mesh = static_cast<const TriMesh *>(m_shapes[shapeIdx]);
@@ -173,6 +158,22 @@ protected:
 		} else {
 			cout << "Encountered a non-triangle shape!" << endl;
 		}
+#else
+		if (EXPECT_TAKEN(m_triAccel[idx].k != KNoTriangleFlag)) {
+			const TriAccel &ta = m_triAccel[idx];
+			if (ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT)) {
+				IntersectionCache *cache = static_cast<IntersectionCache *>(temp);
+				t = tempT;
+				cache->shapeIndex = ta.shapeIndex;
+				cache->index = ta.index;
+				cache->u = tempU;
+				cache->v = tempV;
+				return EYes;
+			}
+		} else {
+			cout << "Encountered a non-triangle shape!" << endl;
+			//int shape = m_triAccel[idx].shapeIndex;
+		}
 #endif
 		return ENo;
 	}
@@ -183,7 +184,9 @@ private:
 	std::vector<const Shape *> m_shapes;
 	std::vector<bool> m_triangleFlag;
 	std::vector<index_type> m_shapeMap;
+#if !defined(MTS_KD_CONSERVE_MEMORY)
 	TriAccel *m_triAccel;
+#endif
 };
 
 MTS_NAMESPACE_END

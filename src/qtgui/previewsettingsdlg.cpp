@@ -29,7 +29,8 @@ public:
 	MethodModel(QObject *parent, bool supportsSinglePass) 
 		: QStringListModel(parent), m_supportsSinglePass(supportsSinglePass) {
 		QStringList tmp;
-		tmp << "OpenGL"
+		tmp << "Disable"
+			<< "OpenGL"
 			<< "OpenGL (single pass)"
 			<< "Coherent ray tracing"
 			<< "Standard ray tracing";
@@ -37,10 +38,10 @@ public:
 	}
 
 	Qt::ItemFlags flags(const QModelIndex &index) const {
-		if (index.row() == 1 && !m_supportsSinglePass)
+		if (index.row() == 2 && !m_supportsSinglePass)
 			return Qt::NoItemFlags;
 #if !defined(MTS_HAS_COHERENT_RT)
-		if (index.row() == 2)
+		if (index.row() == 3)
 			return Qt::NoItemFlags;
 #endif
 		return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
