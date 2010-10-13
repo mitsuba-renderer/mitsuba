@@ -412,13 +412,13 @@ public:
 		}
 	}
 
-	inline void set(uint32_t index, uint8_t value) {
+	inline void set(uint32_t index, int value) {
 		uint8_t *ptr = m_buffer + (index >> 2);
 		uint8_t shift = (index & 3) << 1;
 		*ptr = (*ptr & ~(3 << shift)) | (value << shift);
 	}
 
-	inline uint8_t get(uint32_t index) const {
+	inline int get(uint32_t index) const {
 		uint8_t *ptr = m_buffer + (index >> 2);
 		uint8_t shift = (index & 3) << 1;
 		return (*ptr >> shift) & 3;
@@ -1793,11 +1793,9 @@ protected:
 
 		/* Initially, the split plane is placed left of the scene
 		   and thus all geometry is on its right side */
-		size_type numLeft[3], numRight[3];
-		for (int i=0; i<3; ++i) {
-			numLeft[i] = 0;
-			numRight[i] = primCount;
-		}
+		size_type numLeft[3]  = { 0, 0, 0 },
+				  numRight[3] = { primCount, primCount, primCount };
+
 		EdgeEvent *eventsByAxis[3];
 		int eventsByAxisCtr = 1;
 		eventsByAxis[0] = eventStart;
@@ -1827,18 +1825,21 @@ protected:
 
 			/* Count "end" events */
 			while (event < eventEnd && event->pos == pos
+				&& event->axis == axis
 				&& event->type == EdgeEvent::EEdgeEnd) {
 				++numEnd; ++event;
 			}
 
 			/* Count "planar" events */
 			while (event < eventEnd && event->pos == pos
+				&& event->axis == axis
 				&& event->type == EdgeEvent::EEdgePlanar) {
 				++numPlanar; ++event;
 			}
 
 			/* Count "start" events */
 			while (event < eventEnd && event->pos == pos
+				&& event->axis == axis
 				&& event->type == EdgeEvent::EEdgeStart) {
 				++numStart; ++event;
 			}
@@ -1854,7 +1855,7 @@ protected:
 			numRight[axis] -= numPlanar + numEnd;
 
 			/* Calculate a score using the surface area heuristic */
-			if (EXPECT_TAKEN(pos >= nodeAABB.min[axis] && pos <= nodeAABB.max[axis])) {
+			if (EXPECT_TAKEN(pos > nodeAABB.min[axis] && pos < nodeAABB.max[axis])) {
 				const size_type nL = numLeft[axis], nR = numRight[axis];
 				const Float nLF = (Float) nL, nRF = (Float) nR;
 
@@ -1878,14 +1879,17 @@ protected:
 						* (pLeft * (nL+numPlanar) + pRight * nRF);
 					Float sahCostPlanarRight = m_intersectionCost + m_traversalCost 
 						* (pLeft * nLF + pRight * (nR+numPlanar));
+
 					if (nL + numPlanar == 0 || nR == 0)
 						sahCostPlanarLeft *= m_emptySpaceBonus;
 					if (nL == 0 || nR + numPlanar == 0)
 						sahCostPlanarRight *= m_emptySpaceBonus;
-					if (sahCostPlanarLeft < bestSplit.sahCost ||
+
+					if (sahCostPlanarLeft  < bestSplit.sahCost ||
 						sahCostPlanarRight < bestSplit.sahCost) {
 						bestSplit.pos = pos;
 						bestSplit.axis = axis;
+
 						if (sahCostPlanarLeft < sahCostPlanarRight) {
 							bestSplit.sahCost = sahCostPlanarLeft;
 							bestSplit.numLeft = nL + numPlanar;
@@ -1900,9 +1904,12 @@ protected:
 					}
 				}
 			} else {
-				/* When primitive clipping is active, this should 
-					never happen! */
-				KDAssertEx(!m_clip, "Internal error: edge event is out of bounds");
+				#if defined(MTS_KD_DEBUG)
+				if (m_clip && (pos < nodeAABB.min[axis] || pos > nodeAABB.max[axis])) {
+					/* When primitive clipping is active, this should  never happen! */
+					Log(EError, "Internal error: edge event is out of bounds");
+				}
+				#endif
 			}
 
 			/* The split plane is moved past 't'. All prims,
@@ -2024,7 +2031,8 @@ protected:
 					*newEventsRightEnd = newEventsRightStart;
 
 			for (EdgeEvent *event = eventStart; event<eventEnd; ++event) {
-				uint8_t classification = storage.get(event->index);
+				int classification = storage.get(event->index);
+
 				if (classification == ELeftSide) {
 					/* Left-only primitive. Move to the left list and advance */
 					*leftEventsTempEnd++ = *event;
@@ -2113,7 +2121,8 @@ protected:
 			rightAlloc.release(rightEventsTempStart);
 		} else {
 			for (EdgeEvent *event = eventStart; event < eventEnd; ++event) {
-				uint8_t classification = storage.get(event->index);
+				int classification = storage.get(event->index);
+
 				if (classification == ELeftSide) {
 					/* Left-only primitive. Move to the left list and advance */
 					*leftEventsEnd++ = *event;
