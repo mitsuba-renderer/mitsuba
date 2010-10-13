@@ -114,11 +114,12 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 				its.geoFrame = Frame(normalize(cross(v1.p-v0.p, v2.p-v0.p)));
 				its.shFrame.n = normalize(v0.n * b.x + v1.n * b.y + v2.n * b.z);
 				const Vector dpdu = v0.dpdu * b.x + v1.dpdu * b.y + v2.dpdu * b.z;
-				its.shFrame.s = normalize(its.dpdu - its.shFrame.n 
-					* dot(its.shFrame.n, its.dpdu));
+				its.shFrame.s = normalize(dpdu - its.shFrame.n 
+					* dot(its.shFrame.n, dpdu));
 				its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
 				its.dpdu = dpdu;
 				its.dpdv = v0.dpdv * b.x + v1.dpdv * b.y + v2.dpdv * b.z;
+				its.shFrame = its.geoFrame;
 				its.uv = v0.uv * b.x + v1.uv * b.y + v2.uv * b.z;
 				its.wi = its.toLocal(-ray.d);
 				its.shape = shape;

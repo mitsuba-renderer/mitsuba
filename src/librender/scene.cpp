@@ -68,6 +68,9 @@ Scene::Scene(const Properties &props)
 	   primitives will not be split */
 	if (props.hasProperty("kdStopPrims"))
 		m_kdtree->setStopPrims(props.getInteger("kdStopPrims"));
+	/* kd-tree construction: Maximum tree depth */
+	if (props.hasProperty("kdMaxDepth"))
+		m_kdtree->setMaxDepth(props.getInteger("kdMaxDepth"));
 }
 
 Scene::Scene(Scene *scene) : NetworkedObject(Properties()) {
@@ -116,6 +119,7 @@ Scene::Scene(Stream *stream, InstanceManager *manager)
 	m_kdtree->setEmptySpaceBonus(stream->readFloat());
 	m_kdtree->setStopPrims(stream->readInt());
 	m_kdtree->setClip(stream->readBool());
+	m_kdtree->setMaxDepth(stream->readUInt());
 	m_importanceSampleLuminaires = stream->readBool();
 	m_testType = (ETestType) stream->readInt();
 	m_testThresh = stream->readFloat();
@@ -590,6 +594,7 @@ void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeFloat(m_kdtree->getEmptySpaceBonus());
 	stream->writeInt(m_kdtree->getStopPrims());
 	stream->writeBool(m_kdtree->getClip());
+	stream->writeUInt(m_kdtree->getMaxDepth());
 	stream->writeBool(m_importanceSampleLuminaires);
 	stream->writeInt(m_testType);
 	stream->writeFloat(m_testThresh);

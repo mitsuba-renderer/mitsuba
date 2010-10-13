@@ -2551,7 +2551,7 @@ protected:
 				}
 
 				/* Cases P4 and N4 -- calculate the distance to the split plane */
-				t = (splitVal - ray.o[axis]) * ray.dRcp[axis];
+				Float distToSplit = (splitVal - ray.o[axis]) * ray.dRcp[axis];
 
 				/* Set up a new exit point */
 				const uint32_t tmp = exPt++;
@@ -2560,13 +2560,13 @@ protected:
 
 				KDAssert(exPt < MTS_KD_MAXDEPTH);
 				stack[exPt].prev = tmp;
-				stack[exPt].t = t;
+				stack[exPt].t = distToSplit;
 				stack[exPt].node = farChild;
 
 				#if 1
 				/* Faster than the original code with the 
 				   prevAxis & nextAxis table */
-				stack[exPt].p = ray(t);
+				stack[exPt].p = ray(distToSplit);
 				#else
 				const int nextAxis = nextAxisTable[axis];
 				const int prevAxis = prevAxisTable[axis];

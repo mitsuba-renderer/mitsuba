@@ -142,6 +142,7 @@ protected:
 			const TriAccel &ta = m_triAccel[idx];
 			if (ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT)) {
 				IntersectionCache *cache = static_cast<IntersectionCache *>(temp);
+				t = tempT;
 				cache->shapeIndex = ta.shapeIndex;
 				cache->index = ta.index;
 				cache->u = tempU;
