@@ -71,12 +71,11 @@ void VPLShaderManager::init() {
 			"#version 120\n"
 			"varying float depth;\n"
 			"void main() {\n"
-			"	gl_FragDepth = depth;\n"
-			"	float dx = dFdx(depth), dy = dFdy(depth);"
+			"   float dx = dFdx(depth), dy = dFdy(depth);"
 			"   gl_FragDepth = depth + sqrt(dx*dx + dy*dy);"
 			"}\n"
 		);
-	
+
 		/* Six output triangles per input triangle */
 		m_shadowProgram->setMaxVertices(18); 
 		m_shadowProgram->init();
@@ -202,18 +201,19 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 			farClip = std::max(farClip, its.t);
 		}
 	}
-
+	
 	m_minDist = nearClip + (farClip - nearClip) * m_clamping;
 
-	nearClip = std::min(nearClip, (Float) 0.001f);
+	nearClip = std::min(nearClip, (Float) 0.05f);
 	farClip = std::min(farClip * 1.5f, m_maxClipDist);
 
 	if (farClip < 0 || nearClip >= farClip) {
 		/* Unable to find any surface - just default values based on the scene size */
 		nearClip = 1e-3f * m_scene->getBSphere().radius;
-		farClip = 1e3f * m_scene->getBSphere().radius;
+		farClip = 2 * m_scene->getBSphere().radius;
 		m_minDist = 0;
 	}
+	farClip = std::min(farClip, 5.0f*m_scene->getBSphere().radius);
 
 	m_nearClip = nearClip;
 	m_invClipRange = 1/(farClip-nearClip);
