@@ -34,13 +34,15 @@ public:
 		Thread::getThread()->getLogger()->setLogLevel(EDebug);
 		scene->initialize();
 		BSphere bsphere(scene->getBSphere());
+		const size_t nRays = 5000000;
 
+		Log(EInfo, "Bounding sphere: %s", bsphere.toString().c_str());
 		for (int j=0; j<3; ++j) {
 			ref<Random> random = new Random();
 			ref<Timer> timer = new Timer();
-			size_t nRays = 5000000, nIntersections = 0;
+			size_t nIntersections = 0;
 
-			Log(EInfo, "Bounding sphere: %s", bsphere.toString().c_str());
+			Log(EInfo, "");
 			Log(EInfo, "Shooting " SIZE_T_FMT " rays ..", nRays);
 
 			for (size_t i=0; i<nRays; ++i) {
@@ -57,7 +59,7 @@ public:
 
 			Log(EInfo, "Found " SIZE_T_FMT " intersections in %i ms",
 				nIntersections, timer->getMilliseconds());
-			Log(EInfo, "%.3f MRays/s", 
+			Log(EInfo, "-> %.3f MRays/s", 
 				nRays / (timer->getMilliseconds() * (Float) 1000));
 		}
 
