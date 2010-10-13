@@ -308,8 +308,7 @@ if renderEnv.has_key('XERCESLIB'):
 librender = renderEnv.SharedLibrary('src/librender/mitsuba-render', [
 	'src/librender/bsdf.cpp', 'src/librender/camera.cpp',
 	'src/librender/film.cpp', 'src/librender/integrator.cpp',
-	'src/librender/kdtree.cpp', 'src/librender/kdtree_coherent.cpp',
-	'src/librender/kdtree_traversal.cpp', 'src/librender/kdtree_compiler.cpp',
+	'src/librender/kdtree.cpp', 
 	'src/librender/luminaire.cpp', 'src/librender/medium.cpp', 
 	'src/librender/renderjob.cpp', 'src/librender/imageproc.cpp', 
 	'src/librender/imageproc_wu.cpp', 'src/librender/renderproc.cpp', 

@@ -17,47 +17,133 @@
 */
 
 #include <mitsuba/render/kdtree.h>
-#include <mitsuba/render/trimesh.h>
 
 MTS_NAMESPACE_BEGIN
 
-KDTree::KDTree() : m_built(false), m_triangles(NULL)  {
-	/* SAH constants used by Wald and Havran */
-	m_emptyBonus = 0.8f;
-	m_traversalCost = 15;
-	m_intersectionCost = 20;
-	m_clip = true;
-	m_maxBadRefines = 3;
-	m_triangleCount = 0;
-	m_primitiveCount = 0;
-	m_nonTriangleCount = 0;
-#if defined(MTS_USE_TRIACCEL4)
-	m_packedTriangles = NULL;
-	m_stopPrims = 8;
-#else
-	m_stopPrims = 4;
-#endif
-}
-
-void KDTree::addShape(const Shape *shape) {
-	Assert(!m_built);
-	if (shape->isCompound())
-		Log(EError, "Cannot add compound shapes to a KD-tree - expand them first!");
-	if (shape->getClass()->derivesFrom(TriMesh::m_theClass))
-		m_triangleCount += (int) static_cast<const TriMesh *>(shape)->getTriangleCount();
-	else
-		m_nonTriangleCount += 1;
-	m_shapes.push_back(shape);
+KDTree::KDTree() : m_triAccel(NULL) {
+	m_shapeMap.push_back(0);
 }
 
 KDTree::~KDTree() {
-	if (m_triangles != NULL)
-		freeAligned(m_triangles);
-#if defined(MTS_USE_TRIACCEL4)
-	if (m_packedTriangles != NULL)
-		freeAligned(m_packedTriangles);
-#endif
+	if (m_triAccel)
+		freeAligned(m_triAccel);
 }
 
-MTS_IMPLEMENT_CLASS(KDTree, false, Object)
+void KDTree::addShape(const Shape *shape) {
+	Assert(!isBuilt());
+	if (shape->isCompound())
+		Log(EError, "Cannot add compound shapes to a kd-tree - expand them first!");
+	if (shape->getClass()->derivesFrom(TriMesh::m_theClass)) {
+		// Triangle meshes are expanded into individual primitives,
+		// which are visible to the tree construction code. Generic
+		// primitives are only handled by their AABBs
+		m_shapeMap.push_back((size_type) 
+			static_cast<const TriMesh *>(shape)->getTriangleCount());
+		m_triangleFlag.push_back(true);
+	} else {
+		m_shapeMap.push_back(1);
+		m_triangleFlag.push_back(false);
+	}
+	m_shapes.push_back(shape);
+}
+
+void KDTree::build() {
+	for (size_t i=1; i<m_shapeMap.size(); ++i)
+		m_shapeMap[i] += m_shapeMap[i-1];
+
+	buildInternal();
+
+	ref<Timer> timer = new Timer();
+	size_type primCount = getPrimitiveCount();
+	Log(EDebug, "Precomputing triangle intersection information (%s)",
+			memString(sizeof(TriAccel)*primCount).c_str());
+	m_triAccel = static_cast<TriAccel *>(allocAligned(primCount * sizeof(TriAccel)));
+
+	index_type idx = 0;
+	for (index_type i=0; i<m_shapes.size(); ++i) {
+		const Shape *shape = m_shapes[i];
+		if (m_triangleFlag[i]) {
+			const TriMesh *mesh = static_cast<const TriMesh *>(shape);
+			const Triangle *triangles = mesh->getTriangles();
+			const Vertex *vertexBuffer = mesh->getVertexBuffer();
+			for (index_type j=0; j<mesh->getTriangleCount(); ++j) {
+				const Triangle &tri = triangles[j];
+				const Vertex &v0 = vertexBuffer[tri.idx[0]];
+				const Vertex &v1 = vertexBuffer[tri.idx[1]];
+				const Vertex &v2 = vertexBuffer[tri.idx[2]];
+				m_triAccel[idx].load(v0.p, v1.p, v2.p);
+				m_triAccel[idx].shapeIndex = i;
+				m_triAccel[idx].index = j;
+				++idx;
+			}
+		} else {
+			m_triAccel[idx].shapeIndex = i;
+			m_triAccel[idx].k = KNoTriangleFlag;
+			++idx;
+		}
+	}
+	Log(EDebug, "Finished -- took %i ms.", timer->getMilliseconds());
+	Log(EDebug, "");
+	Assert(idx == primCount);
+}
+
+bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
+	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
+	its.t = std::numeric_limits<Float>::infinity(); 
+	Float mint, maxt;
+
+	if (m_aabb.rayIntersect(ray, mint, maxt)) {
+		if (ray.mint > mint) mint = ray.mint;
+		if (ray.maxt < maxt) maxt = ray.maxt;
+
+		if (EXPECT_TAKEN(maxt > mint)) {
+			if (rayIntersectHavran<false>(ray, mint, maxt, its.t, temp)) {
+				/* After having found a unique intersection, fill a proper record
+				   using the temporary information collected in \ref intersect() */
+				const IntersectionCache *cache = reinterpret_cast<const IntersectionCache *>(temp);
+				const TriMesh *shape = static_cast<const TriMesh *>(m_shapes[cache->shapeIndex]);
+
+				const Triangle &tri = shape->getTriangles()[cache->index];
+				const Vertex *vertexBuffer = shape->getVertexBuffer();
+				const Vertex &v0 = vertexBuffer[tri.idx[0]];
+				const Vertex &v1 = vertexBuffer[tri.idx[1]];
+				const Vertex &v2 = vertexBuffer[tri.idx[2]];
+				const Vector b(1 - cache->u - cache->v, cache->u, cache->v);
+
+				its.p = ray(its.t);
+				its.geoFrame = Frame(normalize(cross(v1.p-v0.p, v2.p-v0.p)));
+				its.shFrame.n = normalize(v0.n * b.x + v1.n * b.y + v2.n * b.z);
+				const Vector dpdu = v0.dpdu * b.x + v1.dpdu * b.y + v2.dpdu * b.z;
+				its.shFrame.s = normalize(its.dpdu - its.shFrame.n 
+					* dot(its.shFrame.n, its.dpdu));
+				its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
+				its.dpdu = dpdu;
+				its.dpdv = v0.dpdv * b.x + v1.dpdv * b.y + v2.dpdv * b.z;
+				its.uv = v0.uv * b.x + v1.uv * b.y + v2.uv * b.z;
+				its.wi = its.toLocal(-ray.d);
+				its.shape = shape;
+				its.hasUVPartials = false;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool KDTree::rayIntersect(const Ray &ray) const {
+	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
+	Float mint, maxt, t;
+
+	if (m_aabb.rayIntersect(ray, mint, maxt)) {
+		if (ray.mint > mint) mint = ray.mint;
+		if (ray.maxt < maxt) maxt = ray.maxt;
+
+		if (EXPECT_TAKEN(maxt > mint)) 
+			if (rayIntersectHavran<true>(ray, mint, maxt, t, temp)) 
+				return true;
+	}
+	return false;
+}
+
+MTS_IMPLEMENT_CLASS(KDTree, false, GenericKDTree)
 MTS_NAMESPACE_END

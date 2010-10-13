@@ -62,8 +62,8 @@ Scene::Scene(const Properties &props)
 	if (props.hasProperty("kdTraversalCost"))
 		m_kdtree->setTraversalCost(props.getFloat("kdTraversalCost"));
 	/* kd-tree construction: Bonus factor for cutting away regions of empty space */
-	if (props.hasProperty("kdEmptyBonus"))
-		m_kdtree->setEmptyBonus(props.getFloat("kdEmptyBonus"));
+	if (props.hasProperty("kdEmptySpaceBonus"))
+		m_kdtree->setEmptySpaceBonus(props.getFloat("kdEmptySpaceBonus"));
 	/* kd-tree construction: A kd-tree node containing this many or fewer 
 	   primitives will not be split */
 	if (props.hasProperty("kdStopPrims"))
@@ -113,7 +113,7 @@ Scene::Scene(Stream *stream, InstanceManager *manager)
 	m_kdtree = new KDTree();
 	m_kdtree->setIntersectionCost(stream->readFloat());
 	m_kdtree->setTraversalCost(stream->readFloat());
-	m_kdtree->setEmptyBonus(stream->readFloat());
+	m_kdtree->setEmptySpaceBonus(stream->readFloat());
 	m_kdtree->setStopPrims(stream->readInt());
 	m_kdtree->setClip(stream->readBool());
 	m_importanceSampleLuminaires = stream->readBool();
@@ -249,7 +249,7 @@ void Scene::initialize() {
 
 		/* Build the kd-tree */
 		m_kdtree->build();
-	
+
 		m_aabb = m_kdtree->getAABB();
 		m_bsphere = m_kdtree->getBSphere();
 		for (unsigned int i=0; i<m_media.size(); i++) {
@@ -587,7 +587,7 @@ void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 
 	stream->writeFloat(m_kdtree->getIntersectionCost());
 	stream->writeFloat(m_kdtree->getTraversalCost());
-	stream->writeFloat(m_kdtree->getEmptyBonus());
+	stream->writeFloat(m_kdtree->getEmptySpaceBonus());
 	stream->writeInt(m_kdtree->getStopPrims());
 	stream->writeBool(m_kdtree->getClip());
 	stream->writeBool(m_importanceSampleLuminaires);

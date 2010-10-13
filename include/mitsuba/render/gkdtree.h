@@ -20,15 +20,18 @@
 #define __KDTREE_GENERIC_H
 
 #include <mitsuba/core/timer.h>
+#include <mitsuba/core/random.h>
+#include <mitsuba/core/lock.h>
 #include <boost/static_assert.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <stack>
 
 /// Activate lots of extra checks
 //#define MTS_KD_DEBUG 1
 
 /** Compile-time KD-tree depth limit. Allows to put certain
     data structures on the stack */
-#define MTS_KD_MAX_DEPTH 48
+#define MTS_KD_MAXDEPTH 48
 
 /// Min-max bin count
 #define MTS_KD_MINMAX_BINS 128
@@ -40,8 +43,8 @@
 #define MTS_KD_BLOCKSIZE_KD  (512*1024/sizeof(KDNode))
 #define MTS_KD_BLOCKSIZE_IDX (512*1024/sizeof(uint32_t))
 
-/// 8*4=32 byte temporary storage for intersection computations 
-#define MTS_KD_INTERSECTION_TEMP 8
+/// 64 byte temporary storage for intersection computations 
+#define MTS_KD_INTERSECTION_TEMP 64
 
 /// Use a simple hashed 8-entry mailbox per thread
 //#define MTS_KD_MAILBOX_ENABLED 1
@@ -71,6 +74,8 @@ MTS_NAMESPACE_BEGIN
  * allocated. This makes it possible to create an implementation
  * with a very low memory overhead. Note that no locking is done, 
  * hence each thread will need its own allocator.
+ *
+ * \author Wenzel Jakob
  */
 class OrderedChunkAllocator {
 public:
@@ -261,6 +266,8 @@ private:
  * This leads to a more conservative memory usage when the 
  * final size of a (possibly very large) growing vector is 
  * unknown. Also, frequent reallocations & copies are avoided.
+ *
+ * \author Wenzel Jakob
  */
 template <typename T, size_t BlockSize> class BlockedVector {
 public:
@@ -382,6 +389,8 @@ private:
  * this operation. This class implements a compact storage
  * (2 bits per entry) in the spirit of the std::vector<bool> 
  * specialization.
+ *
+ * \author Wenzel Jakob
  */
 class ClassificationStorage {
 public:
@@ -441,15 +450,10 @@ private:
  * inline AABB getClippedAABB(index_type primIdx, const AABB &aabb) const;
  *
  * /// Check whether a primitive is intersected by the given ray. Some
- * /// temporary space is supplied, which can be used to store information
- * /// to be used in \ref fillIntersectionDetails.
+ * /// temporary space is supplied, which can be used to store extra 
+ * /// information about the intersection
  * EIntersectionResult intersect(const Ray &ray, index_type idx, Float mint, 
  *		Float maxt, Float &t, void *tmp);
- *
- * /// After having found a unique intersection, fill a proper record
- * /// using the temporary information collected in \ref intersect()
- * void fillIntersectionDetails(const Ray &ray, Float t, const void *tmp, 
- * 		Intersection &its) const;
  *
  * This class follows the "Curiously recurring template" design pattern so that
  * the above functions can be inlined (no virtual calls will be necessary!).
@@ -472,6 +476,8 @@ private:
  * This implementation also provides an optimized ray traversal algorithm 
  * (TA^B_{rec}), which is explained in Vlastimil Havran's PhD thesis 
  * "Heuristic Ray Shooting Algorithms". 
+ *
+ * \author Wenzel Jakob
  */
 template <typename Derived> class GenericKDTree : public Object {
 protected:
@@ -689,14 +695,14 @@ public:
 	}
 
 	/**
-	 * \brief Intersect a ray against all primitives stored in the kd-tree
+	 * \brief Return an axis-aligned bounding box containing all primitives
 	 */
-	bool rayIntersect(const Ray &ray, Intersection &its) const;
+	inline const AABB &getAABB() const { return m_aabb; }
 
 	/**
-	 * \brief Test a ray for intersection against all primitives stored in the kd-tree
+	 * \brief Return an bounding sphere containing all primitives
 	 */
-	bool rayIntersect(const Ray &ray) const;
+	inline const BSphere &getBSphere() const { return m_bsphere; }
 
 	/**
 	 * \brief Empirically find the best traversal and intersection cost values
@@ -705,6 +711,8 @@ public:
 	 * the SAH cost model to the collected statistics.
 	 */
 	void findCosts(Float &traversalCost, Float &intersectionCost);
+
+	MTS_DECLARE_CLASS()
 protected:
 	/**
 	 * \brief Build a KD-tree over the supplied geometry
@@ -721,7 +729,7 @@ protected:
 		/* Establish an ad-hoc depth cutoff value (Formula from PBRT) */
 		if (m_maxDepth == 0)
 			m_maxDepth = (int) (8 + 1.3f * log2i(primCount));
-		m_maxDepth = std::min(m_maxDepth, (size_type) MTS_KD_MAX_DEPTH);
+		m_maxDepth = std::min(m_maxDepth, (size_type) MTS_KD_MAXDEPTH);
 
 		Log(EDebug, "Creating a preliminary index list (%s)", 
 			memString(primCount * sizeof(index_type)).c_str());
@@ -934,6 +942,7 @@ protected:
 			+ Vector(Epsilon, Epsilon, Epsilon);
 		m_aabb.max += (m_aabb.max-m_aabb.min) * Epsilon
 			+ Vector(Epsilon, Epsilon, Epsilon);
+		m_bsphere = m_aabb.getBSphere();
 
 		Log(EDebug, "Structural kd-tree statistics:");
 		Log(EDebug, "   Parallel work units       : " SIZE_T_FMT, 
@@ -2549,7 +2558,7 @@ protected:
 				if (exPt == enPt) /* Do not overwrite the entry point */
 					++exPt;
 
-				KDAssert(exPt < MTS_KD_MAX_DEPTH);
+				KDAssert(exPt < MTS_KD_MAXDEPTH);
 				stack[exPt].prev = tmp;
 				stack[exPt].t = t;
 				stack[exPt].node = farChild;
@@ -2693,7 +2702,7 @@ protected:
 				if (exPt == enPt) /* Do not overwrite the entry point */
 					++exPt;
 
-				KDAssert(exPt < MTS_KD_MAX_DEPTH);
+				KDAssert(exPt < MTS_KD_MAXDEPTH);
 				stack[exPt].prev = tmp;
 				stack[exPt].t = t;
 				stack[exPt].node = farChild;
@@ -2848,6 +2857,7 @@ protected:
 	Float m_emptySpaceBonus;
 	bool m_clip, m_retract, m_parallelBuild;
 	AABB m_aabb;
+	BSphere m_bsphere;
 	size_type m_maxDepth;
 	size_type m_stopPrims;
 	size_type m_maxBadRefines;
@@ -2859,48 +2869,10 @@ protected:
 	BuildInterface m_interface;
 };
 
-
-template <typename Derived> bool GenericKDTree<Derived>::rayIntersect(
-		const Ray &ray, Intersection &its) const {
-
-	uint32_t temp[MTS_KD_INTERSECTION_TEMP];
-	its.t = std::numeric_limits<Float>::infinity(); 
-	Float mint, maxt;
-
-	if (m_aabb.rayIntersect(ray, mint, maxt)) {
-		if (ray.mint > mint) mint = ray.mint;
-		if (ray.maxt < maxt) maxt = ray.maxt;
-
-		if (EXPECT_TAKEN(maxt > mint)) {
-			if (rayIntersectHavran<false>(ray, mint, maxt, its.t, temp)) {
-				cast()->fillIntersectionDetails(ray, its.t, temp, its);
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-template <typename Derived> bool GenericKDTree<Derived>::rayIntersect(
-		const Ray &ray) const {
-	uint32_t temp[MTS_KD_INTERSECTION_TEMP];
-	Float mint, maxt, t;
-
-	if (m_aabb.rayIntersect(ray, mint, maxt)) {
-		if (ray.mint > mint) mint = ray.mint;
-		if (ray.maxt < maxt) maxt = ray.maxt;
-
-		if (EXPECT_TAKEN(maxt > mint)) 
-			if (rayIntersectHavran<true>(ray, mint, maxt, t, temp)) 
-				return true;
-	}
-	return false;
-}
-
 template <typename Derived> void GenericKDTree<Derived>::findCosts(
 		Float &traversalCost, Float &intersectionCost) {
 	ref<Random> random = new Random();
-	uint32_t temp[MTS_KD_INTERSECTION_TEMP];
+	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
 	BSphere bsphere = m_aabb.getBSphere();
 	const size_t nRays = 10000000, warmup = nRays/4;
 	Vector *A = new Vector[nRays-warmup];
@@ -2983,6 +2955,13 @@ template <typename Derived> void GenericKDTree<Derived>::findCosts(
 	delete[] b;
 	traversalCost = x[1];
 	intersectionCost = x[2];
+}
+
+template <typename Derived> Class *GenericKDTree<Derived>::m_theClass 
+	= new Class("GenericKDTree", true, "Object");
+
+template <typename Derived> const Class *GenericKDTree<Derived>::getClass() const {
+	return m_theClass;
 }
 
 MTS_NAMESPACE_END
