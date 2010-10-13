@@ -23,86 +23,84 @@
 MTS_NAMESPACE_BEGIN
 
 class TriKDTree : public GenericKDTree<TriKDTree> {
+	friend class GenericKDTree<TriKDTree>;
 public:
-	TriKDTree(const Triangle *triangles,
-				const Vertex *vertexBuffer,
-				size_type triangleCount) 
-		: m_triangles(triangles),
-		  m_vertexBuffer(vertexBuffer),
-		  m_triangleCount(triangleCount) {
+	TriKDTree() {
+		m_shapeMap.push_back(0);
 	}
-	
-	bool rayIntersect(const Ray &ray, Intersection &its) const {
-		uint32_t temp[MTS_KD_INTERSECTION_TEMP];
-		its.t = std::numeric_limits<Float>::infinity(); 
-		Float mint, maxt;
-		TriAccelHandler handler(m_indices, m_triAccel);
 
-		if (m_aabb.rayIntersect(ray, mint, maxt)) {
-			if (ray.mint > mint) mint = ray.mint;
-			if (ray.maxt < maxt) maxt = ray.maxt;
-
-			if (EXPECT_TAKEN(maxt > mint)) {
-				if (rayIntersectHavranCustom(handler,
-							ray, mint, maxt, its.t, temp)) {
-					fillIntersectionDetails(ray, its.t, temp, its);
-					return true;
-				}
-			}
+	void addShape(const Shape *shape) {
+		Assert(!isBuilt());
+		if (shape->isCompound())
+			Log(EError, "Cannot add compound shapes to a kd-tree - expand them first!");
+		if (shape->getClass()->derivesFrom(TriMesh::m_theClass)) {
+			// Triangle meshes are expanded into individual primitives,
+			// which are visible to the tree construction code. Generic
+			// primitives are only handled by their AABBs
+			m_shapeMap.push_back((size_type) 
+				static_cast<const TriMesh *>(shape)->getTriangleCount());
+			m_triangleFlag.push_back(true);
+		} else {
+			m_shapeMap.push_back(1);
+			m_triangleFlag.push_back(false);
 		}
-		return false;
+		m_shapes.push_back(shape);
 	}
-
-	FINLINE AABB getAABB(index_type idx) const {
-		return m_triangles[idx].getAABB(m_vertexBuffer);
-	}
-
-	FINLINE AABB getClippedAABB(index_type idx, const AABB &aabb) const {
-		return m_triangles[idx].getClippedAABB(m_vertexBuffer, aabb);
-	}
-
-	FINLINE size_type getPrimitiveCount() const {
-		return m_triangleCount;
-	}
-#if 0
-	FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx,
-			Float mint, Float maxt, Float &t, void *tmp) const {
-		Float tempT, tempU, tempV;
-#if 0
-		if (m_triangles[idx].rayIntersect(m_vertexBuffer, ray, tempU, tempV, tempT)) {
-			if (tempT < mint && tempT > maxt)
-				return ENo;
-#else
-		if (m_triAccel[idx].rayIntersect(ray, mint, maxt, tempU, tempV, tempT)) {
-#endif
-			index_type *indexPtr = reinterpret_cast<index_type *>(tmp);
-			Float *floatPtr = reinterpret_cast<Float *>(indexPtr + 1);
-
-			t = tempT;
-			*indexPtr = idx;
-			*floatPtr++ = tempU;
-			*floatPtr++ = tempV;
-
-			return EYes;
-		}
-		return ENo;
-	}
-#endif
 
 	void build() {
-		buildInternal();
-		Log(EInfo, "Precomputing triangle intersection information (%s)",
-				memString(sizeof(TriAccel)*m_triangleCount).c_str());
-		m_triAccel = static_cast<TriAccel *>(allocAligned(m_triangleCount * sizeof(TriAccel)));
-		for (size_t i=0; i<m_triangleCount; ++i) {
-			const Triangle &tri = m_triangles[i];
-			const Vertex &v0 = m_vertexBuffer[tri.idx[0]];
-			const Vertex &v1 = m_vertexBuffer[tri.idx[1]];
-			const Vertex &v2 = m_vertexBuffer[tri.idx[2]];
+		for (size_t i=1; i<m_shapeMap.size(); ++i)
+			m_shapeMap[i] += m_shapeMap[i-1];
 
-			m_triAccel[i].load(v0.p, v1.p, v2.p);
+		buildInternal();
+
+		ref<Timer> timer = new Timer();
+		size_type primCount = getPrimitiveCount();
+		Log(EDebug, "Precomputing triangle intersection information (%s)",
+				memString(sizeof(TriAccel)*primCount).c_str());
+		m_triAccel = static_cast<TriAccel *>(allocAligned(primCount * sizeof(TriAccel)));
+
+		index_type idx = 0;
+		for (index_type i=0; i<m_shapes.size(); ++i) {
+			const Shape *shape = m_shapes[i];
+			if (m_triangleFlag[i]) {
+				const TriMesh *mesh = static_cast<const TriMesh *>(shape);
+				const Triangle *triangles = mesh->getTriangles();
+				const Vertex *vertexBuffer = mesh->getVertexBuffer();
+				for (index_type j=0; j<mesh->getTriangleCount(); ++j) {
+					const Triangle &tri = triangles[j];
+					const Vertex &v0 = vertexBuffer[tri.idx[0]];
+					const Vertex &v1 = vertexBuffer[tri.idx[1]];
+					const Vertex &v2 = vertexBuffer[tri.idx[2]];
+					m_triAccel[idx].load(v0.p, v1.p, v2.p);
+					m_triAccel[idx].shapeIndex = i;
+					m_triAccel[idx].index = j;
+					++idx;
+				}
+			} else {
+				m_triAccel[idx].shapeIndex = i;
+				m_triAccel[idx].k = KNoTriangleFlag;
+				++idx;
+			}
 		}
+		Log(EDebug, "Done (%i ms)", timer->getMilliseconds());
+		Log(EDebug, "");
+		Assert(idx == primCount);
 	}
+	
+protected:
+	/**
+	 * \brief Return the shape index corresponding to a primitive index
+	 * seen by the generic kd-tree implementation. When this is a triangle
+	 * mesh, the \a idx parameter is updated to the triangle index within
+	 * the mesh.
+	 */
+	index_type findShape(index_type &idx) const {
+		std::vector<index_type>::const_iterator it = std::lower_bound(
+				m_shapeMap.begin(), m_shapeMap.end(), idx+1) - 1;
+		idx -= *it;
+		return (index_type) (it - m_shapeMap.begin());
+	}
+
 
 	FINLINE void fillIntersectionDetails(const Ray &ray, 
 			Float t, const void *tmp, Intersection &its) const {
@@ -133,41 +131,57 @@ public:
 		its.hasUVPartials = false;
 	}
 
-protected:
-	struct TriAccelHandler {
-		FINLINE TriAccelHandler(const index_type *indices, const TriAccel *triAccel)
-			: m_indices(indices), m_triAccel(triAccel) { }
-
-		FINLINE bool operator()(const KDNode *node, const Ray &ray, Float searchStart,
-			Float searchEnd, Float &t, void *temp) const {
-			bool foundIntersection = false;
-			for (unsigned int entry=node->getPrimStart(),
-					last = node->getPrimEnd(); entry != last; entry++) {
-				const index_type primIdx = m_indices[entry];
-				Float tempT, tempU, tempV;
-
-				if (m_triAccel[primIdx].rayIntersect(ray, searchStart, searchEnd, tempU, tempV, tempT)) {
-					index_type *indexPtr = reinterpret_cast<index_type *>(temp);
-					Float *floatPtr = reinterpret_cast<Float *>(indexPtr + 1);
-					t = searchEnd = tempT;
-					*indexPtr = primIdx;
-					*floatPtr++ = tempU;
-					*floatPtr++ = tempV;
-					foundIntersection = true;
-				}
-			}
-			return foundIntersection;
+	FINLINE AABB getAABB(index_type idx) const {
+		index_type shapeIdx = findShape(idx);
+		const Shape *shape = m_shapes[shapeIdx];
+		if (m_triangleFlag[shapeIdx]) {
+			const TriMesh *mesh = static_cast<const TriMesh *>(shape);
+			return mesh->getTriangles()[idx].getAABB(mesh->getVertexBuffer());
+		} else {
+			return shape->getAABB();
 		}
-	private:
-		const index_type *m_indices;
-		const TriAccel *m_triAccel;
-	};
+	}
 
+	FINLINE AABB getClippedAABB(index_type idx, const AABB &aabb) const {
+		index_type shapeIdx = findShape(idx);
+		const Shape *shape = m_shapes[shapeIdx];
+		if (m_triangleFlag[shapeIdx]) {
+			const TriMesh *mesh = static_cast<const TriMesh *>(shape);
+			return mesh->getTriangles()[idx].getClippedAABB(mesh->getVertexBuffer(), aabb);
+		} else {
+			return shape->getAABB();
+		}
+	}
+
+	FINLINE size_type getPrimitiveCount() const {
+		return m_shapeMap[m_shapeMap.size()-1];
+	}
+ 
+	FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx, Float mint, 
+		Float maxt, Float &t, void *temp) const {
+		Float tempU, tempV, tempT;
+		if (EXPECT_TAKEN(m_triAccel[idx].k != KNoTriangleFlag)) {
+			const TriAccel &ta = m_triAccel[idx];
+			if (ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT)) {
+				index_type *indexPtr = reinterpret_cast<index_type *>(temp);
+				Float *floatPtr = reinterpret_cast<Float *>((uint8_t *) indexPtr + 8);
+				t = tempT;
+				*indexPtr++ = ta.shapeIndex;
+				*indexPtr++ = ta.index;
+				*floatPtr++ = tempU;
+				*floatPtr++ = tempV;
+				return EYes;
+			}
+		} else {
+			int shape = m_triAccel[idx].shapeIndex;
+		}
+		return ENo;
+	}
 private:
-	const Triangle *m_triangles;
-	const Vertex *m_vertexBuffer;
+	std::vector<const Shape *> m_shapes;
+	std::vector<bool> m_triangleFlag;
+	std::vector<index_type> m_shapeMap;
 	TriAccel *m_triAccel;
-	size_type m_triangleCount;
 };
 
 
@@ -237,8 +251,8 @@ public:
 		ref<TriMesh> mesh = static_cast<TriMesh *> (PluginManager::getInstance()->
 				createObject(TriMesh::m_theClass, bunnyProps));
 		mesh->configure();
-		TriKDTree tree(mesh->getTriangles(), 
-			mesh->getVertexBuffer(), mesh->getTriangleCount());
+		TriKDTree tree;
+		tree.addShape(mesh);
 		tree.build();
 		BSphere bsphere(mesh->getBSphere());
 
@@ -248,6 +262,8 @@ public:
 		ref<KDTree> oldTree = new KDTree();
 		oldTree->addShape(mesh);
 		oldTree->build(); 
+
+		bsphere = BSphere(Point(-0.016840, 0.110154, -0.001537), .2f);
 
 		for (int j=0; j<3; ++j) {
 			ref<Random> random = new Random();

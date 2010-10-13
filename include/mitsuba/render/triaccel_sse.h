@@ -52,7 +52,7 @@ struct TriAccel4 {
 	/// Fast ray-triangle intersection test
 	inline bool rayIntersect(const __m128 o, const __m128 d, float _mint, 
 		float _maxt, float *_t, float *_u, float *_v, unsigned int &_shapeIndex,
-		unsigned int &_index);
+		unsigned int &_index) const;
 };
 
 FINLINE __m128 TriAccel::rayIntersectPacket(const RayPacket4 &packet, 
@@ -188,7 +188,7 @@ inline int TriAccel4::load(const Point *A, const Point *B, const Point *C,
 
 inline bool TriAccel4::rayIntersect(const __m128 o, const __m128 d, float _mint, 
 	float _maxt, float *_t, float *_u, float *_v, unsigned int &_shapeIndex, 
-	unsigned int &_index) {
+	unsigned int &_index) const {
 	__m128 o_k, o_u, o_v, d_k, d_u, d_v;
 	/* Arrange the ray according to the projection axes of the
 	   four packed triangles. This requires a *good* compiler

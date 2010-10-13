@@ -830,9 +830,10 @@ protected:
 		const size_type primBucketCount = 16;
 		size_type primBuckets[primBucketCount];
 		memset(primBuckets, 0, sizeof(size_type)*primBucketCount);
+		m_nodeCount = ctx.innerNodeCount + ctx.leafNodeCount;
 
 		m_nodes = static_cast<KDNode *> (allocAligned(
-				sizeof(KDNode) * (ctx.innerNodeCount + ctx.leafNodeCount)));
+				sizeof(KDNode) * m_nodeCount));
 		m_indices = new index_type[ctx.primIndexCount];
 
 		stack.push(boost::make_tuple(prelimRoot, &m_nodes[nodePtr++], &ctx, m_aabb));
@@ -2622,123 +2623,6 @@ protected:
 	 * \brief Internal kd-tree traversal implementation (Havran variant)
 	 *
 	 * This method is almost identical to \ref rayIntersectHavran, except
-	 * that it forwards all ray-leaf intersections to a specified handler.
-	 */
-	template<typename LeafHandler> FINLINE
-			bool rayIntersectHavranCustom(const LeafHandler &leafHandler,
-			const Ray &ray, Float mint, Float maxt, 
-			Float &t, void *temp) const {
-		KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
-		#if 0
-		static const int prevAxisTable[] = { 2, 0, 1 };
-		static const int nextAxisTable[] = { 1, 2, 0 };
-		#endif
-
-		/* Set up the entry point */
-		uint32_t enPt = 0;
-		stack[enPt].t = mint;
-		stack[enPt].p = ray(mint);
-
-		/* Set up the exit point */
-		uint32_t exPt = 1;
-		stack[exPt].t = maxt;
-		stack[exPt].p = ray(maxt);
-		stack[exPt].node = NULL;
-
-		const KDNode * __restrict currNode = m_nodes;
-		while (currNode != NULL) {
-			while (EXPECT_TAKEN(!currNode->isLeaf())) {
-				const Float splitVal = (Float) currNode->getSplit();
-				const int axis = currNode->getAxis();
-				const KDNode * __restrict farChild;
-
-				if (stack[enPt].p[axis] <= splitVal) {
-					if (stack[exPt].p[axis] <= splitVal) {
-						/* Cases N1, N2, N3, P5, Z2 and Z3 (see thesis) */
-						currNode = currNode->getLeft();
-						continue;
-					}
-
-					/* Typo in Havran's thesis:
-					   (it specifies "stack[exPt].p == splitVal", which
-					    is clearly incorrect) */
-					if (stack[enPt].p[axis] == splitVal) {
-						/* Case Z1 */
-						currNode = currNode->getRight();
-						continue;
-					}
-
-					/* Case N4 */
-					currNode = currNode->getLeft();
-					farChild = currNode + 1; // getRight()
-				} else { /* stack[enPt].p[axis] > splitVal */
-					if (splitVal < stack[exPt].p[axis]) {
-						/* Cases P1, P2, P3 and N5 */
-						currNode = currNode->getRight();
-						continue;
-					}
-					/* Case P4 */
-					farChild = currNode->getLeft();
-					currNode = farChild + 1; // getRight()
-				}
-
-				/* Cases P4 and N4 -- calculate the distance to the split plane */
-				t = (splitVal - ray.o[axis]) * ray.dRcp[axis];
-
-				/* Set up a new exit point */
-				const uint32_t tmp = exPt++;
-				if (exPt == enPt) /* Do not overwrite the entry point */
-					++exPt;
-
-				KDAssert(exPt < MTS_KD_MAX_DEPTH);
-				stack[exPt].prev = tmp;
-				stack[exPt].t = t;
-				stack[exPt].node = farChild;
-
-				#if 1
-				/* Faster than the original code with the 
-				   prevAxis & nextAxis table */
-				stack[exPt].p = ray(t);
-				#else
-				const int nextAxis = nextAxisTable[axis];
-				const int prevAxis = prevAxisTable[axis];
-				stack[exPt].p[nextAxis] = ray.o[nextAxis] + t*ray.d[nextAxis];
-				stack[exPt].p[prevAxis] = ray.o[prevAxis] + t*ray.d[prevAxis];
-				#endif
-
-				stack[exPt].p[axis] = splitVal;
-			}
-			/* Reached a leaf node */
-
-			/* Floating-point arithmetic.. - use both absolute and relative 
-			   epsilons when looking for intersections in the subinterval */
-			#if defined(SINGLE_PRECISION)
-				const Float eps = 1e-3;
-			#else
-				const Float eps = 1e-5;
-			#endif
-			const Float m_eps = 1-eps, p_eps = 1+eps;
-
-			const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);
-			Float searchEnd = std::min(maxt, stack[exPt].t * p_eps + eps);
-
-			if (leafHandler(currNode, ray, searchStart, searchEnd, t, temp))
-				return true;
-
-			/* Pop from the stack and advance to the next node on the interval */
-			enPt = exPt;
-			currNode = stack[exPt].node;
-			exPt = stack[enPt].prev;
-		}
-
-		return false;
-	}
-
-
-	/**
-	 * \brief Internal kd-tree traversal implementation (Havran variant)
-	 *
-	 * This method is almost identical to \ref rayIntersectHavran, except
 	 * that it additionally returns statistics on the number of traversed
 	 * nodes, intersected shapes, as well as the time taken to do this
 	 * (measured using rtdsc).
@@ -2968,6 +2852,7 @@ protected:
 	size_type m_stopPrims;
 	size_type m_maxBadRefines;
 	size_type m_exactPrimThreshold;
+	size_type m_nodeCount;
 	std::vector<SAHTreeBuilder *> m_builders;
 	std::vector<KDNode *> m_indirections;
 	ref<Mutex> m_indirectionLock;
