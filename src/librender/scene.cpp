@@ -82,6 +82,10 @@ Scene::Scene(const Properties &props)
 	/* kd-tree construction: specify whether or not bad splits can be "retracted". */
 	if (props.hasProperty("kdRetract"))
 		m_kdtree->setRetract(props.getBoolean("kdRetract"));
+	/* kd-tree construction: Set the number of bad refines allowed to happen
+	   in succession before a leaf node will be created.*/
+	if (props.hasProperty("kdMaxBadRefines"))
+		m_kdtree->setMaxBadRefines(props.getInteger("kdMaxBadRefines"));
 }
 
 Scene::Scene(Scene *scene) : NetworkedObject(Properties()) {
@@ -134,6 +138,7 @@ Scene::Scene(Stream *stream, InstanceManager *manager)
 	m_kdtree->setExactPrimitiveThreshold(stream->readUInt());
 	m_kdtree->setParallelBuild(stream->readBool());
 	m_kdtree->setRetract(stream->readBool());
+	m_kdtree->setMaxBadRefines(stream->readUInt());
 	m_importanceSampleLuminaires = stream->readBool();
 	m_testType = (ETestType) stream->readInt();
 	m_testThresh = stream->readFloat();
@@ -612,6 +617,7 @@ void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeUInt(m_kdtree->getExactPrimitiveThreshold());
 	stream->writeBool(m_kdtree->getParallelBuild());
 	stream->writeBool(m_kdtree->getRetract());
+	stream->writeUInt(m_kdtree->getMaxBadRefines());
 	stream->writeBool(m_importanceSampleLuminaires);
 	stream->writeInt(m_testType);
 	stream->writeFloat(m_testThresh);

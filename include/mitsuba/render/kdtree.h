@@ -151,6 +151,7 @@ protected:
 				return EYes;
 			}
 		} else {
+			cout << "Encountered a non-triangle shape!" << endl;
 			//int shape = m_triAccel[idx].shapeIndex;
 		}
 #else
@@ -170,6 +171,7 @@ protected:
 				return EYes;
 			}
 		} else {
+			cout << "Encountered a non-triangle shape!" << endl;
 		}
 #endif
 		return ENo;

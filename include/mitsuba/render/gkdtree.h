@@ -2506,12 +2506,8 @@ protected:
 		/* Set up the entry point */
 		uint32_t enPt = 0;
 		stack[enPt].t = mint;
-		//stack[enPt].p = ray(mint);
-		if (mint >= 0.0f)
-			stack[enPt].p = ray(mint);
-		else
-			stack[enPt].p = ray.o;
-	
+		stack[enPt].p = ray(mint);
+
 		/* Set up the exit point */
 		uint32_t exPt = 1;
 		stack[exPt].t = maxt;
@@ -2556,9 +2552,7 @@ protected:
 				}
 
 				/* Cases P4 and N4 -- calculate the distance to the split plane */
-				//XXX
-//				Float distToSplit = (splitVal - ray.o[axis]) * ray.dRcp[axis];
-				Float distToSplit = (splitVal - ray.o[axis]) / ray.d[axis];
+				Float distToSplit = (splitVal - ray.o[axis]) * ray.dRcp[axis];
 
 				/* Set up a new exit point */
 				const uint32_t tmp = exPt++;
@@ -2588,15 +2582,15 @@ protected:
 
 			/* Floating-point arithmetic.. - use both absolute and relative 
 			   epsilons when looking for intersections in the subinterval */
-			#if defined(SINGLE_PRECISION)
-				const Float eps = 1e-3;
-			#else
-				const Float eps = 1e-5;
-			#endif
+#if defined(SINGLE_PRECISION)
+			const Float eps = 1e-3;
+#else
+			const Float eps = 1e-5;
+#endif
 			const Float m_eps = 1-eps, p_eps = 1+eps;
 
 			const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);
-			Float searchEnd = std::min(maxt, stack[exPt].t * p_eps + eps);
+			Float searchEnd   = std::min(maxt, stack[exPt].t * p_eps + eps);
 
 			bool foundIntersection = false;
 
@@ -2610,7 +2604,7 @@ protected:
 				#endif
 
 				EIntersectionResult result = cast()->intersect(ray, 
-						primIdx, stack[enPt].t-Epsilon, stack[exPt].t+Epsilon, t, temp);
+						primIdx, searchStart, searchEnd, t, temp);
 
 				if (result == EYes) {
 					if (shadowRay)
