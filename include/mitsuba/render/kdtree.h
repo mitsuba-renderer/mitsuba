@@ -23,7 +23,11 @@
 #include <mitsuba/render/gkdtree.h>
 #include <mitsuba/render/triaccel.h>
 
-#define MTS_KD_CONSERVE_MEMORY 1
+#if defined(MTS_KD_CONSERVE_MEMORY)
+#if defined(MTS_HAS_COHERENT_RT)
+#error MTS_KD_CONSERVE_MEMORY & MTS_HAS_COHERENT_RT are incompatible
+#endif
+#endif
 
 MTS_NAMESPACE_BEGIN
 
@@ -79,6 +83,31 @@ public:
 	 * \brief Test a ray for intersection against all primitives stored in the kd-tree
 	 */
 	bool rayIntersect(const Ray &ray) const;
+
+	/**
+	 * \brief Intersect four rays with the stored triangle meshes while making
+	 * use of ray coherence to do this very efficiently. 
+	 *
+	 * If the coherent ray tracing compile-time flag is disabled, this function 
+	 * simply does four separate mono-ray traversals.
+	 */
+	void rayIntersectPacket(const Ray *rays, Intersection *its) const;
+
+#if defined(MTS_HAS_COHERENT_RT)
+	/**
+	 * \brief Intersect four rays with the stored triangle meshes while making
+	 * use of ray coherence to do this very efficiently. Requires SSE.
+	 */
+	void rayIntersectPacket(const RayPacket4 &packet, 
+		const RayInterval4 &interval, Intersection4 &its) const;
+
+	/**
+	 * \brief Fallback for incoherent rays
+	 * \sa rayIntesectPacket
+	 */
+	void rayIntersectPacketIncoherent(const RayPacket4 &packet, 
+		const RayInterval4 &interval, Intersection4 &its) const;
+#endif
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -176,6 +205,26 @@ protected:
 		}
 #endif
 		return ENo;
+	}
+
+#if defined(MTS_HAS_COHERENT_RT)
+	/// Ray traversal stack entry for uncoherent ray tracing
+	struct CoherentKDStackEntry {
+		/* Current ray interval */
+		RayInterval4 MM_ALIGN16 interval;
+		/* Pointer to the far child */
+		const KDNode * __restrict node;
+	};
+#endif
+
+	/**
+	 * Fallback for incoherent rays
+	 */
+	inline void rayIntersectPacketIncoherent(const Ray *rays, Intersection *its) const {
+		for (int i=0; i<4; i++) {
+			if (!rayIntersect(rays[i], its[i]))
+				its[i].t = std::numeric_limits<float>::infinity();
+		}
 	}
 
 	/// Virtual destructor

@@ -530,7 +530,7 @@ public:
 		if (m_indices)
 			delete[] m_indices;
 		if (m_nodes)
-			freeAligned(m_nodes);
+			freeAligned(m_nodes-1); // undo alignment shift
 	}
 
 	/**
@@ -840,8 +840,9 @@ protected:
 		memset(primBuckets, 0, sizeof(size_type)*primBucketCount);
 		m_nodeCount = ctx.innerNodeCount + ctx.leafNodeCount;
 
+		// +1 shift is for alignment purposes (see KDNode::getSibling)
 		m_nodes = static_cast<KDNode *> (allocAligned(
-				sizeof(KDNode) * m_nodeCount));
+				sizeof(KDNode) * (m_nodeCount+1)))+1;
 		m_indices = new index_type[ctx.primIndexCount];
 
 		stack.push(boost::make_tuple(prelimRoot, &m_nodes[nodePtr++], &ctx, m_aabb));
@@ -1276,6 +1277,11 @@ protected:
 		FINLINE const KDNode * __restrict getLeft() const {
 			return this + 
 				((inner.combined & EInnerOffsetMask) >> 2);
+		}
+
+		/// Return the sibling of the current node
+		FINLINE const KDNode * __restrict getSibling() const {
+			return (const KDNode *) ((ptrdiff_t) this ^ (ptrdiff_t) 8);
 		}
 
 		/// Return the left child (assuming that this is an interior node)

@@ -204,7 +204,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 	
 	m_minDist = nearClip + (farClip - nearClip) * m_clamping;
 
-	nearClip = std::min(nearClip, (Float) 0.05f);
+	nearClip = std::min(nearClip, (Float) 0.001f);
 	farClip = std::min(farClip * 1.5f, m_maxClipDist);
 
 	if (farClip < 0 || nearClip >= farClip) {
