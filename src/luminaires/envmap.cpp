@@ -145,7 +145,8 @@ public:
 	inline Spectrum Le(const Vector &direction) const {
 		const Vector d = m_worldToLuminaire(direction);
 		const Float u = .5f * (1 + std::atan2(d.x,-d.z) / M_PI);
-		const Float v = std::acos(std::max((Float) -1.0f, std::min((Float) 1.0f, d.y))) / M_PI;
+		const Float v = std::acos(std::max((Float) -1.0f, 
+					std::min((Float) 1.0f, d.y))) / M_PI;
 		return m_mipmap->triangle(0, u, v) * m_intensityScale;
 	}
 
@@ -175,7 +176,7 @@ public:
 		int yPos = std::min(std::max((int) std::floor(y), 0), m_pdfResolution.y-1);
 
 		Float pdf = m_pdf[xPos + yPos * m_pdfResolution.x];
-		Float sinTheta = std::sqrt(std::max(0.0f, 1-d.y*d.y));
+		Float sinTheta = std::sqrt(std::max((Float) 0.0f, 1-d.y*d.y));
 
 		return pdf / (m_pdfPixelSize.x * m_pdfPixelSize.y * sinTheta);
 #endif

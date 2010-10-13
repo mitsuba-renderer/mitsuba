@@ -26,7 +26,7 @@ class TestKDTree : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
 	MTS_DECLARE_TEST(test01_sutherlandHodgman)
-	MTS_DECLARE_TEST(test02_buildSimple)
+	MTS_DECLARE_TEST(test02_bunnyBenchmark)
 	MTS_END_TESTCASE()
 
 	void test01_sutherlandHodgman() {
@@ -81,7 +81,7 @@ public:
 		assertEquals(Point(1, 1, 0), clippedAABB.max);
 	}
 
-	void test02_buildSimple() {
+	void test02_bunnyBenchmark() {
 		Properties bunnyProps("ply");
 		bunnyProps.setString("filename", "tools/tests/bunny.ply");
 
@@ -98,14 +98,15 @@ public:
 
 		bsphere = BSphere(Point(-0.016840, 0.110154, -0.001537), .2f);
 
+		Log(EInfo, "Bunny benchmark (http://homepages.paradise.net.nz/nickamy/benchmark.html):");
+		ref<Timer> timer = new Timer();
 		for (int j=0; j<3; ++j) {
 			ref<Random> random = new Random();
-			ref<Timer> timer = new Timer();
 			size_t nRays = 10000000;
 			size_t nIntersections = 0;
 
-			Log(EInfo, "Bounding sphere: %s", bsphere.toString().c_str());
-			Log(EInfo, "Shooting " SIZE_T_FMT " rays ..", nRays);
+			Log(EInfo, "  Iteration %i: shooting " SIZE_T_FMT " rays ..", j, nRays);
+			timer->reset();
 
 			for (size_t i=0; i<nRays; ++i) {
 				Point2 sample1(random->nextFloat(), random->nextFloat()),
@@ -115,14 +116,16 @@ public:
 				Ray r(p1, normalize(p2-p1));
 				Intersection its;
 
-				if (tree->rayIntersect(r, its))
+				if (tree->rayIntersect(r))
 					nIntersections++;
 			}
 
-			Log(EInfo, "Found " SIZE_T_FMT " intersections in %i ms",
-				nIntersections, timer->getMilliseconds());
-			Log(EInfo, "%.3f MRays/s", 
+			Float perc = nIntersections/(Float) nRays;
+			Log(EInfo, "  Found " SIZE_T_FMT " intersections (%.3f%%) in %i ms",
+				nIntersections, perc, timer->getMilliseconds());
+			Log(EInfo, "  -> %.3f MRays/s", 
 				nRays / (timer->getMilliseconds() * (Float) 1000));
+			Log(EInfo, "");
 		}
 	}
 };

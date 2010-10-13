@@ -30,7 +30,7 @@ struct IsotropicDipoleQuery {
 #if !defined(MTS_SSE) || (SPECTRUM_SAMPLES != 3)
 	inline IsotropicDipoleQuery(const Spectrum &zr, const Spectrum &zv, 
 		const Spectrum &sigmaTr, Float Fdt, const Point &p) 
-		: zr(zr), zv(zv), sigmaTr(sigmaTr), m_result(0), Fdt(Fdt), p(p) {
+		: zr(zr), zv(zv), sigmaTr(sigmaTr), result(0.0f), Fdt(Fdt), p(p) {
 			count = 0;
 	}
 

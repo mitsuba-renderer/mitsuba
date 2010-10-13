@@ -138,6 +138,7 @@ protected:
 	FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx, Float mint, 
 		Float maxt, Float &t, void *temp) const {
 		Float tempU, tempV, tempT;
+#if 1
 		if (EXPECT_TAKEN(m_triAccel[idx].k != KNoTriangleFlag)) {
 			const TriAccel &ta = m_triAccel[idx];
 			if (ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT)) {
@@ -152,6 +153,25 @@ protected:
 		} else {
 			//int shape = m_triAccel[idx].shapeIndex;
 		}
+#else
+		index_type shapeIdx = findShape(idx);
+		if (EXPECT_TAKEN(m_triangleFlag[shapeIdx])) {
+			const TriMesh *mesh = static_cast<const TriMesh *>(m_shapes[shapeIdx]);
+			const Triangle &tri = mesh->getTriangles()[idx];
+			if (tri.rayIntersect(mesh->getVertexBuffer(), ray, tempU, tempV, tempT)) {
+				if (tempT < mint || tempT > maxt)
+					return ENo;
+				IntersectionCache *cache = static_cast<IntersectionCache *>(temp);
+				t = tempT;
+				cache->shapeIndex = shapeIdx;
+				cache->index = idx;
+				cache->u = tempU;
+				cache->v = tempV;
+				return EYes;
+			}
+		} else {
+		}
+#endif
 		return ENo;
 	}
 

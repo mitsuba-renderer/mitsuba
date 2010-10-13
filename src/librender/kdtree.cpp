@@ -93,13 +93,20 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 	Float mint, maxt;
 
 	if (m_aabb.rayIntersect(ray, mint, maxt)) {
-		if (ray.mint > mint) mint = ray.mint;
+		/* Use an adaptive ray epsilon */
+		Float rayMinT = ray.mint;
+		if (rayMinT == Epsilon)
+			rayMinT *= std::max(std::max(std::abs(ray.o.x), 
+				std::abs(ray.o.y)), std::abs(ray.o.z));
+
+		if (rayMinT > mint) mint = rayMinT;
 		if (ray.maxt < maxt) maxt = ray.maxt;
 
 		if (EXPECT_TAKEN(maxt > mint)) {
 			if (rayIntersectHavran<false>(ray, mint, maxt, its.t, temp)) {
 				/* After having found a unique intersection, fill a proper record
 				   using the temporary information collected in \ref intersect() */
+#if 1
 				const IntersectionCache *cache = reinterpret_cast<const IntersectionCache *>(temp);
 				const TriMesh *shape = static_cast<const TriMesh *>(m_shapes[cache->shapeIndex]);
 
@@ -124,6 +131,7 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 				its.wi = its.toLocal(-ray.d);
 				its.shape = shape;
 				its.hasUVPartials = false;
+#endif
 				return true;
 			}
 		}
@@ -133,10 +141,16 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 
 bool KDTree::rayIntersect(const Ray &ray) const {
 	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
-	Float mint, maxt, t;
+	Float mint, maxt, t = std::numeric_limits<Float>::infinity();
 
 	if (m_aabb.rayIntersect(ray, mint, maxt)) {
-		if (ray.mint > mint) mint = ray.mint;
+		/* Use an adaptive ray epsilon */
+		Float rayMinT = ray.mint;
+		if (rayMinT == Epsilon)
+			rayMinT *= std::max(std::max(std::abs(ray.o.x), 
+				std::abs(ray.o.y)), std::abs(ray.o.z));
+
+		if (rayMinT > mint) mint = rayMinT;
 		if (ray.maxt < maxt) maxt = ray.maxt;
 
 		if (EXPECT_TAKEN(maxt > mint)) 

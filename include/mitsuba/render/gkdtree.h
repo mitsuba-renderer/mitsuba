@@ -27,7 +27,7 @@
 #include <stack>
 
 /// Activate lots of extra checks
-//#define MTS_KD_DEBUG 1
+#define MTS_KD_DEBUG 1
 
 /** Compile-time KD-tree depth limit. Allows to put certain
     data structures on the stack */
@@ -674,7 +674,7 @@ public:
 	 * from (approximate) Min-Max binning to the accurate O(n log n) SAH-based 
 	 * optimization method.
 	 */
-	inline void setExactPrimitiveThreshold(bool exactPrimThreshold) {
+	inline void setExactPrimitiveThreshold(size_type exactPrimThreshold) {
 		m_exactPrimThreshold = exactPrimThreshold;
 	}
 
@@ -683,7 +683,7 @@ public:
 	 * from (approximate) Min-Max binning to the accurate O(n log n) SAH-based 
 	 * optimization method.
 	 */
-	inline bool getExactPrimitiveThreshold() const {
+	inline size_type getExactPrimitiveThreshold() const {
 		return m_exactPrimThreshold;
 	}
 
@@ -2216,6 +2216,8 @@ protected:
 	template <int BinCount> struct MinMaxBins {
 		MinMaxBins(const AABB &aabb) : m_aabb(aabb) {
 			m_binSize = m_aabb.getExtents() / BinCount;
+			for (int axis=0; axis<3; ++axis) 
+				m_invBinSize[axis] = 1/m_binSize[axis];
 		}
 
 		/**
@@ -2230,18 +2232,14 @@ protected:
 			m_primCount = primCount;
 			memset(m_minBins, 0, sizeof(size_type) * 3 * BinCount);
 			memset(m_maxBins, 0, sizeof(size_type) * 3 * BinCount);
-			Vector invBinSize;
-
-			for (int axis=0; axis<3; ++axis) 
-				invBinSize[axis] = 1/m_binSize[axis];
 
 			for (size_type i=0; i<m_primCount; ++i) {
 				const AABB aabb = derived->getAABB(indices[i]);
 				for (int axis=0; axis<3; ++axis) {
 					int minIdx = (int) ((aabb.min[axis] - m_aabb.min[axis]) 
-							* invBinSize[axis]);
+							* m_invBinSize[axis]);
 					int maxIdx = (int) ((aabb.max[axis] - m_aabb.min[axis]) 
-							* invBinSize[axis]);
+							* m_invBinSize[axis]);
 					m_maxBins[axis * BinCount 
 						+ std::max(0, std::min(maxIdx, BinCount-1))]++;
 					m_minBins[axis * BinCount 
@@ -2300,7 +2298,7 @@ protected:
 			KDAssert(candidate.sahCost != std::numeric_limits<Float>::infinity());
 
 			const int axis = candidate.axis;
-			const float min = m_aabb.min[axis];
+			const Float min = m_aabb.min[axis];
 
 			/* This part is ensures that the returned split plane is consistent
 			 * with the floating point calculations done by the binning code 
@@ -2316,8 +2314,8 @@ protected:
 			 * numbers are correct. This removes the need for an extra sweep
 			 * through the whole primitive list.
 			 */
-			float invBinSize = 1/m_binSize[axis],
-				  split = min + (leftBin + 1) * m_binSize[axis];
+			Float invBinSize = m_invBinSize[axis];
+			float split = min + (leftBin + 1) * m_binSize[axis];
 			float splitNext = nextafterf(split, 
 				  std::numeric_limits<float>::max());
 			int idx     = (int) ((split - min) * invBinSize);
@@ -2462,6 +2460,9 @@ protected:
 					split.sahCost = sahCost2;
 					split.pos = rightBounds.min[axis];
 				}
+
+				leftBounds.max[axis] = std::min(leftBounds.max[axis], (Float) split.pos);
+				rightBounds.min[axis] = std::max(rightBounds.min[axis], (Float) split.pos);
 			}
 
 			return boost::make_tuple(leftBounds, leftIndices,
@@ -2471,7 +2472,7 @@ protected:
 		size_type m_minBins[3*BinCount], m_maxBins[3*BinCount];
 		size_type m_primCount;
 		AABB m_aabb;
-		Vector m_binSize;
+		Vector m_binSize, m_invBinSize;
 	};
 
 	/// Ray traversal stack entry for incoherent ray tracing
@@ -2493,7 +2494,7 @@ protected:
 			bool rayIntersectHavran(const Ray &ray, Float mint, Float maxt, 
 			Float &t, void *temp) const {
 		KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
-		#if 0
+		#if 1
 		static const int prevAxisTable[] = { 2, 0, 1 };
 		static const int nextAxisTable[] = { 1, 2, 0 };
 		#endif
@@ -2505,14 +2506,18 @@ protected:
 		/* Set up the entry point */
 		uint32_t enPt = 0;
 		stack[enPt].t = mint;
-		stack[enPt].p = ray(mint);
-
+		//stack[enPt].p = ray(mint);
+		if (mint >= 0.0f)
+			stack[enPt].p = ray(mint);
+		else
+			stack[enPt].p = ray.o;
+	
 		/* Set up the exit point */
 		uint32_t exPt = 1;
 		stack[exPt].t = maxt;
 		stack[exPt].p = ray(maxt);
 		stack[exPt].node = NULL;
-
+	
 		const KDNode * __restrict currNode = m_nodes;
 		while (currNode != NULL) {
 			while (EXPECT_TAKEN(!currNode->isLeaf())) {
@@ -2551,7 +2556,9 @@ protected:
 				}
 
 				/* Cases P4 and N4 -- calculate the distance to the split plane */
-				Float distToSplit = (splitVal - ray.o[axis]) * ray.dRcp[axis];
+				//XXX
+//				Float distToSplit = (splitVal - ray.o[axis]) * ray.dRcp[axis];
+				Float distToSplit = (splitVal - ray.o[axis]) / ray.d[axis];
 
 				/* Set up a new exit point */
 				const uint32_t tmp = exPt++;
@@ -2563,18 +2570,19 @@ protected:
 				stack[exPt].t = distToSplit;
 				stack[exPt].node = farChild;
 
-				#if 1
+				#if 0
 				/* Faster than the original code with the 
 				   prevAxis & nextAxis table */
 				stack[exPt].p = ray(distToSplit);
+				stack[exPt].p[axis] = splitVal;
 				#else
 				const int nextAxis = nextAxisTable[axis];
 				const int prevAxis = prevAxisTable[axis];
-				stack[exPt].p[nextAxis] = ray.o[nextAxis] + t*ray.d[nextAxis];
-				stack[exPt].p[prevAxis] = ray.o[prevAxis] + t*ray.d[prevAxis];
+				stack[exPt].p[axis] = splitVal;
+				stack[exPt].p[nextAxis] = ray.o[nextAxis] + distToSplit*ray.d[nextAxis];
+				stack[exPt].p[prevAxis] = ray.o[prevAxis] + distToSplit*ray.d[prevAxis];
 				#endif
 
-				stack[exPt].p[axis] = splitVal;
 			}
 			/* Reached a leaf node */
 
@@ -2589,9 +2597,10 @@ protected:
 
 			const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);
 			Float searchEnd = std::min(maxt, stack[exPt].t * p_eps + eps);
+
 			bool foundIntersection = false;
 
-			for (unsigned int entry=currNode->getPrimStart(),
+			for (index_type entry=currNode->getPrimStart(),
 					last = currNode->getPrimEnd(); entry != last; entry++) {
 				const index_type primIdx = m_indices[entry];
 
@@ -2601,7 +2610,7 @@ protected:
 				#endif
 
 				EIntersectionResult result = cast()->intersect(ray, 
-						primIdx, searchStart, searchEnd, t, temp);
+						primIdx, stack[enPt].t-Epsilon, stack[exPt].t+Epsilon, t, temp);
 
 				if (result == EYes) {
 					if (shadowRay)
@@ -2611,7 +2620,7 @@ protected:
 				}
 
 				#if defined(MTS_KD_MAILBOX_ENABLED)
-				if (result == ENever) 
+				else if (result == ENever) 
 					mailbox.put(primIdx);
 				#endif
 			}
@@ -2779,8 +2788,8 @@ protected:
 		};
 
 		while (node != NULL) {
-			if (EXPECT_TAKEN(!node->isLeaf())) {
-				const float split = (Float) node->getSplit();
+			while (EXPECT_TAKEN(!node->isLeaf())) {
+				const Float split = (Float) node->getSplit();
 				const int axis = node->getAxis();
 				const float t = (split - ray.o[axis]) * ray.dRcp[axis];
 
@@ -2806,8 +2815,92 @@ protected:
 					maxt = t;
 					++stackPos;
 				}
+			}
+			bool foundIntersection = false;
+			for (unsigned int entry=node->getPrimStart(),
+					last = node->getPrimEnd(); entry != last; entry++) {
+				const index_type primIdx = m_indices[entry];
+
+				#if defined(MTS_KD_MAILBOX_ENABLED)
+				if (mailbox.contains(primIdx)) 
+					continue;
+				#endif
+
+				EIntersectionResult result = cast()->intersect(ray, 
+						primIdx, mint, maxt, t, temp);
+
+				if (result == EYes) {
+					if (shadowRay)
+						return true;
+					maxt = t;
+					foundIntersection = true;
+				}
+
+				#if defined(MTS_KD_MAILBOX_ENABLED)
+				else if (result == ENever) 
+					mailbox.put(primIdx);
+				#endif
+			}
+
+			if (foundIntersection) 
+				return true;
+
+			if (stackPos > 0) {
+				--stackPos;
+				node = stack[stackPos].node;
+				mint = stack[stackPos].mint;
+				maxt = stack[stackPos].maxt;
 			} else {
-				bool foundIntersection = false;
+				break;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * \brief Internal kd-tree traversal implementation (PBRT variant)
+	 */
+	template<bool shadowRay> FINLINE bool rayIntersectPBRT(const Ray &ray, 
+			Float mint_, Float maxt_, Float &t, void *temp) const {
+		KDStackEntry stack[MTS_KD_MAXDEPTH];
+		int stackPos = 0;
+		Float mint = mint_, maxt=maxt_;
+		const KDNode *node = m_nodes;
+		bool foundIntersection = false;
+
+		#if defined(MTS_KD_MAILBOX_ENABLED)
+		HashedMailbox mailbox;
+		#endif
+
+		while (node != NULL) {
+			if (t < mint)
+				break;
+
+			if (EXPECT_TAKEN(!node->isLeaf())) {
+				const Float split = (Float) node->getSplit();
+				const int axis = node->getAxis();
+				const float tPlane = (split - ray.o[axis]) * ray.dRcp[axis];
+				bool leftOfSplit = (ray.o[axis] < split) 
+					|| (ray.o[axis] == split && ray.d[axis] >= 0);
+
+				const KDNode * __restrict left = node->getLeft();
+				const KDNode * __restrict right = left + 1;
+				const KDNode * __restrict first  = leftOfSplit ? left : right;
+				const KDNode * __restrict second = leftOfSplit ? right : left;
+
+				if (tPlane > maxt || tPlane <= 0) {
+					node = first;
+				} else if (tPlane < mint) {
+					node = second;
+				} else {
+					stack[stackPos].node = second;
+					stack[stackPos].mint = tPlane;
+					stack[stackPos].maxt = maxt;
+					++stackPos;
+					node = first;
+					maxt = tPlane;
+				}
+			} else {
 				for (unsigned int entry=node->getPrimStart(),
 						last = node->getPrimEnd(); entry != last; entry++) {
 					const index_type primIdx = m_indices[entry];
@@ -2818,12 +2911,12 @@ protected:
 					#endif
 
 					EIntersectionResult result = cast()->intersect(ray, 
-							primIdx, mint, maxt, t, temp);
+							primIdx, mint_, maxt_, t, temp);
 
 					if (result == EYes) {
 						if (shadowRay)
 							return true;
-						maxt = t;
+						maxt_ = t;
 						foundIntersection = true;
 					}
 
@@ -2832,9 +2925,6 @@ protected:
 						mailbox.put(primIdx);
 					#endif
 				}
-
-				if (foundIntersection) 
-					return true;
 
 				if (stackPos > 0) {
 					--stackPos;
@@ -2846,7 +2936,7 @@ protected:
 				}
 			}
 		}
-		return false;
+		return foundIntersection;
 	}
 
 protected:

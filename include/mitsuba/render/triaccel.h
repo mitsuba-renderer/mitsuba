@@ -133,8 +133,13 @@ FINLINE bool TriAccel::rayIntersect(const Ray &ray, Float mint, Float maxt,
 #endif
 
 	/* Calculate the plane intersection (Typo in the thesis?) */
+#if 1
 	Float recip = 1.0f / (d_u * n_u + d_v * n_v + d_k);
 	t = (n_d - o_u*n_u - o_v*n_v - o_k) * recip;
+#else
+	t = (n_d - o_u*n_u - o_v*n_v - o_k) /
+		(d_u * n_u + d_v * n_v + d_k);
+#endif
 
 	if (t < mint || t > maxt)
 		return false;
