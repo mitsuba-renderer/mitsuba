@@ -26,6 +26,7 @@
 #include "navdlg.h"
 #include "aboutdlg.h"
 #include "importdlg.h"
+#include "loaddlg.h"
 #include "server.h"
 #include "save.h"
 #include <QtNetwork>
@@ -600,31 +601,21 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	for (int i=0; i<m_searchPaths.size(); ++i)
 		newResolver->addPath(m_searchPaths[i].toStdString());
 
-	ref<SceneLoader> loadingThread = new SceneLoader(newResolver, filename.file_string());
+	ref<SceneLoader> loadingThread 
+		= new SceneLoader(newResolver, filename.file_string());
+	LoadDialog *loaddlg = new LoadDialog(this);
+	loaddlg->setAttribute(Qt::WA_DeleteOnClose);
+	loaddlg->setWindowModality(Qt::WindowModal);
+	loaddlg->setWindowTitle("Loading ..");
+	loaddlg->show();
 	loadingThread->start();
-
-	QDialog *dialog = new NonClosableDialog(this);
-	dialog->setWindowModality(Qt::WindowModal);
-	dialog->setWindowTitle("Loading ..");
-	QVBoxLayout *layout = new QVBoxLayout(dialog);
-	QProgressBar *progressBar = new QProgressBar(dialog);
-	dialog->resize(200, 50);
-	layout->addWidget(progressBar);
-	progressBar->setTextVisible(false);
-	// weird, Qt/Win needs this to get a busy indicator
-	progressBar->setValue(1);
-	progressBar->setRange(0, 0);
-	dialog->show();
-	progressBar->show();
 
 	while (loadingThread->isRunning()) {
 		QCoreApplication::processEvents();
 		loadingThread->wait(20);
 	}
 	loadingThread->join();
-
-	dialog->hide();
-	delete dialog;
+	loaddlg->close();
 
 	SceneContext *result = loadingThread->getResult();
 	if (result == NULL) {
