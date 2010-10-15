@@ -72,12 +72,24 @@ public:
 	/// Should date information be included? The default is yes.
 	inline void setHaveDate(bool value) { m_haveDate = value; }
 
+	/// Should thread information be included? The default is yes.
+	inline void setHaveThread(bool value) { m_haveThread = value; }
+
+	/// Should log level information be included? The default is yes.
+	inline void setHaveLogLevel(bool value) { m_haveLogLevel = value; }
+
+	/// Should class information be included? The default is yes.
+	inline void setHaveClass(bool value) { m_haveClass = value; }
+
 	MTS_DECLARE_CLASS()
 protected:
 	/// Virtual destructor
 	virtual ~DefaultFormatter() { }
 protected:
 	bool m_haveDate;
+	bool m_haveLogLevel;
+	bool m_haveThread;
+	bool m_haveClass;
 };
 
 MTS_NAMESPACE_END

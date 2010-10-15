@@ -31,7 +31,7 @@
 #include <stdexcept>
 
 #if defined(WIN32)
-#include "getopt.h"
+#include <mitsuba/core/getopt.h>
 #else
 #include <signal.h>
 #endif

@@ -130,7 +130,7 @@ protected:
 		const Shape *shape = m_shapes[shapeIdx];
 		if (m_triangleFlag[shapeIdx]) {
 			const TriMesh *mesh = static_cast<const TriMesh *>(shape);
-			return mesh->getTriangles()[idx].getAABB(mesh->getVertexBuffer());
+			return mesh->getTriangles()[idx].getAABB(mesh->getVertexPositions());
 		} else {
 			return shape->getAABB();
 		}
@@ -142,7 +142,7 @@ protected:
 		const Shape *shape = m_shapes[shapeIdx];
 		if (m_triangleFlag[shapeIdx]) {
 			const TriMesh *mesh = static_cast<const TriMesh *>(shape);
-			return mesh->getTriangles()[idx].getClippedAABB(mesh->getVertexBuffer(), aabb);
+			return mesh->getTriangles()[idx].getClippedAABB(mesh->getVertexPositions(), aabb);
 		} else {
 			return shape->getAABB();
 		}
@@ -173,7 +173,7 @@ protected:
 		if (EXPECT_TAKEN(m_triangleFlag[shapeIdx])) {
 			const TriMesh *mesh = static_cast<const TriMesh *>(m_shapes[shapeIdx]);
 			const Triangle &tri = mesh->getTriangles()[idx];
-			if (tri.rayIntersect(mesh->getVertexBuffer(), ray, tempU, tempV, tempT)) {
+			if (tri.rayIntersect(mesh->getVertexPositions(), ray, tempU, tempV, tempT)) {
 				if (tempT < mint || tempT > maxt)
 					return ENo;
 				IntersectionCache *cache = static_cast<IntersectionCache *>(temp);

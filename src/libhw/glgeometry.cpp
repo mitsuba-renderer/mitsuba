@@ -41,46 +41,64 @@ void GLGeometry::init() {
 }
 void GLGeometry::refresh() {
 	Assert(m_vertexID != 0 && m_indexID != 0);
-#if defined(MTS_HAS_VERTEX_COLORS)
-	const int floatsPerVertex = 14;
-#else
-	const int floatsPerVertex = 11;
-#endif
+	m_stride = 3;
+	if (m_mesh->getVertexNormals())
+		m_stride += 3;
+	if (m_mesh->getVertexTexcoords())
+		m_stride += 2;
+	if (m_mesh->getVertexTangents())
+		m_stride += 3;
+	if (m_mesh->getVertexColors())
+		m_stride += 3;
+	m_stride *= sizeof(GLfloat);
 
-	m_vertexSize = m_mesh->getVertexCount() * sizeof(GLfloat) *
-		floatsPerVertex;
+	m_vertexSize = m_mesh->getVertexCount() * m_stride;
 	m_indexSize = m_mesh->getTriangleCount() * sizeof(GLuint) * 3;
 
 	Log(EDebug, "Uploading a GPU geometry object (\"%s\", " SIZE_T_FMT 
-		" vertices, " SIZE_T_FMT " triangles, %.1f KiB)",
+		" vertices, " SIZE_T_FMT " triangles, %s)",
 		getName().c_str(),
 		m_mesh->getVertexCount(),
 		m_mesh->getTriangleCount(),
-		(m_vertexSize + m_indexSize) / 1024.0f);
+		memString(m_vertexSize + m_indexSize).c_str());
 
-	GLfloat *vertices = new GLfloat[m_mesh->getVertexCount() * floatsPerVertex];
+	GLfloat *vertices = new GLfloat[m_mesh->getVertexCount()
+		* m_stride/sizeof(GLfloat)];
 	GLuint *indices = (GLuint *) m_mesh->getTriangles();
-	const Vertex *source = m_mesh->getVertexBuffer();
-	int pos = 0;
+	const Point *sourcePositions = m_mesh->getVertexPositions();
+	const Normal *sourceNormals = m_mesh->getVertexNormals();
+	const Point2 *sourceTexcoords = m_mesh->getVertexTexcoords();
+	const Spectrum *sourceColors = m_mesh->getVertexColors();
+	const TangentSpace *sourceTangents = m_mesh->getVertexTangents();
+
+	size_t pos = 0;
 	for (size_t i=0; i<m_mesh->getVertexCount(); ++i) {
-		const Vertex &vtx = source[i];
-		vertices[pos++] = (float) vtx.p.x;
-		vertices[pos++] = (float) vtx.p.y;
-		vertices[pos++] = (float) vtx.p.z;
-		vertices[pos++] = (float) vtx.n.x;
-		vertices[pos++] = (float) vtx.n.y;
-		vertices[pos++] = (float) vtx.n.z;
-		vertices[pos++] = (float) vtx.uv.x;
-		vertices[pos++] = (float) vtx.uv.y;
-		vertices[pos++] = (float) vtx.dpdu.x;
-		vertices[pos++] = (float) vtx.dpdu.y;
-		vertices[pos++] = (float) vtx.dpdu.z;
-#if defined(MTS_HAS_VERTEX_COLORS)
-		vertices[pos++] = (float) vtx.color[0];
-		vertices[pos++] = (float) vtx.color[1];
-		vertices[pos++] = (float) vtx.color[2];
-#endif
+		vertices[pos++] = (float) sourcePositions[i].x;
+		vertices[pos++] = (float) sourcePositions[i].y;
+		vertices[pos++] = (float) sourcePositions[i].z;
+		if (sourceNormals) {
+			vertices[pos++] = (float) sourceNormals[i].x;
+			vertices[pos++] = (float) sourceNormals[i].y;
+			vertices[pos++] = (float) sourceNormals[i].z;
+		}
+		if (sourceTexcoords) {
+			vertices[pos++] = (float) sourceTexcoords[i].x;
+			vertices[pos++] = (float) sourceTexcoords[i].y;
+		}
+		if (sourceTangents) {
+			vertices[pos++] = (float) sourceTangents[i].dpdu.x;
+			vertices[pos++] = (float) sourceTangents[i].dpdu.y;
+			vertices[pos++] = (float) sourceTangents[i].dpdu.z;
+		}
+		if (sourceColors) {
+			Float r, g, b;
+			sourceColors[i].toLinearRGB(r, g, b);
+			vertices[pos++] = (float) r;
+			vertices[pos++] = (float) g;
+			vertices[pos++] = (float) b;
+		}
 	}
+	Assert(pos * sizeof(GLfloat) == m_stride * m_mesh->getVertexCount());
 
 	bind();
 

@@ -58,8 +58,6 @@ public:
 
 		Assert(m_triangleCtr == m_triangleCount);
 		Assert(m_vertexCtr == m_vertexCount);
-
-		calculateTangentSpaceBasis(m_hasNormals, m_hasTexCoords, true);
 	}
 
 	PLYLoader(Stream *stream, InstanceManager *manager) : TriMesh(stream, manager) { }
@@ -97,7 +95,7 @@ public:
 		element_definition_callback(const std::string& element_name, std::size_t count) {
 		if (element_name == "vertex") {
 			m_vertexCount = count;
-			m_vertexBuffer = new Vertex[count];
+			m_positions = new Point[m_vertexCount];
 			return std::tr1::tuple<std::tr1::function<void()>,
 				std::tr1::function<void()> >(
 					std::tr1::bind(&PLYLoader::vertex_begin_callback, this),
@@ -121,10 +119,18 @@ public:
 	void vertex_x_callback(ply::float32 x) { m_position.x = x; }
 	void vertex_y_callback(ply::float32 y) { m_position.y = y; }
 	void vertex_z_callback(ply::float32 z) { m_position.z = z; }
-	void normal_x_callback(ply::float32 x) { m_normal.x = x; }
+	void normal_x_callback(ply::float32 x) { 
+		if (!m_normals)
+			m_normals = new Normal[m_vertexCount];
+		m_normal.x = x; 
+	}
 	void normal_y_callback(ply::float32 y) { m_normal.y = y; }
 	void normal_z_callback(ply::float32 z) { m_normal.z = z; }
-	void texcoord_u_callback(ply::float32 x) { m_uv.x = x; }
+	void texcoord_u_callback(ply::float32 x) {
+		if (!m_texcoords)
+			m_texcoords = new Point2[m_vertexCount];
+		m_uv.x = x;
+	}
 	void texcoord_v_callback(ply::float32 y) { m_uv.y = y; }
 
 	inline Float fromSRGBComponent(Float value) {
@@ -136,31 +142,42 @@ public:
 
 	void vertex_begin_callback() { }
 	void vertex_end_callback() {
-		m_vertexBuffer[m_vertexCtr].p = m_objectToWorld(m_position);
-		m_vertexBuffer[m_vertexCtr].n = m_objectToWorld(m_normal);
-		m_vertexBuffer[m_vertexCtr].uv = m_uv;
-		m_vertexBuffer[m_vertexCtr].dpdu = Vector(0.0f);
-		m_vertexBuffer[m_vertexCtr].dpdv = Vector(0.0f);
-#if defined(MTS_HAS_VERTEX_COLORS)
-		if (m_sRGB) {
-			m_red = fromSRGBComponent(m_red);
-			m_green = fromSRGBComponent(m_green);
-			m_blue = fromSRGBComponent(m_blue);
+		m_positions[m_vertexCtr] = m_objectToWorld(m_position);
+		if (m_normals)
+			m_normals[m_vertexCtr] = m_objectToWorld(m_normal);
+		if (m_texcoords)
+			m_texcoords[m_vertexCtr] = m_uv;
+		if (m_colors) {
+			if (m_sRGB)
+				m_colors[m_vertexCtr].fromSRGB(m_red, m_green, m_blue);
+			else
+				m_colors[m_vertexCtr].fromLinearRGB(m_red, m_green, m_blue);
 		}
-		m_vertexBuffer[m_vertexCtr].color[0] = m_red;
-		m_vertexBuffer[m_vertexCtr].color[1] = m_green;
-		m_vertexBuffer[m_vertexCtr].color[2] = m_blue;
-#endif
 		m_vertexCtr++;
 	}
 
-	void red_callback_uint8(ply::uint8 r) { m_red = r / 255.0f; }
+	void red_callback_uint8(ply::uint8 r) {
+		if (!m_colors)
+			m_colors = new Spectrum[m_vertexCount];
+		m_red = r / 255.0f;
+	}
 	void green_callback_uint8(ply::uint8 g) { m_green = g / 255.0f; }
 	void blue_callback_uint8(ply::uint8 b) { m_blue = b / 255.0f; }
-
-	void red_callback(ply::float32 r) { m_red = r; }
+	void red_callback(ply::float32 r) {
+		if (!m_colors)
+			m_colors = new Spectrum[m_vertexCount];
+		m_red = r;
+	}
 	void green_callback(ply::float32 g) { m_green = g; }
 	void blue_callback(ply::float32 b) { m_blue = b; }
+
+	/* Face colors are unsupported */
+	void face_red_callback_uint8(ply::uint8 r) { }
+	void face_green_callback_uint8(ply::uint8 g) { }
+	void face_blue_callback_uint8(ply::uint8 b) { }
+	void face_red_callback(ply::float32 r) { }
+	void face_green_callback(ply::float32 g) { }
+	void face_blue_callback(ply::float32 b) { }
 
 	void face_begin_callback() { }
 	void face_end_callback() { }
@@ -235,6 +252,14 @@ template<> std::tr1::function <void (ply::float32)>
 		} else if (property_name == "diffuse_blue" || property_name == "blue") {
 			return std::tr1::bind(&PLYLoader::blue_callback, this,  _1);
 		}
+	} else if (element_name == "face") {
+		if (property_name == "diffuse_red" || property_name == "red") {
+			return std::tr1::bind(&PLYLoader::face_red_callback, this,  _1);
+		} else if (property_name == "diffuse_green" || property_name == "green") {
+			return std::tr1::bind(&PLYLoader::face_green_callback, this,  _1);
+		} else if (property_name == "diffuse_blue" || property_name == "blue") {
+			return std::tr1::bind(&PLYLoader::face_blue_callback, this,  _1);
+		}
 	}
 	return 0;
 }
@@ -249,6 +274,14 @@ template<> std::tr1::function <void (ply::uint8)>
 			return std::tr1::bind(&PLYLoader::green_callback_uint8, this,  _1);
 		} else if (property_name == "diffuse_blue" || property_name == "blue") {
 			return std::tr1::bind(&PLYLoader::blue_callback_uint8, this,  _1);
+		}
+	} else if (element_name == "face") {
+		if (property_name == "diffuse_red" || property_name == "red") {
+			return std::tr1::bind(&PLYLoader::face_red_callback_uint8, this,  _1);
+		} else if (property_name == "diffuse_green" || property_name == "green") {
+			return std::tr1::bind(&PLYLoader::face_green_callback_uint8, this,  _1);
+		} else if (property_name == "diffuse_blue" || property_name == "blue") {
+			return std::tr1::bind(&PLYLoader::face_blue_callback_uint8, this,  _1);
 		}
 	}
 	return 0;
@@ -366,9 +399,17 @@ void PLYLoader::loadPLY(const fs::path &path) {
 	ref<Timer> timer = new Timer();
 	ply_parser.parse(path.file_string());
 
+	size_t vertexSize = sizeof(Point);
+	if (m_normals)
+		vertexSize += sizeof(Normal);
+	if (m_colors)
+		vertexSize += sizeof(Spectrum);
+	if (m_texcoords)
+		vertexSize += sizeof(Point2);
+
 	Log(EInfo, "\"%s\": Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
 			" vertices (%s in %i ms).", m_name.c_str(), m_triangleCount, m_vertexCount,
-			memString(sizeof(uint32_t) * m_triangleCount * 3 + sizeof(Vertex) * m_vertexCount).c_str(),
+			memString(sizeof(uint32_t) * m_triangleCount * 3 + vertexSize * m_vertexCount).c_str(),
 			timer->getMilliseconds());
 }
 

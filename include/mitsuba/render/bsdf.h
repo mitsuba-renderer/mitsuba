@@ -117,7 +117,7 @@ public:
 	int component, sampledComponent;
 };
 
-/** \brief Abstract BxDF base-class, which supports reflection and
+/** \brief Abstract BSDF base-class, which supports reflection and
  * transmission using a common interface for sampling and evaluation.
  * A BSDF can consist of several components, which can optionally be
  * independently sampled and/or evaluated.
@@ -128,13 +128,14 @@ public:
 	 * BSDF classification types, can be combined using binary OR.
 	 */
 	enum EBSDFType {
-		EUnknown              = 0x00,
-		EDiffuseReflection    = 0x01, /* Perfect diffuse reflection */
-		EDiffuseTransmission  = 0x02, /* Perfect diffuse transmission */
-		EDeltaReflection      = 0x04, /* Reflection using a delta function */
-		EDeltaTransmission    = 0x08, /* Transmission using a delta function */
-		EGlossyReflection     = 0x10, /* Glossy reflection */
-		EGlossyTransmission   = 0x20  /* Glossy transmission */
+		EUnknown              = 0x0000,
+		EDiffuseReflection    = 0x0001, /* Perfect diffuse reflection */
+		EDiffuseTransmission  = 0x0002, /* Perfect diffuse transmission */
+		EDeltaReflection      = 0x0004, /* Reflection using a delta function */
+		EDeltaTransmission    = 0x0008, /* Transmission using a delta function */
+		EGlossyReflection     = 0x0010, /* Glossy reflection */
+		EGlossyTransmission   = 0x0020, /* Glossy transmission */
+		EAnisotropicMaterial  = 0x1000  /* Reflection is not invariant to rotation */
 	};
 
 	/// Type combinations
@@ -148,17 +149,17 @@ public:
 		EAll          = EDiffuse | EDelta | EGlossy
 	};
 
-	/// Return the number of components of this BxDF
+	/// Return the number of components of this BSDF
 	inline int getComponentCount() const {
 		return m_componentCount;
 	}
 
-	/// Return an (OR-ed) integer listing this BxDF's components
+	/// Return an (OR-ed) integer listing this BSDF's components
 	inline unsigned int getType() const {
 		return m_combinedType;
 	}
 
-	/// Returns the BxDF type for a specific component
+	/// Returns the BSDF type for a specific component
 	inline unsigned int getType(int component) const {
 		return m_type[component];
 	}
@@ -168,7 +169,7 @@ public:
 		return (type & m_combinedType) != 0;
 	}
 
-	/// Return whether this BxDF makes use of ray differentials
+	/// Return whether this BSDF makes use of ray differentials
 	inline bool usesRayDifferentials() const {
 		return m_usesRayDifferentials;
 	}
@@ -177,14 +178,14 @@ public:
 	virtual Spectrum getDiffuseReflectance(const Intersection &its) const = 0;
 
 	/**
-	 * Sample the BxDF and divide by the probability of the sample. If a
+	 * Sample the BSDF and divide by the probability of the sample. If a
 	 * component mask or a specific component index is given, the sample
 	 * is drawn from the matching component. Depending on the transport type
 	 * the BSDF or its adjoint version is used. 
 	 * @return The BSDF value divided by the sample probability
 	 */
 	virtual Spectrum sample(BSDFQueryRecord &bRec) const = 0;
-	
+
 	/**
 	 * Convenience method - similar to sample(), but also multiplies
 	 * by the cosine factor of the sampled direction.
@@ -198,7 +199,7 @@ public:
 	}
 
 	/**
-	 * Sample the BxDF and explicitly provided the probability density
+	 * Sample the BSDF and explicitly provided the probability density
 	 * of the sampled direction. If a component mask or a specific 
 	 * component index is given, the sample is drawn from the matching 
 	 * component. Depending on the transport type the BSDF or its adjoint 
@@ -219,11 +220,11 @@ public:
 		return bsdfVal * std::abs(Frame::cosTheta(bRec.wo));
 	}
 
-	/// Evaluate the BxDF f(wi, wo) or its adjoint version f^{*}(wi, wo)
+	/// Evaluate the BSDF f(wi, wo) or its adjoint version f^{*}(wi, wo)
 	virtual Spectrum f(const BSDFQueryRecord &bRec) const = 0;
 
 	/**
-	 * Evaluate the BxDF f(wi, wo) or its adjoint version f^{*}(wi, wo).
+	 * Evaluate the BSDF f(wi, wo) or its adjoint version f^{*}(wi, wo).
 	 * Also multiplies by the cosine factor of the sampled direction.
 	 */
 	inline Spectrum fCos(const BSDFQueryRecord &bRec) const  {

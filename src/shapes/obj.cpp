@@ -40,6 +40,18 @@ public:
 		FileResolver *fResolver = Thread::getThread()->getFileResolver();
 		fs::path path = fResolver->resolve(props.getString("filename"));
 		m_name = path.stem();
+	
+		/* By default, any existing normals will be used for
+		   rendering. If no normals are found, Mitsuba will
+		   automatically generate smooth vertex normals. 
+		   Setting the 'faceNormals' parameter instead forces
+		   the use of face normals, which will result in a faceted
+		   appearance.
+		*/
+		m_faceNormals = props.getBoolean("faceNormals", false);
+
+		/* Causes all normals to be flipped */
+		m_flipNormals = props.getBoolean("flipNormals", false);
 
 		/* Load the geometry */
 		Log(EInfo, "Loading geometry from \"%s\" ..", path.leaf().c_str());
@@ -223,7 +235,13 @@ public:
 		bsdf->incRef();
 		m_materials[name] = bsdf;
 	}
-	
+
+	struct Vertex {
+		Point p;
+		Normal n;
+		Point2 uv;
+	};
+
 	/// For using vertices as keys in an associative structure
 	struct vertex_key_order : public 
 		std::binary_function<Vertex, Vertex, bool> {
@@ -258,7 +276,7 @@ public:
 			BSDF *currentMaterial) {
 		if (triangles.size() == 0)
 			return;
-	
+
 		std::map<Vertex, int, vertex_key_order> vertexMap;
 		std::vector<Vertex> vertexBuffer;
 		size_t numMerged = 0;
@@ -298,14 +316,27 @@ public:
 			triangleArray[i] = tri;
 		}
 
-		Vertex *vertexArray = new Vertex[vertexBuffer.size()];
-		for (unsigned int i=0; i<vertexBuffer.size(); i++) 
-			vertexArray[i] = vertexBuffer[i];
+		ref<TriMesh> mesh = new TriMesh(name, m_worldToObject,
+			triangles.size(), vertexBuffer.size(),
+			hasNormals, hasTexcoords, false,
+			m_flipNormals, m_faceNormals);
 
-		ref<TriMesh> mesh = new TriMesh(name, m_worldToObject, triangleArray, 
-			triangles.size(), vertexArray, vertexBuffer.size());
+		std::copy(triangleArray, triangleArray+triangles.size(), mesh->getTriangles());
+
+		Point    *target_positions = mesh->getVertexPositions();
+		Normal   *target_normals   = mesh->getVertexNormals();
+		Point2   *target_texcoords = mesh->getVertexTexcoords();
+
+		for (size_t i=0; i<vertexBuffer.size(); i++) {
+			*target_positions++ = vertexBuffer[i].p;
+			if (hasNormals)
+				*target_normals++ = vertexBuffer[i].n;
+			if (hasTexcoords)
+				*target_texcoords++ = vertexBuffer[i].uv;
+		}
+
 		mesh->incRef();
-		mesh->calculateTangentSpaceBasis(hasNormals, hasTexcoords);
+		mesh->configure();
 		if (currentMaterial)
 			mesh->addChild("", currentMaterial);
 		m_meshes.push_back(mesh);
@@ -384,6 +415,7 @@ public:
 private:
 	std::vector<TriMesh *> m_meshes;
 	std::map<std::string, BSDF *> m_materials;
+	bool m_flipNormals, m_faceNormals;
 };
 
 MTS_IMPLEMENT_CLASS_S(WavefrontOBJ, false, Shape)

@@ -53,8 +53,7 @@ public:
  */
 struct MTS_EXPORT_RENDER Intersection {
 public:
-	inline Intersection() : t(std::numeric_limits<Float>::infinity()), shape(NULL) {
-	}
+	inline Intersection() : t(std::numeric_limits<Float>::infinity()), shape(NULL) { }
 
 	/* Convert a vector expressed inside the shading frame into world
 	   coordinates */
@@ -134,10 +133,8 @@ public:
 	/// Texture coordinate mapping partials wrt. changes in screen-space
 	Float dudx, dudy, dvdx, dvdy;
 
-#if defined(MTS_HAS_VERTEX_COLORS)
-	/// Interpolated vertex color (if enabled)
+	/// Interpolated vertex color
 	Spectrum color;
-#endif
 
 	/// Affected shape
 	const Shape *shape;

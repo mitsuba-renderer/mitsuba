@@ -20,90 +20,58 @@
 
 MTS_NAMESPACE_BEGIN
 
-bool Triangle::rayIntersect(const Vertex *buffer, const Ray &ray,
-	Float &u, Float &v, Float &t) const {
-	const Point &v0 = buffer[idx[0]].p;
-	const Point &v1 = buffer[idx[1]].p;
-	const Point &v2 = buffer[idx[2]].p;
-
-	/* find vectors for two edges sharing v[0] */
-	Vector edge1 = v1 - v0, edge2 = v2 - v0;
-
-	/* begin calculating determinant - also used to calculate U parameter */
-	Vector pvec = cross(ray.d, edge2);
-
-	/* if determinant is near zero, ray lies in plane of triangle */
-	Float det = dot(edge1, pvec);
-
-	if (det > -1e-8f && det < 1e-8f)
-		return false;
-	Float inv_det = 1.0f / det;
-
-	/* calculate distance from v[0] to ray origin */
-	Vector tvec = ray.o - v0;
-
-	/* calculate U parameter and test bounds */
-	u = dot(tvec, pvec) * inv_det;
-	if (u < 0.0 || u > 1.0)
-		return false;
-
-	/* prepare to test V parameter */
-	Vector qvec = cross(tvec, edge1);
-
-	/* calculate V parameter and test bounds */
-	v = dot(ray.d, qvec) * inv_det;
-	if (v < 0.0 || u + v > 1.0)
-		return false;
-
-	/* calculate t, ray intersects triangle */
-	t = dot(edge2, qvec) * inv_det;
-
-	return true;
-}
-
-Point Triangle::sample(const Vertex *buffer, Normal &normal, 
-	const Point2 &sample) const {
-	const Point &v0 = buffer[idx[0]].p;
-	const Point &v1 = buffer[idx[1]].p;
-	const Point &v2 = buffer[idx[2]].p;
-	const Normal &n0 = buffer[idx[0]].n;
-	const Normal &n1 = buffer[idx[1]].n;
-	const Normal &n2 = buffer[idx[2]].n;
+Point Triangle::sample(const Point *positions, const Normal *normals,
+		Normal &normal, const Point2 &sample) const {
+	const Point &p0 = positions[idx[0]];
+	const Point &p1 = positions[idx[1]];
+	const Point &p2 = positions[idx[2]];
 
 	Point2 bary = squareToTriangle(sample);
-	Vector sideA = v1 - v0, sideB = v2 - v0;
-	Point p = v0 + (sideA * bary.x) + (sideB * bary.y);	
-	normal = Normal(normalize(
-		n0 * (1.0f - bary.x - bary.y) +
-		n1 * bary.x + n2 * bary.y
-	));
+	Vector sideA = p1 - p0, sideB = p2 - p0;
+	Point p = p0 + (sideA * bary.x) + (sideB * bary.y);	
+	
+	if (normals) {
+		const Normal &n0 = normals[idx[0]];
+		const Normal &n1 = normals[idx[1]];
+		const Normal &n2 = normals[idx[2]];
+
+		normal = Normal(normalize(
+			n0 * (1.0f - bary.x - bary.y) +
+			n1 * bary.x + n2 * bary.y
+		));
+	} else {
+		normal = Normal(cross(sideA, sideB));
+	}
 
 	return p;
 }
 
-Float Triangle::surfaceArea(const Vertex *buffer) const {
-	const Point &v0 = buffer[idx[0]].p;
-	const Point &v1 = buffer[idx[1]].p;
-	const Point &v2 = buffer[idx[2]].p;
-	Vector sideA = v1 - v0, sideB = v2 - v0;
+Float Triangle::surfaceArea(const Point *positions) const {
+	const Point &p0 = positions[idx[0]];
+	const Point &p1 = positions[idx[1]];
+	const Point &p2 = positions[idx[2]];
+	Vector sideA = p1 - p0, sideB = p2 - p0;
 	return 0.5f * cross(sideA, sideB).length();
 }
 
 #define MAX_VERTS 10
 
-static int sutherlandHodgman(Point *input, int inCount, Point *output, int axis, 
-		Float splitPos, bool isMinimum) {
+static int sutherlandHodgman(Point3d *input, int inCount, Point3d *output, int axis, 
+		double splitPos, bool isMinimum) {
 	if (inCount < 3)
 		return 0;
 
-	Point cur         = input[0];
-	Float sign        = isMinimum ? 1.0f : -1.0f;
-	Float distance    = sign * (cur[axis] - splitPos);
+	Point3d cur       = input[0];
+	double sign       = isMinimum ? 1.0f : -1.0f;
+	double distance   = sign * (cur[axis] - splitPos);
 	bool  curIsInside = (distance >= 0);
 	int   outCount    = 0;
 
 	for (int i=0; i<inCount; ++i) {
-		Point next = input[(i+1)%inCount];
+		int nextIdx = i+1;
+		if (nextIdx == inCount)
+			nextIdx = 0;
+		Point3d next = input[nextIdx];
 		distance = sign * (next[axis] - splitPos);
 		bool nextIsInside = (distance >= 0);
 
@@ -113,16 +81,16 @@ static int sutherlandHodgman(Point *input, int inCount, Point *output, int axis,
 			output[outCount++] = next;
 		} else if (curIsInside && !nextIsInside) {
 			/* Going outside -- add the intersection */
-			Float t = (splitPos - cur[axis]) / (next[axis] - cur[axis]);
+			double t = (splitPos - cur[axis]) / (next[axis] - cur[axis]);
 			SAssertEx(outCount + 1 < MAX_VERTS, "Overflow in sutherlandHodgman()!");
-			Point p = cur + (next - cur) * t;
+			Point3d p = cur + (next - cur) * t;
 			p[axis] = splitPos; // Avoid roundoff errors
 			output[outCount++] = p;
 		} else if (!curIsInside && nextIsInside) {
 			/* Coming back inside -- add the intersection + next vertex */
-			Float t = (splitPos - cur[axis]) / (next[axis] - cur[axis]);
+			double t = (splitPos - cur[axis]) / (next[axis] - cur[axis]);
 			SAssertEx(outCount + 2 < MAX_VERTS, "Overflow in sutherlandHodgman()!");
-			Point p = cur + (next - cur) * t;
+			Point3d p = cur + (next - cur) * t;
 			p[axis] = splitPos; // Avoid roundoff errors
 			output[outCount++] = p;
 			output[outCount++] = next;
@@ -135,22 +103,18 @@ static int sutherlandHodgman(Point *input, int inCount, Point *output, int axis,
 	return outCount;
 }
 
-AABB Triangle::getClippedAABB(const Vertex *buffer, const AABB &aabb) const {
+AABB Triangle::getClippedAABB(const Point *positions, const AABB &aabb) const {
 	/* Reserve room for some additional vertices */
-	Point vertices1[MAX_VERTS], vertices2[MAX_VERTS];
+	Point3d vertices1[MAX_VERTS], vertices2[MAX_VERTS];
 	int nVertices = 3;
 
-#if defined(MTS_DEBUG_KD)
-	AABB origAABB;
-#endif
-
-
-	for (int i=0; i<3; ++i) {
-		vertices1[i] = buffer[idx[i]].p;
-#if defined(MTS_DEBUG_KD)
-		origAABB.expandBy(vertices1[i]);
-#endif
-	}
+	/* The kd-tree code will frequently call this function with
+	   almost-collapsed AABBs. It's extremely important not to introduce
+	   errors in such cases, otherwise the resulting tree will incorrectly
+	   remove triangles from the associated nodes. Hence, do the
+	   following computation in double precision! */
+	for (int i=0; i<3; ++i) 
+		vertices1[i] = Point3d(positions[idx[i]]);
 
 	for (int axis=0; axis<3; ++axis) {
 		nVertices = sutherlandHodgman(vertices1, nVertices, vertices2, axis, aabb.min[axis], true);
@@ -158,8 +122,36 @@ AABB Triangle::getClippedAABB(const Vertex *buffer, const AABB &aabb) const {
 	}
 
 	AABB result;
-	for (int i=0; i<nVertices; ++i) 
+	for (int i=0; i<nVertices; ++i) {
+#if defined(SINGLE_PRECISION)
+		for (int j=0; j<3; ++j) {
+			/* Now this is really paranoid! */
+			double pos_d = vertices1[i][j];
+			float  pos_f = (float) pos_d;
+			float  pos_roundedDown, pos_roundedUp;
+
+			if (pos_f < pos_d) {
+				/* Float value is too small */
+				pos_roundedDown = pos_f;
+				pos_roundedUp = nextafterf(pos_f, 
+					std::numeric_limits<float>::infinity());
+			} else if (pos_f > pos_d) {
+				/* Float value is too large */
+				pos_roundedUp = pos_f;
+				pos_roundedDown = nextafterf(pos_f, 
+					-std::numeric_limits<float>::infinity());
+			} else {
+				/* Double value is exactly representable */
+				pos_roundedDown = pos_roundedUp = pos_f;
+			}
+
+			result.min[j] = std::min(result.min[j], pos_roundedDown);
+			result.max[j] = std::max(result.max[j], pos_roundedUp);
+		}
+#else
 		result.expandBy(vertices1[i]);
+#endif
+	}
 	result.clip(aabb);
 
 	return result;

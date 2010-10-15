@@ -33,9 +33,6 @@
     data structures on the stack */
 #define MTS_KD_MAXDEPTH 48
 
-/// Min-max bin count
-#define MTS_KD_MINMAX_BINS 128
-
 /// OrderedChunkAllocator: don't create chunks smaller than 512 KiB
 #define MTS_KD_MIN_ALLOC 512*1024
 
@@ -394,7 +391,8 @@ private:
  */
 class ClassificationStorage {
 public:
-	ClassificationStorage(size_t size = 0) : m_buffer(NULL), m_bufferSize(0) { }
+	ClassificationStorage(size_t size = 0) 
+		: m_buffer(NULL), m_bufferSize(0) { }
 
 	~ClassificationStorage() {
 		if (m_buffer)
@@ -438,7 +436,8 @@ private:
  *
  * The code in this class is a fully generic kd-tree implementation, which
  * can theoretically support any kind of shape. However, subclasses still
- * need to provide the following signatures for a functional implementation:
+ * need to provide the following signatures for a functional 
+ * implementation:
  *
  * /// Return the total number of primitives
  * inline size_type getPrimitiveCount() const;
@@ -452,26 +451,28 @@ private:
  * /// Check whether a primitive is intersected by the given ray. Some
  * /// temporary space is supplied, which can be used to store extra 
  * /// information about the intersection
- * EIntersectionResult intersect(const Ray &ray, index_type idx, Float mint, 
- *		Float maxt, Float &t, void *tmp);
+ * EIntersectionResult intersect(const Ray &ray, index_type idx, 
+ *     Float mint, Float maxt, Float &t, void *tmp);
  *
- * This class follows the "Curiously recurring template" design pattern so that
- * the above functions can be inlined (no virtual calls will be necessary!).
+ * This class follows the "Curiously recurring template" design pattern 
+ * so that the above functions can be inlined (in particular, no virtual 
+ * calls will be necessary!).
  *
  * The kd-tree construction algorithm creates 'perfect split' trees as 
  * outlined in the paper "On Building fast kd-Trees for Ray Tracing, and on
  * doing that in O(N log N)" by Ingo Wald and Vlastimil Havran. 
  * For polygonal meshes, the involved Sutherland-Hodgman iterations can be 
- * quite expensive in terms of the overall construction time. The \ref setClip
- * method can be used to deactivate perfect splits at the cost of a 
- * lower-quality tree.
+ * quite expensive in terms of the overall construction time. The 
+ * \ref setClip method can be used to deactivate perfect splits at the 
+ * cost of a lower-quality tree.
  *
  * Because the O(N log N) construction algorithm tends to cause many
- * incoherent memory accesses, a fast approximate technique (Min-max binning)
- * is used near the top of the tree, which significantly reduces cache misses.
- * Once the input data has been narrowed down to a reasonable amount, the
- * implementation switches over to the O(N log N) builder. When multiple
- * processors are available, the build process runs in parallel.
+ * incoherent memory accesses, a fast approximate technique (Min-max 
+ * binning) is used near the top of the tree, which significantly reduces
+ * cache misses. Once the input data has been narrowed down to a 
+ * reasonable amount, the implementation switches over to the O(N log N)
+ * builder. When multiple processors are available, the build process runs
+ * in parallel.
  *
  * This implementation also provides an optimized ray traversal algorithm 
  * (TA^B_{rec}), which is explained in Vlastimil Havran's PhD thesis 
@@ -481,7 +482,9 @@ private:
  */
 template <typename Derived> class GenericKDTree : public Object {
 protected:
+	// Some forward declarations
 	struct KDNode;
+	struct MinMaxBins;
 	struct EdgeEvent;
 	struct EdgeEventOrdering;
 
@@ -492,7 +495,10 @@ public:
 	/// Size number format
 	typedef uint32_t size_type;
 
-	/// Documents the possible outcomes of a single ray-primitive intersection
+	/**
+	 * \brief Documents the possible outcomes of a single 
+	 * ray-primitive intersection computation
+	 */
 	enum EIntersectionResult {
 		/// An intersection was found on the specified interval
 		EYes = 0,
@@ -511,16 +517,17 @@ public:
 	 * the default parameters.
 	 */
 	GenericKDTree() : m_nodes(NULL), m_indices(NULL) {
-		m_traversalCost = 10;
-		m_intersectionCost = 17;
+		m_traversalCost = 15;
+		m_intersectionCost = 20;
 		m_emptySpaceBonus = 0.9f;
 		m_clip = true;
-		m_stopPrims = 4;
+		m_stopPrims = 6;
 		m_maxBadRefines = 3;
 		m_exactPrimThreshold = 65536;
 		m_maxDepth = 0;
 		m_retract = true;
 		m_parallelBuild = true;
+		m_minMaxBins = 128;
 	}
 
 	/**
@@ -555,7 +562,8 @@ public:
 	}
 
 	/**
-	 * \brief Return the intersection cost used by the surface area heuristic
+	 * \brief Return the intersection cost used by the surface 
+	 * area heuristic
 	 */
 	inline Float getIntersectionCost() const {
 		return m_intersectionCost;
@@ -582,6 +590,20 @@ public:
 	 */
 	inline void setMaxDepth(size_type maxDepth) {
 		m_maxDepth = maxDepth;
+	}
+
+	/**
+	 * \brief Set the number of bins used for Min-Max binning
+	 */
+	inline void setMinMaxBins(size_type minMaxBins) {
+		m_minMaxBins = minMaxBins;
+	}
+
+	/**
+	 * \brief Return the number of bins used for Min-Max binning
+	 */
+	inline size_type getMinMaxBins() const {
+		return m_minMaxBins;
 	}
 
 	/**
@@ -670,18 +692,18 @@ public:
 	}
 
 	/**
-	 * \brief Specify the number of primitives, at which the builder will switch
-	 * from (approximate) Min-Max binning to the accurate O(n log n) SAH-based 
-	 * optimization method.
+	 * \brief Specify the number of primitives, at which the builder will 
+	 * switch from (approximate) Min-Max binning to the accurate 
+	 * O(n log n) SAH-based optimization method.
 	 */
 	inline void setExactPrimitiveThreshold(size_type exactPrimThreshold) {
 		m_exactPrimThreshold = exactPrimThreshold;
 	}
 
 	/**
-	 * \brief Return the number of primitives, at which the builder will switch
-	 * from (approximate) Min-Max binning to the accurate O(n log n) SAH-based 
-	 * optimization method.
+	 * \brief Return the number of primitives, at which the builder will 
+	 * switch from (approximate) Min-Max binning to the accurate 
+	 * O(n log n) SAH-based optimization method.
 	 */
 	inline size_type getExactPrimitiveThreshold() const {
 		return m_exactPrimThreshold;
@@ -705,10 +727,11 @@ public:
 	inline const BSphere &getBSphere() const { return m_bsphere; }
 
 	/**
-	 * \brief Empirically find the best traversal and intersection cost values
+	 * \brief Empirically find the best traversal and intersection 
+	 * cost values
 	 *
-	 * This is done by running the traversal code on random rays and fitting 
-	 * the SAH cost model to the collected statistics.
+	 * This is done by running the traversal code on random rays 
+	 * and fitting the SAH cost model to the collected statistics.
 	 */
 	void findCosts(Float &traversalCost, Float &intersectionCost);
 
@@ -720,11 +743,32 @@ protected:
 	 * To be called by the subclass.
 	 */
 	void buildInternal() {
+		/* Some samity checks */
 		if (isBuilt()) 
 			Log(EError, "The kd-tree has already been built!");
+		if (m_traversalCost <= 0)
+			Log(EError, "The traveral cost must be > 0");
+		if (m_intersectionCost <= 0)
+			Log(EError, "The intersection cost must be > 0");
+		if (m_emptySpaceBonus <= 0 || m_emptySpaceBonus > 1)
+			Log(EError, "The empty space bonus must be in [0, 1]");
+		if (m_stopPrims <= 0)
+			Log(EError, "The stopping primitive count must be > 1");
+		if (m_exactPrimThreshold < 0)
+			Log(EError, "The exact primitive threshold must be >= 0");
+		if (m_minMaxBins <= 1)
+			Log(EError, "The number of min-max bins must be > 2");
 
 		size_type primCount = cast()->getPrimitiveCount();
-		BuildContext ctx(primCount);
+		if (primCount == 0) {
+			Log(EWarn, "kd-tree contains no geometry!");
+			// +1 shift is for alignment purposes (see KDNode::getSibling)
+			m_nodes = static_cast<KDNode *>(allocAligned(sizeof(KDNode) * 2))+1;
+			m_nodes[0].initLeafNode(0, 0);
+			return;
+		}
+
+		BuildContext ctx(primCount, m_minMaxBins);
 
 		/* Establish an ad-hoc depth cutoff value (Formula from PBRT) */
 		if (m_maxDepth == 0)
@@ -744,7 +788,8 @@ protected:
 			indices[i] = i;
 		}
 
-		Log(EDebug, "Computed scene bounds in %i ms", timer->getMilliseconds());
+		Log(EDebug, "Computed scene bounds in %i ms", 
+				timer->getMilliseconds());
 		Log(EDebug, "");
 
 		Log(EDebug, "kd-tree configuration:");
@@ -752,13 +797,16 @@ protected:
 		Log(EDebug, "   Intersection cost        : %.2f", m_intersectionCost);
 		Log(EDebug, "   Empty space bonus        : %.2f", m_emptySpaceBonus);
 		Log(EDebug, "   Max. tree depth          : %i", m_maxDepth);
-		Log(EDebug, "   Scene bounding box (min) : %s", m_aabb.min.toString().c_str());
-		Log(EDebug, "   Scene bounding box (max) : %s", m_aabb.max.toString().c_str());
-		Log(EDebug, "   Min-max bins             : %i", MTS_KD_MINMAX_BINS);
+		Log(EDebug, "   Scene bounding box (min) : %s", 
+				m_aabb.min.toString().c_str());
+		Log(EDebug, "   Scene bounding box (max) : %s", 
+				m_aabb.max.toString().c_str());
+		Log(EDebug, "   Min-max bins             : %i", m_minMaxBins);
 		Log(EDebug, "   Greedy SAH optimization  : use for <= %i primitives", 
 				m_exactPrimThreshold);
 		Log(EDebug, "   Perfect splits           : %s", m_clip ? "yes" : "no");
-		Log(EDebug, "   Retract bad splits       : %s", m_retract ? "yes" : "no");
+		Log(EDebug, "   Retract bad splits       : %s", 
+				m_retract ? "yes" : "no");
 		Log(EDebug, "   Stopping primitive count : %i", m_stopPrims);
 		Log(EDebug, "");
 
@@ -845,13 +893,19 @@ protected:
 				sizeof(KDNode) * (m_nodeCount+1)))+1;
 		m_indices = new index_type[ctx.primIndexCount];
 
-		stack.push(boost::make_tuple(prelimRoot, &m_nodes[nodePtr++], &ctx, m_aabb));
+		stack.push(boost::make_tuple(prelimRoot, &m_nodes[nodePtr++], 
+					&ctx, m_aabb));
 		while (!stack.empty()) {
 			const KDNode *node = boost::get<0>(stack.top());
 			KDNode *target = boost::get<1>(stack.top());
 			const BuildContext *context = boost::get<2>(stack.top());
 			AABB aabb = boost::get<3>(stack.top());
 			stack.pop();
+			typename std::map<const KDNode *, index_type>::const_iterator it 
+				= m_interface.threadMap.find(node);
+			// Check if we're switching to a subtree built by a worker thread
+			if (it != m_interface.threadMap.end()) 
+				context = &m_builders[(*it).second]->getContext();
 
 			if (node->isLeaf()) {
 				size_type primStart = node->getPrimStart(),
@@ -870,15 +924,9 @@ protected:
 
 				const BlockedVector<index_type, MTS_KD_BLOCKSIZE_IDX> &indices 
 					= context->indices;
-				for (size_type idx = primStart; idx<primEnd; ++idx)
+				for (size_type idx = primStart; idx<primEnd; ++idx) 
 					m_indices[indexPtr++] = indices[idx];
 			} else {
-				typename std::map<const KDNode *, index_type>::const_iterator it 
-					= m_interface.threadMap.find(node);
-				// Check if we're switching to a subtree built by a worker thread
-				if (it != m_interface.threadMap.end()) 
-					context = &m_builders[(*it).second]->getContext();
-
 				Float sa = aabb.getSurfaceArea();
 				expTraversalSteps += sa;
 				sahCost += sa * m_traversalCost;
@@ -954,7 +1002,8 @@ protected:
 				memString(indexPtr * sizeof(index_type)).c_str());
 		Log(EDebug, "   Inner nodes               : %i", ctx.innerNodeCount);
 		Log(EDebug, "   Leaf nodes                : %i", ctx.leafNodeCount);
-		Log(EDebug, "   Nonempty leaf nodes       : %i", ctx.nonemptyLeafNodeCount);
+		Log(EDebug, "   Nonempty leaf nodes       : %i", 
+				ctx.nonemptyLeafNodeCount);
 		std::ostringstream oss;
 		oss << "   Leaf node histogram       : ";
 		for (size_type i=0; i<primBucketCount; i++) {
@@ -976,7 +1025,8 @@ protected:
 				ctx.primIndexCount / (Float) ctx.nonemptyLeafNodeCount);
 		Log(EDebug, "   Expected traversals/ray   : %.2f", expTraversalSteps);
 		Log(EDebug, "   Expected leaf visits/ray  : %.2f", expLeavesVisited);
-		Log(EDebug, "   Expected prim. visits/ray : %.2f", expPrimitivesIntersected);
+		Log(EDebug, "   Expected prim. visits/ray : %.2f", 
+				expPrimitivesIntersected);
 		Log(EDebug, "   Final SAH cost            : %.2f", sahCost);
 		Log(EDebug, "");
 	}
@@ -1096,6 +1146,7 @@ protected:
 		BlockedVector<KDNode, MTS_KD_BLOCKSIZE_KD> nodes;
 		BlockedVector<index_type, MTS_KD_BLOCKSIZE_IDX> indices;
 		ClassificationStorage classStorage;
+		MinMaxBins minMaxBins;
 
 		size_type leafNodeCount;
 		size_type nonemptyLeafNodeCount;
@@ -1104,7 +1155,8 @@ protected:
 		size_type retractedSplits;
 		size_type pruned;
 
-		BuildContext(size_type primCount) : classStorage(primCount) {
+		BuildContext(size_type primCount, size_type binCount)
+			: classStorage(primCount), minMaxBins(binCount) {
 			classStorage.setPrimitiveCount(primCount);
 			leafNodeCount = 0;
 			nonemptyLeafNodeCount = 0;
@@ -1123,15 +1175,18 @@ protected:
 
 		void printStats() {
 			Log(EDebug, "      Left events   : " SIZE_T_FMT " chunks (%s)",
-					leftAlloc.getChunkCount(), memString(leftAlloc.size()).c_str());
+					leftAlloc.getChunkCount(), 
+					memString(leftAlloc.size()).c_str());
 			Log(EDebug, "      Right events  : " SIZE_T_FMT " chunks (%s)",
-					rightAlloc.getChunkCount(), memString(rightAlloc.size()).c_str());
-			Log(EDebug, "      kd-tree nodes : " SIZE_T_FMT " entries, " SIZE_T_FMT 
-					" blocks (%s)", nodes.size(), nodes.blockCount(), 
+					rightAlloc.getChunkCount(), 
+					memString(rightAlloc.size()).c_str());
+			Log(EDebug, "      kd-tree nodes : " SIZE_T_FMT " entries, " 
+					SIZE_T_FMT " blocks (%s)", nodes.size(), nodes.blockCount(), 
 					memString(nodes.capacity() * sizeof(KDNode)).c_str());
-			Log(EDebug, "      Indices       : " SIZE_T_FMT " entries, " SIZE_T_FMT 
-					" blocks (%s)", indices.size(), indices.blockCount(), 
-					memString(indices.capacity() * sizeof(index_type)).c_str());
+			Log(EDebug, "      Indices       : " SIZE_T_FMT " entries, " 
+					SIZE_T_FMT " blocks (%s)", indices.size(), 
+					indices.blockCount(), memString(indices.capacity()
+					* sizeof(index_type)).c_str());
 		}
 
 		void accumulateStatisticsFrom(const BuildContext &ctx) {
@@ -1295,7 +1350,10 @@ protected:
 			return getLeft() + 1;
 		}
 
-		/// Return the split plane location (assuming that this is an interior node)
+		/**
+		 * \brief Return the split plane location (assuming that this 
+		 * is an interior node)
+		 */
 		FINLINE float getSplit() const {
 			return inner.split;
 		}
@@ -1314,7 +1372,8 @@ protected:
 			} else {
 				oss << "KDNode[interior, axis=" << getAxis() 
 					<< ", split=" << getAxis() 
-					<< ", leftOffset=" << ((inner.combined & EInnerOffsetMask) >> 2)
+					<< ", leftOffset="
+					<< ((inner.combined & EInnerOffsetMask) >> 2)
 					<< "]";
 			}
 			return oss.str();
@@ -1353,7 +1412,8 @@ protected:
 			: Thread(formatString("bld%i", id)),
 			m_id(id),
 			m_parent(parent),
-			m_context(parent->cast()->getPrimitiveCount()),
+			m_context(parent->cast()->getPrimitiveCount(),
+					  parent->getMinMaxBins()),
 			m_interface(parent->m_interface) {
 			setCritical(true);
 		}
@@ -1444,10 +1504,13 @@ protected:
 				float min = (float) aabb.min[axis], max = (float) aabb.max[axis];
 
 				if (min == max) {
-					*eventEnd++ = EdgeEvent(EdgeEvent::EEdgePlanar, axis, min, index);
+					*eventEnd++ = EdgeEvent(EdgeEvent::EEdgePlanar, axis, 
+							min, index);
 				} else {
-					*eventEnd++ = EdgeEvent(EdgeEvent::EEdgeStart, axis, min, index);
-					*eventEnd++ = EdgeEvent(EdgeEvent::EEdgeEnd, axis, max, index);
+					*eventEnd++ = EdgeEvent(EdgeEvent::EEdgeStart, axis, 
+							min, index);
+					*eventEnd++ = EdgeEvent(EdgeEvent::EEdgeEnd, axis, 
+							max, index);
 				}
 			}
 			++actualPrimCount;
@@ -1623,14 +1686,13 @@ protected:
 				m_interface.eventStart = boost::get<0>(events);
 				m_interface.eventEnd = boost::get<1>(events);
 				m_interface.primCount = boost::get<2>(events);
-				badRefines = badRefines;
+				m_interface.badRefines = badRefines;
 				m_interface.cond->signal();
 
 				/* Wait for a worker thread to take this job */
 				while (m_interface.node)
 					m_interface.condJobTaken->wait();
 				m_interface.mutex->unlock();
-
 
 				// Never tear down this subtree (return a SAH cost of -infinity)
 				sahCost = -std::numeric_limits<Float>::infinity();
@@ -1639,8 +1701,8 @@ protected:
 						EdgeEventOrdering());
 
 				sahCost = buildTreeSAH(ctx, depth, node, nodeAABB,
-					boost::get<0>(events), boost::get<1>(events), boost::get<2>(events),
-					isLeftChild, badRefines);
+					boost::get<0>(events), boost::get<1>(events), 
+					boost::get<2>(events), isLeftChild, badRefines);
 			}
 			alloc.release(boost::get<0>(events));
 			return sahCost;
@@ -1650,14 +1712,14 @@ protected:
 	    /*                              Binning                                 */
 	    /* ==================================================================== */
 
-		MinMaxBins<MTS_KD_MINMAX_BINS> bins(tightAABB);
-		bins.bin(cast(), indices, primCount);
+		ctx.minMaxBins.setAABB(tightAABB);
+		ctx.minMaxBins.bin(cast(), indices, primCount);
 
 		/* ==================================================================== */
 	    /*                        Split candidate search                        */
     	/* ==================================================================== */
-		SplitCandidate bestSplit = bins.maximizeSAH(m_traversalCost,
-			m_intersectionCost);
+		SplitCandidate bestSplit = ctx.minMaxBins.maximizeSAH(m_traversalCost,
+				m_intersectionCost);
 
 		/* "Bad refines" heuristic from PBRT */
 		if (bestSplit.sahCost >= leafCost) {
@@ -1675,8 +1737,8 @@ protected:
 	    /* ==================================================================== */
 
 		boost::tuple<AABB, index_type *, AABB, index_type *> partition = 
-			bins.partition(ctx, cast(), indices, bestSplit, isLeftChild, 
-			m_traversalCost, m_intersectionCost);
+			ctx.minMaxBins.partition(ctx, cast(), indices, bestSplit, 
+				isLeftChild, m_traversalCost, m_intersectionCost);
 
 		/* ==================================================================== */
 	    /*                              Recursion                               */
@@ -1696,7 +1758,8 @@ protected:
 			m_indirections.push_back(children);
 			/* Unable to store relative offset -- create an indirection
 			   table entry */
-			node->initIndirectionNode(bestSplit.axis, bestSplit.pos, indirectionIdx);
+			node->initIndirectionNode(bestSplit.axis, bestSplit.pos, 
+					indirectionIdx);
 			m_indirectionLock->unlock();
 		}
 		ctx.innerNodeCount++;
@@ -1881,9 +1944,11 @@ protected:
 						bestSplit.numRight = nR;
 					}
 				} else {
-					Float sahCostPlanarLeft  = m_intersectionCost + m_traversalCost 
+					Float sahCostPlanarLeft  = m_intersectionCost 
+						+ m_traversalCost 
 						* (pLeft * (nL+numPlanar) + pRight * nRF);
-					Float sahCostPlanarRight = m_intersectionCost + m_traversalCost 
+					Float sahCostPlanarRight = m_intersectionCost 
+						+ m_traversalCost 
 						* (pLeft * nLF + pRight * (nR+numPlanar));
 
 					if (nL + numPlanar == 0 || nR == 0)
@@ -1911,7 +1976,8 @@ protected:
 				}
 			} else {
 				#if defined(MTS_KD_DEBUG)
-				if (m_clip && (pos < nodeAABB.min[axis] || pos > nodeAABB.max[axis])) {
+				if (m_clip && (pos < nodeAABB.min[axis] 
+							|| pos > nodeAABB.max[axis])) {
 					/* When primitive clipping is active, this should  never happen! */
 					Log(EError, "Internal error: edge event is out of bounds");
 				}
@@ -2062,12 +2128,15 @@ protected:
 								  max = (float) clippedLeft.max[axis];
 
 							if (min == max) {
-								*newEventsLeftEnd++ = EdgeEvent(EdgeEvent::EEdgePlanar, 
+								*newEventsLeftEnd++ = EdgeEvent(
+										EdgeEvent::EEdgePlanar, 
 										axis, min, index);
 							} else {
-								*newEventsLeftEnd++ = EdgeEvent(EdgeEvent::EEdgeStart, 
+								*newEventsLeftEnd++ = EdgeEvent(
+										EdgeEvent::EEdgeStart, 
 										axis, min, index);
-								*newEventsLeftEnd++ = EdgeEvent(EdgeEvent::EEdgeEnd, 
+								*newEventsLeftEnd++ = EdgeEvent(
+										EdgeEvent::EEdgeEnd, 
 										axis, max, index);
 							}
 						}
@@ -2081,12 +2150,15 @@ protected:
 								  max = (float) clippedRight.max[axis];
 
 							if (min == max) {
-								*newEventsRightEnd++ = EdgeEvent(EdgeEvent::EEdgePlanar,
+								*newEventsRightEnd++ = EdgeEvent(
+										EdgeEvent::EEdgePlanar,
 										axis, min, index);
 							} else {
-								*newEventsRightEnd++ = EdgeEvent(EdgeEvent::EEdgeStart, 
+								*newEventsRightEnd++ = EdgeEvent(
+										EdgeEvent::EEdgeStart, 
 										axis, min, index);
-								*newEventsRightEnd++ = EdgeEvent(EdgeEvent::EEdgeEnd,
+								*newEventsRightEnd++ = EdgeEvent(
+										EdgeEvent::EEdgeEnd,
 										axis, max, index);
 							}
 						}
@@ -2172,7 +2244,8 @@ protected:
 			m_indirections.push_back(children);
 			/* Unable to store relative offset -- create an indirection
 			   table entry */
-			node->initIndirectionNode(bestSplit.axis, bestSplit.pos, indirectionIdx);
+			node->initIndirectionNode(bestSplit.axis, bestSplit.pos, 
+					indirectionIdx);
 			m_indirectionLock->unlock();
 		}
 		ctx.innerNodeCount++;
@@ -2225,12 +2298,24 @@ protected:
 	 * "Highly Parallel Fast KD-tree Construction for Interactive
 	 *  Ray Tracing of Dynamic Scenes"
 	 * by M. Shevtsov, A. Soupikov and A. Kapustin
-	 *
-	 * \tparam BinCount Number of bins to be allocated
 	 */
-	template <int BinCount> struct MinMaxBins {
-		MinMaxBins(const AABB &aabb) : m_aabb(aabb) {
-			m_binSize = m_aabb.getExtents() / BinCount;
+	struct MinMaxBins {
+		MinMaxBins(size_type nBins) : m_binCount(nBins) {
+			m_minBins = new size_type[m_binCount*3];
+			m_maxBins = new size_type[m_binCount*3];
+		}
+
+		~MinMaxBins() {
+			delete[] m_minBins;
+			delete[] m_maxBins;
+		}
+
+		/**
+		 * \brief Prepare to bin for the specified bounds
+		 */
+		void setAABB(const AABB &aabb) {
+			m_aabb = aabb;
+			m_binSize = m_aabb.getExtents() / m_binCount;
 			for (int axis=0; axis<3; ++axis) 
 				m_invBinSize[axis] = 1/m_binSize[axis];
 		}
@@ -2243,22 +2328,24 @@ protected:
 		 * \param indices Primitive indirection list
 		 * \param primCount Specifies the length of \a indices
 		 */
-		void bin(const Derived *derived, index_type *indices, size_type primCount) {
+		void bin(const Derived *derived, index_type *indices, 
+				size_type primCount) {
 			m_primCount = primCount;
-			memset(m_minBins, 0, sizeof(size_type) * 3 * BinCount);
-			memset(m_maxBins, 0, sizeof(size_type) * 3 * BinCount);
+			memset(m_minBins, 0, sizeof(size_type) * 3 * m_binCount);
+			memset(m_maxBins, 0, sizeof(size_type) * 3 * m_binCount);
+			const int64_t maxBin = m_binCount-1;
 
 			for (size_type i=0; i<m_primCount; ++i) {
 				const AABB aabb = derived->getAABB(indices[i]);
 				for (int axis=0; axis<3; ++axis) {
-					int minIdx = (int) ((aabb.min[axis] - m_aabb.min[axis]) 
+					int64_t minIdx = (int64_t) ((aabb.min[axis] - m_aabb.min[axis]) 
 							* m_invBinSize[axis]);
-					int maxIdx = (int) ((aabb.max[axis] - m_aabb.min[axis]) 
+					int64_t maxIdx = (int64_t) ((aabb.max[axis] - m_aabb.min[axis]) 
 							* m_invBinSize[axis]);
-					m_maxBins[axis * BinCount 
-						+ std::max(0, std::min(maxIdx, BinCount-1))]++;
-					m_minBins[axis * BinCount 
-						+ std::max(0, std::min(minIdx, BinCount-1))]++;
+					m_maxBins[axis * m_binCount 
+						+ std::max((int64_t) 0, std::min(maxIdx, maxBin))]++;
+					m_minBins[axis * m_binCount 
+						+ std::max((int64_t) 0, std::min(minIdx, maxBin))]++;
 				}
 			}
 		}
@@ -2280,7 +2367,7 @@ protected:
 				Float leftWidth = 0, rightWidth = extents[axis];
 				const Float binSize = m_binSize[axis];
 
-				for (int i=0; i<BinCount-1; ++i) {
+				for (int i=0; i<m_binCount-1; ++i) {
 					numLeft  += m_minBins[binIdx];
 					numRight -= m_maxBins[binIdx];
 					leftWidth += binSize;
@@ -2315,19 +2402,19 @@ protected:
 			const int axis = candidate.axis;
 			const Float min = m_aabb.min[axis];
 
-			/* This part is ensures that the returned split plane is consistent
-			 * with the floating point calculations done by the binning code 
-			 * in \ref bin(). Since reciprocals and various floating point 
-			 * roundoff errors are involved, simply setting
+			/* The following part may seem a bit paranoid. It is ensures that the 
+			 * returned split plane is consistent with the floating point calculations
+			 * done by the binning code in \ref bin(). Since reciprocals and 
+			 * various floating point roundoff errors are involved, simply setting
 			 *
 			 * candidate.pos = m_aabb.min[axis] + (leftBin+1) * m_binSize[axis];
 			 *
-			 * will potentially lead to a different number primitives being
-			 * classified to the left and right compared to the numbers stored
-			 * in candidate.numLeft and candidate.numRight. We can't have that,
-			 * however, since the partitioning code assumes that these 
-			 * numbers are correct. This removes the need for an extra sweep
-			 * through the whole primitive list.
+			 * can potentially lead to a slight different number primitives being
+			 * classified to the left and right if we were to do check each
+			 * primitive against this split position. We can't have that, however,
+			 * since the partitioning code assumes that these numbers are correct.
+			 * This lets it avoid doing another costly sweep, hence all the
+			 * floating point madness below.
 			 */
 			Float invBinSize = m_invBinSize[axis];
 			float split = min + (leftBin + 1) * m_binSize[axis];
@@ -2337,40 +2424,40 @@ protected:
 			int idxNext = (int) ((splitNext - min) * invBinSize);
 
 			/**
-			 * The split plane should be along the last discrete floating
-			 * floating position, which would still be classified into
-			 * the left bin.
+			 * The split plane should pass through the last discrete floating
+			 * floating value, which would still be classified into
+			 * the left bin. If this is not computed correctly, do binary
+			 * search.
 			 */
-			if (!(idx <= leftBin && idxNext > leftBin)) {
-				float direction;
-
-				/* First, determine the search direction */
-				if (idx > leftBin) 
-					direction = -std::numeric_limits<float>::max();
-				else
-					direction = std::numeric_limits<float>::max();
-
+			if (!(idx == leftBin && idxNext == leftBin+1)) {
+				float left = m_aabb.min[axis];
+				float right = m_aabb.max[axis];
 				int it = 0;
 				while (true) {
-					split     = nextafterf(split, direction);
+					split = left + (right-left)/2;
 					splitNext = nextafterf(split, 
-							std::numeric_limits<float>::max());
+						std::numeric_limits<float>::max());
 					idx     = (int) ((split - min) * invBinSize);
 					idxNext = (int) ((splitNext - min) * invBinSize);
-					if (idx == leftBin && idxNext > leftBin)
+
+					if (idx == leftBin && idxNext == leftBin+1) {
+						/* Got it! */
 						break;
-					if (idx < leftBin && idxNext > leftBin) {
+					} else if (std::abs(idx-idxNext) > 1 || ++it > 50) {
 						/* Insufficient floating point resolution
 						   -> a leaf will be created. */
 						candidate.sahCost = std::numeric_limits<Float>::infinity();
 						break;
 					}
 
-					++it;
+					if (idx <= leftBin)
+						left = split;
+					else
+						right = split;
 				}
 			}
 
-			if (split <= m_aabb.min[axis] || split > m_aabb.max[axis]) {
+			if (split <= m_aabb.min[axis] || split >= m_aabb.max[axis]) {
 				/* Insufficient floating point resolution 
 				   -> a leaf will be created. */
 				candidate.sahCost = std::numeric_limits<Float>::infinity();
@@ -2476,18 +2563,23 @@ protected:
 					split.pos = rightBounds.min[axis];
 				}
 
-				leftBounds.max[axis] = std::min(leftBounds.max[axis], (Float) split.pos);
-				rightBounds.min[axis] = std::max(rightBounds.min[axis], (Float) split.pos);
+				leftBounds.max[axis] = std::min(leftBounds.max[axis], 
+						(Float) split.pos);
+				rightBounds.min[axis] = std::max(rightBounds.min[axis], 
+						(Float) split.pos);
 			}
 
 			return boost::make_tuple(leftBounds, leftIndices,
 					rightBounds, rightIndices);
 		}
 	private:
-		size_type m_minBins[3*BinCount], m_maxBins[3*BinCount];
+		size_type *m_minBins;
+		size_type *m_maxBins;
 		size_type m_primCount;
+		int m_binCount;
 		AABB m_aabb;
-		Vector m_binSize, m_invBinSize;
+		Vector m_binSize;
+		Vector m_invBinSize;
 	};
 
 	/// Ray traversal stack entry for incoherent ray tracing
@@ -2588,8 +2680,10 @@ protected:
 				const int nextAxis = nextAxisTable[axis];
 				const int prevAxis = prevAxisTable[axis];
 				stack[exPt].p[axis] = splitVal;
-				stack[exPt].p[nextAxis] = ray.o[nextAxis] + distToSplit*ray.d[nextAxis];
-				stack[exPt].p[prevAxis] = ray.o[prevAxis] + distToSplit*ray.d[prevAxis];
+				stack[exPt].p[nextAxis] = ray.o[nextAxis]
+					+ distToSplit*ray.d[nextAxis];
+				stack[exPt].p[prevAxis] = ray.o[prevAxis]
+					+ distToSplit*ray.d[prevAxis];
 				#endif
 
 			}
@@ -2961,6 +3055,7 @@ protected:
 	size_type m_stopPrims;
 	size_type m_maxBadRefines;
 	size_type m_exactPrimThreshold;
+	size_type m_minMaxBins;
 	size_type m_nodeCount;
 	std::vector<SAHTreeBuilder *> m_builders;
 	std::vector<KDNode *> m_indirections;
@@ -3028,7 +3123,6 @@ template <typename Derived> void GenericKDTree<Derived>::findCosts(
 		Float model = x[0] * A[i][0]
 			+ x[1] * A[i][1]
 			+ x[2] * A[i][2];
-		//cout << b[i] << " vs " << (int) model << endl;
 		avgResidual += std::abs(b[i] - model);
 	}
 	avgRdtsc /= idx;

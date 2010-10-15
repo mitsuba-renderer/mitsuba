@@ -280,7 +280,8 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 	m_shadowMap->releaseTarget();
 }
 
-void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminaire *luminaire, const Point &camPos) {
+void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, 
+			const Luminaire *luminaire, const Point &camPos) {
 	Shader *bsdfShader = m_renderer->getShaderForResource(bsdf);
 	Shader *vplShader = (vpl.type == ELuminaireVPL)
 		? m_renderer->getShaderForResource(vpl.luminaire)
@@ -296,6 +297,8 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 		m_renderer->setColor(Spectrum(0.0f));
 		return;
 	}
+
+	bool anisotropic = bsdf->getType() & BSDF::EAnisotropicMaterial;
 
 	m_targetConfig = VPLProgramConfiguration(vplShader, bsdfShader, lumShader);
 	m_targetConfig.toString(oss);
@@ -314,25 +317,25 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 
 		/* Vertex program */
 		oss.str("");
-        oss << "#version 120" << endl
-			<< "uniform vec3 vplPos, camPos;" << endl
-			<< "varying vec3 normal, tangent, lightVec, camVec;" << endl
+        oss << "#version 120" << endl;
+		if (anisotropic)
+			oss << "varying vec3 tangent;" << endl;
+
+		oss << "uniform vec3 vplPos, camPos;" << endl
+			<< "varying vec3 normal, lightVec, camVec;" << endl
 			<< "varying vec2 uv;" << endl
-#if defined(MTS_HAS_VERTEX_COLORS)
 			<< "varying vec3 vertexColor;" << endl
-#endif
 			<< endl
 			<< "void main() {" << endl
 			<< "   normal = gl_Normal;" << endl
-			<< "   tangent = gl_MultiTexCoord1.xyz;" << endl
 			<< "   uv = gl_MultiTexCoord0.xy;" << endl
 			<< "   camVec = camPos - gl_Vertex.xyz;" << endl
 			<< "   lightVec = vplPos - gl_Vertex.xyz;" << endl
             << "   gl_Position = ftransform();" << endl
-#if defined(MTS_HAS_VERTEX_COLORS)
-            << "   vertexColor = gl_Color.rgb;" << endl
-#endif
-			<< "}" << endl;
+            << "   vertexColor = gl_Color.rgb;" << endl;
+		if (anisotropic)
+			oss << "   tangent = gl_MultiTexCoord1.xyz;" << endl;
+		oss << "}" << endl;
 
 		program->setSource(GPUProgram::EVertexProgram, oss.str());
 		oss.str("");
@@ -345,14 +348,15 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "uniform float nearClip, invClipRange, minDist;" << endl
 			<< "uniform vec2 vplUV;" << endl
 			<< "uniform bool diffuseSources, diffuseReceivers;" << endl
-#if defined(MTS_HAS_VERTEX_COLORS)
 			<< "varying vec3 vertexColor;" << endl
-#endif
 			<< endl
 			<< "/* Inputs <- Vertex program */" << endl
-			<< "varying vec3 normal, tangent, lightVec, camVec;" << endl
-			<< "varying vec2 uv;" << endl
-			<< endl
+			<< "varying vec3 normal, lightVec, camVec;" << endl
+			<< "varying vec2 uv;" << endl;
+		if (anisotropic)
+			oss << "varying vec3 tangent;" << endl;
+
+		oss << endl
 			<< "/* Some helper functions for BSDF implementations */" << endl
 			<< "float cosTheta(vec3 v) { return v.z; }" << endl
 			<< "float sinTheta2(vec3 v) { return 1.0-v.z*v.z; }" << endl
@@ -365,9 +369,20 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 
 		oss << "void main() {" << endl
 			<< "   /* Set up an ONB */" << endl
-			<< "   vec3 N = normalize(normal);" << endl
-			<< "   vec3 S = normalize(tangent - dot(tangent, N)*N);" << endl
-			<< "   vec3 T = cross(N, S);" << endl
+			<< "   vec3 N = normalize(normal);" << endl;
+		if (anisotropic) {
+			oss << "   vec3 S = normalize(tangent - dot(tangent, N)*N);" << endl;
+		} else {
+			oss << "   vec3 S;" << endl
+				<< "   if (abs(N.x) > abs(N.y)) {" << endl
+				<< "      float invLen = 1.0 / sqrt(N.x*N.x + N.z*N.z);" << endl
+				<< "      S = vec3(-N.z * invLen, 0.0, N.x * invLen);" << endl
+				<< "   } else {" << endl
+				<< "      float invLen = 1.0 / sqrt(N.y*N.y + N.z*N.z);" << endl
+				<< "      S = vec3(0.0, -N.z * invLen, N.y * invLen);" << endl
+				<< "   }" << endl;
+		}
+		oss << "   vec3 T = cross(N, S);" << endl
 			<< endl
 			<< "   /* Compute shadows */" << endl
 			<< "   float d = length(lightVec);" << endl

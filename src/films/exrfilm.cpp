@@ -160,6 +160,7 @@ public:
 		Float r, g, b;
 		int pos = 0;
 
+		Float maxLuminance = 0;
 		for (int y=0; y<m_cropSize.y; y++) {
 			for (int x=0; x<m_cropSize.x; x++) {
 				/* Convert spectrum to XYZ colors */
@@ -167,7 +168,9 @@ public:
 				Float invWeight = 1.0f;
 				if (pixel.weight != 0.0f)
 					invWeight = 1.0f / pixel.weight;
-				(pixel.spec * invWeight).toLinearRGB(r, g, b);
+				Spectrum spec(pixel.spec * invWeight);
+				spec.toLinearRGB(r, g, b);
+				maxLuminance = std::max(maxLuminance, spec.getLuminance());
 
 				targetPixels[4*pos+0] = std::max(0.0f, (float) r);
 				targetPixels[4*pos+1] = std::max(0.0f, (float) g);
@@ -176,13 +179,15 @@ public:
 				++pos;
 			}
 		}
+		
+		maxLuminance *= 10;
 
 		if (m_hasBanner && m_cropSize.x > bannerWidth+5 && m_cropSize.y > bannerHeight + 5) {
 			int xoffs = m_cropSize.x - bannerWidth - 5, yoffs = m_cropSize.y - bannerHeight - 5;
 			for (int y=0; y<bannerHeight; y++) {
 				for (int x=0; x<bannerWidth; x++) {
-					float value = (1-banner[x+y*bannerWidth]) * 1e5f;
 					int pos = 4*((x+xoffs)+(y+yoffs)*m_cropSize.x);
+					float value = (float) (maxLuminance * (1-banner[x+y*bannerWidth]));
 					targetPixels[pos+0] += value;
 					targetPixels[pos+1] += value;
 					targetPixels[pos+2] += value;

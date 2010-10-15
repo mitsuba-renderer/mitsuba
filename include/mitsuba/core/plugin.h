@@ -64,6 +64,8 @@ public:
 protected:
 	/// Resolve the given symbol and return a pointer
 	void *getSymbol(const std::string &sym);
+	/// Check whether a certain symbol is provided by the plugin
+	bool hasSymbol(const std::string &sym) const;
 private:
 #if defined(WIN32)
 	HMODULE m_handle;

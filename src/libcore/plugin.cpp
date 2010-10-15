@@ -63,16 +63,25 @@ Plugin::Plugin(const std::string &shortName, const fs::path &path)
 	m_createUtility = NULL;
 	m_isUtility = false;
 
-	try {
-		m_createInstance = (CreateInstanceFunc) getSymbol("CreateInstance");
-	} catch (const std::exception &) {
+	if (hasSymbol("CreateUtility")) {
 		m_createUtility = (CreateUtilityFunc) getSymbol("CreateUtility");
 		m_isUtility = true;
+	} else {
+		m_createInstance = (CreateInstanceFunc) getSymbol("CreateInstance");
 	}
 	Statistics::getInstance()->logPlugin(shortName, getDescription());
 
 	/* New classes must be registered within the class hierarchy */
 	Class::staticInitialization();
+}
+
+bool Plugin::hasSymbol(const std::string &sym) const {
+#if defined(WIN32)
+	void *ptr = GetProcAddress(m_handle, sym.c_str());
+#else
+	void *ptr = dlsym(m_handle, sym.c_str());
+#endif
+	return ptr != NULL;
 }
 
 void *Plugin::getSymbol(const std::string &sym) {

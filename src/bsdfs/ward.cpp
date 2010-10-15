@@ -51,6 +51,10 @@ public:
 		m_type = new unsigned int[m_componentCount];
 		m_type[0] = EDiffuseReflection;
 		m_type[1] = EGlossyReflection;
+		if (m_alphaX != m_alphaY) {
+			m_type[0] |= EAnisotropicMaterial;
+			m_type[1] |= EAnisotropicMaterial;
+		}
 		m_combinedType = m_type[0] | m_type[1];
 		m_usesRayDifferentials = false;
 	}

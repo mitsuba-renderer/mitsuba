@@ -40,18 +40,27 @@ public:
 		ref<TriMesh> mesh = new TriMesh(stream);
 		m_triangleCount = mesh->getTriangleCount();
 		m_vertexCount = mesh->getVertexCount();
-		m_vertexBuffer = new Vertex[m_vertexCount];
 		m_triangles = new Triangle[m_triangleCount];
-		memcpy(m_vertexBuffer, mesh->getVertexBuffer(), sizeof(Vertex) * m_vertexCount);
+		if (mesh->hasVertexNormals()) {
+			m_normals = new Normal[m_vertexCount];
+			memcpy(m_normals, mesh->getVertexNormals(), sizeof(Normal) * m_vertexCount);
+		}
+		if (mesh->hasVertexTexcoords()) {
+			m_texcoords = new Point2[m_vertexCount];
+			memcpy(m_texcoords, mesh->getVertexTexcoords(), sizeof(Point2) * m_vertexCount);
+		}
+		if (mesh->hasVertexColors()) {
+			m_colors = new Spectrum[m_vertexCount];
+			memcpy(m_colors, mesh->getVertexColors(), sizeof(Spectrum) * m_vertexCount);
+		}
 		memcpy(m_triangles, mesh->getTriangles(), sizeof(Triangle) * m_triangleCount);
 
 		if (!m_objectToWorld.isIdentity()) {
-			for (size_t i=0; i<m_vertexCount; ++i) {
-				Vertex &vertex = m_vertexBuffer[i];
-				vertex.p = m_objectToWorld(vertex.p);
-				vertex.n = m_objectToWorld(vertex.n);
-				vertex.dpdu = m_objectToWorld(vertex.dpdu);
-				vertex.dpdv = m_objectToWorld(vertex.dpdv);
+			for (size_t i=0; i<m_vertexCount; ++i)
+				m_positions[i] = m_objectToWorld(m_positions[i]);
+			if (m_normals) {
+				for (size_t i=0; i<m_vertexCount; ++i)
+					m_normals[i] = m_objectToWorld(m_normals[i]);
 			}
 		}
 	}

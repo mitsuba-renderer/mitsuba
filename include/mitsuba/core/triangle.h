@@ -24,38 +24,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * \brief Mesh vertex data structure. Stores 3D coordinates,
- * vertex normals, UV coordinates and a tangent frame.
- */
-struct Vertex {
-	Point p;     ///< %Position
-	Normal n;    ///< %Normal
-	Point2 uv;   ///< %Texture coordinates
-	Vector dpdu; ///< Partial derivative of the position with respect to \a u.
-	Vector dpdv; ///< Partial derivative of the position with respect to \a v.
-#if defined(MTS_HAS_VERTEX_COLORS)
-	Float color[3];
-#endif
-
-	inline bool operator==(const Vertex &vert) const {
-#if defined(MTS_HAS_VERTEX_COLORS)
-		return (p == vert.p && n == vert.n && uv == vert.uv 
-			     && dpdu == vert.dpdu && dpdv == vert.dpdv
-				 && color[0] == vert.color[0]
-				 && color[1] == vert.color[1]
-				 && color[2] == vert.color[2]);
-#else
-		return (p == vert.p && n == vert.n && uv == vert.uv 
-			     && dpdu == vert.dpdu && dpdv == vert.dpdv);
-#endif
-	}
-	
-	inline bool operator!=(const Vertex &vert) const {
-		return !operator==(vert);
-	}
-};
-
 /** 
  * \brief Simple triangle class including a collection of routines 
  * for analysis and transformation. 
@@ -67,10 +35,10 @@ struct MTS_EXPORT_CORE Triangle {
 	uint32_t idx[3];
 
 	/// Construct an axis-aligned box, which contains the triangle
-	inline AABB getAABB(const Vertex *buffer) const {
-		AABB result(buffer[idx[0]].p);
-		result.expandBy(buffer[idx[1]].p);
-		result.expandBy(buffer[idx[2]].p);
+	inline AABB getAABB(const Point *positions) const {
+		AABB result(positions[idx[0]]);
+		result.expandBy(positions[idx[1]]);
+		result.expandBy(positions[idx[2]]);
 		return result;
 	}
 
@@ -86,7 +54,14 @@ struct MTS_EXPORT_CORE Triangle {
 	 * see "On building fast kd-Trees for Ray Tracing, and on doing 
 	 * that in O(N log N)" by Ingo Wald and Vlastimil Havran
 	 */
-	AABB getClippedAABB(const Vertex *buffer, const AABB &aabb) const;
+	AABB getClippedAABB(const Point *positions, const AABB &aabb) const;
+
+	/// Uniformly sample a point on the triangle and return its normal
+	Point sample(const Point *positions, const Normal *normals,
+			Normal &n, const Point2 &seed) const;
+
+	/// Calculate the surface area of this triangle
+	Float surfaceArea(const Point *positions) const;
 
 	/** \brief Ray-triangle intersection test
 	 * 
@@ -97,14 +72,46 @@ struct MTS_EXPORT_CORE Triangle {
 	 * intersection point, and \a u and \a v contain the intersection point in
 	 * the local triangle coordinate system
 	 */
-	bool rayIntersect(const Vertex *buffer, const Ray &ray, Float &u, 
-		Float &v, Float &t) const;
+	FINLINE bool rayIntersect(const Point *positions, const Ray &ray, Float &u, 
+		Float &v, Float &t) const {
+		const Point &v0 = positions[idx[0]];
+		const Point &v1 = positions[idx[1]];
+		const Point &v2 = positions[idx[2]];
 
-	/// Uniformly sample a point on the triangle and return its normal
-	Point sample(const Vertex *buffer, Normal &n, const Point2 &seed) const;
+		/* find vectors for two edges sharing v[0] */
+		Vector edge1 = v1 - v0, edge2 = v2 - v0;
 
-	/// Calculate the surface area of this triangle
-	Float surfaceArea(const Vertex *buffer) const;
+		/* begin calculating determinant - also used to calculate U parameter */
+		Vector pvec = cross(ray.d, edge2);
+
+		/* if determinant is near zero, ray lies in plane of triangle */
+		Float det = dot(edge1, pvec);
+
+		if (det > -1e-8f && det < 1e-8f)
+			return false;
+		Float inv_det = 1.0f / det;
+
+		/* calculate distance from v[0] to ray origin */
+		Vector tvec = ray.o - v0;
+
+		/* calculate U parameter and test bounds */
+		u = dot(tvec, pvec) * inv_det;
+		if (u < 0.0 || u > 1.0)
+			return false;
+
+		/* prepare to test V parameter */
+		Vector qvec = cross(tvec, edge1);
+
+		/* calculate V parameter and test bounds */
+		v = dot(ray.d, qvec) * inv_det;
+		if (v < 0.0 || u + v > 1.0)
+			return false;
+
+		/* ray intersects triangle -> compute t */
+		t = dot(edge2, qvec) * inv_det;
+
+		return true;
+	}
 };
 
 MTS_NAMESPACE_END

@@ -178,7 +178,8 @@ std::string memString(size_t size) {
 	while (prefix < 4 && value > 1024.0f) {
 		value /= 1024.0f; ++prefix;
 	}
-	return formatString("%.2f %s", value, prefixes[prefix]);
+	return formatString(prefix == 0 ?
+			"%.0f %s" : "%.2f %s", value, prefixes[prefix]);
 }
 
 void * __restrict allocAligned(size_t size) {

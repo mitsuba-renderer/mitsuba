@@ -25,8 +25,8 @@ Film::Film(const Properties &props)
  : ConfigurableObject(props), m_properties(props) {
 	/* Horizontal and vertical film resolution in pixels */
 	m_size = Vector2i(
-		props.getInteger("width", 512),
-		props.getInteger("height", 512)
+		props.getInteger("width", 768),
+		props.getInteger("height", 576)
 	);
 	/* Crop window specified in pixels - by default, this
 	   matches the full sensor area */

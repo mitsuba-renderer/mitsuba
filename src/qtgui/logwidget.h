@@ -31,13 +31,14 @@ class QConsoleAppender : public QObject, public Appender {
 	Q_OBJECT
 public:
     void append(ELogLevel level, const std::string &message) {
-		emit textMessage(level, QString(message.c_str()));
+		emit textMessage(level, QString::fromLatin1(message.c_str()));
 	}
     void logProgress(Float progress, const std::string &name, 
 		const std::string &formatted, const std::string &eta,
 		const void *ptr) {
 		emit progressMessage((RenderJob *) ptr, 
-			QString(name.c_str()), (float) progress, QString(eta.c_str()));
+			QString::fromLatin1(name.c_str()), (float) progress,
+			QString::fromLatin1(eta.c_str()));
 	}
 signals:
 	void textMessage(ELogLevel level, const QString &message);

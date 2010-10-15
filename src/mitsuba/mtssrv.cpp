@@ -31,7 +31,7 @@
 #ifdef WIN32
 #include <io.h>
 #include <ws2tcpip.h>
-#include "getopt.h"
+#include <mitsuba/core/getopt.h>
 #else
 #include <unistd.h>
 #include <errno.h>

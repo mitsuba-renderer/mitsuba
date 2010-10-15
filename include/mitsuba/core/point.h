@@ -60,7 +60,7 @@ template <typename T> struct TPoint2 {
 	explicit TPoint2(T val) : x(val), y(val) { }
 
 	/// Unserialize a point from a binary data stream
-	TPoint2(Stream *stream) {
+	explicit TPoint2(Stream *stream) {
 		x = stream->readElement<T>();
 		y = stream->readElement<T>();
 	}
@@ -246,7 +246,7 @@ template <typename T> struct TPoint3 {
 	explicit TPoint3(T val) : x(val), y(val), z(val) { }
 
 	/// Unserialize a point from a binary data stream
-	TPoint3(Stream *stream) {
+	explicit TPoint3(Stream *stream) {
 		x = stream->readElement<T>();
 		y = stream->readElement<T>();
 		z = stream->readElement<T>();
@@ -435,7 +435,7 @@ template <typename T> struct TPoint4 {
 	explicit TPoint4(T val) : x(val), y(val), z(val), w(val) { }
 
 	/// Unserialize a point from a binary data stream
-	TPoint4(Stream *stream) {
+	explicit TPoint4(Stream *stream) {
 		x = stream->readElement<T>();
 		y = stream->readElement<T>();
 		z = stream->readElement<T>();

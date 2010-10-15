@@ -31,10 +31,10 @@ public:
 
 	void test01_sutherlandHodgman() {
 		/* Test the triangle clipping algorithm on the unit triangle */
-		Vertex vertices[3];
-		vertices[0].p = Point(0, 0, 0);
-		vertices[1].p = Point(1, 0, 0);
-		vertices[2].p = Point(1, 1, 0);
+		Point vertices[3];
+		vertices[0] = Point(0, 0, 0);
+		vertices[1] = Point(1, 0, 0);
+		vertices[2] = Point(1, 1, 0);
 		Triangle t;
 		t.idx[0] = 0; t.idx[1] = 1; t.idx[2] = 2;
 
@@ -92,9 +92,6 @@ public:
 		tree->addShape(mesh);
 		tree->build();
 		BSphere bsphere(mesh->getBSphere());
-
-		//Float intersectionCost, traversalCost;
-		//tree.findCosts(intersectionCost, traversalCost);
 
 		bsphere = BSphere(Point(-0.016840, 0.110154, -0.001537), .2f);
 

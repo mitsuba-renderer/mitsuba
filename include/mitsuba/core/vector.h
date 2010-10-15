@@ -61,7 +61,7 @@ public:
 		: x((T) p.x), y((T) p.y) { }
 
 	/// Unserialize a vector from a binary data stream
-	TVector2(Stream *stream) {
+	explicit TVector2(Stream *stream) {
 		x = stream->readElement<T>();
 		y = stream->readElement<T>();
 	}
@@ -247,7 +247,7 @@ public:
 		: x((T) p.x), y((T) p.y), z((T) p.z) { }
 
 	/// Unserialize a vector from a binary data stream
-	TVector3(Stream *stream) {
+	explicit TVector3(Stream *stream) {
 		x = stream->readElement<T>();
 		y = stream->readElement<T>();
 		z = stream->readElement<T>();
@@ -446,7 +446,7 @@ public:
 		: x((T) p.x), y((T) p.y), z((T) p.z), w((T) p.w) { }
 
 	/// Unserialize a vector from a binary data stream
-	TVector4(Stream *stream) {
+	explicit TVector4(Stream *stream) {
 		x = stream->readElement<T>();
 		y = stream->readElement<T>();
 		z = stream->readElement<T>();

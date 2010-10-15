@@ -33,7 +33,7 @@
 #include <stdexcept>
 
 #if defined(WIN32)
-#include "getopt.h"
+#include <mitsuba/core/getopt.h>
 #else
 #include <signal.h>
 #endif
@@ -141,7 +141,7 @@ int ubi_main(int argc, char **argv) {
 
 		optind = 1;
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "a:c:s:n:p:qhvt")) != -1) {
+		while ((optchar = getopt(argc, argv, "+a:c:s:n:p:qhvt")) != -1) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");

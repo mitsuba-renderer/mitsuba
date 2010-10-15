@@ -42,7 +42,7 @@ enum ESourceType {
 	EPosition = 0,
 	ENormal = 1,
 	EUV = 2,
-	EVertexColors = 3,
+	EVertexColor = 3,
 	ELast
 };
 
@@ -64,11 +64,15 @@ struct Vec4 {
 	inline Point toPoint() const {
 		return Point(x, y, z);
 	}
-	
+
+	inline Vector toVector() const {
+		return Vector(x, y, z);
+	}
+
 	inline Normal toNormal() const {
 		return Normal(x, y, z);
 	}
-	
+
 	inline Point2 toPoint2() const {
 		return Point2(x, y);
 	}
@@ -191,11 +195,12 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 				SLog(EWarn, "Found multiple sets of texture coordinates - ignoring!");
 			}
 		} else if (semantic == "COLOR") {
-			SLog(EWarn, "Found per-vertex colors - ignoring. Please bake into a texture "
-				"(Lighting/shading -> Batch Bake in Maya)");
-			result->typeToOffset[EVertexColors] = offset;
-			result->typeToOffsetInStream[EVertexColors] = offsetInStream;
-			result->typeToCount[EVertexColors] = size;
+			SAssert(accessor->getStride() == 3);
+			SAssert(result->typeToOffset[EVertexColor] == -1);
+			result->hasNormals = true;
+			result->typeToOffset[EVertexColor] = offset;
+			result->typeToOffsetInStream[EVertexColor] = offsetInStream;
+			result->typeToCount[EVertexColor] = size;
 		} else {
 			SLog(EError, "Encountered an unknown source semantic: %s", semantic.c_str());
 		}
@@ -204,6 +209,13 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 
 	return result;
 }
+
+struct Vertex {
+	Point p;
+	Normal n;
+	Point2 uv;
+	Vector col;
+};
 
 /// For using vertices as keys in an associative structure
 struct vertex_key_order : public 
@@ -225,6 +237,12 @@ struct vertex_key_order : public
 		else if (v1.uv.x > v2.uv.x) return 1;
 		if (v1.uv.y < v2.uv.y) return -1;
 		else if (v1.uv.y > v2.uv.y) return 1;
+		if (v1.col.x < v2.col.x) return -1;
+		else if (v1.col.x > v2.col.x) return 1;
+		if (v1.col.y < v2.col.y) return -1;
+		else if (v1.col.y > v2.col.y) return 1;
+		if (v1.col.z < v2.col.z) return -1;
+		else if (v1.col.z > v2.col.z) return 1;
 		return 0;
 	}
 
@@ -240,7 +258,7 @@ struct SimpleTriangle {
 	inline SimpleTriangle(const Point &p0, const Point &p1, const Point &p2)
 		: p0(p0), p1(p1), p2(p2) { }
 };
-	
+
 struct triangle_key_order : public std::binary_function<SimpleTriangle, SimpleTriangle, bool> {
 	static int compare(const Point &v1, const Point &v2) {
 		if (v1.x < v2.x) return -1;
@@ -280,7 +298,7 @@ public:
 
 typedef std::map<SimpleTriangle, bool, triangle_key_order> TriangleMap;
 
-void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::string matID, Transform transform, 
+void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string id, int geomIndex, std::string matID, Transform transform, 
 		std::ostream &os, VertexData *vData, TriangleMap &triMap, const fs::path &meshesDirectory) {
 	std::vector<Vertex> vertexBuffer;
 	std::vector<Triangle> triangles;
@@ -296,13 +314,19 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 		Vertex vertex;
 		domUint posRef = tess_data[i+vData->typeToOffsetInStream[EPosition]];
 		vertex.p = vData->data[vData->typeToOffset[EPosition]][posRef].toPoint();
-		vertex.dpdu = vertex.dpdv = Vector(0.0f);
 
 		if (vData->typeToOffset[ENormal] != -1) {
 			domUint normalRef = tess_data[i+vData->typeToOffsetInStream[ENormal]];
 			vertex.n = vData->data[vData->typeToOffset[ENormal]][normalRef].toNormal();
 		} else {
 			vertex.n = Normal(0.0f);
+		}
+
+		if (vData->typeToOffset[EVertexColor] != -1) {
+			domUint colorRef = tess_data[i+vData->typeToOffsetInStream[EVertexColor]];
+			vertex.col = vData->data[vData->typeToOffset[EVertexColor]][colorRef].toVector();
+		} else {
+			vertex.col = Normal(0.0f);
 		}
 
 		if (vData->typeToOffset[EUV] != -1) {
@@ -364,11 +388,37 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	SLog(EInfo, "\"%s/%s\": Converted " SIZE_T_FMT " triangles, " SIZE_T_FMT 
 		" vertices (merged " SIZE_T_FMT " vertices).", prefixName.c_str(), id.c_str(),
 		triangles.size(), vertexBuffer.size(), numMerged);
-	
-	ref<TriMesh> mesh = new TriMesh(triangles.size(), vertexBuffer.size());
+
+	ref<TriMesh> mesh = new TriMesh(prefixName + "/" + id, Transform(),
+		triangles.size(), vertexBuffer.size(),
+		vData->typeToOffset[ENormal] != -1,
+		vData->typeToOffset[EUV] != -1,
+		vData->typeToOffset[EVertexColor] != -1);
+
 	std::copy(triangles.begin(), triangles.end(), mesh->getTriangles());
-	std::copy(vertexBuffer.begin(), vertexBuffer.end(), mesh->getVertexBuffer());
-	mesh->calculateTangentSpaceBasis(vData->typeToOffset[ENormal]!=-1, vData->typeToOffset[EUV]!=-1);
+
+	Point    *target_positions = mesh->getVertexPositions();
+	Normal   *target_normals   = mesh->getVertexNormals();
+	Point2   *target_texcoords = mesh->getVertexTexcoords();
+	Spectrum *target_colors    = mesh->getVertexColors();
+
+	for (size_t i=0; i<vertexBuffer.size(); ++i) {
+		*target_positions++ = vertexBuffer[i].p;
+		if (target_normals)
+			*target_normals ++ = vertexBuffer[i].n;
+		if (target_texcoords)
+			*target_texcoords++ = vertexBuffer[i].uv;
+		if (target_colors) {
+			Float r = vertexBuffer[i].col.x;
+			Float g = vertexBuffer[i].col.y;
+			Float b = vertexBuffer[i].col.z;
+			if (cvt->m_srgb)
+				target_colors->fromLinearRGB(r,g,b);
+			else
+				target_colors->fromSRGB(r,g,b);
+			target_colors++;
+		}
+	}
 
 	std::string filename = id + std::string(".serialized");
 	ref<FileStream> stream = new FileStream(meshesDirectory / filename, FileStream::ETruncReadWrite);
@@ -394,7 +444,7 @@ void writeGeometry(std::string prefixName, std::string id, int geomIndex, std::s
 	os << "\t</shape>" << endl << endl;
 }
 
-void loadGeometry(std::string prefixName, Transform transform, std::ostream &os, domGeometry &geom, 
+void loadGeometry(GeometryConverter *cvt, std::string prefixName, Transform transform, std::ostream &os, domGeometry &geom, 
 		StringMap &matLookupTable, const fs::path &meshesDir) {
 	std::string identifier;
 	if (geom.getId() != NULL) {
@@ -434,7 +484,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
 		else
 			matID = matLookupTable[triangles->getMaterial()];
-		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
+		writeGeometry(cvt, prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
 		delete data;
 		++geomIndex;
 	}
@@ -493,7 +543,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 		else
 			matID = matLookupTable[polygons->getMaterial()];
 
-		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
+		writeGeometry(cvt, prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
 		delete data;
 		++geomIndex;
 	}
@@ -554,7 +604,7 @@ void loadGeometry(std::string prefixName, Transform transform, std::ostream &os,
 		else
 			matID = matLookupTable[polylist->getMaterial()];
 
-		writeGeometry(prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
+		writeGeometry(cvt, prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
 		delete data;
 		++geomIndex;
 	}
@@ -614,7 +664,7 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 	daeURI &effRef = mat.getInstance_effect()->getUrl();
 	effRef.resolveElement();
 	domEffect *effect = daeSafeCast<domEffect>(effRef.getElement());
-	
+
 	if (!effect)
 		SLog(EError, "Referenced effect not found!");
 
@@ -1096,7 +1146,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 
 		if (!geom)
 			SLog(EError, "Could not find a referenced geometry object!");
-		loadGeometry(prefixName, transform, os, *geom, matLookupTable, meshesDir);
+		loadGeometry(cvt, prefixName, transform, os, *geom, matLookupTable, meshesDir);
 	}
 
 	/* Iterate over all light references */

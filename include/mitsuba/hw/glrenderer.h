@@ -32,6 +32,8 @@
 
 MTS_NAMESPACE_BEGIN
 
+#define MTS_GL_MAX_QUEUED_TRIS 500000
+
 class MTS_EXPORT_HW GLRenderer : public Renderer {
 public:
 	/// Construct a new OpenGL rendering interface
@@ -126,6 +128,12 @@ protected:
 	virtual ~GLRenderer();
 protected:
 	bool m_transmitOnlyPositions;
+	bool m_normalsEnabled;
+	bool m_texcoordsEnabled;
+	bool m_tangentsEnabled;
+	bool m_colorsEnabled;
+	size_t m_queuedTriangles;
+	int m_stride;
 };
 
 MTS_NAMESPACE_END

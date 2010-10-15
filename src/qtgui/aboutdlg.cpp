@@ -46,12 +46,16 @@ AboutDialog::AboutDialog(QWidget *parent) :
 	configFlags += "MTS_SSE ";
 #endif
 
-#if defined(MTS_HAS_COHERENT_RT)
-	configFlags += "MTS_HAS_COHERENT_RT ";
+#if defined(MTS_KD_CONSERVE_MEMORY)
+	configFlags += "MTS_KD_CONSERVE_MEMORY ";
 #endif
 
-#if defined(MTS_HAS_VERTEX_COLORS)
-	configFlags += "MTS_HAS_VERTEX_COLORS ";
+#if defined(MTS_KD_DEBUG)
+	configFlags += "MTS_KD_DEBUG ";
+#endif
+
+#if defined(MTS_HAS_COHERENT_RT)
+	configFlags += "MTS_HAS_COHERENT_RT ";
 #endif
 
 #if defined(MTS_HAS_COLLADA)

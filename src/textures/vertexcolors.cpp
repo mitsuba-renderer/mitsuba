@@ -38,13 +38,7 @@ public:
 	}
 
 	Spectrum getValue(const Intersection &its) const {
-#if defined(MTS_HAS_VERTEX_COLORS)
 		return its.color;
-#else
-		Log(EError, "Vertex colors are not active -- recompile Mitsuba "
-			"with -DMTS_HAS_VERTEX_COLORS");
-		return Spectrum(0.0f);
-#endif
 	}
 
 	bool usesRayDifferentials() const {

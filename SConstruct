@@ -285,6 +285,7 @@ if sys.platform == 'darwin':
 	coreEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing');
 	libcore_objects += coreEnv_osx.SharedObject('src/libcore/platform_darwin.mm')
 elif sys.platform == 'win32':
+	libcore_objects += coreEnv_osx.SharedObject('src/libcore/getopt.c')
 	libcore_objects += coreEnv_osx.SharedObject('src/libcore/platform_win32.cpp')
 
 libcore = coreEnv.SharedLibrary('src/libcore/mitsuba-core', libcore_objects);
@@ -400,8 +401,7 @@ resources = []
 darwinStub = []
 
 if sys.platform == 'win32':
-	resources += [env.RES('tools/windows/mitsuba_res.rc'),
-		env.StaticObject('src/mitsuba/getopt.c')]
+	resources += [env.RES('tools/windows/mitsuba_res.rc')]
 
 # Build the command-line+GUI interface
 mainEnv.Program('mtssrv', resources + ['src/mitsuba/mtssrv.cpp'])

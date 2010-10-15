@@ -291,26 +291,52 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 
 				if (EXPECT_TAKEN(primIndex != KNoTriangleFlag)) {
 					const TriMesh *mesh = static_cast<const TriMesh *>(shape);
-					const Vertex *vb = mesh->getVertexBuffer();
 					const Triangle &t = mesh->getTriangles()[primIndex];
-					const Vertex &v0 = vb[t.idx[0]], &v1 = vb[t.idx[1]], &v2 = vb[t.idx[2]];
+					const Normal *normals = mesh->getVertexNormals();
+					const Point2 *texcoords = mesh->getVertexTexcoords();
+					const Spectrum *colors = mesh->getVertexColors();
+					const TangentSpace * tangents = mesh->getVertexTangents();
 					const Float beta  = its4.u.f[idx],
 								gamma = its4.v.f[idx],
 								alpha = 1.0f - beta - gamma;
-					its.shFrame.n = normalize(v0.n * alpha + v1.n * beta + v2.n * gamma);
-					its.uv = v0.uv * alpha + v1.uv * beta + v2.uv * gamma;
+					const uint32_t idx0 = t.idx[0], idx1 = t.idx[1], idx2 = t.idx[2];
 
-#if defined(MTS_HAS_VERTEX_COLORS)
-					its.color.fromLinearRGB(
-						v0.color[0] * alpha + v1.color[0] * beta + v2.color[0] * gamma,
-						v0.color[1] * alpha + v1.color[1] * beta + v2.color[1] * gamma,
-						v0.color[2] * alpha + v1.color[2] * beta + v2.color[2] * gamma
-					);
-#endif
+					if (EXPECT_TAKEN(normals)) {
+						const Normal &n0 = normals[idx0],
+							  		 &n1 = normals[idx1],
+									 &n2 = normals[idx2];
+						its.shFrame.n = normalize(n0 * alpha + n1 * beta + n2 * gamma);
+					} else {
+						const Point *positions = mesh->getVertexPositions();
+						const Point &p0 = positions[idx0],
+									&p1 = positions[idx1],
+									&p2 = positions[idx2];
+						Vector sideA = p1 - p0, sideB = p2 - p0;
+						its.shFrame.n = Normal(cross(sideA, sideB));
+					}
 
-					if (EXPECT_NOT_TAKEN(bsdf->getType() != BSDF::EDiffuseReflection || !diffuseVPL)) {
-						its.dpdu = v0.dpdu * alpha + v1.dpdu * beta + v2.dpdu * gamma;
-						its.dpdv = v0.dpdv * alpha + v1.dpdv * beta + v2.dpdv * gamma;
+					if (EXPECT_TAKEN(texcoords)) {
+						const Point2 &t0 = texcoords[idx0],
+							  		 &t1 = texcoords[idx1],
+									 &t2 = texcoords[idx2];
+						its.uv = t0 * alpha + t1 * beta + t2 * gamma;
+					} else {
+						its.uv = Point2(0.0f);
+					}
+
+					if (EXPECT_NOT_TAKEN(colors)) {
+						const Spectrum &c0 = colors[idx0],
+							  		   &c1 = colors[idx1],
+									   &c2 = colors[idx2];
+						its.color = c0 * alpha + c1 * beta + c2 * gamma;
+					}
+
+					if (EXPECT_NOT_TAKEN(tangents)) {
+						const TangentSpace &t0 = tangents[idx0],
+							  			   &t1 = tangents[idx1],
+										   &t2 = tangents[idx2];
+						its.dpdu = t0.dpdu * alpha + t1.dpdu * beta + t2.dpdu * gamma;
+						its.dpdv = t0.dpdv * alpha + t1.dpdv * beta + t2.dpdv * gamma;
 					}
 				} else {
 					Ray ray(

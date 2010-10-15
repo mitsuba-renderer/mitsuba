@@ -23,7 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 DefaultFormatter::DefaultFormatter() 
- : m_haveDate(true) {
+ : m_haveDate(true), m_haveLogLevel(true), m_haveThread(true), m_haveClass(true) {
 }
 
 std::string DefaultFormatter::format(ELogLevel logLevel, const Class *theClass,
@@ -38,18 +38,20 @@ std::string DefaultFormatter::format(ELogLevel logLevel, const Class *theClass,
 		oss << buffer;
 	}
 
-	/* Level */
-	switch (logLevel) {
-		case ETrace: oss << "TRACE "; break;
-		case EDebug: oss << "DEBUG "; break;
-		case EInfo:  oss << "INFO  "; break;
-		case EWarn:  oss << "WARN  "; break;
-		case EError: oss << "ERROR "; break;
-		default:     oss << "CUSTM "; break;
+	/* Log level */
+	if (m_haveLogLevel) {
+		switch (logLevel) {
+			case ETrace: oss << "TRACE "; break;
+			case EDebug: oss << "DEBUG "; break;
+			case EInfo:  oss << "INFO  "; break;
+			case EWarn:  oss << "WARN  "; break;
+			case EError: oss << "ERROR "; break;
+			default:     oss << "CUSTM "; break;
+		}
 	}
 
 	/* Thread */
-	if (thread) {
+	if (thread && m_haveThread) {
 		oss << thread->getName();
 
 		for (int i=0; i<(5 - (int) thread->getName().size()); i++)
@@ -57,10 +59,12 @@ std::string DefaultFormatter::format(ELogLevel logLevel, const Class *theClass,
 	}
 
 	/* Class */
-	if (theClass) {
-		oss << "[" << theClass->getName() << "] ";
-	} else if (pLine != -1 && file) {
-		oss << "[" << file << ":" << pLine << "] ";
+	if (m_haveClass) {
+		if (theClass) {
+			oss << "[" << theClass->getName() << "] ";
+		} else if (pLine != -1 && file) {
+			oss << "[" << file << ":" << pLine << "] ";
+		}
 	}
 
 	/* Text */

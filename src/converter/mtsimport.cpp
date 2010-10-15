@@ -23,10 +23,6 @@
  * The conversion barfs when it gets more than 10MB in one single XML string 
  * (error: xmlSAX2Characters: huge text node: out of memory). In this case, split the
  * mesh into smaller pieces or recompile libxml with a higher limit.
- *
- * Since Mitsuba does not support per-vertex colors and prefers textures, any vertex colors 
- * part of the input file are not converted and should instead be baked to textures beforehand 
- * (e.g. using Lighting/shading -> Batch bake in Maya).
  */
 
 #include <xercesc/parsers/SAXParser.hpp>
