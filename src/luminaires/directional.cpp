@@ -67,7 +67,7 @@ public:
 
 	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
 		/* Directional luminaire is not part of the scene */
-		Log(EWarn, "This function should never be called.");
+		Log(EError, "This function should never be called.");
 		return Spectrum(0.0f);
 	}
 
@@ -123,7 +123,6 @@ public:
 
 	Spectrum f(const EmissionRecord &eRec) const {
 		/* Directional luminaire beam is not part of the scene */
-		Log(EWarn, "This function should never be called.");
 		return Spectrum(0.0f);
 	}
 

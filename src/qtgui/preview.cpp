@@ -488,7 +488,7 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	m_renderer->beginDrawingMeshes();
 	for (unsigned int j=0; j<meshes.size(); j++) {
 		m_shaderManager->configure(vpl, meshes[j]->getBSDF(), 
-			meshes[j]->getLuminaire(), camPos);
+			meshes[j]->getLuminaire(), camPos, !meshes[j]->hasVertexNormals());
 		m_renderer->drawTriMesh(meshes[j]);
 		m_shaderManager->unbind();
 	}

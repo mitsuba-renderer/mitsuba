@@ -97,8 +97,17 @@ int GLProgram::createShader(int type, const std::string &source) {
 	glGetObjectParameterivARB(id, GL_COMPILE_STATUS, &result);
 	if (result == GL_FALSE) {
 		cleanup();
+		std::string typeStr;
+		if (type == GL_VERTEX_SHADER_ARB)
+			typeStr = "vertex";
+		else if (type == GL_FRAGMENT_SHADER_ARB)
+			typeStr = "fragment";
+		else if (type == GL_GEOMETRY_SHADER_ARB)
+			typeStr = "geometry";
+		else
+			typeStr = "unknown";
 		if (infoLog != "")
-			Log(EError, "Error compiling a shader: %s", infoLog.c_str());
+			Log(EError, "Error compiling a %s shader: %s", typeStr.c_str(), infoLog.c_str());
 		else
 			Log(EError, "Unknown error encountered while compiling a shader!");
 	} else if (infoLog != "") {

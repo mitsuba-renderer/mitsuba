@@ -252,7 +252,8 @@ void TriMesh::configure() {
 	for (size_t i=0; i<m_vertexCount; i++) 
 		m_bsphere.expandBy(m_positions[i]);
 	computeNormals();
-	if (m_bsdf->getType() & BSDF::EAnisotropicMaterial && !m_tangents)
+	if ((m_bsdf->getType() & BSDF::EAnisotropicMaterial
+		|| m_bsdf->usesRayDifferentials()) && !m_tangents)
 		computeTangentSpaceBasis();
 }
 

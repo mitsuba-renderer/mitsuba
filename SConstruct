@@ -579,7 +579,6 @@ plugins += env.SharedLibrary('plugins/spot', ['src/luminaires/spot.cpp'])
 plugins += env.SharedLibrary('plugins/point', ['src/luminaires/point.cpp'])
 plugins += env.SharedLibrary('plugins/collimated', ['src/luminaires/collimated.cpp'])
 plugins += env.SharedLibrary('plugins/directional', ['src/luminaires/directional.cpp'])
-plugins += env.SharedLibrary('plugins/portal', ['src/luminaires/portal.cpp'])
 
 # Integrators
 plugins += env.SharedLibrary('plugins/direct', ['src/integrators/direct/direct.cpp'])

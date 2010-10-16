@@ -28,7 +28,7 @@ class ConstantLuminaire : public Luminaire {
 public:
 	ConstantLuminaire(const Properties &props) : Luminaire(props) {
 		m_intensity = props.getSpectrum("intensity", Spectrum(1.0f));
-		m_type = EOnSurface;
+		m_type = EOnSurface | EDiffuseDirection;
 	}
 
 	ConstantLuminaire(Stream *stream, InstanceManager *manager) 

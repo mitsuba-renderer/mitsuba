@@ -47,7 +47,7 @@ public:
 
 	/// Prepare for rendering a material with BSDF 'bsdf' illuminated by VPL 'vpl'.
 	void configure(const VPL &vpl, const BSDF *bsdf, 
-		const Luminaire *luminaire, const Point &camPos);
+		const Luminaire *luminaire, const Point &camPos, bool faceNormals);
 
 	/// Draw the background if there is an environment luminaire
 	void drawBackground(const Transform &clipToWorld, const Point &camPos);
@@ -171,7 +171,7 @@ private:
 
 	struct VPLProgramConfiguration {
 		VPLDependencyNode vpl, bsdf, luminaire;
-		bool hasLuminaire;
+		bool hasLuminaire, faceNormals;
 		int param_shadowMap, param_vplPos, param_camPos, param_vplPower;
 		int param_vplN, param_vplS, param_vplT, param_vplWi, param_vplUV;
 		int param_nearClip, param_invClipRange, param_minDist;
@@ -179,8 +179,8 @@ private:
 
 		inline VPLProgramConfiguration() { }
 
-		inline VPLProgramConfiguration(Shader *vpl, Shader *bsdf, Shader *luminaire)
-			: vpl(vpl), bsdf(bsdf), luminaire(luminaire) {
+		inline VPLProgramConfiguration(Shader *vpl, Shader *bsdf, Shader *luminaire, bool faceNormals)
+			: vpl(vpl), bsdf(bsdf), luminaire(luminaire), faceNormals(faceNormals) {
 			hasLuminaire = (luminaire != NULL);
 		}
 
@@ -224,6 +224,8 @@ private:
 				oss << ", luminaire=";
 				luminaire.toString(oss);
 			}
+			if (faceNormals)
+				oss << ", faceNormals";
 		}
 	};
 

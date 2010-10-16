@@ -281,7 +281,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 }
 
 void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, 
-			const Luminaire *luminaire, const Point &camPos) {
+			const Luminaire *luminaire, const Point &camPos, bool faceNormals) {
 	Shader *bsdfShader = m_renderer->getShaderForResource(bsdf);
 	Shader *vplShader = (vpl.type == ELuminaireVPL)
 		? m_renderer->getShaderForResource(vpl.luminaire)
@@ -300,7 +300,8 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 
 	bool anisotropic = bsdf->getType() & BSDF::EAnisotropicMaterial;
 
-	m_targetConfig = VPLProgramConfiguration(vplShader, bsdfShader, lumShader);
+	m_targetConfig = VPLProgramConfiguration(vplShader, bsdfShader, 
+			lumShader, faceNormals);
 	m_targetConfig.toString(oss);
 	std::string configName = oss.str();
 	std::map<std::string, ProgramAndConfiguration>::iterator it =
@@ -315,24 +316,79 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 		/* No program for this particular combination exists -- create one */
 		program = m_renderer->createGPUProgram(configName);
 
+		if (faceNormals) {
+			/* Generate face normals in a geometry shader */
+	
+    		if (!m_renderer->getCapabilities()->isSupported(
+					RendererCapabilities::EGeometryShaders))
+				Log(EError, "Face normals require geometry shader support!");
+			if (anisotropic)
+				Log(EError, "Anisotropy and face normals can't be combined at the moment");
+	
+			oss.str("");
+			oss << "#version 120" << endl
+				<< "#extension GL_EXT_geometry_shader4 : enable" << endl
+				<< "varying in vec3 lightVec_vertex[3], camVec_vertex[3];" << endl
+				<< "varying in vec2 uv_vertex[3];" << endl
+				<< "varying in vec3 vertexColor_vertex[3];" << endl
+				<< "varying out vec3 normal;" << endl
+				<< "varying out vec3 lightVec, camVec;" << endl
+				<< "varying out vec2 uv;" << endl
+				<< "varying out vec3 vertexColor;" << endl
+				<< endl
+				<< "void main() {" << endl
+				<< "   normal = normalize(cross(" << endl
+				<< "      gl_PositionIn[1].xyz-gl_PositionIn[0].xyz," << endl
+				<< "      gl_PositionIn[2].xyz-gl_PositionIn[0].xyz));" << endl
+				<< "   for (int i=0; i<gl_VerticesIn; ++i) {" << endl
+				<< "      gl_Position = gl_PositionIn[i];" << endl
+				<< "      uv = uv_vertex[i];" << endl
+				<< "      vertexColor = vertexColor_vertex[i];" << endl
+				<< "      lightVec = lightVec_vertex[i];" << endl
+				<< "      camVec = camVec_vertex[i];" << endl
+				<< "      EmitVertex();" << endl
+				<< "   }" << endl
+				<< "   EndPrimitive();" << endl
+				<< "}" << endl;
+
+			program->setMaxVertices(3); 
+			program->setSource(GPUProgram::EGeometryProgram, oss.str());
+		}
+
 		/* Vertex program */
 		oss.str("");
         oss << "#version 120" << endl;
 		if (anisotropic)
 			oss << "varying vec3 tangent;" << endl;
+		if (!faceNormals)
+			oss << "varying vec3 normal;" << endl;
+		oss << "uniform vec3 vplPos, camPos;" << endl;
 
-		oss << "uniform vec3 vplPos, camPos;" << endl
-			<< "varying vec3 normal, lightVec, camVec;" << endl
-			<< "varying vec2 uv;" << endl
-			<< "varying vec3 vertexColor;" << endl
-			<< endl
-			<< "void main() {" << endl
-			<< "   normal = gl_Normal;" << endl
-			<< "   uv = gl_MultiTexCoord0.xy;" << endl
-			<< "   camVec = camPos - gl_Vertex.xyz;" << endl
-			<< "   lightVec = vplPos - gl_Vertex.xyz;" << endl
-            << "   gl_Position = ftransform();" << endl
-            << "   vertexColor = gl_Color.rgb;" << endl;
+		if (!faceNormals) {
+			oss << "varying vec3 lightVec, camVec;" << endl
+				<< "varying vec2 uv;" << endl
+				<< "varying vec3 vertexColor;" << endl
+				<< endl
+				<< "void main() {" << endl
+				<< "   uv = gl_MultiTexCoord0.xy;" << endl
+				<< "   camVec = camPos - gl_Vertex.xyz;" << endl
+				<< "   lightVec = vplPos - gl_Vertex.xyz;" << endl
+				<< "   gl_Position = ftransform();" << endl
+				<< "   vertexColor = gl_Color.rgb;" << endl;
+		} else {
+			oss << "varying vec3 lightVec_vertex, camVec_vertex;" << endl
+				<< "varying vec2 uv_vertex;" << endl
+				<< "varying vec3 vertexColor_vertex;" << endl
+				<< endl
+				<< "void main() {" << endl
+				<< "   uv_vertex = gl_MultiTexCoord0.xy;" << endl
+				<< "   camVec_vertex = camPos - gl_Vertex.xyz;" << endl
+				<< "   lightVec_vertex = vplPos - gl_Vertex.xyz;" << endl
+				<< "   gl_Position = ftransform();" << endl
+				<< "   vertexColor_vertex = gl_Color.rgb;" << endl;
+		}
+		if (!faceNormals)
+			oss << "   normal = gl_Normal;" << endl;
 		if (anisotropic)
 			oss << "   tangent = gl_MultiTexCoord1.xyz;" << endl;
 		oss << "}" << endl;

@@ -52,14 +52,14 @@ void Intersection::computePartials(const RayDifferential &ray) {
 	A[0][1] = dpdv[axes[0]];
 	A[1][0] = dpdu[axes[1]];
 	A[1][1] = dpdv[axes[1]];
-	
+
 	/* Auxilary intersection point of the adjacent rays */
 	Point px = ray.rx(tx), py = ray.ry(ty);
 	Bx[0] = px[axes[0]] - p[axes[0]];
 	Bx[1] = px[axes[1]] - p[axes[1]];
 	By[0] = py[axes[0]] - p[axes[0]];
 	By[1] = py[axes[1]] - p[axes[1]];
-
+	
 	if (EXPECT_TAKEN(solveLinearSystem2x2(A, Bx, x))) {
 		dudx = x[0]; dvdx = x[1];
 	} else {
