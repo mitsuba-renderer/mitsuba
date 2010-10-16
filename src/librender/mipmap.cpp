@@ -262,7 +262,10 @@ Spectrum MIPMap::getValue(const Intersection &its) const {
 		if (minorLength == 0)
 			return triangle(0, its.uv.x, its.uv.y);
 	
-		Float lod = std::max((Float) 0, m_levels - 1 + log2(minorLength));
+		// The min() below avoids overflow in the int conversion when lod=inf
+		Float lod = 
+			std::min(std::max((Float) 0, m_levels - 1 + log2(minorLength)), 
+				(Float) (m_levels-1));
 		int ilod = (int) std::floor(lod);
 		Float d = lod - ilod;
 
@@ -276,7 +279,7 @@ Spectrum MIPMap::EWA(Float u, Float v, Float dudx, Float dudy, Float dvdx,
 	++ewaLookups;
 	if (level >= m_levels)
 		return getTexel(m_levels-1, 0, 0);
-	
+
 	Spectrum result(0.0f);
 	Float denominator = 0.0f;
 	u = u * m_levelWidth[level]; v = v * m_levelHeight[level];
@@ -302,7 +305,7 @@ Spectrum MIPMap::EWA(Float u, Float v, Float dudx, Float dudy, Float dvdx,
 			const Float r2 = A*uu*uu + B*uu*vv + C*vv*vv;
 			if (r2 < 1) {
 				const Float weight = m_weightLut[
-					std::min((int) (r2 * MIPMAP_LUTSIZE), MIPMAP_LUTSIZE - 1)];
+					std::max(0, std::min((int) (r2 * MIPMAP_LUTSIZE), MIPMAP_LUTSIZE - 1))];
 				result += getTexel(level, ut, vt) * weight;
 				denominator += weight;
 			}
