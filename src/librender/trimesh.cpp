@@ -252,6 +252,7 @@ void TriMesh::configure() {
 	for (size_t i=0; i<m_vertexCount; i++) 
 		m_bsphere.expandBy(m_positions[i]);
 	computeNormals();
+
 	if ((m_bsdf->getType() & BSDF::EAnisotropicMaterial
 		|| m_bsdf->usesRayDifferentials()) && !m_tangents)
 		computeTangentSpaceBasis();
@@ -337,7 +338,7 @@ void TriMesh::computeNormals() {
 
 void TriMesh::computeTangentSpaceBasis() {
 	int zeroArea = 0, zeroNormals = 0;
-	if (!m_texcoords)
+	if (!m_texcoords && m_bsdf->getType() & BSDF::EAnisotropicMaterial)
 		Log(EError, "\"%s\": computeTangentSpace(): texture coordinates are required "
 				"to generate tangent vectors. If you want to render with an anisotropic "
 				"material, make sure that all assigned objects have texture coordinates.");
@@ -358,6 +359,11 @@ void TriMesh::computeTangentSpaceBasis() {
 			m_normals[i] = Normal(1.0f, 0.0f, 0.0f);
 		}
 		sharers[i] = 0;
+	}
+	
+	if (!m_texcoords) {
+		delete [] sharers;
+		return;
 	}
 
 	for (size_t i=0; i<m_triangleCount; i++) {
