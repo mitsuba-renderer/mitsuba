@@ -55,7 +55,7 @@ public:
 		int ms = m_timer->getMilliseconds();
 		if (ms > 1000) {
 			Float messagesPerSecond = m_messageCount / (ms / 1000.0f);
-			if (messagesPerSecond > 200) {
+			if (messagesPerSecond > 1000) {
 				emit textMessage(EError, 
 						QString("Flood alert: received %1 messages in %2 ms! Ignoring "
 							"future messages to prevent the user interface from freezing. "
