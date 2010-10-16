@@ -66,7 +66,12 @@ LogWidget::LogWidget(QWidget *parent)
 
 LogWidget::~LogWidget() {
 }
-	
+
+void LogWidget::onCriticalError(const QString &message) {
+	QMessageBox::critical(this, tr("Critical error"),
+			message, QMessageBox::Ok);
+}
+
 void LogWidget::onTextMessage(ELogLevel level, const QString &message) {
 	QColor color;
 	switch (level) {

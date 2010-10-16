@@ -26,13 +26,22 @@ namespace mitsuba {
 	class RenderJob;
 };
 
-
 class QConsoleAppender : public QObject, public Appender {
 	Q_OBJECT
 public:
-    void append(ELogLevel level, const std::string &message) {
-		emit textMessage(level, QString::fromLatin1(message.c_str()));
+	QConsoleAppender() {
+		m_timer = new Timer();
+		m_ignoreMessages = false;
+		m_messageCount = 0;
 	}
+
+    void append(ELogLevel level, const std::string &message) {
+		if (!m_ignoreMessages) {
+			emit textMessage(level, QString::fromLatin1(message.c_str()));
+			floodCheck();
+		}
+	}
+
     void logProgress(Float progress, const std::string &name, 
 		const std::string &formatted, const std::string &eta,
 		const void *ptr) {
@@ -40,10 +49,36 @@ public:
 			QString::fromLatin1(name.c_str()), (float) progress,
 			QString::fromLatin1(eta.c_str()));
 	}
+
+	void floodCheck() {
+		++m_messageCount;
+		int ms = m_timer->getMilliseconds();
+		if (ms > 1000) {
+			Float messagesPerSecond = m_messageCount / (ms / 1000.0f);
+			if (messagesPerSecond > 200) {
+				emit textMessage(EError, 
+						QString("Flood alert: received %1 messages in %2 ms! Ignoring "
+							"future messages to prevent the user interface from freezing. "
+							"Note: this only concerns the UI, all messages will still be written to the log file.")
+						.arg(m_messageCount).arg(m_timer->getMilliseconds()));
+				m_ignoreMessages = true;
+				emit criticalError("The console is being flooded with messages and will now shut down to "
+						"prevent the user interface from freezing. Please refer to the console messages to "
+						"find out what happened.");
+			}
+			m_messageCount = 0;
+			m_timer->reset();
+		}
+	}
 signals:
+	void criticalError(const QString &message);
 	void textMessage(ELogLevel level, const QString &message);
 	void progressMessage(const RenderJob *job, const QString &name, 
 		float progress, const QString &eta);
+private:
+	ref<Timer> m_timer;
+	bool m_ignoreMessages;
+	size_t m_messageCount;
 };
 
 class LogWidget : public QMainWindow {
@@ -54,6 +89,7 @@ public:
 	void show();
 public slots:
 	void onTextMessage(ELogLevel level, const QString &message);
+	void onCriticalError(const QString &message);
 	void onShowStats();
 private:
 	QTextEdit *m_contents;

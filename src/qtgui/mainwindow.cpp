@@ -102,6 +102,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	logger->addAppender(m_consoleAppender);
 	connect(m_consoleAppender, SIGNAL(textMessage(ELogLevel, const QString &)), 
 		m_logWidget, SLOT(onTextMessage(ELogLevel, const QString &)), Qt::QueuedConnection);
+	connect(m_consoleAppender, SIGNAL(criticalError(const QString &)), 
+		m_logWidget, SLOT(onCriticalError(const QString &)), Qt::QueuedConnection);
 
 	SLog(EInfo, "Mitsuba version " MTS_VERSION ", Copyright (c) " MTS_YEAR " Wenzel Jakob");
 
