@@ -91,7 +91,7 @@ void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mt
 }
 
 void parseMaterials(GeometryConverter *cvt, std::ostream &os, const fs::path &texturesDir, 
-		const fs::path &mtlFileName) {
+		const fs::path &mtlFileName, std::set<std::string> &mtlList) {
 	SLog(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.file_string().c_str());
 	fs::ifstream is(mtlFileName);
 	if (is.bad() || is.fail())
@@ -104,6 +104,7 @@ void parseMaterials(GeometryConverter *cvt, std::ostream &os, const fs::path &te
 
 	while (is >> buf) {
 		if (buf == "newmtl") {
+			mtlList.insert(mtlName);
 			addMaterial(cvt, os, mtlName, texturesDir, diffuse, diffuseMap, maskMap);
 			std::getline(is, line);
 			mtlName = trim(line.substr(1, line.length()-1));
@@ -148,6 +149,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 	os << "\t<integrator id=\"integrator\" type=\"direct\"/>" << endl << endl;
 
 	std::string buf, line;
+	std::set<std::string> mtlList;
 	while (is >> buf) {
 		if (buf == "mtllib") {
 			std::getline(is, line);
@@ -156,7 +158,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 			fRes->addPath(fs::complete(fRes->resolve(inputFile)).parent_path());
 			fs::path fullMtlName = fRes->resolve(mtlName);
 			if (fs::exists(fullMtlName))
-				parseMaterials(this, os, textureDirectory, fullMtlName);
+				parseMaterials(this, os, textureDirectory, fullMtlName, mtlList);
 			else
 				SLog(EWarn, "Could not find referenced material library '%s'", mtlName.c_str());
 		} else {
@@ -185,7 +187,8 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 		stream->close();
 		os << "\t<shape id=\"" << mesh->getName() << "\" type=\"serialized\">" << endl;
 		os << "\t\t<string name=\"filename\" value=\"meshes/" << filename.c_str() << "\"/>" << endl;
-		if (mesh->getBSDF() != NULL) { 
+		if (mesh->getBSDF() != NULL && 
+				mtlList.find(mesh->getBSDF()->getName()) != mtlList.end()) { 
 			const std::string &matID = mesh->getBSDF()->getName();
 			os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
 		}
