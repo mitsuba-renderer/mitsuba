@@ -35,6 +35,7 @@ public:
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
+		Texture::serialize(stream, manager);
 	}
 
 	Spectrum getValue(const Intersection &its) const {
