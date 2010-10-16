@@ -180,7 +180,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 		std::string filename = mesh->getName() + std::string(".serialized");
 		SLog(EInfo, "Saving \"%s\"", filename.c_str());
 		ref<FileStream> stream = new FileStream(meshesDirectory / filename, FileStream::ETruncReadWrite);
-		stream->setByteOrder(Stream::ENetworkByteOrder);
+		stream->setByteOrder(Stream::ELittleEndian);
 		mesh->serialize(stream);
 		stream->close();
 		os << "\t<shape id=\"" << mesh->getName() << "\" type=\"serialized\">" << endl;

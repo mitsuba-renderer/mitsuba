@@ -22,6 +22,7 @@
 #include <mitsuba/render/luminaire.h>
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
+#include <set>
 
 MTS_NAMESPACE_BEGIN
 
@@ -67,8 +68,9 @@ public:
 		bool hasNormals = false, hasTexcoords = false;
 		bool firstVertex = true;
 		BSDF *currentMaterial = NULL;
-
 		std::string name = m_name;
+		std::set<std::string> geomNames;
+		int geomIdx = 0;
 
 		while (is >> buf) {
 			if (buf == "v") {
@@ -78,9 +80,14 @@ public:
 				vertices.push_back(m_objectToWorld(p));
 				if (firstVertex) {
 					if (triangles.size() > 0) {
+						if (geomNames.find(name) != geomNames.end())
+							/// make sure that we have unique names
+							name = formatString("%s_%i", m_name.c_str(), geomIdx);
 						generateGeometry(name, vertices, normals, texcoords, 
 							triangles, hasNormals, hasTexcoords, currentMaterial);
 						triangles.clear();
+						geomNames.insert(name);
+						geomIdx++;
 					}
 					hasNormals = false;
 					hasTexcoords = false;
@@ -97,7 +104,7 @@ public:
 			} else if (buf == "g") {
 				std::string line;
 				std::getline(is, line);
-				if (line.length() > 2) {
+				if (line.length() > 2) { 
 					name = trim(line.substr(1, line.length()-1));
 					Log(EInfo, "Loading geometry \"%s\"", name.c_str());
 				}

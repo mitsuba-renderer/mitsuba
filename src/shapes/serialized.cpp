@@ -36,23 +36,30 @@ public:
 		/* Load the geometry */
 		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.leaf().c_str());
 		ref<FileStream> stream = new FileStream(filePath, FileStream::EReadOnly);
-		stream->setByteOrder(Stream::ENetworkByteOrder);
+		stream->setByteOrder(Stream::ELittleEndian);
 		ref<TriMesh> mesh = new TriMesh(stream);
 		m_triangleCount = mesh->getTriangleCount();
 		m_vertexCount = mesh->getVertexCount();
-		m_triangles = new Triangle[m_triangleCount];
+
+		m_positions = new Point[m_vertexCount];
+		memcpy(m_positions, mesh->getVertexPositions(), sizeof(Point) * m_vertexCount);
+
 		if (mesh->hasVertexNormals()) {
 			m_normals = new Normal[m_vertexCount];
 			memcpy(m_normals, mesh->getVertexNormals(), sizeof(Normal) * m_vertexCount);
 		}
+
 		if (mesh->hasVertexTexcoords()) {
 			m_texcoords = new Point2[m_vertexCount];
 			memcpy(m_texcoords, mesh->getVertexTexcoords(), sizeof(Point2) * m_vertexCount);
 		}
+
 		if (mesh->hasVertexColors()) {
 			m_colors = new Spectrum[m_vertexCount];
 			memcpy(m_colors, mesh->getVertexColors(), sizeof(Spectrum) * m_vertexCount);
 		}
+
+		m_triangles = new Triangle[m_triangleCount];
 		memcpy(m_triangles, mesh->getTriangles(), sizeof(Triangle) * m_triangleCount);
 
 		if (!m_objectToWorld.isIdentity()) {

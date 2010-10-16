@@ -422,7 +422,7 @@ void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string i
 
 	std::string filename = id + std::string(".serialized");
 	ref<FileStream> stream = new FileStream(meshesDirectory / filename, FileStream::ETruncReadWrite);
-	stream->setByteOrder(Stream::ENetworkByteOrder);
+	stream->setByteOrder(Stream::ELittleEndian);
 	mesh->serialize(stream);
 	stream->close();
 

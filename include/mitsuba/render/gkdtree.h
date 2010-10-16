@@ -808,6 +808,8 @@ protected:
 		Log(EDebug, "   Retract bad splits       : %s", 
 				m_retract ? "yes" : "no");
 		Log(EDebug, "   Stopping primitive count : %i", m_stopPrims);
+		Log(EDebug, "   Build tree in parallel   : %s", 
+				m_parallelBuild ? "yes" : "no");
 		Log(EDebug, "");
 
 		size_type procCount = getProcessorCount();

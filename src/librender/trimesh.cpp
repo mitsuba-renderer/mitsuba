@@ -151,13 +151,12 @@ static void readHelper(Stream *stream, bool fileDoublePrecision,
 	}
 }
 
-TriMesh::TriMesh(Stream *_stream) : Shape(Properties()) {
+TriMesh::TriMesh(Stream *_stream) : Shape(Properties()), m_tangents(NULL) {
 	ref<Stream> stream = _stream;
 
-	Assert(sizeof(Triangle) == 3*sizeof(int));	
-	if (stream->getByteOrder() != Stream::ENetworkByteOrder) 
+	if (stream->getByteOrder() != Stream::ELittleEndian) 
 		Log(EError, "Tried to unserialize a shape from a stream, "
-		"which was not previously set to network byte order!");
+		"which was not previously set to little endian byte order!");
 
 	if (stream->readShort() != MTS_FILEFORMAT_HEADER)
 		Log(EError, "Encountered an invalid file format!");
@@ -184,6 +183,8 @@ TriMesh::TriMesh(Stream *_stream) : Shape(Properties()) {
 		readHelper(stream, fileDoublePrecision, 
 				reinterpret_cast<Float *>(m_normals),
 				m_vertexCount, sizeof(Normal)/sizeof(Float));
+	} else {
+		m_normals = NULL;
 	}
 
 	if (flags & EHasTexcoords) {
@@ -191,6 +192,8 @@ TriMesh::TriMesh(Stream *_stream) : Shape(Properties()) {
 		readHelper(stream, fileDoublePrecision,
 				reinterpret_cast<Float *>(m_texcoords),
 				m_vertexCount, sizeof(Point2)/sizeof(Float));
+	} else {
+		m_texcoords = NULL;
 	}
 
 	if (flags & EHasColors) {
@@ -198,8 +201,11 @@ TriMesh::TriMesh(Stream *_stream) : Shape(Properties()) {
 		readHelper(stream, fileDoublePrecision, 
 				reinterpret_cast<Float *>(m_colors),
 				m_vertexCount, sizeof(Spectrum)/sizeof(Float));
+	} else {
+		m_colors = NULL;
 	}
 
+	m_triangles = new Triangle[m_triangleCount];
 	stream->readUIntArray(reinterpret_cast<uint32_t *>(m_triangles), 
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
 
@@ -474,9 +480,9 @@ void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
 void TriMesh::serialize(Stream *_stream) const {
 	ref<Stream> stream = _stream;
 
-	if (stream->getByteOrder() != Stream::ENetworkByteOrder) 
+	if (stream->getByteOrder() != Stream::ELittleEndian) 
 		Log(EError, "Tried to unserialize a shape from a stream, "
-			"which was not previously set to network byte order!");
+			"which was not previously set to little endian byte order!");
 
 	stream->writeShort(MTS_FILEFORMAT_HEADER);
 	stream->writeShort(MTS_FILEFORMAT_VERSION_V3);
@@ -487,6 +493,7 @@ void TriMesh::serialize(Stream *_stream) const {
 #else
 	uint32_t flags = EDoublePrecision;
 #endif
+
 	if (m_normals)
 		flags |= EHasNormals;
 	if (m_texcoords)

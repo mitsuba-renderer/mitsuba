@@ -171,8 +171,8 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 
 				if (EXPECT_TAKEN(vertexTexcoords)) {
 					const Point2 &t0 = vertexTexcoords[idx0];
-					const Point2 &t1 = vertexTexcoords[idx0];
-					const Point2 &t2 = vertexTexcoords[idx0];
+					const Point2 &t1 = vertexTexcoords[idx1];
+					const Point2 &t2 = vertexTexcoords[idx2];
 					its.uv = t0 * b.x + t1 * b.y + t2 * b.z;
 				} else {
 					its.uv = Point2(0.0f);
