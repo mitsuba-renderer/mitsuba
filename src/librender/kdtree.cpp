@@ -90,6 +90,8 @@ void KDTree::build() {
 				++idx;
 			}
 		} else {
+			/* Create a 'fake' triangle, which redirects to a Shape */
+			memset(&m_triAccel[idx], 0, sizeof(TriAccel));
 			m_triAccel[idx].shapeIndex = i;
 			m_triAccel[idx].k = KNoTriangleFlag;
 			++idx;
@@ -123,72 +125,78 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 				/* After having found a unique intersection, fill a proper record
 				   using the temporary information collected in \ref intersect() */
 				const IntersectionCache *cache = reinterpret_cast<const IntersectionCache *>(temp);
-				const TriMesh *trimesh = static_cast<const TriMesh *>(m_shapes[cache->shapeIndex]);
-				const Triangle &tri = trimesh->getTriangles()[cache->index];
-				const Point *vertexPositions = trimesh->getVertexPositions();
-				const Normal *vertexNormals = trimesh->getVertexNormals();
-				const Point2 *vertexTexcoords = trimesh->getVertexTexcoords();
-				const Spectrum *vertexColors = trimesh->getVertexColors();
-				const TangentSpace *vertexTangents = trimesh->getVertexTangents();
-				const Vector b(1 - cache->u - cache->v, cache->u, cache->v);
+				const Shape *shape = m_shapes[cache->shapeIndex];
+				if (m_triangleFlag[cache->shapeIndex]) {
+					const TriMesh *trimesh = static_cast<const TriMesh *>(shape);
+					const Triangle &tri = trimesh->getTriangles()[cache->index];
+					const Point *vertexPositions = trimesh->getVertexPositions();
+					const Normal *vertexNormals = trimesh->getVertexNormals();
+					const Point2 *vertexTexcoords = trimesh->getVertexTexcoords();
+					const Spectrum *vertexColors = trimesh->getVertexColors();
+					const TangentSpace *vertexTangents = trimesh->getVertexTangents();
+					const Vector b(1 - cache->u - cache->v, cache->u, cache->v);
 
-				const uint32_t idx0 = tri.idx[0], idx1 = tri.idx[1], idx2 = tri.idx[2];
-				const Point &p0 = vertexPositions[idx0];
-				const Point &p1 = vertexPositions[idx1];
-				const Point &p2 = vertexPositions[idx2];
+					const uint32_t idx0 = tri.idx[0], idx1 = tri.idx[1], idx2 = tri.idx[2];
+					const Point &p0 = vertexPositions[idx0];
+					const Point &p1 = vertexPositions[idx1];
+					const Point &p2 = vertexPositions[idx2];
 
-				//its.p = ray(its.t);
-				its.p = p0 * b.x + p1 * b.y + p2 * b.z;
-				Normal faceNormal(cross(p1-p0, p2-p0));
-				Float length = faceNormal.length();
-				if (!faceNormal.isZero())
-					faceNormal /= length;
+					//its.p = ray(its.t);
+					its.p = p0 * b.x + p1 * b.y + p2 * b.z;
+					Normal faceNormal(cross(p1-p0, p2-p0));
+					Float length = faceNormal.length();
+					if (!faceNormal.isZero())
+						faceNormal /= length;
 
-				its.geoFrame = Frame(faceNormal);
+					its.geoFrame = Frame(faceNormal);
 
-				if (EXPECT_TAKEN(vertexNormals)) {
-					const Normal &n0 = vertexNormals[idx0];
-					const Normal &n1 = vertexNormals[idx1];
-					const Normal &n2 = vertexNormals[idx2];
+					if (EXPECT_TAKEN(vertexNormals)) {
+						const Normal &n0 = vertexNormals[idx0];
+						const Normal &n1 = vertexNormals[idx1];
+						const Normal &n2 = vertexNormals[idx2];
 
-					if (EXPECT_TAKEN(!vertexTangents)) {
-						its.shFrame = Frame(normalize(n0 * b.x + n1 * b.y + n2 * b.z));
+						if (EXPECT_TAKEN(!vertexTangents)) {
+							its.shFrame = Frame(normalize(n0 * b.x + n1 * b.y + n2 * b.z));
+						} else {
+							const TangentSpace &t0 = vertexTangents[idx0];
+							const TangentSpace &t1 = vertexTangents[idx1];
+							const TangentSpace &t2 = vertexTangents[idx2];
+							const Vector dpdu = t0.dpdu * b.x + t1.dpdu * b.y + t2.dpdu * b.z;
+							its.shFrame.n = normalize(n0 * b.x + n1 * b.y + n2 * b.z);
+							its.shFrame.s = normalize(dpdu - its.shFrame.n 
+								* dot(its.shFrame.n, dpdu));
+							its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
+							its.dpdu = dpdu;
+							its.dpdv = t0.dpdv * b.x + t1.dpdv * b.y + t2.dpdv * b.z;
+						}
 					} else {
-						const TangentSpace &t0 = vertexTangents[idx0];
-						const TangentSpace &t1 = vertexTangents[idx1];
-						const TangentSpace &t2 = vertexTangents[idx2];
-						const Vector dpdu = t0.dpdu * b.x + t1.dpdu * b.y + t2.dpdu * b.z;
-						its.shFrame.n = normalize(n0 * b.x + n1 * b.y + n2 * b.z);
-						its.shFrame.s = normalize(dpdu - its.shFrame.n 
-							* dot(its.shFrame.n, dpdu));
-						its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
-						its.dpdu = dpdu;
-						its.dpdv = t0.dpdv * b.x + t1.dpdv * b.y + t2.dpdv * b.z;
+						its.shFrame = its.geoFrame;
 					}
+
+					if (EXPECT_TAKEN(vertexTexcoords)) {
+						const Point2 &t0 = vertexTexcoords[idx0];
+						const Point2 &t1 = vertexTexcoords[idx1];
+						const Point2 &t2 = vertexTexcoords[idx2];
+						its.uv = t0 * b.x + t1 * b.y + t2 * b.z;
+					} else {
+						its.uv = Point2(0.0f);
+					}
+
+					if (EXPECT_NOT_TAKEN(vertexColors)) {
+						const Spectrum &c0 = vertexColors[idx0],
+									&c1 = vertexColors[idx1],
+									&c2 = vertexColors[idx2];
+						its.color = c0 * b.x + c1 * b.y + c2 * b.z;
+					}
+
+					its.wi = its.toLocal(-ray.d);
+					its.shape = trimesh;
+					its.hasUVPartials = false;
+					return true;
 				} else {
-					its.shFrame = its.geoFrame;
+					shape->fillIntersectionRecord(ray, its.t,
+						reinterpret_cast<const uint8_t*>(temp) + 4, its);
 				}
-
-				if (EXPECT_TAKEN(vertexTexcoords)) {
-					const Point2 &t0 = vertexTexcoords[idx0];
-					const Point2 &t1 = vertexTexcoords[idx1];
-					const Point2 &t2 = vertexTexcoords[idx2];
-					its.uv = t0 * b.x + t1 * b.y + t2 * b.z;
-				} else {
-					its.uv = Point2(0.0f);
-				}
-
-				if (EXPECT_NOT_TAKEN(vertexColors)) {
-					const Spectrum &c0 = vertexColors[idx0],
-								   &c1 = vertexColors[idx1],
-								   &c2 = vertexColors[idx2];
-					its.color = c0 * b.x + c1 * b.y + c2 * b.z;
-				}
-
-				its.wi = its.toLocal(-ray.d);
-				its.shape = trimesh;
-				its.hasUVPartials = false;
-				return true;
 			}
 		}
 	}
@@ -304,6 +312,7 @@ void KDTree::rayIntersectPacket(const RayPacket4 &packet,
 					itsFound = _mm_or_ps(itsFound, 
 						kdTri.rayIntersectPacket(packet, searchStart, searchEnd, masked, its));
 				} else {
+#if 0
 					/* Not a triangle - invoke the shape's intersection routine */
 					__m128 hasIts = m_shapes[kdTri.shapeIndex]->rayIntersectPacket(packet, 
 							searchStart, searchEnd, masked, its);
@@ -312,6 +321,7 @@ void KDTree::rayIntersectPacket(const RayPacket4 &packet,
 						load1_epi32(kdTri.index), its.primIndex.pi);
 					its.shapeIndex.pi = mux_epi32(pstoepi32(hasIts),
 						load1_epi32(kdTri.shapeIndex), its.shapeIndex.pi);
+#endif
 				}
 				searchEnd = _mm_min_ps(searchEnd, its.t.ps);
 			}
@@ -330,85 +340,6 @@ void KDTree::rayIntersectPacket(const RayPacket4 &packet,
 	}
 }
 	
-void KDTree::rayIntersectPacket(const Ray *rays, Intersection *itsArray) const {
-	RayPacket4 MM_ALIGN16 packet;
-	RayInterval4 MM_ALIGN16 interval(rays);
-	Intersection4 MM_ALIGN16 its4;
-
-	if (packet.load(rays)) {
-		rayIntersectPacket(packet, interval, its4);
-
-		for (int i=0; i<4; i++) {
-			Intersection &its = itsArray[i];
-
-			its.t = its4.t.f[i];
-
-			if (its.t != std::numeric_limits<float>::infinity()) {
-				const uint32_t shapeIndex = its4.shapeIndex.i[i];
-				const uint32_t primIndex = its4.primIndex.i[i];
-				const Shape *shape = m_shapes[shapeIndex];
-
-				if (EXPECT_TAKEN(primIndex != KNoTriangleFlag)) {
-					const TriMesh *trimesh = static_cast<const TriMesh *>(shape);
-					const Triangle &tri = trimesh->getTriangles()[primIndex];
-					const Point *vertexPositions = trimesh->getVertexPositions();
-					const Normal *vertexNormals = trimesh->getVertexNormals();
-					const Point2 *vertexTexcoords = trimesh->getVertexTexcoords();
-					const TangentSpace *vertexTangents = trimesh->getVertexTangents();
-					const Vector b(1 - its4.u.f[i] - its4.v.f[i], its4.u.f[i], its4.v.f[i]);
-
-					const uint32_t idx0 = tri.idx[0], idx1 = tri.idx[1], idx2 = tri.idx[2];
-					const Point &p0 = vertexPositions[idx0];
-					const Point &p1 = vertexPositions[idx1];
-					const Point &p2 = vertexPositions[idx2];
-
-					//its.p = ray(its.t);
-					its.p = p0 * b.x + p1 * b.y + p2 * b.z;
-					its.geoFrame = Frame(normalize(cross(p1-p0, p2-p0)));
-					if (EXPECT_TAKEN(vertexNormals)) {
-						const Normal &n0 = vertexNormals[idx0];
-						const Normal &n1 = vertexNormals[idx1];
-						const Normal &n2 = vertexNormals[idx2];
-
-						if (EXPECT_TAKEN(!vertexTangents)) {
-							its.shFrame = Frame(normalize(n0 * b.x + n1 * b.y + n2 * b.z));
-						} else {
-							const TangentSpace &t0 = vertexTangents[idx0];
-							const TangentSpace &t1 = vertexTangents[idx1];
-							const TangentSpace &t2 = vertexTangents[idx2];
-							const Vector dpdu = t0.dpdu * b.x + t1.dpdu * b.y + t2.dpdu * b.z;
-							its.shFrame.n = normalize(n0 * b.x + n1 * b.y + n2 * b.z);
-							its.shFrame.s = normalize(dpdu - its.shFrame.n 
-								* dot(its.shFrame.n, dpdu));
-							its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
-							its.dpdu = dpdu;
-							its.dpdv = t0.dpdv * b.x + t1.dpdv * b.y + t2.dpdv * b.z;
-						}
-					} else {
-						its.shFrame = its.geoFrame;
-					}
-
-					if (vertexTexcoords) {
-						const Point2 &t0 = vertexTexcoords[idx0];
-						const Point2 &t1 = vertexTexcoords[idx0];
-						const Point2 &t2 = vertexTexcoords[idx0];
-						its.uv = t0 * b.x + t1 * b.y + t2 * b.z;
-					}
-
-					its.wi = its.toLocal(-rays[i].d);
-					its.hasUVPartials = false;
-					its.shape = trimesh;
-				} else {
-					/* Non-triangle shape: intersect again to fill in details */
-					shape->rayIntersect(rays[i], its);
-				}
-			}
-		}
-	} else {
-		rayIntersectPacketIncoherent(rays, itsArray);
-	}
-}
-
 void KDTree::rayIntersectPacketIncoherent(const RayPacket4 &packet, 
 		const RayInterval4 &rayInterval, Intersection4 &its4) const {
 	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
@@ -433,10 +364,6 @@ void KDTree::rayIntersectPacketIncoherent(const RayPacket4 &packet,
 	}
 }
 
-#else // !MTS_HAS_COHERENT_RT
-void KDTree::rayIntersectPacket(const Ray *rays, Intersection *its) const {
-	rayIntersectPacketIncoherent(rays, its);
-}
 #endif
 
 MTS_IMPLEMENT_CLASS(KDTree, false, GenericKDTree)

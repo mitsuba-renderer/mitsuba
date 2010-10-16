@@ -46,7 +46,7 @@ struct TangentSpace {
 class MTS_EXPORT_RENDER TriMesh : public Shape {
 public:
 	/// Create a new, empty triangle mesh with the specified state
-	TriMesh(const std::string &name, Transform worldToObject,
+	TriMesh(const std::string &name, 
 			size_t triangleCount, size_t vertexCount,
 			bool hasNormals, bool hasTexcoords, 
 			bool hasVertexColors, bool flipNormals = false,
@@ -62,6 +62,15 @@ public:
 	 * will remain stable as Mitsuba evolves.
 	 */
 	TriMesh(Stream *stream);
+
+	/// Return the name of this mesh
+	virtual std::string getName() const;
+
+	/// Return the total surface area
+	virtual Float getSurfaceArea() const;
+
+	/// Return a bounding box containing the mesh
+	virtual AABB getAABB() const;
 
 	/// Return the number of triangles
 	inline size_t getTriangleCount() const { return m_triangleCount; }
@@ -110,6 +119,12 @@ public:
 	/// Sample a point on the mesh
 	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const;
 
+	/**
+	 * \brief Return the probability density of sampling the 
+	 * given point using \ref sampleArea()
+	 */
+	Float pdfArea(const ShapeSamplingRecord &sRec) const;
+
 	/// Generate tangent space basis vectors
 	void computeTangentSpaceBasis();
 
@@ -127,7 +142,12 @@ public:
 	 */
 	void serialize(Stream *stream) const;
 
-	/// Build a discrete probability distribution for sampling. Called once after parsing
+	/**
+	 * \brief Build a discrete probability distribution 
+	 * for sampling. 
+	 *
+	 * Called once while loading the scene
+	 */
 	virtual void configure();
 
 	/// Return a string representation
@@ -141,6 +161,8 @@ protected:
 	/// Virtual destructor
 	virtual ~TriMesh();
 protected:
+	std::string m_name;
+	AABB m_aabb;
 	DiscretePDF m_areaPDF;
 	Triangle *m_triangles;
 	Point *m_positions;
@@ -152,6 +174,8 @@ protected:
 	size_t m_vertexCount;
 	bool m_flipNormals;
 	bool m_faceNormals;
+	Float m_surfaceArea;
+	Float m_invSurfaceArea;
 };
 
 MTS_NAMESPACE_END

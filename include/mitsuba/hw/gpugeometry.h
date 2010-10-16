@@ -31,7 +31,7 @@ public:
 	GPUGeometry(const TriMesh *mesh);
 
 	/// Return the name of this geometry object
-	inline const std::string &getName() { return m_mesh->getName(); }
+	inline std::string getName() const { return m_mesh->getName(); }
 
 	/// Upload the geometry object
 	virtual void init() = 0;

@@ -91,7 +91,7 @@ public:
 		ref<KDTree> tree = new KDTree();
 		tree->addShape(mesh);
 		tree->build();
-		BSphere bsphere(mesh->getBSphere());
+		BSphere bsphere(tree->getBSphere());
 
 		bsphere = BSphere(Point(-0.016840, 0.110154, -0.001537), .2f);
 

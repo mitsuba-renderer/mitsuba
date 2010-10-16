@@ -389,7 +389,7 @@ void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string i
 		" vertices (merged " SIZE_T_FMT " vertices).", prefixName.c_str(), id.c_str(),
 		triangles.size(), vertexBuffer.size(), numMerged);
 
-	ref<TriMesh> mesh = new TriMesh(prefixName + "/" + id, Transform(),
+	ref<TriMesh> mesh = new TriMesh(prefixName + "/" + id, 
 		triangles.size(), vertexBuffer.size(),
 		vData->typeToOffset[ENormal] != -1,
 		vData->typeToOffset[EUV] != -1,

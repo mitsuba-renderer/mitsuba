@@ -31,6 +31,10 @@ public:
 	SerializedMesh(const Properties &props) : TriMesh(props) {
 		fs::path filePath = Thread::getThread()->getFileResolver()->resolve(
 			props.getString("filename"));
+
+		/* Object-space -> World-space transformation */
+		Transform objectToWorld = props.getTransform("toWorld", Transform());
+
 		m_name = filePath.stem();
 
 		/* Load the geometry */
@@ -62,12 +66,12 @@ public:
 		m_triangles = new Triangle[m_triangleCount];
 		memcpy(m_triangles, mesh->getTriangles(), sizeof(Triangle) * m_triangleCount);
 
-		if (!m_objectToWorld.isIdentity()) {
+		if (!objectToWorld.isIdentity()) {
 			for (size_t i=0; i<m_vertexCount; ++i)
-				m_positions[i] = m_objectToWorld(m_positions[i]);
+				m_positions[i] = objectToWorld(m_positions[i]);
 			if (m_normals) {
 				for (size_t i=0; i<m_vertexCount; ++i)
-					m_normals[i] = m_objectToWorld(m_normals[i]);
+					m_normals[i] = objectToWorld(m_normals[i]);
 			}
 		}
 	}

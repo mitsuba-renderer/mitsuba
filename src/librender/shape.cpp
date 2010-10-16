@@ -26,23 +26,13 @@
 MTS_NAMESPACE_BEGIN
 
 Shape::Shape(const Properties &props) 
- : ConfigurableObject(props), m_luminaire(NULL) {
-	m_objectToWorld = props.getTransform("toWorld", Transform());
-	m_worldToObject = m_objectToWorld.inverse();
-	m_surfaceArea = 0.0f;
-}
+ : ConfigurableObject(props) { }
 
 Shape::Shape(Stream *stream, InstanceManager *manager) 
  : ConfigurableObject(stream, manager) {
-	m_worldToObject = Transform(stream);
-	m_aabb = AABB(stream);
-	m_bsphere = BSphere(stream);
-	m_surfaceArea = stream->readFloat();
 	m_bsdf = static_cast<BSDF *>(manager->getInstance(stream));
 	m_subsurface = static_cast<Subsurface *>(manager->getInstance(stream));
 	m_luminaire = static_cast<Luminaire *>(manager->getInstance(stream));
-	m_invSurfaceArea = 1.0f / m_surfaceArea;
-	m_objectToWorld = m_worldToObject.inverse();
 }
 
 Shape::~Shape() {
@@ -60,26 +50,23 @@ void Shape::configure() {
 bool Shape::isCompound() const {
 	return false;
 }
-
-bool Shape::isClippable() const {
-	return false;
-}
-
-AABB Shape::getClippedAABB(const AABB &aabb) const {
-	AABB result(m_aabb);
-	result.clip(aabb);
-	return result;
+	
+std::string Shape::getName() const {
+	return "Unnamed";
 }
 
 Shape *Shape::getElement(int i) {
 	return NULL;
 }
-
-Float Shape::pdfArea(const ShapeSamplingRecord &sRec) const {
-	return m_invSurfaceArea;
+	
+AABB Shape::getClippedAABB(const AABB &box) const {
+	AABB result = getAABB();
+	result.clip(box);
+	return result;
 }
 
-Float Shape::sampleSolidAngle(ShapeSamplingRecord &sRec, const Point &from, const Point2 &sample) const {
+Float Shape::sampleSolidAngle(ShapeSamplingRecord &sRec, 
+		const Point &from, const Point2 &sample) const {
 	/* Turns the area sampling routine into one that samples wrt. solid angles */
 	Float pdfArea = sampleArea(sRec, sample);
 	Vector lumToPoint = from - sRec.p;
@@ -114,41 +101,39 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 	}
 }
 
-/// Ray intersection test
-bool Shape::rayIntersect(const Ray &ray, Intersection &its) const {
-	Log(EError, "Not implemented!");
-	return false;
-}
-
-bool Shape::rayIntersect(const Ray &ray, Float start, Float end, Float &t) const {
-	Log(EError, "Not implemented!");
-	return false;
-}
-
-Float Shape::sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
-	Log(EError, "Not implemented!");
-	return 0;
-}
-
-#if defined(MTS_SSE)
-__m128 Shape::rayIntersectPacket(const RayPacket4 &packet, const
-       __m128 mint, __m128 maxt, __m128 inactive, Intersection4 &its) const {
-	Log(EError, "Not implemented!");
-	return SSEConstants::zero.ps;
-}
-#endif
-
 void Shape::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
-
-	m_worldToObject.serialize(stream);
-	m_aabb.serialize(stream);
-	m_bsphere.serialize(stream);
-	stream->writeFloat(m_surfaceArea);
 	manager->serialize(stream, m_bsdf.get());
 	manager->serialize(stream, m_subsurface.get());
 	manager->serialize(stream, m_luminaire.get());
 }
+
+bool Shape::rayIntersect(const Ray &ray, Float mint, 
+		Float maxt, Float &t, void *temp) const {
+	Log(EError, "%s::rayIntersect(): Not implemented!",
+			getClass()->getName().c_str());
+	return false;
+}
+
+void Shape::fillIntersectionRecord(const Ray &ray, Float t, 
+		const void *temp, Intersection &its) const {
+	Log(EError, "%s::fillIntersectionRecord(): Not implemented!",
+			getClass()->getName().c_str());
+}
+
+Float Shape::sampleArea(ShapeSamplingRecord &sRec, 
+		const Point2 &sample) const {
+	Log(EError, "%s::sampleArea(): Not implemented!",
+			getClass()->getName().c_str());
+	return 0.0f;
+}
+
+Float Shape::pdfArea(const ShapeSamplingRecord &sRec) const {
+	Log(EError, "%s::pdfArea(): Not implemented!",
+			getClass()->getName().c_str());
+	return 0.0f;
+}
+
 
 std::string ShapeSamplingRecord::toString() const {
 	std::ostringstream oss;

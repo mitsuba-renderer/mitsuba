@@ -42,6 +42,9 @@ public:
 		/* Determines whether vertex colors should be 
 		   treated as linear RGB or sRGB. */
 		m_sRGB = props.getBoolean("srgb", true);
+		
+		/* Object-space -> World-space transformation */
+		m_objectToWorld = props.getTransform("toWorld", Transform());
 
 		/* Load the geometry */
 		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.leaf().c_str());
@@ -216,6 +219,7 @@ private:
 	Point m_position;
 	Normal m_normal;
 	Float m_red, m_green, m_blue;
+	Transform m_objectToWorld;
 	size_t m_vertexCtr, m_triangleCtr, m_triangleIdxCtr;
 	Triangle m_triangle;
 	bool m_hasNormals, m_hasTexCoords;

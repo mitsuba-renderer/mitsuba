@@ -448,8 +448,8 @@ private:
  * /// Return the AABB of a primitive when clipped to another AABB
  * inline AABB getClippedAABB(index_type primIdx, const AABB &aabb) const;
  *
- * /// Check whether a primitive is intersected by the given ray. Some
- * /// temporary space is supplied, which can be used to store extra 
+ * /// Check whether a primitive is intersected by the given ray. 
+ * /// Some temporary space is supplied, which can be used to cache  
  * /// information about the intersection
  * EIntersectionResult intersect(const Ray &ray, index_type idx, 
  *     Float mint, Float maxt, Float &t, void *tmp);

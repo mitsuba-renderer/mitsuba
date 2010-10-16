@@ -54,6 +54,9 @@ public:
 		/* Causes all normals to be flipped */
 		m_flipNormals = props.getBoolean("flipNormals", false);
 
+		/* Object-space -> World-space transformation */
+		Transform objectToWorld = props.getTransform("toWorld", Transform());
+
 		/* Load the geometry */
 		Log(EInfo, "Loading geometry from \"%s\" ..", path.leaf().c_str());
 		fs::ifstream is(path);
@@ -77,7 +80,7 @@ public:
 				/* Parse + transform vertices */
 				Point p;
 				is >> p.x >> p.y >> p.z;
-				vertices.push_back(m_objectToWorld(p));
+				vertices.push_back(objectToWorld(p));
 				if (firstVertex) {
 					if (triangles.size() > 0) {
 						if (geomNames.find(name) != geomNames.end())
@@ -97,7 +100,7 @@ public:
 				Normal n;
 				is >> n.x >> n.y >> n.z;
 				if (!n.isZero())
-					normals.push_back(normalize(m_objectToWorld(n)));
+					normals.push_back(normalize(objectToWorld(n)));
 				else
 					normals.push_back(n);
 				hasNormals = true;
@@ -164,6 +167,8 @@ public:
 	}
 
 	WavefrontOBJ(Stream *stream, InstanceManager *manager) : Shape(stream, manager) {
+		m_aabb = AABB(stream);
+		m_name = stream->readString();
 		unsigned int meshCount = stream->readUInt();
 		m_meshes.resize(meshCount);
 	
@@ -176,6 +181,8 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Shape::serialize(stream, manager);
 
+		m_aabb.serialize(stream);
+		stream->writeString(m_name);
 		stream->writeUInt((unsigned int) m_meshes.size());
 		for (size_t i=0; i<m_meshes.size(); ++i)
 			manager->serialize(stream, m_meshes[i]);
@@ -323,7 +330,7 @@ public:
 			triangleArray[i] = tri;
 		}
 
-		ref<TriMesh> mesh = new TriMesh(name, m_worldToObject,
+		ref<TriMesh> mesh = new TriMesh(name,
 			triangles.size(), vertexBuffer.size(),
 			hasNormals, hasTexcoords, false,
 			m_flipNormals, m_faceNormals);
@@ -418,11 +425,28 @@ public:
 		return shape;
 	}
 
+	std::string getName() const {
+		return m_name;
+	}
+
+	AABB getAABB() const {
+		return m_aabb;
+	}
+
+	Float getSurfaceArea() const {
+		Float sa = 0;
+		for (size_t i=0; i<m_meshes.size(); ++i)
+			sa += m_meshes[i]->getSurfaceArea();
+		return sa;
+	}
+
 	MTS_DECLARE_CLASS()
 private:
 	std::vector<TriMesh *> m_meshes;
 	std::map<std::string, BSDF *> m_materials;
 	bool m_flipNormals, m_faceNormals;
+	std::string m_name;
+	AABB m_aabb;
 };
 
 MTS_IMPLEMENT_CLASS_S(WavefrontOBJ, false, Shape)

@@ -53,7 +53,9 @@ public:
  */
 struct MTS_EXPORT_RENDER Intersection {
 public:
-	inline Intersection() : t(std::numeric_limits<Float>::infinity()), shape(NULL) { }
+	inline Intersection() :
+		t(std::numeric_limits<Float>::infinity()), 
+		shape(NULL) { }
 
 	/* Convert a vector expressed inside the shading frame into world
 	   coordinates */
@@ -150,43 +152,66 @@ public:
 	/// Is this a compound shape consisting of several sub-objects?
 	virtual bool isCompound() const;
 
-	/// Return a sub-element of a compound shape
+	/**
+	 * \brief Return a sub-element of a compound shape. 
+	 *
+	 * When expanding shapes, the scene will repeatedly call this
+	 * function with increasing indices. Returning \a NULL indicates
+	 * that no more elements are available.
+	 */
 	virtual Shape *getElement(int i);
 
-	/// Does this shape support primitive clipping?
-	virtual bool isClippable() const;
+	/// Return the shape's surface area
+	virtual Float getSurfaceArea() const = 0;
+
+	/// Return a bounding box containing the shape
+	virtual AABB getAABB() const = 0;
 
 	/**
-	 * Returns the minimal axis-aligned bounding box of this shape 
-	 * after it has clipped to the extends of another AABB.
-	 * This is extremely useful to construct better kd-trees.
+	 * \brief Returns the minimal axis-aligned bounding box 
+	 * of this shape when clipped to another bounding box.
+	 * 
+	 * This is extremely important to construct decent kd-trees.
+	 * The default implementation just takes the bounding box
+	 * returned by \ref getAABB() and clips it to \a box.
 	 */
-	virtual AABB getClippedAABB(const AABB &aabb) const;
+	virtual AABB getClippedAABB(const AABB &box) const;
 
-	/// Fast ray intersection test (only calculates the intersection distance)
-	virtual bool rayIntersect(const Ray &ray, Float start, Float end, Float &t) const;
+	/**
+	 * \brief Fast ray intersection test
+	 *
+	 * Check whether the shape is intersected by the given ray. Some
+	 * temporary space (\ref MTS_KD_INTERSECTION_TEMP-4 bytes) is,
+	 * supplied which can be used to cache information about the 
+	 * intersection. The function \ref fillIntersectionRecord() 
+	 * can later use this information to fill in a detailed 
+	 * intersection record.
+	 */
+	virtual bool rayIntersect(const Ray &ray, Float mint, 
+			Float maxt, Float &t, void *temp) const;
 
-	/// More detailed ray intersection test, which stores local geometry information in 'its'
-	virtual bool rayIntersect(const Ray &ray, Intersection &its) const;
+	/**
+	 * \brief Given that an intersection has been found, create a 
+	 * detailed intersection record
+	 */
+	virtual void fillIntersectionRecord(const Ray &ray, Float t, 
+			const void *temp, Intersection &its) const;
 
 #if defined(MTS_SSE)
 	/// Perform 4 simultaneous intersection tests using SSE
-	virtual __m128 rayIntersectPacket(const RayPacket4 &packet, const
-        __m128 mint, __m128 maxt, __m128 inactive, Intersection4 &its) const;
+//	virtual __m128 rayIntersectPacket(const RayPacket4 &packet, const
+  //      __m128 mint, __m128 maxt, __m128 inactive,
+  //      Intersection4 &its) const;
 #endif
 
-	/// Return a bounding sphere containing the shape
-	inline const BSphere &getBSphere() const { return m_bsphere; }
-	
-	/// Return a bounding box containing the shape
-	inline const AABB &getAABB() const { return m_aabb; }
-
 	/**
-	 * Sample a point on the shape - should be uniform
-	 * wrt. surface area. Returns the associated probability
-	 * density
+	 * \brief Sample a point on the shape
+	 *
+	 * Should be uniform wrt. surface area. Returns the 
+	 * associated probability density
 	 */
-	virtual Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const;
+	virtual Float sampleArea(ShapeSamplingRecord &sRec, 
+			const Point2 &sample) const;
 
 	/**
 	 * Return the probability density of sampling the 
@@ -195,19 +220,22 @@ public:
 	virtual Float pdfArea(const ShapeSamplingRecord &sRec) const;
 
 	/**
-	 * Sample a point on the shape - should be uniform
-	 * wrt. solid angle as seen from \a x. Returns the associated probability
-	 * density
+	 * \brief Sample a point on the shape and return the associated
+	 * probability wrt. solid angle.
+	 *
+	 * Should ideally be uniform wrt. solid angle as seen 
+	 * from \a x. The default implementation, just uses
+	 * \ref sampleArea, which can lead to lots of noise.
 	 */
-	virtual Float sampleSolidAngle(ShapeSamplingRecord &sRec, const Point &x, const Point2 &sample) const;
+	virtual Float sampleSolidAngle(ShapeSamplingRecord &sRec, 
+			const Point &x, const Point2 &sample) const;
 
 	/**
-	 * Return the probability density of sampling the given point using sampleSolidAngle()
+	 * \brief Return the probability density of sampling the given 
+	 * point using \ref sampleSolidAngle().
 	 */
-	virtual Float pdfSolidAngle(const ShapeSamplingRecord &sRec, const Point &x) const;
-
-	/// Return the shape's surface area
-	inline Float getSurfaceArea() const { return m_surfaceArea; }
+	virtual Float pdfSolidAngle(const ShapeSamplingRecord &sRec, 
+			const Point &x) const;
 
 	/// Return the shape's BSDF
 	inline const BSDF *getBSDF() const { return m_bsdf.get(); }
@@ -215,7 +243,7 @@ public:
 	inline BSDF *getBSDF() { return m_bsdf.get(); }
 
 	/// Return the name of this shape
-	inline const std::string &getName() const { return m_name; }
+	virtual std::string getName() const;
 
 	/// Does this shape have a sub-surface integrator?
 	inline bool hasSubsurface() const { return m_subsurface.get() != NULL; }
@@ -250,14 +278,9 @@ protected:
 	/// Virtual destructor
 	virtual ~Shape();
 protected:
-	Transform m_worldToObject, m_objectToWorld;
-	std::string m_name;
-	AABB m_aabb;
 	ref<BSDF> m_bsdf;
 	ref<Subsurface> m_subsurface;
 	ref<Luminaire> m_luminaire;
-	Float m_surfaceArea, m_invSurfaceArea;
-	BSphere m_bsphere;
 };
 
 MTS_NAMESPACE_END

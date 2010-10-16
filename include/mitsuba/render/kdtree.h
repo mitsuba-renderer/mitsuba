@@ -84,15 +84,6 @@ public:
 	 */
 	bool rayIntersect(const Ray &ray) const;
 
-	/**
-	 * \brief Intersect four rays with the stored triangle meshes while making
-	 * use of ray coherence to do this very efficiently. 
-	 *
-	 * If the coherent ray tracing compile-time flag is disabled, this function 
-	 * simply does four separate mono-ray traversals.
-	 */
-	void rayIntersectPacket(const Ray *rays, Intersection *its) const;
-
 #if defined(MTS_HAS_COHERENT_RT)
 	/**
 	 * \brief Intersect four rays with the stored triangle meshes while making
@@ -166,17 +157,20 @@ protected:
 	 */
 	FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx, Float mint, 
 		Float maxt, Float &t, void *temp) const {
-		Float tempU, tempV, tempT;
-	
+		IntersectionCache *cache = 
+			static_cast<IntersectionCache *>(temp);
+
 #if defined(MTS_KD_CONSERVE_MEMORY)
 		index_type shapeIdx = findShape(idx);
 		if (EXPECT_TAKEN(m_triangleFlag[shapeIdx])) {
-			const TriMesh *mesh = static_cast<const TriMesh *>(m_shapes[shapeIdx]);
+			const TriMesh *mesh = 
+				static_cast<const TriMesh *>(m_shapes[shapeIdx]);
 			const Triangle &tri = mesh->getTriangles()[idx];
-			if (tri.rayIntersect(mesh->getVertexPositions(), ray, tempU, tempV, tempT)) {
+			Float tempU, tempV, tempT;
+			if (tri.rayIntersect(mesh->getVertexPositions(), ray, 
+						tempU, tempV, tempT)) {
 				if (tempT < mint || tempT > maxt)
 					return ENo;
-				IntersectionCache *cache = static_cast<IntersectionCache *>(temp);
 				t = tempT;
 				cache->shapeIndex = shapeIdx;
 				cache->index = idx;
@@ -185,13 +179,18 @@ protected:
 				return EYes;
 			}
 		} else {
-			cout << "Encountered a non-triangle shape!" << endl;
+			const Shape *shape = m_shapes[shapeIndex];
+			if (shape->rayIntersect(ray, mint, maxt, t, 
+						reinterpret_cast<uint8_t*>(temp) + 4)) {
+				cache->shapeIndex = shapeIdx;
+				return EYes;
+			}
 		}
 #else
+		const TriAccel &ta = m_triAccel[idx];
 		if (EXPECT_TAKEN(m_triAccel[idx].k != KNoTriangleFlag)) {
-			const TriAccel &ta = m_triAccel[idx];
+			Float tempU, tempV, tempT;
 			if (ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT)) {
-				IntersectionCache *cache = static_cast<IntersectionCache *>(temp);
 				t = tempT;
 				cache->shapeIndex = ta.shapeIndex;
 				cache->index = ta.index;
@@ -200,8 +199,13 @@ protected:
 				return EYes;
 			}
 		} else {
-			cout << "Encountered a non-triangle shape!" << endl;
-			//int shape = m_triAccel[idx].shapeIndex;
+			uint32_t shapeIndex = ta.shapeIndex;
+			const Shape *shape = m_shapes[shapeIndex];
+			if (shape->rayIntersect(ray, mint, maxt, t, 
+						reinterpret_cast<uint8_t*>(temp) + 4)) {
+				cache->shapeIndex = shapeIndex;
+				return EYes;
+			}
 		}
 #endif
 		return ENo;
@@ -220,7 +224,8 @@ protected:
 	/**
 	 * Fallback for incoherent rays
 	 */
-	inline void rayIntersectPacketIncoherent(const Ray *rays, Intersection *its) const {
+	inline void rayIntersectPacketIncoherent(const Ray *rays, 
+			Intersection *its) const {
 		for (int i=0; i<4; i++) {
 			if (!rayIntersect(rays[i], its[i]))
 				its[i].t = std::numeric_limits<float>::infinity();

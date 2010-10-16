@@ -30,16 +30,13 @@
 
 MTS_NAMESPACE_BEGIN
 
-TriMesh::TriMesh(const std::string &name, Transform worldToObject, 
-		size_t triangleCount, size_t vertexCount, bool hasNormals, 
-		bool hasTexcoords, bool hasVertexColors, bool flipNormals,
-		bool faceNormals)
+TriMesh::TriMesh(const std::string &name, size_t triangleCount, 
+		size_t vertexCount, bool hasNormals, bool hasTexcoords, 
+		bool hasVertexColors, bool flipNormals, bool faceNormals)
  	: Shape(Properties()), m_triangleCount(triangleCount),
 	  m_vertexCount(vertexCount), m_flipNormals(flipNormals),
 	  m_faceNormals(faceNormals) {
 	m_name = name;
-	m_worldToObject = worldToObject;
-	m_objectToWorld.inverse();
 
 	m_triangles = new Triangle[m_triangleCount];
 	m_positions = new Point[m_vertexCount];
@@ -82,6 +79,9 @@ enum ETriMeshFlags {
 
 TriMesh::TriMesh(Stream *stream, InstanceManager *manager) 
 	: Shape(stream, manager), m_tangents(NULL) {
+	m_name = stream->readString();
+	m_aabb = AABB(stream);
+
 	uint32_t flags = stream->readUInt();
 	m_vertexCount = (size_t) stream->readULong();
 	m_triangleCount = (size_t) stream->readULong();
@@ -210,7 +210,6 @@ TriMesh::TriMesh(Stream *_stream) : Shape(Properties()), m_tangents(NULL) {
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
 
 	m_flipNormals = false;
-	configure();
 }
 
 TriMesh::~TriMesh() {
@@ -226,6 +225,18 @@ TriMesh::~TriMesh() {
 		delete[] m_colors;
 	if (m_triangles)
 		delete[] m_triangles;
+}
+	
+std::string TriMesh::getName() const {
+	return m_name;
+}
+
+AABB TriMesh::getAABB() const {
+	return m_aabb;
+}
+
+Float TriMesh::pdfArea(const ShapeSamplingRecord &sRec) const {
+	return m_invSurfaceArea;
 }
 
 void TriMesh::configure() {
@@ -248,14 +259,15 @@ void TriMesh::configure() {
 	/* Determine the object bounds */
 	for (size_t i=0; i<m_vertexCount; i++) 
 		m_aabb.expandBy(m_positions[i]);
-	m_bsphere.center = m_aabb.getCenter();
-	for (size_t i=0; i<m_vertexCount; i++) 
-		m_bsphere.expandBy(m_positions[i]);
 	computeNormals();
 
 	if ((m_bsdf->getType() & BSDF::EAnisotropicMaterial
 		|| m_bsdf->usesRayDifferentials()) && !m_tangents)
 		computeTangentSpaceBasis();
+}
+
+Float TriMesh::getSurfaceArea() const {
+	return m_surfaceArea;
 }
 
 Float TriMesh::sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
@@ -464,6 +476,8 @@ void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
 		flags |= EHasColors;
 	if (m_faceNormals)
 		flags |= EFaceNormals;
+	stream->writeString(m_name);
+	m_aabb.serialize(stream);
 	stream->writeUInt(flags);
 	stream->writeULong(m_vertexCount);
 	stream->writeULong(m_triangleCount);
@@ -541,7 +555,6 @@ std::string TriMesh::toString() const {
 		<< "  hasColors = " << (m_colors ? "true" : "false") << "," << endl
 		<< "  surfaceArea = " << m_surfaceArea << "," << endl
 		<< "  aabb = " << m_aabb.toString() << "," << endl
-		<< "  bsphere = " << m_bsphere.toString() << "," << endl
 		<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl
 		<< "  subsurface = " << indent(m_subsurface.toString()) << "," << endl
 		<< "  luminaire = " << indent(m_luminaire.toString()) << endl

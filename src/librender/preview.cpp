@@ -343,11 +343,13 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 						its.dpdv = t0.dpdv * alpha + t1.dpdv * beta + t2.dpdv * gamma;
 					}
 				} else {
+#if 0
 					Ray ray(
 						Point(primRay4.o[0].f[idx], primRay4.o[1].f[idx], primRay4.o[2].f[idx]),
 						Vector(primRay4.d[0].f[idx], primRay4.d[1].f[idx], primRay4.d[2].f[idx])
 					);
 					shape->rayIntersect(ray, its);
+#endif
 				}
 
 				wo.x = nSecD[0].f[idx]; wo.y = nSecD[1].f[idx]; wo.z = nSecD[2].f[idx];
