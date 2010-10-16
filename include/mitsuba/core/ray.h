@@ -123,7 +123,14 @@ struct RayDifferential : public Ray {
 	inline RayDifferential(const RayDifferential &ray) 
 		: Ray(ray), hasDifferentials(ray.hasDifferentials), rx(ray.rx), ry(ray.ry) {
 	}
-	
+    
+	void scaleDifferential(Float amount) {
+		rx.setOrigin(o + (rx.o - o) * amount);
+		ry.setOrigin(o + (ry.o - o) * amount);
+		rx.setDirection(d + (rx.d - d) * amount);
+		ry.setDirection(d + (ry.d - d) * amount);
+    }
+
 	inline void operator=(const RayDifferential &ray) {
 		o = ray.o;
 		mint = ray.mint;
