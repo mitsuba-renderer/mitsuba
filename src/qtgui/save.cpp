@@ -331,7 +331,9 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	QString textContent = doc.toString();
 	QTextStream input(&textContent);
 	QTextStream output(&file);
-	QRegExp nameRegExp("name=\"[^\"]*\""),
+	QRegExp 
+		filenameRegExp("filename=\"[^\"]*\""),
+		nameRegExp("name=\"[^\"]*\""),
 		tagRegExp("^\\s*<([a-zA-Z]+) "),
 		leadingSpaces("^ *"),
 		closeTag("^\\s*</");
@@ -362,8 +364,9 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 		int tagMatch = tagRegExp.indexIn(line),
 			tagLength = tagRegExp.matchedLength();
 		int nameMatch = nameRegExp.indexIn(line),
+			filenameMatch = filenameRegExp.indexIn(line),
 			nameLength = nameRegExp.matchedLength();
-		if (tagMatch != -1 && nameMatch != -1) {
+		if (tagMatch != -1 && nameMatch != -1 && filenameMatch == -1) {
 			line = line.left(tagLength) + line.mid(nameMatch, nameLength) + " "
 				+ line.mid(tagMatch+tagLength, nameMatch-(tagMatch+tagLength))
 				+ line.mid(nameMatch+nameLength);

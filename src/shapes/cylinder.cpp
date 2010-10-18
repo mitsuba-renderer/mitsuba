@@ -166,11 +166,11 @@ public:
 	AABB getAABB() const {
 		return getAABB(0, m_length);
 	}
-/*
-	AABB getClippedAABB(const AABB &aabb) const {
+
+	AABB getClippedAABB(const AABB &box) const {
 		Float nearT, farT;
-		AABB result(m_aabb);
-		result.clip(aabb);
+		AABB result(getAABB(0, m_length));
+		result.clip(box);
 
 		Point a = m_objectToWorld(Point(0, 0, 0));
 		Point b = m_objectToWorld(Point(0, 0, m_length));
@@ -180,12 +180,11 @@ public:
 
 		nearT = std::max(nearT, (Float) 0);
 		farT = std::min(farT, m_length);
-		result = getWorldAABB(nearT, farT);
-		result.clip(aabb);
+		result = getAABB(nearT, farT);
+		result.clip(box);
 
 		return result;
 	}
-*/
 
 	Float getSurfaceArea() const {
 		return 2*M_PI*m_radius*m_length;
