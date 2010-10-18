@@ -29,7 +29,8 @@ MTS_NAMESPACE_BEGIN
 
 template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue, T *oldValue) {
 #if defined(WIN32)
-    return InterlockedCompareExchange(v, newValue, oldValue) == oldValue;
+    return InterlockedCompareExchangePointer(
+		reinterpret_cast<volatile PVOID *>(v), newValue, oldValue) == oldValue;
 #else
 	return __sync_bool_compare_and_swap(v, oldValue, newValue);
 #endif
