@@ -195,7 +195,7 @@ VertexData *fetchVertexData(Transform transform, std::ostream &os,
 				SLog(EWarn, "Found multiple sets of texture coordinates - ignoring!");
 			}
 		} else if (semantic == "COLOR") {
-			SAssert(accessor->getStride() == 3);
+			SAssert(accessor->getStride() == 3 || accessor->getStride() == 4);
 			SAssert(result->typeToOffset[EVertexColor] == -1);
 			result->hasNormals = true;
 			result->typeToOffset[EVertexColor] = offset;
