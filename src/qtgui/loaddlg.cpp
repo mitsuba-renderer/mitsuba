@@ -38,7 +38,11 @@ LoadDialog::LoadDialog(QWidget *parent) :
 		this, SLOT(onTextMessage(ELogLevel, const QString &)), Qt::QueuedConnection);
 	QFont font("Monospace");
 	font.setStyleHint(QFont::TypeWriter);
+#if defined(__OSX__)
+	font.setPointSize(10);
+#else
 	font.setPointSize(8);
+#endif
 	ui->console->setFont(font);
 	ui->console->setReadOnly(true);
 	QPalette palette;
