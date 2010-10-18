@@ -23,6 +23,14 @@
 # define _GETOPT_H 1
 #endif
 
+#if !defined(MTS_EXPORT_CORE)
+	#if MTS_BUILD_MODULE == MTS_MODULE_CORE
+		#define MTS_EXPORT_CORE __declspec(dllexport)
+	#else
+		#define MTS_EXPORT_CORE __declspec(dllimport)
+	#endif
+#endif
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -33,7 +41,7 @@ extern "C" {
    Also, when `ordering' is RETURN_IN_ORDER,
    each non-option ARGV-element is returned here.  */
 
-extern char *optarg;
+extern MTS_EXPORT_CORE char *optarg;
 
 /* Index in ARGV of the next element to be scanned.
    This is used for communication to and from the caller
@@ -47,16 +55,16 @@ extern char *optarg;
    Otherwise, `optind' communicates from one call to the next
    how much of ARGV has been scanned so far.  */
 
-extern int optind;
+extern MTS_EXPORT_CORE int optind;
 
 /* Callers store zero here to inhibit the error message `getopt' prints
    for unrecognized options.  */
 
-extern int opterr;
+extern MTS_EXPORT_CORE int opterr;
 
 /* Set to an option character which was unrecognized.  */
 
-extern int optopt;
+extern MTS_EXPORT_CORE int optopt;
 
 #ifndef __need_getopt
 /* Describe the long-named options requested by the application.
@@ -125,17 +133,17 @@ struct option
 /* Many other libraries have conflicting prototypes for getopt, with
    differences in the consts, in stdlib.h.  To avoid compilation
    errors, only prototype getopt for the GNU C library.  */
-extern int getopt (int __argc, char *const *__argv, const char *__shortopts);
+extern MTS_EXPORT_CORE int getopt (int __argc, char *const *__argv, const char *__shortopts);
 
 # ifndef __need_getopt
-extern int getopt_long (int __argc, char *const *__argv, const char *__shortopts,
+extern MTS_EXPORT_CORE int getopt_long (int __argc, char *const *__argv, const char *__shortopts,
 		        const struct option *__longopts, int *__longind);
-extern int getopt_long_only (int __argc, char *const *__argv,
+extern MTS_EXPORT_CORE int getopt_long_only (int __argc, char *const *__argv,
 			     const char *__shortopts,
 		             const struct option *__longopts, int *__longind);
 
 /* Internal only.  Users should not call this directly.  */
-extern int _getopt_internal (int __argc, char *const *__argv,
+extern MTS_EXPORT_CORE int _getopt_internal (int __argc, char *const *__argv,
 			     const char *__shortopts,
 		             const struct option *__longopts, int *__longind,
 			     int __long_only);
