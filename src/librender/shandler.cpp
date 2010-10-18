@@ -24,19 +24,36 @@
 
 MTS_NAMESPACE_BEGIN
 
-SceneHandler::SceneHandler() : m_isIncludedFile(false) {
+SceneHandler::SceneHandler(const ParameterMap &params, NamedObjectMap *namedObjects,
+	bool isIncludedFile) : m_params(params), m_namedObjects(namedObjects),
+	m_isIncludedFile(isIncludedFile) {
 	m_pluginManager = PluginManager::getInstance();
+
+	if (m_isIncludedFile) {
+		SAssert(namedObjects != NULL);
+	} else {
+		SAssert(namedObjects == NULL);
+		m_namedObjects = new NamedObjectMap();
+	}
+
 #if !defined(WIN32)
 	setlocale(LC_NUMERIC, "C");
 #endif
 }
 
-SceneHandler::SceneHandler(const std::map<std::string, std::string> &params,
-	bool isIncludedFile) : m_params(params), m_isIncludedFile(isIncludedFile) {
-	m_pluginManager = PluginManager::getInstance();
+SceneHandler::~SceneHandler() {
+	clear();
+	if (!m_isIncludedFile)
+		delete m_namedObjects;
 }
 
-SceneHandler::~SceneHandler() {
+void SceneHandler::clear() {
+	if (!m_isIncludedFile) {
+		for (NamedObjectMap::iterator it = m_namedObjects->begin();
+			it != m_namedObjects->end(); ++it)
+			(*it).second->decRef();
+		m_namedObjects->clear();
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -44,7 +61,7 @@ SceneHandler::~SceneHandler() {
 // -----------------------------------------------------------------------
 
 void SceneHandler::startDocument() {
-	m_objects.clear();
+	clear();
 }
 
 void SceneHandler::endDocument() {
@@ -153,9 +170,9 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			ReconstructionFilter::m_theClass, context.properties));
 	} else if (name == "ref") {
 		std::string id = context.attributes["id"];
-		if (m_objects.find(id) == m_objects.end())
+		if (m_namedObjects->find(id) == m_namedObjects->end())
 			SLog(EError, "Referenced object '%s' not found!", id.c_str());
-		object = m_objects[id];
+		object = (*m_namedObjects)[id];
 	/* Construct properties */
 	} else if (name == "integer") {
 		char *end_ptr = NULL;
@@ -347,7 +364,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 
 		/* Set the handler and start parsing */
-		SceneHandler *handler = new SceneHandler(m_params, true);
+		SceneHandler *handler = new SceneHandler(m_params, m_namedObjects, true);
 		parser->setDoNamespaces(true);
 		parser->setDocumentHandler(handler);
 		parser->setErrorHandler(handler);
@@ -367,9 +384,10 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		std::string nodeName = context.attributes["name"];
 
 		if (id != "" && name != "ref") {
-			if (m_objects.find(id) != m_objects.end())
+			if (m_namedObjects->find(id) != m_namedObjects->end())
 				SLog(EError, "Duplicate ID '%s' used in scene description!", id.c_str());
-			m_objects[id] = object;
+			(*m_namedObjects)[id] = object;
+			object->incRef();
 		}
 
 		/* If the object has a parent, add it to the parent's children list */

@@ -36,8 +36,10 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER SceneHandler : public HandlerBase {
 public:
-	SceneHandler();
-	SceneHandler(const std::map<std::string, std::string> &params,
+	typedef std::map<std::string, ConfigurableObject *> NamedObjectMap;
+	typedef std::map<std::string, std::string> ParameterMap;
+
+	SceneHandler(const ParameterMap &params, NamedObjectMap *objects = NULL,
 		bool isIncludedFile = false);
 	virtual ~SceneHandler();
 
@@ -56,6 +58,13 @@ public:
 	inline const Scene *getScene() const { return m_scene.get(); }
 	inline Scene *getScene() { return m_scene; }
 
+	// -----------------------------------------------------------------------
+	//  Implementation of the SAX ErrorHandler interface
+	// -----------------------------------------------------------------------
+	void warning(const SAXParseException& exc);
+	void error(const SAXParseException& exc);
+	void fatalError(const SAXParseException& exc);
+protected:
 	inline std::string transcode(const XMLCh * const xmlName) const {
 		char *value = XMLString::transcode(xmlName);
 		std::string result(value);
@@ -63,12 +72,8 @@ public:
 		return result;
 	}
 
-	// -----------------------------------------------------------------------
-	//  Implementation of the SAX ErrorHandler interface
-	// -----------------------------------------------------------------------
-	void warning(const SAXParseException& exc);
-	void error(const SAXParseException& exc);
-	void fatalError(const SAXParseException& exc);
+	void clear();
+
 private:
 	struct ParseContext {
 		inline ParseContext(ParseContext *_parent)
@@ -82,8 +87,8 @@ private:
 	};
 
 	ref<Scene> m_scene;
-	std::map<std::string, ConfigurableObject *> m_objects;
-	std::map<std::string, std::string> m_params;
+	ParameterMap m_params;
+	NamedObjectMap *m_namedObjects;
 	PluginManager *m_pluginManager;
 	std::stack<ParseContext> m_context;
 	Transform m_transform;

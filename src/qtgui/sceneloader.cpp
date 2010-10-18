@@ -39,7 +39,7 @@ void SceneLoader::run() {
 	for(size_t i=0; i<m_filename.size();++i)
 		lowerCase[i] = std::tolower(m_filename[i]);
 
-	SceneHandler *handler = new SceneHandler();
+	SceneHandler *handler = new SceneHandler(SceneHandler::ParameterMap());
 	m_result = new SceneContext();
 	try {
 		QSettings settings("mitsuba-renderer.org", "qtgui");
