@@ -33,6 +33,9 @@ public:
 	~LoadDialog();
 
 	void close();
+	void closeEvent(QCloseEvent *e) {
+		e->ignore();
+	}
 protected slots:
 	void onTextMessage(ELogLevel level, const QString &message);
 	void on_toggleButton_clicked();
