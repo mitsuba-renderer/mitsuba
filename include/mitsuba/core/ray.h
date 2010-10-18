@@ -185,7 +185,7 @@ struct RayInterval4 {
 		mint = SSEConstants::eps;
 		maxt = SSEConstants::p_inf;
 	}
-	
+
 	inline RayInterval4(const Ray *rays) {
 		for (int i=0; i<4; i++) {
 			mint.f[i] = rays[i].mint;

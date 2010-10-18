@@ -40,8 +40,8 @@
 #define MTS_KD_BLOCKSIZE_KD  (512*1024/sizeof(KDNode))
 #define MTS_KD_BLOCKSIZE_IDX (512*1024/sizeof(uint32_t))
 
-/// 64 byte temporary storage for intersection computations 
-#define MTS_KD_INTERSECTION_TEMP 64
+/// 32 byte temporary storage for intersection computations 
+#define MTS_KD_INTERSECTION_TEMP 32
 
 /// Use a simple hashed 8-entry mailbox per thread
 //#define MTS_KD_MAILBOX_ENABLED 1

@@ -90,14 +90,14 @@ public:
 	 * use of ray coherence to do this very efficiently. Requires SSE.
 	 */
 	void rayIntersectPacket(const RayPacket4 &packet, 
-		const RayInterval4 &interval, Intersection4 &its) const;
+		const RayInterval4 &interval, Intersection4 &its, void *temp) const;
 
 	/**
 	 * \brief Fallback for incoherent rays
 	 * \sa rayIntesectPacket
 	 */
 	void rayIntersectPacketIncoherent(const RayPacket4 &packet, 
-		const RayInterval4 &interval, Intersection4 &its) const;
+		const RayInterval4 &interval, Intersection4 &its, void *temp) const;
 #endif
 
 	MTS_DECLARE_CLASS()
@@ -135,7 +135,7 @@ protected:
 			const TriMesh *mesh = static_cast<const TriMesh *>(shape);
 			return mesh->getTriangles()[idx].getClippedAABB(mesh->getVertexPositions(), aabb);
 		} else {
-			return shape->getAABB();
+			return shape->getClippedAABB(aabb);
 		}
 	}
 
@@ -146,7 +146,7 @@ protected:
 	/// Temporarily holds some intersection information
 	struct IntersectionCache {
 		size_type shapeIndex;
-		size_type index;
+		size_type primIndex;
 		Float u, v;
 	};
 
@@ -173,7 +173,7 @@ protected:
 					return ENo;
 				t = tempT;
 				cache->shapeIndex = shapeIdx;
-				cache->index = idx;
+				cache->primIndex = primIdx;
 				cache->u = tempU;
 				cache->v = tempV;
 				return EYes;
@@ -181,8 +181,9 @@ protected:
 		} else {
 			const Shape *shape = m_shapes[shapeIndex];
 			if (shape->rayIntersect(ray, mint, maxt, t, 
-						reinterpret_cast<uint8_t*>(temp) + 4)) {
+						reinterpret_cast<uint8_t*>(temp) + 8)) {
 				cache->shapeIndex = shapeIdx;
+				cache->primIndex = KNoTriangleFlag;
 				return EYes;
 			}
 		}
@@ -193,7 +194,7 @@ protected:
 			if (ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT)) {
 				t = tempT;
 				cache->shapeIndex = ta.shapeIndex;
-				cache->index = ta.index;
+				cache->primIndex = ta.primIndex;
 				cache->u = tempU;
 				cache->v = tempV;
 				return EYes;
@@ -202,8 +203,9 @@ protected:
 			uint32_t shapeIndex = ta.shapeIndex;
 			const Shape *shape = m_shapes[shapeIndex];
 			if (shape->rayIntersect(ray, mint, maxt, t, 
-						reinterpret_cast<uint8_t*>(temp) + 4)) {
+						reinterpret_cast<uint8_t*>(temp) + 8)) {
 				cache->shapeIndex = shapeIndex;
+				cache->primIndex = KNoTriangleFlag;
 				return EYes;
 			}
 		}
@@ -220,17 +222,6 @@ protected:
 		const KDNode * __restrict node;
 	};
 #endif
-
-	/**
-	 * Fallback for incoherent rays
-	 */
-	inline void rayIntersectPacketIncoherent(const Ray *rays, 
-			Intersection *its) const {
-		for (int i=0; i<4; i++) {
-			if (!rayIntersect(rays[i], its[i]))
-				its[i].t = std::numeric_limits<float>::infinity();
-		}
-	}
 
 	/// Virtual destructor
 	virtual ~KDTree();

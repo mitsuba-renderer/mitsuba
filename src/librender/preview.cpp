@@ -137,6 +137,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 	const SSEVector MM_ALIGN16 yOffset(0.0f, 0.0f, 1.0f, 1.0f);
 	const int pixelOffset[] = {0, 1, width, width+1};
 	const __m128 clamping = _mm_set1_ps(1/(m_minDist*m_minDist));
+	uint8_t temp[MTS_KD_INTERSECTION_TEMP*4];
 
 	const __m128 camTL[3] = {
 		 _mm_set1_ps(m_cameraTL.x),
@@ -232,9 +233,9 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 				primRay4.signs[0][0] = primSignsX ? 1 : 0;
 				primRay4.signs[1][0] = primSignsY ? 1 : 0;
 				primRay4.signs[2][0] = primSignsZ ? 1 : 0;
-				m_kdtree->rayIntersectPacket(primRay4, itv4, its4);
+				m_kdtree->rayIntersectPacket(primRay4, itv4, its4, temp);
 			} else {
-				m_kdtree->rayIntersectPacketIncoherent(primRay4, itv4, its4);
+				m_kdtree->rayIntersectPacketIncoherent(primRay4, itv4, its4, temp);
 			}
 			numRays += 4;
 
@@ -287,7 +288,6 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 				const unsigned int primIndex = its4.primIndex.i[idx];
 				const Shape *shape = (*m_shapes)[its4.shapeIndex.i[idx]];
 				const BSDF *bsdf = shape->getBSDF();
-
 
 				if (EXPECT_TAKEN(primIndex != KNoTriangleFlag)) {
 					const TriMesh *mesh = static_cast<const TriMesh *>(shape);
@@ -343,13 +343,12 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 						its.dpdv = t0.dpdv * alpha + t1.dpdv * beta + t2.dpdv * gamma;
 					}
 				} else {
-#if 0
 					Ray ray(
 						Point(primRay4.o[0].f[idx], primRay4.o[1].f[idx], primRay4.o[2].f[idx]),
 						Vector(primRay4.d[0].f[idx], primRay4.d[1].f[idx], primRay4.d[2].f[idx])
 					);
-					shape->rayIntersect(ray, its);
-#endif
+					shape->fillIntersectionRecord(ray, its4.t.f[idx], temp + 
+								+ idx * MTS_KD_INTERSECTION_TEMP + 8, its);
 				}
 
 				wo.x = nSecD[0].f[idx]; wo.y = nSecD[1].f[idx]; wo.z = nSecD[2].f[idx];
@@ -427,9 +426,9 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 				secRay4.signs[0][0] = secSignsX ? 1 : 0;
 				secRay4.signs[1][0] = secSignsY ? 1 : 0;
 				secRay4.signs[2][0] = secSignsZ ? 1 : 0;
-				m_kdtree->rayIntersectPacket(secRay4, secItv4, secIts4);
+				m_kdtree->rayIntersectPacket(secRay4, secItv4, secIts4, temp);
 			} else {
-				m_kdtree->rayIntersectPacketIncoherent(secRay4, secItv4, secIts4);
+				m_kdtree->rayIntersectPacketIncoherent(secRay4, secItv4, secIts4, temp);
 			}
 
 			for (int idx=0; idx<4; ++idx) {

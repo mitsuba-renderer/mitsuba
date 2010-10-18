@@ -86,7 +86,7 @@ void KDTree::build() {
 				const Point &v2 = positions[tri.idx[2]];
 				m_triAccel[idx].load(v0, v1, v2);
 				m_triAccel[idx].shapeIndex = i;
-				m_triAccel[idx].index = j;
+				m_triAccel[idx].primIndex = j;
 				++idx;
 			}
 		} else {
@@ -128,7 +128,7 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 				const Shape *shape = m_shapes[cache->shapeIndex];
 				if (m_triangleFlag[cache->shapeIndex]) {
 					const TriMesh *trimesh = static_cast<const TriMesh *>(shape);
-					const Triangle &tri = trimesh->getTriangles()[cache->index];
+					const Triangle &tri = trimesh->getTriangles()[cache->primIndex];
 					const Point *vertexPositions = trimesh->getVertexPositions();
 					const Normal *vertexNormals = trimesh->getVertexNormals();
 					const Point2 *vertexTexcoords = trimesh->getVertexTexcoords();
@@ -195,7 +195,8 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 					return true;
 				} else {
 					shape->fillIntersectionRecord(ray, its.t,
-						reinterpret_cast<const uint8_t*>(temp) + 4, its);
+						reinterpret_cast<const uint8_t*>(temp) + 8, its);
+					return true;
 				}
 			}
 		}
@@ -231,7 +232,7 @@ static StatsCounter coherentPackets("General", "Coherent ray packets");
 static StatsCounter incoherentPackets("General", "Incoherent ray packets");
 
 void KDTree::rayIntersectPacket(const RayPacket4 &packet, 
-		const RayInterval4 &rayInterval, Intersection4 &its) const {
+		const RayInterval4 &rayInterval, Intersection4 &its, void *temp) const {
 	CoherentKDStackEntry MM_ALIGN16 stack[MTS_KD_MAXDEPTH];
 	RayInterval4 MM_ALIGN16 interval;
 
@@ -248,9 +249,9 @@ void KDTree::rayIntersectPacket(const RayPacket4 &packet,
 	interval.mint.ps = _mm_max_ps(interval.mint.ps, rayInterval.mint.ps);
 	interval.maxt.ps = _mm_min_ps(interval.maxt.ps, rayInterval.maxt.ps);
 
-	__m128 itsFound = _mm_cmpgt_ps(interval.mint.ps, interval.maxt.ps),
-		   masked = itsFound;
-	if (_mm_movemask_ps(itsFound) == 0xF)
+	SSEVector itsFound( _mm_cmpgt_ps(interval.mint.ps, interval.maxt.ps));
+	__m128 masked = itsFound.ps;
+	if (_mm_movemask_ps(itsFound.ps) == 0xF)
 		return;
 
 	while (currNode != NULL) {
@@ -295,54 +296,57 @@ void KDTree::rayIntersectPacket(const RayPacket4 &packet,
 		const index_type primEnd = currNode->getPrimEnd();
 
 		if (EXPECT_NOT_TAKEN(primStart != primEnd)) {
-#ifdef MTS_USE_TRIACCEL4
-			const int count = m_packedTriangles[primStart].indirectionCount;
-			primStart = m_packedTriangles[primStart].indirectionIndex;
-			primEnd = primStart + count;
-#endif
-			__m128 
-				searchStart = _mm_max_ps(rayInterval.mint.ps, 
-					_mm_mul_ps(interval.mint.ps, SSEConstants::om_eps.ps)),
-				searchEnd   = _mm_min_ps(rayInterval.maxt.ps, 
-					_mm_mul_ps(interval.maxt.ps, SSEConstants::op_eps.ps));
+			SSEVector 
+				searchStart(_mm_max_ps(rayInterval.mint.ps, 
+					_mm_mul_ps(interval.mint.ps, SSEConstants::om_eps.ps))),
+				searchEnd(_mm_min_ps(rayInterval.maxt.ps, 
+					_mm_mul_ps(interval.maxt.ps, SSEConstants::op_eps.ps)));
 
 			for (index_type entry=primStart; entry != primEnd; entry++) {
 				const TriAccel &kdTri = m_triAccel[m_indices[entry]];
 				if (EXPECT_TAKEN(kdTri.k != KNoTriangleFlag)) {
-					itsFound = _mm_or_ps(itsFound, 
-						kdTri.rayIntersectPacket(packet, searchStart, searchEnd, masked, its));
+					itsFound.ps = _mm_or_ps(itsFound.ps, 
+						kdTri.rayIntersectPacket(packet, searchStart.ps, searchEnd.ps, masked, its));
 				} else {
-#if 0
-					/* Not a triangle - invoke the shape's intersection routine */
-					__m128 hasIts = m_shapes[kdTri.shapeIndex]->rayIntersectPacket(packet, 
-							searchStart, searchEnd, masked, its);
-					itsFound = _mm_or_ps(itsFound, hasIts);
-					its.primIndex.pi  = mux_epi32(pstoepi32(hasIts), 
-						load1_epi32(kdTri.index), its.primIndex.pi);
-					its.shapeIndex.pi = mux_epi32(pstoepi32(hasIts),
-						load1_epi32(kdTri.shapeIndex), its.shapeIndex.pi);
-#endif
+					const Shape *shape = m_shapes[kdTri.shapeIndex];
+
+					for (int i=0; i<4; ++i) {
+						Ray ray;
+						for (int axis=0; axis<3; axis++) {
+							ray.o[axis] = packet.o[axis].f[i];
+							ray.d[axis] = packet.d[axis].f[i];
+						}
+						Float t;
+
+						if (shape->rayIntersect(ray, searchStart.f[i], searchEnd.f[i], t, 
+								reinterpret_cast<uint8_t *>(temp)
+								+ i * MTS_KD_INTERSECTION_TEMP + 8)) {
+							its.t.f[i] = t;
+							its.shapeIndex.i[i] = kdTri.shapeIndex;
+							its.primIndex.i[i] = KNoTriangleFlag;
+							itsFound.i[i] = 0xFFFFFFFF;
+						}
+					}
 				}
-				searchEnd = _mm_min_ps(searchEnd, its.t.ps);
+				searchEnd.ps = _mm_min_ps(searchEnd.ps, its.t.ps);
 			}
 		}
 
 		/* Abort if the tree has been traversed or if
 		   intersections have been found for all four rays */
-		if (_mm_movemask_ps(itsFound) == 0xF || --stackIndex < 0)
+		if (_mm_movemask_ps(itsFound.ps) == 0xF || --stackIndex < 0)
 			break;
 
 		/* Pop from the stack */
 		currNode = stack[stackIndex].node;
 		interval = stack[stackIndex].interval;
-		masked = _mm_or_ps(itsFound, 
+		masked = _mm_or_ps(itsFound.ps, 
 			_mm_cmpgt_ps(interval.mint.ps, interval.maxt.ps));
 	}
 }
 	
 void KDTree::rayIntersectPacketIncoherent(const RayPacket4 &packet, 
-		const RayInterval4 &rayInterval, Intersection4 &its4) const {
-	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
+		const RayInterval4 &rayInterval, Intersection4 &its4, void *temp) const {
 
 	++incoherentPackets;
 	for (int i=0; i<4; i++) {
@@ -354,12 +358,13 @@ void KDTree::rayIntersectPacketIncoherent(const RayPacket4 &packet,
 		}
 		ray.mint = rayInterval.mint.f[i];
 		ray.maxt = rayInterval.maxt.f[i];
-		if (ray.mint < ray.maxt && rayIntersectHavran<false>(ray, ray.mint, ray.maxt, its4.t.f[i], temp)) {
+		if (ray.mint < ray.maxt && rayIntersectHavran<false>(ray, ray.mint, 
+				ray.maxt, its4.t.f[i], reinterpret_cast<uint8_t *>(temp) + i * MTS_KD_INTERSECTION_TEMP)) {
 			const IntersectionCache *cache = reinterpret_cast<const IntersectionCache *>(temp);
 			its4.u.f[i] = cache->u;
-			its4.v.f[i] = cache->u;
+			its4.v.f[i] = cache->v;
 			its4.shapeIndex.i[i] = cache->shapeIndex;
-			its4.primIndex.i[i] = cache->index;
+			its4.primIndex.i[i] = cache->primIndex;
 		}
 	}
 }

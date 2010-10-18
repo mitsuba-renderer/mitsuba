@@ -111,9 +111,6 @@ public:
 	/// Return a string representation
 	std::string toString() const;
 public:
-	/// Incident direction in the local frame
-	Vector wi;
-
 	/// Distance traveled along the ray
 	Float t;
 
@@ -129,7 +126,7 @@ public:
 	/// UV surface coordinates
 	Point2 uv;
 
-	/// Position partials wrt. to changes in texture-space
+	/// Position partials wrt. the texture space parameterization
 	Vector dpdu, dpdv;
 
 	/// Texture coordinate mapping partials wrt. changes in screen-space
@@ -137,6 +134,9 @@ public:
 
 	/// Interpolated vertex color
 	Spectrum color;
+
+	/// Incident direction in the local frame
+	Vector wi;
 
 	/// Affected shape
 	const Shape *shape;
@@ -196,13 +196,6 @@ public:
 	 */
 	virtual void fillIntersectionRecord(const Ray &ray, Float t, 
 			const void *temp, Intersection &its) const;
-
-#if defined(MTS_SSE)
-	/// Perform 4 simultaneous intersection tests using SSE
-//	virtual __m128 rayIntersectPacket(const RayPacket4 &packet, const
-  //      __m128 mint, __m128 maxt, __m128 inactive,
-  //      Intersection4 &its) const;
-#endif
 
 	/**
 	 * \brief Sample a point on the shape

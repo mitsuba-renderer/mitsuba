@@ -44,8 +44,8 @@ struct TriAccel {
 
 	Float c_nu;
 	Float c_nv;
-	uint32_t index;
 	uint32_t shapeIndex;
+	uint32_t primIndex;
 
 	/// Construct from vertex data. Returns '1' if there was a failure
 	inline int load(const Point &A, const Point &B, const Point &C);

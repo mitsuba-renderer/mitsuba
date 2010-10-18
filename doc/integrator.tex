@@ -200,7 +200,7 @@ To avoid having to do this every time \code{Li()} is called,
 we can override the \code{preprocess} function:
 \begin{cpp}
 	/// Preprocess function -- called on the initiating machine
-	void preprocess(const Scene *scene, RenderQueue *queue, 
+	bool preprocess(const Scene *scene, RenderQueue *queue, 
 			const RenderJob *job, int sceneResID, int cameraResID, 
 			int samplerResID) {
 		SampleIntegrator::preprocess(scene, queue, job, sceneResID, 
@@ -213,6 +213,8 @@ we can override the \code{preprocess} function:
 		for (int i=0; i<8; ++i)
 			m_maxDist = std::max(m_maxDist, 
 				(cameraPosition - sceneAABB.getCorner(i)).length());
+
+		return true;
 	}
 \end{cpp}
 The bottom of this function should be relatively self-explanatory. The
