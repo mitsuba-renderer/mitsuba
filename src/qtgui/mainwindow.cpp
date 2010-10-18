@@ -607,7 +607,7 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 		= new SceneLoader(newResolver, filename.file_string());
 	LoadDialog *loaddlg = new LoadDialog(this);
 	loaddlg->setAttribute(Qt::WA_DeleteOnClose);
-	loaddlg->setWindowModality(Qt::WindowModal);
+	loaddlg->setWindowModality(Qt::ApplicationModal);
 	loaddlg->setWindowTitle("Loading ..");
 	loaddlg->show();
 	loadingThread->start();

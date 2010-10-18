@@ -21,6 +21,10 @@
 #include <mitsuba/core/lock.h>
 #include <stdarg.h>
 
+#if defined(__OSX__)
+#include <sys/sysctl.h>
+#endif
+
 MTS_NAMESPACE_BEGIN
 
 Logger::Logger(ELogLevel level)
@@ -93,9 +97,22 @@ void Logger::log(ELogLevel level, const Class *theClass,
 				__asm__ ("int $3");
 			}
 		}
-#endif
+#elif defined(__OSX__)
+		int                 mib[4];
+		struct kinfo_proc   info;
+		size_t              size;
+		info.kp_proc.p_flag = 0;
+		mib[0] = CTL_KERN;
+		mib[1] = KERN_PROC;
+		mib[2] = KERN_PROC_PID;
+		mib[3] = getpid();
+		size = sizeof(info);
+		sysctl(mib, sizeof(mib) / sizeof(*mib), &info, &size, NULL, 0);
+		bool runningInDebugger = (info.kp_proc.p_flag & P_TRACED) != 0;
 
-#if defined(WIN32)
+		if (runningInDebugger)
+			__asm__ ("int $3");
+#elif defined(WIN32)
 		if (IsDebuggerPresent()) {
 			__asm {
 				int 0x03
