@@ -78,8 +78,8 @@ FINLINE __m128 TriAccel::rayIntersectPacket(const RayPacket4 &packet,
 		c_nu      = splat_ps(line3, 0),
 		c_nv      = splat_ps(line3, 1);
 	const __m128i
-		primIndex = splat_epi32(pstoepi32(line3), 2),
-		shapeIndex = splat_epi32(pstoepi32(line3), 3);
+		primIndex = splat_epi32(pstoepi32(line3), 3),
+		shapeIndex = splat_epi32(pstoepi32(line3), 2);
 
 	const __m128
 		u = _mm_add_ps(_mm_mul_ps(hv, b_nu), _mm_mul_ps(hu, b_nv)),

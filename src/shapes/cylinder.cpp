@@ -26,100 +26,89 @@ MTS_NAMESPACE_BEGIN
 
 class Cylinder : public Shape {
 private:
-	Float m_radius, m_length;
+	Transform m_objectToWorld;
+	Transform m_worldToObject;
+	Float m_radius, m_length, m_invSurfaceArea;
 public:
 	Cylinder(const Properties &props) : Shape(props) {
-		m_radius = props.getFloat("radius", 1.0f);
-		m_length = props.getFloat("length", 1.0f);
-		if (m_objectToWorld.hasScale()) 
-			Log(EError, "The scale needs to be specified using the 'radius' parameter!");
+		/**
+		 * There are two ways of instantiating cylinders: either,
+		 * one can specify a linear transformation to from the
+		 * unit sphere using the 'toWorld' parameter, or one
+		 * can explicitly specify two points and a radius.
+		 */
+		if (props.hasProperty("p1") && props.hasProperty("p2")
+				&& props.hasProperty("radius")) {
+			Point p1 = props.getPoint("p1"), p2 = props.getPoint("p2");
+			Vector rel = p2 - p1;
+			Float radius = props.getFloat("radius");
+			Float length = rel.length();
+
+			m_objectToWorld = 
+				Transform::translate(Vector(p1)) *
+				Transform::fromFrame(Frame(rel/length));
+			m_radius = radius;
+			m_length = length;
+		} else {
+			Transform objectToWorld = props.getTransform("toWorld", Transform());
+			m_radius = objectToWorld(Vector(1,0,0)).length();
+			m_length = objectToWorld(Vector(0,0,1)).length();
+			// Remove the scale from the object-to-world trasnsform
+			m_objectToWorld = objectToWorld * Transform::scale(
+					Vector(1/m_radius, 1/m_radius, 1/m_length));
+		}
+		m_worldToObject = m_objectToWorld.inverse();
+		m_invSurfaceArea = 1/(2*M_PI*m_radius*m_length);
+		Assert(m_length > 0 && m_radius > 0);
 	}
 
 	Cylinder(Stream *stream, InstanceManager *manager) 
 		: Shape(stream, manager) {
+		m_objectToWorld = Transform(stream);
 		m_radius = stream->readFloat();
 		m_length = stream->readFloat();
+		m_worldToObject = m_objectToWorld.inverse();
+		m_invSurfaceArea = 1/(2*M_PI*m_radius*m_length);
 	}
 
-	void configure() {
-		Shape::configure();
-
-		m_aabb.reset(); m_bsphere.radius = 0;
-		m_surfaceArea = 2*M_PI*m_radius*m_length;
-		m_invSurfaceArea = 1.0f / m_surfaceArea;
-
-		m_aabb = getWorldAABB(0, m_length);
-		m_bsphere.center = m_aabb.getCenter();
-		for (int i=0; i<8; ++i) 
-			m_bsphere.expandBy(m_aabb.getCorner(i));
+	void serialize(Stream *stream, InstanceManager *manager) const {
+		Shape::serialize(stream, manager);
+		m_objectToWorld.serialize(stream);
+		stream->writeFloat(m_radius);
+		stream->writeFloat(m_length);
 	}
 
-	bool isClippable() const {
-		return true;
-	}
-	
-	AABB getWorldAABB(Float start, Float end) const {
-		AABB result;
-		const Float r = m_radius;
-		const Point a = m_objectToWorld(Point(0,0,start));
-		const Point b = m_objectToWorld(Point(0,0,end));
-
-		result.expandBy(a - Vector(r, r, r));
-		result.expandBy(a + Vector(r, r, r));
-		result.expandBy(b - Vector(r, r, r));
-		result.expandBy(b + Vector(r, r, r));
-		return result;
-	}
-
-	AABB getClippedAABB(const AABB &aabb) const {
-		Float nearT, farT;
-		AABB result(m_aabb);
-		result.clip(aabb);
-		
-		Point a = m_objectToWorld(Point(0,0,0));
-		Point b = m_objectToWorld(Point(0,0,m_length));
-
-		if (!result.rayIntersect(Ray(a, normalize(b-a)), nearT, farT))
-			return result; // that could be improved
-
-		nearT = std::max(nearT, (Float) 0);
-		farT = std::min(farT, m_length);
-		result = getWorldAABB(nearT, farT);
-		result.clip(aabb);
-
-		return result;
-	}
-
-	bool rayIntersect(const Ray &_ray, Float start, Float end, Float &t) const {
-		double nearT, farT; Ray ray;
+	bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *temp) const {
+		Ray ray;
 
 		/* Transform into the local coordinate system and normalize */
 		m_worldToObject(_ray, ray);
-		
-		const double
+
+		const Float
 			ox = ray.o.x,
 			oy = ray.o.y,
 			dx = ray.d.x, 
 			dy = ray.d.y;
 
-		const double A = dx*dx + dy*dy;
-		const double B = 2 * (dx*ox + dy*oy);
-		const double C = ox*ox + oy*oy - m_radius*m_radius;
+		const Float A = dx*dx + dy*dy;
+		const Float B = 2 * (dx*ox + dy*oy);
+		const Float C = ox*ox + oy*oy - m_radius*m_radius;
 
-		if (!solveQuadraticDouble(A, B, C, nearT, farT))
+		Float nearT, farT;
+		if (!solveQuadratic(A, B, C, nearT, farT))
 			return false;
 
-		if (nearT > end || farT < start)
+		if (nearT > maxt || farT < mint)
 			return false;
 
-		const double zPosNear = ray.o.z + ray.d.z * nearT;
-		const double zPosFar = ray.o.z + ray.d.z * farT;
-		if (zPosNear >= 0 && zPosNear <= m_length && nearT >= start) {
-			t = (Float) nearT;
+		const Float zPosNear = ray.o.z + ray.d.z * nearT;
+		const Float zPosFar = ray.o.z + ray.d.z * farT;
+		if (zPosNear >= 0 && zPosNear <= m_length && nearT >= mint) {
+			t = nearT;
 		} else if (zPosFar >= 0 && zPosFar <= m_length) {
-			if (farT > end)
+			if (farT > maxt)
 				return false;
-			t = (Float) farT;
+			t = farT;
 		} else {
 			return false;
 		}
@@ -127,10 +116,10 @@ public:
 		return true;
 	}
 
-	bool rayIntersect(const Ray &ray, Intersection &its) const {
-		if (!rayIntersect(ray, ray.mint, ray.maxt, its.t)) 
-			return false;
-		its.p = ray(its.t);
+
+	void fillIntersectionRecord(const Ray &ray, Float t, 
+			const void *temp, Intersection &its) const {
+		its.p = ray(t);
 
 		Point local = m_worldToObject(its.p);
 		Float phi = std::atan2(local.y, local.x);
@@ -144,40 +133,13 @@ public:
 		its.dpdu = m_objectToWorld(dpdu);
 		its.dpdv = m_objectToWorld(dpdv);
 		its.geoFrame.n = Normal(normalize(m_objectToWorld(cross(dpdu, dpdv))));
-		its.geoFrame.s = normalize(its.dpdu - its.geoFrame.n
-			* dot(its.geoFrame.n, its.dpdu));
-		its.geoFrame.t = cross(its.geoFrame.n, its.geoFrame.s);
+		its.geoFrame.s = normalize(its.dpdu);
+		its.geoFrame.t = normalize(its.dpdv);
 		its.shFrame = its.geoFrame;
 		its.wi = its.toLocal(-ray.d);
 		its.hasUVPartials = false;
 		its.shape = this;
-
-		return true;
 	}
-
-#if defined(MTS_SSE)
-	/* SSE-accelerated packet tracing is not supported for cylinders at the moment */
-	__m128 rayIntersectPacket(const RayPacket4 &packet, const
-        __m128 start, __m128 end, __m128 inactive, Intersection4 &its) const {
-		SSEVector result(_mm_setzero_ps()), mint(start), maxt(end), mask(inactive);
-		Float t;
-
-		for (int i=0; i<4; i++) {
-			Ray ray;
-			for (int axis=0; axis<3; axis++) {
-				ray.o[axis] = packet.o[axis].f[i];
-				ray.d[axis] = packet.d[axis].f[i];
-			}
-			if (mask.i[i] != 0)
-				continue;
-			if (rayIntersect(ray, mint.f[i], maxt.f[i], t)) {
-				result.i[i] = 0xFFFFFFFF;
-				its.t.f[i] = t;
-			}
-		}
-		return result.ps;
-	}
-#endif
 
 	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
 		Point p = Point(m_radius * std::cos(sample.y), 
@@ -188,10 +150,45 @@ public:
 		return m_invSurfaceArea;
 	}
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Shape::serialize(stream, manager);
-		stream->writeFloat(m_radius);
-		stream->writeFloat(m_length);
+	inline AABB getAABB(Float start, Float end) const {
+		AABB result;
+		const Float r = m_radius;
+		const Point a = m_objectToWorld(Point(0, 0, start));
+		const Point b = m_objectToWorld(Point(0, 0, end));
+
+		result.expandBy(a - Vector(r, r, r));
+		result.expandBy(a + Vector(r, r, r));
+		result.expandBy(b - Vector(r, r, r));
+		result.expandBy(b + Vector(r, r, r));
+		return result;
+	}
+
+	AABB getAABB() const {
+		return getAABB(0, m_length);
+	}
+/*
+	AABB getClippedAABB(const AABB &aabb) const {
+		Float nearT, farT;
+		AABB result(m_aabb);
+		result.clip(aabb);
+
+		Point a = m_objectToWorld(Point(0, 0, 0));
+		Point b = m_objectToWorld(Point(0, 0, m_length));
+
+		if (!result.rayIntersect(Ray(a, normalize(b-a)), nearT, farT))
+			return result; // that could be improved
+
+		nearT = std::max(nearT, (Float) 0);
+		farT = std::min(farT, m_length);
+		result = getWorldAABB(nearT, farT);
+		result.clip(aabb);
+
+		return result;
+	}
+*/
+
+	Float getSurfaceArea() const {
+		return 2*M_PI*m_radius*m_length;
 	}
 
 	std::string toString() const {
@@ -200,12 +197,9 @@ public:
 			<< "  radius = " << m_radius << ", " << endl
 			<< "  length = " << m_length << ", " << endl
 			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl
-			<< "  aabb = " << m_aabb.toString() << "," << endl
-			<< "  bsphere = " << m_bsphere.toString() << "," << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl
 			<< "  luminaire = " << indent(m_luminaire.toString()) << "," << endl
-			<< "  subsurface = " << indent(m_subsurface.toString()) << "," << endl
-			<< "  surfaceArea = " << m_surfaceArea << endl
+			<< "  subsurface = " << indent(m_subsurface.toString())
 			<< "]";
 		return oss.str();
 	}

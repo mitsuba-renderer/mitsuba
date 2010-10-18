@@ -31,10 +31,26 @@ MTS_NAMESPACE_BEGIN
 class Sphere : public Shape {
 public:
 	Sphere(const Properties &props) : Shape(props) {
-		m_objectToWorld = props.getTransform("toWorld", Transform());
+		/**
+		 * There are two ways of instantiating spheres: either,
+		 * one can specify a linear transformation to from the
+		 * unit sphere using the 'toWorld' parameter, or one
+		 * can explicitly specify a radius and center.
+		 */
+		if (props.hasProperty("center") && props.hasProperty("radius")) {
+			m_objectToWorld = 
+				Transform::translate(Vector(props.getPoint("center")));
+			m_radius = props.getFloat("radius");
+		} else {
+			Transform objectToWorld = props.getTransform("toWorld", Transform());
+			m_radius = objectToWorld(Vector(1,0,0)).length();
+			// Remove the scale from the object-to-world trasnsform
+			m_objectToWorld = objectToWorld * Transform::scale(Vector(1/m_radius));
+		}
+
+		/// Are the sphere normals pointing inwards? default: no
+		m_inverted = props.getBoolean("inverted", false);
 		m_center = m_objectToWorld(Point(0,0,0));
-		/// non-uniform scales are not supported!
-		m_radius = m_objectToWorld(Vector(1,0,0)).length();
 		m_worldToObject = m_objectToWorld.inverse();
 		m_invSurfaceArea = 1/(4*M_PI*m_radius*m_radius);
 	}
@@ -44,6 +60,7 @@ public:
 		m_objectToWorld = Transform(stream);
 		m_radius = stream->readFloat();
 		m_center = Point(stream);
+		m_inverted = stream->readBool();
 		m_worldToObject = m_objectToWorld.inverse();
 		m_invSurfaceArea = 1/(4*M_PI*m_radius*m_radius);
 	}
@@ -53,6 +70,7 @@ public:
 		m_objectToWorld.serialize(stream);
 		stream->writeFloat(m_radius);
 		m_center.serialize(stream);
+		stream->writeBool(m_inverted);
 	}
 
 	AABB getAABB() const {
@@ -97,8 +115,9 @@ public:
 			const void *temp, Intersection &its) const {
 		its.t = t;
 		its.p = ray(t);
-		Vector local = normalize(m_worldToObject(its.p - m_center));
-		Float theta = std::acos(local.z);
+		Vector local = m_worldToObject(its.p - m_center);
+		Float theta = std::acos(std::min(std::max(local.z/m_radius, 
+				-(Float) 1), (Float) 1));
 		Float phi = std::atan2(local.y, local.x);
 
 		if (phi < 0)
@@ -107,6 +126,7 @@ public:
 		its.uv.x = phi * (0.5 * INV_PI);
 		its.uv.y = theta * INV_PI;
 		its.dpdu = m_objectToWorld(Vector(-local.y, local.x, 0) * (2*M_PI));
+    	its.geoFrame.n = normalize(its.p - m_center);
 		Float zrad = std::sqrt(local.x*local.x + local.y*local.y);
 
 		if (zrad > 0) {
@@ -114,19 +134,19 @@ public:
 				  cosPhi = local.x * invZRad,
 				  sinPhi = local.y * invZRad;
 			its.dpdv = m_objectToWorld(Vector(local.z * cosPhi, local.z * sinPhi,
-					-std::sin(theta)) * M_PI);
+					-std::sin(theta)*m_radius) * M_PI);
     		its.geoFrame.s = normalize(its.dpdu);
 			its.geoFrame.t = normalize(its.dpdv);
-			its.geoFrame.n = normalize(cross(its.dpdv, its.dpdu));
 		} else {
 			// avoid a singularity
 			const Float cosPhi = 0, sinPhi = 1;
 			its.dpdv = m_objectToWorld(Vector(local.z * cosPhi, local.z * sinPhi,
-					-std::sin(theta)) * M_PI);
-    		its.geoFrame = Frame(normalize(its.p - m_center));
-			if (m_radius < 0)
-				its.geoFrame.n *= -1;
+					-std::sin(theta)*m_radius) * M_PI);
+			coordinateSystem(its.geoFrame.n, its.geoFrame.s, its.geoFrame.t);
 		}
+
+		if (m_inverted)
+			its.geoFrame.n *= -1;
 
  		its.shFrame = its.geoFrame;
  		its.wi = its.toLocal(-ray.d);
@@ -222,6 +242,7 @@ private:
 	Point m_center;
 	Float m_radius;
 	Float m_invSurfaceArea;
+	bool m_inverted;
 };
 
 MTS_IMPLEMENT_CLASS_S(Sphere, false, Shape)
