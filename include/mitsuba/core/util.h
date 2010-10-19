@@ -19,9 +19,10 @@
 #if !defined(__UTIL_H)
 #define __UTIL_H
 
+#include <boost/static_assert.hpp>
+
 MTS_NAMESPACE_BEGIN
 
-class Random;
 // -----------------------------------------------------------------------
 //  Miscellaneous
 // -----------------------------------------------------------------------
@@ -45,20 +46,8 @@ extern MTS_EXPORT_CORE std::string indent(const std::string &string, int amount=
 /// Convert a time difference (in ms) to a string representation
 extern MTS_EXPORT_CORE std::string timeToString(Float time);
 
-/// Convert a string to lower case
-extern MTS_EXPORT_CORE std::string toLowerCase(const std::string &string);
-
-/// Convert a string to upper case
-extern MTS_EXPORT_CORE std::string toUpperCase(const std::string &string);
-
-/// Trim spaces (' ', '\n', '\r', '\t') from the ends of a string
+/// Trim spaces (' ', '\\n', '\\r', '\\t') from the ends of a string
 extern MTS_EXPORT_CORE std::string trim(const std::string& str);
-
-/// Determines whether a string starts with the string given as second parameter
-extern MTS_EXPORT_CORE bool startsWith(const std::string& str, const std::string& start);
-
-/// Determines whether a string ends with the string given as second parameter
-extern MTS_EXPORT_CORE bool endsWith(const std::string& str, const std::string& end);
 
 /// Allocate an aligned region of memory
 extern MTS_EXPORT_CORE void * __restrict allocAligned(size_t size);
@@ -123,21 +112,23 @@ extern MTS_EXPORT_CORE bool solveLinearSystem2x2(const Float a[2][2], const Floa
 extern MTS_EXPORT_CORE void coordinateSystem(const Vector &a, Vector &b, Vector &c);
 
 /**
- * \brief Generate optionally jittered, stratified 1D samples
- * @param dest A pointer to a floating point array with at least
+ * \brief Generate (optionally jittered) stratified 1D samples
+ * \param random Source of random numbers
+ * \param dest A pointer to a floating point array with at least
  *             count entries
- * @param count The interval [0, 1] is split into count strata
- * @param jitter Randomly jitter the samples?
+ * \param count The interval [0, 1] is split into count strata
+ * \param jitter Randomly jitter the samples?
  */
 extern MTS_EXPORT_CORE void stratifiedSample1D(Random *random, Float *dest, 
 	int count, bool jitter);
 
 /**
- * \brief Generate optionally jittered, stratified 2D samples
- * @param dest A pointer to a floating point array 
- * @param countX The X axis interval [0, 1] is split into countX strata
- * @param countY The Y axis interval [0, 1] is split into countY strata
- * @param jitter Randomly jitter the samples?
+ * \brief Generate (optionally jittered) stratified 2D samples
+ * \param random Source of random numbers
+ * \param dest A pointer to a floating point array 
+ * \param countX The X axis interval [0, 1] is split into countX strata
+ * \param countY The Y axis interval [0, 1] is split into countY strata
+ * \param jitter Randomly jitter the samples?
  */
 extern MTS_EXPORT_CORE void stratifiedSample2D(Random *random, Point2 *dest, 
 	int countX, int countY, bool jitter);
@@ -175,12 +166,12 @@ extern MTS_EXPORT_CORE Point2 squareToTriangle(const Point2 &sample);
 
 /// Convert radians to degrees
 inline Float radToDeg(Float rad) {
-    return 180.0f*rad/M_PI;
+    return 180.0f * rad / M_PI;
 }
 
 /// Convert degrees to radians
 inline Float degToRad(Float deg) {
-    return deg*M_PI/180.0f;
+    return deg * M_PI / 180.0f;
 }
 
 /// Simple floating point clamping function
@@ -205,13 +196,13 @@ inline int clamp(int value, int min, int max) {
  * Calculates the unpolarized fresnel reflection coefficient for a 
  * dielectric material
  *
- * @param cosTheta1
+ * \param cosTheta1
  * 		Cosine of the angle between the normal and the incident ray
- * @param cosTheta2
+ * \param cosTheta2
  * 		Cosine of the angle between the normal and the transmitted ray
- * @param etaExt
+ * \param etaExt
  * 		Refraction coefficient outside of the material
- * @param etaInt
+ * \param etaInt
  * 		Refraction coefficient inside the material
  */
 extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosTheta1, Float cosTheta2, 
@@ -221,11 +212,11 @@ extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosTheta1, Float cosTheta2,
  * Calculates the unpolarized fresnel reflection coefficient for a 
  * dielectric material. Handles incidence from either sides.
  *
- * @param cosTheta1
+ * \param cosTheta1
  * 		Cosine of the angle between the normal and the incident ray
- * @param etaExt
+ * \param etaExt
  * 		Refraction coefficient outside of the material
- * @param etaInt
+ * \param etaInt
  * 		Refraction coefficient inside the material
  */
 extern MTS_EXPORT_CORE Float fresnel(Float cosTheta1, Float etaExt, Float etaInt);
@@ -234,11 +225,11 @@ extern MTS_EXPORT_CORE Float fresnel(Float cosTheta1, Float etaExt, Float etaInt
  * Calculates the unpolarized fresnel reflection coefficient on
  * an interface to a conductor.
  *
- * @param cosTheta
+ * \param cosTheta
  * 		Cosine of the angle between the normal and the incident ray
- * @param eta
+ * \param eta
  * 		Relative refractive index (per wavelength)
- * @param k
+ * \param k
  * 		Absorption coefficient (per wavelength)
  */
 extern MTS_EXPORT_CORE Spectrum fresnelConductor(Float cosTheta, const Spectrum &eta, const Spectrum &k);
@@ -259,8 +250,43 @@ extern MTS_EXPORT_CORE Float radicalInverse(int b, int i);
  */
 extern MTS_EXPORT_CORE Float radicalInverseIncremental(int b, Float x);
 
-/* Rational approximation to the inverse normal cumulative distribution function */
+/** 
+ * Rational approximation to the inverse normal 
+ * cumulative distribution function
+ * Source: http://home.online.no/~pjacklam/notes/invnorm/impl/sprouse/ltqnorm.c
+ * \author Peter J. Acklam
+ */
 extern MTS_EXPORT_CORE double normalQuantile(double p);
+
+/// Cast between types, which have an identical binary representation.
+template<typename T, typename U> inline T union_cast(const U &val) {
+	BOOST_STATIC_ASSERT(sizeof(T) == sizeof(U));
+
+	union {
+		U u;
+		T t;
+	} caster = {val};
+
+	return caster.t;
+}
+
+/// Return a string representation of a list of objects
+template<class T> std::string listToString(const std::vector<T> &vec) {
+	std::ostringstream oss;
+	oss << "{" << endl;
+	for (size_t i=0; i<vec.size(); ++i) {
+		oss << "  " << indent(vec[i]->toString());
+		if (i != vec.size()-1)
+			oss << "," << endl;
+		else
+			oss << endl;
+	}
+	oss << "}";
+	return oss.str();
+}
+	
+/// Turn a memory size into a human-readable string
+extern MTS_EXPORT std::string memString(size_t size);
 
 MTS_NAMESPACE_END
 

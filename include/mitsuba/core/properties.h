@@ -19,14 +19,13 @@
 #if !defined(__PROPERTIES_H)
 #define __PROPERTIES_H
 
+#include <mitsuba/mitsuba.h>
 #include <mitsuba/core/transform.h>
-#include <mitsuba/core/spectrum.h>
-#include <map>
 
 MTS_NAMESPACE_BEGIN
 
 /** \brief Associative map for values of various types. Used to
- * construct sub-classes of <tt>ConfigurableObject</tt>
+ * construct subclasses of <tt>ConfigurableObject</tt>.
  */
 class MTS_EXPORT_CORE Properties {
 public:
@@ -135,6 +134,7 @@ public:
 	/// Return a string representation
 	std::string toString() const;
 private:
+	/// \cond
 	struct Element {
 		PropertyType type;
 		union {
@@ -150,6 +150,7 @@ private:
 		std::string v_string;
 		mutable bool queried;
 	};
+	/// \endcond
 
 	std::map<std::string, Element> m_elements;
 	std::string m_pluginName, m_id;

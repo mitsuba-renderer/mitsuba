@@ -19,7 +19,7 @@
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/testcase.h>
 #include <boost/math/distributions/students_t.hpp>
-#include <fstream>
+#include <boost/filesystem/fstream.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -172,21 +172,25 @@ void TestSupervisor::analyze(const Scene *scene) {
 	TestResult result;
 
 	result.input = scene->getSourceFile();
-	result.output = scene->getDestinationFile() + ".m";
+	result.output = scene->getDestinationFile();
+	result.output.replace_extension(".m");
 	result.success = false;
-	std::string refFilename = scene->getDestinationFile() + ".ref";
+	fs::path refFilename = scene->getDestinationFile();
+	refFilename.replace_extension(".ref");
 
-	std::ifstream is(result.output.c_str());
-	std::ifstream is_ref(refFilename.c_str());
+	fs::ifstream is(result.output);
+	fs::ifstream is_ref(refFilename);
 	if (is.fail()) {
-		result.message = formatString("Could not open '%s'!", result.output.c_str());
+		result.message = formatString("Could not open '%s'!", 
+			result.output.file_string().c_str());
 		m_mutex->lock();
 		m_numFailed++; m_results.push_back(result);
 		m_mutex->unlock();
 		return;
 	}
 	if (is_ref.fail()) {
-		result.message = formatString("Could not open '%s'!", refFilename.c_str());
+		result.message = formatString("Could not open '%s'!", 
+			refFilename.file_string().c_str());
 		m_mutex->lock();
 		m_numFailed++; m_results.push_back(result);
 		m_mutex->unlock();
@@ -265,7 +269,7 @@ void TestSupervisor::printSummary() const {
 		if (result.success)
 			continue;
 		Log(EWarn, "============================================================");
-		Log(EWarn, " Failure: Test case %zi (\"%s\")", i+1, result.input.c_str());
+		Log(EWarn, " Failure: Test case %zi (\"%s\")", i+1, result.input.file_string().c_str());
 		Log(EWarn, " Message: \"%s\"", result.message.c_str());
 		Log(EWarn, "============================================================");
 	}

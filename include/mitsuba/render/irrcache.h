@@ -39,7 +39,7 @@ typedef Spectrum TranslationalGradient[3];
  *
  * @author Wenzel Jakob
  */
-struct MTS_EXPORT_RENDER HemisphereSampler : public Object {
+class MTS_EXPORT_RENDER HemisphereSampler : public Object {
 public:
 	struct SampleEntry {
 		Vector d;

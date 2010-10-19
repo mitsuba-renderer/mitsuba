@@ -39,8 +39,6 @@ RenderJob::RenderJob(const std::string &threadName,
 	ref<Camera> camera = m_scene->getCamera();
 	ref<Sampler> sampler = m_scene->getSampler();
 
-	m_fileResolver = FileResolver::getInstance();
-
 	/* Register the scene with the scheduler if needed */
 	if (sceneResID == -1) {
 		m_sceneResID = sched->registerResource(m_scene);
@@ -92,8 +90,6 @@ void RenderJob::run() {
 	ref<Film> film = m_scene->getFilm();
 	ref<Sampler> sampler = m_scene->getSampler();
 
-	FileResolver::setInstance(m_fileResolver);
-
 	if (m_testSupervisor.get()) {
 		if (film->getClass()->getName() != "MFilm")
 			Log(EError, "Only the MATLAB M-file film is supported when "
@@ -111,20 +107,26 @@ void RenderJob::run() {
 	bool cancelled = false;
 	m_scene->initialize();
 	try {
-		m_scene->preprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID);
-
-		if (!m_scene->render(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID)) {
+		if (!m_scene->preprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID)) {
 			cancelled = true;
-			Log(EWarn, "Rendering of scene \"%s\" did not complete successfully!",
-				m_scene->getSourceFile().c_str());
+			Log(EWarn, "Preprocessing of scene \"%s\" did not complete successfully!",
+				m_scene->getSourceFile().leaf().c_str());
 		}
-		m_scene->postprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID);
+
+		if (!cancelled) {
+			if (!m_scene->render(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID)) {
+				cancelled = true;
+				Log(EWarn, "Rendering of scene \"%s\" did not complete successfully!",
+					m_scene->getSourceFile().leaf().c_str());
+			}
+			m_scene->postprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID);
+		}
 
 		if (m_testSupervisor.get()) 
 			m_testSupervisor->analyze(m_scene);
 	} catch (const std::exception &ex) {
 		Log(EWarn, "Rendering of scene \"%s\" did not complete successfully, caught exception: %s",
-			m_scene->getSourceFile().c_str(), ex.what());
+			m_scene->getSourceFile().leaf().c_str(), ex.what());
 		cancelled = true;
 	}
 

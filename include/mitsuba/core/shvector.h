@@ -32,10 +32,13 @@ namespace ublas  = boost::numeric::ublas;
 
 struct SHVector;
 
-/* Stores the diagonal blocks of a spherical harmonic rotation matrix */
+/**
+ * \brief Stores the diagonal blocks of a spherical harmonic rotation matrix
+ */
 struct MTS_EXPORT_CORE SHRotation {
 	std::vector<ublas::matrix<Float> > blocks;
 
+	/// Construct a new rotation storage for the given number of bands
 	inline SHRotation(int bands) : blocks(bands) {
 		for (int i=0; i<bands; ++i) {
 			int dim = 2*i+1;
@@ -44,26 +47,31 @@ struct MTS_EXPORT_CORE SHRotation {
 	}
 
 	/**
-	 * Transform a coefficient vector and store the result into
-	 * the given target vector. The source and target must have
-	 * the same number of bands.
+	 * \brief Transform a coefficient vector and store the result into
+	 * the given target vector. 
+	 *
+	 * The source and target must have the same number of bands.
 	 */
 	void operator()(const SHVector &source, SHVector &target) const;
 };
 
 /**
- * Stores a truncated real spherical harmonics representation of
- * an L2-integrable function. Also provides some other useful 
- * functionality, such as evaluation, projection and rotation.
+ * \brief Stores a truncated real spherical harmonics representation of
+ * an L2-integrable function.
+ *
+ * Also provides some other useful functionality, such as evaluation, 
+ * projection and rotation.
  * 
  * The Mathematica equivalent of the basis functions implemented here is:
  *
+ * <pre>
  * SphericalHarmonicQ[l_, m_, \[Theta]_, \[Phi]_] :=
  *   Piecewise[{
  *      {SphericalHarmonicY[l, m, \[Theta], \[Phi]], m == 0},
  *      {Sqrt[2]*Re[SphericalHarmonicY[l, m, \[Theta], \[Phi]]], m > 0},
  *      {Sqrt[2]*Im[SphericalHarmonicY[l, -m, \[Theta], \[Phi]]], m < 0}
  *  }]
+ * </pre>
  */
 struct MTS_EXPORT_CORE SHVector {
 public:
@@ -169,18 +177,20 @@ public:
 	/// Evaluate for a direction given in spherical coordinates
 	Float eval(Float theta, Float phi) const;
 
-	/// Evaluate for a direction given in cartesian coordinates
+	/// Evaluate for a direction given in Cartesian coordinates
 	Float eval(const Vector &v) const;
 
 	/**
-	 * Evaluate for a direction given in spherical coordinates.
+	 * \brief Evaluate for a direction given in spherical coordinates.
+	 *
 	 * This function is much faster but only works for azimuthally
 	 * invariant functions
 	 */
 	Float evalAzimuthallyInvariant(Float theta, Float phi) const;
 
 	/**
-	 * Evaluate for a direction given in cartesian coordinates.
+	 * \brief Evaluate for a direction given in cartesian coordinates.
+	 *
 	 * This function is much faster but only works for azimuthally
 	 * invariant functions
 	 */
@@ -194,7 +204,7 @@ public:
 
 	/// Dot product
 	inline friend Float dot(const SHVector &v1, const SHVector &v2) {
-		const int size = std::min(v1.m_coeffs.size(), v2.m_coeffs.size());
+		const size_t size = std::min(v1.m_coeffs.size(), v2.m_coeffs.size());
 		return std::inner_product(
 			v1.m_coeffs.begin(), v1.m_coeffs.begin() + size,
 			v2.m_coeffs.begin(), Float()
@@ -214,8 +224,10 @@ public:
 	void offset(Float value);
 
 	/**
-	 * Convolve the SH representation with the supplied kernel, 
-	 * which must be rotationally symmetric around the Z-axis.
+	 * \brief Convolve the SH representation with the supplied kernel.
+	 * 
+	 * Based on the Funk-Hecke theorem -- the kernel must be rotationally 
+	 * symmetric around the Z-axis.
 	 */
 	void convolve(const SHVector &kernel);
 
@@ -303,7 +315,7 @@ public:
 		return error/denom;
 	}
 
-	/* Evaluate an associated Legendre polynomial using the usual recurrence formulae */
+	/// Evaluate an associated Legendre polynomial using the usual recurrence formulae
 	static Float legendre(int l, int m, Float x);
 
 	/// Return a normalization coefficient
@@ -315,8 +327,9 @@ public:
 	}
 
 	/**
-	 * Recursively computes rotation matrices for each band of SH coefficients. Based on
-	 * 'Rotation Matrices for Real Spherical Harmonics. Direct Determination by Recursion' 
+	 * \brief Recursively computes rotation matrices for each band of SH coefficients.
+	 *
+	 * Based on 'Rotation Matrices for Real Spherical Harmonics. Direct Determination by Recursion' 
 	 * by Ivanic and Ruedenberg. The implemented tables follow the notation in 
 	 * 'Spherical Harmonic Lighting: The Gritty Details' by Robin Green.
 	 */
@@ -340,22 +353,23 @@ private:
 };
 
 /**
- * Implementation of 'Importance Sampling Spherical Harmonics'
+ * \brief Implementation of 'Importance Sampling Spherical Harmonics'
  * by W. Jarsz, N. Carr and H. W. Jensen (EUROGRAPHICS 2009)
  */
 class MTS_EXPORT_CORE SHSampler : public Object {
 public:
 	/**
-	 * Create a spherical harmonics sampler object for the
-	 * specified amount of SH coefficient bands. The 'depth'
-	 * parameter specifies the number of recursive sample
-	 * warping steps.
+	 * \brief Precompute a spherical harmonics sampler object
+	 * 
+	 * \param bands Number of SH coefficient bands to support
+	 * \param depth Number of recursive sample warping steps.
 	 */
 	SHSampler(int bands, int depth);
 
 	/**
-	 * Warp a uniform sample in [0,1]^2 to one that is
+	 * \brief Warp a uniform sample in [0,1]^2 to one that is
 	 * approximately proportional to the specified function.
+	 *
 	 * The resulting sample will have spherical coordinates 
 	 * [0,pi]x[0,2pi] and its actual PDF (which might be
 	 * slightly different from the function evaluated at the
@@ -370,7 +384,7 @@ public:
 protected:
 	/// Virtual destructor
 	virtual ~SHSampler();
-	
+
 	/* Index into the assoc. legendre polynomial table */
 	inline int I(int l, int m) const { return l*(l+1)/2 + m; }
 
@@ -381,11 +395,11 @@ protected:
 		return -m_phiMap[depth][phiBlock][P(m)] * m_legendreMap[depth][zBlock][I(l, std::abs(m))];
 	}
 
-	/* Recursively compute assoc. legendre & phi integrals */
+	/// Recursively compute assoc. legendre & phi integrals
 	Float *legendreIntegrals(Float a, Float b);
 	Float *phiIntegrals(Float a, Float b);
 
-	/* Integrate a SH expansion over the specified mip-map region */
+	/// Integrate a SH expansion over the specified mip-map region
 	Float integrate(int depth, int zBlock, int phiBlock, const SHVector &f) const;
 protected:
 	int m_bands;

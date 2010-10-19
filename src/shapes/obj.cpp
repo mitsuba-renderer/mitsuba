@@ -17,9 +17,12 @@
 */
 
 #include <mitsuba/render/trimesh.h>
-#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/plugin.h>
-#include <fstream>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/subsurface.h>
+#include <set>
 
 MTS_NAMESPACE_BEGIN
 
@@ -29,21 +32,36 @@ MTS_NAMESPACE_BEGIN
 class WavefrontOBJ : public Shape {
 public:
 	struct OBJTriangle {
-		unsigned int v[3];
+		unsigned int p[3];
 		unsigned int n[3];
 		unsigned int uv[3];
 	};
 
 	WavefrontOBJ(const Properties &props) : Shape(props) {
-		ref<FileResolver> fresolver = FileResolver::getInstance();
-		std::string path = fresolver->resolve(props.getString("filename"));
-		m_name = fresolver->getChild(path);
+		FileResolver *fResolver = Thread::getThread()->getFileResolver();
+		fs::path path = fResolver->resolve(props.getString("filename"));
+		m_name = path.stem();
+	
+		/* By default, any existing normals will be used for
+		   rendering. If no normals are found, Mitsuba will
+		   automatically generate smooth vertex normals. 
+		   Setting the 'faceNormals' parameter instead forces
+		   the use of face normals, which will result in a faceted
+		   appearance.
+		*/
+		m_faceNormals = props.getBoolean("faceNormals", false);
+
+		/* Causes all normals to be flipped */
+		m_flipNormals = props.getBoolean("flipNormals", false);
+
+		/* Object-space -> World-space transformation */
+		Transform objectToWorld = props.getTransform("toWorld", Transform());
 
 		/* Load the geometry */
-		Log(EInfo, "Loading geometry from \"%s\" ..", path.c_str());
-		std::ifstream is(path.c_str());
+		Log(EInfo, "Loading geometry from \"%s\" ..", path.leaf().c_str());
+		fs::ifstream is(path);
 		if (is.bad() || is.fail())
-			Log(EError, "Geometry file '%s' not found!", path.c_str());
+			Log(EError, "Geometry file '%s' not found!", path.file_string().c_str());
 
 		std::string buf;
 		std::vector<Point> vertices;
@@ -53,20 +71,26 @@ public:
 		bool hasNormals = false, hasTexcoords = false;
 		bool firstVertex = true;
 		BSDF *currentMaterial = NULL;
-
 		std::string name = m_name;
+		std::set<std::string> geomNames;
+		int geomIdx = 0;
 
 		while (is >> buf) {
 			if (buf == "v") {
 				/* Parse + transform vertices */
 				Point p;
 				is >> p.x >> p.y >> p.z;
-				vertices.push_back(m_objectToWorld(p));
+				vertices.push_back(objectToWorld(p));
 				if (firstVertex) {
 					if (triangles.size() > 0) {
+						if (geomNames.find(name) != geomNames.end())
+							/// make sure that we have unique names
+							name = formatString("%s_%i", m_name.c_str(), geomIdx);
 						generateGeometry(name, vertices, normals, texcoords, 
 							triangles, hasNormals, hasTexcoords, currentMaterial);
 						triangles.clear();
+						geomNames.insert(name);
+						geomIdx++;
 					}
 					hasNormals = false;
 					hasTexcoords = false;
@@ -76,14 +100,14 @@ public:
 				Normal n;
 				is >> n.x >> n.y >> n.z;
 				if (!n.isZero())
-					normals.push_back(normalize(m_objectToWorld(n)));
+					normals.push_back(normalize(objectToWorld(n)));
 				else
 					normals.push_back(n);
 				hasNormals = true;
 			} else if (buf == "g") {
 				std::string line;
 				std::getline(is, line);
-				if (line.length() > 2) {
+				if (line.length() > 2) { 
 					name = trim(line.substr(1, line.length()-1));
 					Log(EInfo, "Loading geometry \"%s\"", name.c_str());
 				}
@@ -98,14 +122,14 @@ public:
 			} else if (buf == "mtllib") {
 				std::string line;
 				std::getline(is, line);
-				std::string mtlName = trim(line.substr(1, line.length()-1));
-				ref<FileResolver> fRes = FileResolver::getInstance()->clone();
-				fRes->addPathFromFile(fRes->resolveAbsolute(props.getString("filename")));
-				std::string fullMtlName = fRes->resolve(mtlName);
-				if (FileStream::exists(fullMtlName))
-					parseMaterials(fullMtlName);
+				ref<FileResolver> frClone = fResolver->clone();
+				frClone->addPath(fs::complete(path).parent_path());
+				fs::path mtlName = frClone->resolve(trim(line.substr(1, line.length()-1)));
+				if (fs::exists(mtlName))
+					parseMaterials(mtlName);
 				else
-					Log(EWarn, "Could not find referenced material library '%s'", mtlName.c_str());
+					Log(EWarn, "Could not find referenced material library '%s'", 
+						mtlName.file_string().c_str());
 			} else if (buf == "vt") {
 				std::string line;
 				Float u, v, w;
@@ -126,11 +150,14 @@ public:
 				triangles.push_back(t);
 				if (iss >> tmp) {
 					parse(t, 1, tmp);
-					std::swap(t.v[0], t.v[1]);
+					std::swap(t.p[0], t.p[1]);
 					std::swap(t.uv[0], t.uv[1]);
 					std::swap(t.n[0], t.n[1]);
 					triangles.push_back(t);
 				}
+				if (iss >> tmp)
+					Log(EError, "Encountered an n-gon (with n>4)! Only "
+						"triangles and quads are supported by the OBJ loader.");
 			} else {
 				/* Ignore */
 				std::string line;
@@ -143,6 +170,8 @@ public:
 	}
 
 	WavefrontOBJ(Stream *stream, InstanceManager *manager) : Shape(stream, manager) {
+		m_aabb = AABB(stream);
+		m_name = stream->readString();
 		unsigned int meshCount = stream->readUInt();
 		m_meshes.resize(meshCount);
 	
@@ -155,6 +184,8 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Shape::serialize(stream, manager);
 
+		m_aabb.serialize(stream);
+		stream->writeString(m_name);
 		stream->writeUInt((unsigned int) m_meshes.size());
 		for (size_t i=0; i<m_meshes.size(); ++i)
 			manager->serialize(stream, m_meshes[i]);
@@ -163,17 +194,17 @@ public:
 	void parse(OBJTriangle &t, int i, const std::string &str) {
 		std::vector<std::string> tokens = tokenize(str, "/");
 		if (tokens.size() == 1) {
-			t.v[i] = atoi(tokens[0].c_str())-1;
+			t.p[i] = atoi(tokens[0].c_str())-1;
 		} else if (tokens.size() == 2) {
 			if (str.find("//") == std::string::npos) {
-				t.v[i]  = atoi(tokens[0].c_str())-1;
+				t.p[i]  = atoi(tokens[0].c_str())-1;
 				t.uv[i] = atoi(tokens[1].c_str())-1;
 			} else {
-				t.v[i] = atoi(tokens[0].c_str())-1;
+				t.p[i] = atoi(tokens[0].c_str())-1;
 				t.n[i] = atoi(tokens[1].c_str())-1;
 			}
 		} else if (tokens.size() == 3) {
-			t.v[i] = atoi(tokens[0].c_str())-1;
+			t.p[i] = atoi(tokens[0].c_str())-1;
 			t.uv[i] = atoi(tokens[1].c_str())-1;
 			t.n[i] = atoi(tokens[2].c_str())-1;
 		} else {
@@ -181,11 +212,12 @@ public:
 		}
 	}
 
-	void parseMaterials(const std::string &mtlFileName) {
-		Log(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.c_str());
-		std::ifstream is(mtlFileName.c_str());
+	void parseMaterials(const fs::path &mtlPath) {
+		Log(EInfo, "Loading OBJ materials from \"%s\" ..", mtlPath.filename().c_str());
+		fs::ifstream is(mtlPath);
 		if (is.bad() || is.fail())
-			Log(EError, "Unexpected I/O error while accessing material file '%s'!", mtlFileName.c_str());
+			Log(EError, "Unexpected I/O error while accessing material file '%s'!", 
+				mtlPath.file_string().c_str());
 		std::string buf;
 		std::string mtlName;
 		Spectrum diffuse;
@@ -220,18 +252,24 @@ public:
 		bsdf->incRef();
 		m_materials[name] = bsdf;
 	}
-	
+
+	struct Vertex {
+		Point p;
+		Normal n;
+		Point2 uv;
+	};
+
 	/// For using vertices as keys in an associative structure
 	struct vertex_key_order : public 
 		std::binary_function<Vertex, Vertex, bool> {
 	public:
 		bool operator()(const Vertex &v1, const Vertex &v2) const {
-			if (v1.v.x < v2.v.x) return true;
-			else if (v1.v.x > v2.v.x) return false;
-			if (v1.v.y < v2.v.y) return true;
-			else if (v1.v.y > v2.v.y) return false;
-			if (v1.v.z < v2.v.z) return true;
-			else if (v1.v.z > v2.v.z) return false;
+			if (v1.p.x < v2.p.x) return true;
+			else if (v1.p.x > v2.p.x) return false;
+			if (v1.p.y < v2.p.y) return true;
+			else if (v1.p.y > v2.p.y) return false;
+			if (v1.p.z < v2.p.z) return true;
+			else if (v1.p.z > v2.p.z) return false;
 			if (v1.n.x < v2.n.x) return true;
 			else if (v1.n.x > v2.n.x) return false;
 			if (v1.n.y < v2.n.y) return true;
@@ -255,7 +293,7 @@ public:
 			BSDF *currentMaterial) {
 		if (triangles.size() == 0)
 			return;
-	
+
 		std::map<Vertex, int, vertex_key_order> vertexMap;
 		std::vector<Vertex> vertexBuffer;
 		size_t numMerged = 0;
@@ -265,17 +303,21 @@ public:
 		for (unsigned int i=0; i<triangles.size(); i++) {
 			Triangle tri;
 			for (unsigned int j=0; j<3; j++) {
-				unsigned int vertexId = triangles[i].v[j];
+				unsigned int vertexId = triangles[i].p[j];
 				unsigned int normalId = triangles[i].n[j];
 				unsigned int uvId = triangles[i].uv[j];
 				int key;
 
 				Vertex vertex;
-				vertex.v = vertices.at(vertexId);
+				vertex.p = vertices.at(vertexId);
 				if (hasNormals)
 					vertex.n = normals.at(normalId);
+				else
+					vertex.n = Normal(0.0f);
 				if (hasTexcoords)
 					vertex.uv = texcoords.at(uvId);
+				else
+					vertex.uv = Point2(0.0f);
 
 				if (vertexMap.find(vertex) != vertexMap.end()) {
 					key = vertexMap[vertex];
@@ -291,18 +333,31 @@ public:
 			triangleArray[i] = tri;
 		}
 
-		Vertex *vertexArray = new Vertex[vertexBuffer.size()];
-		for (unsigned int i=0; i<vertexBuffer.size(); i++) 
-			vertexArray[i] = vertexBuffer[i];
+		ref<TriMesh> mesh = new TriMesh(name,
+			triangles.size(), vertexBuffer.size(),
+			hasNormals, hasTexcoords, false,
+			m_flipNormals, m_faceNormals);
 
-		ref<TriMesh> mesh = new TriMesh(name, m_worldToObject, triangleArray, 
-			triangles.size(), vertexArray, vertexBuffer.size());
+		std::copy(triangleArray, triangleArray+triangles.size(), mesh->getTriangles());
+
+		Point    *target_positions = mesh->getVertexPositions();
+		Normal   *target_normals   = mesh->getVertexNormals();
+		Point2   *target_texcoords = mesh->getVertexTexcoords();
+
+		for (size_t i=0; i<vertexBuffer.size(); i++) {
+			*target_positions++ = vertexBuffer[i].p;
+			if (hasNormals)
+				*target_normals++ = vertexBuffer[i].n;
+			if (hasTexcoords)
+				*target_texcoords++ = vertexBuffer[i].uv;
+		}
+
 		mesh->incRef();
-		mesh->calculateTangentSpaceBasis(hasNormals, hasTexcoords);
+		mesh->configure();
 		if (currentMaterial)
 			mesh->addChild("", currentMaterial);
 		m_meshes.push_back(mesh);
-		SLog(EInfo, "%s: Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
+		Log(EInfo, "%s: Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
 			" vertices (merged " SIZE_T_FMT " vertices).", name.c_str(),
 			triangles.size(), vertexBuffer.size(), numMerged);
 	}
@@ -373,10 +428,28 @@ public:
 		return shape;
 	}
 
+	std::string getName() const {
+		return m_name;
+	}
+
+	AABB getAABB() const {
+		return m_aabb;
+	}
+
+	Float getSurfaceArea() const {
+		Float sa = 0;
+		for (size_t i=0; i<m_meshes.size(); ++i)
+			sa += m_meshes[i]->getSurfaceArea();
+		return sa;
+	}
+
 	MTS_DECLARE_CLASS()
 private:
 	std::vector<TriMesh *> m_meshes;
 	std::map<std::string, BSDF *> m_materials;
+	bool m_flipNormals, m_faceNormals;
+	std::string m_name;
+	AABB m_aabb;
 };
 
 MTS_IMPLEMENT_CLASS_S(WavefrontOBJ, false, Shape)

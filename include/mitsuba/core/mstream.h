@@ -24,7 +24,9 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Simple memory buffer-based stream with automatic memory management 
- * (dynamically expands as data is written to it)
+ * 
+ * The underlying memory storage of this implementation dynamically expands 
+ * as data is written to the stream.
  */
 class MTS_EXPORT_CORE MemoryStream : public Stream {
 public:

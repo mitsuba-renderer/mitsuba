@@ -19,8 +19,8 @@
 #if !defined(__TRANSFORM_H)
 #define __TRANSFORM_H
 
+#include <mitsuba/mitsuba.h>
 #include <mitsuba/core/ray.h>
-#include <mitsuba/core/normal.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -32,6 +32,9 @@ class MTS_EXPORT_CORE Matrix4x4 : public Object {
 public:
 	/// Initialize with the identity matrix
 	Matrix4x4();
+
+	/// Initialize the matrix with constant entries
+	Matrix4x4(Float value);
 
 	/// Unserialize a matrix from a stream
 	Matrix4x4(Stream *stream);
@@ -76,13 +79,10 @@ protected:
 	virtual ~Matrix4x4() { }
 };
 	
-struct Frame;
-
 /**
- * \brief Transform class encapsulating a linear affine
- * transformation (using homogenous coordinates) and its inverse
+ * \brief Encapsulates a 4x4 linear transformation and its inverse
  */
-class MTS_EXPORT_CORE Transform {
+struct MTS_EXPORT_CORE Transform {
 public:
 	/// Create an identity transformation
 	Transform();
@@ -231,6 +231,31 @@ public:
 		dest.z = m_invTransform->m[0][2] * v.x + m_invTransform->m[1][2] * v.y
 			   + m_invTransform->m[2][2] * v.z;
 	}
+	
+	/// 4D matrix-vector multiplication
+	inline Vector4 operator()(const Vector4 &v) const {
+		Float x = m_transform->m[0][0] * v.x + m_transform->m[0][1] * v.y
+				+ m_transform->m[0][2] * v.z + m_transform->m[0][3] * v.w;
+		Float y = m_transform->m[1][0] * v.x + m_transform->m[1][1] * v.y
+				+ m_transform->m[1][2] * v.z + m_transform->m[1][3] * v.w;
+		Float z = m_transform->m[2][0] * v.x + m_transform->m[2][1] * v.y
+				+ m_transform->m[2][2] * v.z + m_transform->m[2][3] * v.w;
+		Float w = m_transform->m[3][0] * v.x + m_transform->m[3][1] * v.y
+				+ m_transform->m[3][2] * v.z + m_transform->m[3][3] * v.w;
+		return Vector4(x,y,z,w);
+	}
+
+	/// 4D matrix-vector multiplication
+	inline void operator()(const Vector4 &v, Vector4 &dest) const {
+		dest.x = m_transform->m[0][0] * v.x + m_transform->m[0][1] * v.y
+			   + m_transform->m[0][2] * v.z + m_transform->m[0][3] * v.w;
+		dest.y = m_transform->m[1][0] * v.x + m_transform->m[1][1] * v.y
+			   + m_transform->m[1][2] * v.z + m_transform->m[1][3] * v.w;
+		dest.z = m_transform->m[2][0] * v.x + m_transform->m[2][1] * v.y
+			   + m_transform->m[2][2] * v.z + m_transform->m[2][3] * v.w;
+		dest.w = m_transform->m[3][0] * v.x + m_transform->m[3][1] * v.y
+			   + m_transform->m[3][2] * v.z + m_transform->m[3][3] * v.w;
+	}
 
 	/// Transform a ray. Assumes that there is no scaling
 	inline void operator()(const Ray &a, Ray &b) const {
@@ -264,47 +289,47 @@ public:
 	
 	/** \brief Create a perspective transformation.
 	 *   (Maps [near, far] to [0, 1])
-	 * @param fov Field of view in degrees
-	 * @param clipNear Near clipping plane
-	 * @param clipFar Far clipping plane
+	 * \param fov Field of view in degrees
+	 * \param clipNear Near clipping plane
+	 * \param clipFar Far clipping plane
 	 */
 	static Transform perspective(Float fov, Float clipNear, Float clipFar);
 	
 	/** \brief Create a perspective transformation for OpenGL.
 	 *   (Maps [near, far] to [-1, 1])
-	 * @param fov Field of view in degrees
-	 * @param clipNear Near clipping plane distance
-	 * @param clipFar Far clipping plane distance
+	 * \param fov Field of view in degrees
+	 * \param clipNear Near clipping plane distance
+	 * \param clipFar Far clipping plane distance
 	 */
 	static Transform glPerspective(Float fov, Float clipNear, Float clipFar);
 
 	/** \brief Create a perspective transformation for OpenGL.
-	 * @param left Left clipping plane coordinate
-	 * @param right Right clipping plane coordinate
-	 * @param top Top clipping plane coordinate
-	 * @param bottom Bottom clipping plane coordinate
-	 * @param clipNear Near clipping plane distance
-	 * @param clipFar Far clipping plane distance
+	 * \param left Left clipping plane coordinate
+	 * \param right Right clipping plane coordinate
+	 * \param top Top clipping plane coordinate
+	 * \param bottom Bottom clipping plane coordinate
+	 * \param nearVal Near clipping plane distance
+	 * \param farVal Far clipping plane distance
 	 */
 	static Transform glFrustum(Float left, Float right, Float bottom, Float top, Float nearVal, Float farVal);
 
 	/** \brief Create an orthographic transformation, which maps Z to [0,1]
 	 * and leaves the X and Y coordinates untouched.
-	 * @param clipNear Near clipping plane
-	 * @param clipFar Far clipping plane
+	 * \param clipNear Near clipping plane
+	 * \param clipFar Far clipping plane
 	 */
 	static Transform orthographic(Float clipNear, Float clipFar);
 	
 	/** \brief Create an orthographic transformation for OpenGL
-	 * @param clipNear Near clipping plane
-	 * @param clipFar Far clipping plane
+	 * \param clipNear Near clipping plane
+	 * \param clipFar Far clipping plane
 	 */
 	static Transform glOrthographic(Float clipNear, Float clipFar);
 
 	/** \brief Create a look-at camera transformation
-	 * @param p Camera position
-	 * @param t Target vector
-	 * @param u Up vector
+	 * \param p Camera position
+	 * \param t Target vector
+	 * \param u Up vector
 	 */
 	static Transform lookAt(const Point &p, const Point &t, const Vector &u);
 

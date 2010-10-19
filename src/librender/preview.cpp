@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/preview.h>
+#include <mitsuba/render/triaccel.h>
 #include <mitsuba/render/imageproc_wu.h>
 
 MTS_NAMESPACE_BEGIN
@@ -71,7 +72,9 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 	for (int y=sy; y<ey; ++y) {
 		for (int x=sx; x<ex; ++x) {
 			/* Generate a camera ray without normalization */
-			primary = Ray(m_cameraO, m_cameraTL + m_cameraDx*x + m_cameraDy * y);
+			primary = Ray(m_cameraO, m_cameraTL 
+				+ m_cameraDx * (Float) x
+				+ m_cameraDy * (Float) y);
 
 			++numRays;
 			if (!m_kdtree->rayIntersect(primary, its)) {
@@ -136,6 +139,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 	const SSEVector MM_ALIGN16 yOffset(0.0f, 0.0f, 1.0f, 1.0f);
 	const int pixelOffset[] = {0, 1, width, width+1};
 	const __m128 clamping = _mm_set1_ps(1/(m_minDist*m_minDist));
+	uint8_t temp[MTS_KD_INTERSECTION_TEMP*4];
 
 	const __m128 camTL[3] = {
 		 _mm_set1_ps(m_cameraTL.x),
@@ -231,9 +235,9 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 				primRay4.signs[0][0] = primSignsX ? 1 : 0;
 				primRay4.signs[1][0] = primSignsY ? 1 : 0;
 				primRay4.signs[2][0] = primSignsZ ? 1 : 0;
-				m_kdtree->rayIntersectPacket(primRay4, itv4, its4);
+				m_kdtree->rayIntersectPacket(primRay4, itv4, its4, temp);
 			} else {
-				m_kdtree->rayIntersectPacketIncoherent(primRay4, itv4, its4);
+				m_kdtree->rayIntersectPacketIncoherent(primRay4, itv4, its4, temp);
 			}
 			numRays += 4;
 
@@ -287,28 +291,66 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 				const Shape *shape = (*m_shapes)[its4.shapeIndex.i[idx]];
 				const BSDF *bsdf = shape->getBSDF();
 
-
 				if (EXPECT_TAKEN(primIndex != KNoTriangleFlag)) {
 					const TriMesh *mesh = static_cast<const TriMesh *>(shape);
-					const Vertex *vb = mesh->getVertexBuffer();
 					const Triangle &t = mesh->getTriangles()[primIndex];
-					const Vertex &v0 = vb[t.idx[0]], &v1 = vb[t.idx[1]], &v2 = vb[t.idx[2]];
+					const Normal *normals = mesh->getVertexNormals();
+					const Point2 *texcoords = mesh->getVertexTexcoords();
+					const Spectrum *colors = mesh->getVertexColors();
+					const TangentSpace * tangents = mesh->getVertexTangents();
 					const Float beta  = its4.u.f[idx],
 								gamma = its4.v.f[idx],
 								alpha = 1.0f - beta - gamma;
-					its.shFrame.n = normalize(v0.n * alpha + v1.n * beta + v2.n * gamma);
-					its.uv = v0.uv * alpha + v1.uv * beta + v2.uv * gamma;
+					const uint32_t idx0 = t.idx[0], idx1 = t.idx[1], idx2 = t.idx[2];
 
-					if (EXPECT_NOT_TAKEN(bsdf->getType() != BSDF::EDiffuseReflection || !diffuseVPL)) {
-						its.dpdu = v0.dpdu * alpha + v1.dpdu * beta + v2.dpdu * gamma;
-						its.dpdv = v0.dpdv * alpha + v1.dpdv * beta + v2.dpdv * gamma;
+					if (EXPECT_TAKEN(normals)) {
+						const Normal &n0 = normals[idx0],
+							  		 &n1 = normals[idx1],
+									 &n2 = normals[idx2];
+						its.shFrame.n = normalize(n0 * alpha + n1 * beta + n2 * gamma);
+					} else {
+						const Point *positions = mesh->getVertexPositions();
+						const Point &p0 = positions[idx0],
+									&p1 = positions[idx1],
+									&p2 = positions[idx2];
+						Vector sideA = p1 - p0, sideB = p2 - p0;
+						Vector n = cross(sideA, sideB);
+						Float nLengthSqr = n.lengthSquared();
+						if (nLengthSqr != 0)
+							n /= std::sqrt(nLengthSqr);
+						its.shFrame.n = Normal(n);
+					}
+
+					if (EXPECT_TAKEN(texcoords)) {
+						const Point2 &t0 = texcoords[idx0],
+							  		 &t1 = texcoords[idx1],
+									 &t2 = texcoords[idx2];
+						its.uv = t0 * alpha + t1 * beta + t2 * gamma;
+					} else {
+						its.uv = Point2(0.0f);
+					}
+
+					if (EXPECT_NOT_TAKEN(colors)) {
+						const Spectrum &c0 = colors[idx0],
+							  		   &c1 = colors[idx1],
+									   &c2 = colors[idx2];
+						its.color = c0 * alpha + c1 * beta + c2 * gamma;
+					}
+
+					if (EXPECT_NOT_TAKEN(tangents)) {
+						const TangentSpace &t0 = tangents[idx0],
+							  			   &t1 = tangents[idx1],
+										   &t2 = tangents[idx2];
+						its.dpdu = t0.dpdu * alpha + t1.dpdu * beta + t2.dpdu * gamma;
+						its.dpdv = t0.dpdv * alpha + t1.dpdv * beta + t2.dpdv * gamma;
 					}
 				} else {
 					Ray ray(
 						Point(primRay4.o[0].f[idx], primRay4.o[1].f[idx], primRay4.o[2].f[idx]),
 						Vector(primRay4.d[0].f[idx], primRay4.d[1].f[idx], primRay4.d[2].f[idx])
 					);
-					shape->rayIntersect(ray, its);
+					shape->fillIntersectionRecord(ray, its4.t.f[idx], temp + 
+								+ idx * MTS_KD_INTERSECTION_TEMP + 8, its);
 				}
 
 				wo.x = nSecD[0].f[idx]; wo.y = nSecD[1].f[idx]; wo.z = nSecD[2].f[idx];
@@ -334,9 +376,13 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					its.p.x = secRay4.o[0].f[idx];
 					its.p.y = secRay4.o[1].f[idx];
 					its.p.z = secRay4.o[2].f[idx];
-					its.shFrame.s = normalize(its.dpdu - its.shFrame.n
-						* dot(its.shFrame.n, its.dpdu));
-					its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
+					if (EXPECT_NOT_TAKEN(bsdf->getType() & BSDF::EAnisotropicMaterial)) {
+						its.shFrame.s = normalize(its.dpdu - its.shFrame.n
+							* dot(its.shFrame.n, its.dpdu));
+						its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
+					} else {
+						coordinateSystem(its.shFrame.n, its.shFrame.s, its.shFrame.t);
+					}
 					const Float ctLight = cosThetaLight.f[idx];
 					wi = normalize(wi);
 
@@ -382,9 +428,9 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 				secRay4.signs[0][0] = secSignsX ? 1 : 0;
 				secRay4.signs[1][0] = secSignsY ? 1 : 0;
 				secRay4.signs[2][0] = secSignsZ ? 1 : 0;
-				m_kdtree->rayIntersectPacket(secRay4, secItv4, secIts4);
+				m_kdtree->rayIntersectPacket(secRay4, secItv4, secIts4, temp);
 			} else {
-				m_kdtree->rayIntersectPacketIncoherent(secRay4, secItv4, secIts4);
+				m_kdtree->rayIntersectPacketIncoherent(secRay4, secItv4, secIts4, temp);
 			}
 
 			for (int idx=0; idx<4; ++idx) {

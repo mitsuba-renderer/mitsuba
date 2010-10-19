@@ -19,8 +19,8 @@
 #if !defined(__PHOTONMAP_H)
 #define __PHOTONMAP_H
 
+#include <mitsuba/core/serialization.h>
 #include <mitsuba/core/aabb.h>
-#include <mitsuba/render/records.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -112,7 +112,7 @@ public:
 	Spectrum estimateIrradiance(
 		const Point &p, const Normal &n, 
 		Float searchRadius,
-		unsigned int maxPhotons) const;
+		size_t maxPhotons) const;
 
 	/**
 	 * Using the photon map, estimate the irradiance on a surface (filtered
@@ -130,7 +130,7 @@ public:
 	Spectrum estimateIrradianceFiltered(
 		const Point &p, const Normal &n, 
 		Float searchRadius,
-		unsigned int maxPhotons) const;
+		size_t maxPhotons) const;
 
 	/**
 	 * Using the photon map and a surface intersection, estimate the
@@ -146,7 +146,7 @@ public:
 	Spectrum estimateRadianceFiltered(
 		const Intersection &its,
 		Float searchRadius,
-		unsigned int maxPhotons) const;
+		size_t maxPhotons) const;
 
 	/**
 	 * Compute scattered contributions from all photons within
@@ -156,7 +156,7 @@ public:
 	 * to the 'maxDepth' parameter. This function is meant to be 
 	 * used with progressive photon mapping. 
 	 */
-	int estimateRadianceRaw(const Intersection &its,
+	size_t estimateRadianceRaw(const Intersection &its,
 		Float searchRadius, Spectrum &result, int maxDepth) const;
 
 	/**
@@ -176,7 +176,7 @@ public:
 		const MediumSamplingRecord &mRec,
 		const Ray &ray,
 		Float searchRadius,
-		unsigned int maxPhotons,
+		size_t maxPhotons,
 		const Medium *medium) const;
 
 	/// Determine if the photon map is completely filled
@@ -195,7 +195,7 @@ public:
 	}
 
 	/// Return the position of a photon in the photon map (for debugging)
-	inline Point getPhotonPosition(int i) const {
+	inline Point getPhotonPosition(size_t i) const {
 		return m_photons[i].getPosition();
 	}
 
@@ -313,7 +313,9 @@ public:
 #if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
 			return power;
 #else
-			return Spectrum(power);
+			Spectrum result;
+			result.fromRGBE(power);
+			return result;
 #endif
 		}
 
@@ -358,6 +360,7 @@ protected:
 	typedef std::vector<photon_ptr>::iterator photon_iterator;
 	typedef std::pair<float, const_photon_ptr> search_result;
 
+	/// \cond
 	/* Photon position comparison functor (< comparison). */
 	struct comparePhotonLess : public std::unary_function<photon_ptr, bool> {
 	public:
@@ -397,6 +400,8 @@ protected:
 			return a.first <= b.first;
 		}
 	};
+
+	/// \endcond
 protected:
     /* ===================================================================== */
     /*                         Protected subroutines                         */
@@ -423,8 +428,8 @@ protected:
 	 * @return
 	 *      The number of results
 	 */
-	unsigned int nnSearch(const Point &p, Float &searchRadiusSquared, 
-		unsigned int maxSize, search_result *results) const;
+	size_t nnSearch(const Point &p, Float &searchRadiusSquared, 
+		size_t maxSize, search_result *results) const;
 
 	/**
 	 * Partition a list of photons so that there is an ordering between
@@ -466,17 +471,16 @@ protected:
 	inline size_t rightChild(size_t index) const { return 2*index + 1; }
 	inline bool isInnerNode(size_t index) const { return index <= m_lastInnerNode; }
 	inline bool hasRightChild(size_t index) const { return index <= m_lastRChildNode; }
-protected:
+private:
     /* ===================================================================== */
     /*                        Protected attributes                           */
     /* ===================================================================== */
-
 	struct ThreadContext {
 		AABB aabb;
-		int photonOffset;
-		int photonCount;
-		int maxPhotons;
-		uint8_t unused[128]; // Avoid false sharing
+		size_t photonOffset;
+		size_t photonCount;
+		size_t maxPhotons;
+		uint8_t unused[128-sizeof(AABB)-sizeof(size_t)*3]; // Avoid false sharing
 	};
 
 	/* Precomputed lookup tables */

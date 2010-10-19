@@ -19,61 +19,62 @@
 #if !defined(__BSPHERE_H)
 #define __BSPHERE_H
 
-#include <mitsuba/mitsuba.h>
+#include <mitsuba/core/ray.h>
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Bounding sphere class
+/** \brief Bounding sphere data structure in three dimensions
  */
 struct BSphere {
 	Point center;
 	Float radius;
 
-	/// Construct an empty bounding sphere
+	/// Construct a bounding sphere at the origin having radius zero
 	inline BSphere() {
 		radius = 0.0f;
 	}
-	
-	/// Unserialize an AABB from a stream
+
+	/// Unserialize a bounding sphere from a binary data stream
 	inline BSphere(Stream *stream) {
 		center = Point(stream);
 		radius = stream->readFloat();
 	}
 
-	/// Create a bounding sphere from a given center point and a radius
-	inline BSphere(const Point &pCenter, Float pRadius)
-		: center(pCenter), radius(pRadius) {
+	/// Create a bounding sphere from a given center point and radius
+	inline BSphere(const Point &center, Float radius)
+		: center(center), radius(radius) {
 	}
 
-	/// Copy-constructor
+	/// Copy constructor
 	inline BSphere(const BSphere &boundingSphere) 
 		: center(boundingSphere.center), radius(boundingSphere.radius) {
 	}
 
-	/// Return whether this bounding sphere is empty
+	/// Return whether this bounding sphere has a radius of zero or less.
 	inline bool isEmpty() const {
 		return radius <= 0.0f;
 	}
 
-	/** \brief Expands the bounding sphere to contain another point.
-	 * Does not move the center point
-	 */
+	/// Expand the bounding sphere radius to contain another point.
 	inline void expandBy(const Point p) {
 		Vector dir = p - center;
 		radius = std::max(radius, (p-center).length());
 	}
 
-	/// Comparison operator
+	/// Equality test
 	inline bool operator==(const BSphere &boundingSphere) const {
 		return center == boundingSphere.center && radius == boundingSphere.radius;
 	}
 
-	/// Comparison operator
+	/// Inequality test
 	inline bool operator!=(const BSphere &boundingSphere) const {
-		return !operator==(boundingSphere);
+		return center != boundingSphere.center || radius != boundingSphere.radius;
 	}
 
-	/// Calculate the intersection points with the given ray
+	/**
+	 * \brief Calculate the intersection points with the given ray
+	 * \return \a true if the ray intersects the bounding sphere
+	 */
 	inline bool rayIntersect(const Ray &ray, Float &nearHit, Float &farHit) const {
 		Vector originToCenter = center - ray.o;
 		Float distToRayClosest = dot(originToCenter, ray.d);
@@ -109,13 +110,13 @@ struct BSphere {
 		return true;
 	}
 
-	/// Serialize this AABB to a stream
+	/// Serialize this bounding sphere to a binary data stream
 	inline void serialize(Stream *stream) const {
 		center.serialize(stream);
 		stream->writeFloat(radius);
 	}
 
-	/// Returns a string representation of the bounding sphere
+	/// Return a string representation of the bounding sphere
 	inline std::string toString() const {
 		std::ostringstream oss;
 		oss << "BSphere[center = " << center.toString()

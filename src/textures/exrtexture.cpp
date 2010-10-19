@@ -17,8 +17,10 @@
 */
 
 #include <mitsuba/core/bitmap.h>
-#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/mstream.h>
+#include <mitsuba/core/fstream.h>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/properties.h>
 #include <mitsuba/render/texture.h>
 #include <mitsuba/render/mipmap.h>
 
@@ -31,9 +33,9 @@ MTS_NAMESPACE_BEGIN
 class EXRTexture : public Texture {
 public:
 	EXRTexture(const Properties &props) : Texture(props) {
-		m_filename = props.getString("filename");
-		m_filename = FileResolver::getInstance()->resolve(m_filename);
-		Log(EInfo, "Loading texture \"%s\"", m_filename.c_str());
+		m_filename = Thread::getThread()->getFileResolver()->resolve(
+			props.getString("filename"));
+		Log(EInfo, "Loading texture \"%s\"", m_filename.leaf().c_str());
 
 		ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
 		ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, fs);
@@ -41,11 +43,11 @@ public:
 		m_average = m_mipmap->triangle(m_mipmap->getLevels()-1, 0, 0);
 		m_maximum = m_mipmap->getMaximum();
 	}
-	
+
 	EXRTexture(Stream *stream, InstanceManager *manager) 
 	 : Texture(stream, manager) {
 		m_filename = stream->readString();
-		Log(EInfo, "Unserializing texture \"%s\"", m_filename.c_str());
+		Log(EInfo, "Unserializing texture \"%s\"", m_filename.leaf().c_str());
 		int size = stream->readInt();
 		ref<MemoryStream> mStream = new MemoryStream(size);
 		stream->copyTo(mStream, size);
@@ -58,7 +60,7 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Texture::serialize(stream, manager);
-		stream->writeString(m_filename);
+		stream->writeString(m_filename.file_string());
 		ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
 		stream->writeInt(is->getSize());
 		is->copyTo(stream);
@@ -79,17 +81,17 @@ public:
 	bool usesRayDifferentials() const {
 		return true;
 	}
-	
+
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "EXRTexture[filename=\"" << m_filename << "\"]";
+		oss << "EXRTexture[filename=\"" << m_filename.file_string() << "\"]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
 protected:
 	ref<MIPMap> m_mipmap;
-	std::string m_filename;
+	fs::path m_filename;
 	Spectrum m_average, m_maximum;
 };
 

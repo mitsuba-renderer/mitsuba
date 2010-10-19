@@ -71,12 +71,11 @@ void VPLShaderManager::init() {
 			"#version 120\n"
 			"varying float depth;\n"
 			"void main() {\n"
-			"	gl_FragDepth = depth;\n"
-			"	float dx = dFdx(depth), dy = dFdy(depth);"
+			"   float dx = dFdx(depth), dy = dFdy(depth);"
 			"   gl_FragDepth = depth + sqrt(dx*dx + dy*dy);"
 			"}\n"
 		);
-	
+
 		/* Six output triangles per input triangle */
 		m_shadowProgram->setMaxVertices(18); 
 		m_shadowProgram->init();
@@ -202,7 +201,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 			farClip = std::max(farClip, its.t);
 		}
 	}
-
+	
 	m_minDist = nearClip + (farClip - nearClip) * m_clamping;
 
 	nearClip = std::min(nearClip, (Float) 0.001f);
@@ -211,9 +210,10 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 	if (farClip < 0 || nearClip >= farClip) {
 		/* Unable to find any surface - just default values based on the scene size */
 		nearClip = 1e-3f * m_scene->getBSphere().radius;
-		farClip = 1e3f * m_scene->getBSphere().radius;
+		farClip = 2 * m_scene->getBSphere().radius;
 		m_minDist = 0;
 	}
+	farClip = std::min(farClip, 5.0f*m_scene->getBSphere().radius);
 
 	m_nearClip = nearClip;
 	m_invClipRange = 1/(farClip-nearClip);
@@ -250,7 +250,6 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 		m_shadowProgram->unbind();
 	} else {
 		/* Old-fashioned: render 6 times, once for each cube map face */
-
 		m_altShadowProgram->bind();
 		for (int i=0; i<6; ++i) {
 			switch (i) {
@@ -281,7 +280,8 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 	m_shadowMap->releaseTarget();
 }
 
-void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminaire *luminaire, const Point &camPos) {
+void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, 
+			const Luminaire *luminaire, const Point &camPos, bool faceNormals) {
 	Shader *bsdfShader = m_renderer->getShaderForResource(bsdf);
 	Shader *vplShader = (vpl.type == ELuminaireVPL)
 		? m_renderer->getShaderForResource(vpl.luminaire)
@@ -298,7 +298,10 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 		return;
 	}
 
-	m_targetConfig = VPLProgramConfiguration(vplShader, bsdfShader, lumShader);
+	bool anisotropic = bsdf->getType() & BSDF::EAnisotropicMaterial;
+
+	m_targetConfig = VPLProgramConfiguration(vplShader, bsdfShader, 
+			lumShader, faceNormals);
 	m_targetConfig.toString(oss);
 	std::string configName = oss.str();
 	std::map<std::string, ProgramAndConfiguration>::iterator it =
@@ -313,21 +316,82 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 		/* No program for this particular combination exists -- create one */
 		program = m_renderer->createGPUProgram(configName);
 
+		if (faceNormals) {
+			/* Generate face normals in a geometry shader */
+	
+    		if (!m_renderer->getCapabilities()->isSupported(
+					RendererCapabilities::EGeometryShaders))
+				Log(EError, "Face normals require geometry shader support!");
+			if (anisotropic)
+				Log(EError, "Anisotropy and face normals can't be combined at the moment");
+	
+			oss.str("");
+			oss << "#version 120" << endl
+				<< "#extension GL_EXT_geometry_shader4 : enable" << endl
+				<< "varying in vec3 lightVec_vertex[3], camVec_vertex[3];" << endl
+				<< "varying in vec2 uv_vertex[3];" << endl
+				<< "varying in vec3 vertexColor_vertex[3];" << endl
+				<< "varying out vec3 normal;" << endl
+				<< "varying out vec3 lightVec, camVec;" << endl
+				<< "varying out vec2 uv;" << endl
+				<< "varying out vec3 vertexColor;" << endl
+				<< endl
+				<< "void main() {" << endl
+				<< "   normal = normalize(cross(" << endl
+				<< "      gl_PositionIn[1].xyz-gl_PositionIn[0].xyz," << endl
+				<< "      gl_PositionIn[2].xyz-gl_PositionIn[0].xyz));" << endl
+				<< "   for (int i=0; i<gl_VerticesIn; ++i) {" << endl
+				<< "      gl_Position = gl_PositionIn[i];" << endl
+				<< "      uv = uv_vertex[i];" << endl
+				<< "      vertexColor = vertexColor_vertex[i];" << endl
+				<< "      lightVec = lightVec_vertex[i];" << endl
+				<< "      camVec = camVec_vertex[i];" << endl
+				<< "      EmitVertex();" << endl
+				<< "   }" << endl
+				<< "   EndPrimitive();" << endl
+				<< "}" << endl;
+
+			program->setMaxVertices(3); 
+			program->setSource(GPUProgram::EGeometryProgram, oss.str());
+		}
+
 		/* Vertex program */
 		oss.str("");
-        oss << "#version 120" << endl
-			<< "uniform vec3 vplPos, camPos;" << endl
-			<< "varying vec3 normal, tangent, lightVec, camVec;" << endl
-			<< "varying vec2 uv;" << endl
-			<< endl
-			<< "void main() {" << endl
-			<< "   normal = gl_Normal;" << endl
-			<< "   tangent = gl_MultiTexCoord1.xyz;" << endl
-			<< "   uv = gl_MultiTexCoord0.xy;" << endl
-			<< "   camVec = camPos - gl_Vertex.xyz;" << endl
-			<< "   lightVec = vplPos - gl_Vertex.xyz;" << endl
-            << "   gl_Position = ftransform();" << endl
-			<< "}" << endl;
+        oss << "#version 120" << endl;
+		if (anisotropic)
+			oss << "varying vec3 tangent;" << endl;
+		if (!faceNormals)
+			oss << "varying vec3 normal;" << endl;
+		oss << "uniform vec3 vplPos, camPos;" << endl;
+
+		if (!faceNormals) {
+			oss << "varying vec3 lightVec, camVec;" << endl
+				<< "varying vec2 uv;" << endl
+				<< "varying vec3 vertexColor;" << endl
+				<< endl
+				<< "void main() {" << endl
+				<< "   uv = gl_MultiTexCoord0.xy;" << endl
+				<< "   camVec = camPos - gl_Vertex.xyz;" << endl
+				<< "   lightVec = vplPos - gl_Vertex.xyz;" << endl
+				<< "   gl_Position = ftransform();" << endl
+				<< "   vertexColor = gl_Color.rgb;" << endl;
+		} else {
+			oss << "varying vec3 lightVec_vertex, camVec_vertex;" << endl
+				<< "varying vec2 uv_vertex;" << endl
+				<< "varying vec3 vertexColor_vertex;" << endl
+				<< endl
+				<< "void main() {" << endl
+				<< "   uv_vertex = gl_MultiTexCoord0.xy;" << endl
+				<< "   camVec_vertex = camPos - gl_Vertex.xyz;" << endl
+				<< "   lightVec_vertex = vplPos - gl_Vertex.xyz;" << endl
+				<< "   gl_Position = ftransform();" << endl
+				<< "   vertexColor_vertex = gl_Color.rgb;" << endl;
+		}
+		if (!faceNormals)
+			oss << "   normal = gl_Normal;" << endl;
+		if (anisotropic)
+			oss << "   tangent = gl_MultiTexCoord1.xyz;" << endl;
+		oss << "}" << endl;
 
 		program->setSource(GPUProgram::EVertexProgram, oss.str());
 		oss.str("");
@@ -340,11 +404,15 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 			<< "uniform float nearClip, invClipRange, minDist;" << endl
 			<< "uniform vec2 vplUV;" << endl
 			<< "uniform bool diffuseSources, diffuseReceivers;" << endl
+			<< "varying vec3 vertexColor;" << endl
 			<< endl
 			<< "/* Inputs <- Vertex program */" << endl
-			<< "varying vec3 normal, tangent, lightVec, camVec;" << endl
-			<< "varying vec2 uv;" << endl
-			<< endl
+			<< "varying vec3 normal, lightVec, camVec;" << endl
+			<< "varying vec2 uv;" << endl;
+		if (anisotropic)
+			oss << "varying vec3 tangent;" << endl;
+
+		oss << endl
 			<< "/* Some helper functions for BSDF implementations */" << endl
 			<< "float cosTheta(vec3 v) { return v.z; }" << endl
 			<< "float sinTheta2(vec3 v) { return 1.0-v.z*v.z; }" << endl
@@ -357,9 +425,20 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 
 		oss << "void main() {" << endl
 			<< "   /* Set up an ONB */" << endl
-			<< "   vec3 N = normalize(normal);" << endl
-			<< "   vec3 S = normalize(tangent - dot(tangent, N)*N);" << endl
-			<< "   vec3 T = cross(N, S);" << endl
+			<< "   vec3 N = normalize(normal);" << endl;
+		if (anisotropic) {
+			oss << "   vec3 S = normalize(tangent - dot(tangent, N)*N);" << endl;
+		} else {
+			oss << "   vec3 S;" << endl
+				<< "   if (abs(N.x) > abs(N.y)) {" << endl
+				<< "      float invLen = 1.0 / sqrt(N.x*N.x + N.z*N.z);" << endl
+				<< "      S = vec3(-N.z * invLen, 0.0, N.x * invLen);" << endl
+				<< "   } else {" << endl
+				<< "      float invLen = 1.0 / sqrt(N.y*N.y + N.z*N.z);" << endl
+				<< "      S = vec3(0.0, -N.z * invLen, N.y * invLen);" << endl
+				<< "   }" << endl;
+		}
+		oss << "   vec3 T = cross(N, S);" << endl
 			<< endl
 			<< "   /* Compute shadows */" << endl
 			<< "   float d = length(lightVec);" << endl
@@ -410,7 +489,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf, const Luminai
 		program->setSource(GPUProgram::EFragmentProgram, oss.str());
 		try {
 			program->init();
-		} catch (const std::exception &ex) {
+		} catch (const std::exception &) {
 			Log(EWarn, "Unable to compile the following VPL program:\n%s", oss.str().c_str());
 			throw;
 		}

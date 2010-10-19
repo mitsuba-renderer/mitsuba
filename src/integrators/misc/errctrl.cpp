@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/scene.h>
+#include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -86,9 +87,10 @@ public:
 		m_subIntegrator->configureSampler(sampler);
 	}
 
-	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job, 
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job, 
 			int sceneResID, int cameraResID, int samplerResID) {
-		SampleIntegrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
+		if (!SampleIntegrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID))
+			return false;
 		if (m_subIntegrator == NULL)
 			Log(EError, "No sub-integrator was specified!");
 		Sampler *sampler = static_cast<Sampler *>(Scheduler::getInstance()->getResource(samplerResID, 0));
@@ -96,7 +98,8 @@ public:
 		if (sampler->getClass()->getName() != "IndependentSampler")
 			Log(EError, "The error-controlling integrator should only be "
 				"used in conjunction with the independent sampler");
-		m_subIntegrator->preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
+		if (!m_subIntegrator->preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID))
+			return false;
 
 		Vector2i filmSize = camera->getFilm()->getSize();
 		bool needsLensSample = camera->needsLensSample();
@@ -121,6 +124,7 @@ public:
 		m_quantile = (Float) normalQuantile(1-m_pval/2);
 		Log(EInfo, "Configuring for a %.1f%% confidence interval, quantile=%f, avg. luminance=%f", 
 			(1-m_pval)*100, m_quantile, m_averageLuminance);
+		return true;
 	}
 
 	void renderBlock(const Scene *scene, const Camera *camera, Sampler *sampler, 
@@ -150,7 +154,7 @@ public:
 
 				block->snapshot(x, y);
 				while (!stop) {
-					rRec.newQuery(RadianceQueryRecord::ERadiance);
+					rRec.newQuery(RadianceQueryRecord::ECameraRay);
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
 					sample = rRec.nextSample2D();
@@ -202,13 +206,13 @@ public:
 				block->normalize(x, y, 1.0f / sampleIndex);
 
 				if (block->collectStatistics())
-					block->setVariance(x, y, meanSqr / (sampleIndex-1), sampleIndex);
+					block->setVariance(x, y, Spectrum(meanSqr / (sampleIndex-1)), sampleIndex);
 				cameraRays += sampleIndex;
 				++pixelsRendered;
 			}
 		}
 	}
-	
+
 	Spectrum Li(const RayDifferential &ray, RadianceQueryRecord &rRec) const {
 		return m_subIntegrator->Li(ray, rRec);
 	}
@@ -237,6 +241,12 @@ public:
 	void wakeup(std::map<std::string, SerializableObject *> &params) {
 		m_subIntegrator->wakeup(params);
 	}
+
+	void cancel() {
+		SampleIntegrator::cancel();
+		m_subIntegrator->cancel();
+	}
+
 
 	const Integrator *getSubIntegrator() const {
 		return m_subIntegrator.get();

@@ -20,15 +20,18 @@
 #include <xercesc/parsers/SAXParser.hpp>
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/sstream.h>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/appender.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/shvector.h>
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/render/renderjob.h>
 #include <mitsuba/render/shandler.h>
 #include <fstream>
 #include <stdexcept>
 
 #if defined(WIN32)
-#include "getopt.h"
+#include <mitsuba/core/getopt.h>
 #else
 #include <signal.h>
 #endif
@@ -92,7 +95,7 @@ int ubi_main(int argc, char **argv) {
 					networkHosts = "", destFile="";
 		bool quietMode = false, progressBars = true, skipExisting = false;
 		ELogLevel logLevel = EInfo;
-		FileResolver *resolver = FileResolver::getInstance();
+		ref<FileResolver> fileResolver = Thread::getThread()->getFileResolver();
 		bool testCaseMode = false;
 		std::map<std::string, std::string> parameters;
 		int blockSize = 32;
@@ -109,7 +112,7 @@ int ubi_main(int argc, char **argv) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
 						for (unsigned int i=0; i<paths.size(); ++i) 
-							resolver->addPath(paths[i]);
+							fileResolver->addPath(paths[i]);
 					}
 					break;
 				case 'c':
@@ -264,13 +267,13 @@ int ubi_main(int argc, char **argv) {
 
 		/* Prepare for parsing scene descriptions */
 		SAXParser* parser = new SAXParser();
-		std::string schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
+		fs::path schemaPath = fileResolver->resolveAbsolute("schema/scene.xsd");
 
 		/* Check against the 'scene.xsd' XML Schema */
 		parser->setDoSchema(true);
 		parser->setValidationSchemaFullChecking(true);
 		parser->setValidationScheme(SAXParser::Val_Always);
-		parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
+		parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 
 		/* Set the handler */
 		SceneHandler *handler = new SceneHandler(parameters);
@@ -287,23 +290,22 @@ int ubi_main(int argc, char **argv) {
 
 		int jobIdx = 0;
 		for (int i=optind; i<argc; ++i) {
-			std::string inputFile = argv[i], filePath = resolver->getParentDirectory(inputFile);
-			if (!resolver->contains(filePath))
-				resolver->addPath(filePath);
-				
-			std::string filename = resolver->resolve(inputFile);
-			resolver->setCurrentDirectoryFromFile(filename);
-			std::string filenameWithoutExtension = resolver->resolveDest( 
-				FileResolver::getFilenameWithoutExtension(filename));
+			fs::path 
+				filename = fileResolver->resolve(argv[i]),
+				filePath = fs::complete(filename).parent_path(),
+				baseName = fs::basename(filename);
+			ref<FileResolver> frClone = fileResolver->clone();
+			frClone->addPath(filePath);
+			Thread::getThread()->setFileResolver(frClone);
 
-			SLog(EInfo, "Parsing scene description from \"%s\" ..", inputFile.c_str());
+			SLog(EInfo, "Parsing scene description from \"%s\" ..", argv[i]);
 
-			parser->parse(inputFile.c_str());
+			parser->parse(filename.file_string().c_str());
 			ref<Scene> scene = handler->getScene();
 
-			scene->setSourceFile(inputFile);
+			scene->setSourceFile(filename.file_string());
 			scene->setDestinationFile(destFile.length() > 0 ? destFile 
-				: filenameWithoutExtension);
+				: baseName.file_string());
 			scene->setBlockSize(blockSize);
 
 			if (scene->destinationExists() && skipExisting)
@@ -348,40 +350,12 @@ int main(int argc, char **argv) {
 	SHVector::staticInitialization();
 
 #ifdef WIN32
-	char lpFilename[1024];
-	if (GetModuleFileNameA(NULL,
-		lpFilename, sizeof(lpFilename))) {
-		FileResolver *resolver = FileResolver::getInstance();
-		resolver->addPathFromFile(lpFilename);
-	} else {
-		SLog(EWarn, "Could not determine the executable path");
-	}
-
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
 		SLog(EError, "Could not initialize WinSock2!");
 	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
 		SLog(EError, "Could not find the required version of winsock.dll!");
-#endif
-
-#ifdef __LINUX__
-	char exePath[PATH_MAX];
-	memset(exePath, 0, PATH_MAX);
-	FileResolver *resolver = FileResolver::getInstance();
-	if (readlink("/proc/self/exe", exePath, PATH_MAX) != -1) {
-		resolver->addPathFromFile(exePath);
-	} else {
-		SLog(EWarn, "Could not determine the executable path");
-	}
-	resolver->addPath("/usr/share/mitsuba");
-#endif
-
-#if defined(__OSX__)
-	MTS_AUTORELEASE_BEGIN()
-	FileResolver *resolver = FileResolver::getInstance();
-	resolver->addPath(__ubi_bundlepath());
-	MTS_AUTORELEASE_END() 
 #endif
 
 #if !defined(WIN32)

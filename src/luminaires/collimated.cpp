@@ -28,7 +28,7 @@ public:
 	CollimatedBeamLuminaire(const Properties &props) : Luminaire(props) {
 		m_radius = props.getFloat("radius", 0.01f);
 		m_surfaceArea = m_radius * m_radius * M_PI;
-		Spectrum power = props.getSpectrum("power", 1);
+		Spectrum power = props.getSpectrum("power", Spectrum(1));
 		m_intensity = props.getSpectrum("intensity", power / m_surfaceArea);
 		m_invSurfaceArea = 1 / m_surfaceArea;
 		m_direction = m_luminaireToWorld(Vector(0, 0, 1));

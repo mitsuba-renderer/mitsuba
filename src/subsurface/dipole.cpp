@@ -27,10 +27,10 @@ MTS_NAMESPACE_BEGIN
  * caused by a number of dipole sources
  */
 struct IsotropicDipoleQuery {
-#if !defined(MTS_SSE) || (SPECTRUM_SAMPLES != 3) || 1
+#if !defined(MTS_SSE) || (SPECTRUM_SAMPLES != 3)
 	inline IsotropicDipoleQuery(const Spectrum &zr, const Spectrum &zv, 
 		const Spectrum &sigmaTr, Float Fdt, const Point &p) 
-		: zr(zr), zv(zv), sigmaTr(sigmaTr), Fdt(Fdt), p(p) {
+		: zr(zr), zv(zv), sigmaTr(sigmaTr), result(0.0f), Fdt(Fdt), p(p) {
 			count = 0;
 	}
 
@@ -101,67 +101,6 @@ struct IsotropicDipoleQuery {
 	int count;
 	Float Fdt;
 	Point p;
-};
-
-/**
- * Computes the fluence and vector irradiance at a given point inside the medium
- */
-struct RadianceQuery {
-	inline RadianceQuery(const Spectrum &zr, const Spectrum &zv, 
-		const Spectrum &sigmaTr, const Spectrum &mfp, const Spectrum &D, Float Fdt,
-		const Point &p, const Normal &n) : zr(zr), zv(zv), sigmaTr(sigmaTr), mfp(mfp), D(D), 
-		Fdt(Fdt), p(p) {
-		frame = Frame(n);
-	}
-
-	inline void operator()(const IrradianceSample &sample) {
-		Point sampleP = sample.p;
-
-		Vector diff = frame.toLocal(sampleP - p);
-		const Spectrum weight = Spectrum(0.25f * INV_PI) * sample.E * sample.area * Fdt;
-		for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-			Vector diffR = diff + Vector(0,0,zr[i]), diffV = diff - Vector(0,0,zv[i]);
-			Float dr = diffR.length(), dv=diffV.length();
-
-			/* Avoid singularities - suggested by [Jensen et al., 2001] */
-			dr = std::max(dr, mfp[i]);
-			dv = std::max(dv, mfp[i]);
-
-			fluence[i] += weight[i]/D[i]*(std::exp(-sigmaTr[i] * dr)
-				/ dr-std::exp(-sigmaTr[i] * dv)/dv);
-
-			Vector dNormR = -diffR / dr, dNormV = -diffV / dv;
-			Vector gradR = dNormR * (std::exp(-sigmaTr[i]*dr) * (1 + sigmaTr[i]*dr) / (dr*dr));
-			Vector gradV = dNormV * (std::exp(-sigmaTr[i]*dv) * (1 + sigmaTr[i]*dv) / (dv*dv));
-			Vector grad = frame.toWorld((gradR-gradV) * weight[i]);
-			vecIrrad[0][i] += grad.x; vecIrrad[1][i] += grad.y; vecIrrad[2][i] += grad.z;
-		}
-	}
-
-	inline const Spectrum &getFluence() const {
-		return fluence;
-	}
-
-	inline const Spectrum &getVectorIrradiance(int i) const {
-		return vecIrrad[i];
-	}
-
-	inline const Spectrum getRadiance(const Vector &w) const {
-		return fluence * (.25 * INV_PI) + 
-			(vecIrrad[0] * w.x + vecIrrad[1] * w.y + vecIrrad[2] * w.z) * 3/(4*M_PI);
-	}
-
-	/* Average diffuse reflectance into a certain direction */
-	inline const Spectrum diff(const Vector &w) const {
-		return (vecIrrad[0] * w.x + vecIrrad[1] * w.y + vecIrrad[2] * w.z);
-	}
-
-
-	Spectrum fluence, vecIrrad[3];
-	Spectrum zr, zv, sigmaTr, mfp, D;
-	Float Fdt;
-	Point p;
-	Frame frame;
 };
 
 static ref<Mutex> irrOctreeMutex = new Mutex();
@@ -300,10 +239,10 @@ public:
 		return 0.5f * temp1 * temp1 * (1.0f + temp2 * temp2);
 	}
 
-	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int samplerResID) {
 		if (m_ready)
-			return;
+			return true;
 
 		if (!scene->getIntegrator()->getClass()
 				->derivesFrom(SampleIntegrator::m_theClass)) {
@@ -341,8 +280,12 @@ public:
 
 		proc->bindResource("scene", sceneResID);
 		scene->bindUsedResources(proc);
+		m_proc = proc;
 		sched->schedule(proc);
 		sched->wait(proc);
+		m_proc = NULL;
+		if (proc->getReturnStatus() != ParallelProcess::ESuccess)
+			return false;
 
 		const IrradianceRecordVector &results = *proc->getSamples();
 		for (size_t i=0; i<results.size(); ++i) 
@@ -352,6 +295,7 @@ public:
 		m_octreeResID = Scheduler::getInstance()->registerResource(m_octree);
 
 		m_ready = true;
+		return false;
 	}
 
 	void wakeup(std::map<std::string, SerializableObject *> &params) {
@@ -362,6 +306,10 @@ public:
 		}
 	}
 
+	void cancel() {
+		Scheduler::getInstance()->cancel(m_proc);
+	}
+
 	MTS_DECLARE_CLASS()
 private:
 	Float m_minMFP, m_sampleMultiplier;
@@ -369,6 +317,7 @@ private:
 	Spectrum m_mfp, m_sigmaTr, m_zr, m_zv, m_alphaPrime;
 	Spectrum m_sigmaSPrime, m_sigmaTPrime, m_D, m_ssFactor;
 	ref<IrradianceOctree> m_octree;
+	ref<ParallelProcess> m_proc;
 	int m_octreeResID, m_octreeIndex;
 	int m_maxDepth;
 	bool m_ready, m_requireSample;

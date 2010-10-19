@@ -24,14 +24,14 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Thin wrapper around the recursive pthreads lock
+ * \brief Thin wrapper around the recursive pthreads lock
  */
 class MTS_EXPORT_CORE Mutex : public Object {
 	friend class ConditionVariable;
 public:
 	/// Create a new mutex object
 	Mutex();
-	
+
 	/// Lock the mutex
 	inline void lock() {
 		pthread_mutex_lock(&m_mutex);
@@ -51,15 +51,15 @@ private:
 };
 
 /**
- * Wait flag synchronization primitive. Can be used to
- * wait for a certain flag to become true.
+ * \brief Wait flag synchronization primitive. Can be used to
+ * wait for a certain event to occur.
  */
 class MTS_EXPORT_CORE WaitFlag : public Object {
 public:
 	/**
-	 * Create a new wait flag
+	 * \brief Create a new wait flag
 	 * @param flag
-	 *    Initial state of the flag. If set to true, <tt>wait()</tt>
+	 *    Initial state of the flag. If set to true, \ref wait()
 	 *    will immediately return.
 	 */
 	WaitFlag(bool flag = false);
@@ -67,16 +67,20 @@ public:
 	/// Return the current flag value
 	inline const bool &get() const { return m_flag; }
 
-	/// Set the value of the internal flag
+	/// Set the value of the flag
 	void set(bool value);
 
-	/// Wait for the flag to become true
+	/// Wait for the flag to be set to true
 	void wait();
 
 	/**
-	 * Similar to wait(), but also uses a time value given
-	 * in milliseconds. A return value of <tt>false</tt> signals
+	 * \brief Temporarily wait for the flag to be set to true
+	 * 
+	 * Similar to \ref wait(), but also uses a time value given
+	 * in milliseconds. A return value of \a false signals
 	 * that a timeout has occurred.
+	 *
+	 * \param ms Maximum waiting time in milliseconds
 	 */
 	bool wait(int ms);
 
@@ -84,27 +88,30 @@ public:
 protected:
 	/// Virtual destructor
 	virtual ~WaitFlag();
-protected:
+private:
 	bool m_flag;
 	pthread_mutex_t m_mutex;
 	pthread_cond_t m_cond;
 };
 
 /**
- * Condition variable synchronization primitive. Can be used to
- * wait for an arbitrary condition to become true in a safe way.
+ * \brief Condition variable synchronization primitive. Can be used to
+ * wait for a condition to become true in a safe way.
  */
 class MTS_EXPORT_CORE ConditionVariable : public Object {
 public:
 	/**
-	 * Create a new condition variable. Also takes a mutex, which
-	 * is later used by wait().
+	 * \brief Create a new condition variable. Also takes a 
+	 * mutex, which is later used by wait(). If none is specified,
+	 * a new mutex instance will be created.
 	 */
-	ConditionVariable(Mutex *mutex);
+	ConditionVariable(Mutex *mutex = NULL);
 
 	/**
-	 * Send a signal, which wakes up at least one of the waiting 
-	 * threads. The calling thread does not have to hold the lock, 
+	 * \brief Send a signal, which wakes up at least one of 
+	 * the waiting threads. 
+	 * 
+	 * The calling thread does not have to hold the lock, 
 	 * but more predictable scheduling will occur if this is the 
 	 * case.
 	 */
@@ -113,8 +120,9 @@ public:
 	}
 
 	/**
-	 * Send a signal, which wakes up any waiting threads. The
-	 * calling thread does not have to hold the lock, but more
+	 * \brief Send a signal, which wakes up any waiting threads. 
+	 *
+	 * The calling thread does not have to hold the lock, but more
 	 * predictable scheduling will occur if this is the case.
 	 */
 	inline void broadcast() {
@@ -122,7 +130,8 @@ public:
 	}
 
 	/** 
-	 * Wait for a signal and release the lock in the meanwhile.
+	 * \brief Wait for a signal and release the lock in the meanwhile.
+	 *
 	 * Assumes that the lock specified in the constructor has
 	 * previously been acquired. After returning, the lock is
 	 * held again.
@@ -132,10 +141,14 @@ public:
 	}
 
 	/**
+	 * \brief Temporarily wait for a signal and release the lock in the meanwhile.
+	 *
 	 * Similar to wait(), but also uses a time value given
-	 * in milliseconds. A return value of <tt>false</tt> signals
+	 * in milliseconds. A return value of \a false signals
 	 * that a timeout has occurred. The lock is held after
 	 * returning in either case.
+	 *
+	 * \param ms Maximum waiting time in milliseconds
 	 */
 	bool wait(int ms);
 
@@ -143,7 +156,7 @@ public:
 protected:
 	/// Virtual destructor
 	virtual ~ConditionVariable();
-protected:
+private:
 	bool m_flag;
 	ref<Mutex> m_mutex;
 	pthread_cond_t m_cond;

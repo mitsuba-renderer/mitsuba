@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/volume.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/shvector4d.h>
 #include <fstream>
 
@@ -164,7 +165,7 @@ public:
 		Log(EInfo, "     sampling recursions = %i", m_samplingRecursions);
 
 		bool computePhaseProjection = true;
-		if (FileStream::exists("flake-phase.dat")) {
+		if (fs::exists("flake-phase.dat")) {
 			/* Avoid recomputing this every time */
 			stream = new FileStream("flake-phase.dat", FileStream::EReadOnly);
 			unsigned int header = stream->readUInt();
@@ -202,12 +203,16 @@ public:
 		m_sigmaT.convolve(absCos);
 		m_sigmaT *= 2;
 		Assert(m_sigmaT.isAzimuthallyInvariant());
+		m_kdTree = new KDTree();
 	}
 
 	/* Unserialize from a binary data stream */
 	HeterogeneousFlakeMedium(Stream *stream, InstanceManager *manager) 
 		: Medium(stream, manager) {
-		m_shape = static_cast<Shape *>(manager->getInstance(stream));
+		m_kdTree = new KDTree();
+		size_t shapeCount = stream->readUInt();
+		for (size_t i=0; i<shapeCount; ++i) 
+			addChild("", static_cast<Shape *>(manager->getInstance(stream)));
 		m_densities = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_albedo = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_orientations = static_cast<VolumeDataSource *>(manager->getInstance(stream));
@@ -219,21 +224,20 @@ public:
 		m_sigmaT = SHVector(stream);
 		m_phaseExpansion = SHVector4D(stream);
 		m_samplingRecursions = stream->readInt();
-		m_kdTree = new KDTree();
-		if (m_shape != NULL) {
-			m_kdTree->addShape(m_shape.get());
-			m_kdTree->build();
-		}
 		configure();
 	}
-	
+
 	virtual ~HeterogeneousFlakeMedium() {
+		for (size_t i=0; i<m_shapes.size(); ++i)
+			m_shapes[i]->decRef();
 	}
 
 	/* Serialize the volume to a binary data stream */
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Medium::serialize(stream, manager);
-		manager->serialize(stream, m_shape.get());
+		stream->writeUInt((uint32_t) m_shapes.size());
+		for (size_t i=0; i<m_shapes.size(); ++i)
+			manager->serialize(stream, m_shapes[i]);
 		manager->serialize(stream, m_densities.get());
 		manager->serialize(stream, m_albedo.get());
 		manager->serialize(stream, m_orientations.get());
@@ -269,19 +273,36 @@ public:
 		m_phaseFunction = new FlakePhaseFunction(m_sigmaT, m_samplingRecursions,
 			&m_phaseExpansion, m_exponent, m_normalization, m_fiber, this);
 
-		if (m_shape != NULL)
+		if (m_shapes.size() > 0) {
+			m_kdTree->build();
 			m_aabb = m_kdTree->getAABB();
-		else
+		} else {
 			m_aabb = m_densities->getAABB();
+		}
 	}
+
+	void setParent(ConfigurableObject *parent) {
+		if (parent->getClass()->derivesFrom(Shape::m_theClass))
+			Log(EError, "Medium cannot be a parent of a shape");
+	}
+
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(Shape::m_theClass)) {
-			Assert(m_shape == NULL);
-			m_shape = static_cast<Shape *>(child);
-			m_kdTree = new KDTree();
-			m_kdTree->addShape(m_shape.get());
-			m_kdTree->build();
+			Shape *shape = static_cast<Shape *>(child);
+			if (shape->isCompound()) {
+				int ctr = 0;
+				while (true) {
+					ref<Shape> childShape = shape->getElement(ctr++);
+					if (!childShape)
+						break;
+					addChild("", childShape);
+				}
+			} else {
+				m_kdTree->addShape(shape);
+				shape->incRef();
+				m_shapes.push_back(shape);
+			}
 		} else if (child->getClass()->derivesFrom(VolumeDataSource::m_theClass)) {
 			VolumeDataSource *volume = static_cast<VolumeDataSource *>(child);
 
@@ -301,7 +322,7 @@ public:
 	}
 
 	Float distanceToMediumEntry(const Ray &ray) const {
-		if (m_shape != NULL) {
+		if (m_shapes.size() != 0) {
 			Ray r(ray, Epsilon, std::numeric_limits<Float>::infinity());
 			Intersection its;
 			if (!m_kdTree->rayIntersect(r, its)) 
@@ -319,7 +340,7 @@ public:
 	}
 
 	Float distanceToMediumExit(const Ray &ray) const {
-		if (m_shape != NULL) {
+		if (m_shapes.size() != 0) {
 			Ray r(ray, Epsilon, std::numeric_limits<Float>::infinity());
 			Intersection its;
 			if (!m_kdTree->rayIntersect(r, its)) 
@@ -527,10 +548,10 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "HeterogeneousFlakeMedium[" << endl
-			<< "  albedo=" << indent(m_albedo.toString()) << endl
-			<< "  orientations=" << indent(m_orientations.toString()) << endl
-			<< "  densities=" << indent(m_densities.toString()) << endl
-			<< "  shape =" << indent(m_shape.toString()) << endl
+			<< "  albedo=" << indent(m_albedo.toString()) << "," << endl
+			<< "  orientations=" << indent(m_orientations.toString()) << "," << endl
+			<< "  densities=" << indent(m_densities.toString()) << "," << endl
+			<< "  shapes = " << indent(listToString(m_shapes)) << endl
 			<< "]";
 		return oss.str();
 	}
@@ -539,8 +560,8 @@ private:
 	ref<VolumeDataSource> m_densities;
 	ref<VolumeDataSource> m_albedo;
 	ref<VolumeDataSource> m_orientations;
-	ref<Shape> m_shape;
 	ref<KDTree> m_kdTree;
+	std::vector<Shape *> m_shapes;
 	Float m_stepSize;
 	/* Flake model-related */
 	SHVector m_D, m_sigmaT;
@@ -574,7 +595,7 @@ Spectrum FlakePhaseFunction::f(const MediumSamplingRecord &mRec, const Vector &_
 		return Spectrum(0.0f);
 	else
 		H /= length;
-	return (D(H) + D(-H)) * m_normalization / (2*sigmaT);
+	return Spectrum((D(H) + D(-H)) * m_normalization / (2*sigmaT));
 #endif
 }
 
@@ -595,8 +616,8 @@ Spectrum FlakePhaseFunction::sample(const MediumSamplingRecord &mRec, const Vect
 
 	Vector wo = sphericalDirection(sample.x, sample.y);
 	_wo = frame.toWorld(wo);
-	return Spectrum(std::max((Float) 0, temp.eval(sample.x, sample.y)));
-//	return f(mRec, _wi, _wo);
+//	return Spectrum(std::max((Float) 0, temp.eval(sample.x, sample.y)));
+	return f(mRec, _wi, _wo);
 #else
 	/* Uniform sampling */
 	_wo = squareToSphere(_sample);

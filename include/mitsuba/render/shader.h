@@ -36,6 +36,8 @@ class GPUProgram;
 class MTS_EXPORT_RENDER HWResource {
 public:
 	virtual Shader *createShader(Renderer *renderer) const;
+
+	virtual ~HWResource() { }
 };
 
 /**

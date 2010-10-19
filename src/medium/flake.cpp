@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/core/shvector4d.h>
+#include <mitsuba/core/fstream.h>
 #include <boost/numeric/ublas/symmetric.hpp>
 #ifdef MTS_HAVE_LAPACK
 #include <boost/numeric/bindings/lapack/syev.hpp>
@@ -237,7 +238,7 @@ public:
 		m_D.normalize();
 
 		SHVector4D phaseExpansion;
-		if (FileStream::exists("flake-phase.dat")) {
+		if (fs::exists("flake-phase.dat")) {
 			stream = new FileStream("flake-phase.dat", FileStream::EReadOnly);
 			phaseExpansion = SHVector4D(stream);
 			stream->close();
@@ -331,29 +332,42 @@ public:
 		Log(EInfo, "                 eigs(M) = %s", vecToString(eigs).c_str());
 		Log(EInfo, "                       P = %s", mtxToString(m_P).c_str());
 #endif
+		m_kdTree = new KDTree();
 	}
 
 	FlakeMedium(Stream *stream, InstanceManager *manager)
 		: Medium(stream, manager) {
-		m_shape = static_cast<Shape *>(manager->getInstance(stream));
 		m_kdTree = new KDTree();
-		m_kdTree->addShape(m_shape.get());
-		m_kdTree->build();
-		
+		size_t shapeCount = stream->readUInt();
+		for (size_t i=0; i<shapeCount; ++i) 
+			addChild("", static_cast<Shape *>(manager->getInstance(stream)));
 		m_D = SHVector(stream);
 		m_sigmaS = SHVector(stream);
 		m_sigmaT = SHVector(stream);
 		m_area = stream->readFloat();
 		m_rho = stream->readFloat();
 		m_frame = Frame(stream);
+		configure();
 	}
 
 	virtual ~FlakeMedium() {
+		for (size_t i=0; i<m_shapes.size(); ++i)
+			m_shapes[i]->decRef();
+	}
+
+	void configure() {
+		Medium::configure();
+		if (m_shapes.size() == 0)
+			Log(EError, "This medium requires one or more Shape instance as a child");
+		m_kdTree->build();
+		m_aabb = m_kdTree->getAABB();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Medium::serialize(stream, manager);
-		manager->serialize(stream, m_shape.get());
+		stream->writeUInt((uint32_t) m_shapes.size());
+		for (size_t i=0; i<m_shapes.size(); ++i)
+			manager->serialize(stream, m_shapes[i]);
 		m_D.serialize(stream);
 		m_sigmaS.serialize(stream);
 		m_sigmaT.serialize(stream);
@@ -396,7 +410,7 @@ public:
 			}
 		}
 
-		return sigmaT * coveredLength;
+		return Spectrum(sigmaT * coveredLength);
 	}
 
 	bool sampleDistance(const Ray &theRay, Float distSurf, 
@@ -428,8 +442,8 @@ public:
 				if (its.t > distMed && distMed < distSurf) {
 					/* A medium interaction occurred */
 					mRec.p = ray(distMed);
-					mRec.sigmaA = sigmaA;
-					mRec.sigmaS = sigmaS;
+					mRec.sigmaA = Spectrum(sigmaA);
+					mRec.sigmaS = Spectrum(sigmaS);
 					mRec.albedo = m_albedo;
 					mRec.medium = this;
 					mRec.attenuation = (Spectrum(sigmaT) * (-distMed)).exp();
@@ -477,17 +491,25 @@ public:
 
 	void setParent(ConfigurableObject *parent) {
 		if (parent->getClass()->derivesFrom(Shape::m_theClass))
-			Log(EError, "Medium shape cannot be part of the scene");
+			Log(EError, "Medium cannot be a parent of a shape");
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(Shape::m_theClass)) {
-			Assert(m_shape == NULL);
-			m_shape = static_cast<Shape *>(child);
-			m_kdTree = new KDTree();
-			m_kdTree->addShape(m_shape.get());
-			m_kdTree->build();
-			m_aabb = m_kdTree->getAABB();
+			Shape *shape = static_cast<Shape *>(child);
+			if (shape->isCompound()) {
+				int ctr = 0;
+				while (true) {
+					ref<Shape> childShape = shape->getElement(ctr++);
+					if (!childShape)
+						break;
+					addChild("", childShape);
+				}
+			} else {
+				m_kdTree->addShape(shape);
+				shape->incRef();
+				m_shapes.push_back(shape);
+			}
 		} else {
 			Medium::addChild(name, child);
 		}
@@ -498,15 +520,15 @@ public:
 		oss << "FlakeMedium[" << endl
 			<< "  area = " << m_area << "," << std::endl
 			<< "  rho = " << m_rho << "," << std::endl
-			<< "  shape = " << indent(m_shape->toString()) << std::endl
+			<< "  shapes = " << indent(listToString(m_shapes)) << std::endl
 			<< "]";
 		return oss.str();
 	}
 	
 	MTS_DECLARE_CLASS()
 private:
-	ref<Shape> m_shape;
 	ref<KDTree> m_kdTree;
+	std::vector<Shape *> m_shapes;
 	SHVector m_D, m_sigmaS, m_sigmaT;
 	Float m_area, m_rho;
 	Frame m_frame;

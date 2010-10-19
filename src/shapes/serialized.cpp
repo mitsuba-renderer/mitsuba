@@ -17,6 +17,8 @@
 */
 
 #include <mitsuba/render/trimesh.h>
+#include <mitsuba/core/properties.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
 
 MTS_NAMESPACE_BEGIN
@@ -27,27 +29,49 @@ MTS_NAMESPACE_BEGIN
 class SerializedMesh : public TriMesh {
 public:
 	SerializedMesh(const Properties &props) : TriMesh(props) {
-		m_name = FileResolver::getInstance()->resolve(props.getString("filename"));
+		fs::path filePath = Thread::getThread()->getFileResolver()->resolve(
+			props.getString("filename"));
+
+		/* Object-space -> World-space transformation */
+		Transform objectToWorld = props.getTransform("toWorld", Transform());
+
+		m_name = filePath.stem();
 
 		/* Load the geometry */
-		Log(EInfo, "Loading geometry from \"%s\" ..", m_name.c_str());
-		ref<FileStream> stream = new FileStream(m_name, FileStream::EReadOnly);
-		stream->setByteOrder(Stream::ENetworkByteOrder);
+		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.leaf().c_str());
+		ref<FileStream> stream = new FileStream(filePath, FileStream::EReadOnly);
+		stream->setByteOrder(Stream::ELittleEndian);
 		ref<TriMesh> mesh = new TriMesh(stream);
 		m_triangleCount = mesh->getTriangleCount();
 		m_vertexCount = mesh->getVertexCount();
-		m_vertexBuffer = new Vertex[m_vertexCount];
+
+		m_positions = new Point[m_vertexCount];
+		memcpy(m_positions, mesh->getVertexPositions(), sizeof(Point) * m_vertexCount);
+
+		if (mesh->hasVertexNormals()) {
+			m_normals = new Normal[m_vertexCount];
+			memcpy(m_normals, mesh->getVertexNormals(), sizeof(Normal) * m_vertexCount);
+		}
+
+		if (mesh->hasVertexTexcoords()) {
+			m_texcoords = new Point2[m_vertexCount];
+			memcpy(m_texcoords, mesh->getVertexTexcoords(), sizeof(Point2) * m_vertexCount);
+		}
+
+		if (mesh->hasVertexColors()) {
+			m_colors = new Spectrum[m_vertexCount];
+			memcpy(m_colors, mesh->getVertexColors(), sizeof(Spectrum) * m_vertexCount);
+		}
+
 		m_triangles = new Triangle[m_triangleCount];
-		memcpy(m_vertexBuffer, mesh->getVertexBuffer(), sizeof(Vertex) * m_vertexCount);
 		memcpy(m_triangles, mesh->getTriangles(), sizeof(Triangle) * m_triangleCount);
 
-		if (!m_objectToWorld.isIdentity()) {
-			for (size_t i=0; i<m_vertexCount; ++i) {
-				Vertex &vertex = m_vertexBuffer[i];
-				vertex.v = m_objectToWorld(vertex.v);
-				vertex.n = m_objectToWorld(vertex.n);
-				vertex.dpdu = m_objectToWorld(vertex.dpdu);
-				vertex.dpdv = m_objectToWorld(vertex.dpdv);
+		if (!objectToWorld.isIdentity()) {
+			for (size_t i=0; i<m_vertexCount; ++i)
+				m_positions[i] = objectToWorld(m_positions[i]);
+			if (m_normals) {
+				for (size_t i=0; i<m_vertexCount; ++i)
+					m_normals[i] = objectToWorld(m_normals[i]);
 			}
 		}
 	}

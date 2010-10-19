@@ -17,7 +17,6 @@
 */
 
 #include <mitsuba/core/random.h>
-#include <mitsuba/core/fresolver.h>
 #include <stdarg.h>
 #include <iomanip>
 #include <errno.h>
@@ -149,26 +148,6 @@ std::string trim(const std::string& str) {
 			end == std::string::npos ? str.length() - 1 : end - start + 1);
 }
 
-std::string toLowerCase(const std::string &string) {
-	std::string result;
-	result.reserve(string.length());
-
-	for (unsigned int i=0; i<string.length(); i++)
-		result += std::tolower(string[i]);
-
-	return result;
-}
-
-std::string toUpperCase(const std::string &string) {
-	std::string result;
-	result.reserve(string.length());
-
-	for (unsigned int i=0; i<string.length(); i++)
-		result += toupper(string[i]);
-
-	return result;
-}
-
 std::string indent(const std::string &string, int amount) {
 	/* This could probably be done faster (is not
 	   really speed-critical though) */
@@ -190,13 +169,17 @@ std::string indent(const std::string &string, int amount) {
 	return oss.str();
 }
 
-bool endsWith(const std::string& str, const std::string& end) {
-	std::string::size_type pos = str.rfind(end);
-	return (pos == str.size() - end.size()) && str.length() >= end.length();
-}
-
-bool startsWith(const std::string& str, const std::string& start) {
-	return str.find(start) == 0;
+std::string memString(size_t size) {
+	Float value = (Float) size;
+	const char *prefixes[] = {
+		"B", "KiB", "MiB", "GiB", "TiB"
+	};
+	int prefix = 0;
+	while (prefix < 4 && value > 1024.0f) {
+		value /= 1024.0f; ++prefix;
+	}
+	return formatString(prefix == 0 ?
+			"%.0f %s" : "%.2f %s", value, prefixes[prefix]);
 }
 
 void * __restrict allocAligned(size_t size) {
@@ -604,13 +587,13 @@ Point2 squareToDiskConcentric(const Point2 &sample) {
 }
 
 Float squareToConePdf(Float cosCutoff) {
-	return 1 / (2 * (Float) M_PI * (1 - cosCutoff));
+	return 1 / (2 * M_PI * (1 - cosCutoff));
 }
 
 Vector squareToCone(Float cosCutoff, const Point2 &sample) {
 	Float cosTheta = (1-sample.x) + sample.x * cosCutoff;
 	Float sinTheta = std::sqrt(1 - cosTheta * cosTheta);
-	Float phi = sample.y * (2 * (Float) M_PI);
+	Float phi = sample.y * (2 * M_PI);
 	return Vector(std::cos(phi) * sinTheta,
 		std::sin(phi) * sinTheta, cosTheta);
 }
@@ -644,13 +627,13 @@ Float fresnelDielectric(Float cosTheta1, Float cosTheta2,
 Spectrum fresnelConductor(Float cosTheta, const Spectrum &eta, const Spectrum &k) {
 	Spectrum tmp = (eta*eta + k*k) * (cosTheta * cosTheta);
 
-	Spectrum rParl2 = (tmp - (eta * (2.0f * cosTheta)) + 1.0f)
-					/ (tmp + (eta * (2.0f * cosTheta)) + 1.0f);
+	Spectrum rParl2 = (tmp - (eta * (2.0f * cosTheta)) + Spectrum(1.0f))
+					/ (tmp + (eta * (2.0f * cosTheta)) + Spectrum(1.0f));
 
 	Spectrum tmpF = eta*eta + k*k;
 
-	Spectrum rPerp2 = (tmpF - (eta * (2.0f * cosTheta)) + cosTheta*cosTheta) /
-					  (tmpF + (eta * (2.0f * cosTheta)) + cosTheta*cosTheta);
+	Spectrum rPerp2 = (tmpF - (eta * (2.0f * cosTheta)) + Spectrum(cosTheta*cosTheta)) /
+					  (tmpF + (eta * (2.0f * cosTheta)) + Spectrum(cosTheta*cosTheta));
 
 	return (rParl2 + rPerp2) / 2.0f;
 }
@@ -801,7 +784,4 @@ double normalQuantile(double p) {
 	}
 }
 
-ThreadLocal<FileResolver> FileResolver::m_tls;
-
-MTS_IMPLEMENT_CLASS(FileResolver, false, Object)
 MTS_NAMESPACE_END

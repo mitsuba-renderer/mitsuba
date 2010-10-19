@@ -34,32 +34,35 @@ class HeterogeneousStencilMedium : public Medium {
 public:
 	HeterogeneousStencilMedium(const Properties &props) 
 		: Medium(props) {
+		m_kdTree = new KDTree();
 		m_stepSize = props.getFloat("stepSize", 0);
 	}
 
 	/* Unserialize from a binary data stream */
 	HeterogeneousStencilMedium(Stream *stream, InstanceManager *manager) 
 		: Medium(stream, manager) {
-		m_shape = static_cast<Shape *>(manager->getInstance(stream));
+		m_kdTree = new KDTree();
+		size_t shapeCount = stream->readUInt();
+		for (size_t i=0; i<shapeCount; ++i) 
+			addChild("", static_cast<Shape *>(manager->getInstance(stream)));
 		m_densities = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_albedo = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_orientations = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_stepSize = stream->readFloat();
-		m_kdTree = new KDTree();
-		if (m_shape != NULL) {
-			m_kdTree->addShape(m_shape.get());
-			m_kdTree->build();
-		}
 		configure();
 	}
 
 	virtual ~HeterogeneousStencilMedium() {
+		for (size_t i=0; i<m_shapes.size(); ++i)
+			m_shapes[i]->decRef();
 	}
 
 	/* Serialize the volume to a binary data stream */
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Medium::serialize(stream, manager);
-		manager->serialize(stream, m_shape.get());
+		stream->writeUInt((uint32_t) m_shapes.size());
+		for (size_t i=0; i<m_shapes.size(); ++i)
+			manager->serialize(stream, m_shapes[i]);
 		manager->serialize(stream, m_densities.get());
 		manager->serialize(stream, m_albedo.get());
 		manager->serialize(stream, m_orientations.get());
@@ -75,11 +78,12 @@ public:
 		if (m_orientations.get() == NULL)
 			Log(EError, "No orientations specified!");
 
-	
-		if (m_shape != NULL)
+		if (m_shapes.size() != 0) {
+			m_kdTree->build();
 			m_aabb = m_kdTree->getAABB();
-		else
+		} else {
 			m_aabb = m_densities->getAABB();
+		}
 
 		if (m_stepSize == 0) {
 			m_stepSize = std::min(std::min(
@@ -94,11 +98,20 @@ public:
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(Shape::m_theClass)) {
-			Assert(m_shape == NULL);
-			m_shape = static_cast<Shape *>(child);
-			m_kdTree = new KDTree();
-			m_kdTree->addShape(m_shape.get());
-			m_kdTree->build();
+			Shape *shape = static_cast<Shape *>(child);
+			if (shape->isCompound()) {
+				int ctr = 0;
+				while (true) {
+					ref<Shape> childShape = shape->getElement(ctr++);
+					if (!childShape)
+						break;
+					addChild("", childShape);
+				}
+			} else {
+				m_kdTree->addShape(shape);
+				shape->incRef();
+				m_shapes.push_back(shape);
+			}
 		} else if (child->getClass()->derivesFrom(VolumeDataSource::m_theClass)) {
 			VolumeDataSource *volume = static_cast<VolumeDataSource *>(child);
 
@@ -118,7 +131,7 @@ public:
 	}
 
 	Float distanceToMediumEntry(const Ray &ray) const {
-		if (m_shape != NULL) {
+		if (m_shapes.size() != 0) {
 			Ray r(ray, Epsilon, std::numeric_limits<Float>::infinity());
 			Intersection its;
 			if (!m_kdTree->rayIntersect(r, its)) 
@@ -136,7 +149,7 @@ public:
 	}
 
 	Float distanceToMediumExit(const Ray &ray) const {
-		if (m_shape != NULL) {
+		if (m_shapes.size() != 0) {
 			Ray r(ray, Epsilon, std::numeric_limits<Float>::infinity());
 			Intersection its;
 			if (!m_kdTree->rayIntersect(r, its)) 
@@ -322,8 +335,7 @@ public:
 		oss << "HeterogeneousStencilMedium[" << endl
 			<< "  albedo=" << indent(m_albedo.toString()) << endl
 			<< "  orientations=" << indent(m_orientations.toString()) << endl
-			<< "  densities=" << indent(m_densities.toString()) << endl
-			<< "  shape =" << indent(m_shape.toString()) << endl
+			<< "  densities=" << indent(m_densities.toString()) 
 			<< "]";
 		return oss.str();
 	}
@@ -332,8 +344,8 @@ private:
 	ref<VolumeDataSource> m_densities;
 	ref<VolumeDataSource> m_albedo;
 	ref<VolumeDataSource> m_orientations;
-	ref<Shape> m_shape;
 	ref<KDTree> m_kdTree;
+	std::vector<Shape *> m_shapes;
 	Float m_stepSize;
 };
 

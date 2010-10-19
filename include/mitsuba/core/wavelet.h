@@ -20,6 +20,7 @@
 #define __WAVELET_H
 
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/core/serialization.h>
 
 //#define USE_GOOGLE_SPARSE_HASHMAP 1
 //#define USE_GOOGLE_DENSE_HASHMAP 1
@@ -37,19 +38,18 @@
 
 MTS_NAMESPACE_BEGIN
 
-class SparseWavelet2D;
-class SparseWaveletOctree;
-
 /**
- * Non-standard 2D Haar wavelet transformation. Based on
- * "Wavelets for computer graphics: A primer, part 1" by
+ * \brief Performs non-standard 2D Haar wavelet transformations.
+ *
+ * Based on "Wavelets for computer graphics: A primer, part 1" by
  * Eric J. Stollnitz, Tony D. DeRose, and David H. Salesin
  * (IEEE Computer Graphics and Applications, May 1995)
  */
 class MTS_EXPORT_CORE Wavelet2D : public Object {
 public:
 	/**
-	 * Create a wavelet representation from a given bitmap.
+	 * \brief Create a wavelet representation from a given bitmap.
+	 *
 	 * Only one color channel is supported for this encoding, so
 	 * the desired channel must be selected using the `colorChannel'
 	 * parameter.
@@ -60,7 +60,8 @@ public:
 	Wavelet2D(const SparseWavelet2D *sw);
 
 	/**
-	 * Turn the wavelet representation back into an image.
+	 * \brief Turn the wavelet representation back into an image.
+	 *
 	 * Optionally, scale+offset factors can be supplied to
 	 * map the bitmap to a desired brightness
 	 */
@@ -70,7 +71,7 @@ public:
 	void discard(Float fraction);
 
 	/**
-	 * Discard components such that the relative L^2-error is below the 
+	 * \brief Discard components such that the relative L^2-error is below the 
 	 * given bound. Returns the achieved compression ratio.
 	 */
 	Float compress(Float maxError);
@@ -101,6 +102,7 @@ protected:
 	/// Virtual destructor
 	virtual ~Wavelet2D();
 protected:
+	/// \cond
 	struct coeff_t {
 		inline coeff_t() { } 
 		inline coeff_t(size_t index, float value)
@@ -112,15 +114,16 @@ protected:
 		size_t index;
 		float value;
 	};
+	/// \endcond
 protected:
 	float *m_data;
 	float *m_temp;
-	Vector2 m_range;
 	size_t m_size;
 };
 
 /**
- * Implements the non-standard 3D wavelet transform using Haar basis functions.
+ * \brief Implements the non-standard 3D wavelet transform using 
+ * Haar basis functions.
  */
 class MTS_EXPORT_CORE Wavelet3D : public Object {
 public:
@@ -132,7 +135,7 @@ public:
 	Wavelet3D(const float *data, size_t resolution);
 
 	/**
-	 * Turn the wavelet representation back into a dense format
+	 * \brief Turn the wavelet representation back into a dense format
 	 */
 	void decode(float *target);
 
@@ -140,7 +143,7 @@ public:
 	void discard(Float fraction);
 
 	/**
-	 * Discard components such that the relative L^2-error is below the 
+	 * \brief Discard components such that the relative L^2-error is below the 
 	 * given bound. Returns the achieved compression ratio.
 	 */
 	Float compress(Float maxRelError);
@@ -169,6 +172,7 @@ protected:
 	/// Virtual destructor
 	virtual ~Wavelet3D();
 protected:
+	/// \cond
 	struct coeff_t {
 		inline coeff_t() { } 
 		inline coeff_t(size_t index, float value)
@@ -182,18 +186,19 @@ protected:
 		size_t index;
 		float value;
 	};
+	/// \endcond
 protected:
 	float *m_data;
 	float *m_temp;
-	Vector2 m_range;
 	size_t m_size, m_slab;
 };
 
 /**
- * Sparse 2D wavelet representation using the Haar basis
+ * \brief Sparse 2D wavelet representation using the Haar basis
  */
 class MTS_EXPORT_CORE SparseWavelet2D : public SerializableObject {
 public:
+	/// 2D wavelet coefficient index for \ref SparseWavelet2D
 	struct Key {
 		uint16_t empty;
 		uint8_t level; // level in the hierarchy
@@ -298,8 +303,9 @@ public:
 	Float getPixel(const Point2i &pt) const;
 
 	/**
-	 * Compute a line integral in 2D wavelet space. Coordinates are
-	 * expected as pixel coordinates in [0,0]-[size,size],
+	 * \brief Compute a line integral in 2D wavelet space.
+	 *
+	 * Coordinates are expected as pixel coordinates in [0,0]-[size,size],
 	 * but are allowed to be fractional
 	 */
 	Float lineIntegral(Point2 start, Point2 end) const;
@@ -325,7 +331,8 @@ protected:
 };
 
 /**
- * Sparse 3D wavelet representation using the Haar basis and an octree structure
+ * \brief Sparse 3D wavelet representation using the Haar basis and an 
+ * octree structure
  */
 class MTS_EXPORT_CORE SparseWaveletOctree : public Object {
 public:
@@ -350,6 +357,9 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
+	/// Virtual destructor
+	virtual ~SparseWaveletOctree() { }
+private:
 	struct Node {
 		inline Node(float value) : value(value) {
 			for (int i=0; i<8; ++i)
@@ -363,9 +373,6 @@ protected:
 	Float lineIntegral(int32_t idx,
 		Float tx0, Float ty0, Float tz0,
 		Float tx1, Float ty1, Float tz1, uint8_t a) const;
-
-	/// Virtual destructor
-	virtual ~SparseWaveletOctree() { }
 private:
 	Node *m_root;
 	std::vector<Node> m_nodes;

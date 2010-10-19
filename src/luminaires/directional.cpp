@@ -67,7 +67,7 @@ public:
 
 	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
 		/* Directional luminaire is not part of the scene */
-		Log(EWarn, "This function should never be called.");
+		Log(EError, "This function should never be called.");
 		return Spectrum(0.0f);
 	}
 
@@ -97,7 +97,7 @@ public:
 
 	void sampleEmission(EmissionRecord &eRec, const Point2 &sample1, const Point2 &sample2) const {
 		Point2 posOnDisk = squareToDiskConcentric(sample1) * m_diskRadius;
-		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Point(posOnDisk.x, posOnDisk.y, 0));
+		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Vector(posOnDisk.x, posOnDisk.y, 0));
 		eRec.d = m_direction;
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.pdfDir = 1;
@@ -106,7 +106,7 @@ public:
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		Point2 posOnDisk = squareToDiskConcentric(sample) * m_diskRadius;
-		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Point(posOnDisk.x, posOnDisk.y, 0));
+		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Vector(posOnDisk.x, posOnDisk.y, 0));
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.P = m_intensity;
 	}
@@ -123,7 +123,6 @@ public:
 
 	Spectrum f(const EmissionRecord &eRec) const {
 		/* Directional luminaire beam is not part of the scene */
-		Log(EWarn, "This function should never be called.");
 		return Spectrum(0.0f);
 	}
 

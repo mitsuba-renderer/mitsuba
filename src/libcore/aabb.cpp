@@ -26,19 +26,18 @@ Point AABB::getCorner(uint8_t corner) const {
 			corner & 4 ? max.z : min.z);
 }
 
-Point AABB::getMidPoint() const {
-	return Point(
-		min.x + max.x,
-		min.y + max.y,
-		min.z + max.z
-	) * 0.5f;
-}
-
 bool AABB::contains(const Point &vec) const {
 	return isValid() &&
-		(vec.x >= min.x && vec.x <= max.x) &&
-		(vec.y >= min.y && vec.y <= max.y) &&
-		(vec.z >= min.z && vec.z <= max.z);
+		vec.x >= min.x && vec.x <= max.x &&
+		vec.y >= min.y && vec.y <= max.y &&
+		vec.z >= min.z && vec.z <= max.z;
+}
+
+bool AABB::contains(const AABB &aabb) const {
+	return isValid() &&
+	    min.x <= aabb.min.x && max.x >= aabb.max.x &&
+		min.y <= aabb.min.y && max.y >= aabb.max.y &&
+		min.z <= aabb.min.z && max.z >= aabb.max.z;
 }
 
 void AABB::expandBy(const Point &vec) {
@@ -70,6 +69,32 @@ Float AABB::distanceTo(const Point &p) const {
 		result += value*value;
 	}
 	return std::sqrt(result);
+}
+
+bool AABB::overlaps(const AABB &aabb) const {
+	for (int i=0; i<3; ++i) 
+		if (max[i] < aabb.min[i] || min[i] > aabb.max[i])
+			return false;
+	return true;
+}
+
+bool AABB::overlaps(const BSphere &sphere) const {
+	Float distance = 0;
+	for (int i=0; i<3; ++i) {
+		if (sphere.center[i] < min[i]) {
+			Float d = sphere.center[i]-min[i];
+			distance += d*d;
+		} else if (sphere.center[i] > max[i]) {
+			Float d = sphere.center[i]-max[i];
+			distance += d*d;
+		}
+	}
+	return distance < sphere.radius*sphere.radius;
+}
+
+BSphere AABB::getBSphere() const {
+	Point3 center = getCenter();
+	return BSphere(center, (center - max).length());
 }
 
 std::string AABB::toString() const {

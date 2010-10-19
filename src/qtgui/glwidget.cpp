@@ -26,6 +26,8 @@
 #include "glwidget.h"
 #include "preview.h"
 #include <mitsuba/render/renderjob.h>
+#include <mitsuba/core/timer.h>
+#include <mitsuba/core/mstream.h>
 
 GLWidget::GLWidget(QWidget *parent) :
 	QGLWidget(parent), m_context(NULL) {
@@ -383,7 +385,8 @@ void GLWidget::setReinhardBurn(Float value) {
 void GLWidget::downloadFramebuffer() {
 	bool createdFramebuffer = false;
 
-	if (!m_preview->isRunning()) {
+	if (!m_preview->isRunning()
+		|| m_context->previewMethod == EDisabled) {
 		m_context->framebuffer->clear();
 		return;
 	}
@@ -715,7 +718,7 @@ void GLWidget::paintGL() {
 		GPUTexture *buffer = NULL;
 
 		if (m_context->mode == EPreview) {
-			if (!m_preview->isRunning()) {
+			if (!m_preview->isRunning() || m_context->previewMethod == EDisabled) {
 				/* No preview thread running - just show a grey screen */
 				swapBuffers();
 				return;
@@ -769,7 +772,6 @@ void GLWidget::paintGL() {
 							sourceData++;
 						}
 					}
-				} else {
 				}
 				m_framebuffer->refresh();
 				m_framebufferChanged = false;
@@ -1022,6 +1024,6 @@ void GLWidget::onUpdateView() {
 
 void GLWidget::resizeGL(int width, int height) {
 	glViewport(0, 0, (GLint) width, (GLint) height);
-	m_device->setDimension(Point2i(width, height));
+	m_device->setDimension(Vector2i(width, height));
 }
 

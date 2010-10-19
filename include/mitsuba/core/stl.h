@@ -18,7 +18,7 @@
 
 #ifndef __MITSUBA_STL_H
 #define __MITSUBA_STL_H
-
+ 
 /* Include some SGI STL extensions, which might be missing */
 #ifdef __GNUC__
 #include <ext/functional>
@@ -26,7 +26,10 @@ using __gnu_cxx::select2nd;
 using __gnu_cxx::compose1;
 #else
 #include <functional>
+
 namespace std {
+	/// \cond
+	// (Don't include in the documentation)
 	template <class _Pair> struct _Select1st : public unary_function<_Pair, typename _Pair::first_type> {
 		const typename _Pair::first_type& operator()(const _Pair& __x) const {
 			return __x.first;
@@ -56,10 +59,9 @@ namespace std {
 	template <class _Operation1, class _Operation2> inline unary_compose<_Operation1,_Operation2> compose1(const _Operation1& __fn1, const _Operation2& __fn2) {
 		return unary_compose<_Operation1,_Operation2>(__fn1, __fn2);
 	}
+	/// @endcond
 
 #if defined(_MSC_VER)
-	#define _USE_MATH_DEFINES
-	#include <math.h>
 	#include <float.h>
 
 	#define snprintf _snprintf
@@ -93,61 +95,68 @@ using std::compose1;
 MTS_NAMESPACE_BEGIN
 extern MTS_EXPORT_CORE void * __restrict allocAligned(size_t size);
 extern MTS_EXPORT_CORE void freeAligned(void *ptr);
-MTS_NAMESPACE_END
 
-namespace std {
-	template <typename T> class aligned_allocator {
-	public:
-		typedef size_t	size_type;
-		typedef ptrdiff_t difference_type;
-		typedef T*		pointer;
-		typedef const T*  const_pointer;
-		typedef T&		reference;
-		typedef const T&  const_reference;
-		typedef T		 value_type;
+/**
+ * \brief Aligned memory allocator for use with SSE2-based code
+ * \headerfile mitsuba/core/stl.h mitsuba/mitsuba.h
+ * 
+ * Basic implementaiton, which forwards all calls to \ref allocAligned.
+ */
+template <typename T> class aligned_allocator {
+public:
+	typedef size_t    size_type;
+	typedef ptrdiff_t difference_type;
+	typedef T*        pointer;
+	typedef const T*  const_pointer;
+	typedef T&        reference;
+	typedef const T&  const_reference;
+	typedef T         value_type;
 
-		template <class U> struct rebind {
-			typedef aligned_allocator<U> other;
-		};
-
-		pointer address (reference value) const {
-			return &value;
-		}
-
-		const_pointer address (const_reference value) const {
-			return &value;
-		}
-		
-		aligned_allocator() throw() { }	
-
-		aligned_allocator(const aligned_allocator&) throw() { }
-
-		template <class U> aligned_allocator (const aligned_allocator<U>&) throw()  { }
-
-		~aligned_allocator() throw() { }
-
-		size_type max_size () const throw() {
-			return INT_MAX;
-		}
-
-
-		T* __restrict allocate (size_type num, const_pointer *hint = 0) {
-			return (T *) mitsuba::allocAligned(num*sizeof(T));
-		}
-
-		void construct (pointer p, const T& value) {
-			*p=value;
-		}
-
-		void destroy (pointer p) {
-			p->~T();
-		};
-		
-		void deallocate (pointer p, size_type num) {
-			freeAligned(p);
-		}
+	/// \cond
+	template <class U> struct rebind {
+		typedef aligned_allocator<U> other;
 	};
+	/// \endcond
+
+	pointer address (reference value) const {
+		return &value;
+	}
+
+	const_pointer address (const_reference value) const {
+		return &value;
+	}
+	
+	aligned_allocator() throw() { }	
+
+	aligned_allocator(const aligned_allocator&) throw() { }
+
+	template <class U> aligned_allocator (const aligned_allocator<U>&) throw()  { }
+
+	~aligned_allocator() throw() { }
+
+	size_type max_size () const throw() {
+		return INT_MAX;
+	}
+
+
+	T* __restrict allocate (size_type num, const_pointer *hint = 0) {
+		return (T *) mitsuba::allocAligned(num*sizeof(T));
+	}
+
+	void construct (pointer p, const T& value) {
+		*p=value;
+	}
+
+	void destroy (pointer p) {
+		p->~T();
+	};
+	
+	void deallocate (pointer p, size_type num) {
+		freeAligned(p);
+	}
 };
+
+MTS_NAMESPACE_END
 
 #if defined(WIN32)
 inline bool ubi_isnan(float f) {
@@ -159,6 +168,10 @@ inline bool ubi_isnan(double f) {
 	int classification = ::_fpclass(f);
 	return classification == _FPCLASS_QNAN || classification == _FPCLASS_SNAN;
 }
+extern "C" {
+	extern MTS_EXPORT_CORE float nextafterf(float x, float y);
+};
+
 #else
 inline bool ubi_isnan(float f) {
 	return std::fpclassify(f) == FP_NAN;

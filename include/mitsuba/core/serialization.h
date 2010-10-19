@@ -23,7 +23,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Serializable interface
+/** \brief Abstract interface implemented by all serializable classes
  */
 class MTS_EXPORT_CORE Serializable {
 public:
@@ -34,43 +34,49 @@ protected:
 	virtual ~Serializable() { }
 };
 
-/** \brief Base class of all reference-counted objects with serialization support.
+/** \brief Base class of all reference-counted objects with serialization support
+ *
  * To support unserialization from a stream, the implementation should use one of the
- * RTTI macros "MTS_IMPLEMENT_CLASS_*S".
+ * RTTI macros \ref MTS_IMPLEMENT_CLASS_S or \ref MTS_IMPLEMENT_CLASS_IS.
  */
 class MTS_EXPORT_CORE SerializableObject : public Object, public Serializable {
 public:
-	inline SerializableObject() { }
-
 	/// Unserialize a serializable object
 	SerializableObject(Stream *stream, InstanceManager *manager);
 
 	MTS_DECLARE_CLASS()
 protected:
+	/// Construct a serializable object
+	inline SerializableObject() { }
+
 	/// Virtual deconstructor
 	virtual ~SerializableObject() { }
 };
 
-/** \brief The instance manager coordinates the serialization/
- * unserialization process when link structures are encountered
- * in which an object is referenced by multiple other objects
- * within the same data stream. Cyclic dependencies can also
- * be handled.
+/** \brief Coordinates the serialization and unserialization of object graphs
+ *
+ * When serializaing a complicated object graph to a binary data stream,
+ * the instance manager annotates the data stream to avoid serializing
+ * objects twice or becoming stuck in a cyclic dependency. This allows
+ * arbitrary connected graphs to be serialized.
+ *
+ * Similarly when unserializing a stream, it ensures that the resulting
+ * object graph has the same structure.
  */
 class MTS_EXPORT_CORE InstanceManager : public Object {
 	friend class SerializableObject;
 public:
-	/** \brief Construct a new instance manager */
+	/// \brief Construct a new instance manager
 	InstanceManager();
 
-	/// Retrieve/load an instance by ID
+	/// Retrieve an instance from the given stream
 	SerializableObject *getInstance(Stream *stream);
 
-	/// Store/skip an instance returning its ID
+	/// Store an instance to the given stream
 	void serialize(Stream *stream, const SerializableObject *inst);
 
 	MTS_DECLARE_CLASS()
-protected:
+private:
 	/// Virtual destructor
 	virtual ~InstanceManager();
 

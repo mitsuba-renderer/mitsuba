@@ -37,7 +37,7 @@ public:
 	AreaLuminaire(const Properties &props) : Luminaire(props), m_shape(NULL) {
 		AssertEx(m_luminaireToWorld.isIdentity(), "Error: non-identity transformation found. "
 			"Area luminaires inherit their transformation from the associated shape!");
-		m_intensity = props.getSpectrum("intensity", 1);
+		m_intensity = props.getSpectrum("intensity", Spectrum(1));
 		m_type = EDiffuseDirection | EOnSurface;
 		m_intersectable = true;
 	}

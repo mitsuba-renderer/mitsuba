@@ -20,44 +20,31 @@
 #define BOOST_SYSTEM_NO_LIB 
 
 #include <mitsuba/core/plugin.h>
-#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
-#include <mitsuba/render/trimesh.h>
-#include <boost/filesystem.hpp>
-#include <fstream>
+#include <mitsuba/render/scene.h>
+#include <boost/filesystem/fstream.hpp>
 #include "converter.h"
 
-std::string copyTexture(GeometryConverter *cvt, const std::string &textureDir, std::string filename) {
+std::string copyTexture(GeometryConverter *cvt, const fs::path &textureDir, std::string filename) {
 	SLog(EInfo, "Copying texture \"%s\" ..", filename.c_str());
 
-#if defined(WIN32)
-	for (size_t i=0; i<filename.length(); ++i)
-		if (filename[i] == '/')
-			filename[i] = '\\';
-#else
-	for (size_t i=0; i<filename.length(); ++i)
-		if (filename[i] == '\\')
-			filename[i] = '/';
-#endif
+	boost::filesystem::path path = boost::filesystem::path(filename);
+	fs::path targetPath = textureDir / path.leaf();
+	fs::path resolved = filename;
 
-	boost::filesystem::path path = boost::filesystem::path(filename, boost::filesystem::native);
-	std::string targetPath = textureDir + path.leaf();
-
-	if (!FileStream::exists(targetPath)) {
-		ref<FileResolver> fRes = FileResolver::getInstance();
-		std::string resolved = fRes->resolve(path.leaf());
-		if (!FileStream::exists(filename)) {
-			if (!FileStream::exists(resolved)) {
-				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.c_str());
-				filename = cvt->locateResource(filename);
-				if (filename == "")
+	if (!fs::exists(targetPath)) {
+		ref<FileResolver> fRes = Thread::getThread()->getFileResolver();
+		if (!fs::exists(resolved)) {
+			resolved = fRes->resolve(path.leaf());
+			if (!fs::exists(resolved)) {
+				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
+				resolved = cvt->locateResource(path.leaf());
+				if (resolved.empty())
 					SLog(EError, "Unable to locate a resource -- aborting conversion.");
-			} else {
-				filename = resolved;
 			}
 		}	
 
-		ref<FileStream> input = new FileStream(filename, FileStream::EReadOnly);
+		ref<FileStream> input = new FileStream(resolved, FileStream::EReadOnly);
 		ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
 		input->copyTo(output);
 		output->close();
@@ -68,7 +55,7 @@ std::string copyTexture(GeometryConverter *cvt, const std::string &textureDir, s
 }
 
 void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mtlName,
-		const std::string &texturesDir, const Spectrum &diffuseValue, 
+		const fs::path &texturesDir, const Spectrum &diffuseValue, 
 		const std::string &diffuseMap, const std::string maskMap) {
 	if (mtlName == "") 
 		return;
@@ -103,12 +90,13 @@ void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mt
 		os << "\t</bsdf>" << endl;
 }
 
-void parseMaterials(GeometryConverter *cvt, std::ostream &os, const std::string &texturesDir, 
-		const std::string &mtlFileName) {
-	SLog(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.c_str());
-	std::ifstream is(mtlFileName.c_str());
+void parseMaterials(GeometryConverter *cvt, std::ostream &os, const fs::path &texturesDir, 
+		const fs::path &mtlFileName, std::set<std::string> &mtlList) {
+	SLog(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.file_string().c_str());
+	fs::ifstream is(mtlFileName);
 	if (is.bad() || is.fail())
-		SLog(EError, "Unexpected I/O error while accessing material file '%s'!", mtlFileName.c_str());
+		SLog(EError, "Unexpected I/O error while accessing material file '%s'!", 
+			mtlFileName.file_string().c_str());
 	std::string buf, line;
 	std::string mtlName;
 	Spectrum diffuse(0.0f);
@@ -116,6 +104,7 @@ void parseMaterials(GeometryConverter *cvt, std::ostream &os, const std::string 
 
 	while (is >> buf) {
 		if (buf == "newmtl") {
+			mtlList.insert(mtlName);
 			addMaterial(cvt, os, mtlName, texturesDir, diffuse, diffuseMap, maskMap);
 			std::getline(is, line);
 			mtlName = trim(line.substr(1, line.length()-1));
@@ -143,32 +132,33 @@ void parseMaterials(GeometryConverter *cvt, std::ostream &os, const std::string 
 	addMaterial(cvt, os, mtlName, texturesDir, diffuse, diffuseMap, maskMap);
 }
 
-void GeometryConverter::convertOBJ(const std::string &inputFile, 
+void GeometryConverter::convertOBJ(const fs::path &inputFile, 
 	std::ostream &os,
-	const std::string &textureDirectory,
-	const std::string &meshesDirectory) {
+	const fs::path &textureDirectory,
+	const fs::path &meshesDirectory) {
 
-	std::ifstream is(inputFile.c_str());
+	fs::ifstream is(inputFile);
 	if (is.bad() || is.fail())
-		SLog(EError, "Could not open OBJ file '%s'!", inputFile.c_str());
-	
+		SLog(EError, "Could not open OBJ file '%s'!", inputFile.file_string().c_str());
+
 	os << "<?xml version=\"1.0\" encoding=\"utf-8\"?>" << endl << endl;
 	os << "<!--" << endl << endl;
 	os << "\tAutomatically converted from Wavefront OBJ" << endl << endl;
 	os << "-->" << endl << endl;
 	os << "<scene>" << endl;
 	os << "\t<integrator id=\"integrator\" type=\"direct\"/>" << endl << endl;
-	
+
 	std::string buf, line;
+	std::set<std::string> mtlList;
 	while (is >> buf) {
 		if (buf == "mtllib") {
 			std::getline(is, line);
 			std::string mtlName = trim(line.substr(1, line.length()-1));
-			ref<FileResolver> fRes = FileResolver::getInstance()->clone();
-			fRes->addPathFromFile(fRes->resolveAbsolute(inputFile));
-			std::string fullMtlName = fRes->resolve(mtlName);
-			if (FileStream::exists(fullMtlName))
-				parseMaterials(this, os, textureDirectory, fullMtlName);
+			ref<FileResolver> fRes = Thread::getThread()->getFileResolver()->clone();
+			fRes->addPath(fs::complete(fRes->resolve(inputFile)).parent_path());
+			fs::path fullMtlName = fRes->resolve(mtlName);
+			if (fs::exists(fullMtlName))
+				parseMaterials(this, os, textureDirectory, fullMtlName, mtlList);
 			else
 				SLog(EWarn, "Could not find referenced material library '%s'", mtlName.c_str());
 		} else {
@@ -178,7 +168,7 @@ void GeometryConverter::convertOBJ(const std::string &inputFile,
 	}
 
 	Properties objProps("obj");
-	objProps.setString("filename", inputFile);
+	objProps.setString("filename", inputFile.file_string());
 
 	ref<Shape> rootShape = static_cast<Shape *> (PluginManager::getInstance()->
 			createObject(Shape::m_theClass, objProps));
@@ -191,13 +181,14 @@ void GeometryConverter::convertOBJ(const std::string &inputFile,
 			break;
 		std::string filename = mesh->getName() + std::string(".serialized");
 		SLog(EInfo, "Saving \"%s\"", filename.c_str());
-		ref<FileStream> stream = new FileStream(meshesDirectory + filename, FileStream::ETruncReadWrite);
-		stream->setByteOrder(Stream::ENetworkByteOrder);
+		ref<FileStream> stream = new FileStream(meshesDirectory / filename, FileStream::ETruncReadWrite);
+		stream->setByteOrder(Stream::ELittleEndian);
 		mesh->serialize(stream);
 		stream->close();
 		os << "\t<shape id=\"" << mesh->getName() << "\" type=\"serialized\">" << endl;
 		os << "\t\t<string name=\"filename\" value=\"meshes/" << filename.c_str() << "\"/>" << endl;
-		if (mesh->getBSDF() != NULL) { 
+		if (mesh->getBSDF() != NULL && 
+				mtlList.find(mesh->getBSDF()->getName()) != mtlList.end()) { 
 			const std::string &matID = mesh->getBSDF()->getName();
 			os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
 		}

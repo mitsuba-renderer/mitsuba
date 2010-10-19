@@ -26,6 +26,7 @@
 #include "navdlg.h"
 #include "aboutdlg.h"
 #include "importdlg.h"
+#include "loaddlg.h"
 #include "server.h"
 #include "save.h"
 #include <QtNetwork>
@@ -33,6 +34,8 @@
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
 
 #if !defined(WIN32)
 #include <QX11Info>
@@ -99,6 +102,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	logger->addAppender(m_consoleAppender);
 	connect(m_consoleAppender, SIGNAL(textMessage(ELogLevel, const QString &)), 
 		m_logWidget, SLOT(onTextMessage(ELogLevel, const QString &)), Qt::QueuedConnection);
+	connect(m_consoleAppender, SIGNAL(criticalError(const QString &)), 
+		m_logWidget, SLOT(onCriticalError(const QString &)), Qt::QueuedConnection);
 
 	SLog(EInfo, "Mitsuba version " MTS_VERSION ", Copyright (c) " MTS_YEAR " Wenzel Jakob");
 
@@ -110,6 +115,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->hScrollBar->setVisible(false);
 	ui->vScrollBar->setVisible(false);
 	ui->actionUpdateCheck->setMenuRole(QAction::ApplicationSpecificRole);
+	ui->actionFeedback->setMenuRole(QAction::ApplicationSpecificRole);
+	ui->actionReportBug->setMenuRole(QAction::ApplicationSpecificRole);
 	m_progressWidget = new QWidget(centralWidget());
 	m_progressLabel = new QLabel(m_progressWidget);
 	m_progress = new QProgressBar(m_progressWidget);
@@ -118,6 +125,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	hlayout->addWidget(m_progressLabel);
 	hlayout->addWidget(m_progress);
 	m_progressWidget->setLayout(hlayout);
+
 #if defined(__OSX__)
 	m_progressWidget->setStyleSheet("QWidget#progressWidget {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, "
 		"stop:0 palette(dark), stop: 1 palette(mid)); border-top: 1px solid palette(mid); margin: 0px; spacing: 15px; }");
@@ -127,6 +135,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	m_progress->setAttribute(Qt::WA_MacSmallSize, true);
 	m_progressLabel->setAttribute(Qt::WA_MacSmallSize, true);
 #endif
+
 	m_serverWidget = NULL;
 	m_contextIndex = -1;
 
@@ -221,7 +230,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	/* Submit crash reports on OSX */
 	QDir crashDir = QDir::home();
 	crashDir.cd("Library/Logs/CrashReporter");
-	QFileInfoList crashReports = crashDir.entryInfoList(QStringList("qtgui_*"), 
+	QFileInfoList crashReports = crashDir.entryInfoList(QStringList("mtsgui_*"), 
 			QDir::Files, QDir::Name);
 
 	if (crashReports.size() > 0) {
@@ -288,6 +297,15 @@ MainWindow::MainWindow(QWidget *parent) :
 				QMessageBox::information(this, tr("Crash reporter"),
 					tr("All crash reports have been submitted. Thank you!"),
 					QMessageBox::Ok);
+		} else {
+			for (int i=0; i<crashReports.size(); ++i) {
+				QFile file(crashReports[i].absoluteFilePath());
+				if (!file.remove()) {
+					QMessageBox::critical(this, tr("Unable to submitted crash report"),
+						tr("Unable to delete a crash report -- please check the file permissions in ~/Library/Logs/CrashReporter."), QMessageBox::Ok);
+					break;
+				}
+			}
 		}
 	}
 #endif
@@ -444,7 +462,7 @@ void MainWindow::onBugReportSubmitted() {
 
 void MainWindow::on_actionImport_triggered() {
 #if defined(MTS_HAS_COLLADA)
-	ref<FileResolver> resolver = FileResolver::getInstance();
+	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
 	ref<FileResolver> newResolver = resolver->clone();
 	for (int i=0; i<m_searchPaths.size(); ++i)
 		newResolver->addPath(m_searchPaths[i].toStdString());
@@ -530,7 +548,8 @@ void MainWindow::onProgressMessage(const RenderJob *job, const QString &name,
 
 void MainWindow::on_actionOpen_triggered() {
 	QFileDialog *dialog = new QFileDialog(this, Qt::Sheet);
-	dialog->setNameFilter(tr("Mitsuba scenes (*.xml);;EXR images (*.exr)"));
+	dialog->setNameFilter(tr("All supported formats (*.xml *.exr);;"
+			"Mitsuba scenes (*.xml);;EXR images (*.exr)"));
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
 	dialog->setAcceptMode(QFileDialog::AcceptOpen);
 	dialog->setViewMode(QFileDialog::Detail);
@@ -576,41 +595,29 @@ void MainWindow::onClearRecent() {
 }
 
 SceneContext *MainWindow::loadScene(const QString &qFileName) {
-	ref<FileResolver> resolver = FileResolver::getInstance();
-	std::string filename = resolver->resolveAbsolute(qFileName.toStdString());
-	std::string filePath = resolver->getParentDirectory(filename);
+	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
+	fs::path filename = resolver->resolve(qFileName.toStdString());
+	fs::path filePath = fs::complete(filename).parent_path();
 	ref<FileResolver> newResolver = resolver->clone();
-	if (!newResolver->contains(filePath))
-		newResolver->addPath(filePath);
+	newResolver->addPath(filePath);
 	for (int i=0; i<m_searchPaths.size(); ++i)
 		newResolver->addPath(m_searchPaths[i].toStdString());
-	newResolver->setCurrentDirectoryFromFile(filename);
 
-	ref<SceneLoader> loadingThread = new SceneLoader(newResolver, filename);
+	ref<SceneLoader> loadingThread 
+		= new SceneLoader(newResolver, filename.file_string());
+	LoadDialog *loaddlg = new LoadDialog(this);
+	loaddlg->setAttribute(Qt::WA_DeleteOnClose);
+	loaddlg->setWindowModality(Qt::ApplicationModal);
+	loaddlg->setWindowTitle("Loading ..");
+	loaddlg->show();
 	loadingThread->start();
-
-	QDialog *dialog = new NonClosableDialog(this);
-	dialog->setWindowModality(Qt::WindowModal);
-	dialog->setWindowTitle("Loading ..");
-	QVBoxLayout *layout = new QVBoxLayout(dialog);
-	QProgressBar *progressBar = new QProgressBar(dialog);
-	dialog->resize(200, 50);
-	layout->addWidget(progressBar);
-	progressBar->setTextVisible(false);
-	// weird, Qt/Win needs this to get a busy indicator
-	progressBar->setValue(1);
-	progressBar->setRange(0, 0);
-	dialog->show();
-	progressBar->show();
 
 	while (loadingThread->isRunning()) {
 		QCoreApplication::processEvents();
 		loadingThread->wait(20);
 	}
 	loadingThread->join();
-
-	dialog->hide();
-	delete dialog;
+	loaddlg->close();
 
 	SceneContext *result = loadingThread->getResult();
 	if (result == NULL) {
@@ -971,7 +978,7 @@ void MainWindow::on_actionPreviewSettings_triggered() {
 	settings.setValue("preview_reinhardKey", context->reinhardKey);
 	settings.setValue("preview_reinhardBurn", context->reinhardBurn);
 	settings.setValue("preview_clamping", context->clamping);
-	settings.setValue("preview_previewMethod", context->previewMethod);
+	settings.setValue("preview_method", context->previewMethod);
 	settings.setValue("preview_toneMappingMethod", context->toneMappingMethod);
 	settings.setValue("preview_diffuseReceivers", context->diffuseReceivers);
 	settings.setValue("preview_diffuseSources", context->diffuseSources);
@@ -1014,7 +1021,7 @@ void MainWindow::onPreviewSettingsClose() {
 		settings.setValue("preview_reinhardKey", context->reinhardKey);
 		settings.setValue("preview_reinhardBurn", context->reinhardBurn);
 		settings.setValue("preview_clamping", context->clamping);
-		settings.setValue("preview_previewMethod", context->previewMethod);
+		settings.setValue("preview_method", context->previewMethod);
 		settings.setValue("preview_toneMappingMethod", context->toneMappingMethod);
 		settings.setValue("preview_diffuseSources", context->diffuseSources);
 		settings.setValue("preview_diffuseReceivers", context->diffuseReceivers);
@@ -1033,8 +1040,8 @@ void MainWindow::on_actionSettings_triggered() {
 		return;
 	}
 
-	int workerCount = sched->getWorkerCount();
-	for (int i=0; i<workerCount; ++i) {
+	size_t workerCount = sched->getWorkerCount();
+	for (size_t i=0; i<workerCount; ++i) {
 		Worker *worker = sched->getWorker(i);
 		if (worker->getClass()->derivesFrom(LocalWorker::m_theClass))
 			localWorkers.push_back(worker);
@@ -1206,7 +1213,8 @@ inline float toSRGB(float value) {
 void MainWindow::on_actionExportImage_triggered() {
 	SceneContext *ctx = m_context[ui->tabBar->currentIndex()];
 	QFileDialog dialog(this, tr("Export image .."),
-		"", tr("Linear EXR Image (*.exr);; Tonemapped 8-bit PNG Image (*.png)"));
+		"", tr("All supported formats (*.exr *.png);;Linear EXR Image (*.exr)"
+			";; Tonemapped 8-bit PNG Image (*.png)"));
 
 	QSettings settings("mitsuba-renderer.org", "qtgui");
 	dialog.setViewMode(QFileDialog::Detail);
@@ -1232,7 +1240,8 @@ void MainWindow::on_actionExportImage_triggered() {
 			return;
 		}
 
-		ref<FileStream> fs = new FileStream(qPrintable(fileName), FileStream::ETruncReadWrite);
+		ref<FileStream> fs = new FileStream(qPrintable(fileName), 
+			FileStream::ETruncReadWrite);
 
 		if (ctx->mode == EPreview)
 			ui->glView->downloadFramebuffer();
@@ -1410,6 +1419,14 @@ void MainWindow::on_actionStartServer_triggered() {
 	ui->actionStartServer->setEnabled(false);
 	connect(m_serverWidget, SIGNAL(closed()), this, SLOT(onServerClosed()));
 	m_serverWidget->show();
+}
+
+void MainWindow::on_actionReportBug_triggered() {
+	QDesktopServices::openUrl(QUrl("https://www.mitsuba-renderer.org/bugtracker/projects/mitsuba"));
+}
+
+void MainWindow::on_actionFeedback_triggered() {
+	QDesktopServices::openUrl(QUrl("mailto:Wenzel%20Jakob%20<wenzel@cs.cornell.edu>?subject=Feedback%20on%20Mitsuba"));
 }
 
 void MainWindow::onServerClosed() {

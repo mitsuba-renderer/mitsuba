@@ -20,7 +20,9 @@
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/render/gatherproc.h>
 #include <mitsuba/render/renderqueue.h>
+#if !defined(__OSX__)
 #include <omp.h>
+#endif
 
 MTS_NAMESPACE_BEGIN
 
@@ -40,13 +42,13 @@ public:
 		int depth;
 		Point2i pos;
 
-		inline GatherPoint() : N(0) {
+		inline GatherPoint() : weight(0.0f), flux(0.0f), emission(0.0f), N(0.0f) {
 		}
 	};
 
 	StochasticProgressivePhotonMapIntegrator(const Properties &props) : Integrator(props) {
 		/* Initial photon query radius (0 = infer based on scene size and camera resolution) */
-		m_initialRadius = props.getFloat("initialRadius", .2);
+		m_initialRadius = props.getFloat("initialRadius", 0);
 		/* Alpha parameter from the paper (influences the speed, at which the photon radius is reduced) */
 		m_alpha = props.getFloat("alpha", .7);
 		/* Number of photons to shoot in each iteration */
@@ -86,7 +88,7 @@ public:
 	}
 
 
-	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 			int sceneResID, int cameraResID, int samplerResID) {
 		Integrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
 
@@ -98,6 +100,7 @@ public:
 
 			m_initialRadius = std::min(rad / filmSize.x, rad / filmSize.y) * 5;
 		}
+		return true;
 	}
 
 	bool render(Scene *scene, RenderQueue *queue, 
@@ -147,7 +150,9 @@ public:
 		int samplerResID = sched->registerManifoldResource(
 			static_cast<std::vector<SerializableObject*> &>(samplers)); 
 
+#if !defined(__OSX__)
 		omp_set_num_threads(nCores);
+#endif
 
 		int it=0;
 		while (m_running) { 
@@ -173,7 +178,11 @@ public:
 		#pragma omp parallel for schedule(dynamic)
 		for (int i=-1; i<(int) m_gatherBlocks.size(); ++i) {
 			std::vector<GatherPoint> &gatherPoints = m_gatherBlocks[i];
+#if !defined(__OSX__)
 			Sampler *sampler = static_cast<Sampler *>(samplers[omp_get_thread_num()]);
+#else
+			Sampler *sampler = static_cast<Sampler *>(samplers[0]);
+#endif
 			int xofs = m_offset[i].x, yofs = m_offset[i].y;
 			int index = 0;
 			for (int yofsInt = 0; yofsInt < m_blockSize; ++yofsInt) {
@@ -265,12 +274,12 @@ public:
 		#pragma omp parallel for schedule(dynamic)
 		for (int blockIdx = 0; blockIdx<(int) m_gatherBlocks.size(); ++blockIdx) {
 			std::vector<GatherPoint> &gatherPoints = m_gatherBlocks[blockIdx];
-			Spectrum flux, contrib;
 
 			float *target = m_bitmap->getFloatData();
 			for (size_t i=0; i<gatherPoints.size(); ++i) {
 				GatherPoint &gp = gatherPoints[i];
 				Float M, N = gp.N;
+				Spectrum flux, contrib;
 
 				if (gp.depth != -1) {
 					M = photonMap->estimateRadianceRaw(
@@ -288,11 +297,8 @@ public:
 						gp.emission * proc->getShotPhotons() * M_PI * gp.radius*gp.radius)) * ratio;
 					gp.radius = gp.radius * std::sqrt(ratio);
 					gp.N = N + m_alpha * M;
+					contrib = gp.flux / ((Float) m_totalEmitted * gp.radius*gp.radius * M_PI);
 				}
-				contrib = gp.flux / ((Float) m_totalEmitted * gp.radius*gp.radius * M_PI);
-
-				
-
 
 				Float r, g, b;
 				contrib.toLinearRGB(r, g, b);

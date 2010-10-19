@@ -31,6 +31,10 @@ Some minor adjustments may have to be made to this file based on your configurat
 You may also set adjust certain compilation flags here:
 \begin{description}
 \item[\texttt{MTS\_DEBUG}] Enable assertions etc. Usually a good idea.
+\item[\texttt{MTS\_KD\_DEBUG}] Enable additional checks in the kd-Tree. This
+is quite slow and mainly useful to track down bugs when they are suspected.
+\item[\texttt{MTS\_KD\_CONSERVE\_MEMORY}] Use less memory for storing geometry (at the cost of speed).
+Off by default.
 \item[\texttt{SINGLE\_PRECISION}] Do all computation in single precision. This is usually sufficient.
 \item[\texttt{DOUBLE\_PRECISION}] Do all computation in double precision. Incompatible with
 \texttt{MTS\_SSE}, \texttt{MTS\_HAS\_COHERENT\_RT}, and \texttt{MTS\_DEBUG\_FP}.
@@ -41,18 +45,18 @@ You may also set adjust certain compilation flags here:
 All default configurations use the flags \code{MTS\_DEBUG}, \code{SINGLE\_PRECISION}, \code{MTS\_SSE}, \code{MTS\_HAS\_COHERENT\_RT}.
 Initially, it is a good idea to just leave the configuration the way it is.
 
-\subsection{Building on Linux}
-On Linux, you'll first need to install a whole bunch of dependencies. It is assumed here
+\subsection{Building on Ubuntu Linux}
+You'll first need to install a number of dependencies. It is assumed here
 that you are using Ubuntu Linux, hence some of the package may be named differently if you are 
 using another distribution.
 
 First, run
 \begin{shell}
-$\text{\$}$ apt-get install build-essential scons qt4-dev-tools scons libpng12-dev libjpeg62-dev libilmbase-dev libopenexr-dev libxerces-c2-dev libboost-dev libglewmx1.5-dev libxxf86vm-dev libboost-system-dev libboost-filesystem-dev
+$\text{\$}$ sudo apt-get install build-essential scons qt4-dev-tools scons libpng12-dev libjpeg62-dev libilmbase-dev libopenexr-dev libxerces-c-dev libboost-dev libglewmx1.5-dev libxxf86vm-dev libboost-system-dev libboost-filesystem-dev
 \end{shell}
 To get COLLADA support, you will also need to install the \texttt{collada-dom} packages or build them from scratch. Here, we install the \code{x86\_64} binaries and development headers included with Mitsuba:
 \begin{shell}
-$\text{\$}$ dpkg --install tools/linux/collada-dom2.2_2.2-1_amd64.deb tools/linux/collada-dom-dev_2.2-1_amd64.deb
+$\text{\$}$ sudo dpkg --install tools/linux/collada-dom2.2_2.2-1_amd64.deb tools/linux/collada-dom-dev_2.2-1_amd64.deb
 \end{shell}
 Afterwards, simply run
 \begin{shell}
@@ -69,6 +73,63 @@ $\text{\$}$ . setpath.sh
 \end{shell}
 (note the period at the beginning -- this assumes that you are using \code{bash}).
 
+\subsection{Building on Fedora Core}
+You'll first need to install a number of dependencies. It is assumed here
+that you are using Fedora Core, hence some of the package may be named differently if you are 
+using another distribution.
+
+First, run
+\begin{shell}
+$\text{\$}$ yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel
+\end{shell}
+You will also need the \texttt{glew-mx} and \texttt{collada-dom} packages, which are not included in the Fedora package repository. 
+You can grab source, \texttt{i386}, and \text{x86\_64} \texttt{RPM} files here: \texttt{http://www.mitsuba-renderer.org/releases}.
+Afterwards, simply run
+\begin{shell}
+$\text{\$}$ scons
+\end{shell}
+inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
+If all goes well, SCons should finish successfully within a few minutes:
+\begin{shell}
+scons: $\texttt{done}$ building targets.
+\end{shell}
+To be able to run the renderer from the command line, you will also have to import it into your path:
+\begin{shell}
+$\text{\$}$ . setpath.sh
+\end{shell}
+(note the period at the beginning -- this assumes that you are using \code{bash}).
+
+\subsection{Building on Arch Linux}
+You'll first need to install a number of dependencies.
+
+First, run
+\begin{shell}
+$\text{\$}$ pacman -S mercurial openexr gcc xerces-c boost libjpeg libpng qt libxmu libxi mesa pcre libxml2 scons
+\end{shell}
+Some of the extra dependencies must be built manually:
+\begin{shell}
+$\text{\$}$ wget https://www.mitsuba-renderer.org/releases/contrib/archlinux/glewmx/PKGBUILD
+$\text{\$}$ makepkg
+$\text{\$}$ sudo pacman -U glewmx-*.xz
+\end{shell}
+and similar for \texttt{https://www.mitsuba-renderer.org/releases/contrib/archlin}-
+\texttt{ux/collada-dom/PKGBUILD}.
+Afterwards, simply run
+\begin{shell}
+$\text{\$}$ scons
+\end{shell}
+inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
+If all goes well, SCons should finish successfully within a few minutes:
+\begin{shell}
+scons: $\texttt{done}$ building targets.
+\end{shell}
+To be able to run the renderer from the command line, you will also have to import it into your path:
+\begin{shell}
+$\text{\$}$ . setpath.sh
+\end{shell}
+(note the period at the beginning -- this assumes that you are using \code{bash}).
+
+
 \subsection{Building on Windows}
 This section assumes that Visual Studio 2008 is installed, but the instructions should work equally well with other versions.
 On the Windows platform, Mitsuba already includes most of the dependencies in precompiled form.
@@ -80,7 +141,7 @@ in the \code{\%PATH\%} environment variable so that entering \code{scons} on the
 C:\Users\Wenzel>scons
 scons: ** No SConstruct file found.
 \end{shell}
-\emph{Note: }On some setups, the precompiled SCons binaries generate a warning about not finding SCons in the registry. In this case, you can instead run \code{python setup.py install} within the source release of SCons.
+\emph{Note: }On some setups, the SCons installer generates a warning about not finding Python in the registry. In this case, you can instead run \code{python setup.py install} within the source release of SCons.
 Next, install Qt (\url{http://qt.nokia.com/downloads/windows-cpp-vs2008} -- you should get the release for Visual Studio 2008). Again, you need to make sure that the 
 Qt utilities are reachable through the \code{\%PATH\%} environment variable so that you can for example launch \code{moc.exe} from the command line.
 
@@ -99,8 +160,7 @@ All binaries are now located in the \code{dist} directory, and they should be ex
 
 \subsection{Building on Mac OS X}
 On Mac OS X, you will need to install both scons (\code{www.scons.org}) and 
-a recent release of XCode. You will also need to get Qt 4.7.0 Beta 2 or a newer version.
-As of this writing, 4.7.0 Beta 2 is still the most recent release and can be found here: \url{http://qt.nokia.com/developer/qt-qtcreator-prerelease#download}
+a recent release of XCode. You will also need to get Qt 4.7.0 or a newer version
 --- make sure that you get the normal Cocoa release (i.e. \emph{not} the one based on Carbon). All of the
 other dependencies are already included in precompiled form.
 

@@ -19,610 +19,585 @@
 #if !defined(__VECTOR_H)
 #define __VECTOR_H
 
-#include <mitsuba/mitsuba.h>
 #include <mitsuba/core/stream.h>
 
 MTS_NAMESPACE_BEGIN
 
-class Normal;
-class Point;
-class Point2;
-class Point2i;
-class Point3i;
-class Vector3i;
-
-/** \brief Simple three-dimensional vector class using floating point values.
+/**
+ * \headerfile mitsuba/core/vector.h mitsuba/mitsuba.h
+ * \brief Parameterizable two-dimensional vector data structure
  */
-class Vector {
+template <typename T> struct TVector2 {
 public:
-	Float x, y, z;
+	T x, y;
 
-	inline Vector(Float _x = 0.0f, Float _y = 0.0f, Float _z = 0.0f)
-		: x(_x), y(_y), z(_z) {
-	}
-	
-	inline Vector(Stream *stream) {
-		x = stream->readFloat();
-		y = stream->readFloat();
-		z = stream->readFloat();
-	}
-	
-	inline Vector(const Normal &n);
-	inline Vector(const Point &p);
-	inline Vector(const Vector3i &v);
-	inline Vector(const Point3i &v);
+	/** \brief Construct a new vector without initializing it.
+	 * 
+	 * This construtor is useful when the vector will either not
+	 * be used at all (it might be part of a larger data structure)
+	 * or initialized at a later point in time. Always make sure
+	 * that one of the two is the case! Otherwise your program will do
+	 * computations involving uninitialized memory, which will probably
+	 * lead to a difficult-to-find bug.
+	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
+	TVector2() { }
+#else
+	TVector2() { x = y = std::numeric_limits<double>::quiet_NaN(); }
+#endif
 
-	inline Vector operator+(const Vector &v) const {
-		return Vector(x + v.x, y + v.y, z + v.z);
+	/// Initialize the vector with the specified X and Z components
+	TVector2(T x, T y) : x(x), y(y) {  }
+
+	/// Initialize all components of the the vector with the specified value
+	explicit TVector2(T val) : x(val), y(val) { }
+
+	/// Initialize the vector with the components of a point data structure
+	template <typename T2> explicit TVector2(const TVector2<T2> &v) 
+		: x((T) v.x), y((T) v.y) { }
+
+	/// Initialize the vector with the components of another vector data structure
+	template <typename T2> explicit TVector2(const TPoint2<T2> &p) 
+		: x((T) p.x), y((T) p.y) { }
+
+	/// Unserialize a vector from a binary data stream
+	explicit TVector2(Stream *stream) {
+		x = stream->readElement<T>();
+		y = stream->readElement<T>();
 	}
 
-	inline Vector operator-(const Vector &v) const {
-		return Vector(x - v.x, y - v.y, z - v.z);
+	/// Add two vectors and return the result
+	TVector2 operator+(const TVector2 &v) const {
+		return TVector2(x + v.x, y + v.y);
 	}
 
-	inline Vector& operator+=(const Vector &v) {
+	/// Subtract two vectors and return the result
+	TVector2 operator-(const TVector2 &v) const {
+		return TVector2(x - v.x, y - v.y);
+	}
+
+	/// Add another vector to the current one
+	TVector2& operator+=(const TVector2 &v) {
+		x += v.x; y += v.y; 
+		return *this;
+	}
+
+	/// Subtract another vector from the current one
+	TVector2& operator-=(const TVector2 &v) {
+		x -= v.x; y -= v.y;
+		return *this;
+	}
+
+	/// Multiply the vector by the given scalar and return the result
+	TVector2 operator*(T f) const {
+		return TVector2(x*f, y*f);
+	}
+
+	/// Multiply the vector by the given scalar
+	TVector2 &operator*=(T f) {
+		x *= f; y *= f; 
+		return *this;
+	}
+
+	/// Return a negated version of the vector
+	TVector2 operator-() const {
+		return TVector2(-x, -y);
+	}
+
+	/// Divide the vector by the given scalar and return the result
+	TVector2 operator/(T f) const {
+#ifdef MTS_DEBUG
+		if (f == 0)
+			SLog(EWarn, "Vector2: Division by zero!");
+#endif
+		T recip = (T) 1 / f;
+		return TVector2(x * recip, y * recip);
+	}
+
+	/// Divide the vector by the given scalar
+	TVector2 &operator/=(T f) {
+#ifdef MTS_DEBUG
+		if (f == 0)
+			SLog(EWarn, "Vector2: Division by zero!");
+#endif
+		T recip = (T) 1 / f;
+		x *= recip; y *= recip; 
+		return *this;
+	}
+
+	/// Index into the vector's components
+	T &operator[](int i) {
+		return (&x)[i];
+	}
+
+	/// Index into the vector's components (const version)
+	T operator[](int i) const {
+		return (&x)[i];
+	}
+
+	/// Return the squared 2-norm of this vector
+	T lengthSquared() const {
+		return x*x + y*y;
+	}
+
+	/// Return the 2-norm of this vector
+	T length() const {
+		return std::sqrt(lengthSquared());
+	}
+
+	/// Return whether or not this vector is identically zero
+	bool isZero() const {
+		return x == 0 && y == 0;
+	}
+
+	/// Equality test
+	bool operator==(const TVector2 &v) const {
+		return (v.x == x && v.y == y);
+	}
+
+	/// Inequality test
+	bool operator!=(const TVector2 &v) const {
+		return v.x != x || v.y != y;
+	}
+
+	/// Serialize this vector to a binary data stream
+	void serialize(Stream *stream) const {
+		stream->writeElement<T>(x);
+		stream->writeElement<T>(y);
+	}
+
+	/// Return a readable string representation of this vector
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "[" << x << ", " << y << "]";
+		return oss.str();
+	}
+};
+
+template <typename T> inline TVector2<T> operator*(T f, const TVector2<T> &v) {
+	return v*f;
+}
+
+template <typename T> inline T dot(const TVector2<T> &v1, const TVector2<T> &v2) {
+	return v1.x * v2.x + v1.y * v2.y;
+}
+
+template <typename T> inline T absDot(const TVector2<T> &v1, const TVector2<T> &v2) {
+	return std::abs(dot(v1, v2));
+}
+
+template <typename T> inline TVector2<T> normalize(const TVector2<T> &v) {
+	return v / v.length();
+}
+
+template <> inline TVector2<int> TVector2<int>::operator/(int s) const {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector2i: Division by zero!");
+#endif
+	return TVector2(x/s, y/s);
+}
+
+template <> inline TVector2<int> &TVector2<int>::operator/=(int s) {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector2i: Division by zero!");
+#endif
+
+	x /= s;
+	y /= s;
+	return *this;
+}
+
+/**
+ * \headerfile mitsuba/core/vector.h mitsuba/mitsuba.h
+ * \brief Parameterizable three-dimensional vector data structure
+ */
+template <typename T> struct TVector3 {
+public:
+	T x, y, z;
+
+	/** \brief Construct a new vector without initializing it.
+	 * 
+	 * This construtor is useful when the vector will either not
+	 * be used at all (it might be part of a larger data structure)
+	 * or initialized at a later point in time. Always make sure
+	 * that one of the two is the case! Otherwise your program will do
+	 * computations involving uninitialized memory, which will probably
+	 * lead to a difficult-to-find bug.
+	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
+	TVector3() { }
+#else
+	TVector3() { x = y = z = std::numeric_limits<double>::quiet_NaN(); }
+#endif
+
+	/// Initialize the vector with the specified X, Y and Z components
+	TVector3(T x, T y, T z) : x(x), y(y), z(z) {  }
+
+	/// Initialize all components of the the vector with the specified value
+	explicit TVector3(T val) : x(val), y(val), z(val) { }
+
+	/// Initialize the vector with the components of a point data structure
+	template <typename T2> explicit TVector3(const TVector3<T2> &v) 
+		: x((T) v.x), y((T) v.y), z((T) v.z) { }
+
+	/// Initialize the vector with the components of another vector data structure
+	template <typename T2> explicit TVector3(const TPoint3<T2> &p) 
+		: x((T) p.x), y((T) p.y), z((T) p.z) { }
+
+	/// Unserialize a vector from a binary data stream
+	explicit TVector3(Stream *stream) {
+		x = stream->readElement<T>();
+		y = stream->readElement<T>();
+		z = stream->readElement<T>();
+	}
+
+	/// Add two vectors and return the result
+	TVector3 operator+(const TVector3 &v) const {
+		return TVector3(x + v.x, y + v.y, z + v.z);
+	}
+
+	/// Subtract two vectors and return the result
+	TVector3 operator-(const TVector3 &v) const {
+		return TVector3(x - v.x, y - v.y, z - v.z);
+	}
+
+	/// Add another vector to the current one
+	TVector3& operator+=(const TVector3 &v) {
 		x += v.x; y += v.y; z += v.z;
 		return *this;
 	}
 
-	inline Vector& operator-=(const Vector &v) {
+	/// Subtract another vector from the current one
+	TVector3& operator-=(const TVector3 &v) {
 		x -= v.x; y -= v.y; z -= v.z;
 		return *this;
 	}
 
-	inline Vector operator*(Float f) const {
-		return Vector(x*f, y*f, z*f);
+	/// Multiply the vector by the given scalar and return the result
+	TVector3 operator*(T f) const {
+		return TVector3(x*f, y*f, z*f);
 	}
 
-	inline Vector &operator*=(Float f) {
-		x *= f;
-		y *= f;
-		z *= f;
+	/// Multiply the vector by the given scalar
+	TVector3 &operator*=(T f) {
+		x *= f; y *= f; z *= f;
 		return *this;
 	}
 
-	inline Vector operator-() const {
-		return Vector(-x, -y, -z);
+	/// Return a negated version of the vector
+	TVector3 operator-() const {
+		return TVector3(-x, -y, -z);
 	}
 
-	inline Vector operator/(Float f) const {
+	/// Divide the vector by the given scalar and return the result
+	TVector3 operator/(T f) const {
 #ifdef MTS_DEBUG
-		if (f == 0) {
-			SLog(EWarn, "Vector: Division by zero!");
-			//exit(-1);
-		}
+		if (f == 0)
+			SLog(EWarn, "Vector3: Division by zero!");
 #endif
-		Float r = 1.0f / f;
-		return Vector(x * r, y * r, z * r);
+		T recip = (T) 1 / f;
+		return TVector3(x * recip, y * recip, z * recip);
 	}
 
-	inline Vector &operator/=(Float f) {
+	/// Divide the vector by the given scalar
+	TVector3 &operator/=(T f) {
 #ifdef MTS_DEBUG
-		if (f == 0) {
-			SLog(EWarn, "Vector: Division by zero!");
-			//exit(-1);
-		}
+		if (f == 0)
+			SLog(EWarn, "Vector3: Division by zero!");
 #endif
-		Float r = 1.0f / f;
-		x *= r;
-		y *= r;
-		z *= r;
+		T recip = (T) 1 / f;
+		x *= recip; y *= recip; z *= recip;
 		return *this;
 	}
 
-	inline Float operator[](int i) const {
+	/// Index into the vector's components
+	T &operator[](int i) {
 		return (&x)[i];
 	}
 
-	inline Float &operator[](int i) {
+	/// Index into the vector's components (const version)
+	T operator[](int i) const {
 		return (&x)[i];
 	}
 
-	inline Float lengthSquared() const {
+	/// Return the squared 2-norm of this vector
+	T lengthSquared() const {
 		return x*x + y*y + z*z;
 	}
 
-	inline Float length() const {
+	/// Return the 2-norm of this vector
+	T length() const {
 		return std::sqrt(lengthSquared());
 	}
-	
-	inline bool isZero() const {
-		return x==0 && y == 0 && z == 0;
+
+	/// Return whether or not this vector is identically zero
+	bool isZero() const {
+		return x == 0 && y == 0 && z == 0;
 	}
 
-	inline bool operator==(const Vector &v) const {
+	/// Equality test
+	bool operator==(const TVector3 &v) const {
 		return (v.x == x && v.y == y && v.z == z);
 	}
-	
-	inline bool operator!=(const Vector &v) const {
-		return !operator==(v);
+
+	/// Inequality test
+	bool operator!=(const TVector3 &v) const {
+		return v.x != x || v.y != y || v.z != z;
 	}
 
-	inline void serialize(Stream *stream) const {
-		stream->writeFloat(x);
-		stream->writeFloat(y);
-		stream->writeFloat(z);
+	/// Serialize this vector to a binary data stream
+	void serialize(Stream *stream) const {
+		stream->writeElement<T>(x);
+		stream->writeElement<T>(y);
+		stream->writeElement<T>(z);
 	}
 
-	inline std::string toString() const {
+	/// Return a readable string representation of this vector
+	std::string toString() const {
 		std::ostringstream oss;
 		oss << "[" << x << ", " << y << ", " << z << "]";
 		return oss.str();
 	}
 };
 
-inline Vector operator*(Float f, const Vector &v) {
+template <typename T> inline TVector3<T> operator*(T f, const TVector3<T> &v) {
 	return v*f;
 }
 
-inline Float dot(const Vector &v1, const Vector &v2) {
+template <typename T> inline T dot(const TVector3<T> &v1, const TVector3<T> &v2) {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
-inline Float absDot(const Vector &v1, const Vector &v2) {
+template <typename T> inline T absDot(const TVector3<T> &v1, const TVector3<T> &v2) {
 	return std::abs(dot(v1, v2));
 }
 
-inline Vector cross(const Vector &v1, const Vector &v2) {
+template <typename T> inline TVector3<T> cross(const TVector3<T> &v1, const TVector3<T> &v2) {
 	/* Left-handed vector cross product */
-	return Vector(
+	return TVector3<T>(
 		(v1.y * v2.z) - (v1.z * v2.y), 
 		(v1.z * v2.x) - (v1.x * v2.z),
 		(v1.x * v2.y) - (v1.y * v2.x)
 	);
 }
 
-inline Vector normalize(const Vector &v) {
+template <typename T> inline TVector3<T> normalize(const TVector3<T> &v) {
 	return v / v.length();
 }
 
-/** \brief Simple two-dimensional vector class using single precision
- */
-class Vector2 {
-public:
-	Float x, y;
-
-	inline Vector2(Float _x = 0.0f, Float _y = 0.0f)
-		: x(_x), y(_y) {
-	}
-	
-	inline Vector2(const Point2 &p);
-	
-	inline Vector2(Stream *stream) {
-		x = stream->readFloat();
-		y = stream->readFloat();
-	}
-	
-	inline Vector2 operator+(const Vector2 &v) const {
-		return Vector2(x + v.x, y + v.y);
-	}
-
-	inline Vector2 operator-(const Vector2 &v) const {
-		return Vector2(x - v.x, y - v.y);
-	}
-
-	inline Vector2& operator+=(const Vector2 &v) {
-		x += v.x; y += v.y; 
-		return *this;
-	}
-
-	inline Vector2& operator-=(const Vector2 &v) {
-		x -= v.x; y -= v.y;
-		return *this;
-	}
-
-	inline Vector2 operator*(Float f) const {
-		return Vector2(x*f, y*f);
-	}
-
-	inline Vector2 &operator*=(Float f) {
-		x *= f;
-		y *= f;
-		return *this;
-	}
-
-	inline Vector2 operator-() const {
-		return Vector2(-x, -y);
-	}
-
-	inline Vector2 operator/(Float f) const {
-		Float r = 1.0f / f;
-		return Vector2(x * r, y * r);
-	}
-
-	inline Vector2 &operator/=(Float f) {
-		Float r = 1.0f / f;
-		x *= r;
-		y *= r;
-		return *this;
-	}
-
-	inline Float operator[](int i) const {
-		return (&x)[i];
-	}
-
-	inline Float &operator[](int i) {
-		return (&x)[i];
-	}
-
-	inline Float lengthSquared() const {
-		return x*x + y*y;
-	}
-
-	inline Float length() const {
-		return std::sqrt(lengthSquared());
-	}
-
-	inline bool isZero() const {
-		return x==0 && y == 0;
-	}
-
-	inline bool operator==(const Vector2 &v) const {
-		return (v.x == x && v.y == y);
-	}
-	
-	inline bool operator!=(const Vector2 &v) const {
-		return !operator==(v);
-	}
-
-	inline void serialize(Stream *stream) const {
-		stream->writeFloat(x);
-		stream->writeFloat(y);
-	}
-
-	inline std::string toString() const {
-		std::ostringstream oss;
-		oss << "[" << x << ", " << y << "]";
-		return oss.str();
-	}
-};
-
-inline Vector2 normalize(const Vector2 &v) {
-	return v / v.length();
+template <> inline TVector3<int> TVector3<int>::operator/(int s) const {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector3i: Division by zero!");
+#endif
+	return TVector3(x/s, y/s, z/s);
 }
 
-/** \brief Simple two-dimensional vector class using integer values.
- */
-class Vector2i {
-public:
-	int x, y;
+template <> inline TVector3<int> &TVector3<int>::operator/=(int s) {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector3i: Division by zero!");
+#endif
 
-	inline Vector2i(int _x = 0, int _y = 0)
-		: x(_x), y(_y) {
-	}
-	
-	inline Vector2i(Stream *stream) {
-		x = stream->readInt();
-		y = stream->readInt();
-	}
-	
-	
-	inline Vector2i(const Point2i &p);
-	
-	inline Vector2i operator+(const Vector2i &v) const {
-		return Vector2i(x + v.x, y + v.y);
-	}
-
-	inline Vector2i operator-(const Vector2i &v) const {
-		return Vector2i(x - v.x, y - v.y);
-	}
-
-	inline Vector2i& operator+=(const Vector2i &v) {
-		x += v.x; y += v.y; 
-		return *this;
-	}
-
-	inline Vector2i& operator-=(const Vector2i &v) {
-		x -= v.x; y -= v.y;
-		return *this;
-	}
-
-	inline Vector2i operator*(int i) const {
-		return Vector2i(x*i, y*i);
-	}
-
-	inline Vector2i &operator*=(int i) {
-		x *= i;
-		y *= i;
-		return *this;
-	}
-
-	inline Vector2i operator-() const {
-		return Vector2i(-x, -y);
-	}
-
-	inline Vector2i operator/(int i) const {
-		return Vector2i(x / i, y / i);
-	}
-
-	inline Vector2i &operator/=(int i) {
-		x /= i;
-		y /= i;
-		return *this;
-	}
-
-	inline int operator[](int i) const {
-		return (&x)[i];
-	}
-
-	inline int &operator[](int i) {
-		return (&x)[i];
-	}
-
-	inline int lengthSquared() const {
-		return x*x + y*y;
-	}
-
-	int length() const {
-		return (int) std::sqrt((float) lengthSquared());
-	}
-	
-	inline bool isZero() const {
-		return x==0 && y == 0;
-	}
-
-	inline bool operator==(const Vector2i &v) const {
-		return (v.x == x && v.y == y);
-	}
-	
-	inline bool operator!=(const Vector2i &v) const {
-		return !operator==(v);
-	}
-
-	inline void serialize(Stream *stream) const {
-		stream->writeInt(x);
-		stream->writeInt(y);
-	}
-
-	inline std::string toString() const {
-		std::ostringstream oss;
-		oss << "[" << x << ", " << y << "]";
-		return oss.str();
-	}
-};
-
-/** \brief Simple three-dimensional vector class using integer values.
- */
-class Vector3i {
-public:
-	int x, y, z;
-	
-	inline Vector3i(int _x = 0, int _y = 0, int _z = 0)
-		: x(_x), y(_y), z(_z) {
-	}
-	
-	inline Vector3i(const Vector3i &v) 
-		: x(v.x), y(v.y), z(v.z) {
-	}
-	
-	inline Vector3i(const Point3i &v);
-	
-	inline Vector3i(Stream *stream) {
-		x = stream->readInt();
-		y = stream->readInt();
-		z = stream->readInt();
-	}
-	
-	explicit inline Vector3i(const Vector &v) 
-		: x((int) v.x), y((int) v.y), z((int) v.z) {
-	}
-
-	inline Vector3i operator+(const Vector3i &v) const {
-		return Vector3i(x + v.x, y + v.y, z + v.z);
-	}
-
-	inline Vector3i operator-(const Vector3i &v) const {
-		return Vector3i(x - v.x, y - v.y, z - v.z);
-	}
-
-	inline Vector3i& operator+=(const Vector3i &v) {
-		x += v.x; y += v.y; z += v.z;
-		return *this;
-	}
-
-	inline Vector3i& operator-=(const Vector3i &v) {
-		x -= v.x; y -= v.y; z -= v.z;
-		return *this;
-	}
-
-	inline Vector3i operator*(int i) const {
-		return Vector3i(x*i, y*i, z*i);
-	}
-
-	inline Vector3i &operator*=(int i) {
-		x *= i;
-		y *= i;
-		z *= i;
-		return *this;
-	}
-
-	inline Vector3i operator-() const {
-		return Vector3i(-x, -y, -z);
-	}
-
-	inline Vector3i operator/(int i) const {
-		return Vector3i(x / i, y / i, z / i);
-	}
-
-	inline Vector3i &operator/=(int i) {
-		x /= i;
-		y /= i;
-		z /= i;
-		return *this;
-	}
-
-	inline int operator[](int i) const {
-		return (&x)[i];
-	}
-
-	inline int &operator[](int i) {
-		return (&x)[i];
-	}
-
-	inline int lengthSquared() const {
-		return x*x + y*y + z*z;
-	}
-	
-	int length() const {
-		return (int) std::sqrt((float) lengthSquared());
-	}
-
-	inline bool isZero() const {
-		return x==0 && y == 0 && z == 0;
-	}
-
-	inline bool operator==(const Vector3i &v) const {
-		return (v.x == x && v.y == y && v.z == z);
-	}
-	
-	inline bool operator!=(const Vector3i &v) const {
-		return !operator==(v);
-	}
-
-	inline void serialize(Stream *stream) const {
-		stream->writeInt(x);
-		stream->writeInt(y);
-		stream->writeInt(z);
-	}
-
-	inline std::string toString() const {
-		std::ostringstream oss;
-		oss << "[" << x << ", " << y << ", " << z << "]";
-		return oss.str();
-	}
-};
-
-inline Vector::Vector(const Vector3i &v) 
- : x((Float) v.x), y((Float) v.y), z((Float) v.z) {
+	x /= s;
+	y /= s;
+	z /= s;
+	return *this;
 }
 
-class Vector4 {
+
+/**
+ * \headerfile mitsuba/core/vector.h mitsuba/mitsuba.h
+ * \brief Parameterizable four-dimensional vector data structure
+ */
+template <typename T> struct TVector4 {
 public:
-	Float x, y, z, w;
+	T x, y, z, w;
 
-	inline Vector4(Float _x = 0.0f, Float _y = 0.0f, Float _z = 0.0f, Float _w = 0.0f)
-		: x(_x), y(_y), z(_z), w(_w) {
+	/** \brief Construct a new vector without initializing it.
+	 * 
+	 * This construtor is useful when the vector will either not
+	 * be used at all (it might be part of a larger data structure)
+	 * or initialized at a later point in time. Always make sure
+	 * that one of the two is the case! Otherwise your program will do
+	 * computations involving uninitialized memory, which will probably
+	 * lead to a difficult-to-find bug.
+	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
+	TVector4() { }
+#else
+	TVector4() { x = y = z = w = std::numeric_limits<double>::quiet_NaN(); }
+#endif
+
+	/// Initialize the vector with the specified X, Y and Z components
+	TVector4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {  }
+
+	/// Initialize all components of the the vector with the specified value
+	explicit TVector4(T val) : x(val), y(val), z(val), w(val) { }
+
+	/// Initialize the vector with the components of a point data structure
+	template <typename T2> explicit TVector4(const TVector4<T2> &v) 
+		: x((T) v.x), y((T) v.y), z((T) v.z), w((T) v.w) { }
+
+	/// Initialize the vector with the components of another vector data structure
+	template <typename T2> explicit TVector4(const TPoint4<T2> &p) 
+		: x((T) p.x), y((T) p.y), z((T) p.z), w((T) p.w) { }
+
+	/// Unserialize a vector from a binary data stream
+	explicit TVector4(Stream *stream) {
+		x = stream->readElement<T>();
+		y = stream->readElement<T>();
+		z = stream->readElement<T>();
+		w = stream->readElement<T>();
 	}
 
-	inline Vector4(Stream *stream) {
-		x = stream->readFloat();
-		y = stream->readFloat();
-		z = stream->readFloat();
-		w = stream->readFloat();
+	/// Add two vectors and return the result
+	TVector4 operator+(const TVector4 &v) const {
+		return TVector4(x + v.x, y + v.y, z + v.z, w + v.w);
 	}
 
-	inline Vector4 operator+(const Vector4 &v) const {
-		return Vector4(x + v.x, y + v.y, z + v.z, w + v.w);
+	/// Subtract two vectors and return the result
+	TVector4 operator-(const TVector4 &v) const {
+		return TVector4(x - v.x, y - v.y, z - v.z, w - v.w);
 	}
 
-	inline Vector4 operator-(const Vector4 &v) const {
-		return Vector4(x - v.x, y - v.y, z - v.z, w - v.w);
-	}
-
-	inline Vector4& operator+=(const Vector4 &v) {
+	/// Add another vector to the current one
+	TVector4& operator+=(const TVector4 &v) {
 		x += v.x; y += v.y; z += v.z; w += v.w;
 		return *this;
 	}
 
-	inline Vector4& operator-=(const Vector4 &v) {
+	/// Subtract another vector from the current one
+	TVector4& operator-=(const TVector4 &v) {
 		x -= v.x; y -= v.y; z -= v.z; w -= v.w;
 		return *this;
 	}
 
-	inline Vector4 operator*(Float f) const {
-		return Vector4(x*f, y*f, z*f, w*f);
+	/// Multiply the vector by the given scalar and return the result
+	TVector4 operator*(T f) const {
+		return TVector4(x * f, y * f, z * f, w * f);
 	}
 
-	inline Vector4 &operator*=(Float f) {
-		x *= f;
-		y *= f;
-		z *= f;
-		w *= f;
+	/// Multiply the vector by the given scalar
+	TVector4 &operator*=(T f) {
+		x *= f; y *= f; z *= f; w *= f;
 		return *this;
 	}
 
-	inline Vector4 operator-() const {
-		return Vector4(-x, -y, -z, -w);
+	/// Return a negated version of the vector
+	TVector4 operator-() const {
+		return TVector4(-x, -y, -z, -w);
 	}
 
-	inline Vector4 operator/(Float f) const {
+	/// Divide the vector by the given scalar and return the result
+	TVector4 operator/(T f) const {
 #ifdef MTS_DEBUG
-		if (f == 0) 
+		if (f == 0)
 			SLog(EWarn, "Vector4: Division by zero!");
 #endif
-		Float r = 1.0f / f;
-		return Vector4(x * r, y * r, z * r, w * r);
+		T recip = (T) 1 / f;
+		return TVector4(x * recip, y * recip, z * recip, w * recip);
 	}
 
-	inline Vector4 &operator/=(Float f) {
+	/// Divide the vector by the given scalar
+	TVector4 &operator/=(T f) {
 #ifdef MTS_DEBUG
-		if (f == 0) 
+		if (f == 0)
 			SLog(EWarn, "Vector4: Division by zero!");
 #endif
-		Float r = 1.0f / f;
-		x *= r;
-		y *= r;
-		z *= r;
-		w *= r;
+		T recip = (T) 1 / f;
+		x *= recip; y *= recip; z *= recip; w *= recip;
 		return *this;
 	}
 
-	inline Float operator[](int i) const {
+	/// Index into the vector's components
+	T &operator[](int i) {
 		return (&x)[i];
 	}
 
-	inline Float &operator[](int i) {
+	/// Index into the vector's components (const version)
+	T operator[](int i) const {
 		return (&x)[i];
 	}
 
-	inline Float lengthSquared() const {
+	/// Return the squared 2-norm of this vector
+	T lengthSquared() const {
 		return x*x + y*y + z*z + w*w;
 	}
 
-	inline Float length() const {
+	/// Return the 2-norm of this vector
+	T length() const {
 		return std::sqrt(lengthSquared());
 	}
-	
-	inline bool isZero() const {
-		return x==0 && y == 0 && z == 0 && w == 0;
+
+	/// Return whether or not this vector is identically zero
+	bool isZero() const {
+		return x == 0 && y == 0 && z == 0 && w == 0;
 	}
 
-	inline bool operator==(const Vector4 &v) const {
+	/// Equality test
+	bool operator==(const TVector4 &v) const {
 		return (v.x == x && v.y == y && v.z == z && v.w == w);
 	}
-	
-	inline bool operator!=(const Vector4 &v) const {
-		return !operator==(v);
+
+	/// Inequality test
+	bool operator!=(const TVector4 &v) const {
+		return v.x != x || v.y != y || v.z != z || v.w != w;
 	}
 
-	inline void serialize(Stream *stream) const {
-		stream->writeFloat(x);
-		stream->writeFloat(y);
-		stream->writeFloat(z);
-		stream->writeFloat(w);
+	/// Serialize this vector to a binary data stream
+	void serialize(Stream *stream) const {
+		stream->writeElement<T>(x);
+		stream->writeElement<T>(y);
+		stream->writeElement<T>(z);
+		stream->writeElement<T>(w);
 	}
 
-	inline std::string toString() const {
+	/// Return a readable string representation of this vector
+	std::string toString() const {
 		std::ostringstream oss;
 		oss << "[" << x << ", " << y << ", " << z << ", " << w << "]";
 		return oss.str();
 	}
 };
 
-inline Vector4 operator*(Float f, const Vector4 &v) {
+template <typename T> inline TVector4<T> operator*(T f, const TVector4<T> &v) {
 	return v*f;
 }
 
-inline Float dot(const Vector4 &v1, const Vector4 &v2) {
+template <typename T> inline T dot(const TVector4<T> &v1, const TVector4<T> &v2) {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z + v1.w * v2.w;
 }
 
-inline Float absDot(const Vector4 &v1, const Vector4 &v2) {
+template <typename T> inline T absDot(const TVector4<T> &v1, const TVector4<T> &v2) {
 	return std::abs(dot(v1, v2));
 }
 
-inline Vector4 normalize(const Vector4 &v) {
+template <typename T> inline TVector4<T> normalize(const TVector4<T> &v) {
 	return v / v.length();
+}
+
+template <> inline TVector4<int> TVector4<int>::operator/(int s) const {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector4i: Division by zero!");
+#endif
+	return TVector4(x/s, y/s, z/s, w/s);
+}
+
+template <> inline TVector4<int> &TVector4<int>::operator/=(int s) {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector4i: Division by zero!");
+#endif
+
+	x /= s;
+	y /= s;
+	z /= s;
+	w /= s;
+	return *this;
 }
 
 MTS_NAMESPACE_END

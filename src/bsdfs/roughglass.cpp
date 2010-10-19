@@ -327,7 +327,8 @@ public:
 		Frame mFrame(sampleBeckmannD(bRec.sample));
 
 		/* Perfect specular reflection along the microsurface normal */
-		refract(mFrame.toLocal(bRec.wi), bRec.wo, bRec.quantity);
+		if (refract(mFrame.toLocal(bRec.wi), bRec.wo, bRec.quantity) == 0)
+			return Spectrum(0.0f);
 		bRec.wo = mFrame.toWorld(bRec.wo);
 
 		bRec.sampledComponent = 1;
@@ -335,7 +336,7 @@ public:
 
 		if (Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo) >= 0)
 			return Spectrum(0.0f);
-
+			
 		return f(bRec) / pdf(bRec);
 	}
 

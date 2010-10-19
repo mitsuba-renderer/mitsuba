@@ -19,8 +19,10 @@
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/cstream.h>
 #include <mitsuba/core/sstream.h>
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/shvector.h>
+#include <mitsuba/core/appender.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/plugin.h>
 #include <fstream>
@@ -29,7 +31,7 @@
 #ifdef WIN32
 #include <io.h>
 #include <ws2tcpip.h>
-#include "getopt.h"
+#include <mitsuba/core/getopt.h>
 #else
 #include <unistd.h>
 #include <errno.h>
@@ -97,7 +99,7 @@ int ubi_main(int argc, char **argv) {
 		bool quietMode = false;
 		ELogLevel logLevel = EInfo;
 		std::string hostName = getFQDN();
-		FileResolver *resolver = FileResolver::getInstance();
+		FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 		bool hostNameSet = false;
 
 		optind = 1;
@@ -107,7 +109,7 @@ int ubi_main(int argc, char **argv) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
 						for (unsigned int i=0; i<paths.size(); ++i) 
-							resolver->addPath(paths[i]);
+							fileResolver->addPath(paths[i]);
 					}
 					break;
 				case 'c':
@@ -384,15 +386,6 @@ int main(int argc, char **argv) {
 	SHVector::staticInitialization();
 
 #ifdef WIN32
-	char lpFilename[1024];
-	if (GetModuleFileNameA(NULL,
-		lpFilename, sizeof(lpFilename))) {
-		FileResolver *resolver = FileResolver::getInstance();
-		resolver->addPathFromFile(lpFilename);
-	} else {
-		SLog(EWarn, "Could not determine the executable path");
-	}
-
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
@@ -400,27 +393,6 @@ int main(int argc, char **argv) {
 	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
 		SLog(EError, "Could not find the required version of winsock.dll!");
 #endif
-
-#ifdef __LINUX__
-	char exePath[PATH_MAX];
-	memset(exePath, 0, PATH_MAX);
-	FileResolver *resolver = FileResolver::getInstance();
-	if (readlink("/proc/self/exe", exePath, PATH_MAX) != -1) {
-		resolver->addPathFromFile(exePath);
-	} else {
-		SLog(EWarn, "Could not determine the executable path");
-	}
-	resolver->addPath("/usr/share/mitsuba");
-#endif
-
-
-#if defined(__OSX__)
-	MTS_AUTORELEASE_BEGIN()
-	FileResolver *resolver = FileResolver::getInstance();
-	resolver->addPath(__ubi_bundlepath());
-	MTS_AUTORELEASE_END() 
-#endif
-
 
 #if !defined(WIN32)
 	setlocale(LC_NUMERIC, "C");

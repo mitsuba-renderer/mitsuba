@@ -17,6 +17,8 @@
 */
 
 #include <mitsuba/render/texture.h>
+#include <mitsuba/render/shape.h>
+#include <mitsuba/core/properties.h>
 
 MTS_NAMESPACE_BEGIN
 

@@ -24,67 +24,94 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Mesh vertex data structure. Stores 3D coordinates,
- * vertex normals, UV coordinates and a tangent frame
- */
-struct Vertex {
-	Point v;
-	Normal n;
-	Point2 uv;
-	Vector dpdu, dpdv;
-
-	inline bool operator==(const Vertex &vert) const {
-		return (v == vert.v && n == vert.n && uv == vert.uv 
-			     && dpdu == vert.dpdu && dpdv == vert.dpdv);
-	}
-	
-	inline bool operator!=(const Vertex &vert) const {
-		return !operator==(vert);
-	}
-};
-
-/** \brief Triangle class including a collection of routines 
- *   for analysis and transformation. Triangles are stored as
- *   indices into a vertex array
+/** 
+ * \brief Simple triangle class including a collection of routines 
+ * for analysis and transformation. 
+ *
+ * Triangles are stored as indices into a vertex array
  */
 struct MTS_EXPORT_CORE Triangle {
-	/* Indices into a vertex buffer */
-	unsigned int idx[3];
+	/// Indices into a vertex buffer
+	uint32_t idx[3];
 
 	/// Construct an axis-aligned box, which contains the triangle
-	AABB getAABB(const Vertex *buffer) const;
+	inline AABB getAABB(const Point *positions) const {
+		AABB result(positions[idx[0]]);
+		result.expandBy(positions[idx[1]]);
+		result.expandBy(positions[idx[2]]);
+		return result;
+	}
 
 	/**
-	 * Returns the axis-aligned bounding box of a triangle after it has 
-	 * clipped to the extends of another, given AABB. This function uses the 
-	 * Sutherland-Hodgman algorithm to calculate the convex polygon, which
-	 * is created when applying all 6 AABB splitting planes to the triangle.
-	 * Afterwards, the AABB of the newly created convex polygon is returned.
-	 * This function is an important component for efficiently creating
-	 * 'Perfect Split' KD-trees. For more detail, see
-	 * "On building fast kd-Trees for Ray Tracing, and on doing 
+	 * \brief Returns the axis-aligned bounding box of a triangle after it has 
+	 * clipped to the extends of another, given AABB. 
+	 *
+	 * This function uses the Sutherland-Hodgman algorithm to calculate the 
+	 * convex polygon, which is created when applying all 6 AABB splitting 
+	 * planes to the triangle. Afterwards, the AABB of the newly created 
+	 * convex polygon is returned. This function is an important component 
+	 * for efficiently creating 'Perfect Split' KD-trees. For more detail, 
+	 * see "On building fast kd-Trees for Ray Tracing, and on doing 
 	 * that in O(N log N)" by Ingo Wald and Vlastimil Havran
 	 */
-	AABB getClippedAABB(const Vertex *buffer, const AABB &aabb) const;
+	AABB getClippedAABB(const Point *positions, const AABB &aabb) const;
+
+	/// Uniformly sample a point on the triangle and return its normal
+	Point sample(const Point *positions, const Normal *normals,
+			Normal &n, const Point2 &seed) const;
+
+	/// Calculate the surface area of this triangle
+	Float surfaceArea(const Point *positions) const;
 
 	/** \brief Ray-triangle intersection test
 	 * 
 	 * Uses the algorithm presented by Moeller and Trumbore at
 	 * http://www.acm.org/jgt/papers/MollerTrumbore97/code.html
 	 * Returns true if an intersection has been detected
-	 * On success, pT contains the distance from the ray origin to the
-	 * intersection point and pUV contains the intersection point in
+	 * On success, \a t contains the distance from the ray origin to the
+	 * intersection point, and \a u and \a v contain the intersection point in
 	 * the local triangle coordinate system
 	 */
-	bool rayIntersect(const Vertex *buffer, const Ray &ray, Float &u, 
-		Float &v, Float &t) const;
+	FINLINE bool rayIntersect(const Point *positions, const Ray &ray, Float &u, 
+		Float &v, Float &t) const {
+		const Point &v0 = positions[idx[0]];
+		const Point &v1 = positions[idx[1]];
+		const Point &v2 = positions[idx[2]];
 
-	/// Uniformly sample a point on the triangle and return its normal
-	Point sample(const Vertex *buffer, Normal &n, const Point2 &seed) const;
+		/* find vectors for two edges sharing v[0] */
+		Vector edge1 = v1 - v0, edge2 = v2 - v0;
 
-	/// Calculate the surface area of this triangle
-	Float surfaceArea(const Vertex *buffer) const;
+		/* begin calculating determinant - also used to calculate U parameter */
+		Vector pvec = cross(ray.d, edge2);
+
+		/* if determinant is near zero, ray lies in plane of triangle */
+		Float det = dot(edge1, pvec);
+
+		if (det > -1e-8f && det < 1e-8f)
+			return false;
+		Float inv_det = 1.0f / det;
+
+		/* calculate distance from v[0] to ray origin */
+		Vector tvec = ray.o - v0;
+
+		/* calculate U parameter and test bounds */
+		u = dot(tvec, pvec) * inv_det;
+		if (u < 0.0 || u > 1.0)
+			return false;
+
+		/* prepare to test V parameter */
+		Vector qvec = cross(tvec, edge1);
+
+		/* calculate V parameter and test bounds */
+		v = dot(ray.d, qvec) * inv_det;
+		if (v < 0.0 || u + v > 1.0)
+			return false;
+
+		/* ray intersects triangle -> compute t */
+		t = dot(edge2, qvec) * inv_det;
+
+		return true;
+	}
 };
 
 MTS_NAMESPACE_END

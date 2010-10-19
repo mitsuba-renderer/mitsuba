@@ -16,7 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/mitsuba.h>
+#include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
 #include <errno.h>
 
@@ -78,6 +78,10 @@ void Thread::start() {
 	if (!m_logger)
 		m_logger = m_parent->getLogger();
 
+	/* Inherit the parent thread's file resolver if none was set */
+	if (!m_fresolver)
+		m_fresolver = m_parent->getFileResolver();
+
 	m_running = true;
 	m_joined = false;
 
@@ -86,10 +90,10 @@ void Thread::start() {
 		Log(EError, "Could not create thread!");
 }
 
-void Thread::setPriority(EThreadPriority priority) {
+bool Thread::setPriority(EThreadPriority priority) {
 	m_priority = priority;
 	if (!m_running)
-		return;
+		return true;
 
 	Float factor;
 	switch (priority) {
@@ -107,17 +111,25 @@ void Thread::setPriority(EThreadPriority priority) {
 	int retval = pthread_getschedparam(m_thread, &policy, &param);
 	if (retval) {
 		Log(EWarn, "Error in pthread_getschedparam(): %s!", strerror(retval));
-		return;
+		return false;
 	}
 
 	int min = sched_get_priority_min(policy);
 	int max = sched_get_priority_max(policy);
 
+	if (min == max) {
+		Log(EWarn, "Could not adjust the thread priority -- valid range is zero!");
+		return false;
+	}
+
 	param.sched_priority = (int) (min + (max-min)*factor);
 
 	retval = pthread_setschedparam(m_thread, policy, &param);
-	if (retval)
+	if (retval) {
 		Log(EWarn, "Could not adjust the thread priority to %i: %s!", param.sched_priority, strerror(retval));
+		return false;
+	}
+	return true;
 }
 
 void *Thread::dispatch(void *par) {
@@ -226,7 +238,10 @@ std::string Thread::toString() const {
 }
 
 void Thread::staticInitialization() {
-	Assert(sizeof(CacheLineCounter) == 128);
+#if defined(__OSX__)
+	__ubi_autorelease_init();
+#endif
+
 	m_self = new ThreadLocal<Thread>();
 #if defined(__LINUX__) || defined(__OSX__)
 	m_idMutex = new Mutex();
@@ -237,17 +252,16 @@ void Thread::staticInitialization() {
 	mainThread->m_thread = pthread_self();
 	mainThread->m_joinMutex = new Mutex();
 	mainThread->m_joined = false;
+	mainThread->m_fresolver = new FileResolver();
 	m_self->set(mainThread);
 #if defined(__OSX__)
 	mainThread->m_id = 0;
-	__ubi_autorelease_init();
 #elif defined(__LINUX__)
 	m_id = 0;
 #endif
 }
 
 void Thread::staticShutdown() {
-	FileResolver::getInstance()->decRef();
 	getThread()->m_running = false;
 	m_self->set(NULL);
 	delete m_self;

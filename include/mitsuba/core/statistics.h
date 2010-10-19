@@ -30,25 +30,34 @@ MTS_NAMESPACE_BEGIN
 /// Size of the console-based progress message
 #define PROGRESS_MSG_SIZE 56
 
-/// Specifies the number of internal counters associated with each statistics counter
-/// Needed for SMP/ccNUMA systems where different processors might be
-/// contending for a cache line containing a counter. The solution used here
-/// tries to ensure that every processor has its own local counter.
+/**
+ * Specifies the number of internal counters associated with each 
+ * statistics counter. Needed for SMP/ccNUMA systems where different 
+ * processors might be contending for a cache line containing a counter. 
+ * The solution used here tries to ensure that every processor has 
+ * its own local counter.
+ */
 
 #define NUM_COUNTERS       128   // Must be a power of 2
 #define NUM_COUNTERS_MASK (NUM_COUNTERS-1)
 
-/* Determines the multiples (e.g. 1000, 1024) and units */
+/// Determines the multiples (e.g. 1000, 1024) and units
 enum EStatsType {
-	ENumberValue,
-	EByteCount,
-	EPercentage
+	ENumberValue = 0, ///< Simple unitless number, e.g. # of rays
+	EByteCount,       ///< Number of read/written/transferred bytes
+	EPercentage       ///< Percentage with respect to a base counter
 };
 
-struct CacheLineCounter { // Counter in 128 bytes - avoid false sharing
+/**
+ * \brief Counter data structure, which is suitable for ccNUMA/SMP machines
+ *
+ * This counter takes up at least one cache line
+ * to reduce false sharing.
+ */
+struct CacheLineCounter { 
 #if (defined(WIN32) && !defined(WIN64)) || (defined(__POWERPC__) && !defined(_LP64))
 	// WIN32 & Darwin (PPC/32) doesn't support atomic 64 bit increment operations
-	// -> restrict counters to 32bit
+	// -> restrict counters to 32bit :(
 	uint32_t value;
 	uint32_t unused2;
 #else
@@ -58,12 +67,27 @@ struct CacheLineCounter { // Counter in 128 bytes - avoid false sharing
 };
 
 /** \brief General-purpose statistics counter
+ * 
+ * This class implements a simple counter, which can be used to track various
+ * quantities within Mitsuba. At various points during the execution, it is
+ * possible to then call \ref Statistics::printStats() to get a human-readable 
+ * report of their values.
  */
 class MTS_EXPORT_CORE StatsCounter {
 public:
-	/// Create a new statistics counter and associate it with a category:name pair
+	/** 
+	 * \brief Create a new statistics counter 
+	 * 
+	 * \param category Category of the counter when shown in the statistics summary
+	 * \param name     Name of the counter when shown in the statistics summary
+	 * \param type     Characterization of the quantity that will be measured
+	 * \param initial  Initial value of the counter
+	 * \param base     Initial value of the base counter (only for <tt>type == EPercentage</tt>)
+	 */
 	StatsCounter(const std::string &category, const std::string &name,
 		EStatsType type = ENumberValue, uint64_t initial = 0L, uint64_t base = 0L);
+
+	/// Free all storage used by the counter
 	~StatsCounter();
 
 	/// Increment the counter value by one
@@ -91,7 +115,7 @@ public:
 	}
 #endif
 
-	/// Increment the counter amount by the specified amount
+	/// Increment the counter by the specified amount
 #ifdef MTS_NO_STATISTICS
 	inline void operator+=(size_t amount) { }
 #elif defined(WIN64)
@@ -108,7 +132,7 @@ public:
 	}
 #endif
 	
-	/// Increment the base amount by the specified amount (only for use with EPercentage)
+	/// Increment the base counter by the specified amount (only for use with EPercentage)
 #ifdef MTS_NO_STATISTICS
 	inline void incrementBase(size_t amount = 1) { }
 #elif defined(WIN64)
@@ -158,8 +182,6 @@ public:
 	}
 #endif
 
-	/// Set the reference number (only used with the EPercentage counter type)
-
 	/// Sorting by name (for the statistics)
 	bool operator<(const StatsCounter &v) const;
 private:
@@ -200,7 +222,7 @@ public:
 
 	/// Check whether progress bars are enabled
 	static inline bool isEnabled() { return m_enabled; }
-protected:
+private:
 	/// Convert a time value to a human-readable format
 	void printTime(Float time, std::ostream &os) const;
 private:
@@ -247,7 +269,7 @@ protected:
 	Statistics();
 	/// Virtual destructor
 	virtual ~Statistics() { }
-
+private:
 	struct compareCategory {
 		bool operator()(const StatsCounter *c1, const StatsCounter *c2) {
 			if (c1->getCategory() == c2->getCategory())
@@ -255,7 +277,7 @@ protected:
 			return c1->getCategory() < c2->getCategory();
 		}
 	};
-private:
+	 
 	static ref<Statistics> m_instance;
 	std::vector<const StatsCounter *> m_counters;
 	std::vector<std::pair<std::string, std::string> > m_plugins;

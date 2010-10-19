@@ -104,7 +104,7 @@ public:
 	inline const int getBitsPerPixel() const { return m_bpp; }
 
 	/// Return the bitmap size in bytes
-	inline const int getSize() const { return m_size; }
+	inline const size_t getSize() const { return m_size; }
 
 	/// Return some human-readable information about this bitmap
 	std::string toString() const;

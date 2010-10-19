@@ -147,14 +147,16 @@ public:
 		}
 	}
 
-	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 			int sceneResID, int cameraResID, int samplerResID) {
-		SampleIntegrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
+		if (!SampleIntegrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID))
+			return false;
 
 		if (m_subIntegrator == NULL)
 			Log(EError, "No sub-integrator was specified!");
 
-		m_subIntegrator->preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
+		if (!m_subIntegrator->preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID))
+			return false;
 
 		ref<Scheduler> sched = Scheduler::getInstance();
 		m_irrCache = new IrradianceCache(scene->getAABB());
@@ -185,6 +187,7 @@ public:
 			int subIntegratorResID = sched->registerResource(m_subIntegrator);
 			ref<OvertureProcess> proc = new OvertureProcess(job, m_resolution, m_gradients, 
 				m_clampNeighbor, m_clampScreen, m_influenceMin, m_influenceMax, m_quality);
+			m_proc = proc;
 			proc->bindResource("scene", sceneResID);
 			proc->bindResource("camera", cameraResID);
 			proc->bindResource("subIntegrator", subIntegratorResID);
@@ -192,9 +195,12 @@ public:
 			sched->schedule(proc);
 			sched->unregisterResource(subIntegratorResID);
 			sched->wait(proc);
+			m_proc = NULL;
 
-			if (proc->getReturnStatus() != ParallelProcess::ESuccess) 
-				Log(EError, "The overture pass did not complete sucessfully!");
+			if (proc->getReturnStatus() != ParallelProcess::ESuccess) {
+				Log(EWarn, "The overture pass did not complete sucessfully!");
+				return false;
+			}
 
 			ref<const IrradianceRecordVector> vec = proc->getSamples();
 			Log(EDebug, "Overture pass generated %i irradiance samples", vec->size());
@@ -202,6 +208,16 @@ public:
 				m_irrCache->insert(new IrradianceCache::Record((*vec)[i]));
 
 			m_irrCache->setQuality(m_quality * m_qualityAdjustment);
+		}
+		return true;
+	}
+
+	void cancel() {
+		if (m_proc) {
+			Scheduler::getInstance()->cancel(m_proc);
+		} else {
+			SampleIntegrator::cancel();
+			m_subIntegrator->cancel();
 		}
 	}
 
@@ -316,6 +332,7 @@ private:
 	mutable ThreadLocal<Sampler> m_sampleGenerator;
 	mutable ref<IrradianceCache> m_irrCache;
 	ref<SampleIntegrator> m_subIntegrator;
+	ref<ParallelProcess> m_proc;
 	int m_resolution;
 	Float m_influenceMin, m_influenceMax;
 	Float m_quality, m_qualityAdjustment;

@@ -19,22 +19,41 @@
 #include <mitsuba/core/platform.h>
 #include <xercesc/parsers/SAXParser.hpp>
 #include <mitsuba/render/shandler.h>
+#include <mitsuba/core/fresolver.h>
+#include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
 
-SceneHandler::SceneHandler() : m_isIncludedFile(false) {
+SceneHandler::SceneHandler(const ParameterMap &params, NamedObjectMap *namedObjects,
+	bool isIncludedFile) : m_params(params), m_namedObjects(namedObjects),
+	m_isIncludedFile(isIncludedFile) {
 	m_pluginManager = PluginManager::getInstance();
+
+	if (m_isIncludedFile) {
+		SAssert(namedObjects != NULL);
+	} else {
+		SAssert(namedObjects == NULL);
+		m_namedObjects = new NamedObjectMap();
+	}
+
 #if !defined(WIN32)
 	setlocale(LC_NUMERIC, "C");
 #endif
 }
 
-SceneHandler::SceneHandler(const std::map<std::string, std::string> &params,
-	bool isIncludedFile) : m_params(params), m_isIncludedFile(isIncludedFile) {
-	m_pluginManager = PluginManager::getInstance();
+SceneHandler::~SceneHandler() {
+	clear();
+	if (!m_isIncludedFile)
+		delete m_namedObjects;
 }
 
-SceneHandler::~SceneHandler() {
+void SceneHandler::clear() {
+	if (!m_isIncludedFile) {
+		for (NamedObjectMap::iterator it = m_namedObjects->begin();
+			it != m_namedObjects->end(); ++it)
+			(*it).second->decRef();
+		m_namedObjects->clear();
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -42,7 +61,7 @@ SceneHandler::~SceneHandler() {
 // -----------------------------------------------------------------------
 
 void SceneHandler::startDocument() {
-	m_objects.clear();
+	clear();
 }
 
 void SceneHandler::endDocument() {
@@ -100,7 +119,7 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 void SceneHandler::endElement(const XMLCh* const xmlName) {
 	std::string name = transcode(xmlName);
 	ParseContext &context = m_context.top();
-	std::string type = toLowerCase(context.attributes["type"]);
+	std::string type = boost::to_lower_copy(context.attributes["type"]);
 	context.properties.setPluginName(type);
 	if (context.attributes.find("id") != context.attributes.end())
 		context.properties.setID(context.attributes["id"]);
@@ -151,9 +170,9 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			ReconstructionFilter::m_theClass, context.properties));
 	} else if (name == "ref") {
 		std::string id = context.attributes["id"];
-		if (m_objects.find(id) == m_objects.end())
+		if (m_namedObjects->find(id) == m_namedObjects->end())
 			SLog(EError, "Referenced object '%s' not found!", id.c_str());
-		object = m_objects[id];
+		object = (*m_namedObjects)[id];
 	/* Construct properties */
 	} else if (name == "integer") {
 		char *end_ptr = NULL;
@@ -206,8 +225,8 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 
 		if (u.lengthSquared() == 0) {
 			/* If 'up' was not specified, use an arbitrary axis */
-			Vector v;
-			coordinateSystem(normalize(t-o), u, v);
+			Vector unused;
+			coordinateSystem(normalize(t-o), u, unused);
 		}
 
 		Transform lookAt = Transform::lookAt(o, t, u);
@@ -292,10 +311,10 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			specValue);
 	} else if (name == "blackbody") {
 		Float temperature = parseFloat(name, context.attributes["temperature"]);
-		BlackBodySpectrum *spec = new BlackBodySpectrum(temperature);
-		context.parent->properties.setSpectrum(context.attributes["name"],
-			Spectrum(spec));
-		delete spec;
+		BlackBodySpectrum bb(temperature);
+		Spectrum discrete;
+		discrete.fromSmoothSpectrum(&bb);
+		context.parent->properties.setSpectrum(context.attributes["name"], discrete);
 	} else if (name == "spectrum") {
 		std::vector<std::string> tokens = tokenize(
 			context.attributes["value"], ", ");
@@ -306,7 +325,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				Spectrum(value[0]));
 		} else {
 			if (tokens[0].find(':') != std::string::npos) {
-				InterpolatedSpectrum spec(tokens.size());
+				InterpolatedSpectrum interp(tokens.size());
 				/* Wavelength -> Value mapping */
 				for (size_t i=0; i<tokens.size(); i++) {
 					std::vector<std::string> tokens2 = tokenize(tokens[i], ":");
@@ -314,10 +333,12 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 						SLog(EError, "Invalid spectrum->value mapping specified");
 					Float wavelength = parseFloat(name, tokens2[0]);
 					Float value = parseFloat(name, tokens2[1]);
-					spec.appendSample(wavelength, value);
+					interp.appendSample(wavelength, value);
 				}
+				Spectrum discrete;
+				discrete.fromSmoothSpectrum(&interp);
 				context.parent->properties.setSpectrum(context.attributes["name"],
-					Spectrum(&spec));
+					discrete);
 			} else {
 				if (tokens.size() != SPECTRUM_SAMPLES)
 					SLog(EError, "Invalid spectrum value specified (incorrect length)");
@@ -333,23 +354,23 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		/* Do nothing */
 	} else if (name == "include") {
 		SAXParser* parser = new SAXParser();
-		FileResolver *resolver = FileResolver::getInstance();
-		std::string schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
+		FileResolver *resolver = Thread::getThread()->getFileResolver();
+		fs::path schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
 
 		/* Check against the 'scene.xsd' XML Schema */
 		parser->setDoSchema(true);
 		parser->setValidationSchemaFullChecking(true);
 		parser->setValidationScheme(SAXParser::Val_Always);
-		parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
+		parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 
 		/* Set the handler and start parsing */
-		SceneHandler *handler = new SceneHandler(m_params, true);
+		SceneHandler *handler = new SceneHandler(m_params, m_namedObjects, true);
 		parser->setDoNamespaces(true);
 		parser->setDocumentHandler(handler);
 		parser->setErrorHandler(handler);
-		std::string filename = resolver->resolve(context.attributes["filename"]);
-		SLog(EInfo, "Parsing included file \"%s\" ..", filename.c_str());
-		parser->parse(filename.c_str());
+		fs::path path = resolver->resolve(context.attributes["filename"]);
+		SLog(EInfo, "Parsing included file \"%s\" ..", path.filename().c_str());
+		parser->parse(path.file_string().c_str());
 
 		object = handler->getScene();
 		delete parser;
@@ -363,9 +384,10 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		std::string nodeName = context.attributes["name"];
 
 		if (id != "" && name != "ref") {
-			if (m_objects.find(id) != m_objects.end())
+			if (m_namedObjects->find(id) != m_namedObjects->end())
 				SLog(EError, "Duplicate ID '%s' used in scene description!", id.c_str());
-			m_objects[id] = object;
+			(*m_namedObjects)[id] = object;
+			object->incRef();
 		}
 
 		/* If the object has a parent, add it to the parent's children list */

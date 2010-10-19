@@ -18,6 +18,7 @@
 
 #include "glwidget.h"
 #include "preview.h"
+#include <mitsuba/core/timer.h>
 
 PreviewThread::PreviewThread(Device *parentDevice, Renderer *parentRenderer)
 	: Thread("prev"), m_parentDevice(parentDevice), m_parentRenderer(parentRenderer), 
@@ -36,7 +37,6 @@ PreviewThread::PreviewThread(Device *parentDevice, Renderer *parentRenderer)
 	m_accumBuffer = NULL;
 	m_sleep = false;
 	m_started = new WaitFlag();
-	m_fileResolver = FileResolver::getInstance();
 
 	m_accumProgram = m_renderer->createGPUProgram("Accumulation program");
 	m_accumProgram->setSource(GPUProgram::EVertexProgram,
@@ -257,7 +257,6 @@ void PreviewThread::run() {
 	MTS_AUTORELEASE_BEGIN()
 
 	bool initializedGraphics = false;
-	FileResolver::setInstance(m_fileResolver);
 
 	try {
 		m_device->init(m_parentDevice);
@@ -282,7 +281,8 @@ void PreviewThread::run() {
 			PreviewQueueEntry target;
 
 			m_mutex->lock();
-			while (!(m_quit || (m_context != NULL && m_context->mode == EPreview 
+			while (!(m_quit || (m_context != NULL && m_context->mode == EPreview
+					&& m_context->previewMethod != EDisabled 
 					&& ((m_readyQueue.size() != 0 && !m_motion) || m_recycleQueue.size() != 0))))
 				m_queueCV->wait();
 
@@ -333,7 +333,9 @@ void PreviewThread::run() {
 				target.sync->incRef();
 			}
 
-			if (m_context->previewMethod == ERayTrace || m_context->previewMethod == ERayTraceCoherent) {
+			if (m_context->previewMethod == EDisabled) {
+				/* Do nothing, fall asleep in the next iteration */
+			} else if (m_context->previewMethod == ERayTrace || m_context->previewMethod == ERayTraceCoherent) {
 				if (m_previewProc == NULL || m_previewProc->getScene() != m_context->scene) 
 					m_previewProc = new PreviewProcess(m_context->scene, m_context->sceneResID, 32);
 
@@ -467,7 +469,7 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 
 	Point2 jitter(.5f, .5f);
 	if (!m_motion)
-		jitter -= Point2(m_random->nextFloat(), m_random->nextFloat());
+		jitter -= Vector2(m_random->nextFloat(), m_random->nextFloat());
 
 	m_mutex->lock();
 	const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>
@@ -486,7 +488,7 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	m_renderer->beginDrawingMeshes();
 	for (unsigned int j=0; j<meshes.size(); j++) {
 		m_shaderManager->configure(vpl, meshes[j]->getBSDF(), 
-			meshes[j]->getLuminaire(), camPos);
+			meshes[j]->getLuminaire(), camPos, !meshes[j]->hasVertexNormals());
 		m_renderer->drawTriMesh(meshes[j]);
 		m_shaderManager->unbind();
 	}

@@ -18,8 +18,6 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/renderjob.h>
-#include <mitsuba/render/texture.h>
-#include <mitsuba/render/util.h>
 #include <mitsuba/core/plugin.h>
 
 MTS_NAMESPACE_BEGIN
@@ -64,12 +62,30 @@ Scene::Scene(const Properties &props)
 	if (props.hasProperty("kdTraversalCost"))
 		m_kdtree->setTraversalCost(props.getFloat("kdTraversalCost"));
 	/* kd-tree construction: Bonus factor for cutting away regions of empty space */
-	if (props.hasProperty("kdEmptyBonus"))
-		m_kdtree->setEmptyBonus(props.getFloat("kdEmptyBonus"));
+	if (props.hasProperty("kdEmptySpaceBonus"))
+		m_kdtree->setEmptySpaceBonus(props.getFloat("kdEmptySpaceBonus"));
 	/* kd-tree construction: A kd-tree node containing this many or fewer 
 	   primitives will not be split */
 	if (props.hasProperty("kdStopPrims"))
 		m_kdtree->setStopPrims(props.getInteger("kdStopPrims"));
+	/* kd-tree construction: Maximum tree depth */
+	if (props.hasProperty("kdMaxDepth"))
+		m_kdtree->setMaxDepth(props.getInteger("kdMaxDepth"));
+	/* kd-tree construction: Specify the number of primitives, at which the 
+	   builder will switch from (approximate) Min-Max binning to the accurate 
+	   O(n log n) SAH-based optimization method. */
+	if (props.hasProperty("kdExactPrimitiveThreshold"))
+		m_kdtree->setExactPrimitiveThreshold(props.getInteger("kdExactPrimitiveThreshold"));
+	/* kd-tree construction: use multiple processors? */
+	if (props.hasProperty("kdParallelBuild"))
+		m_kdtree->setParallelBuild(props.getBoolean("kdParallelBuild"));
+	/* kd-tree construction: specify whether or not bad splits can be "retracted". */
+	if (props.hasProperty("kdRetract"))
+		m_kdtree->setRetract(props.getBoolean("kdRetract"));
+	/* kd-tree construction: Set the number of bad refines allowed to happen
+	   in succession before a leaf node will be created.*/
+	if (props.hasProperty("kdMaxBadRefines"))
+		m_kdtree->setMaxBadRefines(props.getInteger("kdMaxBadRefines"));
 }
 
 Scene::Scene(Scene *scene) : NetworkedObject(Properties()) {
@@ -115,9 +131,14 @@ Scene::Scene(Stream *stream, InstanceManager *manager)
 	m_kdtree = new KDTree();
 	m_kdtree->setIntersectionCost(stream->readFloat());
 	m_kdtree->setTraversalCost(stream->readFloat());
-	m_kdtree->setEmptyBonus(stream->readFloat());
+	m_kdtree->setEmptySpaceBonus(stream->readFloat());
 	m_kdtree->setStopPrims(stream->readInt());
 	m_kdtree->setClip(stream->readBool());
+	m_kdtree->setMaxDepth(stream->readUInt());
+	m_kdtree->setExactPrimitiveThreshold(stream->readUInt());
+	m_kdtree->setParallelBuild(stream->readBool());
+	m_kdtree->setRetract(stream->readBool());
+	m_kdtree->setMaxBadRefines(stream->readUInt());
 	m_importanceSampleLuminaires = stream->readBool();
 	m_testType = (ETestType) stream->readInt();
 	m_testThresh = stream->readFloat();
@@ -218,7 +239,7 @@ void Scene::configure() {
 		Float maxExtents = std::max(extents.x, extents.y);
 		Float distance = maxExtents/(2.0f * std::tan(45 * .5f * M_PI/180));
 
-		props.setTransform("toWorld", Transform::translate(Vector(center.x, center.y, aabb.getMinimum().x - distance)));
+		props.setTransform("toWorld", Transform::translate(Vector(center.x, center.y, aabb.getMinimum().z - distance)));
 		props.setFloat("fov", 45.0f);
 
 		m_camera = static_cast<Camera *> (PluginManager::getInstance()->createObject(Camera::m_theClass, props));
@@ -251,7 +272,7 @@ void Scene::initialize() {
 
 		/* Build the kd-tree */
 		m_kdtree->build();
-	
+
 		m_aabb = m_kdtree->getAABB();
 		m_bsphere = m_kdtree->getBSphere();
 		for (unsigned int i=0; i<m_media.size(); i++) {
@@ -284,23 +305,26 @@ void Scene::initialize() {
 	}
 }
 
-void Scene::preprocess(RenderQueue *queue, const RenderJob *job, 
+bool Scene::preprocess(RenderQueue *queue, const RenderJob *job, 
 		int sceneResID, int cameraResID, int samplerResID) {
 	/* Pre-process step for the main scene integrator */
-	m_integrator->preprocess(this, queue, job,
-		sceneResID, cameraResID, samplerResID);
+	if (!m_integrator->preprocess(this, queue, job,
+		sceneResID, cameraResID, samplerResID))
+		return false;
 
 	/* Pre-process step for all sub-surface integrators */
 	for (std::vector<Subsurface *>::iterator it = m_ssIntegrators.begin();
 		it != m_ssIntegrators.end(); ++it) 
-		(*it)->preprocess(this, queue, job, 
-			sceneResID, cameraResID, samplerResID);
+		if (!(*it)->preprocess(this, queue, job, 
+			sceneResID, cameraResID, samplerResID))
+			return false;
 
 	/* Pre-process step for all participating media */
 	for (std::vector<Medium *>::iterator it = m_media.begin();
 		it != m_media.end(); ++it) 
 		(*it)->preprocess(this, queue, job,
 			sceneResID, cameraResID, samplerResID);
+	return true;
 }
 
 bool Scene::render(RenderQueue *queue, const RenderJob *job,
@@ -311,6 +335,9 @@ bool Scene::render(RenderQueue *queue, const RenderJob *job,
 }
 
 void Scene::cancel() {
+	for (std::vector<Subsurface *>::iterator it = m_ssIntegrators.begin();
+		it != m_ssIntegrators.end(); ++it) 
+		(*it)->cancel();
 	m_integrator->cancel();
 }
 
@@ -404,7 +431,7 @@ void Scene::sampleEmission(EmissionRecord &eRec, Point2 &sample1, Point2 &sample
 	luminaire->sampleEmission(eRec, sample1, sample2);
 	eRec.pdfArea *= lumPdf;
 	eRec.luminaire = luminaire;
-	Float cosTheta = eRec.sRec.n.isZero() ? (Float) 1 : absDot(eRec.sRec.n, eRec.d);
+	Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface) ? absDot(eRec.sRec.n, eRec.d) : 1;
 	eRec.P *= cosTheta / (eRec.pdfArea * eRec.pdfDir);
 }
 
@@ -462,7 +489,7 @@ bool Scene::sampleDistance(const Ray &ray, Float maxDist, MediumSamplingRecord &
 	} else {
 		mRec.pdf = 1.0f;
 		mRec.miWeight = 1.0f;
-		mRec.attenuation = 1.0f;
+		mRec.attenuation = Spectrum(1.0f);
 		return false;
 	}
 }
@@ -583,9 +610,14 @@ void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 
 	stream->writeFloat(m_kdtree->getIntersectionCost());
 	stream->writeFloat(m_kdtree->getTraversalCost());
-	stream->writeFloat(m_kdtree->getEmptyBonus());
+	stream->writeFloat(m_kdtree->getEmptySpaceBonus());
 	stream->writeInt(m_kdtree->getStopPrims());
 	stream->writeBool(m_kdtree->getClip());
+	stream->writeUInt(m_kdtree->getMaxDepth());
+	stream->writeUInt(m_kdtree->getExactPrimitiveThreshold());
+	stream->writeBool(m_kdtree->getParallelBuild());
+	stream->writeBool(m_kdtree->getRetract());
+	stream->writeUInt(m_kdtree->getMaxBadRefines());
 	stream->writeBool(m_importanceSampleLuminaires);
 	stream->writeInt(m_testType);
 	stream->writeFloat(m_testThresh);
@@ -614,20 +646,6 @@ void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeUInt((unsigned int) m_netObjects.size());
 	for (size_t i=0; i<m_netObjects.size(); ++i) 
 		manager->serialize(stream, m_netObjects[i]);
-}
-
-template<class T> std::string listToString(const std::vector<T> &vec) {
-	std::ostringstream oss;
-	oss << "{" << endl;
-	for (size_t i=0; i<vec.size(); ++i) {
-		oss << "  " << indent(vec[i]->toString());
-		if (i != vec.size()-1)
-			oss << "," << endl;
-		else
-			oss << endl;
-	}
-	oss << "}";
-	return oss.str();
 }
 
 std::string Scene::toString() const {

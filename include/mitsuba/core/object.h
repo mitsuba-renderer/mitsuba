@@ -24,42 +24,52 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Base class of all Mitsuba classes.
+/**
+ * \headerfile mitsuba/core/object.h mitsuba/mitsuba.h
+ * \brief Parent of all Mitsuba classes.
  *
- * Contains functions relevant to every object
- * such as reference counting, limited type
- * introspection and lifetime management.
+ * Contains functions relevant to every object such as reference counting, 
+ * limited type introspection and lifetime management.
  *
- * @see ref, Class
+ * \sa ref, Class
  */
 class MTS_EXPORT_CORE Object {
 public:
-	/// Object constructor
+	/// Construct a new object 
 	Object();
 
-	/// Get the reference count
+	/// Return the current reference count
 	inline int getRefCount() const;
 
 	/** \brief Increase the reference count of the
-	 * object.
+	 * object by one.
 	 */
 	void incRef() const;
 
-	/** \brief Decrease the reference count object
-	 * of the object. It will automatically be de-
-	 * allocated once the reference count reaches
-	 * zero.
+	/** \brief Decrease the reference count of 
+	 * the object and possibly deallocate it. 
+	 *
+	 * The object will automatically be deallocated once 
+	 * the reference count reaches zero.
 	 */
 	void decRef() const;
 
 	/// Retrieve this object's class
 	virtual const Class *getClass() const;
 
-	/// Convert to string
+	/**
+	 * \brief Return a human-readable string representation
+	 * of the object's contents.
+	 *
+	 * This function is mainly useful for debugging purposes
+	 * and should ideally be implemented by all subclasses.
+	 * The default implementation simply returns <tt>MyObject[unknown]</tt>,
+	 * where <tt>MyObject</tt> is the name of the subclass.
+	 */
 	virtual std::string toString() const;
 protected:
 	/** \brief Virtual private deconstructor.
-	 * (Will only be called by 'ref')
+	 * (Will only be called by \ref ref)
 	 */
 	virtual ~Object();
 private:
@@ -70,7 +80,7 @@ private:
 	mutable pthread_mutex_t m_refLock;
 #endif
 public:
-	static Class *m_theClass;
+	static Class *m_theClass; ///< Pointer to the object's class descriptor
 };
 
 inline int Object::getRefCount() const {

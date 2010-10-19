@@ -22,12 +22,12 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Utility class, which represents a discrete probability
- * distribution function along with its cumulative distribution
- * function. Can transform uniformly distributed samples so
- * that they match the stored distribution.
+ * \brief Stores a discrete probability distribution
+ * 
+ * This class can be used to transform uniformly distributed samples
+ * so that they match the stored distribution.
  */
-class DiscretePDF {
+struct DiscretePDF {
 public:
 	/// Allocate a PDF with the given number of entries
 	explicit inline DiscretePDF(int nEntries = 0) : m_ready(false) {
@@ -41,7 +41,7 @@ public:
 		m_cdf.push_back(0.0f);
 	}
 
-	/// Return the amount of entries
+	/// Return the number of entries
 	inline size_t size() const {
 		return m_pdf.size();
 	}
@@ -67,9 +67,9 @@ public:
 	}
 
 	/**
-	 * Normalize the PDF and build the associated cumulative 
-	 * distribution function. Returns the sum of all unnormalized 
-	 * PDF values.
+	 * \brief Normalize the PDF and build the associated cumulative 
+	 * distribution function.
+	 * \return Sum of all unnormalized PDF values
 	 */
 	inline Float build() {
 		SAssert(m_pdf.size() > 0 && !m_ready);
@@ -87,8 +87,9 @@ public:
 	}
 
 	/**
-	 * Transform a uniformly distributed sample. Returns the
-	 * PDF entry index.
+	 * \brief %Transform a uniformly distributed sample
+	 * \param[in] sampleValue Uniform sample
+	 * \return Sample index 
 	 */
 	inline int sample(Float sampleValue) const {
 		std::vector<Float>::const_iterator entry = 
@@ -98,8 +99,10 @@ public:
 	}
 
 	/**
-	 * Transform a uniformly distributed sample. Returns the
-	 * PDF entry index and the probability value at that index
+	 * \brief %Transform a uniformly distributed sample. 
+	 * \param[in] sampleValue Uniform sample
+	 * \param[out] pdf Probability value of the sample
+	 * \return Sample index 
 	 */
 	inline int sample(Float sampleValue, Float &pdf) const {
 		int index = sample(sampleValue);
@@ -108,9 +111,11 @@ public:
 	}
 
 	/**
-	 * Transform a uniformly distributed sample. Returns the
-	 * PDF entry index. The original sample is transformed so 
-	 * that it can be re-used.
+	 * \brief %Transform a uniformly distributed sample. 
+	 * 
+	 * The original sample is adjusted so that it can be reused.
+	 * \param[in,out] sampleValue Uniform sample
+	 * \return Sample index 
 	 */
 	inline int sampleReuse(Float &sampleValue) const {
 		int index = sample(sampleValue);
@@ -120,9 +125,12 @@ public:
 	}
 
 	/**
-	 * Transform a uniformly distributed sample. Returns the
-	 * PDF entry index and the probability value at that index.
-	 * The original sample is transformed so that it can be re-used.
+	 * \brief %Transform a uniformly distributed sample. 
+	 * 
+	 * The original sample is adjusted so that it can be reused.
+	 * \param[in,out] sampleValue Uniform sample
+	 * \param[out] pdf Probability value of the sample
+	 * \return Sample index 
 	 */
 	inline int sampleReuse(Float &sampleValue, Float &pdf) const {
 		int index = sample(sampleValue, pdf);

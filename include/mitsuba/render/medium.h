@@ -21,16 +21,63 @@
 
 #include <mitsuba/core/netobject.h>
 #include <mitsuba/core/aabb.h>
-#include <mitsuba/render/records.h>
 
 MTS_NAMESPACE_BEGIN
+/**
+ * Data record associated with the sampling procedure responsible for
+ * choosing a point on the in-scattering line integral (while solving 
+ * the radiative transfer equation using Monte Carlo methods).
+ */
+struct MTS_EXPORT_RENDER MediumSamplingRecord {
+public:
+	inline MediumSamplingRecord() : medium(NULL) { }
 
-class Scene;
-class Sampler;
-class RenderQueue;
-class RenderJob;
+	/// Return a string representation
+	std::string toString() const;
+public:
+	/* Traveled distance */
+	Float t;
 
-/** \brief Abstract phase function
+	/* Interaction point */
+	Point p;
+
+	/* Local particle orientation */
+	Vector orientation;
+
+	/* Reference to the associated medium */
+	const Medium *medium;
+
+	/* Specifies the attenuation along the segment [mint, t].
+	   When sampling a distance fails, this contains the 
+	   attenuation along the whole ray.
+	*/
+	Spectrum attenuation;
+
+	/* The medium's absorption coefficient at that point */
+	Spectrum sigmaA;
+
+	/* The medium's scattering coefficient at that point */
+	Spectrum sigmaS;
+
+	/**
+	 * Can contain two things:
+	 * If a medium interaction occurred, this records the probability 
+	 * of having sampled the point p. Otherwise, it contains the
+	 * probability of moving through the medium without an interaction.
+	 */
+	Float pdf;
+
+	/// Max. albedo over all spectral samples
+	Float albedo;
+
+	/// Multiple importance sampling weight
+	Float miWeight;
+};
+
+/** \brief Abstract phase function.
+ *
+ * The convention used here is that the incident and exitant
+ * direction arguments point away from the scattering event (similar to BSDFs).
  */
 class MTS_EXPORT_RENDER PhaseFunction : public ConfigurableObject {
 public:
@@ -39,7 +86,7 @@ public:
 		EDelta
 	};
 
-	/// Evaluate the phase function for a pair of directions (wi, wo)
+	/// Evaluate the phase function for an outward-pointing pair of directions (wi, wo)
 	virtual Spectrum f(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const = 0;
 
 	/**

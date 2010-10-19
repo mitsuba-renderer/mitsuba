@@ -17,6 +17,10 @@
 */
 
 #include <mitsuba/render/shape.h>
+#include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/subsurface.h>
+#include <mitsuba/core/properties.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -25,136 +29,136 @@ MTS_NAMESPACE_BEGIN
  */
 
 class Sphere : public Shape {
-private:
-	Point m_center;
-	Float m_radius;
 public:
 	Sphere(const Properties &props) : Shape(props) {
-		m_radius = props.getFloat("radius", 1.0f); // Negative radius -> inside-out sphere
-		if (m_objectToWorld.hasScale()) 
-			Log(EError, "The scale needs to be specified using the 'radius' parameter!");
+		/**
+		 * There are two ways of instantiating spheres: either,
+		 * one can specify a linear transformation to from the
+		 * unit sphere using the 'toWorld' parameter, or one
+		 * can explicitly specify a radius and center.
+		 */
+		if (props.hasProperty("center") && props.hasProperty("radius")) {
+			m_objectToWorld = 
+				Transform::translate(Vector(props.getPoint("center")));
+			m_radius = props.getFloat("radius");
+		} else {
+			Transform objectToWorld = props.getTransform("toWorld", Transform());
+			m_radius = objectToWorld(Vector(1,0,0)).length();
+			// Remove the scale from the object-to-world trasnsform
+			m_objectToWorld = objectToWorld * Transform::scale(Vector(1/m_radius));
+		}
+
+		/// Are the sphere normals pointing inwards? default: no
+		m_inverted = props.getBoolean("inverted", false);
+		m_center = m_objectToWorld(Point(0,0,0));
+		m_worldToObject = m_objectToWorld.inverse();
+		m_invSurfaceArea = 1/(4*M_PI*m_radius*m_radius);
 	}
-	
+
 	Sphere(Stream *stream, InstanceManager *manager) 
 			: Shape(stream, manager) {
+		m_objectToWorld = Transform(stream);
 		m_radius = stream->readFloat();
-		configure();
+		m_center = Point(stream);
+		m_inverted = stream->readBool();
+		m_worldToObject = m_objectToWorld.inverse();
+		m_invSurfaceArea = 1/(4*M_PI*m_radius*m_radius);
 	}
 
-	void configure() {
-		Shape::configure();
+	void serialize(Stream *stream, InstanceManager *manager) const {
+		Shape::serialize(stream, manager);
+		m_objectToWorld.serialize(stream);
+		stream->writeFloat(m_radius);
+		m_center.serialize(stream);
+		stream->writeBool(m_inverted);
+	}
 
-		m_surfaceArea = 4*M_PI*m_radius*m_radius;
-		m_invSurfaceArea = 1.0f / m_surfaceArea;
-		m_center = m_objectToWorld(Point(0,0,0));
+	AABB getAABB() const {
+		AABB aabb;
 		Float absRadius = std::abs(m_radius);
-		m_aabb.min = m_center - Vector(absRadius, absRadius, absRadius);
-		m_aabb.max = m_center + Vector(absRadius, absRadius, absRadius);
-		m_bsphere.center = m_center;
-		m_bsphere.radius = absRadius;
+		aabb.min = m_center - Vector(absRadius);
+		aabb.max = m_center + Vector(absRadius);
+		return aabb;
 	}
 
-	bool rayIntersect(const Ray &ray, Float start, Float end, Float &t) const {
+	Float getSurfaceArea() const {
+		return 4*M_PI*m_radius*m_radius;
+	}
+
+	bool rayIntersect(const Ray &ray, Float mint, Float maxt, Float &t, void *tmp) const {
+		Vector ro = ray.o - m_center;
+
 		/* Transform into the local coordinate system and normalize */
-		double nearT, farT;
-		const double ox = (double) ray.o.x - (double) m_center.x, 
-			oy = (double) ray.o.y - (double) m_center.y, 
-			oz = (double) ray.o.z - (double) m_center.z;
-		const double dx = ray.d.x, dy = ray.d.y, dz = ray.d.z;
-		const double A = dx*dx + dy*dy + dz*dz;
-		const double B = 2 * (dx*ox + dy*oy + dz*oz);
-		const double C = ox*ox + oy*oy + oz*oz - m_radius * m_radius;
+		Float A = ray.d.x*ray.d.x + ray.d.y*ray.d.y + ray.d.z*ray.d.z;
+		Float B = 2 * (ray.d.x*ro.x + ray.d.y*ro.y + ray.d.z*ro.z);
+		Float C = ro.x*ro.x + ro.y*ro.y +
+				ro.z*ro.z - m_radius*m_radius;
 
-		if (!solveQuadraticDouble(A, B, C, nearT, farT))
+		Float nearT, farT;
+		if (!solveQuadratic(A, B, C, nearT, farT))
 			return false;
 
-		if (nearT > end || farT < start)
+		if (nearT > maxt || farT < mint)
 			return false;
-		if (nearT < start) {
-			if (farT > end)
+		if (nearT < mint) {
+			if (farT > maxt)
 				return false;
-			t = (Float) farT;		
+			t = farT;		
 		} else {
-			t = (Float) nearT;
+			t = nearT;
 		}
+
 		return true;
 	}
 
-	bool rayIntersect(const Ray &ray, Intersection &its) const {
-		if (!rayIntersect(ray, ray.mint, ray.maxt, its.t)) 
-			return false;
-		its.p = ray(its.t);
-
-		Point local = m_worldToObject(its.p);
-		Float absRadius = std::abs(m_radius);
-		Float theta = std::acos(local.z / absRadius);
+	void fillIntersectionRecord(const Ray &ray, Float t, 
+			const void *temp, Intersection &its) const {
+		its.t = t;
+		its.p = ray(t);
+		Vector local = m_worldToObject(its.p - m_center);
+		Float theta = std::acos(std::min(std::max(local.z/m_radius, 
+				-(Float) 1), (Float) 1));
 		Float phi = std::atan2(local.y, local.x);
+
 		if (phi < 0)
 			phi += 2*M_PI;
-		its.uv.x = theta / M_PI;
-		its.uv.y = phi / (2*M_PI);
-		its.shape = this;
+
+		its.uv.x = phi * (0.5 * INV_PI);
+		its.uv.y = theta * INV_PI;
+		its.dpdu = m_objectToWorld(Vector(-local.y, local.x, 0) * (2*M_PI));
+    	its.geoFrame.n = normalize(its.p - m_center);
 		Float zrad = std::sqrt(local.x*local.x + local.y*local.y);
 
-		its.geoFrame.n = Normal(normalize(its.p - m_center));
-		if (m_radius < 0)
-			its.geoFrame.n *= -1;
-
 		if (zrad > 0) {
-			Float invZRad = 1.0f / zrad;
-			Float cosPhi = local.x * invZRad;
-			Float sinPhi = local.y * invZRad;
-			its.dpdu = m_objectToWorld(Vector(-local.y, local.x, 0) * (2*M_PI));
+			Float invZRad = 1.0f / zrad,
+				  cosPhi = local.x * invZRad,
+				  sinPhi = local.y * invZRad;
 			its.dpdv = m_objectToWorld(Vector(local.z * cosPhi, local.z * sinPhi,
-					- absRadius * std::sin(theta)) * M_PI);
-			its.geoFrame.s = normalize(its.dpdu - its.geoFrame.n
-				* dot(its.geoFrame.n, its.dpdu));
-			its.geoFrame.t = cross(its.geoFrame.n, its.geoFrame.s);
+					-std::sin(theta)*m_radius) * M_PI);
+    		its.geoFrame.s = normalize(its.dpdu);
+			its.geoFrame.t = normalize(its.dpdv);
 		} else {
 			// avoid a singularity
-			Float cosPhi = 0, sinPhi = 1;
+			const Float cosPhi = 0, sinPhi = 1;
 			its.dpdv = m_objectToWorld(Vector(local.z * cosPhi, local.z * sinPhi,
-				-absRadius*std::sin(theta))* M_PI);
-			its.dpdu = cross(its.dpdv, its.geoFrame.n);
+					-std::sin(theta)*m_radius) * M_PI);
 			coordinateSystem(its.geoFrame.n, its.geoFrame.s, its.geoFrame.t);
 		}
 
+		if (m_inverted)
+			its.geoFrame.n *= -1;
+
  		its.shFrame = its.geoFrame;
  		its.wi = its.toLocal(-ray.d);
+		its.shape = this;
  		its.hasUVPartials = false;
-
-		return true;
 	}
-
-#if defined(MTS_SSE)
-	/* SSE-accelerated packet tracing is not supported for spheres at the moment */
-	__m128 rayIntersectPacket(const RayPacket4 &packet, const
-        __m128 start, __m128 end, __m128 inactive, Intersection4 &its) const {
-		SSEVector result(_mm_setzero_ps()), mint(start), maxt(end), mask(inactive);
-		Float t;
-
-		for (int i=0; i<4; i++) {
-			Ray ray;
-			for (int axis=0; axis<3; axis++) {
-				ray.o[axis] = packet.o[axis].f[i];
-				ray.d[axis] = packet.d[axis].f[i];
-			}
-			if (mask.i[i] != 0)
-				continue;
-			if (rayIntersect(ray, mint.f[i], maxt.f[i], t)) {
-				result.i[i] = 0xFFFFFFFF;
-				its.t.f[i] = t;
-			}
-		}
-		return result.ps;
-	}
-#endif
 
 	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
 		Vector v = squareToSphere(sample);
-		sRec.n = m_objectToWorld(Normal(v));
-		sRec.p = m_objectToWorld(Point(v * m_radius));
-		return m_invSurfaceArea;
+		sRec.n = Normal(v);
+		sRec.p = Point(v * m_radius) + m_center;
+		return 1.0f / (4*M_PI*m_radius*m_radius);
 	}
 
 	/**
@@ -189,7 +193,7 @@ public:
 
 		Ray ray(p, d);
 		Float t;
-		if (!rayIntersect(ray, 0, std::numeric_limits<Float>::infinity(), t)) {
+		if (!rayIntersect(ray, 0, std::numeric_limits<Float>::infinity(), t, NULL)) {
 			// This can happen sometimes due to roundoff errors - just fail to 
 			// generate a sample in this case.
 			return 0;
@@ -219,28 +223,26 @@ public:
 		return squareToConePdf(cosThetaMax);
 	}
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Shape::serialize(stream, manager);
-		stream->writeFloat(m_radius);
-	}
-
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Sphere[" << endl
 			<< "  radius = " << m_radius << ", " << endl
 			<< "  center = " << m_center.toString() << ", " << endl
-			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl
-			<< "  aabb = " << m_aabb.toString() << "," << endl
-			<< "  bsphere = " << m_bsphere.toString() << "," << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl
 			<< "  luminaire = " << indent(m_luminaire.toString()) << "," << endl
-			<< "  subsurface = " << indent(m_subsurface.toString()) << "," << endl
-			<< "  surfaceArea = " << m_surfaceArea << endl
+			<< "  subsurface = " << indent(m_subsurface.toString()) << endl
 			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
+private:
+	Transform m_objectToWorld;
+	Transform m_worldToObject;
+	Point m_center;
+	Float m_radius;
+	Float m_invSurfaceArea;
+	bool m_inverted;
 };
 
 MTS_IMPLEMENT_CLASS_S(Sphere, false, Shape)

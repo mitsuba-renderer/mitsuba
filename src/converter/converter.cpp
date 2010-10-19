@@ -29,12 +29,10 @@
 #include <xercesc/framework/Wrapper4InputSource.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
 #include <xercesc/util/XMLUni.hpp>
-#include <mitsuba/mitsuba.h>
 #include <mitsuba/core/fresolver.h>
-#include <fstream>
+#include <boost/algorithm/string.hpp>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <errno.h>
 #include <set>
 
 XERCES_CPP_NAMESPACE_USE
@@ -46,18 +44,15 @@ public:
 	inline ImporterDOMErrorHandler() { }
 
 	bool handleError(const DOMError& domError) {
-		ELogLevel logLevel;
-
-		if (domError.getSeverity() == DOMError::DOM_SEVERITY_WARNING)
-			logLevel = EWarn;
-		else
-			logLevel = EError;
-
-		SLog(logLevel, "%s (line %i, char %i): %s",
+		SLog(EWarn, "%s (line %i, char %i): %s",
 			XMLString::transcode(domError.getLocation()->getURI()),
 			domError.getLocation()->getLineNumber(),
 			domError.getLocation()->getColumnNumber(),
 			XMLString::transcode(domError.getMessage()));
+
+		if (domError.getSeverity() != DOMError::DOM_SEVERITY_WARNING)
+			SLog(EError, "Encountered a critical DOM error -- giving up!");
+
 		return true;
 	}
 };
@@ -129,62 +124,45 @@ bool cleanupPass(DOMNode *node, const std::set<std::string> &removals) {
 	return false;
 }
 
-void GeometryConverter::convert(const std::string &inputFile, 
-	const std::string &outputDirectory, 
-	const std::string &sceneName,
-	const std::string &adjustmentFile) {
+void GeometryConverter::convert(const fs::path &inputFile, 
+	const fs::path &outputDirectory, 
+	const fs::path &sceneName,
+	const fs::path &adjustmentFile) {
 
-	std::string textureDirectory = "textures";
-	std::string meshesDirectory = "meshes";
-	std::string outputFile = sceneName;
+	fs::path textureDirectory = "textures";
+	fs::path meshesDirectory = "meshes";
+	fs::path outputFile = sceneName;
 
-	SLog(EInfo, "Creating directories ..");
-#if !defined(WIN32)
-	if (outputDirectory != "") {
-		textureDirectory = outputDirectory + "/textures";
-		meshesDirectory = outputDirectory + "/meshes";
-		outputFile = outputDirectory + std::string("/") + sceneName;
+	if (!outputDirectory.empty()) {
+		textureDirectory = outputDirectory / "textures";
+		meshesDirectory = outputDirectory / "meshes";
+		outputFile = outputDirectory / sceneName;
 	}
 
-	int status = mkdir(textureDirectory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	if (status != 0 && errno != EEXIST)
-		SLog(EError, "Could not create the directory \"%s\"", textureDirectory.c_str());
-	status = mkdir(meshesDirectory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	if (status != 0 && errno != EEXIST)
-		SLog(EError, "Could not create the directory \"%s\"", meshesDirectory.c_str());
-	
-	textureDirectory += "/";
-	meshesDirectory += "/";
-#else
-	if (outputDirectory != "") {
-		textureDirectory = outputDirectory + "\\textures";
-		meshesDirectory = outputDirectory + "\\meshes";
-		outputFile = outputDirectory + std::string("\\") + sceneName;
+	if (!fs::exists(textureDirectory)) {
+		SLog(EInfo, "Creating directory \"%s\" ..", textureDirectory.file_string().c_str());
+		fs::create_directory(textureDirectory);
 	}
 
-	int status = CreateDirectory(textureDirectory.c_str(), NULL);
-	if (status == 0 && GetLastError() != ERROR_ALREADY_EXISTS)
-		SLog(EError, "Could not create the directory \"%s\"", textureDirectory.c_str());
-	status = CreateDirectory(meshesDirectory.c_str(), NULL);
-	if (status == 0 && GetLastError() != ERROR_ALREADY_EXISTS)
-		SLog(EError, "Could not create the directory \"%s\"", meshesDirectory.c_str());
-
-	textureDirectory += "\\";
-	meshesDirectory += "\\";
-#endif
+	if (!fs::exists(meshesDirectory)) {
+		SLog(EInfo, "Creating directory \"%s\" ..", meshesDirectory.file_string().c_str());
+		fs::create_directory(meshesDirectory);
+	}
 
 	std::ostringstream os;
-
 	SLog(EInfo, "Beginning conversion ..");
-	if (endsWith(toLowerCase(inputFile), ".dae") || endsWith(toLowerCase(inputFile), ".zae")) {
+
+	std::string extension = boost::to_lower_copy(fs::extension(inputFile));
+
+	if (extension == ".dae" || extension == ".zae") {
 		convertCollada(inputFile, os, textureDirectory, meshesDirectory);
-	} else if (endsWith(toLowerCase(inputFile), ".obj")) {
+	} else if (extension == ".obj") {
 		convertOBJ(inputFile, os, textureDirectory, meshesDirectory);
 	} else {
 		SLog(EError, "Unknown input format (must end in either .DAE, .ZAE or .OBJ)");
 	}
 
-	if (adjustmentFile != "") {
+	if (!adjustmentFile.empty()) {
 		SLog(EInfo, "Applying adjustments ..");
 		static const XMLCh gLS[] = { chLatin_L, chLatin_S, chNull };
 		DOMImplementationLS *impl = DOMImplementationRegistry::getDOMImplementation(gLS);
@@ -199,8 +177,10 @@ void GeometryConverter::convert(const std::string &inputFile,
 			xmlString.length(), "bufID", false);
 		Wrapper4InputSource *wrapper = new Wrapper4InputSource(memBufIS, false);
 		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *doc = parser->parse(wrapper);
-		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.c_str());
-	
+		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.file_string().c_str());
+		if (adj == NULL)
+			SLog(EError, "Could not parse adjustments file!");
+
 		std::set<std::string> removals, emptyList;
 		cleanupPass(adj, emptyList);
 		findRemovals(adj, removals);
@@ -241,7 +221,7 @@ void GeometryConverter::convert(const std::string &inputFile,
 		DOMLSOutput *output = impl->createLSOutput();
 		serConf->setParameter(XMLUni::fgDOMErrorHandler, &errorHandler);
 		serConf->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
-		XMLFormatTarget *target = new LocalFileFormatTarget(outputFile.c_str());
+		XMLFormatTarget *target = new LocalFileFormatTarget(outputFile.file_string().c_str());
 		output->setByteStream(target);
 		serializer->write(doc, output);
 		delete output;
@@ -251,9 +231,9 @@ void GeometryConverter::convert(const std::string &inputFile,
 		delete serializer;
 		parser->release();
 	} else {
-		std::ofstream ofile(outputFile.c_str());
+		fs::ofstream ofile(outputFile);
 		if (ofile.fail())
-			SLog(EError, "Could not write to \"%s\"!", outputFile.c_str());
+			SLog(EError, "Could not write to \"%s\"!", outputFile.file_string().c_str());
 		ofile << os.str();
 		ofile.close();
 	}

@@ -19,12 +19,98 @@
 #if !defined(__LUMINAIRE_H)
 #define __LUMINAIRE_H
 
-#include <mitsuba/render/records.h>
+#include <mitsuba/render/shape.h>
 #include <mitsuba/render/shader.h>
 
 MTS_NAMESPACE_BEGIN
 
-class Scene;
+/**
+ * Data structure used to record information associated with
+ * sampled shadow rays
+ */
+struct MTS_EXPORT_RENDER LuminaireSamplingRecord {
+public:
+	/// Create an invalid record
+	inline LuminaireSamplingRecord() : luminaire(NULL) { }
+	
+	/**
+	 * When a ray strikes a luminaire that is part of the scene,
+	 * the associated intersection record can be converted into
+	 * a luminaire sampling record in order to query the luminaire
+	 * for emitted radiance. (defined in records.inl)
+	 */
+	LuminaireSamplingRecord(const Intersection &its, const Vector &direction);
+
+	/// Return a string representation
+	std::string toString() const;
+public:
+	/// Associated luminaire
+	const Luminaire *luminaire;
+
+	/// Data record of the associated shape sample
+	ShapeSamplingRecord sRec;
+
+	/// Direction vector pointing away from the light source
+	Vector d;
+
+	/// Probability density of the sampled point on the luminaire
+	Float pdf;
+
+	/**
+	 * Emitted radiance at 'p' into direction 'd' divided by the associated
+	 * probability. Already contains the geometric term and optionally 
+	 * attenuation when generated via Scene::sampleLuminaireAttenuated.
+	 */
+	Spectrum Le;
+};
+
+/**
+ * Data structure used to record information associated with
+ * luminaire emission sampling
+ */
+struct MTS_EXPORT_RENDER EmissionRecord {
+public:
+	enum ESamplingType {
+		ENormal,
+		EPreview
+	};
+
+	/// Construct a luminaire sampling record that can be used to query a luminaire
+	inline EmissionRecord(const Luminaire *luminaire, 
+			const ShapeSamplingRecord &sRec, const Vector &d) 
+		: luminaire(luminaire), type(ENormal), sRec(sRec), d(d) { }
+
+	inline EmissionRecord() : luminaire(NULL), type(ENormal) { }
+
+	/// Return a string representation
+	std::string toString() const;
+public:
+	/// Associated luminaire
+	const Luminaire *luminaire;
+
+	ESamplingType type;
+
+	/// Data record of the associated shape sample
+	ShapeSamplingRecord sRec;
+
+	/// Direction vector pointing away from the light source
+	Vector d;
+
+	/**
+	 * Radiant emittance at the sampled point. When this 
+	 * record was populated using Scene::sampleEmission(), 'P'
+	 * has already been multiplied by the directional 
+	 * scattering distribution and divided by the associated 
+	 * sampling densities.
+	 */
+	Spectrum P;
+
+	/// Area probability density
+	Float pdfArea;
+
+	/// Directional probability density (wrt. projected solid angles)
+	Float pdfDir;
+};
 
 /**
  * Abstract implementation of a luminaire. Supports emission and

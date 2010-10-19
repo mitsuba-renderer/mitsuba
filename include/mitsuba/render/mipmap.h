@@ -19,8 +19,8 @@
 #if !defined(__MIPMAP_H)
 #define __MIPMAP_H
 
-#include <mitsuba/render/records.h>
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/render/shape.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -66,6 +66,14 @@ public:
 
 	/// Return a pointer to internal image representation at full resolution
 	inline const Spectrum *getImageData() const { return m_pyramid[0]; }
+	
+	/// Return a pointer to internal image representation at the specified resolution
+	inline const Spectrum *getImageData(int level) const { return m_pyramid[level]; }
+
+	/// Return the resolution of the specified level
+	inline const Vector2i getLevelResolution(int level) const {
+		return Vector2i(m_levelWidth[level], m_levelHeight[level]);
+	}
 
 	/// Get the component-wise maximum at the zero level
 	Spectrum getMaximum() const;
@@ -78,10 +86,12 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
+	/// \cond
 	struct ResampleWeight {
 		int firstTexel;
 		Float weight[4];
 	};
+	/// \endcond
 
 	/// Calculate weights for up-sampling a texture
 	ResampleWeight *resampleWeights(int oldRes, int newRes) const;

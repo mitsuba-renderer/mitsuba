@@ -98,9 +98,39 @@ public:
 		bool failIfMissing = true) { 
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
-	
+
 	/// Set a Vector4 parameter by name
 	inline void setParameter(const std::string &name, const Vector4 &value,
+		bool failIfMissing = true) { 
+		setParameter(getParameterID(name, failIfMissing), value);
+	}
+
+	/// Set a Point parameter by name
+	inline void setParameter(const std::string &name, const Point &value,
+		bool failIfMissing = true) { 
+		setParameter(getParameterID(name, failIfMissing), value);
+	}
+	
+	/// Set a Point3i parameter by name
+	inline void setParameter(const std::string &name, const Point3i &value,
+		bool failIfMissing = true) { 
+		setParameter(getParameterID(name, failIfMissing), value);
+	}
+	
+	/// Set a Point2 parameter by name
+	inline void setParameter(const std::string &name, const Point2 &value,
+		bool failIfMissing = true) { 
+		setParameter(getParameterID(name, failIfMissing), value);
+	}
+
+	/// Set a Point2i parameter by name
+	inline void setParameter(const std::string &name, const Point2i &value,
+		bool failIfMissing = true) { 
+		setParameter(getParameterID(name, failIfMissing), value);
+	}
+
+	/// Set a Point4 parameter by name
+	inline void setParameter(const std::string &name, const Point4 &value,
 		bool failIfMissing = true) { 
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
@@ -144,6 +174,21 @@ public:
 
 	/// Set a Vector4 parameter
 	virtual void setParameter(int id, const Vector4 &value) = 0;
+
+	/// Set a Point parameter
+	virtual void setParameter(int id, const Point &value) = 0;
+	
+	/// Set a Point3i parameter
+	virtual void setParameter(int id, const Point3i &value) = 0;
+
+	/// Set a Point2 parameter
+	virtual void setParameter(int id, const Point2 &value) = 0;
+	
+	/// Set a Point2i parameter
+	virtual void setParameter(int id, const Point2i &value) = 0;
+
+	/// Set a Point4 parameter
+	virtual void setParameter(int id, const Point4 &value) = 0;
 
 	/// Set a Transform parameter
 	virtual void setParameter(int id, const Transform &value) = 0;

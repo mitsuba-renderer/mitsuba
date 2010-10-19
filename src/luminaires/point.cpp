@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
 class PointLuminaire : public Luminaire {
 public:
 	PointLuminaire(const Properties &props) : Luminaire(props) {
-		m_intensity = props.getSpectrum("intensity", 1);
+		m_intensity = props.getSpectrum("intensity", Spectrum(1));
 		m_position = m_luminaireToWorld(Point(0,0,0));
 		m_surfaceArea = 0.0f;
 		m_type = EDeltaPosition | EDiffuseDirection;

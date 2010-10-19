@@ -72,7 +72,7 @@ void ZStream::flush() {
 }
 
 void ZStream::write(const void *ptr, size_t size) {
-	m_deflateStream.avail_in = size;
+	m_deflateStream.avail_in = (uInt) size;
 	m_deflateStream.next_in = (uint8_t *) ptr;
 
 	int outputSize = 0;
@@ -100,13 +100,13 @@ void ZStream::read(void *ptr, size_t size) {
 		if (m_inflateStream.avail_in == 0) {
 			size_t remaining = m_childStream->getSize() - m_childStream->getPos();
 			m_inflateStream.next_in = m_inflateBuffer;
-			m_inflateStream.avail_in = std::min(remaining, sizeof(m_inflateBuffer));
+			m_inflateStream.avail_in = (uInt) std::min(remaining, sizeof(m_inflateBuffer));
 			if (m_inflateStream.avail_in == 0)
 				Log(EError, "Read less data than expected (%i more bytes required)", size);
 			m_childStream->read(m_inflateBuffer, m_inflateStream.avail_in);
 		}
 
-		m_inflateStream.avail_out = size;
+		m_inflateStream.avail_out = (uInt) size;
 		m_inflateStream.next_out = targetPtr;
 
 		int retval = inflate(&m_inflateStream, Z_NO_FLUSH);
@@ -121,7 +121,7 @@ void ZStream::read(void *ptr, size_t size) {
 				Log(EError, "inflate(): memory error!");
 		};
 
-		int outputSize = size - m_inflateStream.avail_out;
+		size_t outputSize = size - (size_t) m_inflateStream.avail_out;
 		targetPtr += outputSize;
 		size -= outputSize;
 

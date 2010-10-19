@@ -16,7 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/mitsuba.h>
+#include <mitsuba/core/appender.h>
 #include <fstream>
 #ifdef WIN32
 #include <io.h>

@@ -58,6 +58,7 @@ protected:
 	GLuint64 m_indexAddr;
 	GLuint m_vertexSize;
 	GLuint m_indexSize;
+	int m_stride;
 };
 
 MTS_NAMESPACE_END

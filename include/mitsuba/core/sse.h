@@ -94,7 +94,10 @@
 
 MTS_NAMESPACE_BEGIN
 
-/* SSE 4-vector and handy aliases */
+/**
+ * \headerfile mitsuba/core/sse.h mitsuba/mitsuba.h
+ * \brief SSE 4-vector and useful aliases
+ */
 union SSEVector {
 	__m128 ps;
 	__m128i pi;
@@ -124,7 +127,10 @@ union SSEVector {
 	}
 };
 
-/** Some useful constant values for use with SSE */
+/**
+ * \brief Some useful constant values for use with SSE
+ * \headerfile mitsuba/core/sse.h mitsuba/mitsuba.h
+ */
 class MTS_EXPORT_CORE SSEConstants {
 public:
 	/// (0, 0, 0, 0)
@@ -191,6 +197,10 @@ __declspec(naked) static FINLINE unsigned __int64 __cdecl rdtsc(void) {
 		rdtsc
 		ret
 	}
+}
+#else
+static FINLINE __int64 rdtsc(void) {
+	return __rdtsc();
 }
 #endif
 #endif

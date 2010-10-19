@@ -16,10 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/mitsuba.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/statistics.h>
+#include <mitsuba/core/properties.h>
+#include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
-#include <stdexcept>
+#include <mitsuba/core/cobject.h>
 
 #if !defined(WIN32)
 #include <dlfcn.h>
@@ -31,19 +33,19 @@ MTS_NAMESPACE_BEGIN
 //  Abstract plugin module implementation
 // -----------------------------------------------------------------------
 
-Plugin::Plugin(const std::string &shortName, const std::string &path) 
+Plugin::Plugin(const std::string &shortName, const fs::path &path) 
  : m_shortName(shortName), m_path(path) {
 #if defined(WIN32)
-	m_handle = LoadLibrary(path.c_str());
+	m_handle = LoadLibrary(path.file_string().c_str());
 	if (!m_handle) {
-		SLog(EError, "Error while loading plugin \"%s\": %s", m_path.c_str(),
-				lastErrorText().c_str());
+		SLog(EError, "Error while loading plugin \"%s\": %s", 
+				m_path.file_string().c_str(), lastErrorText().c_str());
 	}
 #else
-	m_handle = dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL);
+	m_handle = dlopen(path.file_string().c_str(), RTLD_LAZY | RTLD_LOCAL);
 	if (!m_handle) {
-		SLog(EError, "Error while loading plugin \"%s\": %s", m_path.c_str(),
-				dlerror());
+		SLog(EError, "Error while loading plugin \"%s\": %s",
+			m_path.file_string().c_str(), dlerror());
 	}
 #endif
 	try {
@@ -61,11 +63,11 @@ Plugin::Plugin(const std::string &shortName, const std::string &path)
 	m_createUtility = NULL;
 	m_isUtility = false;
 
-	try {
-		m_createInstance = (CreateInstanceFunc) getSymbol("CreateInstance");
-	} catch (const std::exception &ex) {
+	if (hasSymbol("CreateUtility")) {
 		m_createUtility = (CreateUtilityFunc) getSymbol("CreateUtility");
 		m_isUtility = true;
+	} else {
+		m_createInstance = (CreateInstanceFunc) getSymbol("CreateInstance");
 	}
 	Statistics::getInstance()->logPlugin(shortName, getDescription());
 
@@ -73,18 +75,27 @@ Plugin::Plugin(const std::string &shortName, const std::string &path)
 	Class::staticInitialization();
 }
 
+bool Plugin::hasSymbol(const std::string &sym) const {
+#if defined(WIN32)
+	void *ptr = GetProcAddress(m_handle, sym.c_str());
+#else
+	void *ptr = dlsym(m_handle, sym.c_str());
+#endif
+	return ptr != NULL;
+}
+
 void *Plugin::getSymbol(const std::string &sym) {
 #if defined(WIN32)
 	void *data = GetProcAddress(m_handle, sym.c_str());
 	if (!data) {
 		SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
-			sym.c_str(), m_path.c_str(), lastErrorText().c_str());
+			sym.c_str(), m_path.file_string().c_str(), lastErrorText().c_str());
 	}
 #else
 	void *data = dlsym(m_handle, sym.c_str());
 	if (!data) {
 		SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
-			sym.c_str(), m_path.c_str(), dlerror());
+			sym.c_str(), m_path.file_string().c_str(), dlerror());
 	}
 #endif
 	return data;
@@ -177,12 +188,12 @@ void PluginManager::ensurePluginLoaded(const std::string &name) {
 #else
 	std::string shortName = std::string("plugins/") + name + std::string(".so");
 #endif
-	FileResolver *resolver = FileResolver::getInstance();
-	std::string fullName = resolver->resolve(shortName);
+	const FileResolver *resolver = Thread::getThread()->getFileResolver();
+	fs::path path = resolver->resolve(shortName);
 
-	if (FileStream::exists(fullName)) {
+	if (fs::exists(path)) {
 		Log(EInfo, "Loading plugin \"%s\" ..", shortName.c_str());
-		m_plugins[name] = new Plugin(shortName, fullName);
+		m_plugins[name] = new Plugin(shortName, path.file_string());
 		return;
 	}
 

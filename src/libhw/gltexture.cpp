@@ -453,7 +453,7 @@ Spectrum GLTexture::getPixel(int x, int y) const {
 	Assert(m_fbType == EColorBuffer);
 	float pixels[3];
 	Spectrum result;
-	
+
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_fboId);
 	glPushAttrib(GL_VIEWPORT_BIT);
 	glViewport(0, 0, m_size.x, m_size.y);

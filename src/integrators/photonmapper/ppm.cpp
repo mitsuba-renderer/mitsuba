@@ -19,7 +19,9 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/render/gatherproc.h>
 #include <mitsuba/render/renderqueue.h>
+#if !defined(__OSX__)
 #include <omp.h>
+#endif
 
 MTS_NAMESPACE_BEGIN
 
@@ -39,7 +41,7 @@ public:
 		Float N;
 		int depth;
 
-		inline GatherPoint() : N(0) {
+		inline GatherPoint() : weight(0.0f), flux(0.0f), emission(0.0f), N(0.0f) {
 		}
 	};
 
@@ -90,7 +92,7 @@ public:
 		m_running = false;
 	}
 
-	void preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 			int sceneResID, int cameraResID, int samplerResID) {
 		Integrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
 
@@ -102,6 +104,7 @@ public:
 
 			m_initialRadius = std::min(rad / filmSize.x, rad / filmSize.y) * 5;
 		}
+		return true;
 	}
 
 	bool render(Scene *scene, RenderQueue *queue, 
@@ -120,9 +123,10 @@ public:
 
 		Vector2i cropSize = film->getCropSize();
 		Point2i cropOffset = film->getCropOffset();
-		
-		omp_set_num_threads(nCores);
 
+#if !defined(__OSX__)
+		omp_set_num_threads(nCores);
+#endif
 		m_gatherPoints.clear();
 		m_running = true;
 		for (size_t i=0; i<m_blocks.size(); ++i)

@@ -200,6 +200,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 		film.setAttribute("type", "exrfilm");
 		camera.insertAfter(film, QDomNode());
 	}
+
 	QDomElement widthProperty = findProperty(film, "width");
 	QDomElement heightProperty = findProperty(film, "height");
 
@@ -213,6 +214,57 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 		heightProperty = doc.createElement("integer");
 		heightProperty.setAttribute("name", "height");
 		film.insertBefore(heightProperty, QDomNode());
+	}
+
+	if (film.attribute("type") == "pngfilm") {
+		/* Set tonemapping attributes */
+		QDomElement method = findProperty(film, "toneMappingMethod");
+		QDomElement reinhardBurn = findProperty(film, "reinhardBurn");
+		QDomElement reinhardKey = findProperty(film, "reinhardKey");
+		QDomElement exposure = findProperty(film, "exposure");
+		QDomElement gamma = findProperty(film, "gamma");
+
+		if (method.isNull()) {
+			method = doc.createElement("string");
+			method.setAttribute("name", "toneMappingMethod");
+			film.insertBefore(method, QDomNode());
+		}
+		method.setAttribute("value", ctx->toneMappingMethod == EReinhard ? "reinhard" : "gamma");
+		
+		if (gamma.isNull()) {
+			gamma = doc.createElement("float");
+			gamma.setAttribute("name", "gamma");
+			film.insertBefore(gamma, QDomNode());
+		}
+		gamma.setAttribute("value", QString::number(ctx->srgb ? (Float) -1 : ctx->gamma));
+
+		if (ctx->toneMappingMethod == EGamma) {
+			if (exposure.isNull()) {
+				exposure = doc.createElement("float");
+				exposure.setAttribute("name", "exposure");
+				film.insertBefore(exposure, QDomNode());
+			}
+			exposure.setAttribute("value", QString::number(ctx->exposure));
+			if (!reinhardKey.isNull())
+				film.removeChild(reinhardKey);
+			if (!reinhardBurn.isNull())
+				film.removeChild(reinhardBurn);
+		} else {
+			if (reinhardKey.isNull()) {
+				reinhardKey = doc.createElement("float");
+				reinhardKey.setAttribute("name", "reinhardKey");
+				film.insertBefore(reinhardKey, QDomNode());
+			}
+			if (reinhardBurn.isNull()) {
+				reinhardBurn = doc.createElement("float");
+				reinhardBurn.setAttribute("name", "reinhardBurn");
+				film.insertBefore(reinhardBurn, QDomNode());
+			}
+			reinhardKey.setAttribute("value", QString::number(ctx->reinhardKey));
+			reinhardBurn.setAttribute("value", QString::number(ctx->reinhardBurn));
+			if (!exposure.isNull())
+				film.removeChild(exposure);
+		}
 	}
 
 	Vector2i filmSize = sceneCamera->getFilm()->getSize();
@@ -279,7 +331,9 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	QString textContent = doc.toString();
 	QTextStream input(&textContent);
 	QTextStream output(&file);
-	QRegExp nameRegExp("name=\"[^\"]*\""),
+	QRegExp 
+		filenameRegExp("filename=\"[^\"]*\""),
+		nameRegExp("name=\"[^\"]*\""),
 		tagRegExp("^\\s*<([a-zA-Z]+) "),
 		leadingSpaces("^ *"),
 		closeTag("^\\s*</");
@@ -310,8 +364,9 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 		int tagMatch = tagRegExp.indexIn(line),
 			tagLength = tagRegExp.matchedLength();
 		int nameMatch = nameRegExp.indexIn(line),
+			filenameMatch = filenameRegExp.indexIn(line),
 			nameLength = nameRegExp.matchedLength();
-		if (tagMatch != -1 && nameMatch != -1) {
+		if (tagMatch != -1 && nameMatch != -1 && filenameMatch == -1) {
 			line = line.left(tagLength) + line.mid(nameMatch, nameLength) + " "
 				+ line.mid(tagMatch+tagLength, nameMatch-(tagMatch+tagLength))
 				+ line.mid(nameMatch+nameLength);

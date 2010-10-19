@@ -21,6 +21,9 @@
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/sched.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/appender.h>
+#include <mitsuba/core/statistics.h>
 #if defined(__OSX__)
 #include <ApplicationServices/ApplicationServices.h>
 #endif
@@ -106,46 +109,22 @@ int main(int argc, char *argv[]) {
 
 #if defined(__LINUX__)
 	XInitThreads();
-	FileResolver *resolver = FileResolver::getInstance();
-	resolver->addPath("/usr/share/mitsuba");
 #endif
 
 #if defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
-	FileResolver *resolver = FileResolver::getInstance();
-	resolver->addPath(__ubi_bundlepath());
 	/* Required for the mouse relocation in GLWidget */
 	CGSetLocalEventsSuppressionInterval(0.0f);
 	MTS_AUTORELEASE_END() 
 #endif
 
 #ifdef WIN32
-	char lpFilename[1024];
-	if (GetModuleFileNameA(NULL,
-		lpFilename, sizeof(lpFilename))) {
-		FileResolver *resolver = FileResolver::getInstance();
-		resolver->addPathFromFile(lpFilename);
-	} else {
-		SLog(EWarn, "Could not determine the executable path");
-	}
-
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
 		SLog(EError, "Could not initialize WinSock2!");
 	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
 		SLog(EError, "Could not find the required version of winsock.dll!");
-#endif
-
-#ifdef __LINUX__
-	char exePath[PATH_MAX];
-	memset(exePath, 0, PATH_MAX);
-	if (readlink("/proc/self/exe", exePath, PATH_MAX) != -1) {
-		FileResolver *resolver = FileResolver::getInstance();
-		resolver->addPathFromFile(exePath);
-	} else {
-		SLog(EWarn, "Could not determine the executable path");
-	}
 #endif
 
 #if !defined(WIN32)

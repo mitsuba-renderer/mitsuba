@@ -24,8 +24,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-class RenderJob;
-
 /** 
  * Abstract render listener - can be used to react to 
  * progress messages (e.g. in a GUI)
@@ -60,7 +58,7 @@ public:
 	RenderQueue();
 
 	/// Return the current number of jobs in the queue
-	inline int getJobCount() const { return m_jobs.size(); }
+	inline size_t getJobCount() const { return m_jobs.size(); }
 
 	/// Add a render job to the queue
 	void addJob(RenderJob *thr);
@@ -96,7 +94,7 @@ public:
 private:
 	/// Virtual destructor
 	virtual ~RenderQueue();
-protected:
+private:
 	struct JobRecord {
 		/* Only starting time for now */
 		unsigned int startTime;

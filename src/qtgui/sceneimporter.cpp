@@ -25,21 +25,21 @@ public:
 	inline GUIGeometryConverter(QWidget *parent) : m_parent(parent) {
 	}
 
-	std::string locateResource(const std::string &resource) {
-		LocateResourceDialog locateResource(m_parent, resource.c_str());
+	fs::path locateResource(const fs::path &resource) {
+		LocateResourceDialog locateResource(m_parent, resource.file_string().c_str());
 		locateResource.setWindowModality(Qt::ApplicationModal);
-		if (locateResource.exec()) 
-			return locateResource.getFilename().toStdString();
+		if (locateResource.exec())
+			return fs::path(locateResource.getFilename().toStdString());
 
-		return "";
+		return fs::path();
 	}
 private:
 	QWidget *m_parent;
 };
 
 SceneImporter::SceneImporter(QWidget *parent, FileResolver *resolver, 
-		const std::string &sourceFile, const std::string &directory,
-		const std::string &targetScene, const std::string &adjustmentFile,
+		const fs::path &sourceFile, const fs::path &directory,
+		const fs::path &targetScene, const fs::path &adjustmentFile,
 		bool sRGB)
 	: Thread("impt"), m_parent(parent), m_resolver(resolver), 
 	  m_sourceFile(sourceFile), m_directory(directory), 
@@ -51,7 +51,7 @@ SceneImporter::~SceneImporter() {
 }
 
 void SceneImporter::run() {
-	FileResolver::setInstance(m_resolver);
+	Thread::getThread()->setFileResolver(m_resolver);
 #if defined(MTS_HAS_COLLADA)
 	try {
 		GUIGeometryConverter cvt(m_parent);

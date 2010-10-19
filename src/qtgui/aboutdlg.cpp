@@ -46,8 +46,20 @@ AboutDialog::AboutDialog(QWidget *parent) :
 	configFlags += "MTS_SSE ";
 #endif
 
+#if defined(MTS_KD_CONSERVE_MEMORY)
+	configFlags += "MTS_KD_CONSERVE_MEMORY ";
+#endif
+
+#if defined(MTS_KD_DEBUG)
+	configFlags += "MTS_KD_DEBUG ";
+#endif
+
 #if defined(MTS_HAS_COHERENT_RT)
 	configFlags += "MTS_HAS_COHERENT_RT ";
+#endif
+
+#if defined(MTS_HAS_COLLADA)
+	configFlags += "MTS_HAS_COLLADA ";
 #endif
 
 	ui->label1->setText(ui->label1->text().replace("MTS_VERSION", MTS_VERSION));

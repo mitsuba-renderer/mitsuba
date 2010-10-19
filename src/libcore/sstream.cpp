@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/core/sstream.h>
+#include <mitsuba/core/statistics.h>
 
 #if !defined(WIN32)
 #include <unistd.h>

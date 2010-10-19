@@ -97,8 +97,17 @@ int GLProgram::createShader(int type, const std::string &source) {
 	glGetObjectParameterivARB(id, GL_COMPILE_STATUS, &result);
 	if (result == GL_FALSE) {
 		cleanup();
+		std::string typeStr;
+		if (type == GL_VERTEX_SHADER_ARB)
+			typeStr = "vertex";
+		else if (type == GL_FRAGMENT_SHADER_ARB)
+			typeStr = "fragment";
+		else if (type == GL_GEOMETRY_SHADER_ARB)
+			typeStr = "geometry";
+		else
+			typeStr = "unknown";
 		if (infoLog != "")
-			Log(EError, "Error compiling a shader: %s", infoLog.c_str());
+			Log(EError, "Error compiling a %s shader: %s", typeStr.c_str(), infoLog.c_str());
 		else
 			Log(EError, "Unknown error encountered while compiling a shader!");
 	} else if (infoLog != "") {
@@ -182,6 +191,36 @@ void GLProgram::setParameter(int id, const Vector2i &value) {
 }
 
 void GLProgram::setParameter(int id, const Vector4 &value) {
+	if (id == -1)
+		return;
+	glUniform4f(id, (GLfloat) value.x, (GLfloat) value.y, (GLfloat) value.z, (GLfloat) value.w);
+}
+
+void GLProgram::setParameter(int id, const Point &value) {
+	if (id == -1)
+		return;
+	glUniform3f(id, (GLfloat) value.x, (GLfloat) value.y, (GLfloat) value.z);
+}
+
+void GLProgram::setParameter(int id, const Point3i &value) {
+	if (id == -1)
+		return;
+	glUniform3i(id, value.x, value.y, value.z);
+}
+
+void GLProgram::setParameter(int id, const Point2 &value) {
+	if (id == -1)
+		return;
+	glUniform2f(id, (GLfloat) value.x, (GLfloat) value.y);
+}
+
+void GLProgram::setParameter(int id, const Point2i &value) {
+	if (id == -1)
+		return;
+	glUniform2i(id, value.x, value.y);
+}
+
+void GLProgram::setParameter(int id, const Point4 &value) {
 	if (id == -1)
 		return;
 	glUniform4f(id, (GLfloat) value.x, (GLfloat) value.y, (GLfloat) value.z, (GLfloat) value.w);

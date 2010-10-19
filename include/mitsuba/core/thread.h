@@ -23,9 +23,13 @@
 
 MTS_NAMESPACE_BEGIN
 
+/**
+ * \headerfile mitsuba/core/thread.h mitsuba/mitsuba.h
+ * \brief Cross-platform thread implementation
+ */
 class MTS_EXPORT_CORE Thread : public Object {
 public:
-	/// Available thread priorities
+	/// Possible priority values for \ref Thread::setPriority()
 	enum EThreadPriority {
 		EIdlePriority = 0,
 		ELowestPriority,
@@ -36,17 +40,32 @@ public:
 		ERealtimePriority
 	};
 
-	/// Create a new thread object
+	/**
+	 * \brief Create a new thread object
+	 * \param name An identifying name of this thread 
+	 *   (will be shown in debug messages)
+	 * \param stackSize Initial stack size of the thread
+	 *   (0 = default)
+	 */
 	Thread(const std::string &name, 
 		unsigned int stackSize = 0);
 
-	/// Set the thread priority
-	void setPriority(EThreadPriority priority);
+	/**
+	 * \brief Set the thread priority
+	 *
+	 * This does not always work -- for instance, Linux 
+	 * requires root privileges for this operation.
+	 *
+	 * \return \a true upon success.
+	 */
+	bool setPriority(EThreadPriority priority);
 
 	/**
-	 * Set the critical flag. When an thread marked critical crashes
-	 * from an uncaught exception, the whole process is terminated
-	 * (default: false).
+	 * \brief Specify whether or not this thread is critical
+	 * 
+	 * When an thread marked critical crashes from an uncaught 
+	 * exception, the whole process is brought down. 
+	 * The default is \a false.
 	 */
 	inline void setCritical(bool critical) { m_critical = critical; }
 
@@ -59,7 +78,7 @@ public:
 	/// Return the thread's stack size
 	inline int getStackSize() const { return m_stackSize; }
 
-	/// Return the thread's ID
+	/// Return the thread ID
 #if defined(__OSX__)
 	inline static int getID() { return getThread()->m_id; }
 #elif defined(WIN32)
@@ -68,23 +87,29 @@ public:
 	inline static int getID() { return m_id; }
 #endif
 
-	/// Return the thread's name
+	/// Return the name of this thread
 	inline const std::string &getName() const { return m_name; }
 
-	/// Set the thread's name
+	/// Set the name of this thread
 	inline void setName(const std::string &name) { m_name = name; }
 
 	/// Return the parent thread
 	inline Thread *getParent() { return m_parent; }
 
-	/// Return the parent thread
+	/// Return the parent thread (const version)
 	inline const Thread *getParent() const { return m_parent.get(); }
 
-	/// Set the thread's logger
+	/// Set the logger instance used to process log messages from this thread
 	inline void setLogger(Logger *logger) { m_logger = logger; }
 
-	/// Return the thread's logger
+	/// Return the thread's logger instance
 	inline Logger *getLogger() { return m_logger; }
+
+	/// Set the thread's file resolver
+	inline void setFileResolver(FileResolver *fresolver) { m_fresolver = fresolver; }
+
+	/// Return the thread's file resolver
+	inline FileResolver *getFileResolver() { return m_fresolver; }
 
 	/// Return the current thread
 	inline static Thread *getThread() {
@@ -98,9 +123,11 @@ public:
 	void start();
 
 	/**
-	 * Detach the thread - after this, <tt>join()</tt>
-	 * cannot be used anymore. Releases resources,
-	 * would otherwise be held until a call to <tt>join().</tt>
+	 * \brief Detach the thread and release resources
+	 * 
+	 * After a call to this function, \ref join()
+	 * cannot be used anymore. This releases resources, which
+	 * would otherwise be held until a call to \ref join().
 	 */
 	void detach();
 
@@ -141,6 +168,7 @@ protected:
 private:
 	ref<Thread> m_parent;
 	ref<Logger> m_logger;
+	ref<FileResolver> m_fresolver;
 	ref<Mutex> m_joinMutex;
 	std::string m_name;
 	unsigned int m_stackSize;

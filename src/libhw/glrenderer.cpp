@@ -86,8 +86,8 @@ void GLRenderer::init(Device *device, Renderer *other) {
 
 	bool leopardWorkaround = false;
 #if defined(__OSX__)
-	/* Color render buffers sort-of work in Leopard/8600M or 9600M, but the extension is not reported */
-
+	/* Floating point color render buffers sort-of work for
+	   Leopard/8600M or 9600M, but the extension is not reported */
 	SInt32 MacVersion;
 	if (Gestalt(gestaltSystemVersion, &MacVersion) == noErr) {
 		if (MacVersion >= 0x1050 && MacVersion < 0x1060) {
@@ -174,6 +174,13 @@ void GLRenderer::init(Device *device, Renderer *other) {
 	glDepthFunc(GL_LEQUAL);
 	setBlendMode(EBlendNone);
 
+	m_normalsEnabled = false;
+	m_texcoordsEnabled = false;
+	m_tangentsEnabled = false;
+	m_colorsEnabled = false;
+	m_stride = -1;
+	m_queuedTriangles = 0;
+
 	checkError();
 }
 
@@ -213,109 +220,300 @@ void GLRenderer::checkError(bool onlyWarn) {
 void GLRenderer::beginDrawingMeshes(bool transmitOnlyPositions) {
 	m_transmitOnlyPositions = transmitOnlyPositions;
 	glEnableClientState(GL_VERTEX_ARRAY);
-
-	if (!transmitOnlyPositions) {
-		glEnableClientState(GL_NORMAL_ARRAY);
-		glClientActiveTexture(GL_TEXTURE0);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glClientActiveTexture(GL_TEXTURE1);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	}
+	m_stride = -1;
 
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
-		const int stride = sizeof(GLfloat) * 11;
 		glEnableClientState(GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV);
 		glEnableClientState(GL_ELEMENT_ARRAY_UNIFIED_NV);
-		glVertexFormatNV(3, GL_FLOAT, stride);
-		if (!transmitOnlyPositions) {
-			glNormalFormatNV(GL_FLOAT, stride);
-			glClientActiveTexture(GL_TEXTURE0);
-			glTexCoordFormatNV(2, GL_FLOAT, stride);
-			glClientActiveTexture(GL_TEXTURE1);
-			glTexCoordFormatNV(3, GL_FLOAT, stride);
-		}
 	}
 }
 
 void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 	std::map<const TriMesh *, GPUGeometry *>::iterator it = m_geometry.find(mesh);
 	if (it != m_geometry.end()) {
-		/* Draw using vertex buffer objects */
+		/* Draw using vertex buffer objects (bindless if supported) */
 		GLGeometry *geometry = static_cast<GLGeometry *>((*it).second);
 		if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
 			glBufferAddressRangeNV(GL_VERTEX_ARRAY_ADDRESS_NV, 0, 
 				geometry->m_vertexAddr, geometry->m_vertexSize);
+			int stride = geometry->m_stride;
+			if (stride != m_stride) {
+				glVertexFormatNV(3, GL_FLOAT, stride);
+				glNormalFormatNV(GL_FLOAT, stride);
+				glClientActiveTexture(GL_TEXTURE0);
+				glTexCoordFormatNV(2, GL_FLOAT, stride);
+				glClientActiveTexture(GL_TEXTURE1);
+				glTexCoordFormatNV(3, GL_FLOAT, stride);
+				glColorFormatNV(3, GL_FLOAT, stride);
+				m_stride = stride;
+			}
+
 			if (!m_transmitOnlyPositions) {
-				glBufferAddressRangeNV(GL_NORMAL_ARRAY_ADDRESS_NV, 0, geometry->m_vertexAddr+3*sizeof(GLfloat), 
-					geometry->m_vertexSize - 3*sizeof(GLfloat));
-				glBufferAddressRangeNV(GL_TEXTURE_COORD_ARRAY_ADDRESS_NV, 0, geometry->m_vertexAddr+6*sizeof(GLfloat), 
-					geometry->m_vertexSize - 6*sizeof(GLfloat));
-				glBufferAddressRangeNV(GL_TEXTURE_COORD_ARRAY_ADDRESS_NV, 1, geometry->m_vertexAddr+8*sizeof(GLfloat), 
-					geometry->m_vertexSize - 8*sizeof(GLfloat));
+				int pos = 3 * sizeof(GLfloat);
+				
+				if (mesh->hasVertexNormals()) {
+					if (!m_normalsEnabled) {
+						glEnableClientState(GL_NORMAL_ARRAY);
+						m_normalsEnabled = true;
+					}
+					glBufferAddressRangeNV(GL_NORMAL_ARRAY_ADDRESS_NV, 0, 
+						geometry->m_vertexAddr + pos, 
+						geometry->m_vertexSize - pos);
+
+					pos += 3 * sizeof(GLfloat);
+				} else if (!m_normalsEnabled) {
+					glDisableClientState(GL_NORMAL_ARRAY);
+					m_normalsEnabled = false;
+				}
+
+				if (mesh->hasVertexTexcoords()) {
+					glClientActiveTexture(GL_TEXTURE0);
+					if (!m_texcoordsEnabled) {
+						glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+						m_texcoordsEnabled = true;
+					}
+					glBufferAddressRangeNV(GL_TEXTURE_COORD_ARRAY_ADDRESS_NV, 0,
+						geometry->m_vertexAddr + pos,
+						geometry->m_vertexSize - pos);
+
+					pos += 2 * sizeof(GLfloat);
+				} else if (m_texcoordsEnabled) {
+					glClientActiveTexture(GL_TEXTURE0);
+					glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+					m_texcoordsEnabled = false;
+				}
+
+				/* Pass 'dpdu' as second set of texture coordinates */
+				if (mesh->hasVertexTangents()) {
+					glClientActiveTexture(GL_TEXTURE1);
+					if (!m_tangentsEnabled) {
+						glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+						m_tangentsEnabled = true;
+					}
+
+					glBufferAddressRangeNV(GL_TEXTURE_COORD_ARRAY_ADDRESS_NV, 1,
+						geometry->m_vertexAddr + pos,
+						geometry->m_vertexSize - pos);
+					pos += 3 * sizeof(GLfloat);
+				} else if (m_tangentsEnabled) {
+					glClientActiveTexture(GL_TEXTURE1);
+					glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+					m_tangentsEnabled = false;
+				}
+
+				if (mesh->hasVertexColors()) {
+					if (!m_colorsEnabled) {
+						glEnableClientState(GL_COLOR_ARRAY);
+						m_colorsEnabled = true;
+					}
+
+					glBufferAddressRangeNV(GL_COLOR_ARRAY_ADDRESS_NV, 0, 
+						geometry->m_vertexAddr + pos,
+						geometry->m_vertexSize - pos);
+				} else if (m_colorsEnabled) {
+					glDisableClientState(GL_COLOR_ARRAY);
+					m_colorsEnabled = false;
+				}
 			}
 			glBufferAddressRangeNV(GL_ELEMENT_ARRAY_ADDRESS_NV, 0, 
 				geometry->m_indexAddr, geometry->m_indexSize);
 		} else {
-			const int stride = sizeof(GLfloat) * 11;
-
 			glBindBuffer(GL_ARRAY_BUFFER, geometry->m_vertexID);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry->m_indexID);
+			int stride = geometry->m_stride;
 
 			/* Set up the vertex/normal arrays */
 			glVertexPointer(3, GL_FLOAT, stride, (GLfloat *) 0);
 
 			if (!m_transmitOnlyPositions) {
-				glNormalPointer(GL_FLOAT, stride, (GLfloat *) 0 + 3);
+				int pos = 3;
+				if (mesh->hasVertexNormals()) {
+					if (!m_normalsEnabled) {
+						glEnableClientState(GL_NORMAL_ARRAY);
+						m_normalsEnabled = true;
+					}
+					glNormalPointer(GL_FLOAT, stride, (GLfloat *) 0 + pos);
+					pos += 3;
+				} else if (m_normalsEnabled) {
+					glDisableClientState(GL_NORMAL_ARRAY);
+					m_normalsEnabled = false;
+				}
 
-				glClientActiveTexture(GL_TEXTURE0);
-				glTexCoordPointer(2, GL_FLOAT, stride, (GLfloat *) 0 + 6);
+				if (mesh->hasVertexTexcoords()) {
+					glClientActiveTexture(GL_TEXTURE0);
+					if (!m_texcoordsEnabled) {
+						glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+						m_texcoordsEnabled = true;
+					}
+					glTexCoordPointer(2, GL_FLOAT, stride, (GLfloat *) 0 + pos);
+					pos += 2;
+				} else if (m_texcoordsEnabled) {
+					glClientActiveTexture(GL_TEXTURE0);
+					glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+					m_texcoordsEnabled = false;
+				}
 
 				/* Pass 'dpdu' as second set of texture coordinates */
-				glClientActiveTexture(GL_TEXTURE1);
-				glTexCoordPointer(3, GL_FLOAT, stride, (GLfloat *) 0 + 8);
+				if (mesh->hasVertexTangents()) {
+					glClientActiveTexture(GL_TEXTURE1);
+					if (!m_tangentsEnabled) {
+						glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+						m_tangentsEnabled = true;
+					}
+					glTexCoordPointer(3, GL_FLOAT, stride, (GLfloat *) 0 + pos);
+					pos += 3;
+				} else if (m_tangentsEnabled) {
+					glClientActiveTexture(GL_TEXTURE1);
+					glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+					m_tangentsEnabled = false;
+				}
+
+				if (mesh->hasVertexColors()) {
+					if (!m_colorsEnabled) {
+						glEnableClientState(GL_COLOR_ARRAY);
+						m_colorsEnabled = true;
+					}
+					glColorPointer(3, GL_FLOAT, stride, (GLfloat *) 0 + pos);
+				} else if (m_colorsEnabled) {
+					glDisableClientState(GL_COLOR_ARRAY);
+					m_colorsEnabled = false;
+				}
 			}
 		}
 
-		/* Draw all triangles */
-		glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount() * 3), 
-			GL_UNSIGNED_INT, (GLvoid *) 0);
+		size_t size = mesh->getTriangleCount();
+		if (EXPECT_TAKEN(m_queuedTriangles + size < MTS_GL_MAX_QUEUED_TRIS)) {
+			/* Draw all triangles */
+			glDrawElements(GL_TRIANGLES, (GLsizei) (size * 3), 
+				GL_UNSIGNED_INT, (GLvoid *) 0);
+			m_queuedTriangles += size;
+		} else {
+			/* Spoon-feed them (keeps the OS responsive) */
+			size_t size = mesh->getTriangleCount(), cur = 0;
+			while (cur < size) {
+				size_t drawAmt = std::min(size - cur,
+						MTS_GL_MAX_QUEUED_TRIS - m_queuedTriangles);
+				if (drawAmt > 0)
+					glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3), 
+						GL_UNSIGNED_INT, (GLuint *) 0 + cur * 3);
+				m_queuedTriangles += drawAmt; cur += drawAmt;
+				if (cur < size) {
+					finish();
+				}
+			}
+		}
+
+		if (!m_capabilities->isSupported(RendererCapabilities::EBindless)) {
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		}
 	} else {
 		/* Draw the old-fashioned way without VBOs */
-		const GLchar *vertices = (const GLchar *) mesh->getVertexBuffer();
+		const GLchar *positions = (const GLchar *) mesh->getVertexPositions();
+		const GLchar *normals = (const GLchar *) mesh->getVertexNormals();
+		const GLchar *texcoords = (const GLchar *) mesh->getVertexTexcoords();
+		const GLchar *tangents = (const GLchar *) mesh->getVertexTangents();
+		const GLchar *colors = (const GLchar *) mesh->getVertexColors();
 		const GLchar *indices  = (const GLchar *) mesh->getTriangles();
 		GLenum dataType = sizeof(Float) == 4 ? GL_FLOAT : GL_DOUBLE;
 
-		glVertexPointer(3, dataType, sizeof(Vertex), vertices);
+		glVertexPointer(3, dataType, 0, positions);
 
 		if (!m_transmitOnlyPositions) {
-			glNormalPointer(dataType, sizeof(Vertex), 
-				vertices + sizeof(Float) * 3);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-			glTexCoordPointer(2, dataType, sizeof(Vertex), 
-				vertices + sizeof(Float) * 6);
+			if (mesh->hasVertexNormals()) {
+				if (!m_normalsEnabled) {
+					glEnableClientState(GL_NORMAL_ARRAY);
+					m_normalsEnabled = true;
+				}
+				glNormalPointer(dataType, 0, normals);
+			} else if (m_normalsEnabled) {
+				glDisableClientState(GL_NORMAL_ARRAY);
+				m_normalsEnabled = false;
+			}
+
+			glClientActiveTexture(GL_TEXTURE0);
+			if (mesh->hasVertexTexcoords()) {
+				if (!m_texcoordsEnabled) {
+					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+					m_texcoordsEnabled = true;
+				}
+				glTexCoordPointer(2, dataType, 0, texcoords);
+			} else if (m_texcoordsEnabled) {
+				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				m_texcoordsEnabled = false;
+			}
 
 			/* Pass 'dpdu' as second set of texture coordinates */
 			glClientActiveTexture(GL_TEXTURE1);
-			glTexCoordPointer(3, dataType, sizeof(Vertex), 
-				vertices + sizeof(Float) * 8);
+			if (mesh->hasVertexTangents()) {
+				if (!m_tangentsEnabled) {
+					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+					m_tangentsEnabled = true;
+				}
+				glTexCoordPointer(3, dataType, sizeof(Vector), tangents); 
+			} else if (m_tangentsEnabled) {
+				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				m_tangentsEnabled = false;
+			}
+
+			if (mesh->hasVertexColors()) {
+				if (!m_colorsEnabled) {
+					glEnableClientState(GL_COLOR_ARRAY);
+					m_colorsEnabled = true;
+				}
+				// This won't work for spectral rendering
+				glColorPointer(3, dataType, 0, colors);
+			} else if (m_colorsEnabled) {
+				glDisableClientState(GL_COLOR_ARRAY);
+				m_colorsEnabled = false;
+			}
 		}
 
-		/* Draw all triangles */
-		glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount()*3), 
-			GL_UNSIGNED_INT, indices);
+		size_t size = mesh->getTriangleCount();
+		if (EXPECT_TAKEN(m_queuedTriangles + size < MTS_GL_MAX_QUEUED_TRIS)) {
+			/* Draw all triangles */
+			glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount()*3), 
+				GL_UNSIGNED_INT, indices);
+			m_queuedTriangles += size;
+		} else {
+			/* Spoon-feed them (keeps the OS responsive) */
+			size_t size = mesh->getTriangleCount(), cur = 0;
+			while (cur < size) {
+				size_t drawAmt = std::min(size - cur,
+						MTS_GL_MAX_QUEUED_TRIS - m_queuedTriangles);
+				if (drawAmt > 0)
+					glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3), 
+						GL_UNSIGNED_INT, indices + cur * 3);
+				m_queuedTriangles += drawAmt; cur += drawAmt;
+				if (cur < size) {
+					finish();
+				}
+			}
+		}
 	}
 }
 
 void GLRenderer::endDrawingMeshes() {
 	glDisableClientState(GL_VERTEX_ARRAY);
-	if (!m_transmitOnlyPositions) {
+	if (m_normalsEnabled) {
 		glDisableClientState(GL_NORMAL_ARRAY);
-		glClientActiveTexture(GL_TEXTURE1);
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		m_normalsEnabled = false;
+	}
+	if (m_texcoordsEnabled) {
 		glClientActiveTexture(GL_TEXTURE0);
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		m_texcoordsEnabled = false;
 	}
-	
+	if (m_tangentsEnabled) {
+		glClientActiveTexture(GL_TEXTURE1);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		m_tangentsEnabled = false;
+	}
+	if (m_colorsEnabled) {
+		glDisableClientState(GL_COLOR_ARRAY);
+		m_colorsEnabled = false;
+	}
+
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
 		glDisableClientState(GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV);
 		glDisableClientState(GL_ELEMENT_ARRAY_UNIFIED_NV);
@@ -332,12 +530,38 @@ void GLRenderer::drawAll() {
 		for (it = m_geometry.begin(); it != m_geometry.end(); ++it) {
 			const TriMesh *mesh = static_cast<const TriMesh *>((*it).first);
 			const GLGeometry *geometry = static_cast<const GLGeometry *>((*it).second);
+			int stride = geometry->m_stride;
+			if (stride != m_stride) {
+				glVertexFormatNV(3, GL_FLOAT, stride);
+				m_stride = stride;
+			}
+
 			glBufferAddressRangeNV(GL_VERTEX_ARRAY_ADDRESS_NV, 0, 
 				geometry->m_vertexAddr, geometry->m_vertexSize);
 			glBufferAddressRangeNV(GL_ELEMENT_ARRAY_ADDRESS_NV, 0, 
 				geometry->m_indexAddr, geometry->m_indexSize);
-			glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount()*3), 
-				GL_UNSIGNED_INT, 0);
+
+			size_t size = mesh->getTriangleCount();
+
+			if (EXPECT_TAKEN(m_queuedTriangles + size < MTS_GL_MAX_QUEUED_TRIS)) {
+				/* Draw all triangles */
+				glDrawElements(GL_TRIANGLES, (GLsizei) (size * 3), 
+					GL_UNSIGNED_INT, (GLvoid *) 0);
+				m_queuedTriangles += size;
+			} else {
+				/* Spoon-feed them (keeps the OS responsive) */
+				size_t size = mesh->getTriangleCount(), cur = 0;
+				while (cur < size) {
+					size_t drawAmt = std::min(size - cur,
+							MTS_GL_MAX_QUEUED_TRIS - m_queuedTriangles);
+					if (drawAmt > 0)
+						glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3), 
+							GL_UNSIGNED_INT, (GLuint *) 0 + cur * 3);
+					m_queuedTriangles += drawAmt; cur += drawAmt;
+					if (cur < size)
+						finish();
+				}
+			}
 		}
 	} else {
 		for (it = m_geometry.begin(); it != m_geometry.end(); ++it) {
@@ -348,9 +572,29 @@ void GLRenderer::drawAll() {
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry->m_indexID);
 
 			/* Set up the vertex/normal arrays */
-			glVertexPointer(3, GL_FLOAT, sizeof(GLfloat) * 11, (GLfloat *) 0);
-			glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount()*3), 
-				GL_UNSIGNED_INT, (GLvoid *) 0);
+			glVertexPointer(3, GL_FLOAT, geometry->m_stride, (GLfloat *) 0);
+
+			size_t size = mesh->getTriangleCount();
+
+			if (EXPECT_TAKEN(m_queuedTriangles + size < MTS_GL_MAX_QUEUED_TRIS)) {
+				/* Draw all triangles */
+				glDrawElements(GL_TRIANGLES, (GLsizei) (size * 3), 
+					GL_UNSIGNED_INT, (GLvoid *) 0);
+				m_queuedTriangles += size;
+			} else {
+				/* Spoon-feed them (keeps the OS responsive) */
+				size_t size = mesh->getTriangleCount(), cur = 0;
+				while (cur < size) {
+					size_t drawAmt = std::min(size - cur,
+							MTS_GL_MAX_QUEUED_TRIS - m_queuedTriangles);
+					if (drawAmt > 0)
+						glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3), 
+							GL_UNSIGNED_INT, (GLuint *) 0 + cur * 3);
+					m_queuedTriangles += drawAmt; cur += drawAmt;
+					if (cur < size)
+						finish();
+				}
+			}
 		}
 	}
 	GLRenderer::endDrawingMeshes();
@@ -374,7 +618,7 @@ void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
 		glLoadIdentity();
 		glBegin(GL_QUADS);
 
-		Vector2i upperLeft, lowerRight;
+		Vector2i upperLeft(0), lowerRight(0);
 		if (centerHoriz)
 			upperLeft.x = (scrSize.x - texSize.x)/2;
 		if (centerVert)
@@ -385,7 +629,7 @@ void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
 		if (flipVertically)
 			std::swap(upperLeft.y, lowerRight.y);
 
-		const Float zDepth = -1.0f; // just before the far plane
+		const float zDepth = -1.0f; // just before the far plane
 		glTexCoord2f(0.0f, 0.0f);
 		glVertex3f(upperLeft.x, upperLeft.y, zDepth);
 		glTexCoord2f(1.0f, 0.0f);
@@ -578,8 +822,9 @@ void GLRenderer::flush() {
 
 void GLRenderer::finish() {
 	glFinish();
+	m_queuedTriangles = 0;
 }
-	
+
 void GLRenderer::setColor(const Spectrum &spec) {
 	Float r, g, b;
 	spec.toLinearRGB(r, g, b);

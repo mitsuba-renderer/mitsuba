@@ -18,7 +18,7 @@
 
 #include <mitsuba/render/film.h>
 #include <mitsuba/core/bitmap.h>
-#include <mitsuba/core/fresolver.h>
+#include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -170,14 +170,15 @@ public:
 		}
 	}
 
-	void develop(const std::string &destFile) {
-		std::string filename = destFile;
-		if (!endsWith(filename, ".m"))
-			filename += ".m";
+	void develop(const fs::path &destFile) {
+		fs::path filename = destFile;
+		std::string extension = boost::to_lower_copy(fs::extension(filename));
+		if (extension != ".m")
+			filename.replace_extension(".m");
 
-		Log(EInfo, "Writing image to \"%s\" ..", filename.c_str());
+		Log(EInfo, "Writing image to \"%s\" ..", filename.leaf().c_str());
 	
-		FILE *f = fopen(filename.c_str(), "w");
+		FILE *f = fopen(filename.file_string().c_str(), "w");
 		if (!f)
 			Log(EError, "Output file cannot be created!");
 
@@ -217,11 +218,11 @@ public:
 		fclose(f);
 	}
 	
-	bool destinationExists(const std::string &baseName) const {
-		std::string filename = baseName;
-		if (!endsWith(filename, ".m"))
-			filename += ".m";
-		return FileStream::exists(filename);
+	bool destinationExists(const fs::path &baseName) const {
+		fs::path filename = baseName;
+		if (boost::to_lower_copy(filename.extension()) != ".m")
+			filename.replace_extension(".m");
+		return fs::exists(filename);
 	}
 
 	std::string toString() const {

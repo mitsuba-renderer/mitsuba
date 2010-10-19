@@ -1,6 +1,7 @@
 #include <fstream>
 
 #include <mitsuba/render/shape.h>
+#include <mitsuba/render/bsdf.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/fresolver.h>
 
@@ -11,6 +12,7 @@ MTS_NAMESPACE_BEGIN
 
 Hair::Hair(const Properties &props) : Shape(props) {
 	std::string filename = props.getString("filename");
+			props.getString("filename"));
 	m_radius = (Float) props.getFloat("radius", 0.05f);
 	m_name = FileResolver::getInstance()->resolve(filename);
 

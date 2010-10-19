@@ -21,6 +21,7 @@
 #include "acknowledgmentdlg.h"
 #include "mainwindow.h"
 #include "sceneimporter.h"
+#include <mitsuba/core/fresolver.h>
 
 ImportDialog::ImportDialog(QWidget *parent, FileResolver *resolver) :
 	QDialog(parent, Qt::Sheet), ui(new Ui::ImportDialog), m_resolver(resolver) {
@@ -53,7 +54,8 @@ void ImportDialog::changeEvent(QEvent *e) {
 
 void ImportDialog::on_inputBrowse_clicked(bool checked) {
 	QFileDialog dialog(this);
-	dialog.setNameFilter(tr("COLLADA 1.4 scenes (*.dae *.zae);; Wavefront OBJ scenes (*.obj)"));
+	dialog.setNameFilter(tr("All supported formats (*.dae *.zae *.obj);;"
+		"COLLADA 1.4 scenes (*.dae *.zae);; Wavefront OBJ scenes (*.obj)"));
 	dialog.setAcceptMode(QFileDialog::AcceptOpen);
 	dialog.setViewMode(QFileDialog::Detail);
 	dialog.setWindowModality(Qt::ApplicationModal);
@@ -126,15 +128,15 @@ void ImportDialog::accept() {
 	dialog->show();
 	progressBar->show();
 
-	std::string filePath = m_resolver->getParentDirectory(sourceFile.toStdString());
-	if (!m_resolver->contains(filePath))
-		m_resolver->addPath(filePath);
+	fs::path filePath = fs::complete(fs::path(sourceFile.toStdString())).parent_path();
+	ref<FileResolver> resolver = m_resolver->clone();
+	resolver->addPath(filePath);
 
 	const Logger *logger = Thread::getThread()->getLogger();
 	size_t initialWarningCount = logger->getWarningCount();
 
 	ref<SceneImporter> importingThread = new SceneImporter(this,
-		m_resolver, sourceFile.toStdString(), directory.toStdString(),
+		resolver, sourceFile.toStdString(), directory.toStdString(),
 		targetScene.toStdString(), adjustmentFile.toStdString(),
 		ui->sRGBButton->isChecked());
 	importingThread->start();
@@ -149,13 +151,13 @@ void ImportDialog::accept() {
 	dialog->hide();
 	delete dialog;
 	
-	if (importingThread->getResult().length() > 0) {
+	if (!importingThread->getResult().empty()) {
 		size_t warningCount = logger->getWarningCount() - initialWarningCount;
 		if (warningCount > 0)
 			QMessageBox::warning(this, tr("Scene Import"),
 				tr("Encountered %1 warnings while importing -- please see "
 				"the log for details.").arg(warningCount), QMessageBox::Ok);
-		((MainWindow *) parent())->loadFile(QString(importingThread->getResult().c_str()));
+		((MainWindow *) parent())->loadFile(QString(importingThread->getResult().file_string().c_str()));
 	} else {
 		QMessageBox::critical(this, tr("Scene Import"),
 			tr("Conversion failed -- please see the log for details."),

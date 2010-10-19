@@ -17,8 +17,10 @@
 */
 
 #include <mitsuba/render/volume.h>
-#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/properties.h>
+#include <mitsuba/core/fstream.h>
+#include <mitsuba/core/fresolver.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -66,7 +68,7 @@ public:
 	}
 
 	void loadDictionary(const std::string &filename) {
-		std::string resolved = FileResolver::getInstance()->resolve(filename);
+		fs::path resolved = Thread::getThread()->getFileResolver()->resolve(filename);
 		Log(EInfo, "Loading hierarchical grid dictionary \"%s\"", filename.c_str());
 		ref<FileStream> stream = new FileStream(resolved, FileStream::EReadOnly);
 		stream->setByteOrder(Stream::ELittleEndian);

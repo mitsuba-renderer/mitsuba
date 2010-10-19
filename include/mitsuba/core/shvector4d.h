@@ -24,10 +24,11 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Stores a 4D function f(wi, wo) (such as a BRDF or phase function)
- * using a 2D table of spherical harmonics expansions. Discretizaiton
- * occurs in the 'wi' space. Later lookups interpolate amongst 
- * the 4 adjacent samples
+ * \brief Stores a 4D function f(wi, wo) (such as a BRDF or phase function)
+ * using a 2D table of spherical harmonics expansions. 
+ *
+ * Discretizaiton occurs in the 'wi' space. Lookups interpolate amongst 
+ * the 4 adjacent samples.
  */
 struct SHVector4D {
 public:

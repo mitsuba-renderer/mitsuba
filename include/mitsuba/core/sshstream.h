@@ -24,12 +24,13 @@
 MTS_NAMESPACE_BEGIN
 
 
-/** \brief SSH stream implementation - remotely runs a program
- * and exposes its stdin/stdout streams through an instance of
- * <tt>Stream</tt>. To make this work, passwordless authentication
- * must be enabled (for example by using public key authentication
- * in addition to a running ssh-agent which stores the decrypted 
- * private key).
+/** \brief Stream implementation based on an encrypted SSH tunnel
+ * 
+ * This class remotely starts a program and exposes its stdin/stdout 
+ * streams through an instance of <tt>\ref Stream</tt>. To make all 
+ * of this work, passwordless authentication must be enabled (for 
+ * example by using public key authentication in addition to a 
+ * running ssh-agent, which stores the decrypted private key).
  *
  * On Windows, things are implemented a bit differently: Instead
  * of OpenSSH, plink.exe (from PUTTY) is used and must be available
@@ -46,6 +47,12 @@ public:
 	 * the maximum amount of time that can be spent before failing to 
 	 * create the initial connection. This feature is unsupported 
 	 * (and ignored) on Windows.
+	 * 
+	 * \param userName Username to use for the authentication
+	 * \param hostName Destination host name
+	 * \param cmdLine  Command (with arguments) to be executed on the remote side
+	 * \param port     Destination port
+	 * \param timeout  Maximum time to use for the connection attempt (in seconds)
 	 */
 	SSHStream(const std::string &userName, 
 		const std::string &hostName,
@@ -87,7 +94,7 @@ protected:
 	 * the socket if it is still open
 	 */
 	virtual ~SSHStream();
-protected:
+private:
 	std::string m_userName, m_hostName;
 	int m_port, m_timeout;
 	size_t m_received, m_sent;

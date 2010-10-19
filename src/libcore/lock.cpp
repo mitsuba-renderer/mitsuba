@@ -16,10 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/mitsuba.h>
+#include <mitsuba/core/lock.h>
 #include <errno.h>
 
-#if defined(WIN32)
+#if !defined(WIN32)
+#include <sys/time.h>
+#else
 #include <sys/timeb.h>
 
 static int gettimeofday(struct timeval *tp, void *) {
@@ -53,7 +55,8 @@ Mutex::~Mutex() {
 	}
 }
 
-ConditionVariable::ConditionVariable(Mutex *mutex) : m_mutex(mutex) {
+ConditionVariable::ConditionVariable(Mutex *mutex) {
+	m_mutex = mutex != NULL ? mutex : new Mutex();
 	pthread_cond_init(&m_cond, NULL);
 }
 
