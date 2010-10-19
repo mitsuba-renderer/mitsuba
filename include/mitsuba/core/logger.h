@@ -121,10 +121,10 @@ public:
 	inline size_t getAppenderCount() const { return m_appenders.size(); }
 	
 	/// Return one of the appenders
-	inline Appender *getAppender(int index) { return m_appenders[index]; }
+	inline Appender *getAppender(size_t index) { return m_appenders[index]; }
 	
 	/// Return one of the appenders
-	inline const Appender *getAppender(int index) const { return m_appenders[index]; }
+	inline const Appender *getAppender(size_t index) const { return m_appenders[index]; }
 
 	/// Set the logger's formatter implementation
 	void setFormatter(Formatter *formatter);

@@ -1040,8 +1040,8 @@ void MainWindow::on_actionSettings_triggered() {
 		return;
 	}
 
-	int workerCount = sched->getWorkerCount();
-	for (int i=0; i<workerCount; ++i) {
+	size_t workerCount = sched->getWorkerCount();
+	for (size_t i=0; i<workerCount; ++i) {
 		Worker *worker = sched->getWorker(i);
 		if (worker->getClass()->derivesFrom(LocalWorker::m_theClass))
 			localWorkers.push_back(worker);

@@ -77,10 +77,10 @@ void ProgramSettingsDialog::on_connectionList_currentItemChanged(QListWidgetItem
 }
 
 void ProgramSettingsDialog::refresh() {
-	int coreCount = 0;
+	size_t coreCount = 0;
 	for (int i=0; i<m_connections.size(); ++i)
 		coreCount += m_connections[i].worker->getCoreCount();
-	int totalCount = coreCount + getLocalWorkerCount();
+	size_t totalCount = coreCount + getLocalWorkerCount();
 	ui->statsLabel1->setText(tr("Cores attached via network: %1").arg(coreCount));
 	ui->statsLabel2->setText(tr("Total number of attached cores: %1").arg(totalCount));
 	int listenPort = ui->listenPort->text().toInt();

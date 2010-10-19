@@ -70,7 +70,7 @@ public:
 		ui->searchPathList->addItems(paths);	
 	}
 
-	inline void setLocalWorkerCount(int count) {
+	inline void setLocalWorkerCount(size_t count) {
 		ui->localWorkerBox->setValue(count);
 	}
 

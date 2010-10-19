@@ -204,7 +204,7 @@ public:
 
 	/// Dot product
 	inline friend Float dot(const SHVector &v1, const SHVector &v2) {
-		const int size = std::min(v1.m_coeffs.size(), v2.m_coeffs.size());
+		const size_t size = std::min(v1.m_coeffs.size(), v2.m_coeffs.size());
 		return std::inner_product(
 			v1.m_coeffs.begin(), v1.m_coeffs.begin() + size,
 			v2.m_coeffs.begin(), Float()

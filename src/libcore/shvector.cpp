@@ -249,7 +249,8 @@ struct RotationBlockHelper {
 		const ublas::matrix<Float> &M1, 
 		const ublas::matrix<Float> &Mp, 
 		ublas::matrix<Float> &Mn)
-		: M1(M1), Mp(Mp), Mn(Mn), prevLevel(Mp.size1()/2), level(prevLevel+1) { }
+		: M1(M1), Mp(Mp), Mn(Mn), prevLevel((int) Mp.size1()/2),
+		level((int) Mp.size1()/2+1) { }
 
 	inline Float delta(int i, int j) const {
 		return (i == j) ? (Float) 1 : (Float) 0;
