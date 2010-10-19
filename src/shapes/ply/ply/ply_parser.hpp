@@ -292,7 +292,7 @@ inline ply::ply_parser::ply_parser(flags_type flags)
 
 inline bool ply::ply_parser::parse(const std::string& filename)
 {
-  std::ifstream ifstream(filename.c_str());
+  std::ifstream ifstream(filename.c_str(), std::ios::in | std::ios::binary);
   return parse(ifstream);
 }
 
