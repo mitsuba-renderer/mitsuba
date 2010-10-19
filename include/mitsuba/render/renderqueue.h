@@ -58,7 +58,7 @@ public:
 	RenderQueue();
 
 	/// Return the current number of jobs in the queue
-	inline int getJobCount() const { return m_jobs.size(); }
+	inline size_t getJobCount() const { return m_jobs.size(); }
 
 	/// Add a render job to the queue
 	void addJob(RenderJob *thr);

@@ -238,7 +238,7 @@ public:
 	const Bitmap *getBitmap(unsigned int slot = EDefaultPosition) const;
 
 	/// Return the number of stored bitmaps
-	inline int getBitmapCount() const { return m_bitmaps.size(); }
+	inline int getBitmapCount() const { return (int) m_bitmaps.size(); }
 
 	/// Upload the texture
 	virtual void init() = 0;

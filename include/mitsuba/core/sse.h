@@ -198,6 +198,10 @@ __declspec(naked) static FINLINE unsigned __int64 __cdecl rdtsc(void) {
 		ret
 	}
 }
+#else
+static FINLINE __int64 rdtsc(void) {
+	return __rdtsc();
+}
 #endif
 #endif
 

@@ -197,8 +197,8 @@ bool PhotonMap::storePhoton(const Photon &photon) {
 
 
 void PhotonMap::prepareSMP(int numThreads) {
-	int photonsPerThread = m_maxPhotons / numThreads;
-	int remainder = m_maxPhotons - photonsPerThread * numThreads;
+	size_t photonsPerThread = m_maxPhotons / numThreads;
+	size_t remainder = m_maxPhotons - photonsPerThread * numThreads;
 
 	m_numThreads = numThreads;
 	m_context = new ThreadContext[numThreads];
@@ -222,7 +222,7 @@ bool PhotonMap::storePhotonSMP(int thread, const Point &pos, const Normal &norma
 	/* Keep track of the volume covered by all stored photons */
 	m_context[thread].aabb.expandBy(pos);
 
-	int idx = m_context[thread].photonCount++;
+	size_t idx = m_context[thread].photonCount++;
 	m_photons[m_context[thread].photonOffset + idx] = Photon(pos, normal, dir, power, depth);
 
 	return true;
@@ -478,11 +478,11 @@ void PhotonMap::balanceRecursive(photon_iterator basePtr,
 	}
 }
 
-unsigned int PhotonMap::nnSearch(const Point &p, Float &searchRadiusSquared, 
-		unsigned int maxSize, search_result *results) const {
+size_t PhotonMap::nnSearch(const Point &p, Float &searchRadiusSquared, 
+		size_t maxSize, search_result *results) const {
 	const float pos[3] = { (float) p.x, (float) p.y, (float) p.z };
 	size_t stack[MAX_PHOTONMAP_DEPTH];
-	unsigned int index = 1, stackPos = 1, fill = 0;
+	size_t index = 1, stackPos = 1, fill = 0;
 	bool isPriorityQueue = false;
 	float distSquared = (float) searchRadiusSquared;
 	stack[0] = 0;
@@ -557,7 +557,7 @@ unsigned int PhotonMap::nnSearch(const Point &p, Float &searchRadiusSquared,
 }
 
 Spectrum PhotonMap::estimateIrradiance(const Point &p, const Normal &n, 
-	Float searchRadius, unsigned int maxPhotons) const {
+	Float searchRadius, size_t maxPhotons) const {
 	Spectrum result(0.0f);
 
 	/* The photon map needs to be balanced before executing searches */
@@ -565,15 +565,16 @@ Spectrum PhotonMap::estimateIrradiance(const Point &p, const Normal &n,
 
 	/* Search for photons contained within a spherical region */
 	Float distSquared = searchRadius*searchRadius;
-	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
-	unsigned int resultCount = nnSearch(p, distSquared, maxPhotons, results);
+	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) 
+		* sizeof(search_result)));
+	size_t resultCount = nnSearch(p, distSquared, maxPhotons, results);
 
 	/* Avoid very noisy estimates */
 	if (resultCount < m_minPhotons)
 		return result;
 
 	/* Sum over all contributions */
-	for (unsigned int i=0; i<resultCount; i++) {
+	for (size_t i=0; i<resultCount; i++) {
 		const Photon &photon = *results[i].second;
 
 		/* Don't use samples from the opposite side
@@ -591,7 +592,7 @@ Spectrum PhotonMap::estimateIrradiance(const Point &p, const Normal &n,
 
 #if !defined(MTS_SSE)
 Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n, 
-	Float searchRadius, unsigned int maxPhotons) const {
+	Float searchRadius, size_t maxPhotons) const {
 	Spectrum result(0.0f);
 
 	/* The photon map needs to be balanced before executing searches */
@@ -599,14 +600,14 @@ Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n,
 
 	Float distSquared = searchRadius*searchRadius;
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
-	unsigned int resultCount = nnSearch(p, distSquared, maxPhotons, results);
+	size_t resultCount = nnSearch(p, distSquared, maxPhotons, results);
 
 	/* Avoid very noisy estimates */
 	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
 		return result;
 
 	/* Sum over all contributions */
-	for (unsigned int i=0; i<resultCount; i++) {
+	for (size_t i=0; i<resultCount; i++) {
 		const Float photonDistanceSqr = results[i].first;
 		const Photon &photon = *results[i].second;
 
@@ -628,7 +629,7 @@ Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n,
 #else
 
 Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n, 
-	Float searchRadius, unsigned int maxPhotons) const {
+	Float searchRadius, size_t maxPhotons) const {
 	SSEVector result(_mm_setzero_ps());
 
 	/* The photon map needs to be balanced before executing searches */
@@ -636,14 +637,14 @@ Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n,
 
 	Float distSquared = searchRadius*searchRadius;
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
-	unsigned int resultCount = nnSearch(p, distSquared, maxPhotons, results);
+	size_t resultCount = nnSearch(p, distSquared, maxPhotons, results);
 
 	/* Avoid very noisy estimates */
 	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
 		return Spectrum(0.0f);
 
 	/* Sum over all contributions */
-	for (unsigned int i=0; i<resultCount; i++) {
+	for (size_t i=0; i<resultCount; i++) {
 		const Float photonDistanceSqr = results[i].first;
 		const Photon &photon = *results[i].second;
 
@@ -676,7 +677,7 @@ Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n,
 #endif
 
 Spectrum PhotonMap::estimateRadianceFiltered(const Intersection &its,
-	Float searchRadius, unsigned int maxPhotons) const {
+	Float searchRadius, size_t maxPhotons) const {
 	Spectrum result(0.0f);
 	const BSDF *bsdf = its.shape->getBSDF();
 
@@ -686,14 +687,14 @@ Spectrum PhotonMap::estimateRadianceFiltered(const Intersection &its,
 	/* Search for photons contained within a spherical region */
 	Float distSquared = searchRadius*searchRadius;
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
-	unsigned int resultCount = nnSearch(its.p, distSquared, maxPhotons, results);
+	size_t resultCount = nnSearch(its.p, distSquared, maxPhotons, results);
 
 	/* Avoid very noisy estimates */
 	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
 		return Spectrum(0.0f);
 
 	/* Sum over all contributions */
-	for (unsigned int i=0; i<resultCount; i++) {
+	for (size_t i=0; i<resultCount; i++) {
 		const Float photonDistanceSqr = results[i].first;
 		const Photon &photon = *results[i].second;
 
@@ -710,7 +711,7 @@ Spectrum PhotonMap::estimateRadianceFiltered(const Intersection &its,
 	return result * (m_scale * 3 * INV_PI / distSquared);
 }
 
-int PhotonMap::estimateRadianceRaw(const Intersection &its,
+size_t PhotonMap::estimateRadianceRaw(const Intersection &its,
 	Float searchRadius, Spectrum &result, int maxDepth) const {
 	result = Spectrum(0.0f);
 	const BSDF *bsdf = its.shape->getBSDF();
@@ -720,7 +721,7 @@ int PhotonMap::estimateRadianceRaw(const Intersection &its,
 
 	const float pos[3] = { (float) its.p.x, (float) its.p.y, (float) its.p.z };
 	size_t stack[MAX_PHOTONMAP_DEPTH];
-	unsigned int index = 1, stackPos = 1, resultCount = 0;
+	size_t index = 1, stackPos = 1, resultCount = 0;
 	float distSquared = (float) searchRadius*searchRadius;
 	stack[0] = 0;
 
@@ -788,7 +789,7 @@ int PhotonMap::estimateRadianceRaw(const Intersection &its,
 }
 
 Spectrum PhotonMap::estimateVolumeRadiance(const MediumSamplingRecord &mRec, const Ray &ray,
-	Float searchRadius, unsigned int maxPhotons, const Medium *medium) const {
+	Float searchRadius, size_t maxPhotons, const Medium *medium) const {
 	Spectrum result(0.0f);
 
 	/* The photon map needs to be balanced before executing searches */
@@ -797,7 +798,7 @@ Spectrum PhotonMap::estimateVolumeRadiance(const MediumSamplingRecord &mRec, con
 	/* Search for photons contained within a spherical region */
 	Float distSquared = searchRadius*searchRadius;
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
-	unsigned int resultCount = nnSearch(ray.o, distSquared, maxPhotons, results);
+	size_t resultCount = nnSearch(ray.o, distSquared, maxPhotons, results);
 
 	/* Avoid very noisy estimates */
 	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
@@ -807,7 +808,7 @@ Spectrum PhotonMap::estimateVolumeRadiance(const MediumSamplingRecord &mRec, con
 	Vector wo = -ray.d;
 
 	/* Sum over all contributions */
-	for (unsigned int i=0; i<resultCount; i++) {
+	for (size_t i=0; i<resultCount; i++) {
 		const Photon &photon = *results[i].second;
 		result += photon.getPower() * (phase->f(mRec, photon.getDirection(), wo));
 	}
@@ -829,13 +830,13 @@ void PhotonMap::setMinPhotons(int minPhotons) {
 void PhotonMap::dumpOBJ(const std::string &filename) {
 	std::ofstream os(filename.c_str());
 	os << "o Photons" << endl;
-	for (unsigned int i=1; i<=getPhotonCount(); i++) {
+	for (size_t i=1; i<=getPhotonCount(); i++) {
 		Point p = getPhotonPosition(i);
 		os << "v " << p.x << " " << p.y << " " << p.z << endl;
 	}
 
 	/// Need to generate some fake geometry so that blender will import the points
-	for (unsigned int i=3; i<=getPhotonCount(); i++) 
+	for (size_t i=3; i<=getPhotonCount(); i++) 
 		os << "f " << i << " " << i-1 << " " << i-2 << endl;
 	os.close();
 }

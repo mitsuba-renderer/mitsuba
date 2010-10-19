@@ -72,7 +72,9 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 	for (int y=sy; y<ey; ++y) {
 		for (int x=sx; x<ex; ++x) {
 			/* Generate a camera ray without normalization */
-			primary = Ray(m_cameraO, m_cameraTL + m_cameraDx*x + m_cameraDy * y);
+			primary = Ray(m_cameraO, m_cameraTL 
+				+ m_cameraDx * (Float) x
+				+ m_cameraDy * (Float) y);
 
 			++numRays;
 			if (!m_kdtree->rayIntersect(primary, its)) {

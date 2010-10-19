@@ -78,7 +78,7 @@ private:
  */
 class GatherPhotonWorker : public ParticleTracer {
 public:
-	GatherPhotonWorker(GatherPhotonProcess::EGatherType type, int granularity,
+	GatherPhotonWorker(GatherPhotonProcess::EGatherType type, unsigned int granularity,
 		int maxDepth, int rrDepth)
 		: ParticleTracer(maxDepth, true, rrDepth),
 		m_type(type), m_granularity(granularity) {
@@ -149,7 +149,7 @@ GatherPhotonProcess::GatherPhotonProcess(EGatherType type, size_t photonCount,
 }
 
 ref<WorkProcessor> GatherPhotonProcess::createWorkProcessor() const {
-	return new GatherPhotonWorker(m_type, m_granularity, m_maxDepth, 
+	return new GatherPhotonWorker(m_type, (unsigned int) m_granularity, m_maxDepth, 
 		m_rrDepth);
 }
 

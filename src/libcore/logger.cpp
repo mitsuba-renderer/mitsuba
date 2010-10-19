@@ -113,11 +113,8 @@ void Logger::log(ELogLevel level, const Class *theClass,
 		if (runningInDebugger)
 			__asm__ ("int $3");
 #elif defined(WIN32)
-		if (IsDebuggerPresent()) {
-			__asm {
-				int 0x03
-			}
-		}
+		if (IsDebuggerPresent()) 
+			__debugbreak();
 #endif
 
 		throw std::runtime_error(text);
