@@ -8,8 +8,14 @@
 #include <string>
 #include <vector>
 
+#if defined(WIN32)
+#include <boost/tr1/functional.hpp>
+#include <boost/tr1/memory.hpp>
+#include <boost/tr1/tuple.hpp>
+#else
 #include <tr1/functional>
 #include <tr1/memory>
+#endif
 
 #include <boost/mpl/fold.hpp>
 #include <boost/mpl/inherit.hpp>
