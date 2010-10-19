@@ -155,6 +155,9 @@ public:
 					std::swap(t.n[0], t.n[1]);
 					triangles.push_back(t);
 				}
+				if (iss >> tmp)
+					Log(EError, "Encountered an n-gon (with n>4)! Only "
+						"triangles and quads are supported by the OBJ loader.");
 			} else {
 				/* Ignore */
 				std::string line;
