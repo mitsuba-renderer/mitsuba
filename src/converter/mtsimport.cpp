@@ -32,7 +32,7 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/statistics.h>
 #if defined(WIN32)
-#include "../mitsuba/getopt.h"
+#include <mitsuba/core/getopt.h>
 #endif
 
 XERCES_CPP_NAMESPACE_USE

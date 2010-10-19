@@ -3092,9 +3092,9 @@ template <typename Derived> void GenericKDTree<Derived>::findCosts(
 					nIntersections++;
 				if (i > warmup) {
 					A[idx].x = 1;
-					A[idx].y = boost::get<1>(statistics);
-					A[idx].z = boost::get<2>(statistics);
-					b[idx]   = boost::get<3>(statistics);
+					A[idx].y = (Float) boost::get<1>(statistics);
+					A[idx].z = (Float) boost::get<2>(statistics);
+					b[idx]   = (Float) boost::get<3>(statistics);
 					idx++;
 				}
 			}
