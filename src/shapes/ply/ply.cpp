@@ -22,7 +22,11 @@
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/timer.h>
 #include <ply/ply_parser.hpp>
+#if defined(WIN32)
+#include <boost/tr1/functional.hpp>
+#else
 #include <tr1/functional>
+#endif
 
 using namespace std::tr1::placeholders;
 
