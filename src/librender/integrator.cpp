@@ -163,7 +163,7 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 	RadianceQueryRecord rRec(scene, sampler);
 	bool needsLensSample = camera->needsLensSample();
 	const TabulatedFilter *filter = camera->getFilm()->getTabulatedFilter();
-	Float scaleFactor = 1.0f/std::sqrt(sampler->getSampleCount());
+	Float scaleFactor = 1.0f/std::sqrt((Float) sampler->getSampleCount());
 
 	if (!block->collectStatistics()) {
 		for (y = sy; y < ey; y++) {

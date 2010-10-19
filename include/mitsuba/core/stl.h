@@ -168,8 +168,10 @@ inline bool ubi_isnan(double f) {
 	int classification = ::_fpclass(f);
 	return classification == _FPCLASS_QNAN || classification == _FPCLASS_SNAN;
 }
+extern "C" {
+	extern MTS_EXPORT_CORE float nextafterf(float x, float y);
+};
 
-extern float nextafterf(float x, float y);
 #else
 inline bool ubi_isnan(float f) {
 	return std::fpclassify(f) == FP_NAN;

@@ -119,7 +119,7 @@ public:
 	 * Walks through the list of chunks to find one with enough
 	 * free memory. If no chunk could be found, a new one is created.
 	 */
-	template <typename T> T * __restrict__ allocate(size_t size) {
+	template <typename T> T * __restrict allocate(size_t size) {
 		size *= sizeof(T);
 		for (std::vector<Chunk>::iterator it = m_chunks.begin();
 				it != m_chunks.end(); ++it) {
@@ -295,7 +295,7 @@ public:
 	 * create unused elements in the previous block if a new
 	 * one has to be allocated.
 	 */
-	inline T * __restrict__ allocate(size_t size) {
+	inline T * __restrict allocate(size_t size) {
 #if defined(MTS_KD_DEBUG)
 		SAssert(size <= BlockSize);
 #endif
@@ -2174,10 +2174,10 @@ protected:
 				}
 			}
 
-			KDAssert(leftEventsTempEnd - leftEventsTempStart <= primsLeft * 6);
-			KDAssert(rightEventsTempEnd - rightEventsTempStart <= primsRight * 6);
-			KDAssert(newEventsLeftEnd - newEventsLeftStart <= primsBoth * 6);
-			KDAssert(newEventsRightEnd - newEventsRightStart <= primsBoth * 6);
+			KDAssert((size_type) (leftEventsTempEnd - leftEventsTempStart) <= primsLeft * 6);
+			KDAssert((size_type) (rightEventsTempEnd - rightEventsTempStart) <= primsRight * 6);
+			KDAssert((size_type) (newEventsLeftEnd - newEventsLeftStart) <= primsBoth * 6);
+			KDAssert((size_type) (newEventsRightEnd - newEventsRightStart) <= primsBoth * 6);
 			ctx.pruned += prunedLeft + prunedRight;
 
 			/* Sort the events from overlapping prims */
@@ -2216,8 +2216,8 @@ protected:
 					*rightEventsEnd++ = *event;
 				}
 			}
-			KDAssert(leftEventsEnd - leftEventsStart <= bestSplit.numLeft * 6);
-			KDAssert(rightEventsEnd - rightEventsStart <= bestSplit.numRight * 6);
+			KDAssert((size_type) (leftEventsEnd - leftEventsStart) <= bestSplit.numLeft * 6);
+			KDAssert((size_type) (rightEventsEnd - rightEventsStart) <= bestSplit.numRight * 6);
 		}
 
 		/* Shrink the edge event storage now that we know exactly how 
@@ -2317,7 +2317,7 @@ protected:
 		 */
 		void setAABB(const AABB &aabb) {
 			m_aabb = aabb;
-			m_binSize = m_aabb.getExtents() / m_binCount;
+			m_binSize = m_aabb.getExtents() / (Float) m_binCount;
 			for (int axis=0; axis<3; ++axis) 
 				m_invBinSize[axis] = 1/m_binSize[axis];
 		}
@@ -3092,9 +3092,9 @@ template <typename Derived> void GenericKDTree<Derived>::findCosts(
 					nIntersections++;
 				if (i > warmup) {
 					A[idx].x = 1;
-					A[idx].y = boost::get<1>(statistics);
-					A[idx].z = boost::get<2>(statistics);
-					b[idx]   = boost::get<3>(statistics);
+					A[idx].y = (Float) boost::get<1>(statistics);
+					A[idx].z = (Float) boost::get<2>(statistics);
+					b[idx]   = (Float) boost::get<3>(statistics);
 					idx++;
 				}
 			}

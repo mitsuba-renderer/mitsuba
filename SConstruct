@@ -285,8 +285,8 @@ if sys.platform == 'darwin':
 	coreEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing');
 	libcore_objects += coreEnv_osx.SharedObject('src/libcore/platform_darwin.mm')
 elif sys.platform == 'win32':
-	libcore_objects += coreEnv_osx.SharedObject('src/libcore/getopt.c')
-	libcore_objects += coreEnv_osx.SharedObject('src/libcore/platform_win32.cpp')
+	libcore_objects += coreEnv.SharedObject('src/libcore/getopt.c')
+	libcore_objects += coreEnv.SharedObject('src/libcore/platform_win32.cpp')
 
 libcore = coreEnv.SharedLibrary('src/libcore/mitsuba-core', libcore_objects);
 

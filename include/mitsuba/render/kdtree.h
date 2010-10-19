@@ -54,7 +54,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \sa GenericKDTree
  */
-class KDTree : public GenericKDTree<KDTree> {
+class MTS_EXPORT_RENDER KDTree : public GenericKDTree<KDTree> {
 	friend class GenericKDTree<KDTree>;
 public:
 	/// Create an empty kd-tree
