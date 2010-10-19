@@ -430,6 +430,10 @@ private:
 	size_t m_bufferSize;
 };
 
+#if defined(WIN32)
+#pragma float_control(precise, on)
+#endif
+
 /**
  * \brief SAH KD-tree acceleration data structure for fast ray-object 
  * intersection computations.
@@ -2694,7 +2698,7 @@ protected:
 			/* Floating-point arithmetic.. - use both absolute and relative 
 			   epsilons when looking for intersections in the subinterval */
 			#if defined(SINGLE_PRECISION)
-			const Float eps = 1e-3;
+			const Float eps = 1e-3f;
 			#else
 			const Float eps = 1e-5;
 			#endif
@@ -2825,7 +2829,7 @@ protected:
 			}
 
 			#if defined(SINGLE_PRECISION)
-				const Float eps = 1e-3;
+				const Float eps = 1e-3f;
 			#else
 				const Float eps = 1e-5;
 			#endif
@@ -3082,9 +3086,9 @@ template <typename Derived> void GenericKDTree<Derived>::findCosts(
 		Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
 		Ray ray(p1, normalize(p2-p1));
 		Float mint, maxt, t;
-		if (ray.mint > mint) mint = ray.mint;
-		if (ray.maxt < maxt) maxt = ray.maxt;
 		if (m_aabb.rayIntersect(ray, mint, maxt)) {
+			if (ray.mint > mint) mint = ray.mint;
+			if (ray.maxt < maxt) maxt = ray.maxt;
 			if (EXPECT_TAKEN(maxt > mint)) {
 				boost::tuple<bool, uint32_t, uint32_t, uint64_t> statistics =
 					rayIntersectHavranCollectStatistics(ray, mint, maxt, t, temp);
@@ -3158,6 +3162,11 @@ template <typename Derived> Class *GenericKDTree<Derived>::m_theClass
 template <typename Derived> const Class *GenericKDTree<Derived>::getClass() const {
 	return m_theClass;
 }
+
+#if defined(WIN32)
+#pragma float_control(precise, off)
+#endif
+
 
 MTS_NAMESPACE_END
 
