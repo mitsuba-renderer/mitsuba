@@ -25,6 +25,8 @@ config/config-darwin-x86.py
 config/config-darwin-universal.py  
 config/config-msvc2008-win32.py  
 config/config-msvc2008-win64.py
+config/config-msvc2010-win32.py  
+config/config-msvc2010-win64.py
 \end{shell}
 
 Some minor adjustments may have to be made to this file based on your configuration. 
@@ -131,7 +133,7 @@ $\text{\$}$ . setpath.sh
 
 
 \subsection{Building on Windows}
-This section assumes that Visual Studio 2008 is installed, but the instructions should work equally well with other versions.
+This section assumes that Visual Studio 2008 is installed, but the instructions should work analogously for other versions.
 On the Windows platform, Mitsuba already includes most of the dependencies in precompiled form.
 You will still need to set up a few things though: first, you need to install Python 
 (\url{www.python.org}) and SCons (\url{http://www.scons.org}) and ensure that they are contained

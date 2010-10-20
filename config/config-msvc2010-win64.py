@@ -6,7 +6,7 @@ GCC            = 'cl'
 CXXFLAGS       = ['/nologo', '/Ox', '/fp:fast', '/D', 'WIN32', '/D', 'WIN64', '/W3', '/EHsc', '/GS-', '/GL', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/D_SECURE_SCL=0', '/openmp']
 SHCXXFLAGS     = CXXFLAGS
 TARGET_ARCH    = 'x86_64'
-MSVC_VERSION   = '9.0'
+MSVC_VERSION   = '10.0'
 LINKFLAGS      = ['/nologo', '/SUBSYSTEM:CONSOLE', '/MACHINE:X64', '/FIXED:NO', '/OPT:REF', '/OPT:ICF', '/LTCG', '/NODEFAULTLIB:LIBCMT']
 BASEINCLUDE    = ['#include', '#tools/windows/include']
 BASELIB        = ['pthreadVCE2', 'msvcrt', 'ws2_32']

@@ -49,6 +49,7 @@ vars.Add('BOOSTINCLUDE',  'boost include path')
 vars.Add('BOOSTLIB',      'boost libraries')
 vars.Add('BOOSTLIBDIR',   'boost library path')
 vars.Add('TARGET_ARCH',   'Target architecture')
+vars.Add('MSVC_VERSION',  'MS Visual C++ compiler version')
 
 try:
 	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt4'], toolpath=['tools'])
