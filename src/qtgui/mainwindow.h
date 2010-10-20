@@ -173,7 +173,7 @@ private:
 	QStringList m_searchPaths;
 	QString m_nodeName;
 	int m_blockSize, m_listenPort;
-	bool m_checkForUpdates, m_notifyIfNoUpdates;
+	bool m_checkForUpdates, m_manualUpdateCheck;
 	bool m_activeWindowHack;
 	int m_bugStatus, m_contextIndex;
 	SceneContext *m_lastTab;

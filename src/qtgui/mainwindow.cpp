@@ -27,6 +27,7 @@
 #include "aboutdlg.h"
 #include "importdlg.h"
 #include "loaddlg.h"
+#include "updatedlg.h"
 #include "server.h"
 #include "save.h"
 #include <QtNetwork>
@@ -47,40 +48,6 @@
 #else
 #include "previewsettingsdlg.h"
 #endif
-
-class ProgramVersion {
-public:
-	ProgramVersion(const QString &versionString) {
-		QStringList sl;
-		sl = versionString.trimmed().split('.');
-		SAssert(sl.size() == 3);
-		major = sl[0].toInt();
-		minor = sl[1].toInt();
-		release = sl[2].toInt();
-	}
-
-	inline bool operator<(const ProgramVersion &other) const {
-		if (major < other.major)
-			return true;
-		if (major > other.major)
-			return false;
-		if (minor < other.minor)
-			return true;
-		if (minor > other.minor)
-			return false;
-		if (release < other.release)
-			return true;
-		return false;
-	}
-
-	QString toString() const {
-		return QString("%1.%2.%3").arg(major).arg(minor).arg(release);
-	}
-private:
-	int major;
-	int minor;
-	int release;
-};
 
 static int localWorkerCtr = 0, remoteWorkerCtr = 0;
 
@@ -420,30 +387,33 @@ void MainWindow::adjustSize() {
         resize(s);
 }
 
-void MainWindow::checkForUpdates(bool notifyIfNone) {
-	m_notifyIfNoUpdates = notifyIfNone;
+void MainWindow::checkForUpdates(bool manualUpdateCheck) {
+	m_manualUpdateCheck = manualUpdateCheck;
 	m_networkReply = m_networkManager->get(QNetworkRequest(QUrl("http://www.mitsuba-renderer.org/version")));
 }
 
 void MainWindow::onNetworkFinished(QNetworkReply *reply) {
 	if (reply->error() == QNetworkReply::NoError) {
+		QSettings settings("mitsuba-renderer.org", "qtgui");
 		ProgramVersion remote(QString(reply->readAll()));
+		ProgramVersion ignoredVersion(settings.value("ignoredVersion", "0.0.0").toString());
 		ProgramVersion local(MTS_VERSION);
 
-		if (local < remote)
-			QMessageBox::information(this, tr("New version available"),
-				QString("<p>A new version of Mitsuba is available!</p><p>"
-					"You have version <b>%1</b> and the most recent release is version <b>%2</b>. "
-					"Please visit the <a href=\"http://www.mitsuba-renderer.org\">Mitsuba website</a> to download it.</p>")
-					.arg(local.toString()).arg(remote.toString()),
-					QMessageBox::Ok);
-		else if (m_notifyIfNoUpdates)
+		if (local < remote) {
+			if (!m_manualUpdateCheck && remote == ignoredVersion)
+				return;
+			UpdateDialog *dialog = new UpdateDialog(this, local, remote);
+			dialog->setAttribute(Qt::WA_DeleteOnClose);
+			dialog->setWindowModality(Qt::WindowModal);
+			dialog->show();
+		} else if (m_manualUpdateCheck) {
 			QMessageBox::information(this, tr("Installed version is current"),
 				QString("<p>You're up to date!</p>"
 					"<p>Mitsuba <b>%1</b> is still the newest version available.</p>")
 					.arg(local.toString()), QMessageBox::Ok);
+		}
 	} else {
-		if (m_notifyIfNoUpdates)
+		if (m_manualUpdateCheck)
 			QMessageBox::warning(this, tr("Unable to determine the newest version"),
 				QString("<p>Unable to determine the newest Mitsuba version.</p><p>"
 					"Perhaps you are not connected to the Internet?</p>"),
