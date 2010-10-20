@@ -173,7 +173,57 @@ public:
 
 		return result;
 	}
-	
+
+	inline Float sqr(Float f) {
+		return f*f;
+	}
+
+
+	/**
+	 * Compute the ellipse created by the intersection of an infinite
+	 * cylinder and a plane. Returns false in the degenerate case.
+	 * Based on:
+	 * www.geometrictools.com/Documentation/IntersectionCylinderPlane.pdf
+	 */
+	inline bool intersectCylPlane(Point planePt, Normal planeNrml,
+			Point cylPt, Vector cylD, Float radius) {
+		if (absDot(planeNrml, cylD) < Epsilon)
+			return false;
+
+		Vector A = normalize(cylD - dot(planeNrml, cylD)*planeNrml),
+			   B = cross(planeNrml, A),
+			   delta = planePt - cylPt,
+			   deltaProj = delta - cylD*dot(delta, cylD);
+
+		Float c0 = 1-sqr(dot(A, cylD));
+		Float c1 = 1-sqr(dot(B, cylD));
+		Float c2 = 2*dot(A, deltaProj);
+		Float c3 = 2*dot(B, deltaProj);
+		Float c4 = dot(delta, deltaProj) - radius*radius;
+
+		Float lambda = (c2*c2/(4*c0) + c3*c3/(4*c1) - c4)/(c0*c1);
+
+		Float alpha0 = -c2/(2*c0),
+			  beta0 = -c3/(2*c1),
+			  L_alpha = std::sqrt(c1*lambda),
+			  L_beta = std::sqrt(c0*lambda);
+
+		Point center = planePt + alpha0 * A + beta0 * B;
+		Vector axis1 = L_alpha * A;
+		Vector axis2 = L_beta * B;
+		return true;
+	}
+
+	AABB getClippedAABB(const AABB &box) const {
+		/* Compute a base bounding box */
+		AABB base(getAABB());
+		base.clip(box);
+
+		/* Now forget about the cylinder ends and 
+		   intersect an infinite cylinder with each AABB face */
+		return box;
+	}
+
 #if 0
 	inline AABB getAABB(Float start, Float end) const {
 		AABB result;
