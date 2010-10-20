@@ -675,6 +675,8 @@ if sys.platform == 'win32':
 	installTargets += env.Install('dist', dllprefix + 'xerces-c_3_0.dll')
 	installTargets += env.Install('dist', dllprefix + 'glew32mx.dll')
 	installTargets += env.Install('dist', dllprefix + 'libcollada14dom21.dll')
+	installTargets += env.Install('dist', dllprefix + 'boost_system-vc90-mt-1_39.dll')
+	installTargets += env.Install('dist', dllprefix + 'boost_filesystem-vc90-mt-1_39.dll')
 	if hasQt:
 		installTargets += env.Install('dist', env['QT4_BINPATH']+'/QtCore4.dll')
 		installTargets += env.Install('dist', env['QT4_BINPATH']+'/QtGui4.dll')
