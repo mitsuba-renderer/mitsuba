@@ -675,8 +675,6 @@ if sys.platform == 'win32':
 	installTargets += env.Install('dist', dllprefix + 'xerces-c_3_0.dll')
 	installTargets += env.Install('dist', dllprefix + 'glew32mx.dll')
 	installTargets += env.Install('dist', dllprefix + 'libcollada14dom21.dll')
-	installTargets += env.Install('dist', dllprefix + 'boost_system-vc90-mt-1_39.dll')
-	installTargets += env.Install('dist', dllprefix + 'boost_filesystem-vc90-mt-1_39.dll')
 	if hasQt:
 		installTargets += env.Install('dist', env['QT4_BINPATH']+'/QtCore4.dll')
 		installTargets += env.Install('dist', env['QT4_BINPATH']+'/QtGui4.dll')
@@ -719,8 +717,6 @@ elif sys.platform == 'darwin':
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/Xerces-C.framework/Resources/lib/libxerces-c-3.0.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libpng.framework/Resources/lib/libpng.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libjpeg.framework/Resources/lib/libjpeg.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libboost.framework/Resources/lib/libboost_system-xgcc42-mt-1_39.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libboost.framework/Resources/lib/libboost_filesystem-xgcc42-mt-1_39.dylib')
 	if hasCollada:
 		installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/Collada14Dom.framework/Resources/lib/libCollada14Dom.dylib')
 	if hasQt:
