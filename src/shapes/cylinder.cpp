@@ -21,6 +21,7 @@
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/luminaire.h>
 #include <mitsuba/core/properties.h>
+#include <mitsuba/core/random.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -150,6 +151,30 @@ public:
 		return m_invSurfaceArea;
 	}
 
+	inline AABB getAABB() const {
+		Vector x1 = m_objectToWorld(Vector(m_radius, 0, 0));
+		Vector x2 = m_objectToWorld(Vector(0, m_radius, 0));
+		Point p0 = m_objectToWorld(Point(0, 0, 0));
+		Point p1 = m_objectToWorld(Point(0, 0, m_length));
+		AABB result;
+
+		/* To bound the cylinder, it is sufficient to find the
+		   smallest box containing the two circles at the endpoints.
+		   This can be done component-wise as follows */
+
+		for (int i=0; i<3; ++i) {
+			Float range = std::sqrt(x1[i]*x1[i] + x2[i]*x2[i]);
+
+			result.min[i] = std::min(std::min(result.min[i], 
+						p0[i]-range), p1[i]-range);
+			result.max[i] = std::max(std::max(result.max[i], 
+						p0[i]+range), p1[i]+range);
+		}
+
+		return result;
+	}
+	
+#if 0
 	inline AABB getAABB(Float start, Float end) const {
 		AABB result;
 		const Float r = m_radius;
@@ -164,10 +189,12 @@ public:
 	}
 
 	AABB getAABB() const {
+		/* Very approximate .. */
 		return getAABB(0, m_length);
 	}
 
 	AABB getClippedAABB(const AABB &box) const {
+		/* This is incorrect! */
 		Float nearT, farT;
 		AABB result(getAABB(0, m_length));
 		result.clip(box);
@@ -185,6 +212,7 @@ public:
 
 		return result;
 	}
+#endif
 
 	Float getSurfaceArea() const {
 		return 2*M_PI*m_radius*m_length;
