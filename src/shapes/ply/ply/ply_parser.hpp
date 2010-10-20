@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <cctype>
 
 #if defined(WIN32)
 #include <boost/tr1/functional.hpp>
