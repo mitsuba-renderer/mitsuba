@@ -174,7 +174,7 @@ public:
 		return result;
 	}
 
-	inline Float sqr(Float f) {
+	inline Float sqr(Float f) const {
 		return f*f;
 	}
 
@@ -185,14 +185,26 @@ public:
 	 * Based on:
 	 * www.geometrictools.com/Documentation/IntersectionCylinderPlane.pdf
 	 */
-	inline bool intersectCylPlane(Point planePt, Normal planeNrml,
-			Point cylPt, Vector cylD, Float radius) {
+	FINLINE bool intersectCylPlane(Point planePt, Normal planeNrml,
+			Point cylPt, Vector cylD, Float radius, Point &center,
+			Vector &axis1, Vector &axis2) const {
 		if (absDot(planeNrml, cylD) < Epsilon)
 			return false;
 
-		Vector A = normalize(cylD - dot(planeNrml, cylD)*planeNrml),
-			   B = cross(planeNrml, A),
-			   delta = planePt - cylPt,
+		Vector B, A = cylD - dot(cylD, planeNrml)*planeNrml;
+
+		Float length = A.length();
+		if (length != 0) {
+			A /= length;
+			B = cross(planeNrml, A);
+		} else {
+			Log(EInfo, "interesting: %s %s", cylD.toString().c_str(),
+					planeNrml.toString().c_str());
+
+			coordinateSystem(planeNrml, A, B);
+		}
+
+		Vector delta = planePt - cylPt,
 			   deltaProj = delta - cylD*dot(delta, cylD);
 
 		Float c0 = 1-sqr(dot(A, cylD));
@@ -208,20 +220,31 @@ public:
 			  L_alpha = std::sqrt(c1*lambda),
 			  L_beta = std::sqrt(c0*lambda);
 
-		Point center = planePt + alpha0 * A + beta0 * B;
-		Vector axis1 = L_alpha * A;
-		Vector axis2 = L_beta * B;
+		center = planePt + alpha0 * A + beta0 * B;
+		axis1 = L_alpha * A;
+		axis2 = L_beta * B;
 		return true;
 	}
+
 
 	AABB getClippedAABB(const AABB &box) const {
 		/* Compute a base bounding box */
 		AABB base(getAABB());
 		base.clip(box);
+	
+		Point p0 = m_objectToWorld(Point(0, 0, 0));
+		Point p1 = m_objectToWorld(Point(0, 0, m_length));
+		Vector cylD(normalize(p1-p0));
+		Point center;
+		Vector axis1, axis2;
+
+		intersectCylPlane(box.min, Normal(1, 0, 0), p0, cylD, m_radius, center, axis1, axis2);
+
+//		cout << center.toString() << endl;
 
 		/* Now forget about the cylinder ends and 
 		   intersect an infinite cylinder with each AABB face */
-		return box;
+		return base;
 	}
 
 #if 0
