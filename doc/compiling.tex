@@ -1,6 +1,6 @@
 \section{Compiling the renderer}
 To compile Mitsuba, you will need a recent C++ compiler (e.g. GCC 4.1+ or 
-Visual Studio 2005+) and some additional libraries, which Mitsuba uses internally. 
+Visual Studio 2008+) and some additional libraries, which Mitsuba uses internally. 
 Builds on all three supported platforms are done using a unified system
 based on SCons (\url{http://www.scons.org}), a flexible python-based 
 software construction tool. There are some minor differences between operating systems though: for
@@ -23,8 +23,10 @@ config/config-linux.py
 config/config-darwin-x86_64.py  
 config/config-darwin-x86.py  
 config/config-darwin-universal.py  
-config/config-msvc2005-win32.py  
-config/config-msvc2005-win64.py
+config/config-msvc2008-win32.py  
+config/config-msvc2008-win64.py
+config/config-msvc2010-win32.py  
+config/config-msvc2010-win64.py
 \end{shell}
 
 Some minor adjustments may have to be made to this file based on your configuration. 
@@ -131,7 +133,7 @@ $\text{\$}$ . setpath.sh
 
 
 \subsection{Building on Windows}
-This section assumes that Visual Studio 2008 is installed, but the instructions should work equally well with other versions.
+This section assumes that Visual Studio 2008 is installed, but the instructions should work analogously for other versions.
 On the Windows platform, Mitsuba already includes most of the dependencies in precompiled form.
 You will still need to set up a few things though: first, you need to install Python 
 (\url{www.python.org}) and SCons (\url{http://www.scons.org}) and ensure that they are contained
@@ -146,7 +148,7 @@ Next, install Qt (\url{http://qt.nokia.com/downloads/windows-cpp-vs2008} -- you 
 Qt utilities are reachable through the \code{\%PATH\%} environment variable so that you can for example launch \code{moc.exe} from the command line.
 
 Because the official release of Qt currently only contains 32-bit binaries, you will accordingly have to 
-build Mitsuba in 32-bit mode (i.e. you should use the configuration file \code{config-msvc2005-win32.py}). If you would rather like compile it in 64-bit mode, you have to create
+build Mitsuba in 32-bit mode (i.e. you should use the configuration file \code{config-msvc2008-win32.py}). If you would rather like compile it in 64-bit mode, you have to create
 your own 64-bit Qt binaries.
 
 Having installed these dependencies, run the ``Visual Studio 2008 Command 

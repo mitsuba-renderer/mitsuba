@@ -184,4 +184,44 @@ public:
 	}
 };
 
+class ProgramVersion {
+public:
+	inline ProgramVersion(const QString &versionString) {
+		QStringList sl;
+		sl = versionString.trimmed().split('.');
+		SAssert(sl.size() == 3);
+		major = sl[0].toInt();
+		minor = sl[1].toInt();
+		release = sl[2].toInt();
+	}
+
+	inline bool operator<(const ProgramVersion &other) const {
+		if (major < other.major)
+			return true;
+		if (major > other.major)
+			return false;
+		if (minor < other.minor)
+			return true;
+		if (minor > other.minor)
+			return false;
+		if (release < other.release)
+			return true;
+		return false;
+	}
+
+	inline bool operator==(const ProgramVersion &other) const {
+		return major == other.major 
+			&& minor == other.minor 
+			&& release == other.release;
+	}
+
+	QString toString() const {
+		return QString("%1.%2.%3").arg(major).arg(minor).arg(release);
+	}
+private:
+	int major;
+	int minor;
+	int release;
+};
+
 #endif // QTGUI_COMMON_H
