@@ -50,16 +50,26 @@ Subsurface::Subsurface(Stream *stream, InstanceManager *manager) :
 	m_eta = stream->readFloat();
 	m_sizeMultiplier = stream->readFloat();
 	unsigned int shapeCount = stream->readUInt();
-	for (unsigned int i=0; i<shapeCount; ++i)
-		m_shapes.push_back(static_cast<Shape *>(manager->getInstance(stream)));
+
+	for (unsigned int i=0; i<shapeCount; ++i) {
+		Shape *shape = static_cast<Shape *>(manager->getInstance(stream));
+		m_shapes.push_back(shape);
+	}
 	m_sigmaT = m_sigmaS + m_sigmaA;
 }
-	
+
+Subsurface::~Subsurface() {
+}
+
 void Subsurface::setParent(ConfigurableObject *parent) {
 	if (parent->getClass()->derivesFrom(Shape::m_theClass)) {
 		Shape *shape = static_cast<Shape *>(parent);
-		m_shapes.push_back(shape);
-		m_configured = false;
+		if (shape->isCompound())
+			return;
+		if (std::find(m_shapes.begin(), m_shapes.end(), shape) == m_shapes.end()) {
+			m_shapes.push_back(shape);
+			m_configured = false;
+		}
 	} else {
 		Log(EError, "IsotropicDipole: Invalid child node!");
 	}
@@ -75,9 +85,6 @@ void Subsurface::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeUInt(m_shapes.size());
 	for (unsigned int i=0; i<m_shapes.size(); ++i)
 		manager->serialize(stream, m_shapes[i]);
-}
-
-Subsurface::~Subsurface() {
 }
 
 MTS_IMPLEMENT_CLASS(Subsurface, true, NetworkedObject)

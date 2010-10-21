@@ -255,13 +255,14 @@ public:
 
 		Float sa = 0;
 		for (std::vector<Shape *>::iterator it = m_shapes.begin(); 
-			it != m_shapes.end(); ++it)
+			it != m_shapes.end(); ++it) 
 			sa += (*it)->getSurfaceArea();
 		size_t sampleCount = (size_t) std::ceil(sa / (M_PI * m_minMFP * m_minMFP)
 			* m_sampleMultiplier);
+		Log(EInfo, "Generating " SIZE_T_FMT " irradiance samples..", sampleCount);
 
 		ref<Scheduler> sched = Scheduler::getInstance();
-		
+
 		/* This could be a bit more elegant.. - inform the irradiance
 		   sampler about the index of this subsurface integrator */
 		std::vector<Subsurface *> ssIntegrators
@@ -295,7 +296,7 @@ public:
 		m_octreeResID = Scheduler::getInstance()->registerResource(m_octree);
 
 		m_ready = true;
-		return false;
+		return true;
 	}
 
 	void wakeup(std::map<std::string, SerializableObject *> &params) {

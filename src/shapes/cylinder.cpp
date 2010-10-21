@@ -214,16 +214,6 @@ public:
 		return true;
 	}
 
-	AABB getClippedAABB(const AABB &box) const {
-		/* Compute a base bounding box */
-		AABB base(getAABB());
-		base.clip(box);
-
-		/* Now forget about the cylinder ends and 
-		   intersect an infinite cylinder with each AABB face */
-		return box;
-	}
-
 #if 0
 	inline AABB getAABB(Float start, Float end) const {
 		AABB result;
@@ -237,6 +227,17 @@ public:
 		result.expandBy(b + Vector(r, r, r));
 		return result;
 	}
+
+	AABB getClippedAABB(const AABB &box) const {
+		/* Compute a base bounding box */
+		AABB base(getAABB());
+		base.clip(box);
+
+		/* Now forget about the cylinder ends and 
+		   intersect an infinite cylinder with each AABB face */
+		return box;
+	}
+
 
 	AABB getAABB() const {
 		/* Very approximate .. */
