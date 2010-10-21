@@ -110,6 +110,7 @@ cppPathPrevious = SCons.Util.semi_deepcopy(env['CPPPATH'])
 libPathPrevious = SCons.Util.semi_deepcopy(env['LIBPATH'])
 cppFlagsPrevious = SCons.Util.semi_deepcopy(env['CPPFLAGS'])
 cxxFlagsPrevious = SCons.Util.semi_deepcopy(env['CXXFLAGS'])
+
 if env.has_key('PNGINCLUDE'):
 	env.Append(CPPPATH=env['PNGINCLUDE'])
 if env.has_key('PNGLIBDIR'):
@@ -340,7 +341,8 @@ libhw_objects = ['src/libhw/session.cpp', 'src/libhw/device.cpp',
 	 'src/libhw/glrenderer.cpp', 'src/libhw/glprogram.cpp', 
 	 'src/libhw/glgeometry.cpp', 'src/libhw/gltexture.cpp',
 	 'src/libhw/gpusync.cpp', 'src/libhw/glsync.cpp',
-	 'src/libhw/vpl.cpp']
+	 'src/libhw/vpl.cpp', 'src/libhw/font.cpp',
+	 'src/libhw/viewer.cpp']
 
 if sys.platform == 'win32':
 	libhw_objects += ['src/libhw/wglsession.cpp',
@@ -491,6 +493,7 @@ plugins = []
 
 # Build the plugins -- utilities
 plugins += env.SharedLibrary('plugins/addimages', ['src/utils/addimages.cpp'])
+plugins += env.SharedLibrary('plugins/cylclip', ['src/utils/cylclip.cpp'])
 plugins += env.SharedLibrary('plugins/kdbench', ['src/utils/kdbench.cpp'])
 
 # BSDFs

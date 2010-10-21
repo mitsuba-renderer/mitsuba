@@ -28,6 +28,7 @@
 #include <mitsuba/hw/glgeometry.h>
 #include <mitsuba/hw/glprogram.h>
 #include <mitsuba/hw/glsync.h>
+#include <mitsuba/hw/font.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -731,6 +732,63 @@ void GLRenderer::blitQuad(bool flipVertically) {
 	glTexCoord2f(0.0f, flipVertically ? 0.0f : 1.0f);
 	glVertex3f(0.0f, scrSize.y, zDepth);
 	glEnd();
+}
+
+void GLRenderer::drawText(const Point2i &_pos, 
+		const Font *font, const std::string &text) {
+	int viewport[4];
+	glGetIntegerv(GL_VIEWPORT, viewport);
+	Vector2i scrSize = Vector2i(viewport[2], viewport[3]);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, scrSize.x, scrSize.y, 0, -1, 1);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	font->getTexture()->bind();
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	Point2i pos(_pos);
+	int initial = pos.x;
+
+	glBegin(GL_QUADS);
+	for (size_t i=0; i<text.length(); i++) {
+		char character = text[i];
+		if (character == '\r')
+			continue;
+		if (character == '\n') {
+			pos.x = initial;
+			pos.y += (int) (font->getMaxVerticalBearing()*4.0/3.0);
+			continue;
+		}
+
+		const Font::Glyph &glyph = font->getGlyph(character);
+
+		Point2i start = pos + Vector2i(
+			glyph.horizontalBearing,
+			font->getMaxVerticalBearing() - glyph.verticalBearing
+		);
+		Point2i end = start + glyph.size;
+		Point2 txStart = glyph.tx;
+		Point2 txEnd = txStart + glyph.ts;
+
+		glTexCoord2f(txStart.x, txStart.y);
+		glVertex2f(    start.x,   start.y);
+		glTexCoord2f(txEnd.x,   txStart.y);
+		glVertex2f(    end.x,     start.y);
+		glTexCoord2f(txEnd.x,     txEnd.y);
+		glVertex2f(    end.x,       end.y);
+		glTexCoord2f(txStart.x,   txEnd.y);
+		glVertex2f(    start.x,     end.y);
+
+		pos.x += glyph.horizontalAdvance;
+
+		if (i+1 < text.length())
+			pos.x += font->getKerning(character, text[i+1]);
+	}
+	glEnd();
+
+	font->getTexture()->unbind();
+	glDisable(GL_BLEND);
 }
 
 void GLRenderer::setCamera(const ProjectiveCamera *camera) {

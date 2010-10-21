@@ -92,6 +92,13 @@ public:
 	/// Blit a screen-sized quad
 	void blitQuad(bool flipVertically);
 
+	/**
+	 * Draw a line of text on the screen. The coordinates are specified
+	 * in pixel coordinates, where the upper left corner is the origin
+	 */
+	void drawText(const Point2i &pos, 
+			const Font *font, const std::string &text);
+
 	/// Set a depth offset for shadow mapping (0 to disable)
 	void setDepthOffset(Float value);
 	

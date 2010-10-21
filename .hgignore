@@ -52,10 +52,11 @@ tools/windows/mitsuba_res.res
 .*\.manifest$
 .*\.exp$
 
-# Imported geometry
+# Imported geometry and some default output types
 ^meshes/.*$
 ^textures/.*$
 ^mitsuba.*.log$
+.*\.exr$
 
 # Eclipse CDT project files
 ^.externalToolBuilders/.*$

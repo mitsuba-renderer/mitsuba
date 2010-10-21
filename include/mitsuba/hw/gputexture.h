@@ -103,6 +103,8 @@ public:
 		ER8G8B8A8,
 		/// 8-bit luminance
 		EL8,
+		/// 8-bit luminance + alpha
+		EL8A8,
 		/// Depth component
 		EDepth,
 		/// Floating point luminance (16 bit)

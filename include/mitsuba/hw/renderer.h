@@ -30,6 +30,7 @@ class GPUGeometry;
 class GPUProgram;
 class GPUSync;
 class Bitmap;
+class Font;
 
 /**
  * Helper class, which documents the capabilities of a renderer implementation
@@ -151,6 +152,13 @@ public:
 
 	/// Blit a screen-sized quad
 	virtual void blitQuad(bool flipVertically) = 0;
+
+	/**
+	 * Draw a line of text on the screen. The coordinates are specified
+	 * in pixel coordinates, where the upper left corner is the origin
+	 */
+	virtual void drawText(const Point2i &pos, 
+			const Font *font, const std::string &text) = 0;
 
 	/// Set a depth offset for shadow mapping (0 to disable)
 	virtual void setDepthOffset(Float value) = 0;

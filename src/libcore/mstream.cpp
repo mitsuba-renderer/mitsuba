@@ -21,12 +21,19 @@
 MTS_NAMESPACE_BEGIN
 
 MemoryStream::MemoryStream(size_t initialSize)
- : Stream(), m_capacity(0), m_size(0), m_pos(0), m_data(NULL) {
+ : Stream(), m_capacity(0), m_size(0), m_pos(0), 
+   m_ownsBuffer(true), m_data(NULL) {
 	resize(initialSize);
 }
 
+MemoryStream::MemoryStream(uint8_t *ptr, size_t size) 
+ : Stream(), m_capacity(size), m_size(size), m_pos(0),
+  m_ownsBuffer(false), m_data(ptr) {
+}
+
+
 MemoryStream::~MemoryStream() {
-	if (m_data != NULL)
+	if (m_data != NULL && m_ownsBuffer)
 		free(m_data);
 }
 
@@ -35,6 +42,10 @@ void MemoryStream::reset() {
 }
 
 void MemoryStream::resize(size_t size) {
+	if (!m_ownsBuffer)
+		Log(EError, "Tried to resize a buffer, which doesn't "
+			"belong to this MemoryStream instance!");
+
 	if (m_data == NULL)
 		m_data = (uint8_t *) malloc(size);
 	else
@@ -84,9 +95,6 @@ void MemoryStream::read(void *ptr, size_t size) {
 
 void MemoryStream::write(const void *ptr, size_t size) {
 	size_t endPos = m_pos + size;
-//	for (size_t i=0; i<size; ++i)
-//		printf("0x%x ", ((const char *) ptr)[i]);
-//	printf("\n");
 	if (endPos > m_size) {
 		if (endPos > m_capacity) 
 			resize(endPos);

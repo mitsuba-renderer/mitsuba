@@ -121,7 +121,7 @@ public:
 	 * @param pEvent The event data structure
 	 * @return True if the result has been handled, false otherwise
 	 */
-	virtual bool deviceEventOccurred(const DeviceEvent &pEvent) = 0;
+	virtual bool deviceEventOccurred(const DeviceEvent &event) = 0;
 protected:
 	/// Virtual destructor
 	virtual ~DeviceEventListener() { }

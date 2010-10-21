@@ -35,7 +35,7 @@
 #include <limits>
 
 /// Current release of Mitsuba
-#define MTS_VERSION "0.1.3"
+#define MTS_VERSION "0.2.0"
 
 /// Year of this release
 #define MTS_YEAR "2010"

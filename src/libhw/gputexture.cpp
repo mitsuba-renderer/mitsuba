@@ -65,6 +65,7 @@ void GPUTexture::setBitmap(unsigned int slot, Bitmap *bitmap) {
 
 		switch (bitmap->getBitsPerPixel()) {
 			case 8: m_format = EL8; break;
+			case 16: m_format = EL8A8; break;
 			case 24: m_format = ER8G8B8; break;
 			case 32: m_format = ER8G8B8A8; break;
 			case 96: m_format = EFloat32RGB; break;
@@ -131,6 +132,7 @@ static const char *toString(GPUTexture::ETextureFormat format) {
 		case GPUTexture::ER8G8B8: return "R8G8B8";
 		case GPUTexture::ER8G8B8A8: return "R8G8B8A8";
 		case GPUTexture::EL8: return "L8";
+		case GPUTexture::EL8A8: return "L8A8";
 		case GPUTexture::EDepth: return "depth";
         default: SLog(EError, "Invalid texture format"); return NULL;
     }

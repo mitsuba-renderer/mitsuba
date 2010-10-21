@@ -302,6 +302,10 @@ void GLTexture::lookupGLConstants() {
 			m_format = GL_LUMINANCE;
 			m_internalFormat = GL_LUMINANCE8;
 			break;
+		case EL8A8:
+			m_format = GL_LUMINANCE_ALPHA;
+			m_internalFormat = GL_LUMINANCE8_ALPHA8;
+			break;
 		case EDepth:
 			m_format = GL_DEPTH_COMPONENT;
 			m_internalFormat = GL_DEPTH_COMPONENT32;
