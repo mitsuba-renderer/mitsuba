@@ -136,7 +136,13 @@ struct RayDifferential : public Ray {
 		mint = ray.mint;
 		d = ray.d;
 		maxt = ray.maxt;
+#ifdef MTS_DEBUG_FP
+		disable_fpexcept();
+#endif
 		dRcp = ray.dRcp;
+#ifdef MTS_DEBUG_FP
+		enable_fpexcept();
+#endif
 		hasDifferentials = ray.hasDifferentials;
 		rx = ray.rx;
 		ry = ray.ry;
@@ -147,7 +153,13 @@ struct RayDifferential : public Ray {
 		mint = ray.mint;
 		d = ray.d;
 		maxt = ray.maxt;
+#ifdef MTS_DEBUG_FP
+		disable_fpexcept();
+#endif
 		dRcp = ray.dRcp;
+#ifdef MTS_DEBUG_FP
+		enable_fpexcept();
+#endif
 		hasDifferentials = false;
 	}
 };

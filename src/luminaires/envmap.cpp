@@ -176,7 +176,7 @@ public:
 		int yPos = std::min(std::max((int) std::floor(y), 0), m_pdfResolution.y-1);
 
 		Float pdf = m_pdf[xPos + yPos * m_pdfResolution.x];
-		Float sinTheta = std::sqrt(std::max((Float) 0.0f, 1-d.y*d.y));
+		Float sinTheta = std::sqrt(std::max((Float) Epsilon, 1-d.y*d.y));
 
 		return pdf / (m_pdfPixelSize.x * m_pdfPixelSize.y * sinTheta);
 #endif

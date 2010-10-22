@@ -359,26 +359,6 @@ public:
 		/* Very approximate .. */
 		return getAABB(0, m_length);
 	}
-
-	AABB getClippedAABB(const AABB &box) const {
-		/* This is incorrect! */
-		Float nearT, farT;
-		AABB result(getAABB(0, m_length));
-		result.clip(box);
-
-		Point a = m_objectToWorld(Point(0, 0, 0));
-		Point b = m_objectToWorld(Point(0, 0, m_length));
-
-		if (!result.rayIntersect(Ray(a, normalize(b-a)), nearT, farT))
-			return result; // that could be improved
-
-		nearT = std::max(nearT, (Float) 0);
-		farT = std::min(farT, m_length);
-		result = getAABB(nearT, farT);
-		result.clip(box);
-
-		return result;
-	}
 #endif
 
 	Float getSurfaceArea() const {
