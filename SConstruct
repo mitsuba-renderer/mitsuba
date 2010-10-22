@@ -409,7 +409,6 @@ if sys.platform == 'win32':
 # Build the command-line+GUI interface
 mainEnv.Program('mtssrv', resources + ['src/mitsuba/mtssrv.cpp'])
 mainEnv.Program('mitsuba', resources + ['src/mitsuba/mitsuba.cpp'])
-mainEnv.Program('mtsutil', resources + ['src/mitsuba/mtsutil.cpp'])
 
 if sys.platform == 'darwin':
 	mainEnv_osx = mainEnv.Clone();
@@ -417,6 +416,8 @@ if sys.platform == 'darwin':
 	mainEnv_osx['CXXFLAGS'].remove('-ftree-vectorize');
 	mainEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing');
 	darwinStub += [mainEnv_osx.StaticObject('src/mitsuba/darwin_stub.mm')]
+
+mainEnv.Program('mtsutil', resources + darwinStub + ['src/mitsuba/mtsutil.cpp'])
 
 env.Program('src/utils/joinrgb', ['src/utils/joinrgb.cpp'])
 env.Program('src/utils/ttest', ['src/utils/ttest.cpp'])

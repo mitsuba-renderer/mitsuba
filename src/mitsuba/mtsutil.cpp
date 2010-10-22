@@ -121,7 +121,7 @@ void help() {
 }
 
 
-int ubi_main(int argc, char **argv) {
+int mtsutil(int argc, char **argv) {
 	char optchar, *end_ptr = NULL;
 
 	try {
@@ -356,7 +356,7 @@ int ubi_main(int argc, char **argv) {
 	return 0;
 }
 
-int main(int argc, char **argv) {
+int ubi_main(int argc, char **argv) {
 	/* Initialize the core framework */
 	Class::staticInitialization();
 	PluginManager::staticInitialization();
@@ -390,7 +390,7 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 	
-	int retval = ubi_main(argc, argv);
+	int retval = mtsutil(argc, argv);
 
 	XMLPlatformUtils::Terminate();
 
@@ -411,3 +411,11 @@ int main(int argc, char **argv) {
 
 	return retval;
 }
+
+#if !defined(__OSX__)
+int main(int argc, char **argv) {
+	return ubi_main(argc, argv);
+}
+#endif
+
+

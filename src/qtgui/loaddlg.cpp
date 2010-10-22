@@ -40,7 +40,9 @@ LoadDialog::LoadDialog(QWidget *parent) :
 	font.setStyleHint(QFont::TypeWriter);
 #if defined(__OSX__)
 	font.setPointSize(10);
-	ui->heading->font().setPointSize(14);
+	QFont headingFont = ui->heading->font();
+	headingFont.setPointSize(14);
+	ui->heading->setFont(headingFont);
 #else
 	font.setPointSize(8);
 #endif
