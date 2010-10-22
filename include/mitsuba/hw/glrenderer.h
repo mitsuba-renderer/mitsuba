@@ -54,7 +54,7 @@ public:
 
 	/// Create a new GPU program object
 	GPUProgram *createGPUProgram(const std::string &name);
-	
+
 	/// Create a new synchronization object
 	GPUSync *createGPUSync();
 
@@ -86,7 +86,13 @@ public:
 	/// Clean up the renderer after drawing triangle geometry
 	void endDrawingMeshes(); 
 
-	/// Fast: draw all geometry that has been registered with the renderer (for shadow mapping)
+	/**
+	 * \brief Quickly draw all geometry that has been registered 
+	 * with the renderer.
+	 *
+	 * Only transmits positions, hence this is mainly useful for
+	 * shadow mapping.
+	 */
 	void drawAll();
 
 	/// Blit a screen-sized quad
@@ -99,15 +105,31 @@ public:
 	void drawText(const Point2i &pos, 
 			const Font *font, const std::string &text);
 
+	/// Set the size of point primitives
+	void setPointSize(Float size);
+
+	/// Draw a point
+	void drawPoint(const Point &p);
+
+	/// Draw a line between two specified points
+	void drawLine(const Point &a, const Point &b);
+
+	/// Draw an ellipse with the specified center and axes
+	void drawEllipse(const Point &center, 
+			const Vector &axis1, const Vector &axis2);
+
+	/// Draw a wire-frame axis-aligned box
+	void drawAABB(const AABB &aabb);
+
 	/// Set a depth offset for shadow mapping (0 to disable)
 	void setDepthOffset(Float value);
-	
+
 	/// Set the currently active blending mode
 	void setBlendMode(EBlendMode mode);
-	
+
 	/// Set the currently active culling mode
 	void setCullMode(ECullMode mode);
-	
+
 	/// Activate or deactivate the writing of depth information
 	void setDepthMask(bool value);
 
@@ -116,19 +138,19 @@ public:
 
 	/// Activate or deactivate the writing of color information
 	void setColorMask(bool value);
-	
+
 	/// Set the current fixed-function pipeline color
 	void setColor(const Spectrum &spec);
 
 	/// Flush outstanding rendering commands
 	void flush();
-	
+
 	/// Completely finish outstanding rendering commands
 	void finish();
 
 	/// Check for any error indications
 	void checkError(bool onlyWarn = true);
-	
+
 	MTS_DECLARE_CLASS()
 protected:
 	/// Virtual destructor

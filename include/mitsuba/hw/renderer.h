@@ -80,7 +80,7 @@ public:
 		EBlendAlpha,    // Normal alpha blending
 		EBlendAdditive  // Additive blending
 	};
-	
+
 	/* Possible culling modes */
 	enum ECullMode {
 		ECullNone,     // No culling
@@ -118,10 +118,10 @@ public:
 
 	/// Create a new synchronization object
 	virtual GPUSync *createGPUSync() = 0;
-	
+
 	/// Clear the viewport
 	virtual void clear() = 0;
-	
+
 	/// Configure the camera
 	virtual void setCamera(const ProjectiveCamera *camera) = 0;
 
@@ -137,11 +137,17 @@ public:
 
 	/// Send a triangle mesh to the renderer
 	virtual void drawTriMesh(const TriMesh *mesh) = 0; 
-	
+
 	/// Clean up the renderer after drawing triangle geometry
 	virtual void endDrawingMeshes() = 0; 
-	
-	/// Fast: draw all geometry that has been registered with the renderer (for shadow mapping)
+
+	/**
+	 * \brief Quickly draw all geometry that has been registered 
+	 * with the renderer.
+	 *
+	 * Only transmits positions, hence this is mainly useful for
+	 * shadow mapping.
+	 */
 	virtual void drawAll() = 0;
 
 	/// Draw a quad using the given texture
@@ -160,15 +166,31 @@ public:
 	virtual void drawText(const Point2i &pos, 
 			const Font *font, const std::string &text) = 0;
 
+	/// Set the size of point primitives
+	virtual void setPointSize(Float size) = 0;
+
+	/// Draw a point
+	virtual void drawPoint(const Point &p) = 0;
+
+	/// Draw a line between two specified points
+	virtual void drawLine(const Point &a, const Point &b) = 0;
+
+	/// Draw an ellipse with the specified center and axes
+	virtual void drawEllipse(const Point &center, 
+			const Vector &axis1, const Vector &axis2) = 0;
+
+	/// Draw a wire-frame axis-aligned box
+	virtual void drawAABB(const AABB &aabb) = 0;
+
 	/// Set a depth offset for shadow mapping (0 to disable)
 	virtual void setDepthOffset(Float value) = 0;
 
 	/// Set the currently active blending mode
 	virtual void setBlendMode(EBlendMode mode) = 0;
-	
+
 	/// Set the currently active culling mode
 	virtual void setCullMode(ECullMode mode) = 0;
-	
+
 	/// Activate or deactivate depth testing
 	virtual void setDepthTest(bool value) = 0;
 
@@ -204,7 +226,7 @@ public:
 	 * it when zero is reached
 	 */
 	void unregisterShaderForResource(const HWResource *res);
-	
+
 	/**
 	 * Register a triangle mesh with the renderer. This
 	 * will transfer the associated geometry to the GPU,
@@ -219,7 +241,7 @@ public:
 
 	/// Set the log level
 	inline void setLogLevel(ELogLevel logLevel) { m_logLevel = logLevel; }
-	
+
 	/// Set the log level for warnings
 	inline void setWarnLogLevel(ELogLevel logLevel) { m_warnLogLevel = logLevel; }
 

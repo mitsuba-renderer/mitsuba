@@ -33,7 +33,7 @@ int Viewer::run(int argc, char **argv) {
 	m_renderer->init(m_device);
 	m_device->addCallback(this);
 	m_device->setVisible(true);
-	m_font = new Font(Font::EBitstreamVera14);
+	m_font = new Font(Font::EBitstreamVeraMono14);
 	m_font->init(m_renderer);
 	m_quit = false;
 
@@ -54,6 +54,7 @@ int Viewer::run(int argc, char **argv) {
 }
 
 void Viewer::drawHUD(const std::string &text) {
+	m_renderer->setColor(Spectrum(0.9f));
 	m_renderer->drawText(Point2i(10, 10), m_font, text.c_str());
 }
 

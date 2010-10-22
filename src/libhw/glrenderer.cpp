@@ -161,6 +161,7 @@ void GLRenderer::init(Device *device, Renderer *other) {
 	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
 	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
 	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
 
 	/* Disable color value clamping */
 	if (m_capabilities->isSupported(
@@ -174,6 +175,8 @@ void GLRenderer::init(Device *device, Renderer *other) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 	setBlendMode(EBlendNone);
+
+	glEnable(GL_POINT_SMOOTH);
 
 	m_normalsEnabled = false;
 	m_texcoordsEnabled = false;
@@ -789,6 +792,47 @@ void GLRenderer::drawText(const Point2i &_pos,
 
 	font->getTexture()->unbind();
 	glDisable(GL_BLEND);
+}
+
+void GLRenderer::setPointSize(Float size) {
+	glPointSize(size);
+}
+
+void GLRenderer::drawPoint(const Point &p) {
+	glBegin(GL_POINTS);
+	glVertex3f(p.x, p.y, p.z);
+	glEnd();
+}
+
+void GLRenderer::drawLine(const Point &a, const Point &b) {
+	glBegin(GL_LINES);
+	glVertex3f(a.x, a.y, a.z);
+	glVertex3f(b.x, b.y, b.z);
+	glEnd();
+}
+
+void GLRenderer::drawEllipse(const Point &center, 
+		const Vector &axis1, const Vector &axis2) {
+	const int nSteps = 100;
+	const float stepSize = 2*M_PI/nSteps;
+	glBegin(GL_LINE_LOOP);
+	for (int i=0; i<100; ++i) {
+		Point p = center + axis1 * std::cos(i*stepSize) 
+			+ axis2 * std::sin(i*stepSize);
+		glVertex3f(p.x, p.y, p.z);
+	}
+	glEnd();
+}
+
+void GLRenderer::drawAABB(const AABB &aabb) {
+	#define V(a,b,c) glVertex3f(aabb.a.x, aabb.b.y, aabb.c.z)
+	glBegin(GL_LINE_LOOP); V(max,min,max); V(max,min,min); V(max,max,min); V(max,max,max); glEnd();
+	glBegin(GL_LINE_LOOP); V(max,max,max); V(max,max,min); V(min,max,min); V(min,max,max); glEnd();
+	glBegin(GL_LINE_LOOP); V(max,max,max); V(min,max,max); V(min,min,max); V(max,min,max); glEnd();
+	glBegin(GL_LINE_LOOP); V(min,min,max); V(min,max,max); V(min,max,min); V(min,min,min); glEnd();
+	glBegin(GL_LINE_LOOP); V(min,min,max); V(min,min,min); V(max,min,min); V(max,min,max); glEnd();
+	glBegin(GL_LINE_LOOP); V(min,min,min); V(min,max,min); V(max,max,min); V(max,min,min); glEnd();
+	#undef V
 }
 
 void GLRenderer::setCamera(const ProjectiveCamera *camera) {
