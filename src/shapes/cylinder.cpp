@@ -21,7 +21,6 @@
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/luminaire.h>
 #include <mitsuba/core/properties.h>
-#include <mitsuba/core/random.h>
 
 MTS_NAMESPACE_BEGIN
 
