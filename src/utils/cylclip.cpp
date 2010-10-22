@@ -27,29 +27,33 @@ public:
 		m_viewTransform = Transform::lookAt(Point(10*std::sin(m_angle), 0, std::cos(m_angle)*10), 
 				Point(0, 0, 0), Vector(0, 1, 0));
 		m_lineParams = Point2(M_PI/2, 0.28f);
+		m_cylPos = Point(0.0f);
 		m_device->setFSAA(4);
 		m_red[0] = 1.0f;
 		m_blue[2] = 1.0f;
 		m_showEllipses = false;
 		m_showRectangles = false;
 		m_showClippedAABB = false;
+		m_radius = .2f;
 	}
 
 	void mouseDragged(const DeviceEvent &event) {
-		if (event.getMouseButton() == 1) {
+		if (event.getMouseButton() == Device::ELeftButton) {
 			m_angle += event.getMouseRelative().x / 100.0f;
 			m_viewTransform = Transform::lookAt(Point(10*std::sin(m_angle), 0, std::cos(m_angle)*10), 
 					Point(0, 0, 0), Vector(0, 1, 0));
-		} else {
+		} else if (event.getMouseButton() == Device::ERightButton) {
 			m_lineParams += Vector2(
 				event.getMouseRelative().x / 500.0f,
 				event.getMouseRelative().y / 500.0f
 			);
+		} else if (event.getMouseButton() == Device::EMiddleButton) {
+			m_cylPos += Vector3(
+				event.getMouseRelative().x / 300.0f,
+				0,
+				event.getMouseRelative().y / 300.0f
+			);
 		}
-	}
-
-	inline Float sqr(Float f) const {
-		return f*f;
 	}
 
 	/**
@@ -77,8 +81,10 @@ public:
 		Vector delta = planePt - cylPt,
 			   deltaProj = delta - cylD*dot(delta, cylD);
 
-		Float c0 = 1-sqr(dot(A, cylD));
-		Float c1 = 1-sqr(dot(B, cylD));
+		Float aDotD = dot(A, cylD);
+		Float bDotD = dot(B, cylD);
+		Float c0 = 1-aDotD*aDotD;
+		Float c1 = 1-bDotD*bDotD;
 		Float c2 = 2*dot(A, deltaProj);
 		Float c3 = 2*dot(B, deltaProj);
 		Float c4 = dot(delta, deltaProj) - radius*radius;
@@ -111,9 +117,13 @@ public:
 		Float ellipseLengths[2];
 
 		AABB aabb;
-		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, .2, 
-			ellipseCenter, ellipseAxes, ellipseLengths))
-			return aabb; // return an invalid AABB
+		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, m_radius, 
+			ellipseCenter, ellipseAxes, ellipseLengths)) {
+			/* Degenerate case -- return an invalid AABB. This is
+			   not a problem, since one of the other faces will provide
+			   enough information to arrive at a correct clipped AABB */
+			return aabb;
+		}
 
 		if (m_showEllipses) {
 			m_renderer->setColor(m_gray);
@@ -200,6 +210,12 @@ public:
 			case 'a':
 				m_showClippedAABB = !m_showClippedAABB;
 				break;
+			case '[':
+				m_radius *= 1.1;
+				break;
+			case ']':
+				m_radius /= 1.1;
+				break;
 		}
 	}
 
@@ -218,44 +234,46 @@ public:
 
 		m_renderer->setColor(m_gray);
 		Vector cylD(sphericalDirection(m_lineParams.x, m_lineParams.y));
-		Point cylP(0, 0, 0);
 
-		m_renderer->drawLine(cylP-cylD*1e4, cylP+cylD*1e4);
+		m_renderer->drawLine(m_cylPos-cylD*1e4, m_cylPos+cylD*1e4);
 		AABB clippedAABB;
 
 		clippedAABB.expandBy(intersectCylFace(0, 
 				Point(aabb.min.x, aabb.min.y, aabb.min.z),
 				Point(aabb.min.x, aabb.max.y, aabb.max.z),
-				cylP, cylD));
+				m_cylPos, cylD));
 
 		clippedAABB.expandBy(intersectCylFace(0,
 				Point(aabb.max.x, aabb.min.y, aabb.min.z),
 				Point(aabb.max.x, aabb.max.y, aabb.max.z),
-				cylP, cylD));
+				m_cylPos, cylD));
 
 		clippedAABB.expandBy(intersectCylFace(1, 
 				Point(aabb.min.x, aabb.min.y, aabb.min.z),
 				Point(aabb.max.x, aabb.min.y, aabb.max.z),
-				cylP, cylD));
+				m_cylPos, cylD));
 
 		clippedAABB.expandBy(intersectCylFace(1,
 				Point(aabb.min.x, aabb.max.y, aabb.min.z),
 				Point(aabb.max.x, aabb.max.y, aabb.max.z),
-				cylP, cylD));
+				m_cylPos, cylD));
 
 		clippedAABB.expandBy(intersectCylFace(2, 
 				Point(aabb.min.x, aabb.min.y, aabb.min.z),
 				Point(aabb.max.x, aabb.max.y, aabb.min.z),
-				cylP, cylD));
+				m_cylPos, cylD));
 
 		clippedAABB.expandBy(intersectCylFace(2,
 				Point(aabb.min.x, aabb.min.y, aabb.max.z),
 				Point(aabb.max.x, aabb.max.y, aabb.max.z),
-				cylP, cylD));
+				m_cylPos, cylD));
 
 		m_renderer->setColor(m_gray);
-		if (m_showClippedAABB)
-			m_renderer->drawAABB(clippedAABB);
+
+		if (m_showClippedAABB) {
+			if (clippedAABB.isValid())
+				m_renderer->drawAABB(clippedAABB);
+		}
 
 		m_renderer->setDepthTest(false);
 		drawHUD(formatString("Cylinder clipping test. LMB-dragging moves the camera, RMB-dragging rotates the cylinder\n"
@@ -273,7 +291,8 @@ private:
 	Transform m_projTransform, m_viewTransform;
 	Spectrum m_red, m_blue, m_gray;
 	Point2 m_lineParams;
-	Float m_angle;
+	Point m_cylPos;
+	Float m_angle, m_radius;
 	bool m_showEllipses;
 	bool m_showRectangles;
 	bool m_showClippedAABB;

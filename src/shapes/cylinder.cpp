@@ -174,20 +174,15 @@ public:
 		return result;
 	}
 
-	inline Float sqr(Float f) const {
-		return f*f;
-	}
-
-
 	/**
 	 * Compute the ellipse created by the intersection of an infinite
 	 * cylinder and a plane. Returns false in the degenerate case.
 	 * Based on:
 	 * www.geometrictools.com/Documentation/IntersectionCylinderPlane.pdf
 	 */
-	FINLINE bool intersectCylPlane(Point planePt, Normal planeNrml,
+	bool intersectCylPlane(Point planePt, Normal planeNrml,
 			Point cylPt, Vector cylD, Float radius, Point &center,
-			Vector &axis1, Vector &axis2) const {
+			Vector *axes, Float *lengths) const {
 		if (absDot(planeNrml, cylD) < Epsilon)
 			return false;
 
@@ -198,17 +193,16 @@ public:
 			A /= length;
 			B = cross(planeNrml, A);
 		} else {
-			Log(EInfo, "interesting: %s %s", cylD.toString().c_str(),
-					planeNrml.toString().c_str());
-
 			coordinateSystem(planeNrml, A, B);
 		}
 
 		Vector delta = planePt - cylPt,
 			   deltaProj = delta - cylD*dot(delta, cylD);
 
-		Float c0 = 1-sqr(dot(A, cylD));
-		Float c1 = 1-sqr(dot(B, cylD));
+		Float aDotD = dot(A, cylD);
+		Float bDotD = dot(B, cylD);
+		Float c0 = 1-aDotD*aDotD;
+		Float c1 = 1-bDotD*bDotD;
 		Float c2 = 2*dot(A, deltaProj);
 		Float c3 = 2*dot(B, deltaProj);
 		Float c4 = dot(delta, deltaProj) - radius*radius;
@@ -216,35 +210,135 @@ public:
 		Float lambda = (c2*c2/(4*c0) + c3*c3/(4*c1) - c4)/(c0*c1);
 
 		Float alpha0 = -c2/(2*c0),
-			  beta0 = -c3/(2*c1),
-			  L_alpha = std::sqrt(c1*lambda),
-			  L_beta = std::sqrt(c0*lambda);
+			  beta0 = -c3/(2*c1);
+
+		lengths[0] = std::sqrt(c1*lambda),
+		lengths[1] = std::sqrt(c0*lambda);
 
 		center = planePt + alpha0 * A + beta0 * B;
-		axis1 = L_alpha * A;
-		axis2 = L_beta * B;
+		axes[0] = A;
+		axes[1] = B;
 		return true;
 	}
 
+	AABB intersectCylFace(int axis,
+			const Point &min, const Point &max,
+			const Point &cylPt, const Vector &cylD) const {
+		int axis1 = (axis + 1) % 3;
+		int axis2 = (axis + 2) % 3;
+
+		Normal planeNrml(0.0f);
+		planeNrml[axis] = 1;
+
+		Point ellipseCenter;
+		Vector ellipseAxes[2];
+		Float ellipseLengths[2];
+
+		AABB aabb;
+		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, m_radius, 
+			ellipseCenter, ellipseAxes, ellipseLengths)) {
+			/* Degenerate case -- return an invalid AABB. This is
+			   not a problem, since one of the other faces will provide
+			   enough information to arrive at a correct clipped AABB */
+			return aabb;
+		}
+
+		/* Intersect the ellipse against the sides of the AABB face */
+		for (int i=0; i<4; ++i) {
+			Point p1, p2;
+			p1[axis] = p2[axis] = min[axis];
+			p1[axis1] = ((i+1) & 2) ? min[axis1] : max[axis1];
+			p1[axis2] = ((i+0) & 2) ? min[axis2] : max[axis2];
+			p2[axis1] = ((i+2) & 2) ? min[axis1] : max[axis1];
+			p2[axis2] = ((i+1) & 2) ? min[axis2] : max[axis2];
+
+			Point2 p1l(
+				dot(p1 - ellipseCenter, ellipseAxes[0]) / ellipseLengths[0],
+				dot(p1 - ellipseCenter, ellipseAxes[1]) / ellipseLengths[1]);
+			Point2 p2l(
+				dot(p2 - ellipseCenter, ellipseAxes[0]) / ellipseLengths[0],
+				dot(p2 - ellipseCenter, ellipseAxes[1]) / ellipseLengths[1]);
+
+			Vector2 rel = p2l-p1l;
+			Float A = dot(rel, rel);
+			Float B = 2*dot(Vector2(p1l), rel);
+			Float C = dot(Vector2(p1l), Vector2(p1l))-1;
+
+			Float x0, x1;
+			if (solveQuadratic(A, B, C, x0, x1)) {
+				if (x0 >= 0 && x0 <= 1)
+					aabb.expandBy(p1+(p2-p1)*x0);
+				if (x1 >= 0 && x1 <= 1)
+					aabb.expandBy(p1+(p2-p1)*x1);
+			}
+		}
+
+		ellipseAxes[0] *= ellipseLengths[0];
+		ellipseAxes[1] *= ellipseLengths[1];
+		AABB faceBounds(min, max);
+
+		/* Find the componentwise maxima of the ellipse */
+		for (int i=0; i<2; ++i) {
+			int j = (i==0) ? axis1 : axis2;
+			Float alpha = ellipseAxes[0][j];
+			Float beta = ellipseAxes[1][j];
+			Float ratio = beta/alpha, tmp = std::sqrt(1+ratio*ratio);
+			Float cosTheta = 1/tmp, sinTheta = ratio/tmp;
+			Point p1 = ellipseCenter + cosTheta*ellipseAxes[0] + sinTheta*ellipseAxes[1];
+			Point p2 = ellipseCenter - cosTheta*ellipseAxes[0] - sinTheta*ellipseAxes[1];
+
+			if (faceBounds.contains(p1)) 
+				aabb.expandBy(p1);
+			if (faceBounds.contains(p2)) 
+				aabb.expandBy(p2);
+		}
+
+		return aabb;
+	}
 
 	AABB getClippedAABB(const AABB &box) const {
 		/* Compute a base bounding box */
 		AABB base(getAABB());
 		base.clip(box);
-	
-		Point p0 = m_objectToWorld(Point(0, 0, 0));
-		Point p1 = m_objectToWorld(Point(0, 0, m_length));
-		Vector cylD(normalize(p1-p0));
-		Point center;
-		Vector axis1, axis2;
-
-		intersectCylPlane(box.min, Normal(1, 0, 0), p0, cylD, m_radius, center, axis1, axis2);
-
-//		cout << center.toString() << endl;
+		
+		Point cylPt = m_objectToWorld(Point(0, 0, 0));
+		Vector cylD(m_objectToWorld(Vector(0, 0, 1)));
 
 		/* Now forget about the cylinder ends and 
 		   intersect an infinite cylinder with each AABB face */
-		return base;
+		AABB clippedAABB;
+		clippedAABB.expandBy(intersectCylFace(0, 
+				Point(base.min.x, base.min.y, base.min.z),
+				Point(base.min.x, base.max.y, base.max.z),
+				cylPt, cylD));
+
+		clippedAABB.expandBy(intersectCylFace(0,
+				Point(base.max.x, base.min.y, base.min.z),
+				Point(base.max.x, base.max.y, base.max.z),
+				cylPt, cylD));
+
+		clippedAABB.expandBy(intersectCylFace(1, 
+				Point(base.min.x, base.min.y, base.min.z),
+				Point(base.max.x, base.min.y, base.max.z),
+				cylPt, cylD));
+
+		clippedAABB.expandBy(intersectCylFace(1,
+				Point(base.min.x, base.max.y, base.min.z),
+				Point(base.max.x, base.max.y, base.max.z),
+				cylPt, cylD));
+
+		clippedAABB.expandBy(intersectCylFace(2, 
+				Point(base.min.x, base.min.y, base.min.z),
+				Point(base.max.x, base.max.y, base.min.z),
+				cylPt, cylD));
+
+		clippedAABB.expandBy(intersectCylFace(2,
+				Point(base.min.x, base.min.y, base.max.z),
+				Point(base.max.x, base.max.y, base.max.z),
+				cylPt, cylD));
+
+		clippedAABB.clip(box);
+		return clippedAABB;
 	}
 
 #if 0
