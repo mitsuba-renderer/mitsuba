@@ -22,7 +22,7 @@ MTS_NAMESPACE_BEGIN
 
 class CylClip : public Viewer {
 public:
-	CylClip() : m_red(0.0f), m_blue(0.0f), m_white(1.0f), m_angle(0) {
+	CylClip() : m_red(0.0f), m_blue(0.0f), m_gray(.5f), m_angle(0) {
 		m_projTransform = Transform::glPerspective(45, 1e-4, 1e4);
 		m_viewTransform = Transform::lookAt(Point(10*std::sin(m_angle), 0, std::cos(m_angle)*10), 
 				Point(0, 0, 0), Vector(0, 1, 0));
@@ -32,6 +32,7 @@ public:
 		m_blue[2] = 1.0f;
 		m_showEllipses = false;
 		m_showRectangles = false;
+		m_showClippedAABB = false;
 	}
 
 	void mouseDragged(const DeviceEvent &event) {
@@ -96,7 +97,7 @@ public:
 		return true;
 	}
 
-	bool intersectCylFace(int axis,
+	AABB intersectCylFace(int axis,
 			const Point &min, const Point &max,
 			const Point &cylPt, const Vector &cylD) {
 		int axis1 = (axis + 1) % 3;
@@ -109,18 +110,17 @@ public:
 		Vector ellipseAxes[2];
 		Float ellipseLengths[2];
 
+		AABB aabb;
 		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, .2, 
 			ellipseCenter, ellipseAxes, ellipseLengths))
-			return false;
+			return aabb; // return an invalid AABB
 
 		if (m_showEllipses) {
-			m_renderer->setColor(m_white);
+			m_renderer->setColor(m_gray);
 			m_renderer->drawEllipse(ellipseCenter,
 					ellipseAxes[0]*ellipseLengths[0],
 					ellipseAxes[1]*ellipseLengths[1]);
 		}
-
-		AABB aabb;
 
 		/* Intersect the ellipse against the sides of the AABB face */
 		for (int i=0; i<4; ++i) {
@@ -156,8 +156,37 @@ public:
 				}
 			}
 		}
+	
+		ellipseAxes[0] *= ellipseLengths[0];
+		ellipseAxes[1] *= ellipseLengths[1];
+		m_renderer->setColor(m_blue);
 
-		return true;
+		AABB faceBounds(min, max);
+		/* Find the componentwise maxima of the ellipse */
+		for (int i=0; i<2; ++i) {
+			int j = (i==0) ? axis1 : axis2;
+			Float alpha = ellipseAxes[0][j];
+			Float beta = ellipseAxes[1][j];
+			Float ratio = beta/alpha, tmp = std::sqrt(1+ratio*ratio);
+			Float cosTheta = 1/tmp, sinTheta = ratio/tmp;
+			Point p1 = ellipseCenter + cosTheta*ellipseAxes[0] + sinTheta*ellipseAxes[1];
+			Point p2 = ellipseCenter - cosTheta*ellipseAxes[0] - sinTheta*ellipseAxes[1];
+
+			if (faceBounds.contains(p1)) {
+				aabb.expandBy(p1);
+				m_renderer->drawPoint(p1);
+			}
+			if (faceBounds.contains(p2)) {
+				aabb.expandBy(p2);
+				m_renderer->drawPoint(p2);
+			}
+		}
+
+		m_renderer->setColor(m_gray);
+		if (aabb.isValid() && m_showRectangles)
+			m_renderer->drawAABB(aabb);
+
+		return aabb;
 	}
 
 	void keyPressed(const DeviceEvent &event) {
@@ -167,6 +196,9 @@ public:
 				break;
 			case 'r':
 				m_showRectangles = !m_showRectangles;
+				break;
+			case 'a':
+				m_showClippedAABB = !m_showClippedAABB;
 				break;
 		}
 	}
@@ -184,60 +216,67 @@ public:
 		m_renderer->setColor(Spectrum(0.3f));
 		m_renderer->drawAABB(aabb);
 
-		m_renderer->setColor(Spectrum(0.5f));
+		m_renderer->setColor(m_gray);
 		Vector cylD(sphericalDirection(m_lineParams.x, m_lineParams.y));
 		Point cylP(0, 0, 0);
 
 		m_renderer->drawLine(cylP-cylD*1e4, cylP+cylD*1e4);
+		AABB clippedAABB;
 
-		intersectCylFace(0, 
+		clippedAABB.expandBy(intersectCylFace(0, 
 				Point(aabb.min.x, aabb.min.y, aabb.min.z),
 				Point(aabb.min.x, aabb.max.y, aabb.max.z),
-				cylP, cylD);
+				cylP, cylD));
 
-		intersectCylFace(0,
+		clippedAABB.expandBy(intersectCylFace(0,
 				Point(aabb.max.x, aabb.min.y, aabb.min.z),
 				Point(aabb.max.x, aabb.max.y, aabb.max.z),
-				cylP, cylD);
+				cylP, cylD));
 
-		intersectCylFace(1, 
-				Point(aabb.max.x, aabb.min.y, aabb.min.z),
-				Point(aabb.min.x, aabb.min.y, aabb.max.z),
-				cylP, cylD);
+		clippedAABB.expandBy(intersectCylFace(1, 
+				Point(aabb.min.x, aabb.min.y, aabb.min.z),
+				Point(aabb.max.x, aabb.min.y, aabb.max.z),
+				cylP, cylD));
 
-		intersectCylFace(1,
+		clippedAABB.expandBy(intersectCylFace(1,
 				Point(aabb.min.x, aabb.max.y, aabb.min.z),
 				Point(aabb.max.x, aabb.max.y, aabb.max.z),
-				cylP, cylD);
+				cylP, cylD));
 
-		intersectCylFace(2, 
-				Point(aabb.max.x, aabb.min.y, aabb.min.z),
-				Point(aabb.min.x, aabb.max.y, aabb.min.z),
-				cylP, cylD);
+		clippedAABB.expandBy(intersectCylFace(2, 
+				Point(aabb.min.x, aabb.min.y, aabb.min.z),
+				Point(aabb.max.x, aabb.max.y, aabb.min.z),
+				cylP, cylD));
 
-		intersectCylFace(2,
+		clippedAABB.expandBy(intersectCylFace(2,
 				Point(aabb.min.x, aabb.min.y, aabb.max.z),
 				Point(aabb.max.x, aabb.max.y, aabb.max.z),
-				cylP, cylD);
+				cylP, cylD));
 
+		m_renderer->setColor(m_gray);
+		if (m_showClippedAABB)
+			m_renderer->drawAABB(clippedAABB);
 
 		m_renderer->setDepthTest(false);
-		drawHUD(formatString("Cylinder clipping test\n"
+		drawHUD(formatString("Cylinder clipping test. LMB-dragging moves the camera, RMB-dragging rotates the cylinder\n"
 				"[e] Ellipses: %s\n"
-				"[r] Bounding rectangles : %s\n",
+				"[r] Bounding rectangles : %s\n"
+				"[a] Clipped AABB : %s",
 			m_showEllipses ? "On": "Off",
-			m_showRectangles ? "On": "Off"
+			m_showRectangles ? "On": "Off",
+			m_showClippedAABB ? "On": "Off"
 		));
 	}
 
 	MTS_DECLARE_UTILITY()
 private:
 	Transform m_projTransform, m_viewTransform;
-	Spectrum m_red, m_blue, m_white;
+	Spectrum m_red, m_blue, m_gray;
 	Point2 m_lineParams;
 	Float m_angle;
 	bool m_showEllipses;
 	bool m_showRectangles;
+	bool m_showClippedAABB;
 };
 
 MTS_EXPORT_UTILITY(CylClip, "Cylinder clipping test")
