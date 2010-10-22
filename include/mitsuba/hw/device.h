@@ -115,7 +115,7 @@ private:
 
 /** \brief Abstract device event callback
  */
-class DeviceEventListener {
+class MTS_EXPORT_HW DeviceEventListener {
 public:
 	/** \brief Called when a device event occurs
 	 * @param pEvent The event data structure

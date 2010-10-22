@@ -31,7 +31,7 @@ MTS_NAMESPACE_BEGIN
  * This class makes it possible to rapidly prototype simple OpenGL
  * applications, which can be started using the 'mtsutil' launcher.
  */
-class Viewer : public Utility, public DeviceEventListener {
+class MTS_EXPORT_HW Viewer : public Utility, public DeviceEventListener {
 public:
 	/// Construct a new viewer
 	Viewer();
