@@ -255,6 +255,9 @@ public:
 			props.getString("filename"));
 		Float radius = (Float) props.getFloat("radius", 0.05f);
 
+		/* Object-space -> World-space transformation */
+		Transform objectToWorld = props.getTransform("toWorld", Transform());
+
 		Log(EInfo, "Loading hair geometry from \"%s\" ..", path.leaf().c_str());
 
 		fs::ifstream is(path);
@@ -279,7 +282,7 @@ public:
 				iss >> p.x >> p.y >> p.z;
 				if (!iss.fail()) {
 					if (newFiber || p != lastP) {
-						vertices.push_back(p);
+						vertices.push_back(objectToWorld(p));
 						vertexStartsFiber.push_back(newFiber);
 						lastP = p;
 					} else {
