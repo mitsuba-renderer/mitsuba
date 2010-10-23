@@ -116,6 +116,39 @@ public:
 		return true;
 	}
 
+	bool rayIntersect(const Ray &_ray, Float mint, Float maxt) const {
+		Ray ray;
+
+		/* Transform into the local coordinate system and normalize */
+		m_worldToObject(_ray, ray);
+
+		const Float
+			ox = ray.o.x,
+			oy = ray.o.y,
+			dx = ray.d.x, 
+			dy = ray.d.y;
+
+		const Float A = dx*dx + dy*dy;
+		const Float B = 2 * (dx*ox + dy*oy);
+		const Float C = ox*ox + oy*oy - m_radius*m_radius;
+
+		Float nearT, farT;
+		if (!solveQuadratic(A, B, C, nearT, farT))
+			return false;
+
+		if (nearT > maxt || farT < mint)
+			return false;
+
+		const Float zPosNear = ray.o.z + ray.d.z * nearT;
+		const Float zPosFar = ray.o.z + ray.d.z * farT;
+		if (zPosNear >= 0 && zPosNear <= m_length && nearT >= mint) {
+			return true;
+		} else if (zPosFar >= 0 && zPosFar <= m_length && farT <= maxt) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 
 	void fillIntersectionRecord(const Ray &ray, Float t, 
 			const void *temp, Intersection &its) const {

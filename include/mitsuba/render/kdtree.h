@@ -213,6 +213,45 @@ protected:
 		return ENo;
 	}
 
+	/**
+	 * Check whether a primitive is intersected by the given ray. This
+	 * version is used for shadow rays, hence no temporary space is supplied.
+	 */
+	FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx, 
+			Float mint, Float maxt) const {
+#if defined(MTS_KD_CONSERVE_MEMORY)
+		index_type shapeIdx = findShape(idx);
+		if (EXPECT_TAKEN(m_triangleFlag[shapeIdx])) {
+			const TriMesh *mesh = 
+				static_cast<const TriMesh *>(m_shapes[shapeIdx]);
+			const Triangle &tri = mesh->getTriangles()[idx];
+			Float tempU, tempV, tempT;
+			if (tri.rayIntersect(mesh->getVertexPositions(), ray, 
+						tempU, tempV, tempT)) {
+				if (tempT >= mint && tempT <= maxt)
+					return EYes;
+				else
+					return ENever;
+			}
+			return ENo;
+		} else {
+			const Shape *shape = m_shapes[shapeIndex];
+			return shape->rayIntersect(ray, mint, maxt) ? EYes : ENo;
+		}
+#else
+		const TriAccel &ta = m_triAccel[idx];
+		if (EXPECT_TAKEN(m_triAccel[idx].k != KNoTriangleFlag)) {
+			Float tempU, tempV, tempT;
+			return ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT)
+				? EYes : ENo;
+		} else {
+			uint32_t shapeIndex = ta.shapeIndex;
+			const Shape *shape = m_shapes[shapeIndex];
+			return shape->rayIntersect(ray, mint, maxt) ? EYes : ENo;
+		}
+#endif
+	}
+
 #if defined(MTS_HAS_COHERENT_RT)
 	/// Ray traversal stack entry for uncoherent ray tracing
 	struct CoherentKDStackEntry {

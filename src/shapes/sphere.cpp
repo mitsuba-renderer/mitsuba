@@ -86,7 +86,7 @@ public:
 	}
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt, Float &t, void *tmp) const {
-		Vector ro = ray.o - m_center;
+		const Vector ro = ray.o - m_center;
 
 		/* Transform into the local coordinate system and normalize */
 		Float A = ray.d.x*ray.d.x + ray.d.y*ray.d.y + ray.d.z*ray.d.z;
@@ -107,6 +107,27 @@ public:
 		} else {
 			t = nearT;
 		}
+
+		return true;
+	}
+
+	bool rayIntersect(const Ray &ray, Float mint, Float maxt) const {
+		const Vector ro = ray.o - m_center;
+
+		/* Transform into the local coordinate system and normalize */
+		Float A = ray.d.x*ray.d.x + ray.d.y*ray.d.y + ray.d.z*ray.d.z;
+		Float B = 2 * (ray.d.x*ro.x + ray.d.y*ro.y + ray.d.z*ro.z);
+		Float C = ro.x*ro.x + ro.y*ro.y +
+				ro.z*ro.z - m_radius*m_radius;
+
+		Float nearT, farT;
+		if (!solveQuadratic(A, B, C, nearT, farT))
+			return false;
+
+		if (nearT > maxt || farT < mint)
+			return false;
+		if (nearT < mint && farT > maxt)
+			return false;
 
 		return true;
 	}

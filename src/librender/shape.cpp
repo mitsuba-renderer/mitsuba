@@ -115,6 +115,14 @@ bool Shape::rayIntersect(const Ray &ray, Float mint,
 	return false;
 }
 
+bool Shape::rayIntersect(const Ray &ray, Float mint, 
+		Float maxt) const {
+	Log(EError, "%s::rayIntersect(): Not implemented!",
+			getClass()->getName().c_str());
+	return false;
+}
+
+
 void Shape::fillIntersectionRecord(const Ray &ray, Float t, 
 		const void *temp, Intersection &its) const {
 	Log(EError, "%s::fillIntersectionRecord(): Not implemented!",

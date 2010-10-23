@@ -120,7 +120,6 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 		if (ray.maxt < maxt) maxt = ray.maxt;
 
 		if (EXPECT_TAKEN(maxt > mint)) {
-
 			if (rayIntersectHavran<false>(ray, mint, maxt, its.t, temp)) {
 				/* After having found a unique intersection, fill a proper record
 				   using the temporary information collected in \ref intersect() */
@@ -205,7 +204,6 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 }
 
 bool KDTree::rayIntersect(const Ray &ray) const {
-	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
 	Float mint, maxt, t = std::numeric_limits<Float>::infinity();
 
 	++shadowRaysTraced;
@@ -220,7 +218,7 @@ bool KDTree::rayIntersect(const Ray &ray) const {
 		if (ray.maxt < maxt) maxt = ray.maxt;
 
 		if (EXPECT_TAKEN(maxt > mint)) 
-			if (rayIntersectHavran<true>(ray, mint, maxt, t, temp)) 
+			if (rayIntersectHavran<true>(ray, mint, maxt, t, NULL)) 
 				return true;
 	}
 	return false;

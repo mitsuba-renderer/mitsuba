@@ -895,11 +895,12 @@ protected:
 		size_type primBuckets[primBucketCount];
 		memset(primBuckets, 0, sizeof(size_type)*primBucketCount);
 		m_nodeCount = ctx.innerNodeCount + ctx.leafNodeCount;
+		m_indexCount = ctx.primIndexCount;
 
 		// +1 shift is for alignment purposes (see KDNode::getSibling)
 		m_nodes = static_cast<KDNode *> (allocAligned(
 				sizeof(KDNode) * (m_nodeCount+1)))+1;
-		m_indices = new index_type[ctx.primIndexCount];
+		m_indices = new index_type[m_indexCount];
 
 		stack.push(boost::make_tuple(prelimRoot, &m_nodes[nodePtr++], 
 					&ctx, m_aabb));
@@ -964,7 +965,7 @@ protected:
 		}
 
 		KDAssert(nodePtr == ctx.innerNodeCount + ctx.leafNodeCount);
-		KDAssert(indexPtr == ctx.primIndexCount);
+		KDAssert(indexPtr == m_indexCount);
 
 		Log(EDebug, "Finished -- took %i ms.", timer->getMilliseconds());
 
@@ -2654,6 +2655,7 @@ protected:
 	size_type m_exactPrimThreshold;
 	size_type m_minMaxBins;
 	size_type m_nodeCount;
+	size_type m_indexCount;
 	std::vector<SAHTreeBuilder *> m_builders;
 	std::vector<KDNode *> m_indirections;
 	ref<Mutex> m_indirectionLock;
@@ -2784,8 +2786,14 @@ template<typename Derived> template<bool shadowRay> FINLINE bool
 				continue;
 			#endif
 
-			EIntersectionResult result = cast()->intersect(ray, 
-					primIdx, searchStart, searchEnd, t, temp);
+			EIntersectionResult result;
+			if (!shadowRay) {
+				result = cast()->intersect(ray, primIdx, 
+					searchStart, searchEnd, t, temp);
+			} else {
+				result = cast()->intersect(ray, primIdx, 
+					searchStart, searchEnd);
+			}
 
 			if (result == EYes) {
 				if (shadowRay)
@@ -2986,8 +2994,12 @@ template<typename Derived> template <bool shadowRay> FINLINE bool
 				continue;
 			#endif
 
-			EIntersectionResult result = cast()->intersect(ray, 
-					primIdx, mint, maxt, t, temp);
+			EIntersectionResult result;
+			if (!shadowRay) {
+				result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
+			} else {
+				result = cast()->intersect(ray, primIdx, mint, maxt);
+			}
 
 			if (result == EYes) {
 				if (shadowRay)
@@ -3068,8 +3080,12 @@ template<typename Derived> template <bool shadowRay> FINLINE bool
 					continue;
 				#endif
 
-				EIntersectionResult result = cast()->intersect(ray, 
-						primIdx, mint_, maxt_, t, temp);
+				EIntersectionResult result;
+				if (!shadowRay) {
+					result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
+				} else {
+					result = cast()->intersect(ray, primIdx, mint, maxt);
+				}
 
 				if (result == EYes) {
 					if (shadowRay)

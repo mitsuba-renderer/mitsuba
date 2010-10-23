@@ -191,6 +191,18 @@ public:
 			Float maxt, Float &t, void *temp) const;
 
 	/**
+	 * \brief Fast ray intersection test for visibility queries
+	 *
+	 * Check whether the shape is intersected by the given ray. 
+	 * No details about the intersection are returned, hence the
+	 * function is only useful for visibility queries. For most
+	 * shapes, this will simply call forward the call to \ref 
+	 * rayIntersect. When the shape actually contains a nested kd-tree, 
+	 * some optimizations are possible.
+	 */
+	virtual bool rayIntersect(const Ray &ray, Float mint, Float maxt) const;
+
+	/**
 	 * \brief Given that an intersection has been found, create a 
 	 * detailed intersection record
 	 */
