@@ -20,75 +20,88 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/gkdtree.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
 
 MTS_NAMESPACE_BEGIN
 
-class Hair : public Shape {
+
+/**
+ * \brief Acceleration structure for cylindrical hair
+ * segments with miter joins.
+ */
+class HairKDTree : public GenericKDTree<HairKDTree> {
+	friend class GenericKDTree<HairKDTree>;
 public:
-	Hair(const Properties &props) : Shape(props) {
-		fs::path path = Thread::getThread()->getFileResolver()->resolve(
-			props.getString("filename"));
-		m_radius = (Float) props.getFloat("radius", 0.05f);
+	HairKDTree(std::vector<Point> &vertices, 
+			std::vector<bool> &startFiber, Float radius)
+			: m_radius(radius) {
+		// Take the vertex & start fiber arrays (without copying)
+		m_vertices.swap(vertices);
+		m_startFiber.swap(startFiber);
 
-		Log(EInfo, "Loading hair geometry from \"%s\" ..", path.leaf().c_str());
+		// Compute the index of the first vertex in each segment.
+		m_segIndex.reserve(m_vertices.size());
+		for (size_t i=0; i<m_vertices.size()-1; i++)
+			if (!m_startFiber[i+1])
+				m_segIndex.push_back(i);
 
-		fs::ifstream is(path);
-		if (is.fail())
-			Log(EError, "Could not open \"%s\"!", path.file_string().c_str());
+		Log(EDebug, "Building a kd-tree for " SIZE_T_FMT " hair vertices, "
+			SIZE_T_FMT " segments,", m_vertices.size(), m_segIndex.size());
 
-		std::string line;
-		bool newFiber = true;
-		Point p;
-		size_t segmentCount = 0;
-
-		while (is.good()) {
-			std::getline(is, line);
-			if (line.length() > 0 && line[0] == '#')
-				continue;
-			if (line.length() == 0) {
-				newFiber = true;
-			} else {
-				std::istringstream iss(line);
-				iss >> p.x >> p.y >> p.z;
-				if (!iss.fail()) {
-					if (newFiber)
-						segmentCount++;
-					m_vertices.push_back(p);
-					m_startFiber.push_back(newFiber);
-					newFiber = false;
-				}
-			}
-		}
-		m_startFiber.push_back(true);
-
-		for (size_t i=0; i<m_vertices.size()-1; ++i) {
-			const Point a = firstVertex();
-			const Point b = secondVertex();
-
-			// cosine of steepest miter angle
-			const Float cos0 = dot(firstMiterNormal(), tangent());
-			const Float cos1 = dot(secondMiterNormal(), tangent());
-			const Float maxInvCos = 1.0 / std::min(cos0, cos1);
-			const Vector expandVec(m_radius * maxIvCos);
-
-			result.expandBy(a - expandVec);
-			result.expandBy(a + expandVec);
-			result.expandBy(b - expandVec);
-			result.expandBy(b + expandVec);
-
-		}
-
-		Log(EDebug, "Read " SIZE_T_FMT " hair vertices, " SIZE_T_FMT " segments,", 
-			m_vertices.size(), segmentCount);
+		setStopPrims(0);
+		buildInternal();
 	}
 
-	Hair(Stream *stream, InstanceManager *manager) 
-		: Shape(stream, manager) {
+	inline const AABB &getAABB() const {
+		return m_aabb;
 	}
-	
+
+	inline const std::vector<Point> &getVertices() const {
+		return m_vertices;
+	}
+
+	inline const std::vector<bool> &getStartFiber() const {
+		return m_startFiber;
+	}
+
+	inline Float getRadius() const {
+		return m_radius;
+	}
+protected:
+	AABB getAABB(int index) const {
+		uint32_t iv = m_segIndex[index];
+
+		// cosine of steepest miter angle
+		const Float cos0 = dot(firstMiterNormal(iv), tangent(iv));
+		const Float cos1 = dot(secondMiterNormal(iv), tangent(iv));
+		const Float maxInvCos = 1.0 / std::min(cos0, cos1);
+		const Vector expandVec(m_radius * maxInvCos);
+
+		const Point a = m_vertices[iv];
+		const Point b = m_vertices[iv+1];
+		AABB aabb;
+		aabb.expandBy(a - expandVec);
+		aabb.expandBy(a + expandVec);
+		aabb.expandBy(b - expandVec);
+		aabb.expandBy(b + expandVec);
+		return aabb;
+	}
+
+	AABB getClippedAABB(int index, const AABB &box) const {
+		AABB aabb(getAABB(index));
+		aabb.clip(box);
+		return aabb;
+	}
+
+	inline int getPrimitiveCount() const {
+		return m_segIndex.size();
+	}
+
+protected:
+	/* Some utility functions */
 	inline Vector tangent(int iv) const {
 		return normalize(m_vertices[iv+1] - m_vertices[iv]);
 	}
@@ -104,12 +117,90 @@ public:
 		if (!m_startFiber[iv+2])
 			return normalize(tangent(iv) + tangent(iv+1));
 		else
-			return tangent();
+			return tangent(iv);
+	}
+
+	EIntersectionResult intersect(const Ray &ray, index_type idx, 
+		Float mint, Float maxt, Float &t, void *tmp) {
+		return ENo;
+	}
+
+	MTS_DECLARE_CLASS()
+protected:
+	std::vector<Point> m_vertices;
+	std::vector<bool> m_startFiber;
+	std::vector<uint32_t> m_segIndex;
+	Float m_radius;
+};
+
+class Hair : public Shape {
+public:
+	Hair(const Properties &props) : Shape(props) {
+		fs::path path = Thread::getThread()->getFileResolver()->resolve(
+			props.getString("filename"));
+		Float radius = (Float) props.getFloat("radius", 0.05f);
+
+		Log(EInfo, "Loading hair geometry from \"%s\" ..", path.leaf().c_str());
+
+		fs::ifstream is(path);
+		if (is.fail())
+			Log(EError, "Could not open \"%s\"!", path.file_string().c_str());
+
+		std::string line;
+		bool newFiber = true;
+		Point p;
+		std::vector<Point> vertices;
+		std::vector<bool> startFiber;
+
+		while (is.good()) {
+			std::getline(is, line);
+			if (line.length() > 0 && line[0] == '#')
+				continue;
+			if (line.length() == 0) {
+				newFiber = true;
+			} else {
+				std::istringstream iss(line);
+				iss >> p.x >> p.y >> p.z;
+				if (!iss.fail()) {
+					vertices.push_back(p);
+					startFiber.push_back(newFiber);
+					newFiber = false;
+				}
+			}
+		}
+
+		startFiber.push_back(true);
+		m_kdtree = new HairKDTree(vertices, startFiber, radius);
 	}
 
 
+	Hair(Stream *stream, InstanceManager *manager) 
+		: Shape(stream, manager) {
+		Float radius = stream->readFloat();
+		size_t vertexCount = (size_t) stream->readUInt();
+
+		std::vector<Point> vertices(vertexCount);
+		std::vector<bool> startFiber(vertexCount+1);
+		stream->readFloatArray((Float *) &vertices[0], vertexCount * 3);
+
+		for (size_t i=0; i<vertexCount; ++i) 
+			startFiber[i] = stream->readBool();
+		startFiber[vertexCount] = true;
+
+		m_kdtree = new HairKDTree(vertices, startFiber, radius);
+	}
+
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Shape::serialize(stream, manager);
+
+		const std::vector<Point> &vertices = m_kdtree->getVertices();
+		const std::vector<bool> &startFiber = m_kdtree->getStartFiber();
+
+		stream->writeFloat(m_kdtree->getRadius());
+		stream->writeUInt((uint32_t) vertices.size());
+		stream->writeFloatArray((Float *) &vertices[0], vertices.size() * 3);
+		for (size_t i=0; i<vertices.size(); ++i)
+			stream->writeBool(startFiber[i]);
 	}
 
 	bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *temp) const {
@@ -118,11 +209,11 @@ public:
 
 
 	void fillIntersectionRecord(const Ray &ray, Float t, 
-			const void *temp, Intersection &its) const {
+		const void *temp, Intersection &its) const {
 	}
 
-	inline AABB getAABB() const {
-		return m_aabb;
+	AABB getAABB() const {
+		return m_kdtree->getAABB();
 	}
 
 	Float getSurfaceArea() const {
@@ -133,20 +224,16 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Hair[" << endl
-			<< "  radius = " << m_radius << endl
 			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	std::vector<bool> m_startFiber;
-	std::vector<int> m_segIndex;
-	std::vector<Point> m_vertices;
-	AABB m_aabb;
-	Float m_radius;
+	ref<HairKDTree> m_kdtree;
 };
 
+MTS_IMPLEMENT_CLASS(HairKDTree, false, GenericKDTree)
 MTS_IMPLEMENT_CLASS_S(Hair, false, Shape)
 MTS_EXPORT_PLUGIN(Hair, "Hair intersection primitive");
 MTS_NAMESPACE_END

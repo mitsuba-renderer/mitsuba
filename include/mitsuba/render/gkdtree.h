@@ -758,8 +758,8 @@ protected:
 			Log(EError, "The intersection cost must be > 0");
 		if (m_emptySpaceBonus <= 0 || m_emptySpaceBonus > 1)
 			Log(EError, "The empty space bonus must be in [0, 1]");
-		if (m_stopPrims <= 0)
-			Log(EError, "The stopping primitive count must be > 1");
+		if (m_stopPrims < 0)
+			Log(EError, "The stopping primitive count must be >= 0");
 		if (m_exactPrimThreshold < 0)
 			Log(EError, "The exact primitive threshold must be >= 0");
 		if (m_minMaxBins <= 1)
