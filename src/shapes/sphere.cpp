@@ -86,16 +86,23 @@ public:
 	}
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt, Float &t, void *tmp) const {
-		const Vector ro = ray.o - m_center;
+		/* Do the following in double precision. This helps to avoid
+		   self-intersections when approximating planes using giant spheres */
+		const double 
+			rox = (double) (ray.o.x - m_center.x),
+			roy = (double) (ray.o.y - m_center.y),
+			roz = (double) (ray.o.z - m_center.z),
+			rdx = (double) ray.d.x,
+			rdy = (double) ray.d.y,
+			rdz = (double) ray.d.z;
 
 		/* Transform into the local coordinate system and normalize */
-		Float A = ray.d.x*ray.d.x + ray.d.y*ray.d.y + ray.d.z*ray.d.z;
-		Float B = 2 * (ray.d.x*ro.x + ray.d.y*ro.y + ray.d.z*ro.z);
-		Float C = ro.x*ro.x + ro.y*ro.y +
-				ro.z*ro.z - m_radius*m_radius;
+		double A = rdx*rdx + rdy*rdy + rdz*rdz;
+		double B = 2 * (rdx*rox + rdy*roy + rdz*roz);
+		double C = rox*rox + roy*roy + roz*roz - m_radius*m_radius;
 
-		Float nearT, farT;
-		if (!solveQuadratic(A, B, C, nearT, farT))
+		double nearT, farT;
+		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
 		if (nearT > maxt || farT < mint)
@@ -103,25 +110,32 @@ public:
 		if (nearT < mint) {
 			if (farT > maxt)
 				return false;
-			t = farT;		
+			t = (Float) farT;		
 		} else {
-			t = nearT;
+			t = (Float) nearT;
 		}
 
 		return true;
 	}
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt) const {
-		const Vector ro = ray.o - m_center;
+		/* Do the following in double precision. This helps to avoid
+		   self-intersections when approximating planes using giant spheres */
 
-		/* Transform into the local coordinate system and normalize */
-		Float A = ray.d.x*ray.d.x + ray.d.y*ray.d.y + ray.d.z*ray.d.z;
-		Float B = 2 * (ray.d.x*ro.x + ray.d.y*ro.y + ray.d.z*ro.z);
-		Float C = ro.x*ro.x + ro.y*ro.y +
-				ro.z*ro.z - m_radius*m_radius;
+		const double 
+			rox = (double) (ray.o.x - m_center.x),
+			roy = (double) (ray.o.y - m_center.y),
+			roz = (double) (ray.o.z - m_center.z),
+			rdx = (double) ray.d.x,
+			rdy = (double) ray.d.y,
+			rdz = (double) ray.d.z;
 
-		Float nearT, farT;
-		if (!solveQuadratic(A, B, C, nearT, farT))
+		double A = rdx*rdx + rdy*rdy + rdz*rdz;
+		double B = 2 * (rdx*rox + rdy*roy + rdz*roz);
+		double C = rox*rox + roy*roy + roz*roz - m_radius*m_radius;
+
+		double nearT, farT;
+		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
 		if (nearT > maxt || farT < mint)

@@ -22,17 +22,17 @@
 /* Choice of precision */
 #ifdef DOUBLE_PRECISION
 #define Float double
-#define Epsilon 1e-8
+#define Epsilon 1e-6
 #else
 #ifndef SINGLE_PRECISION
 #define SINGLE_PRECISION
 #endif
 #define Float float
-#define Epsilon 1e-5f
+#define Epsilon 1e-4f
 #endif
 
 /// relative eps. for shadow rays
-#define ShadowEpsilon 1e-3 
+#define ShadowEpsilon 1e-3f
 
 #ifdef M_PI
 #undef M_PI

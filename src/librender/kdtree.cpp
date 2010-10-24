@@ -112,7 +112,7 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 	if (m_aabb.rayIntersect(ray, mint, maxt)) {
 		/* Use an adaptive ray epsilon */
 		Float rayMinT = ray.mint;
-		if (rayMinT == Epsilon)
+		if (rayMinT == Epsilon) 
 			rayMinT *= std::max(std::max(std::abs(ray.o.x), 
 				std::abs(ray.o.y)), std::abs(ray.o.z));
 

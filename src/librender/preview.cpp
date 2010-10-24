@@ -65,7 +65,7 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 	int pos = 0;
 	Intersection its;
 	Spectrum value, bsdfVal;
-	Vector toIts;
+	Vector toVPL;
 	Ray primary, secondary;
 	int numRays = 0;
 
@@ -87,33 +87,32 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 			else
 				value = Spectrum(0.0f);
 
-			toIts = its.p - m_vpl.its.p;
-			secondary = Ray(m_vpl.its.p, toIts, 0.001, 0.999);
+			toVPL = m_vpl.its.p - its.p;
+			secondary = Ray(its.p, toVPL, ShadowEpsilon, 1-ShadowEpsilon);
 			++numRays;
 			if (m_kdtree->rayIntersect(secondary)) {
 				block->setPixel(pos++, value);
 				continue;
 			}
+			Float length = toVPL.length();
+			toVPL/=length;
 
-			Float length = toIts.length();
-			toIts /= length;
-
-			BSDFQueryRecord rr(its, -its.toLocal(toIts));
+			BSDFQueryRecord rr(its, its.toLocal(toVPL));
 			rr.wi = normalize(rr.wi);
 			bsdfVal = its.shape->getBSDF()->fCos(rr);
 			length = std::max(length, m_minDist);
 
 			if (m_vpl.type == ESurfaceVPL) {
-				BSDFQueryRecord bRec(m_vpl.its, m_vpl.its.toLocal(toIts));
+				BSDFQueryRecord bRec(m_vpl.its, -m_vpl.its.toLocal(toVPL));
 				bRec.quantity = EImportance;
 				value += m_vpl.P * bsdfVal * m_vpl.its.shape->getBSDF()->fCos(bRec) / (length*length);
 			} else {
 				EmissionRecord eRec(m_vpl.luminaire, 
-					ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), toIts);
+					ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), -toVPL);
 				eRec.type = EmissionRecord::EPreview;
 				value += m_vpl.P * bsdfVal * m_vpl.luminaire->f(eRec) 
 					* ((m_vpl.luminaire->getType() & Luminaire::EOnSurface ?
-					dot(m_vpl.its.shFrame.n, toIts) : (Float) 1)
+					dot(m_vpl.its.shFrame.n, -toVPL) : (Float) 1)
 					/ (length*length));
 			}
 			block->setPixel(pos++, value);
@@ -198,7 +197,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 	primRay4.o[0].ps = _mm_set1_ps(m_cameraO.x);
 	primRay4.o[1].ps = _mm_set1_ps(m_cameraO.y);
 	primRay4.o[2].ps = _mm_set1_ps(m_cameraO.z);
-	secItv4.mint.ps = _mm_set1_ps(0.001);
+	secItv4.mint.ps = _mm_set1_ps(ShadowEpsilon);
 
 	/* Work on 2x2 sub-blocks */
 	for (int y=sy; y<ey; y += 2, pos += width) {
@@ -272,7 +271,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					_mm_mul_ps(nSecD[0].ps, lumDir[0]),
 					_mm_mul_ps(nSecD[1].ps, lumDir[1])),
 					_mm_mul_ps(nSecD[2].ps, lumDir[2])));
-			secItv4.maxt.ps = _mm_set1_ps(0.999);
+			secItv4.maxt.ps = _mm_set1_ps(1-ShadowEpsilon);
 
 			/* Shading (scalar) --- this is way too much work and should be 
 			   rewritten to be smarter in special cases */

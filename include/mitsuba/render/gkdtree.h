@@ -40,9 +40,6 @@
 #define MTS_KD_BLOCKSIZE_KD  (512*1024/sizeof(KDNode))
 #define MTS_KD_BLOCKSIZE_IDX (512*1024/sizeof(uint32_t))
 
-/// 32 byte temporary storage for intersection computations 
-#define MTS_KD_INTERSECTION_TEMP 32
-
 /// Use a simple hashed 8-entry mailbox per thread
 //#define MTS_KD_MAILBOX_ENABLED 1
 //#define MTS_KD_MAILBOX_SIZE 8
@@ -3117,7 +3114,7 @@ template<typename Derived> template <bool shadowRay> FINLINE bool
 template <typename Derived> void GenericKDTree<Derived>::findCosts(
 		Float &traversalCost, Float &intersectionCost) {
 	ref<Random> random = new Random();
-	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
+	uint8_t temp[128];
 	BSphere bsphere = m_aabb.getBSphere();
 	int nRays = 10000000, warmup = nRays/4;
 	Vector *A = new Vector[nRays-warmup];
