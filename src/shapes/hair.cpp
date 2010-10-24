@@ -54,6 +54,8 @@ public:
 		   SAH cost as the tree subdivision stopping criterion, 
 		   not the number of primitives */
 		setStopPrims(0);
+		setTraversalCost(10);
+		setIntersectionCost(30);
 		buildInternal();
 
 		/* Optimization: replace all primitive indices by the
@@ -273,23 +275,23 @@ public:
 
 		while (is.good()) {
 			std::getline(is, line);
-			if (line.length() > 0 && line[0] == '#')
-				continue;
-			if (line.length() == 0) {
+			if (line.length() > 0 && line[0] == '#') {
 				newFiber = true;
-			} else {
-				std::istringstream iss(line);
-				iss >> p.x >> p.y >> p.z;
-				if (!iss.fail()) {
-					if (newFiber || p != lastP) {
-						vertices.push_back(objectToWorld(p));
-						vertexStartsFiber.push_back(newFiber);
-						lastP = p;
-					} else {
-						nDegenerate++;
-					}
-					newFiber = false;
+				continue;
+			}
+			std::istringstream iss(line);
+			iss >> p.x >> p.y >> p.z;
+			if (!iss.fail()) {
+				if (newFiber || p != lastP) {
+					vertices.push_back(objectToWorld(p));
+					vertexStartsFiber.push_back(newFiber);
+					lastP = p;
+				} else {
+					nDegenerate++;
 				}
+				newFiber = false;
+			} else {
+				newFiber = true;
 			}
 		}
 
@@ -298,6 +300,7 @@ public:
 				" degenerate segments!", nDegenerate);
 
 		vertexStartsFiber.push_back(true);
+
 		m_kdtree = new HairKDTree(vertices, vertexStartsFiber, radius);
 	}
 
