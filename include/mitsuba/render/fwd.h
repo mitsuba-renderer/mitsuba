@@ -37,6 +37,7 @@ class ImageBlock;
 class Integrator;
 struct Intersection;
 class IrradianceCache;
+class AbstractKDTree;
 template <typename Derived> class GenericKDTree;
 class KDTree;
 class LocalWorker;

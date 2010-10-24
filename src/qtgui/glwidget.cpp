@@ -28,6 +28,7 @@
 #include <mitsuba/render/renderjob.h>
 #include <mitsuba/core/timer.h>
 #include <mitsuba/core/mstream.h>
+#include <mitsuba/hw/font.h>
 
 GLWidget::GLWidget(QWidget *parent) :
 	QGLWidget(parent), m_context(NULL) {
@@ -90,6 +91,7 @@ void GLWidget::initializeGL() {
 	m_logoTexture = m_renderer->createGPUTexture("Logo", bitmap);
 	m_logoTexture->setFilterType(GPUTexture::ENearest);
 	m_logoTexture->setMipMapped(false);
+	m_font = new Font(Font::EBitstreamVeraMono14);
 
 	std::vector<std::string> missingExtensions;
 
@@ -276,6 +278,7 @@ void GLWidget::initializeGL() {
 		m_luminanceProgram->init();
 	}
 	m_logoTexture->init();
+	m_font->init(m_renderer);
 	m_redrawTimer->start();
 }
 
@@ -545,6 +548,19 @@ void GLWidget::keyReleaseEvent(QKeyEvent *event) {
 		case Qt::Key_S:
 		case Qt::Key_Down:
 			m_downKeyDown = false; break;
+		case Qt::Key_BracketLeft:
+			if (m_context->showKDTree) {
+				m_context->shownKDTreeLevel
+					= std::max(0, m_context->shownKDTreeLevel - 1);
+				resetPreview();
+			}
+			break;
+		case Qt::Key_BracketRight:
+			if (m_context->showKDTree) {
+				m_context->shownKDTreeLevel++;
+				resetPreview();
+			}
+			break;
 	}
 
 	if (!(m_leftKeyDown || m_rightKeyDown || m_upKeyDown || m_downKeyDown)) {
@@ -792,7 +808,7 @@ void GLWidget::paintGL() {
 			Float invWhitePoint = std::pow((Float) 2.0f, m_context->exposure);
 			if (m_context->mode == EPreview)
 				invWhitePoint /= entry.vplSampleOffset;
-	
+
 			buffer->bind();
 			m_gammaTonemap->bind();
 			m_gammaTonemap->setParameter("source", buffer);
@@ -878,8 +894,15 @@ void GLWidget::paintGL() {
 			buffer->unbind();
 		}
 
-		if (m_context->mode == EPreview)
+		if (m_context->mode == EPreview) {
 			m_preview->releaseBuffer(entry);
+			if (m_context->showKDTree) {
+				m_renderer->setColor(Spectrum(1.0f));
+				m_renderer->drawText(Point2i(10, 10), m_font, 
+					formatString("kd-tree visualization mode\nPress '[' "
+					"and ']' to change the shown level"));
+			}
+		}
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
@@ -927,14 +950,10 @@ void GLWidget::updateScrollBars() {
 		width = size().width(),
 		height = size().height();
 
-	//cout << "Required: " << reqWidth << "x" << reqHeight << ", got " << width << "x" << height << endl;
-
 	if (m_hScroll->isVisible())
 		height += m_hScroll->size().height();
 	if (m_vScroll->isVisible())
 		width += m_vScroll->size().width();
-
-	//cout << "Without scrollbars : got " << width << "x" << height << endl;
 
 	bool needsHScroll = false, needsVScroll = false;
 
@@ -975,8 +994,6 @@ void GLWidget::updateScrollBars() {
 			m_context->scrollOffset.y = 0;
 		}
 	}
-	
-	//cout << "Final space for contents: " << width << "x" << height << endl;
 
 	m_hScroll->setValue(m_context->scrollOffset.x);
 	m_vScroll->setValue(m_context->scrollOffset.y);

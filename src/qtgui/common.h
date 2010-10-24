@@ -158,6 +158,8 @@ struct SceneContext {
 	Float reinhardKey, reinhardBurn;
 	bool diffuseSources;
 	bool diffuseReceivers;
+	bool showKDTree;
+	int shownKDTreeLevel;
 
 	/* Preview state */
 	std::deque<VPL> vpls;

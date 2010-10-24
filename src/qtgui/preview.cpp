@@ -468,7 +468,7 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	m_shaderManager->setVPL(vpl);
 
 	Point2 jitter(.5f, .5f);
-	if (!m_motion)
+	if (!m_motion && !m_context->showKDTree)
 		jitter -= Vector2(m_random->nextFloat(), m_random->nextFloat());
 
 	m_mutex->lock();
@@ -486,13 +486,20 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	m_framebuffer->activateTarget();
 	m_framebuffer->clear();
 	m_renderer->beginDrawingMeshes();
-	for (unsigned int j=0; j<meshes.size(); j++) {
+	for (size_t j=0; j<meshes.size(); j++) {
 		m_shaderManager->configure(vpl, meshes[j]->getBSDF(), 
 			meshes[j]->getLuminaire(), camPos, !meshes[j]->hasVertexNormals());
 		m_renderer->drawTriMesh(meshes[j]);
 		m_shaderManager->unbind();
 	}
 	m_renderer->endDrawingMeshes();
+	if (m_context->showKDTree) {
+		oglRenderKDTree(m_context->scene->getKDTree());
+		const std::vector<Shape *> shapes = m_context->scene->getShapes();
+		for (size_t j=0; j<shapes.size(); ++j) 
+			if (shapes[j]->getKDTree())
+				oglRenderKDTree(shapes[j]->getKDTree());
+	}
 	m_shaderManager->drawBackground(clipToWorld, camPos);
 	m_framebuffer->releaseTarget();
 
@@ -530,6 +537,32 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 			/* No sync objects available - we have to wait 
 			   for everything to finish */
 			m_renderer->finish();
+		}
+	}
+}
+		
+void PreviewThread::oglRenderKDTree(const AbstractKDTree *kdtree) {
+	std::stack<boost::tuple<const AbstractKDTree::KDNode *, AABB, uint32_t> > stack;
+
+	stack.push(boost::make_tuple(kdtree->getRoot(), kdtree->getAABB(), 0));
+
+	m_renderer->setColor(Spectrum(5.0f));
+	while (!stack.empty()) {
+		const AbstractKDTree::KDNode *node = boost::get<0>(stack.top());
+		AABB aabb = boost::get<1>(stack.top());
+		int level = boost::get<2>(stack.top());
+		stack.pop();
+		m_renderer->drawAABB(aabb);
+
+		if (!node->isLeaf() && level + 1 <= m_context->shownKDTreeLevel) {
+			int axis = node->getAxis();
+			float split = node->getSplit();
+			Float tmp = aabb.min[axis];
+			aabb.min[axis] = split;
+			stack.push(boost::make_tuple(node->getLeft(), aabb, level+1));
+			aabb.min[axis] = tmp;
+			aabb.max[axis] = split;
+			stack.push(boost::make_tuple(node->getRight(), aabb, level+1));
 		}
 	}
 }

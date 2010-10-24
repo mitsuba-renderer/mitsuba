@@ -480,6 +480,20 @@ void MainWindow::on_actionUpdateCheck_triggered() {
 	checkForUpdates(true);
 }
 
+void MainWindow::on_actionShowKDTree_triggered() {
+	int currentIndex = ui->tabBar->currentIndex();
+	if (currentIndex == -1)
+		return;
+	SceneContext *currentContext = m_context[currentIndex];
+	bool checked = ui->actionShowKDTree->isChecked();
+	currentContext->showKDTree = checked;
+	if (currentContext->previewMethod != EOpenGL &&
+		currentContext->previewMethod != EOpenGLSinglePass)
+		ui->glView->setPreviewMethod(EOpenGL);
+	else
+		ui->glView->resetPreview();
+}
+
 void MainWindow::changeEvent(QEvent *e) {
     QMainWindow::changeEvent(e);
     switch (e->type()) {
@@ -682,6 +696,8 @@ void MainWindow::updateUI() {
 	ui->actionClose->setEnabled(hasTab);
 	ui->actionDuplicateTab->setEnabled(hasTab);
 	ui->actionAdjustSize->setEnabled(hasTab);
+	ui->actionShowKDTree->setEnabled(hasTab);
+	ui->actionShowKDTree->setChecked(hasTab && context->showKDTree);
 #if !defined(__OSX__)
 	ui->actionPreviewSettings->setEnabled(!fallback && hasTab);
 #else

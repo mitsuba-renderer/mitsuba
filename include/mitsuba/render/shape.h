@@ -242,6 +242,15 @@ public:
 	virtual Float pdfSolidAngle(const ShapeSamplingRecord &sRec, 
 			const Point &x) const;
 
+	/**
+	 * \brief Return the internal kd-tree of this shape (if any)
+	 *
+	 * This function is used by the kd-tree visualization in
+	 * the interactive walkthrough. The default implementation
+	 * simply returns NULL.
+	 */
+	virtual const AbstractKDTree *getKDTree() const;
+
 	/// Return the shape's BSDF
 	inline const BSDF *getBSDF() const { return m_bsdf.get(); }
 	/// Return the shape's BSDF

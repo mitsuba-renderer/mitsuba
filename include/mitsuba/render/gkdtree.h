@@ -427,6 +427,199 @@ private:
 	size_t m_bufferSize;
 };
 
+/**
+ * \brief Base class of all kd-trees.
+ *
+ * This class defines the byte layout for KD-tree nodes and
+ * provides methods for querying the tree structure.
+ */
+class MTS_EXPORT_RENDER AbstractKDTree : public Object {
+public:
+	/// Index number format (max 2^32 prims)
+	typedef uint32_t index_type;
+
+	/// Size number format
+	typedef uint32_t size_type;
+
+	/**
+	 * \brief KD-tree node in 8 bytes. 
+	 */
+	struct KDNode {
+		union {
+			/* Inner node */
+			struct {
+				/* Bit layout:
+				   31   : False (inner node)
+				   30   : Indirection node flag
+				   29-3 : Offset to the left child 
+				          or indirection table entry
+				   2-0  : Split axis
+				*/
+				uint32_t combined;
+
+				/// Split plane coordinate
+				float split;
+			} inner;
+
+			/* Leaf node */
+			struct {
+				/* Bit layout:
+				   31   : True (leaf node)
+				   30-0 : Offset to the node's primitive list
+				*/
+				uint32_t combined;
+
+				/// End offset of the primitive list
+				uint32_t end;
+			} leaf;
+		};
+
+		enum EMask {
+			ETypeMask = 1 << 31,
+			EIndirectionMask = 1 << 30,
+			ELeafOffsetMask = ~ETypeMask,
+			EInnerAxisMask = 0x3,
+			EInnerOffsetMask = ~(EInnerAxisMask + EIndirectionMask),
+			ERelOffsetLimit = (1<<28) - 1
+		};
+
+		/// Initialize a leaf kd-Tree node
+		inline void initLeafNode(unsigned int offset, unsigned int numPrims) {
+			leaf.combined = ETypeMask | offset;
+			leaf.end = offset + numPrims;
+		}
+
+		/**
+		 * Initialize an interior kd-Tree node. Reports a failure if the
+		 * relative offset to the left child node is too large.
+		 */
+		inline bool initInnerNode(int axis, float split, ptrdiff_t relOffset) {
+			if (relOffset < 0 || relOffset > ERelOffsetLimit)
+				return false;
+			inner.combined = axis | ((uint32_t) relOffset << 2);
+			inner.split = split;
+			return true;
+		}
+
+		/**
+		 * \brief Initialize an interior indirection node.
+		 *
+		 * Indirections are necessary whenever the children cannot be 
+		 * referenced using a relative pointer, which can happen when 
+		 * they lie in different memory chunks. In this case, the node
+		 * stores an index into a globally shared pointer list.
+		 */
+		inline void initIndirectionNode(int axis, float split, 
+				uint32_t indirectionEntry) {
+			inner.combined = EIndirectionMask 
+				| ((uint32_t) indirectionEntry << 2)
+				| axis;
+			inner.split = split;
+		}
+
+		/// Is this a leaf node?
+		FINLINE bool isLeaf() const {
+			return leaf.combined & ETypeMask;
+		}
+
+		/// Is this an indirection node?
+		FINLINE bool isIndirection() const {
+			return leaf.combined & EIndirectionMask;
+		}
+
+		/// Assuming this is a leaf node, return the first primitive index
+		FINLINE index_type getPrimStart() const {
+			return leaf.combined & ELeafOffsetMask;
+		}
+
+		/// Assuming this is a leaf node, return the last primitive index
+		FINLINE index_type getPrimEnd() const {
+			return leaf.end;
+		}
+
+		/// Return the index of an indirection node
+		FINLINE index_type getIndirectionIndex() const {
+			return(inner.combined & EInnerOffsetMask) >> 2;
+		}
+
+		/// Return the left child (assuming that this is an interior node)
+		FINLINE const KDNode * __restrict getLeft() const {
+			return this + 
+				((inner.combined & EInnerOffsetMask) >> 2);
+		}
+
+		/// Return the sibling of the current node
+		FINLINE const KDNode * __restrict getSibling() const {
+			return (const KDNode *) ((ptrdiff_t) this ^ (ptrdiff_t) 8);
+		}
+
+		/// Return the left child (assuming that this is an interior node)
+		FINLINE KDNode * __restrict getLeft() {
+			return this + 
+				((inner.combined & EInnerOffsetMask) >> 2);
+		}
+
+		/// Return the left child (assuming that this is an interior node)
+		FINLINE const KDNode * __restrict getRight() const {
+			return getLeft() + 1;
+		}
+
+		/**
+		 * \brief Return the split plane location (assuming that this 
+		 * is an interior node)
+		 */
+		FINLINE float getSplit() const {
+			return inner.split;
+		}
+
+		/// Return the split axis (assuming that this is an interior node)
+		FINLINE int getAxis() const {
+			return inner.combined & EInnerAxisMask;
+		}
+
+		/// Return a string representation
+		std::string toString() const {
+			std::ostringstream oss;
+			if (isLeaf()) {
+				oss << "KDNode[leaf, primStart=" << getPrimStart() 
+					<< ", primCount=" << getPrimEnd()-getPrimStart() << "]";
+			} else {
+				oss << "KDNode[interior, axis=" << getAxis() 
+					<< ", split=" << getAxis() 
+					<< ", leftOffset="
+					<< ((inner.combined & EInnerOffsetMask) >> 2)
+					<< "]";
+			}
+			return oss.str();
+		}
+	};
+	BOOST_STATIC_ASSERT(sizeof(KDNode) == 8);
+
+	/// Return the root node of the kd-tree
+	inline const KDNode *getRoot() const {
+		return m_nodes;
+	}
+
+	/// Return whether or not the kd-tree has been built
+	inline bool isBuilt() const {
+		return m_nodes != NULL;
+	}
+
+	/// Return an axis-aligned bounding box containing all primitives
+	inline const AABB &getAABB() const { return m_aabb; }
+
+	/// Return an bounding sphere containing all primitives
+	inline const BSphere &getBSphere() const { return m_bsphere; }
+
+	MTS_DECLARE_CLASS()
+protected:
+	virtual ~AbstractKDTree() { }
+protected:
+	KDNode *m_nodes;
+	AABB m_aabb;
+	BSphere m_bsphere;
+};
+
 #if defined(WIN32)
 /* Use strict IEEE 754 floating point computations 
    for the following kd-tree building code */
@@ -483,21 +676,14 @@ private:
  *
  * \author Wenzel Jakob
  */
-template <typename Derived> class GenericKDTree : public Object {
+template <typename Derived> class GenericKDTree : public AbstractKDTree {
 protected:
 	// Some forward declarations
-	struct KDNode;
 	struct MinMaxBins;
 	struct EdgeEvent;
 	struct EdgeEventOrdering;
 
 public:
-	/// Index number format (max 2^32 prims)
-	typedef uint32_t index_type;
-
-	/// Size number format
-	typedef uint32_t size_type;
-
 	/**
 	 * \brief Documents the possible outcomes of a single 
 	 * ray-primitive intersection computation
@@ -519,7 +705,8 @@ public:
 	 * \brief Create a new kd-tree instance initialized with 
 	 * the default parameters.
 	 */
-	GenericKDTree() : m_nodes(NULL), m_indices(NULL) {
+	GenericKDTree() : m_indices(NULL) {
+		m_nodes = NULL;
 		m_traversalCost = 15;
 		m_intersectionCost = 20;
 		m_emptySpaceBonus = 0.9f;
@@ -711,23 +898,6 @@ public:
 	inline size_type getExactPrimitiveThreshold() const {
 		return m_exactPrimThreshold;
 	}
-
-	/**
-	 * \brief Return whether or not the kd-tree has been built
-	 */
-	inline bool isBuilt() const {
-		return m_nodes != NULL;
-	}
-
-	/**
-	 * \brief Return an axis-aligned bounding box containing all primitives
-	 */
-	inline const AABB &getAABB() const { return m_aabb; }
-
-	/**
-	 * \brief Return an bounding sphere containing all primitives
-	 */
-	inline const BSphere &getBSphere() const { return m_bsphere; }
 
 	/**
 	 * \brief Empirically find the best traversal and intersection 
@@ -1232,161 +1402,6 @@ protected:
 			done = false;
 		}
 	};
-
-	/**
-	 * \brief KD-tree node in 8 bytes. 
-	 */
-	struct KDNode {
-		union {
-			/* Inner node */
-			struct {
-				/* Bit layout:
-				   31   : False (inner node)
-				   30   : Indirection node flag
-				   29-3 : Offset to the left child 
-				          or indirection table entry
-				   2-0  : Split axis
-				*/
-				uint32_t combined;
-
-				/// Split plane coordinate
-				float split;
-			} inner;
-
-			/* Leaf node */
-			struct {
-				/* Bit layout:
-				   31   : True (leaf node)
-				   30-0 : Offset to the node's primitive list
-				*/
-				uint32_t combined;
-
-				/// End offset of the primitive list
-				uint32_t end;
-			} leaf;
-		};
-
-		enum EMask {
-			ETypeMask = 1 << 31,
-			EIndirectionMask = 1 << 30,
-			ELeafOffsetMask = ~ETypeMask,
-			EInnerAxisMask = 0x3,
-			EInnerOffsetMask = ~(EInnerAxisMask + EIndirectionMask),
-			ERelOffsetLimit = (1<<28) - 1
-		};
-
-		/// Initialize a leaf kd-Tree node
-		inline void initLeafNode(unsigned int offset, unsigned int numPrims) {
-			leaf.combined = ETypeMask | offset;
-			leaf.end = offset + numPrims;
-		}
-
-		/**
-		 * Initialize an interior kd-Tree node. Reports a failure if the
-		 * relative offset to the left child node is too large.
-		 */
-		inline bool initInnerNode(int axis, float split, ptrdiff_t relOffset) {
-			if (relOffset < 0 || relOffset > ERelOffsetLimit)
-				return false;
-			inner.combined = axis | ((uint32_t) relOffset << 2);
-			inner.split = split;
-			return true;
-		}
-
-		/**
-		 * \brief Initialize an interior indirection node.
-		 *
-		 * Indirections are necessary whenever the children cannot be 
-		 * referenced using a relative pointer, which can happen when 
-		 * they lie in different memory chunks. In this case, the node
-		 * stores an index into a globally shared pointer list.
-		 */
-		inline void initIndirectionNode(int axis, float split, 
-				uint32_t indirectionEntry) {
-			inner.combined = EIndirectionMask 
-				| ((uint32_t) indirectionEntry << 2)
-				| axis;
-			inner.split = split;
-		}
-
-		/// Is this a leaf node?
-		FINLINE bool isLeaf() const {
-			return leaf.combined & ETypeMask;
-		}
-
-		/// Is this an indirection node?
-		FINLINE bool isIndirection() const {
-			return leaf.combined & EIndirectionMask;
-		}
-
-		/// Assuming this is a leaf node, return the first primitive index
-		FINLINE index_type getPrimStart() const {
-			return leaf.combined & ELeafOffsetMask;
-		}
-
-		/// Assuming this is a leaf node, return the last primitive index
-		FINLINE index_type getPrimEnd() const {
-			return leaf.end;
-		}
-
-		/// Return the index of an indirection node
-		FINLINE index_type getIndirectionIndex() const {
-			return(inner.combined & EInnerOffsetMask) >> 2;
-		}
-
-		/// Return the left child (assuming that this is an interior node)
-		FINLINE const KDNode * __restrict getLeft() const {
-			return this + 
-				((inner.combined & EInnerOffsetMask) >> 2);
-		}
-
-		/// Return the sibling of the current node
-		FINLINE const KDNode * __restrict getSibling() const {
-			return (const KDNode *) ((ptrdiff_t) this ^ (ptrdiff_t) 8);
-		}
-
-		/// Return the left child (assuming that this is an interior node)
-		FINLINE KDNode * __restrict getLeft() {
-			return this + 
-				((inner.combined & EInnerOffsetMask) >> 2);
-		}
-
-		/// Return the left child (assuming that this is an interior node)
-		FINLINE const KDNode * __restrict getRight() const {
-			return getLeft() + 1;
-		}
-
-		/**
-		 * \brief Return the split plane location (assuming that this 
-		 * is an interior node)
-		 */
-		FINLINE float getSplit() const {
-			return inner.split;
-		}
-
-		/// Return the split axis (assuming that this is an interior node)
-		FINLINE int getAxis() const {
-			return inner.combined & EInnerAxisMask;
-		}
-
-		/// Return a string representation
-		std::string toString() const {
-			std::ostringstream oss;
-			if (isLeaf()) {
-				oss << "KDNode[leaf, primStart=" << getPrimStart() 
-					<< ", primCount=" << getPrimEnd()-getPrimStart() << "]";
-			} else {
-				oss << "KDNode[interior, axis=" << getAxis() 
-					<< ", split=" << getAxis() 
-					<< ", leftOffset="
-					<< ((inner.combined & EInnerOffsetMask) >> 2)
-					<< "]";
-			}
-			return oss.str();
-		}
-	};
-
-	BOOST_STATIC_ASSERT(sizeof(KDNode) == 8);
 
 #if defined(MTS_KD_MAILBOX_ENABLED)
 	/**
@@ -2638,14 +2653,11 @@ protected:
 		Float mint_, Float maxt_, Float &t, void *temp) const;
 
 protected:
-	KDNode *m_nodes;
 	index_type *m_indices;
 	Float m_traversalCost;
 	Float m_intersectionCost;
 	Float m_emptySpaceBonus;
 	bool m_clip, m_retract, m_parallelBuild;
-	AABB m_aabb;
-	BSphere m_bsphere;
 	size_type m_maxDepth;
 	size_type m_stopPrims;
 	size_type m_maxBadRefines;
@@ -3199,7 +3211,7 @@ template <typename Derived> void GenericKDTree<Derived>::findCosts(
 }
 
 template <typename Derived> Class *GenericKDTree<Derived>::m_theClass 
-	= new Class("GenericKDTree", true, "Object");
+	= new Class("GenericKDTree", true, "AbstractKDTree");
 
 template <typename Derived> const Class *GenericKDTree<Derived>::getClass() const {
 	return m_theClass;

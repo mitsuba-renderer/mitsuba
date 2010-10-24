@@ -44,6 +44,7 @@ public:
 	void downloadFramebuffer();
 	void resumePreview();
 	void refreshScene();
+	void resetPreview();
 	inline const RendererCapabilities *getRendererCapabilities() const {
 		return m_renderer->getCapabilities();
 	}
@@ -94,7 +95,6 @@ protected:
 	void keyPressEvent(QKeyEvent *event);
 	void keyReleaseEvent(QKeyEvent *event);
 	void focusOutEvent(QFocusEvent *event);
-	void resetPreview();
 	void resizeEvent(QResizeEvent *event);
 	void wheelEvent(QWheelEvent *event);
 	void dragEnterEvent(QDragEnterEvent *event);
@@ -129,6 +129,7 @@ private:
 	ref<GPUProgram> m_gammaTonemap, m_reinhardTonemap;
 	ref<GPUProgram> m_downsamplingProgram, m_luminanceProgram;
 	ref<QtDevice> m_device;
+	ref<Font> m_font;
 	SceneContext *m_context;
 	bool m_framebufferChanged, m_mouseButtonDown;
 	bool m_leftKeyDown, m_rightKeyDown;

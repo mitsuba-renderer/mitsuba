@@ -115,6 +115,8 @@ void SceneLoader::run() {
 			m_result->up = camera->getInverseViewTransform()(Vector(0, 1, 0));
 			m_result->scrollOffset = Vector2i(0, 0);
 			m_result->pathLength = m_result->detectPathLength();
+			m_result->showKDTree = false;
+			m_result->shownKDTreeLevel = 0;
 		}
 	} catch (const std::exception &e) {
 		m_error = e.what();

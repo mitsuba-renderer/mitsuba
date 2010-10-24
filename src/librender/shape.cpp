@@ -101,6 +101,10 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 	}
 }
 
+const AbstractKDTree *Shape::getKDTree() const {
+	return NULL;
+}
+
 void Shape::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 	manager->serialize(stream, m_bsdf.get());

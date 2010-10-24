@@ -146,9 +146,16 @@
     <property name="title">
      <string>&amp;Tools</string>
     </property>
+    <widget class="QMenu" name="menuDeveloper">
+     <property name="title">
+      <string>Developer</string>
+     </property>
+     <addaction name="actionShowKDTree"/>
+    </widget>
     <addaction name="actionUpdateCheck"/>
     <addaction name="actionStartServer"/>
     <addaction name="separator"/>
+    <addaction name="menuDeveloper"/>
     <addaction name="actionSettings"/>
    </widget>
    <addaction name="menuFile"/>
@@ -450,6 +457,14 @@
   <action name="actionReportBug">
    <property name="text">
     <string>Report a &amp;Bug</string>
+   </property>
+  </action>
+  <action name="actionShowKDTree">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show kd-Tree</string>
    </property>
   </action>
  </widget>

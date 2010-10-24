@@ -125,6 +125,7 @@ private slots:
 	void on_actionAdjustSize_triggered();
 	void on_actionReportBug_triggered();
 	void on_actionFeedback_triggered();
+	void on_actionShowKDTree_triggered();
 	void on_tabBar_currentChanged(int index);
 	bool on_tabBar_tabCloseRequested(int index);
 	void on_tabBar_tabMoved(int from, int to);

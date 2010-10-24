@@ -363,6 +363,10 @@ public:
 		its.shape = this;
 	}
 
+	const AbstractKDTree *getKDTree() const {
+		return m_kdtree.get();
+	}
+
 	AABB getAABB() const {
 		return m_kdtree->getAABB();
 	}
