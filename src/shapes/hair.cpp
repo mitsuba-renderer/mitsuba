@@ -608,7 +608,7 @@ public:
 
 	ref<TriMesh> createTriMesh() {
 		size_t nSegments = m_kdtree->getSegmentCount();
-		/// Use very approximate geometry for coarse hair meshes
+		/// Use very approximate geometry for large hair meshes
 		const size_t phiSteps = (nSegments > 100000) ? 4 : 10;
 		const Float dPhi   = (2*M_PI) / phiSteps;
 
