@@ -20,6 +20,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/luminaire.h>
 #include <mitsuba/render/subsurface.h>
+#include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/properties.h>
 
 MTS_NAMESPACE_BEGIN
@@ -256,6 +257,93 @@ public:
 
 		Float cosThetaMax = std::sqrt(std::max((Float) 0, 1 - squareTerm*squareTerm));
 		return squareToConePdf(cosThetaMax);
+	}
+	
+	ref<TriMesh> createTriMesh() {
+		/// Choice of discretization
+		const size_t thetaSteps = 20;
+		const size_t phiSteps = thetaSteps * 2;
+		const Float dTheta = M_PI / (thetaSteps-1);
+		const Float dPhi   = (2*M_PI) / phiSteps;
+		size_t topIdx = (thetaSteps-2) * phiSteps, botIdx = topIdx+1;
+
+		/// Precompute cosine and sine tables
+		Float *cosPhi = new Float[phiSteps];
+		Float *sinPhi = new Float[phiSteps];
+		for (size_t i=0; i<phiSteps; ++i) {
+			sinPhi[i] = std::sin(i*dPhi);
+			cosPhi[i] = std::cos(i*dPhi);
+		}
+
+		size_t numTris = 2 * phiSteps * (thetaSteps-2);
+
+		ref<TriMesh> mesh = new TriMesh("Sphere approximation",
+			numTris, botIdx+1, true, false, false);
+
+		Point *vertices = mesh->getVertexPositions();
+		Normal *normals = mesh->getVertexNormals();
+		Triangle *triangles = mesh->getTriangles();
+		size_t vertexIdx = 0;
+		for (size_t theta=1; theta<thetaSteps-1; ++theta) {
+			Float sinTheta = std::sin(theta * dTheta);
+			Float cosTheta = std::cos(theta * dTheta);
+
+			for (size_t phi=0; phi<phiSteps; ++phi) {
+				Vector v(
+					sinTheta * cosPhi[phi],
+					sinTheta * sinPhi[phi],
+					cosTheta
+				);
+				vertices[vertexIdx] = m_objectToWorld(Point(v*m_radius));
+				normals[vertexIdx++] = m_objectToWorld(Normal(v));
+			}
+		}
+		vertices[vertexIdx] = m_objectToWorld(Point(0, 0, m_radius));
+		normals[vertexIdx++] = m_objectToWorld(Normal(0, 0, 1));
+		vertices[vertexIdx] = m_objectToWorld(Point(0, 0, -m_radius));
+		normals[vertexIdx++] = m_objectToWorld(Normal(0, 0, -1));
+		Assert(vertexIdx == botIdx+1);
+
+		size_t triangleIdx = 0;
+		for (size_t theta=1; theta<thetaSteps; ++theta) {
+			for (size_t phi=0; phi<phiSteps; ++phi) {
+				size_t nextPhi = (phi + 1) % phiSteps;
+				size_t idx0, idx1, idx2, idx3;
+				if (theta == 1) {
+					idx0 = idx1 = topIdx;
+				} else {
+					idx0 = phiSteps*(theta-2) + phi;
+					idx1 = phiSteps*(theta-2) + nextPhi;
+				}
+				if (theta == thetaSteps-1) {
+					idx2 = idx3 = botIdx;
+				} else {
+					idx2 = phiSteps*(theta-1) + phi;
+					idx3 = phiSteps*(theta-1) + nextPhi;
+				}
+
+				if (idx0 != idx1) {
+					triangles[triangleIdx].idx[0] = idx0;
+					triangles[triangleIdx].idx[1] = idx2;
+					triangles[triangleIdx].idx[2] = idx1;
+					triangleIdx++;
+				}
+				if (idx2 != idx3) {
+					triangles[triangleIdx].idx[0] = idx1;
+					triangles[triangleIdx].idx[1] = idx2;
+					triangles[triangleIdx].idx[2] = idx3;
+					triangleIdx++;
+				}
+			}
+		}
+		Assert(triangleIdx == numTris);
+		delete[] cosPhi;
+		delete[] sinPhi;
+		mesh->setBSDF(m_bsdf);
+		mesh->setLuminaire(m_luminaire);
+		mesh->configure();
+
+		return mesh.get();
 	}
 
 	std::string toString() const {

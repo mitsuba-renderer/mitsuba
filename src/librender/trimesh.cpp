@@ -465,6 +465,10 @@ void TriMesh::computeTangentSpaceBasis() {
 			m_name.c_str(), zeroArea, zeroNormals);
 }
 
+ref<TriMesh> TriMesh::createTriMesh() {
+	return this;
+}
+
 void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
 	Shape::serialize(stream, manager);
 	uint32_t flags = 0;
@@ -497,6 +501,46 @@ void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
 }
 
+void TriMesh::writeOBJ(const fs::path &path) const {
+	fs::ofstream os(path);
+	os << "o " << m_name << endl;
+	for (size_t i=0; i<m_vertexCount; ++i) {
+		os << "v " 
+			<< m_positions[i].x << " "
+			<< m_positions[i].y << " "
+			<< m_positions[i].z << endl;
+	}
+
+	if (m_normals) {
+		for (size_t i=0; i<m_vertexCount; ++i) {
+			os << "vn " 
+				<< m_normals[i].x << " "
+				<< m_normals[i].y << " "
+				<< m_normals[i].z << endl;
+		}
+	}
+
+	if (m_normals) {
+		for (size_t i=0; i<m_triangleCount; ++i) {
+			os << "f " 
+				<< m_triangles[i].idx[0] + 1 << "//" 
+				<< m_triangles[i].idx[0] + 1 << " "
+				<< m_triangles[i].idx[1] + 1 << "//" 
+				<< m_triangles[i].idx[1] + 1 << " "
+				<< m_triangles[i].idx[2] + 1 << "//" 
+				<< m_triangles[i].idx[2] + 1 << endl;
+		}
+	} else {
+		for (size_t i=0; i<m_triangleCount; ++i) {
+			os << "f " 
+				<< m_triangles[i].idx[0] + 1 << " "
+				<< m_triangles[i].idx[1] + 1 << " "
+				<< m_triangles[i].idx[2] + 1 << endl;
+		}
+	}
+
+	os.close();
+}
 
 void TriMesh::serialize(Stream *_stream) const {
 	ref<Stream> stream = _stream;

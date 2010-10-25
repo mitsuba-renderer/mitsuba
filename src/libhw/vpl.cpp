@@ -115,14 +115,19 @@ void VPLShaderManager::init() {
 	m_altShadowProgramParam_depthVec = 
 		m_altShadowProgram->getParameterID("depthVec");
 
-	const std::vector<TriMesh *> meshes = m_scene->getMeshes();
+	const std::vector<Shape *> shapes = m_scene->getShapes();
 	const std::vector<Luminaire *> luminaires = m_scene->getLuminaires();
 
-	for (size_t i=0; i<meshes.size(); ++i) {
-		m_renderer->registerGeometry(meshes[i]);
-		Shader *shader = m_renderer->registerShaderForResource(meshes[i]->getBSDF());
+	for (size_t i=0; i<shapes.size(); ++i) {
+		ref<TriMesh> triMesh = shapes[i]->createTriMesh();
+		if (!triMesh)
+			continue;
+		m_renderer->registerGeometry(triMesh);
+		Shader *shader = m_renderer->registerShaderForResource(triMesh->getBSDF());
 		if (shader != NULL && !shader->isComplete())
-			m_renderer->unregisterShaderForResource(meshes[i]->getBSDF());
+			m_renderer->unregisterShaderForResource(triMesh->getBSDF());
+		triMesh->incRef();
+		m_meshes.push_back(triMesh);
 	}
 
 	for (size_t i=0; i<luminaires.size(); ++i)
@@ -581,13 +586,14 @@ void VPLShaderManager::cleanup() {
 		m_backgroundProgram = NULL;
 	}
 
-	const std::vector<TriMesh *> meshes = m_scene->getMeshes();
 	const std::vector<Luminaire *> luminaires = m_scene->getLuminaires();
 
-	for (size_t i=0; i<meshes.size(); ++i) {
-		m_renderer->unregisterGeometry(meshes[i]);
-		m_renderer->unregisterShaderForResource(meshes[i]->getBSDF());
+	for (size_t i=0; i<m_meshes.size(); ++i) {
+		m_renderer->unregisterGeometry(m_meshes[i]);
+		m_renderer->unregisterShaderForResource(m_meshes[i]->getBSDF());
+		m_meshes[i]->decRef();
 	}
+	m_meshes.clear();
 	for (size_t i=0; i<luminaires.size(); ++i)
 		m_renderer->unregisterShaderForResource(luminaires[i]);
 	m_initialized = false;

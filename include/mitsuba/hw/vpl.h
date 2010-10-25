@@ -55,6 +55,9 @@ public:
 	/// Release bound resources
 	void unbind();
 
+	/// Return all bound triangle meshes
+	inline const std::vector<const TriMesh *> &getMeshes() const { return m_meshes; }
+
 	/// Return the shadow cube map for debugging purposes
 	inline GPUTexture *getShadowMap() { return m_shadowMap; }
 
@@ -268,6 +271,7 @@ private:
 	VPLProgramConfiguration m_targetConfig;
 	ref<GPUProgram> m_backgroundProgram;
 	VPLDependencyNode m_backgroundDependencies;
+	std::vector<const TriMesh *> m_meshes;
 };
 
 MTS_NAMESPACE_END

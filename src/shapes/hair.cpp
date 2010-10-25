@@ -21,6 +21,7 @@
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/luminaire.h>
 #include <mitsuba/render/gkdtree.h>
+#include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
@@ -46,9 +47,10 @@ public:
 		for (size_t i=0; i<m_vertices.size()-1; i++)
 			if (!m_vertexStartsFiber[i+1])
 				m_segIndex.push_back(i);
+		m_segmentCount = m_segIndex.size();
 
 		Log(EDebug, "Building a kd-tree for " SIZE_T_FMT " hair vertices, "
-			SIZE_T_FMT " segments,", m_vertices.size(), m_segIndex.size());
+			SIZE_T_FMT " segments,", m_vertices.size(), m_segmentCount);
 
 		/* Ray-cylinder intersections are expensive. Use only the
 		   SAH cost as the tree subdivision stopping criterion, 
@@ -89,6 +91,11 @@ public:
 	/// Return the radius of the hairs stored in the kd-tree
 	inline Float getRadius() const {
 		return m_radius;
+	}
+
+	/// Return the total number of segments
+	inline size_t getSegmentCount() const {
+		return m_segmentCount;
 	}
 
 	/// Intersect a ray with all segments stored in the kd-tree
@@ -247,6 +254,7 @@ protected:
 	std::vector<Point> m_vertices;
 	std::vector<bool> m_vertexStartsFiber;
 	std::vector<index_type> m_segIndex;
+	size_t m_segmentCount;
 	Float m_radius;
 };
 
@@ -364,6 +372,74 @@ public:
 		its.wi = its.toLocal(-ray.d);
 		its.hasUVPartials = false;
 		its.shape = this;
+	}
+
+	ref<TriMesh> createTriMesh() {
+		/// Choice of discretization
+		const size_t phiSteps = 6;
+		const Float dPhi   = (2*M_PI) / phiSteps;
+
+		size_t nSegments = m_kdtree->getSegmentCount();
+		ref<TriMesh> mesh = new TriMesh("Hair mesh approximation",
+			phiSteps*2*nSegments, phiSteps*2*nSegments, true, false, false);
+
+		Point *vertices = mesh->getVertexPositions();
+		Normal *normals = mesh->getVertexNormals();
+		Triangle *triangles = mesh->getTriangles();
+		size_t triangleIdx = 0, vertexIdx = 0;
+		
+		const std::vector<Point> &hairVertices = m_kdtree->getVertices();
+		const std::vector<bool> &vertexStartsFiber = m_kdtree->getStartFiber();
+		const Float radius = m_kdtree->getRadius();
+		Float *cosPhi = new Float[phiSteps];
+		Float *sinPhi = new Float[phiSteps];
+		for (size_t i=0; i<phiSteps; ++i) {
+			sinPhi[i] = std::sin(i*dPhi);
+			cosPhi[i] = std::cos(i*dPhi);
+		}
+
+		size_t hairIdx = 0;
+		for (size_t iv=0; iv<hairVertices.size()-1; iv++) {
+			if (!vertexStartsFiber[iv+1]) {
+				for (size_t phi=0; phi<phiSteps; ++phi) {
+					Vector tangent = m_kdtree->tangent(iv);
+					Vector dir = Normal(Frame(tangent).toWorld(
+							Vector(cosPhi[phi], sinPhi[phi], 0)));
+					Normal miterNormal1 = m_kdtree->firstMiterNormal(iv);
+					Normal miterNormal2 = m_kdtree->secondMiterNormal(iv);
+					Float t1 = dot(miterNormal1, radius*dir) / dot(miterNormal1, tangent);
+					Float t2 = dot(miterNormal2, radius*dir) / dot(miterNormal2, tangent);
+
+					normals[vertexIdx] = Normal(dir);
+					vertices[vertexIdx++] = m_kdtree->firstVertex(iv) + radius*dir - tangent*t1;
+					normals[vertexIdx] = Normal(dir);
+					vertices[vertexIdx++] = m_kdtree->secondVertex(iv) + radius*dir - tangent*t2;
+
+					int idx0 = 2*(phi + hairIdx*phiSteps), idx1 = idx0+1;
+					int idx2 = (2*phi+2) % (2*phiSteps) + 2*hairIdx*phiSteps, idx3 = idx2+1;
+					triangles[triangleIdx].idx[0] = idx0;
+					triangles[triangleIdx].idx[1] = idx2;
+					triangles[triangleIdx].idx[2] = idx1;
+					triangleIdx++;
+					triangles[triangleIdx].idx[0] = idx1;
+					triangles[triangleIdx].idx[1] = idx2;
+					triangles[triangleIdx].idx[2] = idx3;
+					triangleIdx++;
+				}
+				hairIdx++;
+			}
+		}
+		Assert(triangleIdx == phiSteps*2*nSegments);
+		Assert(vertexIdx == phiSteps*2*nSegments);
+
+		delete[] cosPhi;
+		delete[] sinPhi;
+
+		mesh->setBSDF(m_bsdf);
+		mesh->setLuminaire(m_luminaire);
+		mesh->configure();
+
+		return mesh.get();
 	}
 
 	const AbstractKDTree *getKDTree() const {

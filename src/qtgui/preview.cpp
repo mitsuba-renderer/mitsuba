@@ -463,7 +463,7 @@ void PreviewThread::run() {
 }
 
 void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
-	const std::vector<TriMesh *> meshes = m_context->scene->getMeshes();
+	const std::vector<const TriMesh *> meshes = m_shaderManager->getMeshes();
 
 	m_shaderManager->setVPL(vpl);
 

@@ -56,7 +56,7 @@ public:
 		Transform projectionTransform = camera->getGLProjectionTransform(jitter);
 		m_renderer->setCamera(projectionTransform.getMatrix(), camera->getViewTransform().getMatrix());
 		Transform clipToWorld = camera->getViewTransform().inverse() * projectionTransform.inverse();
-		const std::vector<TriMesh *> meshes = scene->getMeshes();
+		const std::vector<const TriMesh *> meshes = m_shaderManager->getMeshes();
 		Point camPos = scene->getCamera()->getPosition();
 
 		m_renderer->beginDrawingMeshes();

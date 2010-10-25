@@ -251,10 +251,22 @@ public:
 	 */
 	virtual const AbstractKDTree *getKDTree() const;
 
+	/**
+	 * \brief Create a triangle mesh approximation of this shape
+	 *
+	 * This function is used by the realtime preview and 
+	 * certain integrators, which rely on hardware rasterization.
+	 *
+	 * The default implementation simply returns \a NULL.
+	 */
+	virtual ref<TriMesh> createTriMesh();
+
 	/// Return the shape's BSDF
 	inline const BSDF *getBSDF() const { return m_bsdf.get(); }
 	/// Return the shape's BSDF
 	inline BSDF *getBSDF() { return m_bsdf.get(); }
+	/// Set the BSDF of this shape
+	inline void setBSDF(BSDF *bsdf) { m_bsdf = bsdf; }
 
 	/// Return the name of this shape
 	virtual std::string getName() const;
@@ -272,6 +284,8 @@ public:
 	inline Luminaire *getLuminaire() { return m_luminaire; }
 	/// Return the associated luminaire (if any)
 	inline const Luminaire *getLuminaire() const { return m_luminaire.get(); }
+	/// Set the luminaire of this shape
+	inline void setLuminaire(Luminaire *luminaire) { m_luminaire = luminaire; }
 
 	/// Called once after parsing
 	virtual void configure();

@@ -22,6 +22,9 @@
 #include <mitsuba/core/triangle.h>
 #include <mitsuba/core/pdf.h>
 #include <mitsuba/render/shape.h>
+#include <boost/filesystem/fstream.hpp>
+
+namespace fs = boost::filesystem;
 
 MTS_NAMESPACE_BEGIN
 
@@ -115,6 +118,20 @@ public:
 
 	/// Return the number of vertices
 	inline size_t getVertexCount() const { return m_vertexCount; }
+	
+	/**
+	 * \brief Create a triangle mesh approximation of this shape
+	 * 
+	 * Since instances are already triangle meshes, the implementation
+	 * just returns a pointer to \a this.
+	 */
+	ref<TriMesh> createTriMesh();
+
+	/// Export an Wavefront OBJ version of this file
+	void writeOBJ(const fs::path &path) const;
+
+	/// Return the shape's BSDF
+	inline const BSDF *getBSDF() const { return m_bsdf.get(); }
 
 	/// Sample a point on the mesh
 	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const;

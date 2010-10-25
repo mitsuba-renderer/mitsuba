@@ -20,6 +20,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/properties.h>
 
 MTS_NAMESPACE_BEGIN
@@ -373,23 +374,58 @@ public:
 		return clippedAABB;
 	}
 
-#if 0
-	inline AABB getAABB(Float start, Float end) const {
-		AABB result;
-		const Float r = m_radius;
-		const Point a = m_objectToWorld(Point(0, 0, start));
-		const Point b = m_objectToWorld(Point(0, 0, end));
+	ref<TriMesh> createTriMesh() {
+		/// Choice of discretization
+		const size_t phiSteps = 20;
+		const Float dPhi   = (2*M_PI) / phiSteps;
 
+		ref<TriMesh> mesh = new TriMesh("Cylinder approximation",
+			phiSteps*2, phiSteps*2, true, false, false);
+
+		Point *vertices = mesh->getVertexPositions();
+		Normal *normals = mesh->getVertexNormals();
+		Triangle *triangles = mesh->getTriangles();
+		size_t triangleIdx = 0, vertexIdx = 0;
+
+		for (size_t phi=0; phi<phiSteps; ++phi) {
+			Float sinPhi = std::sin(phi * dPhi);
+			Float cosPhi = std::cos(phi * dPhi);
+			int idx0 = vertexIdx, idx1 = idx0+1;
+			int idx2 = (vertexIdx+2) % (2*phiSteps), idx3 = idx2+1;
+			normals[vertexIdx] = m_objectToWorld(Normal(cosPhi, sinPhi, 0));
+			vertices[vertexIdx++] = m_objectToWorld(Point(cosPhi*m_radius, sinPhi*m_radius, 0));
+			normals[vertexIdx] = m_objectToWorld(Normal(cosPhi, sinPhi, 0));
+			vertices[vertexIdx++] = m_objectToWorld(Point(cosPhi*m_radius, sinPhi*m_radius, m_length));
+
+			triangles[triangleIdx].idx[0] = idx0;
+			triangles[triangleIdx].idx[1] = idx2;
+			triangles[triangleIdx].idx[2] = idx1;
+			triangleIdx++;
+			triangles[triangleIdx].idx[0] = idx1;
+			triangles[triangleIdx].idx[1] = idx2;
+			triangles[triangleIdx].idx[2] = idx3;
+			triangleIdx++;
+		}
+
+		mesh->setBSDF(m_bsdf);
+		mesh->setLuminaire(m_luminaire);
+		mesh->configure();
+
+		return mesh.get();
+	}
+
+#if 0
+	AABB getAABB() const {
+		const Point a = m_objectToWorld(Point(0, 0, 0));
+		const Point b = m_objectToWorld(Point(0, 0, m_length));
+
+		const Float r = m_radius;
+		AABB result;
 		result.expandBy(a - Vector(r, r, r));
 		result.expandBy(a + Vector(r, r, r));
 		result.expandBy(b - Vector(r, r, r));
 		result.expandBy(b + Vector(r, r, r));
 		return result;
-	}
-
-	AABB getAABB() const {
-		/* Very approximate .. */
-		return getAABB(0, m_length);
 	}
 #endif
 

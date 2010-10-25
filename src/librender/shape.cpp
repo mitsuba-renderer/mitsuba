@@ -146,6 +146,9 @@ Float Shape::pdfArea(const ShapeSamplingRecord &sRec) const {
 	return 0.0f;
 }
 
+ref<TriMesh> Shape::createTriMesh() {
+	return NULL;
+}
 
 std::string ShapeSamplingRecord::toString() const {
 	std::ostringstream oss;
