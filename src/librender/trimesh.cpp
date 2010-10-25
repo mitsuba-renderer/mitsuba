@@ -348,12 +348,16 @@ void TriMesh::computeNormals() {
 			m_name.c_str(), zeroArea);
 }
 
-void TriMesh::computeTangentSpaceBasis() {
+bool TriMesh::computeTangentSpaceBasis() {
 	int zeroArea = 0, zeroNormals = 0;
-	if (!m_texcoords && m_bsdf->getType() & BSDF::EAnisotropicMaterial)
-		Log(EError, "\"%s\": computeTangentSpace(): texture coordinates are required "
-				"to generate tangent vectors. If you want to render with an anisotropic "
-				"material, make sure that all assigned objects have texture coordinates.");
+	if (!m_texcoords) {
+		if (m_bsdf->getType() & BSDF::EAnisotropicMaterial)
+			Log(EError, "\"%s\": computeTangentSpace(): texture coordinates are required "
+					"to generate tangent vectors. If you want to render with an anisotropic "
+					"material, make sure that all assigned objects have texture coordinates.");
+		return false;
+	}
+
 	if (m_tangents)
 		Log(EError, "Tangent space vectors have already been generated!");
 
@@ -373,11 +377,6 @@ void TriMesh::computeTangentSpaceBasis() {
 		sharers[i] = 0;
 	}
 	
-	if (!m_texcoords) {
-		delete [] sharers;
-		return;
-	}
-
 	for (size_t i=0; i<m_triangleCount; i++) {
 		uint32_t idx0 = m_triangles[i].idx[0],
 				 idx1 = m_triangles[i].idx[1],
@@ -463,6 +462,7 @@ void TriMesh::computeTangentSpaceBasis() {
 		Log(EWarn, "\"%s\": computeTangentSpace(): Mesh contains invalid "
 			"geometry: %i zero area triangles and %i zero normals found!", 
 			m_name.c_str(), zeroArea, zeroNormals);
+	return true;
 }
 
 ref<TriMesh> TriMesh::createTriMesh() {
@@ -596,6 +596,7 @@ std::string TriMesh::toString() const {
 		<< "  faceNormals = " << (m_faceNormals ? "true" : "false") << "," << endl
 		<< "  hasNormals = " << (m_normals ? "true" : "false") << "," << endl
 		<< "  hasTexcoords = " << (m_texcoords ? "true" : "false") << "," << endl
+		<< "  hasTangents = " << (m_tangents ? "true" : "false") << "," << endl
 		<< "  hasColors = " << (m_colors ? "true" : "false") << "," << endl
 		<< "  surfaceArea = " << m_surfaceArea << "," << endl
 		<< "  aabb = " << m_aabb.toString() << "," << endl

@@ -25,6 +25,9 @@
 /// Header identification record for phase function caches
 #define PHASE_FUNCTION_HEADER 0x40044004
 
+/// Less accurate, but rendering times are much faster
+#define FLAKE_SAMPLE_APPROXIMATION 1
+
 MTS_NAMESPACE_BEGIN
 
 struct AbsCos {
@@ -90,6 +93,8 @@ public:
 		ESampledType &sampledType, const Point2 &_sample) const {
 		Float pdf;
 		Spectrum value = sample(mRec, wi, wo, sampledType, pdf, _sample);
+		if (pdf == 0)
+			return Spectrum(0.0f);
 		return value/pdf;
 	}
 
@@ -579,7 +584,7 @@ Spectrum FlakePhaseFunction::f(const MediumSamplingRecord &mRec, const Vector &_
 	Frame frame(orientation);
 	Vector wi = frame.toLocal(_wi);
 	Vector wo = frame.toLocal(_wo);
-#if 0 
+#if defined(FLAKE_SAMPLE_APPROXIMATION) 
 	/* Evaluate spherical harmonics representation - might be inaccurate */
 	SHVector temp(m_phaseExpansion->getBands());
 	m_phaseExpansion->lookup(wi, temp);
@@ -616,8 +621,11 @@ Spectrum FlakePhaseFunction::sample(const MediumSamplingRecord &mRec, const Vect
 
 	Vector wo = sphericalDirection(sample.x, sample.y);
 	_wo = frame.toWorld(wo);
-//	return Spectrum(std::max((Float) 0, temp.eval(sample.x, sample.y)));
+#if defined(FLAKE_SAMPLE_APPROXIMATION) 
+	return Spectrum(std::max((Float) 0, temp.eval(sample.x, sample.y)));
+#else
 	return f(mRec, _wi, _wo);
+#endif
 #else
 	/* Uniform sampling */
 	_wo = squareToSphere(_sample);

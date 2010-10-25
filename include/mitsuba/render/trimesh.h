@@ -142,8 +142,14 @@ public:
 	 */
 	Float pdfArea(const ShapeSamplingRecord &sRec) const;
 
-	/// Generate tangent space basis vectors
-	void computeTangentSpaceBasis();
+	
+	/**
+	 * \brief Generate tangent space basis vectors. 
+	 *
+	 * Returns true upon success. A failure is caused by
+	 * missing texture coordinates
+	 */
+	bool computeTangentSpaceBasis();
 
 	/// Generate surface normals
 	void computeNormals();
