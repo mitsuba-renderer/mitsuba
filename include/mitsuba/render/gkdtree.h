@@ -1013,8 +1013,10 @@ protected:
 		KDAssert(ctx.rightAlloc.used() == 0);
 
 		if (m_parallelBuild) {
+			m_interface.mutex->lock();
 			m_interface.done = true;
 			m_interface.cond->broadcast();
+			m_interface.mutex->unlock();
 			for (size_type i=0; i<m_builders.size(); ++i) 
 				m_builders[i]->join();
 		}

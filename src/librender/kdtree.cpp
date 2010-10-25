@@ -315,6 +315,7 @@ void KDTree::rayIntersectPacket(const RayPacket4 &packet,
 						for (int axis=0; axis<3; axis++) {
 							ray.o[axis] = packet.o[axis].f[i];
 							ray.d[axis] = packet.d[axis].f[i];
+							ray.dRcp[axis] = packet.dRcp[axis].f[i];
 						}
 						Float t;
 

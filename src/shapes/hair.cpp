@@ -43,16 +43,21 @@ public:
 		/* Take the supplied vertex & start fiber arrays (without copying) */
 		m_vertices.swap(vertices);
 		m_vertexStartsFiber.swap(vertexStartsFiber);
+		m_hairCount = 0;
 
 		/* Compute the index of the first vertex in each segment. */
 		m_segIndex.reserve(m_vertices.size());
-		for (size_t i=0; i<m_vertices.size()-1; i++)
+		for (size_t i=0; i<m_vertices.size()-1; i++) {
+			if (m_vertexStartsFiber[i])
+				m_hairCount++;
 			if (!m_vertexStartsFiber[i+1])
 				m_segIndex.push_back(i);
+		}
 		m_segmentCount = m_segIndex.size();
 
 		Log(EDebug, "Building a kd-tree for " SIZE_T_FMT " hair vertices, "
-			SIZE_T_FMT " segments,", m_vertices.size(), m_segmentCount);
+			SIZE_T_FMT " segments, " SIZE_T_FMT " hairs", 
+			m_vertices.size(), m_segmentCount, m_hairCount);
 
 		/* Ray-cylinder intersections are expensive. Use only the
 		   SAH cost as the tree subdivision stopping criterion, 
@@ -61,6 +66,12 @@ public:
 		setTraversalCost(10);
 		setIntersectionCost(30);
 		buildInternal();
+
+		Log(EDebug, "Total amount of storage (kd-tree & vertex data): %s",
+			memString(m_nodeCount * sizeof(KDNode) 
+			+ m_indexCount * sizeof(index_type)
+			+ vertices.size() * sizeof(Point)
+			+ vertexStartsFiber.size() / 8).c_str());
 
 		/* Optimization: replace all primitive indices by the
 		   associated vertex indices (this avoids an extra 
@@ -98,6 +109,16 @@ public:
 	/// Return the total number of segments
 	inline size_t getSegmentCount() const {
 		return m_segmentCount;
+	}
+	
+	/// Return the total number of hairs
+	inline size_t getHairCount() const {
+		return m_hairCount;
+	}
+	
+	/// Return the total number of vertices
+	inline size_t getVertexCount() const {
+		return m_vertices.size();
 	}
 
 	/// Intersect a ray with all segments stored in the kd-tree
@@ -189,6 +210,11 @@ public:
 		return true;
 	}
 
+
+	/**
+	 * \brief Intersect an infinite cylinder with an 
+	 * AABB face and bound the resulting clipped ellipse
+	 */
 	AABB intersectCylFace(int axis,
 			const Point &min, const Point &max,
 			const Point &cylPt, const Vector &cylD) const {
@@ -460,6 +486,7 @@ protected:
 	std::vector<bool> m_vertexStartsFiber;
 	std::vector<index_type> m_segIndex;
 	size_t m_segmentCount;
+	size_t m_hairCount;
 	Float m_radius;
 };
 
@@ -568,10 +595,10 @@ public:
 			static_cast<const HairKDTree::index_type *>(temp);
 		HairKDTree::index_type iv = *storage;
 
-		its.geoFrame.s = m_kdtree->tangent(iv);
-		const Vector relHitPoint = its.p - m_kdtree->firstVertex(iv);
 		const Vector axis = m_kdtree->tangent(iv);
-		its.geoFrame.n = Normal(relHitPoint - dot(axis, relHitPoint) * axis);
+		its.geoFrame.s = axis;
+		const Vector relHitPoint = its.p - m_kdtree->firstVertex(iv);
+		its.geoFrame.n = Normal(normalize(relHitPoint - dot(axis, relHitPoint) * axis));
 		its.geoFrame.t = cross(its.geoFrame.n, its.geoFrame.s);
 		its.shFrame = its.geoFrame;
 		its.wi = its.toLocal(-ray.d);
@@ -580,11 +607,11 @@ public:
 	}
 
 	ref<TriMesh> createTriMesh() {
-		/// Choice of discretization
-		const size_t phiSteps = 10;
+		size_t nSegments = m_kdtree->getSegmentCount();
+		/// Use very approximate geometry for coarse hair meshes
+		const size_t phiSteps = (nSegments > 100000) ? 4 : 10;
 		const Float dPhi   = (2*M_PI) / phiSteps;
 
-		size_t nSegments = m_kdtree->getSegmentCount();
 		ref<TriMesh> mesh = new TriMesh("Hair mesh approximation",
 			phiSteps*2*nSegments, phiSteps*2*nSegments, true, false, false);
 
@@ -608,16 +635,17 @@ public:
 			if (!vertexStartsFiber[iv+1]) {
 				for (size_t phi=0; phi<phiSteps; ++phi) {
 					Vector tangent = m_kdtree->tangent(iv);
-					Vector dir = Normal(Frame(tangent).toWorld(
-							Vector(cosPhi[phi], sinPhi[phi], 0)));
+					Vector dir = Frame(tangent).toWorld(
+							Vector(cosPhi[phi], sinPhi[phi], 0));
 					Normal miterNormal1 = m_kdtree->firstMiterNormal(iv);
 					Normal miterNormal2 = m_kdtree->secondMiterNormal(iv);
 					Float t1 = dot(miterNormal1, radius*dir) / dot(miterNormal1, tangent);
 					Float t2 = dot(miterNormal2, radius*dir) / dot(miterNormal2, tangent);
 
-					normals[vertexIdx] = Normal(dir);
+					Normal normal(normalize(dir));
+					normals[vertexIdx] = normal;
 					vertices[vertexIdx++] = m_kdtree->firstVertex(iv) + radius*dir - tangent*t1;
-					normals[vertexIdx] = Normal(dir);
+					normals[vertexIdx] = normal;
 					vertices[vertexIdx++] = m_kdtree->secondVertex(iv) + radius*dir - tangent*t2;
 
 					int idx0 = 2*(phi + hairIdx*phiSteps), idx1 = idx0+1;
@@ -663,6 +691,10 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Hair[" << endl
+			<< "   numVertices = " << m_kdtree->getVertexCount() << ","
+			<< "   numSegments = " << m_kdtree->getSegmentCount() << ","
+			<< "   numHairs = " << m_kdtree->getHairCount() << ","
+			<< "   radius = " << m_kdtree->getRadius()
 			<< "]";
 		return oss.str();
 	}

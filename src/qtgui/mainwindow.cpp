@@ -1660,6 +1660,8 @@ SceneContext::SceneContext(SceneContext *ctx) {
 	reinhardBurn = ctx->reinhardBurn;
 	diffuseReceivers = ctx->diffuseReceivers;
 	diffuseSources = ctx->diffuseSources;
+	showKDTree = ctx->showKDTree;
+	shownKDTreeLevel = ctx->shownKDTreeLevel;
 }
 
 SceneContext::~SceneContext() {
