@@ -26,6 +26,8 @@
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
 
+#define MTS_HAIR_USE_FANCY_CLIPPING 1
+
 MTS_NAMESPACE_BEGIN
 
 /**
@@ -138,6 +140,208 @@ public:
 		return false;
 	}
 
+#if defined(MTS_HAIR_USE_FANCY_CLIPPING)
+	/**
+	 * Compute the ellipse created by the intersection of an infinite
+	 * cylinder and a plane. Returns false in the degenerate case.
+	 * Based on:
+	 * www.geometrictools.com/Documentation/IntersectionCylinderPlane.pdf
+	 */
+	bool intersectCylPlane(Point planePt, Normal planeNrml,
+			Point cylPt, Vector cylD, Float radius, Point &center,
+			Vector *axes, Float *lengths) const {
+		if (absDot(planeNrml, cylD) < Epsilon)
+			return false;
+
+		Assert(std::abs(planeNrml.length()-1) <Epsilon);
+		Vector B, A = cylD - dot(cylD, planeNrml)*planeNrml;
+
+		Float length = A.length();
+		if (length > Epsilon && planeNrml != cylD) {
+			A /= length;
+			B = cross(planeNrml, A);
+		} else {
+			coordinateSystem(planeNrml, A, B);
+		}
+
+		Vector delta = planePt - cylPt,
+			   deltaProj = delta - cylD*dot(delta, cylD);
+
+		Float aDotD = dot(A, cylD);
+		Float bDotD = dot(B, cylD);
+		Float c0 = 1-aDotD*aDotD;
+		Float c1 = 1-bDotD*bDotD;
+		Float c2 = 2*dot(A, deltaProj);
+		Float c3 = 2*dot(B, deltaProj);
+		Float c4 = dot(delta, deltaProj) - radius*radius;
+
+		Float lambda = (c2*c2/(4*c0) + c3*c3/(4*c1) - c4)/(c0*c1);
+
+		Float alpha0 = -c2/(2*c0),
+			  beta0 = -c3/(2*c1);
+
+		lengths[0] = std::sqrt(c1*lambda),
+		lengths[1] = std::sqrt(c0*lambda);
+
+		center = planePt + alpha0 * A + beta0 * B;
+		axes[0] = A;
+		axes[1] = B;
+		return true;
+	}
+
+	AABB intersectCylFace(int axis,
+			const Point &min, const Point &max,
+			const Point &cylPt, const Vector &cylD) const {
+		int axis1 = (axis + 1) % 3;
+		int axis2 = (axis + 2) % 3;
+
+		Normal planeNrml(0.0f);
+		planeNrml[axis] = 1;
+
+		Point ellipseCenter;
+		Vector ellipseAxes[2];
+		Float ellipseLengths[2];
+
+		AABB aabb;
+		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, m_radius, 
+			ellipseCenter, ellipseAxes, ellipseLengths)) {
+			/* Degenerate case -- return an invalid AABB. This is
+			   not a problem, since one of the other faces will provide
+			   enough information to arrive at a correct clipped AABB */
+			return aabb;
+		}
+
+		/* Intersect the ellipse against the sides of the AABB face */
+		for (int i=0; i<4; ++i) {
+			Point p1, p2;
+			p1[axis] = p2[axis] = min[axis];
+			p1[axis1] = ((i+1) & 2) ? min[axis1] : max[axis1];
+			p1[axis2] = ((i+0) & 2) ? min[axis2] : max[axis2];
+			p2[axis1] = ((i+2) & 2) ? min[axis1] : max[axis1];
+			p2[axis2] = ((i+1) & 2) ? min[axis2] : max[axis2];
+
+			Point2 p1l(
+				dot(p1 - ellipseCenter, ellipseAxes[0]) / ellipseLengths[0],
+				dot(p1 - ellipseCenter, ellipseAxes[1]) / ellipseLengths[1]);
+			Point2 p2l(
+				dot(p2 - ellipseCenter, ellipseAxes[0]) / ellipseLengths[0],
+				dot(p2 - ellipseCenter, ellipseAxes[1]) / ellipseLengths[1]);
+
+			Vector2 rel = p2l-p1l;
+			Float A = dot(rel, rel);
+			Float B = 2*dot(Vector2(p1l), rel);
+			Float C = dot(Vector2(p1l), Vector2(p1l))-1;
+
+			Float x0, x1;
+			if (solveQuadratic(A, B, C, x0, x1)) {
+				if (x0 >= 0 && x0 <= 1)
+					aabb.expandBy(p1+(p2-p1)*x0);
+				if (x1 >= 0 && x1 <= 1)
+					aabb.expandBy(p1+(p2-p1)*x1);
+			}
+		}
+
+		ellipseAxes[0] *= ellipseLengths[0];
+		ellipseAxes[1] *= ellipseLengths[1];
+		AABB faceBounds(min, max);
+
+		/* Find the componentwise maxima of the ellipse */
+		for (int i=0; i<2; ++i) {
+			int j = (i==0) ? axis1 : axis2;
+			Float alpha = ellipseAxes[0][j];
+			Float beta = ellipseAxes[1][j];
+			Float ratio = beta/alpha, tmp = std::sqrt(1+ratio*ratio);
+			Float cosTheta = 1/tmp, sinTheta = ratio/tmp;
+			Point p1 = ellipseCenter + cosTheta*ellipseAxes[0] + sinTheta*ellipseAxes[1];
+			Point p2 = ellipseCenter - cosTheta*ellipseAxes[0] - sinTheta*ellipseAxes[1];
+
+			if (faceBounds.contains(p1)) 
+				aabb.expandBy(p1);
+			if (faceBounds.contains(p2)) 
+				aabb.expandBy(p2);
+		}
+
+		return aabb;
+	}
+
+	AABB getAABB(index_type index) const {
+		index_type iv = m_segIndex.at(index);
+		Point center;
+		Vector axes[2];
+		Float lengths[2];
+
+		bool success = intersectCylPlane(firstVertex(iv), firstMiterNormal(iv), 
+			firstVertex(iv), tangent(iv), m_radius, center, axes, lengths);
+		Assert(success);
+
+		AABB result;
+		axes[0] *= lengths[0]; axes[1] *= lengths[1];
+		for (int i=0; i<3; ++i) {
+			Float range = std::sqrt(axes[0][i]*axes[0][i] + axes[1][i]*axes[1][i]);
+			result.min[i] = std::min(result.min[i], center[i]-range);
+			result.max[i] = std::max(result.max[i], center[i]+range);
+		}
+
+		success = intersectCylPlane(secondVertex(iv), secondMiterNormal(iv), 
+			secondVertex(iv), tangent(iv), m_radius, center, axes, lengths);
+		Assert(success);
+
+		axes[0] *= lengths[0]; axes[1] *= lengths[1];
+		for (int i=0; i<3; ++i) {
+			Float range = std::sqrt(axes[0][i]*axes[0][i] + axes[1][i]*axes[1][i]);
+			result.min[i] = std::min(result.min[i], center[i]-range);
+			result.max[i] = std::max(result.max[i], center[i]+range);
+		}
+		return result;
+	}
+
+	AABB getClippedAABB(index_type index, const AABB &box) const {
+		/* Compute a base bounding box */
+		AABB base(getAABB(index));
+		base.clip(box);
+
+		index_type iv = m_segIndex.at(index);
+
+		Point cylPt = firstVertex(iv);
+		Vector cylD = tangent(iv);
+
+		/* Now forget about the cylinder ends and 
+		   intersect an infinite cylinder with each AABB face */
+		AABB clippedAABB;
+		clippedAABB.expandBy(intersectCylFace(0, 
+				Point(base.min.x, base.min.y, base.min.z),
+				Point(base.min.x, base.max.y, base.max.z),
+				cylPt, cylD));
+
+		clippedAABB.expandBy(intersectCylFace(0,
+				Point(base.max.x, base.min.y, base.min.z),
+				Point(base.max.x, base.max.y, base.max.z),
+				cylPt, cylD));
+
+		clippedAABB.expandBy(intersectCylFace(1, 
+				Point(base.min.x, base.min.y, base.min.z),
+				Point(base.max.x, base.min.y, base.max.z),
+				cylPt, cylD));
+
+		clippedAABB.expandBy(intersectCylFace(1,
+				Point(base.min.x, base.max.y, base.min.z),
+				Point(base.max.x, base.max.y, base.max.z),
+				cylPt, cylD));
+
+		clippedAABB.expandBy(intersectCylFace(2, 
+				Point(base.min.x, base.min.y, base.min.z),
+				Point(base.max.x, base.max.y, base.min.z),
+				cylPt, cylD));
+
+		clippedAABB.expandBy(intersectCylFace(2,
+				Point(base.min.x, base.min.y, base.max.z),
+				Point(base.max.x, base.max.y, base.max.z),
+				cylPt, cylD));
+
+		clippedAABB.clip(base);
+		return clippedAABB;
+	}
+#else
 	/// Compute the AABB of a segment (only used during tree construction)
 	AABB getAABB(int index) const {
 		index_type iv = m_segIndex.at(index);
@@ -165,6 +369,7 @@ public:
 		aabb.clip(box);
 		return aabb;
 	}
+#endif
 
 	/// Return the total number of segments
 	inline int getPrimitiveCount() const {
@@ -376,7 +581,7 @@ public:
 
 	ref<TriMesh> createTriMesh() {
 		/// Choice of discretization
-		const size_t phiSteps = 6;
+		const size_t phiSteps = 10;
 		const Float dPhi   = (2*M_PI) / phiSteps;
 
 		size_t nSegments = m_kdtree->getSegmentCount();

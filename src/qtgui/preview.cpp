@@ -544,25 +544,35 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 void PreviewThread::oglRenderKDTree(const AbstractKDTree *kdtree) {
 	std::stack<boost::tuple<const AbstractKDTree::KDNode *, AABB, uint32_t> > stack;
 
-	stack.push(boost::make_tuple(kdtree->getRoot(), kdtree->getAABB(), 0));
+	stack.push(boost::make_tuple(kdtree->getRoot(), kdtree->getTightAABB(), 0));
+	Float brightness = 10.0f;
 
-	m_renderer->setColor(Spectrum(5.0f));
 	while (!stack.empty()) {
 		const AbstractKDTree::KDNode *node = boost::get<0>(stack.top());
 		AABB aabb = boost::get<1>(stack.top());
 		int level = boost::get<2>(stack.top());
 		stack.pop();
+		m_renderer->setColor(Spectrum(brightness));
 		m_renderer->drawAABB(aabb);
 
-		if (!node->isLeaf() && level + 1 <= m_context->shownKDTreeLevel) {
+		if (!node->isLeaf()) {
 			int axis = node->getAxis();
 			float split = node->getSplit();
-			Float tmp = aabb.min[axis];
-			aabb.min[axis] = split;
-			stack.push(boost::make_tuple(node->getLeft(), aabb, level+1));
-			aabb.min[axis] = tmp;
-			aabb.max[axis] = split;
-			stack.push(boost::make_tuple(node->getRight(), aabb, level+1));
+			if (level + 1 <= m_context->shownKDTreeLevel) {
+				Float tmp = aabb.max[axis];
+				aabb.max[axis] = split;
+				stack.push(boost::make_tuple(node->getLeft(), aabb, level+1));
+				aabb.max[axis] = tmp;
+				aabb.min[axis] = split;
+				stack.push(boost::make_tuple(node->getRight(), aabb, level+1));
+			} else {
+				aabb.min[axis] = split;
+				aabb.max[axis] = split;
+				Spectrum color;
+				color.fromLinearRGB(0, 0, 2*brightness);
+				m_renderer->setColor(color);
+				m_renderer->drawAABB(aabb);
+			}
 		}
 	}
 }

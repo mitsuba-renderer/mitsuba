@@ -605,8 +605,11 @@ public:
 		return m_nodes != NULL;
 	}
 
-	/// Return an axis-aligned bounding box containing all primitives
+	/// Return a (slightly enlarged) axis-aligned bounding box containing all primitives
 	inline const AABB &getAABB() const { return m_aabb; }
+	
+	/// Return a tight axis-aligned bounding box containing all primitives
+	inline const AABB &getTightAABB() const { return m_tightAABB;}
 
 	/// Return an bounding sphere containing all primitives
 	inline const BSphere &getBSphere() const { return m_bsphere; }
@@ -616,7 +619,7 @@ protected:
 	virtual ~AbstractKDTree() { }
 protected:
 	KDNode *m_nodes;
-	AABB m_aabb;
+	AABB m_aabb, m_tightAABB;
 	BSphere m_bsphere;
 };
 
@@ -1163,6 +1166,7 @@ protected:
 
 		/* Slightly enlarge the bounding box 
 		   (necessary e.g. when the scene is planar) */
+		m_tightAABB = m_aabb;
 		m_aabb.min -= (m_aabb.max-m_aabb.min) * Epsilon
 			+ Vector(Epsilon, Epsilon, Epsilon);
 		m_aabb.max += (m_aabb.max-m_aabb.min) * Epsilon
