@@ -495,7 +495,11 @@ public:
 	Hair(const Properties &props) : Shape(props) {
 		fs::path path = Thread::getThread()->getFileResolver()->resolve(
 			props.getString("filename"));
-		Float radius = (Float) props.getFloat("radius", 0.05f);
+		Float radius = props.getFloat("radius", 0.05f);
+		/* Skip segments, whose tangent differs by less than one degree
+		   compared to the previous one */
+		Float angleThreshold = degToRad(props.getFloat("angleThreshold", 1.0f));
+		Float dpThresh = std::cos(angleThreshold);
 
 		/* Object-space -> World-space transformation */
 		Transform objectToWorld = props.getTransform("toWorld", Transform());
@@ -511,7 +515,8 @@ public:
 		Point p, lastP(0.0f);
 		std::vector<Point> vertices;
 		std::vector<bool> vertexStartsFiber;
-		size_t nDegenerate = 0;
+		Vector tangent(0.0f);
+		size_t nDegenerate = 0, nSkipped = 0;
 
 		while (is.good()) {
 			std::getline(is, line);
@@ -522,10 +527,33 @@ public:
 			std::istringstream iss(line);
 			iss >> p.x >> p.y >> p.z;
 			if (!iss.fail()) {
-				if (newFiber || p != lastP) {
-					vertices.push_back(objectToWorld(p));
+				p = objectToWorld(p);
+				if (newFiber) {
+					vertices.push_back(p);
 					vertexStartsFiber.push_back(newFiber);
 					lastP = p;
+					tangent = Vector(0.0f);
+				} else if (p != lastP) {
+					if (tangent.isZero()) {
+						vertices.push_back(p);
+						vertexStartsFiber.push_back(newFiber);
+						tangent = normalize(p - lastP);
+						lastP = p;
+					} else {
+						Vector nextTangent = normalize(p - lastP);
+						if (dot(nextTangent, tangent) > dpThresh) {
+							/* Too small of a difference in the tangent value,
+							   just overwrite the previous vertex by the current one */
+							tangent = normalize(p - vertices[vertices.size()-2]);
+							vertices[vertices.size()-1] = p;
+							++nSkipped;
+						} else {
+							vertices.push_back(p);
+							vertexStartsFiber.push_back(newFiber);
+							tangent = nextTangent;
+						}
+						lastP = p;
+					}
 				} else {
 					nDegenerate++;
 				}
@@ -538,6 +566,9 @@ public:
 		if (nDegenerate > 0)
 			Log(EInfo, "Encountered " SIZE_T_FMT 
 				" degenerate segments!", nDegenerate);
+		if (nSkipped > 0)
+			Log(EInfo, "Skipped " SIZE_T_FMT 
+				" low-curvature segments.", nSkipped);
 
 		vertexStartsFiber.push_back(true);
 
