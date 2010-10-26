@@ -48,3 +48,16 @@ This makes it possible to get the following more realistic result (material desc
 \begin{center}
 \scalebox{.32}{\includegraphics{images/import_5.jpg}}
 \end{center}
+When modeling scenes that should later be rendered in Mitsuba, it is
+important to keep in mind that physically based rendering systems are by
+principle incompatible with many of the options provided in today's 
+modeling toolkits. Hence, one should refrain from using features such 
+\begin{itemize}
+\item adjusting the amount of ambient occlusion on an object 
+\item selectively enabling/disabling light sources for certain
+objects
+\item using point/spot lights with anything other than a quadratic falloff.
+\item creating materials, which reflect more light than they receive
+\end{itemize}
+This is only a partial list --- if in doubt, ask yourself whether a feature
+is physically plausible before using it.
