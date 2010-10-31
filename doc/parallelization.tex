@@ -221,7 +221,7 @@ are rather trivial. Note the \code{stop} field in the \code{process}
 method. This field is used to abort running jobs at the users requests, hence
 it is a good idea to periodically check its value during lengthy computations.
 
-Finally, we need a called \emph{parallel process}
+Finally, we need a so-called \emph{parallel process}
 instance, which is responsible for creating work units and stitching
 work results back into a solution of the whole problem. The \code{ROT13}
 implementation might look as follows:

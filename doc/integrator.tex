@@ -128,7 +128,9 @@ which automatically perform endianness translation. In our case, the
 so we don't really have to do anything.
 
 Note that it is crucial that your code calls the serialization and unserialization 
-implementations of the superclass!
+implementations of the superclass, since it will also read/write some
+information to the stream.
+
 We haven't used the \texttt{manager} parameter yet, so here is a quick overview
 of what it does: if many cases, we don't just want to serialize a single class,
 but a whole graph of objects. Some may be referenced many

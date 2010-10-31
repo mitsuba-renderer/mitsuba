@@ -26,10 +26,26 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Abstract sample generator. Generates a high-dimensional sample
- * and provides 1D and 2D pieces of it to the integrator as requested. 
- * An implementation will ideally provide a sequence that is well 
- * laid-out in sample space using either stratification or QMC techniques.
+ * \brief Base class of all sample generators. 
+ *
+ * For each sample in a pixel, a sample generator produces a (hypothetical)
+ * point in the infinite dimensional random number cube. A rendering 
+ * algorithm can then request subsequent 1D or 2D components of this point 
+ * using the \ref next1D() and \ref next2D() functions. Some implementations
+ * make certain guarantees about the stratification of the first n components
+ * with respect to the other pixel samples. (the low-discrepancy and 
+ * stratified samplers do this for instance). 
+ *
+ * The general interaction between a sampler and a rendering algorithm is as 
+ * follows: Before beginning to render a pixel, the rendering algorithm calls 
+ * \ref generate(). The first pixel sample is generated, after which \ref
+ * advance() needs to be invoked, and so on. Note that any implementations need
+ * to be configured for a certain number of pixel samples, and exceeding these
+ * will lead to an exception being thrown. While computing a pixel sample, the
+ * rendering algorithm usually requests batches of (pseudo-) random numbers 
+ * using the \ref next1D(), \ref next2D(), \ref next1DArray() and 
+ * \ref next2DArray() functions.
+ *
  */
 class MTS_EXPORT_RENDER Sampler : public ConfigurableObject {
 public:
@@ -70,6 +86,11 @@ public:
 	 * requested initially using <tt>request2DArray</tt> and later, they have 
 	 * to be retrieved in the same same order and size configuration as the 
 	 * requests. An exception is thrown when a mismatch is detected.
+	 *
+	 * This function is useful to support things such as a direct illumination
+	 * rendering technique with "n" pixel samples and "m" shading samples,
+	 * while ensuring that the "n*m" sampled positions on an area light source
+	 * are all well-stratified with respect to each other.
 	 */
 	Point2 *next2DArray(unsigned int size);
 

@@ -1,0 +1,97 @@
+\section{Development Guide}
+This chapter and the subsequent ones will provide an overview
+of the the coding conventions and general architecture of Mitsuba. 
+You should only read them if if you wish to interface with the API 
+in some way (e.g. by developing your own plugins). The coding style
+section is only relevant if you plan to submit patches, which should
+go into the main codebase.
+
+\subsection{Coding style}
+\paragraph{Indentation:} The Mitsuba codebase uses tabs for indentation, 
+which expand to \emph{four} spaces. Please make sure that you configure your editor
+this way, otherwise the source code layout will look garbled.
+
+\paragraph{Placement of braces:} Opening braces should be placed on the 
+same line to make the best use of vertical space, i.e.
+\begin{cpp}
+if (x > y) {
+	x = y;
+}
+\end{cpp}
+
+\paragraph{Placement of spaces:} Placement of spaces follows K\&R, e.g.
+\begin{cpp}
+if (x == y) {
+	..
+} else if (x > y) {
+	..
+} else {
+	..
+}
+\end{cpp}
+rather than things like this
+\begin{cpp}
+if ( x==y ){
+}
+..
+\end{cpp}
+
+\paragraph{Name format:} Names are always written in camel-case. 
+Classes and structures start with a capital letter, whereas member functions
+and attributes start with a lower-case letter. Attributes of classes 
+have the prefix \code{m\_}. Here is an example:
+\begin{cpp}
+class MyClass {
+public:
+	MyClass(int value) : m_value(value) { }
+
+	inline void setValue(int value) { m_value = value; }
+	inline int getValue() const { return m_value; }
+private:
+	int m_value;
+};
+\end{cpp}
+
+\paragraph{Enumerations:} For clarity, both enumerations types and entries
+start with a capital \textbf{E}, e.g.
+\begin{cpp}
+enum ETristate {
+	ENo = 0,
+	EYes,
+	EMaybe
+};
+\end{cpp}
+\paragraph{Constant methods and parameters:} Declare member functions and
+their parameters as \code{const} whenever this is possible
+and properly conveys the semantics.
+\paragraph{Inline methods:} Always inline trivial pieces of code, such
+as getters and setters.
+\paragraph{Documentation:} Headers files should contain
+Doxygen-compatible documentation. It is also a good idea to add
+comments to a \code{.cpp} file to explain subtleties of an implemented algorithm. 
+However, anything pertaining to the API should go into the header file.
+
+\paragraph{Boost:} Use the boost libraries whenever this helps to save
+time or write more compact code.
+
+\paragraph{Classes vs structures:}In Mitsuba, classes \emph{always} go onto the heap,
+whereas structures may be allocated both on the stack and the heap. 
+
+Classes that derive from \code{Object} usually implement a protected virtual
+deconstructor, which explicitly prevents them from being allocated on the stack.
+The only way they can be deallocated is using the built-in reference
+counting. This is done using the \code{ref<>} template, e.g.
+
+\begin{cpp}
+if (..) {
+	ref<MyClass> instance = new MyClass();
+	instance->doSomething()
+}   // reference expires, instance will be deallocated
+\end{cpp}
+
+\paragraph{Separation of plugins:}Mitsuba encourages that plugins are only
+used via the generic interface they implement. You will find that almost all plugins
+(e.g. luminaires) don't actually provide a header file, hence they can only be accessed
+using the generic \code{Luminaire} interface they implement. If any kind of special 
+interaction between plugins is needed, this is usually an indication that the 
+generic interface should be extended to accomodate this.
