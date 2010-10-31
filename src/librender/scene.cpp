@@ -244,7 +244,7 @@ void Scene::configure() {
 
 		m_camera = static_cast<Camera *> (PluginManager::getInstance()->createObject(Camera::m_theClass, props));
 		m_camera->configure();
-		m_sampler = m_camera->getSamplerX();
+		m_sampler = m_camera->getSampler();
 	}
 
 	if (m_media.size() > 1)
@@ -503,7 +503,7 @@ void Scene::addChild(const std::string &name, ConfigurableObject *child) {
 	if (cClass->derivesFrom(Camera::m_theClass)) {
 		AssertEx(m_camera == NULL, "There can only be one camera per scene");
 		m_camera = static_cast<Camera *>(child);
-		m_sampler = m_camera->getSamplerX();
+		m_sampler = m_camera->getSampler();
 	} else if (cClass->derivesFrom(Integrator::m_theClass)) {
 		AssertEx(m_integrator == NULL, "There can only be one integrator per scene");
 		m_integrator = static_cast<Integrator *>(child);

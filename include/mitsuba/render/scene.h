@@ -325,7 +325,15 @@ public:
 	 * and re-attached on the remote side using <tt>setSampler</tt>.
 	 **/
 	inline void setSampler(Sampler *sampler) { m_sampler = sampler; }
-	/// Return the scene's sampler
+
+	/**
+	 * Return the scene's sampler. Note that when rendering using multiple
+	 * different threads, each thread will be passed a shallow copy of the
+	 * scene, which has a different sampler instance. This helps to avoid 
+	 * locking/contention issues and ensures that different threads render 
+	 * with different random number sequences. The sampler instance provided
+	 * here is a clone of the original sampler specified in the camera.
+	 */
 	inline Sampler *getSampler() { return m_sampler; }
 	/// Return the scene's sampler
 	inline const Sampler *getSampler() const { return m_sampler.get(); }

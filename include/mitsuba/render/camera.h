@@ -59,15 +59,27 @@ public:
 	 */
 	virtual Float areaDensity(const Point2 &p) const = 0;
 
-	/// Return the camera's sampler
-	inline Sampler *getSamplerX() { return m_sampler; }
+	/**
+	 * \brief Return the camera's sampler.
+	 *
+	 * This is the 'root' sampler, which will later be cloned a 
+	 * number of times to provide each participating worker thread 
+	 * with its own instance (see \ref Scene::getSampler()). 
+	 * Therefore, this sampler should never be used for anything 
+	 * except creating clones.
+	 */
+	inline Sampler *getSampler() { return m_sampler; }
 
 	/**
-	 * Return the camera's sampler. This is the 'root' sampler,
-	 * which will later be replicated for submission to all
-	 * participating workers.
+	 * \brief Return the camera's sampler.
+	 *
+	 * This is the 'root' sampler, which will later be cloned a 
+	 * number of times to provide each participating worker thread 
+	 * with its own instance (see \ref Scene::getSampler()). 
+	 * Therefore, this sampler should never be used for anything 
+	 * except creating clones.
 	 */
-	inline const Sampler *getSamplerX() const { return m_sampler.get(); }
+	inline const Sampler *getSampler() const { return m_sampler.get(); }
 
 	/// Return the image plane normal
 	inline Normal getImagePlaneNormal() const {
