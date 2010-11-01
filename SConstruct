@@ -5,12 +5,17 @@ import os
 import fnmatch
 import multiprocessing
 
-if not os.path.exists('config.py'):
+AddOption("--configfile", dest="configfile", type="string", nargs=1, action='store', help='Manually specify a configuration file')
+configFile = GetOption('configfile')
+if configFile == None:
+	configFile = "config.py"
+
+if not os.path.exists(configFile):
 	print 'A configuration file must be selected! Have a look at \"README\"'
 	Exit(1)
 
 # Parse configuration options
-vars = Variables('config.py');
+vars = Variables(configFile);
 vars.Add('CXX',           'C++ compiler')
 vars.Add('CC',            'C compiler')
 vars.Add('CXXFLAGS',      'C++ flags')

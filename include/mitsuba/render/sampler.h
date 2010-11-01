@@ -38,12 +38,13 @@ MTS_NAMESPACE_BEGIN
  *
  * The general interaction between a sampler and a rendering algorithm is as 
  * follows: Before beginning to render a pixel, the rendering algorithm calls 
- * \ref generate(). The first pixel sample is generated, after which \ref
- * advance() needs to be invoked, and so on. Note that any implementations need
- * to be configured for a certain number of pixel samples, and exceeding these
- * will lead to an exception being thrown. While computing a pixel sample, the
- * rendering algorithm usually requests batches of (pseudo-) random numbers 
- * using the \ref next1D(), \ref next2D(), \ref next1DArray() and 
+ * \ref generate(). The first pixel sample can now be computed, after which
+ * \ref advance() needs to be invoked. This repeats until all pixel samples have
+ * been generated. Note that some implementations need to be configured for a 
+ * certain number of pixel samples, and exceeding these will lead to an 
+ * exception being thrown. While computing a pixel sample, the rendering 
+ * algorithm usually requests batches of (pseudo-) random numbers using 
+ * the \ref next1D(), \ref next2D(), \ref next1DArray() and 
  * \ref next2DArray() functions.
  *
  */
