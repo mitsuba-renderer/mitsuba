@@ -80,8 +80,6 @@ if env.has_key('BASELIBDIR'):
 	env.Append(LIBPATH=env['BASELIBDIR'])
 
 env.Decider('MD5-timestamp')
-env.SetOption('implicit_cache', 1)
-
 #env.SetOption('num_jobs', multiprocessing.cpu_count())
 
 AddOption("--dist", dest="dist", type="string", nargs=0, action='store', help='Make an official release')
