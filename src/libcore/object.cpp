@@ -24,39 +24,27 @@ Class *Object::m_theClass = new Class("Object", false, "");
 
 Object::Object()
  : m_refCount(0) {
-#if defined(WIN32)
-	InitializeCriticalSection(&m_refLock);
-#else
-	pthread_mutex_init(&m_refLock, NULL);
-#endif
 }
 
 void Object::incRef() const {
-#if defined(WIN32)
-	EnterCriticalSection(&m_refLock);
-	m_refCount++;
-	LeaveCriticalSection(&m_refLock);
+#if defined(_WIN32)
+	InterlockedIncrement(&m_refCount);
 #else
-	pthread_mutex_lock(&m_refLock);
-	m_refCount++;
-	pthread_mutex_unlock(&m_refLock);
+	__sync_fetch_and_add(&m_refCount, 1);
 #endif
 }
 
 void Object::decRef() const {
-#if defined(WIN32)
-	EnterCriticalSection(&m_refLock);
-	int count = --m_refCount;
-	LeaveCriticalSection(&m_refLock);
+#if defined(_WIN32)
+	int count = InterlockedDecrement(&m_refCount);
 #else
-	pthread_mutex_lock(&m_refLock);
-	int count = --m_refCount;
-	pthread_mutex_unlock(&m_refLock);
+	int count = __sync_sub_and_fetch(&m_refCount, 1);
 #endif
 	AssertEx(count >= 0, "Reference count is below zero!");
 	if (count == 0) 
 		delete this;
 }
+
 
 const Class *Object::getClass() const {
     return m_theClass;
@@ -74,11 +62,6 @@ Object::~Object() {
 		Log(EWarn, "Deleting %s with reference count %i!", 
 			toString().c_str(), m_refCount);
 	}
-#if defined(WIN32)
-	DeleteCriticalSection(&m_refLock);
-#else
-	pthread_mutex_destroy(&m_refLock);
-#endif
 }
 
 MTS_NAMESPACE_END

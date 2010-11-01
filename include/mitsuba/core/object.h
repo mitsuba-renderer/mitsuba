@@ -73,10 +73,10 @@ protected:
 	 */
 	virtual ~Object();
 private:
-	mutable int m_refCount;
-#if defined(WIN32)
-	mutable CRITICAL_SECTION m_refLock;
+#if defined(_WIN32)
+	mutable LONG volatile m_refCount;
 #else
+	mutable int m_refCount;
 	mutable pthread_mutex_t m_refLock;
 #endif
 public:
