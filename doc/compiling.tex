@@ -162,13 +162,14 @@ All binaries are now located in the \code{dist} directory, and they should be ex
 \subsubsection{Integration with the Visual Studio interface}
 If you plan to modify Mitsuba and you enjoy working within the Visual
 Studio interface, the following steps should help you integrate the two
-(thanks to Marios Papas for this description!). The instructions are for Visual Studio 2008,
+(thanks to Marios Papas for this description!). They are written for Visual Studio 2008,
 hence some changes may be necessary on other versions. Also, they assume
 that you followed all of the previous steps.
 
 \begin{enumerate}
-\item Create a copy of \code{config.py} in the Mitsuba root directory and
-name it \code{config\_debug.py}. This will later be used to support debug
+\item Create a copy of the file \code{config.py} in the Mitsuba root directory and
+save it as \code{config\_debug.py}. This configuration 
+will later be used to support debug
 builds. Open the file and make the following changes:
 \begin{enumerate}
 \item In \code{CXXFLAGS}, replace \code{/Ox} by \code{/Od} (this disables
@@ -180,7 +181,11 @@ optimizations, which is necessary to see variable contents in the debugger)
 the \emph{File$\to$New$\to$Project From Existing Code} menu entry.
 \item Choose \emph{Visual C++} from the drop-down menu and press \emph{Next}
 \item Specify the Mitsuba root directory at the top and enter \emph{mitsuba}
-as the project name. Uncheck \emph{Show all files in Solution explorer} and
+as the project name. 
+In \emph{Add files to the project from these folders}, remove the Mitsuba 
+root directory and only add the \code{src} and \code{include} subdirectories. 
+This is crucial for IntelliSense to work.
+Uncheck \emph{Show all files in Solution explorer} and
 press \emph{Next}.
 \item Choose \emph{Use external build systen} and press \emph{Next}.
 \item In the following, feel free to replace any occurrence of
@@ -188,18 +193,18 @@ press \emph{Next}.
 cores in your machine (this will provide faster build times). 
 Fill in the following values:
 
-\begin{tabular}{ll}i
-\emph{Build command line}:&\code{scons}\\
-\emph{Rebuild command line}:&\code{scons -c \&\& scons}\\
-\emph{Clean command line}:&\code{scons -c}\\
+\begin{tabular}{lp{9cm}}
+\emph{Build command line}:&\code{scons {-}-cfg=config\_debug.py}\\
+\emph{Rebuild command line}:&\code{scons {-}-cfg=config\_debug.py -c \&\& scons {-}-cfg=config\_debug.py}\\
+\emph{Clean command line}:&\code{scons {-}-cfg=config\_debug.py -c}\\
 \emph{Output}:&\code{dist\textbackslash mtsgui.exe}\\
 \emph{Include search paths}:&\code{C:\textbackslash Qt\textbackslash
-include} (your Qt path may be different)
+include} (or wherever the Qt headers are installed on your machine)
 \end{tabular}
 \item On the next page, uncheck \emph{Same as Debug configuration}.
-Afterwards, enter exactly the same values as before except replacing
-every occurrence of \code{scons} by \code{scons {-}-cfg=config\_debug.py}.
-\item Click \emph{Finish} and wait for IntelliSense to finish (this might take
+Afterwards, enter exactly the same values as before except leaving out
+the \code{{-}-cfg=config\_debug.py} parameter to \code{scons}.
+\item Click \emph{Finish} and wait for IntelliSense to refresh (this might take
 a while).
 \item Switch to the Release configuration.
 \end{enumerate}

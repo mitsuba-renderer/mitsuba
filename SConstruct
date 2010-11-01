@@ -5,8 +5,8 @@ import os
 import fnmatch
 import multiprocessing
 
-AddOption("--configfile", dest="configfile", type="string", nargs=1, action='store', help='Manually specify a configuration file')
-configFile = GetOption('configfile')
+AddOption("--cfg", dest="cfg", type="string", nargs=1, action='store', help='Manually specify a configuration file')
+configFile = GetOption('cfg')
 if configFile == None:
 	configFile = "config.py"
 
