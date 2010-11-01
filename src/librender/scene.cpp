@@ -275,11 +275,11 @@ void Scene::initialize() {
 
 		m_aabb = m_kdtree->getAABB();
 		m_bsphere = m_kdtree->getBSphere();
-		for (unsigned int i=0; i<m_media.size(); i++) {
-			const AABB &aabb = m_media[i]->getAABB();
-			m_aabb.expandBy(aabb);
-			for (int j=0; j<8; ++j)
-				m_bsphere.expandBy(aabb.getCorner(j));
+
+		if (m_media.size() > 0) {
+			for (size_t i=0; i<m_media.size(); i++) 
+				m_aabb.expandBy(m_media[i]->getAABB());
+			m_bsphere = m_aabb.getBSphere();
 		}
 	}
 
