@@ -586,7 +586,6 @@ plugins += env.SharedLibrary('plugins/constant', ['src/luminaires/constant.cpp']
 plugins += env.SharedLibrary('plugins/envmap', ['src/luminaires/envmap.cpp'])
 plugins += env.SharedLibrary('plugins/spot', ['src/luminaires/spot.cpp'])
 plugins += env.SharedLibrary('plugins/point', ['src/luminaires/point.cpp'])
-plugins += env.SharedLibrary('plugins/sinusoidal', ['src/luminaires/sinusoidal.cpp'])
 plugins += env.SharedLibrary('plugins/collimated', ['src/luminaires/collimated.cpp'])
 plugins += env.SharedLibrary('plugins/directional', ['src/luminaires/directional.cpp'])
 
