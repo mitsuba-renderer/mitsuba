@@ -208,7 +208,7 @@ public:
 		ref<Bitmap> bitmap = new Bitmap(m_cropSize.x, m_cropSize.y, m_bpp);
 		uint8_t *targetPixels = bitmap->getData();
 		Float r, g, b;
-		int pos = 0;
+		size_t pos = 0;
 
 		Float exposure = std::pow(2.0f, (Float) m_exposure);
 		Float invWpSqr = std::pow((Float) 2, (Float) m_reinhardBurn);
@@ -273,7 +273,7 @@ public:
 				for (int y=0; y<bannerHeight; y++) {
 					for (int x=0; x<bannerWidth; x++) {
 						int value = (1-banner[x+y*bannerWidth])*255;
-						int pos = 4*((x+xoffs)+(y+yoffs)*m_cropSize.x);
+						size_t pos = 4*((x+xoffs)+(y+yoffs)*(size_t) m_cropSize.x);
 						targetPixels[pos+0] = (uint8_t) clamp(value + targetPixels[pos+0], 0, 255);
 						targetPixels[pos+1] = (uint8_t) clamp(value + targetPixels[pos+1], 0, 255);
 						targetPixels[pos+2] = (uint8_t) clamp(value + targetPixels[pos+2], 0, 255);
@@ -320,7 +320,7 @@ public:
 				for (int y=0; y<bannerHeight; y++) {
 					for (int x=0; x<bannerWidth; x++) {
 						int value = (1-banner[x+y*bannerWidth])*255;
-						int pos = 3*((x+xoffs)+(y+yoffs)*m_cropSize.x);
+						size_t pos = 3*((x+xoffs)+(y+yoffs)*(size_t) m_cropSize.x);
 						targetPixels[pos+0] = (uint8_t) clamp(value + targetPixels[pos+0], 0, 255);
 						targetPixels[pos+1] = (uint8_t) clamp(value + targetPixels[pos+1], 0, 255);
 						targetPixels[pos+2] = (uint8_t) clamp(value + targetPixels[pos+2], 0, 255);
@@ -356,7 +356,7 @@ public:
 				for (int y=0; y<bannerHeight; y++) {
 					for (int x=0; x<bannerWidth; x++) {
 						int value = 2*(1-banner[x+y*bannerWidth])*255;
-						int pos = 2*((x+xoffs)+(y+yoffs)*m_cropSize.x);
+						size_t pos = 2*((x+xoffs)+(y+yoffs)*(size_t) m_cropSize.x);
 						targetPixels[pos+0] = (uint8_t) clamp(value + targetPixels[pos], 0, 255);
 						targetPixels[pos+1] = (uint8_t) 255;
 					}
@@ -388,7 +388,7 @@ public:
 				for (int y=0; y<bannerHeight; y++) {
 					for (int x=0; x<bannerWidth; x++) {
 						int value = (1-banner[x+y*bannerWidth])*255;
-						int pos = (x+xoffs)+(y+yoffs)*m_cropSize.x;
+						size_t pos = (x+xoffs)+(y+yoffs)*(size_t)m_cropSize.x;
 						targetPixels[pos] = (uint8_t) clamp(value + targetPixels[pos], 0, 255);
 					}
 				}
