@@ -164,7 +164,7 @@ Bitmap::Bitmap(int width, int height, int bpp)
 		m_gamma = -1.0f; // sRGB
 
 	// 1-bit masks are stored in a packed format. 
-	m_size = (size_t) std::ceil((m_width * m_height * m_bpp) / 8.0);
+	m_size = (size_t) std::ceil(((double) m_width * m_height * m_bpp) / 8.0);
 	m_data = static_cast<unsigned char *>(allocAligned(m_size));
 }
 
