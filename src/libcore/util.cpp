@@ -387,46 +387,6 @@ bool solveQuadratic(Float a, Float b, Float c, Float &x0, Float &x1) {
 	return true;
 }
 
-bool solveQuadraticDouble(double a, double b, double c, double &x0, double &x1) {
-	/* Linear case */
-	if (a == 0) {
-		if (b != 0) {
-			x0 = x1 = -c / b;
-			return true;
-		}
-		return false;
-	}
-
-	double discrim = b*b - 4.0f*a*c;
-
-	/* Leave if there is no solution */
-	if (discrim < 0)
-		return false;
-
-	double temp, sqrtDiscrim = std::sqrt(discrim);
-
-	/* Numerically stable version of (-b (+/-) sqrtDiscrim) / (2 * a)
-	 *
-	 * Based on the observation that one solution is always
-	 * accurate while the other is not. Finds the solution of
-	 * greater magnitude which does not suffer from loss of
-	 * precision and then uses the identity x1 * x2 = c / a
-	 */
-	if (b < 0)
-		temp = -0.5f * (b - sqrtDiscrim);
-	else
-		temp = -0.5f * (b + sqrtDiscrim);
-
-	x0 = temp / a;
-	x1 = c / temp;
-
-	/* Return the results so that x0 < x1 */
-	if (x0 > x1)
-		std::swap(x0, x1);
-
-	return true;
-}
-
 bool solveLinearSystem2x2(const Float a[2][2], const Float b[2], Float x[2]) {
 	Float det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
 

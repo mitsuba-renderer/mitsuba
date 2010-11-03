@@ -97,12 +97,6 @@ extern MTS_EXPORT_CORE Float lanczosSinc(Float t, Float tau = 2);
 extern MTS_EXPORT_CORE bool solveQuadratic(Float a, Float b, Float c, Float &x0, Float &x1);
 
 /**
- * \brief Similar to solveQuadratic(), but always uses double precision independent
- * of the chosen compile-time precision.
- */
-extern MTS_EXPORT_CORE bool solveQuadraticDouble(double a, double b, double c, double &x0, double &x1);
-
-/**
  * \brief Solve a 2x2 linear equation system using basic linear algebra
  */
 extern MTS_EXPORT_CORE bool solveLinearSystem2x2(const Float a[2][2], const Float b[2], Float x[2]);

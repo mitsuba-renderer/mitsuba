@@ -87,23 +87,13 @@ public:
 	}
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt, Float &t, void *tmp) const {
-		/* Do the following in double precision. This helps to avoid
-		   self-intersections when approximating planes using giant spheres */
-		const double 
-			rox = (double) (ray.o.x - m_center.x),
-			roy = (double) (ray.o.y - m_center.y),
-			roz = (double) (ray.o.z - m_center.z),
-			rdx = (double) ray.d.x,
-			rdy = (double) ray.d.y,
-			rdz = (double) ray.d.z;
+		Vector o = ray.o - m_center;
+		Float A = ray.d.x*ray.d.x + ray.d.y*ray.d.y + ray.d.z*ray.d.z;
+		Float B = 2 * (ray.d.x*o.x + ray.d.y*o.y + ray.d.z*o.z);
+		Float C = o.x*o.x + o.y*o.y + o.z*o.z - m_radius*m_radius;
 
-		/* Transform into the local coordinate system and normalize */
-		double A = rdx*rdx + rdy*rdy + rdz*rdz;
-		double B = 2 * (rdx*rox + rdy*roy + rdz*roz);
-		double C = rox*rox + roy*roy + roz*roz - m_radius*m_radius;
-
-		double nearT, farT;
-		if (!solveQuadraticDouble(A, B, C, nearT, farT))
+		Float nearT, farT;
+		if (!solveQuadratic(A, B, C, nearT, farT))
 			return false;
 
 		if (nearT > maxt || farT < mint)
@@ -111,32 +101,22 @@ public:
 		if (nearT < mint) {
 			if (farT > maxt)
 				return false;
-			t = (Float) farT;		
+			t = farT;		
 		} else {
-			t = (Float) nearT;
+			t = nearT;
 		}
 
 		return true;
 	}
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt) const {
-		/* Do the following in double precision. This helps to avoid
-		   self-intersections when approximating planes using giant spheres */
+		Vector o = ray.o - m_center;
+		Float A = ray.d.x*ray.d.x + ray.d.y*ray.d.y + ray.d.z*ray.d.z;
+		Float B = 2 * (ray.d.x*o.x + ray.d.y*o.y + ray.d.z*o.z);
+		Float C = o.x*o.x + o.y*o.y + o.z*o.z - m_radius*m_radius;
 
-		const double 
-			rox = (double) (ray.o.x - m_center.x),
-			roy = (double) (ray.o.y - m_center.y),
-			roz = (double) (ray.o.z - m_center.z),
-			rdx = (double) ray.d.x,
-			rdy = (double) ray.d.y,
-			rdz = (double) ray.d.z;
-
-		double A = rdx*rdx + rdy*rdy + rdz*rdz;
-		double B = 2 * (rdx*rox + rdy*roy + rdz*roz);
-		double C = rox*rox + roy*roy + roz*roz - m_radius*m_radius;
-
-		double nearT, farT;
-		if (!solveQuadraticDouble(A, B, C, nearT, farT))
+		Float nearT, farT;
+		if (!solveQuadratic(A, B, C, nearT, farT))
 			return false;
 
 		if (nearT > maxt || farT < mint)
