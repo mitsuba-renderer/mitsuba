@@ -146,6 +146,12 @@ extern "C" {
 
 	METHODDEF(void) dsm_term_source (j_decompress_ptr cinfo) {
 	}
+
+	METHODDEF(void) dsm_error_exit (j_common_ptr cinfo) {
+		char msg[JMSG_LENGTH_MAX];
+		(*cinfo->err->format_message) (cinfo, msg);
+		SLog(EError, "Critcal libjpeg error: %s", msg);
+	}
 };
 
 /* ========================== *
@@ -462,6 +468,8 @@ void Bitmap::loadJPEG(Stream *stream) {
 
 	memset(&jbuf, 0, sizeof(jbuf_t));
 	cinfo.err = jpeg_std_error(&jerr);
+	jerr.error_exit = dsm_error_exit;
+
 	jpeg_create_decompress(&cinfo);
 	cinfo.src = (struct jpeg_source_mgr *) &jbuf;
 	jbuf.buffer = new JOCTET[length];
@@ -597,7 +605,6 @@ void Bitmap::savePNG(Stream *stream) const {
 	}
 
 	png_set_write_fn(png_ptr, stream, (png_rw_ptr) png_write_data, (png_flush_ptr) png_flush_data);
-//	png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
 	png_set_compression_level(png_ptr, 5);
 
 	memset(text, 0, sizeof(png_text)*4);

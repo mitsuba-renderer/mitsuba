@@ -22,12 +22,23 @@
 #include <QtGui>
 #include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
+#include "../converter/converter.h"
 
 using namespace mitsuba;
 
+class GUIGeometryConverter : public QObject, public GeometryConverter {
+	Q_OBJECT
+public:
+	inline GUIGeometryConverter() { }
+protected:
+	fs::path locateResource(const fs::path &resource);
+signals:
+	void locateResource(const fs::path &resource, fs::path *result);
+};
+
 class SceneImporter : public Thread {
 public:
-	SceneImporter(QWidget *parent, FileResolver *resolver, 
+	SceneImporter(FileResolver *resolver, 
 		const fs::path &sourceFile, const fs::path &directory,
 		const fs::path &targetScene, const fs::path &adjustmentFile,
 		bool sRGB);
@@ -36,11 +47,14 @@ public:
 
 	inline void wait(int ms) { m_wait->wait(ms); }
 
+	inline GUIGeometryConverter *getConverter() { return &m_converter; }
+
 	inline const fs::path &getResult() const { return m_result; }
 protected:
 	virtual ~SceneImporter();
+
 private:
-	QWidget *m_parent;
+	GUIGeometryConverter m_converter;
 	ref<FileResolver> m_resolver;
 	ref<WaitFlag> m_wait;
 	fs::path m_sourceFile;

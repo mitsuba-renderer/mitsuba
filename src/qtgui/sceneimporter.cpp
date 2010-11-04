@@ -17,31 +17,18 @@
 */
 
 #include "sceneimporter.h"
-#include "../converter/converter.h"
-#include "locateresourcedlg.h"
 
-class GUIGeometryConverter : public GeometryConverter {
-public:
-	inline GUIGeometryConverter(QWidget *parent) : m_parent(parent) {
-	}
+fs::path GUIGeometryConverter::locateResource(const fs::path &resource) {
+	fs::path result;
+	emit locateResource(resource, &result);
+	return result;
+}
 
-	fs::path locateResource(const fs::path &resource) {
-		LocateResourceDialog locateResource(m_parent, resource.file_string().c_str());
-		locateResource.setWindowModality(Qt::ApplicationModal);
-		if (locateResource.exec())
-			return fs::path(locateResource.getFilename().toStdString());
-
-		return fs::path();
-	}
-private:
-	QWidget *m_parent;
-};
-
-SceneImporter::SceneImporter(QWidget *parent, FileResolver *resolver, 
+SceneImporter::SceneImporter(FileResolver *resolver, 
 		const fs::path &sourceFile, const fs::path &directory,
 		const fs::path &targetScene, const fs::path &adjustmentFile,
 		bool sRGB)
-	: Thread("impt"), m_parent(parent), m_resolver(resolver), 
+	: Thread("impt"), m_resolver(resolver), 
 	  m_sourceFile(sourceFile), m_directory(directory), 
 	  m_targetScene(targetScene), m_adjustmentFile(adjustmentFile), m_srgb(sRGB) {
 	m_wait = new WaitFlag();
@@ -54,10 +41,9 @@ void SceneImporter::run() {
 	Thread::getThread()->setFileResolver(m_resolver);
 #if defined(MTS_HAS_COLLADA)
 	try {
-		GUIGeometryConverter cvt(m_parent);
-		cvt.setSRGB(m_srgb);
-		cvt.convert(m_sourceFile, m_directory, m_targetScene, m_adjustmentFile);
-		m_result = cvt.getFilename();
+		m_converter.setSRGB(m_srgb);
+		m_converter.convert(m_sourceFile, m_directory, m_targetScene, m_adjustmentFile);
+		m_result = m_converter.getFilename();
 	} catch (const std::exception &ex) {
 		SLog(EWarn, "Conversion failed: %s", ex.what());
 	} catch (...) {

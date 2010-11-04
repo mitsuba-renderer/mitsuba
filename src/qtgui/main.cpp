@@ -139,6 +139,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 	qRegisterMetaType<ELogLevel>("ELogLevel");
+	qRegisterMetaType<fs::path>("fs::path");
 
 	MitsubaApplication app(argc, argv);
 	try {

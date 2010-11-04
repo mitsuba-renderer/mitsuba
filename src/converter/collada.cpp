@@ -269,6 +269,7 @@ struct triangle_key_order : public std::binary_function<SimpleTriangle, SimpleTr
 		else if (v1.z > v2.z) return 1;
 		return 0;
 	}
+
 	bool operator()(const SimpleTriangle &t1, const SimpleTriangle &t2) const {
 		int result;
 		result = compare(t1.p0, t2.p0);
@@ -332,9 +333,7 @@ void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string i
 		if (vData->typeToOffset[EUV] != -1) {
 			domUint uvRef = tess_data[i+vData->typeToOffsetInStream[EUV]];
 			vertex.uv = vData->data[vData->typeToOffset[EUV]][uvRef].toPoint2();
-#if 1
 			vertex.uv.y = 1-vertex.uv.y; // Invert the V coordinate
-#endif
 		} else {
 			vertex.uv = Point2(0.0f);
 		}
@@ -936,19 +935,22 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const fs::path &texture
 			if (!fs::exists(resolved)) {
 				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
 				resolved = cvt->locateResource(path.leaf());
+				targetPath = targetPath.parent_path() / resolved.leaf();
 				if (resolved.empty())
 					SLog(EError, "Unable to locate a resource -- aborting conversion.");
 			}
 		}
-		ref<FileStream> input = new FileStream(resolved, FileStream::EReadOnly);
-		ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
-		input->copyTo(output);
-		input->close();
-		output->close();
+		if (fs::complete(resolved) != fs::complete(targetPath)) {
+			ref<FileStream> input = new FileStream(resolved, FileStream::EReadOnly);
+			ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
+			input->copyTo(output);
+			input->close();
+			output->close();
+		}
 	}
 
 	os << "\t<texture id=\"" << identifier << "\" type=\"ldrtexture\">" << endl;
-	os << "\t\t<string name=\"filename\" value=\"textures/" << path.leaf() << "\"/>" << endl;
+	os << "\t\t<string name=\"filename\" value=\"textures/" << targetPath.leaf() << "\"/>" << endl;
 	os << "\t</texture>" << endl << endl;
 }
 

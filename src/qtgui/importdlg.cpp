@@ -21,7 +21,7 @@
 #include "acknowledgmentdlg.h"
 #include "mainwindow.h"
 #include "sceneimporter.h"
-#include <mitsuba/core/fresolver.h>
+#include "locateresourcedlg.h"
 
 ImportDialog::ImportDialog(QWidget *parent, FileResolver *resolver) :
 	QDialog(parent, Qt::Sheet), ui(new Ui::ImportDialog), m_resolver(resolver) {
@@ -135,11 +135,16 @@ void ImportDialog::accept() {
 	const Logger *logger = Thread::getThread()->getLogger();
 	size_t initialWarningCount = logger->getWarningCount();
 
-	ref<SceneImporter> importingThread = new SceneImporter(this,
+	ref<SceneImporter> importingThread = new SceneImporter(
 		resolver, sourceFile.toStdString(), directory.toStdString(),
 		targetScene.toStdString(), adjustmentFile.toStdString(),
 		ui->sRGBButton->isChecked());
 	importingThread->start();
+
+	connect(importingThread->getConverter(),
+			SIGNAL(locateResource(const fs::path &, fs::path *)),
+			this, SLOT(onLocateResource(const fs::path &, fs::path *)),
+			Qt::BlockingQueuedConnection);
 
 	while (importingThread->isRunning()) {
 		QCoreApplication::processEvents();
@@ -163,4 +168,11 @@ void ImportDialog::accept() {
 			tr("Conversion failed -- please see the log for details."),
 			QMessageBox::Ok);
 	}
+}
+
+void ImportDialog::onLocateResource(const fs::path &path, fs::path *target) {
+	LocateResourceDialog locateResource(this, path.file_string().c_str());
+	locateResource.setWindowModality(Qt::ApplicationModal);
+	if (locateResource.exec())
+		*target = fs::path(locateResource.getFilename().toStdString());
 }

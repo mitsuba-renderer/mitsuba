@@ -36,6 +36,7 @@ protected slots:
 	void on_inputBrowse_clicked(bool checked);
 	void on_directoryBrowse_clicked(bool checked);
 	void on_adjustmentBrowse_clicked(bool checked);
+	void onLocateResource(const fs::path &path, fs::path *target);
 	void refresh();
 protected:
     void changeEvent(QEvent *e);

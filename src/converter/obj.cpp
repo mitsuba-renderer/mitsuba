@@ -39,19 +39,22 @@ std::string copyTexture(GeometryConverter *cvt, const fs::path &textureDir, std:
 			if (!fs::exists(resolved)) {
 				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
 				resolved = cvt->locateResource(path.leaf());
+				targetPath = targetPath.parent_path() / resolved.leaf();
 				if (resolved.empty())
 					SLog(EError, "Unable to locate a resource -- aborting conversion.");
 			}
 		}	
 
-		ref<FileStream> input = new FileStream(resolved, FileStream::EReadOnly);
-		ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
-		input->copyTo(output);
-		output->close();
-		input->close();
+		if (fs::complete(resolved) != fs::complete(targetPath)) {
+			ref<FileStream> input = new FileStream(resolved, FileStream::EReadOnly);
+			ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
+			input->copyTo(output);
+			output->close();
+			input->close();
+		}
 	}
 
-	return path.leaf();
+	return targetPath.leaf();
 }
 
 void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mtlName,
