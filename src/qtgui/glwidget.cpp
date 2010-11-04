@@ -874,7 +874,7 @@ void GLWidget::paintGL() {
 			Float logLuminance, maxLuminance, unused;
 			m_luminanceBuffer[target]->getPixel(0, 0).toLinearRGB(logLuminance, maxLuminance, unused);
 			logLuminance = std::exp(logLuminance / (size.x*size.y));
-			if (ubi_isnan(logLuminance) || std::isinf(logLuminance)) {
+			if (mts_isnan(logLuminance) || std::isinf(logLuminance)) {
 				SLog(EWarn, "Could not determine the average log-luminance, since the image contains NaNs/infs/negative values");
 				logLuminance = 1;
 			}

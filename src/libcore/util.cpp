@@ -656,9 +656,9 @@ std::string timeToString(Float time) {
 	std::ostringstream os;
 	char suffix = 's';
 #ifdef WIN32
-	if (ubi_isnan(time) || std::isinf(time)) {
+	if (mts_isnan(time) || std::isinf(time)) {
 #else
-	if (ubi_isnan(time) || std::fpclassify(time) == FP_INFINITE) {
+	if (mts_isnan(time) || std::fpclassify(time) == FP_INFINITE) {
 #endif
 		return "inf";
 	}

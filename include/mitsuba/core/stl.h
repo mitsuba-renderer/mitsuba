@@ -159,13 +159,13 @@ public:
 MTS_NAMESPACE_END
 
 #if defined(WIN32)
-inline bool ubi_isnan(float f) {
+inline bool mts_isnan(float f) {
 	int classification = ::_fpclass(f);
 	return classification == _FPCLASS_QNAN 
 		|| classification == _FPCLASS_SNAN;
 }
 
-inline bool ubi_isnan(double f) {
+inline bool mts_isnan(double f) {
 	int classification = ::_fpclass(f);
 	return classification == _FPCLASS_QNAN
 		|| classification == _FPCLASS_SNAN;
@@ -174,19 +174,19 @@ extern "C" {
 	extern MTS_EXPORT_CORE float nextafterf(float x, float y);
 };
 #elif defined(__clang__)
-inline bool ubi_isnan(float f) {
+inline bool mts_isnan(float f) {
 	return std::isnan(f);
 }
 
-inline bool ubi_isnan(double f) {
+inline bool mts_isnan(double f) {
 	return std::isnan(f);
 }
 #else
-inline bool ubi_isnan(float f) {
+inline bool mts_isnan(float f) {
 	return std::fpclassify(f) == FP_NAN;
 }
 
-inline bool ubi_isnan(double f) {
+inline bool mts_isnan(double f) {
 	return std::fpclassify(f) == FP_NAN;
 }
 #endif
