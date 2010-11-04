@@ -19,7 +19,7 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/render/gatherproc.h>
 #include <mitsuba/render/renderqueue.h>
-#if !defined(__OSX__)
+#if !defined(__OSX__) && defined(_OPENMP)
 #include <omp.h>
 #endif
 
@@ -124,7 +124,7 @@ public:
 		Vector2i cropSize = film->getCropSize();
 		Point2i cropOffset = film->getCropOffset();
 
-#if !defined(__OSX__)
+#if !defined(__OSX__) && defined(_OPENMP)
 		omp_set_num_threads(nCores);
 #endif
 		m_gatherPoints.clear();

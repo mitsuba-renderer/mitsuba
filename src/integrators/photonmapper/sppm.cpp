@@ -20,7 +20,7 @@
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/render/gatherproc.h>
 #include <mitsuba/render/renderqueue.h>
-#if !defined(__OSX__)
+#if !defined(__OSX__) && defined(_OPENMP)
 #include <omp.h>
 #endif
 
@@ -150,7 +150,7 @@ public:
 		int samplerResID = sched->registerManifoldResource(
 			static_cast<std::vector<SerializableObject*> &>(samplers)); 
 
-#if !defined(__OSX__)
+#if !defined(__OSX__) && defined(_OPENMP)
 		omp_set_num_threads(nCores);
 #endif
 
@@ -178,7 +178,7 @@ public:
 		#pragma omp parallel for schedule(dynamic)
 		for (int i=-1; i<(int) m_gatherBlocks.size(); ++i) {
 			std::vector<GatherPoint> &gatherPoints = m_gatherBlocks[i];
-#if !defined(__OSX__)
+#if !defined(__OSX__) && defined(_OPENMP)
 			Sampler *sampler = static_cast<Sampler *>(samplers[omp_get_thread_num()]);
 #else
 			Sampler *sampler = static_cast<Sampler *>(samplers[0]);

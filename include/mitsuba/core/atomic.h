@@ -32,7 +32,19 @@ template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue
     return InterlockedCompareExchangePointer(
 		reinterpret_cast<volatile PVOID *>(v), newValue, oldValue) == oldValue;
 #else
+  #if !defined(__clang__)
 	return __sync_bool_compare_and_swap(v, oldValue, newValue);
+  #else
+  #if __SIZEOF_POINTER__ == 8 
+	return __sync_bool_compare_and_swap(
+		reinterpret_cast<long long volatile *>(v), reinterpret_cast<long long>(oldValue), 
+		reinterpret_cast<long long>(newValue));
+  #else
+	return __sync_bool_compare_and_swap(
+		reinterpret_cast<long volatile *>(v), reinterpret_cast<long>(oldValue), 
+		reinterpret_cast<long>(newValue));
+  #endif
+  #endif
 #endif
 }
 

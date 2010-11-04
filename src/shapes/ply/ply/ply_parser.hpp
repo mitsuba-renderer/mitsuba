@@ -9,13 +9,38 @@
 #include <vector>
 #include <cctype>
 
-#if defined(WIN32)
+#if defined(__clang__)
+#define MTS_USE_BOOST_TR1 (!__has_feature(cxx_variadic_templates))
+#else
+#  if defined(_MSC_VER) && (_MSC_VER < 1600)
+#  define MTS_USE_BOOST_TR1 1
+#  else
+#  define MTS_USE_BOOST_TR1 0
+#  endif
+#endif
+
+#if MTS_USE_BOOST_TR1
+#  if defined(Float)
+#    define MTS_Float
+#    pragma push_macro("Float")
+#    undef Float
+#  endif
 #include <boost/tr1/functional.hpp>
 #include <boost/tr1/memory.hpp>
 #include <boost/tr1/tuple.hpp>
+#  if defined(MTS_Float)
+#    pragma pop_macro("Float")
+#    undef MTS_Float
+#  endif
+#else
+#if defined(_MSC_VER) && (_MSC_VER >= 1600)
+#include <functional>
+#include <memory>
+#include <tuple>
 #else
 #include <tr1/functional>
 #include <tr1/memory>
+#endif
 #endif
 
 #include <boost/mpl/fold.hpp>
@@ -93,6 +118,7 @@ public:
     {
       return static_cast<callbacks_element<ScalarType>&>(callbacks_).callback;
     }
+#if !defined(__clang__)
     template <typename ScalarType>
     friend typename scalar_property_definition_callback_type<ScalarType>::type& at(scalar_property_definition_callbacks_type& scalar_property_definition_callbacks)
     {
@@ -103,6 +129,7 @@ public:
     {
       return scalar_property_definition_callbacks.get<ScalarType>();
     }
+#endif
   };
 
   template <typename SizeType, typename ScalarType>
@@ -183,6 +210,7 @@ public:
     {
       return static_cast<const callbacks_element<boost::mpl::pair<SizeType, ScalarType> >&>(callbacks_).callback;
     }
+#if !defined(__clang__)
     template <typename SizeType, typename ScalarType>
     friend typename list_property_definition_callback_type<SizeType, ScalarType>::type& at(list_property_definition_callbacks_type& list_property_definition_callbacks)
     {
@@ -193,6 +221,7 @@ public:
     {
       return list_property_definition_callbacks.get<SizeType, ScalarType>();
     }
+#endif
   };
 
   void info_callback(const info_callback_type& info_callback);
@@ -374,7 +403,10 @@ inline void ply::ply_parser::parse_list_property_definition(const std::string& p
 {
   typedef SizeType size_type;
   typedef ScalarType scalar_type;
-  typename list_property_definition_callback_type<size_type, scalar_type>::type& list_property_definition_callback = list_property_definition_callbacks_.get<size_type, scalar_type>();
+  #if !defined(__INTEL_COMPILER)
+  typename
+  #endif
+  list_property_definition_callback_type<size_type, scalar_type>::type& list_property_definition_callback = list_property_definition_callbacks_.get<size_type, scalar_type>();
   typedef typename list_property_begin_callback_type<size_type, scalar_type>::type list_property_begin_callback_type;
   typedef typename list_property_element_callback_type<size_type, scalar_type>::type list_property_element_callback_type;
   typedef typename list_property_end_callback_type<size_type, scalar_type>::type list_property_end_callback_type;
@@ -516,5 +548,40 @@ inline bool ply::ply_parser::parse_list_property(format_type format, std::istrea
     return true;
   }
 }
+
+#if defined(__clang__)
+// Horrible workaround for ADT failure as of Clang 2.8
+namespace ply
+{
+
+template <typename ScalarType>
+typename ply_parser::scalar_property_definition_callback_type<ScalarType>::type& at
+(ply_parser::scalar_property_definition_callbacks_type& scalar_property_definition_callbacks)
+{
+return scalar_property_definition_callbacks.get<ScalarType>();
+}
+template <typename ScalarType>
+const typename ply_parser::scalar_property_definition_callback_type<ScalarType>::type& at
+(const ply_parser::scalar_property_definition_callbacks_type& scalar_property_definition_callbacks)
+{
+return scalar_property_definition_callbacks.get<ScalarType>();
+}
+
+
+template <typename SizeType, typename ScalarType>
+typename ply_parser::list_property_definition_callback_type<SizeType, ScalarType>::type& at
+(ply_parser::list_property_definition_callbacks_type& list_property_definition_callbacks)
+{
+return list_property_definition_callbacks.get<SizeType, ScalarType>();
+}
+template <typename SizeType, typename ScalarType>
+const typename ply_parser::list_property_definition_callback_type<SizeType, ScalarType>::type& at
+(const ply_parser::list_property_definition_callbacks_type& list_property_definition_callbacks)
+{
+return list_property_definition_callbacks.get<SizeType, ScalarType>();
+}
+
+} // namespace ply
+#endif
 
 #endif // PLY_PLY_PARSER_HPP_INCLUDED

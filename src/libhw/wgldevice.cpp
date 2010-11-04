@@ -289,7 +289,7 @@ void WGLDevice::init(Device *other) {
 
 	if (!m_hwnd)
 		Log(EError, "Unable to create the window");
-	SetWindowLong(m_hwnd, 0, (LONG) this);
+	SetWindowLongPtr(m_hwnd, 0, (LONG_PTR) this);
 	ShowWindow(m_hwnd, SW_HIDE);
 
 	/* Switch to fullscreen */

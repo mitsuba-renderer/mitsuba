@@ -19,6 +19,8 @@
 #if !defined(__REFERENCE_H)
 #define __REFERENCE_H
 
+#include "util.h"
+
 MTS_NAMESPACE_BEGIN
 
 /**

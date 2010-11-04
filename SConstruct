@@ -22,6 +22,7 @@ vars.Add('CXXFLAGS',      'C++ flags')
 vars.Add('CCFLAGS',       'C compiler flags')
 vars.Add('STRIP',         'Program for stripping away unused symbols')
 vars.Add('SHCXXFLAGS',    'C++ flags (for shared libraries)')
+vars.Add('LINK',          'Linker')
 vars.Add('LINKFLAGS',     'Linker flags')
 vars.Add('SHLINKFLAGS',   'Linker flags (dynamic libraries)')
 vars.Add('BASEINCLUDE',   'Base include path')
@@ -71,11 +72,11 @@ env.Append(CPPFLAGS=[])
 env.Append(LIBPATH=[])
 env.Append(LIBS=env['BASELIB'])
 if env.has_key('BOOSTINCLUDE'):
-	env.Append(CPPPATH=env['BOOSTINCLUDE'])
+	env.Prepend(CPPPATH=env['BOOSTINCLUDE'])
 if env.has_key('BOOSTLIBDIR'):
-	env.Append(LIBPATH=env['BOOSTLIBDIR'])
+	env.Prepend(LIBPATH=env['BOOSTLIBDIR'])
 if env.has_key('BOOSTLIB'):
-	env.Append(LIBS=env['BOOSTLIB'])
+	env.Prepend(LIBS=env['BOOSTLIB'])
 if env.has_key('BASELIBDIR'):
 	env.Append(LIBPATH=env['BASELIBDIR'])
 
@@ -117,31 +118,31 @@ cppFlagsPrevious = SCons.Util.semi_deepcopy(env['CPPFLAGS'])
 cxxFlagsPrevious = SCons.Util.semi_deepcopy(env['CXXFLAGS'])
 
 if env.has_key('PNGINCLUDE'):
-	env.Append(CPPPATH=env['PNGINCLUDE'])
+	env.Prepend(CPPPATH=env['PNGINCLUDE'])
 if env.has_key('PNGLIBDIR'):
-	env.Append(LIBPATH=env['PNGLIBDIR'])
+	env.Prepend(LIBPATH=env['PNGLIBDIR'])
 if env.has_key('JPEGINCLUDE'):
-	env.Append(CPPPATH=env['JPEGINCLUDE'])
+	env.Prepend(CPPPATH=env['JPEGINCLUDE'])
 if env.has_key('JPEGLIBDIR'):
-	env.Append(LIBPATH=env['JPEGLIBDIR'])
+	env.Prepend(LIBPATH=env['JPEGLIBDIR'])
 if env.has_key('OEXRFLAGS'):
-	env.Append(CPPFLAGS=env['OEXRFLAGS'])
+	env.Prepend(CPPFLAGS=env['OEXRFLAGS'])
 if env.has_key('OEXRINCLUDE'):
-	env.Append(CPPPATH=env['OEXRINCLUDE'])
+	env.Prepend(CPPPATH=env['OEXRINCLUDE'])
 if env.has_key('OEXRLIBDIR'):
-	env.Append(LIBPATH=env['OEXRLIBDIR'])
+	env.Prepend(LIBPATH=env['OEXRLIBDIR'])
 if env.has_key('XERCESINCLUDE'):
-	env.Append(CPPPATH=env['XERCESINCLUDE'])
+	env.Prepend(CPPPATH=env['XERCESINCLUDE'])
 if env.has_key('XERCESLIBDIR'):
-	env.Append(LIBPATH=env['XERCESLIBDIR'])
+	env.Prepend(LIBPATH=env['XERCESLIBDIR'])
 if env.has_key('GLINCLUDE'):
-	env.Append(CPPPATH=env['GLINCLUDE'])
+	env.Prepend(CPPPATH=env['GLINCLUDE'])
 if env.has_key('GLFLAGS'):
-	env.Append(CPPFLAGS=env['GLFLAGS'])
+	env.Prepend(CPPFLAGS=env['GLFLAGS'])
 if env.has_key('COLLADAINCLUDE'):
-	env.Append(CPPPATH=env['COLLADAINCLUDE'])
+	env.Prepend(CPPPATH=env['COLLADAINCLUDE'])
 if env.has_key('COLLADALIBDIR'):
-	env.Append(LIBPATH=env['COLLADALIBDIR'])
+	env.Prepend(LIBPATH=env['COLLADALIBDIR'])
 
 if not conf.CheckCXX():
 	print 'Could not compile a simple C++ fragment, verify that ' + env['CXX'] + ' is installed!'
@@ -245,27 +246,27 @@ except:
 # Core library
 coreEnv = env.Clone()
 if coreEnv.has_key('OEXRLIBDIR'):
-	coreEnv.Append(LIBPATH=env['OEXRLIBDIR'])
+	coreEnv.Prepend(LIBPATH=env['OEXRLIBDIR'])
 if coreEnv.has_key('OEXRINCLUDE'):
-	coreEnv.Append(CPPPATH=env['OEXRINCLUDE'])
+	coreEnv.Prepend(CPPPATH=env['OEXRINCLUDE'])
 if coreEnv.has_key('OEXRFLAGS'):
-	coreEnv.Append(CPPFLAGS=env['OEXRFLAGS'])
+	coreEnv.Prepend(CPPFLAGS=env['OEXRFLAGS'])
 if coreEnv.has_key('OEXRLIB'):
-	coreEnv.Append(LIBS=env['OEXRLIB'])
+	coreEnv.Prepend(LIBS=env['OEXRLIB'])
 if coreEnv.has_key('PNGLIBDIR'):
-	coreEnv.Append(LIBPATH=env['PNGLIBDIR'])
+	coreEnv.Prepend(LIBPATH=env['PNGLIBDIR'])
 if coreEnv.has_key('PNGINCLUDE'):
-	coreEnv.Append(CPPPATH=env['PNGINCLUDE'])
+	coreEnv.Prepend(CPPPATH=env['PNGINCLUDE'])
 if coreEnv.has_key('PNGLIB'):
-	coreEnv.Append(LIBS=env['PNGLIB'])
+	coreEnv.Prepend(LIBS=env['PNGLIB'])
 if coreEnv.has_key('JPEGLIBDIR'):
-	coreEnv.Append(LIBPATH=env['JPEGLIBDIR'])
+	coreEnv.Prepend(LIBPATH=env['JPEGLIBDIR'])
 if coreEnv.has_key('JPEGINCLUDE'):
-	coreEnv.Append(CPPPATH=env['JPEGINCLUDE'])
+	coreEnv.Prepend(CPPPATH=env['JPEGINCLUDE'])
 if coreEnv.has_key('JPEGLIB'):
-	coreEnv.Append(LIBS=env['JPEGLIB'])
+	coreEnv.Prepend(LIBS=env['JPEGLIB'])
 
-coreEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_CORE']])
+coreEnv.Prepend(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_CORE']])
 libcore_objects = [
 	'src/libcore/class.cpp', 'src/libcore/object.cpp', 
 	'src/libcore/statistics.cpp', 'src/libcore/thread.cpp',
@@ -308,11 +309,11 @@ env.Append(LIBPATH=['src/libcore'])
 renderEnv = env.Clone()
 renderEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_RENDER']] )
 if renderEnv.has_key('XERCESINCLUDE'):
-	renderEnv.Append(CPPPATH=renderEnv['XERCESINCLUDE'])
+	renderEnv.Prepend(CPPPATH=renderEnv['XERCESINCLUDE'])
 if renderEnv.has_key('XERCESLIBDIR'):
-	renderEnv.Append(LIBPATH=renderEnv['XERCESLIBDIR'])
+	renderEnv.Prepend(LIBPATH=renderEnv['XERCESLIBDIR'])
 if renderEnv.has_key('XERCESLIB'):
-	renderEnv.Append(LIBS=renderEnv['XERCESLIB'])
+	renderEnv.Prepend(LIBS=renderEnv['XERCESLIB'])
 librender = renderEnv.SharedLibrary('src/librender/mitsuba-render', [
 	'src/librender/bsdf.cpp', 'src/librender/camera.cpp',
 	'src/librender/film.cpp', 'src/librender/integrator.cpp',
@@ -362,13 +363,13 @@ elif sys.platform == 'linux2':
 glEnv = env.Clone()
 glEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_HW']] )
 if glEnv.has_key('GLLIB'):
-	glEnv.Append(LIBS=glEnv['GLLIB'])
+	glEnv.Prepend(LIBS=glEnv['GLLIB'])
 if glEnv.has_key('GLLIBDIR'):
-	glEnv.Append(LIBPATH=glEnv['GLLIBDIR'])
+	glEnv.Prepend(LIBPATH=glEnv['GLLIBDIR'])
 if glEnv.has_key('GLFLAGS'):
-	glEnv.Append(CPPFLAGS=glEnv['GLFLAGS'])
+	glEnv.Prepend(CPPFLAGS=glEnv['GLFLAGS'])
 if glEnv.has_key('GLINCLUDE'):
-	glEnv.Append(CPPPATH=glEnv['GLINCLUDE'])
+	glEnv.Prepend(CPPPATH=glEnv['GLINCLUDE'])
 
 if sys.platform == 'darwin':
 	glEnv_osx = glEnv.Clone();
@@ -391,19 +392,19 @@ env['SHLIBPREFIX']=''
 # Environment with Xerces + wxWidgets
 mainEnv = env.Clone()
 if mainEnv.has_key('XERCESINCLUDE'):
-	mainEnv.Append(CPPPATH=mainEnv['XERCESINCLUDE'])
+	mainEnv.Prepend(CPPPATH=mainEnv['XERCESINCLUDE'])
 if mainEnv.has_key('XERCESLIBDIR'):
-	mainEnv.Append(LIBPATH=mainEnv['XERCESLIBDIR'])
+	mainEnv.Prepend(LIBPATH=mainEnv['XERCESLIBDIR'])
 if mainEnv.has_key('XERCESLIB'):
-	mainEnv.Append(LIBS=mainEnv['XERCESLIB'])
+	mainEnv.Prepend(LIBS=mainEnv['XERCESLIB'])
 if mainEnv.has_key('GLLIB'):
-	mainEnv.Append(LIBS=mainEnv['GLLIB'])
+	mainEnv.Prepend(LIBS=mainEnv['GLLIB'])
 if mainEnv.has_key('GLLIBDIR'):
-	mainEnv.Append(LIBPATH=mainEnv['GLLIBDIR'])
+	mainEnv.Prepend(LIBPATH=mainEnv['GLLIBDIR'])
 if mainEnv.has_key('GLFLAGS'):
-	mainEnv.Append(CXXFLAGS=mainEnv['GLFLAGS'])
+	mainEnv.Prepend(CXXFLAGS=mainEnv['GLFLAGS'])
 if mainEnv.has_key('GLINCLUDE'):
-	mainEnv.Append(CPPPATH=mainEnv['GLINCLUDE'])
+	mainEnv.Prepend(CPPPATH=mainEnv['GLINCLUDE'])
 
 resources = []
 darwinStub = []
@@ -436,11 +437,11 @@ if hasCollada:
 	colladaEnv.Append(LIBS=['mitsuba-hw'])
 	colladaEnv.Append(LIBPATH=['src/libhw'])
 	if env.has_key('COLLADAINCLUDE'):
-		colladaEnv.Append(CPPPATH=env['COLLADAINCLUDE'])
+		colladaEnv.Prepend(CPPPATH=env['COLLADAINCLUDE'])
 	if env.has_key('COLLADALIBDIR'):
-		colladaEnv.Append(LIBPATH=env['COLLADALIBDIR'])
+		colladaEnv.Prepend(LIBPATH=env['COLLADALIBDIR'])
 	if env.has_key('COLLADALIB'):
-		colladaEnv.Append(LIBS=env['COLLADALIB'])
+		colladaEnv.Prepend(LIBS=env['COLLADALIB'])
 	converter_objects = [
 		colladaEnv.StaticObject('src/converter/collada.cpp'),
 		colladaEnv.StaticObject('src/converter/obj.cpp'),
@@ -473,9 +474,9 @@ if hasQt:
 	if hasCollada:
 		qtgui_files += converter_objects
 		if env.has_key('COLLADALIBDIR'):
-			qtEnv.Append(LIBPATH=env['COLLADALIBDIR'])
+			qtEnv.Prepend(LIBPATH=env['COLLADALIBDIR'])
 		if env.has_key('COLLADALIB'):
-			qtEnv.Append(LIBS=env['COLLADALIB'])
+			qtEnv.Prepend(LIBS=env['COLLADALIB'])
 
 	if sys.platform == 'darwin':
 		qtEnv_osx = qtEnv.Clone();
