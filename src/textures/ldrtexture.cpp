@@ -33,9 +33,9 @@ MTS_NAMESPACE_BEGIN
 /**
  * Gamma-corrected bitmap texture using the JPG, PNG, TGA or BMP
  */
-class LDRTexture : public Texture {
+class LDRTexture : public Texture2D {
 public:
-	LDRTexture(const Properties &props) : Texture(props) {
+	LDRTexture(const Properties &props) : Texture2D(props) {
 		m_filename = Thread::getThread()->getFileResolver()->resolve(
 			props.getString("filename"));
 		m_gamma = props.getFloat("gamma", -1); /* -1 means sRGB */
@@ -60,7 +60,7 @@ public:
 	}
 
 	LDRTexture(Stream *stream, InstanceManager *manager) 
-	 : Texture(stream, manager) {
+	 : Texture2D(stream, manager) {
 		m_filename = stream->readString();
 		Log(EInfo, "Unserializing texture \"%s\"", m_filename.leaf().c_str());
 		m_gamma = stream->readFloat();
@@ -161,7 +161,7 @@ public:
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
-		Texture::serialize(stream, manager);
+		Texture2D::serialize(stream, manager);
 		stream->writeString(m_filename.file_string());
 		stream->writeFloat(m_gamma);
 		stream->writeInt(m_format);
@@ -176,8 +176,13 @@ public:
 		}
 	}
 
-	Spectrum getValue(const Intersection &its) const {
-		return m_mipmap->getValue(its);
+	Spectrum getValue(const Point2 &uv) const {
+		return m_mipmap->triangle(0, uv.x, uv.y);
+	}
+
+	Spectrum getValue(const Point2 &uv, Float dudx, 
+			Float dudy, Float dvdx, Float dvdy) const {
+		return m_mipmap->getValue(uv.x, uv.y, dudx, dudy, dvdx, dvdy);
 	}
 
 	Spectrum getAverage() const {
@@ -214,8 +219,9 @@ protected:
 
 class LDRTextureShader : public Shader {
 public:
-	LDRTextureShader(Renderer *renderer, std::string filename, ref<Bitmap> bitmap) 
-		: Shader(renderer, ETextureShader) {
+	LDRTextureShader(Renderer *renderer, std::string filename, ref<Bitmap> bitmap,
+			const Point2 &uvOffset, const Vector2 &uvScale) 
+		: Shader(renderer, ETextureShader), m_uvOffset(uvOffset), m_uvScale(uvScale) {
 		m_gpuTexture = renderer->createGPUTexture(filename, bitmap);
 		m_gpuTexture->setWrapType(GPUTexture::ERepeat);
 		m_gpuTexture->setMaxAnisotropy(8);
@@ -232,20 +238,28 @@ public:
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
 		oss << "uniform sampler2D " << evalName << "_texture;" << endl
+			<< "uniform vec2 " << evalName << "_uvOffset;" << endl
+			<< "uniform vec2 " << evalName << "_uvScale;" << endl
 			<< endl
 			<< "vec3 " << evalName << "(vec2 uv) {" << endl
-			<< "    return texture2D(" << evalName << "_texture, uv).rgb;" << endl
+			<< "    return texture2D(" << evalName << "_texture, vec2(" << endl
+			<< "          uv.x * " << evalName << "_uvScale.x + " << evalName << "_uvOffset.x," << endl 
+			<< "          uv.y * " << evalName << "_uvScale.y + " << evalName << "_uvOffset.y)).rgb;" << endl 
 			<< "}" << endl;
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
 		parameterIDs.push_back(program->getParameterID(evalName + "_texture", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_uvOffset", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
 		int &textureUnitOffset) const {
 		m_gpuTexture->bind(textureUnitOffset++);
 		program->setParameter(parameterIDs[0], m_gpuTexture.get());
+		program->setParameter(parameterIDs[1], m_uvOffset);
+		program->setParameter(parameterIDs[2], m_uvScale);
 	}
 
 	void unbind() const {
@@ -255,13 +269,16 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	ref<GPUTexture> m_gpuTexture;
+	Point2 m_uvOffset;
+	Vector2 m_uvScale;
 };
 
 Shader *LDRTexture::createShader(Renderer *renderer) const {
-	return new LDRTextureShader(renderer, m_filename.leaf(), m_mipmap->getLDRBitmap());
+	return new LDRTextureShader(renderer, m_filename.leaf(), 
+			m_mipmap->getLDRBitmap(), m_uvOffset, m_uvScale);
 }
 
-MTS_IMPLEMENT_CLASS_S(LDRTexture, false, Texture)
+MTS_IMPLEMENT_CLASS_S(LDRTexture, false, Texture2D)
 MTS_IMPLEMENT_CLASS(LDRTextureShader, false, Shader)
 MTS_EXPORT_PLUGIN(LDRTexture, "LDR texture (JPG/PNG/TGA/BMP)");
 MTS_NAMESPACE_END

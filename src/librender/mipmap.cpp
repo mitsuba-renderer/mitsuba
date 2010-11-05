@@ -216,22 +216,20 @@ Spectrum MIPMap::triangle(int level, Float x, Float y) const {
 static StatsCounter mipmapLookups("Texture", "Mip-map texture lookups");
 static StatsCounter ewaLookups("Texture", "EWA texture lookups");
 
-Spectrum MIPMap::getValue(const Intersection &its) const {
-	if (!its.hasUVPartials)
-		return triangle(0, its.uv.x, its.uv.y);
-
+Spectrum MIPMap::getValue(Float u, Float v, 
+		Float dudx, Float dudy, Float dvdx, Float dvdy) const {
 	if (m_isotropic) {
 		++mipmapLookups;
 		/* Conservatively estimate a square lookup region */
 		Float width = 2.0f * std::max(
-			std::max(std::abs(its.dudx), std::abs(its.dudy)),
-			std::max(std::abs(its.dvdx), std::abs(its.dvdy)));
+			std::max(std::abs(dudx), std::abs(dudy)),
+			std::max(std::abs(dvdx), std::abs(dvdy)));
 		Float mipmapLevel = m_levels - 1 + 
 			log2(std::max(width, (Float) 1e-8f));
 
 		if (mipmapLevel < 0) {
 			/* The lookup is smaller than one pixel */
-			return triangle(0, its.uv.x, its.uv.y);
+			return triangle(0, u, v);
 		} else if (mipmapLevel >= m_levels - 1) {
 			/* The lookup is larger than the whole texture */
 			return getTexel(m_levels - 1, 0, 0);
@@ -239,12 +237,10 @@ Spectrum MIPMap::getValue(const Intersection &its) const {
 			/* Tri-linear interpolation */
 			int level = (int) mipmapLevel;
 			Float delta = mipmapLevel - level;
-			return triangle(level, its.uv.x, its.uv.y) * (1.0f - delta)
-				+ triangle(level, its.uv.x, its.uv.y) * delta;
+			return triangle(level, u, v) * (1.0f - delta)
+				+ triangle(level, u, v) * delta;
 		}
 	} else {
-		Float dudx = its.dudx, dudy = its.dudy, dvdx = its.dvdx, dvdy = its.dvdy;
-
 		if (dudx*dudx + dudy*dudy < dvdx*dvdx + dvdy*dvdy) {
 			std::swap(dudx, dvdx);
 			std::swap(dudy, dvdy);
@@ -260,7 +256,7 @@ Spectrum MIPMap::getValue(const Intersection &its) const {
 		}
 
 		if (minorLength == 0)
-			return triangle(0, its.uv.x, its.uv.y);
+			return triangle(0, u, v);
 	
 		// The min() below avoids overflow in the int conversion when lod=inf
 		Float lod = 
@@ -269,8 +265,8 @@ Spectrum MIPMap::getValue(const Intersection &its) const {
 		int ilod = (int) std::floor(lod);
 		Float d = lod - ilod;
 
-		return EWA(its.uv.x, its.uv.y, dudx, dudy, dvdx, dvdy, ilod)   * (1-d) +
-			   EWA(its.uv.x, its.uv.y, dudx, dudy, dvdx, dvdy, ilod+1) * d;
+		return EWA(u, v, dudx, dudy, dvdx, dvdy, ilod)   * (1-d) +
+			   EWA(u, v, dudx, dudy, dvdx, dvdy, ilod+1) * d;
 	}
 }
 	

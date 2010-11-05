@@ -30,9 +30,9 @@ MTS_NAMESPACE_BEGIN
  * Simple linear (i.e. not gamma corrected) bitmap texture
  * using the EXR file format
  */
-class EXRTexture : public Texture {
+class EXRTexture : public Texture2D {
 public:
-	EXRTexture(const Properties &props) : Texture(props) {
+	EXRTexture(const Properties &props) : Texture2D(props) {
 		m_filename = Thread::getThread()->getFileResolver()->resolve(
 			props.getString("filename"));
 		Log(EInfo, "Loading texture \"%s\"", m_filename.leaf().c_str());
@@ -45,7 +45,7 @@ public:
 	}
 
 	EXRTexture(Stream *stream, InstanceManager *manager) 
-	 : Texture(stream, manager) {
+	 : Texture2D(stream, manager) {
 		m_filename = stream->readString();
 		Log(EInfo, "Unserializing texture \"%s\"", m_filename.leaf().c_str());
 		int size = stream->readInt();
@@ -59,15 +59,20 @@ public:
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
-		Texture::serialize(stream, manager);
+		Texture2D::serialize(stream, manager);
 		stream->writeString(m_filename.file_string());
 		ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
 		stream->writeInt(is->getSize());
 		is->copyTo(stream);
 	}
 
-	Spectrum getValue(const Intersection &its) const {
-		return m_mipmap->getValue(its);
+	Spectrum getValue(const Point2 &uv) const {
+		return m_mipmap->triangle(0, uv.x, uv.y);
+	}
+
+	Spectrum getValue(const Point2 &uv, Float dudx, 
+			Float dudy, Float dvdx, Float dvdy) const {
+		return m_mipmap->getValue(uv.x, uv.y, dudx, dudy, dvdx, dvdy);
 	}
 
 	Spectrum getMaximum() const {
@@ -95,6 +100,6 @@ protected:
 	Spectrum m_average, m_maximum;
 };
 
-MTS_IMPLEMENT_CLASS_S(EXRTexture, false, Texture)
+MTS_IMPLEMENT_CLASS_S(EXRTexture, false, Texture2D)
 MTS_EXPORT_PLUGIN(EXRTexture, "HDR texture (EXR)");
 MTS_NAMESPACE_END

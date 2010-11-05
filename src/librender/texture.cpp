@@ -31,9 +31,50 @@ Texture::Texture(Stream *stream, InstanceManager *manager)
 
 Texture::~Texture() {
 }
-	
+
 void Texture::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
+}
+
+Texture2D::Texture2D(const Properties &props) : Texture(props) {
+	if (props.getString("coordinates", "uv") == "uv") {
+		m_uvOffset = Point2(
+			props.getFloat("offsetU", 0.0f),
+			props.getFloat("offsetV", 0.0f)
+		);
+		m_uvScale = Vector2(
+			props.getFloat("scaleU", 1.0f),
+			props.getFloat("scaleV", 1.0f)
+		);
+	} else {
+		Log(EError, "Only UV coordinates are supported at the moment!");
+	}
+}
+
+Texture2D::Texture2D(Stream *stream, InstanceManager *manager) 
+ : Texture(stream, manager) {
+	m_uvOffset = Point2(stream);
+	m_uvScale = Vector2(stream);
+}
+
+Texture2D::~Texture2D() {
+}
+
+void Texture2D::serialize(Stream *stream, InstanceManager *manager) const {
+	Texture::serialize(stream, manager);
+	m_uvOffset.serialize(stream);
+	m_uvScale.serialize(stream);
+}
+
+Spectrum Texture2D::getValue(const Intersection &its) const {
+	Point2 uv = Point2(its.uv.x * m_uvScale.x, its.uv.y * m_uvScale.y) + m_uvOffset;
+	if (its.hasUVPartials) {
+		return getValue(uv, 
+			its.dudx * m_uvScale.x, its.dudy * m_uvScale.x,
+			its.dvdx * m_uvScale.y, its.dvdy * m_uvScale.y);
+	} else {
+		return getValue(uv);
+	}
 }
 
 ConstantTexture::ConstantTexture(Stream *stream, InstanceManager *manager) 
@@ -81,6 +122,7 @@ Shader *ConstantTexture::createShader(Renderer *renderer) const {
 }
 
 MTS_IMPLEMENT_CLASS(Texture, true, ConfigurableObject)
+MTS_IMPLEMENT_CLASS(Texture2D, true, Texture)
 MTS_IMPLEMENT_CLASS_S(ConstantTexture, false, Texture)
 MTS_IMPLEMENT_CLASS(ConstantTextureShader, false, Shader)
 MTS_NAMESPACE_END

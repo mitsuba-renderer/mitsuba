@@ -26,31 +26,31 @@ MTS_NAMESPACE_BEGIN
 /**
  * Grid texture
  */
-class GridTexture : public Texture {
+class GridTexture : public Texture2D {
 public:
-	GridTexture(const Properties &props) : Texture(props) {
+	GridTexture(const Properties &props) : Texture2D(props) {
 		m_brightReflectance = props.getSpectrum("brightReflectance", Spectrum(.4f));
 		m_darkReflectance = props.getSpectrum("darkReflectance", Spectrum(.2f));
 		m_width = props.getFloat("width", .01f);
 	}
 
 	GridTexture(Stream *stream, InstanceManager *manager) 
-	 : Texture(stream, manager) {
+	 : Texture2D(stream, manager) {
 		m_brightReflectance = Spectrum(stream);
 		m_darkReflectance = Spectrum(stream);
 		m_width = stream->readFloat();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
-		Texture::serialize(stream, manager);
+		Texture2D::serialize(stream, manager);
 		m_brightReflectance.serialize(stream);
 		m_darkReflectance.serialize(stream);
 		stream->writeFloat(m_width);
 	}
 
-	Spectrum getValue(const Intersection &its) const {
-		Float x = its.uv.x - (int) its.uv.x;
-		Float y = its.uv.y - (int) its.uv.y;
+	inline Spectrum getValue(const Point2 &uv) const {
+		Float x = uv.x - (int) uv.x;
+		Float y = uv.y - (int) uv.y;
 
 		if (x > .5)
 			x-=1;
@@ -61,6 +61,11 @@ public:
 			return m_darkReflectance;
 		else
 			return m_brightReflectance;
+	}
+	
+	Spectrum getValue(const Point2 &uv, Float dudx, 
+			Float dudy, Float dvdx, Float dvdy) const {
+		return GridTexture::getValue(uv);
 	}
 
 	bool usesRayDifferentials() const {
@@ -93,8 +98,10 @@ protected:
 class GridTextureShader : public Shader {
 public:
 	GridTextureShader(Renderer *renderer, const Spectrum &brightReflectance, 
-		const Spectrum &darkReflectance, Float width) : Shader(renderer, ETextureShader),
-		m_brightReflectance(brightReflectance), m_darkReflectance(darkReflectance), m_width(width) {
+		const Spectrum &darkReflectance, Float width, const Point2 &uvOffset,
+		const Vector2 &uvScale) : Shader(renderer, ETextureShader),
+		m_brightReflectance(brightReflectance), m_darkReflectance(darkReflectance), 
+		m_width(width), m_uvOffset(uvOffset), m_uvScale(uvScale) {
 	}
 
 	void generateCode(std::ostringstream &oss,
@@ -103,8 +110,13 @@ public:
 		oss << "uniform vec3 " << evalName << "_brightReflectance;" << endl
 			<< "uniform vec3 " << evalName << "_darkReflectance;" << endl
 			<< "uniform float " << evalName << "_width;" << endl
+			<< "uniform vec2 " << evalName << "_uvOffset;" << endl
+			<< "uniform vec2 " << evalName << "_uvScale;" << endl
 			<< endl
 			<< "vec3 " << evalName << "(vec2 uv) {" << endl
+			<< "    uv = vec2(" << endl
+			<< "        uv.x * " << evalName << "_uvScale.x + " << evalName << "_uvOffset.x," << endl
+			<< "        uv.y * " << evalName << "_uvScale.y + " << evalName << "_uvOffset.y);" << endl
 			<< "    float x = uv.x - floor(uv.x);" << endl
 			<< "    float y = uv.y - floor(uv.y);" << endl
 			<< "    if (x > .5) x -= 1.0;" << endl
@@ -120,6 +132,8 @@ public:
 		parameterIDs.push_back(program->getParameterID(evalName + "_brightReflectance", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_darkReflectance", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_width", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_uvOffset", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
@@ -127,6 +141,8 @@ public:
 		program->setParameter(parameterIDs[0], m_brightReflectance);
 		program->setParameter(parameterIDs[1], m_darkReflectance);
 		program->setParameter(parameterIDs[2], m_width);
+		program->setParameter(parameterIDs[3], m_uvOffset);
+		program->setParameter(parameterIDs[4], m_uvScale);
 	}
 
 	MTS_DECLARE_CLASS()
@@ -134,13 +150,16 @@ private:
 	Spectrum m_brightReflectance;
 	Spectrum m_darkReflectance;
 	Float m_width;
+	Point2 m_uvOffset;
+	Vector2 m_uvScale;
 };
 
 Shader *GridTexture::createShader(Renderer *renderer) const {
-	return new GridTextureShader(renderer, m_brightReflectance, m_darkReflectance, m_width);
+	return new GridTextureShader(renderer, m_brightReflectance, m_darkReflectance, 
+			m_width, m_uvOffset, m_uvScale);
 }
 	
 MTS_IMPLEMENT_CLASS(GridTextureShader, false, Shader)
-MTS_IMPLEMENT_CLASS_S(GridTexture, false, Texture)
+MTS_IMPLEMENT_CLASS_S(GridTexture, false, Texture2D)
 MTS_EXPORT_PLUGIN(GridTexture, "Grid texture");
 MTS_NAMESPACE_END

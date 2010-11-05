@@ -20,7 +20,6 @@
 #define __MIPMAP_H
 
 #include <mitsuba/core/bitmap.h>
-#include <mitsuba/render/shape.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -47,10 +46,9 @@ public:
 	/// Construct a mip map from a HDR bitmap
 	static ref<MIPMap> fromBitmap(Bitmap *bitmap);
 
-	/**
-	 * Do a mip-map lookup at the appropriate level
-	 */
-	Spectrum getValue(const Intersection &its) const;
+	/// Do a mip-map lookup at the appropriate level
+	Spectrum getValue(Float u, Float v,
+		Float dudx, Float dudy, Float dvdx, Float dvdy) const;
 
 	/// Return the number of mip-map levels
 	inline int getLevels() const { return m_levels; }
