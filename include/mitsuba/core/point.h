@@ -28,6 +28,9 @@ MTS_NAMESPACE_BEGIN
  * \brief Parameterizable two-dimensional point data structure
  */
 template <typename T> struct TPoint2 {
+	typedef T           ValueType;
+	typedef TVector2<T> VectorType;
+
 	T x, y;
 
 	/** \brief Construct a new point without initializing it.
@@ -171,6 +174,9 @@ template <typename T> struct TPoint2 {
 		stream->writeElement<T>(y);
 	}
 
+	/// Return the number of dimensions
+	inline static int dim() { return 2; }
+
 	/// Return a readable string representation of this point
 	std::string toString() const {
 		std::ostringstream oss;
@@ -214,6 +220,9 @@ template <> inline TPoint2<int> &TPoint2<int>::operator/=(int s) {
  * \brief Parameterizable three-dimensional point data structure
  */
 template <typename T> struct TPoint3 {
+	typedef T           ValueType;
+	typedef TVector3<T> VectorType;
+
 	T x, y, z;
 
 	/** \brief Construct a new point without initializing it.
@@ -359,6 +368,9 @@ template <typename T> struct TPoint3 {
 		stream->writeElement<T>(z);
 	}
 
+	/// Return the number of dimensions
+	inline static int dim() { return 3; }
+
 	/// Return a readable string representation of this point
 	std::string toString() const {
 		std::ostringstream oss;
@@ -403,6 +415,9 @@ template <> inline TPoint3<int> &TPoint3<int>::operator/=(int s) {
  * \brief Parameterizable four-dimensional point data structure
  */
 template <typename T> struct TPoint4 {
+	typedef T           ValueType;
+	typedef TVector4<T> VectorType;
+
 	T x, y, z, w;
 
 	/** \brief Construct a new point without initializing it.
@@ -549,6 +564,9 @@ template <typename T> struct TPoint4 {
 		stream->writeElement<T>(z);
 		stream->writeElement<T>(w);
 	}
+
+	/// Return the number of dimensions
+	inline static int dim() { return 4; }
 
 	/// Return a readable string representation of this point
 	std::string toString() const {

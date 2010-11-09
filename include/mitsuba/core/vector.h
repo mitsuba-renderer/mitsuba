@@ -28,7 +28,9 @@ MTS_NAMESPACE_BEGIN
  * \brief Parameterizable two-dimensional vector data structure
  */
 template <typename T> struct TVector2 {
-public:
+	typedef T          ValueType;
+	typedef TPoint2<T> PointType;
+
 	T x, y;
 
 	/** \brief Construct a new vector without initializing it.
@@ -166,6 +168,9 @@ public:
 		stream->writeElement<T>(y);
 	}
 
+	/// Return the number of dimensions
+	inline static int dim() { return 2; }
+
 	/// Return a readable string representation of this vector
 	std::string toString() const {
 		std::ostringstream oss;
@@ -214,7 +219,9 @@ template <> inline TVector2<int> &TVector2<int>::operator/=(int s) {
  * \brief Parameterizable three-dimensional vector data structure
  */
 template <typename T> struct TVector3 {
-public:
+	typedef T          ValueType;
+	typedef TPoint3<T> PointType;
+
 	T x, y, z;
 
 	/** \brief Construct a new vector without initializing it.
@@ -354,6 +361,9 @@ public:
 		stream->writeElement<T>(z);
 	}
 
+	/// Return the number of dimensions
+	inline static int dim() { return 3; }
+
 	/// Return a readable string representation of this vector
 	std::string toString() const {
 		std::ostringstream oss;
@@ -413,7 +423,9 @@ template <> inline TVector3<int> &TVector3<int>::operator/=(int s) {
  * \brief Parameterizable four-dimensional vector data structure
  */
 template <typename T> struct TVector4 {
-public:
+	typedef T          ValueType;
+	typedef TPoint4<T> PointType;
+
 	T x, y, z, w;
 
 	/** \brief Construct a new vector without initializing it.
@@ -554,6 +566,9 @@ public:
 		stream->writeElement<T>(z);
 		stream->writeElement<T>(w);
 	}
+
+	/// Return the number of dimensions
+	inline static int dim() { return 4; }
 
 	/// Return a readable string representation of this vector
 	std::string toString() const {
