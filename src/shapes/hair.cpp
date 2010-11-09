@@ -34,8 +34,8 @@ MTS_NAMESPACE_BEGIN
  * \brief Space-efficient acceleration structure for cylindrical hair
  * segments with miter joints.
  */
-class HairKDTree : public GenericKDTree<HairKDTree> {
-	friend class GenericKDTree<HairKDTree>;
+class HairKDTree : public GenericKDTree<AABB, HairKDTree> {
+	friend class GenericKDTree<AABB, HairKDTree>;
 public:
 	HairKDTree(std::vector<Point> &vertices, 
 			std::vector<bool> &vertexStartsFiber, Float radius)
@@ -209,7 +209,6 @@ public:
 		axes[1] = B;
 		return true;
 	}
-
 
 	/**
 	 * \brief Intersect an infinite cylinder with an 
@@ -706,7 +705,7 @@ public:
 		return mesh.get();
 	}
 
-	const AbstractKDTree *getKDTree() const {
+	const AbstractKDTree<AABB> *getKDTree() const {
 		return m_kdtree.get();
 	}
 

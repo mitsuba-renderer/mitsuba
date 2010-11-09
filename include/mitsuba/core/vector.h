@@ -28,8 +28,8 @@ MTS_NAMESPACE_BEGIN
  * \brief Parameterizable two-dimensional vector data structure
  */
 template <typename T> struct TVector2 {
-	typedef T          ValueType;
-	typedef TPoint2<T> PointType;
+	typedef T          value_type;
+	typedef TPoint2<T> point_type;
 
 	T x, y;
 
@@ -219,8 +219,8 @@ template <> inline TVector2<int> &TVector2<int>::operator/=(int s) {
  * \brief Parameterizable three-dimensional vector data structure
  */
 template <typename T> struct TVector3 {
-	typedef T          ValueType;
-	typedef TPoint3<T> PointType;
+	typedef T          value_type;
+	typedef TPoint3<T> point_type;
 
 	T x, y, z;
 
@@ -423,8 +423,8 @@ template <> inline TVector3<int> &TVector3<int>::operator/=(int s) {
  * \brief Parameterizable four-dimensional vector data structure
  */
 template <typename T> struct TVector4 {
-	typedef T          ValueType;
-	typedef TPoint4<T> PointType;
+	typedef T          value_type;
+	typedef TPoint4<T> point_type;
 
 	T x, y, z, w;
 

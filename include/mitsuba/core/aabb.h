@@ -33,9 +33,9 @@ MTS_NAMESPACE_BEGIN
  * \tparam T Underlying point data type (e.g. \ref TPoint3<float>)
  */
 template <typename T> struct TAABB {
-	typedef T                      PointType;
-	typedef typename T::ValueType  ValueType;
-	typedef typename T::VectorType VectorType;
+	typedef T                       point_type;
+	typedef typename T::value_type  value_type;
+	typedef typename T::vector_type vector_type;
 
 	/** 
 	 * \brief Create a new invalid bounding box
@@ -50,19 +50,19 @@ template <typename T> struct TAABB {
 
 	/// Unserialize a bounding box from a binary data stream
 	inline TAABB(Stream *stream) {
-		min = PointType(stream);
-		max = PointType(stream);
+		min = point_type(stream);
+		max = point_type(stream);
 	}
 
 	/// Create a collapsed AABB from a single point
-	inline TAABB(const PointType &p) 
+	inline TAABB(const point_type &p) 
 		: min(p), max(p) { }
 
 	/// Create a bounding box from two positions
-	inline TAABB(const PointType &min, const PointType &max)
+	inline TAABB(const point_type &min, const point_type &max)
 		: min(min), max(max) {
 #if defined(MTS_DEBUG)
-		for (int i=0; i<PointType::dim(); ++i) 
+		for (int i=0; i<point_type::dim(); ++i) 
 			SAssert(min[i] <= max[i]);
 #endif
 	}
@@ -79,7 +79,7 @@ template <typename T> struct TAABB {
 
 	/// Clip to another bounding box
 	inline void clip(const TAABB &aabb) {
-		for (int i=0; i<PointType::dim(); ++i) {
+		for (int i=0; i<point_type::dim(); ++i) {
 			min[i] = std::max(min[i], aabb.min[i]);
 			max[i] = std::min(max[i], aabb.max[i]);
 		}
@@ -93,28 +93,28 @@ template <typename T> struct TAABB {
 	 * respectively.
 	 */
 	inline void reset() {
-		min = PointType( std::numeric_limits<ValueType>::infinity());
-		max = PointType(-std::numeric_limits<ValueType>::infinity());
+		min = point_type( std::numeric_limits<value_type>::infinity());
+		max = point_type(-std::numeric_limits<value_type>::infinity());
 	}
 
 	/// Calculate the n-dimensional volume of the bounding box
-	inline ValueType getVolume() const {
-		ValueType result = 0;
+	inline value_type getVolume() const {
+		value_type result = 0;
 		for (int i=0; i<3; ++i) {
-			ValueType tmp = max[i] - min[i];
+			value_type tmp = max[i] - min[i];
 			result += tmp*tmp;
 		}
 		return result;
 	}
 
 	/// Return the center point
-	inline PointType getCenter() const {
-		return (max + min) * (ValueType) 0.5;
+	inline point_type getCenter() const {
+		return (max + min) * (value_type) 0.5;
 	}
 
 	/// Check whether a point lies on or inside the bounding box
-	inline bool contains(const PointType &vec) const {
-		for (int i=0; i<PointType::dim(); ++i)
+	inline bool contains(const point_type &vec) const {
+		for (int i=0; i<point_type::dim(); ++i)
 			if (vec[i] < min[i] || vec[i] > max[i])
 				return false;
 		return true;
@@ -124,7 +124,7 @@ template <typename T> struct TAABB {
 	inline bool contains(const TAABB &aabb) const {
 		if (!isValid())
 			return false;
-		for (int i=0; i<PointType::dim(); ++i)
+		for (int i=0; i<point_type::dim(); ++i)
 			if (aabb.min[i] < min[i] || aabb.max[i] > max[i])
 				return false;
 		return true;
@@ -132,15 +132,15 @@ template <typename T> struct TAABB {
 
 	/// Axis-aligned bounding box overlap test
 	inline bool overlaps(const TAABB &aabb) const {
-		for (int i=0; i<PointType::dim(); ++i) 
+		for (int i=0; i<point_type::dim(); ++i) 
 			if (max[i] < aabb.min[i] || min[i] > aabb.max[i])
 				return false;
 		return true;
 	}
 
 	/// Expand the bounding box to contain another point
-	inline void expandBy(const PointType &p) {
-		for (int i=0; i<PointType::dim(); ++i) {
+	inline void expandBy(const point_type &p) {
+		for (int i=0; i<point_type::dim(); ++i) {
 			min[i] = std::min(min[i], p[i]);
 			max[i] = std::max(max[i], p[i]);
 		}
@@ -148,17 +148,17 @@ template <typename T> struct TAABB {
 
 	/// Expand the bounding box to contain another bounding box
 	inline void expandBy(const TAABB &aabb) {
-		for (int i=0; i<PointType::dim(); ++i) {
+		for (int i=0; i<point_type::dim(); ++i) {
 			min[i] = std::min(min[i], aabb.min[i]);
 			max[i] = std::max(max[i], aabb.max[i]);
 		}
 	}
 
 	/// Calculate the point-AABB distance
-	inline ValueType distanceTo(const PointType &p) const {
-		ValueType result = 0;
-		for (int i=0; i<PointType::dim(); ++i) {
-			ValueType value = 0;
+	inline value_type distanceTo(const point_type &p) const {
+		value_type result = 0;
+		for (int i=0; i<point_type::dim(); ++i) {
+			value_type value = 0;
 			if (p[i] < min[i])
 				value = min[i] - p[i];
 			if (p[i] > max[i])
@@ -170,7 +170,7 @@ template <typename T> struct TAABB {
 
 	/// Return whether this bounding box is valid
 	inline bool isValid() const {
-		for (int i=0; i<PointType::dim(); ++i) 
+		for (int i=0; i<point_type::dim(); ++i) 
 			if (max[i] < min[i])
 				return false;
 		return true;
@@ -184,7 +184,7 @@ template <typename T> struct TAABB {
 	 * is considered nonempty.
 	 */
 	inline bool isEmpty() const {
-		for (int i=0; i<PointType::dim(); ++i) {
+		for (int i=0; i<point_type::dim(); ++i) {
 			if (max[i] > min[i])
 				return false;
 		}
@@ -196,7 +196,7 @@ template <typename T> struct TAABB {
 		Vector d = max - min;
 		int largest = 0;
 
-		for (int i=1; i<PointType::dim(); ++i)
+		for (int i=1; i<point_type::dim(); ++i)
 			if (d[i] > d[largest])
 				largest = i;
 		return largest;
@@ -207,7 +207,7 @@ template <typename T> struct TAABB {
 		Vector d = max - min;
 		int shortest = 0;
 
-		for (int i=1; i<PointType::dim(); ++i)
+		for (int i=1; i<point_type::dim(); ++i)
 			if (d[i] < d[shortest])
 				shortest = i;
 		return shortest;
@@ -217,7 +217,7 @@ template <typename T> struct TAABB {
 	 * \brief Calculate the bounding box extents
 	 * \return max-min
 	 */
-	inline VectorType getExtents() const {
+	inline vector_type getExtents() const {
 		return max - min;
 	}
 
@@ -241,8 +241,8 @@ template <typename T> struct TAABB {
 		return oss.str();
 	}
 
-	PointType min; ///< Component-wise minimum 
-	PointType max; ///< Component-wise maximum 
+	point_type min; ///< Component-wise minimum 
+	point_type max; ///< Component-wise maximum 
 };
 
 
@@ -270,7 +270,7 @@ public:
 	inline AABB(const Point &p) : TAABB<Point>(p) { }
 
 	/// Create a bounding box from two positions
-	inline AABB(const PointType &min, const PointType &max) 
+	inline AABB(const point_type &min, const point_type &max) 
 		: TAABB<Point>(min, max) {
 	}
 
