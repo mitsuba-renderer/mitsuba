@@ -61,8 +61,8 @@ MTS_NAMESPACE_BEGIN
  *
  * \sa GenericKDTree
  */
-class MTS_EXPORT_RENDER KDTree : public GenericKDTree<KDTree> {
-	friend class GenericKDTree<KDTree>;
+class MTS_EXPORT_RENDER KDTree : public GenericKDTree<AABB, KDTree> {
+	friend class GenericKDTree<AABB, KDTree>;
 public:
 	/// Create an empty kd-tree
 	KDTree();

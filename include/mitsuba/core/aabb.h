@@ -23,103 +23,255 @@
 
 MTS_NAMESPACE_BEGIN
 
+
+/**
+ * \brief Generic multi-dimensional bounding box data structure
+ *
+ * Maintains a component-wise minimum and maximum position and provides
+ * various convenience functions to query or change them.
+ *
+ * \tparam T Underlying point data type (e.g. \ref TPoint3<float>)
+ */
+template <typename T> struct TAABB {
+	typedef T                       point_type;
+	typedef typename T::value_type  value_type;
+	typedef typename T::vector_type vector_type;
+
+	/** 
+	 * \brief Create a new invalid bounding box
+	 * 
+	 * Initializes the components of the minimum 
+	 * and maximum position to \f$\infty\f$ and \f$-\infty\f$,
+	 * respectively.
+	 */
+	inline TAABB() {
+		reset();
+	}
+
+	/// Unserialize a bounding box from a binary data stream
+	inline TAABB(Stream *stream) {
+		min = point_type(stream);
+		max = point_type(stream);
+	}
+
+	/// Create a collapsed AABB from a single point
+	inline TAABB(const point_type &p) 
+		: min(p), max(p) { }
+
+	/// Create a bounding box from two positions
+	inline TAABB(const point_type &min, const point_type &max)
+		: min(min), max(max) {
+#if defined(MTS_DEBUG)
+		for (int i=0; i<point_type::dim(); ++i) 
+			SAssert(min[i] <= max[i]);
+#endif
+	}
+
+	/// Equality test
+	inline bool operator==(const TAABB &aabb) const {
+		return min == aabb.min && max == aabb.max;
+	}
+
+	/// Inequality test
+	inline bool operator!=(const TAABB &aabb) const {
+		return min != aabb.min || max != aabb.max;
+	}
+
+	/// Clip to another bounding box
+	inline void clip(const TAABB &aabb) {
+		for (int i=0; i<point_type::dim(); ++i) {
+			min[i] = std::max(min[i], aabb.min[i]);
+			max[i] = std::min(max[i], aabb.max[i]);
+		}
+	}
+
+	/** 
+	 * \brief Mark the bounding box as invalid.
+	 * 
+	 * This operation sets the components of the minimum 
+	 * and maximum position to \f$\infty\f$ and \f$-\infty\f$,
+	 * respectively.
+	 */
+	inline void reset() {
+		min = point_type( std::numeric_limits<value_type>::infinity());
+		max = point_type(-std::numeric_limits<value_type>::infinity());
+	}
+
+	/// Calculate the n-dimensional volume of the bounding box
+	inline value_type getVolume() const {
+		value_type result = 0;
+		for (int i=0; i<3; ++i) {
+			value_type tmp = max[i] - min[i];
+			result += tmp*tmp;
+		}
+		return result;
+	}
+
+	/// Return the center point
+	inline point_type getCenter() const {
+		return (max + min) * (value_type) 0.5;
+	}
+
+	/// Check whether a point lies on or inside the bounding box
+	inline bool contains(const point_type &vec) const {
+		for (int i=0; i<point_type::dim(); ++i)
+			if (vec[i] < min[i] || vec[i] > max[i])
+				return false;
+		return true;
+	}
+
+	/// Check whether a given bounding box is contained within this one
+	inline bool contains(const TAABB &aabb) const {
+		if (!isValid())
+			return false;
+		for (int i=0; i<point_type::dim(); ++i)
+			if (aabb.min[i] < min[i] || aabb.max[i] > max[i])
+				return false;
+		return true;
+	}
+
+	/// Axis-aligned bounding box overlap test
+	inline bool overlaps(const TAABB &aabb) const {
+		for (int i=0; i<point_type::dim(); ++i) 
+			if (max[i] < aabb.min[i] || min[i] > aabb.max[i])
+				return false;
+		return true;
+	}
+
+	/// Expand the bounding box to contain another point
+	inline void expandBy(const point_type &p) {
+		for (int i=0; i<point_type::dim(); ++i) {
+			min[i] = std::min(min[i], p[i]);
+			max[i] = std::max(max[i], p[i]);
+		}
+	}
+
+	/// Expand the bounding box to contain another bounding box
+	inline void expandBy(const TAABB &aabb) {
+		for (int i=0; i<point_type::dim(); ++i) {
+			min[i] = std::min(min[i], aabb.min[i]);
+			max[i] = std::max(max[i], aabb.max[i]);
+		}
+	}
+
+	/// Calculate the point-AABB distance
+	inline value_type distanceTo(const point_type &p) const {
+		value_type result = 0;
+		for (int i=0; i<point_type::dim(); ++i) {
+			value_type value = 0;
+			if (p[i] < min[i])
+				value = min[i] - p[i];
+			if (p[i] > max[i])
+				value = p[i] - max[i];
+			result += value*value;
+		}
+		return std::sqrt(result);
+	}
+
+	/// Return whether this bounding box is valid
+	inline bool isValid() const {
+		for (int i=0; i<point_type::dim(); ++i) 
+			if (max[i] < min[i])
+				return false;
+		return true;
+	}
+
+	/**
+	 * \brief Return whether or not this bounding box 
+	 * covers anything at all.
+	 *
+	 * A bounding box which only covers a single point
+	 * is considered nonempty.
+	 */
+	inline bool isEmpty() const {
+		for (int i=0; i<point_type::dim(); ++i) {
+			if (max[i] > min[i])
+				return false;
+		}
+		return true;
+	}
+
+	/// Return the axis index with the largest associated side length
+	inline int getLargestAxis() const {
+		Vector d = max - min;
+		int largest = 0;
+
+		for (int i=1; i<point_type::dim(); ++i)
+			if (d[i] > d[largest])
+				largest = i;
+		return largest;
+	}
+
+	/// Return the axis index with the shortest associated side length
+	inline int getShortestAxis() const {
+		Vector d = max - min;
+		int shortest = 0;
+
+		for (int i=1; i<point_type::dim(); ++i)
+			if (d[i] < d[shortest])
+				shortest = i;
+		return shortest;
+	}
+
+	/**
+	 * \brief Calculate the bounding box extents
+	 * \return max-min
+	 */
+	inline vector_type getExtents() const {
+		return max - min;
+	}
+
+	/// Serialize this bounding box to a binary data stream
+	inline void serialize(Stream *stream) const {
+		min.serialize(stream);
+		max.serialize(stream);
+	}
+
+	/// Return a string representation of the bounding box
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "AABB[";
+		if (!isValid()) {
+			oss << "invalid";
+		} else {
+			oss << "min=" << min.toString()
+				<< ", max=" << max.toString();
+		}
+		oss	<< "]";
+		return oss.str();
+	}
+
+	point_type min; ///< Component-wise minimum 
+	point_type max; ///< Component-wise maximum 
+};
+
+
 /**
  * \brief Axis-aligned bounding box data structure in three dimensions
  * 
  * Maintains a component-wise minimum and maximum position and provides
  * various convenience functions to query or change them.
  */
-struct MTS_EXPORT_CORE AABB {
+struct MTS_EXPORT_CORE AABB : public TAABB<Point> {
 public:
-	Point min; ///< Component-wise minimum 
-	Point max; ///< Component-wise maximum 
-
 	/** 
-	 * \brief Construct an invalid bounding box
+	 * \brief Create a new invalid bounding box
 	 * 
-	 * The minimum and maximum positions will be
-	 * initialized to \f$(\infty,\infty,\infty)\f$ 
-	 * and \f$(-\infty, -\infty, -\infty)\f$, respectively.
+	 * Initializes the components of the minimum 
+	 * and maximum position to \f$\infty\f$ and \f$-\infty\f$,
+	 * respectively.
 	 */
-	inline AABB() {
-		reset();
-	}
+	inline AABB() : TAABB<Point>() { }
 
 	/// Unserialize a bounding box from a binary data stream
-	inline AABB(Stream *stream) {
-		min = Point(stream);
-		max = Point(stream);
-	}
-	
+	inline AABB(Stream *stream) : TAABB<Point>(stream) { }
+
 	/// Create a collapsed AABB from a single point
-	inline AABB(const Point &p) 
-		: min(p), max(p) { }
+	inline AABB(const Point &p) : TAABB<Point>(p) { }
 
-	/// Create a bounding box from two 3D positions
-	inline AABB(const Point &min, const Point &max)
-		: min(min), max(max) {
-		SAssert(min.x <= max.x
-			&& min.y <= max.y
-			&& min.z <= max.z);
-	}
-
-	/// Copy-constructor
-	inline AABB(const AABB &aabb) 
-		: min(aabb.min), max(aabb.max) {
-	}
-
-	/// Assignment operator
-	inline AABB &operator=(const AABB &aabb) {
-		min = aabb.min;
-		max = aabb.max;
-		return *this;
-	}
-
-	/// Equality test
-	inline bool operator==(const AABB &aabb) const {
-		return min == aabb.min && max == aabb.max;
-	}
-
-	/// Inequality test
-	inline bool operator!=(const AABB &aabb) const {
-		return min != aabb.min || max != aabb.max;
-	}
-
-	/** 
-	 * \brief Mark the bounding box as invalid.
-	 * 
-	 * This operation sets the
-	 * minimum position to \f$(\infty,\infty,\infty)\f$ and the
-	 * maximum position to \f$(-\infty, -\infty, -\infty)\f$.
-	 */
-	inline void reset() {
-		const Float inf = std::numeric_limits<Float>::infinity();
-		min = Point(inf, inf, inf);
-		max = Point(-inf, -inf, -inf);
-	}
-
-	/// Clip to another bounding box
-	inline void clip(const AABB &aabb) {
-		min.x = std::max(min.x, aabb.min.x);
-		min.y = std::max(min.y, aabb.min.y);
-		min.z = std::max(min.z, aabb.min.z);
-		max.x = std::min(max.x, aabb.max.x);
-		max.y = std::min(max.y, aabb.max.y);
-		max.z = std::min(max.z, aabb.max.z);
-	}
-
-	/// Return the center point
-	inline Point getCenter() const {
-		return (max + min) * (Float) 0.5;
-	}
-
-	/// Calculate the volume of the bounding box
-	inline Float getVolume() const {
-		Float x = max.x - min.x;
-		Float y = max.y - min.y;
-		Float z = max.z - min.z;
-
-		return x*x + y*y + z*z;
+	/// Create a bounding box from two positions
+	inline AABB(const point_type &min, const point_type &max) 
+		: TAABB<Point>(min, max) {
 	}
 
 	/// Calculate the surface area of the bounding box
@@ -129,72 +281,10 @@ public:
 	}
 
 	/**
-	 * \brief Calculate the bounding box extents
-	 * \return max-min
-	 */
-	inline Vector getExtents() const {
-		return max - min;
-	}
-
-	/// Return the axis index with the largest associated side length
-	inline int getLargestAxis() const {
-		Vector d = max - min;
-		if (d.x >= d.y && d.x >= d.z)
-			return 0;
-		else if (d.y >= d.z)
-			return 1;
-		else
-			return 2;
-	}
-
-	/// Return the axis index with the smallest associated side length
-	inline int getSmallestAxis() const {
-		Vector d = max - min;
-		if (d.x <= d.y && d.x <= d.z)
-			return 0;
-		else if (d.y <= d.z)
-			return 1;
-		else
-			return 2;
-	}
-
-	/// Return whether this bounding box is valid
-	inline bool isValid() const {
-		return max.x >= min.x && max.y >= min.y && max.z >= min.z;
-	}
-
-	/**
-	 * \brief Return whether or not this bounding box covers a 
-	 * nonzero amount of space
-	 */
-	inline bool isEmpty() const {
-		return max.x <= min.x
-			&& max.y <= min.y
-			&& max.z <= min.z;
-	}
-
-
-	/// Return the component-wise minimum point of the bounding box
-	inline const Point &getMinimum() const {
-		return min;
-	}
-
-	/// Return the component-wise maximum point of the bounding box
-	inline const Point &getMaximum() const {
-		return max;
-	}
-
-	/**
 	 * \brief Return the position of a bounding box corner
 	 * \param corner Requested corner index (0..7)
 	 */
 	Point getCorner(uint8_t corner) const;
-
-	/// Check whether a point lies on or inside the bounding box
-	bool contains(const Point &vec) const;
-
-	/// Check whether a given bounding box is contained within this one
-	bool contains(const AABB &aabb) const;
 
 	/**
 	 * \brief Bounding sphere-box overlap test
@@ -204,18 +294,6 @@ public:
 	 * (Graphics Gems, 1990)
 	 */
 	bool overlaps(const BSphere &sphere) const;
-
-	/// Axis-aligned bounding box overlap test
-	bool overlaps(const AABB &saabb) const;
-
-	/// Expand the bounding box to contain another point
-	void expandBy(const Point &vec);
-
-	/// Expand the bounding box to contain another bounding box
-	void expandBy(const AABB &aabb);
-
-	/// Calculate the point-AABB distance
-	Float distanceTo(const Point &p) const;
 
 	/** \brief Calculate the near and far ray-AABB intersection
 	 * points (if they exist).
@@ -265,15 +343,6 @@ public:
 
 	/// Create a bounding sphere, which contains the axis-aligned box
 	BSphere getBSphere() const;
-
-	/// Serialize this bounding box to a binary data stream
-	inline void serialize(Stream *stream) const {
-		min.serialize(stream);
-		max.serialize(stream);
-	}
-
-	/// Return a string representation of the bounding box
-	std::string toString() const;
 };
 
 MTS_NAMESPACE_END

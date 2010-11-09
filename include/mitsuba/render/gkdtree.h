@@ -433,7 +433,7 @@ private:
  * This class defines the byte layout for KD-tree nodes and
  * provides methods for querying the tree structure.
  */
-class MTS_EXPORT_RENDER AbstractKDTree : public Object {
+template <typename AABBType> class AbstractKDTree : public Object {
 public:
 	/// Index number format (max 2^32 prims)
 	typedef uint32_t index_type;
@@ -606,10 +606,10 @@ public:
 	}
 
 	/// Return a (slightly enlarged) axis-aligned bounding box containing all primitives
-	inline const AABB &getAABB() const { return m_aabb; }
+	inline const AABBType &getAABB() const { return m_aabb; }
 	
 	/// Return a tight axis-aligned bounding box containing all primitives
-	inline const AABB &getTightAABB() const { return m_tightAABB;}
+	inline const AABBType &getTightAABB() const { return m_tightAABB;}
 
 	/// Return an bounding sphere containing all primitives
 	inline const BSphere &getBSphere() const { return m_bsphere; }
@@ -619,7 +619,7 @@ protected:
 	virtual ~AbstractKDTree() { }
 protected:
 	KDNode *m_nodes;
-	AABB m_aabb, m_tightAABB;
+	AABBType m_aabb, m_tightAABB;
 	BSphere m_bsphere;
 };
 
@@ -679,7 +679,8 @@ protected:
  *
  * \author Wenzel Jakob
  */
-template <typename Derived> class GenericKDTree : public AbstractKDTree {
+template <typename AABBType, typename Derived> 
+	class GenericKDTree : public AbstractKDTree<AABBType> {
 protected:
 	// Some forward declarations
 	struct MinMaxBins;
@@ -687,6 +688,13 @@ protected:
 	struct EdgeEventOrdering;
 
 public:
+	typedef typename AbstractKDTree<AABBType>::size_type  size_type;
+	typedef typename AbstractKDTree<AABBType>::index_type index_type;
+	typedef typename AbstractKDTree<AABBType>::KDNode     KDNode;
+	typedef typename AABBType::value_type                 value_type;
+	typedef typename AABBType::point_type                 point_type;
+	typedef typename AABBType::vector_type                vector_type;
+
 	/**
 	 * \brief Documents the possible outcomes of a single 
 	 * ray-primitive intersection computation
@@ -709,7 +717,7 @@ public:
 	 * the default parameters.
 	 */
 	GenericKDTree() : m_indices(NULL) {
-		m_nodes = NULL;
+		this->m_nodes = NULL;
 		m_traversalCost = 15;
 		m_intersectionCost = 20;
 		m_emptySpaceBonus = 0.9f;
@@ -729,8 +737,8 @@ public:
 	virtual ~GenericKDTree() {
 		if (m_indices)
 			delete[] m_indices;
-		if (m_nodes)
-			freeAligned(m_nodes-1); // undo alignment shift
+		if (this->m_nodes)
+			freeAligned(this->m_nodes-1); // undo alignment shift
 	}
 
 	/**
@@ -920,7 +928,7 @@ protected:
 	 */
 	void buildInternal() {
 		/* Some samity checks */
-		if (isBuilt()) 
+		if (this->isBuilt()) 
 			Log(EError, "The kd-tree has already been built!");
 		if (m_traversalCost <= 0)
 			Log(EError, "The traveral cost must be > 0");
@@ -939,8 +947,8 @@ protected:
 		if (primCount == 0) {
 			Log(EWarn, "kd-tree contains no geometry!");
 			// +1 shift is for alignment purposes (see KDNode::getSibling)
-			m_nodes = static_cast<KDNode *>(allocAligned(sizeof(KDNode) * 2))+1;
-			m_nodes[0].initLeafNode(0, 0);
+			this->m_nodes = static_cast<KDNode *>(allocAligned(sizeof(KDNode) * 2))+1;
+			this->m_nodes[0].initLeafNode(0, 0);
 			return;
 		}
 
@@ -958,9 +966,10 @@ protected:
 		index_type *indices = leftAlloc.allocate<index_type>(primCount);
 
 		ref<Timer> timer = new Timer();
-		m_aabb.reset();
+		AABB &aabb = this->m_aabb;
+		aabb.reset();
 		for (index_type i=0; i<primCount; ++i) {
-			m_aabb.expandBy(cast()->getAABB(i));
+			aabb.expandBy(cast()->getAABB(i));
 			indices[i] = i;
 		}
 
@@ -974,9 +983,9 @@ protected:
 		Log(EDebug, "   Empty space bonus        : %.2f", m_emptySpaceBonus);
 		Log(EDebug, "   Max. tree depth          : %i", m_maxDepth);
 		Log(EDebug, "   Scene bounding box (min) : %s", 
-				m_aabb.min.toString().c_str());
+				aabb.min.toString().c_str());
 		Log(EDebug, "   Scene bounding box (max) : %s", 
-				m_aabb.max.toString().c_str());
+				aabb.max.toString().c_str());
 		Log(EDebug, "   Min-max bins             : %i", m_minMaxBins);
 		Log(EDebug, "   Greedy SAH optimization  : use for <= %i primitives", 
 				m_exactPrimThreshold);
@@ -1005,7 +1014,7 @@ protected:
 
 		m_indirectionLock = new Mutex();
 		KDNode *prelimRoot = ctx.nodes.allocate(1);
-		buildTreeMinMax(ctx, 1, prelimRoot, m_aabb, m_aabb, 
+		buildTreeMinMax(ctx, 1, prelimRoot, aabb, aabb, 
 				indices, primCount, true, 0);
 		ctx.leftAlloc.release(indices);
 
@@ -1055,7 +1064,7 @@ protected:
 		Log(EDebug, "Optimizing memory layout ..");
 
 		std::stack<boost::tuple<const KDNode *, KDNode *, 
-				const BuildContext *, AABB> > stack;
+				const BuildContext *, AABBType> > stack;
 
 		Float expTraversalSteps = 0;
 		Float expLeavesVisited = 0;
@@ -1070,17 +1079,17 @@ protected:
 		m_indexCount = ctx.primIndexCount;
 
 		// +1 shift is for alignment purposes (see KDNode::getSibling)
-		m_nodes = static_cast<KDNode *> (allocAligned(
+		this->m_nodes = static_cast<KDNode *> (allocAligned(
 				sizeof(KDNode) * (m_nodeCount+1)))+1;
 		m_indices = new index_type[m_indexCount];
 
-		stack.push(boost::make_tuple(prelimRoot, &m_nodes[nodePtr++], 
-					&ctx, m_aabb));
+		stack.push(boost::make_tuple(prelimRoot, &this->m_nodes[nodePtr++], 
+					&ctx, aabb));
 		while (!stack.empty()) {
 			const KDNode *node = boost::get<0>(stack.top());
 			KDNode *target = boost::get<1>(stack.top());
 			const BuildContext *context = boost::get<2>(stack.top());
-			AABB aabb = boost::get<3>(stack.top());
+			AABBType aabb = boost::get<3>(stack.top());
 			stack.pop();
 			typename std::map<const KDNode *, index_type>::const_iterator it 
 				= m_interface.threadMap.find(node);
@@ -1118,7 +1127,7 @@ protected:
 				else 
 					left = m_indirections[node->getIndirectionIndex()];
 
-				KDNode *children = &m_nodes[nodePtr];
+				KDNode *children = &this->m_nodes[nodePtr];
 				nodePtr += 2;
 				int axis = node->getAxis();
 				float split = node->getSplit();
@@ -1160,7 +1169,7 @@ protected:
 
 		Log(EDebug, "");
 
-		Float rootSA = m_aabb.getSurfaceArea();
+		Float rootSA = aabb.getSurfaceArea();
 		expTraversalSteps /= rootSA;
 		expLeavesVisited /= rootSA;
 		expPrimitivesIntersected /= rootSA;
@@ -1168,12 +1177,12 @@ protected:
 
 		/* Slightly enlarge the bounding box 
 		   (necessary e.g. when the scene is planar) */
-		m_tightAABB = m_aabb;
-		m_aabb.min -= (m_aabb.max-m_aabb.min) * Epsilon
+		this->m_tightAABB = aabb;
+		aabb.min -= (aabb.max-aabb.min) * Epsilon
 			+ Vector(Epsilon, Epsilon, Epsilon);
-		m_aabb.max += (m_aabb.max-m_aabb.min) * Epsilon
+		aabb.max += (aabb.max-aabb.min) * Epsilon
 			+ Vector(Epsilon, Epsilon, Epsilon);
-		m_bsphere = m_aabb.getBSphere();
+		this->m_bsphere = aabb.getBSphere();
 
 		Log(EDebug, "Structural kd-tree statistics:");
 		Log(EDebug, "   Parallel work units       : " SIZE_T_FMT, 
@@ -1527,7 +1536,7 @@ protected:
 				aabb = cast()->getAABB(index);
 			}
 
-			for (int axis=0; axis<3; ++axis) {
+			for (int axis=0; axis<point_type::dim(); ++axis) {
 				float min = (float) aabb.min[axis], max = (float) aabb.max[axis];
 
 				if (min == max) {
@@ -1889,16 +1898,22 @@ protected:
 
 		/* Initially, the split plane is placed left of the scene
 		   and thus all geometry is on its right side */
-		size_type numLeft[3]  = { 0, 0, 0 },
-				  numRight[3] = { primCount, primCount, primCount };
+		size_type numLeft[point_type::dim()],
+				  numRight[point_type::dim()];
+	
+		for (int i=0; i<point_type::dim(); ++i) {
+			numLeft[i] = 0;
+			numRight[i] = primCount;
+		}
 
-		EdgeEvent *eventsByAxis[3];
+		EdgeEvent *eventsByAxis[point_type::dim()];
 		int eventsByAxisCtr = 1;
 		eventsByAxis[0] = eventStart;
 
 		const Vector extents(nodeAABB.getExtents());
 		const Float invSA = 0.5f / (extents.x * extents.y 
 				+ extents.y*extents.z + extents.x*extents.z);
+
 		const Vector temp0 = Vector(
 			(extents[1] * extents[2]),
 			(extents[0] * extents[2]),
@@ -1942,7 +1957,7 @@ protected:
 
 			/* Keep track of the beginning of dimensions */
 			if (event < eventEnd && event->axis != axis) {
-				KDAssert(eventsByAxisCtr < 3);
+				KDAssert(eventsByAxisCtr < point_type::dim());
 				eventsByAxis[eventsByAxisCtr++] = event;
 			}
 
@@ -2018,13 +2033,13 @@ protected:
 			numLeft[axis] += numStart + numPlanar;
 		}
 
+#if defined(MTS_KD_DEBUG)
 		/* Sanity checks. Everything should now be left of the split plane */
-		KDAssert(numRight[0] == 0 && numLeft[0] == primCount &&
-			   numRight[1] == 0 && numLeft[1] == primCount &&
-			   numRight[2] == 0 && numLeft[2] == primCount);
-
-		KDAssert(eventsByAxis[1]->axis == 1 && (eventsByAxis[1]-1)->axis == 0);
-		KDAssert(eventsByAxis[2]->axis == 2 && (eventsByAxis[2]-1)->axis == 1);
+		for (int i=0; i<point_type::dim(); ++i)
+			KDAssert(numRight[i] == 0 && numLeft[i] == primCount);
+		for (int i=1; i<point_type::dim(); ++i)
+			KDAssert(eventsByAxis[i]->axis == i && (eventsByAxis[i]-1)->axis == i-1);
+#endif
 
 		/* "Bad refines" heuristic from PBRT */
 		if (bestSplit.sahCost >= leafCost) {
@@ -2099,15 +2114,15 @@ protected:
 		EdgeEvent *leftEventsStart, *rightEventsStart;
 		if (isLeftChild) {
 			leftEventsStart = eventStart;
-			rightEventsStart = rightAlloc.allocate<EdgeEvent>(bestSplit.numRight * 6);
+			rightEventsStart = rightAlloc.allocate<EdgeEvent>(bestSplit.numRight * 2 * point_type::dim());
 		} else {
-			leftEventsStart = leftAlloc.allocate<EdgeEvent>(bestSplit.numLeft * 6);
+			leftEventsStart = leftAlloc.allocate<EdgeEvent>(bestSplit.numLeft * 2 * point_type::dim());
 			rightEventsStart = eventStart;
 		}
 
 		EdgeEvent *leftEventsEnd = leftEventsStart, *rightEventsEnd = rightEventsStart;
 
-		AABB leftNodeAABB = nodeAABB, rightNodeAABB = nodeAABB;
+		AABBType leftNodeAABB = nodeAABB, rightNodeAABB = nodeAABB;
 		leftNodeAABB.max[bestSplit.axis] = bestSplit.pos;
 		rightNodeAABB.min[bestSplit.axis] = bestSplit.pos;
 
@@ -2119,10 +2134,10 @@ protected:
 
 		if (m_clip) {
 			EdgeEvent
-			  *leftEventsTempStart = leftAlloc.allocate<EdgeEvent>(primsLeft * 6),
-			  *rightEventsTempStart = rightAlloc.allocate<EdgeEvent>(primsRight * 6),
-			  *newEventsLeftStart = leftAlloc.allocate<EdgeEvent>(primsBoth * 6),
-			  *newEventsRightStart = rightAlloc.allocate<EdgeEvent>(primsBoth * 6);
+			  *leftEventsTempStart = leftAlloc.allocate<EdgeEvent>(primsLeft * 2 * point_type::dim()),
+			  *rightEventsTempStart = rightAlloc.allocate<EdgeEvent>(primsRight * 2 * point_type::dim()),
+			  *newEventsLeftStart = leftAlloc.allocate<EdgeEvent>(primsBoth * 2 * point_type::dim()),
+			  *newEventsRightStart = rightAlloc.allocate<EdgeEvent>(primsBoth * 2 * point_type::dim());
 
 			EdgeEvent *leftEventsTempEnd = leftEventsTempStart, 
 					*rightEventsTempEnd = rightEventsTempStart,
@@ -2150,7 +2165,7 @@ protected:
 					KDAssert(rightNodeAABB.contains(clippedRight));
 
 					if (clippedLeft.isValid() && clippedLeft.getSurfaceArea() > 0) {
-						for (int axis=0; axis<3; ++axis) {
+						for (int axis=0; axis<point_type::dim(); ++axis) {
 							float min = (float) clippedLeft.min[axis],
 								  max = (float) clippedLeft.max[axis];
 
@@ -2172,7 +2187,7 @@ protected:
 					}
 
 					if (clippedRight.isValid() && clippedRight.getSurfaceArea() > 0) {
-						for (int axis=0; axis<3; ++axis) {
+						for (int axis=0; axis<point_type::dim(); ++axis) {
 							float min = (float) clippedRight.min[axis],
 								  max = (float) clippedRight.max[axis];
 
@@ -2199,10 +2214,10 @@ protected:
 				}
 			}
 
-			KDAssert((size_type) (leftEventsTempEnd - leftEventsTempStart) <= primsLeft * 6);
-			KDAssert((size_type) (rightEventsTempEnd - rightEventsTempStart) <= primsRight * 6);
-			KDAssert((size_type) (newEventsLeftEnd - newEventsLeftStart) <= primsBoth * 6);
-			KDAssert((size_type) (newEventsRightEnd - newEventsRightStart) <= primsBoth * 6);
+			KDAssert((size_type) (leftEventsTempEnd - leftEventsTempStart) <= primsLeft * 2 * point_type::dim());
+			KDAssert((size_type) (rightEventsTempEnd - rightEventsTempStart) <= primsRight * 2 * point_type::dim());
+			KDAssert((size_type) (newEventsLeftEnd - newEventsLeftStart) <= primsBoth * 2 * point_type::dim());
+			KDAssert((size_type) (newEventsRightEnd - newEventsRightStart) <= primsBoth * 2 * point_type::dim());
 			ctx.pruned += prunedLeft + prunedRight;
 
 			/* Sort the events from overlapping prims */
@@ -2241,8 +2256,8 @@ protected:
 					*rightEventsEnd++ = *event;
 				}
 			}
-			KDAssert((size_type) (leftEventsEnd - leftEventsStart) <= bestSplit.numLeft * 6);
-			KDAssert((size_type) (rightEventsEnd - rightEventsStart) <= bestSplit.numRight * 6);
+			KDAssert((size_type) (leftEventsEnd - leftEventsStart) <= bestSplit.numLeft * 2 * point_type::dim());
+			KDAssert((size_type) (rightEventsEnd - rightEventsStart) <= bestSplit.numRight * 2 * point_type::dim());
 		}
 
 		/* Shrink the edge event storage now that we know exactly how 
@@ -2328,8 +2343,8 @@ protected:
 	 */
 	struct MinMaxBins {
 		MinMaxBins(size_type nBins) : m_binCount(nBins) {
-			m_minBins = new size_type[m_binCount*3];
-			m_maxBins = new size_type[m_binCount*3];
+			m_minBins = new size_type[m_binCount*point_type::dim()];
+			m_maxBins = new size_type[m_binCount*point_type::dim()];
 		}
 
 		~MinMaxBins() {
@@ -2340,10 +2355,10 @@ protected:
 		/**
 		 * \brief Prepare to bin for the specified bounds
 		 */
-		void setAABB(const AABB &aabb) {
+		void setAABB(const AABBType &aabb) {
 			m_aabb = aabb;
 			m_binSize = m_aabb.getExtents() / (Float) m_binCount;
-			for (int axis=0; axis<3; ++axis) 
+			for (int axis=0; axis<point_type::dim(); ++axis) 
 				m_invBinSize[axis] = 1/m_binSize[axis];
 		}
 
@@ -2358,13 +2373,13 @@ protected:
 		void bin(const Derived *derived, index_type *indices, 
 				size_type primCount) {
 			m_primCount = primCount;
-			memset(m_minBins, 0, sizeof(size_type) * 3 * m_binCount);
-			memset(m_maxBins, 0, sizeof(size_type) * 3 * m_binCount);
+			memset(m_minBins, 0, sizeof(size_type) * point_type::dim() * m_binCount);
+			memset(m_maxBins, 0, sizeof(size_type) * point_type::dim() * m_binCount);
 			const int64_t maxBin = m_binCount-1;
 
 			for (size_type i=0; i<m_primCount; ++i) {
-				const AABB aabb = derived->getAABB(indices[i]);
-				for (int axis=0; axis<3; ++axis) {
+				const AABBType aabb = derived->getAABB(indices[i]);
+				for (int axis=0; axis<point_type::dim(); ++axis) {
 					int64_t minIdx = (int64_t) ((aabb.min[axis] - m_aabb.min[axis]) 
 							* m_invBinSize[axis]);
 					int64_t maxIdx = (int64_t) ((aabb.max[axis] - m_aabb.min[axis]) 
@@ -2388,8 +2403,8 @@ protected:
 			Float normalization = 2.0f / m_aabb.getSurfaceArea();
 			int binIdx = 0, leftBin = 0;
 
-			for (int axis=0; axis<3; ++axis) {
-				Vector extents = m_aabb.getExtents();
+			for (int axis=0; axis<point_type::dim(); ++axis) {
+				vector_type extents = m_aabb.getExtents();
 				size_type numLeft = 0, numRight = m_primCount;
 				Float leftWidth = 0, rightWidth = extents[axis];
 				const Float binSize = m_binSize[axis];
@@ -2500,14 +2515,14 @@ protected:
 		 * boxes for the left and right subtrees and return associated
 		 * primitive lists.
 		 */
-		boost::tuple<AABB, index_type *, AABB, index_type *> partition(
+		boost::tuple<AABBType, index_type *, AABB, index_type *> partition(
 				BuildContext &ctx, const Derived *derived, index_type *primIndices,
 				SplitCandidate &split, bool isLeftChild, Float traversalCost, 
 				Float intersectionCost) {
 			const float splitPos = split.pos;
 			const int axis = split.axis;
 			size_type numLeft = 0, numRight = 0;
-			AABB leftBounds, rightBounds;
+			AABBType leftBounds, rightBounds;
 
 			index_type *leftIndices, *rightIndices;
 			if (isLeftChild) {
@@ -2522,7 +2537,7 @@ protected:
 
 			for (size_type i=0; i<m_primCount; ++i) {
 				const index_type primIndex = primIndices[i];
-				const AABB aabb = derived->getAABB(primIndex);
+				const AABBType aabb = derived->getAABB(primIndex);
 
 				if (aabb.max[axis] <= splitPos) {
 					KDAssert(numLeft < split.numLeft);
@@ -2686,9 +2701,9 @@ protected:
 /**
  * \brief Internal kd-tree traversal implementation (Havran variant)
  */
-template<typename Derived> template<bool shadowRay> FINLINE bool 
-		GenericKDTree<Derived>::rayIntersectHavran(const Ray &ray, 
-		Float mint, Float maxt, Float &t, void *temp) const {
+template<typename AABBType, typename Derived> template<bool shadowRay> 
+		FINLINE bool GenericKDTree<AABBType, Derived>::rayIntersectHavran(
+		const Ray &ray, Float mint, Float maxt, Float &t, void *temp) const {
 	KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
 	#if 0
 	static const int prevAxisTable[] = { 2, 0, 1 };
@@ -2710,7 +2725,7 @@ template<typename Derived> template<bool shadowRay> FINLINE bool
 	stack[exPt].p = ray(maxt);
 	stack[exPt].node = NULL;
 
-	const KDNode * __restrict currNode = m_nodes;
+	const KDNode * __restrict currNode = this->m_nodes;
 	while (currNode != NULL) {
 		while (EXPECT_TAKEN(!currNode->isLeaf())) {
 			const Float splitVal = (Float) currNode->getSplit();
@@ -2835,8 +2850,9 @@ template<typename Derived> template<bool shadowRay> FINLINE bool
 	return false;
 }
 
-template <typename Derived> FINLINE boost::tuple<bool, uint32_t, uint32_t, uint64_t> 
-		GenericKDTree<Derived>::rayIntersectHavranCollectStatistics(
+template <typename AABBType, typename Derived>
+		FINLINE boost::tuple<bool, uint32_t, uint32_t, uint64_t> 
+		GenericKDTree<AABBType, Derived>::rayIntersectHavranCollectStatistics(
 		const Ray &ray, Float mint, Float maxt, Float &t, void *temp) const {
 	KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
 
@@ -2855,7 +2871,7 @@ template <typename Derived> FINLINE boost::tuple<bool, uint32_t, uint32_t, uint6
 	uint32_t numIntersections = 0;
 	uint64_t timer = rdtsc();
 
-	const KDNode * __restrict currNode = m_nodes;
+	const KDNode * __restrict currNode = this->m_nodes;
 	while (currNode != NULL) {
 		while (EXPECT_TAKEN(!currNode->isLeaf())) {
 			const Float splitVal = (Float) currNode->getSplit();
@@ -2952,13 +2968,14 @@ template <typename Derived> FINLINE boost::tuple<bool, uint32_t, uint32_t, uint6
 			numIntersections, rdtsc() - timer);
 }
 
-template<typename Derived> template <bool shadowRay> FINLINE bool 
-		GenericKDTree<Derived>::rayIntersectPlain(const Ray &ray, 
+template<typename AABBType, typename Derived>
+		template <bool shadowRay> FINLINE bool 
+		GenericKDTree<AABBType, Derived>::rayIntersectPlain(const Ray &ray, 
 		Float mint_, Float maxt_, Float &t, void *temp) const {
 	KDStackEntry stack[MTS_KD_MAXDEPTH];
 	int stackPos = 0;
 	Float mint = mint_, maxt = maxt_;
-	const KDNode *node = m_nodes;
+	const KDNode *node = this->m_nodes;
 
 	#if defined(MTS_KD_MAILBOX_ENABLED)
 	HashedMailbox mailbox;
@@ -3044,13 +3061,14 @@ template<typename Derived> template <bool shadowRay> FINLINE bool
 	return false;
 }
 
-template<typename Derived> template <bool shadowRay> FINLINE bool 
-		GenericKDTree<Derived>::rayIntersectPBRT(const Ray &ray, 
+template<typename AABBType, typename Derived>
+		template <bool shadowRay> FINLINE bool 
+		GenericKDTree<AABBType, Derived>::rayIntersectPBRT(const Ray &ray, 
 		Float mint_, Float maxt_, Float &t, void *temp) const {
 	KDStackEntry stack[MTS_KD_MAXDEPTH];
 	int stackPos = 0;
 	Float mint = mint_, maxt=maxt_;
-	const KDNode *node = m_nodes;
+	const KDNode *node = this->m_nodes;
 	bool foundIntersection = false;
 
 	#if defined(MTS_KD_MAILBOX_ENABLED)
@@ -3129,11 +3147,12 @@ template<typename Derived> template <bool shadowRay> FINLINE bool
 }
 
 
-template <typename Derived> void GenericKDTree<Derived>::findCosts(
+template <typename AABBType, typename Derived>
+		void GenericKDTree<AABBType, Derived>::findCosts(
 		Float &traversalCost, Float &intersectionCost) {
 	ref<Random> random = new Random();
 	uint8_t temp[128];
-	BSphere bsphere = m_aabb.getBSphere();
+	BSphere bsphere = this->m_aabb.getBSphere();
 	int nRays = 10000000, warmup = nRays/4;
 	Vector *A = new Vector[nRays-warmup];
 	Float *b = new Float[nRays-warmup];
@@ -3146,7 +3165,7 @@ template <typename Derived> void GenericKDTree<Derived>::findCosts(
 		Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
 		Ray ray(p1, normalize(p2-p1));
 		Float mint, maxt, t;
-		if (m_aabb.rayIntersect(ray, mint, maxt)) {
+		if (this->m_aabb.rayIntersect(ray, mint, maxt)) {
 			if (ray.mint > mint) mint = ray.mint;
 			if (ray.maxt < maxt) maxt = ray.maxt;
 			if (EXPECT_TAKEN(maxt > mint)) {
@@ -3216,13 +3235,23 @@ template <typename Derived> void GenericKDTree<Derived>::findCosts(
 	intersectionCost = x[2];
 }
 
-template <typename Derived> Class *GenericKDTree<Derived>::m_theClass 
-	= new Class("GenericKDTree", true, "AbstractKDTree");
+template <typename AABBType>
+	Class *AbstractKDTree<AABBType>::m_theClass 
+		= new Class("AbstractKDTree", true, "Object");
 
-template <typename Derived> const Class *GenericKDTree<Derived>::getClass() const {
+template <typename AABBType>
+	const Class *AbstractKDTree<AABBType>::getClass() const {
 	return m_theClass;
 }
 
+template <typename AABBType, typename Derived>
+	Class *GenericKDTree<AABBType, Derived>::m_theClass 
+		= new Class("GenericKDTree", true, "AbstractKDTree");
+
+template <typename AABBType, typename Derived>
+	const Class *GenericKDTree<AABBType, Derived>::getClass() const {
+	return m_theClass;
+}
 
 MTS_NAMESPACE_END
 
