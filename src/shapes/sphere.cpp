@@ -38,7 +38,10 @@ public:
 		 * unit sphere using the 'toWorld' parameter, or one
 		 * can explicitly specify a radius and center.
 		 */
-		if (props.hasProperty("center") && props.hasProperty("radius")) {
+		if (props.hasProperty("toWorld") && (props.hasProperty("center") || props.hasProperty("radius"))) {
+			Log(EError, "The format for specifying spheres has changed. Please either provide "
+					"an object-to-world transformation (including scaling) or a radius and a center");
+		} else if (props.hasProperty("center") && props.hasProperty("radius")) {
 			m_objectToWorld = 
 				Transform::translate(Vector(props.getPoint("center")));
 			m_radius = props.getFloat("radius");
