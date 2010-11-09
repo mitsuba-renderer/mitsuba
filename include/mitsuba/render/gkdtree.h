@@ -1898,16 +1898,22 @@ protected:
 
 		/* Initially, the split plane is placed left of the scene
 		   and thus all geometry is on its right side */
-		size_type numLeft[3]  = { 0, 0, 0 },
-				  numRight[3] = { primCount, primCount, primCount };
+		size_type numLeft[point_type::dim()],
+				  numRight[point_type::dim()];
+	
+		for (int i=0; i<point_type::dim(); ++i) {
+			numLeft[i] = 0;
+			numRight[i] = primCount;
+		}
 
-		EdgeEvent *eventsByAxis[3];
+		EdgeEvent *eventsByAxis[point_type::dim()];
 		int eventsByAxisCtr = 1;
 		eventsByAxis[0] = eventStart;
 
 		const Vector extents(nodeAABB.getExtents());
 		const Float invSA = 0.5f / (extents.x * extents.y 
 				+ extents.y*extents.z + extents.x*extents.z);
+
 		const Vector temp0 = Vector(
 			(extents[1] * extents[2]),
 			(extents[0] * extents[2]),
@@ -1951,7 +1957,7 @@ protected:
 
 			/* Keep track of the beginning of dimensions */
 			if (event < eventEnd && event->axis != axis) {
-				KDAssert(eventsByAxisCtr < 3);
+				KDAssert(eventsByAxisCtr < point_type::dim());
 				eventsByAxis[eventsByAxisCtr++] = event;
 			}
 
@@ -2027,13 +2033,13 @@ protected:
 			numLeft[axis] += numStart + numPlanar;
 		}
 
+#if defined(MTS_KD_DEBUG)
 		/* Sanity checks. Everything should now be left of the split plane */
-		KDAssert(numRight[0] == 0 && numLeft[0] == primCount &&
-			   numRight[1] == 0 && numLeft[1] == primCount &&
-			   numRight[2] == 0 && numLeft[2] == primCount);
-
-		KDAssert(eventsByAxis[1]->axis == 1 && (eventsByAxis[1]-1)->axis == 0);
-		KDAssert(eventsByAxis[2]->axis == 2 && (eventsByAxis[2]-1)->axis == 1);
+		for (int i=0; i<point_type::dim(); ++i)
+			KDAssert(numRight[i] == 0 && numLeft[i] == primCount);
+		for (int i=1; i<point_type::dim(); ++i)
+			KDAssert(eventsByAxis[i]->axis == i && (eventsByAxis[i]-1)->axis == i-1);
+#endif
 
 		/* "Bad refines" heuristic from PBRT */
 		if (bestSplit.sahCost >= leafCost) {
@@ -2108,15 +2114,15 @@ protected:
 		EdgeEvent *leftEventsStart, *rightEventsStart;
 		if (isLeftChild) {
 			leftEventsStart = eventStart;
-			rightEventsStart = rightAlloc.allocate<EdgeEvent>(bestSplit.numRight * 6);
+			rightEventsStart = rightAlloc.allocate<EdgeEvent>(bestSplit.numRight * 2 * point_type::dim());
 		} else {
-			leftEventsStart = leftAlloc.allocate<EdgeEvent>(bestSplit.numLeft * 6);
+			leftEventsStart = leftAlloc.allocate<EdgeEvent>(bestSplit.numLeft * 2 * point_type::dim());
 			rightEventsStart = eventStart;
 		}
 
 		EdgeEvent *leftEventsEnd = leftEventsStart, *rightEventsEnd = rightEventsStart;
 
-		AABB leftNodeAABB = nodeAABB, rightNodeAABB = nodeAABB;
+		AABBType leftNodeAABB = nodeAABB, rightNodeAABB = nodeAABB;
 		leftNodeAABB.max[bestSplit.axis] = bestSplit.pos;
 		rightNodeAABB.min[bestSplit.axis] = bestSplit.pos;
 
@@ -2128,10 +2134,10 @@ protected:
 
 		if (m_clip) {
 			EdgeEvent
-			  *leftEventsTempStart = leftAlloc.allocate<EdgeEvent>(primsLeft * 6),
-			  *rightEventsTempStart = rightAlloc.allocate<EdgeEvent>(primsRight * 6),
-			  *newEventsLeftStart = leftAlloc.allocate<EdgeEvent>(primsBoth * 6),
-			  *newEventsRightStart = rightAlloc.allocate<EdgeEvent>(primsBoth * 6);
+			  *leftEventsTempStart = leftAlloc.allocate<EdgeEvent>(primsLeft * 2 * point_type::dim()),
+			  *rightEventsTempStart = rightAlloc.allocate<EdgeEvent>(primsRight * 2 * point_type::dim()),
+			  *newEventsLeftStart = leftAlloc.allocate<EdgeEvent>(primsBoth * 2 * point_type::dim()),
+			  *newEventsRightStart = rightAlloc.allocate<EdgeEvent>(primsBoth * 2 * point_type::dim());
 
 			EdgeEvent *leftEventsTempEnd = leftEventsTempStart, 
 					*rightEventsTempEnd = rightEventsTempStart,
@@ -2159,7 +2165,7 @@ protected:
 					KDAssert(rightNodeAABB.contains(clippedRight));
 
 					if (clippedLeft.isValid() && clippedLeft.getSurfaceArea() > 0) {
-						for (int axis=0; axis<3; ++axis) {
+						for (int axis=0; axis<point_type::dim(); ++axis) {
 							float min = (float) clippedLeft.min[axis],
 								  max = (float) clippedLeft.max[axis];
 
@@ -2181,7 +2187,7 @@ protected:
 					}
 
 					if (clippedRight.isValid() && clippedRight.getSurfaceArea() > 0) {
-						for (int axis=0; axis<3; ++axis) {
+						for (int axis=0; axis<point_type::dim(); ++axis) {
 							float min = (float) clippedRight.min[axis],
 								  max = (float) clippedRight.max[axis];
 
@@ -2208,10 +2214,10 @@ protected:
 				}
 			}
 
-			KDAssert((size_type) (leftEventsTempEnd - leftEventsTempStart) <= primsLeft * 6);
-			KDAssert((size_type) (rightEventsTempEnd - rightEventsTempStart) <= primsRight * 6);
-			KDAssert((size_type) (newEventsLeftEnd - newEventsLeftStart) <= primsBoth * 6);
-			KDAssert((size_type) (newEventsRightEnd - newEventsRightStart) <= primsBoth * 6);
+			KDAssert((size_type) (leftEventsTempEnd - leftEventsTempStart) <= primsLeft * 2 * point_type::dim());
+			KDAssert((size_type) (rightEventsTempEnd - rightEventsTempStart) <= primsRight * 2 * point_type::dim());
+			KDAssert((size_type) (newEventsLeftEnd - newEventsLeftStart) <= primsBoth * 2 * point_type::dim());
+			KDAssert((size_type) (newEventsRightEnd - newEventsRightStart) <= primsBoth * 2 * point_type::dim());
 			ctx.pruned += prunedLeft + prunedRight;
 
 			/* Sort the events from overlapping prims */
@@ -2250,8 +2256,8 @@ protected:
 					*rightEventsEnd++ = *event;
 				}
 			}
-			KDAssert((size_type) (leftEventsEnd - leftEventsStart) <= bestSplit.numLeft * 6);
-			KDAssert((size_type) (rightEventsEnd - rightEventsStart) <= bestSplit.numRight * 6);
+			KDAssert((size_type) (leftEventsEnd - leftEventsStart) <= bestSplit.numLeft * 2 * point_type::dim());
+			KDAssert((size_type) (rightEventsEnd - rightEventsStart) <= bestSplit.numRight * 2 * point_type::dim());
 		}
 
 		/* Shrink the edge event storage now that we know exactly how 
@@ -2337,8 +2343,8 @@ protected:
 	 */
 	struct MinMaxBins {
 		MinMaxBins(size_type nBins) : m_binCount(nBins) {
-			m_minBins = new size_type[m_binCount*3];
-			m_maxBins = new size_type[m_binCount*3];
+			m_minBins = new size_type[m_binCount*point_type::dim()];
+			m_maxBins = new size_type[m_binCount*point_type::dim()];
 		}
 
 		~MinMaxBins() {
@@ -2349,10 +2355,10 @@ protected:
 		/**
 		 * \brief Prepare to bin for the specified bounds
 		 */
-		void setAABB(const AABB &aabb) {
+		void setAABB(const AABBType &aabb) {
 			m_aabb = aabb;
 			m_binSize = m_aabb.getExtents() / (Float) m_binCount;
-			for (int axis=0; axis<3; ++axis) 
+			for (int axis=0; axis<point_type::dim(); ++axis) 
 				m_invBinSize[axis] = 1/m_binSize[axis];
 		}
 
@@ -2367,13 +2373,13 @@ protected:
 		void bin(const Derived *derived, index_type *indices, 
 				size_type primCount) {
 			m_primCount = primCount;
-			memset(m_minBins, 0, sizeof(size_type) * 3 * m_binCount);
-			memset(m_maxBins, 0, sizeof(size_type) * 3 * m_binCount);
+			memset(m_minBins, 0, sizeof(size_type) * point_type::dim() * m_binCount);
+			memset(m_maxBins, 0, sizeof(size_type) * point_type::dim() * m_binCount);
 			const int64_t maxBin = m_binCount-1;
 
 			for (size_type i=0; i<m_primCount; ++i) {
-				const AABB aabb = derived->getAABB(indices[i]);
-				for (int axis=0; axis<3; ++axis) {
+				const AABBType aabb = derived->getAABB(indices[i]);
+				for (int axis=0; axis<point_type::dim(); ++axis) {
 					int64_t minIdx = (int64_t) ((aabb.min[axis] - m_aabb.min[axis]) 
 							* m_invBinSize[axis]);
 					int64_t maxIdx = (int64_t) ((aabb.max[axis] - m_aabb.min[axis]) 
@@ -2397,8 +2403,8 @@ protected:
 			Float normalization = 2.0f / m_aabb.getSurfaceArea();
 			int binIdx = 0, leftBin = 0;
 
-			for (int axis=0; axis<3; ++axis) {
-				Vector extents = m_aabb.getExtents();
+			for (int axis=0; axis<point_type::dim(); ++axis) {
+				vector_type extents = m_aabb.getExtents();
 				size_type numLeft = 0, numRight = m_primCount;
 				Float leftWidth = 0, rightWidth = extents[axis];
 				const Float binSize = m_binSize[axis];
@@ -2509,14 +2515,14 @@ protected:
 		 * boxes for the left and right subtrees and return associated
 		 * primitive lists.
 		 */
-		boost::tuple<AABB, index_type *, AABB, index_type *> partition(
+		boost::tuple<AABBType, index_type *, AABB, index_type *> partition(
 				BuildContext &ctx, const Derived *derived, index_type *primIndices,
 				SplitCandidate &split, bool isLeftChild, Float traversalCost, 
 				Float intersectionCost) {
 			const float splitPos = split.pos;
 			const int axis = split.axis;
 			size_type numLeft = 0, numRight = 0;
-			AABB leftBounds, rightBounds;
+			AABBType leftBounds, rightBounds;
 
 			index_type *leftIndices, *rightIndices;
 			if (isLeftChild) {
@@ -2531,7 +2537,7 @@ protected:
 
 			for (size_type i=0; i<m_primCount; ++i) {
 				const index_type primIndex = primIndices[i];
-				const AABB aabb = derived->getAABB(primIndex);
+				const AABBType aabb = derived->getAABB(primIndex);
 
 				if (aabb.max[axis] <= splitPos) {
 					KDAssert(numLeft < split.numLeft);
