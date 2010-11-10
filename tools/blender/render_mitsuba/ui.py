@@ -37,100 +37,72 @@ del properties_world
 # Example of wrapping every class 'as is'
 import properties_material
 for member in dir(properties_material):
-    subclass = getattr(properties_material, member)
-    try:
-        subclass.COMPAT_ENGINES.add('MITSUBA_RENDER')
-    except:
-        pass
+	subclass = getattr(properties_material, member)
+	try:
+		subclass.COMPAT_ENGINES.add('MITSUBA_RENDER')
+	except:
+		pass
 del properties_material
 
 import properties_data_mesh
 for member in dir(properties_data_mesh):
-    subclass = getattr(properties_data_mesh, member)
-    try:
-        subclass.COMPAT_ENGINES.add('MITSUBA_RENDER')
-    except:
-        pass
+	subclass = getattr(properties_data_mesh, member)
+	try:
+		subclass.COMPAT_ENGINES.add('MITSUBA_RENDER')
+	except:
+		pass
 del properties_data_mesh
 
 import properties_texture
 for member in dir(properties_texture):
-    subclass = getattr(properties_texture, member)
-    try:
-        subclass.COMPAT_ENGINES.add('MITSUBA_RENDER')
-    except:
-        pass
+	subclass = getattr(properties_texture, member)
+	try:
+		subclass.COMPAT_ENGINES.add('MITSUBA_RENDER')
+	except:
+		pass
 del properties_texture
 
 import properties_data_camera
 for member in dir(properties_data_camera):
-    subclass = getattr(properties_data_camera, member)
-    try:
-        subclass.COMPAT_ENGINES.add('MITSUBA_RENDER')
-    except:
-        pass
+	subclass = getattr(properties_data_camera, member)
+	try:
+		subclass.COMPAT_ENGINES.add('MITSUBA_RENDER')
+	except:
+		pass
 del properties_data_camera
 
-
+import properties_data_lamp
+for member in dir(properties_data_lamp):
+	subclass = getattr(properties_data_lamp, member)
+	try:
+		subclass.COMPAT_ENGINES.add('MITSUBA_RENDER')
+	except:
+		pass
+del properties_data_lamp
 
 class RenderButtonsPanel():
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "render"
-    # COMPAT_ENGINES must be defined in each subclass, external engines can add themselves here
+	bl_space_type = 'PROPERTIES'
+	bl_region_type = 'WINDOW'
+	bl_context = "render"
 
-    @classmethod
-    def poll(cls, context):
-        rd = context.scene.render
-        return (rd.use_game_engine == False) and (rd.engine in cls.COMPAT_ENGINES)
+	@classmethod
+	def poll(cls, context):
+		rd = context.scene.render
+		return (rd.use_game_engine == False) and (rd.engine in cls.COMPAT_ENGINES)
 
 
 class RENDER_PT_mitsuba_radiosity(RenderButtonsPanel, bpy.types.Panel):
-    bl_label = "Radiosity"
-    COMPAT_ENGINES = {'MITSUBA_RENDER'}
+	bl_label = "Mitsuba setup"
+	COMPAT_ENGINES = {'MITSUBA_RENDER'}
 
-    def draw_header(self, context):
-        scene = context.scene
+	def draw(self, context):
+		layout = self.layout
+		scene = context.scene
+		rd = scene.render
 
-        self.layout.prop(scene, "mts_radio_enable", text="")
-
-    def draw(self, context):
-        layout = self.layout
-
-        scene = context.scene
-        rd = scene.render
-
-        layout.active = scene.mts_radio_enable
-
-        split = layout.split()
-
-        col = split.column()
-        col.prop(scene, "mts_radio_count", text="Rays")
-        col.prop(scene, "mts_radio_recursion_limit", text="Recursions")
-        col = split.column()
-        col.prop(scene, "mts_radio_error_bound", text="Error")
-
-        layout.prop(scene, "mts_radio_display_advanced")
-
-        if scene.mts_radio_display_advanced:
-            split = layout.split()
-
-            col = split.column()
-            col.prop(scene, "mts_radio_adc_bailout", slider=True)
-            col.prop(scene, "mts_radio_gray_threshold", slider=True)
-            col.prop(scene, "mts_radio_low_error_factor", slider=True)
-
-            col = split.column()
-            col.prop(scene, "mts_radio_brightness")
-            col.prop(scene, "mts_radio_minimum_reuse", text="Min Reuse")
-            col.prop(scene, "mts_radio_nearest_count")
-
-            split = layout.split()
-
-            col = split.column()
-            col.label(text="Estimation Influence:")
-            col.prop(scene, "mts_radio_media")
-            col.prop(scene, "mts_radio_normal")
-
-            col = split.column()
-            col.prop(scene, "mts_radio_always_sample")
+		split = layout.split()
+		col = split.column();
+		col.prop(scene, "mts_path", text="Executable")
+		row = col.row();
+		row.prop(scene, "mts_gui", text="In external GUI")
+		row.operator("wm.save_homefile", text="Save", icon ='FILE_TICK')

@@ -27,7 +27,7 @@ bl_addon_info = {
 	"warning": "",
 	"wiki_url": "http://wiki.blender.org/index.php/Extensions:2.5/Py/"\
 		"Scripts/Render/Mitsuba",
-	"tracker_url": "Unavailable",
+	"tracker_url": "https://www.mitsuba-renderer.org/bugtracker/projects/mitsuba",
 	"category": "Render"}
 
 
@@ -41,89 +41,19 @@ else:
 	from render_mitsuba import render
 	from render_mitsuba import ui
 
-
 def register():
 	Scene = bpy.types.Scene
-
-	# Not a real pov option, just to know if we should write
-	Scene.mts_radio_enable = BoolProperty(
-			name="Enable Radiosity",
-			description="Enable mitsubas radiosity calculation",
-			default=False)
-	Scene.mts_radio_display_advanced = BoolProperty(
-			name="Advanced Options",
-			description="Show advanced options",
-			default=False)
-
-	# Real pov options
-	Scene.mts_radio_adc_bailout = FloatProperty(
-			name="ADC Bailout", description="The adc_bailout for radiosity rays. Use adc_bailout = 0.01 / brightest_ambient_object for good results",
-			min=0.0, max=1000.0, soft_min=0.0, soft_max=1.0, default=0.01)
-
-	Scene.mts_radio_always_sample = BoolProperty(
-			name="Always Sample", description="Only use the data from the pretrace step and not gather any new samples during the final radiosity pass",
-			default=True)
-
-	Scene.mts_radio_brightness = FloatProperty(
-			name="Brightness", description="Amount objects are brightened before being returned upwards to the rest of the system",
-			min=0.0, max=1000.0, soft_min=0.0, soft_max=10.0, default=1.0)
-
-	Scene.mts_radio_count = IntProperty(
-			name="Ray Count", description="Number of rays that are sent out whenever a new radiosity value has to be calculated",
-			min=1, max=1600, default=35)
-
-	Scene.mts_radio_error_bound = FloatProperty(
-			name="Error Bound", description="One of the two main speed/quality tuning values, lower values are more accurate",
-			min=0.0, max=1000.0, soft_min=0.1, soft_max=10.0, default=1.8)
-
-	Scene.mts_radio_gray_threshold = FloatProperty(
-			name="Gray Threshold", description="One of the two main speed/quality tuning values, lower values are more accurate",
-			min=0.0, max=1.0, soft_min=0, soft_max=1, default=0.0)
-
-	Scene.mts_radio_low_error_factor = FloatProperty(
-			name="Low Error Factor", description="If you calculate just enough samples, but no more, you will get an image which has slightly blotchy lighting",
-			min=0.0, max=1.0, soft_min=0.0, soft_max=1.0, default=0.5)
-
-	# max_sample - not available yet
-	Scene.mts_radio_media = BoolProperty(
-			name="Media", description="Radiosity estimation can be affected by media",
-			default=False)
-
-	Scene.mts_radio_minimum_reuse = FloatProperty(
-			name="Minimum Reuse", description="Fraction of the screen width which sets the minimum radius of reuse for each sample point (At values higher than 2% expect errors)",
-			min=0.0, max=1.0, soft_min=0.1, soft_max=0.1, default=0.015)
-
-	Scene.mts_radio_nearest_count = IntProperty(
-			name="Nearest Count", description="Number of old ambient values blended together to create a new interpolated value",
-			min=1, max=20, default=5)
-
-	Scene.mts_radio_normal = BoolProperty(
-			name="Normals", description="Radiosity estimation can be affected by normals",
-			default=False)
-
-	Scene.mts_radio_recursion_limit = IntProperty(
-			name="Recursion Limit", description="how many recursion levels are used to calculate the diffuse inter-reflection",
-			min=1, max=20, default=3)
-
+	Scene.mts_path = bpy.props.StringProperty(
+		name = "mts_path",
+		description="Full path to the 'mitsuba' executable",
+		default = "", subtype = "FILE_PATH", maxlen=1024)
+	Scene.mts_gui = bpy.props.BoolProperty(
+		name = "mts_gui",
+		description="Should the Mitsuba user interface be launched?",
+		default = False)
 
 def unregister():
-	import bpy
-	Scene = bpy.types.Scene
-
-	del Scene.mts_radio_enable
-	del Scene.mts_radio_display_advanced
-	del Scene.mts_radio_adc_bailout
-	del Scene.mts_radio_always_sample
-	del Scene.mts_radio_brightness
-	del Scene.mts_radio_count
-	del Scene.mts_radio_error_bound
-	del Scene.mts_radio_gray_threshold
-	del Scene.mts_radio_low_error_factor
-	del Scene.mts_radio_media
-	del Scene.mts_radio_minimum_reuse
-	del Scene.mts_radio_nearest_count
-	del Scene.mts_radio_normal
-	del Scene.mts_radio_recursion_limit
+	del Scene.mts_path
 
 if __name__ == "__main__":
 	register()

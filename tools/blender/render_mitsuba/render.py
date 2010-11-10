@@ -55,7 +55,8 @@ class MitsubaRender(bpy.types.RenderEngine):
 		adjfile.close()
 
 	def _render(self):
-		mts_path = '/home/wenzel/mitsuba'
+		scene = bpy.data.scenes[0]
+		(mts_path, tail) = os.path.split(bpy.path.abspath(scene.mts_path))
 		mtsimport_binary = os.path.join(mts_path, "mtsimport")
 		mitsuba_binary = os.path.join(mts_path, "mitsuba")
 		mts_render_libpath = os.path.join(mts_path, "src/librender")
@@ -63,7 +64,6 @@ class MitsubaRender(bpy.types.RenderEngine):
 		mts_hw_libpath = os.path.join(mts_path, "src/libhw")
 		env = copy.copy(os.environ)
 		env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath
-		scene = bpy.data.scenes[0]
 		render = scene.render
 		width = int(render.resolution_x * render.resolution_percentage * 0.01)
 		height = int(render.resolution_y * render.resolution_percentage * 0.01)
@@ -102,6 +102,8 @@ class MitsubaRender(bpy.types.RenderEngine):
 		if not self._render():
 			self.update_stats("", "MtsBlend: Unable to render (please check the console)")
 			return
+			
+		self.update_stats("", "MtsBlend: Unable to render (please check the console)")
 
 		r = scene.render
 		x = int(r.resolution_x * r.resolution_percentage * 0.01)
