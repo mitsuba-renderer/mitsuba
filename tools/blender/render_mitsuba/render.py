@@ -25,11 +25,55 @@ import copy
 import shutil
 import time
 
+class MitsubaCheckOp(bpy.types.Operator):
+	bl_idname = 'mts.check'
+	bl_label = 'Check scene'
+
+	def reportWarning(self, msg):
+		self.report({'WARNING'}, msg)
+		print("MtsBlend: %s" % msg)
+
+	def _check_lamp(self, lamp):
+		hasErrors = False
+		if lamp.type == 'POINT' and lamp.falloff_type != 'INVERSE_SQUARE':
+			self.reportWarning('Point light "%s" needs to have inverse square falloff' % lamp.name)
+			hasErrors = True
+
+		if hasErrors:
+			self.reportWarning('Encountered one or more problems -- check the console')
+		else:
+			self.report({'INFO'}, "No problems found")
+
+	def execute(self, context):
+		scene = bpy.data.scenes[0]
+		for obj in scene.objects:
+			if obj.type == 'LAMP':
+				self._check_lamp(obj.data)
+		return {'FINISHED'}
+
 # Basic Mitsuba integration based on the POV-Ray add-on
 # Piggybacks on the COLLADA exporter to get most things done
 class MitsubaRender(bpy.types.RenderEngine):
 	bl_idname = 'MITSUBA_RENDER'
 	bl_label = "Mitsuba"
+
+	def _export_worldtrafo(self, adjfile, trafo):
+		adjfile.write('\t\t<transform name="toWorld">\n')
+		adjfile.write('\t\t\t<matrix value="')
+		for j in range(0,4):
+			for i in range(0,4):
+				adjfile.write("%f " % trafo[i][j])
+		adjfile.write('"/>\n\t\t</transform>\n')
+
+
+	def _export_lamp(self, adjfile, lamp):
+		if lamp.data.type == 'POINT':
+			adjfile.write('\t<luminaire id="%s-light" type="point">\n' % lamp.data.name)
+			mult = lamp.data.distance * lamp.data.distance / 2
+			self._export_worldtrafo(adjfile, lamp.matrix_world)
+			adjfile.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
+					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
+			adjfile.write('\t</luminaire>\n')
 
 	def _export(self, scene):
 		import tempfile
@@ -51,6 +95,9 @@ class MitsubaRender(bpy.types.RenderEngine):
 		print("MtsBlend: Writing adjustments file")
 		adjfile = open(self._temp_adj, 'w')
 		adjfile.write('<adjustments>\n');
+		for obj in scene.objects:
+			if obj.type == 'LAMP':
+				self._export_lamp(adjfile, obj)
 		adjfile.write('</adjustments>\n');
 		adjfile.close()
 
@@ -94,8 +141,8 @@ class MitsubaRender(bpy.types.RenderEngine):
 		return True
 
 	def _cleanup(self):
-	 	#shutil.rmtree(self._temp_dir)
 		print("Not cleaning up")
+	 	#shutil.rmtree(self._temp_dir)
 
 	def render(self, scene):
 		self._export(scene)
@@ -103,8 +150,6 @@ class MitsubaRender(bpy.types.RenderEngine):
 			self.update_stats("", "MtsBlend: Unable to render (please check the console)")
 			return
 			
-		self.update_stats("", "MtsBlend: Unable to render (please check the console)")
-
 		r = scene.render
 		x = int(r.resolution_x * r.resolution_percentage * 0.01)
 		y = int(r.resolution_y * r.resolution_percentage * 0.01)

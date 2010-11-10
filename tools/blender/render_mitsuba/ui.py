@@ -106,3 +106,4 @@ class RENDER_PT_mitsuba_radiosity(RenderButtonsPanel, bpy.types.Panel):
 		row = col.row();
 		row.prop(scene, "mts_gui", text="In external GUI")
 		row.operator("wm.save_homefile", text="Save", icon ='FILE_TICK')
+		col.operator("mts.check", text="Check scene")
