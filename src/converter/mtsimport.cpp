@@ -57,6 +57,7 @@ void help() {
 		<<  "   -p <num>    Use the specified number of samples per pixel." << endl << endl
 		<<  "   -s          Assume that colors are in sRGB space." << endl << endl
 		<<  "   -m          Map the larger image side to the full field of view" << endl << endl
+		<<  "   -l <type>   Override the type of film (e.g. 'exrfilm', 'pngfilm', ..)" << endl << endl
 		<<  "   -r <w>x<h>  Override the image resolution to e.g. 1920x1080" << endl << endl
 		<<  "   -f <fov>    Override the field of view to the given value in degrees." << endl << endl
 		<< "Please see the documentation for more information." << endl;
@@ -67,13 +68,14 @@ int colladaMain(int argc, char **argv) {
 	char optchar, *end_ptr = NULL;
 	int xres = -1, yres = -1;
 	int samplesPerPixel = 8;
+	std::string filmType = "exrfilm";
 	Float fov = -1;
 	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 	ELogLevel logLevel = EInfo;
 
 	optind = 1;
 
-	while ((optchar = getopt(argc, argv, "svhmr:a:p:f:")) != -1) {
+	while ((optchar = getopt(argc, argv, "svhmr:a:p:f:l:")) != -1) {
 		switch (optchar) {
 			case 'a': {
 					std::vector<std::string> paths = tokenize(optarg, ";");
@@ -94,6 +96,9 @@ int colladaMain(int argc, char **argv) {
 				break;
 			case 'v':
 				logLevel = EDebug;
+				break;
+			case 'l':
+				filmType = optarg;
 				break;
 			case 'f':
 				fov = (Float) strtod(optarg, &end_ptr);
@@ -133,6 +138,7 @@ int colladaMain(int argc, char **argv) {
 	converter.setMapSmallerSide(mapSmallerSide);
 	converter.setSamplesPerPixel(samplesPerPixel);
 	converter.setFov(fov);
+	converter.setFilmType(filmType);
 
 	const Logger *logger = Thread::getThread()->getLogger();
 	size_t initialWarningCount = logger->getWarningCount();

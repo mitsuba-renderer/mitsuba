@@ -1050,7 +1050,7 @@ void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, d
 	os << "\t\t<sampler type=\"ldsampler\">" << endl;
 	os << "\t\t\t<integer name=\"sampleCount\" value=\"" << cvt->m_samplesPerPixel << "\"/>" << endl;
 	os << "\t\t</sampler>" << endl << endl;
-	os << "\t\t<film type=\"exrfilm\">" << endl;
+	os << "\t\t<film id=\"film\" type=\"" << cvt->m_filmType << "\">" << endl;
 	os << "\t\t\t<integer name=\"width\" value=\"" << xres << "\"/>" << endl;
 	os << "\t\t\t<integer name=\"height\" value=\"" << (int) (xres/aspect) << "\"/>" << endl;
 	os << "\t\t\t<rfilter type=\"gaussian\"/>" << endl;

@@ -28,6 +28,7 @@ public:
 		m_xres = m_yres = -1;
 		m_samplesPerPixel = 8;
 		m_fov = -1;
+		m_filmType = "exrfilm";
 	}
 
 	void convert(const fs::path &inputFile, 
@@ -42,6 +43,7 @@ public:
 	inline void setResolution(int xres, int yres) { m_xres = xres; m_yres = yres; }
 	inline void setSamplesPerPixel(int samplesPerPixel) { m_samplesPerPixel = samplesPerPixel; }
 	inline void setFov(Float fov) { m_fov = fov; }
+	inline void setFilmType(const std::string &filmType) { m_filmType = filmType; }
 	inline const fs::path &getFilename() const { return m_filename; }
 private:
 	void convertCollada(const fs::path &inputFile, std::ostream &os,
@@ -55,4 +57,5 @@ public:
 	int m_xres, m_yres, m_samplesPerPixel;
 	Float m_fov;
 	fs::path m_filename;
+	std::string m_filmType;
 };
