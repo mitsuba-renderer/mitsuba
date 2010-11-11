@@ -17,13 +17,6 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-import subprocess
-import os
-import sys
-import math
-import copy
-import shutil
-import time
 
 class MitsubaCheckOp(bpy.types.Operator):
 	bl_idname = 'mts.check'

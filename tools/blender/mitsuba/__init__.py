@@ -31,29 +31,10 @@ bl_addon_info = {
 	"category": "Render"}
 
 
-if "bpy" in locals():
-	reload(render)
-	reload(ui)
-
-else:
-	import bpy
-	from bpy.props import *
-	from render_mitsuba import render
-	from render_mitsuba import ui
+from .core import RENDERENGINE_mitsuba
 
 def register():
-	Scene = bpy.types.Scene
-	Scene.mts_path = bpy.props.StringProperty(
-		name = "mts_path",
-		description="Full path to the 'mitsuba' executable",
-		default = "", subtype = "FILE_PATH", maxlen=1024)
-	Scene.mts_gui = bpy.props.BoolProperty(
-		name = "mts_gui",
-		description="Should the Mitsuba user interface be launched?",
-		default = False)
+	RENDERENGINE_mitsuba.install()
 
 def unregister():
-	del Scene.mts_path
-
-if __name__ == "__main__":
-	register()
+	RENDERENGINE_mitsuba.uninstall()
