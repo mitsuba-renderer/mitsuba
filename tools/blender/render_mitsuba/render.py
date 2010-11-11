@@ -66,14 +66,39 @@ class MitsubaRender(bpy.types.RenderEngine):
 		adjfile.write('"/>\n\t\t</transform>\n')
 
 
-	def _export_lamp(self, adjfile, lamp):
+	def _export_lamp(self, adjfile, lamp, idx):
 		if lamp.data.type == 'POINT':
 			adjfile.write('\t<luminaire id="%s-light" type="point">\n' % lamp.data.name)
-			mult = lamp.data.distance * lamp.data.distance / 2
+			mult = lamp.data.energy * lamp.data.distance * lamp.data.distance / 2
 			self._export_worldtrafo(adjfile, lamp.matrix_world)
 			adjfile.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
 					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
 			adjfile.write('\t</luminaire>\n')
+		elif lamp.data.type == 'AREA':
+			adjfile.write('\t<shape type="obj">\n')
+			size_x = lamp.data.size
+			size_y = lamp.data.size
+			if lamp.data.shape == 'RECTANGLE':
+				size_y = lamp.data.size_y
+			path = os.path.join(os.path.join(self._temp_dir, 'meshes'), "_area_luminaire_%d.obj" % idx)
+
+			adjfile.write('\t\t<string name="filename" value="%s"/>\n' % path)
+			self._export_worldtrafo(adjfile, lamp.matrix_world)
+
+			adjfile.write('\n\t\t<luminaire id="%s-light" type="area">\n' % lamp.data.name)
+			mult = lamp.data.energy * lamp.data.distance * lamp.data.distance / (size_x * size_y)
+			adjfile.write('\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
+					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
+			adjfile.write('\t\t</luminaire>\n')
+			adjfile.write('\t</shape>\n')
+		
+			objFile = open(path, 'w')
+			objFile.write('v %f %f 0\n' % (-size_x/2, -size_y/2))
+			objFile.write('v %f %f 0\n' % ( size_x/2, -size_y/2))
+			objFile.write('v %f %f 0\n' % ( size_x/2,  size_y/2))
+			objFile.write('v %f %f 0\n' % (-size_x/2,  size_y/2))
+			objFile.write('f 4 3 2 1\n')
+			objFile.close()
 
 	def _export(self, scene):
 		import tempfile
@@ -82,6 +107,7 @@ class MitsubaRender(bpy.types.RenderEngine):
 		self._temp_xml = os.path.join(self._temp_dir, 'scene.xml')
 		self._temp_adj = os.path.join(self._temp_dir, 'scene_adjustments.xml')
 		self._temp_out = os.path.join(self._temp_dir, 'scene.png')
+		os.mkdir(os.path.join(self._temp_dir, 'meshes'))
 		print("MtsBlend: Writing COLLADA file")
 		while True:
 			try:
@@ -95,9 +121,11 @@ class MitsubaRender(bpy.types.RenderEngine):
 		print("MtsBlend: Writing adjustments file")
 		adjfile = open(self._temp_adj, 'w')
 		adjfile.write('<adjustments>\n');
+		idx = 0
 		for obj in scene.objects:
 			if obj.type == 'LAMP':
-				self._export_lamp(adjfile, obj)
+				self._export_lamp(adjfile, obj, idx)
+			idx = idx+1
 		adjfile.write('</adjustments>\n');
 		adjfile.close()
 
