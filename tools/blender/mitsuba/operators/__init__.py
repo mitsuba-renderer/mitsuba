@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 # System Libs
-import os, copy, subprocess
+import os, sys, copy, subprocess, traceback, string
 
 # Blender Libs
 import bpy
@@ -65,7 +65,7 @@ class MitsubaCheckOp(bpy.types.Operator):
 
 	def reportWarning(self, msg):
 		self.report({'WARNING'}, msg)
-		print("MtsBlend: %s" % msg)
+		MtsLog("MtsBlend: %s" % msg)
 
 	def _check_lamp(self, lamp):
 		hasErrors = False
@@ -99,74 +99,80 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 		return {'RUNNING_MODAL'}
 
 	def execute(self, context):
-		if self.properties.scene == '':
-			scene = context.scene
-		else:
-			scene = bpy.data.scenes[self.properties.scene]
-
-		if scene is None:
-			self.report({'ERROR'}, 'Scene is not valid for export to %s' % self.properties.filename)
-			return {'CANCELLED'}
-		
-		# Force scene update; NB, scene.update() doesn't work
-		scene.frame_set(scene.frame_current)
-
-		(self.properties.filename, _) = os.path.splitext(self.properties.filename)
-
-		mts_basename = os.path.join(
-			self.properties.directory,
-			self.properties.filename)
-		mts_dae_file = mts_basename + ".dae"
-		mts_xml_file = mts_basename + ".xml"
-		mts_adj_file = mts_basename + "_adjustments.xml"
-		mts_meshes_dir = os.path.join(self.properties.directory, "meshes")
-
-		efutil.export_path = mts_xml_file
 		try:
-			os.mkdir(mts_meshes_dir)
-		except OSError:
-			pass
+			if self.properties.scene == '':
+				scene = context.scene
+			else:
+				scene = bpy.data.scenes[self.properties.scene]
 
-		scene.collada_export(mts_dae_file)
-
-		MtsLog('MtsBlend: Writing adjustments file to "%s"' % mts_adj_file)
-		adj = MtsAdjustments(mts_adj_file)
-		adj.export(scene)
-
-		if scene.mitsuba_engine.binary_path == "":
-			self.report({'ERROR'}, 'Mitsuba binary path must be specified!')
-			return {'CANCELLED'}
-
-		scene.mitsuba_engine.binary_path = efutil.filesystem_path(scene.mitsuba_engine.binary_path)
-		efutil.write_config_value('mitsuba', 'defaults', 'binary_path', scene.mitsuba_engine.binary_path)
-
-		(mts_path, tail) = os.path.split(bpy.path.abspath(scene.mitsuba_engine.binary_path))
-		mtsimport_binary = os.path.join(mts_path, "mtsimport")
-		env = copy.copy(os.environ)
-		mts_render_libpath = os.path.join(mts_path, "src/librender")
-		mts_core_libpath = os.path.join(mts_path, "src/libcore")
-		mts_hw_libpath = os.path.join(mts_path, "src/libhw")
-		env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath
-		render = scene.render
-		width = int(render.resolution_x * render.resolution_percentage * 0.01)
-		height = int(render.resolution_y * render.resolution_percentage * 0.01)
-
-		MtsLog("MtsBlend: Launching mtsimport")
-		try:
-			process = subprocess.Popen(
-				[mtsimport_binary, '-r', '%dx%d' % (width, height),
-					'-l', 'pngfilm', mts_dae_file, mts_xml_file, mts_adj_file],
-				env = env,
-				cwd = self.properties.directory
-			)
-			if process.wait() != 0:
-				self.report({'ERROR'}, "mtsimport returned with a nonzero status!")
+			if scene is None:
+				self.report({'ERROR'}, 'Scene is not valid for export to %s' % self.properties.filename)
 				return {'CANCELLED'}
-		except OSError:
-			self.report({'ERROR'}, "Could not execute '%s'" % mtsimport_binary)
-			return {'CANCELLED'}
+			
+			# Force scene update; NB, scene.update() doesn't work
+			scene.frame_set(scene.frame_current)
 
-		return {'FINISHED'}
+			(self.properties.filename, _) = os.path.splitext(self.properties.filename)
+
+			mts_basename = os.path.join(
+				self.properties.directory,
+				self.properties.filename)
+			mts_dae_file = mts_basename + ".dae"
+			mts_xml_file = mts_basename + ".xml"
+			mts_adj_file = mts_basename + "_adjustments.xml"
+			mts_meshes_dir = os.path.join(self.properties.directory, "meshes")
+
+			efutil.export_path = mts_xml_file
+			try:
+				os.mkdir(mts_meshes_dir)
+			except OSError:
+				pass
+
+			scene.collada_export(mts_dae_file)
+
+			MtsLog('MtsBlend: Writing adjustments file to "%s"' % mts_adj_file)
+			adj = MtsAdjustments(mts_adj_file, self.properties.directory)
+			adj.export(scene)
+
+			if scene.mitsuba_engine.binary_path == "":
+				self.report({'ERROR'}, 'Mitsuba binary path must be specified!')
+				return {'CANCELLED'}
+
+			scene.mitsuba_engine.binary_path = efutil.filesystem_path(scene.mitsuba_engine.binary_path)
+			efutil.write_config_value('mitsuba', 'defaults', 'binary_path', scene.mitsuba_engine.binary_path)
+
+			(mts_path, tail) = os.path.split(bpy.path.abspath(scene.mitsuba_engine.binary_path))
+			mtsimport_binary = os.path.join(mts_path, "mtsimport")
+			env = copy.copy(os.environ)
+			mts_render_libpath = os.path.join(mts_path, "src/librender")
+			mts_core_libpath = os.path.join(mts_path, "src/libcore")
+			mts_hw_libpath = os.path.join(mts_path, "src/libhw")
+			env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath
+			render = scene.render
+			width = int(render.resolution_x * render.resolution_percentage * 0.01)
+			height = int(render.resolution_y * render.resolution_percentage * 0.01)
+
+			MtsLog("MtsBlend: Launching mtsimport")
+			try:
+				process = subprocess.Popen(
+					[mtsimport_binary, '-r', '%dx%d' % (width, height),
+						'-l', 'pngfilm', mts_dae_file, mts_xml_file, mts_adj_file],
+					env = env,
+					cwd = self.properties.directory
+				)
+				if process.wait() != 0:
+					self.report({'ERROR'}, "mtsimport returned with a nonzero status!")
+					return {'CANCELLED'}
+			except OSError:
+				self.report({'ERROR'}, "Could not execute '%s'" % mtsimport_binary)
+				return {'CANCELLED'}
+
+			return {'FINISHED'}
+		except:
+			typ, value, tb = sys.exc_info()
+			elist = traceback.format_exception(typ, value, tb)
+			MtsLog("Caught exception: %s" % ''.join(elist))
+			return {'CANCELLED'}
 
 menu_func = lambda self, context: self.layout.operator("export.mitsuba", text="Export Mitsuba scene...")
 bpy.types.INFO_MT_file_export.append(menu_func)

@@ -28,11 +28,13 @@ from extensions_framework import util as efutil
 
 # Mitsuba-related classes
 from mitsuba.properties.engine import mitsuba_engine
+from mitsuba.properties.lamp import mitsuba_lamp
 from mitsuba.operators import MITSUBA_OT_preset_engine_add, EXPORT_OT_mitsuba
 from mitsuba.outputs import MtsLog, MtsFilmDisplay
 from mitsuba.export.film import resolution
 
 from mitsuba.ui import render_panels
+from mitsuba.ui import lamps
 
 def compatible(mod):
 	mod = __import__(mod)
@@ -43,6 +45,10 @@ def compatible(mod):
 			pass
 	del mod
 
+
+import properties_data_lamp
+properties_data_lamp.DATA_PT_context_lamp.COMPAT_ENGINES.add('mitsuba')
+del properties_data_lamp
 
 import properties_render
 properties_render.RENDER_PT_render.COMPAT_ENGINES.add('mitsuba')
@@ -58,7 +64,8 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 	bl_label			= 'Mitsuba'
 
 	property_groups = [
-		('Scene', mitsuba_engine)
+		('Scene', mitsuba_engine),
+		('Lamp', mitsuba_lamp)
 	]
 
 	render_lock = threading.Lock()
@@ -95,7 +102,8 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 				scene = scene.name
 			)
 			if 'CANCELLED' in export_result:
-				return False
+				bpy.ops.ef.msg(msg_type='ERROR', msg_text='Error while exporting -- check the console for details.')
+				return 
 
 			if scene.mitsuba_engine.export_mode == 'render':
 				(mts_path, tail) = os.path.split(bpy.path.abspath(scene.mitsuba_engine.binary_path))
@@ -115,11 +123,10 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 						cwd = self.output_dir
 					)
 				elif scene.mitsuba_engine.render_mode == 'cli':
-					(output_image, _) = os.path.splitext(efutil.export_path)
-					self.output_file = output_image + ".png"
+					self.output_file = efutil.export_path[:-4] + ".png"
 
 					mitsuba_process = subprocess.Popen(
-						[mitsuba_binary, efutil.export_path, '-o', output_image],
+						[mitsuba_binary, efutil.export_path, '-o', self.output_file],
 						env = env,
 						cwd = self.output_dir
 					)
@@ -135,11 +142,15 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 						if self.render_update_timer.isAlive(): self.render_update_timer.join()
 
 					# If we exit the wait loop (user cancelled) and luxconsole is still running, then send SIGINT
-					if mitsuba_process.poll() == None and scene.luxrender_engine.binary_name != 'luxrender':
+					if mitsuba_process.poll() == None:
 						# Use SIGTERM because that's the only one supported on Windows
-						luxrender_process.send_signal(subprocess.signal.SIGTERM)
+						mitsuba_process.send_signal(subprocess.signal.SIGTERM)
 
 					# Stop updating the render result and load the final image
 					framebuffer_thread.stop()
 					framebuffer_thread.join()
-					framebuffer_thread.kick(render_end=True)
+
+					if mitsuba_process.poll() != None and mitsuba_process.returncode != 0:
+						bpy.ops.ef.msg(msg_type='ERROR', msg_text='Rendering failed -- check the console.')
+					else:
+						framebuffer_thread.kick(render_end=True)

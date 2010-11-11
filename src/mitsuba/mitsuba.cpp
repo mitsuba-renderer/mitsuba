@@ -331,8 +331,10 @@ int ubi_main(int argc, char **argv) {
 			testSupervisor->printSummary();
 	} catch (const std::exception &e) {
 		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
+		return -1;
 	} catch (...) {
 		std::cerr << "Caught a critical exeption of unknown type!" << endl;
+		return -1;
 	}
 
 	return 0;
