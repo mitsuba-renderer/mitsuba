@@ -297,7 +297,7 @@ void Scene::initialize() {
 			(*it)->preprocess(this);
 			/* Add with a probability proportional to the luminaire's power */
 			if (m_importanceSampleLuminaires)
-				m_luminairePDF.put((*it)->getPower().getLuminance());
+				m_luminairePDF.put((*it)->getSamplingWeight());
 			else
 				m_luminairePDF.put(1.0f);
 		}
@@ -358,7 +358,7 @@ Float Scene::pdfLuminaire(const Point &p,
 	Float luminance;
 
 	if (m_importanceSampleLuminaires)
-		luminance = luminaire->getPower().getLuminance();
+		luminance = luminaire->getSamplingWeight();
 	else 
 		luminance = 1.0f;
 
@@ -373,7 +373,7 @@ Float Scene::pdfLuminaire(const Intersection &its,
 	Float luminance;
 
 	if (m_importanceSampleLuminaires)
-		luminance = luminaire->getPower().getLuminance();
+		luminance = luminaire->getSamplingWeight();
 	else 
 		luminance = 1.0f;
 
@@ -452,7 +452,7 @@ void Scene::pdfEmission(EmissionRecord &eRec) const {
 	const Luminaire *luminaire = eRec.luminaire;
 	Float luminance;
 	if (m_importanceSampleLuminaires)
-		luminance = luminaire->getPower().getLuminance();
+		luminance = luminaire->getSamplingWeight();
 	else 
 		luminance = 1.0f;
 	/* Calculate the probability of importance sampling this luminaire */

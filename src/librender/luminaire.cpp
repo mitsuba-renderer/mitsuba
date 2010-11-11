@@ -24,7 +24,13 @@ MTS_NAMESPACE_BEGIN
 Luminaire::Luminaire(const Properties &props)
  : ConfigurableObject(props), m_surfaceArea(0.0f) {
 	m_type = 0;
+
+	// Transformation from the luminaire's local coordinates to world coordiantes
 	m_luminaireToWorld = props.getTransform("toWorld", Transform());
+
+	// Importance sampling weight (used by the luminaire sampling code in \ref Scene)
+	m_samplingWeight = props.getFloat("samplingWeight", 1.0f);
+
 	m_worldToLuminaire = m_luminaireToWorld.inverse();
 	AssertEx(!m_luminaireToWorld.hasScale(), "toWorld transformation can't have scale factors!");
 	m_intersectable = false;
@@ -33,6 +39,7 @@ Luminaire::Luminaire(const Properties &props)
 Luminaire::Luminaire(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
 	m_surfaceArea = stream->readFloat();
+	m_samplingWeight = stream->readFloat();
 	m_type = (EType) stream->readInt();
 	m_intersectable = stream->readBool();
 	m_worldToLuminaire = Transform(stream);
@@ -46,6 +53,7 @@ void Luminaire::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 
 	stream->writeFloat(m_surfaceArea);
+	stream->writeFloat(m_samplingWeight);
 	stream->writeInt(m_type);
 	stream->writeBool(m_intersectable);
 	m_worldToLuminaire.serialize(stream);

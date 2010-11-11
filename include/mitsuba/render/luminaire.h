@@ -249,6 +249,12 @@ public:
 	/// Optional pre-process step before rendering starts
 	virtual void preprocess(const Scene *scene);
 
+	/**
+	 * \brief Return the luminaire's sampling weight. This is used by
+	 * the luminaire importance sampling routines in \ref Scene.
+	 */
+	inline Float getSamplingWeight() const { return m_samplingWeight; }
+
 	MTS_DECLARE_CLASS()
 protected:
     /// Create a new luminaire
@@ -262,6 +268,7 @@ protected:
 protected:
 	Transform m_worldToLuminaire, m_luminaireToWorld;
 	Float m_surfaceArea;
+	Float m_samplingWeight;
 	int m_type;
 	bool m_intersectable;
 };
