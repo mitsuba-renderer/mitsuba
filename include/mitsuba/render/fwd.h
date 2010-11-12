@@ -34,6 +34,7 @@ class GatherPhotonProcess;
 class HemisphereSampler;
 class HWResource;
 class ImageBlock;
+class Instanced;
 class Integrator;
 struct Intersection;
 class IrradianceCache;

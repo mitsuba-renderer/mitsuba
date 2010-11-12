@@ -101,6 +101,7 @@
 					<xsd:element name="subsurface" type="object"/>
 					<xsd:element name="ref" type="reference"/>
 					<xsd:element name="luminaire" type="luminaire"/>
+					<xsd:element name="shape" type="shape"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
