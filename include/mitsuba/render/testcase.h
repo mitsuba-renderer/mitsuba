@@ -87,7 +87,7 @@ protected:
 	void assertEqualsImpl(const Point &expected, const Point &actual, Float epsilon, const char *file, int line);
 
 	/// Asserts that the two 4x4 matrices are equal
-	void assertEqualsImpl(const Matrix4x4 *expected, const Matrix4x4 *actual, Float epsilon, const char *file, int line);
+	void assertEqualsImpl(const Matrix4x4 &expected, const Matrix4x4 &actual, Float epsilon, const char *file, int line);
 
 	/// Asserts that a condition is true
 	void assertTrueImpl(bool condition, const char *expr, const char *file, int line);

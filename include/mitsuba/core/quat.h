@@ -211,7 +211,7 @@ template <typename T> struct TQuaternion {
 	 */
 	static TQuaternion fromTransform(const Transform trafo) {
 		/// Implementation from PBRT
-		const Matrix4x4 &m = *trafo.getMatrix();
+		const Matrix4x4 &m = trafo.getMatrix();
 		T trace = m.m[0][0] + m.m[1][1] + m.m[2][2];
 		TVector3<T> v; T w;
 		if (trace > 0.f) {
@@ -252,18 +252,20 @@ template <typename T> struct TQuaternion {
 		Float xy = v.x * v.y, xz = v.x * v.z, yz = v.y * v.z;
 		Float wx = v.x * w,   wy = v.y * w,   wz = v.z * w;
 
-		ref<Matrix4x4> m = new Matrix4x4();
-		m->m[0][0] = 1.f - 2.f * (yy + zz);
-		m->m[0][1] =       2.f * (xy + wz);
-		m->m[0][2] =       2.f * (xz - wy);
-		m->m[1][0] =       2.f * (xy - wz);
-		m->m[1][1] = 1.f - 2.f * (xx + zz);
-		m->m[1][2] =       2.f * (yz + wx);
-		m->m[2][0] =       2.f * (xz + wy);
-		m->m[2][1] =       2.f * (yz - wx);
-		m->m[2][2] = 1.f - 2.f * (xx + yy);
+		Matrix4x4 m;
+		m.m[0][0] = 1.f - 2.f * (yy + zz);
+		m.m[0][1] =       2.f * (xy + wz);
+		m.m[0][2] =       2.f * (xz - wy);
+		m.m[1][0] =       2.f * (xy - wz);
+		m.m[1][1] = 1.f - 2.f * (xx + zz);
+		m.m[1][2] =       2.f * (yz + wx);
+		m.m[2][0] =       2.f * (xz + wy);
+		m.m[2][1] =       2.f * (yz - wx);
+		m.m[2][2] = 1.f - 2.f * (xx + yy);
 
-		return Transform(m->transpose(), m);
+		Matrix4x4 transp;
+		m.transpose(transp);
+		return Transform(transp, m);
 	}
 
 	/// Serialize this quaternion to a binary data stream

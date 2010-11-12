@@ -244,13 +244,13 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		if (tokens.size() != 16)
 			SLog(EError, "Invalid matrix specified");
 		int index = 0;
-		Float tmp[4][4];
+		Matrix4x4 mtx;
 
 		for (int i=0; i<4; ++i)
 			for (int j=0; j<4; ++j)
-				tmp[i][j] = parseFloat(name, tokens[index++]);
+				mtx.m[i][j] = parseFloat(name, tokens[index++]);
 
-		m_transform = Transform(new Matrix4x4(tmp)) * m_transform;
+		m_transform = Transform(mtx) * m_transform;
 	} else if (name == "point" || name == "vector") {
 		Float x = parseFloat(name, context.attributes["x"]);
 		Float y = parseFloat(name, context.attributes["y"]);

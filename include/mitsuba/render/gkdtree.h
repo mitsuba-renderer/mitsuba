@@ -3188,19 +3188,21 @@ template <typename AABBType, typename Derived>
 			" intersections)", idx, nIntersections);
 
 	/* Solve using normal equations */
-	ref<Matrix4x4> M = new Matrix4x4(0.0f);
+	Matrix4x4 M(0.0f), Minv;
 	Vector4 rhs(0.0f), x;
 
 	for (int i=0; i<3; ++i) {
 		for (int j=0; j<3; ++j) 
 			for (int k=0; k<idx; ++k) 
-				M->m[i][j] += A[k][i]*A[k][j];
+				M.m[i][j] += A[k][i]*A[k][j];
 		for (int k=0; k<idx; ++k) 
 			rhs[i] += A[k][i]*b[k];
 	}
-	M->m[3][3] = 1.0f;
+	M.m[3][3] = 1.0f;
+	bool success = M.invert(Minv);
+	Assert(success);
 
-	Transform(M->inverse())(rhs, x);
+	Transform(Minv, M)(rhs, x);
 
 	Float avgRdtsc = 0, avgResidual = 0;
 	for (int i=0; i<idx; ++i) {

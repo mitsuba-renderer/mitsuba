@@ -242,7 +242,7 @@ void GLProgram::setParameter(int id, const Transform &trafo) {
 		return;
 #ifdef SINGLE_PRECISION
 	glUniformMatrix4fv(id, 1, true, reinterpret_cast<const GLfloat *>
-		(trafo.getMatrix()->m));
+		(trafo.getMatrix().m));
 #else
 	GLfloat tmp[16];
 	int idx=0;

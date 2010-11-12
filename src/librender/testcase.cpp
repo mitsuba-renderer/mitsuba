@@ -98,15 +98,15 @@ void TestCase::assertEqualsImpl(const Vector4 &expected, const Vector4 &actual, 
 			"expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
 }
 
-void TestCase::assertEqualsImpl(const Matrix4x4 *expected, const Matrix4x4 *actual, Float epsilon, const char *file, int line) {
+void TestCase::assertEqualsImpl(const Matrix4x4 &expected, const Matrix4x4 &actual, Float epsilon, const char *file, int line) {
 	bool match = true;
 	for (int i=0; i<4; ++i)
 		for (int j=0; j<4; ++j)
-			if (std::abs(expected->m[i][j]-actual->m[i][j]) > epsilon)
+			if (std::abs(expected.m[i][j]-actual.m[i][j]) > epsilon)
 				match = false;
 	if (!match)
 		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
-			"expected matrix %s, got %s.", expected->toString().c_str(), actual->toString().c_str());
+			"expected matrix %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
 }
 
 struct Sample {

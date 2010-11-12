@@ -25,24 +25,23 @@ class TestLinearAlgebra : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
 	MTS_DECLARE_TEST(test01_eigenDecomp)
-	MTS_DECLARE_TEST(test02_quaternion)
 	MTS_END_TESTCASE()
 
 	void test01_eigenDecomp() {
-		ref<Matrix4x4> A = new Matrix4x4(
+		Matrix4x4 A(
 			1.4541, 1.1233, 1.2407, 1.2548,
 			1.1233, 0.2597, 0.3819, 1.3917,
 			1.2407, 0.3819, 1.1552, 1.1048,
 			1.2548, 1.3917, 1.1048, 1.4712
 		);
-		ref<Matrix4x4> Q = new Matrix4x4();
+		Matrix4x4 Q;
 		Vector4 d;
-		A->symmEigenDecomp(Q, d);
+		A.symmEigenDecomp(Q, d);
 
 		Vector4 refD(-0.823889076095475, 0.130902702868822,
 			0.557486242256414, 4.47570013097024);
 
-		ref<Matrix4x4> refQ = new Matrix4x4(
+		Matrix4x4 refQ(
 			0.294383137629217, 0.746207030711883, 0.191065628242818, 0.565692108217809,
 			-0.789565156329591, 0.139585328270248, -0.459560990857043, 0.381977087957391,
 			-0.286639718342894, -0.415237779451033, 0.738328701906588, 0.447533223711729,

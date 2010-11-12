@@ -130,7 +130,7 @@ public:
 		const Point2 &jitter) = 0;
 
 	/// Configure the camera (manual)
-	virtual void setCamera(const Matrix4x4 *proj, const Matrix4x4 *view) = 0;
+	virtual void setCamera(const Matrix4x4 &proj, const Matrix4x4 &view) = 0;
 
 	/// Set up the renderer for drawing triangle geometry
 	virtual void beginDrawingMeshes(bool transmitOnlyPositions = false) = 0; 

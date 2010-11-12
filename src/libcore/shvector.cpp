@@ -352,16 +352,16 @@ void SHVector::rotation(const Transform &t, SHRotation &rot) {
 	if (rot.blocks.size() <= 1)
 		return;
 
-	const Matrix4x4 *trafo = t.getMatrix();
-	rot.blocks[1](0, 0) =  trafo->m[1][1];
-	rot.blocks[1](0, 1) = -trafo->m[2][1];
-	rot.blocks[1](0, 2) =  trafo->m[0][1];
-	rot.blocks[1](1, 0) = -trafo->m[1][2];
-	rot.blocks[1](1, 1) =  trafo->m[2][2];
-	rot.blocks[1](1, 2) = -trafo->m[0][2];
-	rot.blocks[1](2, 0) =  trafo->m[1][0];
-	rot.blocks[1](2, 1) = -trafo->m[2][0];
-	rot.blocks[1](2, 2) =  trafo->m[0][0];
+	const Matrix4x4 &trafo = t.getMatrix();
+	rot.blocks[1](0, 0) =  trafo.m[1][1];
+	rot.blocks[1](0, 1) = -trafo.m[2][1];
+	rot.blocks[1](0, 2) =  trafo.m[0][1];
+	rot.blocks[1](1, 0) = -trafo.m[1][2];
+	rot.blocks[1](1, 1) =  trafo.m[2][2];
+	rot.blocks[1](1, 2) = -trafo.m[0][2];
+	rot.blocks[1](2, 0) =  trafo.m[1][0];
+	rot.blocks[1](2, 1) = -trafo.m[2][0];
+	rot.blocks[1](2, 2) =  trafo.m[0][0];
 
 	if (rot.blocks.size() <= 2)
 		return;

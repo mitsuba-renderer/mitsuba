@@ -442,7 +442,7 @@ void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string i
 	std::ostringstream matrix;
 	for (int i=0; i<4; ++i)
 		for (int j=0; j<4; ++j)
-			matrix << transform.getMatrix()->m[i][j] << " ";
+			matrix << transform.getMatrix().m[i][j] << " ";
 	std::string matrixValues = matrix.str();
 
 	os << "\t<shape id=\"" << prefixName << "/" << id << "\" type=\"serialized\">" << endl;
@@ -993,7 +993,7 @@ void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, d
 	std::ostringstream matrix;
 	for (int i=0; i<4; ++i)
 		for (int j=0; j<4; ++j)
-			matrix << transform.getMatrix()->m[i][j] << " ";
+			matrix << transform.getMatrix().m[i][j] << " ";
 	std::string matrixValues = matrix.str();
 
 	domCamera::domOptics::domTechnique_common::domOrthographic* ortho = camera.getOptics()->
@@ -1127,7 +1127,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 			);
 		} else if (element->typeID() == domMatrix::ID()) {
 			daeTArray<double> value = daeSafeCast<domMatrix>(element)->getValue();
-			ref<Matrix4x4> matrix = new Matrix4x4(
+			Matrix4x4 matrix(
 				(Float) value.get(0), (Float) value.get(1), (Float) value.get(2), (Float) value.get(3), 
 				(Float) value.get(4), (Float) value.get(5), (Float) value.get(6), (Float) value.get(7), 
 				(Float) value.get(8), (Float) value.get(9), (Float) value.get(10), (Float) value.get(11), 

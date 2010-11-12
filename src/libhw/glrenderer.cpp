@@ -837,14 +837,14 @@ void GLRenderer::drawAABB(const AABB &aabb) {
 
 void GLRenderer::setCamera(const ProjectiveCamera *camera) {
 	GLfloat temp1[16], temp2[16];
-	Matrix4x4 *view = const_cast<Matrix4x4 *>(camera->getViewTransform().getMatrix());
-	Matrix4x4 *proj = const_cast<Matrix4x4 *>(camera->getGLProjectionTransform().getMatrix());
+	const Matrix4x4 &view = camera->getViewTransform().getMatrix();
+	const Matrix4x4 &proj = camera->getGLProjectionTransform().getMatrix();
 
 	int pos=0;
 	for (int j=0; j<4; j++) {
 		for (int i=0; i<4; i++) {
-			temp1[pos]=(GLfloat) proj->m[i][j];
-			temp2[pos++]=(GLfloat) view->m[i][j];
+			temp1[pos]=(GLfloat) proj.m[i][j];
+			temp2[pos++]=(GLfloat) view.m[i][j];
 		}
 	}
 
@@ -858,14 +858,14 @@ void GLRenderer::setCamera(const ProjectiveCamera *camera) {
 
 void GLRenderer::setCamera(const ProjectiveCamera *camera, const Point2 &jitter) {
 	GLfloat temp1[16], temp2[16];
-	ref<Matrix4x4> view = const_cast<Matrix4x4 *>(camera->getViewTransform().getMatrix());
-	ref<Matrix4x4> proj = const_cast<Matrix4x4 *>(camera->getGLProjectionTransform(jitter).getMatrix());
+	const Matrix4x4 &view = camera->getViewTransform().getMatrix();
+	const Matrix4x4 &proj = camera->getGLProjectionTransform(jitter).getMatrix();
 
 	int pos=0;
 	for (int j=0; j<4; j++) {
 		for (int i=0; i<4; i++) {
-			temp1[pos]=(GLfloat) proj->m[i][j];
-			temp2[pos++]=(GLfloat) view->m[i][j];
+			temp1[pos]=(GLfloat) proj.m[i][j];
+			temp2[pos++]=(GLfloat) view.m[i][j];
 		}
 	}
 
@@ -877,13 +877,13 @@ void GLRenderer::setCamera(const ProjectiveCamera *camera, const Point2 &jitter)
 	glMultMatrixf(temp2);
 }
 
-void GLRenderer::setCamera(const Matrix4x4 *proj, const Matrix4x4 *view) {
+void GLRenderer::setCamera(const Matrix4x4 &proj, const Matrix4x4 &view) {
 	GLfloat temp1[16], temp2[16];
 	int pos=0;
 	for (int j=0; j<4; j++) {
 		for (int i=0; i<4; i++) {
-			temp1[pos]=(GLfloat) proj->m[i][j];
-			temp2[pos++]=(GLfloat) view->m[i][j];
+			temp1[pos]=(GLfloat) proj.m[i][j];
+			temp2[pos++]=(GLfloat) view.m[i][j];
 		}
 	}
 

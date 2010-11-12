@@ -69,7 +69,7 @@ public:
 		const Point2 &jitter);
 
 	/// Configure the camera (manual)
-	void setCamera(const Matrix4x4 *proj, const Matrix4x4 *view);
+	void setCamera(const Matrix4x4 &proj, const Matrix4x4 &view);
 
 	/// Set up the renderer for drawing triangle geometry
 	void beginDrawingMeshes(bool transmitOnlyPositions = false); 

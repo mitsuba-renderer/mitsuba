@@ -242,13 +242,13 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 				case 4: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, 1), Vector(0, 1, 0)).inverse(); break;
 				case 5: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, -1), Vector(0, 1, 0)).inverse(); break;
 			}
-			const Matrix4x4 *viewMatrix = lightViewTrafo.getMatrix();
+			const Matrix4x4 &viewMatrix = lightViewTrafo.getMatrix();
 			m_shadowProgram->setParameter(m_shadowProgramParam_cubeMapTransform[i], lightProjTrafo * lightViewTrafo);
 			m_shadowProgram->setParameter(m_shadowProgramParam_depthVec[i], Vector4(
-				-viewMatrix->m[2][0] * m_invClipRange,
-				-viewMatrix->m[2][1] * m_invClipRange,
-				-viewMatrix->m[2][2] * m_invClipRange,
-				(-viewMatrix->m[2][3] - m_nearClip) * m_invClipRange
+				-viewMatrix.m[2][0] * m_invClipRange,
+				-viewMatrix.m[2][1] * m_invClipRange,
+				-viewMatrix.m[2][2] * m_invClipRange,
+				(-viewMatrix.m[2][3] - m_nearClip) * m_invClipRange
 			));
 		}
 		m_renderer->drawAll();
@@ -265,14 +265,14 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 				case 4: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, 1), Vector(0, 1, 0)).inverse(); break;
 				case 5: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, -1), Vector(0, 1, 0)).inverse(); break;
 			}
-			const Matrix4x4 *viewMatrix = lightViewTrafo.getMatrix();
+			const Matrix4x4 &viewMatrix = lightViewTrafo.getMatrix();
 
 			m_altShadowProgram->setParameter(m_altShadowProgramParam_cubeMapTransform, lightProjTrafo * lightViewTrafo);
 			m_altShadowProgram->setParameter(m_altShadowProgramParam_depthVec, Vector4(
-				-viewMatrix->m[2][0] * m_invClipRange,
-				-viewMatrix->m[2][1] * m_invClipRange,
-				-viewMatrix->m[2][2] * m_invClipRange,
-				(-viewMatrix->m[2][3] - m_nearClip) * m_invClipRange
+				-viewMatrix.m[2][0] * m_invClipRange,
+				-viewMatrix.m[2][1] * m_invClipRange,
+				-viewMatrix.m[2][2] * m_invClipRange,
+				(-viewMatrix.m[2][3] - m_nearClip) * m_invClipRange
 			));
 
 			m_shadowMap->activateSide(i);
