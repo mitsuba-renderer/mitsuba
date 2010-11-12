@@ -323,6 +323,7 @@ void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string i
 
 	for (size_t i=0; i<tess_cleanup.size(); ++i)
 		delete[] tess_cleanup[i];
+	tess_cleanup.clear();
 
 	for (size_t i=0; i<tess_data.size(); i+=tess_nSources) {
 		Vertex vertex;
