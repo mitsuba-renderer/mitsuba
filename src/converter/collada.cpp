@@ -53,6 +53,14 @@ struct Vec4 {
 		: x(x), y(y), z(z), w(w) {
 	}
 
+	inline void operator+=(const Vec4 &v) {
+		x += v.x; y += v.y; z += v.z; w += v.w;
+	}
+	
+	inline Vec4 operator*(Float f) const {
+		return Vec4(x * f, y * f, z * f, w * f);
+	}
+
 	inline Float operator[](int i) const {
 		return (&x)[i];
 	}
@@ -104,6 +112,8 @@ struct VertexData {
 /* This code is not thread-safe for now */
 GLUtesselator *tess = NULL;
 std::vector<domUint> tess_data;
+std::vector<domUint *> tess_cleanup;
+VertexData *tess_vdata = NULL;
 size_t tess_nSources;
 
 VertexData *fetchVertexData(Transform transform, std::ostream &os, 
@@ -310,6 +320,9 @@ void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string i
 		return;
 
 	id += formatString("_%i", geomIndex);
+
+	for (size_t i=0; i<tess_cleanup.size(); ++i)
+		delete[] tess_cleanup[i];
 
 	for (size_t i=0; i<tess_data.size(); i+=tess_nSources) {
 		Vertex vertex;
@@ -525,6 +538,7 @@ void loadGeometry(GeometryConverter *cvt, std::string prefixName, Transform tran
 			for (size_t l = 0; l<indices.getCount(); ++l) 
 				temp[l] = indices.get(l);
 
+			tess_vdata = data;
 			gluTessBeginPolygon(tess, NULL);
 			gluTessBeginContour(tess);
 
@@ -586,6 +600,7 @@ void loadGeometry(GeometryConverter *cvt, std::string prefixName, Transform tran
 			for (size_t l = 0; l<vertexCount * data->nSources; ++l)
 				temp[l] = indexArray.get(indexOffset++);
 
+			tess_vdata = data;
 			gluTessBeginPolygon(tess, NULL);
 			gluTessBeginContour(tess);
 
@@ -1202,7 +1217,39 @@ GLvoid __stdcall tessVertex(void *data) {
 
 GLvoid __stdcall tessCombine(GLdouble coords[3], void *vertex_data[4], 
 	GLfloat weight[4], void **outData) {
-	SLog(EWarn, "Detected a degenerate or self-intersecting polygon!");
+	const domUint **raw = (const domUint **) vertex_data;
+	domUint *result = new domUint[tess_nSources];
+	tess_cleanup.push_back(result);
+
+	for (size_t i=0; i<tess_nSources; ++i) {
+		int offset = 0;
+		bool found = false;
+		for (int j=0; j<ELast; ++j) {
+			if (tess_vdata->typeToOffsetInStream[j] == (int) i) {
+				offset = tess_vdata->typeToOffset[j];
+				found = true;
+				break;
+			}
+		}
+		SAssert(found);
+
+		// this will be very slow -- let's hope that it happens rarely
+		domUint size = tess_vdata->typeToCount[offset];
+		Vec4 *oldVec = tess_vdata->data[offset];
+		Vec4 *newVec = new Vec4[size+1];
+		memcpy(newVec, oldVec, size * sizeof(Vec4));
+
+		newVec[size] = Vec4(0.0f);
+		for (int j=0; j<4; ++j) {
+			domUint idx = raw[j][i];
+			newVec[size] += newVec[idx] * weight[j];
+		}
+		tess_vdata->data[offset] = newVec;
+		result[i] = size;
+
+		delete oldVec;
+	}
+	*outData = result;
 }
 
 GLvoid __stdcall tessEnd() {
