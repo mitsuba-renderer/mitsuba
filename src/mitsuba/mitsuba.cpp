@@ -65,6 +65,7 @@ void help() {
 	cout <<  "   -n name     Assign a node name to this instance (Default: host name)" << endl << endl;
 	cout <<  "   -t          Test case mode (see Mitsuba docs for more information)" << endl << endl;
 	cout <<  "   -x          Skip rendering of files where output already exists" << endl << endl;
+	cout <<  "   -r sec      Write (partial) output images every 'sec' seconds" << endl << endl;
 	cout <<  "   -b res      Specify the block resolution used to split images into parallel" << endl;
 	cout <<  "               workloads (default: 32). Only applies to some integrators." << endl << endl;
 	cout <<  "   -v          Be more verbose" << endl << endl;
@@ -85,6 +86,28 @@ void signalHandler(int signal) {
 }
 #endif
 
+class FlushThread : public Thread {
+public:
+	FlushThread(int timeout) : Thread("flush"), 
+		m_flag(new WaitFlag()),
+		m_timeout(timeout) { }
+
+	void run() {
+		while (!m_flag->get()) {
+			m_flag->wait(m_timeout * 1000);
+			renderQueue->flush();
+		}
+	}
+
+	void quit() {
+		m_flag->set(true);
+		join();
+	}
+private:
+	ref<WaitFlag> m_flag;
+	int m_timeout;
+};
+
 int ubi_main(int argc, char **argv) {
 	char optchar, *end_ptr = NULL;
 
@@ -99,6 +122,7 @@ int ubi_main(int argc, char **argv) {
 		bool testCaseMode = false;
 		std::map<std::string, std::string> parameters;
 		int blockSize = 32;
+		int flushTimer = -1;
 
 		if (argc < 2) {
 			help();
@@ -107,7 +131,7 @@ int ubi_main(int argc, char **argv) {
 
 		optind = 1;
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "a:c:D:s:j:n:o:b:p:qhzvtx")) != -1) {
+		while ((optchar = getopt(argc, argv, "a:c:D:s:j:n:o:r:b:p:qhzvtx")) != -1) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
@@ -161,6 +185,11 @@ int ubi_main(int argc, char **argv) {
 					numParallelScenes = strtol(optarg, &end_ptr, 10);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the parallel scene count!");
+					break;
+				case 'r':
+					flushTimer = strtol(optarg, &end_ptr, 10);
+					if (*end_ptr != '\0')
+						SLog(EError, "Could not parse the '-r' parameter argument!");
 					break;
 				case 'b':
 					blockSize = strtol(optarg, &end_ptr, 10);
@@ -288,6 +317,12 @@ int ubi_main(int argc, char **argv) {
 		if (testCaseMode)
 			testSupervisor = new TestSupervisor(argc-optind);
 
+		ref<FlushThread> flushThread;
+		if (flushTimer > 0) {
+			flushThread = new FlushThread(flushTimer);
+			flushThread->start();
+		}
+
 		int jobIdx = 0;
 		for (int i=optind; i<argc; ++i) {
 			fs::path 
@@ -320,6 +355,8 @@ int ubi_main(int argc, char **argv) {
 
 		/* Wait for all render processes to finish */
 		renderQueue->waitLeft(0);
+		if (flushThread)
+			flushThread->quit();
 		renderQueue = NULL;
 
 		delete handler;

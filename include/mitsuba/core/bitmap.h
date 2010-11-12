@@ -55,8 +55,13 @@ public:
 	/// Clear the bitmap to zero
 	void clear();
 
-	/// Save the bitmap using the give file format
-	void save(EFileFormat format, Stream *stream) const;
+
+	/**
+	 * Save the bitmap using the give file format. Where
+	 * applicable, the \a compression parameter can be used
+	 * to control amount of compression (1: lowest, 9: highest)
+	 * */
+	void save(EFileFormat format, Stream *stream, int compression = 5) const;
 
 	/// Return the image's title identifier
 	inline const std::string &getTile() const { return m_title; }
@@ -134,7 +139,7 @@ protected:
 	void loadEXR(Stream *stream);
 
 	/// Save a file using the PNG file format
-	void savePNG(Stream *stream) const;
+	void savePNG(Stream *stream, int compression) const;
 
 	/// Save a file using the EXR file format
 	void saveEXR(Stream *stream) const;

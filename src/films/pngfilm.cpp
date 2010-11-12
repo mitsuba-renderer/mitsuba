@@ -403,7 +403,7 @@ public:
 		Log(EInfo, "Writing image to \"%s\" ..", filename.leaf().c_str());
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
 		bitmap->setGamma(m_gamma);
-		bitmap->save(Bitmap::EPNG, stream);
+		bitmap->save(Bitmap::EPNG, stream, 1);
 	}
 
 	bool destinationExists(const fs::path &baseName) const {

@@ -126,7 +126,8 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 					self.output_file = efutil.export_path[:-4] + ".png"
 
 					mitsuba_process = subprocess.Popen(
-						[mitsuba_binary, efutil.export_path, '-o', self.output_file],
+						[mitsuba_binary, '-r',  '%d' % scene.mitsuba_engine.refresh_interval,
+							'-o', self.output_file, efutil.export_path],
 						env = env,
 						cwd = self.output_dir
 					)
