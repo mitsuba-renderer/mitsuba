@@ -122,7 +122,7 @@ Transform Transform::perspective(Float fov, Float clipNear, Float clipFar) {
 	 *  zProj = (far * (z - near)) / (z * (far-near))
 	 *  
 	 *  Camera-space depths are not mapped linearly!
-	 * */
+	 */
 
 	Float recip = 1.0f / (clipFar - clipNear);
 

@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/testcase.h>
+#include <mitsuba/core/quat.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -24,6 +25,7 @@ class TestLinearAlgebra : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
 	MTS_DECLARE_TEST(test01_eigenDecomp)
+	MTS_DECLARE_TEST(test02_quaternion)
 	MTS_END_TESTCASE()
 
 	void test01_eigenDecomp() {
