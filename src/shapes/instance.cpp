@@ -107,10 +107,17 @@ public:
 		return false;
 	}
 
-	void fillIntersectionRecord(const Ray &ray, Float t, 
+	void fillIntersectionRecord(const Ray &ray, 
 		const void *temp, Intersection &its) const {
 		const KDTree *kdtree = m_shapeGroup->getKDTree();
-		Log(EError, "fillIntersectionRecord(): Unsupported!");
+		kdtree->fillIntersectionRecord<false>(ray, temp, its);
+		its.shFrame.n = normalize(m_objectToWorld(its.shFrame.n));
+		its.shFrame.s = normalize(m_objectToWorld(its.shFrame.s));
+		its.shFrame.t = normalize(m_objectToWorld(its.shFrame.t));
+		its.geoFrame = Frame(normalize(m_objectToWorld(its.geoFrame.n)));
+		its.wi = its.shFrame.toLocal(-ray.d);
+		its.dpdu = m_objectToWorld(its.dpdu);
+		its.dpdv = m_objectToWorld(its.dpdv);
 	}
 
 	MTS_DECLARE_CLASS()

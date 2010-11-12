@@ -206,7 +206,7 @@ public:
 	 * \brief Given that an intersection has been found, create a 
 	 * detailed intersection record
 	 */
-	virtual void fillIntersectionRecord(const Ray &ray, Float t, 
+	virtual void fillIntersectionRecord(const Ray &ray, 
 			const void *temp, Intersection &its) const;
 
 	/**

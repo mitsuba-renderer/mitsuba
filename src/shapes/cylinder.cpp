@@ -151,9 +151,9 @@ public:
 		}
 	}
 
-	void fillIntersectionRecord(const Ray &ray, Float t, 
+	void fillIntersectionRecord(const Ray &ray,
 			const void *temp, Intersection &its) const {
-		its.p = ray(t);
+		its.p = ray(its.t);
 
 		Point local = m_worldToObject(its.p);
 		Float phi = std::atan2(local.y, local.x);

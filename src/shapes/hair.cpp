@@ -612,9 +612,9 @@ public:
 		return m_kdtree->rayIntersect(ray, mint, maxt);
 	}
 
-	void fillIntersectionRecord(const Ray &ray, Float t, 
+	void fillIntersectionRecord(const Ray &ray, 
 		const void *temp, Intersection &its) const {
-		its.p = ray(t);
+		its.p = ray(its.t);
 
 		/* No UV coordinates for now */
 		its.uv = Point2(0,0);

@@ -270,6 +270,90 @@ protected:
 	};
 #endif
 
+	/**
+	 * \brief After having found a unique intersection, fill a proper record
+	 * using the temporary information collected in \ref intersect() 
+	 */
+	template<bool BarycentricPos> FINLINE void fillIntersectionRecord(const Ray &ray, 
+			const void *temp, Intersection &its) const {
+		const IntersectionCache *cache = reinterpret_cast<const IntersectionCache *>(temp);
+		const Shape *shape = m_shapes[cache->shapeIndex];
+		if (m_triangleFlag[cache->shapeIndex]) {
+			const TriMesh *trimesh = static_cast<const TriMesh *>(shape);
+			const Triangle &tri = trimesh->getTriangles()[cache->primIndex];
+			const Point *vertexPositions = trimesh->getVertexPositions();
+			const Normal *vertexNormals = trimesh->getVertexNormals();
+			const Point2 *vertexTexcoords = trimesh->getVertexTexcoords();
+			const Spectrum *vertexColors = trimesh->getVertexColors();
+			const TangentSpace *vertexTangents = trimesh->getVertexTangents();
+			const Vector b(1 - cache->u - cache->v, cache->u, cache->v);
+
+			const uint32_t idx0 = tri.idx[0], idx1 = tri.idx[1], idx2 = tri.idx[2];
+			const Point &p0 = vertexPositions[idx0];
+			const Point &p1 = vertexPositions[idx1];
+			const Point &p2 = vertexPositions[idx2];
+
+			if (BarycentricPos)
+				its.p = p0 * b.x + p1 * b.y + p2 * b.z;
+			else
+				its.p = ray(its.t);
+
+			Normal faceNormal(cross(p1-p0, p2-p0));
+			Float length = faceNormal.length();
+			if (!faceNormal.isZero())
+				faceNormal /= length;
+
+			its.geoFrame = Frame(faceNormal);
+
+			if (EXPECT_TAKEN(vertexNormals)) {
+				const Normal &n0 = vertexNormals[idx0];
+				const Normal &n1 = vertexNormals[idx1];
+				const Normal &n2 = vertexNormals[idx2];
+
+				if (EXPECT_TAKEN(!vertexTangents)) {
+					its.shFrame = Frame(normalize(n0 * b.x + n1 * b.y + n2 * b.z));
+				} else {
+					const TangentSpace &t0 = vertexTangents[idx0];
+					const TangentSpace &t1 = vertexTangents[idx1];
+					const TangentSpace &t2 = vertexTangents[idx2];
+					const Vector dpdu = t0.dpdu * b.x + t1.dpdu * b.y + t2.dpdu * b.z;
+					its.shFrame.n = normalize(n0 * b.x + n1 * b.y + n2 * b.z);
+					its.shFrame.s = normalize(dpdu - its.shFrame.n 
+						* dot(its.shFrame.n, dpdu));
+					its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
+					its.dpdu = dpdu;
+					its.dpdv = t0.dpdv * b.x + t1.dpdv * b.y + t2.dpdv * b.z;
+				}
+			} else {
+				its.shFrame = its.geoFrame;
+			}
+
+			if (EXPECT_TAKEN(vertexTexcoords)) {
+				const Point2 &t0 = vertexTexcoords[idx0];
+				const Point2 &t1 = vertexTexcoords[idx1];
+				const Point2 &t2 = vertexTexcoords[idx2];
+				its.uv = t0 * b.x + t1 * b.y + t2 * b.z;
+			} else {
+				its.uv = Point2(0.0f);
+			}
+
+			if (EXPECT_NOT_TAKEN(vertexColors)) {
+				const Spectrum &c0 = vertexColors[idx0],
+							&c1 = vertexColors[idx1],
+							&c2 = vertexColors[idx2];
+				its.color = c0 * b.x + c1 * b.y + c2 * b.z;
+			}
+
+			its.wi = its.toLocal(-ray.d);
+			its.shape = trimesh;
+			its.hasUVPartials = false;
+		} else {
+			shape->fillIntersectionRecord(ray, 
+				reinterpret_cast<const uint8_t*>(temp) + 8, its);
+		}
+	}
+
+
 	/// Virtual destructor
 	virtual ~KDTree();
 private:

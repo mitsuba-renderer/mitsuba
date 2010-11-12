@@ -348,8 +348,8 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 						Point(primRay4.o[0].f[idx], primRay4.o[1].f[idx], primRay4.o[2].f[idx]),
 						Vector(primRay4.d[0].f[idx], primRay4.d[1].f[idx], primRay4.d[2].f[idx])
 					);
-					shape->fillIntersectionRecord(ray, its4.t.f[idx], temp + 
-								+ idx * MTS_KD_INTERSECTION_TEMP + 8, its);
+					its.t = its4.t.f[idx];
+					shape->fillIntersectionRecord(ray, temp + idx * MTS_KD_INTERSECTION_TEMP + 8, its);
 				}
 
 				wo.x = nSecD[0].f[idx]; wo.y = nSecD[1].f[idx]; wo.z = nSecD[2].f[idx];

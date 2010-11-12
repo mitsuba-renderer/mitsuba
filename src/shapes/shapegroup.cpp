@@ -60,6 +60,10 @@ void ShapeGroup::addChild(const std::string &name, ConfigurableObject *child) {
 		Log(EError, "Nested instancing is not supported!");
 	} else if (cClass->derivesFrom(Shape::m_theClass)) {
 		Shape *shape = static_cast<Shape *>(child);
+		if (shape->isLuminaire())
+			Log(EError, "Instancing of luminaires is not supported");
+		if (shape->hasSubsurface())
+			Log(EError, "Instancing of subsurface integrators is not supported");
 		if (shape->isCompound()) {
 			int index = 0;
 			do {

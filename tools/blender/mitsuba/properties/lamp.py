@@ -50,7 +50,7 @@ class mitsuba_lamp(declarative_property_group):
 			'type': 'float',
 			'attr': 'sampling_weight',
 			'name': 'Sampling weight',
-			'description': 'Determines the relative amount of samples for this light source',
+			'description': 'Relative amount of samples to place on this light source (e.g. the "importance")',
 			'default': 1.0,
 			'min': 1e-3,
 			'soft_min': 1e-3,

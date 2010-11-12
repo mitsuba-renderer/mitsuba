@@ -130,10 +130,9 @@ public:
 		return true;
 	}
 
-	void fillIntersectionRecord(const Ray &ray, Float t, 
+	void fillIntersectionRecord(const Ray &ray, 
 			const void *temp, Intersection &its) const {
-		its.t = t;
-		its.p = ray(t);
+		its.p = ray(its.t);
 		Vector local = m_worldToObject(its.p - m_center);
 		Float theta = std::acos(std::min(std::max(local.z/m_radius, 
 				-(Float) 1), (Float) 1));
