@@ -16,105 +16,84 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import os, math, mathutils
+import os 
 
-from extensions_framework import util as efutil
+class ParamSetItem(list):
+	type		= None
+	type_name	= None
+	name		= None
+	value		= None
 
-class MtsAdjustments:
-	'''
-		Writes scene information to an "adjustments" file. This
-		mechanism is used to capture information which gets lost
-		in translation when using the COLLADA exporter.
-	'''
+	def __init__(self, *args):
+		self.type, self.name, self.value = args
+		self.type_name = "%s %s" % (self.type, self.name)
+		self.append(self.type_name)
+		self.append(self.value)
+	
+	def to_string(self):
+		if self.type == "color":
+			return '\t\t<rgb name="%s" value="%s %s %s"/>\n' % (self.name,
+					self.value[0], self.value[1], self.value[2])
+		elif self.type == "point" or self.type == "vector":
+			return '\t\t<%s name="%s" value="%s %s %s"/>\n' % (self.type,
+					self.name, self.value[0], self.value[1], self.value[2])
+		elif self.type == "integer" or self.type == "float" \
+				or self.type ==	"string":
+			return '\t\t<%s name="%s" value="%s"/>\n' % (self.type, self.name, self.value)
+		elif self.type == "reference_texture" or self.type == "reference_material":
+			return '\t\t<ref name="%s" id="%s"/>\n' % (self.name, self.value)
 
-	def __init__(self, target_file, target_dir):
-		self.target_file = target_file
-		self.target_dir = target_dir
+class ParamSet(list):
+	names = []
+	
+	def update(self, other):
+		for p in other:
+			self.add(p.type, p.name, p.value)
+		return self
+	
+	def add(self, type, name, value):
+		if name in self.names:
+			for p in self:
+				if p.name == name:
+					self.remove(p)
+		
+		self.append(
+			ParamSetItem(type, name, value)
+		)
+		self.names.append(name)
+		return self
+	
+	def add_float(self, name, value):
+		self.add('float', name, value)
+		return self
+	
+	def add_integer(self, name, value):
+		self.add('integer', name, value)
+		return self
 
-	def export_worldtrafo(self, adjfile, trafo):
-		adjfile.write('\t\t<transform name="toWorld">\n')
-		adjfile.write('\t\t\t<matrix value="')
-		for j in range(0,4):
-			for i in range(0,4):
-				adjfile.write("%f " % trafo[i][j])
-		adjfile.write('"/>\n\t\t</transform>\n')
+	def add_reference(self, type, name, value):
+		self.add('reference_%s' % type, name, value)
+		return self
 
-	def export_lamp(self, adjfile, lamp, idx):
-		ltype = lamp.data.mitsuba_lamp.type
-		if ltype == 'POINT':
-			adjfile.write('\t<luminaire id="%s-light" type="point">\n' % lamp.data.name)
-			mult = lamp.data.mitsuba_lamp.intensity
-			self.export_worldtrafo(adjfile, lamp.matrix_world)
-			adjfile.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-			adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.sampling_weight)
-			adjfile.write('\t</luminaire>\n')
-		elif ltype == 'AREA':
-			adjfile.write('\t<shape type="obj">\n')
-			size_x = lamp.data.size
-			size_y = lamp.data.size
-			if lamp.data.shape == 'RECTANGLE':
-				size_y = lamp.data.size_y
-			path = os.path.join(os.path.join(self.target_dir, 'meshes'), "_area_luminaire_%d.obj" % idx)
+	def add_bool(self, name, value):
+		self.add('bool', name, bool(value))
+		return self
 
-			adjfile.write('\t\t<string name="filename" value="%s"/>\n' % path)
-			self.export_worldtrafo(adjfile, lamp.matrix_world)
-
-			adjfile.write('\n\t\t<luminaire id="%s-light" type="area">\n' % lamp.data.name)
-			mult = lamp.data.mitsuba_lamp.intensity / (2 * size_x * size_y)
-			adjfile.write('\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-			adjfile.write('\t\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.sampling_weight)
-			adjfile.write('\t\t</luminaire>\n')
-			adjfile.write('\t</shape>\n')
-			objFile = open(path, 'w')
-			objFile.write('v %f %f 0\n' % (-size_x/2, -size_y/2))
-			objFile.write('v %f %f 0\n' % ( size_x/2, -size_y/2))
-			objFile.write('v %f %f 0\n' % ( size_x/2,  size_y/2))
-			objFile.write('v %f %f 0\n' % (-size_x/2,  size_y/2))
-			objFile.write('f 4 3 2 1\n')
-			objFile.close()
-		elif ltype == 'SUN':
-			adjfile.write('\t<luminaire id="%s-light" type="directional">\n' % lamp.data.name)
-			mult = lamp.data.mitsuba_lamp.intensity
-			scale = mathutils.Matrix.Scale(-1, 4, mathutils.Vector([0, 0, 1]))
-			self.export_worldtrafo(adjfile, lamp.matrix_world * mathutils.Matrix.Scale(-1, 4, mathutils.Vector([0, 0, 1])))
-			adjfile.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-			adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.sampling_weight)
-			adjfile.write('\t</luminaire>\n')
-		elif ltype == 'SPOT':
-			adjfile.write('\t<luminaire id="%s-light" type="spot">\n' % lamp.data.name)
-			mult = lamp.data.mitsuba_lamp.intensity
-			self.export_worldtrafo(adjfile, lamp.matrix_world * mathutils.Matrix.Scale(-1, 4, mathutils.Vector([0, 0, 1])))
-			adjfile.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-			adjfile.write('\t\t<float name="cutoffAngle" value="%f"/>\n' % (lamp.data.spot_size * 180 / (math.pi * 2)))
-			adjfile.write('\t\t<float name="beamWidth" value="%f"/>\n' % (lamp.data.spot_blend * lamp.data.spot_size * 180 / (math.pi * 2)))
-			adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.sampling_weight)
-			adjfile.write('\t</luminaire>\n')
-		elif ltype == 'ENV':
-			if lamp.data.mitsuba_lamp.envmap_type == 'constant':
-				adjfile.write('\t<luminaire id="%s-light" type="constant">\n' % lamp.data.name)
-				mult = lamp.data.mitsuba_lamp.intensity
-				adjfile.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-						% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-				adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.sampling_weight)
-				adjfile.write('\t</luminaire>\n')
-			elif lamp.data.mitsuba_lamp.envmap_type == 'envmap':
-				adjfile.write('\t<luminaire id="%s-light" type="envmap">\n' % lamp.data.name)
-				adjfile.write('\t\t<string name="filename" value="%s"/>\n' % efutil.filesystem_path(lamp.data.mitsuba_lamp.envmap_file))
-				self.export_worldtrafo(adjfile, lamp.matrix_world)
-				adjfile.write('\t\t<float name="intensityScale" value="%f"/>\n' % lamp.data.mitsuba_lamp.intensity)
-				adjfile.write('\t</luminaire>\n')
-
-	def export(self, scene):
-		adjfile = open(self.target_file, 'w')
-		adjfile.write('<adjustments>\n');
-		idx = 0
-		for obj in scene.objects:
-			if obj.type == 'LAMP':
-				self.export_lamp(adjfile, obj, idx)
-			idx = idx+1
-		adjfile.write('</adjustments>\n');
-		adjfile.close()
+	def add_string(self, name, value):
+		self.add('string', name, str(value))
+		return self
+	
+	def add_vector(self, name, value):
+		self.add('vector', name, [i for i in value])
+		return self
+	
+	def add_point(self, name, value):
+		self.add('point', name, [p for p in value])
+		return self
+	
+	def add_color(self, name, value):
+		self.add('color', name, [c for c in value])
+		return self
+	
+	def to_string(self):
+		return ''.join(item.to_string() for item in self)

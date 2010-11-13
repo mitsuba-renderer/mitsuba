@@ -29,29 +29,29 @@ MTS_NAMESPACE_BEGIN
 class Checkerboard : public Texture2D {
 public:
 	Checkerboard(const Properties &props) : Texture2D(props) {
-		m_brightReflectance = props.getSpectrum("brightReflectance", Spectrum(.4f));
-		m_darkReflectance = props.getSpectrum("darkReflectance", Spectrum(.2f));
+		m_brightColor.g = props.getSpectrum("brightReflectance", Spectrum(.4f));
+		m_darkColor.g = props.getSpectrum("darkReflectance", Spectrum(.2f));
 	}
 
 	Checkerboard(Stream *stream, InstanceManager *manager) 
 	 : Texture2D(stream, manager) {
-		m_brightReflectance = Spectrum(stream);
-		m_darkReflectance = Spectrum(stream);
+		m_brightColor.g = Spectrum(stream);
+		m_darkColor.g = Spectrum(stream);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Texture2D::serialize(stream, manager);
-		m_brightReflectance.serialize(stream);
-		m_darkReflectance.serialize(stream);
+		m_brightColor.g.serialize(stream);
+		m_darkColor.g.serialize(stream);
 	}
 
 	inline Spectrum getValue(const Point2 &uv) const {
 		int x = 2*(((int) uv.x) % 2) - 1, y = 2*(((int) uv.y) % 2) - 1;
 
 		if (x*y == 1)
-			return m_brightReflectance;
+			return m_brightColor.g;
 		else
-			return m_darkReflectance;
+			return m_darkColor.g;
 	}
 
 	Spectrum getValue(const Point2 &uv, Float dudx, Float dudy, Float dvdx, Float dvdy) const {
@@ -63,11 +63,11 @@ public:
 	}
 
 	Spectrum getAverage() const {
-		return m_darkReflectance * .5f;
+		return m_darkColor.g * .5f;
 	}
 	
 	Spectrum getMaximum() const {
-		return m_brightReflectance;
+		return m_brightColor.g;
 	}
 
 	std::string toString() const {
@@ -78,26 +78,26 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	Spectrum m_darkReflectance;
-	Spectrum m_brightReflectance;
+	Spectrum m_darkColor.g;
+	Spectrum m_brightColor.g;
 };
 
 // ================ Hardware shader implementation ================ 
 
 class CheckerboardShader : public Shader {
 public:
-	CheckerboardShader(Renderer *renderer, const Spectrum &brightReflectance, 
-		const Spectrum &darkReflectance, const Point2 &uvOffset,
+	CheckerboardShader(Renderer *renderer, const Spectrum &brightColor.g, 
+		const Spectrum &darkColor.g, const Point2 &uvOffset,
 		const Vector2 &uvScale) : Shader(renderer, ETextureShader),
-		m_brightReflectance(brightReflectance), m_darkReflectance(darkReflectance), 
+		m_brightColor.g(brightReflectance), m_darkReflectance(darkReflectance), 
 		m_uvOffset(uvOffset), m_uvScale(uvScale) {
 	}
 
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		oss << "uniform vec3 " << evalName << "_brightReflectance;" << endl
-			<< "uniform vec3 " << evalName << "_darkReflectance;" << endl
+		oss << "uniform vec3 " << evalName << "_brightColor.g;" << endl
+			<< "uniform vec3 " << evalName << "_darkColor.g;" << endl
 			<< "uniform vec2 " << evalName << "_uvOffset;" << endl
 			<< "uniform vec2 " << evalName << "_uvScale;" << endl
 			<< endl
@@ -107,37 +107,37 @@ public:
 			<< "        uv.y * " << evalName << "_uvScale.y + " << evalName << "_uvOffset.y);" << endl
 			<< "    float x = 2*(mod(int(uv.x), 2)) - 1, y = 2*(mod(int(uv.y), 2)) - 1;" << endl
 			<< "    if (x*y == 1)" << endl
-			<< "        return " << evalName << "_brightReflectance;" << endl
+			<< "        return " << evalName << "_brightColor.g;" << endl
 			<< "    else" << endl
-			<< "        return " << evalName << "_darkReflectance;" << endl
+			<< "        return " << evalName << "_darkColor.g;" << endl
 			<< "}" << endl;
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_brightReflectance", false));
-		parameterIDs.push_back(program->getParameterID(evalName + "_darkReflectance", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_brightColor.g", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_darkColor.g", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_uvOffset", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
 		int &textureUnitOffset) const {
-		program->setParameter(parameterIDs[0], m_brightReflectance);
-		program->setParameter(parameterIDs[1], m_darkReflectance);
+		program->setParameter(parameterIDs[0], m_brightColor.g);
+		program->setParameter(parameterIDs[1], m_darkColor.g);
 		program->setParameter(parameterIDs[2], m_uvOffset);
 		program->setParameter(parameterIDs[3], m_uvScale);
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	Spectrum m_brightReflectance;
-	Spectrum m_darkReflectance;
+	Spectrum m_brightColor.g;
+	Spectrum m_darkColor.g;
 	Point2 m_uvOffset;
 	Vector2 m_uvScale;
 };
 
 Shader *Checkerboard::createShader(Renderer *renderer) const {
-	return new CheckerboardShader(renderer, m_brightReflectance, m_darkReflectance, 
+	return new CheckerboardShader(renderer, m_brightColor.g, m_darkReflectance, 
 		m_uvOffset, m_uvScale);
 }
 	

@@ -79,14 +79,13 @@ class lamps(DataButtonsPanel, property_group_renderer, bpy.types.Panel):
 
 			# AREA LAMP: Blender Properties
 			elif lamp.type == 'AREA':
-				
 				if wide_ui:
 					col=layout.row()
 				else:
 					col=layout.column()
 				col.row().prop(lamp, "shape", expand=True)
-
 				sub = col.column(align=True)
+
 				if (lamp.shape == 'SQUARE'):
 					sub.prop(lamp, "size")
 				elif (lamp.shape == 'RECTANGLE'):

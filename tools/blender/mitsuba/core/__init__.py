@@ -29,12 +29,19 @@ from extensions_framework import util as efutil
 # Mitsuba-related classes
 from mitsuba.properties.engine import mitsuba_engine
 from mitsuba.properties.lamp import mitsuba_lamp
+from mitsuba.properties.texture import mitsuba_texture, \
+	mitsuba_tex_ldrtexture, mitsuba_tex_checkerboard
+from mitsuba.properties.material import mitsuba_material, \
+	mitsuba_mat_lambertian
+
 from mitsuba.operators import MITSUBA_OT_preset_engine_add, EXPORT_OT_mitsuba
 from mitsuba.outputs import MtsLog, MtsFilmDisplay
 from mitsuba.export.film import resolution
 
 from mitsuba.ui import render_panels
 from mitsuba.ui import lamps
+from mitsuba.ui.textures import main, ldrtexture, checkerboard
+from mitsuba.ui.materials import main, lambertian
 
 def compatible(mod):
 	mod = __import__(mod)
@@ -44,7 +51,6 @@ def compatible(mod):
 		except:
 			pass
 	del mod
-
 
 import properties_data_lamp
 properties_data_lamp.DATA_PT_context_lamp.COMPAT_ENGINES.add('mitsuba')
@@ -56,6 +62,10 @@ properties_render.RENDER_PT_dimensions.COMPAT_ENGINES.add('mitsuba')
 properties_render.RENDER_PT_output.COMPAT_ENGINES.add('mitsuba')
 del properties_render
 
+import properties_texture
+properties_texture.TEXTURE_PT_context_texture.COMPAT_ENGINES.add('mitsuba')
+del properties_texture
+
 compatible("properties_data_mesh")
 compatible("properties_data_camera")
 
@@ -65,7 +75,12 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 
 	property_groups = [
 		('Scene', mitsuba_engine),
-		('Lamp', mitsuba_lamp)
+		('Lamp', mitsuba_lamp),
+		('Texture', mitsuba_texture),
+		('mitsuba_texture', mitsuba_tex_ldrtexture),
+		('mitsuba_texture', mitsuba_tex_checkerboard),
+		('Material', mitsuba_material),
+		('mitsuba_material', mitsuba_mat_lambertian)
 	]
 
 	render_lock = threading.Lock()
@@ -142,7 +157,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 						self.render_update_timer.start()
 						if self.render_update_timer.isAlive(): self.render_update_timer.join()
 
-					# If we exit the wait loop (user cancelled) and luxconsole is still running, then send SIGINT
+					# If we exit the wait loop (user cancelled) and mitsuba is still running, then send SIGINT
 					if mitsuba_process.poll() == None:
 						# Use SIGTERM because that's the only one supported on Windows
 						mitsuba_process.send_signal(subprocess.signal.SIGTERM)
@@ -152,6 +167,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 					framebuffer_thread.join()
 
 					if mitsuba_process.poll() != None and mitsuba_process.returncode != 0:
+						MtsLog("MtsBlend: Rendering failed -- check the console")
 						bpy.ops.ef.msg(msg_type='ERROR', msg_text='Rendering failed -- check the console.')
 					else:
 						framebuffer_thread.kick(render_end=True)

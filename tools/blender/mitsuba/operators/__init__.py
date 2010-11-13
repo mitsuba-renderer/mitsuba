@@ -27,7 +27,7 @@ from presets import AddPresetBase
 from extensions_framework import util as efutil
 
 from mitsuba.outputs import MtsLog
-from mitsuba.export import MtsAdjustments
+from mitsuba.export.adjustments import MtsAdjustments
 
 def try_preset_path_create(preset_subdir):
 	target_path = os.path.join(bpy.utils.preset_paths('')[0], preset_subdir)
@@ -59,32 +59,61 @@ class MITSUBA_OT_preset_engine_add(MITSUBA_OT_preset_base, bpy.types.Operator):
 	]
 	preset_subdir = 'mitsuba/engine'
 
-class MitsubaCheckOp(bpy.types.Operator):
-	bl_idname = 'mts.check'
-	bl_label = 'Check scene'
 
-	def reportWarning(self, msg):
-		self.report({'WARNING'}, msg)
-		MtsLog("MtsBlend: %s" % msg)
+class MITSUBA_MT_presets_texture(MITSUBA_MT_base, bpy.types.Menu):
+	bl_label = "Mitsuba Texture Presets"
+	preset_subdir = "mitsuba/texture"
 
-	def _check_lamp(self, lamp):
-		hasErrors = False
-		if lamp.type == 'POINT' and lamp.falloff_type != 'INVERSE_SQUARE':
-			self.reportWarning('Point light "%s" needs to have inverse square falloff' % lamp.name)
-			hasErrors = True
-
-		if hasErrors:
-			self.reportWarning('Encountered one or more problems -- check the console')
-		else:
-			self.report({'INFO'}, "No problems found")
-
+class MITSUBA_OT_preset_texture_add(MITSUBA_OT_preset_base, bpy.types.Operator):
+	'''Save the current settings as a preset'''
+	bl_idname = 'mitsuba.preset_texture_add'
+	bl_label = 'Add Mitsuba Texture settings preset'
+	preset_menu = 'MITSUBA_MT_presets_texture'
+	preset_values =  []
+	preset_subdir = 'mitsuba/texture'
+	
 	def execute(self, context):
-		scene = bpy.data.scenes[0]
-		for obj in scene.objects:
-			if obj.type == 'LAMP':
-				self._check_lamp(obj.data)
-		return {'FINISHED'}
+		pv = [
+			'bpy.context.texture.mitsuba_texture.%s'%v['attr'] for v in bpy.types.mitsuba_texture.get_exportable_properties()
+		]
+		mts_type = context.texture.mitsuba_texture.type
+		sub_type = getattr(bpy.types, 'mitsuba_tex_%s' % mts_type)
 
+		pv.extend([
+			'bpy.context.texture.mitsuba_texture.mitsuba_tex_%s.%s'%(mts_type, v['attr']) for v in sub_type.get_exportable_properties()
+		])
+		
+		self.preset_values = pv
+		return super().execute(context)
+
+
+class MITSUBA_MT_presets_material(MITSUBA_MT_base, bpy.types.Menu):
+	bl_label = "Mitsuba Material Presets"
+	preset_subdir = "mitsuba/material"
+
+class MITSUBA_OT_preset_material_add(MITSUBA_OT_preset_base, bpy.types.Operator):
+	'''Save the current settings as a preset'''
+	bl_idname = 'mitsuba.preset_material_add'
+	bl_label = 'Add Mitsuba Material settings preset'
+	preset_menu = 'MITSUBA_MT_presets_material'
+	preset_values =  []
+	preset_subdir = 'mitsuba/material'
+	
+	def execute(self, context):
+		pv = [
+			'bpy.context.material.mitsuba_material.%s'%v['attr'] for v in bpy.types.mitsuba_material.get_exportable_properties()
+		] 
+
+		# store only the sub-properties of the selected mitsuba material type
+		mts_type = context.material.mitsuba_material.type
+		sub_type = getattr(bpy.types, 'mitsuba_mat_%s' % mts_type)
+		
+		pv.extend([
+			'bpy.context.material.mitsuba_material.mitsuba_mat_%s.%s'%(mts_type, v['attr']) for v in sub_type.get_exportable_properties()
+		])
+		
+		self.preset_values = pv
+		return super().execute(context)
 
 class EXPORT_OT_mitsuba(bpy.types.Operator):
 	bl_idname = 'export.mitsuba'
