@@ -41,7 +41,7 @@ class InstanceManager;
 class InterpolatedSpectrum;
 class LocalWorker;
 class Logger;
-class Matrix4x4;
+struct Matrix4x4;
 class MemoryStream;
 class Mutex;
 class NetworkedObject;

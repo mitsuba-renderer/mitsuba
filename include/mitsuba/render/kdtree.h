@@ -61,6 +61,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \sa GenericKDTree
  */
+
 class MTS_EXPORT_RENDER KDTree : public GenericKDTree<AABB, KDTree> {
 	friend class GenericKDTree<AABB, KDTree>;
 	friend class Instance;
@@ -353,6 +354,37 @@ protected:
 		}
 	}
 
+	/// Plain shadow ray query (used by the 'instance' plugin)
+	inline bool rayIntersect(const Ray &ray, Float _mint, Float _maxt) const {
+		Float mint, maxt, tempT = std::numeric_limits<Float>::infinity(); 
+		if (m_aabb.rayIntersect(ray, mint, maxt)) {
+			if (_mint > mint) mint = _mint;
+			if (_maxt < maxt) maxt = _maxt;
+
+			if (EXPECT_TAKEN(maxt > mint)) {
+				if (rayIntersectHavran<true>(ray, mint, maxt, tempT, NULL))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	/// Plain intersection query (used by the 'instance' plugin)
+	inline bool rayIntersect(const Ray &ray, Float _mint, Float _maxt, Float &t, void *temp) const {
+		Float mint, maxt, tempT = std::numeric_limits<Float>::infinity(); 
+		if (m_aabb.rayIntersect(ray, mint, maxt)) {
+			if (_mint > mint) mint = _mint;
+			if (_maxt < maxt) maxt = _maxt;
+
+			if (EXPECT_TAKEN(maxt > mint)) {
+				if (rayIntersectHavran<false>(ray, mint, maxt, tempT, temp)) {
+					t = tempT;
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 
 	/// Virtual destructor
 	virtual ~KDTree();

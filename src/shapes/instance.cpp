@@ -68,43 +68,19 @@ public:
 		}
 	}
 
-	bool rayIntersect(const Ray &_ray, Float _mint, 
-			Float _maxt, Float &t, void *temp) const {
+	bool rayIntersect(const Ray &_ray, Float mint, 
+			Float maxt, Float &t, void *temp) const {
 		const KDTree *kdtree = m_shapeGroup->getKDTree();
 		Ray ray;
 		m_worldToObject(_ray, ray);
-		Float mint, maxt, tempT = std::numeric_limits<Float>::infinity(); 
-
-		if (kdtree->m_aabb.rayIntersect(ray, mint, maxt)) {
-			if (_mint > mint) mint = _mint;
-			if (_maxt < maxt) maxt = _maxt;
-
-			if (EXPECT_TAKEN(maxt > mint)) {
-				if (kdtree->rayIntersectHavran<false>(ray, mint, maxt, tempT, temp)) {
-					t = tempT;
-					return true;
-				}
-			}
-		}
-		return false;
+		return kdtree->rayIntersect(ray, mint, maxt, t, temp);
 	}
 
-	bool rayIntersect(const Ray &_ray, Float _mint, Float _maxt) const {
+	bool rayIntersect(const Ray &_ray, Float mint, Float maxt) const {
 		const KDTree *kdtree = m_shapeGroup->getKDTree();
 		Ray ray;
 		m_worldToObject(_ray, ray);
-		Float mint, maxt, tempT = std::numeric_limits<Float>::infinity(); 
-
-		if (kdtree->m_aabb.rayIntersect(ray, mint, maxt)) {
-			if (_mint > mint) mint = _mint;
-			if (_maxt < maxt) maxt = _maxt;
-
-			if (EXPECT_TAKEN(maxt > mint)) {
-				if (kdtree->rayIntersectHavran<true>(ray, mint, maxt, tempT, NULL))
-					return true;
-			}
-		}
-		return false;
+		return kdtree->rayIntersect(ray, mint, maxt);
 	}
 
 	void fillIntersectionRecord(const Ray &ray, 
