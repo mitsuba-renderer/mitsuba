@@ -33,6 +33,9 @@ template <typename T> struct TVector2 {
 
 	T x, y;
 
+	/// Number of dimensions
+	const static int dim = 2;
+
 	/** \brief Construct a new vector without initializing it.
 	 * 
 	 * This construtor is useful when the vector will either not
@@ -168,9 +171,6 @@ template <typename T> struct TVector2 {
 		stream->writeElement<T>(y);
 	}
 
-	/// Return the number of dimensions
-	inline static int dim() { return 2; }
-
 	/// Return a readable string representation of this vector
 	std::string toString() const {
 		std::ostringstream oss;
@@ -223,6 +223,9 @@ template <typename T> struct TVector3 {
 	typedef TPoint3<T> point_type;
 
 	T x, y, z;
+	
+	/// Number of dimensions
+	const static int dim = 3;
 
 	/** \brief Construct a new vector without initializing it.
 	 * 
@@ -361,9 +364,6 @@ template <typename T> struct TVector3 {
 		stream->writeElement<T>(z);
 	}
 
-	/// Return the number of dimensions
-	inline static int dim() { return 3; }
-
 	/// Return a readable string representation of this vector
 	std::string toString() const {
 		std::ostringstream oss;
@@ -427,6 +427,10 @@ template <typename T> struct TVector4 {
 	typedef TPoint4<T> point_type;
 
 	T x, y, z, w;
+	
+	/// Number of dimensions
+	const static int dim = 3;
+
 
 	/** \brief Construct a new vector without initializing it.
 	 * 
@@ -566,9 +570,6 @@ template <typename T> struct TVector4 {
 		stream->writeElement<T>(z);
 		stream->writeElement<T>(w);
 	}
-
-	/// Return the number of dimensions
-	inline static int dim() { return 4; }
 
 	/// Return a readable string representation of this vector
 	std::string toString() const {

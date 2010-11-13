@@ -33,6 +33,9 @@ template <typename T> struct TPoint2 {
 
 	T x, y;
 
+	/// Number of dimensions
+	const static int dim = 2;
+
 	/** \brief Construct a new point without initializing it.
 	 * 
 	 * This construtor is useful when the point will either not
@@ -174,9 +177,6 @@ template <typename T> struct TPoint2 {
 		stream->writeElement<T>(y);
 	}
 
-	/// Return the number of dimensions
-	inline static int dim() { return 2; }
-
 	/// Return a readable string representation of this point
 	std::string toString() const {
 		std::ostringstream oss;
@@ -224,6 +224,9 @@ template <typename T> struct TPoint3 {
 	typedef TVector3<T> vector_type;
 
 	T x, y, z;
+
+	/// Number of dimensions
+	const static int dim = 3;
 
 	/** \brief Construct a new point without initializing it.
 	 * 
@@ -368,8 +371,6 @@ template <typename T> struct TPoint3 {
 		stream->writeElement<T>(z);
 	}
 
-	/// Return the number of dimensions
-	inline static int dim() { return 3; }
 
 	/// Return a readable string representation of this point
 	std::string toString() const {
@@ -419,6 +420,9 @@ template <typename T> struct TPoint4 {
 	typedef TVector4<T> vector_type;
 
 	T x, y, z, w;
+	
+	/// Number of dimensions
+	const static int dim = 4;
 
 	/** \brief Construct a new point without initializing it.
 	 * 
@@ -564,10 +568,7 @@ template <typename T> struct TPoint4 {
 		stream->writeElement<T>(z);
 		stream->writeElement<T>(w);
 	}
-
-	/// Return the number of dimensions
-	inline static int dim() { return 4; }
-
+	
 	/// Return a readable string representation of this point
 	std::string toString() const {
 		std::ostringstream oss;
