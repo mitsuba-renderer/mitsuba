@@ -21,6 +21,7 @@ import os, math, mathutils
 import bpy
 
 from extensions_framework import util as efutil
+from mitsuba.export import translate_id
 
 class MtsAdjustments:
 	'''
@@ -134,7 +135,7 @@ class MtsAdjustments:
 			if p.type == 'reference_texture':
 				self.export_texture(adjfile, self.find_texture(p.value))
 
-		adjfile.write('\t<texture id="%s" type="%s">\n' % (mat.name, mat.mitsuba_texture.type))
+		adjfile.write('\t<texture id="%s" type="%s">\n' % (translate_id(mat.name), mat.mitsuba_texture.type))
 		adjfile.write(params.to_string())
 		adjfile.write(params.to_string_ref())
 		adjfile.write('\t</texture>\n')
@@ -151,7 +152,7 @@ class MtsAdjustments:
 			elif p.type == 'reference_texture':
 				self.export_texture(adjfile, self.find_texture(p.value))
 
-		adjfile.write('\t<bsdf id="%s" type="%s">\n' % (mat.name, mat.mitsuba_material.type))
+		adjfile.write('\t<bsdf id="%s" type="%s">\n' % (translate_id(mat.name), mat.mitsuba_material.type))
 		adjfile.write(params.to_string())
 		adjfile.write(params.to_string_ref())
 		adjfile.write('\t</bsdf>\n')
