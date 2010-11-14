@@ -20,7 +20,7 @@ from extensions_framework import declarative_property_group
 
 class mitsuba_lamp(declarative_property_group):
 	controls = [
-		'sampling_weight',
+		'samplingWeight',
 		'envmap_type',
 		'envmap_file'
 	]
@@ -48,7 +48,7 @@ class mitsuba_lamp(declarative_property_group):
 		},
 		{
 			'type': 'float',
-			'attr': 'sampling_weight',
+			'attr': 'samplingWeight',
 			'name': 'Sampling weight',
 			'description': 'Relative amount of samples to place on this light source (e.g. the "importance")',
 			'default': 1.0,
@@ -66,8 +66,8 @@ class mitsuba_lamp(declarative_property_group):
 			'default': 10.0,
 			'min': 1e-3,
 			'soft_min': 1e-3,
-			'max': 1e3,
-			'soft_max': 1e3,
+			'max': 1e5,
+			'soft_max': 1e5,
 			'save_in_preset': True
 		},
 		{

@@ -52,7 +52,7 @@ class MtsAdjustments:
 			self.export_worldtrafo(adjfile, lamp.matrix_world)
 			adjfile.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
 					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-			adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.sampling_weight)
+			adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
 			adjfile.write('\t</luminaire>\n')
 		elif ltype == 'AREA':
 			adjfile.write('\t<shape type="obj">\n')
@@ -69,7 +69,7 @@ class MtsAdjustments:
 			mult = lamp.data.mitsuba_lamp.intensity / (2 * size_x * size_y)
 			adjfile.write('\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
 					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-			adjfile.write('\t\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.sampling_weight)
+			adjfile.write('\t\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
 			adjfile.write('\t\t</luminaire>\n')
 			adjfile.write('\t</shape>\n')
 			objFile = open(path, 'w')
@@ -86,7 +86,7 @@ class MtsAdjustments:
 			self.export_worldtrafo(adjfile, lamp.matrix_world * mathutils.Matrix.Scale(-1, 4, mathutils.Vector([0, 0, 1])))
 			adjfile.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
 					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-			adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.sampling_weight)
+			adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
 			adjfile.write('\t</luminaire>\n')
 		elif ltype == 'SPOT':
 			adjfile.write('\t<luminaire id="%s-light" type="spot">\n' % lamp.data.name)
@@ -96,7 +96,7 @@ class MtsAdjustments:
 					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
 			adjfile.write('\t\t<float name="cutoffAngle" value="%f"/>\n' % (lamp.data.spot_size * 180 / (math.pi * 2)))
 			adjfile.write('\t\t<float name="beamWidth" value="%f"/>\n' % (lamp.data.spot_blend * lamp.data.spot_size * 180 / (math.pi * 2)))
-			adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.sampling_weight)
+			adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
 			adjfile.write('\t</luminaire>\n')
 		elif ltype == 'ENV':
 			if lamp.data.mitsuba_lamp.envmap_type == 'constant':
@@ -104,7 +104,7 @@ class MtsAdjustments:
 				mult = lamp.data.mitsuba_lamp.intensity
 				adjfile.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
 						% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-				adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.sampling_weight)
+				adjfile.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
 				adjfile.write('\t</luminaire>\n')
 			elif lamp.data.mitsuba_lamp.envmap_type == 'envmap':
 				adjfile.write('\t<luminaire id="%s-light" type="envmap">\n' % lamp.data.name)

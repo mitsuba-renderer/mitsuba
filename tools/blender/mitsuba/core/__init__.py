@@ -37,7 +37,7 @@ from mitsuba.properties.material import mitsuba_material, \
 	mitsuba_mat_microfacet, mitsuba_mat_roughglass, \
 	mitsuba_mat_roughmetal, mitsuba_mat_dielectric, \
 	mitsuba_mat_mirror, mitsuba_mat_difftrans, \
-	mitsuba_mat_composite
+	mitsuba_mat_composite, mitsuba_emission
 from mitsuba.operators import MITSUBA_OT_preset_engine_add, EXPORT_OT_mitsuba
 from mitsuba.outputs import MtsLog, MtsFilmDisplay
 from mitsuba.export.film import resolution
@@ -49,7 +49,7 @@ from mitsuba.ui.textures import main, ldrtexture, checkerboard, \
 from mitsuba.ui.materials import MATERIAL_PT_context_material_mts
 from mitsuba.ui.materials import main, lambertian, phong, ward, \
 		microfacet, roughglass, roughmetal, dielectric, \
-		mirror, difftrans, composite
+		mirror, difftrans, composite, emission
 
 def compatible(mod):
 	mod = __import__(mod)
@@ -86,6 +86,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 		('mitsuba_texture', mitsuba_tex_gridtexture),
 		('mitsuba_texture', mitsuba_tex_mapping),
 		('Material', mitsuba_material),
+		('Material', mitsuba_emission),
 		('mitsuba_material', mitsuba_mat_lambertian),
 		('mitsuba_material', mitsuba_mat_phong),
 		('mitsuba_material', mitsuba_mat_ward),

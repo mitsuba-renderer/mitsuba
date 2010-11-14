@@ -62,6 +62,81 @@ class mitsuba_material(declarative_property_group):
 		sub_type = getattr(self, 'mitsuba_mat_%s' % self.type)
 		return sub_type.get_params()
 
+class mitsuba_emission(declarative_property_group):
+	'''
+	Storage class for Mitsuba Material emission settings.
+	This class will be instantiated within a Blender Material
+	object.
+	'''
+	
+	controls = [
+		'use_emission',
+		'color',
+		'intensity',
+		'samplingWeight',
+	]
+	
+	visibility = {
+		'intensity': 			{ 'use_emission': True },
+		'intensity':			{ 'use_emission': True },
+		'color': 				{ 'use_emission': True },
+		'samplingWeight':		{ 'use_emission': True }
+	}
+	
+	properties = [
+		{
+			'type': 'bool',
+			'attr': 'use_emission',
+			'name': 'Use Emission',
+			'default': False,
+			'save_in_preset': True
+		},
+		{
+			'type': 'float',
+			'attr': 'intensity',
+			'name': 'Intensity',
+			'description': 'Specifies the intensity of the light source',
+			'default': 10.0,
+			'min': 1e-3,
+			'soft_min': 1e-3,
+			'max': 1e5,
+			'soft_max': 1e5,
+			'save_in_preset': True
+		},
+		{
+			'type': 'float',
+			'attr': 'samplingWeight',
+			'name': 'Sampling weight',
+			'description': 'Relative amount of samples to place on this light source (e.g. the "importance")',
+			'default': 1.0,
+			'min': 1e-3,
+			'soft_min': 1e-3,
+			'max': 1e3,
+			'soft_max': 1e3,
+			'save_in_preset': True
+		},
+		{
+			'attr': 'color',
+			'type': 'float_vector',
+			'subtype': 'COLOR',
+			'description' : 'Color of the emitted light',
+			'name' : 'Color',
+			'default' : (1.0, 1.0, 1.0),
+			'min': 0.0,
+			'max': 1.0,
+			'save_in_preset': True
+		},
+	]
+
+	def get_params(self):
+		params = ParamSet()
+		params.update(param_diffuseReflectance.get_params(self))
+		params.update(param_specularReflectance.get_params(self))
+		params.add_color('intensity', 
+			[self.color[0] * self.intensity, self.color[1] * self.intensity, self.color[2] * self.intensity])
+		params.add_float('samplingWeight', self.samplingWeight)
+		return params
+
 class mitsuba_mat_lambertian(declarative_property_group):
 	controls = param_reflectance.controls
 	
