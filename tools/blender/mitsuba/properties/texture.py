@@ -126,7 +126,15 @@ class TextureParameter(TextureParameterBase):
 	# colour for each material type. If the property name is
 	# not set, then the color won't be changed.
 	master_color_map = {
-		'lambertian': 'reflectance'
+		'lambertian': 'reflectance',
+		'difftrans': 'transmittance',
+		'ward': 'diffuseReflectance',
+		'phong': 'diffuseReflectance',
+		'microfacet': 'diffuseReflectance',
+		'mirror': 'specularReflectance',
+		'dielectric': 'specularReflectance',
+		'roughglass': 'specularReflectance',
+		'roughmetal': 'specularReflectance'
 	}
 
 	def set_master_colour(self, s, c):
@@ -223,8 +231,9 @@ class mitsuba_texture(declarative_property_group):
 			'name': 'Texture type',
 			'type': 'enum',
 			'items': [
-				('ldrtexture', 'Bitmap', 'ldrtexture'),
-				('checkerboard', 'Checkerboard', 'checkerboard')
+				('ldrtexture', 'Bitmap', 'Low dynamic-range texture'),
+				('checkerboard', 'Checkerboard', 'Procedural checkerboard texture'),
+				('gridtexture', 'Grid texture', 'Procedural grid texture')
 			],
 			'default' : 'ldrtexture',
 			'save_in_preset': True
@@ -426,6 +435,57 @@ class mitsuba_tex_checkerboard(declarative_property_group):
 		
 		params.add_color('darkColor', self.darkColor) 
 		params.add_color('brightColor', self.brightColor) 
+
+		return params
+
+class mitsuba_tex_gridtexture(declarative_property_group):
+	controls = [
+		'darkColor',
+		'brightColor',
+		'lineWidth'
+	]
+
+	properties = [
+		{
+			'attr': 'darkColor',
+			'type': 'float_vector',
+			'subtype': 'COLOR',
+			'name' : 'Dark color',
+			'description' : 'Color of the dark patches',
+			'default' : (0.2, 0.2, 0.2),
+			'min': 0.0,
+			'max': 1.0,
+			'save_in_preset': True
+		},
+		{
+			'attr': 'brightColor',
+			'type': 'float_vector',
+			'subtype': 'COLOR',
+			'description' : 'Color of the bright patches',
+			'name' : 'Bright color',
+			'default' : (0.4, 0.4, 0.4),
+			'min': 0.0,
+			'max': 1.0,
+			'save_in_preset': True
+		},
+		{
+			'attr': 'lineWidth',
+			'type': 'float',
+			'description' : 'Size of the grid lines in UV space',
+			'name' : 'Line width',
+			'default' : 0.01,
+			'min': 0.0,
+			'max': 1.0,
+			'save_in_preset': True
+		}
+	]
+
+	def get_params(self):
+		params = ParamSet()
+		
+		params.add_color('darkColor', self.darkColor) 
+		params.add_color('brightColor', self.brightColor) 
+		params.add_float('lineWidth', self.lineWidth) 
 
 		return params
 

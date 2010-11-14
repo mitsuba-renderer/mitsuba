@@ -136,6 +136,7 @@ class MtsAdjustments:
 
 		adjfile.write('\t<texture id="%s" type="%s">\n' % (mat.name, mat.mitsuba_texture.type))
 		adjfile.write(params.to_string())
+		adjfile.write(params.to_string_ref())
 		adjfile.write('\t</texture>\n')
 
 	def export_material(self, adjfile, mat):
@@ -152,6 +153,7 @@ class MtsAdjustments:
 
 		adjfile.write('\t<bsdf id="%s" type="%s">\n' % (mat.name, mat.mitsuba_material.type))
 		adjfile.write(params.to_string())
+		adjfile.write(params.to_string_ref())
 		adjfile.write('\t</bsdf>\n')
 
 	def export(self, scene):

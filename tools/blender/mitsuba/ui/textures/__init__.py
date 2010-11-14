@@ -55,7 +55,7 @@ class TEXTURE_PT_context_texture_mts(TextureButtonsPanel, bpy.types.Panel):
 			col.operator("texture.slot_move", text="", icon='TRIA_DOWN').type = 'DOWN'
 			col.menu("TEXTURE_MT_specials", icon='DOWNARROW_HLT', text="")
 
-		split = layout.split(percentage=0.65)
+		split = layout.split(percentage=1)
 		col = split.column()
 
 		if tex_collection:

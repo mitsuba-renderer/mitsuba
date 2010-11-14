@@ -31,19 +31,24 @@ from mitsuba.properties.engine import mitsuba_engine
 from mitsuba.properties.lamp import mitsuba_lamp
 from mitsuba.properties.texture import mitsuba_texture, \
 	mitsuba_tex_ldrtexture, mitsuba_tex_checkerboard, \
-	mitsuba_tex_mapping
+	mitsuba_tex_gridtexture, mitsuba_tex_mapping
 from mitsuba.properties.material import mitsuba_material, \
-	mitsuba_mat_lambertian
-
+	mitsuba_mat_lambertian, mitsuba_mat_phong, mitsuba_mat_ward, \
+	mitsuba_mat_microfacet, mitsuba_mat_roughglass, \
+	mitsuba_mat_roughmetal, mitsuba_mat_dielectric, \
+	mitsuba_mat_mirror, mitsuba_mat_difftrans
 from mitsuba.operators import MITSUBA_OT_preset_engine_add, EXPORT_OT_mitsuba
 from mitsuba.outputs import MtsLog, MtsFilmDisplay
 from mitsuba.export.film import resolution
-
 from mitsuba.ui import render_panels
 from mitsuba.ui import lamps
 from mitsuba.ui.textures import TEXTURE_PT_context_texture_mts
-from mitsuba.ui.textures import main, ldrtexture, checkerboard, mapping
-from mitsuba.ui.materials import main, lambertian
+from mitsuba.ui.textures import main, ldrtexture, checkerboard, \
+		gridtexture, mapping
+from mitsuba.ui.materials import MATERIAL_PT_context_material_mts
+from mitsuba.ui.materials import main, lambertian, phong, ward, \
+		microfacet, roughglass, roughmetal, dielectric, \
+		mirror, difftrans
 
 def compatible(mod):
 	mod = __import__(mod)
@@ -77,9 +82,18 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 		('Texture', mitsuba_texture),
 		('mitsuba_texture', mitsuba_tex_ldrtexture),
 		('mitsuba_texture', mitsuba_tex_checkerboard),
+		('mitsuba_texture', mitsuba_tex_gridtexture),
 		('mitsuba_texture', mitsuba_tex_mapping),
 		('Material', mitsuba_material),
-		('mitsuba_material', mitsuba_mat_lambertian)
+		('mitsuba_material', mitsuba_mat_lambertian),
+		('mitsuba_material', mitsuba_mat_phong),
+		('mitsuba_material', mitsuba_mat_ward),
+		('mitsuba_material', mitsuba_mat_microfacet),
+		('mitsuba_material', mitsuba_mat_roughglass),
+		('mitsuba_material', mitsuba_mat_roughmetal),
+		('mitsuba_material', mitsuba_mat_dielectric),
+		('mitsuba_material', mitsuba_mat_difftrans),
+		('mitsuba_material', mitsuba_mat_mirror)
 	]
 
 	render_lock = threading.Lock()

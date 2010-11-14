@@ -40,8 +40,14 @@ class ParamSetItem(list):
 		elif self.type == "integer" or self.type == "float" \
 				or self.type ==	"string":
 			return '\t\t<%s name="%s" value="%s"/>\n' % (self.type, self.name, self.value)
-		elif self.type == "reference_texture" or self.type == "reference_material":
+		else:
+			return ""
+	
+	def to_string_ref(self):
+		if self.type == "reference_texture" or self.type == "reference_material":
 			return '\t\t<ref name="%s" id="%s"/>\n' % (self.name, self.value)
+		else:
+			return ""
 
 class ParamSet(list):
 	names = []
@@ -97,3 +103,6 @@ class ParamSet(list):
 	
 	def to_string(self):
 		return ''.join(item.to_string() for item in self)
+
+	def to_string_ref(self):
+		return ''.join(item.to_string_ref() for item in self)

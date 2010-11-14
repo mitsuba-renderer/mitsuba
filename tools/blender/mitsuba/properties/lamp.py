@@ -63,7 +63,7 @@ class mitsuba_lamp(declarative_property_group):
 			'attr': 'intensity',
 			'name': 'Intensity',
 			'description': 'Specifies the intensity of the light source',
-			'default': 1.0,
+			'default': 10.0,
 			'min': 1e-3,
 			'soft_min': 1e-3,
 			'max': 1e3,

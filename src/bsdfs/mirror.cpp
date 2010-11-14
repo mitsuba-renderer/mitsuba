@@ -27,7 +27,7 @@ class Mirror : public BSDF {
 public:
 	Mirror(const Properties &props) 
 		: BSDF(props) {
-		m_reflectance = props.getSpectrum("reflectance", Spectrum(0.8f));
+		m_reflectance = props.getSpectrum("specularReflectance", Spectrum(0.8f));
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
 		m_type[0] = EDeltaReflection;

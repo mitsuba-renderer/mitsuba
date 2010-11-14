@@ -44,9 +44,9 @@ public:
 		/* B term from Cauchy's equation (units: um^2) - external */
 		m_extB = props.getFloat("extB", 0);
 		/* Reflectance modulation term */
-		m_reflectance = props.getSpectrum("reflectance", Spectrum(1.0f));
+		m_reflectance = props.getSpectrum("specularReflectance", Spectrum(1.0f));
 		/* Transmittance modulation term */
-		m_transmittance = props.getSpectrum("transmittance", Spectrum(1.0f));
+		m_transmittance = props.getSpectrum("specularTransmittance", Spectrum(1.0f));
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
