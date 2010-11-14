@@ -21,6 +21,9 @@
 
 MTS_NAMESPACE_BEGIN
 
+static StatsCounter mipmapLookups("Texture", "Mip-map texture lookups");
+static StatsCounter ewaLookups("Texture", "EWA texture lookups");
+
 /* Isotropic/anisotropic EWA mip-map texture map class based on PBRT */
 MIPMap::MIPMap(int width, int height, Spectrum *pixels, 
 	bool isotropic, EWrapMode wrapMode, Float maxAnisotropy) 
@@ -130,15 +133,19 @@ Spectrum MIPMap::getMaximum() const {
 	for (int y=0; y<height; ++y) {
 		for (int x=0; x<width; ++x) {
 			Spectrum value = *pixels++;
-			for (int j=0; j<SPECTRUM_SAMPLES; ++j) {
+			for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 				max[j] = std::max(max[j], value[j]);
-			}
 		}
+	}
+	if (m_wrapMode == EWhite) {
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+			max[i] = std::max(max[i], (Float) 1.0f);
 	}
 	return max;
 }
 	
-ref<MIPMap> MIPMap::fromBitmap(Bitmap *bitmap) {
+ref<MIPMap> MIPMap::fromBitmap(Bitmap *bitmap, bool isotropic, 
+		EWrapMode wrapMode, Float maxAnisotropy) {
 	int width = bitmap->getWidth();
 	int height = bitmap->getHeight();
 	float *data = bitmap->getFloatData();
@@ -155,7 +162,9 @@ ref<MIPMap> MIPMap::fromBitmap(Bitmap *bitmap) {
 			pixels[y*width+x] = s;
 		}
 	}
-	return new MIPMap(width, height, pixels);
+
+	return new MIPMap(width, height, pixels,
+		isotropic, wrapMode, maxAnisotropy);
 }
 
 MIPMap::ResampleWeight *MIPMap::resampleWeights(int oldRes, int newRes) const {
@@ -197,6 +206,11 @@ Spectrum MIPMap::getTexel(int level, int x, int y) const {
 				|| y >=  m_levelHeight[level])
 				return Spectrum(0.0f);
 			break;
+		case EWhite:
+			if (x < 0 || y < 0 || x >= m_levelWidth[level] 
+				|| y >=  m_levelHeight[level])
+				return Spectrum(1.0f);
+			break;
 	}
 	return m_pyramid[level][x + m_levelWidth[level]*y];
 }
@@ -213,9 +227,6 @@ Spectrum MIPMap::triangle(int level, Float x, Float y) const {
 		+ getTexel(level, xPos + 1, yPos + 1) * dx * dy;
 }
 		
-static StatsCounter mipmapLookups("Texture", "Mip-map texture lookups");
-static StatsCounter ewaLookups("Texture", "EWA texture lookups");
-
 Spectrum MIPMap::getValue(Float u, Float v, 
 		Float dudx, Float dudy, Float dvdx, Float dvdy) const {
 	if (m_isotropic) {

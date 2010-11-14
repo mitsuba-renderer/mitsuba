@@ -234,21 +234,84 @@ class mitsuba_texture(declarative_property_group):
 	def get_params(self):
 		if hasattr(self, 'mitsuba_tex_%s' % self.type):
 			mts_texture = getattr(self, 'mitsuba_tex_%s' % self.type) 
-			return mts_texture.get_params()
+			params = mts_texture.get_params()
+			params.update(self.mitsuba_tex_mapping.get_params())
+			return params
 		else:
 			return ParamSet()
+
+class mitsuba_tex_mapping(declarative_property_group):
+	controls = [
+		['uscale', 'vscale'],
+		['uoffset', 'voffset']
+	]
+
+	properties = [
+		{
+			'attr': 'uscale',
+			'type': 'float',
+			'name': 'U Scale',
+			'default': 1.0,
+			'min': -100.0,
+			'soft_min': -100.0,
+			'max': 100.0,
+			'soft_max': 100.0,
+			'save_in_preset': True
+		},
+		{
+			'attr': 'vscale',
+			'type': 'float',
+			'name': 'V Scale',
+			'default': 1.0,
+			'min': -100.0,
+			'soft_min': -100.0,
+			'max': 100.0,
+			'soft_max': 100.0,
+			'save_in_preset': True
+		},
+		{
+			'attr': 'uoffset',
+			'type': 'float',
+			'name': 'U Offset',
+			'default': 0.0,
+			'min': -100.0,
+			'soft_min': -100.0,
+			'max': 100.0,
+			'soft_max': 100.0,
+			'save_in_preset': True
+		},
+		{
+			'attr': 'voffset',
+			'type': 'float',
+			'name': 'V Offset',
+			'default': 0.0,
+			'min': -100.0,
+			'soft_min': -100.0,
+			'max': 100.0,
+			'soft_max': 100.0,
+			'save_in_preset': True
+		}
+	]
+
+	def get_params(self):
+		mapping_params = ParamSet()
+		mapping_params.add_float('uscale', self.uscale)
+		mapping_params.add_float('vscale', self.vscale)
+		mapping_params.add_float('uoffset', self.uoffset)
+		mapping_params.add_float('voffset', self.voffset)
+		return mapping_params
 
 class mitsuba_tex_ldrtexture(declarative_property_group):
 	controls = [
 		'filename',
-		'filtertype',
-		'gamma',
-		'max_anisotropy',
-		'wrap',
+		'wrapMode',
+		'filterType', 
+		'maxAnisotropy',
+		['srgb', 'gamma']
 	]
 	
 	visibility = {
-		'max_anisotropy': { 'filtertype': 'ewa' },
+		'maxAnisotropy': { 'filterType': 'ewa' },
 		'gamma': { 'srgb': False }
 	}
 
@@ -263,7 +326,7 @@ class mitsuba_tex_ldrtexture(declarative_property_group):
 		},
 		{
 			'type': 'enum',
-			'attr': 'filtertype',
+			'attr': 'filterType',
 			'name': 'Filter type',
 			'description' : 'Specifies the type of texture filtering',
 			'items': [
@@ -296,14 +359,14 @@ class mitsuba_tex_ldrtexture(declarative_property_group):
 		{
 			'type': 'float',
 			'description' :  'Maximum allowed anisotropy when using the EWA filter',
-			'attr': 'max_anisotropy',
+			'attr': 'maxAnisotropy',
 			'name': 'Max. Anisotropy',
 			'default': 8.0,
 			'save_in_preset': True
 		},
 		{
 			'type': 'enum',
-			'attr': 'wrap',
+			'attr': 'wrapMode',
 			'name': 'Wrapping',
 			'description' : 'What should be done when encountering UV coordinates outside of the range [0,1]',
 			'items': [
@@ -320,9 +383,9 @@ class mitsuba_tex_ldrtexture(declarative_property_group):
 		params = ParamSet()
 
 		params.add_string('filename', efutil.path_relative_to_export(self.filename) ) \
-			  .add_string('filtertype', self.filtertype) \
-			  .add_float('max_anisotropy', self.max_anisotropy) \
-			  .add_string('wrap', self.wrap) \
+			  .add_string('filterType', self.filterType) \
+			  .add_float('maxAnisotropy', self.maxAnisotropy) \
+			  .add_string('wrapMode', self.wrapMode) \
 			  .add_float('gamma', -1 if self.srgb else self.gamma)
 
 		return params

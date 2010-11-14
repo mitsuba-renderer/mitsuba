@@ -30,7 +30,8 @@ from extensions_framework import util as efutil
 from mitsuba.properties.engine import mitsuba_engine
 from mitsuba.properties.lamp import mitsuba_lamp
 from mitsuba.properties.texture import mitsuba_texture, \
-	mitsuba_tex_ldrtexture, mitsuba_tex_checkerboard
+	mitsuba_tex_ldrtexture, mitsuba_tex_checkerboard, \
+	mitsuba_tex_mapping
 from mitsuba.properties.material import mitsuba_material, \
 	mitsuba_mat_lambertian
 
@@ -40,7 +41,8 @@ from mitsuba.export.film import resolution
 
 from mitsuba.ui import render_panels
 from mitsuba.ui import lamps
-from mitsuba.ui.textures import main, ldrtexture, checkerboard
+from mitsuba.ui.textures import TEXTURE_PT_context_texture_mts
+from mitsuba.ui.textures import main, ldrtexture, checkerboard, mapping
 from mitsuba.ui.materials import main, lambertian
 
 def compatible(mod):
@@ -62,10 +64,6 @@ properties_render.RENDER_PT_dimensions.COMPAT_ENGINES.add('mitsuba')
 properties_render.RENDER_PT_output.COMPAT_ENGINES.add('mitsuba')
 del properties_render
 
-import properties_texture
-properties_texture.TEXTURE_PT_context_texture.COMPAT_ENGINES.add('mitsuba')
-del properties_texture
-
 compatible("properties_data_mesh")
 compatible("properties_data_camera")
 
@@ -79,6 +77,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 		('Texture', mitsuba_texture),
 		('mitsuba_texture', mitsuba_tex_ldrtexture),
 		('mitsuba_texture', mitsuba_tex_checkerboard),
+		('mitsuba_texture', mitsuba_tex_mapping),
 		('Material', mitsuba_material),
 		('mitsuba_material', mitsuba_mat_lambertian)
 	]

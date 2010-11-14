@@ -82,7 +82,10 @@ class MITSUBA_OT_preset_texture_add(MITSUBA_OT_preset_base, bpy.types.Operator):
 		pv.extend([
 			'bpy.context.texture.mitsuba_texture.mitsuba_tex_%s.%s'%(mts_type, v['attr']) for v in sub_type.get_exportable_properties()
 		])
-		
+		pv.extend([
+			'bpy.context.texture.mitsuba_texture.mitsuba_tex_mapping.%s'%v['attr'] for v in bpy.types.mitsuba_tex_mapping.get_exportable_properties()
+		])
+
 		self.preset_values = pv
 		return super().execute(context)
 

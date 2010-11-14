@@ -30,8 +30,9 @@ MTS_NAMESPACE_BEGIN
 class MTS_EXPORT_RENDER MIPMap : public Object {
 public:
 	enum EWrapMode {
-		ERepeat,
+		ERepeat = 0,
 		EBlack,
+		EWhite,
 		EClamp
 	};
 
@@ -44,7 +45,9 @@ public:
 		Float maxAnisotropy = 8.0f);
 
 	/// Construct a mip map from a HDR bitmap
-	static ref<MIPMap> fromBitmap(Bitmap *bitmap);
+	static ref<MIPMap> fromBitmap(Bitmap *bitmap, 
+		bool isotropic = false, EWrapMode wrapMode = ERepeat,
+		Float maxAnisotropy = 8.0f);
 
 	/// Do a mip-map lookup at the appropriate level
 	Spectrum getValue(Float u, Float v,

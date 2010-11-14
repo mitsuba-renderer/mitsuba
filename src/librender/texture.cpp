@@ -39,12 +39,12 @@ void Texture::serialize(Stream *stream, InstanceManager *manager) const {
 Texture2D::Texture2D(const Properties &props) : Texture(props) {
 	if (props.getString("coordinates", "uv") == "uv") {
 		m_uvOffset = Point2(
-			props.getFloat("offsetU", 0.0f),
-			props.getFloat("offsetV", 0.0f)
+			props.getFloat("uoffset", 0.0f),
+			props.getFloat("voffset", 0.0f)
 		);
 		m_uvScale = Vector2(
-			props.getFloat("scaleU", 1.0f),
-			props.getFloat("scaleV", 1.0f)
+			props.getFloat("uscale", 1.0f),
+			props.getFloat("vscale", 1.0f)
 		);
 	} else {
 		Log(EError, "Only UV coordinates are supported at the moment!");
