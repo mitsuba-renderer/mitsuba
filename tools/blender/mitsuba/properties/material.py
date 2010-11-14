@@ -50,7 +50,8 @@ class mitsuba_material(declarative_property_group):
 				('roughglass', 'Rough glass', 'Rough dielectric material (e.g. sand-blasted glass)'),
 				('roughmetal', 'Rough metal', 'Rough conductor (e.g. sand-blasted metal)'),
 				('difftrans', 'Diffuse transmitter', 'Material with an ideally diffuse transmittance'),
-				('microfacet', 'Microfacet', 'Microfacet material (like the rough glass material, but without transmittance)')
+				('microfacet', 'Microfacet', 'Microfacet material (like the rough glass material, but without transmittance)'),
+				('composite', 'Compound material', 'Allows creating mixtures of different materials')
 			],
 			'save_in_preset': True
 		}
@@ -459,7 +460,7 @@ class mitsuba_mat_dielectric(declarative_property_group):
 
 class mitsuba_mat_mirror(declarative_property_group):
 	controls = [
-		'specularReflectance',
+		'specularReflectance'
 	]
 
 	properties = [
@@ -483,7 +484,7 @@ class mitsuba_mat_mirror(declarative_property_group):
 
 class mitsuba_mat_difftrans(declarative_property_group):
 	controls = [
-		'transmittance',
+		'transmittance'
 	]
 
 	properties = [
@@ -491,7 +492,7 @@ class mitsuba_mat_difftrans(declarative_property_group):
 			'attr': 'transmittance',
 			'type': 'float_vector',
 			'subtype': 'COLOR',
-			'description' : 'Diffuse transmittance value',
+			'description' : 'Amount of ideal diffuse transmittance through the surface',
 			'name' : 'Diffuse transmittance',
 			'default' : (0.5, 0.5, 0.5),
 			'min': 0.0,
@@ -504,3 +505,63 @@ class mitsuba_mat_difftrans(declarative_property_group):
 		params = ParamSet()
 		params.add_color('transmittance', self.transmittance)
 		return params
+
+class WeightedMaterialParameter:
+	def __init__(self, name, readableName, propertyGroup):
+		self.name = name
+		self.readableName = readableName
+		self.propertyGroup = propertyGroup
+
+	def get_controls(self):
+		return [ ['%s_material' % self.name, .8, '%s_weight' % self.name ]]
+
+	def get_properties(self):
+		return [
+			{
+				'attr': '%s_name' % self.name,
+				'type': 'string',
+				'name': '%s material name' % self.name,
+				'save_in_preset': True
+			},
+			{
+				'attr': '%s_weight' % self.name,
+				'type': 'float',
+				'name': 'Weight',
+				'min': 0.0,
+				'max': 1.0,
+				'default' : 0.0,
+				'save_in_preset': True
+			},
+			{
+				'attr': '%s_material' % self.name,
+				'type': 'prop_search',
+				'src': lambda s, c: s.object,
+				'src_attr': 'material_slots',
+				'trg': lambda s,c: getattr(c, self.propertyGroup),
+				'trg_attr': '%s_name' % self.name,
+				'name': '%s:' % self.readableName
+			}
+		]
+
+
+param_mat = []
+for i in range(0, 6):
+	param_mat.append(WeightedMaterialParameter("mat%i" % i, "Material %i" % i, "mitsuba_mat_composite"));
+
+class mitsuba_mat_composite(declarative_property_group):
+	controls = [
+		'nElements'
+	] + sum(map(lambda x: x.get_controls(), param_mat), [])
+
+	properties = [
+		{
+			'attr': 'nElements',
+			'type': 'int',
+			'name' : 'Components',
+			'description' : 'Number of mixture components',
+			'default' : 2,
+			'min': 2,
+			'max': 5,
+			'save_in_preset': True
+		}
+	] + sum(map(lambda x: x.get_properties(), param_mat), [])
