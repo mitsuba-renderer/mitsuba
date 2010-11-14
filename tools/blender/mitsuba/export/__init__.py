@@ -45,7 +45,10 @@ class ParamSetItem(list):
 	
 	def to_string_ref(self):
 		if self.type == "reference_texture" or self.type == "reference_material":
-			return '\t\t<ref name="%s" id="%s"/>\n' % (self.name, self.value)
+			if self.name == "":
+				return '\t\t<ref id="%s"/>\n' % self.value
+			else:
+				return '\t\t<ref name="%s" id="%s"/>\n' % (self.name, self.value)
 		else:
 			return ""
 

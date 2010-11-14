@@ -579,5 +579,10 @@ class mitsuba_mat_composite(declarative_property_group):
 
 	def get_params(self):
 		params = ParamSet()
+		weights = ""
+		for i in range(1,self.nElements+1):
+			weights += str(getattr(self, "mat%i_weight" % i)) + " "
+			params.add_reference('material', "mat%i" % i, getattr(self, "mat%i_name" % i))
+		params.add_string('weights', weights)
 		return params
 
