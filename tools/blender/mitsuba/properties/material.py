@@ -5,6 +5,7 @@ import bpy
 
 from extensions_framework import declarative_property_group
 from extensions_framework import util as efutil
+from extensions_framework.validate import Logic_Operator
 from mitsuba.properties.texture import TextureParameter
 from mitsuba.export import ParamSet
 
@@ -513,7 +514,7 @@ class WeightedMaterialParameter:
 		self.propertyGroup = propertyGroup
 
 	def get_controls(self):
-		return [ ['%s_material' % self.name, .8, '%s_weight' % self.name ]]
+		return [ ['%s_material' % self.name, .7, '%s_weight' % self.name ]]
 
 	def get_properties(self):
 		return [
@@ -545,8 +546,16 @@ class WeightedMaterialParameter:
 
 
 param_mat = []
-for i in range(0, 6):
+for i in range(1, 6):
 	param_mat.append(WeightedMaterialParameter("mat%i" % i, "Material %i" % i, "mitsuba_mat_composite"));
+
+
+def mitsuba_mat_composite_visibility():
+	result = {}
+	for i in range(2, 6):
+		result["mat%i_material" % i]   = {'nElements' : Logic_Operator({'gte' : i})}
+		result["mat%i_weight" % i] = {'nElements' : Logic_Operator({'gte' : i})}
+	return result
 
 class mitsuba_mat_composite(declarative_property_group):
 	controls = [
@@ -565,3 +574,10 @@ class mitsuba_mat_composite(declarative_property_group):
 			'save_in_preset': True
 		}
 	] + sum(map(lambda x: x.get_properties(), param_mat), [])
+
+	visibility = mitsuba_mat_composite_visibility()
+
+	def get_params(self):
+		params = ParamSet()
+		return params
+

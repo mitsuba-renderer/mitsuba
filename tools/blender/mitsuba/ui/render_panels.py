@@ -44,7 +44,6 @@ class setup_preset(render_described_context, bpy.types.Panel):
 		
 		super().draw(context)
 
-
 class engine(render_described_context, bpy.types.Panel):
 	'''
 	Engine settings UI Panel

@@ -28,3 +28,14 @@ class ui_material_composite(mitsuba_material_sub, bpy.types.Panel):
 	display_property_groups = [
 		( ('material', 'mitsuba_material'), 'mitsuba_mat_composite' )
 	]
+		
+	def draw(self, context):
+		super().draw(context)
+
+		mat = context.material.mitsuba_material.mitsuba_mat_composite
+		weight = 0
+		for i in range(1,mat.nElements+1):
+			weight += getattr(mat, "mat%i_weight" % i)
+		if weight > 1:
+			row = self.layout.row()
+			row.label("Warning: material weights sum to >1")
