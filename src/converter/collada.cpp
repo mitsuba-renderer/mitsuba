@@ -27,6 +27,7 @@
 #include <boost/algorithm/string.hpp>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <set>
 
 #if defined(__OSX__)
 #include <OpenGL/glu.h>
@@ -37,6 +38,19 @@
 #include "converter.h"
 
 typedef std::map<std::string, std::string> StringMap;
+typedef std::map<std::string, int> RefCountMap;
+
+struct ColladaContext {
+	GeometryConverter *cvt;
+	RefCountMap refCountMap;
+	std::set<std::string> serializedGeometry;
+	fs::path texturesDirectory;
+	fs::path meshesDirectory;
+	StringMap idToTexture, fileToId;
+	std::ostream &os;
+
+	inline ColladaContext(std::ostream &os) : os(os) { }
+};
 
 enum ESourceType {
 	EPosition = 0,
@@ -116,7 +130,7 @@ std::vector<domUint *> tess_cleanup;
 VertexData *tess_vdata = NULL;
 size_t tess_nSources;
 
-VertexData *fetchVertexData(Transform transform, std::ostream &os, 
+VertexData *fetchVertexData(Transform transform, 
 		const domInputLocal_Array &vertInputs,
 		const domInputLocalOffset_Array &inputs) {
 	VertexData *result = new VertexData();
@@ -309,8 +323,9 @@ public:
 
 typedef std::map<SimpleTriangle, bool, triangle_key_order> TriangleMap;
 
-void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string id, int geomIndex, std::string matID, Transform transform, 
-		std::ostream &os, VertexData *vData, TriangleMap &triMap, const fs::path &meshesDirectory) {
+void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::string id, 
+		int geomIndex, std::string matID, Transform transform, VertexData *vData, 
+		TriangleMap &triMap, bool exportShapeGroup) {
 	std::vector<Vertex> vertexBuffer;
 	std::vector<Triangle> triangles;
 	std::map<Vertex, int, vertex_key_order> vertexMap;
@@ -318,8 +333,6 @@ void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string i
 	Triangle triangle;
 	if (tess_data.size() == 0)
 		return;
-
-	id += formatString("_%i", geomIndex);
 
 	for (size_t i=0; i<tess_cleanup.size(); ++i)
 		delete[] tess_cleanup[i];
@@ -389,7 +402,7 @@ void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string i
 		if (triangles.size() == 0) {
 			SLog(EWarn, "\"%s/%s\": Only contains duplicates (%i triangles) of already-existing geometry. Ignoring.", 
 				prefixName.c_str(), id.c_str(), duplicates);
-			os << "\t<!-- Ignored shape \"" << prefixName << "/" 
+			ctx.os << "\t<!-- Ignored shape \"" << prefixName << "/" 
 				<< id << "\" (mat=\"" << matID << "\"), since it only contains duplicate geometry. -->" << endl << endl;
 			return;
 		} else {
@@ -425,7 +438,7 @@ void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string i
 			Float r = vertexBuffer[i].col.x;
 			Float g = vertexBuffer[i].col.y;
 			Float b = vertexBuffer[i].col.z;
-			if (cvt->m_srgb)
+			if (ctx.cvt->m_srgb)
 				target_colors->fromLinearRGB(r,g,b);
 			else
 				target_colors->fromSRGB(r,g,b);
@@ -433,8 +446,9 @@ void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string i
 		}
 	}
 
+	id += formatString("_%i", geomIndex);
 	std::string filename = id + std::string(".serialized");
-	ref<FileStream> stream = new FileStream(meshesDirectory / filename, FileStream::ETruncReadWrite);
+	ref<FileStream> stream = new FileStream(ctx.meshesDirectory / filename, FileStream::ETruncReadWrite);
 	stream->setByteOrder(Stream::ELittleEndian);
 	mesh->serialize(stream);
 	stream->close();
@@ -445,20 +459,28 @@ void writeGeometry(GeometryConverter *cvt, std::string prefixName, std::string i
 			matrix << transform.getMatrix().m[i][j] << " ";
 	std::string matrixValues = matrix.str();
 
-	os << "\t<shape id=\"" << prefixName << "/" << id << "\" type=\"serialized\">" << endl;
-	os << "\t\t<string name=\"filename\" value=\"meshes/" << filename << "\"/>" << endl;
-	if (!transform.isIdentity()) {
-		os << "\t\t<transform name=\"toWorld\">" << endl;
-		os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
-		os << "\t\t</transform>" << endl;
+	if (!exportShapeGroup) {
+		ctx.os << "\t<shape id=\"" << prefixName << "/" << id << "\" type=\"serialized\">" << endl;
+		ctx.os << "\t\t<string name=\"filename\" value=\"meshes/" << filename << "\"/>" << endl;
+		if (!transform.isIdentity()) {
+			ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
+			ctx.os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
+			ctx.os << "\t\t</transform>" << endl;
+		}
+		if (matID != "") 
+			ctx.os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
+		ctx.os << "\t</shape>" << endl << endl;
+	} else {
+		ctx.os << "\t\t<shape type=\"serialized\">" << endl;
+		ctx.os << "\t\t\t<string name=\"filename\" value=\"meshes/" << filename << "\"/>" << endl;
+		if (matID != "") 
+			ctx.os << "\t\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
+		ctx.os << "\t\t</shape>" << endl << endl;
 	}
-	if (matID != "") 
-		os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
-	os << "\t</shape>" << endl << endl;
 }
 
-void loadGeometry(GeometryConverter *cvt, std::string prefixName, Transform transform, std::ostream &os, domGeometry &geom, 
-		StringMap &matLookupTable, const fs::path &meshesDir) {
+void loadGeometry(ColladaContext &ctx, std::string prefixName, Transform transform, domGeometry &geom, 
+		StringMap &matLookupTable) {
 	std::string identifier;
 	if (geom.getId() != NULL) {
 		identifier = geom.getId();
@@ -478,6 +500,28 @@ void loadGeometry(GeometryConverter *cvt, std::string prefixName, Transform tran
 	if (!mesh)
 		SLog(EError, "Invalid geometry type encountered (must be a <mesh>)!");
 
+	bool exportShapeGroup = false;
+	if (ctx.serializedGeometry.find(identifier) != ctx.serializedGeometry.end()) {
+		ctx.os << "\t<shape id=\"" << prefixName << "/" << identifier << "\" type=\"instance\">" << endl;
+		if (!transform.isIdentity()) {
+			std::ostringstream matrix;
+			for (int i=0; i<4; ++i)
+				for (int j=0; j<4; ++j)
+					matrix << transform.getMatrix().m[i][j] << " ";
+			std::string matrixValues = matrix.str();
+			ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
+			ctx.os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
+			ctx.os << "\t\t</transform>" << endl;
+		}
+		ctx.os << "\t\t<ref id=\"" << identifier << "\"/>" << endl;
+		ctx.os << "\t</shape>" << endl << endl;
+		return;
+	} else if (ctx.refCountMap[identifier] > 1) {
+		ctx.os << "\t<shape id=\"" << identifier << "\" type=\"shapegroup\">" << endl;
+		exportShapeGroup = true;
+	}
+	ctx.serializedGeometry.insert(identifier);
+
 	const domInputLocal_Array &vertInputs = mesh->getVertices()->getInput_array();
 
 	int geomIndex = 0;
@@ -486,7 +530,7 @@ void loadGeometry(GeometryConverter *cvt, std::string prefixName, Transform tran
 	for (size_t i=0; i<trianglesArray.getCount(); ++i) {
 		domTriangles *triangles = trianglesArray[i];
 		domInputLocalOffset_Array &inputs = triangles->getInput_array();
-		VertexData *data = fetchVertexData(transform, os, vertInputs, inputs);
+		VertexData *data = fetchVertexData(transform, vertInputs, inputs);
 		domListOfUInts &indices = triangles->getP()->getValue();
 		tess_data.clear();
 		tess_nSources = data->nSources;
@@ -497,7 +541,7 @@ void loadGeometry(GeometryConverter *cvt, std::string prefixName, Transform tran
 			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
 		else
 			matID = matLookupTable[triangles->getMaterial()];
-		writeGeometry(cvt, prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
+		writeGeometry(ctx, prefixName, identifier, geomIndex, matID, transform, data, triMap, exportShapeGroup);
 		delete data;
 		++geomIndex;
 	}
@@ -506,7 +550,7 @@ void loadGeometry(GeometryConverter *cvt, std::string prefixName, Transform tran
 	for (size_t i=0; i<polygonsArray.getCount(); ++i) {
 		domPolygons *polygons = polygonsArray[i];
 		domInputLocalOffset_Array &inputs = polygons->getInput_array();
-		VertexData *data = fetchVertexData(transform, os, vertInputs, inputs);
+		VertexData *data = fetchVertexData(transform, vertInputs, inputs);
 		domP_Array &indexArray = polygons->getP_array();
 		int posOffset = data->typeToOffset[EPosition];
 
@@ -557,7 +601,7 @@ void loadGeometry(GeometryConverter *cvt, std::string prefixName, Transform tran
 		else
 			matID = matLookupTable[polygons->getMaterial()];
 
-		writeGeometry(cvt, prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
+		writeGeometry(ctx, prefixName, identifier, geomIndex, matID, transform, data, triMap, exportShapeGroup);
 		delete data;
 		++geomIndex;
 	}
@@ -566,7 +610,7 @@ void loadGeometry(GeometryConverter *cvt, std::string prefixName, Transform tran
 	for (size_t i=0; i<polylistArray.getCount(); ++i) {
 		domPolylist *polylist = polylistArray[i];
 		domInputLocalOffset_Array &inputs = polylist->getInput_array();
-		VertexData *data = fetchVertexData(transform, os, vertInputs, inputs);
+		VertexData *data = fetchVertexData(transform, vertInputs, inputs);
 		domListOfUInts &vcount = polylist->getVcount()->getValue();
 		domListOfUInts &indexArray = polylist->getP()->getValue();
 		int posOffset = data->typeToOffset[EPosition], indexOffset = 0;
@@ -619,13 +663,29 @@ void loadGeometry(GeometryConverter *cvt, std::string prefixName, Transform tran
 		else
 			matID = matLookupTable[polylist->getMaterial()];
 
-		writeGeometry(cvt, prefixName, identifier, geomIndex, matID, transform, os, data, triMap, meshesDir);
+		writeGeometry(ctx, prefixName, identifier, geomIndex, matID, transform, data, triMap, exportShapeGroup);
 		delete data;
 		++geomIndex;
 	}
+	if (exportShapeGroup) {
+		ctx.os << "\t</shape>" << endl << endl;
+		ctx.os << "\t<shape id=\"" << prefixName << "/" << identifier << "\" type=\"instance\">" << endl;
+		if (!transform.isIdentity()) {
+			std::ostringstream matrix;
+			for (int i=0; i<4; ++i)
+				for (int j=0; j<4; ++j)
+					matrix << transform.getMatrix().m[i][j] << " ";
+			std::string matrixValues = matrix.str();
+			ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
+			ctx.os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
+			ctx.os << "\t\t</transform>" << endl;
+		}
+		ctx.os << "\t\t<ref id=\"" << identifier << "\"/>" << endl;
+		ctx.os << "\t</shape>" << endl << endl;
+	}
 }
 
-void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const fs::path &name, StringMap &idToTexture, 
+void loadMaterialParam(ColladaContext &ctx, const fs::path &name, 
 		domCommon_color_or_texture_type *value, bool handleRefs) {
 	if (!value)
 		return;
@@ -635,34 +695,34 @@ void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const fs::path 
 		value->getTexture().cast();
 	if (color && !handleRefs) {
 		domFloat4 &colValue = color->getValue();
-		if (cvt->m_srgb)
-			os << "\t\t<srgb name=\"" << name << "\" value=\"";
+		if (ctx.cvt->m_srgb)
+			ctx.os << "\t\t<srgb name=\"" << name << "\" value=\"";
 		else
-			os << "\t\t<rgb name=\"" << name << "\" value=\"";
-		os << colValue.get(0) << " " << colValue.get(1) << " " 
+			ctx.os << "\t\t<rgb name=\"" << name << "\" value=\"";
+		ctx.os << colValue.get(0) << " " << colValue.get(1) << " " 
 		   << colValue.get(2) << "\"/>" << endl;
 	} else if (texture && handleRefs) {
-		if (idToTexture.find(texture->getTexture()) == idToTexture.end()) {
+		if (ctx.idToTexture.find(texture->getTexture()) == ctx.idToTexture.end()) {
 			SLog(EError, "Could not find referenced texture \"%s\"", texture->getTexture());
 		} else {
-			os << "\t\t<ref name=\"" << name << "\" id=\""
-			   << idToTexture[texture->getTexture()] << "\"/>" << endl;
+			ctx.os << "\t\t<ref name=\"" << name << "\" id=\""
+			   << ctx.idToTexture[texture->getTexture()] << "\"/>" << endl;
 		}
 	}
 }
 
-void loadMaterialParam(GeometryConverter *cvt, std::ostream &os, const fs::path &name, StringMap &,
+void loadMaterialParam(ColladaContext &ctx, const fs::path &name, 
 		domCommon_float_or_param_type *value, bool handleRef) {
 	if (!value)
 		return;
 	domCommon_float_or_param_type::domFloat *floatValue = value->getFloat();
 	if (!handleRef && floatValue) {
-		os << "\t\t<float name=\"" << name << "\" value=\""
+		ctx.os << "\t\t<float name=\"" << name << "\" value=\""
 		   << floatValue->getValue() << "\"/>" << endl;
 	}
 }
 
-void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, StringMap &_idToTexture) {
+void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 	std::string identifier;
 	if (mat.getId() != NULL) {
 		identifier = mat.getId();
@@ -674,7 +734,7 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 			identifier = formatString("unnamedMat_%i", unnamedCtr++);
 		}
 	}
-	StringMap idToTexture = _idToTexture;
+	StringMap idToTexture = ctx.idToTexture;
 
 	daeURI &effRef = mat.getInstance_effect()->getUrl();
 	effRef.resolveElement();
@@ -741,26 +801,26 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 				isDiffuse = true;
 		}
 		if (isDiffuse) {
-			os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
-			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
-			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
-			os << "\t</bsdf>" << endl << endl;
+			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
+			loadMaterialParam(ctx, "reflectance", diffuse, false);
+			loadMaterialParam(ctx, "reflectance", diffuse, true);
+			ctx.os << "\t</bsdf>" << endl << endl;
 		} else {
-			os << "\t<bsdf id=\"" << identifier << "\" type=\"phong\">" << endl;
-			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, false);
-			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, false);
-			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, false);
-			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, true);
-			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, true);
-			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, true);
-			os << "\t</bsdf>" << endl << endl;
+			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"phong\">" << endl;
+			loadMaterialParam(ctx,  "diffuseReflectance", diffuse, false);
+			loadMaterialParam(ctx, "specularReflectance", specular, false);
+			loadMaterialParam(ctx, "exponent", shininess, false);
+			loadMaterialParam(ctx, "diffuseReflectance", diffuse, true);
+			loadMaterialParam(ctx, "specularReflectance", specular, true);
+			loadMaterialParam(ctx, "exponent", shininess, true);
+			ctx.os << "\t</bsdf>" << endl << endl;
 		}
 	} else if (lambert) {
 		domCommon_color_or_texture_type* diffuse = lambert->getDiffuse();
-		os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
-		loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
-		loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
-		os << "\t</bsdf>" << endl << endl;
+		ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
+		loadMaterialParam(ctx, "reflectance", diffuse, false);
+		loadMaterialParam(ctx, "reflectance", diffuse, true);
+		ctx.os << "\t</bsdf>" << endl << endl;
 	} else if (blinn) {
 		SLog(EWarn, "\"%s\": Encountered a \"blinn\" COLLADA material, which is currently "
 			"unsupported in Mitsuba -- replacing it using a Phong material.", identifier.c_str());
@@ -777,39 +837,39 @@ void loadMaterial(GeometryConverter *cvt, std::ostream &os, domMaterial &mat, St
 				isDiffuse = true;
 		}
 		if (isDiffuse) {
-			os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
-			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, false);
-			loadMaterialParam(cvt, os, "reflectance", idToTexture, diffuse, true);
-			os << "\t</bsdf>" << endl << endl;
+			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
+			loadMaterialParam(ctx, "reflectance", diffuse, false);
+			loadMaterialParam(ctx, "reflectance", diffuse, true);
+			ctx.os << "\t</bsdf>" << endl << endl;
 		} else {
-			os << "\t<bsdf id=\"" << identifier << "\" type=\"blinn\">" << endl;
-			os << "\t\t<float name=\"specularReflectance\" value=\"1\"/>" << endl;
-			os << "\t\t<float name=\"diffuseReflectance\" value=\"1\"/>" << endl;
-			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, false);
-			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, false);
-			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, false);
-			loadMaterialParam(cvt, os, "diffuseReflectance", idToTexture, diffuse, true);
-			loadMaterialParam(cvt, os, "specularReflectance", idToTexture, specular, true);
-			loadMaterialParam(cvt, os, "exponent", idToTexture, shininess, true);
-			os << "\t</bsdf>" << endl << endl;
+			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"blinn\">" << endl;
+			ctx.os << "\t\t<float name=\"specularReflectance\" value=\"1\"/>" << endl;
+			ctx.os << "\t\t<float name=\"diffuseReflectance\" value=\"1\"/>" << endl;
+			loadMaterialParam(ctx, "diffuseReflectance", diffuse, false);
+			loadMaterialParam(ctx, "specularReflectance", specular, false);
+			loadMaterialParam(ctx, "exponent", shininess, false);
+			loadMaterialParam(ctx, "diffuseReflectance", diffuse, true);
+			loadMaterialParam(ctx, "specularReflectance", specular, true);
+			loadMaterialParam(ctx, "exponent", shininess, true);
+			ctx.os << "\t</bsdf>" << endl << endl;
 		}
 	} else if (constant) {
 		domCommon_float_or_param_type* transparency = constant->getTransparency();
 		domCommon_float_or_param_type::domFloat *transparencyValue = 
 				transparency ? transparency->getFloat() : NULL;
 		if (transparencyValue && transparencyValue->getValue() > 0.5) {
-			os << "\t<bsdf id=\"" << identifier << "\" type=\"dielectric\"/>" << endl << endl;
+			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"dielectric\"/>" << endl << endl;
 		} else {
 			SLog(EWarn, "\"%s\": Encountered a \"constant\" COLLADA material, which is currently "
 				"unsupported in Mitsuba -- replacing it using a Lambertian material.", identifier.c_str());
-			os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\"/>" << endl << endl;
+			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\"/>" << endl << endl;
 		}
 	} else {
 		SLog(EError, "Material type not supported! (must be Lambertian/Phong/Blinn/Constant)");
 	}
 }
 
-void loadLight(Transform transform, std::ostream &os, domLight &light) {
+void loadLight(ColladaContext &ctx, Transform transform, domLight &light) {
 	std::string identifier;
 	if (light.getId() != NULL) {
 		identifier = light.getId();
@@ -857,23 +917,23 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 		if (notQuadratic)
 			SLog(EWarn, "Point light \"%s\" is not a quadratic light! Treating it as one -- expect problems.", identifier.c_str());
 		domFloat3 &color = point->getColor()->getValue();
-		os << "\t<luminaire id=\"" << identifier << "\" type=\"point\">" << endl;
-		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
-		os << "\t\t<transform name=\"toWorld\">" << endl;
-		os << "\t\t\t<translate x=\"" << pos.x << "\" y=\"" << pos.y << "\" z=\"" << pos.z << "\"/>" << endl;
-		os << "\t\t</transform>" << endl;
-		os << "\t</luminaire>" << endl << endl;
+		ctx.os << "\t<luminaire id=\"" << identifier << "\" type=\"point\">" << endl;
+		ctx.os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
+		ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
+		ctx.os << "\t\t\t<translate x=\"" << pos.x << "\" y=\"" << pos.y << "\" z=\"" << pos.z << "\"/>" << endl;
+		ctx.os << "\t\t</transform>" << endl;
+		ctx.os << "\t</luminaire>" << endl << endl;
 	}
 
 	domLight::domTechnique_common::domDirectional *directional = light.getTechnique_common()->getDirectional().cast();
 	if (directional) {
 		domFloat3 &color = directional->getColor()->getValue();
-		os << "\t<luminaire id=\"" << identifier << "\" type=\"directional\">" << endl;
-		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
-		os << "\t\t<transform name=\"toWorld\">" << endl;
-		os << "\t\t\t<lookAt ox=\"" << pos.x << "\" oy=\"" << pos.y << "\" oz=\"" << pos.z << "\" tx=\"" << target.x << "\" ty=\"" << target.y << "\" tz=\"" << target.z << "\"/>" << endl;
-		os << "\t\t</transform>" << endl << endl;
-		os << "\t</luminaire>" << endl << endl;
+		ctx.os << "\t<luminaire id=\"" << identifier << "\" type=\"directional\">" << endl;
+		ctx.os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
+		ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
+		ctx.os << "\t\t\t<lookAt ox=\"" << pos.x << "\" oy=\"" << pos.y << "\" oz=\"" << pos.z << "\" tx=\"" << target.x << "\" ty=\"" << target.y << "\" tz=\"" << target.z << "\"/>" << endl;
+		ctx.os << "\t\t</transform>" << endl << endl;
+		ctx.os << "\t</luminaire>" << endl << endl;
 	}
 
 	domLight::domTechnique_common::domSpot *spot = light.getTechnique_common()->getSpot().cast();
@@ -891,27 +951,26 @@ void loadLight(Transform transform, std::ostream &os, domLight &light) {
 		Float falloffAngle = 180.0f;
 		if (spot->getFalloff_angle())
 			falloffAngle = (Float) spot->getFalloff_angle()->getValue();
-		os << "\t<luminaire id=\"" << identifier << "\" type=\"spot\">" << endl;
-		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
-		os << "\t\t<float name=\"cutoffAngle\" value=\"" << falloffAngle/2 << "\"/>" << endl << endl;
-		os << "\t\t<transform name=\"toWorld\">" << endl;
-		os << "\t\t\t<lookAt ox=\"" << pos.x << "\" oy=\"" << pos.y << "\" oz=\"" << pos.z << "\" tx=\"" << target.x << "\" ty=\"" << target.y << "\" tz=\"" << target.z << "\"/>" << endl;
-		os << "\t\t</transform>" << endl;
-		os << "\t</luminaire>" << endl << endl;
+		ctx.os << "\t<luminaire id=\"" << identifier << "\" type=\"spot\">" << endl;
+		ctx.os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
+		ctx.os << "\t\t<float name=\"cutoffAngle\" value=\"" << falloffAngle/2 << "\"/>" << endl << endl;
+		ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
+		ctx.os << "\t\t\t<lookAt ox=\"" << pos.x << "\" oy=\"" << pos.y << "\" oz=\"" << pos.z << "\" tx=\"" << target.x << "\" ty=\"" << target.y << "\" tz=\"" << target.z << "\"/>" << endl;
+		ctx.os << "\t\t</transform>" << endl;
+		ctx.os << "\t</luminaire>" << endl << endl;
 	}
 	domLight::domTechnique_common::domAmbient *ambient = light.getTechnique_common()->getAmbient().cast();
 	if (ambient) {
 		domFloat3 &color = ambient->getColor()->getValue();
-		os << "\t<luminaire id=\"" << identifier << "\" type=\"constant\">" << endl;
-		os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
-		os << "\t</luminaire>" << endl << endl;
+		ctx.os << "\t<luminaire id=\"" << identifier << "\" type=\"constant\">" << endl;
+		ctx.os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
+		ctx.os << "\t</luminaire>" << endl << endl;
 	}
 	if (!point && !spot && !ambient && !directional)
 		SLog(EWarn, "Encountered an unknown light type!");
 }
 
-void loadImage(GeometryConverter *cvt, std::ostream &os, const fs::path &textureDir, 
-		domImage &image, StringMap &idToTexture, StringMap &fileToId) {
+void loadImage(ColladaContext &ctx, domImage &image) {
 	std::string identifier;
 	if (image.getId() != NULL) {
 		identifier = image.getId();
@@ -927,16 +986,16 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const fs::path &texture
 	SLog(EInfo, "Converting texture \"%s\" ..", identifier.c_str());
 
 	std::string filename = cdom::uriToFilePath(image.getInit_from()->getValue().str());
-	if (fileToId.find(filename) != fileToId.end()) {
-		idToTexture[identifier] = fileToId[filename];
+	if (ctx.fileToId.find(filename) != ctx.fileToId.end()) {
+		ctx.idToTexture[identifier] = ctx.fileToId[filename];
 		return;
 	}
 
-	idToTexture[identifier] = identifier;
-	fileToId[filename] = identifier;
+	ctx.idToTexture[identifier] = identifier;
+	ctx.fileToId[filename] = identifier;
 
 	fs::path path = fs::path(filename);
-	fs::path targetPath = textureDir / path.leaf();
+	fs::path targetPath = ctx.texturesDirectory / path.leaf();
 	fs::path resolved = filename;
 
 	std::string extension = boost::to_lower_copy(fs::extension(path));
@@ -950,7 +1009,7 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const fs::path &texture
 			resolved = fRes->resolve(path.leaf());
 			if (!fs::exists(resolved)) {
 				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
-				resolved = cvt->locateResource(path.leaf());
+				resolved = ctx.cvt->locateResource(path.leaf());
 				targetPath = targetPath.parent_path() / resolved.leaf();
 				if (resolved.empty())
 					SLog(EError, "Unable to locate a resource -- aborting conversion.");
@@ -965,12 +1024,12 @@ void loadImage(GeometryConverter *cvt, std::ostream &os, const fs::path &texture
 		}
 	}
 
-	os << "\t<texture id=\"" << identifier << "\" type=\"ldrtexture\">" << endl;
-	os << "\t\t<string name=\"filename\" value=\"textures/" << targetPath.leaf() << "\"/>" << endl;
-	os << "\t</texture>" << endl << endl;
+	ctx.os << "\t<texture id=\"" << identifier << "\" type=\"ldrtexture\">" << endl;
+	ctx.os << "\t\t<string name=\"filename\" value=\"textures/" << targetPath.leaf() << "\"/>" << endl;
+	ctx.os << "\t</texture>" << endl << endl;
 }
 
-void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, domCamera &camera) {
+void loadCamera(ColladaContext &ctx, Transform transform, domCamera &camera) {
 	std::string identifier;
 	if (camera.getId() != NULL) {
 		identifier = camera.getId();
@@ -1001,19 +1060,19 @@ void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, d
 	if (ortho) {
 		if (ortho->getAspect_ratio().cast() != 0)
 			aspect = (Float) ortho->getAspect_ratio()->getValue();
-		if (cvt->m_xres != -1) {
-			xres = cvt->m_xres;
-			aspect = (Float) cvt->m_xres / (Float) cvt->m_yres;
+		if (ctx.cvt->m_xres != -1) {
+			xres = ctx.cvt->m_xres;
+			aspect = (Float) ctx.cvt->m_xres / (Float) ctx.cvt->m_yres;
 		}
-		os << "\t<camera id=\"" << identifier << "\" type=\"orthographic\">" << endl;
+		ctx.os << "\t<camera id=\"" << identifier << "\" type=\"orthographic\">" << endl;
 	}
 
 	domCamera::domOptics::domTechnique_common::domPerspective* persp = camera.getOptics()->
 		getTechnique_common()->getPerspective().cast();
 	if (persp) {
-		if (cvt->m_xres != -1) {
-			xres = cvt->m_xres;
-			aspect = (Float) cvt->m_xres / (Float) cvt->m_yres;
+		if (ctx.cvt->m_xres != -1) {
+			xres = ctx.cvt->m_xres;
+			aspect = (Float) ctx.cvt->m_xres / (Float) ctx.cvt->m_yres;
 		} else {
 			if (persp->getAspect_ratio().cast() != 0) {
 				aspect = (Float) persp->getAspect_ratio()->getValue();
@@ -1024,58 +1083,57 @@ void loadCamera(GeometryConverter *cvt, Transform transform, std::ostream &os, d
 				}
 			}
 		}
-		os << "\t<camera id=\"" << identifier << "\" type=\"perspective\">" << endl;
+		ctx.os << "\t<camera id=\"" << identifier << "\" type=\"perspective\">" << endl;
 		if (persp->getXfov().cast()) {
 			Float xFov = (Float) persp->getXfov()->getValue();
-			if (std::abs(xFov-1.0f) < Epsilon && cvt->m_fov == -1) {
+			if (std::abs(xFov-1.0f) < Epsilon && ctx.cvt->m_fov == -1) {
 				SLog(EWarn, "Found the suspicious field of view value \"1.0\", which is likely due to a bug in Blender 2.5"
 					" - setting to 45deg. Please use the \"-f\" parameter to override this.");
 				xFov = 45.0f;
 			}
 			Float yFov = radToDeg(2 * std::atan(std::tan(degToRad(xFov)/2) / aspect));
-			if (cvt->m_fov != -1)
-				xFov = yFov = cvt->m_fov;
+			if (ctx.cvt->m_fov != -1)
+				xFov = yFov = ctx.cvt->m_fov;
 			if (aspect <= 1.0f)
-				os << "\t\t<float name=\"fov\" value=\"" << xFov << "\"/>" << endl;
+				ctx.os << "\t\t<float name=\"fov\" value=\"" << xFov << "\"/>" << endl;
 			else
-				os << "\t\t<float name=\"fov\" value=\"" << yFov << "\"/>" << endl;
+				ctx.os << "\t\t<float name=\"fov\" value=\"" << yFov << "\"/>" << endl;
 		} else if (persp->getYfov().cast()) {
 			Float yFov = (Float) persp->getYfov()->getValue();
-			if (std::abs(yFov-1.0) < Epsilon && cvt->m_fov == -1) {
+			if (std::abs(yFov-1.0) < Epsilon && ctx.cvt->m_fov == -1) {
 				SLog(EWarn, "Found the suspicious field of view value \"1.0\", which is likely due to a bug in Blender 2.5"
 					" - setting to 45deg. Please use the \"-f\" parameter to override this.");
 				yFov = 45.0f;
 			}
 			Float xFov = radToDeg(2 * std::atan(std::tan(degToRad(yFov)/2) * aspect));
-			if (cvt->m_fov != -1)
-				xFov = yFov = cvt->m_fov;
+			if (ctx.cvt->m_fov != -1)
+				xFov = yFov = ctx.cvt->m_fov;
 			if (aspect > 1.0f)
-				os << "\t\t<float name=\"fov\" value=\"" << yFov << "\"/>" << endl;
+				ctx.os << "\t\t<float name=\"fov\" value=\"" << yFov << "\"/>" << endl;
 			else
-				os << "\t\t<float name=\"fov\" value=\"" << xFov << "\"/>" << endl;
+				ctx.os << "\t\t<float name=\"fov\" value=\"" << xFov << "\"/>" << endl;
 		}
-		os << "\t\t<float name=\"nearClip\" value=\"" << persp->getZnear()->getValue() << "\"/>" << endl;
-		os << "\t\t<float name=\"farClip\" value=\"" << persp->getZfar()->getValue() << "\"/>" << endl;
-		os << "\t\t<boolean name=\"mapSmallerSide\" value=\"" << (cvt->m_mapSmallerSide ? "true" : "false") << "\"/>" << endl;
+		ctx.os << "\t\t<float name=\"nearClip\" value=\"" << persp->getZnear()->getValue() << "\"/>" << endl;
+		ctx.os << "\t\t<float name=\"farClip\" value=\"" << persp->getZfar()->getValue() << "\"/>" << endl;
+		ctx.os << "\t\t<boolean name=\"mapSmallerSide\" value=\"" << (ctx.cvt->m_mapSmallerSide ? "true" : "false") << "\"/>" << endl;
 	}
 
-	os << endl;
-	os << "\t\t<transform name=\"toWorld\">" << endl;
-	os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
-	os << "\t\t</transform>" << endl << endl;
-	os << "\t\t<sampler type=\"ldsampler\">" << endl;
-	os << "\t\t\t<integer name=\"sampleCount\" value=\"" << cvt->m_samplesPerPixel << "\"/>" << endl;
-	os << "\t\t</sampler>" << endl << endl;
-	os << "\t\t<film id=\"film\" type=\"" << cvt->m_filmType << "\">" << endl;
-	os << "\t\t\t<integer name=\"width\" value=\"" << xres << "\"/>" << endl;
-	os << "\t\t\t<integer name=\"height\" value=\"" << (int) (xres/aspect) << "\"/>" << endl;
-	os << "\t\t\t<rfilter type=\"gaussian\"/>" << endl;
-	os << "\t\t</film>" << endl;
-	os << "\t</camera>" << endl << endl;
+	ctx.os << endl;
+	ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
+	ctx.os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
+	ctx.os << "\t\t</transform>" << endl << endl;
+	ctx.os << "\t\t<sampler type=\"ldsampler\">" << endl;
+	ctx.os << "\t\t\t<integer name=\"sampleCount\" value=\"" << ctx.cvt->m_samplesPerPixel << "\"/>" << endl;
+	ctx.os << "\t\t</sampler>" << endl << endl;
+	ctx.os << "\t\t<film id=\"film\" type=\"" << ctx.cvt->m_filmType << "\">" << endl;
+	ctx.os << "\t\t\t<integer name=\"width\" value=\"" << xres << "\"/>" << endl;
+	ctx.os << "\t\t\t<integer name=\"height\" value=\"" << (int) (xres/aspect) << "\"/>" << endl;
+	ctx.os << "\t\t\t<rfilter type=\"gaussian\"/>" << endl;
+	ctx.os << "\t\t</film>" << endl;
+	ctx.os << "\t</camera>" << endl << endl;
 }
 
-void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os, 
-		domNode &node, std::string prefixName, const fs::path &meshesDir) {
+void loadNode(ColladaContext &ctx, Transform transform, domNode &node, std::string prefixName) {
 	std::string identifier;
 	if (node.getId() != NULL) {
 		identifier = node.getId();
@@ -1165,7 +1223,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 
 		if (!geom)
 			SLog(EError, "Could not find a referenced geometry object!");
-		loadGeometry(cvt, prefixName, transform, os, *geom, matLookupTable, meshesDir);
+		loadGeometry(ctx, prefixName, transform, *geom, matLookupTable);
 	}
 
 	/* Iterate over all light references */
@@ -1175,7 +1233,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 		domLight *light = daeSafeCast<domLight>(inst->getUrl().getElement());
 		if (!light)
 			SLog(EError, "Could not find a referenced light!");
-		loadLight(transform, os, *light);
+		loadLight(ctx, transform, *light);
 	}
 
 	/* Iterate over all camera references */
@@ -1185,13 +1243,13 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 		domCamera *camera = daeSafeCast<domCamera>(inst->getUrl().getElement());
 		if (camera == NULL)
 			SLog(EError, "Could not find a referenced camera!");
-		loadCamera(cvt, transform, os, *camera);
+		loadCamera(ctx, transform, *camera);
 	}
 
 	/* Recursively iterate through sub-nodes */
 	domNode_Array &nodes = node.getNode_array();
 	for (size_t i=0; i<nodes.getCount(); ++i) 
-		loadNode(cvt, transform, os, *nodes[i], prefixName, meshesDir);
+		loadNode(ctx, transform, *nodes[i], prefixName);
 
 	/* Recursively iterate through <instance_node> elements */
 	domInstance_node_Array &instanceNodes = node.getInstance_node_array();
@@ -1199,7 +1257,33 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 		domNode *node = daeSafeCast<domNode>(instanceNodes[i]->getUrl().getElement());
 		if (!node)
 			SLog(EError, "Could not find a referenced node!");
-		loadNode(cvt, transform, os, *node, prefixName + std::string("/") + identifier, meshesDir);
+		loadNode(ctx, transform, *node, prefixName + std::string("/") + identifier);
+	}
+}
+
+void computeRefCounts(ColladaContext &ctx, domNode &node) {
+	domInstance_geometry_Array &instanceGeometries = node.getInstance_geometry_array();
+	for (size_t i=0; i<instanceGeometries.getCount(); ++i) {
+		domInstance_geometry *inst = instanceGeometries[i];
+		domGeometry *geom = daeSafeCast<domGeometry>(inst->getUrl().getElement());
+		if (geom->getId() != NULL) {
+			if (ctx.refCountMap.find(geom->getId()) == ctx.refCountMap.end())
+				ctx.refCountMap[geom->getId()] = 1;
+			else
+				ctx.refCountMap[geom->getId()]++;
+		}
+	}
+
+	/* Recursively iterate through sub-nodes */
+	domNode_Array &nodes = node.getNode_array();
+	for (size_t i=0; i<nodes.getCount(); ++i) 
+		computeRefCounts(ctx, *nodes[i]);
+
+	/* Recursively iterate through <instance_node> elements */
+	domInstance_node_Array &instanceNodes = node.getInstance_node_array();
+	for (size_t i=0; i<instanceNodes.getCount(); ++i) {
+		domNode *node = daeSafeCast<domNode>(instanceNodes[i]->getUrl().getElement());
+		computeRefCounts(ctx, *node);
 	}
 }
 
@@ -1266,7 +1350,7 @@ GLvoid __stdcall tessEdgeFlag(GLboolean) {
 
 void GeometryConverter::convertCollada(const fs::path &inputFile, 
 	std::ostream &os,
-	const fs::path &textureDirectory,
+	const fs::path &texturesDirectory,
 	const fs::path &meshesDirectory) {
 	CustomErrorHandler errorHandler;
 	daeErrorHandler::setErrorHandler(&errorHandler);
@@ -1302,23 +1386,30 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	os << "<scene>" << endl;
 	os << "\t<integrator id=\"integrator\" type=\"direct\"/>" << endl << endl;
 
-	StringMap idToTexture, fileToId;
+	ColladaContext ctx(os);
+	ctx.meshesDirectory = meshesDirectory;
+	ctx.texturesDirectory = texturesDirectory;
+	ctx.cvt = this;
+
 	domLibrary_images_Array &libraryImages = document->getLibrary_images_array();
 	for (size_t i=0; i<libraryImages.getCount(); ++i) {
 		domImage_Array &images = libraryImages[i]->getImage_array();
 		for (size_t j=0; j<images.getCount(); ++j) 
-			loadImage(this, os, textureDirectory, *images.get(j), idToTexture, fileToId);
+			loadImage(ctx, *images.get(j));
 	}
 
 	domLibrary_materials_Array &libraryMaterials = document->getLibrary_materials_array();
 	for (size_t i=0; i<libraryMaterials.getCount(); ++i) {
 		domMaterial_Array &materials = libraryMaterials[i]->getMaterial_array();
 		for (size_t j=0; j<materials.getCount(); ++j) 
-			loadMaterial(this, os, *materials.get(j), idToTexture);
+			loadMaterial(ctx, *materials.get(j));
 	}
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
-		loadNode(this, Transform(), os, *nodes[i], "", meshesDirectory);
+		computeRefCounts(ctx, *nodes[i]);
+
+	for (size_t i=0; i<nodes.getCount(); ++i) 
+		loadNode(ctx, Transform(), *nodes[i], "");
 
 	os << "</scene>" << endl;
 
