@@ -41,8 +41,8 @@ void joinRGB(const std::string &s1, const std::string &s2, const std::string &s3
 	for (int y=0; y<rBitmap->getWidth(); ++y) {
 		for (int x=0; x<rBitmap->getWidth(); ++x) {
 			float r = rData[(x + y * width) * 4];
-			float g = gData[(x + y * width) * 4];
-			float b = bData[(x + y * width) * 4];
+			float g = gData[(x + y * width) * 4 + 1];
+			float b = bData[(x + y * width) * 4 + 2];
 			outData[(x+y * width) * 4 + 0] = r;
 			outData[(x+y * width) * 4 + 1] = g;
 			outData[(x+y * width) * 4 + 2] = b;
