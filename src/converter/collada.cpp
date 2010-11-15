@@ -20,6 +20,7 @@
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
+#include <mitsuba/render/track.h>
 #include <dom/domCOLLADA.h>
 #include <dae.h>
 #include <dae/daeErrorHandler.h>
@@ -35,14 +36,21 @@
 #include <GL/glu.h>
 #endif
 
+#ifndef WIN32
+#define __stdcall
+#endif
+
 #include "converter.h"
 
+typedef AnimationTrack<Float> FloatTrack;
 typedef std::map<std::string, std::string> StringMap;
 typedef std::map<std::string, int> RefCountMap;
+typedef std::map<std::string, FloatTrack *> AnimationMap;
 
 struct ColladaContext {
 	GeometryConverter *cvt;
 	RefCountMap refCountMap;
+	AnimationMap animations;
 	std::set<std::string> serializedGeometry;
 	fs::path texturesDirectory;
 	fs::path meshesDirectory;
@@ -153,6 +161,7 @@ VertexData *fetchVertexData(Transform transform,
 	for (size_t i=0; i<inputs.getCount(); ++i) {
 		int offsetInStream = (int) inputs[i]->getOffset(),
 		    offset = offsetInStream;
+
 		daeURI &sourceRef = inputs[i]->getSource();
 		sourceRef.resolveElement();
 		domSource *source = daeSafeCast<domSource>(sourceRef.getElement());
@@ -308,7 +317,6 @@ struct triangle_key_order : public std::binary_function<SimpleTriangle, SimpleTr
 		return false;
 	}
 };
-
 
 class CustomErrorHandler : public daeErrorHandler {
 public:
@@ -1287,9 +1295,111 @@ void computeRefCounts(ColladaContext &ctx, domNode &node) {
 	}
 }
 
-#ifndef WIN32
-#define __stdcall
-#endif
+void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
+	std::string identifier;
+	if (anim.getId() != NULL) {
+		identifier = anim.getId();
+	} else {
+		if (anim.getName() != NULL) {
+			identifier = anim.getName();
+		} else {
+			static int unnamedCtr = 0;
+			identifier = formatString("unnamedAnimation_%i", unnamedCtr);
+		}
+	}
+	SLog(EInfo, "Loading animation \"%s\" ..", identifier.c_str());
+
+	domChannel_Array &channels = anim.getChannel_array();
+	for (size_t i=0; i<channels.getCount(); ++i) {
+		domChannel *channel = channels[i];
+		std::vector<std::string> target = tokenize(channel->getTarget(), "./");
+		SAssertEx(target.size() == 3, "Encountered an unknown animation channel identifier!");
+
+		daeURI &sourceRef = channel->getSource();
+		sourceRef.resolveElement();
+		domSampler *sampler = daeSafeCast<domSampler>(sourceRef.getElement());
+		if (!sampler)
+			SLog(EError, "Referenced animation sampler not found!");
+		const domInputLocal_Array &inputs = sampler->getInput_array();
+		FloatTrack *track = NULL;
+		FloatTrack::EType trackType = FloatTrack::EInvalid;
+		boost::to_lower(target[1]);
+		boost::to_lower(target[2]);
+		if (target[1] == "location") {
+			if (target[2] == "x") {
+				trackType = FloatTrack::ELocationX;
+			} else if (target[2] == "y") {
+				trackType = FloatTrack::ELocationY;
+			} else if (target[3] == "z") {
+				trackType = FloatTrack::ELocationZ;
+			}
+		} else if (target[1] == "scale") {
+			if (target[2] == "x") {
+				trackType = FloatTrack::EScaleX;
+			} else if (target[2] == "y") {
+				trackType = FloatTrack::EScaleY;
+			} else if (target[3] == "z") {
+				trackType = FloatTrack::EScaleZ;
+			}
+		} else if (target[1] == "rotationx" && target[2] == "angle") {
+				trackType = FloatTrack::ERotationX;
+		} else if (target[1] == "rotationy" && target[2] == "angle") {
+				trackType = FloatTrack::ERotationY;
+		} else if (target[1] == "rotationz" && target[2] == "angle") {
+				trackType = FloatTrack::ERotationZ;
+		}
+
+		if (trackType == FloatTrack::EInvalid) {
+			SLog(EWarn, "Skipping unsupported animation track of type %s.%s", 
+				target[1].c_str(), target[2].c_str());
+			continue;
+		}
+
+		for (size_t j=0; j<inputs.getCount(); ++j) {
+			sourceRef = inputs[j]->getSource();
+			sourceRef.resolveElement();
+			domSource *source = daeSafeCast<domSource>(sourceRef.getElement());
+			if (!source)
+				SLog(EError, "Referenced animation source not found!");
+			std::string semantic = inputs[j]->getSemantic();
+			domSource::domTechnique_common *techniqueCommon = source->getTechnique_common();
+			if (!techniqueCommon)
+				SLog(EError, "Data source does not have a <technique_common> tag!");
+			domAccessor *accessor = techniqueCommon->getAccessor();
+			if (!accessor)
+				SLog(EError, "Data source does not have a <accessor> tag!");
+			unsigned int nParams = (unsigned int) accessor->getParam_array().getCount(),
+						 stride  = (unsigned int) accessor->getStride();
+			size_t size = (size_t) accessor->getCount();
+
+			if (stride != 1 || nParams != 1) {
+ 				/// Only single-valued tracks are supported for now
+				SLog(EError, "Encountered a multi-valued animation track.");
+			}
+			if (!track)
+				track = new FloatTrack(trackType, size);
+			else
+				SAssert(track->getSize() == size);
+
+			if (semantic == "INPUT") {
+				domListOfFloats &floatArray = source->getFloat_array()->getValue();
+				for (size_t i=0; i<size; ++i)
+					track->setTime(i, floatArray[i]);
+			} else if (semantic == "OUTPUT") {
+				domListOfFloats &floatArray = source->getFloat_array()->getValue();
+				for (size_t i=0; i<size; ++i)
+					track->setValue(i, floatArray[i]);
+			} else if (semantic == "INTERPOLATION") {
+				/// Ignored for now
+			} else {
+				SLog(EWarn, "Encountered an unsupported semantic: \"%s\"", semantic.c_str());
+			}
+		}
+
+		if (track)
+			ctx.animations.insert(AnimationMap::value_type(target[0], track));
+	}
+}
 
 GLvoid __stdcall tessBegin(GLenum type) {
 	SAssert(type == GL_TRIANGLES);
@@ -1338,15 +1448,12 @@ GLvoid __stdcall tessCombine(GLdouble coords[3], void *vertex_data[4],
 	*outData = result;
 }
 
-GLvoid __stdcall tessEnd() {
-}
-
+GLvoid __stdcall tessEnd() { }
+GLvoid __stdcall tessEdgeFlag(GLboolean) { }
 GLvoid __stdcall tessError(GLenum error) {
 	SLog(EError, "The GLU tesselator generated an error: %s!", gluErrorString(error));
 }
 
-GLvoid __stdcall tessEdgeFlag(GLboolean) {
-}
 
 void GeometryConverter::convertCollada(const fs::path &inputFile, 
 	std::ostream &os,
@@ -1404,12 +1511,23 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 		for (size_t j=0; j<materials.getCount(); ++j) 
 			loadMaterial(ctx, *materials.get(j));
 	}
+	
+	domLibrary_animations_Array &libraryAnimations = document->getLibrary_animations_array();
+	for (size_t i=0; i<libraryAnimations.getCount(); ++i) {
+		domAnimation_Array &animations = libraryAnimations[i]->getAnimation_array();
+		for (size_t j=0; j<animations.getCount(); ++j) 
+			loadAnimation(ctx, *animations[j]);
+	}
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
 		computeRefCounts(ctx, *nodes[i]);
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
 		loadNode(ctx, Transform(), *nodes[i], "");
+	
+	for (AnimationMap::iterator it = ctx.animations.begin();
+		it != ctx.animations.end(); ++it)
+		delete it->second;
 
 	os << "</scene>" << endl;
 

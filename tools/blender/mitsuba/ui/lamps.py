@@ -61,7 +61,7 @@ class lamps(DataButtonsPanel, property_group_renderer, bpy.types.Panel):
 			else:
 				layout.prop(lamp.mitsuba_lamp, "envmap_file", text="HDRI file")
 			layout.prop(lamp.mitsuba_lamp, "intensity", text="Intensity")
-			layout.prop(lamp.mitsuba_lamp, "sampling_weight", text = "Sampling weight")
+			layout.prop(lamp.mitsuba_lamp, "samplingWeight", text = "Sampling weight")
 
 			# SPOT LAMP: Blender Properties
 			if lamp.type == 'SPOT':
