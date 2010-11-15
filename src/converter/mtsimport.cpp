@@ -192,11 +192,12 @@ int ubi_main(int argc, char **argv) {
 		renderer->init(device);
 
 		device->makeCurrent(renderer);
+		ref<Timer> timer = new Timer();
 
 		retval = colladaMain(argc, argv);
 
 		if (retval != -1)
-			cout << "Finished conversion" << endl;
+			cout << "Finished conversion (took " << timer->getMilliseconds() << " ms)" << endl;
 
 		renderer->shutdown();
 		device->shutdown();

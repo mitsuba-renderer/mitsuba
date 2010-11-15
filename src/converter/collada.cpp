@@ -43,9 +43,10 @@
 #include "converter.h"
 
 typedef AnimationTrack<Float> FloatTrack;
+typedef AnimationTrack<Quaternion> QuatTrack;
 typedef std::map<std::string, std::string> StringMap;
 typedef std::map<std::string, int> RefCountMap;
-typedef std::map<std::string, FloatTrack *> AnimationMap;
+typedef std::multimap<std::string, AbstractAnimationTrack *> AnimationMap;
 
 struct ColladaContext {
 	GeometryConverter *cvt;
@@ -1401,6 +1402,57 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 	}
 }
 
+void mergeRotations(ColladaContext &ctx) {
+	for (AnimationMap::iterator it = ctx.animations.begin();
+		it != ctx.animations.end();) {
+		std::string key = it->first;
+		AnimationMap::iterator start = ctx.animations.lower_bound(key);
+		AnimationMap::iterator end = ctx.animations.upper_bound(key);
+		FloatTrack *tracks[] = { NULL, NULL, NULL };
+
+		for (AnimationMap::iterator it2 = start; it2 != end; ++it2) {
+			if (it2->second->getType() == FloatTrack::ERotationX)
+				tracks[0] = (FloatTrack *) it2->second;
+			else if (it2->second->getType() == FloatTrack::ERotationY)
+				tracks[1] = (FloatTrack *) it2->second;
+			else if (it2->second->getType() == FloatTrack::ERotationZ)
+				tracks[2] = (FloatTrack *) it2->second;
+		}
+
+		if (!tracks[0] && !tracks[1] && !tracks[2]) {
+			it = end;
+			continue;
+		}
+
+		SLog(EInfo, "Converting rotation track of \"%s\" to quaternions ..", 
+				key.c_str());
+
+		std::set<Float> times;
+		for (size_t i=0; i<3; ++i)
+			for (size_t j=0; j<(tracks[i] ? tracks[i]->getSize() : (size_t) 0); ++j)
+				times.insert(tracks[i]->getTime(j));
+
+		QuatTrack *newTrack = new QuatTrack(QuatTrack::ERotationQuat, times.size());
+		size_t idx = 0;
+
+		for (std::set<Float>::iterator it2 = times.begin();
+			it2 != times.end(); ++it2) {
+			Float time = *it2, rot[3];
+//			for (int i=0; i<3; ++i)
+//				rot[i] = tracks[i] ? tracks[i]->lookup(time) : (Float) 0;
+
+			newTrack->setTime(idx, time);
+			newTrack->setValue(idx, Quaternion());
+			idx++;
+		}
+
+		ctx.animations.insert(AnimationMap::value_type(key, newTrack));
+
+		it = ctx.animations.upper_bound(key);
+	}
+}
+
+
 GLvoid __stdcall tessBegin(GLenum type) {
 	SAssert(type == GL_TRIANGLES);
 }
@@ -1453,7 +1505,6 @@ GLvoid __stdcall tessEdgeFlag(GLboolean) { }
 GLvoid __stdcall tessError(GLenum error) {
 	SLog(EError, "The GLU tesselator generated an error: %s!", gluErrorString(error));
 }
-
 
 void GeometryConverter::convertCollada(const fs::path &inputFile, 
 	std::ostream &os,
@@ -1518,6 +1569,7 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 		for (size_t j=0; j<animations.getCount(); ++j) 
 			loadAnimation(ctx, *animations[j]);
 	}
+	mergeRotations(ctx);
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
 		computeRefCounts(ctx, *nodes[i]);

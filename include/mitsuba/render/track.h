@@ -19,24 +19,39 @@
 #if !defined(__ANIMATION_TRACK_H)
 #define __ANIMATION_TRACK_H
 
-#include <mitsuba/mitsuba.h>
+#include <mitsuba/core/quat.h>
 
 MTS_NAMESPACE_BEGIN
+	
+template <typename T> class AnimationTrack;
 
-template <typename T> class AnimationTrack {
+/// Base class of animation tracks
+class AbstractAnimationTrack {
+	template<typename T> friend class AnimationTrack;
 public:
 	enum EType {
 		EInvalid = 0,
-		ELocationX, ELocationY, ELocationZ, ELocationXYZ,
-		EScaleX, EScaleY, EScaleZ, EScaleXYZ,
-		ERotationX, ERotationY, ERotationZ, ERotationXYZ
+		ELocationX, ELocationY, ELocationZ, 
+		EScaleX, EScaleY, EScaleZ, 
+		ERotationX, ERotationY, ERotationZ,
+		ERotationQuat
 	};
-
-	AnimationTrack(EType type, size_t nKeyframes) 
-		: m_type(type), m_times(nKeyframes), m_values(nKeyframes) { }
 
 	/// Return the type of this track
 	inline EType getType() const { return m_type; }
+protected:
+	AbstractAnimationTrack(EType type) : m_type(type) { }
+
+protected:
+	EType m_type;
+};
+
+/// Parameterizable animation track
+template <typename T> class AnimationTrack : public AbstractAnimationTrack {
+public:
+	AnimationTrack(EType type, size_t nKeyframes) 
+		: AbstractAnimationTrack(type),
+		 m_times(nKeyframes), m_values(nKeyframes) { }
 
 	/// Return the number of keyframes
 	inline size_t getSize() const { return m_times.size(); }
@@ -57,7 +72,6 @@ public:
 	inline T lookup(Float time) const {
 	}
 private:
-	EType m_type;
 	std::vector<Float> m_times;
 	std::vector<T> m_values;
 };
