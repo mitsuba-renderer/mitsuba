@@ -460,7 +460,7 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 	std::string matrixValues = matrix.str();
 
 	if (!exportShapeGroup) {
-		ctx.os << "\t<shape id=\"" << prefixName << "/" << id << "\" type=\"serialized\">" << endl;
+		ctx.os << "\t<shape id=\"" << id << "\" type=\"serialized\">" << endl;
 		ctx.os << "\t\t<string name=\"filename\" value=\"meshes/" << filename << "\"/>" << endl;
 		if (!transform.isIdentity()) {
 			ctx.os << "\t\t<transform name=\"toWorld\">" << endl;

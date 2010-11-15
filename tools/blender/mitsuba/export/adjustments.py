@@ -157,6 +157,20 @@ class MtsAdjustments:
 		adjfile.write(params.to_string_ref())
 		adjfile.write('\t</bsdf>\n')
 
+	def export_emission(self, adjfile, obj):
+			lamp = obj.data.materials[0].mitsuba_emission
+			name = translate_id(obj.data.name)
+			adjfile.write('\t<shape id="%s-mesh_0" type="serialized">\n' % name)
+			adjfile.write('\t\t<string name="filename" value="meshes/%s-mesh_0.serialized"/>\n' % name)
+			self.export_worldtrafo(adjfile, obj.matrix_world)
+			adjfile.write('\t\t<luminaire type="area">\n')
+			mult = lamp.intensity
+			adjfile.write('\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
+					% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult))
+			adjfile.write('\t\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.samplingWeight)
+			adjfile.write('\t\t</luminaire>\n')
+			adjfile.write('\t</shape>\n')
+
 	def export(self, scene):
 		adjfile = open(self.target_file, 'w')
 		adjfile.write('<adjustments>\n');
@@ -167,6 +181,8 @@ class MtsAdjustments:
 			elif obj.type == 'MESH':
 				for mat in obj.data.materials:
 					self.export_material(adjfile, mat)
+				if len(obj.data.materials) > 0 and obj.data.materials[0].mitsuba_emission.use_emission:
+					self.export_emission(adjfile, obj)
 			idx = idx+1
 		adjfile.write('</adjustments>\n');
 		adjfile.close()
