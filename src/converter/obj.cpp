@@ -197,7 +197,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 			SLog(EInfo, "Saving mesh \"%s\"", mesh->getName().c_str());
 			mesh->serialize(m_geometryFile);
 			os << "\t\t<string name=\"filename\" value=\"" << m_geometryFileName.filename() << "\"/>" << endl;
-			os << "\t\t<integername=\"shapeIndex\" value=\"" << (m_geometryDict.size()-1) << "\"/>" << endl;
+			os << "\t\t<integer name=\"shapeIndex\" value=\"" << (m_geometryDict.size()-1) << "\"/>" << endl;
 		}
 
 		if (mesh->getBSDF() != NULL && 

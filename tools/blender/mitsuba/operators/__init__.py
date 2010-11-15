@@ -211,3 +211,48 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 
 menu_func = lambda self, context: self.layout.operator("export.mitsuba", text="Export Mitsuba scene...")
 bpy.types.INFO_MT_file_export.append(menu_func)
+
+class MITSUBA_OT_material_slot_move(bpy.types.Operator):
+	''' Rearrange the material slots '''
+	bl_idname = 'mitsuba.material_slot_move'
+	bl_label = 'Move a material entry up or down'
+	type = bpy.props.StringProperty(name='type')
+
+	def execute(self, context):
+		obj = bpy.context.active_object
+		index = obj.active_material_index
+		new_index = index-1 if self.properties.type == 'UP' else index+1
+		size = len(obj.material_slots)
+
+		if new_index >= 0 and new_index < size:
+			obj.active_material_index = 0
+			# Can't write to material_slots, hence the kludge
+			materials = []
+			for i in range(0, size):
+				materials += [obj.material_slots[i].name]
+			for i in range(0, size):
+				mat = obj.data.materials.pop(0)
+				del(mat)
+			temp = materials[index]
+			materials[index] = materials[new_index]
+			materials[new_index] = temp
+			for i in range(0, size):
+				obj.data.materials.append(bpy.data.materials[materials[i]])
+
+			obj.active_material_index = new_index
+		return {'FINISHED'}
+
+class MITSUBA_OT_material_add(bpy.types.Operator):
+	''' Append a new material '''
+	bl_idname = 'mitsuba.material_add'
+	bl_label = 'Append a new material'
+	type = bpy.props.StringProperty(name='type')
+
+	def execute(self, context):
+		obj = bpy.context.active_object
+		index = obj.active_material_index
+		curName = obj.material_slots[index].name
+		mat = bpy.data.materials.new(name=curName)
+		obj.data.materials.append(mat)
+		obj.active_material_index = len(obj.data.materials)-1
+		return {'FINISHED'}

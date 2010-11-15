@@ -60,11 +60,13 @@ class MATERIAL_PT_context_material_mts(MaterialButtonsPanel, bpy.types.Panel):
 		if ob:
 			row = layout.row()
 
-			row.template_list(ob, "material_slots", ob, "active_material_index", rows=2)
+			row.template_list(ob, "material_slots", ob, "active_material_index", rows=4)
 
 			col = row.column(align=True)
-			col.operator("object.material_slot_add", icon='ZOOMIN', text="")
+			col.operator("mitsuba.material_add", icon='ZOOMIN', text="")
 			col.operator("object.material_slot_remove", icon='ZOOMOUT', text="")
+			col.operator("mitsuba.material_slot_move", text="", icon='TRIA_UP').type = 'UP'
+			col.operator("mitsuba.material_slot_move", text="", icon='TRIA_DOWN').type = 'DOWN'
 
 			col.menu("MATERIAL_MT_specials", icon='DOWNARROW_HLT', text="")
 
@@ -74,7 +76,7 @@ class MATERIAL_PT_context_material_mts(MaterialButtonsPanel, bpy.types.Panel):
 				row.operator("object.material_slot_select", text="Select")
 				row.operator("object.material_slot_deselect", text="Deselect")
 
-		split = layout.split(percentage=0.65)
+		split = layout.split(percentage=0.75)
 
 		if ob:
 			split.template_ID(ob, "active_material", new="material.new")

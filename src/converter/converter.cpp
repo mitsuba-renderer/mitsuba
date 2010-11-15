@@ -152,7 +152,7 @@ void GeometryConverter::convert(const fs::path &inputFile,
 		fs::create_directory(textureDirectory);
 	}
 
-	if (!fs::exists(meshesDirectory)) {
+	if (!fs::exists(meshesDirectory) && !m_packGeometry) {
 		SLog(EInfo, "Creating directory \"%s\" ..", meshesDirectory.file_string().c_str());
 		fs::create_directory(meshesDirectory);
 	}
