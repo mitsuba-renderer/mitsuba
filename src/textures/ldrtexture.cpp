@@ -184,6 +184,21 @@ public:
 					*flData++ = 1.0f;
 				}
 			}
+		} else if (bitmap->getBitsPerPixel() == 1) {
+			int pos = 0;
+			for (int y=0; y<bitmap->getHeight(); ++y) {
+				for (int x=0; x<bitmap->getWidth(); ++x) {
+					int entry = pos / 8;
+					int bit   = pos % 8;
+					int value = (data[entry] & (1 << bit)) ? 255 : 0;
+					float col = tbl[value];
+					*flData++ = col;
+					*flData++ = col;
+					*flData++ = col;
+					*flData++ = 1.0f;
+					pos++;
+				}
+			}
 		} else {
 			Log(EError, "%i bpp images are currently not supported!", bitmap->getBitsPerPixel());
 		}

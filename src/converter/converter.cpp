@@ -30,6 +30,7 @@
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
 #include <xercesc/util/XMLUni.hpp>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
 #include <boost/algorithm/string.hpp>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -139,6 +140,13 @@ void GeometryConverter::convert(const fs::path &inputFile,
 		outputFile = outputDirectory / sceneName;
 	}
 
+	if (m_packGeometry) {
+		m_geometryFileName = outputDirectory / sceneName;
+		m_geometryFileName.replace_extension(".serialized");
+		m_geometryFile = new FileStream(m_geometryFileName, FileStream::ETruncReadWrite);
+		m_geometryFile->setByteOrder(Stream::ELittleEndian);
+	}
+
 	if (!fs::exists(textureDirectory)) {
 		SLog(EInfo, "Creating directory \"%s\" ..", textureDirectory.file_string().c_str());
 		fs::create_directory(textureDirectory);
@@ -237,6 +245,13 @@ void GeometryConverter::convert(const fs::path &inputFile,
 		ofile << os.str();
 		ofile.close();
 	}
+	if (m_geometryFile) {
+		for (size_t i=0; i<m_geometryDict.size(); ++i)
+			m_geometryFile->writeUInt(m_geometryDict[i]);
+		m_geometryFile->writeUInt((uint32_t) m_geometryDict.size());
+		m_geometryFile->close();
+	}
+
 	m_filename = outputFile;
 }
 

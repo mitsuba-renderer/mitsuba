@@ -151,8 +151,24 @@ static void readHelper(Stream *stream, bool fileDoublePrecision,
 	}
 }
 
-TriMesh::TriMesh(Stream *_stream) : Shape(Properties()), m_tangents(NULL) {
+TriMesh::TriMesh(Stream *_stream, int index)
+		: Shape(Properties()), m_tangents(NULL) {
 	ref<Stream> stream = _stream;
+
+	if (index != 0) {
+		/* Determine the position of the requested substream. This
+		   is stored at the end of the file */
+		stream->setPos(stream->getSize() - sizeof(uint32_t));
+		uint32_t count = stream->readUInt();
+		if (index < 0 || index > (int) count) {
+			Log(EError, "Unable to unserialize mesh, "
+				"shape index is out of range! (requested %i out of 0..%i)",
+				index, count-1);
+		}
+		stream->setPos(stream->getSize() - sizeof(uint32_t) * (1+count-index));
+		// Seek to the correct position
+		stream->setPos(stream->readUInt());
+	}
 
 	if (stream->getByteOrder() != Stream::ELittleEndian) 
 		Log(EError, "Tried to unserialize a shape from a stream, "

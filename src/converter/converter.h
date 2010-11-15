@@ -29,6 +29,7 @@ public:
 		m_samplesPerPixel = 8;
 		m_fov = -1;
 		m_filmType = "exrfilm";
+		m_packGeometry = true;
 	}
 
 	void convert(const fs::path &inputFile, 
@@ -42,6 +43,7 @@ public:
 	inline void setMapSmallerSide(bool mapSmallerSide) { m_mapSmallerSide = mapSmallerSide; }
 	inline void setResolution(int xres, int yres) { m_xres = xres; m_yres = yres; }
 	inline void setSamplesPerPixel(int samplesPerPixel) { m_samplesPerPixel = samplesPerPixel; }
+	inline void setPackGeometry(bool packGeometry) { m_packGeometry = packGeometry; }
 	inline void setFov(Float fov) { m_fov = fov; }
 	inline void setFilmType(const std::string &filmType) { m_filmType = filmType; }
 	inline const fs::path &getFilename() const { return m_filename; }
@@ -58,4 +60,8 @@ public:
 	Float m_fov;
 	fs::path m_filename;
 	std::string m_filmType;
+	ref<FileStream> m_geometryFile;
+	fs::path m_geometryFileName;
+	std::vector<uint32_t> m_geometryDict;
+	bool m_packGeometry;
 };

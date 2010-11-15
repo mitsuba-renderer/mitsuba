@@ -35,13 +35,16 @@ public:
 		/* Object-space -> World-space transformation */
 		Transform objectToWorld = props.getTransform("toWorld", Transform());
 
+		/// When the file contains multiple meshes, this index specifies which one to load 
+		int shapeIndex = props.getInteger("shapeIndex", 0);
+
 		m_name = filePath.stem();
 
 		/* Load the geometry */
 		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.leaf().c_str());
 		ref<FileStream> stream = new FileStream(filePath, FileStream::EReadOnly);
 		stream->setByteOrder(Stream::ELittleEndian);
-		ref<TriMesh> mesh = new TriMesh(stream);
+		ref<TriMesh> mesh = new TriMesh(stream, shapeIndex);
 		m_triangleCount = mesh->getTriangleCount();
 		m_vertexCount = mesh->getVertexCount();
 

@@ -57,6 +57,7 @@ void help() {
 		<<  "   -p <num>    Use the specified number of samples per pixel." << endl << endl
 		<<  "   -s          Assume that colors are in sRGB space." << endl << endl
 		<<  "   -m          Map the larger image side to the full field of view" << endl << endl
+		<<  "   -y          Don't pack all geometry data into a single file" << endl << endl
 		<<  "   -l <type>   Override the type of film (e.g. 'exrfilm', 'pngfilm', ..)" << endl << endl
 		<<  "   -r <w>x<h>  Override the image resolution to e.g. 1920x1080" << endl << endl
 		<<  "   -f <fov>    Override the field of view to the given value in degrees." << endl << endl
@@ -72,10 +73,11 @@ int colladaMain(int argc, char **argv) {
 	Float fov = -1;
 	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 	ELogLevel logLevel = EInfo;
+	bool packGeometry = true;
 
 	optind = 1;
 
-	while ((optchar = getopt(argc, argv, "svhmr:a:p:f:l:")) != -1) {
+	while ((optchar = getopt(argc, argv, "svyhmr:a:p:f:l:")) != -1) {
 		switch (optchar) {
 			case 'a': {
 					std::vector<std::string> paths = tokenize(optarg, ";");
@@ -99,6 +101,9 @@ int colladaMain(int argc, char **argv) {
 				break;
 			case 'l':
 				filmType = optarg;
+				break;
+			case 'y':
+				packGeometry = false;
 				break;
 			case 'f':
 				fov = (Float) strtod(optarg, &end_ptr);
@@ -138,6 +143,7 @@ int colladaMain(int argc, char **argv) {
 	converter.setMapSmallerSide(mapSmallerSide);
 	converter.setSamplesPerPixel(samplesPerPixel);
 	converter.setFov(fov);
+	converter.setPackGeometry(packGeometry);
 	converter.setFilmType(filmType);
 
 	const Logger *logger = Thread::getThread()->getLogger();

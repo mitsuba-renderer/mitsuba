@@ -44,6 +44,8 @@
 
 typedef AnimationTrack<Float> FloatTrack;
 typedef AnimationTrack<Quaternion> QuatTrack;
+typedef AnimationTrack<Vector> VectorTrack;
+typedef AnimationTrack<Point> PointTrack;
 typedef std::map<std::string, std::string> StringMap;
 typedef std::map<std::string, int> RefCountMap;
 typedef std::multimap<std::string, AbstractAnimationTrack *> AnimationMap;
@@ -456,11 +458,20 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 	}
 
 	id += formatString("_%i", geomIndex);
-	std::string filename = id + std::string(".serialized");
-	ref<FileStream> stream = new FileStream(ctx.meshesDirectory / filename, FileStream::ETruncReadWrite);
-	stream->setByteOrder(Stream::ELittleEndian);
-	mesh->serialize(stream);
-	stream->close();
+	std::string filename;
+
+	if (!ctx.cvt->m_geometryFile) {
+		filename = id + std::string(".serialized");
+		ref<FileStream> stream = new FileStream(ctx.meshesDirectory / filename, FileStream::ETruncReadWrite);
+		stream->setByteOrder(Stream::ELittleEndian);
+		mesh->serialize(stream);
+		stream->close();
+		filename = "meshes/" + filename;
+	} else {
+		ctx.cvt->m_geometryDict.push_back(ctx.cvt->m_geometryFile->getPos());
+		mesh->serialize(ctx.cvt->m_geometryFile);
+		filename = ctx.cvt->m_geometryFileName.filename();
+	}
 
 	std::ostringstream matrix;
 	for (int i=0; i<4; ++i)
@@ -470,7 +481,9 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 
 	if (!exportShapeGroup) {
 		ctx.os << "\t<shape id=\"" << id << "\" type=\"serialized\">" << endl;
-		ctx.os << "\t\t<string name=\"filename\" value=\"meshes/" << filename << "\"/>" << endl;
+		ctx.os << "\t\t<string name=\"filename\" value=\"" << filename << "\"/>" << endl;
+		if (ctx.cvt->m_geometryFile)
+			ctx.os << "\t\t<integer name=\"shapeIndex\" value=\"" << (ctx.cvt->m_geometryDict.size() - 1) << "\"/>" << endl;
 		if (!transform.isIdentity()) {
 			ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
 			ctx.os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
@@ -481,7 +494,9 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 		ctx.os << "\t</shape>" << endl << endl;
 	} else {
 		ctx.os << "\t\t<shape type=\"serialized\">" << endl;
-		ctx.os << "\t\t\t<string name=\"filename\" value=\"meshes/" << filename << "\"/>" << endl;
+		ctx.os << "\t\t\t<string name=\"filename\" value=\"" << filename << "\"/>" << endl;
+		if (ctx.cvt->m_geometryFile)
+			ctx.os << "\t\t<integer name=\"shapeIndex\" value=\"" << (ctx.cvt->m_geometryDict.size() - 1)<< "\"/>" << endl;
 		if (matID != "") 
 			ctx.os << "\t\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
 		ctx.os << "\t\t</shape>" << endl << endl;
@@ -743,8 +758,7 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 			identifier = formatString("unnamedMat_%i", unnamedCtr++);
 		}
 	}
-	StringMap idToTexture = ctx.idToTexture;
-
+	
 	daeURI &effRef = mat.getInstance_effect()->getUrl();
 	effRef.resolveElement();
 	domEffect *effect = daeSafeCast<domEffect>(effRef.getElement());
@@ -773,16 +787,16 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 				= surface->getFx_surface_init_common()->getInit_from_array();
 			SAssert(initFromArray.getCount() == 1);
 			std::string id = initFromArray[0]->getValue().getID();
-			if (idToTexture.find(id) == idToTexture.end())
+			if (ctx.idToTexture.find(id) == ctx.idToTexture.end())
 				SLog(EError, "Referenced bitmap '%s' not found!", id.c_str());
-			idToTexture[newParam->getSid()] = idToTexture[id];
+			ctx.idToTexture[newParam->getSid()] = ctx.idToTexture[id];
 		}
 
 		if (sampler2D) {
 			std::string id = sampler2D->getSource()->getValue();
-			if (idToTexture.find(id) == idToTexture.end())
+			if (ctx.idToTexture.find(id) == ctx.idToTexture.end())
 				SLog(EError, "Referenced surface '%s' not found!", id.c_str());
-			idToTexture[newParam->getSid()] = idToTexture[id];
+			ctx.idToTexture[newParam->getSid()] = ctx.idToTexture[id];
 		}
 	}
 
@@ -1314,7 +1328,7 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 	for (size_t i=0; i<channels.getCount(); ++i) {
 		domChannel *channel = channels[i];
 		std::vector<std::string> target = tokenize(channel->getTarget(), "./");
-		SAssertEx(target.size() == 3, "Encountered an unknown animation channel identifier!");
+		SAssert(target.size() >= 2);
 
 		daeURI &sourceRef = channel->getSource();
 		sourceRef.resolveElement();
@@ -1322,12 +1336,15 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 		if (!sampler)
 			SLog(EError, "Referenced animation sampler not found!");
 		const domInputLocal_Array &inputs = sampler->getInput_array();
-		FloatTrack *track = NULL;
-		FloatTrack::EType trackType = FloatTrack::EInvalid;
+		AbstractAnimationTrack *track = NULL;
+		AbstractAnimationTrack::EType trackType = AbstractAnimationTrack::EInvalid;
 		boost::to_lower(target[1]);
-		boost::to_lower(target[2]);
-		if (target[1] == "location") {
-			if (target[2] == "x") {
+		if (target.size() > 2)
+			boost::to_lower(target[2]);
+		if (target[1] == "location" || target[1] == "translate") {
+			if (target.size() == 2) {
+				trackType = PointTrack::ELocationXYZ;
+			} else if (target[2] == "x") {
 				trackType = FloatTrack::ELocationX;
 			} else if (target[2] == "y") {
 				trackType = FloatTrack::ELocationY;
@@ -1335,24 +1352,26 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 				trackType = FloatTrack::ELocationZ;
 			}
 		} else if (target[1] == "scale") {
-			if (target[2] == "x") {
+			if (target.size() == 2) {
+				trackType = VectorTrack::EScaleXYZ;
+			} else if (target[2] == "x") {
 				trackType = FloatTrack::EScaleX;
 			} else if (target[2] == "y") {
 				trackType = FloatTrack::EScaleY;
 			} else if (target[3] == "z") {
 				trackType = FloatTrack::EScaleZ;
 			}
-		} else if (target[1] == "rotationx" && target[2] == "angle") {
+		} else if ((target[1] == "rotationx" || target[1] == "rotatex") && target.size() == 3 && target[2] == "angle") {
 				trackType = FloatTrack::ERotationX;
-		} else if (target[1] == "rotationy" && target[2] == "angle") {
+		} else if ((target[1] == "rotationy" || target[1] == "rotatey") && target.size() == 3 && target[2] == "angle") {
 				trackType = FloatTrack::ERotationY;
-		} else if (target[1] == "rotationz" && target[2] == "angle") {
+		} else if ((target[1] == "rotationz" || target[1] == "rotatez") && target.size() == 3 && target[2] == "angle") {
 				trackType = FloatTrack::ERotationZ;
 		}
 
 		if (trackType == FloatTrack::EInvalid) {
 			SLog(EWarn, "Skipping unsupported animation track of type %s.%s", 
-				target[1].c_str(), target[2].c_str());
+				target[1].c_str(), target.size() > 2 ? target[2].c_str() : "");
 			continue;
 		}
 
@@ -1369,27 +1388,44 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 			domAccessor *accessor = techniqueCommon->getAccessor();
 			if (!accessor)
 				SLog(EError, "Data source does not have a <accessor> tag!");
-			unsigned int nParams = (unsigned int) accessor->getParam_array().getCount(),
-						 stride  = (unsigned int) accessor->getStride();
+			unsigned int stride  = (unsigned int) accessor->getStride();
 			size_t size = (size_t) accessor->getCount();
 
-			if (stride != 1 || nParams != 1) {
- 				/// Only single-valued tracks are supported for now
-				SLog(EError, "Encountered a multi-valued animation track.");
-			}
-			if (!track)
-				track = new FloatTrack(trackType, size);
-			else
+			if (!track) {
+				if (trackType == VectorTrack::EScaleXYZ)
+					track = new VectorTrack(trackType, size);
+				else if (trackType == PointTrack::ELocationXYZ)
+					track = new PointTrack(trackType, size);
+				else
+					track = new FloatTrack(trackType, size);
+			} else {
 				SAssert(track->getSize() == size);
+			}
 
 			if (semantic == "INPUT") {
 				domListOfFloats &floatArray = source->getFloat_array()->getValue();
-				for (size_t i=0; i<size; ++i)
+				SAssert(stride == 1);
+				for (size_t i=0; i<size; ++i) 
 					track->setTime(i, floatArray[i]);
 			} else if (semantic == "OUTPUT") {
 				domListOfFloats &floatArray = source->getFloat_array()->getValue();
-				for (size_t i=0; i<size; ++i)
-					track->setValue(i, floatArray[i]);
+				if (trackType == PointTrack::ELocationXYZ) {
+					SAssert(stride == 3);
+					for (size_t i=0; i<size; ++i)
+						((PointTrack *) track)->setValue(i, 
+							Point(floatArray[i*3+0], floatArray[i*3+1], 
+							floatArray[i*3+2]));
+				} else if (trackType == PointTrack::EScaleXYZ) {
+					SAssert(stride == 3);
+					for (size_t i=0; i<size; ++i)
+						((VectorTrack *) track)->setValue(i, 
+							Vector(floatArray[i*3+0], floatArray[i*3+1], 
+							floatArray[i*3+2]));
+				} else {
+					SAssert(stride == 1);
+					for (size_t i=0; i<size; ++i) 
+						((FloatTrack *) track)->setValue(i, floatArray[i]);
+				}
 			} else if (semantic == "INTERPOLATION") {
 				/// Ignored for now
 			} else {

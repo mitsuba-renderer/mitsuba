@@ -182,14 +182,24 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 		TriMesh *mesh = static_cast<TriMesh *>(rootShape->getElement(ctr++));
 		if (!mesh)
 			break;
-		std::string filename = mesh->getName() + std::string(".serialized");
-		SLog(EInfo, "Saving \"%s\"", filename.c_str());
-		ref<FileStream> stream = new FileStream(meshesDirectory / filename, FileStream::ETruncReadWrite);
-		stream->setByteOrder(Stream::ELittleEndian);
-		mesh->serialize(stream);
-		stream->close();
 		os << "\t<shape id=\"" << mesh->getName() << "\" type=\"serialized\">" << endl;
-		os << "\t\t<string name=\"filename\" value=\"meshes/" << filename.c_str() << "\"/>" << endl;
+
+		if (!m_geometryFile) {
+			std::string filename = mesh->getName() + std::string(".serialized");
+			SLog(EInfo, "Saving \"%s\"", filename.c_str());
+			ref<FileStream> stream = new FileStream(meshesDirectory / filename, FileStream::ETruncReadWrite);
+			stream->setByteOrder(Stream::ELittleEndian);
+			mesh->serialize(stream);
+			stream->close();
+			os << "\t\t<string name=\"filename\" value=\"meshes/" << filename.c_str() << "\"/>" << endl;
+		} else {
+			m_geometryDict.push_back(m_geometryFile->getPos());
+			SLog(EInfo, "Saving mesh \"%s\"", mesh->getName().c_str());
+			mesh->serialize(m_geometryFile);
+			os << "\t\t<string name=\"filename\" value=\"" << m_geometryFileName.filename() << "\"/>" << endl;
+			os << "\t\t<integername=\"shapeIndex\" value=\"" << (m_geometryDict.size()-1) << "\"/>" << endl;
+		}
+
 		if (mesh->getBSDF() != NULL && 
 				mtlList.find(mesh->getBSDF()->getName()) != mtlList.end()) { 
 			const std::string &matID = mesh->getBSDF()->getName();

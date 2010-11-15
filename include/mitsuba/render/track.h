@@ -31,36 +31,38 @@ class AbstractAnimationTrack {
 public:
 	enum EType {
 		EInvalid = 0,
-		ELocationX, ELocationY, ELocationZ, 
-		EScaleX, EScaleY, EScaleZ, 
+		ELocationX, ELocationY, ELocationZ, ELocationXYZ, 
+		EScaleX, EScaleY, EScaleZ, EScaleXYZ,
 		ERotationX, ERotationY, ERotationZ,
 		ERotationQuat
 	};
 
 	/// Return the type of this track
 	inline EType getType() const { return m_type; }
-protected:
-	AbstractAnimationTrack(EType type) : m_type(type) { }
-
-protected:
-	EType m_type;
-};
-
-/// Parameterizable animation track
-template <typename T> class AnimationTrack : public AbstractAnimationTrack {
-public:
-	AnimationTrack(EType type, size_t nKeyframes) 
-		: AbstractAnimationTrack(type),
-		 m_times(nKeyframes), m_values(nKeyframes) { }
-
-	/// Return the number of keyframes
-	inline size_t getSize() const { return m_times.size(); }
 
 	/// Set the time value of a certain keyframe
 	inline void setTime(size_t idx, Float time) { m_times[idx] = time; }
 
 	/// Return the time value of a certain keyframe
 	inline Float getTime(size_t idx) const { return m_times[idx]; }
+	
+	/// Return the number of keyframes
+	inline size_t getSize() const { return m_times.size(); }
+
+protected:
+	AbstractAnimationTrack(EType type, size_t nKeyframes) 
+		: m_type(type), m_times(nKeyframes) { }
+
+protected:
+	EType m_type;
+	std::vector<Float> m_times;
+};
+
+/// Parameterizable animation track
+template <typename T> class AnimationTrack : public AbstractAnimationTrack {
+public:
+	AnimationTrack(EType type, size_t nKeyframes) 
+		: AbstractAnimationTrack(type, nKeyframes), m_values(nKeyframes) { }
 
 	/// Set the value of a certain keyframe
 	inline void setValue(size_t idx, const T &value) { m_values[idx] = value; }
@@ -72,7 +74,6 @@ public:
 	inline T lookup(Float time) const {
 	}
 private:
-	std::vector<Float> m_times;
 	std::vector<T> m_values;
 };
 
