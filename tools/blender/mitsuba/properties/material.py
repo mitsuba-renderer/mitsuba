@@ -70,7 +70,6 @@ class mitsuba_emission(declarative_property_group):
 	'''
 	
 	controls = [
-		'use_emission',
 		'color',
 		'intensity',
 		'samplingWeight',

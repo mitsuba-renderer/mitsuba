@@ -114,7 +114,10 @@ class MITSUBA_OT_preset_material_add(MITSUBA_OT_preset_base, bpy.types.Operator)
 		pv.extend([
 			'bpy.context.material.mitsuba_material.mitsuba_mat_%s.%s'%(mts_type, v['attr']) for v in sub_type.get_exportable_properties()
 		])
-		
+		pv.extend([
+			'bpy.context.material.mitsuba_material.mitsuba_emission.%s'%v['attr'] for v in bpy.types.mitsuba_emission.get_exportable_properties()
+		])
+
 		self.preset_values = pv
 		return super().execute(context)
 

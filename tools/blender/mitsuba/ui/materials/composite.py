@@ -19,6 +19,7 @@
 import bpy
 
 from mitsuba.ui.materials import mitsuba_material_sub
+from properties_material import active_node_mat
 
 class ui_material_composite(mitsuba_material_sub, bpy.types.Panel):
 	bl_label = 'Mitsuba Composite Material'
@@ -32,7 +33,7 @@ class ui_material_composite(mitsuba_material_sub, bpy.types.Panel):
 	def draw(self, context):
 		super().draw(context)
 
-		mat = context.material.mitsuba_material.mitsuba_mat_composite
+		mat = active_node_mat(context.material).mitsuba_material.mitsuba_mat_composite
 		weight = 0
 		missing = False
 		selfRef = False

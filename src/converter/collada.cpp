@@ -1087,6 +1087,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 			identifier = formatString("unnamedNode_%i", unnamedCtr);
 		}
 	}
+	prefixName = prefixName + std::string("/") + identifier;
 	SLog(EInfo, "Converting node \"%s\" ..", identifier.c_str());
 
 	daeTArray<daeSmartRef<daeElement> > children = node.getChildren();
@@ -1190,7 +1191,7 @@ void loadNode(GeometryConverter *cvt, Transform transform, std::ostream &os,
 	/* Recursively iterate through sub-nodes */
 	domNode_Array &nodes = node.getNode_array();
 	for (size_t i=0; i<nodes.getCount(); ++i) 
-		loadNode(cvt, transform, os, *nodes[i], prefixName + std::string("/") + identifier, meshesDir);
+		loadNode(cvt, transform, os, *nodes[i], prefixName, meshesDir);
 
 	/* Recursively iterate through <instance_node> elements */
 	domInstance_node_Array &instanceNodes = node.getInstance_node_array();
