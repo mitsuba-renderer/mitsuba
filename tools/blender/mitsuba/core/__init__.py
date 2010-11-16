@@ -40,7 +40,9 @@ from mitsuba.properties.material import mitsuba_material, \
 	mitsuba_mat_composite, mitsuba_emission
 from mitsuba.operators import MITSUBA_OT_preset_engine_add, EXPORT_OT_mitsuba
 from mitsuba.outputs import MtsLog, MtsFilmDisplay
+from mitsuba.export.adjustments import MtsAdjustments
 from mitsuba.export.film import resolution
+from mitsuba.export import get_instance_materials
 from mitsuba.ui import render_panels
 from mitsuba.ui import lamps
 from mitsuba.ui.textures import TEXTURE_PT_context_texture_mts
@@ -70,12 +72,17 @@ properties_render.RENDER_PT_dimensions.COMPAT_ENGINES.add('mitsuba')
 properties_render.RENDER_PT_output.COMPAT_ENGINES.add('mitsuba')
 del properties_render
 
+import properties_material
+properties_material.MATERIAL_PT_preview.COMPAT_ENGINES.add('mitsuba')
+del properties_material
+
 compatible("properties_data_mesh")
 compatible("properties_data_camera")
 
 class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 	bl_idname			= 'mitsuba'
 	bl_label			= 'Mitsuba'
+	bl_use_preview      = True
 
 	property_groups = [
 		('Scene', mitsuba_engine),
@@ -104,6 +111,37 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 	def process_wait_timer(self):
 		# Nothing to do here
 		pass
+	
+	def render_preview(self, scene):
+		# Iterate through the preview scene, finding objects with materials attached
+		objects_materials = {}
+
+		for object in [ob for ob in scene.objects if ob.is_visible(scene) and not ob.hide_render]:
+			for mat in get_instance_materials(object):
+				if mat is not None:
+					if not object.name in objects_materials.keys(): objects_materials[object] = []
+					objects_materials[object].append(mat)
+
+		# find objects that are likely to be the preview objects
+		preview_objects = [o for o in objects_materials.keys() if o.name.startswith('preview')]
+		if len(preview_objects) < 1:
+			return
+
+		# find the materials attached to the likely preview object
+		likely_materials = objects_materials[preview_objects[0]]
+		if len(likely_materials) < 1:
+			return
+		print(materials)
+
+		tempdir = efutil.temp_directory()
+		matpreview_file = os.path.join(tempdir, "matpreview_materials.xml")
+		pm = likely_materials[0]
+		adj = MtsAdjustments(matpreview_file, tempdir, 
+			bpy.data.materials, bpy.data.textures)
+		adj.writeHeader()
+		adj.exportMaterial(pm)
+		adj.writeFooter()
+
 
 	def render(self, scene):
 		if scene is None:
@@ -118,6 +156,11 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 				self.output_dir = os.path.dirname(scene_path)		
 			if self.output_dir[-1] != '/':
 				self.output_dir += '/'
+
+			if scene.name == 'preview':
+				self.render_preview(scene)
+				return
+			
 			efutil.export_path = self.output_dir
 			os.chdir(self.output_dir)
 

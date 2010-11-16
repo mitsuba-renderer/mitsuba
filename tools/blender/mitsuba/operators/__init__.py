@@ -147,8 +147,6 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 			# Force scene update; NB, scene.update() doesn't work
 			scene.frame_set(scene.frame_current)
 
-			(self.properties.filename, _) = os.path.splitext(self.properties.filename)
-
 			mts_basename = os.path.join(
 				self.properties.directory,
 				self.properties.filename)
@@ -251,7 +249,10 @@ class MITSUBA_OT_material_add(bpy.types.Operator):
 	def execute(self, context):
 		obj = bpy.context.active_object
 		index = obj.active_material_index
-		curName = obj.material_slots[index].name
+		if len(obj.material_slots) == 0:
+			curName = 'Material'
+		else:
+			curName = obj.material_slots[index].name
 		mat = bpy.data.materials.new(name=curName)
 		obj.data.materials.append(mat)
 		obj.active_material_index = len(obj.data.materials)-1
