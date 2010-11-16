@@ -295,12 +295,19 @@ template <typename T> struct TQuaternion {
 		m.m[0][0] = 1.f - 2.f * (yy + zz);
 		m.m[0][1] =       2.f * (xy + wz);
 		m.m[0][2] =       2.f * (xz - wy);
+		m.m[0][3] = 0.0f;
 		m.m[1][0] =       2.f * (xy - wz);
 		m.m[1][1] = 1.f - 2.f * (xx + zz);
 		m.m[1][2] =       2.f * (yz + wx);
+		m.m[1][3] = 0.0f;
 		m.m[2][0] =       2.f * (xz + wy);
 		m.m[2][1] =       2.f * (yz - wx);
 		m.m[2][2] = 1.f - 2.f * (xx + yy);
+		m.m[2][3] = 0.0f;
+		m.m[3][0] = 0.0f;
+		m.m[3][1] = 0.0f;
+		m.m[3][2] = 0.0f;
+		m.m[3][3] = 1.0f;
 
 		Matrix4x4 transp;
 		m.transpose(transp);

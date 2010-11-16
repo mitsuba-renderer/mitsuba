@@ -65,6 +65,7 @@ MTS_NAMESPACE_BEGIN
 class MTS_EXPORT_RENDER KDTree : public GenericKDTree<AABB, KDTree> {
 	friend class GenericKDTree<AABB, KDTree>;
 	friend class Instance;
+	friend class AnimatedInstance;
 public:
 	/// Create an empty kd-tree
 	KDTree();

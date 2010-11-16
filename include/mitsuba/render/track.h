@@ -87,6 +87,7 @@ public:
 
 	/// Serialize to a binary data stream
 	void serialize(Stream *stream) const {
+		stream->writeUInt(m_type);
 		stream->writeUInt((uint32_t) m_times.size());
 		stream->writeFloatArray(&m_times[0], m_times.size());
 		for (size_t i=0; i<m_values.size(); ++i)
@@ -95,6 +96,7 @@ public:
 			
 	/// Evaluate the animation track at an arbitrary time value
 	inline value_type eval(Float time) const {
+		SAssert(m_times.size() > 0);
 		std::vector<Float>::const_iterator entry = 
 				std::lower_bound(m_times.begin(), m_times.end(), time);
 		int idx0 = (int) (entry - m_times.begin()) - 1;
@@ -172,10 +174,24 @@ public:
 	void addTrack(AbstractAnimationTrack *track);
 
 	/// Compute the transformation at the specified time value
-	void eval(Float t, Transform &trafo);
+	void eval(Float t, Transform &trafo) const;
 
 	/// Serialize to a binary data stream
 	void serialize(Stream *stream) const;
+
+	/// Return the extents along the time axis
+	void computeTimeBounds(Float &min, Float &max) const {
+		min = std::numeric_limits<Float>::infinity();
+		max = -std::numeric_limits<Float>::infinity();
+
+		for (size_t i=0; i<m_tracks.size(); ++i) {
+			AbstractAnimationTrack *track = m_tracks[i];
+			size_t size = track->getSize();
+			SAssert(size > 0);
+			min = std::min(min, track->getTime(0));
+			max = std::max(max, track->getTime(size-1));
+		}
+	}
 
 	MTS_DECLARE_CLASS()
 protected:

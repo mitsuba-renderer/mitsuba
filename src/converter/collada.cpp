@@ -1504,7 +1504,7 @@ void mergeRotations(ColladaContext &ctx) {
 			it2 != times.end(); ++it2) {
 			Float time = *it2, rot[3];
 			for (int i=0; i<3; ++i)
-				rot[i] = tracks[i] ? tracks[i]->eval(time) : (Float) 0;
+				rot[i] = tracks[i] ? (tracks[i]->eval(time) * (M_PI/180)) : (Float) 0;
 
 			newTrack->setTime(idx, time);
 			newTrack->setValue(idx, Quaternion::fromEulerAngles(
@@ -1532,8 +1532,7 @@ GLvoid __stdcall tessVertex(void *data) {
 
 GLvoid __stdcall tessCombine(GLdouble coords[3], void *vertex_data[4], 
 	GLfloat weight[4], void **outData) {
-	const domUint **raw = (const domUint **) vertex_data;
-	domUint *result = new domUint[tess_nSources];
+	domUint *result = new domUint[tess_nSources], size = 0;
 	tess_cleanup.push_back(result);
 
 	for (size_t i=0; i<tess_nSources; ++i) {
@@ -1542,6 +1541,7 @@ GLvoid __stdcall tessCombine(GLdouble coords[3], void *vertex_data[4],
 		for (int j=0; j<ELast; ++j) {
 			if (tess_vdata->typeToOffsetInStream[j] == (int) i) {
 				offset = tess_vdata->typeToOffset[j];
+				size = tess_vdata->typeToCount[j];
 				found = true;
 				break;
 			}
@@ -1549,14 +1549,16 @@ GLvoid __stdcall tessCombine(GLdouble coords[3], void *vertex_data[4],
 		SAssert(found);
 
 		// this will be very slow -- let's hope that it happens rarely
-		domUint size = tess_vdata->typeToCount[offset];
 		Vec4 *oldVec = tess_vdata->data[offset];
 		Vec4 *newVec = new Vec4[size+1];
 		memcpy(newVec, oldVec, size * sizeof(Vec4));
 
 		newVec[size] = Vec4(0.0f);
 		for (int j=0; j<4; ++j) {
-			domUint idx = raw[j][i];
+			void *ptr = vertex_data[j];
+			if (!ptr)
+				continue;
+			domUint idx = ((domUint *) ptr)[i];
 			newVec[size] += newVec[idx] * weight[j];
 		}
 		tess_vdata->data[offset] = newVec;

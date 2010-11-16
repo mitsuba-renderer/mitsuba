@@ -7,7 +7,7 @@ AnimatedTransform::AnimatedTransform(Stream *stream) {
 	for (size_t i=0; i<nTracks; ++i) {
 		AbstractAnimationTrack::EType type = 
 			(AbstractAnimationTrack::EType) stream->readUInt();
-
+		AbstractAnimationTrack *track = NULL;
 		switch (type) {
 			case AbstractAnimationTrack::ETranslationX:
 			case AbstractAnimationTrack::ETranslationY:
@@ -18,18 +18,21 @@ AnimatedTransform::AnimatedTransform(Stream *stream) {
 			case AbstractAnimationTrack::ERotationX:
 			case AbstractAnimationTrack::ERotationY:
 			case AbstractAnimationTrack::ERotationZ:
-				m_tracks.push_back(new FloatTrack(type, stream));
+				track = new FloatTrack(type, stream);
 				break;
 			case AbstractAnimationTrack::ETranslationXYZ:
 			case AbstractAnimationTrack::EScaleXYZ:
-				m_tracks.push_back(new VectorTrack(type, stream));
+				track = new VectorTrack(type, stream);
 				break;
 			case AbstractAnimationTrack::ERotationQuat:
-				m_tracks.push_back(new QuatTrack(type, stream));
+				track = new QuatTrack(type, stream);
 				break;
 			default:
-				Log(EError, "Encountered an unknown animation track type!");
+				Log(EError, "Encountered an unknown animation track type (%i)!", type);
 		}
+
+		track->incRef();
+		m_tracks.push_back(track);
 	}
 }
 
@@ -50,7 +53,7 @@ void AnimatedTransform::serialize(Stream *stream) const {
 }
 
 /// Compute the transformation at the specified time value
-void AnimatedTransform::eval(Float t, Transform &trafo) {
+void AnimatedTransform::eval(Float t, Transform &trafo) const {
 	Vector translation(0.0f);
 	Vector scale(1.0f);
 	Quaternion rotation;
@@ -90,8 +93,11 @@ void AnimatedTransform::eval(Float t, Transform &trafo) {
 					"animation track type: %i!", track->getType());
 		}
 	}
+	//cout << "T:" << translation.toString() << " R:" << rotation.toString() << " S:" << scale.toString() << endl;
+	
 	trafo = Transform::translate(translation) * 
-		rotation.toTransform() * Transform::scale(scale);
+		rotation.toTransform() *
+		Transform::scale(scale);
 }
 
 MTS_IMPLEMENT_CLASS(AbstractAnimationTrack, true, Object)
