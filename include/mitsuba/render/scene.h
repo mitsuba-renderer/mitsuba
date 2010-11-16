@@ -131,8 +131,8 @@ public:
 	}
 
 	/// Cast a shadow ray
-	inline bool isOccluded(const Point &p1, const Point &p2) const {
-		Ray ray(p1, p2-p1);
+	inline bool isOccluded(const Point &p1, const Point &p2, Float time) const {
+		Ray ray(p1, p2-p1, time);
 		ray.mint = ShadowEpsilon;
 		ray.maxt = 1-ShadowEpsilon;
 		return m_kdtree->rayIntersect(ray);
@@ -155,6 +155,9 @@ public:
 	 * @param lRec
 	 *    A luminaire sampling record, which will hold information such as the
 	 *    probability density, associated measure etc.
+	 * @param time
+	 *    Associated time value -- this is needed to check the visibility when
+	 *    objects are potentially moving over time
 	 * @param testVisibility
 	 *    If this is true, a shadow-ray will be cast to ensure that no surface
 	 *    blocks the path lRec.sRec.p <-> p.
@@ -162,7 +165,8 @@ public:
      *    true if sampling was successful
 	 */
 	bool sampleLuminaire(const Point &p,
-		LuminaireSamplingRecord &lRec, const Point2 &sample, bool testVisibility = true) const;
+		LuminaireSamplingRecord &lRec, Float time, 
+		const Point2 &sample, bool testVisibility = true) const;
 
 	/**
 	 * Sample a visible point on a luminaire (ideally uniform wrt. the solid angle of p). Takes
@@ -186,9 +190,10 @@ public:
 	 * lRec.Le by the integrated extinction coefficient on the path lRec.sRec.p <-> p.
 	 */
 	inline bool sampleLuminaireAttenuated(const Point &p,
-		LuminaireSamplingRecord &lRec, const Point2 &sample, bool testVisibility = true) const {
-		if (sampleLuminaire(p, lRec, sample, testVisibility)) {
-			lRec.Le *= getAttenuation(Ray(p, lRec.sRec.p-p, 0, 1));
+		LuminaireSamplingRecord &lRec, Float time, 
+		const Point2 &sample, bool testVisibility = true) const {
+		if (sampleLuminaire(p, lRec, time, sample, testVisibility)) {
+			lRec.Le *= getAttenuation(Ray(p, lRec.sRec.p-p, 0, 1, 0));
 			return true;
 		}
 		return false;
@@ -201,7 +206,7 @@ public:
 	inline bool sampleLuminaireAttenuated(const Intersection &its,
 		LuminaireSamplingRecord &lRec, const Point2 &sample, bool testVisibility = true) const {
 		if (sampleLuminaire(its, lRec, sample, testVisibility)) {
-			lRec.Le *= getAttenuation(Ray(its.p, lRec.sRec.p-its.p, 0, 1));
+			lRec.Le *= getAttenuation(Ray(its.p, lRec.sRec.p-its.p, 0, 1, 0));
 			return true;
 		}
 		return false;

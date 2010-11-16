@@ -72,6 +72,7 @@ public:
 		const RangeWorkUnit *range = static_cast<const RangeWorkUnit *>(workUnit);
 		IrradianceRecordVector *result = static_cast<IrradianceRecordVector *>(workResult);
 		const SampleIntegrator *integrator = m_integrator.get();
+		ref<Camera> camera = m_scene->getCamera();
 
 		result->clear();
 		for (size_t i=range->getRangeStart(); i<range->getRangeEnd(); ++i) {
@@ -83,10 +84,11 @@ public:
 			expSamples *= m_sampleCount;
 			ShapeSamplingRecord sRec;
 			Float pdf = m_shapes[index]->sampleArea(sRec, sample) * expSamples;
+			Float time = camera->getShutterOpen() + m_sampler->next1D() * camera->getShutterOpenTime();
 
 			result->put(IrradianceSample(
 				sRec.p,
-				integrator->E(m_scene.get(), sRec.p, sRec.n, m_independentSampler),
+				integrator->E(m_scene.get(), sRec.p, sRec.n, time, m_independentSampler),
 				1/pdf
 			));
 		}

@@ -74,7 +74,7 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 			/* Generate a camera ray without normalization */
 			primary = Ray(m_cameraO, m_cameraTL 
 				+ m_cameraDx * (Float) x
-				+ m_cameraDy * (Float) y);
+				+ m_cameraDy * (Float) y, 0.0f);
 
 			++numRays;
 			if (!m_kdtree->rayIntersect(primary, its)) {
@@ -88,7 +88,7 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 				value = Spectrum(0.0f);
 
 			toVPL = m_vpl.its.p - its.p;
-			secondary = Ray(its.p, toVPL, ShadowEpsilon, 1-ShadowEpsilon);
+			secondary = Ray(its.p, toVPL, ShadowEpsilon, 1-ShadowEpsilon, 0.0f);
 			++numRays;
 			if (m_kdtree->rayIntersect(secondary)) {
 				block->setPixel(pos++, value);
@@ -281,7 +281,8 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					secItv4.maxt.f[idx] = 0;
 					emitted[idx] = m_scene->LeBackground(Ray(
 						Point(primRay4.o[0].f[idx], primRay4.o[1].f[idx], primRay4.o[2].f[idx]),
-						Vector(primRay4.d[0].f[idx], primRay4.d[1].f[idx], primRay4.d[2].f[idx])
+						Vector(primRay4.d[0].f[idx], primRay4.d[1].f[idx], primRay4.d[2].f[idx]),
+						0.0f
 					));
 					memset(&direct[idx], 0, sizeof(Spectrum));
 					continue;
@@ -346,7 +347,8 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 				} else {
 					Ray ray(
 						Point(primRay4.o[0].f[idx], primRay4.o[1].f[idx], primRay4.o[2].f[idx]),
-						Vector(primRay4.d[0].f[idx], primRay4.d[1].f[idx], primRay4.d[2].f[idx])
+						Vector(primRay4.d[0].f[idx], primRay4.d[1].f[idx], primRay4.d[2].f[idx]),
+						0.0f
 					);
 					its.t = its4.t.f[idx];
 					shape->fillIntersectionRecord(ray, temp + idx * MTS_KD_INTERSECTION_TEMP + 8, its);

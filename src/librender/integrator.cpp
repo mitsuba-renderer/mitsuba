@@ -68,7 +68,7 @@ void SampleIntegrator::serialize(Stream *stream, InstanceManager *manager) const
 	stream->writeBool(m_irrIndirect);
 }
 
-Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n,
+Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n, Float time,
 	Sampler *sampler) const {
 	Spectrum E(0.0f);
 	LuminaireSamplingRecord lRec;
@@ -80,7 +80,7 @@ Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n
 		rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission);
 
 		/* Direct */
-		if (scene->sampleLuminaireAttenuated(p, lRec, rRec.nextSample2D())) {
+		if (scene->sampleLuminaireAttenuated(p, lRec, time, rRec.nextSample2D())) {
 			Float dp = dot(lRec.d, n);
 			if (dp < 0) 
 				E -= lRec.Le * dp;
@@ -90,7 +90,7 @@ Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n
 		if (m_irrIndirect) {
 			Vector d = frame.toWorld(squareToHemispherePSA(rRec.nextSample2D()));
 			++rRec.depth;
-			E += Li(RayDifferential(p, d), rRec) * M_PI;
+			E += Li(RayDifferential(p, d, time), rRec) * M_PI;
 		}
 		sampler->advance();
 	}
@@ -150,6 +150,7 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 	const Camera *camera, Sampler *sampler, ImageBlock *block, const bool &stop) const {
 	Point2 sample, lensSample;
 	RayDifferential eyeRay;
+	Float timeSample = 0;
 	Spectrum spec;
 	int x, y;
 	uint64_t j;
@@ -162,6 +163,7 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 	block->clear();
 	RadianceQueryRecord rRec(scene, sampler);
 	bool needsLensSample = camera->needsLensSample();
+	bool needsTimeSample = camera->needsTimeSample();
 	const TabulatedFilter *filter = camera->getFilm()->getTabulatedFilter();
 	Float scaleFactor = 1.0f/std::sqrt((Float) sampler->getSampleCount());
 
@@ -175,10 +177,12 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 					rRec.newQuery(RadianceQueryRecord::ECameraRay);
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
+					if (needsTimeSample)
+						timeSample = rRec.nextSample1D();
 					sample = rRec.nextSample2D();
 					sample.x += x; sample.y += y;
 					camera->generateRayDifferential(sample, 
-						lensSample, eyeRay);
+						lensSample, timeSample, eyeRay);
 					eyeRay.scaleDifferential(scaleFactor);
 					++cameraRays;
 					spec = Li(eyeRay, rRec);
@@ -199,10 +203,12 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 					rRec.newQuery(RadianceQueryRecord::ECameraRay);
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
+					if (needsTimeSample)
+						timeSample = rRec.nextSample1D();
 					sample = rRec.nextSample2D();
 					sample.x += x; sample.y += y;
 					camera->generateRayDifferential(sample, 
-						lensSample, eyeRay);
+						lensSample, timeSample, eyeRay);
 					eyeRay.scaleDifferential(scaleFactor);
 					++cameraRays;
 					spec = Li(eyeRay, rRec);

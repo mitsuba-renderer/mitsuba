@@ -262,7 +262,7 @@ inline int new_node(Float t1, int a, Float t2, int b, Float t3, int c) {
 Float SparseMipmap3D::lineIntegral(const Ray &r) const {
 	Float length = r.d.length();
 
-	Ray ray(r(r.mint), r.d/length, 0, (r.maxt-r.mint)*length);
+	Ray ray(r(r.mint), r.d/length, 0, (r.maxt-r.mint)*length, 0.0f);
 
 	uint8_t a = 0;
 	if (ray.d.x < 0) {
@@ -304,7 +304,7 @@ bool SparseMipmap3D::invertLineIntegral(const Ray &r, Float desiredDensity,
 		Float &accumDensity, Float &samplePos, Float &sampleDensity) const {
 	Float length = r.d.length();
 
-	Ray ray(r(r.mint), r.d/length, 0, (r.maxt-r.mint)*length);
+	Ray ray(r(r.mint), r.d/length, 0, (r.maxt-r.mint)*length, 0.0f);
 
 	uint8_t a = 0;
 	if (ray.d.x < 0) {

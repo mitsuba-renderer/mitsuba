@@ -81,7 +81,7 @@ public:
 
 				/* Estimate the single scattering component if this is requested */
 				if (rRec.type & RadianceQueryRecord::EInscatteredDirectRadiance && 
-					scene->sampleLuminaireAttenuated(mRec.p, lRec, rRec.nextSample2D())) {
+					scene->sampleLuminaireAttenuated(mRec.p, lRec, ray.time, rRec.nextSample2D())) {
 					/* Evaluate the phase function */
 					Spectrum phaseVal = phase->f(mRec, -ray.d, -lRec.d);
 
@@ -111,7 +111,7 @@ public:
 				prevIts = its;
 
 				/* Trace a ray in this direction */
-				ray = Ray(mRec.p, wo);
+				ray = Ray(mRec.p, wo, ray.time);
 				bool hitLuminaire = false;
 				if (scene->rayIntersect(ray, its)) {
 					/* Intersected something - check if it was a luminaire */
@@ -230,7 +230,7 @@ public:
 				prevIts = its;
 
 				/* Trace a ray in this direction */
-				ray = Ray(its.p, its.toWorld(bRec.wo));
+				ray = Ray(its.p, its.toWorld(bRec.wo), ray.time);
 				bool hitLuminaire = false;
 				if (scene->rayIntersect(ray, its)) {
 					/* Intersected something - check if it was a luminaire */

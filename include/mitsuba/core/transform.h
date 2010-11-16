@@ -310,6 +310,7 @@ public:
 		b.dRcp.x = 1.0f / b.d.x;
 		b.dRcp.y = 1.0f / b.d.y;
 		b.dRcp.z = 1.0f / b.d.z;
+		b.time = a.time;
 #ifdef MTS_DEBUG_FP
 		enable_fpexcept();
 #endif

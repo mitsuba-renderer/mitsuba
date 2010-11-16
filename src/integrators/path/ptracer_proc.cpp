@@ -77,7 +77,7 @@ void CaptureParticleWorker::handleSurfaceInteraction(int, bool,
 
 	if (m_camera->positionToSample(its.p, screenSample)) {
 		Point cameraPosition = m_camera->getPosition(screenSample);
-		if (m_scene->isOccluded(cameraPosition, its.p)) 
+		if (m_scene->isOccluded(cameraPosition, its.p, its.time)) 
 			return;
 
 		const BSDF *bsdf = its.shape->getBSDF();
@@ -94,7 +94,7 @@ void CaptureParticleWorker::handleSurfaceInteraction(int, bool,
 			importance = 1/m_camera->areaDensity(screenSample);
 
 		/* Compute Le * importance and store it in an accumulation buffer */
-		Ray ray(its.p, d, 0, dist);
+		Ray ray(its.p, d, 0, dist, its.time);
 		Spectrum sampleVal = weight * bsdf->fCos(bRec) 
 			* m_scene->getAttenuation(ray) * importance;
 
@@ -103,13 +103,13 @@ void CaptureParticleWorker::handleSurfaceInteraction(int, bool,
 }
 
 void CaptureParticleWorker::handleMediumInteraction(int, bool, 
-		const MediumSamplingRecord &mRec, const Vector &wi, 
+		const MediumSamplingRecord &mRec, Float time, const Vector &wi, 
 		const Spectrum &weight) {
 	Point2 screenSample;
 
 	if (m_camera->positionToSample(mRec.p, screenSample)) {
 		Point cameraPosition = m_camera->getPosition(screenSample);
-		if (m_scene->isOccluded(cameraPosition, mRec.p))
+		if (m_scene->isOccluded(cameraPosition, mRec.p, time))
 			return;
 
 		Vector wo = cameraPosition - mRec.p;
@@ -122,7 +122,7 @@ void CaptureParticleWorker::handleMediumInteraction(int, bool,
 			importance = 1/m_camera->areaDensity(screenSample);
 
 		/* Compute Le * importance and store in accumulation buffer */
-		Ray ray(mRec.p, wo, 0, dist);
+		Ray ray(mRec.p, wo, 0, dist, time);
 
 		Spectrum sampleVal = weight * mRec.medium->getPhaseFunction()->f(mRec, wi, wo)
 			* m_scene->getAttenuation(ray) * importance;

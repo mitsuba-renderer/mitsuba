@@ -364,7 +364,7 @@ public:
 
 	Spectrum tau(const Ray &r) const {
 		Float dLength = r.d.length();
-		Ray ray(r(r.mint), r.d / dLength);
+		Ray ray(r(r.mint), r.d / dLength, 0.0f);
 		Float remaining = (r.maxt - r.mint) * dLength;
 		Float integral = 0.0f;
 		int iterations = 0;
@@ -462,7 +462,7 @@ public:
 	bool sampleDistance(const Ray &r, Float maxDist, 
 			MediumSamplingRecord &mRec,  Sampler *sampler) const {
 		Float dLength = r.d.length();
-		Ray ray(r(r.mint), r.d / dLength);
+		Ray ray(r(r.mint), r.d / dLength, 0.0f);
 		Float remaining      = (maxDist - r.mint) * dLength,
 			  desiredTau     = -std::log(1-sampler->next1D())/m_sizeMultiplier,
 			  accumulatedTau = 0.0f,

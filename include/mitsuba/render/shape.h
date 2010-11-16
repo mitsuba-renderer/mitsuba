@@ -132,6 +132,9 @@ public:
 	/// Texture coordinate mapping partials wrt. changes in screen-space
 	Float dudx, dudy, dvdx, dvdy;
 
+	/// Time value associated with the intersection
+	Float time;
+
 	/// Interpolated vertex color
 	Spectrum color;
 

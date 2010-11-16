@@ -110,7 +110,7 @@ public:
 					sample2(random->nextFloat(), random->nextFloat());
 				Point p1 = bsphere.center + squareToSphere(sample1) * bsphere.radius;
 				Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
-				Ray r(p1, normalize(p2-p1));
+				Ray r(p1, normalize(p2-p1), 0.0f);
 				Intersection its;
 
 				if (tree->rayIntersect(r))

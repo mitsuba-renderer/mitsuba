@@ -98,6 +98,9 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 	Spectrum weight, bsdfVal;
 	int depth;
 	bool caustic;
+	ref<Camera> camera = m_scene->getCamera();
+	Float shutterOpen     = camera->getShutterOpen(), 
+		  shutterOpenTime = camera->getShutterOpenTime();
 
 	m_sampler->generate();
 	for (size_t index = range->getRangeStart(); index <= range->getRangeEnd() && !stop; ++index) {
@@ -108,7 +111,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 		/* Sample an emitted particle */
 		m_scene->sampleEmission(eRec, areaSample, dirSample);
 
-		ray = Ray(eRec.sRec.p, eRec.d);
+		ray = Ray(eRec.sRec.p, eRec.d, shutterOpen + shutterOpenTime * m_sampler->next1D());
 		weight = eRec.P;
 		depth = 1;
 		caustic = true;
@@ -126,7 +129,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				*/
 
 				weight *= mRec.sigmaS * mRec.attenuation / mRec.pdf;
-				handleMediumInteraction(depth, caustic, mRec, -ray.d, weight);
+				handleMediumInteraction(depth, caustic, mRec, ray.time, -ray.d, weight);
 	
 				if (!m_multipleScattering)
 					break;
@@ -144,7 +147,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 						weight /= mRec.albedo;
 				}
 
-				ray = Ray(mRec.p, wo);
+				ray = Ray(mRec.p, wo, ray.time);
 			} else if (its.t == std::numeric_limits<Float>::infinity()) {
 				/* There is no surface in this direction */
 				break;
@@ -179,7 +182,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 
 				weight *= bsdfVal;
 				Vector wi = -ray.d, wo = its.toWorld(bRec.wo);
-				ray = Ray(its.p, wo);
+				ray = Ray(its.p, wo, ray.time);
 
 				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
 				Float wiDotGeoN = dot(its.geoFrame.n, wi),
@@ -206,7 +209,7 @@ void ParticleTracer::handleSurfaceInteraction(int depth, bool caustic,
 }
 
 void ParticleTracer::handleMediumInteraction(int depth, bool caustic,
-	const MediumSamplingRecord &mRec, const Vector &wi, 
+	const MediumSamplingRecord &mRec, Float time, const Vector &wi, 
 	const Spectrum &weight) {
 }
 

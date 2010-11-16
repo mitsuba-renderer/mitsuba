@@ -109,15 +109,16 @@ public:
 		return m_lensRadius > 0.0f;
 	}
 
-	void generateRay(const Point2 &dirSample, const Point2 &lensSample, 
-		Ray &ray) const {
+	void generateRay(const Point2 &dirSample, const Point2 &lensSample,
+			Float timeSample, Ray &ray) const {
 		/* Calculate intersection on the image plane */
 		Point rasterCoords(dirSample.x, dirSample.y, 0);
 		Point imageCoords;
 		m_rasterToCamera(rasterCoords, imageCoords);
 
 		/* Construct ray in camera space */
-		Ray localRay(Point(0, 0, 0), Vector(imageCoords));
+		Ray localRay(Point(0, 0, 0), Vector(imageCoords),
+			m_shutterOpen + m_shutterOpenTime * timeSample);
 
 		if (m_lensRadius > 0.0f) {
 			/* Sample a point on the aperture */
@@ -184,6 +185,8 @@ public:
 			<< "  yfov = " << m_yfov << "," << std::endl
 			<< "  nearClip = " << m_nearClip << "," << std::endl
 			<< "  farClip = " << m_farClip << "," << std::endl
+			<< "  shutterOpen = " << m_shutterOpen << "," << std::endl
+			<< "  shutterClose = " << m_shutterClose << "," << std::endl
 			<< "  lensRadius = " << m_lensRadius << "," << std::endl
 			<< "  focalDistance = " << m_focalDistance << "," << std::endl
 			<< "  cameraToWorld = " << indent(m_cameraToWorld.toString()) << "," << std::endl

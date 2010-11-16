@@ -103,8 +103,9 @@ public:
 
 		Vector2i filmSize = camera->getFilm()->getSize();
 		bool needsLensSample = camera->needsLensSample();
+		bool needsTimeSample = camera->needsTimeSample();
 		const int nSamples = 10000;
-		Float luminance = 0;
+		Float luminance = 0, timeSample = 0;
 		RadianceQueryRecord rRec(scene, sampler);
 		for (int i=0; i<nSamples; ++i) {
 			Point2 sample, lensSample;
@@ -113,10 +114,12 @@ public:
 			rRec.newQuery(RadianceQueryRecord::ERadiance);
 			if (needsLensSample)
 				lensSample = rRec.nextSample2D();
+			if (needsTimeSample)
+				timeSample = rRec.nextSample1D();
 			sample = rRec.nextSample2D();
 			sample.x *= filmSize.x;
 			sample.y *= filmSize.y;
-			camera->generateRayDifferential(sample, lensSample, eyeRay);
+			camera->generateRayDifferential(sample, lensSample, timeSample, eyeRay);
 
 			luminance += m_subIntegrator->Li(eyeRay, rRec).getLuminance();
 		}
@@ -130,13 +133,14 @@ public:
 	void renderBlock(const Scene *scene, const Camera *camera, Sampler *sampler, 
 			ImageBlock *block, const bool &stop) const {
 		bool needsLensSample = camera->needsLensSample();
+		bool needsTimeSample = camera->needsTimeSample();
 		const TabulatedFilter *filter = camera->getFilm()->getTabulatedFilter();
 
 		Float mean, meanSqr;
 		Point2 sample, lensSample;
 		RayDifferential eyeRay;
 		int x, y;
-		Float sampleLuminance;
+		Float sampleLuminance, timeSample = 0;
 		RadianceQueryRecord rRec(scene, sampler);
 		int sampleIndex;
 
@@ -157,10 +161,12 @@ public:
 					rRec.newQuery(RadianceQueryRecord::ECameraRay);
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
+					if (needsTimeSample)
+						timeSample = rRec.nextSample1D();
 					sample = rRec.nextSample2D();
 					sample.x += x; sample.y += y;
 					camera->generateRayDifferential(sample, 
-						lensSample, eyeRay);
+						lensSample, timeSample, eyeRay);
 
 					Spectrum sampleValue = m_subIntegrator->Li(eyeRay, rRec);
 
@@ -217,8 +223,8 @@ public:
 		return m_subIntegrator->Li(ray, rRec);
 	}
 	
-	Spectrum E(const Scene *scene, const Point &p, const Normal &n, Sampler *sampler) const {
-		return m_subIntegrator->E(scene, p, n, sampler);
+	Spectrum E(const Scene *scene, const Point &p, const Normal &n, Float time, Sampler *sampler) const {
+		return m_subIntegrator->E(scene, p, n, time, sampler);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {

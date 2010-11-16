@@ -106,7 +106,7 @@ public:
 	 * which occurred while tracing particles.
      */
 	virtual void handleMediumInteraction(int depth, bool caustic,
-		const MediumSamplingRecord &mRec, const Vector &wi, 
+		const MediumSamplingRecord &mRec, Float time, const Vector &wi, 
 		const Spectrum &weight);
 
 	MTS_DECLARE_CLASS()

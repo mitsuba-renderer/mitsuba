@@ -168,7 +168,7 @@ public:
 			bsdfVal /= bsdfPdf;
 
 			/* Trace a ray in this direction */
-			Ray bsdfRay(its.p, its.toWorld(bRec.wo));
+			Ray bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);
 			bool hitLuminaire = false;
 			if (scene->rayIntersect(bsdfRay, bsdfIts)) {
 				bsdfRay.mint = 0; bsdfRay.maxt = bsdfIts.t; 

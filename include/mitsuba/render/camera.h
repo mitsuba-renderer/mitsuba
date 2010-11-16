@@ -31,11 +31,11 @@ class MTS_EXPORT_RENDER Camera : public ConfigurableObject {
 public:
 	/// Create a ray from the given sample
 	virtual void generateRay(const Point2 &sample, const Point2 &lensSample,
-		Ray &ray) const = 0;
+		Float timeSample, Ray &ray) const = 0;
 
 	/// Create ray differentials from the given sample
 	void generateRayDifferential(const Point2 &sample, 
-		const Point2 &lensSample, RayDifferential &ray) const;
+		const Point2 &lensSample, Float timeSample, RayDifferential &ray) const;
 
 	/**
 	 * Turn a world-space position into fractional pixel coordinates.
@@ -46,6 +46,9 @@ public:
 
 	/// Does generateRay() expect a proper lens sample?
 	virtual bool needsLensSample() const = 0;
+	
+	/// Does generateRay() expect a proper time sample?
+	inline bool needsTimeSample() const { return m_shutterOpenTime > 0; }
 
 	/// Return the camera position (approximate in the case of finite sensor area)
 	inline const Point &getPosition() const { return m_position; }
@@ -81,11 +84,20 @@ public:
 	 */
 	inline const Sampler *getSampler() const { return m_sampler.get(); }
 
+	/// Return the time value of the shutter opening event
+	inline Float getShutterOpen() const { return m_shutterOpen; }
+	
+	/// Return the length, for which the shutter remains open
+	inline Float getShutterOpenTime() const { return m_shutterOpenTime; }
+
+	/// Return the time value of the shutter closing event
+	inline Float getShutterClose() const { return m_shutterOpen; }
+
 	/// Return the image plane normal
 	inline Normal getImagePlaneNormal() const {
 		return Normal(normalize(m_cameraToWorld(Vector(0, 0, 1))));
 	}
-	
+
 	/// Return the view transformation
 	inline const Transform &getViewTransform() const { return m_worldToCamera; }
 
@@ -143,6 +155,7 @@ protected:
 	Transform m_worldToCamera, m_cameraToWorld;
 	Point m_position;
 	Properties m_properties;
+	Float m_shutterOpen, m_shutterClose, m_shutterOpenTime;
 };
 	
 class MTS_EXPORT_RENDER ProjectiveCamera : public Camera {

@@ -288,7 +288,7 @@ public:
 	 * cosine-weighted sampling and a configurable number of rays.
 	 */
 	virtual Spectrum E(const Scene *scene, const Point &p, const
-		Normal &n, Sampler *sampler) const; 
+		Normal &n, Float time, Sampler *sampler) const; 
 
 	/**
 	 * Perform the main rendering task. The work is automatically
