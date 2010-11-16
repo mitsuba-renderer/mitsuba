@@ -156,7 +156,7 @@ template<> void AnimationTrack<Quaternion>::serialize(Stream *stream, const Quat
 }
 
 /// Animated transformation with an underlying keyframe representation
-class AnimatedTransform : public Object {
+class MTS_EXPORT_RENDER AnimatedTransform : public Object {
 public:
 	/// Create a new animated transform
 	AnimatedTransform() { }
