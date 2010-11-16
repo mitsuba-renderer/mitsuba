@@ -42,10 +42,6 @@
 
 #include "converter.h"
 
-typedef AnimationTrack<Float> FloatTrack;
-typedef AnimationTrack<Quaternion> QuatTrack;
-typedef AnimationTrack<Vector> VectorTrack;
-typedef AnimationTrack<Point> PointTrack;
 typedef std::map<std::string, std::string> StringMap;
 typedef std::map<std::string, int> RefCountMap;
 typedef std::multimap<std::string, AbstractAnimationTrack *> AnimationMap;
@@ -59,6 +55,7 @@ struct ColladaContext {
 	fs::path meshesDirectory;
 	StringMap idToTexture, fileToId;
 	std::ostream &os;
+	int trackIndex;
 
 	inline ColladaContext(std::ostream &os) : os(os) { }
 };
@@ -496,14 +493,35 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 		ctx.os << "\t\t<shape type=\"serialized\">" << endl;
 		ctx.os << "\t\t\t<string name=\"filename\" value=\"" << filename << "\"/>" << endl;
 		if (ctx.cvt->m_geometryFile)
-			ctx.os << "\t\t<integer name=\"shapeIndex\" value=\"" << (ctx.cvt->m_geometryDict.size() - 1)<< "\"/>" << endl;
+			ctx.os << "\t\t\t<integer name=\"shapeIndex\" value=\"" << (ctx.cvt->m_geometryDict.size() - 1)<< "\"/>" << endl;
 		if (matID != "") 
 			ctx.os << "\t\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
 		ctx.os << "\t\t</shape>" << endl << endl;
 	}
 }
+		
+void exportAnimation(ColladaContext &ctx, const fs::path &path, const std::string &name) {
+	AnimationMap::iterator start = ctx.animations.lower_bound(name);
+	AnimationMap::iterator end = ctx.animations.upper_bound(name);
 
-void loadGeometry(ColladaContext &ctx, std::string prefixName, Transform transform, domGeometry &geom, 
+	ref<AnimatedTransform> trafo = new AnimatedTransform();
+
+	for (AnimationMap::iterator it = start; it != end; ++it) {
+		AbstractAnimationTrack *track = it->second;
+		int type = track->getType();
+		if (type == FloatTrack::ERotationX 
+			|| type == FloatTrack::ERotationY
+			|| type == FloatTrack::ERotationZ)
+			continue;
+		trafo->addTrack(track);
+	}
+	SLog(EInfo, "Writing animation track \"%s\"", path.filename().c_str());
+	ref<FileStream> fs = new FileStream(path, FileStream::ETruncReadWrite);
+	trafo->serialize(fs);
+}
+
+void loadGeometry(ColladaContext &ctx, const std::string &instanceName, 
+		std::string prefixName, Transform transform, domGeometry &geom, 
 		StringMap &matLookupTable) {
 	std::string identifier;
 	if (geom.getId() != NULL) {
@@ -526,7 +544,14 @@ void loadGeometry(ColladaContext &ctx, std::string prefixName, Transform transfo
 
 	bool exportShapeGroup = false;
 	if (ctx.serializedGeometry.find(identifier) != ctx.serializedGeometry.end()) {
-		ctx.os << "\t<shape id=\"" << prefixName << "/" << identifier << "\" type=\"instance\">" << endl;
+		if (ctx.animations.find(instanceName) != ctx.animations.end()) {
+			ctx.os << "\t<shape id=\"" << prefixName << "/" << identifier << "\" type=\"animatedinstance\">" << endl;
+			std::string filename = formatString("animation_%i.serialized", ctx.trackIndex++);
+			ctx.os << "\t\t<string name=\"filename\" value=\"" << filename << "\"/>" << endl;
+			exportAnimation(ctx, ctx.cvt->m_outputDirectory / filename, instanceName);
+		} else {
+			ctx.os << "\t<shape id=\"" << prefixName << "/" << identifier << "\" type=\"instance\">" << endl;
+		}
 		if (!transform.isIdentity()) {
 			std::ostringstream matrix;
 			for (int i=0; i<4; ++i)
@@ -540,7 +565,7 @@ void loadGeometry(ColladaContext &ctx, std::string prefixName, Transform transfo
 		ctx.os << "\t\t<ref id=\"" << identifier << "\"/>" << endl;
 		ctx.os << "\t</shape>" << endl << endl;
 		return;
-	} else if (ctx.refCountMap[identifier] > 1) {
+	} else if (ctx.refCountMap[identifier] > 1 || ctx.refCountMap[instanceName]) {
 		ctx.os << "\t<shape id=\"" << identifier << "\" type=\"shapegroup\">" << endl;
 		exportShapeGroup = true;
 	}
@@ -693,16 +718,23 @@ void loadGeometry(ColladaContext &ctx, std::string prefixName, Transform transfo
 	}
 	if (exportShapeGroup) {
 		ctx.os << "\t</shape>" << endl << endl;
-		ctx.os << "\t<shape id=\"" << prefixName << "/" << identifier << "\" type=\"instance\">" << endl;
-		if (!transform.isIdentity()) {
-			std::ostringstream matrix;
-			for (int i=0; i<4; ++i)
-				for (int j=0; j<4; ++j)
-					matrix << transform.getMatrix().m[i][j] << " ";
-			std::string matrixValues = matrix.str();
-			ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
-			ctx.os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
-			ctx.os << "\t\t</transform>" << endl;
+		if (ctx.animations.find(instanceName) != ctx.animations.end()) {
+			ctx.os << "\t<shape id=\"" << prefixName << "/" << identifier << "\" type=\"animatedinstance\">" << endl;
+			std::string filename = formatString("animation_%i.serialized", ctx.trackIndex++);
+			ctx.os << "\t\t<string name=\"filename\" value=\"" << filename << "\"/>" << endl;
+			exportAnimation(ctx, ctx.cvt->m_outputDirectory / filename, instanceName);
+		} else {
+			ctx.os << "\t<shape id=\"" << prefixName << "/" << identifier << "\" type=\"instance\">" << endl;
+			if (!transform.isIdentity()) {
+				std::ostringstream matrix;
+				for (int i=0; i<4; ++i)
+					for (int j=0; j<4; ++j)
+						matrix << transform.getMatrix().m[i][j] << " ";
+				std::string matrixValues = matrix.str();
+				ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
+				ctx.os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
+				ctx.os << "\t\t</transform>" << endl;
+			}
 		}
 		ctx.os << "\t\t<ref id=\"" << identifier << "\"/>" << endl;
 		ctx.os << "\t</shape>" << endl << endl;
@@ -1246,7 +1278,7 @@ void loadNode(ColladaContext &ctx, Transform transform, domNode &node, std::stri
 
 		if (!geom)
 			SLog(EError, "Could not find a referenced geometry object!");
-		loadGeometry(ctx, prefixName, transform, *geom, matLookupTable);
+		loadGeometry(ctx, identifier, prefixName, transform, *geom, matLookupTable);
 	}
 
 	/* Iterate over all light references */
@@ -1329,6 +1361,10 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 		domChannel *channel = channels[i];
 		std::vector<std::string> target = tokenize(channel->getTarget(), "./");
 		SAssert(target.size() >= 2);
+		if (ctx.refCountMap.find(target[0]) == ctx.refCountMap.end())
+			ctx.refCountMap[target[0]] = 1;
+		else
+			ctx.refCountMap[target[0]]++;
 
 		daeURI &sourceRef = channel->getSource();
 		sourceRef.resolveElement();
@@ -1343,13 +1379,13 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 			boost::to_lower(target[2]);
 		if (target[1] == "location" || target[1] == "translate") {
 			if (target.size() == 2) {
-				trackType = PointTrack::ELocationXYZ;
+				trackType = VectorTrack::ETranslationXYZ;
 			} else if (target[2] == "x") {
-				trackType = FloatTrack::ELocationX;
+				trackType = FloatTrack::ETranslationX;
 			} else if (target[2] == "y") {
-				trackType = FloatTrack::ELocationY;
+				trackType = FloatTrack::ETranslationY;
 			} else if (target[2] == "z") {
-				trackType = FloatTrack::ELocationZ;
+				trackType = FloatTrack::ETranslationZ;
 			}
 		} else if (target[1] == "scale") {
 			if (target.size() == 2) {
@@ -1392,12 +1428,11 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 			size_t size = (size_t) accessor->getCount();
 
 			if (!track) {
-				if (trackType == VectorTrack::EScaleXYZ)
+				if (trackType == VectorTrack::EScaleXYZ || trackType == VectorTrack::ETranslationXYZ)
 					track = new VectorTrack(trackType, size);
-				else if (trackType == PointTrack::ELocationXYZ)
-					track = new PointTrack(trackType, size);
 				else
 					track = new FloatTrack(trackType, size);
+				track->incRef();
 			} else {
 				SAssert(track->getSize() == size);
 			}
@@ -1409,13 +1444,7 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 					track->setTime(i, floatArray[i]);
 			} else if (semantic == "OUTPUT") {
 				domListOfFloats &floatArray = source->getFloat_array()->getValue();
-				if (trackType == PointTrack::ELocationXYZ) {
-					SAssert(stride == 3);
-					for (size_t i=0; i<size; ++i)
-						((PointTrack *) track)->setValue(i, 
-							Point(floatArray[i*3+0], floatArray[i*3+1], 
-							floatArray[i*3+2]));
-				} else if (trackType == PointTrack::EScaleXYZ) {
+				if (trackType == VectorTrack::ETranslationXYZ || trackType == VectorTrack::EScaleXYZ) {
 					SAssert(stride == 3);
 					for (size_t i=0; i<size; ++i)
 						((VectorTrack *) track)->setValue(i, 
@@ -1475,7 +1504,7 @@ void mergeRotations(ColladaContext &ctx) {
 			it2 != times.end(); ++it2) {
 			Float time = *it2, rot[3];
 			for (int i=0; i<3; ++i)
-				rot[i] = tracks[i] ? tracks[i]->lookup(time) : (Float) 0;
+				rot[i] = tracks[i] ? tracks[i]->eval(time) : (Float) 0;
 
 			newTrack->setTime(idx, time);
 			newTrack->setValue(idx, Quaternion::fromEulerAngles(
@@ -1483,6 +1512,7 @@ void mergeRotations(ColladaContext &ctx) {
 			idx++;
 		}
 
+		newTrack->incRef();
 		ctx.animations.insert(AnimationMap::value_type(key, newTrack));
 
 		it = ctx.animations.upper_bound(key);
@@ -1585,6 +1615,7 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	ctx.meshesDirectory = meshesDirectory;
 	ctx.texturesDirectory = texturesDirectory;
 	ctx.cvt = this;
+	ctx.trackIndex = 0;
 
 	domLibrary_images_Array &libraryImages = document->getLibrary_images_array();
 	for (size_t i=0; i<libraryImages.getCount(); ++i) {
@@ -1616,7 +1647,7 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	
 	for (AnimationMap::iterator it = ctx.animations.begin();
 		it != ctx.animations.end(); ++it)
-		delete it->second;
+		it->second->decRef();
 
 	os << "</scene>" << endl;
 

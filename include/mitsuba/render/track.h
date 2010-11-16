@@ -31,7 +31,7 @@ class MTS_EXPORT_RENDER AbstractAnimationTrack : public Object {
 public:
 	enum EType {
 		EInvalid = 0,
-		ELocationX, ELocationY, ELocationZ, ELocationXYZ, 
+		ETranslationX, ETranslationY, ETranslationZ, ETranslationXYZ, 
 		EScaleX, EScaleY, EScaleZ, EScaleXYZ,
 		ERotationX, ERotationY, ERotationZ,
 		ERotationQuat
@@ -45,15 +45,19 @@ public:
 
 	/// Return the time value of a certain keyframe
 	inline Float getTime(size_t idx) const { return m_times[idx]; }
-	
+
 	/// Return the number of keyframes
 	inline size_t getSize() const { return m_times.size(); }
+
+	/// Serialize to a binary data stream
+	virtual void serialize(Stream *stream) const = 0;
 
 	MTS_DECLARE_CLASS()
 protected:
 	AbstractAnimationTrack(EType type, size_t nKeyframes) 
 		: m_type(type), m_times(nKeyframes) { }
 
+	virtual ~AbstractAnimationTrack() { }
 protected:
 	EType m_type;
 	std::vector<Float> m_times;
@@ -67,17 +71,30 @@ public:
 	AnimationTrack(EType type, size_t nKeyframes) 
 		: AbstractAnimationTrack(type, nKeyframes), m_values(nKeyframes) { }
 
+	AnimationTrack(EType type, Stream *stream) 
+		: AbstractAnimationTrack(type, (size_t) stream->readUInt()) {
+		m_values.resize(m_times.size());
+		stream->readFloatArray(&m_times[0], m_times.size());
+		for (size_t i=0; i<m_values.size(); ++i)
+			unserialize(stream, m_values[i]);
+	}
+
 	/// Set the value of a certain keyframe
 	inline void setValue(size_t idx, const value_type &value) { m_values[idx] = value; }
 	
 	/// Return the value of a certain keyframe
 	inline const value_type &getValue(size_t idx) const { return m_values[idx]; }
 
-	/// Evaluate the animation track using linear interpolation
-	value_type lerp(int idx0, int idx1, Float t) const;
-
+	/// Serialize to a binary data stream
+	void serialize(Stream *stream) const {
+		stream->writeUInt((uint32_t) m_times.size());
+		stream->writeFloatArray(&m_times[0], m_times.size());
+		for (size_t i=0; i<m_values.size(); ++i)
+			serialize(stream, m_values[i]);
+	}
+			
 	/// Evaluate the animation track at an arbitrary time value
-	inline value_type lookup(Float time) const {
+	inline value_type eval(Float time) const {
 		std::vector<Float>::const_iterator entry = 
 				std::lower_bound(m_times.begin(), m_times.end(), time);
 		int idx0 = (int) (entry - m_times.begin()) - 1;
@@ -87,6 +104,17 @@ public:
 		if (m_times[idx0] != m_times[idx1])
 			t = (time-m_times[idx0]) / (m_times[idx1]-m_times[idx0]);
 		return lerp(idx0, idx1, t);
+	}
+protected:
+	/// Evaluate the animation track using linear interpolation
+	value_type lerp(int idx0, int idx1, Float t) const;
+
+	void unserialize(Stream *stream, value_type &value) {
+		value = stream->readElement<value_type>();
+	}
+
+	void serialize(Stream *stream, const value_type &value) const {
+		stream->writeElement<value_type>(value);
 	}
 private:
 	std::vector<value_type> m_values;
@@ -100,6 +128,62 @@ template<typename T> T AnimationTrack<T>::lerp(int idx0, int idx1, Float t) cons
 template<> Quaternion AnimationTrack<Quaternion>::lerp(int idx0, int idx1, Float t) const {
 	return slerp(m_values[idx0], m_values[idx1], t);
 }
+
+template<> void AnimationTrack<Point>::unserialize(Stream *stream, Point &value) {
+	value = Point(stream);
+}
+
+template<> void AnimationTrack<Point>::serialize(Stream *stream, const Point &value) const {
+	value.serialize(stream);
+}
+
+template<> void AnimationTrack<Vector>::unserialize(Stream *stream, Vector &value) {
+	value = Vector(stream);
+}
+
+template<> void AnimationTrack<Vector>::serialize(Stream *stream, const Vector &value) const {
+	value.serialize(stream);
+}
+
+template<> void AnimationTrack<Quaternion>::unserialize(Stream *stream, Quaternion &value) {
+	value = Quaternion(stream);
+}
+
+template<> void AnimationTrack<Quaternion>::serialize(Stream *stream, const Quaternion &value) const {
+	value.serialize(stream);
+}
+
+/// Animated transformation with an underlying keyframe representation
+class AnimatedTransform : public Object {
+public:
+	/// Create a new animated transform
+	AnimatedTransform() { }
+	
+	/// Unseraizlie a animated transform
+	AnimatedTransform(Stream *stream);
+
+	/// Return the number of associated animation tracks
+	inline size_t getTrackCount() const { return m_tracks.size(); }
+
+	/// Look up one of the tracks by index
+	inline const AbstractAnimationTrack *getTrack(size_t idx) const { return m_tracks[idx]; }
+
+	/// Append an animation track
+	void addTrack(AbstractAnimationTrack *track);
+
+	/// Compute the transformation at the specified time value
+	void eval(Float t, Transform &trafo);
+
+	/// Serialize to a binary data stream
+	void serialize(Stream *stream) const;
+
+	MTS_DECLARE_CLASS()
+protected:
+	/// Virtual destructor
+	virtual ~AnimatedTransform();
+private:
+	std::vector<AbstractAnimationTrack *> m_tracks;
+};
 
 MTS_NAMESPACE_END
 

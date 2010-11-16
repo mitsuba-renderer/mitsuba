@@ -134,6 +134,8 @@ void GeometryConverter::convert(const fs::path &inputFile,
 	fs::path meshesDirectory = "meshes";
 	fs::path outputFile = sceneName;
 
+	this->m_outputDirectory = outputDirectory;
+
 	if (!outputDirectory.empty()) {
 		textureDirectory = outputDirectory / "textures";
 		meshesDirectory = outputDirectory / "meshes";

@@ -58,7 +58,7 @@ public:
 	bool m_srgb, m_mapSmallerSide;
 	int m_xres, m_yres, m_samplesPerPixel;
 	Float m_fov;
-	fs::path m_filename;
+	fs::path m_filename, m_outputDirectory;
 	std::string m_filmType;
 	ref<FileStream> m_geometryFile;
 	fs::path m_geometryFileName;
