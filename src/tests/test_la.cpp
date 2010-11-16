@@ -17,7 +17,6 @@
 */
 
 #include <mitsuba/render/testcase.h>
-#include <mitsuba/core/quat.h>
 
 MTS_NAMESPACE_BEGIN
 

@@ -19,7 +19,7 @@
 #if !defined(__QUATERNION_H)
 #define __QUATERNION_H
 
-#include <mitsuba/mitsuba.h>
+#include <mitsuba/core/transform.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -28,6 +28,16 @@ MTS_NAMESPACE_BEGIN
  */
 template <typename T> struct TQuaternion {
 	typedef T          value_type;
+
+	/// Used by \ref TQuaternion::fromEulerAngles
+	enum EEulerAngleConvention {
+		EEulerXYZ = 0,
+		EEulerXZY,
+		EEulerYXZ,
+		EEulerYZX,
+		EEulerZXY,
+		EEulerZYX
+	};
 
 	/// Imaginary component
 	TVector3<T> v;
@@ -106,7 +116,7 @@ template <typename T> struct TQuaternion {
 
 	/// Quaternion multiplication
 	TQuaternion &operator*=(const TQuaternion &q) {
-		value_type tmp = w * q.w - dot(w, q.w);
+		value_type tmp = w * q.w - dot(v, q.v);
 		v = cross(v, q.v) + q.w * v + w * q.v;
 		w = tmp;
 		return *this;
@@ -115,7 +125,7 @@ template <typename T> struct TQuaternion {
 	/// Quaternion multiplication (creates a temporary)
 	TQuaternion operator*(const TQuaternion &q) const {
 		return TQuaternion(cross(v, q.v) + q.w * v + w * q.v,
-			w * q.w - dot(w, q.w));
+			w * q.w - dot(v, q.v));
 	}
 
 	/// Equality test
@@ -243,6 +253,35 @@ template <typename T> struct TQuaternion {
 			v.z = q[2];
 		}
 		return TQuaternion(v, w);
+	}
+	
+	/**
+	 * \brief Construct an unit quaternion matching the supplied
+	 * rotation expressed in Euler angles (in radians)
+	 */
+	static TQuaternion fromEulerAngles(EEulerAngleConvention conv,
+			Float x, Float y, Float z) {
+		Quaternion qx = fromAxisAngle(Vector(1.0, 0.0, 0.0), x);
+		Quaternion qy = fromAxisAngle(Vector(0.0, 1.0, 0.0), y);
+		Quaternion qz = fromAxisAngle(Vector(0.0, 0.0, 1.0), z);
+
+		switch (conv) {
+			case EEulerXYZ:
+				return qz * qy * qx;
+			case EEulerXZY:
+				return qy * qz * qx;
+			case EEulerYXZ:
+				return qz * qx * qy;
+			case EEulerYZX:
+				return qx * qz * qy;
+			case EEulerZXY:
+				return qy * qx * qz;
+			case EEulerZYX:
+				return qx * qy * qz;
+			default:	
+				SLog(EError, "Internal error!");
+				return TQuaternion();
+		}
 	}
 
 	/// Compute the rotation matrix for the given quaternion

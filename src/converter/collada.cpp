@@ -1348,7 +1348,7 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 				trackType = FloatTrack::ELocationX;
 			} else if (target[2] == "y") {
 				trackType = FloatTrack::ELocationY;
-			} else if (target[3] == "z") {
+			} else if (target[2] == "z") {
 				trackType = FloatTrack::ELocationZ;
 			}
 		} else if (target[1] == "scale") {
@@ -1358,7 +1358,7 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 				trackType = FloatTrack::EScaleX;
 			} else if (target[2] == "y") {
 				trackType = FloatTrack::EScaleY;
-			} else if (target[3] == "z") {
+			} else if (target[2] == "z") {
 				trackType = FloatTrack::EScaleZ;
 			}
 		} else if ((target[1] == "rotationx" || target[1] == "rotatex") && target.size() == 3 && target[2] == "angle") {
@@ -1474,11 +1474,12 @@ void mergeRotations(ColladaContext &ctx) {
 		for (std::set<Float>::iterator it2 = times.begin();
 			it2 != times.end(); ++it2) {
 			Float time = *it2, rot[3];
-//			for (int i=0; i<3; ++i)
-//				rot[i] = tracks[i] ? tracks[i]->lookup(time) : (Float) 0;
+			for (int i=0; i<3; ++i)
+				rot[i] = tracks[i] ? tracks[i]->lookup(time) : (Float) 0;
 
 			newTrack->setTime(idx, time);
-			newTrack->setValue(idx, Quaternion());
+			newTrack->setValue(idx, Quaternion::fromEulerAngles(
+				Quaternion::EEulerXYZ, rot[0], rot[1], rot[2]));
 			idx++;
 		}
 
