@@ -38,7 +38,7 @@ void joinRGB(const std::string &s1, const std::string &s2, const std::string &s3
 	float *outData = outBitmap->getFloatData();
 	int width = rBitmap->getWidth();
 
-	for (int y=0; y<rBitmap->getWidth(); ++y) {
+	for (int y=0; y<rBitmap->getHeight(); ++y) {
 		for (int x=0; x<rBitmap->getWidth(); ++x) {
 			float r = rData[(x + y * width) * 4];
 			float g = gData[(x + y * width) * 4 + 1];
