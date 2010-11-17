@@ -53,7 +53,7 @@
 		  <ref id="__planetex" name="reflectance"/>
 	</bsdf>
 	<shape id="Interior-mesh_0" type="serialized">
-		  <string name="filename" value="matpreview.Scene.00010.serialized"/>
+		  <string name="filename" value="matpreview.serialized"/>
 		  <integer name="shapeIndex" value="0"/>
 		  <transform name="toWorld">
 			  <matrix value="1 0 0 0 0 1 0 0 0 0 1 0.0252155 0 0 0 1"/>
@@ -62,7 +62,7 @@
 	</shape>
 
 	<shape id="Exterior-mesh_0" type="serialized">
-		<string name="filename" value="matpreview.Scene.00010.serialized"/>
+		<string name="filename" value="matpreview.serialized"/>
 		<integer name="shapeIndex" value="1"/>
 		<transform name="toWorld">
 			<matrix value="0.614046 0.614047 0 -1.78814e-07 -0.614047 0.614046 0 2.08616e-07 0 0 0.868393 1.02569 0 0 0 1"/>
@@ -71,7 +71,7 @@
 	</shape>
 
 	<shape id="Plane-mesh_0" type="serialized">
-		  <string name="filename" value="matpreview.Scene.00010.serialized"/>
+		  <string name="filename" value="matpreview.serialized"/>
 		  <integer name="shapeIndex" value="2"/>
 		  <transform name="toWorld">
 			  <matrix value="20 0 0 -10 0 20 0 10 0 0 20 0 0 0 0 1"/>
