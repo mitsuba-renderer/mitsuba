@@ -58,7 +58,7 @@ public:
 	}
 };
 
-void findRemovals(DOMNode *node, std::set<std::string> &removals) {
+void createNodeMap(DOMNode *node, std::map<std::string, DOMNode *> &nodes) {
 	if (node) {
 		char *nodeName = XMLString::transcode(node->getNodeName());
 		if (strcmp(nodeName, "ref") == 0) {
@@ -68,61 +68,18 @@ void findRemovals(DOMNode *node, std::set<std::string> &removals) {
 		XMLString::release(&nodeName);
 		if (node->getNodeType() == DOMNode::ELEMENT_NODE && node->hasAttributes()) {
 			DOMNamedNodeMap *attributes = node->getAttributes();
-			for (size_t i=0; i<attributes->getLength(); ++i) {
-				DOMAttr *attribute = (DOMAttr*) attributes->item(i);
-				char *name = XMLString::transcode(attribute->getName());
+			XMLCh *idString = XMLString::transcode("id");
+			DOMAttr *attribute = (DOMAttr *) attributes->getNamedItem(idString);
+			XMLString::release(&idString);
+			if (attribute != NULL) {
 				char *value = XMLString::transcode(attribute->getValue());
-
-				if (strcmp(name, "id") == 0)
-					removals.insert(value);
-
-				XMLString::release(&name);
+				nodes[value] = node;
 				XMLString::release(&value);
 			}
 		}
 		for (DOMNode *child = node->getFirstChild(); child != 0; child=child->getNextSibling())
-			findRemovals(child, removals);
+			createNodeMap(child, nodes);
 	}
-}
-
-bool cleanupPass(DOMNode *node, const std::set<std::string> &removals) {
-	if (node) {
-		char *nodeName = XMLString::transcode(node->getNodeName());
-		if (strcmp(nodeName, "ref") == 0) {
-			XMLString::release(&nodeName);
-			return false;
-		}
-
-		if (node->getNodeType() == DOMNode::ELEMENT_NODE && node->hasAttributes()) {
-			DOMNamedNodeMap *attributes = node->getAttributes();
-			for (size_t i=0; i<attributes->getLength(); ++i) {
-				DOMAttr *attribute = (DOMAttr*) attributes->item(i);
-				char *name = XMLString::transcode(attribute->getName());
-				char *value = XMLString::transcode(attribute->getValue());
-
-				if (strcmp(name, "id") == 0 && removals.find(value) != removals.end()) {
-					XMLString::release(&name);
-					XMLString::release(&value);
-					return true; /* Remove this node */
-				}
-
-				XMLString::release(&name);
-				XMLString::release(&value);
-			}
-			XMLString::release(&nodeName);
-		} else if (node->getNodeType() == DOMNode::TEXT_NODE) {
-			return true;
-		}
-		DOMNode *child = node->getFirstChild();
-		while (child) {
-			DOMNode *next = child->getNextSibling();
-			bool doRemove = cleanupPass(child, removals);
-			if (doRemove)
-				node->removeChild(child);
-			child = next;
-		}
-	}
-	return false;
 }
 
 void GeometryConverter::convert(const fs::path &inputFile, 
@@ -191,10 +148,8 @@ void GeometryConverter::convert(const fs::path &inputFile,
 		if (adj == NULL)
 			SLog(EError, "Could not parse adjustments file!");
 
-		std::set<std::string> removals, emptyList;
-		cleanupPass(adj, emptyList);
-		findRemovals(adj, removals);
-		cleanupPass(doc, removals);
+		std::map<std::string, DOMNode *> nodeMap;
+		createNodeMap(doc, nodeMap);
 
 		DOMElement *docRoot = doc->getDocumentElement();
 		DOMElement *adjRoot = adj->getDocumentElement();
@@ -222,9 +177,37 @@ void GeometryConverter::convert(const fs::path &inputFile,
 			SAssertEx(insertBeforeNode != NULL, "Internal error while applying adjustments: cannot find shape/camera node");
 		}
 
-		for (DOMNode *child = adjRoot->getFirstChild(); child != 0; child=child->getNextSibling())
-			if (child->getNodeType() == DOMNode::ELEMENT_NODE)
-				docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
+		for (DOMNode *child = adjRoot->getFirstChild(); child != 0; child=child->getNextSibling()) {
+			if (child->getNodeType() == DOMNode::ELEMENT_NODE) {
+				char *nodeName = XMLString::transcode(child->getNodeName());
+				std::string id;
+				if (child->getNodeType() == DOMNode::ELEMENT_NODE && child->hasAttributes()) {
+					DOMNamedNodeMap *attributes = child->getAttributes();
+					XMLCh *idString = XMLString::transcode("id");
+					DOMAttr *attribute = (DOMAttr *) attributes->getNamedItem(idString);
+					XMLString::release(&idString);
+					if (attribute) {
+						char *value = XMLString::transcode(attribute->getValue());
+						id = value;
+						XMLString::release(&value);
+					}
+				}
+				if (id != "" && nodeMap.find(id) != nodeMap.end()) {
+					DOMNode *node = nodeMap[id], *parent = node->getParentNode();
+					if (strcmp(nodeName, "append") == 0) {
+						DOMNode *node = nodeMap[id];
+						for (DOMNode *child2 = child->getFirstChild(); child2 != 0; child2=child2->getNextSibling()) 
+							node->insertBefore(doc->importNode(child2, true), NULL);
+					} else {
+						parent->removeChild(node);
+						docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
+					}
+				} else {
+					docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
+				}
+				XMLString::release(&nodeName);
+			}
+		}
 
 		DOMLSSerializer *serializer = impl->createLSSerializer();
 		DOMConfiguration *serConf(serializer->getDomConfig());

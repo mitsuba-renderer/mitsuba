@@ -164,16 +164,14 @@ class MtsAdjustments:
 	def exportEmission(self, obj):
 			lamp = obj.data.materials[0].mitsuba_emission
 			name = translate_id(obj.data.name)
-			self.out.write('\t<shape id="%s-mesh_0" type="serialized">\n' % name)
-			self.out.write('\t\t<string name="filename" value="meshes/%s-mesh_0.serialized"/>\n' % name)
-			self.exportWorldtrafo(obj.matrix_world)
+			self.out.write('\t<append id="%s-mesh_0">\n' % name)
 			self.out.write('\t\t<luminaire type="area">\n')
 			mult = lamp.intensity
 			self.out.write('\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
 					% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult))
 			self.out.write('\t\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.samplingWeight)
 			self.out.write('\t\t</luminaire>\n')
-			self.out.write('\t</shape>\n')
+			self.out.write('\t</append>\n')
 
 	def writeHeader(self):
 		self.out = open(self.target_file, 'w')

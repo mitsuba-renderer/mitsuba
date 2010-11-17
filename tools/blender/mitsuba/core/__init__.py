@@ -131,7 +131,6 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 		likely_materials = objects_materials[preview_objects[0]]
 		if len(likely_materials) < 1:
 			return
-		print(materials)
 
 		tempdir = efutil.temp_directory()
 		matpreview_file = os.path.join(tempdir, "matpreview_materials.xml")
