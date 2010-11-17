@@ -25,7 +25,7 @@ class ui_material_composite(mitsuba_material_sub, bpy.types.Panel):
 	bl_label = 'Mitsuba Composite Material'
 
 	MTS_COMPAT = {'composite'}
-	
+
 	display_property_groups = [
 		( ('material', 'mitsuba_material'), 'mitsuba_mat_composite' )
 	]

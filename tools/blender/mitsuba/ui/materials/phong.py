@@ -24,7 +24,7 @@ class ui_material_phong(mitsuba_material_sub, bpy.types.Panel):
 	bl_label = 'Mitsuba Phong Material'
 
 	MTS_COMPAT = {'phong'}
-	
+
 	display_property_groups = [
 		( ('material', 'mitsuba_material'), 'mitsuba_mat_phong' )
 	]
