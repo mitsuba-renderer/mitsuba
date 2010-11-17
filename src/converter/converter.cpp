@@ -198,9 +198,11 @@ void GeometryConverter::convert(const fs::path &inputFile,
 						DOMNode *node = nodeMap[id];
 						for (DOMNode *child2 = child->getFirstChild(); child2 != 0; child2=child2->getNextSibling()) 
 							node->insertBefore(doc->importNode(child2, true), NULL);
-					} else {
+					} else if (parent == insertBeforeNode->getParentNode()) {
 						parent->removeChild(node);
 						docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
+					} else {
+						parent->replaceChild(doc->importNode(child, true), node);
 					}
 				} else {
 					docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);

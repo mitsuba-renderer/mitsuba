@@ -51,7 +51,7 @@ class engine(render_described_context, bpy.types.Panel):
 	Engine settings UI Panel
 	'''
 	
-	bl_label = 'Mitsuba Engine Configuration'
+	bl_label = 'Mitsuba Engine Settings'
 	
 	display_property_groups = [
 		( ('scene',), 'mitsuba_engine' )
@@ -66,4 +66,27 @@ class engine(render_described_context, bpy.types.Panel):
 			context.scene.mitsuba_engine.binary_path = binary_path
 			cached_binary_path = binary_path
 		super().draw(context)
+
+class integrator(render_described_context, bpy.types.Panel):
+	'''
+	Integrator settings UI Panel
+	'''
+	
+	bl_label = 'Mitsuba Integrator Settings'
+	
+	display_property_groups = [
+		( ('scene',), 'mitsuba_integrator' )
+	]
+
+
+class sampler(render_described_context, bpy.types.Panel):
+	'''
+	Sampler settings UI Panel
+	'''
+
+	bl_label = 'Mitsuba Sampler Settings'
+	
+	display_property_groups = [
+		( ('scene',), 'mitsuba_sampler' )
+	]
 

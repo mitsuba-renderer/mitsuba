@@ -29,6 +29,8 @@ from extensions_framework import util as efutil
 # Mitsuba-related classes
 from mitsuba import plugin_path
 from mitsuba.properties.engine import mitsuba_engine
+from mitsuba.properties.sampler import mitsuba_sampler
+from mitsuba.properties.integrator import mitsuba_integrator
 from mitsuba.properties.lamp import mitsuba_lamp
 from mitsuba.properties.texture import mitsuba_texture, \
 	mitsuba_tex_ldrtexture, mitsuba_tex_checkerboard, \
@@ -45,8 +47,7 @@ from mitsuba.export.adjustments import MtsAdjustments
 from mitsuba.export import translate_id 
 from mitsuba.export.film import resolution
 from mitsuba.export import get_instance_materials
-from mitsuba.ui import render_panels
-from mitsuba.ui import lamps
+from mitsuba.ui import render_panels, lamps
 from mitsuba.ui.textures import TEXTURE_PT_context_texture_mts
 from mitsuba.ui.textures import main, ldrtexture, checkerboard, \
 		gridtexture, mapping
@@ -84,6 +85,8 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 
 	property_groups = [
 		('Scene', mitsuba_engine),
+		('Scene', mitsuba_integrator),
+		('Scene', mitsuba_sampler),
 		('Lamp', mitsuba_lamp),
 		('Texture', mitsuba_texture),
 		('mitsuba_texture', mitsuba_tex_ldrtexture),
@@ -214,7 +217,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 				output_dir = scene_path
 			else:
 				output_dir = os.path.dirname(scene_path)		
-			if self.output_dir[-1] != '/':
+			if output_dir[-1] != '/':
 				output_dir += '/'
 			efutil.export_path = output_dir
 			os.chdir(output_dir)

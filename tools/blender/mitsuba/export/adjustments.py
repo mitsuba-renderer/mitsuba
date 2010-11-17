@@ -63,11 +63,11 @@ class MtsAdjustments:
 			size_y = lamp.data.size
 			if lamp.data.shape == 'RECTANGLE':
 				size_y = lamp.data.size_y
-			path = os.path.join(os.path.join(self.target_dir, 'meshes'), "_area_luminaire_%d.obj" % idx)
+			mts_meshes_dir = os.path.join(self.target_dir, 'meshes')
+			filename = "area_luminaire_%d.obj" % idx
 
-			self.out.write('\t\t<string name="filename" value="%s"/>\n' % path)
+			self.out.write('\t\t<string name="filename" value="meshes/%s"/>\n' % filename)
 			self.exportWorldtrafo(lamp.matrix_world)
-
 			self.out.write('\n\t\t<luminaire id="%s-light" type="area">\n' % name)
 			mult = lamp.data.mitsuba_lamp.intensity / (2 * size_x * size_y)
 			self.out.write('\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
@@ -75,6 +75,12 @@ class MtsAdjustments:
 			self.out.write('\t\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
 			self.out.write('\t\t</luminaire>\n')
 			self.out.write('\t</shape>\n')
+			
+			try:
+				os.mkdir(mts_meshes_dir)
+			except OSError:
+				pass
+			path = os.path.join(mts_meshes_dir, filename)
 			objFile = open(path, 'w')
 			objFile.write('v %f %f 0\n' % (-size_x/2, -size_y/2))
 			objFile.write('v %f %f 0\n' % ( size_x/2, -size_y/2))
@@ -115,6 +121,15 @@ class MtsAdjustments:
 				self.exportWorldtrafo(lamp.matrix_world)
 				self.out.write('\t\t<float name="intensityScale" value="%f"/>\n' % lamp.data.mitsuba_lamp.intensity)
 				self.out.write('\t</luminaire>\n')
+
+	def exportIntegrator(self, integrator):
+		self.out.write('\t<integrator id="integrator" type="%s">\n' % integrator.type)
+		self.out.write('\t</integrator>\n')
+
+	def exportSampler(self, sampler):
+		self.out.write('\t<sampler id="sampler" type="%s">\n' % sampler.type)
+		self.out.write('\t\t<integer name="sampleCount" value="%i"/>\n' % sampler.sampleCount)
+		self.out.write('\t</sampler>\n')
 
 	def findTexture(self, name):
 		if name in self.textures:
@@ -203,6 +218,8 @@ class MtsAdjustments:
 	def export(self, scene):
 		idx = 0
 		self.writeHeader()
+		self.exportIntegrator(scene.mitsuba_integrator)
+		self.exportSampler(scene.mitsuba_sampler)
 		for obj in scene.objects:
 			if obj.type == 'LAMP':
 				self.exportLamp(obj, idx)
