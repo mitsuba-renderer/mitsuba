@@ -5,7 +5,10 @@
 
 -->
 <scene>
-	<integrator id="integrator" type="direct"/>
+	<integrator id="integrator" type="path">
+		<integer name="maxDepth" value="$depth"/>
+	</integrator>
+
 	<include filename="$matfile"/>
 
 	<camera id="Camera-camera" type="perspective">
@@ -17,7 +20,7 @@
 		</transform>
 
 		<sampler type="ldsampler">
-			<integer name="sampleCount" value="16"/>
+			<integer name="sampleCount" value="$spp"/>
 		</sampler>
 
 		<film id="film" type="pngfilm">
@@ -30,53 +33,45 @@
 	</camera>
 
 	<luminaire id="Area_002-light" type="envmap">
-		  <string name="filename" value="envmap.exr"/>
-		  <transform name="toWorld">
-			  <matrix value="-0.224951 -0.000001 -0.974370 0.000000 -0.974370 0.000000 0.224951 0.000000 0.000000 1.000000 -0.000001 8.870000 0.000000 0.000000 0.000000 1.000000 "/>
+	<string name="filename" value="envmap.exr"/>
+		<transform name="toWorld">
+			<matrix value="-0.224951 -0.000001 -0.974370 0.000000 -0.974370 0.000000 0.224951 0.000000 0.000000 1.000000 -0.000001 8.870000 0.000000 0.000000 0.000000 1.000000 "/>
 		</transform>
 		<float name="intensityScale" value="1.540006"/>
 	</luminaire>
-		  
+
 	<bsdf id="__diffmat" type="lambertian">
-		  <rgb name="reflectance" value="0.5 0.5 0.5"/>
-	  </bsdf>
+		<rgb name="reflectance" value="0.5 0.5 0.5"/>
+	</bsdf>
 
 	<texture id="__planetex" type="checkerboard">
-		  <rgb name="darkColor" value="0.20000000298 0.20000000298 0.20000000298"/>
-		  <rgb name="brightColor" value="0.40000000596 0.40000000596 0.40000000596"/>
-		  <float name="uscale" value="30.0"/>
-		  <float name="vscale" value="30.0"/>
-		  <float name="uoffset" value="0.0"/>
-		  <float name="voffset" value="0.0"/>
-		  </texture>
-	<bsdf id="__planemat" type="lambertian">
-		  <ref id="__planetex" name="reflectance"/>
-	</bsdf>
-	<shape id="Interior-mesh_0" type="serialized">
-		  <string name="filename" value="matpreview.serialized"/>
-		  <integer name="shapeIndex" value="0"/>
-		  <transform name="toWorld">
-			  <matrix value="1 0 0 0 0 1 0 0 0 0 1 0.0252155 0 0 0 1"/>
-		</transform>
-		  <ref id="__diffmat" name="bsdf"/>
-	</shape>
+		<rgb name="darkColor" value="0.20000000298 0.20000000298 0.20000000298"/>
+		<rgb name="brightColor" value="0.40000000596 0.40000000596 0.40000000596"/>
+		<float name="uscale" value="30.0"/>
+		<float name="vscale" value="30.0"/>
+		<float name="uoffset" value="0.0"/>
+		<float name="voffset" value="0.0"/>
+	</texture>
 
-	<shape id="Exterior-mesh_0" type="serialized">
+	<bsdf id="__planemat" type="lambertian">
+		<ref id="__planetex" name="reflectance"/>
+	</bsdf>
+
+	<shape id="Interior-mesh_0" type="serialized">
 		<string name="filename" value="matpreview.serialized"/>
-		<integer name="shapeIndex" value="1"/>
+		<integer name="shapeIndex" value="0"/>
 		<transform name="toWorld">
-			<matrix value="0.614046 0.614047 0 -1.78814e-07 -0.614047 0.614046 0 2.08616e-07 0 0 0.868393 1.02569 0 0 0 1"/>
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0.0252155 0 0 0 1"/>
 		</transform>
-		<ref id="$matname" name="bsdf"/>
+		<ref id="__diffmat" name="bsdf"/>
 	</shape>
 
 	<shape id="Plane-mesh_0" type="serialized">
-		  <string name="filename" value="matpreview.serialized"/>
-		  <integer name="shapeIndex" value="2"/>
-		  <transform name="toWorld">
-			  <matrix value="20 0 0 -10 0 20 0 10 0 0 20 0 0 0 0 1"/>
-		</transform>
-		  <ref id="__planemat" name="bsdf"/>
+		<string name="filename" value="matpreview.serialized"/>
+			<integer name="shapeIndex" value="2"/>
+			<transform name="toWorld">
+				<matrix value="20 0 0 -10 0 20 0 10 0 0 20 0 0 0 0 1"/>
+			</transform>
+		<ref id="__planemat" name="bsdf"/>
 	</shape>
-
 </scene>

@@ -129,7 +129,7 @@ class MtsAdjustments:
 		else:
 			raise Exception('Failed to find material "%s"' % name)
 
-	def export_texture(self, mat):
+	def exportTexture(self, mat):
 		if mat.name in self.exported_textures:
 			return
 		self.exported_textures += [mat.name]
@@ -137,7 +137,7 @@ class MtsAdjustments:
 
 		for p in params:
 			if p.type == 'reference_texture':
-				self.export_texture(self.findTexture(p.value))
+				self.exportTexture(self.findTexture(p.value))
 
 		self.out.write('\t<texture id="%s" type="%s">\n' % (translate_id(mat.name), mat.mitsuba_texture.type))
 		self.out.write(params.to_string())
@@ -154,7 +154,7 @@ class MtsAdjustments:
 			if p.type == 'reference_material':
 				self.exportMaterial(self.findMaterial(p.value))
 			elif p.type == 'reference_texture':
-				self.export_texture(self.findTexture(p.value))
+				self.exportTexture(self.findTexture(p.value))
 
 		self.out.write('\t<bsdf id="%s" type="%s">\n' % (translate_id(mat.name), mat.mitsuba_material.type))
 		self.out.write(params.to_string())
@@ -180,6 +180,25 @@ class MtsAdjustments:
 	def writeFooter(self):
 		self.out.write('</scene>\n');
 		self.out.close()
+
+	def exportPreviewMesh(self, material):
+		self.out.write('\t\t<shape id="Exterior-mesh_0" type="serialized">\n')
+		self.out.write('\t\t\t<string name="filename" value="matpreview.serialized"/>\n')
+		self.out.write('\t\t\t<integer name="shapeIndex" value="1"/>\n')
+		self.out.write('\t\t\t<transform name="toWorld">\n')
+		self.out.write('\t\t\t\t<matrix value="0.614046 0.614047 0 -1.78814e-07 -0.614047 0.614046 0 2.08616e-07 0 0 0.868393 1.02569 0 0 0 1"/>\n')
+		self.out.write('\t\t\t</transform>\n')
+		self.out.write('\t\t\t<ref id="%s" name="bsdf"/>\n' % translate_id(material.name))
+		lamp = material.mitsuba_emission
+		if lamp and lamp.use_emission:
+			mult = lamp.intensity
+			self.out.write('\t\t\t<luminaire type="area">\n')
+			self.out.write('\t\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
+					% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult))
+			self.out.write('\t\t\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.samplingWeight)
+			self.out.write('\t\t\t</luminaire>\n')
+		self.out.write('\t\t</shape>\n')
+		self.out.write('\n')
 
 	def export(self, scene):
 		idx = 0

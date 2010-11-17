@@ -167,12 +167,9 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 			adj = MtsAdjustments(mts_adj_file, self.properties.directory)
 			adj.export(scene)
 
-			if scene.mitsuba_engine.binary_path == "":
+			if scene.mitsuba_engine.binary_path == '':
 				self.report({'ERROR'}, 'Mitsuba binary path must be specified!')
 				return {'CANCELLED'}
-
-			scene.mitsuba_engine.binary_path = efutil.filesystem_path(scene.mitsuba_engine.binary_path)
-			efutil.write_config_value('mitsuba', 'defaults', 'binary_path', scene.mitsuba_engine.binary_path)
 
 			(mts_path, tail) = os.path.split(bpy.path.abspath(scene.mitsuba_engine.binary_path))
 			mtsimport_binary = os.path.join(mts_path, "mtsimport")

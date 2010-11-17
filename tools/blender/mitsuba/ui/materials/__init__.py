@@ -16,32 +16,39 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
+import bpy, copy
 from properties_material import MaterialButtonsPanel
 
 from extensions_framework.ui import property_group_renderer
 from mitsuba.outputs import MtsLog
+from extensions_framework import util as efutil
 
 material_cache = {}
+cached_spp = None
+cached_depth = None
 
 class mitsuba_material_base(MaterialButtonsPanel, property_group_renderer):
 	COMPAT_ENGINES	= {'mitsuba'}
-	MTS_PROPS       = ['type']
+	MTS_PROPS	   = ['type']
 
 	def draw(self, context):
-		mat = context.material.mitsuba_material
+		if not hasattr(context, 'material'):
+			return
+		global material_cache
+		mat = context.material
 		if mat.name in material_cache:
 			mat_cached = material_cache[mat.name]
 		else:
 			mat_cached = {}
 			material_cache[mat.name] = mat_cached
 
+		mat = self.get_contents(mat)
 		repaint = False
 		for prop in self.MTS_PROPS:
 			prop_value = getattr(mat, prop)
 			prop_cache_value = mat_cached[prop] if prop in mat_cached else None
 			if prop_cache_value != prop_value:
-				mat_cached[prop] = prop_value
+				mat_cached[prop] = copy.copy(prop_value)
 				repaint = True
 		if repaint:
 			# Cause a repaint
@@ -49,31 +56,38 @@ class mitsuba_material_base(MaterialButtonsPanel, property_group_renderer):
 			context.material.preview_render_type = context.material.preview_render_type 
 		return super().draw(context)
 
+	def get_contents(self, mat):
+		return mat.mitsuba_material
+
 class mitsuba_material_sub(MaterialButtonsPanel, property_group_renderer):
 	COMPAT_ENGINES	= {'mitsuba'}
 	MTS_COMPAT		= set()
-	MTS_PROPS       = []
+	MTS_PROPS	   = []
 
 	@classmethod
 	def poll(cls, context):
 		'''
 		Only show Mitsuba panel if mitsuba_material.material in MTS_COMPAT
 		'''
+		if not hasattr(context, 'material'):
+			return False
 
-		return super().poll(context) and context and context.material \
-			and context.material.mitsuba_material \
-			and context.material.mitsuba_material.type in cls.MTS_COMPAT
+		return super().poll(context) and context.material.mitsuba_material.type in cls.MTS_COMPAT
 
 	def draw(self, context):
-		mat = context.material.mitsuba_material
-		sub_type = getattr(bpy.types, 'mitsuba_mat_%s' % mat.type)
-		mat = getattr(mat, 'mitsuba_mat_%s' % mat.type)
+		if not hasattr(context, 'material'):
+			return
+		mat = context.material
+		sub_type = getattr(bpy.types, 'mitsuba_mat_%s' % mat.mitsuba_material.type)
+		global material_cache
 		if mat.name in material_cache:
 			mat_cached = material_cache[mat.name]
 		else:
 			mat_cached = {}
 			material_cache[mat.name] = mat_cached
-			
+	
+		mat = getattr(mat.mitsuba_material, 'mitsuba_mat_%s' %
+				mat.mitsuba_material.type)
 		props = sub_type.get_exportable_properties()
 
 		repaint = False
@@ -82,13 +96,39 @@ class mitsuba_material_sub(MaterialButtonsPanel, property_group_renderer):
 			prop_value = getattr(mat, prop) if hasattr(mat, prop) else None
 			prop_cache_value = mat_cached[prop] if prop in mat_cached else None
 			if prop_cache_value != prop_value:
-				mat_cached[prop] = prop_value
+				mat_cached[prop] = copy.copy(prop_value)
 				repaint = True
 		if repaint:
 			# Cause a repaint
 			MtsLog("Forcing a repaint")
 			context.material.preview_render_type = context.material.preview_render_type 
 		return super().draw(context)
+
+class MATERIAL_PT_preview_mts(MaterialButtonsPanel, bpy.types.Panel):
+	bl_label = "Preview"
+	COMPAT_ENGINES = {'mitsuba'}
+
+	def draw(self, context):
+		if not hasattr(context, 'material'):
+			return
+		self.layout.template_preview(context.material)
+		engine = context.scene.mitsuba_engine
+		row = self.layout.row(True)
+		row.prop(engine, "preview_depth")
+		row.prop(engine, "preview_spp")
+
+		global cached_depth
+		global cached_spp
+		if engine.preview_depth != cached_depth or engine.preview_spp != cached_spp:
+			actualChange = cached_depth != None
+			cached_depth = engine.preview_depth
+			cached_spp = engine.preview_spp
+			if actualChange:
+				MtsLog("Forcing a repaint")
+				context.material.preview_render_type = context.material.preview_render_type 
+				efutil.write_config_value('mitsuba', 'defaults', 'preview_spp', str(cached_spp))
+				efutil.write_config_value('mitsuba', 'defaults', 'preview_depth', str(cached_depth))
+
 
 class MATERIAL_PT_context_material_mts(MaterialButtonsPanel, bpy.types.Panel):
 	bl_label = ""

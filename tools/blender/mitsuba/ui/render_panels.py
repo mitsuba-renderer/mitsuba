@@ -20,6 +20,9 @@ import bpy
 from properties_render import RenderButtonsPanel
 
 from extensions_framework.ui import property_group_renderer
+from extensions_framework import util as efutil
+
+cached_binary_path = None
 
 class render_described_context(RenderButtonsPanel, property_group_renderer):
 	'''
@@ -27,7 +30,6 @@ class render_described_context(RenderButtonsPanel, property_group_renderer):
 	'''
 	
 	COMPAT_ENGINES = {'mitsuba'}
-
 
 class setup_preset(render_described_context, bpy.types.Panel):
 	'''
@@ -41,7 +43,7 @@ class setup_preset(render_described_context, bpy.types.Panel):
 		row.menu("MITSUBA_MT_presets_engine", text=bpy.types.MITSUBA_MT_presets_engine.bl_label)
 		row.operator("mitsuba.preset_engine_add", text="", icon="ZOOMIN")
 		row.operator("mitsuba.preset_engine_add", text="", icon="ZOOMOUT").remove_active = True
-		
+
 		super().draw(context)
 
 class engine(render_described_context, bpy.types.Panel):
@@ -54,4 +56,14 @@ class engine(render_described_context, bpy.types.Panel):
 	display_property_groups = [
 		( ('scene',), 'mitsuba_engine' )
 	]
+			
+	def draw(self, context):
+		global cached_binary_path
+		binary_path = context.scene.mitsuba_engine.binary_path
+		if binary_path != "" and cached_binary_path != binary_path:
+			binary_path = efutil.filesystem_path(binary_path)
+			efutil.write_config_value('mitsuba', 'defaults', 'binary_path', binary_path)
+			context.scene.mitsuba_engine.binary_path = binary_path
+			cached_binary_path = binary_path
+		super().draw(context)
 

@@ -74,10 +74,6 @@ properties_render.RENDER_PT_dimensions.COMPAT_ENGINES.add('mitsuba')
 properties_render.RENDER_PT_output.COMPAT_ENGINES.add('mitsuba')
 del properties_render
 
-import properties_material
-properties_material.MATERIAL_PT_preview.COMPAT_ENGINES.add('mitsuba')
-del properties_material
-
 compatible("properties_data_mesh")
 compatible("properties_data_camera")
 
@@ -117,6 +113,9 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 	def render_preview(self, scene):
 		# Iterate through the preview scene, finding objects with materials attached
 		objects_materials = {}
+						
+		if resolution(scene) == (96, 96):
+			return
 
 		for object in [ob for ob in scene.objects if ob.is_visible(scene) and not ob.hide_render]:
 			for mat in get_instance_materials(object):
@@ -144,6 +143,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 			bpy.data.materials, bpy.data.textures)
 		adj.writeHeader()
 		adj.exportMaterial(pm)
+		adj.exportPreviewMesh(pm)
 		adj.writeFooter()
 		(mts_path, tail) = os.path.split(bpy.path.abspath(scene.mitsuba_engine.binary_path))
 		mitsuba_binary = os.path.join(mts_path, "mitsuba")
@@ -154,13 +154,16 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 		env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath
 		(width, height) = resolution(scene)
 		refresh_interval = 1
+		preview_spp = int(efutil.find_config_value('mitsuba', 'defaults', 'preview_spp', '16'))
+		preview_depth = int(efutil.find_config_value('mitsuba', 'defaults', 'preview_depth', '2'))
 		mitsuba_process = subprocess.Popen(
-			[mitsuba_binary, '-r%i' % refresh_interval,
+			[mitsuba_binary, '-q', 
+				'-r%i' % refresh_interval,
 				'-o', output_file, '-Dmatfile=%s' % matfile,
-				'-Dmatname=%s' % translate_id(pm.name), 
 				'-Dwidth=%i' % width, 
 				'-Dheight=%i' % height, 
-				'-q', 
+				'-Dspp=%i' % preview_spp,
+				'-Ddepth=%i' % preview_depth,
 				'-o', output_file, scene_file],
 			env = env,
 			cwd = tempdir
@@ -172,10 +175,11 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 		})
 		framebuffer_thread.set_kick_period(refresh_interval)
 		framebuffer_thread.start()
+		render_update_timer = None
 		while mitsuba_process.poll() == None and not self.test_break():
-			self.render_update_timer = threading.Timer(1, self.process_wait_timer)
-			self.render_update_timer.start()
-			if self.render_update_timer.isAlive(): self.render_update_timer.join()
+			render_update_timer = threading.Timer(1, self.process_wait_timer)
+			render_update_timer.start()
+			if render_update_timer.isAlive(): render_update_timer.join()
 
 		# If we exit the wait loop (user cancelled) and mitsuba is still running, then send SIGINT
 		if mitsuba_process.poll() == None:
@@ -196,31 +200,33 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 		if scene is None:
 			bpy.ops.ef.msg(msg_type='ERROR', msg_text='Scene to render is not valid')
 			return
+		if scene.mitsuba_engine.binary_path == '':
+			bpy.ops.ef.msg(msg_type='ERROR', msg_text='The Mitsuba binary path is unspecified!')
+			return
 
 		with self.render_lock:	# just render one thing at a time
-			scene_path = efutil.filesystem_path(scene.render.filepath)
-			if os.path.isdir(scene_path):
-				self.output_dir = scene_path
-			else:
-				self.output_dir = os.path.dirname(scene_path)		
-			if self.output_dir[-1] != '/':
-				self.output_dir += '/'
-
 			if scene.name == 'preview':
 				self.render_preview(scene)
 				return
-			
-			efutil.export_path = self.output_dir
-			os.chdir(self.output_dir)
+
+			scene_path = efutil.filesystem_path(scene.render.filepath)
+			if os.path.isdir(scene_path):
+				output_dir = scene_path
+			else:
+				output_dir = os.path.dirname(scene_path)		
+			if self.output_dir[-1] != '/':
+				output_dir += '/'
+			efutil.export_path = output_dir
+			os.chdir(output_dir)
 
 			if scene.render.use_color_management == False:
 				MtsLog('WARNING: Colour Management is switched off, render results may look too dark.')
 
-			MtsLog('MtsBlend: Current directory = "%s"' % self.output_dir)
+			MtsLog('MtsBlend: Current directory = "%s"' % output_dir)
 			output_basename = efutil.scene_filename() + '.%s.%05i' % (scene.name, scene.frame_current)
 
 			export_result = bpy.ops.export.mitsuba(
-				directory = self.output_dir,
+				directory = output_dir,
 				filename = output_basename,
 				scene = scene.name
 			)
@@ -243,7 +249,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 					subprocess.Popen(
 						[mtsgui_binary, efutil.export_path],
 						env = env,
-						cwd = self.output_dir
+						cwd = output_dir
 					)
 				elif scene.mitsuba_engine.render_mode == 'cli':
 					output_file = efutil.export_path[:-4] + ".png"
@@ -252,7 +258,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 						[mitsuba_binary, '-r',  '%d' % scene.mitsuba_engine.refresh_interval,
 							'-o', output_file, efutil.export_path],
 						env = env,
-						cwd = self.output_dir
+						cwd = output_dir
 					)
 					framebuffer_thread = MtsFilmDisplay({
 						'resolution': resolution(scene),
@@ -261,10 +267,11 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 					})
 					framebuffer_thread.set_kick_period(scene.mitsuba_engine.refresh_interval) 
 					framebuffer_thread.start()
+					render_update_timer = None
 					while mitsuba_process.poll() == None and not self.test_break():
-						self.render_update_timer = threading.Timer(1, self.process_wait_timer)
-						self.render_update_timer.start()
-						if self.render_update_timer.isAlive(): self.render_update_timer.join()
+						render_update_timer = threading.Timer(1, self.process_wait_timer)
+						render_update_timer.start()
+						if render_update_timer.isAlive(): render_update_timer.join()
 
 					# If we exit the wait loop (user cancelled) and mitsuba is still running, then send SIGINT
 					if mitsuba_process.poll() == None:

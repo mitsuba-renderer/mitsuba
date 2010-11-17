@@ -28,13 +28,16 @@ class emission(mitsuba_material_base, bpy.types.Panel):
 	
 	bl_label = 'Mitsuba Material Emission'
 	bl_options = {'DEFAULT_CLOSED'}
+	MTS_PROPS = ['color', 'intensity', 'samplingWeight', 'use_emission']
 
 	display_property_groups = [
 		( ('material',), 'mitsuba_emission' )
 	]
 
-	
+	def get_contents(self, mat):
+		return mat.mitsuba_emission
+
 	def draw_header(self, context):
-		if context.material:
+		if hasattr(context, "material"):
 			mat = active_node_mat(context.material)
 			self.layout.prop(mat.mitsuba_emission, "use_emission", text="")
