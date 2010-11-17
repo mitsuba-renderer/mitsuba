@@ -24,8 +24,14 @@ MTS_NAMESPACE_BEGIN
 Camera::Camera(const Properties &props)
  : ConfigurableObject(props), m_properties(props) {
 	m_cameraToWorld = props.getTransform("toWorld", Transform());
+	m_shutterOpen = props.getFloat("shutterOpen", 0.0f);
+	m_shutterClose = props.getFloat("shutterClose", 5.0f);
+	if (m_shutterOpen > m_shutterClose)
+		Log(EError, "Shutter opening time must be less than "
+			"or equal to the shutter closing time!");
 	m_worldToCamera = m_cameraToWorld.inverse();
 	m_position = m_cameraToWorld(Point(0,0,0));
+	m_shutterOpenTime = m_shutterClose - m_shutterOpen;
 }
 
 Camera::Camera(Stream *stream, InstanceManager *manager)
@@ -34,7 +40,10 @@ Camera::Camera(Stream *stream, InstanceManager *manager)
 	m_sampler = static_cast<Sampler *>(manager->getInstance(stream));
 	m_worldToCamera = Transform(stream);
 	m_cameraToWorld = Transform(stream);
+	m_shutterOpen = stream->readFloat();
+	m_shutterClose = stream->readFloat();
 	m_position = m_cameraToWorld(Point(0,0,0));
+	m_shutterOpenTime = m_shutterClose - m_shutterOpen;
 }
 
 Camera::~Camera() {
@@ -60,16 +69,18 @@ void Camera::serialize(Stream *stream, InstanceManager *manager) const {
 	manager->serialize(stream, m_sampler.get());
 	m_worldToCamera.serialize(stream);
 	m_cameraToWorld.serialize(stream);
+	stream->writeFloat(m_shutterOpen);
+	stream->writeFloat(m_shutterClose);
 }
 
 void Camera::generateRayDifferential(const Point2 &sample,
-	const Point2 &lensSample, RayDifferential &ray) const {
+	const Point2 &lensSample, Float timeSample, RayDifferential &ray) const {
 
-	generateRay(sample, lensSample, ray);
+	generateRay(sample, lensSample, timeSample, ray);
 	Point2 temp = sample; temp.x += 1; 
-	generateRay(temp, lensSample, ray.rx);
+	generateRay(temp, lensSample, timeSample, ray.rx);
 	temp = sample; temp.y += 1;
-	generateRay(temp, lensSample, ray.ry);
+	generateRay(temp, lensSample, timeSample, ray.ry);
 	ray.hasDifferentials = true;
 }
 

@@ -277,7 +277,7 @@ public:
 					RadianceQueryRecord::ERadianceNoEmission | RadianceQueryRecord::EDistance);
 				rRec2.extra = 1;
 				rRec2.sampler = sampler;
-				entry.L = m_subIntegrator->Li(RayDifferential(rRec.its.p, entry.d), rRec2);
+				entry.L = m_subIntegrator->Li(RayDifferential(rRec.its.p, entry.d, ray.time), rRec2);
 				entry.dist = rRec2.dist;
 				sampler->advance();
 			}
@@ -288,7 +288,7 @@ public:
 		E = hs->getIrradiance();
 	}
 
-	Spectrum E(const Scene *scene, const Point &p, const Normal &n, Sampler *sampler) const {
+	Spectrum E(const Scene *scene, const Point &p, const Normal &n, Float time, Sampler *sampler) const {
 		Spectrum EDir(0.0f), EIndir(0.0f);
 		RadianceQueryRecord rRec(scene, sampler);
 		LuminaireSamplingRecord lRec;
@@ -297,7 +297,7 @@ public:
 		for (unsigned int i=0; i<m_irrSamples; i++) {
 			rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission);
 
-			if (scene->sampleLuminaireAttenuated(p, lRec, rRec.nextSample2D())) {
+			if (scene->sampleLuminaireAttenuated(p, lRec, time, rRec.nextSample2D())) {
 				Float dp = dot(lRec.d, n);
 				if (dp < 0) 
 					EDir -= lRec.Le * dp;

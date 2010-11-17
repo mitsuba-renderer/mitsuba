@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<!--
+
+	Automatically converted from COLLADA
+
+-->
+<scene>
+	<integrator id="integrator" type="path">
+		<integer name="maxDepth" value="$depth"/>
+	</integrator>
+
+	<include filename="$matfile"/>
+
+	<camera id="Camera-camera" type="perspective">
+		<float name="fov" value="28.8415"/>
+		<boolean name="mapSmallerSide" value="true"/>
+
+		<transform name="toWorld">
+			<matrix value="0.68588 -0.31737 -0.654862 3.69558 0.727634 0.312469 0.610666 -3.46243 -0.0108168 0.895343 -0.445245 3.25463 0 0 0 1"/>
+		</transform>
+
+		<sampler type="ldsampler">
+			<integer name="sampleCount" value="$spp"/>
+		</sampler>
+
+		<film id="film" type="pngfilm">
+			<integer name="width" value="$width"/>
+			<integer name="height" value="$height"/>
+			<boolean name="alpha" value="false"/>
+			<boolean name="banner" value="false"/>
+			<rfilter type="gaussian"/>
+		</film>
+	</camera>
+
+	<luminaire id="Area_002-light" type="envmap">
+	<string name="filename" value="envmap.exr"/>
+		<transform name="toWorld">
+			<matrix value="-0.224951 -0.000001 -0.974370 0.000000 -0.974370 0.000000 0.224951 0.000000 0.000000 1.000000 -0.000001 8.870000 0.000000 0.000000 0.000000 1.000000 "/>
+		</transform>
+		<float name="intensityScale" value="1.540006"/>
+	</luminaire>
+
+	<bsdf id="__diffmat" type="lambertian">
+		<rgb name="reflectance" value="0.5 0.5 0.5"/>
+	</bsdf>
+
+	<texture id="__planetex" type="checkerboard">
+		<rgb name="darkColor" value="0.20000000298 0.20000000298 0.20000000298"/>
+		<rgb name="brightColor" value="0.40000000596 0.40000000596 0.40000000596"/>
+		<float name="uscale" value="30.0"/>
+		<float name="vscale" value="30.0"/>
+		<float name="uoffset" value="0.0"/>
+		<float name="voffset" value="0.0"/>
+	</texture>
+
+	<bsdf id="__planemat" type="lambertian">
+		<ref id="__planetex" name="reflectance"/>
+	</bsdf>
+
+	<shape id="Interior-mesh_0" type="serialized">
+		<string name="filename" value="matpreview.serialized"/>
+		<integer name="shapeIndex" value="0"/>
+		<transform name="toWorld">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0.0252155 0 0 0 1"/>
+		</transform>
+		<ref id="__diffmat" name="bsdf"/>
+	</shape>
+
+	<shape id="Plane-mesh_0" type="serialized">
+		<string name="filename" value="matpreview.serialized"/>
+			<integer name="shapeIndex" value="2"/>
+			<transform name="toWorld">
+				<matrix value="20 0 0 -10 0 20 0 10 0 0 20 0 0 0 0 1"/>
+			</transform>
+		<ref id="__planemat" name="bsdf"/>
+	</shape>
+</scene>

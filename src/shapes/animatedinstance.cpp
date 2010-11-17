@@ -23,8 +23,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-#define TIME 0
-
 class AnimatedInstance : public Shape {
 public:
 	AnimatedInstance(const Properties &props) : Shape(props) {
@@ -96,7 +94,7 @@ public:
 		const KDTree *kdtree = m_shapeGroup->getKDTree();
 		Ray ray;
 		Transform objectToWorld, worldToObject;
-		m_transform->eval(TIME, objectToWorld);
+		m_transform->eval(_ray.time, objectToWorld);
 		worldToObject = objectToWorld.inverse();
 		worldToObject(_ray, ray);
 		return kdtree->rayIntersect(ray, mint, maxt, t, temp);
@@ -106,7 +104,7 @@ public:
 		const KDTree *kdtree = m_shapeGroup->getKDTree();
 		Ray ray;
 		Transform objectToWorld, worldToObject;
-		m_transform->eval(TIME, objectToWorld);
+		m_transform->eval(_ray.time, objectToWorld);
 		worldToObject = objectToWorld.inverse();
 		worldToObject(_ray, ray);
 		return kdtree->rayIntersect(ray, mint, maxt);
@@ -116,7 +114,7 @@ public:
 		const void *temp, Intersection &its) const {
 		const KDTree *kdtree = m_shapeGroup->getKDTree();
 		Transform objectToWorld;
-		m_transform->eval(TIME, objectToWorld);
+		m_transform->eval(ray.time, objectToWorld);
 		kdtree->fillIntersectionRecord<false>(ray, temp, its);
 		its.shFrame.n = normalize(objectToWorld(its.shFrame.n));
 		its.shFrame.s = normalize(objectToWorld(its.shFrame.s));

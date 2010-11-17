@@ -64,7 +64,7 @@ inline bool RadianceQueryRecord::rayIntersect(const RayDifferential &ray) {
 	/* Only search for an intersection if this was explicitly requested */
 	if (type & EIntersection) {
 		scene->rayIntersect(ray, its);
-		attenuation = scene->getAttenuation(Ray(ray.o, ray.d, 0, its.t));
+		attenuation = scene->getAttenuation(Ray(ray.o, ray.d, 0, its.t, ray.time));
 		if (type & EOpacity) 
 			alpha = its.isValid() ? 1 : (1 - attenuation.average());
 		if (type & EDistance)

@@ -844,7 +844,7 @@ Float SparseWaveletOctree::lineIntegral(Point start, Point end) const {
 	start /= (Float) m_size;
 	end /= (Float) m_size;
 
-	Ray ray(start, normalize(end-start));
+	Ray ray(start, normalize(end-start), 0.0f);
 	
 	uint8_t a = 0;
 	if (ray.d.x < 0) {

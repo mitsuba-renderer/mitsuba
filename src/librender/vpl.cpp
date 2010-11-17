@@ -55,7 +55,7 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 		weight *= scene->sampleEmissionDirection(eRec, dirSample);
 		Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface) ? absDot(eRec.sRec.n, eRec.d) : 1;
 		weight *= cosTheta / eRec.pdfDir;
-		ray = Ray(eRec.sRec.p, eRec.d);
+		ray = Ray(eRec.sRec.p, eRec.d, 0.0f);
 
 		depth = 2;
 		while (!weight.isBlack() && depth < maxDepth) {
@@ -85,7 +85,7 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 			weight *= bsdfVal;
 		
 			Vector wi = -ray.d, wo = its.toWorld(bRec.wo);
-			ray = Ray(its.p, wo);
+			ray = Ray(its.p, wo, 0.0f);
 
 			/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
 			Float wiDotGeoN = dot(its.geoFrame.n, wi),

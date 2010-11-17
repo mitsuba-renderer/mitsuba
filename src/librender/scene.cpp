@@ -383,7 +383,7 @@ Float Scene::pdfLuminaire(const Intersection &its,
 }
 
 bool Scene::sampleLuminaire(const Point &p,
-		LuminaireSamplingRecord &lRec, const Point2 &s,
+		LuminaireSamplingRecord &lRec, Float time, const Point2 &s,
 		bool testVisibility) const {
 	Point2 sample(s);
 	Float lumPdf;
@@ -392,7 +392,7 @@ bool Scene::sampleLuminaire(const Point &p,
 	luminaire->sample(p, lRec, sample);
 
 	if (lRec.pdf != 0) {
-		if (testVisibility && isOccluded(p, lRec.sRec.p)) 
+		if (testVisibility && isOccluded(p, lRec.sRec.p, time)) 
 			return false;
 		lRec.pdf *= lumPdf;
 		lRec.Le /= lRec.pdf;
@@ -413,7 +413,7 @@ bool Scene::sampleLuminaire(const Intersection &its,
 	luminaire->sample(its, lRec, sample);
 
 	if (lRec.pdf != 0) {
-		if (testVisibility && isOccluded(its.p, lRec.sRec.p)) 
+		if (testVisibility && isOccluded(its.p, lRec.sRec.p, its.time)) 
 			return false;
 		lRec.pdf *= lumPdf;
 		lRec.Le /= lRec.pdf;

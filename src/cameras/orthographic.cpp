@@ -104,13 +104,14 @@ public:
 	}
 
 	void generateRay(const Point2 &dirSample, const Point2 &lensSample, 
-		Ray &ray) const {
+		Float timeSample, Ray &ray) const {
 		Point rasterCoords(dirSample.x, dirSample.y, 0);
 		Point imageCoords;
 		m_rasterToCamera(rasterCoords, imageCoords);
 
 		/* Construct ray in camera space */
-		Ray localRay(imageCoords, Vector(0, 0, 1));
+		Ray localRay(imageCoords, Vector(0, 0, 1),
+			m_shutterOpen + m_shutterOpenTime * timeSample);
 		localRay.mint = 0;
 		localRay.maxt = m_farClip - m_nearClip;
 
@@ -154,6 +155,8 @@ public:
 			<< "  aspect = " << m_aspect << "," << std::endl
 			<< "  nearClip = " << m_nearClip << "," << std::endl
 			<< "  farClip = " << m_farClip << "," << std::endl
+			<< "  shutterOpen = " << m_shutterOpen << "," << std::endl
+			<< "  shutterClose = " << m_shutterClose << "," << std::endl
 			<< "  areaDensity = " << m_areaDensity << "," << std::endl
 			<< "  cameraToWorld = " << indent(m_cameraToWorld.toString()) << "," << std::endl
 			<< "  cameraToScreen = " << indent(m_cameraToScreen.toString()) << "," << std::endl

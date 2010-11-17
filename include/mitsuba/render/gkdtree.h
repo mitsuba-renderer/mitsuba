@@ -3163,7 +3163,7 @@ template <typename AABBType, typename Derived>
 			sample2(random->nextFloat(), random->nextFloat());
 		Point p1 = bsphere.center + squareToSphere(sample1) * bsphere.radius;
 		Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
-		Ray ray(p1, normalize(p2-p1));
+		Ray ray(p1, normalize(p2-p1), 0.0f);
 		Float mint, maxt, t;
 		if (this->m_aabb.rayIntersect(ray, mint, maxt)) {
 			if (ray.mint > mint) mint = ray.mint;

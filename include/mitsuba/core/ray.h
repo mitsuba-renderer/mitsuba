@@ -31,24 +31,27 @@ struct Ray {
 	Vector d;    ///< Ray direction
 	Float maxt;  ///< Maximum range for intersection tests
 	Vector dRcp; ///< Componentwise reciprocals of the ray direction
+	Float time;  ///< Time value associated with this ray
 
 	/// Construct a new ray
-	inline Ray() : mint(Epsilon), maxt(std::numeric_limits<Float>::infinity()) {
+	inline Ray() : mint(Epsilon), 
+		maxt(std::numeric_limits<Float>::infinity()), time(0.0f) {
 	}
 
 	/// Copy constructor (1)
 	inline Ray(const Ray &ray) 
-	 : o(ray.o), mint(ray.mint), d(ray.d), maxt(ray.maxt), dRcp(ray.dRcp) {
+	 : o(ray.o), mint(ray.mint), d(ray.d), maxt(ray.maxt), 
+	   dRcp(ray.dRcp), time(ray.time) {
 	}
 
 	/// Copy constructor (2)
 	inline Ray(const Ray &ray, Float mint, Float maxt) 
-	 : o(ray.o), mint(mint), d(ray.d), maxt(maxt), dRcp(ray.dRcp) {
+	 : o(ray.o), mint(mint), d(ray.d), maxt(maxt), dRcp(ray.dRcp), time(ray.time) {
 	}
-	
+
 	/// Construct a new ray
-	inline Ray(Point o, Vector _d)
-		: o(o), mint(Epsilon),  d(_d), maxt(std::numeric_limits<Float>::infinity()) {
+	inline Ray(Point o, Vector _d, Float time)
+		: o(o), mint(Epsilon),  d(_d), maxt(std::numeric_limits<Float>::infinity()), time(time) {
 #ifdef MTS_DEBUG_FP
 		disable_fpexcept();
 #endif
@@ -61,8 +64,8 @@ struct Ray {
 	}
 
 	/// Construct a new ray
-	inline Ray(Point o, Vector _d, Float mint, Float maxt)
-		: o(o), mint(mint),  d(_d), maxt(maxt) {
+	inline Ray(Point o, Vector _d, Float mint, Float maxt, Float time)
+		: o(o), mint(mint),  d(_d), maxt(maxt), time(time) {
 #ifdef MTS_DEBUG_FP
 		disable_fpexcept();
 #endif
@@ -76,6 +79,9 @@ struct Ray {
 
 	/// Set the origin
 	inline void setOrigin(const Point &oVal) { o = oVal; }
+
+	/// Set the origin
+	inline void setTime(const Float &tval) { time = tval; }
 	
 	/// Set the direction and update the reciprocal
 	inline void setDirection(const Vector &dVal) {
@@ -97,7 +103,8 @@ struct Ray {
 	/// Return a string representation of this ray
 	inline std::string toString() const {
 		std::ostringstream oss;
-		oss << "Ray[orig=" << o.toString() << ", dest=" << d.toString() << "]";
+		oss << "Ray[orig=" << o.toString() << ", dest=" 
+			<< d.toString() << ", time=" << time << "]";
 		return oss.str();
 	}
 };
@@ -112,8 +119,8 @@ struct RayDifferential : public Ray {
 		: hasDifferentials(false) {
 	}
 
-	inline RayDifferential(const Point &p, const Vector &d) 
-		: Ray(p, d), hasDifferentials(false) {
+	inline RayDifferential(const Point &p, const Vector &d, Float time) 
+		: Ray(p, d, time), hasDifferentials(false) {
 	}
 
 	inline explicit RayDifferential(const Ray &ray) 

@@ -86,6 +86,7 @@ std::string Intersection::toString() const {
 		<< "  uv = " << uv.toString() << "," << std::endl
 		<< "  dpdu = " << dpdu.toString() << "," << std::endl
 		<< "  dpdv = " << dpdv.toString() << "," << std::endl
+		<< "  time = " << time << "," << std::endl
 		<< "  shape = " << indent(((Object *)shape)->toString()) << std::endl
 		<< "]";
 	return oss.str();

@@ -1177,7 +1177,7 @@ void loadCamera(ColladaContext &ctx, Transform transform, domCamera &camera) {
 	ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
 	ctx.os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
 	ctx.os << "\t\t</transform>" << endl << endl;
-	ctx.os << "\t\t<sampler type=\"ldsampler\">" << endl;
+	ctx.os << "\t\t<sampler id=\"sampler\" type=\"ldsampler\">" << endl;
 	ctx.os << "\t\t\t<integer name=\"sampleCount\" value=\"" << ctx.cvt->m_samplesPerPixel << "\"/>" << endl;
 	ctx.os << "\t\t</sampler>" << endl << endl;
 	ctx.os << "\t\t<film id=\"film\" type=\"" << ctx.cvt->m_filmType << "\">" << endl;

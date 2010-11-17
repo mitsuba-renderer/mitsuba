@@ -16,6 +16,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import os
+
 bl_addon_info = {
 	"name": "Mitsuba",
 	"author": "Wenzel Jakob",
@@ -30,6 +32,8 @@ bl_addon_info = {
 	"tracker_url": "https://www.mitsuba-renderer.org/bugtracker/projects/mitsuba",
 	"category": "Render"}
 
+def plugin_path():
+	return os.path.dirname(os.path.realpath(__file__))
 
 from .core import RENDERENGINE_mitsuba
 

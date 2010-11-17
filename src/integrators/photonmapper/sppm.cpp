@@ -169,6 +169,7 @@ public:
 	void distributedRTPass(Scene *scene, std::vector<SerializableObject *> &samplers) {
 		ref<Camera> camera = scene->getCamera();
 		bool needsLensSample = camera->needsLensSample();
+		bool needsTimeSample = camera->needsTimeSample();
 		ref<Film> film = camera->getFilm();
 		Vector2i cropSize = film->getCropSize();
 		Point2i cropOffset = film->getCropOffset();
@@ -191,16 +192,19 @@ public:
 				for (int xofsInt = 0; xofsInt < m_blockSize; ++xofsInt) {
 					if (xofsInt + xofs - cropOffset.x >= cropSize.x)
 						continue;
-						Point2 lensSample, sample;
+					Point2 lensSample, sample;
+					Float timeSample = 0.0f;
 					GatherPoint &gatherPoint = gatherPoints[index++];
 					sampler->generate();
 					if (needsLensSample)
 						lensSample = sampler->next2D();
+					if (needsTimeSample)
+						timeSample = sampler->next1D();
 					gatherPoint.pos = Point2i(xofs + xofsInt, yofs + yofsInt);
 					sample = sampler->next2D();
 					sample += Vector2((Float) gatherPoint.pos.x, (Float) gatherPoint.pos.y);
 					RayDifferential ray;
-					camera->generateRayDifferential(sample, lensSample, ray);
+					camera->generateRayDifferential(sample, lensSample, timeSample, ray);
 					Spectrum weight(1.0f);
 					int depth = 1;
 
@@ -232,7 +236,7 @@ public:
 									gatherPoint.depth = -1;
 									break;
 								}
-								ray = RayDifferential(gatherPoint.its.p, gatherPoint.its.toWorld(bRec.wo));
+								ray = RayDifferential(gatherPoint.its.p, gatherPoint.its.toWorld(bRec.wo), ray.time);
 								++depth;
 							}
 						} else {

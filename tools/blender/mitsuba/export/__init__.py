@@ -189,3 +189,15 @@ class ParamSet(list):
 
 	def to_string_ref(self):
 		return ''.join(item.to_string_ref() for item in self)
+
+def get_instance_materials(ob):
+	obmats = []
+	# Grab materials attached to object instances ...
+	if hasattr(ob, 'material_slots'):
+		for ms in ob.material_slots:
+			obmats.append(ms.material)
+	# ... and to the object's mesh data
+	if hasattr(ob.data, 'materials'):
+		for m in ob.data.materials:
+			obmats.append(m)
+	return obmats

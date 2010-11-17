@@ -147,8 +147,6 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 			# Force scene update; NB, scene.update() doesn't work
 			scene.frame_set(scene.frame_current)
 
-			(self.properties.filename, _) = os.path.splitext(self.properties.filename)
-
 			mts_basename = os.path.join(
 				self.properties.directory,
 				self.properties.filename)
@@ -169,12 +167,9 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 			adj = MtsAdjustments(mts_adj_file, self.properties.directory)
 			adj.export(scene)
 
-			if scene.mitsuba_engine.binary_path == "":
+			if scene.mitsuba_engine.binary_path == '':
 				self.report({'ERROR'}, 'Mitsuba binary path must be specified!')
 				return {'CANCELLED'}
-
-			scene.mitsuba_engine.binary_path = efutil.filesystem_path(scene.mitsuba_engine.binary_path)
-			efutil.write_config_value('mitsuba', 'defaults', 'binary_path', scene.mitsuba_engine.binary_path)
 
 			(mts_path, tail) = os.path.split(bpy.path.abspath(scene.mitsuba_engine.binary_path))
 			mtsimport_binary = os.path.join(mts_path, "mtsimport")
@@ -251,7 +246,10 @@ class MITSUBA_OT_material_add(bpy.types.Operator):
 	def execute(self, context):
 		obj = bpy.context.active_object
 		index = obj.active_material_index
-		curName = obj.material_slots[index].name
+		if len(obj.material_slots) == 0:
+			curName = 'Material'
+		else:
+			curName = obj.material_slots[index].name
 		mat = bpy.data.materials.new(name=curName)
 		obj.data.materials.append(mat)
 		obj.active_material_index = len(obj.data.materials)-1

@@ -115,7 +115,7 @@ public:
 			prevIts = its;
 
 			/* Trace a ray in this direction */
-			ray = Ray(its.p, its.toWorld(bRec.wo));
+			ray = Ray(its.p, its.toWorld(bRec.wo), ray.time);
 			bool hitLuminaire = false;
 			if (scene->rayIntersect(ray, its)) {
 				/* Intersected something - check if it was a luminaire */

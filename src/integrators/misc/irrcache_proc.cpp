@@ -104,7 +104,7 @@ public:
 				if (stop) 
 					break;
 				Point2 sample(x + .5f, y + .5f);
-				m_camera->generateRayDifferential(sample, lensSample, eyeRay);
+				m_camera->generateRayDifferential(sample, lensSample, 0.0f, eyeRay);
 				if (m_scene->rayIntersect(eyeRay, its)) {
 					const BSDF *bsdf = its.shape->getBSDF();
 					if (!bsdf->getType() == BSDF::EDiffuseReflection)
@@ -125,7 +125,7 @@ public:
 							rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission | RadianceQueryRecord::EDistance);
 							rRec.depth = 2;
 							rRec.extra = 1; // mark as irradiance cache query
-							entry.L = integrator->Li(RayDifferential(its.p, entry.d), rRec);
+							entry.L = integrator->Li(RayDifferential(its.p, entry.d, 0.0f), rRec);
 							entry.dist = rRec.dist;
 							m_sampler->advance();
 						}

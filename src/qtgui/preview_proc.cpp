@@ -92,11 +92,12 @@ void PreviewProcess::configure(const VPL &vpl, Float minDist, const Point2 &jitt
 	const Point2 right(topLeft.x + m_film->getSize().x, topLeft.y);
 	const Point2 bottom(topLeft.x, topLeft.y + m_film->getSize().y);
 	const Point2 lens(0, 0);
+	Float time = 0.0f;
 
 	const Camera *camera = m_scene->getCamera();
-	camera->generateRay(topLeft, lens, topLeftRay);
-	camera->generateRay(right, lens, rightRay);
-	camera->generateRay(bottom, lens, bottomRay);
+	camera->generateRay(topLeft, lens, time, topLeftRay);
+	camera->generateRay(right, lens, time, rightRay);
+	camera->generateRay(bottom, lens, time, bottomRay);
 	m_cameraTL = Vector(topLeftRay.d);
 	m_cameraO = camera->getPosition();
 	m_cameraDx = (rightRay.d - topLeftRay.d)

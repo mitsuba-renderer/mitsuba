@@ -135,9 +135,11 @@ public:
 
 		m_totalEmitted = 0;
 		bool needsLensSample = camera->needsLensSample();
+		bool needsTimeSample = camera->needsTimeSample();
 		Log(EInfo, "Creating approximately %i gather points", cropSize.x*cropSize.y*sampleCount);
 		Point2 lensSample, sample;
 		RayDifferential eyeRay;
+		Float timeSample = 0;
 		m_filter = camera->getFilm()->getTabulatedFilter();
 		Vector2 filterSize = m_filter->getFilterSize();
 		int borderSize = (int) std::ceil(std::max(filterSize.x, filterSize.y));
@@ -179,10 +181,12 @@ public:
 						for (uint64_t j = 0; j<sampleCount; j++) {
 							if (needsLensSample)
 								lensSample = cameraSampler->next2D();
+							if (needsTimeSample)
+								timeSample = cameraSampler->next1D();
 							sample = cameraSampler->next2D();
 							sample.x += x; sample.y += y;
 							camera->generateRayDifferential(sample, 
-								lensSample, eyeRay);
+								lensSample, timeSample, eyeRay);
 							size_t offset = gatherPoints.size();
 							int count = createGatherPoints(scene, eyeRay, sample, Spectrum(1.0f),
 								gatherPoints, 1);
@@ -240,7 +244,7 @@ public:
 						continue;
 					bsdfVal = bsdf->fDelta(bRec);
 
-					RayDifferential recursiveRay(p.its.p, p.its.toWorld(bRec.wo));
+					RayDifferential recursiveRay(p.its.p, p.its.toWorld(bRec.wo), ray.time);
 					count += createGatherPoints(scene, recursiveRay, sample, 
 						weight * bsdfVal, gatherPoints, depth+1);
 				}

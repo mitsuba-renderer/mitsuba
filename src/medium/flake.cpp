@@ -377,7 +377,7 @@ public:
 	}
 
 	bool isInside(const Ray &r) const {
-		Ray ray(r(r.mint + Epsilon), r.d);
+		Ray ray(r(r.mint + Epsilon), r.d, 0.0f);
 		Intersection its;
 		if (!m_kdTree->rayIntersect(ray, its))
 			return false;
@@ -386,7 +386,7 @@ public:
 
 	Spectrum tau(const Ray &r) const {
 		Float dLength = r.d.length();
-		Ray ray(r(r.mint), r.d / dLength);
+		Ray ray(r(r.mint), r.d / dLength, 0.0f);
 		Float coveredLength = 0, remaining = (r.maxt - r.mint) * dLength;
 		bool inside = isInside(r);
 		Intersection its;
@@ -416,7 +416,7 @@ public:
 	bool sampleDistance(const Ray &theRay, Float distSurf, 
 			MediumSamplingRecord &mRec, Sampler *sampler) const {
 		Intersection its;
-		Ray ray(theRay.o, theRay.d);
+		Ray ray(theRay.o, theRay.d, 0.0f);
 		int iterations = 0;
 
 		/* Check if the start of the ray is already inside the medium */

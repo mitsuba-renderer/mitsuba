@@ -353,7 +353,7 @@ public:
 						continue;
 
 					rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadiance);
-					recursiveRay = Ray(its.p, its.toWorld(bRec.wo));
+					recursiveRay = Ray(its.p, its.toWorld(bRec.wo), ray.time);
 					Li += m_parentIntegrator->Li(recursiveRay, rRec2) * bsdfVal;
 				}
 			}
@@ -370,7 +370,7 @@ public:
 				Spectrum bsdfVal = bsdf->sampleCos(bRec);
 
 				rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadianceNoEmission);
-				recursiveRay = Ray(its.p, its.toWorld(bRec.wo));
+				recursiveRay = Ray(its.p, its.toWorld(bRec.wo), ray.time);
 				Li += m_parentIntegrator->Li(recursiveRay, rRec2) * bsdfVal * weight;
 			}
 		} else {

@@ -353,6 +353,7 @@ protected:
 			shape->fillIntersectionRecord(ray, 
 				reinterpret_cast<const uint8_t*>(temp) + 8, its);
 		}
+		its.time = ray.time;
 	}
 
 	/// Plain shadow ray query (used by the 'instance' plugin)

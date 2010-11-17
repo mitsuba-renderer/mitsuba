@@ -49,6 +49,7 @@ protected:
 	Float m_gamma, m_exposure;
 	std::string m_toneMappingMethod;
 	Float m_reinhardKey, m_reinhardBurn;
+	int m_compressionRate;
 public:
 	PNGFilm(const Properties &props) : Film(props) {
 		m_pixels = new Pixel[m_cropSize.x * m_cropSize.y];
@@ -68,6 +69,8 @@ public:
 		m_reinhardBurn = props.getFloat("reinhardBurn", 0.0f);
 		/* Reinhard "key" parameter */
 		m_reinhardKey = props.getFloat("reinhardKey", 0.18f);
+		/* Compression rate (1=low, 9=high) */
+		m_compressionRate = props.getInteger("compressionRate", 1);
 
 		if (m_toneMappingMethod != "gamma" && m_toneMappingMethod != "reinhard") 
 			Log(EError, "Unknown tone mapping method specified (must be 'gamma' or 'reinhard')");
@@ -95,6 +98,7 @@ public:
 		m_reinhardKey = stream->readFloat();
 		m_reinhardBurn = stream->readFloat();
 		m_exposure = stream->readFloat();
+		m_compressionRate = stream->readInt();
 		m_gamma = 1.0f / m_gamma;
 		m_pixels = new Pixel[m_cropSize.x * m_cropSize.y];
 	}
@@ -109,6 +113,7 @@ public:
 		stream->writeFloat(m_reinhardKey);
 		stream->writeFloat(m_reinhardBurn);
 		stream->writeFloat(m_exposure);
+		stream->writeInt(m_compressionRate);
 	}
 
 	virtual ~PNGFilm() {
@@ -403,7 +408,7 @@ public:
 		Log(EInfo, "Writing image to \"%s\" ..", filename.leaf().c_str());
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
 		bitmap->setGamma(m_gamma);
-		bitmap->save(Bitmap::EPNG, stream, 1);
+		bitmap->save(Bitmap::EPNG, stream, m_compressionRate);
 	}
 
 	bool destinationExists(const fs::path &baseName) const {

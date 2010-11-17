@@ -209,7 +209,7 @@ public:
 		Vector d = Frame(w*invDistW).toWorld(
 			squareToCone(cosThetaMax, sample));
 
-		Ray ray(p, d);
+		Ray ray(p, d, 0.0f);
 		Float t;
 		if (!rayIntersect(ray, 0, std::numeric_limits<Float>::infinity(), t, NULL)) {
 			// This can happen sometimes due to roundoff errors - just fail to 

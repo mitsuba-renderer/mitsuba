@@ -93,8 +93,6 @@ void AnimatedTransform::eval(Float t, Transform &trafo) const {
 					"animation track type: %i!", track->getType());
 		}
 	}
-	//cout << "T:" << translation.toString() << " R:" << rotation.toString() << " S:" << scale.toString() << endl;
-	
 	trafo = Transform::translate(translation) * 
 		rotation.toTransform() *
 		Transform::scale(scale);

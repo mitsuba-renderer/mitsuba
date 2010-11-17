@@ -16,28 +16,33 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
+from extensions_framework import declarative_property_group
+from extensions_framework import util as efutil
 
-from mitsuba.ui.materials import mitsuba_material_base
-from properties_material import active_node_mat
-
-class emission(mitsuba_material_base, bpy.types.Panel):
+class mitsuba_integrator(declarative_property_group):
 	'''
-	Material Emission Settings
+	Storage class for Mitsuba Integrator settings.
+	This class will be instantiated within a Blender scene
+	object.
 	'''
-	
-	bl_label = 'Mitsuba Material Emission'
-	bl_options = {'DEFAULT_CLOSED'}
-	MTS_PROPS = ['color', 'intensity', 'samplingWeight', 'use_emission']
 
-	display_property_groups = [
-		( ('material',), 'mitsuba_emission' )
+	controls = [
+		'type',
+		'sampleCount'
 	]
 
-	def get_contents(self, mat):
-		return mat.mitsuba_emission
+	properties = [
+		{
+			'type': 'enum',
+			'attr': 'type',
+			'name': 'Type',
+			'description': 'Specifies the type of integrator to use',
+			'default': 'ldintegrator',
+			'items': [
+				('direct', 'Direct Illumination', 'direct'),
+				('path', 'Path tracer', 'path'),
+			],
+			'save_in_preset': True
+		}
+	]
 
-	def draw_header(self, context):
-		if hasattr(context, "material"):
-			mat = active_node_mat(context.material)
-			self.layout.prop(mat.mitsuba_emission, "use_emission", text="")
