@@ -27,12 +27,12 @@ class MtsFilmDisplay(TimerThread):
 			MtsLog('Updating render result %ix%i' % (xres,yres))
 
 		result = self.LocalStorage['RE'].begin_result(0, 0, int(xres), int(yres))
-		if os.path.exists(self.LocalStorage['RE'].output_file):
+		if os.path.exists(self.LocalStorage['output_file']):
 			bpy.ops.ef.msg(msg_text='Updating RenderResult')
 			lay = result.layers[0]
-			lay.load_from_file(self.LocalStorage['RE'].output_file)
+			lay.load_from_file(self.LocalStorage['output_file'])
 		else:
-			err_msg = 'ERROR: Could not load render result from %s' % self.LocalStorage['RE'].output_file
+			err_msg = 'ERROR: Could not load render result from %s' % self.LocalStorage['output_file']
 			MtsLog(err_msg)
 			bpy.ops.ef.msg(msg_type='ERROR', msg_text=err_msg)
 		self.LocalStorage['RE'].end_result(result)

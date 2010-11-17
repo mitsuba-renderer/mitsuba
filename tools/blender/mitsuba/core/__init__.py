@@ -27,6 +27,7 @@ from extensions_framework.engine import engine_base
 from extensions_framework import util as efutil
 
 # Mitsuba-related classes
+from mitsuba import plugin_path
 from mitsuba.properties.engine import mitsuba_engine
 from mitsuba.properties.lamp import mitsuba_lamp
 from mitsuba.properties.texture import mitsuba_texture, \
@@ -41,6 +42,7 @@ from mitsuba.properties.material import mitsuba_material, \
 from mitsuba.operators import MITSUBA_OT_preset_engine_add, EXPORT_OT_mitsuba
 from mitsuba.outputs import MtsLog, MtsFilmDisplay
 from mitsuba.export.adjustments import MtsAdjustments
+from mitsuba.export import translate_id 
 from mitsuba.export.film import resolution
 from mitsuba.export import get_instance_materials
 from mitsuba.ui import render_panels
@@ -133,13 +135,61 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 			return
 
 		tempdir = efutil.temp_directory()
-		matpreview_file = os.path.join(tempdir, "matpreview_materials.xml")
+		matfile = os.path.join(tempdir, "matpreview_materials.xml")
+		output_file = os.path.join(tempdir, "matpreview.png")
+		scene_file = os.path.join(os.path.join(plugin_path(),
+			"matpreview"), "matpreview.xml")
 		pm = likely_materials[0]
-		adj = MtsAdjustments(matpreview_file, tempdir, 
+		adj = MtsAdjustments(matfile, tempdir, 
 			bpy.data.materials, bpy.data.textures)
 		adj.writeHeader()
 		adj.exportMaterial(pm)
 		adj.writeFooter()
+		(mts_path, tail) = os.path.split(bpy.path.abspath(scene.mitsuba_engine.binary_path))
+		mitsuba_binary = os.path.join(mts_path, "mitsuba")
+		env = copy.copy(os.environ)
+		mts_render_libpath = os.path.join(mts_path, "src/librender")
+		mts_core_libpath = os.path.join(mts_path, "src/libcore")
+		mts_hw_libpath = os.path.join(mts_path, "src/libhw")
+		env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath
+		(width, height) = resolution(scene)
+		refresh_interval = 1
+		mitsuba_process = subprocess.Popen(
+			[mitsuba_binary, '-r%i' % refresh_interval,
+				'-o', output_file, '-Dmatfile=%s' % matfile,
+				'-Dmatname=%s' % translate_id(pm.name), 
+				'-Dwidth=%i' % width, 
+				'-Dheight=%i' % height, 
+				'-q', 
+				'-o', output_file, scene_file],
+			env = env,
+			cwd = tempdir
+		)
+		framebuffer_thread = MtsFilmDisplay({
+			'resolution': resolution(scene),
+			'RE': self,
+			'output_file': output_file
+		})
+		framebuffer_thread.set_kick_period(refresh_interval)
+		framebuffer_thread.start()
+		while mitsuba_process.poll() == None and not self.test_break():
+			self.render_update_timer = threading.Timer(1, self.process_wait_timer)
+			self.render_update_timer.start()
+			if self.render_update_timer.isAlive(): self.render_update_timer.join()
+
+		# If we exit the wait loop (user cancelled) and mitsuba is still running, then send SIGINT
+		if mitsuba_process.poll() == None:
+			# Use SIGTERM because that's the only one supported on Windows
+			mitsuba_process.send_signal(subprocess.signal.SIGTERM)
+
+		# Stop updating the render result and load the final image
+		framebuffer_thread.stop()
+		framebuffer_thread.join()
+
+		if mitsuba_process.poll() != None and mitsuba_process.returncode != 0:
+			MtsLog("MtsBlend: Rendering failed -- check the console")
+		else:
+			framebuffer_thread.kick(render_end=True)
 
 
 	def render(self, scene):
@@ -196,17 +246,18 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 						cwd = self.output_dir
 					)
 				elif scene.mitsuba_engine.render_mode == 'cli':
-					self.output_file = efutil.export_path[:-4] + ".png"
+					output_file = efutil.export_path[:-4] + ".png"
 
 					mitsuba_process = subprocess.Popen(
 						[mitsuba_binary, '-r',  '%d' % scene.mitsuba_engine.refresh_interval,
-							'-o', self.output_file, efutil.export_path],
+							'-o', output_file, efutil.export_path],
 						env = env,
 						cwd = self.output_dir
 					)
 					framebuffer_thread = MtsFilmDisplay({
 						'resolution': resolution(scene),
 						'RE': self,
+						'output_file': output_file
 					})
 					framebuffer_thread.set_kick_period(scene.mitsuba_engine.refresh_interval) 
 					framebuffer_thread.start()
