@@ -52,7 +52,7 @@ class mitsuba_material(declarative_property_group):
 				('roughmetal', 'Rough metal', 'Rough conductor (e.g. sand-blasted metal)'),
 				('difftrans', 'Diffuse transmitter', 'Material with an ideally diffuse transmittance'),
 				('microfacet', 'Microfacet', 'Microfacet material (like the rough glass material, but without transmittance)'),
-				('composite', 'Compound material', 'Allows creating mixtures of different materials')
+				('composite', 'Composite material', 'Allows creating mixtures of different materials')
 			],
 			'save_in_preset': True
 		}
