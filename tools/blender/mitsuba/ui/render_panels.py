@@ -16,7 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
+import os, bpy
 from properties_render import RenderButtonsPanel
 
 from extensions_framework.ui import property_group_renderer
@@ -61,10 +61,13 @@ class engine(render_described_context, bpy.types.Panel):
 		global cached_binary_path
 		binary_path = context.scene.mitsuba_engine.binary_path
 		if binary_path != "" and cached_binary_path != binary_path:
-			binary_path = efutil.filesystem_path(binary_path)
-			efutil.write_config_value('mitsuba', 'defaults', 'binary_path', binary_path)
-			context.scene.mitsuba_engine.binary_path = binary_path
+			binary_path = os.path.abspath(efutil.filesystem_path(binary_path))
+			actualChange = cached_binary_path != None
 			cached_binary_path = binary_path
+			context.scene.mitsuba_engine.binary_path = binary_path
+			if actualChange:
+				print('Updating binary_path to "%s"\n' % binary_path)
+				efutil.write_config_value('mitsuba', 'defaults', 'binary_path', binary_path)
 		super().draw(context)
 
 class integrator(render_described_context, bpy.types.Panel):

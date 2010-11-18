@@ -188,7 +188,7 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 					[mtsimport_binary, '-r', '%dx%d' % (width, height),
 						'-l', 'pngfilm', mts_dae_file, mts_xml_file, mts_adj_file],
 					env = env,
-					cwd = self.properties.directory
+					cwd = mts_path
 				)
 				if process.wait() != 0:
 					self.report({'ERROR'}, "mtsimport returned with a nonzero status!")

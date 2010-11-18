@@ -169,7 +169,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 				'-Ddepth=%i' % preview_depth,
 				'-o', output_file, scene_file],
 			env = env,
-			cwd = tempdir
+			cwd = mts_path
 		)
 		framebuffer_thread = MtsFilmDisplay({
 			'resolution': resolution(scene),
@@ -252,16 +252,15 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 					subprocess.Popen(
 						[mtsgui_binary, efutil.export_path],
 						env = env,
-						cwd = output_dir
+						cwd = mts_path
 					)
 				elif scene.mitsuba_engine.render_mode == 'cli':
 					output_file = efutil.export_path[:-4] + ".png"
-
 					mitsuba_process = subprocess.Popen(
 						[mitsuba_binary, '-r',  '%d' % scene.mitsuba_engine.refresh_interval,
 							'-o', output_file, efutil.export_path],
 						env = env,
-						cwd = output_dir
+						cwd = mts_path
 					)
 					framebuffer_thread = MtsFilmDisplay({
 						'resolution': resolution(scene),
