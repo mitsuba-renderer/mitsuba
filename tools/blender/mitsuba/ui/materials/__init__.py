@@ -111,7 +111,7 @@ class MATERIAL_PT_preview_mts(MaterialButtonsPanel, bpy.types.Panel):
 	def draw(self, context):
 		if not hasattr(context, 'material'):
 			return
-		self.layout.template_preview(context.material)
+		self.layout.template_preview(context.material, show_buttons=False)
 		engine = context.scene.mitsuba_engine
 		row = self.layout.row(True)
 		row.prop(engine, "preview_depth")

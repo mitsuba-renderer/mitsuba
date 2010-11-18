@@ -65,9 +65,8 @@ class engine(render_described_context, bpy.types.Panel):
 			actualChange = cached_binary_path != None
 			cached_binary_path = binary_path
 			context.scene.mitsuba_engine.binary_path = binary_path
-			if actualChange:
-				print('Updating binary_path to "%s"\n' % binary_path)
-				efutil.write_config_value('mitsuba', 'defaults', 'binary_path', binary_path)
+			print('Updating binary_path to "%s"\n' % binary_path)
+			efutil.write_config_value('mitsuba', 'defaults', 'binary_path', binary_path)
 		super().draw(context)
 
 class integrator(render_described_context, bpy.types.Panel):
