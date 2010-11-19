@@ -18,7 +18,7 @@
 
 #include <mitsuba/core/platform.h>
 #include <xercesc/parsers/SAXParser.hpp>
-#include <mitsuba/render/shandler.h>
+#include <mitsuba/render/scenehandler.h>
 #include <mitsuba/core/fresolver.h>
 #include <boost/algorithm/string.hpp>
 

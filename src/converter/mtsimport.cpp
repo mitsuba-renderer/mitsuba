@@ -54,13 +54,13 @@ void help() {
 		<<  "   -h          Display this help text" << endl << endl
 		<<  "   -a p1;p2;.. Add one or more entries to the resource search path" << endl << endl
 		<<  "   -v          Be more verbose" << endl << endl
-		<<  "   -p <num>    Use the specified number of samples per pixel." << endl << endl
 		<<  "   -s          Assume that colors are in sRGB space." << endl << endl
 		<<  "   -m          Map the larger image side to the full field of view" << endl << endl
+		<<  "   -z          Import animations" << endl << endl
 		<<  "   -y          Don't pack all geometry data into a single file" << endl << endl
+		<<  "   -n          Don't import any materials (an adjustments file will be necessary)" << endl << endl
 		<<  "   -l <type>   Override the type of film (e.g. 'exrfilm', 'pngfilm', ..)" << endl << endl
 		<<  "   -r <w>x<h>  Override the image resolution to e.g. 1920x1080" << endl << endl
-		<<  "   -f <fov>    Override the field of view to the given value in degrees." << endl << endl
 		<< "Please see the documentation for more information." << endl;
 }
 
@@ -68,16 +68,15 @@ int colladaMain(int argc, char **argv) {
 	bool srgb = false, mapSmallerSide = true;
 	char optchar, *end_ptr = NULL;
 	int xres = -1, yres = -1;
-	int samplesPerPixel = 8;
 	std::string filmType = "exrfilm";
-	Float fov = -1;
 	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 	ELogLevel logLevel = EInfo;
-	bool packGeometry = true;
+	bool packGeometry = true, importMaterials = true,
+		 importAnimations = false;
 
 	optind = 1;
 
-	while ((optchar = getopt(argc, argv, "svyhmr:a:p:f:l:")) != -1) {
+	while ((optchar = getopt(argc, argv, "snzvyhmr:a:l:")) != -1) {
 		switch (optchar) {
 			case 'a': {
 					std::vector<std::string> paths = tokenize(optarg, ";");
@@ -91,10 +90,11 @@ int colladaMain(int argc, char **argv) {
 			case 'm':
 				mapSmallerSide = false;
 				break;
-			case 'p':
-				samplesPerPixel = strtol(optarg, &end_ptr, 10);
-				if (*end_ptr != '\0')
-					SLog(EError, "Invalid number of samples per pixel!");
+			case 'n':
+				importMaterials = false;
+				break;
+			case 'z':
+				importAnimations = true;
 				break;
 			case 'v':
 				logLevel = EDebug;
@@ -104,11 +104,6 @@ int colladaMain(int argc, char **argv) {
 				break;
 			case 'y':
 				packGeometry = false;
-				break;
-			case 'f':
-				fov = (Float) strtod(optarg, &end_ptr);
-				if (*end_ptr != '\0')
-					SLog(EError, "Invalid field of view value!");
 				break;
 			case 'r': {
 					std::vector<std::string> tokens = tokenize(optarg, "x");
@@ -140,9 +135,9 @@ int colladaMain(int argc, char **argv) {
 	ConsoleGeometryConverter converter;
 	converter.setSRGB(srgb);
 	converter.setResolution(xres, yres);
+	converter.setImportMaterials(importMaterials);
+	converter.setImportAnimations(importAnimations);
 	converter.setMapSmallerSide(mapSmallerSide);
-	converter.setSamplesPerPixel(samplesPerPixel);
-	converter.setFov(fov);
 	converter.setPackGeometry(packGeometry);
 	converter.setFilmType(filmType);
 

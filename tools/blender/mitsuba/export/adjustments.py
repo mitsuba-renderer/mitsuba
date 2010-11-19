@@ -215,6 +215,17 @@ class MtsAdjustments:
 		self.out.write('\t\t</shape>\n')
 		self.out.write('\n')
 
+	def exportCameraSettings(self, scene, camera):
+		if scene.mitsuba_integrator.motionblur:
+			frameTime = 1.0/scene.render.fps
+			shuttertime = scene.mitsuba_integrator.shuttertime
+			shutterOpen = (scene.frame_current - shuttertime/2) * frameTime
+			shutterClose = (scene.frame_current + shuttertime/2) * frameTime
+			self.out.write('\t<prepend id="%s-camera">\n' % translate_id(camera.name))
+			self.out.write('\t\t<float name="shutterOpen" value="%f"/>\n' % shutterOpen)
+			self.out.write('\t\t<float name="shutterClose" value="%f"/>\n' % shutterClose)
+			self.out.write('\t</prepend>\n')
+
 	def export(self, scene):
 		idx = 0
 		self.writeHeader()
@@ -228,6 +239,8 @@ class MtsAdjustments:
 					self.exportMaterial(mat)
 				if len(obj.data.materials) > 0 and obj.data.materials[0].mitsuba_emission.use_emission:
 					self.exportEmission(obj)
+			elif obj.type == 'CAMERA':
+				self.exportCameraSettings(scene, obj)
 			idx = idx+1
 		self.writeFooter()
 

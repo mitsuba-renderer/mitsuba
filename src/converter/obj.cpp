@@ -154,7 +154,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 	std::string buf, line;
 	std::set<std::string> mtlList;
 	while (is >> buf) {
-		if (buf == "mtllib") {
+		if (buf == "mtllib" && m_importMaterials) {
 			std::getline(is, line);
 			std::string mtlName = trim(line.substr(1, line.length()-1));
 			ref<FileResolver> fRes = Thread::getThread()->getFileResolver()->clone();

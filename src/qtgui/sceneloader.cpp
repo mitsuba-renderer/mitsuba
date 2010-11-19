@@ -19,7 +19,7 @@
 #include <xercesc/parsers/SAXParser.hpp>
 #include "glwidget.h"
 #include "sceneloader.h"
-#include <mitsuba/render/shandler.h>
+#include <mitsuba/render/scenehandler.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
 #include <boost/algorithm/string.hpp>

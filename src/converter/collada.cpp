@@ -1141,28 +1141,14 @@ void loadCamera(ColladaContext &ctx, Transform transform, domCamera &camera) {
 		ctx.os << "\t<camera id=\"" << identifier << "\" type=\"perspective\">" << endl;
 		if (persp->getXfov().cast()) {
 			Float xFov = (Float) persp->getXfov()->getValue();
-			if (std::abs(xFov-1.0f) < Epsilon && ctx.cvt->m_fov == -1) {
-				SLog(EWarn, "Found the suspicious field of view value \"1.0\", which is likely due to a bug in Blender 2.5"
-					" - setting to 45deg. Please use the \"-f\" parameter to override this.");
-				xFov = 45.0f;
-			}
 			Float yFov = radToDeg(2 * std::atan(std::tan(degToRad(xFov)/2) / aspect));
-			if (ctx.cvt->m_fov != -1)
-				xFov = yFov = ctx.cvt->m_fov;
 			if (aspect <= 1.0f)
 				ctx.os << "\t\t<float name=\"fov\" value=\"" << xFov << "\"/>" << endl;
 			else
 				ctx.os << "\t\t<float name=\"fov\" value=\"" << yFov << "\"/>" << endl;
 		} else if (persp->getYfov().cast()) {
 			Float yFov = (Float) persp->getYfov()->getValue();
-			if (std::abs(yFov-1.0) < Epsilon && ctx.cvt->m_fov == -1) {
-				SLog(EWarn, "Found the suspicious field of view value \"1.0\", which is likely due to a bug in Blender 2.5"
-					" - setting to 45deg. Please use the \"-f\" parameter to override this.");
-				yFov = 45.0f;
-			}
 			Float xFov = radToDeg(2 * std::atan(std::tan(degToRad(yFov)/2) * aspect));
-			if (ctx.cvt->m_fov != -1)
-				xFov = yFov = ctx.cvt->m_fov;
 			if (aspect > 1.0f)
 				ctx.os << "\t\t<float name=\"fov\" value=\"" << yFov << "\"/>" << endl;
 			else
@@ -1178,7 +1164,7 @@ void loadCamera(ColladaContext &ctx, Transform transform, domCamera &camera) {
 	ctx.os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
 	ctx.os << "\t\t</transform>" << endl << endl;
 	ctx.os << "\t\t<sampler id=\"sampler\" type=\"ldsampler\">" << endl;
-	ctx.os << "\t\t\t<integer name=\"sampleCount\" value=\"" << ctx.cvt->m_samplesPerPixel << "\"/>" << endl;
+	ctx.os << "\t\t\t<integer name=\"sampleCount\" value=\"4\"/>" << endl;
 	ctx.os << "\t\t</sampler>" << endl << endl;
 	ctx.os << "\t\t<film id=\"film\" type=\"" << ctx.cvt->m_filmType << "\">" << endl;
 	ctx.os << "\t\t\t<integer name=\"width\" value=\"" << xres << "\"/>" << endl;
@@ -1619,34 +1605,38 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	ctx.cvt = this;
 	ctx.trackIndex = 0;
 
-	domLibrary_images_Array &libraryImages = document->getLibrary_images_array();
-	for (size_t i=0; i<libraryImages.getCount(); ++i) {
-		domImage_Array &images = libraryImages[i]->getImage_array();
-		for (size_t j=0; j<images.getCount(); ++j) 
-			loadImage(ctx, *images.get(j));
-	}
+	if (m_importMaterials) {
+		domLibrary_images_Array &libraryImages = document->getLibrary_images_array();
+		for (size_t i=0; i<libraryImages.getCount(); ++i) {
+			domImage_Array &images = libraryImages[i]->getImage_array();
+			for (size_t j=0; j<images.getCount(); ++j) 
+				loadImage(ctx, *images.get(j));
+		}
 
-	domLibrary_materials_Array &libraryMaterials = document->getLibrary_materials_array();
-	for (size_t i=0; i<libraryMaterials.getCount(); ++i) {
-		domMaterial_Array &materials = libraryMaterials[i]->getMaterial_array();
-		for (size_t j=0; j<materials.getCount(); ++j) 
-			loadMaterial(ctx, *materials.get(j));
+		domLibrary_materials_Array &libraryMaterials = document->getLibrary_materials_array();
+		for (size_t i=0; i<libraryMaterials.getCount(); ++i) {
+			domMaterial_Array &materials = libraryMaterials[i]->getMaterial_array();
+			for (size_t j=0; j<materials.getCount(); ++j) 
+				loadMaterial(ctx, *materials.get(j));
+		}
 	}
 	
-	domLibrary_animations_Array &libraryAnimations = document->getLibrary_animations_array();
-	for (size_t i=0; i<libraryAnimations.getCount(); ++i) {
-		domAnimation_Array &animations = libraryAnimations[i]->getAnimation_array();
-		for (size_t j=0; j<animations.getCount(); ++j) 
-			loadAnimation(ctx, *animations[j]);
+	if (m_importAnimations) {
+		domLibrary_animations_Array &libraryAnimations = document->getLibrary_animations_array();
+		for (size_t i=0; i<libraryAnimations.getCount(); ++i) {
+			domAnimation_Array &animations = libraryAnimations[i]->getAnimation_array();
+			for (size_t j=0; j<animations.getCount(); ++j) 
+				loadAnimation(ctx, *animations[j]);
+		}
+		mergeRotations(ctx);
 	}
-	mergeRotations(ctx);
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
 		computeRefCounts(ctx, *nodes[i]);
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
 		loadNode(ctx, Transform(), *nodes[i], "");
-	
+
 	for (AnimationMap::iterator it = ctx.animations.begin();
 		it != ctx.animations.end(); ++it)
 		it->second->decRef();

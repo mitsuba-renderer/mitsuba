@@ -184,9 +184,11 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 
 			MtsLog("MtsBlend: Launching mtsimport")
 			try:
-				process = subprocess.Popen(
-					[mtsimport_binary, '-r', '%dx%d' % (width, height),
-						'-l', 'pngfilm', mts_dae_file, mts_xml_file, mts_adj_file],
+				command = [mtsimport_binary, '-r', '%dx%d' % (width, height),
+						'-n', '-l', 'pngfilm', mts_dae_file, mts_xml_file, mts_adj_file]
+				if scene.mitsuba_integrator.motionblur:
+					command += ['-z']
+				process = subprocess.Popen(command,
 					env = env,
 					cwd = mts_path
 				)
