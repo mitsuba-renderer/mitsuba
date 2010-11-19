@@ -100,20 +100,6 @@ inherent relation that links them to another object. For instance, BSDFs are usu
 they appear as a child object of a shape. Similarly, the sampler and film affect the way in which
 rays are generated from the camera and how it records the resulting radiance samples, hence they are nested inside it.
 
-Note that you should always put properties \emph{before} nested child objects, otherwise you'll see something like the following slightly cryptic
- XML validation error. For instance,
-\begin{xml}
-...
-	<shape type="obj">
-		<bsdf type="phong"/>
-		<string name="filename" value="lucy.obj"/>
-	</shape>
-...
-\end{xml}
-fails with this message:
-\begin{shell}
-Caught a critical exeption: 2010-08-11 03:23:31 ERROR main [src/mitsuba/shandler.cpp:359] Error in file "/home/wenzel/mitsuba/test.xml" (line 63): Element 'string' is not valid $\texttt{for}$ content model: '(((integer|float|point|vector|boolean|transform|string|spectrum|rgb)|blackbody),((bsdf|subsurface|ref)|luminaire))'
-\end{shell}
 \subsection{Property types}
 This section documents all of the ways in which properties can be supplied to objects. If you are more
 interested in knowing which properties a certain plugin accepts, you should look at the next section instead.
