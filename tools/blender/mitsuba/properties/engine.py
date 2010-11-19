@@ -75,8 +75,8 @@ class mitsuba_engine(declarative_property_group):
 			'type': 'int',
 			'attr': 'refresh_interval',
 			'name': 'Refresh interval',
-			'description': 'Period for updating rendering on screen (seconds)',
-			'default': 10,
+			'description': 'Period for updating rendering on screen (in seconds)',
+			'default': 5,
 			'min': 1,
 			'soft_min': 1,
 			'save_in_preset': True
