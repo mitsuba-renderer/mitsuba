@@ -195,9 +195,11 @@ void GeometryConverter::convert(const fs::path &inputFile,
 				if (id != "" && nodeMap.find(id) != nodeMap.end()) {
 					DOMNode *node = nodeMap[id], *parent = node->getParentNode();
 					if (strcmp(nodeName, "append") == 0) {
-						DOMNode *node = nodeMap[id];
 						for (DOMNode *child2 = child->getFirstChild(); child2 != 0; child2=child2->getNextSibling()) 
 							node->insertBefore(doc->importNode(child2, true), NULL);
+					} else if (strcmp(nodeName, "prepend") == 0) {
+						for (DOMNode *child2 = child->getFirstChild(); child2 != 0; child2=child2->getNextSibling()) 
+							node->insertBefore(doc->importNode(child2, true), node->getFirstChild());
 					} else if (parent == insertBeforeNode->getParentNode()) {
 						parent->removeChild(node);
 						docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
@@ -212,10 +214,13 @@ void GeometryConverter::convert(const fs::path &inputFile,
 		}
 
 		DOMLSSerializer *serializer = impl->createLSSerializer();
-		DOMConfiguration *serConf(serializer->getDomConfig());
-		DOMLSOutput *output = impl->createLSOutput();
+		DOMConfiguration *serConf = serializer->getDomConfig();
 		serConf->setParameter(XMLUni::fgDOMErrorHandler, &errorHandler);
-		serConf->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
+		if (serConf->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true)) 
+			serConf->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
+		if (serConf->canSetParameter(XMLUni::fgDOMWRTXercesPrettyPrint, true)) 
+			serConf->setParameter(XMLUni::fgDOMWRTXercesPrettyPrint, true);
+		DOMLSOutput *output = impl->createLSOutput();
 		XMLFormatTarget *target = new LocalFileFormatTarget(outputFile.file_string().c_str());
 		output->setByteStream(target);
 		serializer->write(doc, output);

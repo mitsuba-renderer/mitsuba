@@ -41,3 +41,4 @@ class emission(mitsuba_material_base, bpy.types.Panel):
 		if hasattr(context, "material"):
 			mat = active_node_mat(context.material)
 			self.layout.prop(mat.mitsuba_emission, "use_emission", text="")
+			self.validate(context)

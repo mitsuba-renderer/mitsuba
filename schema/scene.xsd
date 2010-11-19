@@ -99,19 +99,11 @@
 	<!-- LUMINAIRE Element -->
 	<xsd:complexType name="luminaire">
 		<xsd:complexContent>
-			<xsd:extension base="object">
-				<xsd:choice minOccurs="0" maxOccurs="unbounded">
-					<xsd:element name="texture" type="texture"/>
-					<xsd:element name="luminaire" type="luminaire"/>
-				</xsd:choice>
-			</xsd:extension>
-		</xsd:complexContent>
-		<xsd:complexContent>
 			<xsd:extension base="objectBase">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
 					<xsd:group ref="objectGroup"/>
-					<xsd:element name="integrator" type="integrator"/>
-					<xsd:element name="sampler" type="object"/>
+					<xsd:element name="texture" type="texture"/>
+					<xsd:element name="luminaire" type="luminaire"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>

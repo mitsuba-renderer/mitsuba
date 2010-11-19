@@ -56,6 +56,7 @@ void help() {
 		<<  "   -v          Be more verbose" << endl << endl
 		<<  "   -s          Assume that colors are in sRGB space." << endl << endl
 		<<  "   -m          Map the larger image side to the full field of view" << endl << endl
+		<<  "   -z          Import animations" << endl << endl
 		<<  "   -y          Don't pack all geometry data into a single file" << endl << endl
 		<<  "   -n          Don't import any materials (an adjustments file will be necessary)" << endl << endl
 		<<  "   -l <type>   Override the type of film (e.g. 'exrfilm', 'pngfilm', ..)" << endl << endl
@@ -70,12 +71,12 @@ int colladaMain(int argc, char **argv) {
 	std::string filmType = "exrfilm";
 	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 	ELogLevel logLevel = EInfo;
-	bool packGeometry = true;
-	bool importMaterials = true;
+	bool packGeometry = true, importMaterials = true,
+		 importAnimations = false;
 
 	optind = 1;
 
-	while ((optchar = getopt(argc, argv, "snvyhmr:a:l:")) != -1) {
+	while ((optchar = getopt(argc, argv, "snzvyhmr:a:l:")) != -1) {
 		switch (optchar) {
 			case 'a': {
 					std::vector<std::string> paths = tokenize(optarg, ";");
@@ -91,6 +92,9 @@ int colladaMain(int argc, char **argv) {
 				break;
 			case 'n':
 				importMaterials = false;
+				break;
+			case 'z':
+				importAnimations = true;
 				break;
 			case 'v':
 				logLevel = EDebug;
@@ -132,6 +136,7 @@ int colladaMain(int argc, char **argv) {
 	converter.setSRGB(srgb);
 	converter.setResolution(xres, yres);
 	converter.setImportMaterials(importMaterials);
+	converter.setImportAnimations(importAnimations);
 	converter.setMapSmallerSide(mapSmallerSide);
 	converter.setPackGeometry(packGeometry);
 	converter.setFilmType(filmType);

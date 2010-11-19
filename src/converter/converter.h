@@ -28,6 +28,8 @@ public:
 		m_xres = m_yres = -1;
 		m_filmType = "exrfilm";
 		m_packGeometry = true;
+		m_importMaterials = true;
+		m_importAnimations = false;
 	}
 
 	void convert(const fs::path &inputFile, 
@@ -42,6 +44,7 @@ public:
 	inline void setResolution(int xres, int yres) { m_xres = xres; m_yres = yres; }
 	inline void setPackGeometry(bool packGeometry) { m_packGeometry = packGeometry; }
 	inline void setImportMaterials(bool importMaterials) { m_importMaterials = importMaterials; }
+	inline void setImportAnimations(bool importAnimations) { m_importAnimations = importAnimations; }
 	inline void setFilmType(const std::string &filmType) { m_filmType = filmType; }
 	inline const fs::path &getFilename() const { return m_filename; }
 private:
@@ -52,7 +55,8 @@ private:
 		const fs::path &textureDirectory,
 		const fs::path &meshesDirectory);
 public:
-	bool m_srgb, m_mapSmallerSide, m_importMaterials;
+	bool m_srgb, m_mapSmallerSide;
+	bool m_importMaterials, m_importAnimations;
 	int m_xres, m_yres;
 	fs::path m_filename, m_outputDirectory;
 	std::string m_filmType;

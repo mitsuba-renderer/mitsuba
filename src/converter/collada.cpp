@@ -1621,20 +1621,22 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 		}
 	}
 	
-	domLibrary_animations_Array &libraryAnimations = document->getLibrary_animations_array();
-	for (size_t i=0; i<libraryAnimations.getCount(); ++i) {
-		domAnimation_Array &animations = libraryAnimations[i]->getAnimation_array();
-		for (size_t j=0; j<animations.getCount(); ++j) 
-			loadAnimation(ctx, *animations[j]);
+	if (m_importAnimations) {
+		domLibrary_animations_Array &libraryAnimations = document->getLibrary_animations_array();
+		for (size_t i=0; i<libraryAnimations.getCount(); ++i) {
+			domAnimation_Array &animations = libraryAnimations[i]->getAnimation_array();
+			for (size_t j=0; j<animations.getCount(); ++j) 
+				loadAnimation(ctx, *animations[j]);
+		}
+		mergeRotations(ctx);
 	}
-	mergeRotations(ctx);
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
 		computeRefCounts(ctx, *nodes[i]);
 
 	for (size_t i=0; i<nodes.getCount(); ++i) 
 		loadNode(ctx, Transform(), *nodes[i], "");
-	
+
 	for (AnimationMap::iterator it = ctx.animations.begin();
 		it != ctx.animations.end(); ++it)
 		it->second->decRef();
