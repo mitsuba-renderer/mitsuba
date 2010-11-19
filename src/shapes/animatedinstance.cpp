@@ -39,6 +39,7 @@ public:
 		: Shape(stream, manager) {
 		m_shapeGroup = static_cast<ShapeGroup *>(manager->getInstance(stream));
 		m_transform = new AnimatedTransform(stream);
+		configure();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -134,5 +135,5 @@ private:
 };
 
 MTS_IMPLEMENT_CLASS_S(AnimatedInstance, false, Shape)
-MTS_EXPORT_PLUGIN(AnimatedInstance, "AnimatedInstanced geometry");
+MTS_EXPORT_PLUGIN(AnimatedInstance, "Animated instanced geometry");
 MTS_NAMESPACE_END

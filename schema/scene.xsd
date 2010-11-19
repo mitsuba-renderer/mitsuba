@@ -5,7 +5,7 @@
 		<xsd:complexType>
 			<xsd:choice minOccurs="0" maxOccurs="unbounded">
 				<xsd:element name="camera" type="camera"/>
-				<xsd:element name="texture" type="object"/>
+				<xsd:element name="texture" type="texture"/>
 				<xsd:element name="bsdf" type="bsdf"/>
 				<xsd:element name="integrator" type="integrator"/>
 				<xsd:element name="luminaire" type="luminaire"/>
@@ -29,9 +29,9 @@
 	</xsd:element>
 
 	<!-- Generic Object -->
-	<xsd:complexType name="object">
-		<xsd:choice minOccurs="0" maxOccurs="unbounded">
-			<!-- Usual attributes -->
+	<xsd:group name="objectGroup">
+		<!-- Allow all property types -->
+		<xsd:choice>
 			<xsd:element name="integer" type="integer"/>
 			<xsd:element name="float" type="float"/>
 			<xsd:element name="point" type="point"/>
@@ -44,12 +44,27 @@
 			<xsd:element name="srgb" type="string"/>
 			<xsd:element name="blackbody" type="blackbody"/>
 		</xsd:choice>
+	</xsd:group>
+	
+	<xsd:complexType name="objectBase">
 		<xsd:attribute name="type" type="xsd:string" use="required"/>
 		<xsd:attribute name="name" type="xsd:string"/>
 		<xsd:attribute name="id" type="xsd:string"/>
 	</xsd:complexType>
+
 	
-	<!-- Object reference -->
+	<xsd:complexType name="object">
+		<xsd:complexContent>
+			<xsd:extension base="objectBase">
+				<xsd:choice minOccurs="0" maxOccurs="unbounded">
+					<xsd:group ref="objectGroup"/>
+				</xsd:choice>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+
+
+	<!-- REFERENCE -->
 	<xsd:complexType name="reference">
 		<xsd:attribute name="id" type="xsd:string" use="required"/>
 		<xsd:attribute name="name" type="xsd:string"/>
@@ -58,8 +73,9 @@
 	<!-- CAMERA Element -->
 	<xsd:complexType name="camera">
 		<xsd:complexContent>
-			<xsd:extension base="object">
+			<xsd:extension base="objectBase">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
+					<xsd:group ref="objectGroup"/>
 					<xsd:element name="sampler" type="object"/>
 					<xsd:element name="film" type="film"/>
 				</xsd:choice>
@@ -70,22 +86,32 @@
 	<!-- INTEGRATOR Element -->
 	<xsd:complexType name="integrator">
 		<xsd:complexContent>
-			<xsd:extension base="object">
+			<xsd:extension base="objectBase">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
+					<xsd:group ref="objectGroup"/>
 					<xsd:element name="integrator" type="integrator"/>
 					<xsd:element name="sampler" type="object"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
 	</xsd:complexType>
-	
+
 	<!-- LUMINAIRE Element -->
 	<xsd:complexType name="luminaire">
 		<xsd:complexContent>
 			<xsd:extension base="object">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
-					<xsd:element name="texture" type="object"/>
+					<xsd:element name="texture" type="texture"/>
 					<xsd:element name="luminaire" type="luminaire"/>
+				</xsd:choice>
+			</xsd:extension>
+		</xsd:complexContent>
+		<xsd:complexContent>
+			<xsd:extension base="objectBase">
+				<xsd:choice minOccurs="0" maxOccurs="unbounded">
+					<xsd:group ref="objectGroup"/>
+					<xsd:element name="integrator" type="integrator"/>
+					<xsd:element name="sampler" type="object"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
@@ -95,8 +121,9 @@
 	<!-- SHAPE Element -->
 	<xsd:complexType name="shape">
 		<xsd:complexContent>
-			<xsd:extension base="object">
+			<xsd:extension base="objectBase">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
+					<xsd:group ref="objectGroup"/>
 					<xsd:element name="bsdf" type="bsdf"/>
 					<xsd:element name="subsurface" type="object"/>
 					<xsd:element name="ref" type="reference"/>
@@ -110,12 +137,12 @@
 	<!-- VOLUMEREGION Element -->
 	<xsd:complexType name="medium">
 		<xsd:complexContent>
-			<xsd:extension base="object">
+			<xsd:extension base="objectBase">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
+					<xsd:group ref="objectGroup"/>
 					<xsd:element name="shape" type="shape"/>
 					<xsd:element name="volume" type="object"/>
 					<xsd:element name="phase" type="phase"/>
-					<xsd:element name="ref" type="reference"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
@@ -124,9 +151,10 @@
 	<!-- BSDF Element -->
 	<xsd:complexType name="bsdf">
 		<xsd:complexContent>
-			<xsd:extension base="object">
+			<xsd:extension base="objectBase">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
-					<xsd:element name="texture" type="object"/>
+					<xsd:group ref="objectGroup"/>
+					<xsd:element name="texture" type="texture"/>
 					<xsd:element name="bsdf" type="bsdf"/>
 					<xsd:element name="ref" type="reference"/>
 				</xsd:choice>
@@ -134,24 +162,41 @@
 		</xsd:complexContent>
 	</xsd:complexType>
 
-	<!-- Phase Element -->
-	<xsd:complexType name="phase">
+	<!-- TEXTURE Element -->
+	<xsd:complexType name="texture">
 		<xsd:complexContent>
-			<xsd:extension base="object"/>
-		</xsd:complexContent>
-	</xsd:complexType>
-
-	<!-- Film Element -->
-	<xsd:complexType name="film">
-		<xsd:complexContent>
-			<xsd:extension base="object">
+			<xsd:extension base="objectBase">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
-					<xsd:element name="rfilter" type="object"/>
+					<xsd:group ref="objectGroup"/>
+					<xsd:element name="texture" type="texture"/>
+					<xsd:element name="ref" type="reference"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
 	</xsd:complexType>
 
+	<!-- PHASE Element -->
+	<xsd:complexType name="phase">
+		<xsd:complexContent>
+			<xsd:extension base="objectBase">
+				<xsd:choice minOccurs="0" maxOccurs="unbounded">
+					<xsd:group ref="objectGroup"/>
+				</xsd:choice>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+
+	<!-- FILM Element -->
+	<xsd:complexType name="film">
+		<xsd:complexContent>
+			<xsd:extension base="objectBase">
+				<xsd:choice minOccurs="0" maxOccurs="unbounded">
+					<xsd:group ref="objectGroup"/>
+					<xsd:element name="rfilter" type="object"/>
+				</xsd:choice>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
 
 	<!-- Types and parameters -->
 	<xsd:simpleType name="integerType">
@@ -196,15 +241,16 @@
 		</xsd:union>
 	</xsd:simpleType>
 
-
 	<xsd:complexType name="float">
 		<xsd:attribute name="name" type="xsd:string" use="required"/>
 		<xsd:attribute name="value" type="doubleType" use="required"/>
 	</xsd:complexType>
+
 	<xsd:complexType name="integer">
 		<xsd:attribute name="name" type="xsd:string" use="required"/>
 		<xsd:attribute name="value" type="integerType" use="required"/>
 	</xsd:complexType>
+
 	<xsd:complexType name="boolean">
 		<xsd:attribute name="name" type="xsd:string" use="required"/>
 		<xsd:attribute name="value" type="booleanType" use="required"/>

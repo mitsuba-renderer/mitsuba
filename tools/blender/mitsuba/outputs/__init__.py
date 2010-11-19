@@ -28,7 +28,6 @@ class MtsFilmDisplay(TimerThread):
 
 		result = self.LocalStorage['RE'].begin_result(0, 0, int(xres), int(yres))
 		if os.path.exists(self.LocalStorage['output_file']):
-			bpy.ops.ef.msg(msg_text='Updating RenderResult')
 			lay = result.layers[0]
 			lay.load_from_file(self.LocalStorage['output_file'])
 		else:

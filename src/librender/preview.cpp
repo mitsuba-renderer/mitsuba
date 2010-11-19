@@ -68,13 +68,14 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 	Vector toVPL;
 	Ray primary, secondary;
 	int numRays = 0;
+	float shutterOpen = m_scene->getCamera()->getShutterOpen();
 
 	for (int y=sy; y<ey; ++y) {
 		for (int x=sx; x<ex; ++x) {
 			/* Generate a camera ray without normalization */
 			primary = Ray(m_cameraO, m_cameraTL 
 				+ m_cameraDx * (Float) x
-				+ m_cameraDy * (Float) y, 0.0f);
+				+ m_cameraDy * (Float) y, shutterOpen);
 
 			++numRays;
 			if (!m_kdtree->rayIntersect(primary, its)) {
@@ -88,7 +89,7 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 				value = Spectrum(0.0f);
 
 			toVPL = m_vpl.its.p - its.p;
-			secondary = Ray(its.p, toVPL, ShadowEpsilon, 1-ShadowEpsilon, 0.0f);
+			secondary = Ray(its.p, toVPL, ShadowEpsilon, 1-ShadowEpsilon, shutterOpen);
 			++numRays;
 			if (m_kdtree->rayIntersect(secondary)) {
 				block->setPixel(pos++, value);
@@ -352,6 +353,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					);
 					its.t = its4.t.f[idx];
 					shape->fillIntersectionRecord(ray, temp + idx * MTS_KD_INTERSECTION_TEMP + 8, its);
+					bsdf = its.shape->getBSDF();
 				}
 
 				wo.x = nSecD[0].f[idx]; wo.y = nSecD[1].f[idx]; wo.z = nSecD[2].f[idx];

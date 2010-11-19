@@ -27,7 +27,7 @@
 #include <mitsuba/core/appender.h>
 #include <mitsuba/render/util.h>
 #include <mitsuba/render/renderjob.h>
-#include <mitsuba/render/shandler.h>
+#include <mitsuba/render/scenehandler.h>
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <stdexcept>

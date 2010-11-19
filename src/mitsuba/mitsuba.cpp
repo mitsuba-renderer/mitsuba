@@ -26,7 +26,7 @@
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/render/renderjob.h>
-#include <mitsuba/render/shandler.h>
+#include <mitsuba/render/scenehandler.h>
 #include <fstream>
 #include <stdexcept>
 

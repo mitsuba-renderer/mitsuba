@@ -20,7 +20,7 @@
 #include <xercesc/parsers/SAXParser.hpp>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/util.h>
-#include <mitsuba/render/shandler.h>
+#include <mitsuba/render/scenehandler.h>
 
 MTS_NAMESPACE_BEGIN
 

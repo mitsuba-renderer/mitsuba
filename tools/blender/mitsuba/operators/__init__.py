@@ -186,7 +186,7 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 			try:
 				process = subprocess.Popen(
 					[mtsimport_binary, '-r', '%dx%d' % (width, height),
-						'-l', 'pngfilm', mts_dae_file, mts_xml_file, mts_adj_file],
+						'-n', '-l', 'pngfilm', mts_dae_file, mts_xml_file, mts_adj_file],
 					env = env,
 					cwd = self.properties.directory
 				)

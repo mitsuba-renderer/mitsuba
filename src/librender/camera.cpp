@@ -25,7 +25,7 @@ Camera::Camera(const Properties &props)
  : ConfigurableObject(props), m_properties(props) {
 	m_cameraToWorld = props.getTransform("toWorld", Transform());
 	m_shutterOpen = props.getFloat("shutterOpen", 0.0f);
-	m_shutterClose = props.getFloat("shutterClose", 5.0f);
+	m_shutterClose = props.getFloat("shutterClose", 0.0f);
 	if (m_shutterOpen > m_shutterClose)
 		Log(EError, "Shutter opening time must be less than "
 			"or equal to the shutter closing time!");
