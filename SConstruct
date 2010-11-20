@@ -56,6 +56,7 @@ vars.Add('BOOSTLIB',      'boost libraries')
 vars.Add('BOOSTLIBDIR',   'boost library path')
 vars.Add('TARGET_ARCH',   'Target architecture')
 vars.Add('MSVC_VERSION',  'MS Visual C++ compiler version')
+vars.Add('QTDIR',         'Qt installation directory')
 
 try:
 	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt4'], toolpath=['tools'])
@@ -160,9 +161,9 @@ if not conf.CheckCXXHeader('xercesc/dom/DOMLSParser.hpp'):
 if not conf.CheckCXXHeader('dae.h'):
 	hasCollada = False
 	print 'COLLADA DOM is missing: not building the COLLADA importer'
-if not conf.CheckCXXHeader('boost/math/distributions/students_t.hpp'):
-	print 'Boost is missing (install libboost1.40-dev and libboost-math1.40-dev)!'
-	Exit(1)
+#if not conf.CheckCXXHeader('boost/math/distributions/students_t.hpp'):
+#	print 'Boost is missing (install libboost1.40-dev and libboost-math1.40-dev)!'
+#	Exit(1)
 if sys.platform == 'win32':
 	if not (conf.CheckCHeader(['windows.h', 'GL/gl.h']) and conf.CheckCHeader(['windows.h', 'GL/glu.h']) and conf.CheckCHeader(['windows.h', 'GL/gl.h', 'GL/glext.h'])):
 		print 'OpenGL headers are missing!'
@@ -571,8 +572,6 @@ plugins += env.SharedLibrary('plugins/hgridvolume', ['src/volume/hgridvolume.cpp
 # Sub-surface integrators
 plugins += env.SharedLibrary('plugins/dipole', ['src/subsurface/dipole.cpp',
 	'src/subsurface/irrproc.cpp', 'src/subsurface/irrtree.cpp'])
-#plugins += env.SharedLibrary('plugins/adipole', ['src/subsurface/adipole.cpp',
-#	'src/subsurface/irrproc.cpp', 'src/subsurface/irrtree.cpp'])
 
 # Texture types
 plugins += env.SharedLibrary('plugins/exrtexture', ['src/textures/exrtexture.cpp'])
@@ -604,40 +603,6 @@ plugins += env.SharedLibrary('plugins/photonmapper', ['src/integrators/photonmap
 plugins += env.SharedLibrary('plugins/ppm', ['src/integrators/photonmapper/ppm.cpp'])
 plugins += env.SharedLibrary('plugins/sppm', ['src/integrators/photonmapper/sppm.cpp'])
 plugins += env.SharedLibrary('plugins/vpl', ['src/integrators/vpl/vpl.cpp'])
-	
-#camsampler = env.SharedObject('src/integrators/bidir/camsampler.cpp')
-#pathvertex_bdpt = env.SharedObject('src/integrators/bidir/pathvertex_bdpt',
-#	'src/integrators/bidir/pathvertex.cpp', CPPDEFINES = {'MTS_METHOD' : 'BDPT'});
-#path_bdpt = env.SharedObject('src/integrators/bidir/path_bdpt',
-#	'src/integrators/bidir/path.cpp', CPPDEFINES = {'MTS_METHOD' : 'BDPT'});
-#pathvertex_mlt = env.SharedObject('src/integrators/bidir/pathvertex_mlt',
-#	'src/integrators/bidir/pathvertex.cpp', CPPDEFINES = {'MTS_METHOD' : 'MLT'});
-#path_mlt = env.SharedObject('src/integrators/bidir/path_mlt',
-#	'src/integrators/bidir/path.cpp', CPPDEFINES = {'MTS_METHOD' : 'MLT'});
-
-#plugins += env.SharedLibrary('plugins/bidir', [
-#	camsampler, pathvertex_bdpt, path_bdpt,
-#	'src/integrators/bidir/bidir.cpp',
-#	'src/integrators/bidir/bidir_proc.cpp'], CPPDEFINES = {'MTS_METHOD' : 'BDPT'})
-
-#plugins += env.SharedLibrary('plugins/kelemen', [
-#	'src/integrators/bidir/kelemen.cpp',
-#	'src/integrators/bidir/kelemen_sampler.cpp',
-#	'src/integrators/bidir/kelemen_proc.cpp',
-#	'src/integrators/bidir/mlt_sampler.cpp',
-#	pathvertex_bdpt, path_bdpt], CPPDEFINES = {'MTS_METHOD' : 'BDPT'})
-
-#plugins += env.SharedLibrary('plugins/mlt', [
-#	camsampler,
-#	'src/integrators/bidir/mlt.cpp',
-#	'src/integrators/bidir/mlt_sampler.cpp',
-#	'src/integrators/bidir/mlt_bidir.cpp',
-#	'src/integrators/bidir/mlt_lens.cpp',
-#	'src/integrators/bidir/mlt_caustic.cpp',
-#	'src/integrators/bidir/mlt_mchain.cpp',
-#	'src/integrators/bidir/mlt_proc.cpp',
-#	pathvertex_mlt, path_mlt
-#])
 
 # Testcases
 testEnv = env.Clone()
@@ -683,7 +648,16 @@ if sys.platform == 'win32':
 	installTargets += env.Install('dist', dllprefix + 'pthreadVCE2.dll')
 	installTargets += env.Install('dist', dllprefix + 'xerces-c_3_0.dll')
 	installTargets += env.Install('dist', dllprefix + 'glew32mx.dll')
-	installTargets += env.Install('dist', dllprefix + 'libcollada14dom21.dll')
+	compilerType = 'vc90'
+	if env['MSVC_VERSION'] == '9.0':
+		compilerType = 'vc90'
+	elif env['MSVC_VERSION'] == '10.0':
+		compilerType = 'vc100'
+	else:
+		raise Exception('Unknown compiler version!')
+	installTargets += env.Install('dist', dllprefix + '%s/libcollada14dom21.dll' % compilerType)
+	installTargets += env.Install('dist', dllprefix + '%s/boost_system-%s-mt-1_44.dll' % (compilerType, compilerType))
+	installTargets += env.Install('dist', dllprefix + '%s/boost_filesystem-%s-mt-1_44.dll' % (compilerType, compilerType))
 	if hasQt:
 		installTargets += env.Install('dist', env['QT4_BINPATH']+'/QtCore4.dll')
 		installTargets += env.Install('dist', env['QT4_BINPATH']+'/QtGui4.dll')

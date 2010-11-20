@@ -19,11 +19,11 @@
 #if !defined(__PLATFORM_H)
 #define __PLATFORM_H
 
+/// Disable BOOST's autolinking feature
+#define BOOST_ALL_NO_LIB 1
+
 #if defined(_MSC_VER)
 	/* Disable MSVC STL debug + security features (slow..!) */
-	#ifdef _SECURE_SCL
-		#undef _SECURE_SCL
-	#endif
 	#ifdef _SECURE_SCL_THROWS
 		#undef _SECURE_SCL_THROWS
 	#endif
@@ -32,7 +32,6 @@
 	#endif
 	#undef _STLP_DEBUG
 
-	#define _SECURE_SCL 0
 	#define _SECURE_SCL_THROWS 0
 	#define _HAS_ITERATOR_DEBUGGING 0
 	#define __MSVC__
