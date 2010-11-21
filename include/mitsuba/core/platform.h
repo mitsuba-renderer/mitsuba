@@ -27,6 +27,9 @@
 	#ifdef _SECURE_SCL_THROWS
 		#undef _SECURE_SCL_THROWS
 	#endif
+	#ifdef _SCL_SECURE_NO_WARNINGS
+		#undef _SCL_SECURE_NO_WARNINGS
+	#endif
 	#ifdef _HAS_ITERATOR_DEBUGGING
 		#undef _HAS_ITERATOR_DEBUGGING
 	#endif
@@ -34,6 +37,7 @@
 
 	#define _SECURE_SCL_THROWS 0
 	#define _HAS_ITERATOR_DEBUGGING 0
+	#define _SCL_SECURE_NO_WARNINGS 0
 	#define __MSVC__
 	#define __WINDOWS__
 
@@ -49,6 +53,7 @@
 
 	#pragma warning(disable : 4251) // 'field' : class 'A' needs to have dll-interface to be used by clients of class 'B'
 	#pragma warning(disable : 4800) // 'type' : forcing value to bool 'true' or 'false' (performance warning)
+	#pragma warning(disable : 4996) // Secure SCL warnings
 	#include <stdint_msvc.h>        // Does not exist in MSVC. Use a replacement
 	#if _MSC_VER >= 1400
 		#include <memory.h>
