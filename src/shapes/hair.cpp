@@ -705,7 +705,7 @@ public:
 		return mesh.get();
 	}
 
-	const AbstractKDTree<AABB> *getKDTree() const {
+	const KDTreeBase<AABB> *getKDTree() const {
 		return m_kdtree.get();
 	}
 

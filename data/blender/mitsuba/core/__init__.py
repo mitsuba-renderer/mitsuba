@@ -148,7 +148,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 		adj.exportMaterial(pm)
 		adj.exportPreviewMesh(pm)
 		adj.writeFooter()
-		(mts_path, tail) = os.path.split(bpy.path.abspath(scene.mitsuba_engine.binary_path))
+		mts_path = scene.mitsuba_engine.binary_path
 		mitsuba_binary = os.path.join(mts_path, "mitsuba")
 		env = copy.copy(os.environ)
 		mts_render_libpath = os.path.join(mts_path, "src/librender")
@@ -238,7 +238,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 				return 
 
 			if scene.mitsuba_engine.export_mode == 'render':
-				(mts_path, tail) = os.path.split(bpy.path.abspath(scene.mitsuba_engine.binary_path))
+				mts_path = scene.mitsuba_engine.binary_path
 				mtsgui_binary = os.path.join(mts_path, "mtsgui")
 				mitsuba_binary = os.path.join(mts_path, "mitsuba")
 				env = copy.copy(os.environ)

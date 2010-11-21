@@ -101,7 +101,7 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 	}
 }
 
-const AbstractKDTree<AABB> *Shape::getKDTree() const {
+const KDTreeBase<AABB> *Shape::getKDTree() const {
 	return NULL;
 }
 

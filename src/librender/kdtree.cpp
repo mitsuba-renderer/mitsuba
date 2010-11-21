@@ -300,5 +300,5 @@ void KDTree::rayIntersectPacketIncoherent(const RayPacket4 &packet,
 
 #endif
 
-MTS_IMPLEMENT_CLASS(KDTree, false, GenericKDTree)
+MTS_IMPLEMENT_CLASS(KDTree, false, KDTreeBase)
 MTS_NAMESPACE_END

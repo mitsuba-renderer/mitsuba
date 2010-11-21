@@ -46,8 +46,8 @@
 //#define MTS_KD_MAILBOX_MASK (MTS_KD_MAILBOX_SIZE-1)
 
 #if defined(MTS_KD_DEBUG)
-#define KDAssert(expr) Assert(expr)
-#define KDAssertEx(expr, text) AssertEx(expr, text)
+#define KDAssert(expr) SAssert(expr)
+#define KDAssertEx(expr, text) SAssertEx(expr, text)
 #else
 #define KDAssert(expr) 
 #define KDAssertEx(expr, text) 
@@ -433,7 +433,7 @@ private:
  * This class defines the byte layout for KD-tree nodes and
  * provides methods for querying the tree structure.
  */
-template <typename AABBType> class AbstractKDTree : public Object {
+template <typename AABBType> class KDTreeBase : public Object {
 public:
 	/// Index number format (max 2^32 prims)
 	typedef uint32_t index_type;
@@ -616,7 +616,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	virtual ~AbstractKDTree() { }
+	virtual ~KDTreeBase() { }
 protected:
 	KDNode *m_nodes;
 	AABBType m_aabb, m_tightAABB;
@@ -628,6 +628,9 @@ protected:
    for the following kd-tree building code */
 #pragma float_control(precise, on)
 #endif
+
+#define KDLog(level, fmt, ...) Thread::getThread()->getLogger()->log(level, KDTreeBase<AABB>::m_theClass, \
+	__FILE__, __LINE__, fmt, ## __VA_ARGS__)
 
 /**
  * \brief SAH KD-tree acceleration data structure for fast ray-object 
@@ -680,7 +683,7 @@ protected:
  * \author Wenzel Jakob
  */
 template <typename AABBType, typename Derived> 
-	class GenericKDTree : public AbstractKDTree<AABBType> {
+	class GenericKDTree : public KDTreeBase<AABBType> {
 protected:
 	// Some forward declarations
 	struct MinMaxBins;
@@ -688,9 +691,9 @@ protected:
 	struct EdgeEventOrdering;
 
 public:
-	typedef typename AbstractKDTree<AABBType>::size_type  size_type;
-	typedef typename AbstractKDTree<AABBType>::index_type index_type;
-	typedef typename AbstractKDTree<AABBType>::KDNode     KDNode;
+	typedef typename KDTreeBase<AABBType>::size_type  size_type;
+	typedef typename KDTreeBase<AABBType>::index_type index_type;
+	typedef typename KDTreeBase<AABBType>::KDNode     KDNode;
 	typedef typename AABBType::value_type                 value_type;
 	typedef typename AABBType::point_type                 point_type;
 	typedef typename AABBType::vector_type                vector_type;
@@ -918,8 +921,6 @@ public:
 	 * and fitting the SAH cost model to the collected statistics.
 	 */
 	void findCosts(Float &traversalCost, Float &intersectionCost);
-
-	MTS_DECLARE_CLASS()
 protected:
 	/**
 	 * \brief Build a KD-tree over the supplied geometry
@@ -929,23 +930,23 @@ protected:
 	void buildInternal() {
 		/* Some samity checks */
 		if (this->isBuilt()) 
-			Log(EError, "The kd-tree has already been built!");
+			KDLog(EError, "The kd-tree has already been built!");
 		if (m_traversalCost <= 0)
-			Log(EError, "The traveral cost must be > 0");
+			KDLog(EError, "The traveral cost must be > 0");
 		if (m_intersectionCost <= 0)
-			Log(EError, "The intersection cost must be > 0");
+			KDLog(EError, "The intersection cost must be > 0");
 		if (m_emptySpaceBonus <= 0 || m_emptySpaceBonus > 1)
-			Log(EError, "The empty space bonus must be in [0, 1]");
+			KDLog(EError, "The empty space bonus must be in [0, 1]");
 		if (m_stopPrims < 0)
-			Log(EError, "The stopping primitive count must be >= 0");
+			KDLog(EError, "The stopping primitive count must be >= 0");
 		if (m_exactPrimThreshold < 0)
-			Log(EError, "The exact primitive threshold must be >= 0");
+			KDLog(EError, "The exact primitive threshold must be >= 0");
 		if (m_minMaxBins <= 1)
-			Log(EError, "The number of min-max bins must be > 2");
+			KDLog(EError, "The number of min-max bins must be > 2");
 
 		size_type primCount = cast()->getPrimitiveCount();
 		if (primCount == 0) {
-			Log(EWarn, "kd-tree contains no geometry!");
+			KDLog(EWarn, "kd-tree contains no geometry!");
 			// +1 shift is for alignment purposes (see KDNode::getSibling)
 			this->m_nodes = static_cast<KDNode *>(allocAligned(sizeof(KDNode) * 2))+1;
 			this->m_nodes[0].initLeafNode(0, 0);
@@ -959,7 +960,7 @@ protected:
 			m_maxDepth = (int) (8 + 1.3f * log2i(primCount));
 		m_maxDepth = std::min(m_maxDepth, (size_type) MTS_KD_MAXDEPTH);
 
-		Log(EDebug, "Creating a preliminary index list (%s)", 
+		KDLog(EDebug, "Creating a preliminary index list (%s)", 
 			memString(primCount * sizeof(index_type)).c_str());
 
 		OrderedChunkAllocator &leftAlloc = ctx.leftAlloc;
@@ -973,29 +974,29 @@ protected:
 			indices[i] = i;
 		}
 
-		Log(EDebug, "Computed scene bounds in %i ms", 
+		KDLog(EDebug, "Computed scene bounds in %i ms", 
 				timer->getMilliseconds());
-		Log(EDebug, "");
+		KDLog(EDebug, "");
 
-		Log(EDebug, "kd-tree configuration:");
-		Log(EDebug, "   Traversal cost           : %.2f", m_traversalCost);
-		Log(EDebug, "   Intersection cost        : %.2f", m_intersectionCost);
-		Log(EDebug, "   Empty space bonus        : %.2f", m_emptySpaceBonus);
-		Log(EDebug, "   Max. tree depth          : %i", m_maxDepth);
-		Log(EDebug, "   Scene bounding box (min) : %s", 
+		KDLog(EDebug, "kd-tree configuration:");
+		KDLog(EDebug, "   Traversal cost           : %.2f", m_traversalCost);
+		KDLog(EDebug, "   Intersection cost        : %.2f", m_intersectionCost);
+		KDLog(EDebug, "   Empty space bonus        : %.2f", m_emptySpaceBonus);
+		KDLog(EDebug, "   Max. tree depth          : %i", m_maxDepth);
+		KDLog(EDebug, "   Scene bounding box (min) : %s", 
 				aabb.min.toString().c_str());
-		Log(EDebug, "   Scene bounding box (max) : %s", 
+		KDLog(EDebug, "   Scene bounding box (max) : %s", 
 				aabb.max.toString().c_str());
-		Log(EDebug, "   Min-max bins             : %i", m_minMaxBins);
-		Log(EDebug, "   Greedy SAH optimization  : use for <= %i primitives", 
+		KDLog(EDebug, "   Min-max bins             : %i", m_minMaxBins);
+		KDLog(EDebug, "   Greedy SAH optimization  : use for <= %i primitives", 
 				m_exactPrimThreshold);
-		Log(EDebug, "   Perfect splits           : %s", m_clip ? "yes" : "no");
-		Log(EDebug, "   Retract bad splits       : %s", 
+		KDLog(EDebug, "   Perfect splits           : %s", m_clip ? "yes" : "no");
+		KDLog(EDebug, "   Retract bad splits       : %s", 
 				m_retract ? "yes" : "no");
-		Log(EDebug, "   Stopping primitive count : %i", m_stopPrims);
-		Log(EDebug, "   Build tree in parallel   : %s", 
+		KDLog(EDebug, "   Stopping primitive count : %i", m_stopPrims);
+		KDLog(EDebug, "   Build tree in parallel   : %s", 
 				m_parallelBuild ? "yes" : "no");
-		Log(EDebug, "");
+		KDLog(EDebug, "");
 
 		size_type procCount = getProcessorCount();
 		if (procCount == 1)
@@ -1010,7 +1011,7 @@ protected:
 			}
 		}
 
-		Log(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
+		KDLog(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
 
 		m_indirectionLock = new Mutex();
 		KDNode *prelimRoot = ctx.nodes.allocate(1);
@@ -1030,17 +1031,17 @@ protected:
 				m_builders[i]->join();
 		}
 
-		Log(EInfo, "Finished -- took %i ms.", timer->getMilliseconds());
-		Log(EDebug, "");
+		KDLog(EInfo, "Finished -- took %i ms.", timer->getMilliseconds());
+		KDLog(EDebug, "");
 
-		Log(EDebug, "Temporary memory statistics:");
-		Log(EDebug, "   Classification storage : %s", 
+		KDLog(EDebug, "Temporary memory statistics:");
+		KDLog(EDebug, "   Classification storage : %s", 
 				memString((ctx.classStorage.size() * (1+procCount))).c_str());
-		Log(EDebug, "   Indirection entries    : " SIZE_T_FMT " (%s)", 
+		KDLog(EDebug, "   Indirection entries    : " SIZE_T_FMT " (%s)", 
 				m_indirections.size(), memString(m_indirections.capacity()
 				* sizeof(KDNode *)).c_str());
 
-		Log(EDebug, "   Main thread:");
+		KDLog(EDebug, "   Main thread:");
 		ctx.printStats();
 		size_t totalUsage = m_indirections.capacity() 
 			* sizeof(KDNode *) + ctx.size();
@@ -1049,7 +1050,7 @@ protected:
 		ctx.leftAlloc.cleanup();
 		ctx.rightAlloc.cleanup();
 		for (size_type i=0; i<m_builders.size(); ++i) {
-			Log(EDebug, "   Worker thread %i:", i+1);
+			KDLog(EDebug, "   Worker thread %i:", i+1);
 			BuildContext &subCtx = m_builders[i]->getContext();
 			subCtx.printStats();
 			totalUsage += subCtx.size();
@@ -1057,11 +1058,11 @@ protected:
 			subCtx.rightAlloc.cleanup();
 			ctx.accumulateStatisticsFrom(subCtx);
 		}
-		Log(EDebug, "   Total: %s", memString(totalUsage).c_str());
+		KDLog(EDebug, "   Total: %s", memString(totalUsage).c_str());
 
-		Log(EDebug, "");
+		KDLog(EDebug, "");
 		timer->reset();
-		Log(EDebug, "Optimizing memory layout ..");
+		KDLog(EDebug, "Optimizing memory layout ..");
 
 		std::stack<boost::tuple<const KDNode *, KDNode *, 
 				const BuildContext *, AABBType> > stack;
@@ -1133,7 +1134,7 @@ protected:
 				float split = node->getSplit();
 				bool result = target->initInnerNode(axis, split, children - target);
 				if (!result)
-					Log(EError, "Cannot represent relative pointer -- "
+					KDLog(EError, "Cannot represent relative pointer -- "
 						"too many primitives?");
 
 				Float tmp = aabb.min[axis];
@@ -1148,7 +1149,7 @@ protected:
 		KDAssert(nodePtr == ctx.innerNodeCount + ctx.leafNodeCount);
 		KDAssert(indexPtr == m_indexCount);
 
-		Log(EDebug, "Finished -- took %i ms.", timer->getMilliseconds());
+		KDLog(EDebug, "Finished -- took %i ms.", timer->getMilliseconds());
 
 		/* Free some more memory */
 		ctx.nodes.clear();
@@ -1167,7 +1168,7 @@ protected:
 			m_builders.clear();
 		}
 
-		Log(EDebug, "");
+		KDLog(EDebug, "");
 
 		Float rootSA = aabb.getSurfaceArea();
 		expTraversalSteps /= rootSA;
@@ -1184,42 +1185,42 @@ protected:
 			+ Vector(Epsilon, Epsilon, Epsilon);
 		this->m_bsphere = aabb.getBSphere();
 
-		Log(EDebug, "Structural kd-tree statistics:");
-		Log(EDebug, "   Parallel work units       : " SIZE_T_FMT, 
+		KDLog(EDebug, "Structural kd-tree statistics:");
+		KDLog(EDebug, "   Parallel work units       : " SIZE_T_FMT, 
 				m_interface.threadMap.size());
-		Log(EDebug, "   Node storage cost         : %s", 
+		KDLog(EDebug, "   Node storage cost         : %s", 
 				memString(nodePtr * sizeof(KDNode)).c_str());
-		Log(EDebug, "   Index storage cost        : %s", 
+		KDLog(EDebug, "   Index storage cost        : %s", 
 				memString(indexPtr * sizeof(index_type)).c_str());
-		Log(EDebug, "   Inner nodes               : %i", ctx.innerNodeCount);
-		Log(EDebug, "   Leaf nodes                : %i", ctx.leafNodeCount);
-		Log(EDebug, "   Nonempty leaf nodes       : %i", 
+		KDLog(EDebug, "   Inner nodes               : %i", ctx.innerNodeCount);
+		KDLog(EDebug, "   Leaf nodes                : %i", ctx.leafNodeCount);
+		KDLog(EDebug, "   Nonempty leaf nodes       : %i", 
 				ctx.nonemptyLeafNodeCount);
 		std::ostringstream oss;
 		oss << "   Leaf node histogram       : ";
 		for (size_type i=0; i<primBucketCount; i++) {
 			oss << i << "(" << primBuckets[i] << ") ";
 			if ((i+1)%4==0 && i+1<primBucketCount) {
-				Log(EDebug, "%s", oss.str().c_str());
+				KDLog(EDebug, "%s", oss.str().c_str());
 				oss.str("");
 				oss << "                               ";
 			}
 		}
-		Log(EDebug, "%s", oss.str().c_str());
-		Log(EDebug, "");
-		Log(EDebug, "Qualitative kd-tree statistics:");
-		Log(EDebug, "   Retracted splits          : %i", ctx.retractedSplits);
-		Log(EDebug, "   Pruned primitives         : %i", ctx.pruned);
-		Log(EDebug, "   Largest leaf node         : %i primitives",
+		KDLog(EDebug, "%s", oss.str().c_str());
+		KDLog(EDebug, "");
+		KDLog(EDebug, "Qualitative kd-tree statistics:");
+		KDLog(EDebug, "   Retracted splits          : %i", ctx.retractedSplits);
+		KDLog(EDebug, "   Pruned primitives         : %i", ctx.pruned);
+		KDLog(EDebug, "   Largest leaf node         : %i primitives",
 				maxPrimsInLeaf);
-		Log(EDebug, "   Avg. prims/nonempty leaf  : %.2f", 
+		KDLog(EDebug, "   Avg. prims/nonempty leaf  : %.2f", 
 				ctx.primIndexCount / (Float) ctx.nonemptyLeafNodeCount);
-		Log(EDebug, "   Expected traversals/ray   : %.2f", expTraversalSteps);
-		Log(EDebug, "   Expected leaf visits/ray  : %.2f", expLeavesVisited);
-		Log(EDebug, "   Expected prim. visits/ray : %.2f", 
+		KDLog(EDebug, "   Expected traversals/ray   : %.2f", expTraversalSteps);
+		KDLog(EDebug, "   Expected leaf visits/ray  : %.2f", expLeavesVisited);
+		KDLog(EDebug, "   Expected prim. visits/ray : %.2f", 
 				expPrimitivesIntersected);
-		Log(EDebug, "   Final SAH cost            : %.2f", sahCost);
-		Log(EDebug, "");
+		KDLog(EDebug, "   Final SAH cost            : %.2f", sahCost);
+		KDLog(EDebug, "");
 	}
 
 protected:
@@ -1365,16 +1366,16 @@ protected:
 		}
 
 		void printStats() {
-			Log(EDebug, "      Left events   : " SIZE_T_FMT " chunks (%s)",
+			KDLog(EDebug, "      Left events   : " SIZE_T_FMT " chunks (%s)",
 					leftAlloc.getChunkCount(), 
 					memString(leftAlloc.size()).c_str());
-			Log(EDebug, "      Right events  : " SIZE_T_FMT " chunks (%s)",
+			KDLog(EDebug, "      Right events  : " SIZE_T_FMT " chunks (%s)",
 					rightAlloc.getChunkCount(), 
 					memString(rightAlloc.size()).c_str());
-			Log(EDebug, "      kd-tree nodes : " SIZE_T_FMT " entries, " 
+			KDLog(EDebug, "      kd-tree nodes : " SIZE_T_FMT " entries, " 
 					SIZE_T_FMT " blocks (%s)", nodes.size(), nodes.blockCount(), 
 					memString(nodes.capacity() * sizeof(KDNode)).c_str());
-			Log(EDebug, "      Indices       : " SIZE_T_FMT " entries, " 
+			KDLog(EDebug, "      Indices       : " SIZE_T_FMT " entries, " 
 					SIZE_T_FMT " blocks (%s)", indices.size(), 
 					indices.blockCount(), memString(indices.capacity()
 					* sizeof(index_type)).c_str());
@@ -2021,7 +2022,7 @@ protected:
 				if (m_clip && (pos < nodeAABB.min[axis] 
 							|| pos > nodeAABB.max[axis])) {
 					/* When primitive clipping is active, this should  never happen! */
-					Log(EError, "Internal error: edge event is out of bounds");
+					KDLog(EError, "Internal error: edge event is out of bounds");
 				}
 				#endif
 			}
@@ -3184,7 +3185,7 @@ template <typename AABBType, typename Derived>
 		}
 	}
 
-	Log(EDebug, "Fitting to " SIZE_T_FMT " samples (" SIZE_T_FMT 
+	KDLog(EDebug, "Fitting to " SIZE_T_FMT " samples (" SIZE_T_FMT 
 			" intersections)", idx, nIntersections);
 
 	/* Solve using normal equations */
@@ -3200,7 +3201,7 @@ template <typename AABBType, typename Derived>
 	}
 	M.m[3][3] = 1.0f;
 	bool success = M.invert(Minv);
-	Assert(success);
+	SAssert(success);
 
 	Transform(Minv, M)(rhs, x);
 
@@ -3219,17 +3220,17 @@ template <typename AABBType, typename Derived>
 		avgRdtsc += b[k];
 	avgRdtsc /= idx;
 
-	Log(EDebug, "Least squares fit:");
-	Log(EDebug, "   Constant overhead    = %.2f", x[0]);
-	Log(EDebug, "   Traversal cost       = %.2f", x[1]);
-	Log(EDebug, "   Intersection cost    = %.2f", x[2]);
-	Log(EDebug, "   Average rdtsc value  = %.2f", avgRdtsc);
-	Log(EDebug, "   Avg. residual        = %.2f", avgResidual);
+	KDLog(EDebug, "Least squares fit:");
+	KDLog(EDebug, "   Constant overhead    = %.2f", x[0]);
+	KDLog(EDebug, "   Traversal cost       = %.2f", x[1]);
+	KDLog(EDebug, "   Intersection cost    = %.2f", x[2]);
+	KDLog(EDebug, "   Average rdtsc value  = %.2f", avgRdtsc);
+	KDLog(EDebug, "   Avg. residual        = %.2f", avgResidual);
 	x *= 10/x[1];
-	Log(EDebug, "Re-scaled:");
-	Log(EDebug, "   Constant overhead    = %.2f", x[0]);
-	Log(EDebug, "   Traversal cost       = %.2f", x[1]);
-	Log(EDebug, "   Intersection cost    = %.2f", x[2]);
+	KDLog(EDebug, "Re-scaled:");
+	KDLog(EDebug, "   Constant overhead    = %.2f", x[0]);
+	KDLog(EDebug, "   Traversal cost       = %.2f", x[1]);
+	KDLog(EDebug, "   Intersection cost    = %.2f", x[2]);
 
 	delete[] A;
 	delete[] b;
@@ -3238,20 +3239,11 @@ template <typename AABBType, typename Derived>
 }
 
 template <typename AABBType>
-	Class *AbstractKDTree<AABBType>::m_theClass 
-		= new Class("AbstractKDTree", true, "Object");
+	Class *KDTreeBase<AABBType>::m_theClass 
+		= new Class("KDTreeBase", true, "Object");
 
 template <typename AABBType>
-	const Class *AbstractKDTree<AABBType>::getClass() const {
-	return m_theClass;
-}
-
-template <typename AABBType, typename Derived>
-	Class *GenericKDTree<AABBType, Derived>::m_theClass 
-		= new Class("GenericKDTree", true, "AbstractKDTree");
-
-template <typename AABBType, typename Derived>
-	const Class *GenericKDTree<AABBType, Derived>::getClass() const {
+	const Class *KDTreeBase<AABBType>::getClass() const {
 	return m_theClass;
 }
 

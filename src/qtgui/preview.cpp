@@ -541,14 +541,14 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	}
 }
 		
-void PreviewThread::oglRenderKDTree(const AbstractKDTree<AABB> *kdtree) {
-	std::stack<boost::tuple<const AbstractKDTree<AABB>::KDNode *, AABB, uint32_t> > stack;
+void PreviewThread::oglRenderKDTree(const KDTreeBase<AABB> *kdtree) {
+	std::stack<boost::tuple<const KDTreeBase<AABB>::KDNode *, AABB, uint32_t> > stack;
 
 	stack.push(boost::make_tuple(kdtree->getRoot(), kdtree->getTightAABB(), 0));
 	Float brightness = 10.0f;
 
 	while (!stack.empty()) {
-		const AbstractKDTree<AABB>::KDNode *node = boost::get<0>(stack.top());
+		const KDTreeBase<AABB>::KDNode *node = boost::get<0>(stack.top());
 		AABB aabb = boost::get<1>(stack.top());
 		int level = boost::get<2>(stack.top());
 		stack.pop();

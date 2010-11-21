@@ -171,7 +171,7 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 				self.report({'ERROR'}, 'Mitsuba binary path must be specified!')
 				return {'CANCELLED'}
 
-			(mts_path, tail) = os.path.split(bpy.path.abspath(scene.mitsuba_engine.binary_path))
+			mts_path = scene.mitsuba_engine.binary_path
 			mtsimport_binary = os.path.join(mts_path, "mtsimport")
 			env = copy.copy(os.environ)
 			mts_render_libpath = os.path.join(mts_path, "src/librender")

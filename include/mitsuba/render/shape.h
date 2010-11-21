@@ -252,7 +252,7 @@ public:
 	 * the interactive walkthrough. The default implementation
 	 * simply returns NULL.
 	 */
-	virtual const AbstractKDTree<AABB> *getKDTree() const;
+	virtual const KDTreeBase<AABB> *getKDTree() const;
 
 	/**
 	 * \brief Create a triangle mesh approximation of this shape

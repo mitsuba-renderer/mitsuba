@@ -75,7 +75,7 @@ protected:
 	/// Render a single VPL using OpenGL
 	void oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl);
 	/// Render a wireframe visualization of a kd-tree
-	void oglRenderKDTree(const AbstractKDTree<AABB> *kdtree);
+	void oglRenderKDTree(const KDTreeBase<AABB> *kdtree);
 	/// Render a single VPL using real-time coherent ray tracing
 	void rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl);
 private:

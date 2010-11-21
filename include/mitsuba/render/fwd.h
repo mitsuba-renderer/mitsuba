@@ -45,7 +45,7 @@ class Instanced;
 class Integrator;
 struct Intersection;
 class IrradianceCache;
-template <typename AABBType> class AbstractKDTree;
+template <typename AABBType> class KDTreeBase;
 template <typename AABBType, typename Derived> class GenericKDTree;
 class KDTree;
 class LocalWorker;

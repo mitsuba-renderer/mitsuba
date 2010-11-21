@@ -62,6 +62,8 @@ class engine(render_described_context, bpy.types.Panel):
 		binary_path = context.scene.mitsuba_engine.binary_path
 		if binary_path != "" and cached_binary_path != binary_path:
 			binary_path = os.path.abspath(efutil.filesystem_path(binary_path))
+			if os.path.isfile(binary_path):
+				(binary_path, tail) = os.path.split(binary_path)
 			actualChange = cached_binary_path != None
 			cached_binary_path = binary_path
 			context.scene.mitsuba_engine.binary_path = binary_path
