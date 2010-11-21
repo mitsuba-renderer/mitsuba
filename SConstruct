@@ -637,7 +637,6 @@ if sys.platform == 'win32':
 	installTargets += env.Install('dist', 'mtssrv.exe')
 	installTargets += env.Install('dist', 'mtsutil.exe')
 	installTargets += env.Install('dist', 'mtsimport.exe')
-	installTargets += env.Install('dist', 'mtsgui.exe')
 	installTargets += env.Install('dist', 'src/libcore/libmitsuba-core.dll')
 	installTargets += env.Install('dist', 'src/libhw/libmitsuba-hw.dll')
 	installTargets += env.Install('dist', 'src/librender/libmitsuba-render.dll')
@@ -663,6 +662,7 @@ if sys.platform == 'win32':
 	installTargets += env.Install('dist', dllprefix + '%s/boost_system-%s-mt-1_44.dll' % (compilerType, compilerType))
 	installTargets += env.Install('dist', dllprefix + '%s/boost_filesystem-%s-mt-1_44.dll' % (compilerType, compilerType))
 	if hasQt:
+		installTargets += env.Install('dist', 'mtsgui.exe')
 		installTargets += env.Install('dist', env['QT4_BINPATH']+'/QtCore4.dll')
 		installTargets += env.Install('dist', env['QT4_BINPATH']+'/QtGui4.dll')
 		installTargets += env.Install('dist', env['QT4_BINPATH']+'/QtXml4.dll')
