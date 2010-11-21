@@ -10,6 +10,10 @@ configFile = GetOption('cfg')
 if configFile == None:
 	configFile = "config.py"
 
+if (sys.platform == 'win32' or sys.platform == 'darwin') and not os.path.exists('dependencies'):
+	print 'The dependencies are missing -- see http://www.mitsuba-renderer.org/devblog/archives/11-Build-system-changes.html'
+	Exit(1)
+
 if not os.path.exists(configFile):
 	print 'A configuration file must be selected! Have a look at \"README\"'
 	Exit(1)
@@ -56,13 +60,14 @@ vars.Add('BOOSTLIB',      'boost libraries')
 vars.Add('BOOSTLIBDIR',   'boost library path')
 vars.Add('TARGET_ARCH',   'Target architecture')
 vars.Add('MSVC_VERSION',  'MS Visual C++ compiler version')
+vars.Add('QTDIR',         'Qt installation directory')
 
 try:
-	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt4'], toolpath=['tools'])
+	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt4'], toolpath=['data'])
 	print 'Checking for Qt 4.x... yes'
 	hasQt = True
 except Exception:
-	env = Environment(options=vars, ENV = os.environ, tools=['default'], toolpath=['tools'])
+	env = Environment(options=vars, ENV = os.environ, tools=['default'])
 	print 'Unable to detect a Qt installation -- not building the GUI!'
 	hasQt = False
 
@@ -160,9 +165,9 @@ if not conf.CheckCXXHeader('xercesc/dom/DOMLSParser.hpp'):
 if not conf.CheckCXXHeader('dae.h'):
 	hasCollada = False
 	print 'COLLADA DOM is missing: not building the COLLADA importer'
-if not conf.CheckCXXHeader('boost/math/distributions/students_t.hpp'):
-	print 'Boost is missing (install libboost1.40-dev and libboost-math1.40-dev)!'
-	Exit(1)
+#if not conf.CheckCXXHeader('boost/math/distributions/students_t.hpp'):
+#	print 'Boost is missing (install libboost1.40-dev and libboost-math1.40-dev)!'
+#	Exit(1)
 if sys.platform == 'win32':
 	if not (conf.CheckCHeader(['windows.h', 'GL/gl.h']) and conf.CheckCHeader(['windows.h', 'GL/glu.h']) and conf.CheckCHeader(['windows.h', 'GL/gl.h', 'GL/glext.h'])):
 		print 'OpenGL headers are missing!'
@@ -408,7 +413,7 @@ resources = []
 darwinStub = []
 
 if sys.platform == 'win32':
-	resources += [env.RES('tools/windows/mitsuba_res.rc')]
+	resources += [env.RES('data/windows/mitsuba_res.rc')]
 
 # Build the command-line+GUI interface
 mainEnv.Program('mtssrv', resources + ['src/mitsuba/mtssrv.cpp'])
@@ -462,7 +467,7 @@ if hasQt:
 		qtEnv.Append(LINKFLAGS=['/SUBSYSTEM:WINDOWS'])
 		qtEnv.Append(LIBS=['qtmain'])
 	elif sys.platform == 'darwin':
-		qtEnv.Append(LINKFLAGS=['-Ftools/darwin', '-framework', 'BWToolkitFramework'])
+		qtEnv.Append(LINKFLAGS=['-Fdependencies/darwin', '-framework', 'BWToolkitFramework'])
 
 	qtInterfaces = [qtEnv.Uic4(uic) for uic in scanFiles('src/qtgui', ['*.ui'])]
 	qtResources = [qtEnv.Qrc(qrc) for qrc in scanFiles('src/qtgui', ['*.qrc'])]
@@ -482,7 +487,7 @@ if hasQt:
 		qtEnv_osx['CXXFLAGS'].remove('-fstrict-aliasing');
 		qtEnv_osx['CXXFLAGS'].remove('-ftree-vectorize');
 		qtEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing');
-		qtEnv_osx['CXXFLAGS'].append(['-Ftools/darwin', '-framework', 'BWToolkitFramework'])
+		qtEnv_osx['CXXFLAGS'].append(['-Fdependencies/darwin', '-framework', 'BWToolkitFramework'])
 		qtgui_files += qtEnv_osx.StaticObject('src/qtgui/previewsettingsdlg_cocoa_impl.mm')
 	else:
 		qtgui_files = [x for x in qtgui_files if (not isinstance(x, str) or 'cocoa' not in x)]
@@ -571,8 +576,6 @@ plugins += env.SharedLibrary('plugins/hgridvolume', ['src/volume/hgridvolume.cpp
 # Sub-surface integrators
 plugins += env.SharedLibrary('plugins/dipole', ['src/subsurface/dipole.cpp',
 	'src/subsurface/irrproc.cpp', 'src/subsurface/irrtree.cpp'])
-#plugins += env.SharedLibrary('plugins/adipole', ['src/subsurface/adipole.cpp',
-#	'src/subsurface/irrproc.cpp', 'src/subsurface/irrtree.cpp'])
 
 # Texture types
 plugins += env.SharedLibrary('plugins/exrtexture', ['src/textures/exrtexture.cpp'])
@@ -604,40 +607,6 @@ plugins += env.SharedLibrary('plugins/photonmapper', ['src/integrators/photonmap
 plugins += env.SharedLibrary('plugins/ppm', ['src/integrators/photonmapper/ppm.cpp'])
 plugins += env.SharedLibrary('plugins/sppm', ['src/integrators/photonmapper/sppm.cpp'])
 plugins += env.SharedLibrary('plugins/vpl', ['src/integrators/vpl/vpl.cpp'])
-	
-#camsampler = env.SharedObject('src/integrators/bidir/camsampler.cpp')
-#pathvertex_bdpt = env.SharedObject('src/integrators/bidir/pathvertex_bdpt',
-#	'src/integrators/bidir/pathvertex.cpp', CPPDEFINES = {'MTS_METHOD' : 'BDPT'});
-#path_bdpt = env.SharedObject('src/integrators/bidir/path_bdpt',
-#	'src/integrators/bidir/path.cpp', CPPDEFINES = {'MTS_METHOD' : 'BDPT'});
-#pathvertex_mlt = env.SharedObject('src/integrators/bidir/pathvertex_mlt',
-#	'src/integrators/bidir/pathvertex.cpp', CPPDEFINES = {'MTS_METHOD' : 'MLT'});
-#path_mlt = env.SharedObject('src/integrators/bidir/path_mlt',
-#	'src/integrators/bidir/path.cpp', CPPDEFINES = {'MTS_METHOD' : 'MLT'});
-
-#plugins += env.SharedLibrary('plugins/bidir', [
-#	camsampler, pathvertex_bdpt, path_bdpt,
-#	'src/integrators/bidir/bidir.cpp',
-#	'src/integrators/bidir/bidir_proc.cpp'], CPPDEFINES = {'MTS_METHOD' : 'BDPT'})
-
-#plugins += env.SharedLibrary('plugins/kelemen', [
-#	'src/integrators/bidir/kelemen.cpp',
-#	'src/integrators/bidir/kelemen_sampler.cpp',
-#	'src/integrators/bidir/kelemen_proc.cpp',
-#	'src/integrators/bidir/mlt_sampler.cpp',
-#	pathvertex_bdpt, path_bdpt], CPPDEFINES = {'MTS_METHOD' : 'BDPT'})
-
-#plugins += env.SharedLibrary('plugins/mlt', [
-#	camsampler,
-#	'src/integrators/bidir/mlt.cpp',
-#	'src/integrators/bidir/mlt_sampler.cpp',
-#	'src/integrators/bidir/mlt_bidir.cpp',
-#	'src/integrators/bidir/mlt_lens.cpp',
-#	'src/integrators/bidir/mlt_caustic.cpp',
-#	'src/integrators/bidir/mlt_mchain.cpp',
-#	'src/integrators/bidir/mlt_proc.cpp',
-#	pathvertex_mlt, path_mlt
-#])
 
 # Testcases
 testEnv = env.Clone()
@@ -661,9 +630,9 @@ if sys.platform == 'win32':
 			installTargets += env.Install('dist/plugins', plugin)
 	installTargets += env.Install('dist/schema', 'schema/scene.xsd')
 	if 'WIN64' in env['CXXFLAGS']:
-		dllprefix='tools/windows/lib64/'
+		dllprefix='dependencies/windows/lib64/'
 	else:
-		dllprefix='tools/windows/lib32/'
+		dllprefix='dependencies/windows/lib32/'
 	installTargets += env.Install('dist', 'mitsuba.exe')
 	installTargets += env.Install('dist', 'mtssrv.exe')
 	installTargets += env.Install('dist', 'mtsutil.exe')
@@ -683,7 +652,16 @@ if sys.platform == 'win32':
 	installTargets += env.Install('dist', dllprefix + 'pthreadVCE2.dll')
 	installTargets += env.Install('dist', dllprefix + 'xerces-c_3_0.dll')
 	installTargets += env.Install('dist', dllprefix + 'glew32mx.dll')
-	installTargets += env.Install('dist', dllprefix + 'libcollada14dom21.dll')
+	compilerType = 'vc90'
+	if env['MSVC_VERSION'] == '9.0':
+		compilerType = 'vc90'
+	elif env['MSVC_VERSION'] == '10.0':
+		compilerType = 'vc100'
+	else:
+		raise Exception('Unknown compiler version!')
+	installTargets += env.Install('dist', dllprefix + '%s/libcollada14dom21.dll' % compilerType)
+	installTargets += env.Install('dist', dllprefix + '%s/boost_system-%s-mt-1_44.dll' % (compilerType, compilerType))
+	installTargets += env.Install('dist', dllprefix + '%s/boost_filesystem-%s-mt-1_44.dll' % (compilerType, compilerType))
 	if hasQt:
 		installTargets += env.Install('dist', env['QT4_BINPATH']+'/QtCore4.dll')
 		installTargets += env.Install('dist', env['QT4_BINPATH']+'/QtGui4.dll')
@@ -709,25 +687,27 @@ elif sys.platform == 'darwin':
 	installTargets += env.Install('Mitsuba.app/Contents/MacOS', 'mtsutil')
 	installTargets += env.Install('Mitsuba.app/Contents/MacOS', 'mitsuba')
 	installTargets += env.Install('Mitsuba.app/Contents/MacOS', 'mtsimport')
-	plist = env.Install('Mitsuba.app/Contents', 'tools/darwin/Info.plist')
+	plist = env.Install('Mitsuba.app/Contents', 'data/darwin/Info.plist')
 	installTargets += plist
 	installTargets += env.AddPostAction(plist, 'perl -pi -e "s/MTS_VERSION/%s/" $TARGET' % MTS_VERSION)
-	installTargets += env.Install('Mitsuba.app/Contents', 'tools/darwin/PkgInfo')
-	installTargets += env.Install('Mitsuba.app/Contents/Resources', 'tools/darwin/Resources/mitsuba.icns')
+	installTargets += env.Install('Mitsuba.app/Contents', 'data/darwin/PkgInfo')
+	installTargets += env.Install('Mitsuba.app/Contents/Resources', 'data/darwin/Resources/mitsuba.icns')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'src/librender/libmitsuba-render.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'src/libcore/libmitsuba-core.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'src/libhw/libmitsuba-hw.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/GLEW.framework/Resources/libs/libGLEW.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/OpenEXR.framework/Resources/lib/libHalf.6.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/OpenEXR.framework/Resources/lib/libIex.6.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/OpenEXR.framework/Resources/lib/libImath.6.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/OpenEXR.framework/Resources/lib/libIlmThread.6.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/OpenEXR.framework/Resources/lib/libIlmImf.6.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/Xerces-C.framework/Resources/lib/libxerces-c-3.0.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libpng.framework/Resources/lib/libpng.dylib')
-	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/libjpeg.framework/Resources/lib/libjpeg.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/GLEW.framework/Resources/libs/libGLEW.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/OpenEXR.framework/Resources/lib/libHalf.6.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/OpenEXR.framework/Resources/lib/libIex.6.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/OpenEXR.framework/Resources/lib/libImath.6.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/OpenEXR.framework/Resources/lib/libIlmThread.6.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/OpenEXR.framework/Resources/lib/libIlmImf.6.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/Xerces-C.framework/Resources/lib/libxerces-c-3.0.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/libpng.framework/Resources/lib/libpng.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/libjpeg.framework/Resources/lib/libjpeg.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/libboost.framework/Resources/lib/libboost_system.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/libboost.framework/Resources/lib/libboost_filesystem.dylib')
 	if hasCollada:
-		installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'tools/darwin/Collada14Dom.framework/Resources/lib/libCollada14Dom.dylib')
+		installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/Collada14Dom.framework/Resources/lib/libCollada14Dom.dylib')
 	if hasQt:
 		installTargets += env.Install('Mitsuba.app/Contents/MacOS', 'mtsgui')
 		installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtCore.framework/Versions/4/QtCore')
@@ -741,20 +721,20 @@ elif sys.platform == 'darwin':
 		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
 		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @executable_path/../Frameworks/QtGui $TARGET')
 		installTargets += env.Install('Mitsuba.app/Contents/Resources', '/Library/Frameworks//QtGui.framework/Versions/4/Resources/qt_menu.nib')
-		installTargets += env.Install('Mitsuba.app/Contents/Resources/PreviewSettings.nib', 'tools/darwin/PreviewSettings.nib/designable.nib')
-		installTargets += env.Install('Mitsuba.app/Contents/Resources/PreviewSettings.nib', 'tools/darwin/PreviewSettings.nib/keyedobjects.nib')
-		installTargets += env.Install('Mitsuba.app/Contents/Resources', 'tools/darwin/qt.conf')
-		installTargets += env.Install('Mitsuba.app/Contents/Frameworks/BWToolkitFramework.framework/Versions/A', 'tools/darwin/BWToolkitFramework.framework/Versions/A/BWToolkitFramework')
-		for file in os.listdir('tools/darwin/BWToolkitFramework.framework/Versions/A/Resources'):
+		installTargets += env.Install('Mitsuba.app/Contents/Resources/PreviewSettings.nib', 'data/darwin/PreviewSettings.nib/designable.nib')
+		installTargets += env.Install('Mitsuba.app/Contents/Resources/PreviewSettings.nib', 'data/darwin/PreviewSettings.nib/keyedobjects.nib')
+		installTargets += env.Install('Mitsuba.app/Contents/Resources', 'data/darwin/qt.conf')
+		installTargets += env.Install('Mitsuba.app/Contents/Frameworks/BWToolkitFramework.framework/Versions/A', 'dependencies/darwin/BWToolkitFramework.framework/Versions/A/BWToolkitFramework')
+		for file in os.listdir('dependencies/darwin/BWToolkitFramework.framework/Versions/A/Resources'):
 			if fnmatch.fnmatch(file, '*.pdf') or fnmatch.fnmatch(file, '*.tiff') or fnmatch.fnmatch(file, '*.tif') or fnmatch.fnmatch(file, '*.png') or fnmatch.fnmatch(file, '*.rtf') or fnmatch.fnmatch(file, '*.plist'):
-				installTargets += env.Install('Mitsuba.app/Contents/Frameworks/BWToolkitFramework.framework/Resources', 'tools/darwin/BWToolkitFramework.framework/Versions/A/Resources/' + file)
+				installTargets += env.Install('Mitsuba.app/Contents/Frameworks/BWToolkitFramework.framework/Resources', 'dependencies/darwin/BWToolkitFramework.framework/Versions/A/Resources/' + file)
 
 if dist:
 	if sys.platform == 'win32':
-		distTarget = env.Command("Mitsuba %s.zip" % MTS_VERSION, [], "tools\\windows\\build-dist.bat %s" % MTS_VERSION)
+		distTarget = env.Command("Mitsuba %s.zip" % MTS_VERSION, [], "data\\windows\\build-dist.bat %s" % MTS_VERSION)
 		Depends(distTarget, installTargets)
 	elif sys.platform == 'darwin':
-		distTarget = env.Command("Mitsuba %s.dmg" % MTS_VERSION, [], "tools/darwin/build-dmg.sh %s" % MTS_VERSION)
+		distTarget = env.Command("Mitsuba %s.dmg" % MTS_VERSION, [], "data/darwin/build-dmg.sh %s" % MTS_VERSION)
 		Depends(distTarget, installTargets)
 	elif sys.platform == 'linux2':
-		env.Command("mitsuba-%s.tar.gz" % MTS_VERSION, [], "tools/linux/build-sourcedist.sh %s" % MTS_VERSION)
+		env.Command("mitsuba-%s.tar.gz" % MTS_VERSION, [], "data/linux/build-sourcedist.sh %s" % MTS_VERSION)

@@ -19,6 +19,9 @@
 ^config.log$
 .*\.pyc$
 
+# Dependencies
+^dependencies/.*$
+
 # OSX binaries and byproducts
 ^Mitsuba.app/.*$
 \.DS_Store
