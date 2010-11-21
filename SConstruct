@@ -10,6 +10,10 @@ configFile = GetOption('cfg')
 if configFile == None:
 	configFile = "config.py"
 
+if (sys.platform == 'win32' or sys.platform == 'darwin') and not os.path.exists('dependencies'):
+	print 'The dependencies are missing -- see http://www.mitsuba-renderer.org/devblog/archives/11-Build-system-changes.html'
+	Exit(1)
+
 if not os.path.exists(configFile):
 	print 'A configuration file must be selected! Have a look at \"README\"'
 	Exit(1)
@@ -700,6 +704,8 @@ elif sys.platform == 'darwin':
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/Xerces-C.framework/Resources/lib/libxerces-c-3.0.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/libpng.framework/Resources/lib/libpng.dylib')
 	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/libjpeg.framework/Resources/lib/libjpeg.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/libboost.framework/Resources/lib/libboost_system.dylib')
+	installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/libboost.framework/Resources/lib/libboost_filesystem.dylib')
 	if hasCollada:
 		installTargets += env.OSXLibInst('Mitsuba.app/Contents/Frameworks', 'dependencies/darwin/Collada14Dom.framework/Resources/lib/libCollada14Dom.dylib')
 	if hasQt:
