@@ -6,3 +6,8 @@ Blender application bundle (e.g. \code{blender.app/Contents/MacOS/}\textbf{<BLEN
 
 When specifying the Mitsuba executable path, note that you must again provide
 the path to the binary within the application bundle, e.g. \code{/Applications/Mitsuba.app/Contents/MacOS/mitsuba}
+
+\subsection{General information}
+- MtsBlend always uses the first material slot as the main material of an
+object. When building custom materials (e.g. mixtures using the compound BSDF),
+make sure that the first slot contains the final material you wish to assign.

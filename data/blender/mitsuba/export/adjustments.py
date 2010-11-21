@@ -35,7 +35,7 @@ class MtsAdjustments:
 		self.target_dir = target_dir
 		self.exported_materials = []
 		self.exported_textures = []
-		self.materials = materials if materials != None else bpy.data.textures
+		self.materials = materials if materials != None else bpy.data.materials
 		self.textures = textures if textures != None else bpy.data.textures
 
 	def exportWorldtrafo(self, trafo):
@@ -142,7 +142,8 @@ class MtsAdjustments:
 		if name in self.materials:
 			return self.materials[name]
 		else:
-			raise Exception('Failed to find material "%s"' % name)
+			raise Exception('Failed to find material "%s" in "%s"' % (name,
+				str(self.materials)))
 
 	def exportTexture(self, mat):
 		if mat.name in self.exported_textures:
