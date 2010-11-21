@@ -175,12 +175,13 @@ scons: ** No SConstruct file found.
 Next, install Qt (\url{http://qt.nokia.com/downloads/windows-cpp-vs2008} -- you should get the release for Visual Studio 2008). Again, you need to make sure that the 
 Qt utilities are reachable through the \code{\%PATH\%} environment variable so that you can for example launch \code{moc.exe} from the command line.
 
-Because the official release of Qt currently only contains 32-bit binaries, you will accordingly have to 
-build Mitsuba in 32-bit mode (i.e. you should use the configuration file \code{config-msvc2008-win32.py}). If you would rather like compile it in 64-bit mode, you have to create
-your own 64-bit Qt binaries.
+Note that since the official release of Qt currently only contains 32-bit binaries, you will accordingly have to 
+build Mitsuba in 32-bit mode (i.e. you should use the configuration file \code{config-msvc2008-win32.py}). If you would rather like compile it in 64-bit mode, 
+you can either compile your own 64-bit Qt binaries or use the prebuilt
+packages available here: \url{http://code.google.com/p/qt-msvc-installer}.
 
 Having installed these dependencies, run the ``Visual Studio 2008 Command 
-Prompt'' from the Start Menu (pick the \code{x86} version if you have the choice between \code{x86} and \code{x64}). Afterwards,
+Prompt'' from the Start Menu (\code{x86} for 32-bit or \code{x64} for 64bit). Afterwards,
 navigate to the Mitsuba directory and run \code{scons}. 
 In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the \code{scons} command.
 
