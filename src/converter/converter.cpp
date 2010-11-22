@@ -27,7 +27,7 @@
 #include <xercesc/parsers/XercesDOMParser.hpp>
 #include <xercesc/framework/MemBufInputSource.hpp>
 #include <xercesc/framework/Wrapper4InputSource.hpp>
-#include <xercesc/framework/LocalFileFormatTarget.hpp>
+#include <xercesc/framework/MemBufFormatTarget.hpp>
 #include <xercesc/util/XMLUni.hpp>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
@@ -231,12 +231,46 @@ void GeometryConverter::convert(const fs::path &inputFile,
 		serConf->setParameter(XMLUni::fgDOMErrorHandler, &errorHandler);
 		if (serConf->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true)) 
 			serConf->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
-		if (serConf->canSetParameter(XMLUni::fgDOMWRTXercesPrettyPrint, true)) 
-			serConf->setParameter(XMLUni::fgDOMWRTXercesPrettyPrint, true);
 		DOMLSOutput *output = impl->createLSOutput();
-		XMLFormatTarget *target = new LocalFileFormatTarget(outputFile.file_string().c_str());
+		MemBufFormatTarget *target = new MemBufFormatTarget();
 		output->setByteStream(target);
 		serializer->write(doc, output);
+		const XMLByte *content = target->getRawBuffer();
+		std::ostringstream oss;
+
+		/* Turn leading spaces into tabs */
+		bool newline = true;
+		int numSpaces = 0;
+		for (size_t i=0; i<target->getLen(); ++i) {
+			char data = content[i];
+			switch (data) {
+				case ' ':
+					if (newline)
+						numSpaces++;
+					else
+						oss << data;
+					break;
+				case '\r':
+				case '\n':
+					oss << data;
+					newline = true;
+					numSpaces = 0;
+					break;
+				default:
+					if (newline) {
+						for (int i=0; i<numSpaces/2; ++i)
+							oss << '\t';
+					}
+					oss << data;
+					newline = false;
+					numSpaces = 0;
+					break;
+			}
+		}
+
+		fs::ofstream os(outputFile);
+		os << oss.str();
+		os.close();
 		delete output;
 		delete target;
 		delete wrapper;
