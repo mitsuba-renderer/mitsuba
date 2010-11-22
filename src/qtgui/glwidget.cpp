@@ -416,7 +416,7 @@ void GLWidget::downloadFramebuffer() {
 	// Scale by the number of developed VPLs 
 	const float *sourceData = sourceBitmap->getFloatData();
 	float *targetData = m_context->framebuffer->getFloatData();
-	float factor = 1.0f/entry.vplSampleOffset;
+	float factor = 1.0f / entry.vplSampleOffset;
 
 	for (size_t pos=0, total = size.x*size.y*4; pos<total; ++pos)
 		targetData[pos] = sourceData[pos] * factor;

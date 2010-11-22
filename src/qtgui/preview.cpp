@@ -331,6 +331,7 @@ void PreviewThread::run() {
 				target.buffer->incRef();
 				target.sync = m_renderer->createGPUSync();
 				target.sync->incRef();
+				m_renderer->finish();
 			}
 
 			if (m_context->previewMethod == EDisabled) {

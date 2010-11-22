@@ -1670,6 +1670,72 @@ protected:
 	}
 
 	/**
+	 * \brief Implements the transition from min-max-binning to the
+	 * SAH-based optimization
+	 *
+	 * \param ctx 
+	 *     Thread-specific build context containing allocators etc.
+	 * \param depth 
+	 *     Current tree depth (1 == root node)
+	 * \param node
+	 *     KD-tree node entry to be filled
+	 * \param nodeAABB
+	 *     Axis-aligned bounding box of the current node
+	 * \param indices
+	 *     Index list of all triangles in the current node (for min-max binning)
+	 * \param primCount
+	 *     Total primitive count for the current node
+	 * \param isLeftChild
+	 *     Is this node the left child of its parent? This is important for
+	 *     memory management using the \ref OrderedChunkAllocator.
+	 * \param badRefines
+	 *     Number of "probable bad refines" further up the tree. This makes
+	 *     it possible to split along an initially bad-looking candidate in
+	 *     the hope that the SAH cost was significantly overestimated. The
+	 *     counter makes sure that only a limited number of such splits can
+	 *     happen in succession.
+	 * \returns 
+	 *     Final SAH cost of the node
+	 */
+	inline Float transitionToSAH(BuildContext &ctx, unsigned int depth, KDNode *node, 
+			const AABB &nodeAABB, index_type *indices,
+			size_type primCount, bool isLeftChild, size_type badRefines) {
+		OrderedChunkAllocator &alloc = isLeftChild 
+				? ctx.leftAlloc : ctx.rightAlloc;
+		boost::tuple<EdgeEvent *, EdgeEvent *, size_type> events  
+				= createEventList(alloc, nodeAABB, indices, primCount);
+		Float sahCost;
+		if (m_parallelBuild) {
+			m_interface.mutex->lock();
+			m_interface.depth = depth;
+			m_interface.node = node;
+			m_interface.nodeAABB = nodeAABB;
+			m_interface.eventStart = boost::get<0>(events);
+			m_interface.eventEnd = boost::get<1>(events);
+			m_interface.primCount = boost::get<2>(events);
+			m_interface.badRefines = badRefines;
+			m_interface.cond->signal();
+
+			/* Wait for a worker thread to take this job */
+			while (m_interface.node)
+				m_interface.condJobTaken->wait();
+			m_interface.mutex->unlock();
+
+			// Never tear down this subtree (return a SAH cost of -infinity)
+			sahCost = -std::numeric_limits<Float>::infinity();
+		} else {
+			std::sort(boost::get<0>(events), boost::get<1>(events), 
+					EdgeEventOrdering());
+
+			sahCost = buildTreeSAH(ctx, depth, node, nodeAABB,
+				boost::get<0>(events), boost::get<1>(events), 
+				boost::get<2>(events), isLeftChild, badRefines);
+		}
+		alloc.release(boost::get<0>(events));
+		return sahCost;
+	}
+
+	/**
 	 * \brief Build helper function (min-max binning)
 	 *
 	 * \param ctx 
@@ -1709,41 +1775,9 @@ protected:
 			return leafCost;
 		}
 
-		if (primCount <= m_exactPrimThreshold) {
-			OrderedChunkAllocator &alloc = isLeftChild 
-					? ctx.leftAlloc : ctx.rightAlloc;
-			boost::tuple<EdgeEvent *, EdgeEvent *, size_type> events  
-					= createEventList(alloc, nodeAABB, indices, primCount);
-			Float sahCost;
-			if (m_parallelBuild) {
-				m_interface.mutex->lock();
-				m_interface.depth = depth;
-				m_interface.node = node;
-				m_interface.nodeAABB = nodeAABB;
-				m_interface.eventStart = boost::get<0>(events);
-				m_interface.eventEnd = boost::get<1>(events);
-				m_interface.primCount = boost::get<2>(events);
-				m_interface.badRefines = badRefines;
-				m_interface.cond->signal();
-
-				/* Wait for a worker thread to take this job */
-				while (m_interface.node)
-					m_interface.condJobTaken->wait();
-				m_interface.mutex->unlock();
-
-				// Never tear down this subtree (return a SAH cost of -infinity)
-				sahCost = -std::numeric_limits<Float>::infinity();
-			} else {
-				std::sort(boost::get<0>(events), boost::get<1>(events), 
-						EdgeEventOrdering());
-
-				sahCost = buildTreeSAH(ctx, depth, node, nodeAABB,
-					boost::get<0>(events), boost::get<1>(events), 
-					boost::get<2>(events), isLeftChild, badRefines);
-			}
-			alloc.release(boost::get<0>(events));
-			return sahCost;
-		}
+		if (primCount <= m_exactPrimThreshold) 
+			return transitionToSAH(ctx, depth, node, nodeAABB, indices,
+				primCount, isLeftChild, badRefines);
 
 		/* ==================================================================== */
 	    /*                              Binning                                 */
@@ -1758,10 +1792,24 @@ protected:
 		SplitCandidate bestSplit = ctx.minMaxBins.maximizeSAH(m_traversalCost,
 				m_intersectionCost);
 
+		if (bestSplit.sahCost == std::numeric_limits<Float>::infinity()) {
+			/* This is bad: we have either run out of floating point precision to
+			   accurately represent split planes (e.g. 'tightAABB' is almost collapsed
+			   along an axis), or the compiler made overly liberal use of floating point 
+			   optimizations, causing the two stages of the min-max binning code to 
+			   become inconsistent. The two ways to proceed at this point are to
+			   either create a leaf (bad) or switch over to the SAH-based optimization,
+			   which is done below */
+			KDLog(EWarn, "Min-max binning was unable to split %i primitives with %s "
+				"-- retrying with the SAH-based optimization",
+				primCount, tightAABB.toString().c_str());
+			return transitionToSAH(ctx, depth, node, nodeAABB, indices,
+				primCount, isLeftChild, badRefines);
+		}
+
 		/* "Bad refines" heuristic from PBRT */
 		if (bestSplit.sahCost >= leafCost) {
 			if ((bestSplit.sahCost > 4 * leafCost && primCount < 16)
-				|| bestSplit.sahCost == std::numeric_limits<Float>::infinity()
 				|| badRefines >= m_maxBadRefines) {
 				createLeaf(ctx, node, indices, primCount);
 				return leafCost;
