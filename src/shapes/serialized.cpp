@@ -41,7 +41,7 @@ public:
 		m_name = filePath.stem();
 
 		/* Load the geometry */
-		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.leaf().c_str());
+		Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.leaf().c_str());
 		ref<FileStream> stream = new FileStream(filePath, FileStream::EReadOnly);
 		stream->setByteOrder(Stream::ELittleEndian);
 		ref<TriMesh> mesh = new TriMesh(stream, shapeIndex);
