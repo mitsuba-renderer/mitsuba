@@ -181,7 +181,7 @@ class MtsAdjustments:
 			lamp = obj.data.materials[0].mitsuba_emission
 			name = translate_id(obj.data.name)
 			self.out.write('\t<append id="%s-mesh_0">\n' % name)
-			self.out.write('\t\t<luminaire type="area">\n')
+			self.out.write('\t\t<luminaire id="%s-emission" type="area">\n' % name)
 			mult = lamp.intensity
 			self.out.write('\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
 					% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult))

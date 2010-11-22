@@ -82,6 +82,18 @@ void createNodeMap(DOMNode *node, std::map<std::string, DOMNode *> &nodes) {
 	}
 }
 
+void cleanup(DOMNode *node) {
+	DOMNode *child = node->getFirstChild();
+	while (child) {
+		DOMNode *next = child->getNextSibling();
+		if (child->getNodeType() == DOMNode::TEXT_NODE)
+			node->removeChild(child);
+		else
+			cleanup(child);
+		child = next;
+	}
+}
+
 void GeometryConverter::convert(const fs::path &inputFile, 
 	const fs::path &outputDirectory, 
 	const fs::path &sceneName,
@@ -212,6 +224,7 @@ void GeometryConverter::convert(const fs::path &inputFile,
 				XMLString::release(&nodeName);
 			}
 		}
+		cleanup(doc);
 
 		DOMLSSerializer *serializer = impl->createLSSerializer();
 		DOMConfiguration *serConf = serializer->getDomConfig();
