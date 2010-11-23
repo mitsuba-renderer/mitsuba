@@ -9,4 +9,4 @@ src/libcore/libmitsuba-core.so /usr/lib
 schema/scene.xsd /usr/share/mitsuba/schema
 plugins/* /usr/share/mitsuba/plugins
 src/qtgui/resources/mitsuba48.png /usr/share/pixmaps
-tools/linux/mitsuba.desktop /usr/share/applications
+data/linux/mitsuba.desktop /usr/share/applications
