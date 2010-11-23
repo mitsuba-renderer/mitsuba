@@ -186,13 +186,13 @@ public:
 		oss << "uniform vec3 " << evalName << "_intensity;" << endl
 			<< endl
 			<< "vec3 " << evalName << "_area(vec2 uv) {" << endl
-			<< "    return " << evalName << "_intensity;" << endl
+			<< "    return " << evalName << "_intensity * 3.1415;" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_dir(vec3 wo) {" << endl
 			<< "    if (wo.z < 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
-			<< "    return vec3(1.0);" << endl
+			<< "    return vec3(0.31831);" << endl
 			<< "}" << endl;
 	}
 
