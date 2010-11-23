@@ -192,7 +192,7 @@ public:
 			<< "vec3 " << evalName << "_dir(vec3 wo) {" << endl
 			<< "    if (wo.z < 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
-			<< "    return vec3(0.31831);" << endl
+			<< "    return vec3(1.0);" << endl
 			<< "}" << endl;
 	}
 
