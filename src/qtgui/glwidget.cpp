@@ -50,7 +50,7 @@ GLWidget::GLWidget(QWidget *parent) :
 	connect(m_preview, SIGNAL(statusMessage(const QString &)), 
 		this, SIGNAL(statusMessage(const QString &)), Qt::QueuedConnection);
 	m_invertMouse = false;
-	m_navigationMode = EFlythroughFixedYaw;
+	m_navigationMode = EFlythrough;
 	m_ignoreMouseEvent = QPoint(0, 0);
 	m_didSetCursor = false;
 	m_softwareFallback = false;
@@ -406,7 +406,12 @@ void GLWidget::downloadFramebuffer() {
 		createdFramebuffer = true;
 	}
 
-	PreviewQueueEntry entry = m_preview->acquireBuffer();
+	PreviewQueueEntry entry = m_preview->acquireBuffer(1000);
+	if (entry.buffer == NULL) {
+		if (createdFramebuffer)
+			m_framebuffer->init();
+		return;
+	}
 
 	Point3i size = entry.buffer->getSize();
 	ref<Bitmap> sourceBitmap = new Bitmap(size.x, size.y, 128);

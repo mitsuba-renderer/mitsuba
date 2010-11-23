@@ -109,6 +109,10 @@ public:
 	void rayIntersectPacketIncoherent(const RayPacket4 &packet, 
 		const RayInterval4 &interval, Intersection4 &its, void *temp) const;
 #endif
+	
+	FINLINE size_type getPrimitiveCount() const {
+		return m_shapeMap[m_shapeMap.size()-1];
+	}
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -149,10 +153,6 @@ protected:
 		}
 	}
 
-	FINLINE size_type getPrimitiveCount() const {
-		return m_shapeMap[m_shapeMap.size()-1];
-	}
- 
 	/// Temporarily holds some intersection information
 	struct IntersectionCache {
 		size_type shapeIndex;

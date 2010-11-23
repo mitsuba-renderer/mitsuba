@@ -38,7 +38,8 @@ public:
     void append(ELogLevel level, const std::string &message) {
 		if (!m_ignoreMessages) {
 			emit textMessage(level, QString::fromLatin1(message.c_str()));
-			floodCheck();
+			if (level >= EWarn)
+				floodCheck();
 		}
 	}
 

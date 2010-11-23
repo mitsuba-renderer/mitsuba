@@ -48,6 +48,8 @@ public:
 	AABB getAABB() const {
 		const KDTree *kdtree = m_shapeGroup->getKDTree();
 		const AABB &aabb = kdtree->getAABB();
+		if (!aabb.isValid()) // the geometry group is empty
+			return aabb;
 		AABB result;
 		for (int i=0; i<8; ++i)
 			result.expandBy(m_objectToWorld(aabb.getCorner(i)));

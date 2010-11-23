@@ -59,9 +59,16 @@ public:
 	/// Return a pointer to the internal KD-tree
 	inline const KDTree *getKDTree() const { return m_kdtree.get(); }
 
+	/// Return the name of the geometry group
+	std::string getName() const;
+
+	/// Return a string representation
+	std::string toString() const;
+
 	MTS_DECLARE_CLASS()
 private:
 	ref<KDTree> m_kdtree;
+	std::string m_name;
 };
 
 MTS_NAMESPACE_END

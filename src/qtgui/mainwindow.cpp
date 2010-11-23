@@ -141,7 +141,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->glView->setInvertMouse(settings.value("invertMouse", false).toBool());
 	ui->glView->setMouseSensitivity(settings.value("mouseSensitivity", 3).toInt());
 	ui->glView->setNavigationMode((ENavigationMode) settings.value("navigationMode", 
-		EFlythroughFixedYaw).toInt());
+		EFlythrough).toInt());
 	m_searchPaths = settings.value("searchPaths", QStringList()).toStringList();
 	m_blockSize = settings.value("blockSize", 32).toInt();
 	m_listenPort = settings.value("listenPort", MTS_DEFAULT_PORT).toInt();

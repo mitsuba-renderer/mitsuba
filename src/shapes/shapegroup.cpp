@@ -22,6 +22,7 @@ MTS_NAMESPACE_BEGIN
 
 ShapeGroup::ShapeGroup(const Properties &props) : Shape(props) {
 	m_kdtree = new KDTree();
+	m_name = props.getID();
 }
 
 ShapeGroup::ShapeGroup(Stream *stream, InstanceManager *manager) 
@@ -83,6 +84,19 @@ void ShapeGroup::addChild(const std::string &name, ConfigurableObject *child) {
 bool ShapeGroup::isCompound() const {
 	// this shape reduces to nothing (compound, no children)
 	return true;
+}
+
+std::string ShapeGroup::getName() const {
+	return m_name;
+}
+
+std::string ShapeGroup::toString() const {
+	std::ostringstream oss;
+		oss << "ShapeGroup[" << endl
+			<< "  name = \"" << m_name << "\", " << endl
+			<< "  primCount = " << m_kdtree->getPrimitiveCount() << endl
+			<< "]";
+	return oss.str();
 }
 
 MTS_IMPLEMENT_CLASS_S(ShapeGroup, false, Shape)

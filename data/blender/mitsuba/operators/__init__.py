@@ -125,7 +125,7 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 	bl_idname = 'export.mitsuba'
 	bl_label = 'Export Mitsuba Scene (.xml)'
 
-	filename		= bpy.props.StringProperty(name='Target filename')
+	filename		= bpy.props.StringProperty(name='Target filename', subtype = 'FILE_PATH')
 	directory		= bpy.props.StringProperty(name='Target directory')
 	scene			= bpy.props.StringProperty(options={'HIDDEN'}, default='')
 
@@ -150,6 +150,9 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 			mts_basename = os.path.join(
 				self.properties.directory,
 				self.properties.filename)
+			(path, ext) = os.path.splitext(mts_basename)
+			if ext == '.xml':
+				mts_basename = path
 			mts_dae_file = mts_basename + ".dae"
 			mts_xml_file = mts_basename + ".xml"
 			mts_adj_file = mts_basename + "_adjustments.xml"
@@ -206,7 +209,10 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 			MtsLog("Caught exception: %s" % ''.join(elist))
 			return {'CANCELLED'}
 
-menu_func = lambda self, context: self.layout.operator("export.mitsuba", text="Export Mitsuba scene...")
+def menu_func(self, context):
+	default_path = os.path.splitext(os.path.basename(bpy.data.filepath))[0] + ".xml"
+	self.layout.operator("export.mitsuba", text="Export Mitsuba scene...").filename = default_path
+
 bpy.types.INFO_MT_file_export.append(menu_func)
 
 class MITSUBA_OT_material_slot_move(bpy.types.Operator):
