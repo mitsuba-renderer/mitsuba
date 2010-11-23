@@ -15,6 +15,10 @@
 
 #include <mitsuba/mitsuba.h>
 
+/* Use strict IEEE 754 floating point computations 
+   for the following code */
+#pragma float_control(precise, on)
+
 typedef union {
   float value;
   uint32_t word;
