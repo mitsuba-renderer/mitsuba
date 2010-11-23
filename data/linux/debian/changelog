@@ -1,3 +1,26 @@
+mitsuba (0.2.0-1) unstable; urgency=low
+
+  * The COLLADA importer is more robust and should handle most scenes (hm, this sounds familiar). Rather than generating hundreds of translated mesh files, the new version instead produces one single compressed file.
+  * I've added an experimental plugin for Blender 2.5 integration, including a custom material designer. Since it depends on features which won't be in Blender until the upcoming 2.56 release, it is currently necessary to compile Blender from SVN to use the plugin. Many thanks go to Doug Hammond for providing his excellent EF package, which the plugin uses extensively.
+  * The KD-tree acceleration and construction code has been completely rewritten. The new code produces noticeably better trees and does so within a fraction of the time of the old version. It also scales to very large polygonal meshes (>20M triangles), whereas the previous implementation would quickly exhaust all available memory in such cases. (see http://www.mitsuba-renderer.org/devblog/archives/10-New-acceleration-data-structures.html for details)
+  * Instancing support was added, and there is limited (rigid) animation support for shapes.
+  * Edgar has kindly contributed patches to compile Mitsuba using the Intel C++ compiler. Official windows 32-/64-bit builds now use this compiler, since it produces faster-running executables (in comparison to Visual Studio).
+  * The XML schema of the scene description language is now less picky. Specifically, it is possible to specify properties and objects in an arbitrary order.
+  * Standard UV texture mapping controls (offset, scale) are provided
+  * Luminaire importance sampling is more flexible. The previous implementation sampled a light source proportional to its power, which was often exactly the wrong thing to do. In this release, the sampling weights ca be manually specified.
+  * There is partial support for rendering vast amounts of hair (partial because only the intersection shape is implemented at this point -- no hair-specific scattering models have been added yet)
+  * A PLY file loader based on libply (courtesy of Ares Lagae) was added
+  * Vertex colors are now accessible within the renderer. This is implemented using a special "texture", which forwards the color information to scattering models
+  * Severe lock contention issues in the irradiance cache were fixed (these resulted in slow performance when rendering on many cores).
+  * The loading dialog now contains a console, which shows what is happening while waiting for a large scene to load
+  * The builtin environment map luminaire support importance sampling (it did uniform sampling before - jikes!)
+  * A bunch of materials and textures now have GLSL implementations so that they can be used in the interactive preview
+  * The preview itself should be quite a bit faster due to optimizations in how geometry is passed to the GPU.
+
+  As usual, a large number of bugs were also fixed. The documentation is still rather incomplete, but I'm working on it.
+
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Tue, 23 Nov 2010 02:06:00 -0400
+
 mitsuba (0.1.3-1) unstable; urgency=low
 
   This is mainly a bugfix release to address a serious regression in the 
