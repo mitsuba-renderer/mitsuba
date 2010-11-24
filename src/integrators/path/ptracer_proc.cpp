@@ -81,10 +81,10 @@ void CaptureParticleWorker::handleSurfaceInteraction(int, bool,
 			return;
 
 		const BSDF *bsdf = its.shape->getBSDF();
-		Vector d = cameraPosition - its.p;
-		Float dist = d.length(); d /= dist;
+		Vector wo = cameraPosition - its.p;
+		Float dist = wo.length(); wo /= dist;
 
-		BSDFQueryRecord bRec(its, its.toLocal(d));
+		BSDFQueryRecord bRec(its, its.toLocal(wo));
 		bRec.quantity = EImportance;
 
 		Float importance; 
@@ -93,10 +93,23 @@ void CaptureParticleWorker::handleSurfaceInteraction(int, bool,
 		else
 			importance = 1/m_camera->areaDensity(screenSample);
 
+		Vector wi = its.toWorld(its.wi);
+		/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+		Float wiDotGeoN = dot(its.geoFrame.n, wi),
+			  woDotGeoN = dot(its.geoFrame.n, wo);
+		if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 || 
+			woDotGeoN * Frame::cosTheta(bRec.wo) <= 0)
+			return;
+
+		/* Adjoint BSDF for shading normals -- [Veach, p. 155] */
+		Float correction = std::abs(
+			(Frame::cosTheta(bRec.wi) * woDotGeoN)/
+			(Frame::cosTheta(bRec.wo) * wiDotGeoN));
+
 		/* Compute Le * importance and store it in an accumulation buffer */
-		Ray ray(its.p, d, 0, dist, its.time);
+		Ray ray(its.p, wo, 0, dist, its.time);
 		Spectrum sampleVal = weight * bsdf->fCos(bRec) 
-			* m_scene->getAttenuation(ray) * importance;
+			* m_scene->getAttenuation(ray) * (importance * correction);
 
 		m_workResult->splat(screenSample, sampleVal, m_filter);
 	}
@@ -200,7 +213,7 @@ void CaptureParticleProcess::bindResource(const std::string &name, int id) {
 }
 
 ref<WorkProcessor> CaptureParticleProcess::createWorkProcessor() const {
-	return new CaptureParticleWorker(m_maxDepth, m_multipleScattering, 
+	return new CaptureParticleWorker(m_maxDepth-1, m_multipleScattering, 
 		m_rrDepth);
 }
 
