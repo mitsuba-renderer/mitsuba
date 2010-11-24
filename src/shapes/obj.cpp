@@ -37,6 +37,26 @@ public:
 		unsigned int uv[3];
 	};
 
+	void fetch_line(std::istream &is, std::string &line) {
+		/// Fetch a line from the stream, while handling line breaks with backslashes
+		std::getline(is, line);
+		int lastCharacter = line.size()-1;
+		while (lastCharacter >= 0 && 
+				(line[lastCharacter] == '\r' ||
+					line[lastCharacter] == '\n' ||
+					line[lastCharacter] == '\t' ||
+					line[lastCharacter] == ' '))
+			lastCharacter--;
+
+		if (line[lastCharacter] == '\\') {
+			std::string nextLine;
+			fetch_line(is, nextLine);
+			line = line.substr(0, lastCharacter) + nextLine;
+		} else {
+			line.resize(lastCharacter+1);
+		}
+	}
+
 	WavefrontOBJ(const Properties &props) : Shape(props) {
 		FileResolver *fResolver = Thread::getThread()->getFileResolver();
 		fs::path path = fResolver->resolve(props.getString("filename"));
@@ -71,15 +91,20 @@ public:
 		bool hasNormals = false, hasTexcoords = false;
 		bool firstVertex = true;
 		BSDF *currentMaterial = NULL;
-		std::string name = m_name;
+		std::string name = m_name, line;
 		std::set<std::string> geomNames;
 		int geomIdx = 0;
 
-		while (is >> buf) {
+		while (is.good() && !is.eof()) {
+			fetch_line(is, line);
+			std::istringstream iss(line);
+			if (!(iss >> buf))
+				continue;
+
 			if (buf == "v") {
 				/* Parse + transform vertices */
 				Point p;
-				is >> p.x >> p.y >> p.z;
+				iss >> p.x >> p.y >> p.z;
 				vertices.push_back(objectToWorld(p));
 				if (firstVertex) {
 					if (triangles.size() > 0) {
@@ -98,30 +123,24 @@ public:
 				}
 			} else if (buf == "vn") {
 				Normal n;
-				is >> n.x >> n.y >> n.z;
+				iss >> n.x >> n.y >> n.z;
 				if (!n.isZero())
 					normals.push_back(normalize(objectToWorld(n)));
 				else
 					normals.push_back(n);
 				hasNormals = true;
 			} else if (buf == "g") {
-				std::string line;
-				std::getline(is, line);
 				if (line.length() > 2) { 
 					name = trim(line.substr(1, line.length()-1));
 					Log(EInfo, "Loading geometry \"%s\"", name.c_str());
 				}
 			} else if (buf == "usemtl") {
-				std::string line;
-				std::getline(is, line);
 				std::string materialName = trim(line.substr(1, line.length()-1));
 				if (m_materials.find(materialName) != m_materials.end())
 					currentMaterial = m_materials[materialName];
 				else
 					currentMaterial = NULL;
 			} else if (buf == "mtllib") {
-				std::string line;
-				std::getline(is, line);
 				ref<FileResolver> frClone = fResolver->clone();
 				frClone->addPath(fs::complete(path).parent_path());
 				fs::path mtlName = frClone->resolve(trim(line.substr(1, line.length()-1)));
@@ -131,17 +150,12 @@ public:
 					Log(EWarn, "Could not find referenced material library '%s'", 
 						mtlName.file_string().c_str());
 			} else if (buf == "vt") {
-				std::string line;
 				Float u, v, w;
-				std::getline(is, line);
-				std::istringstream iss(line);
 				iss >> u >> v >> w;
 				texcoords.push_back(Point2(u, v));
 				hasTexcoords = true;
 			} else if (buf == "f") {
-				std::string line, tmp;
-				std::getline(is, line);
-				std::istringstream iss(line);
+				std::string  tmp;
 				firstVertex = true;
 				OBJTriangle t;
 				iss >> tmp; parse(t, 0, tmp);
@@ -160,8 +174,6 @@ public:
 						"triangles and quads are supported by the OBJ loader.");
 			} else {
 				/* Ignore */
-				std::string line;
-				std::getline(is, line);
 			}
 		}
 
