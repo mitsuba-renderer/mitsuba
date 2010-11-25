@@ -191,7 +191,9 @@ void GeometryConverter::convert(const fs::path &inputFile,
 
 		for (DOMNode *child = adjRoot->getFirstChild(); child != 0; child=child->getNextSibling()) {
 			if (child->getNodeType() == DOMNode::ELEMENT_NODE) {
-				char *nodeName = XMLString::transcode(child->getNodeName());
+				char *temp = XMLString::transcode(child->getNodeName());
+				std::string nodeName(temp);
+				XMLString::release(&temp);
 				std::string id;
 				if (child->getNodeType() == DOMNode::ELEMENT_NODE && child->hasAttributes()) {
 					DOMNamedNodeMap *attributes = child->getAttributes();
@@ -206,12 +208,14 @@ void GeometryConverter::convert(const fs::path &inputFile,
 				}
 				if (id != "" && nodeMap.find(id) != nodeMap.end()) {
 					DOMNode *node = nodeMap[id], *parent = node->getParentNode();
-					if (strcmp(nodeName, "append") == 0) {
+					if (nodeName == "append") {
 						for (DOMNode *child2 = child->getFirstChild(); child2 != 0; child2=child2->getNextSibling()) 
 							node->insertBefore(doc->importNode(child2, true), NULL);
-					} else if (strcmp(nodeName, "prepend") == 0) {
+					} else if (nodeName == "prepend") {
 						for (DOMNode *child2 = child->getFirstChild(); child2 != 0; child2=child2->getNextSibling()) 
 							node->insertBefore(doc->importNode(child2, true), node->getFirstChild());
+					} else if (nodeName == "remove") {
+						parent->removeChild(node);
 					} else if (parent == insertBeforeNode->getParentNode()) {
 						parent->removeChild(node);
 						docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
@@ -219,9 +223,11 @@ void GeometryConverter::convert(const fs::path &inputFile,
 						parent->replaceChild(doc->importNode(child, true), node);
 					}
 				} else {
+					if (nodeName == "append" || nodeName == "prepend" || nodeName == "remove")
+						SLog(EError, "Adjustments file: Found an append/prepend/remove element, "
+							" which refers to a nonexistant node");
 					docRoot->insertBefore(doc->importNode(child, true), insertBeforeNode);
 				}
-				XMLString::release(&nodeName);
 			}
 		}
 		cleanup(doc);

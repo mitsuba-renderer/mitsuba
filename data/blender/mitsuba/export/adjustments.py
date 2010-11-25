@@ -58,6 +58,7 @@ class MtsAdjustments:
 			self.out.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
 			self.out.write('\t</luminaire>\n')
 		elif ltype == 'AREA':
+			self.out.write('\t<remove id="%s-light"/>\n' % name)
 			self.out.write('\t<shape type="obj">\n')
 			size_x = lamp.data.size
 			size_y = lamp.data.size
@@ -68,7 +69,7 @@ class MtsAdjustments:
 
 			self.out.write('\t\t<string name="filename" value="meshes/%s"/>\n' % filename)
 			self.exportWorldtrafo(lamp.matrix_world)
-			self.out.write('\n\t\t<luminaire id="%s-light" type="area">\n' % name)
+			self.out.write('\n\t\t<luminaire id="%s-arealight" type="area">\n' % name)
 			mult = lamp.data.mitsuba_lamp.intensity / (2 * size_x * size_y)
 			self.out.write('\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
 					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
