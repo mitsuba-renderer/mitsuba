@@ -252,8 +252,7 @@ public:
 
 				/* If a luminaire was hit, estimate the local illumination and
 				   weight using the power heuristic */
-				if (hitLuminaire && (rRec.type & RadianceQueryRecord::EDirectRadiance)
-					&& !(bRec.sampledType & BSDF::EDelta)) {
+				if (hitLuminaire && rRec.type & RadianceQueryRecord::EDirectRadiance) {
 					lRec.Le = lRec.luminaire->Le(lRec);
 					/* Prob. of having generated this sample using luminaire sampling */
 					const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ?
