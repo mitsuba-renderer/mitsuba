@@ -1126,6 +1126,8 @@ void MainWindow::on_actionStop_triggered() {
 	} else if (context->mode == ERender) {
 		context->mode = EPreview;
 	}
+	ui->glView->resumePreview();
+
 	updateUI();
 }
 
