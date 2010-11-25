@@ -53,9 +53,9 @@ public:
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
 		Spectrum pathThroughput(1.0f);
-		bool computeIntersection = false;
+		bool computeIntersection = false, deltaBounce = false;
 
-		while (rRec.depth < m_maxDepth || m_maxDepth < 0) {
+		while (rRec.depth < m_maxDepth || m_maxDepth < 0 || (rRec.depth == m_maxDepth && deltaBounce)) {
 			if (computeIntersection)
 				scene->rayIntersect(ray, its);
 
@@ -114,8 +114,10 @@ public:
 						  - the current query asks for single scattering
 						*/
 						rRec.type = RadianceQueryRecord::ERadianceNoEmission;
+						deltaBounce = false;
 					} else {
 						rRec.type = RadianceQueryRecord::ERadiance;
+						deltaBounce = true;
 					}
 				}
 
@@ -190,10 +192,12 @@ public:
 				if (!(rRec.type & RadianceQueryRecord::EIndirectRadiance)) {
 					/* Stop if indirect illumination was not requested (except: sampled a delta BSDF 
 					   - look for emitted radiance only) */
-					if (bRec.sampledType & BSDF::EDelta) 
+					if (bRec.sampledType & BSDF::EDelta) {
+						deltaBounce = true;
 						rRec.type = RadianceQueryRecord::EEmittedRadiance;
-					else
+					} else {
 						break;
+					}
 				} else {
 					if (!(bRec.sampledType & BSDF::EDelta) || !(rRec.type & RadianceQueryRecord::EDirectRadiance)) {
 						/* Emitted radiance is only included in the recursive query if:
@@ -201,8 +205,10 @@ public:
 						  - the current query asks for direct illumination
 						*/
 						rRec.type = RadianceQueryRecord::ERadianceNoEmission;
+						deltaBounce = false;
 					} else {
 						rRec.type = RadianceQueryRecord::ERadiance;
+						deltaBounce = true;
 					}
 				}
 
