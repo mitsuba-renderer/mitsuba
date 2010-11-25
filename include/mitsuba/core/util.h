@@ -278,7 +278,21 @@ template<class T> std::string listToString(const std::vector<T> &vec) {
 	oss << "}";
 	return oss.str();
 }
-	
+
+/**
+ * \brief Numerically well-behaved routine for computing 
+ * the angle between two unit vectors
+ *
+ * Suggested by Don Hatch at
+ * http://www.plunk.org/~hatch/rightway.php
+ */
+template <typename VectorType> inline Float unitAngle(const VectorType &u, const VectorType &v) {
+	if (dot(u, v) < 0)
+		return M_PI - 2 * std::asin((v+u).length()/2);
+	else
+		return 2 * std::asin((v-u).length()/2);
+}
+
 /// Turn a memory size into a human-readable string
 extern MTS_EXPORT std::string memString(size_t size);
 

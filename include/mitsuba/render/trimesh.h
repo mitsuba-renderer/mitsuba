@@ -120,7 +120,7 @@ public:
 
 	/// Return the number of vertices
 	inline size_t getVertexCount() const { return m_vertexCount; }
-	
+
 	/**
 	 * \brief Create a triangle mesh approximation of this shape
 	 * 
@@ -144,7 +144,6 @@ public:
 	 */
 	Float pdfArea(const ShapeSamplingRecord &sRec) const;
 
-	
 	/**
 	 * \brief Generate tangent space basis vectors. 
 	 *
@@ -155,6 +154,21 @@ public:
 
 	/// Generate surface normals
 	void computeNormals();
+
+	/**
+	 * \brief Regenerate the triangulation so that adjacent faces
+	 * with an angle greater than \a maxAngle degrees become disconnected.
+	 * 
+	 * On the other hand, if the angle is less than \a maxAngle, the code
+	 * ensures that the faces  reference the same vertices.
+	 * This step is very useful as a pre-process when generating
+	 * high-quality smooth shading normals on meshes with creases.
+	 * Note: this function is fairly memory intensive and will require
+	 * approximately three 3x the storate used by the input mesh.
+	 * It will never try to merge vertices with equal positions but
+	 * different UV coordinates or vertex colors.
+	 */
+	void rebuildTopology(Float maxAngle);
 
 	/// Serialize to a file/network stream
 	void serialize(Stream *stream, InstanceManager *manager) const;

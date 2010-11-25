@@ -20,6 +20,7 @@
 #include <mitsuba/core/random.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/zstream.h>
+#include <mitsuba/core/timer.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/bsdf.h>
@@ -281,6 +282,7 @@ void TriMesh::configure() {
 	/* Determine the object bounds */
 	for (size_t i=0; i<m_vertexCount; i++) 
 		m_aabb.expandBy(m_positions[i]);
+
 	computeNormals();
 
 	if ((m_bsdf->getType() & BSDF::EAnisotropicMaterial
@@ -299,8 +301,177 @@ Float TriMesh::sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const
 	return m_invSurfaceArea;
 }
 
+struct Vertex {
+	Point p;
+	Point2 uv;
+	Spectrum col;
+	inline Vertex() : p(0.0f), uv(0.0f), col(0.0f) { }
+};
+
+/// For using vertices as keys in an associative structure
+struct vertex_key_order : public 
+	std::binary_function<Vertex, Vertex, bool> {
+	static int compare(const Vertex &v1, const Vertex &v2) {
+		if (v1.p.x < v2.p.x) return -1;
+		else if (v1.p.x > v2.p.x) return 1;
+		if (v1.p.y < v2.p.y) return -1;
+		else if (v1.p.y > v2.p.y) return 1;
+		if (v1.p.z < v2.p.z) return -1;
+		else if (v1.p.z > v2.p.z) return 1;
+		if (v1.uv.x < v2.uv.x) return -1;
+		else if (v1.uv.x > v2.uv.x) return 1;
+		if (v1.uv.y < v2.uv.y) return -1;
+		else if (v1.uv.y > v2.uv.y) return 1;
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
+			if (v1.col[i] < v2.col[i]) return -1;
+			else if (v1.col[i] > v2.col[i]) return 1;
+		}
+		return 0;
+	}
+
+	bool operator()(const Vertex &v1, const Vertex &v2) const {
+		return compare(v1, v2) < 0;
+	}
+};
+
+/// Used in \ref TriMesh::rebuildTopology()
+struct TopoData {
+	uint32_t idx;   /// Triangle index
+	bool clustered; /// Has the tri-vert. pair been assigned to a cluster?
+	inline TopoData() { }
+	inline TopoData(uint32_t idx, bool clustered)
+		: idx(idx), clustered(clustered) { }
+};
+
+
+void TriMesh::rebuildTopology(Float maxAngle) {
+	typedef std::multimap<Vertex, TopoData, vertex_key_order> MMap;
+	typedef std::pair<Vertex, TopoData> MPair;
+	const Float dpThresh = std::cos(degToRad(maxAngle));
+
+	if (m_normals) {
+		delete[] m_normals;
+		m_normals = NULL;
+	}
+
+	if (m_tangents) {
+		delete[] m_tangents;
+		m_tangents = NULL;
+	}
+
+	Log(EInfo, "Rebuilding the topology of \"%s\" (" SIZE_T_FMT 
+			" triangles, " SIZE_T_FMT " vertices, max. angle = %f)", 
+			m_name.c_str(), m_triangleCount, m_vertexCount, maxAngle);
+	ref<Timer> timer = new Timer();
+
+	MMap vertexToFace;
+	std::vector<Point> newPositions;
+	std::vector<Point2> newTexcoords;
+	std::vector<Spectrum> newColors;
+	std::vector<Normal> faceNormals(m_triangleCount);
+	Triangle *newTriangles = new Triangle[m_triangleCount];
+
+	newPositions.reserve(m_vertexCount);
+	if (m_texcoords != NULL)
+		newTexcoords.reserve(m_vertexCount);
+	if (m_colors != NULL)
+		newColors.reserve(m_vertexCount);
+
+	/* Create an associative list and precompute a few things */
+	for (size_t i=0; i<m_triangleCount; ++i) {
+		const Triangle &tri = m_triangles[i];
+		Vertex v;
+		for (int j=0; j<3; ++j) {
+			v.p = m_positions[tri.idx[j]];
+			if (m_texcoords)
+				v.uv = m_texcoords[tri.idx[j]];
+			if (m_colors)
+				v.col = m_colors[tri.idx[j]];
+			vertexToFace.insert(MPair(v, TopoData(i, false)));
+		}
+		Point v0 = m_positions[tri.idx[0]];
+		Point v1 = m_positions[tri.idx[1]];
+		Point v2 = m_positions[tri.idx[2]];
+		faceNormals[i] = Normal(normalize(cross(v1 - v0, v2 - v0)));
+		for (int j=0; j<3; ++j)
+			newTriangles[i].idx[j] = 0xFFFFFFFFU;
+	}
+
+	/* Under the reasonable assumption that the vertex degree is
+	   bounded by a constant, the following runs in O(n) */
+	for (MMap::iterator it = vertexToFace.begin(); it != vertexToFace.end();) {
+		MMap::iterator start = vertexToFace.lower_bound(it->first);
+		MMap::iterator end = vertexToFace.upper_bound(it->first);
+
+		/* Perform a greedy clustering of normals */
+		for (MMap::iterator it2 = start; it2 != end; it2++) {
+			const Vertex &v = it2->first;
+			const TopoData &t1 = it2->second;
+			Normal n1(faceNormals[t1.idx]);
+			if (t1.clustered)
+				continue;
+
+			uint32_t vertexIdx = (uint32_t) newPositions.size();
+			newPositions.push_back(v.p);
+			if (m_texcoords)
+				newTexcoords.push_back(v.uv);
+			if (m_colors)
+				newColors.push_back(v.col);
+
+			for (MMap::iterator it3 = it2; it3 != end; ++it3) {
+				TopoData &t2 = it3->second;
+				if (t2.clustered)
+					continue;
+				Normal n2(faceNormals[t2.idx]);
+
+				if (n1 == n2 || dot(n1, n2) > dpThresh) {
+					const Triangle &tri = m_triangles[t2.idx];
+					Triangle &newTri = newTriangles[t2.idx];
+					for (int i=0; i<3; ++i) {
+						if (m_positions[tri.idx[i]] == v.p)
+							newTri.idx[i] = vertexIdx;
+					}
+					t2.clustered = true;
+				}
+			}
+		}
+
+		it = end;
+	}
+
+	for (size_t i=0; i<m_triangleCount; ++i) 
+		for (int j=0; j<3; ++j)
+			Assert(newTriangles[i].idx[j] != 0xFFFFFFFFU);
+
+	delete[] m_triangles;
+	m_triangles = newTriangles;
+
+	delete[] m_positions;
+	m_positions = new Point[newPositions.size()];
+	memcpy(m_positions, &newPositions[0], sizeof(Point) * newPositions.size());
+
+	if (m_texcoords) {
+		delete[] m_texcoords;
+		m_texcoords = new Point2[newTexcoords.size()];
+		memcpy(m_texcoords, &newTexcoords[0], sizeof(Point2) * newTexcoords.size());
+	}
+
+	if (m_colors) {
+		delete[] m_colors;
+		m_colors = new Spectrum[newColors.size()];
+		memcpy(m_colors, &newColors[0], sizeof(Spectrum) * newColors.size());
+	}
+
+	m_vertexCount = newPositions.size();
+
+	Log(EInfo, "Done after %i ms (mesh now has " SIZE_T_FMT " vertices)", 
+			timer->getMilliseconds(), m_vertexCount);
+
+	computeNormals();
+}
+
 void TriMesh::computeNormals() {
-	int zeroArea = 0, invalidNormals = 0;
+	int invalidNormals = 0;
 	if (m_faceNormals) {
 		if (m_normals) {
 			delete[] m_normals;
@@ -325,21 +496,23 @@ void TriMesh::computeNormals() {
 		} else {
 			m_normals = new Normal[m_vertexCount];
 			memset(m_normals, 0, sizeof(Normal)*m_vertexCount);
+			Normal n(0.0f);
 
+			/* Well-behaved vertex normal computation based on 
+			   "Computing Vertex Normals from Polygonal Facets"
+			   by Grit Thuermer and Charles A. Wuethrich,
+			   JGT 1998, Vol 3 */
 			for (size_t i=0; i<m_triangleCount; i++) {
 				const Triangle &tri = m_triangles[i];
-				const Point &v0 = m_positions[tri.idx[0]];
-				const Point &v1 = m_positions[tri.idx[1]];
-				const Point &v2 = m_positions[tri.idx[2]];
-				Normal n = Normal(cross(v1 - v0, v2 - v0));
-				Float length = n.length();
-				if (length != 0) {
-					n /= length;
-					m_normals[tri.idx[0]] += n;
-					m_normals[tri.idx[1]] += n;
-					m_normals[tri.idx[2]] += n;
-				} else {
-					zeroArea++;
+				for (int i=0; i<3; ++i) {
+					const Point &v0 = m_positions[tri.idx[i]];
+					const Point &v1 = m_positions[tri.idx[(i+1)%3]];
+					const Point &v2 = m_positions[tri.idx[(i+2)%3]];
+					Vector sideA(v1-v0), sideB(v2-v0);
+					if (i==0)
+						n = Normal(normalize(cross(sideA, sideB)));
+					Float angle = unitAngle(normalize(sideA), normalize(sideB));
+					m_normals[tri.idx[i]] += n * angle;
 				}
 			}
 
@@ -364,10 +537,6 @@ void TriMesh::computeNormals() {
 	if (invalidNormals > 0)
 		Log(EWarn, "\"%s\": Unable to generate %i vertex normals", 
 			m_name.c_str(), invalidNormals);
-
-	if (zeroArea > 0)
-		Log(EWarn, "\"%s\": Mesh contains %i zero area triangles",
-			m_name.c_str(), zeroArea);
 }
 
 bool TriMesh::computeTangentSpaceBasis() {
