@@ -53,9 +53,9 @@ public:
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
 		Spectrum pathThroughput(1.0f);
-		bool computeIntersection = false, deltaBounce = false;
+		bool computeIntersection = false;
 
-		while (rRec.depth < m_maxDepth || m_maxDepth < 0 || (rRec.depth == m_maxDepth && deltaBounce)) {
+		while (rRec.depth < m_maxDepth || m_maxDepth < 0) {
 			if (computeIntersection)
 				scene->rayIntersect(ray, its);
 
@@ -103,10 +103,11 @@ public:
 				if (!(rRec.type & RadianceQueryRecord::EInscatteredIndirectRadiance)) {
 					/* Stop if multiple scattering was not requested (except: sampled a delta phase function
 					   - look for emitted radiance only) */
-					if (sampledType == PhaseFunction::EDelta) 
+					if (sampledType == PhaseFunction::EDelta) {
 						rRec.type = RadianceQueryRecord::EEmittedRadiance;
-					else
+					} else {
 						break;
+					}
 				} else {
 					if (sampledType != PhaseFunction::EDelta || !(rRec.type & RadianceQueryRecord::EInscatteredDirectRadiance)) {
 						/* Emitted radiance is only included in the recursive query if:
@@ -114,10 +115,8 @@ public:
 						  - the current query asks for single scattering
 						*/
 						rRec.type = RadianceQueryRecord::ERadianceNoEmission;
-						deltaBounce = false;
 					} else {
 						rRec.type = RadianceQueryRecord::ERadiance;
-						deltaBounce = true;
 					}
 				}
 
@@ -188,27 +187,36 @@ public:
 				/*                         Indirect illumination                        */
 				/* ==================================================================== */
 			
+				bool includeEmitted = (bRec.sampledType & BSDF::EDelta) 
+					&& (rRec.type & RadianceQueryRecord::EDirectRadiance);
 				/* Stop if indirect illumination was not requested */
 				if (!(rRec.type & RadianceQueryRecord::EIndirectRadiance)) {
 					/* Stop if indirect illumination was not requested (except: sampled a delta BSDF 
-					   - look for emitted radiance only) */
-					if (bRec.sampledType & BSDF::EDelta) {
-						deltaBounce = true;
+					   - recursively look for emitted radiance only to get the direct component) */
+					if (includeEmitted) {
 						rRec.type = RadianceQueryRecord::EEmittedRadiance;
+						if (rRec.depth+1 == m_maxDepth) {
+							/* Do one extra recursion to get the emitted radiance component 
+							   (e.g. from an envmap). We must reduce rRec.depth 
+							   or the loop will terminate */
+							--rRec.depth;
+						}
 					} else {
 						break;
 					}
 				} else {
-					if (!(bRec.sampledType & BSDF::EDelta) || !(rRec.type & RadianceQueryRecord::EDirectRadiance)) {
-						/* Emitted radiance is only included in the recursive query if:
-						  - the sampled BSDF component had a Dirac delta distribution AND
-						  - the current query asks for direct illumination
-						*/
+					if (!includeEmitted) {
 						rRec.type = RadianceQueryRecord::ERadianceNoEmission;
-						deltaBounce = false;
 					} else {
-						rRec.type = RadianceQueryRecord::ERadiance;
-						deltaBounce = true;
+						if (rRec.depth+1 == m_maxDepth) {
+							/* Do one extra recursion to get the emitted radiance component 
+							   (e.g. from an envmap). We must reduce rRec.depth 
+							   or the loop will terminate */
+							--rRec.depth;
+							rRec.type = RadianceQueryRecord::EEmittedRadiance;
+						} else {
+							rRec.type = RadianceQueryRecord::ERadiance;
+						}
 					}
 				}
 
