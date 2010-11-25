@@ -32,7 +32,10 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Space-efficient acceleration structure for cylindrical hair
- * segments with miter joints.
+ * segments with miter joints. This class expects an ASCII file containing
+ * a list of hairs made from segments. Each line should contain an X,
+ * Y and Z coordinate separated by a space. An empty line indicates
+ * the start of a new hair.
  */
 class HairKDTree : public GenericKDTree<AABB, HairKDTree> {
 	friend class GenericKDTree<AABB, HairKDTree>;
@@ -734,7 +737,7 @@ private:
 	ref<HairKDTree> m_kdtree;
 };
 
-MTS_IMPLEMENT_CLASS(HairKDTree, false, GenericKDTree)
+MTS_IMPLEMENT_CLASS(HairKDTree, false, KDTreeBase)
 MTS_IMPLEMENT_CLASS_S(Hair, false, Shape)
 MTS_EXPORT_PLUGIN(Hair, "Hair intersection primitive");
 MTS_NAMESPACE_END
