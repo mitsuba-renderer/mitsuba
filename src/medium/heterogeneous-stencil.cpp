@@ -199,7 +199,7 @@ public:
 	}
 	
 	Float integrateDensities(Ray ray, Float length) const {
-		int nParts = (int) std::ceil(length/m_stepSize);
+		int nParts = std::max(1, (int) std::ceil(length/m_stepSize));
 		nParts += nParts % 2;
 		const Float stepSize = length/nParts;
 		const Vector increment = ray.d * stepSize;
@@ -225,8 +225,7 @@ public:
 		Float &currentSigmaT, 
 		Spectrum &currentAlbedo, 
 		Float desiredTau) const {
-
-		int nParts = (int) std::ceil(maxDist/m_stepSize);
+		int nParts = std::max(1, (int) std::ceil(maxDist/m_stepSize));
 		Float stepSize = maxDist/nParts;
 		Vector fullIncrement = ray.d * stepSize,
 			   halfIncrement = fullIncrement * .5f;
