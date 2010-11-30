@@ -94,6 +94,7 @@ protected:
 	SceneContext *getContext(const RenderJob *job, bool failIfNotFound = true);
 	void drawHLine(SceneContext *ctx, int x1, int y, int x2, const float *color);
 	void drawVLine(SceneContext *ctx, int x, int y1, int y2, const float *color);
+	void drawVisualWorkUnit(SceneContext *context, const VisualWorkUnit &block);
 	void checkForUpdates(bool notifyIfNone = false);
 	void saveAs(SceneContext *ctx, const QString &targetFile);
 	QSize sizeHint() const;

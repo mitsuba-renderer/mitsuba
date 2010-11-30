@@ -831,8 +831,10 @@ bool MainWindow::on_tabBar_tabCloseRequested(int index) {
 	SceneContext *context = m_context[index];
 	if (context->renderJob != NULL) {
 		QMessageBox box(QMessageBox::Question, tr("Really close?"), 
-			tr("Rendering of scene \"%1\" is unfinished - all progress will be lost. Are you sure you want to continue?").arg(context->shortName),
-			QMessageBox::Yes | QMessageBox::No, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::Sheet);
+			tr("Rendering of scene \"%1\" is unfinished - all progress "
+				"will be lost. Are you sure you want to continue?").arg(context->shortName),
+			QMessageBox::Yes | QMessageBox::No, this,
+			Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::Sheet);
 		box.setWindowModality(Qt::WindowModal);
 		if (box.exec() == QMessageBox::No)
 			return false;
@@ -1120,11 +1122,16 @@ void MainWindow::on_actionSettings_triggered() {
 
 void MainWindow::on_actionStop_triggered() {
 	SceneContext *context = m_context[ui->tabBar->currentIndex()];
+	m_contextMutex.lock();
+	context->workUnits.clear();
 	if (context->renderJob) {
 		context->cancelled = true;
-		context->renderJob->cancel();
+		ref<RenderJob> renderJob = context->renderJob;
+		m_contextMutex.unlock();
+		renderJob->cancel();
 	} else if (context->mode == ERender) {
 		context->mode = EPreview;
+		m_contextMutex.unlock();
 	}
 	ui->glView->resumePreview();
 
@@ -1370,6 +1377,7 @@ void MainWindow::onJobFinished(const RenderJob *job, bool cancelled) {
 	m_renderQueue->join();
 	if (context == NULL)
 		return;
+	context->workUnits.clear();
 	if (cancelled) {
 		if (!context->cancelled) {
 			QMessageBox::critical(this, tr("Error while rendering"),
@@ -1427,15 +1435,30 @@ void MainWindow::onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu
 	SceneContext *context = getContext(job, false);
 	if (context == NULL)
 		return;
+	VisualWorkUnit vwu;
+	/* This is not executed in the event loop -- take some precautions */
+	m_contextMutex.lock();
+	vwu.offset = wu->getOffset();
+	vwu.size = wu->getSize();
+	vwu.worker = worker;
+	context->workUnits.insert(vwu);
+	drawVisualWorkUnit(context, vwu);
+	bool isCurrentView = ui->tabBar->currentIndex() < m_context.size() &&
+		m_context[ui->tabBar->currentIndex()] == context;
+	m_contextMutex.unlock();
+	if (isCurrentView)
+		emit updateView();
+}
 
+void MainWindow::drawVisualWorkUnit(SceneContext *context, const VisualWorkUnit &vwu) {
 	Film *film = context->scene->getFilm();
-	int ox = wu->getOffset().x - film->getCropOffset().x, 
-		oy = wu->getOffset().y - film->getCropOffset().y,
-		ex = ox + wu->getSize().x, ey = oy + wu->getSize().y;
+	Point2i co = film->getCropOffset();
+	int ox = vwu.offset.x - co.x, oy = vwu.offset.y - co.y,
+		ex = ox + vwu.size.x, ey = oy + vwu.size.y;
 	const float *color = NULL;
 
 	/* Use desaturated colors to highlight the host
-	   responsible for rendering the current image block */
+	   responsible for rendering the current image vwu */
 	const float white[]     = { 1.0f, 1.0f, 1.0f };
 	const float red[]       = { 1.0f, 0.3f, 0.3f };
 	const float green[]     = { 0.3f, 1.0f, 0.3f };
@@ -1445,7 +1468,7 @@ void MainWindow::onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu
 	const float magenta[]   = { 1.0f, 0.3f, 1.0f };
 	const float turquoise[] = { 0.3f, 1.0f, 1.0f };
 
-	switch (worker % 8) {
+	switch (vwu.worker % 8) {
 		case 1: color = green; break;
 		case 2: color = yellow; break;
 		case 3: color = blue; break;
@@ -1459,7 +1482,7 @@ void MainWindow::onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu
 			break;
 	}
 
-	if (wu->getSize().x < 3 || wu->getSize().y < 3)
+	if (vwu.size.x < 3 || vwu.size.y < 3)
 		return;
 
 	drawHLine(context, ox, oy, ox + 3, color);
@@ -1470,23 +1493,14 @@ void MainWindow::onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu
 	drawVLine(context, ex - 1, oy, oy + 3, color);
 	drawVLine(context, ex - 1, ey - 4, ey - 1, color);
 	drawVLine(context, ox, ey - 4, ey - 1, color);
-
-	/* This is not executed in the event loop -- take some precautions */
-	m_contextMutex.lock();
-	bool isCurrentView = ui->tabBar->currentIndex() < m_context.size() &&
-		m_context[ui->tabBar->currentIndex()] == context;
-	m_contextMutex.unlock();
-	if (isCurrentView)
-		emit updateView();
-}
-	
-void MainWindow::on_glView_loadFileRequest(const QString &string) {
-	loadFile(string);
 }
 
 void MainWindow::onWorkEnd(const RenderJob *job, const ImageBlock *block) {
 	int ox = block->getOffset().x, oy = block->getOffset().y,
 		ex = ox + block->getSize().x, ey = oy + block->getSize().y;
+	VisualWorkUnit vwu;
+	vwu.offset = block->getOffset();
+	vwu.size = block->getSize();
 	SceneContext *context = getContext(job, false);
 	if (context == NULL)
 		return;
@@ -1512,6 +1526,12 @@ void MainWindow::onWorkEnd(const RenderJob *job, const ImageBlock *block) {
 	m_contextMutex.lock();
 	bool isCurrentView = ui->tabBar->currentIndex() < m_context.size() &&
 		m_context[ui->tabBar->currentIndex()] == context;
+	if (context->workUnits.find(vwu) != context->workUnits.end()) {
+		context->workUnits.erase(vwu);
+	} else if (!context->cancelled) {
+		SLog(EWarn, "Internal error: unable to find previously scheduled"
+				" rectangular work unit.");
+	}
 	m_contextMutex.unlock();
 	if (isCurrentView)
 		emit updateView();
@@ -1537,9 +1557,21 @@ void MainWindow::onRefresh(const RenderJob *job) {
 			fbOffset += 4;
 		}
 	}
-	
-	if (m_context[ui->tabBar->currentIndex()] == context)
+
+	/* This is executed by worker threads -- take some precautions */
+	m_contextMutex.lock();
+	bool isCurrentView = ui->tabBar->currentIndex() < m_context.size() &&
+		m_context[ui->tabBar->currentIndex()] == context;
+	for (std::set<VisualWorkUnit, block_comparator>::const_iterator it =
+		context->workUnits.begin(); it != context->workUnits.end(); ++it) 
+		drawVisualWorkUnit(context, *it);
+	m_contextMutex.unlock();
+	if (isCurrentView)
 		emit updateView();
+}
+
+void MainWindow::on_glView_loadFileRequest(const QString &string) {
+	loadFile(string);
 }
 
 bool ServerConnection::createWorker(QWidget *parent) {

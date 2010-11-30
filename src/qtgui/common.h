@@ -131,6 +131,29 @@ struct PreviewQueueEntry {
 	}
 };
 
+struct VisualWorkUnit {
+	Point2i offset;
+	Vector2i size;
+	int worker;
+};
+
+struct block_comparator : std::binary_function<VisualWorkUnit, VisualWorkUnit, bool> {
+	static int compare(const VisualWorkUnit &v1, const VisualWorkUnit &v2) {
+		if (v1.offset.x < v2.offset.x) return -1;
+		else if (v1.offset.x > v2.offset.x) return 1;
+		if (v1.offset.y < v2.offset.y) return -1;
+		else if (v1.offset.y > v2.offset.y) return 1;
+		if (v1.size.x < v2.size.x) return -1;
+		else if (v1.size.x > v2.size.x) return 1;
+		if (v1.size.y < v2.size.y) return -1;
+		else if (v1.size.y > v2.size.y) return 1;
+		return 0;
+	}
+
+	bool operator()(const VisualWorkUnit &v1, const VisualWorkUnit &v2) const {
+		return compare(v1, v2) < 0;
+	}
+};
 
 struct SceneContext {
 	/* Scene-related */
@@ -147,6 +170,7 @@ struct SceneContext {
 	float progress;
 	QString eta, progressName;
 	ref<Bitmap> framebuffer;
+	std::set<VisualWorkUnit, block_comparator> workUnits;
 	EMode mode, cancelMode;
 	Float gamma, exposure, clamping;
 	bool srgb;
