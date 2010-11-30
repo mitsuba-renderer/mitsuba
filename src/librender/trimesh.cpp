@@ -265,27 +265,26 @@ Float TriMesh::pdfArea(const ShapeSamplingRecord &sRec) const {
 void TriMesh::configure() {
 	Shape::configure();
 
-	if (m_areaPDF.isReady())
-		return;
-	
-	m_aabb.reset();
+	if (m_areaPDF.isReady()) {
+		m_aabb.reset();
 
-	if (m_triangleCount == 0)
-		Log(EError, "Encountered an empty triangle mesh!");
+		if (m_triangleCount == 0)
+			Log(EError, "Encountered an empty triangle mesh!");
 
-	/* Generate a PDF for sampling wrt. area */
-	for (size_t i=0; i<m_triangleCount; i++) 
-		m_areaPDF.put(m_triangles[i].surfaceArea(m_positions));
-	m_surfaceArea = m_areaPDF.build();
-	m_invSurfaceArea = 1.0f / m_surfaceArea;
+		/* Generate a PDF for sampling wrt. area */
+		for (size_t i=0; i<m_triangleCount; i++) 
+			m_areaPDF.put(m_triangles[i].surfaceArea(m_positions));
+		m_surfaceArea = m_areaPDF.build();
+		m_invSurfaceArea = 1.0f / m_surfaceArea;
 
-	/* Determine the object bounds */
-	for (size_t i=0; i<m_vertexCount; i++) 
-		m_aabb.expandBy(m_positions[i]);
+		/* Determine the object bounds */
+		for (size_t i=0; i<m_vertexCount; i++) 
+			m_aabb.expandBy(m_positions[i]);
 
-	computeNormals();
+		computeNormals();
+	}
 
-	if ((m_bsdf->getType() & BSDF::EAnisotropicMaterial
+	if (((m_bsdf->getType() & BSDF::EAnisotropicMaterial)
 		|| m_bsdf->usesRayDifferentials()) && !m_tangents)
 		computeTangentSpaceBasis();
 }
