@@ -30,8 +30,7 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * This class implements a simple binary exchange format
- * for discretized volume data. On Linux, the files are
- * directly mapped into memory for better performance
+ * for discretized volume data.
  */
 class GridDataSource : public VolumeDataSource {
 public:
@@ -201,7 +200,7 @@ public:
 		if (m_mmapPtr == NULL)
 			Log(EError, "MapViewOfFile: Could not map \"%s\" to memory: %s", 
 				m_filename.file_string().c_str(), lastErrorText().c_str());
-		m_data = ((float *) m_mmapPtr) + 10;
+		m_data = ((float *) m_mmapPtr) + 12;
 #else
 		Log(EInfo, "Loading \"%s\": %ix%ix%i (%i channels), %i KiB, %s", filename.c_str(), 
 			m_res.x, m_res.y, m_res.z, m_channels, nEntries*sizeof(float)/1024,

@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <fenv.h>
 #endif
 
 #if !defined(L1_CACHE_LINE_SIZE)
@@ -238,6 +239,60 @@ std::string lastErrorText() {
 	return result;
 }
 #endif
+
+bool enableFPExceptions() {
+	bool exceptionsWereEnabled = false;
+#if defined(WIN32)
+	_clearfp();
+	unsigned int cw = _controlfp(0, 0);
+	exceptionsWereEnabled = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
+	cw &= ~(_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
+	_controlfp(cw, _MCW_EM);
+#else
+	exceptionsWereEnabled = 
+		fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+	feenableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+#endif
+#if defined(MTS_SSE)
+	enable_fpexcept_sse();
+#endif
+	return exceptionsWereEnabled;
+}
+
+bool disableFPExceptions() {
+	bool exceptionsWereEnabled = false;
+#if defined(WIN32)
+	_clearfp();
+	unsigned int cw = _controlfp(0, 0);
+	exceptionsWereEnabled = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
+	cw |= _EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW;
+	_controlfp(cw, _MCW_EM);
+#else
+	exceptionsWereEnabled = 
+		fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+	fedisableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+#endif
+#if defined(MTS_SSE)
+	disable_fpexcept_sse();
+#endif
+	return exceptionsWereEnabled;
+}
+
+void restoreFPExceptions(bool oldState) {
+	bool currentState;
+#if defined(WIN32)
+	unsigned int cw = _controlfp(0, 0);
+	currentState = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
+#else
+	currentState = fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+#endif
+	if (oldState != currentState) {
+		if (oldState)
+			enableFPExceptions();
+		else
+			disableFPExceptions();
+	}
+}
 
 
 std::string getHostName() {

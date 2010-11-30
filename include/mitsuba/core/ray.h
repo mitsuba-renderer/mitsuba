@@ -53,13 +53,13 @@ struct Ray {
 	inline Ray(Point o, Vector _d, Float time)
 		: o(o), mint(Epsilon),  d(_d), maxt(std::numeric_limits<Float>::infinity()), time(time) {
 #ifdef MTS_DEBUG_FP
-		disable_fpexcept();
+		bool state = disableFPExceptions();
 #endif
 		dRcp.x = (Float) 1.0f / _d.x;
 		dRcp.y = (Float) 1.0f / _d.y;
 		dRcp.z = (Float) 1.0f / _d.z;
 #ifdef MTS_DEBUG_FP
-		enable_fpexcept();
+		restoreFPExceptions(state);
 #endif
 	}
 
@@ -67,13 +67,13 @@ struct Ray {
 	inline Ray(Point o, Vector _d, Float mint, Float maxt, Float time)
 		: o(o), mint(mint),  d(_d), maxt(maxt), time(time) {
 #ifdef MTS_DEBUG_FP
-		disable_fpexcept();
+		bool state = disableFPExceptions();
 #endif
 		dRcp.x = (Float) 1.0f / _d.x;
 		dRcp.y = (Float) 1.0f / _d.y;
 		dRcp.z = (Float) 1.0f / _d.z;
 #ifdef MTS_DEBUG_FP
-		enable_fpexcept();
+		restoreFPExceptions(state);
 #endif
 	}
 
@@ -87,13 +87,13 @@ struct Ray {
 	inline void setDirection(const Vector &dVal) {
 		d = dVal;
 #ifdef MTS_DEBUG_FP
-		disable_fpexcept();
+		bool state = disableFPExceptions();
 #endif
 		dRcp.x = (Float) 1.0f / dVal.x;
 		dRcp.y = (Float) 1.0f / dVal.y;
 		dRcp.z = (Float) 1.0f / dVal.z;
 #ifdef MTS_DEBUG_FP
-		enable_fpexcept();
+		restoreFPExceptions(state);
 #endif
 	}
 
@@ -144,11 +144,11 @@ struct RayDifferential : public Ray {
 		d = ray.d;
 		maxt = ray.maxt;
 #ifdef MTS_DEBUG_FP
-		disable_fpexcept();
+		bool state = disableFPExceptions();
 #endif
 		dRcp = ray.dRcp;
 #ifdef MTS_DEBUG_FP
-		enable_fpexcept();
+		restoreFPExceptions(state);
 #endif
 		hasDifferentials = ray.hasDifferentials;
 		rx = ray.rx;
@@ -161,11 +161,11 @@ struct RayDifferential : public Ray {
 		d = ray.d;
 		maxt = ray.maxt;
 #ifdef MTS_DEBUG_FP
-		disable_fpexcept();
+		bool state = disableFPExceptions();
 #endif
 		dRcp = ray.dRcp;
 #ifdef MTS_DEBUG_FP
-		enable_fpexcept();
+		restoreFPExceptions(state);
 #endif
 		hasDifferentials = false;
 	}

@@ -20,10 +20,6 @@
 #include <mitsuba/render/renderproc.h>
 #include <mitsuba/render/imageproc_wu.h>
 
-#ifdef MTS_DEBUG_FP
-#include <fenv.h>
-#endif
-
 MTS_NAMESPACE_BEGIN
 
 class BlockRenderer : public WorkProcessor {
@@ -67,11 +63,7 @@ public:
 		ImageBlock *block = static_cast<ImageBlock *>(workResult);
 
 #ifdef MTS_DEBUG_FP
-		/* Debugging: Turn on FP exceptions? */
-		#ifdef MTS_SSE
-			enable_fpexcept();
-		#endif
-		feenableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+		enableFPExceptions();
 #endif
 
 		block->setOffset(rect->getOffset());
@@ -79,10 +71,7 @@ public:
 		m_integrator->renderBlock(m_scene, m_camera, m_sampler, block, stop);
 
 #ifdef MTS_DEBUG_FP
-		#ifdef MTS_SSE
-			disable_fpexcept();
-		#endif
-		fedisableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+		disableFPExceptions();
 #endif
 	}
 

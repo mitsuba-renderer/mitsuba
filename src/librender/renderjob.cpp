@@ -19,10 +19,6 @@
 #include <mitsuba/render/renderjob.h>
 #include <mitsuba/render/renderproc.h>
 
-#ifdef MTS_DEBUG_FP
-#include <fenv.h>
-#endif
-
 MTS_NAMESPACE_BEGIN
 	
 RenderJob::RenderJob(const std::string &threadName, 

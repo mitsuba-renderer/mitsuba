@@ -66,6 +66,27 @@ extern MTS_EXPORT_CORE int getProcessorCount();
 /// Return the host name of this machine
 extern MTS_EXPORT_CORE std::string getHostName();
 
+/**
+ * Enable floating point exceptions (to catch NaNs, overflows, 
+ * arithmetic with infinity). On Intel processors, this applies
+ * to both x87 and SSE2 math
+ *
+ * \return \a true if floating point exceptions were active
+ * before calling the function
+ */
+extern MTS_EXPORT_CORE bool enableFPExceptions();
+
+/**
+ * Disable floating point exceptions
+ *
+ * \return \a true if floating point exceptions were active
+ * before calling the function
+ */
+extern MTS_EXPORT_CORE bool disableFPExceptions();
+
+/// Restore floating point exceptions to the specified state
+extern MTS_EXPORT_CORE void restoreFPExceptions(bool state);
+
 /// Return the fully qualified domain name of this machine 
 extern MTS_EXPORT_CORE std::string getFQDN();
 

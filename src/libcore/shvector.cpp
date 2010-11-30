@@ -437,7 +437,7 @@ Float SHSampler::warp(const SHVector &f, Point2 &sample) const {
 		Float zNorm = (Float) 1 / (z1+z2);
 		z1 *= zNorm; z2 *= zNorm;
 
-		if (sample.x <= z1) {
+		if (sample.x < z1) {
 			sample.x /= z1;
 			phi1 = q00; phi2 = q10;
 			i <<= 1;

@@ -304,7 +304,7 @@ public:
 		operator()(a.o, b.o);
 		operator()(a.d, b.d);
 #ifdef MTS_DEBUG_FP
-		disable_fpexcept();
+		bool state = disableFPExceptions();
 #endif
 		/* Re-compute the reciprocal */
 		b.dRcp.x = 1.0f / b.d.x;
@@ -312,7 +312,7 @@ public:
 		b.dRcp.z = 1.0f / b.d.z;
 		b.time = a.time;
 #ifdef MTS_DEBUG_FP
-		enable_fpexcept();
+		restoreFPExceptions(state);
 #endif
 	}
 	
