@@ -581,7 +581,7 @@ Spectrum FlakePhaseFunction::f(const MediumSamplingRecord &mRec, const Vector &_
 	if (orientation.lengthSquared() == 0)
 		return Spectrum(0.0f);
 
-	Frame frame(orientation);
+	Frame frame(normalize(orientation));
 	Vector wi = frame.toLocal(_wi);
 	Vector wo = frame.toLocal(_wo);
 #if defined(FLAKE_SAMPLE_APPROXIMATION) 
@@ -608,8 +608,13 @@ Spectrum FlakePhaseFunction::sample(const MediumSamplingRecord &mRec, const Vect
 		ESampledType &sampledType, Float &pdf, const Point2 &_sample) const {
 	sampledType = PhaseFunction::ENormal;
 #if 1
+	Vector orientation = m_medium->lookupOrientation(mRec.p);
+	if (orientation.lengthSquared() == 0) {
+		pdf = 0.0f;
+		return Spectrum(0.0f);
+	}
 	/* Importance sampling using the interpolated phase function */
-	Frame frame(m_medium->lookupOrientation(mRec.p));
+	Frame frame(normalize(orientation));
 	Point2 sample(_sample);
 	Vector wi = frame.toLocal(_wi);
 
@@ -635,7 +640,10 @@ Spectrum FlakePhaseFunction::sample(const MediumSamplingRecord &mRec, const Vect
 }
 
 Float FlakePhaseFunction::pdf(const MediumSamplingRecord &mRec, const Vector &_wi, const Vector &_wo) const {
-	Frame frame(m_medium->lookupOrientation(mRec.p));
+	Vector orientation = m_medium->lookupOrientation(mRec.p);
+	if (orientation.lengthSquared() == 0)
+		return 0.0f;
+	Frame frame(normalize(orientation));
 	SHVector temp(m_phaseExpansion->getBands());
 	Vector wi = frame.toLocal(_wi);
 	Vector wo = frame.toLocal(_wo);
