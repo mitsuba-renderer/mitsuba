@@ -41,6 +41,8 @@ public:
 		/// Fetch a line from the stream, while handling line breaks with backslashes
 		if (!std::getline(is, line))
 			return false;
+		if (line == "")
+			return true;
 		int lastCharacter = line.size()-1;
 		while (lastCharacter >= 0 && 
 				(line[lastCharacter] == '\r' ||
