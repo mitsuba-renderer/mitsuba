@@ -37,9 +37,10 @@ public:
 		unsigned int uv[3];
 	};
 
-	void fetch_line(std::istream &is, std::string &line) {
+	bool fetch_line(std::istream &is, std::string &line) {
 		/// Fetch a line from the stream, while handling line breaks with backslashes
-		std::getline(is, line);
+		if (!std::getline(is, line))
+			return false;
 		int lastCharacter = line.size()-1;
 		while (lastCharacter >= 0 && 
 				(line[lastCharacter] == '\r' ||
@@ -55,6 +56,7 @@ public:
 		} else {
 			line.resize(lastCharacter+1);
 		}
+		return true;
 	}
 
 	WavefrontOBJ(const Properties &props) : Shape(props) {
@@ -95,8 +97,7 @@ public:
 		std::set<std::string> geomNames;
 		int geomIdx = 0;
 
-		while (is.good() && !is.eof()) {
-			fetch_line(is, line);
+		while (is.good() && !is.eof() && fetch_line(is, line)) {
 			std::istringstream iss(line);
 			if (!(iss >> buf))
 				continue;
