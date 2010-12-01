@@ -53,7 +53,11 @@ GLWidget::GLWidget(QWidget *parent) :
 	m_navigationMode = EFlythrough;
 	m_ignoreMouseEvent = QPoint(0, 0);
 	m_didSetCursor = false;
+#if defined(MTS_GUI_SOFTWARE_FALLBACK)
+	m_softwareFallback = true;
+#else
 	m_softwareFallback = false;
+#endif
 	m_ignoreResizeEvents = false;
 	m_ignoreScrollEvents = false;
 	setAcceptDrops(true);
@@ -111,7 +115,7 @@ void GLWidget::initializeGL() {
 		RendererCapabilities::EVertexBufferObjects))
 		missingExtensions.push_back("Vertex buffer objects");
 
-	if (missingExtensions.size() > 0) {
+	if (missingExtensions.size() > 0 || m_softwareFallback) {
 		std::ostringstream oss;
 		oss << "You machine is missing the following required "
 			"OpenGL capabilities: ";
@@ -1048,4 +1052,3 @@ void GLWidget::resizeGL(int width, int height) {
 	glViewport(0, 0, (GLint) width, (GLint) height);
 	m_device->setDimension(Vector2i(width, height));
 }
-
