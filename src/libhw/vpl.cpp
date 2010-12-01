@@ -342,9 +342,12 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 				<< "varying out vec3 vertexColor;" << endl
 				<< endl
 				<< "void main() {" << endl
-				<< "   normal = normalize(cross(" << endl
-				<< "      gl_PositionIn[1].xyz-gl_PositionIn[0].xyz," << endl
-				<< "      gl_PositionIn[2].xyz-gl_PositionIn[0].xyz));" << endl
+				<< "   vec3 p0 = gl_PositionIn[0].xyz / gl_PositionIn[0].w;" << endl
+				<< "   vec3 p1 = gl_PositionIn[1].xyz / gl_PositionIn[1].w;" << endl
+				<< "   vec3 p2 = gl_PositionIn[2].xyz / gl_PositionIn[2].w;" << endl
+				<< "   normal = normalize(cross(p1 - p0, p2 - p0));" << endl
+				<< "   gl_Position = vec4(0.0);" << endl
+				<< "   lightVec = camVec = vec3(0.0);" << endl
 				<< "   for (int i=0; i<gl_VerticesIn; ++i) {" << endl
 				<< "      gl_Position = gl_PositionIn[i];" << endl
 				<< "      uv = uv_vertex[i];" << endl
@@ -365,13 +368,12 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
         oss << "#version 120" << endl;
 		if (anisotropic)
 			oss << "varying vec3 tangent;" << endl;
-		if (!faceNormals)
-			oss << "varying vec3 normal;" << endl;
 		oss << "uniform vec3 vplPos, camPos;" << endl;
 
 		if (!faceNormals) {
 			oss << "varying vec3 lightVec, camVec;" << endl
 				<< "varying vec2 uv;" << endl
+				<< "varying vec3 normal;" << endl
 				<< "varying vec3 vertexColor;" << endl
 				<< endl
 				<< "void main() {" << endl
@@ -379,7 +381,8 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 				<< "   camVec = camPos - gl_Vertex.xyz;" << endl
 				<< "   lightVec = vplPos - gl_Vertex.xyz;" << endl
 				<< "   gl_Position = ftransform();" << endl
-				<< "   vertexColor = gl_Color.rgb;" << endl;
+				<< "   vertexColor = gl_Color.rgb;" << endl
+				<< "   normal = gl_Normal;" << endl;
 		} else {
 			oss << "varying vec3 lightVec_vertex, camVec_vertex;" << endl
 				<< "varying vec2 uv_vertex;" << endl
@@ -392,8 +395,6 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 				<< "   gl_Position = ftransform();" << endl
 				<< "   vertexColor_vertex = gl_Color.rgb;" << endl;
 		}
-		if (!faceNormals)
-			oss << "   normal = gl_Normal;" << endl;
 		if (anisotropic)
 			oss << "   tangent = gl_MultiTexCoord1.xyz;" << endl;
 		oss << "}" << endl;

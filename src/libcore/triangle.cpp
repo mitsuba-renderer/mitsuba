@@ -40,7 +40,7 @@ Point Triangle::sample(const Point *positions, const Normal *normals,
 			n1 * bary.x + n2 * bary.y
 		));
 	} else {
-		normal = Normal(cross(sideA, sideB));
+		normal = Normal(normalize(cross(sideA, sideB)));
 	}
 
 	return p;

@@ -265,7 +265,7 @@ Float TriMesh::pdfArea(const ShapeSamplingRecord &sRec) const {
 void TriMesh::configure() {
 	Shape::configure();
 
-	if (m_areaPDF.isReady()) {
+	if (!m_areaPDF.isReady()) {
 		m_aabb.reset();
 
 		if (m_triangleCount == 0)

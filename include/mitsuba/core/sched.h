@@ -593,9 +593,8 @@ protected:
 		item.wp = proc->createWorkProcessor();
 		const ParallelProcess::ResourceBindings &bindings = item.proc->getResourceBindings();
 		for (ParallelProcess::ResourceBindings::const_iterator it = bindings.begin();
-			it != bindings.end(); ++it) {
+			it != bindings.end(); ++it)
 			item.wp->m_resources[(*it).first] = m_scheduler->getResource((*it).second, item.coreOffset);
-		}
 		try {
 			item.wp->prepare();
 			item.workUnit = item.wp->createWorkUnit();

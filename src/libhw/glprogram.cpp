@@ -38,6 +38,7 @@ void GLProgram::init() {
 	Assert(m_id[0] == 0 && m_id[1] == 0 && m_program == 0);
 
 	Log(EDebug, "Uploading a GPU program : %s", toString().c_str());
+	m_program = glCreateProgramObjectARB();
 
 	m_id[EVertexProgram] = createShader(GL_VERTEX_SHADER_ARB, 
 		m_source[EVertexProgram]);
@@ -46,7 +47,13 @@ void GLProgram::init() {
 	m_id[EGeometryProgram] = createShader(GL_GEOMETRY_SHADER_ARB,
 		m_source[EGeometryProgram]);
 
-	m_program = glCreateProgramObjectARB();
+	if (m_id[EGeometryProgram] != 0) {
+		Assert(m_maxVertices > 0);
+		glProgramParameteriEXT(m_program, GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES); 
+		glProgramParameteriEXT(m_program, GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
+		glProgramParameteriEXT(m_program, GL_GEOMETRY_VERTICES_OUT_EXT, m_maxVertices);
+	}
+
 	if (m_id[EVertexProgram] != 0)
 		glAttachObjectARB(m_program, m_id[EVertexProgram]);
 	if (m_id[EFragmentProgram] != 0)
@@ -54,14 +61,7 @@ void GLProgram::init() {
 	if (m_id[EGeometryProgram] != 0)
 		glAttachObjectARB(m_program, m_id[EGeometryProgram]);
 
-	if (m_id[EGeometryProgram] != 0) {
-		glProgramParameteriEXT(m_program, GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES); 
-		glProgramParameteriEXT(m_program, GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
-		glProgramParameteriEXT(m_program, GL_GEOMETRY_VERTICES_OUT_EXT, m_maxVertices);
-	}
-
 	glLinkProgramARB(m_program);
-	//glValidateProgramARB(m_program);
 
 	std::string infoLog = getInfoLogProgram();
 
@@ -74,9 +74,9 @@ void GLProgram::init() {
 		Log(EError, "Error linking a GPU program!");
 	} else if (infoLog != "") {
 		if (infoLog.find("warning") != std::string::npos)
-			Log(EWarn, infoLog.c_str());
+			Log(EWarn, "GLSL linker warning: %s", infoLog.c_str());
 		else
-			Log(EDebug, infoLog.c_str());
+			Log(EDebug, "GLSL linker message: %s", infoLog.c_str());
 	}
 }
 
@@ -112,9 +112,9 @@ int GLProgram::createShader(int type, const std::string &source) {
 			Log(EError, "Unknown error encountered while compiling a shader!");
 	} else if (infoLog != "") {
 		if (infoLog.find("warning") != std::string::npos)
-			Log(EWarn, infoLog.c_str());
+			Log(EWarn, "GLSL compiler warning: %s", infoLog.c_str());
 		else
-			Log(EDebug, infoLog.c_str());
+			Log(EDebug, "GLSL compiler message: %s", infoLog.c_str());
 	}
 	return id;
 }
@@ -248,7 +248,7 @@ void GLProgram::setParameter(int id, const Transform &trafo) {
 	int idx=0;
 	for (int i=0; i<4; i++)
 		for (int j=0; j<4; j++)
-			tmp[idx++] = (GLfloat) trafo.getMatrix()->m[i][j];
+			tmp[idx++] = (GLfloat) trafo.getMatrix().m[i][j];
 	glUniformMatrix4fv(id, 1, true, tmp);
 #endif
 }

@@ -183,13 +183,13 @@ protected:
 					return ENo;
 				t = tempT;
 				cache->shapeIndex = shapeIdx;
-				cache->primIndex = primIdx;
+				cache->primIndex = idx;
 				cache->u = tempU;
 				cache->v = tempV;
 				return EYes;
 			}
 		} else {
-			const Shape *shape = m_shapes[shapeIndex];
+			const Shape *shape = m_shapes[shapeIdx];
 			if (shape->rayIntersect(ray, mint, maxt, t, 
 						reinterpret_cast<uint8_t*>(temp) + 8)) {
 				cache->shapeIndex = shapeIdx;
@@ -245,7 +245,7 @@ protected:
 			}
 			return ENo;
 		} else {
-			const Shape *shape = m_shapes[shapeIndex];
+			const Shape *shape = m_shapes[shapeIdx];
 			return shape->rayIntersect(ray, mint, maxt) ? EYes : ENo;
 		}
 #else
