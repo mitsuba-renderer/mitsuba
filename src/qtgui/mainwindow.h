@@ -161,6 +161,7 @@ private:
 	QList<SceneContext *> m_context;
 	ref<RenderQueue> m_renderQueue;
 	ref<QRenderListener> m_renderListener;
+	Thread::EThreadPriority m_workerPriority;
 	QList<ServerConnection> m_connections;
 	QMutex m_contextMutex;
 	PreviewSettingsDialog *m_previewSettingsDialog;

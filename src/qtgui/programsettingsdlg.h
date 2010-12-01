@@ -110,6 +110,33 @@ public:
 		}
 	}
 
+	inline void setWorkerPriority(Thread::EThreadPriority logLevel) {
+		switch (logLevel) {
+			case Thread::EIdlePriority: ui->workerPriorityBox->setCurrentIndex(0); break;
+			case Thread::ELowestPriority: ui->workerPriorityBox->setCurrentIndex(1); break;
+			case Thread::ELowPriority: ui->workerPriorityBox->setCurrentIndex(2); break;
+			case Thread::ENormalPriority: ui->workerPriorityBox->setCurrentIndex(3); break;
+			case Thread::EHighPriority: ui->workerPriorityBox->setCurrentIndex(4); break;
+			case Thread::EHighestPriority: ui->workerPriorityBox->setCurrentIndex(5); break;
+			default:
+				SLog(EError, "Unknown worker priority!");
+		}
+	}
+
+	inline Thread::EThreadPriority getWorkerPriority() const {
+		switch (ui->workerPriorityBox->currentIndex()) {
+			case 0: return Thread::EIdlePriority;
+			case 1: return Thread::ELowestPriority;
+			case 2: return Thread::ELowPriority;
+			case 3: return Thread::ENormalPriority;
+			case 4: return Thread::EHighPriority;
+			case 5: return Thread::EHighestPriority;
+			default:
+				SLog(EError, "Unknown worker priority!");
+				return Thread::ENormalPriority;
+		}
+	}
+
 	void setBlockSize(int size) {
 		switch (size) {
 			case 2: ui->blockSizeBox->setCurrentIndex(0); break;

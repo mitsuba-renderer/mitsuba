@@ -307,8 +307,10 @@ void MainWindow::initWorkers() {
 	QSettings settings("mitsuba-renderer.org", "qtgui");
 	ref<Scheduler> scheduler = Scheduler::getInstance();
 	int localWorkerCount = settings.value("localWorkers", getProcessorCount()).toInt();
+	m_workerPriority = (Thread::EThreadPriority)
+		settings.value("workerPriority", (int) Thread::ELowPriority).toInt();
 	for (int i=0; i<localWorkerCount; ++i)
-		scheduler->registerWorker(new LocalWorker(formatString("wrk%i", localWorkerCtr++)));
+		scheduler->registerWorker(new LocalWorker(formatString("wrk%i", localWorkerCtr++), m_workerPriority));
 
 	int networkConnections = 0;
 	QList<QVariant> connectionData = settings.value("connections").toList();
@@ -356,9 +358,9 @@ void MainWindow::initWorkers() {
 		QMessageBox::warning(this, tr("Scheduler warning"),
 			tr("There must be at least one worker thread -- forcing creation of one."),
 			QMessageBox::Ok);
-		scheduler->registerWorker(new LocalWorker(formatString("wrk%i", localWorkerCtr++)));
+		scheduler->registerWorker(new LocalWorker(formatString("wrk%i", localWorkerCtr++), m_workerPriority));
 	}
-	
+
 	QStringList args = qApp->arguments();
 	for (int i=1; i<args.count(); ++i)
 		loadFile(args[i]);
@@ -1038,6 +1040,7 @@ void MainWindow::on_actionSettings_triggered() {
 	ProgramSettingsDialog d(this);
 	d.setWindowModality(Qt::ApplicationModal);
 	d.setLogLevel(logger->getLogLevel());
+	d.setWorkerPriority(m_workerPriority);
 	d.setInvertMouse(ui->glView->getInvertMouse());
 	d.setNavigationMode(ui->glView->getNavigationMode());
 	d.setMouseSensitivity(ui->glView->getMouseSensitivity());
@@ -1067,6 +1070,7 @@ void MainWindow::on_actionSettings_triggered() {
 		settings.setValue("listenPort", d.getListenPort());
 		settings.setValue("nodeName", d.getNodeName());
 		settings.setValue("navigationMode", (int) d.getNavigationMode());
+		settings.setValue("workerPriority", d.getWorkerPriority());
 
 		logger->setLogLevel(d.getLogLevel());
 		ui->glView->setInvertMouse(d.getInvertMouse());
@@ -1077,6 +1081,7 @@ void MainWindow::on_actionSettings_triggered() {
 		m_checkForUpdates = d.getCheckForUpdates();
 		m_listenPort = d.getListenPort();
 		m_nodeName = d.getNodeName();
+		m_workerPriority = d.getWorkerPriority();
 
 		bool localWorkersChanged = (int) localWorkers.size() != d.getLocalWorkerCount();
 
@@ -1084,7 +1089,7 @@ void MainWindow::on_actionSettings_triggered() {
 			ref<Scheduler> sched = Scheduler::getInstance();
 			sched->pause();
 			while (d.getLocalWorkerCount() > (int) localWorkers.size()) {
-				LocalWorker *worker = new LocalWorker(formatString("wrk%i", localWorkerCtr++));
+				LocalWorker *worker = new LocalWorker(formatString("wrk%i", localWorkerCtr++), m_workerPriority);
 				sched->registerWorker(worker);
 				localWorkers.push_back(worker);
 			}
