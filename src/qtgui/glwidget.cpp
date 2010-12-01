@@ -116,6 +116,9 @@ void GLWidget::initializeGL() {
 		missingExtensions.push_back("Vertex buffer objects");
 
 	if (missingExtensions.size() > 0 || m_softwareFallback) {
+#if !defined(MTS_GUI_SOFTWARE_FALLBACK)
+		/* Show a warning message unless the fallback mode
+		   was explicitly requested */
 		std::ostringstream oss;
 		oss << "You machine is missing the following required "
 			"OpenGL capabilities: ";
@@ -130,9 +133,10 @@ void GLWidget::initializeGL() {
 			<< "the rendering preview but no tonemapping and no "
 			<< "real-time preview/navigation.";
 		m_errorString = QString(oss.str().c_str());
+		m_softwareFallback = true;
+#endif
 		// Don't redraw as often, since this is now quite costly
 		m_redrawTimer->setInterval(1000);
-		m_softwareFallback = true;
 	} else {
 		m_gammaTonemap = m_renderer->createGPUProgram("Tonemapper [Gamma]");
 		m_reinhardTonemap = m_renderer->createGPUProgram("Tonemapper [Reinhard et al. 2002]");
