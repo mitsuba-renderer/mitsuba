@@ -45,6 +45,10 @@ Off by default.
 \item[\texttt{MTS\_SSE}]Activate optimized SSE routines.
 \item[\texttt{MTS\_HAS\_COHERENT\_RT}]Include coherent ray tracing support (depends on \texttt{MTS\_SSE}).
 \item[\texttt{MTS\_DEBUG\_FP}]Generated NaNs will cause floating point exceptions, which can be caught in a debugger. Warning: This is slow!
+\item[\texttt{MTS\_GUI\_SOFTWARE\_FALLBACK}]Forces the GUI to use a software
+fallback mode, which is considerably slower and removes the realtime preview.
+This is useful when running the interface on a remote machine
+accessed via the Remote Desktop Protocol (RDP).
 \end{description}
 All default configurations use the flags \code{MTS\_DEBUG}, \code{SINGLE\_PRECISION}, \code{MTS\_SSE}, \code{MTS\_HAS\_COHERENT\_RT}.
 Initially, it is a good idea to just leave the configuration the way it is.
