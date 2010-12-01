@@ -24,7 +24,6 @@ vars.Add('CXX',           'C++ compiler')
 vars.Add('CC',            'C compiler')
 vars.Add('CXXFLAGS',      'C++ flags')
 vars.Add('CCFLAGS',       'C compiler flags')
-vars.Add('STRIP',         'Program for stripping away unused symbols')
 vars.Add('SHCXXFLAGS',    'C++ flags (for shared libraries)')
 vars.Add('LINK',          'Linker')
 vars.Add('LINKFLAGS',     'Linker flags')
@@ -217,18 +216,12 @@ else:
 env = conf.Finish()
 dist = GetOption('dist') != None
 
-def stripinst_build_function(self, target, source, pkgname = None, use_own = None):
-	inst = self.Install(target, source)
-	self.AddPostAction(inst, env['STRIP'] + ' $TARGET')
-	return inst
-
 def osxlibinst_build_function(self, target, source, pkgname = None, use_own = None):
 	inst = self.Install(target, source)
 	prefix, name = os.path.split(source)
 	self.AddPostAction(inst, 'install_name_tool -id @executable_path/../Frameworks/' + name + ' $TARGET')
 	return inst
 
-env.__class__.StripInst = stripinst_build_function
 env.__class__.OSXLibInst = osxlibinst_build_function
 
 if hasCollada:

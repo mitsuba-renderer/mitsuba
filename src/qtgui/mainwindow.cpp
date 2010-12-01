@@ -1206,25 +1206,42 @@ inline float toSRGB(float value) {
 }
 
 void MainWindow::on_actionExportImage_triggered() {
-	SceneContext *ctx = m_context[ui->tabBar->currentIndex()];
-	QFileDialog dialog(this, tr("Export image .."),
+	QFileDialog *dialog = new QFileDialog(this, tr("Export image .."),
 		"", tr("All supported formats (*.exr *.png);;Linear EXR Image (*.exr)"
 			";; Tonemapped 8-bit PNG Image (*.png)"));
 
 	QSettings settings("mitsuba-renderer.org", "qtgui");
-	dialog.setViewMode(QFileDialog::Detail);
-	dialog.setAcceptMode(QFileDialog::AcceptSave);
+	dialog->setViewMode(QFileDialog::Detail);
+	dialog->setAcceptMode(QFileDialog::AcceptSave);
 
 #if defined(__OSX__)
-	dialog.setOption(QFileDialog::DontUseNativeDialog, true);
+	dialog->setOption(QFileDialog::DontUseNativeDialog, true);
 #endif
 
-	dialog.restoreState(settings.value("fileDialogState").toByteArray());
+	dialog->restoreState(settings.value("fileDialogState").toByteArray());
+	dialog->setAttribute(Qt::WA_DeleteOnClose);
+	dialog->setWindowModality(Qt::WindowModal);
+	connect(dialog, SIGNAL(finished(int)), this, SLOT(onExportDialogClose(int)));
+	m_currentChild = dialog;
+	// prevent a tab drawing artifact on Qt/OSX
+	m_activeWindowHack = true;
+	dialog->show();
+	qApp->processEvents();
+	m_activeWindowHack = false;
+}
 
-    if (dialog.exec() == QDialog::Accepted) {
-        QString fileName = dialog.selectedFiles().value(0);
+void MainWindow::onExportDialogClose(int reason) {
+	int currentIndex = ui->tabBar->currentIndex();
+	SceneContext *ctx = m_context[currentIndex];
+
+	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
+	m_currentChild = NULL;
+
+    if (reason == QDialog::Accepted) {
+        QString fileName = dialog->selectedFiles().value(0);
 		Bitmap::EFileFormat format;
-		settings.setValue("fileDialogState", dialog.saveState());
+		settings.setValue("fileDialogState", dialog->saveState());
 
 		if (fileName.endsWith(".exr")) {
 			format = Bitmap::EEXR;
