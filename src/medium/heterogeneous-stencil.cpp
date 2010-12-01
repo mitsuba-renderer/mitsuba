@@ -76,7 +76,7 @@ public:
 		if (m_albedo.get() == NULL)
 			Log(EError, "No albedo specified!");
 		if (m_orientations.get() == NULL)
-			Log(EError, "No orientations specified!");
+			Log(EWarn, "No orientations specified!");
 
 		if (m_shapes.size() != 0) {
 			m_kdTree->build();
@@ -86,10 +86,12 @@ public:
 		}
 
 		if (m_stepSize == 0) {
-			m_stepSize = std::min(std::min(
+			m_stepSize = std::min(
 				m_densities->getStepSize(),
-				m_albedo->getStepSize()),
-				m_orientations->getStepSize());
+				m_albedo->getStepSize());
+			if (m_orientations)
+				m_stepSize = std::min(m_stepSize,
+					m_orientations->getStepSize());
 
 			if (m_stepSize == std::numeric_limits<Float>::infinity()) 
 				Log(EError, "Unable to infer step size, please specify!");
@@ -329,7 +331,8 @@ public:
 		mRec.sigmaS = currentAlbedo * currentSigmaT;
 		mRec.sigmaA = Spectrum(currentSigmaT) - mRec.sigmaS;
 		mRec.albedo = currentAlbedo.max();
-		mRec.orientation = m_orientations->lookupVector(mRec.p);
+		mRec.orientation = m_orientations.get() 
+			? m_orientations->lookupVector(mRec.p) : Vector(0.0f);
 		mRec.medium = this;
 		return true;
 	}

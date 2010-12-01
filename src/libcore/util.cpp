@@ -248,6 +248,11 @@ bool enableFPExceptions() {
 	exceptionsWereEnabled = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 	cw &= ~(_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 	_controlfp(cw, _MCW_EM);
+#elif defined(__OSX__)
+#if !defined(MTS_SSE)
+#error SSE must be enabled to handle FP exceptions on OSX
+#endif
+	exceptionsWereEnabled = query_fpexcept_sse() != 0;
 #else
 	exceptionsWereEnabled = 
 		fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
@@ -267,6 +272,8 @@ bool disableFPExceptions() {
 	exceptionsWereEnabled = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 	cw |= _EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW;
 	_controlfp(cw, _MCW_EM);
+#elif defined(__OSX__)
+	exceptionsWereEnabled = query_fpexcept_sse() != 0;
 #else
 	exceptionsWereEnabled = 
 		fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
@@ -283,6 +290,8 @@ void restoreFPExceptions(bool oldState) {
 #if defined(WIN32)
 	unsigned int cw = _controlfp(0, 0);
 	currentState = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
+#elif defined(__OSX__)
+	currentState = query_fpexcept_sse() != 0;
 #else
 	currentState = fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 #endif
