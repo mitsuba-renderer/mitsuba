@@ -35,7 +35,8 @@ public:
 	IrradianceRecordVector() { }
 
 	inline void put(const IrradianceCache::Record *rec) {
-		m_samples.push_back(new IrradianceCache::Record(rec));
+		if (rec)
+			m_samples.push_back(new IrradianceCache::Record(rec));
 	}
 
 	inline size_t size() const {
