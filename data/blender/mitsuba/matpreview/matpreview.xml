@@ -41,7 +41,7 @@
 	</luminaire>
 
 	<bsdf id="__diffmat" type="lambertian">
-		<rgb name="reflectance" value="0.5 0.5 0.5"/>
+		<rgb name="reflectance" value="0.18 0.18 0.18"/>
 	</bsdf>
 
 	<texture id="__planetex" type="checkerboard">

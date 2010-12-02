@@ -43,8 +43,6 @@ public:
 		m_type[0] = EGlossyReflection;
 		m_type[1] = EGlossyTransmission;
 		m_combinedType = m_type[0] | m_type[1];
-		m_transmissionSamplingWeight = .5f;
-		m_reflectionSamplingWeight = 1 - m_transmissionSamplingWeight;
 		m_usesRayDifferentials = false;
 	}
 
@@ -55,8 +53,6 @@ public:
 		m_alphaB = stream->readFloat();
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
-		m_reflectionSamplingWeight = stream->readFloat();
-		m_transmissionSamplingWeight = stream->readFloat();
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
@@ -78,9 +74,9 @@ public:
 	 * Beckmann distribution function for gaussian random surfaces
 	 * @param thetaM Tangent of the angle between M and N.
 	 */
-	Float beckmannD(const Vector &m) const {
-		Float ex = Frame::tanTheta(m) / m_alphaB;
-		Float value = std::exp(-(ex*ex)) / (M_PI * m_alphaB*m_alphaB * 
+	inline Float beckmannD(const Vector &m, Float alphaB) const {
+		Float ex = Frame::tanTheta(m) / alphaB;
+		Float value = std::exp(-(ex*ex)) / (M_PI * alphaB*alphaB * 
 			std::pow(Frame::cosTheta(m), (Float) 4.0f));
 		if (value < Epsilon)
 			return 0;
@@ -91,8 +87,8 @@ public:
 	 * Sample microsurface normals according to 
 	 * the Beckmann distribution
 	 */
-	Normal sampleBeckmannD(Point2 sample) const {
-		Float thetaM = std::atan(std::sqrt(-m_alphaB*m_alphaB 
+	Normal sampleBeckmannD(Point2 sample, Float alphaB) const {
+		Float thetaM = std::atan(std::sqrt(-alphaB*alphaB 
 			* std::log(1.0f - sample.x)));
 		Float phiM = (2.0f * M_PI) * sample.y;
 		return Normal(sphericalDirection(thetaM, phiM));
@@ -187,7 +183,7 @@ public:
 		Float F = fresnel(dot(bRec.wi, Hr), m_extIOR, m_intIOR);
 
 		/* Microsurface normal distribution */
-		Float D = beckmannD(Hr);
+		Float D = beckmannD(Hr, m_alphaB);
 
 		/* Smith's shadow-masking function for the Beckmann distribution */
 		Float G = smithBeckmannG1(bRec.wi, Hr) * smithBeckmannG1(bRec.wo, Hr);
@@ -214,7 +210,7 @@ public:
 		Float F = 1.0f - fresnel(dot(bRec.wi, Ht), m_extIOR, m_intIOR);
 
 		/* Microsurface normal distribution */
-		Float D = beckmannD(Ht);
+		Float D = beckmannD(Ht, m_alphaB);
 
 		/* Smith's shadow-masking function for the Beckmann distribution */
 		Float G;
@@ -257,7 +253,7 @@ public:
 		return result;
 	}
 	
-	inline Float pdfReflection(const BSDFQueryRecord &bRec) const {
+	inline Float pdfReflection(const BSDFQueryRecord &bRec, Float alphaB) const {
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) < 0)
 			return 0.0f;
 
@@ -267,10 +263,10 @@ public:
 		/* Jacobian of the half-direction transform */
 		Float dwhr_dwo = 1.0f / (4.0f * absDot(bRec.wo, Hr));
 
-		return beckmannD(Hr) * std::abs(Frame::cosTheta(Hr)) * dwhr_dwo;
+		return beckmannD(Hr, alphaB) * std::abs(Frame::cosTheta(Hr)) * dwhr_dwo;
 	}
 
-	inline Float pdfTransmission(const BSDFQueryRecord &bRec) const {
+	inline Float pdfTransmission(const BSDFQueryRecord &bRec, Float alphaB) const {
 		Float etaI = m_extIOR, etaO = m_intIOR;
 
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
@@ -285,7 +281,7 @@ public:
 		Float sqrtDenom = etaI * dot(bRec.wi, Ht) + etaO * dot(bRec.wo, Ht);
 		Float dwht_dwo = (etaO*etaO * absDot(bRec.wo, Ht)) / (sqrtDenom*sqrtDenom);
 
-		return beckmannD(Ht) * std::abs(Frame::cosTheta(Ht)) * dwht_dwo;
+		return beckmannD(Ht, alphaB) * std::abs(Frame::cosTheta(Ht)) * dwht_dwo;
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec) const {
@@ -294,21 +290,30 @@ public:
 		bool hasTransmission = (bRec.typeMask & EGlossyTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
 
+		/* Suggestion by Bruce walter: sample using a slightly different 
+		   value of alphaB. This in practice limits the weights to 
+		   values <= 4. See also \ref sample() */
+		Float alphaB = m_alphaB * (1.2f - 0.2f * std::sqrt(
+				std::abs(Frame::cosTheta(bRec.wi))));
+
 		if (hasReflection && hasTransmission) {
-			return m_reflectionSamplingWeight * pdfReflection(bRec) +
-				   m_transmissionSamplingWeight * pdfTransmission(bRec);
+			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+			fr = std::min(std::max(fr, (Float) 0.05f), (Float) 0.95f);
+			return fr * pdfReflection(bRec, alphaB) +
+				   (1-fr) * pdfTransmission(bRec, alphaB);
 		} else if (hasReflection) {
-			return pdfReflection(bRec);
+			return pdfReflection(bRec, alphaB);
 		} else if (hasTransmission) {
-			return pdfTransmission(bRec);
+			return pdfTransmission(bRec, alphaB);
 		}
 
 		return 0.0f;
 	}
-	
-	inline Spectrum sampleReflection(BSDFQueryRecord &bRec) const {
+
+	inline Spectrum sampleReflection(BSDFQueryRecord &bRec, Float alphaB) const {
 		/* Sample M, the microsurface normal */
-		Normal m = sampleBeckmannD(bRec.sample);
+		Normal m = sampleBeckmannD(bRec.sample, alphaB);
+
 		/* Perfect specular reflection along the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
 
@@ -322,13 +327,14 @@ public:
 		return f(bRec) / pdf(bRec);
 	}
 
-	inline Spectrum sampleTransmission(BSDFQueryRecord &bRec) const {
+	inline Spectrum sampleTransmission(BSDFQueryRecord &bRec, Float alphaB) const {
 		/* Sample M, the microsurface normal */
-		Frame mFrame(sampleBeckmannD(bRec.sample));
+		Frame mFrame(sampleBeckmannD(bRec.sample, alphaB));
 
 		/* Perfect specular reflection along the microsurface normal */
 		if (refract(mFrame.toLocal(bRec.wi), bRec.wo, bRec.quantity) == 0)
 			return Spectrum(0.0f);
+
 		bRec.wo = mFrame.toWorld(bRec.wo);
 
 		bRec.sampledComponent = 1;
@@ -346,19 +352,27 @@ public:
 		bool hasTransmission = (bRec.typeMask & EGlossyTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
 
+		/* Suggestion by Bruce walter: sample using a slightly different 
+		   value of alphaB. This in practice limits the weights to 
+		   values <= 4. The change is of course also accounted for 
+		   in \ref pdf(), hence no error is introduced. */
+		Float alphaB = m_alphaB * (1.2f - 0.2f * std::sqrt(
+				std::abs(Frame::cosTheta(bRec.wi))));
+
 		if (hasReflection && hasTransmission) {
-			if (bRec.sample.x < m_reflectionSamplingWeight) {
-				bRec.sample.x = bRec.sample.x / m_reflectionSamplingWeight;
-				return sampleReflection(bRec);
+			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+			fr = std::min(std::max(fr, (Float) 0.05f), (Float) 0.95f);
+			if (bRec.sample.x < fr) {
+				bRec.sample.x /= fr;
+				return sampleReflection(bRec, alphaB);
 			} else {
-				bRec.sample.x = (bRec.sample.x - m_reflectionSamplingWeight)
-					/ m_transmissionSamplingWeight;
-				return sampleTransmission(bRec);
+				bRec.sample.x = (bRec.sample.x - fr) / (1-fr);
+				return sampleTransmission(bRec, alphaB);
 			}
 		} else if (hasReflection) {
-			return sampleReflection(bRec);
+			return sampleReflection(bRec, alphaB);
 		} else if (hasTransmission) {
-			return sampleTransmission(bRec);
+			return sampleTransmission(bRec, alphaB);
 		}
 
 		return Spectrum(0.0f);
@@ -372,8 +386,6 @@ public:
 		stream->writeFloat(m_alphaB);
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
-		stream->writeFloat(m_reflectionSamplingWeight);
-		stream->writeFloat(m_transmissionSamplingWeight);
 	}
 
 	std::string toString() const {
@@ -393,8 +405,6 @@ private:
 	Spectrum m_specularReflectance;
 	Spectrum m_specularTransmittance;
 	Float m_alphaB, m_intIOR, m_extIOR;
-	Float m_reflectionSamplingWeight;
-	Float m_transmissionSamplingWeight;
 };
 
 MTS_IMPLEMENT_CLASS_S(RoughGlass, false, BSDF)
