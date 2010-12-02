@@ -290,7 +290,7 @@ public:
 		bool hasTransmission = (bRec.typeMask & EGlossyTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
 
-		/* Suggestion by Bruce walter: sample using a slightly different 
+		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alphaB. This in practice limits the weights to 
 		   values <= 4. See also \ref sample() */
 		Float alphaB = m_alphaB * (1.2f - 0.2f * std::sqrt(
@@ -352,7 +352,7 @@ public:
 		bool hasTransmission = (bRec.typeMask & EGlossyTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
 
-		/* Suggestion by Bruce walter: sample using a slightly different 
+		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alphaB. This in practice limits the weights to 
 		   values <= 4. The change is of course also accounted for 
 		   in \ref pdf(), hence no error is introduced. */

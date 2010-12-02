@@ -655,7 +655,9 @@ void Worker::start(Scheduler *scheduler, int workerIndex, int coreOffset) {
 LocalWorker::LocalWorker(const std::string &name, 
 		Thread::EThreadPriority priority) : Worker(name) {
 	m_coreCount = 1;
+#if !defined(__LINUX__)
 	setPriority(priority);
+#endif
 }
 
 LocalWorker::~LocalWorker() {
