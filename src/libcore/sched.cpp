@@ -656,6 +656,8 @@ LocalWorker::LocalWorker(const std::string &name,
 		Thread::EThreadPriority priority) : Worker(name) {
 	m_coreCount = 1;
 #if !defined(__LINUX__)
+	/* Don't set thead priority on Linux, since it uses 
+	   dynamic priorities */
 	setPriority(priority);
 #endif
 }
