@@ -370,7 +370,7 @@
 			Block size used to parallelize the photon query passes (default: 32x32 pixels).
 		</param>
 	</plugin>
-	x
+
 	<plugin type="integrator" name="sppm" readableName="Stochastic progressive photon mapper"
 			show="true" className="StochasticProgressivePhotonMapIntegrator" extends="Integrator">
 		<descr>

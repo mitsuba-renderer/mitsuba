@@ -149,6 +149,7 @@ public:
 				m_granularity, m_maxDepth, m_rrDepth, job);
 
 			proc->bindResource("scene", sceneResID);
+			proc->bindResource("camera", cameraResID);
 			proc->bindResource("sampler", qmcSamplerID);
 
 			m_proc = proc;

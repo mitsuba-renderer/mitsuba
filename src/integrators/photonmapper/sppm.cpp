@@ -157,7 +157,8 @@ public:
 		int it=0;
 		while (m_running) { 
 			distributedRTPass(scene, samplers);
-			photonMapPass(++it, queue, job, film, sceneResID, samplerResID);
+			photonMapPass(++it, queue, job, film, sceneResID, 
+					cameraResID, samplerResID);
 		}
 
 		for (size_t i=0; i<sched->getCoreCount(); ++i)
@@ -252,7 +253,7 @@ public:
 	}
 
 	void photonMapPass(int it, RenderQueue *queue, const RenderJob *job,  
-			Film *film, int sceneResID, int samplerResID) {
+			Film *film, int sceneResID, int cameraResID, int samplerResID) {
 		Log(EInfo, "Performing a photon mapping pass %i", it);
 		ref<Scheduler> sched = Scheduler::getInstance();
 
@@ -262,6 +263,7 @@ public:
 			m_granularity, m_maxDepth-1, m_rrDepth, job);
 
 		proc->bindResource("scene", sceneResID);
+		proc->bindResource("camera", cameraResID);
 		proc->bindResource("sampler", samplerResID);
 
 		sched->schedule(proc);

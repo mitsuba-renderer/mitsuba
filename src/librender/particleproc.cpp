@@ -84,7 +84,8 @@ ref<WorkUnit> ParticleTracer::createWorkUnit() const {
 }
 
 void ParticleTracer::prepare() {
-	m_scene = static_cast<Scene *>(getResource("scene"));
+	m_scene = new Scene(static_cast<Scene *>(getResource("scene")));
+	m_scene->setCamera(static_cast<Camera *>(getResource("camera")));
 	m_sampler = static_cast<Sampler *>(getResource("sampler"));
 }
 
