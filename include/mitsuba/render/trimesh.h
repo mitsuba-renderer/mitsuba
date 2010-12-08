@@ -53,7 +53,7 @@ public:
 			size_t triangleCount, size_t vertexCount,
 			bool hasNormals, bool hasTexcoords, 
 			bool hasVertexColors, bool flipNormals = false,
-			bool faceNormals = false);
+			bool faceNormals = false, bool recenter = false);
 
 	/// Unserialize a triangle mesh
 	TriMesh(Stream *stream, InstanceManager *manager);
@@ -213,6 +213,7 @@ protected:
 	size_t m_vertexCount;
 	bool m_flipNormals;
 	bool m_faceNormals;
+	bool m_recenter;
 	Float m_surfaceArea;
 	Float m_invSurfaceArea;
 };

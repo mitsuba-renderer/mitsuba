@@ -75,6 +75,10 @@ public:
 		*/
 		m_faceNormals = props.getBoolean("faceNormals", false);
 
+		/* Re-center & scale all contents to move them into the 
+		   AABB [-1, -1, -1]x[1, 1, 1]? */
+		m_recenter = props.getBoolean("recenter", false);
+
 		/* Causes all normals to be flipped */
 		m_flipNormals = props.getBoolean("flipNormals", false);
 
@@ -351,7 +355,7 @@ public:
 		ref<TriMesh> mesh = new TriMesh(name,
 			triangles.size(), vertexBuffer.size(),
 			hasNormals, hasTexcoords, false,
-			m_flipNormals, m_faceNormals);
+			m_flipNormals, m_faceNormals, m_recenter);
 
 		std::copy(triangleArray, triangleArray+triangles.size(), mesh->getTriangles());
 
@@ -462,7 +466,7 @@ public:
 private:
 	std::vector<TriMesh *> m_meshes;
 	std::map<std::string, BSDF *> m_materials;
-	bool m_flipNormals, m_faceNormals;
+	bool m_flipNormals, m_faceNormals, m_recenter;
 	std::string m_name;
 	AABB m_aabb;
 };
