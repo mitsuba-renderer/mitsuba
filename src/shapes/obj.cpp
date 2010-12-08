@@ -112,14 +112,15 @@ public:
 				/* Parse + transform vertices */
 				Point p;
 				iss >> p.x >> p.y >> p.z;
-				vertices.push_back(objectToWorld(p));
+				vertices.push_back(p);
 				if (firstVertex) {
 					if (triangles.size() > 0) {
 						if (geomNames.find(name) != geomNames.end())
 							/// make sure that we have unique names
 							name = formatString("%s_%i", m_name.c_str(), geomIdx);
 						generateGeometry(name, vertices, normals, texcoords, 
-							triangles, hasNormals, hasTexcoords, currentMaterial);
+							triangles, hasNormals, hasTexcoords, currentMaterial,
+							objectToWorld);
 						triangles.clear();
 						geomNames.insert(name);
 						geomIdx++;
@@ -131,10 +132,7 @@ public:
 			} else if (buf == "vn") {
 				Normal n;
 				iss >> n.x >> n.y >> n.z;
-				if (!n.isZero())
-					normals.push_back(normalize(objectToWorld(n)));
-				else
-					normals.push_back(n);
+				normals.push_back(n);
 				hasNormals = true;
 			} else if (buf == "g") {
 				if (line.length() > 2) { 
@@ -185,7 +183,8 @@ public:
 		}
 
 		generateGeometry(name, vertices, normals, texcoords, 
-			triangles, hasNormals, hasTexcoords, currentMaterial);
+			triangles, hasNormals, hasTexcoords, currentMaterial,
+			objectToWorld);
 	}
 
 	WavefrontOBJ(Stream *stream, InstanceManager *manager) : Shape(stream, manager) {
@@ -309,13 +308,28 @@ public:
 			const std::vector<Point2> &texcoords,
 			const std::vector<OBJTriangle> &triangles,
 			bool hasNormals, bool hasTexcoords,
-			BSDF *currentMaterial) {
+			BSDF *currentMaterial,
+			const Transform &objectToWorld) {
 		if (triangles.size() == 0)
 			return;
 
 		std::map<Vertex, int, vertex_key_order> vertexMap;
 		std::vector<Vertex> vertexBuffer;
 		size_t numMerged = 0;
+		Vector translate(0.0f);
+		Float scale = 0.0f;
+
+		if (m_recenter) {
+			AABB aabb;
+			for (unsigned int i=0; i<triangles.size(); i++) {
+				for (unsigned int j=0; j<3; j++) {
+					unsigned int vertexId = triangles[i].p[j];
+					aabb.expandBy(vertices.at(vertexId));
+				}
+			}
+			scale = 2/aabb.getExtents()[aabb.getLargestAxis()];
+			translate = -Vector(aabb.getCenter());
+		}
 
 		/* Collapse the mesh into a more usable form */
 		Triangle *triangleArray = new Triangle[triangles.size()];
@@ -328,11 +342,17 @@ public:
 				int key;
 
 				Vertex vertex;
-				vertex.p = vertices.at(vertexId);
-				if (hasNormals)
-					vertex.n = normals.at(normalId);
+
+				if (m_recenter)
+					vertex.p = objectToWorld((vertices.at(vertexId) + translate)*scale);
+				else
+					vertex.p = objectToWorld(vertices.at(vertexId));
+
+				if (hasNormals && normals.at(normalId) != Normal(0.0f))
+					vertex.n = normalize(objectToWorld(normals.at(normalId)));
 				else
 					vertex.n = Normal(0.0f);
+
 				if (hasTexcoords)
 					vertex.uv = texcoords.at(uvId);
 				else
@@ -355,7 +375,7 @@ public:
 		ref<TriMesh> mesh = new TriMesh(name,
 			triangles.size(), vertexBuffer.size(),
 			hasNormals, hasTexcoords, false,
-			m_flipNormals, m_faceNormals, m_recenter);
+			m_flipNormals, m_faceNormals);
 
 		std::copy(triangleArray, triangleArray+triangles.size(), mesh->getTriangles());
 

@@ -33,11 +33,10 @@ MTS_NAMESPACE_BEGIN
 
 TriMesh::TriMesh(const std::string &name, size_t triangleCount, 
 		size_t vertexCount, bool hasNormals, bool hasTexcoords, 
-		bool hasVertexColors, bool flipNormals, bool faceNormals,
-		bool recenter)
+		bool hasVertexColors, bool flipNormals, bool faceNormals)
  	: Shape(Properties()), m_triangleCount(triangleCount),
 	  m_vertexCount(vertexCount), m_flipNormals(flipNormals),
-	  m_faceNormals(faceNormals), m_recenter(recenter) {
+	  m_faceNormals(faceNormals) {
 	m_name = name;
 
 	m_triangles = new Triangle[m_triangleCount];
@@ -65,10 +64,6 @@ TriMesh::TriMesh(const Properties &props)
 	/* Causes all normals to be flipped */
 	m_flipNormals = props.getBoolean("flipNormals", false);
 	
-	/* Re-center & scale all contents to move them into the 
-	   AABB [-1, -1, -1]x[1, 1, 1]? */
-	m_recenter = props.getBoolean("recenter", false);
-
 	m_triangles = NULL;
 }
 
@@ -279,16 +274,6 @@ void TriMesh::configure() {
 		/* Determine the object bounds */
 		for (size_t i=0; i<m_vertexCount; i++) 
 			m_aabb.expandBy(m_positions[i]);
-
-		if (m_recenter) {
-			Float scale = 2/m_aabb.getExtents()[m_aabb.getLargestAxis()];
-			Vector translate = -Vector(m_aabb.getCenter());
-			for (size_t i=0; i<m_vertexCount; ++i) {
-				m_positions[i] = (m_positions[i] + translate)*scale;
-			}
-			m_aabb.min = (m_aabb.min + translate)*scale;
-			m_aabb.max = (m_aabb.max + translate)*scale;
-		}
 
 		/* Generate a PDF for sampling wrt. area */
 		for (size_t i=0; i<m_triangleCount; i++) 
