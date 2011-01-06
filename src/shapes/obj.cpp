@@ -102,6 +102,7 @@ public:
 		std::string name = m_name, line;
 		std::set<std::string> geomNames;
 		int geomIdx = 0;
+		bool nameBeforeGeometry = false;
 
 		while (is.good() && !is.eof() && fetch_line(is, line)) {
 			std::istringstream iss(line);
@@ -113,42 +114,53 @@ public:
 				Point p;
 				iss >> p.x >> p.y >> p.z;
 				vertices.push_back(p);
-				if (firstVertex) {
-					if (triangles.size() > 0) {
-						if (geomNames.find(name) != geomNames.end())
-							/// make sure that we have unique names
-							name = formatString("%s_%i", m_name.c_str(), geomIdx);
-						generateGeometry(name, vertices, normals, texcoords, 
-							triangles, hasNormals, hasTexcoords, currentMaterial,
-							objectToWorld);
-						triangles.clear();
-						geomNames.insert(name);
-						geomIdx++;
-					}
-					hasNormals = false;
-					hasTexcoords = false;
-					firstVertex = false;
-				}
 			} else if (buf == "vn") {
 				Normal n;
 				iss >> n.x >> n.y >> n.z;
 				normals.push_back(n);
 				hasNormals = true;
 			} else if (buf == "g") {
-				if (line.length() > 2) { 
-					name = trim(line.substr(1, line.length()-1));
-					Log(EInfo, "Loading geometry \"%s\"", name.c_str());
-				}
-			} else if (buf == "usemtl") {
-				std::string materialName = trim(line.substr(1, line.length()-1));
-				if (m_materials.find(materialName) != m_materials.end())
-					currentMaterial = m_materials[materialName];
+				std::string targetName;
+				std::string newName = trim(line.substr(1, line.length()-1));
+
+				/* There appear to be two different conventions
+				   for specifying object names in OBJ file -- try
+				   to detect which one is being used */
+				if (nameBeforeGeometry)
+					// Save geometry under the previously specified name
+					targetName = name;
 				else
+					targetName = newName;
+
+				if (triangles.size() > 0) {
+					/// make sure that we have unique names
+					if (geomNames.find(targetName) != geomNames.end())
+						name = formatString("%s_%i", targetName.c_str(), geomIdx);
+					generateGeometry(targetName, vertices, normals, texcoords, 
+						triangles, hasNormals, hasTexcoords, currentMaterial,
+						objectToWorld);
+					triangles.clear();
+					geomNames.insert(name);
+					geomIdx++;
+					hasNormals = false;
+					hasTexcoords = false;
+					firstVertex = false;
+				} else {
+					nameBeforeGeometry = true;
+				}
+				name = newName;
+			} else if (buf == "usemtl") {
+				std::string materialName = trim(line.substr(6, line.length()-1));
+				if (m_materials.find(materialName) != m_materials.end()) {
+					currentMaterial = m_materials[materialName];
+				} else {
+					Log(EWarn, "Unable to find material %s", materialName.c_str());
 					currentMaterial = NULL;
+				}
 			} else if (buf == "mtllib") {
 				ref<FileResolver> frClone = fResolver->clone();
 				frClone->addPath(fs::complete(path).parent_path());
-				fs::path mtlName = frClone->resolve(trim(line.substr(1, line.length()-1)));
+				fs::path mtlName = frClone->resolve(trim(line.substr(6, line.length()-1)));
 				if (fs::exists(mtlName))
 					parseMaterials(mtlName);
 				else
@@ -181,6 +193,9 @@ public:
 				/* Ignore */
 			}
 		}
+		if (geomNames.find(name) != geomNames.end())
+			/// make sure that we have unique names
+			name = formatString("%s_%i", m_name.c_str(), geomIdx);
 
 		generateGeometry(name, vertices, normals, texcoords, 
 			triangles, hasNormals, hasTexcoords, currentMaterial,
@@ -312,6 +327,7 @@ public:
 			const Transform &objectToWorld) {
 		if (triangles.size() == 0)
 			return;
+		Log(EInfo, "Loading geometry \"%s\"", name.c_str());
 
 		std::map<Vertex, int, vertex_key_order> vertexMap;
 		std::vector<Vertex> vertexBuffer;

@@ -28,7 +28,10 @@ Medium::Medium(const Properties &props)
 	defaultSigmaA.fromLinearRGB(0.0014f, 0.0025f, 0.0142f);
 	defaultSigmaS.fromLinearRGB(0.7f, 1.22f, 1.9f);
 
-	m_sizeMultiplier = props.getFloat("sizeMultiplier", 1);
+	if (props.hasProperty("densityMultiplier"))
+		m_sizeMultiplier = props.getFloat("densityMultiplier");
+	else
+		m_sizeMultiplier = props.getFloat("sizeMultiplier", 1);
 	m_sigmaA = props.getSpectrum("sigmaA", defaultSigmaA);
 	m_sigmaS = props.getSpectrum("sigmaS", defaultSigmaS);
 	m_sigmaA *= m_sizeMultiplier;
