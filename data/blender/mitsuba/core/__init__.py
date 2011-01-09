@@ -154,7 +154,8 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 		mts_render_libpath = os.path.join(mts_path, "src/librender")
 		mts_core_libpath = os.path.join(mts_path, "src/libcore")
 		mts_hw_libpath = os.path.join(mts_path, "src/libhw")
-		env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath
+		mts_bidir_libpath = os.path.join(mts_path, "src/libbidir")
+		env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath + ":" + mts_bidir_libpath
 		(width, height) = resolution(scene)
 		refresh_interval = 1
 		preview_spp = int(efutil.find_config_value('mitsuba', 'defaults', 'preview_spp', '16'))
@@ -245,7 +246,8 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
 				mts_render_libpath = os.path.join(mts_path, "src/librender")
 				mts_core_libpath = os.path.join(mts_path, "src/libcore")
 				mts_hw_libpath = os.path.join(mts_path, "src/libhw")
-				env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath
+				mts_bidir_libpath = os.path.join(mts_path, "src/libbidir")
+				env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath + ":" + mts_bidir_libpath
 
 				MtsLog("MtsBlend: Launching renderer ..")
 				if scene.mitsuba_engine.render_mode == 'gui':
