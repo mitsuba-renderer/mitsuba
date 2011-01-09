@@ -126,15 +126,27 @@
 		</xsd:complexContent>
 	</xsd:complexType>
 	
-	<!-- VOLUMEREGION Element -->
+	<!-- MEDIUM Element -->
 	<xsd:complexType name="medium">
 		<xsd:complexContent>
 			<xsd:extension base="objectBase">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
 					<xsd:group ref="objectGroup"/>
 					<xsd:element name="shape" type="shape"/>
-					<xsd:element name="volume" type="object"/>
+					<xsd:element name="volume" type="volume"/>
 					<xsd:element name="phase" type="phase"/>
+				</xsd:choice>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+
+	<!-- VOLUME Element -->
+	<xsd:complexType name="volume">
+		<xsd:complexContent>
+			<xsd:extension base="objectBase">
+				<xsd:choice minOccurs="0" maxOccurs="unbounded">
+					<xsd:group ref="objectGroup"/>
+					<xsd:element name="volume" type="volume"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
