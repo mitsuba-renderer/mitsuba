@@ -400,6 +400,9 @@ public:
 	/// Get the number of workers
 	size_t getWorkerCount() const;
 
+	/// Get the number of local workers
+	size_t getLocalWorkerCount() const;
+
 	/// Retrieve one of the workers by index
 	Worker *getWorker(int index);
 
