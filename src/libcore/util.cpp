@@ -173,10 +173,10 @@ std::string indent(const std::string &string, int amount) {
 std::string memString(size_t size) {
 	Float value = (Float) size;
 	const char *prefixes[] = {
-		"B", "KiB", "MiB", "GiB", "TiB"
+		"B", "KiB", "MiB", "GiB", "TiB", "PiB"
 	};
 	int prefix = 0;
-	while (prefix < 4 && value > 1024.0f) {
+	while (prefix < 5 && value > 1024.0f) {
 		value /= 1024.0f; ++prefix;
 	}
 	return formatString(prefix == 0 ?

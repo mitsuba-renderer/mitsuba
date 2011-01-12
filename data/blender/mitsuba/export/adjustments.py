@@ -162,7 +162,7 @@ class MtsAdjustments:
 		self.out.write('\t</texture>\n')
 
 	def exportMaterial(self, mat):
-		if mat.name in self.exported_materials:
+		if not hasattr(mat, 'name') or not mat.name in self.exported_materials:
 			return
 		self.exported_materials += [mat.name]
 		params = mat.mitsuba_material.get_params()
@@ -239,7 +239,7 @@ class MtsAdjustments:
 			elif obj.type == 'MESH':
 				for mat in obj.data.materials:
 					self.exportMaterial(mat)
-				if len(obj.data.materials) > 0 and obj.data.materials[0].mitsuba_emission.use_emission:
+				if len(obj.data.materials) > 0 and obj.data.materials[0] != None and obj.data.materials[0].mitsuba_emission.use_emission:
 					self.exportEmission(obj)
 			elif obj.type == 'CAMERA':
 				self.exportCameraSettings(scene, obj)
