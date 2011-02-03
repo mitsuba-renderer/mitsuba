@@ -63,6 +63,11 @@ public:
 		memcpy(m, _m, sizeof(T) * M * N);
 	}
 
+	/// Initialize the matrix from a given (flat) MxN array in row-major order
+	explicit inline Matrix(T _m[M*N]) {
+		memcpy(m, _m, sizeof(T) * M * N);
+	}
+
 	/// Unserialize a matrix from a stream
 	explicit inline Matrix(Stream *stream) {
 		stream->readArray(&m[0][0], M * N);
@@ -215,12 +220,109 @@ public:
 		*this = temp;
 		return *this;
 	}
+	
+	/**
+	 * \brief Compute the LU decomposition of a matrix
+	 *
+	 * For an m-by-n matrix A with m >= n, the LU decomposition is an
+	 * m-by-n unit lower triangular matrix L, an n-by-n upper triangular
+	 * matrix U,
+	 *
+	 * and a permutation vector piv of length m so that A(piv,:) = L*U.
+	 * If m < n, then L is m-by-m and U is m-by-n.
+	 *
+	 * The LU decompostion with pivoting always exists, even if the matrix is
+	 * singular, so the constructor will never fail.
+	 * The primary use of the
+	 *
+	 * LU decomposition is in the solution of square systems of simultaneous
+	 * linear equations.
+	 *
+	 * \param Target matrix (the L and U parts will be stored
+	 *        together in a packed format)
+	 * \param piv Storage for the permutation created by the pivoting
+	 * \param pivsign Sign of the permutation
+	 * \return \a true if the matrix was nonsingular.
+	 *
+	 * Based on the implementation in JAMA.
+	 */
+	bool lu(Matrix &LU, int piv[M], int &pivsign) const;
 
-	/// Compute the inverse of this matrix using the Gauss-Jordan algorithm
+	/**
+	 * Compute the Cholesky decomposition of a symmetric
+	 * positive definite matrix
+	 *
+	 * \param L Target matrix (a lower triangular matrix such
+	 *    that A=L*L')
+	 * \return \a false If the matrix is not symmetric positive
+	 *    definite.
+	 * Based on the implementation in JAMA.
+	 */
+	bool chol(Matrix &L) const;
+
+	/**
+	 * Solve A*X==B, where \a this is a Cholesky decomposition of \a A created by \ref chol()
+	 *
+	 * \param B A matrix with as many rows as \a A and any number of columns
+	 * \param X A matrix such that L*L'*X == B
+	 *
+	 * Based on the implementation in JAMA.
+	 */
+	template <int K> void cholSolve(const Matrix<M, K, T> &B, 
+			Matrix<M, K, T> &X) const;
+
+	/**
+	 * Solve A*X==B, where \a this is a LU decomposition of \a A created by \ref lu()
+	 *
+	 * \param B A matrix with as many rows as \a A and any number of  columns
+	 * \param X A matrix such that L*U*X == B(piv, :)
+	 * \param piv Pivot vector returned by \ref lu()
+	 *
+	 * Based on the implementation in JAMA.
+	 */
+	template <int K> void luSolve(const Matrix<M, K, T> &B, 
+			Matrix<M, K, T> &X, int piv[M]) const;
+
+	/**
+	 * \brief Compute the determinant of a decomposed matrix 
+	 * created by \ref lu()
+	 *
+	 * \param pivsign The sign of the pivoting permutation returned
+	 *        by \ref lu()
+	 *
+	 * Based on the implementation in JAMA.
+	 */
+	T luDet(int pivsign) const;
+
+	/**
+	 * \brief Compute the determinant of a decomposed matrix 
+	 * created by \ref chol()
+	 */
+
+	T cholDet() const;
+
+	/**
+	 * \brief Compute the determinant of a square matrix (internally
+	 * creates a LU decomposition)
+	 */
+	inline T det() const {
+		Matrix LU;
+		int piv[M], pivsign;
+		if (!lu(LU, piv, pivsign))
+			return 0.0f;
+		return LU.luDet(pivsign);
+	}
+
+	/// Compute the inverse of a square matrix using the Gauss-Jordan algorithm
 	bool invert(Matrix &target) const;
 
-	/// Perform a symmetric eigendecomposition into Q and D.
-	void symmEigenDecomp(Matrix &Q, T *d) const {
+	/**
+	 * \brief Perform a symmetric eigendecomposition of a square matrix 
+	 * into Q and D.
+	 *
+	 * Based on the implementation in JAMA.
+	 */
+	inline void symmEigenDecomp(Matrix &Q, T d[M]) const {
 		BOOST_STATIC_ASSERT(M == N);
 		T e[M];
 		Q = *this;
@@ -229,14 +331,14 @@ public:
 	}
 
 	/// Compute the transpose of this matrix
-	void transpose(Matrix<N, M, T> &target) const {
+	inline void transpose(Matrix<N, M, T> &target) const {
 		for (int i=0; i<M; ++i)
 			for (int j=0; j<N; ++j)
 				target.m[i][j] = m[j][i];
 	}
 
 	/// Serialize the matrix to a stream
-	void serialize(Stream *stream) const {
+	inline void serialize(Stream *stream) const {
 		stream->writeArray(&m[0][0], M*N);
 	}
 
@@ -244,16 +346,16 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Matrix[" << M << "x" << N << ","<< std::endl;
-		for (int i=0; i<4; ++i) {
+		for (int i=0; i<M; ++i) {
 			oss << "  [";
-			for (int j=0; j<4; ++j) {
+			for (int j=0; j<N; ++j) {
 				oss << m[i][j];
-				if (j != 3)
+				if (j != N-1)
 					oss << ", ";
 			}
 			oss << "]";
 
-			if (i != 3)
+			if (i != M-1)
 				oss << ",";
 			oss << std::endl;
 		}
@@ -269,6 +371,87 @@ protected:
 };
 
 /**
+ * \brief Basic 2x2 matrix data type
+ */
+struct MTS_EXPORT_CORE Matrix2x2 : public Matrix<2, 2, Float> {
+public:
+	Matrix2x2() { }
+
+	/// Initialize the matrix with constant entries
+	explicit inline Matrix2x2(Float value) : Matrix<2, 2, Float>(value) { }
+
+	/// Initialize the matrix from a given 2x2 array
+	explicit inline Matrix2x2(Float _m[2][2]) : Matrix<2, 2, Float>(_m) { }
+	
+	/// Initialize the matrix from a given (float) 2x2 array in row-major order
+	explicit inline Matrix2x2(Float _m[4]) : Matrix<2, 2, Float>(_m) { }
+
+	/// Unserialize a matrix from a stream
+	explicit inline Matrix2x2(Stream *stream) : Matrix<2, 2, Float>(stream) { }
+
+	/// Initialize with the given values
+	inline Matrix2x2(Float a00, Float a01, Float a10, Float a11) {
+		m[0][0] = a00; m[0][1] = a01;
+		m[1][0] = a10; m[1][1] = a11; 
+	}
+
+	/// Return the determinant (Faster than Matrix::det)
+	inline Float det() const {
+		return m[0][0]*m[1][1] - m[0][1]*m[1][0];
+	}
+
+	/// Compute the inverse (Faster than Matrix::invert)
+	inline bool invert(Matrix2x2 &target) const {
+		Float det = this->det();
+		if (det == 0)
+			return false;
+		Float invDet = 1/det;
+		target.m[0][0] =  m[1][1] * invDet;
+		target.m[0][1] = -m[0][1] * invDet;
+		target.m[1][1] =  m[0][0] * invDet;
+		target.m[1][0] = -m[1][0] * invDet;
+		return true;
+	}
+};
+
+/**
+ * \brief Basic 3x3 matrix data type
+ */
+struct MTS_EXPORT_CORE Matrix3x3 : public Matrix<3, 3, Float> {
+public:
+	Matrix3x3() { }
+
+	/// Initialize the matrix with constant entries
+	explicit inline Matrix3x3(Float value) : Matrix<3, 3, Float>(value) { }
+
+	/// Initialize the matrix from a given 3x3 array
+	explicit inline Matrix3x3(Float _m[3][3]) : Matrix<3, 3, Float>(_m) { }
+
+	/// Initialize the matrix from a given (float) 3x3 array in row-major order
+	explicit inline Matrix3x3(Float _m[9]) : Matrix<3, 3, Float>(_m) { }
+
+	/// Unserialize a matrix from a stream
+	explicit inline Matrix3x3(Stream *stream) : Matrix<3, 3, Float>(stream) { }
+
+	/// Initialize with the given values
+	inline Matrix3x3(Float a00, Float a01, Float a02,
+			Float a10, Float a11, Float a12,
+			Float a20, Float a21, Float a22) {
+		m[0][0] = a00; m[0][1] = a01; m[0][2] = a02;
+		m[1][0] = a10; m[1][1] = a11; m[1][2] = a12;
+		m[2][0] = a20; m[2][1] = a21; m[2][2] = a22;
+	}
+
+	/// Return the determinant (Faster than Matrix::det())
+	inline Float det() const {
+		return ((m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]))
+			  - (m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]))
+			  + (m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])));
+	}
+};
+
+
+/**
  * \brief Basic 4x4 matrix data type
  */
 struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
@@ -277,8 +460,11 @@ struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 	/// Initialize the matrix with constant entries
 	explicit inline Matrix4x4(Float value) : Matrix<4, 4, Float>(value) { }
 
-	/// Initialize the matrix from a given MxN array
+	/// Initialize the matrix from a given 4x4 array
 	explicit inline Matrix4x4(Float _m[4][4]) : Matrix<4, 4, Float>(_m) { }
+
+	/// Initialize the matrix from a given (float) 4x4 array in row-major order
+	explicit inline Matrix4x4(Float _m[16]) : Matrix<4, 4, Float>(_m) { }
 
 	/// Unserialize a matrix from a stream
 	explicit inline Matrix4x4(Stream *stream) : Matrix<4, 4, Float>(stream) { }

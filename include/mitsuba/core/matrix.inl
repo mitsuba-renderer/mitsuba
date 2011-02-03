@@ -1,5 +1,142 @@
 MTS_NAMESPACE_BEGIN
 
+/* Implementations are based on the public domain JAMA library */
+	
+template <int M, int N, typename T> bool Matrix<M, N, T>::chol(Matrix &L) const {
+	BOOST_STATIC_ASSERT(M == N);
+
+	for (int j = 0; j < N; j++) {
+		T *Lrowj = L.m[j], d = 0;
+		for (int k = 0; k < j; k++) {
+			T *Lrowk = L.m[k];
+			T s = 0;
+			for (int i = 0; i < k; i++)
+				s += Lrowk[i]*Lrowj[i];
+			Lrowj[k] = s = (m[j][k] - s)/L.m[k][k];
+			d = d + s*s;
+			if (m[k][j] != m[j][k])
+				return false;
+		}
+		d = m[j][j] - d;
+		if (d <= 0)
+			return false;
+		L.m[j][j] = std::sqrt(std::max(d, (T) 0));
+		for (int k = j+1; k < N; k++) 
+			L.m[j][k] = 0;
+	}
+
+	return true;
+}
+
+template <int M, int N, typename T> template <int K> void Matrix<M, N, T>::cholSolve(const Matrix<M, K, T> &B, 
+			Matrix<M, K, T> &X) const { 
+	BOOST_STATIC_ASSERT(M == N);
+
+	memcpy(X.m, B.m, sizeof(T)*M*K);
+
+	// Solve L*Y = B;
+	for (int k = 0; k < N; k++) {
+		for (int j = 0; j < K; j++) {
+			for (int i = 0; i < k ; i++)
+				X.m[k][j] -= X.m[i][j]*m[k][i];
+			X.m[k][j] /= m[k][k];
+		}
+	}
+
+	// Solve L'*X = Y;
+	for (int k = N-1; k >= 0; k--) {
+		for (int j = 0; j < K; j++) {
+			for (int i = k+1; i < N ; i++)
+				X.m[k][j] -= X.m[i][j]*m[i][k];
+			X.m[k][j] /= m[k][k];
+		}
+	}
+}
+
+template <int M, int N, typename T> bool Matrix<M, N, T>::lu(Matrix &LU,
+		int piv[M], int &pivsign) const {
+	LU = *this;
+
+	// Computes L and U with the "daxpy"-based elimination algorithm
+	for (int i = 0; i < M; i++)
+		piv[i] = i;
+	pivsign = 1;
+
+	// Main loop.
+	for (int k = 0; k < N; k++) {
+		// Find pivot.
+		int p = k;
+		for (int i = k+1; i < M; i++)
+            if (std::abs(LU.m[i][k]) > std::abs(LU.m[p][k])) 
+               p = i;
+
+         // Exchange if necessary.
+		if (p != k) {
+            for (int j = 0; j < N; j++) 
+				std::swap(LU.m[p][j], LU.m[k][j]);
+			std::swap(piv[p], piv[k]);
+			pivsign = -pivsign;
+		}
+
+		// Compute multipliers and eliminate k-th column.
+		if (LU.m[k][k] != 0) {
+			for (int i = k+1; i < M; i++) {
+				LU.m[i][k] /= LU.m[k][k];
+				for (int j = k+1; j < N; j++)
+					LU.m[i][j] -= LU.m[i][k]*LU.m[k][j];
+			}
+		}
+	}
+	for (int j = 0; j < N; j++)
+		if (LU.m[j][j] == 0)
+			return false;
+	return true;
+}
+
+template <int M, int N, typename T> template <int K> void Matrix<M, N, T>::luSolve(const Matrix<M, K, T> &B, 
+			Matrix<M, K, T> &X, int piv[M]) const { 
+	BOOST_STATIC_ASSERT(M == N);
+
+	// Copy right hand side with pivoting
+	for (int i=0; i<M; ++i)
+		for (int j=0; j<K; ++j) 
+			X.m[i][j] = B.m[piv[i]][j];
+
+	// Solve L*Y = B(piv,:)
+	for (int k = 0; k < N; k++)
+		for (int i = k+1; i < N; i++)
+			for (int j = 0; j < K; j++) 
+				X.m[i][j] -= X.m[k][j]*m[i][k];
+
+	// Solve U*X = Y;
+	for (int k = N-1; k >= 0; k--) {
+		for (int j = 0; j < K; j++)
+			X.m[k][j] /= m[k][k];
+
+		for (int i = 0; i < k; i++)
+			for (int j = 0; j < K; j++)
+				X.m[i][j] -= X.m[k][j]*m[i][k];
+	}
+}
+
+template <int M, int N, typename T> T Matrix<M, N, T>::luDet(int pivsign) const {
+	BOOST_STATIC_ASSERT(M == N);
+	T d = (T) pivsign;
+	for (int j = 0; j < N; j++)
+		d *= m[j][j];
+	return d;
+}
+
+template <int M, int N, typename T> T Matrix<M, N, T>::cholDet() const {
+	BOOST_STATIC_ASSERT(M == N);
+	T d = m[0][0] * m[0][0];
+	for (int j = 1; j < N; j++)
+		d *= m[j][j] * m[j][j];
+	return d;
+}
+
+
+
 template <int M, int N, typename T> bool Matrix<M, N, T>::invert(Matrix &target) const {
 	BOOST_STATIC_ASSERT(M == N);
 
@@ -56,9 +193,6 @@ template <int M, int N, typename T> bool Matrix<M, N, T>::invert(Matrix &target)
 	}
 	return true;
 }
-
-/* Eigendecomposition code for symmetric 3x3 matrices.
-   From the public domain Java Matrix library JAMA. */
 
 // Symmetric Householder reduction to tridiagonal form.
 template <int M, int N, typename T> void 
@@ -209,7 +343,7 @@ template <int M, int N, typename T> void
 				// Compute implicit shift
 				T g = d[l];
 				T p = (d[l + 1] - g) / (2.0f * e[l]);
-				T r = std::sqrt(1 + p*p);
+				T r = hypot2(1, p);
 
 				if (p < 0)
 					r = -r;
@@ -236,7 +370,7 @@ template <int M, int N, typename T> void
 					s2 = s;
 					g = c * e[i];
 					h = c * p;
-					r = std::sqrt(p*p+ e[i]*e[i]);
+					r = hypot2(p, e[i]);
 					e[i + 1] = s * r;
 					s = e[i] / r;
 					c = p / r;

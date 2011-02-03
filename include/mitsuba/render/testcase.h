@@ -87,7 +87,16 @@ protected:
 	void assertEqualsImpl(const Point &expected, const Point &actual, Float epsilon, const char *file, int line);
 
 	/// Asserts that the two 4x4 matrices are equal
-	void assertEqualsImpl(const Matrix4x4 &expected, const Matrix4x4 &actual, Float epsilon, const char *file, int line);
+	template<int M, int N> void assertEqualsImpl(const Matrix<M, N, Float> &expected, const Matrix<M, N, Float> &actual, Float epsilon, const char *file, int line) {
+		bool match = true;
+		for (int i=0; i<M; ++i)
+			for (int j=0; j<N; ++j)
+				if (std::abs(expected.m[i][j]-actual.m[i][j]) > epsilon)
+					match = false;
+		if (!match)
+			Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
+				"expected matrix %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
+	}
 
 	/// Asserts that a condition is true
 	void assertTrueImpl(bool condition, const char *expr, const char *file, int line);

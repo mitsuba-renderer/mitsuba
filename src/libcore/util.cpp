@@ -808,4 +808,18 @@ double normalQuantile(double p) {
 	}
 }
 
+Float hypot2(Float a, Float b) {
+	Float r;
+	if (std::abs(a) > std::abs(b)) {
+		r = b/a;
+		r = std::abs(a)*std::sqrt(1+r*r);
+	} else if (b != 0) {
+		r = a/b;
+		r = std::abs(b)*std::sqrt(1+r*r);
+	} else {
+		r = 0;
+	}
+	return r;
+}
+
 MTS_NAMESPACE_END

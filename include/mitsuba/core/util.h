@@ -288,6 +288,9 @@ extern MTS_EXPORT_CORE Float radicalInverseIncremental(int b, Float x);
  */
 extern MTS_EXPORT_CORE double normalQuantile(double p);
 
+/// sqrt(a^2 + b^2) without underflow (like 'hypot' on compilers that support C99)
+extern MTS_EXPORT_CORE Float hypot2(Float a, Float b);
+
 /// Cast between types, which have an identical binary representation.
 template<typename T, typename U> inline T union_cast(const U &val) {
 	BOOST_STATIC_ASSERT(sizeof(T) == sizeof(U));
@@ -342,7 +345,7 @@ template <typename VectorType> inline Float unitAngle(const VectorType &u, const
 }
 
 /// Turn a memory size into a human-readable string
-extern MTS_EXPORT std::string memString(size_t size);
+extern MTS_EXPORT_CORE std::string memString(size_t size);
 
 MTS_NAMESPACE_END
 
