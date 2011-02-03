@@ -22,9 +22,7 @@
 #include <mitsuba/core/brent.h>
 #include <mitsuba/core/shvector4d.h>
 #include <mitsuba/core/statistics.h>
-#include <boost/math/special_functions/erf.hpp>
 #include <fstream>
-#include "erfc.h"
 
 /*
  * When inverting an integral of the form f(t):=\int_0^t [...] dt
@@ -69,7 +67,7 @@ struct FlakeDistr {
 	EMode mode;
 
 	FlakeDistr() { }
-	FlakeDistr(EMode mode, Float exp) : exp(exp), mode(mode), m_gaussian(exp) { }
+	FlakeDistr(EMode mode, Float exp) : exp(exp), mode(mode) { }
 
 	inline Float operator()(const Vector &w) const {
 		switch (mode) {
