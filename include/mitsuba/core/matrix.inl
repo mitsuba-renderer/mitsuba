@@ -129,10 +129,10 @@ template <int M, int N, typename T> T Matrix<M, N, T>::luDet(int pivsign) const 
 
 template <int M, int N, typename T> T Matrix<M, N, T>::cholDet() const {
 	BOOST_STATIC_ASSERT(M == N);
-	T d = m[0][0] * m[0][0];
+	T d = m[0][0];
 	for (int j = 1; j < N; j++)
-		d *= m[j][j] * m[j][j];
-	return d;
+		d *= m[j][j];
+	return d*d;
 }
 
 
