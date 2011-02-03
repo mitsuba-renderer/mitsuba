@@ -169,7 +169,7 @@ std::string Statistics::getStats() {
 		char temp[128];
 		float value = (float) counter->getValue();
 		float baseValue = (float) counter->getBase();
-		int suffixIndex = 0;
+		int suffixIndex = 0, suffixIndex2 = 0;
 
 		if (value == 0 && counter->getType() != EPercentage)
 			continue;
@@ -204,15 +204,37 @@ std::string Statistics::getStats() {
 					Float value2 = value, value3 = baseValue;
 					while (value2 > 1000.0f) {
 						value2 /= 1000.0f;
-						value3 /= 1000.0f;
 						suffixIndex++;
+					}
+					while (value3 > 1000.0f) {
+						value3 /= 1000.0f;
+						suffixIndex2++;
 					}
 					snprintf(temp, sizeof(temp), "    -  %s : %.1f %% (%.1f%s of %.1f%s)", 
 						counter->getName().c_str(), baseValue == 0 ? (Float) 0 : value/baseValue * 100, 
 						value2, suffixesNumber[suffixIndex].c_str(),
-						value3, suffixesNumber[suffixIndex].c_str());
+						value3, suffixesNumber[suffixIndex2].c_str());
 					break;
 				}
+			case EAverage: {
+					Float avg = value / (Float) baseValue;
+					Float value2 = value, value3 = baseValue;
+					while (value2 > 1000.0f) {
+						value2 /= 1000.0f;
+						suffixIndex++;
+					}
+					while (value3 > 1000.0f) {
+						value3 /= 1000.0f;
+						suffixIndex2++;
+					}
+					snprintf(temp, sizeof(temp), "    -  %s : %.1f (%.1f%s / %.1f%s)", 
+						counter->getName().c_str(), avg,
+						value2, suffixesNumber[suffixIndex].c_str(),
+						value3, suffixesNumber[suffixIndex2].c_str());
+					break;
+				}
+			default:
+				Log(EError, "Unknown counter type!");
 		}
 		oss << temp << std::endl;
 		++statsEntries;

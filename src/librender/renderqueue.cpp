@@ -72,7 +72,7 @@ void RenderQueue::removeJob(RenderJob *job, bool cancelled) {
 	}
 	JobRecord &rec = (*it).second;
 	unsigned int ms = m_timer->getMilliseconds() - rec.startTime;
-	Log(EInfo, "Render time: %s", timeToString(ms/1000.0f).c_str());
+	Log(EInfo, "Render time: %s", timeToString(ms/1000.0f, true).c_str());
 	m_jobs.erase(job);
 	m_cond->broadcast();
 	m_joinMutex->lock();
@@ -123,10 +123,10 @@ void RenderQueue::signalFinishJob(const RenderJob *job, bool cancelled) {
 	m_mutex->unlock();
 }
 
-void RenderQueue::signalRefresh(const RenderJob *job) {
+void RenderQueue::signalRefresh(const RenderJob *job, const Bitmap *bitmap) {
 	m_mutex->lock();
 	for (size_t i=0; i<m_listeners.size(); ++i)
-		m_listeners[i]->refreshEvent(job);
+		m_listeners[i]->refreshEvent(job, bitmap);
 	m_mutex->unlock();
 }
 

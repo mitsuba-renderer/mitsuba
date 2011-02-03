@@ -16,7 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/renderproc_wr.h>
+#include <mitsuba/render/imageblock.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -121,7 +121,7 @@ void ImageBlock::save(Stream *stream) const {
 	}
 	stream->writeInt(extra);
 }
-	
+
 void ImageBlock::add(const ImageBlock *block) {
 	int entry=0, imageY = block->offset.y-offset.y-1;
 
@@ -157,12 +157,12 @@ void ImageBlock::add(const ImageBlock *block) {
 std::string ImageBlock::toString() const {
 	std::ostringstream oss;
 	oss << "ImageBlock[" << endl
-		<< "\tborder=" << border << "," << endl
-		<< "\toffset=" << offset.toString() << "," << endl
-		<< "\tsize=" << size.toString() << "," << endl
-		<< "\tfullSize=" << fullSize.toString() << "," << endl
-		<< "\thasVariances=" << (variances != NULL) << "," << endl
-		<< "\textra =" << extra << endl
+		<< "\tborder = " << border << "," << endl
+		<< "\toffset = " << offset.toString() << "," << endl
+		<< "\tsize = " << size.toString() << "," << endl
+		<< "\tfullSize = " << fullSize.toString() << "," << endl
+		<< "\thasVariances = " << (variances != NULL) << "," << endl
+		<< "\textra = " << extra << endl
 		<< "]";
 	return oss.str();
 }

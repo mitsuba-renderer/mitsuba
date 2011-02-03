@@ -34,8 +34,8 @@ BSDF::~BSDF() {
 }
 
 /* Inefficient version in case this is not supported by the BSDF implementation */
-Spectrum BSDF::sample(BSDFQueryRecord &bRec, Float &_pdf) const {
-	if (sample(bRec).isBlack()) {
+Spectrum BSDF::sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+	if (sample(bRec, _sample).isZero()) {
 		_pdf = 0.0f;
 		return Spectrum(0.0f);
 	}
@@ -52,6 +52,10 @@ void BSDF::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeString(m_name);
 }
 
+void BSDF::setParent(ConfigurableObject *parent) {
+	/* BSDF's don't need to reference their parent -> do nothing */
+}
+
 void BSDF::addChild(const std::string &name, ConfigurableObject *obj) {
 	ConfigurableObject::addChild(name, obj);
 }
@@ -64,20 +68,11 @@ Spectrum BSDF::fDelta(const BSDFQueryRecord &bRec) const {
 	return Spectrum(0.0f);
 }
 
-void operator<<(const ETransportQuantity &quantity, std::ostream &os) {
-	switch (quantity) {
-		case EImportance: os << "importance"; break;
-		case ERadiance:   os << "radiance"; break;
-		default: os << "invalid"; break;
-	};
-}
-
 std::string BSDFQueryRecord::toString() const {
 	std::ostringstream oss;
 	oss << "BSDFQueryRecord[" << std::endl
 		<< "  wi = " << wi.toString() << "," << std::endl
 		<< "  wo = " << wo.toString() << "," << std::endl
-		<< "  sample = " << sample.toString() << "," << std::endl
 		<< "  quantity = " << quantity << "," << std::endl
 		<< "  typeMask = " << typeMask << "," << std::endl
 		<< "  sampledType = " << sampledType << "," << std::endl

@@ -77,8 +77,10 @@ inline int TriAccel::load(const Point &A, const Point &B, const Point &C) {
 	const Float n_k = N[k],
 		denom = b[u]*c[v] - b[v]*c[u];
 
-	if (denom == 0)
+	if (denom == 0) {
+		k = 3;
 		return 1;
+	}
 
 	/* Pre-compute intersection calculation constants */
 	n_u   =  N[u] / n_k;
@@ -129,6 +131,8 @@ FINLINE bool TriAccel::rayIntersect(const Ray &ray, Float mint, Float maxt,
 			d_v = ray.d[1];
 			d_k = ray.d[2];
 			break;
+		default:
+			return false;
 	}
 #endif
 

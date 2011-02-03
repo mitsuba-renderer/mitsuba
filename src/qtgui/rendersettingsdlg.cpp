@@ -182,6 +182,7 @@ void RenderSettingsDialog::onTreeSelectionChange(const QItemSelection &selected,
 
 void RenderSettingsDialog::update() {
 	int index = ui->integratorBox->currentIndex();
+	Properties integratorProps;
 
 	int sampleCount = -1;
 	if (sender() == ui->samplerBox) {
@@ -192,7 +193,10 @@ void RenderSettingsDialog::update() {
 		else if (samplerProps.hasProperty("resolution"))
 			sampleCount = (int) std::pow((Float) samplerProps.getInteger("resolution"), (Float) 2);
 	}
-	
+
+	if (sender() == ui->integratorBox)
+		m_integratorNode->putProperties(integratorProps);
+
 	m_integratorNode = m_model->updateClass(m_integratorNode,
 		ui->integratorBox->itemData(index).toList().at(0).toString(),
 		ui->integratorBox->itemText(index));
@@ -228,6 +232,14 @@ void RenderSettingsDialog::update() {
 			} else if (treeItem->getName() == "resolution") {
 				treeItem->setValue((int) std::sqrt((Float) sampleCount));
 			}
+		}
+	}
+
+	if (sender() == ui->integratorBox) {
+		for (int i=0; i<m_integratorNode->childCount(); ++i) {
+			TreeItem *treeItem = m_integratorNode->child(i);
+			if (integratorProps.hasProperty(treeItem->getName().toStdString())) 
+				m_integratorNode->setProperty(treeItem->getName().toStdString(), integratorProps);
 		}
 	}
 
@@ -465,7 +477,7 @@ QStringList RenderSettingsDialog::validateConfiguration() const {
 	m_samplerNode->putProperties(samplerProps);
 
 	if (samplerName != "independent") {
-		if (integratorName == "ptracer" || integratorName == "mlt" || integratorName == "kelemen")
+		if (integratorName == "ptracer" || integratorName == "mlt_kelemen" || integratorName == "mlt_veach")
 			messages << "Error: This integrator requires the independent sampler.";
 		if (ui->aiBox->isChecked())
 			messages << "Error: Adaptive integration requires the independent sampler.";

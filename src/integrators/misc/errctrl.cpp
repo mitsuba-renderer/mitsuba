@@ -21,7 +21,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-static StatsCounter cameraRays("Error-controlling integrator", "Camera Rays");
 static StatsCounter pixelsRendered("Error-controlling integrator", "Pixels rendered");
 
 /**
@@ -29,11 +28,13 @@ static StatsCounter pixelsRendered("Error-controlling integrator", "Pixels rende
  * the computed radiance achieves a specifiable relative error 
  * threshold (5% by default) with a certain probability (95% by default). 
  * Internally, it uses a Z-test to decide when to stop collecting samples.
- * While not entirely rigorous in the statistical sense, this provides a 
- * useful stopping criterion. When used in conjunction with image 
- * reconstruction filters, this class ensures that neighboring image 
- * regions are not unduly biased by placing many samples at a 
- * certain position.
+ * While probably repeating a Z-test in this way is likely not entirely 
+ * rigorous in the statistical sense, it provides a useful statistically
+ * motivated stopping criterion.
+ *
+ * When used in conjunction with image reconstruction filters, this class
+ * ensures that neighboring image regions are not unduly biased by placing
+ * many samples at a certain position.
  */
 class ErrorControl : public SampleIntegrator {
 public:
@@ -131,7 +132,7 @@ public:
 	}
 
 	void renderBlock(const Scene *scene, const Camera *camera, Sampler *sampler, 
-			ImageBlock *block, const bool &stop) const {
+			ImageBlock *block, const bool &stop, const std::vector<Point2i> *points) const {
 		bool needsLensSample = camera->needsLensSample();
 		bool needsTimeSample = camera->needsTimeSample();
 		const TabulatedFilter *filter = camera->getFilm()->getTabulatedFilter();
@@ -150,13 +151,16 @@ public:
 				ey = sy + block->getSize().y;
 
 		block->clear();
-		for (y = sy; y < ey; y++) {
-			for (x = sx; x < ex; x++) {
+		if (points) {
+			/* Use a prescribed traversal order (e.g. using a space-filling curve) */
+			for (size_t i=0; i<points->size(); ++i) {
+				Point2i offset = points->operator[](i) 
+					+ Vector2i(block->getOffset());
 				sampler->generate();
 				mean = meanSqr = 0.0f;
 				sampleIndex = 0;
 
-				block->snapshot(x, y);
+				block->snapshot(offset.x, offset.y);
 				while (!stop) {
 					rRec.newQuery(RadianceQueryRecord::ECameraRay);
 					if (needsLensSample)
@@ -164,7 +168,7 @@ public:
 					if (needsTimeSample)
 						timeSample = rRec.nextSample1D();
 					sample = rRec.nextSample2D();
-					sample.x += x; sample.y += y;
+					sample.x += offset.x; sample.y += offset.y;
 					camera->generateRayDifferential(sample, 
 						lensSample, timeSample, eyeRay);
 
@@ -180,7 +184,7 @@ public:
 					sampler->advance();
 
 					/* Numerically robust online variance estimation using an
-					   algorithm proposed by Donald Knuth (TAOCP vol.2, 3rd ed., p.232) */
+					algorithm proposed by Donald Knuth (TAOCP vol.2, 3rd ed., p.232) */
 					const Float delta = sampleLuminance - mean;
 					mean += delta / sampleIndex;
 					meanSqr += delta * (sampleLuminance - mean);
@@ -207,14 +211,81 @@ public:
 					}
 				}
 
-				/* Ensure that a large amount of samples on one pixel does not
-				   bias adjacent pixels */
-				block->normalize(x, y, 1.0f / sampleIndex);
+				/* Ensure that a large amounts of samples in one 
+				   pixel do not excessively bias neighboring pixels */
+				block->normalize(offset.x, offset.y, 1.0f / sampleIndex);
 
 				if (block->collectStatistics())
-					block->setVariance(x, y, Spectrum(meanSqr / (sampleIndex-1)), sampleIndex);
-				cameraRays += sampleIndex;
+					block->setVariance(offset.x, offset.y, 
+							Spectrum(meanSqr / (sampleIndex-1)), sampleIndex);
 				++pixelsRendered;
+			}
+		} else {
+			for (y = sy; y < ey; y++) {
+				for (x = sx; x < ex; x++) {
+					sampler->generate();
+					mean = meanSqr = 0.0f;
+					sampleIndex = 0;
+
+					block->snapshot(x, y);
+					while (!stop) {
+						rRec.newQuery(RadianceQueryRecord::ECameraRay);
+						if (needsLensSample)
+							lensSample = rRec.nextSample2D();
+						if (needsTimeSample)
+							timeSample = rRec.nextSample1D();
+						sample = rRec.nextSample2D();
+						sample.x += x; sample.y += y;
+						camera->generateRayDifferential(sample, 
+							lensSample, timeSample, eyeRay);
+
+						Spectrum sampleValue = m_subIntegrator->Li(eyeRay, rRec);
+
+						if (block->putSample(sample, sampleValue, rRec.alpha, filter)) {
+							/* Check for problems with the sample */
+							sampleLuminance = sampleValue.getLuminance();
+						} else {
+							sampleLuminance = 0.0f;
+						}
+						++sampleIndex;
+						sampler->advance();
+
+						/* Numerically robust online variance estimation using an
+						algorithm proposed by Donald Knuth (TAOCP vol.2, 3rd ed., p.232) */
+						const Float delta = sampleLuminance - mean;
+						mean += delta / sampleIndex;
+						meanSqr += delta * (sampleLuminance - mean);
+
+						if (m_maxSamples >= 0 && sampleIndex >= m_maxSamples) {
+							break;
+						} else if (sampleIndex >= m_minSamples) {
+							/* Variance of the primary estimator */
+							const Float variance = meanSqr / (sampleIndex-1);
+
+							Float stdError = std::sqrt(variance/sampleIndex);
+
+							/* Half width of the confidence interval */
+							Float ciWidth = stdError * m_quantile;
+
+							if (m_verbose && (sampleIndex % 100) == 0) 
+								Log(EDebug, "%i samples, mean=%f, stddev=%f, std error=%f, ci width=%f, max allowed=%f", sampleIndex, mean, 
+									std::sqrt(variance), stdError, ciWidth, (m_perPixel ? mean : m_averageLuminance) * m_maxError);
+
+							if (m_perPixel && ciWidth <= m_maxError*mean)
+								break;
+							else if (!m_perPixel && ciWidth <= m_maxError * m_averageLuminance)
+								break;
+						}
+					}
+
+					/* Ensure that a large amounts of samples in one 
+					   pixel do not excessively bias neighboring pixels */
+					block->normalize(x, y, 1.0f / sampleIndex);
+
+					if (block->collectStatistics())
+						block->setVariance(x, y, Spectrum(meanSqr / (sampleIndex-1)), sampleIndex);
+					++pixelsRendered;
+				}
 			}
 		}
 	}
@@ -223,8 +294,9 @@ public:
 		return m_subIntegrator->Li(ray, rRec);
 	}
 	
-	Spectrum E(const Scene *scene, const Point &p, const Normal &n, Float time, Sampler *sampler) const {
-		return m_subIntegrator->E(scene, p, n, time, sampler);
+	Spectrum E(const Scene *scene, const Point &p, const Normal &n, Float time, 
+			Sampler *sampler, int irrSamples, bool irrIndirect) const {
+		return m_subIntegrator->E(scene, p, n, time, sampler, irrSamples, irrIndirect);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {

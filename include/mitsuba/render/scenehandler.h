@@ -21,10 +21,8 @@
 
 #include <xercesc/sax/HandlerBase.hpp>
 #include <xercesc/sax/AttributeList.hpp>
-#include <mitsuba/render/scene.h>
-#include <mitsuba/render/texture.h>
-#include <mitsuba/render/volume.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/properties.h>
 #include <stack>
 #include <map>
 

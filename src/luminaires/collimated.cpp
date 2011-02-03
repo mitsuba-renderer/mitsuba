@@ -39,6 +39,7 @@ public:
 		: Luminaire(stream, manager) {
 		m_intensity = Spectrum(stream);
 		m_radius = stream->readFloat();
+		m_surfaceArea = m_radius * m_radius * M_PI;
 		m_invSurfaceArea = 1 / m_surfaceArea;
 		m_direction = m_luminaireToWorld(Vector(0, 0, 1));
 	}
@@ -59,14 +60,14 @@ public:
 		return Spectrum(0.0f);
 	}
 
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec) const {
+	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 		/* PDF is a delta function - zero probability when a sample point was not
 		   generated using sample() */
-		return 0.0f;
+		return delta ? 1.0f : 0.0f;
 	}
 
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec) const {
-		return CollimatedBeamLuminaire::pdf(its.p, lRec);
+	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
+		return CollimatedBeamLuminaire::pdf(its.p, lRec, delta);
 	}
 
 	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
@@ -117,20 +118,19 @@ public:
 	}
 
 	Spectrum f(const EmissionRecord &eRec) const {
-		/* Collimated beam is not part of the scene */
-		Log(EWarn, "This function should never be called.");
 		return Spectrum(0.0f);
 	}
 
-	void pdfEmission(EmissionRecord &eRec) const {
-		eRec.pdfArea = m_invSurfaceArea;
-		eRec.pdfDir = 0;
+	void pdfEmission(EmissionRecord &eRec, bool delta) const {
+		eRec.pdfArea = delta ? 0.0f : m_invSurfaceArea;
+		eRec.pdfDir = delta ? 1.0f : 0.0f;
 		eRec.P = m_intensity;
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "CollimatedBeamLuminaire[" << std::endl
+			<< "  name = \"" << m_name << "\"," << std::endl
 			<< "  intensity = " << m_intensity.toString() << "," << std::endl
 			<< "  power = " << getPower().toString() << "," << std::endl
 			<< "  position = " << m_luminaireToWorld(Point(0, 0, 0)).toString() << "," << std::endl
@@ -144,6 +144,7 @@ public:
 private:
 	Spectrum m_intensity;
 	Vector m_direction;
+	Float m_surfaceArea;
 	Float m_invSurfaceArea;
 	Float m_radius;
 };

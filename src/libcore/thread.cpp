@@ -152,11 +152,15 @@ void *Thread::dispatch(void *par) {
 	try {
 		thread->run();
 	} catch (std::exception &e) {
-		Log(EWarn, "Fatal error: uncaught exception: \"%s\"", e.what());
+		ELogLevel warnLogLevel = thread->getLogger()->getErrorLevel() == EError
+			? EWarn : EInfo;
+		Log(warnLogLevel, "Fatal error: uncaught exception: \"%s\"", e.what());
 		if (thread->m_critical)
 			_exit(-1);
 	} catch (...) {
-		Log(EWarn, "Fatal error - uncaught exception (unknown type)");
+		ELogLevel warnLogLevel = thread->getLogger()->getErrorLevel() == EError
+			? EWarn : EInfo;
+		Log(warnLogLevel, "Fatal error - uncaught exception (unknown type)");
 		if (thread->m_critical)
 			_exit(-1);
 	}

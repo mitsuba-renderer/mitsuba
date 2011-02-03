@@ -74,14 +74,14 @@ public:
 
 		for (int i=0; i<=res; ++i) {
 			Float theta = hExt*i, cosTheta = std::cos(theta);
-			Float weightExt = (i & 1) ? 4 : 2;
+			Float weightExt = (i & 1) ? (Float) 4 : (Float) 2;
 			if (i == 0 || i == res)
 				weightExt = 1;
 			SLog(EInfo, "4D projection: %i%% done", (int) (100*i/(Float) res));
 
 			for (int j=0; j<=res*2; ++j) {
 				Float phi = hInt*j;
-				Float weightInt = (j & 1) ? 4 : 2;
+				Float weightInt = (j & 1) ? (Float) 4 : (Float) 2;
 				if (j == 0 || j == 2*res)
 					weightInt = 1;
 

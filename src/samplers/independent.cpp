@@ -74,10 +74,10 @@ public:
 	}
 
 	Point2 next2D() {
-		return Point2(
-			m_random->nextFloat(),
-			m_random->nextFloat()
-		);
+		/// Enforce a specific order of evaluation
+		Float value1 = m_random->nextFloat();
+		Float value2 = m_random->nextFloat();
+		return Point2(value1, value2);
 	}
 	
 	Float independent1D() {
@@ -85,10 +85,10 @@ public:
 	}
 
 	Point2 independent2D() {
-		return Point2(
-			m_random->nextFloat(),
-			m_random->nextFloat()
-		);
+		/// Enforce a specific order of evaluation
+		Float value1 = m_random->nextFloat();
+		Float value2 = m_random->nextFloat();
+		return Point2(value1, value2);
 	}
 
 	std::string toString() const {

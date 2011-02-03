@@ -24,107 +24,70 @@
 
 MTS_NAMESPACE_BEGIN
 /**
- * Data record associated with the sampling procedure responsible for
- * choosing a point on the in-scattering line integral (while solving 
- * the radiative transfer equation using Monte Carlo methods).
+ * \brief Data record associated with the sampling procedure responsible for
+ * choosing a point on the in-scattering line integral of the RTE
  */
 struct MTS_EXPORT_RENDER MediumSamplingRecord {
 public:
+	/// Create an invalid medium sampling record
 	inline MediumSamplingRecord() : medium(NULL) { }
 
 	/// Return a string representation
 	std::string toString() const;
 public:
-	/* Traveled distance */
+	/// Traveled distance
 	Float t;
 
-	/* Interaction point */
+	/// Location of the scattering interaction
 	Point p;
 
-	/* Local particle orientation */
+	/// Local particle orientation at \ref p
 	Vector orientation;
 
-	/* Reference to the associated medium */
+	/// Reference to the associated medium
 	const Medium *medium;
 
-	/* Specifies the attenuation along the segment [mint, t].
-	   When sampling a distance fails, this contains the 
-	   attenuation along the whole ray.
-	*/
+	/**
+	 * \brief Specifies the attenuation along the segment [mint, t]
+	 *
+	 * When sampling a distance fails, this contains the 
+	 * attenuation along the whole ray segment [mint, maxDist].
+	 * See 
+	 */
 	Spectrum attenuation;
 
-	/* The medium's absorption coefficient at that point */
+	/// The medium's absorption coefficient at \ref p
 	Spectrum sigmaA;
 
-	/* The medium's scattering coefficient at that point */
+	/// The medium's scattering coefficient at \ref p
 	Spectrum sigmaS;
 
+	/// Records the probability of sampling a medium interaction at p
+	Float pdfSuccess;
+	
 	/**
-	 * Can contain two things:
-	 * If a medium interaction occurred, this records the probability 
-	 * of having sampled the point p. Otherwise, it contains the
-	 * probability of moving through the medium without an interaction.
+	 * \brief Records the probability of sampling a medium 
+	 * interaction in the reverse direction
+	 *
+	 * This is essentially the density of obtained by calling \ref sampleDistance,
+	 * but starting at \a p and stopping at \a ray.o. These probabilities
+	 * are important for bidirectional methods.
 	 */
-	Float pdf;
+	Float pdfSuccessRev;
 
-	/// Max. albedo over all spectral samples
+	/**
+	 * When the \ref Medium::sampleDistance() is successful, this function
+	 * returns the probability of not having generated a medium interaction
+	 * until \ref t. Otherwise, it records the probability of
+	 * not generating any interactions in the whole interval [mint, maxt].
+	 * This probability is assumed to be symmetric with respect to
+	 * sampling from the other direction, which is why there is no
+	 * \a pdfFailureRev field.
+	 */
+	Float pdfFailure;
+
+	/// Max. single scattering albedo over all spectral samples
 	Float albedo;
-
-	/// Multiple importance sampling weight
-	Float miWeight;
-};
-
-/** \brief Abstract phase function.
- *
- * The convention used here is that the incident and exitant
- * direction arguments point away from the scattering event (similar to BSDFs).
- */
-class MTS_EXPORT_RENDER PhaseFunction : public ConfigurableObject {
-public:
-	enum ESampledType {
-		ENormal = 0,
-		EDelta
-	};
-
-	/// Evaluate the phase function for an outward-pointing pair of directions (wi, wo)
-	virtual Spectrum f(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const = 0;
-
-	/**
-	 * Importance sample the phase function. Division by the
-	 * PDF is included in the returned value.
-	 */
-	virtual Spectrum sample(const MediumSamplingRecord &mRec, const Vector &wi, Vector &wo, 
-		ESampledType &sampledType, const Point2 &sample) const = 0;
-
-	/**
-	 * Importance sample the phase function - do not divide
-	 * by the PDF and return it explicitly.
-	 */
-	virtual Spectrum sample(const MediumSamplingRecord &mRec, const Vector &wi, Vector &wo, 
-		ESampledType &sampledType, Float &pdf, const Point2 &sample) const = 0;
-
-	/**
-	 * Calculate the probability of sampling wo (given wi). Assuming
-	 * that the phase function can be sampled exactly, the default 
-	 * implementation just evaluates f()
-	 */
-	virtual Float pdf(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const;
-
-	/// Return a string representation
-	virtual std::string toString() const = 0;
-
-	MTS_DECLARE_CLASS()
-protected:
-	/// Create a new phase function instance
-	inline PhaseFunction(const Properties &props) :
-		ConfigurableObject(props) { }
-
-	/// Unserialize a phase function
-	inline PhaseFunction(Stream *stream, InstanceManager *manager) :
-		ConfigurableObject(stream, manager) { }
-
-	/// Virtual destructor
-	virtual ~PhaseFunction() { }
 };
 
 /** \brief Abstract participating medium 
@@ -132,26 +95,51 @@ protected:
 class MTS_EXPORT_RENDER Medium : public NetworkedObject {
 public:
 	/**
-	 * Possibly perform a pre-process task. The last three parameters are
-	 * resource IDs of the associated scene, camera and sample generator,
-	 * which have been made available to all local and remote workers.
+	 * \brief Possibly perform a pre-process task.
+	 *
+	 * The last three parameters are resource IDs of the associated scene, 
+	 * camera and sample generator, which have been made available to all 
+	 * local and remote workers.
 	 */
 	virtual void preprocess(const Scene *scene, RenderQueue *queue, 
 		const RenderJob *job, int sceneResID, int cameraResID, int samplerResID);
 
 	/** 
-	 * Optical thickness computation - integrates 
-	 * the extinction coefficient along a ray segment [mint, maxt]
+	 * \brief Compute the attenuation along a ray segment
+	 *
+	 * Computes the attenuation along a ray segment 
+	 * [mint, maxt] associated with the ray. It is assumed
+	 * that the ray has a normalized direction value.
+	 *
 	 */
 	virtual Spectrum tau(const Ray &ray) const = 0;
-	
+
 	/**
-	 * Sample a distance along a ray - should ideally importance 
-	 * sample with respect to the attenuation.
-	 * Returns false if the maximum distance was exceeded.
+	 * \brief Sample a distance along the ray segment [mint, maxt]
+	 *
+	 * Should ideally importance sample with respect to the attenuation.
+	 * It is assumed that the ray has a normalized direction value.
+	 *
+	 * \param ray      Ray, along which a distance should be sampled
+	 * \param mRec     Medium sampling record to be filled with the result
+	 * \return         \a false if the maximum distance was exceeded, or if
+	 *                 no interaction inside the medium could be sampled.
 	 */
-	virtual bool sampleDistance(const Ray &ray, Float maxDist,
+	virtual bool sampleDistance(const Ray &ray,
 		MediumSamplingRecord &mRec, Sampler *sampler) const = 0;
+
+	/**
+	 * \brief Compute the density of sampling distance \a t along the 
+	 * ray using the sampling strategy implemented by \a sampleDistance. 
+	 *
+	 * The function computes the continuous densities in the case of
+	 * a successful \ref sampleDistance() invocation (in both directions),
+	 * as well as the Dirac delta density associated with a failure.
+	 * For convenience, it also stores the attenuation along the ray
+	 * segment in \a mRec.
+	 */
+	virtual void pdfDistance(const Ray &ray, Float t, 
+		MediumSamplingRecord &mRec) const = 0;
 
 	/// Return the phase function of this medium
 	inline const PhaseFunction *getPhaseFunction() const { return m_phaseFunction.get(); }
@@ -189,7 +177,7 @@ protected:
 	Float m_albedo;
 	AABB m_aabb;
 	ref<PhaseFunction> m_phaseFunction;
-	Float m_sizeMultiplier;
+	Float m_densityMultiplier;
 };
 
 MTS_NAMESPACE_END

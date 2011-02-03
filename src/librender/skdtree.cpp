@@ -16,19 +16,19 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/kdtree.h>
+#include <mitsuba/render/skdtree.h>
 #include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
 
-KDTree::KDTree() {
+ShapeKDTree::ShapeKDTree() {
 #if !defined(MTS_KD_CONSERVE_MEMORY)
 	m_triAccel = NULL;
 #endif
 	m_shapeMap.push_back(0);
 }
 
-KDTree::~KDTree() {
+ShapeKDTree::~ShapeKDTree() {
 #if !defined(MTS_KD_CONSERVE_MEMORY)
 	if (m_triAccel)
 		freeAligned(m_triAccel);
@@ -40,7 +40,7 @@ KDTree::~KDTree() {
 static StatsCounter raysTraced("General", "Normal rays traced");
 static StatsCounter shadowRaysTraced("General", "Shadow rays traced");
 
-void KDTree::addShape(const Shape *shape) {
+void ShapeKDTree::addShape(const Shape *shape) {
 	Assert(!isBuilt());
 	if (shape->isCompound())
 		Log(EError, "Cannot add compound shapes to a kd-tree - expand them first!");
@@ -59,11 +59,13 @@ void KDTree::addShape(const Shape *shape) {
 	m_shapes.push_back(shape);
 }
 
-void KDTree::build() {
+void ShapeKDTree::build() {
 	for (size_t i=1; i<m_shapeMap.size(); ++i)
 		m_shapeMap[i] += m_shapeMap[i-1];
 
-	buildInternal();
+	SAHKDTree3D<ShapeKDTree>::buildInternal();
+		
+	m_bsphere = m_aabb.getBSphere();
 
 #if !defined(MTS_KD_CONSERVE_MEMORY)
 	ref<Timer> timer = new Timer();
@@ -103,7 +105,7 @@ void KDTree::build() {
 #endif
 }
 
-bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
+bool ShapeKDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
 	its.t = std::numeric_limits<Float>::infinity(); 
 	Float mint, maxt;
@@ -129,7 +131,7 @@ bool KDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 	return false;
 }
 
-bool KDTree::rayIntersect(const Ray &ray) const {
+bool ShapeKDTree::rayIntersect(const Ray &ray) const {
 	Float mint, maxt, t = std::numeric_limits<Float>::infinity();
 
 	++shadowRaysTraced;
@@ -155,7 +157,7 @@ bool KDTree::rayIntersect(const Ray &ray) const {
 static StatsCounter coherentPackets("General", "Coherent ray packets");
 static StatsCounter incoherentPackets("General", "Incoherent ray packets");
 
-void KDTree::rayIntersectPacket(const RayPacket4 &packet, 
+void ShapeKDTree::rayIntersectPacket(const RayPacket4 &packet, 
 		const RayInterval4 &rayInterval, Intersection4 &its, void *temp) const {
 	CoherentKDStackEntry MM_ALIGN16 stack[MTS_KD_MAXDEPTH];
 	RayInterval4 MM_ALIGN16 interval;
@@ -272,7 +274,7 @@ void KDTree::rayIntersectPacket(const RayPacket4 &packet,
 	}
 }
 	
-void KDTree::rayIntersectPacketIncoherent(const RayPacket4 &packet, 
+void ShapeKDTree::rayIntersectPacketIncoherent(const RayPacket4 &packet, 
 		const RayInterval4 &rayInterval, Intersection4 &its4, void *temp) const {
 
 	++incoherentPackets;
@@ -300,5 +302,5 @@ void KDTree::rayIntersectPacketIncoherent(const RayPacket4 &packet,
 
 #endif
 
-MTS_IMPLEMENT_CLASS(KDTree, false, KDTreeBase)
+MTS_IMPLEMENT_CLASS(ShapeKDTree, false, KDTreeBase)
 MTS_NAMESPACE_END

@@ -716,7 +716,7 @@ Float radicalInverseIncremental(int b, Float x) {
 	return x;
 }
 
-std::string timeToString(Float time) {
+std::string timeToString(Float time, bool precise) {
 	std::ostringstream os;
 	char suffix = 's';
 #ifdef WIN32
@@ -726,7 +726,7 @@ std::string timeToString(Float time) {
 #endif
 		return "inf";
 	}
-	os << std::setprecision(1) << std::fixed;
+	os << std::setprecision(precise ? 4 : 1) << std::fixed;
 	if (time > 60) {
 		time /= 60; suffix = 'm';
 		if (time > 60) {

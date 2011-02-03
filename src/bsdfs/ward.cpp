@@ -126,7 +126,11 @@ public:
 			Float factor2 = H.x / m_alphaX, factor3 = H.y / m_alphaY;
 			Float exponent = -(factor2*factor2+factor3*factor3)/(H.z*H.z);
 			Float specRef = factor1 * std::exp(exponent) * m_ks;
-			result += m_specularReflectance->getValue(bRec.its) * specRef;
+			/* Important to prevent numeric issues when evaluating the
+			   sampling density of the Ward model in places where it takes
+			   on miniscule values (Veach-MLT does this for instance) */
+			if (specRef > Epsilon)
+				result += m_specularReflectance->getValue(bRec.its) * specRef;
 		}
 
 		if (hasDiffuse) 
@@ -134,12 +138,13 @@ public:
 
 		return result;
 	}
-		
+
 	inline Float pdfSpec(const BSDFQueryRecord &bRec) const {
 		Vector H = normalize(bRec.wi+bRec.wo);
 		Float factor1 = 1.0f / (4.0f * M_PI * m_alphaX * m_alphaY * 
 			dot(H, bRec.wi) * std::pow(Frame::cosTheta(H), 3));
 		Float factor2 = H.x / m_alphaX, factor3 = H.y / m_alphaY;
+
 		Float exponent = -(factor2*factor2+factor3*factor3)/(H.z*H.z);
 		Float specPdf = factor1 * std::exp(exponent);
 		return specPdf;
@@ -166,17 +171,17 @@ public:
 		return 0.0f;
 	}
 
-	inline Spectrum sampleSpecular(BSDFQueryRecord &bRec) const {
+	inline Spectrum sampleSpecular(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		Float phiH = std::atan(m_alphaY/m_alphaX 
-			* std::tan(2.0f * M_PI * bRec.sample.y));
-		if (bRec.sample.y > 0.5f)
+			* std::tan(2.0f * M_PI * sample.y));
+		if (sample.y > 0.5f)
 			phiH += M_PI;
 		Float cosPhiH = std::cos(phiH);
 		Float sinPhiH = std::sqrt(std::max((Float) 0.0f, 
 			1.0f-cosPhiH*cosPhiH));
 
 		Float thetaH = std::atan(std::sqrt(std::max((Float) 0.0f, 
-			-std::log(bRec.sample.x) / (
+			-std::log(sample.x) / (
 				(cosPhiH*cosPhiH)/(m_alphaX*m_alphaX) +
 				(sinPhiH*sinPhiH)/(m_alphaY*m_alphaY)
 		))));
@@ -196,14 +201,15 @@ public:
 		return Frame::cosTheta(bRec.wo) * INV_PI;
 	}
 
-	inline Spectrum sampleLambertian(BSDFQueryRecord &bRec) const {
-		bRec.wo = squareToHemispherePSA(bRec.sample);
+	inline Spectrum sampleLambertian(BSDFQueryRecord &bRec, const Point2 &sample) const {
+		bRec.wo = squareToHemispherePSA(sample);
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
 		return f(bRec) / pdf(bRec);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec) const {
+	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
+		Point2 sample(_sample);
 		if (bRec.wi.z <= 0)
 			return Spectrum(0.0f);
 
@@ -213,18 +219,18 @@ public:
 				&& (bRec.component == -1 || bRec.component == 1);
 
 		if (sampleDiffuse && sampleGlossy) {
-			if (bRec.sample.x <= m_specularSamplingWeight) {
-				bRec.sample.x = bRec.sample.x / m_specularSamplingWeight;
-				return sampleSpecular(bRec);
+			if (sample.x <= m_specularSamplingWeight) {
+				sample.x = sample.x / m_specularSamplingWeight;
+				return sampleSpecular(bRec, sample);
 			} else {
-				bRec.sample.x = (bRec.sample.x - m_specularSamplingWeight)
+				sample.x = (sample.x - m_specularSamplingWeight)
 					/ m_diffuseSamplingWeight;
-				return sampleLambertian(bRec);
+				return sampleLambertian(bRec, sample);
 			}
 		} else if (sampleDiffuse) {
-			return sampleLambertian(bRec);
+			return sampleLambertian(bRec, sample);
 		} else if (sampleGlossy) {
-			return sampleSpecular(bRec);
+			return sampleSpecular(bRec, sample);
 		}
 
 		return Spectrum(0.0f);

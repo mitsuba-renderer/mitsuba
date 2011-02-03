@@ -16,12 +16,13 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/medium.h>
+#include <mitsuba/render/phase.h>
+#include <mitsuba/render/sampler.h>
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * Basic isotropic phase function
+ * Isotropic phase function (i.e. f=1/(4*pi))
  */
 class IsotropicPhaseFunction : public PhaseFunction {
 public:
@@ -40,22 +41,21 @@ public:
 		PhaseFunction::serialize(stream, manager);
 	}
 
-	Spectrum sample(const MediumSamplingRecord &mRec, const Vector &wi, Vector &wo, 
-			ESampledType &sampledType, const Point2 &sample) const {
-		wo = squareToSphere(sample);
-		sampledType = ENormal;
+	Spectrum sample(PhaseFunctionQueryRecord &pRec, 
+			Sampler *sampler) const {
+		Point2 sample(sampler->next2D());
+		pRec.wo = squareToSphere(sample);
 		return Spectrum(1.0f);
 	}
 
-	Spectrum sample(const MediumSamplingRecord &mRec, const Vector &wi, Vector &wo, 
-			ESampledType &sampledType, Float &pdf, const Point2 &sample) const {
-		wo = squareToSphere(sample);
-		sampledType = ENormal;
+	Spectrum sample(PhaseFunctionQueryRecord &pRec, 
+			Float &pdf, Sampler *sampler) const {
+		pRec.wo = squareToSphere(sampler->next2D());
 		pdf = 1/(4 * (Float) M_PI);
 		return Spectrum(pdf);
 	}
 
-	Spectrum f(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const {
+	Spectrum f(const PhaseFunctionQueryRecord &pRec) const {
 		return Spectrum(1/(4 * (Float) M_PI));
 	}
 

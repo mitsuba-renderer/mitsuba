@@ -104,7 +104,8 @@ private:
 class IrradianceSamplingProcess : public ParallelProcess {
 public:
 	IrradianceSamplingProcess(size_t sampleCount, size_t granularity, 
-		int ssIndex, const void *progressReporterPayload);
+		int ssIndex, int irrSamples, 
+		bool irrIndirect, const void *progressReporterPayload);
 
 	inline const IrradianceRecordVector *getSamples() const {
 		return m_samples.get();
@@ -122,6 +123,8 @@ protected:
 private:
 	size_t m_sampleCount, m_samplesRequested, m_resultCount, m_granularity;
 	int m_ssIndex;
+	int m_irrSamples;
+	bool m_irrIndirect;
 	ref<Mutex> m_resultMutex;
 	ref<IrradianceRecordVector> m_samples;
 	ProgressReporter *m_progress;

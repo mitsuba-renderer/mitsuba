@@ -44,13 +44,20 @@ public:
 		int sceneResID = -1,
 		int cameraResID = -1,
 		int samplerResID = -1,
-		bool threadIsCritical = true);
+		bool threadIsCritical = true,
+		bool visualFeedback = false);
+
+	/// Should visual feedback be provided (true when rendering using the GUI)
+	inline bool hasVisualFeedback() const { return m_visualFeedback; }
 
 	/// Write out the current (partially rendered) image
 	inline void flush() { m_scene->flush(); }
 
 	/// Cancel a running render job
 	inline void cancel() { m_scene->cancel(); }
+
+	/// Wait for the job to finish and return whether it was successful
+	inline bool wait() { join(); return !m_cancelled; }
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -66,6 +73,8 @@ private:
 	bool m_ownsSceneResource;
 	bool m_ownsCameraResource;
 	bool m_ownsSamplerResource;
+	bool m_visualFeedback;
+	bool m_cancelled;
 };
 
 MTS_NAMESPACE_END

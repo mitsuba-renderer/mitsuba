@@ -19,33 +19,68 @@
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/volume.h>
 #include <mitsuba/core/fstream.h>
+#include <mitsuba/core/brent.h>
 #include <mitsuba/core/shvector4d.h>
+#include <mitsuba/core/statistics.h>
+#include <boost/math/special_functions/erf.hpp>
 #include <fstream>
+#include "erfc.h"
+
+/*
+ * When inverting an integral of the form f(t):=\int_0^t [...] dt
+ * using composite Simpson's rule quadrature, the following constant
+ * specified how many times the step size will be reduced when we
+ * have almost reached the desired value.
+ */
+#define NUM_REFINES 8 
+
+/**
+ * Allow to stop integrating densities when the resulting segment
+ * has a throughput of less than 'Epsilon'
+ */
+#define HET_EARLY_EXIT 1
 
 /// Header identification record for phase function caches
 #define PHASE_FUNCTION_HEADER 0x40044004
 
-/// Less accurate, but rendering times are much faster
-#define FLAKE_SAMPLE_APPROXIMATION 1
+#define USE_REJECTION_SAMPLING 1
+#define USE_COSTHETA_DISTR 1
 
 MTS_NAMESPACE_BEGIN
+
+static StatsCounter totalSamples("Micro-flake model", "Sample generations");
+static StatsCounter avgSampleIterations("Micro-flake model", "Average rejection sampling iterations", EAverage);
+static StatsCounter brentSolves("Micro-flake model", "Brent solver calls");
+static StatsCounter avgBrentFunEvals("Micro-flake model", "Average Brent solver function evaluations", EAverage);
 
 struct AbsCos {
 	Float operator()(const Vector &w) const { return std::abs(w.z); }
 };
 
+#define USE_COSTHETA_DISTR 1
+
+enum EMode {
+	ESinP = 0,
+	ECosP
+};
+
 struct FlakeDistr {
 	Float exp;
-	bool fiber;
+	EMode mode;
 
-	FlakeDistr(Float exp, bool fiber) : exp(exp), fiber(fiber) {
-	}
+	FlakeDistr() { }
+	FlakeDistr(EMode mode, Float exp) : exp(exp), mode(mode), m_gaussian(exp) { }
 
 	inline Float operator()(const Vector &w) const {
-		if (fiber)
-			return std::pow(1-std::pow(w.z, 2), exp/2.0f);
-		else
-			return std::pow(std::abs(w.z), exp);
+		switch (mode) {
+			case ESinP:
+				return std::pow(1-std::pow(w.z, 2), exp/2.0f);
+			case ECosP:
+				return std::pow(std::abs(w.z), exp);
+			default:
+				SLog(EError, "Invalid flake distribution!");
+				return 0.0f;
+		}
 	}
 };
 
@@ -62,12 +97,13 @@ template <typename Distr> struct FlakePhaseFunctor {
 
 class HeterogeneousFlakeMedium;
 
+
 class FlakePhaseFunction : public PhaseFunction {
 public:
 	FlakePhaseFunction(const SHVector &sigmaT, int samplingRecursions, const SHVector4D *phaseExpansion, 
-		Float exponent, Float normalization, bool fiber, HeterogeneousFlakeMedium *medium) : PhaseFunction(Properties()), 
-		m_sigmaT(sigmaT), m_samplingRecursions(samplingRecursions), m_phaseExpansion(phaseExpansion), 
-		m_exponent(exponent), m_normalization(normalization), m_fiber(fiber), m_medium(medium) {
+		Float exponent, Float normalization, EMode mode, HeterogeneousFlakeMedium *medium) : PhaseFunction(Properties()), 
+		m_sigmaT(sigmaT), m_samplingRecursions(samplingRecursions), m_distr(mode, exponent), m_phaseExpansion(phaseExpansion), 
+		m_exponent(exponent), m_normalization(normalization), m_mode(mode), m_medium(medium) {
 		initialize();
 	}
 
@@ -88,24 +124,16 @@ public:
 
 	virtual ~FlakePhaseFunction() { }
 
-
-	Spectrum sample(const MediumSamplingRecord &mRec, const Vector &wi, Vector &wo, 
-		ESampledType &sampledType, const Point2 &_sample) const {
-		Float pdf;
-		Spectrum value = sample(mRec, wi, wo, sampledType, pdf, _sample);
-		if (pdf == 0)
-			return Spectrum(0.0f);
-		return value/pdf;
-	}
-
 	/* Implementations are below */
-	Spectrum f(const MediumSamplingRecord &mRec, const Vector &_wi, const Vector &_wo) const;
+	Spectrum f(const PhaseFunctionQueryRecord &pRec) const;
 
-	Spectrum sample(const MediumSamplingRecord &mRec, const Vector &_wi, Vector &_wo, 
-			ESampledType &sampledType, Float &pdf, 
-				const Point2 &_sample) const;
+	Spectrum sample(PhaseFunctionQueryRecord &pRec,
+		Float &pdf, Sampler *sampler) const;
+	
+	Spectrum sample(PhaseFunctionQueryRecord &pRec,
+		Sampler *sampler) const;
 
-	Float pdf(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const;
+	Float pdf(const PhaseFunctionQueryRecord &pRec) const;
 
 	std::string toString() const {
 		return "FlakePhaseFunction[]";
@@ -116,21 +144,14 @@ private:
 	SHVector m_sigmaT;
 	ref<SHSampler> m_shSampler;
 	int m_samplingRecursions;
+	FlakeDistr m_distr;
 	const SHVector4D *m_phaseExpansion;
 	mutable PrimitiveThreadLocal<SHVector> m_temp;
 	Float m_exponent;
 	Float m_normalization;
-	bool m_fiber;
+	EMode m_mode;
 	const HeterogeneousFlakeMedium *m_medium; 
 };
-
-/*
- * When inverting an integral of the form f(t):=\int_0^t [...] dt
- * using composite Simpson's rule quadrature, the following constant
- * specified how many times the step size will be reduced when we
- * have almost reached the desired value.
- */
-#define NUM_REFINES 10
 
 class HeterogeneousFlakeMedium : public Medium {
 public:
@@ -144,16 +165,26 @@ public:
 		Assert(bands > 0 && phaseBands > 0);
 
 		m_samplingRecursions = props.getInteger("samplingRecursions", 10);
-		m_fiber = props.getBoolean("fiber", true);
+		std::string mode = props.getString("mode", "sinp");
+
+		if (mode == "sinp") {
+			m_mode = ESinP;
+		} else if (mode == "cosp") {
+			m_mode = ECosP;
+		} else {
+			Log(EError, "Unknown mode: %s!", mode.c_str());
+		}	
+
 		const int numSamples = 80;
 		ref<FileStream> stream;
 
 		SHVector absCos = SHVector(bands);
 		absCos.project(AbsCos(), numSamples);
 		Float absCosError = absCos.l2Error(AbsCos(), numSamples);
-
+		
 		m_exponent = props.getFloat("exponent", 4);
-		FlakeDistr distrFunc(m_exponent, m_fiber);
+		FlakeDistr distrFunc(m_mode, m_exponent);
+
 		m_D = SHVector(bands);
 		m_D.project(distrFunc, numSamples);
 		m_normalization = 1 / (m_D(0, 0) * 2 * std::sqrt(M_PI));
@@ -161,7 +192,7 @@ public:
 		m_D.normalize();
 
 		Log(EInfo, "=======  Flake medium properties =======");
-		Log(EInfo, "       distribution type = %s", m_fiber ? " sin^p" : "cos^p");
+		Log(EInfo, "       distribution type = %s", mode.c_str());
 		Log(EInfo, "   distribution exponent = %f", m_exponent);
 		Log(EInfo, "    SH bands (D, sigmaT) = %i", bands);
 		Log(EInfo, "    SH bands (phase fct) = %i", phaseBands);
@@ -175,10 +206,10 @@ public:
 			stream = new FileStream("flake-phase.dat", FileStream::EReadOnly);
 			unsigned int header = stream->readUInt();
 			int nBands = stream->readInt();
-			bool isFiber = stream->readBool();
+			int mode = stream->readInt();
 			Float exponent = stream->readFloat();
 			if (header == PHASE_FUNCTION_HEADER && nBands == phaseBands 
-				&& exponent == m_exponent && isFiber == m_fiber) {
+				&& exponent == m_exponent && mode == m_mode) {
 				m_phaseExpansion = SHVector4D(stream);
 				computePhaseProjection = false;
 			}
@@ -195,26 +226,26 @@ public:
 			stream = new FileStream("flake-phase.dat", FileStream::ETruncReadWrite);
 			stream->writeInt(PHASE_FUNCTION_HEADER);
 			stream->writeInt(phaseBands);
-			stream->writeBool(m_fiber);
+			stream->writeInt(m_mode);
 			stream->writeFloat(m_exponent);
 			m_phaseExpansion.serialize(stream);
 			stream->close();
 		}
-		
+
 		for (int i=0; i<phaseBands; ++i)
 			Log(EInfo, "Energy in phase function band %i: %f", i, m_phaseExpansion.energy(i));
 
+		/* Compute sigma_t except for the a*rho factor */
 		m_sigmaT = SHVector(m_D);
 		m_sigmaT.convolve(absCos);
-		m_sigmaT *= 2;
 		Assert(m_sigmaT.isAzimuthallyInvariant());
-		m_kdTree = new KDTree();
+		m_kdTree = new ShapeKDTree();
 	}
-
+	
 	/* Unserialize from a binary data stream */
 	HeterogeneousFlakeMedium(Stream *stream, InstanceManager *manager) 
 		: Medium(stream, manager) {
-		m_kdTree = new KDTree();
+		m_kdTree = new ShapeKDTree();
 		size_t shapeCount = stream->readUInt();
 		for (size_t i=0; i<shapeCount; ++i) 
 			addChild("", static_cast<Shape *>(manager->getInstance(stream)));
@@ -224,7 +255,7 @@ public:
 		m_stepSize = stream->readFloat();
 		m_exponent = stream->readFloat();
 		m_normalization = stream->readFloat();
-		m_fiber = stream->readBool();
+		m_mode = (EMode) stream->readInt();
 		m_D = SHVector(stream);
 		m_sigmaT = SHVector(stream);
 		m_phaseExpansion = SHVector4D(stream);
@@ -249,7 +280,7 @@ public:
 		stream->writeFloat(m_stepSize);
 		stream->writeFloat(m_exponent);
 		stream->writeFloat(m_normalization);
-		stream->writeBool(m_fiber);
+		stream->writeInt(m_mode);
 		m_D.serialize(stream);
 		m_sigmaT.serialize(stream);
 		m_phaseExpansion.serialize(stream);
@@ -276,7 +307,7 @@ public:
 		}
 
 		m_phaseFunction = new FlakePhaseFunction(m_sigmaT, m_samplingRecursions,
-			&m_phaseExpansion, m_exponent, m_normalization, m_fiber, this);
+			&m_phaseExpansion, m_exponent, m_normalization, m_mode, this);
 
 		if (m_shapes.size() > 0) {
 			m_kdTree->build();
@@ -326,75 +357,57 @@ public:
 		}
 	}
 
-	Float distanceToMediumEntry(const Ray &ray) const {
+	/**
+	 * \brief Intersect a ray with the stencil and 
+	 * determine whether it started on the inside
+	 */
+	inline bool rayIntersect(const Ray &ray, Float &t, bool &inside) const {
 		if (m_shapes.size() != 0) {
-			Ray r(ray, Epsilon, std::numeric_limits<Float>::infinity());
 			Intersection its;
-			if (!m_kdTree->rayIntersect(r, its)) 
-				return std::numeric_limits<Float>::infinity(); 
-			return dot(ray.d, its.geoFrame.n) > 0 ? 0 : its.t;
+			if (!m_kdTree->rayIntersect(ray, its)) 
+				return false;
+			inside = dot(its.geoFrame.n, ray.d) > 0;
+			t = its.t;
 		} else {
 			Float mint, maxt;
 			if (!m_aabb.rayIntersect(ray, mint, maxt))
-				return std::numeric_limits<Float>::infinity(); 
-			if (mint <= Epsilon && maxt <= Epsilon)
-				return std::numeric_limits<Float>::infinity(); 
-			else
-				return (mint < 0) ? 0 : mint;
+				return false;
+			if (mint <= ray.mint && maxt <= ray.mint)
+				return false;
+			inside = mint <= 0 && maxt > 0;
+			t = (mint <= 0) ? maxt : mint;
 		}
+		return true;
 	}
 
-	Float distanceToMediumExit(const Ray &ray) const {
-		if (m_shapes.size() != 0) {
-			Ray r(ray, Epsilon, std::numeric_limits<Float>::infinity());
-			Intersection its;
-			if (!m_kdTree->rayIntersect(r, its)) 
-				return 0;
-			return dot(ray.d, its.geoFrame.n) < 0 ? 0 : its.t;
-		} else {
-			Float mint, maxt;
-			if (!m_aabb.rayIntersect(ray, mint, maxt)) 
-				return 0;
-			if (mint < Epsilon && maxt > 0)
-				return maxt;
-			else
-				return 0;
-		}
+	inline Vector lookupOrientation(const Point &p) const {
+		Vector orientation = m_orientations->lookupVector(p);
+		Float lengthSqr = orientation.lengthSquared();
+		if (lengthSqr != 0)
+			return orientation / std::sqrt(lengthSqr);
+		else
+			return Vector(0.0f);
 	}
 
-	Spectrum tau(const Ray &r) const {
-		Float dLength = r.d.length();
-		Ray ray(r(r.mint), r.d / dLength, 0.0f);
-		Float remaining = (r.maxt - r.mint) * dLength;
-		Float integral = 0.0f;
-		int iterations = 0;
+	inline Float sigmaT(const Point &p, const Vector &d) const {
+		/**
+		 * Double the densities so that a uniform flake distribution
+		 * reproduces isotropic scattering
+		 */
+		Float density = 2 * m_densities->lookupFloat(p) * m_densityMultiplier;
+		if (density == 0)
+			return 0.0f;
+		Vector orientation = lookupOrientation(p);
+		if (orientation == Vector(0.0f))
+			return 0.0f;
 
-		Float entry = distanceToMediumEntry(ray);
-		while (entry < remaining && entry != std::numeric_limits<Float>::infinity()) {
-			ray.o = ray(entry);
-			remaining -= entry;
-			Float exit = distanceToMediumExit(ray);
+		Vector localD = Frame(orientation).toLocal(d);
 
-			if (exit != std::numeric_limits<Float>::infinity())
-				integral += integrateDensities(ray, std::min(remaining, exit));
-
-			remaining -= exit;
-			if (remaining <= 0) 
-				break;
-
-			ray.o = ray(exit);
-			entry = distanceToMediumEntry(ray);
-			if (++iterations > 10) {
-				/// Just a precaution..
-				Log(EWarn, "tau(): round-off error issues?");
-				break;
-			}
-		}
-
-		return Spectrum(integral * m_sizeMultiplier);
+		return density * m_sigmaT.evalAzimuthallyInvariant(localD);
 	}
-	
-	Float integrateDensities(Ray ray, Float length) const {
+
+	/// Integrate densities using the composite Simpson's rule
+	inline Float integrateDensity(Ray ray, Float length) const {
 		if (length == 0)
 			return 0.0f;
 		int nParts = (int) std::ceil(length/m_stepSize);
@@ -402,156 +415,214 @@ public:
 		const Float stepSize = length/nParts;
 		const Vector increment = ray.d * stepSize;
 
-		Float m=4;
-		Float accumulatedTau = 
+		Float m = 4;
+		Float accumulatedDensity = 
 			sigmaT(ray.o, ray.d) + sigmaT(ray(length), ray.d);
+#ifdef HET_EARLY_EXIT
+		const Float stopAfterDensity = -std::log(Epsilon);
+		const Float stopValue = stopAfterDensity*3/stepSize;
+#endif
 
 		ray.o += increment;
 		for (int i=1; i<nParts; ++i) {
 			Float value = sigmaT(ray.o, ray.d);
-			accumulatedTau += value*m;
+			accumulatedDensity += value*m;
+			Point tmp = ray.o;
 			ray.o += increment;
-			m = 6-m;
-		}
-		accumulatedTau *= stepSize/3;
 
-		return accumulatedTau;
+			if (ray.o == tmp) {
+				Log(EWarn, "integrateDensity(): failed to make forward progress -- "
+						"round-off error issues? The step size was %.18f", stepSize);
+				break;
+			}
+
+#ifdef HET_EARLY_EXIT
+			if (accumulatedDensity > stopValue) // Stop early
+				return std::numeric_limits<Float>::infinity();
+#endif
+			m = 6 - m;
+		}
+		accumulatedDensity *= stepSize/3;
+
+		return accumulatedDensity;
 	}
 
-	Float invertDensityIntegral(Ray ray, Float maxDist, 
-		Float &accumulatedTau, 
-		Float &currentSigmaT, 
-		Spectrum &currentAlbedo, 
-		Float desiredTau) const {
+	/**
+	 * \brief Integrate the density covered by the specified ray
+	 * segment, while clipping the volume to the underlying
+	 * stencil volume.
+	 */
+	inline Float integrateDensity(const Ray &r) const {
+		Ray ray(r(r.mint), r.d,
+			0, std::numeric_limits<Float>::infinity(), 0.0f);
+		Float integral = 0, remaining = r.maxt - r.mint;
+		int iterations = 0;
+		bool inside = false;
+		Float t = 0;
+
+		while (remaining > 0 && rayIntersect(ray, t, inside)) {
+			if (inside) 
+				integral += integrateDensity(ray, std::min(remaining, t));
+
+			remaining -= t;
+			ray.o = ray(t);
+			ray.mint = Epsilon;
+
+			if (++iterations > 100) {
+				/// Just a precaution..
+				Log(EWarn, "integrateDensity(): round-off error issues?");
+				break;
+			}
+		}
+		return integral;
+	}
+	
+	/**
+	 * Attempts to solve the following 1D integral equation for 't'
+	 * \int_0^t density(ray.o + x * ray.d) * dx + accumulatedDensity == desiredDensity.
+	 * When no solution can be found in [0, maxDist] the function returns
+	 * false. For convenience, the function returns the current values of sigmaT 
+	 * and the albedo, as well as the 3D position 'ray.o+t*ray.d' upon
+	 * success.
+	 */
+	bool invertDensityIntegral(Ray ray, Float maxDist, 
+			Float &accumulatedDensity, Float desiredDensity,
+			Float &currentSigmaT, Spectrum &currentAlbedo, 
+			Point &currentPoint) const {
 		if (maxDist == 0)
 			return std::numeric_limits<Float>::infinity();
-
 		int nParts = (int) std::ceil(maxDist/m_stepSize);
 		Float stepSize = maxDist/nParts;
 		Vector fullIncrement = ray.d * stepSize,
 			   halfIncrement = fullIncrement * .5f;
-	
-		Float lastNode = sigmaT(ray.o, ray.d);
 		Float t = 0;
-
 		int numRefines = 0;
-		while (t <= maxDist) {
-			const Float node1 = lastNode,
-						node2 = sigmaT(ray.o + halfIncrement, ray.d),
-						node3 = sigmaT(ray.o + fullIncrement, ray.d);
-			const Float newDensity = accumulatedTau 
-				+ (node1+node2*4+node3) * (stepSize/6);
+		bool success = false;
+		Float node1 = sigmaT(ray.o, ray.d);
 
-			if (newDensity > desiredTau) {
-				if (++numRefines > NUM_REFINES) {
-					currentAlbedo = m_albedo->lookupSpectrum(ray.o+fullIncrement);
-					currentSigmaT = node3;
-					return t;
+		while (t <= maxDist) {
+			Float node2 = sigmaT(ray.o + halfIncrement, ray.d);
+			Float node3 = sigmaT(ray.o + fullIncrement, ray.d);
+			const Float newDensity = accumulatedDensity + 
+				(node1+node2*4+node3) * (stepSize/6);
+
+			if (newDensity > desiredDensity) {
+				if (t+stepSize/2 <= maxDist) {
+					/* Record the last "good" scattering event */
+					success = true;
+					if (EXPECT_TAKEN(node2 != 0)) {
+						currentPoint = ray.o + halfIncrement;
+						currentSigmaT = node2;
+					} else if (node3 != 0 && t+stepSize <= maxDist) {
+						currentPoint = ray.o + fullIncrement;
+						currentSigmaT = node3;
+					} else if (node1 != 0) {
+						currentPoint = ray.o;
+						currentSigmaT = node1;
+					}
 				}
 
+				if (++numRefines > NUM_REFINES)
+					break;
+
 				stepSize *= .5f;
-				fullIncrement *= .5f;
+				fullIncrement = halfIncrement;
 				halfIncrement *= .5f;
 				continue;
 			}
 
-			accumulatedTau = newDensity;
-			lastNode = node3;
+			if (ray.o+fullIncrement == ray.o) /* Unable to make forward progress - stop */
+				break;
+
+			accumulatedDensity = newDensity;
+			node1 = node3;
 			t += stepSize;
 			ray.o += fullIncrement;
 		}
-		return std::numeric_limits<Float>::infinity();
+
+		if (success) 
+			currentAlbedo = m_albedo->lookupSpectrum(currentPoint);
+
+		return success;
 	}
 
-	bool sampleDistance(const Ray &r, Float maxDist, 
-			MediumSamplingRecord &mRec,  Sampler *sampler) const {
-		Float dLength = r.d.length();
-		Ray ray(r(r.mint), r.d / dLength, 0.0f);
-		Float remaining      = (maxDist - r.mint) * dLength,
-			  desiredTau     = -std::log(1-sampler->next1D())/m_sizeMultiplier,
-			  accumulatedTau = 0.0f,
+	/// Evaluate the attenuation along a ray segment
+	Spectrum tau(const Ray &ray) const {
+		return Spectrum(std::exp(-integrateDensity(ray)));
+	}
+
+	bool sampleDistance(const Ray &r, MediumSamplingRecord &mRec,
+			Sampler *sampler) const {
+		Ray ray(r(r.mint), r.d, 0.0f);
+		Float distSurf       = r.maxt - r.mint,
+			  desiredDensity     = -std::log(1-sampler->next1D()),
+			  accumulatedDensity = 0.0f,
 			  currentSigmaT  = 0.0f;
-		Spectrum currentAlbedo(0.0f), integral(0.0f);
+		Spectrum currentAlbedo(0.0f);
 		int iterations = 0;
-		bool success = false;
+		bool inside = false, success = false;
+		Float t = 0;
+		Float sigmaTOrigin = sigmaT(ray.o, ray.d);
 
-		mRec.miWeight = 1;
-		Float entry = distanceToMediumEntry(ray);
-		while (entry < remaining && entry != std::numeric_limits<Float>::infinity()) {
-			ray.o = ray(entry);
-			remaining -= entry;
-			Float exit = distanceToMediumExit(ray);
-
-			if (exit != std::numeric_limits<Float>::infinity()) {
-				Float t = invertDensityIntegral(ray, std::min(remaining, exit), 
-						accumulatedTau, currentSigmaT, currentAlbedo, desiredTau);
-				if (t != std::numeric_limits<Float>::infinity()) {
-					mRec.p = ray(t);
+		while (rayIntersect(ray, t, inside)) {
+			if (inside) {
+				Point currentPoint(0.0f);
+				success = invertDensityIntegral(ray, std::min(t, distSurf), 
+						accumulatedDensity, desiredDensity, currentSigmaT, currentAlbedo,
+						currentPoint);
+				if (success) {
+					/* A medium interaction occurred */
+					mRec.p = currentPoint;
 					mRec.t = (mRec.p-r.o).length();
 					success = true;
 					break;
 				}
-			} else {
-				break;
 			}
 
-			remaining -= exit;
+			distSurf -= t;
 
-			if (remaining < 0) {
+			if (distSurf < 0) {
+				/* A surface interaction occurred */
 				break;
 			}
+			ray.o = ray(t);
+			ray.mint = Epsilon;
 
-			ray.o = ray(exit);
-			entry = distanceToMediumEntry(ray);
-			if (++iterations > 10) {
+			if (++iterations > 100) {
 				/// Just a precaution..
 				Log(EWarn, "sampleDistance(): round-off error issues?");
 				break;
 			}
 		}
-		accumulatedTau *= m_sizeMultiplier;
-		currentSigmaT *= m_sizeMultiplier;
+		Float expVal = std::max(Epsilon, std::exp(-accumulatedDensity));
 
-		if (!success) {
-			/* Could not achieve the desired density - hit the next surface instead */
-			mRec.pdf = std::max((Float) Epsilon, std::exp(-accumulatedTau));
-			mRec.attenuation = (-Spectrum(accumulatedTau)).exp();
+		if (success)
+			mRec.orientation = lookupOrientation(mRec.p);
+
+		mRec.pdfFailure = expVal;
+		mRec.pdfSuccess = expVal * std::max((Float) Epsilon, currentSigmaT);
+		mRec.pdfSuccessRev = expVal * std::max((Float) Epsilon, sigmaTOrigin);
+		mRec.attenuation = Spectrum(expVal);
+
+		if (!success)
 			return false;
-		}
-
-		mRec.pdf = std::exp(-accumulatedTau) * std::max((Float) Epsilon, currentSigmaT);
-		mRec.attenuation = (-Spectrum(accumulatedTau)).exp();
 
 		mRec.sigmaS = currentAlbedo * currentSigmaT;
 		mRec.sigmaA = Spectrum(currentSigmaT) - mRec.sigmaS;
 		mRec.albedo = currentAlbedo.max();
-		mRec.orientation = m_orientations->lookupVector(mRec.p);
 		mRec.medium = this;
 		return true;
 	}
 
+	void pdfDistance(const Ray &ray, Float t, MediumSamplingRecord &mRec) const {
+		Float expVal = std::exp(-integrateDensity(Ray(ray, 0, t)));
 
-	inline Float sigmaT(const Point &p, const Vector &d) const {
-		Float density = m_densities->lookupFloat(p);
-		if (density == 0)
-			return 0.0f;
-		Vector orientation = m_orientations->lookupVector(p);
-		Float length = orientation.length();
-		if (length == 0)
-			return 0.0f;
-		else
-			orientation /= length;
-		Vector localD = normalize(Frame(orientation).toLocal(d));
-
-		return density * m_sigmaT.evalAzimuthallyInvariant(localD);
-	}
-
-	inline Float lookupDensity(const Point &p, const Vector &d) const {
-		return m_densities->lookupFloat(p);
-	}
-
-	inline Vector lookupOrientation(const Point &p) const {
-		return m_orientations->lookupVector(p);
+		mRec.attenuation = Spectrum(expVal);
+		mRec.pdfFailure = expVal;
+		mRec.pdfSuccess = expVal * std::max((Float) Epsilon, 
+			sigmaT(ray(t), ray.d));
+		mRec.pdfSuccessRev = expVal * std::max((Float) Epsilon, 
+			sigmaT(ray(ray.mint), ray.d));
 	}
 
 	std::string toString() const {
@@ -560,7 +631,8 @@ public:
 			<< "  albedo=" << indent(m_albedo.toString()) << "," << endl
 			<< "  orientations=" << indent(m_orientations.toString()) << "," << endl
 			<< "  densities=" << indent(m_densities.toString()) << "," << endl
-			<< "  shapes = " << indent(listToString(m_shapes)) << endl
+			<< "  stepSize=" << m_stepSize << "," << endl
+			<< "  densityMultiplier=" << m_densityMultiplier << endl
 			<< "]";
 		return oss.str();
 	}
@@ -569,26 +641,22 @@ private:
 	ref<VolumeDataSource> m_densities;
 	ref<VolumeDataSource> m_albedo;
 	ref<VolumeDataSource> m_orientations;
-	ref<KDTree> m_kdTree;
+	ref<ShapeKDTree> m_kdTree;
 	std::vector<Shape *> m_shapes;
 	Float m_stepSize;
 	/* Flake model-related */
 	SHVector m_D, m_sigmaT;
 	SHVector4D m_phaseExpansion;
 	int m_samplingRecursions;
-	bool m_fiber;
+	EMode m_mode;
 	Float m_exponent, m_normalization;
 };
 
-Spectrum FlakePhaseFunction::f(const MediumSamplingRecord &mRec, const Vector &_wi, const Vector &_wo) const {
-	Vector orientation = m_medium->lookupOrientation(mRec.p);
-	if (orientation.lengthSquared() == 0)
-		return Spectrum(0.0f);
-
-	Frame frame(normalize(orientation));
-	Vector wi = frame.toLocal(_wi);
-	Vector wo = frame.toLocal(_wo);
-#if defined(FLAKE_SAMPLE_APPROXIMATION) 
+Spectrum FlakePhaseFunction::f(const PhaseFunctionQueryRecord &pRec) const {
+	Frame frame(pRec.mRec.orientation);
+	Vector wi = frame.toLocal(pRec.wi);
+	Vector wo = frame.toLocal(pRec.wo);
+#if defined(FLAKE_EVAL_APPROXIMATION) 
 	/* Evaluate spherical harmonics representation - might be inaccurate */
 	SHVector temp(m_phaseExpansion->getBands());
 	m_phaseExpansion->lookup(wi, temp);
@@ -596,68 +664,75 @@ Spectrum FlakePhaseFunction::f(const MediumSamplingRecord &mRec, const Vector &_
 	return Spectrum(result);
 #else
 	/* Evaluate the real phase function */
-	FlakeDistr D(m_exponent, m_fiber);
 	Float sigmaT = m_sigmaT.evalAzimuthallyInvariant(wi);
 	Vector H = wi + wo;
 	Float length = H.length();
+
 	if (length == 0)
 		return Spectrum(0.0f);
 	else
 		H /= length;
-	return Spectrum((D(H) + D(-H)) * m_normalization / (2*sigmaT));
+
+	Float result = m_distr(H) / (2*sigmaT);
+	result *= m_normalization;
+	return Spectrum(result);
 #endif
 }
 
-Spectrum FlakePhaseFunction::sample(const MediumSamplingRecord &mRec, const Vector &_wi, Vector &_wo, 
-		ESampledType &sampledType, Float &pdf, const Point2 &_sample) const {
-	sampledType = PhaseFunction::ENormal;
-#if 1
-	Vector orientation = m_medium->lookupOrientation(mRec.p);
-	if (orientation.lengthSquared() == 0) {
-		pdf = 0.0f;
-		return Spectrum(0.0f);
-	}
+Spectrum FlakePhaseFunction::sample(PhaseFunctionQueryRecord &pRec,
+		Float &_pdf, Sampler *sampler) const {
+#if defined(FLAKE_SAMPLE_UNIFORM)
+	/* Uniform sampling */
+	pRec.wo = squareToSphere(sampler->next2D());
+	_pdf = 1/(4*M_PI);
+	return f(pRec);
+#else
+	Point2 sample(sampler->next2D());
+	Frame frame(pRec.mRec.orientation);
+	Vector wi = frame.toLocal(pRec.wi);
 	/* Importance sampling using the interpolated phase function */
-	Frame frame(normalize(orientation));
-	Point2 sample(_sample);
-	Vector wi = frame.toLocal(_wi);
-
 	SHVector &temp = m_temp.get();
 	if (EXPECT_NOT_TAKEN(temp.getBands() == 0))
 		temp = SHVector(m_phaseExpansion->getBands());
 	m_phaseExpansion->lookup(wi, temp);
-	pdf = m_shSampler->warp(temp, sample);
+	_pdf = m_shSampler->warp(temp, sample);
 
 	Vector wo = sphericalDirection(sample.x, sample.y);
-	_wo = frame.toWorld(wo);
-#if defined(FLAKE_SAMPLE_APPROXIMATION) 
-	return Spectrum(std::max((Float) 0, temp.eval(sample.x, sample.y)));
-#else
-	return f(mRec, _wi, _wo);
-#endif
-#else
-	/* Uniform sampling */
-	_wo = squareToSphere(_sample);
-	pdf = 1/(4*M_PI);
-	return f(mRec, _wi, _wo);
+	pRec.wo = frame.toWorld(wo);
+	#if defined(FLAKE_EVAL_APPROXIMATION) 
+		return Spectrum(std::max((Float) 0, temp.eval(sample.x, sample.y)));
+	#else
+		return f(pRec);
+	#endif
 #endif
 }
 
-Float FlakePhaseFunction::pdf(const MediumSamplingRecord &mRec, const Vector &_wi, const Vector &_wo) const {
-	Vector orientation = m_medium->lookupOrientation(mRec.p);
-	if (orientation.lengthSquared() == 0)
-		return 0.0f;
-	Frame frame(normalize(orientation));
+Spectrum FlakePhaseFunction::sample(PhaseFunctionQueryRecord &pRec,
+		Sampler *sampler) const {
+	Float pdf;
+	Spectrum result = FlakePhaseFunction::sample(pRec, pdf, sampler);
+	if (!result.isZero())
+		return result / pdf;
+	else
+		return Spectrum(0.0f);
+}
+
+Float FlakePhaseFunction::pdf(const PhaseFunctionQueryRecord &pRec) const {
+#if defined(FLAKE_SAMPLE_UNIFORM)
+	return 1/(4*M_PI);
+#else
+	Frame frame(pRec.mRec.orientation);
+	Vector wi = frame.toLocal(pRec.wi);
+	Vector wo = frame.toLocal(pRec.wo);
 	SHVector temp(m_phaseExpansion->getBands());
-	Vector wi = frame.toLocal(_wi);
-	Vector wo = frame.toLocal(_wo);
 	m_phaseExpansion->lookup(wi, temp);
 
 	return std::max((Float) 0, temp.eval(wo));
+#endif
 }
 
 MTS_IMPLEMENT_CLASS_S(HeterogeneousFlakeMedium, false, Medium)
 MTS_IMPLEMENT_CLASS_S(FlakePhaseFunction, false, PhaseFunction)
-MTS_EXPORT_PLUGIN(HeterogeneousFlakeMedium, "Stenciled heterogeneous medium");
+MTS_EXPORT_PLUGIN(HeterogeneousFlakeMedium, "Heterogeneous micro-flake medium");
 MTS_NAMESPACE_END
 

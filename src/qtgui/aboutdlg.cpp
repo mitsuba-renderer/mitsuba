@@ -62,10 +62,11 @@ AboutDialog::AboutDialog(QWidget *parent) :
 	configFlags += "MTS_HAS_COLLADA ";
 #endif
 
-	ui->label1->setText(ui->label1->text().replace("MTS_VERSION", MTS_VERSION));
-	ui->label1->setText(ui->label1->text().replace("CONFIG_FLAGS", configFlags));
+	ui->label->setText(ui->label->text().replace("MTS_VERSION", MTS_VERSION));
+	ui->label->setText(ui->label->text().replace("CONFIG_FLAGS", configFlags));
+
 #if defined(__OSX__)
-	ui->label1->setText(ui->label1->text().replace("font-size:10pt", "font-size:14pt"));
+	ui->label1->setText(ui->label->text().replace("font-size:10pt", "font-size:14pt"));
 #endif
 }
 

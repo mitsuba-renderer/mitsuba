@@ -60,7 +60,7 @@ protected:
 private:
 	ref<Scene> m_scene;
 	ref<Camera> m_camera;
-	ref<KDTree> m_kdtree;
+	ref<ShapeKDTree> m_kdtree;
 	int m_blockSize;
 	Point m_cameraO;
 	Vector m_cameraTL;

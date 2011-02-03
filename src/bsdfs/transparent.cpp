@@ -71,7 +71,7 @@ public:
 		wo = Vector(-wi.x, -wi.y, -wi.z);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec) const {
+	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		if (!(bRec.typeMask & m_combinedType))
 			return Spectrum(0.0f);
 		transmit(bRec.wi, bRec.wo);
@@ -81,7 +81,7 @@ public:
 			std::abs(Frame::cosTheta(bRec.wo));
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (!(bRec.typeMask & m_combinedType))
 			return Spectrum(0.0f);
 		transmit(bRec.wi, bRec.wo);

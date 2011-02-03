@@ -107,9 +107,23 @@ public:
 
 	/// Set the log level (everything below will be ignored)
 	void setLogLevel(ELogLevel level);
+	
+	/**
+	 * \brief Set the error log level (this level and anything 
+	 * above will throw exceptions).
+	 *
+	 * The value provided here can be used for instance to turn
+	 * warnings into errors. But \a level must always be
+	 * less than \ref EError, i.e. it isn't possible to
+	 * cause errors not to throw an exception.
+	 */
+	void setErrorLevel(ELogLevel level);
 
 	/// Return the current log level
 	inline ELogLevel getLogLevel() const { return m_logLevel; }
+	
+	/// Return the current error level
+	inline ELogLevel getErrorLevel() const { return m_errorLevel; }
 
 	/// Add an appender to this logger
 	void addAppender(Appender *appender);
@@ -147,6 +161,7 @@ protected:
 	virtual ~Logger();
 private:
 	ELogLevel m_logLevel;
+	ELogLevel m_errorLevel;
 	ref<Formatter> m_formatter;
 	ref<Mutex> m_mutex;
 	std::vector<Appender *> m_appenders;

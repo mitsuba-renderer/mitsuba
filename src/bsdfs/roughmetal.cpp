@@ -147,12 +147,12 @@ public:
 		return beckmannD(Hr) * Frame::cosTheta(Hr) * dwhr_dwo;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec) const {
+	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		if (bRec.wi.z <= 0)
 			return Spectrum(0.0f);
 
 		/* Sample M, the microsurface normal */
-		Normal m = sampleBeckmannD(bRec.sample);
+		Normal m = sampleBeckmannD(sample);
 		/* Perfect specular reflection along the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
 

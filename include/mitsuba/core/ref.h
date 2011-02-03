@@ -114,10 +114,12 @@ public:
 	 * Return a string representation of this reference
 	 */
 	inline std::string toString() const {
-		return formatString("ref<%s>[ref=%i, ptr=%s]",
-				m_ptr == NULL ? "null" : m_ptr->getClass()->getName().c_str(),
-				m_ptr == NULL ? -1 : m_ptr->getRefCount(),
-				m_ptr == NULL ? "null" : m_ptr->toString().c_str());
+		if (m_ptr == NULL)
+			return "ref<null>[]";
+		else
+			return formatString("ref<%s>[ref=%i, ptr=%s]",
+					m_ptr->getClass()->getName().c_str(),
+					m_ptr->getRefCount(), m_ptr->toString().c_str());
 	}
 private:
 	T *m_ptr;

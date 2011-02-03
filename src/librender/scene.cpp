@@ -24,7 +24,7 @@ MTS_NAMESPACE_BEGIN
 
 Scene::Scene(const Properties &props)
  : NetworkedObject(props), m_blockSize(32) {
-	m_kdtree = new KDTree();
+	m_kdtree = new ShapeKDTree();
 	/* When test case mode is active (Mitsuba is started with the -t parameter), 
 	  this specifies the type of test performed. Mitsuba will expect a reference 
 	  solution file of the name <tt>&lt;sceneName&gt;.ref</tt>. When set to 
@@ -56,7 +56,7 @@ Scene::Scene(const Properties &props)
 	/* kd-tree construction: Relative cost of a triangle intersection operation 
 	   in the surface area heuristic. */
 	if (props.hasProperty("kdIntersectionCost"))
-		m_kdtree->setIntersectionCost(props.getFloat("kdIntersectionCost"));
+		m_kdtree->setQueryCost(props.getFloat("kdIntersectionCost"));
 	/* kd-tree construction: Relative cost of a kd-tree traversal operation 
 	   in the surface area heuristic. */
 	if (props.hasProperty("kdTraversalCost"))
@@ -128,8 +128,8 @@ Scene::Scene(Scene *scene) : NetworkedObject(Properties()) {
 
 Scene::Scene(Stream *stream, InstanceManager *manager) 
  : NetworkedObject(stream, manager) {
-	m_kdtree = new KDTree();
-	m_kdtree->setIntersectionCost(stream->readFloat());
+	m_kdtree = new ShapeKDTree();
+	m_kdtree->setQueryCost(stream->readFloat());
 	m_kdtree->setTraversalCost(stream->readFloat());
 	m_kdtree->setEmptySpaceBonus(stream->readFloat());
 	m_kdtree->setStopPrims(stream->readInt());
@@ -305,11 +305,17 @@ void Scene::initialize() {
 				m_luminairePDF.put(1.0f);
 		}
 		m_luminairePDF.build();
+	} else {
+		for (std::vector<Luminaire *>::iterator it = m_luminaires.begin();
+			it != m_luminaires.end(); ++it) 
+			(*it)->preprocess(this);
 	}
 }
 
 bool Scene::preprocess(RenderQueue *queue, const RenderJob *job, 
 		int sceneResID, int cameraResID, int samplerResID) {
+	initialize();
+
 	/* Pre-process step for the main scene integrator */
 	if (!m_integrator->preprocess(this, queue, job,
 		sceneResID, cameraResID, samplerResID))
@@ -356,7 +362,7 @@ void Scene::postprocess(RenderQueue *queue, const RenderJob *job,
 }
 
 Float Scene::pdfLuminaire(const Point &p,
-		const LuminaireSamplingRecord &lRec) const {
+		const LuminaireSamplingRecord &lRec, bool delta) const {
 	const Luminaire *luminaire = lRec.luminaire;
 	Float luminance;
 
@@ -367,11 +373,11 @@ Float Scene::pdfLuminaire(const Point &p,
 
 	/* Calculate the probability of importance sampling this luminaire */
 	const Float fraction = luminance / m_luminairePDF.getOriginalSum();
-	return luminaire->pdf(p, lRec) * fraction;
+	return luminaire->pdf(p, lRec, delta) * fraction;
 }
 
 Float Scene::pdfLuminaire(const Intersection &its,
-		const LuminaireSamplingRecord &lRec) const {
+		const LuminaireSamplingRecord &lRec, bool delta) const {
 	const Luminaire *luminaire = lRec.luminaire;
 	Float luminance;
 
@@ -382,7 +388,7 @@ Float Scene::pdfLuminaire(const Intersection &its,
 
 	/* Calculate the probability of importance sampling this luminaire */
 	const Float fraction = luminance / m_luminairePDF.getOriginalSum();
-	return luminaire->pdf(its, lRec) * fraction;
+	return luminaire->pdf(its, lRec, delta) * fraction;
 }
 
 bool Scene::sampleLuminaire(const Point &p,
@@ -434,7 +440,8 @@ void Scene::sampleEmission(EmissionRecord &eRec, Point2 &sample1, Point2 &sample
 	luminaire->sampleEmission(eRec, sample1, sample2);
 	eRec.pdfArea *= lumPdf;
 	eRec.luminaire = luminaire;
-	Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface) ? absDot(eRec.sRec.n, eRec.d) : 1;
+	Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface)
+		? absDot(eRec.sRec.n, eRec.d) : 1;
 	eRec.P *= cosTheta / (eRec.pdfArea * eRec.pdfDir);
 }
 
@@ -451,7 +458,7 @@ Spectrum Scene::sampleEmissionDirection(EmissionRecord &eRec, Point2 &sample) co
 	return eRec.luminaire->sampleEmissionDirection(eRec, sample);
 }
 
-void Scene::pdfEmission(EmissionRecord &eRec) const {
+void Scene::pdfEmission(EmissionRecord &eRec, bool delta) const {
 	const Luminaire *luminaire = eRec.luminaire;
 	Float luminance;
 	if (m_importanceSampleLuminaires)
@@ -461,7 +468,7 @@ void Scene::pdfEmission(EmissionRecord &eRec) const {
 	/* Calculate the probability of importance sampling this luminaire */
 	const Float fraction = luminance / m_luminairePDF.getOriginalSum();
 
-	luminaire->pdfEmission(eRec);
+	luminaire->pdfEmission(eRec, delta);
 	eRec.pdfArea *= fraction;
 }
 
@@ -473,27 +480,38 @@ Spectrum Scene::LeBackground(const Ray &ray) const {
 	return Le;
 }
 
-Spectrum Scene::getAttenuation(const Ray &ray) const {
-	Spectrum extinction(0.0f);
-	for (std::vector<Medium *>::const_iterator it = 
-			m_media.begin(); it != m_media.end(); ++it) {
-		extinction += (*it)->tau(ray);
+Spectrum Scene::getAttenuation(const Ray &_ray) const {
+	Spectrum attenuation(1.0f);
+	if (m_media.size() > 0) {
+		Float dLength = _ray.d.length();
+		Ray ray(_ray.o, _ray.d/dLength, 
+				_ray.mint*dLength, _ray.maxt*dLength, _ray.time);
+		for (std::vector<Medium *>::const_iterator it = 
+				m_media.begin(); it != m_media.end(); ++it) 
+			attenuation *= (*it)->tau(ray);
 	}
-	if (extinction.isBlack())
-		return Spectrum(1.0f);
-	else
-		return (-extinction).exp();
+	return attenuation;
 }
 
-bool Scene::sampleDistance(const Ray &ray, Float maxDist, MediumSamplingRecord &mRec, 
+bool Scene::sampleDistance(const Ray &ray, MediumSamplingRecord &mRec, 
 			Sampler *sampler) const {
 	if (m_media.size() > 0) {
-		return m_media[0]->sampleDistance(ray, maxDist, mRec, sampler);
+		return m_media[0]->sampleDistance(ray, mRec, sampler);
 	} else {
-		mRec.pdf = 1.0f;
-		mRec.miWeight = 1.0f;
+		mRec.pdfFailure = 1.0f;
+		mRec.pdfSuccess = mRec.pdfSuccessRev = 0.0f;
 		mRec.attenuation = Spectrum(1.0f);
 		return false;
+	}
+}
+
+void Scene::pdfDistance(const Ray &ray, Float t, MediumSamplingRecord &mRec) const {
+	if (m_media.size() > 0) {
+		m_media[0]->pdfDistance(ray, t, mRec);
+	} else {
+		mRec.pdfSuccess = mRec.pdfSuccessRev = 0;
+		mRec.attenuation = Spectrum(1.0f);
+		mRec.pdfFailure = 1;
 	}
 }
 
@@ -611,7 +629,7 @@ void Scene::addShape(Shape *shape) {
 void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 
-	stream->writeFloat(m_kdtree->getIntersectionCost());
+	stream->writeFloat(m_kdtree->getQueryCost());
 	stream->writeFloat(m_kdtree->getTraversalCost());
 	stream->writeFloat(m_kdtree->getEmptySpaceBonus());
 	stream->writeInt(m_kdtree->getStopPrims());

@@ -19,6 +19,7 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/render/medium.h>
+#include <mitsuba/render/phase.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -28,14 +29,15 @@ Medium::Medium(const Properties &props)
 	defaultSigmaA.fromLinearRGB(0.0014f, 0.0025f, 0.0142f);
 	defaultSigmaS.fromLinearRGB(0.7f, 1.22f, 1.9f);
 
-	if (props.hasProperty("densityMultiplier"))
-		m_sizeMultiplier = props.getFloat("densityMultiplier");
-	else
-		m_sizeMultiplier = props.getFloat("sizeMultiplier", 1);
+	if (props.hasProperty("sizeMultiplier"))
+		Log(EError, "Deprecation error: the parameter sizeMultiplier"
+			" has been renamed to densityMultiplier");
+
+	m_densityMultiplier = props.getFloat("densityMultiplier", 1);
 	m_sigmaA = props.getSpectrum("sigmaA", defaultSigmaA);
 	m_sigmaS = props.getSpectrum("sigmaS", defaultSigmaS);
-	m_sigmaA *= m_sizeMultiplier;
-	m_sigmaS *= m_sizeMultiplier;
+	m_sigmaA *= m_densityMultiplier;
+	m_sigmaS *= m_densityMultiplier;
 	m_sigmaT = m_sigmaA + m_sigmaS;
 	m_albedo = (m_sigmaS/m_sigmaT).max();
 }
@@ -43,7 +45,7 @@ Medium::Medium(const Properties &props)
 Medium::Medium(Stream *stream, InstanceManager *manager)
  : NetworkedObject(stream, manager) {
 	m_aabb = AABB(stream);
-	m_sizeMultiplier = stream->readFloat();
+	m_densityMultiplier = stream->readFloat();
 	m_sigmaA = Spectrum(stream);
 	m_sigmaS = Spectrum(stream);
 	m_sigmaT = m_sigmaA + m_sigmaS;
@@ -77,15 +79,10 @@ void Medium::configure() {
 void Medium::serialize(Stream *stream, InstanceManager *manager) const {
 	NetworkedObject::serialize(stream, manager);
 	m_aabb.serialize(stream);
-	stream->writeFloat(m_sizeMultiplier);
+	stream->writeFloat(m_densityMultiplier);
 	m_sigmaA.serialize(stream);
 	m_sigmaS.serialize(stream);
 	manager->serialize(stream, m_phaseFunction.get());
-}
-
-Float PhaseFunction::pdf(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const {
-	/* Assumes that the returned value is uniform */
-	return f(mRec, wi, wo)[0];
 }
 
 std::string MediumSamplingRecord::toString() const {
@@ -95,12 +92,14 @@ std::string MediumSamplingRecord::toString() const {
 		<< "  p = " << p.toString() << "," << std::endl
 		<< "  sigmaA = " << sigmaA.toString() << "," << std::endl
 		<< "  sigmaS = " << sigmaS.toString() << "," << std::endl
-		<< "  pdf = " << pdf << "," << std::endl
+		<< "  pdfFailure = " << pdfFailure << "," << std::endl
+		<< "  pdfSuccess = " << pdfSuccess << "," << std::endl
+		<< "  pdfSuccessRev = " << pdfSuccessRev << "," << std::endl
+		<< "  attenuation = " << attenuation.toString() << "," << std::endl
 		<< "  medium = " << indent(((Object *) medium)->toString()) << std::endl
 		<< "]";
 	return oss.str();
 }
 
 MTS_IMPLEMENT_CLASS(Medium, true, NetworkedObject)
-MTS_IMPLEMENT_CLASS(PhaseFunction, true, ConfigurableObject)
 MTS_NAMESPACE_END

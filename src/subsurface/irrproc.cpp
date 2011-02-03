@@ -26,18 +26,22 @@ MTS_NAMESPACE_BEGIN
 /* Parallel irradiance sampling implementation (worker) */
 class IrradianceSamplingWorker : public WorkProcessor {
 public:
-	IrradianceSamplingWorker(size_t sampleCount, int ssIndex) 
-		: m_sampleCount(sampleCount), m_ssIndex(ssIndex) {
+	IrradianceSamplingWorker(size_t sampleCount, int ssIndex, int irrSamples, bool irrIndirect) 
+		: m_sampleCount(sampleCount), m_ssIndex(ssIndex), m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
 	}
 
 	IrradianceSamplingWorker(Stream *stream, InstanceManager *manager) {
 		m_sampleCount = (size_t) stream->readLong();
 		m_ssIndex = stream->readInt();
+		m_irrSamples = stream->readInt();
+		m_irrIndirect = stream->readBool();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		stream->writeLong(m_sampleCount);
 		stream->writeInt(m_ssIndex);
+		stream->writeInt(m_irrSamples);
+		stream->writeBool(m_irrIndirect);
 	}
 
 	ref<WorkUnit> createWorkUnit() const {
@@ -88,14 +92,15 @@ public:
 
 			result->put(IrradianceSample(
 				sRec.p,
-				integrator->E(m_scene.get(), sRec.p, sRec.n, time, m_independentSampler),
+				integrator->E(m_scene.get(), sRec.p, sRec.n, time, 
+					m_independentSampler, m_irrSamples, m_irrIndirect),
 				1/pdf
 			));
 		}
 	}
 
 	ref<WorkProcessor> clone() const {
-		return new IrradianceSamplingWorker(m_sampleCount, m_ssIndex);
+		return new IrradianceSamplingWorker(m_sampleCount, m_ssIndex, m_irrSamples, m_irrIndirect);
 	}
 
 	MTS_DECLARE_CLASS()
@@ -110,6 +115,8 @@ private:
 	std::vector<Shape *> m_shapes;
 	size_t m_sampleCount;
 	int m_ssIndex;
+	int m_irrSamples;
+	bool m_irrIndirect;
 };
 
 void IrradianceRecordVector::load(Stream *stream) {
@@ -134,8 +141,10 @@ std::string IrradianceRecordVector::toString() const {
 }
 
 IrradianceSamplingProcess::IrradianceSamplingProcess(size_t sampleCount, 
-	size_t granularity, int ssIndex, const void *progressReporterPayload) 
-	: m_sampleCount(sampleCount), m_granularity(granularity), m_ssIndex(ssIndex) {
+	size_t granularity, int ssIndex, int irrSamples, bool irrIndirect,
+	const void *progressReporterPayload) 
+	: m_sampleCount(sampleCount), m_granularity(granularity), m_ssIndex(ssIndex), 
+	m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
 	m_resultCount = 0;
 	m_resultMutex = new Mutex();
 	m_samples = new IrradianceRecordVector();
@@ -150,7 +159,8 @@ IrradianceSamplingProcess::~IrradianceSamplingProcess() {
 }
 
 ref<WorkProcessor> IrradianceSamplingProcess::createWorkProcessor() const {
-	return new IrradianceSamplingWorker(m_sampleCount, m_ssIndex);
+	return new IrradianceSamplingWorker(m_sampleCount, m_ssIndex, 
+			m_irrSamples, m_irrIndirect);
 }
 
 ParallelProcess::EStatus IrradianceSamplingProcess::generateWork(WorkUnit *unit, int worker) {

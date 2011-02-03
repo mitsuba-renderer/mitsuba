@@ -43,11 +43,6 @@
 /// Default port of <tt>mtssrv</tt>
 #define MTS_DEFAULT_PORT 7554
 
-#if defined(__LINUX__)
-/// Default resource directory for packaged releases on Linux
-#define MTS_RESOURCE_DIR "/usr/share/mitsuba"
-#endif
-
 using std::cout;
 using std::cerr;
 using std::endl;

@@ -120,6 +120,16 @@ public:
 		irrOctreeMutex->lock();
 		m_octreeIndex = irrOctreeIndex++;
 		irrOctreeMutex->unlock();
+		
+		/* How many samples should be taken when estimating the irradiance at a given point in the scene? 
+		This attribute is currently only used in conjunction with subsurface integrators and
+		can safely be ignored if the scene contains none of them. */
+		m_irrSamples = props.getInteger("irrSamples", 32);
+				
+		/* When estimating the irradiance at a given point, should indirect illumination be included
+		in the final estimate? This attribute is currently only used in conjunction with 
+		subsurface integrators and can safely be ignored if the scene contains none of them. */
+		m_irrIndirect = props.getBoolean("irrIndirect", true);
 
 		/* Multiplicative factor, which can be used to adjust the number of
 		   irradiance samples */
@@ -147,6 +157,8 @@ public:
 		m_minDelta = stream->readFloat();
 		m_maxDepth = stream->readInt();
 		m_octreeIndex = stream->readInt();
+		m_irrSamples = stream->readInt();
+		m_irrIndirect = stream->readBool();
 		m_ready = false;
 		m_octreeResID = -1;
 		configure();
@@ -170,10 +182,12 @@ public:
 		stream->writeFloat(m_minDelta);
 		stream->writeInt(m_maxDepth);
 		stream->writeInt(m_octreeIndex);
+		stream->writeInt(m_irrSamples);
+		stream->writeBool(m_irrIndirect);
 	}
 
 	Spectrum Lo(const Scene *scene, const Intersection &its, const Vector &d) const {
-		if (!m_ready || m_ssFactor.isBlack())
+		if (!m_ready || m_ssFactor.isZero())
 			return Spectrum(0.0f);
 		IsotropicDipoleQuery query(m_zr, m_zv, m_sigmaTr, m_Fdt, its.p);
 	
@@ -277,7 +291,8 @@ public:
 		Assert(index != -1);
 
 		ref<IrradianceSamplingProcess> proc = new IrradianceSamplingProcess(
-			sampleCount, (size_t) std::ceil(sampleCount/100.0f), index, job);
+			sampleCount, (size_t) std::ceil(sampleCount/100.0f), index, 
+			m_irrSamples, m_irrIndirect, job);
 
 		proc->bindResource("scene", sceneResID);
 		scene->bindUsedResources(proc);
@@ -321,6 +336,8 @@ private:
 	ref<ParallelProcess> m_proc;
 	int m_octreeResID, m_octreeIndex;
 	int m_maxDepth;
+	int m_irrSamples;
+	bool m_irrIndirect;
 	bool m_ready, m_requireSample;
 };
 

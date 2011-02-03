@@ -108,7 +108,7 @@ public:
 	/// Area probability density
 	Float pdfArea;
 
-	/// Directional probability density (wrt. projected solid angles)
+	/// Directional probability density (wrt. solid angle)
 	Float pdfDir;
 };
 
@@ -122,7 +122,8 @@ public:
 		EDeltaDirection = 0x1,
 		EDiffuseDirection = 0x02,
 		EOnSurface = 0x04,
-		EDeltaPosition = 0x8
+		EDeltaPosition = 0x8,
+		EDelta = EDeltaDirection | EDeltaPosition
 	};
 
 	/// ================= Direct illumination sampling ================= 
@@ -164,7 +165,7 @@ public:
 	 * the luminaire sampling strategy implemented by this class.
 	 */
 	virtual Float pdf(const Point &p, 
-		const LuminaireSamplingRecord &lRec) const = 0;
+		const LuminaireSamplingRecord &lRec, bool delta) const = 0;
 
 	/**
 	 * Calculate the probability of generating this sample using
@@ -172,7 +173,7 @@ public:
 	 * (as above, but for surface interactions)
 	 */
 	virtual Float pdf(const Intersection &its, 
-		const LuminaireSamplingRecord &lRec) const = 0;
+		const LuminaireSamplingRecord &lRec, bool delta) const = 0;
 
 	/// ================= Emission sampling ================= 
 
@@ -204,9 +205,10 @@ public:
 
 	/**
 	 * Given an emitted particle, populate the emission record with the relevant 
-	 * probability densities.
+	 * probability densities. When \a delta is set to true, only components
+	 * with a Dirac delta density are queried.
 	 */
-	virtual void pdfEmission(EmissionRecord &eRec) const = 0;
+	virtual void pdfEmission(EmissionRecord &eRec, bool delta) const = 0;
 
 	/**
 	 * Evaluate the directional scattering distribution of this light source
@@ -224,9 +226,16 @@ public:
 	/// ================= Misc. ================= 
 
 	/**
-	 * Return the total surface area (potentially zero)
+	 * \brief Fill the supplied emission record with information matching 
+	 * the associated ray.
+	 *
+	 * This function is only relevant to background luminaires. The default
+	 * implementation throws an exception, which states that the method is
+	 * unimplemented.
+	 *
+	 * \return \a true upon success
 	 */
-	inline Float getSurfaceArea() const { return m_surfaceArea; }
+	virtual bool createEmissionRecord(EmissionRecord &eRec, const Ray &ray) const;
 
 	/**
 	 * Return an estimate of the total amount of power emitted 
@@ -242,6 +251,9 @@ public:
 
 	/// Serialize this luminaire to disk
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
+	
+	/// Return the name of this luminaire
+	inline const std::string &getName() const { return m_name; }
 
 	/// Return the luminaire type
 	inline int getType() const { return m_type; }
@@ -267,10 +279,10 @@ protected:
 	virtual ~Luminaire();
 protected:
 	Transform m_worldToLuminaire, m_luminaireToWorld;
-	Float m_surfaceArea;
 	Float m_samplingWeight;
 	int m_type;
 	bool m_intersectable;
+	std::string m_name;
 };
 
 MTS_NAMESPACE_END

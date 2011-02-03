@@ -17,7 +17,7 @@
 */
 
 #include <mitsuba/render/scene.h>
-#include <mitsuba/core/fresolver.h>
+#include <mitsuba/render/volume.h>
 #include <fstream>
 
 MTS_NAMESPACE_BEGIN
@@ -28,679 +28,394 @@ MTS_NAMESPACE_BEGIN
  * specified how many times the step size will be reduced when we
  * have almost reached the desired value.
  */
-#define NUM_REFINES 10
+#define NUM_REFINES 8
 
 /**
- * Heterogeneous medium class using trilinear interpolation, 
- * Simpson quadrature and one of several possible sampling
- * strategies. Data files have to be provided in an ASCII
- * format as follows:
+ * Allow to stop integrating densities when the resulting segment
+ * has a throughput of less than 'Epsilon'
+ */
+#define HET_EARLY_EXIT 1
+
+/**
+ * Flexible heterogeneous medium implementation, which acquires its data from 
+ * nested <tt>Volume</tt> instances. These can be constant, use a procedural 
+ * function, or fetch data from disk, e.g. using a memory-mapped density grid.
  *
- * - The first three numbers determine the X,Y and Z resolution,
- *   each of which has to be larger than 2.
- * - The next six numbers determine the minimum X, Y and Z
- *   as well as the maximum X, Y and Z values of the enclosing
- *   axis-aligned bounding box.
- * - Afterwards, (xres*yres*zres) density samples follow in 
- *   XYZ order, (e.g. the second entry has coordinate x=2).
+ * Instead of allowing separate volumes to be provided for the scattering
+ * parameters sigma_s and sigma_t, this class instead takes the approach of 
+ * enforcing a spectrally uniform sigma_t, which must be provided using a 
+ * nested scalar-valued volume named 'density'.
+ *
+ * A nested spectrum-valued 'albedo' volume must also be provided, which is 
+ * used to compute the parameter sigma_s using the expression
+ * "sigma_s = density * albedo" (i.e. 'albedo' contains the single-scattering
+ * albedo of the medium).
+ *
+ * Optionally, one can also provide an vector-valued 'orientation' volume,
+ * which contains local particle orientations that will be passed to
+ * scattering models such as Kajiya-Kay phase function.
  */
 class HeterogeneousMedium : public Medium {
 public:
-	/*
-	 * We want to generate realizations of a random variable, which has a 
-	 * cumulative distribution function given by
-	 *
-	 * F(t) := 1 - \int_0^t \sigma_t(s) \exp(\int_0^s \sigma_t(s') ds') ds
-	 */
-	enum ESamplingStrategy {
-		/* Standard approach: generate a 'desired' accumulated density by 
-		   sampling an exponentially distributed random variable. Afterwards,
-		   try to find the distance, at which this much density has been 
-		   accumulated. The composite Simpson's rule is used to integrate 
-		   densities along the ray */
-		EStandard,
-
-		/* Naive variant for verification purposes: uniformly sample a distance
-		   along the ray segment intersecting the volume */
-		EUniform,
-
-		/* Double integral approach - stupid and slow, but it also works.. */
-		EDoubleIntegral,
-
-		/* Rejection sampling approach by [Coleman et al., 1967]. Only for 
-		   media with a wavelength-independent extinction coefficient 
-		   (see below) */
-		EColeman
-	};
-
 	HeterogeneousMedium(const Properties &props) 
-		: Medium(props), m_data(NULL), m_empty(NULL) {
-		std::string strategy = props.getString("strategy", "standard");
-
-		if (strategy == "standard") {
-			m_strategy = EStandard;
-		} else if (strategy == "uniform") {
-			m_strategy = EUniform;
-		} else if (strategy == "double") {
-			m_strategy = EDoubleIntegral;
-		} else if (strategy == "coleman") {
-			m_strategy = EColeman;
-			for (size_t i=1; i<SPECTRUM_SAMPLES; ++i)
-				if (m_sigmaT[i] != m_sigmaT[0])
-					Log(EError, "The [Coleman et al.] sampling strategy is not supported "
-						"for colored media - computing the attenuation "
-						"of individual channels requires integrating volume densities, "
-						"which this strategy was trying to avoid..");
-		} else {
-			Log(EError, "Specified an unknown sampling strategy");
-		}
-
-	
-		fs::path volData = Thread::getThread()->getFileResolver()->resolve(
-			props.getString("filename"));
-
-		/* Medium to world transformation - can't have nonuniform scales. Also note 
-		   that a uniform scale factor of 100 will not reduce densities by that 
-		   amount */
-		m_mediumToWorld = props.getTransform("toWorld", Transform());
-
-		Log(EInfo, "Loading volume data from \"%s\" ..", volData.file_string().c_str());
-		fs::ifstream is(volData);
-		if (is.bad() || is.fail())
-			Log(EError, "Invalid medium data file specified");
-
-		/* While integrating density along a ray, approximately one sample
-		   per voxel is taken - that number can be changed here */
-		m_stepSizeFactor = props.getFloat("stepSizeFactor", 1.0f);
-
-		Float proposedSigma = std::numeric_limits<Float>::infinity();
-		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-			proposedSigma = std::min(proposedSigma, m_sigmaT[i]);
-		
-		/* Can be used to override the extinction coefficient used to sample distances 
-			in the in-scatter line integral. By default, the smallest spectral sample of 
-			<tt>sigmaA+sigmaT</tt> is used. */
-		m_sigma = props.getFloat("sigma", proposedSigma);
-
-		/* [Fedkiw et al.] volume density format */
-		is >> m_res.x; 
-		is >> m_res.y; 
-		is >> m_res.z;
-		is >> m_dataAABB.min.x; is >> m_dataAABB.min.y; is >> m_dataAABB.min.z;
-		is >> m_dataAABB.max.x; is >> m_dataAABB.max.y; is >> m_dataAABB.max.z;
-
-		m_aabb.reset();
-		for (int i=0; i<8; ++i)
-			m_aabb.expandBy(m_mediumToWorld(m_dataAABB.getCorner(i)));
-
-		m_data = new Float[m_res.x * m_res.y * m_res.z];
-
-		for (int i=0; i<m_res.x*m_res.y*m_res.z; ++i)
-			is >> m_data[i];
+		: Medium(props) {
+		m_kdTree = new ShapeKDTree();
+		m_stepSize = props.getFloat("stepSize", 0);
 	}
 
 	/* Unserialize from a binary data stream */
 	HeterogeneousMedium(Stream *stream, InstanceManager *manager) 
 		: Medium(stream, manager) {
-		m_res = Vector3i(stream);
-		m_mediumToWorld = Transform(stream);
-		m_dataAABB = AABB(stream);
-		m_strategy = (ESamplingStrategy) stream->readInt();
-		m_sigma = stream->readFloat();
-		m_stepSizeFactor = stream->readFloat();
-		m_data = new Float[m_res.x * m_res.y * m_res.z];
-		stream->readFloatArray(m_data, m_res.x*m_res.y*m_res.z);
+		m_kdTree = new ShapeKDTree();
+		size_t shapeCount = stream->readUInt();
+		for (size_t i=0; i<shapeCount; ++i) 
+			addChild("", static_cast<Shape *>(manager->getInstance(stream)));
+		m_densities = static_cast<VolumeDataSource *>(manager->getInstance(stream));
+		m_albedo = static_cast<VolumeDataSource *>(manager->getInstance(stream));
+		m_orientations = static_cast<VolumeDataSource *>(manager->getInstance(stream));
+		m_stepSize = stream->readFloat();
 		configure();
 	}
 
-	void configure() {
-		Medium::configure();
-
-		m_voxels.x = m_res.x-1; m_voxels.y = m_res.y-1; m_voxels.z = m_res.z-1;
-		m_empty = new bool[m_voxels.x*m_voxels.y*m_voxels.z];
-		m_extents = m_dataAABB.getExtents();
-
-		for (int i=0; i<3; ++i)
-			m_cellWidth[i] = m_extents[i] / (Float) m_voxels[i];
-
-		size_t nPoints = m_res.x*m_res.y*m_res.z;
-		m_maxDensity = 0;
-		for (size_t i=0; i<nPoints; ++i) 
-			m_maxDensity = std::max(m_maxDensity, m_data[i]);
-
-		/* Take note of completely empty areas */
-		int numEmpty = 0;
-		for (int x1=0; x1<m_voxels.x; ++x1) {
-			for (int y1=0; y1<m_voxels.y; ++y1) {
-				for (int z1=0; z1<m_voxels.z; ++z1) {
-					const int x2 = x1+1, y2 = y1+1, z2 = z1+1;
-					const Float
-						d000 = m_data[(z1*m_res.y + y1)*m_res.x + x1],
-						d001 = m_data[(z1*m_res.y + y1)*m_res.x + x2],
-						d010 = m_data[(z1*m_res.y + y2)*m_res.x + x1],
-						d011 = m_data[(z1*m_res.y + y2)*m_res.x + x2],
-						d100 = m_data[(z2*m_res.y + y1)*m_res.x + x1],
-						d101 = m_data[(z2*m_res.y + y1)*m_res.x + x2],
-						d110 = m_data[(z2*m_res.y + y2)*m_res.x + x1],
-						d111 = m_data[(z2*m_res.y + y2)*m_res.x + x2];
-
-					int pos = x1+m_voxels.x*(y1 + m_voxels.y * z1);
-					if (d000 == 0 && d001 == 0 && d010 == 0 && d011 == 0 &&
-						d100 == 0 && d101 == 0 && d110 == 0 && d111 == 0) {
-						numEmpty++;
-						m_empty[pos] = true;
-					} else {
-						m_empty[pos] = false;
-					}
-				}
-			}
-		}
-
-		m_worldToMedium = m_mediumToWorld.inverse();
-		Float scaleFactor = m_mediumToWorld(Vector(0,0,1)).length();
-		m_stepSize = std::numeric_limits<Float>::infinity();
-		for (int i=0; i<3; ++i)
-			m_stepSize = std::min(m_stepSize, m_extents[i] / (Float) (m_res[i]-1));
-		m_stepSize *= scaleFactor * m_stepSizeFactor;
-		int voxelCount = m_voxels.x*m_voxels.y*m_voxels.z;
-		Log(EInfo, "Resolution: %ix%ix%i, %s, %i voxels, %.1f%% empty", m_res.x, m_res.y, 
-			m_res.z, m_dataAABB.toString().c_str(), voxelCount, 100*numEmpty/(Float) voxelCount);
-	}
-
 	virtual ~HeterogeneousMedium() {
-		if (m_data)
-			delete[] m_data;
-		if (m_empty)	
-			delete[] m_empty;
+		for (size_t i=0; i<m_shapes.size(); ++i)
+			m_shapes[i]->decRef();
 	}
 
 	/* Serialize the volume to a binary data stream */
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Medium::serialize(stream, manager);
-
-		m_res.serialize(stream);
-		m_mediumToWorld.serialize(stream);
-		m_dataAABB.serialize(stream);
-		stream->writeInt(m_strategy);
-		stream->writeFloat(m_sigma);
-		stream->writeFloat(m_stepSizeFactor);
-		stream->writeFloatArray(m_data, m_res.x*m_res.y*m_res.z);
+		stream->writeUInt((uint32_t) m_shapes.size());
+		for (size_t i=0; i<m_shapes.size(); ++i)
+			manager->serialize(stream, m_shapes[i]);
+		manager->serialize(stream, m_densities.get());
+		manager->serialize(stream, m_albedo.get());
+		manager->serialize(stream, m_orientations.get());
+		stream->writeFloat(m_stepSize);
 	}
 
-	/* Evaluate the density using trilinear interpolation */
-	inline Float eval(const Point &p) const {
-		if (p.x < 0 || p.y < 0 || p.z < 0)
-			return 0.0f;
-		const int x1 = (int) p.x, y1 = (int) p.y, z1 = (int) p.z,
-				  x2 = x1+1, y2 = y1+1, z2 = z1+1;
+	void configure() {
+		Medium::configure();
+		if (m_densities.get() == NULL)
+			Log(EError, "No densities specified!");
+		if (m_albedo.get() == NULL)
+			Log(EError, "No albedo specified!");
 
-		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x || y2 >= m_res.y || z2 >= m_res.z) {
-			/* Do an integer bounds test (may seem redundant - this is
-			   to avoid a segfault, should a NaN/Inf ever find its way here..) */
-			return 0;
+		if (m_shapes.size() != 0) {
+			m_kdTree->build();
+			m_aabb = m_kdTree->getAABB();
+		} else {
+			m_aabb = m_densities->getAABB();
 		}
 
-		if (m_empty[x1 + m_voxels.x * (y1 + m_voxels.y * z1)]) 
-			return 0.0f;
+		if (m_stepSize == 0) {
+			m_stepSize = std::min(
+				m_densities->getStepSize(), m_albedo->getStepSize());
+			if (m_orientations != NULL)
+				m_stepSize = std::min(m_stepSize,
+					m_orientations->getStepSize());
 
-		const Float fx = p.x-x1, fy = p.y-y1, fz = p.z-z1,
-				_fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f-fz;
-
-		const Float
-			d000 = m_data[(z1*m_res.y + y1)*m_res.x + x1],
-			d001 = m_data[(z1*m_res.y + y1)*m_res.x + x2],
-			d010 = m_data[(z1*m_res.y + y2)*m_res.x + x1],
-			d011 = m_data[(z1*m_res.y + y2)*m_res.x + x2],
-			d100 = m_data[(z2*m_res.y + y1)*m_res.x + x1],
-			d101 = m_data[(z2*m_res.y + y1)*m_res.x + x2],
-			d110 = m_data[(z2*m_res.y + y2)*m_res.x + x1],
-			d111 = m_data[(z2*m_res.y + y2)*m_res.x + x2];
-
-		return ((d000*_fx + d001*fx)*_fy +
-				(d010*_fx + d011*fx)*fy)*_fz +
-			   ((d100*_fx + d101*fx)*_fy +
-				(d110*_fx + d111*fx)*fy)*fz;
+			if (m_stepSize == std::numeric_limits<Float>::infinity()) 
+				Log(EError, "Unable to infer step size, please specify!");
+		}
 	}
 
-	Spectrum tau(const Ray &r) const {
-		/* Ensure we're dealing with a normalized ray */
-		Float rayLength = r.d.length();
-		Ray ray;
-		m_worldToMedium(r, ray);
-		ray.setDirection(ray.d/rayLength);
-		ray.maxt *= rayLength;
-		ray.mint *= rayLength;
+	void addChild(const std::string &name, ConfigurableObject *child) {
+		if (child->getClass()->derivesFrom(Shape::m_theClass)) {
+			Shape *shape = static_cast<Shape *>(child);
+			if (shape->isCompound()) {
+				int ctr = 0;
+				while (true) {
+					ref<Shape> childShape = shape->getElement(ctr++);
+					if (!childShape)
+						break;
+					addChild("", childShape);
+				}
+			} else {
+				m_kdTree->addShape(shape);
+				shape->incRef();
+				m_shapes.push_back(shape);
+			}
+		} else if (child->getClass()->derivesFrom(VolumeDataSource::m_theClass)) {
+			VolumeDataSource *volume = static_cast<VolumeDataSource *>(child);
 
-		/* Intersect against the AABB containing the medium.
-	       Slightly offset to avoid zero samples at the endpoints */
-		Float mint, maxt;
-		if (!m_dataAABB.rayIntersect(ray, mint, maxt))
-			return Spectrum(0.0f);
-
-		mint = std::max(ray.mint, mint+Epsilon);
-		maxt = std::min(ray.maxt, maxt-Epsilon);
-
-		if (mint >= maxt) 
-			return Spectrum(0.0f);
-
-		/* Traverse directly in grid coordinates */
-		ray.o = Point(ray(mint)-m_dataAABB.min);
-		for (int i=0; i<3; ++i) {
-			ray.o[i] /= m_cellWidth[i];
-			ray.d[i] /= m_cellWidth[i];
+			if (name == "albedo") {
+				Assert(volume->supportsSpectrumLookups());
+				m_albedo = volume;
+			} else if (name == "density") {
+				Assert(volume->supportsFloatLookups());
+				m_densities = volume;
+			} else if (name == "orientations") {
+				Assert(volume->supportsVectorLookups());
+				m_orientations = volume;
+			}
+		} else {
+			Medium::addChild(name, child);
 		}
-		maxt -= mint;
+	}
+	
+	/**
+	 * \brief Intersect a ray with the stencil and 
+	 * determine whether it started on the inside
+	 */
+	inline bool rayIntersect(const Ray &ray, Float &t, bool &inside) const {
+		if (m_shapes.size() != 0) {
+			Intersection its;
+			if (!m_kdTree->rayIntersect(ray, its)) 
+				return false;
+			inside = dot(its.geoFrame.n, ray.d) > 0;
+			t = its.t;
+		} else {
+			Float mint, maxt;
+			if (!m_aabb.rayIntersect(ray, mint, maxt))
+				return false;
+			if (mint <= ray.mint && maxt <= ray.mint)
+				return false;
+			inside = mint <= 0 && maxt > 0;
+			t = (mint <= 0) ? maxt : mint;
+		}
+		return true;
+	}
 
-		/* Composite Simpson's rule */
-		int nParts = (int) std::ceil(maxt/m_stepSize);
+	/// Integrate densities using the composite Simpson's rule
+	inline Float integrateDensity(Ray ray, Float length) const {
+		if (length == 0)
+			return 0.0f;
+		int nParts = (int) std::ceil(length/m_stepSize);
 		nParts += nParts % 2;
-		const Float stepSize = maxt/nParts;
+		const Float stepSize = length/nParts;
 		const Vector increment = ray.d * stepSize;
 
-		Float m=4, accumulatedDensity = eval(ray.o) + eval(ray(maxt));
+		Float m = 4;
+		Float accumulatedDensity = m_densities->lookupFloat(ray.o) 
+			+ m_densities->lookupFloat(ray(length));
+#ifdef HET_EARLY_EXIT
+		const Float stopAfterDensity = -std::log(Epsilon);
+		const Float stopValue = stopAfterDensity*3/(stepSize
+				* m_densityMultiplier);
+#endif
+
 		ray.o += increment;
 		for (int i=1; i<nParts; ++i) {
-			accumulatedDensity += m*eval(ray.o);
+			Float value = m_densities->lookupFloat(ray.o);
+			accumulatedDensity += value*m;
+			Point tmp = ray.o;
 			ray.o += increment;
-			m = 6-m;
+
+			if (ray.o == tmp) {
+				Log(EWarn, "integrateDensity(): failed to make forward progress -- "
+						"round-off error issues? The step size was %f", stepSize);
+				break;
+			}
+
+#ifdef HET_EARLY_EXIT
+			if (accumulatedDensity > stopValue) // Stop early
+				return std::numeric_limits<Float>::infinity();
+#endif
+			m = 6 - m;
 		}
 		accumulatedDensity *= stepSize/3;
 
-		return m_sigmaT * accumulatedDensity;
+		return accumulatedDensity * m_densityMultiplier;
 	}
 
-	bool sampleDistance(const Ray &r, Float maxDist, 
-			MediumSamplingRecord &mRec,  Sampler *sampler) const {
-		if (m_strategy == EStandard)
-			return importanceSampleStandard(r, maxDist, mRec, sampler);
-		else if (m_strategy == EUniform)
-			return uniformlySampleDistance(r, maxDist, mRec, sampler);
-		else if (m_strategy == EDoubleIntegral)
-			return importanceSampleDoubleIntegral(r, maxDist, mRec, sampler);
-		else
-			return importanceSampleColeman(r, maxDist, mRec, sampler);
-	}
+	/**
+	 * \brief Integrate the density covered by the specified ray
+	 * segment, while clipping the volume to the underlying
+	 * stencil volume.
+	 */
+	inline Float integrateDensity(const Ray &r) const {
+		Ray ray(r(r.mint), r.d,
+			0, std::numeric_limits<Float>::infinity(), 0.0f);
+		Float integral = 0, remaining = r.maxt - r.mint;
+		int iterations = 0;
+		bool inside = false;
+		Float t = 0;
 
-	bool importanceSampleStandard(const Ray &r, Float maxDist, 
-			MediumSamplingRecord &mRec,  Sampler *sampler) const {
-		/* Ensure we're dealing with a normalized ray */
-		Float rayLength = r.d.length();
-		Ray ray;
-		m_worldToMedium(r, ray);
-		ray.setDirection(ray.d/rayLength);
-		maxDist *= rayLength;
-		ray.mint *= rayLength;
+		while (remaining > 0 && rayIntersect(ray, t, inside)) {
+			if (inside) 
+				integral += integrateDensity(ray, std::min(remaining, t));
 
-		/* Intersect against the AABB containing the medium.
-	       Slightly offset to avoid zero samples at the endpoints */
-		Float mint, maxt;
-		mRec.pdf = 1; mRec.miWeight = 1; mRec.attenuation = Spectrum(1.0f);
-		if (!m_dataAABB.rayIntersect(ray, mint, maxt))
-			return false;
+			remaining -= t;
+			ray.o = ray(t);
+			ray.mint = Epsilon;
 
-		mint = std::max(ray.mint, mint+Epsilon);
-		maxt = std::min(maxDist, maxt-Epsilon);
-
-		if (mint >= maxt) 
-			return false;
-
-		/* Traverse directly in grid coordinates */
-		ray.o = Point(ray(mint)-m_dataAABB.min);
-		for (int i=0; i<3; ++i) {
-			ray.o[i] /= m_cellWidth[i];
-			ray.d[i] /= m_cellWidth[i];
+			if (++iterations > 100) {
+				/// Just a precaution..
+				Log(EWarn, "integrateDensity(): round-off error issues?");
+				break;
+			}
 		}
-		maxt -= mint;
-		Float sigmaT = m_sigma;
+		return integral;
+	}
 
-		int nParts = (int) std::ceil(maxt/m_stepSize);
-		Float stepSize = maxt/nParts;
+	/**
+	 * Attempts to solve the following 1D integral equation for 't'
+	 * \int_0^t density(ray.o + x * ray.d) * dx + accumulatedDensity == desiredDensity.
+	 * When no solution can be found in [0, maxDist] the function returns
+	 * false. For convenience, the function returns the current values of sigmaT 
+	 * and the albedo, as well as the 3D position 'ray.o+t*ray.d' upon
+	 * success.
+	 */
+	bool invertDensityIntegral(Ray ray, Float maxDist, 
+			Float &accumulatedDensity, Float desiredDensity,
+			Float &currentSigmaT, Spectrum &currentAlbedo, 
+			Point &currentPoint) const {
+		if (maxDist == 0)
+			return std::numeric_limits<Float>::infinity();
+		int nParts = (int) std::ceil(maxDist/m_stepSize);
+		Float stepSize = maxDist/nParts;
 		Vector fullIncrement = ray.d * stepSize,
 			   halfIncrement = fullIncrement * .5f;
 
-		Float t=0, desiredDensity = -std::log(1-sampler->next1D())/sigmaT,
-			  lastNode = eval(ray.o), accumulatedDensity = 0;
-
-		bool success = false;
+		Float node1 = m_densities->lookupFloat(ray.o);
+		Float t = 0;
 		int numRefines = 0;
+		bool success = false;
 
-		while (t <= maxt) {
-			const Float node1 = lastNode,
-						node2 = eval(ray.o + halfIncrement),
-						node3 = eval(ray.o + fullIncrement);
-			const Float newDensity = accumulatedDensity + stepSize / 6 * (node1+4*node2+node3);
-			
+		while (t <= maxDist) {
+			Float node2 = m_densities->lookupFloat(ray.o + halfIncrement),
+				  node3 = m_densities->lookupFloat(ray.o + fullIncrement);
+			const Float newDensity = accumulatedDensity 
+				+ (node1+node2*4+node3) * (stepSize/6) * m_densityMultiplier;
+
 			if (newDensity > desiredDensity) {
-				if (++numRefines > NUM_REFINES) {
-					lastNode = node3;
+				if (t+stepSize/2 <= maxDist) {
+					/* Record the last "good" scattering event */
 					success = true;
-					break;
+					if (EXPECT_TAKEN(node2 != 0)) {
+						currentPoint = ray.o + halfIncrement;
+						currentSigmaT = node2;
+					} else if (node3 != 0 && t+stepSize <= maxDist) {
+						currentPoint = ray.o + fullIncrement;
+						currentSigmaT = node3;
+					} else if (node1 != 0) {
+						currentPoint = ray.o;
+						currentSigmaT = node1;
+					}
 				}
 
+				if (++numRefines > NUM_REFINES)
+					break;
+
 				stepSize *= .5f;
-				fullIncrement *= .5f;
+				fullIncrement = halfIncrement;
 				halfIncrement *= .5f;
 				continue;
 			}
-		
-			accumulatedDensity = newDensity;
-			lastNode = node3;
-			t += stepSize;
-			ray.o += fullIncrement;
-		}
-
-		if (!success) {
-			/* Could not achieve the desired density - hit the next surface instead */
-			mRec.pdf = std::exp(-accumulatedDensity * sigmaT);
-			mRec.attenuation = (m_sigmaT * (-accumulatedDensity)).exp();
-			return false;
-		}
-
-		mRec.t = t+mint;
-		mRec.p = r(mRec.t);
-		mRec.pdf = std::exp(-accumulatedDensity * sigmaT) * lastNode * sigmaT;
-		mRec.attenuation = (m_sigmaT * (-accumulatedDensity)).exp();
-		mRec.sigmaA = m_sigmaA * lastNode;
-		mRec.sigmaS = m_sigmaS * lastNode;
-		mRec.albedo = m_albedo;
-		mRec.medium = this;
-
-		return true;
-	}
-
-	bool importanceSampleDoubleIntegral(const Ray &r, Float maxDist, 
-			MediumSamplingRecord &mRec,  Sampler *sampler) const {
-		/* Ensure we're dealing with a normalized ray */
-		Float rayLength = r.d.length();
-		Ray ray;
-		m_worldToMedium(r, ray);
-		ray.setDirection(ray.d/rayLength);
-		maxDist *= rayLength;
-		ray.mint *= rayLength;
-
-		/* Intersect against the AABB containing the medium.
-	       Slightly offset to avoid zero samples at the endpoints */
-		Float mint, maxt;
-		mRec.pdf = 1; mRec.miWeight = 1; mRec.attenuation = Spectrum(1.0f);
-		if (!m_dataAABB.rayIntersect(ray, mint, maxt))
-			return false;
-
-		mint = std::max(ray.mint, mint+Epsilon);
-		maxt = std::min(maxDist, maxt-Epsilon);
-
-		if (mint >= maxt) 
-			return false;
-
-		/* Traverse directly in grid coordinates */
-		ray.o = Point(ray(mint)-m_dataAABB.min);
-		for (int i=0; i<3; ++i) {
-			ray.o[i] /= m_cellWidth[i];
-			ray.d[i] /= m_cellWidth[i];
-		}
-		maxt -= mint;
-		Float sigmaT = m_sigma;
-		Float innerIntegral = 0, outerIntegral = 0;
-
-		int nParts = (int) std::ceil(maxt/m_stepSize);
-		Float stepSize = maxt/nParts, halfStepSize = stepSize *.5f;
-		Vector fullIncrement = ray.d * stepSize,
-			   halfIncrement = fullIncrement * .5f,
-			   quarterIncrement = halfIncrement * .5f;
-		Float lastNode = eval(ray.o);
-		Ray rayBackup(ray);
-
-		/* First pass: normalization */
-		for (int i=0; i<nParts; ++i) {
-			/* Inner integral: integrate density \rho(t) */
-			const Float node1 = lastNode,
-						node2 = eval(ray.o + quarterIncrement),
-						node3 = eval(ray.o + halfIncrement),
-						node4 = eval(ray.o + halfIncrement + quarterIncrement),
-						node5 = eval(ray.o + fullIncrement);
-
-			/* Simpson's rule with twice the resolution */
-			const Float innerIntegralMiddle = innerIntegral 
-							+ halfStepSize / 6 * (node1 + 4*node2 + node3),
-						innerIntegralRight = innerIntegralMiddle
-							+ halfStepSize / 6 * (node3 + 4*node4 + node5);
-
-			/* Outer integral: integrate \rho(s) exp(-\int_0^t \sigma_t \rho(s) ds) */
-			const Float contributionLeft   = std::exp(-innerIntegral*sigmaT)       * node1,
-						contributionMiddle = std::exp(-innerIntegralMiddle*sigmaT) * node3,
-						contributionRight  = std::exp(-innerIntegralRight*sigmaT)  * node5;
-
-			const Float outerIntegralRight = outerIntegral + 
-				stepSize / 6 * (contributionLeft + 4*contributionMiddle + contributionRight);
-
-			innerIntegral = innerIntegralRight;
-			outerIntegral = outerIntegralRight;
-			lastNode = node5;
-			ray.o += fullIncrement;
-		}
-
-		Float t=0, xi = sampler->next1D();
-		const Float totalAttenuation = std::exp(-innerIntegral * sigmaT);
-
-		if (xi < totalAttenuation) {
-			/* Sample the surface instead */
-			mRec.pdf = totalAttenuation;
-			mRec.attenuation = (m_sigmaT * (-innerIntegral)).exp();
-			return false;
-		} else {
-			mRec.pdf = 1-totalAttenuation;
-			xi = (xi-totalAttenuation)/mRec.pdf;
-		}
-		const Float normFactor = 1.0f / outerIntegral;
-
-		/* Second pass: invert the outer integral */
-		innerIntegral = 0; outerIntegral = 0;
-		ray = rayBackup; lastNode = eval(ray.o);
-
-		bool success = false;
-		int numRefines = 0;
-
-		while (t <= maxt) {
-			/* Inner integral: integrate density \rho(t) */
-			const Float node1 = lastNode,
-						node2 = eval(ray.o + quarterIncrement),
-						node3 = eval(ray.o + halfIncrement),
-						node4 = eval(ray.o + halfIncrement + quarterIncrement),
-						node5 = eval(ray.o + fullIncrement);
 			
-			/* Simpson's rule with twice the resolution */
-			const Float innerIntegralMiddle = innerIntegral 
-							+ halfStepSize / 6 * (node1+4*node2+node3),
-						innerIntegralRight = innerIntegralMiddle
-							+ halfStepSize / 6 * (node3+4*node4+node5);
+			if (ray.o+fullIncrement == ray.o) /* Unable to make forward progress - stop */
+				break;
 
-			/* Outer integral: integrate \rho(s) exp(-\int_0^t \sigma_t \rho(s) ds) */
-			const Float contributionLeft   = std::exp(-innerIntegral*sigmaT)       * node1 * normFactor,
-						contributionMiddle = std::exp(-innerIntegralMiddle*sigmaT) * node3 * normFactor,
-						contributionRight  = std::exp(-innerIntegralRight*sigmaT)  * node5 * normFactor;
-
-			const Float outerIntegralRight = outerIntegral + 
-				stepSize / 6 * (contributionLeft + 4*contributionMiddle + contributionRight);
-
-			if (outerIntegralRight > xi) {
-				if (++numRefines > NUM_REFINES) {
-					outerIntegral = outerIntegralRight;
-					mRec.pdf *= contributionRight;
-					lastNode = node5;
-					success = true;
-					break;
-				}
-
-				stepSize *= .5f;
-				halfStepSize *= .5f;
-				fullIncrement *= .5f;
-				halfIncrement *= .5f;
-				quarterIncrement *= .5f;
-				continue;
-			}
-		
-			innerIntegral = innerIntegralRight;
-			outerIntegral = outerIntegralRight;
-			lastNode = node5;
+			accumulatedDensity = newDensity;
+			node1 = node3;
 			t += stepSize;
 			ray.o += fullIncrement;
 		}
 
-		if (!success) {
-			/* Left the integration domain due to round-off errors */
-			mRec.pdf = 1;
-			lastNode = 0;
-		}
+		if (success) 
+			currentAlbedo = m_albedo->lookupSpectrum(currentPoint);
 
-		mRec.t = t+mint;
-		mRec.p = r(mRec.t);
-		mRec.attenuation = (m_sigmaT * (-innerIntegral)).exp();
-		mRec.sigmaA = m_sigmaA * lastNode;
-		mRec.sigmaS = m_sigmaS * lastNode;
-		mRec.albedo = m_albedo;
-		mRec.medium = this;
-
-		return true;
+		return success;
 	}
 
-	bool importanceSampleColeman(const Ray &r, Float maxDist, 
-			MediumSamplingRecord &mRec,  Sampler *sampler) const {
-		/* Ensure we're dealing with a normalized ray */
-		Float rayLength = r.d.length();
-		Ray ray;
-		m_worldToMedium(r, ray);
-		ray.setDirection(ray.d/rayLength);
-		maxDist *= rayLength;
-		ray.mint *= rayLength;
+	/// Evaluate the attenuation along a ray segment
+	Spectrum tau(const Ray &ray) const {
+		return Spectrum(std::exp(-integrateDensity(ray)));
+	}
 
-		/* Intersect against the AABB containing the medium.
-	       Slightly offset to avoid zero samples at the endpoints */
-		Float mint, maxt;
-		mRec.pdf = 1; mRec.miWeight = 1; mRec.attenuation = Spectrum(1.0f);
-		if (!m_dataAABB.rayIntersect(ray, mint, maxt))
-			return false;
+	bool sampleDistance(const Ray &r, MediumSamplingRecord &mRec,
+			Sampler *sampler) const {
+		Ray ray(r(r.mint), r.d, 0.0f);
+		Float distSurf       = r.maxt - r.mint,
+			  desiredDensity     = -std::log(1-sampler->next1D()),
+			  accumulatedDensity = 0.0f,
+			  currentSigmaT  = 0.0f;
+		Spectrum currentAlbedo(0.0f);
+		int iterations = 0;
+		bool inside = false, success = false;
+		Float t = 0;
+		Float sigmaTOrigin = m_densities->lookupFloat(ray.o) * m_densityMultiplier;
 
-		mint = std::max(ray.mint, mint+Epsilon);
-		maxt = std::min(maxDist, maxt-Epsilon);
-
-		if (mint >= maxt) 
-			return false;
-
-		/* Traverse directly in grid coordinates */
-		ray.o = Point(ray(mint)-m_dataAABB.min);
-		for (int i=0; i<3; ++i) {
-			ray.o[i] /= m_cellWidth[i];
-			ray.d[i] /= m_cellWidth[i];
-		}
-		maxt -= mint;
-
-		Float sigmaT = m_sigma;
-		Float maxSigmaT = sigmaT * m_maxDensity;
-
-		Float density, t = 0;
-		while (true) {
-			Float x = sampler->next1D(), y = sampler->next1D();
-			t += -std::log(1-x) / maxSigmaT;
-
-			if (t > maxt) {
-				mRec.pdf = 1;
-				mRec.attenuation = Spectrum(1.0f);
-				return false;
+		while (rayIntersect(ray, t, inside)) {
+			if (inside) {
+				Point currentPoint(0.0f);
+				success = invertDensityIntegral(ray, std::min(t, distSurf), 
+						accumulatedDensity, desiredDensity, currentSigmaT, currentAlbedo,
+						currentPoint);
+				if (success) {
+					/* A medium interaction occurred */
+					mRec.p = currentPoint;
+					mRec.t = (mRec.p-r.o).length();
+					success = true;
+					break;
+				}
 			}
-			density = eval(ray(t));
 
-			if (density/m_maxDensity > y)
+			distSurf -= t;
+
+			if (distSurf < 0) {
+				/* A surface interaction occurred */
 				break;
+			}
+			ray.o = ray(t);
+			ray.mint = Epsilon;
+
+			if (++iterations > 100) {
+				/// Just a precaution..
+				Log(EWarn, "sampleDistance(): round-off error issues?");
+				break;
+			}
 		}
+		Float expVal = std::max(Epsilon, std::exp(-accumulatedDensity));
 
-		mRec.sigmaA = m_sigmaA * density;
-		mRec.sigmaS = m_sigmaS * density;
-		mRec.albedo = m_albedo;
+		mRec.pdfFailure = expVal;
+		mRec.pdfSuccess = expVal * std::max((Float) Epsilon, currentSigmaT);
+		mRec.pdfSuccessRev = expVal * std::max((Float) Epsilon, sigmaTOrigin);
+		mRec.attenuation = Spectrum(expVal);
+		
+		if (!success)
+			return false;
 
-		/* Intentionally not computing some of these,
-		   since they will cancel out when computing
-			   sigmaS * attenuation / pdf
-		   (which is hopefully how this method is used :))
-		*/
-		mRec.attenuation = Spectrum(1);
-		mRec.pdf = density * sigmaT;
+		mRec.sigmaS = currentAlbedo * currentSigmaT;
+		mRec.sigmaA = Spectrum(currentSigmaT) - mRec.sigmaS;
+		mRec.albedo = currentAlbedo.max();
+		mRec.orientation = m_orientations != NULL 
+			? m_orientations->lookupVector(mRec.p) : Vector(0.0f);
 		mRec.medium = this;
-		mRec.t = t+mint;
-		mRec.p = r(mRec.t);
 		return true;
 	}
 
-	bool uniformlySampleDistance(const Ray &r, Float maxDist, 
-			MediumSamplingRecord &mRec,  Sampler *sampler) const {
-		mRec.pdf = 1; mRec.miWeight = 1; mRec.attenuation = Spectrum(1.0f);
+	void pdfDistance(const Ray &ray, Float t, MediumSamplingRecord &mRec) const {
+		Float expVal = std::exp(-integrateDensity(Ray(ray, 0, t)));
 
-		const Float probSurface = .5, probMedium = 1-probSurface;
-		mRec.pdf = 1;
-
-		Ray ray;
-		m_worldToMedium(r, ray);
-
-		/* Intersect against the AABB containing the medium.
-		   Slightly offset to avoid zero samples at the endpoints */
-		Float mint, maxt;
-		if (!m_dataAABB.rayIntersect(ray, mint, maxt)) 
-			return false;
-		mint = std::max(ray.mint, mint+Epsilon);
-		maxt = std::min(maxDist, maxt-Epsilon);
-		if (mint >= maxt) 
-			return false;
-
-		Float U = sampler->next1D();
-		if (U > probSurface) {
-			U = (U - probSurface)/probMedium;
-		} else {
-			mRec.pdf = probSurface;
-			mRec.attenuation = (-tau(Ray(r, r.mint, maxDist))).exp();
-			return false;
-		}
-
-		mRec.t = U*(maxt-mint) + mint;
-		mRec.p = r(mRec.t);
-
-		Point gridPos(ray(mRec.t)-m_dataAABB.min);
-		for (int i=0; i<3; ++i) 
-			gridPos[i] /= m_cellWidth[i];
-
-		Float fval = eval(gridPos);
-		mRec.pdf = probMedium/(maxt-mint);
-		mRec.sigmaA = m_sigmaA * fval;
-		mRec.sigmaS = m_sigmaS * fval;
-		mRec.albedo = m_albedo;
-		mRec.medium = this;
-		mRec.attenuation = (-tau(Ray(r, r.mint, mRec.t))).exp();
-
-		return true;
+		mRec.attenuation = Spectrum(expVal);
+		mRec.pdfFailure = expVal;
+		mRec.pdfSuccess = expVal * std::max((Float) Epsilon, 
+			m_densities->lookupFloat(ray(t)) * m_densityMultiplier);
+		mRec.pdfSuccessRev = expVal * std::max((Float) Epsilon, 
+			m_densities->lookupFloat(ray(ray.mint)) * m_densityMultiplier);
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "HeterogeneousMedium[" << endl
-			<< "  sigmaA = " << m_sigmaA.toString() << "," << std::endl
-			<< "  sigmaS = " << m_sigmaS.toString() << "," << std::endl
-			<< "  sigmaT = " << m_sigmaT.toString() << "," << std::endl
-			<< "  phase = " << indent(m_phaseFunction->toString()) << "," << std::endl
-			<< "  res = " << m_res.x << "x" << m_res.y << "x" << m_res.z << "," << std::endl
-			<< "  aabb = " << m_dataAABB.toString() << std::endl
+			<< "  albedo=" << indent(m_albedo.toString()) << "," << endl
+			<< "  orientations=" << indent(m_orientations.toString()) << "," << endl
+			<< "  densities=" << indent(m_densities.toString()) << "," << endl
+			<< "  stepSize=" << m_stepSize << "," << endl
+			<< "  densityMultiplier=" << m_densityMultiplier << endl
 			<< "]";
 		return oss.str();
 	}
 	MTS_DECLARE_CLASS()
 private:
-	ESamplingStrategy m_strategy;
-	Float m_sigma;
-	Vector3i m_res, m_voxels;
-	Vector m_cellWidth;
-	Transform m_worldToMedium;
-	Transform m_mediumToWorld;
-	Vector m_extents;
-	Float *m_data;
-	bool *m_empty;
-	Float m_stepSize, m_stepSizeFactor, m_maxDensity;
-	AABB m_dataAABB;
+	ref<VolumeDataSource> m_densities;
+	ref<VolumeDataSource> m_albedo;
+	ref<VolumeDataSource> m_orientations;
+	ref<ShapeKDTree> m_kdTree;
+	std::vector<Shape *> m_shapes;
+	Float m_stepSize;
 };
 
 MTS_IMPLEMENT_CLASS_S(HeterogeneousMedium, false, Medium)

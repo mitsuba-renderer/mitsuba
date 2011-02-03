@@ -27,13 +27,11 @@
 
 MTS_NAMESPACE_BEGIN
 
-
-
 class KDBench : public Utility {
 public:
 	void help() {
 		cout << endl;
-		cout << "Synpsis: kd-tree performance benchmark. Traces uniformly distributed rays" << endl;
+		cout << "Synopsis: kd-tree performance benchmark. Traces uniformly distributed rays" << endl;
 		cout << "though the bounding sphere of a scene and reports the resulting number of" << endl;
 		cout << "rays per second. The main intent of this utility is to optimize the kd-tree" << endl;
 		cout << "construction parameters for particular scenes and machines." << endl;
@@ -59,7 +57,7 @@ public:
 		cout << "                  fitting the cost model to collected performance data" << endl << endl;
 		cout << "Examples:" << endl;
 		cout << "  E.g. to build a tree for the Stanford bunny having a low SAH cost, type " << endl << endl;
-		cout << "  $ mtsutil kdbench -e .9 -l1 -d48 -x100000 tools/tests/bunny.ply" << endl << endl;
+		cout << "  $ mtsutil kdbench -e .9 -l1 -d48 -x100000 data/tests/bunny.ply" << endl << endl;
 		cout << "  To get SAH costs comparable to [Wald and Havran 06], also specify -t15 -i20" << endl << endl;
 		cout << "  The high -x paramer effectively disables Min-Max binning, which " << endl;
 		cout << "  leads to a slower and more memory-intensive build, so don't try" << endl;
@@ -153,7 +151,7 @@ public:
 		}
 
 		ref<Scene> scene;
-		ref<KDTree> kdtree;
+		ref<ShapeKDTree> kdtree;
 
 		std::string lowercase = boost::to_lower_copy(std::string(argv[optind]));
 		if (boost::ends_with(lowercase, ".xml")) {
@@ -173,14 +171,14 @@ public:
 			mesh = static_cast<TriMesh *> (PluginManager::getInstance()->
 					createObject(TriMesh::m_theClass, props));
 			mesh->configure();
-			kdtree = new KDTree();
+			kdtree = new ShapeKDTree();
 			kdtree->addShape(mesh);
 		} else {
 			Log(EError, "The supplied scene filename must end in either PLY or XML!");
 		}
 
 		if (intersectionCost != -1)
-			kdtree->setIntersectionCost(intersectionCost);
+			kdtree->setQueryCost(intersectionCost);
 		if (traversalCost != -1)
 			kdtree->setTraversalCost(traversalCost);
 		if (emptySpaceBonus != -1)

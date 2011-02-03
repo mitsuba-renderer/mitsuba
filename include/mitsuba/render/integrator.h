@@ -240,9 +240,6 @@ public:
 	/// Surface interaction data structure (*)
 	Intersection its;
 
-	/// Attenuation along the current ray (*)
-	Spectrum attenuation;
-
 	/// Opacity value of the associated pixel (*)
 	Float alpha;
 
@@ -288,7 +285,8 @@ public:
 	 * cosine-weighted sampling and a configurable number of rays.
 	 */
 	virtual Spectrum E(const Scene *scene, const Point &p, const
-		Normal &n, Float time, Sampler *sampler) const; 
+		Normal &n, Float time, Sampler *sampler, int nSamples,
+		bool includeIndirect) const; 
 
 	/**
 	 * Perform the main rendering task. The work is automatically
@@ -314,9 +312,25 @@ public:
 	 * This method does the main work of <tt>render()</tt> and
 	 * runs in parallel for a series of image blocks, which are
 	 * being processed at a time.
+	 *
+	 * \param scene
+	 *    Pointer to the underlying scene
+	 * \param camera
+	 *    Pointer to the camera used to render the image
+	 * \param sampler
+	 *    Pointer to the sampler used to render the image
+	 * \param block
+	 *    Pointer to the image block to be filled 
+	 * \param points
+	 *    Optional; Can be used to set a specific traversal order,
+	 *    for example using a space-filling curve.
+	 * \param stop
+	 *    Reference to a boolean, which will be set to true when
+	 *    the user has requested that the program be stopped
 	 */
 	virtual void renderBlock(const Scene *scene, const Camera *camera, 
-		Sampler *sampler, ImageBlock *block, const bool &stop) const;
+		Sampler *sampler, ImageBlock *block, const bool &stop,
+		const std::vector<Point2i> *points = NULL) const;
 
 	/**
 	 * <tt>NetworkedObject</tt> implementation:
@@ -356,8 +370,6 @@ protected:
 protected:
 	/// Used to temporarily cache a parallel process while it is in operation
 	ref<ParallelProcess> m_process;
-	unsigned int m_irrSamples;
-	bool m_irrIndirect;
 };
 
 /*

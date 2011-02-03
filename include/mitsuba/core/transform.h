@@ -19,94 +19,11 @@
 #if !defined(__TRANSFORM_H)
 #define __TRANSFORM_H
 
-#include <mitsuba/mitsuba.h>
+#include <mitsuba/core/matrix.h>
 #include <mitsuba/core/ray.h>
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * \brief Basic 4x4 matrix data type
- */
-struct MTS_EXPORT_CORE Matrix4x4 {
-	/** \brief Construct a new 4x4 matrix without initializing it.
-	 * 
-	 * This construtor is useful when the matrix will either not
-	 * be used at all (it might be part of a larger data structure)
-	 * or initialized at a later point in time. Always make sure
-	 * that one of the two is the case! Otherwise your program will do
-	 * computations involving uninitialized memory, which will probably
-	 * lead to a difficult-to-find bug.
-	 */
-#if !defined(MTS_DEBUG_UNINITIALIZED)
-	Matrix4x4() { }
-#else
-	Matrix4x4() {
-		for (int i=0; i<4; i++)
-			for (int j=0; j<4; j++)
-				m[i][j] = std::numeric_limits<double>::quiet_NaN();
-	}
-#endif
-
-	/// Initialize the matrix with constant entries
-	explicit inline Matrix4x4(Float value) {
-		for (int i=0; i<4; i++)
-			for (int j=0; j<4; j++)
-				m[i][j] = value;
-	}
-
-	explicit inline Matrix4x4(Float _m[4][4]) {
-		memcpy(m, _m, sizeof(Float) * 16);
-	}
-
-	/// Unserialize a matrix from a stream
-	explicit inline Matrix4x4(Stream *stream) {
-		stream->readFloatArray(&m[0][0], 16);
-	}
-
-	/// Initialize with the given values
-	inline Matrix4x4(
-		Float a00, Float a01, Float a02, Float a03,
-		Float a10, Float a11, Float a12, Float a13,
-		Float a20, Float a21, Float a22, Float a23,
-		Float a30, Float a31, Float a32, Float a33) {
-		m[0][0] = a00; m[0][1] = a01; m[0][2] = a02; m[0][3] = a03;
-		m[1][0] = a10; m[1][1] = a11; m[1][2] = a12; m[1][3] = a13;
-		m[2][0] = a20; m[2][1] = a21; m[2][2] = a22; m[2][3] = a23;
-		m[3][0] = a30; m[3][1] = a31; m[3][2] = a32; m[3][3] = a33;
-	}
-
-	/// Initialize with the identity matrix
-	void setIdentity() {
-		for (int i=0; i<4; i++)
-			for (int j=0; j<4; j++)
-				m[i][j] = (i == j) ? 1.0f : 0.0f;
-	}
-
-	/// Return the determinant of the upper left 3x3 sub-matrix
-	Float det3x3() const;
-
-	/// Perform a symmetric 4x4 eigendecomposition into Q and D.
-	void symmEigenDecomp(Matrix4x4 &Q, Vector4 &d);
-
-	/// Return the inverse of this matrix
-	bool invert(Matrix4x4 &target) const;
-
-	/// Return the transpose of this matrix
-	void transpose(Matrix4x4 &target) const {
-		for (int i=0; i<4; i++)
-			for (int j=0; j<4; j++)
-				target.m[i][j] = m[j][i];
-	}
-
-	/// Serialize the matrix to a stream
-	void serialize(Stream *stream) const;
-
-	/// Return a string representation
-	std::string toString() const;
-
-	Float m[4][4];
-};
-	
 /**
  * \brief Encapsulates a 4x4 linear transformation and its inverse
  */
@@ -200,8 +117,8 @@ public:
 			return Point(x, y, z) / w;
 	}
 
-	/// Transform a point by a non-projective matrix
-	inline Point transformBasic(const Point &p) const {
+	/// Transform a point by a affine / non-projective matrix
+	inline Point transformAffine(const Point &p) const {
 		Float x = m_transform.m[0][0] * p.x + m_transform.m[0][1] * p.y
 				+ m_transform.m[0][2] * p.z + m_transform.m[0][3];
 		Float y = m_transform.m[1][0] * p.x + m_transform.m[1][1] * p.y

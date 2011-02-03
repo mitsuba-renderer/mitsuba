@@ -360,7 +360,13 @@ public:
 	}
 
 	/// Check if this spectrum is zero at all wavelengths
-	bool isBlack() const;
+	inline bool isZero() const {
+		for (int i=0; i<SPECTRUM_SAMPLES; i++) {
+			if (s[i] != 0.0f)
+				return false;
+		}	
+		return true;
+	}
 
 	/**
 	 * \brief Evaluate the SPD at an arbitrary wavelength

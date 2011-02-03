@@ -20,7 +20,7 @@
 #define __FILM_H
 
 #include <mitsuba/render/sampler.h>
-#include <mitsuba/render/renderproc_wr.h>
+#include <mitsuba/render/imageblock.h>
 #include <boost/filesystem.hpp>
 
 namespace fs = boost::filesystem;

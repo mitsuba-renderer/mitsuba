@@ -16,42 +16,46 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__IMAGEPROC_WU_H)
-#define __IMAGEPROC_WU_H
 
-#include <mitsuba/core/sched.h>
+#if !defined(__MMAP_H)
+#define __MMAP_H
+
+#include <mitsuba/core/fstream.h>
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * Rectangular image work unit. Used by the <tt>BlockedImageProcess</tt>.
+ * \brief Basic cross-platform abstraction for memory mapped files
  */
-class MTS_EXPORT_RENDER RectangularWorkUnit : public WorkUnit {
+class MTS_EXPORT_CORE MemoryMappedFile : public Object {
 public:
-	inline RectangularWorkUnit() { }
+	/// Map the specified file into memory
+	MemoryMappedFile(const fs::path &filename);
 
-	/* WorkUnit implementation */
-	void set(const WorkUnit *wu);
-	void load(Stream *stream);
-	void save(Stream *stream) const;
+	/// Return a pointer to the file contents in memory
+	inline void *getData() { return m_data; }
 
-	inline const Point2i &getOffset() const { return m_offset; }
-	inline const Vector2i &getSize() const { return m_size; }
+	/// Return a pointer to the file contents in memory (const version)
+	inline const void *getData() const { return m_data; }
 
-	inline void setOffset(const Point2i &offset) { m_offset = offset; }
-	inline void setSize(const Vector2i &size) { m_size = size; }
+	/// Return the size of the mapped region
+	inline size_t getSize() const { return m_size; }
 
-	std::string toString() const;
+	/// Release all resources
+	virtual ~MemoryMappedFile();
 
 	MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~RectangularWorkUnit() { }
-private:
-	Point2i m_offset;
-	Vector2i m_size;
+	fs::path m_filename;
+
+#if defined(WIN32)
+	HANDLE m_file;
+	HANDLE m_fileMapping;
+#endif
+	size_t m_size;
+	void *m_data;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __IMAGEPROC_WU_H */
+#endif /* __MMAP_H */

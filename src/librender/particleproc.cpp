@@ -19,6 +19,7 @@
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/render/particleproc.h>
 #include <mitsuba/render/medium.h>
+#include <mitsuba/render/phase.h>
 #include <mitsuba/render/range.h>
 
 MTS_NAMESPACE_BEGIN
@@ -117,27 +118,27 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 		depth = 1;
 		caustic = true;
 
-		while (!weight.isBlack() && (depth <= m_maxDepth || m_maxDepth < 0)) {
+		while (!weight.isZero() && (depth <= m_maxDepth || m_maxDepth < 0)) {
 			m_scene->rayIntersect(ray, its); 
 
             /* ==================================================================== */
             /*                 Radiative Transfer Equation sampling                 */
             /* ==================================================================== */
-			if (m_scene->sampleDistance(ray, its.t, mRec, m_sampler)) {
-				Vector wo;
+			if (m_scene->sampleDistance(Ray(ray, 0, its.t), mRec, m_sampler)) {
 				/* Sample the integral
 				  \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
 				*/
 
-				weight *= mRec.sigmaS * mRec.attenuation / mRec.pdf;
+				weight *= mRec.sigmaS * mRec.attenuation / mRec.pdfSuccess;
 				handleMediumInteraction(depth, caustic, mRec, ray.time, -ray.d, weight);
 	
 				if (!m_multipleScattering)
 					break;
 
-				PhaseFunction::ESampledType sampledType; // ignored
-				weight *= mRec.medium->getPhaseFunction()->sample(mRec, -ray.d, 
-					wo, sampledType, m_sampler->next2D());
+				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
+				pRec.quantity = EImportance;
+
+				weight *= mRec.medium->getPhaseFunction()->sample(pRec, m_sampler);
 				caustic = false;
 
 				/* Russian roulette */
@@ -148,7 +149,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 						weight /= mRec.albedo;
 				}
 
-				ray = Ray(mRec.p, wo, ray.time);
+				ray = Ray(mRec.p, pRec.wo, ray.time);
 			} else if (its.t == std::numeric_limits<Float>::infinity()) {
 				/* There is no surface in this direction */
 				break;
@@ -156,17 +157,17 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				ray.mint = 0; ray.maxt = its.t;
 
 				/* Sample 
-					tau(x, y) * (Surface integral). This happens with probability mRec.pdf
+					tau(x, y) * (Surface integral). This happens with probability mRec.pdfFailure
 					Divide this out and multiply with the proper per color channel attenuation.
 				*/
-				weight *= m_scene->getAttenuation(ray) / mRec.pdf;
+				weight *= m_scene->getAttenuation(ray) / mRec.pdfFailure;
 				handleSurfaceInteraction(depth, caustic, its, weight);
 
 				const BSDF *bsdf = its.shape->getBSDF();
-				BSDFQueryRecord bRec(its, m_sampler->next2D());
+				BSDFQueryRecord bRec(its);
 				bRec.quantity = EImportance;
-				bsdfVal = bsdf->sampleCos(bRec);
-				if (bsdfVal.isBlack())
+				bsdfVal = bsdf->sampleCos(bRec, m_sampler->next2D());
+				if (bsdfVal.isZero())
 					break;
 
 				/* Russian roulette */

@@ -17,8 +17,11 @@
 */
 
 #include <mitsuba/render/scene.h>
+#include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
+
+static StatsCounter avgPathLength("Volumetric path tracer", "Average path length", EAverage);
 
 /**
  * Volumetric path tracer, which solves the full radiative transfer
@@ -51,7 +54,6 @@ public:
 		LuminaireSamplingRecord lRec;
 		MediumSamplingRecord mRec;
 		RayDifferential ray(r);
-		Intersection prevIts;
 		Spectrum Li(0.0f);
 
 		/* Perform the first ray intersection (or ignore if the 
@@ -63,9 +65,8 @@ public:
 			/* ==================================================================== */
 			/*                 Radiative Transfer Equation sampling                 */
 			/* ==================================================================== */
-			if (scene->sampleDistance(ray, its.t, mRec, rRec.sampler)) {
+			if (scene->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
 				const PhaseFunction *phase = mRec.medium->getPhaseFunction();
-				Vector wo, wi = -ray.d;
 
 				if (rRec.depth == m_maxDepth && m_maxDepth > 0) // No more scattering events allowed
 					break;
@@ -73,7 +74,7 @@ public:
 				/* Sample the integral
 				   \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
 				*/
-				pathThroughput *= mRec.sigmaS * mRec.attenuation * mRec.miWeight / mRec.pdf;
+				pathThroughput *= mRec.sigmaS * mRec.attenuation / mRec.pdfSuccess;
 
 				/* ==================================================================== */
 				/*                          Luminaire sampling                          */
@@ -83,14 +84,14 @@ public:
 				if (rRec.type & RadianceQueryRecord::EInscatteredDirectRadiance && 
 					scene->sampleLuminaireAttenuated(mRec.p, lRec, ray.time, rRec.nextSample2D())) {
 					/* Evaluate the phase function */
-					Spectrum phaseVal = phase->f(mRec, -ray.d, -lRec.d);
+					Spectrum phaseVal = phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 
 					if (phaseVal.max() > 0) {
 						/* Calculate prob. of having sampled that direction using 
 						   phase function sampling */
 						Float phasePdf = (lRec.luminaire->isIntersectable() 
 								|| lRec.luminaire->isBackgroundLuminaire()) ? 
-							phase->pdf(mRec, -ray.d, -lRec.d) : 0;
+							phase->pdf(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d)) : 0;
 
 						/* Weight using the power heuristic */
 						const Float weight = miWeight(lRec.pdf, phasePdf);
@@ -102,16 +103,15 @@ public:
 				/*                         Phase function sampling                      */
 				/* ==================================================================== */
 
-				PhaseFunction::ESampledType sampledType;
 				Float phasePdf;
-				Spectrum phaseVal = phase->sample(mRec, wi, wo, sampledType, phasePdf, rRec.nextSample2D());
+				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
+				Spectrum phaseVal = phase->sample(pRec, phasePdf, rRec.sampler);
 				if (phaseVal.max() == 0)
 					break;
 				phaseVal /= phasePdf;
-				prevIts = its;
 
 				/* Trace a ray in this direction */
-				ray = Ray(mRec.p, wo, ray.time);
+				ray = Ray(mRec.p, pRec.wo, ray.time);
 				bool hitLuminaire = false;
 				if (scene->rayIntersect(ray, its)) {
 					/* Intersected something - check if it was a luminaire */
@@ -129,7 +129,7 @@ public:
 					}
 				}
 				ray.mint = 0; ray.maxt = its.t; 
-				rRec.attenuation = scene->getAttenuation(ray);
+				Spectrum attenuation = scene->getAttenuation(ray);
 
 				/* If a luminaire was hit, estimate the local illumination and
 				   weight using the power heuristic */
@@ -137,10 +137,9 @@ public:
 					lRec.Le = lRec.luminaire->Le(lRec);
 
 					/* Prob. of having generated this sample using luminaire sampling */
-					const Float lumPdf = (sampledType != PhaseFunction::EDelta) 
-						? scene->pdfLuminaire(mRec.p, lRec) : 0;
+					const Float lumPdf = scene->pdfLuminaire(mRec.p, lRec);
 					Float weight = miWeight(phasePdf, lumPdf);
-					Li += pathThroughput * rRec.attenuation * lRec.Le * phaseVal * weight;
+					Li += pathThroughput * attenuation * lRec.Le * phaseVal * weight;
 				}
 
 				/* ==================================================================== */
@@ -164,10 +163,10 @@ public:
 				rRec.depth++;
 			} else {
 				/* Sample 
-					tau(x, y) (Surface integral). This happens with probability mRec.pdf
+					tau(x, y) (Surface integral). This happens with probability mRec.pdfFailure
 					Divide this out and multiply with the proper per-color-channel attenuation.
 				*/
-				pathThroughput *= mRec.attenuation * mRec.miWeight / mRec.pdf;
+				pathThroughput *= mRec.attenuation / mRec.pdfFailure;
 
 				if (!its.isValid()) {
 					/* If no intersection could be found, possibly return 
@@ -203,7 +202,7 @@ public:
 					/* Evaluate BSDF * cos(theta) */
 					const Spectrum bsdfVal = bsdf->fCos(bRec);
 
-					if (!bsdfVal.isBlack()) {
+					if (!bsdfVal.isZero()) {
 						/* Calculate prob. of having sampled that direction
 						   using BSDF sampling */
 						Float bsdfPdf = (lRec.luminaire->isIntersectable() 
@@ -221,13 +220,13 @@ public:
 				/* ==================================================================== */
 
 				/* Sample BSDF * cos(theta) */
-				BSDFQueryRecord bRec(rRec, its, rRec.nextSample2D());
+				BSDFQueryRecord bRec(rRec, its);
 				Float bsdfPdf;
-				Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf);
-				if (bsdfVal.isBlack())
+				Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, rRec.nextSample2D());
+				if (bsdfVal.isZero())
 					break;
 				bsdfVal /= bsdfPdf;
-				prevIts = its;
+				Intersection prevIts = its;
 
 				/* Trace a ray in this direction */
 				ray = Ray(its.p, its.toWorld(bRec.wo), ray.time);
@@ -248,7 +247,7 @@ public:
 					}
 				}
 				ray.mint = 0; ray.maxt = its.t; 
-				rRec.attenuation = scene->getAttenuation(ray);
+				Spectrum attenuation = scene->getAttenuation(ray);
 
 				/* If a luminaire was hit, estimate the local illumination and
 				   weight using the power heuristic */
@@ -258,7 +257,7 @@ public:
 					const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ?
 						scene->pdfLuminaire(prevIts, lRec) : 0;
 					const Float weight = miWeight(bsdfPdf, lumPdf);
-					Li += pathThroughput * rRec.attenuation * lRec.Le * bsdfVal * weight;
+					Li += pathThroughput * attenuation * lRec.Le * bsdfVal * weight;
 				}
 
 				/* ==================================================================== */
@@ -270,8 +269,9 @@ public:
 					break;
 				rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 
-				/* Russian roulette - Possibly stop the recursion */
-				if (rRec.depth >= m_rrDepth) {
+				/* Russian roulette - Possibly stop the recursion. Don't use for transmission
+				   due to IOR weighting factors, which throw the heuristic off */
+				if (rRec.depth >= m_rrDepth && !(bRec.sampledType & BSDF::ETransmission)) {
 					/* Assuming that BSDF importance sampling is perfect,
 					   'bsdfVal.max()' should equal the maximum albedo
 					   over all spectral samples */
@@ -286,6 +286,8 @@ public:
 				rRec.depth++;
 			}
 		}
+		avgPathLength.incrementBase();
+		avgPathLength += rRec.depth;
 		return Li;
 	}
 

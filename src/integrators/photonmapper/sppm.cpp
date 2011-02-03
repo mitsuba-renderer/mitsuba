@@ -154,12 +154,20 @@ public:
 		omp_set_num_threads(nCores);
 #endif
 
+#ifdef MTS_DEBUG_FP
+		enableFPExceptions();
+#endif
+
 		int it=0;
 		while (m_running) { 
 			distributedRTPass(scene, samplers);
 			photonMapPass(++it, queue, job, film, sceneResID, 
 					cameraResID, samplerResID);
 		}
+
+#ifdef MTS_DEBUG_FP
+		disableFPExceptions();
+#endif
 
 		for (size_t i=0; i<sched->getCoreCount(); ++i)
 			samplers[i]->decRef();
@@ -231,13 +239,14 @@ public:
 							} else {
 								/* Recurse for dielectric materials and (specific to SPPM):
 								   recursive "final gathering" for glossy materials */
-								BSDFQueryRecord bRec(gatherPoint.its, sampler->next2D());
-								weight *= bsdf->sampleCos(bRec);
-								if (weight.isBlack()) {
+								BSDFQueryRecord bRec(gatherPoint.its);
+								weight *= bsdf->sampleCos(bRec, sampler->next2D());
+								if (weight.isZero()) {
 									gatherPoint.depth = -1;
 									break;
 								}
-								ray = RayDifferential(gatherPoint.its.p, gatherPoint.its.toWorld(bRec.wo), ray.time);
+								ray = RayDifferential(gatherPoint.its.p, 
+									gatherPoint.its.toWorld(bRec.wo), ray.time);
 								++depth;
 							}
 						} else {
@@ -314,7 +323,7 @@ public:
 			}
 		}
 		film->fromBitmap(m_bitmap);
-		queue->signalRefresh(job);
+		queue->signalRefresh(job, NULL);
 	}
 
 

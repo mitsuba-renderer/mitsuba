@@ -199,14 +199,6 @@ void Spectrum::fromSRGB(Float r, Float g, Float b) {
 	fromLinearRGB(r, g, b);
 }
 
-bool Spectrum::isBlack() const {
-	for (int i=0; i<SPECTRUM_SAMPLES; i++) {
-		if (s[i] != 0.0f)
-			return false;
-	}	
-	return true;
-}
-
 /* RGBE conversion based on Bruce Walter's and Greg Ward's code
   -> http://www.graphics.cornell.edu/online/formats/rgbe/rgbe.c */
 void Spectrum::toRGBE(uint8_t rgbe[4]) const {

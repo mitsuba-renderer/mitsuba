@@ -495,7 +495,6 @@ void TriMesh::computeNormals() {
 		} else {
 			m_normals = new Normal[m_vertexCount];
 			memset(m_normals, 0, sizeof(Normal)*m_vertexCount);
-			Normal n(0.0f);
 
 			/* Well-behaved vertex normal computation based on 
 			   "Computing Vertex Normals from Polygonal Facets"
@@ -503,13 +502,19 @@ void TriMesh::computeNormals() {
 			   JGT 1998, Vol 3 */
 			for (size_t i=0; i<m_triangleCount; i++) {
 				const Triangle &tri = m_triangles[i];
+				Normal n(0.0f);
 				for (int i=0; i<3; ++i) {
 					const Point &v0 = m_positions[tri.idx[i]];
 					const Point &v1 = m_positions[tri.idx[(i+1)%3]];
 					const Point &v2 = m_positions[tri.idx[(i+2)%3]];
 					Vector sideA(v1-v0), sideB(v2-v0);
-					if (i==0)
-						n = Normal(normalize(cross(sideA, sideB)));
+					if (i==0) {
+						n = cross(sideA, sideB);
+						Float length = n.length();
+						if (length == 0)
+							break;
+						n /= length;
+					}
 					Float angle = unitAngle(normalize(sideA), normalize(sideB));
 					m_normals[tri.idx[i]] += n * angle;
 				}

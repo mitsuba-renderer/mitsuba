@@ -83,12 +83,12 @@ public:
 
 	void test02_bunnyBenchmark() {
 		Properties bunnyProps("ply");
-		bunnyProps.setString("filename", "tools/tests/bunny.ply");
+		bunnyProps.setString("filename", "data/tests/bunny.ply");
 
 		ref<TriMesh> mesh = static_cast<TriMesh *> (PluginManager::getInstance()->
 				createObject(TriMesh::m_theClass, bunnyProps));
 		mesh->configure();
-		ref<KDTree> tree = new KDTree();
+		ref<ShapeKDTree> tree = new ShapeKDTree();
 		tree->addShape(mesh);
 		tree->build();
 		BSphere bsphere(tree->getBSphere());

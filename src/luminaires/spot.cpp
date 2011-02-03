@@ -40,7 +40,6 @@ public:
 		Assert(m_cutoffAngle >= m_beamWidth);
 		m_cosBeamWidth = std::cos(m_beamWidth);
 		m_cosCutoffAngle = std::cos(m_cutoffAngle);
-		m_surfaceArea = 0.0f;
 		m_position = m_luminaireToWorld(Point(0, 0, 0));
 		m_type = EDeltaPosition;
 		m_texture = new ConstantTexture(
@@ -107,14 +106,14 @@ public:
 		return Spectrum(0.0f);
 	}
 
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec) const {
+	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 		/* PDF is a delta function - zero probability when a sample point was not
 		   generated using sample() */
-		return 0.0f;
+		return delta ? 1.0f : 0.0f;
 	}
 	
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec) const {
-		return SpotLuminaire::pdf(its.p, lRec);
+	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
+		return SpotLuminaire::pdf(its.p, lRec, delta);
 	}
 
 	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
@@ -153,18 +152,18 @@ public:
 		return Spectrum(falloffCurve(eRec.d, true));
 	}
 
-	void pdfEmission(EmissionRecord &eRec) const {
+	void pdfEmission(EmissionRecord &eRec, bool delta) const {
 		if (Frame::cosTheta(m_worldToLuminaire(eRec.d))>m_cosCutoffAngle)
 			eRec.pdfDir = 0;
 		else
-			eRec.pdfDir = squareToConePdf(m_cosCutoffAngle);
-		eRec.pdfArea = 0;
+			eRec.pdfDir = delta ? 0.0f : squareToConePdf(m_cosCutoffAngle);
+		eRec.pdfArea = delta ? 1.0f : 0.0f;
 	}
 
 	Spectrum f(const EmissionRecord &eRec) const {
 		return falloffCurve(eRec.d, true);
 	}
-	
+
 	Spectrum fArea(const EmissionRecord &eRec) const {
 		return Spectrum(0.0f);
 	}
@@ -180,6 +179,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SpotLuminaire[" << std::endl
+			<< "  name = \"" << m_name << "\"," << std::endl
 			<< "  intensity = " << m_intensity.toString() << "," << std::endl
 			<< "  texture = " << m_texture.toString() << "," << std::endl
 			<< "  position = " << m_position.toString() << "," << std::endl

@@ -17,8 +17,11 @@
 */
 
 #include <mitsuba/render/scene.h>
+#include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
+
+static StatsCounter avgPathLength("Path tracer", "Average path length", EAverage);
 
  /**
   * Extended path tracer -- uses multiple importance sampling to combine 
@@ -55,8 +58,8 @@ public:
 
 		while (rRec.depth <= m_maxDepth || m_maxDepth < 0) {
 			if (!its.isValid()) {
-				/* If no intersection could be found, possibly return 
-				   attenuated radiance from a background luminaire */
+				/* If no intersection could be found, potentially return 
+				   radiance from a background luminaire if it exists */
 				if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
 					Li += pathThroughput * scene->LeBackground(ray);
 				break;
@@ -88,7 +91,7 @@ public:
 				/* Evaluate BSDF * cos(theta) */
 				const Spectrum bsdfVal = bsdf->fCos(bRec);
 
-				if (!bsdfVal.isBlack()) {
+				if (!bsdfVal.isZero()) {
 					/* Calculate prob. of having sampled that direction
 					   using BSDF sampling */
 					Float bsdfPdf = (lRec.luminaire->isIntersectable() 
@@ -106,10 +109,10 @@ public:
 			/* ==================================================================== */
 
 			/* Sample BSDF * cos(theta) */
-			BSDFQueryRecord bRec(rRec, its, rRec.nextSample2D());
+			BSDFQueryRecord bRec(rRec, its);
 			Float bsdfPdf;
-			Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf);
-			if (bsdfVal.isBlack())
+			Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, rRec.nextSample2D());
+			if (bsdfVal.isZero()) 
 				break;
 			bsdfVal /= bsdfPdf;
 			prevIts = its;
@@ -131,6 +134,7 @@ public:
 					lRec.d = -ray.d;
 					hitLuminaire = true;
 				} else {
+					rRec.depth++;
 					break;
 				}
 			}
@@ -159,13 +163,14 @@ public:
 				break;
 			rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 
-			/* Russian roulette - Possibly stop the recursion */
-			if (rRec.depth >= m_rrDepth) {
+			/* Russian roulette - Possibly stop the recursion. Don't use for transmission
+			   due to IOR weighting factors, which throw the heuristic off */
+			if (rRec.depth >= m_rrDepth && !(bRec.sampledType & BSDF::ETransmission)) {
 				/* Assuming that BSDF importance sampling is perfect,
 				   'bsdfVal.max()' should equal the maximum albedo
 				   over all spectral samples */
 				Float approxAlbedo = std::min((Float) 0.9f, bsdfVal.max());
-				if (rRec.nextSample1D() > approxAlbedo)
+				if (rRec.nextSample1D() > approxAlbedo) 
 					break;
 				else
 					pathThroughput /= approxAlbedo;
@@ -174,6 +179,8 @@ public:
 			pathThroughput *= bsdfVal;
 			rRec.depth++;
 		}
+		avgPathLength.incrementBase();
+		avgPathLength += rRec.depth;
 		return Li;
 	}
 

@@ -36,7 +36,7 @@ class AreaLuminaire : public Luminaire {
 public:
 	AreaLuminaire(const Properties &props) : Luminaire(props), m_shape(NULL) {
 		AssertEx(m_luminaireToWorld.isIdentity(), "Error: non-identity transformation found. "
-			"Area luminaires inherit their transformation from the associated shape!");
+			"Area luminaires inherit their transformation from their associated shape!");
 		m_intensity = props.getSpectrum("intensity", Spectrum(1));
 		m_type = EDiffuseDirection | EOnSurface;
 		m_intersectable = true;
@@ -56,7 +56,7 @@ public:
 	}
 
 	Spectrum getPower() const {
-		return m_intensity * m_surfaceArea * M_PI;
+		return m_intensity * m_shape->getSurfaceArea() * M_PI;
 	}
 
 	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
@@ -83,12 +83,12 @@ public:
 		AreaLuminaire::sample(its.p, lRec, sample);
 	}
 
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec) const {
+	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 		return m_shape->pdfSolidAngle(lRec.sRec, p);
 	}
-	
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec) const {
-		return pdf(its.p, lRec);
+
+	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
+		return AreaLuminaire::pdf(its.p, lRec, delta);
 	}
 
 	void sampleEmission(EmissionRecord &eRec,
@@ -124,14 +124,14 @@ public:
 			return Spectrum(0.0f);
 	}
 
-	void pdfEmission(EmissionRecord &eRec) const {
+	void pdfEmission(EmissionRecord &eRec, bool delta) const {
 		Float dp = dot(eRec.sRec.n, eRec.d);
 		if (dp > 0)
-			eRec.pdfDir = dp * INV_PI;
+			eRec.pdfDir = delta ? 0.0f : dp * INV_PI;
 		else {
 			eRec.pdfDir = 0;
 		}
-		eRec.pdfArea = m_shape->pdfArea(eRec.sRec);
+		eRec.pdfArea = delta ? 0.0f : m_shape->pdfArea(eRec.sRec);
 	}
 
 	void setParent(ConfigurableObject *parent) {
@@ -147,7 +147,6 @@ public:
 
 			m_shape = shape;
 			parent->configure();
-			m_surfaceArea = m_shape->getSurfaceArea();
 		} else {
 			Log(EError, "An area light source must be child of a shape instance");
 		}
@@ -156,6 +155,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "AreaLuminaire[" << std::endl
+			<< "  name = \"" << m_name << "\"," << std::endl
 			<< "  intensity = " << m_intensity.toString() << std::endl
 			<< "]";
 		return oss.str();

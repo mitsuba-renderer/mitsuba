@@ -52,6 +52,7 @@ public:
 	}
 
 	void configure() {
+		BSDF::configure();
 		if (!m_nestedBSDF)
 			Log(EError, "A child BSDF is required");
 		m_combinedType = m_nestedBSDF->getType() | EDeltaTransmission;
@@ -88,8 +89,9 @@ public:
 		wo = Vector(-wi.x, -wi.y, -wi.z);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec) const {
+	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
 		Float probBSDF = m_opacity->getValue(bRec.its).getLuminance();
+		Point2 sample(_sample);
 		Spectrum result(0.0f);
 
 		bool sampleTransmission = bRec.typeMask & EDeltaTransmission
@@ -99,9 +101,9 @@ public:
 			bRec.sampledComponent < m_nestedBSDF->getComponentCount();
 
 		if (sampleTransmission && sampleNested) {
-			if (bRec.sample.x <= probBSDF) {
-				bRec.sample.x /= probBSDF;
-				result = m_nestedBSDF->sample(bRec);
+			if (sample.x <= probBSDF) {
+				sample.x /= probBSDF;
+				result = m_nestedBSDF->sample(bRec, sample);
 			} else {
 				transmit(bRec.wi, bRec.wo);
 				bRec.sampledComponent = m_nestedBSDF->getComponentCount();
@@ -114,14 +116,15 @@ public:
 			bRec.sampledType = EDeltaTransmission;
 			result = Spectrum(1 - probBSDF) / std::abs(Frame::cosTheta(bRec.wo));
 		} else if (sampleNested) {
-			result = m_nestedBSDF->sample(bRec);
+			result = m_nestedBSDF->sample(bRec, sample);
 		}
 
 		return result;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
 		Float probBSDF = m_opacity->getValue(bRec.its).getLuminance();
+		Point2 sample(_sample);
 		Spectrum result(0.0f);
 
 		bool sampleTransmission = bRec.typeMask & EDeltaTransmission
@@ -131,9 +134,9 @@ public:
 			bRec.sampledComponent < m_nestedBSDF->getComponentCount();
 
 		if (sampleTransmission && sampleNested) {
-			if (bRec.sample.x <= probBSDF) {
-				bRec.sample.x /= probBSDF;
-				result = m_nestedBSDF->sample(bRec, pdf) * probBSDF;
+			if (sample.x <= probBSDF) {
+				sample.x /= probBSDF;
+				result = m_nestedBSDF->sample(bRec, pdf, sample) * probBSDF;
 				pdf *= probBSDF;
 			} else {
 				transmit(bRec.wi, bRec.wo);
@@ -149,7 +152,7 @@ public:
 			pdf = std::abs(Frame::cosTheta(bRec.wo));
 			result = Spectrum(1 - probBSDF);
 		} else if (sampleNested) {
-			result = m_nestedBSDF->sample(bRec, pdf);
+			result = m_nestedBSDF->sample(bRec, pdf, sample);
 		}
 
 		return result;

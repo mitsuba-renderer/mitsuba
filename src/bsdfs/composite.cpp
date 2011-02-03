@@ -89,6 +89,8 @@ public:
 	}
 
 	void configure() {
+		BSDF::configure();
+
 		m_combinedType = 0;
 		m_usesRayDifferentials = false;
 		m_componentCount = 0;
@@ -214,11 +216,12 @@ public:
 		return result;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
+		Point2 sample(_sample);
 		if (bRec.component == -1) {
 			Float componentPDF;
-			int entry = m_pdf.sampleReuse(bRec.sample.x, componentPDF);
-			Spectrum result = m_bsdfs[entry]->sample(bRec, pdf);
+			int entry = m_pdf.sampleReuse(sample.x, componentPDF);
+			Spectrum result = m_bsdfs[entry]->sample(bRec, pdf, sample);
 			bRec.sampledComponent += m_bsdfOffset[entry];
 			pdf *= componentPDF;
 			return result * m_bsdfWeight[entry];
@@ -231,7 +234,7 @@ public:
 
 				int tempComponent = bRec.component;
 				bRec.component = component;
-				Spectrum result = m_bsdfs[i]->sample(bRec, pdf);
+				Spectrum result = m_bsdfs[i]->sample(bRec, pdf, sample);
 				bRec.component = bRec.sampledComponent = tempComponent;
 
 				return result * m_bsdfWeight[i];
@@ -241,11 +244,12 @@ public:
 		return Spectrum(0.0f);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec) const {
+	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
+		Point2 sample(_sample);
 		if (bRec.component == -1) {
 			Float componentPDF;
-			int entry = m_pdf.sampleReuse(bRec.sample.x, componentPDF);
-			Spectrum result = m_bsdfs[entry]->sample(bRec);
+			int entry = m_pdf.sampleReuse(sample.x, componentPDF);
+			Spectrum result = m_bsdfs[entry]->sample(bRec, sample);
 			result /= componentPDF;
 			bRec.sampledComponent += m_bsdfOffset[entry];
 			return result * m_bsdfWeight[entry];
@@ -258,7 +262,7 @@ public:
 
 				int tempComponent = bRec.component;
 				bRec.component = component;
-				Spectrum result = m_bsdfs[i]->sample(bRec);
+				Spectrum result = m_bsdfs[i]->sample(bRec, sample);
 				bRec.component = bRec.sampledComponent = tempComponent;
 
 				return result * m_bsdfWeight[i];

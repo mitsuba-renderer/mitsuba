@@ -41,6 +41,7 @@ class InstanceManager;
 class InterpolatedSpectrum;
 class LocalWorker;
 class Logger;
+template <int M, int N, typename T> struct Matrix;
 struct Matrix4x4;
 class MemoryStream;
 class Mutex;

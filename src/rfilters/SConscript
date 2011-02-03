@@ -1,0 +1,9 @@
+Import('env', 'plugins')
+
+plugins += env.SharedLibrary('#plugins/box', ['box.cpp'])
+plugins += env.SharedLibrary('#plugins/wsinc', ['wsinc.cpp'])
+plugins += env.SharedLibrary('#plugins/mitchell', ['mitchell.cpp'])
+plugins += env.SharedLibrary('#plugins/catmullrom', ['catmullrom.cpp'])
+plugins += env.SharedLibrary('#plugins/gaussian', ['gaussian.cpp'])
+
+Export('plugins')

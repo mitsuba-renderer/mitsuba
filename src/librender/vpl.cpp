@@ -58,15 +58,15 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 		ray = Ray(eRec.sRec.p, eRec.d, 0.0f);
 
 		depth = 2;
-		while (!weight.isBlack() && depth < maxDepth) {
+		while (!weight.isZero() && depth < maxDepth) {
 			if (!scene->rayIntersect(ray, its))
 				break;
 
 			const BSDF *bsdf = its.shape->getBSDF();
-			BSDFQueryRecord bRec(its, sampler->next2D());
+			BSDFQueryRecord bRec(its);
 			bRec.quantity = EImportance;
-			bsdfVal = bsdf->sampleCos(bRec);
-			if (bsdfVal.isBlack())
+			bsdfVal = bsdf->sampleCos(bRec, sampler->next2D());
+			if (bsdfVal.isZero())
 				break;
 
 			/* Assuming that BSDF importance sampling is perfect,

@@ -310,9 +310,9 @@ public:
 		return 0.0f;
 	}
 
-	inline Spectrum sampleReflection(BSDFQueryRecord &bRec, Float alphaB) const {
+	inline Spectrum sampleReflection(BSDFQueryRecord &bRec, Float alphaB, const Point2 &sample) const {
 		/* Sample M, the microsurface normal */
-		Normal m = sampleBeckmannD(bRec.sample, alphaB);
+		Normal m = sampleBeckmannD(sample, alphaB);
 
 		/* Perfect specular reflection along the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
@@ -324,12 +324,15 @@ public:
 		if (Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
 
-		return f(bRec) / pdf(bRec);
+		Float pdfValue = pdf(bRec);
+		if (pdfValue == 0)
+			return Spectrum(0.0f);
+		return f(bRec) / pdfValue;
 	}
 
-	inline Spectrum sampleTransmission(BSDFQueryRecord &bRec, Float alphaB) const {
+	inline Spectrum sampleTransmission(BSDFQueryRecord &bRec, Float alphaB, const Point2 &sample) const {
 		/* Sample M, the microsurface normal */
-		Frame mFrame(sampleBeckmannD(bRec.sample, alphaB));
+		Frame mFrame(sampleBeckmannD(sample, alphaB));
 
 		/* Perfect specular reflection along the microsurface normal */
 		if (refract(mFrame.toLocal(bRec.wi), bRec.wo, bRec.quantity) == 0)
@@ -343,14 +346,18 @@ public:
 		if (Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo) >= 0)
 			return Spectrum(0.0f);
 			
-		return f(bRec) / pdf(bRec);
+		Float pdfValue = pdf(bRec);
+		if (pdfValue == 0)
+			return Spectrum(0.0f);
+		return f(bRec) / pdfValue;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec) const {
+	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
 		bool hasReflection = (bRec.typeMask & EGlossyReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool hasTransmission = (bRec.typeMask & EGlossyTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
+		Point2 sample(_sample);
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alphaB. This in practice limits the weights to 
@@ -362,17 +369,17 @@ public:
 		if (hasReflection && hasTransmission) {
 			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
 			fr = std::min(std::max(fr, (Float) 0.05f), (Float) 0.95f);
-			if (bRec.sample.x < fr) {
-				bRec.sample.x /= fr;
-				return sampleReflection(bRec, alphaB);
+			if (sample.x < fr) {
+				sample.x /= fr;
+				return sampleReflection(bRec, alphaB, sample);
 			} else {
-				bRec.sample.x = (bRec.sample.x - fr) / (1-fr);
-				return sampleTransmission(bRec, alphaB);
+				sample.x = (sample.x - fr) / (1-fr);
+				return sampleTransmission(bRec, alphaB, sample);
 			}
 		} else if (hasReflection) {
-			return sampleReflection(bRec, alphaB);
+			return sampleReflection(bRec, alphaB, sample);
 		} else if (hasTransmission) {
-			return sampleTransmission(bRec, alphaB);
+			return sampleTransmission(bRec, alphaB, sample);
 		}
 
 		return Spectrum(0.0f);

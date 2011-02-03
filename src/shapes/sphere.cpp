@@ -39,7 +39,7 @@ public:
 		 * can explicitly specify a radius and center.
 		 */
 		if (props.hasProperty("toWorld") && (props.hasProperty("center") || props.hasProperty("radius"))) {
-			Log(EError, "The format for specifying spheres has changed. Please either provide "
+			Log(EError, "Deprecation error: the format for specifying spheres has changed. Please either provide "
 					"an object-to-world transformation (including scaling) or a radius and a center");
 		} else if (props.hasProperty("center") && props.hasProperty("radius")) {
 			m_objectToWorld = 
@@ -176,6 +176,10 @@ public:
 		Vector v = squareToSphere(sample);
 		sRec.n = Normal(v);
 		sRec.p = Point(v * m_radius) + m_center;
+		return 1.0f / (4*M_PI*m_radius*m_radius);
+	}
+
+	Float pdfArea(const ShapeSamplingRecord &sRec) const {
 		return 1.0f / (4*M_PI*m_radius*m_radius);
 	}
 

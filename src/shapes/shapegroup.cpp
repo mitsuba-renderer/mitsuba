@@ -21,13 +21,13 @@
 MTS_NAMESPACE_BEGIN
 
 ShapeGroup::ShapeGroup(const Properties &props) : Shape(props) {
-	m_kdtree = new KDTree();
+	m_kdtree = new ShapeKDTree();
 	m_name = props.getID();
 }
 
 ShapeGroup::ShapeGroup(Stream *stream, InstanceManager *manager) 
 	: Shape(stream, manager) {
-	m_kdtree = new KDTree();
+	m_kdtree = new ShapeKDTree();
 	size_t shapeCount = stream->readUInt();
 	for (size_t i=0; i<shapeCount; ++i)
 		m_kdtree->addShape(static_cast<Shape *>(manager->getInstance(stream)));

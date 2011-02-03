@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/testcase.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/sfcurve.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -85,6 +86,6 @@ public:
 	}
 };
 
-MTS_EXPORT_TESTCASE(TestSamplers, "Testcase for Sampler implementations")
+MTS_EXPORT_TESTCASE(TestSamplers, "Testcase for sampling-related code")
 
 MTS_NAMESPACE_END

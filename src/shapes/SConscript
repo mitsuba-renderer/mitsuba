@@ -1,0 +1,14 @@
+Import('env', 'plugins')
+
+plugins += env.SharedLibrary('#plugins/obj', ['obj.cpp'])
+plugins += env.SharedLibrary('#plugins/ply', ['ply/ply.cpp', 'ply/ply_parser.cpp'],
+	CPPPATH = env['CPPPATH'] + ['ply'])
+plugins += env.SharedLibrary('#plugins/serialized', ['serialized.cpp'])
+plugins += env.SharedLibrary('#plugins/sphere', ['sphere.cpp'])
+plugins += env.SharedLibrary('#plugins/cylinder', ['cylinder.cpp'])
+plugins += env.SharedLibrary('#plugins/hair', ['hair.cpp'])
+plugins += env.SharedLibrary('#plugins/shapegroup', ['shapegroup.cpp'])
+plugins += env.SharedLibrary('#plugins/instance', ['instance.cpp'])
+plugins += env.SharedLibrary('#plugins/animatedinstance', ['animatedinstance.cpp'])
+
+Export('plugins')

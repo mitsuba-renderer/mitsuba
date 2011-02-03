@@ -200,7 +200,7 @@ public:
 	}
 
 	Spectrum Lo(const Intersection &its, const Vector &d) const {
-		if (!m_ready || m_ssFactor.isBlack())
+		if (!m_ready || m_ssFactor.isZero())
 			return Spectrum(0.0f);
 		AnisotropicDipoleQuery query(m_P, m_xr, m_xv, m_detP, m_beta, its.shFrame, m_Fdt, its.p);
 	

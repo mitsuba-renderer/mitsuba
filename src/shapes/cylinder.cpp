@@ -35,7 +35,7 @@ public:
 		/**
 		 * There are two ways of instantiating cylinders: either,
 		 * one can specify a linear transformation to from the
-		 * unit sphere using the 'toWorld' parameter, or one
+		 * unit cylinder using the 'toWorld' parameter, or one
 		 * can explicitly specify two points and a radius.
 		 */
 		if (props.hasProperty("p1") && props.hasProperty("p2")

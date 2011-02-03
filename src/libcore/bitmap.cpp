@@ -538,13 +538,6 @@ bool Bitmap::operator==(const Bitmap &bitmap) const {
 }
 
 void Bitmap::save(EFileFormat format, Stream *stream, int compression) const {
-	if (m_bpp == 96 || m_bpp == 128)
-		AssertEx(format == EEXR, "Bitmap: 96/128 bpp images can only be stored "
-			"using the EXR file format");
-	else
-		AssertEx(format == EPNG, "Bitmap: 1-32 bpp images can only be stored "
-			"using the PNG file format");
-
 	if (format == EEXR)
 		saveEXR(stream);
 	else if (format == EPNG)
@@ -562,13 +555,21 @@ void Bitmap::saveEXR(Stream *stream) const {
 	Imf::Rgba *rgba = new Imf::Rgba[m_width*m_height];
 	const float *m_buffer = getFloatData();
 	for (int i=0; i<m_width*m_height; i++) {
-		rgba[i].r = *m_buffer; m_buffer++;
-		rgba[i].g = *m_buffer; m_buffer++;
-		rgba[i].b = *m_buffer; m_buffer++;
-		if (m_bpp == 128) {
-			rgba[i].a = *m_buffer; m_buffer++;
-		} else {
+		if (m_bpp == 32) {
+			rgba[i].r = *m_buffer;
+			rgba[i].g = *m_buffer; 
+			rgba[i].b = *m_buffer++; 
 			rgba[i].a = 1;
+		} else if (m_bpp == 96) {
+			rgba[i].r = *m_buffer; m_buffer++;
+			rgba[i].g = *m_buffer; m_buffer++;
+			rgba[i].b = *m_buffer; m_buffer++;
+			rgba[i].a = 1;
+		} else if (m_bpp == 128) {
+			rgba[i].r = *m_buffer; m_buffer++;
+			rgba[i].g = *m_buffer; m_buffer++;
+			rgba[i].b = *m_buffer; m_buffer++;
+			rgba[i].a = *m_buffer; m_buffer++;
 		}
 	}
 	file.setFrameBuffer(rgba, 1, m_width);

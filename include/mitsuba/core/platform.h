@@ -73,6 +73,7 @@
 	#define MTS_MODULE_CORE 1
 	#define MTS_MODULE_RENDER 2
 	#define MTS_MODULE_HW 3
+	#define MTS_MODULE_BIDIR 4
 
 	#define MTS_EXPORT __declspec(dllexport)
 	#define MTS_IMPORT __declspec(dllimport)
@@ -92,6 +93,11 @@
 	#else
 		#define MTS_EXPORT_HW __declspec(dllimport)
 	#endif
+	#if MTS_BUILD_MODULE == MTS_MODULE_BIDIR
+		#define MTS_EXPORT_BIDIR __declspec(dllexport)
+	#else
+		#define MTS_EXPORT_BIDIR __declspec(dllimport)
+	#endif
 
 	#define SIZE_T_FMT "%Iu"
 	#define BOOST_FILESYSTEM_NO_LIB 
@@ -101,9 +107,14 @@
 	#define MTS_EXPORT_CORE
 	#define MTS_EXPORT_RENDER
 	#define MTS_EXPORT_HW
+	#define MTS_EXPORT_BIDIR
 	#include <stdint.h>
 
 	#define SIZE_T_FMT "%zd"
+#endif
+
+#if !defined(__LITTLE_ENDIAN__) && !defined(__BIG_ENDIAN__)
+#define __LITTLE_ENDIAN__ 1 // Little endian by default
 #endif
 
 #define MTS_NAMESPACE_BEGIN namespace mitsuba {

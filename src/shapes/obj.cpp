@@ -51,7 +51,7 @@ public:
 					line[lastCharacter] == ' '))
 			lastCharacter--;
 
-		if (line[lastCharacter] == '\\') {
+		if (lastCharacter >= 0 && line[lastCharacter] == '\\') {
 			std::string nextLine;
 			fetch_line(is, nextLine);
 			line = line.substr(0, lastCharacter) + nextLine;

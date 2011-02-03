@@ -22,46 +22,42 @@
 #include <mitsuba/core/cobject.h>
 #include <mitsuba/core/frame.h>
 #include <mitsuba/core/properties.h>
+#include <mitsuba/render/common.h>
 #include <mitsuba/render/shader.h>
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * Specifies the transported quantity when sampling / evaluating a BSDF
- */
-enum ETransportQuantity {
-	ERadiance = 1,
-	EImportance = 2
-};
-
-/**
- * Data structure, which contains all information required to
- * sample or query a BSDF. 
+ * \brief Data structure, which contains information 
+ * required to sample or query a BSDF. 
  */
 struct MTS_EXPORT_RENDER BSDFQueryRecord {
 public:
 	/**
-	 * Given a surface interaction and an incident direction 
+	 * \brief Given a surface interaction and an incident direction 
 	 * construct a query record which can be used to sample 
 	 * an outgoing direction.
+	 *
 	 * For convenience, this function uses the local incident direction 
 	 * vector contained in the supplied intersection record.
 	 */
 	inline BSDFQueryRecord(RadianceQueryRecord &rRec, 
-		const Intersection &its, Point2 sample); 
+		const Intersection &its); 
 
 	/**
-	 * Given a surface interaction and an incident direction, 
+	 * \brief Given a surface interaction and an incident direction, 
 	 * construct a query record which can be used to sample
 	 * an outgoing direction.
+	 *
 	 * For convenience, this function uses the local incident direction 
 	 * vector contained in the supplied intersection record.
 	 */
-	inline BSDFQueryRecord(const Intersection &its, Point2 sample);
+	inline BSDFQueryRecord(const Intersection &its);
 
 	/**
-	 * Given a surface interaction an an incident/exitant direction 
+	 * \brief Given a surface interaction an an incident/exitant direction 
 	 * pair (wi, wo), create a BSDF query record to evaluate f(wi, wo).
+	 *
 	 * For convenience, this function uses the local incident direction 
 	 * vector contained in the supplied intersection record.
 	 */
@@ -69,19 +65,20 @@ public:
 		const Intersection &its, const Vector &wo);
 
 	/**
-	 * Given a surface interaction an an incident/exitant direction 
+	 * \brief Given a surface interaction an an incident/exitant direction 
 	 * pair (wi, wo), create a BSDF query record to evaluate f(wi, wo). 
+	 *
 	 * For convenience, this function uses the local incident direction 
 	 * vector contained in the supplied intersection record.
 	 */
 	inline BSDFQueryRecord(const Intersection &its, const Vector &wo);
 
 	/**
-	 * Given a surface interaction an an incident/exitant direction 
+	 * \brief Given a surface interaction an an incident/exitant direction 
 	 * pair (wi, wo), create a BSDF query record to evaluate f(wi, wo).
 	 */
-	inline BSDFQueryRecord(const Intersection &its, const Vector &wi,
-		const Vector &wo); 
+	inline BSDFQueryRecord(const Intersection &its, 
+		const Vector &wi, const Vector &wo); 
 
 	/// Return a string representation
 	std::string toString() const;
@@ -98,12 +95,9 @@ public:
 	/* Outgoing/sampled direction */
 	Vector wo;
 
-	/* Random sample used to generate the new direction */
-	Point2 sample;
-
 	/* Transported quantity (radiance or importance) -- required for 
-	   non-reciprocal BSDFs such as transmission through a dielectric
-	   material */
+	   rendering with non-reciprocal BSDFs such as transmission 
+	   through a dielectric material */
 	ETransportQuantity quantity;
 
 	/* Bit mask containing the component types, which may be sampled.
@@ -182,18 +176,18 @@ public:
 	 * component mask or a specific component index is given, the sample
 	 * is drawn from the matching component. Depending on the transport type
 	 * the BSDF or its adjoint version is used. 
-	 * @return The BSDF value divided by the sample probability
+	 * \return The BSDF value divided by the sample probability
 	 */
-	virtual Spectrum sample(BSDFQueryRecord &bRec) const = 0;
+	virtual Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const = 0;
 
 	/**
 	 * Convenience method - similar to sample(), but also multiplies
 	 * by the cosine factor of the sampled direction.
 	 * @return The BSDF value divided by the sample probability
 	 */
-	inline Spectrum sampleCos(BSDFQueryRecord &bRec) const {
-		Spectrum bsdfVal = sample(bRec);
-		if (bsdfVal.isBlack())
+	inline Spectrum sampleCos(BSDFQueryRecord &bRec, const Point2 &_sample) const {
+		Spectrum bsdfVal = sample(bRec, _sample);
+		if (bsdfVal.isZero())
 			return bsdfVal; // bRec.wo is undefined, play safe
 		return bsdfVal * std::abs(Frame::cosTheta(bRec.wo));
 	}
@@ -204,18 +198,20 @@ public:
 	 * component index is given, the sample is drawn from the matching 
 	 * component. Depending on the transport type the BSDF or its adjoint 
 	 * version is used. 
-	 * @return The BSDF value (not divided by the probability)
+	 * \return The BSDF value (not divided by the probability)
 	 */
-	virtual Spectrum sample(BSDFQueryRecord &bRec, Float &pdf) const;
+	virtual Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, 
+		const Point2 &sample) const;
 
 	/**
 	 * Convenience method - similar to sample(), but also multiplies
 	 * by the cosine factor of the sampled direction.
 	 * @return The BSDF value (not divided by the probability)
 	 */
-	inline Spectrum sampleCos(BSDFQueryRecord &bRec, Float &pdf) const {
-		Spectrum bsdfVal(sample(bRec, pdf));
-		if (bsdfVal.isBlack())
+	inline Spectrum sampleCos(BSDFQueryRecord &bRec, Float &pdf,
+			const Point2 &_sample) const {
+		Spectrum bsdfVal(sample(bRec, pdf, _sample));
+		if (bsdfVal.isZero())
 			return bsdfVal; // bRec.wo is undefined, play safe
 		return bsdfVal * std::abs(Frame::cosTheta(bRec.wo));
 	}
@@ -252,6 +248,9 @@ public:
 	/// Serialize this object to a stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
+	/// Set the parent object
+	virtual void setParent(ConfigurableObject *parent);
+
 	MTS_DECLARE_CLASS()
 protected:
 	/// Create a new BSDF instance
@@ -269,8 +268,6 @@ protected:
 	bool m_usesRayDifferentials;
 	std::string m_name;
 };
-
-extern void operator<<(const ETransportQuantity &quantity, std::ostream &os);
 
 MTS_NAMESPACE_END
 

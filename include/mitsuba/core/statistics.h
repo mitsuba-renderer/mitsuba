@@ -45,7 +45,8 @@ MTS_NAMESPACE_BEGIN
 enum EStatsType {
 	ENumberValue = 0, ///< Simple unitless number, e.g. # of rays
 	EByteCount,       ///< Number of read/written/transferred bytes
-	EPercentage       ///< Percentage with respect to a base counter
+	EPercentage,      ///< Percentage with respect to a base counter
+	EAverage          ///< Average value with respect to a base counter
 };
 
 /**
@@ -82,7 +83,7 @@ public:
 	 * \param name     Name of the counter when shown in the statistics summary
 	 * \param type     Characterization of the quantity that will be measured
 	 * \param initial  Initial value of the counter
-	 * \param base     Initial value of the base counter (only for <tt>type == EPercentage</tt>)
+	 * \param base     Initial value of the base counter (only for <tt>type == EPercentage</tt> and <tt>EAverage</tt>)
 	 */
 	StatsCounter(const std::string &category, const std::string &name,
 		EStatsType type = ENumberValue, uint64_t initial = 0L, uint64_t base = 0L);
@@ -132,7 +133,7 @@ public:
 	}
 #endif
 	
-	/// Increment the base counter by the specified amount (only for use with EPercentage)
+	/// Increment the base counter by the specified amount (only for use with EPercentage/EAverage)
 #ifdef MTS_NO_STATISTICS
 	inline void incrementBase(size_t amount = 1) { }
 #elif defined(WIN64)
@@ -170,7 +171,7 @@ public:
 	}
 #endif
 
-	/// Get the reference number (only used with the EPercentage counter type)
+	/// Get the reference number (only used with the EPercentage/EAverage counter type)
 #ifdef MTS_NO_STATISTICS
 	inline uint64_t getBase() const { return 0L; }
 #else

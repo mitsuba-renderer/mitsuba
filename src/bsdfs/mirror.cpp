@@ -71,12 +71,12 @@ public:
 		wo = Vector(-wi.x, -wi.y, wi.z);
 	}
 
-	inline Spectrum sample(BSDFQueryRecord &bRec) const {
+	inline Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		Float pdf;
-		return Mirror::sample(bRec, pdf);
+		return Mirror::sample(bRec, pdf, sample);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (!(bRec.typeMask & m_combinedType))
 			return Spectrum(0.0f);
 		reflect(bRec.wi, bRec.wo);

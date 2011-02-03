@@ -6,6 +6,7 @@ mtsimport /usr/bin
 src/libhw/libmitsuba-hw.so /usr/lib
 src/librender/libmitsuba-render.so /usr/lib
 src/libcore/libmitsuba-core.so /usr/lib
+src/libbidir/libmitsuba-bidir.so /usr/lib
 schema/scene.xsd /usr/share/mitsuba/schema
 plugins/* /usr/share/mitsuba/plugins
 src/qtgui/resources/mitsuba48.png /usr/share/pixmaps

@@ -27,6 +27,8 @@ MTS_NAMESPACE_BEGIN
 /**
  * Simple film implementation, which stores the captured image
  * as an RGBA-based low dynamic-range PNG file with gamma correction.
+ * Alternatively, the class supports a global version of the 
+ * [Reinhard et al. 2002] tonemapping algorithm.
  * Spectral radiance values are converted to linear RGB using 
  * the CIE 1931 XYZ color matching functions and ITU-R Rec. BT.709
  */

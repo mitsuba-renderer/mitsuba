@@ -52,8 +52,8 @@ public:
 	}
 
 	/// Called when the whole target image has been altered in some way
-	inline void refreshEvent(const RenderJob *job) {
-		emit refresh(job);
+	inline void refreshEvent(const RenderJob *job, const Bitmap *bitmap) {
+		emit refresh(job, bitmap);
 	}
 
 	/// Called when a render job has completed successfully or unsuccessfully
@@ -65,7 +65,7 @@ public:
 signals:
 	void workBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 	void workEnd(const RenderJob *job, const ImageBlock *wr);
-	void refresh(const RenderJob *job);
+	void refresh(const RenderJob *job, const Bitmap *bitmap);
 	void jobFinished(const RenderJob *job, bool cancelled);
 protected:
 	virtual ~QRenderListener() { }
@@ -136,7 +136,7 @@ private slots:
 	void onClearRecent();
 	void onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 	void onWorkEnd(const RenderJob *job, const ImageBlock *wr);
-	void onRefresh(const RenderJob *job);
+	void onRefresh(const RenderJob *job, const Bitmap *bitmap);
 	void onJobFinished(const RenderJob *job, bool cancelled);
 	void onProgressMessage(const RenderJob *job, const QString &name, 
 		float progress, const QString &eta);

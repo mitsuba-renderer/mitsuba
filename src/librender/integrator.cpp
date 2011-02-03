@@ -22,8 +22,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-static StatsCounter cameraRays("General", "Camera Rays");
-
 Integrator::Integrator(const Properties &props)
  : NetworkedObject(props), m_properties(props) {
 }
@@ -43,40 +41,24 @@ void Integrator::serialize(Stream *stream, InstanceManager *manager) const {
 const Integrator *Integrator::getSubIntegrator() const { return NULL; }
 
 SampleIntegrator::SampleIntegrator(const Properties &props)
- : Integrator(props) {
-	/* How many samples should be taken when estimating the irradiance at a given point in the scene? 
-	   This attribute is currently only used in conjunction with subsurface integrators and
-	   can safely be ignored if the scene contains none of them. */
-	m_irrSamples = props.getInteger("irrSamples", 32);
-			
-	/* When estimating the irradiance at a given point, should indirect illumination be included
-	   in the final estimate? This attribute is currently only used in conjunction with 
-	   subsurface integrators and can safely be ignored if the scene contains none of them. */
-	m_irrIndirect = props.getBoolean("irrIndirect", true);
-}
+ : Integrator(props) { }
 
 SampleIntegrator::SampleIntegrator(Stream *stream, InstanceManager *manager)
- : Integrator(stream, manager) {
-	m_irrSamples = stream->readInt();
-	m_irrIndirect = stream->readBool();
-}
+ : Integrator(stream, manager) { }
 
 void SampleIntegrator::serialize(Stream *stream, InstanceManager *manager) const {
 	Integrator::serialize(stream, manager);
-
-	stream->writeInt(m_irrSamples);
-	stream->writeBool(m_irrIndirect);
 }
 
 Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n, Float time,
-	Sampler *sampler) const {
+	Sampler *sampler, int irrSamples, bool irrIndirect) const {
 	Spectrum E(0.0f);
 	LuminaireSamplingRecord lRec;
 	RadianceQueryRecord rRec(scene, sampler);
 	Frame frame(n);
 
 	sampler->generate();
-	for (unsigned int i=0; i<m_irrSamples; i++) {
+	for (int i=0; i<irrSamples; i++) {
 		rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission);
 
 		/* Direct */
@@ -87,14 +69,14 @@ Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n
 		}
 
 		/* Indirect */
-		if (m_irrIndirect) {
+		if (irrIndirect) {
 			Vector d = frame.toWorld(squareToHemispherePSA(rRec.nextSample2D()));
 			++rRec.depth;
 			E += Li(RayDifferential(p, d, time), rRec) * M_PI;
 		}
 		sampler->advance();
 	}
-	return E / (Float) m_irrSamples;
+	return E / (Float) irrSamples;
 }
 
 void SampleIntegrator::cancel() {
@@ -147,18 +129,13 @@ void SampleIntegrator::wakeup(std::map<std::string, SerializableObject *> &) {
 }
 
 void SampleIntegrator::renderBlock(const Scene *scene,
-	const Camera *camera, Sampler *sampler, ImageBlock *block, const bool &stop) const {
+	const Camera *camera, Sampler *sampler, ImageBlock *block, 
+	const bool &stop, const std::vector<Point2i> *points) const {
 	Point2 sample, lensSample;
 	RayDifferential eyeRay;
 	Float timeSample = 0;
 	Spectrum spec;
-	int x, y;
-	uint64_t j;
 
-	const int sx = block->getOffset().x,
-			  sy = block->getOffset().y,
-			  ex = sx + block->getSize().x,
-		      ey = sy + block->getSize().y;
 
 	block->clear();
 	RadianceQueryRecord rRec(scene, sampler);
@@ -167,60 +144,125 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 	const TabulatedFilter *filter = camera->getFilm()->getTabulatedFilter();
 	Float scaleFactor = 1.0f/std::sqrt((Float) sampler->getSampleCount());
 
-	if (!block->collectStatistics()) {
-		for (y = sy; y < ey; y++) {
-			for (x = sx; x < ex; x++) {
+	if (points) {
+		/* Use a prescribed traversal order (e.g. using a space-filling curve) */
+		if (!block->collectStatistics()) {
+			for (size_t i=0; i<points->size(); ++i) {
+				Point2i offset = points->operator[](i) 
+					+ Vector2i(block->getOffset());
 				if (stop) 
 					break;
 				sampler->generate();
-				for (j = 0; j<sampler->getSampleCount(); j++) {
+				for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
 					rRec.newQuery(RadianceQueryRecord::ECameraRay);
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
 					if (needsTimeSample)
 						timeSample = rRec.nextSample1D();
 					sample = rRec.nextSample2D();
-					sample.x += x; sample.y += y;
+					sample.x += offset.x; sample.y += offset.y;
 					camera->generateRayDifferential(sample, 
 						lensSample, timeSample, eyeRay);
 					eyeRay.scaleDifferential(scaleFactor);
-					++cameraRays;
 					spec = Li(eyeRay, rRec);
 					block->putSample(sample, spec, rRec.alpha, filter);
 					sampler->advance();
 				}
 			}
-		}
-	} else {
-		Spectrum mean, meanSqr;
-		for (y = sy; y < ey; y++) {
-			for (x = sx; x < ex; x++) {
+		} else {
+			Spectrum mean, meanSqr;
+			for (size_t i=0; i<points->size(); ++i) {
+				Point2i offset = points->operator[](i) 
+					+ Vector2i(block->getOffset());
 				if (stop) 
 					break;
 				sampler->generate();
 				mean = meanSqr = Spectrum(0.0f);
-				for (j = 0; j<sampler->getSampleCount(); j++) {
+				for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
 					rRec.newQuery(RadianceQueryRecord::ECameraRay);
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
 					if (needsTimeSample)
 						timeSample = rRec.nextSample1D();
 					sample = rRec.nextSample2D();
-					sample.x += x; sample.y += y;
+					sample.x += offset.x; sample.y += offset.y;
 					camera->generateRayDifferential(sample, 
 						lensSample, timeSample, eyeRay);
 					eyeRay.scaleDifferential(scaleFactor);
-					++cameraRays;
 					spec = Li(eyeRay, rRec);
 
 					/* Numerically robust online variance estimation using an
-					   algorithm proposed by Donald Knuth (TAOCP vol.2, 3rd ed., p.232) */
+						algorithm proposed by Donald Knuth (TAOCP vol.2, 3rd ed., p.232) */
 					const Spectrum delta = spec - mean;
 					mean += delta / ((Float) j+1);
 					meanSqr += delta * (spec - mean);
 					block->putSample(sample, spec, rRec.alpha, filter);
-					block->setVariance(x, y, meanSqr / (Float) j, (int) j+1);
+					block->setVariance(offset.x, offset.y,
+						meanSqr / (Float) j, (int) j+1);
 					sampler->advance();
+				}
+			}
+		}
+	} else {
+		/* Simple scanline traversal order */
+		const int
+			sx = block->getOffset().x,
+			sy = block->getOffset().y,
+			ex = sx + block->getSize().x,
+			ey = sy + block->getSize().y;
+		if (!block->collectStatistics()) {
+			for (int y = sy; y < ey; y++) {
+				for (int x = sx; x < ex; x++) {
+					if (stop) 
+						break;
+					sampler->generate();
+					for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
+						rRec.newQuery(RadianceQueryRecord::ECameraRay);
+						if (needsLensSample)
+							lensSample = rRec.nextSample2D();
+						if (needsTimeSample)
+							timeSample = rRec.nextSample1D();
+						sample = rRec.nextSample2D();
+						sample.x += x; sample.y += y;
+						camera->generateRayDifferential(sample, 
+							lensSample, timeSample, eyeRay);
+						eyeRay.scaleDifferential(scaleFactor);
+						spec = Li(eyeRay, rRec);
+						block->putSample(sample, spec, rRec.alpha, filter);
+						sampler->advance();
+					}
+				}
+			}
+		} else {
+			Spectrum mean, meanSqr;
+			for (int y = sy; y < ey; y++) {
+				for (int x = sx; x < ex; x++) {
+					if (stop) 
+						break;
+					sampler->generate();
+					mean = meanSqr = Spectrum(0.0f);
+					for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
+						rRec.newQuery(RadianceQueryRecord::ECameraRay);
+						if (needsLensSample)
+							lensSample = rRec.nextSample2D();
+						if (needsTimeSample)
+							timeSample = rRec.nextSample1D();
+						sample = rRec.nextSample2D();
+						sample.x += x; sample.y += y;
+						camera->generateRayDifferential(sample, 
+							lensSample, timeSample, eyeRay);
+						eyeRay.scaleDifferential(scaleFactor);
+						spec = Li(eyeRay, rRec);
+
+						/* Numerically robust online variance estimation using an
+						   algorithm proposed by Donald Knuth (TAOCP vol.2, 3rd ed., p.232) */
+						const Spectrum delta = spec - mean;
+						mean += delta / ((Float) j+1);
+						meanSqr += delta * (spec - mean);
+						block->putSample(sample, spec, rRec.alpha, filter);
+						block->setVariance(x, y, meanSqr / (Float) j, (int) j+1);
+						sampler->advance();
+					}
 				}
 			}
 		}

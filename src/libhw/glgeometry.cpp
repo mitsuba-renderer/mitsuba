@@ -55,7 +55,7 @@ void GLGeometry::refresh() {
 	m_vertexSize = m_mesh->getVertexCount() * m_stride;
 	m_indexSize = m_mesh->getTriangleCount() * sizeof(GLuint) * 3;
 
-	Log(EDebug, "Uploading a GPU geometry object (\"%s\", " SIZE_T_FMT 
+	Log(ETrace, "Uploading a GPU geometry object (\"%s\", " SIZE_T_FMT 
 		" vertices, " SIZE_T_FMT " triangles, %s)",
 		getName().c_str(),
 		m_mesh->getVertexCount(),
@@ -131,7 +131,7 @@ void GLGeometry::unbind() {
 
 void GLGeometry::cleanup() {
 	Assert(m_vertexID != 0 && m_indexID != 0);
-	Log(EDebug, "Freeing GPU geometry object \"%s\"", getName().c_str());
+	Log(ETrace, "Freeing GPU geometry object \"%s\"", getName().c_str());
 	glDeleteBuffers(1, &m_vertexID);
 	glDeleteBuffers(1, &m_indexID);
 	m_vertexID = m_indexID = 0;

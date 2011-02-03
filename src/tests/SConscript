@@ -1,0 +1,9 @@
+Import('env', 'plugins', 'glob', 'os')
+
+testEnv = env.Clone()
+testEnv.Append(CPPDEFINES = [['MTS_TESTCASE', '1']])
+for plugin in glob.glob('test_*.cpp'):
+	name = os.path.basename(plugin)
+	plugins += testEnv.SharedLibrary('#plugins/' + name[0:len(name)-4], plugin)
+
+Export('plugins')

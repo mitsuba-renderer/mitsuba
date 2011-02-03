@@ -77,6 +77,7 @@ public:
 	}
 
 	void configure() {
+		BSDF::configure();
 		if (m_verifyEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
 				+ m_ks * m_specularReflectance->getMaximum().max() > 1.0f)) {
 			Log(EWarn, "Material \"%s\": Energy conservation is potentially violated!", getName().c_str());
@@ -160,13 +161,13 @@ public:
 		return 0.0f;
 	}
 
-	inline Spectrum sampleSpecular(BSDFQueryRecord &bRec) const {
+	inline Spectrum sampleSpecular(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		Vector R = Vector(-bRec.wi.x, -bRec.wi.y, bRec.wi.z);
 
 		/* Sample from a Phong lobe centered around (0, 0, 1) */
-		Float sinAlpha = std::sqrt(1-std::pow(bRec.sample.y, 2/(m_exponent + 1)));
-		Float cosAlpha = std::pow(bRec.sample.y, 1/(m_exponent + 1));
-		Float phi = (2.0f * M_PI) * bRec.sample.x;
+		Float sinAlpha = std::sqrt(1-std::pow(sample.y, 2/(m_exponent + 1)));
+		Float cosAlpha = std::pow(sample.y, 1/(m_exponent + 1));
+		Float phi = (2.0f * M_PI) * sample.x;
 		Vector localDir = Vector(
 			sinAlpha * std::cos(phi),
 			sinAlpha * std::sin(phi),
@@ -188,14 +189,16 @@ public:
 		return Frame::cosTheta(bRec.wo) * INV_PI;
 	}
 
-	inline Spectrum sampleDiffuse(BSDFQueryRecord &bRec) const {
-		bRec.wo = squareToHemispherePSA(bRec.sample);
+	inline Spectrum sampleDiffuse(BSDFQueryRecord &bRec, const Point2 &sample) const {
+		bRec.wo = squareToHemispherePSA(sample);
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
 		return f(bRec) / pdf(bRec);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec) const {
+	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
+		Point2 sample(_sample);
+
 		if (bRec.wi.z <= 0)
 			return Spectrum(0.0f);
 
@@ -205,20 +208,18 @@ public:
 				&& (bRec.component == -1 || bRec.component == 1);
 
 		if (enableDiffuse && enableGlossy) {
-			Point2 newSample = bRec.sample;
-
-			if (bRec.sample.x <= m_specularSamplingWeight) {
-				bRec.sample.x /= m_specularSamplingWeight;
-				return sampleSpecular(bRec);
+			if (sample.x <= m_specularSamplingWeight) {
+				sample.x /= m_specularSamplingWeight;
+				return sampleSpecular(bRec, sample);
 			} else {
-				bRec.sample.x = (bRec.sample.x - m_specularSamplingWeight)
+				sample.x = (sample.x - m_specularSamplingWeight)
 					/ m_diffuseSamplingWeight;
-				return sampleDiffuse(bRec);
+				return sampleDiffuse(bRec, sample);
 			}
 		} else if (enableDiffuse) {
-			return sampleDiffuse(bRec);
+			return sampleDiffuse(bRec, sample);
 		} else if (enableGlossy) {
-			return sampleSpecular(bRec);
+			return sampleSpecular(bRec, sample);
 		}
 
 		return Spectrum(0.0f);

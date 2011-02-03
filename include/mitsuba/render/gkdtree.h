@@ -40,11 +40,6 @@
 #define MTS_KD_BLOCKSIZE_KD  (512*1024/sizeof(KDNode))
 #define MTS_KD_BLOCKSIZE_IDX (512*1024/sizeof(uint32_t))
 
-/// Use a simple hashed 8-entry mailbox per thread
-//#define MTS_KD_MAILBOX_ENABLED 1
-//#define MTS_KD_MAILBOX_SIZE 8
-//#define MTS_KD_MAILBOX_MASK (MTS_KD_MAILBOX_SIZE-1)
-
 #if defined(MTS_KD_DEBUG)
 #define KDAssert(expr) SAssert(expr)
 #define KDAssertEx(expr, text) SAssertEx(expr, text)
@@ -611,16 +606,12 @@ public:
 	/// Return a tight axis-aligned bounding box containing all primitives
 	inline const AABBType &getTightAABB() const { return m_tightAABB;}
 
-	/// Return an bounding sphere containing all primitives
-	inline const BSphere &getBSphere() const { return m_bsphere; }
-
 	MTS_DECLARE_CLASS()
 protected:
 	virtual ~KDTreeBase() { }
 protected:
 	KDNode *m_nodes;
 	AABBType m_aabb, m_tightAABB;
-	BSphere m_bsphere;
 };
 
 #if defined(WIN32)
@@ -633,13 +624,18 @@ protected:
 	__FILE__, __LINE__, fmt, ## __VA_ARGS__)
 
 /**
- * \brief SAH KD-tree acceleration data structure for fast ray-object 
- * intersection computations.
+ * \brief Optimized KD-tree acceleration data structure for 
+ * n-dimensional (n<=4) shapes and various queries on them.
+ *
+ * Note that this class mainly concerns itself with data that cover a
+ * region of space. For point data, other implementations will be more 
+ * suitable. The most important application in Mitsuba is the fast 
+ * construction of high-quality trees for ray tracing. See the class
+ * \ref SAHKDTree for this specialization.
  *
  * The code in this class is a fully generic kd-tree implementation, which
- * can theoretically support any kind of shape. However, subclasses still
- * need to provide the following signatures for a functional 
- * implementation:
+ * can theoretically support any kind of shape. However, subclasses still 
+ * need to provide the following signatures for a functional implementation:
  *
  * /// Return the total number of primitives
  * inline size_type getPrimitiveCount() const;
@@ -648,21 +644,26 @@ protected:
  * inline AABB getAABB(index_type primIdx) const;
  *
  * /// Return the AABB of a primitive when clipped to another AABB
- * inline AABB getClippedAABB(index_type primIdx, const AABB &aabb) const;
- *
- * /// Check whether a primitive is intersected by the given ray. 
- * /// Some temporary space is supplied, which can be used to cache  
- * /// information about the intersection
- * EIntersectionResult intersect(const Ray &ray, index_type idx, 
- *     Float mint, Float maxt, Float &t, void *tmp);
+ * inline AABB getClippedAABB(index_type primIdx, const AABBType &aabb) const;
  *
  * This class follows the "Curiously recurring template" design pattern 
  * so that the above functions can be inlined (in particular, no virtual 
  * calls will be necessary!).
  *
+ * When the kd-tree is initially built, this class optimizes a cost 
+ * heuristic every time a split plane has to be chosen. For ray tracing,
+ * the heuristic is usually the surface area heuristic (SAH), but other
+ * choices are possible as well. The tree construction heuristic must be 
+ * passed as a template argument, which can use a supplied AABB and
+ * split candidate to compute approximate probabilities of recursing into
+ * the left and right subrees during a typical kd-tree query operation.
+ * See \ref SurfaceAreaHeuristic for an example of the interface that
+ * must be implemented.
+ *
  * The kd-tree construction algorithm creates 'perfect split' trees as 
  * outlined in the paper "On Building fast kd-Trees for Ray Tracing, and on
- * doing that in O(N log N)" by Ingo Wald and Vlastimil Havran. 
+ * doing that in O(N log N)" by Ingo Wald and Vlastimil Havran. This works
+ * even when the tree is not meant to be used for ray tracing.
  * For polygonal meshes, the involved Sutherland-Hodgman iterations can be 
  * quite expensive in terms of the overall construction time. The 
  * \ref setClip method can be used to deactivate perfect splits at the 
@@ -676,13 +677,9 @@ protected:
  * builder. When multiple processors are available, the build process runs
  * in parallel.
  *
- * This implementation also provides an optimized ray traversal algorithm 
- * (TA^B_{rec}), which is explained in Vlastimil Havran's PhD thesis 
- * "Heuristic Ray Shooting Algorithms". 
- *
  * \author Wenzel Jakob
  */
-template <typename AABBType, typename Derived> 
+template <typename AABBType, typename TreeConstructionHeuristic, typename Derived> 
 	class GenericKDTree : public KDTreeBase<AABBType> {
 protected:
 	// Some forward declarations
@@ -694,26 +691,9 @@ public:
 	typedef typename KDTreeBase<AABBType>::size_type  size_type;
 	typedef typename KDTreeBase<AABBType>::index_type index_type;
 	typedef typename KDTreeBase<AABBType>::KDNode     KDNode;
-	typedef typename AABBType::value_type                 value_type;
-	typedef typename AABBType::point_type                 point_type;
-	typedef typename AABBType::vector_type                vector_type;
-
-	/**
-	 * \brief Documents the possible outcomes of a single 
-	 * ray-primitive intersection computation
-	 */
-	enum EIntersectionResult {
-		/// An intersection was found on the specified interval
-		EYes = 0,
-
-		/** While an intersection could not be found on the specified 
-		    interval, the primitive might still intersect the ray if a
-			larger interval was considered */
-		ENo,
-
-		/// The primitive will never intersect the ray in question
-		ENever
-	};
+	typedef typename AABBType::value_type             value_type;
+	typedef typename AABBType::point_type             point_type;
+	typedef typename AABBType::vector_type            vector_type;
 
 	/**
 	 * \brief Create a new kd-tree instance initialized with 
@@ -722,7 +702,7 @@ public:
 	GenericKDTree() : m_indices(NULL) {
 		this->m_nodes = NULL;
 		m_traversalCost = 15;
-		m_intersectionCost = 20;
+		m_queryCost = 20;
 		m_emptySpaceBonus = 0.9f;
 		m_clip = true;
 		m_stopPrims = 6;
@@ -745,37 +725,40 @@ public:
 	}
 
 	/**
-	 * \brief Set the traversal cost used by the surface area heuristic
+	 * \brief Set the traversal cost used by the tree construction heuristic
 	 */
 	inline void setTraversalCost(Float traversalCost) {
 		m_traversalCost = traversalCost;
 	}
 
 	/**
-	 * \brief Return the traversal cost used by the surface area heuristic
+	 * \brief Return the traversal cost used by the tree construction heuristic
 	 */
 	inline Float getTraversalCost() const {
 		return m_traversalCost;
 	}
 
 	/**
-	 * \brief Set the intersection cost used by the surface area heuristic
+	 * \brief Set the query cost used by the tree construction heuristic
+	 * (This is the average cost for testing a contained shape against 
+	 *  a kd-tree search query)
 	 */
-	inline void setIntersectionCost(Float intersectionCost) {
-		m_intersectionCost = intersectionCost;
+	inline void setQueryCost(Float queryCost) {
+		m_queryCost = queryCost;
 	}
 
 	/**
-	 * \brief Return the intersection cost used by the surface 
-	 * area heuristic
+	 * \brief Return the query cost used by the tree construction heuristic
+	 * (This is the average cost for testing a contained shape against 
+	 *  a kd-tree search query)
 	 */
-	inline Float getIntersectionCost() const {
-		return m_intersectionCost;
+	inline Float getQueryCost() const {
+		return m_queryCost;
 	}
 
 	/**
 	 * \brief Set the bonus factor for empty space used by the
-	 * surface area heuristic
+	 * tree construction heuristic
 	 */
 	inline void setEmptySpaceBonus(Float emptySpaceBonus) {
 		m_emptySpaceBonus = emptySpaceBonus;
@@ -783,7 +766,7 @@ public:
 
 	/**
 	 * \brief Return the bonus factor for empty space used by the
- 	 * surface area heuristic
+ 	 * tree construction heuristic
 	 */
 	inline Float getEmptySpaceBonus() const {
 		return m_emptySpaceBonus;
@@ -898,7 +881,7 @@ public:
 	/**
 	 * \brief Specify the number of primitives, at which the builder will 
 	 * switch from (approximate) Min-Max binning to the accurate 
-	 * O(n log n) SAH-based optimization method.
+	 * O(n log n) optimization method.
 	 */
 	inline void setExactPrimitiveThreshold(size_type exactPrimThreshold) {
 		m_exactPrimThreshold = exactPrimThreshold;
@@ -907,20 +890,11 @@ public:
 	/**
 	 * \brief Return the number of primitives, at which the builder will 
 	 * switch from (approximate) Min-Max binning to the accurate 
-	 * O(n log n) SAH-based optimization method.
+	 * O(n log n) optimization method.
 	 */
 	inline size_type getExactPrimitiveThreshold() const {
 		return m_exactPrimThreshold;
 	}
-
-	/**
-	 * \brief Empirically find the best traversal and intersection 
-	 * cost values
-	 *
-	 * This is done by running the traversal code on random rays 
-	 * and fitting the SAH cost model to the collected statistics.
-	 */
-	void findCosts(Float &traversalCost, Float &intersectionCost);
 protected:
 	/**
 	 * \brief Build a KD-tree over the supplied geometry
@@ -933,8 +907,8 @@ protected:
 			KDLog(EError, "The kd-tree has already been built!");
 		if (m_traversalCost <= 0)
 			KDLog(EError, "The traveral cost must be > 0");
-		if (m_intersectionCost <= 0)
-			KDLog(EError, "The intersection cost must be > 0");
+		if (m_queryCost <= 0)
+			KDLog(EError, "The query cost must be > 0");
 		if (m_emptySpaceBonus <= 0 || m_emptySpaceBonus > 1)
 			KDLog(EError, "The empty space bonus must be in [0, 1]");
 		if (m_stopPrims < 0)
@@ -967,7 +941,7 @@ protected:
 		index_type *indices = leftAlloc.allocate<index_type>(primCount);
 
 		ref<Timer> timer = new Timer();
-		AABB &aabb = this->m_aabb;
+		AABBType &aabb = this->m_aabb;
 		aabb.reset();
 		for (index_type i=0; i<primCount; ++i) {
 			aabb.expandBy(cast()->getAABB(i));
@@ -980,7 +954,7 @@ protected:
 
 		KDLog(EDebug, "kd-tree configuration:");
 		KDLog(EDebug, "   Traversal cost           : %.2f", m_traversalCost);
-		KDLog(EDebug, "   Intersection cost        : %.2f", m_intersectionCost);
+		KDLog(EDebug, "   Query cost               : %.2f", m_queryCost);
 		KDLog(EDebug, "   Empty space bonus        : %.2f", m_emptySpaceBonus);
 		KDLog(EDebug, "   Max. tree depth          : %i", m_maxDepth);
 		KDLog(EDebug, "   Scene bounding box (min) : %s", 
@@ -988,7 +962,7 @@ protected:
 		KDLog(EDebug, "   Scene bounding box (max) : %s", 
 				aabb.max.toString().c_str());
 		KDLog(EDebug, "   Min-max bins             : %i", m_minMaxBins);
-		KDLog(EDebug, "   Greedy SAH optimization  : use for <= %i primitives", 
+		KDLog(EDebug, "   O(n log n) method        : use for <= %i primitives", 
 				m_exactPrimThreshold);
 		KDLog(EDebug, "   Perfect splits           : %s", m_clip ? "yes" : "no");
 		KDLog(EDebug, "   Retract bad splits       : %s", 
@@ -1005,13 +979,11 @@ protected:
 		if (m_parallelBuild) {
 			m_builders.resize(procCount);
 			for (size_type i=0; i<procCount; ++i) {
-				m_builders[i] = new SAHTreeBuilder(i, this);
+				m_builders[i] = new TreeBuilder(i, this);
 				m_builders[i]->incRef();
 				m_builders[i]->start();
 			}
 		}
-
-		KDLog(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
 
 		m_indirectionLock = new Mutex();
 		KDNode *prelimRoot = ctx.nodes.allocate(1);
@@ -1070,7 +1042,8 @@ protected:
 		Float expTraversalSteps = 0;
 		Float expLeavesVisited = 0;
 		Float expPrimitivesIntersected = 0;
-		Float sahCost = 0;
+		Float heuristicCost = 0;
+
 		size_type nodePtr = 0, indexPtr = 0;
 		size_type maxPrimsInLeaf = 0;
 		const size_type primBucketCount = 16;
@@ -1084,6 +1057,9 @@ protected:
 				sizeof(KDNode) * (m_nodeCount+1)))+1;
 		m_indices = new index_type[m_indexCount];
 
+		/* The following code rewrites all tree nodes with proper relative 
+		 * indices. It also computes the final tree cost and some other
+		 * useful heuristics */
 		stack.push(boost::make_tuple(prelimRoot, &this->m_nodes[nodePtr++], 
 					&ctx, aabb));
 		while (!stack.empty()) {
@@ -1101,26 +1077,29 @@ protected:
 			if (node->isLeaf()) {
 				size_type primStart = node->getPrimStart(),
 						  primEnd = node->getPrimEnd(),
-						  primCount = primEnd-primStart;
-				target->initLeafNode(indexPtr, primCount);
+						  primsInLeaf = primEnd-primStart;
+				target->initLeafNode(indexPtr, primsInLeaf);
 
-				Float sa = aabb.getSurfaceArea(), weightedSA = sa * primCount;
-				expLeavesVisited += aabb.getSurfaceArea();
-				expPrimitivesIntersected += weightedSA;
-				sahCost += weightedSA * m_intersectionCost;
-				if (primCount < primBucketCount)
-					primBuckets[primCount]++;
-				if (primCount > maxPrimsInLeaf)
-					maxPrimsInLeaf = primCount;
+				Float quantity = TreeConstructionHeuristic::getQuantity(aabb),
+					  weightedQuantity = quantity * primsInLeaf;
+				expLeavesVisited += quantity;
+				expPrimitivesIntersected += weightedQuantity;
+				heuristicCost += weightedQuantity * m_queryCost;
+				if (primsInLeaf < primBucketCount)
+					primBuckets[primsInLeaf]++;
+				if (primsInLeaf > maxPrimsInLeaf)
+					maxPrimsInLeaf = primsInLeaf;
 
 				const BlockedVector<index_type, MTS_KD_BLOCKSIZE_IDX> &indices 
 					= context->indices;
-				for (size_type idx = primStart; idx<primEnd; ++idx) 
+				for (size_type idx = primStart; idx<primEnd; ++idx) { 
+					KDAssert(indices[idx] >= 0 && indices[idx] < primCount);
 					m_indices[indexPtr++] = indices[idx];
+				}
 			} else {
-				Float sa = aabb.getSurfaceArea();
-				expTraversalSteps += sa;
-				sahCost += sa * m_traversalCost;
+				Float quantity = TreeConstructionHeuristic::getQuantity(aabb);
+				expTraversalSteps += quantity;
+				heuristicCost += quantity * m_traversalCost;
 
 				const KDNode *left;
 				if (EXPECT_TAKEN(!node->isIndirection()))
@@ -1170,56 +1149,55 @@ protected:
 
 		KDLog(EDebug, "");
 
-		Float rootSA = aabb.getSurfaceArea();
-		expTraversalSteps /= rootSA;
-		expLeavesVisited /= rootSA;
-		expPrimitivesIntersected /= rootSA;
-		sahCost /= rootSA;
+		Float rootQuantity = TreeConstructionHeuristic::getQuantity(aabb);
+		expTraversalSteps /= rootQuantity;
+		expLeavesVisited /= rootQuantity;
+		expPrimitivesIntersected /= rootQuantity;
+		heuristicCost /= rootQuantity;
 
 		/* Slightly enlarge the bounding box 
 		   (necessary e.g. when the scene is planar) */
 		this->m_tightAABB = aabb;
 		aabb.min -= (aabb.max-aabb.min) * Epsilon
-			+ Vector(Epsilon, Epsilon, Epsilon);
+			+ vector_type(Epsilon);
 		aabb.max += (aabb.max-aabb.min) * Epsilon
-			+ Vector(Epsilon, Epsilon, Epsilon);
-		this->m_bsphere = aabb.getBSphere();
+			+ vector_type(Epsilon);
 
 		KDLog(EDebug, "Structural kd-tree statistics:");
-		KDLog(EDebug, "   Parallel work units       : " SIZE_T_FMT, 
+		KDLog(EDebug, "   Parallel work units         : " SIZE_T_FMT, 
 				m_interface.threadMap.size());
-		KDLog(EDebug, "   Node storage cost         : %s", 
+		KDLog(EDebug, "   Node storage cost           : %s", 
 				memString(nodePtr * sizeof(KDNode)).c_str());
-		KDLog(EDebug, "   Index storage cost        : %s", 
+		KDLog(EDebug, "   Index storage cost          : %s", 
 				memString(indexPtr * sizeof(index_type)).c_str());
-		KDLog(EDebug, "   Inner nodes               : %i", ctx.innerNodeCount);
-		KDLog(EDebug, "   Leaf nodes                : %i", ctx.leafNodeCount);
-		KDLog(EDebug, "   Nonempty leaf nodes       : %i", 
+		KDLog(EDebug, "   Inner nodes                 : %i", ctx.innerNodeCount);
+		KDLog(EDebug, "   Leaf nodes                  : %i", ctx.leafNodeCount);
+		KDLog(EDebug, "   Nonempty leaf nodes         : %i", 
 				ctx.nonemptyLeafNodeCount);
 		std::ostringstream oss;
-		oss << "   Leaf node histogram       : ";
+		oss << "   Leaf node histogram         : ";
 		for (size_type i=0; i<primBucketCount; i++) {
 			oss << i << "(" << primBuckets[i] << ") ";
 			if ((i+1)%4==0 && i+1<primBucketCount) {
 				KDLog(EDebug, "%s", oss.str().c_str());
 				oss.str("");
-				oss << "                               ";
+				oss << "                                 ";
 			}
 		}
 		KDLog(EDebug, "%s", oss.str().c_str());
 		KDLog(EDebug, "");
 		KDLog(EDebug, "Qualitative kd-tree statistics:");
-		KDLog(EDebug, "   Retracted splits          : %i", ctx.retractedSplits);
-		KDLog(EDebug, "   Pruned primitives         : %i", ctx.pruned);
-		KDLog(EDebug, "   Largest leaf node         : %i primitives",
+		KDLog(EDebug, "   Retracted splits            : %i", ctx.retractedSplits);
+		KDLog(EDebug, "   Pruned primitives           : %i", ctx.pruned);
+		KDLog(EDebug, "   Largest leaf node           : %i primitives",
 				maxPrimsInLeaf);
-		KDLog(EDebug, "   Avg. prims/nonempty leaf  : %.2f", 
+		KDLog(EDebug, "   Avg. prims/nonempty leaf    : %.2f", 
 				ctx.primIndexCount / (Float) ctx.nonemptyLeafNodeCount);
-		KDLog(EDebug, "   Expected traversals/ray   : %.2f", expTraversalSteps);
-		KDLog(EDebug, "   Expected leaf visits/ray  : %.2f", expLeavesVisited);
-		KDLog(EDebug, "   Expected prim. visits/ray : %.2f", 
+		KDLog(EDebug, "   Expected traversals/query   : %.2f", expTraversalSteps);
+		KDLog(EDebug, "   Expected leaf visits/query  : %.2f", expLeavesVisited);
+		KDLog(EDebug, "   Expected prim. visits/query : %.2f", 
 				expPrimitivesIntersected);
-		KDLog(EDebug, "   Final SAH cost            : %.2f", sahCost);
+		KDLog(EDebug, "   Final cost                  : %.2f", heuristicCost);
 		KDLog(EDebug, "");
 	}
 
@@ -1300,25 +1278,25 @@ protected:
 	};
 
 	/**
-	 * \brief Data type for split candidates computed by 
-	 * the SAH optimization routines.
+	 * \brief Data type for split candidates computed by
+	 * the O(n log n) greedy optimization method.
 	 * */
 	struct SplitCandidate {
-		Float sahCost;
+		Float cost;
 		float pos;
 		int axis;
 		size_type numLeft, numRight;
 		bool planarLeft;
 
 		inline SplitCandidate() :
-			sahCost(std::numeric_limits<Float>::infinity()),
+			cost(std::numeric_limits<Float>::infinity()),
 			pos(0), axis(0), numLeft(0), numRight(0), planarLeft(false) {
 		}
 
 		std::string toString() const {
 			std::ostringstream oss;
 			oss << "SplitCandidate[" << endl
-				<< "  sahCost=" << sahCost << "," << endl
+				<< "  cost=" << cost << "," << endl
 				<< "  pos=" << pos << "," << endl
 				<< "  axis=" << axis << "," << endl
 				<< "  numLeft=" << numLeft << "," << endl
@@ -1393,7 +1371,7 @@ protected:
 
 	/**
 	 * \brief Communication data structure used to pass jobs to
-	 * SAH kd-tree builder threads
+	 * kd-tree builder threads
 	 */
 	struct BuildInterface {
 		/* Communcation */
@@ -1405,7 +1383,7 @@ protected:
 		/* Job description for building a subtree */
 		int depth;
 		KDNode *node;
-		AABB nodeAABB;
+		AABBType nodeAABB;
 		EdgeEvent *eventStart, *eventEnd;
 		size_type primCount;
 		int badRefines;
@@ -1419,33 +1397,12 @@ protected:
 		}
 	};
 
-#if defined(MTS_KD_MAILBOX_ENABLED)
 	/**
-	 * \brief Hashed mailbox implementation
+	 * \brief kd-tree builder thread
 	 */
-	struct HashedMailbox {
-		inline HashedMailbox() {
-			memset(entries, 0xFF, sizeof(index_type)*MTS_KD_MAILBOX_SIZE);
-		}
-
-		inline void put(index_type primIndex) {
-			entries[primIndex & MTS_KD_MAILBOX_MASK] = primIndex;
-		}
-
-		inline bool contains(index_type primIndex) const {
-			return entries[primIndex & MTS_KD_MAILBOX_MASK] == primIndex;
-		}
-
-		index_type entries[MTS_KD_MAILBOX_SIZE];
-	};
-#endif
-
-	/**
-	 * \brief SAH kd-tree builder thread
-	 */
-	class SAHTreeBuilder : public Thread {
+	class TreeBuilder : public Thread {
 	public:
-		SAHTreeBuilder(index_type id, GenericKDTree *parent) 
+		TreeBuilder(index_type id, GenericKDTree *parent) 
 			: Thread(formatString("bld%i", id)),
 			m_id(id),
 			m_parent(parent),
@@ -1455,7 +1412,7 @@ protected:
 			setCritical(true);
 		}
 
-		~SAHTreeBuilder() {
+		~TreeBuilder() {
 			KDAssert(m_context.leftAlloc.used() == 0);
 			KDAssert(m_context.rightAlloc.used() == 0);
 		}
@@ -1472,7 +1429,7 @@ protected:
 				}
 				int depth = m_interface.depth;
 				KDNode *node = m_interface.node;
-				AABB nodeAABB = m_interface.nodeAABB;
+				AABBType nodeAABB = m_interface.nodeAABB;
 				size_t eventCount = m_interface.eventEnd - m_interface.eventStart;
 				size_type primCount = m_interface.primCount;
 				int badRefines = m_interface.badRefines;
@@ -1486,7 +1443,7 @@ protected:
 				m_interface.mutex->unlock();
 
 				std::sort(eventStart, eventEnd, EdgeEventOrdering());
-				m_parent->buildTreeSAH(m_context, depth, node,
+				m_parent->buildTree(m_context, depth, node,
 					nodeAABB, eventStart, eventEnd, primCount, true, badRefines);
 				leftAlloc.release(eventStart);
 			}
@@ -1517,18 +1474,18 @@ protected:
 	 * \brief Create an edge event list for a given list of primitives. 
 	 *
 	 * This is necessary when passing from Min-Max binning to the more 
-	 * accurate SAH-based optimizier.
+	 * accurate O(n log n) optimizier.
 	 */
 	boost::tuple<EdgeEvent *, EdgeEvent *, size_type> createEventList(
-			OrderedChunkAllocator &alloc, const AABB &nodeAABB, 
+			OrderedChunkAllocator &alloc, const AABBType &nodeAABB, 
 			index_type *prims, size_type primCount) {
-		size_type initialSize = primCount * 6, actualPrimCount = 0;
+		size_type initialSize = primCount * 2 * point_type::dim, actualPrimCount = 0;
 		EdgeEvent *eventStart = alloc.allocate<EdgeEvent>(initialSize);
 		EdgeEvent *eventEnd = eventStart;
 
 		for (size_type i=0; i<primCount; ++i) {
 			index_type index = prims[i];
-			AABB aabb;
+			AABBType aabb;
 			if (m_clip) {
 				aabb = cast()->getClippedAABB(index, nodeAABB);
 				if (!aabb.isValid() || aabb.getSurfaceArea() == 0)
@@ -1580,6 +1537,7 @@ protected:
 		if (primCount > 0) {
 			size_type seenPrims = 0;
 			ctx.nonemptyLeafNodeCount++;
+
 			for (EdgeEvent *event = eventStart; event != eventEnd 
 					&& event->axis == 0; ++event) {
 				if (event->type == EdgeEvent::EEdgeStart ||
@@ -1611,7 +1569,7 @@ protected:
 		node->initLeafNode((size_type) ctx.indices.size(), primCount);
 		if (primCount > 0) {
 			ctx.nonemptyLeafNodeCount++;
-			for (size_type i=0; i<primCount; ++i) 
+			for (size_type i=0; i<primCount; ++i)
 				ctx.indices.push_back(indices[i]);
 			ctx.primIndexCount += primCount;
 		}
@@ -1622,7 +1580,7 @@ protected:
 	 * \brief Leaf node creation helper function. 
 	 *
 	 * Creates a unique index list by collapsing
-	 * a subtree with a bad SAH cost.
+	 * a subtree with a bad cost.
 	 *
 	 * \param ctx 
 	 *     Thread-specific build context containing allocators etc.
@@ -1630,48 +1588,46 @@ protected:
 	 *     KD-tree node entry to be filled
 	 * \param start
 	 *     Start pointer of the subtree indices
-	 * \param primCount
-	 *     Total primitive count for the current node
 	 */
-	void createLeafAfterRetraction(BuildContext &ctx, KDNode *node, 
-			size_type start, size_type primCount) {
-		node->initLeafNode(start, primCount);
-		size_type actualCount = (size_type) (ctx.indices.size() - start);
+	void createLeafAfterRetraction(BuildContext &ctx, KDNode *node, size_type start) {
+		size_type indexCount = (size_type) (ctx.indices.size() - start);
+		SAssert(indexCount > 0);
 
-		if (primCount > 0)
-			ctx.nonemptyLeafNodeCount++;
+		OrderedChunkAllocator &alloc = ctx.leftAlloc;
 
-		if (actualCount != primCount) {
-			KDAssert(primCount > 0);
-			OrderedChunkAllocator &alloc = ctx.leftAlloc;
+		/* A temporary list is allocated to do the sorting (the indices
+		   are not guaranteed to be contiguous in memory) */
+		index_type *tempStart = alloc.allocate<index_type>(indexCount),
+				   *tempEnd = tempStart + indexCount,
+				   *ptr = tempStart;
 
-			/* A temporary list is allocated to do the sorting (the indices
-			   are not guaranteed to be contiguous in memory) */
-			index_type *tempStart = alloc.allocate<index_type>(actualCount);
-			index_type *tempEnd = tempStart, *ptr = tempStart;
+		for (size_type i=start, end = start + indexCount; i<end; ++i)
+			*ptr++ = ctx.indices[i];
 
-			for (size_type i=start, end = start + actualCount; i<end; ++i)
-				*tempEnd++ = ctx.indices[i];
+		/* Generate an index list without duplicate entries */
+		std::sort(tempStart, tempEnd, std::less<index_type>());
+		ptr = tempStart;
 
-			std::sort(tempStart, tempEnd, std::less<index_type>());
-
-			for (size_type i=start, end = start + primCount; i<end; ++i) {
-				ctx.indices[i] = *ptr++;
-				while (ptr < tempEnd && *ptr == ctx.indices[i])
-					++ptr;
-			}
-
-			ctx.indices.resize(start + primCount);
-			ctx.primIndexCount = ctx.primIndexCount - actualCount + primCount;
-			alloc.release(tempStart);
+		int idx = start;
+		while (ptr < tempEnd) {
+			ctx.indices[idx] = *ptr++;
+			while (ptr < tempEnd && *ptr == ctx.indices[idx])
+				++ptr;
+			idx++;
 		}
 
+		int nSeen = idx-start;
+		ctx.primIndexCount = ctx.primIndexCount - indexCount + nSeen;
+		ctx.indices.resize(idx);
+		alloc.release(tempStart);
+		node->initLeafNode(start, nSeen);
+		ctx.nonemptyLeafNodeCount++;
 		ctx.leafNodeCount++;
 	}
 
 	/**
 	 * \brief Implements the transition from min-max-binning to the
-	 * SAH-based optimization
+	 * O(n log n) optimization.
 	 *
 	 * \param ctx 
 	 *     Thread-specific build context containing allocators etc.
@@ -1691,20 +1647,20 @@ protected:
 	 * \param badRefines
 	 *     Number of "probable bad refines" further up the tree. This makes
 	 *     it possible to split along an initially bad-looking candidate in
-	 *     the hope that the SAH cost was significantly overestimated. The
+	 *     the hope that the cost was significantly overestimated. The
 	 *     counter makes sure that only a limited number of such splits can
 	 *     happen in succession.
 	 * \returns 
-	 *     Final SAH cost of the node
+	 *     Final cost of the node
 	 */
-	inline Float transitionToSAH(BuildContext &ctx, unsigned int depth, KDNode *node, 
-			const AABB &nodeAABB, index_type *indices,
+	inline Float transitionToNLogN(BuildContext &ctx, unsigned int depth, KDNode *node, 
+			const AABBType &nodeAABB, index_type *indices,
 			size_type primCount, bool isLeftChild, size_type badRefines) {
 		OrderedChunkAllocator &alloc = isLeftChild 
 				? ctx.leftAlloc : ctx.rightAlloc;
 		boost::tuple<EdgeEvent *, EdgeEvent *, size_type> events  
 				= createEventList(alloc, nodeAABB, indices, primCount);
-		Float sahCost;
+		Float cost;
 		if (m_parallelBuild) {
 			m_interface.mutex->lock();
 			m_interface.depth = depth;
@@ -1721,18 +1677,18 @@ protected:
 				m_interface.condJobTaken->wait();
 			m_interface.mutex->unlock();
 
-			// Never tear down this subtree (return a SAH cost of -infinity)
-			sahCost = -std::numeric_limits<Float>::infinity();
+			// Never tear down this subtree (return a cost of -infinity)
+			cost = -std::numeric_limits<Float>::infinity();
 		} else {
 			std::sort(boost::get<0>(events), boost::get<1>(events), 
 					EdgeEventOrdering());
 
-			sahCost = buildTreeSAH(ctx, depth, node, nodeAABB,
+			cost = buildTree(ctx, depth, node, nodeAABB,
 				boost::get<0>(events), boost::get<1>(events), 
 				boost::get<2>(events), isLeftChild, badRefines);
 		}
 		alloc.release(boost::get<0>(events));
-		return sahCost;
+		return cost;
 	}
 
 	/**
@@ -1758,25 +1714,25 @@ protected:
 	 * \param badRefines
 	 *     Number of "probable bad refines" further up the tree. This makes
 	 *     it possible to split along an initially bad-looking candidate in
-	 *     the hope that the SAH cost was significantly overestimated. The
+	 *     the hope that the cost was significantly overestimated. The
 	 *     counter makes sure that only a limited number of such splits can
 	 *     happen in succession.
 	 * \returns 
-	 *     Final SAH cost of the node
+	 *     Final cost of the node
 	 */
 	Float buildTreeMinMax(BuildContext &ctx, unsigned int depth, KDNode *node, 
-			const AABB &nodeAABB, const AABB &tightAABB, index_type *indices,
+			const AABBType &nodeAABB, const AABBType &tightAABB, index_type *indices,
 			size_type primCount, bool isLeftChild, size_type badRefines) {
 		KDAssert(nodeAABB.contains(tightAABB));
 
-		Float leafCost = primCount * m_intersectionCost;
+		Float leafCost = primCount * m_queryCost;
 		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
 			createLeaf(ctx, node, indices, primCount);
 			return leafCost;
 		}
 
 		if (primCount <= m_exactPrimThreshold) 
-			return transitionToSAH(ctx, depth, node, nodeAABB, indices,
+			return transitionToNLogN(ctx, depth, node, nodeAABB, indices,
 				primCount, isLeftChild, badRefines);
 
 		/* ==================================================================== */
@@ -1789,27 +1745,27 @@ protected:
 		/* ==================================================================== */
 	    /*                        Split candidate search                        */
     	/* ==================================================================== */
-		SplitCandidate bestSplit = ctx.minMaxBins.maximizeSAH(m_traversalCost,
-				m_intersectionCost);
+		SplitCandidate bestSplit = ctx.minMaxBins.minimizeCost(m_traversalCost,
+				m_queryCost);
 
-		if (bestSplit.sahCost == std::numeric_limits<Float>::infinity()) {
+		if (bestSplit.cost == std::numeric_limits<Float>::infinity()) {
 			/* This is bad: we have either run out of floating point precision to
 			   accurately represent split planes (e.g. 'tightAABB' is almost collapsed
 			   along an axis), or the compiler made overly liberal use of floating point 
 			   optimizations, causing the two stages of the min-max binning code to 
 			   become inconsistent. The two ways to proceed at this point are to
-			   either create a leaf (bad) or switch over to the SAH-based optimization,
-			   which is done below */
+			   either create a leaf (bad) or switch over to the O(n log n) greedy 
+			   optimization, which is done below */
 			KDLog(EWarn, "Min-max binning was unable to split %i primitives with %s "
-				"-- retrying with the SAH-based optimization",
+				"-- retrying with the O(n log n) greedy optimization",
 				primCount, tightAABB.toString().c_str());
-			return transitionToSAH(ctx, depth, node, nodeAABB, indices,
+			return transitionToNLogN(ctx, depth, node, nodeAABB, indices,
 				primCount, isLeftChild, badRefines);
 		}
 
 		/* "Bad refines" heuristic from PBRT */
-		if (bestSplit.sahCost >= leafCost) {
-			if ((bestSplit.sahCost > 4 * leafCost && primCount < 16)
+		if (bestSplit.cost >= leafCost) {
+			if ((bestSplit.cost > 4 * leafCost && primCount < 16)
 				|| badRefines >= m_maxBadRefines) {
 				createLeaf(ctx, node, indices, primCount);
 				return leafCost;
@@ -1821,9 +1777,9 @@ protected:
 	    /*                            Partitioning                              */
 	    /* ==================================================================== */
 
-		boost::tuple<AABB, index_type *, AABB, index_type *> partition = 
+		boost::tuple<AABBType, index_type *, AABBType, index_type *> partition = 
 			ctx.minMaxBins.partition(ctx, cast(), indices, bestSplit, 
-				isLeftChild, m_traversalCost, m_intersectionCost);
+				isLeftChild, m_traversalCost, m_queryCost);
 
 		/* ==================================================================== */
 	    /*                              Recursion                               */
@@ -1849,27 +1805,29 @@ protected:
 		}
 		ctx.innerNodeCount++;
 
-		AABB childAABB(nodeAABB);
+		AABBType childAABB(nodeAABB);
 		childAABB.max[bestSplit.axis] = bestSplit.pos;
-		Float saLeft = childAABB.getSurfaceArea();
 
-		Float leftSAHCost = buildTreeMinMax(ctx, depth+1, children,
+		Float leftCost = buildTreeMinMax(ctx, depth+1, children,
 				childAABB, boost::get<0>(partition), boost::get<1>(partition), 
 				bestSplit.numLeft, true, badRefines);
 
 		childAABB.min[bestSplit.axis] = bestSplit.pos;
 		childAABB.max[bestSplit.axis] = nodeAABB.max[bestSplit.axis];
-		Float saRight = childAABB.getSurfaceArea();
 
-		Float rightSAHCost = buildTreeMinMax(ctx, depth+1, children + 1,
+		Float rightCost = buildTreeMinMax(ctx, depth+1, children + 1,
 				childAABB, boost::get<2>(partition), boost::get<3>(partition), 
 				bestSplit.numRight, false, badRefines);
 
-		/* Compute the final SAH cost given the updated cost 
+		TreeConstructionHeuristic tch(nodeAABB);
+		std::pair<Float, Float> prob = tch(bestSplit.axis, 
+			bestSplit.pos - nodeAABB.min[bestSplit.axis],
+			nodeAABB.max[bestSplit.axis] - bestSplit.pos);
+
+		/* Compute the final cost given the updated cost 
 		   values received from the children */
-		Float finalSAHCost = m_traversalCost + 
-			(saLeft * leftSAHCost + saRight * rightSAHCost)
-			/ nodeAABB.getSurfaceArea();
+		Float finalCost = m_traversalCost + 
+			(prob.first * leftCost + prob.second * rightCost);
 
 		/* Release the index lists not needed by the children anymore */
 		if (isLeftChild)
@@ -1881,23 +1839,23 @@ protected:
 	    /*                           Final decision                             */
 	    /* ==================================================================== */
 
-		if (!m_retract || finalSAHCost < primCount * m_intersectionCost) {
-			return finalSAHCost;
+		if (!m_retract || finalCost < primCount * m_queryCost) {
+			return finalCost;
 		} else {
-			/* In the end, splitting didn't help to reduce the SAH cost.
+			/* In the end, splitting didn't help to reduce the cost.
 			   Tear up everything below this node and create a leaf */
 			ctx.nodes.resize(nodePosBeforeSplit);
 			ctx.retractedSplits++;
 			ctx.leafNodeCount = leafNodeCountBeforeSplit;
 			ctx.nonemptyLeafNodeCount = nonemptyLeafNodeCountBeforeSplit;
 			ctx.innerNodeCount = innerNodeCountBeforeSplit;
-			createLeafAfterRetraction(ctx, node, indexPosBeforeSplit, primCount);
+			createLeafAfterRetraction(ctx, node, indexPosBeforeSplit);
 			return leafCost;
 		}
 	}
 
 	/*
-	 * \brief Build helper function (greedy SAH-based optimization)
+	 * \brief Build helper function (greedy O(n log n) optimization)
 	 *
 	 * \param ctx 
 	 *     Thread-specific build context containing allocators etc.
@@ -1919,17 +1877,17 @@ protected:
 	 * \param badRefines
 	 *     Number of "probable bad refines" further up the tree. This makes
 	 *     it possible to split along an initially bad-looking candidate in
-	 *     the hope that the SAH cost was significantly overestimated. The
+	 *     the hope that the cost was significantly overestimated. The
 	 *     counter makes sure that only a limited number of such splits can
 	 *     happen in succession.
 	 * \returns 
-	 *     Final SAH cost of the node
+	 *     Final cost of the node
 	 */
-	Float buildTreeSAH(BuildContext &ctx, unsigned int depth, KDNode *node,
-		const AABB &nodeAABB, EdgeEvent *eventStart, EdgeEvent *eventEnd, 
+	Float buildTree(BuildContext &ctx, unsigned int depth, KDNode *node,
+		const AABBType &nodeAABB, EdgeEvent *eventStart, EdgeEvent *eventEnd, 
 		size_type primCount, bool isLeftChild, size_type badRefines) {
 
-		Float leafCost = primCount * m_intersectionCost;
+		Float leafCost = primCount * m_queryCost;
 		if (primCount <= m_stopPrims || depth >= m_maxDepth) {
 			createLeaf(ctx, node, eventStart, eventEnd, primCount);
 			return leafCost;
@@ -1942,7 +1900,7 @@ protected:
     	/* ==================================================================== */
 
 		/* First, find the optimal splitting plane according to the
-		   surface area heuristic. To do this in O(n), the search is
+		   tree construction heuristic. To do this in O(n), the search is
 		   implemented as a sweep over the edge events */
 
 		/* Initially, the split plane is placed left of the scene
@@ -1958,20 +1916,7 @@ protected:
 		EdgeEvent *eventsByAxis[point_type::dim];
 		int eventsByAxisCtr = 1;
 		eventsByAxis[0] = eventStart;
-
-		const Vector extents(nodeAABB.getExtents());
-		const Float invSA = 0.5f / (extents.x * extents.y 
-				+ extents.y*extents.z + extents.x*extents.z);
-
-		const Vector temp0 = Vector(
-			(extents[1] * extents[2]),
-			(extents[0] * extents[2]),
-			(extents[0] * extents[1])) * 2 * invSA;
-
-		const Vector temp1 = Vector(
-			(extents[1] + extents[2]),
-			(extents[0] + extents[2]),
-			(extents[0] + extents[1])) * 2 * invSA;
+		TreeConstructionHeuristic tch(nodeAABB);
 
 		/* Iterate over all events on the current axis */
 		for (EdgeEvent *event = eventStart; event < eventEnd; ) {
@@ -2014,51 +1959,50 @@ protected:
 			   and ending primitives are removed from the right side */
 			numRight[axis] -= numPlanar + numEnd;
 
-			/* Calculate a score using the surface area heuristic */
+			/* Calculate a score using the tree construction heuristic */
 			if (EXPECT_TAKEN(pos > nodeAABB.min[axis] && pos < nodeAABB.max[axis])) {
 				const size_type nL = numLeft[axis], nR = numRight[axis];
 				const Float nLF = (Float) nL, nRF = (Float) nR;
 
-				Float pLeft  = temp0[axis] + temp1[axis] * (pos - nodeAABB.min[axis]);
-				Float pRight = temp0[axis] + temp1[axis] * (nodeAABB.max[axis] - pos);
+				std::pair<Float, Float> prob = tch(axis, 
+						pos - nodeAABB.min[axis],
+						nodeAABB.max[axis] - pos);
 
 				if (numPlanar == 0) {
-					Float sahCost = m_intersectionCost + m_traversalCost 
-						* (pLeft * nLF + pRight * nRF);
+					Float cost = m_traversalCost + m_queryCost
+						* (prob.first * nLF + prob.second * nRF);
 					if (nL == 0 || nR == 0)
-						sahCost *= m_emptySpaceBonus;
-					if (sahCost < bestSplit.sahCost) {
+						cost *= m_emptySpaceBonus;
+					if (cost < bestSplit.cost) {
 						bestSplit.pos = pos;
 						bestSplit.axis = axis;
-						bestSplit.sahCost = sahCost;
+						bestSplit.cost = cost;
 						bestSplit.numLeft = nL;
 						bestSplit.numRight = nR;
 					}
 				} else {
-					Float sahCostPlanarLeft  = m_intersectionCost 
-						+ m_traversalCost 
-						* (pLeft * (nL+numPlanar) + pRight * nRF);
-					Float sahCostPlanarRight = m_intersectionCost 
-						+ m_traversalCost 
-						* (pLeft * nLF + pRight * (nR+numPlanar));
+					Float costPlanarLeft  = m_traversalCost
+						+ m_queryCost * (prob.first * (nL+numPlanar) + prob.second * nRF);
+					Float costPlanarRight = m_traversalCost
+						+ m_queryCost * (prob.first * nLF + prob.second * (nR+numPlanar));
 
 					if (nL + numPlanar == 0 || nR == 0)
-						sahCostPlanarLeft *= m_emptySpaceBonus;
+						costPlanarLeft *= m_emptySpaceBonus;
 					if (nL == 0 || nR + numPlanar == 0)
-						sahCostPlanarRight *= m_emptySpaceBonus;
+						costPlanarRight *= m_emptySpaceBonus;
 
-					if (sahCostPlanarLeft  < bestSplit.sahCost ||
-						sahCostPlanarRight < bestSplit.sahCost) {
+					if (costPlanarLeft < bestSplit.cost ||
+						costPlanarRight < bestSplit.cost) {
 						bestSplit.pos = pos;
 						bestSplit.axis = axis;
 
-						if (sahCostPlanarLeft < sahCostPlanarRight) {
-							bestSplit.sahCost = sahCostPlanarLeft;
+						if (costPlanarLeft < costPlanarRight) {
+							bestSplit.cost = costPlanarLeft;
 							bestSplit.numLeft = nL + numPlanar;
 							bestSplit.numRight = nR;
 							bestSplit.planarLeft = true;
 						} else {
-							bestSplit.sahCost = sahCostPlanarRight;
+							bestSplit.cost = costPlanarRight;
 							bestSplit.numLeft = nL;
 							bestSplit.numRight = nR + numPlanar;
 							bestSplit.planarLeft = false;
@@ -2091,10 +2035,10 @@ protected:
 #endif
 
 		/* "Bad refines" heuristic from PBRT */
-		if (bestSplit.sahCost >= leafCost) {
-			if ((bestSplit.sahCost > 4 * leafCost && primCount < 16)
+		if (bestSplit.cost >= leafCost) {
+			if ((bestSplit.cost > 4 * leafCost && primCount < 16)
 				|| badRefines >= m_maxBadRefines
-				|| bestSplit.sahCost == std::numeric_limits<Float>::infinity()) {
+				|| bestSplit.cost == std::numeric_limits<Float>::infinity()) {
 				createLeaf(ctx, node, eventStart, eventEnd, primCount);
 				return leafCost;
 			}
@@ -2134,7 +2078,7 @@ protected:
 			} else if (event->type == EdgeEvent::EEdgePlanar) {
 				/* If the planar primitive is not on the split plane, the
 				   classification is easy. Otherwise, place it on the side with
-				   the better SAH score */
+				   the lower cost */
 				KDAssert(storage.get(event->index) == EBothSides);
 				if (event->pos < bestSplit.pos || (event->pos == bestSplit.pos
 						&& bestSplit.planarLeft)) {
@@ -2207,8 +2151,8 @@ protected:
 					   generate new events for each side */
 					const index_type index = event->index;
 
-					AABB clippedLeft = cast()->getClippedAABB(index, leftNodeAABB);
-					AABB clippedRight = cast()->getClippedAABB(index, rightNodeAABB);
+					AABBType clippedLeft = cast()->getClippedAABB(index, leftNodeAABB);
+					AABBType clippedRight = cast()->getClippedAABB(index, rightNodeAABB);
 
 					KDAssert(leftNodeAABB.contains(clippedLeft));
 					KDAssert(rightNodeAABB.contains(clippedRight));
@@ -2341,21 +2285,22 @@ protected:
 		}
 		ctx.innerNodeCount++;
 
-		Float leftSAHCost = buildTreeSAH(ctx, depth+1, children,
+		Float leftCost = buildTree(ctx, depth+1, children,
 				leftNodeAABB, leftEventsStart, leftEventsEnd,
 				bestSplit.numLeft - prunedLeft, true, badRefines);
 
-		Float rightSAHCost = buildTreeSAH(ctx, depth+1, children+1,
+		Float rightCost = buildTree(ctx, depth+1, children+1,
 				rightNodeAABB, rightEventsStart, rightEventsEnd,
 				bestSplit.numRight - prunedRight, false, badRefines);
 
-		Float saLeft = leftNodeAABB.getSurfaceArea();
-		Float saRight = rightNodeAABB.getSurfaceArea();
+		std::pair<Float, Float> prob = tch(bestSplit.axis, 
+			bestSplit.pos - nodeAABB.min[bestSplit.axis],
+			nodeAABB.max[bestSplit.axis] - bestSplit.pos);
 
-		/* Compute the final SAH cost given the updated cost 
+		/* Compute the final cost given the updated cost 
 		   values received from the children */
-		Float finalSAHCost = m_traversalCost + 
-			(saLeft * leftSAHCost + saRight * rightSAHCost) * invSA;
+		Float finalCost = m_traversalCost + 
+			(prob.first * leftCost + prob.second * rightCost);
 
 		/* Release the index lists not needed by the children anymore */
 		if (isLeftChild)
@@ -2366,9 +2311,9 @@ protected:
 		/* ==================================================================== */
 	    /*                           Final decision                             */
 	    /* ==================================================================== */
-
-		if (!m_retract || finalSAHCost < primCount * m_intersectionCost) {
-			return finalSAHCost;
+		
+		if (!m_retract || finalCost < primCount * m_queryCost) {
+			return finalCost;
 		} else {
 			/* In the end, splitting didn't help to reduce the SAH cost.
 			   Tear up everything below this node and create a leaf */
@@ -2377,11 +2322,11 @@ protected:
 			ctx.leafNodeCount = leafNodeCountBeforeSplit;
 			ctx.nonemptyLeafNodeCount = nonemptyLeafNodeCountBeforeSplit;
 			ctx.innerNodeCount = innerNodeCountBeforeSplit;
-			createLeafAfterRetraction(ctx, node, indexPosBeforeSplit, primCount);
+			createLeafAfterRetraction(ctx, node, indexPosBeforeSplit);
 			return leafCost;
 		}
 
-		return bestSplit.sahCost;
+		return bestSplit.cost;
 	}
 
 	/**
@@ -2442,15 +2387,15 @@ protected:
 		}
 
 		/**
-		 * \brief Evaluate the surface area heuristic at each bin boundary
-		 * and return the maximizer for the given cost constants. Min-max
+		 * \brief Evaluate the tree construction heuristic at each bin boundary
+		 * and return the minimizer for the given cost constants. Min-max
 		 * binning uses no "empty space bonus" since it cannot create such
 		 * splits.
 		 */
-		SplitCandidate maximizeSAH(Float traversalCost, Float intersectionCost) {
+		SplitCandidate minimizeCost(Float traversalCost, Float queryCost) {
 			SplitCandidate candidate;
-			Float normalization = 2.0f / m_aabb.getSurfaceArea();
 			int binIdx = 0, leftBin = 0;
+			TreeConstructionHeuristic tch(m_aabb);
 
 			for (int axis=0; axis<point_type::dim; ++axis) {
 				vector_type extents = m_aabb.getExtents();
@@ -2463,20 +2408,14 @@ protected:
 					numRight -= m_maxBins[binIdx];
 					leftWidth += binSize;
 					rightWidth -= binSize;
+					std::pair<Float, Float> prob =
+						tch(axis, leftWidth, rightWidth);
 
-					extents[axis] = leftWidth;
-					Float pLeft = normalization * (extents.x*extents.y 
-							+ extents.x*extents.z + extents.y*extents.z);
+					Float cost = traversalCost + queryCost 
+						* (prob.first * numLeft + prob.second * numRight);
 
-					extents[axis] = rightWidth;
-					Float pRight = normalization * (extents.x*extents.y 
-							+ extents.x*extents.z + extents.y*extents.z);
-
-					Float sahCost = traversalCost + intersectionCost 
-						* (pLeft * numLeft + pRight * numRight);
-
-					if (sahCost < candidate.sahCost) {
-						candidate.sahCost = sahCost;
+					if (cost < candidate.cost) {
+						candidate.cost = cost;
 						candidate.axis = axis;
 						candidate.numLeft = numLeft;
 						candidate.numRight = numRight;
@@ -2488,7 +2427,7 @@ protected:
 				binIdx++;
 			}
 
-			KDAssert(candidate.sahCost != std::numeric_limits<Float>::infinity());
+			KDAssert(candidate.cost != std::numeric_limits<Float>::infinity());
 
 			const int axis = candidate.axis;
 			const Float min = m_aabb.min[axis];
@@ -2500,7 +2439,7 @@ protected:
 			 *
 			 * candidate.pos = m_aabb.min[axis] + (leftBin+1) * m_binSize[axis];
 			 *
-			 * can potentially lead to a slight different number primitives being
+			 * can potentially lead to a slightly different number primitives being
 			 * classified to the left and right if we were to do check each
 			 * primitive against this split position. We can't have that, however,
 			 * since the partitioning code assumes that these numbers are correct.
@@ -2537,7 +2476,7 @@ protected:
 					} else if (std::abs(idx-idxNext) > 1 || ++it > 50) {
 						/* Insufficient floating point resolution
 						   -> a leaf will be created. */
-						candidate.sahCost = std::numeric_limits<Float>::infinity();
+						candidate.cost = std::numeric_limits<Float>::infinity();
 						break;
 					}
 
@@ -2551,7 +2490,7 @@ protected:
 			if (split <= m_aabb.min[axis] || split >= m_aabb.max[axis]) {
 				/* Insufficient floating point resolution 
 				   -> a leaf will be created. */
-				candidate.sahCost = std::numeric_limits<Float>::infinity();
+				candidate.cost = std::numeric_limits<Float>::infinity();
 			}
 
 			candidate.pos = split;
@@ -2564,10 +2503,10 @@ protected:
 		 * boxes for the left and right subtrees and return associated
 		 * primitive lists.
 		 */
-		boost::tuple<AABBType, index_type *, AABB, index_type *> partition(
+		boost::tuple<AABBType, index_type *, AABBType, index_type *> partition(
 				BuildContext &ctx, const Derived *derived, index_type *primIndices,
 				SplitCandidate &split, bool isLeftChild, Float traversalCost, 
-				Float intersectionCost) {
+				Float queryCost) {
 			const float splitPos = split.pos;
 			const int axis = split.axis;
 			size_type numLeft = 0, numRight = 0;
@@ -2624,33 +2563,25 @@ protected:
 			if (leftBounds.max[axis] != rightBounds.min[axis]) {
 				/* There is some space between the child nodes -- move
 				   the split plane onto one of the AABBs so that the
-				   surface area heuristic is minimized */
-				Float normalization = 2.0f / m_aabb.getSurfaceArea();
-				Vector extents = m_aabb.getExtents();
+				   heuristic cost is minimized */
+				TreeConstructionHeuristic tch(m_aabb);
 
-				extents[axis] = leftBounds.max[axis] - m_aabb.min[axis];
-				Float pLeft1 = normalization * (extents.x*extents.y 
-							+ extents.x*extents.z + extents.y*extents.z);
-				extents[axis] = m_aabb.max[axis] - leftBounds.max[axis];
-				Float pRight1 = normalization * (extents.x*extents.y 
-							+ extents.x*extents.z + extents.y*extents.z);
-				Float sahCost1 = traversalCost + intersectionCost 
-					* (pLeft1 * numLeft + pRight1 * numRight);
+				std::pair<Float, Float> prob1 = tch(axis,
+					leftBounds.max[axis] - m_aabb.min[axis],
+					m_aabb.max[axis] - leftBounds.max[axis]);
+				std::pair<Float, Float> prob2 = tch(axis,
+					rightBounds.min[axis] - m_aabb.min[axis],
+					m_aabb.max[axis] - rightBounds.min[axis]);
+				Float cost1 = traversalCost + queryCost 
+					* (prob1.first * numLeft + prob1.second * numRight);
+				Float cost2 = traversalCost + queryCost 
+					* (prob2.first * numLeft + prob2.second * numRight);
 
-				extents[axis] = rightBounds.min[axis] - m_aabb.min[axis];
-				Float pLeft2 = normalization * (extents.x*extents.y 
-							+ extents.x*extents.z + extents.y*extents.z);
-				extents[axis] = m_aabb.max[axis] - rightBounds.min[axis];
-				Float pRight2 = normalization * (extents.x*extents.y 
-							+ extents.x*extents.z + extents.y*extents.z);
-				Float sahCost2 = traversalCost + intersectionCost 
-					* (pLeft2 * numLeft + pRight2 * numRight);
-
-				if (sahCost1 <= sahCost2) {
-					split.sahCost = sahCost1;
+				if (cost1 <= cost2) {
+					split.cost = cost1;
 					split.pos = leftBounds.max[axis];
 				} else {
-					split.sahCost = sahCost2;
+					split.cost = cost2;
 					split.pos = rightBounds.min[axis];
 				}
 
@@ -2668,64 +2599,15 @@ protected:
 		size_type *m_maxBins;
 		size_type m_primCount;
 		int m_binCount;
-		AABB m_aabb;
-		Vector m_binSize;
-		Vector m_invBinSize;
+		AABBType m_aabb;
+		vector_type m_binSize;
+		vector_type m_invBinSize;
 	};
-
-	/// Ray traversal stack entry for Wald-style incoherent ray tracing
-	struct KDStackEntry {
-		const KDNode * __restrict node;
-		Float mint, maxt;
-	};
-
-	/// Ray traversal stack entry for Havran-style incoherent ray tracing
-	struct KDStackEntryHavran {
-		/* Pointer to the far child */
-		const KDNode * __restrict node;
-		/* Distance traveled along the ray (entry or exit) */
-		Float t;
-		/* Previous stack item */
-		uint32_t prev;
-		/* Associated point */
-		Point p;
-	};
-
-	/**
-	* \brief Internal kd-tree traversal implementation (Havran variant)
-	*/
-	template<bool shadowRay> FINLINE
-			bool rayIntersectHavran(const Ray &ray, Float mint, Float maxt, 
-			Float &t, void *temp) const;
-
-	/**
-	 * \brief Internal kd-tree traversal implementation (Havran variant)
-	 *
-	 * This method is almost identical to \ref rayIntersectHavran, except
-	 * that it additionally returns statistics on the number of traversed
-	 * nodes, intersected shapes, as well as the time taken to do this
-	 * (measured using rtdsc).
-	 */
-	FINLINE boost::tuple<bool, uint32_t, uint32_t, uint64_t> 
-			rayIntersectHavranCollectStatistics(const Ray &ray, 
-			Float mint, Float maxt, Float &t, void *temp) const; 
-
-	/**
-	* \brief Internal kd-tree traversal implementation (PBRT variant)
-	*/
-	template<bool shadowRay> FINLINE bool rayIntersectPBRT(const Ray &ray, 
-			Float mint_, Float maxt_, Float &t, void *temp) const;
-
-	/**
-	* \brief Internal kd-tree traversal implementation (Plain variant)
-	*/
-	template<bool shadowRay> FINLINE bool rayIntersectPlain(const Ray &ray, 
-		Float mint_, Float maxt_, Float &t, void *temp) const;
 
 protected:
 	index_type *m_indices;
 	Float m_traversalCost;
-	Float m_intersectionCost;
+	Float m_queryCost;
 	Float m_emptySpaceBonus;
 	bool m_clip, m_retract, m_parallelBuild;
 	size_type m_maxDepth;
@@ -2735,556 +2617,17 @@ protected:
 	size_type m_minMaxBins;
 	size_type m_nodeCount;
 	size_type m_indexCount;
-	std::vector<SAHTreeBuilder *> m_builders;
+	std::vector<TreeBuilder *> m_builders;
 	std::vector<KDNode *> m_indirections;
 	ref<Mutex> m_indirectionLock;
 	BuildInterface m_interface;
 };
 
 #if defined(WIN32)
-/* It's fine if the following traversal code uses fast 
-   (i.e. non-strict) IEEE 754 floating point computations */
+/* Revert back to fast / non-strict IEEE 754 
+   floating point computations */
 #pragma float_control(precise, off)
 #endif
-
-/**
- * \brief Internal kd-tree traversal implementation (Havran variant)
- */
-template<typename AABBType, typename Derived> template<bool shadowRay> 
-		FINLINE bool GenericKDTree<AABBType, Derived>::rayIntersectHavran(
-		const Ray &ray, Float mint, Float maxt, Float &t, void *temp) const {
-	KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
-	#if 0
-	static const int prevAxisTable[] = { 2, 0, 1 };
-	static const int nextAxisTable[] = { 1, 2, 0 };
-	#endif
-
-	#if defined(MTS_KD_MAILBOX_ENABLED)
-	HashedMailbox mailbox;
-	#endif
-
-	/* Set up the entry point */
-	uint32_t enPt = 0;
-	stack[enPt].t = mint;
-	stack[enPt].p = ray(mint);
-
-	/* Set up the exit point */
-	uint32_t exPt = 1;
-	stack[exPt].t = maxt;
-	stack[exPt].p = ray(maxt);
-	stack[exPt].node = NULL;
-
-	const KDNode * __restrict currNode = this->m_nodes;
-	while (currNode != NULL) {
-		while (EXPECT_TAKEN(!currNode->isLeaf())) {
-			const Float splitVal = (Float) currNode->getSplit();
-			const int axis = currNode->getAxis();
-			const KDNode * __restrict farChild;
-
-			if (stack[enPt].p[axis] <= splitVal) {
-				if (stack[exPt].p[axis] <= splitVal) {
-					/* Cases N1, N2, N3, P5, Z2 and Z3 (see thesis) */
-					currNode = currNode->getLeft();
-					continue;
-				}
-
-				/* Typo in Havran's thesis:
-				   (it specifies "stack[exPt].p == splitVal", which
-				    is clearly incorrect) */
-				if (stack[enPt].p[axis] == splitVal) {
-					/* Case Z1 */
-					currNode = currNode->getRight();
-					continue;
-				}
-
-				/* Case N4 */
-				currNode = currNode->getLeft();
-				farChild = currNode + 1; // getRight()
-			} else { /* stack[enPt].p[axis] > splitVal */
-				if (splitVal < stack[exPt].p[axis]) {
-					/* Cases P1, P2, P3 and N5 */
-					currNode = currNode->getRight();
-					continue;
-				}
-				/* Case P4 */
-				farChild = currNode->getLeft();
-				currNode = farChild + 1; // getRight()
-			}
-
-			/* Cases P4 and N4 -- calculate the distance to the split plane */
-			Float distToSplit = (splitVal - ray.o[axis]) * ray.dRcp[axis];
-
-			/* Set up a new exit point */
-			const uint32_t tmp = exPt++;
-			if (exPt == enPt) /* Do not overwrite the entry point */
-				++exPt;
-
-			KDAssert(exPt < MTS_KD_MAXDEPTH);
-			stack[exPt].prev = tmp;
-			stack[exPt].t = distToSplit;
-			stack[exPt].node = farChild;
-
-			#if 1
-			/* Faster than the original code with the 
-			   prevAxis & nextAxis table */
-			stack[exPt].p = ray(distToSplit);
-			stack[exPt].p[axis] = splitVal;
-			#else
-			const int nextAxis = nextAxisTable[axis];
-			const int prevAxis = prevAxisTable[axis];
-			stack[exPt].p[axis] = splitVal;
-			stack[exPt].p[nextAxis] = ray.o[nextAxis]
-				+ distToSplit*ray.d[nextAxis];
-			stack[exPt].p[prevAxis] = ray.o[prevAxis]
-				+ distToSplit*ray.d[prevAxis];
-			#endif
-
-		}
-		/* Reached a leaf node */
-
-		/* Floating-point arithmetic.. - use both absolute and relative 
-		   epsilons when looking for intersections in the subinterval */
-		#if defined(SINGLE_PRECISION)
-		const Float eps = 1e-3f;
-		#else
-		const Float eps = 1e-5;
-		#endif
-		const Float m_eps = 1-eps, p_eps = 1+eps;
-
-		const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);
-		Float searchEnd   = std::min(maxt, stack[exPt].t * p_eps + eps);
-
-		bool foundIntersection = false;
-
-		for (index_type entry=currNode->getPrimStart(),
-				last = currNode->getPrimEnd(); entry != last; entry++) {
-			const index_type primIdx = m_indices[entry];
-
-			#if defined(MTS_KD_MAILBOX_ENABLED)
-			if (mailbox.contains(primIdx)) 
-				continue;
-			#endif
-
-			EIntersectionResult result;
-			if (!shadowRay) {
-				result = cast()->intersect(ray, primIdx, 
-					searchStart, searchEnd, t, temp);
-			} else {
-				result = cast()->intersect(ray, primIdx, 
-					searchStart, searchEnd);
-			}
-
-			if (result == EYes) {
-				if (shadowRay)
-					return true;
-				searchEnd = t;
-				foundIntersection = true;
-			}
-
-			#if defined(MTS_KD_MAILBOX_ENABLED)
-			else if (result == ENever) 
-				mailbox.put(primIdx);
-			#endif
-		}
-
-		if (foundIntersection) 
-			return true;
-
-		/* Pop from the stack and advance to the next node on the interval */
-		enPt = exPt;
-		currNode = stack[exPt].node;
-		exPt = stack[enPt].prev;
-	}
-
-	return false;
-}
-
-template <typename AABBType, typename Derived>
-		FINLINE boost::tuple<bool, uint32_t, uint32_t, uint64_t> 
-		GenericKDTree<AABBType, Derived>::rayIntersectHavranCollectStatistics(
-		const Ray &ray, Float mint, Float maxt, Float &t, void *temp) const {
-	KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
-
-	/* Set up the entry point */
-	uint32_t enPt = 0;
-	stack[enPt].t = mint;
-	stack[enPt].p = ray(mint);
-
-	/* Set up the exit point */
-	uint32_t exPt = 1;
-	stack[exPt].t = maxt;
-	stack[exPt].p = ray(maxt);
-	stack[exPt].node = NULL;
-
-	uint32_t numTraversals = 0;
-	uint32_t numIntersections = 0;
-	uint64_t timer = rdtsc();
-
-	const KDNode * __restrict currNode = this->m_nodes;
-	while (currNode != NULL) {
-		while (EXPECT_TAKEN(!currNode->isLeaf())) {
-			const Float splitVal = (Float) currNode->getSplit();
-			const int axis = currNode->getAxis();
-			const KDNode * __restrict farChild;
-
-			++numTraversals;
-			if (stack[enPt].p[axis] <= splitVal) {
-				if (stack[exPt].p[axis] <= splitVal) {
-					/* Cases N1, N2, N3, P5, Z2 and Z3 (see thesis) */
-					currNode = currNode->getLeft();
-					continue;
-				}
-
-				/* Typo in Havran's thesis:
-				   (it specifies "stack[exPt].p == splitVal", which
-				    is clearly incorrect) */
-				if (stack[enPt].p[axis] == splitVal) {
-					/* Case Z1 */
-					currNode = currNode->getRight();
-					continue;
-				}
-
-				/* Case N4 */
-				currNode = currNode->getLeft();
-				farChild = currNode + 1; // getRight()
-			} else { /* stack[enPt].p[axis] > splitVal */
-				if (splitVal < stack[exPt].p[axis]) {
-					/* Cases P1, P2, P3 and N5 */
-					currNode = currNode->getRight();
-					continue;
-				}
-				/* Case P4 */
-				farChild = currNode->getLeft();
-				currNode = farChild + 1; // getRight()
-			}
-
-			/* Cases P4 and N4 -- calculate the distance to the split plane */
-			t = (splitVal - ray.o[axis]) * ray.dRcp[axis];
-
-			/* Set up a new exit point */
-			const uint32_t tmp = exPt++;
-			if (exPt == enPt) /* Do not overwrite the entry point */
-				++exPt;
-
-			KDAssert(exPt < MTS_KD_MAXDEPTH);
-			stack[exPt].prev = tmp;
-			stack[exPt].t = t;
-			stack[exPt].node = farChild;
-			stack[exPt].p = ray(t);
-			stack[exPt].p[axis] = splitVal;
-		}
-
-		#if defined(SINGLE_PRECISION)
-			const Float eps = 1e-3f;
-		#else
-			const Float eps = 1e-5;
-		#endif
-		const Float m_eps = 1-eps, p_eps = 1+eps;
-
-		/* Floating-point arithmetic.. - use both absolute and relative 
-		   epsilons when looking for intersections in the subinterval */
-		const Float searchStart = std::max(mint, stack[enPt].t * m_eps - eps);
-		Float searchEnd = std::min(maxt, stack[exPt].t * p_eps + eps);
-
-		/* Reached a leaf node */
-		bool foundIntersection = false;
-		for (unsigned int entry=currNode->getPrimStart(),
-				last = currNode->getPrimEnd(); entry != last; entry++) {
-			const index_type primIdx = m_indices[entry];
-
-			++numIntersections;
-			EIntersectionResult result = cast()->intersect(ray, 
-					primIdx, searchStart, searchEnd, t, temp);
-
-			if (result == EYes) {
-				searchEnd = t;
-				foundIntersection = true;
-			}
-		}
-
-		if (foundIntersection)
-			return boost::make_tuple(true, numTraversals, 
-					numIntersections, rdtsc() - timer);
-
-
-		/* Pop from the stack and advance to the next node on the interval */
-		enPt = exPt;
-		currNode = stack[exPt].node;
-		exPt = stack[enPt].prev;
-	}
-
-	return boost::make_tuple(false, numTraversals, 
-			numIntersections, rdtsc() - timer);
-}
-
-template<typename AABBType, typename Derived>
-		template <bool shadowRay> FINLINE bool 
-		GenericKDTree<AABBType, Derived>::rayIntersectPlain(const Ray &ray, 
-		Float mint_, Float maxt_, Float &t, void *temp) const {
-	KDStackEntry stack[MTS_KD_MAXDEPTH];
-	int stackPos = 0;
-	Float mint = mint_, maxt = maxt_;
-	const KDNode *node = this->m_nodes;
-
-	#if defined(MTS_KD_MAILBOX_ENABLED)
-	HashedMailbox mailbox;
-	#endif
-
-	const int signs[3] = {
-		ray.d[0] >= 0 ? 1 : 0,
-		ray.d[1] >= 0 ? 1 : 0,
-		ray.d[2] >= 0 ? 1 : 0
-	};
-
-	while (node != NULL) {
-		while (EXPECT_TAKEN(!node->isLeaf())) {
-			const Float split = (Float) node->getSplit();
-			const int axis = node->getAxis();
-			const float t = (split - ray.o[axis]) * ray.dRcp[axis];
-
-			int sign = signs[axis];
-
-			const KDNode * __restrict base = node->getLeft();
-			const KDNode * __restrict first = base + (sign^1);
-			const KDNode * __restrict second = base + sign;
-
-			node = first;
-
-			bool front = t > maxt,
-				 back = t < mint;
-
-			if (front) {
-				;
-			} else if (back) {
-				node = second;
-			} else {
-				stack[stackPos].node = second;
-				stack[stackPos].mint = t;
-				stack[stackPos].maxt = maxt;
-				maxt = t;
-				++stackPos;
-			}
-		}
-		bool foundIntersection = false;
-		for (unsigned int entry=node->getPrimStart(),
-				last = node->getPrimEnd(); entry != last; entry++) {
-			const index_type primIdx = m_indices[entry];
-
-			#if defined(MTS_KD_MAILBOX_ENABLED)
-			if (mailbox.contains(primIdx)) 
-				continue;
-			#endif
-
-			EIntersectionResult result;
-			if (!shadowRay) {
-				result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
-			} else {
-				result = cast()->intersect(ray, primIdx, mint, maxt);
-			}
-
-			if (result == EYes) {
-				if (shadowRay)
-					return true;
-				maxt = t;
-				foundIntersection = true;
-			}
-
-			#if defined(MTS_KD_MAILBOX_ENABLED)
-			else if (result == ENever) 
-				mailbox.put(primIdx);
-			#endif
-		}
-
-		if (foundIntersection) 
-			return true;
-
-		if (stackPos > 0) {
-			--stackPos;
-			node = stack[stackPos].node;
-			mint = stack[stackPos].mint;
-			maxt = stack[stackPos].maxt;
-		} else {
-			break;
-		}
-	}
-	return false;
-}
-
-template<typename AABBType, typename Derived>
-		template <bool shadowRay> FINLINE bool 
-		GenericKDTree<AABBType, Derived>::rayIntersectPBRT(const Ray &ray, 
-		Float mint_, Float maxt_, Float &t, void *temp) const {
-	KDStackEntry stack[MTS_KD_MAXDEPTH];
-	int stackPos = 0;
-	Float mint = mint_, maxt=maxt_;
-	const KDNode *node = this->m_nodes;
-	bool foundIntersection = false;
-
-	#if defined(MTS_KD_MAILBOX_ENABLED)
-	HashedMailbox mailbox;
-	#endif
-
-	while (node != NULL) {
-		if (t < mint)
-			break;
-
-		if (EXPECT_TAKEN(!node->isLeaf())) {
-			const Float split = (Float) node->getSplit();
-			const int axis = node->getAxis();
-			const float tPlane = (split - ray.o[axis]) * ray.dRcp[axis];
-			bool leftOfSplit = (ray.o[axis] < split) 
-				|| (ray.o[axis] == split && ray.d[axis] >= 0);
-
-			const KDNode * __restrict left = node->getLeft();
-			const KDNode * __restrict right = left + 1;
-			const KDNode * __restrict first  = leftOfSplit ? left : right;
-			const KDNode * __restrict second = leftOfSplit ? right : left;
-
-			if (tPlane > maxt || tPlane <= 0) {
-				node = first;
-			} else if (tPlane < mint) {
-				node = second;
-			} else {
-				stack[stackPos].node = second;
-				stack[stackPos].mint = tPlane;
-				stack[stackPos].maxt = maxt;
-				++stackPos;
-				node = first;
-				maxt = tPlane;
-			}
-		} else {
-			for (unsigned int entry=node->getPrimStart(),
-					last = node->getPrimEnd(); entry != last; entry++) {
-				const index_type primIdx = m_indices[entry];
-
-				#if defined(MTS_KD_MAILBOX_ENABLED)
-				if (mailbox.contains(primIdx)) 
-					continue;
-				#endif
-
-				EIntersectionResult result;
-				if (!shadowRay) {
-					result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
-				} else {
-					result = cast()->intersect(ray, primIdx, mint, maxt);
-				}
-
-				if (result == EYes) {
-					if (shadowRay)
-						return true;
-					maxt_ = t;
-					foundIntersection = true;
-				}
-
-				#if defined(MTS_KD_MAILBOX_ENABLED)
-				else if (result == ENever) 
-					mailbox.put(primIdx);
-				#endif
-			}
-
-			if (stackPos > 0) {
-				--stackPos;
-				node = stack[stackPos].node;
-				mint = stack[stackPos].mint;
-				maxt = stack[stackPos].maxt;
-			} else {
-				break;
-			}
-		}
-	}
-	return foundIntersection;
-}
-
-
-template <typename AABBType, typename Derived>
-		void GenericKDTree<AABBType, Derived>::findCosts(
-		Float &traversalCost, Float &intersectionCost) {
-	ref<Random> random = new Random();
-	uint8_t temp[128];
-	BSphere bsphere = this->m_aabb.getBSphere();
-	int nRays = 10000000, warmup = nRays/4;
-	Vector *A = new Vector[nRays-warmup];
-	Float *b = new Float[nRays-warmup];
-	int nIntersections = 0, idx = 0;
-
-	for (int i=0; i<nRays; ++i) {
-		Point2 sample1(random->nextFloat(), random->nextFloat()),
-			sample2(random->nextFloat(), random->nextFloat());
-		Point p1 = bsphere.center + squareToSphere(sample1) * bsphere.radius;
-		Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
-		Ray ray(p1, normalize(p2-p1), 0.0f);
-		Float mint, maxt, t;
-		if (this->m_aabb.rayIntersect(ray, mint, maxt)) {
-			if (ray.mint > mint) mint = ray.mint;
-			if (ray.maxt < maxt) maxt = ray.maxt;
-			if (EXPECT_TAKEN(maxt > mint)) {
-				boost::tuple<bool, uint32_t, uint32_t, uint64_t> statistics =
-					rayIntersectHavranCollectStatistics(ray, mint, maxt, t, temp);
-				if (boost::get<0>(statistics))
-					nIntersections++;
-				if (i > warmup) {
-					A[idx].x = 1;
-					A[idx].y = (Float) boost::get<1>(statistics);
-					A[idx].z = (Float) boost::get<2>(statistics);
-					b[idx]   = (Float) boost::get<3>(statistics);
-					idx++;
-				}
-			}
-		}
-	}
-
-	KDLog(EDebug, "Fitting to " SIZE_T_FMT " samples (" SIZE_T_FMT 
-			" intersections)", idx, nIntersections);
-
-	/* Solve using normal equations */
-	Matrix4x4 M(0.0f), Minv;
-	Vector4 rhs(0.0f), x;
-
-	for (int i=0; i<3; ++i) {
-		for (int j=0; j<3; ++j) 
-			for (int k=0; k<idx; ++k) 
-				M.m[i][j] += A[k][i]*A[k][j];
-		for (int k=0; k<idx; ++k) 
-			rhs[i] += A[k][i]*b[k];
-	}
-	M.m[3][3] = 1.0f;
-	bool success = M.invert(Minv);
-	SAssert(success);
-
-	Transform(Minv, M)(rhs, x);
-
-	Float avgRdtsc = 0, avgResidual = 0;
-	for (int i=0; i<idx; ++i) {
-		avgRdtsc += b[i];
-		Float model = x[0] * A[i][0]
-			+ x[1] * A[i][1]
-			+ x[2] * A[i][2];
-		avgResidual += std::abs(b[i] - model);
-	}
-	avgRdtsc /= idx;
-	avgResidual /= idx;
-
-	for (int k=0; k<idx; ++k) 
-		avgRdtsc += b[k];
-	avgRdtsc /= idx;
-
-	KDLog(EDebug, "Least squares fit:");
-	KDLog(EDebug, "   Constant overhead    = %.2f", x[0]);
-	KDLog(EDebug, "   Traversal cost       = %.2f", x[1]);
-	KDLog(EDebug, "   Intersection cost    = %.2f", x[2]);
-	KDLog(EDebug, "   Average rdtsc value  = %.2f", avgRdtsc);
-	KDLog(EDebug, "   Avg. residual        = %.2f", avgResidual);
-	x *= 10/x[1];
-	KDLog(EDebug, "Re-scaled:");
-	KDLog(EDebug, "   Constant overhead    = %.2f", x[0]);
-	KDLog(EDebug, "   Traversal cost       = %.2f", x[1]);
-	KDLog(EDebug, "   Intersection cost    = %.2f", x[2]);
-
-	delete[] A;
-	delete[] b;
-	traversalCost = x[1];
-	intersectionCost = x[2];
-}
 
 template <typename AABBType>
 	Class *KDTreeBase<AABBType>::m_theClass 

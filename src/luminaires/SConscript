@@ -1,0 +1,11 @@
+Import('env', 'plugins')
+
+plugins += env.SharedLibrary('#plugins/area', ['area.cpp'])
+plugins += env.SharedLibrary('#plugins/constant', ['constant.cpp'])
+plugins += env.SharedLibrary('#plugins/envmap', ['envmap.cpp'])
+plugins += env.SharedLibrary('#plugins/spot', ['spot.cpp'])
+plugins += env.SharedLibrary('#plugins/point', ['point.cpp'])
+plugins += env.SharedLibrary('#plugins/collimated', ['collimated.cpp'])
+plugins += env.SharedLibrary('#plugins/directional', ['directional.cpp'])
+
+Export('plugins')

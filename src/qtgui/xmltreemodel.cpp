@@ -98,43 +98,48 @@ bool TreeItem::setData(int column, const QVariant &value) {
 	return true;
 }
 	
+void TreeItem::setProperty(const std::string &name, const Properties &props) {
+	QVariant data;
+	switch (props.getType(name)) {
+		case Properties::EBoolean:
+			data = QVariant(props.getBoolean(name));
+			break;
+		case Properties::EInteger:
+			data = QVariant(props.getInteger(name));
+			break;
+		case Properties::EFloat:
+			data = QVariant((double) props.getFloat(name));
+			break;
+		case Properties::EString:
+			data = QVariant(props.getString(name).c_str());
+			break;
+		default:
+			SLog(EError, "TreeItem::getProperties(): \"%s\": Unable to handle elements of type %i", 
+				name.c_str(), props.getType(name));
+	}
+
+	bool found = false;
+	for (int i=0; i<m_childItems.size(); ++i) {
+		if (m_childItems[i]->m_itemName == name.c_str()) {
+			m_childItems[i]->setData(1, data);
+			found = true;
+			break;
+		}
+	}
+	if (!found)
+		SLog(EWarn, "TreeItem::getProperties(): \"%s\": Unable to find element in tree!", name.c_str());
+}
+
 void TreeItem::setProperties(const Properties &props) {
 	std::vector<std::string> propertyNames;
 	props.putPropertyNames(propertyNames);
 
 	for (std::vector<std::string>::const_iterator it = propertyNames.begin();
-		it != propertyNames.end(); ++it) {
-		QVariant data;
-		switch (props.getType(*it)) {
-			case Properties::EBoolean:
-				data = QVariant(props.getBoolean(*it));
-				break;
-			case Properties::EInteger:
-				data = QVariant(props.getInteger(*it));
-				break;
-			case Properties::EFloat:
-				data = QVariant((double) props.getFloat(*it));
-				break;
-			case Properties::EString:
-				data = QVariant(props.getString(*it).c_str());
-				break;
-			default:
-				SLog(EError, "TreeItem::getProperties(): \"%s\": Unable to handle elements of type %i", 
-					(*it).c_str(), props.getType(*it));
-		}
-
-		bool found = false;
-		for (int i=0; i<m_childItems.size(); ++i) {
-			if (m_childItems[i]->m_itemName == (*it).c_str()) {
-				m_childItems[i]->setData(1, data);
-				found = true;
-				break;
-			}
-		}
-		if (!found)
-			SLog(EWarn, "TreeItem::getProperties(): \"%s\": Unable to find element in tree!", (*it).c_str());
-	}
+		it != propertyNames.end(); ++it) 
+		setProperty(*it, props);
 }
+
+
 
 void TreeItem::putProperties(Properties &props) const {
 	for (int i=0; i<m_childItems.size(); ++i) {
@@ -164,7 +169,6 @@ void TreeItem::putProperties(Properties &props) const {
 		}
 	}
 }
-
 
 // ====================================================================
 //    XMLTreeModel implementation

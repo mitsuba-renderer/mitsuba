@@ -46,7 +46,7 @@ public:
 	}
 
 	AABB getAABB() const {
-		const KDTree *kdtree = m_shapeGroup->getKDTree();
+		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		const AABB &aabb = kdtree->getAABB();
 		if (!aabb.isValid()) // the geometry group is empty
 			return aabb;
@@ -72,14 +72,14 @@ public:
 
 	bool rayIntersect(const Ray &_ray, Float mint, 
 			Float maxt, Float &t, void *temp) const {
-		const KDTree *kdtree = m_shapeGroup->getKDTree();
+		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		Ray ray;
 		m_worldToObject(_ray, ray);
 		return kdtree->rayIntersect(ray, mint, maxt, t, temp);
 	}
 
 	bool rayIntersect(const Ray &_ray, Float mint, Float maxt) const {
-		const KDTree *kdtree = m_shapeGroup->getKDTree();
+		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		Ray ray;
 		m_worldToObject(_ray, ray);
 		return kdtree->rayIntersect(ray, mint, maxt);
@@ -87,7 +87,7 @@ public:
 
 	void fillIntersectionRecord(const Ray &ray, 
 		const void *temp, Intersection &its) const {
-		const KDTree *kdtree = m_shapeGroup->getKDTree();
+		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		kdtree->fillIntersectionRecord<false>(ray, temp, its);
 		its.shFrame.n = normalize(m_objectToWorld(its.shFrame.n));
 		its.shFrame.s = normalize(m_objectToWorld(its.shFrame.s));

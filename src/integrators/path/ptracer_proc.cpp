@@ -137,7 +137,8 @@ void CaptureParticleWorker::handleMediumInteraction(int, bool,
 		/* Compute Le * importance and store in accumulation buffer */
 		Ray ray(mRec.p, wo, 0, dist, time);
 
-		Spectrum sampleVal = weight * mRec.medium->getPhaseFunction()->f(mRec, wi, wo)
+		Spectrum sampleVal = weight * mRec.medium->getPhaseFunction()->f(
+			  PhaseFunctionQueryRecord(mRec, wi, wo))
 			* m_scene->getAttenuation(ray) * importance;
 
 		m_workResult->splat(screenSample, sampleVal, m_filter);
@@ -161,7 +162,7 @@ void CaptureParticleProcess::develop() {
 	}
 	m_film->fromBitmap(m_finalBitmap);
 
-	m_queue->signalRefresh(m_job);
+	m_queue->signalRefresh(m_job, m_finalBitmap);
 }
 
 void CaptureParticleProcess::processResult(const WorkResult *wr, bool cancelled) {

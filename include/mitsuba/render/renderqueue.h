@@ -20,12 +20,12 @@
 #define __RENDERQUEUE_H
 
 #include <mitsuba/mitsuba.h>
-#include <mitsuba/render/imageproc_wu.h>
+#include <mitsuba/render/rectwu.h>
 
 MTS_NAMESPACE_BEGIN
 
 /** 
- * Abstract render listener - can be used to react to 
+ * \brief Abstract render listener - can be used to react to 
  * progress messages (e.g. in a GUI)
  */
 class MTS_EXPORT_RENDER RenderListener : public Object {
@@ -36,9 +36,13 @@ public:
 	/// Called when work has finished in a rectangular image region
 	virtual void workEndEvent(const RenderJob *job, const ImageBlock *wr) = 0;
 	
-	/// Called when the whole target image has been altered in some way
-	virtual void refreshEvent(const RenderJob *job) = 0;
-	
+	/**
+	 * \brief Called when the whole target image has been altered in some way.
+	 * \param bitmap (Optional) When a bitmap representation of the image data
+	 * 	   exists, this parameter can be used to pass it. Set to NULL by default.
+	 */
+	virtual void refreshEvent(const RenderJob *job, const Bitmap *bitmap = NULL) = 0;
+
 	/// Called when a render job has completed successfully or unsuccessfully
 	virtual void finishJobEvent(const RenderJob *job, bool cancelled) = 0;
 
@@ -88,7 +92,7 @@ public:
 	void signalWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 	void signalWorkEnd(const RenderJob *job, const ImageBlock *block);
 	void signalFinishJob(const RenderJob *job, bool cancelled);
-	void signalRefresh(const RenderJob *job);
+	void signalRefresh(const RenderJob *job, const Bitmap *bitmap);
 
 	MTS_DECLARE_CLASS()
 private:

@@ -52,13 +52,15 @@ public:
 	void configure() {
 		m_weightBSDF = 1 / (Float) m_bsdfSamples;
 		m_weightLum = 1 / (Float) m_luminaireSamples;
-		m_fracLum = m_luminaireSamples / (Float) (m_luminaireSamples + m_bsdfSamples);
 		m_fracBSDF = m_bsdfSamples / (Float) (m_luminaireSamples + m_bsdfSamples);
+		m_fracLum = m_luminaireSamples / (Float) (m_luminaireSamples + m_bsdfSamples);
 	}
 
 	void configureSampler(Sampler *sampler) {
-		sampler->request2DArray(m_luminaireSamples);
-		sampler->request2DArray(m_bsdfSamples);
+		if (m_luminaireSamples > 1)
+			sampler->request2DArray(m_luminaireSamples);
+		if (m_bsdfSamples > 1)
+			sampler->request2DArray(m_bsdfSamples);
 	}
 
 	Spectrum Li(const RayDifferential &r, RadianceQueryRecord &rRec) const {
@@ -132,7 +134,7 @@ public:
 				/* Evaluate BSDF * cos(theta) */
 				const Spectrum bsdfVal = bsdf->fCos(bRec);
 
-				if (!bsdfVal.isBlack()) {
+				if (!bsdfVal.isZero()) {
 					/* Calculate prob. of having sampled that direction
 						using BSDF sampling */
 					Float bsdfPdf = (lRec.luminaire->isIntersectable() 
@@ -160,10 +162,10 @@ public:
 
 		for (int i=0; i<numBSDFSamples; ++i) {
 			/* Sample BSDF * cos(theta) */
-			BSDFQueryRecord bRec(rRec, its, sampleArray[i]);
+			BSDFQueryRecord bRec(rRec, its);
 			Float bsdfPdf;
-			Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf);
-			if (bsdfVal.isBlack())
+			Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, sampleArray[i]);
+			if (bsdfVal.isZero())
 				break;
 			bsdfVal /= bsdfPdf;
 

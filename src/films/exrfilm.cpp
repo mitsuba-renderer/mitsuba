@@ -122,13 +122,15 @@ public:
 			return Spectrum(0.0f);
 		}
 		Pixel &pixel = m_pixels[xPixel + yPixel * m_cropSize.x];
-		return pixel.weight != 0 ? pixel.spec / pixel.weight : Spectrum(0.0f);
+
+		return pixel.weight != 0 ? 
+			(pixel.spec / pixel.weight) : Spectrum(0.0f);
 	}
 
 	void putImageBlock(const ImageBlock *block) {
 		int entry=0, imageY = block->getOffset().y - 
 			block->getBorder() - m_cropOffset.y - 1;
-		
+
 		for (int y=0; y<block->getFullSize().y; ++y) {
 			if (++imageY < 0 || imageY >= m_cropSize.y) {
 				/// Skip a row if it is outside of the crop region

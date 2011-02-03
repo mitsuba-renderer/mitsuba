@@ -17,8 +17,11 @@
 */
 
 #include <mitsuba/render/scene.h>
+#include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
+
+static StatsCounter avgPathLength("Volumetric path tracer", "Average path length", EAverage);
 
 /**
  * Volumetric path tracer, which solves the full radiative transfer
@@ -46,7 +49,6 @@ public:
 		LuminaireSamplingRecord lRec;
 		MediumSamplingRecord mRec;
 		RayDifferential ray(r);
-		Intersection prevIts;
 		Spectrum Li(0.0f);
 
 		/* Perform the first ray intersection (or ignore if the 
@@ -62,14 +64,13 @@ public:
 			/* ==================================================================== */
 			/*                 Radiative Transfer Equation sampling                 */
 			/* ==================================================================== */
-			if (scene->sampleDistance(ray, its.t, mRec, rRec.sampler)) {
+			if (scene->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
 				const PhaseFunction *phase = mRec.medium->getPhaseFunction();
-				Vector wo, wi = -ray.d;
 
 				/* Sample the integral
 				   \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
 				*/
-				pathThroughput *= mRec.sigmaS * mRec.attenuation * mRec.miWeight / mRec.pdf;
+				pathThroughput *= mRec.sigmaS * mRec.attenuation / mRec.pdfSuccess;
 
 				/* ==================================================================== */
 				/*                          Luminaire sampling                          */
@@ -78,21 +79,20 @@ public:
 				/* Estimate the single scattering component if this is requested */
 				if (rRec.type & RadianceQueryRecord::EInscatteredDirectRadiance && 
 					scene->sampleLuminaireAttenuated(mRec.p, lRec, ray.time, rRec.nextSample2D())) {
-					Li += pathThroughput * lRec.Le * phase->f(mRec, -ray.d, -lRec.d);
+					Li += pathThroughput * lRec.Le * phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 				}
 
 				/* ==================================================================== */
 				/*                         Phase function sampling                      */
 				/* ==================================================================== */
 
-				PhaseFunction::ESampledType sampledType;
-				Spectrum phaseVal = phase->sample(mRec, wi, wo, sampledType, rRec.nextSample2D());
+				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
+				Spectrum phaseVal = phase->sample(pRec, rRec.sampler);
 				if (phaseVal.max() == 0)
 					break;
-				prevIts = its;
 
 				/* Trace a ray in this direction */
-				ray = Ray(mRec.p, wo, ray.time);
+				ray = Ray(mRec.p, pRec.wo, ray.time);
 				computeIntersection = true;
 
 				/* ==================================================================== */
@@ -100,25 +100,8 @@ public:
 				/* ==================================================================== */
 
 				/* Set the recursive query type */
-				if (!(rRec.type & RadianceQueryRecord::EInscatteredIndirectRadiance)) {
-					/* Stop if multiple scattering was not requested (except: sampled a delta phase function
-					   - look for emitted radiance only) */
-					if (sampledType == PhaseFunction::EDelta) {
-						rRec.type = RadianceQueryRecord::EEmittedRadiance;
-					} else {
-						break;
-					}
-				} else {
-					if (sampledType != PhaseFunction::EDelta || !(rRec.type & RadianceQueryRecord::EInscatteredDirectRadiance)) {
-						/* Emitted radiance is only included in the recursive query if:
-						  - the sampled phase function component had a Dirac delta distribution AND
-						  - the current query asks for single scattering
-						*/
-						rRec.type = RadianceQueryRecord::ERadianceNoEmission;
-					} else {
-						rRec.type = RadianceQueryRecord::ERadiance;
-					}
-				}
+				if (!(rRec.type & RadianceQueryRecord::EInscatteredIndirectRadiance))
+					break; /* Stop if multiple scattering was not requested */
 
 				/* Russian roulette - Possibly stop the recursion */
 				if (rRec.depth >= m_rrDepth) {
@@ -130,12 +113,13 @@ public:
 
 				pathThroughput *= phaseVal;
 				rRec.depth++;
+				rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 			} else {
 				/* Sample 
-					tau(x, y) (Surface integral). This happens with probability mRec.pdf
+					tau(x, y) (Surface integral). This happens with probability mRec.pdfFailure
 					Divide this out and multiply with the proper per-color-channel attenuation.
 				*/
-				pathThroughput *= mRec.attenuation * mRec.miWeight / mRec.pdf;
+				pathThroughput *= mRec.attenuation / mRec.pdfFailure;
 
 				if (!its.isValid()) {
 					/* If no intersection could be found, possibly return 
@@ -173,11 +157,10 @@ public:
 				/* ==================================================================== */
 
 				/* Sample BSDF * cos(theta) */
-				BSDFQueryRecord bRec(rRec, its, rRec.nextSample2D());
-				Spectrum bsdfVal = bsdf->sampleCos(bRec);
-				if (bsdfVal.isBlack())
+				BSDFQueryRecord bRec(rRec, its);
+				Spectrum bsdfVal = bsdf->sampleCos(bRec, rRec.nextSample2D());
+				if (bsdfVal.isZero())
 					break;
-				prevIts = its;
 
 				/* Trace a ray in this direction */
 				ray = Ray(its.p, its.toWorld(bRec.wo), ray.time);
@@ -186,10 +169,10 @@ public:
 				/* ==================================================================== */
 				/*                         Indirect illumination                        */
 				/* ==================================================================== */
-			
 				bool includeEmitted = (bRec.sampledType & BSDF::EDelta) 
 					&& (rRec.type & RadianceQueryRecord::EDirectRadiance);
-				/* Stop if indirect illumination was not requested */
+			
+					/* Stop if indirect illumination was not requested */
 				if (!(rRec.type & RadianceQueryRecord::EIndirectRadiance)) {
 					/* Stop if indirect illumination was not requested (except: sampled a delta BSDF 
 					   - recursively look for emitted radiance only to get the direct component) */
@@ -220,8 +203,9 @@ public:
 					}
 				}
 
-				/* Russian roulette - Possibly stop the recursion */
-				if (rRec.depth >= m_rrDepth) {
+				/* Russian roulette - Possibly stop the recursion. Don't use for transmission
+				   due to IOR weighting factors, which throw the heuristic off */
+				if (rRec.depth >= m_rrDepth && !(bRec.sampledType & BSDF::ETransmission)) {
 					/* Assuming that BSDF importance sampling is perfect,
 					   'bsdfVal.max()' should equal the maximum albedo
 					   over all spectral samples */
@@ -236,6 +220,8 @@ public:
 				rRec.depth++;
 			}
 		}
+		avgPathLength.incrementBase();
+		avgPathLength += rRec.depth;
 		return Li;
 	}
 

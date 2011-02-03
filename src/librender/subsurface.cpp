@@ -30,7 +30,11 @@ Subsurface::Subsurface(const Properties &props)
 	defaultSigmaA.fromLinearRGB(0.0014f, 0.0025f, 0.0142f);
 	defaultSigmaS.fromLinearRGB(0.7f, 1.22f, 1.9f);
 
-	m_sizeMultiplier = props.getFloat("sizeMultiplier", 1);
+	if (props.hasProperty("sizeMultiplier"))
+		Log(EError, "Deprecation error: the parameter sizeMultiplier"
+			" has been renamed to densityMultiplier");
+
+	m_densityMultiplier = props.getFloat("densityMultiplier", 1);
 	/* Scattering coefficient */
 	m_sigmaS = props.getSpectrum("sigmaS", defaultSigmaS);
 	/* Absorption coefficient */
@@ -38,8 +42,8 @@ Subsurface::Subsurface(const Properties &props)
 	/* Refractive index of the object */
 	m_eta = props.getFloat("eta", 1.5f);
 		
-	m_sigmaS *= m_sizeMultiplier;
-	m_sigmaA *= m_sizeMultiplier;
+	m_sigmaS *= m_densityMultiplier;
+	m_sigmaA *= m_densityMultiplier;
 	m_sigmaT = m_sigmaS + m_sigmaA;
 }
 
@@ -48,7 +52,7 @@ Subsurface::Subsurface(Stream *stream, InstanceManager *manager) :
 	m_sigmaS = Spectrum(stream);
 	m_sigmaA = Spectrum(stream);
 	m_eta = stream->readFloat();
-	m_sizeMultiplier = stream->readFloat();
+	m_densityMultiplier = stream->readFloat();
 	unsigned int shapeCount = stream->readUInt();
 
 	for (unsigned int i=0; i<shapeCount; ++i) {
@@ -81,7 +85,7 @@ void Subsurface::serialize(Stream *stream, InstanceManager *manager) const {
 	m_sigmaS.serialize(stream);
 	m_sigmaA.serialize(stream);
 	stream->writeFloat(m_eta);
-	stream->writeFloat(m_sizeMultiplier);
+	stream->writeFloat(m_densityMultiplier);
 	stream->writeUInt(m_shapes.size());
 	for (unsigned int i=0; i<m_shapes.size(); ++i)
 		manager->serialize(stream, m_shapes[i]);

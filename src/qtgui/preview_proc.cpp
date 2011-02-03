@@ -16,7 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/imageproc_wu.h>
+#include <mitsuba/render/rectwu.h>
 #include "preview_proc.h"
 
 PreviewProcess::PreviewProcess(const Scene *scene, int sceneResID, int blockSize) 

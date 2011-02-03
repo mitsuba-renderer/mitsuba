@@ -1,16 +1,34 @@
+/*
+    This file is part of Mitsuba, a physically based rendering system.
+
+    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
+
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #if !defined(__RECORDS_INLINE_H)
 #define __RECORDS_INLINE_H
 
 MTS_NAMESPACE_BEGIN
 	
 inline BSDFQueryRecord::BSDFQueryRecord(RadianceQueryRecord &rRec, 
-	const Intersection &its, Point2 sample): rRec(&rRec), 
-	its(its), wi(its.wi), sample(sample), quantity(ERadiance),
+	const Intersection &its): rRec(&rRec), 
+	its(its), wi(its.wi), quantity(ERadiance),
 	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
 }
 
-inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, Point2 sample)
-	: rRec(NULL), its(its), wi(its.wi), sample(sample), quantity(ERadiance),
+inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its)
+	: rRec(NULL), its(its), wi(its.wi), quantity(ERadiance),
 	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
 }
 
@@ -64,9 +82,9 @@ inline bool RadianceQueryRecord::rayIntersect(const RayDifferential &ray) {
 	/* Only search for an intersection if this was explicitly requested */
 	if (type & EIntersection) {
 		scene->rayIntersect(ray, its);
-		attenuation = scene->getAttenuation(Ray(ray.o, ray.d, 0, its.t, ray.time));
-		if (type & EOpacity) 
-			alpha = its.isValid() ? 1 : (1 - attenuation.average());
+		if (type & EOpacity)
+			alpha = its.isValid() ? 1 : (1 - scene->getAttenuation(
+				Ray(ray.o, ray.d, 0, its.t, ray.time)).average());
 		if (type & EDistance)
 			dist = its.t;
 		type ^= EIntersection; // unset the intersection bit

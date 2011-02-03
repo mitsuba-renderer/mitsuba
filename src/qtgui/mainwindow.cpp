@@ -153,8 +153,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	connect(m_renderListener, SIGNAL(jobFinished(const RenderJob *, bool)), 
 		this, SLOT(onJobFinished(const RenderJob *, bool)), Qt::QueuedConnection);
-	connect(m_renderListener, SIGNAL(refresh(const RenderJob *)), 
-		this, SLOT(onRefresh(const RenderJob *)), Qt::QueuedConnection);
+	connect(m_renderListener, SIGNAL(refresh(const RenderJob *, const Bitmap *)), 
+		this, SLOT(onRefresh(const RenderJob *, const Bitmap *)), Qt::BlockingQueuedConnection);
 	connect(m_renderListener, SIGNAL(workEnd(const RenderJob *, const ImageBlock *)), 
 		this, SLOT(onWorkEnd(const RenderJob *, const ImageBlock *)), Qt::DirectConnection);
 	connect(m_renderListener, SIGNAL(workBegin(const RenderJob *, const RectangularWorkUnit *, int)),
@@ -1158,7 +1158,7 @@ void MainWindow::on_actionRender_triggered() {
 	Scene *scene = context->scene;
 	scene->setBlockSize(m_blockSize);
 	context->renderJob = new RenderJob("rend", scene, m_renderQueue, NULL, 
-		context->sceneResID, -1, -1, false);
+		context->sceneResID, -1, -1, false, true);
 	context->cancelMode = ERender;
 	if (context->mode != ERender)
 		ui->glView->downloadFramebuffer();
@@ -1396,9 +1396,9 @@ void MainWindow::on_actionAbout_triggered() {
 
 void MainWindow::onJobFinished(const RenderJob *job, bool cancelled) {
 	SceneContext *context = getContext(job, false);
-	m_renderQueue->join();
 	if (context == NULL)
 		return;
+	m_renderQueue->join();
 	context->workUnits.clear();
 	if (cancelled) {
 		if (!context->cancelled) {
@@ -1412,7 +1412,7 @@ void MainWindow::onJobFinished(const RenderJob *job, bool cancelled) {
 				ui->glView->resumePreview();
 		}
 	}
-	onRefresh(job);
+	onRefresh(job, NULL);
 	context->renderJob = NULL;
 	updateUI();
 	if (ui->tabBar->currentIndex() != -1 &&
@@ -1559,7 +1559,7 @@ void MainWindow::onWorkEnd(const RenderJob *job, const ImageBlock *block) {
 		emit updateView();
 }
 
-void MainWindow::onRefresh(const RenderJob *job) {
+void MainWindow::onRefresh(const RenderJob *job, const Bitmap *_bitmap) {
 	SceneContext *context = getContext(job, false);
 	if (context == NULL)
 		return;
@@ -1567,16 +1567,24 @@ void MainWindow::onRefresh(const RenderJob *job) {
 	Point2i co = film->getCropOffset();
 	Bitmap *bitmap = context->framebuffer;
 	float *framebuffer = bitmap->getFloatData();
-	Float r, g, b;
 
-	for (int y = 0; y < bitmap->getHeight(); ++y) {
-		int fbOffset = y*bitmap->getWidth()*4;
-		for (int x = 0; x < bitmap->getWidth(); ++x) {
-			film->getValue(x + co.x, y + co.y).toLinearRGB(r, g, b);
-			framebuffer[fbOffset] = (float) r;
-			framebuffer[fbOffset+1] = (float) g;
-			framebuffer[fbOffset+2] = (float) b;
-			fbOffset += 4;
+	if (_bitmap != NULL) {
+		SAssert(bitmap->getWidth() == _bitmap->getWidth());
+		SAssert(bitmap->getHeight() == _bitmap->getHeight());
+		SAssert(bitmap->getBitsPerPixel() == _bitmap->getBitsPerPixel());
+		memcpy(framebuffer, _bitmap->getFloatData(),
+			bitmap->getWidth() * bitmap->getHeight() * 4 * sizeof(float));
+	} else {
+		Float r, g, b;
+		for (int y = 0; y < bitmap->getHeight(); ++y) {
+			int fbOffset = y*bitmap->getWidth()*4;
+			for (int x = 0; x < bitmap->getWidth(); ++x) {
+				film->getValue(x + co.x, y + co.y).toLinearRGB(r, g, b);
+				framebuffer[fbOffset] = (float) r;
+				framebuffer[fbOffset+1] = (float) g;
+				framebuffer[fbOffset+2] = (float) b;
+				fbOffset += 4;
+			}
 		}
 	}
 

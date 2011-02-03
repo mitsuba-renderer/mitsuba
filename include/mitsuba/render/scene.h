@@ -23,7 +23,7 @@
 #include <mitsuba/core/pdf.h>
 #include <mitsuba/core/aabb.h>
 #include <mitsuba/render/trimesh.h>
-#include <mitsuba/render/kdtree.h>
+#include <mitsuba/render/skdtree.h>
 #include <mitsuba/render/camera.h>
 #include <mitsuba/render/luminaire.h>
 #include <mitsuba/render/integrator.h>
@@ -31,6 +31,8 @@
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/texture.h>
 #include <mitsuba/render/medium.h>
+#include <mitsuba/render/volume.h>
+#include <mitsuba/render/phase.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -169,6 +171,30 @@ public:
 		const Point2 &sample, bool testVisibility = true) const;
 
 	/**
+	 * Convenience method - similar to \a sampleLuminaire(), but also attenuates
+	 * lRec.Le by the integrated extinction coefficient on the path lRec.sRec.p <-> p.
+	 */
+	inline bool sampleLuminaireAttenuated(const Point &p,
+		LuminaireSamplingRecord &lRec, Float time, 
+		const Point2 &sample, bool testVisibility = true) const {
+		if (sampleLuminaire(p, lRec, time, sample, testVisibility)) {
+			lRec.Le *= getAttenuation(Ray(p, lRec.sRec.p-p, 0, 1, time));
+			return true;
+		}
+		return false;
+	}
+
+
+	/**
+	 * Return the probability of generating a sample on a luminaire if
+	 * \ref sampleLuminaire() is called with the point 'p'.
+	 * When \a delta is set to true, only components
+	 * with a Dirac delta density are queried.
+	 */
+	Float pdfLuminaire(const Point &p,
+		const LuminaireSamplingRecord &lRec, bool delta = false) const;
+
+	/**
 	 * Sample a visible point on a luminaire (ideally uniform wrt. the solid angle of p). Takes
 	 * a surface intersection record (some luminaires make use of this to provide improved sampling)
 	 * @param its 
@@ -183,30 +209,18 @@ public:
      *    true if sampling was successful
 	 */
 	bool sampleLuminaire(const Intersection &its,
-		LuminaireSamplingRecord &lRec, const Point2 &sample, bool testVisibility = true) const;
-
-	/**
-	 * Convenience method - similar to sampleLuminaire(), but also attenuates
-	 * lRec.Le by the integrated extinction coefficient on the path lRec.sRec.p <-> p.
-	 */
-	inline bool sampleLuminaireAttenuated(const Point &p,
-		LuminaireSamplingRecord &lRec, Float time, 
-		const Point2 &sample, bool testVisibility = true) const {
-		if (sampleLuminaire(p, lRec, time, sample, testVisibility)) {
-			lRec.Le *= getAttenuation(Ray(p, lRec.sRec.p-p, 0, 1, 0));
-			return true;
-		}
-		return false;
-	}
+		LuminaireSamplingRecord &lRec, const Point2 &sample,
+		bool testVisibility = true) const;
 
 	/**
 	 * Convenience method - similar to sampleLuminaire(), but also attenuates
 	 * lRec.Le by the integrated extinction coefficient on the path lRec.sRec.p <-> p.
 	 */
 	inline bool sampleLuminaireAttenuated(const Intersection &its,
-		LuminaireSamplingRecord &lRec, const Point2 &sample, bool testVisibility = true) const {
+		LuminaireSamplingRecord &lRec, const Point2 &sample,
+		bool testVisibility = true) const {
 		if (sampleLuminaire(its, lRec, sample, testVisibility)) {
-			lRec.Le *= getAttenuation(Ray(its.p, lRec.sRec.p-its.p, 0, 1, 0));
+			lRec.Le *= getAttenuation(Ray(its.p, lRec.sRec.p-its.p, 0, 1, its.time));
 			return true;
 		}
 		return false;
@@ -214,17 +228,10 @@ public:
 
 	/**
 	 * Return the probability of generating a sample on a luminaire if
-	 * sampleLuminaire() is called with the point 'p'.
-	 */
-	Float pdfLuminaire(const Point &p,
-		const LuminaireSamplingRecord &lRec) const;
-
-	/**
-	 * Return the probability of generating a sample on a luminaire if
 	 * sampleLuminaire() is called with the surface interation 'its'
 	 */
 	Float pdfLuminaire(const Intersection &its,
-		const LuminaireSamplingRecord &lRec) const;
+		const LuminaireSamplingRecord &lRec, bool delta = false) const;
 
 	/**
 	 * Sample a particle leaving a luminaire and return a ray describing its path
@@ -238,8 +245,8 @@ public:
 	 * implemented in <tt>sampleEmission</tt>. An examplary use of this
 	 * is bidirectional path tracing, where the directionally varying part
 	 * is handed similarly to a BSDF, which modulates the spatially
-	 * dependent radiance component. After the function call terminates,
-	 * the area density as well as the spatially dependent radiance component
+	 * dependent radiance component. After this returns, the area density 
+	 * as well as the spatially dependent radiance component
 	 * will be stored in <tt>eRec</tt>.
 	 */
 	void sampleEmissionArea(EmissionRecord &lRec, Point2 &sample) const;
@@ -252,10 +259,12 @@ public:
 	Spectrum sampleEmissionDirection(EmissionRecord &lRec, Point2 &sample) const;
 
 	/**
-	 * Given an emitted particle, populate the emission record with the relevant spectra
-	 * and probability densities.
+	 * Given an emitted particle, populate the emission record with the 
+	 * relevant spectra and probability densities.
+	 * When \a delta is set to true, only components
+	 * with a Dirac delta density are queried.
 	 */
-	void pdfEmission(EmissionRecord &eRec) const;
+	void pdfEmission(EmissionRecord &eRec, bool delta) const;
 
 	/**
 	 * Return the background radiance for a ray, which did not hit anything.
@@ -272,21 +281,43 @@ public:
 		return LeBackground(ray) * getAttenuation(ray);
 	}
 
-	/// Calculate the attenuation along the ray segment [mint, maxt]
+	/**
+	 * \brief Calculate the attenuation along the ray segment [mint, maxt]
+	 *
+	 * As a special exception, this function doesn't require 
+	 * the ray distance field to be normalized
+	 */
 	Spectrum getAttenuation(const Ray &ray) const;
 
 	/// Does the scene contain participating media?
 	inline bool hasMedia() const { return !m_media.empty(); }
 
 	/**
-	 * In the presence of participating media, sample a traveled distance
-	 * along a ray. Should ideally importance sample with respect to the
-	 * sample contribution.
-	 * Returns false if the ray passes through all media (or
-	 * if there were none). Assumes that none of the media overlap!
+	 * \brief In the presence of participating media, sample the 
+	 * in-scattering line integral of the RTE. 
+	 *
+	 * Should ideally importance sample with respect to the
+	 * sample contribution. The ray direction is required to
+	 * be normalized.
+	 *
+	 * \return false if the ray passes beyond \a ray.maxt (or
+	 * if there were no participating media at all). 
 	 */
-	bool sampleDistance(const Ray &ray, Float maxDist, MediumSamplingRecord &mRec,
-		Sampler *sampler) const;
+	bool sampleDistance(const Ray &ray,
+			MediumSamplingRecord &mRec, Sampler *sampler) const;
+
+	/**
+	 * \brief Compute the density of sampling distance \a t along the 
+	 * ray using the sampling strategy implemented by \a sampleDistance. 
+	 *
+	 * The function computes the continuous densities in the case of
+	 * a successful \ref sampleDistance() invocation (in both directions),
+	 * as well as the Dirac delta density associated with a failure.
+	 * For convenience, it also stores the attenuation along the ray
+	 * segment in \a mRec.
+	 */
+	void pdfDistance(const Ray &ray, Float t, 
+		MediumSamplingRecord &mRec) const;
 
 	/// Return the scene's test mode
 	inline ETestType getTestType() const { return m_testType; }
@@ -351,9 +382,9 @@ public:
 	inline void setFilm(Film *film) { m_camera->setFilm(film); }
 	
 	/// Return the scene's kd-tree accelerator
-	inline KDTree *getKDTree() { return m_kdtree; }
+	inline ShapeKDTree *getKDTree() { return m_kdtree; }
 	/// Return the scene's kd-tree accelerator
-	inline const KDTree *getKDTree() const { return m_kdtree.get(); }
+	inline const ShapeKDTree *getKDTree() const { return m_kdtree.get(); }
 
 	/// Return the a list of all subsurface integrators
 	inline const std::vector<Subsurface *> &getSubsurfaceIntegrators() const { return m_ssIntegrators; }
@@ -417,7 +448,7 @@ protected:
 	/// Add a shape to the scene
 	void addShape(Shape *shape);
 private:
-	ref<KDTree> m_kdtree;
+	ref<ShapeKDTree> m_kdtree;
 	ref<Camera> m_camera;
 	ref<Integrator> m_integrator;
 	ref<Sampler> m_sampler;

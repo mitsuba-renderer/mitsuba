@@ -1,0 +1,6 @@
+Import('env', 'plugins')
+
+plugins += env.SharedLibrary('#plugins/perspective', ['perspective.cpp'])
+plugins += env.SharedLibrary('#plugins/orthographic', ['orthographic.cpp'])
+
+Export('plugins')

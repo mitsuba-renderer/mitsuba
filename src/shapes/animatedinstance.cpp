@@ -51,7 +51,7 @@ public:
 	void configure() {
 		if (!m_shapeGroup)
 			Log(EError, "A reference to a 'shapegroup' must be specified!");
-		const KDTree *kdtree = m_shapeGroup->getKDTree();
+		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		const AABB &aabb = kdtree->getAABB();
 		Float minT, maxT;
 		m_transform->computeTimeBounds(minT, maxT);
@@ -92,7 +92,7 @@ public:
 
 	bool rayIntersect(const Ray &_ray, Float mint, 
 			Float maxt, Float &t, void *temp) const {
-		const KDTree *kdtree = m_shapeGroup->getKDTree();
+		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		Ray ray;
 		Transform objectToWorld, worldToObject;
 		m_transform->eval(_ray.time, objectToWorld);
@@ -102,7 +102,7 @@ public:
 	}
 
 	bool rayIntersect(const Ray &_ray, Float mint, Float maxt) const {
-		const KDTree *kdtree = m_shapeGroup->getKDTree();
+		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		Ray ray;
 		Transform objectToWorld, worldToObject;
 		m_transform->eval(_ray.time, objectToWorld);
@@ -113,7 +113,7 @@ public:
 
 	void fillIntersectionRecord(const Ray &ray, 
 		const void *temp, Intersection &its) const {
-		const KDTree *kdtree = m_shapeGroup->getKDTree();
+		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		Transform objectToWorld;
 		m_transform->eval(ray.time, objectToWorld);
 		kdtree->fillIntersectionRecord<false>(ray, temp, its);

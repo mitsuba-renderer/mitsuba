@@ -39,8 +39,14 @@ public:
 	/// Return the underlying data
 	inline uint8_t *getData() { return m_data; }
 	
-	/// Return the underlying data
+	/// Return the underlying data (const version)
 	inline const uint8_t *getData() const { return m_data; }
+
+	/// Return the underlying data at the current position
+	inline uint8_t *getCurrentData() { return m_data + m_pos; }
+	
+	/// Return the underlying data at the current position (const version)
+	inline const uint8_t *getCurrentData() const { return m_data + m_pos; }
 
 	/// Set size and position to zero without changing the underlying buffer
 	void reset();

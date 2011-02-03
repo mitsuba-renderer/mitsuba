@@ -43,8 +43,12 @@ extern MTS_EXPORT_CORE std::vector<std::string> tokenize(
 /// Indent a string (Used for recursive toString() structure dumping)
 extern MTS_EXPORT_CORE std::string indent(const std::string &string, int amount=1);
 
-/// Convert a time difference (in ms) to a string representation
-extern MTS_EXPORT_CORE std::string timeToString(Float time);
+/**
+ * Convert a time difference (in ms) to a string representation
+ * \param accurate When set to true, a higher-precision string representation
+ * is generated.
+ */
+extern MTS_EXPORT_CORE std::string timeToString(Float time, bool precise = false);
 
 /// Trim spaces (' ', '\\n', '\\r', '\\t') from the ends of a string
 extern MTS_EXPORT_CORE std::string trim(const std::string& str);
@@ -207,6 +211,17 @@ inline int clamp(int value, int min, int max) {
 	else return value;
 }
 
+/// Linearly interpolate between two values
+inline Float lerp(Float t, Float v1, Float v2) {
+    return ((Float) 1 - t) * v1 + t * v2;
+}
+
+/// S-shaped smoothly varying interpolation between two values
+inline Float smoothStep(Float min, Float max, Float value) {
+    Float v = clamp((value - min) / (max - min), (Float) 0, (Float) 1);
+    return v * v * (-2 * v  + 3);
+}
+
 /**
  * Calculates the unpolarized fresnel reflection coefficient for a 
  * dielectric material
@@ -283,6 +298,18 @@ template<typename T, typename U> inline T union_cast(const U &val) {
 	} caster = {val};
 
 	return caster.t;
+}
+
+/// Swaps the byte order of the underlying representation
+template<typename T> inline T endianness_swap(T value) {
+	union {
+		T value;
+		uint8_t byteValue[sizeof(T)];
+	} u;
+
+	u.value = value;
+	std::reverse(&u.byteValue[0], &u.byteValue[sizeof(T)]);
+	return u.value;
 }
 
 /// Return a string representation of a list of objects

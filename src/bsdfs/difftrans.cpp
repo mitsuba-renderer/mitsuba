@@ -69,10 +69,10 @@ public:
 		return std::abs(Frame::cosTheta(bRec.wo)) * INV_PI;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec) const {
+	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		if (!(bRec.typeMask & m_combinedType))
 			return Spectrum(0.0f);
-		bRec.wo = squareToHemispherePSA(bRec.sample);
+		bRec.wo = squareToHemispherePSA(sample);
 		if (bRec.wi.z > 0)
 			bRec.wo.z *= -1;
 		bRec.sampledComponent = 0;
@@ -82,10 +82,10 @@ public:
 		return m_transmittance->getValue(bRec.its) / std::abs(Frame::cosTheta(bRec.wo));
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (!(bRec.typeMask & m_combinedType)) 
 			return Spectrum(0.0f);
-		bRec.wo = squareToHemispherePSA(bRec.sample);
+		bRec.wo = squareToHemispherePSA(sample);
 		if (bRec.wi.z > 0)
 			bRec.wo.z *= -1;
 		bRec.sampledComponent = 0;

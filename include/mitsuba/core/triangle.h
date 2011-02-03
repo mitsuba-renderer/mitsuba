@@ -72,14 +72,10 @@ struct MTS_EXPORT_CORE Triangle {
 	 * intersection point, and \a u and \a v contain the intersection point in
 	 * the local triangle coordinate system
 	 */
-	FINLINE bool rayIntersect(const Point *positions, const Ray &ray, Float &u, 
-		Float &v, Float &t) const {
-		const Point &v0 = positions[idx[0]];
-		const Point &v1 = positions[idx[1]];
-		const Point &v2 = positions[idx[2]];
-
+	FINLINE static bool rayIntersect(const Point &p0, const Point &p1, const Point &p2, 
+		const Ray &ray, Float &u, Float &v, Float &t) {
 		/* find vectors for two edges sharing v[0] */
-		Vector edge1 = v1 - v0, edge2 = v2 - v0;
+		Vector edge1 = p1 - p0, edge2 = p2 - p0;
 
 		/* begin calculating determinant - also used to calculate U parameter */
 		Vector pvec = cross(ray.d, edge2);
@@ -92,7 +88,7 @@ struct MTS_EXPORT_CORE Triangle {
 		Float inv_det = 1.0f / det;
 
 		/* calculate distance from v[0] to ray origin */
-		Vector tvec = ray.o - v0;
+		Vector tvec = ray.o - p0;
 
 		/* calculate U parameter and test bounds */
 		u = dot(tvec, pvec) * inv_det;
@@ -111,6 +107,22 @@ struct MTS_EXPORT_CORE Triangle {
 		t = dot(edge2, qvec) * inv_det;
 
 		return true;
+	}
+
+	/** \brief Ray-triangle intersection test
+	 * 
+	 * Uses the algorithm presented by Moeller and Trumbore at
+	 * http://www.acm.org/jgt/papers/MollerTrumbore97/code.html
+	 * Returns true if an intersection has been detected
+	 * On success, \a t contains the distance from the ray origin to the
+	 * intersection point, and \a u and \a v contain the intersection point in
+	 * the local triangle coordinate system
+	 */
+	FINLINE bool rayIntersect(const Point *positions, const Ray &ray, Float &u, 
+		Float &v, Float &t) const {
+		return rayIntersect(
+			positions[idx[0]], positions[idx[1]],
+			positions[idx[2]], ray, u, v, t);
 	}
 };
 

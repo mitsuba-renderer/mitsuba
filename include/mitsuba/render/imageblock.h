@@ -77,16 +77,17 @@ public:
 	std::string toString() const;
 
 	/**
-	 * Add a sample to the image block -- returns false if the 
+	 * \brief Add a sample to the image block -- returns false if the 
 	 * sample contains invalid values (negative/NaN)
+	 *
+	 * The implementation of this function is based on PBRT
 	 */
 	inline bool putSample(Point2 sample, const Spectrum &spec,
-		const Float alphaValue, const TabulatedFilter *filter) {
-		/* Implementation based on PBRT */
+		const Float alphaValue, const TabulatedFilter *filter, bool complain = true) {
 		const Vector2 filterSize = filter->getFilterSize();
 
 		/* Check for problems with the sample */
-		if (!spec.isValid()) {
+		if (!spec.isValid() && complain) {
 			Log(EWarn, "Invalid sample value : %s", spec.toString().c_str());
 			return false;
 		}
@@ -118,20 +119,31 @@ public:
 		}
 
 		/* Update the weights+pixels */
-		for (int y=yStart; y<=yEnd; ++y) {
-			int index = y*fullSize.x + xStart;
-			for (int x=xStart; x<=xEnd; ++x) {
-				Float weight = filter->lookup(idxX[x-xStart], idxY[y-yStart]);
-				pixels[index] += spec * weight;
-				alpha[index] += alphaValue * weight;
-				weights[index++] += weight;
+		if (alpha) {
+			for (int y=yStart; y<=yEnd; ++y) {
+				int index = y*fullSize.x + xStart;
+				for (int x=xStart; x<=xEnd; ++x) {
+					Float weight = filter->lookup(idxX[x-xStart], idxY[y-yStart]);
+					pixels[index] += spec * weight;
+					alpha[index] += alphaValue * weight;
+					weights[index++] += weight;
+				}
+			}
+		} else {
+			for (int y=yStart; y<=yEnd; ++y) {
+				int index = y*fullSize.x + xStart;
+				for (int x=xStart; x<=xEnd; ++x) {
+					Float weight = filter->lookup(idxX[x-xStart], idxY[y-yStart]);
+					pixels[index] += spec * weight;
+					weights[index++] += weight;
+				}
 			}
 		}
 		return true;
 	}
 	
 	/**
-	 * Like putSample(), but does not update weights or alpha values
+	 * \brief Like \ref putSample(), but does not update weights nor alpha values
 	 */
 	inline bool splat(Point2 sample, const Spectrum &spec,
 		const TabulatedFilter *filter) {
@@ -182,6 +194,8 @@ public:
 	}
 
 	/**
+	 * \brief Create a snapshot for use with adaptive sampling
+	 *
 	 * Before starting to place samples within the area of a single pixel, this
 	 * method can be called to take a snapshot of all surrounding spectrum+weight 
 	 * values. Those values can later be used to ensure that adjacent pixels will
@@ -205,8 +219,10 @@ public:
 	}
 	
 	/**
-	 * Multiplies the contributions since the last snapshot by the
+	 * \brief Multiplies the contributions since the last snapshot by the
 	 * supplied value.
+	 *
+	 * For use together with \ref snapshot()
 	 */
 	inline void normalize(int px, int py, Float factor) {
 		const int xStart = px - offset.x, xEnd = xStart + 2*border;
@@ -284,7 +300,7 @@ public:
 	inline uint32_t getSampleCount(size_t idx) const { return nSamples[idx]; }
 
 	/// Look up an alpha value (given a 1D array index for performance reasons)
-	inline Float getAlpha(size_t idx) const { return alpha[idx]; }
+	inline Float getAlpha(size_t idx) const { return alpha ? alpha[idx] : 1.0f; }
 
 	/**
 	 * Return the value of the 'extra' field (to be used for storing

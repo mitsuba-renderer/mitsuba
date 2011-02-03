@@ -68,8 +68,8 @@ public:
 		Log(EError, "Progressive photon mapping currently doesn't work "
 			"on OSX due to a bug in OpenMP that affects Leopard & Snow Leopard");
 #endif
-		if (m_maxDepth <= 1) 
-			Log(EError, "Maximum depth must be set to \"2\" or higher!");
+		if (m_maxDepth <= 1 && m_maxDepth != -1) 
+			Log(EError, "Maximum depth must either be set to \"-1\" or \"2\" or higher!");
 	}
 
 	ProgressivePhotonMapIntegrator(Stream *stream, InstanceManager *manager)
@@ -159,6 +159,10 @@ public:
 		for (size_t i=0; i<sched->getCoreCount(); ++i)
 			samplers[i]->decRef();
 
+#ifdef MTS_DEBUG_FP
+		enableFPExceptions();
+#endif
+
 		/* Create gather points in blocks so that gathering can be parallelized later on */
 		for (int yofs=0; yofs<cropSize.y; yofs += m_blockSize) {
 			for (int xofs=0; xofs<cropSize.x; xofs += m_blockSize) {
@@ -188,7 +192,8 @@ public:
 							camera->generateRayDifferential(sample, 
 								lensSample, timeSample, eyeRay);
 							size_t offset = gatherPoints.size();
-							int count = createGatherPoints(scene, eyeRay, sample, Spectrum(1.0f),
+							int count = createGatherPoints(scene, eyeRay, sample, 
+									cameraSampler, Spectrum(1.0f),
 								gatherPoints, 1);
 							if (count > 1) { // necessary because of filter weight computation
 								for (int i = 0; i<count; ++i)
@@ -208,14 +213,19 @@ public:
 		while (m_running) 
 			photonMapPass(++it, queue, job, film, sceneResID, cameraResID, independentSamplerResID);
 
+#ifdef MTS_DEBUG_FP
+		disableFPExceptions();
+#endif
+
 		sched->unregisterResource(independentSamplerResID);
 		return true;
 	}
 
 	int createGatherPoints(Scene *scene, const RayDifferential &ray, 
-			const Point2 &sample, const Spectrum &weight, std::vector<GatherPoint> &gatherPoints, int depth) {
+			const Point2 &sample, Sampler *sampler, const Spectrum &weight, 
+			std::vector<GatherPoint> &gatherPoints, int depth) {
 		int count = 0;
-		if (depth >= m_maxDepth)
+		if (depth >= m_maxDepth && m_maxDepth != -1)
 			return 0;
 		GatherPoint p;
 		if (scene->rayIntersect(ray, p.its)) {
@@ -237,16 +247,19 @@ public:
 					if ((bsdf->getType(i) & BSDF::EDelta) == 0)
 						continue;
 					/* Sample the BSDF and recurse */
-					BSDFQueryRecord bRec(p.its, Point2());
+					BSDFQueryRecord bRec(p.its);
 					bRec.component = i;
-					Spectrum bsdfVal = bsdf->sampleCos(bRec);
-					if (bsdfVal.isBlack())
+					Spectrum bsdfVal = bsdf->sampleCos(bRec, Point2(0.0f));
+					if (bsdfVal.isZero())
 						continue;
 					bsdfVal = bsdf->fDelta(bRec);
 
-					RayDifferential recursiveRay(p.its.p, p.its.toWorld(bRec.wo), ray.time);
-					count += createGatherPoints(scene, recursiveRay, sample, 
-						weight * bsdfVal, gatherPoints, depth+1);
+					const Float rrProb = depth < 4 ? 1 : 0.8f;
+					if (sampler->independent1D() < rrProb) {
+						RayDifferential recursiveRay(p.its.p, p.its.toWorld(bRec.wo), ray.time);
+						count += createGatherPoints(scene, recursiveRay, sample, sampler, 
+							weight * bsdfVal / rrProb, gatherPoints, depth+1);
+					}
 				}
 			}
 		} else if (depth == 1) {
@@ -267,7 +280,7 @@ public:
 		/* Generate the global photon map */
 		ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 			GatherPhotonProcess::EAllSurfacePhotons, m_photonCount,
-			m_granularity, m_maxDepth-1, m_rrDepth, job);
+			m_granularity, m_maxDepth == -1 ? -1 : (m_maxDepth-1), m_rrDepth, job);
 
 		proc->bindResource("scene", sceneResID);
 		proc->bindResource("camera", cameraResID);
@@ -302,7 +315,7 @@ public:
 				}
 
 				Float M = photonMap->estimateRadianceRaw(
-					g.its, g.radius, flux, m_maxDepth-g.depth), N = g.N;
+					g.its, g.radius, flux, m_maxDepth == -1 ? INT_MAX : (m_maxDepth-g.depth)), N = g.N;
 
 				if (N+M == 0) {
 					g.flux = contrib = Spectrum(0.0f);
@@ -314,13 +327,13 @@ public:
 				}
 				contrib = g.flux / ((Float) m_totalEmitted * g.radius*g.radius * M_PI)
 					+ g.emission;
-				block->putSample(g.sample, contrib * g.weight, 1, m_filter);
+				block->putSample(g.sample, contrib * g.weight, 1, m_filter, false);
 			}
 			m_mutex->lock();
 			film->putImageBlock(block);
 			m_mutex->unlock();
 		}
-		queue->signalRefresh(job);
+		queue->signalRefresh(job, NULL);
 	}
 
 

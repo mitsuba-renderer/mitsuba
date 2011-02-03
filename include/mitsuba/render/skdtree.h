@@ -20,7 +20,7 @@
 #define __KD_TREE_H
 
 #include <mitsuba/render/shape.h>
-#include <mitsuba/render/gkdtree.h>
+#include <mitsuba/render/sahkdtree3.h>
 #include <mitsuba/render/triaccel.h>
 
 #if defined(MTS_KD_CONSERVE_MEMORY)
@@ -62,13 +62,14 @@ MTS_NAMESPACE_BEGIN
  * \sa GenericKDTree
  */
 
-class MTS_EXPORT_RENDER KDTree : public GenericKDTree<AABB, KDTree> {
-	friend class GenericKDTree<AABB, KDTree>;
+class MTS_EXPORT_RENDER ShapeKDTree : public SAHKDTree3D<ShapeKDTree> {
+	friend class GenericKDTree<AABB, SurfaceAreaHeuristic, ShapeKDTree>;
+	friend class SAHKDTree3D<ShapeKDTree>;
 	friend class Instance;
 	friend class AnimatedInstance;
 public:
 	/// Create an empty kd-tree
-	KDTree();
+	ShapeKDTree();
 
 	/// Add a shape to the kd-tree
 	void addShape(const Shape *shape);
@@ -80,6 +81,9 @@ public:
 	 * \brief Return an axis-aligned bounding box containing all primitives
 	 */
 	inline const AABB &getAABB() const { return m_aabb; }
+	
+	/// Return an bounding sphere containing all primitives
+	inline const BSphere &getBSphere() const { return m_bsphere; }
 
 	/// Build the kd-tree (needs to be called before tracing any rays)
 	void build();
@@ -165,7 +169,7 @@ protected:
 	 * temporary space is supplied to store data that can later
 	 * be used to create a detailed intersection record.
 	 */
-	FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx, Float mint, 
+	FINLINE bool intersect(const Ray &ray, index_type idx, Float mint, 
 		Float maxt, Float &t, void *temp) const {
 		IntersectionCache *cache = 
 			static_cast<IntersectionCache *>(temp);
@@ -180,13 +184,13 @@ protected:
 			if (tri.rayIntersect(mesh->getVertexPositions(), ray, 
 						tempU, tempV, tempT)) {
 				if (tempT < mint || tempT > maxt)
-					return ENo;
+					return false;
 				t = tempT;
 				cache->shapeIndex = shapeIdx;
 				cache->primIndex = idx;
 				cache->u = tempU;
 				cache->v = tempV;
-				return EYes;
+				return true;
 			}
 		} else {
 			const Shape *shape = m_shapes[shapeIdx];
@@ -194,7 +198,7 @@ protected:
 						reinterpret_cast<uint8_t*>(temp) + 8)) {
 				cache->shapeIndex = shapeIdx;
 				cache->primIndex = KNoTriangleFlag;
-				return EYes;
+				return true;
 			}
 		}
 #else
@@ -207,7 +211,7 @@ protected:
 				cache->primIndex = ta.primIndex;
 				cache->u = tempU;
 				cache->v = tempV;
-				return EYes;
+				return true;
 			}
 		} else {
 			uint32_t shapeIndex = ta.shapeIndex;
@@ -216,18 +220,18 @@ protected:
 						reinterpret_cast<uint8_t*>(temp) + 8)) {
 				cache->shapeIndex = shapeIndex;
 				cache->primIndex = KNoTriangleFlag;
-				return EYes;
+				return true;
 			}
 		}
 #endif
-		return ENo;
+		return false;
 	}
 
 	/**
 	 * Check whether a primitive is intersected by the given ray. This
 	 * version is used for shadow rays, hence no temporary space is supplied.
 	 */
-	FINLINE EIntersectionResult intersect(const Ray &ray, index_type idx, 
+	FINLINE bool intersect(const Ray &ray, index_type idx, 
 			Float mint, Float maxt) const {
 #if defined(MTS_KD_CONSERVE_MEMORY)
 		index_type shapeIdx = findShape(idx);
@@ -239,25 +243,22 @@ protected:
 			if (tri.rayIntersect(mesh->getVertexPositions(), ray, 
 						tempU, tempV, tempT)) {
 				if (tempT >= mint && tempT <= maxt)
-					return EYes;
-				else
-					return ENever;
+					return true;
 			}
-			return ENo;
+			return false;
 		} else {
 			const Shape *shape = m_shapes[shapeIdx];
-			return shape->rayIntersect(ray, mint, maxt) ? EYes : ENo;
+			return shape->rayIntersect(ray, mint, maxt);
 		}
 #else
 		const TriAccel &ta = m_triAccel[idx];
 		if (EXPECT_TAKEN(m_triAccel[idx].k != KNoTriangleFlag)) {
 			Float tempU, tempV, tempT;
-			return ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT)
-				? EYes : ENo;
+			return ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT);
 		} else {
 			uint32_t shapeIndex = ta.shapeIndex;
 			const Shape *shape = m_shapes[shapeIndex];
-			return shape->rayIntersect(ray, mint, maxt) ? EYes : ENo;
+			return shape->rayIntersect(ray, mint, maxt);
 		}
 #endif
 	}
@@ -363,10 +364,8 @@ protected:
 			if (_mint > mint) mint = _mint;
 			if (_maxt < maxt) maxt = _maxt;
 
-			if (EXPECT_TAKEN(maxt > mint)) {
-				if (rayIntersectHavran<true>(ray, mint, maxt, tempT, NULL))
-					return true;
-			}
+			if (EXPECT_TAKEN(maxt > mint))
+				return rayIntersectHavran<true>(ray, mint, maxt, tempT, NULL);
 		}
 		return false;
 	}
@@ -389,7 +388,7 @@ protected:
 	}
 
 	/// Virtual destructor
-	virtual ~KDTree();
+	virtual ~ShapeKDTree();
 private:
 	std::vector<const Shape *> m_shapes;
 	std::vector<bool> m_triangleFlag;
@@ -397,6 +396,7 @@ private:
 #if !defined(MTS_KD_CONSERVE_MEMORY)
 	TriAccel *m_triAccel;
 #endif
+	BSphere m_bsphere;
 };
 
 MTS_NAMESPACE_END

@@ -17,8 +17,11 @@
 */
 
 #include <mitsuba/render/camera.h>
+#include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
+
+static StatsCounter cameraRays("General", "Camera ray generations");
 
 /**
  * Simple orthographic camera model
@@ -37,6 +40,8 @@ public:
 		/* Calculate the perspective transform */
 		m_cameraToScreen = Transform::orthographic(m_nearClip, m_farClip);
 		m_cameraToScreenGL = Transform::glOrthographic(m_nearClip, m_farClip);
+		if (std::abs(1-m_cameraToWorld(Vector(0, 0, 1)).length()) > Epsilon) 
+			Log(EError, "The orthographic camera does not allow non-unity scale factors in the 'Z' direction!");
 	}
 
 	OrthographicCamera(Stream *stream, InstanceManager *manager) 
@@ -105,6 +110,7 @@ public:
 
 	void generateRay(const Point2 &dirSample, const Point2 &lensSample, 
 		Float timeSample, Ray &ray) const {
+		++cameraRays;
 		Point rasterCoords(dirSample.x, dirSample.y, 0);
 		Point imageCoords;
 		m_rasterToCamera(rasterCoords, imageCoords);

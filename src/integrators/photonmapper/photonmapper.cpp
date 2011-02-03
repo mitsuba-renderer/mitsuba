@@ -277,7 +277,7 @@ public:
 			/* If no intersection could be found, possibly return 
 			   attenuated radiance from a background luminaire */
 			if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
-				Li += rRec.scene->LeBackgroundAttenuated(ray);
+				Li += rRec.scene->LeBackground(ray);
 			return Li;
 		}
 
@@ -308,7 +308,7 @@ public:
 			Float weight = 1 / (Float) numDirectSamples;
 
 			for (int i=0; i<numDirectSamples; ++i) {
-				if (rRec.scene->sampleLuminaireAttenuated(its, lRec, sampleArray[i])) {
+				if (rRec.scene->sampleLuminaire(its, lRec, sampleArray[i])) {
 					/* Allocate a record for querying the BSDF */
 					const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
 
@@ -347,10 +347,10 @@ public:
 				int compCount = bsdf->getComponentCount();
 				for (int i=0; i<compCount; i++) {
 					/* Sample the BSDF and recurse */
-					BSDFQueryRecord bRec(its, Point2(0,0));
+					BSDFQueryRecord bRec(its);
 					bRec.component = i;
-					Spectrum bsdfVal = bsdf->sampleCos(bRec);
-					if (bsdfVal.isBlack())
+					Spectrum bsdfVal = bsdf->sampleCos(bRec, Point2(0.0f));
+					if (bsdfVal.isZero())
 						continue;
 
 					rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadiance);
@@ -367,8 +367,8 @@ public:
 			Float weight = 1 / (Float) m_glossySamples;
 
 			for (int i=0; i<m_glossySamples; ++i) {
-				BSDFQueryRecord bRec(rRec, its, sampleArray[i]);
-				Spectrum bsdfVal = bsdf->sampleCos(bRec);
+				BSDFQueryRecord bRec(rRec, its);
+				Spectrum bsdfVal = bsdf->sampleCos(bRec, sampleArray[i]);
 
 				rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadianceNoEmission);
 				recursiveRay = Ray(its.p, its.toWorld(bRec.wo), ray.time);
@@ -379,7 +379,7 @@ public:
 				m_globalLookupRadius, m_globalLookupSize);
 		}
 
-		return Li * rRec.attenuation + LiVol;
+		return Li * LiVol;
 	}
 	
 	std::string toString() const {

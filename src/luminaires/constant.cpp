@@ -34,19 +34,33 @@ public:
 	ConstantLuminaire(Stream *stream, InstanceManager *manager) 
 		: Luminaire(stream, manager) {
 		m_intensity = Spectrum(stream);
+		m_bsphere = BSphere(stream);
+		m_surfaceArea = 4 * m_bsphere.radius * m_bsphere.radius * M_PI;
+		m_invSurfaceArea = 1/m_surfaceArea;
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Luminaire::serialize(stream, manager);
 
 		m_intensity.serialize(stream);
+		m_bsphere.serialize(stream);
 	}
 
 	void preprocess(const Scene *scene) {
 		/* Get the scene's bounding sphere and slightly enlarge it */
-		m_bsphere = scene->getBSphere();
-		m_bsphere.radius *= 1.01f;
-		m_surfaceArea = m_bsphere.radius * m_bsphere.radius * M_PI;
+		if (m_bsphere.isEmpty()) {
+			/* Get the scene's bounding sphere and slightly enlarge it */
+			m_bsphere = scene->getBSphere();
+			m_bsphere.radius *= 1.01f;
+		}
+		if (scene->getCamera()) {
+			BSphere old = m_bsphere;
+			m_bsphere.expandBy(scene->getCamera()->getPosition());
+			if (old != m_bsphere)
+				m_bsphere.radius *= 1.01f;
+		}
+		m_surfaceArea = 4 * m_bsphere.radius * m_bsphere.radius * M_PI;
+		m_invSurfaceArea = 1/m_surfaceArea;
 	}
 
 	Spectrum getPower() const {
@@ -63,36 +77,31 @@ public:
 
 	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
-		lRec.d = squareToSphere(sample);
-		lRec.sRec.p = p - lRec.d * (2 * m_bsphere.radius);
-		lRec.pdf = 1.0f / (4*M_PI);
-		lRec.Le = m_intensity;
-	}
-
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec) const {
-		return 1.0f / (4*M_PI);
-	}
-
-	/* Sampling routine for surfaces - just do BSDF sampling */
-	void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
-		const Point2 &sample) const {
-		const BSDF *bsdf = its.shape->getBSDF();
-		BSDFQueryRecord bRec(its, sample);
-		Spectrum val = bsdf->sample(bRec);
-		if (!val.isBlack()) {
-			lRec.pdf = bsdf->pdf(bRec);
+		Vector d = squareToSphere(sample);
+	
+		Float nearHit, farHit;
+		if (m_bsphere.contains(p) && m_bsphere.rayIntersect(Ray(p, d, 0.0f), nearHit, farHit)) {
+			lRec.sRec.p = p + d * nearHit;
+			lRec.pdf = 1.0f / (4*M_PI);
+			lRec.sRec.n = normalize(m_bsphere.center - lRec.sRec.p);
+			lRec.d = -d;
 			lRec.Le = m_intensity;
-			lRec.d = -its.toWorld(bRec.wo);
-			lRec.sRec.p = its.p - lRec.d * (2 * m_bsphere.radius);
 		} else {
-			lRec.pdf = 0;
+			lRec.pdf = 0.0f;
 		}
 	}
+	
+	inline void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
+		const Point2 &sample) const {
+		ConstantLuminaire::sample(its.p, lRec, sample);
+	}
 
-	inline Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec) const {
-		const BSDF *bsdf = its.shape->getBSDF();
-		BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
-		return bsdf->pdf(bRec);
+	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
+		return delta ? 0.0f : 1.0f / (4*M_PI);
+	}
+	
+	inline Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
+		return delta ? 0.0f : 1.0f / (4*M_PI);
 	}
 
 	/**
@@ -123,7 +132,7 @@ public:
 		}
 
 		eRec.d /= length;
-		eRec.pdfArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
+		eRec.pdfArea = m_invSurfaceArea;
 		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
 		eRec.P = m_intensity;
 	}
@@ -159,14 +168,33 @@ public:
 		return Spectrum(INV_PI);
 	}
 
-	void pdfEmission(EmissionRecord &eRec) const {
+	void pdfEmission(EmissionRecord &eRec, bool delta) const {
 		Assert(eRec.type == EmissionRecord::ENormal);
 		Float dp = dot(eRec.sRec.n, eRec.d);
 		if (dp > 0)
-			eRec.pdfDir = INV_PI * dp;
+			eRec.pdfDir = delta ? 0.0f : INV_PI * dp;
 		else
-			eRec.pdfDir = 0;
-		eRec.pdfArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
+			eRec.pdfDir = 0.0f;
+		eRec.pdfArea = delta ? 0.0f : m_invSurfaceArea;
+	}
+
+	bool createEmissionRecord(EmissionRecord &eRec, const Ray &ray) const {
+		Float nearHit, farHit;
+		if (!m_bsphere.contains(ray.o) || !m_bsphere.rayIntersect(ray, nearHit, farHit)) {
+			Log(EWarn, "Could not create an emission record -- the ray "
+				"in question appears to be outside of the scene bounds!");
+			return false;
+		}
+
+		eRec.type = EmissionRecord::ENormal;
+		eRec.sRec.p = ray(nearHit);
+		eRec.sRec.n = normalize(m_bsphere.center - eRec.sRec.p);
+		eRec.d = -ray.d;
+		eRec.pdfArea = m_invSurfaceArea;
+		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
+		eRec.P = m_intensity;
+		eRec.luminaire = this;
+		return true;
 	}
 
 	Spectrum f(const EmissionRecord &eRec) const {
@@ -184,6 +212,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "ConstantLuminaire[" << std::endl
+			<< "  name = \"" << m_name << "\"," << std::endl
 			<< "  intensity = " << m_intensity.toString() << "," << std::endl
 			<< "  power = " << getPower().toString() << std::endl
 			<< "]";
@@ -196,6 +225,8 @@ public:
 private:
 	Spectrum m_intensity;
 	BSphere m_bsphere;
+	Float m_surfaceArea;
+	Float m_invSurfaceArea;
 };
 
 // ================ Hardware shader implementation ================ 
@@ -227,7 +258,7 @@ public:
 		int &textureUnitOffset) const {
 		program->setParameter(parameterIDs[0], m_emittance);
 	}
-
+	
 	MTS_DECLARE_CLASS()
 private:
 	Spectrum m_emittance;

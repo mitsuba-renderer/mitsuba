@@ -141,15 +141,15 @@ public:
 			return 1.0f;
 	}
 
-	inline Spectrum sample(BSDFQueryRecord &bRec) const {
+	inline Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		Float pdf=1;
-		Spectrum spec = Dielectric::sample(bRec, pdf);
+		Spectrum spec = Dielectric::sample(bRec, pdf, sample);
 		if (pdf == 0)
 			return spec;
 		return spec/pdf;
 	}
 
-	inline Spectrum sample(BSDFQueryRecord &bRec, Float &pdf) const {
+	inline Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
@@ -166,13 +166,13 @@ public:
 				/* If we are already tracing a monochromatic ray,
 				   keep it that way */
 				wavelengthSample = bRec.rRec->wavelength
-					= (int) std::min(bRec.sample.x * SPECTRUM_SAMPLES,
+					= (int) std::min(sample.y * SPECTRUM_SAMPLES,
 						SPECTRUM_SAMPLES-1);
 			} else {
 				wavelengthSample = bRec.rRec->wavelength;
 			}
 		} else {
-			wavelengthSample = (int) std::min(bRec.sample.x * SPECTRUM_SAMPLES,
+			wavelengthSample = (int) std::min(sample.y * SPECTRUM_SAMPLES,
 						SPECTRUM_SAMPLES-1);
 		}
 
@@ -189,7 +189,7 @@ public:
 		/* Calculate the refracted/reflected vectors+coefficients */
 		if (sampleTransmission && sampleReflection) {
 			/* Importance sample according to the reflectance/transmittance */
-			if (bRec.sample.x < (importanceSampleComponents ? fr : 0.5f)) {
+			if (sample.x < (importanceSampleComponents ? fr : 0.5f)) {
 				reflect(bRec.wi, bRec.wo);
 				bRec.sampledComponent = 0;
 				bRec.sampledType = EDeltaReflection;

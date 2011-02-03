@@ -66,7 +66,7 @@ protected:
 	Spectrum m_sigmaS;
 	Spectrum m_sigmaA;
 	Spectrum m_sigmaT;
-	Float m_eta, m_sizeMultiplier;
+	Float m_eta, m_densityMultiplier;
 	std::vector<Shape *> m_shapes;
 };
 

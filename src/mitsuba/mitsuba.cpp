@@ -69,6 +69,7 @@ void help() {
 	cout <<  "   -b res      Specify the block resolution used to split images into parallel" << endl;
 	cout <<  "               workloads (default: 32). Only applies to some integrators." << endl << endl;
 	cout <<  "   -v          Be more verbose" << endl << endl;
+	cout <<  "   -w          Treat warnings as errors" << endl << endl;
 	cout <<  "   -b          Disable progress bars" << endl << endl;
 	cout <<  " The README file included with the distribution contains further information." << endl;
 }
@@ -119,7 +120,7 @@ int ubi_main(int argc, char **argv) {
 		bool quietMode = false, progressBars = true, skipExisting = false;
 		ELogLevel logLevel = EInfo;
 		ref<FileResolver> fileResolver = Thread::getThread()->getFileResolver();
-		bool testCaseMode = false;
+		bool testCaseMode = false, treatWarningsAsErrors = false;
 		std::map<std::string, std::string> parameters;
 		int blockSize = 32;
 		int flushTimer = -1;
@@ -131,7 +132,7 @@ int ubi_main(int argc, char **argv) {
 
 		optind = 1;
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "a:c:D:s:j:n:o:r:b:p:qhzvtx")) != -1) {
+		while ((optchar = getopt(argc, argv, "a:c:D:s:j:n:o:r:b:p:qhzvtwx")) != -1) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
@@ -141,6 +142,9 @@ int ubi_main(int argc, char **argv) {
 					break;
 				case 'c':
 					networkHosts = networkHosts + std::string(";") + std::string(optarg);
+					break;
+				case 'w':
+					treatWarningsAsErrors = true;
 					break;
 				case 'D': {
 						std::vector<std::string> param = tokenize(optarg, "=");
@@ -216,7 +220,8 @@ int ubi_main(int argc, char **argv) {
 		/* Configure the logging subsystem */
 		ref<Logger> log = Thread::getThread()->getLogger();
 		log->setLogLevel(logLevel);
-		
+		log->setErrorLevel(treatWarningsAsErrors ? EWarn : EError);
+
 		/* Disable the default appenders */
 		for (size_t i=0; i<log->getAppenderCount(); ++i) {
 			Appender *appender = log->getAppender(i);
@@ -347,7 +352,8 @@ int ubi_main(int argc, char **argv) {
 				continue;
 
 			ref<RenderJob> thr = new RenderJob(formatString("ren%i", jobIdx++), 
-				scene, renderQueue, testSupervisor);
+				scene, renderQueue, testSupervisor, -1, -1, -1, true,
+				flushTimer > 0);
 			thr->start();
 
 			renderQueue->waitLeft(numParallelScenes-1);

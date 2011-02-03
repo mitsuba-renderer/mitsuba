@@ -21,7 +21,9 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Simple directional luminaire
+ * Simple directional luminaire. In an untransformed state, the luminaire 
+ * sends light into the positive Z direction. To change the direction,
+ * either specify a "toWorld" transformation or set the "direction" parameter.
  */
 class DirectionalLuminaire : public Luminaire {
 public:
@@ -29,10 +31,18 @@ public:
 		m_intensity = props.getSpectrum("intensity", Spectrum(1.0f));
 		m_diskRadius = 0;
 		m_type = EDeltaDirection;
+		if (props.hasProperty("toWorld") && props.hasProperty("direction"))
+			Log(EError, "Please specify either a direction or a luminaire "
+				"to world space transformation");
+		else if (props.hasProperty("direction"))
+			m_direction = normalize(props.getVector("direction"));
+		else 
+			m_direction = normalize(m_luminaireToWorld(Vector(0, 0, 1)));
 	}
 
 	DirectionalLuminaire(Stream *stream, InstanceManager *manager) 
 		: Luminaire(stream, manager) {
+		m_direction = Vector(stream);
 		m_intensity = Spectrum(stream);
 		m_diskOrigin = Point(stream);
 		m_diskRadius = stream->readFloat();
@@ -40,13 +50,13 @@ public:
 	}
 
 	void configure() {
-		m_direction = normalize(m_luminaireToWorld(Vector(0, 0, 1)));
 		m_surfaceArea = m_diskRadius * m_diskRadius * M_PI;
 		m_invSurfaceArea = 1.0f / m_surfaceArea;
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Luminaire::serialize(stream, manager);
+		m_direction.serialize(stream);
 		m_intensity.serialize(stream);
 		m_diskOrigin.serialize(stream);
 		stream->writeFloat(m_diskRadius);
@@ -71,14 +81,14 @@ public:
 		return Spectrum(0.0f);
 	}
 
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec) const {
+	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 		/* PDF is a delta function - zero probability when a sample point was not
 		   generated using sample() */
-		return 0.0f;
+		return delta ? 1.0f : 0.0f;
 	}
 
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec) const {
-		return DirectionalLuminaire::pdf(its.p, lRec);
+	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
+		return DirectionalLuminaire::pdf(its.p, lRec, delta);
 	}
 
 	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
@@ -126,15 +136,16 @@ public:
 		return Spectrum(0.0f);
 	}
 
-	void pdfEmission(EmissionRecord &eRec) const {
-		eRec.pdfArea = m_invSurfaceArea;
-		eRec.pdfDir = 0;
+	void pdfEmission(EmissionRecord &eRec, bool delta) const {
+		eRec.pdfArea = delta ? 0.0f : m_invSurfaceArea;
+		eRec.pdfDir = delta ? 1.0f : 0.0f;
 		eRec.P = m_intensity;
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "DirectionalLuminaire[" << std::endl
+			<< "  name = \"" << m_name << "\"," << std::endl
 			<< "  intensity = " << m_intensity.toString() << "," << std::endl
 			<< "  power = " << getPower().toString() << "," << std::endl
 			<< "  direction = " << m_direction.toString() 
@@ -146,6 +157,7 @@ public:
 private:
 	Spectrum m_intensity;
 	Vector m_direction;
+	Float m_surfaceArea;
 	Float m_invSurfaceArea;
 	Float m_diskRadius;
 	Point m_diskOrigin;

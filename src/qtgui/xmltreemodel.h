@@ -52,6 +52,7 @@ public:
 	void setToolTip(const QString &str);
 	bool setData(int column, const QVariant &value);
 	void setProperties(const Properties &props);
+	void setProperty(const std::string &name, const Properties &props);
 	void putProperties(Properties &props) const;
 private:
 	QList<TreeItem*> m_childItems;

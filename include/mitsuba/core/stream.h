@@ -110,9 +110,15 @@ public:
 
 	/// Write a signed short (16 bit) to the stream
 	void writeShort(short value);
+	
+	/// Write an array of signed shorts (16 bit) to the stream
+	void writeShortArray(const short *values, size_t size);
 
 	/// Write an unsigned short (16 bit) to the stream
 	void writeUShort(unsigned short value);
+
+	/// Write an array of unsigned shorts (16 bit) to the stream
+	void writeUShortArray(const unsigned short *values, size_t size);
 
 	/// Write a signed int (32 bit) to the stream
 	void writeInt(int value);
@@ -188,9 +194,15 @@ public:
 
 	/// Read a signed short (16 bit) from the stream
 	short readShort();
+	
+	/// Read an array of signed shorts (16 bit) from the stream
+	void readShortArray(short *dest, size_t size);
 
 	/// Read an unsigned short (16 bit) from the stream
 	unsigned short readUShort();
+	
+	/// Read an array of unsigned shorts (16 bit) from the stream
+	void readUShortArray(unsigned short *dest, size_t size);
 
 	/// Read a signed int (32 bit) from the stream
 	int readInt();
@@ -264,11 +276,29 @@ public:
 	 */
 	void copyTo(Stream *stream, int64_t numBytes = -1);
 
-	/// Read an element from the stream (uses partial template specialization)
+	/**
+	 * \brief Read an element from the stream (uses partial template 
+	 * specialization to select a method appropriate to the data type)
+	 */
 	template <typename T> T readElement();
 
-	/// Write an element to the stream (uses partial template specialization)
+	/**
+	 * \brief Write an element to the stream (uses partial template 
+	 * specialization to select a method appropriate to the data type)
+	 */
 	template <typename T> void writeElement(T value);
+
+	/**
+	 * \brief Read an array from the stream (uses partial template 
+	 * specialization to select a method appropriate to the data type)
+	 */
+	template <typename T> void readArray(T *array, size_t count);
+
+	/**
+	 * \brief Write an array to the stream (uses partial template 
+	 * specialization to select a method appropriate to the data type)
+	 */
+	template <typename T> void writeArray(const T *array, size_t count);
 
 	/// @}
 
@@ -289,6 +319,16 @@ template <typename T> inline T Stream::readElement() {
 template <typename T> inline void Stream::writeElement(T value) {
 	Log(EError, "Stream::writeElement<T>: not implemented!");
 }
+
+template <typename T> inline void Stream::readArray(T *array, size_t count) {
+	Log(EError, "Stream::readArray<T>: not implemented!");
+}
+
+template <typename T> inline void Stream::writeArray(const T *array, size_t count) {
+	Log(EError, "Stream::writeArray<T>: not implemented!");
+}
+
+
 
 /// \cond
 template <> inline float Stream::readElement() { return readSingle(); }
@@ -316,6 +356,32 @@ template <> inline void Stream::writeElement(uint32_t val) { return writeUInt(va
 template <> inline void Stream::writeElement(int64_t val) { return writeLong(val); }
 template <> inline void Stream::writeElement(uint64_t val) { return writeULong(val); }
 template <> inline void Stream::writeElement(const std::string &val) { return writeString(val); }
+
+template <> inline void Stream::readArray(float *array, size_t count) { return readSingleArray(array, count); }
+template <> inline void Stream::readArray(double *array, size_t count) { return readDoubleArray(array, count); }
+template <> inline void Stream::readArray(char *array, size_t count) { return read((uint8_t *) array, count); }
+template <> inline void Stream::readArray(unsigned char *array, size_t count) { return read((uint8_t *) array, count); }
+template <> inline void Stream::readArray(bool *array, size_t count) { return read((uint8_t *) array, count); }
+template <> inline void Stream::readArray(int16_t *array, size_t count) { return readShortArray(array, count); }
+template <> inline void Stream::readArray(uint16_t *array, size_t count) { return readUShortArray(array, count); }
+template <> inline void Stream::readArray(int32_t *array, size_t count) { return readIntArray(array, count); }
+template <> inline void Stream::readArray(uint32_t *array, size_t count) { return readUIntArray(array, count); }
+template <> inline void Stream::readArray(int64_t *array, size_t count) { return readLongArray(array, count); }
+template <> inline void Stream::readArray(uint64_t *array, size_t count) { return readULongArray(array, count); }
+
+template <> inline void Stream::writeArray(const float *array, size_t count) { return writeSingleArray(array, count); }
+template <> inline void Stream::writeArray(const double *array, size_t count) { return writeDoubleArray(array, count); }
+template <> inline void Stream::writeArray(const char *array, size_t count) { return write((uint8_t *) array, count); }
+template <> inline void Stream::writeArray(const unsigned char *array, size_t count) { return write((uint8_t *) array, count); }
+template <> inline void Stream::writeArray(const bool *array, size_t count) { return write((uint8_t *) array, count); }
+template <> inline void Stream::writeArray(const int16_t *array, size_t count) { return writeShortArray(array, count); }
+template <> inline void Stream::writeArray(const uint16_t *array, size_t count) { return writeUShortArray(array, count); }
+template <> inline void Stream::writeArray(const int32_t *array, size_t count) { return writeIntArray(array, count); }
+template <> inline void Stream::writeArray(const uint32_t *array, size_t count) { return writeUIntArray(array, count); }
+template <> inline void Stream::writeArray(const int64_t *array, size_t count) { return writeLongArray(array, count); }
+template <> inline void Stream::writeArray(const uint64_t *array, size_t count) { return writeULongArray(array, count); }
+
+
 /// \endcond
 
 MTS_NAMESPACE_END

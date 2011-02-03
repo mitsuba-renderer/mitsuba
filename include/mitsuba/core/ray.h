@@ -49,6 +49,10 @@ struct Ray {
 	 : o(ray.o), mint(mint), d(ray.d), maxt(maxt), dRcp(ray.dRcp), time(ray.time) {
 	}
 
+	/// Construct a new ray, while not specifying a direction yet
+	inline Ray(Point o, Float time) : o(o), mint(Epsilon), maxt(std::numeric_limits<Float>::infinity()), time(time) {
+	}
+
 	/// Construct a new ray
 	inline Ray(Point o, Vector _d, Float time)
 		: o(o), mint(Epsilon),  d(_d), maxt(std::numeric_limits<Float>::infinity()), time(time) {
@@ -104,7 +108,8 @@ struct Ray {
 	inline std::string toString() const {
 		std::ostringstream oss;
 		oss << "Ray[orig=" << o.toString() << ", dest=" 
-			<< d.toString() << ", time=" << time << "]";
+			<< d.toString() << ", mint=" << mint 
+			<< ", maxt=" << maxt << ", time=" << time << "]";
 		return oss.str();
 	}
 };

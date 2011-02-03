@@ -28,7 +28,7 @@
 MTS_NAMESPACE_BEGIN
 
 Logger::Logger(ELogLevel level)
- : m_logLevel(level), m_warningCount(0) {
+ : m_logLevel(level), m_errorLevel(EError), m_warningCount(0) {
 	m_mutex = new Mutex();
 }
 
@@ -45,6 +45,11 @@ void Logger::setFormatter(Formatter *formatter) {
 
 void Logger::setLogLevel(ELogLevel level) {
 	m_logLevel = level;
+}
+
+void Logger::setErrorLevel(ELogLevel level) {
+	Assert(m_errorLevel <= EError);
+	m_errorLevel = level;
 }
 
 void Logger::log(ELogLevel level, const Class *theClass, 
@@ -78,7 +83,7 @@ void Logger::log(ELogLevel level, const Class *theClass,
 	if (msg != tmp)
 		delete[] msg;
 
-	if (level < EError) {
+	if (level < m_errorLevel) {
 		m_mutex->lock();
 		if (level >= EWarn)
 			m_warningCount++;

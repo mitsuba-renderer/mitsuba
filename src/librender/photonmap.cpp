@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/photonmap.h>
 #include <mitsuba/render/scene.h>
+#include <mitsuba/render/phase.h>
 #include <fstream>
 
 MTS_NAMESPACE_BEGIN
@@ -810,7 +811,8 @@ Spectrum PhotonMap::estimateVolumeRadiance(const MediumSamplingRecord &mRec, con
 	/* Sum over all contributions */
 	for (size_t i=0; i<resultCount; i++) {
 		const Photon &photon = *results[i].second;
-		result += photon.getPower() * (phase->f(mRec, photon.getDirection(), wo));
+		result += photon.getPower() * (phase->f(
+			PhaseFunctionQueryRecord(mRec, photon.getDirection(), wo)));
 	}
 
 	const Float volFactor = (4/(Float) 3) * (Float) M_PI * 

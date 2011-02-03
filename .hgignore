@@ -50,7 +50,7 @@
 ^plugins/.*\.lib$
 ^plugins/.*\.dll$
 ^dist/.*$
-tools/windows/mitsuba_res.res
+data/windows/mitsuba_res.res
 .*\.pdb$
 .*\.manifest$
 .*\.exp$

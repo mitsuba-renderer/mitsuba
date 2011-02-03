@@ -44,8 +44,7 @@ public:
 		m_kd = props.getFloat("diffuseAmount", 1.0f);
 		m_ks = props.getFloat("specularAmount", 1.0f);
 
-		m_verifyEnergyConservation = props.getBoolean("verifyEnergyConservation", true);
-		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", -1);
+		Assert(m_kd >= 0 && m_kd <= 1 && m_ks >= 0 && m_ks <= 1);
 
 		m_alphaB = props.getFloat("alphaB", .1f);
 		m_intIOR = props.getFloat("intIOR", 1.5f);
@@ -70,8 +69,6 @@ public:
 		m_ks = stream->readFloat();
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
-		m_specularSamplingWeight = stream->readFloat();
-		m_diffuseSamplingWeight = stream->readFloat();
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
@@ -85,26 +82,6 @@ public:
 
 	virtual ~Microfacet() {
 		delete[] m_type;
-	}
-
-	void configure() {
-		if (m_verifyEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
-				+ m_ks * m_specularReflectance->getMaximum().max() > 1.0f)) {
-			Log(EWarn, "Material \"%s\": Energy conservation is potentially violated!", getName().c_str());
-			Log(EWarn, "Max. diffuse reflectance = %f * %f = %f", m_kd, m_diffuseReflectance->getMaximum().max(), m_kd*m_diffuseReflectance->getMaximum().max());
-			Log(EWarn, "Max. specular reflectance = %f * %f = %f", m_ks, m_specularReflectance->getMaximum().max(), m_ks*m_specularReflectance->getMaximum().max());
-			Float normalization = 1/(m_kd * m_diffuseReflectance->getMaximum().max() + m_ks * m_specularReflectance->getMaximum().max());
-			Log(EWarn, "Reducing the albedo to %.1f%% of the original value to be on the safe side. "
-				"Specify verifyEnergyConservation=false to prevent this.", normalization * 100);
-			m_kd *= normalization; m_ks *= normalization;
-		}
-
-		if (m_specularSamplingWeight == -1) {
-			Float avgDiffReflectance = m_diffuseReflectance->getAverage().average() * m_kd;
-			Float avgSpecularReflectance = m_specularReflectance->getAverage().average() * m_ks;
-			m_specularSamplingWeight = avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance);
-		}
-		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
@@ -197,9 +174,8 @@ public:
 
 	inline Float pdfSpec(const BSDFQueryRecord &bRec) const {
 		Vector Hr = normalize(bRec.wi + bRec.wo);
-		/* Jacobian of the half-direction transform. */
-		Float dwhr_dwo = 1.0f / (4.0f * absDot(bRec.wo, Hr));
-		return beckmannD(Hr) * Frame::cosTheta(Hr) * dwhr_dwo;
+		return beckmannD(Hr) * Frame::cosTheta(Hr) 
+			/ (4.0f * absDot(bRec.wo, Hr));
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec) const {
@@ -210,10 +186,15 @@ public:
 
 		if (bRec.wi.z <= 0 || bRec.wo.z <= 0)
 			return 0.0f;
-		
+
 		if (hasDiffuse && hasGlossy) {
-			return m_specularSamplingWeight * pdfSpec(bRec) +
-				   m_diffuseSamplingWeight * pdfDiffuse(bRec);
+			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+			fr = std::min(std::max(fr, (Float) 0.05f), (Float) 0.95f);
+			Float diffuseSamplingWeight = (1-fr) * m_kd;
+			Float specularSamplingWeight = fr * m_ks;
+			Float normalization = 1 / (diffuseSamplingWeight + specularSamplingWeight);
+			return (specularSamplingWeight * pdfSpec(bRec)
+				  + diffuseSamplingWeight * pdfDiffuse(bRec)) * normalization;
 		} else if (hasDiffuse) {
 			return pdfDiffuse(bRec);
 		} else if (hasGlossy) {
@@ -223,9 +204,9 @@ public:
 		return 0.0f;
 	}
 	
-	inline Spectrum sampleSpecular(BSDFQueryRecord &bRec) const {
+	inline Spectrum sampleSpecular(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		/* Sample M, the microsurface normal */
-		Normal m = sampleBeckmannD(bRec.sample);
+		Normal m = sampleBeckmannD(sample);
 		/* Perfect specular reflection along the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
 
@@ -235,21 +216,25 @@ public:
 		if (bRec.wo.z <= 0)
 			return Spectrum(0.0f);
 
-		return f(bRec) / pdf(bRec);
+		Float pdfValue = pdf(bRec);
+		if (pdfValue == 0)
+			return Spectrum(0.0f);
+		return f(bRec) / pdfValue;
 	}
 
 	inline Float pdfDiffuse(const BSDFQueryRecord &bRec) const {
 		return Frame::cosTheta(bRec.wo) * INV_PI;
 	}
 
-	inline Spectrum sampleLambertian(BSDFQueryRecord &bRec) const {
-		bRec.wo = squareToHemispherePSA(bRec.sample);
+	inline Spectrum sampleLambertian(BSDFQueryRecord &bRec, const Point2 &sample) const {
+		bRec.wo = squareToHemispherePSA(sample);
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
 		return f(bRec) / pdf(bRec);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec) const {
+	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
+		Point2 sample(_sample);
 		if (bRec.wi.z <= 0)
 			return Spectrum(0.0f);
 
@@ -259,18 +244,25 @@ public:
 				&& (bRec.component == -1 || bRec.component == 1);
 
 		if (sampleDiffuse && sampleGlossy) {
-			if (bRec.sample.x <= m_specularSamplingWeight) {
-				bRec.sample.x = bRec.sample.x / m_specularSamplingWeight;
-				return sampleSpecular(bRec);
+			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+			fr = std::min(std::max(fr, (Float) 0.05f), (Float) 0.95f);
+			Float diffuseSamplingWeight = (1-fr) * m_kd;
+			Float specularSamplingWeight = fr * m_ks;
+			Float normalization = 1 / (diffuseSamplingWeight + specularSamplingWeight);
+			specularSamplingWeight *= normalization;
+			diffuseSamplingWeight *= normalization;
+
+			if (sample.x < specularSamplingWeight) {
+				sample.x /= specularSamplingWeight;
+				return sampleSpecular(bRec, sample);
 			} else {
-				bRec.sample.x = (bRec.sample.x - m_specularSamplingWeight)
-					/ m_diffuseSamplingWeight;
-				return sampleLambertian(bRec);
+				sample.x = (sample.x - specularSamplingWeight) / diffuseSamplingWeight;
+				return sampleLambertian(bRec, sample);
 			}
 		} else if (sampleDiffuse) {
-			return sampleLambertian(bRec);
+			return sampleLambertian(bRec, sample);
 		} else if (sampleGlossy) {
-			return sampleSpecular(bRec);
+			return sampleSpecular(bRec, sample);
 		}
 
 		return Spectrum(0.0f);
@@ -298,8 +290,6 @@ public:
 		stream->writeFloat(m_ks);
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
-		stream->writeFloat(m_specularSamplingWeight);
-		stream->writeFloat(m_diffuseSamplingWeight);
 	}
 
 	Shader *createShader(Renderer *renderer) const; 
@@ -311,7 +301,6 @@ public:
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  diffuseAmount = " << m_kd << "," << endl
 			<< "  specularAmount = " << m_ks << "," << endl
-			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl
 			<< "  extIOR = " << m_extIOR << "," << endl
 			<< "  alphaB = " << m_alphaB << endl
@@ -324,8 +313,6 @@ private:
 	ref<Texture> m_diffuseReflectance;
 	ref<Texture> m_specularReflectance;
 	Float m_alphaB, m_intIOR, m_extIOR;
-	Float m_specularSamplingWeight;
-	Float m_diffuseSamplingWeight;
 	Float m_ks, m_kd;
 	bool m_verifyEnergyConservation;
 };

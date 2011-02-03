@@ -60,6 +60,11 @@ struct BSphere {
 		Vector dir = p - center;
 		radius = std::max(radius, (p-center).length());
 	}
+	
+	/// Check whether the specified point is inside or on the sphere
+	inline bool contains(const Point p) const {
+		return (p - center).length() <= radius;
+	}
 
 	/// Equality test
 	inline bool operator==(const BSphere &boundingSphere) const {

@@ -53,6 +53,7 @@ public:
 		: Luminaire(stream, manager) {
 		m_intensityScale = stream->readFloat();
 		m_path = stream->readString();
+		m_bsphere = BSphere(stream);
 		Log(EInfo, "Unserializing environment map \"%s\"", m_path.leaf().c_str());
 		uint32_t size = stream->readUInt();
 		ref<MemoryStream> mStream = new MemoryStream(size);
@@ -61,6 +62,8 @@ public:
 		ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, mStream);
 		m_mipmap = MIPMap::fromBitmap(bitmap);
 		m_average = m_mipmap->triangle(m_mipmap->getLevels()-1, 0, 0) * m_intensityScale;
+		m_surfaceArea = 4 * m_bsphere.radius * m_bsphere.radius * M_PI;
+		m_invSurfaceArea = 1/m_surfaceArea;
 
 		if (Scheduler::getInstance()->hasRemoteWorkers()
 			&& !fs::exists(m_path)) {
@@ -77,6 +80,7 @@ public:
 		Luminaire::serialize(stream, manager);
 		stream->writeFloat(m_intensityScale);
 		stream->writeString(m_path.file_string());
+		m_bsphere.serialize(stream);
 
 		if (m_stream.get()) {
 			stream->writeUInt((unsigned int) m_stream->getSize());
@@ -108,15 +112,23 @@ public:
 	}
 
 	void preprocess(const Scene *scene) {
-		/* Get the scene's bounding sphere and slightly enlarge it */
-		m_bsphere = scene->getBSphere();
-		m_bsphere.radius *= 1.01f;
-		m_surfaceArea = m_bsphere.radius * m_bsphere.radius * M_PI;
+		if (m_bsphere.isEmpty()) {
+			/* Get the scene's bounding sphere and slightly enlarge it */
+			m_bsphere = scene->getBSphere();
+			m_bsphere.radius *= 1.01f;
+		}
+		if (scene->getCamera()) {
+			BSphere old = m_bsphere;
+			m_bsphere.expandBy(scene->getCamera()->getPosition());
+			if (old != m_bsphere)
+				m_bsphere.radius *= 1.01f;
+		}
+		m_surfaceArea = 4 * m_bsphere.radius * m_bsphere.radius * M_PI;
+		m_invSurfaceArea = 1/m_surfaceArea;
 	}
 
 	Spectrum getPower() const {
-		return m_average * (M_PI * 4 * M_PI
-			* m_bsphere.radius * m_bsphere.radius);
+		return m_average * m_surfaceArea * M_PI;
 	}
 
 	Vector sampleDirection(Point2 sample, Float &pdf, Spectrum &value) const {
@@ -160,11 +172,19 @@ public:
 
 	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
-		lRec.d = sampleDirection(sample, lRec.pdf, lRec.Le);
-		lRec.sRec.p = p - lRec.d * (2 * m_bsphere.radius);
+		Vector d = sampleDirection(sample, lRec.pdf, lRec.Le);
+
+		Float nearHit, farHit;
+		if (m_bsphere.contains(p) && m_bsphere.rayIntersect(Ray(p, -d, 0.0f), nearHit, farHit)) {
+			lRec.sRec.p = p - d * nearHit;
+			lRec.sRec.n = normalize(m_bsphere.center - lRec.sRec.p);
+			lRec.d = d;
+		} else {
+			lRec.pdf = 0.0f;
+		}
 	}
 
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec) const {
+	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 #if defined(SAMPLE_UNIFORMLY)
 		return 1.0f / (4*M_PI);
 #else
@@ -188,8 +208,8 @@ public:
 		EnvMapLuminaire::sample(its.p, lRec, sample);
 	}
 
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec) const {
-		return EnvMapLuminaire::pdf(its.p, lRec);
+	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
+		return EnvMapLuminaire::pdf(its.p, lRec, delta);
 	}
 
 	/**
@@ -220,7 +240,7 @@ public:
 		}
 
 		eRec.d /= length;
-		eRec.pdfArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
+		eRec.pdfArea = m_invSurfaceArea;
 		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
 		eRec.P = Le(-eRec.d);
 	}
@@ -265,14 +285,14 @@ public:
 			return Spectrum(INV_PI);
 	}
 
-	void pdfEmission(EmissionRecord &eRec) const {
+	void pdfEmission(EmissionRecord &eRec, bool delta) const {
 		Assert(eRec.type == EmissionRecord::ENormal);
 		Float dp = dot(eRec.sRec.n, eRec.d);
 		if (dp > 0)
-			eRec.pdfDir = INV_PI * dp;
+			eRec.pdfDir = delta ? 0.0f : INV_PI * dp;
 		else
 			eRec.pdfDir = 0;
-		eRec.pdfArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
+		eRec.pdfArea = delta ? 0.0f : m_invSurfaceArea;
 	}
 
 	Spectrum f(const EmissionRecord &eRec) const {
@@ -287,6 +307,25 @@ public:
 		return Spectrum(M_PI);
 	}
 
+	bool createEmissionRecord(EmissionRecord &eRec, const Ray &ray) const {
+		Float nearHit, farHit;
+		if (!m_bsphere.contains(ray.o) || !m_bsphere.rayIntersect(ray, nearHit, farHit)) {
+			Log(EWarn, "Could not create an emission record -- the ray "
+				"in question appears to be outside of the scene bounds!");
+			return false;
+		}
+
+		eRec.type = EmissionRecord::ENormal;
+		eRec.sRec.p = ray(nearHit);
+		eRec.sRec.n = normalize(m_bsphere.center - eRec.sRec.p);
+		eRec.pdfArea = m_invSurfaceArea;
+		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
+		eRec.d = -ray.d;
+		eRec.P = Le(ray.d);
+		eRec.luminaire = this;
+		return true;
+	}
+
 	bool isBackgroundLuminaire() const {
 		return true;
 	}
@@ -294,6 +333,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "EnvMapLuminaire[" << std::endl
+			<< "  name = \"" << m_name << "\"," << std::endl
 			<< "  path = \"" << m_path << "\"," << std::endl
 			<< "  intensityScale = " << m_intensityScale << "," << std::endl
 			<< "  power = " << getPower().toString() << "," << std::endl
@@ -309,6 +349,8 @@ private:
 	Spectrum m_average;
 	BSphere m_bsphere;
 	Float m_intensityScale;
+	Float m_surfaceArea;
+	Float m_invSurfaceArea;
 	fs::path m_path;
 	ref<MIPMap> m_mipmap;
 	ref<MemoryStream> m_stream;

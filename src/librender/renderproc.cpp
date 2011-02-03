@@ -17,8 +17,9 @@
 */
 
 #include <mitsuba/core/statistics.h>
+#include <mitsuba/core/sfcurve.h>
 #include <mitsuba/render/renderproc.h>
-#include <mitsuba/render/imageproc_wu.h>
+#include <mitsuba/render/rectwu.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -68,7 +69,9 @@ public:
 
 		block->setOffset(rect->getOffset());
 		block->setSize(rect->getSize());
-		m_integrator->renderBlock(m_scene, m_camera, m_sampler, block, stop);
+		m_hilbertCurve.initialize(rect->getSize());
+		m_integrator->renderBlock(m_scene, m_camera, m_sampler, 
+			block, stop, &m_hilbertCurve.getPoints());
 
 #ifdef MTS_DEBUG_FP
 		disableFPExceptions();
@@ -96,6 +99,7 @@ private:
 	int m_blockSize;
 	int m_borderSize;
 	int m_collectStatistics;
+	HilbertCurve2D<int> m_hilbertCurve;
 };
 
 

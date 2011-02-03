@@ -1,0 +1,34 @@
+Import('sys', 'env', 'resources', 'hasCollada', 'stubs')
+
+# Create an environment with Xerces and OpenGL
+mainEnv = env.Clone()
+if mainEnv.has_key('XERCESINCLUDE'):
+	mainEnv.Prepend(CPPPATH=mainEnv['XERCESINCLUDE'])
+if mainEnv.has_key('XERCESLIBDIR'):
+	mainEnv.Prepend(LIBPATH=mainEnv['XERCESLIBDIR'])
+if mainEnv.has_key('XERCESLIB'):
+	mainEnv.Prepend(LIBS=mainEnv['XERCESLIB'])
+if mainEnv.has_key('GLLIB'):
+	mainEnv.Prepend(LIBS=mainEnv['GLLIB'])
+if mainEnv.has_key('GLLIBDIR'):
+	mainEnv.Prepend(LIBPATH=mainEnv['GLLIBDIR'])
+if mainEnv.has_key('GLFLAGS'):
+	mainEnv.Prepend(CXXFLAGS=mainEnv['GLFLAGS'])
+if mainEnv.has_key('GLINCLUDE'):
+	mainEnv.Prepend(CPPPATH=mainEnv['GLINCLUDE'])
+
+if sys.platform == 'darwin':
+	# On OSX, we need this stub to access OpenGL from the command line
+	mainEnv_osx = mainEnv.Clone()
+	mainEnv_osx['CXXFLAGS'].remove('-fstrict-aliasing')
+	mainEnv_osx['CXXFLAGS'].remove('-ftree-vectorize')
+	mainEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing')
+	stubs += [mainEnv_osx.StaticObject('darwin_stub.mm')]
+
+mainEnv.Program('#mtsutil', resources + stubs + ['mtsutil.cpp'])
+
+# Build the command-line+GUI interface
+mainEnv.Program('#mtssrv', resources + ['mtssrv.cpp'])
+mainEnv.Program('#mitsuba', resources + ['mitsuba.cpp'])
+
+Return('mainEnv')

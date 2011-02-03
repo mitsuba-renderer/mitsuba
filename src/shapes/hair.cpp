@@ -20,7 +20,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/luminaire.h>
-#include <mitsuba/render/gkdtree.h>
+#include <mitsuba/render/sahkdtree3.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/fstream.h>
@@ -37,8 +37,9 @@ MTS_NAMESPACE_BEGIN
  * Y and Z coordinate separated by a space. An empty line indicates
  * the start of a new hair.
  */
-class HairKDTree : public GenericKDTree<AABB, HairKDTree> {
-	friend class GenericKDTree<AABB, HairKDTree>;
+class HairKDTree : public SAHKDTree3D<HairKDTree> {
+	friend class GenericKDTree<AABB, SurfaceAreaHeuristic, HairKDTree>;
+	friend class SAHKDTree3D<HairKDTree>;
 public:
 	HairKDTree(std::vector<Point> &vertices, 
 			std::vector<bool> &vertexStartsFiber, Float radius)
@@ -67,7 +68,7 @@ public:
 		   not the number of primitives */
 		setStopPrims(0);
 		setTraversalCost(10);
-		setIntersectionCost(30);
+		setQueryCost(30);
 		buildInternal();
 
 		Log(EDebug, "Total amount of storage (kd-tree & vertex data): %s",
@@ -404,7 +405,7 @@ public:
 		return m_segIndex.size();
 	}
 
-	inline EIntersectionResult intersect(const Ray &ray, index_type iv, 
+	inline bool intersect(const Ray &ray, index_type iv, 
 		Float mint, Float maxt, Float &t, void *tmp) const {
 		/* First compute the intersection with the infinite cylinder */
 		Float nearT, farT;
@@ -421,10 +422,10 @@ public:
 		const Float C = projOrigin.lengthSquared() - m_radius*m_radius;
 
 		if (!solveQuadratic(A, B, C, nearT, farT))
-			return ENever;
+			return false;
 
 		if (nearT > maxt || farT < mint)
-			return ENo;
+			return false;
 
 		/* Next check the intersection points against the miter planes */
 		Point pointNear = ray(nearT);
@@ -436,20 +437,20 @@ public:
 		} else if (dot(pointFar - firstVertex(iv), firstMiterNormal(iv)) >= 0 &&
 				dot(pointFar - secondVertex(iv), secondMiterNormal(iv)) <= 0) {
 			if (farT > maxt)
-				return ENo;
+				return false;
 			t = farT;
 		} else {
-			return ENo;
+			return false;
 		}
 
 		index_type *storage = static_cast<index_type *>(tmp);
 		if (storage)
 			*storage = iv;
 
-		return EYes;
+		return true;
 	}
 	
-	inline EIntersectionResult intersect(const Ray &ray, index_type iv, 
+	inline bool intersect(const Ray &ray, index_type iv, 
 		Float mint, Float maxt) const {
 		Float tempT;
 		return intersect(ray, iv, mint, maxt, tempT, NULL);

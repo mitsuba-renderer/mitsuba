@@ -96,9 +96,9 @@ public:
 		m_gamma = stream->readFloat();
 		m_format = static_cast<Bitmap::EFileFormat>(stream->readInt());
 		m_anisotropic = stream->readBool();
-		m_wrapMode = (MIPMap::EWrapMode) stream->readBool();
+		m_wrapMode = (MIPMap::EWrapMode) stream->readUInt();
 		m_maxAnisotropy = stream->readFloat();
-		unsigned int size = stream->readUInt();
+		uint32_t size = stream->readUInt();
 		ref<MemoryStream> mStream = new MemoryStream(size);
 		stream->copyTo(mStream, size);
 		mStream->setPos(0);
@@ -112,6 +112,7 @@ public:
 			   later have to handle a call to serialize(), the
 			   whole bitmap must be kept in memory */
 			m_stream = mStream;
+			m_stream->setPos(0);
 		}
 	}
 
@@ -217,13 +218,14 @@ public:
 		stream->writeBool(m_anisotropic);
 		stream->writeUInt(m_wrapMode);
 		stream->writeFloat(m_maxAnisotropy);
+
 		if (m_stream.get()) {
-			stream->writeUInt((unsigned int) m_stream->getSize());
+			stream->writeUInt((uint32_t) m_stream->getSize());
 			stream->write(m_stream->getData(), m_stream->getSize());
 		} else {
 			ref<Stream> mStream = new MemoryStream();
 			ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
-			stream->writeUInt((unsigned int) is->getSize());
+			stream->writeUInt((uint32_t) is->getSize());
 			is->copyTo(stream);
 		}
 	}

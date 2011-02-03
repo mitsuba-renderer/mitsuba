@@ -17,8 +17,11 @@
 */
 
 #include <mitsuba/render/camera.h>
+#include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
+
+static StatsCounter cameraRays("General", "Camera ray generations");
 
 /**
  * Perspective camera model. Depth of field can optionally 
@@ -38,6 +41,10 @@ public:
 		m_focalDistance = props.getFloat("focalDistance", m_farClip);
 		/* World-space lens radius */
 		m_lensRadius = props.getFloat("lensRadius", 0.0f);
+		if (m_cameraToWorld.hasScale()) 
+			Log(EError, "Mitsuba's perspective camera does not allow scale "
+				"factors in the camera-to-world transformation! Please remove those factors, "
+				"since they will cause inconsistencies in various parts of the renderer.");
 	}
 
 	PerspectiveCamera(Stream *stream, InstanceManager *manager) 
@@ -111,6 +118,8 @@ public:
 
 	void generateRay(const Point2 &dirSample, const Point2 &lensSample,
 			Float timeSample, Ray &ray) const {
+		++cameraRays;
+
 		/* Calculate intersection on the image plane */
 		Point rasterCoords(dirSample.x, dirSample.y, 0);
 		Point imageCoords;

@@ -683,7 +683,9 @@ void LocalWorker::run() {
 		} catch (const std::exception &ex) {
 			m_schedItem.stop = true;
 			releaseWork(m_schedItem);
-			Log(EWarn, "Caught an exception - canceling process %i: %s",
+			ELogLevel warnLogLevel = Thread::getThread()->getLogger()->getErrorLevel() == EError
+				? EWarn : EInfo;
+			Log(warnLogLevel, "Caught an exception - canceling process %i: %s",
 				m_schedItem.id, ex.what());
 			cancel(false);
 			continue;

@@ -246,7 +246,7 @@ public:
 	};
 
 	Float lookupFloat(const Point &_p) const {
-		const Point p = m_worldToGrid.transformBasic(_p);
+		const Point p = m_worldToGrid.transformAffine(_p);
 		if (p.x < 0 || p.y < 0 || p.z < 0)
 			return 0.0f;
 		const int x1 = (int) p.x, y1 = (int) p.y, z1 = (int) p.z,
@@ -255,7 +255,7 @@ public:
 		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x || 
 			y2 >= m_res.y || z2 >= m_res.z) {
 			/* Do an integer bounds test (may seem redundant - this is
-				to avoid a segfault, should a NaN/Inf ever find its way here..) */
+			   to avoid a segfault, should a NaN/Inf ever find its way here..) */
 			return 0;
 		}
 
@@ -280,7 +280,7 @@ public:
 
 
 	Spectrum lookupSpectrum(const Point &_p) const {
-		const Point p = m_worldToGrid.transformBasic(_p);
+		const Point p = m_worldToGrid.transformAffine(_p);
 		if (p.x < 0 || p.y < 0 || p.z < 0)
 			return Spectrum(0.0f);
 
@@ -290,7 +290,7 @@ public:
 		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x || 
 			y2 >= m_res.y || z2 >= m_res.z) {
 			/* Do an integer bounds test (may seem redundant - this is
-				to avoid a segfault, should a NaN/Inf ever find its way here..) */
+			   to avoid a segfault, should a NaN/Inf ever find its way here..) */
 			return Spectrum(0.0f);
 		}
 
@@ -316,7 +316,7 @@ public:
 	}
 
 	Vector lookupVector(const Point &_p) const {
-		const Point p = m_worldToGrid.transformBasic(_p);
+		const Point p = m_worldToGrid.transformAffine(_p);
 		if (p.x < 0 || p.y < 0 || p.z < 0)
 			return Vector(0.0f);
 
@@ -326,7 +326,7 @@ public:
 		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x || 
 			y2 >= m_res.y || z2 >= m_res.z) {
 			/* Do an integer bounds test (may seem redundant - this is
-				to avoid a segfault, should a NaN/Inf ever find its way here..) */
+			   to avoid a segfault, should a NaN/Inf ever find its way here..) */
 			return Vector(0.0f);
 		}
 
@@ -334,10 +334,10 @@ public:
 		const float3 *vectorData = (float3 *) m_data;
 #if 1
 		/* Nearest neighbor */
-		return vectorData[
+		return m_volumeToWorld(vectorData[
 			(((fz < .5) ? z1 : z2)  * m_res.y +
 			((fy < .5) ? y1 : y2)) * m_res.x +
-			((fx < .5) ? x1 : x2)].toVector();
+			((fx < .5) ? x1 : x2)].toVector());
 #else
 		Float _fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f-fz;
 
@@ -351,10 +351,10 @@ public:
 			&d110 = vectorData[(z2*m_res.y + y2)*m_res.x + x1],
 			&d111 = vectorData[(z2*m_res.y + y2)*m_res.x + x2];
 
-		return (((d000*_fx + d001*fx)*_fy +
+		return m_volumeToWorld((((d000*_fx + d001*fx)*_fy +
 				(d010*_fx + d011*fx)*fy)*_fz +
 				((d100*_fx + d101*fx)*_fy +
-				(d110*_fx + d111*fx)*fy)*fz).toVector();
+				(d110*_fx + d111*fx)*fy)*fz).toVector());
 #endif
 	}
 	

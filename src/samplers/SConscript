@@ -1,0 +1,9 @@
+Import('env', 'plugins')
+
+plugins += env.SharedLibrary('#plugins/independent', ['independent.cpp'])
+plugins += env.SharedLibrary('#plugins/stratified', ['stratified.cpp'])
+plugins += env.SharedLibrary('#plugins/halton', ['halton.cpp'])
+plugins += env.SharedLibrary('#plugins/hammersley', ['hammersley.cpp'])
+plugins += env.SharedLibrary('#plugins/ldsampler', ['ldsampler.cpp'])
+
+Export('plugins')

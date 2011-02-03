@@ -45,10 +45,12 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 				texture1[x+m_width*y] = Spectrum(0.0f);
 				for (int j=0; j<4; j++) {
 					int pos = weights[x].firstTexel + j;
-					if (wrapMode == ERepeat) 
-						pos = modulo(pos, width);
-					else if (wrapMode == EClamp)
-						pos = clamp(pos, 0, width-1);
+					if (pos < 0 || pos >= height) {
+						if (wrapMode == ERepeat) 
+							pos = modulo(pos, width);
+						else if (wrapMode == EClamp)
+							pos = clamp(pos, 0, width-1);
+					}
 					if (pos >= 0 && pos < width)
 						texture1[x+m_width*y] += pixels[pos+y*width] 
 							* weights[x].weight[j];
@@ -61,23 +63,26 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 		/* Re-sample into the Y direction */
 		texture = new Spectrum[m_width*m_height];
 		weights = resampleWeights(height, m_height);
+		memset(texture, 0, sizeof(Spectrum)*m_width*m_height);
 		for (int x=0; x<m_width; x++) {
 			for (int y=0; y<m_height; y++) {
-				texture[x+m_width*y] = Spectrum(0.0f);
 				for (int j=0; j<4; j++) {
 					int pos = weights[y].firstTexel + j;
-					if (wrapMode == ERepeat) 
-						pos = modulo(pos, height);
-					else if (wrapMode == EClamp)
-						pos = clamp(pos, 0, height-1);
+					if (pos < 0 || pos >= height) {
+						if (wrapMode == ERepeat) 
+							pos = modulo(pos, height);
+						else if (wrapMode == EClamp)
+							pos = clamp(pos, 0, height-1);
+					}
 					if (pos >= 0 && pos < height)
 						texture[x+m_width*y] += texture1[x+pos*m_width]
 							* weights[y].weight[j];
 				}
 			}
-			for (int y=0; y<m_height; y++)
-				texture[x+m_width*y].clampNegative();
 		}
+		for (int y=0; y<m_height; y++)
+			for (int x=0; x<m_width; x++)
+			texture[x+m_width*y].clampNegative();
 		delete[] weights;
 		delete[] texture1;
 	}
@@ -95,8 +100,8 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 		m_levelWidth[i]  = std::max(1, m_levelWidth[i-1]/2);
 		m_levelHeight[i] = std::max(1, m_levelHeight[i-1]/2);
 		m_pyramid[i] = new Spectrum[m_levelWidth[i] * m_levelHeight[i]];
-		for (int x = 0; x < m_levelWidth[i]; x++) {
-			for (int y = 0; y < m_levelHeight[i]; y++) {
+		for (int y = 0; y < m_levelHeight[i]; y++) {
+			for (int x = 0; x < m_levelWidth[i]; x++) {
 				m_pyramid[i][x+y*m_levelWidth[i]] = (
 					getTexel(i-1, 2*x, 2*y) + 
 					getTexel(i-1, 2*x+1, 2*y) + 
@@ -192,27 +197,27 @@ MIPMap::ResampleWeight *MIPMap::resampleWeights(int oldRes, int newRes) const {
 }
 	
 Spectrum MIPMap::getTexel(int level, int x, int y) const {
-	switch (m_wrapMode) {
-		case ERepeat:
-			x = modulo(x, m_levelWidth[level]);
-			y = modulo(y, m_levelHeight[level]);
-			break;
-		case EClamp:
-			x = clamp(x, 0, m_levelWidth[level] - 1);
-			y = clamp(y, 0, m_levelHeight[level] - 1);
-			break;
-		case EBlack:
-			if (x < 0 || y < 0 || x >= m_levelWidth[level] 
-				|| y >=  m_levelHeight[level])
+	int levelWidth = m_levelWidth[level];
+	int levelHeight = m_levelHeight[level];
+
+	if (x <= 0 || y < 0 || x >= levelWidth || y >= levelHeight) {
+		switch (m_wrapMode) {
+			case ERepeat:
+				x = modulo(x, levelWidth);
+				y = modulo(y, levelHeight);
+				break;
+			case EClamp:
+				x = clamp(x, 0, levelWidth - 1);
+				y = clamp(y, 0, levelHeight - 1);
+				break;
+			case EBlack:
 				return Spectrum(0.0f);
-			break;
-		case EWhite:
-			if (x < 0 || y < 0 || x >= m_levelWidth[level] 
-				|| y >=  m_levelHeight[level])
+			case EWhite:
 				return Spectrum(1.0f);
-			break;
+		}
 	}
-	return m_pyramid[level][x + m_levelWidth[level]*y];
+
+	return m_pyramid[level][x + levelWidth*y];
 }
 	
 Spectrum MIPMap::triangle(int level, Float x, Float y) const {

@@ -38,9 +38,9 @@ GLTexture::GLTexture(const std::string &name, Bitmap *bitmap)
 
 void GLTexture::init() {
 	if (m_fbType == ENone)
-		Log(EDebug, "Uploading a texture : %s", toString().c_str());
+		Log(ETrace, "Uploading a texture : %s", toString().c_str());
 	else
-		Log(EDebug, "Creating a framebuffer : %s", toString().c_str());
+		Log(ETrace, "Creating a framebuffer : %s", toString().c_str());
 
 	lookupGLConstants();
 
@@ -513,8 +513,12 @@ void GLTexture::releaseTarget() {
 
 void GLTexture::bind(int textureUnit) const {
 	/* Bind to the texture */
-	m_textureUnits.get().insert(textureUnit);
-	glActiveTexture(GL_TEXTURE0 + textureUnit);
+	if (GLEW_VERSION_1_3) {
+		m_textureUnits.get().insert(textureUnit);
+		glActiveTexture(GL_TEXTURE0 + textureUnit);
+	} else {
+		AssertEx(textureUnit == 0, "Multitexture is not supported");
+	}
 	glEnable(m_glType);
 	glBindTexture(m_glType, m_id);
 
@@ -525,20 +529,24 @@ void GLTexture::bind(int textureUnit) const {
 }
 
 void GLTexture::unbind() const {
-	std::set<int> &textureUnits = m_textureUnits.get();
-	for (std::set<int>::iterator it = textureUnits.begin();
-		it != textureUnits.end(); ++it) {
-		glActiveTexture(GL_TEXTURE0 + *it);
+	if (GLEW_VERSION_1_3) {
+		std::set<int> &textureUnits = m_textureUnits.get();
+		for (std::set<int>::iterator it = textureUnits.begin();
+			it != textureUnits.end(); ++it) {
+			glActiveTexture(GL_TEXTURE0 + *it);
+			glDisable(m_glType);
+		}
+		textureUnits.clear();
+	} else {
 		glDisable(m_glType);
 	}
-	textureUnits.clear();
 }
 
 void GLTexture::cleanup() {
 	if (m_id == 0)
 		return;
 	if (m_fbType != ENone) {
-		Log(EDebug, "Freeing framebuffer \"%s\"", m_name.c_str());
+		Log(ETrace, "Freeing framebuffer \"%s\"", m_name.c_str());
 		switch (m_fbType) {
 			case EColorBuffer:
 				glDeleteRenderbuffersEXT(1, &m_depthId);
@@ -550,7 +558,7 @@ void GLTexture::cleanup() {
 		}
 		glDeleteFramebuffersEXT(1, &m_fboId);
 	} else {
-		Log(EDebug, "Freeing texture \"%s\"", m_name.c_str());
+		Log(ETrace, "Freeing texture \"%s\"", m_name.c_str());
 	}
 	glDeleteTextures(1, &m_id);
 	m_id = 0;

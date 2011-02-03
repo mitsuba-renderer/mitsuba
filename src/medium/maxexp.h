@@ -30,6 +30,8 @@ public:
 
 		m_cdf[0] = 0;
 		for (size_t i=0; i<m_sigmaT.size(); ++i) {
+			if (i > 0 && m_sigmaT[i] == m_sigmaT[i-1]) 
+				SLog(EError, "Internal error: sigmaT must vary across channels");
 			/* Integrate max(f_1(t), .., f_n(t)) on [0, \infty]*/
 			Float lower = (i==0) ? -1 : -std::pow((m_sigmaT[i]/m_sigmaT[i-1]), 
 						-m_sigmaT[i] / (m_sigmaT[i]-m_sigmaT[i-1]));
@@ -64,6 +66,14 @@ public:
 		pdf = m_sigmaT[index] * std::exp(-m_sigmaT[index] * t) * m_invNormalization;
 
 		return t;
+	}
+	
+	Float pdf(Float t) const {
+		const Float *lowerBound = std::lower_bound(&m_intervalStart[0], 
+				&m_intervalStart[m_intervalStart.size()], t);
+		int index = std::max(0, (int) (lowerBound - &m_intervalStart[0]) - 1);
+		SAssert(index >= 0 && index < (int) m_sigmaT.size());
+		return m_sigmaT[index] * std::exp(-m_sigmaT[index] * t) * m_invNormalization;
 	}
 
 	Float cdf(Float t) const {

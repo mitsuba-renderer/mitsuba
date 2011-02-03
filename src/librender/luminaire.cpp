@@ -22,7 +22,7 @@
 MTS_NAMESPACE_BEGIN
 
 Luminaire::Luminaire(const Properties &props)
- : ConfigurableObject(props), m_surfaceArea(0.0f) {
+ : ConfigurableObject(props) {
 	m_type = 0;
 
 	// Transformation from the luminaire's local coordinates to world coordiantes
@@ -31,6 +31,8 @@ Luminaire::Luminaire(const Properties &props)
 	// Importance sampling weight (used by the luminaire sampling code in \ref Scene)
 	m_samplingWeight = props.getFloat("samplingWeight", 1.0f);
 
+	m_name = props.getID();
+
 	m_worldToLuminaire = m_luminaireToWorld.inverse();
 	AssertEx(!m_luminaireToWorld.hasScale(), "toWorld transformation can't have scale factors!");
 	m_intersectable = false;
@@ -38,11 +40,11 @@ Luminaire::Luminaire(const Properties &props)
 
 Luminaire::Luminaire(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
-	m_surfaceArea = stream->readFloat();
 	m_samplingWeight = stream->readFloat();
 	m_type = (EType) stream->readInt();
 	m_intersectable = stream->readBool();
 	m_worldToLuminaire = Transform(stream);
+	m_name = stream->readString();
 	m_luminaireToWorld = m_worldToLuminaire.inverse();
 }
 
@@ -52,11 +54,16 @@ Luminaire::~Luminaire() {
 void Luminaire::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 
-	stream->writeFloat(m_surfaceArea);
 	stream->writeFloat(m_samplingWeight);
 	stream->writeInt(m_type);
 	stream->writeBool(m_intersectable);
 	m_worldToLuminaire.serialize(stream);
+	stream->writeString(m_name);
+}
+
+bool Luminaire::createEmissionRecord(EmissionRecord &eRec, const Ray &ray) const {
+	Log(EError, "createEmissionRecord(): Not implemented!");
+	return false;
 }
 
 void Luminaire::preprocess(const Scene *scene) {
@@ -69,7 +76,7 @@ bool Luminaire::isBackgroundLuminaire() const {
 Spectrum Luminaire::Le(const Ray &ray) const {
 	return Spectrum(0.0f);
 }
-
+	
 std::string EmissionRecord::toString() const {
 	std::ostringstream oss;
 	oss << "EmissionRecord[" << std::endl

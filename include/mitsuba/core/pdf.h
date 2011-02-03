@@ -30,9 +30,15 @@ MTS_NAMESPACE_BEGIN
 struct DiscretePDF {
 public:
 	/// Allocate a PDF with the given number of entries
-	explicit inline DiscretePDF(int nEntries = 0) : m_ready(false) {
+	explicit inline DiscretePDF(size_t nEntries = 0) : m_ready(false) {
 		m_pdf.resize(nEntries);
 		m_cdf.resize(nEntries+1);
+	}
+
+	/// Reserve memory for a certain number of entries
+	inline void reserve(size_t nEntries) {
+		m_pdf.reserve(nEntries);
+		m_cdf.reserve(nEntries+1);
 	}
 
 	/// Append a PDF entry
@@ -72,7 +78,7 @@ public:
 	 * \return Sum of all unnormalized PDF values
 	 */
 	inline Float build() {
-		SAssert(m_pdf.size() > 0 && !m_ready);
+		SAssert(m_pdf.size() > 0);
 		m_cdf[0] = 0.0f;
 		for (unsigned int i=1; i<m_cdf.size(); ++i)
 			m_cdf[i] = m_cdf[i-1] + m_pdf[i-1];

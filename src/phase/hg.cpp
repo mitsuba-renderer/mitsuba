@@ -16,7 +16,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/medium.h>
+#include <mitsuba/render/phase.h>
+#include <mitsuba/render/sampler.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/frame.h>
 
@@ -49,8 +50,9 @@ public:
 		stream->writeFloat(m_g);
 	}
 
-	inline Spectrum sample(const MediumSamplingRecord &mRec, const Vector &wi, Vector &wo, 
-			ESampledType &sampledType, const Point2 &sample) const {
+	inline Spectrum sample(PhaseFunctionQueryRecord &pRec,
+			Sampler *sampler) const {
+		Point2 sample(sampler->next2D());
 
 		Float cosTheta;
 		if (std::abs(m_g) < Epsilon) {
@@ -67,23 +69,23 @@ public:
 			sinTheta * cosPhi,
 			sinTheta * sinPhi,
 			cosTheta);
-		wo = Frame(-wi).toWorld(dir);
-		
-		sampledType = ENormal;
+		pRec.wo = Frame(-pRec.wi).toWorld(dir);
+
 		return Spectrum(1.0f);
 	}
 
-	Spectrum sample(const MediumSamplingRecord &mRec, const Vector &wi, Vector &wo, 
-			ESampledType &sampledType, Float &pdf, const Point2 &sample) const {
-		HGPhaseFunction::sample(mRec, wi, wo, sampledType, sample);
+	Spectrum sample(PhaseFunctionQueryRecord &pRec,
+			Float &pdf, Sampler *sampler) const {
+		HGPhaseFunction::sample(pRec, sampler);
 
-		pdf = f(mRec, wi, wo)[0];
+		pdf = HGPhaseFunction::f(pRec)[0];
 		return Spectrum(pdf);
 	}
 
-	Spectrum f(const MediumSamplingRecord &mRec, const Vector &wi, const Vector &wo) const {
+
+	Spectrum f(const PhaseFunctionQueryRecord &pRec) const {
 		return Spectrum(1/(4*M_PI) * (1 - m_g*m_g) /
-			std::pow(1.f + m_g*m_g - 2.f * m_g * dot(-wi, wo), (Float) 1.5f));
+			std::pow(1.f + m_g*m_g - 2.f * m_g * dot(-pRec.wi, pRec.wo), (Float) 1.5f));
 	}
 
 	std::string toString() const {

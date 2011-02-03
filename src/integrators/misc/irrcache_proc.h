@@ -20,7 +20,7 @@
 #define __IRRCACHE_PROC_H
 
 #include <mitsuba/render/imageproc.h>
-#include <mitsuba/render/imageproc_wu.h>
+#include <mitsuba/render/rectwu.h>
 #include <mitsuba/render/irrcache.h>
 
 MTS_NAMESPACE_BEGIN

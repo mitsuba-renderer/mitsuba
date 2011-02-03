@@ -16,7 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/kdtree.h>
+#include <mitsuba/render/skdtree.h>
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/luminaire.h>
@@ -57,7 +57,7 @@ public:
 	Float getSurfaceArea() const;
 
 	/// Return a pointer to the internal KD-tree
-	inline const KDTree *getKDTree() const { return m_kdtree.get(); }
+	inline const ShapeKDTree *getKDTree() const { return m_kdtree.get(); }
 
 	/// Return the name of the geometry group
 	std::string getName() const;
@@ -67,7 +67,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	ref<KDTree> m_kdtree;
+	ref<ShapeKDTree> m_kdtree;
 	std::string m_name;
 };
 

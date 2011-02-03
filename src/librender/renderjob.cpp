@@ -23,8 +23,9 @@ MTS_NAMESPACE_BEGIN
 	
 RenderJob::RenderJob(const std::string &threadName, 
 	Scene *scene, RenderQueue *queue, TestSupervisor *testSupervisor,
-	int sceneResID, int cameraResID, int samplerResID, bool threadIsCritical) : Thread(threadName),
-	m_scene(scene), m_queue(queue), m_testSupervisor(testSupervisor) {
+	int sceneResID, int cameraResID, int samplerResID, bool threadIsCritical,
+	bool visualFeedback) : Thread(threadName), m_scene(scene), m_queue(queue), 
+	m_testSupervisor(testSupervisor), m_visualFeedback(visualFeedback) {
 
 	/* Optional: bring the process down when this thread crashes */
 	setCritical(threadIsCritical); 
@@ -70,6 +71,7 @@ RenderJob::RenderJob(const std::string &threadName,
 		m_samplerResID = samplerResID;
 		m_ownsSamplerResource = false;
 	}
+	m_cancelled = false;
 }
 
 RenderJob::~RenderJob() {
@@ -85,6 +87,7 @@ RenderJob::~RenderJob() {
 void RenderJob::run() {
 	ref<Film> film = m_scene->getFilm();
 	ref<Sampler> sampler = m_scene->getSampler();
+	m_cancelled = false;
 
 	if (m_testSupervisor.get()) {
 		if (film->getClass()->getName() != "MFilm")
@@ -100,18 +103,16 @@ void RenderJob::run() {
 		}
 	}
 
-	bool cancelled = false;
-	m_scene->initialize();
 	try {
 		if (!m_scene->preprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID)) {
-			cancelled = true;
+			m_cancelled = true;
 			Log(EWarn, "Preprocessing of scene \"%s\" did not complete successfully!",
 				m_scene->getSourceFile().leaf().c_str());
 		}
 
-		if (!cancelled) {
+		if (!m_cancelled) {
 			if (!m_scene->render(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID)) {
-				cancelled = true;
+				m_cancelled = true;
 				Log(EWarn, "Rendering of scene \"%s\" did not complete successfully!",
 					m_scene->getSourceFile().leaf().c_str());
 			}
@@ -123,10 +124,10 @@ void RenderJob::run() {
 	} catch (const std::exception &ex) {
 		Log(EWarn, "Rendering of scene \"%s\" did not complete successfully, caught exception: %s",
 			m_scene->getSourceFile().leaf().c_str(), ex.what());
-		cancelled = true;
+		m_cancelled = true;
 	}
 
-	m_queue->removeJob(this, cancelled);
+	m_queue->removeJob(this, m_cancelled);
 }
 
 MTS_IMPLEMENT_CLASS(RenderJob, false, Thread)
