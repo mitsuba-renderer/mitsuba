@@ -448,6 +448,15 @@ public:
 		);
 	}
 
+	/// Return a row by index
+	inline Vector2 row(int i) const {
+		return Vector2(m[i][0], m[i][1]);
+	}
+
+	/// Return a column by index
+	inline Vector2 col(int i) const {
+		return Vector2(m[0][i], m[1][i]);
+	}
 };
 
 /**
@@ -491,6 +500,20 @@ public:
 			m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z,
 			m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z,
 			m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z);
+	}
+
+	/// Return a row by index
+	inline Vector3 row(int i) const {
+		return Vector3(
+			m[i][0], m[i][1], m[i][2]
+		);
+	}
+
+	/// Return a column by index
+	inline Vector3 col(int i) const {
+		return Vector3(
+			m[0][i], m[1][i], m[2][i]
+		);
 	}
 };
 
@@ -539,6 +562,20 @@ struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 			m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z + m[1][3] * v.w,
 			m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z + m[2][3] * v.w,
 			m[3][0] * v.x + m[3][1] * v.y + m[3][2] * v.z + m[3][3] * v.w
+		);
+	}
+
+	/// Return a row by index
+	inline Vector4 row(int i) const {
+		return Vector4(
+			m[i][0], m[i][1], m[i][2], m[i][3]
+		);
+	}
+
+	/// Return a column by index
+	inline Vector4 col(int i) const {
+		return Vector4(
+			m[0][i], m[1][i], m[2][i], m[3][i]
 		);
 	}
 };
