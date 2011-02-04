@@ -364,7 +364,7 @@ public:
 	}
 protected:
 	/// Symmetric Householder reduction to tridiagonal form.
-	static void tred2(T V[M][N], T d[M], T e[M]);
+	static void tred2(T V[M][N], T d[N], T e[N]);
 
 	/// Symmetric tridiagonal QL algorithm.
 	static void tql2(T V[M][N], T d[N], T e[N]);
