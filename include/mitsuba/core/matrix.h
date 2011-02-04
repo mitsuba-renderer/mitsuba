@@ -198,6 +198,33 @@ public:
 		return *this;
 	}
 
+	/// Scalar division (creates a temporary)
+	inline Matrix operator/(T value) const {
+		Matrix result;
+#ifdef MTS_DEBUG
+		if (value == 0)
+			SLog(EWarn, "Matrix: Division by zero!");
+#endif
+		Float recip = 1/value;
+		for (int i=0; i<M; ++i)
+			for (int j=0; j<N; ++j)
+				result.m[i][j] = m[i][j]*recip;
+		return result;
+	}
+
+	/// Scalar division
+	inline const Matrix& operator/=(T value) {
+#ifdef MTS_DEBUG
+		if (value == 0)
+			SLog(EWarn, "Matrix: Division by zero!");
+#endif
+		Float recip = 1/value;
+		for (int i=0; i<M; ++i)
+			for (int j=0; j<N; ++j)
+				m[i][j] *= recip;
+		return *this;
+	}
+
 	/// Matrix multiplication (creates a temporary)
 	template <int M2, int N2> inline Matrix<M, N2, T> operator*(const Matrix<M2, N2, T> &mat) const {
 		BOOST_STATIC_ASSERT(N == M2);
