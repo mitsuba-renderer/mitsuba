@@ -349,7 +349,7 @@ public:
 	 *
 	 * Based on the implementation in JAMA.
 	 */
-	inline void symmEigenDecomp(Matrix &Q, T d[M]) const {
+	inline void symEig(Matrix &Q, T d[M]) const {
 		BOOST_STATIC_ASSERT(M == N);
 		T e[M];
 		Q = *this;

@@ -38,7 +38,7 @@ public:
 		);
 		Matrix4x4 Q;
 		Vector4 d;
-		A.symmEigenDecomp(Q, (Float *) &d);
+		A.symEig(Q, (Float *) &d);
 
 		Vector4 refD(-0.823889076095475, 0.130902702868822,
 			0.557486242256414, 4.47570013097024);
