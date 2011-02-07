@@ -16,8 +16,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__KD_TREE_H)
-#define __KD_TREE_H
+#if !defined(__SHAPE_KDTREE_H)
+#define __SHAPE_KDTREE_H
 
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/sahkdtree3.h>
@@ -401,4 +401,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __KD_TREE_H */
+#endif /* __SHAPE_KDTREE_H */

@@ -209,7 +209,7 @@ template <typename T> struct TAABB {
 
 	/// Return the axis index with the largest associated side length
 	inline int getLargestAxis() const {
-		Vector d = max - min;
+		vector_type d = max - min;
 		int largest = 0;
 
 		for (int i=1; i<point_type::dim; ++i)
@@ -220,7 +220,7 @@ template <typename T> struct TAABB {
 
 	/// Return the axis index with the shortest associated side length
 	inline int getShortestAxis() const {
-		Vector d = max - min;
+		vector_type d = max - min;
 		int shortest = 0;
 
 		for (int i=1; i<point_type::dim; ++i)
