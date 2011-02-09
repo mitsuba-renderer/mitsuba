@@ -130,10 +130,10 @@ public:
 	
 	void test03_pointKDTree() {
 		typedef TKDTree< BasicKDNode<Point2, Float> > KDTree2;
-		size_t nPoints = 20000;
+		size_t nPoints = 50000, nTries = 20;
 		ref<Random> random = new Random();
 
-		for (int heuristic=0; heuristic<3; ++heuristic) {
+		for (int heuristic=0; heuristic<4; ++heuristic) {
 			KDTree2 kdtree(nPoints, (KDTree2::EHeuristic) heuristic);
 
 			for (size_t i=0; i<nPoints; ++i) {
@@ -146,8 +146,10 @@ public:
 			if (heuristic == 0) {
 				Log(EInfo, "Testing the balanced kd-tree construction heuristic");
 			} else if (heuristic == 1) {
-				Log(EInfo, "Testing the sliding midpoint kd-tree construction heuristic");
+				Log(EInfo, "Testing the left-balanced kd-tree construction heuristic");
 			} else if (heuristic == 2) {
+				Log(EInfo, "Testing the sliding midpoint kd-tree construction heuristic");
+			} else if (heuristic == 3) {
 				Log(EInfo, "Testing the voxel volume kd-tree construction heuristic");
 			}
 
@@ -156,7 +158,7 @@ public:
 			Log(EInfo, "Construction time = %i ms, depth = %i", timer->getMilliseconds(), kdtree.getDepth());
 
 			for (int k=1; k<=10; ++k) {
-				size_t nTraversals = 0, nTries = 10;
+				size_t nTraversals = 0;
 				for (size_t it = 0; it < nTries; ++it) {
 					Point2 p(random->nextFloat(), random->nextFloat());
 					nTraversals += kdtree.nnSearch(p, k, results);
@@ -170,7 +172,7 @@ public:
 				}
 				Log(EInfo, "Average number of traversals for a %i-nn query = " SIZE_T_FMT, k, nTraversals / nTries);
 			}
-			size_t nTraversals = 0, nTries = 10;
+			size_t nTraversals = 0;
 			for (size_t it = 0; it < nTries; ++it) {
 				Point2 p(random->nextFloat(), random->nextFloat());
 				nTraversals += kdtree.search(p, 0.05, results);

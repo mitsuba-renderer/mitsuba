@@ -97,6 +97,9 @@ public:
 	enum EHeuristic {
 		/// Create a balanced tree by splitting along the median
 		EBalanced = 0,
+		
+		/// Create a left-balanced tree
+		ELeftBalanced,
 
 		/**
 		 * \brief Use the sliding midpoint tree construction rule. This 
@@ -365,7 +368,36 @@ protected:
 			case EBalanced: {
 					/* Split along the median */
 					split = rangeStart + (rangeEnd-rangeStart)/2;
+					axis = m_aabb.getLargestAxis();
 					std::nth_element(rangeStart, split, rangeEnd, CoordinateOrdering(axis));
+				};
+				break;
+
+			case ELeftBalanced: {
+					size_t treeSize = rangeEnd-rangeStart;
+					/* Layer 0 contains one node */
+					size_t p = 1;
+
+					/* Traverse downwards until the first incompletely
+					   filled tree level is encountered */
+					while (2*p <= treeSize)
+						p *= 2;
+
+					/* Calculate the number of filled slots in the last level */
+					size_t remaining = treeSize - p + 1;
+
+					if (2*remaining < p) {
+						/* Case 2: The last level contains too few nodes. Remove
+						   overestimate from the left subtree node count and add
+						   the remaining nodes */
+						p = (p >> 1) + remaining;
+					}
+
+					axis = m_aabb.getLargestAxis();
+					
+					split = rangeStart + (p - 1);
+					std::nth_element(rangeStart, split, rangeEnd,
+						CoordinateOrdering(axis));
 				};
 				break;
 
