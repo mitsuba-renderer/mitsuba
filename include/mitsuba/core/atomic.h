@@ -27,6 +27,8 @@ MTS_NAMESPACE_BEGIN
 #include <libkern/OSAtomic.h>
 #endif
 
+/* The following implementations are based on PBRT */
+
 template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue, T *oldValue) {
 #if defined(WIN32)
     return InterlockedCompareExchangePointer(
@@ -46,6 +48,31 @@ template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue
   #endif
   #endif
 #endif
+}
+
+inline bool atomicCompareAndExchange(volatile int32_t *v, int32_t newValue, int32_t oldValue) {
+#if defined(WIN32)
+    return InterlockedCompareExchange(
+		reint32_terpret_cast<volatile int32_t *>(v), newValue, oldValue) == oldValue;
+#else
+	return __sync_bool_compare_and_swap(v, oldValue, newValue);
+#endif
+}
+
+inline float atomicAdd(volatile float *val, float delta) {
+	/* Atomic FP addition from PBRT */
+	union bits { float f; int32_t i; };
+	bits oldVal, newVal;
+	do {
+        // On IA32/x64, adding a PAUSE instruction in compare/exchange loops
+        // is recommended to improve performance.  (And it does!)
+#if (defined(__i386__) || defined(__amd64__))
+        __asm__ __volatile__ ("pause\n");
+#endif
+		oldVal.f = *val;
+		newVal.f = oldVal.f + delta;
+	} while (atomicCompareAndExchange((volatile int32_t *) val, newVal.i, oldVal.i) != oldVal.i);
+	return newVal.f;
 }
 
 MTS_NAMESPACE_END
