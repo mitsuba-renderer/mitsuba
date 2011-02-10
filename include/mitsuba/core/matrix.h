@@ -104,6 +104,14 @@ public:
 		return false;
 	}
 
+	/// Assignment operator
+	inline Matrix &operator=(const Matrix &mat) {
+		for (int i=0; i<M; ++i)
+			for (int j=0; j<N; ++j)
+				m[i][j] = mat.m[i][j];
+		return *this;
+	}
+
 	/// Matrix addition (returns a temporary)
 	inline Matrix operator+(const Matrix &mat) const {
 		Matrix result;
