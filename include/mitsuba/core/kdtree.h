@@ -88,6 +88,7 @@ template <typename PointType, typename DataRecord> struct BasicKDNode {
  */
 template <typename KDNode> class TKDTree {
 public:
+	typedef KDNode                           node_type;
 	typedef typename KDNode::point_type      point_type;
 	typedef typename point_type::value_type  value_type;
 	typedef typename point_type::vector_type vector_type;
