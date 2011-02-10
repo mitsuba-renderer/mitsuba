@@ -397,7 +397,7 @@ protected:
 		std::binary_function<search_result, search_result, bool> {
 	public:
 		inline bool operator()(search_result &a, search_result &b) const {
-			return a.first <= b.first;
+			return a.first < b.first;
 		}
 	};
 

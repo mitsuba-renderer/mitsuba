@@ -17,8 +17,9 @@
 */
 
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/kdtree.h>
 #include <mitsuba/render/testcase.h>
-#include <mitsuba/render/gkdtree.h>
+#include <mitsuba/render/skdtree.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -27,6 +28,7 @@ public:
 	MTS_BEGIN_TESTCASE()
 	MTS_DECLARE_TEST(test01_sutherlandHodgman)
 	MTS_DECLARE_TEST(test02_bunnyBenchmark)
+	MTS_DECLARE_TEST(test03_pointKDTree)
 	MTS_END_TESTCASE()
 
 	void test01_sutherlandHodgman() {
@@ -123,6 +125,66 @@ public:
 			Log(EInfo, "  -> %.3f MRays/s", 
 				nRays / (timer->getMilliseconds() * (Float) 1000));
 			Log(EInfo, "");
+		}
+	}
+	
+	void test03_pointKDTree() {
+		typedef TKDTree< BasicKDNode<Point2, Float> > KDTree2;
+		size_t nPoints = 50000, nTries = 20;
+		ref<Random> random = new Random();
+
+		for (int heuristic=0; heuristic<4; ++heuristic) {
+			KDTree2 kdtree(nPoints, (KDTree2::EHeuristic) heuristic);
+
+			for (size_t i=0; i<nPoints; ++i) {
+				kdtree[i].setPosition(Point2(random->nextFloat(), random->nextFloat()));
+				kdtree[i].setValue(random->nextFloat());
+			}
+		
+			std::vector<KDTree2::SearchResult> results, resultsBF;
+
+			if (heuristic == 0) {
+				Log(EInfo, "Testing the balanced kd-tree construction heuristic");
+			} else if (heuristic == 1) {
+				Log(EInfo, "Testing the left-balanced kd-tree construction heuristic");
+			} else if (heuristic == 2) {
+				Log(EInfo, "Testing the sliding midpoint kd-tree construction heuristic");
+			} else if (heuristic == 3) {
+				Log(EInfo, "Testing the voxel volume kd-tree construction heuristic");
+			}
+
+			ref<Timer> timer = new Timer();
+			kdtree.build();
+			Log(EInfo, "Construction time = %i ms, depth = %i", timer->getMilliseconds(), kdtree.getDepth());
+
+			for (int k=1; k<=10; ++k) {
+				size_t nTraversals = 0;
+				for (size_t it = 0; it < nTries; ++it) {
+					Point2 p(random->nextFloat(), random->nextFloat());
+					nTraversals += kdtree.nnSearch(p, k, results);
+					resultsBF.clear();
+					for (size_t j=0; j<nPoints; ++j)
+						resultsBF.push_back(KDTree2::SearchResult((kdtree[j].getPosition()-p).lengthSquared(), j));
+					std::sort(results.begin(), results.end(), KDTree2::SearchResultComparator());
+					std::sort(resultsBF.begin(), resultsBF.end(), KDTree2::SearchResultComparator());
+					for (int j=0; j<k; ++j) 
+						assertTrue(results[j] == resultsBF[j]);
+				}
+				Log(EInfo, "Average number of traversals for a %i-nn query = " SIZE_T_FMT, k, nTraversals / nTries);
+			}
+			size_t nTraversals = 0;
+			for (size_t it = 0; it < nTries; ++it) {
+				Point2 p(random->nextFloat(), random->nextFloat());
+				nTraversals += kdtree.search(p, 0.05, results);
+				resultsBF.clear();
+				for (size_t j=0; j<nPoints; ++j)
+					resultsBF.push_back(KDTree2::SearchResult((kdtree[j].getPosition()-p).lengthSquared(), j));
+				std::sort(results.begin(), results.end(), KDTree2::SearchResultComparator());
+				std::sort(resultsBF.begin(), resultsBF.end(), KDTree2::SearchResultComparator());
+				for (size_t j=0; j<results.size(); ++j) 
+					assertTrue(results[j] == resultsBF[j]);
+			}
+			Log(EInfo, "Average number of traversals for a radius=0.05 search query = " SIZE_T_FMT, nTraversals / nTries);
 		}
 	}
 };
