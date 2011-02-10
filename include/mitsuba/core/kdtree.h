@@ -266,6 +266,136 @@ public:
 	}
 
 	/**
+	 * \brief Execute a search query and run the specified functor on them,
+	 * while potentially modifying nodes within the search radius
+	 *
+	 * The functor must have an operator() implementation, which accepts
+	 * a \a KDNode as its argument.
+	 *
+	 * \param p Search position
+	 * \param result Index list of search results
+	 * \param searchRadius Search radius 
+	 * \return The number of used traversal steps
+	 */
+	template <typename Functor> size_t executeModifier(const point_type &p,
+			Float searchRadius, Functor &functor) {
+		uint32_t *stack = (uint32_t *) alloca((m_depth+1) * sizeof(uint32_t));
+		size_t index = 0, stackPos = 1, traversalSteps = 0;
+		Float distSquared = searchRadius*searchRadius;
+		stack[0] = 0;
+
+		while (stackPos > 0) {
+			KDNode &node = m_nodes[index];
+			++traversalSteps;
+			int nextIndex;
+	
+			/* Recurse on inner nodes */
+			if (!node.isLeaf()) {
+				Float distToPlane = p[node.getAxis()] 
+					- node.getPosition()[node.getAxis()];
+	
+				uint32_t first, second;
+				bool searchBoth = distToPlane*distToPlane <= distSquared;
+
+				if (distToPlane > 0) {
+					first = node.getRightIndex();
+					second = searchBoth ? index+1 : 0;
+				} else {
+					first = index+1;
+					second = searchBoth ? node.getRightIndex() : 0;
+				}
+
+				if (first != 0 && second != 0) {
+					nextIndex = first;
+					stack[stackPos++] = second;
+				} else if (first != 0) {
+					nextIndex = first;
+				} else if (second != 0) {
+					nextIndex = second;
+				} else {
+					nextIndex = stack[--stackPos];
+				}
+			} else {
+				nextIndex = stack[--stackPos];
+			}
+	
+			/* Check if the current point is within the query's search radius */
+			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
+	
+			if (pointDistSquared < distSquared)
+				functor(node);
+
+			index = nextIndex;
+		}
+		return traversalSteps;
+	}
+
+	/**
+	 * \brief Execute a search query and run the specified functor on them
+	 *
+	 * The functor must have an operator() implementation, which accepts
+	 * a constant reference to a \a KDNode as its argument.
+	 *
+	 * \param p Search position
+	 * \param result Index list of search results
+	 * \param searchRadius  Search radius 
+	 * \return The number of used traversal steps
+	 */
+	template <typename Functor> size_t executeQuery(const point_type &p,
+			Float searchRadius, Functor &functor) const {
+		uint32_t *stack = (uint32_t *) alloca((m_depth+1) * sizeof(uint32_t));
+		size_t index = 0, stackPos = 1, traversalSteps = 0;
+		Float distSquared = searchRadius*searchRadius;
+		stack[0] = 0;
+
+		while (stackPos > 0) {
+			const KDNode &node = m_nodes[index];
+			++traversalSteps;
+			int nextIndex;
+	
+			/* Recurse on inner nodes */
+			if (!node.isLeaf()) {
+				Float distToPlane = p[node.getAxis()] 
+					- node.getPosition()[node.getAxis()];
+	
+				uint32_t first, second;
+				bool searchBoth = distToPlane*distToPlane <= distSquared;
+
+				if (distToPlane > 0) {
+					first = node.getRightIndex();
+					second = searchBoth ? index+1 : 0;
+				} else {
+					first = index+1;
+					second = searchBoth ? node.getRightIndex() : 0;
+				}
+
+				if (first != 0 && second != 0) {
+					nextIndex = first;
+					stack[stackPos++] = second;
+				} else if (first != 0) {
+					nextIndex = first;
+				} else if (second != 0) {
+					nextIndex = second;
+				} else {
+					nextIndex = stack[--stackPos];
+				}
+			} else {
+				nextIndex = stack[--stackPos];
+			}
+	
+			/* Check if the current point is within the query's search radius */
+			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
+	
+			if (pointDistSquared < distSquared)
+				functor(node);
+
+			index = nextIndex;
+		}
+		return traversalSteps;
+	}
+
+
+	/**
 	 * \brief Run a search query
 	 *
 	 * \param p Search position
@@ -273,7 +403,7 @@ public:
 	 * \param searchRadius  Search radius 
 	 * \return The number of used traversal steps
 	 */
-	size_t search(const point_type &p, Float searchRadius, std::vector<SearchResult> &results) const {
+	size_t search(const point_type &p, Float searchRadius, std::vector<uint32_t> &results) const {
 		uint32_t *stack = (uint32_t *) alloca((m_depth+1) * sizeof(uint32_t));
 		size_t index = 0, stackPos = 1, traversalSteps = 0;
 		Float distSquared = searchRadius*searchRadius;
@@ -320,7 +450,7 @@ public:
 			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
 	
 			if (pointDistSquared < distSquared) 
-				results.push_back(SearchResult(pointDistSquared, index));
+				results.push_back(index);
 
 			index = nextIndex;
 		}

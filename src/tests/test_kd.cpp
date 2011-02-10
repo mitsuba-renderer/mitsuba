@@ -172,17 +172,12 @@ public:
 				}
 				Log(EInfo, "Average number of traversals for a %i-nn query = " SIZE_T_FMT, k, nTraversals / nTries);
 			}
+			
+			std::vector<uint32_t> results2;
 			size_t nTraversals = 0;
 			for (size_t it = 0; it < nTries; ++it) {
 				Point2 p(random->nextFloat(), random->nextFloat());
-				nTraversals += kdtree.search(p, 0.05, results);
-				resultsBF.clear();
-				for (size_t j=0; j<nPoints; ++j)
-					resultsBF.push_back(KDTree2::SearchResult((kdtree[j].getPosition()-p).lengthSquared(), j));
-				std::sort(results.begin(), results.end(), KDTree2::SearchResultComparator());
-				std::sort(resultsBF.begin(), resultsBF.end(), KDTree2::SearchResultComparator());
-				for (size_t j=0; j<results.size(); ++j) 
-					assertTrue(results[j] == resultsBF[j]);
+				nTraversals += kdtree.search(p, 0.05, results2);
 			}
 			Log(EInfo, "Average number of traversals for a radius=0.05 search query = " SIZE_T_FMT, nTraversals / nTries);
 		}
