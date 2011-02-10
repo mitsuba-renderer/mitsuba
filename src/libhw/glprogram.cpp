@@ -237,18 +237,48 @@ void GLProgram::setParameter(int id, const GPUTexture *value) {
 			value->getName().c_str(), getName().c_str());
 }
 
-void GLProgram::setParameter(int id, const Transform &trafo) {
+void GLProgram::setParameter(int id, const Matrix2x2 &matrix) {
 	if (id == -1)
 		return;
 #ifdef SINGLE_PRECISION
-	glUniformMatrix4fv(id, 1, true, reinterpret_cast<const GLfloat *>
-		(trafo.getMatrix().m));
+	glUniformMatrix2fv(id, 1, true, reinterpret_cast<const GLfloat *>(matrix.m));
+#else
+	GLfloat tmp[4];
+	int idx=0;
+	for (int i=0; i<2; i++)
+		for (int j=0; j<2; j++)
+			tmp[idx++] = (GLfloat) matrix.m[i][j];
+	glUniformMatrix2fv(id, 1, true, tmp);
+#endif
+}
+
+void GLProgram::setParameter(int id, const Matrix3x3 &matrix) {
+	if (id == -1)
+		return;
+#ifdef SINGLE_PRECISION
+	glUniformMatrix3fv(id, 1, true, reinterpret_cast<const GLfloat *>(matrix.m));
+#else
+	GLfloat tmp[9];
+	int idx=0;
+	for (int i=0; i<3; i++)
+		for (int j=0; j<3; j++)
+			tmp[idx++] = (GLfloat) matrix.m[i][j];
+	glUniformMatrix3fv(id, 1, true, tmp);
+#endif
+}
+
+
+void GLProgram::setParameter(int id, const Matrix4x4 &matrix) {
+	if (id == -1)
+		return;
+#ifdef SINGLE_PRECISION
+	glUniformMatrix4fv(id, 1, true, reinterpret_cast<const GLfloat *>(matrix.m));
 #else
 	GLfloat tmp[16];
 	int idx=0;
 	for (int i=0; i<4; i++)
 		for (int j=0; j<4; j++)
-			tmp[idx++] = (GLfloat) trafo.getMatrix().m[i][j];
+			tmp[idx++] = (GLfloat) matrix.m[i][j];
 	glUniformMatrix4fv(id, 1, true, tmp);
 #endif
 }

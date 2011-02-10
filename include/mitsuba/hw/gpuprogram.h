@@ -135,10 +135,28 @@ public:
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
+	/// Set a Matrix2x2 parameter by name
+	inline void setParameter(const std::string &name, const Matrix2x2 &value,
+		bool failIfMissing = true) { 
+		setParameter(getParameterID(name, failIfMissing), value);
+	}
+
+	/// Set a Matrix3x3 parameter by name
+	inline void setParameter(const std::string &name, const Matrix3x3 &value,
+		bool failIfMissing = true) { 
+		setParameter(getParameterID(name, failIfMissing), value);
+	}
+
+	/// Set a Matrix4x4 parameter by name
+	inline void setParameter(const std::string &name, const Matrix4x4 &value,
+		bool failIfMissing = true) { 
+		setParameter(getParameterID(name, failIfMissing), value);
+	}
+
 	/// Set a Transform parameter by name
 	inline void setParameter(const std::string &name, const Transform &value,
 		bool failIfMissing = true) {
-		setParameter(getParameterID(name, failIfMissing), value);
+		setParameter(getParameterID(name, failIfMissing), value.getMatrix());
 	}
 
 	/// Set a Spectrum parameter (will be converted to linear RGB) by name
@@ -190,8 +208,19 @@ public:
 	/// Set a Point4 parameter
 	virtual void setParameter(int id, const Point4 &value) = 0;
 
+	/// Set a Matrix2x2 parameter
+	virtual void setParameter(int id, const Matrix2x2 &value) = 0;
+
+	/// Set a Matrix3x3 parameter
+	virtual void setParameter(int id, const Matrix3x3 &value) = 0;
+
+	/// Set a Matrix4x4 parameter
+	virtual void setParameter(int id, const Matrix4x4 &value) = 0;
+
 	/// Set a Transform parameter
-	virtual void setParameter(int id, const Transform &value) = 0;
+	inline void setParameter(int id, const Transform &value) {
+		setParameter(id, value.getMatrix());
+	}
 
 	/// Set a Spectrum parameter (will be converted to linear RGB)
 	virtual void setParameter(int id, const Spectrum &value) = 0;

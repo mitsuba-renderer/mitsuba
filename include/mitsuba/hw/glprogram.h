@@ -83,8 +83,14 @@ public:
 	/// Set a Point4 parameter
 	void setParameter(int id, const Point4 &value);
 
-	/// Set a Transform parameter
-	void setParameter(int id, const Transform &value);
+	/// Set a Matrix2x2 parameter
+	void setParameter(int id, const Matrix2x2 &value);
+
+	/// Set a Matrix3x3 parameter
+	void setParameter(int id, const Matrix3x3 &value);
+
+	/// Set a Matrix4x4 parameter
+	void setParameter(int id, const Matrix4x4 &value);
 
 	/// Set a Spectrum parameter (will be converted to linear RGB)
 	void setParameter(int id, const Spectrum &value);
