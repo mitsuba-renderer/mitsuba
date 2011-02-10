@@ -59,12 +59,12 @@ public:
 	}
 
 	/// Initialize the matrix from a given MxN array
-	explicit inline Matrix(T _m[M][N]) {
+	explicit inline Matrix(const T _m[M][N]) {
 		memcpy(m, _m, sizeof(T) * M * N);
 	}
 
 	/// Initialize the matrix from a given (flat) MxN array in row-major order
-	explicit inline Matrix(T _m[M*N]) {
+	explicit inline Matrix(const T _m[M*N]) {
 		memcpy(m, _m, sizeof(T) * M * N);
 	}
 
@@ -72,6 +72,12 @@ public:
 	explicit inline Matrix(Stream *stream) {
 		stream->readArray(&m[0][0], M * N);
 	}
+
+	/// Copy constructor
+	inline Matrix(const Matrix &mtx) {
+		memcpy(m, mtx.m, sizeof(T) * M * N);
+	}
+
 
 	/// Initialize with the identity matrix
 	void setIdentity() {
@@ -410,19 +416,22 @@ protected:
  */
 struct MTS_EXPORT_CORE Matrix2x2 : public Matrix<2, 2, Float> {
 public:
-	Matrix2x2() { }
+	inline Matrix2x2() { }
 
 	/// Initialize the matrix with constant entries
 	explicit inline Matrix2x2(Float value) : Matrix<2, 2, Float>(value) { }
 
 	/// Initialize the matrix from a given 2x2 array
-	explicit inline Matrix2x2(Float _m[2][2]) : Matrix<2, 2, Float>(_m) { }
+	explicit inline Matrix2x2(const Float _m[2][2]) : Matrix<2, 2, Float>(_m) { }
 	
 	/// Initialize the matrix from a given (float) 2x2 array in row-major order
-	explicit inline Matrix2x2(Float _m[4]) : Matrix<2, 2, Float>(_m) { }
+	explicit inline Matrix2x2(const Float _m[4]) : Matrix<2, 2, Float>(_m) { }
 
 	/// Unserialize a matrix from a stream
 	explicit inline Matrix2x2(Stream *stream) : Matrix<2, 2, Float>(stream) { }
+
+	/// Copy constructor
+	inline Matrix2x2(const Matrix<2, 2, Float> &mtx) : Matrix<2, 2, Float>(mtx) { }
 
 	/// Initialize with the given values
 	inline Matrix2x2(Float a00, Float a01, Float a10, Float a11) {
@@ -456,6 +465,14 @@ public:
 		);
 	}
 
+	/// Assignment operator
+	inline Matrix2x2 &operator=(const Matrix<2, 2, Float> &mat) {
+		for (int i=0; i<2; ++i)
+			for (int j=0; j<2; ++j)
+				m[i][j] = mat.m[i][j];
+		return *this;
+	}
+
 	/// Return a row by index
 	inline Vector2 row(int i) const {
 		return Vector2(m[i][0], m[i][1]);
@@ -472,19 +489,22 @@ public:
  */
 struct MTS_EXPORT_CORE Matrix3x3 : public Matrix<3, 3, Float> {
 public:
-	Matrix3x3() { }
+	inline Matrix3x3() { }
 
 	/// Initialize the matrix with constant entries
 	explicit inline Matrix3x3(Float value) : Matrix<3, 3, Float>(value) { }
 
 	/// Initialize the matrix from a given 3x3 array
-	explicit inline Matrix3x3(Float _m[3][3]) : Matrix<3, 3, Float>(_m) { }
+	explicit inline Matrix3x3(const Float _m[3][3]) : Matrix<3, 3, Float>(_m) { }
 
 	/// Initialize the matrix from a given (float) 3x3 array in row-major order
-	explicit inline Matrix3x3(Float _m[9]) : Matrix<3, 3, Float>(_m) { }
+	explicit inline Matrix3x3(const Float _m[9]) : Matrix<3, 3, Float>(_m) { }
 
 	/// Unserialize a matrix from a stream
 	explicit inline Matrix3x3(Stream *stream) : Matrix<3, 3, Float>(stream) { }
+	
+	/// Copy constructor
+	inline Matrix3x3(const Matrix<3, 3, Float> &mtx) : Matrix<3, 3, Float>(mtx) { }
 
 	/// Initialize with the given values
 	inline Matrix3x3(Float a00, Float a01, Float a02,
@@ -510,6 +530,14 @@ public:
 			m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z);
 	}
 
+	/// Assignment operator
+	inline Matrix3x3 &operator=(const Matrix<3, 3, Float> &mat) {
+		for (int i=0; i<3; ++i)
+			for (int j=0; j<3; ++j)
+				m[i][j] = mat.m[i][j];
+		return *this;
+	}
+
 	/// Return a row by index
 	inline Vector3 row(int i) const {
 		return Vector3(
@@ -530,19 +558,22 @@ public:
  * \brief Basic 4x4 matrix data type
  */
 struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
-	Matrix4x4() { }
+	inline Matrix4x4() { }
 
 	/// Initialize the matrix with constant entries
 	explicit inline Matrix4x4(Float value) : Matrix<4, 4, Float>(value) { }
 
 	/// Initialize the matrix from a given 4x4 array
-	explicit inline Matrix4x4(Float _m[4][4]) : Matrix<4, 4, Float>(_m) { }
+	explicit inline Matrix4x4(const Float _m[4][4]) : Matrix<4, 4, Float>(_m) { }
 
 	/// Initialize the matrix from a given (float) 4x4 array in row-major order
-	explicit inline Matrix4x4(Float _m[16]) : Matrix<4, 4, Float>(_m) { }
+	explicit inline Matrix4x4(const Float _m[16]) : Matrix<4, 4, Float>(_m) { }
 
 	/// Unserialize a matrix from a stream
 	explicit inline Matrix4x4(Stream *stream) : Matrix<4, 4, Float>(stream) { }
+
+	/// Copy constructor
+	inline Matrix4x4(const Matrix<4, 4, Float> &mtx) : Matrix<4, 4, Float>(mtx) { }
 
 	/// Initialize with the given values
 	inline Matrix4x4(
@@ -571,6 +602,14 @@ struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 			m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z + m[2][3] * v.w,
 			m[3][0] * v.x + m[3][1] * v.y + m[3][2] * v.z + m[3][3] * v.w
 		);
+	}
+
+	/// Assignment operator
+	inline Matrix4x4 &operator=(const Matrix<4, 4, Float> &mat) {
+		for (int i=0; i<4; ++i)
+			for (int j=0; j<4; ++j)
+				m[i][j] = mat.m[i][j];
+		return *this;
 	}
 
 	/// Return a row by index
