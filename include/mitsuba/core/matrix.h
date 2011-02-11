@@ -261,7 +261,16 @@ public:
 		*this = temp;
 		return *this;
 	}
-	
+
+	/// Compute the trace of a square matrix
+	inline Float trace() const {
+		BOOST_STATIC_ASSERT(M == N);
+		Float sum = 0;
+		for (int i=0; i<M; ++i)
+			sum += m[i][i];
+		return sum;
+	}
+
 	/**
 	 * \brief Compute the LU decomposition of a matrix
 	 *

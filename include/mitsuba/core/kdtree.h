@@ -164,6 +164,8 @@ public:
 	inline const aabb_type &getAABB() const { return m_aabb; }
 	/// Return the depth of the constructed KD-tree
 	inline size_t getDepth() const { return m_depth; }
+	/// Return the size of the kd-tree
+	inline size_t getSize() const { return m_nodes.size(); }
 
 	/// Construct the KD-tree hierarchy
 	void build() {
