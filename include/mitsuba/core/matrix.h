@@ -239,21 +239,6 @@ public:
 		return *this;
 	}
 
-	/// Matrix multiplication (creates a temporary)
-	template <int M2, int N2> inline Matrix<M, N2, T> operator*(const Matrix<M2, N2, T> &mat) const {
-		BOOST_STATIC_ASSERT(N == M2);
-		Matrix<M, N2, T> result;
-		for (int i=0; i<M; ++i) {
-			for (int j=0; j<N2; ++j) {
-				T sum = 0;
-				for (int k=0; k<N; ++k)
-					sum += m[i][k] * mat.m[k][j];
-				result.m[i][j] = sum;
-			}
-		}
-		return result;
-	}
-
 	/// Matrix multiplication (for square matrices)
 	inline const Matrix &operator*=(const Matrix &mat) {
 		BOOST_STATIC_ASSERT(M == N);
@@ -635,6 +620,21 @@ struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 		);
 	}
 };
+
+/// Matrix multiplication (creates a temporary)
+template <typename T, int M1, int N1, int M2, int N2> inline Matrix<M1, N2, T> operator*(const Matrix<M1, N1, T> &mat1, const Matrix<M2, N2, T> &mat2) {
+	BOOST_STATIC_ASSERT(N1 == M2);
+	Matrix<M1, N2, T> result;
+	for (int i=0; i<M1; ++i) {
+		for (int j=0; j<N2; ++j) {
+			T sum = 0;
+			for (int k=0; k<N1; ++k)
+				sum += mat1.m[i][k] * mat2.m[k][j];
+			result.m[i][j] = sum;
+		}
+	}
+	return result;
+}
 
 MTS_NAMESPACE_END
 

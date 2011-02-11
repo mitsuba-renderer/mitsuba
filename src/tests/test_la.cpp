@@ -23,13 +23,27 @@ MTS_NAMESPACE_BEGIN
 class TestLinearAlgebra : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
-	MTS_DECLARE_TEST(test01_eigenDecomp)
-	MTS_DECLARE_TEST(test02_gaussJordan)
-	MTS_DECLARE_TEST(test03_lu)
-	MTS_DECLARE_TEST(test04_chol)
+	MTS_DECLARE_TEST(test01_basicOperations)
+	MTS_DECLARE_TEST(test02_eigenDecomp)
+	MTS_DECLARE_TEST(test03_gaussJordan)
+	MTS_DECLARE_TEST(test04_lu)
+	MTS_DECLARE_TEST(test05_chol)
 	MTS_END_TESTCASE()
 
-	void test01_eigenDecomp() {
+	void test01_basicOperations() {
+		Float refA[] = { 1, 2, 3, 4, 5, 6 };
+		Float refB[] = { 7, 8, 9, 10, 11, 12 };
+		Float refC[] = { 58, 64, 139, 154 };
+		Matrix<2, 3, Float> A(refA);
+		Matrix<3, 2, Float> B(refB);
+		Matrix<2, 2, Float> C(refC);
+		assertEqualsEpsilon(A*B, C, 1e-6);
+
+		Matrix2x2 A2(1, 2, 3, 4), B2(3, 4, 5, 6);
+		assertEqualsEpsilon(A2*B2, Matrix2x2(13, 16, 29, 36), 1e-6);
+	}
+
+	void test02_eigenDecomp() {
 		Matrix4x4 A(
 			1.4541, 1.1233, 1.2407, 1.2548,
 			1.1233, 0.2597, 0.3819, 1.3917,
@@ -54,7 +68,7 @@ public:
 		assertEqualsEpsilon(Q, refQ, 1e-6);
 	}
 	
-	void test02_gaussJordan() {
+	void test03_gaussJordan() {
 		Float orig[5][5] = {
 			{0.603220764324061,0.0160774582181293, 0.508210763233408, 0.953606295121746, 0.990510667271985},
 			{0.636413405652896, 0.728102544189785, 0.295895331742393, 0.214085933989557, 0.289789452981086},
@@ -77,7 +91,7 @@ public:
 		assertEqualsEpsilon(inverse, refInverseMatrix, 1e-4);
 	}
 
-	void test03_lu() {
+	void test04_lu() {
 		Float orig[5][5] = {
 			{0.603220764324061,0.0160774582181293, 0.508210763233408, 0.953606295121746, 0.990510667271985},
 			{0.636413405652896, 0.728102544189785, 0.295895331742393, 0.214085933989557, 0.289789452981086},
@@ -108,7 +122,7 @@ public:
 		assertEqualsEpsilon(X, Xref, 1e-5);
 	}
 	
-	void test04_chol() {
+	void test05_chol() {
 		Float orig[5][5] = {
 			{5.51302956379742,     -1.36613599367125,     -0.56818386886837,      1.43247259160815,    -0.341242075046427},
 			{-1.36613599367125,      4.32377082646249,     -1.78941813087798,   -0.0389694848978303,     -1.36129441356894},

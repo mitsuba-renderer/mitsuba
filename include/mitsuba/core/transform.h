@@ -312,18 +312,6 @@ private:
 	Matrix4x4 m_invTransform;
 };
 
-/// Matrix-matrix multiplication
-inline Matrix4x4 operator*(const Matrix4x4 &m1, const Matrix4x4 &m2) {
-	Matrix4x4 retval;
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 4; j++)
-			retval.m[i][j] = m1.m[i][0] * m2.m[0][j] +
-							 m1.m[i][1] * m2.m[1][j] +
-							 m1.m[i][2] * m2.m[2][j] +
-							 m1.m[i][3] * m2.m[3][j];
-	return retval;
-}
-
 MTS_NAMESPACE_END
 
 #endif /* __TRANSFORM_H */
