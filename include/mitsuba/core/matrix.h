@@ -459,6 +459,15 @@ public:
 		);
 	}
 
+	/// Scalar multiplication (creates a temporary)
+	inline Matrix2x2 operator*(Float value) const {
+		Matrix2x2 result;
+		for (int i=0; i<2; ++i)
+			for (int j=0; j<2; ++j)
+				result.m[i][j] = m[i][j]*value;
+		return result;
+	}
+
 	/// Assignment operator
 	inline Matrix2x2 &operator=(const Matrix<2, 2, Float> &mat) {
 		for (int i=0; i<2; ++i)
@@ -522,6 +531,15 @@ public:
 			m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z,
 			m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z,
 			m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z);
+	}
+
+	/// Scalar multiplication (creates a temporary)
+	inline Matrix3x3 operator*(Float value) const {
+		Matrix3x3 result;
+		for (int i=0; i<3; ++i)
+			for (int j=0; j<3; ++j)
+				result.m[i][j] = m[i][j]*value;
+		return result;
 	}
 
 	/// Assignment operator
@@ -596,6 +614,15 @@ struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 			m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z + m[2][3] * v.w,
 			m[3][0] * v.x + m[3][1] * v.y + m[3][2] * v.z + m[3][3] * v.w
 		);
+	}
+
+	/// Scalar multiplication (creates a temporary)
+	inline Matrix4x4 operator*(Float value) const {
+		Matrix4x4 result;
+		for (int i=0; i<4; ++i)
+			for (int j=0; j<4; ++j)
+				result.m[i][j] = m[i][j]*value;
+		return result;
 	}
 
 	/// Assignment operator

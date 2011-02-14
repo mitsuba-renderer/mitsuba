@@ -46,12 +46,20 @@ template <typename PointType, typename DataRecord> struct BasicKDNode {
 	inline BasicKDNode(const DataRecord &value) : position((Float) 0), 
 		right(0), flags(0), axis(0), value(value) { }
 
-	/// Return the index of the right child of this node
-	inline uint32_t getRightIndex() { return right; }
-	/// Return the index of the right child of this node (const version)
-	inline const uint32_t getRightIndex() const { return right; }
-	/// Set the right child index of this node
-	inline void setRightIndex(uint32_t node) { right = node; }
+	/// Given the current node's index, return the index of the right child 
+	inline uint32_t getRightIndex(uint32_t curIndex) { return right; }
+	/// Given the current node's index, return the index of the right child (const version)
+	inline const uint32_t getRightIndex(uint32_t curIndex) const { return right; }
+	/// Given the current node's index, set the right child index
+	inline void setRightIndex(uint32_t curIndex, uint32_t value) { right = value; }
+
+	/// Given the current node's index, return the index of the left child 
+	inline uint32_t getLeftIndex(uint32_t curIndex) { return curIndex + 1; }
+	/// Given the current node's index, return the index of the left child (const version)
+	inline const uint32_t getLeftIndex(uint32_t curIndex) const { return curIndex + 1; }
+	/// Given the current node's index, set the left child index
+	inline void setLeftIndex(uint32_t curIndex, uint32_t value) {
+		if (value != curIndex+1) SLog(EError, "Not supported!"); }
 
 	/// Check whether this is a leaf node
 	inline bool isLeaf() const { return flags & 1; }
@@ -214,11 +222,11 @@ public:
 				bool searchBoth = distToPlane*distToPlane <= distSquared;
 
 				if (distToPlane > 0) {
-					first = node.getRightIndex();
-					second = searchBoth ? index+1 : 0;
+					first = node.getRightIndex(index);
+					second = searchBoth ? node.getLeftIndex(index) : 0;
 				} else {
-					first = index+1;
-					second = searchBoth ? node.getRightIndex() : 0;
+					first = node.getLeftIndex(index);
+					second = searchBoth ? node.getRightIndex(index) : 0;
 				}
 
 				if (first != 0 && second != 0) {
@@ -301,11 +309,11 @@ public:
 				bool searchBoth = distToPlane*distToPlane <= distSquared;
 
 				if (distToPlane > 0) {
-					first = node.getRightIndex();
-					second = searchBoth ? index+1 : 0;
+					first = node.getRightIndex(index);
+					second = searchBoth ? node.getLeftIndex(index) : 0;
 				} else {
-					first = index+1;
-					second = searchBoth ? node.getRightIndex() : 0;
+					first = node.getLeftIndex(index);
+					second = searchBoth ? node.getRightIndex(index) : 0;
 				}
 
 				if (first != 0 && second != 0) {
@@ -365,11 +373,11 @@ public:
 				bool searchBoth = distToPlane*distToPlane <= distSquared;
 
 				if (distToPlane > 0) {
-					first = node.getRightIndex();
-					second = searchBoth ? index+1 : 0;
+					first = node.getRightIndex(index);
+					second = searchBoth ? node.getLeftIndex(index) : 0;
 				} else {
-					first = index+1;
-					second = searchBoth ? node.getRightIndex() : 0;
+					first = node.getLeftIndex(index);
+					second = searchBoth ? node.getRightIndex(index) : 0;
 				}
 
 				if (first != 0 && second != 0) {
@@ -428,11 +436,11 @@ public:
 				bool searchBoth = distToPlane*distToPlane <= distSquared;
 
 				if (distToPlane > 0) {
-					first = node.getRightIndex();
-					second = searchBoth ? index+1 : 0;
+					first = node.getRightIndex(index);
+					second = searchBoth ? node.getLeftIndex(index) : 0;
 				} else {
-					first = index+1;
-					second = searchBoth ? node.getRightIndex() : 0;
+					first = node.getLeftIndex(index);
+					second = searchBoth ? node.getRightIndex(index) : 0;
 				}
 
 				if (first != 0 && second != 0) {
@@ -589,9 +597,11 @@ protected:
 		value_type splitPos = split->getPosition()[axis];
 		split->setAxis(axis);
 		if (split+1 != rangeEnd) 
-			split->setRightIndex((uint32_t) (split + 1 - m_nodes.begin()));
+			split->setRightIndex(rangeStart - m_nodes.begin(), (uint32_t) (split + 1 - m_nodes.begin()));
 		else 
-			split->setRightIndex(0);
+			split->setRightIndex(rangeStart - m_nodes.begin(), 0);
+
+		split->setLeftIndex(rangeStart - m_nodes.begin(), rangeStart + 1 - m_nodes.begin());
 		split->setLeaf(false);
 		std::iter_swap(rangeStart, split);
 
