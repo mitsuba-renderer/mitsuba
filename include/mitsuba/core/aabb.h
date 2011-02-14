@@ -177,8 +177,23 @@ template <typename T> struct TAABB {
 			value_type value = 0;
 			if (p[i] < min[i])
 				value = min[i] - p[i];
-			if (p[i] > max[i])
+			else if (p[i] > max[i])
 				value = p[i] - max[i];
+			result += value*value;
+		}
+		return std::sqrt(result);
+	}
+
+	/// Calculate the minimum AABB-AABB distance
+	inline value_type distanceTo(const TAABB &aabb) const {
+		value_type result = 0;
+
+		for (int i=0; i<point_type::dim; ++i) {
+			value_type value = 0;
+			if (aabb.max[i] < min[i])
+				value = min[i] - aabb.max[i];
+			else if (aabb.min[i] > max[i])
+				value = aabb.min[i] - max[i];
 			result += value*value;
 		}
 		return std::sqrt(result);
