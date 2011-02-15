@@ -53,16 +53,16 @@ template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue
 inline bool atomicCompareAndExchange(volatile int32_t *v, int32_t newValue, int32_t oldValue) {
 #if defined(WIN32)
     return InterlockedCompareExchange(
-		reinterpret_cast<volatile int32_t *>(v), newValue, oldValue) == oldValue;
+		reinterpret_cast<volatile LONG *>(v), newValue, oldValue) == oldValue;
 #else
 	return __sync_bool_compare_and_swap(v, oldValue, newValue);
 #endif
 }
 
 inline bool atomicCompareAndExchange(volatile int64_t *v, int64_t newValue, int64_t oldValue) {
-#if defined(WIN64)
+#if defined(WIN32)
     return InterlockedCompareExchange64(
-		reinterpret_cast<volatile int64_t *>(v), newValue, oldValue) == oldValue;
+		reinterpret_cast<volatile LONGLONG *>(v), newValue, oldValue) == oldValue;
 #else
 	return __sync_bool_compare_and_swap(v, oldValue, newValue);
 #endif

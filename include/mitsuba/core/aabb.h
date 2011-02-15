@@ -305,6 +305,11 @@ public:
 		: TAABB<Point>(min, max) {
 	}
 
+	/// Construct from a TAABB<Point>
+	inline AABB(const TAABB<Point> &aabb) 
+		: min(aabb.min), max(aabb.max) {
+	}
+
 	/// Calculate the surface area of the bounding box
 	inline Float getSurfaceArea() const {
 		Vector d = max - min;
