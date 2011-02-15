@@ -27,6 +27,10 @@ MTS_NAMESPACE_BEGIN
 #include <libkern/OSAtomic.h>
 #endif
 
+#if defined(WIN32)
+#include <intrin.h>
+#endif
+
 /* The following implementations are based on PBRT */
 
 template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue, T *oldValue) {
@@ -61,7 +65,7 @@ inline bool atomicCompareAndExchange(volatile int32_t *v, int32_t newValue, int3
 
 inline bool atomicCompareAndExchange(volatile int64_t *v, int64_t newValue, int64_t oldValue) {
 #if defined(WIN32)
-    return InterlockedCompareExchange64(
+    return _InterlockedCompareExchange64(
 		reinterpret_cast<volatile LONGLONG *>(v), newValue, oldValue) == oldValue;
 #else
 	return __sync_bool_compare_and_swap(v, oldValue, newValue);
