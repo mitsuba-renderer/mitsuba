@@ -122,7 +122,7 @@ inline double atomicAdd(volatile double *dst, double delta) {
 
 inline int32_t atomicAdd(volatile int32_t *dst, int32_t delta) {
 #if defined(WIN32)
-	return InterlockedExchangeAdd(dst, delta) + delta;
+	return InterlockedExchangeAdd(reinterpret_cast<volatile LONG *>(dst), delta) + delta;
 #else
 	return __sync_add_and_fetch(dst, delta);
 #endif
@@ -136,7 +136,7 @@ inline int32_t atomicAdd(volatile int32_t *dst, int32_t delta) {
 
 inline int64_t atomicAdd(volatile int64_t *dst, int64_t delta) {
 #if defined(WIN64)
-	return _InterlockedExchangeAdd64(dst, delta) + delta;
+	return _InterlockedExchangeAdd64(reinterpret_cast<volatile LONGLONG *>(dst), delta) + delta;
 #elif defined(WIN32)
 	SLog(EError, "atomicAdd() cannot handle 64-bit integers on WIN32");
 	return 0;
