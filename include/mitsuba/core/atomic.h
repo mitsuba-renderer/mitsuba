@@ -72,7 +72,12 @@ inline bool atomicCompareAndExchange(volatile int64_t *v, int64_t newValue, int6
 #endif
 }
 
-inline float atomicAdd(volatile float *val, float delta) {
+/**
+ * \brief Atomically add \a delta to the floating point destination \a dst
+ *
+ * \return The final value written to \a dst
+ */
+inline float atomicAdd(volatile float *dst, float delta) {
 	/* Atomic FP addition from PBRT */
 	union bits { float f; int32_t i; };
 	bits oldVal, newVal;
@@ -82,13 +87,18 @@ inline float atomicAdd(volatile float *val, float delta) {
 #if (defined(__i386__) || defined(__amd64__))
         __asm__ __volatile__ ("pause\n");
 #endif
-		oldVal.f = *val;
+		oldVal.f = *dst;
 		newVal.f = oldVal.f + delta;
-	} while (!atomicCompareAndExchange((volatile int32_t *) val, newVal.i, oldVal.i));
+	} while (!atomicCompareAndExchange((volatile int32_t *) dst, newVal.i, oldVal.i));
 	return newVal.f;
 }
 
-inline double atomicAdd(volatile double *val, double delta) {
+/**
+ * \brief Atomically add \a delta to the floating point destination \a dst
+ *
+ * \return The final value written to \a dst
+ */
+inline double atomicAdd(volatile double *dst, double delta) {
 	/* Atomic FP addition from PBRT */
 	union bits { double f; int64_t i; };
 	bits oldVal, newVal;
@@ -98,10 +108,38 @@ inline double atomicAdd(volatile double *val, double delta) {
 #if (defined(__i386__) || defined(__amd64__))
         __asm__ __volatile__ ("pause\n");
 #endif
-		oldVal.f = *val;
+		oldVal.f = *dst;
 		newVal.f = oldVal.f + delta;
-	} while (!atomicCompareAndExchange((volatile int64_t *) val, newVal.i, oldVal.i));
+	} while (!atomicCompareAndExchange((volatile int64_t *) dst, newVal.i, oldVal.i));
 	return newVal.f;
+}
+
+/**
+ * \brief Atomically add \a delta to the 32-bit integer destination \a dst
+ *
+ * \return The final value written to \a dst
+ */
+
+inline int32_t atomicAdd(volatile int32_t *dst, int32_t delta) {
+#if defined(WIN32)
+	return InterlockedAdd(dst, delta);
+#else
+	return __sync_add_and_fetch(dst, delta);
+#endif
+}
+
+/**
+ * \brief Atomically add \a delta to the 64-bit integer destination \a dst
+ *
+ * \return The final value written to \a dst
+ */
+
+inline int32_t atomicAdd(volatile int64_t *dst, int64_t delta) {
+#if defined(WIN32)
+	return _InterlockedAdd64(dst, delta);
+#else
+	return __sync_add_and_fetch(dst, delta);
+#endif
 }
 
 MTS_NAMESPACE_END
