@@ -43,6 +43,11 @@
 
 
 # Windows binaries and byproducts
+^Release/.*$
+^Debug/.*$
+^mitsuba.ncb$
+^mitsuba.suo$
+^mitsuba\.vcproj\..*$
 .*\.exe$
 .*\.obj$
 ^src/.*\.lib$
@@ -54,6 +59,7 @@ data/windows/mitsuba_res.res
 .*\.pdb$
 .*\.manifest$
 .*\.exp$
+
 
 # Imported geometry and some default output types
 ^meshes/.*$

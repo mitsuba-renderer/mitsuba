@@ -10,7 +10,6 @@ MSVC_VERSION   = '9.0'
 LINKFLAGS      = ['/nologo', '/SUBSYSTEM:CONSOLE', '/MACHINE:X64', '/FIXED:NO', '/OPT:REF', '/OPT:ICF', '/LTCG', '/NODEFAULTLIB:LIBCMT']
 BASEINCLUDE    = ['#include', '#dependencies/windows/include']
 BASELIB        = ['pthreadVCE2', 'msvcrt', 'ws2_32']
-QTDIR          = 'C:\\Qt64'
 OEXRINCLUDE    = ['#dependencies/windows/include/OpenEXR']
 OEXRFLAGS      = ['/D', 'OPENEXR_DLL']
 OEXRLIB        = ['IlmImf', 'IlmThread', 'Iex', 'zlib1', 'Half']
