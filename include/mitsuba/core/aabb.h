@@ -30,7 +30,8 @@ MTS_NAMESPACE_BEGIN
  * Maintains a component-wise minimum and maximum position and provides
  * various convenience functions to query or change them.
  *
- * \tparam T Underlying point data type (e.g. \ref TPoint3<float>)
+ * \tparam T Underlying point data type (e.g. \c TPoint3<float>)
+ * \ingroup libcore
  */
 template <typename T> struct TAABB {
 	typedef T                       point_type;
@@ -282,6 +283,8 @@ template <typename T> struct TAABB {
  * 
  * Maintains a component-wise minimum and maximum position and provides
  * various convenience functions to query or change them.
+ *
+ * \ingroup libcore
  */
 struct MTS_EXPORT_CORE AABB : public TAABB<Point> {
 public:

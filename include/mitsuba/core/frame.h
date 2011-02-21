@@ -29,6 +29,8 @@ MTS_NAMESPACE_BEGIN
  * This class is mostly used to quickly convert between different
  * cartesian coordinate systems and to efficiently compute certain
  * quantities (e.g. \ref cosTheta(), \ref tanTheta, ..).
+ *
+ * \ingroup libcore
  */
 struct Frame {
 	Vector s, t;

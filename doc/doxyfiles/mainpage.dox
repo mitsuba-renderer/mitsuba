@@ -1,4 +1,14 @@
 /**
+	\defgroup libcore Core library
+	This module contains the core support API of Mitsuba
+ */
+/**
+	\defgroup librender Render library
+	This module contains the rendering-related API of Mitsuba
+ */
+
+
+/**
 	\mainpage Mitsuba Renderer API Documentation
 
 	<center>
@@ -9,19 +19,16 @@
 
 	<div class="featuretitle">Basic Information</div>
     - <a href="http://www.mitsuba-renderer.org/documentation.pdf">Reference Manual (PDF)</a>
-	</div>
 
     <div class="featuretitle">API Documentation</div>
     - <a href="annotated.html">Annotated Class List</a>
     - <a href="classes.html">Alphabetical Class List</a>
     - <a href="hierarchy.html">Class Hierarchy</a>
-	</div>
 
 	<div class="featuretitle">Community</div>
     - <a href="http://www.mitsuba-renderer.org/devblog">Development Blog</a>
     - <a href="https://www.mitsuba-renderer.org/bugtracker/projects/mitsuba">Bug Tracker</a>
     - <a href="https://www.mitsuba-renderer.org/hg">List of repositories</a>
-	</div>
 
 	</td></tr></table>
 	</center>

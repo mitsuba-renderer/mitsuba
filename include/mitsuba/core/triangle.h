@@ -29,6 +29,7 @@ MTS_NAMESPACE_BEGIN
  * for analysis and transformation. 
  *
  * Triangles are stored as indices into a vertex array
+ * \ingroup libcore
  */
 struct MTS_EXPORT_CORE Triangle {
 	/// Indices into a vertex buffer

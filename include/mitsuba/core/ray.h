@@ -23,8 +23,14 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Simple three-dimensional ray class with
-   minimum / maximum extent information */
+/** \brief Simple three-dimensional ray data structure with
+ * minimum / maximum extent information.
+ *
+ * The somewhat peculiar ordering of the attributes is due
+ * to alignment purposes and should not be changed.
+ *
+ * \ingroup libcore
+*/
 struct Ray {
 	Point o;     ///< Ray origin
 	Float mint;  ///< Minimum range for intersection tests
@@ -115,7 +121,9 @@ struct Ray {
 };
 
 /** \brief %Ray differential -- enhances the basic ray class with 
-   information about the rays of adjacent pixels on the view plane */
+   information about the rays of adjacent pixels on the view plane
+   \ingroup libcore
+*/
 struct RayDifferential : public Ray {
 	bool hasDifferentials;
 	Ray rx, ry;

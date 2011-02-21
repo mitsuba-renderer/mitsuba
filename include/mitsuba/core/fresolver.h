@@ -34,6 +34,8 @@ MTS_NAMESPACE_BEGIN
  * within a set of specifiable search paths in a cross-platform
  * compatible manner (similar to the $PATH variable on various 
  * operating systems).
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE FileResolver : public Object {
 public:

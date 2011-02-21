@@ -25,6 +25,8 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Thin wrapper around the recursive pthreads lock
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Mutex : public Object {
 	friend class ConditionVariable;
@@ -53,6 +55,8 @@ private:
 /**
  * \brief Wait flag synchronization primitive. Can be used to
  * wait for a certain event to occur.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE WaitFlag : public Object {
 public:
@@ -97,6 +101,8 @@ private:
 /**
  * \brief Condition variable synchronization primitive. Can be used to
  * wait for a condition to become true in a safe way.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE ConditionVariable : public Object {
 public:

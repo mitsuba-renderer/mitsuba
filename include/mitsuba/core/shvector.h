@@ -34,6 +34,7 @@ struct SHVector;
 
 /**
  * \brief Stores the diagonal blocks of a spherical harmonic rotation matrix
+ * \ingroup libcore
  */
 struct MTS_EXPORT_CORE SHRotation {
 	std::vector<ublas::matrix<Float> > blocks;
@@ -72,6 +73,8 @@ struct MTS_EXPORT_CORE SHRotation {
  *      {Sqrt[2]*Im[SphericalHarmonicY[l, -m, \[Theta], \[Phi]]], m < 0}
  *  }]
  * </pre>
+ *
+ * \ingroup libcore
  */
 struct MTS_EXPORT_CORE SHVector {
 public:

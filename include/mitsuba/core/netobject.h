@@ -30,6 +30,8 @@ MTS_NAMESPACE_BEGIN
  * to the process (by a call to <tt>\ref bindUsedResources()</tt>). These will then be 
  * distributed to all participating compute servers. Once unserialized on the remote side, 
  * <tt>\ref wakeup()</tt> is called to let the object re-associate with the shared resources.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE NetworkedObject : public ConfigurableObject {
 public:

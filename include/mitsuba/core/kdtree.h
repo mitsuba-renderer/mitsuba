@@ -29,6 +29,8 @@ MTS_NAMESPACE_BEGIN
  *
  * \tparam PointType Underlying point data type (e.g. \ref TPoint3<float>)
  * \tparam DataRecord Custom payload to be attached to each node
+ *
+ * \ingroup libcore
  */
 template <typename PointType, typename DataRecord> struct BasicKDNode {
 	typedef PointType point_type;
@@ -93,6 +95,8 @@ template <typename PointType, typename DataRecord> struct BasicKDNode {
  *
  * \tparam KDNode Underlying node data structure. See \ref BasicKDNode as
  * an example for the required public interface
+ *
+ * \ingroup libcore
  */
 template <typename KDNode> class TKDTree {
 public:
@@ -192,7 +196,7 @@ public:
 	 *
 	 * \param p Search position
 	 * \param k Maximum number of search results
-	 * \param result Index list of search results
+	 * \param results Index list of search results
 	 * \param searchRadius   Maximum search radius (this can be used to
 	 *      restrict the knn query to a subset of the data)
 	 * \return The number of used traversal steps
@@ -284,7 +288,7 @@ public:
 	 * a \a KDNode as its argument.
 	 *
 	 * \param p Search position
-	 * \param result Index list of search results
+	 * \param functor Functor to be called on each search result
 	 * \param searchRadius Search radius 
 	 * \return The number of used traversal steps
 	 */
@@ -348,7 +352,7 @@ public:
 	 * a constant reference to a \a KDNode as its argument.
 	 *
 	 * \param p Search position
-	 * \param result Index list of search results
+	 * \param functor Functor to be called on each search result
 	 * \param searchRadius  Search radius 
 	 * \return The number of used traversal steps
 	 */
@@ -410,7 +414,7 @@ public:
 	 * \brief Run a search query
 	 *
 	 * \param p Search position
-	 * \param result Index list of search results
+	 * \param results Index list of search results
 	 * \param searchRadius  Search radius 
 	 * \return The number of used traversal steps
 	 */

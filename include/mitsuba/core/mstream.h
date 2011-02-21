@@ -27,6 +27,8 @@ MTS_NAMESPACE_BEGIN
  * 
  * The underlying memory storage of this implementation dynamically expands 
  * as data is written to the stream.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE MemoryStream : public Stream {
 public:

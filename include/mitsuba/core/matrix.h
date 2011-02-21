@@ -25,7 +25,9 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Generic fixed-size dense matrix class using a row-major storage format
+ * \brief Generic fixed-size dense matrix class using a row-major storage format
+ *
+ * \ingroup libcore
  */
 template <int M, int N, typename T> struct Matrix {
 public:
@@ -407,6 +409,7 @@ protected:
 
 /**
  * \brief Basic 2x2 matrix data type
+ * \ingroup libcore
  */
 struct MTS_EXPORT_CORE Matrix2x2 : public Matrix<2, 2, Float> {
 public:
@@ -489,6 +492,7 @@ public:
 
 /**
  * \brief Basic 3x3 matrix data type
+ * \ingroup libcore
  */
 struct MTS_EXPORT_CORE Matrix3x3 : public Matrix<3, 3, Float> {
 public:
@@ -568,6 +572,7 @@ public:
 
 /**
  * \brief Basic 4x4 matrix data type
+ * \ingroup libcore
  */
 struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 	inline Matrix4x4() { }
@@ -649,7 +654,8 @@ struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 };
 
 /// Matrix multiplication (creates a temporary)
-template <typename T, int M1, int N1, int M2, int N2> inline Matrix<M1, N2, T> operator*(const Matrix<M1, N1, T> &mat1, const Matrix<M2, N2, T> &mat2) {
+template <typename T, int M1, int N1, int M2, int N2> inline Matrix<M1, N2, T> 
+		operator*(const Matrix<M1, N1, T> &mat1, const Matrix<M2, N2, T> &mat2) {
 	BOOST_STATIC_ASSERT(N1 == M2);
 	Matrix<M1, N2, T> result;
 	for (int i=0; i<M1; ++i) {

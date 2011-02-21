@@ -38,8 +38,15 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Extended LRU Cache based on the bimap implementation by Tim Day
+ * \brief Generic LRU cache implementation
+ *
+ * Based on the bimap implementation by Tim Day
  * (http://www.bottlenose.demon.co.uk/article/lru.pdf)
+ *
+ * \tparam K Key data type
+ * \tparam KComp Key comparator
+ * \tparam V Value data type
+ * \ingroup libcore
  */
 template <typename K, typename KComp, typename V> struct LRUCache : public Object {
 public:

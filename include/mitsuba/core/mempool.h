@@ -28,6 +28,7 @@ MTS_NAMESPACE_BEGIN
  * of objects of the same type, while attempting to keep them 
  * contiguous in memory and having only minimal interaction with the
  * underlying allocator.
+ * \ingroup libcore
  */
 template <typename T> class MemoryPool {
 public:
@@ -51,14 +52,14 @@ public:
 		return result;
 	}
 
-	void ensureNotContained(T *ptr) {
-		if (std::find(m_free.begin(), m_free.end(), ptr) != m_free.end()) ///XXX
-			SLog(EError, "Memory pool inconsistency()");
-	}
+//	void ensureNotContained(T *ptr) {
+//		if (std::find(m_free.begin(), m_free.end(), ptr) != m_free.end())
+//			SLog(EError, "Memory pool inconsistency()");
+//	}
 
 	/// Release an entry
 	inline void release(T *ptr) {
-//		if (std::find(m_free.begin(), m_free.end(), ptr) != m_free.end()) ///XXX remove
+//		if (std::find(m_free.begin(), m_free.end(), ptr) != m_free.end())
 //			SLog(EError, "Memory pool inconsistency in release()");
 		m_free.push_back(ptr);
 	}

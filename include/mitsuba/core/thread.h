@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \headerfile mitsuba/core/thread.h mitsuba/mitsuba.h
  * \brief Cross-platform thread implementation
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Thread : public Object {
 public:

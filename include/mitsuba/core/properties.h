@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 
 /** \brief Associative map for values of various types. Used to
  * construct subclasses of <tt>ConfigurableObject</tt>.
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Properties {
 public:

@@ -31,6 +31,8 @@ MTS_NAMESPACE_BEGIN
  * lets them accept parameters specified in an external XML file. Additionally,
  * they can have child objects, which correspond to nested instantiation
  * requests in the XML file.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE ConfigurableObject : public SerializableObject {
 public:
@@ -71,6 +73,8 @@ protected:
 
 /** \brief This macro creates the binary interface, which Mitsuba 
  * requires to load a plugin.
+ *
+ * \ingroup libcore
  */
 #define MTS_EXPORT_PLUGIN(name, descr) \
 	extern "C" { \

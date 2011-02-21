@@ -73,6 +73,8 @@ struct CacheLineCounter {
  * quantities within Mitsuba. At various points during the execution, it is
  * possible to then call \ref Statistics::printStats() to get a human-readable 
  * report of their values.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE StatsCounter {
 public:
@@ -194,6 +196,7 @@ private:
 };
 
 /** \brief General-purpose progress reporter
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE ProgressReporter {
 public:
@@ -240,6 +243,7 @@ private:
 
 /** \brief Collects various rendering statistics. Only
  * one instance is created during a program run
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Statistics : public Object {
 public:

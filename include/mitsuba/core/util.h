@@ -22,6 +22,9 @@
 #include <boost/static_assert.hpp>
 
 MTS_NAMESPACE_BEGIN
+ 
+/*! \addtogroup libcore */
+/*! @{ */
 
 // -----------------------------------------------------------------------
 //  Miscellaneous
@@ -45,7 +48,8 @@ extern MTS_EXPORT_CORE std::string indent(const std::string &string, int amount=
 
 /**
  * Convert a time difference (in ms) to a string representation
- * \param accurate When set to true, a higher-precision string representation
+ * \param time Time value in milliseconds
+ * \param precise When set to true, a higher-precision string representation
  * is generated.
  */
 extern MTS_EXPORT_CORE std::string timeToString(Float time, bool precise = false);
@@ -346,6 +350,8 @@ template <typename VectorType> inline Float unitAngle(const VectorType &u, const
 
 /// Turn a memory size into a human-readable string
 extern MTS_EXPORT_CORE std::string memString(size_t size);
+
+/*! @} */
 
 MTS_NAMESPACE_END
 

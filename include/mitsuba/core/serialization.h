@@ -24,6 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Abstract interface implemented by all serializable classes
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Serializable {
 public:
@@ -38,6 +39,8 @@ protected:
  *
  * To support unserialization from a stream, the implementation should use one of the
  * RTTI macros \ref MTS_IMPLEMENT_CLASS_S or \ref MTS_IMPLEMENT_CLASS_IS.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE SerializableObject : public Object, public Serializable {
 public:
@@ -62,6 +65,8 @@ protected:
  *
  * Similarly when unserializing a stream, it ensures that the resulting
  * object graph has the same structure.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE InstanceManager : public Object {
 	friend class SerializableObject;

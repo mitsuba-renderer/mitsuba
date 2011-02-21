@@ -15,11 +15,6 @@
  FOR A PARTICULAR PURPOSE.  See the license for more details.
 */
 
-/*! \file gausslobattointegral.hpp
-	\brief integral of a one-dimensional function using the adaptive
-	Gauss-Lobatto integral
-*/
-
 #if !defined(__QUADRATURE_H)
 #define __QUADRATURE_H
 
@@ -28,23 +23,24 @@
 
 MTS_NAMESPACE_BEGIN
 
-//! Integral of a one-dimensional function
-/*! Given a target accuracy \f$ \epsilon \f$, the integral of
-	a function \f$ f \f$ between \f$ a \f$ and \f$ b \f$ is
-	calculated by means of the Gauss-Lobatto formula
-*/
-
-/*! References:
-   This algorithm is a C++ implementation of the algorithm outlined in
-
-   W. Gander and W. Gautschi, Adaptive Quadrature - Revisited.
-   BIT, 40(1):84-101, March 2000. CS technical report:
-   ftp.inf.ethz.ch/pub/publications/tech-reports/3xx/306.ps.gz
-
-   The original MATLAB version can be downloaded here
-   http://www.inf.ethz.ch/personal/gander/adaptlob.m
-*/
-
+/**
+ * \brief Computes the integral of a one-dimensional function.
+ *
+ * Given a target accuracy \f$ \epsilon \f$, the integral of
+ * a function \f$ f \f$ between \f$ a \f$ and \f$ b \f$ is
+ * calculated by means of the Gauss-Lobatto formula.
+ *
+ * References:
+ * This algorithm is a C++ implementation of the algorithm outlined in
+ *
+ * W. Gander and W. Gautschi, Adaptive Quadrature - Revisited.
+ * BIT, 40(1):84-101, March 2000. CS technical report:
+ * ftp.inf.ethz.ch/pub/publications/tech-reports/3xx/306.ps.gz
+ *
+ * The original MATLAB version can be downloaded here
+ * http://www.inf.ethz.ch/personal/gander/adaptlob.m
+ * \ingroup libcore
+ */
 class MTS_EXPORT_CORE GaussLobattoIntegrator {
 public:
 	/**

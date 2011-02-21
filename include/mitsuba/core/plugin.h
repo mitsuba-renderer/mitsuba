@@ -32,6 +32,8 @@ MTS_NAMESPACE_BEGIN
  * 
  * Please see the <tt>\ref ConfigurableObject</tt> and
  * <tt>\ref Utility</tt> classes for details
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Plugin {
 	typedef void *(*CreateInstanceFunc)(const Properties &props);
@@ -84,6 +86,8 @@ private:
 /**
  * \brief The plugin manager is responsible for resolving and
  * loading external plugins.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE PluginManager : public Object {
 public:

@@ -27,6 +27,8 @@ MTS_NAMESPACE_BEGIN
  * \brief 2D version of the Hilbert space-filling curve
  *
  * Based on http://voxelizator3d.wordpress.com/
+ *
+ * \ingroup libcore
  */
 template <typename T> class HilbertCurve2D {
 public:

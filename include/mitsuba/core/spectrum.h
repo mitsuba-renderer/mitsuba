@@ -31,6 +31,8 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Abstract smooth spectral power distribution data type,
  * which supports evaluation at arbitrary wavelengths
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE SmoothSpectrum {
 public:
@@ -48,6 +50,8 @@ public:
  *
  * Computes the spectral power distribution of a black body of the 
  * specified temperature.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE BlackBodySpectrum : public SmoothSpectrum {
 public:
@@ -71,6 +75,8 @@ private:
 
 /**
  * \brief Linearly interpolated spectral power distribution
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE InterpolatedSpectrum : public SmoothSpectrum {
 public:
@@ -106,6 +112,8 @@ private:
  *
  * When SPECTRUM_SAMPLES is set to 3 (the default), this class 
  * falls back to linear RGB as its internal representation.
+ *
+ * \ingroup libcore
  */
 struct MTS_EXPORT_CORE Spectrum {
 public:

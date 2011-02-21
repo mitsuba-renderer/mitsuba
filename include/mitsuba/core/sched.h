@@ -27,13 +27,14 @@
 /**
  * Uncomment this to enable scheduling debug messages
  */
-#define DEBUG_SCHED 1
+//#define DEBUG_SCHED 1
 
 MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Abstract work unit -- represents a small amount of information 
  * that encodes part of a larger processing task. 
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE WorkUnit : public Object {
 public:
@@ -58,6 +59,7 @@ protected:
 /**
  * \brief Abstract work result -- represents the result of a 
  * processed <tt>\ref WorkUnit</tt> instance.
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE WorkResult : public Object {
 public:
@@ -86,6 +88,8 @@ protected:
  * returned in the form of <tt>WorkResult</tt>s will eventually be lost. 
  * Each worker (both locally and remotely) has its own <tt>WorkProcessor</tt>, 
  * and therefore no form of locking is required within instances of this class.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE WorkProcessor : public SerializableObject {
 	friend class Scheduler;
@@ -160,6 +164,8 @@ protected:
  * is an instance of <tt>WorkProcessor</tt>, which is also specified here.
  * Finally, the this class references `resources', which denote 
  * chunks of globally shared read-only data required during execution.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE ParallelProcess : public Object {
 	friend class Scheduler;
@@ -311,6 +317,8 @@ class Worker;
  * of <tt>\ref Worker</tt>s with the scheduler. These try to acquire work 
  * units from the scheduler, which are then executed on the current machine 
  * or sent to remote nodes over a network connection.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Scheduler : public Object {
 	friend class Worker;
@@ -717,6 +725,8 @@ protected:
 /**
  * \brief Acquires work from the scheduler and executes 
  * it locally.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE LocalWorker : public Worker {
 public:

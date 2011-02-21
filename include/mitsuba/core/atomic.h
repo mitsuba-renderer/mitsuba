@@ -31,8 +31,24 @@ MTS_NAMESPACE_BEGIN
 #include <intrin.h>
 #endif
 
-/* The following implementations are based on PBRT */
+/**
+ * The following implementations are based on PBRT
+ *
+ * \addtogroup libcore
+ */
 
+/*! @{ */
+
+/**
+ * \brief Atomically attempt to exchange a pointer with another value
+ * 
+ * \param v Pointer to the pointer in question
+ * \param oldValue Last known value of the destination \a v
+ * \param newValue Replacement value for the destination \a v
+ * \tparam T Base type of the pointer
+ * \return \c true if \c *v was equal to \c oldValue and the exchange
+ *         was successful.
+ */
 template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue, T *oldValue) {
 #if defined(WIN32)
     return InterlockedCompareExchangePointer(
@@ -54,6 +70,16 @@ template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue
 #endif
 }
 
+/**
+ * \brief Atomically attempt to exchange a 32-bit integer with another value
+ * 
+ * \param v Pointer to the memory region in question
+ * \param oldValue Last known value of the destination \a v
+ * \param newValue Replacement value for the destination \a v
+ * \return \c true if \c *v was equal to \c oldValue and the exchange
+ *         was successful.
+ */
+
 inline bool atomicCompareAndExchange(volatile int32_t *v, int32_t newValue, int32_t oldValue) {
 #if defined(WIN32)
     return InterlockedCompareExchange(
@@ -62,6 +88,16 @@ inline bool atomicCompareAndExchange(volatile int32_t *v, int32_t newValue, int3
 	return __sync_bool_compare_and_swap(v, oldValue, newValue);
 #endif
 }
+
+/**
+ * \brief Atomically attempt to exchange a 64-bit integer with another value
+ * 
+ * \param v Pointer to the memory region in question
+ * \param oldValue Last known value of the destination \a v
+ * \param newValue Replacement value for the destination \a v
+ * \return \c true if \c *v was equal to \c oldValue and the exchange
+ *         was successful.
+ */
 
 inline bool atomicCompareAndExchange(volatile int64_t *v, int64_t newValue, int64_t oldValue) {
 #if defined(WIN32)
@@ -144,6 +180,8 @@ inline int64_t atomicAdd(volatile int64_t *dst, int64_t delta) {
 	return __sync_add_and_fetch(dst, delta);
 #endif
 }
+
+/*! }@ */
 
 MTS_NAMESPACE_END
 
