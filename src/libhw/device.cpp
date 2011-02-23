@@ -37,7 +37,7 @@ Device::Device(Session *name) {
 	m_doubleBuffer = true;
 	m_fullscreen = false;
 	m_fsaa = 1;
-	m_dimension = Vector2i(640, 480);
+	m_size = Vector2i(640, 480);
 	m_position = Point2i(0, 0);
 	m_center = true;
 	m_session = name;
@@ -69,9 +69,9 @@ void Device::setTitle(const std::string &title) {
 	m_title = title;
 }
 
-void Device::setDimension(const Vector2i &dimension) {
+void Device::setSize(const Vector2i &dimension) {
 	Assert(!m_initialized);
-	m_dimension = dimension;
+	m_size = dimension;
 }
 
 void Device::setRedBits(int redBits) {

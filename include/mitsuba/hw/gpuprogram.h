@@ -44,6 +44,9 @@ public:
 
 	/// Set the source code of this program
 	inline void setSource(EType type, const std::string &source) { m_source[type] = source; }
+	
+	/// Set the source code of this program by filename
+	void setSourceFile(EType type, const fs::path &path);
 
 	/// Get the source code of this program
 	inline const std::string &getSource(EType type) const { return m_source[type]; }

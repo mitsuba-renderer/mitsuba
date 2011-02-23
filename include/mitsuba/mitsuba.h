@@ -35,10 +35,11 @@
 #include <limits>
 
 /// Current release of Mitsuba
-#define MTS_VERSION "0.2.0"
+#define MTS_VERSION "0.2.1"
+#define MTS_VERSION_CODE 000201
 
 /// Year of this release
-#define MTS_YEAR "2010"
+#define MTS_YEAR "2011"
 
 /// Default port of <tt>mtssrv</tt>
 #define MTS_DEFAULT_PORT 7554

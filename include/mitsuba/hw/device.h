@@ -237,10 +237,13 @@ public:
 	static Device *create(Session *session);
 
 	/// Return the dimension of the device
-	inline Vector2i getDimension() const { return m_dimension; }
+	inline Vector2i getSize() const { return m_size; }
 
 	/// Set the dimension of the device
-	void setDimension(const Vector2i &dimension);
+	void setSize(const Vector2i &dimension);
+
+	/// Return the aspect ratio of the device
+	inline Float getAspect() const { return (Float) m_size.x / (Float) m_size.y; }
 
 	/// Return the position of the device
 	inline Point2i getPosition() const { return m_position; }
@@ -380,7 +383,7 @@ protected:
 protected:
 	ref<Session> m_session;
 	ref<Timer> m_timer;
-	Vector2i m_dimension;
+	Vector2i m_size;
 	Point2i m_position;
 	int m_fsaa;
 	int m_redBits;

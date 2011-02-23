@@ -24,7 +24,7 @@ Viewer::Viewer() {
 	m_session = Session::create();
 	m_device = Device::create(m_session);
 	m_renderer = Renderer::create(m_session);
-	m_device->setDimension(Vector2i(768, 576));
+	m_device->setSize(Vector2i(768, 576));
 }
 
 int Viewer::run(int argc, char **argv) {
