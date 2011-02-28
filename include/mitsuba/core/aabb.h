@@ -170,8 +170,8 @@ template <typename T> struct TAABB {
 		}
 	}
 
-	/// Calculate the point-AABB distance
-	inline value_type distanceTo(const point_type &p) const {
+	/// Calculate the squared point-AABB distance
+	inline value_type squaredDistanceTo(const point_type &p) const {
 		value_type result = 0;
 		for (int i=0; i<point_type::dim; ++i) {
 			value_type value = 0;
@@ -181,11 +181,16 @@ template <typename T> struct TAABB {
 				value = p[i] - max[i];
 			result += value*value;
 		}
-		return std::sqrt(result);
+		return result;
 	}
 
-	/// Calculate the minimum AABB-AABB distance
-	inline value_type distanceTo(const TAABB &aabb) const {
+	/// Calculate the point-AABB distance
+	inline value_type distanceTo(const point_type &p) const {
+		return std::sqrt(squaredDistanceTo(p));
+	}
+
+	/// Calculate the minimum squared AABB-AABB distance
+	inline value_type squaredDistanceTo(const TAABB &aabb) const {
 		value_type result = 0;
 
 		for (int i=0; i<point_type::dim; ++i) {
@@ -196,7 +201,12 @@ template <typename T> struct TAABB {
 				value = aabb.min[i] - max[i];
 			result += value*value;
 		}
-		return std::sqrt(result);
+		return result;
+	}
+
+	/// Calculate the minimum AABB-AABB distance
+	inline value_type distanceTo(const TAABB &aabb) const {
+		return std::sqrt(squaredDistanceTo(aabb));
 	}
 
 	/// Return whether this bounding box is valid
