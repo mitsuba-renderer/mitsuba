@@ -28,6 +28,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Platform independent milli/microsecond timer
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Timer : public Object {
 public:

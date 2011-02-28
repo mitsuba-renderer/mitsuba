@@ -371,7 +371,7 @@ std::string Stream::readLine() {
 	
 	do {
 		try {
-			data = readChar();
+			read(&data, sizeof(char));
 		} catch (std::exception &e) {
 			if (getPos() == getSize()) {
 				if (retval.size() != 0) {
@@ -391,9 +391,9 @@ std::string Stream::readLine() {
 std::string Stream::readString() {
 	std::string retval;
 	char data;
-	
+
 	do {
-		data = readChar();
+		read(&data, sizeof(char));
 		if (data != 0)
 			retval += data;
 	} while (data != 0);

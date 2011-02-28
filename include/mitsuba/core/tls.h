@@ -29,6 +29,7 @@
  * This class implements a simple reference-counting thread-local
  * pointer storage.
  * \sa PrimitiveThreadLocal
+ * \ingroup libcore
  */
 template <typename T> class ThreadLocal {
 public:
@@ -91,6 +92,7 @@ private:
  * \brief Thin wrapper around posix thread local storage. 
  *     Stores heap-allocated data other than Object instances.
  * \sa ThreadLocal
+ * \ingroup libcore
  */
 template <typename T> class PrimitiveThreadLocal {
 public:

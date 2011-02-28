@@ -27,7 +27,10 @@ MTS_NAMESPACE_BEGIN
 
 
 /**
- * \brief Implements a lock-free singly linked list.
+ * \brief Implements a lock-free singly linked list using
+ * atomic operations.
+ * 
+ * \ingroup libcore
  */
 template <typename T> class LockFreeList {
 public:
@@ -69,6 +72,8 @@ private:
  *
  * Based on the excellent implementation in PBRT. Modifications are 
  * the addition of a bounding sphere query and support for multithreading.
+ *
+ * \ingroup libcore
  */
 template <typename T> class Octree {
 public:

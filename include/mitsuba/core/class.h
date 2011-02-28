@@ -36,6 +36,7 @@ MTS_NAMESPACE_BEGIN
  * </ul>
  *
  * \sa ref, Object
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Class {
 public:
@@ -115,6 +116,10 @@ private:
 	void *m_instPtr, *m_unSerPtr;
 };
 
+/*! \addtogroup libcore */
+
+/*! @{ */
+
 /**
  * \brief This macro must be used in the declaration of 
  * all classes derived from \ref Object.
@@ -187,6 +192,8 @@ public: \
 	const Class *name::getClass() const { \
 		return m_theClass;\
 	}
+
+/*! @} */
 
 MTS_NAMESPACE_END
 

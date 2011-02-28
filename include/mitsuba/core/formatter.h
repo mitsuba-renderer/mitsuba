@@ -34,6 +34,8 @@ enum ELogLevel {
 
 /** \brief Abstract interface for converting log information into 
  * a human-readable format
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Formatter : public Object {
 public:

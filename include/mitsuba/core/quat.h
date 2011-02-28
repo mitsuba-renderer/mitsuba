@@ -25,6 +25,7 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Parameterizable quaternion data structure
+ * \ingroup libcore
  */
 template <typename T> struct TQuaternion {
 	typedef T          value_type;

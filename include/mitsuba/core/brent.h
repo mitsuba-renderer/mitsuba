@@ -29,6 +29,8 @@ MTS_NAMESPACE_BEGIN
  * The implementation is transcribed from the Apache Commons 
  * Java implementation. The function \a Func is required to be
  * continuous, but not necessarily smooth.
+ *
+ * \ingroup libcore
  */
 template <typename T, typename Func> class BrentSolver {
 public:

@@ -30,6 +30,8 @@ MTS_NAMESPACE_BEGIN
  * Internally represented using floating point numbers of the chosen 
  * compile-time precision. The main difference in comparison to <tt>TVector3&lt;Float&gt;</tt>
  * is in how instances of <tt>Normal</tt> are treated by linear transformations.
+ *
+ * \ingroup libcore
  */
 struct Normal : public TVector3<Float> {
 	/** \brief Construct a new normal without initializing it.

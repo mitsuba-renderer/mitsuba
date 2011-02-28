@@ -26,6 +26,8 @@ MTS_NAMESPACE_BEGIN
 /**
  * \headerfile mitsuba/core/point.h mitsuba/mitsuba.h
  * \brief Parameterizable two-dimensional point data structure
+ *
+ * \ingroup libcore
  */
 template <typename T> struct TPoint2 {
 	typedef T           value_type;
@@ -218,6 +220,7 @@ template <> inline TPoint2<int> &TPoint2<int>::operator/=(int s) {
 /**
  * \headerfile mitsuba/core/point.h mitsuba/mitsuba.h
  * \brief Parameterizable three-dimensional point data structure
+ * \ingroup libcore
  */
 template <typename T> struct TPoint3 {
 	typedef T           value_type;
@@ -414,6 +417,7 @@ template <> inline TPoint3<int> &TPoint3<int>::operator/=(int s) {
 /**
  * \headerfile mitsuba/core/point.h mitsuba/mitsuba.h
  * \brief Parameterizable four-dimensional point data structure
+ * \ingroup libcore
  */
 template <typename T> struct TPoint4 {
 	typedef T           value_type;

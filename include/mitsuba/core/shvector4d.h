@@ -29,6 +29,8 @@ MTS_NAMESPACE_BEGIN
  *
  * Discretization occurs in the 'wi' space. Lookups interpolate amongst 
  * the 4 adjacent samples.
+ *
+ * \ingroup libcore
  */
 struct SHVector4D {
 public:

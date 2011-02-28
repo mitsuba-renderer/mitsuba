@@ -168,8 +168,8 @@ void X11Device::init(Device *other) {
 
 		/* Find the best matching screen resolution */
 		for (int i=0; i<modeCount; ++i) {
-			if (modes[i]->hdisplay == m_dimension.x &&
-				modes[i]->vdisplay == m_dimension.y)
+			if (modes[i]->hdisplay == m_size.x &&
+				modes[i]->vdisplay == m_size.y)
 				modeList.push_back(modes[i]);
 		}
 		/* Release the memory held by the resolution list */
@@ -201,7 +201,7 @@ void X11Device::init(Device *other) {
 
 		m_window = XCreateWindow(session->m_display, session->m_root,
 			0, 0, /* x,y position*/
-			m_dimension.x, m_dimension.y,
+			m_size.x, m_size.y,
 			0, m_visinfo->depth, /* border width, color depth */
 			InputOutput, m_visinfo->visual,
 			CWBackPixel | CWBorderPixel | CWColormap | 
@@ -221,14 +221,14 @@ void X11Device::init(Device *other) {
 	} else {
 		/* Center the window if needed */
 		if (m_center) {
-			m_position.x = (DisplayWidth(session->m_display, session->m_screen) - m_dimension.x) / 2;
-			m_position.y = (DisplayHeight(session->m_display, session->m_screen) - m_dimension.y) / 2;
+			m_position.x = (DisplayWidth(session->m_display, session->m_screen) - m_size.x) / 2;
+			m_position.y = (DisplayHeight(session->m_display, session->m_screen) - m_size.y) / 2;
 		}
 
 		/* Create the X window */
 		unsigned long mask = CWBackPixel | CWBorderPixel | CWColormap;
 		m_window = XCreateWindow(session->m_display, session->m_root,
-				m_position.x, m_position.y, m_dimension.x, m_dimension.y, 0, m_visinfo->depth,
+				m_position.x, m_position.y, m_size.x, m_size.y, 0, m_visinfo->depth,
 				InputOutput, m_visinfo->visual, mask, &x11attr);
 
 		if (!m_window)
@@ -236,8 +236,8 @@ void X11Device::init(Device *other) {
 
 		/* Make the window non-resizable */
 		XSizeHints *hints = XAllocSizeHints();
-		hints->min_width = hints->max_width = hints->width = m_dimension.x;
-		hints->min_height = hints->max_height = hints->height = m_dimension.y;
+		hints->min_width = hints->max_width = hints->width = m_size.x;
+		hints->min_height = hints->max_height = hints->height = m_size.y;
 		hints->x = m_position.x; hints->y = m_position.y;
 		hints->flags = PMaxSize | PMinSize | USSize | USPosition;
 		XSetNormalHints(session->m_display, m_window, hints);
@@ -426,10 +426,10 @@ void X11Device::processEvent(const XEvent &event) {
 		translateMouse(event, deviceEvent);
 		deviceEvent.setMouseButton(m_buttonState);
 		if (m_grab)
-			warpMouse(Point2i(getDimension().x / 2, getDimension().y/2));
+			warpMouse(Point2i(getSize().x / 2, getSize().y/2));
 		int xpos = deviceEvent.getMousePosition().x;
 		int ypos = deviceEvent.getMousePosition().y;
-		if (xpos > m_dimension.x || xpos < 0 || ypos > m_dimension.y || ypos < 0)
+		if (xpos > m_size.x || xpos < 0 || ypos > m_size.y || ypos < 0)
 			return;
 		}
 		break;

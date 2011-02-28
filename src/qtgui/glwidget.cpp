@@ -1054,5 +1054,5 @@ void GLWidget::onUpdateView() {
 
 void GLWidget::resizeGL(int width, int height) {
 	glViewport(0, 0, (GLint) width, (GLint) height);
-	m_device->setDimension(Vector2i(width, height));
+	m_device->setSize(Vector2i(width, height));
 }

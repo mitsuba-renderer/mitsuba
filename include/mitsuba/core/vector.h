@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \headerfile mitsuba/core/vector.h mitsuba/mitsuba.h
  * \brief Parameterizable two-dimensional vector data structure
+ * \ingroup libcore
  */
 template <typename T> struct TVector2 {
 	typedef T          value_type;
@@ -217,6 +218,7 @@ template <> inline TVector2<int> &TVector2<int>::operator/=(int s) {
 /**
  * \headerfile mitsuba/core/vector.h mitsuba/mitsuba.h
  * \brief Parameterizable three-dimensional vector data structure
+ * \ingroup libcore
  */
 template <typename T> struct TVector3 {
 	typedef T          value_type;
@@ -421,6 +423,7 @@ template <> inline TVector3<int> &TVector3<int>::operator/=(int s) {
 /**
  * \headerfile mitsuba/core/vector.h mitsuba/mitsuba.h
  * \brief Parameterizable four-dimensional vector data structure
+ * \ingroup libcore
  */
 template <typename T> struct TVector4 {
 	typedef T          value_type;

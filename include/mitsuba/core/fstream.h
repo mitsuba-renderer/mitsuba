@@ -31,6 +31,8 @@ MTS_NAMESPACE_BEGIN
  *
  * This class uses POSIX streams on Linux and OSX and the native
  * WIN32 API when used on Windows.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE FileStream : public Stream {
 public:

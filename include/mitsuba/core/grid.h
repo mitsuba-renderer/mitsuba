@@ -25,6 +25,8 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Uniform 3D grid for storing and manipulating arbitrary quantities
+ *
+ * \ingroup libcore
  */
 template <typename ValueType> class Grid {
 public:

@@ -25,6 +25,8 @@ MTS_NAMESPACE_BEGIN
 
 /** \brief This class defines an abstract destination
  * for logging-relevant information
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Appender : public Object {
 public:
@@ -48,8 +50,10 @@ protected:
 	virtual ~Appender() { }
 };
 
-/** \brief Appender implementation, which writes to an
- * arbitrary C++ stream
+/** \brief %Appender implementation, which writes to an
+ * arbitrary C++ output stream
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE StreamAppender : public Appender {
 public:
@@ -84,8 +88,10 @@ private:
 	bool m_lastMessageWasProgress;
 };
 
-/** \brief Appender implementation, which writes to an
- * unbuffered file descriptor.
+/** \brief %Appender implementation, which writes directly 
+ * to an UNIX-style unbuffered file descriptor.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE UnbufferedAppender : public Appender {
 public:

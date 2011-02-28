@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Encapsulates a 4x4 linear transformation and its inverse
+ * \ingroup libcore
  */
 struct MTS_EXPORT_CORE Transform {
 public:

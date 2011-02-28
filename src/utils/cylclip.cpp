@@ -219,8 +219,9 @@ public:
 		}
 	}
 
-	void init() {
+	bool init(int argc, char **argv) {
 		m_renderer->setPointSize(4.0f);
+		return true;
 	}
 
 	void draw() {

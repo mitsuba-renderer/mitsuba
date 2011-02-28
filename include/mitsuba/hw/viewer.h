@@ -36,9 +36,13 @@ public:
 	/// Construct a new viewer
 	Viewer();
 
-	/// \brief Program entry point
+	/**
+	 * \brief Program entry point
+	 *
+	 * The viewer is initialized by this method -- to add custom
+	 * initialization code, please override \ref init
+	 */
 	int run(int argc, char **argv);
-
 protected:
 	/// Draw a heads-up display
 	void drawHUD(const std::string &text);
@@ -46,8 +50,17 @@ protected:
 	/// To be overwritten by the subclass: main drawing routine
 	virtual void draw() = 0;
 
-	/// To be overwritten (optionally): perform any necessary initializations
-	virtual void init();
+	/**
+	 * \brief To be overwritten (optionally): perform any necessary 
+	 * initializations
+	 *
+	 * The default implementation does nothing and returns \c true.
+	 *
+	 * \param argc Number of command line arguments
+	 * \param argv List of command line argument strings
+	 * \return \c true upon success. Otherwise, the viewer will quit.
+	 */
+	virtual bool init(int argc, char **argv);
 
 	/// To be overwritten (optionally): perform any necessary cleanups
 	virtual void shutdown();

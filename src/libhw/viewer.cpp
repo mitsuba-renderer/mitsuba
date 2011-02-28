@@ -24,7 +24,7 @@ Viewer::Viewer() {
 	m_session = Session::create();
 	m_device = Device::create(m_session);
 	m_renderer = Renderer::create(m_session);
-	m_device->setDimension(Vector2i(768, 576));
+	m_device->setSize(Vector2i(768, 576));
 }
 
 int Viewer::run(int argc, char **argv) {
@@ -37,14 +37,15 @@ int Viewer::run(int argc, char **argv) {
 	m_font->init(m_renderer);
 	m_quit = false;
 
-	init();
-	while (!m_quit) {
-		m_session->processEvents();
-		m_renderer->clear();
-		draw();
-		m_device->flip();
+	if (init(argc, argv)) {
+		while (!m_quit) {
+			m_session->processEvents();
+			m_renderer->clear();
+			draw();
+			m_device->flip();
+		}
+		shutdown();
 	}
-	shutdown();
 
 	m_font->cleanup();
 	m_renderer->shutdown();
@@ -58,7 +59,10 @@ void Viewer::drawHUD(const std::string &text) {
 	m_renderer->drawText(Point2i(10, 10), m_font, text.c_str());
 }
 
-void Viewer::init() { }
+bool Viewer::init(int argc, char **argv) {
+	return true;
+}
+
 void Viewer::shutdown() { }
 void Viewer::keyPressed(const DeviceEvent &event) { }
 void Viewer::keyReleased(const DeviceEvent &event) { }

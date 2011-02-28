@@ -27,13 +27,21 @@
 
 MTS_NAMESPACE_BEGIN
 
+/*! \addtogroup libcore */
+/*! @{ */
+
 /// Write a Log message to the console (to be used within subclasses of <tt>Object</tt>)
 #define Log(level, fmt, ...) Thread::getThread()->getLogger()->log(level, m_theClass, \
 	__FILE__, __LINE__, fmt, ## __VA_ARGS__)
 
-/// Write a Log message to the console (static version - to be used where Log() is not applicable)
+/**
+ * \brief Write a Log message to the console (static version - to be used
+ * outside of classes that derive from Object)
+ */
 #define SLog(level, fmt, ...) Thread::getThread()->getLogger()->log(level, NULL, \
 	__FILE__, __LINE__, fmt, ## __VA_ARGS__)
+
+/*! @} */
 
 #ifdef MTS_NDEBUG
 #define Assert(cond) ((void) 0)
@@ -42,30 +50,35 @@ MTS_NAMESPACE_BEGIN
 #define SAssertEx(cond, explanation) ((void) 0)
 #else
 
-/* Assertion */
+/* Assertions */
+/*! \addtogroup libcore */
+/*! @{ */
+
 #define Assert(cond) do { \
 		if (!(cond)) Log(EError, "Assertion \"%s\" failed in %s:%i", \
 		#cond, __FILE__, __LINE__); \
 	} while (0)
 
-/* Static assertion (see SLog) */
+/// ``Static'' assertion (to be used outside of classes that derive from Object) 
 #define SAssert(cond) do { \
 		if (!(cond)) SLog(EError, "Assertion \"%s\" failed in %s:%i", \
 		#cond, __FILE__, __LINE__); \
 	} while (0)
 
-/* Assertion with a customizable error explanation */
+/// Assertion with a customizable error explanation
 #define AssertEx(cond, explanation) do { \
 		if (!(cond)) Log(EError, "Assertion \"%s\" failed in %s:%i (" explanation ")", \
 		#cond, __FILE__, __LINE__); \
 	} while (0)
 
-/* Static assertion with a customizable error explanation (see SLog) */
+/// Static assertion with a customizable error explanation (see \ref SLog)
 #define SAssertEx(cond, explanation) do { \
 		if (!(cond)) SLog(EError, "Assertion \"%s\" failed in %s:%i (" explanation ")", \
 		#cond, __FILE__, __LINE__); \
 	} while (0)
 #endif
+
+/*! @} */
 
 /** 
  * \headerfile mitsuba/core/logger.h mitsuba/mitsuba.h
@@ -75,6 +88,8 @@ MTS_NAMESPACE_BEGIN
  * a Formatter to convert it into a human-readable form.
  * Following that, it sends this information to every 
  * registered Appender.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Logger : public Object {
 public:

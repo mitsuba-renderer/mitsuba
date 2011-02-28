@@ -66,7 +66,7 @@ LONG WINAPI WGLDevice::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			device->initPixelFormat(hWnd);
 			break;
 		case WM_SIZE: 
-			device->m_dimension = Vector2i(LOWORD(lParam), HIWORD(lParam));
+			device->m_size = Vector2i(LOWORD(lParam), HIWORD(lParam));
 			break;
 		case WM_PAINT:
 			BeginPaint(hWnd, &ps);
@@ -280,7 +280,7 @@ void WGLDevice::init(Device *other) {
 			m_fullscreen ? WS_POPUP : (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX),
 			CW_USEDEFAULT,
 			CW_USEDEFAULT,
-			getDimension().x, getDimension().y,
+			getSize().x, getSize().y,
 			NULL, NULL,
 			session->m_hinstance,
 			NULL);
@@ -299,8 +299,8 @@ void WGLDevice::init(Device *other) {
 		ZeroMemory(&dm, sizeof(dm));
 		dm.dmSize = sizeof(dm);
 		dm.dmBitsPerPel = GetDeviceCaps(m_hdc, BITSPIXEL);
-		dm.dmPelsWidth = m_dimension.x;
-		dm.dmPelsHeight = m_dimension.y;
+		dm.dmPelsWidth = m_size.x;
+		dm.dmPelsHeight = m_size.y;
 
 		dm.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL;
 		if (!ChangeDisplaySettings(&dm, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL)
@@ -308,11 +308,11 @@ void WGLDevice::init(Device *other) {
 	}
 
 	if (m_fullscreen || m_center) {
-		m_position.x = (GetSystemMetrics(SM_CXSCREEN) - m_dimension.x) / 2;
-		m_position.y = (GetSystemMetrics(SM_CYSCREEN) - m_dimension.y) / 2;
+		m_position.x = (GetSystemMetrics(SM_CXSCREEN) - m_size.x) / 2;
+		m_position.y = (GetSystemMetrics(SM_CYSCREEN) - m_size.y) / 2;
 	}
 
-	SetWindowPos(m_hwnd, HWND_TOP, m_position.x, m_position.y, m_dimension.x, m_dimension.y, SWP_NOCOPYBITS);
+	SetWindowPos(m_hwnd, HWND_TOP, m_position.x, m_position.y, m_size.x, m_size.y, SWP_NOCOPYBITS);
 	UpdateWindow(m_hwnd);
 
 	m_mouse = Point2i(-1, -1);
@@ -434,8 +434,8 @@ bool WGLDevice::translateMouse(UINT uMsg, WPARAM wParam, DeviceEvent &event) {
 			event.setType(EMouseMotionEvent);
 			event.setMouseButton(ENoButton);
 			if (m_grab)
-				warpMouse(Point2i(getDimension().x / 2, 
-					getDimension().y/2));
+				warpMouse(Point2i(getSize().x / 2, 
+					getSize().y/2));
 			break;
 		case WM_LBUTTONDOWN:
 			event.setType(EMouseButtonDownEvent);

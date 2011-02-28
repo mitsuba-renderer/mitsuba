@@ -44,6 +44,7 @@ MTS_NAMESPACE_BEGIN
  * Based on "Wavelets for computer graphics: A primer, part 1" by
  * Eric J. Stollnitz, Tony D. DeRose, and David H. Salesin
  * (IEEE Computer Graphics and Applications, May 1995)
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Wavelet2D : public Object {
 public:
@@ -195,6 +196,7 @@ protected:
 
 /**
  * \brief Sparse 2D wavelet representation using the Haar basis
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE SparseWavelet2D : public SerializableObject {
 public:
@@ -333,6 +335,7 @@ protected:
 /**
  * \brief Sparse 3D wavelet representation using the Haar basis and an 
  * octree structure
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE SparseWaveletOctree : public Object {
 public:

@@ -29,6 +29,8 @@ MTS_NAMESPACE_BEGIN
  * the implementation switches to HDR and the EXR file format.
  *
  * This class can efficiently handle 1-bit masks
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Bitmap : public Object {
 public:

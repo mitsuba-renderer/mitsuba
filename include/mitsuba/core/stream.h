@@ -35,6 +35,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \sa FileStream, MemoryStream, SocketStream, 
  *     ConsoleStream, SSHStream, ZStream
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Stream : public Object {
 public:
@@ -327,8 +328,6 @@ template <typename T> inline void Stream::readArray(T *array, size_t count) {
 template <typename T> inline void Stream::writeArray(const T *array, size_t count) {
 	Log(EError, "Stream::writeArray<T>: not implemented!");
 }
-
-
 
 /// \cond
 template <> inline float Stream::readElement() { return readSingle(); }

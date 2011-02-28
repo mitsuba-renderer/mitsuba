@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Basic cross-platform abstraction for memory mapped files
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE MemoryMappedFile : public Object {
 public:

@@ -38,6 +38,8 @@ class StreamBackend;
 /**
  * \brief Acquires work from the scheduler and forwards
  * it to a processing node reachable through a \ref Stream.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE RemoteWorker : public Worker {
 	friend class RemoteWorkerReader;
@@ -116,6 +118,8 @@ private:
 /**
  * \brief Parallel process facade used to insert work units from a
  * remote scheduler into the local one.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE RemoteProcess : public ParallelProcess {
 public:
@@ -185,6 +189,8 @@ private:
  *
  * Attaches to the end of a stream, accepts work units and forwards 
  * them to the local scheduler. Can be used to create network processing nodes.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE StreamBackend : public Thread {
 	friend class RemoteProcess;

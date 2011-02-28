@@ -112,7 +112,7 @@ public:
 		m_accumBuffer->setMipMapped(false);
 
 		m_session->init();
-		m_device->setDimension(film->getSize());
+		m_device->setSize(film->getSize());
 		m_device->init();
 		m_device->setVisible(false);
 		m_renderer->init(m_device);

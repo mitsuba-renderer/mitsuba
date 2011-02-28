@@ -187,7 +187,7 @@ using namespace mitsuba;
 				NSPoint location = [((NSWindow *) m_device->getWindow()) mouseLocationOutsideOfEventStream];
 				if (deviceEvent.getType() == Device::ENoEvent)
 					deviceEvent.setType(Device::EMouseButtonDownEvent);
-				deviceEvent.setMousePosition(Point2i((int) location.x, m_device->getDimension().y - (int) location.y));
+				deviceEvent.setMousePosition(Point2i((int) location.x, m_device->getSize().y - (int) location.y));
 				deviceEvent.setMouseRelative(Vector2i(0, 0));
 				uint buttonNumber = [event buttonNumber];
 				uint buttonMask = 0;
@@ -213,7 +213,7 @@ using namespace mitsuba;
 					deviceEvent.setMouseButton(Device::EWheelUpButton);
 				else
 					deviceEvent.setMouseButton(Device::EWheelDownButton);
-				deviceEvent.setMousePosition(Point2i((int) location.x, m_device->getDimension().y - (int) location.y));
+				deviceEvent.setMousePosition(Point2i((int) location.x, m_device->getSize().y - (int) location.y));
 				deviceEvent.setMouseRelative(Vector2i(0, 0));
 				deviceEvent.setType(Device::EMouseButtonDownEvent);
 				m_device->pushEvent(deviceEvent);
@@ -231,7 +231,7 @@ using namespace mitsuba;
 					return;
 				}
 				NSPoint location = [((NSWindow *) m_device->getWindow()) mouseLocationOutsideOfEventStream];
-				Point2i absolute((int) location.x, m_device->getDimension().y - (int) location.y);
+				Point2i absolute((int) location.x, m_device->getSize().y - (int) location.y);
 
 				bool cursorInWindow = m_device->isMouseInWindow();
 				if (m_buttonMask == 0)
@@ -262,8 +262,8 @@ using namespace mitsuba;
 				if (cursorInWindow) 
 					m_mouseInWindow = true;
 
-				if (absolute.x > m_device->getDimension().x || absolute.x < 0 
-					|| absolute.y > m_device->getDimension().y || absolute.y< 0)
+				if (absolute.x > m_device->getSize().x || absolute.x < 0 
+					|| absolute.y > m_device->getSize().y || absolute.y< 0)
 					return;
 			}
 			break;
@@ -401,7 +401,7 @@ void NSGLDevice::init(Device *other) {
 	Log(EDebug, "Initializing NSGL device");
 
 	NSRect contentRect = NSMakeRect(m_position.x, m_position.y,
-		m_dimension.x, m_dimension.y);
+		m_size.x, m_size.y);
 
 	/* Protect the event queue */
 	m_mutex = new Mutex();
@@ -535,7 +535,7 @@ void NSGLDevice::setGrab(bool grab) {
 	Assert(m_initialized);
 
 	if (grab) {
-		warpMouse(Point2i(getDimension().x / 2, getDimension().y/2));
+		warpMouse(Point2i(getSize().x / 2, getSize().y/2));
 		CGAssociateMouseAndMouseCursorPosition(false);
 	} else {
 		CGAssociateMouseAndMouseCursorPosition(true);

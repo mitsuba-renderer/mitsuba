@@ -75,6 +75,7 @@
    Any feedback is very welcome.
    http://www.math.hiroshima-u.ac.jp/~m-mat/MT/emt.html
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove spaces)
+ * \ingroup libcore
 */
 
 /* Period parameters */  

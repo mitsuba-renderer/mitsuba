@@ -32,6 +32,7 @@ MTS_NAMESPACE_BEGIN
  * limited type introspection and lifetime management.
  *
  * \sa ref, Class
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE Object {
 public:

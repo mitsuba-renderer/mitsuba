@@ -29,9 +29,11 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Portable Stream implementation, which encapsulates a socket 
+/** \brief Portable %Stream implementation, which encapsulates a socket 
  * for IPv4/IPv6 network communications. Set to use network byte order
  * by default.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE SocketStream : public Stream {
 public:

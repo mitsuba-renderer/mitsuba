@@ -33,6 +33,7 @@ MTS_NAMESPACE_BEGIN
  * out of scope, the associated object will be deallocated.
  * 
  * \author Wenzel Jakob
+ * \ingroup libcore
  */
 template <typename T> class ref {
 public:

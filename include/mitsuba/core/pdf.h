@@ -26,6 +26,8 @@ MTS_NAMESPACE_BEGIN
  * 
  * This class can be used to transform uniformly distributed samples
  * so that they match the stored distribution.
+ * 
+ * \ingroup libcore
  */
 struct DiscretePDF {
 public:

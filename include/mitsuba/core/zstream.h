@@ -26,6 +26,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Transparent compression/decompression stream based on ZLIB.
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE ZStream : public Stream {
 public:
