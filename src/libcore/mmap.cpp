@@ -8,7 +8,7 @@
 MTS_NAMESPACE_BEGIN
 
 MemoryMappedFile::MemoryMappedFile(const fs::path &filename) : m_filename(filename) {
-	m_size = fs::file_size(filename);
+	m_size = (size_t) fs::file_size(filename);
 	Log(EInfo, "Mapping \"%s\" into memory (%s)..", 
 			filename.filename().c_str(), memString(m_size).c_str());
 #if defined(__LINUX__) || defined(__OSX__)
