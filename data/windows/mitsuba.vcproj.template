@@ -27,9 +27,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="scons --cfg=config/config-msvc2008-win32-debug.py"
-				ReBuildCommandLine="scons --cfg=config/config-msvc2008-win32-debug.py -c &amp;&amp; scons --cfg=config/config-msvc2008-win32-debug.py"
-				CleanCommandLine="scons --cfg=config/config-msvc2008-win32-debug.py -c"
+				BuildCommandLine="scons --parallelize --cfg=config/config-msvc2008-win32-debug.py"
+				ReBuildCommandLine="scons --parallelize --cfg=config/config-msvc2008-win32-debug.py -c &amp;&amp; scons --parallelize --cfg=config/config-msvc2008-win32-debug.py"
+				CleanCommandLine="scons --parallelize --cfg=config/config-msvc2008-win32-debug.py -c"
 				Output="dist\mtsgui.exe"
 				PreprocessorDefinitions="WIN32;_DEBUG;"
 				IncludeSearchPath=""
@@ -47,9 +47,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="scons --cfg=config/config-msvc2008-win32.py"
-				ReBuildCommandLine="scons --cfg=config/config-msvc2008-win32.py -c &amp;&amp; scons --cfg=config/config-msvc2008-win32.py"
-				CleanCommandLine="scons --cfg=config/config-msvc2008-win32.py -c"
+				BuildCommandLine="scons --parallelize --cfg=config/config-msvc2008-win32.py"
+				ReBuildCommandLine="scons --parallelize --cfg=config/config-msvc2008-win32.py -c &amp;&amp; scons --parallelize --cfg=config/config-msvc2008-win32.py"
+				CleanCommandLine="scons --parallelize --cfg=config/config-msvc2008-win32.py -c"
 				Output="dist\mtsgui.exe"
 				PreprocessorDefinitions="WIN32;NDEBUG;"
 				IncludeSearchPath=""
@@ -67,9 +67,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="scons --cfg=config/config-msvc2008-win64-debug.py"
-				ReBuildCommandLine="scons --cfg=config/config-msvc2008-win64-debug.py -c &amp;&amp; scons --cfg=config/config-msvc2008-win64-debug.py"
-				CleanCommandLine="scons --cfg=config/config-msvc2008-win64-debug.py -c"
+				BuildCommandLine="scons --parallelize --cfg=config/config-msvc2008-win64-debug.py"
+				ReBuildCommandLine="scons --parallelize --cfg=config/config-msvc2008-win64-debug.py -c &amp;&amp; scons --parallelize --cfg=config/config-msvc2008-win64-debug.py"
+				CleanCommandLine="scons --parallelize --cfg=config/config-msvc2008-win64-debug.py -c"
 				Output="dist\mtsgui.exe"
 				PreprocessorDefinitions="WIN32;_DEBUG;"
 				IncludeSearchPath=""
@@ -87,9 +87,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="scons --cfg=config/config-msvc2008-win64.py"
-				ReBuildCommandLine="scons --cfg=config/config-msvc2008-win64.py -c &amp;&amp; scons --cfg=config/config-msvc2008-win64.py"
-				CleanCommandLine="scons --cfg=config/config-msvc2008-win64.py -c"
+				BuildCommandLine="scons --parallelize --cfg=config/config-msvc2008-win64.py"
+				ReBuildCommandLine="scons --parallelize --cfg=config/config-msvc2008-win64.py -c &amp;&amp; scons --parallelize --cfg=config/config-msvc2008-win64.py"
+				CleanCommandLine="scons --parallelize --cfg=config/config-msvc2008-win64.py -c"
 				Output="dist\mtsgui.exe"
 				PreprocessorDefinitions="WIN32;NDEBUG;"
 				IncludeSearchPath=""
