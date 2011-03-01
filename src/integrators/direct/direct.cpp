@@ -166,7 +166,7 @@ public:
 			Float bsdfPdf;
 			Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, sampleArray[i]);
 			if (bsdfVal.isZero())
-				break;
+				continue;
 			bsdfVal /= bsdfPdf;
 
 			/* Trace a ray in this direction */
