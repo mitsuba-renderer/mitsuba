@@ -27,8 +27,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-extern GLEWContext *glewGetContext();
-
 GLProgram::GLProgram(const std::string &name) 
  : GPUProgram(name) {
 	m_id[0] = m_id[1] = m_program = 0;

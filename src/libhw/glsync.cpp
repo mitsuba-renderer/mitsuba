@@ -28,8 +28,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-extern GLEWContext *glewGetContext();
-
 GLSync::GLSync() : GPUSync(), m_sync(0) {
 }
 

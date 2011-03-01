@@ -30,10 +30,23 @@
 #include <GL/glext.h>
 #endif
 
+struct GLEWContextStruct;
+
+/// Get the per-thread context for GLEW-MX
+extern GLEWContextStruct *glewGetContext();
+
 MTS_NAMESPACE_BEGIN
 
+/**
+ * \brief Specifies the maximum number of triangles that can
+ * be sent to the GPU in one batch. This is useful to
+ * avoid freezing the OS when dealing with huge inputs.
+ */
 #define MTS_GL_MAX_QUEUED_TRIS 500000
 
+/**
+ * \brief OpenGL implementation of the \ref Renderer interface
+ */
 class MTS_EXPORT_HW GLRenderer : public Renderer {
 public:
 	/// Construct a new OpenGL rendering interface

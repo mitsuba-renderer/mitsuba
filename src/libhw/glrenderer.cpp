@@ -30,13 +30,13 @@
 #include <mitsuba/hw/glsync.h>
 #include <mitsuba/hw/font.h>
 
-MTS_NAMESPACE_BEGIN
+static mitsuba::PrimitiveThreadLocal<GLEWContextStruct> glewContext;
 
-PrimitiveThreadLocal<GLEWContext> glewContext;
-
-GLEWContext *glewGetContext() {
+GLEWContextStruct *glewGetContext() {
 	return &glewContext.get();
 }
+
+MTS_NAMESPACE_BEGIN
 
 GLRenderer::GLRenderer(Session *session)
  : Renderer(session) {

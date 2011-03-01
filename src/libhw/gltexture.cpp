@@ -30,8 +30,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-extern GLEWContext *glewGetContext();
-
 GLTexture::GLTexture(const std::string &name, Bitmap *bitmap)
  : GPUTexture(name, bitmap), m_id(0), m_extraId(0), m_needsUpdate(true) {
 }

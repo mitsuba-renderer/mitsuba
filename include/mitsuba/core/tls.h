@@ -21,6 +21,8 @@
 
 #include <mitsuba/mitsuba.h>
 
+MTS_NAMESPACE_BEGIN
+
 /**
  * \headerfile mitsuba/core/tls.h mitsuba/mitsuba.h
  * \brief Thin wrapper around posix thread local storage. 
@@ -158,5 +160,7 @@ private:
 
 	pthread_key_t m_key;
 };
+
+MTS_NAMESPACE_END
 
 #endif /* __TLS_H */

@@ -26,8 +26,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-extern GLEWContext *glewGetContext();
-
 GLGeometry::GLGeometry(const TriMesh *mesh) 
  : GPUGeometry(mesh), m_vertexID(0), m_indexID(0) {
 }
