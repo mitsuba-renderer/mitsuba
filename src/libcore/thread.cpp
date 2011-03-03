@@ -39,6 +39,21 @@ protected:
 	virtual ~MainThread() { }
 };
 
+class OpenMPThread : public Thread {
+public:
+	OpenMPThread() : Thread("main") {
+	}
+
+	virtual void run() {
+		Log(EError, "The OpenMP thread is already running!");
+	}
+
+	MTS_DECLARE_CLASS()
+protected:
+	virtual ~OpenMPThread() { }
+};
+
+
 ThreadLocal<Thread> *Thread::m_self = NULL;
 
 #if defined(__LINUX__) || defined(__OSX__)
@@ -278,6 +293,26 @@ void Thread::staticShutdown() {
 #endif
 }
 
+void Thread::initializeOpenMP() {
+	ref<Logger> logger = Thread::getThread()->getLogger();
+	ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
+
+	#pragma omp parallel
+	{
+		Thread *thread = Thread::getThread();
+		if (!thread) {
+			thread = new OpenMPThread();
+			thread->m_running = true;
+			thread->m_thread = pthread_self();
+			thread->m_joinMutex = new Mutex();
+			thread->m_joined = false;
+			thread->m_fresolver = fResolver;
+			thread->m_logger = logger;
+			m_self->set(thread);
+		}
+	}
+}
+
 Thread::~Thread() {
 	if (m_running)
 		Log(EWarn, "Destructor called while Thread '%s' is still running", m_name.c_str());
@@ -285,4 +320,5 @@ Thread::~Thread() {
 
 MTS_IMPLEMENT_CLASS(Thread, true, Object)
 MTS_IMPLEMENT_CLASS(MainThread, false, Thread)
+MTS_IMPLEMENT_CLASS(OpenMPThread, false, Thread)
 MTS_NAMESPACE_END

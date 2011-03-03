@@ -147,6 +147,9 @@ public:
 	/// Shut down the threading system
 	static void staticShutdown();
 
+	/// Initialize Mitsuba's threading system for simultaneous use of OpenMP
+	static void initializeOpenMP();
+
 	MTS_DECLARE_CLASS()
 protected:
 	/// Virtual destructor
