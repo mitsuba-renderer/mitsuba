@@ -47,33 +47,20 @@ public:
 		return m_intensity * 4 * M_PI;
 	}
 
-	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
-		return Spectrum(0.0f);
-	}
-
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
+	Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 		/* PDF is a delta function - zero probability when a sample point was not
 		   generated using sample() */
 		return delta ? 1.0f : 0.0f;
 	}
 
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
-		return PointLuminaire::pdf(its.p, lRec, delta);
-	}
-
-	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
+	void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
 		Vector lumToP = p - m_position;
 		Float invDist = 1.0f / lumToP.length();
 		lRec.sRec.p = m_position;
 		lRec.d = lumToP * invDist;
 		lRec.pdf = 1.0f;
-		lRec.Le = m_intensity * (invDist*invDist);
-	}
-	
-	void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
-		const Point2 &sample) const {
-		PointLuminaire::sample(its.p, lRec, sample);
+		lRec.value = m_intensity * (invDist*invDist);
 	}
 	
 	void sampleEmission(EmissionRecord &eRec, 
@@ -82,13 +69,13 @@ public:
 		eRec.d = squareToSphere(sample2);
 		eRec.pdfDir = 1.0f / (4 * M_PI);
 		eRec.pdfArea = 1;
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 	}
 	
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		eRec.sRec.p = m_position;
 		eRec.pdfArea = 1;
-		eRec.P = m_intensity * (4*M_PI);
+		eRec.value = m_intensity * (4*M_PI);
 	}
 
 	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {
@@ -106,7 +93,7 @@ public:
 		return Spectrum(0.0f);
 	}
 
-	Spectrum f(const EmissionRecord &eRec) const {
+	Spectrum fDirection(const EmissionRecord &eRec) const {
 		return Spectrum(1/(4*M_PI));
 	}
 

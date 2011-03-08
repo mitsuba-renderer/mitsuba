@@ -102,33 +102,20 @@ public:
 		return result * ((m_cutoffAngle - std::acos(cosTheta)) * m_invTransitionWidth);
 	}
 
-	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
-		return Spectrum(0.0f);
-	}
-
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
+	Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 		/* PDF is a delta function - zero probability when a sample point was not
 		   generated using sample() */
 		return delta ? 1.0f : 0.0f;
 	}
 	
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
-		return SpotLuminaire::pdf(its.p, lRec, delta);
-	}
-
-	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
+	void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
 		Vector lumToP = p - m_position;
 		Float invDist = 1.0f / lumToP.length();
 		lRec.sRec.p = m_position;
 		lRec.d = lumToP * invDist;
 		lRec.pdf = 1.0f;
-		lRec.Le = falloffCurve(lRec.d) * (invDist*invDist);
-	}
-
-	void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
-		const Point2 &sample) const {
-		SpotLuminaire::sample(its.p, lRec, sample);
+		lRec.value = falloffCurve(lRec.d) * (invDist*invDist);
 	}
 
 	void sampleEmission(EmissionRecord &eRec, 
@@ -137,13 +124,13 @@ public:
 		m_luminaireToWorld(squareToCone(m_cosCutoffAngle, sample2), eRec.d);
 		eRec.pdfDir = squareToConePdf(m_cosCutoffAngle);
 		eRec.pdfArea = 1;
-		eRec.P = falloffCurve(eRec.d);
+		eRec.value = falloffCurve(eRec.d);
 	}
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		eRec.sRec.p = m_position;
 		eRec.pdfArea = 1;
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 	}
 
 	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {
@@ -160,7 +147,7 @@ public:
 		eRec.pdfArea = delta ? 1.0f : 0.0f;
 	}
 
-	Spectrum f(const EmissionRecord &eRec) const {
+	Spectrum fDirection(const EmissionRecord &eRec) const {
 		return falloffCurve(eRec.d, true);
 	}
 

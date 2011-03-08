@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/camera.h>
+#include <mitsuba/render/medium.h>
 #include <mitsuba/core/plugin.h>
 
 MTS_NAMESPACE_BEGIN
@@ -38,6 +39,7 @@ Camera::Camera(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
 	m_film = static_cast<Film *>(manager->getInstance(stream));
 	m_sampler = static_cast<Sampler *>(manager->getInstance(stream));
+	m_medium = static_cast<Medium *>(manager->getInstance(stream));
 	m_worldToCamera = Transform(stream);
 	m_cameraToWorld = Transform(stream);
 	m_shutterOpen = stream->readFloat();
@@ -67,6 +69,7 @@ void Camera::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 	manager->serialize(stream, m_film.get());
 	manager->serialize(stream, m_sampler.get());
+	manager->serialize(stream, m_medium.get());
 	m_worldToCamera.serialize(stream);
 	m_cameraToWorld.serialize(stream);
 	stream->writeFloat(m_shutterOpen);
@@ -91,6 +94,12 @@ void Camera::addChild(const std::string &name, ConfigurableObject *child) {
 	} else if (child->getClass()->derivesFrom(Film::m_theClass)) {
 		Assert(m_film == NULL);
 		m_film = static_cast<Film *>(child);
+	} else if (child->getClass()->derivesFrom(Medium::m_theClass)) {
+		Assert(m_medium == NULL);
+		m_medium = static_cast<Medium *>(child);
+	} else if (child->getClass()->derivesFrom(Medium::m_theClass)) {
+		Assert(m_medium == NULL);
+		m_medium = static_cast<Medium *>(child);
 	} else {
 		Log(EError, "Camera: Invalid child node!");
 	}
@@ -139,7 +148,7 @@ PinholeCamera::PinholeCamera(const Properties &props)
 	*/
 	m_mapSmallerSide = props.getBoolean("mapSmallerSide", true);
 }
-
+	
 PinholeCamera::PinholeCamera(Stream *stream, InstanceManager *manager)
  : ProjectiveCamera(stream, manager) {
 	m_fov = stream->readFloat();
@@ -167,6 +176,7 @@ void PinholeCamera::configure() {
 		m_xfov = m_fov;
 		m_yfov = radToDeg(2 * std::atan(std::tan(degToRad(m_fov)/2) / m_aspect));
 	}
+
 	m_imagePlaneSize.x = 2 * std::tan(degToRad(m_xfov)/2);
 	m_imagePlaneSize.y = 2 * std::tan(degToRad(m_yfov)/2);
 	m_imagePlanePixelSize.x = m_imagePlaneSize.x / getFilm()->getSize().x;
@@ -179,22 +189,6 @@ Float PinholeCamera::importance(const Point2 &p) const {
 	Float y = (p.y * m_imagePlanePixelSize.y) - .5f * m_imagePlaneSize.y;
 
 	return std::pow(1 + x*x+y*y, (Float) (3.0/2.0)) * m_imagePlaneInvArea;
-}
-
-Float PinholeCamera::solidAngle(Float xs, Float xe, Float ys, Float ye) const {
-	xs = (xs * m_imagePlanePixelSize.x) - .5f * m_imagePlaneSize.x;
-	ys = (ys * m_imagePlanePixelSize.y) - .5f * m_imagePlaneSize.y;
-	xe = (xe * m_imagePlanePixelSize.x) - .5f * m_imagePlaneSize.x;
-	ye = (ye * m_imagePlanePixelSize.y) - .5f * m_imagePlaneSize.y;
-
-	/* cos(theta) / d^2 with respect to the image plane integrated
-	   over the specified footprint */
-	Float xs2 = xs*xs, xe2 = xe*xe, ys2 = ys*ys, ye2 = ye*ye;
-	Float atan1 = std::atan((xe*ye)/std::sqrt(1 + xe2 + ye2));
-	Float atan2 = std::atan((xs*ye)/std::sqrt(1 + xs2 + ye2));
-	Float atan3 = std::atan((xe*ys)/std::sqrt(1 + xe2 + ys2));
-	Float atan4 = std::atan((xs*ys)/std::sqrt(1 + xs2 + ys2));
-	return atan1 - atan2 - atan3 + atan4;
 }
 
 Float PinholeCamera::importance(const Vector &v) const {

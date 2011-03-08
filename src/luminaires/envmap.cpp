@@ -166,13 +166,9 @@ public:
 		return Le(normalize(ray.d));
 	}
 
-	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
-		return Le(-lRec.d);
-	}
-
-	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
+	void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
-		Vector d = sampleDirection(sample, lRec.pdf, lRec.Le);
+		Vector d = sampleDirection(sample, lRec.pdf, lRec.value);
 
 		Float nearHit, farHit;
 		if (m_bsphere.contains(p) && m_bsphere.rayIntersect(Ray(p, -d, 0.0f), nearHit, farHit)) {
@@ -184,7 +180,7 @@ public:
 		}
 	}
 
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
+	Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 #if defined(SAMPLE_UNIFORMLY)
 		return 1.0f / (4*M_PI);
 #else
@@ -200,16 +196,6 @@ public:
 
 		return pdf / (m_pdfPixelSize.x * m_pdfPixelSize.y * sinTheta);
 #endif
-	}
-
-	/* Sampling routine for surfaces */
-	void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
-			const Point2 &sample) const {
-		EnvMapLuminaire::sample(its.p, lRec, sample);
-	}
-
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
-		return EnvMapLuminaire::pdf(its.p, lRec, delta);
 	}
 
 	/**
@@ -234,7 +220,7 @@ public:
 		Float length = eRec.d.length();
 
 		if (length == 0) {
-			eRec.P = Spectrum(0.0f);
+			eRec.value = Spectrum(0.0f);
 			eRec.pdfArea = eRec.pdfDir = 1.0f;
 			return;
 		}
@@ -242,7 +228,7 @@ public:
 		eRec.d /= length;
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
-		eRec.P = Le(-eRec.d);
+		eRec.value = Le(-eRec.d);
 	}
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
@@ -251,7 +237,7 @@ public:
 			eRec.sRec.p = m_bsphere.center + d * m_bsphere.radius;
 			eRec.sRec.n = Normal(-d);
 			eRec.pdfArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
-			eRec.P = Spectrum(M_PI);
+			eRec.value = Spectrum(M_PI);
 		} else {
 			/* Preview mode, which is more suitable for VPL-based rendering: approximate 
 			   the infinitely far-away source with set of diffuse point sources */
@@ -260,7 +246,7 @@ public:
 			eRec.sRec.p = m_bsphere.center + d * radius;
 			eRec.sRec.n = Normal(-d);
 			eRec.pdfArea = 1.0f / (4 * M_PI * radius * radius);
-			eRec.P = Le(d) * M_PI;
+			eRec.value = Le(d) * M_PI;
 		}
 	}
 
@@ -295,7 +281,7 @@ public:
 		eRec.pdfArea = delta ? 0.0f : m_invSurfaceArea;
 	}
 
-	Spectrum f(const EmissionRecord &eRec) const {
+	Spectrum fDirection(const EmissionRecord &eRec) const {
 		if (eRec.type == EmissionRecord::ENormal)
 			return Le(-eRec.d) * INV_PI;
 		else
@@ -321,7 +307,7 @@ public:
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
 		eRec.d = -ray.d;
-		eRec.P = Le(ray.d);
+		eRec.value = Le(ray.d);
 		eRec.luminaire = this;
 		return true;
 	}

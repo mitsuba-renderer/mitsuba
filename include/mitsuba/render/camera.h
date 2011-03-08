@@ -24,18 +24,31 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Abstract camera base class. A camera turns a sample on
- * the image plane into a 3D ray. For this, it requires two 
- * supporting objects: a <tt>Sampler</tt> and a <tt>Film</tt> instance.
+ * the image plane into a 3D ray. It uses two supporting child 
+ * objects: a \re Sampler and a \ref Film instance.
  */
 class MTS_EXPORT_RENDER Camera : public ConfigurableObject {
 public:
+	// =============================================================
+	//! @{ \name Ray generation
+	// =============================================================
+
 	/// Create a ray from the given sample
-	virtual void generateRay(const Point2 &sample, const Point2 &lensSample,
+	virtual void generateRay(const Point2 &sample, 
+		const Point2 &lensSample,
 		Float timeSample, Ray &ray) const = 0;
 
 	/// Create ray differentials from the given sample
 	void generateRayDifferential(const Point2 &sample, 
-		const Point2 &lensSample, Float timeSample, RayDifferential &ray) const;
+		const Point2 &lensSample, Float timeSample, 
+		RayDifferential &ray) const;
+	
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Other query functions
+	// =============================================================
 
 	/**
 	 * Turn a world-space position into fractional pixel coordinates.
@@ -50,40 +63,6 @@ public:
 	/// Does generateRay() expect a proper time sample?
 	inline bool needsTimeSample() const { return m_shutterOpenTime > 0; }
 
-	/// Return the camera position (approximate in the case of finite sensor area)
-	inline const Point &getPosition() const { return m_position; }
-
-	/// Return the camera position at the provided screen sample
-	virtual Point getPosition(const Point2 &sample) const;
-
-	/**
-	 * Calculate the pixel area density at a position on the image plane.
-	 * Returns zero for cameras with an infinitesimal sensor (e.g. pinhole cameras).
-	 */
-	virtual Float areaDensity(const Point2 &p) const = 0;
-
-	/**
-	 * \brief Return the camera's sampler.
-	 *
-	 * This is the 'root' sampler, which will later be cloned a 
-	 * number of times to provide each participating worker thread 
-	 * with its own instance (see \ref Scene::getSampler()). 
-	 * Therefore, this sampler should never be used for anything 
-	 * except creating clones.
-	 */
-	inline Sampler *getSampler() { return m_sampler; }
-
-	/**
-	 * \brief Return the camera's sampler.
-	 *
-	 * This is the 'root' sampler, which will later be cloned a 
-	 * number of times to provide each participating worker thread 
-	 * with its own instance (see \ref Scene::getSampler()). 
-	 * Therefore, this sampler should never be used for anything 
-	 * except creating clones.
-	 */
-	inline const Sampler *getSampler() const { return m_sampler.get(); }
-
 	/// Return the time value of the shutter opening event
 	inline Float getShutterOpen() const { return m_shutterOpen; }
 	
@@ -93,10 +72,18 @@ public:
 	/// Return the time value of the shutter closing event
 	inline Float getShutterClose() const { return m_shutterOpen; }
 
-	/// Return the image plane normal
-	inline Normal getImagePlaneNormal() const {
-		return Normal(normalize(m_cameraToWorld(Vector(0, 0, 1))));
-	}
+	//! @}
+	// =============================================================
+	
+	// =============================================================
+	//! @{ \name Other query functions
+	// =============================================================
+
+	/// Return the camera position (approximate in the case of finite sensor area)
+	inline const Point &getPosition() const { return m_position; }
+
+	/// Return the camera position at the provided screen sample
+	virtual Point getPosition(const Point2 &sample) const;
 
 	/// Return the view transformation
 	inline const Transform &getViewTransform() const { return m_worldToCamera; }
@@ -118,6 +105,46 @@ public:
 		m_position = m_cameraToWorld(Point(0,0,0));
 	}
 
+	/// Return the image plane normal
+	inline Normal getImagePlaneNormal() const {
+		return Normal(normalize(m_cameraToWorld(Vector(0, 0, 1))));
+	}
+
+	/**
+	 * Calculate the pixel area density at a position on the image plane.
+	 * Returns zero for cameras with an infinitesimal sensor (e.g. pinhole cameras).
+	 */
+	virtual Float areaDensity(const Point2 &p) const = 0;
+
+	//! @}
+	// =============================================================
+	
+	// =============================================================
+	//! @{ \name Miscellaneous
+	// =============================================================
+
+	/**
+	 * \brief Return the camera's sampler.
+	 *
+	 * This is the 'root' sampler, which will later be cloned a 
+	 * number of times to provide each participating worker thread 
+	 * with its own instance (see \ref Scene::getSampler()). 
+	 * Therefore, this sampler should never be used for anything 
+	 * except creating clones.
+	 */
+	inline Sampler *getSampler() { return m_sampler; }
+
+	/**
+	 * \brief Return the camera's sampler (const version).
+	 *
+	 * This is the 'root' sampler, which will later be cloned a 
+	 * number of times to provide each participating worker thread 
+	 * with its own instance (see \ref Scene::getSampler()). 
+	 * Therefore, this sampler should never be used for anything 
+	 * except creating clones.
+	 */
+	inline const Sampler *getSampler() const { return m_sampler.get(); }
+
 	/// Set the camera's film
 	void setFilm(Film *film);
 
@@ -126,6 +153,12 @@ public:
 
 	/// Return the camera's film
 	inline const Film *getFilm() const { return m_film.get(); }
+
+	/// Return a pointer to the medium that surrounds the camera
+	inline Medium *getMedium() { return m_medium.get(); }
+
+	/// Return a pointer to the medium that surrounds the camera (const version)
+	inline const Medium *getMedium() const { return m_medium.get(); }
 
 	/// Add a child ConfigurableObject
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
@@ -138,6 +171,9 @@ public:
 
 	/// Return the properties of this camera 
 	inline const Properties &getProperties() const { return m_properties; }
+
+	//! @}
+	// =============================================================
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -156,6 +192,7 @@ protected:
 	Point m_position;
 	Properties m_properties;
 	Float m_shutterOpen, m_shutterClose, m_shutterOpenTime;
+	ref<Medium> m_medium;
 };
 	
 class MTS_EXPORT_RENDER ProjectiveCamera : public Camera {
@@ -201,12 +238,6 @@ public:
 
 	/// Calculate the image plane size for a plane of the given distance
 	Vector2 getImagePlaneSize(Float dist) const;
-
-	/**
-	 * Calculate the solid angle subtended by the area [xs,xe]x[ys,ye] 
-	 * on the image plane (in pixel coordinates starting at 0). 
-	 */
-	Float solidAngle(Float xs, Float xe, Float ys, Float ye) const;
 
 	/**
 	 * Calculate the importance of the given image-plane point

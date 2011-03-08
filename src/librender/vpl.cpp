@@ -44,7 +44,7 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 
 		/* Sample an emitted particle */
 		scene->sampleEmissionArea(eRec, areaSample);
-		weight = eRec.P / eRec.pdfArea;
+		weight = eRec.value / eRec.pdfArea;
 		VPL lumVPL(ELuminaireVPL, weight);
 		lumVPL.its.p = eRec.sRec.p;
 		lumVPL.its.shFrame = (eRec.luminaire->getType() & Luminaire::EOnSurface)

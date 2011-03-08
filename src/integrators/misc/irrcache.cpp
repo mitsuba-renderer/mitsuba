@@ -223,14 +223,14 @@ public:
 
 	Spectrum Li(const RayDifferential &ray, RadianceQueryRecord &rRec) const {
 		Intersection &its = rRec.its;
-		if (!m_direct && (rRec.type & RadianceQueryRecord::EDirectRadiance))
-			rRec.type ^= RadianceQueryRecord::EDirectRadiance;
+		if (!m_direct && (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance))
+			rRec.type ^= RadianceQueryRecord::EDirectSurfaceRadiance;
 
 		if (rRec.rayIntersect(ray)) {
 			const BSDF *bsdf = its.getBSDF(ray);
 
 			if (bsdf->getType() == BSDF::EDiffuseReflection && 
-					(rRec.type & RadianceQueryRecord::EIndirectRadiance)) {
+					(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)) {
 				Spectrum E;
 				if (!m_irrCache->get(its, E)) {
 					handleMiss(ray, rRec, E);
@@ -239,7 +239,7 @@ public:
 						E.fromLinearRGB(1e3, 0, 0);
 				}
 
-				rRec.type ^= RadianceQueryRecord::EIndirectRadiance;
+				rRec.type ^= RadianceQueryRecord::EIndirectSurfaceRadiance;
 
 				return E * bsdf->getDiffuseReflectance(its) * INV_PI + 
 					m_subIntegrator->Li(ray, rRec);
@@ -298,10 +298,10 @@ public:
 		for (int i=0; i<irrSamples; i++) {
 			rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission);
 
-			if (scene->sampleLuminaireAttenuated(p, lRec, time, rRec.nextSample2D())) {
+			if (scene->sampleAttenuatedLuminaire(p, lRec, time, rRec.nextSample2D())) {
 				Float dp = dot(lRec.d, n);
 				if (dp < 0) 
-					EDir -= lRec.Le * dp;
+					EDir -= lRec.value * dp;
 			}
 		}
 

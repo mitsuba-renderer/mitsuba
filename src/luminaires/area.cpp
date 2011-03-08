@@ -59,36 +59,27 @@ public:
 		return m_intensity * m_shape->getSurfaceArea() * M_PI;
 	}
 
-	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
-		if (dot(lRec.d, lRec.sRec.n) <= 0)
+	Spectrum Le(const Intersection &its, const Vector &d) const {
+		if (dot(d, its.geoFrame.n) <= 0)
 			return Spectrum(0.0f);
 		return m_intensity;
 	}
 
-	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
+	void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
 		lRec.pdf = m_shape->sampleSolidAngle(lRec.sRec, p, sample);
 		lRec.d = p - lRec.sRec.p;
 
 		if (EXPECT_TAKEN(lRec.pdf > 0 && dot(lRec.d, lRec.sRec.n) > 0)) {
-			lRec.Le = m_intensity;
+			lRec.value = m_intensity;
 			lRec.d = normalize(lRec.d);
 		} else {
 			lRec.pdf = 0;
 		}
 	}
 
-	inline void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
-		const Point2 &sample) const {
-		AreaLuminaire::sample(its.p, lRec, sample);
-	}
-
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
+	Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 		return m_shape->pdfSolidAngle(lRec.sRec, p);
-	}
-
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
-		return AreaLuminaire::pdf(its.p, lRec, delta);
 	}
 
 	void sampleEmission(EmissionRecord &eRec,
@@ -97,12 +88,12 @@ public:
 		Vector wo = squareToHemispherePSA(sample2);
 		eRec.pdfDir = Frame::cosTheta(wo) * INV_PI;
 		eRec.d = Frame(eRec.sRec.n).toWorld(wo);
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 	}
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		eRec.pdfArea = m_shape->sampleArea(eRec.sRec, sample);
-		eRec.P = m_intensity * M_PI;
+		eRec.value = m_intensity * M_PI;
 	}
 
 	Spectrum fArea(const EmissionRecord &eRec) const {
@@ -116,7 +107,7 @@ public:
 		return Spectrum(INV_PI);
 	}
 
-	Spectrum f(const EmissionRecord &eRec) const {
+	Spectrum fDirection(const EmissionRecord &eRec) const {
 		Float dp = dot(eRec.sRec.n, eRec.d);
 		if (dp > 0)
 			return Spectrum(INV_PI);

@@ -83,7 +83,7 @@ public:
 			/* ==================================================================== */
 
 			/* Estimate the direct illumination if this is requested */
-			if (rRec.type & RadianceQueryRecord::EDirectRadiance && 
+			if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
 				scene->sampleLuminaire(its, lRec, rRec.nextSample2D())) {
 				/* Allocate a record for querying the BSDF */
 				const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
@@ -100,7 +100,7 @@ public:
 
 					/* Weight using the power heuristic */
 					const Float weight = miWeight(lRec.pdf, bsdfPdf);
-					Li += pathThroughput * lRec.Le * bsdfVal * weight;
+					Li += pathThroughput * lRec.value * bsdfVal * weight;
 				}
 			}
 
@@ -142,14 +142,14 @@ public:
 			/* If a luminaire was hit, estimate the local illumination and
 			   weight using the power heuristic */
 			if (hitLuminaire &&  
-				(rRec.type & RadianceQueryRecord::EDirectRadiance)) {
-				lRec.Le = lRec.luminaire->Le(lRec);
+				(rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance)) {
+				lRec.value = lRec.luminaire->Le(lRec);
 
 				/* Prob. of having generated this sample using luminaire sampling */
 				const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ? 
 					scene->pdfLuminaire(prevIts, lRec) : 0;
 				const Float weight = miWeight(bsdfPdf, lumPdf);
-				Li += pathThroughput * lRec.Le * bsdfVal * weight;
+				Li += pathThroughput * lRec.value * bsdfVal * weight;
 			}
 
 			/* ==================================================================== */
@@ -159,7 +159,7 @@ public:
 			/* Set the recursive query type */
 			/* Stop if no surface was hit by the BSDF sample or if indirect illumination
 			   was not requested */
-			if (!its.isValid() || !(rRec.type & RadianceQueryRecord::EIndirectRadiance)) 
+			if (!its.isValid() || !(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)) 
 				break;
 			rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 

@@ -191,17 +191,17 @@ Scene::Scene(Stream *stream, InstanceManager *manager)
 }
 
 Scene::~Scene() {
-	for (unsigned int i=0; i<m_shapes.size(); i++)
+	for (size_t i=0; i<m_shapes.size(); i++)
 		m_shapes[i]->decRef();
-	for (unsigned int i=0; i<m_meshes.size(); i++)
+	for (size_t i=0; i<m_meshes.size(); i++)
 		m_meshes[i]->decRef();
-	for (unsigned int i=0; i<m_media.size(); i++) 
+	for (size_t i=0; i<m_media.size(); i++) 
 		m_media[i]->decRef();
-	for (unsigned int i=0; i<m_objects.size(); i++)
+	for (size_t i=0; i<m_objects.size(); i++)
 		m_objects[i]->decRef();
-	for (unsigned int i=0; i<m_ssIntegrators.size(); i++)
+	for (size_t i=0; i<m_ssIntegrators.size(); i++)
 		m_ssIntegrators[i]->decRef();
-	for (unsigned int i=0; i<m_luminaires.size(); i++)
+	for (size_t i=0; i<m_luminaires.size(); i++)
 		m_luminaires[i]->decRef();
 }
 
@@ -230,8 +230,6 @@ void Scene::configure() {
 		AABB aabb;
 		for (size_t i=0; i<m_shapes.size(); ++i)
 			aabb.expandBy(m_shapes[i]->getAABB());
-		for (size_t i=0; i<m_media.size(); ++i)
-			aabb.expandBy(m_media[i]->getAABB());
 		if (!aabb.isValid())
 			Log(EError, "Unable to set up a default camera -- does the scene contain anything at all?");
 		Point center = aabb.getCenter();
@@ -246,9 +244,6 @@ void Scene::configure() {
 		m_camera->configure();
 		m_sampler = m_camera->getSampler();
 	}
-
-	if (m_media.size() > 1)
-		Log(EError, "Scenes are currently restricted to at most one participating medium.");
 
 	m_integrator->configureSampler(m_sampler);
 
@@ -275,12 +270,6 @@ void Scene::initialize() {
 
 		m_aabb = m_kdtree->getAABB();
 		m_bsphere = m_kdtree->getBSphere();
-
-		if (m_media.size() > 0) {
-			for (size_t i=0; i<m_media.size(); i++) 
-				m_aabb.expandBy(m_media[i]->getAABB());
-			m_bsphere = m_aabb.getBSphere();
-		}
 	}
 
 	if (!m_luminairePDF.isReady()) {
@@ -327,12 +316,6 @@ bool Scene::preprocess(RenderQueue *queue, const RenderJob *job,
 		if (!(*it)->preprocess(this, queue, job, 
 			sceneResID, cameraResID, samplerResID))
 			return false;
-
-	/* Pre-process step for all participating media */
-	for (std::vector<Medium *>::iterator it = m_media.begin();
-		it != m_media.end(); ++it) 
-		(*it)->preprocess(this, queue, job,
-			sceneResID, cameraResID, samplerResID);
 	return true;
 }
 
@@ -376,27 +359,12 @@ Float Scene::pdfLuminaire(const Point &p,
 	return luminaire->pdf(p, lRec, delta) * fraction;
 }
 
-Float Scene::pdfLuminaire(const Intersection &its,
-		const LuminaireSamplingRecord &lRec, bool delta) const {
-	const Luminaire *luminaire = lRec.luminaire;
-	Float luminance;
-
-	if (m_importanceSampleLuminaires)
-		luminance = luminaire->getSamplingWeight();
-	else 
-		luminance = 1.0f;
-
-	/* Calculate the probability of importance sampling this luminaire */
-	const Float fraction = luminance / m_luminairePDF.getOriginalSum();
-	return luminaire->pdf(its, lRec, delta) * fraction;
-}
-
-bool Scene::sampleLuminaire(const Point &p,
-		LuminaireSamplingRecord &lRec, Float time, const Point2 &s,
+bool Scene::sampleLuminaire(const Point &p, Float time,
+		LuminaireSamplingRecord &lRec, const Point2 &s,
 		bool testVisibility) const {
 	Point2 sample(s);
 	Float lumPdf;
-	unsigned int index = m_luminairePDF.sampleReuse(sample.x, lumPdf);
+	size_t index = m_luminairePDF.sampleReuse(sample.x, lumPdf);
 	const Luminaire *luminaire = m_luminaires[index];
 	luminaire->sample(p, lRec, sample);
 
@@ -404,7 +372,7 @@ bool Scene::sampleLuminaire(const Point &p,
 		if (testVisibility && isOccluded(p, lRec.sRec.p, time)) 
 			return false;
 		lRec.pdf *= lumPdf;
-		lRec.Le /= lRec.pdf;
+		lRec.value /= lRec.pdf;
 		lRec.luminaire = luminaire;
 		return true;
 	} else {
@@ -412,20 +380,30 @@ bool Scene::sampleLuminaire(const Point &p,
 	}
 }
 
-bool Scene::sampleLuminaire(const Intersection &its,
-		LuminaireSamplingRecord &lRec, const Point2 &s,
-		bool testVisibility) const {
+bool Scene::sampleAttenuatedLuminaire(const Point &p, Float time, 
+	const Medium *medium, LuminaireSamplingRecord &lRec, 
+	const Point2 &s) const {
 	Point2 sample(s);
 	Float lumPdf;
-	unsigned int index = m_luminairePDF.sampleReuse(sample.x, lumPdf);
-	const Luminaire *luminaire = m_luminaires[index];
-	luminaire->sample(its, lRec, sample);
+	const Luminaire *luminaire = m_luminaires[
+		m_luminairePDF.sampleReuse(sample.x, lumPdf)];
+	luminaire->sample(p, lRec, sample);
 
 	if (lRec.pdf != 0) {
-		if (testVisibility && isOccluded(its.p, lRec.sRec.p, its.time)) 
+		Vector d = normalize(lRec.sRec.p - p);
+		const Shape *shape;
+		Ray ray(p, d, time)
+		Float t;
+
+		while (scene->rayIntersect(ray, t, shape)) {
+
+		}
+
+		Spectrum attenuation = getAttenuation();
+		if (attenuation.isBlack())
 			return false;
 		lRec.pdf *= lumPdf;
-		lRec.Le /= lRec.pdf;
+		lRec.value /= lRec.pdf * attenuation;
 		lRec.luminaire = luminaire;
 		return true;
 	} else {
@@ -435,27 +413,23 @@ bool Scene::sampleLuminaire(const Intersection &its,
 
 void Scene::sampleEmission(EmissionRecord &eRec, Point2 &sample1, Point2 &sample2) const {
 	Float lumPdf;
-	unsigned int index = m_luminairePDF.sampleReuse(sample1.x, lumPdf);
+	size_t index = m_luminairePDF.sampleReuse(sample1.x, lumPdf);
 	const Luminaire *luminaire = m_luminaires[index];
 	luminaire->sampleEmission(eRec, sample1, sample2);
 	eRec.pdfArea *= lumPdf;
 	eRec.luminaire = luminaire;
 	Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface)
 		? absDot(eRec.sRec.n, eRec.d) : 1;
-	eRec.P *= cosTheta / (eRec.pdfArea * eRec.pdfDir);
+	eRec.value *= cosTheta / (eRec.pdfArea * eRec.pdfDir);
 }
 
 void Scene::sampleEmissionArea(EmissionRecord &eRec, Point2 &sample) const {
 	Float lumPdf;
-	unsigned int index = m_luminairePDF.sampleReuse(sample.x, lumPdf);
+	size_t index = m_luminairePDF.sampleReuse(sample.x, lumPdf);
 	const Luminaire *luminaire = m_luminaires[index];
 	luminaire->sampleEmissionArea(eRec, sample);
 	eRec.pdfArea *= lumPdf;
 	eRec.luminaire = luminaire;
-}
-
-Spectrum Scene::sampleEmissionDirection(EmissionRecord &eRec, Point2 &sample) const {
-	return eRec.luminaire->sampleEmissionDirection(eRec, sample);
 }
 
 void Scene::pdfEmission(EmissionRecord &eRec, bool delta) const {
@@ -478,41 +452,6 @@ Spectrum Scene::LeBackground(const Ray &ray) const {
 		it != m_luminaires.end(); ++it)
 		Le += (*it)->Le(ray);
 	return Le;
-}
-
-Spectrum Scene::getAttenuation(const Ray &_ray) const {
-	Spectrum attenuation(1.0f);
-	if (m_media.size() > 0) {
-		Float dLength = _ray.d.length();
-		Ray ray(_ray.o, _ray.d/dLength, 
-				_ray.mint*dLength, _ray.maxt*dLength, _ray.time);
-		for (std::vector<Medium *>::const_iterator it = 
-				m_media.begin(); it != m_media.end(); ++it) 
-			attenuation *= (*it)->tau(ray);
-	}
-	return attenuation;
-}
-
-bool Scene::sampleDistance(const Ray &ray, MediumSamplingRecord &mRec, 
-			Sampler *sampler) const {
-	if (m_media.size() > 0) {
-		return m_media[0]->sampleDistance(ray, mRec, sampler);
-	} else {
-		mRec.pdfFailure = 1.0f;
-		mRec.pdfSuccess = mRec.pdfSuccessRev = 0.0f;
-		mRec.attenuation = Spectrum(1.0f);
-		return false;
-	}
-}
-
-void Scene::pdfDistance(const Ray &ray, Float t, MediumSamplingRecord &mRec) const {
-	if (m_media.size() > 0) {
-		m_media[0]->pdfDistance(ray, t, mRec);
-	} else {
-		mRec.pdfSuccess = mRec.pdfSuccessRev = 0;
-		mRec.attenuation = Spectrum(1.0f);
-		mRec.pdfFailure = 1;
-	}
 }
 
 void Scene::addChild(const std::string &name, ConfigurableObject *child) {
@@ -554,22 +493,22 @@ void Scene::addChild(const std::string &name, ConfigurableObject *child) {
 		ref<Scene> scene = static_cast<Scene *>(child);
 		/* A scene from somewhere else has been included.
 		   Add all of its contents */
-		for (unsigned int i=0; i<scene->getLuminaires().size(); ++i) {
+		for (size_t i=0; i<scene->getLuminaires().size(); ++i) {
 			Luminaire *lum = scene->getLuminaires()[i];
 			lum->setParent(this);
 			addChild("luminaire", lum);
 		}
-		for (unsigned int i=0; i<scene->getShapes().size(); ++i) {
+		for (size_t i=0; i<scene->getShapes().size(); ++i) {
 			Shape *shape = scene->getShapes()[i];
 			shape->setParent(this);
 			addChild("shape", shape);
 		}
-		for (unsigned int i=0; i<scene->getReferencedObjects().size(); ++i) {
+		for (size_t i=0; i<scene->getReferencedObjects().size(); ++i) {
 			ConfigurableObject *obj = scene->getReferencedObjects()[i];
 			obj->setParent(this);
 			addChild("object", obj);
 		}
-		for (unsigned int i=0; i<scene->getMedia().size(); ++i) {
+		for (size_t i=0; i<scene->getMedia().size(); ++i) {
 			Medium *medium = scene->getMedia()[i];
 			medium->setParent(this);
 			addChild("medium", medium);
@@ -646,25 +585,25 @@ void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 	m_aabb.serialize(stream);
 	m_bsphere.serialize(stream);
 	manager->serialize(stream, m_backgroundLuminaire.get());
-	stream->writeUInt((unsigned int) m_shapes.size());
+	stream->writeUInt((uint32_t) m_shapes.size());
 	for (size_t i=0; i<m_shapes.size(); ++i) 
 		manager->serialize(stream, m_shapes[i]);
-	stream->writeUInt((unsigned int) m_meshes.size());
+	stream->writeUInt((uint32_t) m_meshes.size());
 	for (size_t i=0; i<m_meshes.size(); ++i) 
 		manager->serialize(stream, m_meshes[i]);
-	stream->writeUInt((unsigned int) m_luminaires.size());
+	stream->writeUInt((uint32_t) m_luminaires.size());
 	for (size_t i=0; i<m_luminaires.size(); ++i) 
 		manager->serialize(stream, m_luminaires[i]);
-	stream->writeUInt((unsigned int) m_media.size());
+	stream->writeUInt((uint32_t) m_media.size());
 	for (size_t i=0; i<m_media.size(); ++i) 
 		manager->serialize(stream, m_media[i]);
-	stream->writeUInt((unsigned int) m_ssIntegrators.size());
+	stream->writeUInt((uint32_t) m_ssIntegrators.size());
 	for (size_t i=0; i<m_ssIntegrators.size(); ++i) 
 		manager->serialize(stream, m_ssIntegrators[i]);
-	stream->writeUInt((unsigned int) m_objects.size());
+	stream->writeUInt((uint32_t) m_objects.size());
 	for (size_t i=0; i<m_objects.size(); ++i) 
 		manager->serialize(stream, m_objects[i]);
-	stream->writeUInt((unsigned int) m_netObjects.size());
+	stream->writeUInt((uint32_t) m_netObjects.size());
 	for (size_t i=0; i<m_netObjects.size(); ++i) 
 		manager->serialize(stream, m_netObjects[i]);
 }

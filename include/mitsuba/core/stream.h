@@ -67,7 +67,9 @@ public:
 	/// Return a string representation
 	virtual std::string toString() const;
 
-	/// @{ \name Abstract methods to be implemented by subclasses
+	// ======================================================================
+	/// @{ \name Abstract methods that need to be implemented by subclasses
+	// ======================================================================
 
 	/// Read a specified amount of data from the stream
 	virtual void read(void *ptr, size_t size) = 0;
@@ -97,8 +99,11 @@ public:
 	virtual bool canRead() const = 0;
 
 	/// @}
+	// ======================================================================
 	
-	/// @{ \name Convenience functions
+	// ======================================================================
+	/// @{ \name Convenience functions with automatic endianness conversion
+	// ======================================================================
 
 	/// Skip the given number of bytes
 	void skip(size_t amount);

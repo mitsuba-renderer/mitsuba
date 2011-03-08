@@ -59,10 +59,10 @@ MTS_NAMESPACE_BEGIN
  * The class \ref OrderedChunkAllocator provides a specialized
  * memory allocator, which reserves memory in chunks of at least
  * 128KiB. An important assumption made by the allocator is that
- * memory will be released in the same order, in which it is 
- * allocated. This makes it possible to create an implementation
- * with a very low memory overhead. Note that no locking is done, 
- * hence each thread will need its own allocator.
+ * memory will be released in the exact same order, in which it was 
+ * previously allocated. This makes it possible to create an
+ * implementation with a very low memory overhead. Note that no locking
+ * is done, hence each thread will need its own allocator.
  *
  * \author Wenzel Jakob
  */

@@ -55,12 +55,12 @@ public:
 	}
 
 	/// Access a PDF entry
-	inline Float &operator[](unsigned int entry) {
+	inline Float &operator[](size_t entry) {
 		return m_pdf[entry];
 	}
 
 	/// Access a PDF entry
-	inline const Float &operator[](unsigned int entry) const {
+	inline const Float &operator[](size_t entry) const {
 		return m_pdf[entry];
 	}
 
@@ -82,10 +82,10 @@ public:
 	inline Float build() {
 		SAssert(m_pdf.size() > 0);
 		m_cdf[0] = 0.0f;
-		for (unsigned int i=1; i<m_cdf.size(); ++i)
+		for (size_t i=1; i<m_cdf.size(); ++i)
 			m_cdf[i] = m_cdf[i-1] + m_pdf[i-1];
 		m_originalSum = m_cdf[m_cdf.size()-1];
-		for (unsigned int i=0; i<m_pdf.size(); ++i) {
+		for (size_t i=0; i<m_pdf.size(); ++i) {
 			m_cdf[i] /= m_originalSum;
 			m_pdf[i] /= m_originalSum;
 		}

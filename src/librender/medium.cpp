@@ -53,10 +53,6 @@ Medium::Medium(Stream *stream, InstanceManager *manager)
 	m_phaseFunction = static_cast<PhaseFunction *>(manager->getInstance(stream));
 }
 	
-void Medium::preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job, 
-	int sceneResID, int cameraResID, int samplerResID) {
-}
-
 void Medium::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
 
@@ -95,8 +91,7 @@ std::string MediumSamplingRecord::toString() const {
 		<< "  pdfFailure = " << pdfFailure << "," << std::endl
 		<< "  pdfSuccess = " << pdfSuccess << "," << std::endl
 		<< "  pdfSuccessRev = " << pdfSuccessRev << "," << std::endl
-		<< "  attenuation = " << attenuation.toString() << "," << std::endl
-		<< "  medium = " << indent(((Object *) medium)->toString()) << std::endl
+		<< "  attenuation = " << attenuation.toString()
 		<< "]";
 	return oss.str();
 }

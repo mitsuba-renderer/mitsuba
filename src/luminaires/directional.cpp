@@ -75,34 +75,19 @@ public:
 		return m_intensity * m_surfaceArea;
 	}
 
-	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
-		/* Directional luminaire is not part of the scene */
-		Log(EError, "This function should never be called.");
-		return Spectrum(0.0f);
-	}
-
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
+	Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 		/* PDF is a delta function - zero probability when a sample point was not
 		   generated using sample() */
 		return delta ? 1.0f : 0.0f;
 	}
 
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
-		return DirectionalLuminaire::pdf(its.p, lRec, delta);
-	}
-
-	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
+	void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
 		lRec.sRec.p = p - m_direction * (2 * m_diskRadius);
 		lRec.d = m_direction;
 		lRec.luminaire = this;
 		lRec.pdf = 1.0f;
-		lRec.Le = m_intensity;
-	}
-
-	void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
-		const Point2 &sample) const {
-		DirectionalLuminaire::sample(its.p, lRec, sample);
+		lRec.value = m_intensity;
 	}
 
 	void sampleEmission(EmissionRecord &eRec, const Point2 &sample1, const Point2 &sample2) const {
@@ -111,14 +96,14 @@ public:
 		eRec.d = m_direction;
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.pdfDir = 1;
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 	}
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		Point2 posOnDisk = squareToDiskConcentric(sample) * m_diskRadius;
 		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Vector(posOnDisk.x, posOnDisk.y, 0));
 		eRec.pdfArea = m_invSurfaceArea;
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 	}
 
 	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {
@@ -131,7 +116,7 @@ public:
 		return m_intensity;
 	}
 
-	Spectrum f(const EmissionRecord &eRec) const {
+	Spectrum fDirection(const EmissionRecord &eRec) const {
 		/* Directional luminaire beam is not part of the scene */
 		return Spectrum(0.0f);
 	}
@@ -139,7 +124,7 @@ public:
 	void pdfEmission(EmissionRecord &eRec, bool delta) const {
 		eRec.pdfArea = delta ? 0.0f : m_invSurfaceArea;
 		eRec.pdfDir = delta ? 1.0f : 0.0f;
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 	}
 
 	std::string toString() const {

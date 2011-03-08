@@ -22,6 +22,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/medium.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -33,19 +34,15 @@ Shape::Shape(Stream *stream, InstanceManager *manager)
 	m_bsdf = static_cast<BSDF *>(manager->getInstance(stream));
 	m_subsurface = static_cast<Subsurface *>(manager->getInstance(stream));
 	m_luminaire = static_cast<Luminaire *>(manager->getInstance(stream));
+	m_interiorMedium = static_cast<Medium *>(manager->getInstance(stream));
+	m_exteriorMedium = static_cast<Medium *>(manager->getInstance(stream));
 }
 
 Shape::~Shape() {
 }
 
 
-void Shape::configure() {
-	/* Ensure that there is at least some default BSDF */
-	if (m_bsdf == NULL) {
-		m_bsdf = static_cast<BSDF *> (PluginManager::getInstance()->
-			createObject(BSDF::m_theClass, Properties("lambertian")));
-	}
-}
+void Shape::configure() { }
 	
 bool Shape::isCompound() const {
 	return false;
@@ -96,6 +93,17 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 	} else if (cClass->derivesFrom(Subsurface::m_theClass)) {
 		Assert(m_subsurface == NULL);
 		m_subsurface = static_cast<Subsurface *>(child);
+	} else if (cClass->derivesFrom(Medium::m_theClass)) {
+		if (name == "interiorMedium") {
+			Assert(m_interiorMedium != NULL);
+			m_interiorMedium = static_cast<Medium *>(child);
+		} else if (name == "exteriorMedium") {
+			Assert(m_exteriorMedium != NULL);
+			m_exteriorMedium = static_cast<Medium *>(child);
+		} else {
+			Log(EError, "Shape: Invalid medium child (must be named "
+				"'interiorMedium' or 'exteriorMedium')!");
+		}
 	} else {
 		Log(EError, "Shape: Invalid child node!");
 	}
@@ -110,6 +118,8 @@ void Shape::serialize(Stream *stream, InstanceManager *manager) const {
 	manager->serialize(stream, m_bsdf.get());
 	manager->serialize(stream, m_subsurface.get());
 	manager->serialize(stream, m_luminaire.get());
+	manager->serialize(stream, m_interiorMedium.get());
+	manager->serialize(stream, m_exteriorMedium.get());
 }
 
 bool Shape::rayIntersect(const Ray &ray, Float mint, 

@@ -58,9 +58,9 @@ public:
 		ERelativeError
 	};
 
-	/* ==================================================================== */
-    /*                     Initialization & Rendering                       */
-    /* ==================================================================== */
+	// =============================================================
+	//! @{ \name Initialization and rendering
+	// =============================================================
 
 	/// Construct a new, empty scene
 	Scene(const Properties &props);
@@ -72,8 +72,8 @@ public:
 	Scene(Stream *stream, InstanceManager *manager);
 
 	/**
-	 * Initialization step - _must_ be called before using any of the
-	 * methods provided by <tt>Scene</tt>.
+	 * \brief Initialize the scene. This function \a must be called 
+	 * before using any of the methods in this class.
 	 */
 	void initialize();
 
@@ -102,19 +102,21 @@ public:
 	bool render(RenderQueue *queue, const RenderJob *job,
 			int sceneResID, int cameraResID, int samplerResID);
 	
+	/// Post-process step after rendering. Parameters are explained above
+	void postprocess(RenderQueue *queue, const RenderJob *job,
+		int sceneResID, int cameraResID, int samplerResID);
+
 	/// Write out the current (partially rendered) image
 	void flush();
 
 	/**
-	 * This can be called asynchronously to cancel a running render job.
-	 * In this case, <tt>render()</tt> will quit with a return value of 
-	 * <tt>false</tt>.
+	 * \brief Cancel a running rendering job
+	 *
+	 * This function can be called asynchronously, e.g. from a GUI.
+	 * In this case, \ref render() will quit with a return value of 
+	 * \c false.
 	 */
 	void cancel();
-
-	/// Post-process step after rendering. Parameters are explained above
-	void postprocess(RenderQueue *queue, const RenderJob *job,
-		int sceneResID, int cameraResID, int samplerResID);
 
 	/// Add a child node to the scene
 	void addChild(const std::string &name, ConfigurableObject *child);
@@ -123,13 +125,56 @@ public:
 	   and addition of all child ConfigurableObjects.) */
 	void configure();
 
-	/* ==================================================================== */
-    /*                         Integrator interface                         */
-    /* ==================================================================== */
+	//! @}
+	// =============================================================
 
-	/// Check for an intersection with scene objects
-	inline bool rayIntersect(const Ray &pRay, Intersection &its) const {
+	// =============================================================
+	//! @{ \name Ray tracing
+	// =============================================================
+
+	/**
+	 * \brief Intersect a ray against all primitives stored in the scene
+	 * and return detailed intersection information
+	 *
+	 * \param ray
+	 *    A 3-dimensional ray data structure with minimum/maximum
+	 *    extent information, as well as a time (which applies when
+	 *    the shapes are animated)
+	 *
+	 * \param its
+	 *    A detailed intersection record, which will be filled by the
+	 *    intersection query
+	 *
+	 * \return \c true if an intersection was found
+	 */
+	inline bool rayIntersect(const Ray &ray, Intersection &its) const {
 		return m_kdtree->rayIntersect(pRay, its);
+	}
+
+	/**
+	 * \brief Intersect a ray against all primitives stored in the scene
+	 * and return the traveled distance and intersected shape
+	 *
+	 * This function represents a performance compromise when the
+	 * intersected shape must be known, but there is no need for
+	 * a detailed intersection record.
+	 *
+	 * \param ray
+	 *    A 3-dimensional ray data structure with minimum/maximum
+	 *    extent information, as well as a time (which applies when
+	 *    the shapes are animated)
+	 *
+	 * \param t
+	 *    The traveled ray distance will be stored in this parameter
+	 
+	 * \param t
+	 *    A pointer to the intersected shape will be stored in this
+	 *    parameter
+	 *
+	 * \return \c true if an intersection was found
+	 */
+	inline bool rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape) const {
+		return m_kdtree->rayIntersect(ray, t, shape);
 	}
 
 	/// Cast a shadow ray
@@ -149,175 +194,137 @@ public:
 	inline const BSphere &getBSphere() const {
 		return m_bsphere;
 	}
+	
+	//! @}
+	// =============================================================
+	
+	// =============================================================
+	//! @{ \name Luminaire query & sampling functions
+	// =============================================================
 
 	/**
-	 * Sample a visible point on a luminaire (ideally uniform wrt. the solid angle of p)
-	 * @param p
+	 * Sample a visible point on a luminaire (ideally uniform wrt. solid angle at \c p)
+	 * \param p
 	 *     An arbitrary point in the scene
-	 * @param lRec
-	 *    A luminaire sampling record, which will hold information such as the
-	 *    probability density, associated measure etc.
-	 * @param time
+	 * \param time
 	 *    Associated time value -- this is needed to check the visibility when
 	 *    objects are potentially moving over time
-	 * @param testVisibility
-	 *    If this is true, a shadow-ray will be cast to ensure that no surface
-	 *    blocks the path lRec.sRec.p <-> p.
-	 * @return
-     *    true if sampling was successful
-	 */
-	bool sampleLuminaire(const Point &p,
-		LuminaireSamplingRecord &lRec, Float time, 
-		const Point2 &sample, bool testVisibility = true) const;
-
-	/**
-	 * Convenience method - similar to \a sampleLuminaire(), but also attenuates
-	 * lRec.Le by the integrated extinction coefficient on the path lRec.sRec.p <-> p.
-	 */
-	inline bool sampleLuminaireAttenuated(const Point &p,
-		LuminaireSamplingRecord &lRec, Float time, 
-		const Point2 &sample, bool testVisibility = true) const {
-		if (sampleLuminaire(p, lRec, time, sample, testVisibility)) {
-			lRec.Le *= getAttenuation(Ray(p, lRec.sRec.p-p, 0, 1, time));
-			return true;
-		}
-		return false;
-	}
-
-
-	/**
-	 * Return the probability of generating a sample on a luminaire if
-	 * \ref sampleLuminaire() is called with the point 'p'.
-	 * When \a delta is set to true, only components
-	 * with a Dirac delta density are queried.
-	 */
-	Float pdfLuminaire(const Point &p,
-		const LuminaireSamplingRecord &lRec, bool delta = false) const;
-
-	/**
-	 * Sample a visible point on a luminaire (ideally uniform wrt. the solid angle of p). Takes
-	 * a surface intersection record (some luminaires make use of this to provide improved sampling)
-	 * @param its 
-	 *     An arbitrary surface intersection
-	 * @param lRec
+	 * \param lRec
 	 *    A luminaire sampling record, which will hold information such as the
-	 *    probability density, associated measure etc.
-	 * @param testVisibility
+	 *    probability density, etc.
+	 * \param testVisibility
 	 *    If this is true, a shadow-ray will be cast to ensure that no surface
 	 *    blocks the path lRec.sRec.p <-> p.
-	 * @return
-     *    true if sampling was successful
+	 * \return
+     *    \c true if sampling was successful
 	 */
-	bool sampleLuminaire(const Intersection &its,
-		LuminaireSamplingRecord &lRec, const Point2 &sample,
-		bool testVisibility = true) const;
+	bool sampleLuminaire(const Point &p, Float time, LuminaireSamplingRecord &lRec,
+			const Point2 &sample, bool testVisibility = true) const;
 
 	/**
-	 * Convenience method - similar to sampleLuminaire(), but also attenuates
-	 * lRec.Le by the integrated extinction coefficient on the path lRec.sRec.p <-> p.
+	 * \brief Convenience method - similar to \ref sampleLuminaire(), but also attenuates
+	 * \c lRec.value by the integrated extinction coefficient along the connection path.
+	 * A visibility test is always performed.
+	 *
+	 * \param p
+	 *     An arbitrary point in the scene
+	 * \param time
+	 *    Associated time value -- this is needed to check the visibility when
+	 *    objects are potentially moving over time
+	 * \param medium
+	 *    The medium located at the ray origin (or \c NULL for vacuum).
+	 * \param lRec
+	 *    A luminaire sampling record, which will hold information such 
+	 *    as the probability density, etc.
+	 * \return
+     *    \c true if sampling was successful
 	 */
-	inline bool sampleLuminaireAttenuated(const Intersection &its,
-		LuminaireSamplingRecord &lRec, const Point2 &sample,
-		bool testVisibility = true) const {
-		if (sampleLuminaire(its, lRec, sample, testVisibility)) {
-			lRec.Le *= getAttenuation(Ray(its.p, lRec.sRec.p-its.p, 0, 1, its.time));
-			return true;
-		}
-		return false;
-	}
+	bool sampleAttenuatedLuminaire(const Point &p, Float time, 
+		const Medium *medium, LuminaireSamplingRecord &lRec, 
+		const Point2 &sample) const;
 
 	/**
-	 * Return the probability of generating a sample on a luminaire if
-	 * sampleLuminaire() is called with the surface interation 'its'
+	 * \brief Return the probability density associated with the sample \c lRec 
+	 * when calling \ref sampleLuminaire() with the point \c p.
+	 *
+	 * \param p
+	 *     An arbitrary point in the scene
+	 * \param lRec
+	 *     Luminaire sampling record, whose associated density is to
+	 *     be determined
+	 * \param delta
+	 *     When this parameter is set to true, only components with a
+	 *     Dirac delta density are queried. Otherwise, they are left out.
 	 */
-	Float pdfLuminaire(const Intersection &its,
-		const LuminaireSamplingRecord &lRec, bool delta = false) const;
+	Float pdfLuminaire(const Point &p, const LuminaireSamplingRecord &lRec,
+			bool delta = false) const;
 
 	/**
-	 * Sample a particle leaving a luminaire and return a ray describing its path
-	 * as well as record containing detailed probability density information. 
-	 * Two uniformly distributed 2D samples are required.
+	 * \brief Sample a particle leaving one of the scene's luminaires and 
+	 * return a ray describing its path as well as record containing detailed
+	 * probability density information. 
+	 *
+	 * Two uniformly distributed 2D samples are required. This method does
+	 * exactly the same as calling \c sampleEmissionArea and 
+	 * \c eRec.luminaire->sampleEmissionDirection(..) in sequence, 
+	 * modulating \c eRec.Le by the return value of the latter and dividing
+	 * by the product of the spatial and directional sampling densities.
 	 */
+
 	void sampleEmission(EmissionRecord &lRec, Point2 &sample1, Point2 &sample2) const;
 
 	/**
-	 * Sample only the spatial dimension of the emission sampling strategy
-	 * implemented in <tt>sampleEmission</tt>. An examplary use of this
-	 * is bidirectional path tracing, where the directionally varying part
-	 * is handed similarly to a BSDF, which modulates the spatially
-	 * dependent radiance component. After this returns, the area density 
-	 * as well as the spatially dependent radiance component
-	 * will be stored in <tt>eRec</tt>.
+	 * \brief Sample only the spatial part of the emission sampling strategy
+	 * implemented in \c sampleEmission.
+	 *
+	 * An examplary use of this method is bidirectional path tracing or MLT, 
+	 * where the area and direction sampling steps take place in different 
+	 * vertices.
+	 *
+	 * After the function call terminates, the area density as well as the
+	 * spatially dependent emittance component will be stored in \c eRec.
 	 */
 	void sampleEmissionArea(EmissionRecord &lRec, Point2 &sample) const;
 
 	/**
-	 * As above, but handles only the directional part. Must be called *after*
-	 * sampleEmissionArea(). The return value is to be understood as a BRDF,
-	 * which modulates the emitted energy.
-	 */
-	Spectrum sampleEmissionDirection(EmissionRecord &lRec, Point2 &sample) const;
-
-	/**
-	 * Given an emitted particle, populate the emission record with the 
-	 * relevant spectra and probability densities.
-	 * When \a delta is set to true, only components
-	 * with a Dirac delta density are queried.
+	 * \brief Given an emitted particle, populate the emission record with the 
+	 * relevant probability densities.
+	 *
+	 * When \c delta is set to true, only components with a Dirac delta density
+	 * are considered in the query. Otherwise, they are left out.
 	 */
 	void pdfEmission(EmissionRecord &eRec, bool delta) const;
 
 	/**
-	 * Return the background radiance for a ray, which did not hit anything.
+	 * \brief Return the background radiance for a ray that did not intersect
+	 * any of the scene objects.
+	 *
+	 * This is primarily meant for path tracing-style integrators.
 	 */
 	Spectrum LeBackground(const Ray &ray) const;
 
 	/**
-	 * Return the background radiance for a ray, which did not hit anything.
-	 * (attenuated by any participating media along the ray)
+	 * \brief Return the background radiance for a ray that did not intersect
+	 * any of the scene objects. This method additionally considers
+	 * attenuation by participating media
+	 *
+	 * This is primarily meant for path tracing-style integrators.
 	 */
-	inline Spectrum LeBackgroundAttenuated(const Ray &ray) const {
+	inline Spectrum LeAttenuatedBackground(const Ray &ray, const Medium *medium) const {
 		if (!m_backgroundLuminaire)
 			return Spectrum(0.0f);
-		return LeBackground(ray) * getAttenuation(ray);
+		return LeBackground(ray) * medium->tau(ray);
 	}
+	
+	//! @}
+	// =============================================================
 
-	/**
-	 * \brief Calculate the attenuation along the ray segment [mint, maxt]
-	 *
-	 * As a special exception, this function doesn't require 
-	 * the ray distance field to be normalized
-	 */
-	Spectrum getAttenuation(const Ray &ray) const;
+	// =============================================================
+	//! @{ \name Miscellaneous
+	// =============================================================
 
 	/// Does the scene contain participating media?
 	inline bool hasMedia() const { return !m_media.empty(); }
-
-	/**
-	 * \brief In the presence of participating media, sample the 
-	 * in-scattering line integral of the RTE. 
-	 *
-	 * Should ideally importance sample with respect to the
-	 * sample contribution. The ray direction is required to
-	 * be normalized.
-	 *
-	 * \return false if the ray passes beyond \a ray.maxt (or
-	 * if there were no participating media at all). 
-	 */
-	bool sampleDistance(const Ray &ray,
-			MediumSamplingRecord &mRec, Sampler *sampler) const;
-
-	/**
-	 * \brief Compute the density of sampling distance \a t along the 
-	 * ray using the sampling strategy implemented by \a sampleDistance. 
-	 *
-	 * The function computes the continuous densities in the case of
-	 * a successful \ref sampleDistance() invocation (in both directions),
-	 * as well as the Dirac delta density associated with a failure.
-	 * For convenience, it also stores the attenuation along the ray
-	 * segment in \a mRec.
-	 */
-	void pdfDistance(const Ray &ray, Float t, 
-		MediumSamplingRecord &mRec) const;
 
 	/// Return the scene's test mode
 	inline ETestType getTestType() const { return m_testType; }
@@ -439,6 +446,9 @@ public:
 
 	/// Return a string representation
 	std::string toString() const;
+
+	//! @}
+	// =============================================================
 
 	MTS_DECLARE_CLASS()
 protected:

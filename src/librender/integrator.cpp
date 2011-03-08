@@ -51,7 +51,7 @@ void SampleIntegrator::serialize(Stream *stream, InstanceManager *manager) const
 }
 
 Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n, Float time,
-	Sampler *sampler, int irrSamples, bool irrIndirect) const {
+		const Medium *medium, Sampler *sampler, int irrSamples, bool irrIndirect) const {
 	Spectrum E(0.0f);
 	LuminaireSamplingRecord lRec;
 	RadianceQueryRecord rRec(scene, sampler);
@@ -59,13 +59,13 @@ Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n
 
 	sampler->generate();
 	for (int i=0; i<irrSamples; i++) {
-		rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission);
+		rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission, medium);
 
 		/* Direct */
-		if (scene->sampleLuminaireAttenuated(p, lRec, time, rRec.nextSample2D())) {
+		if (scene->sampleAttenuatedLuminaire(p, time, medium, lRec, rRec.nextSample2D())) {
 			Float dp = dot(lRec.d, n);
 			if (dp < 0) 
-				E -= lRec.Le * dp;
+				E -= lRec.value * dp;
 		}
 
 		/* Indirect */
@@ -148,13 +148,12 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 		/* Use a prescribed traversal order (e.g. using a space-filling curve) */
 		if (!block->collectStatistics()) {
 			for (size_t i=0; i<points->size(); ++i) {
-				Point2i offset = points->operator[](i) 
-					+ Vector2i(block->getOffset());
+				Point2i offset = (*points)[i] + Vector2i(block->getOffset());
 				if (stop) 
 					break;
 				sampler->generate();
 				for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
-					rRec.newQuery(RadianceQueryRecord::ECameraRay);
+					rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
 					if (needsTimeSample)
@@ -172,14 +171,13 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 		} else {
 			Spectrum mean, meanSqr;
 			for (size_t i=0; i<points->size(); ++i) {
-				Point2i offset = points->operator[](i) 
-					+ Vector2i(block->getOffset());
+				Point2i offset = (*points)[i] + Vector2i(block->getOffset());
 				if (stop) 
 					break;
 				sampler->generate();
 				mean = meanSqr = Spectrum(0.0f);
 				for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
-					rRec.newQuery(RadianceQueryRecord::ECameraRay);
+					rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
 					if (needsTimeSample)
@@ -217,7 +215,7 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 						break;
 					sampler->generate();
 					for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
-						rRec.newQuery(RadianceQueryRecord::ECameraRay);
+						rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 						if (needsLensSample)
 							lensSample = rRec.nextSample2D();
 						if (needsTimeSample)
@@ -242,7 +240,7 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 					sampler->generate();
 					mean = meanSqr = Spectrum(0.0f);
 					for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
-						rRec.newQuery(RadianceQueryRecord::ECameraRay);
+						rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 						if (needsLensSample)
 							lensSample = rRec.nextSample2D();
 						if (needsTimeSample)
@@ -298,11 +296,11 @@ std::string RadianceQueryRecord::toString() const {
 		<< "  type = { ";
 	if (type & EEmittedRadiance) oss << "emitted ";
 	if (type & ESubsurfaceRadiance) oss << "subsurface ";
-	if (type & EDirectRadiance) oss << "direct ";
-	if (type & EIndirectRadiance) oss << "indirect ";
+	if (type & EDirectSurfaceRadiance) oss << "direct ";
+	if (type & EIndirectSurfaceRadiance) oss << "indirect ";
 	if (type & ECausticRadiance) oss << "caustic ";
-	if (type & EInscatteredDirectRadiance) oss << "inscatteredDirect ";
-	if (type & EInscatteredIndirectRadiance) oss << "inscatteredIndirect ";
+	if (type & EDirectMediumRadiance) oss << "inscatteredDirect ";
+	if (type & EIndirectMediumRadiance) oss << "inscatteredIndirect ";
 	if (type & EDistance) oss << "distance ";
 	if (type & EOpacity) oss << "opacity ";
 	if (type & EIntersection) oss << "intersection ";

@@ -113,7 +113,7 @@ public:
 protected:
 	/// Protected constructor
 	inline ParticleTracer(int maxDepth, bool multipleScattering, int rrDepth) 
-		: m_maxDepth(maxDepth), m_multipleScattering(multipleScattering), 
+		: m_maxDepth(maxDepth), 
 		m_rrDepth(rrDepth) {
 	}
 	/// Protected constructor
@@ -124,7 +124,6 @@ protected:
 	ref<Scene> m_scene;
 	ref<Sampler> m_sampler;
 	int m_maxDepth;
-	bool m_multipleScattering;
 	int m_rrDepth;
 };
 

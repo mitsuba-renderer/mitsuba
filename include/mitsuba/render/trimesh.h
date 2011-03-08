@@ -67,6 +67,10 @@ public:
 	 * the specified index determines which one to load.
 	 */
 	TriMesh(Stream *stream, int idx = 0);
+	
+	// =============================================================
+	//! @{ \name General query functions
+	// =============================================================
 
 	/// Return the name of this mesh
 	virtual std::string getName() const;
@@ -77,8 +81,25 @@ public:
 	/// Return a bounding box containing the mesh
 	virtual AABB getAABB() const;
 
+	/**
+	 * \brief Create a triangle mesh approximation of this shape
+	 * 
+	 * Since instances are already triangle meshes, the implementation
+	 * just returns a pointer to \a this.
+	 */
+	ref<TriMesh> createTriMesh();
+
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Access to the stored triangle mesh
+	// =============================================================
+
 	/// Return the number of triangles
 	inline size_t getTriangleCount() const { return m_triangleCount; }
+	/// Return the number of vertices
+	inline size_t getVertexCount() const { return m_vertexCount; }
 
 	/// Return the triangle list (const version)
 	inline const Triangle *getTriangles() const { return m_triangles; };
@@ -118,22 +139,12 @@ public:
 	/// Does the mesh have vertex tangents?
 	inline bool hasVertexTangents() const { return m_tangents != NULL; };
 
-	/// Return the number of vertices
-	inline size_t getVertexCount() const { return m_vertexCount; }
+	//! @}
+	// =============================================================
 
-	/**
-	 * \brief Create a triangle mesh approximation of this shape
-	 * 
-	 * Since instances are already triangle meshes, the implementation
-	 * just returns a pointer to \a this.
-	 */
-	ref<TriMesh> createTriMesh();
-
-	/// Export an Wavefront OBJ version of this file
-	void writeOBJ(const fs::path &path) const;
-
-	/// Return the shape's BSDF
-	inline const BSDF *getBSDF() const { return m_bsdf.get(); }
+	// =============================================================
+	//! @{ \name Sampling routines
+	// =============================================================
 
 	/// Sample a point on the mesh
 	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const;
@@ -143,6 +154,13 @@ public:
 	 * given point using \ref sampleArea()
 	 */
 	Float pdfArea(const ShapeSamplingRecord &sRec) const;
+	
+	//! @}
+	// =============================================================
+	
+	// =============================================================
+	//! @{ \name Miscellaneous
+	// =============================================================
 
 	/**
 	 * \brief Generate tangent space basis vectors. 
@@ -174,10 +192,11 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const;
 
 	/**
-	 * Serialize to a file/network stream - this is an alternative
-	 * routine, which only loads triangle data (no BSDF,
-	 * Sub-surface integrator, etc.) in a format that
-	 * will remain stable as mitsuba evolves.
+	 * \brief Serialize to a file/network stream
+	 *
+	 * This is an alternative routine, which \a only loads triangle
+	 * data (no BSDF, Sub-surface integrator, etc.) in a format that
+	 * will remain stable as Mitsuba evolves.
 	 */
 	void serialize(Stream *stream) const;
 
@@ -189,8 +208,14 @@ public:
 	 */
 	virtual void configure();
 
+	/// Export an Wavefront OBJ version of this file
+	void writeOBJ(const fs::path &path) const;
+	
 	/// Return a string representation
 	std::string toString() const;
+
+	//! @}
+	// =============================================================
 
 	MTS_DECLARE_CLASS()
 protected:

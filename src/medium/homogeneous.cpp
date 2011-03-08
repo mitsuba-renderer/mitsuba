@@ -22,8 +22,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Homogeneous participating medium. An arbitrary (manifold) shape
- * must be specified as a child object.
+ * Homogeneous participating medium with support for various phase functions
  */
 class HomogeneousMedium : public Medium {
 public:
@@ -34,9 +33,9 @@ public:
 	 */
 	enum ESamplingStrategy {
 		EBalance,  /// Exp. distrib.; pick a random channel each time
-		ESingle,  /// Exp. distrib.; pick a specified channel
-		EManual,  /// Exp. distrib.; manually specify a value
-		EMaximum  /// Max-of-exp. distribs
+		ESingle,   /// Exp. distrib.; pick a specified channel
+		EManual,   /// Exp. distrib.; manually specify a value
+		EMaximum   /// Max-of-exp. distribs
 	};
 
 	HomogeneousMedium(const Properties &props) 
@@ -111,10 +110,6 @@ public:
 
 	HomogeneousMedium(Stream *stream, InstanceManager *manager)
 		: Medium(stream, manager), m_maxExpDist(NULL) {
-		m_kdTree = new ShapeKDTree();
-		size_t shapeCount = stream->readUInt();
-		for (size_t i=0; i<shapeCount; ++i) 
-			addChild("", static_cast<Shape *>(manager->getInstance(stream)));
 		m_strategy = (ESamplingStrategy) stream->readInt();
 		m_samplingDensity= stream->readFloat();
 		m_mediumSamplingWeight = stream->readFloat();
@@ -130,28 +125,15 @@ public:
 	}
 
 	virtual ~HomogeneousMedium() {
-		for (size_t i=0; i<m_shapes.size(); ++i)
-			m_shapes[i]->decRef();
 		if (m_maxExpDist)
 			delete m_maxExpDist;
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Medium::serialize(stream, manager);
-		stream->writeUInt((uint32_t) m_shapes.size());
-		for (size_t i=0; i<m_shapes.size(); ++i)
-			manager->serialize(stream, m_shapes[i]);
 		stream->writeInt(m_strategy);
 		stream->writeFloat(m_samplingDensity);
 		stream->writeFloat(m_mediumSamplingWeight);
-	}
-	
-	void configure() {
-		Medium::configure();
-		if (m_shapes.size() == 0)
-			Log(EError, "This medium requires one or more Shape instance as a child");
-		m_kdTree->build();
-		m_aabb = m_kdTree->getAABB();
 	}
 
 	Float getCoveredLength(const Ray &r) const {
@@ -336,27 +318,6 @@ public:
 			Log(EError, "Medium cannot be a parent of a shape");
 	}
 
-	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(Shape::m_theClass)) {
-			Shape *shape = static_cast<Shape *>(child);
-			if (shape->isCompound()) {
-				int ctr = 0;
-				while (true) {
-					ref<Shape> childShape = shape->getElement(ctr++);
-					if (!childShape)
-						break;
-					addChild("", childShape);
-				}
-			} else {
-				m_kdTree->addShape(shape);
-				shape->incRef();
-				m_shapes.push_back(shape);
-			}
-		} else {
-			Medium::addChild(name, child);
-		}
-	}
-
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "HomogeneousMedium[" << endl
@@ -381,8 +342,6 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	ref<ShapeKDTree> m_kdTree;
-	std::vector<Shape *> m_shapes;
 	Float m_samplingDensity, m_mediumSamplingWeight;
 	ESamplingStrategy m_strategy;
 	MaxExpDist *m_maxExpDist;

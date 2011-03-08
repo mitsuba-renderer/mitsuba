@@ -29,12 +29,12 @@ MTS_NAMESPACE_BEGIN
  */
 struct MTS_EXPORT_RENDER MediumSamplingRecord {
 public:
-	/// Create an invalid medium sampling record
-	inline MediumSamplingRecord() : medium(NULL) { }
+	inline MediumSamplingRecord() { }
 
 	/// Return a string representation
 	std::string toString() const;
 public:
+
 	/// Traveled distance
 	Float t;
 
@@ -43,9 +43,6 @@ public:
 
 	/// Local particle orientation at \ref p
 	Vector orientation;
-
-	/// Reference to the associated medium
-	const Medium *medium;
 
 	/**
 	 * \brief Specifies the attenuation along the segment [mint, t]
@@ -94,16 +91,6 @@ public:
  */
 class MTS_EXPORT_RENDER Medium : public NetworkedObject {
 public:
-	/**
-	 * \brief Possibly perform a pre-process task.
-	 *
-	 * The last three parameters are resource IDs of the associated scene, 
-	 * camera and sample generator, which have been made available to all 
-	 * local and remote workers.
-	 */
-	virtual void preprocess(const Scene *scene, RenderQueue *queue, 
-		const RenderJob *job, int sceneResID, int cameraResID, int samplerResID);
-
 	/** 
 	 * \brief Compute the attenuation along a ray segment
 	 *

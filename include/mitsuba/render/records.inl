@@ -51,31 +51,35 @@ inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &w
 inline bool Intersection::hasSubsurface() const {
 	return shape->hasSubsurface();
 }
+
 inline bool Intersection::isLuminaire() const {
 	return shape->isLuminaire();
 }
 
 inline Spectrum Intersection::Le(const Vector &d) const {
-	return shape->getLuminaire()->Le(
-		LuminaireSamplingRecord(*this, d));
+	return shape->getLuminaire()->Le(*this, d);
 }
 
 inline Spectrum Intersection::LoSub(const Scene *scene, const Vector &d) const {
 	return shape->getSubsurface()->Lo(scene, *this, d);
 }
-	
+
 inline const BSDF *Intersection::getBSDF(const RayDifferential &ray) {
 	const BSDF *bsdf = shape->getBSDF();
-	if (bsdf->usesRayDifferentials() && !hasUVPartials)
+	if (bsdf && bsdf->usesRayDifferentials() && !hasUVPartials)
 			computePartials(ray);
 	return bsdf;
 }
 
-inline LuminaireSamplingRecord::LuminaireSamplingRecord(const Intersection &its, const Vector &dir) {
-	sRec.p = its.p;
-	sRec.n = its.geoFrame.n;
-	d = dir;
-	luminaire = its.shape->getLuminaire();
+inline bool Intersection::isMediumTransition() const {
+	return shape->isMediumTransition();
+}
+
+inline const Medium *Intersection::getTargetMedium(const Ray &ray) const {
+	if (dot(ray.d, geoFrame.n) > 0)
+		return shape->getExteriorMedium();
+	else
+		return shape->getInteriorMedium();
 }
 	
 inline bool RadianceQueryRecord::rayIntersect(const RayDifferential &ray) {
@@ -83,8 +87,8 @@ inline bool RadianceQueryRecord::rayIntersect(const RayDifferential &ray) {
 	if (type & EIntersection) {
 		scene->rayIntersect(ray, its);
 		if (type & EOpacity)
-			alpha = its.isValid() ? 1 : (1 - scene->getAttenuation(
-				Ray(ray.o, ray.d, 0, its.t, ray.time)).average());
+//			alpha = its.isValid() ? 1 : (1 - scene->getAttenuation(
+//				Ray(ray.o, ray.d, 0, its.t, ray.time)).average());
 		if (type & EDistance)
 			dist = its.t;
 		type ^= EIntersection; // unset the intersection bit

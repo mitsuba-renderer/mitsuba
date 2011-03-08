@@ -304,7 +304,7 @@ public:
 		}
 
 		/* Estimate the direct illumination if this is requested */
-		if (rRec.type & RadianceQueryRecord::EDirectRadiance) {
+		if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) {
 			Float weight = 1 / (Float) numDirectSamples;
 
 			for (int i=0; i<numDirectSamples; ++i) {
@@ -315,7 +315,7 @@ public:
 					/* Evaluate BSDF * cos(theta) */
 					const Spectrum bsdfVal = bsdf->fCos(bRec);
 
-					Li += lRec.Le * bsdfVal * weight;
+					Li += lRec.value * bsdfVal * weight;
 				}
 			}
 		}
@@ -327,7 +327,7 @@ public:
 
 		if (bsdfType == BSDF::EDiffuseReflection) {
 			/* Hit a diffuse material - do a direct photon map visualization. */
-			if (rRec.type & RadianceQueryRecord::EIndirectRadiance) 
+			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) 
 				Li += m_globalPhotonMap->estimateIrradianceFiltered(its.p, 
 					its.shFrame.n, m_globalLookupRadius, m_globalLookupSize)
 						* bsdf->getDiffuseReflectance(its) * INV_PI;

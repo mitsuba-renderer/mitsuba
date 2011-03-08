@@ -70,13 +70,11 @@ ParticleTracer::ParticleTracer(Stream *stream, InstanceManager *manager)
 	: WorkProcessor(stream, manager) {
 
 	m_maxDepth = stream->readInt();	
-	m_multipleScattering = stream->readBool();	
 	m_rrDepth = stream->readInt();	
 }
 
 void ParticleTracer::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeInt(m_maxDepth);
-	stream->writeBool(m_multipleScattering);
 	stream->writeInt(m_rrDepth);
 }
 
@@ -112,9 +110,10 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 
 		/* Sample an emitted particle */
 		m_scene->sampleEmission(eRec, areaSample, dirSample);
+		const Medium *medium = eRec.luminaire->getMedium();
 
 		ray = Ray(eRec.sRec.p, eRec.d, shutterOpen + shutterOpenTime * m_sampler->next1D());
-		weight = eRec.P;
+		weight = eRec.value;
 		depth = 1;
 		caustic = true;
 
@@ -124,7 +123,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
             /* ==================================================================== */
             /*                 Radiative Transfer Equation sampling                 */
             /* ==================================================================== */
-			if (m_scene->sampleDistance(Ray(ray, 0, its.t), mRec, m_sampler)) {
+			if (medium && medium->sampleDistance(Ray(ray, 0, its.t), mRec, m_sampler)) {
 				/* Sample the integral
 				  \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
 				*/
@@ -132,13 +131,10 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				weight *= mRec.sigmaS * mRec.attenuation / mRec.pdfSuccess;
 				handleMediumInteraction(depth, caustic, mRec, ray.time, -ray.d, weight);
 	
-				if (!m_multipleScattering)
-					break;
-
 				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
 				pRec.quantity = EImportance;
 
-				weight *= mRec.medium->getPhaseFunction()->sample(pRec, m_sampler);
+				weight *= medium->getPhaseFunction()->sample(pRec, m_sampler);
 				caustic = false;
 
 				/* Russian roulette */
@@ -154,16 +150,25 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				/* There is no surface in this direction */
 				break;
 			} else {
-				ray.mint = 0; ray.maxt = its.t;
-
 				/* Sample 
 					tau(x, y) * (Surface integral). This happens with probability mRec.pdfFailure
 					Divide this out and multiply with the proper per color channel attenuation.
 				*/
-				weight *= m_scene->getAttenuation(ray) / mRec.pdfFailure;
-				handleSurfaceInteraction(depth, caustic, its, weight);
+				if (medium)
+					weight *= mRec.attenuation / mRec.pdfFailure;
+
+				if (its.isMediumTransition())
+					medium = its.getTargetMedium(ray);
 
 				const BSDF *bsdf = its.shape->getBSDF();
+
+				if (!bsdf) {
+					/* Pass right through the surface (there is no BSDF) */
+					ray.setOrigin(its.p);
+					continue;
+				}
+	
+				handleSurfaceInteraction(depth, caustic, its, weight);
 				BSDFQueryRecord bRec(its);
 				bRec.quantity = EImportance;
 				bsdfVal = bsdf->sampleCos(bRec, m_sampler->next2D());
@@ -184,7 +189,8 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 
 				weight *= bsdfVal;
 				Vector wi = -ray.d, wo = its.toWorld(bRec.wo);
-				ray = Ray(its.p, wo, ray.time);
+				ray.setOrigin(its.p);
+				ray.setDirection(wo);
 
 				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
 				Float wiDotGeoN = dot(its.geoFrame.n, wi),
@@ -199,7 +205,6 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 					(Frame::cosTheta(bRec.wo) * wiDotGeoN));
 
 				caustic &= (bRec.sampledType & BSDF::EDelta) ? true : false;
-
 			}
 			++depth;
 		}

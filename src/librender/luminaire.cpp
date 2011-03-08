@@ -74,15 +74,21 @@ bool Luminaire::isBackgroundLuminaire() const {
 }
 
 Spectrum Luminaire::Le(const Ray &ray) const {
+	Log(EError, "Luminaire::Le(const Ray &) is not implemented!");
 	return Spectrum(0.0f);
 }
 	
+Spectrum Luminaire::Le(const Intersection &its, const Vector &d) const {
+	Log(EError, "Luminaire::Le(const Intersection &, const Vector &) is not implemented!");
+	return Spectrum(0.0f);
+}
+
 std::string EmissionRecord::toString() const {
 	std::ostringstream oss;
 	oss << "EmissionRecord[" << std::endl
 		<< "  sRec = " << indent(sRec.toString()) << "," << std::endl
 		<< "  d = " << d.toString() << "," << std::endl
-		<< "  P = " << P.toString() << "," << std::endl
+		<< "  value = " << value.toString() << "," << std::endl
 		<< "  pdfArea = " << pdfArea << "," << std::endl
 		<< "  pdfDir = " << pdfDir << "," << std::endl
 		<< "  luminaire = " << ((luminaire == NULL ) ? "null" : indent(((Object *) luminaire)->toString()).c_str()) << std::endl
@@ -96,7 +102,7 @@ std::string LuminaireSamplingRecord::toString() const {
 		<< "  sRec = " << indent(sRec.toString()) << "," << std::endl
 		<< "  d = " << d.toString() << "," << std::endl
 		<< "  pdf = " << pdf << "," << std::endl
-		<< "  Le = " << Le.toString() << "," << std::endl
+		<< "  value = " << value.toString() << "," << std::endl
 		<< "  luminaire = " << ((luminaire == NULL ) ? "null" : indent(((Object *) luminaire)->toString()).c_str()) << std::endl
 		<< "]";
 	return oss.str();

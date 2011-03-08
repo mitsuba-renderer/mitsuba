@@ -36,16 +36,11 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  */
 class VolumetricPathTracer : public MonteCarloIntegrator {
 public:
-	VolumetricPathTracer(const Properties &props) : MonteCarloIntegrator(props) {
-		/* Beta factor for the power heuristic */
-		m_beta = props.getFloat("beta", 2.0f);
-	}
+	VolumetricPathTracer(const Properties &props) : MonteCarloIntegrator(props) { }
 
 	/// Unserialize from a binary data stream
 	VolumetricPathTracer(Stream *stream, InstanceManager *manager)
-	 : MonteCarloIntegrator(stream, manager) {
-		m_beta = stream->readFloat();
-	}
+	 : MonteCarloIntegrator(stream, manager) { }
 
 	Spectrum Li(const RayDifferential &r, RadianceQueryRecord &rRec) const {
 		/* Some aliases and local variables */
@@ -65,8 +60,8 @@ public:
 			/* ==================================================================== */
 			/*                 Radiative Transfer Equation sampling                 */
 			/* ==================================================================== */
-			if (scene->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
-				const PhaseFunction *phase = mRec.medium->getPhaseFunction();
+			if (rRec.medium && rRec.medium->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
+				const PhaseFunction *phase = rRec.medium->getPhaseFunction();
 
 				if (rRec.depth == m_maxDepth && m_maxDepth > 0) // No more scattering events allowed
 					break;
@@ -81,8 +76,8 @@ public:
 				/* ==================================================================== */
 
 				/* Estimate the single scattering component if this is requested */
-				if (rRec.type & RadianceQueryRecord::EInscatteredDirectRadiance && 
-					scene->sampleLuminaireAttenuated(mRec.p, lRec, ray.time, rRec.nextSample2D())) {
+				if (rRec.type & RadianceQueryRecord::EDirectMediumRadiance && 
+					scene->sampleAttenuatedLuminaire(mRec.p, lRec, ray.time, rRec.nextSample2D())) {
 					/* Evaluate the phase function */
 					Spectrum phaseVal = phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 
@@ -95,7 +90,7 @@ public:
 
 						/* Weight using the power heuristic */
 						const Float weight = miWeight(lRec.pdf, phasePdf);
-						Li += pathThroughput * lRec.Le * phaseVal * weight;
+						Li += pathThroughput * lRec.value * phaseVal * weight;
 					}
 				}
 
@@ -128,18 +123,23 @@ public:
 						hitLuminaire = true;
 					}
 				}
-				ray.mint = 0; ray.maxt = its.t; 
-				Spectrum attenuation = scene->getAttenuation(ray);
 
 				/* If a luminaire was hit, estimate the local illumination and
 				   weight using the power heuristic */
-				if (hitLuminaire && (rRec.type & RadianceQueryRecord::EInscatteredDirectRadiance)) {
-					lRec.Le = lRec.luminaire->Le(lRec);
+				if (hitLuminaire && (rRec.type & RadianceQueryRecord::EDirectMediumRadiance)) {
+					lRec.value = lRec.luminaire->Le(lRec);
 
 					/* Prob. of having generated this sample using luminaire sampling */
 					const Float lumPdf = scene->pdfLuminaire(mRec.p, lRec);
 					Float weight = miWeight(phasePdf, lumPdf);
-					Li += pathThroughput * attenuation * lRec.Le * phaseVal * weight;
+					Spectrum contrib = pathThroughput * lRec.value * phaseVal * weight;
+					
+					if (rRec.medium) {
+						ray.mint = 0; ray.maxt = its.t; 
+						contrib *= rRec.medium->tau(ray);
+					}
+
+					contrib += Li;
 				}
 
 				/* ==================================================================== */
@@ -147,7 +147,7 @@ public:
 				/* ==================================================================== */
 
 				/* Stop if multiple scattering was not requested */
-				if (!(rRec.type & RadianceQueryRecord::EInscatteredIndirectRadiance)) 
+				if (!(rRec.type & RadianceQueryRecord::EIndirectMediumRadiance)) 
 					break;
 				rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 
@@ -166,7 +166,8 @@ public:
 					tau(x, y) (Surface integral). This happens with probability mRec.pdfFailure
 					Divide this out and multiply with the proper per-color-channel attenuation.
 				*/
-				pathThroughput *= mRec.attenuation / mRec.pdfFailure;
+				if (rRec.medium)
+					pathThroughput *= mRec.attenuation / mRec.pdfFailure;
 
 				if (!its.isValid()) {
 					/* If no intersection could be found, possibly return 
@@ -176,7 +177,16 @@ public:
 					break;
 				}
 
+				if (its.isMediumTransition())
+					rRec.medium = its.getTargetMedium(ray);
+
 				const BSDF *bsdf = its.getBSDF(ray);
+				if (!bsdf) {
+					/* Pass right through the surface (there is no BSDF) */
+					ray.setOrigin(its.p);
+					scene->rayIntersect(ray, its);
+					continue;
+				}
 
 				/* Possibly include emitted radiance if requested */
 				if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
@@ -194,8 +204,8 @@ public:
 				/* ==================================================================== */
 
 				/* Estimate the direct illumination if this is requested */
-				if (rRec.type & RadianceQueryRecord::EDirectRadiance && 
-					scene->sampleLuminaireAttenuated(its, lRec, rRec.nextSample2D())) {
+				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
+					scene->sampleAttenuatedLuminaire(its, lRec, rRec.medium, rRec.nextSample2D())) {
 					/* Allocate a record for querying the BSDF */
 					const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
 
@@ -211,7 +221,7 @@ public:
 
 						/* Weight using the power heuristic */
 						const Float weight = miWeight(lRec.pdf, bsdfPdf);
-						Li += pathThroughput * lRec.Le * bsdfVal * weight;
+						Li += pathThroughput * lRec.value * bsdfVal * weight;
 					}
 				}
 
@@ -246,18 +256,21 @@ public:
 						hitLuminaire = true;
 					}
 				}
-				ray.mint = 0; ray.maxt = its.t; 
-				Spectrum attenuation = scene->getAttenuation(ray);
 
 				/* If a luminaire was hit, estimate the local illumination and
 				   weight using the power heuristic */
-				if (hitLuminaire && rRec.type & RadianceQueryRecord::EDirectRadiance) {
-					lRec.Le = lRec.luminaire->Le(lRec);
+				if (hitLuminaire && rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) {
+					lRec.value = lRec.luminaire->Le(lRec);
 					/* Prob. of having generated this sample using luminaire sampling */
 					const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ?
 						scene->pdfLuminaire(prevIts, lRec) : 0;
 					const Float weight = miWeight(bsdfPdf, lumPdf);
-					Li += pathThroughput * attenuation * lRec.Le * bsdfVal * weight;
+					Spectrum contrib = pathThroughput * lRec.value * bsdfVal * weight;
+					if (rRec.medium) {
+						ray.mint = 0; ray.maxt = its.t; 
+						contrib *= rRec.medium->getAttenuation(ray);
+					}
+					Li += contrib;
 				}
 
 				/* ==================================================================== */
@@ -265,7 +278,7 @@ public:
 				/* ==================================================================== */
 			
 				/* Stop if indirect illumination was not requested */
-				if (!(rRec.type & RadianceQueryRecord::EIndirectRadiance)) 
+				if (!(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)) 
 					break;
 				rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 
@@ -292,20 +305,18 @@ public:
 	}
 
 	inline Float miWeight(Float pdfA, Float pdfB) const {
-		pdfA = std::pow(pdfA, m_beta);
-		pdfB = std::pow(pdfB, m_beta);
-		return pdfA / (pdfA + pdfB);
+		Float a = pdfA * pdfA;
+		Float b = pdfB * pdfB;
+		return a / (a + b);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		MonteCarloIntegrator::serialize(stream, manager);
-		stream->writeFloat(m_beta);
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "VolumetricPathTracer[" << std::endl
-			<< "  beta = " << m_beta << "," << std::endl
 			<< "  maxDepth = " << m_maxDepth << "," << std::endl
 			<< "  rrDepth = " << m_rrDepth << std::endl
 			<< "]";

@@ -98,7 +98,7 @@ public:
 			Li += its.LoSub(scene, -ray.d);
 
 		/* Leave here if direct illumination was not requested */
-		if (!(rRec.type & RadianceQueryRecord::EDirectRadiance))
+		if (!(rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance))
 			return Li;
 
 		/* ==================================================================== */
@@ -143,7 +143,7 @@ public:
 
 					/* Weight using the power heuristic */
 					const Float weight = miWeight(lRec.pdf * fracLum, bsdfPdf * fracBSDF) * weightLum;
-					Li += lRec.Le * bsdfVal * weight;
+					Li += lRec.value * bsdfVal * weight;
 				}
 			}
 		}
@@ -191,13 +191,13 @@ public:
 
 			/* If a luminaire was hit, estimate the local illumination and
 				sample weight using the power heuristic */
-			if (hitLuminaire && (rRec.type & RadianceQueryRecord::EDirectRadiance)) {
-				lRec.Le = lRec.luminaire->Le(lRec);
+			if (hitLuminaire && (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance)) {
+				lRec.value = lRec.luminaire->Le(lRec);
 				Float lumPdf = scene->pdfLuminaire(its, lRec);
 				if (bRec.sampledType & BSDF::EDelta)
 					lumPdf = 0;
 				const Float weight = miWeight(bsdfPdf * fracBSDF, lumPdf * fracLum) * weightBSDF;
-				Li += lRec.Le * bsdfVal * weight;
+				Li += lRec.value * bsdfVal * weight;
 			}
 		}
 

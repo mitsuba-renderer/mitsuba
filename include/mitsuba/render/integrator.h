@@ -26,10 +26,11 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Abstract integrator base-class. Does not make any assumptions on
+ * \brief Abstract integrator base-class; does not make any assumptions on
  * how radiance is computed. 
- * Amongst other things, this allows the use of hardware-accelerated 
- * rasterization, which directly operates on the camera's film and has 
+ *
+ * Amongst other things, the generality of this class allows for hardware-accelerated 
+ * rasterization that directly operates on the camera's film and has 
  * no global knowledge about radiance within the scene. Other possibilities
  * are sampling- or particle tracing-based integrators.
  */
@@ -106,85 +107,86 @@ protected:
 	Properties m_properties;
 };
 
+/**
+ * \brief Radiance query record data structure used by \ref SampleIntegrator
+ */
 struct MTS_EXPORT_RENDER RadianceQueryRecord {
 public:
-	/**
-	 * List of suported query types. These can be combined by a binary OR.
-	 */
+	/// List of suported query types. These can be combined by a binary OR.
 	enum ERadianceQuery {
-		/* Emitted radiance from a luminaire intersected by the ray */
+		/// Emitted radiance from a luminaire intersected by the ray
 		EEmittedRadiance     = 0x0001,
 
-		/* Emitted radiance from a subsurface integrator */
+		/// Emitted radiance from a subsurface integrator */
 		ESubsurfaceRadiance  = 0x0002,
 
-		/* Direct (surface) radiance */
-		EDirectRadiance      = 0x0004,
+		/// Direct (surface) radiance */
+		EDirectSurfaceRadiance      = 0x0004,
 
-		/* Indirect (surface) radiance, where the last bounce did not go
-		   through a Dirac delta BSDF */
-		EIndirectRadiance    = 0x0008,
+		/*! \brief Indirect (surface) radiance, where the last bounce did not go
+		    through a Dirac delta BSDF */
+		EIndirectSurfaceRadiance    = 0x0008,
 
-		/* Indirect (surface) radiance, where the last bounce went
+		/*! \brief Indirect (surface) radiance, where the last bounce went
 		   through a Dirac delta BSDF */
 		ECausticRadiance     = 0x0010,
 
-		/* In-scattered radiance due to volumetric scattering (direct) */
-		EInscatteredDirectRadiance = 0x0020,
+		/// In-scattered radiance due to volumetric scattering (direct)
+		EDirectMediumRadiance = 0x0020,
 
-		/* In-scattered radiance due to volumetric scattering (indirect) */
-		EInscatteredIndirectRadiance = 0x0040,
+		/// In-scattered radiance due to volumetric scattering (indirect)
+		EIndirectMediumRadiance = 0x0040,
 
-		/* Distance to the next surface intersection */
+		/// Distance to the next surface intersection
 		EDistance            = 0x0080,
 
-		/* Opacity value: 1 when a surface was hit, 0 when the ray leads
-		   into empty space. When there is a participating medium,
-		   this can also take on fractional values. */
+		/*! \brief Store an opacity value, which is equal to 1 when a shape
+		   was intersected and 0 when the ray passes through empty space. 
+		   When there is a participating medium, it can also take on fractional
+		   values. */
 		EOpacity             = 0x0100,
 
-		/* A ray intersection may need to be performed. This can be set to 
+		/*! \brief A ray intersection may need to be performed. This can be set to 
 		   zero if the caller has already provided the intersection */
 		EIntersection        = 0x0200,
 
 		/* Radiance from volumes */
-		EVolumeRadiance      = EInscatteredDirectRadiance | EInscatteredIndirectRadiance,
+		EVolumeRadiance      = EDirectMediumRadiance | EIndirectMediumRadiance,
 
-		/* Radiance query without emitted radiance, ray intersection required */
-		ERadianceNoEmission  = ESubsurfaceRadiance | EDirectRadiance | EIndirectRadiance
-			| ECausticRadiance | EInscatteredDirectRadiance | EInscatteredIndirectRadiance | EIntersection,
+		/// Radiance query without emitted radiance, ray intersection required
+		ERadianceNoEmission  = ESubsurfaceRadiance | EDirectSurfaceRadiance | EIndirectSurfaceRadiance
+			| ECausticRadiance | EDirectMediumRadiance | EIndirectMediumRadiance | EIntersection,
 
-		/* Default radiance query, ray intersection required */
+		/// Default radiance query, ray intersection required
 		ERadiance = ERadianceNoEmission | EEmittedRadiance,
 
-		/* Radiance + opacity */
+		/// Radiance + opacity
 		ECameraRay = ERadiance | EOpacity
 	};
 
 	/// Construct an invalid radiance query record
 	inline RadianceQueryRecord() 
-	 : type(0), scene(NULL), sampler(NULL),
-	   depth(0), alpha(0), dist(-1), wavelength(-1), extra(0) {
+	 : type(0), scene(NULL), sampler(NULL), medium(NULL),
+	   depth(0), alpha(0), dist(-1), extra(0) {
 	}
 
 	/// Construct a radiance query record for the given scene and sampler
 	inline RadianceQueryRecord(const Scene *scene, Sampler *sampler) 
-	 : type(0), scene(scene), sampler(sampler), 
-	   depth(0), alpha(0), dist(-1), wavelength(-1), extra(0) {
+	 : type(0), scene(scene), sampler(sampler), medium(NULL),
+	   depth(0), alpha(0), dist(-1), extra(0) {
 	}
 	
 	/// Copy constructor
 	inline RadianceQueryRecord(const RadianceQueryRecord &rRec) 
-	 : type(rRec.type), scene(rRec.scene), sampler(rRec.sampler), 
-	   depth(rRec.depth), alpha(rRec.alpha), dist(rRec.dist),
-	   wavelength(rRec.wavelength), extra(rRec.extra) {
+	 : type(rRec.type), scene(rRec.scene), sampler(rRec.sampler), medium(rRec.medium),
+	   depth(rRec.depth), alpha(rRec.alpha), dist(rRec.dist), extra(rRec.extra) {
 	}
 
 	/// Begin a new query of the given type
-	inline void newQuery(int _type) {
+	inline void newQuery(int _type, const Medium *_medium) {
 		type = _type;
+		medium = _medium;
 		depth = 1;
-		wavelength = -1;
 		extra = 0;
 	}
 
@@ -194,22 +196,24 @@ public:
 		scene = parent.scene;
 		sampler = parent.sampler;
 		depth = parent.depth+1;
-		wavelength = parent.wavelength;
 		extra = 0;
 	}
 
 	/**
-	 * Search for a ray intersection. This
-	 * does several things at once - if the intersection has 
-	 * already been provided, the function returns.
+	 * \brief Search for a ray intersection
+	 *
+	 * This function does several things at once: if the
+	 * intersection has already been provided, it returns.
+	 *
 	 * Otherwise, it
-	 * - performs the ray intersection
-	 * - computes the attenuation due to participating media
-	 *   and stores it in <tt>attenuation</tt>.
-	 * - sets the alpha value (if <tt>EAlpha</tt> is set in <tt>type</tt>)
-	 * - sets the distance value (if <tt>EDistance</tt> is set in <tt>type</tt>)
-	 * - clears the <tt>EIntersection</tt> flag in <tt>type</tt>
-	 * Returns true if there is a valid intersection.
+	 * 1. performs the ray intersection
+	 * 2. computes the attenuation due to participating media
+	 *   and stores it in \c attenuation.
+	 * 3. sets the alpha value (if \c EAlpha is set in \c type)
+	 * 4. sets the distance value (if \c EDistance is set in \c type)
+	 * 5. clears the \c EIntersection flag in \c type
+	 * 
+	 * \return \c true if there is a valid intersection.
 	 */
 	inline bool rayIntersect(const RayDifferential &ray);
 
@@ -234,6 +238,9 @@ public:
 	/// Sample generator
 	Sampler *sampler;
 
+	/// Pointer to the current medium (*)
+	const Medium *medium;
+
 	/// Current depth value (# of light bounces) (*)
 	int depth;
 
@@ -250,16 +257,6 @@ public:
 	Float dist;
 
 	/**
-	 * In some cases, the integrator may be forced to restrict
-	 * radiance computations to one wavelength (e.g. when intersecting
-	 * a dielectric material with dispersion or while path
-	 * tracing through a highly scattering medium with a non-constant
-	 * scattering coefficient). This attribute is used to store the
-	 * chosen wavelength. (*)
-	 */
-	int wavelength;
-
-	/**
 	 * Internal flag, which can be used to pass additional information 
 	 * amonst recursive calls inside an integrator. The use
 	 * is dependent on the particular integrator implementation. (*)
@@ -273,19 +270,37 @@ public:
 class MTS_EXPORT_RENDER SampleIntegrator : public Integrator {
 public:
 	/**
-	 * Sample the incident radiance along a ray. Also requires
+	 * \brief Sample the incident radiance along a ray. Also requires
 	 * a radiance query record, which makes this request more precise.
 	 */
 	virtual Spectrum Li(const RayDifferential &ray,
 		RadianceQueryRecord &rRec) const = 0;
 
 	/**
-	 * Estimate the irradiance at a given surface point. The
-	 * default implementation simply samples the hemisphere using
+	 * \brief Estimate the irradiance at a given surface point
+	 *
+	 * The default implementation simply samples the hemisphere using
 	 * cosine-weighted sampling and a configurable number of rays.
+	 *
+	 * \param scene
+	 *     Const pointer to the underlying scene
+	 * \param p
+	 *     The surface location at which to estimate the irradiance
+	 * \param n
+	 *     The surface normal at which to estimate the irradiance
+	 * \param medium
+	 *     Const pointer to the medium that encloses \c (p, n).
+	 *     A value of \c NULL corresponds to vacuum
+	 * \param sampler
+	 *     A pointer to a sample generator
+	 * \param nSamples
+	 *     How many samples should be taken
+	 * \param includeIndirect
+	 *     Include indirect illumination in the estimate?
 	 */
 	virtual Spectrum E(const Scene *scene, const Point &p, const
-		Normal &n, Float time, Sampler *sampler, int nSamples,
+		Normal &n, Float time, const Medium *medium,
+		Sampler *sampler, int nSamples,
 		bool includeIndirect) const; 
 
 	/**

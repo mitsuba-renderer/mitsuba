@@ -77,9 +77,9 @@ public:
 				/* ==================================================================== */
 
 				/* Estimate the single scattering component if this is requested */
-				if (rRec.type & RadianceQueryRecord::EInscatteredDirectRadiance && 
-					scene->sampleLuminaireAttenuated(mRec.p, lRec, ray.time, rRec.nextSample2D())) {
-					Li += pathThroughput * lRec.Le * phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
+				if (rRec.type & RadianceQueryRecord::EDirectMediumRadiance && 
+					scene->sampleAttenuatedLuminaire(mRec.p, lRec, ray.time, rRec.nextSample2D())) {
+					Li += pathThroughput * lRec.value * phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 				}
 
 				/* ==================================================================== */
@@ -100,7 +100,7 @@ public:
 				/* ==================================================================== */
 
 				/* Set the recursive query type */
-				if (!(rRec.type & RadianceQueryRecord::EInscatteredIndirectRadiance))
+				if (!(rRec.type & RadianceQueryRecord::EIndirectMediumRadiance))
 					break; /* Stop if multiple scattering was not requested */
 
 				/* Russian roulette - Possibly stop the recursion */
@@ -144,12 +144,12 @@ public:
 				/* ==================================================================== */
 
 				/* Estimate the direct illumination if this is requested */
-				if (rRec.type & RadianceQueryRecord::EDirectRadiance && 
-					scene->sampleLuminaireAttenuated(its, lRec, rRec.nextSample2D())) {
+				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
+					scene->sampleAttenuatedLuminaire(its, lRec, rRec.nextSample2D())) {
 					/* Allocate a record for querying the BSDF */
 					const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
 
-					Li += pathThroughput * lRec.Le * bsdf->fCos(bRec);
+					Li += pathThroughput * lRec.value * bsdf->fCos(bRec);
 				}
 
 				/* ==================================================================== */
@@ -170,10 +170,10 @@ public:
 				/*                         Indirect illumination                        */
 				/* ==================================================================== */
 				bool includeEmitted = (bRec.sampledType & BSDF::EDelta) 
-					&& (rRec.type & RadianceQueryRecord::EDirectRadiance);
+					&& (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance);
 			
 					/* Stop if indirect illumination was not requested */
-				if (!(rRec.type & RadianceQueryRecord::EIndirectRadiance)) {
+				if (!(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)) {
 					/* Stop if indirect illumination was not requested (except: sampled a delta BSDF 
 					   - recursively look for emitted radiance only to get the direct component) */
 					if (includeEmitted) {

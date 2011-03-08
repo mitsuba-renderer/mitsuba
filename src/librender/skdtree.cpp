@@ -131,6 +131,35 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 	return false;
 }
 
+bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape) const {
+	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
+	Float mint, maxt;
+	
+	t = std::numeric_limits<Float>::infinity();
+
+	++shadowRaysTraced;
+	if (m_aabb.rayIntersect(ray, mint, maxt)) {
+		/* Use an adaptive ray epsilon */
+		Float rayMinT = ray.mint;
+		if (rayMinT == Epsilon)
+			rayMinT *= std::max(std::max(std::abs(ray.o.x), 
+				std::abs(ray.o.y)), std::abs(ray.o.z));
+
+		if (rayMinT > mint) mint = rayMinT;
+		if (ray.maxt < maxt) maxt = ray.maxt;
+
+		if (EXPECT_TAKEN(maxt > mint)) {
+			if (rayIntersectHavran<false>(ray, mint, maxt, t, temp)) {
+				const IntersectionCache *cache = reinterpret_cast<const IntersectionCache *>(temp);
+				shape = m_shapes[cache->shapeIndex];
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
 bool ShapeKDTree::rayIntersect(const Ray &ray) const {
 	Float mint, maxt, t = std::numeric_limits<Float>::infinity();
 

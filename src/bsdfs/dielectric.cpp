@@ -26,8 +26,7 @@ const bool importanceSampleComponents = true;
 /**
  * Models an interface between two materials with non-matched indices of refraction.
  * The microscopic surface structure is assumed to be perfectly flat, resulting 
- * in a BSDF equal to a Dirac delta function. When spectral rendering is active, 
- * dispersion is simulated using Cauchy's equation.
+ * in a BSDF equal to a Dirac delta function. 
  *
  * The default settings are set to a borosilicate glass BK7/air interface.
  */
@@ -39,10 +38,6 @@ public:
 		m_intIOR = props.getFloat("intIOR", 1.5046f);
 		/* Specifies the external index of refraction at the interface */
 		m_extIOR = props.getFloat("extIOR", 1);
-		/* B term from Cauchy's equation (units: um^2) - internal */
-		m_intB = props.getFloat("intB", 0.00420f);
-		/* B term from Cauchy's equation (units: um^2) - external */
-		m_extB = props.getFloat("extB", 0);
 		/* Reflectance modulation term */
 		m_reflectance = props.getSpectrum("specularReflectance", Spectrum(1.0f));
 		/* Transmittance modulation term */
@@ -60,8 +55,6 @@ public:
 			: BSDF(stream, manager) {
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
-		m_intB = stream->readFloat();
-		m_extB = stream->readFloat();
 		m_transmittance = Spectrum(stream);
 		m_reflectance = Spectrum(stream);
 
@@ -82,8 +75,6 @@ public:
 
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
-		stream->writeFloat(m_intB);
-		stream->writeFloat(m_extB);
 		m_transmittance.serialize(stream);
 		m_reflectance.serialize(stream);
 	}
@@ -155,36 +146,7 @@ public:
 		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
 
-#if SPECTRUM_SAMPLES != 3
-		Spectrum result(0.0f);
-		Float intIOR, extIOR;
-		int wavelengthSample;
-
-		/* Sample a wavelength */
-		if (bRec.rRec) {
-			if (bRec.rRec->wavelength == -1) {
-				/* If we are already tracing a monochromatic ray,
-				   keep it that way */
-				wavelengthSample = bRec.rRec->wavelength
-					= (int) std::min(sample.y * SPECTRUM_SAMPLES,
-						SPECTRUM_SAMPLES-1);
-			} else {
-				wavelengthSample = bRec.rRec->wavelength;
-			}
-		} else {
-			wavelengthSample = (int) std::min(sample.y * SPECTRUM_SAMPLES,
-						SPECTRUM_SAMPLES-1);
-		}
-
-		/* Wavelength in um */
-		Float wavelength = Spectrum::getWavelength(bRec.rRec->wavelength) * 0.001f;
-		intIOR = m_intIOR + m_intB / (wavelength*wavelength);
-		extIOR = m_extIOR + m_extB / (wavelength*wavelength);
-		result[wavelengthEntry] = SPECTRUM_SAMPLES;
-#else
-		Float intIOR = m_intIOR, extIOR = m_extIOR;
-#endif
-		Float fr = fresnel(Frame::cosTheta(bRec.wi), extIOR, intIOR);
+		Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
 
 		/* Calculate the refracted/reflected vectors+coefficients */
 		if (sampleTransmission && sampleReflection) {
@@ -201,7 +163,7 @@ public:
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDeltaTransmission;
 
-				Float result = refract(intIOR, extIOR, bRec.wi, bRec.wo, bRec.quantity);
+				Float result = refract(m_intIOR, m_extIOR, bRec.wi, bRec.wo, bRec.quantity);
 				if (result == 0)
 					return Spectrum(0.0f);
 				pdf *= std::abs(Frame::cosTheta(bRec.wo));
@@ -219,7 +181,7 @@ public:
 			bRec.sampledType = EDeltaTransmission;
 			pdf = std::abs(Frame::cosTheta(bRec.wo));
 
-			Float result = refract(intIOR, extIOR, bRec.wi, bRec.wo, bRec.quantity);
+			Float result = refract(m_intIOR, m_extIOR, bRec.wi, bRec.wo, bRec.quantity);
 			if (result == 0)
 				return Spectrum(0.0f);
 
@@ -260,11 +222,7 @@ public:
 		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
 		bool reflection = bRec.wo.z * bRec.wi.z > 0;
-#if SPECTRUM_SAMPLES != 3
-		#error fixme
-#else
 		Float intIOR = m_intIOR, extIOR = m_extIOR;
-#endif
 		Float fr = fresnel(Frame::cosTheta(bRec.wi), extIOR, intIOR);
 		if (sampleReflection && !sampleTransmission && !reflection) 
 			return Spectrum(0.0f);
@@ -289,9 +247,7 @@ public:
 		std::ostringstream oss;
 		oss << "Dielectric[" << endl
 			<< "  intIOR=" << m_intIOR << "," << endl 
-			<< "  extIOR=" << m_extIOR << "," << endl
-			<< "  intB=" << m_intB << "," << endl 
-			<< "  extB=" << m_extB << endl
+			<< "  extIOR=" << m_extIOR << endl
 			<< "]";
 		return oss.str();
 	}
@@ -299,7 +255,6 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	Float m_intIOR, m_extIOR;
-	Float m_intB, m_extB;
 	Spectrum m_reflectance;
 	Spectrum m_transmittance;
 };
