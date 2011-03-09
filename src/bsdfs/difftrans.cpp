@@ -97,7 +97,7 @@ public:
 	}
 		
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "transmittance") {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "transmittance") {
 			m_transmittance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_transmittance->usesRayDifferentials();
 		} else {

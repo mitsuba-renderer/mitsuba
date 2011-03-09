@@ -74,10 +74,8 @@ protected:
  */
 class CaptureParticleWorker : public ParticleTracer {
 public:
-	inline CaptureParticleWorker(int maxDepth, bool multipleScattering, 
-		int rrDepth) : ParticleTracer(maxDepth, 
-			multipleScattering, rrDepth) {
-	}
+	inline CaptureParticleWorker(int maxDepth, int rrDepth)
+		: ParticleTracer(maxDepth, rrDepth) { }
 
 	inline CaptureParticleWorker(Stream *stream, InstanceManager *manager) 
 	 : ParticleTracer(stream, manager) { }
@@ -127,11 +125,10 @@ private:
 class CaptureParticleProcess : public ParticleProcess {
 public:
 	CaptureParticleProcess(const RenderJob *job, RenderQueue *queue, 
-		size_t sampleCount, size_t granularity, int maxDepth, bool multipleScattering,
-		int rrDepth) : ParticleProcess(ParticleProcess::ETrace, sampleCount, 
+		size_t sampleCount, size_t granularity, int maxDepth, int rrDepth)
+		: ParticleProcess(ParticleProcess::ETrace, sampleCount, 
 		  granularity, "Rendering", job), m_job(job), m_queue(queue), 
-		  m_maxDepth(maxDepth), m_multipleScattering(multipleScattering), 
-		  m_rrDepth(rrDepth) {
+		  m_maxDepth(maxDepth), m_rrDepth(rrDepth) {
 	}
 
 	void develop();
@@ -152,7 +149,6 @@ private:
 	ref<Bitmap> m_accumBitmap;
 	ref<Bitmap> m_finalBitmap;
 	int m_maxDepth;
-	bool m_multipleScattering;
 	int m_rrDepth;
 };
 

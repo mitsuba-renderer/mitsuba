@@ -60,10 +60,10 @@ public:
 		props.setLong("sampleCount", m_sampleCount);
 		props.setPluginName("hammersley");
 		m_sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, props));
+			createObject(MTS_CLASS(Sampler), props));
 		props.setPluginName("independent");
 		m_independentSampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, props));
+			createObject(MTS_CLASS(Sampler), props));
 		m_scene->wakeup(m_resources);
 		const Subsurface *ss = m_scene->getSubsurfaceIntegrators()[m_ssIndex];
 		m_shapes = ss->getShapes();

@@ -1033,7 +1033,7 @@ void MainWindow::on_actionSettings_triggered() {
 	size_t workerCount = sched->getWorkerCount();
 	for (size_t i=0; i<workerCount; ++i) {
 		Worker *worker = sched->getWorker(i);
-		if (worker->getClass()->derivesFrom(LocalWorker::m_theClass))
+		if (worker->getClass()->derivesFrom(MTS_CLASS(LocalWorker)))
 			localWorkers.push_back(worker);
 	}
 
@@ -1653,11 +1653,11 @@ SceneContext::SceneContext(SceneContext *ctx) {
 		ref<PluginManager> pluginMgr = PluginManager::getInstance();
 		ref<PinholeCamera> oldCamera = static_cast<PinholeCamera *>(ctx->scene->getCamera());
 		ref<PinholeCamera> camera = static_cast<PinholeCamera *> 
-			(pluginMgr->createObject(Camera::m_theClass, oldCamera->getProperties()));
+			(pluginMgr->createObject(MTS_CLASS(Camera), oldCamera->getProperties()));
 		ref<Sampler> sampler = static_cast<Sampler *> 
-			(pluginMgr->createObject(Sampler::m_theClass, ctx->scene->getSampler()->getProperties()));
+			(pluginMgr->createObject(MTS_CLASS(Sampler), ctx->scene->getSampler()->getProperties()));
 		ref<Film> film = static_cast<Film *> 
-			(pluginMgr->createObject(Film::m_theClass, oldCamera->getFilm()->getProperties()));
+			(pluginMgr->createObject(MTS_CLASS(Film), oldCamera->getFilm()->getProperties()));
 		const Integrator *oldIntegrator = ctx->scene->getIntegrator();
 		ref<Integrator> currentIntegrator;
 
@@ -1665,7 +1665,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 		std::vector<Integrator *> integratorList;
 		while (oldIntegrator != NULL) {
 			ref<Integrator> integrator = static_cast<Integrator *> (pluginMgr->createObject(
-				Integrator::m_theClass, oldIntegrator->getProperties()));
+				MTS_CLASS(Integrator), oldIntegrator->getProperties()));
 			if (depth++ == 0) 
 				scene->setIntegrator(integrator);
 			else 
@@ -1679,7 +1679,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 			integratorList[i]->configure();
 
 		ref<ReconstructionFilter> rfilter = static_cast<ReconstructionFilter *> 
-			(pluginMgr->createObject(ReconstructionFilter::m_theClass, oldCamera->getFilm()->
+			(pluginMgr->createObject(MTS_CLASS(ReconstructionFilter), oldCamera->getFilm()->
 				getReconstructionFilter()->getProperties()));
 
 		rfilter->configure();

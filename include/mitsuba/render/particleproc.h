@@ -112,10 +112,9 @@ public:
 	MTS_DECLARE_CLASS()
 protected:
 	/// Protected constructor
-	inline ParticleTracer(int maxDepth, bool multipleScattering, int rrDepth) 
-		: m_maxDepth(maxDepth), 
-		m_rrDepth(rrDepth) {
-	}
+	inline ParticleTracer(int maxDepth, int rrDepth) 
+		: m_maxDepth(maxDepth), m_rrDepth(rrDepth) { }
+
 	/// Protected constructor
 	ParticleTracer(Stream *stream, InstanceManager *manager);
 	/// Virtual destructor

@@ -76,7 +76,7 @@ void Film::serialize(Stream *stream, InstanceManager *manager) const {
 void Film::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
 
-	if (cClass->derivesFrom(ReconstructionFilter::m_theClass)) {
+	if (cClass->derivesFrom(MTS_CLASS(ReconstructionFilter))) {
 		Assert(m_filter == NULL);
 		m_filter = static_cast<ReconstructionFilter *>(child);
 		m_tabulatedFilter = new TabulatedFilter(m_filter);
@@ -90,7 +90,7 @@ void Film::configure() {
 	if (m_filter == NULL) {
 		/* No reconstruction filter has been selected. Load a gaussian filter by default */
 		m_filter = static_cast<ReconstructionFilter *> (PluginManager::getInstance()->
-				createObject(ReconstructionFilter::m_theClass, Properties("gaussian")));
+				createObject(MTS_CLASS(ReconstructionFilter), Properties("gaussian")));
 		m_tabulatedFilter = new TabulatedFilter(m_filter);
 	}
 }

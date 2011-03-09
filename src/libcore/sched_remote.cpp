@@ -334,7 +334,7 @@ StreamBackend::StreamBackend(const std::string &thrName, Scheduler *scheduler,
 }
 
 StreamBackend::~StreamBackend() {
-	if (m_stream->getClass()->derivesFrom(SocketStream::m_theClass)) {
+	if (m_stream->getClass()->derivesFrom(MTS_CLASS(SocketStream))) {
 		SocketStream *sstream = static_cast<SocketStream *>(m_stream.get());
 		Log(EInfo, "Closing connection to %s - received %i KB / sent %i KB",
 			sstream->getPeer().c_str(), (int) (sstream->getReceivedBytes() / 1024),
@@ -346,7 +346,7 @@ void StreamBackend::run() {
 	if (m_detach)
 		detach();
 
-	if (m_stream->getClass()->derivesFrom(SocketStream::m_theClass)) {
+	if (m_stream->getClass()->derivesFrom(MTS_CLASS(SocketStream))) {
 		SocketStream *sstream = static_cast<SocketStream *>(m_stream.get());
 		Log(EInfo, "Incoming connection from %s", sstream->getPeer().c_str());
 	}

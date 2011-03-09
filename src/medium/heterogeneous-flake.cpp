@@ -316,13 +316,13 @@ public:
 	}
 
 	void setParent(ConfigurableObject *parent) {
-		if (parent->getClass()->derivesFrom(Shape::m_theClass))
+		if (parent->getClass()->derivesFrom(MTS_CLASS(Shape)))
 			Log(EError, "Medium cannot be a parent of a shape");
 	}
 
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(Shape::m_theClass)) {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Shape))) {
 			Shape *shape = static_cast<Shape *>(child);
 			if (shape->isCompound()) {
 				int ctr = 0;
@@ -337,7 +337,7 @@ public:
 				shape->incRef();
 				m_shapes.push_back(shape);
 			}
-		} else if (child->getClass()->derivesFrom(VolumeDataSource::m_theClass)) {
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(VolumeDataSource))) {
 			VolumeDataSource *volume = static_cast<VolumeDataSource *>(child);
 
 			if (name == "albedo") {

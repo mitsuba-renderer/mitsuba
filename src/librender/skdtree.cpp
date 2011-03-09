@@ -44,7 +44,7 @@ void ShapeKDTree::addShape(const Shape *shape) {
 	Assert(!isBuilt());
 	if (shape->isCompound())
 		Log(EError, "Cannot add compound shapes to a kd-tree - expand them first!");
-	if (shape->getClass()->derivesFrom(TriMesh::m_theClass)) {
+	if (shape->getClass()->derivesFrom(MTS_CLASS(TriMesh))) {
 		// Triangle meshes are expanded into individual primitives,
 		// which are visible to the tree construction code. Generic
 		// primitives are only handled by their AABBs

@@ -132,43 +132,43 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		object = m_scene = new Scene(context.properties);
 	} else if (name == "shape") {
 		object = static_cast<Shape *> (m_pluginManager->createObject(
-			Shape::m_theClass, context.properties));
+			MTS_CLASS(Shape), context.properties));
 	} else if (name == "sampler") {
 		object = static_cast<Sampler *> (m_pluginManager->createObject(
-			Sampler::m_theClass, context.properties));
+			MTS_CLASS(Sampler), context.properties));
 	} else if (name == "film") {
 		object = static_cast<Film *> (m_pluginManager->createObject(
-			Film::m_theClass, context.properties));
+			MTS_CLASS(Film), context.properties));
 	} else if (name == "integrator") {
 		object = static_cast<Integrator *> (m_pluginManager->createObject(
-			Integrator::m_theClass, context.properties));
+			MTS_CLASS(Integrator), context.properties));
 	} else if (name == "texture") {
 		object = static_cast<Texture *> (m_pluginManager->createObject(
-			Texture::m_theClass, context.properties));
+			MTS_CLASS(Texture), context.properties));
 	} else if (name == "camera") {
 		object = static_cast<Camera *> (m_pluginManager->createObject(
-			Camera::m_theClass, context.properties));
+			MTS_CLASS(Camera), context.properties));
 	} else if (name == "subsurface") {
 		object = static_cast<Subsurface *> (m_pluginManager->createObject(
-			Subsurface::m_theClass, context.properties));
+			MTS_CLASS(Subsurface), context.properties));
 	} else if (name == "luminaire") {
 		object = static_cast<Luminaire *> (m_pluginManager->createObject(
-			Luminaire::m_theClass, context.properties));
+			MTS_CLASS(Luminaire), context.properties));
 	} else if (name == "medium") {
 		object = static_cast<Medium *> (m_pluginManager->createObject(
-			Medium::m_theClass, context.properties));
+			MTS_CLASS(Medium), context.properties));
 	} else if (name == "volume") {
 		object = static_cast<VolumeDataSource *> (m_pluginManager->createObject(
-			VolumeDataSource::m_theClass, context.properties));
+			MTS_CLASS(VolumeDataSource), context.properties));
 	} else if (name == "phase") {
 		object = static_cast<PhaseFunction *> (m_pluginManager->createObject(
-			PhaseFunction::m_theClass, context.properties));
+			MTS_CLASS(PhaseFunction), context.properties));
 	} else if (name == "bsdf") {
 		object = static_cast<BSDF *> (m_pluginManager->createObject(
-			BSDF::m_theClass, context.properties));
+			MTS_CLASS(BSDF), context.properties));
 	} else if (name == "rfilter") {
 		object = static_cast<ReconstructionFilter *> (m_pluginManager->createObject(
-			ReconstructionFilter::m_theClass, context.properties));
+			MTS_CLASS(ReconstructionFilter), context.properties));
 	} else if (name == "ref") {
 		std::string id = context.attributes["id"];
 		if (m_namedObjects->find(id) == m_namedObjects->end())
@@ -408,7 +408,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		}
 
 		/* Don't configure a scene object if it is from an included file */
-		if (name != "include" && (!m_isIncludedFile || !object->getClass()->derivesFrom(Scene::m_theClass))) 
+		if (name != "include" && (!m_isIncludedFile || !object->getClass()->derivesFrom(MTS_CLASS(Scene)))) 
 			object->configure();
 	}
 

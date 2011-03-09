@@ -21,30 +21,18 @@
 
 MTS_NAMESPACE_BEGIN
 	
-inline BSDFQueryRecord::BSDFQueryRecord(RadianceQueryRecord &rRec, 
-	const Intersection &its): rRec(&rRec), 
-	its(its), wi(its.wi), quantity(ERadiance),
-	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
-}
-
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its)
-	: rRec(NULL), its(its), wi(its.wi), quantity(ERadiance),
+	: its(its), wi(its.wi), quantity(ERadiance),
 	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
 }
 
-inline BSDFQueryRecord::BSDFQueryRecord(RadianceQueryRecord &rRec, 
-		const Intersection &its, const Vector &wo)
-	: rRec(&rRec), its(its), wi(its.wi), wo(wo), quantity(ERadiance),
-	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
-}
-	
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wo)	  
-	: rRec(NULL), its(its), wi(its.wi), wo(wo), quantity(ERadiance),
+	: its(its), wi(its.wi), wo(wo), quantity(ERadiance),
     typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
 }
 	
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wi, const Vector &wo) 
-  : rRec(NULL), its(its), wi(wi), wo(wo), quantity(ERadiance),
+  : its(its), wi(wi), wo(wo), quantity(ERadiance),
   typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
 }
 

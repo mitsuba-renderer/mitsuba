@@ -88,16 +88,16 @@ void Camera::generateRayDifferential(const Point2 &sample,
 }
 
 void Camera::addChild(const std::string &name, ConfigurableObject *child) {
-	if (child->getClass()->derivesFrom(Sampler::m_theClass)) {
+	if (child->getClass()->derivesFrom(MTS_CLASS(Sampler))) {
 		Assert(m_sampler == NULL);
 		m_sampler = static_cast<Sampler *>(child);
-	} else if (child->getClass()->derivesFrom(Film::m_theClass)) {
+	} else if (child->getClass()->derivesFrom(MTS_CLASS(Film))) {
 		Assert(m_film == NULL);
 		m_film = static_cast<Film *>(child);
-	} else if (child->getClass()->derivesFrom(Medium::m_theClass)) {
+	} else if (child->getClass()->derivesFrom(MTS_CLASS(Medium))) {
 		Assert(m_medium == NULL);
 		m_medium = static_cast<Medium *>(child);
-	} else if (child->getClass()->derivesFrom(Medium::m_theClass)) {
+	} else if (child->getClass()->derivesFrom(MTS_CLASS(Medium))) {
 		Assert(m_medium == NULL);
 		m_medium = static_cast<Medium *>(child);
 	} else {
@@ -116,7 +116,7 @@ void ProjectiveCamera::configure() {
 	if (m_film == NULL) {
 		/* Instantiate an EXR film by default */
 		m_film = static_cast<Film*> (PluginManager::getInstance()->
-			createObject(Film::m_theClass, Properties("exrfilm")));
+			createObject(MTS_CLASS(Film), Properties("exrfilm")));
 		m_film->configure();
 	}
 
@@ -125,7 +125,7 @@ void ProjectiveCamera::configure() {
 		Properties props("independent");
 		props.setInteger("sampleCount", 4);
 		m_sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-				createObject(Sampler::m_theClass, props));
+				createObject(MTS_CLASS(Sampler), props));
 		m_sampler->configure();
 	}
 	m_aspect = (Float) m_film->getSize().x / (Float) m_film->getSize().y;

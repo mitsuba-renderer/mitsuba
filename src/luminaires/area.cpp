@@ -126,7 +126,7 @@ public:
 	}
 
 	void setParent(ConfigurableObject *parent) {
-		if (parent->getClass()->derivesFrom(Shape::m_theClass)) {
+		if (parent->getClass()->derivesFrom(MTS_CLASS(Shape))) {
 			Shape *shape = static_cast<Shape *>(parent);
 			if (parent == m_parent || shape->isCompound())
 				return;

@@ -85,15 +85,15 @@ Float Shape::pdfSolidAngle(const ShapeSamplingRecord &sRec, const Point &from) c
 
 void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
-	if (cClass->derivesFrom(BSDF::m_theClass)) {
+	if (cClass->derivesFrom(MTS_CLASS(BSDF))) {
 		m_bsdf = static_cast<BSDF *>(child);
-	} else if (cClass->derivesFrom(Luminaire::m_theClass)) {
+	} else if (cClass->derivesFrom(MTS_CLASS(Luminaire))) {
 		Assert(m_luminaire == NULL);
 		m_luminaire = static_cast<Luminaire *>(child);
-	} else if (cClass->derivesFrom(Subsurface::m_theClass)) {
+	} else if (cClass->derivesFrom(MTS_CLASS(Subsurface))) {
 		Assert(m_subsurface == NULL);
 		m_subsurface = static_cast<Subsurface *>(child);
-	} else if (cClass->derivesFrom(Medium::m_theClass)) {
+	} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
 		if (name == "interiorMedium") {
 			Assert(m_interiorMedium != NULL);
 			m_interiorMedium = static_cast<Medium *>(child);

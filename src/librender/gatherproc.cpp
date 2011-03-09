@@ -79,10 +79,8 @@ private:
 class GatherPhotonWorker : public ParticleTracer {
 public:
 	GatherPhotonWorker(GatherPhotonProcess::EGatherType type, unsigned int granularity,
-		int maxDepth, int rrDepth)
-		: ParticleTracer(maxDepth, true, rrDepth),
-		m_type(type), m_granularity(granularity) {
-	}
+		int maxDepth, int rrDepth) : ParticleTracer(maxDepth, rrDepth),
+		m_type(type), m_granularity(granularity) { }
 
 	GatherPhotonWorker(Stream *stream, InstanceManager *manager) 
 	 : ParticleTracer(stream, manager) {

@@ -125,7 +125,7 @@ public:
 			/* Estimate the direct illumination if this is requested */
 			if (scene->sampleLuminaire(its.p, ray.time, lRec, sampleArray[i])) {
 				/* Allocate a record for querying the BSDF */
-				const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
+				const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 
 				/* Evaluate BSDF * cos(theta) */
 				const Spectrum bsdfVal = bsdf->fCos(bRec);
@@ -154,12 +154,11 @@ public:
 		} else {
 			sample = rRec.nextSample2D();
 			sampleArray = &sample;
-			Assert(sampleArray[0] == sample);
 		}
 
 		for (int i=0; i<numBSDFSamples; ++i) {
 			/* Sample BSDF * cos(theta) */
-			BSDFQueryRecord bRec(rRec, its);
+			BSDFQueryRecord bRec(its);
 			Float bsdfPdf;
 			Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, sampleArray[i]);
 			if (bsdfVal.isZero())
@@ -168,12 +167,13 @@ public:
 
 			/* Trace a ray in this direction */
 			Ray bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);
-			bool hitLuminaire = false;
 			if (scene->rayIntersect(bsdfRay, bsdfIts)) {
 				/* Intersected something - check if it was a luminaire */
 				if (bsdfIts.isLuminaire()) {
 					lRec = LuminaireSamplingRecord(bsdfIts, -bsdfRay.d);
-					hitLuminaire = true;
+					lRec.value = its.Le(-bsdfRay.d);
+				} else {
+					continue;
 				}
 			} else {
 				/* No intersection found. Possibly, there is a background
@@ -181,21 +181,18 @@ public:
 				if (scene->hasBackgroundLuminaire()) {
 					lRec.luminaire = scene->getBackgroundLuminaire();
 					lRec.d = -bsdfRay.d;
-					hitLuminaire = true;
+					lRec.value = lRec.luminaire->Le(bsdfRay);
+				} else {
+					continue;
 				}
 			}
 
-			/* If a luminaire was hit, estimate the local illumination and
-				sample weight using the power heuristic */
-			if (hitLuminaire && (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance)) {
-				lRec.value = its.Le(-bsdfRay.d);
-				Float lumPdf = scene->pdfLuminaire(its.p, lRec);
-				if (bRec.sampledType & BSDF::EDelta)
-					lumPdf = 0;
-				const Float weight = miWeight(bsdfPdf * fracBSDF, 
-						lumPdf * fracLum) * weightBSDF;
-				Li += lRec.value * bsdfVal * weight;
-			}
+			const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ? 
+				scene->pdfLuminaire(its.p, lRec) : 0;
+	
+			const Float weight = miWeight(bsdfPdf * fracBSDF, 
+				lumPdf * fracLum) * weightBSDF;
+			Li += lRec.value * bsdfVal * weight;
 		}
 
 		return Li;
@@ -233,5 +230,5 @@ private:
 };
 
 MTS_IMPLEMENT_CLASS_S(MIDirectIntegrator, false, SampleIntegrator)
-MTS_EXPORT_PLUGIN(MIDirectIntegrator, "Direct-only integrator");
+MTS_EXPORT_PLUGIN(MIDirectIntegrator, "Direct illumination integrator");
 MTS_NAMESPACE_END

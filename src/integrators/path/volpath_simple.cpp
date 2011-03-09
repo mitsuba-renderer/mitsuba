@@ -34,13 +34,11 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  */
 class SimpleVolumetricPathTracer : public MonteCarloIntegrator {
 public:
-	SimpleVolumetricPathTracer(const Properties &props) : MonteCarloIntegrator(props) {
-	}
+	SimpleVolumetricPathTracer(const Properties &props) : MonteCarloIntegrator(props) { }
 
 	/// Unserialize from a binary data stream
 	SimpleVolumetricPathTracer(Stream *stream, InstanceManager *manager)
-	 : MonteCarloIntegrator(stream, manager) {
-	}
+	 : MonteCarloIntegrator(stream, manager) { }
 
 	Spectrum Li(const RayDifferential &r, RadianceQueryRecord &rRec) const {
 		/* Some aliases and local variables */
@@ -64,7 +62,7 @@ public:
 			/* ==================================================================== */
 			/*                 Radiative Transfer Equation sampling                 */
 			/* ==================================================================== */
-			if (scene->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
+			if (medium && rRec.medium->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
 				const PhaseFunction *phase = mRec.medium->getPhaseFunction();
 
 				/* Sample the integral
@@ -78,7 +76,7 @@ public:
 
 				/* Estimate the single scattering component if this is requested */
 				if (rRec.type & RadianceQueryRecord::EDirectMediumRadiance && 
-					scene->sampleAttenuatedLuminaire(mRec.p, lRec, ray.time, rRec.nextSample2D())) {
+					scene->sampleAttenuatedLuminaire(mRec.p, ray.time, rRec.medium, lRec, rRec.nextSample2D())) {
 					Li += pathThroughput * lRec.value * phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 				}
 
@@ -88,7 +86,7 @@ public:
 
 				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
 				Spectrum phaseVal = phase->sample(pRec, rRec.sampler);
-				if (phaseVal.max() == 0)
+				if (phaseVal.isZero())
 					break;
 
 				/* Trace a ray in this direction */
@@ -99,7 +97,6 @@ public:
 				/*                         Multiple scattering                          */
 				/* ==================================================================== */
 
-				/* Set the recursive query type */
 				if (!(rRec.type & RadianceQueryRecord::EIndirectMediumRadiance))
 					break; /* Stop if multiple scattering was not requested */
 
@@ -116,10 +113,12 @@ public:
 				rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 			} else {
 				/* Sample 
-					tau(x, y) (Surface integral). This happens with probability mRec.pdfFailure
-					Divide this out and multiply with the proper per-color-channel attenuation.
+					tau(x, y) * (Surface integral). This happens with probability mRec.pdfFailure
+					Account for this and multiply by the proper per-color-channel attenuation.
 				*/
-				pathThroughput *= mRec.attenuation / mRec.pdfFailure;
+
+				if (rRec.medium)
+					pathThroughput *= mRec.attenuation / mRec.pdfFailure;
 
 				if (!its.isValid()) {
 					/* If no intersection could be found, possibly return 
@@ -127,9 +126,20 @@ public:
 					if (rRec.type & RadianceQueryRecord::EEmittedRadiance) 
 						Li += pathThroughput * scene->LeBackground(ray);
 					break;
+				} else if (its.isMediumTransition()) {
+					rRec.medium = its.getTargetMedium(ray);
 				}
 
+				computeIntersection = true;
+
 				const BSDF *bsdf = its.getBSDF(ray);
+
+				if (!bsdf) {
+					/* Pass right through the surface (there is no BSDF) */
+					ray.setOrigin(its.p);
+					rRec.depth++;
+					continue;
+				}
 
 				/* Possibly include emitted radiance if requested */
 				if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
@@ -162,20 +172,19 @@ public:
 				if (bsdfVal.isZero())
 					break;
 
-				/* Trace a ray in this direction */
+				/* In the next iteration, trace a ray in this direction */
 				ray = Ray(its.p, its.toWorld(bRec.wo), ray.time);
-				computeIntersection = true;
 
 				/* ==================================================================== */
 				/*                         Indirect illumination                        */
 				/* ==================================================================== */
 				bool includeEmitted = (bRec.sampledType & BSDF::EDelta) 
 					&& (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance);
-			
-					/* Stop if indirect illumination was not requested */
+
 				if (!(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)) {
-					/* Stop if indirect illumination was not requested (except: sampled a delta BSDF 
-					   - recursively look for emitted radiance only to get the direct component) */
+					/* Stop if indirect illumination was not requested (except: just sampled a
+					   delta BSDF -- recursively look for emitted radiance to get the
+					   direct component of the current interaction) */
 					if (includeEmitted) {
 						rRec.type = RadianceQueryRecord::EEmittedRadiance;
 						if (rRec.depth+1 == m_maxDepth) {

@@ -34,17 +34,6 @@ MTS_NAMESPACE_BEGIN
 struct MTS_EXPORT_RENDER BSDFQueryRecord {
 public:
 	/**
-	 * \brief Given a surface interaction and an incident direction 
-	 * construct a query record which can be used to sample 
-	 * an outgoing direction.
-	 *
-	 * For convenience, this function uses the local incident direction 
-	 * vector contained in the supplied intersection record.
-	 */
-	inline BSDFQueryRecord(RadianceQueryRecord &rRec, 
-		const Intersection &its); 
-
-	/**
 	 * \brief Given a surface interaction and an incident direction, 
 	 * construct a query record which can be used to sample
 	 * an outgoing direction.
@@ -53,16 +42,6 @@ public:
 	 * vector contained in the supplied intersection record.
 	 */
 	inline BSDFQueryRecord(const Intersection &its);
-
-	/**
-	 * \brief Given a surface interaction an an incident/exitant direction 
-	 * pair (wi, wo), create a BSDF query record to evaluate f(wi, wo).
-	 *
-	 * For convenience, this function uses the local incident direction 
-	 * vector contained in the supplied intersection record.
-	 */
-	inline BSDFQueryRecord(RadianceQueryRecord &rRec, 
-		const Intersection &its, const Vector &wo);
 
 	/**
 	 * \brief Given a surface interaction an an incident/exitant direction 
@@ -83,9 +62,6 @@ public:
 	/// Return a string representation
 	std::string toString() const;
 public:
-	/* Pointer to the associated radiance query record (or NULL) */
-	RadianceQueryRecord *rRec;
-
 	/* Surface interaction */
 	const Intersection &its;
 

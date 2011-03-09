@@ -273,7 +273,7 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(BSDF::m_theClass)) {
+		if (child->getClass()->derivesFrom(MTS_CLASS(BSDF))) {
 			BSDF *bsdf = static_cast<BSDF *>(child);
 			m_bsdfs.push_back(bsdf);
 			bsdf->incRef();

@@ -75,8 +75,8 @@ public:
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		const Class *cClass = child->getClass();
 
-		if (cClass->derivesFrom(Integrator::m_theClass)) {
-			if (!cClass->derivesFrom(SampleIntegrator::m_theClass))
+		if (cClass->derivesFrom(MTS_CLASS(Integrator))) {
+			if (!cClass->derivesFrom(MTS_CLASS(SampleIntegrator)))
 				Log(EError, "The sub-integrator must be derived from the class SampleIntegrator");
 			m_subIntegrator = static_cast<SampleIntegrator *>(child);
 		} else {

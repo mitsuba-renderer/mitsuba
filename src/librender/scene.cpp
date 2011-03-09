@@ -221,7 +221,7 @@ void Scene::configure() {
 	if (m_integrator == NULL) {
 		/* Create a direct integrator by default */
 		m_integrator = static_cast<Integrator *> (PluginManager::getInstance()->
-				createObject(Integrator::m_theClass, Properties("direct")));
+				createObject(MTS_CLASS(Integrator), Properties("direct")));
 		m_integrator->configure();
 	}
 	if (m_camera == NULL) {
@@ -242,7 +242,7 @@ void Scene::configure() {
 		props.setTransform("toWorld", Transform::translate(Vector(center.x, center.y, aabb.min.z - distance)));
 		props.setFloat("fov", 45.0f);
 
-		m_camera = static_cast<Camera *> (PluginManager::getInstance()->createObject(Camera::m_theClass, props));
+		m_camera = static_cast<Camera *> (PluginManager::getInstance()->createObject(MTS_CLASS(Camera), props));
 		m_camera->configure();
 		m_sampler = m_camera->getSampler();
 	}
@@ -280,7 +280,7 @@ void Scene::initialize() {
 			Properties constantProps("constant");
 			constantProps.setSpectrum("intensity", Spectrum(0.9f));
 			ref<Luminaire> luminaire = static_cast<Luminaire *>(
-				PluginManager::getInstance()->createObject(Luminaire::m_theClass, constantProps));
+				PluginManager::getInstance()->createObject(MTS_CLASS(Luminaire), constantProps));
 			addChild("", luminaire);
 			luminaire->configure();
 		}
@@ -382,6 +382,52 @@ bool Scene::sampleLuminaire(const Point &p, Float time,
 	}
 }
 
+Spectrum Scene::getAttenuation(const Point &p1, const Point &p2,
+		Float time, const Medium *medium) const {
+	if (m_media.size() == 0) {
+		return Spectrum(isOccluded(p1, p2, time)
+			? 0.0f : 1.0f);
+	} else {
+		Vector d = p2 - p1;
+		Float distance = d.length(), traveled = 0;
+		d /= distance;
+		distance *= 1-Epsilon;
+
+		const Shape *shape;
+		Ray ray(p1, d, time);
+		Spectrum atten(1.0f);
+		int iterations = 0;
+
+		while (true) {
+			Normal n;
+			Float t;
+	
+			bool surface = rayIntersect(ray, t, shape, n);
+
+			if (medium)
+				atten *= medium->tau(Ray(ray.o, d, 0, t, time));
+
+			if (!surface)
+				break;
+
+			ray.o = ray(t);
+			traveled += t;
+
+			if (shape->isOccluder() && traveled < distance)
+				return Spectrum(0.0f);
+			else if (shape->isMediumTransition())
+				medium = dot(n, d) > 0 ? shape->getExteriorMedium()
+					: shape->getInteriorMedium();
+
+			if (++iterations > 100) { /// Just a precaution..
+				Log(EWarn, "sampleAttenuatedLuminaire(): round-off error issues?");
+				break;
+			}
+		}
+		return atten;
+	}
+}
+
 bool Scene::sampleAttenuatedLuminaire(const Point &p, Float time, 
 	const Medium *medium, LuminaireSamplingRecord &lRec, 
 	const Point2 &s) const {
@@ -392,46 +438,9 @@ bool Scene::sampleAttenuatedLuminaire(const Point &p, Float time,
 	luminaire->sample(p, lRec, sample);
 
 	if (lRec.pdf != 0) {
-		if (m_media.size() == 0) {
-			if (isOccluded(p, lRec.sRec.p, time)) 
-				return false;
-		} else {
-			Vector d = lRec.sRec.p - p;
-			Float distance = d.length(), traveled = 0;
-			d /= distance;
-			distance *= 1-Epsilon;
-
-			const Shape *shape;
-			Ray ray(p, d, time);
-			int iterations = 0;
-
-			while (true) {
-				Normal n;
-				Float t;
-		
-				bool surface = rayIntersect(ray, t, shape, n);
-
-				if (medium)
-					lRec.value *= medium->tau(Ray(ray.o, d, 0, t, time));
-
-				if (!surface)
-					break;
-
-				ray.o = ray(t);
-				traveled += t;
-
-				if (shape->isOccluder() && traveled < distance)
-					return false;
-				else if (shape->isMediumTransition())
-					medium = dot(n, d) > 0 ? shape->getExteriorMedium()
-						: shape->getInteriorMedium();
-
-				if (++iterations > 100) { /// Just a precaution..
-					Log(EWarn, "sampleAttenuatedLuminaire(): round-off error issues?");
-					break;
-				}
-			}
-		}
+		lRec.value *= getAttenuation(p, lRec.sRec.p, time, medium);
+		if (lRec.value.isZero())
+			return false;
 		lRec.pdf *= lumPdf;
 		lRec.value /= lRec.pdf;
 		lRec.luminaire = luminaire;
@@ -486,28 +495,28 @@ Spectrum Scene::LeBackground(const Ray &ray) const {
 void Scene::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
 
-	if (cClass->derivesFrom(NetworkedObject::m_theClass) &&
-	   !cClass->derivesFrom(Integrator::m_theClass)) 
+	if (cClass->derivesFrom(MTS_CLASS(NetworkedObject)) &&
+	   !cClass->derivesFrom(MTS_CLASS(Integrator))) 
 		m_netObjects.push_back(static_cast<NetworkedObject *>(child));
-	if (cClass->derivesFrom(Camera::m_theClass)) {
+	if (cClass->derivesFrom(MTS_CLASS(Camera))) {
 		AssertEx(m_camera == NULL, "There can only be one camera per scene");
 		m_camera = static_cast<Camera *>(child);
 		m_sampler = m_camera->getSampler();
-	} else if (cClass->derivesFrom(Integrator::m_theClass)) {
+	} else if (cClass->derivesFrom(MTS_CLASS(Integrator))) {
 		AssertEx(m_integrator == NULL, "There can only be one integrator per scene");
 		m_integrator = static_cast<Integrator *>(child);
-	} else if (cClass->derivesFrom(Texture::m_theClass)
-			|| cClass->derivesFrom(BSDF::m_theClass)) {
+	} else if (cClass->derivesFrom(MTS_CLASS(Texture))
+			|| cClass->derivesFrom(MTS_CLASS(BSDF))) {
 		ConfigurableObject *obj= static_cast<ConfigurableObject *>(child);
 		obj->incRef();
 		m_objects.push_back(obj);
-	} else if (cClass->derivesFrom(Medium::m_theClass)) {
+	} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
 		Medium *medium = static_cast<Medium *>(child);
 		if (m_media.find(medium) == m_media.end()) {
 			medium->incRef();
 			m_media.insert(medium);
 		}
-	} else if (cClass->derivesFrom(Luminaire::m_theClass)) {
+	} else if (cClass->derivesFrom(MTS_CLASS(Luminaire))) {
 		Luminaire *luminaire = static_cast<Luminaire *>(child);
 		luminaire->incRef();
 		m_luminaires.push_back(luminaire);
@@ -516,11 +525,11 @@ void Scene::addChild(const std::string &name, ConfigurableObject *child) {
 				"The scene may only contain one background luminaire");
 			m_backgroundLuminaire = luminaire;
 		}
-	} else if (cClass->derivesFrom(Shape::m_theClass)) {
+	} else if (cClass->derivesFrom(MTS_CLASS(Shape))) {
 		ref<Shape> shape = static_cast<Shape *>(child);
 		shape->incRef();
 		m_shapes.push_back(shape);
-	} else if (cClass->derivesFrom(Scene::m_theClass)) {
+	} else if (cClass->derivesFrom(MTS_CLASS(Scene))) {
 		ref<Scene> scene = static_cast<Scene *>(child);
 		/* A scene from somewhere else has been included.
 		   Add all of its contents */
@@ -598,7 +607,7 @@ void Scene::addShape(Shape *shape) {
 			iMedium->incRef();
 		}
 
-		if (shape->getClass()->derivesFrom(TriMesh::m_theClass)) {
+		if (shape->getClass()->derivesFrom(MTS_CLASS(TriMesh))) {
 			if (std::find(m_meshes.begin(), m_meshes.end(), shape)
 					== m_meshes.end()) {
 				m_meshes.push_back(static_cast<TriMesh *>(shape));

@@ -32,7 +32,7 @@ public:
 
 	void test01_Halton() {
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-				createObject(Sampler::m_theClass, Properties("halton")));
+				createObject(MTS_CLASS(Sampler), Properties("halton")));
 
 		/* MATLAB: p = haltonset(5); net(p,5) */
 		Float comparison[] = {
@@ -57,7 +57,7 @@ public:
 		props.setInteger("sampleCount", 5);
 
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-				createObject(Sampler::m_theClass, props));
+				createObject(MTS_CLASS(Sampler), props));
 
 		Float comparison[] = {
 			0.0,						0,                 0,                 0,                 0,                 0,

@@ -105,7 +105,7 @@ public:
 			props.setBoolean("sendData", false);
 
 			VolumeDataSource *content = static_cast<VolumeDataSource *> (PluginManager::getInstance()->
-					createObject(VolumeDataSource::m_theClass, props));
+					createObject(MTS_CLASS(VolumeDataSource), props));
 			content->configure();
 
 			m_blocks[(m_res.y * block.z + block.y) * m_res.x + block.x] = content;

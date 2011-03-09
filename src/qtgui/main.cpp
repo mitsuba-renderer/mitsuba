@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
 		ref<Logger> logger = Thread::getThread()->getLogger();
 		for (size_t i=0; i<logger->getAppenderCount(); ++i) {
 			Appender *appender = logger->getAppender(i);
-			if (appender->getClass()->derivesFrom(StreamAppender::m_theClass))
+			if (appender->getClass()->derivesFrom(MTS_CLASS(StreamAppender)))
 				logger->removeAppender(appender);
 		}
 

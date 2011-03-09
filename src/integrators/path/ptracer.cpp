@@ -54,9 +54,6 @@ public:
 		   <tt>2</tt> will lead to single-bounce (direct-only) illumination, and so on. */
 		m_maxDepth = props.getInteger("maxDepth", -1);
 
-		/* Should the multiple scattering term be included? */
-		m_multipleScattering = props.getBoolean("multipleScattering", true);
-
 		/* Granularity of the work units used in parallelizing 
 		   the particle tracing task (default: 200K samples).
 		   Should be high enough so that sending and accumulating
@@ -69,7 +66,6 @@ public:
 		m_maxDepth = stream->readInt();
 		m_rrDepth = stream->readInt();
 		m_granularity = (size_t) stream->readULong();
-		m_multipleScattering = stream->readBool();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -77,7 +73,6 @@ public:
 		stream->writeInt(m_maxDepth);
 		stream->writeInt(m_rrDepth);
 		stream->writeULong((uint64_t) m_granularity);
-		stream->writeBool(m_multipleScattering);
 	}
 
 	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
@@ -111,7 +106,7 @@ public:
 
 		ref<ParallelProcess> process = new CaptureParticleProcess(
 			job, queue, m_sampleCount, m_granularity,
-			m_maxDepth, m_multipleScattering, m_rrDepth);
+			m_maxDepth, m_rrDepth);
 
 		process->bindResource("scene", sceneResID);
 		process->bindResource("camera", cameraResID);
@@ -132,7 +127,6 @@ protected:
 	ref<ParallelProcess> m_process;
 	int m_maxDepth, m_rrDepth;
 	size_t m_sampleCount, m_granularity;
-	bool m_multipleScattering;
 };
 
 MTS_IMPLEMENT_CLASS_S(AdjointParticleTracer, false, Integrator)

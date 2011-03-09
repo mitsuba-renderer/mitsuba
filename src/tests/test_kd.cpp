@@ -88,7 +88,7 @@ public:
 		bunnyProps.setString("filename", "data/tests/bunny.ply");
 
 		ref<TriMesh> mesh = static_cast<TriMesh *> (PluginManager::getInstance()->
-				createObject(TriMesh::m_theClass, bunnyProps));
+				createObject(MTS_CLASS(TriMesh), bunnyProps));
 		mesh->configure();
 		ref<ShapeKDTree> tree = new ShapeKDTree();
 		tree->addShape(mesh);

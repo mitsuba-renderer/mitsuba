@@ -89,7 +89,7 @@ public:
 		if (cosTheta < m_cosCutoffAngle)
 			return Spectrum(0.0f);
 
-		if (m_texture->getClass() != ConstantTexture::m_theClass) {
+		if (m_texture->getClass() != MTS_CLASS(ConstantTexture)) {
 			Intersection its;
 			its.hasUVPartials = false;
 			its.uv.x = .5+localDir.x / (localDir.z / m_uvFactor);
@@ -156,7 +156,7 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "texture") {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "texture") {
 			m_texture = static_cast<Texture *>(child);
 		} else {
 			Luminaire::addChild(name, child);

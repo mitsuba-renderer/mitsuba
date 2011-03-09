@@ -45,12 +45,12 @@ void CaptureParticleWorkResult::save(Stream *stream) const {
 void CaptureParticleWorker::prepare() {
 	ParticleTracer::prepare();
 	m_camera = static_cast<Camera *>(getResource("camera"));
-	m_isPinholeCamera = m_camera->getClass()->derivesFrom(PinholeCamera::m_theClass);
+	m_isPinholeCamera = m_camera->getClass()->derivesFrom(MTS_CLASS(PinholeCamera));
 	m_filter = m_camera->getFilm()->getTabulatedFilter();
 }
 
 ref<WorkProcessor> CaptureParticleWorker::clone() const {
-	return new CaptureParticleWorker(m_maxDepth, m_multipleScattering, 
+	return new CaptureParticleWorker(m_maxDepth, 
 		m_rrDepth);
 }
 
@@ -214,8 +214,7 @@ void CaptureParticleProcess::bindResource(const std::string &name, int id) {
 }
 
 ref<WorkProcessor> CaptureParticleProcess::createWorkProcessor() const {
-	return new CaptureParticleWorker(m_maxDepth-1, m_multipleScattering, 
-		m_rrDepth);
+	return new CaptureParticleWorker(m_maxDepth-1, m_rrDepth);
 }
 
 MTS_IMPLEMENT_CLASS(CaptureParticleProcess, false, ParticleProcess)

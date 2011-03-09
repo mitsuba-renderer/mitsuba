@@ -310,14 +310,14 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	if (m_rFilterNode != NULL) 
 		m_rFilterNode->putProperties(rFilterProps);
 	ref<ReconstructionFilter> rFilter = static_cast<ReconstructionFilter *> 
-		(pluginMgr->createObject(ReconstructionFilter::m_theClass, rFilterProps));
+		(pluginMgr->createObject(MTS_CLASS(ReconstructionFilter), rFilterProps));
 
 	/* Configure the sampler */
 	Properties samplerProps(getPluginName(ui->samplerBox));
 	if (m_samplerNode != NULL) 
 		m_samplerNode->putProperties(samplerProps);
 	ref<Sampler> sampler = static_cast<Sampler *> 
-		(pluginMgr->createObject(Sampler::m_theClass, samplerProps));
+		(pluginMgr->createObject(MTS_CLASS(Sampler), samplerProps));
 	sampler->configure();
 	
 	/* Configure the integrator */
@@ -325,7 +325,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	if (m_integratorNode != NULL) 
 		m_integratorNode->putProperties(integratorProps);
 	ref<Integrator> integrator = static_cast<Integrator *> 
-		(pluginMgr->createObject(Integrator::m_theClass, integratorProps));
+		(pluginMgr->createObject(MTS_CLASS(Integrator), integratorProps));
 	integrator->configure();
 
 	if (ui->icBox->isChecked()) {
@@ -333,7 +333,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 		if (m_icNode != NULL) 
 			m_icNode->putProperties(icProps);
 		ref<Integrator> ic = static_cast<Integrator *> 
-			(pluginMgr->createObject(Integrator::m_theClass, icProps));
+			(pluginMgr->createObject(MTS_CLASS(Integrator), icProps));
 		ic->addChild("", integrator);
 		ic->configure();
 		integrator = ic;
@@ -344,7 +344,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 		if (m_aiNode != NULL) 
 			m_aiNode->putProperties(aiProps);
 		ref<Integrator> ai = static_cast<Integrator *> 
-			(pluginMgr->createObject(Integrator::m_theClass, aiProps));
+			(pluginMgr->createObject(MTS_CLASS(Integrator), aiProps));
 		ai->addChild("", integrator);
 		ai->configure();
 		integrator = ai;
@@ -356,7 +356,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	int width = resolution[0].toInt(), height = resolution[1].toInt();
 	filmProps.setInteger("width", width, false);
 	filmProps.setInteger("height", height, false);
-	ref<Film> film = static_cast<Film *> (pluginMgr->createObject(Film::m_theClass, filmProps));
+	ref<Film> film = static_cast<Film *> (pluginMgr->createObject(MTS_CLASS(Film), filmProps));
 	film->addChild("", rFilter);
 	film->configure();
 	if (width != ctx->framebuffer->getWidth() ||
@@ -369,7 +369,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	/* Configure the camera */
 	Properties cameraProps = oldCamera->getProperties();
 	ref<PinholeCamera> camera = static_cast<PinholeCamera *> 
-		(pluginMgr->createObject(Camera::m_theClass, cameraProps));
+		(pluginMgr->createObject(MTS_CLASS(Camera), cameraProps));
 	camera->addChild("", sampler);
 	camera->addChild("", film);
 	camera->setViewTransform(oldCamera->getViewTransform());

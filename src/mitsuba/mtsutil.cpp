@@ -195,7 +195,7 @@ int mtsutil(int argc, char **argv) {
 		/* Disable the default appenders */
 		for (size_t i=0; i<log->getAppenderCount(); ++i) {
 			Appender *appender = log->getAppender(i);
-			if (appender->getClass()->derivesFrom(StreamAppender::m_theClass))
+			if (appender->getClass()->derivesFrom(MTS_CLASS(StreamAppender)))
 				log->removeAppender(appender);
 		}
 
@@ -297,7 +297,7 @@ int mtsutil(int argc, char **argv) {
 					ref<Utility> utility = plugin.createUtility();
 
 					TestCase *testCase = static_cast<TestCase *>(utility.get());
-					if (!utility->getClass()->derivesFrom(TestCase::m_theClass))
+					if (!utility->getClass()->derivesFrom(MTS_CLASS(TestCase)))
 						SLog(EError, "This is not a test case!");
 
 					if (testCase->run(argc-optind, argv+optind) != 0)

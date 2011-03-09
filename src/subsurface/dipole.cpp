@@ -259,7 +259,7 @@ public:
 			return true;
 
 		if (!scene->getIntegrator()->getClass()
-				->derivesFrom(SampleIntegrator::m_theClass)) {
+				->derivesFrom(MTS_CLASS(SampleIntegrator))) {
 			Log(EError, "The dipole subsurface integrator requires "
 				"a sampling-based surface integrator!");
 		}

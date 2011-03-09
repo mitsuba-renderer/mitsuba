@@ -138,8 +138,8 @@ public:
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		const Class *cClass = child->getClass();
 
-		if (cClass->derivesFrom(Integrator::m_theClass)) {
-			if (!cClass->derivesFrom(SampleIntegrator::m_theClass))
+		if (cClass->derivesFrom(MTS_CLASS(Integrator))) {
+			if (!cClass->derivesFrom(MTS_CLASS(SampleIntegrator)))
 				Log(EError, "The sub-integrator must be derived from the class SampleIntegrator");
 			m_subIntegrator = static_cast<SampleIntegrator *>(child);
 		} else {
@@ -258,7 +258,7 @@ public:
 			Properties props("independent");
 			props.setInteger("sampleCount", m_resolution * 3 * m_resolution);
 			sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-				createObject(Sampler::m_theClass, props));
+				createObject(MTS_CLASS(Sampler), props));
 			hs = new HemisphereSampler(m_resolution, 3 * m_resolution);
 			m_hemisphereSampler.set(hs);
 			m_sampleGenerator.set(sampler);

@@ -68,7 +68,7 @@ public:
 		Properties props("independent");
 		props.setInteger("sampleCount", m_resolution * 3 * m_resolution);
 		m_sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, props));
+			createObject(MTS_CLASS(Sampler), props));
 		m_subIntegrator->wakeup(m_resources);
 
 		m_irrCache = new IrradianceCache(m_scene->getAABB());

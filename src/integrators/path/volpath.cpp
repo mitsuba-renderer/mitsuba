@@ -81,7 +81,7 @@ public:
 					/* Evaluate the phase function */
 					Spectrum phaseVal = phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 
-					if (phaseVal.max() > 0) {
+					if (!phaseVal.isZero()) {
 						/* Calculate prob. of having sampled that direction using 
 						   phase function sampling */
 						Float phasePdf = (lRec.luminaire->isIntersectable() 
@@ -101,7 +101,7 @@ public:
 				Float phasePdf;
 				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
 				Spectrum phaseVal = phase->sample(pRec, phasePdf, rRec.sampler);
-				if (phaseVal.max() == 0)
+				if (phaseVal.isZero())
 					break;
 				phaseVal /= phasePdf;
 
@@ -164,7 +164,7 @@ public:
 			} else {
 				/* Sample 
 					tau(x, y) (Surface integral). This happens with probability mRec.pdfFailure
-					Divide this out and multiply with the proper per-color-channel attenuation.
+					Account for this and multiply by the proper per-color-channel attenuation.
 				*/
 				if (rRec.medium)
 					pathThroughput *= mRec.attenuation / mRec.pdfFailure;
@@ -175,16 +175,16 @@ public:
 					if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
 						Li += pathThroughput * scene->LeBackground(ray);
 					break;
-				}
-
-				if (its.isMediumTransition())
+				} else if (its.isMediumTransition()) {
 					rRec.medium = its.getTargetMedium(ray);
+				}
 
 				const BSDF *bsdf = its.getBSDF(ray);
 				if (!bsdf) {
 					/* Pass right through the surface (there is no BSDF) */
 					ray.setOrigin(its.p);
 					scene->rayIntersect(ray, its);
+					rRec.depth++;
 					continue;
 				}
 

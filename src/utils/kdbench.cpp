@@ -169,7 +169,7 @@ public:
 			props.setString("filename", argv[optind]);
 			ref<TriMesh> mesh;
 			mesh = static_cast<TriMesh *> (PluginManager::getInstance()->
-					createObject(TriMesh::m_theClass, props));
+					createObject(MTS_CLASS(TriMesh), props));
 			mesh->configure();
 			kdtree = new ShapeKDTree();
 			kdtree->addShape(mesh);

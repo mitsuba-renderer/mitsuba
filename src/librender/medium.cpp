@@ -56,7 +56,7 @@ Medium::Medium(Stream *stream, InstanceManager *manager)
 void Medium::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
 
-	if (cClass->derivesFrom(PhaseFunction::m_theClass)) {
+	if (cClass->derivesFrom(MTS_CLASS(PhaseFunction))) {
 		Assert(m_phaseFunction == NULL);
 		m_phaseFunction = static_cast<PhaseFunction *>(child);
 	} else {
@@ -68,7 +68,7 @@ void Medium::addChild(const std::string &name, ConfigurableObject *child) {
 void Medium::configure() {
 	if (m_phaseFunction == NULL) {
 		m_phaseFunction = static_cast<PhaseFunction *> (PluginManager::getInstance()->
-				createObject(PhaseFunction::m_theClass, Properties("isotropic")));
+				createObject(MTS_CLASS(PhaseFunction), Properties("isotropic")));
 	}
 }
 

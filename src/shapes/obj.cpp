@@ -282,7 +282,7 @@ public:
 		props.setSpectrum("reflectance", diffuse);
 		props.setID(name);
 		BSDF *bsdf = static_cast<BSDF *> (PluginManager::getInstance()->
-			createObject(BSDF::m_theClass, props));
+			createObject(MTS_CLASS(BSDF), props));
 		bsdf->incRef();
 		m_materials[name] = bsdf;
 	}
@@ -439,27 +439,27 @@ public:
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		const Class *cClass = child->getClass();
-		if (cClass->derivesFrom(BSDF::m_theClass)) {
+		if (cClass->derivesFrom(MTS_CLASS(BSDF))) {
 			m_bsdf = static_cast<BSDF *>(child);
 			for (size_t i=0; i<m_meshes.size(); ++i) 
 				m_meshes[i]->addChild(name, child);
 			Assert(m_meshes.size() > 0);
 			m_bsdf->setParent(NULL);
-		} else if (cClass->derivesFrom(Luminaire::m_theClass)) {
+		} else if (cClass->derivesFrom(MTS_CLASS(Luminaire))) {
 			Assert(m_luminaire == NULL && m_meshes.size() == 1);
 			m_luminaire = static_cast<Luminaire *>(child);
 			for (size_t i=0; i<m_meshes.size(); ++i) {
 				child->setParent(m_meshes[i]);
 				m_meshes[i]->addChild(name, child);
 			}
-		} else if (cClass->derivesFrom(Subsurface::m_theClass)) {
+		} else if (cClass->derivesFrom(MTS_CLASS(Subsurface))) {
 			Assert(m_subsurface == NULL);
 			m_subsurface = static_cast<Subsurface *>(child);
 			for (size_t i=0; i<m_meshes.size(); ++i) { 
 				child->setParent(m_meshes[i]);
 				m_meshes[i]->addChild(name, child);
 			}
-		} else if (cClass->derivesFrom(Medium::m_theClass)) {
+		} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
 			Assert(m_subsurface == NULL);
 			for (size_t i=0; i<m_meshes.size(); ++i) { 
 				child->setParent(m_meshes[i]);

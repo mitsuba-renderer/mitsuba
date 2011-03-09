@@ -121,7 +121,7 @@ public:
 		m_totalEmitted = 0;
 
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, Properties("independent")));
+			createObject(MTS_CLASS(Sampler), Properties("independent")));
 
 		/* Allocate memory */
 		m_bitmap = new Bitmap(film->getSize().x, film->getSize().y, 128);

@@ -20,7 +20,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-Class *Object::m_theClass = new Class("Object", false, "");
+Class *MTS_CLASS(Object) = new Class("Object", false, "");
 
 Object::Object()
  : m_refCount(0) {

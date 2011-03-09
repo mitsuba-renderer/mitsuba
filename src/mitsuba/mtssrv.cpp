@@ -192,7 +192,7 @@ int ubi_main(int argc, char **argv) {
 		/* Disable the default appenders */
 		for (size_t i=0; i<log->getAppenderCount(); ++i) {
 			Appender *appender = log->getAppender(i);
-			if (appender->getClass()->derivesFrom(StreamAppender::m_theClass))
+			if (appender->getClass()->derivesFrom(MTS_CLASS(StreamAppender)))
 				log->removeAppender(appender);
 		}
 

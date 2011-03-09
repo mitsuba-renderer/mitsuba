@@ -103,7 +103,7 @@ size_t Scheduler::getLocalWorkerCount() const {
 	size_t count = 0;
 	m_mutex->lock();
 	for (size_t i=0; i<m_workers.size(); ++i) {
-		if (m_workers[i]->getClass() == LocalWorker::m_theClass)
+		if (m_workers[i]->getClass() == MTS_CLASS(LocalWorker))
 			count++;
 	}
 	m_mutex->unlock();

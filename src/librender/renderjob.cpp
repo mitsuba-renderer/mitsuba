@@ -97,7 +97,7 @@ void RenderJob::run() {
 			if (film->getTabulatedFilter()->getName() != "BoxFilter")
 				Log(EError, "Only the box reconstruction filter is supported when "
 					"performing a t-test in test case mode!");
-			if (!m_scene->getIntegrator()->getClass()->derivesFrom(SampleIntegrator::m_theClass)) 
+			if (!m_scene->getIntegrator()->getClass()->derivesFrom(MTS_CLASS(SampleIntegrator))) 
 				Log(EError, "Only sampling-based integrators are supported when "
 					"performing a t-test in test case mode!");
 		}

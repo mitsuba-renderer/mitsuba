@@ -145,7 +145,7 @@ public:
 		int borderSize = (int) std::ceil(std::max(filterSize.x, filterSize.y));
 
 		ref<Sampler> independentSampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, Properties("independent")));
+			createObject(MTS_CLASS(Sampler), Properties("independent")));
 
 		/* Create a sampler instance for every core */
 		std::vector<SerializableObject *> samplers(sched->getCoreCount());

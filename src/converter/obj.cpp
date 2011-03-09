@@ -174,7 +174,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 	objProps.setString("filename", inputFile.file_string());
 
 	ref<Shape> rootShape = static_cast<Shape *> (PluginManager::getInstance()->
-			createObject(Shape::m_theClass, objProps));
+			createObject(MTS_CLASS(Shape), objProps));
 	SAssert(rootShape->isCompound());
 
 	int ctr = 0;

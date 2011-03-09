@@ -314,7 +314,7 @@ public:
 	}
 
 	void setParent(ConfigurableObject *parent) {
-		if (parent->getClass()->derivesFrom(Shape::m_theClass))
+		if (parent->getClass()->derivesFrom(MTS_CLASS(Shape)))
 			Log(EError, "Medium cannot be a parent of a shape");
 	}
 

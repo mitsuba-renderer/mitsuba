@@ -120,7 +120,7 @@ public:
 		/* Create a deterministic sampler for the photon gathering step */
 		ref<Scheduler> sched = Scheduler::getInstance();
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, Properties("halton")));
+			createObject(MTS_CLASS(Sampler), Properties("halton")));
 		int qmcSamplerID = sched->registerResource(sampler);
 
 		/* Don't create a caustic photon map if the scene does not contain specular materials */
@@ -251,7 +251,7 @@ public:
 		if (!m_volumePhotonMap.get() && params.find("volumetricPhotonMap") != params.end())
 			m_volumePhotonMap = static_cast<PhotonMap *>(params["volumetricPhotonMap"]);
 
-		if (getParent() != NULL && getParent()->getClass()->derivesFrom(SampleIntegrator::m_theClass))
+		if (getParent() != NULL && getParent()->getClass()->derivesFrom(MTS_CLASS(SampleIntegrator)))
 			m_parentIntegrator = static_cast<SampleIntegrator *>(getParent());
 		else
 			m_parentIntegrator = this;
@@ -308,9 +308,9 @@ public:
 			Float weight = 1 / (Float) numDirectSamples;
 
 			for (int i=0; i<numDirectSamples; ++i) {
-				if (rRec.scene->sampleLuminaire(its, lRec, sampleArray[i])) {
+				if (rRec.scene->sampleLuminaire(its.p, ray.time, lRec, sampleArray[i])) {
 					/* Allocate a record for querying the BSDF */
-					const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
+					const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 
 					/* Evaluate BSDF * cos(theta) */
 					const Spectrum bsdfVal = bsdf->fCos(bRec);
@@ -367,7 +367,7 @@ public:
 			Float weight = 1 / (Float) m_glossySamples;
 
 			for (int i=0; i<m_glossySamples; ++i) {
-				BSDFQueryRecord bRec(rRec, its);
+				BSDFQueryRecord bRec(its);
 				Spectrum bsdfVal = bsdf->sampleCos(bRec, sampleArray[i]);
 
 				rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadianceNoEmission);

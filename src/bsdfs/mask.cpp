@@ -159,9 +159,9 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "opacity") {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "opacity") {
 			m_opacity = static_cast<Texture *>(child);
-		} else if (child->getClass()->derivesFrom(BSDF::m_theClass)) {
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(BSDF))) {
 			m_nestedBSDF = static_cast<BSDF *>(child);
 		} else {
 			BSDF::addChild(name, child);

@@ -94,7 +94,7 @@ public:
 		ref<Film> film = camera->getFilm();
 		m_cancel = false;
 
-		if (!camera->getClass()->derivesFrom(ProjectiveCamera::m_theClass))
+		if (!camera->getClass()->derivesFrom(MTS_CLASS(ProjectiveCamera)))
 			Log(EError, "The VPL renderer requires a projective camera!");
 
 		/* Initialize hardware rendering */

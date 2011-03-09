@@ -57,9 +57,9 @@ Float ShapeGroup::getSurfaceArea() const {
 
 void ShapeGroup::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
-	if (cClass->derivesFrom(ShapeGroup::m_theClass) || cClass->getName() == "ShapeInstance") {
+	if (cClass->derivesFrom(MTS_CLASS(ShapeGroup)) || cClass->getName() == "ShapeInstance") {
 		Log(EError, "Nested instancing is not supported!");
-	} else if (cClass->derivesFrom(Shape::m_theClass)) {
+	} else if (cClass->derivesFrom(MTS_CLASS(Shape))) {
 		Shape *shape = static_cast<Shape *>(child);
 		if (shape->isLuminaire())
 			Log(EError, "Instancing of luminaires is not supported");

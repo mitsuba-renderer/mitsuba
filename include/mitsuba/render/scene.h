@@ -181,13 +181,35 @@ public:
 		return m_kdtree->rayIntersect(ray, t, shape, n);
 	}
 
-	/// Cast a shadow ray
+	/**
+	 * \brief Test for occlusion between \c p1 and \c p2 at the
+	 * specified time
+	 *
+	 * \return \c true if an occluder is located on the line segment
+	 * between \c p1 and \c p2.
+	 */
 	inline bool isOccluded(const Point &p1, const Point &p2, Float time) const {
 		Ray ray(p1, p2-p1, time);
 		ray.mint = ShadowEpsilon;
 		ray.maxt = 1-ShadowEpsilon;
 		return m_kdtree->rayIntersect(ray);
 	}
+
+	/**
+	 * \brief Return the attenuation between \c p1 and \c p2 at
+	 * the specified time.
+	 *
+	 * This function is very similar to \ref isOccluded with
+	 * the difference being that it accounts for participating
+	 * media.
+	 *
+	 * \return An attenuation value. A constant spectrum of value 1 corresponds
+	 * to no attenuation at all, and 0 means that everything was attenuated 
+	 * (e.g. by a surface or a very dense medium)
+	 */
+
+	Spectrum getAttenuation(const Point &p1, const Point &p2, Float time, 
+		const Medium *medium) const;
 
 	/// Return an axis-aligned bounding box containing the whole scene
 	inline const AABB &getAABB() const {

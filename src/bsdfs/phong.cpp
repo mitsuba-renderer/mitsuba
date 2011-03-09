@@ -226,10 +226,10 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "diffuseReflectance") {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "diffuseReflectance") {
 			m_diffuseReflectance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "specularReflectance") {
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
 			m_specularReflectance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
 		} else {

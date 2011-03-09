@@ -84,9 +84,9 @@ public:
 
 			/* Estimate the direct illumination if this is requested */
 			if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
-				scene->sampleLuminaire(its, lRec, rRec.nextSample2D())) {
+				scene->sampleLuminaire(its.p, ray.time, lRec, rRec.nextSample2D())) {
 				/* Allocate a record for querying the BSDF */
-				const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
+				const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 
 				/* Evaluate BSDF * cos(theta) */
 				const Spectrum bsdfVal = bsdf->fCos(bRec);
@@ -109,7 +109,7 @@ public:
 			/* ==================================================================== */
 
 			/* Sample BSDF * cos(theta) */
-			BSDFQueryRecord bRec(rRec, its);
+			BSDFQueryRecord bRec(its);
 			Float bsdfPdf;
 			Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, rRec.nextSample2D());
 			if (bsdfVal.isZero()) 
@@ -124,6 +124,7 @@ public:
 				/* Intersected something - check if it was a luminaire */
 				if (its.isLuminaire()) {
 					lRec = LuminaireSamplingRecord(its, -ray.d);
+					lRec.value = its.Le(-ray.d);
 					hitLuminaire = true;
 				}
 			} else {
@@ -132,6 +133,7 @@ public:
 				if (scene->hasBackgroundLuminaire()) {
 					lRec.luminaire = scene->getBackgroundLuminaire();
 					lRec.d = -ray.d;
+					lRec.value = lRec.luminaire->Le(ray);
 					hitLuminaire = true;
 				} else {
 					rRec.depth++;
@@ -143,11 +145,9 @@ public:
 			   weight using the power heuristic */
 			if (hitLuminaire &&  
 				(rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance)) {
-				lRec.value = lRec.luminaire->Le(lRec);
-
 				/* Prob. of having generated this sample using luminaire sampling */
 				const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ? 
-					scene->pdfLuminaire(prevIts, lRec) : 0;
+					scene->pdfLuminaire(its.p, lRec) : 0;
 				const Float weight = miWeight(bsdfPdf, lumPdf);
 				Li += pathThroughput * lRec.value * bsdfVal * weight;
 			}
