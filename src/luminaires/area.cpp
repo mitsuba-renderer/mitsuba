@@ -59,8 +59,8 @@ public:
 		return m_intensity * m_shape->getSurfaceArea() * M_PI;
 	}
 
-	Spectrum Le(const Intersection &its, const Vector &d) const {
-		if (dot(d, its.geoFrame.n) <= 0)
+	Spectrum Le(const ShapeSamplingRecord &sRec, const Vector &d) const {
+		if (dot(d, sRec.n) <= 0)
 			return Spectrum(0.0f);
 		return m_intensity;
 	}

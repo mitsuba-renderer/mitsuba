@@ -131,7 +131,7 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 	return false;
 }
 
-bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape) const {
+bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape, Normal &n) const {
 	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
 	Float mint, maxt;
 	
@@ -152,6 +152,23 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape) c
 			if (rayIntersectHavran<false>(ray, mint, maxt, t, temp)) {
 				const IntersectionCache *cache = reinterpret_cast<const IntersectionCache *>(temp);
 				shape = m_shapes[cache->shapeIndex];
+			
+				if (m_triangleFlag[cache->shapeIndex]) {
+					const TriMesh *trimesh = static_cast<const TriMesh *>(shape);
+					const Triangle &tri = trimesh->getTriangles()[cache->primIndex];
+					const Point *vertexPositions = trimesh->getVertexPositions();
+					const Point &p0 = vertexPositions[tri.idx[0]];
+					const Point &p1 = vertexPositions[tri.idx[1]];
+					const Point &p2 = vertexPositions[tri.idx[2]];
+					n = cross(p1-p0, p2-p0);
+				} else {
+					/// Uh oh... -- much unnecessary work is done here
+					Intersection its;
+					shape->fillIntersectionRecord(ray, 
+						reinterpret_cast<const uint8_t*>(temp) + 8, its);
+					n = its.geoFrame.n;
+				}
+
 				return true;
 			}
 		}

@@ -18,6 +18,7 @@
 
 #include <mitsuba/core/properties.h>
 #include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/medium.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -40,6 +41,7 @@ Luminaire::Luminaire(const Properties &props)
 
 Luminaire::Luminaire(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
+	m_medium = static_cast<Medium *>(manager->getInstance(stream));
 	m_samplingWeight = stream->readFloat();
 	m_type = (EType) stream->readInt();
 	m_intersectable = stream->readBool();
@@ -53,7 +55,7 @@ Luminaire::~Luminaire() {
 
 void Luminaire::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
-
+	manager->serialize(stream, m_medium.get());
 	stream->writeFloat(m_samplingWeight);
 	stream->writeInt(m_type);
 	stream->writeBool(m_intersectable);
@@ -78,8 +80,8 @@ Spectrum Luminaire::Le(const Ray &ray) const {
 	return Spectrum(0.0f);
 }
 	
-Spectrum Luminaire::Le(const Intersection &its, const Vector &d) const {
-	Log(EError, "Luminaire::Le(const Intersection &, const Vector &) is not implemented!");
+Spectrum Luminaire::Le(const ShapeSamplingRecord &sRec, const Vector &d) const {
+	Log(EError, "Luminaire::Le(const ShapeSamplingRecord sRec&, const Vector &) is not implemented!");
 	return Spectrum(0.0f);
 }
 

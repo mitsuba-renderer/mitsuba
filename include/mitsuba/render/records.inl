@@ -57,7 +57,7 @@ inline bool Intersection::isLuminaire() const {
 }
 
 inline Spectrum Intersection::Le(const Vector &d) const {
-	return shape->getLuminaire()->Le(*this, d);
+	return shape->getLuminaire()->Le(ShapeSamplingRecord(*this), d);
 }
 
 inline Spectrum Intersection::LoSub(const Scene *scene, const Vector &d) const {

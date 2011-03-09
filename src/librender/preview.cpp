@@ -111,7 +111,7 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 				EmissionRecord eRec(m_vpl.luminaire, 
 					ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), -toVPL);
 				eRec.type = EmissionRecord::EPreview;
-				value += m_vpl.P * bsdfVal * m_vpl.luminaire->f(eRec) 
+				value += m_vpl.P * bsdfVal * m_vpl.luminaire->fDirection(eRec) 
 					* ((m_vpl.luminaire->getType() & Luminaire::EOnSurface ?
 					dot(m_vpl.its.shFrame.n, -toVPL) : (Float) 1)
 					/ (length*length));
@@ -176,7 +176,6 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 	SSEVector MM_ALIGN16 nSecD[3], cosThetaLight, invLengthSquared;
 	Spectrum emitted[4], direct[4];
 	Intersection its;
-	LuminaireSamplingRecord lRec;
 	Vector wo, wi;
 	its.hasUVPartials = false;
 
@@ -192,7 +191,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 		diffuseVPL = m_vpl.luminaire->getType() & Luminaire::EDiffuseDirection;
 		EmissionRecord eRec(m_vpl.luminaire, 
 			ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), m_vpl.its.shFrame.n);
-		vplWeight = m_vpl.P * m_vpl.luminaire->f(eRec);
+		vplWeight = m_vpl.P * m_vpl.luminaire->fDirection(eRec);
 	}
 
 	primRay4.o[0].ps = _mm_set1_ps(m_cameraO.x);
@@ -361,9 +360,8 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 				if (EXPECT_TAKEN(!shape->isLuminaire())) {
 					memset(&emitted[idx], 0, sizeof(Spectrum));
 				} else {
-					lRec.d = -Vector(primRay4.d[0].f[idx], primRay4.d[1].f[idx], primRay4.d[2].f[idx]);
-					lRec.sRec.n = its.shFrame.n;
-					emitted[idx] = shape->getLuminaire()->Le(lRec);
+					Vector d(-primRay4.d[0].f[idx], -primRay4.d[1].f[idx], -primRay4.d[2].f[idx]);
+					emitted[idx] = shape->getLuminaire()->Le(ShapeSamplingRecord(its.p, its.shFrame.n), d);
 				}
 
 				if (EXPECT_TAKEN(bsdf->getType() == BSDF::EDiffuseReflection && diffuseVPL)) {
@@ -401,7 +399,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 							EmissionRecord eRec(m_vpl.luminaire, 
 								ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), wi);
 							eRec.type = EmissionRecord::EPreview;
-							vplWeight = m_vpl.luminaire->f(eRec) * m_vpl.P;
+							vplWeight = m_vpl.luminaire->fDirection(eRec) * m_vpl.P;
 						}
 					}
 

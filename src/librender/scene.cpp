@@ -390,25 +390,48 @@ bool Scene::sampleAttenuatedLuminaire(const Point &p, Float time,
 	luminaire->sample(p, lRec, sample);
 
 	if (lRec.pdf != 0) {
-		Vector d = normalize(lRec.sRec.p - p);
+		Vector d = lRec.sRec.p - p;
+		Float distance = d.length(), traveled = 0;
+		d /= distance;
+		distance *= 1-Epsilon;
+
 		const Shape *shape;
-		Ray ray(p, d, time)
-		Float t;
+		Ray ray(p, d, time);
+		int iterations = 0;
 
-		while (scene->rayIntersect(ray, t, shape)) {
+		while (true) {
+			Normal n;
+			Float t;
+	
+			bool surface = rayIntersect(ray, t, shape, n);
 
+			if (medium)
+				lRec.value *= medium->tau(Ray(ray.o, d, 0, t, time));
+
+			if (!surface)
+				break;
+
+			ray.o = ray(t);
+			traveled += t;
+
+			if (shape->isOccluder() && traveled < distance)
+				return false;
+			else if (shape->isMediumTransition())
+				medium = dot(n, d) > 0 ? shape->getExteriorMedium()
+					: shape->getInteriorMedium();
+
+			if (++iterations > 100) { /// Just a precaution..
+				Log(EWarn, "sampleAttenuatedLuminaire(): round-off error issues?");
+				break;
+			}
 		}
 
-		Spectrum attenuation = getAttenuation();
-		if (attenuation.isBlack())
-			return false;
 		lRec.pdf *= lumPdf;
-		lRec.value /= lRec.pdf * attenuation;
+		lRec.value /= lRec.pdf;
 		lRec.luminaire = luminaire;
 		return true;
-	} else {
-		return false;
 	}
+	return false;
 }
 
 void Scene::sampleEmission(EmissionRecord &eRec, Point2 &sample1, Point2 &sample2) const {

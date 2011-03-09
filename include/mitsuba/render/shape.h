@@ -34,9 +34,12 @@ public:
 	/// Create a sampling record (does no initialization!)
 	inline ShapeSamplingRecord() { }
 
-	/// Create a sampling record with the specified position and normal
+	/// Initialize a sampling record from the specified position and normal
 	inline ShapeSamplingRecord(const Point &p, const Normal &n)
 		: p(p), n(n) { }
+	
+	/// Initialize a sampling record from the specified intersection record
+	inline ShapeSamplingRecord(const Intersection &its);
 
 	/// Return a string representation
 	std::string toString() const;
@@ -365,6 +368,9 @@ protected:
 	ref<Luminaire> m_luminaire;
 	ref<Medium> m_interiorMedium, m_exteriorMedium;
 };
+
+inline ShapeSamplingRecord::ShapeSamplingRecord(const Intersection &its)
+	: p(its.p), n(its.geoFrame.n) { }
 
 MTS_NAMESPACE_END
 

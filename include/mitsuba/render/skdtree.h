@@ -38,6 +38,8 @@
 
 MTS_NAMESPACE_BEGIN
 
+typedef const Shape * ConstShapePtr;
+
 /**
  * \brief SAH KD-tree acceleration data structure for fast ray-triangle 
  * intersections.
@@ -68,8 +70,6 @@ class MTS_EXPORT_RENDER ShapeKDTree : public SAHKDTree3D<ShapeKDTree> {
 	friend class Instance;
 	friend class AnimatedInstance;
 public:
-	typedef const Shape * ConstShapePtr;
-
 	// =============================================================
 	//! @{ \name Initialization and tree construction
 	// =============================================================
@@ -139,13 +139,17 @@ public:
 	 * \param t
 	 *    The traveled ray distance will be stored in this parameter
 	 
-	 * \param t
+	 * \param shape
 	 *    A pointer to the intersected shape will be stored in this
 	 *    parameter
 	 *
+	 * \param n
+	 *    The geometric surface normal will be stored in this parameter
+	 *
 	 * \return \c true if an intersection was found
 	 */
-	bool rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape) const;
+	bool rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape, 
+		Normal &n) const;
 
 	/**
 	 * \brief Test a ray for occlusion with respect to all primitives

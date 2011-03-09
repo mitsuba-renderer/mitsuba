@@ -290,7 +290,8 @@ public:
 	 * The default implementation throws an exception, which states that
 	 * the method is not implemented.
 	 */
-	virtual Spectrum Le(const Intersection &its, const Vector &d) const;
+	virtual Spectrum Le(const ShapeSamplingRecord &sRec,
+			const Vector &d) const;
 
 	//! @}
 	// =============================================================

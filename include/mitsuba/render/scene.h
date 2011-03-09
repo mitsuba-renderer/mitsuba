@@ -148,7 +148,7 @@ public:
 	 * \return \c true if an intersection was found
 	 */
 	inline bool rayIntersect(const Ray &ray, Intersection &its) const {
-		return m_kdtree->rayIntersect(pRay, its);
+		return m_kdtree->rayIntersect(ray, its);
 	}
 
 	/**
@@ -167,14 +167,18 @@ public:
 	 * \param t
 	 *    The traveled ray distance will be stored in this parameter
 	 
-	 * \param t
+	 * \param shape
 	 *    A pointer to the intersected shape will be stored in this
 	 *    parameter
 	 *
+	 * \param n
+	 *    The geometric surface normal will be stored in this parameter
+	 *
 	 * \return \c true if an intersection was found
 	 */
-	inline bool rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape) const {
-		return m_kdtree->rayIntersect(ray, t, shape);
+	inline bool rayIntersect(const Ray &ray, Float &t, 
+			ConstShapePtr &shape, Normal &n) const {
+		return m_kdtree->rayIntersect(ray, t, shape, n);
 	}
 
 	/// Cast a shadow ray
