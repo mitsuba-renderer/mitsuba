@@ -51,14 +51,14 @@ void SampleIntegrator::serialize(Stream *stream, InstanceManager *manager) const
 }
 
 Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n, Float time,
-		const Medium *medium, Sampler *sampler, int irrSamples, bool irrIndirect) const {
+		const Medium *medium, Sampler *sampler, int nSamples, bool handleIndirect) const {
 	Spectrum E(0.0f);
 	LuminaireSamplingRecord lRec;
 	RadianceQueryRecord rRec(scene, sampler);
 	Frame frame(n);
 
 	sampler->generate();
-	for (int i=0; i<irrSamples; i++) {
+	for (int i=0; i<nSamples; i++) {
 		rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission, medium);
 
 		/* Direct */
@@ -69,14 +69,14 @@ Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n
 		}
 
 		/* Indirect */
-		if (irrIndirect) {
+		if (handleIndirect) {
 			Vector d = frame.toWorld(squareToHemispherePSA(rRec.nextSample2D()));
 			++rRec.depth;
 			E += Li(RayDifferential(p, d, time), rRec) * M_PI;
 		}
 		sampler->advance();
 	}
-	return E / (Float) irrSamples;
+	return E / (Float) nSamples;
 }
 
 void SampleIntegrator::cancel() {

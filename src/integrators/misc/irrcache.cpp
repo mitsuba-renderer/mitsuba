@@ -288,32 +288,31 @@ public:
 		E = hs->getIrradiance();
 	}
 
-	Spectrum E(const Scene *scene, const Point &p, const Normal &n,
-			Float time, Sampler *sampler, int irrSamples, bool irrIndirect) const {
+	Spectrum E(const Scene *scene, const Point &p, const Normal &n, Float time,
+			const Medium *medium, Sampler *sampler, int nSamples, bool handleIndirect) const {
 		Spectrum EDir(0.0f), EIndir(0.0f);
 		RadianceQueryRecord rRec(scene, sampler);
 		LuminaireSamplingRecord lRec;
 
 		/* Direct illumination */
-		for (int i=0; i<irrSamples; i++) {
-			rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission);
-
-			if (scene->sampleAttenuatedLuminaire(p, lRec, time, rRec.nextSample2D())) {
+		for (int i=0; i<nSamples; i++) {
+			if (scene->sampleAttenuatedLuminaire(p, time, medium, lRec, rRec.nextSample2D())) {
 				Float dp = dot(lRec.d, n);
 				if (dp < 0) 
 					EDir -= lRec.value * dp;
 			}
 		}
 
+		rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission, medium);
 		rRec.its.p = p;
 		rRec.its.geoFrame = rRec.its.shFrame = Frame(n);
 
-		if (irrIndirect) {
+		if (handleIndirect) {
 			if (!m_irrCache->get(rRec.its, EIndir)) 
 				handleMiss(RayDifferential(), rRec, EIndir);
 		}
 
-		return (EDir / (Float) irrSamples) + EIndir;
+		return (EDir / (Float) nSamples) + EIndir;
 	}
 
 	const Integrator *getSubIntegrator() const {

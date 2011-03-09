@@ -120,6 +120,8 @@ private:
 
 /*! @{ */
 
+#define MTS_CLASS(x) x::m_theClass
+
 /**
  * \brief This macro must be used in the declaration of 
  * all classes derived from \ref Object.

@@ -107,6 +107,8 @@ public:
 				m_camera->generateRayDifferential(sample, lensSample, 0.0f, eyeRay);
 				if (m_scene->rayIntersect(eyeRay, its)) {
 					const BSDF *bsdf = its.shape->getBSDF();
+					if (!bsdf)
+						continue;
 					if (!bsdf->getType() == BSDF::EDiffuseReflection)
 						continue;
 					if (m_irrCache->get(its, E))
@@ -122,7 +124,8 @@ public:
 						for (unsigned int k=0; k<m_hs->getN(); k++) {
 							HemisphereSampler::SampleEntry &entry = (*m_hs)(j, k);
 							entry.dist = std::numeric_limits<Float>::infinity();
-							rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission | RadianceQueryRecord::EDistance);
+							rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission
+								| RadianceQueryRecord::EDistance, m_camera->getMedium());
 							rRec.depth = 2;
 							rRec.extra = 1; // mark as irradiance cache query
 							entry.L = integrator->Li(RayDifferential(its.p, entry.d, 0.0f), rRec);

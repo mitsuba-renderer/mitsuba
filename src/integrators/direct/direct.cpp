@@ -74,11 +74,7 @@ public:
 
 		/* Perform the first ray intersection (or ignore if the 
 		   intersection has already been provided). */
-		if (rRec.rayIntersect(ray)) {
-			ray.mint = 0; ray.maxt = rRec.its.t;
-		}
-
-		if (!its.isValid()) {
+		if (!rRec.rayIntersect(ray)) {
 			/* If no intersection could be found, possibly return 
 			   radiance from a background luminaire */
 			if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
@@ -142,7 +138,8 @@ public:
 						bsdf->pdf(bRec) : 0;
 
 					/* Weight using the power heuristic */
-					const Float weight = miWeight(lRec.pdf * fracLum, bsdfPdf * fracBSDF) * weightLum;
+					const Float weight = miWeight(lRec.pdf * fracLum, 
+							bsdfPdf * fracBSDF) * weightLum;
 					Li += lRec.value * bsdfVal * weight;
 				}
 			}
@@ -173,7 +170,6 @@ public:
 			Ray bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);
 			bool hitLuminaire = false;
 			if (scene->rayIntersect(bsdfRay, bsdfIts)) {
-				bsdfRay.mint = 0; bsdfRay.maxt = bsdfIts.t; 
 				/* Intersected something - check if it was a luminaire */
 				if (bsdfIts.isLuminaire()) {
 					lRec = LuminaireSamplingRecord(bsdfIts, -bsdfRay.d);
@@ -192,11 +188,12 @@ public:
 			/* If a luminaire was hit, estimate the local illumination and
 				sample weight using the power heuristic */
 			if (hitLuminaire && (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance)) {
-				lRec.value = lRec.luminaire->Le(lRec);
-				Float lumPdf = scene->pdfLuminaire(its, lRec);
+				lRec.value = its.Le(-bsdfRay.d);
+				Float lumPdf = scene->pdfLuminaire(its.p, lRec);
 				if (bRec.sampledType & BSDF::EDelta)
 					lumPdf = 0;
-				const Float weight = miWeight(bsdfPdf * fracBSDF, lumPdf * fracLum) * weightBSDF;
+				const Float weight = miWeight(bsdfPdf * fracBSDF, 
+						lumPdf * fracLum) * weightBSDF;
 				Li += lRec.value * bsdfVal * weight;
 			}
 		}

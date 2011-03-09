@@ -22,6 +22,7 @@
 #include <mitsuba/render/luminaire.h>
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
+#include <mitsuba/render/medium.h>
 #include <set>
 
 MTS_NAMESPACE_BEGIN
