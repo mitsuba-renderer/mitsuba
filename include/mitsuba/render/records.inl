@@ -81,7 +81,14 @@ inline const Medium *Intersection::getTargetMedium(const Ray &ray) const {
 	else
 		return shape->getInteriorMedium();
 }
-	
+
+inline LuminaireSamplingRecord::LuminaireSamplingRecord(const Intersection &its, const Vector &dir) {
+	sRec.p = its.p;
+	sRec.n = its.geoFrame.n;
+	d = dir;
+	luminaire = its.shape->getLuminaire();
+}
+
 inline bool RadianceQueryRecord::rayIntersect(const RayDifferential &ray) {
 	/* Only search for an intersection if this was explicitly requested */
 	if (type & EIntersection) {

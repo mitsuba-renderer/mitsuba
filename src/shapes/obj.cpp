@@ -458,6 +458,12 @@ public:
 				child->setParent(m_meshes[i]);
 				m_meshes[i]->addChild(name, child);
 			}
+		} else if (cClass->derivesFrom(Medium::m_theClass)) {
+			Assert(m_subsurface == NULL);
+			for (size_t i=0; i<m_meshes.size(); ++i) { 
+				child->setParent(m_meshes[i]);
+				m_meshes[i]->addChild(name, child);
+			}
 		} else {
 			Shape::addChild(name, child);
 		}

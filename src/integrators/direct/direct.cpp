@@ -127,7 +127,7 @@ public:
 
 		for (int i=0; i<numLuminaireSamples; ++i) {
 			/* Estimate the direct illumination if this is requested */
-			if (scene->sampleLuminaire(its, lRec, sampleArray[i])) {
+			if (scene->sampleLuminaire(its.p, ray.time, lRec, sampleArray[i])) {
 				/* Allocate a record for querying the BSDF */
 				const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
 
@@ -181,7 +181,7 @@ public:
 				}
 			} else {
 				/* No intersection found. Possibly, there is a background
-					luminaire such as an environment map? */
+				   luminaire such as an environment map? */
 				if (scene->hasBackgroundLuminaire()) {
 					lRec.luminaire = scene->getBackgroundLuminaire();
 					lRec.d = -bsdfRay.d;

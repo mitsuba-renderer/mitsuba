@@ -112,8 +112,9 @@ Scene::Scene(Scene *scene) : NetworkedObject(Properties()) {
 	for (size_t i=0; i<m_luminaires.size(); ++i)
 		m_luminaires[i]->incRef();
 	m_media = scene->m_media;
-	for (size_t i=0; i<m_media.size(); ++i)
-		m_media[i]->incRef();
+	for (std::set<Medium *>::iterator it = m_media.begin();
+			it != m_media.end(); ++it)
+		(*it)->incRef();
 	m_ssIntegrators = scene->m_ssIntegrators;
 	for (size_t i=0; i<m_ssIntegrators.size(); ++i)
 		m_ssIntegrators[i]->incRef();
@@ -168,7 +169,7 @@ Scene::Scene(Stream *stream, InstanceManager *manager)
 	for (int i=0; i<count; ++i) {
 		Medium *medium = static_cast<Medium *>(manager->getInstance(stream));
 		medium->incRef();
-		m_media.push_back(medium);
+		m_media.insert(medium);
 	}
 	count = stream->readInt();
 	for (int i=0; i<count; ++i) {
@@ -195,14 +196,15 @@ Scene::~Scene() {
 		m_shapes[i]->decRef();
 	for (size_t i=0; i<m_meshes.size(); i++)
 		m_meshes[i]->decRef();
-	for (size_t i=0; i<m_media.size(); i++) 
-		m_media[i]->decRef();
 	for (size_t i=0; i<m_objects.size(); i++)
 		m_objects[i]->decRef();
 	for (size_t i=0; i<m_ssIntegrators.size(); i++)
 		m_ssIntegrators[i]->decRef();
 	for (size_t i=0; i<m_luminaires.size(); i++)
 		m_luminaires[i]->decRef();
+	for (std::set<Medium *>::iterator it = m_media.begin();
+			it != m_media.end(); ++it)
+		(*it)->decRef();
 }
 
 void Scene::bindUsedResources(ParallelProcess *proc) const {
@@ -390,42 +392,46 @@ bool Scene::sampleAttenuatedLuminaire(const Point &p, Float time,
 	luminaire->sample(p, lRec, sample);
 
 	if (lRec.pdf != 0) {
-		Vector d = lRec.sRec.p - p;
-		Float distance = d.length(), traveled = 0;
-		d /= distance;
-		distance *= 1-Epsilon;
-
-		const Shape *shape;
-		Ray ray(p, d, time);
-		int iterations = 0;
-
-		while (true) {
-			Normal n;
-			Float t;
-	
-			bool surface = rayIntersect(ray, t, shape, n);
-
-			if (medium)
-				lRec.value *= medium->tau(Ray(ray.o, d, 0, t, time));
-
-			if (!surface)
-				break;
-
-			ray.o = ray(t);
-			traveled += t;
-
-			if (shape->isOccluder() && traveled < distance)
+		if (m_media.size() == 0) {
+			if (isOccluded(p, lRec.sRec.p, time)) 
 				return false;
-			else if (shape->isMediumTransition())
-				medium = dot(n, d) > 0 ? shape->getExteriorMedium()
-					: shape->getInteriorMedium();
+		} else {
+			Vector d = lRec.sRec.p - p;
+			Float distance = d.length(), traveled = 0;
+			d /= distance;
+			distance *= 1-Epsilon;
 
-			if (++iterations > 100) { /// Just a precaution..
-				Log(EWarn, "sampleAttenuatedLuminaire(): round-off error issues?");
-				break;
+			const Shape *shape;
+			Ray ray(p, d, time);
+			int iterations = 0;
+
+			while (true) {
+				Normal n;
+				Float t;
+		
+				bool surface = rayIntersect(ray, t, shape, n);
+
+				if (medium)
+					lRec.value *= medium->tau(Ray(ray.o, d, 0, t, time));
+
+				if (!surface)
+					break;
+
+				ray.o = ray(t);
+				traveled += t;
+
+				if (shape->isOccluder() && traveled < distance)
+					return false;
+				else if (shape->isMediumTransition())
+					medium = dot(n, d) > 0 ? shape->getExteriorMedium()
+						: shape->getInteriorMedium();
+
+				if (++iterations > 100) { /// Just a precaution..
+					Log(EWarn, "sampleAttenuatedLuminaire(): round-off error issues?");
+					break;
+				}
 			}
 		}
-
 		lRec.pdf *= lumPdf;
 		lRec.value /= lRec.pdf;
 		lRec.luminaire = luminaire;
@@ -497,8 +503,10 @@ void Scene::addChild(const std::string &name, ConfigurableObject *child) {
 		m_objects.push_back(obj);
 	} else if (cClass->derivesFrom(Medium::m_theClass)) {
 		Medium *medium = static_cast<Medium *>(child);
-		medium->incRef();
-		m_media.push_back(medium);
+		if (m_media.find(medium) == m_media.end()) {
+			medium->incRef();
+			m_media.insert(medium);
+		}
 	} else if (cClass->derivesFrom(Luminaire::m_theClass)) {
 		Luminaire *luminaire = static_cast<Luminaire *>(child);
 		luminaire->incRef();
@@ -531,8 +539,9 @@ void Scene::addChild(const std::string &name, ConfigurableObject *child) {
 			obj->setParent(this);
 			addChild("object", obj);
 		}
-		for (size_t i=0; i<scene->getMedia().size(); ++i) {
-			Medium *medium = scene->getMedia()[i];
+		for (std::set<Medium *>::iterator it = scene->getMedia().begin();
+				it != scene->getMedia().end(); ++it) {
+			Medium *medium = *it;
 			medium->setParent(this);
 			addChild("medium", medium);
 		}
@@ -575,6 +584,20 @@ void Scene::addShape(Shape *shape) {
 				shape->getSubsurface()->incRef();
 			}
 		}
+
+		Medium *iMedium = shape->getInteriorMedium(),
+		       *eMedium = shape->getExteriorMedium();
+
+		if (eMedium != NULL && m_media.find(eMedium) == m_media.end()) {
+			m_media.insert(eMedium);
+			eMedium->incRef();
+		}
+
+		if (iMedium != NULL && m_media.find(iMedium) == m_media.end()) {
+			m_media.insert(iMedium);
+			iMedium->incRef();
+		}
+
 		if (shape->getClass()->derivesFrom(TriMesh::m_theClass)) {
 			if (std::find(m_meshes.begin(), m_meshes.end(), shape)
 					== m_meshes.end()) {
@@ -582,6 +605,7 @@ void Scene::addShape(Shape *shape) {
 				shape->incRef();
 			}
 		}
+
 		shape->incRef();
 		m_kdtree->addShape(shape);
 		m_shapes.push_back(shape);
@@ -618,8 +642,9 @@ void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 	for (size_t i=0; i<m_luminaires.size(); ++i) 
 		manager->serialize(stream, m_luminaires[i]);
 	stream->writeUInt((uint32_t) m_media.size());
-	for (size_t i=0; i<m_media.size(); ++i) 
-		manager->serialize(stream, m_media[i]);
+	for (std::set<Medium *>::iterator it = m_media.begin();
+			it != m_media.end(); ++it)
+		manager->serialize(stream, *it);
 	stream->writeUInt((uint32_t) m_ssIntegrators.size());
 	for (size_t i=0; i<m_ssIntegrators.size(); ++i) 
 		manager->serialize(stream, m_ssIntegrators[i]);
@@ -643,12 +668,12 @@ std::string Scene::toString() const {
 		<< "  integrator = " << indent(m_integrator.toString()) << "," << endl
 		<< "  kdtree = " << indent(m_kdtree.toString()) << "," << endl
 		<< "  backgroundLuminaire = " << indent(m_backgroundLuminaire.toString()) << "," << endl
-		<< "  meshes = " << indent(listToString(m_meshes)) << "," << endl
-		<< "  shapes = " << indent(listToString(m_shapes)) << "," << endl
-		<< "  luminaires = " << indent(listToString(m_luminaires)) << "," << endl
-		<< "  media = " << indent(listToString(m_media)) << "," << endl
-		<< "  ssIntegrators = " << indent(listToString(m_ssIntegrators)) << "," << endl
-		<< "  objects = " << indent(listToString(m_objects)) << endl;
+		<< "  meshes = " << indent(containerToString(m_meshes.begin(), m_meshes.end())) << "," << endl
+		<< "  shapes = " << indent(containerToString(m_shapes.begin(), m_shapes.end())) << "," << endl
+		<< "  luminaires = " << indent(containerToString(m_luminaires.begin(), m_luminaires.end())) << "," << endl
+		<< "  media = " << indent(containerToString(m_media.begin(), m_media.end())) << "," << endl
+		<< "  ssIntegrators = " << indent(containerToString(m_ssIntegrators.begin(), m_ssIntegrators.end())) << "," << endl
+		<< "  objects = " << indent(containerToString(m_objects.begin(), m_objects.end())) << endl;
 	oss << "]";
 	return oss.str();
 }

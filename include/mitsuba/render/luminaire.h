@@ -33,6 +33,9 @@ public:
 	/// Create an invalid shadow ray sampling record
 	inline LuminaireSamplingRecord() : luminaire(NULL) { }
 
+	/// Create a shadow ray sampling record based on a surface intersection
+	inline LuminaireSamplingRecord(const Intersection &its, const Vector &direction);
+
 	/// Return a string representation
 	std::string toString() const;
 public:

@@ -317,7 +317,10 @@ public:
 	inline Spectrum LeAttenuatedBackground(const Ray &ray, const Medium *medium) const {
 		if (!m_backgroundLuminaire)
 			return Spectrum(0.0f);
-		return LeBackground(ray) * medium->tau(ray);
+		Spectrum result = LeBackground(ray);
+		if (medium)
+			result *= medium->tau(ray);
+		return result;
 	}
 	
 	//! @}
@@ -418,9 +421,9 @@ public:
 	/// Return the scene's luminaires
 	inline const std::vector<Luminaire *> &getLuminaires() const { return m_luminaires; }
 	/// Return the scene's participating media
-	inline std::vector<Medium *> &getMedia() { return m_media; }
+	inline std::set<Medium *> &getMedia() { return m_media; }
 	/// Return the scene's participating media
-	inline const std::vector<Medium *> &getMedia() const { return m_media; }
+	inline const std::set<Medium *> &getMedia() const { return m_media; }
 	/// Return referenced objects (such as textures, BSDFs)
 	inline std::vector<ConfigurableObject *> &getReferencedObjects() { return m_objects; }
 	/// Return referenced objects (such as textures, BSDFs)
@@ -470,10 +473,10 @@ private:
 	std::vector<TriMesh *> m_meshes;
 	std::vector<Shape *> m_shapes;
 	std::vector<Luminaire *> m_luminaires;
-	std::vector<Medium *> m_media;
 	std::vector<Subsurface *> m_ssIntegrators;
 	std::vector<ConfigurableObject *> m_objects;
 	std::vector<NetworkedObject *> m_netObjects;
+	std::set<Medium *> m_media;
 	fs::path m_sourceFile;
 	fs::path m_destinationFile;
 	DiscretePDF m_luminairePDF;

@@ -27,7 +27,8 @@ MTS_NAMESPACE_BEGIN
 class IrradianceSamplingWorker : public WorkProcessor {
 public:
 	IrradianceSamplingWorker(size_t sampleCount, int ssIndex, int irrSamples, bool irrIndirect) 
-		: m_sampleCount(sampleCount), m_ssIndex(ssIndex), m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
+		: m_sampleCount(sampleCount), m_ssIndex(ssIndex), 
+		m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
 	}
 
 	IrradianceSamplingWorker(Stream *stream, InstanceManager *manager) {
@@ -93,8 +94,8 @@ public:
 			result->put(IrradianceSample(
 				sRec.p,
 				integrator->E(m_scene.get(), sRec.p, sRec.n, time, 
-					m_independentSampler, m_irrSamples, m_irrIndirect),
-				1/pdf
+					camera->getMedium(), m_independentSampler,
+					m_irrSamples, m_irrIndirect), 1/pdf
 			));
 		}
 	}

@@ -320,12 +320,14 @@ template<typename T> inline T endianness_swap(T value) {
 }
 
 /// Return a string representation of a list of objects
-template<class T> std::string listToString(const std::vector<T> &vec) {
+template<class Iterator> std::string containerToString(const Iterator &start, const Iterator &end) {
 	std::ostringstream oss;
 	oss << "{" << endl;
-	for (size_t i=0; i<vec.size(); ++i) {
-		oss << "  " << indent(vec[i]->toString());
-		if (i != vec.size()-1)
+	Iterator it = start;
+	while (it != end) {
+		oss << "  " << indent((*it)->toString());
+		++it;
+		if (it != end) 
 			oss << "," << endl;
 		else
 			oss << endl;

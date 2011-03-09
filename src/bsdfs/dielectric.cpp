@@ -95,7 +95,7 @@ public:
 		wi = Vector(-wo.x, -wo.y, wo.z);
 	}
 
-	Float refract(Float &intIOR, Float &extIOR, 
+	Float refract(Float intIOR, Float extIOR, 
 			const Vector &wi, Vector &wo, ETransportQuantity quantity) const {
 		Float cosTheta1 = Frame::cosTheta(wi);
 		bool entering = cosTheta1 > 0.0f;

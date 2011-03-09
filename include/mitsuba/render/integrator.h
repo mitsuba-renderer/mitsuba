@@ -299,9 +299,8 @@ public:
 	 *     Include indirect illumination in the estimate?
 	 */
 	virtual Spectrum E(const Scene *scene, const Point &p, const
-		Normal &n, Float time, const Medium *medium,
-		Sampler *sampler, int nSamples,
-		bool includeIndirect) const; 
+		Normal &n, Float time, const Medium *medium, Sampler *sampler,
+		int nSamples, bool includeIndirect) const; 
 
 	/**
 	 * Perform the main rendering task. The work is automatically
