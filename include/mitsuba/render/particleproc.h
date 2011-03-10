@@ -24,9 +24,10 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Abstract parallel particle tracing process - distributes the work of 
- * particle tracing and gathers results as computed by a subclass of 
- * <tt>ParticleTracer</tt>
+ * \brief Abstract parallel particle tracing process
+ *
+ * Distributes the work of particle tracing over multiple cores/machines
+ * and gathers results computed by a subclass of \ref ParticleTracer.
  */
 class MTS_EXPORT_RENDER ParticleProcess : public ParallelProcess {
 public:
@@ -82,39 +83,78 @@ protected:
 };
 
 /**
- * Abstract work processor - traces particles and performs a
- * customizable action every time a surface or volume interaction occurs.
+ * \brief Abstract particle tracer implementation
+ *
+ * Traces particles and performs a customizable action every time a
+ * surface or volume interaction occurs.
  */
 class MTS_EXPORT_RENDER ParticleTracer : public WorkProcessor {
 public:
-	/* WorkProcessor interface */
+	// =============================================================
+	//! @{ \name WorkProcessor interface
+	// =============================================================
 	virtual ref<WorkUnit> createWorkUnit() const;
 	virtual void prepare();
 	virtual void process(const WorkUnit *workUnit, WorkResult *workResult, 
 		const bool &stop);
 	void serialize(Stream *stream, InstanceManager *manager) const;
+	//! @}
+	// =============================================================
 
 	/**
-     * Abstract method - handle a surface interation, 
-	 * which occurred while tracing particles.
+     * \brief Handle a surface interation event
+	 *
+	 * To be overridden in a subclass. The default implementation
+	 * does nothing
+	 *
+	 * \param depth 
+	 *    Depth of the interaction in path space (with 1
+	 *    corresponding to the first bounce) 
+	 * \param caustic
+	 *    Is this a caustic path? (This flag is \c false when there
+	 *    was any non-specular interaction on the path so far)
+	 * \param its
+	 *    Associated intersection record
+	 * \param medium
+	 *    Pointer to the current medium \a before the surface
+	 *    interaction
+	 * \param weight
+	 *    Particle weight along the preceding subpath
      */
 	virtual void handleSurfaceInteraction(int depth, bool caustic,
-		const Intersection &its, const Spectrum &weight);
+		const Intersection &its, const Medium *medium,
+		const Spectrum &weight);
 
-	/**
-     * Abstract method - handle an interation with a participating medium, 
-	 * which occurred while tracing particles.
+    /**
+     * \brief Handle a medium interation event
+	 *
+	 * To be overridden in a subclass. The default implementation
+	 * does nothing
+	 *
+	 * \param depth 
+	 *    Depth of the interaction in path space (with 1
+	 *    corresponding to the first bounce) 
+	 * \param caustic
+	 *    Is this a caustic path? (This flag is \c false when there
+	 *    was any non-specular interaction on the path so far)
+	 * \param mRec
+	 *    Associated medium sampling record
+	 * \param medium
+	 *    Pointer to the current medium
+	 * \param time
+	 *    Time value associated with the path
+	 * \param weight
+	 *    Particle weight along the preceding subpath
      */
 	virtual void handleMediumInteraction(int depth, bool caustic,
-		const MediumSamplingRecord &mRec, Float time, const Vector &wi, 
-		const Spectrum &weight);
+		const MediumSamplingRecord &mRec, const Medium *medium,
+		Float time, const Vector &wi, const Spectrum &weight);
 
 	MTS_DECLARE_CLASS()
 protected:
 	/// Protected constructor
 	inline ParticleTracer(int maxDepth, int rrDepth) 
 		: m_maxDepth(maxDepth), m_rrDepth(rrDepth) { }
-
 	/// Protected constructor
 	ParticleTracer(Stream *stream, InstanceManager *manager);
 	/// Virtual destructor

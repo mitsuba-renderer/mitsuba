@@ -62,8 +62,8 @@ public:
 			/* ==================================================================== */
 			/*                 Radiative Transfer Equation sampling                 */
 			/* ==================================================================== */
-			if (medium && rRec.medium->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
-				const PhaseFunction *phase = mRec.medium->getPhaseFunction();
+			if (rRec.medium && rRec.medium->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
+				const PhaseFunction *phase = rRec.medium->getPhaseFunction();
 
 				/* Sample the integral
 				   \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
@@ -127,7 +127,7 @@ public:
 						Li += pathThroughput * scene->LeBackground(ray);
 					break;
 				} else if (its.isMediumTransition()) {
-					rRec.medium = its.getTargetMedium(ray);
+					rRec.medium = its.getTargetMedium(ray.d);
 				}
 
 				computeIntersection = true;
@@ -155,10 +155,9 @@ public:
 
 				/* Estimate the direct illumination if this is requested */
 				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
-					scene->sampleAttenuatedLuminaire(its, lRec, rRec.nextSample2D())) {
+					scene->sampleAttenuatedLuminaire(its.p, ray.time, rRec.medium, lRec, rRec.nextSample2D())) {
 					/* Allocate a record for querying the BSDF */
-					const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
-
+					const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 					Li += pathThroughput * lRec.value * bsdf->fCos(bRec);
 				}
 
@@ -167,7 +166,7 @@ public:
 				/* ==================================================================== */
 
 				/* Sample BSDF * cos(theta) */
-				BSDFQueryRecord bRec(rRec, its);
+				BSDFQueryRecord bRec(its);
 				Spectrum bsdfVal = bsdf->sampleCos(bRec, rRec.nextSample2D());
 				if (bsdfVal.isZero())
 					break;

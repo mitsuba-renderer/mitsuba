@@ -88,9 +88,9 @@ public:
 	
 	/**
 	 * \brief When \c isMediumTransition() = \c true, 
-	 * determine the target medium based on \c ray
+	 * determine the medium that contains the ray (\c this->p, \c d)
 	 */
-	inline const Medium *getTargetMedium(const Ray &ray) const;
+	inline const Medium *getTargetMedium(const Vector &d) const;
 
 	/**
 	 * Returns the BSDF of the intersected shape. The

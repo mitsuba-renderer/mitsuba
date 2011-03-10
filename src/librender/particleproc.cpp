@@ -129,7 +129,8 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				*/
 
 				weight *= mRec.sigmaS * mRec.attenuation / mRec.pdfSuccess;
-				handleMediumInteraction(depth, caustic, mRec, ray.time, -ray.d, weight);
+				handleMediumInteraction(depth, caustic, mRec, medium,
+					ray.time, -ray.d, weight);
 	
 				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
 				pRec.quantity = EImportance;
@@ -157,10 +158,13 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				if (medium)
 					weight *= mRec.attenuation / mRec.pdfFailure;
 
-				if (its.isMediumTransition())
-					medium = its.getTargetMedium(ray);
-
 				const BSDF *bsdf = its.shape->getBSDF();
+
+				if (bsdf)
+					handleSurfaceInteraction(depth, caustic, its, medium, weight);
+
+				if (its.isMediumTransition())
+					medium = its.getTargetMedium(ray.d);
 
 				if (!bsdf) {
 					/* Pass right through the surface (there is no BSDF) */
@@ -168,7 +172,6 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 					continue;
 				}
 	
-				handleSurfaceInteraction(depth, caustic, its, weight);
 				BSDFQueryRecord bRec(its);
 				bRec.quantity = EImportance;
 				bsdfVal = bsdf->sampleCos(bRec, m_sampler->next2D());
@@ -212,13 +215,11 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 }
 
 void ParticleTracer::handleSurfaceInteraction(int depth, bool caustic,
-	const Intersection &its, const Spectrum &weight) {
-}
+	const Intersection &its, const Medium *medium, const Spectrum &weight) { }
 
 void ParticleTracer::handleMediumInteraction(int depth, bool caustic,
-	const MediumSamplingRecord &mRec, Float time, const Vector &wi, 
-	const Spectrum &weight) {
-}
+	const MediumSamplingRecord &mRec, const Medium *medium, Float time,
+	const Vector &wi, const Spectrum &weight) { }
 
 MTS_IMPLEMENT_CLASS(RangeWorkUnit, false, WorkUnit)
 MTS_IMPLEMENT_CLASS(ParticleProcess, true, ParallelProcess)

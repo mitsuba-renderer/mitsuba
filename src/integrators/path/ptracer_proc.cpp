@@ -71,13 +71,21 @@ void CaptureParticleWorker::process(const WorkUnit *workUnit, WorkResult *workRe
 	m_workResult = NULL;
 }
 
-void CaptureParticleWorker::handleSurfaceInteraction(int, bool,
-		const Intersection &its, const Spectrum &weight) {
+void CaptureParticleWorker::handleSurfaceInteraction(int depth,
+		bool caustic, const Intersection &its, const Medium *medium,
+		const Spectrum &weight) {
 	Point2 screenSample;
 
 	if (m_camera->positionToSample(its.p, screenSample)) {
 		Point cameraPosition = m_camera->getPosition(screenSample);
-		if (m_scene->isOccluded(cameraPosition, its.p, its.time)) 
+
+		if (its.isMediumTransition()) 
+			medium = its.getTargetMedium(cameraPosition - its.p);
+
+		Spectrum attenuation = m_scene->getAttenuation(its.p,
+				cameraPosition, its.time, medium);
+
+		if (attenuation.isZero())
 			return;
 
 		const BSDF *bsdf = its.shape->getBSDF();
@@ -94,6 +102,7 @@ void CaptureParticleWorker::handleSurfaceInteraction(int, bool,
 			importance = 1/m_camera->areaDensity(screenSample);
 
 		Vector wi = its.toWorld(its.wi);
+
 		/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
 		Float wiDotGeoN = dot(its.geoFrame.n, wi),
 			  woDotGeoN = dot(its.geoFrame.n, wo);
@@ -106,23 +115,25 @@ void CaptureParticleWorker::handleSurfaceInteraction(int, bool,
 			(Frame::cosTheta(bRec.wi) * woDotGeoN)/
 			(Frame::cosTheta(bRec.wo) * wiDotGeoN));
 
-		/* Compute Le * importance and store it in an accumulation buffer */
+		/* Splat onto the accumulation buffer */
 		Ray ray(its.p, wo, 0, dist, its.time);
 		Spectrum sampleVal = weight * bsdf->fCos(bRec) 
-			* m_scene->getAttenuation(ray) * (importance * correction);
+			* attenuation * (importance * correction);
 
 		m_workResult->splat(screenSample, sampleVal, m_filter);
 	}
 }
 
-void CaptureParticleWorker::handleMediumInteraction(int, bool, 
-		const MediumSamplingRecord &mRec, Float time, const Vector &wi, 
-		const Spectrum &weight) {
+void CaptureParticleWorker::handleMediumInteraction(int depth, bool caustic,
+		const MediumSamplingRecord &mRec, const Medium *medium,
+		Float time, const Vector &wi, const Spectrum &weight) {
 	Point2 screenSample;
 
 	if (m_camera->positionToSample(mRec.p, screenSample)) {
 		Point cameraPosition = m_camera->getPosition(screenSample);
-		if (m_scene->isOccluded(cameraPosition, mRec.p, time))
+		Spectrum attenuation = m_scene->getAttenuation(mRec.p,
+			cameraPosition, time, medium);
+		if (attenuation.isZero())
 			return;
 
 		Vector wo = cameraPosition - mRec.p;
@@ -134,12 +145,11 @@ void CaptureParticleWorker::handleMediumInteraction(int, bool,
 		else
 			importance = 1/m_camera->areaDensity(screenSample);
 
-		/* Compute Le * importance and store in accumulation buffer */
+		/* Splat onto the accumulation buffer */
 		Ray ray(mRec.p, wo, 0, dist, time);
 
-		Spectrum sampleVal = weight * mRec.medium->getPhaseFunction()->f(
-			  PhaseFunctionQueryRecord(mRec, wi, wo))
-			* m_scene->getAttenuation(ray) * importance;
+		Spectrum sampleVal = weight * medium->getPhaseFunction()->f(
+			  PhaseFunctionQueryRecord(mRec, wi, wo)) * attenuation * importance;
 
 		m_workResult->splat(screenSample, sampleVal, m_filter);
 	}

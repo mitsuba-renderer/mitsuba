@@ -63,8 +63,8 @@ inline bool Intersection::isMediumTransition() const {
 	return shape->isMediumTransition();
 }
 
-inline const Medium *Intersection::getTargetMedium(const Ray &ray) const {
-	if (dot(ray.d, geoFrame.n) > 0)
+inline const Medium *Intersection::getTargetMedium(const Vector &d) const {
+	if (dot(d, geoFrame.n) > 0)
 		return shape->getExteriorMedium();
 	else
 		return shape->getInteriorMedium();

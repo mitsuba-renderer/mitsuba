@@ -93,7 +93,8 @@ public:
 	 * pixel of the accumulation buffer.
 	 */
 	void handleSurfaceInteraction(int depth, bool caustic,
-		const Intersection &its, const Spectrum &weight);
+		const Intersection &its, const Medium *medium,
+		const Spectrum &weight);
 
 	/**
 	 * Handles particles interacting with a medium - if a reflection to the
@@ -101,8 +102,8 @@ public:
 	 * pixel of the accumulation buffer.
 	 */
 	void handleMediumInteraction(int depth, bool caustic,
-		const MediumSamplingRecord &mRec, Float time, const Vector &wi, 
-		const Spectrum &weight);
+			const MediumSamplingRecord &mRec, const Medium *medium,
+			Float time, const Vector &wi, const Spectrum &weight);
 
 	MTS_DECLARE_CLASS()
 protected:

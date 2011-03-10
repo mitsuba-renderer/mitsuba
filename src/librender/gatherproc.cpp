@@ -111,7 +111,9 @@ public:
 		m_workResult = NULL;
 	}
 
-	void handleSurfaceInteraction(int depth, bool caustic, const Intersection &its, const Spectrum &weight) {
+	void handleSurfaceInteraction(int depth, bool caustic,
+			const Intersection &its, const Medium *medium,
+			const Spectrum &weight) {
 		int bsdfType = its.shape->getBSDF()->getType();
 		if (!(bsdfType & BSDF::EDiffuseReflection) && !(bsdfType & BSDF::EGlossyReflection))
 			return;
@@ -122,8 +124,9 @@ public:
 			m_workResult->put(PhotonMap::Photon(its.p, its.geoFrame.n, -its.toWorld(its.wi), weight, depth));
 	}
 
-	void handleMediumInteraction(int depth, bool caustic, const MediumSamplingRecord &mRec, Float time, 
-			const Vector &wi, const Spectrum &weight) {
+	void handleMediumInteraction(int depth, bool caustic,
+			const MediumSamplingRecord &mRec, const Medium *medium,
+			Float time, const Vector &wi, const Spectrum &weight) {
 		if (m_type == GatherPhotonProcess::EVolumePhotons && depth > 1)
 			m_workResult->put(PhotonMap::Photon(mRec.p, Normal(), -wi, weight, depth));
 	}
