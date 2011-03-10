@@ -69,7 +69,7 @@ public:
 				/* Sample the integral
 				   \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
 				*/
-				pathThroughput *= mRec.sigmaS * mRec.attenuation / mRec.pdfSuccess;
+				pathThroughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 
 				/* ==================================================================== */
 				/*                          Luminaire sampling                          */
@@ -136,7 +136,7 @@ public:
 					
 					if (rRec.medium) {
 						ray.mint = 0; ray.maxt = its.t; 
-						contrib *= rRec.medium->tau(ray);
+						contrib *= rRec.medium->getTransmittance(ray);
 					}
 
 					contrib += Li;
@@ -164,10 +164,10 @@ public:
 			} else {
 				/* Sample 
 					tau(x, y) (Surface integral). This happens with probability mRec.pdfFailure
-					Account for this and multiply by the proper per-color-channel attenuation.
+					Account for this and multiply by the proper per-color-channel transmittance.
 				*/
 				if (rRec.medium)
-					pathThroughput *= mRec.attenuation / mRec.pdfFailure;
+					pathThroughput *= mRec.transmittance / mRec.pdfFailure;
 
 				if (!its.isValid()) {
 					/* If no intersection could be found, possibly return 
@@ -184,7 +184,6 @@ public:
 					/* Pass right through the surface (there is no BSDF) */
 					ray.setOrigin(its.p);
 					scene->rayIntersect(ray, its);
-					rRec.depth++;
 					continue;
 				}
 
@@ -253,8 +252,8 @@ public:
 					   luminaire such as an environment map? */
 					if (scene->hasBackgroundLuminaire()) {
 						lRec.luminaire = scene->getBackgroundLuminaire();
-						lRec.d = -ray.d;
 						lRec.value = lRec.luminaire->Le(ray);
+						lRec.d = -ray.d;
 						hitLuminaire = true;
 					}
 				}
@@ -269,7 +268,7 @@ public:
 					Spectrum contrib = pathThroughput * lRec.value * bsdfVal * weight;
 					if (rRec.medium) {
 						ray.mint = 0; ray.maxt = its.t; 
-						contrib *= rRec.medium->tau(ray);
+						contrib *= rRec.medium->getTransmittance(ray);
 					}
 					Li += contrib;
 				}
@@ -306,9 +305,9 @@ public:
 	}
 
 	inline Float miWeight(Float pdfA, Float pdfB) const {
-		Float a = pdfA * pdfA;
-		Float b = pdfB * pdfB;
-		return a / (a + b);
+		pdfA *= pdfA;
+		pdfB *= pdfB;
+		return pdfA / (pdfA + pdfB);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -325,8 +324,6 @@ public:
 	}
 
 	MTS_DECLARE_CLASS()
-private:
-	Float m_beta;
 };
 
 MTS_IMPLEMENT_CLASS_S(VolumetricPathTracer, false, MonteCarloIntegrator)

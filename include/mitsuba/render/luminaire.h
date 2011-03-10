@@ -57,7 +57,7 @@ public:
 	/**
 	 * \brief Emitted radiance at \c p into direction \c d divided by
 	 * the associated probability. Already contains the geometric term
-	 * and optionally also attenuation when generated via 
+	 * and optionally also transmittance when generated via 
 	 * \ref Scene::sampleAttenuatedLuminaire.
 	 */
 	Spectrum value;

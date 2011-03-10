@@ -82,10 +82,10 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 		if (its.isMediumTransition()) 
 			medium = its.getTargetMedium(cameraPosition - its.p);
 
-		Spectrum attenuation = m_scene->getAttenuation(its.p,
+		Spectrum transmittance = m_scene->getTransmittance(its.p,
 				cameraPosition, its.time, medium);
 
-		if (attenuation.isZero())
+		if (transmittance.isZero())
 			return;
 
 		const BSDF *bsdf = its.shape->getBSDF();
@@ -118,7 +118,7 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 		/* Splat onto the accumulation buffer */
 		Ray ray(its.p, wo, 0, dist, its.time);
 		Spectrum sampleVal = weight * bsdf->fCos(bRec) 
-			* attenuation * (importance * correction);
+			* transmittance * (importance * correction);
 
 		m_workResult->splat(screenSample, sampleVal, m_filter);
 	}
@@ -131,9 +131,10 @@ void CaptureParticleWorker::handleMediumInteraction(int depth, bool caustic,
 
 	if (m_camera->positionToSample(mRec.p, screenSample)) {
 		Point cameraPosition = m_camera->getPosition(screenSample);
-		Spectrum attenuation = m_scene->getAttenuation(mRec.p,
+		Spectrum transmittance = m_scene->getTransmittance(mRec.p,
 			cameraPosition, time, medium);
-		if (attenuation.isZero())
+
+		if (transmittance.isZero())
 			return;
 
 		Vector wo = cameraPosition - mRec.p;
@@ -149,7 +150,7 @@ void CaptureParticleWorker::handleMediumInteraction(int depth, bool caustic,
 		Ray ray(mRec.p, wo, 0, dist, time);
 
 		Spectrum sampleVal = weight * medium->getPhaseFunction()->f(
-			  PhaseFunctionQueryRecord(mRec, wi, wo)) * attenuation * importance;
+			  PhaseFunctionQueryRecord(mRec, wi, wo)) * transmittance * importance;
 
 		m_workResult->splat(screenSample, sampleVal, m_filter);
 	}

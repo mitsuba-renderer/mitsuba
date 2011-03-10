@@ -178,7 +178,6 @@
 		</descr>
 		<param name="luminaireSamples" readableName="Luminaire Samples" type="integer" default="1">Number of samples to take using the luminaire sampling technique</param>
 		<param name="bsdfSamples" readableName="BSDF Samples" type="integer" default="1">Number of samples to take using the BSDF sampling technique</param>
-		<param name="beta" readableName="Power Heuristic coefficient" type="float" default="2" importance="1">Beta coefficient for the power heuristic</param>
 	</plugin>
 
 	<plugin type="integrator" name="path" readableName="Path tracer"
@@ -189,7 +188,6 @@
 			supports volumetric absorption, but does not attempt to solve the
 			full radiative transfer equation (see <tt>volpath</tt> if this is needed).
 		</descr>
-		<param name="beta" readableName="Power Heuristic coefficient" type="float" default="2" importance="1">Beta coefficient for the power heuristic</param>
 	</plugin>
  
 	<plugin type="integrator" name="volpath_simple" readableName = "Volumetric path tracer (Simple)"
@@ -217,7 +215,6 @@
 			intersection computation.
 			On surfaces, this integrator behaves exactly like the MI path tracer.
 		</descr>
-		<param name="beta" readableName="Power Heuristic coefficient" type="float" default="2" importance="1">Beta coefficient for the power heuristic</param>
 	</plugin>
 
 	<plugin type="integrator" name="ptracer" readableName="Adjoint particle tracer" show="true"

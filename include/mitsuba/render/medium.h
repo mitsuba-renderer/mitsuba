@@ -26,6 +26,8 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Data record associated with the sampling procedure responsible for
  * choosing a point on the in-scattering line integral of the RTE
+ *
+ * \sa Medium::sampleDistance()
  */
 struct MTS_EXPORT_RENDER MediumSamplingRecord {
 public:
@@ -45,13 +47,12 @@ public:
 	Vector orientation;
 
 	/**
-	 * \brief Specifies the attenuation along the segment [mint, t]
+	 * \brief Specifies the transmittance along the segment [mint, t]
 	 *
 	 * When sampling a distance fails, this contains the 
-	 * attenuation along the whole ray segment [mint, maxDist].
-	 * See 
+	 * transmittance along the whole ray segment [mint, maxDist].
 	 */
-	Spectrum attenuation;
+	Spectrum transmittance;
 
 	/// The medium's absorption coefficient at \ref p
 	Spectrum sigmaA;
@@ -67,7 +68,7 @@ public:
 	 * interaction in the reverse direction
 	 *
 	 * This is essentially the density of obtained by calling \ref sampleDistance,
-	 * but starting at \a p and stopping at \a ray.o. These probabilities
+	 * but starting at \c p and stopping at \c ray.o. These probabilities
 	 * are important for bidirectional methods.
 	 */
 	Float pdfSuccessRev;
@@ -92,19 +93,19 @@ public:
 class MTS_EXPORT_RENDER Medium : public NetworkedObject {
 public:
 	/** 
-	 * \brief Compute the attenuation along a ray segment
+	 * \brief Compute the transmittance along a ray segment
 	 *
-	 * Computes the attenuation along a ray segment 
+	 * Computes the transmittance along a ray segment 
 	 * [mint, maxt] associated with the ray. It is assumed
 	 * that the ray has a normalized direction value.
 	 *
 	 */
-	virtual Spectrum tau(const Ray &ray) const = 0;
+	virtual Spectrum getTransmittance(const Ray &ray) const = 0;
 
 	/**
 	 * \brief Sample a distance along the ray segment [mint, maxt]
 	 *
-	 * Should ideally importance sample with respect to the attenuation.
+	 * Should ideally importance sample with respect to the transmittance.
 	 * It is assumed that the ray has a normalized direction value.
 	 *
 	 * \param ray      Ray, along which a distance should be sampled
@@ -122,7 +123,7 @@ public:
 	 * The function computes the continuous densities in the case of
 	 * a successful \ref sampleDistance() invocation (in both directions),
 	 * as well as the Dirac delta density associated with a failure.
-	 * For convenience, it also stores the attenuation along the ray
+	 * For convenience, it also stores the transmittance along the ray
 	 * segment in \a mRec.
 	 */
 	virtual void pdfDistance(const Ray &ray, Float t, 

@@ -95,10 +95,10 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 		m_subsurface = static_cast<Subsurface *>(child);
 	} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
 		if (name == "interiorMedium") {
-			Assert(m_interiorMedium != NULL);
+			Assert(m_interiorMedium == NULL);
 			m_interiorMedium = static_cast<Medium *>(child);
 		} else if (name == "exteriorMedium") {
-			Assert(m_exteriorMedium != NULL);
+			Assert(m_exteriorMedium == NULL);
 			m_exteriorMedium = static_cast<Medium *>(child);
 		} else {
 			Log(EError, "Shape: Invalid medium child (must be named "

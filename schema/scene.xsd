@@ -121,6 +121,7 @@
 					<xsd:element name="ref" type="reference"/>
 					<xsd:element name="luminaire" type="luminaire"/>
 					<xsd:element name="shape" type="shape"/>
+					<xsd:element name="medium" type="medium"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
@@ -291,6 +292,7 @@
 		<xsd:attribute name="x" type="doubleType"/>
 		<xsd:attribute name="y" type="doubleType"/>
 		<xsd:attribute name="z" type="doubleType"/>
+		<xsd:attribute name="value" type="doubleType"/>
 	</xsd:complexType>
 	<xsd:complexType name="rotate">
 		<xsd:attribute name="x" type="doubleType"/>

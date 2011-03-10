@@ -31,24 +31,17 @@ static StatsCounter avgPathLength("Path tracer", "Average path length", EAverage
   */
 class MIPathTracer : public MonteCarloIntegrator {
 public:
-	MIPathTracer(const Properties &props) : MonteCarloIntegrator(props) {
-		/* Beta factor for the power heuristic */
-		m_beta = props.getFloat("beta", 2.0f);
-	}
+	MIPathTracer(const Properties &props) : MonteCarloIntegrator(props) { }
 
 	/// Unserialize from a binary data stream
 	MIPathTracer(Stream *stream, InstanceManager *manager)
-	 : MonteCarloIntegrator(stream, manager) {
-		m_beta = stream->readFloat();
-	}
+	 : MonteCarloIntegrator(stream, manager) { }
 
 	Spectrum Li(const RayDifferential &r, RadianceQueryRecord &rRec) const {
 		/* Some aliases and local variables */
 		const Scene *scene = rRec.scene;
 		Intersection &its = rRec.its;
-		LuminaireSamplingRecord lRec;
 		RayDifferential ray(r);
-		Intersection prevIts;
 		Spectrum Li(0.0f);
 
 		/* Perform the first ray intersection (or ignore if the 
@@ -67,6 +60,13 @@ public:
 
 			const BSDF *bsdf = its.getBSDF(ray);
 
+			if (EXPECT_NOT_TAKEN(bsdf == NULL)) {
+				/* The MI path tracer doesn't support
+				   surfaces without a BSDF (e.g. medium transitions)
+				   -- give up. */
+				break;
+			}
+
 			/* Possibly include emitted radiance if requested */
 			if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
 				Li += pathThroughput * its.Le(-ray.d);
@@ -83,6 +83,7 @@ public:
 			/* ==================================================================== */
 
 			/* Estimate the direct illumination if this is requested */
+			LuminaireSamplingRecord lRec;
 			if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
 				scene->sampleLuminaire(its.p, ray.time, lRec, rRec.nextSample2D())) {
 				/* Allocate a record for querying the BSDF */
@@ -115,7 +116,6 @@ public:
 			if (bsdfVal.isZero()) 
 				break;
 			bsdfVal /= bsdfPdf;
-			prevIts = its;
 
 			/* Trace a ray in this direction */
 			ray = Ray(its.p, its.toWorld(bRec.wo), ray.time);
@@ -132,8 +132,8 @@ public:
 				   luminaire such as an environment map? */
 				if (scene->hasBackgroundLuminaire()) {
 					lRec.luminaire = scene->getBackgroundLuminaire();
-					lRec.d = -ray.d;
 					lRec.value = lRec.luminaire->Le(ray);
+					lRec.d = -ray.d;
 					hitLuminaire = true;
 				} else {
 					rRec.depth++;
@@ -146,8 +146,8 @@ public:
 			if (hitLuminaire &&  
 				(rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance)) {
 				/* Prob. of having generated this sample using luminaire sampling */
-				const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ? 
-					scene->pdfLuminaire(its.p, lRec) : 0;
+				const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ?
+					scene->pdfLuminaire(ray.o, lRec) : 0;
 				const Float weight = miWeight(bsdfPdf, lumPdf);
 				Li += pathThroughput * lRec.value * bsdfVal * weight;
 			}
@@ -179,26 +179,27 @@ public:
 			pathThroughput *= bsdfVal;
 			rRec.depth++;
 		}
+
+		/* Store statistics */
 		avgPathLength.incrementBase();
 		avgPathLength += rRec.depth;
+
 		return Li;
 	}
 
 	inline Float miWeight(Float pdfA, Float pdfB) const {
-		pdfA = std::pow(pdfA, m_beta);
-		pdfB = std::pow(pdfB, m_beta);
+		pdfA *= pdfA;
+		pdfB *= pdfB;
 		return pdfA / (pdfA + pdfB);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		MonteCarloIntegrator::serialize(stream, manager);
-		stream->writeFloat(m_beta);
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "MIPathTracer[" << std::endl
-			<< "  beta = " << m_beta << "," << std::endl
 			<< "  maxDepth = " << m_maxDepth << "," << std::endl
 			<< "  rrDepth = " << m_rrDepth << std::endl
 			<< "]";
@@ -206,8 +207,6 @@ public:
 	}
 
 	MTS_DECLARE_CLASS()
-private:
-	Float m_beta;
 };
 
 MTS_IMPLEMENT_CLASS_S(MIPathTracer, false, MonteCarloIntegrator)

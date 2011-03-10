@@ -202,15 +202,13 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		Float x = parseFloat(name, context.attributes["x"], 0);
 		Float y = parseFloat(name, context.attributes["y"], 0);
 		Float z = parseFloat(name, context.attributes["z"], 0);
-		Transform translate = Transform::translate(Vector(x, y, z));
-		m_transform = translate * m_transform;
+		m_transform = Transform::translate(Vector(x, y, z)) * m_transform;
 	} else if (name == "rotate") {
 		Float x = parseFloat(name, context.attributes["x"], 0);
 		Float y = parseFloat(name, context.attributes["y"], 0);
 		Float z = parseFloat(name, context.attributes["z"], 0);
 		Float angle = parseFloat(name, context.attributes["angle"]);
-		Transform rotate = Transform::rotate(Vector(x, y, z), angle);
-		m_transform = rotate * m_transform;
+		m_transform = Transform::rotate(Vector(x, y, z), angle) * m_transform;
 	} else if (name == "lookAt") {
 		Float ox = parseFloat(name, context.attributes["ox"]);
 		Float oy = parseFloat(name, context.attributes["oy"]);
@@ -230,15 +228,30 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			coordinateSystem(normalize(t-o), u, unused);
 		}
 
-		Transform lookAt = Transform::lookAt(o, t, u);
-		m_transform = lookAt * m_transform;
+		m_transform =  Transform::lookAt(o, t, u) * m_transform;
 	} else if (name == "scale") {
-		Float x = parseFloat(name, context.attributes["x"], 1);
-		Float y = parseFloat(name, context.attributes["y"], 1);
-		Float z = parseFloat(name, context.attributes["z"], 1);
+		bool hasXYZ = 
+			context.attributes["x"] != "" ||
+			context.attributes["y"] != "" ||
+			context.attributes["z"] != "";
+		bool hasValue = 
+			context.attributes["value"] != "";
+		Float x=0, y=0, z=0;
 
-		Transform scale = Transform::scale(Vector(x, y, z));
-		m_transform = scale * m_transform;
+		if (hasXYZ && hasValue) {
+			SLog(EError, "<scale>: provided both xyz and value arguments!");
+		} else if (hasXYZ) {
+			x = parseFloat(name, context.attributes["x"], 1);
+			y = parseFloat(name, context.attributes["y"], 1);
+			z = parseFloat(name, context.attributes["z"], 1);
+		} else if (hasValue) {
+			x = y = z = parseFloat(name, context.attributes["value"]);
+		} else {
+			SLog(EError, "<scale>: provided neither xyz nor value arguments!");
+		}
+		cout << x << " " << y << " " << z << endl;
+
+		m_transform = Transform::scale(Vector(x, y, z)) * m_transform;
 	} else if (name == "matrix") {
 		std::vector<std::string> tokens = tokenize(
 			context.attributes["value"], ", ");

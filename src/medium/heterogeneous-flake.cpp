@@ -544,7 +544,7 @@ public:
 		return success;
 	}
 
-	/// Evaluate the attenuation along a ray segment
+	/// Evaluate the transmittance along a ray segment
 	Spectrum tau(const Ray &ray) const {
 		return Spectrum(std::exp(-integrateDensity(ray)));
 	}
@@ -600,7 +600,7 @@ public:
 		mRec.pdfFailure = expVal;
 		mRec.pdfSuccess = expVal * std::max((Float) Epsilon, currentSigmaT);
 		mRec.pdfSuccessRev = expVal * std::max((Float) Epsilon, sigmaTOrigin);
-		mRec.attenuation = Spectrum(expVal);
+		mRec.transmittance = Spectrum(expVal);
 
 		if (!success)
 			return false;
@@ -615,7 +615,7 @@ public:
 	void pdfDistance(const Ray &ray, Float t, MediumSamplingRecord &mRec) const {
 		Float expVal = std::exp(-integrateDensity(Ray(ray, 0, t)));
 
-		mRec.attenuation = Spectrum(expVal);
+		mRec.transmittance = Spectrum(expVal);
 		mRec.pdfFailure = expVal;
 		mRec.pdfSuccess = expVal * std::max((Float) Epsilon, 
 			sigmaT(ray(t), ray.d));

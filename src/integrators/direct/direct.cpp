@@ -34,8 +34,6 @@ public:
 		m_luminaireSamples = props.getInteger("luminaireSamples", 1);
 		/* Number of samples to take using the BSDF sampling technique */
 		m_bsdfSamples = props.getInteger("bsdfSamples", 1);
-		/* Beta factor for the power heuristic */
-		m_beta = props.getFloat("beta", 2.0f);
 
 		Assert(m_luminaireSamples + m_bsdfSamples > 0);
 	}
@@ -45,7 +43,6 @@ public:
 	 : SampleIntegrator(stream, manager) {
 		m_luminaireSamples = stream->readInt();
 		m_bsdfSamples = stream->readInt();
-		m_beta = stream->readFloat();
 		configure();
 	}
 
@@ -84,6 +81,13 @@ public:
 		}
 
 		const BSDF *bsdf = its.getBSDF(ray);
+
+		if (EXPECT_NOT_TAKEN(!bsdf)) {
+			/* The direct illumination integrator doesn't support
+			   surfaces without a BSDF (e.g. medium transitions)
+			   -- give up. */
+			return Li;
+		}
 
 		/* Possibly include emitted radiance if requested */
 		if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
@@ -171,7 +175,7 @@ public:
 				/* Intersected something - check if it was a luminaire */
 				if (bsdfIts.isLuminaire()) {
 					lRec = LuminaireSamplingRecord(bsdfIts, -bsdfRay.d);
-					lRec.value = its.Le(-bsdfRay.d);
+					lRec.value = bsdfIts.Le(-bsdfRay.d);
 				} else {
 					continue;
 				}
@@ -199,8 +203,8 @@ public:
 	}
 
 	inline Float miWeight(Float pdfA, Float pdfB) const {
-		pdfA = std::pow(pdfA, m_beta);
-		pdfB = std::pow(pdfB, m_beta);
+		pdfA *= pdfA;
+		pdfB *= pdfB;
 		return pdfA / (pdfA + pdfB);
 	}
 
@@ -208,15 +212,13 @@ public:
 		SampleIntegrator::serialize(stream, manager);
 		stream->writeInt(m_luminaireSamples);
 		stream->writeInt(m_bsdfSamples);
-		stream->writeFloat(m_beta);
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "MIDirectIntegrator[" << std::endl
 			<< "  luminaireSamples = " << m_luminaireSamples << "," << std::endl
-			<< "  bsdfSamples = " << m_bsdfSamples << "," << std::endl
-			<< "  beta = " << m_beta << std::endl
+			<< "  bsdfSamples = " << m_bsdfSamples 
 			<< "]";
 		return oss.str();
 	}
@@ -226,7 +228,6 @@ private:
 	int m_luminaireSamples, m_bsdfSamples;
 	Float m_fracBSDF, m_fracLum;
 	Float m_weightBSDF, m_weightLum;
-	Float m_beta;
 };
 
 MTS_IMPLEMENT_CLASS_S(MIDirectIntegrator, false, SampleIntegrator)

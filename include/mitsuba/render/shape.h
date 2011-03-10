@@ -303,10 +303,9 @@ public:
 	// =============================================================
 	//! @{ \name Miscellaneous
 	// =============================================================
-
-	/// Does this surface act as an occluder?
-	inline bool isOccluder() const { return m_bsdf != NULL; }
 	
+	/// Does the shape act as an occluder?
+	inline bool isOccluder() const { return m_bsdf.get() != NULL; }
 	/// Does the surface of this shape mark a medium transition?
 	inline bool isMediumTransition() const { return m_interiorMedium.get() || m_exteriorMedium.get(); }
 	/// Return the medium that lies on the interior of this shape (\c NULL == vacuum)
@@ -334,6 +333,8 @@ public:
 	/// Set the luminaire of this shape
 	inline void setLuminaire(Luminaire *luminaire) { m_luminaire = luminaire; }
 
+	/// Does the shape have a BSDF?
+	inline bool hasBSDF() const { return m_bsdf.get() != NULL; }
 	/// Return the shape's BSDF
 	inline const BSDF *getBSDF() const { return m_bsdf.get(); }
 	/// Return the shape's BSDF

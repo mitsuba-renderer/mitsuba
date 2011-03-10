@@ -53,7 +53,8 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 		vpls.push_back(lumVPL);
 
 		weight *= eRec.luminaire->sampleEmissionDirection(eRec, dirSample);
-		Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface) ? absDot(eRec.sRec.n, eRec.d) : 1;
+		Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface)
+			? absDot(eRec.sRec.n, eRec.d) : 1;
 		weight *= cosTheta / eRec.pdfDir;
 		ray = Ray(eRec.sRec.p, eRec.d, 0.0f);
 
@@ -63,6 +64,12 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 				break;
 
 			const BSDF *bsdf = its.shape->getBSDF();
+			if (!bsdf) {
+				/* Pass right through the surface (there is no BSDF) */
+				ray.setOrigin(its.p);
+				continue;
+			}
+
 			BSDFQueryRecord bRec(its);
 			bRec.quantity = EImportance;
 			bsdfVal = bsdf->sampleCos(bRec, sampler->next2D());

@@ -382,7 +382,7 @@ bool Scene::sampleLuminaire(const Point &p, Float time,
 	}
 }
 
-Spectrum Scene::getAttenuation(const Point &p1, const Point &p2,
+Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 		Float time, const Medium *medium) const {
 	if (m_media.size() == 0) {
 		return Spectrum(isOccluded(p1, p2, time)
@@ -405,7 +405,7 @@ Spectrum Scene::getAttenuation(const Point &p1, const Point &p2,
 			bool surface = rayIntersect(ray, t, shape, n);
 
 			if (medium)
-				atten *= medium->tau(Ray(ray.o, d, 0, t, time));
+				atten *= medium->getTransmittance(Ray(ray, 0, t));
 
 			if (!surface)
 				break;
@@ -438,7 +438,7 @@ bool Scene::sampleAttenuatedLuminaire(const Point &p, Float time,
 	luminaire->sample(p, lRec, sample);
 
 	if (lRec.pdf != 0) {
-		lRec.value *= getAttenuation(p, lRec.sRec.p, time, medium);
+		lRec.value *= getTransmittance(p, lRec.sRec.p, time, medium);
 		if (lRec.value.isZero())
 			return false;
 		lRec.pdf *= lumPdf;
@@ -482,14 +482,6 @@ void Scene::pdfEmission(EmissionRecord &eRec, bool delta) const {
 
 	luminaire->pdfEmission(eRec, delta);
 	eRec.pdfArea *= fraction;
-}
-
-Spectrum Scene::LeBackground(const Ray &ray) const {
-	Spectrum Le(0.0f);
-	for (std::vector<Luminaire *>::const_iterator it = m_luminaires.begin();
-		it != m_luminaires.end(); ++it)
-		Le += (*it)->Le(ray);
-	return Le;
 }
 
 void Scene::addChild(const std::string &name, ConfigurableObject *child) {

@@ -128,7 +128,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				  \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
 				*/
 
-				weight *= mRec.sigmaS * mRec.attenuation / mRec.pdfSuccess;
+				weight *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 				handleMediumInteraction(depth, caustic, mRec, medium,
 					ray.time, -ray.d, weight);
 	
@@ -153,10 +153,10 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 			} else {
 				/* Sample 
 					tau(x, y) * (Surface integral). This happens with probability mRec.pdfFailure
-					Divide this out and multiply with the proper per color channel attenuation.
+					Divide this out and multiply with the proper per color channel transmittance.
 				*/
 				if (medium)
-					weight *= mRec.attenuation / mRec.pdfFailure;
+					weight *= mRec.transmittance / mRec.pdfFailure;
 
 				const BSDF *bsdf = its.shape->getBSDF();
 

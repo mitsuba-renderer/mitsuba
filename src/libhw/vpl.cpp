@@ -123,7 +123,8 @@ void VPLShaderManager::init() {
 		if (!triMesh)
 			continue;
 		m_renderer->registerGeometry(triMesh);
-		Shader *shader = m_renderer->registerShaderForResource(triMesh->getBSDF());
+		Shader *shader = triMesh->hasBSDF() ? 
+			m_renderer->registerShaderForResource(triMesh->getBSDF()) : NULL;
 		if (shader != NULL && !shader->isComplete())
 			m_renderer->unregisterShaderForResource(triMesh->getBSDF());
 		triMesh->incRef();

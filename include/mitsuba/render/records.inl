@@ -87,7 +87,7 @@ inline bool RadianceQueryRecord::rayIntersect(const RayDifferential &ray) {
 			else if (medium == NULL)
 				alpha = 0.0f;
 			else
-				alpha = 1-medium->tau(ray).average();
+				alpha = 1-medium->getTransmittance(ray).average();
 		}
 		if (type & EDistance)
 			dist = its.t;

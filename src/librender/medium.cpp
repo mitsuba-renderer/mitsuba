@@ -91,7 +91,7 @@ std::string MediumSamplingRecord::toString() const {
 		<< "  pdfFailure = " << pdfFailure << "," << std::endl
 		<< "  pdfSuccess = " << pdfSuccess << "," << std::endl
 		<< "  pdfSuccessRev = " << pdfSuccessRev << "," << std::endl
-		<< "  attenuation = " << attenuation.toString()
+		<< "  transmittance = " << transmittance.toString()
 		<< "]";
 	return oss.str();
 }

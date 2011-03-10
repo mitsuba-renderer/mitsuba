@@ -207,8 +207,8 @@ public:
 	 *
 	 * Otherwise, it
 	 * 1. performs the ray intersection
-	 * 2. computes the attenuation due to participating media
-	 *   and stores it in \c attenuation.
+	 * 2. computes the transmittance due to participating media
+	 *   and stores it in \c transmittance.
 	 * 3. sets the alpha value (if \c EAlpha is set in \c type)
 	 * 4. sets the distance value (if \c EDistance is set in \c type)
 	 * 5. clears the \c EIntersection flag in \c type

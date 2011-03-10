@@ -29,7 +29,7 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  * without multiple importance sampling - this version can be much
  * faster than the multiple importance sampling version when when 
  * rendering heterogeneous participating media using the 
- * [Coleman et al.] sampling technique, since fewer attenuation
+ * [Coleman et al.] sampling technique, since fewer transmittance
  * evaluations will be required.
  */
 class SimpleVolumetricPathTracer : public MonteCarloIntegrator {
@@ -68,7 +68,7 @@ public:
 				/* Sample the integral
 				   \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
 				*/
-				pathThroughput *= mRec.sigmaS * mRec.attenuation / mRec.pdfSuccess;
+				pathThroughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 
 				/* ==================================================================== */
 				/*                          Luminaire sampling                          */
@@ -76,8 +76,11 @@ public:
 
 				/* Estimate the single scattering component if this is requested */
 				if (rRec.type & RadianceQueryRecord::EDirectMediumRadiance && 
-					scene->sampleAttenuatedLuminaire(mRec.p, ray.time, rRec.medium, lRec, rRec.nextSample2D())) {
-					Li += pathThroughput * lRec.value * phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
+					scene->sampleAttenuatedLuminaire(mRec.p, ray.time,
+						rRec.medium, lRec, rRec.nextSample2D())) {
+
+					Li += pathThroughput * lRec.value * phase->f(
+							PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 				}
 
 				/* ==================================================================== */
@@ -114,11 +117,11 @@ public:
 			} else {
 				/* Sample 
 					tau(x, y) * (Surface integral). This happens with probability mRec.pdfFailure
-					Account for this and multiply by the proper per-color-channel attenuation.
+					Account for this and multiply by the proper per-color-channel transmittance.
 				*/
 
 				if (rRec.medium)
-					pathThroughput *= mRec.attenuation / mRec.pdfFailure;
+					pathThroughput *= mRec.transmittance / mRec.pdfFailure;
 
 				if (!its.isValid()) {
 					/* If no intersection could be found, possibly return 
@@ -137,7 +140,6 @@ public:
 				if (!bsdf) {
 					/* Pass right through the surface (there is no BSDF) */
 					ray.setOrigin(its.p);
-					rRec.depth++;
 					continue;
 				}
 

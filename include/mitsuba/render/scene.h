@@ -196,19 +196,22 @@ public:
 	}
 
 	/**
-	 * \brief Return the attenuation between \c p1 and \c p2 at
+	 * \brief Return the transmittance between \c p1 and \c p2 at
 	 * the specified time.
 	 *
-	 * This function is very similar to \ref isOccluded with
-	 * the difference being that it accounts for participating
-	 * media.
+	 * This function is essentially a continuous version of \ref isOccluded,
+	 * which accounts for the presence of participating media. 
 	 *
-	 * \return An attenuation value. A constant spectrum of value 1 corresponds
-	 * to no attenuation at all, and 0 means that everything was attenuated 
-	 * (e.g. by a surface or a very dense medium)
+	 * The implementation correctly handles arbitrary amounts of index-matched
+	 * medium transitions, which means that it won't just stop and return zero
+	 * after encountering one. Mismatched boundaries need to be handled
+	 * differently though.
+	 *
+	 * \return An spectral-valued transmittance value with components
+	 * between zero and one.
 	 */
 
-	Spectrum getAttenuation(const Point &p1, const Point &p2, Float time, 
+	Spectrum getTransmittance(const Point &p1, const Point &p2, Float time, 
 		const Medium *medium) const;
 
 	/// Return an axis-aligned bounding box containing the whole scene
@@ -327,12 +330,14 @@ public:
 	 *
 	 * This is primarily meant for path tracing-style integrators.
 	 */
-	Spectrum LeBackground(const Ray &ray) const;
+	inline Spectrum LeBackground(const Ray &ray) const {
+		return hasBackgroundLuminaire() ? m_backgroundLuminaire->Le(ray) : Spectrum(0.0f);
+	}
 
 	/**
 	 * \brief Return the background radiance for a ray that did not intersect
 	 * any of the scene objects. This method additionally considers
-	 * attenuation by participating media
+	 * transmittance by participating media
 	 *
 	 * This is primarily meant for path tracing-style integrators.
 	 */
@@ -341,7 +346,7 @@ public:
 			return Spectrum(0.0f);
 		Spectrum result = LeBackground(ray);
 		if (medium)
-			result *= medium->tau(ray);
+			result *= medium->getTransmittance(ray);
 		return result;
 	}
 	

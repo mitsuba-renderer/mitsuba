@@ -22,20 +22,19 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Homogeneous participating medium with support for various phase functions
+ * Homogeneous participating medium with support for general phase functions
  */
 class HomogeneousMedium : public Medium {
 public:
 	/**
-	 * The following sampling strategies for choosing a 
-	 * suitable distribution in the in-scattering line integral
-	 * are available.
+	 * This class supports the following sampling strategies for choosing
+	 * a suitable scattering location when sampling the RTE
 	 */
 	enum ESamplingStrategy {
-		EBalance,  /// Exp. distrib.; pick a random channel each time
-		ESingle,   /// Exp. distrib.; pick a specified channel
-		EManual,   /// Exp. distrib.; manually specify a value
-		EMaximum   /// Max-of-exp. distribs
+		EBalance,  /// Exponential distrib.; pick a random channel each time
+		ESingle,   /// Exponential distrib.; pick a specified channel
+		EManual,   /// Exponential distrib.; manually specify the falloff
+		EMaximum   /// Maximum-of-exponential distribution
 	};
 
 	HomogeneousMedium(const Properties &props) 
@@ -62,7 +61,7 @@ public:
 				/* The medium scatters some light -> place at least half 
 				   of the samples in it, otherwise we will render lots
 				   of spatially varying noise where one pixel has a
-				   medium interaction while the neighbors don't */
+				   medium interaction and the neighbors don't */
 				m_mediumSamplingWeight = std::max(m_mediumSamplingWeight, 
 					(Float) 0.5f);
 			}
@@ -73,6 +72,8 @@ public:
 		} else if (strategy == "single") {
 			m_strategy = ESingle;
 
+			/* By default, choose the lowest-variance channel
+			   (the one with the smallest sigma_t, that is) */
 			int channel = 0;
 			Float smallest = std::numeric_limits<Float>::infinity();
 			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
@@ -87,7 +88,10 @@ public:
 			m_samplingDensity = m_sigmaT[channel];
 
 			if (props.getBoolean("monochromatic", false)) {
-				/* Optionally configure as a monochromatic medium */
+				/* Optionally turn this into a monochromatic medium
+				   based on the chosen color channel. This is useful
+				   when the whole scene is rendered once per channel
+				   and then recombined to create a color image */
 				m_sigmaA = Spectrum(m_sigmaA[channel]);
 				m_sigmaS = Spectrum(m_sigmaS[channel]);
 				m_sigmaT = m_sigmaA + m_sigmaS;
@@ -100,12 +104,10 @@ public:
 			m_maxExpDist = new MaxExpDist(coeffs);
 		} else if (strategy == "manual") {
 			m_strategy = EManual;
-			m_samplingDensity= props.getFloat("sigma");
+			m_samplingDensity = props.getFloat("samplingDensity");
 		} else {
 			Log(EError, "Specified an unknown sampling strategy");
 		}
-
-		m_kdTree = new ShapeKDTree();
 	}
 
 	HomogeneousMedium(Stream *stream, InstanceManager *manager)
@@ -136,126 +138,56 @@ public:
 		stream->writeFloat(m_mediumSamplingWeight);
 	}
 
-	Float getCoveredLength(const Ray &r) const {
-		Ray ray(r(r.mint), r.d,
-			0, std::numeric_limits<Float>::infinity(), 0.0f);
-		Float coveredLength = 0, remaining = r.maxt - r.mint;
-		Intersection its;
-		int iterations = 0;
-
-		while (remaining > 0 && m_kdTree->rayIntersect(ray, its)) {
-			bool inside = dot(its.geoFrame.n, ray.d) > 0;
-			if (inside)
-				coveredLength += std::min(remaining, its.t);
-			remaining -= its.t;
-			ray.o = its.p;
-			ray.mint = Epsilon;
-
-			if (++iterations > 10) {
-				/// Just a precaution..
-				Log(EWarn, "getCoveredLength(): round-off error issues?");
-				break;
-			}
-		}
-		return coveredLength;
+	Spectrum getTransmittance(const Ray &ray) const {
+		return (m_sigmaT * (ray.mint - ray.maxt)).exp();
 	}
 
-	Spectrum tau(const Ray &ray) const {
-		return (m_sigmaT * (-getCoveredLength(ray))).exp();
-	}
-
-	bool sampleDistance(const Ray &r, MediumSamplingRecord &mRec, 
+	bool sampleDistance(const Ray &ray, MediumSamplingRecord &mRec,
 			Sampler *sampler) const {
-		Intersection its;
-		Ray ray(r(r.mint), r.d,
-			0, std::numeric_limits<Float>::infinity(), 0.0f);
-		Float distSurf = r.maxt - r.mint;
-		int iterations = 0;
-
-		/* Remaining distance in the medium */
-		Float distMed, samplingDensity = m_samplingDensity;
-		Float rand = sampler->next1D();
-		if (m_strategy == EBalance) {
-			int channel = std::min((int) (sampler->next1D() 
-				* SPECTRUM_SAMPLES), SPECTRUM_SAMPLES-1);
-			samplingDensity = m_sigmaT[channel];
-		}
-
-		if (rand > m_mediumSamplingWeight) {
-			/* Don't generate a medium interaction, but still
-			   compute the attenuation etc */
-			distMed = std::numeric_limits<Float>::infinity();
-		} else {
+		Float rand = sampler->next1D(), sampledDistance;
+		Float samplingDensity = m_samplingDensity;
+		if (rand <= m_mediumSamplingWeight) {
 			rand /= m_mediumSamplingWeight;
 			if (m_strategy != EMaximum) {
-				distMed = -std::log(1-rand) / samplingDensity;
+				/* Choose the sampling density to be used */
+				if (m_strategy == EBalance) {
+					int channel = std::min((int) (sampler->next1D() 
+						* SPECTRUM_SAMPLES), SPECTRUM_SAMPLES-1);
+					samplingDensity = m_sigmaT[channel];
+				}
+				sampledDistance = -std::log(1-rand) / samplingDensity;
 			} else {
-				distMed = m_maxExpDist->sample(1-rand, mRec.pdfSuccess);
+				sampledDistance = m_maxExpDist->sample(1-rand, mRec.pdfSuccess);
 			}
+		} else {
+			/* Don't generate a medium interaction */
+			sampledDistance = std::numeric_limits<Float>::infinity();
 		}
 
-		Float traveled = 0,  // Traveled ray distance
-			  coveredLength = 0;   // Distance covered by the medium
+		Float distSurf = ray.maxt - ray.mint;
+		bool success = true;
 
-		bool success = false;
-
-		while (m_kdTree->rayIntersect(ray, its)) {
-			bool inside = dot(its.geoFrame.n, ray.d) > 0;
-			if (inside) {
-				/* Moving through the medium */
-				if (its.t > distMed && distMed < distSurf) {
-					/* A medium interaction occurred */
-					mRec.p = ray(distMed);
-					mRec.sigmaA = m_sigmaA;
-					mRec.sigmaS = m_sigmaS;
-					mRec.albedo = m_mediumSamplingWeight;
-					mRec.medium = this;
-					coveredLength += distMed;
-					traveled += distMed;
-					success = true;
-					break;
-				} else if (its.t > distSurf) {
-					/* A surface interaction occurred */
-					coveredLength += distSurf;
-					traveled += distSurf;
-					break;
-				} else {
-					/* Still moving through the medium */
-					coveredLength += its.t;
-					distMed -= its.t;
-				}
-			} else {
-				/* Moving through space outside of the medium */
-				if (its.t > distSurf) {
-					/* A surface interaction occurred */
-					traveled += distSurf;
-					break;
-				}
-			}
-			traveled += its.t;
-			distSurf -= its.t;
-			ray.o = its.p;
-			ray.mint = Epsilon;
-
-			if (++iterations > 10) {
-				/// Just a precaution..
-				Log(EWarn, "sampleDistance(): round-off error issues?");
-				break;
-			}
+		if (sampledDistance < distSurf) {
+			mRec.t = sampledDistance + ray.mint;
+			mRec.p = ray(mRec.t);
+			mRec.sigmaA = m_sigmaA;
+			mRec.sigmaS = m_sigmaS;
+			mRec.albedo = m_mediumSamplingWeight;
+		} else {
+			sampledDistance = distSurf;
+			success = false;
 		}
-		mRec.attenuation = (m_sigmaT * (-coveredLength)).exp();
-		mRec.t = traveled;
 
 		switch (m_strategy) {
 			case EMaximum:
-				mRec.pdfFailure = 1-m_maxExpDist->cdf(coveredLength);
+				mRec.pdfFailure = 1-m_maxExpDist->cdf(sampledDistance);
 				break;
 
 			case EBalance: 
 				mRec.pdfFailure = 0;
 				mRec.pdfSuccess = 0;
 				for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-					Float tmp = std::exp(-m_sigmaT[i] * coveredLength);
+					Float tmp = std::exp(-m_sigmaT[i] * sampledDistance);
 					mRec.pdfFailure += tmp;
 					mRec.pdfSuccess += m_sigmaT[i] * tmp;
 				}
@@ -265,7 +197,7 @@ public:
 
 			case ESingle:
 			case EManual:
-				mRec.pdfFailure = std::exp(-samplingDensity * coveredLength);
+				mRec.pdfFailure = std::exp(-samplingDensity * sampledDistance);
 				mRec.pdfSuccess = samplingDensity * mRec.pdfFailure;
 				break;
 
@@ -273,6 +205,7 @@ public:
 				Log(EError, "Unknown sampling strategy!");
 		}
 
+		mRec.transmittance = (m_sigmaT * (-sampledDistance)).exp();
 		mRec.pdfSuccessRev = mRec.pdfSuccess = mRec.pdfSuccess * m_mediumSamplingWeight;
 		mRec.pdfFailure = m_mediumSamplingWeight * mRec.pdfFailure + (1-m_mediumSamplingWeight);
 
@@ -280,20 +213,21 @@ public:
 	}
 
 	void pdfDistance(const Ray &ray, Float t, MediumSamplingRecord &mRec) const {
-		Float coveredLength = getCoveredLength(Ray(ray, 0, t));
+		Float distance = t - ray.mint;
 		switch (m_strategy) {
 			case EManual: 
 			case ESingle: {
-					Float temp = std::exp(-m_samplingDensity * coveredLength);
+					Float temp = std::exp(-m_samplingDensity * distance);
 					mRec.pdfSuccess = m_samplingDensity * temp;
 					mRec.pdfFailure = temp;
 				}
 				break;
+
 			case EBalance: {
 					mRec.pdfSuccess = 0;
 					mRec.pdfFailure = 0;
 					for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-						Float temp = std::exp(-m_sigmaT[i] * coveredLength);
+						Float temp = std::exp(-m_sigmaT[i] * distance);
 						mRec.pdfSuccess += m_sigmaT[i] * temp;
 						mRec.pdfFailure += temp;
 					}
@@ -301,21 +235,18 @@ public:
 					mRec.pdfFailure /= SPECTRUM_SAMPLES;
 				}
 				break;
+
 			case EMaximum:
-				mRec.pdfSuccess = m_maxExpDist->pdf(coveredLength);
-				mRec.pdfFailure = 1-m_maxExpDist->cdf(coveredLength);
+				mRec.pdfSuccess = m_maxExpDist->pdf(distance);
+				mRec.pdfFailure = 1-m_maxExpDist->cdf(distance);
 				break;
+
 			default:
 				Log(EError, "Unknown sampling strategy!");
 		}
-		mRec.attenuation = (m_sigmaT * (-coveredLength)).exp();
+		mRec.transmittance = (m_sigmaT * (-distance)).exp();
 		mRec.pdfSuccess = mRec.pdfSuccessRev = mRec.pdfSuccess * m_mediumSamplingWeight;
 		mRec.pdfFailure = mRec.pdfFailure * m_mediumSamplingWeight + (1-m_mediumSamplingWeight);
-	}
-
-	void setParent(ConfigurableObject *parent) {
-		if (parent->getClass()->derivesFrom(MTS_CLASS(Shape)))
-			Log(EError, "Medium cannot be a parent of a shape");
 	}
 
 	std::string toString() const {
@@ -334,8 +265,7 @@ public:
 			case EMaximum: oss << "maximum," << endl; break;
 		}
 
-		oss << "  phase = " << indent(m_phaseFunction.toString()) << "," << endl 
-			<< "  shapes = " << indent(listToString(m_shapes)) << endl
+		oss << "  phase = " << indent(m_phaseFunction.toString()) << endl 
 			<< "]";
 		return oss.str();
 	}
