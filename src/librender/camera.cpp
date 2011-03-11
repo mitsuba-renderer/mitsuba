@@ -109,9 +109,18 @@ ProjectiveCamera::ProjectiveCamera(Stream *stream, InstanceManager *manager)
  : Camera(stream, manager) {
 	m_cameraToScreen = Transform(stream);
 	m_cameraToScreenGL = Transform(stream);
+	m_nearClip = stream->readFloat();
+	m_farClip = stream->readFloat();
 	m_aspect = stream->readFloat();
 }
 	
+ProjectiveCamera::ProjectiveCamera(const Properties &props) : Camera(props) {
+	/* Near clipping plane distance */
+	m_nearClip = props.getFloat("nearClip", 1e-2f);
+	/* Far clipping plane distance */
+	m_farClip = props.getFloat("farClip", 1e4f);
+}
+
 void ProjectiveCamera::configure() {
 	if (m_film == NULL) {
 		/* Instantiate an EXR film by default */
@@ -136,6 +145,8 @@ void ProjectiveCamera::serialize(Stream *stream, InstanceManager *manager) const
 
 	m_cameraToScreen.serialize(stream);
 	m_cameraToScreenGL.serialize(stream);
+	stream->writeFloat(m_nearClip);
+	stream->writeFloat(m_farClip);
 	stream->writeFloat(m_aspect);
 }
 

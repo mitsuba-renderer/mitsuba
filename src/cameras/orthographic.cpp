@@ -31,9 +31,6 @@ class OrthographicCamera : public ProjectiveCamera {
 public:
 	OrthographicCamera(const Properties &props) 
 		: ProjectiveCamera(props) {
-		/* Load the properties */
-		m_nearClip = props.getFloat("nearClip", 1e-1f);
-		m_farClip = props.getFloat("farClip", 1e6f);
 		/* Should the smaller image plane side be mapped to normalized 
 		   device coordinates in [0,1]? */
 		m_mapSmallerSide = props.getBoolean("mapSmallerSide", true);
@@ -49,8 +46,6 @@ public:
 		m_worldToScreen = Transform(stream);
 		m_rasterToCamera = Transform(stream);
 		m_cameraToRaster = Transform(stream);
-		m_nearClip = stream->readFloat();
-		m_farClip = stream->readFloat();
 		m_areaDensity = stream->readFloat();
 		m_rasterToScreen = Transform(stream);
 		m_screenToRaster = Transform(stream);
@@ -96,8 +91,6 @@ public:
 		m_worldToScreen.serialize(stream);
 		m_rasterToCamera.serialize(stream);
 		m_cameraToRaster.serialize(stream);
-		stream->writeFloat(m_nearClip);
-		stream->writeFloat(m_farClip);
 		stream->writeFloat(m_areaDensity);
 		m_rasterToScreen.serialize(stream);
 		m_screenToRaster.serialize(stream);

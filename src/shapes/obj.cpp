@@ -19,6 +19,7 @@
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/timer.h>
 #include <mitsuba/render/luminaire.h>
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
@@ -92,6 +93,7 @@ public:
 		if (is.bad() || is.fail())
 			Log(EError, "Geometry file '%s' not found!", path.file_string().c_str());
 
+		ref<Timer> timer = new Timer();
 		std::string buf;
 		std::vector<Point> vertices;
 		std::vector<Normal> normals;
@@ -201,6 +203,8 @@ public:
 		generateGeometry(name, vertices, normals, texcoords, 
 			triangles, hasNormals, hasTexcoords, currentMaterial,
 			objectToWorld);
+
+		Log(EInfo, "Done with \"%s\" (took %i ms)", path.leaf().c_str(), timer->getMilliseconds());
 	}
 
 	WavefrontOBJ(Stream *stream, InstanceManager *manager) : Shape(stream, manager) {
@@ -328,7 +332,7 @@ public:
 			const Transform &objectToWorld) {
 		if (triangles.size() == 0)
 			return;
-		Log(EInfo, "Loading geometry \"%s\"", name.c_str());
+		Log(EInfo, "Loading mesh \"%s\"", name.c_str());
 
 		std::map<Vertex, int, vertex_key_order> vertexMap;
 		std::vector<Vertex> vertexBuffer;

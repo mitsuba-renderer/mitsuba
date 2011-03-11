@@ -38,14 +38,9 @@ public:
 		m_beamWidth = degToRad(m_beamWidth);
 		m_cutoffAngle = degToRad(m_cutoffAngle);
 		Assert(m_cutoffAngle >= m_beamWidth);
-		m_cosBeamWidth = std::cos(m_beamWidth);
-		m_cosCutoffAngle = std::cos(m_cutoffAngle);
-		m_position = m_luminaireToWorld(Point(0, 0, 0));
 		m_type = EDeltaPosition;
 		m_texture = new ConstantTexture(
 			props.getSpectrum("texture", Spectrum(1.0f)));
-		m_uvFactor = std::tan(m_beamWidth/2);
-		m_invTransitionWidth = 1.0 / (m_cutoffAngle - m_beamWidth);
 	}
 
 	SpotLuminaire(Stream *stream, InstanceManager *manager) 
@@ -54,6 +49,10 @@ public:
 		m_intensity = Spectrum(stream);
 		m_beamWidth = stream->readFloat();
 		m_cutoffAngle = stream->readFloat();
+		configure();
+	}
+
+	void configure() {
 		m_cosBeamWidth = std::cos(m_beamWidth);
 		m_cosCutoffAngle = std::cos(m_cutoffAngle);
 		m_position = m_luminaireToWorld(Point(0, 0, 0));
@@ -86,7 +85,7 @@ public:
 		Vector localDir = m_worldToLuminaire(d);
 		const Float cosTheta = localDir.z;
 		
-		if (cosTheta < m_cosCutoffAngle)
+		if (cosTheta <= m_cosCutoffAngle)
 			return Spectrum(0.0f);
 
 		if (m_texture->getClass() != MTS_CLASS(ConstantTexture)) {
@@ -97,9 +96,11 @@ public:
 			result *= m_texture->getValue(its);
 		}
 
-		if (cosTheta > m_cosBeamWidth)
+		if (cosTheta >= m_cosBeamWidth)
 			return result;
-		return result * ((m_cutoffAngle - std::acos(cosTheta)) * m_invTransitionWidth);
+
+		return result * ((m_cutoffAngle - std::acos(cosTheta))
+				* m_invTransitionWidth);
 	}
 
 	Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {

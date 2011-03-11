@@ -301,7 +301,7 @@ void RenderSettingsDialog::load(const SceneContext *ctx) {
 
 void RenderSettingsDialog::apply(SceneContext *ctx) {
 	Scene *scene = new Scene(ctx->scene);
-	const PinholeCamera *oldCamera = static_cast<const PinholeCamera *>(scene->getCamera());
+	PinholeCamera *oldCamera = static_cast<const PinholeCamera *>(scene->getCamera());
 	Properties filmProps = oldCamera->getFilm()->getProperties();
 	ref<PluginManager> pluginMgr = PluginManager::getInstance();
 
@@ -374,6 +374,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	camera->addChild("", film);
 	camera->setViewTransform(oldCamera->getViewTransform());
 	camera->setFov(oldCamera->getFov());
+	camera->setMedium(oldCamera->getMedium());
 	camera->configure();
 	
 	/* Update the scene with the newly constructed elements */

@@ -78,6 +78,7 @@
 					<xsd:group ref="objectGroup"/>
 					<xsd:element name="sampler" type="object"/>
 					<xsd:element name="film" type="film"/>
+					<xsd:element name="ref" type="reference"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>

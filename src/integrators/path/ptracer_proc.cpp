@@ -74,10 +74,15 @@ void CaptureParticleWorker::process(const WorkUnit *workUnit, WorkResult *workRe
 void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 		bool caustic, const Intersection &its, const Medium *medium,
 		const Spectrum &weight) {
+	const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>(m_camera.get());
 	Point2 screenSample;
 
-	if (m_camera->positionToSample(its.p, screenSample)) {
-		Point cameraPosition = m_camera->getPosition(screenSample);
+	if (camera->positionToSample(its.p, screenSample)) {
+		Point cameraPosition = camera->getPosition(screenSample);
+	
+		Float t = dot(camera->getImagePlaneNormal(), its.p-cameraPosition);
+		if (t < camera->getNearClip() || t > camera->getFarClip())
+			return;
 
 		if (its.isMediumTransition()) 
 			medium = its.getTargetMedium(cameraPosition - its.p);
@@ -97,9 +102,9 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 
 		Float importance; 
 		if (m_isPinholeCamera)
-			importance = ((PinholeCamera *) m_camera.get())->importance(screenSample) / (dist * dist);
+			importance = ((const PinholeCamera *) camera)->importance(screenSample) / (dist * dist);
 		else
-			importance = 1/m_camera->areaDensity(screenSample);
+			importance = 1/camera->areaDensity(screenSample);
 
 		Vector wi = its.toWorld(its.wi);
 
@@ -127,10 +132,16 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 void CaptureParticleWorker::handleMediumInteraction(int depth, bool caustic,
 		const MediumSamplingRecord &mRec, const Medium *medium,
 		Float time, const Vector &wi, const Spectrum &weight) {
+	const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>(m_camera.get());
 	Point2 screenSample;
 
-	if (m_camera->positionToSample(mRec.p, screenSample)) {
-		Point cameraPosition = m_camera->getPosition(screenSample);
+	if (camera->positionToSample(mRec.p, screenSample)) {
+		Point cameraPosition = camera->getPosition(screenSample);
+
+		Float t = dot(camera->getImagePlaneNormal(), mRec.p-cameraPosition);
+		if (t < camera->getNearClip() || t > camera->getFarClip())
+			return;
+
 		Spectrum transmittance = m_scene->getTransmittance(mRec.p,
 			cameraPosition, time, medium);
 
@@ -142,9 +153,9 @@ void CaptureParticleWorker::handleMediumInteraction(int depth, bool caustic,
 
 		Float importance; 
 		if (m_isPinholeCamera)
-			importance = ((PinholeCamera *) m_camera.get())->importance(screenSample) / (dist * dist);
+			importance = ((const PinholeCamera *) camera)->importance(screenSample) / (dist * dist);
 		else
-			importance = 1/m_camera->areaDensity(screenSample);
+			importance = 1/camera->areaDensity(screenSample);
 
 		/* Splat onto the accumulation buffer */
 		Ray ray(mRec.p, wo, 0, dist, time);

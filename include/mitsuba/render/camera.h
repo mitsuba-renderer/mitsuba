@@ -155,10 +155,13 @@ public:
 	inline const Film *getFilm() const { return m_film.get(); }
 
 	/// Return a pointer to the medium that surrounds the camera
-	inline Medium *getMedium() { return m_medium.get(); }
-
+	inline Medium *getMedium() { return m_medium; }
+	
 	/// Return a pointer to the medium that surrounds the camera (const version)
 	inline const Medium *getMedium() const { return m_medium.get(); }
+
+	/// Set the medium that surrounds the camera
+	inline void setMedium(Medium *medium) { m_medium = medium; }
 
 	/// Add a child ConfigurableObject
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
@@ -213,14 +216,20 @@ public:
 	   and addition of all child ConfigurableObjects. */
 	virtual void configure();
 
+	/// Return the near clip plane distance
+	inline Float getNearClip() const { return m_nearClip; }
+
+	/// Return the far clip plane distance
+	inline Float getFarClip() const { return m_farClip; }
+
 	MTS_DECLARE_CLASS()
 protected:
-	inline ProjectiveCamera(const Properties &props) : Camera(props) { }
+	ProjectiveCamera(const Properties &props);
 	ProjectiveCamera(Stream *stream, InstanceManager *manager);
 	virtual ~ProjectiveCamera() { }
 protected:
 	Transform m_cameraToScreen, m_cameraToScreenGL;
-	Float m_aspect;
+	Float m_nearClip, m_farClip, m_aspect;
 };
 
 /**

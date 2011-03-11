@@ -54,6 +54,8 @@ public:
 		/* Perform the first ray intersection (or ignore if the 
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
+		ray.mint = Epsilon;
+
 		Spectrum pathThroughput(1.0f);
 
 		while (rRec.depth <= m_maxDepth || m_maxDepth < 0) {
