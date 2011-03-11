@@ -94,10 +94,10 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 		Assert(m_subsurface == NULL);
 		m_subsurface = static_cast<Subsurface *>(child);
 	} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
-		if (name == "interiorMedium") {
+		if (name == "interior") {
 			Assert(m_interiorMedium == NULL);
 			m_interiorMedium = static_cast<Medium *>(child);
-		} else if (name == "exteriorMedium") {
+		} else if (name == "exterior") {
 			Assert(m_exteriorMedium == NULL);
 			m_exteriorMedium = static_cast<Medium *>(child);
 		} else {

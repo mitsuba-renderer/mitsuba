@@ -389,39 +389,41 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 			? 0.0f : 1.0f);
 	} else {
 		Vector d = p2 - p1;
-		Float distance = d.length(), traveled = 0;
-		d /= distance;
-		distance *= 1-Epsilon;
+		Float remaining = d.length();
+		d /= remaining;
+		remaining *= 1-Epsilon;
 
 		const Shape *shape;
 		Ray ray(p1, d, time);
 		Spectrum atten(1.0f);
 		int iterations = 0;
 
-		while (true) {
+		while (remaining > 0) {
 			Normal n;
 			Float t;
-	
+
+			ray.mint = 0.1*Epsilon;
 			bool surface = rayIntersect(ray, t, shape, n);
 
-			if (medium)
-				atten *= medium->getTransmittance(Ray(ray, 0, t));
+			if (medium) 
+				atten *= medium->getTransmittance(Ray(ray, 0, std::min(t, remaining)));
 
-			if (!surface)
+			if (!surface) 
 				break;
 
 			ray.o = ray(t);
-			traveled += t;
+			remaining -= t;
 
-			if (shape->isOccluder() && traveled < distance)
-				return Spectrum(0.0f);
-			else if (shape->isMediumTransition())
-				medium = dot(n, d) > 0 ? shape->getExteriorMedium()
-					: shape->getInteriorMedium();
-
-			if (++iterations > 100) { /// Just a precaution..
-				Log(EWarn, "sampleAttenuatedLuminaire(): round-off error issues?");
-				break;
+			if (remaining > 0) {
+				if (shape->isOccluder())
+					return Spectrum(0.0f);
+				else if (shape->isMediumTransition()) 
+					medium = dot(n, d) > 0 ? shape->getExteriorMedium()
+						: shape->getInteriorMedium();
+				if (++iterations > 100) { /// Just a precaution..
+					Log(EWarn, "sampleAttenuatedLuminaire(): round-off error issues?");
+					break;
+				}
 			}
 		}
 		return atten;
