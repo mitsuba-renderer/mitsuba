@@ -152,7 +152,7 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape, N
 			if (rayIntersectHavran<false>(ray, mint, maxt, t, temp)) {
 				const IntersectionCache *cache = reinterpret_cast<const IntersectionCache *>(temp);
 				shape = m_shapes[cache->shapeIndex];
-			
+
 				if (m_triangleFlag[cache->shapeIndex]) {
 					const TriMesh *trimesh = static_cast<const TriMesh *>(shape);
 					const Triangle &tri = trimesh->getTriangles()[cache->primIndex];

@@ -402,7 +402,6 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 			Normal n;
 			Float t;
 
-			ray.mint = 0.1*Epsilon;
 			bool surface = rayIntersect(ray, t, shape, n);
 
 			if (medium) 
@@ -426,6 +425,7 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 				}
 			}
 		}
+
 		return atten;
 	}
 }

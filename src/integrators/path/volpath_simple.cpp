@@ -58,11 +58,12 @@ public:
 		while (rRec.depth < m_maxDepth || m_maxDepth < 0) {
 			if (computeIntersection)
 				scene->rayIntersect(ray, its);
+			ray.mint = Epsilon;
 
 			/* ==================================================================== */
 			/*                 Radiative Transfer Equation sampling                 */
 			/* ==================================================================== */
-			if (false && rRec.medium && rRec.medium->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
+			if (rRec.medium && rRec.medium->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
 				const PhaseFunction *phase = rRec.medium->getPhaseFunction();
 
 				/* Sample the integral
@@ -120,7 +121,7 @@ public:
 					Account for this and multiply by the proper per-color-channel transmittance.
 				*/
 
-				if (rRec.medium && false)
+				if (rRec.medium)
 					pathThroughput *= mRec.transmittance / mRec.pdfFailure;
 
 				if (!its.isValid()) {
@@ -195,7 +196,6 @@ public:
 							--rRec.depth;
 						}
 					} else {
-						cout << "Got here 3." << endl;
 						break;
 					}
 				} else {
