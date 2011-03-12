@@ -32,11 +32,29 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE MemoryStream : public Stream {
 public:
+	// =============================================================
+	//! @{ \name Constructors
+	// =============================================================
+
 	/// Create a new memory stream
 	MemoryStream(size_t initialSize = 512);
 
-	/// Create a memory stream, which operates on a pre-allocated buffer
+	/**
+	 * \brief Create a memory stream, which operates on a
+	 * pre-allocated buffer. 
+	 *
+	 * A memory stream created in this way will never resize the
+	 * underlying buffer. An exception is thrown e.g. when attempting
+	 * to extend its size
+	 */
 	MemoryStream(uint8_t *ptr, size_t size);
+
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Memory stream-specific features
+	// =============================================================
 
 	/// Return the underlying data
 	inline uint8_t *getData() { return m_data; }
@@ -53,7 +71,13 @@ public:
 	/// Set size and position to zero without changing the underlying buffer
 	void reset();
 
-	/* Stream implementation */
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Implementation of the Stream interface
+	// =============================================================
+
 	void read(void *ptr, size_t size);
 	void write(const void *ptr, size_t size);
 	void setPos(size_t pos);
@@ -63,6 +87,9 @@ public:
 	void flush();
 	bool canWrite() const;
 	bool canRead() const;
+
+	//! @}
+	// =============================================================
 
 	/// Return a string representation
 	std::string toString() const;

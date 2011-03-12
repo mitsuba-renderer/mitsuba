@@ -159,7 +159,7 @@ public:
 	/**
 	 * Convenience method - similar to sample(), but also multiplies
 	 * by the cosine factor of the sampled direction.
-	 * @return The BSDF value divided by the sample probability
+	 * \return The BSDF value divided by the sample probability
 	 */
 	inline Spectrum sampleCos(BSDFQueryRecord &bRec, const Point2 &_sample) const {
 		Spectrum bsdfVal = sample(bRec, _sample);
@@ -182,7 +182,7 @@ public:
 	/**
 	 * Convenience method - similar to sample(), but also multiplies
 	 * by the cosine factor of the sampled direction.
-	 * @return The BSDF value (not divided by the probability)
+	 * \return The BSDF value (not divided by the probability)
 	 */
 	inline Spectrum sampleCos(BSDFQueryRecord &bRec, Float &pdf,
 			const Point2 &_sample) const {

@@ -216,15 +216,15 @@ public:
 	/**
 	 * \brief Create a new stream backend
 	 *
-	 * @param name
+	 * \param name
 	 *    Name of the created thread
-	 * @param scheduler
+	 * \param scheduler
 	 *    Scheduler instance used to process work units
-	 * @param nodeName
+	 * \param nodeName
 	 *    Exposed name of this node
-	 * @param stream
+	 * \param stream
 	 *    Stream used for communications
-	 * @param detach
+	 * \param detach
 	 *    Should the associated thread be joinable or detach instead?
 	 */
 	StreamBackend(const std::string &name, Scheduler *scheduler, 

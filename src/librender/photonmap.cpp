@@ -23,102 +23,17 @@
 
 MTS_NAMESPACE_BEGIN
 
-/* Precompute cosine/sine values for quick conversions
-	from quantized spherical coordinates to floating 
-	point vectors. (Precomputation idea based on 
-	Jensen's implementation.) */
-Float PhotonMap::m_cosTheta[256];
-Float PhotonMap::m_sinTheta[256];
-Float PhotonMap::m_cosPhi[256];
-Float PhotonMap::m_sinPhi[256];
-Float PhotonMap::m_expTable[256];
-
-bool PhotonMap::createPrecompTables() {
-	// Compiler sanity check
-#if !defined(DOUBLE_PRECISION) && SPECTRUM_SAMPLES == 3
-	if (sizeof(Photon) != 24) {
-		cerr << "Internal error - incorrect photon storage size" << endl;
-		exit(-1);
-	}
-#endif
-
-	for (int i=0; i<256; i++) {
-		Float angle = (Float) i * ((Float) M_PI / 256.0f);
-		m_cosPhi[i] = std::cos(2.0f * angle);
-		m_sinPhi[i] = std::sin(2.0f * angle);
-		/* Theta has twice the angular resolution */
-		m_cosTheta[i] = std::cos(angle);
-		m_sinTheta[i] = std::sin(angle);
-	
-		m_expTable[i] = std::ldexp((Float) 1, i - (128+8));
-	}
-	m_expTable[0] = 0;
-
-	return true;
-}
-
-bool PhotonMap::m_precompTableReady = PhotonMap::createPrecompTables();
-
-PhotonMap::Photon::Photon(const Point &p, const Normal &normal,
-						  const Vector &dir, const Spectrum &P,
-						  uint16_t _depth) {
-	if (P.isNaN()) 
-		Log(EWarn, "Creating an invalid photon with power: %s", P.toString().c_str());
-
-	/* Possibly convert to single precision floating point
-	   (if Mitsuba is configured to use double precision) */
-	pos[0] = (float) p.x;
-	pos[1] = (float) p.y;
-	pos[2] = (float) p.z;
-	depth = _depth;
-	unused = 0;
-	axis = -1;
-
-	/* Convert the direction into an approximate spherical 
-	   coordinate format to reduce storage requirements */
-	theta = (unsigned char) std::min(255,
-		(int) (std::acos(dir.z) * (256.0 / M_PI)));
-
-	int tmp = std::min(255,
-		(int) (std::atan2(dir.y, dir.x) * (256.0 / (2.0 * M_PI))));
-	if (tmp < 0)
-		phi = (unsigned char) (tmp + 256);
-	else
-		phi = (unsigned char) tmp;
-	
-	if (normal.isZero()) {
-		thetaN = phiN = 0;
-	} else {
-		thetaN = (unsigned char) std::min(255,
-			(int) (std::acos(normal.z) * (256.0 / M_PI)));
-		tmp = std::min(255,
-			(int) (std::atan2(normal.y, normal.x) * (256.0 / (2.0 * M_PI))));
-		if (tmp < 0)
-			phiN = (unsigned char) (tmp + 256);
-		else
-			phiN = (unsigned char) tmp;
-	}
-
-#if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
-	power = P;
-#else
-	/* Pack the photon power into Greg Ward's RGBE format */
-	P.toRGBE(power);
-#endif
-}
-
 PhotonMap::PhotonMap(size_t maxPhotons) 
  : m_photonCount(0), m_maxPhotons(maxPhotons), m_minPhotons(8),
-   m_numThreads(-1), m_balanced(false), m_scale(1.0f), m_context(NULL) {
-	Assert(m_precompTableReady);
+   m_balanced(false), m_scale(1.0f) {
+	Assert(Photon::m_precompTableReady);
 
 	/* For convenient heap addressing, the the photon list
 	   entries start with number 1 */
-	m_photons = new Photon[maxPhotons + 1];
+	m_photons = (Photon *) allocAligned(sizeof(Photon) * (maxPhotons+1));
 }
 	
-PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager) 
- : m_numThreads(-1), m_context(NULL) {
+PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager) { 
 	m_aabb = AABB(stream);
 	m_balanced = stream->readBool();
 	m_maxPhotons = (size_t) stream->readULong();
@@ -133,9 +48,7 @@ PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager)
 }
 
 PhotonMap::~PhotonMap() {
-	if (m_context)
-		delete[] m_context;
-	delete[] m_photons;
+	freeAligned(m_photons);
 }
 
 std::string PhotonMap::toString() const {
@@ -195,40 +108,6 @@ bool PhotonMap::storePhoton(const Photon &photon) {
 
 	return true;
 }
-
-
-void PhotonMap::prepareSMP(int numThreads) {
-	size_t photonsPerThread = m_maxPhotons / numThreads;
-	size_t remainder = m_maxPhotons - photonsPerThread * numThreads;
-
-	m_numThreads = numThreads;
-	m_context = new ThreadContext[numThreads];
-	for (int i=0; i<numThreads; ++i) {
-		m_context[i].photonOffset = 1 + i*photonsPerThread;
-		m_context[i].maxPhotons = photonsPerThread;
-		m_context[i].photonCount = 0;
-	}
-	m_context[numThreads-1].maxPhotons += remainder;
-}
-
-bool PhotonMap::storePhotonSMP(int thread, const Point &pos, const Normal &normal, 
-		const Vector &dir, const Spectrum &power, uint16_t depth) {
-	Assert(!m_balanced);
-	Assert(!power.isNaN());
-
-	/* Overflow check */
-	if (m_context[thread].photonCount >= m_context[thread].maxPhotons)
-		return false;
-
-	/* Keep track of the volume covered by all stored photons */
-	m_context[thread].aabb.expandBy(pos);
-
-	size_t idx = m_context[thread].photonCount++;
-	m_photons[m_context[thread].photonOffset + idx] = Photon(pos, normal, dir, power, depth);
-
-	return true;
-}
-
 
 /**
  * Relaxed partitioning algorithm based on code in stl_algo.h and Jensen's
@@ -384,18 +263,6 @@ size_t PhotonMap::leftSubtreeSize(size_t treeSize) const {
 
 void PhotonMap::balance() {
 	Assert(!m_balanced);
-
-	/* Unify the results from all gather threads */
-	if (m_context != NULL) {
-		for (int i=0; i<m_numThreads; ++i) {
-			Assert(m_context[i].maxPhotons == m_context[i].photonCount);
-			m_photonCount += m_context[i].photonCount;
-			m_aabb.expandBy(m_context[i].aabb);
-		}
-
-		/* Check if the photon map was properly filled */
-		Assert(m_photonCount == m_maxPhotons);
-	}
 
 	/* Shuffle pointers instead of copying photons back and forth */
 	std::vector<photon_ptr> photonPointers(m_photonCount + 1);
@@ -658,7 +525,7 @@ Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n,
 		const __m128 
 			mantissa = _mm_cvtepi32_ps(
 				_mm_set_epi32(photon.power[0], photon.power[1], photon.power[2], 0)),
-			exponent = _mm_load1_ps(&m_expTable[photon.power[3]]),
+			exponent = _mm_load1_ps(&Photon::m_expTable[photon.power[3]]),
 			packedWeight = _mm_load1_ps(&weight),
 			value = _mm_mul_ps(packedWeight, _mm_mul_ps(mantissa, exponent));
 

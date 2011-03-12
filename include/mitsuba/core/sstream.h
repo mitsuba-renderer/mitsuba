@@ -30,13 +30,19 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Portable %Stream implementation, which encapsulates a socket 
- * for IPv4/IPv6 network communications. Set to use network byte order
- * by default.
+ * for IPv4/IPv6 network communications. 
+ *
+ * By default, this type of stream is configured to use network byte
+ * order (= big endian).
  *
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE SocketStream : public Stream {
 public:
+	// =============================================================
+	//! @{ \name Constructors
+	// =============================================================
+
 	/// Create a stream from an existing socket
 #if defined(WIN32)
 	SocketStream(SOCKET socket);
@@ -47,16 +53,12 @@ public:
 	/// Connect to the given host/port
 	SocketStream(const std::string &host, int port);
 
-	/* Stream implementation */
-	void read(void *ptr, size_t size);
-	void write(const void *ptr, size_t size);
-	void setPos(size_t pos);
-	size_t getPos() const;
-	size_t getSize() const;
-	void truncate(size_t size);
-	void flush();
-	bool canWrite() const;
-	bool canRead() const;
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Socket stream-specific features
+	// =============================================================
 
 	/// Return the peer's name
 	inline const std::string &getPeer() const { return m_peer; }
@@ -70,8 +72,28 @@ public:
 	/// Return a string representation
 	std::string toString() const;
 
-	/// Handle a socket error
+	/// Handle the last socket-specific error (looks up the appropriate OS description)
 	static void handleError(const std::string &cmd, ELogLevel level = EError);
+
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Implementation of the Stream interface
+	// =============================================================
+
+	void read(void *ptr, size_t size);
+	void write(const void *ptr, size_t size);
+	void setPos(size_t pos);
+	size_t getPos() const;
+	size_t getSize() const;
+	void truncate(size_t size);
+	void flush();
+	bool canWrite() const;
+	bool canRead() const;
+
+	//! @}
+	// =============================================================
 
 	MTS_DECLARE_CLASS()
 protected:

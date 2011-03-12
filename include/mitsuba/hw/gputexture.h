@@ -159,8 +159,8 @@ public:
 	 * If bitmap is non-NULL, the texture type, format 
 	 * will be automatically set
 	 *
-	 * @param name A human-readable name (for debugging)
-	 * @param bitmap An bitmap to be put into the first
+	 * \param name A human-readable name (for debugging)
+	 * \param bitmap An bitmap to be put into the first
 	 * 		slot. A NULL value will be ignored.
 	 */
 	GPUTexture(const std::string &name, Bitmap *bitmap);

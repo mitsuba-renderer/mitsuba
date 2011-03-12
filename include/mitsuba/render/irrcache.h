@@ -37,7 +37,7 @@ typedef Spectrum TranslationalGradient[3];
  * Krivanek J., Gautron P., Bouatouch K., Pattanaik S.
  * (Proceedings of SCCG 2005)
  *
- * @author Wenzel Jakob
+ * \author Wenzel Jakob
  */
 class MTS_EXPORT_RENDER HemisphereSampler : public Object {
 public:
@@ -139,7 +139,7 @@ private:
  * "An Approximate Global Illumination System for Computer Generated Films"
  * by E. Tabellion and A. Lamorlette (SIGGRAPH 2004)
  *
- * @author Wenzel Jakob
+ * \author Wenzel Jakob
  */
 class MTS_EXPORT_RENDER IrradianceCache : public SerializableObject {
 public:
@@ -190,11 +190,11 @@ public:
 	/**
 	 * Add a sample to the irradiance cache
 	 *
-	 * @param ray
+	 * \param ray
 	 * 		Ray differentials (if they exist)
-	 * @param its 
+	 * \param its 
 	 * 		The position/normal of the surface in question
-	 * @param sample
+	 * \param sample
 	 *      Record containing all hemispherical samples and 
 	 *      derived gradient information
 	 */

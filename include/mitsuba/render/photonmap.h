@@ -19,13 +19,12 @@
 #if !defined(__PHOTONMAP_H)
 #define __PHOTONMAP_H
 
-#include <mitsuba/core/serialization.h>
-#include <mitsuba/core/aabb.h>
+#include <mitsuba/render/photon.h>
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * Hard-coded size limit - permits to use a recursion-free
+ * \brief Hard-coded size limit - permits to use a recursion-free
  * nearest neighbor search.
  */
 #define MAX_PHOTONMAP_DEPTH 30 // corresponds to 1,073,741,824 photons
@@ -35,16 +34,14 @@ MTS_NAMESPACE_BEGIN
  * for really really large photon maps. STL-ified implementation with some 
  * comments and explanations of the individial algorithms.
  *
- * @remark The reference implementation in the book suffers from an indexing 
+ * \remark The reference implementation in the book suffers from an indexing 
  *  bug, which results in a small amount of photons being lost in the final 
  *  estimate. The bug has been fixed in this re-implementation.
  *
- * @author Wenzel Jakob
+ * \author Wenzel Jakob
  */
 class MTS_EXPORT_RENDER PhotonMap : public SerializableObject {
 public:
-	struct Photon;
-
     /* ===================================================================== */
     /*                        Public access methods                          */
     /* ===================================================================== */
@@ -61,12 +58,6 @@ public:
 	PhotonMap(Stream *stream, InstanceManager *manager);
 
 	/**
-	 * If the photon map is to be filled by several processors, 
-	 * it must be prepared using this method
-	 */
-	void prepareSMP(int numThreads);
-
-	/**
 	 * Store a photon in the (still unbalanced) photon map
 	 */
 	bool storePhoton(const Point &pos, const Normal &normal,
@@ -77,13 +68,6 @@ public:
 	 * Store a photon in the (still unbalanced) photon map
 	 */
 	bool storePhoton(const Photon &photon);
-
-	/**
-	 * Store a photon in the (still unbalanced) photon map.
-	 * SMP version - additionally requires a thread ID
-	 */
-	bool storePhotonSMP(int thread, const Point &pos, const Normal &normal,
-		const Vector &dir, const Spectrum &power, uint16_t depth);
 
 	/**
 	 * Scale all photon power values contained in this photon map
@@ -100,13 +84,13 @@ public:
 	/**
 	 * Using the photon map, estimate the irradiance on a surface (Unfiltered)
 	 *
-	 * @param p
+	 * \param p
 	 * 		The surface position for the estimate
-	 * @param n
+	 * \param n
 	 * 		Normal vector of the surface in question
-	 * @param searchRadius
+	 * \param searchRadius
 	 * 		Size of the spherical photon search region
-	 * @param maxPhotons
+	 * \param maxPhotons
 	 * 		How many photon should (at most) be used in the estimate?
 	 */
 	Spectrum estimateIrradiance(
@@ -118,13 +102,13 @@ public:
 	 * Using the photon map, estimate the irradiance on a surface (filtered
 	 * using Simpson's kernel)
 	 *
-	 * @param p
+	 * \param p
 	 * 		The surface position for the estimate
-	 * @param n
+	 * \param n
 	 * 		Normal vector of the surface in question
-	 * @param searchRadius
+	 * \param searchRadius
 	 * 		Size of the spherical photon search region
-	 * @param maxPhotons
+	 * \param maxPhotons
 	 * 		How many photon should (at most) be used in the estimate?
 	 */
 	Spectrum estimateIrradianceFiltered(
@@ -136,11 +120,11 @@ public:
 	 * Using the photon map and a surface intersection, estimate the
 	 * radiant exitance into a given direction
 	 *
-	 * @param its
+	 * \param its
 	 * 		A surface interaction
-	 * @param searchRadius
+	 * \param searchRadius
 	 * 		Size of the spherical photon search region
-	 * @param maxPhotons
+	 * \param maxPhotons
 	 * 		How many photon should (at most) be used in the estimate?
 	 */
 	Spectrum estimateRadianceFiltered(
@@ -163,13 +147,13 @@ public:
 	 * Using the photon map and an outgoing ray, estimate the
 	 * scattered volume radiance into a given direction
 	 *
-	 * @param ray 
+	 * \param ray 
 	 * 		The outgoing ray
-	 * @param searchRadius
+	 * \param searchRadius
 	 * 		Size of the spherical photon search region
-	 * @param maxPhotons
+	 * \param maxPhotons
 	 * 		How many photon should (at most) be used in the estimate?
-	 * @param medium
+	 * \param medium
 	 *      The associated participating medium
 	 */
 	Spectrum estimateVolumeRadiance(
@@ -217,138 +201,6 @@ public:
 	std::string toString() const;
 
 	MTS_DECLARE_CLASS()
-public:
-    /* ===================================================================== */
-    /*                        Shared data structures                         */
-    /* ===================================================================== */
-
-	/** \brief Memory-efficient photon data structure as suggested in
-		"Realistic Image Synthesis Using Photon Mapping" by Henrik Wann Jensen.
-		The Photon Map will always use single-precision floating point
-		(even if mitsuba is configured to use double precision).
-	*/
-	struct Photon { // 4*3 + 4 + 2 + 2 = 20 bytes
-		float pos[3];			/* Photon position in single precision */
-#if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
-		Spectrum power;         /* Super-accurate photon map :) */
-#else
-		uint8_t power[4];		/* Photon power in Ward's RGBE format */
-#endif
-		uint8_t phi, theta;		/* Approximate photon direction */
-		uint8_t phiN, thetaN;	/* Approximate associated normal direction */
-		uint16_t depth;			/* Photon depth (in # of interactions) */
-		uint8_t axis;			/* Split axis */
-		uint8_t unused;			/* Word alignment :( */
-
-		/// Dummy constructor
-		inline Photon() { }
-
-		/// Construct from a photon interaction 
-		Photon(const Point &pos, const Normal &normal,
-			   const Vector &dir, const Spectrum &power,
-			   uint16_t depth);
-
-		/// Unserialize from a binary data stream
-		inline Photon(Stream *stream) {
-			stream->readSingleArray(pos, 3);
-#if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
-			power = Spectrum(stream);
-			phi = stream->readUChar();
-			theta = stream->readUChar();
-			phiN = stream->readUChar();
-			thetaN = stream->readUChar();
-#else
-			stream->read(power, 8);
-#endif
-			depth = stream->readUShort();
-			axis = stream->readUChar();
-			unused = 0;
-		}
-
-		/// Return the depth (in # of interactions)
-		inline int getDepth() const {
-			return depth;
-		}
-
-		/// Compute the squared distance between this photon and some point.
-		inline float distSquared(const float *q) const {
-			float dist1 = pos[0]-q[0],
-				  dist2 = pos[1]-q[1],
-				  dist3 = pos[2]-q[2];
-			return dist1*dist1 + dist2*dist2 + dist3*dist3;
-		}
-
-		/**
-		 * Convert the photon direction from quantized spherical coordinates
-		 * to a floating point vector value. Precomputation idea based on 
-		 * Jensen's implementation.
-		 */
-		inline Vector getDirection() const {
-			return Vector(
-				m_cosPhi[phi] * m_sinTheta[theta],
-				m_sinPhi[phi] * m_sinTheta[theta],
-				m_cosTheta[theta]
-			);
-		}
-
-		/**
-		 * Convert the normal direction from quantized spherical coordinates
-		 * to a floating point vector value.
-		 */
-		inline Normal getNormal() const {
-			return Normal(
-				m_cosPhi[phiN] * m_sinTheta[thetaN],
-				m_sinPhi[phiN] * m_sinTheta[thetaN],
-				m_cosTheta[thetaN]
-			);
-		}
-
-		/// Return the photon position as a vector
-		inline Point getPosition() const {
-			return Point(pos[0], pos[1], pos[2]);
-		}
-
-		/// Convert the photon power from RGBE to floating point
-		inline Spectrum getPower() const {
-#if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
-			return power;
-#else
-			Spectrum result;
-			result.fromRGBE(power);
-			return result;
-#endif
-		}
-
-		/// Serialize to a binary data stream
-		inline void serialize(Stream *stream) const {
-			stream->writeSingleArray(pos, 3);
-#if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
-			power.serialize(stream);
-			stream->writeUChar(phi);
-			stream->writeUChar(theta);
-			stream->writeUChar(phiN);
-			stream->writeUChar(thetaN);
-#else
-			stream->write(power, 8);
-#endif
-			stream->writeUShort(depth);
-			stream->writeUChar(axis);
-		}
-
-		/// Return a string representation (for debugging)
-		std::string toString() const {
-			std::ostringstream oss;
-			oss << "Photon[pos = [" << pos[0] << ", "
-				<< pos[1] << ", " << pos[2] << "]"
-				<< ", power = " << getPower().toString()
-				<< ", direction = " << getDirection().toString()
-				<< ", normal = " << getNormal().toString()
-				<< ", axis = " << axis
-				<< ", depth = " << depth
-				<< "]";
-			return oss.str();
-		}
-	};
 protected:
     /* ===================================================================== */
     /*                      Protected data structures                        */
@@ -413,19 +265,19 @@ protected:
 	/**
 	 * Perform a new nearest-neighbor search query
 	 *
-	 * @param pos
+	 * \param pos
 	 * 		Nearest-neighbor search position
-	 * @param searchRadiusSquared
+	 * \param searchRadiusSquared
 	 * 		Squared search radius - is updated should the search
 	 *      radius be decreased
-	 * @param maxSize
+	 * \param maxSize
 	 * 		Maximum number of photons, which will be returned. If
 	 * 		this value is ever exceeded, the search uses a priority
 	 * 		queue to only return the closest entries
-	 * @param results
+	 * \param results
 	 *      Pre-allocated search result data structure. Should have
 	 *      one extra entry for internal use. 
-	 * @return
+	 * \return
 	 *      The number of results
 	 */
 	size_t nnSearch(const Point &p, Float &searchRadiusSquared, 
@@ -450,13 +302,13 @@ protected:
 	 * Recursive balancing algorithm. See implementation for
 	 * further documentation.
 	 *
-	 * @param sortStart
+	 * \param sortStart
 	 * 		The beginning of the list to be balanced
-	 * @param sortEnd
+	 * \param sortEnd
 	 * 		The end of the list to be balanced
-	 * @param heapPointers
+	 * \param heapPointers
 	 * 		An array, which will hold the photon tree as it is constructed
-	 * 	@param heapIndex
+	 * \param heapIndex
 	 * 		The heap array index of the next pivot
 	 */
 	void balanceRecursive(
@@ -475,22 +327,6 @@ private:
     /* ===================================================================== */
     /*                        Protected attributes                           */
     /* ===================================================================== */
-	struct ThreadContext {
-		AABB aabb;
-		size_t photonOffset;
-		size_t photonCount;
-		size_t maxPhotons;
-		uint8_t unused[128-sizeof(AABB)-sizeof(size_t)*3]; // Avoid false sharing
-	};
-
-	/* Precomputed lookup tables */
-	static Float m_cosTheta[256];
-	static Float m_sinTheta[256];
-	static Float m_cosPhi[256];
-	static Float m_sinPhi[256];
-	static Float m_expTable[256];
-	static bool m_precompTableReady;
-
 	Photon *m_photons;
 	AABB m_aabb;
 	size_t m_photonCount;
@@ -498,10 +334,8 @@ private:
 	size_t m_minPhotons;
 	size_t m_lastInnerNode;
 	size_t m_lastRChildNode;
-	int m_numThreads;
 	bool m_balanced;
 	Float m_scale;
-	ThreadContext *m_context;
 };
 
 MTS_NAMESPACE_END

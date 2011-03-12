@@ -21,15 +21,15 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * This stores a number of photons, which can be sent over 
- * the wire as needed. Used to implement parallel photon
+ * \brief This class stores a number of photons, which can be sent over 
+ * the wire as needed. It is used to implement parallel networked photon
  * tracing passes.
  */
 class PhotonVector : public WorkResult {
 public:
 	PhotonVector() { }
 
-	inline void put(const PhotonMap::Photon &p) {
+	inline void put(const Photon &p) {
 		m_photons.push_back(p);
 	}
 
@@ -41,7 +41,7 @@ public:
 		m_photons.clear();
 	}
 
-	inline const PhotonMap::Photon &operator[](size_t index) const {
+	inline const Photon &operator[](size_t index) const {
 		return m_photons[index];
 	}
 
@@ -50,7 +50,7 @@ public:
 		size_t count = stream->readUInt();
 		m_photons.resize(count);
 		for (size_t i=0; i<count; ++i)
-			m_photons[i] = PhotonMap::Photon(stream);
+			m_photons[i] = Photon(stream);
 	}
 
 	void save(Stream *stream) const {
@@ -70,7 +70,7 @@ protected:
 	// Virtual destructor
 	virtual ~PhotonVector() { }
 private:
-	std::vector<PhotonMap::Photon> m_photons;
+	std::vector<Photon> m_photons;
 };
 
 /**
@@ -78,7 +78,7 @@ private:
  */
 class GatherPhotonWorker : public ParticleTracer {
 public:
-	GatherPhotonWorker(GatherPhotonProcess::EGatherType type, unsigned int granularity,
+	GatherPhotonWorker(GatherPhotonProcess::EGatherType type, size_t granularity,
 		int maxDepth, int rrDepth) : ParticleTracer(maxDepth, rrDepth),
 		m_type(type), m_granularity(granularity) { }
 
@@ -121,14 +121,14 @@ public:
 		if ((m_type == GatherPhotonProcess::ECausticPhotons && depth > 1 && caustic)
 		 || (m_type == GatherPhotonProcess::ESurfacePhotons && depth > 1 && !caustic)
 		 || (m_type == GatherPhotonProcess::EAllSurfacePhotons)) 
-			m_workResult->put(PhotonMap::Photon(its.p, its.geoFrame.n, -its.toWorld(its.wi), weight, depth));
+			m_workResult->put(Photon(its.p, its.geoFrame.n, -its.toWorld(its.wi), weight, depth));
 	}
 
 	void handleMediumInteraction(int depth, bool caustic,
 			const MediumSamplingRecord &mRec, const Medium *medium,
 			Float time, const Vector &wi, const Spectrum &weight) {
 		if (m_type == GatherPhotonProcess::EVolumePhotons && depth > 1)
-			m_workResult->put(PhotonMap::Photon(mRec.p, Normal(), -wi, weight, depth));
+			m_workResult->put(Photon(mRec.p, Normal(), -wi, weight, depth));
 	}
 
 	MTS_DECLARE_CLASS()
@@ -137,12 +137,12 @@ protected:
 	virtual ~GatherPhotonWorker() { }
 protected:
 	GatherPhotonProcess::EGatherType m_type;
-	unsigned int m_granularity;
+	size_t m_granularity;
 	ref<PhotonVector> m_workResult;
 };
 
 GatherPhotonProcess::GatherPhotonProcess(EGatherType type, size_t photonCount, 
-	unsigned int granularity, int maxDepth, int rrDepth, const void *progressReporterPayload) 
+	size_t granularity, int maxDepth, int rrDepth, const void *progressReporterPayload) 
 	: ParticleProcess(ParticleProcess::EGather, photonCount, granularity, "Gathering photons", 
 	  progressReporterPayload), m_type(type), m_maxDepth(maxDepth), m_rrDepth(rrDepth), 
 	  m_excess(0), m_numShot(0) {
@@ -150,7 +150,7 @@ GatherPhotonProcess::GatherPhotonProcess(EGatherType type, size_t photonCount,
 }
 
 ref<WorkProcessor> GatherPhotonProcess::createWorkProcessor() const {
-	return new GatherPhotonWorker(m_type, (unsigned int) m_granularity, m_maxDepth, 
+	return new GatherPhotonWorker(m_type, m_granularity, m_maxDepth, 
 		m_rrDepth);
 }
 

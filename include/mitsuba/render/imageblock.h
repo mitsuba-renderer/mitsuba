@@ -40,25 +40,25 @@ public:
 	/**
 	 * Construct a new image block of the requested size
 	 *
-	 * @param maxBlockSize
+	 * \param maxBlockSize
 	 *    Upper bound on the horizontal & vertical size of a block
 	 *
-	 * @param borderSize
+	 * \param borderSize
 	 *    Size of the border region storing contributions that
 	 *    affect neighboring blocks due to the use of image 
 	 *    reconstruction filters
 	 *
-	 * @param supportWeights
+	 * \param supportWeights
 	 *    Should per-pixel weights be supported? (required for
 	 *    image reconstruction filters)
 	 *
-	 * @param supportAlpha
+	 * \param supportAlpha
 	 *    Should per-pixel alpha values be supported?
 	 *
-	 * @param supportSnapshot
+	 * \param supportSnapshot
 	 *    Should the snapshot feature be supported?
 	 *
-	 * @param supportStatistics
+	 * \param supportStatistics
 	 *    Should per-pixel variance estimates be supported?
 	 */
 	ImageBlock(const Vector2i &maxBlockSize, int borderSize, 

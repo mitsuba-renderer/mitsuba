@@ -48,7 +48,7 @@ protected:
  * Class wraps code that generates the spiral of image blocks
  * for rendering.
  *
- * @author Adam Arbree
+ * \author Adam Arbree
  * Aug 25, 2005
  * RayTracer.java
  * Copyright 2005 Program of Computer Graphics, Cornell University
