@@ -249,7 +249,6 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		} else {
 			SLog(EError, "<scale>: provided neither xyz nor value arguments!");
 		}
-		cout << x << " " << y << " " << z << endl;
 
 		m_transform = Transform::scale(Vector(x, y, z)) * m_transform;
 	} else if (name == "matrix") {
