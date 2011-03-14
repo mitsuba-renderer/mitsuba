@@ -301,7 +301,7 @@ void RenderSettingsDialog::load(const SceneContext *ctx) {
 
 void RenderSettingsDialog::apply(SceneContext *ctx) {
 	Scene *scene = new Scene(ctx->scene);
-	PinholeCamera *oldCamera = static_cast<const PinholeCamera *>(scene->getCamera());
+	PinholeCamera *oldCamera = static_cast<PinholeCamera *>(scene->getCamera());
 	Properties filmProps = oldCamera->getFilm()->getProperties();
 	ref<PluginManager> pluginMgr = PluginManager::getInstance();
 

@@ -645,7 +645,7 @@ void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 	for (size_t i=0; i<m_luminaires.size(); ++i) 
 		manager->serialize(stream, m_luminaires[i]);
 	stream->writeUInt((uint32_t) m_media.size());
-	for (std::set<Medium *>::iterator it = m_media.begin();
+	for (std::set<Medium *>::const_iterator it = m_media.begin();
 			it != m_media.end(); ++it)
 		manager->serialize(stream, *it);
 	stream->writeUInt((uint32_t) m_ssIntegrators.size());
