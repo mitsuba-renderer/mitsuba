@@ -305,8 +305,9 @@ public:
 
 		if (bsdf == NULL) {
 			RadianceQueryRecord rRec2;
-			rRec2.recursiveQuery(rRec, rRec.type);
-			return m_parentIntegrator->Li(RayDifferential(its.p, ray.d, ray.time), rRec2);
+			rRec2.recursiveQuery(rRec);
+			Li += m_parentIntegrator->Li(RayDifferential(its.p, ray.d, ray.time), rRec2);
+			return Li;
 		}
 
 		int bsdfType = bsdf->getType();

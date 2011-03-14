@@ -202,7 +202,7 @@ public:
 
 	/// Initialize the query record for a recursive query
 	inline void recursiveQuery(const RadianceQueryRecord &parent) {
-		type = parent.type;
+		type = parent.type | EIntersection;
 		scene = parent.scene;
 		sampler = parent.sampler;
 		depth = parent.depth+1;
