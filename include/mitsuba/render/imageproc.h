@@ -39,11 +39,11 @@ protected:
 	/**
 	 * Initialize the image process
 	 *
-	 * @param offset
+	 * \param offset
 	 *    Integer offset of the image region to be processed
-	 * @param size
+	 * \param size
 	 *    Size of the image region to be processed
-	 * @param blockSize
+	 * \param blockSize
 	 *    Size of the generated square pixel blocks
 	 */
 	void init(const Point2i &offset, const Vector2i &size, int blockSize);

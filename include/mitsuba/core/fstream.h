@@ -36,7 +36,7 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE FileStream : public Stream {
 public:
-	/// File opening modes
+	/// Supported file opening modes
 	enum EFileMode {
 		EReadOnly = 0,   ///< rb
 		EReadWrite,      ///< rb+
@@ -46,11 +46,22 @@ public:
 		EAppendReadWrite ///< ab+
 	};
 
+	// =============================================================
+	//! @{ \name Constructors
+	// =============================================================
+
 	/// Create a file stream class with no file open
 	FileStream();
 
 	/// Create a file stream class and open a file with a given EFileMode
 	explicit FileStream(const fs::path &path, EFileMode mode = EReadOnly);
+
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name File-specific features
+	// =============================================================
 
 	/// Return the file path
 	inline const fs::path &getPath() const { return m_path; }
@@ -67,7 +78,13 @@ public:
 	/// Return a string representation
 	std::string toString() const;
 
-	/* Stream implementation */
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Stream interface
+	// =============================================================
+
 	void read(void *ptr, size_t size);
 	void write(const void *ptr, size_t size);
 	void setPos(size_t pos);
@@ -77,6 +94,9 @@ public:
 	void flush();
 	bool canWrite() const;
 	bool canRead() const;
+
+	//! @}
+	// =============================================================
 
 	MTS_DECLARE_CLASS()
 protected:

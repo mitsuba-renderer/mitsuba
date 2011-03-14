@@ -24,14 +24,25 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Stream-style interface to the default stdin/stdout console streams
+ *
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE ConsoleStream : public Stream {
 public:
+	// =============================================================
+	//! @{ \name Constructors
+	// =============================================================
+
 	/// Create a new console stream
 	ConsoleStream();
 
-	/* Stream implementation */
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Implementation of the Stream interface
+	// =============================================================
+
 	void read(void *ptr, size_t size);
 	void write(const void *ptr, size_t size);
 	void setPos(size_t pos);
@@ -41,6 +52,9 @@ public:
 	void flush();
 	bool canWrite() const;
 	bool canRead() const;
+
+	//! @}
+	// =============================================================
 
 	/// Return a string representation
 	std::string toString() const;

@@ -19,7 +19,7 @@ librender = renderEnv.SharedLibrary('mitsuba-render', [
 	'util.cpp', 'irrcache.cpp', 'testcase.cpp', 'preview.cpp',
 	'photonmap.cpp', 'gatherproc.cpp', 'mipmap3d.cpp', 'volume.cpp', 
 	'vpl.cpp', 'shader.cpp', 'scenehandler.cpp', 'intersection.cpp', 
-	'track.cpp', 'common.cpp', 'phase.cpp', 'noise.cpp'
+	'track.cpp', 'common.cpp', 'phase.cpp', 'noise.cpp', 'photon.cpp'
 ])
 
 if sys.platform == "darwin":

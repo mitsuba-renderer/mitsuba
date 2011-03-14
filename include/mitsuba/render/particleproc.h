@@ -26,26 +26,57 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Abstract parallel particle tracing process
  *
- * Distributes the work of particle tracing over multiple cores/machines
- * and gathers results computed by a subclass of \ref ParticleTracer.
+ * This class implements a particle tracer similar to what is
+ * described in appendix 4.A of Eric Veach's PhD thesis. Particles
+ * are emitted from the light source and subsequently perform a random
+ * walk that includes both surface and medium scattering events. The 
+ * work is spread out over multiple cores/machines. For every such
+ * event,a custom routine is invoked.
+ *
+ * To actually use this class, you must extend it and implement the
+ * function \ref createWorkProcessor(), which should return a subclass
+ * of \ref ParticleTracer with overridden functions
+ * \ref ParticleTracer::handleSurfaceInteraction and
+ * \ref ParticleTracer::handleMediumInteraction.
  */
 class MTS_EXPORT_RENDER ParticleProcess : public ParallelProcess {
 public:
+	/// The particle tracer supports two principal modes of operation
 	enum EMode {
-		/// Trace a specified amount of photons and then stop
+		/**
+		 * \brief Trace a fixed number of \a particles
+		 * 
+		 * In this mode, a specified number of particles will be emitted, and
+		 * a customizable action is performed for every scattering event.
+		 * Note that the number of resulting \a events will generally be 
+		 * different from the number of traced \a particles.
+		 *
+		 * This mode is used for instance by the \c ptracer plugin.
+		 */
 		ETrace = 0,
 
 		/**
-		 * Trace an unspecified amount of photons until a certain 
-		 * number of events has been recorded. Due to asynchronous
-		 * nature introduced by parallelism, this comes at the
-		 * risk of distributing a bit too much work.
+		 * \brief `Gather' a fixed number of scattering \a events
+		 *
+		 * In this mode, the number of particles to be emitted is
+		 * unknown ahead of time. Instead, the implementation traces
+		 * particles until a a certain number of scattering events
+		 * have been recorded.
+		 * 
+		 * This mode is used to create photon maps. See
+		 * \ref GatherPhotonProcess for an implementation.
 		 */
 		EGather
 	};
 
-	/* ParallelProcess interface */
+	// =============================================================
+	//! @{ \name ParallelProcess interface
+	// =============================================================
+
 	virtual EStatus generateWork(WorkUnit *unit, int worker);
+	
+	//! @}
+	// =============================================================
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -53,15 +84,16 @@ protected:
 	/**
 	 * Create a new particle process 
 	 *
-	 * @param mode
+	 * \param mode
 	 *    Particle tracing mode - see above
-	 * @param workCount
+	 * \param workCount
 	 *    Total # of particles to trace / # events to record
-	 * @param granularity
-	 *    Number of particles in each work unit
-	 * @param progressText
+	 * \param granularity
+	 *    Number of particles in each work unit. When set to zero,
+	 *    a suitable number will be automatically chosen.
+	 * \param progressText
 	 *    Title of the progress bar
-	 * @param progressReporterPayload
+	 * \param progressReporterPayload
 	 *    Custom pointer payload to be delivered with progress messages
 	 */
 	ParticleProcess(EMode mode, size_t workCount,

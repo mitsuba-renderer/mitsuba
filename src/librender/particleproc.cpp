@@ -24,11 +24,17 @@
 
 MTS_NAMESPACE_BEGIN
 
-ParticleProcess::ParticleProcess(EMode mode, size_t workCount, 
-	size_t granularity, const std::string &progressText,
-	const void *progressReporterPayload) : 
-	m_mode(mode), m_workCount(workCount), m_numGenerated(0), 
-	m_granularity(granularity), m_receivedResultCount(0) {
+ParticleProcess::ParticleProcess(EMode mode, size_t workCount, size_t granularity,
+		const std::string &progressText, const void *progressReporterPayload)
+	: m_mode(mode), m_workCount(workCount), m_numGenerated(0),
+	  m_granularity(granularity), m_receivedResultCount(0) {
+
+	/* Choose a suitable work unit granularity if none was specified */
+	if (m_granularity == 0)
+		m_granularity = std::max((size_t) 1, workCount /
+			(4 * Scheduler::getInstance()->getWorkerCount()));
+
+	/* Create a visual progress reporter */
 	m_progress = new ProgressReporter(progressText, workCount, 
 		progressReporterPayload);
 	m_resultMutex = new Mutex();
@@ -39,22 +45,21 @@ ParticleProcess::~ParticleProcess() {
 }
 
 ParallelProcess::EStatus ParticleProcess::generateWork(WorkUnit *unit, int worker) {
+	RangeWorkUnit *range = static_cast<RangeWorkUnit *>(unit);
+	size_t workUnitSize;
+
 	if (m_mode == ETrace) {
 		if (m_numGenerated == m_workCount)
-			return EFailure;
-		/* Reserve a sequence of at most 'granularity' particles */
-		size_t workSize = std::min(m_granularity, m_workCount - m_numGenerated);
-		RangeWorkUnit *range = static_cast<RangeWorkUnit *>(unit);
-		range->setRange(m_numGenerated, m_numGenerated + workSize - 1);
-		m_numGenerated += workSize;
+			return EFailure; // There is no more work
+
+		workUnitSize = std::min(m_granularity, m_workCount - m_numGenerated);
 	} else {
 		if (m_receivedResultCount >= m_workCount)
-			return EFailure;
-		/* Reserve a sequence of exactly 'granularity' particles */
-		RangeWorkUnit *range = static_cast<RangeWorkUnit *>(unit);
-		range->setRange(m_numGenerated, m_numGenerated + m_granularity - 1);
-		m_numGenerated += m_granularity;
+			return EFailure; // There is no more work
+
+		workUnitSize = m_granularity;
 	}
+
 
 	return ESuccess;
 }
@@ -152,8 +157,8 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				break;
 			} else {
 				/* Sample 
-					tau(x, y) * (Surface integral). This happens with probability mRec.pdfFailure
-					Divide this out and multiply with the proper per color channel transmittance.
+					tau(x, y) (Surface integral). This happens with probability mRec.pdfFailure
+					Account for this and multiply by the proper per-color-channel transmittance.
 				*/
 				if (medium)
 					weight *= mRec.transmittance / mRec.pdfFailure;
@@ -169,6 +174,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				if (!bsdf) {
 					/* Pass right through the surface (there is no BSDF) */
 					ray.setOrigin(its.p);
+					++depth;
 					continue;
 				}
 	
@@ -197,7 +203,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 
 				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
 				Float wiDotGeoN = dot(its.geoFrame.n, wi),
-						woDotGeoN = dot(its.geoFrame.n, wo);
+				      woDotGeoN = dot(its.geoFrame.n, wo);
 				if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 || 
 					woDotGeoN * Frame::cosTheta(bRec.wo) <= 0)
 					break;

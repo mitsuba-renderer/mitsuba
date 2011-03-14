@@ -118,8 +118,8 @@ private:
 class MTS_EXPORT_HW DeviceEventListener {
 public:
 	/** \brief Called when a device event occurs
-	 * @param pEvent The event data structure
-	 * @return True if the result has been handled, false otherwise
+	 * \param event The event data structure
+	 * \return True if the result has been handled, false otherwise
 	 */
 	virtual bool deviceEventOccurred(const DeviceEvent &event) = 0;
 protected:

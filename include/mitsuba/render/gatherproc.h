@@ -44,17 +44,17 @@ public:
 
 	/**
 	 * Create a new process for parallel photon gathering
-	 * @param type
+	 * \param type
 	 *     Specifies the type of requested photons (surface/caustic/volume)
-	 * @param photonCount
+	 * \param photonCount
 	 *     Specifies the number of requested photons
-	 * @param granularity
+	 * \param granularity
 	 *     Size of the internally used work units (in photons)
-	 * @param progressReporterPayload
+	 * \param progressReporterPayload
 	 *    Custom pointer payload to be delivered with progress messages
 	 */
 	GatherPhotonProcess(EGatherType type, size_t photonCount, 
-		unsigned int granularity, int maxDepth, int rrDepth,
+		size_t granularity, int maxDepth, int rrDepth,
 		const void *progressReporterPayload);
 
 	/**

@@ -62,7 +62,7 @@ class MTS_EXPORT_CORE WaitFlag : public Object {
 public:
 	/**
 	 * \brief Create a new wait flag
-	 * @param flag
+	 * \param flag
 	 *    Initial state of the flag. If set to true, \ref wait()
 	 *    will immediately return.
 	 */
