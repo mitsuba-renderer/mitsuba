@@ -195,16 +195,15 @@ void GatherPhotonProcess::processResult(const WorkResult *wr, bool cancelled) {
 		size_t start = vec.getParticleIndex(i),
 			   end   = vec.getParticleIndex(i+1);
 		++nParticles;
-		bool stop = false;
+		bool full = false;
 		for (size_t j=start; j<end; ++j) {
 			if (!m_photonMap->storePhoton(vec[j])) {
-				cout << "Photon map is full, skipping " << vec.getPhotonCount() -j << " photons" << endl;
 				m_excess += vec.getPhotonCount() - j;
-				stop = true;
+				full = true;
 				break;
 			}
 		}
-		if (stop)
+		if (full)
 			break;
 	}
 	m_numShot += nParticles;

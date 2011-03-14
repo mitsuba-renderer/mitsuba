@@ -271,7 +271,7 @@ public:
 	}
 
 	Spectrum Li(const RayDifferential &ray, RadianceQueryRecord &rRec) const {
-		Spectrum Li(0.0f), LiVol(0.0f);
+		Spectrum Li(0.0f);
 		Intersection &its = rRec.its;
 		LuminaireSamplingRecord lRec;
 	
@@ -341,7 +341,7 @@ public:
 
 		if (bsdfType == BSDF::EDiffuseReflection) {
 			/* Hit a diffuse material - do a direct photon map visualization. */
-			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) 
+			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)
 				Li += m_globalPhotonMap->estimateIrradianceFiltered(its.p, 
 					its.shFrame.n, m_globalLookupRadius, m_globalLookupSize)
 						* bsdf->getDiffuseReflectance(its) * INV_PI;
@@ -393,7 +393,7 @@ public:
 				m_globalLookupRadius, m_globalLookupSize);
 		}
 
-		return Li * LiVol;
+		return Li;
 	}
 	
 	std::string toString() const {
