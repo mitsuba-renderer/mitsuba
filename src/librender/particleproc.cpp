@@ -32,7 +32,7 @@ ParticleProcess::ParticleProcess(EMode mode, size_t workCount, size_t granularit
 	/* Choose a suitable work unit granularity if none was specified */
 	if (m_granularity == 0)
 		m_granularity = std::max((size_t) 1, workCount /
-			(8 * Scheduler::getInstance()->getWorkerCount()));
+			(16 * Scheduler::getInstance()->getWorkerCount()));
 
 	/* Create a visual progress reporter */
 	m_progress = new ProgressReporter(progressText, workCount, 

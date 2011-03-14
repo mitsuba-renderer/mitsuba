@@ -291,11 +291,11 @@ public:
 
 		ref<PhotonMap> photonMap = proc->getPhotonMap();
 		photonMap->balance();
-		Log(EInfo, "Global photon map full. Shot " SIZE_T_FMT " photons, excess due to parallelism: " 
-			SIZE_T_FMT, proc->getShotPhotons(), proc->getExcess());
+		Log(EDebug, "Photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+			SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
 		Log(EInfo, "Gathering ..");
-		m_totalEmitted += proc->getShotPhotons();
+		m_totalEmitted += proc->getShotParticles();
 		film->clear();
 		#pragma omp parallel for schedule(dynamic)
 		for (int blockIdx = 0; blockIdx<(int) m_blocks.size(); ++blockIdx) {

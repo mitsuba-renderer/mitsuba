@@ -196,6 +196,17 @@ public:
 		scene = parent.scene;
 		sampler = parent.sampler;
 		depth = parent.depth+1;
+		medium = parent.medium;
+		extra = 0;
+	}
+
+	/// Initialize the query record for a recursive query
+	inline void recursiveQuery(const RadianceQueryRecord &parent) {
+		type = parent.type;
+		scene = parent.scene;
+		sampler = parent.sampler;
+		depth = parent.depth+1;
+		medium = parent.medium;
 		extra = 0;
 	}
 

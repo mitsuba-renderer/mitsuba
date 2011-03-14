@@ -165,11 +165,11 @@ public:
 				return false;
 
 			m_globalPhotonMap = proc->getPhotonMap();
-			m_globalPhotonMap->setScale(1 / (Float) proc->getShotPhotons());
+			m_globalPhotonMap->setScale(1 / (Float) proc->getShotParticles());
 			m_globalPhotonMap->setMinPhotons(m_globalMinPhotons);
 			m_globalPhotonMap->balance();
-			Log(EDebug, "Global photon map full. Shot " SIZE_T_FMT " photons, excess due to parallelism: " 
-				SIZE_T_FMT, proc->getShotPhotons(), proc->getExcess());
+			Log(EDebug, "Global photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 			m_globalPhotonMapID = sched->registerResource(m_globalPhotonMap);
 		}
 
@@ -183,6 +183,7 @@ public:
 				m_granularity, 2, m_rrDepth, m_gatherLocally, job);
 
 			proc->bindResource("scene", sceneResID);
+			proc->bindResource("camera", cameraResID);
 			proc->bindResource("sampler", qmcSamplerID);
 
 			m_proc = proc;
@@ -194,11 +195,11 @@ public:
 				return false;
 
 			m_causticPhotonMap = proc->getPhotonMap();
-			m_causticPhotonMap->setScale(1 / (Float) proc->getShotPhotons());
+			m_causticPhotonMap->setScale(1 / (Float) proc->getShotParticles());
 			m_causticPhotonMap->setMinPhotons(m_causticMinPhotons);
 			m_causticPhotonMap->balance();
-			Log(EDebug, "Caustic photon map - excess photons due to parallelism: " 
-				SIZE_T_FMT, proc->getExcess());
+			Log(EDebug, "Caustic photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 			m_causticPhotonMapID = sched->registerResource(m_causticPhotonMap);
 		}
 
@@ -212,6 +213,7 @@ public:
 				m_granularity, m_maxDepth, m_rrDepth, m_gatherLocally, job);
 
 			proc->bindResource("scene", sceneResID);
+			proc->bindResource("camera", cameraResID);
 			proc->bindResource("sampler", qmcSamplerID);
 
 			m_proc = proc;
@@ -223,11 +225,11 @@ public:
 				return false;
 
 			m_volumePhotonMap = proc->getPhotonMap();
-			m_volumePhotonMap->setScale(1 / (Float) proc->getShotPhotons());
+			m_volumePhotonMap->setScale(1 / (Float) proc->getShotParticles());
 			m_volumePhotonMap->setMinPhotons(m_volumeMinPhotons);
 			m_volumePhotonMap->balance();
-			Log(EDebug, "Volumetric photon map - excess photons due to parallelism: " 
-				SIZE_T_FMT, proc->getExcess());
+			Log(EDebug, "Volume photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 			m_volumePhotonMapID = sched->registerResource(m_volumePhotonMap);
 		}
 
@@ -277,6 +279,9 @@ public:
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
 
+		if ((rRec.type & RadianceQueryRecord::EVolumeRadiance) && rRec.medium) {
+		}
+
 		if (!its.isValid()) {
 			/* If no intersection could be found, possibly return 
 			   attenuated radiance from a background luminaire */
@@ -294,6 +299,16 @@ public:
 			Li += its.LoSub(rRec.scene, -ray.d);
 
 		const BSDF *bsdf = its.getBSDF(ray);
+				
+		if (its.isMediumTransition())
+			rRec.medium = its.getTargetMedium(ray.d);
+
+		if (bsdf == NULL) {
+			RadianceQueryRecord rRec2;
+			rRec2.recursiveQuery(rRec, rRec.type);
+			return m_parentIntegrator->Li(RayDifferential(its.p, ray.d, ray.time), rRec2);
+		}
+
 		int bsdfType = bsdf->getType();
 
 		Point2 *sampleArray, sample;
@@ -323,11 +338,6 @@ public:
 				}
 			}
 		}
-
-//		if (rRec.type & RadianceQueryRecord:EVolumeRadiance) {
-			/* Ray marching */
-//		}
-
 
 		if (bsdfType == BSDF::EDiffuseReflection) {
 			/* Hit a diffuse material - do a direct photon map visualization. */

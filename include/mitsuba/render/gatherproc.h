@@ -74,13 +74,13 @@ public:
 	 * of excess photons that had to be discarded. If this is too
 	 * high, the granularity should be decreased.
 	 */
-	inline size_t getExcess() const { return m_excess; }
-	
+	inline size_t getExcessPhotons() const { return m_excess; }
+
 	/**
-	 * \brief Lists the nuber of photons that had to be shot
+	 * \brief Lists the nuber of particles that had to be shot
 	 * in order to fill the photon map.
 	 */
-	inline size_t getShotPhotons() const { return m_numShot; }
+	inline size_t getShotParticles() const { return m_numShot; }
 
 	// ======================================================================
 	/// @{ \name ParallelProcess implementation
