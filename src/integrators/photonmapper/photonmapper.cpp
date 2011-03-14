@@ -30,7 +30,7 @@ class PhotonMapIntegrator : public SampleIntegrator {
 public:
 	PhotonMapIntegrator(const Properties &props) : SampleIntegrator(props) {
 		/* Number of luminaire samples for direct illumination */
-		m_directSamples = props.getInteger("directSamples", 1);
+		m_directSamples = props.getInteger("directSamples", 16);
 		/* Number of BSDF samples when intersecting a glossy material */
 		m_glossySamples = props.getInteger("glossySamples", 32);
 		/* Depth to start using russian roulette when tracing photons */
@@ -39,9 +39,8 @@ public:
 		m_maxDepth = props.getInteger("maxDepth", 40);
 		/* Depth cutoff when recursively tracing specular materials */
 		m_maxSpecularDepth = props.getInteger("maxSpecularDepth", 6);
-		/* Granularity of photon tracing work units (in shot particles) */
-		m_granularity = props.getInteger("granularity", 1000);
-
+		/* Granularity of photon tracing work units (in shot particles, 0 => decide automatically) */
+		m_granularity = props.getInteger("granularity", 0);
 		/* Number of photons to collect for the global photon map */
 		m_globalPhotons = (size_t) props.getLong("globalPhotons", 200000);
 		/* Number of photons to collect for the caustic photon map */
@@ -66,6 +65,8 @@ public:
 		m_causticLookupSize = props.getInteger("causticLookupSize", 200);
 		/* Maximum number of results for volumetric photon map lookups */
 		m_volumeLookupSize = props.getInteger("volumeLookupSize", 200);
+		/* Should photon gathering steps exclusively run on the local machine? */
+		m_gatherLocally = props.getBoolean("gatherLocally", true);
 	}
 
 	/// Unserialize from a binary data stream
@@ -86,6 +87,7 @@ public:
 		m_globalLookupSize = stream->readInt();
 		m_causticLookupSize = stream->readInt();
 		m_volumeLookupSize = stream->readInt();
+		m_gatherLocally = stream->readBool();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -105,6 +107,7 @@ public:
 		stream->writeInt(m_globalLookupSize);
 		stream->writeInt(m_causticLookupSize);
 		stream->writeInt(m_volumeLookupSize);
+		stream->writeBool(m_gatherLocally);
 	}
 
 	/// Configure the sampler for a specified amount of direct illumination samples
@@ -127,7 +130,8 @@ public:
 		const std::vector<Shape *> &shapes = scene->getShapes();
 		bool foundSpecular = false;
 		for (size_t i=0; i<shapes.size(); ++i) {
-			if (shapes[i]->getBSDF()->getType() & BSDF::EDelta) {
+			const BSDF *bsdf = shapes[i]->getBSDF();
+			if (bsdf && bsdf->getType() & BSDF::EDelta) {
 				foundSpecular = true;
 				break;
 			}
@@ -146,7 +150,7 @@ public:
 			/* Generate the global photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::ESurfacePhotons, m_globalPhotons,
-				m_granularity, m_maxDepth, m_rrDepth, job);
+				m_granularity, m_maxDepth, m_rrDepth, m_gatherLocally, job);
 
 			proc->bindResource("scene", sceneResID);
 			proc->bindResource("camera", cameraResID);
@@ -176,7 +180,7 @@ public:
 			/* Generate the caustic photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::ECausticPhotons, m_causticPhotons,
-				m_granularity, 2, m_rrDepth, job);
+				m_granularity, 2, m_rrDepth, m_gatherLocally, job);
 
 			proc->bindResource("scene", sceneResID);
 			proc->bindResource("sampler", qmcSamplerID);
@@ -205,7 +209,7 @@ public:
 			/* Generate the volume photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::EVolumePhotons, m_volumePhotons,
-				m_granularity, m_maxDepth, m_rrDepth, job);
+				m_granularity, m_maxDepth, m_rrDepth, m_gatherLocally, job);
 
 			proc->bindResource("scene", sceneResID);
 			proc->bindResource("sampler", qmcSamplerID);
@@ -413,6 +417,7 @@ private:
 	int m_directSamples, m_glossySamples;
 	int m_rrDepth;
 	int m_maxDepth, m_maxSpecularDepth;
+	bool m_gatherLocally;
 };
 
 MTS_IMPLEMENT_CLASS_S(PhotonMapIntegrator, false, SampleIntegrator)

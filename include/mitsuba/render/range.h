@@ -24,8 +24,10 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * A work unit specifying e.g. a range of particles to be traced
- * by a worker.
+ * \brief A work unit specifying a range of some quantity to be processed.
+ * 
+ * An example usage is in \ref ParticleProcess, where this class specifies
+ * sequences of particles to be traced.
  */
 class MTS_EXPORT_RENDER RangeWorkUnit : public WorkUnit {
 public:

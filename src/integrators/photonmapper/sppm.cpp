@@ -269,7 +269,7 @@ public:
 		/* Generate the global photon map */
 		ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 			GatherPhotonProcess::EAllSurfacePhotons, m_photonCount,
-			m_granularity, m_maxDepth-1, m_rrDepth, job);
+			m_granularity, m_maxDepth-1, m_rrDepth, true, job);
 
 		proc->bindResource("scene", sceneResID);
 		proc->bindResource("camera", cameraResID);

@@ -70,7 +70,7 @@ public:
 	};
 
 	// =============================================================
-	//! @{ \name ParallelProcess interface
+	//! @{ \name Implementation of the ParallelProcess interface
 	// =============================================================
 
 	virtual EStatus generateWork(WorkUnit *unit, int worker);
@@ -123,18 +123,36 @@ protected:
 class MTS_EXPORT_RENDER ParticleTracer : public WorkProcessor {
 public:
 	// =============================================================
-	//! @{ \name WorkProcessor interface
+	//! @{ \name Implementation of the WorkProcessor interface
 	// =============================================================
+
 	virtual ref<WorkUnit> createWorkUnit() const;
 	virtual void prepare();
 	virtual void process(const WorkUnit *workUnit, WorkResult *workResult, 
 		const bool &stop);
 	void serialize(Stream *stream, InstanceManager *manager) const;
+
 	//! @}
 	// =============================================================
+	
+	/**
+	 * \brief Handle a particle emission event
+	 *
+	 * To be overridden in a subclass. The default implementation
+	 * does nothing
+	 *
+	 * \param eRec
+	 *    Emission sampling record
+	 * \param medium
+	 *    Pointer to the current medium
+	 * \param time
+	 *    Time value associated with the particle
+	 */
+	virtual void handleEmission(const EmissionRecord &eRec,
+			const Medium *medium, Float time);
 
 	/**
-     * \brief Handle a surface interation event
+     * \brief Handle a surface interaction event
 	 *
 	 * To be overridden in a subclass. The default implementation
 	 * does nothing
@@ -158,7 +176,7 @@ public:
 		const Spectrum &weight);
 
     /**
-     * \brief Handle a medium interation event
+     * \brief Handle a medium interaction event
 	 *
 	 * To be overridden in a subclass. The default implementation
 	 * does nothing
@@ -174,7 +192,7 @@ public:
 	 * \param medium
 	 *    Pointer to the current medium
 	 * \param time
-	 *    Time value associated with the path
+	 *    Time value associated with the particle
 	 * \param weight
 	 *    Particle weight along the preceding subpath
      */

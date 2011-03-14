@@ -688,19 +688,25 @@ protected:
 	struct EdgeEventOrdering;
 
 public:
-	typedef typename KDTreeBase<AABBType>::size_type  size_type;
-	typedef typename KDTreeBase<AABBType>::index_type index_type;
-	typedef typename KDTreeBase<AABBType>::KDNode     KDNode;
-	typedef typename AABBType::value_type             value_type;
-	typedef typename AABBType::point_type             point_type;
-	typedef typename AABBType::vector_type            vector_type;
+	typedef KDTreeBase<AABBType>             Parent;
+	typedef typename Parent::size_type       size_type;
+	typedef typename Parent::index_type      index_type;
+	typedef typename Parent::KDNode          KDNode;
+	typedef typename AABBType::value_type    value_type;
+	typedef typename AABBType::point_type    point_type;
+	typedef typename AABBType::vector_type   vector_type;
+
+	using Parent::m_nodes;
+	using Parent::m_aabb;
+	using Parent::m_tightAABB;
+	using Parent::isBuilt;
 
 	/**
 	 * \brief Create a new kd-tree instance initialized with 
 	 * the default parameters.
 	 */
 	GenericKDTree() : m_indices(NULL) {
-		this->m_nodes = NULL;
+		m_nodes = NULL;
 		m_traversalCost = 15;
 		m_queryCost = 20;
 		m_emptySpaceBonus = 0.9f;
@@ -720,8 +726,8 @@ public:
 	virtual ~GenericKDTree() {
 		if (m_indices)
 			delete[] m_indices;
-		if (this->m_nodes)
-			freeAligned(this->m_nodes-1); // undo alignment shift
+		if (m_nodes)
+			freeAligned(m_nodes-1); // undo alignment shift
 	}
 
 	/**
@@ -903,7 +909,7 @@ protected:
 	 */
 	void buildInternal() {
 		/* Some samity checks */
-		if (this->isBuilt()) 
+		if (isBuilt()) 
 			KDLog(EError, "The kd-tree has already been built!");
 		if (m_traversalCost <= 0)
 			KDLog(EError, "The traveral cost must be > 0");
@@ -922,8 +928,8 @@ protected:
 		if (primCount == 0) {
 			KDLog(EWarn, "kd-tree contains no geometry!");
 			// +1 shift is for alignment purposes (see KDNode::getSibling)
-			this->m_nodes = static_cast<KDNode *>(allocAligned(sizeof(KDNode) * 2))+1;
-			this->m_nodes[0].initLeafNode(0, 0);
+			m_nodes = static_cast<KDNode *>(allocAligned(sizeof(KDNode) * 2))+1;
+			m_nodes[0].initLeafNode(0, 0);
 			return;
 		}
 
@@ -941,7 +947,7 @@ protected:
 		index_type *indices = leftAlloc.allocate<index_type>(primCount);
 
 		ref<Timer> timer = new Timer();
-		AABBType &aabb = this->m_aabb;
+		AABBType &aabb = m_aabb;
 		aabb.reset();
 		for (index_type i=0; i<primCount; ++i) {
 			aabb.expandBy(cast()->getAABB(i));
@@ -1053,14 +1059,14 @@ protected:
 		m_indexCount = ctx.primIndexCount;
 
 		// +1 shift is for alignment purposes (see KDNode::getSibling)
-		this->m_nodes = static_cast<KDNode *> (allocAligned(
+		m_nodes = static_cast<KDNode *> (allocAligned(
 				sizeof(KDNode) * (m_nodeCount+1)))+1;
 		m_indices = new index_type[m_indexCount];
 
 		/* The following code rewrites all tree nodes with proper relative 
 		 * indices. It also computes the final tree cost and some other
 		 * useful heuristics */
-		stack.push(boost::make_tuple(prelimRoot, &this->m_nodes[nodePtr++], 
+		stack.push(boost::make_tuple(prelimRoot, &m_nodes[nodePtr++], 
 					&ctx, aabb));
 		while (!stack.empty()) {
 			const KDNode *node = boost::get<0>(stack.top());
@@ -1107,7 +1113,7 @@ protected:
 				else 
 					left = m_indirections[node->getIndirectionIndex()];
 
-				KDNode *children = &this->m_nodes[nodePtr];
+				KDNode *children = &m_nodes[nodePtr];
 				nodePtr += 2;
 				int axis = node->getAxis();
 				float split = node->getSplit();
@@ -1157,7 +1163,7 @@ protected:
 
 		/* Slightly enlarge the bounding box 
 		   (necessary e.g. when the scene is planar) */
-		this->m_tightAABB = aabb;
+		m_tightAABB = aabb;
 		aabb.min -= (aabb.max-aabb.min) * Epsilon
 			+ vector_type(Epsilon);
 		aabb.max += (aabb.max-aabb.min) * Epsilon

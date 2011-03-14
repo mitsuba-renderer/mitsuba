@@ -268,7 +268,7 @@ public:
 	 * \brief Is this process strictly local?
 	 *
 	 * If a process is marked as local, it shouldn't be distributed 
-	 * to remote processing nodes? The default implementation 
+	 * to remote processing nodes. The default implementation 
 	 * returns false.
 	 */
 	virtual bool isLocal() const;

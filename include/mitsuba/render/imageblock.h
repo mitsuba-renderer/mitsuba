@@ -71,11 +71,6 @@ public:
 	/// Add another image block to this one
 	void add(const ImageBlock *block);
 
-	/* WorkResult interface */
-	void load(Stream *stream);
-	void save(Stream *stream) const;
-	std::string toString() const;
-
 	/**
 	 * \brief Add a sample to the image block -- returns false if the 
 	 * sample contains invalid values (negative/NaN)
@@ -313,6 +308,17 @@ public:
 	 * special flags etc. associated with this block)
 	 */
 	inline void setExtra(int32_t value) { extra = value; }
+
+	// ======================================================================
+	//! @{ \name Implementation of the WorkResult interface
+	// ======================================================================
+
+	void load(Stream *stream);
+	void save(Stream *stream) const;
+	std::string toString() const;
+
+	//! @}
+	// ======================================================================
 
 	MTS_DECLARE_CLASS()
 protected:

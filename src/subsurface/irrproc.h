@@ -40,9 +40,9 @@ public:
 	}
 
 	/**
-	 * \param _p The sample point on the surface
-	 * \param _E The irradiance value at this point
-	 * \param _area The surface area associated with that sample
+	 * \param p The sample point on the surface
+	 * \param E The irradiance value at this point
+	 * \param area The surface area associated with that sample
 	 */
 	inline IrradianceSample(const Point &p, const Spectrum &E, Float area) 
 		: p(p), E(E), area(area) { }

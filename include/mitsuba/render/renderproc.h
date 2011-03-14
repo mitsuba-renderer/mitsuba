@@ -26,19 +26,29 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Parallel process for rendering with sampling-based integrators. Splits
- * an image into square pixel regions, which can be processed independently.
+ * \brief Parallel process for rendering with sampling-based integrators.
+ *
+ * Splits an image into independent rectangular pixel regions, which are
+ * then rendered in parallel.
+ *
+ * \sa SampleIntegrator
  */
 class MTS_EXPORT_RENDER BlockedRenderProcess : public BlockedImageProcess {
 public:
 	BlockedRenderProcess(const RenderJob *parent, RenderQueue *queue, 
 		int blockSize);
 
-	/* ParallelProcess interface */
+	// ======================================================================
+	//! @{ \name Implementation of the ParallelProcess interface
+	// ======================================================================
+
 	ref<WorkProcessor> createWorkProcessor() const;
 	void processResult(const WorkResult *result, bool cancelled);
 	void bindResource(const std::string &name, int id);
 	EStatus generateWork(WorkUnit *unit, int worker);
+	
+	//! @}
+	// ======================================================================
 
 	MTS_DECLARE_CLASS()
 protected:

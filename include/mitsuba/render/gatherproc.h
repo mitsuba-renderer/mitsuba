@@ -36,9 +36,9 @@ public:
 		ESurfacePhotons,
 		/// Caustic photons (indirect on diffuse surfaces, last bounce was through a delta BSDF)
 		ECausticPhotons,
-		/// Surface photons (all of them, even direct)
+		/// Surface photons (all of them, even direct illumination)
 		EAllSurfacePhotons,
-		/// Volumetric photons (multiple scattering only)
+		/// Volumetric photons
 		EVolumePhotons
 	};
 
@@ -50,20 +50,25 @@ public:
 	 *     Specifies the number of requested photons
 	 * \param granularity
 	 *     Size of the internally used work units (in photons)
+	 * \param isLocal
+	 *     Should the parallel process only be executed locally? (sending
+	 *     photons over the network may be unnecessary and wasteful)
 	 * \param progressReporterPayload
 	 *    Custom pointer payload to be delivered with progress messages
 	 */
 	GatherPhotonProcess(EGatherType type, size_t photonCount, 
-		size_t granularity, int maxDepth, int rrDepth,
+		size_t granularity, int maxDepth, int rrDepth, bool isLocal,
 		const void *progressReporterPayload);
 
 	/**
 	 * Once the process has finished, this returns a reference 
 	 * to the (still unbalanced) photon map
 	 */
-	inline PhotonMap *getPhotonMap() { return m_photonMap.get(); }
+	inline PhotonMap *getPhotonMap() { return m_photonMap; }
 
 	/**
+	 * \brief Return the number of discarded photons
+	 *
 	 * Due to asynchronous processing, some excess photons
 	 * will generally be produced. This function returns the number
 	 * of excess photons that had to be discarded. If this is too
@@ -72,14 +77,21 @@ public:
 	inline size_t getExcess() const { return m_excess; }
 	
 	/**
-	 * Lists the nuber of photons, which had to be shot
+	 * \brief Lists the nuber of photons that had to be shot
 	 * in order to fill the photon map.
 	 */
 	inline size_t getShotPhotons() const { return m_numShot; }
 
-	/* ParallelProcess implementation */
+	// ======================================================================
+	/// @{ \name ParallelProcess implementation
+	// ======================================================================
+
+	bool isLocal() const;
 	ref<WorkProcessor> createWorkProcessor() const; 
 	void processResult(const WorkResult *wr, bool cancelled);
+
+	/// @}
+	// ======================================================================
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -90,6 +102,7 @@ protected:
 	ref<PhotonMap> m_photonMap;
 	int m_maxDepth;
 	int m_rrDepth;
+	bool m_isLocal;
 	size_t m_excess, m_numShot;
 };
 

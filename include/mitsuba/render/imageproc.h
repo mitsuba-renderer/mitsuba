@@ -31,8 +31,14 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER BlockedImageProcess : public ParallelProcess {
 public:
-	/* ParallelProcess interface */
+	// ======================================================================
+	//! @{ \name Implementation of the ParallelProcess interface
+	// ======================================================================
+
 	virtual EStatus generateWork(WorkUnit *unit, int worker);
+	
+	//! @}
+	// ======================================================================
 
 	MTS_DECLARE_CLASS()
 protected:

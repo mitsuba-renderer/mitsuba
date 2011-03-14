@@ -98,13 +98,19 @@ private:
 template <typename Derived> 
 	class SAHKDTree3D : public GenericKDTree<AABB, SurfaceAreaHeuristic, Derived> {
 public:
-	typedef typename KDTreeBase<AABB>::size_type  size_type;
-	typedef typename KDTreeBase<AABB>::index_type index_type;
-	typedef typename KDTreeBase<AABB>::KDNode     KDNode;
+	typedef GenericKDTree<AABB, SurfaceAreaHeuristic, Derived> Parent;
+	typedef typename KDTreeBase<AABB>::size_type               size_type;
+	typedef typename KDTreeBase<AABB>::index_type              index_type;
+	typedef typename KDTreeBase<AABB>::KDNode                  KDNode;
+
+	using Parent::m_nodes;
+	using Parent::m_aabb;
+	using Parent::m_indices;
+	using Parent::cast;
 
 protected:
 	void buildInternal() {
-		size_type primCount = this->cast()->getPrimitiveCount();
+		size_type primCount = cast()->getPrimitiveCount();
 		KDLog(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
 		GenericKDTree<AABB, SurfaceAreaHeuristic, Derived>::buildInternal();
 	}
@@ -177,7 +183,7 @@ protected:
 		stack[exPt].node = NULL;
 	
 		bool foundIntersection = false;
-		const KDNode * __restrict currNode = this->m_nodes;
+		const KDNode * __restrict currNode = m_nodes;
 		while (currNode != NULL) {
 			while (EXPECT_TAKEN(!currNode->isLeaf())) {
 				const Float splitVal = (Float) currNode->getSplit();
@@ -247,7 +253,7 @@ protected:
 			/* Reached a leaf node */
 			for (index_type entry=currNode->getPrimStart(),
 					last = currNode->getPrimEnd(); entry != last; entry++) {
-				const index_type primIdx = this->m_indices[entry];
+				const index_type primIdx = m_indices[entry];
 	
 				#if defined(MTS_KD_MAILBOX_ENABLED)
 				if (mailbox.contains(primIdx)) 
@@ -256,9 +262,9 @@ protected:
 	
 				bool result;
 				if (!shadowRay)
-					result = this->cast()->intersect(ray, primIdx, mint, maxt, t, temp);
+					result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
 				else
-					result = this->cast()->intersect(ray, primIdx, mint, maxt);
+					result = cast()->intersect(ray, primIdx, mint, maxt);
 	
 				if (result) {
 					if (shadowRay)
@@ -313,7 +319,7 @@ protected:
 		uint64_t timer = rdtsc();
 		bool foundIntersection = false;
 	
-		const KDNode * __restrict currNode = this->m_nodes;
+		const KDNode * __restrict currNode = m_nodes;
 		while (currNode != NULL) {
 			while (EXPECT_TAKEN(!currNode->isLeaf())) {
 				const Float splitVal = (Float) currNode->getSplit();
@@ -370,10 +376,10 @@ protected:
 			/* Reached a leaf node */
 			for (unsigned int entry=currNode->getPrimStart(),
 					last = currNode->getPrimEnd(); entry != last; entry++) {
-				const index_type primIdx = this->m_indices[entry];
+				const index_type primIdx = m_indices[entry];
 	
 				++numIntersections;
-				bool result = this->cast()->intersect(ray, primIdx, mint, maxt, t, temp);
+				bool result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
 	
 				if (result) {
 					maxt = t;
@@ -402,7 +408,7 @@ protected:
 		KDStackEntry stack[MTS_KD_MAXDEPTH];
 		int stackPos = 0;
 		Float mint = mint_, maxt=maxt_;
-		const KDNode *node = this->m_nodes;
+		const KDNode *node = m_nodes;
 		bool foundIntersection = false;
 	
 		while (node != NULL) {
@@ -436,13 +442,13 @@ protected:
 			} else {
 				for (unsigned int entry=node->getPrimStart(),
 						last = node->getPrimEnd(); entry != last; entry++) {
-					const index_type primIdx = this->m_indices[entry];
+					const index_type primIdx = m_indices[entry];
 	
 					bool result;
 					if (!shadowRay)
-						result = this->cast()->intersect(ray, primIdx, mint, maxt, t, temp);
+						result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
 					else
-						result = this->cast()->intersect(ray, primIdx, mint, maxt);
+						result = cast()->intersect(ray, primIdx, mint, maxt);
 	
 					if (result) {
 						if (shadowRay)
@@ -477,7 +483,7 @@ protected:
 		KDStackEntry stack[MTS_KD_MAXDEPTH];
 		int stackPos = 0;
 		Float mint = mint_, maxt = maxt_;
-		const KDNode *node = this->m_nodes;
+		const KDNode *node = m_nodes;
 	
 		const int signs[3] = {
 			ray.d[0] >= 0 ? 1 : 0,
@@ -517,13 +523,13 @@ protected:
 			bool foundIntersection = false;
 			for (unsigned int entry=node->getPrimStart(),
 					last = node->getPrimEnd(); entry != last; entry++) {
-				const index_type primIdx = this->m_indices[entry];
+				const index_type primIdx = m_indices[entry];
 
 				bool result;
 				if (!shadowRay) {
-					result = this->cast()->intersect(ray, primIdx, mint, maxt, t, temp);
+					result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
 				} else {
-					result = this->cast()->intersect(ray, primIdx, mint, maxt);
+					result = cast()->intersect(ray, primIdx, mint, maxt);
 				}
 	
 				if (result) {
@@ -560,7 +566,7 @@ public:
 	void findCosts(Float &traversalCost, Float &intersectionCost) {
 		ref<Random> random = new Random();
 		uint8_t temp[128];
-		BSphere bsphere = this->m_aabb.getBSphere();
+		BSphere bsphere = m_aabb.getBSphere();
 		int nRays = 10000000, warmup = nRays/4;
 		Vector *A = new Vector[nRays-warmup];
 		Float *b = new Float[nRays-warmup];
@@ -573,7 +579,7 @@ public:
 			Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
 			Ray ray(p1, normalize(p2-p1), 0.0f);
 			Float mint, maxt, t;
-			if (this->m_aabb.rayIntersect(ray, mint, maxt)) {
+			if (m_aabb.rayIntersect(ray, mint, maxt)) {
 				if (ray.mint > mint) mint = ray.mint;
 				if (ray.maxt < maxt) maxt = ray.maxt;
 				if (EXPECT_TAKEN(maxt > mint)) {

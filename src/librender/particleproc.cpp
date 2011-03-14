@@ -32,7 +32,7 @@ ParticleProcess::ParticleProcess(EMode mode, size_t workCount, size_t granularit
 	/* Choose a suitable work unit granularity if none was specified */
 	if (m_granularity == 0)
 		m_granularity = std::max((size_t) 1, workCount /
-			(4 * Scheduler::getInstance()->getWorkerCount()));
+			(8 * Scheduler::getInstance()->getWorkerCount()));
 
 	/* Create a visual progress reporter */
 	m_progress = new ProgressReporter(progressText, workCount, 
@@ -59,6 +59,9 @@ ParallelProcess::EStatus ParticleProcess::generateWork(WorkUnit *unit, int worke
 
 		workUnitSize = m_granularity;
 	}
+
+	range->setRange(m_numGenerated, m_numGenerated + workUnitSize - 1);
+	m_numGenerated += workUnitSize;
 
 
 	return ESuccess;
@@ -106,6 +109,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 	ref<Camera> camera = m_scene->getCamera();
 	Float shutterOpen     = camera->getShutterOpen(), 
 		  shutterOpenTime = camera->getShutterOpenTime();
+	bool needsTimeSample = (shutterOpenTime != 0);
 
 	m_sampler->generate();
 	for (size_t index = range->getRangeStart(); index <= range->getRangeEnd() && !stop; ++index) {
@@ -117,7 +121,13 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 		m_scene->sampleEmission(eRec, areaSample, dirSample);
 		const Medium *medium = eRec.luminaire->getMedium();
 
-		ray = Ray(eRec.sRec.p, eRec.d, shutterOpen + shutterOpenTime * m_sampler->next1D());
+		ray = Ray(eRec.sRec.p, eRec.d, shutterOpen);
+		
+		if (needsTimeSample)
+			ray.time += shutterOpenTime * m_sampler->next1D();
+
+		handleEmission(eRec, medium, ray.time);
+
 		weight = eRec.value;
 		depth = 1;
 		caustic = true;
@@ -219,6 +229,9 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 		}
 	}
 }
+
+void ParticleTracer::handleEmission(const EmissionRecord &eRec,
+	const Medium *medium, Float time) { }
 
 void ParticleTracer::handleSurfaceInteraction(int depth, bool caustic,
 	const Intersection &its, const Medium *medium, const Spectrum &weight) { }
