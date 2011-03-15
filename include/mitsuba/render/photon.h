@@ -29,7 +29,7 @@ MTS_NAMESPACE_BEGIN
  * Requires 24 bytes when Mitsuba is compiled with single precision
  * and RGB-based color spectra.
  */
-struct Photon {
+struct MTS_EXPORT_RENDER Photon {
 	friend class PhotonMap;
 public:
 	// ======================================================================

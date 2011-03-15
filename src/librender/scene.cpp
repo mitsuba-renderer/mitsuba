@@ -420,7 +420,7 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 					medium = dot(n, d) > 0 ? shape->getExteriorMedium()
 						: shape->getInteriorMedium();
 				if (++iterations > 100) { /// Just a precaution..
-					Log(EWarn, "sampleAttenuatedLuminaire(): round-off error issues?");
+					Log(EWarn, "getTransmittance(): round-off error issues?");
 					break;
 				}
 			}
@@ -450,6 +450,30 @@ bool Scene::sampleAttenuatedLuminaire(const Point &p, Float time,
 	}
 	return false;
 }
+
+bool Scene::sampleAttenuatedLuminaire(const Intersection &its, 
+	const Medium *medium, LuminaireSamplingRecord &lRec, 
+	const Point2 &s) const {
+	Point2 sample(s);
+	Float lumPdf;
+	const Luminaire *luminaire = m_luminaires[
+		m_luminairePDF.sampleReuse(sample.x, lumPdf)];
+	luminaire->sample(its.p, lRec, sample);
+
+	if (lRec.pdf != 0) {
+		if (its.isMediumTransition())
+			medium = its.getTargetMedium(lRec.sRec.p - its.p);
+		lRec.value *= getTransmittance(its.p, lRec.sRec.p, its.time, medium);
+		if (lRec.value.isZero())
+			return false;
+		lRec.pdf *= lumPdf;
+		lRec.value /= lRec.pdf;
+		lRec.luminaire = luminaire;
+		return true;
+	}
+	return false;
+}
+
 
 void Scene::sampleEmission(EmissionRecord &eRec, Point2 &sample1, Point2 &sample2) const {
 	Float lumPdf;

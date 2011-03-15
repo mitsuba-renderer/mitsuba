@@ -106,13 +106,22 @@ public:
 	using Parent::m_nodes;
 	using Parent::m_aabb;
 	using Parent::m_indices;
-	using Parent::cast;
 
 protected:
 	void buildInternal() {
 		size_type primCount = cast()->getPrimitiveCount();
 		KDLog(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
 		GenericKDTree<AABB, SurfaceAreaHeuristic, Derived>::buildInternal();
+	}
+
+	/// Cast to the derived class
+	inline Derived *cast() {
+		return static_cast<Derived *>(this);
+	}
+
+	/// Cast to the derived class (const version)
+	inline const Derived *cast() const {
+		return static_cast<const Derived *>(this);
 	}
 
 	/**

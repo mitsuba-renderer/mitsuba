@@ -189,9 +189,6 @@ public:
 		return m_photons[pos];
 	}
 
-	/// Set the minimum amount of photons to consider an estimate valid
-	void setMinPhotons(int minPhotons);
-
 	/**
 	 * Serialize a photon map to a binary data stream
 	 */
@@ -328,7 +325,6 @@ private:
 	AABB m_aabb;
 	size_t m_photonCount;
 	size_t m_maxPhotons;
-	size_t m_minPhotons;
 	size_t m_lastInnerNode;
 	size_t m_lastRChildNode;
 	bool m_balanced;

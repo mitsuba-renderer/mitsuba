@@ -69,6 +69,13 @@ inline const Medium *Intersection::getTargetMedium(const Vector &d) const {
 	else
 		return shape->getInteriorMedium();
 }
+	
+inline const Medium *Intersection::getTargetMedium(Float cosTheta) const {
+	if (cosTheta > 0)
+		return shape->getExteriorMedium();
+	else
+		return shape->getInteriorMedium();
+}
 
 inline LuminaireSamplingRecord::LuminaireSamplingRecord(const Intersection &its, const Vector &dir) {
 	sRec.p = its.p;

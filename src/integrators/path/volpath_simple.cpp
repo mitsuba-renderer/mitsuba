@@ -130,8 +130,6 @@ public:
 					if (rRec.type & RadianceQueryRecord::EEmittedRadiance) 
 						Li += pathThroughput * scene->LeBackground(ray);
 					break;
-				} else if (its.isMediumTransition()) {
-					rRec.medium = its.getTargetMedium(ray.d);
 				}
 
 				computeIntersection = true;
@@ -140,6 +138,8 @@ public:
 
 				if (!bsdf) {
 					/* Pass right through the surface (there is no BSDF) */
+					if (its.isMediumTransition())
+						rRec.medium = its.getTargetMedium(ray.d);
 					ray.setOrigin(its.p);
 					continue;
 				}
@@ -158,7 +158,7 @@ public:
 
 				/* Estimate the direct illumination if this is requested */
 				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
-					scene->sampleAttenuatedLuminaire(its.p, ray.time, rRec.medium, lRec, rRec.nextSample2D())) {
+					scene->sampleAttenuatedLuminaire(its, rRec.medium, lRec, rRec.nextSample2D())) {
 					/* Allocate a record for querying the BSDF */
 					const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 					Li += pathThroughput * lRec.value * bsdf->fCos(bRec);
@@ -173,9 +173,14 @@ public:
 				Spectrum bsdfVal = bsdf->sampleCos(bRec, rRec.nextSample2D());
 				if (bsdfVal.isZero()) 
 					break;
+	
+				Vector wo = its.toWorld(bRec.wo);
+
+				if (its.isMediumTransition())
+					rRec.medium = its.getTargetMedium(wo);
 
 				/* In the next iteration, trace a ray in this direction */
-				ray = Ray(its.p, its.toWorld(bRec.wo), ray.time);
+				ray = Ray(its.p, wo, ray.time);
 
 				/* ==================================================================== */
 				/*                         Indirect illumination                        */

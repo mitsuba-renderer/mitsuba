@@ -178,12 +178,13 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				if (bsdf)
 					handleSurfaceInteraction(depth, caustic, its, medium, weight);
 
-				if (its.isMediumTransition())
-					medium = its.getTargetMedium(ray.d);
-
 				if (!bsdf) {
 					/* Pass right through the surface (there is no BSDF) */
 					ray.setOrigin(its.p);
+
+					if (its.isMediumTransition())
+						medium = its.getTargetMedium(ray.d);
+
 					++depth;
 					continue;
 				}
@@ -217,6 +218,9 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 || 
 					woDotGeoN * Frame::cosTheta(bRec.wo) <= 0)
 					break;
+
+				if (its.isMediumTransition())
+					medium = its.getTargetMedium(woDotGeoN);
 
 				/* Adjoint BSDF for shading normals -- [Veach, p. 155] */
 				weight *= std::abs(

@@ -52,19 +52,11 @@ public:
 		m_globalLookupRadiusRel = props.getFloat("globalLookupRadius", 0.05f);
 		/* Radius of lookups in the caustic photon map (relative to the scene size) */
 		m_causticLookupRadiusRel = props.getFloat("causticLookupRadius", 0.0125f);
-		/* Radius of lookups in the volumetric photon map (relative to the scene size) */
-		m_volumeLookupRadiusRel = props.getFloat("volumeLookupRadius", 0.05f);
-		/* Minimum amount of photons to consider a global photon map lookup valid */
-		m_globalMinPhotons = props.getInteger("globalMinPhotons", 8);
-		/* Minimum amount of photons to consider a caustic photon map lookup valid */
-		m_causticMinPhotons = props.getInteger("causticMinPhotons", 100);
 		/* Minimum amount of photons to consider a volumetric photon map lookup valid */
-		m_volumeMinPhotons = props.getInteger("volumeMinPhotons", 8);
-		/* Maximum number of results for global photon map lookups */
 		m_globalLookupSize = props.getInteger("globalLookupSize", 200);
 		/* Maximum number of results for caustic photon map lookups */
 		m_causticLookupSize = props.getInteger("causticLookupSize", 200);
-		/* Maximum number of results for volumetric photon map lookups */
+		/* Approximate number of volume photons to be used in a lookup */
 		m_volumeLookupSize = props.getInteger("volumeLookupSize", 200);
 		/* Should photon gathering steps exclusively run on the local machine? */
 		m_gatherLocally = props.getBoolean("gatherLocally", true);
@@ -81,10 +73,6 @@ public:
 		m_volumePhotons = stream->readSize();
 		m_globalLookupRadius = stream->readFloat();
 		m_causticLookupRadius = stream->readFloat();
-		m_volumeLookupRadius = stream->readFloat();
-		m_globalMinPhotons = stream->readInt();
-		m_causticMinPhotons = stream->readInt();
-		m_volumeMinPhotons = stream->readInt();
 		m_globalLookupSize = stream->readInt();
 		m_causticLookupSize = stream->readInt();
 		m_volumeLookupSize = stream->readInt();
@@ -101,10 +89,6 @@ public:
 		stream->writeSize(m_volumePhotons);
 		stream->writeFloat(m_globalLookupRadius);
 		stream->writeFloat(m_causticLookupRadius);
-		stream->writeFloat(m_volumeLookupRadius);
-		stream->writeInt(m_globalMinPhotons);
-		stream->writeInt(m_causticMinPhotons);
-		stream->writeInt(m_volumeMinPhotons);
 		stream->writeInt(m_globalLookupSize);
 		stream->writeInt(m_causticLookupSize);
 		stream->writeInt(m_volumeLookupSize);
@@ -177,7 +161,6 @@ public:
 
 			m_globalPhotonMap = proc->getPhotonMap();
 			m_globalPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
-			m_globalPhotonMap->setMinPhotons(m_globalMinPhotons);
 			m_globalPhotonMap->balance();
 			m_globalPhotonMapID = sched->registerResource(m_globalPhotonMap);
 		}
@@ -208,15 +191,11 @@ public:
 
 			m_causticPhotonMap = proc->getPhotonMap();
 			m_causticPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
-			m_causticPhotonMap->setMinPhotons(m_causticMinPhotons);
 			m_causticPhotonMap->balance();
 			m_causticPhotonMapID = sched->registerResource(m_causticPhotonMap);
 		}
 
 		if (m_volumePhotonMap.get() == NULL && m_volumePhotons > 0) {
-			/* Adapt to scene extents */
-			m_volumeLookupRadius = m_volumeLookupRadiusRel * scene->getBSphere().radius;
-
 			/* Generate the volume photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::EVolumePhotons, m_volumePhotons,
@@ -241,7 +220,7 @@ public:
 			volumePhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
 			volumePhotonMap->balance();
 	
-			m_bre = new BeamRadianceEstimator(volumePhotonMap);
+			m_bre = new BeamRadianceEstimator(volumePhotonMap, m_volumeLookupSize);
 			m_breID = sched->registerResource(m_bre);
 		}
 
@@ -316,13 +295,16 @@ public:
 
 		const BSDF *bsdf = its.getBSDF(ray);
 				
-		if (its.isMediumTransition())
-			rRec.medium = its.getTargetMedium(ray.d);
-
 		if (bsdf == NULL) {
-			RadianceQueryRecord rRec2;
-			rRec2.recursiveQuery(rRec);
-			LiSurf += m_parentIntegrator->Li(RayDifferential(its.p, ray.d, ray.time), rRec2);
+			if (rRec.depth+1 < m_maxSpecularDepth) {
+				RadianceQueryRecord rRec2;
+				rRec2.recursiveQuery(rRec);
+	
+				if (its.isMediumTransition())
+					rRec2.medium = its.getTargetMedium(ray.d);
+
+				LiSurf += m_parentIntegrator->Li(RayDifferential(its.p, ray.d, ray.time), rRec2);
+			}
 			return LiSurf * transmittance + LiMedium;
 		}
 
@@ -344,7 +326,7 @@ public:
 			Float weight = 1 / (Float) numDirectSamples;
 
 			for (int i=0; i<numDirectSamples; ++i) {
-				if (rRec.scene->sampleLuminaire(its.p, ray.time, lRec, sampleArray[i])) {
+				if (rRec.scene->sampleAttenuatedLuminaire(its, rRec.medium, lRec, sampleArray[i])) {
 					/* Allocate a record for querying the BSDF */
 					const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 
@@ -435,12 +417,9 @@ private:
 	SampleIntegrator *m_parentIntegrator;
 	int m_globalPhotonMapID, m_causticPhotonMapID, m_breID;
 	size_t m_globalPhotons, m_causticPhotons, m_volumePhotons;
-	int m_globalMinPhotons, m_globalLookupSize;
-	int m_causticMinPhotons, m_causticLookupSize;
-	int m_volumeMinPhotons, m_volumeLookupSize;
+	int m_globalLookupSize, m_causticLookupSize, m_volumeLookupSize;
 	Float m_globalLookupRadiusRel, m_globalLookupRadius;
 	Float m_causticLookupRadiusRel, m_causticLookupRadius;
-	Float m_volumeLookupRadiusRel, m_volumeLookupRadius;
 	int m_granularity;
 	int m_directSamples, m_glossySamples;
 	int m_rrDepth;

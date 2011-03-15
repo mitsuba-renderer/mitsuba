@@ -35,7 +35,7 @@ public:
 	 * \brief Create a BRE acceleration data structure from
 	 * an existing volumetric photon map
 	 */
-	BeamRadianceEstimator(const PhotonMap *pmap);
+	BeamRadianceEstimator(const PhotonMap *pmap, size_t lookupSize);
 
 	/**
 	 * \brief Unserialize a BRE acceleration data structure from

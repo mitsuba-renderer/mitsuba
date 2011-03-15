@@ -17,15 +17,17 @@
 */
 
 #include <mitsuba/render/medium.h>
+#include <mitsuba/render/phase.h>
 #include "bre.h"
 
 MTS_NAMESPACE_BEGIN
 
-BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap) {
-	int n = 10;
+BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t lookupSize) {
+	size_t reducedLookupSize = std::sqrt(lookupSize);
+	Float sizeFactor = (Float) lookupSize/ (Float) reducedLookupSize;
 
 	PhotonMap::search_result *results = 
-		new PhotonMap::search_result[n+1];
+		new PhotonMap::search_result[reducedLookupSize+1];
 
 	m_photonCount = pmap->getPhotonCount();
 	m_scaleFactor = pmap->getScaleFactor();
@@ -42,8 +44,10 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap) {
 		node.photon = photon;
 
 		Float searchRadiusSqr = std::numeric_limits<Float>::infinity();
-		pmap->nnSearch(photon.getPosition(), searchRadiusSqr, n, results);
-		node.radius = std::sqrt(searchRadiusSqr);
+		pmap->nnSearch(photon.getPosition(), searchRadiusSqr, reducedLookupSize, results);
+
+		/* Compute photon radius based on a locally uniform density assumption */
+		node.radius = std::sqrt(searchRadiusSqr * sizeFactor);
 	}
 
 	Log(EInfo, "Generating a hierarchy for the beam radiance estimate");
@@ -110,7 +114,8 @@ Spectrum BeamRadianceEstimator::query(const Ray &ray, const Medium *medium) cons
 	size_t nNodes = 0;
 
 	const Spectrum &sigmaT = medium->getSigmaT();
-	const Spectrum &sigmaS = medium->getSigmaS();
+	const PhaseFunction *phase = medium->getPhaseFunction();
+	MediumSamplingRecord mRec;
 
 	while (stackPos > 0) {
 		const BRENode &node = m_nodes[index];
@@ -139,13 +144,14 @@ Spectrum BeamRadianceEstimator::query(const Ray &ray, const Medium *medium) cons
 		if (distSqr < radSqr) {
 			Float weight = K2(distSqr/radSqr)/radSqr;
 
-			Spectrum tau = Spectrum(-sigmaT * diskDistance).exp();
-			Spectrum contrib = tau * sigmaS * (1/(4*M_PI) * weight * m_scaleFactor)
-				* node.photon.getPower() * 1e8;
-			//cout << tau.toString() << " " << sigmaS.toString() << " " << weight << " " << m_scaleFactor << " " << node.photon.getPower().toString() << endl;
+			Vector wi = -node.photon.getDirection();
+
+			Spectrum transmittance = Spectrum(-sigmaT * diskDistance).exp();
+			result += transmittance * node.photon.getPower()
+				* phase->f(PhaseFunctionQueryRecord(mRec, wi, -ray.d)) *
+				(weight * m_scaleFactor);
 		}
 	}
-	cout << result.toString() << endl;
 
 	return result;
 }

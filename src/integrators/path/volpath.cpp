@@ -177,13 +177,13 @@ public:
 					if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
 						Li += pathThroughput * scene->LeBackground(ray);
 					break;
-				} else if (its.isMediumTransition()) {
-					rRec.medium = its.getTargetMedium(ray.d);
 				}
 
 				const BSDF *bsdf = its.getBSDF(ray);
 				if (!bsdf) {
 					/* Pass right through the surface (there is no BSDF) */
+					if (its.isMediumTransition())
+						rRec.medium = its.getTargetMedium(ray.d);
 					ray.setOrigin(its.p);
 					scene->rayIntersect(ray, its);
 					continue;
@@ -206,7 +206,7 @@ public:
 
 				/* Estimate the direct illumination if this is requested */
 				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
-					scene->sampleAttenuatedLuminaire(its.p, ray.time, rRec.medium, lRec, rRec.nextSample2D())) {
+					scene->sampleAttenuatedLuminaire(its, rRec.medium, lRec, rRec.nextSample2D())) {
 					/* Allocate a record for querying the BSDF */
 					const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 

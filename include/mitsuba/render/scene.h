@@ -253,7 +253,8 @@ public:
 	/**
 	 * \brief Convenience method - similar to \ref sampleLuminaire(), but also attenuates
 	 * \c lRec.value by the integrated extinction coefficient along the connection path.
-	 * A visibility test is always performed.
+	 * A visibility test is always performed. This function is meant to be used when 
+	 * \c p does not lie on a surface.
 	 *
 	 * \param p
 	 *     An arbitrary point in the scene
@@ -269,6 +270,25 @@ public:
      *    \c true if sampling was successful
 	 */
 	bool sampleAttenuatedLuminaire(const Point &p, Float time, 
+		const Medium *medium, LuminaireSamplingRecord &lRec, 
+		const Point2 &sample) const;
+
+	/**
+	 * \brief Convenience method - similar to \ref sampleLuminaire(), but also attenuates
+	 * \c lRec.value by the integrated extinction coefficient along the connection path.
+	 * A visibility test is always performed.
+	 *
+	 * \param its
+	 *     An arbitrary intersection
+	 * \param medium
+	 *    The medium located at the ray origin (or \c NULL for vacuum).
+	 * \param lRec
+	 *    A luminaire sampling record, which will hold information such 
+	 *    as the probability density, etc.
+	 * \return
+     *    \c true if sampling was successful
+	 */
+	bool sampleAttenuatedLuminaire(const Intersection &its, 
 		const Medium *medium, LuminaireSamplingRecord &lRec, 
 		const Point2 &sample) const;
 

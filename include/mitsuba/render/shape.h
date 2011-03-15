@@ -87,10 +87,21 @@ public:
 	inline bool isMediumTransition() const;
 	
 	/**
-	 * \brief When \c isMediumTransition() = \c true, 
-	 * determine the medium that contains the ray (\c this->p, \c d)
+	 * \brief Determine the target medium
+	 *
+	 * When \c isMediumTransition() = \c true, determine the medium that
+	 * contains the ray (\c this->p, \c d)
 	 */
 	inline const Medium *getTargetMedium(const Vector &d) const;
+
+	/**
+	 * \brief Determine the target medium based on the cosine
+	 * of the angle between the geometric normal and a direction
+	 *
+	 * Returns the exterior medium when \c cosTheta > 0 and
+	 * the interior medium when \c cosTheta <= 0.
+	 */
+	inline const Medium *getTargetMedium(Float cosTheta) const;
 
 	/**
 	 * Returns the BSDF of the intersected shape. The

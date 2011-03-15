@@ -62,8 +62,8 @@ Photon::Photon(Stream *stream) {
 }
 
 Photon::Photon(const Point &p, const Normal &normal,
-						  const Vector &dir, const Spectrum &P,
-						  uint16_t _depth) {
+			   const Vector &dir, const Spectrum &P,
+			   uint16_t _depth) {
 	if (P.isNaN()) 
 		SLog(EWarn, "Creating an invalid photon with power: %s", P.toString().c_str());
 

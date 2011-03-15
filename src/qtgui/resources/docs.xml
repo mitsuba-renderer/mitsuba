@@ -311,24 +311,22 @@
 			Parallel photon mapper with SSE-accelerated lookups. Uses an RGBE-based
 			encoding to reduce the storage footprint of photons.
 		</descr>
-		<param name="directSamples" readableName="Direct samples" type="integer" default="1">Number of luminaire samples for direct illumination</param>
+		<param name="directSamples" readableName="Direct samples" type="integer" default="32">Number of luminaire samples for direct illumination</param>
 		<param name="glossySamples" readableName="Glossy samples" type="integer" default="32">Number of glossy samples for direct illumination</param>
 		<param name="maxDepth" readableName="Maximum depth" type="integer" default="40">Depth cutoff when tracing photons</param>
 		<param name="maxSpecularDepth" readableName="Max. specular bounces" type="integer" default="6">Depth cutoff when recursively tracing specular materials</param>
-		<param name="granularity" readableName="Work unit granularity" importance="1" type="integer" default="1000">Granularity of photon tracing work units (in shot particles)</param>
+		<param name="causticLookupSize" readableName="Caustic photon map lookup size" type="integer" default="200">Amount of photons to consider in a caustic photon map lookup</param>
+		<param name="globalLookupSize" readableName="Global photon map lookup size" type="integer" default="200">Amount of photons to consider in a global photon map lookup</param>
+		<param name="volumeLookupSize" readableName="Volume photon map lookup size" type="integer" default="200">Amount of photons to consider in a volume photon map lookup</param>
+		<param name="granularity" readableName="Work unit granularity" importance="1" type="integer" default="0">Granularity of photon tracing work units (in shot particles, 0 => decide automatically</param>
 		<param name="rrDepth" readableName="Russian roulette starting depth" importance="1" type="integer" default="10">Depth to start using russian roulette when tracing photons</param>
 		<param name="globalPhotons" readableName="Global photons" type="integer" default="200000">Number of photons to collect for the global photon map</param>
 		<param name="causticPhotons" readableName="Caustic photons" type="integer" default="200000">Number of photons to collect for the caustic photon map (if applicable)</param>
 		<param name="volumePhotons" readableName="Volume photons" type="integer" default="200000">Number of photons to collect for the volume photon map (if applicable)</param>
 		<param name="globalLookupRadius" readableName="Lookup radius (global)" type="float" default="0.05">Radius of lookups in the global photon map (relative to the scene size)</param>
 		<param name="causticLookupRadius" readableName="Lookup radius (caustic)" type="float" default="0.0125">Radius of lookups in the caustic photon map (relative to the scene size)</param>
-		<param name="volumeLookupRadius" readableName="Lookup radius (volume)" type="float" default="0.05">Radius of lookups in the volume photon map (relative to the scene size)</param>
-		<param name="globalMinPhotons" readableName="Min. photons (global)" type="integer" importance="1" default="8">Minimum amount of photons to consider a global photon map lookup valid</param>
 		<param name="globalMaxPhotons" readableName="Max. photons (global)" type="integer" importance="1" default="200">Maximum amount of results for global photon map lookups</param>
-		<param name="causticMinPhotons" readableName="Min. photons (caustic)" type="integer" importance="1" default="100">Minimum amount of photons to consider a caustic photon map lookup valid</param>
 		<param name="causticMaxPhotons" readableName="Max. photons (caustic)" type="integer" importance="1" default="200">Maximum amount of results for caustic photon map lookups</param>
-		<param name="volumeMinPhotons" readableName="Min. photons (volume)" type="integer" importance="1" default="8">Minimum amount of photons to consider a volume photon map lookup valid</param>
-		<param name="volumeMaxPhotons" readableName="Max. photons (volume)" type="integer" importance="1" default="200">Maximum amount of results for volume photon map lookups</param>
 	</plugin>
 
 	<plugin type="integrator" name="ppm" readableName="Progressive photon mapper"

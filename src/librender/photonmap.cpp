@@ -24,8 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 PhotonMap::PhotonMap(size_t maxPhotons) 
- : m_photonCount(0), m_maxPhotons(maxPhotons), m_minPhotons(8),
-   m_balanced(false), m_scale(1.0f) {
+ : m_photonCount(0), m_maxPhotons(maxPhotons), m_balanced(false), m_scale(1.0f) {
 	Assert(Photon::m_precompTableReady);
 
 	/* For convenient heap addressing, the the photon list
@@ -37,7 +36,6 @@ PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager) {
 	m_aabb = AABB(stream);
 	m_balanced = stream->readBool();
 	m_maxPhotons = stream->readSize();
-	m_minPhotons = stream->readSize();
 	m_lastInnerNode = stream->readSize();
 	m_lastRChildNode = stream->readSize();
 	m_scale = (Float) stream->readFloat();
@@ -57,7 +55,6 @@ std::string PhotonMap::toString() const {
 		<< "  aabb = " << m_aabb.toString() << "," << endl
 		<< "  photonCount = " << m_photonCount << "," << endl
 		<< "  maxPhotons = " << m_maxPhotons << "," << endl
-		<< "  minPhotons = " << m_minPhotons << "," << endl
 		<< "  balanced = " << m_balanced << "," << endl
 		<< "  scale = " << m_scale << endl
 		<< "]";
@@ -70,7 +67,6 @@ void PhotonMap::serialize(Stream *stream, InstanceManager *manager) const {
 	m_aabb.serialize(stream);
 	stream->writeBool(m_balanced);
 	stream->writeSize(m_maxPhotons);
-	stream->writeSize(m_minPhotons);
 	stream->writeSize(m_lastInnerNode);
 	stream->writeSize(m_lastRChildNode);
 	stream->writeFloat(m_scale);
@@ -399,10 +395,6 @@ Spectrum PhotonMap::estimateIrradiance(const Point &p, const Normal &n,
 		* sizeof(search_result)));
 	size_t resultCount = nnSearch(p, distSquared, maxPhotons, results);
 
-	/* Avoid very noisy estimates */
-	if (resultCount < m_minPhotons)
-		return result;
-
 	/* Sum over all contributions */
 	for (size_t i=0; i<resultCount; i++) {
 		const Photon &photon = *results[i].second;
@@ -431,10 +423,6 @@ Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n,
 	Float distSquared = searchRadius*searchRadius;
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
 	size_t resultCount = nnSearch(p, distSquared, maxPhotons, results);
-
-	/* Avoid very noisy estimates */
-	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
-		return result;
 
 	/* Sum over all contributions */
 	for (size_t i=0; i<resultCount; i++) {
@@ -468,10 +456,6 @@ Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n,
 	Float distSquared = searchRadius*searchRadius;
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
 	size_t resultCount = nnSearch(p, distSquared, maxPhotons, results);
-
-	/* Avoid very noisy estimates */
-	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
-		return Spectrum(0.0f);
 
 	/* Sum over all contributions */
 	for (size_t i=0; i<resultCount; i++) {
@@ -518,10 +502,6 @@ Spectrum PhotonMap::estimateRadianceFiltered(const Intersection &its,
 	Float distSquared = searchRadius*searchRadius;
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
 	size_t resultCount = nnSearch(its.p, distSquared, maxPhotons, results);
-
-	/* Avoid very noisy estimates */
-	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
-		return Spectrum(0.0f);
 
 	/* Sum over all contributions */
 	for (size_t i=0; i<resultCount; i++) {
@@ -630,10 +610,6 @@ Spectrum PhotonMap::estimateVolumeRadiance(const MediumSamplingRecord &mRec, con
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
 	size_t resultCount = nnSearch(ray.o, distSquared, maxPhotons, results);
 
-	/* Avoid very noisy estimates */
-	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
-		return Spectrum(0.0f);
-
 	const PhaseFunction *phase = medium->getPhaseFunction();
 	Vector wo = -ray.d;
 
@@ -649,10 +625,6 @@ Spectrum PhotonMap::estimateVolumeRadiance(const MediumSamplingRecord &mRec, con
 	return result * (m_scale / volFactor);
 }
 
-void PhotonMap::setMinPhotons(int minPhotons) {
-	m_minPhotons = minPhotons;
-}
-	
 void PhotonMap::dumpOBJ(const std::string &filename) {
 	std::ofstream os(filename.c_str());
 	os << "o Photons" << endl;
