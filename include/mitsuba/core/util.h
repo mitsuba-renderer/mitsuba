@@ -353,6 +353,44 @@ template <typename VectorType> inline Float unitAngle(const VectorType &u, const
 /// Turn a memory size into a human-readable string
 extern MTS_EXPORT_CORE std::string memString(size_t size);
 
+/**
+ * This algorithm is based on Donald Knuth's book
+ * "The Art of Computer Programming, Volume 3: Sorting and Searching"
+ * (1st edition, section 5.2, page 595)
+ *
+ * Given a permutation and an array of values, it applies the permutation
+ * in linear time without requiring additional memory. This is based on
+ * the fact that each permutation can be decomposed into a disjoint set
+ * of permutations, which can then be applied individually.
+ */
+template <typename T> void permute_inplace(T *values, std::vector<size_t> &perm) {
+	for (size_t i=0; i<perm.size(); i++) {
+		if (perm[i] != i) {
+			/* The start of a new cycle has been found. Save
+			   the value at this position, since it will be
+			   overwritten */
+			size_t j = i;
+			T curval = values[i];
+
+			do {
+				/* Shuffle backwards */
+				size_t k = perm[j];
+				values[j] = values[k];
+
+				/* Also fix the permutations on the way */
+				perm[j] = j;
+				j = k;
+
+				/* Until the end of the cycle has been found */
+			} while (perm[j] != i);
+
+			/* Fix the final position with the saved value */
+			values[j] = curval;
+			perm[j] = j;
+		}
+	}
+}
+
 /*! @} */
 
 MTS_NAMESPACE_END

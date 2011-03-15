@@ -42,6 +42,11 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER PhotonMap : public SerializableObject {
 public:
+	typedef Photon *photon_ptr;
+	typedef const Photon *const_photon_ptr;
+	typedef std::vector<photon_ptr>::iterator photon_iterator;
+	typedef std::pair<float, const_photon_ptr> search_result;
+
     /* ===================================================================== */
     /*                        Public access methods                          */
     /* ===================================================================== */
@@ -178,9 +183,9 @@ public:
 		return m_balanced;
 	}
 
-	/// Return the position of a photon in the photon map (for debugging)
-	inline Point getPhotonPosition(size_t i) const {
-		return m_photons[i].getPosition();
+	/// Return a photon in the photon map
+	inline const Photon &getPhoton(size_t pos) const {
+		return m_photons[pos+1];
 	}
 
 	/// Set the minimum amount of photons to consider an estimate valid
@@ -194,23 +199,35 @@ public:
 	/// Dump the photons to an OBJ file to analyze their spatial distribution
 	void dumpOBJ(const std::string &filename);
 	
-	/// Initialize the static lookup tables (executed once at program startup)
-	static bool createPrecompTables();
-
 	/// Return a string representation
 	std::string toString() const;
+
+	/**
+	 * Perform a new nearest-neighbor search query
+	 *
+	 * \param pos
+	 * 		Nearest-neighbor search position
+	 * \param searchRadiusSquared
+	 * 		Squared search radius - is updated should the search
+	 *      radius be decreased
+	 * \param maxSize
+	 * 		Maximum number of photons, which will be returned. If
+	 * 		this value is ever exceeded, the search uses a priority
+	 * 		queue to only return the closest entries
+	 * \param results
+	 *      Pre-allocated search result data structure. Should have
+	 *      one extra entry for internal use. 
+	 * \return
+	 *      The number of results
+	 */
+	size_t nnSearch(const Point &p, Float &searchRadiusSquared, 
+		size_t maxSize, search_result *results) const;
 
 	MTS_DECLARE_CLASS()
 protected:
     /* ===================================================================== */
     /*                      Protected data structures                        */
     /* ===================================================================== */
-
-	typedef Photon *photon_ptr;
-	typedef const Photon *const_photon_ptr;
-
-	typedef std::vector<photon_ptr>::iterator photon_iterator;
-	typedef std::pair<float, const_photon_ptr> search_result;
 
 	/// \cond
 	/* Photon position comparison functor (< comparison). */
@@ -261,27 +278,6 @@ protected:
 
 	/// Virtual destructor
 	virtual ~PhotonMap();
-
-	/**
-	 * Perform a new nearest-neighbor search query
-	 *
-	 * \param pos
-	 * 		Nearest-neighbor search position
-	 * \param searchRadiusSquared
-	 * 		Squared search radius - is updated should the search
-	 *      radius be decreased
-	 * \param maxSize
-	 * 		Maximum number of photons, which will be returned. If
-	 * 		this value is ever exceeded, the search uses a priority
-	 * 		queue to only return the closest entries
-	 * \param results
-	 *      Pre-allocated search result data structure. Should have
-	 *      one extra entry for internal use. 
-	 * \return
-	 *      The number of results
-	 */
-	size_t nnSearch(const Point &p, Float &searchRadiusSquared, 
-		size_t maxSize, search_result *results) const;
 
 	/**
 	 * Partition a list of photons so that there is an ordering between
