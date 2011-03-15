@@ -53,11 +53,11 @@ public:
 		/* Radius of lookups in the caustic photon map (relative to the scene size) */
 		m_causticLookupRadiusRel = props.getFloat("causticLookupRadius", 0.0125f);
 		/* Minimum amount of photons to consider a volumetric photon map lookup valid */
-		m_globalLookupSize = props.getInteger("globalLookupSize", 200);
+		m_globalLookupSize = props.getInteger("globalLookupSize", 120);
 		/* Maximum number of results for caustic photon map lookups */
-		m_causticLookupSize = props.getInteger("causticLookupSize", 200);
+		m_causticLookupSize = props.getInteger("causticLookupSize", 120);
 		/* Approximate number of volume photons to be used in a lookup */
-		m_volumeLookupSize = props.getInteger("volumeLookupSize", 200);
+		m_volumeLookupSize = props.getInteger("volumeLookupSize", 120);
 		/* Should photon gathering steps exclusively run on the local machine? */
 		m_gatherLocally = props.getBoolean("gatherLocally", true);
 	}
