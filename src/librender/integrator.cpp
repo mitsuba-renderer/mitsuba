@@ -93,7 +93,7 @@ bool SampleIntegrator::render(Scene *scene,
 
 	size_t nCores = sched->getCoreCount();
 	const Sampler *sampler = static_cast<const Sampler *>(sched->getResource(samplerResID, 0));
-	uint64_t sampleCount = sampler->getSampleCount();
+	size_t sampleCount = sampler->getSampleCount();
 
 	Log(EInfo, "Starting render job (%ix%i, %lld %s, " SIZE_T_FMT 
 		" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y, 
@@ -152,7 +152,7 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 				if (stop) 
 					break;
 				sampler->generate();
-				for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
+				for (size_t j = 0; j<sampler->getSampleCount(); j++) {
 					rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
@@ -176,7 +176,7 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 					break;
 				sampler->generate();
 				mean = meanSqr = Spectrum(0.0f);
-				for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
+				for (size_t j = 0; j<sampler->getSampleCount(); j++) {
 					rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
@@ -214,7 +214,7 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 					if (stop) 
 						break;
 					sampler->generate();
-					for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
+					for (size_t j = 0; j<sampler->getSampleCount(); j++) {
 						rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 						if (needsLensSample)
 							lensSample = rRec.nextSample2D();
@@ -239,7 +239,7 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 						break;
 					sampler->generate();
 					mean = meanSqr = Spectrum(0.0f);
-					for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
+					for (size_t j = 0; j<sampler->getSampleCount(); j++) {
 						rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 						if (needsLensSample)
 							lensSample = rRec.nextSample2D();

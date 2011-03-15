@@ -497,7 +497,7 @@ void latinHypercube(Random *random, Float *dest, int nSamples, int nDim) {
 			dest[nDim * i + j] = (i + random->nextFloat()) * delta;
 	for (int i = 0; i < nDim; ++i) {
 		for (int j = 0; j < nSamples; ++j) {
-			int other = random->nextInteger(nSamples);
+			int other = random->nextUInt(nSamples);
 			std::swap(dest[nDim * j + i], dest[nDim * other + i]);
 		}
 	}

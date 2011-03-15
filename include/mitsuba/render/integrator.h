@@ -379,7 +379,7 @@ public:
 	 */
 	virtual void wakeup(std::map<std::string, SerializableObject *> &params);
 
-	/// Serialize this integrator to disk
+	/// Serialize this integrator to a binary data stream
 	void serialize(Stream *stream, InstanceManager *manager) const;
 
 	MTS_DECLARE_CLASS()
@@ -404,7 +404,7 @@ protected:
  */
 class MTS_EXPORT_RENDER MonteCarloIntegrator : public SampleIntegrator {
 public:
-	/// Serialize this integrator to disk
+	/// Serialize this integrator to a binary data stream
 	void serialize(Stream *stream, InstanceManager *manager) const;
 
 	MTS_DECLARE_CLASS()

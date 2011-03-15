@@ -45,7 +45,7 @@ public:
 
 	LowDiscrepancySampler(const Properties &props) : Sampler(props) {
 		/* Number of samples per pixel when used with a sampling-based integrator */
-		m_sampleCount = (uint64_t) props.getLong("sampleCount", 4);
+		m_sampleCount = props.getSize("sampleCount", 4);
 
 		/* Depth, up to which which low discrepancy samples are guaranteed to be available. */
 		m_depth = props.getInteger("depth", 3);
@@ -122,35 +122,35 @@ public:
 		sample.y = sobol2(n, scramble[1]);
 	}
 
-	inline void generate1D(Float *samples, unsigned int sampleCount) {
-		uint32_t scramble = m_random->nextLong() & 0xFFFFFFFF;
-		for (unsigned int i = 0; i < sampleCount; ++i)
+	inline void generate1D(Float *samples, size_t sampleCount) {
+		uint32_t scramble = m_random->nextULong() & 0xFFFFFFFF;
+		for (size_t i = 0; i < sampleCount; ++i)
 			samples[i] = vanDerCorput(i, scramble);
 		m_random->shuffle(samples, samples + sampleCount);
 	}
 
-	inline void generate2D(Point2 *samples, unsigned int sampleCount) {
+	inline void generate2D(Point2 *samples, size_t sampleCount) {
 		union {
 			uint64_t qword;
 			uint32_t dword[2];
 		} scramble;
-		scramble.qword = m_random->nextLong();
-		for (unsigned int i = 0; i < sampleCount; ++i)
+		scramble.qword = m_random->nextULong();
+		for (size_t i = 0; i < sampleCount; ++i)
 			sample02(i, scramble.dword, samples[i]);
 		m_random->shuffle(samples, samples + sampleCount);
 	}
 
 	void generate() {
 		for (int i=0; i<m_depth; ++i) {
-			generate1D(m_samples1D[i], (unsigned int) m_sampleCount);
-			generate2D(m_samples2D[i], (unsigned int) m_sampleCount);
+			generate1D(m_samples1D[i], m_sampleCount);
+			generate2D(m_samples2D[i], m_sampleCount);
 		}
 		
 		for (size_t i=0; i<m_req1D.size(); i++)
-			generate1D(m_sampleArrays1D[i], (unsigned int) m_sampleCount * m_req1D[i]);
+			generate1D(m_sampleArrays1D[i], m_sampleCount * m_req1D[i]);
 
 		for (size_t i=0; i<m_req2D.size(); i++)
-			generate2D(m_sampleArrays2D[i], (unsigned int) m_sampleCount * m_req2D[i]);
+			generate2D(m_sampleArrays2D[i], m_sampleCount * m_req2D[i]);
 
 		m_sampleIndex = 0;
 		m_sampleDepth1D = m_sampleDepth2D = 0;
@@ -163,7 +163,7 @@ public:
 		m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
 	}
 	
-	void setSampleIndex(uint64_t sampleIndex) {
+	void setSampleIndex(size_t sampleIndex) {
 		m_sampleIndex = sampleIndex;
 		m_sampleDepth1D = m_sampleDepth2D = 0;
 		m_sampleDepth1DArray = m_sampleDepth2DArray = 0;

@@ -39,7 +39,7 @@ public:
 
 	HaltonSequence(const Properties &props) : Sampler(props) {
 		/* Number of samples per pixel when used with a sampling-based integrator */
-		m_sampleCount = (uint64_t) props.getLong("sampleCount", 1);
+		m_sampleCount = props.getSize("sampleCount", 1);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -64,7 +64,7 @@ public:
 		m_sampleIndex++;
 	}
 
-	void setSampleIndex(uint64_t sampleIndex) {
+	void setSampleIndex(size_t sampleIndex) {
 		m_sampleDepth = 0;
 		m_sampleIndex = sampleIndex;
 	}

@@ -86,7 +86,7 @@ public:
 	/// Configure the film
 	virtual void configure();
 	
-	/// Serialize this film to disk
+	/// Serialize this film to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 	
 	/// Does the destination already exist?

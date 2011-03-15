@@ -92,15 +92,9 @@ public:
  */
 class MTS_EXPORT_RENDER Medium : public NetworkedObject {
 public:
-	/** 
-	 * \brief Compute the transmittance along a ray segment
-	 *
-	 * Computes the transmittance along a ray segment 
-	 * [mint, maxt] associated with the ray. It is assumed
-	 * that the ray has a normalized direction value.
-	 *
-	 */
-	virtual Spectrum getTransmittance(const Ray &ray) const = 0;
+	// =============================================================
+	//! @{ \name Medium sampling strategy
+	// =============================================================
 
 	/**
 	 * \brief Sample a distance along the ray segment [mint, maxt]
@@ -117,7 +111,7 @@ public:
 		MediumSamplingRecord &mRec, Sampler *sampler) const = 0;
 
 	/**
-	 * \brief Compute the density of sampling distance \a t along the 
+	 * \brief Compute the 1D density of sampling distance \a t along the 
 	 * ray using the sampling strategy implemented by \a sampleDistance. 
 	 *
 	 * The function computes the continuous densities in the case of
@@ -129,8 +123,43 @@ public:
 	virtual void pdfDistance(const Ray &ray, Float t, 
 		MediumSamplingRecord &mRec) const = 0;
 
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Functions for querying the medium
+	// =============================================================
+
+	/** 
+	 * \brief Compute the transmittance along a ray segment
+	 *
+	 * Computes the transmittance along a ray segment 
+	 * [mint, maxt] associated with the ray. It is assumed
+	 * that the ray has a normalized direction value.
+	 */
+	virtual Spectrum getTransmittance(const Ray &ray) const = 0;
+
 	/// Return the phase function of this medium
 	inline const PhaseFunction *getPhaseFunction() const { return m_phaseFunction.get(); }
+
+	/// Determine whether the medium is homogeneous
+	virtual bool isHomogeneous() const = 0;
+
+	/// For homogeneous media: return the absorption coefficient
+	inline const Spectrum &getSigmaA() const { return m_sigmaA; }
+
+	/// For homogeneous media: return the scattering coefficient
+	inline const Spectrum &getSigmaS() const { return m_sigmaS; }
+
+	/// For homogeneous media: return the extinction coefficient
+	inline const Spectrum &getSigmaT() const { return m_sigmaT; }
+
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Miscellaneous
+	// =============================================================
 
 	/** \brief Configure the object (called _once_ after construction
 	   and addition of all child ConfigurableObjects. */
@@ -147,6 +176,9 @@ public:
 
 	/// Return a string representation
 	virtual std::string toString() const = 0;
+
+	//! @}
+	// =============================================================
 
 	MTS_DECLARE_CLASS()
 protected:

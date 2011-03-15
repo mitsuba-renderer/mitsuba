@@ -155,7 +155,7 @@ SparseMipmap3D::SparseMipmap3D(Stream *stream, InstanceManager *manager) {
 	m_aabb = AABB(stream);
 	m_size = (size_t) stream->readUInt();
 	
-	size_t nodeCount = (size_t) stream->readULong();
+	size_t nodeCount = stream->readSize();
 	m_nodes.resize(nodeCount);
 	for (size_t i=0; i<nodeCount; ++i) {
 		stream->readIntArray(m_nodes[i].child, 8);
@@ -169,7 +169,7 @@ SparseMipmap3D::SparseMipmap3D(Stream *stream, InstanceManager *manager) {
 void SparseMipmap3D::serialize(Stream *stream, InstanceManager *manager) const {
 	m_aabb.serialize(stream);
 	stream->writeUInt(m_size);
-	stream->writeULong(m_nodes.size());
+	stream->writeSize(m_nodes.size());
 
 	for (size_t i=0; i<m_nodes.size(); ++i) {
 		stream->writeIntArray(m_nodes[i].child, 8);

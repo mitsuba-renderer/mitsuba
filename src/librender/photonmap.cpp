@@ -36,12 +36,12 @@ PhotonMap::PhotonMap(size_t maxPhotons)
 PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager) { 
 	m_aabb = AABB(stream);
 	m_balanced = stream->readBool();
-	m_maxPhotons = (size_t) stream->readULong();
-	m_minPhotons = (size_t) stream->readULong();
-	m_lastInnerNode = (size_t) stream->readULong();
-	m_lastRChildNode = (size_t) stream->readULong();
+	m_maxPhotons = stream->readSize();
+	m_minPhotons = stream->readSize();
+	m_lastInnerNode = stream->readSize();
+	m_lastRChildNode = stream->readSize();
 	m_scale = (Float) stream->readFloat();
-	m_photonCount = (size_t) stream->readULong();
+	m_photonCount = stream->readSize();
 	m_photons = new Photon[m_maxPhotons + 1];
 	for (size_t i=1; i<=m_maxPhotons; ++i) 
 		m_photons[i] = Photon(stream);
@@ -69,12 +69,12 @@ void PhotonMap::serialize(Stream *stream, InstanceManager *manager) const {
 		m_photonCount * 20.0f / 1024.0f);
 	m_aabb.serialize(stream);
 	stream->writeBool(m_balanced);
-	stream->writeULong(m_maxPhotons);
-	stream->writeULong(m_minPhotons);
-	stream->writeULong(m_lastInnerNode);
-	stream->writeULong(m_lastRChildNode);
+	stream->writeSize(m_maxPhotons);
+	stream->writeSize(m_minPhotons);
+	stream->writeSize(m_lastInnerNode);
+	stream->writeSize(m_lastRChildNode);
 	stream->writeFloat(m_scale);
-	stream->writeULong(m_photonCount);
+	stream->writeSize(m_photonCount);
 	for (size_t i=1; i<=m_maxPhotons; ++i)
 		m_photons[i].serialize(stream);
 }
@@ -649,11 +649,6 @@ Spectrum PhotonMap::estimateVolumeRadiance(const MediumSamplingRecord &mRec, con
 	return result * (m_scale / volFactor);
 }
 
-
-void PhotonMap::setScale(Float value) {
-	m_scale = value;
-}
-	
 void PhotonMap::setMinPhotons(int minPhotons) {
 	m_minPhotons = minPhotons;
 }
@@ -661,7 +656,7 @@ void PhotonMap::setMinPhotons(int minPhotons) {
 void PhotonMap::dumpOBJ(const std::string &filename) {
 	std::ofstream os(filename.c_str());
 	os << "o Photons" << endl;
-	for (size_t i=0; i<getPhotonCount(); i++) {
+	for (size_t i=1; i<=getPhotonCount(); i++) {
 		Point p = getPhoton(i).getPosition();
 		os << "v " << p.x << " " << p.y << " " << p.z << endl;
 	}

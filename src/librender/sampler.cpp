@@ -26,19 +26,19 @@ Sampler::Sampler(const Properties &props)
 
 Sampler::Sampler(Stream *stream, InstanceManager *manager) 
  : ConfigurableObject(stream, manager) {
-	m_sampleCount = stream->readULong();
-	unsigned int n1DArrays = stream->readUInt();
-	for (unsigned int i=0; i<n1DArrays; ++i) 
+	m_sampleCount = stream->readSize();
+	uint32_t n1DArrays = stream->readUInt();
+	for (uint32_t i=0; i<n1DArrays; ++i) 
 		request1DArray(stream->readUInt());
-	unsigned int n2DArrays = stream->readUInt();
-	for (unsigned int i=0; i<n2DArrays; ++i) 
+	uint32_t n2DArrays = stream->readUInt();
+	for (uint32_t i=0; i<n2DArrays; ++i) 
 		request2DArray(stream->readUInt());
 }
 
 void Sampler::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 
-	stream->writeULong(m_sampleCount);
+	stream->writeSize(m_sampleCount);
 	stream->writeUInt(m_req1D.size());
 	for (size_t i=0; i<m_req1D.size(); ++i)
 		stream->writeUInt(m_req1D[i]);
@@ -57,22 +57,22 @@ void Sampler::advance() {
 	m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
 }
 
-void Sampler::setSampleIndex(uint64_t sampleIndex) {
+void Sampler::setSampleIndex(size_t sampleIndex) {
 	m_sampleIndex = sampleIndex;
 	m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
 }
 
-void Sampler::request1DArray(unsigned int size) {
+void Sampler::request1DArray(uint32_t size) {
 	m_req1D.push_back(size);
 	m_sampleArrays1D.push_back(new Float[m_sampleCount * size]);
 }
 
-void Sampler::request2DArray(unsigned int size) {
+void Sampler::request2DArray(uint32_t size) {
 	m_req2D.push_back(size);
 	m_sampleArrays2D.push_back(new Point2[m_sampleCount * size]);
 }
 
-Point2 *Sampler::next2DArray(unsigned int size) {
+Point2 *Sampler::next2DArray(uint32_t size) {
 	Assert(m_sampleIndex < m_sampleCount);
 	if (m_sampleDepth2DArray < (int) m_req2D.size()) {
 		Assert(m_req2D[m_sampleDepth2DArray] == size);
@@ -84,7 +84,7 @@ Point2 *Sampler::next2DArray(unsigned int size) {
 	}
 }
 
-Float *Sampler::next1DArray(unsigned int size) {
+Float *Sampler::next1DArray(uint32_t size) {
 	Assert(m_sampleIndex < m_sampleCount);
 	if (m_sampleDepth1DArray < (int) m_req1D.size()) {
 		Assert(m_req1D[m_sampleDepth1DArray] == size);

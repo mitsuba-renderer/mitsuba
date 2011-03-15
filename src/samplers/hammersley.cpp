@@ -40,7 +40,7 @@ public:
 
 	HammersleySequence(const Properties &props) : Sampler(props) {
 		/* Number of samples per pixel when used with a sampling-based integrator */
-		m_sampleCount = (uint64_t) props.getLong("sampleCount", 1);
+		m_sampleCount = props.getSize("sampleCount", 1);
 		m_invSamplesPerPixel = 1.0f / m_sampleCount;
 	}
 
@@ -67,7 +67,7 @@ public:
 		m_sampleDepth = 0;
 	}
 
-	void setSampleIndex(uint64_t sampleIndex) {
+	void setSampleIndex(size_t sampleIndex) {
 		m_sampleDepth = 0;
 		m_sampleIndex = sampleIndex;
 	}

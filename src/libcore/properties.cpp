@@ -128,6 +128,31 @@ int64_t Properties::getLong(const std::string &name, int64_t defVal) const {
 	return (*it).second.v_long;
 }
 
+size_t Properties::getSize(const std::string &name) const {
+	if (!hasProperty(name))
+		SLog(EError, "Property \"%s\" missing", name.c_str());
+	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
+	if ((*it).second.type != EInteger)
+		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+	if ((*it).second.v_long < 0)
+		SLog(EError, "Size property \"%s\": expected a nonnegative value!");
+	(*it).second.queried = true;
+	return (*it).second.v_long;
+}
+
+size_t Properties::getSize(const std::string &name, size_t defVal) const {
+	if (!hasProperty(name))
+		return defVal;
+	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
+	if ((*it).second.type != EInteger)
+		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+	if ((*it).second.v_long < 0)
+		SLog(EError, "Size property \"%s\": expected a nonnegative value!");
+	(*it).second.queried = true;
+	return (*it).second.v_long;
+}
+
+
 void Properties::setFloat(const std::string &name, Float value, bool warnDuplicates) {
 	if (hasProperty(name) && warnDuplicates)
 		SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str());

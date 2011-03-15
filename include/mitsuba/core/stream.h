@@ -144,9 +144,12 @@ public:
 	/// Write an array of signed ints (64 bit) to the stream
 	void writeLongArray(const int64_t *values, size_t size);
 
-	/// Write an unsigned int (32 bit) to the stream
+	/// Write an unsigned int (64 bit) to the stream
 	void writeULong(uint64_t value);
-	
+
+	/// Write a size value to the stream
+	void writeSize(size_t value) { writeULong((uint64_t) value); }
+
 	/// Write an array of unsigned ints (64 bit) to the stream
 	void writeULongArray(const uint64_t *values, size_t size);
 
@@ -230,6 +233,9 @@ public:
 
 	/// Read an unsigned int (64 bit) from the stream
 	uint64_t readULong();
+	
+	/// Read a size value from the stream
+	size_t readSize() { return (size_t) readULong(); }
 
 	/// Read an array of unsigned ints (64 bit) from the stream
 	void readULongArray(uint64_t *dst, size_t size);

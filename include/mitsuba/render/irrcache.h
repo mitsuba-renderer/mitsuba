@@ -53,21 +53,21 @@ public:
 	 * Allocate storage for a hemispherical sample with M
 	 * elevation and N azimuthal samples.
 	 */
-	HemisphereSampler(int M, int N);
+	HemisphereSampler(uint32_t M, uint32_t N);
 
 	/// Return the elevational resolution
-	inline unsigned int getM() const { return m_M; }
+	inline uint32_t getM() const { return m_M; }
 	
 	/// Return the azimuthal resolution
-	inline unsigned int getN() const { return m_N; }
+	inline uint32_t getN() const { return m_N; }
 
 	/// Access a cell by index
-	inline SampleEntry &operator() (int j, int k) {
+	inline SampleEntry &operator() (uint32_t j, uint32_t k) {
 		return m_entries[j*m_N + k];
 	}
 
 	/// Access a cell by index (const version)
-	inline const SampleEntry &operator() (int j, int k) const {
+	inline const SampleEntry &operator() (uint32_t j, uint32_t k) const {
 		return m_entries[j*m_N + k];
 	}
 
@@ -112,7 +112,7 @@ protected:
 	/// Free all memory
 	virtual ~HemisphereSampler();
 private:
-	unsigned int m_M, m_N;
+	uint32_t m_M, m_N;
 	SampleEntry *m_entries;
 	Vector *m_uk, *m_vk, *m_vkMinus;
 	Spectrum m_E;

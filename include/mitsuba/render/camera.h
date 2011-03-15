@@ -166,7 +166,7 @@ public:
 	/// Add a child ConfigurableObject
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
 
-	/// Serialize this camera to disk	
+	/// Serialize this camera to a binary data stream	
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
 	// Set the parent node
@@ -209,7 +209,7 @@ public:
 	/// Return a projection transformation that includes a pixel offset (using GL clip space coordinates)
 	virtual Transform getGLProjectionTransform(const Point2 &jitter) const = 0;
 
-	/// Serialize this camera to disk
+	/// Serialize this camera to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 	
 	/** \brief Configure the object (called _once_ after construction
@@ -242,7 +242,7 @@ public:
 	   and addition of all child ConfigurableObjects. */
 	virtual void configure();
 
-	/// Serialize this camera to disk
+	/// Serialize this camera to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
 	/// Calculate the image plane size for a plane of the given distance

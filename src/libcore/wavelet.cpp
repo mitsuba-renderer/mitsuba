@@ -336,14 +336,14 @@ SparseWavelet2D::SparseWavelet2D(const SparseWavelet2D *sw)
 }
 
 SparseWavelet2D::SparseWavelet2D(Stream *stream, InstanceManager *Manager) {
-	m_size = (size_t) stream->readULong();
+	m_size = stream->readSize();
 	m_scalingFunction = stream->readSingle();
-	size_t coefficientCount = (size_t) stream->readULong();
+	size_t coefficientCount = stream->readSize();
 #if defined(USE_GOOGLE_DENSE_HASHMAP)
 	m_data.set_empty_key(0xFFFFFFFFFFFFFFFFULL);
 #endif
 	for (size_t i=0; i<coefficientCount; i++) {
-		uint64_t key = stream->readULong();
+		uint64_t key = stream->readSize();
 		m_data[key] = stream->readSingle();
 	}
 	m_maxLevel = log2i(m_size)-1;
@@ -377,12 +377,12 @@ Float SparseWavelet2D::getPixel(const Point2i &pt) const {
 }
 
 void SparseWavelet2D::serialize(Stream *stream, InstanceManager *Manager) const {
-	stream->writeULong(m_size);
+	stream->writeSize(m_size);
 	stream->writeSingle(m_scalingFunction);
-	stream->writeULong(m_data.size());
+	stream->writeSize(m_data.size());
 
 	for (CoefficientIterator it = m_data.begin(); it != m_data.end(); ++it) {
-		stream->writeULong((*it).first);
+		stream->writeSize((*it).first);
 		stream->writeSingle((*it).second);
 	}
 }

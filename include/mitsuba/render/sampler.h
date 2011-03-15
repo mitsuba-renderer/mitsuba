@@ -70,7 +70,7 @@ public:
 	virtual void advance();
 
 	/// Manually set the current sample index
-	virtual void setSampleIndex(uint64_t sampleIndex);
+	virtual void setSampleIndex(size_t sampleIndex);
 
 	/// Retrieve the next component value from the current sample
 	virtual Float next1D() = 0;
@@ -124,12 +124,12 @@ public:
 	virtual Point2 independent2D() = 0;
 
 	/// Return total number of samples
-	inline uint64_t getSampleCount() const { return m_sampleCount; }
+	inline size_t getSampleCount() const { return m_sampleCount; }
 	
 	/// Return the current sample index
-	inline uint64_t getSampleIndex() const { return m_sampleIndex; }
+	inline size_t getSampleIndex() const { return m_sampleIndex; }
 
-	/// Serialize this sampler to disk
+	/// Serialize this sampler to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
 	/// Return the properties of this sampler
@@ -149,8 +149,8 @@ protected:
 	/// Virtual destructor
 	virtual ~Sampler();
 protected:
-	uint64_t m_sampleCount;
-	uint64_t m_sampleIndex;
+	size_t m_sampleCount;
+	size_t m_sampleIndex;
 	std::vector<unsigned int> m_req1D, m_req2D;
 	std::vector<Float *> m_sampleArrays1D;
 	std::vector<Point2 *> m_sampleArrays2D;

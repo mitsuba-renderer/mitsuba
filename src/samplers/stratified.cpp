@@ -46,8 +46,8 @@ public:
 		m_permutations2D = new unsigned int*[m_depth];
 
 		for (int i=0; i<m_depth; i++) {
-			m_permutations1D[i] = new unsigned int[(size_t) m_sampleCount];
-			m_permutations2D[i] = new unsigned int[(size_t) m_sampleCount];
+			m_permutations1D[i] = new unsigned int[m_sampleCount];
+			m_permutations2D[i] = new unsigned int[m_sampleCount];
 		}
 
 		m_invResolution = 1 / (Float) m_resolution;
@@ -63,8 +63,8 @@ public:
 		m_permutations1D = new unsigned int*[m_depth];
 		m_permutations2D = new unsigned int*[m_depth];
 		for (int i=0; i<m_depth; i++) {
-			m_permutations1D[i] = new unsigned int[(size_t) m_sampleCount];
-			m_permutations2D[i] = new unsigned int[(size_t) m_sampleCount];
+			m_permutations1D[i] = new unsigned int[m_sampleCount];
+			m_permutations2D[i] = new unsigned int[m_sampleCount];
 		}
 		m_invResolution = 1.0f / m_resolution;
 		m_invResolutionSquare = 1.0f / m_sampleCount;
@@ -99,8 +99,8 @@ public:
 		sampler->m_permutations1D = new unsigned int*[m_depth];
 		sampler->m_permutations2D = new unsigned int*[m_depth];
 		for (int i=0; i<m_depth; i++) {
-			sampler->m_permutations1D[i] = new unsigned int[(size_t) m_sampleCount];
-			sampler->m_permutations2D[i] = new unsigned int[(size_t) m_sampleCount];
+			sampler->m_permutations1D[i] = new unsigned int[m_sampleCount];
+			sampler->m_permutations2D[i] = new unsigned int[m_sampleCount];
 		}
 		for (size_t i=0; i<m_req1D.size(); ++i)
 			sampler->request2DArray(m_req1D[i]);
@@ -111,27 +111,27 @@ public:
 
 	void generate() {
 		for (int i=0; i<m_depth; i++) {
-			for (uint64_t j=0; j<m_sampleCount; j++)
+			for (size_t j=0; j<m_sampleCount; j++)
 				m_permutations1D[i][j] = (unsigned int) j;
 			m_random->shuffle(&m_permutations1D[i][0], &m_permutations1D[i][m_sampleCount]);
 
-			for (uint64_t j=0; j<m_sampleCount; j++)
+			for (size_t j=0; j<m_sampleCount; j++)
 				m_permutations2D[i][j] = (unsigned int) j;
 			m_random->shuffle(&m_permutations2D[i][0], &m_permutations2D[i][m_sampleCount]);
 		}
 
 		for (size_t i=0; i<m_req1D.size(); i++)
-			latinHypercube(m_random, m_sampleArrays1D[i], m_req1D[i] * (size_t) m_sampleCount, 1);
+			latinHypercube(m_random, m_sampleArrays1D[i], m_req1D[i] * m_sampleCount, 1);
 		for (size_t i=0; i<m_req2D.size(); i++)
 			latinHypercube(m_random, reinterpret_cast<Float *>(m_sampleArrays2D[i]), 
-				m_req2D[i] * (size_t) m_sampleCount, 2);
+				m_req2D[i] * m_sampleCount, 2);
 
 		m_sampleIndex = 0;
 		m_sampleDepth1D = m_sampleDepth2D = 0;
 		m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
 	}
 
-	void setSampleIndex(uint64_t sampleIndex) {
+	void setSampleIndex(size_t sampleIndex) {
 		m_sampleIndex = sampleIndex;
 		m_sampleDepth1D = m_sampleDepth2D = 0;
 		m_sampleDepth1DArray = m_sampleDepth2DArray = 0;

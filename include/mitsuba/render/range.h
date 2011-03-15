@@ -38,13 +38,13 @@ public:
 	}
 	
 	inline void load(Stream *stream) {
-		m_rangeStart = (size_t) stream->readULong();
-		m_rangeEnd = (size_t) stream->readULong();
+		m_rangeStart = stream->readSize();
+		m_rangeEnd = stream->readSize();
 	}
 
 	inline void save(Stream *stream) const {
-		stream->writeULong(m_rangeStart);
-		stream->writeULong(m_rangeEnd);
+		stream->writeSize(m_rangeStart);
+		stream->writeSize(m_rangeEnd);
 	}
 
 	inline std::string toString() const {

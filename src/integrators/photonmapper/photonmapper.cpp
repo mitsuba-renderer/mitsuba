@@ -18,6 +18,7 @@
 
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/render/gatherproc.h>
+#include "bre.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -42,11 +43,11 @@ public:
 		/* Granularity of photon tracing work units (in shot particles, 0 => decide automatically) */
 		m_granularity = props.getInteger("granularity", 0);
 		/* Number of photons to collect for the global photon map */
-		m_globalPhotons = (size_t) props.getLong("globalPhotons", 200000);
+		m_globalPhotons = props.getSize("globalPhotons", 200000);
 		/* Number of photons to collect for the caustic photon map */
-		m_causticPhotons = (size_t) props.getLong("causticPhotons", 200000);
+		m_causticPhotons = props.getSize("causticPhotons", 200000);
 		/* Number of photons to collect for the volumetric photon map */
-		m_volumePhotons = (size_t) props.getLong("volumePhotons", 200000);
+		m_volumePhotons = props.getSize("volumePhotons", 200000);
 		/* Radius of lookups in the global photon map (relative to the scene size) */
 		m_globalLookupRadiusRel = props.getFloat("globalLookupRadius", 0.05f);
 		/* Radius of lookups in the caustic photon map (relative to the scene size) */
@@ -75,9 +76,9 @@ public:
 		m_directSamples = stream->readInt();
 		m_glossySamples = stream->readInt();
 		m_maxSpecularDepth = stream->readInt();
-		m_globalPhotons = (size_t) stream->readULong();
-		m_causticPhotons = (size_t) stream->readULong();
-		m_volumePhotons = (size_t) stream->readULong();
+		m_globalPhotons = stream->readSize();
+		m_causticPhotons = stream->readSize();
+		m_volumePhotons = stream->readSize();
 		m_globalLookupRadius = stream->readFloat();
 		m_causticLookupRadius = stream->readFloat();
 		m_volumeLookupRadius = stream->readFloat();
@@ -95,9 +96,9 @@ public:
 		stream->writeInt(m_directSamples);
 		stream->writeInt(m_glossySamples);
 		stream->writeInt(m_maxSpecularDepth);
-		stream->writeULong(m_globalPhotons);
-		stream->writeULong(m_causticPhotons);
-		stream->writeULong(m_volumePhotons);
+		stream->writeSize(m_globalPhotons);
+		stream->writeSize(m_causticPhotons);
+		stream->writeSize(m_volumePhotons);
 		stream->writeFloat(m_globalLookupRadius);
 		stream->writeFloat(m_causticLookupRadius);
 		stream->writeFloat(m_volumeLookupRadius);
@@ -140,8 +141,15 @@ public:
 			m_causticPhotons = 0;
 
 		/* Don't create a volumetric photon map if there are no participating media */
-		if (!scene->hasMedia())
+		const std::set<Medium *> &media = scene->getMedia();
+		if (media.size() == 0)
 			m_volumePhotons = 0;
+
+		for (std::set<Medium *>::const_iterator it = media.begin(); it != media.end(); ++it) {
+			if (!(*it)->isHomogeneous())
+				Log(EError, "Inhomogeneous media are currently not supported by the photon mapper!");
+		}
+
 
 		if (m_globalPhotonMap.get() == NULL && m_globalPhotons > 0) {
 			/* Adapt to scene extents */
@@ -164,12 +172,13 @@ public:
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
 
-			m_globalPhotonMap = proc->getPhotonMap();
-			m_globalPhotonMap->setScale(1 / (Float) proc->getShotParticles());
-			m_globalPhotonMap->setMinPhotons(m_globalMinPhotons);
-			m_globalPhotonMap->balance();
 			Log(EDebug, "Global photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
 				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
+
+			m_globalPhotonMap = proc->getPhotonMap();
+			m_globalPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
+			m_globalPhotonMap->setMinPhotons(m_globalMinPhotons);
+			m_globalPhotonMap->balance();
 			m_globalPhotonMapID = sched->registerResource(m_globalPhotonMap);
 		}
 
@@ -193,13 +202,14 @@ public:
 	
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
-
-			m_causticPhotonMap = proc->getPhotonMap();
-			m_causticPhotonMap->setScale(1 / (Float) proc->getShotParticles());
-			m_causticPhotonMap->setMinPhotons(m_causticMinPhotons);
-			m_causticPhotonMap->balance();
+			
 			Log(EDebug, "Caustic photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
 				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
+
+			m_causticPhotonMap = proc->getPhotonMap();
+			m_causticPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
+			m_causticPhotonMap->setMinPhotons(m_causticMinPhotons);
+			m_causticPhotonMap->balance();
 			m_causticPhotonMapID = sched->registerResource(m_causticPhotonMap);
 		}
 
@@ -224,13 +234,15 @@ public:
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
 
-			m_volumePhotonMap = proc->getPhotonMap();
-			m_volumePhotonMap->setScale(1 / (Float) proc->getShotParticles());
-			m_volumePhotonMap->setMinPhotons(m_volumeMinPhotons);
-			m_volumePhotonMap->balance();
 			Log(EDebug, "Volume photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
 				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
-			m_volumePhotonMapID = sched->registerResource(m_volumePhotonMap);
+
+			ref<PhotonMap> volumePhotonMap = proc->getPhotonMap();
+			volumePhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
+			volumePhotonMap->balance();
+	
+			m_bre = new BeamRadianceEstimator(volumePhotonMap);
+			m_breID = sched->registerResource(m_bre);
 		}
 
 		sched->unregisterResource(qmcSamplerID);
@@ -244,8 +256,8 @@ public:
 			proc->bindResource("globalPhotonMap", m_globalPhotonMapID);
 		if (m_causticPhotonMap.get())
 			proc->bindResource("causticPhotonMap", m_causticPhotonMapID);
-		if (m_volumePhotonMap.get())
-			proc->bindResource("volumePhotonMap", m_volumePhotonMapID);
+		if (m_bre.get())
+			proc->bindResource("bre", m_breID);
 	}
 
 	/// Connect to globally shared resources
@@ -254,8 +266,8 @@ public:
 			m_globalPhotonMap = static_cast<PhotonMap *>(params["globalPhotonMap"]);
 		if (!m_causticPhotonMap.get() && params.find("causticPhotonMap") != params.end())
 			m_causticPhotonMap = static_cast<PhotonMap *>(params["causticPhotonMap"]);
-		if (!m_volumePhotonMap.get() && params.find("volumetricPhotonMap") != params.end())
-			m_volumePhotonMap = static_cast<PhotonMap *>(params["volumetricPhotonMap"]);
+		if (!m_bre.get() && params.find("bre") != params.end())
+			m_bre = static_cast<BeamRadianceEstimator *>(params["bre"]);
 
 		if (getParent() != NULL && getParent()->getClass()->derivesFrom(MTS_CLASS(SampleIntegrator)))
 			m_parentIntegrator = static_cast<SampleIntegrator *>(getParent());
@@ -271,7 +283,7 @@ public:
 	}
 
 	Spectrum Li(const RayDifferential &ray, RadianceQueryRecord &rRec) const {
-		Spectrum Li(0.0f);
+		Spectrum LiSurf(0.0f), LiMedium(0.0f), transmittance(1.0f);
 		Intersection &its = rRec.its;
 		LuminaireSamplingRecord lRec;
 	
@@ -279,24 +291,28 @@ public:
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
 
-		if ((rRec.type & RadianceQueryRecord::EVolumeRadiance) && rRec.medium) {
+		if (rRec.medium) {
+			Ray mediumRaySegment(ray, 0, its.t);
+			transmittance = rRec.medium->getTransmittance(mediumRaySegment);
+			if (rRec.type & RadianceQueryRecord::EVolumeRadiance)
+				LiMedium = m_bre->query(mediumRaySegment, rRec.medium);
 		}
 
 		if (!its.isValid()) {
 			/* If no intersection could be found, possibly return 
 			   attenuated radiance from a background luminaire */
 			if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
-				Li += rRec.scene->LeBackground(ray);
-			return Li;
+				LiSurf += rRec.scene->LeBackground(ray);
+			return LiSurf * transmittance + LiMedium;
 		}
 
 		/* Possibly include emitted radiance if requested */
 		if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance)) 
-			Li += its.Le(-ray.d);
+			LiSurf += its.Le(-ray.d);
 
 		/* Include radiance from a subsurface integrator if requested */
 		if (its.hasSubsurface() && (rRec.type & RadianceQueryRecord::ESubsurfaceRadiance))
-			Li += its.LoSub(rRec.scene, -ray.d);
+			LiSurf += its.LoSub(rRec.scene, -ray.d);
 
 		const BSDF *bsdf = its.getBSDF(ray);
 				
@@ -306,8 +322,8 @@ public:
 		if (bsdf == NULL) {
 			RadianceQueryRecord rRec2;
 			rRec2.recursiveQuery(rRec);
-			Li += m_parentIntegrator->Li(RayDifferential(its.p, ray.d, ray.time), rRec2);
-			return Li;
+			LiSurf += m_parentIntegrator->Li(RayDifferential(its.p, ray.d, ray.time), rRec2);
+			return LiSurf * transmittance + LiMedium;
 		}
 
 		int bsdfType = bsdf->getType();
@@ -335,7 +351,7 @@ public:
 					/* Evaluate BSDF * cos(theta) */
 					const Spectrum bsdfVal = bsdf->fCos(bRec);
 
-					Li += lRec.value * bsdfVal * weight;
+					LiSurf += lRec.value * bsdfVal * weight;
 				}
 			}
 		}
@@ -343,11 +359,11 @@ public:
 		if (bsdfType == BSDF::EDiffuseReflection) {
 			/* Hit a diffuse material - do a direct photon map visualization. */
 			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)
-				Li += m_globalPhotonMap->estimateIrradianceFiltered(its.p, 
+				LiSurf += m_globalPhotonMap->estimateIrradianceFiltered(its.p, 
 					its.shFrame.n, m_globalLookupRadius, m_globalLookupSize)
 						* bsdf->getDiffuseReflectance(its) * INV_PI;
 			if (rRec.type & RadianceQueryRecord::ECausticRadiance && m_causticPhotonMap.get())
-				Li += m_causticPhotonMap->estimateIrradianceFiltered(its.p,
+				LiSurf += m_causticPhotonMap->estimateIrradianceFiltered(its.p,
 					its.shFrame.n, m_causticLookupRadius, m_causticLookupSize)
 							* bsdf->getDiffuseReflectance(its) * INV_PI;
 		} else if ((bsdfType & BSDF::EDelta) != 0
@@ -370,7 +386,7 @@ public:
 
 					rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadiance);
 					recursiveRay = Ray(its.p, its.toWorld(bRec.wo), ray.time);
-					Li += m_parentIntegrator->Li(recursiveRay, rRec2) * bsdfVal;
+					LiSurf += m_parentIntegrator->Li(recursiveRay, rRec2) * bsdfVal;
 				}
 			}
 		} else if (rRec.depth == 1 && (bsdf->getType() & BSDF::EGlossy)) {
@@ -387,14 +403,14 @@ public:
 
 				rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadianceNoEmission);
 				recursiveRay = Ray(its.p, its.toWorld(bRec.wo), ray.time);
-				Li += m_parentIntegrator->Li(recursiveRay, rRec2) * bsdfVal * weight;
+				LiSurf += m_parentIntegrator->Li(recursiveRay, rRec2) * bsdfVal * weight;
 			}
 		} else {
-			Li += m_globalPhotonMap->estimateRadianceFiltered(its,
+			LiSurf += m_globalPhotonMap->estimateRadianceFiltered(its,
 				m_globalLookupRadius, m_globalLookupSize);
 		}
 
-		return Li;
+		return LiSurf * transmittance + LiMedium;
 	}
 	
 	std::string toString() const {
@@ -415,8 +431,9 @@ private:
 	ref<PhotonMap> m_causticPhotonMap;
 	ref<PhotonMap> m_volumePhotonMap;
 	ref<ParallelProcess> m_proc;
+	ref<BeamRadianceEstimator> m_bre;
 	SampleIntegrator *m_parentIntegrator;
-	int m_globalPhotonMapID, m_causticPhotonMapID, m_volumePhotonMapID;
+	int m_globalPhotonMapID, m_causticPhotonMapID, m_breID;
 	size_t m_globalPhotons, m_causticPhotons, m_volumePhotons;
 	int m_globalMinPhotons, m_globalLookupSize;
 	int m_causticMinPhotons, m_causticLookupSize;

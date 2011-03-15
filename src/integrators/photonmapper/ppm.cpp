@@ -115,7 +115,7 @@ public:
 		size_t nCores = sched->getCoreCount();
 		Sampler *cameraSampler = (Sampler *) sched->getResource(samplerResID, 0);
 	
-		uint64_t sampleCount = cameraSampler->getSampleCount();
+		size_t sampleCount = cameraSampler->getSampleCount();
 		Log(EInfo, "Starting render job (%ix%i, %lld %s, " SIZE_T_FMT 
 			" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y, 
 			sampleCount, sampleCount == 1 ? "sample" : "samples", nCores, 
@@ -182,7 +182,7 @@ public:
 						int y = cropOffset.y + yofs + yofsInt;
 						int x = cropOffset.x + xofs + xofsInt;
 						cameraSampler->generate();
-						for (uint64_t j = 0; j<sampleCount; j++) {
+						for (size_t j = 0; j<sampleCount; j++) {
 							if (needsLensSample)
 								lensSample = cameraSampler->next2D();
 							if (needsTimeSample)

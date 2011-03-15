@@ -339,7 +339,7 @@ public:
 	//! @{ \name Miscellaneous
 	// =============================================================
 
-	/// Serialize this luminaire to disk
+	/// Serialize this luminaire to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
 	/// Optional pre-process step before rendering starts

@@ -74,10 +74,11 @@ public:
 	 */
 	bool storePhoton(const Photon &photon);
 
-	/**
-	 * Scale all photon power values contained in this photon map
-	 */
-	void setScale(Float value);
+	/// Scale all photon power values contained in this photon map
+	inline void setScaleFactor(Float value) { m_scale = value; }
+
+	/// Return the power scale factor of this photon map
+	inline Float getScaleFactor() const { return m_scale; }
 
 	/**
 	 * Recursively build a left-balanced kd-tree. This has to be
@@ -183,9 +184,9 @@ public:
 		return m_balanced;
 	}
 
-	/// Return a photon in the photon map
+	/// Return a photon in the photon map (1-based indexing!)
 	inline const Photon &getPhoton(size_t pos) const {
-		return m_photons[pos+1];
+		return m_photons[pos];
 	}
 
 	/// Set the minimum amount of photons to consider an estimate valid
@@ -270,6 +271,12 @@ protected:
 		}
 	};
 
+	/// Heap convenience routines
+	inline size_t leftChild(size_t index) const { return 2*index; }
+	inline size_t rightChild(size_t index) const { return 2*index + 1; }
+	inline bool isInnerNode(size_t index) const { return index <= m_lastInnerNode; }
+	inline bool hasRightChild(size_t index) const { return index <= m_lastRChildNode; }
+
 	/// \endcond
 protected:
     /* ===================================================================== */
@@ -313,12 +320,6 @@ protected:
 		photon_iterator sortEnd,
 		std::vector<size_t> &heapPermutation,
 		AABB &aabb, size_t heapIndex) const;
-
-	/// Heap access routines
-	inline size_t leftChild(size_t index) const { return 2*index; }
-	inline size_t rightChild(size_t index) const { return 2*index + 1; }
-	inline bool isInnerNode(size_t index) const { return index <= m_lastInnerNode; }
-	inline bool hasRightChild(size_t index) const { return index <= m_lastRChildNode; }
 private:
     /* ===================================================================== */
     /*                        Protected attributes                           */

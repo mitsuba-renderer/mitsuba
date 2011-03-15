@@ -84,8 +84,8 @@ TriMesh::TriMesh(Stream *stream, InstanceManager *manager)
 	m_aabb = AABB(stream);
 
 	uint32_t flags = stream->readUInt();
-	m_vertexCount = (size_t) stream->readULong();
-	m_triangleCount = (size_t) stream->readULong();
+	m_vertexCount = stream->readSize();
+	m_triangleCount = stream->readSize();
 
 	m_positions = new Point[m_vertexCount];
 	stream->readFloatArray(reinterpret_cast<Float *>(m_positions), 
@@ -190,8 +190,8 @@ TriMesh::TriMesh(Stream *_stream, int index)
 	stream = new ZStream(stream);
 
 	uint32_t flags = stream->readUInt();
-	m_vertexCount = (size_t) stream->readULong();
-	m_triangleCount = (size_t) stream->readULong();
+	m_vertexCount = stream->readSize();
+	m_triangleCount = stream->readSize();
 	
 	bool fileDoublePrecision = flags & EDoublePrecision;
 	m_faceNormals = flags & EFaceNormals;
@@ -678,8 +678,8 @@ void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeString(m_name);
 	m_aabb.serialize(stream);
 	stream->writeUInt(flags);
-	stream->writeULong(m_vertexCount);
-	stream->writeULong(m_triangleCount);
+	stream->writeSize(m_vertexCount);
+	stream->writeSize(m_triangleCount);
 
 	stream->writeFloatArray(reinterpret_cast<Float *>(m_positions), 
 		m_vertexCount * sizeof(Point)/sizeof(Float));
@@ -764,8 +764,8 @@ void TriMesh::serialize(Stream *_stream) const {
 		flags |= EFaceNormals;
 
 	stream->writeUInt(flags);
-	stream->writeULong(m_vertexCount);
-	stream->writeULong(m_triangleCount);
+	stream->writeSize(m_vertexCount);
+	stream->writeSize(m_triangleCount);
 
 	stream->writeFloatArray(reinterpret_cast<Float *>(m_positions), 
 		m_vertexCount * sizeof(Point)/sizeof(Float));

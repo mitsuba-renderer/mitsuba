@@ -72,10 +72,14 @@ public:
 
 	/// Set an integer value
 	void setLong(const std::string &name, int64_t value, bool warnDuplicates = true);
-	/// Get an intteger value
+	/// Get an integer value
 	int64_t getLong(const std::string &name) const;
 	/// Get an integer value (with default);
 	int64_t getLong(const std::string &name, int64_t defVal) const;
+	/// Get a size value
+	size_t getSize(const std::string &name) const;
+	/// Get an size value (with default);
+	size_t getSize(const std::string &name, size_t defVal) const;
 
 	/// Set a single precision floating point value
 	void setFloat(const std::string &name, Float value, bool warnDuplicates = true);

@@ -31,7 +31,7 @@ public:
 
 	IndependentSampler(const Properties &props) : Sampler(props) {
 		/* Number of samples per pixel when used with a sampling-based integrator */
-		m_sampleCount = (uint64_t) props.getLong("sampleCount", 1);
+		m_sampleCount = props.getSize("sampleCount", 1);
 		m_random = new Random();
 	}
 
