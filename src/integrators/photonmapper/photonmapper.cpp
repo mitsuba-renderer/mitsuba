@@ -273,6 +273,7 @@ public:
 		if (rRec.medium) {
 			Ray mediumRaySegment(ray, 0, its.t);
 			transmittance = rRec.medium->getTransmittance(mediumRaySegment);
+			mediumRaySegment.mint = ray.mint;
 			if (rRec.type & RadianceQueryRecord::EVolumeRadiance)
 				LiMedium = m_bre->query(mediumRaySegment, rRec.medium);
 		}

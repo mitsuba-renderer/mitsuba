@@ -315,9 +315,9 @@
 		<param name="glossySamples" readableName="Glossy samples" type="integer" default="32">Number of glossy samples for direct illumination</param>
 		<param name="maxDepth" readableName="Maximum depth" type="integer" default="40">Depth cutoff when tracing photons</param>
 		<param name="maxSpecularDepth" readableName="Max. specular bounces" type="integer" default="6">Depth cutoff when recursively tracing specular materials</param>
-		<param name="causticLookupSize" readableName="Caustic photon map lookup size" type="integer" default="200">Amount of photons to consider in a caustic photon map lookup</param>
-		<param name="globalLookupSize" readableName="Global photon map lookup size" type="integer" default="200">Amount of photons to consider in a global photon map lookup</param>
-		<param name="volumeLookupSize" readableName="Volume photon map lookup size" type="integer" default="200">Amount of photons to consider in a volume photon map lookup</param>
+		<param name="causticLookupSize" readableName="Caustic photon map lookup size" type="integer" default="120">Amount of photons to consider in a caustic photon map lookup</param>
+		<param name="globalLookupSize" readableName="Global photon map lookup size" type="integer" default="120">Amount of photons to consider in a global photon map lookup</param>
+		<param name="volumeLookupSize" readableName="Volume photon map lookup size" type="integer" default="120">Amount of photons to consider in a volume photon map lookup</param>
 		<param name="granularity" readableName="Work unit granularity" importance="1" type="integer" default="0">Granularity of photon tracing work units (in shot particles, 0 => decide automatically</param>
 		<param name="rrDepth" readableName="Russian roulette starting depth" importance="1" type="integer" default="10">Depth to start using russian roulette when tracing photons</param>
 		<param name="globalPhotons" readableName="Global photons" type="integer" default="200000">Number of photons to collect for the global photon map</param>

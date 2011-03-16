@@ -44,7 +44,6 @@ Medium::Medium(const Properties &props)
 
 Medium::Medium(Stream *stream, InstanceManager *manager)
  : NetworkedObject(stream, manager) {
-	m_aabb = AABB(stream);
 	m_densityMultiplier = stream->readFloat();
 	m_sigmaA = Spectrum(stream);
 	m_sigmaS = Spectrum(stream);
@@ -74,7 +73,6 @@ void Medium::configure() {
 
 void Medium::serialize(Stream *stream, InstanceManager *manager) const {
 	NetworkedObject::serialize(stream, manager);
-	m_aabb.serialize(stream);
 	stream->writeFloat(m_densityMultiplier);
 	m_sigmaA.serialize(stream);
 	m_sigmaS.serialize(stream);

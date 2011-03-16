@@ -231,14 +231,23 @@ void PhotonMap::balance() {
 	for (size_t i=0; i<=m_photonCount; i++)
 		photonPointers[i] = &m_photons[i];
 
-	Log(EInfo, "Photon map: balancing %i photons ..", m_photonCount);
+	ref<Timer> timer = new Timer();
+
+	Log(EInfo, "Photon map: balancing %i photons (%s)..", m_photonCount,
+		memString(sizeof(Photon) * (m_photonCount+1)).c_str());
+
 	balanceRecursive(photonPointers.begin(), photonPointers.begin()+1, 
 		photonPointers.end(), heapPermutation, m_aabb, 1);
+
+	Log(EInfo, "Done (took %i ms)", timer->getMilliseconds());
+	timer->reset();
 
 	/* 'heapPointers' now contains a permutation representing
 	    the properly left-balanced photon map. Apply this permutation
 		to the photon array. */
 	permute_inplace(m_photons, heapPermutation);
+
+	Log(EInfo, "Applied permutation (took %i ms)", timer->getMilliseconds());
 
 	/* We want to quickly be able to determine whether a node at
 	   a given index is an inner node (e.g. it has left or right

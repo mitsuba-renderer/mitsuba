@@ -59,39 +59,28 @@ class HeterogeneousMedium : public Medium {
 public:
 	HeterogeneousMedium(const Properties &props) 
 		: Medium(props) {
-		m_kdTree = new ShapeKDTree();
 		m_stepSize = props.getFloat("stepSize", 0);
 	}
 
 	/* Unserialize from a binary data stream */
 	HeterogeneousMedium(Stream *stream, InstanceManager *manager) 
 		: Medium(stream, manager) {
-		m_kdTree = new ShapeKDTree();
-		size_t shapeCount = stream->readUInt();
-		for (size_t i=0; i<shapeCount; ++i) 
-			addChild("", static_cast<Shape *>(manager->getInstance(stream)));
 		m_densities = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_albedo = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_orientations = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_stepSize = stream->readFloat();
+		m_aabb = AABB(stream);
 		configure();
-	}
-
-	virtual ~HeterogeneousMedium() {
-		for (size_t i=0; i<m_shapes.size(); ++i)
-			m_shapes[i]->decRef();
 	}
 
 	/* Serialize the volume to a binary data stream */
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Medium::serialize(stream, manager);
-		stream->writeUInt((uint32_t) m_shapes.size());
-		for (size_t i=0; i<m_shapes.size(); ++i)
-			manager->serialize(stream, m_shapes[i]);
 		manager->serialize(stream, m_densities.get());
 		manager->serialize(stream, m_albedo.get());
 		manager->serialize(stream, m_orientations.get());
 		stream->writeFloat(m_stepSize);
+		m_aabb.serialize(stream);
 	}
 
 	void configure() {
@@ -101,12 +90,7 @@ public:
 		if (m_albedo.get() == NULL)
 			Log(EError, "No albedo specified!");
 
-		if (m_shapes.size() != 0) {
-			m_kdTree->build();
-			m_aabb = m_kdTree->getAABB();
-		} else {
-			m_aabb = m_densities->getAABB();
-		}
+		m_aabb = m_densities->getAABB();
 
 		if (m_stepSize == 0) {
 			m_stepSize = std::min(
@@ -121,22 +105,7 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Shape))) {
-			Shape *shape = static_cast<Shape *>(child);
-			if (shape->isCompound()) {
-				int ctr = 0;
-				while (true) {
-					ref<Shape> childShape = shape->getElement(ctr++);
-					if (!childShape)
-						break;
-					addChild("", childShape);
-				}
-			} else {
-				m_kdTree->addShape(shape);
-				shape->incRef();
-				m_shapes.push_back(shape);
-			}
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(VolumeDataSource))) {
+		if (child->getClass()->derivesFrom(MTS_CLASS(VolumeDataSource))) {
 			VolumeDataSource *volume = static_cast<VolumeDataSource *>(child);
 
 			if (name == "albedo") {
@@ -154,33 +123,13 @@ public:
 		}
 	}
 	
-	/**
-	 * \brief Intersect a ray with the stencil and 
-	 * determine whether it started on the inside
-	 */
-	inline bool rayIntersect(const Ray &ray, Float &t, bool &inside) const {
-		if (m_shapes.size() != 0) {
-			Intersection its;
-			if (!m_kdTree->rayIntersect(ray, its)) 
-				return false;
-			inside = dot(its.geoFrame.n, ray.d) > 0;
-			t = its.t;
-		} else {
-			Float mint, maxt;
-			if (!m_aabb.rayIntersect(ray, mint, maxt))
-				return false;
-			if (mint <= ray.mint && maxt <= ray.mint)
-				return false;
-			inside = mint <= 0 && maxt > 0;
-			t = (mint <= 0) ? maxt : mint;
-		}
-		return true;
-	}
-
 	/// Integrate densities using the composite Simpson's rule
-	inline Float integrateDensity(Ray ray, Float length) const {
-		if (length == 0)
+	inline Float integrateDensity(const Ray &r) const {
+		Ray ray(r(r.mint), r.d, 0, r.maxt - r.mint);
+
+		if (r.maxt == 0)
 			return 0.0f;
+	
 		int nParts = (int) std::ceil(length/m_stepSize);
 		nParts += nParts % 2;
 		const Float stepSize = length/nParts;
@@ -189,6 +138,7 @@ public:
 		Float m = 4;
 		Float accumulatedDensity = m_densities->lookupFloat(ray.o) 
 			+ m_densities->lookupFloat(ray(length));
+
 #ifdef HET_EARLY_EXIT
 		const Float stopAfterDensity = -std::log(Epsilon);
 		const Float stopValue = stopAfterDensity*3/(stepSize
@@ -203,7 +153,7 @@ public:
 			ray.o += increment;
 
 			if (ray.o == tmp) {
-				Log(EWarn, "integrateDensity(): failed to make forward progress -- "
+				Log(EWarn, "integrateDensity(): unable to make forward progress -- "
 						"round-off error issues? The step size was %f", stepSize);
 				break;
 			}
@@ -220,38 +170,8 @@ public:
 	}
 
 	/**
-	 * \brief Integrate the density covered by the specified ray
-	 * segment, while clipping the volume to the underlying
-	 * stencil volume.
-	 */
-	inline Float integrateDensity(const Ray &r) const {
-		Ray ray(r(r.mint), r.d,
-			0, std::numeric_limits<Float>::infinity(), 0.0f);
-		Float integral = 0, remaining = r.maxt - r.mint;
-		int iterations = 0;
-		bool inside = false;
-		Float t = 0;
-
-		while (remaining > 0 && rayIntersect(ray, t, inside)) {
-			if (inside) 
-				integral += integrateDensity(ray, std::min(remaining, t));
-
-			remaining -= t;
-			ray.o = ray(t);
-			ray.mint = Epsilon;
-
-			if (++iterations > 100) {
-				/// Just a precaution..
-				Log(EWarn, "integrateDensity(): round-off error issues?");
-				break;
-			}
-		}
-		return integral;
-	}
-
-	/**
 	 * Attempts to solve the following 1D integral equation for 't'
-	 * \int_0^t density(ray.o + x * ray.d) * dx + accumulatedDensity == desiredDensity.
+	 * \int_0^t density(ray.o + x * ray.d) * dx == desiredDensity.
 	 * When no solution can be found in [0, maxDist] the function returns
 	 * false. For convenience, the function returns the current values of sigmaT 
 	 * and the albedo, as well as the 3D position 'ray.o+t*ray.d' upon
@@ -263,6 +183,7 @@ public:
 			Point &currentPoint) const {
 		if (maxDist == 0)
 			return std::numeric_limits<Float>::infinity();
+
 		int nParts = (int) std::ceil(maxDist/m_stepSize);
 		Float stepSize = maxDist/nParts;
 		Vector fullIncrement = ray.d * stepSize,
@@ -272,6 +193,7 @@ public:
 		Float t = 0;
 		int numRefines = 0;
 		bool success = false;
+		accumulatedDensity = 0.0f;
 
 		while (t <= maxDist) {
 			Float node2 = m_densities->lookupFloat(ray.o + halfIncrement),
@@ -304,8 +226,11 @@ public:
 				continue;
 			}
 			
-			if (ray.o+fullIncrement == ray.o) /* Unable to make forward progress - stop */
+			if (ray.o+fullIncrement == ray.o) {
+				Log(EWarn, "invertDensityIntegral(): unable to make forward progress -- "
+						"round-off error issues? The step size was %f", stepSize);
 				break;
+			}
 
 			accumulatedDensity = newDensity;
 			node1 = node3;
@@ -400,11 +325,11 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "HeterogeneousMedium[" << endl
-			<< "  albedo=" << indent(m_albedo.toString()) << "," << endl
-			<< "  orientations=" << indent(m_orientations.toString()) << "," << endl
-			<< "  densities=" << indent(m_densities.toString()) << "," << endl
-			<< "  stepSize=" << m_stepSize << "," << endl
-			<< "  densityMultiplier=" << m_densityMultiplier << endl
+			<< "  albedo = " << indent(m_albedo.toString()) << "," << endl
+			<< "  orientations = " << indent(m_orientations.toString()) << "," << endl
+			<< "  densities = " << indent(m_densities.toString()) << "," << endl
+			<< "  stepSize = " << m_stepSize << "," << endl
+			<< "  densityMultiplier = " << m_densityMultiplier << endl
 			<< "]";
 		return oss.str();
 	}
@@ -413,9 +338,8 @@ private:
 	ref<VolumeDataSource> m_densities;
 	ref<VolumeDataSource> m_albedo;
 	ref<VolumeDataSource> m_orientations;
-	ref<ShapeKDTree> m_kdTree;
-	std::vector<Shape *> m_shapes;
 	Float m_stepSize;
+	AABB m_aabb;
 };
 
 MTS_IMPLEMENT_CLASS_S(HeterogeneousMedium, false, Medium)

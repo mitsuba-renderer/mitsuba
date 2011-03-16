@@ -171,9 +171,6 @@ public:
 	/// Add a child ConfigurableObject
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
 
-	/// Return a bounding volume
-	inline const AABB &getAABB() const { return m_aabb; }
-
 	/// Return a string representation
 	virtual std::string toString() const = 0;
 
@@ -195,7 +192,6 @@ protected:
 	Spectrum m_sigmaS;
 	Spectrum m_sigmaT;
 	Float m_albedo;
-	AABB m_aabb;
 	ref<PhaseFunction> m_phaseFunction;
 	Float m_densityMultiplier;
 };

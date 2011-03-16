@@ -18,6 +18,8 @@
 
 #include <mitsuba/render/medium.h>
 #include <mitsuba/render/phase.h>
+#include <mitsuba/core/timer.h>
+#include <omp.h>
 #include "bre.h"
 
 MTS_NAMESPACE_BEGIN
@@ -26,20 +28,28 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 	size_t reducedLookupSize = std::sqrt(lookupSize);
 	Float sizeFactor = (Float) lookupSize/ (Float) reducedLookupSize;
 
-	PhotonMap::search_result *results = 
-		new PhotonMap::search_result[reducedLookupSize+1];
-
 	m_photonCount = pmap->getPhotonCount();
 	m_scaleFactor = pmap->getScaleFactor();
 	m_lastInnerNode = m_photonCount/2;
 	m_lastRChildNode = (m_photonCount-1)/2;
 	m_depth = log2i(m_photonCount)+1;
 
+	Log(EInfo, "Allocating %s for the BRE acceleration data structure",
+		memString(sizeof(BRENode) * (m_photonCount+1)).c_str());
 	m_nodes = new BRENode[m_photonCount+1];
 
 	Log(EInfo, "Computing photon radii ..");
+	int tcount = omp_get_max_threads();
+	PhotonMap::search_result **resultsPerThread = new PhotonMap::search_result*[tcount];
+	for (int i=0; i<tcount; ++i)
+		resultsPerThread[i] = new PhotonMap::search_result[reducedLookupSize+1];
+
+	ref<Timer> timer = new Timer();
+	#pragma omp parallel for
 	for (size_t i=1; i<=m_photonCount; ++i) {
+		PhotonMap::search_result *results = resultsPerThread[omp_get_thread_num()];
 		const Photon &photon = pmap->getPhoton(i);
+
 		BRENode &node = m_nodes[i];
 		node.photon = photon;
 
@@ -49,12 +59,17 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 		/* Compute photon radius based on a locally uniform density assumption */
 		node.radius = std::sqrt(searchRadiusSqr * sizeFactor);
 	}
+	Log(EInfo, "Done (took %i ms)", timer->getMilliseconds());
 
 	Log(EInfo, "Generating a hierarchy for the beam radiance estimate");
+	timer->reset();
 
 	buildHierarchy(1);
+	Log(EInfo, "Done (took %i ms)", timer->getMilliseconds());
 
-	delete[] results;
+	for (int i=0; i<tcount; ++i)
+		delete[] resultsPerThread[i];
+	delete[] resultsPerThread;
 }
 
 BeamRadianceEstimator::BeamRadianceEstimator(Stream *stream, InstanceManager *manager) {
@@ -107,7 +122,8 @@ inline Float K2(Float sqrParam) {
 	return (3/M_PI) * tmp * tmp;
 }
 
-Spectrum BeamRadianceEstimator::query(const Ray &ray, const Medium *medium) const {
+Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium) const {
+	const Ray ray(r(r.mint), r.d, 0, r.maxt - r.mint, r.time);
 	uint32_t *stack = (uint32_t *) alloca((m_depth+1) * sizeof(uint32_t));
 	uint32_t index = 1, stackPos = 1;
 	Spectrum result(0.0f);
