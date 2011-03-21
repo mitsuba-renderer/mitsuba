@@ -36,6 +36,9 @@ void GLProgram::init() {
 	Assert(m_id[0] == 0 && m_id[1] == 0 && m_program == 0);
 
 	Log(EDebug, "Uploading a GPU program : %s", toString().c_str());
+	if (!GLEW_ARB_shader_objects)
+		Log(EError, "Your OpenGL implementation does not support shader objects!");
+
 	m_program = glCreateProgramObjectARB();
 
 	m_id[EVertexProgram] = createShader(GL_VERTEX_SHADER_ARB, 
@@ -81,6 +84,9 @@ void GLProgram::init() {
 int GLProgram::createShader(int type, const std::string &source) {
 	if (source == "")
 		return 0;
+
+	if (type == GL_GEOMETRY_SHADER_ARB && !GLEW_ARB_geometry_shader4)
+		Log(EError, "Your OpenGL implementation does not support geometry shaders!");
 
 	int id = glCreateShaderObjectARB(type);
 

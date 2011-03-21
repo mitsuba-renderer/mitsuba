@@ -150,10 +150,6 @@ public:
 		int samplerResID = sched->registerManifoldResource(
 			static_cast<std::vector<SerializableObject*> &>(samplers)); 
 
-#if !defined(__OSX__) && defined(_OPENMP)
-		omp_set_num_threads(nCores);
-#endif
-
 #ifdef MTS_DEBUG_FP
 		enableFPExceptions();
 #endif

@@ -109,5 +109,26 @@ void X11Session::processEvents() {
 	}
 }
 
+void X11Session::processEventsBlocking(bool &stop) {
+	XEvent event;
+	while (true) {
+		if (!XPending(m_display) && stop)
+			break;
+		XNextEvent(m_display, &event);
+		Window window = event.xany.window;
+		
+		std::vector<Device *>::iterator it = m_devices.begin();
+
+		for (; it!=m_devices.end(); ++it) {
+			X11Device *device = static_cast<X11Device *>(*it);
+			if (device->getWindow() == window) {
+				device->processEvent(event);
+				break;
+			}
+		}
+	}
+}
+
+
 MTS_IMPLEMENT_CLASS(X11Session, false, Session)
 MTS_NAMESPACE_END

@@ -579,10 +579,8 @@ void NSGLDevice::processEvents() {
 	Assert(m_initialized);
 
 	m_mutex->lock();
-	std::vector<DeviceEvent>::iterator it = m_deviceEvents.begin();
-	for (; it!=m_deviceEvents.end(); ++it) {
+	for (std::vector<DeviceEvent>::iterator it = m_deviceEvents.begin(); it!=m_deviceEvents.end(); ++it) 
 		fireDeviceEvent(*it);
-	}
 	m_deviceEvents.clear();
 	m_mutex->unlock();
 }

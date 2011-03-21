@@ -54,6 +54,7 @@ public:
 				event.getMouseRelative().y / 300.0f
 			);
 		}
+		redraw();
 	}
 
 	/**
@@ -217,6 +218,7 @@ public:
 				m_radius /= 1.1;
 				break;
 		}
+		redraw();
 	}
 
 	bool init(int argc, char **argv) {

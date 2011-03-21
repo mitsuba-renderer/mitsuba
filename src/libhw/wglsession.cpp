@@ -77,9 +77,19 @@ void WGLSession::processEvents() {
 	MSG msg;
 
 	while (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE)) {
-		if (GetMessage(&msg, NULL, 0, 0) > 0) {
+		if (GetMessage(&msg, NULL, 0, 0) > 0) 
 			DispatchMessage(&msg);
-		}
+	}
+}
+
+void WGLSession::processEventsBlocking(bool &stop) {
+	MSG msg;
+
+	while (true) {
+		if (!PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE) && stop)
+			break;
+		if (GetMessage(&msg, NULL, 0, 0) > 0) 
+			DispatchMessage(&msg);
 	}
 }
 

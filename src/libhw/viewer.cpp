@@ -36,10 +36,14 @@ int Viewer::run(int argc, char **argv) {
 	m_font = new Font(Font::EBitstreamVeraMono14);
 	m_font->init(m_renderer);
 	m_quit = false;
+	m_leaveEventLoop = true;
 
 	if (init(argc, argv)) {
-		while (!m_quit) {
-			m_session->processEvents();
+		while (true) {
+			m_session->processEventsBlocking(m_leaveEventLoop);
+			m_leaveEventLoop = false;
+			if (m_quit) 
+				break;
 			m_renderer->clear();
 			draw();
 			m_device->flip();
@@ -77,10 +81,12 @@ bool Viewer::deviceEventOccurred(const DeviceEvent &event) {
 	switch (event.getType()) {
 		case Device::EKeyDownEvent:
 			if (event.getKeyboardKey() == 'q' 
-				|| event.getKeyboardSpecial() == Device::EKeyEscape)
+				|| event.getKeyboardSpecial() == Device::EKeyEscape) {
 				m_quit = true;
-			else
+				m_leaveEventLoop = true;
+			} else {
 				keyPressed(event);
+			}
 			break;
 		case Device::EKeyUpEvent: keyReleased(event); break;
 		case Device::EMouseMotionEvent: mouseMoved(event); break;
@@ -91,6 +97,7 @@ bool Viewer::deviceEventOccurred(const DeviceEvent &event) {
 		case Device::EMouseEndDragEvent: mouseEndDrag(event); break;
 		case Device::EQuitEvent:
 			m_quit = true;
+			m_leaveEventLoop = true;
 			break;
 	}
 

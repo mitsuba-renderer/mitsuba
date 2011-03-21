@@ -47,6 +47,9 @@ protected:
 	/// Draw a heads-up display
 	void drawHUD(const std::string &text);
 
+	/// Request that the draw() routine be called 
+	inline void redraw() { m_leaveEventLoop = true; }
+
 	/// To be overwritten by the subclass: main drawing routine
 	virtual void draw() = 0;
 
@@ -98,7 +101,7 @@ protected:
 	ref<Device> m_device;
 	ref<Renderer> m_renderer;
 	ref<Font> m_font;
-	bool m_quit;
+	bool m_quit, m_leaveEventLoop;
 };
 
 MTS_NAMESPACE_END
