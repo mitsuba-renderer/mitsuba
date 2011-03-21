@@ -55,6 +55,12 @@ public:
 	/// Initialize the renderer
 	virtual void init(Device *device, Renderer *other = NULL);
 
+	/**
+	 * \brief Reconfigure the renderer for a certain device
+	 * (e.g. after a resize event)
+	 */
+	void reconfigure(const Device *device);
+
 	/// Shut the renderer down
 	virtual void shutdown();
 

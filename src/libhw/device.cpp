@@ -46,6 +46,7 @@ Device::Device(Session *name) {
 	m_fpsCounter = 0;
 	m_lastTime = 0;
 	m_timer = new Timer();
+	m_resizeAllowed = true;
 }
 
 Device::~Device() {
@@ -122,6 +123,11 @@ void Device::setDoubleBuffer(bool doubleBuffer) {
 void Device::setFullscreen(bool fullscreen) {
 	Assert(!m_initialized);
     m_fullscreen = fullscreen;
+}
+
+void Device::setResizeAllowed(bool resizeAllowed) {
+	Assert(!m_initialized);
+    m_resizeAllowed = resizeAllowed;
 }
 
 void Device::setCenter(bool center) {

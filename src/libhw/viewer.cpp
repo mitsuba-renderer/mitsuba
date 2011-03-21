@@ -37,6 +37,8 @@ int Viewer::run(int argc, char **argv) {
 	m_font->init(m_renderer);
 	m_quit = false;
 	m_leaveEventLoop = true;
+	DeviceEvent event(Device::EResizeEvent);
+	windowResized(event);
 
 	if (init(argc, argv)) {
 		while (true) {
@@ -76,6 +78,7 @@ void Viewer::mouseMoved(const DeviceEvent &event) { }
 void Viewer::mouseBeginDrag(const DeviceEvent &event) { }
 void Viewer::mouseDragged(const DeviceEvent &event) { }
 void Viewer::mouseEndDrag(const DeviceEvent &event) { }
+void Viewer::windowResized(const DeviceEvent &event) { }
 
 bool Viewer::deviceEventOccurred(const DeviceEvent &event) {
 	switch (event.getType()) {
@@ -97,6 +100,11 @@ bool Viewer::deviceEventOccurred(const DeviceEvent &event) {
 		case Device::EMouseEndDragEvent: mouseEndDrag(event); break;
 		case Device::EQuitEvent:
 			m_quit = true;
+			m_leaveEventLoop = true;
+			break;
+		case Device::EResizeEvent:
+			m_renderer->reconfigure(m_device);
+			windowResized(event);
 			m_leaveEventLoop = true;
 			break;
 	}

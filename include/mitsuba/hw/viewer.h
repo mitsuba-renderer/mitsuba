@@ -91,6 +91,9 @@ protected:
 
 	/// To be overwritten (optionally): handle a mouse end drag event
 	virtual void mouseEndDrag(const DeviceEvent &event);
+	
+	/// To be overwritten (optionally): handle a window resize event
+	virtual void windowResized(const DeviceEvent &event);
 
 private:
 	bool deviceEventOccurred(const DeviceEvent &event);

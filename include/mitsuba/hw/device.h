@@ -147,7 +147,8 @@ public:
 		EMouseEndDragEvent = 0x0400,
 		EMouseDoubleClickEvent = 0x0800,
 		EGainFocusEvent = 0x1000,
-		ELoseFocusEvent = 0x2000
+		ELoseFocusEvent = 0x2000,
+		EResizeEvent = 0x4000
 	};
 
 	/// Device keyboard event modifiers
@@ -315,6 +316,12 @@ public:
 	/// Return whether full screen drawing is enabled
 	inline bool getFullscreen() const { return m_fullscreen; }
 
+	// Specify whether resizing the window is allowed
+	void setResizeAllowed(bool resizeAllowed);
+
+	/// Return whether it is possible to resize the window
+	inline bool isResizeAllowed() const { return m_resizeAllowed; }
+
 	/// Define whether to enable window centering
 	void setCenter(bool center);
 
@@ -386,20 +393,11 @@ protected:
 	Vector2i m_size;
 	Point2i m_position;
 	int m_fsaa;
-	int m_redBits;
-	int m_greenBits;
-	int m_blueBits;
-	int m_alphaBits;
-	int m_depthBits;
-	int m_stencilBits;
-	bool m_doubleBuffer;
-	bool m_initialized;
-	bool m_fullscreen;
-	bool m_center;
-	bool m_showFPS;
-	int m_fpsCounter;
-	int m_fps;
-	int m_lastTime;
+	int m_redBits, m_greenBits, m_blueBits;
+	int m_alphaBits, m_depthBits, m_stencilBits;
+	bool m_doubleBuffer, m_initialized, m_fullscreen;
+	bool m_center, m_showFPS, m_resizeAllowed;
+	int m_fpsCounter, m_fps, m_lastTime;
 	std::string m_title;
 	std::list<DeviceEventListener *> m_callbacks;
 };

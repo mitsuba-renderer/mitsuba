@@ -209,6 +209,10 @@ GPUSync *GLRenderer::createGPUSync() {
 	return new GLSync();
 }
 
+void GLRenderer::reconfigure(const Device *device) {
+	glViewport(0, 0, device->getSize().x, device->getSize().y);
+}
+
 void GLRenderer::clear() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	checkError();
