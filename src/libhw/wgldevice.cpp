@@ -65,10 +65,14 @@ LONG WINAPI WGLDevice::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		case WM_CREATE:
 			device->initPixelFormat(hWnd);
 			break;
-		case WM_SIZE: 
-			device->m_size = Vector2i(LOWORD(lParam), HIWORD(lParam));
-			deviceEvent.setType(EResizeEvent);
-			device->fireDeviceEvent(deviceEvent);
+		case WM_SIZE: {
+				Vector2i size = Vector2i(LOWORD(lParam), HIWORD(lParam));
+				if (device->m_size == size) {
+					device->m_size = size;
+					deviceEvent.setType(EResizeEvent);
+					device->fireDeviceEvent(deviceEvent);
+				}
+			}
 			break;
 		case WM_PAINT:
 			BeginPaint(hWnd, &ps);
