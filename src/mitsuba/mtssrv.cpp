@@ -188,6 +188,9 @@ int ubi_main(int argc, char **argv) {
 		/* Configure the logging subsystem */
 		ref<Logger> log = Thread::getThread()->getLogger();
 		log->setLogLevel(logLevel);
+
+		/* Initialize OpenMP */
+		Thread::initializeOpenMP(nprocs);
 		
 		/* Disable the default appenders */
 		for (size_t i=0; i<log->getAppenderCount(); ++i) {

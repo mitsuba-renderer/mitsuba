@@ -124,9 +124,6 @@ public:
 		Vector2i cropSize = film->getCropSize();
 		Point2i cropOffset = film->getCropOffset();
 
-#if !defined(__OSX__) && defined(_OPENMP)
-		omp_set_num_threads(nCores);
-#endif
 		m_gatherPoints.clear();
 		m_running = true;
 		for (size_t i=0; i<m_blocks.size(); ++i)

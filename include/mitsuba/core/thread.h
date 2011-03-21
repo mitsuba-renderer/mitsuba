@@ -148,7 +148,7 @@ public:
 	static void staticShutdown();
 
 	/// Initialize Mitsuba's threading system for simultaneous use of OpenMP
-	static void initializeOpenMP();
+	static void initializeOpenMP(size_t threadCount);
 
 	MTS_DECLARE_CLASS()
 protected:

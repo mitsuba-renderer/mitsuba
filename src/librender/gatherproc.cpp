@@ -155,7 +155,7 @@ public:
 			const MediumSamplingRecord &mRec, const Medium *medium,
 			Float time, const Vector &wi, const Spectrum &weight) {
 		if (m_type == GatherPhotonProcess::EVolumePhotons)
-			m_workResult->put(Photon(mRec.p, Normal(), -wi, weight, depth));
+			m_workResult->put(Photon(mRec.p, Normal(0.0f, 0.0f, 0.0f), -wi, weight, depth));
 	}
 
 	MTS_DECLARE_CLASS()

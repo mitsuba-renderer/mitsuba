@@ -24,7 +24,8 @@
 
 MTS_NAMESPACE_BEGIN
 
-ref<Scene> Utility::loadScene(const std::string &filename) {
+ref<Scene> Utility::loadScene(const std::string &filename,
+		const ParameterMap &params) {
 	/* Prepare for parsing scene descriptions */
 	FileResolver *resolver = Thread::getThread()->getFileResolver();
 	SAXParser* parser = new SAXParser();
@@ -37,7 +38,7 @@ ref<Scene> Utility::loadScene(const std::string &filename) {
 	parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 
 	std::map<std::string, std::string> parameters;
-	SceneHandler *handler = new SceneHandler(parameters);
+	SceneHandler *handler = new SceneHandler(params);
 	parser->setDoNamespaces(true);
 	parser->setDocumentHandler(handler);
 	parser->setErrorHandler(handler);

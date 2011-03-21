@@ -70,7 +70,7 @@ void help() {
 	cout <<  "               workloads (default: 32). Only applies to some integrators." << endl << endl;
 	cout <<  "   -v          Be more verbose" << endl << endl;
 	cout <<  "   -w          Treat warnings as errors" << endl << endl;
-	cout <<  "   -b          Disable progress bars" << endl << endl;
+	cout <<  "   -z          Disable progress bars" << endl << endl;
 	cout <<  " The README file included with the distribution contains further information." << endl;
 }
 
@@ -216,6 +216,9 @@ int ubi_main(int argc, char **argv) {
 		}
 
 		ProgressReporter::setEnabled(progressBars);
+
+		/* Initialize OpenMP */
+		Thread::initializeOpenMP(nprocs);
 
 		/* Configure the logging subsystem */
 		ref<Logger> log = Thread::getThread()->getLogger();

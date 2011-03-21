@@ -19,6 +19,7 @@
 #include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
 #include <errno.h>
+#include <omp.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -41,8 +42,8 @@ protected:
 
 class OpenMPThread : public Thread {
 public:
-	OpenMPThread() : Thread("main") {
-	}
+	OpenMPThread(int threadIdx)
+		: Thread(formatString("omp%i", threadIdx)) { }
 
 	virtual void run() {
 		Log(EError, "The OpenMP thread is already running!");
@@ -293,15 +294,17 @@ void Thread::staticShutdown() {
 #endif
 }
 
-void Thread::initializeOpenMP() {
+void Thread::initializeOpenMP(size_t threadCount) {
 	ref<Logger> logger = Thread::getThread()->getLogger();
 	ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
+
+	omp_set_num_threads(threadCount);
 
 	#pragma omp parallel
 	{
 		Thread *thread = Thread::getThread();
 		if (!thread) {
-			thread = new OpenMPThread();
+			thread = new OpenMPThread(omp_get_thread_num());
 			thread->m_running = true;
 			thread->m_thread = pthread_self();
 			thread->m_joinMutex = new Mutex();

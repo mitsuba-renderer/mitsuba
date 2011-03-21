@@ -40,11 +40,14 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
+	typedef std::map<std::string, std::string> ParameterMap;
+
 	/// Virtual destructor
 	virtual ~Utility() { }
 
 	/// Load a scene
-	ref<Scene> loadScene(const std::string &fname);
+	ref<Scene> loadScene(const std::string &fname,
+		const ParameterMap &params= ParameterMap());
 };
 
 #define MTS_DECLARE_UTILITY() \

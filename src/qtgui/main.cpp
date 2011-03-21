@@ -102,6 +102,7 @@ int main(int argc, char *argv[]) {
 	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
+	Thread::initializeOpenMP(getProcessorCount());
 	Logger::staticInitialization();
 	Spectrum::staticInitialization();
 	Scheduler::staticInitialization();
