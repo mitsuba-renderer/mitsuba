@@ -67,6 +67,8 @@ LONG WINAPI WGLDevice::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			break;
 		case WM_SIZE: 
 			device->m_size = Vector2i(LOWORD(lParam), HIWORD(lParam));
+			deviceEvent.setType(EResizeEvent);
+			device->fireDeviceEvent(deviceEvent);
 			break;
 		case WM_PAINT:
 			BeginPaint(hWnd, &ps);
@@ -277,7 +279,7 @@ void WGLDevice::init(Device *other) {
 		m_hwnd = CreateWindow(
 			session->m_wndClassName.c_str(),
 			m_title.c_str(),
-			m_fullscreen ? WS_POPUP : (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX),
+			m_fullscreen ? WS_POPUP : (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_SIZEBOX),
 			CW_USEDEFAULT,
 			CW_USEDEFAULT,
 			getSize().x, getSize().y,
@@ -633,7 +635,6 @@ void WGLDevice::setGrab(bool grab) {
 	m_grab = grab;
 	showCursor(!grab);
 }
-
 
 void WGLDevice::shutdown() {
 	Device::shutdown();
