@@ -35,10 +35,11 @@ GLWidget::GLWidget(QWidget *parent) :
 	setAutoBufferSwap(false);
 	setFocusPolicy(Qt::StrongFocus);
 	m_clock = new Timer();
+	m_wheelTimer = new Timer();
+	m_animationTimer = new Timer();
 	m_movementTimer = new QTimer(parent);
 	m_movementTimer->setInterval(20);
 	m_movementTimer->setSingleShot(false);
-	m_wheelTimer = new Timer();
 	m_redrawTimer = new QTimer(parent);
 	m_redrawTimer->setInterval(200);
 	connect(m_movementTimer, SIGNAL(timeout()), this, SLOT(timerImpulse()));
@@ -62,6 +63,7 @@ GLWidget::GLWidget(QWidget *parent) :
 #endif
 	m_ignoreResizeEvents = false;
 	m_ignoreScrollEvents = false;
+	m_animation = false;
 	setAcceptDrops(true);
 }
 
@@ -309,7 +311,7 @@ void GLWidget::setScene(SceneContext *context) {
 		context = NULL;
 	m_preview->setSceneContext(context, true, false);
 	m_framebufferChanged = true;
-	m_mouseButtonDown = false;
+	m_mouseButtonDown = m_animation = false;
 	m_leftKeyDown = m_rightKeyDown = m_upKeyDown = m_downKeyDown = false;
 	m_gizmo->reset();
 	updateGeometry();
@@ -480,27 +482,45 @@ void GLWidget::timerImpulse() {
 		m_movementTimer->stop();
 		return;
 	}
-	Camera *camera = m_context->scene->getCamera();
-	Float moveSpeed = m_context->movementScale
-		* m_clock->getMilliseconds();
-	m_clock->reset();
+	ProjectiveCamera *camera 
+		= static_cast<ProjectiveCamera *>(m_context->scene->getCamera());
 
-	if (m_leftKeyDown)
-		camera->setViewTransform(
-		Transform::translate(Vector(moveSpeed,0,0))
-		* camera->getViewTransform());
-	if (m_rightKeyDown)
-		camera->setViewTransform(
-		Transform::translate(Vector(-moveSpeed,0,0))
-		* camera->getViewTransform());
-	if (m_downKeyDown)
-		camera->setViewTransform(
-		Transform::translate(Vector(0,0,moveSpeed))
-		* camera->getViewTransform());
-	if (m_upKeyDown)
-		camera->setViewTransform(
-		Transform::translate(Vector(0,0,-moveSpeed))
-		* camera->getViewTransform());
+	if (m_animation) {
+		Float x = std::min(m_animationTimer->getMilliseconds() / 500.0f, 1.0f);
+		Float t = x*x*x*(x*(x*6-15)+10); // smootherstep by Ken Perlin
+
+		Point origin = (1-t) * m_animationOrigin0 + t * m_animationOrigin1;
+		Point target = (1-t) * m_animationTarget0 + t * m_animationTarget1;
+
+		camera->setInverseViewTransform(Transform::lookAt(origin, target, m_up));
+
+		if (x == 1.0f)
+			m_animation = false;
+	}
+
+	if (!m_gizmo->isDragging() && !m_animation) {
+		Float moveSpeed = m_context->movementScale
+			* m_clock->getMilliseconds();
+
+		if (m_leftKeyDown)
+			camera->setViewTransform(
+			Transform::translate(Vector(moveSpeed,0,0))
+			* camera->getViewTransform());
+		if (m_rightKeyDown)
+			camera->setViewTransform(
+			Transform::translate(Vector(-moveSpeed,0,0))
+			* camera->getViewTransform());
+		if (m_downKeyDown)
+			camera->setViewTransform(
+			Transform::translate(Vector(0,0,moveSpeed))
+			* camera->getViewTransform());
+		if (m_upKeyDown)
+			camera->setViewTransform(
+			Transform::translate(Vector(0,0,-moveSpeed))
+			* camera->getViewTransform());
+	}
+
+	m_clock->reset();
 
 	if (m_context->renderJob) {
 		m_context->renderJob->cancel();
@@ -513,6 +533,12 @@ void GLWidget::timerImpulse() {
 		emit stopRendering(); 
 	}
 
+	if (!(m_leftKeyDown || m_rightKeyDown || m_upKeyDown || m_downKeyDown 
+		|| m_wheelTimer->getMilliseconds() < 200 || m_animation)) {
+		if (m_movementTimer->isActive()) 
+			m_movementTimer->stop();
+	}
+
 	resetPreview();
 }
 
@@ -521,7 +547,7 @@ void GLWidget::resetPreview() {
 		return;
 	bool motion = m_leftKeyDown || m_rightKeyDown || 
 		m_upKeyDown || m_downKeyDown || m_mouseButtonDown ||
-		m_wheelTimer->getMilliseconds() < 200;
+		m_wheelTimer->getMilliseconds() < 200 || m_animation;
 	m_preview->setSceneContext(m_context, false, motion);
 	updateGL();
 }
@@ -529,14 +555,12 @@ void GLWidget::resetPreview() {
 void GLWidget::keyPressEvent(QKeyEvent *event) {
 	if (event->key() == Qt::Key_Escape)
 		emit quit();
-	if (event->key() == Qt::Key_R)
+	else if (event->key() == Qt::Key_R)
 		emit beginRendering();
 
 	if (event->isAutoRepeat() || !m_context)
 		return;
 	
-	PinholeCamera *camera = static_cast<PinholeCamera *>(m_context->scene->getCamera());
-
 	switch (event->key()) {
 		case Qt::Key_PageUp:   m_context->movementScale *= 2; break;
 		case Qt::Key_PageDown: m_context->movementScale /= 2; break;
@@ -561,21 +585,8 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 		}
 		// break intentionally missing
 		case Qt::Key_F: {
-			if (!m_gizmo->isActive())
-				return;
-			Vector up;
-			if (m_navigationMode == EFlythroughFixedYaw)
-				up = m_context->up;
-			else 
-				up = camera->getInverseViewTransform()(Vector(0,1,0));
-			Vector d = Vector(camera->getImagePlaneNormal());
-			Float fov = std::min(camera->getXFov(), camera->getYFov())*0.8/2;
-			const BSphere &bs = m_gizmo->getBSphere();
-			Float distance = bs.radius/std::tan(fov * M_PI/180);
-
-			camera->setInverseViewTransform(
-				Transform::lookAt(bs.center - distance*d, bs.center, up));
-			resetPreview();
+			if (m_gizmo->isActive())
+				reveal(m_gizmo->getBSphere());
 		};
 		break;
 	}
@@ -611,17 +622,10 @@ void GLWidget::keyReleaseEvent(QKeyEvent *event) {
 			}
 			break;
 	}
-
-	if (!(m_leftKeyDown || m_rightKeyDown || m_upKeyDown || m_downKeyDown)) {
-		if (m_movementTimer->isActive()) {
-			m_movementTimer->stop();
-			resetPreview();
-		}
-	}
 }
 
 void GLWidget::mouseMoveEvent(QMouseEvent *event) {
-	if (!m_preview->isRunning())
+	if (!m_preview->isRunning() || m_animation)
 		return;
 
 	QPoint previousPos = m_mousePos, 
@@ -713,7 +717,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 
 	if (event->buttons() & Qt::MidButton) {
 		camera->setViewTransform(
-			Transform::translate(Vector(-(Float) rel.x(), (Float) rel.y(), 0) 
+			Transform::translate(Vector((Float) rel.x(), (Float) -rel.y(), 0) 
 				* m_mouseSensitivity * .6f * m_context->movementScale)
 			* camera->getViewTransform());
 		didMove = true;
@@ -739,7 +743,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 void GLWidget::wheelEvent(QWheelEvent *event) {
 	QScrollBar *bar = event->orientation() == Qt::Vertical
 		? m_vScroll : m_hScroll;
-	if (!m_preview->isRunning()) 
+	if (!m_preview->isRunning() || m_animation) 
 		return;
 
 	if (bar->isVisible()) {
@@ -766,14 +770,18 @@ void GLWidget::wheelEvent(QWheelEvent *event) {
 		Vector d = Vector(camera->getImagePlaneNormal());
 		Point o = camera->getPosition();
 		Intersection its;
+		Float nearClip = camera->getNearClip(), farClip = camera->getFarClip();
 
-		if (m_context->scene->rayIntersect(Ray(o, d, 0), its)) {
+		if (m_context->scene->rayIntersect(Ray(o, d, nearClip, farClip, 0), its)) {
 			Float length = (its.p - o).length();
 
-			length *= std::pow(1 - 1e-3f, event->delta());
+			length = std::min(std::max(length * std::pow(1 - 1e-3f, 
+					event->delta()), 1.2f*nearClip), farClip/1.2f);
 			camera->setInverseViewTransform(
 				Transform::lookAt(its.p - length*d, its.p, up));
 			m_wheelTimer->reset();
+			if (!m_movementTimer->isActive())
+				m_movementTimer->start();
 			resetPreview();
 		}
 
@@ -820,6 +828,15 @@ void GLWidget::mousePressEvent(QMouseEvent *event) {
 	}
 }
 
+void GLWidget::mouseDoubleClickEvent(QMouseEvent *event) {
+	if (!m_preview->isRunning())
+		return;
+	if (m_navigationMode == EArcBall && m_gizmo->isActive()
+		&& event->buttons() & Qt::LeftButton) 
+		reveal(m_gizmo->getBSphere());
+}
+
+
 void GLWidget::mouseReleaseEvent(QMouseEvent *event) {
 	if (!m_preview->isRunning())
 		return;
@@ -861,7 +878,7 @@ void GLWidget::paintGL() {
 			}
 			bool motion = m_leftKeyDown || m_rightKeyDown || 
 				m_upKeyDown || m_downKeyDown || m_mouseButtonDown ||
-				m_wheelTimer->getMilliseconds() < 200;
+				m_wheelTimer->getMilliseconds() < 200 || m_animation;
 			entry = m_preview->acquireBuffer(motion ? -1 : 50);
 			if (entry.buffer == NULL) {
 				/* Unsuccessful at acquiring a buffer in the 
@@ -1232,6 +1249,30 @@ Point2i GLWidget::upperLeft(bool flipY) const {
 		deviceSize.x < filmSize.x ? (-m_context->scrollOffset.x) : (deviceSize.x - filmSize.x)/2,
 		deviceSize.y < filmSize.y ? (flipY ? (deviceSize.y-filmSize.y 
 			+ m_context->scrollOffset.y) : -m_context->scrollOffset.y) : (deviceSize.y - filmSize.y)/2);
+}
+
+void GLWidget::reveal(const BSphere &bsphere) {
+	if (!m_context || m_animation)
+		return;
+	PinholeCamera *camera = static_cast<PinholeCamera *>(m_context->scene->getCamera());
+	if (m_navigationMode == EFlythroughFixedYaw)
+		m_up = m_context->up;
+	else 
+		m_up = camera->getInverseViewTransform()(Vector(0,1,0));
+	if (m_gizmo->isDragging())
+		m_gizmo->stopDrag();
+	Vector d = Vector(camera->getImagePlaneNormal());
+	Float fov = std::min(camera->getXFov(), camera->getYFov())*0.9f/2;
+	Float distance = bsphere.radius/std::tan(fov * M_PI/180.0f);
+
+	m_animationTimer->reset();
+	m_animationOrigin0 = camera->getPosition();
+	m_animationOrigin1 = bsphere.center - distance*d;
+	m_animationTarget0 = m_animationOrigin0 + d;
+	m_animationTarget1 = m_animationOrigin1 + d;
+	m_animation = true;
+	if (!m_movementTimer->isActive())
+		m_movementTimer->start();
 }
 
 void GLWidget::resizeGL(int width, int height) {
