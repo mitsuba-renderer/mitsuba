@@ -16,6 +16,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from .. import MitsubaAddon
+
 from extensions_framework import declarative_property_group
 from extensions_framework import util as efutil
 from extensions_framework.validate import Logic_OR as O
@@ -214,12 +216,15 @@ class TextureParameter(TextureParameterBase):
 			)
 		return params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_texture(declarative_property_group):
 	'''
 	Storage class for Mitsuba Texture settings.
 	This class will be instantiated within a Blender Texture
 	object.
 	'''
+	
+	ef_attach_to = ['Texture']
 
 	controls = [
 		'type'
@@ -249,7 +254,10 @@ class mitsuba_texture(declarative_property_group):
 		else:
 			return ParamSet()
 
+@MitsubaAddon.addon_register_class
 class mitsuba_tex_mapping(declarative_property_group):
+	ef_attach_to = ['mitsuba_texture']
+
 	controls = [
 		['uscale', 'vscale'],
 		['uoffset', 'voffset']
@@ -310,7 +318,10 @@ class mitsuba_tex_mapping(declarative_property_group):
 		mapping_params.add_float('voffset', self.voffset)
 		return mapping_params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_tex_ldrtexture(declarative_property_group):
+	ef_attach_to = ['mitsuba_texture']
+
 	controls = [
 		'filename',
 		'wrapMode',
@@ -399,7 +410,10 @@ class mitsuba_tex_ldrtexture(declarative_property_group):
 
 		return params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_tex_checkerboard(declarative_property_group):
+	ef_attach_to = ['mitsuba_texture']
+
 	controls = [
 		'darkColor',
 		'brightColor'
@@ -438,7 +452,10 @@ class mitsuba_tex_checkerboard(declarative_property_group):
 
 		return params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_tex_gridtexture(declarative_property_group):
+	ef_attach_to = ['mitsuba_texture']
+
 	controls = [
 		'darkColor',
 		'brightColor',

@@ -72,6 +72,12 @@ public:
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
+	/// Set a integer parameter by name
+	inline void setParameter(const std::string &name, int value, 
+		bool failIfMissing = true) {
+		setParameter(getParameterID(name, failIfMissing), value);
+	}
+
 	/// Set a float parameter by name
 	inline void setParameter(const std::string &name, Float value, 
 		bool failIfMissing = true) {
@@ -180,6 +186,9 @@ public:
 
 	/// Set a float parameter
 	virtual void setParameter(int id, Float value) = 0;
+
+	/// Set a int parameter
+	virtual void setParameter(int id, int value) = 0;
 
 	/// Set a Vector parameter
 	virtual void setParameter(int id, const Vector &value) = 0;

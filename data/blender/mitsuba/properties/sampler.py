@@ -16,15 +16,20 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from .. import MitsubaAddon
+
 from extensions_framework import declarative_property_group
 from extensions_framework import util as efutil
 
+@MitsubaAddon.addon_register_class
 class mitsuba_sampler(declarative_property_group):
 	'''
 	Storage class for Mitsuba Sampler settings.
 	This class will be instantiated within a Blender scene
 	object.
 	'''
+
+	ef_attach_to = ['Scene']
 
 	controls = [
 		'type',

@@ -28,6 +28,7 @@
 #include <mitsuba/hw/gpuprogram.h>
 #include <mitsuba/hw/gpusync.h>
 #include <mitsuba/hw/vpl.h>
+#include <mitsuba/hw/gizmo.h>
 #if defined(WIN32)
 #include <mitsuba/hw/wgldevice.h>
 #endif
@@ -99,6 +100,8 @@ protected:
 	void wheelEvent(QWheelEvent *event);
 	void dragEnterEvent(QDragEnterEvent *event);
 	void dropEvent(QDropEvent *event);
+	void oglRenderKDTree(const KDTreeBase<AABB> *kdtree);
+	Point2i upperLeft(bool flipY = false) const;
 
 	/* Masquerade QGLWidget as a GL device for libhw */
 #if defined(WIN32)
@@ -130,6 +133,7 @@ private:
 	ref<GPUProgram> m_downsamplingProgram, m_luminanceProgram;
 	ref<QtDevice> m_device;
 	ref<Font> m_font;
+	ref<Gizmo> m_gizmo;
 	SceneContext *m_context;
 	bool m_framebufferChanged, m_mouseButtonDown;
 	bool m_leftKeyDown, m_rightKeyDown;
@@ -145,7 +149,9 @@ private:
 	bool m_ignoreScrollEvents, m_ignoreResizeEvents;
 	int m_mouseSensitivity, m_softwareFallback;
 	ref<Bitmap> m_fallbackBitmap;
+	ref<Timer> m_wheelTimer;
 	QString m_errorString;
+	Transform m_storedViewTransform;
 };
 
 #endif /* __GLWIDGET_H */

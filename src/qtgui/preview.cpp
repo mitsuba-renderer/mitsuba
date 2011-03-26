@@ -469,7 +469,7 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	m_shaderManager->setVPL(vpl);
 
 	Point2 jitter(.5f, .5f);
-	if (!m_motion && !m_context->showKDTree)
+	if (!m_motion && !m_context->showKDTree && m_accumBuffer != NULL)
 		jitter -= Vector2(m_random->nextFloat(), m_random->nextFloat());
 
 	m_mutex->lock();
@@ -494,13 +494,6 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 		m_shaderManager->unbind();
 	}
 	m_renderer->endDrawingMeshes();
-	if (m_context->showKDTree) {
-		oglRenderKDTree(m_context->scene->getKDTree());
-		const std::vector<Shape *> shapes = m_context->scene->getShapes();
-		for (size_t j=0; j<shapes.size(); ++j) 
-			if (shapes[j]->getKDTree())
-				oglRenderKDTree(shapes[j]->getKDTree());
-	}
 	m_shaderManager->drawBackground(clipToWorld, camPos);
 	m_framebuffer->releaseTarget();
 
@@ -511,6 +504,7 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	if (m_accumBuffer == NULL) { 
 		target.buffer->clear();
 		m_renderer->blitTexture(m_framebuffer, true);
+		m_framebuffer->blit(target.buffer, GPUTexture::EDepthBuffer);
 	} else {
 		m_accumBuffer->bind(1);
 		m_accumProgram->bind();
@@ -519,9 +513,11 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 		m_renderer->blitQuad(true);
 		m_accumProgram->unbind();
 		m_accumBuffer->unbind();
+		m_accumBuffer->blit(target.buffer, GPUTexture::EDepthBuffer);
 	}
-	m_framebuffer->unbind();
+
 	m_renderer->setDepthMask(true);
+	m_framebuffer->unbind();
 	m_renderer->setDepthTest(true);
 	target.buffer->releaseTarget();
 	m_accumBuffer = target.buffer;
@@ -538,42 +534,6 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 			/* No sync objects available - we have to wait 
 			   for everything to finish */
 			m_renderer->finish();
-		}
-	}
-}
-		
-void PreviewThread::oglRenderKDTree(const KDTreeBase<AABB> *kdtree) {
-	std::stack<boost::tuple<const KDTreeBase<AABB>::KDNode *, AABB, uint32_t> > stack;
-
-	stack.push(boost::make_tuple(kdtree->getRoot(), kdtree->getTightAABB(), 0));
-	Float brightness = 10.0f;
-
-	while (!stack.empty()) {
-		const KDTreeBase<AABB>::KDNode *node = boost::get<0>(stack.top());
-		AABB aabb = boost::get<1>(stack.top());
-		int level = boost::get<2>(stack.top());
-		stack.pop();
-		m_renderer->setColor(Spectrum(brightness));
-		m_renderer->drawAABB(aabb);
-
-		if (!node->isLeaf()) {
-			int axis = node->getAxis();
-			float split = node->getSplit();
-			if (level + 1 <= m_context->shownKDTreeLevel) {
-				Float tmp = aabb.max[axis];
-				aabb.max[axis] = split;
-				stack.push(boost::make_tuple(node->getLeft(), aabb, level+1));
-				aabb.max[axis] = tmp;
-				aabb.min[axis] = split;
-				stack.push(boost::make_tuple(node->getRight(), aabb, level+1));
-			} else {
-				aabb.min[axis] = split;
-				aabb.max[axis] = split;
-				Spectrum color;
-				color.fromLinearRGB(0, 0, 2*brightness);
-				m_renderer->setColor(color);
-				m_renderer->drawAABB(aabb);
-			}
 		}
 	}
 }

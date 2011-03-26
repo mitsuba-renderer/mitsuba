@@ -20,92 +20,60 @@
 import os, time, threading, subprocess, sys, copy
 
 # Blender libs
-import bpy
+import bpy, bl_ui
 
 # Framework libs
-from extensions_framework.engine import engine_base
 from extensions_framework import util as efutil
 
-# Mitsuba-related classes
-from mitsuba import plugin_path
-from mitsuba.properties.engine import mitsuba_engine
-from mitsuba.properties.sampler import mitsuba_sampler
-from mitsuba.properties.integrator import mitsuba_integrator
-from mitsuba.properties.lamp import mitsuba_lamp
-from mitsuba.properties.texture import mitsuba_texture, \
-	mitsuba_tex_ldrtexture, mitsuba_tex_checkerboard, \
-	mitsuba_tex_gridtexture, mitsuba_tex_mapping
-from mitsuba.properties.material import mitsuba_material, \
-	mitsuba_mat_lambertian, mitsuba_mat_phong, mitsuba_mat_ward, \
-	mitsuba_mat_microfacet, mitsuba_mat_roughglass, \
-	mitsuba_mat_roughmetal, mitsuba_mat_dielectric, \
-	mitsuba_mat_mirror, mitsuba_mat_difftrans, \
-	mitsuba_mat_composite, mitsuba_emission
-from mitsuba.operators import MITSUBA_OT_preset_engine_add, EXPORT_OT_mitsuba
-from mitsuba.outputs import MtsLog, MtsFilmDisplay
-from mitsuba.export.adjustments import MtsAdjustments
-from mitsuba.export import translate_id 
-from mitsuba.export.film import resolution
-from mitsuba.export import get_instance_materials
-from mitsuba.ui import render_panels, lamps
-from mitsuba.ui.textures import TEXTURE_PT_context_texture_mts
-from mitsuba.ui.textures import main, ldrtexture, checkerboard, \
-		gridtexture, mapping
-from mitsuba.ui.materials import MATERIAL_PT_context_material_mts
-from mitsuba.ui.materials import main, lambertian, phong, ward, \
-		microfacet, roughglass, roughmetal, dielectric, \
-		mirror, difftrans, composite, emission
+from .. import MitsubaAddon, plugin_path
+
+from ..outputs import MtsLog, MtsFilmDisplay
+from ..export.adjustments import MtsAdjustments
+from ..export.film import resolution
+from ..export import get_instance_materials, translate_id
+
+from ..properties import (
+	engine, sampler, integrator, lamp, texture, material
+);
+
+from ..ui import (
+	render_panels, lamps, materials
+)
+
+from ..ui.textures import (
+	main, ldrtexture, checkerboard, gridtexture, mapping
+)
+
+from ..ui.materials import (
+	main, lambertian, phong, ward,  microfacet, roughglass,
+	roughmetal, dielectric, mirror, difftrans, composite, 
+	emission
+)
+
+from .. import operators
 
 def compatible(mod):
-	mod = __import__(mod)
+	mod = __import__('bl_ui.' + mod)
 	for subclass in mod.__dict__.values():
 		try:
-			subclass.COMPAT_ENGINES.add('mitsuba')
+			subclass.COMPAT_ENGINES.add(MitsubaAddon.BL_IDNAME)
 		except:
 			pass
 	del mod
 
-import properties_data_lamp
-properties_data_lamp.DATA_PT_context_lamp.COMPAT_ENGINES.add('mitsuba')
-del properties_data_lamp
-
-import properties_render
-properties_render.RENDER_PT_render.COMPAT_ENGINES.add('mitsuba')
-properties_render.RENDER_PT_dimensions.COMPAT_ENGINES.add('mitsuba')
-properties_render.RENDER_PT_output.COMPAT_ENGINES.add('mitsuba')
-del properties_render
+bl_ui.properties_data_lamp.DATA_PT_context_lamp.COMPAT_ENGINES.add(MitsubaAddon.BL_IDNAME)
+bl_ui.properties_render.RENDER_PT_render.COMPAT_ENGINES.add(MitsubaAddon.BL_IDNAME)
+bl_ui.properties_render.RENDER_PT_dimensions.COMPAT_ENGINES.add(MitsubaAddon.BL_IDNAME)
+bl_ui.properties_render.RENDER_PT_output.COMPAT_ENGINES.add(MitsubaAddon.BL_IDNAME)
 
 compatible("properties_data_mesh")
 compatible("properties_data_camera")
 
-class RENDERENGINE_mitsuba(bpy.types.RenderEngine, engine_base):
-	bl_idname			= 'mitsuba'
+@MitsubaAddon.addon_register_class
+class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
+	bl_idname			= MitsubaAddon.BL_IDNAME
 	bl_label			= 'Mitsuba'
 	bl_use_preview      = True
-
-	property_groups = [
-		('Scene', mitsuba_engine),
-		('Scene', mitsuba_integrator),
-		('Scene', mitsuba_sampler),
-		('Lamp', mitsuba_lamp),
-		('Texture', mitsuba_texture),
-		('mitsuba_texture', mitsuba_tex_ldrtexture),
-		('mitsuba_texture', mitsuba_tex_checkerboard),
-		('mitsuba_texture', mitsuba_tex_gridtexture),
-		('mitsuba_texture', mitsuba_tex_mapping),
-		('Material', mitsuba_material),
-		('Material', mitsuba_emission),
-		('mitsuba_material', mitsuba_mat_lambertian),
-		('mitsuba_material', mitsuba_mat_phong),
-		('mitsuba_material', mitsuba_mat_ward),
-		('mitsuba_material', mitsuba_mat_microfacet),
-		('mitsuba_material', mitsuba_mat_roughglass),
-		('mitsuba_material', mitsuba_mat_roughmetal),
-		('mitsuba_material', mitsuba_mat_dielectric),
-		('mitsuba_material', mitsuba_mat_difftrans),
-		('mitsuba_material', mitsuba_mat_mirror),
-		('mitsuba_material', mitsuba_mat_composite)
-	]
 
 	render_lock = threading.Lock()
 

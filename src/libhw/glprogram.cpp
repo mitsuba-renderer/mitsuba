@@ -170,6 +170,12 @@ void GLProgram::setParameter(int id, Float value) {
 	glUniform1f(id, (GLfloat) value);
 }
 
+void GLProgram::setParameter(int id, int value) {
+	if (id == -1)
+		return;
+	glUniform1i(id, value);
+}
+
 void GLProgram::setParameter(int id, const Vector &value) {
 	if (id == -1)
 		return;

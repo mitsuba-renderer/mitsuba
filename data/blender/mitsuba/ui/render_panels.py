@@ -16,22 +16,24 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import os, bpy
-from properties_render import RenderButtonsPanel
+import os, bpy, bl_ui
+
+from .. import MitsubaAddon
 
 from extensions_framework.ui import property_group_renderer
 from extensions_framework import util as efutil
 
 cached_binary_path = None
 
-class render_described_context(RenderButtonsPanel, property_group_renderer):
+class render_panel(bl_ui.properties_render.RenderButtonsPanel, property_group_renderer):
 	'''
 	Base class for render engine settings panels
 	'''
 	
-	COMPAT_ENGINES = {'mitsuba'}
+	COMPAT_ENGINES = { MitsubaAddon.BL_IDNAME }
 
-class setup_preset(render_described_context, bpy.types.Panel):
+@MitsubaAddon.addon_register_class
+class setup_preset(render_panel, bpy.types.Panel):
 	'''
 	Engine settings presets UI Panel
 	'''
@@ -46,7 +48,8 @@ class setup_preset(render_described_context, bpy.types.Panel):
 
 		super().draw(context)
 
-class engine(render_described_context, bpy.types.Panel):
+@MitsubaAddon.addon_register_class
+class engine(render_panel, bpy.types.Panel):
 	'''
 	Engine settings UI Panel
 	'''
@@ -71,7 +74,8 @@ class engine(render_described_context, bpy.types.Panel):
 			efutil.write_config_value('mitsuba', 'defaults', 'binary_path', binary_path)
 		super().draw(context)
 
-class integrator(render_described_context, bpy.types.Panel):
+@MitsubaAddon.addon_register_class
+class integrator(render_panel, bpy.types.Panel):
 	'''
 	Integrator settings UI Panel
 	'''
@@ -82,8 +86,8 @@ class integrator(render_described_context, bpy.types.Panel):
 		( ('scene',), 'mitsuba_integrator' )
 	]
 
-
-class sampler(render_described_context, bpy.types.Panel):
+@MitsubaAddon.addon_register_class
+class sampler(render_panel, bpy.types.Panel):
 	'''
 	Sampler settings UI Panel
 	'''

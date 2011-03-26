@@ -19,6 +19,7 @@
 #include "rendersettingsdlg.h"
 #include "ui_rendersettingsdlg.h"
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/fresolver.h>
 
 /* ====================== Some helper routines ====================== */
 
@@ -305,6 +306,13 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	Properties filmProps = oldCamera->getFilm()->getProperties();
 	ref<PluginManager> pluginMgr = PluginManager::getInstance();
 
+	/* Temporarily set up a new file resolver */
+	ref<Thread> thread = Thread::getThread();
+	ref<FileResolver> oldResolver = thread->getFileResolver();
+	ref<FileResolver> newResolver = oldResolver->clone();
+	newResolver->addPath(fs::complete(scene->getSourceFile()).parent_path());
+	thread->setFileResolver(newResolver);
+
 	/* Configure the reconstruction filter */
 	Properties rFilterProps(getPluginName(ui->rFilterBox));
 	if (m_rFilterNode != NULL) 
@@ -384,6 +392,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	scene->configure();
 
 	ctx->scene = scene;
+	thread->setFileResolver(oldResolver);
 }
 
 RenderSettingsDialog::~RenderSettingsDialog() {

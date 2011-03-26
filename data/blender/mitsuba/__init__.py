@@ -18,27 +18,33 @@
 
 import os
 
-bl_addon_info = {
+bl_info = {
 	"name": "Mitsuba",
 	"author": "Wenzel Jakob",
-	"version": (0, 1),
-	"blender": (2, 5, 5),
-	"api": 31667,
+	"version": (0, 2, 1),
+	"blender": (2, 5, 6),
+	"api": 35669,
+	"category": "Render",
 	"location": "Render > Engine > Mitsuba",
 	"description": "Basic Mitsuba integration for Blender",
 	"warning": "",
 	"wiki_url": "http://wiki.blender.org/index.php/Extensions:2.5/Py/"\
 		"Scripts/Render/Mitsuba",
-	"tracker_url": "https://www.mitsuba-renderer.org/bugtracker/projects/mitsuba",
-	"category": "Render"}
+	"tracker_url": "https://www.mitsuba-renderer.org/bugtracker/projects/mitsuba"}
 
 def plugin_path():
 	return os.path.dirname(os.path.realpath(__file__))
 
-from .core import RENDERENGINE_mitsuba
+if 'core' in locals():
+	import imp
+	imp.reload(core)
+else:
+	import bpy
+	
+	from extensions_framework import Addon
+	MitsubaAddon = Addon(bl_info)
+	register, unregister = MitsubaAddon.init_functions()
 
-def register():
-	RENDERENGINE_mitsuba.install()
-
-def unregister():
-	RENDERENGINE_mitsuba.uninstall()
+	# Importing the core package causes extensions_framework managed
+	# RNA class registration via @MitsubaAddon.addon_register_class
+	from . import core

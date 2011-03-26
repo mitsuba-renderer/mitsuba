@@ -16,14 +16,16 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
-from properties_data_lamp import DataButtonsPanel 
+import bpy, bl_ui
+
+from .. import MitsubaAddon
 
 from extensions_framework.ui import property_group_renderer
 
 narrowui = 180
 
-class lamps(DataButtonsPanel, property_group_renderer, bpy.types.Panel):
+@MitsubaAddon.addon_register_class
+class lamps(bl_ui.properties_data_lamp.DataButtonsPanel, property_group_renderer, bpy.types.Panel):
 	bl_label = 'Mitsuba Lamps'
 	COMPAT_ENGINES = {'mitsuba'}
 	

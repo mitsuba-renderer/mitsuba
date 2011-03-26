@@ -33,8 +33,15 @@ enum EConnectionType {
 };
 
 enum ENavigationMode {
-	EFlythroughFixedYaw = 0,
+	EArcBall = 0,
+	EFlythroughFixedYaw,
 	EFlythrough
+};
+
+enum ESelectionMode {
+	ENothing = 0,
+	EShape,
+	EScene
 };
 
 namespace mitsuba {
@@ -184,13 +191,16 @@ struct SceneContext {
 	bool diffuseReceivers;
 	bool showKDTree;
 	int shownKDTreeLevel;
+	ESelectionMode selectionMode;
+	const Shape *selectedShape;
 
 	/* Preview state */
 	std::deque<VPL> vpls;
 	PreviewQueueEntry previewBuffer;
 
-	SceneContext() : scene(NULL), sceneResID(-1), renderJob(NULL) {
-	}
+	SceneContext() : scene(NULL), sceneResID(-1), 
+		renderJob(NULL), selectionMode(ENothing),
+		selectedShape(NULL) { }
 
 	/// Detect the path length
 	int detectPathLength() const;

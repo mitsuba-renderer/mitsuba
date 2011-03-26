@@ -76,9 +76,9 @@ class MTS_EXPORT_HW Renderer : public Object {
 public:
 	/* Possible blending modes */
 	enum EBlendMode {
-		EBlendNone,     // Blending turned off
-		EBlendAlpha,    // Normal alpha blending
-		EBlendAdditive  // Additive blending
+		EBlendNone,          // Blending turned off
+		EBlendAlpha,         // Normal alpha blending
+		EBlendAdditive       // Additive blending
 	};
 
 	/* Possible culling modes */
@@ -161,6 +161,14 @@ public:
 		bool flipVertically = false, 
 		bool centerHoriz = true, bool centerVert = true,
 		const Vector2i &offset = Vector2i(0, 0)) = 0;
+
+	/// Draw a planar circle with the specified center, normal and radius
+	virtual void drawCircle(const Point &center, 
+		const Normal &normal, Float radius) = 0;
+
+	/// Draw a 3D arc connecting \c p1 and \c p2
+	virtual void drawArc(const Point &center,
+		const Point &p1, const Point &p2, bool shorterPiece) = 0;
 
 	/// Blit a screen-sized quad
 	virtual void blitQuad(bool flipVertically) = 0;

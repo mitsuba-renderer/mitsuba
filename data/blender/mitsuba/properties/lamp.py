@@ -16,9 +16,14 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from .. import MitsubaAddon
+
 from extensions_framework import declarative_property_group
 
+@MitsubaAddon.addon_register_class
 class mitsuba_lamp(declarative_property_group):
+	ef_attach_to = ['Lamp']
+
 	controls = [
 		'samplingWeight',
 		'envmap_type',

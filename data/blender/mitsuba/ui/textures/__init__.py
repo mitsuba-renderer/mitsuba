@@ -16,17 +16,17 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
-
-from properties_texture import TextureButtonsPanel
-from properties_texture import context_tex_datablock
+import bpy, bl_ui
 
 from extensions_framework.ui import property_group_renderer
 
-class TEXTURE_PT_context_texture_mts(TextureButtonsPanel, bpy.types.Panel):
+from ... import MitsubaAddon
+
+@MitsubaAddon.addon_register_class
+class TEXTURE_PT_context_texture_mts(bl_ui.properties_texture.TextureButtonsPanel, bpy.types.Panel):
 	bl_label = ""
 	bl_options = {'HIDE_HEADER'}
-	COMPAT_ENGINES	= {'mitsuba'}
+	COMPAT_ENGINES	= { MitsubaAddon.BL_IDNAME }
 
 	@classmethod
 	def poll(cls, context):
@@ -42,7 +42,7 @@ class TEXTURE_PT_context_texture_mts(TextureButtonsPanel, bpy.types.Panel):
 		node = context.texture_node
 		space = context.space_data
 		tex = context.texture
-		idblock = context_tex_datablock(context)
+		idblock = bl_ui.properties_texture.context_tex_datablock(context)
 		tex_collection = space.pin_id is None and type(idblock) != bpy.types.Brush and not node
 
 		if tex_collection:
@@ -70,12 +70,12 @@ class TEXTURE_PT_context_texture_mts(TextureButtonsPanel, bpy.types.Panel):
 
 		col = split.column()
 
-class mitsuba_texture_base(TextureButtonsPanel, property_group_renderer):
+class mitsuba_texture_base(bl_ui.properties_texture.TextureButtonsPanel, property_group_renderer):
 	'''
 	This is the base class for all Mitsuba texture sub-panels.
 	'''
 	
-	COMPAT_ENGINES	= {'mitsuba'}
+	COMPAT_ENGINES	= { MitsubaAddon.BL_IDNAME }
 	MTS_COMPAT		= set()
 
 	@classmethod

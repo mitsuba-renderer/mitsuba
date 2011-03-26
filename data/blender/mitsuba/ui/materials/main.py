@@ -17,9 +17,10 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+from ... import MitsubaAddon
+from ...ui.materials import mitsuba_material_base
 
-from mitsuba.ui.materials import mitsuba_material_base
-
+@MitsubaAddon.addon_register_class
 class main(mitsuba_material_base, bpy.types.Panel):
 	'''
 	Material Editor UI Panel

@@ -53,6 +53,9 @@ public:
 	/// Set a float parameter
 	void setParameter(int id, Float value);
 
+	/// Set a integer parameter
+	void setParameter(int id, int value);
+
 	/// Set a Vector parameter
 	void setParameter(int id, const Vector &value);
 
@@ -97,7 +100,7 @@ public:
 
 	/** Set a GPUTexture parameter. Must be executed after
 	    binding the texture to a texture unit */
-	void setParameter(int id, const GPUTexture *value);
+	void setParameter(int id, const GPUTexture *value); 
 
 	MTS_DECLARE_CLASS()
 protected:

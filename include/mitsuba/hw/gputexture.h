@@ -32,7 +32,7 @@ public:
 	/// Available texture types
 	enum ETextureType {
 		/**
-		 * 1-D texture, useful for the storage of pre-calculated functions
+		 * \brief 1-D texture, useful for the storage of pre-calculated functions
 		 * in conjunction with pixel shaders. Needs 1D texture coordinates
 		 */
 		ETexture1D = 0,
@@ -48,16 +48,22 @@ public:
 	};
 
 	/** \brief If the texture type is set to EFrameBuffer, the 
-	 * configuration must be specified */
+	 * configuration must be one of the following constants */
 	enum EFrameBufferType {
 		/// This is not a framebuffer
-		ENone = 0,
+		ENone = 0x00,
 
-		/// Z-buffered color framebuffer
-		EColorBuffer,
+		/**
+		 * \brief Color framebuffer (\a including an internal depth 
+		 * buffer that cannot be accessed as a texture)
+		 */
+		EColorBuffer = 0x01,
 
 		/// Depth-only framebuffer (e.g. for shadow mapping)
-		EDepthBuffer
+		EDepthBuffer = 0x02,
+
+		/// Color and texture framebuffer (both exposed as textures)
+		EColorAndDepthBuffer = 0x03
 	};
 
 	/// A texture has one more slots into which bitmaps can be placed
@@ -260,8 +266,18 @@ public:
 	/// Free the texture from GPU memory
 	virtual void cleanup() = 0;
 	
-	/// Bind the texture and enable texturing
-	virtual void bind(int textureUnit = 0) const = 0;
+	/**
+	 * \brief Bind the texture and enable texturing
+	 *
+	 * \param textureUnit
+	 *     Specifies the unit to which this texture should be bound
+	 * \param textureIndex
+	 *     When this texture has multiple sub-textures (e.g.
+	 *     a color and depth map in the case of a 
+	 *     \ref EColorAndDepthBuffer texture), this parameter
+	 *     specifies the one to be bound
+	 */
+	virtual void bind(int textureUnit = 0, int textureIndex = 0) const = 0;
 
 	/// Unbind the texture and disable texturing
 	virtual void unbind() const = 0;
@@ -294,8 +310,35 @@ public:
 	/// Return the number of samples (for multisample color render targets)
 	inline int getSampleCount() const { return m_samples; }
 
-	/// Blit a float render buffer into another render buffer
-	virtual void blit(GPUTexture *texture) const = 0;
+	/**
+	 * \brief Blit a render buffer into another render buffer
+	 *
+	 * \param target
+	 *     Specifies the target render buffer
+	 * \param what
+	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy 
+	 */
+	virtual void blit(GPUTexture *target, int what) const = 0;
+
+	/**
+	 * \brief Blit a render buffer into another render buffer
+	 *
+	 * \param target
+	 *     Specifies the target render buffer (or NULL for the framebuffer)
+	 * \param what
+	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy 
+	 * \param sourceOffset 
+	 *     Offset in the source render buffer
+	 * \param sourceOffset 
+	 *     Size of the region to be copied from the source render buffer
+	 * \param destOffset 
+	 *     Offset in the destination render buffer
+	 * \param destOffset 
+	 *     Size of the region to be copied into the dest destination buffer
+	 */
+	virtual void blit(GPUTexture *target, int what, const Point2i &sourceOffset,
+		const Vector2i &sourceSize, const Point2i &destOffset,
+		const Vector2i &destSize) const = 0;
 
 	/// Clear (assuming that this is a render buffer)
 	virtual void clear() = 0;

@@ -17,9 +17,10 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+from ... import MitsubaAddon
+from ...ui.materials import mitsuba_material_sub
 
-from mitsuba.ui.materials import mitsuba_material_sub
-
+@MitsubaAddon.addon_register_class
 class ui_material_microfacet(mitsuba_material_sub, bpy.types.Panel):
 	bl_label = 'Mitsuba Microfacet Material'
 

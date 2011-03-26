@@ -87,6 +87,7 @@ void GPUTexture::setFrameBufferType(EFrameBufferType type) {
 
 	switch (m_fbType) {
 		case EColorBuffer:
+		case EColorAndDepthBuffer:
 			break;
 		case EDepthBuffer:	
 			m_format = EDepth;
@@ -164,6 +165,7 @@ static const char *toString(GPUTexture::EFrameBufferType fbType) {
 		case GPUTexture::ENone: return "none";
 		case GPUTexture::EDepthBuffer: return "depthBuffer";
 		case GPUTexture::EColorBuffer: return "colorBuffer";
+		case GPUTexture::EColorAndDepthBuffer: return "colorAndDepthBuffer";
         default: SLog(EError, "Invalid framebuffer type"); return NULL;
     }
 }

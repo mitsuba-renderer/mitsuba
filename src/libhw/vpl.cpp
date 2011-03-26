@@ -343,10 +343,9 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 				<< "varying out vec3 vertexColor;" << endl
 				<< endl
 				<< "void main() {" << endl
-				<< "   vec3 p0 = gl_PositionIn[0].xyz / gl_PositionIn[0].w;" << endl
-				<< "   vec3 p1 = gl_PositionIn[1].xyz / gl_PositionIn[1].w;" << endl
-				<< "   vec3 p2 = gl_PositionIn[2].xyz / gl_PositionIn[2].w;" << endl
-				<< "   normal = normalize(cross(p1 - p0, p2 - p0));" << endl
+				<< "   vec3 edge1 = camVec_vertex[0]-camVec_vertex[1];" << endl
+				<< "   vec3 edge2 = camVec_vertex[0]-camVec_vertex[2];" << endl
+				<< "   normal = normalize(cross(edge1, edge2));" << endl
 				<< "   gl_Position = vec4(0.0);" << endl
 				<< "   lightVec = camVec = vec3(0.0);" << endl
 				<< "   for (int i=0; i<gl_VerticesIn; ++i) {" << endl

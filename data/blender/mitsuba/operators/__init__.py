@@ -20,51 +20,46 @@
 import os, sys, copy, subprocess, traceback, string
 
 # Blender Libs
-import bpy
-from presets import AddPresetBase
+import bpy, bl_operators
 
 # Extensions_Framework Libs
 from extensions_framework import util as efutil
 
-from mitsuba.outputs import MtsLog
-from mitsuba.export.adjustments import MtsAdjustments
+from .. import MitsubaAddon
+from ..outputs import MtsLog
+from ..export.adjustments import MtsAdjustments
 
-def try_preset_path_create(preset_subdir):
-	target_path = os.path.join(bpy.utils.preset_paths('')[0], preset_subdir)
-	if not os.path.exists(target_path):
-		os.makedirs(target_path)
-
-class MITSUBA_MT_base(object):
+class MITSUBA_MT_base(bpy.types.Menu):
 	preset_operator = "script.execute_preset"
 	def draw(self, context):
-		try_preset_path_create(self.preset_subdir)
-		return bpy.types.Menu.draw_preset(self, context)
+		return self.draw_preset(context)
 
-class MITSUBA_OT_preset_base(AddPresetBase):
-	def execute(self, context):
-		try_preset_path_create(self.preset_subdir)
-		return super().execute(context)
-
-class MITSUBA_MT_presets_engine(MITSUBA_MT_base, bpy.types.Menu):
+@MitsubaAddon.addon_register_class
+class MITSUBA_MT_presets_engine(MITSUBA_MT_base):
 	bl_label = "Mitsuba Engine Presets"
 	preset_subdir = "mitsuba/engine"
 
-class MITSUBA_OT_preset_engine_add(MITSUBA_OT_preset_base, bpy.types.Operator):
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_preset_engine_add(bl_operators.presets.AddPresetBase, bpy.types.Operator):
 	'''Save the current settings as a preset'''
 	bl_idname = 'mitsuba.preset_engine_add'
 	bl_label = 'Add Mitsuba Engine settings preset'
 	preset_menu = 'MITSUBA_MT_presets_engine'
-	preset_values = [
-		'bpy.context.scene.mitsuba_engine.%s'%v['attr'] for v in bpy.types.mitsuba_engine.get_exportable_properties()
-	]
 	preset_subdir = 'mitsuba/engine'
+	
+	def execute(self, context):
+		self.preset_values = [
+			'bpy.context.scene.mitsuba_engine.%s'%v['attr'] for v in bpy.types.mitsuba_engine.get_exportable_properties()
+		]
+		return super().execute(context)
 
-
-class MITSUBA_MT_presets_texture(MITSUBA_MT_base, bpy.types.Menu):
+@MitsubaAddon.addon_register_class
+class MITSUBA_MT_presets_texture(MITSUBA_MT_base):
 	bl_label = "Mitsuba Texture Presets"
 	preset_subdir = "mitsuba/texture"
 
-class MITSUBA_OT_preset_texture_add(MITSUBA_OT_preset_base, bpy.types.Operator):
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_preset_texture_add(bl_operators.presets.AddPresetBase, bpy.types.Operator):
 	'''Save the current settings as a preset'''
 	bl_idname = 'mitsuba.preset_texture_add'
 	bl_label = 'Add Mitsuba Texture settings preset'
@@ -89,12 +84,13 @@ class MITSUBA_OT_preset_texture_add(MITSUBA_OT_preset_base, bpy.types.Operator):
 		self.preset_values = pv
 		return super().execute(context)
 
-
-class MITSUBA_MT_presets_material(MITSUBA_MT_base, bpy.types.Menu):
+@MitsubaAddon.addon_register_class
+class MITSUBA_MT_presets_material(MITSUBA_MT_base):
 	bl_label = "Mitsuba Material Presets"
 	preset_subdir = "mitsuba/material"
 
-class MITSUBA_OT_preset_material_add(MITSUBA_OT_preset_base, bpy.types.Operator):
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_preset_material_add(bl_operators.presets.AddPresetBase, bpy.types.Operator):
 	'''Save the current settings as a preset'''
 	bl_idname = 'mitsuba.preset_material_add'
 	bl_label = 'Add Mitsuba Material settings preset'
@@ -121,6 +117,7 @@ class MITSUBA_OT_preset_material_add(MITSUBA_OT_preset_base, bpy.types.Operator)
 		self.preset_values = pv
 		return super().execute(context)
 
+@MitsubaAddon.addon_register_class
 class EXPORT_OT_mitsuba(bpy.types.Operator):
 	bl_idname = 'export.mitsuba'
 	bl_label = 'Export Mitsuba Scene (.xml)'
@@ -215,6 +212,7 @@ def menu_func(self, context):
 
 bpy.types.INFO_MT_file_export.append(menu_func)
 
+@MitsubaAddon.addon_register_class
 class MITSUBA_OT_material_slot_move(bpy.types.Operator):
 	''' Rearrange the material slots '''
 	bl_idname = 'mitsuba.material_slot_move'
@@ -245,6 +243,7 @@ class MITSUBA_OT_material_slot_move(bpy.types.Operator):
 			obj.active_material_index = new_index
 		return {'FINISHED'}
 
+@MitsubaAddon.addon_register_class
 class MITSUBA_OT_material_add(bpy.types.Operator):
 	''' Append a new material '''
 	bl_idname = 'mitsuba.material_add'

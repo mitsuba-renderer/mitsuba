@@ -741,6 +741,51 @@ void GLRenderer::blitQuad(bool flipVertically) {
 	glEnd();
 }
 
+void GLRenderer::drawCircle(const Point &center, 
+		const Normal &normal, Float radius) {
+	int nDiscr = 80;
+	Vector X, Y;
+	Float stepSize = 2*M_PI/nDiscr;
+	coordinateSystem(normal, X, Y);
+
+	glBegin(GL_LINE_LOOP);
+	for (int i=0; i<nDiscr; ++i) {
+		Float sinTheta = std::sin(i * stepSize) * radius;
+		Float cosTheta = std::cos(i * stepSize) * radius;
+		Point p = center + X*cosTheta + Y*sinTheta;
+		glVertex3f(p.x, p.y, p.z);
+	}
+	glEnd();
+}
+
+void GLRenderer::drawArc(const Point &center,
+		const Point &p1, const Point &p2, bool shorterPiece) {
+	if (p1 == p2 || p1 == center || p2 == center)
+		return;
+	Vector X = normalize(p1 - center), Y = p2 - center;
+	Float radius = Y.length(); Y /= radius;
+	Float angle = unitAngle(X, Y);
+
+	Y = normalize(Y - dot(Y, X) * X);
+
+	if (!shorterPiece) {
+		angle = 2*M_PI - angle;
+		Y = -Y;
+	}
+
+	int nDiscr = 80;
+	Float stepSize = angle/(nDiscr-1);
+	glBegin(GL_LINE_STRIP);
+	for (int i=0; i<nDiscr; ++i) {
+		Float sinTheta = std::sin(i * stepSize) * radius;
+		Float cosTheta = std::cos(i * stepSize) * radius;
+
+		Point p = center + X*cosTheta + Y*sinTheta;
+		glVertex3f(p.x, p.y, p.z);
+	}
+	glEnd();
+}
+
 void GLRenderer::drawText(const Point2i &_pos, 
 		const Font *font, const std::string &text) {
 	int viewport[4];

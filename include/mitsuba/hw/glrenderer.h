@@ -102,6 +102,13 @@ public:
 		bool centerHoriz = true, bool centerVert = true,
 		const Vector2i &offset = Vector2i(0, 0));
 
+	/// Draw a planar circle with the specified center, normal and radius
+	void drawCircle(const Point &center, const Normal &normal, Float radius);
+
+	/// Draw a 3D arc connecting \c p1 and \c p2
+	void drawArc(const Point &center,
+		const Point &p1, const Point &p2, bool shorterPiece);
+
 	/// Clean up the renderer after drawing triangle geometry
 	void endDrawingMeshes(); 
 

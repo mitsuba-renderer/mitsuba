@@ -16,15 +16,19 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from .. import MitsubaAddon
 from extensions_framework import declarative_property_group
 from extensions_framework import util as efutil
 
+@MitsubaAddon.addon_register_class
 class mitsuba_integrator(declarative_property_group):
 	'''
 	Storage class for Mitsuba Integrator settings.
 	This class will be instantiated within a Blender scene
 	object.
 	'''
+
+	ef_attach_to = ['Scene']
 
 	controls = [
 		'type',
@@ -42,7 +46,7 @@ class mitsuba_integrator(declarative_property_group):
 			'attr': 'type',
 			'name': 'Type',
 			'description': 'Specifies the type of integrator to use',
-			'default': 'ldintegrator',
+			'default': 'direct',
 			'items': [
 				('direct', 'Direct Illumination', 'direct'),
 				('path', 'Path tracer', 'path'),

@@ -141,7 +141,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->glView->setInvertMouse(settings.value("invertMouse", false).toBool());
 	ui->glView->setMouseSensitivity(settings.value("mouseSensitivity", 3).toInt());
 	ui->glView->setNavigationMode((ENavigationMode) settings.value("navigationMode", 
-		EFlythrough).toInt());
+		EArcBall).toInt());
 	m_searchPaths = settings.value("searchPaths", QStringList()).toStringList();
 	m_blockSize = settings.value("blockSize", 32).toInt();
 	m_listenPort = settings.value("listenPort", MTS_DEFAULT_PORT).toInt();
@@ -1649,6 +1649,13 @@ QString ServerConnection::toString() const {
 
 SceneContext::SceneContext(SceneContext *ctx) {
 	if (ctx->scene) {
+		/* Temporarily set up a new file resolver */
+		ref<Thread> thread = Thread::getThread();
+		ref<FileResolver> oldResolver = thread->getFileResolver();
+		ref<FileResolver> newResolver = oldResolver->clone();
+		newResolver->addPath(fs::complete(ctx->scene->getSourceFile()).parent_path());
+		thread->setFileResolver(newResolver);
+
 		scene = new Scene(ctx->scene);
 		ref<PluginManager> pluginMgr = PluginManager::getInstance();
 		ref<PinholeCamera> oldCamera = static_cast<PinholeCamera *>(ctx->scene->getCamera());
@@ -1696,6 +1703,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 		scene->configure();
 		sceneResID = ctx->sceneResID;
 		Scheduler::getInstance()->retainResource(sceneResID);
+		thread->setFileResolver(oldResolver);
 	} else {
 		sceneResID = -1;
 		renderJob = NULL;
@@ -1726,6 +1734,8 @@ SceneContext::SceneContext(SceneContext *ctx) {
 	diffuseSources = ctx->diffuseSources;
 	showKDTree = ctx->showKDTree;
 	shownKDTreeLevel = ctx->shownKDTreeLevel;
+	selectedShape = ctx->selectedShape;
+	selectionMode = ctx->selectionMode;
 }
 
 SceneContext::~SceneContext() {

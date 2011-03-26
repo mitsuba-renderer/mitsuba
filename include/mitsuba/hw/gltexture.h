@@ -39,9 +39,19 @@ public:
 
 	/// Free the texture from GPU memory
 	void cleanup();
-	
-	/// Bind the texture and enable texturing
-	void bind(int textureUnit = 0) const;
+
+	/**
+	 * \brief Bind the texture and enable texturing
+	 *
+	 * \param textureUnit
+	 *     Specifies the unit to which this texture should be bound
+	 * \param textureIndex
+	 *     When this texture has multiple sub-textures (e.g.
+	 *     a color and depth map in the case of a 
+	 *     \ref EColorAndDepthBuffer texture), this parameter
+	 *     specifies the one to be bound
+	 */
+	void bind(int textureUnit = 0, int textureIndex = 0) const;
 
 	/// Download the texture (only for render target textures)
 	void download(Bitmap *bitmap = NULL);
@@ -61,8 +71,35 @@ public:
 	/// Deactivate the render target
 	void releaseTarget();
 
-	/// Blit a float render buffer into another render buffer
-	void blit(GPUTexture *texture) const;
+	/**
+	 * \brief Blit a render buffer into another render buffer
+	 *
+	 * \param target
+	 *     Specifies the target render buffer (or NULL for the framebuffer)
+	 * \param what
+	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy 
+	 */
+	void blit(GPUTexture *target, int what) const;
+
+	/**
+	 * \brief Blit a render buffer into another render buffer
+	 *
+	 * \param target
+	 *     Specifies the target render buffer (or NULL for the framebuffer)
+	 * \param what
+	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy 
+	 * \param sourceOffset 
+	 *     Offset in the source render buffer
+	 * \param sourceOffset 
+	 *     Size of the region to be copied from the source render buffer
+	 * \param destOffset 
+	 *     Offset in the destination render buffer
+	 * \param destOffset 
+	 *     Size of the region to be copied into the dest destination buffer
+	 */
+	void blit(GPUTexture *target, int what, const Point2i &sourceOffset,
+		const Vector2i &sourceSize, const Point2i &destOffset,
+		const Vector2i &destSize) const;
 
 	/// Clear (assuming that this is a render buffer)
 	void clear();
@@ -86,9 +123,7 @@ protected:
 	GLuint m_format;
 	GLuint m_internalFormat;
 	GLuint m_dataFormat;
-	/* For render targets */
 	GLuint m_fboId, m_depthId;
-	GLuint m_extraId;
 	mutable bool m_needsUpdate;
 };
 
