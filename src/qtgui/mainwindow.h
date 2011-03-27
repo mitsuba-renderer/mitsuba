@@ -127,6 +127,7 @@ private slots:
 	void on_actionReportBug_triggered();
 	void on_actionFeedback_triggered();
 	void on_actionShowKDTree_triggered();
+	void on_actionSceneDescription_triggered();
 	void on_tabBar_currentChanged(int index);
 	bool on_tabBar_tabCloseRequested(int index);
 	void on_tabBar_tabMoved(int from, int to);
@@ -153,6 +154,7 @@ private slots:
 	void onExportDialogClose(int reason);
 	void onRenderSettingsClose(int reason);
 	void onImportDialogClose(int reason);
+	void onSceneInformationClose(int reason);
 
 private:
     Ui::MainWindow *ui;

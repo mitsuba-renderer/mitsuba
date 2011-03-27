@@ -68,6 +68,10 @@ GLWidget::GLWidget(QWidget *parent) :
 }
 
 GLWidget::~GLWidget() {
+	shutdown();
+}
+
+void GLWidget::shutdown() {
 	if (m_preview)
 		m_preview->quit();
 }
@@ -157,9 +161,9 @@ void GLWidget::initializeGL() {
 
 		m_gammaTonemap->setSource(GPUProgram::EFragmentProgram,
 			"#version 120\n"
-			"uniform sampler2D source;\n"
+			"uniform sampler2D colorSource, depthSource;\n"
 			"uniform float invWhitePoint, invGamma;\n"
-			"uniform bool sRGB;\n"
+			"uniform bool sRGB, hasDepth;\n"
 			"\n"
 			"float toSRGB(float value) {\n"
 			"	if (value < 0.0031308)\n"
@@ -168,11 +172,12 @@ void GLWidget::initializeGL() {
 			"}\n"
 			"\n"
 			"void main() {\n"
-			"	vec4 color = texture2D(source, gl_TexCoord[0].xy) * invWhitePoint;\n"
+			"	vec4 color = texture2D(colorSource, gl_TexCoord[0].xy) * invWhitePoint;\n"
 			"	if (sRGB)\n"
 			"		gl_FragColor = vec4(toSRGB(color.r), toSRGB(color.g), toSRGB(color.b), 1);\n"
 			"	else\n"
 			"		gl_FragColor = vec4(pow(color.rgb, vec3(invGamma)), 1);\n"
+			"	gl_FragDepth = hasDepth ? texture2D(depthSource, gl_TexCoord[0].xy).r : 0.5;\n"
 			"}\n"
 		);
 
@@ -185,9 +190,9 @@ void GLWidget::initializeGL() {
 
 		m_reinhardTonemap->setSource(GPUProgram::EFragmentProgram,
 			"#version 120\n"
-			"uniform sampler2D source;\n"
+			"uniform sampler2D colorSource, depthSource;\n"
 			"uniform float key, invWpSqr, invGamma, multiplier;\n"
-			"uniform bool sRGB;\n"
+			"uniform bool sRGB, hasDepth;\n"
 			"\n"
 			"float toSRGB(float value) {\n"
 			"	if (value < 0.0031308)\n"
@@ -204,7 +209,7 @@ void GLWidget::initializeGL() {
 			"                            -0.969256,  1.875991,  0.041556,\n"
 			"					          0.055648, -0.204043,  1.057311);\n"
 			"\n"
-			"	vec4 color = texture2D(source, gl_TexCoord[0].xy)*multiplier;\n"
+			"	vec4 color = texture2D(colorSource, gl_TexCoord[0].xy)*multiplier;\n"
 			"   vec3 xyz = rgb2xyz * color.rgb;\n"
 			"   float normalization = 1.0/(xyz.x + xyz.y + xyz.z);\n"
 			"   vec3 Yxy = vec3(xyz.x*normalization, xyz.y*normalization, xyz.y);\n"
@@ -216,6 +221,7 @@ void GLWidget::initializeGL() {
 			"		gl_FragColor = vec4(toSRGB(color.r), toSRGB(color.g), toSRGB(color.b), 1);\n"
 			"	else\n"
 			"		gl_FragColor = vec4(pow(color.rgb, vec3(invGamma)), 1);\n"
+			"	gl_FragDepth = hasDepth ? texture2D(depthSource, gl_TexCoord[0].xy).r : 0.5;\n"
 			"}\n"
 		);
 
@@ -573,15 +579,14 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 		case Qt::Key_Down:
 			m_downKeyDown = true; break;
 		case Qt::Key_A: {
-			if (m_context->selectionMode == ENothing) {
-				m_context->selectionMode = EScene;
-				m_gizmo->init(m_context->scene->getBSphere());
-			} else {
+			if (m_context->selectionMode == EScene) {
 				m_context->selectionMode = ENothing;
 				m_gizmo->reset();
+			} else {
+				m_context->selectionMode = EScene;
+				m_gizmo->init(m_context->scene->getBSphere());
 			}
 			m_context->selectedShape = NULL;
-			updateGL();
 		}
 		// break intentionally missing
 		case Qt::Key_F: {
@@ -653,7 +658,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 	bool didMove = false;
 	
 	if (m_navigationMode == EArcBall) {
-		if (event->buttons() & Qt::LeftButton) {
+		if (event->buttons() & Qt::LeftButton && m_gizmo->canDrag()) {
 			Ray ray;
 			Point2i offset = upperLeft();
 			Point2 sample = Point2(m_mousePos.x() - offset.x, m_mousePos.y() - offset.y);
@@ -811,8 +816,12 @@ void GLWidget::mousePressEvent(QMouseEvent *event) {
 			if (its.t < t) {
 				SLog(EInfo, "Selected shape \"%s\"", its.shape->getName().c_str());
 				m_context->selectedShape = its.shape;
-				m_gizmo->init(its.shape->getAABB().getBSphere());
+				BSphere bsphere = its.shape->getAABB().getBSphere();
+				bool newSelection = (bsphere != m_gizmo->getBSphere());
+				m_gizmo->init(bsphere);
 				m_context->selectionMode = EShape;
+				if (newSelection) 
+					return;
 			}
 		} else {
 			if (t == std::numeric_limits<Float>::infinity()) {
@@ -822,7 +831,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event) {
 				return;
 			}
 		}
-		
+
 		m_gizmo->startDrag(ray);
 		m_storedViewTransform = camera->getViewTransform();
 	}
@@ -856,7 +865,8 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void GLWidget::paintGL() {
-	m_renderer->setDepthTest(false);
+	m_renderer->setDepthTest(true);
+	m_renderer->setDepthMask(true);
 	if (m_context == NULL) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		m_renderer->clear();
@@ -866,7 +876,7 @@ void GLWidget::paintGL() {
 	} else if (m_context != NULL) {
 		Vector2i size;
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		PreviewQueueEntry entry;
 		GPUTexture *buffer = NULL;
 
@@ -933,7 +943,12 @@ void GLWidget::paintGL() {
 
 			size = Vector2i(m_framebuffer->getSize().x, m_framebuffer->getSize().y);
 			buffer = m_framebuffer;
+		} else {
+			return;
 		}
+		bool hasDepth = m_context->mode == EPreview
+			&& (m_context->previewMethod == EOpenGL ||
+				m_context->previewMethod == EOpenGLSinglePass);
 
 		if (m_softwareFallback) {
 			buffer->bind();
@@ -947,11 +962,15 @@ void GLWidget::paintGL() {
 			if (m_context->mode == EPreview)
 				invWhitePoint /= entry.vplSampleOffset;
 
+			if (hasDepth)
+				buffer->bind(1, 1);
 			m_gammaTonemap->bind();
-			m_gammaTonemap->setParameter("source", 0);
+			m_gammaTonemap->setParameter("colorSource", 0);
+			m_gammaTonemap->setParameter("depthSource", 1);
 			m_gammaTonemap->setParameter("invWhitePoint", invWhitePoint);
 			m_gammaTonemap->setParameter("invGamma", 1/m_context->gamma);
 			m_gammaTonemap->setParameter("sRGB", m_context->srgb);
+			m_gammaTonemap->setParameter("hasDepth", hasDepth);
 			m_renderer->blitTexture(buffer, m_context->mode == EPreview, 
 				!m_hScroll->isVisible(), !m_vScroll->isVisible(),
 				-m_context->scrollOffset);
@@ -1015,13 +1034,17 @@ void GLWidget::paintGL() {
 				logLuminance = 1;
 			}
 
+			if (hasDepth)
+				buffer->bind(1, 1);
 			m_reinhardTonemap->bind();
-			m_reinhardTonemap->setParameter("source", 0);
+			m_reinhardTonemap->setParameter("colorSource", 0);
+			m_reinhardTonemap->setParameter("depthSource", 1);
 			m_reinhardTonemap->setParameter("key", m_context->reinhardKey/logLuminance);
 			m_reinhardTonemap->setParameter("multiplier", multiplier);
 			m_reinhardTonemap->setParameter("invWpSqr", std::pow((Float) 2, m_context->reinhardBurn));
 			m_reinhardTonemap->setParameter("invGamma", 1/m_context->gamma);
 			m_reinhardTonemap->setParameter("sRGB", m_context->srgb);
+			m_reinhardTonemap->setParameter("hasDepth", hasDepth);
 			m_renderer->blitTexture(buffer, m_context->mode == EPreview, 
 				!m_hScroll->isVisible(), !m_vScroll->isVisible(),
 				-m_context->scrollOffset);
@@ -1059,19 +1082,14 @@ void GLWidget::paintGL() {
 		if (m_context->mode == EPreview) {
 			const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>
 				(m_context->scene->getCamera());
-			m_renderer->setCamera(camera);
-			
-			Point2i offset = upperLeft(true);
-
-			buffer->blit(NULL, GPUTexture::EDepthBuffer, Point2i(0, 0),
-				size, offset, size);
 			glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-
+			m_renderer->setCamera(camera);
+			glPushAttrib(GL_VIEWPORT_BIT);
+			Point2i offset = upperLeft(true);
 			glViewport(offset.x, offset.y, size.x, size.y);
-			m_renderer->setDepthTest(true);
 			m_renderer->setDepthMask(false);
+			m_renderer->setDepthTest(true);
 			m_renderer->setBlendMode(Renderer::EBlendAdditive);
-			glDepthFunc(GL_LESS);
 
 			if (m_context->showKDTree) {
 				oglRenderKDTree(m_context->scene->getKDTree());
@@ -1085,9 +1103,7 @@ void GLWidget::paintGL() {
 				m_gizmo->draw(m_renderer, camera);
 
 			m_renderer->setBlendMode(Renderer::EBlendNone);
-			m_renderer->setDepthTest(false);
-			m_renderer->setDepthMask(true);
-			glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+			glPopAttrib();
 		}
 	}
 	swapBuffers();

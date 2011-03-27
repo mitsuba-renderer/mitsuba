@@ -265,7 +265,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 			secRay4.dRcp[0].ps = _mm_div_ps(SSEConstants::one.ps, secRay4.d[0].ps);
 			secRay4.dRcp[1].ps = _mm_div_ps(SSEConstants::one.ps, secRay4.d[1].ps);
 			secRay4.dRcp[2].ps = _mm_div_ps(SSEConstants::one.ps, secRay4.d[2].ps);
-			
+
 			cosThetaLight.ps = _mm_sub_ps(_mm_setzero_ps(),
 				_mm_add_ps(_mm_add_ps(
 					_mm_mul_ps(nSecD[0].ps, lumDir[0]),
@@ -290,6 +290,12 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 				const unsigned int primIndex = its4.primIndex.i[idx];
 				const Shape *shape = (*m_shapes)[its4.shapeIndex.i[idx]];
 				const BSDF *bsdf = shape->getBSDF();
+
+				if (EXPECT_NOT_TAKEN(!bsdf)) {
+					memset(&emitted[idx], 0, sizeof(Spectrum));
+					memset(&direct[idx], 0, sizeof(Spectrum));
+					continue;
+				}
 
 				if (EXPECT_TAKEN(primIndex != KNoTriangleFlag)) {
 					const TriMesh *mesh = static_cast<const TriMesh *>(shape);

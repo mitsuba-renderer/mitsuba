@@ -42,9 +42,12 @@ public:
 
 	/// Check whether the gizmo is currently active
 	inline bool isActive() const { return m_active; }
-	
+
+	/// Check whether the drag starting point has been set
+	inline bool canDrag() const { return m_drag; }
+
 	/// Check whether the gizmo is currently used in a drag operation
-	inline bool isDragging() const { return m_drag; }
+	inline bool isDragging() const { return m_drag && (m_dragStart != m_dragEnd); }
 
 	/// Check whether a certain ray intersects the gizmo
 	inline void rayIntersect(const Ray &ray, Float &t) const {
@@ -69,7 +72,7 @@ public:
 	inline void reset() { m_active = m_drag = false; }
 	
 	/// Stop dragging
-	inline void stopDrag() { m_drag = false; }
+	inline void stopDrag() { m_dragStart = m_dragEnd; }
 
 	/// Return the bounding sphere associated with the gizmo
 	inline const BSphere &getBSphere() const { return m_bsphere; }

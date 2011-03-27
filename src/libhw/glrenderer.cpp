@@ -39,11 +39,9 @@ GLEWContextStruct *glewGetContext() {
 MTS_NAMESPACE_BEGIN
 
 GLRenderer::GLRenderer(Session *session)
- : Renderer(session) {
-}
+ : Renderer(session) { }
 
-GLRenderer::~GLRenderer() {
-}
+GLRenderer::~GLRenderer() { }
 
 void GLRenderer::init(Device *device, Renderer *other) {
 	Renderer::init(device, other);

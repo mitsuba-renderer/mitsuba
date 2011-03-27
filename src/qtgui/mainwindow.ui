@@ -151,6 +151,7 @@
       <string>Developer</string>
      </property>
      <addaction name="actionShowKDTree"/>
+     <addaction name="actionSceneDescription"/>
     </widget>
     <addaction name="actionUpdateCheck"/>
     <addaction name="actionStartServer"/>
@@ -465,6 +466,11 @@
    </property>
    <property name="text">
     <string>Visualize kd-Tree</string>
+   </property>
+  </action>
+  <action name="actionSceneDescription">
+   <property name="text">
+    <string>Describe Scene..</string>
    </property>
   </action>
  </widget>

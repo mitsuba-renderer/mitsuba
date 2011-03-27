@@ -216,7 +216,7 @@ void GLTexture::init() {
 				Log(EError, "FBO Error: Unknown error status (0x%x)!", status);
 		}
 	
-		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, GL_NONE);
 	}
 }
 
@@ -478,7 +478,7 @@ Spectrum GLTexture::getPixel(int x, int y) const {
 	glViewport(0, 0, m_size.x, m_size.y);
 	glReadPixels(x, y, 1, 1, GL_RGB, GL_FLOAT, &pixels);
 	glPopAttrib();
-	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, GL_NONE);
 
 	result.fromLinearRGB(pixels[0], pixels[1], pixels[2]);
 	return result;
@@ -488,7 +488,6 @@ Spectrum GLTexture::getPixel(int x, int y) const {
 void GLTexture::activateTarget() {
 	Assert(m_fbType != ENone);
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_fboId);
-
 	glPushAttrib(GL_VIEWPORT_BIT);
 	glViewport(0, 0, m_size.x, m_size.y);
 }
@@ -525,7 +524,7 @@ void GLTexture::setTargetRegion(const Point2i &offset, const Vector2i &size) {
 void GLTexture::releaseTarget() {
 	Assert(m_fbType != ENone);
 	glPopAttrib();
-	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, GL_NONE);
 	if (isMipMapped())
 		m_needsUpdate = true;
 }
@@ -541,10 +540,11 @@ void GLTexture::bind(int textureUnit, int textureIndex) const {
 	}
 
 	glEnable(m_glType);
-	if (textureIndex == 1 && m_fbType == EColorAndDepthBuffer) 
+	if (textureIndex == 1 && m_fbType == EColorAndDepthBuffer) {
 		glBindTexture(m_glType, m_depthId);
-	else 
+	} else {
 		glBindTexture(m_glType, m_id);
+	}
 
 	if (isMipMapped() && m_needsUpdate) {
 		glGenerateMipmapEXT(m_glType);
@@ -616,9 +616,9 @@ void GLTexture::blit(GPUTexture *target, int what) const {
 	glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, GL_NONE);
 }
 
-void GLTexture::blit(GPUTexture *target, int what, const Point2i &sourceOffset,
-	const Vector2i &sourceSize, const Point2i &destOffset,
-	const Vector2i &destSize) const {
+void GLTexture::blit(GPUTexture *target, int what, 
+		const Point2i &sourceOffset, const Vector2i &sourceSize,
+		const Point2i &destOffset, const Vector2i &destSize) const {
 	GLTexture *dest = static_cast<GLTexture *>(target);
 	Assert(m_fbType != ENone && (dest == NULL || dest->m_fbType != ENone));
 

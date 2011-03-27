@@ -21,6 +21,7 @@
 #include "rendersettingsdlg.h"
 #include "previewsettingsdlg.h"
 #include "programsettingsdlg.h"
+#include "sceneinfodlg.h"
 #include "sceneloader.h"
 #include "logwidget.h"
 #include "navdlg.h"
@@ -496,6 +497,28 @@ void MainWindow::on_actionShowKDTree_triggered() {
 		ui->glView->resetPreview();
 }
 
+void MainWindow::on_actionSceneDescription_triggered() {
+	int currentIndex = ui->tabBar->currentIndex();
+	if (currentIndex == -1)
+		return;
+	SceneContext *context= m_context[currentIndex];
+	SceneInformationDialog *dialog = new SceneInformationDialog(this,
+		context->scene);
+	QDesktopWidget *desktop = QApplication::desktop();
+	dialog->move(QPoint((desktop->width() - dialog->width()) / 2, (desktop->height() - dialog->height())/2));
+	connect(dialog, SIGNAL(finished(int)), this, SLOT(onSceneInformationClose(int)));
+	m_currentChild = dialog;
+	// prevent a tab drawing artifact on Qt/OSX
+	m_activeWindowHack = true;
+	dialog->show();
+	qApp->processEvents();
+	m_activeWindowHack = false;
+}
+
+void MainWindow::onSceneInformationClose(int reason) {
+	m_currentChild = NULL;
+}
+
 void MainWindow::changeEvent(QEvent *e) {
     QMainWindow::changeEvent(e);
     switch (e->type()) {
@@ -700,6 +723,7 @@ void MainWindow::updateUI() {
 	ui->actionAdjustSize->setEnabled(hasTab);
 	ui->actionShowKDTree->setEnabled(hasTab);
 	ui->actionShowKDTree->setChecked(hasTab && context->showKDTree);
+	ui->actionSceneDescription->setEnabled(hasTab);
 #if !defined(__OSX__)
 	ui->actionPreviewSettings->setEnabled(!fallback && hasTab);
 #else
@@ -863,6 +887,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 			return;
 		}
 	}
+	ui->glView->shutdown();
 	QMainWindow::closeEvent(event);
 	m_logWidget->hide();
 	Logger *logger = Thread::getThread()->getLogger();
@@ -1369,7 +1394,6 @@ void MainWindow::onSaveAsDialogClose(int reason) {
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;
 	if (reason == QDialog::Accepted) {
-		m_currentChild = NULL;
         QString fileName = dialog->selectedFiles().value(0);
 		settings.setValue("fileDialogState", dialog->saveState());
 		saveScene(this, context, fileName);

@@ -46,6 +46,7 @@ public:
 	void resumePreview();
 	void refreshScene();
 	void resetPreview();
+	void shutdown();
 	inline const RendererCapabilities *getRendererCapabilities() const {
 		return m_renderer->getCapabilities();
 	}

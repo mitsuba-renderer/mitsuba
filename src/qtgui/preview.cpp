@@ -325,7 +325,7 @@ void PreviewThread::run() {
 				target.buffer->setFormat(GPUTexture::EFloat32RGB);
 				target.buffer->setSize(size);
 				target.buffer->setFilterType(GPUTexture::ENearest);
-				target.buffer->setFrameBufferType(GPUTexture::EColorBuffer);
+				target.buffer->setFrameBufferType(GPUTexture::EColorAndDepthBuffer);
 				target.buffer->setMipMapped(false);
 				target.buffer->init();
 				target.buffer->incRef();

@@ -42,7 +42,6 @@ Transform Gizmo::getTransform() const {
 }
 
 void Gizmo::startDrag(const Ray &ray) {
-	m_drag = false;
 	Float nearT, farT;
 	if (!m_bsphere.rayIntersect(ray, nearT, farT)
 		|| (nearT < 0 && farT < 0)) {
@@ -53,8 +52,8 @@ void Gizmo::startDrag(const Ray &ray) {
 	} else {
 		m_dragStart = ray(nearT);
 	}
-
-	m_active = true;
+	m_dragEnd = m_dragStart;
+	m_drag = true;
 }
 
 void Gizmo::dragTo(const Ray &ray, const Camera *camera) {
@@ -71,7 +70,6 @@ void Gizmo::dragTo(const Ray &ray, const Camera *camera) {
 		m_dragEnd = m_bsphere.center + normalize(closest - 
 				m_bsphere.center) * m_bsphere.radius;
 	}
-	m_drag = true;
 }
 
 void Gizmo::draw(Renderer *renderer, const Camera *camera) {
@@ -86,10 +84,12 @@ void Gizmo::draw(Renderer *renderer, const Camera *camera) {
 	Float tcRadius = std::sqrt(length*length - radius*radius)*radius/length;
 	Float tcDist = std::sqrt(radius*radius - tcRadius*tcRadius);
 
+	renderer->setDepthTest(false);
 	renderer->drawCircle(m_bsphere.center - camToSphere * tcDist, 
 			camToSphere, tcRadius);
+	renderer->setDepthTest(true);
 
-	if (m_drag) {
+	if (m_drag && m_dragStart != m_dragEnd) {
 		Spectrum color1, color2;
 		color1.fromLinearRGB(0.7f, 0.7f, 1.0f);
 		color2.fromLinearRGB(0.3f, 0.3f, 0.3f);
