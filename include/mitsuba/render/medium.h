@@ -24,8 +24,8 @@
 
 MTS_NAMESPACE_BEGIN
 /**
- * \brief Data record associated with the sampling procedure responsible for
- * choosing a point on the in-scattering line integral of the RTE
+ * \brief Data record for sampling a point on the in-scattering 
+ * integral of the RTE
  *
  * \sa Medium::sampleDistance()
  */

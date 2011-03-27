@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 # System libs
-import os, time, threading, subprocess, sys, copy
+import os, time, threading, sys, copy
 
 # Blender libs
 import bpy, bl_ui
@@ -28,9 +28,8 @@ from extensions_framework import util as efutil
 from .. import MitsubaAddon, plugin_path
 
 from ..outputs import MtsLog, MtsFilmDisplay
-from ..export.adjustments import MtsAdjustments
-from ..export.film import resolution
-from ..export import get_instance_materials, translate_id
+from ..export import (get_instance_materials, 
+		resolution, MtsLaunch, MtsExporter)
 
 from ..properties import (
 	engine, sampler, integrator, lamp, texture, material
@@ -84,8 +83,9 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 	def render_preview(self, scene):
 		# Iterate through the preview scene, finding objects with materials attached
 		objects_materials = {}
+		(width, height) = resolution(scene)
 						
-		if resolution(scene) == (96, 96):
+		if (width, height) == (96, 96):
 			return
 
 		for object in [ob for ob in scene.objects if ob.is_visible(scene) and not ob.hide_render]:
@@ -105,41 +105,31 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 			return
 
 		tempdir = efutil.temp_directory()
-		matfile = os.path.join(tempdir, "matpreview_materials.xml")
+		matfile = "matpreview_materials.xml"
 		output_file = os.path.join(tempdir, "matpreview.png")
 		scene_file = os.path.join(os.path.join(plugin_path(),
 			"matpreview"), "matpreview.xml")
 		pm = likely_materials[0]
-		adj = MtsAdjustments(matfile, tempdir, 
+		exporter = MtsExporter(tempdir, matfile,
 			bpy.data.materials, bpy.data.textures)
-		adj.writeHeader()
-		adj.exportMaterial(pm)
-		adj.exportPreviewMesh(pm)
-		adj.writeFooter()
-		mts_path = scene.mitsuba_engine.binary_path
-		mitsuba_binary = os.path.join(mts_path, "mitsuba")
-		env = copy.copy(os.environ)
-		mts_render_libpath = os.path.join(mts_path, "src/librender")
-		mts_core_libpath = os.path.join(mts_path, "src/libcore")
-		mts_hw_libpath = os.path.join(mts_path, "src/libhw")
-		mts_bidir_libpath = os.path.join(mts_path, "src/libbidir")
-		env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath + ":" + mts_bidir_libpath
-		(width, height) = resolution(scene)
+		exporter.writeHeader()
+		exporter.exportMaterial(pm)
+		exporter.exportPreviewMesh(pm)
+		exporter.writeFooter()
 		refresh_interval = 1
 		preview_spp = int(efutil.find_config_value('mitsuba', 'defaults', 'preview_spp', '16'))
 		preview_depth = int(efutil.find_config_value('mitsuba', 'defaults', 'preview_depth', '2'))
-		mitsuba_process = subprocess.Popen(
-			[mitsuba_binary, '-q', 
+
+		mitsuba_process = MtsLaunch(scene.mitsuba_engine.binary_path,
+			['mitsuba', '-q', 
 				'-r%i' % refresh_interval,
-				'-o', output_file, '-Dmatfile=%s' % matfile,
+				'-o', output_file, '-Dmatfile=%s' % os.path.join(tempdir, matfile),
 				'-Dwidth=%i' % width, 
 				'-Dheight=%i' % height, 
 				'-Dspp=%i' % preview_spp,
 				'-Ddepth=%i' % preview_depth,
-				'-o', output_file, scene_file],
-			env = env,
-			cwd = mts_path
-		)
+				'-o', output_file, scene_file])
+
 		framebuffer_thread = MtsFilmDisplay({
 			'resolution': resolution(scene),
 			'RE': self,
@@ -170,13 +160,24 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 
 	def render(self, scene):
 		if scene is None:
-			bpy.ops.ef.msg(msg_type='ERROR', msg_text='Scene to render is not valid')
+			MtsLog('ERROR: Scene is missing!')
 			return
 		if scene.mitsuba_engine.binary_path == '':
-			bpy.ops.ef.msg(msg_type='ERROR', msg_text='The Mitsuba binary path is unspecified!')
+			MtsLog('ERROR: The binary path is unspecified!')
 			return
 
+		config_updates = {}
+		binary_path = os.path.abspath(efutil.filesystem_path(scene.mitsuba_engine.binary_path))
+		if os.path.isdir(binary_path) and os.path.exists(binary_path):
+			config_updates['binary_path'] = binary_path
+
 		with self.render_lock:	# just render one thing at a time
+			try:
+				for k, v in config_updates.items():
+					efutil.write_config_value('mitsuba', 'defaults', k, v)
+			except Exception as err:
+				MtsLog('WARNING: Saving Mitsuba configuration failed, please set your user scripts dir: %s' % err)
+		
 			if scene.name == 'preview':
 				self.render_preview(scene)
 				return
@@ -192,45 +193,30 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 			os.chdir(output_dir)
 
 			if scene.render.use_color_management == False:
-				MtsLog('WARNING: Colour Management is switched off, render results may look too dark.')
+				MtsLog('WARNING: Color Management is switched off, render results may look too dark.')
 
 			MtsLog('MtsBlend: Current directory = "%s"' % output_dir)
 			output_basename = efutil.scene_filename() + '.%s.%05i' % (scene.name, scene.frame_current)
 
-			export_result = bpy.ops.export.mitsuba(
+			result = MtsExporter(
 				directory = output_dir,
 				filename = output_basename,
-				scene = scene.name
-			)
-			if 'CANCELLED' in export_result:
-				bpy.ops.ef.msg(msg_type='ERROR', msg_text='Error while exporting -- check the console for details.')
-				return 
+			).export(scene)
+	
+			if not result:
+				MtsLog('Error while exporting -- check the console for details.')
+				return
 
 			if scene.mitsuba_engine.export_mode == 'render':
-				mts_path = scene.mitsuba_engine.binary_path
-				mtsgui_binary = os.path.join(mts_path, "mtsgui")
-				mitsuba_binary = os.path.join(mts_path, "mitsuba")
-				env = copy.copy(os.environ)
-				mts_render_libpath = os.path.join(mts_path, "src/librender")
-				mts_core_libpath = os.path.join(mts_path, "src/libcore")
-				mts_hw_libpath = os.path.join(mts_path, "src/libhw")
-				mts_bidir_libpath = os.path.join(mts_path, "src/libbidir")
-				env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath + ":" + mts_bidir_libpath
 
 				MtsLog("MtsBlend: Launching renderer ..")
 				if scene.mitsuba_engine.render_mode == 'gui':
-					subprocess.Popen(
-						[mtsgui_binary, efutil.export_path],
-						env = env,
-						cwd = mts_path
-					)
+					MtsLaunch(scene.mitsuba_engine.binary_path, ['mtsgui', efutil.export_path])
 				elif scene.mitsuba_engine.render_mode == 'cli':
 					output_file = efutil.export_path[:-4] + ".png"
-					mitsuba_process = subprocess.Popen(
-						[mitsuba_binary, '-r',  '%d' % scene.mitsuba_engine.refresh_interval,
-							'-o', output_file, efutil.export_path],
-						env = env,
-						cwd = mts_path
+					mitsuba_process = MtsLaunch(scene.mitsuba_engine.binary_path, 
+						['mitsuba', '-r',  '%d' % scene.mitsuba_engine.refresh_interval,
+							'-o', output_file, efutil.export_path]
 					)
 					framebuffer_thread = MtsFilmDisplay({
 						'resolution': resolution(scene),

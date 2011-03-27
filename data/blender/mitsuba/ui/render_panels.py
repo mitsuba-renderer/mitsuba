@@ -23,8 +23,6 @@ from .. import MitsubaAddon
 from extensions_framework.ui import property_group_renderer
 from extensions_framework import util as efutil
 
-cached_binary_path = None
-
 class render_panel(bl_ui.properties_render.RenderButtonsPanel, property_group_renderer):
 	'''
 	Base class for render engine settings panels
@@ -59,20 +57,6 @@ class engine(render_panel, bpy.types.Panel):
 	display_property_groups = [
 		( ('scene',), 'mitsuba_engine' )
 	]
-			
-	def draw(self, context):
-		global cached_binary_path
-		binary_path = context.scene.mitsuba_engine.binary_path
-		if binary_path != "" and cached_binary_path != binary_path:
-			binary_path = os.path.abspath(efutil.filesystem_path(binary_path))
-			if os.path.isfile(binary_path):
-				(binary_path, tail) = os.path.split(binary_path)
-			actualChange = cached_binary_path != None
-			cached_binary_path = binary_path
-			context.scene.mitsuba_engine.binary_path = binary_path
-			print('Updating binary_path to "%s"\n' % binary_path)
-			efutil.write_config_value('mitsuba', 'defaults', 'binary_path', binary_path)
-		super().draw(context)
 
 @MitsubaAddon.addon_register_class
 class integrator(render_panel, bpy.types.Panel):

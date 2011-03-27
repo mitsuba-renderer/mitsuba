@@ -67,7 +67,7 @@ class mitsuba_engine(declarative_property_group):
 			'subtype': 'DIR_PATH',
 			'attr': 'binary_path',
 			'name': 'Executable path',
-			'description': 'Path to the "mitsuba" executable',
+			'description': 'Path to the Mitsuba install',
 			'default': efutil.find_config_value('mitsuba', 'defaults', 'binary_path', '')
 		},
 		{

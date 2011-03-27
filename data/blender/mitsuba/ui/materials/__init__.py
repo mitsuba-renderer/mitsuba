@@ -61,7 +61,7 @@ class mitsuba_material_base(bl_ui.properties_material.MaterialButtonsPanel, prop
 		if repaint:
 			# Cause a repaint
 			MtsLog("Forcing a repaint")
-			context.material.preview_render_type = context.material.preview_render_type 
+			#context.material.preview_render_type = context.material.preview_render_type 
 
 	def draw(self, context):
 		if not hasattr(context, 'material'):
@@ -114,7 +114,7 @@ class mitsuba_material_sub(bl_ui.properties_material.MaterialButtonsPanel, prope
 		if repaint:
 			# Cause a repaint
 			MtsLog("Forcing a repaint")
-			context.material.preview_render_type = context.material.preview_render_type 
+			#context.material.preview_render_type = context.material.preview_render_type 
 		return super().draw(context)
 
 @MitsubaAddon.addon_register_class
@@ -139,7 +139,7 @@ class MATERIAL_PT_preview_mts(bl_ui.properties_material.MaterialButtonsPanel, bp
 			cached_spp = engine.preview_spp
 			if actualChange:
 				MtsLog("Forcing a repaint")
-				context.material.preview_render_type = context.material.preview_render_type 
+				#context.material.preview_render_type = context.material.preview_render_type 
 				efutil.write_config_value('mitsuba', 'defaults', 'preview_spp', str(cached_spp))
 				efutil.write_config_value('mitsuba', 'defaults', 'preview_depth', str(cached_depth))
 

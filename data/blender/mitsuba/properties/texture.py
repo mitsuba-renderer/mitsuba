@@ -139,18 +139,6 @@ class TextureParameter(TextureParameterBase):
 		'roughmetal': 'specularReflectance'
 	}
 
-	def set_master_colour(self, s, c):
-		'''
-		This neat little hack will set the blender material colour to the value
-		given in the material panel via the property's 'draw' lambda function.
-		'''
-
-		if c.type in self.master_color_map.keys() and self.attr == self.master_color_map[c.type]:
-			submat = getattr(c, 'mitsuba_mat_%s'%c.type)
-			submat_col = getattr(submat, self.attr+'_color')
-			if s.material.diffuse_color != submat_col:
-				s.material.diffuse_color = submat_col
-	
 	def get_properties(self):
 		return [
 			{
@@ -183,7 +171,6 @@ class TextureParameter(TextureParameterBase):
 				'max': self.max,
 				'soft_max': self.max,
 				'subtype': 'COLOR',
-				'draw': lambda s,c: self.set_master_colour(s, c),
 				'save_in_preset': True
 			},
 			{
