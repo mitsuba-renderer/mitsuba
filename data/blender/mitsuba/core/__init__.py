@@ -32,11 +32,11 @@ from ..export import (get_instance_materials,
 		resolution, MtsLaunch, MtsExporter)
 
 from ..properties import (
-	engine, sampler, integrator, lamp, texture, material
+	engine, sampler, integrator, lamp, texture, material, world
 );
 
 from ..ui import (
-	render_panels, lamps, materials
+	render_panels, lamps, materials, world
 )
 
 from ..ui.textures import (

@@ -258,3 +258,56 @@ class MITSUBA_OT_convert_material(bpy.types.Operator):
 		
 		material_converter(self.report, context.scene, blender_mat)
 		return {'FINISHED'}	
+
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_MT_presets_medium(MITSUBA_MT_base):
+	bl_label = "Mitsuba Medium Presets"
+	preset_subdir = "mitsuba/medium"
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_preset_medium_add(bl_operators.presets.AddPresetBase, bpy.types.Operator):
+	'''Save the current settings as a preset'''
+	bl_idname = 'mitsuba.preset_medium_add'
+	bl_label = 'Add Mitsuba Medium settings preset'
+	preset_menu = 'MITSUBA_MT_presets_medium'
+	preset_values = []
+	preset_subdir = 'mitsuba/medium'
+	
+	def execute(self, context):
+		ks = 'bpy.context.scene.mitsuba_media.media[bpy.context.scene.mitsuba_media.media_index].%s'
+		pv = [
+			ks%v['attr'] for v in bpy.types.mitsuba_medium_data.get_exportable_properties()
+		]
+		
+		self.preset_values = pv
+		return super().execute(context)
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_medium_add(bpy.types.Operator):
+	'''Add a new medium definition to the scene'''
+	
+	bl_idname = "mitsuba.medium_add"
+	bl_label = "Add Mitsuba Medium"
+	
+	new_medium_name = bpy.props.StringProperty(default='New Medium')
+	
+	def invoke(self, context, event):
+		v = context.scene.mitsuba_media.media
+		v.add()
+		new_vol = v[len(v)-1]
+		new_vol.name = self.properties.new_medium_name
+		return {'FINISHED'}
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_medium_remove(bpy.types.Operator):
+	'''Remove the selected medium definition'''
+	
+	bl_idname = "mitsuba.medium_remove"
+	bl_label = "Remove Mitsuba Medium"
+
+	def invoke(self, context, event):
+		w = context.scene.mitsuba_media
+		w.media.remove( w.media_index )
+		w.media_index = len(w.media)-1
+		return {'FINISHED'}
