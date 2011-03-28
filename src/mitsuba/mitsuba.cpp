@@ -346,9 +346,9 @@ int ubi_main(int argc, char **argv) {
 			parser->parse(filename.file_string().c_str());
 			ref<Scene> scene = handler->getScene();
 
-			scene->setSourceFile(filename.file_string());
-			scene->setDestinationFile(destFile.length() > 0 ? destFile 
-				: baseName.file_string());
+			scene->setSourceFile(filename);
+			scene->setDestinationFile(destFile.length() > 0 ? 
+				fs::path(destFile) : baseName);
 			scene->setBlockSize(blockSize);
 
 			if (scene->destinationExists() && skipExisting)
