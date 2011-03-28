@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 # System libs
-import os, time, threading, sys, copy
+import os, time, threading, sys, copy, subprocess
 
 # Blender libs
 import bpy, bl_ui
@@ -73,9 +73,94 @@ compatible("properties_particle")
 class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 	bl_idname			= MitsubaAddon.BL_IDNAME
 	bl_label			= 'Mitsuba'
-	bl_use_preview      = False
+	bl_use_preview      = True
 
 	render_lock = threading.Lock()
+
+	def render(self, scene):
+		if self is None or scene is None:
+			MtsLog('ERROR: Scene is missing!')
+			return
+		if scene.mitsuba_engine.binary_path == '':
+			MtsLog('ERROR: The binary path is unspecified!')
+			return
+
+		with self.render_lock:	# just render one thing at a time
+			if scene.name == 'preview':
+				self.render_preview(scene)
+				return
+
+			config_updates = {}
+			binary_path = os.path.abspath(efutil.filesystem_path(scene.mitsuba_engine.binary_path))
+			if os.path.isdir(binary_path) and os.path.exists(binary_path):
+				config_updates['binary_path'] = binary_path
+
+			try:
+				for k, v in config_updates.items():
+					efutil.write_config_value('mitsuba', 'defaults', k, v)
+			except Exception as err:
+				MtsLog('WARNING: Saving Mitsuba configuration failed, please set your user scripts dir: %s' % err)
+		
+			scene_path = efutil.filesystem_path(scene.render.filepath)
+			if os.path.isdir(scene_path):
+				output_dir = scene_path
+			else:
+				output_dir = os.path.dirname(scene_path)		
+			if output_dir[-1] != '/':
+				output_dir += '/'
+			efutil.export_path = output_dir
+			os.chdir(output_dir)
+
+			if scene.render.use_color_management == False:
+				MtsLog('WARNING: Color Management is switched off, render results may look too dark.')
+
+			MtsLog('MtsBlend: Current directory = "%s"' % output_dir)
+			output_basename = efutil.scene_filename() + '.%s.%05i' % (scene.name, scene.frame_current)
+
+			result = MtsExporter(
+				directory = output_dir,
+				filename = output_basename,
+			).export(scene)
+	
+			if not result:
+				MtsLog('Error while exporting -- check the console for details.')
+				return
+
+			if scene.mitsuba_engine.export_mode == 'render':
+
+				MtsLog("MtsBlend: Launching renderer ..")
+				if scene.mitsuba_engine.render_mode == 'gui':
+					MtsLaunch(scene.mitsuba_engine.binary_path, ['mtsgui', efutil.export_path])
+				elif scene.mitsuba_engine.render_mode == 'cli':
+					output_file = efutil.export_path[:-4] + ".png"
+					mitsuba_process = MtsLaunch(scene.mitsuba_engine.binary_path, 
+						['mitsuba', '-r', str(scene.mitsuba_engine.refresh_interval),
+							'-o', output_file, efutil.export_path]
+					)
+					framebuffer_thread = MtsFilmDisplay()
+					framebuffer_thread.set_kick_period(scene.mitsuba_engine.refresh_interval) 
+					framebuffer_thread.begin(self, output_file, resolution(scene))
+					render_update_timer = None
+					while mitsuba_process.poll() == None and not self.test_break():
+						render_update_timer = threading.Timer(1, self.process_wait_timer)
+						render_update_timer.start()
+						if render_update_timer.isAlive(): render_update_timer.join()
+
+					# If we exit the wait loop (user cancelled) and mitsuba is still running, then send SIGINT
+					if mitsuba_process.poll() == None:
+						# Use SIGTERM because that's the only one supported on Windows
+						mitsuba_process.send_signal(subprocess.signal.SIGTERM)
+
+					# Stop updating the render result and load the final image
+					framebuffer_thread.stop()
+					framebuffer_thread.join()
+
+					if mitsuba_process.poll() != None and mitsuba_process.returncode != 0:
+						MtsLog("MtsBlend: Rendering failed -- check the console")
+						bpy.ops.ef.msg(msg_type='ERROR', msg_text='Rendering failed -- check the console.')
+					else:
+						framebuffer_thread.kick(render_end=True)
+					framebuffer_thread.shutdown()
 
 	def process_wait_timer(self):
 		# Nothing to do here
@@ -113,6 +198,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 		pm = likely_materials[0]
 		exporter = MtsExporter(tempdir, matfile,
 			bpy.data.materials, bpy.data.textures)
+		exporter.adj_filename = os.path.join(tempdir, matfile)
 		exporter.writeHeader()
 		exporter.exportMaterial(pm)
 		exporter.exportPreviewMesh(pm)
@@ -131,118 +217,32 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 				'-Ddepth=%i' % preview_depth,
 				'-o', output_file, scene_file])
 
-		framebuffer_thread = MtsFilmDisplay({
-			'resolution': resolution(scene),
-			'RE': self,
-			'output_file': output_file
-		})
+		framebuffer_thread = MtsFilmDisplay()
 		framebuffer_thread.set_kick_period(refresh_interval)
-		framebuffer_thread.start()
+		framebuffer_thread.begin(self, output_file, resolution(scene))
 		render_update_timer = None
 		while mitsuba_process.poll() == None and not self.test_break():
 			render_update_timer = threading.Timer(1, self.process_wait_timer)
 			render_update_timer.start()
 			if render_update_timer.isAlive(): render_update_timer.join()
 
+		cancelled = False
 		# If we exit the wait loop (user cancelled) and mitsuba is still running, then send SIGINT
 		if mitsuba_process.poll() == None:
+			MtsLog("MtsBlend: Terminating process..")
 			# Use SIGTERM because that's the only one supported on Windows
 			mitsuba_process.send_signal(subprocess.signal.SIGTERM)
+			cancelled = True
 
 		# Stop updating the render result and load the final image
 		framebuffer_thread.stop()
 		framebuffer_thread.join()
 
-		if mitsuba_process.poll() != None and mitsuba_process.returncode != 0:
-			MtsLog("MtsBlend: Rendering failed -- check the console")
-		else:
-			framebuffer_thread.kick(render_end=True)
-
-
-	def render(self, scene):
-		if scene is None:
-			MtsLog('ERROR: Scene is missing!')
-			return
-		if scene.mitsuba_engine.binary_path == '':
-			MtsLog('ERROR: The binary path is unspecified!')
-			return
-
-		config_updates = {}
-		binary_path = os.path.abspath(efutil.filesystem_path(scene.mitsuba_engine.binary_path))
-		if os.path.isdir(binary_path) and os.path.exists(binary_path):
-			config_updates['binary_path'] = binary_path
-
-		with self.render_lock:	# just render one thing at a time
-			try:
-				for k, v in config_updates.items():
-					efutil.write_config_value('mitsuba', 'defaults', k, v)
-			except Exception as err:
-				MtsLog('WARNING: Saving Mitsuba configuration failed, please set your user scripts dir: %s' % err)
-		
-			if scene.name == 'preview':
-				self.render_preview(scene)
-				return
-
-			scene_path = efutil.filesystem_path(scene.render.filepath)
-			if os.path.isdir(scene_path):
-				output_dir = scene_path
+		if not cancelled:
+			if mitsuba_process.poll() != None and mitsuba_process.returncode != 0:
+				MtsLog("MtsBlend: Rendering failed -- check the console")
 			else:
-				output_dir = os.path.dirname(scene_path)		
-			if output_dir[-1] != '/':
-				output_dir += '/'
-			efutil.export_path = output_dir
-			os.chdir(output_dir)
+				framebuffer_thread.kick(render_end=True)
+		framebuffer_thread.shutdown()
 
-			if scene.render.use_color_management == False:
-				MtsLog('WARNING: Color Management is switched off, render results may look too dark.')
 
-			MtsLog('MtsBlend: Current directory = "%s"' % output_dir)
-			output_basename = efutil.scene_filename() + '.%s.%05i' % (scene.name, scene.frame_current)
-
-			result = MtsExporter(
-				directory = output_dir,
-				filename = output_basename,
-			).export(scene)
-	
-			if not result:
-				MtsLog('Error while exporting -- check the console for details.')
-				return
-
-			if scene.mitsuba_engine.export_mode == 'render':
-
-				MtsLog("MtsBlend: Launching renderer ..")
-				if scene.mitsuba_engine.render_mode == 'gui':
-					MtsLaunch(scene.mitsuba_engine.binary_path, ['mtsgui', efutil.export_path])
-				elif scene.mitsuba_engine.render_mode == 'cli':
-					output_file = efutil.export_path[:-4] + ".png"
-					mitsuba_process = MtsLaunch(scene.mitsuba_engine.binary_path, 
-						['mitsuba', '-r',  '%d' % scene.mitsuba_engine.refresh_interval,
-							'-o', output_file, efutil.export_path]
-					)
-					framebuffer_thread = MtsFilmDisplay({
-						'resolution': resolution(scene),
-						'RE': self,
-						'output_file': output_file
-					})
-					framebuffer_thread.set_kick_period(scene.mitsuba_engine.refresh_interval) 
-					framebuffer_thread.start()
-					render_update_timer = None
-					while mitsuba_process.poll() == None and not self.test_break():
-						render_update_timer = threading.Timer(1, self.process_wait_timer)
-						render_update_timer.start()
-						if render_update_timer.isAlive(): render_update_timer.join()
-
-					# If we exit the wait loop (user cancelled) and mitsuba is still running, then send SIGINT
-					if mitsuba_process.poll() == None:
-						# Use SIGTERM because that's the only one supported on Windows
-						mitsuba_process.send_signal(subprocess.signal.SIGTERM)
-
-					# Stop updating the render result and load the final image
-					framebuffer_thread.stop()
-					framebuffer_thread.join()
-
-					if mitsuba_process.poll() != None and mitsuba_process.returncode != 0:
-						MtsLog("MtsBlend: Rendering failed -- check the console")
-						bpy.ops.ef.msg(msg_type='ERROR', msg_text='Rendering failed -- check the console.')
-					else:
-						framebuffer_thread.kick(render_end=True)

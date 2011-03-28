@@ -112,27 +112,23 @@ class ParamSetItem(list):
 		self.append(self.type_name)
 		self.append(self.value)
 	
-	def to_string(self):
+	def export(self, exporter):
 		if self.type == "color":
-			return '\t\t<rgb name="%s" value="%s %s %s"/>\n' % (self.name,
-					self.value[0], self.value[1], self.value[2])
+			exporter.parameter('rgb', self.name,
+				{ 'value' : "%s %s %s" % (self.value[0], self.value[1], self.value[2])})
 		elif self.type == "point" or self.type == "vector":
-			return '\t\t<%s name="%s" value="%s %s %s"/>\n' % (self.type,
-					self.name, self.value[0], self.value[1], self.value[2])
+			exporter.parameter(self.type, self.name,
+				{ 'value' : "%s %s %s" % (self.value[0], self.value[1], self.value[2])})
 		elif self.type == "integer" or self.type == "float" \
 				or self.type ==	"string":
-			return '\t\t<%s name="%s" value="%s"/>\n' % (self.type, self.name, self.value)
-		else:
-			return ""
+			exporter.parameter(self.type, self.name, { 'value' : "%s" % self.value })
 	
-	def to_string_ref(self):
-		if self.type == "reference_texture" or self.type == "reference_material":
-			if self.name == "":
-				return '\t\t<ref id="%s"/>\n' % translate_id(self.value)
+	def export_ref(self, exporter):
+		if self.type == "reference_texture" or self.type == "reference_material" or self.type == 'reference_medium':
+			if self.name != "":
+				exporter.element('ref', {'id' : translate_id(self.value), 'name' : self.name})
 			else:
-				return '\t\t<ref name="%s" id="%s"/>\n' % (self.name, translate_id(self.value))
-		else:
-			return ""
+				exporter.element('ref', {'id' : translate_id(self.value)})
 
 class ParamSet(list):
 	names = []
@@ -186,12 +182,12 @@ class ParamSet(list):
 		self.add('color', name, [c for c in value])
 		return self
 	
-	def to_string(self):
-		return ''.join(item.to_string() for item in self)
-
-	def to_string_ref(self):
-		return ''.join(item.to_string_ref() for item in self)
-
+	def export(self, exporter):
+		for item in self:
+			item.export(exporter)
+		for item in self:
+			item.export_ref(exporter)
+	
 def get_instance_materials(ob):
 	obmats = []
 	# Grab materials attached to object instances ...
@@ -249,17 +245,14 @@ class MtsExporter:
 		self.indent = 0
 		self.stack = []
 
-	def parameter(self, paramType, paramName, attributes = {}):
-		self.out.write('\t' * self.indent + '<%s name="%s"' % (paramType, paramName))
-		for (k, v) in attributes.items():
-			self.out.write(' %s=\"%s\"' % (k, v))
-		self.out.write('/>\n')
-	
-	def element(self, name, attributes = {}):
-		self.out.write('\t' * self.indent + '<%s' % name)
-		for (k, v) in attributes.items():
-			self.out.write(' %s=\"%s\"' % (k, v))
-		self.out.write('/>\n')
+	def writeHeader(self):
+		self.out = open(self.adj_filename, 'w')
+		self.out.write('<?xml version="1.0" encoding="utf-8"?>\n');
+		self.openElement('scene')
+
+	def writeFooter(self):
+		self.closeElement()
+		self.out.close()
 
 	def openElement(self, name, attributes = {}):
 		self.out.write('\t' * self.indent + '<%s' % name)
@@ -274,6 +267,18 @@ class MtsExporter:
 		name = self.stack.pop()
 		self.out.write('\t' * self.indent + '</%s>\n' % name)
 
+	def element(self, name, attributes = {}):
+		self.out.write('\t' * self.indent + '<%s' % name)
+		for (k, v) in attributes.items():
+			self.out.write(' %s=\"%s\"' % (k, v))
+		self.out.write('/>\n')
+
+	def parameter(self, paramType, paramName, attributes = {}):
+		self.out.write('\t' * self.indent + '<%s name="%s"' % (paramType, paramName))
+		for (k, v) in attributes.items():
+			self.out.write(' %s=\"%s\"' % (k, v))
+		self.out.write('/>\n')
+	
 	def exportWorldTrafo(self, trafo):
 		self.openElement('transform', {'name' : 'toWorld'})
 		value = ""
@@ -378,20 +383,19 @@ class MtsExporter:
 			raise Exception('Failed to find material "%s" in "%s"' % (name,
 				str(self.materials)))
 
-	def exportTexture(self, mat):
-		if mat.name in self.exported_textures:
+	def exportTexture(self, tex):
+		if tex.name in self.exported_textures:
 			return
-		self.exported_textures += [mat.name]
-		params = mat.mitsuba_texture.get_params()
+		self.exported_textures += [tex.name]
+		params = tex.mitsuba_texture.get_params()
 
 		for p in params:
 			if p.type == 'reference_texture':
 				self.exportTexture(self.findTexture(p.value))
 
-		self.out.write('\t<texture id="%s" type="%s">\n' % (translate_id(mat.name), mat.mitsuba_texture.type))
-		self.out.write(params.to_string())
-		self.out.write(params.to_string_ref())
-		self.out.write('\t</texture>\n')
+		self.openElement('texture', {'id' : '%s' % translate_id(tex.name), 'type' : tex.mitsuba_texture.type})
+		params.export(self)
+		self.closeElement()
 
 	def exportMaterial(self, mat):
 		if not hasattr(mat, 'name') or mat.name in self.exported_materials:
@@ -405,10 +409,9 @@ class MtsExporter:
 			elif p.type == 'reference_texture':
 				self.exportTexture(self.findTexture(p.value))
 
-		self.out.write('\t<bsdf id="%s-material" type="%s">\n' % (translate_id(mat.name), mat.mitsuba_material.type))
-		self.out.write(params.to_string())
-		self.out.write(params.to_string_ref())
-		self.out.write('\t</bsdf>\n')
+		self.openElement('bsdf', {'id' : '%s-material' % translate_id(mat.name), 'type' : mat.mitsuba_material.type})
+		params.export(self)
+		self.closeElement()
 
 	def exportEmission(self, obj):
 			mult = lamp.intensity
@@ -422,15 +425,6 @@ class MtsExporter:
 			self.closeElement()
 			self.closeElement()
 
-	def writeHeader(self):
-		self.out = open(self.adj_filename, 'w')
-		self.out.write('<?xml version="1.0" encoding="utf-8"?>\n');
-		self.openElement('scene')
-
-	def writeFooter(self):
-		self.closeElement()
-		self.out.close()
-
 	def exportPreviewMesh(self, material):
 		self.out.write('\t\t<shape id="Exterior-mesh_0" type="serialized">\n')
 		self.out.write('\t\t\t<string name="filename" value="matpreview.serialized"/>\n')
@@ -438,7 +432,7 @@ class MtsExporter:
 		self.out.write('\t\t\t<transform name="toWorld">\n')
 		self.out.write('\t\t\t\t<matrix value="0.614046 0.614047 0 -1.78814e-07 -0.614047 0.614046 0 2.08616e-07 0 0 0.868393 1.02569 0 0 0 1"/>\n')
 		self.out.write('\t\t\t</transform>\n')
-		self.out.write('\t\t\t<ref id="%s" name="bsdf"/>\n' % translate_id(material.name))
+		self.out.write('\t\t\t<ref id="%s-material" name="bsdf"/>\n' % translate_id(material.name))
 		lamp = material.mitsuba_emission
 		if lamp and lamp.use_emission:
 			mult = lamp.intensity
