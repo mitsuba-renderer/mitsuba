@@ -27,8 +27,8 @@ narrowui = 180
 @MitsubaAddon.addon_register_class
 class lamps(bl_ui.properties_data_lamp.DataButtonsPanel, property_group_renderer, bpy.types.Panel):
 	bl_label = 'Mitsuba Lamps'
-	COMPAT_ENGINES = {'mitsuba'}
-	
+	COMPAT_ENGINES = { MitsubaAddon.BL_IDNAME }
+
 	display_property_groups = [
 		( ('lamp',), 'mitsuba_lamp' )
 	]
@@ -41,14 +41,9 @@ class lamps(bl_ui.properties_data_lamp.DataButtonsPanel, property_group_renderer
 			wide_ui = context.region.width > narrowui
 
 			if wide_ui:
-				layout.prop(lamp.mitsuba_lamp, "type", expand=True)
+				layout.prop(lamp, "type", expand=True)
 			else:
-				layout.prop(lamp.mitsuba_lamp, "type", text="")
-			
-			if lamp.mitsuba_lamp.type == 'ENV':
-				lamp.type = 'HEMI'
-			else:
-				lamp.type = lamp.mitsuba_lamp.type
+				layout.prop(lamp, "type", text="")
 
 			split = layout.split()
 			

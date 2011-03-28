@@ -80,6 +80,14 @@ public:
 				return Spectrum(0.0f);
 		}
 
+		/* Possibly include emitted radiance if requested */
+		if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
+			Li += its.Le(-ray.d);
+
+		/* Include radiance from a subsurface integrator if requested */
+		if (its.hasSubsurface() && (rRec.type & RadianceQueryRecord::ESubsurfaceRadiance))
+			Li += its.LoSub(scene, -ray.d);
+
 		const BSDF *bsdf = its.getBSDF(ray);
 
 		if (EXPECT_NOT_TAKEN(!bsdf)) {
@@ -88,14 +96,6 @@ public:
 			   -- give up. */
 			return Li;
 		}
-
-		/* Possibly include emitted radiance if requested */
-		if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
-			Li += its.Le(-ray.d);
-
-		/* Include radiance from a subsurface integrator if requested */
-		if (its.hasSubsurface() && (rRec.type & RadianceQueryRecord::ESubsurfaceRadiance))
-			Li += its.LoSub(scene, -ray.d);
 
 		/* Leave here if direct illumination was not requested */
 		if (!(rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance))

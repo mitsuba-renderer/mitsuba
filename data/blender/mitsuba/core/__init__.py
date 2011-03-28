@@ -52,7 +52,7 @@ from ..ui.materials import (
 from .. import operators
 
 def compatible(mod):
-	mod = __import__('bl_ui.' + mod)
+	mod = getattr(bl_ui, mod)
 	for subclass in mod.__dict__.values():
 		try:
 			subclass.COMPAT_ENGINES.add(MitsubaAddon.BL_IDNAME)
@@ -67,12 +67,13 @@ bl_ui.properties_render.RENDER_PT_output.COMPAT_ENGINES.add(MitsubaAddon.BL_IDNA
 
 compatible("properties_data_mesh")
 compatible("properties_data_camera")
+compatible("properties_particle")
 
 @MitsubaAddon.addon_register_class
 class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 	bl_idname			= MitsubaAddon.BL_IDNAME
 	bl_label			= 'Mitsuba'
-	bl_use_preview      = True
+	bl_use_preview      = False
 
 	render_lock = threading.Lock()
 

@@ -37,21 +37,6 @@ class mitsuba_lamp(declarative_property_group):
 
 	properties = [
 		{
-			'type': 'enum',
-			'attr': 'type',
-			'name': 'Light source type',
-			'description': 'Specifies the behavior of the light source',
-			'default': 'POINT',
-			'items': [
-				('POINT', 'Point', 'Omnidirectional spot light source'),
-				('SUN', 'Dir', 'Constant direction parallel light source'),
-				('SPOT', 'Spot', 'Directional cone light source'),
-				('ENV', 'Env', 'Environment map light source'),
-				('AREA', 'Area', 'Diffuse area light source')
-			],
-			'save_in_preset': True
-		},
-		{
 			'type': 'float',
 			'attr': 'samplingWeight',
 			'name': 'Sampling weight',

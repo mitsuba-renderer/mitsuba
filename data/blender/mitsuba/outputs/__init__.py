@@ -28,8 +28,7 @@ class MtsFilmDisplay(TimerThread):
 
 		result = self.LocalStorage['RE'].begin_result(0, 0, int(xres), int(yres))
 		if os.path.exists(self.LocalStorage['output_file']):
-			lay = result.layers[0]
-			lay.load_from_file(self.LocalStorage['output_file'])
+			result.layers[0].load_from_file(self.LocalStorage['output_file'])
 		else:
 			err_msg = 'ERROR: Could not load render result from %s' % self.LocalStorage['output_file']
 			MtsLog(err_msg)

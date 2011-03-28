@@ -125,7 +125,7 @@ class TextureParameter(TextureParameterBase):
 		vis.update(self.get_extra_visibility())
 		return vis
 	
-	# colour for each material type. If the property name is
+	# color for each material type. If the property name is
 	# not set, then the color won't be changed.
 	master_color_map = {
 		'lambertian': 'reflectance',

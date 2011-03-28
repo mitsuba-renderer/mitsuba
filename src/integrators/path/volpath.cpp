@@ -179,16 +179,6 @@ public:
 					break;
 				}
 
-				const BSDF *bsdf = its.getBSDF(ray);
-				if (!bsdf) {
-					/* Pass right through the surface (there is no BSDF) */
-					if (its.isMediumTransition())
-						rRec.medium = its.getTargetMedium(ray.d);
-					ray.setOrigin(its.p);
-					scene->rayIntersect(ray, its);
-					continue;
-				}
-
 				/* Possibly include emitted radiance if requested */
 				if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
 					Li += pathThroughput * its.Le(-ray.d);
@@ -199,6 +189,16 @@ public:
 
 				if (rRec.depth == m_maxDepth && m_maxDepth > 0)
 					break;
+
+				const BSDF *bsdf = its.getBSDF(ray);
+				if (!bsdf) {
+					/* Pass right through the surface (there is no BSDF) */
+					if (its.isMediumTransition())
+						rRec.medium = its.getTargetMedium(ray.d);
+					ray.setOrigin(its.p);
+					scene->rayIntersect(ray, its);
+					continue;
+				}
 
 				/* ==================================================================== */
 				/*                          Luminaire sampling                          */

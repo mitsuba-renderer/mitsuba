@@ -23,7 +23,7 @@ from .. import MitsubaAddon
 
 from extensions_framework import declarative_property_group
 from extensions_framework import util as efutil
-from extensions_framework.validate import Logic_Operator
+from extensions_framework.validate import Logic_Operator, Logic_OR as O
 from ..properties.texture import TextureParameter
 from ..export import ParamSet
 
@@ -53,14 +53,19 @@ class mitsuba_material(declarative_property_group):
 	
 	controls = [
 		'type',
-	] 
+		'twosided'
+	]
+
+	visibility = {
+		'twosided' : { 'type' : O(['lambertian', 'phong', 'ward', 'mirror', 'roughmetal', 'microfacet', 'composite'])}
+	}
 
 	properties = [
 		# Material Type Select
 		{
 			'type': 'enum',
 			'attr': 'type',
-			'name': 'Type',
+			'name': 'Material Type',
 			'description': 'Mitsuba material type',
 			'default': 'lambertian',
 			'items': [
@@ -75,6 +80,14 @@ class mitsuba_material(declarative_property_group):
 				('microfacet', 'Microfacet', 'Microfacet material (like the rough glass material, but without transmittance)'),
 				('composite', 'Composite material', 'Allows creating mixtures of different materials')
 			],
+			'save_in_preset': True
+		},
+		{
+			'type': 'bool',
+			'attr': 'twosided',
+			'name': 'Use two-sided shading',
+			'description': 'Use two-sided shading for this material? This only makes sense for non-transparent/translucent materials.',
+			'default': False,
 			'save_in_preset': True
 		}
 	]

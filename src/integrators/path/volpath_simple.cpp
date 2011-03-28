@@ -134,6 +134,14 @@ public:
 
 				computeIntersection = true;
 
+				/* Possibly include emitted radiance if requested */
+				if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
+					Li += pathThroughput * its.Le(-ray.d);
+
+				/* Include radiance from a subsurface integrator if requested */
+				if (its.hasSubsurface() && (rRec.type & RadianceQueryRecord::ESubsurfaceRadiance))
+					Li += pathThroughput * its.LoSub(rRec.scene, -ray.d);
+
 				const BSDF *bsdf = its.getBSDF(ray);
 
 				if (!bsdf) {
@@ -143,14 +151,6 @@ public:
 					ray.setOrigin(its.p);
 					continue;
 				}
-
-				/* Possibly include emitted radiance if requested */
-				if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
-					Li += pathThroughput * its.Le(-ray.d);
-
-				/* Include radiance from a subsurface integrator if requested */
-				if (its.hasSubsurface() && (rRec.type & RadianceQueryRecord::ESubsurfaceRadiance))
-					Li += pathThroughput * its.LoSub(rRec.scene, -ray.d);
 
 				/* ==================================================================== */
 				/*                          Luminaire sampling                          */

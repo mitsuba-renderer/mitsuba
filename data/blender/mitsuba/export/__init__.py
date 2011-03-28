@@ -16,7 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy, os, copy, subprocess
+import bpy, os, copy, subprocess, math, mathutils
 from extensions_framework import util as efutil
 from ..outputs import MtsLog
 
@@ -246,44 +246,75 @@ class MtsExporter:
 		self.exported_textures = []
 		self.materials = materials if materials != None else bpy.data.materials
 		self.textures = textures if textures != None else bpy.data.textures
+		self.indent = 0
+		self.stack = []
+
+	def parameter(self, paramType, paramName, attributes = {}):
+		self.out.write('\t' * self.indent + '<%s name="%s"' % (paramType, paramName))
+		for (k, v) in attributes.items():
+			self.out.write(' %s=\"%s\"' % (k, v))
+		self.out.write('/>\n')
+	
+	def element(self, name, attributes = {}):
+		self.out.write('\t' * self.indent + '<%s' % name)
+		for (k, v) in attributes.items():
+			self.out.write(' %s=\"%s\"' % (k, v))
+		self.out.write('/>\n')
+
+	def openElement(self, name, attributes = {}):
+		self.out.write('\t' * self.indent + '<%s' % name)
+		for (k, v) in attributes.items():
+			self.out.write(' %s=\"%s\"' % (k, v))
+		self.out.write('>\n')
+		self.indent = self.indent+1
+		self.stack.append(name)
+
+	def closeElement(self):
+		self.indent = self.indent-1
+		name = self.stack.pop()
+		self.out.write('\t' * self.indent + '</%s>\n' % name)
 
 	def exportWorldTrafo(self, trafo):
-		self.out.write('\t\t<transform name="toWorld">\n')
-		self.out.write('\t\t\t<matrix value="')
+		self.openElement('transform', {'name' : 'toWorld'})
+		value = ""
 		for j in range(0,4):
 			for i in range(0,4):
-				self.out.write("%f " % trafo[i][j])
-		self.out.write('"/>\n\t\t</transform>\n')
+				value += "%f " % trafo[i][j]
+		self.element('matrix', {'value' : value})
+		self.closeElement()
 
 	def exportLamp(self, lamp, idx):
-		ltype = lamp.data.mitsuba_lamp.type
+		ltype = lamp.data.type
 		name = translate_id(lamp.data.name)
+		mult = lamp.data.mitsuba_lamp.intensity
 		if ltype == 'POINT':
-			self.out.write('\t<luminaire id="%s-light" type="point">\n' % name)
-			mult = lamp.data.mitsuba_lamp.intensity
+			self.openElement('luminaire', { 'type' : 'point', 'id' : '%s-light' % name })
 			self.exportWorldTrafo(lamp.matrix_world)
-			self.out.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-			self.out.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
-			self.out.write('\t</luminaire>\n')
+			self.parameter('rgb', 'intensity', {'value' : 
+				"%f %f %f" % (lamp.data.color.r*mult, lamp.data.color.g*mult,
+					lamp.data.color.b*mult)})
+			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.data.mitsuba_lamp.samplingWeight})
+			self.closeElement()
 		elif ltype == 'AREA':
-			self.out.write('\t<remove id="%s-light"/>\n' % name)
-			self.out.write('\t<shape type="obj">\n')
-			size_x = lamp.data.size
-			size_y = lamp.data.size
+			self.element('remove', { 'id' : '%s-light' % name})
+			self.openElement('shape', { 'type' : 'obj'} )
+			(size_x, size_y) = (lamp.data.size, lamp.data.size)
 			if lamp.data.shape == 'RECTANGLE':
 				size_y = lamp.data.size_y
+			mult = mult / (2 * size_x * size_y)
 			filename = "area_luminaire_%d.obj" % idx
 
-			self.out.write('\t\t<string name="filename" value="meshes/%s"/>\n' % filename)
+			self.parameter('string', 'filename', { 'value' : 'meshes/%s' % filename})
 			self.exportWorldTrafo(lamp.matrix_world)
-			self.out.write('\n\t\t<luminaire id="%s-arealight" type="area">\n' % name)
-			mult = lamp.data.mitsuba_lamp.intensity / (2 * size_x * size_y)
-			self.out.write('\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-			self.out.write('\t\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
-			self.out.write('\t\t</luminaire>\n')
-			self.out.write('\t</shape>\n')
+
+			self.openElement('luminaire', { 'id' : '%s-arealight' % name, 'type' : 'area'})
+			self.parameter('rgb', 'intensity', { 'value' : "%f %f %f"
+					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult)})
+			self.closeElement()
+			self.openElement('bsdf', { 'type' : 'lambertian'})
+			self.parameter('spectrum', 'reflectance', {'value' : '0'})
+			self.closeElement()
+			self.closeElement()
 			path = os.path.join(self.meshes_dir, filename)
 			objFile = open(path, 'w')
 			objFile.write('v %f %f 0\n' % (-size_x/2, -size_y/2))
@@ -293,47 +324,45 @@ class MtsExporter:
 			objFile.write('f 4 3 2 1\n')
 			objFile.close()
 		elif ltype == 'SUN':
-			self.out.write('\t<luminaire id="%s-light" type="directional">\n' % name)
-			mult = lamp.data.mitsuba_lamp.intensity
+			self.openElement('luminaire', { 'id' : '%s-light' % name, 'type' : 'directional'})
 			scale = mathutils.Matrix.Scale(-1, 4, mathutils.Vector([0, 0, 1]))
 			self.exportWorldTrafo(lamp.matrix_world * mathutils.Matrix.Scale(-1, 4, mathutils.Vector([0, 0, 1])))
-			self.out.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-			self.out.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
-			self.out.write('\t</luminaire>\n')
+			self.parameter('rgb', 'intensity', { 'value' : "%f %f %f"
+					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult)})
+			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.data.mitsuba_lamp.samplingWeight})
+			self.closeElement()
 		elif ltype == 'SPOT':
-			self.out.write('\t<luminaire id="%s-light" type="spot">\n' % name)
-			mult = lamp.data.mitsuba_lamp.intensity
+			self.openElement('luminaire', { 'id' : '%s-light' % name, 'type' : 'spot'})
 			self.exportWorldTrafo(lamp.matrix_world * mathutils.Matrix.Scale(-1, 4, mathutils.Vector([0, 0, 1])))
-			self.out.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-			self.out.write('\t\t<float name="cutoffAngle" value="%f"/>\n' % (lamp.data.spot_size * 180 / (math.pi * 2)))
-			self.out.write('\t\t<float name="beamWidth" value="%f"/>\n' % (lamp.data.spot_blend * lamp.data.spot_size * 180 / (math.pi * 2)))
-			self.out.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
-			self.out.write('\t</luminaire>\n')
-		elif ltype == 'ENV':
+			self.parameter('rgb', 'intensity', { 'value' : "%f %f %f"
+					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult)})
+			self.parameter('float', 'cutoffAngle', {'value' : '%f' %  (lamp.data.spot_size * 180 / (math.pi * 2))})
+			self.parameter('float', 'beamWidth', {'value' : '%f' % (lamp.data.spot_blend * lamp.data.spot_size * 180 / (math.pi * 2))})
+			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.data.mitsuba_lamp.samplingWeight})
+			self.closeElement()
+		elif ltype == 'HEMI':
 			if lamp.data.mitsuba_lamp.envmap_type == 'constant':
-				self.out.write('\t<luminaire id="%s-light" type="constant">\n' % name)
-				mult = lamp.data.mitsuba_lamp.intensity
-				self.out.write('\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-						% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult))
-				self.out.write('\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.data.mitsuba_lamp.samplingWeight)
-				self.out.write('\t</luminaire>\n')
+				self.openElement('luminaire', { 'id' : '%s-light' % name, 'type' : 'constant'})
+				self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.data.mitsuba_lamp.samplingWeight})
+				self.parameter('rgb', 'intensity', { 'value' : "%f %f %f"
+						% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult)})
+				self.closeElement()
 			elif lamp.data.mitsuba_lamp.envmap_type == 'envmap':
-				self.out.write('\t<luminaire id="%s-light" type="envmap">\n' % name)
-				self.out.write('\t\t<string name="filename" value="%s"/>\n' % efutil.filesystem_path(lamp.data.mitsuba_lamp.envmap_file))
+				self.openElement('luminaire', { 'id' : '%s-light' % name, 'type' : 'envmap'})
+				self.parameter('string', 'filename', {'value' : efutil.filesystem_path(lamp.data.mitsuba_lamp.envmap_file)})
 				self.exportWorldTrafo(lamp.matrix_world)
-				self.out.write('\t\t<float name="intensityScale" value="%f"/>\n' % lamp.data.mitsuba_lamp.intensity)
-				self.out.write('\t</luminaire>\n')
+				self.parameter('float', 'intensityScale', {'value' : '%f' % lamp.data.mitsuba_lamp.intensity})
+				self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.data.mitsuba_lamp.samplingWeight})
+				self.closeElement()
 
 	def exportIntegrator(self, integrator):
-		self.out.write('\t<integrator id="integrator" type="%s">\n' % integrator.type)
-		self.out.write('\t</integrator>\n')
+		self.openElement('integrator', { 'id' : 'integrator', 'type' : integrator.type})
+		self.closeElement()
 
 	def exportSampler(self, sampler):
-		self.out.write('\t<sampler id="sampler" type="%s">\n' % sampler.type)
-		self.out.write('\t\t<integer name="sampleCount" value="%i"/>\n' % sampler.sampleCount)
-		self.out.write('\t</sampler>\n')
+		self.openElement('sampler', { 'id' : 'sampler', 'type' : sampler.type})
+		self.parameter('integer', 'sampleCount', { 'value' : '%i' % sampler.sampleCount})
+		self.closeElement()
 
 	def findTexture(self, name):
 		if name in self.textures:
@@ -382,23 +411,24 @@ class MtsExporter:
 		self.out.write('\t</bsdf>\n')
 
 	def exportEmission(self, obj):
+			mult = lamp.intensity
 			lamp = obj.data.materials[0].mitsuba_emission
 			name = translate_id(obj.data.name)
-			self.out.write('\t<append id="%s-mesh_0">\n' % name)
-			self.out.write('\t\t<luminaire id="%s-emission" type="area">\n' % name)
-			mult = lamp.intensity
-			self.out.write('\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-					% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult))
-			self.out.write('\t\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.samplingWeight)
-			self.out.write('\t\t</luminaire>\n')
-			self.out.write('\t</append>\n')
+			self.openElement('append', { 'id' : '%s-mesh_0' % name})
+			self.openElement('luminaire', { 'id' : '%s-emission' % name, 'type' : 'area'})
+			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.samplingWeight})
+			self.parameter('rgb', 'intensity', { 'value' : "%f %f %f"
+					% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult)})
+			self.closeElement()
+			self.closeElement()
 
 	def writeHeader(self):
 		self.out = open(self.adj_filename, 'w')
-		self.out.write('<scene>\n');
+		self.out.write('<?xml version="1.0" encoding="utf-8"?>\n');
+		self.openElement('scene')
 
 	def writeFooter(self):
-		self.out.write('</scene>\n');
+		self.closeElement()
 		self.out.close()
 
 	def exportPreviewMesh(self, material):

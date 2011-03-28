@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 # System Libs
-import os, sys, subprocess, traceback, string
+import os, sys, subprocess, traceback, string, math
 
 # Blender Libs
 import bpy, bl_operators
@@ -207,3 +207,54 @@ class MITSUBA_OT_material_add(bpy.types.Operator):
 		obj.data.materials.append(mat)
 		obj.active_material_index = len(obj.data.materials)-1
 		return {'FINISHED'}
+
+def material_converter(report, scene, blender_mat):
+	try:
+		mitsuba_mat = blender_mat.mitsuba_material
+
+		mitsuba_mat.type = 'microfacet'
+		mitsuba_mat.mitsuba_mat_microfacet.diffuseReflectance_color =  [blender_mat.diffuse_intensity*i for i in blender_mat.diffuse_color]
+		mitsuba_mat.mitsuba_mat_microfacet.specularAmount = 1.0
+		mitsuba_mat.mitsuba_mat_microfacet.diffuseAmount = 1.0
+					
+		logHardness = math.log(blender_mat.specular_hardness)
+		specular_scale = 2.0 * max(0.0128415*logHardness**2 - 0.171266*logHardness + 0.575631, 0.0)
+		mitsuba_mat.mitsuba_mat_microfacet.specularReflectance_color =  [specular_scale * blender_mat.specular_intensity*i for i in blender_mat.specular_color]
+		mitsuba_mat.mitsuba_mat_microfacet.alphaB = min(max(0.757198 - 0.120395*logHardness, 0.0), 1.0)
+
+		report({'INFO'}, 'Converted blender material "%s"' % blender_mat.name)
+		return {'FINISHED'}
+	except Exception as err:
+		report({'ERROR'}, 'Cannot convert material: %s' % err)
+		return {'CANCELLED'}
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_convert_all_materials(bpy.types.Operator):
+	bl_idname = 'mitsuba.convert_all_materials'
+	bl_label = 'Convert all Blender materials'
+	
+	def report_log(self, level, msg):
+		MtsLog('Material conversion %s: %s' % (level, msg))
+	
+	def execute(self, context):
+		for blender_mat in bpy.data.materials:
+			# Don't convert materials from linked-in files
+			if blender_mat.library == None:
+				material_converter(self.report_log, context.scene, blender_mat)
+		return {'FINISHED'}
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_convert_material(bpy.types.Operator):
+	bl_idname = 'mitsuba.convert_material'
+	bl_label = 'Convert selected Blender material'
+	
+	material_name = bpy.props.StringProperty(default='')
+	
+	def execute(self, context):
+		if self.properties.material_name == '':
+			blender_mat = context.material
+		else:
+			blender_mat = bpy.data.materials[self.properties.material_name]
+		
+		material_converter(self.report, context.scene, blender_mat)
+		return {'FINISHED'}	
