@@ -32,8 +32,8 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 	Spectrum *texture = pixels;
 
 	if (!isPowerOfTwo(width) || !isPowerOfTwo(height)) {
-		m_width = roundToPowerOfTwo(width);
-		m_height = roundToPowerOfTwo(height);
+		m_width = (int) roundToPowerOfTwo((uint32_t) width);
+		m_height = (int) roundToPowerOfTwo((uint32_t) height);
 
 		/* The texture needs to be up-sampled */
 		Spectrum *texture1 = new Spectrum[m_width*height];
@@ -87,7 +87,7 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 		delete[] texture1;
 	}
 
-	m_levels = 1 + log2i(std::max(width, height));
+	m_levels = 1 + log2i((uint32_t) std::max(width, height));
 	m_pyramid = new Spectrum*[m_levels];
 	m_pyramid[0] = texture;
 	m_levelWidth = new int[m_levels];

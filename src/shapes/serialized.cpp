@@ -38,7 +38,8 @@ public:
 		/// When the file contains multiple meshes, this index specifies which one to load 
 		int shapeIndex = props.getInteger("shapeIndex", 0);
 
-		m_name = (props.getID() != "unnamed") ? props.getID() : formatString("%s@%i", filePath.stem().c_str(), shapeIndex); 
+		m_name = (props.getID() != "unnamed") ? props.getID() 
+			: formatString("%s@%i", filePath.stem().c_str(), shapeIndex); 
 
 		/* Load the geometry */
 		Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.leaf().c_str());

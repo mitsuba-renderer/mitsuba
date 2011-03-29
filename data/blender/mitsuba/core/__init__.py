@@ -106,8 +106,6 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 				output_dir = scene_path
 			else:
 				output_dir = os.path.dirname(scene_path)		
-			if output_dir[-1] != '/':
-				output_dir += '/'
 			efutil.export_path = output_dir
 			os.chdir(output_dir)
 
@@ -244,5 +242,4 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 			else:
 				framebuffer_thread.kick(render_end=True)
 		framebuffer_thread.shutdown()
-
 

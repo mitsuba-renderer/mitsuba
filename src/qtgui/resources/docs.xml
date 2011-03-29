@@ -1044,19 +1044,16 @@
 	</plugin>
 
 	<plugin type="sampler" name="independent" readableName="Independent sampler" show="true" className="IndependentSampler" extends="Sampler">
-		<descr>Independent sample generator - returns independent uniformly distributed random numbers on <tt>[0,1)</tt> and <tt>[0, 1)x[0, 1)</tt>.</descr>
-		<param name="sampleCount" readableName="Samples per pixel" type="integer" default="1">Number of generated samples / samples per pixel.</param>
+		<descr>Independent sample generator - computes independent uniformly distributed random numbers without any kind of stratification.</descr>
+		<param name="sampleCount" readableName="Samples per pixel" type="integer" default="4">Number of samples per pixel</param>
 	</plugin>
 
 	<plugin type="sampler" name="stratified" readableName="Stratified sampler" show="true" className="StratifiedSampler" extends="Sampler">
-		<descr>
-			Stratified sample generator. Given a resolution <tt>R</tt> and a depth <tt>D</tt>, it 
-			generates <tt>R*R</tt> samples, each of which can be queried for up to <tt>D</tt> 1- 
-			or 2-dimensional vectors by an integrator. The returned 1D/2D-vectors of a particular depth
-			have the property of being stratified over all <tt>R*R</tt> samples. When
-			the maximum depth is exceeded, this implementation reverts to independent sampling.
+		<descr>Stratified sample generator - computes stratified samples in 1 and 2 dimensions.
+			This only works up to a specified maximum depth, after which
+			the implementation falls back to independent sampling.
 		</descr>
-		<param name="resolution" readableName="Stratification resolution" type="integer" default="2">Stratification resolution of the sample space. The default results in 2x2=4 samples per pixel</param>
+		<param name="sampleCount" readableName="Samples per pixel" type="integer" default="4">Number of samples per pixel (will be rounded up to the next perfect square)</param>
 		<param name="depth" readableName="Stratification depth" type="integer" default="3">Depth, up to which which stratified samples are guaranteed to be available.</param>
 	</plugin>
 
@@ -1066,7 +1063,7 @@
 			Provides samples up to a specified depth, after which independent 
 			sampling takes over.
 		</descr>
-		<param name="sampleCount" readableName="Samples per pixel" type="integer" default="4">Number of generated samples / samples per pixel</param>
+		<param name="sampleCount" readableName="Samples per pixel" type="integer" default="4">Number of samples per pixel (will be rounded up to the next power of two)</param>
 		<param name="depth" readableName="Depth" type="integer" default="3">Depth, up to which which low discrepancy samples are guaranteed to be available.</param>
 	</plugin>
 

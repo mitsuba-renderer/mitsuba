@@ -27,8 +27,7 @@ MTS_NAMESPACE_BEGIN
  */
 class LowDiscrepancySampler : public Sampler {
 public:
-	LowDiscrepancySampler() : Sampler(Properties()) {
-	}
+	LowDiscrepancySampler() : Sampler(Properties()) { }
 
 	LowDiscrepancySampler(Stream *stream, InstanceManager *manager) 
 	 : Sampler(stream, manager) {
@@ -44,23 +43,24 @@ public:
 	}
 
 	LowDiscrepancySampler(const Properties &props) : Sampler(props) {
-		/* Number of samples per pixel when used with a sampling-based integrator */
+		/* Sample count (will be rounded up to the next power of two) */
 		m_sampleCount = props.getSize("sampleCount", 4);
 
 		/* Depth, up to which which low discrepancy samples are guaranteed to be available. */
 		m_depth = props.getInteger("depth", 3);
 
-		if (!isPowerOfTwo((int) m_sampleCount)) {
-			m_sampleCount = roundToPowerOfTwo((int) m_sampleCount);
-			Log(EWarn, "Sample count should be a power of two - rounding to %i", m_sampleCount);
+		if (!isPowerOfTwo((uint64_t) m_sampleCount)) {
+			m_sampleCount = (size_t) roundToPowerOfTwo((uint64_t) m_sampleCount);
+			Log(EWarn, "Sample count should be a power of two -- rounding to "
+					SIZE_T_FMT, m_sampleCount);
 		}
 
 		m_samples1D = new Float*[m_depth];
 		m_samples2D = new Point2*[m_depth];
 
 		for (int i=0; i<m_depth; i++) {
-			m_samples1D[i] = new Float[(size_t) m_sampleCount];
-			m_samples2D[i] = new Point2[(size_t) m_sampleCount];
+			m_samples1D[i] = new Float[m_sampleCount];
+			m_samples2D[i] = new Point2[m_sampleCount];
 		}
 
 		m_random = new Random();
@@ -90,8 +90,8 @@ public:
 		sampler->m_samples1D = new Float*[m_depth];
 		sampler->m_samples2D = new Point2*[m_depth];
 		for (int i=0; i<m_depth; i++) {
-			sampler->m_samples1D[i] = new Float[(size_t) m_sampleCount];
-			sampler->m_samples2D[i] = new Point2[(size_t) m_sampleCount];
+			sampler->m_samples1D[i] = new Float[m_sampleCount];
+			sampler->m_samples2D[i] = new Point2[m_sampleCount];
 		}
 		for (size_t i=0; i<m_req1D.size(); ++i)
 			sampler->request2DArray(m_req1D[i]);

@@ -224,6 +224,7 @@ VertexData *fetchVertexData(Transform transform,
 				result->typeToOffset[EUV] = offset;
 				result->typeToOffsetInStream[EUV] = offsetInStream;
 				result->typeToCount[EUV] = size;
+				cout << "Got texture coordinates.." << endl;
 			} else {
 				SLog(EWarn, "Found multiple sets of texture coordinates - ignoring!");
 			}

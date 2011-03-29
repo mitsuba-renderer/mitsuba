@@ -183,17 +183,10 @@ void RenderSettingsDialog::onTreeSelectionChange(const QItemSelection &selected,
 
 void RenderSettingsDialog::update() {
 	int index = ui->integratorBox->currentIndex();
-	Properties integratorProps;
+	Properties integratorProps, samplerProps;
 
-	int sampleCount = -1;
-	if (sender() == ui->samplerBox) {
-		Properties samplerProps;
+	if (sender() == ui->samplerBox)
 		m_samplerNode->putProperties(samplerProps);
-		if (samplerProps.hasProperty("sampleCount"))
-			sampleCount = samplerProps.getInteger("sampleCount");
-		else if (samplerProps.hasProperty("resolution"))
-			sampleCount = (int) std::pow((Float) samplerProps.getInteger("resolution"), (Float) 2);
-	}
 
 	if (sender() == ui->integratorBox)
 		m_integratorNode->putProperties(integratorProps);
@@ -224,23 +217,19 @@ void RenderSettingsDialog::update() {
 		m_aiNode = m_model->updateClass(m_aiNode, "", "");
 	}
 
-	if (sender() == ui->samplerBox && sampleCount != -1) {
-		std::string samplerPlugin = getPluginName(ui->samplerBox);
-		for (int i=0; i<m_samplerNode->childCount(); ++i) {
-			TreeItem *treeItem = m_samplerNode->child(i);
-			if (treeItem->getName() == "sampleCount") {
-				treeItem->setValue(sampleCount);
-			} else if (treeItem->getName() == "resolution") {
-				treeItem->setValue((int) std::sqrt((Float) sampleCount));
-			}
-		}
-	}
-
 	if (sender() == ui->integratorBox) {
 		for (int i=0; i<m_integratorNode->childCount(); ++i) {
 			TreeItem *treeItem = m_integratorNode->child(i);
 			if (integratorProps.hasProperty(treeItem->getName().toStdString())) 
 				m_integratorNode->setProperty(treeItem->getName().toStdString(), integratorProps);
+		}
+	}
+	
+	if (sender() == ui->samplerBox) {
+		for (int i=0; i<m_samplerNode->childCount(); ++i) {
+			TreeItem *treeItem = m_samplerNode->child(i);
+			if (samplerProps.hasProperty(treeItem->getName().toStdString())) 
+				m_samplerNode->setProperty(treeItem->getName().toStdString(), samplerProps);
 		}
 	}
 

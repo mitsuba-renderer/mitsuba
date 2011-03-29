@@ -470,7 +470,7 @@
   </action>
   <action name="actionSceneDescription">
    <property name="text">
-    <string>Describe Scene..</string>
+    <string>Scene Information ..</string>
    </property>
   </action>
  </widget>

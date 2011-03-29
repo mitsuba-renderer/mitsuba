@@ -244,7 +244,7 @@ bool enableFPExceptions() {
 	bool exceptionsWereEnabled = false;
 #if defined(WIN32)
 	_clearfp();
-	unsigned int cw = _controlfp(0, 0);
+	uint32_t cw = _controlfp(0, 0);
 	exceptionsWereEnabled = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 	cw &= ~(_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 	_controlfp(cw, _MCW_EM);
@@ -268,7 +268,7 @@ bool disableFPExceptions() {
 	bool exceptionsWereEnabled = false;
 #if defined(WIN32)
 	_clearfp();
-	unsigned int cw = _controlfp(0, 0);
+	uint32_t cw = _controlfp(0, 0);
 	exceptionsWereEnabled = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 	cw |= _EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW;
 	_controlfp(cw, _MCW_EM);
@@ -288,7 +288,7 @@ bool disableFPExceptions() {
 void restoreFPExceptions(bool oldState) {
 	bool currentState;
 #if defined(WIN32)
-	unsigned int cw = _controlfp(0, 0);
+	uint32_t cw = _controlfp(0, 0);
 	currentState = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 #elif defined(__OSX__)
 	currentState = query_fpexcept_sse() != 0;
@@ -381,11 +381,18 @@ std::string formatString(const char *fmt, ...) {
 	return std::string(tmp);
 }
 
-int log2i(int value) {
-  int r = 0;
-  while ((value >> r) != 0)
-    r++;
-  return r-1;
+int log2i(uint32_t value) {
+	int r = 0;
+	while ((value >> r) != 0)
+		r++;
+	return r-1;
+}
+
+int log2i(uint64_t value) {
+	int r = 0;
+	while ((value >> r) != 0)
+		r++;
+	return r-1;
 }
 
 int modulo(int a, int b) {
@@ -394,11 +401,7 @@ int modulo(int a, int b) {
 }
 
 /* Fast rounding & power-of-two test algorithms from PBRT */
-bool isPowerOfTwo(unsigned int i) {
-	return (i & (i-1)) == 0;
-}
-
-unsigned int roundToPowerOfTwo(unsigned int i) {
+uint32_t roundToPowerOfTwo(uint32_t i) {
 	i--;
 	i |= i >> 1; i |= i >> 2;
 	i |= i >> 4; i |= i >> 8;
@@ -406,6 +409,13 @@ unsigned int roundToPowerOfTwo(unsigned int i) {
 	return i+1;
 }
 
+uint64_t roundToPowerOfTwo(uint64_t i) {
+	i--;
+	i |= i >> 1;  i |= i >> 2;
+	i |= i >> 4;  i |= i >> 8;
+	i |= i >> 16; i |= i >> 32;
+	return i+1;
+}
 
 // -----------------------------------------------------------------------
 //  Numerical utility functions

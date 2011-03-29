@@ -923,7 +923,7 @@ protected:
 			KDLog(EError, "The exact primitive threshold must be >= 0");
 		if (m_minMaxBins <= 1)
 			KDLog(EError, "The number of min-max bins must be > 2");
-
+		
 		size_type primCount = cast()->getPrimitiveCount();
 		if (primCount == 0) {
 			KDLog(EWarn, "kd-tree contains no geometry!");
@@ -932,6 +932,9 @@ protected:
 			m_nodes[0].initLeafNode(0, 0);
 			return;
 		}
+
+		if (primCount <= m_exactPrimThreshold)
+			m_parallelBuild = false;
 
 		BuildContext ctx(primCount, m_minMaxBins);
 

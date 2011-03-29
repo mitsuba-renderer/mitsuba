@@ -389,6 +389,7 @@ protected:
 
 				if (EXPECT_TAKEN(!vertexTangents)) {
 					its.shFrame = Frame(normalize(n0 * b.x + n1 * b.y + n2 * b.z));
+					its.dpdu = its.dpdv = Vector(0.0f);
 				} else {
 					const TangentSpace &t0 = vertexTangents[idx0];
 					const TangentSpace &t1 = vertexTangents[idx1];
@@ -403,6 +404,7 @@ protected:
 				}
 			} else {
 				its.shFrame = its.geoFrame;
+				its.dpdu = its.dpdv = Vector(0.0f);
 			}
 
 			if (EXPECT_TAKEN(vertexTexcoords)) {

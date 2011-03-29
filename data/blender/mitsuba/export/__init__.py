@@ -401,7 +401,13 @@ class MtsExporter:
 		if not hasattr(mat, 'name') or mat.name in self.exported_materials:
 			return
 		self.exported_materials += [mat.name]
-		params = mat.mitsuba_material.get_params()
+		mmat = mat.mitsuba_material
+		params = mmat.get_params()
+		twosided = False
+
+		if mmat.twosided and mmat.type in ['lambertian', 'phong', 'ward', 
+				'mirror', 'roughmetal', 'microfacet', 'composite']:
+			twosided = True
 
 		for p in params:
 			if p.type == 'reference_material':
@@ -409,14 +415,22 @@ class MtsExporter:
 			elif p.type == 'reference_texture':
 				self.exportTexture(self.findTexture(p.value))
 
-		self.openElement('bsdf', {'id' : '%s-material' % translate_id(mat.name), 'type' : mat.mitsuba_material.type})
+		if twosided:
+			self.openElement('bsdf', {'id' : '%s-material' % translate_id(mat.name), 'type' : 'twosided'})
+			self.openElement('bsdf', {'type' : mmat.type})
+		else:
+			self.openElement('bsdf', {'id' : '%s-material' % translate_id(mat.name), 'type' : mmat.type})
+
 		params.export(self)
 		self.closeElement()
+		
+		if twosided:
+			self.closeElement()
 
 	def exportEmission(self, obj):
-			mult = lamp.intensity
 			lamp = obj.data.materials[0].mitsuba_emission
 			name = translate_id(obj.data.name)
+			mult = lamp.intensity
 			self.openElement('append', { 'id' : '%s-mesh_0' % name})
 			self.openElement('luminaire', { 'id' : '%s-emission' % name, 'type' : 'area'})
 			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.samplingWeight})
@@ -426,23 +440,21 @@ class MtsExporter:
 			self.closeElement()
 
 	def exportPreviewMesh(self, material):
-		self.out.write('\t\t<shape id="Exterior-mesh_0" type="serialized">\n')
-		self.out.write('\t\t\t<string name="filename" value="matpreview.serialized"/>\n')
-		self.out.write('\t\t\t<integer name="shapeIndex" value="1"/>\n')
-		self.out.write('\t\t\t<transform name="toWorld">\n')
-		self.out.write('\t\t\t\t<matrix value="0.614046 0.614047 0 -1.78814e-07 -0.614047 0.614046 0 2.08616e-07 0 0 0.868393 1.02569 0 0 0 1"/>\n')
-		self.out.write('\t\t\t</transform>\n')
-		self.out.write('\t\t\t<ref id="%s-material" name="bsdf"/>\n' % translate_id(material.name))
+		self.openElement('shape', {'id' : 'Exterior-mesh_0', 'type' : 'serialized'})
+		self.parameter('string', 'filename', {'value' : 'matpreview.serialized'})
+		self.parameter('integer', 'shapeIndex', {'value' : '1'})
+		self.openElement('transform', {'name' : 'toWorld'})
+		self.element('matrix', {'value' : '0.614046 0.614047 0 -1.78814e-07 -0.614047 0.614046 0 2.08616e-07 0 0 0.868393 1.02569 0 0 0 1'})
+		self.closeElement()
+		self.element('ref', {'name' : 'bsdf', 'id' : '%s-material' % translate_id(material.name)})
 		lamp = material.mitsuba_emission
 		if lamp and lamp.use_emission:
 			mult = lamp.intensity
-			self.out.write('\t\t\t<luminaire type="area">\n')
-			self.out.write('\t\t\t\t<rgb name="intensity" value="%f %f %f"/>\n' 
-					% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult))
-			self.out.write('\t\t\t\t<float name="samplingWeight" value="%f"/>\n' % lamp.samplingWeight)
-			self.out.write('\t\t\t</luminaire>\n')
-		self.out.write('\t\t</shape>\n')
-		self.out.write('\n')
+			self.openElement('luminaire', {'type' : 'area'})
+			self.parameter('rgb', 'intensity', { 'value' : "%f %f %f"
+					% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult)})
+			self.closeElement()
+		self.closeElement()
 
 	def exportCameraSettings(self, scene, camera):
 		if scene.mitsuba_integrator.motionblur:
@@ -450,10 +462,20 @@ class MtsExporter:
 			shuttertime = scene.mitsuba_integrator.shuttertime
 			shutterOpen = (scene.frame_current - shuttertime/2) * frameTime
 			shutterClose = (scene.frame_current + shuttertime/2) * frameTime
-			self.out.write('\t<prepend id="%s-camera">\n' % translate_id(camera.name))
-			self.out.write('\t\t<float name="shutterOpen" value="%f"/>\n' % shutterOpen)
-			self.out.write('\t\t<float name="shutterClose" value="%f"/>\n' % shutterClose)
-			self.out.write('\t</prepend>\n')
+			self.openElement('prepend', {'id' : '%s-camera' % translate_id(camera.name)})
+			self.parameter('float', 'shutterOpen', {'value' : str(shutterOpen)})
+			self.parameter('float', 'shutterClose', {'value' : str(shutterClose)})
+			self.closeElement()
+
+	def exportMedium(self, medium):
+		self.openElement('medium', {'id' : medium.name, 'type' : medium.type})
+		if medium.g == 0:
+			self.element('phase', {'type' : 'isotropic'})
+		else:
+			self.openElement('phase', {'type' : 'hg'})
+			self.parameter('float', 'g', {'value' : str(medium.g)})
+			self.closeElement()
+		self.closeElement()
 
 	def export(self, scene):
 		if scene.mitsuba_engine.binary_path == '':
@@ -463,7 +485,6 @@ class MtsExporter:
 		idx = 0
 		# Force scene update; NB, scene.update() doesn't work
 		scene.frame_set(scene.frame_current)
-		
 		efutil.export_path = self.xml_filename
 		try:
 			os.mkdir(self.meshes_dir)
@@ -477,6 +498,8 @@ class MtsExporter:
 		self.writeHeader()
 		self.exportIntegrator(scene.mitsuba_integrator)
 		self.exportSampler(scene.mitsuba_sampler)
+		for medium in scene.mitsuba_media.media:
+			self.exportMedium(medium)
 		for obj in scene.objects:
 			if obj.type == 'LAMP':
 				self.exportLamp(obj, idx)
@@ -490,7 +513,7 @@ class MtsExporter:
 			idx = idx+1
 		self.writeFooter()
 		(width, height) = resolution(scene)
-		
+
 		MtsLog("MtsBlend: Launching mtsimport")
 		command = ['mtsimport', '-r', '%dx%d' % (width, height),
 			'-n', '-l', 'pngfilm', self.dae_filename, self.xml_filename, self.adj_filename]

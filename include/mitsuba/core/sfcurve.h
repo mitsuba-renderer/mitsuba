@@ -52,7 +52,7 @@ public:
 		m_points.reserve(m_size.x*m_size.y);
 		m_size = size; m_pos = PointType(0);
 		generate(
-			log2i(std::max(m_size.x, m_size.y)),
+			log2i((uint32_t) std::max(m_size.x, m_size.y)),
 			ENorth, EEast, ESouth, EWest);
 	}
 

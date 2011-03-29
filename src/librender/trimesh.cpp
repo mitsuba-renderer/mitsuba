@@ -285,7 +285,7 @@ void TriMesh::configure() {
 	}
 
 	if (hasBSDF() && ((m_bsdf->getType() & BSDF::EAnisotropicMaterial)
-		|| m_bsdf->usesRayDifferentials()) && !m_tangents)
+		|| m_bsdf->usesRayDifferentials()) && !m_tangents) 
 		computeTangentSpaceBasis();
 }
 
@@ -546,10 +546,12 @@ void TriMesh::computeNormals() {
 bool TriMesh::computeTangentSpaceBasis() {
 	int zeroArea = 0, zeroNormals = 0;
 	if (!m_texcoords) {
-		if (hasBSDF() && m_bsdf->getType() & BSDF::EAnisotropicMaterial)
-			Log(EError, "\"%s\": computeTangentSpace(): texture coordinates are required "
-					"to generate tangent vectors. If you want to render with an anisotropic "
-					"material, make sure that all assigned objects have texture coordinates.");
+		bool anisotropic = hasBSDF() && m_bsdf->getType() & BSDF::EAnisotropicMaterial;
+		if (anisotropic)
+			Log(EError, "\"%s\": computeTangentSpace(): texture coordinates "
+				"are required to generate tangent vectors. If you want to render with an anisotropic "
+				"material, please make sure that all associated shapes have valid texture coordinates.",
+				getName().c_str());
 		return false;
 	}
 
