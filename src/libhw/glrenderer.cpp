@@ -529,13 +529,22 @@ void GLRenderer::endDrawingMeshes() {
 	}
 }
 	
-void GLRenderer::drawAll() {
+void GLRenderer::drawAll(const std::vector<std::pair<const GPUGeometry *, Transform> > &geo) {
+	GLfloat temp[16];
 	GLRenderer::beginDrawingMeshes(true);
-	std::map<const TriMesh *, GPUGeometry *>::iterator it;
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	std::vector<std::pair<const GPUGeometry *, Transform> >::const_iterator it;
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
-		for (it = m_geometry.begin(); it != m_geometry.end(); ++it) {
-			const TriMesh *mesh = static_cast<const TriMesh *>((*it).first);
-			const GLGeometry *geometry = static_cast<const GLGeometry *>((*it).second);
+		for (it = geo.begin(); it != geo.end(); ++it) {
+			const GLGeometry *geometry = static_cast<const GLGeometry *>(it->first);
+			const TriMesh *mesh = geometry->getTriMesh();
+			int pos=0;
+			for (int j=0; j<4; j++)
+				for (int i=0; i<4; i++)
+					temp[pos++] = (GLfloat) it->second.getMatrix().m[i][j];
+			glLoadMatrixf(temp);
+
 			int stride = geometry->m_stride;
 			if (stride != m_stride) {
 				glVertexFormatNV(3, GL_FLOAT, stride);
@@ -568,11 +577,17 @@ void GLRenderer::drawAll() {
 						finish();
 				}
 			}
+			glPopMatrix();
 		}
 	} else {
-		for (it = m_geometry.begin(); it != m_geometry.end(); ++it) {
-			const TriMesh *mesh = static_cast<const TriMesh *>((*it).first);
-			const GLGeometry *geometry = static_cast<const GLGeometry *>((*it).second);
+		for (it = geo.begin(); it != geo.end(); ++it) {
+			const GLGeometry *geometry = static_cast<const GLGeometry *>(it->first);
+			const TriMesh *mesh = geometry->getTriMesh();
+			int pos=0;
+			for (int j=0; j<4; j++)
+				for (int i=0; i<4; i++)
+					temp[pos++] = (GLfloat) it->second.getMatrix().m[i][j];
+			glLoadMatrixf(temp);
 
 			glBindBuffer(GL_ARRAY_BUFFER, geometry->m_vertexID);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry->m_indexID);
@@ -601,9 +616,11 @@ void GLRenderer::drawAll() {
 						finish();
 				}
 			}
+			glPopMatrix();
 		}
 	}
 	GLRenderer::endDrawingMeshes();
+	glPopMatrix();
 }
 
 void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
@@ -963,6 +980,23 @@ void GLRenderer::setDepthTest(bool value) {
 void GLRenderer::setColorMask(bool value) {
 	GLboolean flag = value ? GL_TRUE : GL_FALSE;
 	glColorMask(flag, flag, flag, flag);
+}
+
+void GLRenderer::pushTransform(const Transform &trafo) {
+	const Matrix4x4 &matrix = trafo.getMatrix();
+	GLfloat temp[16];
+	int pos=0;
+	for (int j=0; j<4; j++)
+		for (int i=0; i<4; i++)
+			temp[pos++] = (GLfloat) matrix.m[i][j];
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glMultMatrixf(temp);
+}
+	
+void GLRenderer::popTransform() {
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
 }
 
 void GLRenderer::flush() {

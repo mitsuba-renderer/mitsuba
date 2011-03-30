@@ -197,7 +197,9 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 		exporter = MtsExporter(tempdir, matfile,
 			bpy.data.materials, bpy.data.textures)
 		exporter.adj_filename = os.path.join(tempdir, matfile)
-		exporter.writeHeader()
+		if not exporter.writeHeader():
+			MtsLog('Error while exporting -- check the console for details.')
+			return;
 		exporter.exportMaterial(pm)
 		exporter.exportPreviewMesh(pm)
 		exporter.writeFooter()

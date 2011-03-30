@@ -20,6 +20,7 @@
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
+#include <mitsuba/core/timer.h>
 #include <mitsuba/render/track.h>
 #include <dom/domCOLLADA.h>
 #include <dae.h>
@@ -224,7 +225,6 @@ VertexData *fetchVertexData(Transform transform,
 				result->typeToOffset[EUV] = offset;
 				result->typeToOffsetInStream[EUV] = offsetInStream;
 				result->typeToCount[EUV] = size;
-				cout << "Got texture coordinates.." << endl;
 			} else {
 				SLog(EWarn, "Found multiple sets of texture coordinates - ignoring!");
 			}
@@ -420,7 +420,7 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 	}
 
 	SAssert(triangleIdx == 0);
-	SLog(EInfo, "\"%s/%s\": Converted " SIZE_T_FMT " triangles, " SIZE_T_FMT 
+	SLog(EDebug, "\"%s/%s\": Converted " SIZE_T_FMT " triangles, " SIZE_T_FMT 
 		" vertices (merged " SIZE_T_FMT " vertices).", prefixName.c_str(), id.c_str(),
 		triangles.size(), vertexBuffer.size(), numMerged);
 
@@ -516,7 +516,7 @@ void exportAnimation(ColladaContext &ctx, const fs::path &path, const std::strin
 			continue;
 		trafo->addTrack(track);
 	}
-	SLog(EInfo, "Writing animation track \"%s\"", path.filename().c_str());
+	SLog(EDebug, "Writing animation track \"%s\"", path.filename().c_str());
 	ref<FileStream> fs = new FileStream(path, FileStream::ETruncReadWrite);
 	trafo->serialize(fs);
 }
@@ -537,7 +537,7 @@ void loadGeometry(ColladaContext &ctx, const std::string &instanceName,
 	}
 	TriangleMap triMap;
 
-	SLog(EInfo, "Converting geometry \"%s\" (instantiated by %s)..", identifier.c_str(), 
+	SLog(EDebug, "Converting geometry \"%s\" (instantiated by %s)..", identifier.c_str(), 
 		prefixName == "" ? "/" : prefixName.c_str());
 	domMesh *mesh = geom.getMesh().cast();
 	if (!mesh)
@@ -938,7 +938,7 @@ void loadLight(ColladaContext &ctx, Transform transform, domLight &light) {
 		}
 	}
 
-	SLog(EInfo, "Converting light \"%s\" ..", identifier.c_str());
+	SLog(EDebug, "Converting light \"%s\" ..", identifier.c_str());
 	char *end_ptr = NULL;
 
 	// Lights in Mitsuba point along the positive Z axis (COLLADA: neg. Z)
@@ -1039,7 +1039,7 @@ void loadImage(ColladaContext &ctx, domImage &image) {
 		}
 	}
 
-	SLog(EInfo, "Converting texture \"%s\" ..", identifier.c_str());
+	SLog(EDebug, "Converting texture \"%s\" ..", identifier.c_str());
 
 	std::string filename = cdom::uriToFilePath(image.getInit_from()->getValue().str());
 	if (ctx.fileToId.find(filename) != ctx.fileToId.end()) {
@@ -1098,7 +1098,7 @@ void loadCamera(ColladaContext &ctx, Transform transform, domCamera &camera) {
 		}
 	}
 
-	SLog(EInfo, "Converting camera \"%s\" ..", identifier.c_str());
+	SLog(EDebug, "Converting camera \"%s\" ..", identifier.c_str());
 	Float aspect = 1.0f;
 	int xres=768;
 
@@ -1188,7 +1188,7 @@ void loadNode(ColladaContext &ctx, Transform transform, domNode &node, std::stri
 		}
 	}
 	prefixName = prefixName + std::string("/") + identifier;
-	SLog(EInfo, "Converting node \"%s\" ..", identifier.c_str());
+	SLog(EDebug, "Converting node \"%s\" ..", identifier.c_str());
 
 	daeTArray<daeSmartRef<daeElement> > children = node.getChildren();
 	/* Parse transformations */
@@ -1341,7 +1341,7 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 			identifier = formatString("unnamedAnimation_%i", unnamedCtr);
 		}
 	}
-	SLog(EInfo, "Loading animation \"%s\" ..", identifier.c_str());
+	SLog(EDebug, "Loading animation \"%s\" ..", identifier.c_str());
 
 	domChannel_Array &channels = anim.getChannel_array();
 	for (size_t i=0; i<channels.getCount(); ++i) {
@@ -1476,7 +1476,7 @@ void mergeRotations(ColladaContext &ctx) {
 			continue;
 		}
 
-		SLog(EInfo, "Converting rotation track of \"%s\" to quaternions ..", 
+		SLog(EDebug, "Converting rotation track of \"%s\" to quaternions ..", 
 				key.c_str());
 
 		std::set<Float> times;
@@ -1606,7 +1606,10 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	ctx.cvt = this;
 	ctx.trackIndex = 0;
 
+	ref<Timer> timer = new Timer();
+
 	if (m_importMaterials) {
+		SLog(EInfo, "Importing materials ..");
 		domLibrary_images_Array &libraryImages = document->getLibrary_images_array();
 		for (size_t i=0; i<libraryImages.getCount(); ++i) {
 			domImage_Array &images = libraryImages[i]->getImage_array();
@@ -1623,6 +1626,7 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	}
 	
 	if (m_importAnimations) {
+		SLog(EInfo, "Importing animations ..");
 		domLibrary_animations_Array &libraryAnimations = document->getLibrary_animations_array();
 		for (size_t i=0; i<libraryAnimations.getCount(); ++i) {
 			domAnimation_Array &animations = libraryAnimations[i]->getAnimation_array();
@@ -1632,6 +1636,7 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 		mergeRotations(ctx);
 	}
 
+	SLog(EInfo, "Importing scene ..");
 	for (size_t i=0; i<nodes.getCount(); ++i) 
 		computeRefCounts(ctx, *nodes[i]);
 
@@ -1641,6 +1646,8 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	for (AnimationMap::iterator it = ctx.animations.begin();
 		it != ctx.animations.end(); ++it)
 		it->second->decRef();
+
+	SLog(EInfo, "Done, took %s", timeToString(timer->getMilliseconds()/1000.0f).c_str());
 
 	os << "</scene>" << endl;
 

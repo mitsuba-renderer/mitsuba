@@ -246,9 +246,14 @@ class MtsExporter:
 		self.stack = []
 
 	def writeHeader(self):
-		self.out = open(self.adj_filename, 'w')
+		try:
+			self.out = open(self.adj_filename, 'w')
+		except IOError:
+			MtsLog('Error: unable to write to file \"%s\"!' % self.adj_filename)
+			return False
 		self.out.write('<?xml version="1.0" encoding="utf-8"?>\n');
 		self.openElement('scene')
+		return True
 
 	def writeFooter(self):
 		self.closeElement()
@@ -308,7 +313,10 @@ class MtsExporter:
 				size_y = lamp.data.size_y
 			mult = mult / (2 * size_x * size_y)
 			filename = "area_luminaire_%d.obj" % idx
-
+			try:
+				os.mkdir(self.meshes_dir)
+			except OSError:
+				pass
 			self.parameter('string', 'filename', { 'value' : 'meshes/%s' % filename})
 			self.exportWorldTrafo(lamp.matrix_world)
 
@@ -429,9 +437,12 @@ class MtsExporter:
 
 	def exportEmission(self, obj):
 			lamp = obj.data.materials[0].mitsuba_emission
-			name = translate_id(obj.data.name)
+			if obj.data.users > 1:
+				MtsLog("Error: luminaires cannot be instantiated!")
+				return
 			mult = lamp.intensity
-			self.openElement('append', { 'id' : '%s-mesh_0' % name})
+			name = translate_id(obj.data.name) + "-mesh_0"
+			self.openElement('append', { 'id' : name})
 			self.openElement('luminaire', { 'id' : '%s-emission' % name, 'type' : 'area'})
 			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.samplingWeight})
 			self.parameter('rgb', 'intensity', { 'value' : "%f %f %f"
@@ -486,16 +497,11 @@ class MtsExporter:
 		# Force scene update; NB, scene.update() doesn't work
 		scene.frame_set(scene.frame_current)
 		efutil.export_path = self.xml_filename
-		try:
-			os.mkdir(self.meshes_dir)
-		except OSError:
-			pass
 	
-		MtsLog('MtsBlend: Writing COLLADA file to "%s"' % self.dae_filename)
-		scene.collada_export(self.dae_filename)
-
 		MtsLog('MtsBlend: Writing adjustments file to "%s"' % self.adj_filename)
-		self.writeHeader()
+		if not self.writeHeader():
+			return False
+
 		self.exportIntegrator(scene.mitsuba_integrator)
 		self.exportSampler(scene.mitsuba_sampler)
 		for medium in scene.mitsuba_media.media:
@@ -513,6 +519,9 @@ class MtsExporter:
 			idx = idx+1
 		self.writeFooter()
 		(width, height) = resolution(scene)
+		
+		MtsLog('MtsBlend: Writing COLLADA file to "%s"' % self.dae_filename)
+		scene.collada_export(self.dae_filename)
 
 		MtsLog("MtsBlend: Launching mtsimport")
 		command = ['mtsimport', '-r', '%dx%d' % (width, height),

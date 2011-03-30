@@ -154,7 +154,7 @@ public:
 	 * Only transmits positions, hence this is mainly useful for
 	 * shadow mapping.
 	 */
-	virtual void drawAll() = 0;
+	virtual void drawAll(const std::vector<std::pair<const GPUGeometry *, Transform> > &geo) = 0;
 
 	/// Draw a quad using the given texture
 	virtual void blitTexture(const GPUTexture *texture,
@@ -217,6 +217,12 @@ public:
 	/// Set the current fixed-function pipeline color
 	virtual void setColor(const Spectrum &spec) = 0;
 
+	/// Push a view transformation onto the matrix stack
+	virtual void pushTransform(const Transform &trafo) = 0;
+	
+	/// Pop the last view transformation from the matrix stack
+	virtual void popTransform() = 0;
+
 	/// Flush outstanding rendering commands
 	virtual void flush() = 0;
 
@@ -246,11 +252,9 @@ public:
 	 * will transfer the associated geometry to the GPU,
 	 * which accelerates later calls to drawTriMesh()
 	 */
-	void registerGeometry(const TriMesh *mesh);
+	GPUGeometry *registerGeometry(const TriMesh *mesh);
 
-	/**
-	 * Unregister a triangle mesh from the renderer.
-	 */
+	/// Unregister a triangle mesh from the renderer.
 	void unregisterGeometry(const TriMesh *mesh);
 
 	/// Set the log level

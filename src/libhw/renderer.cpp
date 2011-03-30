@@ -97,9 +97,9 @@ void Renderer::unregisterShaderForResource(const HWResource *resource) {
 	}
 }
 
-void Renderer::registerGeometry(const TriMesh *mesh) {
+GPUGeometry *Renderer::registerGeometry(const TriMesh *mesh) {
 	if (!m_capabilities->isSupported(RendererCapabilities::EVertexBufferObjects))
-		return;
+		return NULL;
 
 	GPUGeometry *geometry;
 	if (m_geometry.find(mesh) == m_geometry.end()) {
@@ -110,6 +110,7 @@ void Renderer::registerGeometry(const TriMesh *mesh) {
 		geometry = m_geometry[mesh];
 	}
 	geometry->incRef();
+	return geometry;
 }
 
 void Renderer::unregisterGeometry(const TriMesh *mesh) {

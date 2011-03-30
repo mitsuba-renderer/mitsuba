@@ -37,9 +37,11 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Scene data structure: holds information on surfaces, luminaires
- * and participating media and coordinates rendering jobs. Also provides
- * useful query routines mostly used by the integrator implementations.
+ * \brief Principal scene data structure
+ *
+ * Holds information on surfaces, luminaires and participating media and 
+ * coordinates rendering jobs. This class also provides useful query routines
+ * that are mostly used by the \ref Integrator implementations.
  */
 class MTS_EXPORT_RENDER Scene : public NetworkedObject {
 public:

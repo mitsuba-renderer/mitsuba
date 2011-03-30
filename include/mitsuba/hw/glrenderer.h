@@ -119,7 +119,7 @@ public:
 	 * Only transmits positions, hence this is mainly useful for
 	 * shadow mapping.
 	 */
-	void drawAll();
+	void drawAll(const std::vector<std::pair<const GPUGeometry *, Transform> > &geo);
 
 	/// Blit a screen-sized quad
 	void blitQuad(bool flipVertically);
@@ -167,6 +167,12 @@ public:
 
 	/// Set the current fixed-function pipeline color
 	void setColor(const Spectrum &spec);
+
+	/// Push a view transformation onto the matrix stack
+	void pushTransform(const Transform &trafo);
+	
+	/// Pop the last view transformation from the matrix stack
+	void popTransform();
 
 	/// Flush outstanding rendering commands
 	void flush();

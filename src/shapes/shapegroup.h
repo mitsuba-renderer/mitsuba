@@ -25,10 +25,11 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief "Fake" shape that groups sub-shapes into a
- * separate KD-tree. When this shape is used by itself,
- * it doesn't actually generate any intersectable geometry.
- * Instead, the "instance" plugin must be used to create
- * references to the geometry stored inside it.
+ * separate KD-tree.
+ *
+ * This shape doesn't actually generate any intersectable 
+ * geometry on its own. Instead, the "instance" plugin must 
+ * be used to create references to the geometry stored inside it.
  */
 class ShapeGroup : public Shape {
 public:

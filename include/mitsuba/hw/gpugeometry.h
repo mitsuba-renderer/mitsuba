@@ -33,6 +33,9 @@ public:
 	/// Return the name of this geometry object
 	inline std::string getName() const { return m_mesh->getName(); }
 
+	/// Return the associated triangle mesh
+	inline const TriMesh *getTriMesh() const { return m_mesh.get(); }
+
 	/// Upload the geometry object
 	virtual void init() = 0;
 

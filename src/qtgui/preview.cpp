@@ -464,7 +464,7 @@ void PreviewThread::run() {
 }
 
 void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
-	const std::vector<const TriMesh *> meshes = m_shaderManager->getMeshes();
+	const std::vector<std::pair<const TriMesh *, Transform> > meshes = m_shaderManager->getMeshes();
 
 	m_shaderManager->setVPL(vpl);
 
@@ -488,9 +488,15 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	m_framebuffer->clear();
 	m_renderer->beginDrawingMeshes();
 	for (size_t j=0; j<meshes.size(); j++) {
-		m_shaderManager->configure(vpl, meshes[j]->getBSDF(), 
-			meshes[j]->getLuminaire(), camPos, !meshes[j]->hasVertexNormals());
-		m_renderer->drawTriMesh(meshes[j]);
+		const TriMesh *mesh = meshes[j].first;
+		bool hasTransform = !meshes[j].second.isIdentity();
+		m_shaderManager->configure(vpl, mesh->getBSDF(), 
+			mesh->getLuminaire(), camPos, !mesh->hasVertexNormals());
+		if (hasTransform)
+			m_renderer->pushTransform(meshes[j].second);
+		m_renderer->drawTriMesh(mesh);
+		if (hasTransform)
+			m_renderer->popTransform();
 		m_shaderManager->unbind();
 	}
 	m_renderer->endDrawingMeshes();
