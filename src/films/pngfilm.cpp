@@ -411,6 +411,8 @@ public:
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
 		bitmap->setGamma(m_gamma);
 		bitmap->save(Bitmap::EPNG, stream, m_compressionRate);
+		stream->flush();
+		stream->close();
 	}
 
 	bool destinationExists(const fs::path &baseName) const {

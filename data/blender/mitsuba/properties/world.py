@@ -20,13 +20,13 @@ from .. import MitsubaAddon
 
 from extensions_framework import declarative_property_group
 
-def WorldMediumParameter(attr, name):
+def MediumParameter(attr, name):
 	return [
 		{
 			'attr': '%s_medium' % attr,
 			'type': 'string',
 			'name': '%s_medium' % attr,
-			'description': '%s_medium' % attr,
+			'description': '%s medium; blank means vacuum' % attr,
 			'save_in_preset': True
 		},
 		{
@@ -34,7 +34,7 @@ def WorldMediumParameter(attr, name):
 			'attr': attr,
 			'src': lambda s,c: s.scene.mitsuba_media,
 			'src_attr': 'media',
-			'trg': lambda s,c: c.mitsuba_world,
+			'trg': lambda s,c: c.mitsuba_material,
 			'trg_attr': '%s_medium' % attr,
 			'name': name
 		}

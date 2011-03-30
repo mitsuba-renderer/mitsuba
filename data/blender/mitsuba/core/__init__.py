@@ -201,7 +201,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 			MtsLog('Error while exporting -- check the console for details.')
 			return;
 		exporter.exportMaterial(pm)
-		exporter.exportPreviewMesh(pm)
+		exporter.exportPreviewMesh(scene, pm)
 		exporter.writeFooter()
 		refresh_interval = 1
 		preview_spp = int(efutil.find_config_value('mitsuba', 'defaults', 'preview_spp', '16'))

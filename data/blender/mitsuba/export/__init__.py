@@ -240,6 +240,7 @@ class MtsExporter:
 		self.meshes_dir = os.path.join(directory, "meshes")
 		self.exported_materials = []
 		self.exported_textures = []
+		self.exported_media = []
 		self.materials = materials if materials != None else bpy.data.materials
 		self.textures = textures if textures != None else bpy.data.textures
 		self.indent = 0
@@ -410,6 +411,8 @@ class MtsExporter:
 			return
 		self.exported_materials += [mat.name]
 		mmat = mat.mitsuba_material
+		if mmat.type == 'none':
+			return
 		params = mmat.get_params()
 		twosided = False
 
@@ -449,22 +452,46 @@ class MtsExporter:
 					% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult)})
 			self.closeElement()
 			self.closeElement()
+						
+	def exportMediumReference(self, scene, obj, role, mediumName):
+		if medium == "":
+			return
+		if obj.data.users > 1:
+			MtsLog("Error: medium transitions cannot be instantiated (at least for now)!")
+			return
+		self.exportMedium(scene.mitsuba_media.media[mediumName])
+		shapeName = translate_id(obj.data.name) + "-mesh_0"
+		self.openElement('append', { 'id' : shapeName})
+		self.element('ref', { 'name' : role, 'id' : mediumName})
+		self.closeElement()
 
-	def exportPreviewMesh(self, material):
+	def exportPreviewMesh(self, scene, material):
+		mmat = material.mitsuba_material
+		lamp = material.mitsuba_emission
+		if mmat.is_medium_transition:
+			if mmat.interior_medium != '':
+				self.exportMedium(scene.mitsuba_media.media[mmat.interior_medium])
+			if mmat.exterior_medium != '':
+				self.exportMedium(scene.mitsuba_media.media[mmat.exterior_medium])
 		self.openElement('shape', {'id' : 'Exterior-mesh_0', 'type' : 'serialized'})
 		self.parameter('string', 'filename', {'value' : 'matpreview.serialized'})
 		self.parameter('integer', 'shapeIndex', {'value' : '1'})
 		self.openElement('transform', {'name' : 'toWorld'})
 		self.element('matrix', {'value' : '0.614046 0.614047 0 -1.78814e-07 -0.614047 0.614046 0 2.08616e-07 0 0 0.868393 1.02569 0 0 0 1'})
 		self.closeElement()
-		self.element('ref', {'name' : 'bsdf', 'id' : '%s-material' % translate_id(material.name)})
-		lamp = material.mitsuba_emission
+		if mmat.type != 'none':
+			self.element('ref', {'name' : 'bsdf', 'id' : '%s-material' % translate_id(material.name)})
 		if lamp and lamp.use_emission:
 			mult = lamp.intensity
 			self.openElement('luminaire', {'type' : 'area'})
 			self.parameter('rgb', 'intensity', { 'value' : "%f %f %f"
 					% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult)})
 			self.closeElement()
+		if mmat.is_medium_transition:
+			if mmat.interior_medium != '':
+				self.element('ref', { 'name' : 'interior', 'id' : mmat.interior_medium})
+			if mmat.exterior_medium != '':
+				self.element('ref', { 'name' : 'exterior', 'id' : mmat.exterior_medium})
 		self.closeElement()
 
 	def exportCameraSettings(self, scene, camera):
@@ -479,6 +506,9 @@ class MtsExporter:
 			self.closeElement()
 
 	def exportMedium(self, medium):
+		if medium.name in self.exported_media:
+			return
+		self.exported_media += [mat.name]
 		self.openElement('medium', {'id' : medium.name, 'type' : medium.type})
 		if medium.g == 0:
 			self.element('phase', {'type' : 'isotropic'})
@@ -504,16 +534,19 @@ class MtsExporter:
 
 		self.exportIntegrator(scene.mitsuba_integrator)
 		self.exportSampler(scene.mitsuba_sampler)
-		for medium in scene.mitsuba_media.media:
-			self.exportMedium(medium)
 		for obj in scene.objects:
 			if obj.type == 'LAMP':
 				self.exportLamp(obj, idx)
 			elif obj.type == 'MESH':
 				for mat in obj.data.materials:
 					self.exportMaterial(mat)
-				if len(obj.data.materials) > 0 and obj.data.materials[0] != None and obj.data.materials[0].mitsuba_emission.use_emission:
-					self.exportEmission(obj)
+				if len(obj.data.materials) > 0 and obj.data.materials[0] != None:
+					if obj.data.materials[0].mitsuba_emission.use_emission:
+						self.exportEmission(obj)
+					mmat = obj.data.materials[0].mitsuba_material
+					if mmat.is_medium_transition:
+						self.exportMediumReference(scene, obj, 'interior', mmat.interior_medium)
+						self.exportMediumReference(scene, obj, 'exterior', mmat.exterior_medium)
 			elif obj.type == 'CAMERA':
 				self.exportCameraSettings(scene, obj)
 			idx = idx+1

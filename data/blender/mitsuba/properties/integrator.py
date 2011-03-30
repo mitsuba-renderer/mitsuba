@@ -50,6 +50,7 @@ class mitsuba_integrator(declarative_property_group):
 			'items': [
 				('direct', 'Direct Illumination', 'direct'),
 				('path', 'Path tracer', 'path'),
+				('volpath', 'Volumetric path tracer', 'volpath')
 			],
 			'save_in_preset': True
 		},

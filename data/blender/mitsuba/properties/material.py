@@ -27,6 +27,8 @@ from extensions_framework.validate import Logic_Operator, Logic_OR as O
 from ..properties.texture import TextureParameter
 from ..export import ParamSet
 
+from ..properties.world import MediumParameter
+
 param_reflectance = TextureParameter('reflectance', 'Reflectance', \
 		'Diffuse reflectance value', default=(0.5, 0.5, 0.5))
 param_diffuseReflectance = TextureParameter('diffuseReflectance', 'Diffuse reflectance', \
@@ -53,11 +55,16 @@ class mitsuba_material(declarative_property_group):
 	
 	controls = [
 		'type',
-		'twosided'
+		'twosided',
+		'is_medium_transition',
+		'interior',
+		'exterior'
 	]
 
 	visibility = {
-		'twosided' : { 'type' : O(['lambertian', 'phong', 'ward', 'mirror', 'roughmetal', 'microfacet', 'composite'])}
+		'twosided' : { 'type' : O(['lambertian', 'phong', 'ward', 'mirror', 'roughmetal', 'microfacet', 'composite'])},
+		'exterior' : { 'is_medium_transition' : True },
+		'interior' : { 'is_medium_transition' : True }
 	}
 
 	properties = [
@@ -69,28 +76,39 @@ class mitsuba_material(declarative_property_group):
 			'description': 'Mitsuba material type',
 			'default': 'lambertian',
 			'items': [
-				('lambertian', 'Lambertian', 'Lambertian (i.e. ideally diffuse) material'),
-				('phong', 'Phong', 'Modified Phong BRDF'),
-				('ward', 'Anisotropic Ward', 'Anisotropic Ward BRDF'),
-				('dielectric', 'Ideal dielectric', 'Ideal dielectric material (e.g. glass)'),
-				('mirror', 'Ideal mirror', 'Ideal mirror material'),
-				('roughglass', 'Rough glass', 'Rough dielectric material (e.g. sand-blasted glass)'),
-				('roughmetal', 'Rough metal', 'Rough conductor (e.g. sand-blasted metal)'),
+				('none', 'None (passthrough)', 'Passthrough material. This is useful for creating participating media with index-matched boundaries'),
 				('difftrans', 'Diffuse transmitter', 'Material with an ideally diffuse transmittance'),
 				('microfacet', 'Microfacet', 'Microfacet material (like the rough glass material, but without transmittance)'),
-				('composite', 'Composite material', 'Allows creating mixtures of different materials')
+				('composite', 'Composite material', 'Allows creating mixtures of different materials'),
+				('roughglass', 'Rough glass', 'Rough dielectric material (e.g. sand-blasted glass)'),
+				('roughmetal', 'Rough metal', 'Rough conductor (e.g. sand-blasted metal)'),
+				('dielectric', 'Ideal dielectric', 'Ideal dielectric material (e.g. glass)'),
+				('mirror', 'Ideal mirror', 'Ideal mirror material'),
+				('ward', 'Anisotropic Ward', 'Anisotropic Ward BRDF'),
+				('phong', 'Phong', 'Modified Phong BRDF'),
+				('lambertian', 'Lambertian', 'Lambertian (i.e. ideally diffuse) material')
 			],
 			'save_in_preset': True
 		},
 		{
 			'type': 'bool',
 			'attr': 'twosided',
-			'name': 'Use two-sided shading',
+			'name': 'Use two-sided shading?',
 			'description': 'Use two-sided shading for this material? This only makes sense for non-transparent/translucent materials.',
 			'default': False,
 			'save_in_preset': True
+		},
+		{
+			'type': 'bool',
+			'attr': 'is_medium_transition',
+			'name': 'Is medium transition?',
+			'description': 'Activate this property if the material marks a transition from one participating medium to another.',
+			'default': False,
+			'save_in_preset': True
 		}
-	]
+	] + MediumParameter('interior', 'Interior') \
+	  + MediumParameter('exterior', 'Exterior')
+
 
 	def get_params(self):
 		sub_type = getattr(self, 'mitsuba_mat_%s' % self.type)

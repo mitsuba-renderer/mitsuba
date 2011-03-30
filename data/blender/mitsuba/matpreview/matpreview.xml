@@ -5,7 +5,7 @@
 
 -->
 <scene>
-	<integrator id="integrator" type="path">
+	<integrator id="integrator" type="volpath">
 		<integer name="maxDepth" value="$depth"/>
 	</integrator>
 
