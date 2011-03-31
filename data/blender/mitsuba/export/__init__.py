@@ -458,7 +458,7 @@ class MtsExporter:
 			self.closeElement()
 						
 	def exportMediumReference(self, scene, obj, role, mediumName):
-		if medium == "":
+		if mediumName == "":
 			return
 		if obj.data.users > 1:
 			MtsLog("Error: medium transitions cannot be instantiated (at least for now)!")
@@ -473,10 +473,11 @@ class MtsExporter:
 		mmat = material.mitsuba_material
 		lamp = material.mitsuba_emission
 		if mmat.is_medium_transition:
+			mainScene = bpy.data.scenes[0]
 			if mmat.interior_medium != '':
-				self.exportMedium(scene.mitsuba_media.media[mmat.interior_medium])
+				self.exportMedium(mainScene.mitsuba_media.media[mmat.interior_medium])
 			if mmat.exterior_medium != '':
-				self.exportMedium(scene.mitsuba_media.media[mmat.exterior_medium])
+				self.exportMedium(mainScene.mitsuba_media.media[mmat.exterior_medium])
 		self.openElement('shape', {'id' : 'Exterior-mesh_0', 'type' : 'serialized'})
 		self.parameter('string', 'filename', {'value' : 'matpreview.serialized'})
 		self.parameter('integer', 'shapeIndex', {'value' : '1'})
@@ -512,7 +513,7 @@ class MtsExporter:
 	def exportMedium(self, medium):
 		if medium.name in self.exported_media:
 			return
-		self.exported_media += [mat.name]
+		self.exported_media += [medium.name]
 		self.openElement('medium', {'id' : medium.name, 'type' : medium.type})
 		if medium.g == 0:
 			self.element('phase', {'type' : 'isotropic'})
@@ -520,6 +521,18 @@ class MtsExporter:
 			self.openElement('phase', {'type' : 'hg'})
 			self.parameter('float', 'g', {'value' : str(medium.g)})
 			self.closeElement()
+		if medium.type == 'homogeneous':
+			self.parameter('float', 'densityMultiplier', {'value' :
+				str(medium.densityMultiplier)})
+			self.parameter('rgb', 'sigmaA', {'value' : '%f %f %f' % (
+				(1-medium.albedo.r) * medium.sigmaT[0],
+				(1-medium.albedo.g) * medium.sigmaT[1],
+				(1-medium.albedo.b) * medium.sigmaT[2])})
+			self.parameter('rgb', 'sigmaS', {'value' : '%f %f %f' % (
+				medium.albedo.r * medium.sigmaT[0],
+				medium.albedo.g * medium.sigmaT[1],
+				medium.albedo.b * medium.sigmaT[2])})
+
 		self.closeElement()
 
 	def export(self, scene):

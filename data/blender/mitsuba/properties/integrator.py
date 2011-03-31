@@ -48,9 +48,9 @@ class mitsuba_integrator(declarative_property_group):
 			'description': 'Specifies the type of integrator to use',
 			'default': 'direct',
 			'items': [
-				('direct', 'Direct Illumination', 'direct'),
+				('volpath', 'Volumetric path tracer', 'volpath'),
 				('path', 'Path tracer', 'path'),
-				('volpath', 'Volumetric path tracer', 'volpath')
+				('direct', 'Direct Illumination', 'direct')
 			],
 			'save_in_preset': True
 		},

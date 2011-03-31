@@ -52,9 +52,9 @@ class mitsuba_medium_data(declarative_property_group):
 	ef_attach_to = []	# not attached
 	
 	controls = [
-		'type', 'g'
+		'type', 'g', 'densityMultiplier', 'sigmaT', 'albedo'
 	]
-	
+
 	properties = [
 		{
 			'type': 'enum',
@@ -77,6 +77,41 @@ class mitsuba_medium_data(declarative_property_group):
 			'max': 1.0,
 			'soft_max': 1.0,
 			'precision': 4,
+			'save_in_preset': True
+		},
+		{
+			'type': 'float',
+			'attr': 'densityMultiplier',
+			'name': 'Density',
+			'description': 'In conjunction with the scattering and absorption coefficients, this number determines the optical density of the medium',
+			'default': 1.0,
+			'min': 0,
+			'max': 10000,
+			'precision': 4,
+			'save_in_preset': True
+		},
+		{
+			'type': 'float_vector',
+			'attr': 'sigmaT',
+			'name' : 'Extinction',
+			'description' : 'Extinction due to scattering and absorption. Please ' +
+				'keep these value roughly equal across color channels (or expect noise).',
+			'default' : (1.0, 1.0, 1.0),
+			'min': 0.0,
+			'max': 1.0,
+			'expand' : False,
+			'save_in_preset': True
+		},
+		{
+			'type': 'float_vector',
+			'attr': 'albedo',
+			'subtype': 'COLOR',
+			'name' : 'Single-scattering albedo',
+			'description' : 'Specifies the albedo of a single scattering interaction',
+			'default' : (0.8, 0.8, 0.8),
+			'min': 0.0,
+			'max': 1.0,
+			'expand' : False,
 			'save_in_preset': True
 		}
 	]

@@ -93,7 +93,7 @@ class mitsuba_material(declarative_property_group):
 		{
 			'type': 'bool',
 			'attr': 'twosided',
-			'name': 'Use two-sided shading?',
+			'name': 'Use two-sided shading',
 			'description': 'Use two-sided shading for this material? This only makes sense for non-transparent/translucent materials.',
 			'default': False,
 			'save_in_preset': True
@@ -101,7 +101,7 @@ class mitsuba_material(declarative_property_group):
 		{
 			'type': 'bool',
 			'attr': 'is_medium_transition',
-			'name': 'Mark as medium transition?',
+			'name': 'Mark as medium transition',
 			'description': 'Activate this property if the material specifies a transition from one participating medium to another.',
 			'default': False,
 			'save_in_preset': True
@@ -513,7 +513,7 @@ class mitsuba_mat_roughmetal(declarative_property_group):
 			'name' : 'IOR',
 			'description' : 'Per-channel index of refraction of the conductor',
 			'default' : (0.370, 0.370, 0.370),
-			'min': 1.0,
+			'min': 0.1,
 			'max': 10.0,
 			'expand' : False,
 			'save_in_preset': True
