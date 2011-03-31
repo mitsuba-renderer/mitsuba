@@ -91,5 +91,12 @@ class lamps(bl_ui.properties_data_lamp.DataButtonsPanel, property_group_renderer
 			elif wide_ui:
 				col = split.column()
 			
+			layout.prop(lamp.mitsuba_lamp, "inside_medium")
+			if lamp.mitsuba_lamp.inside_medium:
+				layout.prop_search(
+					lamp.mitsuba_lamp, 'lamp_medium',
+					context.scene.mitsuba_media, 'media',
+					text = 'Medium'
+				)
 			if lamp.type == 'HEMI':
-				layout.label('Note: these cover the whole sphere')
+				layout.label('Note: covers the whole sphere')

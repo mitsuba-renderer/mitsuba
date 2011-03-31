@@ -298,7 +298,7 @@ class MtsExporter:
 		self.element('matrix', {'value' : value})
 		self.closeElement()
 
-	def exportLamp(self, lamp, idx):
+	def exportLamp(self, scene, lamp, idx):
 		ltype = lamp.data.type
 		name = translate_id(lamp.data.name)
 		mult = lamp.data.mitsuba_lamp.intensity
@@ -309,6 +309,9 @@ class MtsExporter:
 				"%f %f %f" % (lamp.data.color.r*mult, lamp.data.color.g*mult,
 					lamp.data.color.b*mult)})
 			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.data.mitsuba_lamp.samplingWeight})
+			
+			if lamp.data.mitsuba_lamp.inside_medium:
+				self.exportMediumReference(scene, lamp, nil, lamp.data.mitsuba_lamp.lamp_medium)
 			self.closeElement()
 		elif ltype == 'AREA':
 			self.element('remove', { 'id' : '%s-light' % name})
@@ -466,7 +469,10 @@ class MtsExporter:
 		self.exportMedium(scene.mitsuba_media.media[mediumName])
 		shapeName = translate_id(obj.data.name) + "-mesh_0"
 		self.openElement('append', { 'id' : shapeName})
-		self.element('ref', { 'name' : role, 'id' : mediumName})
+		if role == '':
+			self.element('ref', { 'id' : mediumName})
+		else
+			self.element('ref', { 'name' : role, 'id' : mediumName})
 		self.closeElement()
 
 	def exportPreviewMesh(self, scene, material):
