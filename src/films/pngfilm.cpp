@@ -52,6 +52,7 @@ protected:
 	std::string m_toneMappingMethod;
 	Float m_reinhardKey, m_reinhardBurn;
 	int m_compressionRate;
+	ref<Mutex> m_mutex;
 public:
 	PNGFilm(const Properties &props) : Film(props) {
 		m_pixels = new Pixel[m_cropSize.x * m_cropSize.y];
@@ -89,6 +90,7 @@ public:
 			Log(EError, "16bpp implies a grayscale image with an alpha channel!");
 		if (m_bpp != 8 && m_bpp != 16 && m_bpp != 24 && m_bpp != 32)
 			Log(EError, "The PNG film must be set to 8, 16, 24 or 32 bits per pixel!");
+		m_mutex = new Mutex();
 	}
 
 	PNGFilm(Stream *stream, InstanceManager *manager) 
@@ -103,6 +105,7 @@ public:
 		m_compressionRate = stream->readInt();
 		m_gamma = 1.0f / m_gamma;
 		m_pixels = new Pixel[m_cropSize.x * m_cropSize.y];
+		m_mutex = new Mutex();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -212,6 +215,7 @@ public:
 
 	void develop(const fs::path &destFile) {
 		Log(EDebug, "Developing film ..");
+		m_mutex->lock();
 		ref<Bitmap> bitmap = new Bitmap(m_cropSize.x, m_cropSize.y, m_bpp);
 		uint8_t *targetPixels = bitmap->getData();
 		Float r, g, b;
@@ -411,8 +415,8 @@ public:
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
 		bitmap->setGamma(m_gamma);
 		bitmap->save(Bitmap::EPNG, stream, m_compressionRate);
-		stream->flush();
 		stream->close();
+		m_mutex->unlock();
 	}
 
 	bool destinationExists(const fs::path &baseName) const {

@@ -20,7 +20,7 @@
 import os, time, threading, sys, copy, subprocess
 
 # Blender libs
-import bpy, bl_ui
+import bpy, bl_ui, time
 
 # Framework libs
 from extensions_framework import util as efutil
@@ -106,8 +106,6 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 				output_dir = scene_path
 			else:
 				output_dir = os.path.dirname(scene_path)		
-			efutil.export_path = output_dir
-			os.chdir(output_dir)
 
 			if scene.render.use_color_management == False:
 				MtsLog('WARNING: Color Management is switched off, render results may look too dark.')
@@ -128,10 +126,11 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 
 				MtsLog("MtsBlend: Launching renderer ..")
 				if scene.mitsuba_engine.render_mode == 'gui':
-					MtsLaunch(scene.mitsuba_engine.binary_path, ['mtsgui', efutil.export_path])
+					MtsLaunch(scene.mitsuba_engine.binary_path, output_dir,
+						['mtsgui', efutil.export_path])
 				elif scene.mitsuba_engine.render_mode == 'cli':
 					output_file = efutil.export_path[:-4] + ".png"
-					mitsuba_process = MtsLaunch(scene.mitsuba_engine.binary_path, 
+					mitsuba_process = MtsLaunch(scene.mitsuba_engine.binary_path, output_dir,
 						['mitsuba', '-r', str(scene.mitsuba_engine.refresh_interval),
 							'-o', output_file, efutil.export_path]
 					)
@@ -155,7 +154,6 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 
 					if mitsuba_process.poll() != None and mitsuba_process.returncode != 0:
 						MtsLog("MtsBlend: Rendering failed -- check the console")
-						bpy.ops.ef.msg(msg_type='ERROR', msg_text='Rendering failed -- check the console.')
 					else:
 						framebuffer_thread.kick(render_end=True)
 					framebuffer_thread.shutdown()
@@ -207,9 +205,10 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 		preview_spp = int(efutil.find_config_value('mitsuba', 'defaults', 'preview_spp', '16'))
 		preview_depth = int(efutil.find_config_value('mitsuba', 'defaults', 'preview_depth', '2'))
 
-		mitsuba_process = MtsLaunch(scene.mitsuba_engine.binary_path,
+		mitsuba_process = MtsLaunch(scene.mitsuba_engine.binary_path, tempdir,
 			['mitsuba', '-q', 
 				'-r%i' % refresh_interval,
+				'-b16',
 				'-o', output_file, '-Dmatfile=%s' % os.path.join(tempdir, matfile),
 				'-Dwidth=%i' % width, 
 				'-Dheight=%i' % height, 
@@ -219,7 +218,7 @@ class RENDERENGINE_mitsuba(bpy.types.RenderEngine):
 
 		framebuffer_thread = MtsFilmDisplay()
 		framebuffer_thread.set_kick_period(refresh_interval)
-		framebuffer_thread.begin(self, output_file, resolution(scene))
+		framebuffer_thread.begin(self, output_file, resolution(scene), preview=True)
 		render_update_timer = None
 		while mitsuba_process.poll() == None and not self.test_break():
 			render_update_timer = threading.Timer(1, self.process_wait_timer)

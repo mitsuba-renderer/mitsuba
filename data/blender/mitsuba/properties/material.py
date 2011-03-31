@@ -101,8 +101,8 @@ class mitsuba_material(declarative_property_group):
 		{
 			'type': 'bool',
 			'attr': 'is_medium_transition',
-			'name': 'Is medium transition?',
-			'description': 'Activate this property if the material marks a transition from one participating medium to another.',
+			'name': 'Mark as medium transition?',
+			'description': 'Activate this property if the material specifies a transition from one participating medium to another.',
 			'default': False,
 			'save_in_preset': True
 		}

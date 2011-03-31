@@ -211,7 +211,7 @@ def resolution(scene):
 	
 	return xr, yr
 
-def MtsLaunch(mts_path, commandline):
+def MtsLaunch(mts_path, path, commandline):
 	env = copy.copy(os.environ)
 	mts_render_libpath = os.path.join(mts_path, "src/librender")
 	mts_core_libpath = os.path.join(mts_path, "src/libcore")
@@ -219,7 +219,7 @@ def MtsLaunch(mts_path, commandline):
 	mts_bidir_libpath = os.path.join(mts_path, "src/libbidir")
 	env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath + ":" + mts_bidir_libpath
 	commandline[0] = os.path.join(mts_path, commandline[0])
-	return subprocess.Popen(commandline, env = env, cwd = mts_path)
+	return subprocess.Popen(commandline, env = env, cwd = path)
 
 class MtsExporter:
 	'''
@@ -245,6 +245,10 @@ class MtsExporter:
 		self.textures = textures if textures != None else bpy.data.textures
 		self.indent = 0
 		self.stack = []
+		if directory[-1] != '/':
+			directory += '/'
+		self.output_directory = directory
+		efutil.export_path = self.xml_filename
 
 	def writeHeader(self):
 		try:
@@ -526,7 +530,6 @@ class MtsExporter:
 		idx = 0
 		# Force scene update; NB, scene.update() doesn't work
 		scene.frame_set(scene.frame_current)
-		efutil.export_path = self.xml_filename
 	
 		MtsLog('MtsBlend: Writing adjustments file to "%s"' % self.adj_filename)
 		if not self.writeHeader():
@@ -561,7 +564,8 @@ class MtsExporter:
 			'-n', '-l', 'pngfilm', self.dae_filename, self.xml_filename, self.adj_filename]
 		if scene.mitsuba_integrator.motionblur:
 			command += ['-z']
-		process = MtsLaunch(scene.mitsuba_engine.binary_path, command);
+		process = MtsLaunch(scene.mitsuba_engine.binary_path,
+			self.output_directory, command);
 		if process.wait() != 0:
 			return False
 		return True

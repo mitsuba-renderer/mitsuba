@@ -105,6 +105,8 @@ bool Viewer::deviceEventOccurred(const DeviceEvent &event) {
 		case Device::EResizeEvent:
 			m_renderer->reconfigure(m_device);
 			windowResized(event);
+			// no break
+		case Device::EGainFocusEvent:
 			m_leaveEventLoop = true;
 			break;
 	}

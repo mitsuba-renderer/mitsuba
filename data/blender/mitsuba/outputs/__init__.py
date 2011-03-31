@@ -18,28 +18,35 @@ class MtsFilmDisplay(TimerThread):
 
 	STARTUP_DELAY = 1
 
-	def begin(self, renderer, output_file, resolution):
-		(xres, yres) = resolution
-		self.result = renderer.begin_result(0, 0, int(xres), int(yres))
+	def begin(self, renderer, output_file, resolution, preview = False):
+		(self.xres, self.yres) = (int(resolution[0]), int(resolution[1]))
 		self.renderer = renderer
 		self.output_file = output_file
 		self.resolution = resolution
+		self.preview = preview
+		if not self.preview:
+			self.result = self.renderer.begin_result(0, 0, self.xres, self.yres)
 		self.start()
 
 	def shutdown(self):
-		self.renderer.end_result(self.result)
+		if not self.preview:
+			self.renderer.end_result(self.result)
 
 	def kick(self, render_end=False):
 		if not bpy.app.background or render_end:
-			if render_end:
-				MtsLog('Final render result %ix%i' % self.resolution)
-			else:
-				MtsLog('Updating render result %ix%i' % self.resolution)
-
 			if os.path.exists(self.output_file):
+				if render_end:
+					MtsLog('Final render result %ix%i' % self.resolution)
+				else:
+					MtsLog('Updating render result %ix%i' % self.resolution)
 				try:
-					self.result.layers[0].load_from_file(self.output_file)
-					self.renderer.update_result(self.result)
+					if self.preview:
+						self.result = self.renderer.begin_result(0, 0, self.xres, self.yres)
+						self.result.layers[0].load_from_file(self.output_file)
+						self.renderer.end_result(self.result)
+					else:
+						self.result.layers[0].load_from_file(self.output_file)
+						self.renderer.update_result(self.result)
 				except:
 					pass
 			else:

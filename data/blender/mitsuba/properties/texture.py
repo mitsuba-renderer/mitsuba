@@ -389,7 +389,7 @@ class mitsuba_tex_ldrtexture(declarative_property_group):
 	def get_params(self):
 		params = ParamSet()
 
-		params.add_string('filename', efutil.path_relative_to_export(self.filename) ) \
+		params.add_string('filename', efutil.path_relative_to_export(self.filename)) \
 			  .add_string('filterType', self.filterType) \
 			  .add_float('maxAnisotropy', self.maxAnisotropy) \
 			  .add_string('wrapMode', self.wrapMode) \
