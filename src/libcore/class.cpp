@@ -22,7 +22,7 @@ MTS_NAMESPACE_BEGIN
 
 typedef std::map<std::string, Class *, std::less<std::string> > ClassMap;
 static ClassMap *__classes;
-static bool __isInitialized = false;
+bool Class::m_isInitialized = false;
 typedef Object *(*inst_function)();
 typedef Object *(*unSer_function)(Stream *, InstanceManager *);
 
@@ -81,7 +81,7 @@ void Class::staticInitialization() {
 	std::for_each(__classes->begin(), __classes->end(), 
 		compose1(std::ptr_fun(initializeOnce),
 		select2nd<ClassMap::value_type>()));
-	__isInitialized = true;
+	m_isInitialized = true;
 }
 
 Object *Class::instantiate() const {
@@ -107,7 +107,7 @@ void Class::staticShutdown() {
 		delete (*it).second;
 	delete __classes;
 	__classes = NULL;
-	__isInitialized = false;
+	m_isInitialized = false;
 }
 
 MTS_NAMESPACE_END

@@ -26,9 +26,9 @@ MemoryStream::MemoryStream(size_t initialSize)
 	resize(initialSize);
 }
 
-MemoryStream::MemoryStream(uint8_t *ptr, size_t size) 
+MemoryStream::MemoryStream(void *ptr, size_t size) 
  : Stream(), m_capacity(size), m_size(size), m_pos(0),
-  m_ownsBuffer(false), m_data(ptr) {
+  m_ownsBuffer(false), m_data((uint8_t *) ptr) {
 }
 
 

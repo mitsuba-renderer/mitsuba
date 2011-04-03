@@ -23,18 +23,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Abstract interface implemented by all serializable classes
- * \ingroup libcore
- */
-class MTS_EXPORT_CORE Serializable {
-public:
-	/// Serialize this object to a stream
-	virtual void serialize(Stream *stream, InstanceManager *manager) const = 0;
-protected:
-	/// Virtual deconstructor
-	virtual ~Serializable() { }
-};
-
 /** \brief Base class of all reference-counted objects with serialization support
  *
  * To support unserialization from a stream, the implementation should use one of the
@@ -42,10 +30,13 @@ protected:
  *
  * \ingroup libcore
  */
-class MTS_EXPORT_CORE SerializableObject : public Object, public Serializable {
+class MTS_EXPORT_CORE SerializableObject : public Object {
 public:
 	/// Unserialize a serializable object
 	SerializableObject(Stream *stream, InstanceManager *manager);
+
+	/// Serialize this object to a stream
+	virtual void serialize(Stream *stream, InstanceManager *manager) const = 0;
 
 	MTS_DECLARE_CLASS()
 protected:

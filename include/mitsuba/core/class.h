@@ -96,6 +96,9 @@ public:
 	/// Generate an instance of this class (if this is supported)
 	Object *instantiate() const;
 
+	/// Check if the RTTI layer has been initialized
+	static inline bool rttiIsInitialized() { return m_isInitialized; }
+
 	/** \brief Initializes the built-in RTTI and creates
 	 * a list of all compiled classes
 	 */
@@ -114,6 +117,7 @@ private:
 	Class *m_superClass;
 	std::string m_superClassName;
 	void *m_instPtr, *m_unSerPtr;
+	static bool m_isInitialized;
 };
 
 /*! \addtogroup libcore */

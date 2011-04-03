@@ -9,7 +9,7 @@ MTS_NAMESPACE_BEGIN
 
 MemoryMappedFile::MemoryMappedFile(const fs::path &filename) : m_filename(filename) {
 	m_size = (size_t) fs::file_size(filename);
-	Log(EInfo, "Mapping \"%s\" into memory (%s)..", 
+	Log(ETrace, "Mapping \"%s\" into memory (%s)..", 
 			filename.filename().c_str(), memString(m_size).c_str());
 #if defined(__LINUX__) || defined(__OSX__)
 	int fd = open(filename.file_string().c_str(), O_RDONLY);
@@ -40,7 +40,7 @@ MemoryMappedFile::MemoryMappedFile(const fs::path &filename) : m_filename(filena
 
 MemoryMappedFile::~MemoryMappedFile() {
 #if defined(__LINUX__) || defined(__OSX__)
-	Log(EDebug, "Unmapping \"%s\" from memory", 
+	Log(ETrace, "Unmapping \"%s\" from memory", 
 		m_filename.file_string().c_str()); 
 	int retval = munmap(m_data, m_size);
 	if (retval != 0)

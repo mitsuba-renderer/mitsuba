@@ -73,15 +73,10 @@ protected:
 	 * (Will only be called by \ref ref)
 	 */
 	virtual ~Object();
-private:
-#if defined(_WIN32)
-	mutable LONG volatile m_refCount;
-#else
-	mutable int m_refCount;
-	mutable pthread_mutex_t m_refLock;
-#endif
 public:
 	static Class *m_theClass; ///< Pointer to the object's class descriptor
+private:
+	volatile mutable int m_refCount;
 };
 
 inline int Object::getRefCount() const {

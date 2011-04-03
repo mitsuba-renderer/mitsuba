@@ -36,7 +36,7 @@ public:
 	MemoryStream(size_t initialSize = 512);
 
 	/// Create a memory stream, which operates on a pre-allocated buffer
-	MemoryStream(uint8_t *ptr, size_t size);
+	MemoryStream(void *ptr, size_t size);
 
 	/// Return the underlying data
 	inline uint8_t *getData() { return m_data; }
