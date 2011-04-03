@@ -155,9 +155,39 @@ public:
 
 	/**
 	 * \brief Intersect a ray against all primitives stored in the scene
+	 * and return detailed intersection information
+	 *
+	 * This variant also computes the attenuation until the next
+	 * surface intersection (or until infinity if there is no
+	 * intersection). Index-matched medium transitions are transparently
+	 * handled and do not result in an intersection.
+	 *
+	 * \param ray
+	 *    A 3-dimensional ray data structure with minimum/maximum
+	 *    extent information, as well as a time (which applies when
+	 *    the shapes are animated)
+	 *
+	 * \param its
+	 *    A detailed intersection record, which will be filled by the
+	 *    intersection query
+	 *
+	 * \param medium
+	 *    Initial medium containing the ray \c ray.
+	 *
+	 * \param transmittance
+	 *    Transmittance from the ray origin to the returned intersection
+	 *    (or infinity if there is no intersection)
+	 *
+	 * \return \c true if an intersection was found
+	 */
+	bool attenuatedRayIntersect(const Ray &ray, const Medium *medium,
+		Intersection &its, Spectrum &transmittance) const;
+
+	/**
+	 * \brief Intersect a ray against all primitives stored in the scene
 	 * and return the traveled distance and intersected shape
 	 *
-	 * This function represents a performance compromise when the
+	 * This function represents a performance improvement when the
 	 * intersected shape must be known, but there is no need for
 	 * a detailed intersection record.
 	 *
@@ -215,7 +245,7 @@ public:
 
 	Spectrum getTransmittance(const Point &p1, const Point &p2, Float time, 
 		const Medium *medium) const;
-
+	
 	/// Return an axis-aligned bounding box containing the whole scene
 	inline const AABB &getAABB() const {
 		return m_aabb;

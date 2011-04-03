@@ -471,7 +471,7 @@ class MtsExporter:
 		self.openElement('append', { 'id' : shapeName})
 		if role == '':
 			self.element('ref', { 'id' : mediumName})
-		else
+		else:
 			self.element('ref', { 'name' : role, 'id' : mediumName})
 		self.closeElement()
 
@@ -489,6 +489,7 @@ class MtsExporter:
 		self.parameter('integer', 'shapeIndex', {'value' : '1'})
 		self.openElement('transform', {'name' : 'toWorld'})
 		self.element('matrix', {'value' : '0.614046 0.614047 0 -1.78814e-07 -0.614047 0.614046 0 2.08616e-07 0 0 0.868393 1.02569 0 0 0 1'})
+		self.element('translate', { 'z' : '0.01'})
 		self.closeElement()
 		if mmat.type != 'none':
 			self.element('ref', {'name' : 'bsdf', 'id' : '%s-material' % translate_id(material.name)})

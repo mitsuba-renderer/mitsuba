@@ -395,7 +395,7 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 
 		const Shape *shape;
 		Ray ray(p1, d, time);
-		Spectrum atten(1.0f);
+		Spectrum transmittance(1.0f);
 		int iterations = 0;
 
 		while (remaining > 0) {
@@ -405,7 +405,7 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 			bool surface = rayIntersect(ray, t, shape, n);
 
 			if (medium) 
-				atten *= medium->getTransmittance(Ray(ray, 0, std::min(t, remaining)));
+				transmittance *= medium->getTransmittance(Ray(ray, 0, std::min(t, remaining)));
 
 			if (!surface) 
 				break;
@@ -426,7 +426,37 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 			}
 		}
 
-		return atten;
+		return transmittance;
+	}
+}
+
+bool Scene::attenuatedRayIntersect(const Ray &_ray, const Medium *medium,
+		Intersection &its, Spectrum &transmittance) const {
+	Ray ray(_ray);
+	transmittance = Spectrum(1.0f);
+	int iterations = 0;
+
+	while (true) {
+		bool surface = m_kdtree->rayIntersect(ray, its);
+
+		if (medium) 
+			transmittance *= medium->getTransmittance(Ray(ray, 0, its.t));
+
+		if (!surface)
+			return false;
+		else if (its.shape->isOccluder())
+			return true;
+		else if (its.shape->isMediumTransition()) 
+			medium = dot(its.geoFrame.n, ray.d) > 0 ?
+				  its.shape->getExteriorMedium()
+				: its.shape->getInteriorMedium();
+
+		ray.o = ray(its.t);
+
+		if (++iterations > 100) { /// Just a precaution..
+			Log(EWarn, "attenuatedRayIntersect(): round-off error issues?");
+			return false;
+		}
 	}
 }
 

@@ -110,7 +110,9 @@ public:
 				/* Trace a ray in this direction */
 				ray = Ray(mRec.p, pRec.wo, ray.time);
 				bool hitLuminaire = false;
-				if (scene->rayIntersect(ray, its)) {
+				Spectrum transmittance;
+
+				if (scene->attenuatedRayIntersect(ray, rRec.medium, its, transmittance)) {
 					/* Intersected something - check if it was a luminaire */
 					if (its.isLuminaire()) {
 						lRec = LuminaireSamplingRecord(its, -ray.d);
@@ -122,8 +124,8 @@ public:
 					   luminaire such as an environment map? */
 					if (scene->hasBackgroundLuminaire()) {
 						lRec.luminaire = scene->getBackgroundLuminaire();
-						lRec.d = -ray.d;
 						lRec.value = lRec.luminaire->Le(ray);
+						lRec.d = -ray.d;
 						hitLuminaire = true;
 					}
 				}
@@ -134,14 +136,7 @@ public:
 					/* Prob. of having generated this sample using luminaire sampling */
 					const Float lumPdf = scene->pdfLuminaire(mRec.p, lRec);
 					Float weight = miWeight(phasePdf, lumPdf);
-					Spectrum contrib = pathThroughput * lRec.value * phaseVal * weight;
-					
-					if (rRec.medium) {
-						ray.mint = 0; ray.maxt = its.t; 
-						contrib *= rRec.medium->getTransmittance(ray);
-					}
-
-					contrib += Li;
+					Li += pathThroughput * lRec.value * phaseVal * weight * transmittance;
 				}
 
 				/* ==================================================================== */
@@ -236,13 +231,20 @@ public:
 				Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, rRec.nextSample2D());
 				if (bsdfVal.isZero())
 					break;
+	
 				bsdfVal /= bsdfPdf;
 				Intersection prevIts = its;
 
 				/* Trace a ray in this direction */
 				ray = Ray(its.p, its.toWorld(bRec.wo), ray.time);
+
+				if (its.isMediumTransition())
+					rRec.medium = its.getTargetMedium(ray.d);
+
 				bool hitLuminaire = false;
-				if (scene->rayIntersect(ray, its)) {
+				Spectrum transmittance;
+
+				if (scene->attenuatedRayIntersect(ray, rRec.medium, its, transmittance)) {
 					/* Intersected something - check if it was a luminaire */
 					if (its.isLuminaire()) {
 						lRec = LuminaireSamplingRecord(its, -ray.d);
@@ -267,12 +269,7 @@ public:
 					const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ?
 						scene->pdfLuminaire(prevIts.p, lRec) : 0;
 					const Float weight = miWeight(bsdfPdf, lumPdf);
-					Spectrum contrib = pathThroughput * lRec.value * bsdfVal * weight;
-					if (rRec.medium) {
-						ray.mint = 0; ray.maxt = its.t; 
-						contrib *= rRec.medium->getTransmittance(ray);
-					}
-					Li += contrib;
+					Li += pathThroughput * lRec.value * bsdfVal * weight * transmittance;
 				}
 
 				/* ==================================================================== */

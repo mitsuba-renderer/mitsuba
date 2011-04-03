@@ -18,7 +18,6 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/volume.h>
-#include <fstream>
 
 MTS_NAMESPACE_BEGIN
 
@@ -34,7 +33,7 @@ MTS_NAMESPACE_BEGIN
  * Allow to stop integrating densities when the resulting segment
  * has a throughput of less than 'Epsilon'
  */
-#define HET_EARLY_EXIT 1
+#define EARLY_EXIT 1
 
 /**
  * Flexible heterogeneous medium implementation, which acquires its data from 
@@ -60,6 +59,10 @@ public:
 	HeterogeneousMedium(const Properties &props) 
 		: Medium(props) {
 		m_stepSize = props.getFloat("stepSize", 0);
+		if (props.hasProperty("sigmaS") || props.hasProperty("sigmaA"))
+			Log(EError, "The 'sigmaS' and 'sigmaA' properties are only supported by "
+				"homogeneous media. Please use nested volume instances to supply "
+				"these parameters");
 	}
 
 	/* Unserialize from a binary data stream */
@@ -69,7 +72,6 @@ public:
 		m_albedo = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_orientations = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_stepSize = stream->readFloat();
-		m_aabb = AABB(stream);
 		configure();
 	}
 
@@ -80,7 +82,6 @@ public:
 		manager->serialize(stream, m_albedo.get());
 		manager->serialize(stream, m_orientations.get());
 		stream->writeFloat(m_stepSize);
-		m_aabb.serialize(stream);
 	}
 
 	void configure() {
@@ -89,7 +90,6 @@ public:
 			Log(EError, "No densities specified!");
 		if (m_albedo.get() == NULL)
 			Log(EError, "No albedo specified!");
-
 		m_aabb = m_densities->getAABB();
 
 		if (m_stepSize == 0) {
@@ -100,7 +100,8 @@ public:
 					m_orientations->getStepSize());
 
 			if (m_stepSize == std::numeric_limits<Float>::infinity()) 
-				Log(EError, "Unable to infer step size, please specify!");
+				Log(EError, "Unable to infer a suitable step size, please specify one "
+						"manually using the 'stepSize' parameter.");
 		}
 	}
 
@@ -117,56 +118,68 @@ public:
 			} else if (name == "orientations") {
 				Assert(volume->supportsVectorLookups());
 				m_orientations = volume;
+			} else {
+				Medium::addChild(name, child);
 			}
 		} else {
 			Medium::addChild(name, child);
 		}
 	}
-	
-	/// Integrate densities using the composite Simpson's rule
-	inline Float integrateDensity(const Ray &r) const {
-		Ray ray(r(r.mint), r.d, 0, r.maxt - r.mint);
 
-		if (r.maxt == 0)
+	/// Integrate densities using composite Simpson quadrature
+	inline Float integrateDensity(const Ray &ray) const {
+		/* Determine the ray segment, along which the
+		   density integration should take place */
+		Float mint, maxt;
+		if (!m_aabb.rayIntersect(ray, mint, maxt))
+			return false;
+		mint = std::max(mint, ray.mint);
+		maxt = std::min(maxt, ray.maxt);
+		Float length = maxt-mint;
+		Point p = ray(mint);
+
+		if (length <= 0)
 			return 0.0f;
 	
-		int nParts = (int) std::ceil(length/m_stepSize);
+		/* Compute a suitable step size */
+		int nParts = (int) std::ceil(length / m_stepSize);
 		nParts += nParts % 2;
 		const Float stepSize = length/nParts;
 		const Vector increment = ray.d * stepSize;
 
-		Float m = 4;
+		/* Perform lookups at the first and last node */
 		Float accumulatedDensity = m_densities->lookupFloat(ray.o) 
-			+ m_densities->lookupFloat(ray(length));
+			+ m_densities->lookupFloat(ray(ray.maxt));
 
-#ifdef HET_EARLY_EXIT
+#ifdef EARLY_EXIT
 		const Float stopAfterDensity = -std::log(Epsilon);
-		const Float stopValue = stopAfterDensity*3/(stepSize
+		const Float stopValue = stopAfterDensity*3.0f/(stepSize
 				* m_densityMultiplier);
 #endif
 
-		ray.o += increment;
-		for (int i=1; i<nParts; ++i) {
-			Float value = m_densities->lookupFloat(ray.o);
-			accumulatedDensity += value*m;
-			Point tmp = ray.o;
-			ray.o += increment;
+		p += increment;
 
-			if (ray.o == tmp) {
+		Float m = 4;
+		for (int i=1; i<nParts; ++i) {
+			accumulatedDensity += m * m_densities->lookupFloat(p);
+			m = 6 - m;
+			
+#ifdef EARLY_EXIT
+			if (accumulatedDensity > stopValue) // Stop early
+				return std::numeric_limits<Float>::infinity();
+#endif
+
+			Point next = p + increment;
+			if (p == next) {
 				Log(EWarn, "integrateDensity(): unable to make forward progress -- "
 						"round-off error issues? The step size was %f", stepSize);
 				break;
 			}
-
-#ifdef HET_EARLY_EXIT
-			if (accumulatedDensity > stopValue) // Stop early
-				return std::numeric_limits<Float>::infinity();
-#endif
-			m = 6 - m;
+			p = next;
 		}
-		accumulatedDensity *= stepSize/3;
 
-		return accumulatedDensity * m_densityMultiplier;
+		return accumulatedDensity * m_densityMultiplier
+			* stepSize * (1.0f / 3.0f);
 	}
 
 	/**

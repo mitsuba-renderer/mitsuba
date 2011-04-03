@@ -60,6 +60,17 @@ void Logger::log(ELogLevel level, const Class *theClass,
 
 	char tmp[512], *msg = tmp;
 	va_list iterator;
+
+#if defined(WIN32)
+	va_start(iterator, fmt);
+	size_t size = _vscprintf(fmt, iterator) + 1;
+
+	if (size >= sizeof(tmp)) 
+		msg = new char[size];
+
+	vsnprintf_s(msg, size, size-1, fmt, iterator);
+	va_end(iterator);
+#else
 	va_start(iterator, fmt);
 	size_t size = vsnprintf(tmp, sizeof(tmp), fmt, iterator);
 	va_end(iterator);
@@ -71,6 +82,7 @@ void Logger::log(ELogLevel level, const Class *theClass,
 		vsnprintf(msg, size+1, fmt, iterator);
 		va_end(iterator);
 	}
+#endif
 
 	if (m_formatter == NULL) {
 		std::cerr << "PANIC: Logging has not been properly initialized!" << std::endl;
