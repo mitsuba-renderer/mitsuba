@@ -6,6 +6,5 @@ plugins += env.SharedLibrary('#plugins/cylclip', ['cylclip.cpp'])
 plugins += env.SharedLibrary('#plugins/kdbench', ['kdbench.cpp'])
 plugins += env.SharedLibrary('#plugins/ttest', ['ttest.cpp'])
 plugins += env.SharedLibrary('#plugins/tonemap', ['tonemap.cpp'])
-plugins += env.SharedLibrary('#plugins/rot13', ['rot13.cpp'])
 
 Export('plugins')
