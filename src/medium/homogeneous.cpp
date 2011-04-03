@@ -248,7 +248,7 @@ public:
 		mRec.pdfSuccess = mRec.pdfSuccessRev = mRec.pdfSuccess * m_mediumSamplingWeight;
 		mRec.pdfFailure = mRec.pdfFailure * m_mediumSamplingWeight + (1-m_mediumSamplingWeight);
 	}
-	
+
 	bool isHomogeneous() const {
 		return true;
 	}

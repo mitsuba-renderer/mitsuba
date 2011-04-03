@@ -60,7 +60,6 @@ class RemoteProcess;
 class RemoteWorker;
 class RemoteWorkerReader;
 class Scheduler;
-class Serializable;
 class SerializableObject;
 struct SHRotation;
 class SHSampler;

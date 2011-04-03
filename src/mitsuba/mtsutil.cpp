@@ -347,6 +347,7 @@ int mtsutil(int argc, char **argv) {
 
 			int retval = utility->run(argc-optind, argv+optind);
 			utility = NULL;
+			scheduler->stop();
 			delete plugin;
 			return retval;
 		}

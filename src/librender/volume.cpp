@@ -25,16 +25,14 @@
 
 MTS_NAMESPACE_BEGIN
 
-VolumeDataSource::VolumeDataSource(const Properties &props) : ConfigurableObject(props) {
-}
-
 VolumeDataSource::VolumeDataSource(Stream *stream, InstanceManager *manager) :
 	ConfigurableObject(stream, manager) {
 	m_aabb = AABB(stream);
 }
 
-VolumeDataSource::~VolumeDataSource() {
-}
+VolumeDataSource::VolumeDataSource(const Properties &props) : ConfigurableObject(props) { }
+
+VolumeDataSource::~VolumeDataSource() { }
 
 void VolumeDataSource::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);

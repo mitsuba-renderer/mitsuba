@@ -47,7 +47,7 @@ public:
 	 * underlying buffer. An exception is thrown e.g. when attempting
 	 * to extend its size
 	 */
-	MemoryStream(uint8_t *ptr, size_t size);
+	MemoryStream(void *ptr, size_t size);
 
 	//! @}
 	// =============================================================

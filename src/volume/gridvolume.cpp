@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -17,56 +17,66 @@
 */
 
 #include <mitsuba/render/volume.h>
-#include <mitsuba/core/fstream.h>
+#include <mitsuba/core/mstream.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/properties.h>
-
-#if defined(__LINUX__) || defined(__OSX__)
-#include <sys/mman.h>
-#include <fcntl.h>
-#endif
+#include <mitsuba/core/mmap.h>
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * This class implements a simple binary exchange format
- * for discretized volume data.
+ * \brief This class implements access to volume data stored on a 
+ * 3D grid using a simple binary exchange format.
+ *
+ * The format uses a little endian encoding and is specified as follows:
+ *
+ * Bytes 1-3   :  ASCII Bytes 'V', 'O', and 'L' 
+ * Byte  4     :  Version identifier (currently 3)
+ * Bytes 5-8   :  Encoding identifier using a double word. Currently,
+ *                only one setting is supported:
+ *                    1 => Dense single-precision representation
+ * Bytes 9-12  :  Number of cells along the X axis (double word)
+ * Bytes 13-16 :  Number of cells along the Y axis (double word)
+ * Bytes 17-20 :  Number of cells along the Z axis (double word)
+ * Bytes 21-24 :  Number of channels (double word, supported values: 1 or 3)
+ * Bytes 25-48 :  Axis-aligned bounding box of the data stored in single
+ *                precision (order: xmin, ymin, zmin, xmax, ymax, zmax)
+ * Bytes 49-*  :  Binary data of the volume stored in the specified encoding.
+ *                The data are ordered so that the following C-style indexing
+ *                operation makes sense after the file has been mapped into memory:
+ *                   "data[((zpos*yres + ypos)*xres + xpos)*channels + chan]"
+ *                where (xpos, ypos, zpos, chan) denotes the lookup location.
  */
 class GridDataSource : public VolumeDataSource {
 public:
 	GridDataSource(const Properties &props) 
-		: VolumeDataSource(props), m_overrideAABB(false) {
-		std::string filename = props.getString("filename");
-		loadFromFile(props.getString("filename"));
+		: VolumeDataSource(props) {
 		m_volumeToWorld = props.getTransform("toWorld", Transform());
 
 		if (props.hasProperty("min") && props.hasProperty("max")) {
 			/* Optionally allow to use an AABB other than 
 			   the one specified by the grid file */
-			m_originalAABB.min = props.getPoint("min");
-			m_originalAABB.max = props.getPoint("max");
-			m_overrideAABB = true;
+			m_dataAABB.min = props.getPoint("min");
+			m_dataAABB.max = props.getPoint("max");
 		}
 
-		for (int i=0; i<8; ++i)
-			m_aabb.expandBy(m_volumeToWorld(m_originalAABB.getCorner(i)));
-
 		/**
-		* When 'sendData' is set to false, only the filename 
-		* is transmitted. A following unserialization of the 
-		* stream causes the implementation to then look for 
-		* the file (which had better exist if unserialization 
-		* occurs on a remote machine)
-		*/
-		m_sendData = props.getBoolean("sendData", true);
+		 * When 'sendData' is set to false, only the filename 
+		 * is transmitted. A following unserialization of the 
+		 * stream causes the implementation to then look for 
+		 * the file (which had better exist if unserialization 
+		 * occurs on a remote machine)
+		 */
+		 m_sendData = props.getBoolean("sendData", false);
+
+		 loadFromFile(props.getString("filename"));
 	}
 
 	GridDataSource(Stream *stream, InstanceManager *manager) 
-	: VolumeDataSource(stream, manager) {
+			: VolumeDataSource(stream, manager) {
 		m_volumeToWorld = Transform(stream);
-		m_originalAABB = AABB(stream);
+		m_dataAABB = AABB(stream);
 		m_sendData = stream->readBool();
-		m_overrideAABB = stream->readBool();
 		if (m_sendData) { 
 			m_res = Vector3i(stream);
 			m_channels = stream->readInt();
@@ -74,7 +84,6 @@ public:
 			size_t nEntries = m_res.x*m_res.y*m_res.z*m_channels;
 			m_data = new float[nEntries];
 			stream->readSingleArray(m_data, nEntries);
-			m_fromStream = true;
 		} else {
 			std::string filename = stream->readString();
 			loadFromFile(filename);
@@ -83,35 +92,16 @@ public:
 	}
 
 	virtual ~GridDataSource() {
-#if defined(__LINUX__) || defined(__OSX__)
-		if (m_fromStream) {
+		if (!m_mmap)
 			delete[] m_data;
-		} else {
-			Log(EDebug, "Unmapping \"%s\" from memory", 
-				m_filename.file_string().c_str()); 
-			int retval = munmap(m_mmapPtr, m_mmapSize);
-			if (retval != 0)
-				Log(EError, "munmap(): unable to unmap memory!");
-		}
-#elif defined(WIN32)
-		if (!UnmapViewOfFile(m_mmapPtr))
-			Log(EError, "UnmapViewOfFile(): unable to unmap memory: %s", lastErrorText().c_str());
-		if (!CloseHandle(m_fileMapping))
-			Log(EError, "CloseHandle(): unable to close file mapping: %s", lastErrorText().c_str());
-		if (!CloseHandle(m_file))
-			Log(EError, "CloseHandle(): unable to close file: %s", lastErrorText().c_str());
-#else
-		delete[] m_data;
-#endif
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		VolumeDataSource::serialize(stream, manager);
 
 		m_volumeToWorld.serialize(stream);
-		m_originalAABB.serialize(stream);
+		m_dataAABB.serialize(stream);
 		stream->writeBool(m_sendData);
-		stream->writeBool(m_overrideAABB);
 
 		if (m_sendData) {
 			m_res.serialize(stream);
@@ -123,26 +113,29 @@ public:
 			stream->writeString(m_filename.file_string());
 		}
 	}
-		
+
 	void configure() {
-		Vector extents(m_originalAABB.getExtents());
+		Vector extents(m_dataAABB.getExtents());
 		m_worldToVolume = m_volumeToWorld.inverse();
 		m_worldToGrid = Transform::scale(Vector(
 				(m_res[0] - 1) / extents[0],
 				(m_res[1] - 1) / extents[1],
 				(m_res[2] - 1) / extents[2])
-			) * Transform::translate(-Vector(m_originalAABB.min)) * m_worldToVolume;
+			) * Transform::translate(-Vector(m_dataAABB.min)) * m_worldToVolume;
 		m_stepSize = std::numeric_limits<Float>::infinity();
 		for (int i=0; i<3; ++i)
 			m_stepSize = std::min(m_stepSize, extents[i] / (Float) (m_res[i]-1));
+		m_aabb.reset();
+		for (int i=0; i<8; ++i)
+			m_aabb.expandBy(m_volumeToWorld(m_dataAABB.getCorner(i)));
 	}
 
 	void loadFromFile(const std::string &filename) {
-		fs::path resolved = Thread::getThread()->getFileResolver()->resolve(filename);
-		ref<FileStream> stream = new FileStream(resolved, FileStream::EReadOnly);
-		stream->setByteOrder(Stream::ELittleEndian);
 		m_filename = filename;
-		m_fromStream = false;
+		fs::path resolved = Thread::getThread()->getFileResolver()->resolve(filename);
+		m_mmap = new MemoryMappedFile(filename);
+		ref<MemoryStream> stream = new MemoryStream(m_mmap->getData(), m_mmap->getSize());
+		stream->setByteOrder(Stream::ELittleEndian);
 
 		char header[3];
 		stream->read(header, 3);
@@ -159,56 +152,20 @@ public:
 		int xres = stream->readInt(), yres=stream->readInt(), zres=stream->readInt();
 		m_res = Vector3i(xres, yres, zres);
 		m_channels = stream->readInt();
+		if (m_channels != 1 && m_channels != 3)
+			Log(EError, "Encountered an invalid volume data file (%i channels, only "
+				"1 and 3 are supported)", m_channels);
 
-		size_t nEntries = m_res.x*m_res.y*m_res.z*m_channels;
-		Float xmin = stream->readSingle(), ymin = stream->readSingle(), zmin = stream->readSingle();
-		Float xmax = stream->readSingle(), ymax = stream->readSingle(), zmax = stream->readSingle();
-		if (!m_overrideAABB)
-			m_originalAABB = AABB(Point(xmin, ymin, zmin), Point(xmax, ymax, zmax));
+		if (!m_dataAABB.isValid()) {
+			Float xmin = stream->readSingle(), ymin = stream->readSingle(), zmin = stream->readSingle();
+			Float xmax = stream->readSingle(), ymax = stream->readSingle(), zmax = stream->readSingle();
+			m_dataAABB = AABB(Point(xmin, ymin, zmin), Point(xmax, ymax, zmax));
+		}
 
-#if defined(__LINUX__) || defined(__OSX__)
-		Log(EDebug, "Mapping \"%s\" into memory: %ix%ix%i (%i channels), %i KiB, %s", filename.c_str(), 
-			m_res.x, m_res.y, m_res.z, m_channels, nEntries*sizeof(float)/1024,
-			m_originalAABB.toString().c_str());
-		stream->close();
-		int fd = open(resolved.file_string().c_str(), O_RDONLY);
-		if (fd == -1)
-			Log(EError, "Could not open \"%s\"!", m_filename.file_string().c_str());
-		m_mmapSize = (nEntries+12)*sizeof(float);
-		m_mmapPtr = mmap(NULL, m_mmapSize, PROT_READ, MAP_SHARED, fd, 0);
-		if (m_mmapPtr == NULL)
-			Log(EError, "Could not map \"%s\" to memory!", m_filename.file_string().c_str());
-		m_data = ((float *) m_mmapPtr) + 12;
-		if (close(fd) != 0)
-			Log(EError, "close(): unable to close file!");
-#elif defined(WIN32)
-		Log(EDebug, "Mapping \"%s\" into memory: %ix%ix%i (%i channels), %i KiB, %s", filename.c_str(), 
-			m_res.x, m_res.y, m_res.z, m_channels, nEntries*sizeof(float)/1024,
-			m_originalAABB.toString().c_str());
-		stream->close();
-		m_file = CreateFile(resolved.file_string().c_str(), GENERIC_READ, 
-			FILE_SHARE_READ, NULL, OPEN_EXISTING, 
-			FILE_ATTRIBUTE_NORMAL, NULL);
-		if (m_file == INVALID_HANDLE_VALUE)
-			Log(EError, "Could not open \"%s\": %s", m_filename.file_string().c_str(),
-				lastErrorText().c_str());
-		m_fileMapping = CreateFileMapping(m_file, NULL, PAGE_READONLY, 0, 0, NULL);
-		if (m_fileMapping == NULL)
-			Log(EError, "CreateFileMapping: Could not map \"%s\" to memory: %s", 
-				m_filename.file_string().c_str(), lastErrorText().c_str());
-		m_mmapPtr = (float *) MapViewOfFile(m_fileMapping, FILE_MAP_READ, 0, 0, 0);
-		if (m_mmapPtr == NULL)
-			Log(EError, "MapViewOfFile: Could not map \"%s\" to memory: %s", 
-				m_filename.file_string().c_str(), lastErrorText().c_str());
-		m_data = ((float *) m_mmapPtr) + 12;
-#else
-		Log(EInfo, "Loading \"%s\": %ix%ix%i (%i channels), %i KiB, %s", filename.c_str(), 
-			m_res.x, m_res.y, m_res.z, m_channels, nEntries*sizeof(float)/1024,
-			m_originalAABB.toString().c_str());
-		m_data = new float[nEntries];
-		stream->read(m_data, nEntries*sizeof(float));
-		stream->close();
-#endif
+		Log(EDebug, "Mapped \"%s\" into memory: %ix%ix%i (%i channels), %i KiB, %s", filename.c_str(), 
+			m_res.x, m_res.y, m_res.z, m_channels, memString(m_mmap->getSize()).c_str(),
+			m_dataAABB.toString().c_str());
+		m_data = ((float *) m_mmap->getData()) + 12;
 	}
 
 	/**
@@ -220,10 +177,6 @@ public:
 
 		inline float3(float a, float b, float c) {
 			value[0] = a; value[1] = b; value[2] = c;
-		}
-
-		inline float3(float *x) {
-			value[0] = x[0]; value[1] = x[1]; value[1] = x[2];
 		}
 
 		inline float3 operator*(Float v) const {
@@ -378,23 +331,15 @@ public:
 protected:
 	fs::path m_filename;
 	float *m_data;
-	bool m_fromStream, m_sendData;
+	bool m_sendData;
 	Vector3i m_res;
 	int m_channels;
 	Transform m_worldToGrid;
 	Transform m_worldToVolume;
 	Transform m_volumeToWorld;
 	Float m_stepSize;
-	bool m_overrideAABB;
-	AABB m_originalAABB;
-#if defined(__LINUX__) || defined(__OSX__)
-	size_t m_mmapSize;
-	void *m_mmapPtr;
-#elif defined(WIN32)
-	HANDLE m_file;
-	HANDLE m_fileMapping;
-	void *m_mmapPtr;
-#endif
+	AABB m_dataAABB;
+	ref<MemoryMappedFile> m_mmap;
 };
 
 MTS_IMPLEMENT_CLASS_S(GridDataSource, false, VolumeDataSource);
