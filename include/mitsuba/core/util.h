@@ -113,6 +113,11 @@ extern MTS_EXPORT_CORE int log2i(uint64_t value);
 /// Friendly modulo function (always positive)
 extern MTS_EXPORT_CORE int modulo(int a, int b);
 
+/// Integer floor function
+inline int floorToInt(Float value) {
+	return (int) std::floor(value);
+}
+
 /// Check if an integer is a power of two (32 bit version)
 inline bool isPowerOfTwo(uint32_t i) {
 	return (i & (i-1)) == 0;

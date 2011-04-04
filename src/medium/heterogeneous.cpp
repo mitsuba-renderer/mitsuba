@@ -30,7 +30,7 @@ MTS_NAMESPACE_BEGIN
 #define HETVOL_EARLY_EXIT 1
 
 /// Generate a few statistics related to the implementation?
-#define HETVOL_STATISTICS 1
+//#define HETVOL_STATISTICS 1
 
 #if defined(HETVOL_STATISTICS)
 static StatsCounter avgNewtonIterations("Heterogeneous volume", 
@@ -169,7 +169,9 @@ public:
 			maxComp = std::max(maxComp, std::abs(p[i]));
 			maxComp = std::max(maxComp, std::abs(pLast[i]));
 		}
-		if (length/maxComp < 1e-6f) 
+
+		/* Ignore degenerate path segments */
+		if (length < 1e-6f * maxComp) 
 			return 0.0f;
 
 		/* Compute a suitable step size */
@@ -291,7 +293,8 @@ public:
 			maxComp = std::max(maxComp, std::abs(pLast[i]));
 		}
 
-		if (length/maxComp < 1e-6f) 
+		/* Ignore degenerate path segments */
+		if (length < 1e-6f * maxComp) 
 			return 0.0f;
 
 		/* Compute a suitable step size */

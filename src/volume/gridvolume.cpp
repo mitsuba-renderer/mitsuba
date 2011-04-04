@@ -200,20 +200,17 @@ public:
 
 	Float lookupFloat(const Point &_p) const {
 		const Point p = m_worldToGrid.transformAffine(_p);
-		if (p.x < 0 || p.y < 0 || p.z < 0)
-			return 0.0f;
-		const int x1 = (int) p.x, y1 = (int) p.y, z1 = (int) p.z,
-					x2 = x1+1, y2 = y1+1, z2 = z1+1;
+		const int x1 = floorToInt(p.x),
+			  y1 = floorToInt(p.y),
+			  z1 = floorToInt(p.z),
+			  x2 = x1+1, y2 = y1+1, z2 = z1+1;
 
-		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x || 
-			y2 >= m_res.y || z2 >= m_res.z) {
-			/* Do an integer bounds test (may seem redundant - this is
-			   to avoid a segfault, should a NaN/Inf ever find its way here..) */
+		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x ||
+		    y2 >= m_res.y || z2 >= m_res.z) 
 			return 0;
-		}
 
-		const Float fx = p.x-x1, fy = p.y-y1, fz = p.z-z1,
-				_fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f-fz;
+		const Float fx = p.x - x1, fy = p.y - y1, fz = p.z - z1,
+				_fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
 
 		const Float
 			d000 = m_data[(z1*m_res.y + y1)*m_res.x + x1],
@@ -234,24 +231,19 @@ public:
 
 	Spectrum lookupSpectrum(const Point &_p) const {
 		const Point p = m_worldToGrid.transformAffine(_p);
-		if (p.x < 0 || p.y < 0 || p.z < 0)
+		const int x1 = floorToInt(p.x),
+			  y1 = floorToInt(p.y),
+			  z1 = floorToInt(p.z),
+			  x2 = x1+1, y2 = y1+1, z2 = z1+1;
+
+		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x ||
+		    y2 >= m_res.y || z2 >= m_res.z) 
 			return Spectrum(0.0f);
 
-		const int x1 = (int) p.x, y1 = (int) p.y, z1 = (int) p.z,
-				x2 = x1+1, y2 = y1+1, z2 = z1+1;
-
-		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x || 
-			y2 >= m_res.y || z2 >= m_res.z) {
-			/* Do an integer bounds test (may seem redundant - this is
-			   to avoid a segfault, should a NaN/Inf ever find its way here..) */
-			return Spectrum(0.0f);
-		}
-
-		const Float fx = p.x-x1, fy = p.y-y1, fz = p.z-z1,
-				_fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f-fz;
+		const Float fx = p.x - x1, fy = p.y - y1, fz = p.z - z1,
+				_fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
 
 		const float3 *spectrumData = (float3 *) m_data;
-
 		const float3
 			&d000 = spectrumData[(z1*m_res.y + y1)*m_res.x + x1],
 			&d001 = spectrumData[(z1*m_res.y + y1)*m_res.x + x2],
@@ -270,45 +262,23 @@ public:
 
 	Vector lookupVector(const Point &_p) const {
 		const Point p = m_worldToGrid.transformAffine(_p);
-		if (p.x < 0 || p.y < 0 || p.z < 0)
-			return Vector(0.0f);
+		const int x1 = floorToInt(p.x),
+			  y1 = floorToInt(p.y),
+			  z1 = floorToInt(p.z),
+			  x2 = x1+1, y2 = y1+1, z2 = z1+1;
 
-		const int x1 = (int) p.x, y1 = (int) p.y, z1 = (int) p.z,
-				x2 = x1+1, y2 = y1+1, z2 = z1+1;
-
-		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x || 
-			y2 >= m_res.y || z2 >= m_res.z) {
-			/* Do an integer bounds test (may seem redundant - this is
-			   to avoid a segfault, should a NaN/Inf ever find its way here..) */
+		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x ||
+		    y2 >= m_res.y || z2 >= m_res.z) 
 			return Vector(0.0f);
-		}
 
 		const Float fx = p.x-x1, fy = p.y-y1, fz = p.z-z1;
 		const float3 *vectorData = (float3 *) m_data;
-#if 1
+
 		/* Nearest neighbor */
 		return m_volumeToWorld(vectorData[
-			(((fz < .5) ? z1 : z2)  * m_res.y +
-			((fy < .5) ? y1 : y2)) * m_res.x +
-			((fx < .5) ? x1 : x2)].toVector());
-#else
-		Float _fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f-fz;
-
-		const float3
-			&d000 = vectorData[(z1*m_res.y + y1)*m_res.x + x1],
-			&d001 = vectorData[(z1*m_res.y + y1)*m_res.x + x2],
-			&d010 = vectorData[(z1*m_res.y + y2)*m_res.x + x1],
-			&d011 = vectorData[(z1*m_res.y + y2)*m_res.x + x2],
-			&d100 = vectorData[(z2*m_res.y + y1)*m_res.x + x1],
-			&d101 = vectorData[(z2*m_res.y + y1)*m_res.x + x2],
-			&d110 = vectorData[(z2*m_res.y + y2)*m_res.x + x1],
-			&d111 = vectorData[(z2*m_res.y + y2)*m_res.x + x2];
-
-		return m_volumeToWorld((((d000*_fx + d001*fx)*_fy +
-				(d010*_fx + d011*fx)*fy)*_fz +
-				((d100*_fx + d101*fx)*_fy +
-				(d110*_fx + d111*fx)*fy)*fz).toVector());
-#endif
+		   (((fz < .5) ? z1 : z2)  * m_res.y +
+		    ((fy < .5) ? y1 : y2)) * m_res.x +
+		    ((fx < .5) ? x1 : x2)].toVector());
 	}
 	
 	bool supportsFloatLookups() const {
