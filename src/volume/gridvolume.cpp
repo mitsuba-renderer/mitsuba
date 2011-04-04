@@ -85,7 +85,7 @@ public:
 			m_data = new float[nEntries];
 			stream->readSingleArray(m_data, nEntries);
 		} else {
-			std::string filename = stream->readString();
+			fs::path filename = stream->readString();
 			loadFromFile(filename);
 		}
 		configure();
@@ -130,10 +130,10 @@ public:
 			m_aabb.expandBy(m_volumeToWorld(m_dataAABB.getCorner(i)));
 	}
 
-	void loadFromFile(const std::string &filename) {
+	void loadFromFile(const fs::path &filename) {
 		m_filename = filename;
 		fs::path resolved = Thread::getThread()->getFileResolver()->resolve(filename);
-		m_mmap = new MemoryMappedFile(filename);
+		m_mmap = new MemoryMappedFile(resolved);
 		ref<MemoryStream> stream = new MemoryStream(m_mmap->getData(), m_mmap->getSize());
 		stream->setByteOrder(Stream::ELittleEndian);
 
@@ -162,7 +162,7 @@ public:
 			m_dataAABB = AABB(Point(xmin, ymin, zmin), Point(xmax, ymax, zmax));
 		}
 
-		Log(EDebug, "Mapped \"%s\" into memory: %ix%ix%i (%i channels), %i KiB, %s", filename.c_str(), 
+		Log(EDebug, "Mapped \"%s\" into memory: %ix%ix%i (%i channels), %i KiB, %s", resolved.filename().c_str(), 
 			m_res.x, m_res.y, m_res.z, m_channels, memString(m_mmap->getSize()).c_str(),
 			m_dataAABB.toString().c_str());
 		m_data = ((float *) m_mmap->getData()) + 12;
