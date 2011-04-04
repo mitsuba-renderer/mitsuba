@@ -620,8 +620,9 @@ protected:
 #pragma float_control(precise, on)
 #endif
 
-#define KDLog(level, fmt, ...) Thread::getThread()->getLogger()->log(level, KDTreeBase<AABB>::m_theClass, \
-	__FILE__, __LINE__, fmt, ## __VA_ARGS__)
+#define KDLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
+	level, KDTreeBase<AABB>::m_theClass, __FILE__, __LINE__, \
+		fmt, ## __VA_ARGS__)
 
 /**
  * \brief Optimized KD-tree acceleration data structure for 

@@ -111,16 +111,17 @@ public:
 		MediumSamplingRecord &mRec, Sampler *sampler) const = 0;
 
 	/**
-	 * \brief Compute the 1D density of sampling distance \a t along the 
-	 * ray using the sampling strategy implemented by \a sampleDistance. 
+	 * \brief Compute the 1D density of sampling distance \a ray.maxt
+	 * along the ray using the sampling strategy implemented by 
+	 * \a sampleDistance. 
 	 *
 	 * The function computes the continuous densities in the case of
 	 * a successful \ref sampleDistance() invocation (in both directions),
 	 * as well as the Dirac delta density associated with a failure.
-	 * For convenience, it also stores the transmittance along the ray
-	 * segment in \a mRec.
+	 * For convenience, it also stores the transmittance along the 
+	 * supplied ray segment within \a mRec.
 	 */
-	virtual void pdfDistance(const Ray &ray, Float t, 
+	virtual void pdfDistance(const Ray &ray, 
 		MediumSamplingRecord &mRec) const = 0;
 
 	//! @}

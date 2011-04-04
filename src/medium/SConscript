@@ -1,7 +1,7 @@
 Import('env', 'plugins')
 
 plugins += env.SharedLibrary('#plugins/homogeneous', ['homogeneous.cpp'])
-#plugins += env.SharedLibrary('#plugins/heterogeneous', ['heterogeneous.cpp'])
+plugins += env.SharedLibrary('#plugins/heterogeneous', ['heterogeneous.cpp'])
 #plugins += env.SharedLibrary('#plugins/heterogeneous-flake', ['heterogeneous-flake.cpp'])
 
 Export('plugins')

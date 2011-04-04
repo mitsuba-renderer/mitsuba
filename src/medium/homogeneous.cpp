@@ -212,8 +212,8 @@ public:
 		return success;
 	}
 
-	void pdfDistance(const Ray &ray, Float t, MediumSamplingRecord &mRec) const {
-		Float distance = t - ray.mint;
+	void pdfDistance(const Ray &ray, MediumSamplingRecord &mRec) const {
+		Float distance = ray.maxt - ray.mint;
 		switch (m_strategy) {
 			case EManual: 
 			case ESingle: {

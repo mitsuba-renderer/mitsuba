@@ -21,14 +21,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*
- * When inverting an integral of the form f(t):=\int_0^t [...] dt
- * using composite Simpson's rule quadrature, the following constant
- * specified how many times the step size will be reduced when we
- * have almost reached the desired value.
- */
-#define NUM_REFINES 8
-
 /**
  * Allow to stop integrating densities when the resulting segment
  * has a throughput of less than 'Epsilon'
@@ -126,31 +118,48 @@ public:
 		}
 	}
 
-	/// Integrate densities using composite Simpson quadrature
-	inline Float integrateDensity(const Ray &ray) const {
+	/*
+	 * This function uses Simpson quadrature to compute following 
+	 * integral:
+	 * 
+	 *    \int_{ray.mint}^{ray.maxt} density(ray(x)) dx
+	 * 
+	 * The integration proceeds by splitting the function into
+	 * approximately \c (ray.maxt-ray.mint)/m_stepSize segments,
+	 * each of which are then approximated by a quadratic polynomial.
+	 * The step size must be chosen so that this approximation is 
+	 * valid given the behavior of the integrand.
+	 *
+	 * \param ray
+	 *    Ray segment to be used for the integration
+	 *
+	 * \return
+	 *    The integrated density
+	 */
+	Float integrateDensity(const Ray &ray) const {
 		/* Determine the ray segment, along which the
 		   density integration should take place */
 		Float mint, maxt;
 		if (!m_aabb.rayIntersect(ray, mint, maxt))
-			return false;
+			return 0.0f;
+
 		mint = std::max(mint, ray.mint);
 		maxt = std::min(maxt, ray.maxt);
 		Float length = maxt-mint;
-		Point p = ray(mint);
 
 		if (length <= 0)
 			return 0.0f;
 	
 		/* Compute a suitable step size */
-		int nParts = (int) std::ceil(length / m_stepSize);
-		nParts += nParts % 2;
-		const Float stepSize = length/nParts;
+		uint32_t nSteps = (uint32_t) std::ceil(length / m_stepSize);
+		nSteps += nSteps % 2;
+		const Float stepSize = length/nSteps;
 		const Vector increment = ray.d * stepSize;
 
 		/* Perform lookups at the first and last node */
-		Float accumulatedDensity = m_densities->lookupFloat(ray.o) 
-			+ m_densities->lookupFloat(ray(ray.maxt));
-
+		Point p = ray(mint);
+		Float integratedDensity = m_densities->lookupFloat(p) 
+			+ m_densities->lookupFloat(ray(maxt));
 #ifdef EARLY_EXIT
 		const Float stopAfterDensity = -std::log(Epsilon);
 		const Float stopValue = stopAfterDensity*3.0f/(stepSize
@@ -160,12 +169,12 @@ public:
 		p += increment;
 
 		Float m = 4;
-		for (int i=1; i<nParts; ++i) {
-			accumulatedDensity += m * m_densities->lookupFloat(p);
+		for (uint32_t i=1; i<nSteps; ++i) {
+			integratedDensity += m * m_densities->lookupFloat(p);
 			m = 6 - m;
 			
 #ifdef EARLY_EXIT
-			if (accumulatedDensity > stopValue) // Stop early
+			if (integratedDensity > stopValue) // Stop early
 				return std::numeric_limits<Float>::infinity();
 #endif
 
@@ -178,161 +187,205 @@ public:
 			p = next;
 		}
 
-		return accumulatedDensity * m_densityMultiplier
+		return integratedDensity * m_densityMultiplier
 			* stepSize * (1.0f / 3.0f);
 	}
 
 	/**
-	 * Attempts to solve the following 1D integral equation for 't'
-	 * \int_0^t density(ray.o + x * ray.d) * dx == desiredDensity.
-	 * When no solution can be found in [0, maxDist] the function returns
-	 * false. For convenience, the function returns the current values of sigmaT 
-	 * and the albedo, as well as the 3D position 'ray.o+t*ray.d' upon
-	 * success.
+	 * This function uses composite Simpson quadrature to solve the 
+	 * following integral equation for \a t:
+	 * 
+	 *    \int_{ray.mint}^t density(ray(x)) dx == desiredDensity
+	 * 
+	 * The integration proceeds by splitting the function into
+	 * approximately \c (ray.maxt-ray.mint)/m_stepSize segments,
+	 * each of which are then approximated by a quadratic polynomial.
+	 * The step size must be chosen so that this approximation is 
+	 * valid given the behavior of the integrand.
+	 * 
+	 * \param ray
+	 *    Ray segment to be used for the integration
+	 *
+	 * \param desiredDensity
+	 *    Right hand side of the above equation
+	 *
+	 * \param integratedDensity
+	 *    Contains the final integrated density. Upon success, this value
+	 *    should closely match \c desiredDensity. When the equation could
+	 *    \a not be solved, the parameter contains the integrated density
+	 *    from \c ray.mint to \c ray.maxt (which, in this case, must be 
+	 *    less than \c desiredDensity).
+	 *
+	 * \param t
+	 *    After calling this function, \c t will store the solution of the above
+	 *    equation. When there is no solution, it will be set to zero.
+	 *
+	 * \param densityAtMinT
+	 *    After calling this function, \c densityAtMinT will store the
+	 *    underlying density function evaluated at \c ray(ray.mint).
+	 *
+	 * \param densityAtT
+	 *    After calling this function, \c densityAtT will store the
+	 *    underlying density function evaluated at \c ray(t). When
+	 *    there is no solution, it will be set to zero.
+	 *
+	 * \return
+	 *    When no solution can be found in [ray.mint, ray.maxt] the
+	 *    function returns \c false.
 	 */
-	bool invertDensityIntegral(Ray ray, Float maxDist, 
-			Float &accumulatedDensity, Float desiredDensity,
-			Float &currentSigmaT, Spectrum &currentAlbedo, 
-			Point &currentPoint) const {
-		if (maxDist == 0)
-			return std::numeric_limits<Float>::infinity();
+	bool invertDensityIntegral(const Ray &ray, Float desiredDensity,
+			Float &integratedDensity, Float &t, Float &densityAtMinT,
+			Float &densityAtT) const {
+		integratedDensity = densityAtMinT = densityAtT = 0.0f;
 
-		int nParts = (int) std::ceil(maxDist/m_stepSize);
-		Float stepSize = maxDist/nParts;
-		Vector fullIncrement = ray.d * stepSize,
-			   halfIncrement = fullIncrement * .5f;
+		/* Determine the ray segment, along which the
+		   density integration should take place */
+		Float mint, maxt;
+		if (!m_aabb.rayIntersect(ray, mint, maxt))
+			return false;
+		mint = std::max(mint, ray.mint);
+		maxt = std::min(maxt, ray.maxt);
+		Float length = maxt - mint;
+		Point p = ray(mint);
 
-		Float node1 = m_densities->lookupFloat(ray.o);
-		Float t = 0;
-		int numRefines = 0;
-		bool success = false;
-		accumulatedDensity = 0.0f;
+		if (length <= 0) 
+			return false;
 
-		while (t <= maxDist) {
-			Float node2 = m_densities->lookupFloat(ray.o + halfIncrement),
-				  node3 = m_densities->lookupFloat(ray.o + fullIncrement);
-			const Float newDensity = accumulatedDensity 
-				+ (node1+node2*4+node3) * (stepSize/6) * m_densityMultiplier;
+		/* Compute a suitable step size */
+		uint32_t nSteps = (uint32_t) std::ceil(length / m_stepSize);
+		Float stepSize = length / nSteps,
+			  multiplier = (1.0f / 6.0f) * stepSize
+				  * m_densityMultiplier;
+		Vector fullStep = ray.d * stepSize,
+			   halfStep = fullStep * .5f;
 
-			if (newDensity > desiredDensity) {
-				if (t+stepSize/2 <= maxDist) {
-					/* Record the last "good" scattering event */
-					success = true;
-					if (EXPECT_TAKEN(node2 != 0)) {
-						currentPoint = ray.o + halfIncrement;
-						currentSigmaT = node2;
-					} else if (node3 != 0 && t+stepSize <= maxDist) {
-						currentPoint = ray.o + fullIncrement;
-						currentSigmaT = node3;
-					} else if (node1 != 0) {
-						currentPoint = ray.o;
-						currentSigmaT = node1;
+		Float node1 = m_densities->lookupFloat(p);
+
+		if (ray.mint == mint)
+			densityAtMinT = node1 * m_densityMultiplier;
+		else
+			densityAtMinT = 0.0f;
+
+		for (uint32_t i=0; i<nSteps; ++i) {
+			Float node2 = m_densities->lookupFloat(p + halfStep),
+				  node3 = m_densities->lookupFloat(p + fullStep),
+				  newDensity = integratedDensity + multiplier * 
+						(node1+node2*4+node3);
+
+			if (newDensity >= desiredDensity) {
+				/* The integrated density of the last segment exceeds the desired
+				   amount -- now use the Simpson quadrature expression and 
+				   Newton-Bisection to find the precise location of the scattering
+				   event. Note that no further density queries are performed after
+				   this point; instead, the densities are modeled based on a 
+				   quadratic polynomial that is fit to the last three lookups */
+
+				Float a = 0, b = stepSize, x = a,
+					  fx = integratedDensity - desiredDensity,
+					  stepSizeSqr = stepSize * stepSize,
+					  temp = m_densityMultiplier / stepSizeSqr;
+				int it = 1;
+
+				while (true) {
+					/* Lagrange polynomial from the Simpson quadrature */
+					Float dfx = temp * (node1 * stepSizeSqr
+						- (3*node1 - 4*node2 + node3)*stepSize*x
+						+ 2*(node1 - 2*node2 + node3)*x*x);
+					#if 0
+						cout << "Iteration " << it << ":  a=" << a << ", b=" << b 
+							<< ", x=" << x << ", fx=" << fx << ", dfx=" << dfx << endl;
+					#endif
+
+					x -= fx/dfx;
+
+					if (x <= a || x >= b || dfx == 0) 
+						x = 0.5f * (b + a);
+
+					/* Integrated version of the above Lagrange polynomial */
+					Float intval = integratedDensity + temp * (1.0f / 6.0f) * (x *
+						(6*node1*stepSizeSqr - 3*(3*node1 - 4*node2 + node3)*stepSize*x
+						+ 4*(node1 - 2*node2 + node3)*x*x));
+					fx = intval-desiredDensity;
+
+					if (std::abs(fx) < 1e-6f) {
+						t = mint + stepSize * i + x;
+						integratedDensity = intval;
+						densityAtT = temp * (node1 * stepSizeSqr
+							- (3*node1 - 4*node2 + node3)*stepSize*x
+							+ 2*(node1 - 2*node2 + node3)*x*x);
+						return true;
+					} else if (++it > 30) {
+						Log(EWarn, "invertDensityIntegral(): stuck in Newton-Bisection -- "
+							"round-off error issues? The step size was %f, fx=%f, dfx=%f, "
+							"a=%f, b=%f", stepSize, fx, dfx, a, b);
+						return false;
 					}
+
+					if (fx > 0)
+						b = x;
+					else
+						a = x;
 				}
-
-				if (++numRefines > NUM_REFINES)
-					break;
-
-				stepSize *= .5f;
-				fullIncrement = halfIncrement;
-				halfIncrement *= .5f;
-				continue;
 			}
-			
-			if (ray.o+fullIncrement == ray.o) {
+
+			Point next = p + fullStep;
+			if (p == next) {
 				Log(EWarn, "invertDensityIntegral(): unable to make forward progress -- "
 						"round-off error issues? The step size was %f", stepSize);
 				break;
 			}
-
-			accumulatedDensity = newDensity;
+			integratedDensity = newDensity;
 			node1 = node3;
-			t += stepSize;
-			ray.o += fullIncrement;
+			p = next;
 		}
 
-		if (success) 
-			currentAlbedo = m_albedo->lookupSpectrum(currentPoint);
+		return false;
+	}
+
+	Spectrum getTransmittance(const Ray &ray) const {
+		return Spectrum(std::exp(-integrateDensity(ray)));
+	}
+
+	bool sampleDistance(const Ray &ray, MediumSamplingRecord &mRec,
+			Sampler *sampler) const {
+		Float desiredDensity = -std::log(1-sampler->next1D());
+		Float integratedDensity, densityAtMinT, densityAtT;
+		bool success = false;
+
+		if (invertDensityIntegral(ray, desiredDensity, integratedDensity, 
+				mRec.t, densityAtMinT, densityAtT)) {
+			mRec.p = ray(mRec.t);
+			success = true;
+			Spectrum albedo = m_albedo->lookupSpectrum(mRec.p);
+			mRec.sigmaS = albedo * densityAtT;
+			mRec.sigmaA = Spectrum(densityAtT) - mRec.sigmaS;
+			mRec.albedo = albedo.max();
+			mRec.orientation = m_orientations != NULL 
+				? m_orientations->lookupVector(mRec.p) : Vector(0.0f);
+		}
+
+		Float expVal = std::exp(-integratedDensity);
+		mRec.pdfFailure = expVal;
+		mRec.pdfSuccess = expVal * densityAtT;
+		mRec.pdfSuccessRev = expVal * densityAtMinT;
+		mRec.transmittance = Spectrum(expVal);
 
 		return success;
 	}
 
-	/// Evaluate the transmittance along a ray segment
-	Spectrum tau(const Ray &ray) const {
-		return Spectrum(std::exp(-integrateDensity(ray)));
-	}
-
-	bool sampleDistance(const Ray &r, MediumSamplingRecord &mRec,
-			Sampler *sampler) const {
-		Ray ray(r(r.mint), r.d, 0.0f);
-		Float distSurf       = r.maxt - r.mint,
-			  desiredDensity     = -std::log(1-sampler->next1D()),
-			  accumulatedDensity = 0.0f,
-			  currentSigmaT  = 0.0f;
-		Spectrum currentAlbedo(0.0f);
-		int iterations = 0;
-		bool inside = false, success = false;
-		Float t = 0;
-		Float sigmaTOrigin = m_densities->lookupFloat(ray.o) * m_densityMultiplier;
-
-		while (rayIntersect(ray, t, inside)) {
-			if (inside) {
-				Point currentPoint(0.0f);
-				success = invertDensityIntegral(ray, std::min(t, distSurf), 
-						accumulatedDensity, desiredDensity, currentSigmaT, currentAlbedo,
-						currentPoint);
-				if (success) {
-					/* A medium interaction occurred */
-					mRec.p = currentPoint;
-					mRec.t = (mRec.p-r.o).length();
-					success = true;
-					break;
-				}
-			}
-
-			distSurf -= t;
-
-			if (distSurf < 0) {
-				/* A surface interaction occurred */
-				break;
-			}
-			ray.o = ray(t);
-			ray.mint = Epsilon;
-
-			if (++iterations > 100) {
-				/// Just a precaution..
-				Log(EWarn, "sampleDistance(): round-off error issues?");
-				break;
-			}
-		}
-		Float expVal = std::max(Epsilon, std::exp(-accumulatedDensity));
-
-		mRec.pdfFailure = expVal;
-		mRec.pdfSuccess = expVal * std::max((Float) Epsilon, currentSigmaT);
-		mRec.pdfSuccessRev = expVal * std::max((Float) Epsilon, sigmaTOrigin);
-		mRec.transmittance = Spectrum(expVal);
-		
-		if (!success)
-			return false;
-
-		mRec.sigmaS = currentAlbedo * currentSigmaT;
-		mRec.sigmaA = Spectrum(currentSigmaT) - mRec.sigmaS;
-		mRec.albedo = currentAlbedo.max();
-		mRec.orientation = m_orientations != NULL 
-			? m_orientations->lookupVector(mRec.p) : Vector(0.0f);
-		mRec.medium = this;
-		return true;
-	}
-
-	void pdfDistance(const Ray &ray, Float t, MediumSamplingRecord &mRec) const {
-		Float expVal = std::exp(-integrateDensity(Ray(ray, 0, t)));
+	void pdfDistance(const Ray &ray, MediumSamplingRecord &mRec) const {
+		Float expVal = std::exp(-integrateDensity(ray));
 
 		mRec.transmittance = Spectrum(expVal);
 		mRec.pdfFailure = expVal;
-		mRec.pdfSuccess = expVal * std::max((Float) Epsilon, 
-			m_densities->lookupFloat(ray(t)) * m_densityMultiplier);
-		mRec.pdfSuccessRev = expVal * std::max((Float) Epsilon, 
-			m_densities->lookupFloat(ray(ray.mint)) * m_densityMultiplier);
+		mRec.pdfSuccess = expVal * 
+			m_densities->lookupFloat(ray(ray.maxt)) * m_densityMultiplier;
+		mRec.pdfSuccessRev = expVal * 
+			m_densities->lookupFloat(ray(ray.mint)) * m_densityMultiplier;
+	}
+
+	bool isHomogeneous() const {
+		return false;
 	}
 
 	std::string toString() const {
@@ -346,6 +399,7 @@ public:
 			<< "]";
 		return oss.str();
 	}
+
 	MTS_DECLARE_CLASS()
 private:
 	ref<VolumeDataSource> m_densities;

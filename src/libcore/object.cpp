@@ -44,11 +44,8 @@ void Object::incRef() const {
 void Object::decRef() const {
 #if defined(DEBUG_ALLOCATIONS)
 	if (Class::rttiIsInitialized()) {
-		cout << this << ": Decreasing reference count -> ";
-		cout.flush();
-		cout << m_refCount - 1;
-		cout.flush();
-		cout << " (" << getClass()->getName() << ")" << endl;
+		cout << this << ": Decreasing reference count (" << getClass()->getName() << ") -> "
+			<< m_refCount - 1 << endl;
 	}
 #endif
 #if defined(_WIN32)
