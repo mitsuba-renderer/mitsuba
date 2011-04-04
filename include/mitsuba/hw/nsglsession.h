@@ -36,6 +36,9 @@ public:
 	/// Shut the session down
 	void shutdown();
 
+	/// Process all events and call event callbacks
+	void processEvents();
+
 	/**
 	 * \brief Process all events and call event callbacks.
 	 *

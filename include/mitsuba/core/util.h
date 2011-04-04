@@ -110,6 +110,11 @@ extern MTS_EXPORT_CORE int log2i(uint32_t value);
 /// Base-2 logarithm (64-bit integer version)
 extern MTS_EXPORT_CORE int log2i(uint64_t value);
 
+/// Base-2 logarithm (size_t version)
+inline int log2i(size_t value) {
+	return log2i((uint64_t) value);
+}
+
 /// Friendly modulo function (always positive)
 extern MTS_EXPORT_CORE int modulo(int a, int b);
 
@@ -125,6 +130,11 @@ inline bool isPowerOfTwo(int32_t i) {
 
 /// Check if an integer is a power of two (64 bit version)
 inline bool isPowerOfTwo(uint64_t i) {
+	return (i & (i-1)) == 0;
+}
+
+/// Check if an integer is a power of two (size_t version)
+inline bool isPowerOfTwo(size_t i) {
 	return (i & (i-1)) == 0;
 }
 
