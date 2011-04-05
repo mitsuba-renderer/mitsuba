@@ -43,19 +43,22 @@ static int NoisePerm[2 * NOISE_PERM_SIZE] = {
 inline static Float grad(int x, int y, int z, Float dx, Float dy, Float dz) {
 	int h = NoisePerm[NoisePerm[NoisePerm[x]+y]+z];
 	h &= 15;
-#if defined(GRAD_PBRT)
-	Float u = h<8 || h==12 || h==13 ? dx : dy;
-	Float v = h<4 || h==12 || h==13 ? dy : dz;
-#elif defined(GRAD_PERLIN)
+#if defined(GRAD_PERLIN)
+	/* Based on Ken Perlin's improved Noise reference implementation */
 	Float u = h<8 ? dx : dy;
 	Float v = h<4 ? dy : h==12 || h==14 ? dx : dz;
+#elif defined(GRAD_PBRT)
+	/* PBRT's implementation uses the hashes somewhat
+	   differently. Possibly, this is just a typo */
+	Float u = h<8 || h==12 || h==13 ? dx : dy;
+	Float v = h<4 || h==12 || h==13 ? dy : dz;
 #endif
 	return ((h&1) ? -u : u) + ((h&2) ? -v : v);
 }
 
 inline static Float noiseWeight(Float t) {
-	Float t3 = t*t*t, t4 = t3*t;
-	return 6.0f*t4*t - 15.0f*t4 + 10.0f*t3;
+	Float t3 = t*t*t, t4 = t3*t, t5 = t4*t;
+	return 6.0f*t5 - 15.0f*t4 + 10.0f*t3;
 }
 
 Float Noise::perlinNoise(const Point &p) {
