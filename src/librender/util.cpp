@@ -36,9 +36,10 @@ ref<Scene> Utility::loadScene(const std::string &filename,
 	parser->setValidationSchemaFullChecking(true);
 	parser->setValidationScheme(SAXParser::Val_Always);
 	parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
+	parser->setCalculateSrcOfs(true);
 
 	std::map<std::string, std::string> parameters;
-	SceneHandler *handler = new SceneHandler(params);
+	SceneHandler *handler = new SceneHandler(parser, params);
 	parser->setDoNamespaces(true);
 	parser->setDocumentHandler(handler);
 	parser->setErrorHandler(handler);

@@ -248,8 +248,8 @@ public:
 	 * No details about the intersection are returned, hence the
 	 * function is only useful for visibility queries. For most
 	 * shapes, this will simply call forward the call to \ref 
-	 * rayIntersect. When the shape actually contains a nested kd-tree, 
-	 * some optimizations are possible.
+	 * rayIntersect. When the shape actually contains a nested 
+	 * kd-tree, some optimizations are possible.
 	 */
 	virtual bool rayIntersect(const Ray &ray, Float mint, Float maxt) const;
 
@@ -316,7 +316,7 @@ public:
 	// =============================================================
 	
 	/// Does the shape act as an occluder?
-	inline bool isOccluder() const { return m_bsdf.get() != NULL; }
+	inline bool isOccluder() const { return m_occluder; }
 	/// Does the surface of this shape mark a medium transition?
 	inline bool isMediumTransition() const { return m_interiorMedium.get() || m_exteriorMedium.get(); }
 	/// Return the medium that lies on the interior of this shape (\c NULL == vacuum)
@@ -351,7 +351,7 @@ public:
 	/// Return the shape's BSDF
 	inline BSDF *getBSDF() { return m_bsdf.get(); }
 	/// Set the BSDF of this shape
-	inline void setBSDF(BSDF *bsdf) { m_bsdf = bsdf; }
+	inline void setBSDF(BSDF *bsdf) { m_bsdf = bsdf; m_occluder = (bsdf != NULL); }
 
 	/// Called once after parsing
 	virtual void configure();
@@ -378,7 +378,9 @@ protected:
 	ref<BSDF> m_bsdf;
 	ref<Subsurface> m_subsurface;
 	ref<Luminaire> m_luminaire;
-	ref<Medium> m_interiorMedium, m_exteriorMedium;
+	ref<Medium> m_interiorMedium;
+	ref<Medium> m_exteriorMedium;
+	bool m_occluder;
 };
 
 inline ShapeSamplingRecord::ShapeSamplingRecord(const Intersection &its)

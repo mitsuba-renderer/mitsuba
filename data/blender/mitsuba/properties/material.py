@@ -42,7 +42,49 @@ def dict_merge(*args):
 		vis.update(deepcopy(vis_dict))
 	return vis
 
+mat_names = {
+	'lambertian' : 'Lambertian',
+	'phong' : 'Phong',
+	'ward' : 'Anisotropic Ward',
+	'mirror' : 'Ideal mirror',
+	'dielectric' : 'Ideal dielectric',
+	'roughmetal' : 'Rough metal',
+	'roughglass' : 'Rough glass',
+	'microfacet' : 'Microfacet',
+	'composite' : 'Composite material',
+	'difftrans' : 'Diffuse transmitter',
+	'none' : 'Passthrough material'
+}
 
+@MitsubaAddon.addon_register_class
+class MATERIAL_OT_set_mitsuba_type(bpy.types.Operator):
+	bl_idname = 'material.set_mitsuba_type'
+	bl_label = 'Set material type'
+	
+	mat_name = bpy.props.StringProperty()
+	
+	@classmethod
+	def poll(cls, context):
+		return	context.material and \
+				context.material.mitsuba_material
+	
+	def execute(self, context):
+		context.material.mitsuba_material.set_type(self.properties.mat_name)
+		return {'FINISHED'}
+
+@MitsubaAddon.addon_register_class
+class MATERIAL_MT_mitsuba_type(bpy.types.Menu):
+	bl_label = 'Material Type'
+	
+	def draw(self, context):
+		sl = self.layout
+		from operator import itemgetter
+		result = sorted(mat_names.items(), key=itemgetter(1))
+		for item in result:
+			print(result)
+			op = sl.operator('MATERIAL_OT_set_mitsuba_type', text = item[1])
+			op.mat_name = item[0]
+	
 @MitsubaAddon.addon_register_class
 class mitsuba_material(declarative_property_group):
 	'''
@@ -54,7 +96,6 @@ class mitsuba_material(declarative_property_group):
 	ef_attach_to = ['Material']
 	
 	controls = [
-		'type',
 		'twosided',
 		'is_medium_transition',
 		'interior',
@@ -62,7 +103,8 @@ class mitsuba_material(declarative_property_group):
 	]
 
 	visibility = {
-		'twosided' : { 'type' : O(['lambertian', 'phong', 'ward', 'mirror', 'roughmetal', 'microfacet', 'composite'])},
+		'twosided' : { 'type' : O(['lambertian', 'phong', 'ward',
+			'mirror', 'roughmetal', 'microfacet', 'composite'])},
 		'exterior' : { 'is_medium_transition' : True },
 		'interior' : { 'is_medium_transition' : True }
 	}
@@ -70,24 +112,17 @@ class mitsuba_material(declarative_property_group):
 	properties = [
 		# Material Type Select
 		{
-			'type': 'enum',
+			'attr': 'type_label',
+			'name': 'Mitsuba material type',
+			'type': 'string',
+			'default': 'Lambertian',
+			'save_in_preset': True
+		},
+		{
+			'type': 'string',
 			'attr': 'type',
-			'name': 'Material Type',
-			'description': 'Mitsuba material type',
+			'name': 'Type',
 			'default': 'lambertian',
-			'items': [
-				('none', 'None (passthrough)', 'Passthrough material. This is useful for creating participating media with index-matched boundaries'),
-				('difftrans', 'Diffuse transmitter', 'Material with an ideally diffuse transmittance'),
-				('microfacet', 'Microfacet', 'Microfacet material (like the rough glass material, but without transmittance)'),
-				('composite', 'Composite material', 'Allows creating mixtures of different materials'),
-				('roughglass', 'Rough glass', 'Rough dielectric material (e.g. sand-blasted glass)'),
-				('roughmetal', 'Rough metal', 'Rough conductor (e.g. sand-blasted metal)'),
-				('dielectric', 'Ideal dielectric', 'Ideal dielectric material (e.g. glass)'),
-				('mirror', 'Ideal mirror', 'Ideal mirror material'),
-				('ward', 'Anisotropic Ward', 'Anisotropic Ward BRDF'),
-				('phong', 'Phong', 'Modified Phong BRDF'),
-				('lambertian', 'Lambertian', 'Lambertian (i.e. ideally diffuse) material')
-			],
 			'save_in_preset': True
 		},
 		{
@@ -109,6 +144,9 @@ class mitsuba_material(declarative_property_group):
 	] + MediumParameter('interior', 'Interior') \
 	  + MediumParameter('exterior', 'Exterior')
 
+	def set_type(self, mat_type):
+		self.type = mat_type
+		self.type_label = mat_names[mat_type]
 
 	def get_params(self):
 		sub_type = getattr(self, 'mitsuba_mat_%s' % self.type)

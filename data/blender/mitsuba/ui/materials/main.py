@@ -42,5 +42,7 @@ class main(mitsuba_material_base, bpy.types.Panel):
 		row.operator("mitsuba.convert_all_materials", icon='WORLD_DATA')
 		row = self.layout.row(align=True)
 		row.operator("mitsuba.convert_material", icon='MATERIAL_DATA')
+		row = self.layout.row(align=True)
 
+		row.menu('MATERIAL_MT_mitsuba_type', text=context.material.mitsuba_material.type_label)
 		super().draw(context)

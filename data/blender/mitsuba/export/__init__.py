@@ -311,7 +311,7 @@ class MtsExporter:
 			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.data.mitsuba_lamp.samplingWeight})
 			
 			if lamp.data.mitsuba_lamp.inside_medium:
-				self.exportMediumReference(scene, lamp, nil, lamp.data.mitsuba_lamp.lamp_medium)
+				self.exportMediumReference(scene, lamp, None, lamp.data.mitsuba_lamp.lamp_medium)
 			self.closeElement()
 		elif ltype == 'AREA':
 			self.element('remove', { 'id' : '%s-light' % name})
@@ -559,7 +559,7 @@ class MtsExporter:
 		self.exportSampler(scene.mitsuba_sampler)
 		for obj in scene.objects:
 			if obj.type == 'LAMP':
-				self.exportLamp(obj, idx)
+				self.exportLamp(scene, obj, idx)
 			elif obj.type == 'MESH':
 				for mat in obj.data.materials:
 					self.exportMaterial(mat)

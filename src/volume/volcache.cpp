@@ -45,7 +45,7 @@ struct Vector3iKeyOrder : public std::binary_function<Vector3i, Vector3i, bool> 
 
 /**
  * This class sits in between the renderer and another data source, for which 
- * caches all data lookups using a LRU scheme. This is useful if the nested 
+ * it caches all data lookups using a LRU scheme. This is useful if the nested 
  * volume data source is expensive to evaluate.
  */
 class CachingDataSource : public VolumeDataSource {
@@ -90,6 +90,9 @@ public:
 		if (m_nested == NULL)
 			Log(EError, "A nested volume data source is needed!");
 		m_aabb = m_nested->getAABB();
+		if (!m_aabb.isValid())
+			Log(EError, "Nested axis-aligned bounding box was invalid!");
+
 		if (m_voxelWidth == -1)
 			m_voxelWidth = m_nested->getStepSize();
 
@@ -260,8 +263,7 @@ public:
 		for (int z = 0; z<m_blockRes; ++z) {
 			for (int y = 0; y<m_blockRes; ++y) {
 				for (int x = 0; x<m_blockRes; ++x) {
-					Point p = offset + Vector(x + (Float) 0.5f, 
-						y + (Float) 0.5f, z + (Float) 0.5f) * m_voxelWidth;
+					Point p = offset + Vector(x, y, z) * m_voxelWidth;
 					float value = (float) m_nested->lookupFloat(p);
 					result[idx++] = value;
 					nonempty |= (value != 0);

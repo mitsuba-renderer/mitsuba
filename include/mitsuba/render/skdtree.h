@@ -311,11 +311,9 @@ protected:
 				static_cast<const TriMesh *>(m_shapes[shapeIdx]);
 			const Triangle &tri = mesh->getTriangles()[idx];
 			Float tempU, tempV, tempT;
-			if (tri.rayIntersect(mesh->getVertexPositions(), ray, 
-						tempU, tempV, tempT)) {
-				if (tempT >= mint && tempT <= maxt)
-					return mesh->isOccluder();
-			}
+			if (mesh->isOccluder() &&
+				tri.rayIntersect(mesh->getVertexPositions(), ray, tempU, tempV, tempT))
+				return tempT >= mint && tempT <= maxt;
 			return false;
 		} else {
 			const Shape *shape = m_shapes[shapeIdx];
@@ -331,7 +329,7 @@ protected:
 			return shape->isOccluder() &&
 				ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT);
 		} else {
-			return shape->isOccluder() &&
+			return shape->isOccluder() && 
 				shape->rayIntersect(ray, mint, maxt);
 		}
 #endif

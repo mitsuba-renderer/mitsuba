@@ -25,10 +25,15 @@
 
 MTS_NAMESPACE_BEGIN
 
-SceneHandler::SceneHandler(const ParameterMap &params, NamedObjectMap *namedObjects,
-	bool isIncludedFile) : m_params(params), m_namedObjects(namedObjects),
-	m_isIncludedFile(isIncludedFile) {
-	m_pluginManager = PluginManager::getInstance();
+#define XMLLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
+	level, NULL, __FILE__, __LINE__, "Near file offset %i: " fmt, \
+	(int) m_parser->getSrcOffset(), ## __VA_ARGS__)
+
+SceneHandler::SceneHandler(const SAXParser *parser,
+	const ParameterMap &params, NamedObjectMap *namedObjects,
+	bool isIncludedFile) : m_parser(parser), m_params(params),
+		m_namedObjects(namedObjects), m_isIncludedFile(isIncludedFile) {
+		m_pluginManager = PluginManager::getInstance();
 
 	if (m_isIncludedFile) {
 		SAssert(namedObjects != NULL);
@@ -73,16 +78,17 @@ void SceneHandler::characters(const XMLCh* const name,
 	const unsigned int length) {
 }
 
-static Float parseFloat(const std::string &name, const std::string &str, Float defVal = -1) {
+Float SceneHandler::parseFloat(const std::string &name,
+		const std::string &str, Float defVal) const {
 	char *end_ptr = NULL;
 	if (str == "") {
 		if (defVal == -1)
-			SLog(EError, "Missing floating point value (in <%s>)", name.c_str());
+			XMLLog(EError, "Missing floating point value (in <%s>)", name.c_str());
 		return defVal;
 	}
 	Float result = (Float) std::strtod(str.c_str(), &end_ptr);
 	if (*end_ptr != '\0')
-		SLog(EError, "Invalid floating point value specified (in <%s>)", name.c_str());
+		XMLLog(EError, "Invalid floating point value specified (in <%s>)", name.c_str());
 	return result;
 }
 
@@ -106,7 +112,7 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 				}
 			}
 			if (attrValue.find('$') != attrValue.npos)
-				SLog(EError, "The scene referenced an undefined parameter: \"%s\"", attrValue.c_str());
+				XMLLog(EError, "The scene referenced an undefined parameter: \"%s\"", attrValue.c_str());
 		}
 
 		context.attributes[transcode(xmlAttributes.getName(i))] = attrValue;
@@ -172,7 +178,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 	} else if (name == "ref") {
 		std::string id = context.attributes["id"];
 		if (m_namedObjects->find(id) == m_namedObjects->end())
-			SLog(EError, "Referenced object '%s' not found!", id.c_str());
+			XMLLog(EError, "Referenced object '%s' not found!", id.c_str());
 		object = (*m_namedObjects)[id];
 	/* Construct properties */
 	} else if (name == "integer") {
@@ -183,7 +189,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		int64_t i = strtoll(context.attributes["value"].c_str(), &end_ptr, 10);
 #endif
 		if (*end_ptr != '\0')
-			SLog(EError, "Invalid integer value specified (in <%s>)", 
+			XMLLog(EError, "Invalid integer value specified (in <%s>)", 
 				context.attributes["name"].c_str());
 		context.parent->properties.setLong(context.attributes["name"], i);
 	} else if (name == "float") {
@@ -239,7 +245,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		Float x=0, y=0, z=0;
 
 		if (hasXYZ && hasValue) {
-			SLog(EError, "<scale>: provided both xyz and value arguments!");
+			XMLLog(EError, "<scale>: provided both xyz and value arguments!");
 		} else if (hasXYZ) {
 			x = parseFloat(name, context.attributes["x"], 1);
 			y = parseFloat(name, context.attributes["y"], 1);
@@ -247,7 +253,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		} else if (hasValue) {
 			x = y = z = parseFloat(name, context.attributes["value"]);
 		} else {
-			SLog(EError, "<scale>: provided neither xyz nor value arguments!");
+			XMLLog(EError, "<scale>: provided neither xyz nor value arguments!");
 		}
 
 		m_transform = Transform::scale(Vector(x, y, z)) * m_transform;
@@ -255,7 +261,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		std::vector<std::string> tokens = tokenize(
 			context.attributes["value"], ", ");
 		if (tokens.size() != 16)
-			SLog(EError, "Invalid matrix specified");
+			XMLLog(EError, "Invalid matrix specified");
 		int index = 0;
 		Matrix4x4 mtx;
 
@@ -279,7 +285,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			/* Parse HTML-style hexadecimal colors */
 			int encoded = strtol(tokens[0].c_str()+1, &end_ptr, 16);
 			if (*end_ptr != '\0')
-				SLog(EError, "Invalid rgb value specified (in <%s>)", context.attributes["name"].c_str());
+				XMLLog(EError, "Invalid rgb value specified (in <%s>)", context.attributes["name"].c_str());
 			value[0] = ((encoded & 0xFF0000) >> 16) / 255.0f;
 			value[1] = ((encoded & 0x00FF00) >> 8) / 255.0f;
 			value[2] =  (encoded & 0x0000FF) / 255.0f;
@@ -290,7 +296,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				value[i] = parseFloat(name, tokens[i]);
 		} else {
 			value[0] = value[1] = value[2] = 0; // avoid warning
-			SLog(EError, "Invalid RGB value specified");
+			XMLLog(EError, "Invalid RGB value specified");
 		}
 		Spectrum specValue;
 		specValue.fromLinearRGB(value[0], value[1], value[2]);
@@ -305,7 +311,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			/* Parse HTML-style hexadecimal colors */
 			int encoded = strtol(tokens[0].c_str()+1, &end_ptr, 16);
 			if (*end_ptr != '\0')
-				SLog(EError, "Invalid sRGB value specified (in <%s>)", context.attributes["name"].c_str());
+				XMLLog(EError, "Invalid sRGB value specified (in <%s>)", context.attributes["name"].c_str());
 			value[0] = ((encoded & 0xFF0000) >> 16) / 255.0f;
 			value[1] = ((encoded & 0x00FF00) >> 8) / 255.0f;
 			value[2] =  (encoded & 0x0000FF) / 255.0f;
@@ -316,7 +322,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				value[i] = parseFloat(name, tokens[i]);
 		} else {
 			value[0] = value[1] = value[2] = 0; // avoid warning
-			SLog(EError, "Invalid sRGB value specified");
+			XMLLog(EError, "Invalid sRGB value specified");
 		}
 		Spectrum specValue;
 		specValue.fromSRGB(value[0], value[1], value[2]);
@@ -343,7 +349,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				for (size_t i=0; i<tokens.size(); i++) {
 					std::vector<std::string> tokens2 = tokenize(tokens[i], ":");
 					if (tokens2.size() != 2) 
-						SLog(EError, "Invalid spectrum->value mapping specified");
+						XMLLog(EError, "Invalid spectrum->value mapping specified");
 					Float wavelength = parseFloat(name, tokens2[0]);
 					Float value = parseFloat(name, tokens2[1]);
 					interp.appendSample(wavelength, value);
@@ -354,7 +360,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 					discrete);
 			} else {
 				if (tokens.size() != SPECTRUM_SAMPLES)
-					SLog(EError, "Invalid spectrum value specified (incorrect length)");
+					XMLLog(EError, "Invalid spectrum value specified (incorrect length)");
 				for (int i=0; i<SPECTRUM_SAMPLES; i++) 
 					value[i] = parseFloat(name, tokens[i]);
 				context.parent->properties.setSpectrum(context.attributes["name"],
@@ -377,19 +383,20 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 
 		/* Set the handler and start parsing */
-		SceneHandler *handler = new SceneHandler(m_params, m_namedObjects, true);
+		SceneHandler *handler = new SceneHandler(parser, m_params, m_namedObjects, true);
 		parser->setDoNamespaces(true);
 		parser->setDocumentHandler(handler);
 		parser->setErrorHandler(handler);
+		parser->setCalculateSrcOfs(true);
 		fs::path path = resolver->resolve(context.attributes["filename"]);
-		SLog(EInfo, "Parsing included file \"%s\" ..", path.filename().c_str());
+		XMLLog(EInfo, "Parsing included file \"%s\" ..", path.filename().c_str());
 		parser->parse(path.file_string().c_str());
 
 		object = handler->getScene();
 		delete parser;
 		delete handler;
 	} else {
-		SLog(EError, "Unhandled tag \"%s\" encountered!", name.c_str());
+		XMLLog(EError, "Unhandled tag \"%s\" encountered!", name.c_str());
 	}
 
 	if (object != NULL) {
@@ -398,7 +405,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 
 		if (id != "" && name != "ref") {
 			if (m_namedObjects->find(id) != m_namedObjects->end())
-				SLog(EError, "Duplicate ID '%s' used in scene description!", id.c_str());
+				XMLLog(EError, "Duplicate ID '%s' used in scene description!", id.c_str());
 			(*m_namedObjects)[id] = object;
 			object->incRef();
 		}
@@ -427,7 +434,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 	/* Warn about unqueried properties */
 	std::vector<std::string> unq = context.properties.getUnqueried();
 	for (unsigned int i=0; i<unq.size(); ++i)
-		SLog(EWarn, "Unqueried attribute \"%s\" in element \"%s\"", unq[i].c_str(), name.c_str());
+		XMLLog(EWarn, "Unqueried attribute \"%s\" in element \"%s\"", unq[i].c_str(), name.c_str());
 
 	m_context.pop();
 }

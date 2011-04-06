@@ -23,6 +23,7 @@ MTS_NAMESPACE_BEGIN
 Instance::Instance(const Properties &props) : Shape(props) {
 	m_objectToWorld = props.getTransform("toWorld", Transform());
 	m_worldToObject = m_objectToWorld.inverse();
+	m_occluder = true;
 }
 
 Instance::Instance(Stream *stream, InstanceManager *manager) 
@@ -30,6 +31,7 @@ Instance::Instance(Stream *stream, InstanceManager *manager)
 	m_shapeGroup = static_cast<ShapeGroup *>(manager->getInstance(stream));
 	m_objectToWorld = Transform(stream);
 	m_worldToObject = m_objectToWorld.inverse();
+	m_occluder = true;
 }
 
 void Instance::serialize(Stream *stream, InstanceManager *manager) const {

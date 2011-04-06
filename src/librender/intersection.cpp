@@ -71,6 +71,7 @@ void Intersection::computePartials(const RayDifferential &ray) {
 	} else {
 		dudy = 0; dudy = 1;
 	}
+	cout << "Computed " << dudx << "," << dudy << "," << dvdx << "," << dvdy << endl;
 }
 
 std::string Intersection::toString() const {
@@ -83,7 +84,8 @@ std::string Intersection::toString() const {
 		<< "  t = " << t << "," << std::endl
 		<< "  geoFrame = " << indent(geoFrame.toString()) << "," << std::endl
 		<< "  shFrame = " << indent(shFrame.toString()) << "," << std::endl
-		<< "  uv = " << uv.toString() << "," << std::endl;
+		<< "  uv = " << uv.toString() << "," << std::endl
+		<< "  hasUVPartials = " << hasUVPartials << "," << std::endl;
 	if (hasUVPartials) {
 		oss << "  dpdu = " << dpdu.toString() << "," << std::endl
 			<< "  dpdv = " << dpdv.toString() << "," << std::endl;
