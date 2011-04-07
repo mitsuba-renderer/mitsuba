@@ -90,6 +90,8 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 	} else if (cClass->derivesFrom(MTS_CLASS(Luminaire))) {
 		Assert(m_luminaire == NULL);
 		m_luminaire = static_cast<Luminaire *>(child);
+		if (m_luminaire && m_exteriorMedium)
+			m_luminaire->setMedium(m_exteriorMedium);
 	} else if (cClass->derivesFrom(MTS_CLASS(Subsurface))) {
 		Assert(m_subsurface == NULL);
 		m_subsurface = static_cast<Subsurface *>(child);
@@ -100,6 +102,8 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 		} else if (name == "exterior") {
 			Assert(m_exteriorMedium == NULL);
 			m_exteriorMedium = static_cast<Medium *>(child);
+			if (m_luminaire)
+				m_luminaire->setMedium(m_exteriorMedium);
 		} else {
 			Log(EError, "Shape: Invalid medium child (must be named "
 				"'interiorMedium' or 'exteriorMedium')!");

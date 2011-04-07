@@ -69,8 +69,6 @@ public:
 		Spectrum Li(0.0f);
 		Point2 sample;
 
-		cout << "========================================================" << endl;
-
 		/* Perform the first ray intersection (or ignore if the 
 		   intersection has already been provided). */
 		if (!rRec.rayIntersect(ray)) {
@@ -91,7 +89,6 @@ public:
 			Li += its.LoSub(scene, -ray.d);
 
 		const BSDF *bsdf = its.getBSDF(ray);
-		cout << its.toString() << endl;
 
 		if (EXPECT_NOT_TAKEN(!bsdf)) {
 			/* The direct illumination integrator doesn't support

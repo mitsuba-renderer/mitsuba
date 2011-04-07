@@ -83,6 +83,7 @@ void SceneLoader::run() {
 
 			fs::path 
 				filename = m_filename,
+				filePath = fs::complete(filename).parent_path(),
 				baseName = fs::basename(filename);
 
 			SLog(EInfo, "Parsing scene description from \"%s\" ..", m_filename.c_str());
@@ -90,7 +91,7 @@ void SceneLoader::run() {
 			ref<Scene> scene = handler->getScene();
 
 			scene->setSourceFile(m_filename);
-			scene->setDestinationFile(baseName.file_string());
+			scene->setDestinationFile(filePath / baseName);
 			scene->initialize();
 
 			if (scene->getIntegrator() == NULL)

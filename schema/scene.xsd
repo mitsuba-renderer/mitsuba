@@ -13,6 +13,7 @@
 				<xsd:element name="medium" type="medium"/>
 				<xsd:element name="phase" type="phase"/>
 				<xsd:element name="include" type="include"/>
+				<xsd:element name="null" type="null"/>
 
 				<!-- Usual attributes -->
 				<xsd:element name="integer" type="integer"/>
@@ -68,6 +69,11 @@
 	<xsd:complexType name="reference">
 		<xsd:attribute name="id" type="xsd:string" use="required"/>
 		<xsd:attribute name="name" type="xsd:string"/>
+	</xsd:complexType>
+
+	<!-- NULL -->
+	<xsd:complexType name="null">
+		<xsd:attribute name="id" type="xsd:string" use="required"/>
 	</xsd:complexType>
 
 	<!-- CAMERA Element -->

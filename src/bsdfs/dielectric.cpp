@@ -175,17 +175,17 @@ public:
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EDeltaReflection;
 			pdf = std::abs(Frame::cosTheta(bRec.wo));
-			return m_reflectance * (fr * std::abs(1.0f/Frame::cosTheta(bRec.wo)));
+			return m_reflectance * fr;
 		} else if (sampleTransmission) {
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDeltaTransmission;
-			pdf = std::abs(Frame::cosTheta(bRec.wo));
 
 			Float result = refract(m_intIOR, m_extIOR, bRec.wi, bRec.wo, bRec.quantity);
+			pdf = std::abs(Frame::cosTheta(bRec.wo));
 			if (result == 0)
 				return Spectrum(0.0f);
 
-			return m_transmittance * (result * (1-fr) * std::abs(1.0f/Frame::cosTheta(bRec.wo)));
+			return m_transmittance * result * (1-fr);
 		}
 		return Spectrum(0.0f);
 	}

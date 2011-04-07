@@ -81,7 +81,6 @@ class MATERIAL_MT_mitsuba_type(bpy.types.Menu):
 		from operator import itemgetter
 		result = sorted(mat_names.items(), key=itemgetter(1))
 		for item in result:
-			print(result)
 			op = sl.operator('MATERIAL_OT_set_mitsuba_type', text = item[1])
 			op.mat_name = item[0]
 	

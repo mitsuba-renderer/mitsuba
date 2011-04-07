@@ -349,7 +349,7 @@ int ubi_main(int argc, char **argv) {
 
 			scene->setSourceFile(filename);
 			scene->setDestinationFile(destFile.length() > 0 ? 
-				fs::path(destFile) : baseName);
+				fs::path(destFile) : (filePath / baseName));
 			scene->setBlockSize(blockSize);
 
 			if (scene->destinationExists() && skipExisting)

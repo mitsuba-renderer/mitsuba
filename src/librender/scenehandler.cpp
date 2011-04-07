@@ -56,8 +56,9 @@ SceneHandler::~SceneHandler() {
 void SceneHandler::clear() {
 	if (!m_isIncludedFile) {
 		for (NamedObjectMap::iterator it = m_namedObjects->begin();
-			it != m_namedObjects->end(); ++it)
-			(*it).second->decRef();
+				it != m_namedObjects->end(); ++it)
+			if (it->second)
+				it->second->decRef();
 		m_namedObjects->clear();
 	}
 }
@@ -105,9 +106,9 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 			for (std::map<std::string, std::string>::const_iterator it = m_params.begin();
 				it != m_params.end(); ++it) {
 				std::string::size_type pos = 0;
-				std::string searchString = "$" + (*it).first;
+				std::string searchString = "$" + it->first;
 				while ((pos = attrValue.find(searchString, pos)) != std::string::npos) {
-					attrValue.replace(pos, searchString.size(), (*it).second);
+					attrValue.replace(pos, searchString.size(), it->second);
 					++pos;
 				}
 			}
@@ -175,6 +176,8 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 	} else if (name == "rfilter") {
 		object = static_cast<ReconstructionFilter *> (m_pluginManager->createObject(
 			MTS_CLASS(ReconstructionFilter), context.properties));
+	} else if (name == "null") {
+		object = NULL;
 	} else if (name == "ref") {
 		std::string id = context.attributes["id"];
 		if (m_namedObjects->find(id) == m_namedObjects->end())
@@ -399,7 +402,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		XMLLog(EError, "Unhandled tag \"%s\" encountered!", name.c_str());
 	}
 
-	if (object != NULL) {
+	if (object != NULL || name == "null") {
 		std::string id = context.attributes["id"];
 		std::string nodeName = context.attributes["name"];
 
@@ -407,28 +410,33 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			if (m_namedObjects->find(id) != m_namedObjects->end())
 				XMLLog(EError, "Duplicate ID '%s' used in scene description!", id.c_str());
 			(*m_namedObjects)[id] = object;
-			object->incRef();
+			if (object)
+				object->incRef();
 		}
 
-		/* If the object has a parent, add it to the parent's children list */
-		if (context.parent != NULL) {
-			object->incRef();
-			context.parent->children.push_back(
-				std::pair<std::string, ConfigurableObject *>(nodeName, object));
-		}
+		if (object) {
+			/* If the object has a parent, add it to the parent's children list */
+			if (context.parent != NULL) {
+				object->incRef();
+				context.parent->children.push_back(
+					std::pair<std::string, ConfigurableObject *>(nodeName, object));
+			}
 
-		/* If the object has children, append them */
-		for (std::vector<std::pair<std::string, ConfigurableObject *> >
-				::iterator it = context.children.begin();
-				it != context.children.end(); ++it) {
-			object->addChild((*it).first, (*it).second);
-			(*it).second->setParent(object);
-			(*it).second->decRef();
-		}
+			/* If the object has children, append them */
+			for (std::vector<std::pair<std::string, ConfigurableObject *> >
+					::iterator it = context.children.begin();
+					it != context.children.end(); ++it) {
+				if (it->second != NULL) {
+					object->addChild(it->first, it->second);
+					it->second->setParent(object);
+					it->second->decRef();
+				}
+			}
 
-		/* Don't configure a scene object if it is from an included file */
-		if (name != "include" && (!m_isIncludedFile || !object->getClass()->derivesFrom(MTS_CLASS(Scene)))) 
-			object->configure();
+			/* Don't configure a scene object if it is from an included file */
+			if (name != "include" && (!m_isIncludedFile || !object->getClass()->derivesFrom(MTS_CLASS(Scene)))) 
+				object->configure();
+		}
 	}
 
 	/* Warn about unqueried properties */

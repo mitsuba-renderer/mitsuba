@@ -54,8 +54,6 @@ inline Spectrum Intersection::LoSub(const Scene *scene, const Vector &d) const {
 
 inline const BSDF *Intersection::getBSDF(const RayDifferential &ray) {
 	const BSDF *bsdf = shape->getBSDF();
-	if (bsdf)
-		cout << "getBSDF(): " << bsdf->usesRayDifferentials() << ", hasUVPartials=" << hasUVPartials << endl;
 
 	if (bsdf && bsdf->usesRayDifferentials() && !hasUVPartials)
 			computePartials(ray);
