@@ -116,7 +116,9 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Lambertian[reflectance=" << m_reflectance->toString() << "]";
+		oss << "Microfacet[" << endl
+			<< "  reflectance = " << indent(m_reflectance->toString()) << endl
+			<< "]";
 		return oss.str();
 	}
 

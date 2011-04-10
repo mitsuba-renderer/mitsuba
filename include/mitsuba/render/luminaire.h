@@ -162,6 +162,9 @@ public:
 	/// Is this luminaire intersectable (e.g. can it be encountered by a tracing a ray)?
 	inline bool isIntersectable() const { return m_intersectable; }
 
+	/// Specify the medium that surrounds the luminaire
+	inline void setMedium(Medium *medium) { m_medium = medium; }
+
 	/// Return a pointer to the medium that surrounds the luminaire
 	inline Medium *getMedium() { return m_medium.get(); }
 
@@ -344,6 +347,9 @@ public:
 
 	/// Optional pre-process step before rendering starts
 	virtual void preprocess(const Scene *scene);
+
+	/// Add a child (e.g. a medium reference) to this luminaire
+	void addChild(const std::string &name, ConfigurableObject *child);
 
 	//! @}
 	// =============================================================

@@ -302,6 +302,8 @@ class MtsExporter:
 		ltype = lamp.data.type
 		name = translate_id(lamp.data.name)
 		mult = lamp.data.mitsuba_lamp.intensity
+		if lamp.data.mitsuba_lamp.inside_medium:
+			self.exportMedium(scene.mitsuba_media.media[lamp.data.mitsuba_lamp.lamp_medium])
 		if ltype == 'POINT':
 			self.openElement('luminaire', { 'type' : 'point', 'id' : '%s-light' % name })
 			self.exportWorldTrafo(lamp.matrix_world)
@@ -309,9 +311,8 @@ class MtsExporter:
 				"%f %f %f" % (lamp.data.color.r*mult, lamp.data.color.g*mult,
 					lamp.data.color.b*mult)})
 			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.data.mitsuba_lamp.samplingWeight})
-			
 			if lamp.data.mitsuba_lamp.inside_medium:
-				self.exportMediumReference(scene, lamp, nil, lamp.data.mitsuba_lamp.lamp_medium)
+				self.element('ref', {'id' : lamp.data.mitsuba_lamp.lamp_medium})
 			self.closeElement()
 		elif ltype == 'AREA':
 			self.element('remove', { 'id' : '%s-light' % name})
@@ -360,6 +361,8 @@ class MtsExporter:
 			self.parameter('float', 'cutoffAngle', {'value' : '%f' %  (lamp.data.spot_size * 180 / (math.pi * 2))})
 			self.parameter('float', 'beamWidth', {'value' : '%f' % (lamp.data.spot_blend * lamp.data.spot_size * 180 / (math.pi * 2))})
 			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.data.mitsuba_lamp.samplingWeight})
+			if lamp.data.mitsuba_lamp.inside_medium:
+				self.element('ref', {'id' : lamp.data.mitsuba_lamp.lamp_medium})
 			self.closeElement()
 		elif ltype == 'HEMI':
 			if lamp.data.mitsuba_lamp.envmap_type == 'constant':
@@ -378,6 +381,7 @@ class MtsExporter:
 
 	def exportIntegrator(self, integrator):
 		self.openElement('integrator', { 'id' : 'integrator', 'type' : integrator.type})
+		self.parameter('integer', 'maxDepth', { 'value' : str(integrator.maxdepth)})
 		self.closeElement()
 
 	def exportSampler(self, sampler):
@@ -419,6 +423,7 @@ class MtsExporter:
 		self.exported_materials += [mat.name]
 		mmat = mat.mitsuba_material
 		if mmat.type == 'none':
+			self.element('null', {'id' : '%s-material' % translate_id(mat.name)})
 			return
 		params = mmat.get_params()
 		twosided = False
@@ -446,20 +451,28 @@ class MtsExporter:
 			self.closeElement()
 
 	def exportEmission(self, obj):
-			lamp = obj.data.materials[0].mitsuba_emission
-			if obj.data.users > 1:
-				MtsLog("Error: luminaires cannot be instantiated!")
-				return
-			mult = lamp.intensity
-			name = translate_id(obj.data.name) + "-mesh_0"
+		lamp = obj.data.materials[0].mitsuba_emission
+		if obj.data.users > 1:
+			MtsLog("Error: luminaires cannot be instantiated!")
+			return
+		mult = lamp.intensity
+		name = translate_id(obj.data.name) + "-mesh_0"
+		self.openElement('append', { 'id' : name})
+		self.openElement('luminaire', { 'id' : '%s-emission' % name, 'type' : 'area'})
+		self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.samplingWeight})
+		self.parameter('rgb', 'intensity', { 'value' : "%f %f %f"
+				% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult)})
+		self.closeElement()
+		self.closeElement()
+	
+	def exportNormalMode(self, obj):
+		mesh = obj.data.mitsuba_mesh
+		name = translate_id(obj.data.name) + "-mesh_0"
+		if mesh.normals == 'facenormals':
 			self.openElement('append', { 'id' : name})
-			self.openElement('luminaire', { 'id' : '%s-emission' % name, 'type' : 'area'})
-			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.samplingWeight})
-			self.parameter('rgb', 'intensity', { 'value' : "%f %f %f"
-					% (lamp.color.r*mult, lamp.color.g*mult, lamp.color.b*mult)})
+			self.parameter('boolean', 'faceNormals', {'value' : 'true'})
 			self.closeElement()
-			self.closeElement()
-						
+					
 	def exportMediumReference(self, scene, obj, role, mediumName):
 		if mediumName == "":
 			return
@@ -507,6 +520,7 @@ class MtsExporter:
 		self.closeElement()
 
 	def exportCameraSettings(self, scene, camera):
+		mcam = camera.data.mitsuba_camera
 		if scene.mitsuba_integrator.motionblur:
 			frameTime = 1.0/scene.render.fps
 			shuttertime = scene.mitsuba_integrator.shuttertime
@@ -515,6 +529,11 @@ class MtsExporter:
 			self.openElement('prepend', {'id' : '%s-camera' % translate_id(camera.name)})
 			self.parameter('float', 'shutterOpen', {'value' : str(shutterOpen)})
 			self.parameter('float', 'shutterClose', {'value' : str(shutterClose)})
+			self.closeElement()
+		if mcam.exterior_medium != '':
+			self.exportMedium(scene.mitsuba_media.media[mcam.exterior_medium])
+			self.openElement('prepend', {'id' : '%s-camera' % translate_id(camera.name)})
+			self.element('ref', { 'name' : 'exterior', 'id' : mcam.exterior_medium})
 			self.closeElement()
 
 	def exportMedium(self, medium):
@@ -559,8 +578,9 @@ class MtsExporter:
 		self.exportSampler(scene.mitsuba_sampler)
 		for obj in scene.objects:
 			if obj.type == 'LAMP':
-				self.exportLamp(obj, idx)
+				self.exportLamp(scene, obj, idx)
 			elif obj.type == 'MESH':
+				self.exportNormalMode(obj)
 				for mat in obj.data.materials:
 					self.exportMaterial(mat)
 				if len(obj.data.materials) > 0 and obj.data.materials[0] != None:

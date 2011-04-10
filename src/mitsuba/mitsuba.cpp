@@ -311,9 +311,10 @@ int ubi_main(int argc, char **argv) {
 		parser->setValidationSchemaFullChecking(true);
 		parser->setValidationScheme(SAXParser::Val_Always);
 		parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
+		parser->setCalculateSrcOfs(true);
 
 		/* Set the handler */
-		SceneHandler *handler = new SceneHandler(parameters);
+		SceneHandler *handler = new SceneHandler(parser, parameters);
 		parser->setDoNamespaces(true);
 		parser->setDocumentHandler(handler);
 		parser->setErrorHandler(handler);
@@ -348,7 +349,7 @@ int ubi_main(int argc, char **argv) {
 
 			scene->setSourceFile(filename);
 			scene->setDestinationFile(destFile.length() > 0 ? 
-				fs::path(destFile) : baseName);
+				fs::path(destFile) : (filePath / baseName));
 			scene->setBlockSize(blockSize);
 
 			if (scene->destinationExists() && skipExisting)

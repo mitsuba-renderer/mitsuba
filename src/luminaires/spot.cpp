@@ -137,7 +137,7 @@ public:
 	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {
 		m_luminaireToWorld(squareToCone(m_cosCutoffAngle, sample), eRec.d);
 		eRec.pdfDir = squareToConePdf(m_cosCutoffAngle);
-		return Spectrum(falloffCurve(eRec.d, true));
+		return falloffCurve(eRec.d, true);
 	}
 
 	void pdfEmission(EmissionRecord &eRec, bool delta) const {

@@ -182,6 +182,21 @@ struct RayDifferential : public Ray {
 #endif
 		hasDifferentials = false;
 	}
+
+	/// Return a string representation of this ray
+	inline std::string toString() const {
+		std::ostringstream oss;
+		oss << "RayDifferential[" << endl
+			<< "  orig = " << o.toString() << "," << endl
+			<< "  dest = " << d.toString() << "," << endl
+			<< "  mint = " << mint << "," << endl
+			<< "  maxt = " << maxt << "," << endl
+			<< "  time = " << time << "," << endl
+			<< "  rx = " << indent(rx.toString()) << "," << endl
+			<< "  ry = " << indent(ry.toString()) << endl
+			<< "]" << endl;
+		return oss.str();
+	}
 };
 
 #if defined(MTS_SSE)

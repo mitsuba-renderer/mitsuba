@@ -558,6 +558,11 @@ bool TriMesh::computeTangentSpaceBasis() {
 	if (m_tangents)
 		Log(EError, "Tangent space vectors have already been generated!");
 
+	if (!m_normals) {
+		Log(EWarn, "Vertex normals are required to compute a tangent space basis!");
+		return false;
+	}
+
 	m_tangents = new TangentSpace[m_vertexCount];
 	memset(m_tangents, 0, sizeof(TangentSpace));
 
@@ -573,7 +578,7 @@ bool TriMesh::computeTangentSpaceBasis() {
 		}
 		sharers[i] = 0;
 	}
-	
+
 	for (size_t i=0; i<m_triangleCount; i++) {
 		uint32_t idx0 = m_triangles[i].idx[0],
 				 idx1 = m_triangles[i].idx[1],

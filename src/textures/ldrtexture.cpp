@@ -253,7 +253,10 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "LDRTexture[filename=\"" << m_filename << "\", gamma=" << m_gamma << "]";
+		oss << "LDRTexture[" << endl
+			<< "  filename = \"" << m_filename << "\"," << endl
+			<< "  gamma = " << m_gamma << endl
+			<< "]";
 		return oss.str();
 	}
 

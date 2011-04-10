@@ -74,8 +74,14 @@ public:
 			for (size_t i=0; i<m_vertexCount; ++i)
 				m_positions[i] = objectToWorld(m_positions[i]);
 			if (m_normals) {
-				for (size_t i=0; i<m_vertexCount; ++i)
+				for (size_t i=0; i<m_vertexCount; ++i) 
 					m_normals[i] = objectToWorld(m_normals[i]);
+			}
+		}
+		if (objectToWorld.det3x3() < 0) {
+			for (size_t i=0; i<m_triangleCount; ++i) {
+				Triangle &t = m_triangles[i];
+				std::swap(t.idx[0], t.idx[1]);
 			}
 		}
 	}

@@ -26,6 +26,10 @@
 #include <stack>
 #include <map>
 
+XERCES_CPP_NAMESPACE_BEGIN
+class SAXParser;
+XERCES_CPP_NAMESPACE_END
+
 XERCES_CPP_NAMESPACE_USE
 MTS_NAMESPACE_BEGIN
 
@@ -37,8 +41,8 @@ public:
 	typedef std::map<std::string, ConfigurableObject *> NamedObjectMap;
 	typedef std::map<std::string, std::string> ParameterMap;
 
-	SceneHandler(const ParameterMap &params, NamedObjectMap *objects = NULL,
-		bool isIncludedFile = false);
+	SceneHandler(const SAXParser *parser, const ParameterMap &params,
+			NamedObjectMap *objects = NULL, bool isIncludedFile = false);
 	virtual ~SceneHandler();
 
 	// -----------------------------------------------------------------------
@@ -69,6 +73,8 @@ protected:
 		XMLString::release(&value);
 		return result;
 	}
+	Float parseFloat(const std::string &name, const std::string &str,
+			Float defVal = -1) const;
 
 	void clear();
 
@@ -84,6 +90,7 @@ private:
 		std::vector<std::pair<std::string, ConfigurableObject *> > children;
 	};
 
+	const SAXParser *m_parser;
 	ref<Scene> m_scene;
 	ParameterMap m_params;
 	NamedObjectMap *m_namedObjects;

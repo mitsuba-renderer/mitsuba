@@ -32,6 +32,7 @@ public:
 
 		Log(EInfo, "Loading animation track from \"%s\"", m_name.c_str());
 		ref<FileStream> fs = new FileStream(path, FileStream::EReadOnly);
+		m_occluder = true;
 		m_transform = new AnimatedTransform(fs);
 	}
 
@@ -39,6 +40,7 @@ public:
 		: Shape(stream, manager) {
 		m_shapeGroup = static_cast<ShapeGroup *>(manager->getInstance(stream));
 		m_transform = new AnimatedTransform(stream);
+		m_occluder = true;
 		configure();
 	}
 

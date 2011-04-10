@@ -12,7 +12,7 @@ void Intersection::computePartials(const RayDifferential &ray) {
 		return;
 	hasUVPartials = true;
 
-	if (!ray.hasDifferentials) {
+	if (!ray.hasDifferentials || (dpdu.isZero() && dpdv.isZero())) {
 		dudx = dvdx = dudy = dvdy = 0.0f;
 		return;
 	}
@@ -83,12 +83,11 @@ std::string Intersection::toString() const {
 		<< "  t = " << t << "," << std::endl
 		<< "  geoFrame = " << indent(geoFrame.toString()) << "," << std::endl
 		<< "  shFrame = " << indent(shFrame.toString()) << "," << std::endl
-		<< "  uv = " << uv.toString() << "," << std::endl;
-	if (hasUVPartials) {
-		oss << "  dpdu = " << dpdu.toString() << "," << std::endl
-			<< "  dpdv = " << dpdv.toString() << "," << std::endl;
-	}
-	oss << "  time = " << time << "," << std::endl
+		<< "  uv = " << uv.toString() << "," << std::endl
+		<< "  hasUVPartials = " << hasUVPartials << "," << std::endl
+		<< "  dpdu = " << dpdu.toString() << "," << std::endl
+		<< "  dpdv = " << dpdv.toString() << "," << std::endl
+		<< "  time = " << time << "," << std::endl
 		<< "  shape = " << indent(((Object *)shape)->toString()) << std::endl
 		<< "]";
 	return oss.str();

@@ -104,29 +104,30 @@ extern MTS_EXPORT_CORE std::string formatString(const char *pFmt, ...);
 /// Base-2 logarithm
 extern MTS_EXPORT_CORE Float log2(Float value);
 
+/// Friendly modulo function (always positive)
+extern MTS_EXPORT_CORE int modulo(int a, int b);
+
+/// Integer floor function
+inline int floorToInt(Float value) {
+	return (int) std::floor(value);
+}
 /// Base-2 logarithm (32-bit integer version)
 extern MTS_EXPORT_CORE int log2i(uint32_t value);
 
 /// Base-2 logarithm (64-bit integer version)
 extern MTS_EXPORT_CORE int log2i(uint64_t value);
 
-/// Friendly modulo function (always positive)
-extern MTS_EXPORT_CORE int modulo(int a, int b);
-
-/// Check if an integer is a power of two (32 bit version)
-inline bool isPowerOfTwo(uint32_t i) {
-	return (i & (i-1)) == 0;
-}
+/// Check if an integer is a power of two (unsigned 32 bit version)
+inline bool isPowerOfTwo(uint32_t i) { return (i & (i-1)) == 0; }
 
 /// Check if an integer is a power of two (signed 32 bit version)
-inline bool isPowerOfTwo(int32_t i) {
-	return i > 0 && (i & (i-1)) == 0;
-}
+inline bool isPowerOfTwo(int32_t i) { return i > 0 && (i & (i-1)) == 0; }
 
 /// Check if an integer is a power of two (64 bit version)
-inline bool isPowerOfTwo(uint64_t i) {
-	return (i & (i-1)) == 0;
-}
+inline bool isPowerOfTwo(uint64_t i) { return (i & (i-1)) == 0; }
+
+/// Check if an integer is a power of two (signed 64 bit version)
+inline bool isPowerOfTwo(int64_t i) { return i > 0 && (i & (i-1)) == 0; }
 
 /// Round an integer to the next power of two
 extern MTS_EXPORT_CORE uint32_t roundToPowerOfTwo(uint32_t i);

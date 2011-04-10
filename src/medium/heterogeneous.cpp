@@ -18,14 +18,30 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/volume.h>
+#include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * Allow to stop integrating densities when the resulting segment
- * has a throughput of less than 'Epsilon'
+ * \brief When the following line is uncommented, the medium implementation 
+ * stops integrating densities when it is determined that the segment has a
+ * throughput of less than 'Epsilon' (see \c mitsuba/core/constants.h)
  */
-#define EARLY_EXIT 1
+#define HETVOL_EARLY_EXIT 1
+
+/// Generate a few statistics related to the implementation?
+//#define HETVOL_STATISTICS 1
+
+#if defined(HETVOL_STATISTICS)
+static StatsCounter avgNewtonIterations("Heterogeneous volume", 
+		"Avg. # of Newton-Bisection iterations", EAverage);
+static StatsCounter avgRayMarchingStepsTransmission("Heterogeneous volume", 
+		"Avg. # of ray marching steps (transmission)", EAverage);
+static StatsCounter avgRayMarchingStepsSampling("Heterogeneous volume", 
+		"Avg. # of ray marching steps (sampling)", EAverage);
+static StatsCounter earlyExits("Heterogeneous volume", 
+		"Number of early exits", EPercentage);
+#endif
 
 /**
  * Flexible heterogeneous medium implementation, which acquires its data from 
@@ -145,26 +161,39 @@ public:
 
 		mint = std::max(mint, ray.mint);
 		maxt = std::min(maxt, ray.maxt);
-		Float length = maxt-mint;
+		Float length = maxt-mint, maxComp = 0;
 
-		if (length <= 0)
+		Point p = ray(mint), pLast = ray(maxt);
+
+		for (int i=0; i<3; ++i) {
+			maxComp = std::max(maxComp, std::abs(p[i]));
+			maxComp = std::max(maxComp, std::abs(pLast[i]));
+		}
+
+		/* Ignore degenerate path segments */
+		if (length < 1e-6f * maxComp) 
 			return 0.0f;
-	
+
 		/* Compute a suitable step size */
 		uint32_t nSteps = (uint32_t) std::ceil(length / m_stepSize);
 		nSteps += nSteps % 2;
 		const Float stepSize = length/nSteps;
 		const Vector increment = ray.d * stepSize;
 
+		#if defined(HETVOL_STATISTICS)
+			avgRayMarchingStepsTransmission.incrementBase();
+			earlyExits.incrementBase();
+		#endif
+
 		/* Perform lookups at the first and last node */
-		Point p = ray(mint);
 		Float integratedDensity = m_densities->lookupFloat(p) 
-			+ m_densities->lookupFloat(ray(maxt));
-#ifdef EARLY_EXIT
-		const Float stopAfterDensity = -std::log(Epsilon);
-		const Float stopValue = stopAfterDensity*3.0f/(stepSize
-				* m_densityMultiplier);
-#endif
+			+ m_densities->lookupFloat(pLast);
+
+		#if defined(HETVOL_EARLY_EXIT)
+			const Float stopAfterDensity = -std::log(Epsilon);
+			const Float stopValue = stopAfterDensity*3.0f/(stepSize
+					* m_densityMultiplier);
+		#endif
 
 		p += increment;
 
@@ -172,16 +201,27 @@ public:
 		for (uint32_t i=1; i<nSteps; ++i) {
 			integratedDensity += m * m_densities->lookupFloat(p);
 			m = 6 - m;
+
+			#if defined(HETVOL_STATISTICS)
+				++avgRayMarchingStepsTransmission;
+			#endif
 			
-#ifdef EARLY_EXIT
-			if (integratedDensity > stopValue) // Stop early
-				return std::numeric_limits<Float>::infinity();
-#endif
+			#if defined(HETVOL_EARLY_EXIT)
+				if (integratedDensity > stopValue) {
+					// Reached the threshold -- stop early
+					#if defined(HETVOL_STATISTICS)
+						++earlyExits;
+					#endif
+					return std::numeric_limits<Float>::infinity();
+				}
+			#endif
 
 			Point next = p + increment;
 			if (p == next) {
 				Log(EWarn, "integrateDensity(): unable to make forward progress -- "
-						"round-off error issues? The step size was %f", stepSize);
+						"round-off error issues? The step size was %e, mint=%f, "
+						"maxt=%f, nSteps=%i, ray=%s", stepSize, mint, maxt, nSteps, 
+						ray.toString().c_str());
 				break;
 			}
 			p = next;
@@ -245,11 +285,17 @@ public:
 			return false;
 		mint = std::max(mint, ray.mint);
 		maxt = std::min(maxt, ray.maxt);
-		Float length = maxt - mint;
-		Point p = ray(mint);
+		Float length = maxt - mint, maxComp = 0;
+		Point p = ray(mint), pLast = ray(maxt);
 
-		if (length <= 0) 
-			return false;
+		for (int i=0; i<3; ++i) {
+			maxComp = std::max(maxComp, std::abs(p[i]));
+			maxComp = std::max(maxComp, std::abs(pLast[i]));
+		}
+
+		/* Ignore degenerate path segments */
+		if (length < 1e-6f * maxComp) 
+			return 0.0f;
 
 		/* Compute a suitable step size */
 		uint32_t nSteps = (uint32_t) std::ceil(length / m_stepSize);
@@ -266,12 +312,18 @@ public:
 		else
 			densityAtMinT = 0.0f;
 
+		#if defined(HETVOL_STATISTICS)
+			avgRayMarchingStepsSampling.incrementBase();
+		#endif
+
 		for (uint32_t i=0; i<nSteps; ++i) {
 			Float node2 = m_densities->lookupFloat(p + halfStep),
 				  node3 = m_densities->lookupFloat(p + fullStep),
 				  newDensity = integratedDensity + multiplier * 
 						(node1+node2*4+node3);
-
+			#if defined(HETVOL_STATISTICS)
+				++avgRayMarchingStepsSampling;
+			#endif
 			if (newDensity >= desiredDensity) {
 				/* The integrated density of the last segment exceeds the desired
 				   amount -- now use the Simpson quadrature expression and 
@@ -286,7 +338,13 @@ public:
 					  temp = m_densityMultiplier / stepSizeSqr;
 				int it = 1;
 
+				#if defined(HETVOL_STATISTICS)
+					avgNewtonIterations.incrementBase();
+				#endif
 				while (true) {
+					#if defined(HETVOL_STATISTICS)
+						++avgNewtonIterations;
+					#endif
 					/* Lagrange polynomial from the Simpson quadrature */
 					Float dfx = temp * (node1 * stepSizeSqr
 						- (3*node1 - 4*node2 + node3)*stepSize*x
@@ -316,7 +374,7 @@ public:
 						return true;
 					} else if (++it > 30) {
 						Log(EWarn, "invertDensityIntegral(): stuck in Newton-Bisection -- "
-							"round-off error issues? The step size was %f, fx=%f, dfx=%f, "
+							"round-off error issues? The step size was %e, fx=%f, dfx=%f, "
 							"a=%f, b=%f", stepSize, fx, dfx, a, b);
 						return false;
 					}
@@ -331,7 +389,7 @@ public:
 			Point next = p + fullStep;
 			if (p == next) {
 				Log(EWarn, "invertDensityIntegral(): unable to make forward progress -- "
-						"round-off error issues? The step size was %f", stepSize);
+						"round-off error issues? The step size was %e", stepSize);
 				break;
 			}
 			integratedDensity = newDensity;

@@ -39,7 +39,8 @@ void SceneLoader::run() {
 	for(size_t i=0; i<m_filename.size();++i)
 		lowerCase[i] = std::tolower(m_filename[i]);
 
-	SceneHandler *handler = new SceneHandler(SceneHandler::ParameterMap());
+	SceneHandler *handler = new SceneHandler(parser,
+			SceneHandler::ParameterMap());
 	m_result = new SceneContext();
 	try {
 		QSettings settings("mitsuba-renderer.org", "qtgui");
@@ -73,6 +74,7 @@ void SceneLoader::run() {
 			parser->setValidationSchemaFullChecking(true);
 			parser->setValidationScheme(SAXParser::Val_Always);
 			parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
+			parser->setCalculateSrcOfs(true);
 
 			/* Set the SAX handler */
 			parser->setDoNamespaces(true);
@@ -81,6 +83,7 @@ void SceneLoader::run() {
 
 			fs::path 
 				filename = m_filename,
+				filePath = fs::complete(filename).parent_path(),
 				baseName = fs::basename(filename);
 
 			SLog(EInfo, "Parsing scene description from \"%s\" ..", m_filename.c_str());
@@ -88,7 +91,7 @@ void SceneLoader::run() {
 			ref<Scene> scene = handler->getScene();
 
 			scene->setSourceFile(m_filename);
-			scene->setDestinationFile(baseName.file_string());
+			scene->setDestinationFile(filePath / baseName);
 			scene->initialize();
 
 			if (scene->getIntegrator() == NULL)

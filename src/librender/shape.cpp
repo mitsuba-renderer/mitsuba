@@ -27,7 +27,7 @@
 MTS_NAMESPACE_BEGIN
 
 Shape::Shape(const Properties &props) 
- : ConfigurableObject(props) { }
+ : ConfigurableObject(props), m_occluder(false) { }
 
 Shape::Shape(Stream *stream, InstanceManager *manager) 
  : ConfigurableObject(stream, manager) {
@@ -36,10 +36,10 @@ Shape::Shape(Stream *stream, InstanceManager *manager)
 	m_luminaire = static_cast<Luminaire *>(manager->getInstance(stream));
 	m_interiorMedium = static_cast<Medium *>(manager->getInstance(stream));
 	m_exteriorMedium = static_cast<Medium *>(manager->getInstance(stream));
+	m_occluder = stream->readBool();
 }
 
-Shape::~Shape() {
-}
+Shape::~Shape() { }
 
 
 void Shape::configure() { }
@@ -68,11 +68,10 @@ Float Shape::sampleSolidAngle(ShapeSamplingRecord &sRec,
 	Float pdfArea = sampleArea(sRec, sample);
 	Vector lumToPoint = from - sRec.p;
 	Float distSquared = lumToPoint.lengthSquared(), dp = dot(lumToPoint, sRec.n);
-	if (dp > 0) {
+	if (dp > 0)
 		return pdfArea * distSquared * std::sqrt(distSquared) / dp;
-	} else {
+	else
 		return 0.0f;
-	}
 }
 
 Float Shape::pdfSolidAngle(const ShapeSamplingRecord &sRec, const Point &from) const {
@@ -87,9 +86,12 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
 	if (cClass->derivesFrom(MTS_CLASS(BSDF))) {
 		m_bsdf = static_cast<BSDF *>(child);
+		m_occluder = true;
 	} else if (cClass->derivesFrom(MTS_CLASS(Luminaire))) {
 		Assert(m_luminaire == NULL);
 		m_luminaire = static_cast<Luminaire *>(child);
+		if (m_luminaire && m_exteriorMedium)
+			m_luminaire->setMedium(m_exteriorMedium);
 	} else if (cClass->derivesFrom(MTS_CLASS(Subsurface))) {
 		Assert(m_subsurface == NULL);
 		m_subsurface = static_cast<Subsurface *>(child);
@@ -100,12 +102,14 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 		} else if (name == "exterior") {
 			Assert(m_exteriorMedium == NULL);
 			m_exteriorMedium = static_cast<Medium *>(child);
+			if (m_luminaire)
+				m_luminaire->setMedium(m_exteriorMedium);
 		} else {
 			Log(EError, "Shape: Invalid medium child (must be named "
 				"'interiorMedium' or 'exteriorMedium')!");
 		}
 	} else {
-		Log(EError, "Shape: Invalid child node!");
+		ConfigurableObject::addChild(name, child);
 	}
 }
 
@@ -120,6 +124,7 @@ void Shape::serialize(Stream *stream, InstanceManager *manager) const {
 	manager->serialize(stream, m_luminaire.get());
 	manager->serialize(stream, m_interiorMedium.get());
 	manager->serialize(stream, m_exteriorMedium.get());
+	stream->writeBool(m_occluder);
 }
 
 bool Shape::rayIntersect(const Ray &ray, Float mint, 

@@ -29,6 +29,7 @@ MTS_NAMESPACE_BEGIN
  * The implementations in this class are based on PBRT
  */
 class MTS_EXPORT_RENDER Noise {
+public:
 	/**
 	 * \brief Evaluate the Perlin noise function at \a p.
 	 */
