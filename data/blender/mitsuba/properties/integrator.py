@@ -32,6 +32,7 @@ class mitsuba_integrator(declarative_property_group):
 
 	controls = [
 		'type',
+		'maxdepth',
 		['motionblur',
 		'shuttertime']
 	]
@@ -50,7 +51,8 @@ class mitsuba_integrator(declarative_property_group):
 			'items': [
 				('volpath', 'Volumetric path tracer', 'volpath'),
 				('path', 'Path tracer', 'path'),
-				('direct', 'Direct Illumination', 'direct')
+				('direct', 'Direct Illumination', 'direct'),
+				('ptracer', 'Adjoint Particle Tracer', 'ptracer')
 			],
 			'save_in_preset': True
 		},
@@ -71,6 +73,16 @@ class mitsuba_integrator(declarative_property_group):
 			'min': 0,
 			'max': 100,
 			'default': 1
+		},
+		{
+			'type': 'int',
+			'attr': 'maxdepth',
+			'name': 'Max. path depth',
+			'description': 'Maximum path depth to be rendered. 2 corresponds to direct illumination, 3 is 1-bounce indirect illumination, etc.',
+			'save_in_preset': True,
+			'min': 2,
+			'max': 100,
+			'default': 4
 		}
 	]
 

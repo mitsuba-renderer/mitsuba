@@ -363,8 +363,8 @@ void ConfigurableObject::serialize(Stream *stream, InstanceManager *manager) con
 }
 
 void ConfigurableObject::addChild(const std::string &name, ConfigurableObject *child) {
-	SLog(EError, "ConfigurableObject::addChild(\"%s\") not implemented in \"%s\"", 
-		name.c_str(), toString().c_str());
+	SLog(EError, "ConfigurableObject::addChild(\"%s\", %s) not implemented in \"%s\"", 
+		name.c_str(), child->toString().c_str(), toString().c_str());
 }
 
 void NetworkedObject::serialize(Stream *stream, InstanceManager *manager) const {

@@ -302,6 +302,8 @@ class MtsExporter:
 		ltype = lamp.data.type
 		name = translate_id(lamp.data.name)
 		mult = lamp.data.mitsuba_lamp.intensity
+		if lamp.data.mitsuba_lamp.inside_medium:
+			self.exportMedium(scene.mitsuba_media.media[lamp.data.mitsuba_lamp.lamp_medium])
 		if ltype == 'POINT':
 			self.openElement('luminaire', { 'type' : 'point', 'id' : '%s-light' % name })
 			self.exportWorldTrafo(lamp.matrix_world)
@@ -309,9 +311,8 @@ class MtsExporter:
 				"%f %f %f" % (lamp.data.color.r*mult, lamp.data.color.g*mult,
 					lamp.data.color.b*mult)})
 			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.data.mitsuba_lamp.samplingWeight})
-			
 			if lamp.data.mitsuba_lamp.inside_medium:
-				self.exportMediumReference(scene, lamp, None, lamp.data.mitsuba_lamp.lamp_medium)
+				self.element('ref', {'id' : lamp.data.mitsuba_lamp.lamp_medium})
 			self.closeElement()
 		elif ltype == 'AREA':
 			self.element('remove', { 'id' : '%s-light' % name})
@@ -360,6 +361,8 @@ class MtsExporter:
 			self.parameter('float', 'cutoffAngle', {'value' : '%f' %  (lamp.data.spot_size * 180 / (math.pi * 2))})
 			self.parameter('float', 'beamWidth', {'value' : '%f' % (lamp.data.spot_blend * lamp.data.spot_size * 180 / (math.pi * 2))})
 			self.parameter('float', 'samplingWeight', {'value' : '%f' % lamp.data.mitsuba_lamp.samplingWeight})
+			if lamp.data.mitsuba_lamp.inside_medium:
+				self.element('ref', {'id' : lamp.data.mitsuba_lamp.lamp_medium})
 			self.closeElement()
 		elif ltype == 'HEMI':
 			if lamp.data.mitsuba_lamp.envmap_type == 'constant':
@@ -378,6 +381,7 @@ class MtsExporter:
 
 	def exportIntegrator(self, integrator):
 		self.openElement('integrator', { 'id' : 'integrator', 'type' : integrator.type})
+		self.parameter('integer', 'maxDepth', { 'value' : str(integrator.maxdepth)})
 		self.closeElement()
 
 	def exportSampler(self, sampler):

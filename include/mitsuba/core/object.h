@@ -76,7 +76,11 @@ protected:
 public:
 	static Class *m_theClass; ///< Pointer to the object's class descriptor
 private:
+#ifndef WIN32
 	volatile mutable int m_refCount;
+#else
+	volatile mutable LONG m_refCount;
+#endif
 };
 
 inline int Object::getRefCount() const {

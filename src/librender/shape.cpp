@@ -109,7 +109,7 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 				"'interiorMedium' or 'exteriorMedium')!");
 		}
 	} else {
-		Log(EError, "Shape: Invalid child node!");
+		ConfigurableObject::addChild(name, child);
 	}
 }
 

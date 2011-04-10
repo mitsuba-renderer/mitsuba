@@ -111,6 +111,8 @@
 					<xsd:group ref="objectGroup"/>
 					<xsd:element name="texture" type="texture"/>
 					<xsd:element name="luminaire" type="luminaire"/>
+					<xsd:element name="medium" type="medium"/>
+					<xsd:element name="ref" type="reference"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>

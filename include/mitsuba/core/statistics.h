@@ -186,6 +186,13 @@ public:
 	}
 #endif
 
+	/// Reset the stored counter values
+	inline void reset() {
+		for (int i=0; i<NUM_COUNTERS; ++i) {
+			m_value[i].value = m_base[i].value = 0;
+		}
+	}
+
 	/// Sorting by name (for the statistics)
 	bool operator<(const StatsCounter &v) const;
 private:

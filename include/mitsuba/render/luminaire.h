@@ -348,6 +348,9 @@ public:
 	/// Optional pre-process step before rendering starts
 	virtual void preprocess(const Scene *scene);
 
+	/// Add a child (e.g. a medium reference) to this luminaire
+	void addChild(const std::string &name, ConfigurableObject *child);
+
 	//! @}
 	// =============================================================
 

@@ -53,6 +53,16 @@ Luminaire::Luminaire(Stream *stream, InstanceManager *manager)
 Luminaire::~Luminaire() {
 }
 
+void Luminaire::addChild(const std::string &name, ConfigurableObject *child) {
+	const Class *cClass = child->getClass();
+	if (cClass->derivesFrom(MTS_CLASS(Medium))) {
+		Assert(m_medium == NULL);
+		m_medium = static_cast<Medium *>(child);
+	} else {
+		ConfigurableObject::addChild(name, child);
+	}
+}
+
 void Luminaire::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 	manager->serialize(stream, m_medium.get());

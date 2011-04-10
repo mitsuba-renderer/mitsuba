@@ -78,9 +78,9 @@ public:
 				for (int k=0; k<3; ++k)
 					sum += m_transform.m[i][k] * m_transform.m[j][k];
 
-				if (i == j && std::abs(sum-1) > Epsilon)
+				if (i == j && std::abs(sum-1) > 1e-3f)
 					return true;
-				else if (i != j && std::abs(sum) > Epsilon)
+				else if (i != j && std::abs(sum) > 1e-3f)
 					return true;
 			}
 		}
