@@ -132,6 +132,7 @@ extern std::string __ubi_bundlepath();
 extern void __ubi_chdir_to_bundlepath();
 #define MTS_AUTORELEASE_BEGIN() __ubi_autorelease_begin();
 #define MTS_AUTORELEASE_END() __ubi_autorelease_end();
+#define MTS_AMBIGUOUS_SIZE_T 1
 #else
 #define MTS_AUTORELEASE_BEGIN() 
 #define MTS_AUTORELEASE_END() 

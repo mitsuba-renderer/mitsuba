@@ -418,7 +418,7 @@ int modulo(int a, int b) {
 }
 
 /* Fast rounding & power-of-two test algorithms from PBRT */
-uint32_t roundToPowerOfTwo(uint32_t i) {
+uint32_t roundToPow2(uint32_t i) {
 	i--;
 	i |= i >> 1; i |= i >> 2;
 	i |= i >> 4; i |= i >> 8;
@@ -426,7 +426,7 @@ uint32_t roundToPowerOfTwo(uint32_t i) {
 	return i+1;
 }
 
-uint64_t roundToPowerOfTwo(uint64_t i) {
+uint64_t roundToPow2(uint64_t i) {
 	i--;
 	i |= i >> 1;  i |= i >> 2;
 	i |= i >> 4;  i |= i >> 8;

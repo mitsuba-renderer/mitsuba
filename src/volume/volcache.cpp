@@ -57,7 +57,7 @@ public:
 		/// Size of an individual block (must be a power of 2)
 		m_blockSize = props.getInteger("blockSize", 4);
 
-		if (!isPowerOfTwo(m_blockSize))
+		if (!isPow2(m_blockSize))
 			Log(EError, "Block size must be a power of two!");
 
 		/* Width of an individual voxel. Will use the step size of the 

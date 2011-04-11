@@ -49,8 +49,8 @@ public:
 		/* Depth, up to which which low discrepancy samples are guaranteed to be available. */
 		m_depth = props.getInteger("depth", 3);
 
-		if (!isPowerOfTwo((uint64_t) m_sampleCount)) {
-			m_sampleCount = (size_t) roundToPowerOfTwo((uint64_t) m_sampleCount);
+		if (!isPow2(m_sampleCount)) {
+			m_sampleCount = (size_t) roundToPow2(m_sampleCount);
 			Log(EWarn, "Sample count should be a power of two -- rounding to "
 					SIZE_T_FMT, m_sampleCount);
 		}

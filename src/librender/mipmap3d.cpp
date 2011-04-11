@@ -23,7 +23,7 @@ MTS_NAMESPACE_BEGIN
 
 SparseMipmap3D::SparseMipmap3D(const AABB &aabb, size_t size, const float *data, 
 		Float maxError, Float offset)  : m_aabb(aabb), m_size(size) {
-	Assert(isPowerOfTwo(m_size));
+	Assert(isPow2(m_size));
 	m_levels = 1 + log2i(m_size);
 	m_aabbSum = Vector(m_aabb.min + m_aabb.max);
 
