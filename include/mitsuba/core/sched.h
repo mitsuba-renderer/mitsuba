@@ -327,8 +327,8 @@ public:
 	 * \brief Schedule a parallelizable process for execution.
 	 *
 	 * If the scheduler is currently running and idle, its execution 
-	 * will begin immediately. Returns \a false if the process
-	 * is already scheduled and has not yet terminated and \a true
+	 * will begin immediately. Returns \c false if the process
+	 * is already scheduled and has not yet terminated and \c true
 	 * in any other case.
 	 */
 	bool schedule(ParallelProcess *process);

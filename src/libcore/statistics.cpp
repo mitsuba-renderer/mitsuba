@@ -74,9 +74,9 @@ void ProgressReporter::update(long long value) {
 			m_string[i] = '+';
 		m_fillPos = fillEnd;
 		std::ostringstream oss;
-		std::string eta = timeToString(remaining);
+		std::string eta = timeString(remaining);
 		oss << '\r' << m_title << ": [" << m_string << "] (";
-		oss << timeToString(time) << ", ETA: " 
+		oss << timeString(time) << ", ETA: " 
 			<< eta << ")  \b\b";
 		Thread::getThread()->getLogger()->logProgress(
 			perc, m_title, oss.str(), eta, m_ptr);

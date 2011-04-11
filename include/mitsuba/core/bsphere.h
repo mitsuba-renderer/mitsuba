@@ -80,7 +80,7 @@ struct BSphere {
 
 	/**
 	 * \brief Calculate the intersection points with the given ray
-	 * \return \a true if the ray intersects the bounding sphere
+	 * \return \c true if the ray intersects the bounding sphere
 	 */
 	inline bool rayIntersect(const Ray &ray, Float &nearHit, Float &farHit) const {
 		Vector originToCenter = center - ray.o;

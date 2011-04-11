@@ -72,7 +72,7 @@ void RenderQueue::removeJob(RenderJob *job, bool cancelled) {
 	}
 	JobRecord &rec = (*it).second;
 	unsigned int ms = m_timer->getMilliseconds() - rec.startTime;
-	Log(EInfo, "Render time: %s", timeToString(ms/1000.0f, true).c_str());
+	Log(EInfo, "Render time: %s", timeString(ms/1000.0f, true).c_str());
 	m_jobs.erase(job);
 	m_cond->broadcast();
 	m_joinMutex->lock();

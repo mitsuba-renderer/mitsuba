@@ -354,7 +354,7 @@ std::string getFQDN() {
 }
 
 Float log2(Float value) {
-	static Float invLn2 = (Float) 1.0f / std::log((Float) 2.0f);
+	const Float invLn2 = (Float) 1.0f / std::log((Float) 2.0f);
 	return std::log(value) * invLn2;
 }
 
@@ -743,7 +743,7 @@ Float radicalInverseIncremental(int b, Float x) {
 	return x;
 }
 
-std::string timeToString(Float time, bool precise) {
+std::string timeString(Float time, bool precise) {
 	std::ostringstream os;
 	char suffix = 's';
 #ifdef WIN32

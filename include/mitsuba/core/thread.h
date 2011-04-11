@@ -57,7 +57,7 @@ public:
 	 * This does not always work -- for instance, Linux 
 	 * requires root privileges for this operation.
 	 *
-	 * \return \a true upon success.
+	 * \return \c true upon success.
 	 */
 	bool setPriority(EThreadPriority priority);
 
@@ -66,7 +66,7 @@ public:
 	 * 
 	 * When an thread marked critical crashes from an uncaught 
 	 * exception, the whole process is brought down. 
-	 * The default is \a false.
+	 * The default is \c false.
 	 */
 	inline void setCritical(bool critical) { m_critical = critical; }
 

@@ -81,7 +81,7 @@ public:
 	 * \brief Temporarily wait for the flag to be set to true
 	 * 
 	 * Similar to \ref wait(), but also uses a time value given
-	 * in milliseconds. A return value of \a false signals
+	 * in milliseconds. A return value of \c false signals
 	 * that a timeout has occurred.
 	 *
 	 * \param ms Maximum waiting time in milliseconds
@@ -150,7 +150,7 @@ public:
 	 * \brief Temporarily wait for a signal and release the lock in the meanwhile.
 	 *
 	 * Similar to wait(), but also uses a time value given
-	 * in milliseconds. A return value of \a false signals
+	 * in milliseconds. A return value of \c false signals
 	 * that a timeout has occurred. The lock is held after
 	 * returning in either case.
 	 *

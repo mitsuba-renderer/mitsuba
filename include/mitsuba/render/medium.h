@@ -104,7 +104,7 @@ public:
 	 *
 	 * \param ray      Ray, along which a distance should be sampled
 	 * \param mRec     Medium sampling record to be filled with the result
-	 * \return         \a false if the maximum distance was exceeded, or if
+	 * \return         \c false if the maximum distance was exceeded, or if
 	 *                 no interaction inside the medium could be sampled.
 	 */
 	virtual bool sampleDistance(const Ray &ray,

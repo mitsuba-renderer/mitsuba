@@ -49,7 +49,7 @@ public:
 	 * to automatically do this for you.
 	 *
 	 * \param name Name of the class
-	 * \param abstract \a true if the class contains pure virtual methods
+	 * \param abstract \c true if the class contains pure virtual methods
 	 * \param superClassName Name of the parent class
 	 * \param instPtr Pointer to an instantiation function
 	 * \param unSerPtr Pointer to an unserialization function
@@ -138,7 +138,7 @@ public: \
 /**
  * \brief Creates basic RTTI support for a class
  * \param name Name of the class
- * \param abstract \a true if the class contains pure virtual methods
+ * \param abstract \c true if the class contains pure virtual methods
  * \param super Name of the parent class
  */
 #define MTS_IMPLEMENT_CLASS(name, abstract, super) \
@@ -151,7 +151,7 @@ public: \
  * \brief Creates basic RTTI support for a class. Assumes that
  * the class can be instantiated by name.
  * \param name Name of the class
- * \param abstract \a true if the class contains pure virtual methods
+ * \param abstract \c true if the class contains pure virtual methods
  * \param super Name of the parent class
  */
 #define MTS_IMPLEMENT_CLASS_I(name, abstract, super) \
@@ -167,7 +167,7 @@ public: \
  * \brief Creates basic RTTI support for a class. Assumes that
  * the class can be unserialized from a binary data stream.
  * \param name Name of the class
- * \param abstract \a true if the class contains pure virtual methods
+ * \param abstract \c true if the class contains pure virtual methods
  * \param super Name of the parent class
  */
 #define MTS_IMPLEMENT_CLASS_S(name, abstract, super) \
@@ -184,7 +184,7 @@ public: \
  * the class can be unserialized from a binary data stream as well
  * as instantiated by name.
  * \param name Name of the class
- * \param abstract \a true if the class contains pure virtual methods
+ * \param abstract \c true if the class contains pure virtual methods
  * \param super Name of the parent class
  */
 #define MTS_IMPLEMENT_CLASS_IS(name, abstract, super) \

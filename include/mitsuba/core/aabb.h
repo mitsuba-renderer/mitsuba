@@ -384,7 +384,7 @@ public:
 #ifdef MTS_SSE
 	/**
 	 * \brief Intersect against a packet of four rays. 
-	 * \return \a false if none of the rays intersect.
+	 * \return \c false if none of the rays intersect.
 	 */
 	FINLINE bool rayIntersectPacket(const RayPacket4 &ray, RayInterval4 &interval) const;
 #endif

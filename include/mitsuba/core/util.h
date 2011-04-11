@@ -43,8 +43,14 @@ extern MTS_EXPORT_CORE std::vector<std::string> tokenize(
 	const std::string &delim
 );
 
+/// Trim spaces (' ', '\\n', '\\r', '\\t') from the ends of a string
+extern MTS_EXPORT_CORE std::string trim(const std::string& str);
+
 /// Indent a string (Used for recursive toString() structure dumping)
 extern MTS_EXPORT_CORE std::string indent(const std::string &string, int amount=1);
+
+/// Wrapped snprintf
+extern MTS_EXPORT_CORE std::string formatString(const char *pFmt, ...);
 
 /**
  * Convert a time difference (in ms) to a string representation
@@ -52,10 +58,10 @@ extern MTS_EXPORT_CORE std::string indent(const std::string &string, int amount=
  * \param precise When set to true, a higher-precision string representation
  * is generated.
  */
-extern MTS_EXPORT_CORE std::string timeToString(Float time, bool precise = false);
+extern MTS_EXPORT_CORE std::string timeString(Float time, bool precise = false);
 
-/// Trim spaces (' ', '\\n', '\\r', '\\t') from the ends of a string
-extern MTS_EXPORT_CORE std::string trim(const std::string& str);
+/// Turn a memory size into a human-readable string
+extern MTS_EXPORT_CORE std::string memString(size_t size);
 
 /// Allocate an aligned region of memory
 extern MTS_EXPORT_CORE void * __restrict allocAligned(size_t size);
@@ -74,12 +80,15 @@ extern MTS_EXPORT_CORE int getProcessorCount();
 /// Return the host name of this machine
 extern MTS_EXPORT_CORE std::string getHostName();
 
+/// Return the fully qualified domain name of this machine 
+extern MTS_EXPORT_CORE std::string getFQDN();
+
 /**
  * Enable floating point exceptions (to catch NaNs, overflows, 
  * arithmetic with infinity). On Intel processors, this applies
  * to both x87 and SSE2 math
  *
- * \return \a true if floating point exceptions were active
+ * \return \c true if floating point exceptions were active
  * before calling the function
  */
 extern MTS_EXPORT_CORE bool enableFPExceptions();
@@ -87,19 +96,13 @@ extern MTS_EXPORT_CORE bool enableFPExceptions();
 /**
  * Disable floating point exceptions
  *
- * \return \a true if floating point exceptions were active
+ * \return \c true if floating point exceptions were active
  * before calling the function
  */
 extern MTS_EXPORT_CORE bool disableFPExceptions();
 
 /// Restore floating point exceptions to the specified state
 extern MTS_EXPORT_CORE void restoreFPExceptions(bool state);
-
-/// Return the fully qualified domain name of this machine 
-extern MTS_EXPORT_CORE std::string getFQDN();
-
-/// Wrapped snprintf
-extern MTS_EXPORT_CORE std::string formatString(const char *pFmt, ...);
 
 /// Base-2 logarithm
 extern MTS_EXPORT_CORE Float log2(Float value);
@@ -117,6 +120,15 @@ extern MTS_EXPORT_CORE int log2i(uint32_t value);
 /// Base-2 logarithm (64-bit integer version)
 extern MTS_EXPORT_CORE int log2i(uint64_t value);
 
+#if defined(MTS_AMBIGUOUS_SIZE_T)
+inline int log2i(size_t value) {
+	if (sizeof(size_t) == 8)
+		return log2i((uint64_t) value);
+	else
+		return log2i((uint32_t) value);
+}
+#endif
+
 /// Check if an integer is a power of two (unsigned 32 bit version)
 inline bool isPowerOfTwo(uint32_t i) { return (i & (i-1)) == 0; }
 
@@ -128,6 +140,15 @@ inline bool isPowerOfTwo(uint64_t i) { return (i & (i-1)) == 0; }
 
 /// Check if an integer is a power of two (signed 64 bit version)
 inline bool isPowerOfTwo(int64_t i) { return i > 0 && (i & (i-1)) == 0; }
+
+#if defined(MTS_AMBIGUOUS_SIZE_T)
+inline int isPowerOfTwo(size_t value) {
+	if (sizeof(size_t) == 8)
+		return isPowerOfTwo((uint64_t) value);
+	else
+		return isPowerOfTwo((uint32_t) value);
+}
+#endif
 
 /// Round an integer to the next power of two
 extern MTS_EXPORT_CORE uint32_t roundToPowerOfTwo(uint32_t i);
@@ -368,9 +389,6 @@ template <typename VectorType> inline Float unitAngle(const VectorType &u, const
 	else
 		return 2 * std::asin((v-u).length()/2);
 }
-
-/// Turn a memory size into a human-readable string
-extern MTS_EXPORT_CORE std::string memString(size_t size);
 
 /**
  * This algorithm is based on Donald Knuth's book

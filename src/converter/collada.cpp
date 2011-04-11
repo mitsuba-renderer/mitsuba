@@ -1647,7 +1647,7 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 		it != ctx.animations.end(); ++it)
 		it->second->decRef();
 
-	SLog(EInfo, "Done, took %s", timeToString(timer->getMilliseconds()/1000.0f).c_str());
+	SLog(EInfo, "Done, took %s", timeString(timer->getMilliseconds()/1000.0f).c_str());
 
 	os << "</scene>" << endl;
 
