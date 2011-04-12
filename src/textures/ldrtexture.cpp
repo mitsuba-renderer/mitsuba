@@ -129,10 +129,10 @@ public:
 		float tbl[256];
 		if (m_gamma == -1) {
 			for (int i=0; i<256; ++i) 
-				tbl[i] = fromSRGBComponent(i/255.0f);
+				tbl[i] = fromSRGBComponent((Float) i / (Float) 255);
 		} else {
 			for (int i=0; i<256; ++i)
-				tbl[i] = std::pow(i/255.0f, m_gamma);
+				tbl[i] = std::pow((Float) i / (Float) 255, m_gamma);
 		}
 
 		uint8_t *data = bitmap->getData();

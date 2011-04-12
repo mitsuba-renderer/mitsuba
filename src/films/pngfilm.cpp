@@ -221,7 +221,7 @@ public:
 		Float r, g, b;
 		size_t pos = 0;
 
-		Float exposure = std::pow(2.0f, (Float) m_exposure);
+		Float exposure = std::pow((Float) 2, (Float) m_exposure);
 		Float invWpSqr = std::pow((Float) 2, (Float) m_reinhardBurn);
 		Float reinhardKey = 0;
 		bool reinhard = false;
