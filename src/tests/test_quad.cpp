@@ -75,7 +75,8 @@ public:
 			&TestQuadrature::testF2, this, _1, _2), &min, &max, &result, &err, evals),
 			NDIntegrator::ESuccess);
 		Float ref = 2 * std::pow(std::sin(5), 2);
-		Log(EInfo, "test02_nD_01(): used " SIZE_T_FMT " function evaluations, error=%f", evals, err);
+		Log(EInfo, "test02_nD_01(): used " SIZE_T_FMT " function evaluations, "
+				"error=%f", evals, err);
 		assertEqualsEpsilon(result, ref, 1e-5f);
 	}
 
@@ -86,7 +87,8 @@ public:
 		assertEquals(quad.integrateVectorized(boost::bind(
 			&TestQuadrature::testF3, this, _1, _2, _3), min, max, result, err, evals),
 			NDIntegrator::ESuccess);
-		Log(EInfo, "test02_nD_02(): used " SIZE_T_FMT " function evaluations, error=[%f, %f]", evals, err[0], err[1]);
+		Log(EInfo, "test02_nD_02(): used " SIZE_T_FMT " function evaluations, "
+				"error=[%f, %f]", evals, err[0], err[1]);
 		assertEqualsEpsilon(result[0], 1, 1e-5f);
 		assertEqualsEpsilon(result[1], 1, 1e-5f);
 	}
