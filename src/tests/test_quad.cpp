@@ -42,8 +42,8 @@ public:
 		return std::exp(-0.5f * dot(x, x)/stddev)/(std::pow(2*M_PI * stddev, (Float) 3 / (Float) 2));
 	}
 
-	void testF3(unsigned int nPoints, const Float *in, Float *out) const {
-		for (unsigned int i=0; i<nPoints; ++i) {
+	void testF3(size_t nPoints, const Float *in, Float *out) const {
+		for (size_t i=0; i<nPoints; ++i) {
 			Vector v(in[0], in[1], in[2]);
 			Float weight = 
 				(1 + v.x*v.x) / std::pow(1-v.x*v.x, 2) *

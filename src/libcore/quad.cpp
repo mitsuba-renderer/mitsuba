@@ -598,7 +598,7 @@ static NDIntegrator::EResult rule75genzmalik_evalError(rule *r_, unsigned int fd
 	}
 
 	/* Evaluate the const Integrand & function(s) at all the points */
-	f(npts, pts, vals);
+	f((size_t) npts, pts, vals);
 
 	/* we are done with the points, and so we can re-use the pts 
 	   array to store the maximum difference diff[i] in each dimension 
@@ -774,8 +774,8 @@ static NDIntegrator::EResult rule15gauss_evalError(rule *r,
 		R[iR].splitDim = 0; /* no choice but to divide 0th dimension */
 	}
 
-	f(npts, pts, vals);
-     
+	f((size_t) npts, pts, vals);
+ 
 	for (unsigned int k = 0; k < fdim; ++k) {
 		for (unsigned int iR = 0; iR < nR; ++iR) {
 			const Float halfwidth = R[iR].h.data[1];
@@ -1120,8 +1120,8 @@ static NDIntegrator::EResult integrate(unsigned fdim, const VectorizedIntegrand 
 
 class VectorizationAdapter {
 public:
-	VectorizationAdapter(const NDIntegrator::Integrand &integrand, unsigned int fdim,
-			unsigned int dim) : m_integrand(integrand), m_fdim(dim), m_dim(dim) {
+	VectorizationAdapter(const NDIntegrator::Integrand &integrand, size_t fdim,
+			size_t dim) : m_integrand(integrand), m_fdim(dim), m_dim(dim) {
 		m_temp = new Float[m_fdim];
 	}
 
@@ -1129,20 +1129,20 @@ public:
 		delete[] m_temp;
 	}
 
-	void f(unsigned int nPt, const Float *in, Float *out) {
-		for (unsigned int i = 0; i < nPt; ++i) {
+	void f(size_t nPt, const Float *in, Float *out) {
+		for (size_t i = 0; i < nPt; ++i) {
 			m_integrand(in + i*m_dim, m_temp);
-	  		for (unsigned int k = 0; k < m_fdim; ++k)
+	  		for (size_t k = 0; k < m_fdim; ++k)
 				out[k*nPt + i] = m_temp[k];
 		}
 	}
 private:
 	const NDIntegrator::Integrand &m_integrand;
-	unsigned int m_fdim, m_dim;
+	size_t m_fdim, m_dim;
 	Float *m_temp;
 };
 
-NDIntegrator::NDIntegrator(unsigned int fDim, unsigned int dim,
+NDIntegrator::NDIntegrator(size_t fDim, size_t dim,
 			size_t maxEvals, Float absError, Float relError) 
  : m_fdim(fDim), m_dim(dim), m_maxEvals(maxEvals), m_absError(absError),
   m_relError(relError) { }
@@ -1150,14 +1150,14 @@ NDIntegrator::NDIntegrator(unsigned int fDim, unsigned int dim,
 NDIntegrator::EResult NDIntegrator::integrate(const Integrand &f, const Float *min, 
 		const Float *max, Float *result, Float *error, size_t &evals) const {
 	VectorizationAdapter adapter(f, m_fdim, m_dim);
-	return mitsuba::integrate(m_fdim, boost::bind(
-		&VectorizationAdapter::f, &adapter, _1, _2, _3), m_dim,
+	return mitsuba::integrate((unsigned int) m_fdim, boost::bind(
+		&VectorizationAdapter::f, &adapter, _1, _2, _3), (unsigned int) m_dim,
 		min, max, m_maxEvals, m_absError, m_relError, result, error, evals, false);
 }
 
 NDIntegrator::EResult NDIntegrator::integrateVectorized(const VectorizedIntegrand &f, const Float *min, 
 		const Float *max, Float *result, Float *error, size_t &evals) const {
-	return mitsuba::integrate(m_fdim, f, m_dim,
+	return mitsuba::integrate((unsigned int) m_fdim, f, (unsigned int) m_dim,
 		min, max, m_maxEvals, m_absError, m_relError, result, error, evals, true);
 }
 

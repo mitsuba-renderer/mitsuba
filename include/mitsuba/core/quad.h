@@ -135,8 +135,8 @@ protected:
  */
 class MTS_EXPORT_CORE NDIntegrator {
 public:
-	typedef boost::function<void (const Float *, Float *)>               Integrand;
-	typedef boost::function<void (unsigned int, const Float *, Float *)> VectorizedIntegrand;
+	typedef boost::function<void (const Float *, Float *)>         Integrand;
+	typedef boost::function<void (size_t, const Float *, Float *)> VectorizedIntegrand;
 
 	enum EResult {
 		ESuccess = 0,
@@ -156,7 +156,7 @@ public:
 	 * \param absError Absolute error requirement (0 to disable)
 	 * \param relError Relative error requirement (0 to disable)
 	 */
-	NDIntegrator(unsigned int fDim, unsigned int dim,
+	NDIntegrator(size_t fDim, size_t dim,
 			size_t maxEvals, Float absError = 0, Float relError = 0);
 
 	/**
@@ -206,8 +206,7 @@ public:
 	EResult integrateVectorized(const VectorizedIntegrand &f, const Float *min, 
 		const Float *max, Float *result, Float *error, size_t &evals) const;
 protected:
-	unsigned int m_fdim, m_dim;
-	size_t m_maxEvals;
+	size_t m_fdim, m_dim, m_maxEvals;
 	Float m_absError, m_relError;
 };
 

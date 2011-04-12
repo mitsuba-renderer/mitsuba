@@ -281,7 +281,12 @@ void Thread::staticInitialization() {
 #endif
 }
 
+static std::vector<OpenMPThread *> __ompThreads;
+
 void Thread::staticShutdown() {
+	for (size_t i=0; i<__ompThreads.size(); ++i)
+		__ompThreads[i]->decRef();
+	__ompThreads.clear();
 	getThread()->m_running = false;
 	m_self->set(NULL);
 	delete m_self;
@@ -311,7 +316,10 @@ void Thread::initializeOpenMP(size_t threadCount) {
 			thread->m_joined = false;
 			thread->m_fresolver = fResolver;
 			thread->m_logger = logger;
+			thread->incRef();
 			m_self->set(thread);
+			#pragma omp critical
+			__ompThreads.push_back((OpenMPThread *) thread);
 		}
 	}
 }
