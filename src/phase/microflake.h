@@ -19,6 +19,11 @@
 #if !defined(__MICROFLAKE_SIGMA_T_H)
 #define __MICROFLAKE_SIGMA_T_H
 
+#include <mitsuba/core/statistics.h>
+#include <mitsuba/core/brent.h>
+#include <boost/math/special_functions/erf.hpp>
+#include <boost/bind.hpp>
+
 MTS_NAMESPACE_BEGIN
 
 #define SIGMA_T_RANGE_MIN 4e-08
@@ -165,6 +170,61 @@ double sigmaT_fiberGaussian(double stddev, double sinTheta) {
 
 	return result;
 }
+
+static StatsCounter brentSolves("Micro-flake model",
+		"Brent solver calls");
+static StatsCounter avgBrentFunEvals("Micro-flake model",
+		"Average Brent solver function evaluations", EAverage);
+
+struct GaussianFiberDistribution {
+public:
+	inline GaussianFiberDistribution(Float stddev) : m_stddev(stddev) {
+		m_normalization = 1/(std::sqrt(2*M_PI) * m_stddev * 
+				boost::math::erf<Float>(1/(SQRT_TWO * m_stddev)));
+		m_c1 = 1.0f/boost::math::erf<Float>(1/(SQRT_TWO * m_stddev));
+	}
+
+	/// Evaluate \sigma_t as a function of \cos\theta
+	Float sigmaT(Float cosTheta) const {
+		return sigmaT_fiberGaussian(m_stddev, 
+			std::sqrt(std::max((Float) 0, 1-cosTheta*cosTheta)));
+	}
+
+	/// Evaluate the longitudinal density as a function of \cos\theta
+	Float pdfCosTheta(Float cosTheta) const {
+		return std::exp(-cosTheta*cosTheta/(2*m_stddev*m_stddev)) * m_normalization;
+	}
+
+	/// Evaluate the longitudinal CDF as a function of \cos\theta
+	inline Float cdf(Float theta) const {
+		return 0.5f * (1.0f - 
+			boost::math::erf<Float>(std::cos(theta)/(SQRT_TWO * m_stddev))*m_c1);
+	}
+
+	/**
+	 * Apply the inversion method to sample \theta given 
+	 * a uniformly distributed \xi on [0, 1]
+	 */
+	Float sample(Float xi) const {
+		BrentSolver brentSolver(100, 1e-6f);
+		BrentSolver::Result result = brentSolver.solve(
+			boost::bind(&GaussianFiberDistribution::cdfFunctor, this, xi, _1), 0, M_PI);
+		SAssert(result.success);
+		avgBrentFunEvals.incrementBase();
+		++brentSolves;
+		return result.x;
+	}
+private:
+	Float cdfFunctor(Float theta, Float xi) const {
+		++avgBrentFunEvals;
+		return cdf(theta)-xi;
+	}
+
+	Float m_stddev;
+	Float m_normalization;
+	Float m_c1;
+};
+
 
 MTS_NAMESPACE_END
 
