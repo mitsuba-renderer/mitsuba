@@ -228,7 +228,6 @@ public:
 				(d110*_fx + d111*fx)*fy)*fz;
 	}
 
-
 	Spectrum lookupSpectrum(const Point &_p) const {
 		const Point p = m_worldToGrid.transformAffine(_p);
 		const int x1 = floorToInt(p.x),

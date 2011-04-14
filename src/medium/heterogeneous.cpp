@@ -24,19 +24,19 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief When the following line is uncommented, the medium implementation 
- * stops integrating densities when it is determined that the segment has a
+ * stops integrating density when it is determined that the segment has a
  * throughput of less than 'Epsilon' (see \c mitsuba/core/constants.h)
  */
 #define HETVOL_EARLY_EXIT 1
 
 /// Generate a few statistics related to the implementation?
-//#define HETVOL_STATISTICS 1
+#define HETVOL_STATISTICS 1
 
 #if defined(HETVOL_STATISTICS)
 static StatsCounter avgNewtonIterations("Heterogeneous volume", 
 		"Avg. # of Newton-Bisection iterations", EAverage);
 static StatsCounter avgRayMarchingStepsTransmission("Heterogeneous volume", 
-		"Avg. # of ray marching steps (transmission)", EAverage);
+		"Avg. # of ray marching steps (transmittance)", EAverage);
 static StatsCounter avgRayMarchingStepsSampling("Heterogeneous volume", 
 		"Avg. # of ray marching steps (sampling)", EAverage);
 static StatsCounter earlyExits("Heterogeneous volume", 
@@ -59,7 +59,7 @@ static StatsCounter earlyExits("Heterogeneous volume",
  * albedo of the medium).
  *
  * Optionally, one can also provide an vector-valued 'orientation' volume,
- * which contains local particle orientations that will be passed to
+ * which contains local particle orientation that will be passed to
  * scattering models such as Kajiya-Kay phase function.
  */
 class HeterogeneousMedium : public Medium {
@@ -76,9 +76,9 @@ public:
 	/* Unserialize from a binary data stream */
 	HeterogeneousMedium(Stream *stream, InstanceManager *manager) 
 		: Medium(stream, manager) {
-		m_densities = static_cast<VolumeDataSource *>(manager->getInstance(stream));
+		m_density = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_albedo = static_cast<VolumeDataSource *>(manager->getInstance(stream));
-		m_orientations = static_cast<VolumeDataSource *>(manager->getInstance(stream));
+		m_orientation = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_stepSize = stream->readFloat();
 		configure();
 	}
@@ -86,35 +86,35 @@ public:
 	/* Serialize the volume to a binary data stream */
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Medium::serialize(stream, manager);
-		manager->serialize(stream, m_densities.get());
+		manager->serialize(stream, m_density.get());
 		manager->serialize(stream, m_albedo.get());
-		manager->serialize(stream, m_orientations.get());
+		manager->serialize(stream, m_orientation.get());
 		stream->writeFloat(m_stepSize);
 	}
 
 	void configure() {
 		Medium::configure();
-		if (m_densities.get() == NULL)
-			Log(EError, "No densities specified!");
+		if (m_density.get() == NULL)
+			Log(EError, "No density specified!");
 		if (m_albedo.get() == NULL)
 			Log(EError, "No albedo specified!");
-		m_aabb = m_densities->getAABB();
+		m_aabb = m_density->getAABB();
 		m_directionallyVaryingCoefficients = 
 			m_phaseFunction->needsDirectionallyVaryingCoefficients();
 
 		if (m_stepSize == 0) {
 			m_stepSize = std::min(
-				m_densities->getStepSize(), m_albedo->getStepSize());
-			if (m_orientations != NULL)
+				m_density->getStepSize(), m_albedo->getStepSize());
+			if (m_orientation != NULL)
 				m_stepSize = std::min(m_stepSize,
-					m_orientations->getStepSize());
+					m_orientation->getStepSize());
 
 			if (m_stepSize == std::numeric_limits<Float>::infinity()) 
 				Log(EError, "Unable to infer a suitable step size, please specify one "
 						"manually using the 'stepSize' parameter.");
 		}
 		
-		if (m_directionallyVaryingCoefficients && m_orientations.get() == NULL)
+		if (m_directionallyVaryingCoefficients && m_orientation.get() == NULL)
 			Log(EError, "Cannot use anisotropic phase function: "
 				"did not specify a particle orientation field!");
 	}
@@ -128,10 +128,10 @@ public:
 				m_albedo = volume;
 			} else if (name == "density") {
 				Assert(volume->supportsFloatLookups());
-				m_densities = volume;
-			} else if (name == "orientations") {
+				m_density = volume;
+			} else if (name == "orientation") {
 				Assert(volume->supportsVectorLookups());
-				m_orientations = volume;
+				m_orientation = volume;
 			} else {
 				Medium::addChild(name, child);
 			}
@@ -335,7 +335,7 @@ public:
 				   amount -- now use the Simpson quadrature expression and 
 				   Newton-Bisection to find the precise location of the scattering
 				   event. Note that no further density queries are performed after
-				   this point; instead, the densities are modeled based on a 
+				   this point; instead, the density are modeled based on a 
 				   quadratic polynomial that is fit to the last three lookups */
 
 				Float a = 0, b = stepSize, x = a,
@@ -424,8 +424,8 @@ public:
 			mRec.sigmaS = albedo * densityAtT;
 			mRec.sigmaA = Spectrum(densityAtT) - mRec.sigmaS;
 			mRec.albedo = albedo.max();
-			mRec.orientation = m_orientations != NULL 
-				? m_orientations->lookupVector(mRec.p) : Vector(0.0f);
+			mRec.orientation = m_orientation != NULL 
+				? m_orientation->lookupVector(mRec.p) : Vector(0.0f);
 		}
 
 		Float expVal = std::exp(-integratedDensity);
@@ -456,8 +456,8 @@ public:
 		std::ostringstream oss;
 		oss << "HeterogeneousMedium[" << endl
 			<< "  albedo = " << indent(m_albedo.toString()) << "," << endl
-			<< "  orientations = " << indent(m_orientations.toString()) << "," << endl
-			<< "  densities = " << indent(m_densities.toString()) << "," << endl
+			<< "  orientation = " << indent(m_orientation.toString()) << "," << endl
+			<< "  density = " << indent(m_density.toString()) << "," << endl
 			<< "  stepSize = " << m_stepSize << "," << endl
 			<< "  densityMultiplier = " << m_densityMultiplier << endl
 			<< "]";
@@ -467,17 +467,18 @@ public:
 	MTS_DECLARE_CLASS()
 protected:
 	inline Float lookupDensity(const Point &p, const Vector &d) const {
-		Float density = m_densities->lookupFloat(p);
-		if (m_directionallyVaryingCoefficients) {
-			Float cosTheta = dot(d, m_orientations->lookupVector(p));
-			density *= m_phaseFunction->sigmaDir(cosTheta);
+		Float density = m_density->lookupFloat(p);
+		if (m_directionallyVaryingCoefficients && density != 0) {
+			Vector orientation = m_orientation->lookupVector(p);
+			if (!orientation.isZero())
+				density *= m_phaseFunction->sigmaDir(dot(d, orientation));
 		}
 		return density;
 	}
 protected:
-	ref<VolumeDataSource> m_densities;
+	ref<VolumeDataSource> m_density;
 	ref<VolumeDataSource> m_albedo;
-	ref<VolumeDataSource> m_orientations;
+	ref<VolumeDataSource> m_orientation;
 	Float m_stepSize;
 	AABB m_aabb;
 	bool m_directionallyVaryingCoefficients;

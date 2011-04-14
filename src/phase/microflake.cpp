@@ -69,8 +69,10 @@ public:
 	}
 
 	Float f(const PhaseFunctionQueryRecord &pRec) const {
-		if (pRec.mRec.orientation.isZero())
-			return 0.0f;
+		if (pRec.mRec.orientation.isZero()) {
+			/* Switch to uniform sampling */
+			return 1/(4*M_PI);
+		}
 
 		Frame frame(pRec.mRec.orientation);
 		Vector wi = frame.toLocal(pRec.wi);
@@ -81,13 +83,17 @@ public:
 		if (length == 0)
 			return 0.0f;
 
-		return 0.5 * m_fiberDistr.pdfCosTheta(Frame::cosTheta(H)/length)
+		return 0.5f * m_fiberDistr.pdfCosTheta(Frame::cosTheta(H)/length)
 				/ m_fiberDistr.sigmaT(Frame::cosTheta(wi));
 	}
 
 	inline Float sample(PhaseFunctionQueryRecord &pRec, Sampler *sampler) const {
-		if (pRec.mRec.orientation.isZero())
-			return 0.0f;
+		if (pRec.mRec.orientation.isZero()) {
+			/* Switch to uniform sampling */
+			pRec.wo = squareToSphere(sampler->next2D());
+			return 1.0f;
+		}
+
 		Frame frame(pRec.mRec.orientation);
 		Vector wi = frame.toLocal(pRec.wi);
 
