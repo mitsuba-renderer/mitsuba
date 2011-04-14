@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -31,29 +31,24 @@ static StatsCounter avgPathLength("Path tracer", "Average path length", EAverage
   */
 class MIPathTracer : public MonteCarloIntegrator {
 public:
-	MIPathTracer(const Properties &props) : MonteCarloIntegrator(props) {
-		/* Beta factor for the power heuristic */
-		m_beta = props.getFloat("beta", 2.0f);
-	}
+	MIPathTracer(const Properties &props) : MonteCarloIntegrator(props) { }
 
 	/// Unserialize from a binary data stream
 	MIPathTracer(Stream *stream, InstanceManager *manager)
-	 : MonteCarloIntegrator(stream, manager) {
-		m_beta = stream->readFloat();
-	}
+	 : MonteCarloIntegrator(stream, manager) { }
 
 	Spectrum Li(const RayDifferential &r, RadianceQueryRecord &rRec) const {
 		/* Some aliases and local variables */
 		const Scene *scene = rRec.scene;
 		Intersection &its = rRec.its;
-		LuminaireSamplingRecord lRec;
 		RayDifferential ray(r);
-		Intersection prevIts;
 		Spectrum Li(0.0f);
 
 		/* Perform the first ray intersection (or ignore if the 
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
+		ray.mint = Epsilon;
+
 		Spectrum pathThroughput(1.0f);
 
 		while (rRec.depth <= m_maxDepth || m_maxDepth < 0) {
@@ -66,6 +61,13 @@ public:
 			}
 
 			const BSDF *bsdf = its.getBSDF(ray);
+
+			if (EXPECT_NOT_TAKEN(bsdf == NULL)) {
+				/* The MI path tracer doesn't support
+				   surfaces without a BSDF (e.g. medium transitions)
+				   -- give up. */
+				break;
+			}
 
 			/* Possibly include emitted radiance if requested */
 			if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
@@ -83,10 +85,11 @@ public:
 			/* ==================================================================== */
 
 			/* Estimate the direct illumination if this is requested */
-			if (rRec.type & RadianceQueryRecord::EDirectRadiance && 
-				scene->sampleLuminaire(its, lRec, rRec.nextSample2D())) {
+			LuminaireSamplingRecord lRec;
+			if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
+				scene->sampleLuminaire(its.p, ray.time, lRec, rRec.nextSample2D())) {
 				/* Allocate a record for querying the BSDF */
-				const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
+				const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 
 				/* Evaluate BSDF * cos(theta) */
 				const Spectrum bsdfVal = bsdf->fCos(bRec);
@@ -100,7 +103,7 @@ public:
 
 					/* Weight using the power heuristic */
 					const Float weight = miWeight(lRec.pdf, bsdfPdf);
-					Li += pathThroughput * lRec.Le * bsdfVal * weight;
+					Li += pathThroughput * lRec.value * bsdfVal * weight;
 				}
 			}
 
@@ -109,13 +112,12 @@ public:
 			/* ==================================================================== */
 
 			/* Sample BSDF * cos(theta) */
-			BSDFQueryRecord bRec(rRec, its);
+			BSDFQueryRecord bRec(its);
 			Float bsdfPdf;
 			Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, rRec.nextSample2D());
 			if (bsdfVal.isZero()) 
 				break;
 			bsdfVal /= bsdfPdf;
-			prevIts = its;
 
 			/* Trace a ray in this direction */
 			ray = Ray(its.p, its.toWorld(bRec.wo), ray.time);
@@ -124,6 +126,7 @@ public:
 				/* Intersected something - check if it was a luminaire */
 				if (its.isLuminaire()) {
 					lRec = LuminaireSamplingRecord(its, -ray.d);
+					lRec.value = its.Le(-ray.d);
 					hitLuminaire = true;
 				}
 			} else {
@@ -131,6 +134,7 @@ public:
 				   luminaire such as an environment map? */
 				if (scene->hasBackgroundLuminaire()) {
 					lRec.luminaire = scene->getBackgroundLuminaire();
+					lRec.value = lRec.luminaire->Le(ray);
 					lRec.d = -ray.d;
 					hitLuminaire = true;
 				} else {
@@ -142,14 +146,12 @@ public:
 			/* If a luminaire was hit, estimate the local illumination and
 			   weight using the power heuristic */
 			if (hitLuminaire &&  
-				(rRec.type & RadianceQueryRecord::EDirectRadiance)) {
-				lRec.Le = lRec.luminaire->Le(lRec);
-
+				(rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance)) {
 				/* Prob. of having generated this sample using luminaire sampling */
-				const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ? 
-					scene->pdfLuminaire(prevIts, lRec) : 0;
+				const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ?
+					scene->pdfLuminaire(ray.o, lRec) : 0;
 				const Float weight = miWeight(bsdfPdf, lumPdf);
-				Li += pathThroughput * lRec.Le * bsdfVal * weight;
+				Li += pathThroughput * lRec.value * bsdfVal * weight;
 			}
 
 			/* ==================================================================== */
@@ -159,7 +161,7 @@ public:
 			/* Set the recursive query type */
 			/* Stop if no surface was hit by the BSDF sample or if indirect illumination
 			   was not requested */
-			if (!its.isValid() || !(rRec.type & RadianceQueryRecord::EIndirectRadiance)) 
+			if (!its.isValid() || !(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)) 
 				break;
 			rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 
@@ -179,26 +181,27 @@ public:
 			pathThroughput *= bsdfVal;
 			rRec.depth++;
 		}
+
+		/* Store statistics */
 		avgPathLength.incrementBase();
 		avgPathLength += rRec.depth;
+
 		return Li;
 	}
 
 	inline Float miWeight(Float pdfA, Float pdfB) const {
-		pdfA = std::pow(pdfA, m_beta);
-		pdfB = std::pow(pdfB, m_beta);
+		pdfA *= pdfA;
+		pdfB *= pdfB;
 		return pdfA / (pdfA + pdfB);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		MonteCarloIntegrator::serialize(stream, manager);
-		stream->writeFloat(m_beta);
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "MIPathTracer[" << std::endl
-			<< "  beta = " << m_beta << "," << std::endl
 			<< "  maxDepth = " << m_maxDepth << "," << std::endl
 			<< "  rrDepth = " << m_rrDepth << std::endl
 			<< "]";
@@ -206,8 +209,6 @@ public:
 	}
 
 	MTS_DECLARE_CLASS()
-private:
-	Float m_beta;
 };
 
 MTS_IMPLEMENT_CLASS_S(MIPathTracer, false, MonteCarloIntegrator)

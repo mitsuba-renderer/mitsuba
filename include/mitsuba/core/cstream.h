@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -24,14 +24,25 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Stream-style interface to the default stdin/stdout console streams
+ *
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE ConsoleStream : public Stream {
 public:
+	// =============================================================
+	//! @{ \name Constructors
+	// =============================================================
+
 	/// Create a new console stream
 	ConsoleStream();
 
-	/* Stream implementation */
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Implementation of the Stream interface
+	// =============================================================
+
 	void read(void *ptr, size_t size);
 	void write(const void *ptr, size_t size);
 	void setPos(size_t pos);
@@ -41,6 +52,9 @@ public:
 	void flush();
 	bool canWrite() const;
 	bool canRead() const;
+
+	//! @}
+	// =============================================================
 
 	/// Return a string representation
 	std::string toString() const;

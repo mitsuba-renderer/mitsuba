@@ -16,17 +16,19 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
-from properties_data_lamp import DataButtonsPanel 
+import bpy, bl_ui
+
+from .. import MitsubaAddon
 
 from extensions_framework.ui import property_group_renderer
 
 narrowui = 180
 
-class lamps(DataButtonsPanel, property_group_renderer, bpy.types.Panel):
+@MitsubaAddon.addon_register_class
+class lamps(bl_ui.properties_data_lamp.DataButtonsPanel, property_group_renderer, bpy.types.Panel):
 	bl_label = 'Mitsuba Lamps'
-	COMPAT_ENGINES = {'mitsuba'}
-	
+	COMPAT_ENGINES = { MitsubaAddon.BL_IDNAME }
+
 	display_property_groups = [
 		( ('lamp',), 'mitsuba_lamp' )
 	]
@@ -39,14 +41,9 @@ class lamps(DataButtonsPanel, property_group_renderer, bpy.types.Panel):
 			wide_ui = context.region.width > narrowui
 
 			if wide_ui:
-				layout.prop(lamp.mitsuba_lamp, "type", expand=True)
+				layout.prop(lamp, "type", expand=True)
 			else:
-				layout.prop(lamp.mitsuba_lamp, "type", text="")
-			
-			if lamp.mitsuba_lamp.type == 'ENV':
-				lamp.type = 'HEMI'
-			else:
-				lamp.type = lamp.mitsuba_lamp.type
+				layout.prop(lamp, "type", text="")
 
 			split = layout.split()
 			
@@ -94,5 +91,12 @@ class lamps(DataButtonsPanel, property_group_renderer, bpy.types.Panel):
 			elif wide_ui:
 				col = split.column()
 			
+			layout.prop(lamp.mitsuba_lamp, "inside_medium")
+			if lamp.mitsuba_lamp.inside_medium:
+				layout.prop_search(
+					lamp.mitsuba_lamp, 'lamp_medium',
+					context.scene.mitsuba_media, 'media',
+					text = 'Medium'
+				)
 			if lamp.type == 'HEMI':
-				layout.label('Note: these cover the whole sphere')
+				layout.label('Note: covers the whole sphere')

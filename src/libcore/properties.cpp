@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -127,6 +127,31 @@ int64_t Properties::getLong(const std::string &name, int64_t defVal) const {
 	(*it).second.queried = true;
 	return (*it).second.v_long;
 }
+
+size_t Properties::getSize(const std::string &name) const {
+	if (!hasProperty(name))
+		SLog(EError, "Property \"%s\" missing", name.c_str());
+	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
+	if ((*it).second.type != EInteger)
+		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+	if ((*it).second.v_long < 0)
+		SLog(EError, "Size property \"%s\": expected a nonnegative value!");
+	(*it).second.queried = true;
+	return (*it).second.v_long;
+}
+
+size_t Properties::getSize(const std::string &name, size_t defVal) const {
+	if (!hasProperty(name))
+		return defVal;
+	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
+	if ((*it).second.type != EInteger)
+		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+	if ((*it).second.v_long < 0)
+		SLog(EError, "Size property \"%s\": expected a nonnegative value!");
+	(*it).second.queried = true;
+	return (*it).second.v_long;
+}
+
 
 void Properties::setFloat(const std::string &name, Float value, bool warnDuplicates) {
 	if (hasProperty(name) && warnDuplicates)
@@ -338,8 +363,8 @@ void ConfigurableObject::serialize(Stream *stream, InstanceManager *manager) con
 }
 
 void ConfigurableObject::addChild(const std::string &name, ConfigurableObject *child) {
-	SLog(EError, "ConfigurableObject::addChild(\"%s\") not implemented in \"%s\"", 
-		name.c_str(), toString().c_str());
+	SLog(EError, "ConfigurableObject::addChild(\"%s\", %s) not implemented in \"%s\"", 
+		name.c_str(), child->toString().c_str(), toString().c_str());
 }
 
 void NetworkedObject::serialize(Stream *stream, InstanceManager *manager) const {

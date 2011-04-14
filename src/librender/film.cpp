@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -76,7 +76,7 @@ void Film::serialize(Stream *stream, InstanceManager *manager) const {
 void Film::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
 
-	if (cClass->derivesFrom(ReconstructionFilter::m_theClass)) {
+	if (cClass->derivesFrom(MTS_CLASS(ReconstructionFilter))) {
 		Assert(m_filter == NULL);
 		m_filter = static_cast<ReconstructionFilter *>(child);
 		m_tabulatedFilter = new TabulatedFilter(m_filter);
@@ -90,7 +90,7 @@ void Film::configure() {
 	if (m_filter == NULL) {
 		/* No reconstruction filter has been selected. Load a gaussian filter by default */
 		m_filter = static_cast<ReconstructionFilter *> (PluginManager::getInstance()->
-				createObject(ReconstructionFilter::m_theClass, Properties("gaussian")));
+				createObject(MTS_CLASS(ReconstructionFilter), Properties("gaussian")));
 		m_tabulatedFilter = new TabulatedFilter(m_filter);
 	}
 }

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -236,8 +236,17 @@ void X11Device::init(Device *other) {
 
 		/* Make the window non-resizable */
 		XSizeHints *hints = XAllocSizeHints();
-		hints->min_width = hints->max_width = hints->width = m_size.x;
-		hints->min_height = hints->max_height = hints->height = m_size.y;
+		hints->width = m_size.x;
+		hints->height = m_size.y;
+		
+		if (m_resizeAllowed) {
+			hints->min_width = hints->min_height = 10;
+			hints->max_width = hints->max_height = INT_MAX;
+		} else {
+			hints->min_width = hints->max_width = m_size.x; 
+			hints->min_height = hints->max_height = m_size.y;
+		}
+
 		hints->x = m_position.x; hints->y = m_position.y;
 		hints->flags = PMaxSize | PMinSize | USSize | USPosition;
 		XSetNormalHints(session->m_display, m_window, hints);
@@ -473,7 +482,14 @@ void X11Device::processEvent(const XEvent &event) {
 	case UnmapNotify:
 		m_modifierState = 0;
 		break;
-	case ConfigureNotify:
+	case ConfigureNotify: {
+			Vector2i size(event.xconfigure.width, event.xconfigure.height);
+			if (m_size != size) {
+				m_size = size;
+				deviceEvent.setType(EResizeEvent);
+			}
+		}
+		break;
 	case ReparentNotify:
 	case Expose:
 		break;

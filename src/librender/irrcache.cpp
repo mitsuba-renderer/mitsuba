@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -21,7 +21,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-HemisphereSampler::HemisphereSampler(int M, int N) : m_M(M), m_N(N) {
+HemisphereSampler::HemisphereSampler(uint32_t M, uint32_t N) : m_M(M), m_N(N) {
 	m_entries = new SampleEntry[m_M*m_N];
 	m_uk = new Vector[m_N];
 	m_vk = new Vector[m_N];
@@ -36,8 +36,8 @@ HemisphereSampler::~HemisphereSampler() {
 }
 
 void HemisphereSampler::generateDirections(const Intersection &its, Sampler *sampler) {
-	for (unsigned int j=0; j<m_M; j++) {
-		for (unsigned int k=0; k<m_N; k++) {
+	for (uint32_t j=0; j<m_M; j++) {
+		for (uint32_t k=0; k<m_N; k++) {
 			SampleEntry &entry = m_entries[j*m_N + k];
 			Point2 sample = sampler->independent2D();
 
@@ -57,7 +57,7 @@ void HemisphereSampler::generateDirections(const Intersection &its, Sampler *sam
 
 	/* Precompute planar vectors - see "Practical Global Illumination" by Jaroslav Krivanek 
 	   and Pascal Gautron for more details on this notation */
-	for (unsigned int k=0; k<m_N; k++) {
+	for (uint32_t k=0; k<m_N; k++) {
 		Float phi     =  2*M_PI*(k+.5f)/m_N,
 			  vk      =  phi - M_PI/2,
 			  vkMinus = (2*M_PI*k)/m_N + M_PI/2;
@@ -84,7 +84,7 @@ void HemisphereSampler::process(const Intersection &its) {
 	m_hMinRestricted = std::numeric_limits<Float>::infinity();
 
 	Float invDists = 0;
-	for (unsigned int j=0; j<m_M; j++) {
+	for (uint32_t j=0; j<m_M; j++) {
 		const Float cosThetaMinus = std::sqrt(1-j/(Float)m_M),
 					sinThetaMinus = std::sqrt(j/(Float)m_M),
 					cosTheta      = std::sqrt(1-(j+.5f)/m_M),
@@ -92,7 +92,7 @@ void HemisphereSampler::process(const Intersection &its) {
 					cosThetaPlus  = std::sqrt(1-(j+1)/(Float)m_M),
 					cosThetaDiff  = cosThetaMinus - cosThetaPlus,
 					tanTheta      = sinTheta / cosTheta;
-		for (unsigned int k=0; k<m_N; k++) {
+		for (uint32_t k=0; k<m_N; k++) {
 			const SampleEntry &entry = m_entries[j*m_N + k];
 
 			/* Rotational gradient - \pi/(MN) * \sum_{k=0}^{N-1}(v_k \sum_{j=0}^{M-1}) \tan\theta_j * L_{jk}) */
@@ -239,9 +239,9 @@ IrradianceCache::IrradianceCache(Stream *stream, InstanceManager *manager) :
 	m_clampScreen = stream->readBool();
 	m_clampNeighbor = stream->readBool();
 	m_useGradients = stream->readBool();
-	unsigned int recordCount = stream->readUInt();
+	uint32_t recordCount = stream->readUInt();
 	m_records.reserve(recordCount);
-	for (unsigned int i=0; i<recordCount; ++i) {
+	for (uint32_t i=0; i<recordCount; ++i) {
 		Record *sample = new Record(stream);
 		Float validRadius = sample->R0 / (2*m_kappa);
 		m_octree.insert(sample, AABB(
@@ -266,8 +266,8 @@ void IrradianceCache::serialize(Stream *stream, InstanceManager *manager) const 
 	stream->writeBool(m_clampScreen);
 	stream->writeBool(m_clampNeighbor);
 	stream->writeBool(m_useGradients);
-	stream->writeUInt((unsigned int) m_records.size());
-	for (unsigned int i=0; i<m_records.size(); ++i)
+	stream->writeUInt(m_records.size());
+	for (uint32_t i=0; i<m_records.size(); ++i)
 		m_records[i]->serialize(stream);
 }
 

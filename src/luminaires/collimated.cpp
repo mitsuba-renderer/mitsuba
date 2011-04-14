@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -54,23 +54,13 @@ public:
 		return m_intensity * m_surfaceArea;
 	}
 
-	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
-		/* Collimated beam is not part of the scene */
-		Log(EWarn, "This function should never be called.");
-		return Spectrum(0.0f);
-	}
-
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
+	Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 		/* PDF is a delta function - zero probability when a sample point was not
 		   generated using sample() */
 		return delta ? 1.0f : 0.0f;
 	}
 
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
-		return CollimatedBeamLuminaire::pdf(its.p, lRec, delta);
-	}
-
-	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
+	void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
 		Point local = m_worldToLuminaire(p);
 		Vector2 planeProjection = Vector2(local.x, local.y);
@@ -82,13 +72,8 @@ public:
 			lRec.d = m_direction;
 			lRec.luminaire = this;
 			lRec.pdf = 1.0f;
-			lRec.Le = m_intensity;
+			lRec.value = m_intensity;
 		}
-	}
-
-	void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
-		const Point2 &sample) const {
-		CollimatedBeamLuminaire::sample(its.p, lRec, sample);
 	}
 
 	void sampleEmission(EmissionRecord &eRec, const Point2 &sample1, const Point2 &sample2) const {
@@ -97,14 +82,14 @@ public:
 		eRec.d = m_direction;
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.pdfDir = 1;
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 	}
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		Point2 posOnDisk = squareToDiskConcentric(sample) * m_radius;
 		eRec.sRec.p = m_luminaireToWorld(Point(posOnDisk.x, posOnDisk.y, 0));
 		eRec.pdfArea = m_invSurfaceArea;
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 	}
 
 	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {
@@ -117,14 +102,14 @@ public:
 		return m_intensity;
 	}
 
-	Spectrum f(const EmissionRecord &eRec) const {
+	Spectrum fDirection(const EmissionRecord &eRec) const {
 		return Spectrum(0.0f);
 	}
 
 	void pdfEmission(EmissionRecord &eRec, bool delta) const {
 		eRec.pdfArea = delta ? 0.0f : m_invSurfaceArea;
 		eRec.pdfDir = delta ? 1.0f : 0.0f;
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 	}
 
 	std::string toString() const {

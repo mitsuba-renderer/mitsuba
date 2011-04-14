@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
 /** \brief Stream implementation based on an encrypted SSH tunnel
  * 
  * This class remotely starts a program and exposes its stdin/stdout 
- * streams through an instance of <tt>\ref Stream</tt>. To make all 
+ * streams through an instance of \ref Stream. To make all 
  * of this work, passwordless authentication must be enabled (for 
  * example by using public key authentication in addition to a 
  * running ssh-agent, which stores the decrypted private key).
@@ -42,6 +42,10 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE SSHStream : public Stream {
 public:
+	// =============================================================
+	//! @{ \name Constructors
+	// =============================================================
+
 	/**
 	 * Create a new SSH stream. The timeout parameter specifies specifies
 	 * the maximum amount of time that can be spent before failing to 
@@ -60,16 +64,12 @@ public:
 		int port = 22, int timeout = 10
 	);
 
-	/* Stream implementation */
-	void read(void *ptr, size_t size);
-	void write(const void *ptr, size_t size);
-	void setPos(size_t pos);
-	size_t getPos() const;
-	size_t getSize() const;
-	void truncate(size_t size);
-	void flush();
-	bool canWrite() const;
-	bool canRead() const;
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name SSH stream-specific features
+	// =============================================================
 
 	/// Return the destination machine's host name
 	inline const std::string &getHostName() const { return m_hostName; }
@@ -82,6 +82,27 @@ public:
 	
 	/// Return the number of sent bytes
 	inline size_t getSentBytes() const { return m_sent; }
+
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Implementation of the Stream interface
+	// =============================================================
+
+	void read(void *ptr, size_t size);
+	void write(const void *ptr, size_t size);
+	void setPos(size_t pos);
+	size_t getPos() const;
+	size_t getSize() const;
+	void truncate(size_t size);
+	void flush();
+	bool canWrite() const;
+	bool canRead() const;
+	
+	//! @}
+	// =============================================================
+
 
 	/// Return a string representation
 	std::string toString() const;

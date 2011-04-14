@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -40,9 +40,9 @@ public:
 	}
 
 	/**
-	 * @param _p The sample point on the surface
-	 * @param _E The irradiance value at this point
-	 * @param _area The surface area associated with that sample
+	 * \param p The sample point on the surface
+	 * \param E The irradiance value at this point
+	 * \param area The surface area associated with that sample
 	 */
 	inline IrradianceSample(const Point &p, const Spectrum &E, Float area) 
 		: p(p), E(E), area(area) { }

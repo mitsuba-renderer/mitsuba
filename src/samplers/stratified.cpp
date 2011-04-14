@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -34,20 +34,31 @@ public:
 	}
 
 	StratifiedSampler(const Properties &props) : Sampler(props) {
-		/* Stratification resolution of the sample space. Default: 2, 
-		   resulting in 2x2=4 samples per pixel */
-		m_resolution = props.getInteger("resolution", 2);
+		/* Sample count (will be rounded up to the next perfect square) */
+		size_t desiredSampleCount = props.getSize("sampleCount", 4);
+
+		size_t i = 1;
+		while (i * i < desiredSampleCount)
+			++i;
+		m_sampleCount = i*i;
+	
+		if (m_sampleCount != desiredSampleCount) {
+			Log(EWarn, "Sample count should be a perfect square -- rounding to "
+					SIZE_T_FMT, m_sampleCount);
+		}
+
+		m_resolution = (int) i;
 
 		/* Depth, up to which which stratified samples are guaranteed to be available. */
 		m_depth = props.getInteger("depth", 3);
 
 		m_sampleCount = m_resolution*m_resolution;
-		m_permutations1D = new unsigned int*[m_depth];
-		m_permutations2D = new unsigned int*[m_depth];
+		m_permutations1D = new uint32_t*[m_depth];
+		m_permutations2D = new uint32_t*[m_depth];
 
 		for (int i=0; i<m_depth; i++) {
-			m_permutations1D[i] = new unsigned int[(size_t) m_sampleCount];
-			m_permutations2D[i] = new unsigned int[(size_t) m_sampleCount];
+			m_permutations1D[i] = new uint32_t[m_sampleCount];
+			m_permutations2D[i] = new uint32_t[m_sampleCount];
 		}
 
 		m_invResolution = 1 / (Float) m_resolution;
@@ -60,11 +71,11 @@ public:
 		m_depth = stream->readInt();
 		m_resolution = stream->readInt();
 		m_random = static_cast<Random *>(manager->getInstance(stream));
-		m_permutations1D = new unsigned int*[m_depth];
-		m_permutations2D = new unsigned int*[m_depth];
+		m_permutations1D = new uint32_t*[m_depth];
+		m_permutations2D = new uint32_t*[m_depth];
 		for (int i=0; i<m_depth; i++) {
-			m_permutations1D[i] = new unsigned int[(size_t) m_sampleCount];
-			m_permutations2D[i] = new unsigned int[(size_t) m_sampleCount];
+			m_permutations1D[i] = new uint32_t[m_sampleCount];
+			m_permutations2D[i] = new uint32_t[m_sampleCount];
 		}
 		m_invResolution = 1.0f / m_resolution;
 		m_invResolutionSquare = 1.0f / m_sampleCount;
@@ -96,11 +107,11 @@ public:
 		sampler->m_invResolutionSquare = m_invResolutionSquare;
 		sampler->m_random = new Random(m_random);
 
-		sampler->m_permutations1D = new unsigned int*[m_depth];
-		sampler->m_permutations2D = new unsigned int*[m_depth];
+		sampler->m_permutations1D = new uint32_t*[m_depth];
+		sampler->m_permutations2D = new uint32_t*[m_depth];
 		for (int i=0; i<m_depth; i++) {
-			sampler->m_permutations1D[i] = new unsigned int[(size_t) m_sampleCount];
-			sampler->m_permutations2D[i] = new unsigned int[(size_t) m_sampleCount];
+			sampler->m_permutations1D[i] = new uint32_t[m_sampleCount];
+			sampler->m_permutations2D[i] = new uint32_t[m_sampleCount];
 		}
 		for (size_t i=0; i<m_req1D.size(); ++i)
 			sampler->request2DArray(m_req1D[i]);
@@ -111,27 +122,27 @@ public:
 
 	void generate() {
 		for (int i=0; i<m_depth; i++) {
-			for (uint64_t j=0; j<m_sampleCount; j++)
-				m_permutations1D[i][j] = (unsigned int) j;
+			for (size_t j=0; j<m_sampleCount; j++)
+				m_permutations1D[i][j] = (uint32_t) j;
 			m_random->shuffle(&m_permutations1D[i][0], &m_permutations1D[i][m_sampleCount]);
 
-			for (uint64_t j=0; j<m_sampleCount; j++)
-				m_permutations2D[i][j] = (unsigned int) j;
+			for (size_t j=0; j<m_sampleCount; j++)
+				m_permutations2D[i][j] = (uint32_t) j;
 			m_random->shuffle(&m_permutations2D[i][0], &m_permutations2D[i][m_sampleCount]);
 		}
 
 		for (size_t i=0; i<m_req1D.size(); i++)
-			latinHypercube(m_random, m_sampleArrays1D[i], m_req1D[i] * (size_t) m_sampleCount, 1);
+			latinHypercube(m_random, m_sampleArrays1D[i], m_req1D[i] * m_sampleCount, 1);
 		for (size_t i=0; i<m_req2D.size(); i++)
 			latinHypercube(m_random, reinterpret_cast<Float *>(m_sampleArrays2D[i]), 
-				m_req2D[i] * (size_t) m_sampleCount, 2);
+				m_req2D[i] * m_sampleCount, 2);
 
 		m_sampleIndex = 0;
 		m_sampleDepth1D = m_sampleDepth2D = 0;
 		m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
 	}
 
-	void setSampleIndex(uint64_t sampleIndex) {
+	void setSampleIndex(size_t sampleIndex) {
 		m_sampleIndex = sampleIndex;
 		m_sampleDepth1D = m_sampleDepth2D = 0;
 		m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
@@ -200,7 +211,7 @@ private:
 	int m_resolution;
 	int m_depth;
 	Float m_invResolution, m_invResolutionSquare;
-	unsigned int **m_permutations1D, **m_permutations2D;
+	uint32_t **m_permutations1D, **m_permutations2D;
 	int m_sampleDepth1D, m_sampleDepth2D;
 };
 

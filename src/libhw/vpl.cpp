@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -20,6 +20,7 @@
 #include <mitsuba/hw/vpl.h>
 #include <mitsuba/hw/gpuprogram.h>
 #include <mitsuba/hw/gputexture.h>
+#include "../shapes/instance.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -41,7 +42,7 @@ void VPLShaderManager::init() {
 	
 		m_shadowProgram->setSource(GPUProgram::EVertexProgram,
 			"void main() {\n"
-			"	gl_Position = gl_Vertex;\n"
+			"	gl_Position = gl_ModelViewMatrix * gl_Vertex;\n"
 			"}"
 		);
 
@@ -94,7 +95,7 @@ void VPLShaderManager::init() {
 		"uniform vec4 depthVec;\n"
 		"varying float depth;\n"
 		"void main() {\n"
-		"	gl_Position = cubeMapTransform * gl_Vertex;\n"
+		"	gl_Position = gl_ModelViewMatrix * (cubeMapTransform * gl_Vertex);\n"
 		"	depth = dot(depthVec, gl_Vertex);\n"
 		"}\n"
 	);
@@ -120,14 +121,36 @@ void VPLShaderManager::init() {
 
 	for (size_t i=0; i<shapes.size(); ++i) {
 		ref<TriMesh> triMesh = shapes[i]->createTriMesh();
-		if (!triMesh)
+		if (!triMesh) {
+			std::string shapeClass = shapes[i]->getClass()->getName();
+			if (shapeClass == "Instance") {
+				const Instance *instance = static_cast<const Instance *>(shapes[i]);
+				const std::vector<const Shape *> &subShapes = 
+						instance->getShapeGroup()->getKDTree()->getShapes(); 
+				for (size_t j=0; j<subShapes.size(); ++j) {
+					triMesh = const_cast<Shape *>(subShapes[j])->createTriMesh();
+					if (!triMesh)
+						continue;
+					GPUGeometry *gpuGeo = m_renderer->registerGeometry(triMesh);
+					Shader *shader = triMesh->hasBSDF() ? 
+						m_renderer->registerShaderForResource(triMesh->getBSDF()) : NULL;
+					if (shader != NULL && !shader->isComplete())
+						m_renderer->unregisterShaderForResource(triMesh->getBSDF());
+					m_meshes.push_back(std::make_pair(triMesh.get(), instance->getWorldTransform()));
+					if (gpuGeo)
+						m_drawList.push_back(std::make_pair(gpuGeo, instance->getWorldTransform()));
+				}
+			}
 			continue;
-		m_renderer->registerGeometry(triMesh);
-		Shader *shader = m_renderer->registerShaderForResource(triMesh->getBSDF());
+		}
+		GPUGeometry *gpuGeo = m_renderer->registerGeometry(triMesh);
+		Shader *shader = triMesh->hasBSDF() ? 
+			m_renderer->registerShaderForResource(triMesh->getBSDF()) : NULL;
 		if (shader != NULL && !shader->isComplete())
 			m_renderer->unregisterShaderForResource(triMesh->getBSDF());
-		triMesh->incRef();
-		m_meshes.push_back(triMesh);
+		m_meshes.push_back(std::make_pair(triMesh.get(), Transform()));
+		if (gpuGeo)
+			m_drawList.push_back(std::make_pair(gpuGeo, Transform()));
 	}
 
 	for (size_t i=0; i<luminaires.size(); ++i)
@@ -168,6 +191,37 @@ void VPLShaderManager::init() {
 
 	m_initialized = true;
 }
+
+void VPLShaderManager::cleanup() {
+	for (std::map<std::string, ProgramAndConfiguration>::iterator it = m_programs.begin();
+		it != m_programs.end(); ++it) {
+		(*it).second.program->cleanup();
+		(*it).second.program->decRef();
+	}
+
+	if (m_shadowMap)
+		m_shadowMap->cleanup();
+
+	if (m_backgroundProgram) {
+		m_backgroundProgram->cleanup();
+		m_backgroundProgram = NULL;
+	}
+
+	const std::vector<Luminaire *> luminaires = m_scene->getLuminaires();
+
+	for (size_t i=0; i<m_meshes.size(); ++i) {
+		m_renderer->unregisterGeometry(m_meshes[i].first);
+		m_renderer->unregisterShaderForResource(m_meshes[i].first->getBSDF());
+	}
+
+	m_meshes.clear();
+	m_drawList.clear();
+
+	for (size_t i=0; i<luminaires.size(); ++i)
+		m_renderer->unregisterShaderForResource(luminaires[i]);
+	m_initialized = false;
+}
+
 
 void VPLShaderManager::setVPL(const VPL &vpl) {
 	Point p = vpl.its.p + vpl.its.shFrame.n * 0.01;
@@ -223,6 +277,9 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 	m_nearClip = nearClip;
 	m_invClipRange = 1/(farClip-nearClip);
 	Transform lightViewTrafo, lightProjTrafo = Transform::glPerspective(90.0f, nearClip, farClip);
+	Matrix4x4 identity;
+	identity.setIdentity();
+	m_renderer->setCamera(identity, identity);
 
 	m_shadowMap->activateTarget();
 	if (m_singlePass && m_shadowProgram != NULL) {
@@ -251,7 +308,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 				(-viewMatrix.m[2][3] - m_nearClip) * m_invClipRange
 			));
 		}
-		m_renderer->drawAll();
+		m_renderer->drawAll(m_drawList);
 		m_shadowProgram->unbind();
 	} else {
 		/* Old-fashioned: render 6 times, once for each cube map face */
@@ -277,7 +334,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 
 			m_shadowMap->activateSide(i);
 			m_shadowMap->clear();
-			m_renderer->drawAll();
+			m_renderer->drawAll(m_drawList);
 		}
 
 		m_altShadowProgram->unbind();
@@ -342,10 +399,9 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 				<< "varying out vec3 vertexColor;" << endl
 				<< endl
 				<< "void main() {" << endl
-				<< "   vec3 p0 = gl_PositionIn[0].xyz / gl_PositionIn[0].w;" << endl
-				<< "   vec3 p1 = gl_PositionIn[1].xyz / gl_PositionIn[1].w;" << endl
-				<< "   vec3 p2 = gl_PositionIn[2].xyz / gl_PositionIn[2].w;" << endl
-				<< "   normal = normalize(cross(p1 - p0, p2 - p0));" << endl
+				<< "   vec3 edge1 = camVec_vertex[0]-camVec_vertex[1];" << endl
+				<< "   vec3 edge2 = camVec_vertex[0]-camVec_vertex[2];" << endl
+				<< "   normal = normalize(cross(edge1, edge2));" << endl
 				<< "   gl_Position = vec4(0.0);" << endl
 				<< "   lightVec = camVec = vec3(0.0);" << endl
 				<< "   for (int i=0; i<gl_VerticesIn; ++i) {" << endl
@@ -570,34 +626,6 @@ void VPLShaderManager::unbind() {
 		m_current.program->unbind();
 		m_shadowMap->unbind();
 	}
-}
-
-void VPLShaderManager::cleanup() {
-	for (std::map<std::string, ProgramAndConfiguration>::iterator it = m_programs.begin();
-		it != m_programs.end(); ++it) {
-		(*it).second.program->cleanup();
-		(*it).second.program->decRef();
-	}
-
-	if (m_shadowMap)
-		m_shadowMap->cleanup();
-
-	if (m_backgroundProgram) {
-		m_backgroundProgram->cleanup();
-		m_backgroundProgram = NULL;
-	}
-
-	const std::vector<Luminaire *> luminaires = m_scene->getLuminaires();
-
-	for (size_t i=0; i<m_meshes.size(); ++i) {
-		m_renderer->unregisterGeometry(m_meshes[i]);
-		m_renderer->unregisterShaderForResource(m_meshes[i]->getBSDF());
-		m_meshes[i]->decRef();
-	}
-	m_meshes.clear();
-	for (size_t i=0; i<luminaires.size(); ++i)
-		m_renderer->unregisterShaderForResource(luminaires[i]);
-	m_initialized = false;
 }
 
 MTS_IMPLEMENT_CLASS(VPLShaderManager, false, Object)

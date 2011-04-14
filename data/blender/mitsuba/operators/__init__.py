@@ -17,54 +17,49 @@
 # ##### END GPL LICENSE BLOCK #####
 
 # System Libs
-import os, sys, copy, subprocess, traceback, string
+import os, sys, subprocess, traceback, string, math
 
 # Blender Libs
-import bpy
-from presets import AddPresetBase
+import bpy, bl_operators
 
 # Extensions_Framework Libs
 from extensions_framework import util as efutil
 
-from mitsuba.outputs import MtsLog
-from mitsuba.export.adjustments import MtsAdjustments
+from .. import MitsubaAddon
+from ..outputs import MtsLog
+from ..export import MtsExporter
 
-def try_preset_path_create(preset_subdir):
-	target_path = os.path.join(bpy.utils.preset_paths('')[0], preset_subdir)
-	if not os.path.exists(target_path):
-		os.makedirs(target_path)
-
-class MITSUBA_MT_base(object):
+class MITSUBA_MT_base(bpy.types.Menu):
 	preset_operator = "script.execute_preset"
 	def draw(self, context):
-		try_preset_path_create(self.preset_subdir)
-		return bpy.types.Menu.draw_preset(self, context)
+		return self.draw_preset(context)
 
-class MITSUBA_OT_preset_base(AddPresetBase):
-	def execute(self, context):
-		try_preset_path_create(self.preset_subdir)
-		return super().execute(context)
-
-class MITSUBA_MT_presets_engine(MITSUBA_MT_base, bpy.types.Menu):
+@MitsubaAddon.addon_register_class
+class MITSUBA_MT_presets_engine(MITSUBA_MT_base):
 	bl_label = "Mitsuba Engine Presets"
 	preset_subdir = "mitsuba/engine"
 
-class MITSUBA_OT_preset_engine_add(MITSUBA_OT_preset_base, bpy.types.Operator):
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_preset_engine_add(bl_operators.presets.AddPresetBase, bpy.types.Operator):
 	'''Save the current settings as a preset'''
 	bl_idname = 'mitsuba.preset_engine_add'
 	bl_label = 'Add Mitsuba Engine settings preset'
 	preset_menu = 'MITSUBA_MT_presets_engine'
-	preset_values = [
-		'bpy.context.scene.mitsuba_engine.%s'%v['attr'] for v in bpy.types.mitsuba_engine.get_exportable_properties()
-	]
 	preset_subdir = 'mitsuba/engine'
+	
+	def execute(self, context):
+		self.preset_values = [
+			'bpy.context.scene.mitsuba_engine.%s'%v['attr'] for v in bpy.types.mitsuba_engine.get_exportable_properties()
+		]
+		return super().execute(context)
 
-
-class MITSUBA_MT_presets_texture(MITSUBA_MT_base, bpy.types.Menu):
+@MitsubaAddon.addon_register_class
+class MITSUBA_MT_presets_texture(MITSUBA_MT_base):
 	bl_label = "Mitsuba Texture Presets"
 	preset_subdir = "mitsuba/texture"
 
-class MITSUBA_OT_preset_texture_add(MITSUBA_OT_preset_base, bpy.types.Operator):
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_preset_texture_add(bl_operators.presets.AddPresetBase, bpy.types.Operator):
 	'''Save the current settings as a preset'''
 	bl_idname = 'mitsuba.preset_texture_add'
 	bl_label = 'Add Mitsuba Texture settings preset'
@@ -89,12 +84,13 @@ class MITSUBA_OT_preset_texture_add(MITSUBA_OT_preset_base, bpy.types.Operator):
 		self.preset_values = pv
 		return super().execute(context)
 
-
-class MITSUBA_MT_presets_material(MITSUBA_MT_base, bpy.types.Menu):
+@MitsubaAddon.addon_register_class
+class MITSUBA_MT_presets_material(MITSUBA_MT_base):
 	bl_label = "Mitsuba Material Presets"
 	preset_subdir = "mitsuba/material"
 
-class MITSUBA_OT_preset_material_add(MITSUBA_OT_preset_base, bpy.types.Operator):
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_preset_material_add(bl_operators.presets.AddPresetBase, bpy.types.Operator):
 	'''Save the current settings as a preset'''
 	bl_idname = 'mitsuba.preset_material_add'
 	bl_label = 'Add Mitsuba Material settings preset'
@@ -121,6 +117,7 @@ class MITSUBA_OT_preset_material_add(MITSUBA_OT_preset_base, bpy.types.Operator)
 		self.preset_values = pv
 		return super().execute(context)
 
+@MitsubaAddon.addon_register_class
 class EXPORT_OT_mitsuba(bpy.types.Operator):
 	bl_idname = 'export.mitsuba'
 	bl_label = 'Export Mitsuba Scene (.xml)'
@@ -130,7 +127,7 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 	scene			= bpy.props.StringProperty(options={'HIDDEN'}, default='')
 
 	def invoke(self, context, event):
-		context.window_manager.add_fileselect(self)
+		context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
 
 	def execute(self, context):
@@ -140,66 +137,12 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 			else:
 				scene = bpy.data.scenes[self.properties.scene]
 
-			if scene is None:
-				self.report({'ERROR'}, 'Scene is not valid for export to %s' % self.properties.filename)
-				return {'CANCELLED'}
-			
-			# Force scene update; NB, scene.update() doesn't work
-			scene.frame_set(scene.frame_current)
+			result = MtsExporter(
+				directory = self.properties.directory,
+				filename = self.properties.filename).export(scene)
 
-			mts_basename = os.path.join(
-				self.properties.directory,
-				self.properties.filename)
-			(path, ext) = os.path.splitext(mts_basename)
-			if ext == '.xml':
-				mts_basename = path
-			mts_dae_file = mts_basename + ".dae"
-			mts_xml_file = mts_basename + ".xml"
-			mts_adj_file = mts_basename + "_adjustments.xml"
-			mts_meshes_dir = os.path.join(self.properties.directory, "meshes")
-
-			efutil.export_path = mts_xml_file
-			try:
-				os.mkdir(mts_meshes_dir)
-			except OSError:
-				pass
-
-			scene.collada_export(mts_dae_file)
-
-			MtsLog('MtsBlend: Writing adjustments file to "%s"' % mts_adj_file)
-			adj = MtsAdjustments(mts_adj_file, self.properties.directory)
-			adj.export(scene)
-
-			if scene.mitsuba_engine.binary_path == '':
-				self.report({'ERROR'}, 'Mitsuba binary path must be specified!')
-				return {'CANCELLED'}
-
-			mts_path = scene.mitsuba_engine.binary_path
-			mtsimport_binary = os.path.join(mts_path, "mtsimport")
-			env = copy.copy(os.environ)
-			mts_render_libpath = os.path.join(mts_path, "src/librender")
-			mts_core_libpath = os.path.join(mts_path, "src/libcore")
-			mts_hw_libpath = os.path.join(mts_path, "src/libhw")
-			env['LD_LIBRARY_PATH'] = mts_core_libpath + ":" + mts_render_libpath + ":" + mts_hw_libpath
-			render = scene.render
-			width = int(render.resolution_x * render.resolution_percentage * 0.01)
-			height = int(render.resolution_y * render.resolution_percentage * 0.01)
-
-			MtsLog("MtsBlend: Launching mtsimport")
-			try:
-				command = [mtsimport_binary, '-r', '%dx%d' % (width, height),
-						'-n', '-l', 'pngfilm', mts_dae_file, mts_xml_file, mts_adj_file]
-				if scene.mitsuba_integrator.motionblur:
-					command += ['-z']
-				process = subprocess.Popen(command,
-					env = env,
-					cwd = mts_path
-				)
-				if process.wait() != 0:
-					self.report({'ERROR'}, "mtsimport returned with a nonzero status!")
-					return {'CANCELLED'}
-			except OSError:
-				self.report({'ERROR'}, "Could not execute '%s'" % mtsimport_binary)
+			if not result:
+				self.report({'ERROR'}, "Unsucessful export!");
 				return {'CANCELLED'}
 
 			return {'FINISHED'}
@@ -207,14 +150,15 @@ class EXPORT_OT_mitsuba(bpy.types.Operator):
 			typ, value, tb = sys.exc_info()
 			elist = traceback.format_exception(typ, value, tb)
 			MtsLog("Caught exception: %s" % ''.join(elist))
+			self.report({'ERROR'}, "Unsucessful export!");
 			return {'CANCELLED'}
 
 def menu_func(self, context):
 	default_path = os.path.splitext(os.path.basename(bpy.data.filepath))[0] + ".xml"
 	self.layout.operator("export.mitsuba", text="Export Mitsuba scene...").filename = default_path
-
 bpy.types.INFO_MT_file_export.append(menu_func)
 
+@MitsubaAddon.addon_register_class
 class MITSUBA_OT_material_slot_move(bpy.types.Operator):
 	''' Rearrange the material slots '''
 	bl_idname = 'mitsuba.material_slot_move'
@@ -245,6 +189,7 @@ class MITSUBA_OT_material_slot_move(bpy.types.Operator):
 			obj.active_material_index = new_index
 		return {'FINISHED'}
 
+@MitsubaAddon.addon_register_class
 class MITSUBA_OT_material_add(bpy.types.Operator):
 	''' Append a new material '''
 	bl_idname = 'mitsuba.material_add'
@@ -261,4 +206,108 @@ class MITSUBA_OT_material_add(bpy.types.Operator):
 		mat = bpy.data.materials.new(name=curName)
 		obj.data.materials.append(mat)
 		obj.active_material_index = len(obj.data.materials)-1
+		return {'FINISHED'}
+
+def material_converter(report, scene, blender_mat):
+	try:
+		mitsuba_mat = blender_mat.mitsuba_material
+
+		mitsuba_mat.type = 'microfacet'
+		mitsuba_mat.mitsuba_mat_microfacet.diffuseReflectance_color =  [blender_mat.diffuse_intensity*i for i in blender_mat.diffuse_color]
+		mitsuba_mat.mitsuba_mat_microfacet.specularAmount = 1.0
+		mitsuba_mat.mitsuba_mat_microfacet.diffuseAmount = 1.0
+					
+		logHardness = math.log(blender_mat.specular_hardness)
+		specular_scale = 2.0 * max(0.0128415*logHardness**2 - 0.171266*logHardness + 0.575631, 0.0)
+		mitsuba_mat.mitsuba_mat_microfacet.specularReflectance_color =  [specular_scale * blender_mat.specular_intensity*i for i in blender_mat.specular_color]
+		mitsuba_mat.mitsuba_mat_microfacet.alphaB = min(max(0.757198 - 0.120395*logHardness, 0.0), 1.0)
+
+		report({'INFO'}, 'Converted blender material "%s"' % blender_mat.name)
+		return {'FINISHED'}
+	except Exception as err:
+		report({'ERROR'}, 'Cannot convert material: %s' % err)
+		return {'CANCELLED'}
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_convert_all_materials(bpy.types.Operator):
+	bl_idname = 'mitsuba.convert_all_materials'
+	bl_label = 'Convert all Blender materials'
+	
+	def report_log(self, level, msg):
+		MtsLog('Material conversion %s: %s' % (level, msg))
+	
+	def execute(self, context):
+		for blender_mat in bpy.data.materials:
+			# Don't convert materials from linked-in files
+			if blender_mat.library == None:
+				material_converter(self.report_log, context.scene, blender_mat)
+		return {'FINISHED'}
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_convert_material(bpy.types.Operator):
+	bl_idname = 'mitsuba.convert_material'
+	bl_label = 'Convert selected Blender material'
+	
+	material_name = bpy.props.StringProperty(default='')
+	
+	def execute(self, context):
+		if self.properties.material_name == '':
+			blender_mat = context.material
+		else:
+			blender_mat = bpy.data.materials[self.properties.material_name]
+		
+		material_converter(self.report, context.scene, blender_mat)
+		return {'FINISHED'}	
+
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_MT_presets_medium(MITSUBA_MT_base):
+	bl_label = "Mitsuba Medium Presets"
+	preset_subdir = "mitsuba/medium"
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_preset_medium_add(bl_operators.presets.AddPresetBase, bpy.types.Operator):
+	'''Save the current settings as a preset'''
+	bl_idname = 'mitsuba.preset_medium_add'
+	bl_label = 'Add Mitsuba Medium settings preset'
+	preset_menu = 'MITSUBA_MT_presets_medium'
+	preset_values = []
+	preset_subdir = 'mitsuba/medium'
+	
+	def execute(self, context):
+		ks = 'bpy.context.scene.mitsuba_media.media[bpy.context.scene.mitsuba_media.media_index].%s'
+		pv = [
+			ks%v['attr'] for v in bpy.types.mitsuba_medium_data.get_exportable_properties()
+		]
+		
+		self.preset_values = pv
+		return super().execute(context)
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_medium_add(bpy.types.Operator):
+	'''Add a new medium definition to the scene'''
+	
+	bl_idname = "mitsuba.medium_add"
+	bl_label = "Add Mitsuba Medium"
+	
+	new_medium_name = bpy.props.StringProperty(default='New Medium')
+	
+	def invoke(self, context, event):
+		v = context.scene.mitsuba_media.media
+		v.add()
+		new_vol = v[len(v)-1]
+		new_vol.name = self.properties.new_medium_name
+		return {'FINISHED'}
+
+@MitsubaAddon.addon_register_class
+class MITSUBA_OT_medium_remove(bpy.types.Operator):
+	'''Remove the selected medium definition'''
+	
+	bl_idname = "mitsuba.medium_remove"
+	bl_label = "Remove Mitsuba Medium"
+
+	def invoke(self, context, event):
+		w = context.scene.mitsuba_media
+		w.media.remove( w.media_index )
+		w.media_index = len(w.media)-1
 		return {'FINISHED'}

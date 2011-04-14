@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -41,22 +41,22 @@ public:
 		PhaseFunction::serialize(stream, manager);
 	}
 
-	Spectrum sample(PhaseFunctionQueryRecord &pRec, 
+	Float sample(PhaseFunctionQueryRecord &pRec, 
 			Sampler *sampler) const {
 		Point2 sample(sampler->next2D());
 		pRec.wo = squareToSphere(sample);
-		return Spectrum(1.0f);
+		return 1.0f;
 	}
 
-	Spectrum sample(PhaseFunctionQueryRecord &pRec, 
+	Float sample(PhaseFunctionQueryRecord &pRec, 
 			Float &pdf, Sampler *sampler) const {
 		pRec.wo = squareToSphere(sampler->next2D());
 		pdf = 1/(4 * (Float) M_PI);
-		return Spectrum(pdf);
+		return pdf;
 	}
 
-	Spectrum f(const PhaseFunctionQueryRecord &pRec) const {
-		return Spectrum(1/(4 * (Float) M_PI));
+	Float f(const PhaseFunctionQueryRecord &pRec) const {
+		return 1/(4 * (Float) M_PI);
 	}
 
 	std::string toString() const {

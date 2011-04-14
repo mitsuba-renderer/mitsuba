@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -62,7 +62,7 @@ class MTS_EXPORT_CORE WaitFlag : public Object {
 public:
 	/**
 	 * \brief Create a new wait flag
-	 * @param flag
+	 * \param flag
 	 *    Initial state of the flag. If set to true, \ref wait()
 	 *    will immediately return.
 	 */
@@ -81,7 +81,7 @@ public:
 	 * \brief Temporarily wait for the flag to be set to true
 	 * 
 	 * Similar to \ref wait(), but also uses a time value given
-	 * in milliseconds. A return value of \a false signals
+	 * in milliseconds. A return value of \c false signals
 	 * that a timeout has occurred.
 	 *
 	 * \param ms Maximum waiting time in milliseconds
@@ -150,7 +150,7 @@ public:
 	 * \brief Temporarily wait for a signal and release the lock in the meanwhile.
 	 *
 	 * Similar to wait(), but also uses a time value given
-	 * in milliseconds. A return value of \a false signals
+	 * in milliseconds. A return value of \c false signals
 	 * that a timeout has occurred. The lock is held after
 	 * returning in either case.
 	 *

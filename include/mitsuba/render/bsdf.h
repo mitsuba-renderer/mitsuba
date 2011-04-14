@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -34,17 +34,6 @@ MTS_NAMESPACE_BEGIN
 struct MTS_EXPORT_RENDER BSDFQueryRecord {
 public:
 	/**
-	 * \brief Given a surface interaction and an incident direction 
-	 * construct a query record which can be used to sample 
-	 * an outgoing direction.
-	 *
-	 * For convenience, this function uses the local incident direction 
-	 * vector contained in the supplied intersection record.
-	 */
-	inline BSDFQueryRecord(RadianceQueryRecord &rRec, 
-		const Intersection &its); 
-
-	/**
 	 * \brief Given a surface interaction and an incident direction, 
 	 * construct a query record which can be used to sample
 	 * an outgoing direction.
@@ -53,16 +42,6 @@ public:
 	 * vector contained in the supplied intersection record.
 	 */
 	inline BSDFQueryRecord(const Intersection &its);
-
-	/**
-	 * \brief Given a surface interaction an an incident/exitant direction 
-	 * pair (wi, wo), create a BSDF query record to evaluate f(wi, wo).
-	 *
-	 * For convenience, this function uses the local incident direction 
-	 * vector contained in the supplied intersection record.
-	 */
-	inline BSDFQueryRecord(RadianceQueryRecord &rRec, 
-		const Intersection &its, const Vector &wo);
 
 	/**
 	 * \brief Given a surface interaction an an incident/exitant direction 
@@ -83,9 +62,6 @@ public:
 	/// Return a string representation
 	std::string toString() const;
 public:
-	/* Pointer to the associated radiance query record (or NULL) */
-	RadianceQueryRecord *rRec;
-
 	/* Surface interaction */
 	const Intersection &its;
 
@@ -183,7 +159,7 @@ public:
 	/**
 	 * Convenience method - similar to sample(), but also multiplies
 	 * by the cosine factor of the sampled direction.
-	 * @return The BSDF value divided by the sample probability
+	 * \return The BSDF value divided by the sample probability
 	 */
 	inline Spectrum sampleCos(BSDFQueryRecord &bRec, const Point2 &_sample) const {
 		Spectrum bsdfVal = sample(bRec, _sample);
@@ -206,7 +182,7 @@ public:
 	/**
 	 * Convenience method - similar to sample(), but also multiplies
 	 * by the cosine factor of the sampled direction.
-	 * @return The BSDF value (not divided by the probability)
+	 * \return The BSDF value (not divided by the probability)
 	 */
 	inline Spectrum sampleCos(BSDFQueryRecord &bRec, Float &pdf,
 			const Point2 &_sample) const {

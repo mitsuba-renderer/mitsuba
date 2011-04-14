@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -52,6 +52,7 @@ protected:
 	std::string m_toneMappingMethod;
 	Float m_reinhardKey, m_reinhardBurn;
 	int m_compressionRate;
+	ref<Mutex> m_mutex;
 public:
 	PNGFilm(const Properties &props) : Film(props) {
 		m_pixels = new Pixel[m_cropSize.x * m_cropSize.y];
@@ -89,6 +90,7 @@ public:
 			Log(EError, "16bpp implies a grayscale image with an alpha channel!");
 		if (m_bpp != 8 && m_bpp != 16 && m_bpp != 24 && m_bpp != 32)
 			Log(EError, "The PNG film must be set to 8, 16, 24 or 32 bits per pixel!");
+		m_mutex = new Mutex();
 	}
 
 	PNGFilm(Stream *stream, InstanceManager *manager) 
@@ -103,6 +105,7 @@ public:
 		m_compressionRate = stream->readInt();
 		m_gamma = 1.0f / m_gamma;
 		m_pixels = new Pixel[m_cropSize.x * m_cropSize.y];
+		m_mutex = new Mutex();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -212,12 +215,13 @@ public:
 
 	void develop(const fs::path &destFile) {
 		Log(EDebug, "Developing film ..");
+		m_mutex->lock();
 		ref<Bitmap> bitmap = new Bitmap(m_cropSize.x, m_cropSize.y, m_bpp);
 		uint8_t *targetPixels = bitmap->getData();
 		Float r, g, b;
 		size_t pos = 0;
 
-		Float exposure = std::pow(2.0f, (Float) m_exposure);
+		Float exposure = std::pow((Float) 2, (Float) m_exposure);
 		Float invWpSqr = std::pow((Float) 2, (Float) m_reinhardBurn);
 		Float reinhardKey = 0;
 		bool reinhard = false;
@@ -411,6 +415,8 @@ public:
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
 		bitmap->setGamma(m_gamma);
 		bitmap->save(Bitmap::EPNG, stream, m_compressionRate);
+		stream->close();
+		m_mutex->unlock();
 	}
 
 	bool destinationExists(const fs::path &baseName) const {

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -72,7 +72,7 @@ void RenderQueue::removeJob(RenderJob *job, bool cancelled) {
 	}
 	JobRecord &rec = (*it).second;
 	unsigned int ms = m_timer->getMilliseconds() - rec.startTime;
-	Log(EInfo, "Render time: %s", timeToString(ms/1000.0f, true).c_str());
+	Log(EInfo, "Render time: %s", timeString(ms/1000.0f, true).c_str());
 	m_jobs.erase(job);
 	m_cond->broadcast();
 	m_joinMutex->lock();

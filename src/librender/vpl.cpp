@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -24,7 +24,7 @@ MTS_NAMESPACE_BEGIN
 size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDepth, 
 		std::deque<VPL> &vpls) {
 	ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-		createObject(Sampler::m_theClass, Properties("halton")));
+		createObject(MTS_CLASS(Sampler), Properties("halton")));
 	EmissionRecord eRec;
 	eRec.type = EmissionRecord::EPreview;
 	Ray ray;
@@ -44,7 +44,7 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 
 		/* Sample an emitted particle */
 		scene->sampleEmissionArea(eRec, areaSample);
-		weight = eRec.P / eRec.pdfArea;
+		weight = eRec.value / eRec.pdfArea;
 		VPL lumVPL(ELuminaireVPL, weight);
 		lumVPL.its.p = eRec.sRec.p;
 		lumVPL.its.shFrame = (eRec.luminaire->getType() & Luminaire::EOnSurface)
@@ -52,8 +52,9 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 		lumVPL.luminaire = eRec.luminaire;
 		vpls.push_back(lumVPL);
 
-		weight *= scene->sampleEmissionDirection(eRec, dirSample);
-		Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface) ? absDot(eRec.sRec.n, eRec.d) : 1;
+		weight *= eRec.luminaire->sampleEmissionDirection(eRec, dirSample);
+		Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface)
+			? absDot(eRec.sRec.n, eRec.d) : 1;
 		weight *= cosTheta / eRec.pdfDir;
 		ray = Ray(eRec.sRec.p, eRec.d, 0.0f);
 
@@ -63,6 +64,12 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 				break;
 
 			const BSDF *bsdf = its.shape->getBSDF();
+			if (!bsdf) {
+				/* Pass right through the surface (there is no BSDF) */
+				ray.setOrigin(its.p);
+				continue;
+			}
+
 			BSDFQueryRecord bRec(its);
 			bRec.quantity = EImportance;
 			bsdfVal = bsdf->sampleCos(bRec, sampler->next2D());

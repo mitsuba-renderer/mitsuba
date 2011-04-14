@@ -100,7 +100,7 @@ void Random::seed(uint64_t s) {
 void Random::seed(Random *random) {
 	uint64_t buf[MT_N];
 	for (int i=0; i<MT_N; ++i)
-		buf[i] = random->nextLong();
+		buf[i] = random->nextULong();
 	seed(buf, MT_N);
 }
 
@@ -133,7 +133,7 @@ void Random::seed(uint64_t *init_key, uint64_t key_length) {
 }
 
 
-uint64_t Random::nextLong() {
+uint64_t Random::nextULong() {
     int i;
     uint64_t x;
     static uint64_t mag01[2]={0ULL, MT_MATRIX_A};
@@ -168,9 +168,9 @@ uint64_t Random::nextLong() {
     return x;
 }
 
-unsigned int Random::nextInteger(unsigned int n) {
+uint32_t Random::nextUInt(uint32_t n) {
 	/* Determine a bit mask */
-	unsigned int result, bitmask = n;
+	uint32_t result, bitmask = n;
 	bitmask |= bitmask >> 1;
 	bitmask |= bitmask >> 2;
 	bitmask |= bitmask >> 4;
@@ -178,7 +178,7 @@ unsigned int Random::nextInteger(unsigned int n) {
 	bitmask |= bitmask >> 16;
 
 	/* Generate numbers until one in [0, n) is found */
-	while ((result = (unsigned int) (nextLong() & bitmask)) >= n)
+	while ((result = (uint32_t) (nextULong() & bitmask)) >= n)
 		;
 
 	return result;
@@ -186,7 +186,7 @@ unsigned int Random::nextInteger(unsigned int n) {
 
 #if defined(DOUBLE_PRECISION)
 Float Random::nextFloat() { 
-	return (Float) ((nextLong() >> 11) * (1.0/9007199254740992.0));
+	return (Float) ((nextULong() >> 11) * (1.0/9007199254740992.0));
 }
 #else
 Float Random::nextFloat() {
@@ -196,7 +196,7 @@ Float Random::nextFloat() {
 		uint32_t u;
 		float f;
     } x;
-    x.u = ((nextLong() & 0xFFFFFFFF) >> 9) | 0x3f800000UL;
+    x.u = ((nextULong() & 0xFFFFFFFF) >> 9) | 0x3f800000UL;
     return x.f - 1.0f;
 }
 #endif

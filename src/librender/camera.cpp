@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/camera.h>
+#include <mitsuba/render/medium.h>
 #include <mitsuba/core/plugin.h>
 
 MTS_NAMESPACE_BEGIN
@@ -38,6 +39,7 @@ Camera::Camera(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
 	m_film = static_cast<Film *>(manager->getInstance(stream));
 	m_sampler = static_cast<Sampler *>(manager->getInstance(stream));
+	m_medium = static_cast<Medium *>(manager->getInstance(stream));
 	m_worldToCamera = Transform(stream);
 	m_cameraToWorld = Transform(stream);
 	m_shutterOpen = stream->readFloat();
@@ -67,6 +69,7 @@ void Camera::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 	manager->serialize(stream, m_film.get());
 	manager->serialize(stream, m_sampler.get());
+	manager->serialize(stream, m_medium.get());
 	m_worldToCamera.serialize(stream);
 	m_cameraToWorld.serialize(stream);
 	stream->writeFloat(m_shutterOpen);
@@ -85,12 +88,18 @@ void Camera::generateRayDifferential(const Point2 &sample,
 }
 
 void Camera::addChild(const std::string &name, ConfigurableObject *child) {
-	if (child->getClass()->derivesFrom(Sampler::m_theClass)) {
+	if (child->getClass()->derivesFrom(MTS_CLASS(Sampler))) {
 		Assert(m_sampler == NULL);
 		m_sampler = static_cast<Sampler *>(child);
-	} else if (child->getClass()->derivesFrom(Film::m_theClass)) {
+	} else if (child->getClass()->derivesFrom(MTS_CLASS(Film))) {
 		Assert(m_film == NULL);
 		m_film = static_cast<Film *>(child);
+	} else if (child->getClass()->derivesFrom(MTS_CLASS(Medium))) {
+		Assert(m_medium == NULL);
+		m_medium = static_cast<Medium *>(child);
+	} else if (child->getClass()->derivesFrom(MTS_CLASS(Medium))) {
+		Assert(m_medium == NULL);
+		m_medium = static_cast<Medium *>(child);
 	} else {
 		Log(EError, "Camera: Invalid child node!");
 	}
@@ -100,14 +109,23 @@ ProjectiveCamera::ProjectiveCamera(Stream *stream, InstanceManager *manager)
  : Camera(stream, manager) {
 	m_cameraToScreen = Transform(stream);
 	m_cameraToScreenGL = Transform(stream);
+	m_nearClip = stream->readFloat();
+	m_farClip = stream->readFloat();
 	m_aspect = stream->readFloat();
 }
 	
+ProjectiveCamera::ProjectiveCamera(const Properties &props) : Camera(props) {
+	/* Near clipping plane distance */
+	m_nearClip = props.getFloat("nearClip", 1e-2f);
+	/* Far clipping plane distance */
+	m_farClip = props.getFloat("farClip", 1e4f);
+}
+
 void ProjectiveCamera::configure() {
 	if (m_film == NULL) {
 		/* Instantiate an EXR film by default */
 		m_film = static_cast<Film*> (PluginManager::getInstance()->
-			createObject(Film::m_theClass, Properties("exrfilm")));
+			createObject(MTS_CLASS(Film), Properties("exrfilm")));
 		m_film->configure();
 	}
 
@@ -116,7 +134,7 @@ void ProjectiveCamera::configure() {
 		Properties props("independent");
 		props.setInteger("sampleCount", 4);
 		m_sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-				createObject(Sampler::m_theClass, props));
+				createObject(MTS_CLASS(Sampler), props));
 		m_sampler->configure();
 	}
 	m_aspect = (Float) m_film->getSize().x / (Float) m_film->getSize().y;
@@ -127,6 +145,8 @@ void ProjectiveCamera::serialize(Stream *stream, InstanceManager *manager) const
 
 	m_cameraToScreen.serialize(stream);
 	m_cameraToScreenGL.serialize(stream);
+	stream->writeFloat(m_nearClip);
+	stream->writeFloat(m_farClip);
 	stream->writeFloat(m_aspect);
 }
 
@@ -139,7 +159,7 @@ PinholeCamera::PinholeCamera(const Properties &props)
 	*/
 	m_mapSmallerSide = props.getBoolean("mapSmallerSide", true);
 }
-
+	
 PinholeCamera::PinholeCamera(Stream *stream, InstanceManager *manager)
  : ProjectiveCamera(stream, manager) {
 	m_fov = stream->readFloat();
@@ -167,6 +187,7 @@ void PinholeCamera::configure() {
 		m_xfov = m_fov;
 		m_yfov = radToDeg(2 * std::atan(std::tan(degToRad(m_fov)/2) / m_aspect));
 	}
+
 	m_imagePlaneSize.x = 2 * std::tan(degToRad(m_xfov)/2);
 	m_imagePlaneSize.y = 2 * std::tan(degToRad(m_yfov)/2);
 	m_imagePlanePixelSize.x = m_imagePlaneSize.x / getFilm()->getSize().x;
@@ -179,22 +200,6 @@ Float PinholeCamera::importance(const Point2 &p) const {
 	Float y = (p.y * m_imagePlanePixelSize.y) - .5f * m_imagePlaneSize.y;
 
 	return std::pow(1 + x*x+y*y, (Float) (3.0/2.0)) * m_imagePlaneInvArea;
-}
-
-Float PinholeCamera::solidAngle(Float xs, Float xe, Float ys, Float ye) const {
-	xs = (xs * m_imagePlanePixelSize.x) - .5f * m_imagePlaneSize.x;
-	ys = (ys * m_imagePlanePixelSize.y) - .5f * m_imagePlaneSize.y;
-	xe = (xe * m_imagePlanePixelSize.x) - .5f * m_imagePlaneSize.x;
-	ye = (ye * m_imagePlanePixelSize.y) - .5f * m_imagePlaneSize.y;
-
-	/* cos(theta) / d^2 with respect to the image plane integrated
-	   over the specified footprint */
-	Float xs2 = xs*xs, xe2 = xe*xe, ys2 = ys*ys, ye2 = ye*ye;
-	Float atan1 = std::atan((xe*ye)/std::sqrt(1 + xe2 + ye2));
-	Float atan2 = std::atan((xs*ye)/std::sqrt(1 + xs2 + ye2));
-	Float atan3 = std::atan((xe*ys)/std::sqrt(1 + xe2 + ys2));
-	Float atan4 = std::atan((xs*ys)/std::sqrt(1 + xs2 + ys2));
-	return atan1 - atan2 - atan3 + atan4;
 }
 
 Float PinholeCamera::importance(const Vector &v) const {

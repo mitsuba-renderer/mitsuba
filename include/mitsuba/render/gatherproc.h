@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -36,50 +36,62 @@ public:
 		ESurfacePhotons,
 		/// Caustic photons (indirect on diffuse surfaces, last bounce was through a delta BSDF)
 		ECausticPhotons,
-		/// Surface photons (all of them, even direct)
+		/// Surface photons (all of them, even direct illumination)
 		EAllSurfacePhotons,
-		/// Volumetric photons (multiple scattering only)
+		/// Volumetric photons
 		EVolumePhotons
 	};
 
 	/**
 	 * Create a new process for parallel photon gathering
-	 * @param type
+	 * \param type
 	 *     Specifies the type of requested photons (surface/caustic/volume)
-	 * @param photonCount
+	 * \param photonCount
 	 *     Specifies the number of requested photons
-	 * @param granularity
+	 * \param granularity
 	 *     Size of the internally used work units (in photons)
-	 * @param progressReporterPayload
+	 * \param isLocal
+	 *     Should the parallel process only be executed locally? (sending
+	 *     photons over the network may be unnecessary and wasteful)
+	 * \param progressReporterPayload
 	 *    Custom pointer payload to be delivered with progress messages
 	 */
 	GatherPhotonProcess(EGatherType type, size_t photonCount, 
-		unsigned int granularity, int maxDepth, int rrDepth,
+		size_t granularity, int maxDepth, int rrDepth, bool isLocal,
 		const void *progressReporterPayload);
 
 	/**
 	 * Once the process has finished, this returns a reference 
 	 * to the (still unbalanced) photon map
 	 */
-	inline PhotonMap *getPhotonMap() { return m_photonMap.get(); }
+	inline PhotonMap *getPhotonMap() { return m_photonMap; }
 
 	/**
+	 * \brief Return the number of discarded photons
+	 *
 	 * Due to asynchronous processing, some excess photons
 	 * will generally be produced. This function returns the number
 	 * of excess photons that had to be discarded. If this is too
 	 * high, the granularity should be decreased.
 	 */
-	inline size_t getExcess() const { return m_excess; }
-	
+	inline size_t getExcessPhotons() const { return m_excess; }
+
 	/**
-	 * Lists the nuber of photons, which had to be shot
+	 * \brief Lists the nuber of particles that had to be shot
 	 * in order to fill the photon map.
 	 */
-	inline size_t getShotPhotons() const { return m_numShot; }
+	inline size_t getShotParticles() const { return m_numShot; }
 
-	/* ParallelProcess implementation */
+	// ======================================================================
+	/// @{ \name ParallelProcess implementation
+	// ======================================================================
+
+	bool isLocal() const;
 	ref<WorkProcessor> createWorkProcessor() const; 
 	void processResult(const WorkResult *wr, bool cancelled);
+
+	/// @}
+	// ======================================================================
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -90,6 +102,7 @@ protected:
 	ref<PhotonMap> m_photonMap;
 	int m_maxDepth;
 	int m_rrDepth;
+	bool m_isLocal;
 	size_t m_excess, m_numShot;
 };
 

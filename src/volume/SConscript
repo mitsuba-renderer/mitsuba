@@ -3,5 +3,6 @@ Import('env', 'plugins')
 plugins += env.SharedLibrary('#plugins/constvolume', ['constvolume.cpp'])
 plugins += env.SharedLibrary('#plugins/gridvolume', ['gridvolume.cpp'])
 plugins += env.SharedLibrary('#plugins/hgridvolume', ['hgridvolume.cpp'])
+plugins += env.SharedLibrary('#plugins/volcache', ['volcache.cpp'])
 
 Export('plugins')

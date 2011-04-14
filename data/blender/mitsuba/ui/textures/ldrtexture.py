@@ -18,8 +18,10 @@
 
 import bpy
 
-from mitsuba.ui.textures import mitsuba_texture_base
+from ... import MitsubaAddon
+from ...ui.textures import mitsuba_texture_base
 
+@MitsubaAddon.addon_register_class
 class ui_texture_ldrtexture(mitsuba_texture_base, bpy.types.Panel):
 	bl_label = 'Mitsuba Bitmap Texture'
 	

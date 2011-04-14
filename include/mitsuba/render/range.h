@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -24,8 +24,10 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * A work unit specifying e.g. a range of particles to be traced
- * by a worker.
+ * \brief A work unit specifying a range of some quantity to be processed.
+ * 
+ * An example usage is in \ref ParticleProcess, where this class specifies
+ * sequences of particles to be traced.
  */
 class MTS_EXPORT_RENDER RangeWorkUnit : public WorkUnit {
 public:
@@ -36,13 +38,13 @@ public:
 	}
 	
 	inline void load(Stream *stream) {
-		m_rangeStart = (size_t) stream->readULong();
-		m_rangeEnd = (size_t) stream->readULong();
+		m_rangeStart = stream->readSize();
+		m_rangeEnd = stream->readSize();
 	}
 
 	inline void save(Stream *stream) const {
-		stream->writeULong(m_rangeStart);
-		stream->writeULong(m_rangeEnd);
+		stream->writeSize(m_rangeStart);
+		stream->writeSize(m_rangeEnd);
 	}
 
 	inline std::string toString() const {

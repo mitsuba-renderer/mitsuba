@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -268,7 +268,7 @@ public:
 	 * \brief Is this process strictly local?
 	 *
 	 * If a process is marked as local, it shouldn't be distributed 
-	 * to remote processing nodes? The default implementation 
+	 * to remote processing nodes. The default implementation 
 	 * returns false.
 	 */
 	virtual bool isLocal() const;
@@ -327,8 +327,8 @@ public:
 	 * \brief Schedule a parallelizable process for execution.
 	 *
 	 * If the scheduler is currently running and idle, its execution 
-	 * will begin immediately. Returns \a false if the process
-	 * is already scheduled and has not yet terminated and \a true
+	 * will begin immediately. Returns \c false if the process
+	 * is already scheduled and has not yet terminated and \c true
 	 * in any other case.
 	 */
 	bool schedule(ParallelProcess *process);

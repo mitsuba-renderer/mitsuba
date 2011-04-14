@@ -8,6 +8,8 @@
 MTS_NAMESPACE_BEGIN
 
 MemoryMappedFile::MemoryMappedFile(const fs::path &filename) : m_filename(filename) {
+	if (!fs::exists(filename))
+		Log(EError, "The file \"%s\" does not exist!", filename.file_string().c_str());
 	m_size = (size_t) fs::file_size(filename);
 	Log(ETrace, "Mapping \"%s\" into memory (%s)..", 
 			filename.filename().c_str(), memString(m_size).c_str());

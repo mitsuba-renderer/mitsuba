@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -72,10 +72,14 @@ public:
 
 	/// Set an integer value
 	void setLong(const std::string &name, int64_t value, bool warnDuplicates = true);
-	/// Get an intteger value
+	/// Get an integer value
 	int64_t getLong(const std::string &name) const;
 	/// Get an integer value (with default);
 	int64_t getLong(const std::string &name, int64_t defVal) const;
+	/// Get a size value
+	size_t getSize(const std::string &name) const;
+	/// Get an size value (with default);
+	size_t getSize(const std::string &name, size_t defVal) const;
 
 	/// Set a single precision floating point value
 	void setFloat(const std::string &name, Float value, bool warnDuplicates = true);

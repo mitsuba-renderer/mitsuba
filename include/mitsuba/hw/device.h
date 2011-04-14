@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -118,8 +118,8 @@ private:
 class MTS_EXPORT_HW DeviceEventListener {
 public:
 	/** \brief Called when a device event occurs
-	 * @param pEvent The event data structure
-	 * @return True if the result has been handled, false otherwise
+	 * \param event The event data structure
+	 * \return True if the result has been handled, false otherwise
 	 */
 	virtual bool deviceEventOccurred(const DeviceEvent &event) = 0;
 protected:
@@ -147,7 +147,8 @@ public:
 		EMouseEndDragEvent = 0x0400,
 		EMouseDoubleClickEvent = 0x0800,
 		EGainFocusEvent = 0x1000,
-		ELoseFocusEvent = 0x2000
+		ELoseFocusEvent = 0x2000,
+		EResizeEvent = 0x4000
 	};
 
 	/// Device keyboard event modifiers
@@ -315,6 +316,12 @@ public:
 	/// Return whether full screen drawing is enabled
 	inline bool getFullscreen() const { return m_fullscreen; }
 
+	// Specify whether resizing the window is allowed
+	void setResizeAllowed(bool resizeAllowed);
+
+	/// Return whether it is possible to resize the window
+	inline bool isResizeAllowed() const { return m_resizeAllowed; }
+
 	/// Define whether to enable window centering
 	void setCenter(bool center);
 
@@ -386,20 +393,11 @@ protected:
 	Vector2i m_size;
 	Point2i m_position;
 	int m_fsaa;
-	int m_redBits;
-	int m_greenBits;
-	int m_blueBits;
-	int m_alphaBits;
-	int m_depthBits;
-	int m_stencilBits;
-	bool m_doubleBuffer;
-	bool m_initialized;
-	bool m_fullscreen;
-	bool m_center;
-	bool m_showFPS;
-	int m_fpsCounter;
-	int m_fps;
-	int m_lastTime;
+	int m_redBits, m_greenBits, m_blueBits;
+	int m_alphaBits, m_depthBits, m_stencilBits;
+	bool m_doubleBuffer, m_initialized, m_fullscreen;
+	bool m_center, m_showFPS, m_resizeAllowed;
+	int m_fpsCounter, m_fps, m_lastTime;
 	std::string m_title;
 	std::list<DeviceEventListener *> m_callbacks;
 };

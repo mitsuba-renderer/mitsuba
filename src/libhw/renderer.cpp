@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -97,9 +97,9 @@ void Renderer::unregisterShaderForResource(const HWResource *resource) {
 	}
 }
 
-void Renderer::registerGeometry(const TriMesh *mesh) {
+GPUGeometry *Renderer::registerGeometry(const TriMesh *mesh) {
 	if (!m_capabilities->isSupported(RendererCapabilities::EVertexBufferObjects))
-		return;
+		return NULL;
 
 	GPUGeometry *geometry;
 	if (m_geometry.find(mesh) == m_geometry.end()) {
@@ -110,6 +110,7 @@ void Renderer::registerGeometry(const TriMesh *mesh) {
 		geometry = m_geometry[mesh];
 	}
 	geometry->incRef();
+	return geometry;
 }
 
 void Renderer::unregisterGeometry(const TriMesh *mesh) {

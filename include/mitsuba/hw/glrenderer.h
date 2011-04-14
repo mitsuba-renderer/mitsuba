@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -55,6 +55,12 @@ public:
 	/// Initialize the renderer
 	virtual void init(Device *device, Renderer *other = NULL);
 
+	/**
+	 * \brief Reconfigure the renderer for a certain device
+	 * (e.g. after a resize event)
+	 */
+	void reconfigure(const Device *device);
+
 	/// Shut the renderer down
 	virtual void shutdown();
 
@@ -96,6 +102,13 @@ public:
 		bool centerHoriz = true, bool centerVert = true,
 		const Vector2i &offset = Vector2i(0, 0));
 
+	/// Draw a planar circle with the specified center, normal and radius
+	void drawCircle(const Point &center, const Normal &normal, Float radius);
+
+	/// Draw a 3D arc connecting \c p1 and \c p2
+	void drawArc(const Point &center,
+		const Point &p1, const Point &p2, bool shorterPiece);
+
 	/// Clean up the renderer after drawing triangle geometry
 	void endDrawingMeshes(); 
 
@@ -106,7 +119,7 @@ public:
 	 * Only transmits positions, hence this is mainly useful for
 	 * shadow mapping.
 	 */
-	void drawAll();
+	void drawAll(const std::vector<std::pair<const GPUGeometry *, Transform> > &geo);
 
 	/// Blit a screen-sized quad
 	void blitQuad(bool flipVertically);
@@ -154,6 +167,12 @@ public:
 
 	/// Set the current fixed-function pipeline color
 	void setColor(const Spectrum &spec);
+
+	/// Push a view transformation onto the matrix stack
+	void pushTransform(const Transform &trafo);
+	
+	/// Pop the last view transformation from the matrix stack
+	void popTransform();
 
 	/// Flush outstanding rendering commands
 	void flush();

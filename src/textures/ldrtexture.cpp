@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -129,10 +129,10 @@ public:
 		float tbl[256];
 		if (m_gamma == -1) {
 			for (int i=0; i<256; ++i) 
-				tbl[i] = fromSRGBComponent(i/255.0f);
+				tbl[i] = fromSRGBComponent((Float) i / (Float) 255);
 		} else {
 			for (int i=0; i<256; ++i)
-				tbl[i] = std::pow(i/255.0f, m_gamma);
+				tbl[i] = std::pow((Float) i / (Float) 255, m_gamma);
 		}
 
 		uint8_t *data = bitmap->getData();
@@ -253,7 +253,10 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "LDRTexture[filename=\"" << m_filename << "\", gamma=" << m_gamma << "]";
+		oss << "LDRTexture[" << endl
+			<< "  filename = \"" << m_filename << "\"," << endl
+			<< "  gamma = " << m_gamma << endl
+			<< "]";
 		return oss.str();
 	}
 

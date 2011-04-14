@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -84,8 +84,8 @@ TriMesh::TriMesh(Stream *stream, InstanceManager *manager)
 	m_aabb = AABB(stream);
 
 	uint32_t flags = stream->readUInt();
-	m_vertexCount = (size_t) stream->readULong();
-	m_triangleCount = (size_t) stream->readULong();
+	m_vertexCount = stream->readSize();
+	m_triangleCount = stream->readSize();
 
 	m_positions = new Point[m_vertexCount];
 	stream->readFloatArray(reinterpret_cast<Float *>(m_positions), 
@@ -190,8 +190,8 @@ TriMesh::TriMesh(Stream *_stream, int index)
 	stream = new ZStream(stream);
 
 	uint32_t flags = stream->readUInt();
-	m_vertexCount = (size_t) stream->readULong();
-	m_triangleCount = (size_t) stream->readULong();
+	m_vertexCount = stream->readSize();
+	m_triangleCount = stream->readSize();
 	
 	bool fileDoublePrecision = flags & EDoublePrecision;
 	m_faceNormals = flags & EFaceNormals;
@@ -284,8 +284,8 @@ void TriMesh::configure() {
 		computeNormals();
 	}
 
-	if (((m_bsdf->getType() & BSDF::EAnisotropicMaterial)
-		|| m_bsdf->usesRayDifferentials()) && !m_tangents)
+	if (hasBSDF() && ((m_bsdf->getType() & BSDF::EAnisotropicMaterial)
+		|| m_bsdf->usesRayDifferentials()) && !m_tangents) 
 		computeTangentSpaceBasis();
 }
 
@@ -546,15 +546,22 @@ void TriMesh::computeNormals() {
 bool TriMesh::computeTangentSpaceBasis() {
 	int zeroArea = 0, zeroNormals = 0;
 	if (!m_texcoords) {
-		if (m_bsdf->getType() & BSDF::EAnisotropicMaterial)
-			Log(EError, "\"%s\": computeTangentSpace(): texture coordinates are required "
-					"to generate tangent vectors. If you want to render with an anisotropic "
-					"material, make sure that all assigned objects have texture coordinates.");
+		bool anisotropic = hasBSDF() && m_bsdf->getType() & BSDF::EAnisotropicMaterial;
+		if (anisotropic)
+			Log(EError, "\"%s\": computeTangentSpace(): texture coordinates "
+				"are required to generate tangent vectors. If you want to render with an anisotropic "
+				"material, please make sure that all associated shapes have valid texture coordinates.",
+				getName().c_str());
 		return false;
 	}
 
 	if (m_tangents)
 		Log(EError, "Tangent space vectors have already been generated!");
+
+	if (!m_normals) {
+		Log(EWarn, "Vertex normals are required to compute a tangent space basis!");
+		return false;
+	}
 
 	m_tangents = new TangentSpace[m_vertexCount];
 	memset(m_tangents, 0, sizeof(TangentSpace));
@@ -571,7 +578,7 @@ bool TriMesh::computeTangentSpaceBasis() {
 		}
 		sharers[i] = 0;
 	}
-	
+
 	for (size_t i=0; i<m_triangleCount; i++) {
 		uint32_t idx0 = m_triangles[i].idx[0],
 				 idx1 = m_triangles[i].idx[1],
@@ -678,8 +685,8 @@ void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeString(m_name);
 	m_aabb.serialize(stream);
 	stream->writeUInt(flags);
-	stream->writeULong(m_vertexCount);
-	stream->writeULong(m_triangleCount);
+	stream->writeSize(m_vertexCount);
+	stream->writeSize(m_triangleCount);
 
 	stream->writeFloatArray(reinterpret_cast<Float *>(m_positions), 
 		m_vertexCount * sizeof(Point)/sizeof(Float));
@@ -764,8 +771,8 @@ void TriMesh::serialize(Stream *_stream) const {
 		flags |= EFaceNormals;
 
 	stream->writeUInt(flags);
-	stream->writeULong(m_vertexCount);
-	stream->writeULong(m_triangleCount);
+	stream->writeSize(m_vertexCount);
+	stream->writeSize(m_triangleCount);
 
 	stream->writeFloatArray(reinterpret_cast<Float *>(m_positions), 
 		m_vertexCount * sizeof(Point)/sizeof(Float));

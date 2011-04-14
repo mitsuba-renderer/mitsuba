@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -27,7 +27,8 @@ MTS_NAMESPACE_BEGIN
 class IrradianceSamplingWorker : public WorkProcessor {
 public:
 	IrradianceSamplingWorker(size_t sampleCount, int ssIndex, int irrSamples, bool irrIndirect) 
-		: m_sampleCount(sampleCount), m_ssIndex(ssIndex), m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
+		: m_sampleCount(sampleCount), m_ssIndex(ssIndex), 
+		m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
 	}
 
 	IrradianceSamplingWorker(Stream *stream, InstanceManager *manager) {
@@ -59,10 +60,10 @@ public:
 		props.setLong("sampleCount", m_sampleCount);
 		props.setPluginName("hammersley");
 		m_sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, props));
+			createObject(MTS_CLASS(Sampler), props));
 		props.setPluginName("independent");
 		m_independentSampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, props));
+			createObject(MTS_CLASS(Sampler), props));
 		m_scene->wakeup(m_resources);
 		const Subsurface *ss = m_scene->getSubsurfaceIntegrators()[m_ssIndex];
 		m_shapes = ss->getShapes();
@@ -93,8 +94,8 @@ public:
 			result->put(IrradianceSample(
 				sRec.p,
 				integrator->E(m_scene.get(), sRec.p, sRec.n, time, 
-					m_independentSampler, m_irrSamples, m_irrIndirect),
-				1/pdf
+					camera->getMedium(), m_independentSampler,
+					m_irrSamples, m_irrIndirect), 1/pdf
 			));
 		}
 	}

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -36,10 +36,16 @@ int Viewer::run(int argc, char **argv) {
 	m_font = new Font(Font::EBitstreamVeraMono14);
 	m_font->init(m_renderer);
 	m_quit = false;
+	m_leaveEventLoop = true;
+	DeviceEvent event(Device::EResizeEvent);
+	windowResized(event);
 
 	if (init(argc, argv)) {
-		while (!m_quit) {
-			m_session->processEvents();
+		while (true) {
+			m_session->processEventsBlocking(m_leaveEventLoop);
+			m_leaveEventLoop = false;
+			if (m_quit) 
+				break;
 			m_renderer->clear();
 			draw();
 			m_device->flip();
@@ -72,15 +78,18 @@ void Viewer::mouseMoved(const DeviceEvent &event) { }
 void Viewer::mouseBeginDrag(const DeviceEvent &event) { }
 void Viewer::mouseDragged(const DeviceEvent &event) { }
 void Viewer::mouseEndDrag(const DeviceEvent &event) { }
+void Viewer::windowResized(const DeviceEvent &event) { }
 
 bool Viewer::deviceEventOccurred(const DeviceEvent &event) {
 	switch (event.getType()) {
 		case Device::EKeyDownEvent:
 			if (event.getKeyboardKey() == 'q' 
-				|| event.getKeyboardSpecial() == Device::EKeyEscape)
+				|| event.getKeyboardSpecial() == Device::EKeyEscape) {
 				m_quit = true;
-			else
+				m_leaveEventLoop = true;
+			} else {
 				keyPressed(event);
+			}
 			break;
 		case Device::EKeyUpEvent: keyReleased(event); break;
 		case Device::EMouseMotionEvent: mouseMoved(event); break;
@@ -91,6 +100,14 @@ bool Viewer::deviceEventOccurred(const DeviceEvent &event) {
 		case Device::EMouseEndDragEvent: mouseEndDrag(event); break;
 		case Device::EQuitEvent:
 			m_quit = true;
+			m_leaveEventLoop = true;
+			break;
+		case Device::EResizeEvent:
+			m_renderer->reconfigure(m_device);
+			windowResized(event);
+			// no break
+		case Device::EGainFocusEvent:
+			m_leaveEventLoop = true;
 			break;
 	}
 

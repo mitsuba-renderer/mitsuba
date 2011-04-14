@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -76,9 +76,9 @@ class MTS_EXPORT_HW Renderer : public Object {
 public:
 	/* Possible blending modes */
 	enum EBlendMode {
-		EBlendNone,     // Blending turned off
-		EBlendAlpha,    // Normal alpha blending
-		EBlendAdditive  // Additive blending
+		EBlendNone,          // Blending turned off
+		EBlendAlpha,         // Normal alpha blending
+		EBlendAdditive       // Additive blending
 	};
 
 	/* Possible culling modes */
@@ -102,6 +102,12 @@ public:
 	 * between them to permit sharing of textures, programs, etc.
 	 */
 	virtual void init(Device *device, Renderer *other = NULL);
+
+	/**
+	 * \brief Reconfigure the renderer for a certain device
+	 * (e.g. after a resize event)
+	 */
+	virtual void reconfigure(const Device *device) = 0;
 
 	/// Shut the renderer down
 	virtual void shutdown();
@@ -148,13 +154,21 @@ public:
 	 * Only transmits positions, hence this is mainly useful for
 	 * shadow mapping.
 	 */
-	virtual void drawAll() = 0;
+	virtual void drawAll(const std::vector<std::pair<const GPUGeometry *, Transform> > &geo) = 0;
 
 	/// Draw a quad using the given texture
 	virtual void blitTexture(const GPUTexture *texture,
 		bool flipVertically = false, 
 		bool centerHoriz = true, bool centerVert = true,
 		const Vector2i &offset = Vector2i(0, 0)) = 0;
+
+	/// Draw a planar circle with the specified center, normal and radius
+	virtual void drawCircle(const Point &center, 
+		const Normal &normal, Float radius) = 0;
+
+	/// Draw a 3D arc connecting \c p1 and \c p2
+	virtual void drawArc(const Point &center,
+		const Point &p1, const Point &p2, bool shorterPiece) = 0;
 
 	/// Blit a screen-sized quad
 	virtual void blitQuad(bool flipVertically) = 0;
@@ -203,6 +217,12 @@ public:
 	/// Set the current fixed-function pipeline color
 	virtual void setColor(const Spectrum &spec) = 0;
 
+	/// Push a view transformation onto the matrix stack
+	virtual void pushTransform(const Transform &trafo) = 0;
+	
+	/// Pop the last view transformation from the matrix stack
+	virtual void popTransform() = 0;
+
 	/// Flush outstanding rendering commands
 	virtual void flush() = 0;
 
@@ -232,11 +252,9 @@ public:
 	 * will transfer the associated geometry to the GPU,
 	 * which accelerates later calls to drawTriMesh()
 	 */
-	void registerGeometry(const TriMesh *mesh);
+	GPUGeometry *registerGeometry(const TriMesh *mesh);
 
-	/**
-	 * Unregister a triangle mesh from the renderer.
-	 */
+	/// Unregister a triangle mesh from the renderer.
 	void unregisterGeometry(const TriMesh *mesh);
 
 	/// Set the log level

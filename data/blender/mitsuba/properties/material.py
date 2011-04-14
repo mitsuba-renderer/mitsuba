@@ -1,13 +1,33 @@
-import math
+# ##### BEGIN GPL LICENSE BLOCK #####
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
+
+import bpy, math
 from copy import deepcopy
 
-import bpy
+from .. import MitsubaAddon
 
 from extensions_framework import declarative_property_group
 from extensions_framework import util as efutil
-from extensions_framework.validate import Logic_Operator
-from mitsuba.properties.texture import TextureParameter
-from mitsuba.export import ParamSet
+from extensions_framework.validate import Logic_Operator, Logic_OR as O
+from ..properties.texture import TextureParameter
+from ..export import ParamSet
+
+from ..properties.world import MediumParameter
 
 param_reflectance = TextureParameter('reflectance', 'Reflectance', \
 		'Diffuse reflectance value', default=(0.5, 0.5, 0.5))
@@ -22,52 +42,124 @@ def dict_merge(*args):
 		vis.update(deepcopy(vis_dict))
 	return vis
 
+mat_names = {
+	'lambertian' : 'Lambertian',
+	'phong' : 'Phong',
+	'ward' : 'Anisotropic Ward',
+	'mirror' : 'Ideal mirror',
+	'dielectric' : 'Ideal dielectric',
+	'roughmetal' : 'Rough metal',
+	'roughglass' : 'Rough glass',
+	'microfacet' : 'Microfacet',
+	'composite' : 'Composite material',
+	'difftrans' : 'Diffuse transmitter',
+	'none' : 'Passthrough material'
+}
 
+@MitsubaAddon.addon_register_class
+class MATERIAL_OT_set_mitsuba_type(bpy.types.Operator):
+	bl_idname = 'material.set_mitsuba_type'
+	bl_label = 'Set material type'
+	
+	mat_name = bpy.props.StringProperty()
+	
+	@classmethod
+	def poll(cls, context):
+		return	context.material and \
+				context.material.mitsuba_material
+	
+	def execute(self, context):
+		context.material.mitsuba_material.set_type(self.properties.mat_name)
+		return {'FINISHED'}
+
+@MitsubaAddon.addon_register_class
+class MATERIAL_MT_mitsuba_type(bpy.types.Menu):
+	bl_label = 'Material Type'
+	
+	def draw(self, context):
+		sl = self.layout
+		from operator import itemgetter
+		result = sorted(mat_names.items(), key=itemgetter(1))
+		for item in result:
+			op = sl.operator('MATERIAL_OT_set_mitsuba_type', text = item[1])
+			op.mat_name = item[0]
+	
+@MitsubaAddon.addon_register_class
 class mitsuba_material(declarative_property_group):
 	'''
 	Storage class for Mitsuba Material settings.
 	This class will be instantiated within a Blender Material
 	object.
 	'''
+
+	ef_attach_to = ['Material']
 	
 	controls = [
-		'type',
-	] 
+		'twosided',
+		'is_medium_transition',
+		'interior',
+		'exterior'
+	]
+
+	visibility = {
+		'twosided' : { 'type' : O(['lambertian', 'phong', 'ward',
+			'mirror', 'roughmetal', 'microfacet', 'composite'])},
+		'exterior' : { 'is_medium_transition' : True },
+		'interior' : { 'is_medium_transition' : True }
+	}
 
 	properties = [
 		# Material Type Select
 		{
-			'type': 'enum',
+			'attr': 'type_label',
+			'name': 'Mitsuba material type',
+			'type': 'string',
+			'default': 'Lambertian',
+			'save_in_preset': True
+		},
+		{
+			'type': 'string',
 			'attr': 'type',
 			'name': 'Type',
-			'description': 'Mitsuba material type',
-			'default': 'matte',
-			'items': [
-				('lambertian', 'Lambertian', 'Lambertian (i.e. ideally diffuse) material'),
-				('phong', 'Phong', 'Modified Phong BRDF'),
-				('ward', 'Anisotropic Ward', 'Anisotropic Ward BRDF'),
-				('dielectric', 'Ideal dielectric', 'Ideal dielectric material (e.g. glass)'),
-				('mirror', 'Ideal mirror', 'Ideal mirror material'),
-				('roughglass', 'Rough glass', 'Rough dielectric material (e.g. sand-blasted glass)'),
-				('roughmetal', 'Rough metal', 'Rough conductor (e.g. sand-blasted metal)'),
-				('difftrans', 'Diffuse transmitter', 'Material with an ideally diffuse transmittance'),
-				('microfacet', 'Microfacet', 'Microfacet material (like the rough glass material, but without transmittance)'),
-				('composite', 'Composite material', 'Allows creating mixtures of different materials')
-			],
+			'default': 'lambertian',
+			'save_in_preset': True
+		},
+		{
+			'type': 'bool',
+			'attr': 'twosided',
+			'name': 'Use two-sided shading',
+			'description': 'Use two-sided shading for this material? This only makes sense for non-transparent/translucent materials.',
+			'default': False,
+			'save_in_preset': True
+		},
+		{
+			'type': 'bool',
+			'attr': 'is_medium_transition',
+			'name': 'Mark as medium transition',
+			'description': 'Activate this property if the material specifies a transition from one participating medium to another.',
+			'default': False,
 			'save_in_preset': True
 		}
-	]
+	] + MediumParameter('interior', 'Interior') \
+	  + MediumParameter('exterior', 'Exterior')
+
+	def set_type(self, mat_type):
+		self.type = mat_type
+		self.type_label = mat_names[mat_type]
 
 	def get_params(self):
 		sub_type = getattr(self, 'mitsuba_mat_%s' % self.type)
 		return sub_type.get_params()
 
+@MitsubaAddon.addon_register_class
 class mitsuba_emission(declarative_property_group):
 	'''
 	Storage class for Mitsuba Material emission settings.
 	This class will be instantiated within a Blender Material
 	object.
 	'''
+	
+	ef_attach_to = ['Material']
 	
 	controls = [
 		'color',
@@ -136,7 +228,9 @@ class mitsuba_emission(declarative_property_group):
 		params.add_float('samplingWeight', self.samplingWeight)
 		return params
 
-class mitsuba_mat_lambertian(declarative_property_group):
+@MitsubaAddon.addon_register_class
+class mitsuba_mat_lambertian(declarative_property_group):	
+	ef_attach_to = ['mitsuba_material']
 	controls = param_reflectance.controls
 	
 	properties = param_reflectance.properties
@@ -148,7 +242,9 @@ class mitsuba_mat_lambertian(declarative_property_group):
 		params.update(param_reflectance.get_params(self))
 		return params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_mat_phong(declarative_property_group):
+	ef_attach_to = ['mitsuba_material']
 	controls = [
 		'diffuseAmount',
 		'specularAmount',
@@ -204,7 +300,9 @@ class mitsuba_mat_phong(declarative_property_group):
 		params.add_float('exponent', self.exponent)
 		return params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_mat_ward(declarative_property_group):
+	ef_attach_to = ['mitsuba_material']
 	controls = [
 		'diffuseAmount',
 		'specularAmount',
@@ -271,7 +369,9 @@ class mitsuba_mat_ward(declarative_property_group):
 		params.add_float('alphaY', self.alphaY)
 		return params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_mat_microfacet(declarative_property_group):
+	ef_attach_to = ['mitsuba_material']
 	controls = [
 		'diffuseAmount',
 		'specularAmount',
@@ -350,7 +450,9 @@ class mitsuba_mat_microfacet(declarative_property_group):
 		params.add_float('intIOR', self.intIOR)
 		return params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_mat_roughglass(declarative_property_group):
+	ef_attach_to = ['mitsuba_material']
 	controls = [
 		'specularReflectance',
 		'specularTransmittance',
@@ -422,7 +524,9 @@ class mitsuba_mat_roughglass(declarative_property_group):
 		params.add_float('intIOR', self.intIOR)
 		return params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_mat_roughmetal(declarative_property_group):
+	ef_attach_to = ['mitsuba_material']
 	controls = [
 		'alphaB',
 		'ior', 'k'
@@ -446,7 +550,7 @@ class mitsuba_mat_roughmetal(declarative_property_group):
 			'name' : 'IOR',
 			'description' : 'Per-channel index of refraction of the conductor',
 			'default' : (0.370, 0.370, 0.370),
-			'min': 1.0,
+			'min': 0.1,
 			'max': 10.0,
 			'expand' : False,
 			'save_in_preset': True
@@ -473,7 +577,9 @@ class mitsuba_mat_roughmetal(declarative_property_group):
 		params.add_color('k', self.k)
 		return params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_mat_dielectric(declarative_property_group):
+	ef_attach_to = ['mitsuba_material']
 	controls = [
 		'specularReflectance',
 		'specularTransmittance',
@@ -533,7 +639,9 @@ class mitsuba_mat_dielectric(declarative_property_group):
 		params.add_float('intIOR', self.intIOR)
 		return params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_mat_mirror(declarative_property_group):
+	ef_attach_to = ['mitsuba_material']
 	controls = [
 		'specularReflectance'
 	]
@@ -557,7 +665,9 @@ class mitsuba_mat_mirror(declarative_property_group):
 		params.add_color('specularReflectance', self.specularReflectance)
 		return params
 
+@MitsubaAddon.addon_register_class
 class mitsuba_mat_difftrans(declarative_property_group):
+	ef_attach_to = ['mitsuba_material']
 	controls = [
 		'transmittance'
 	]
@@ -631,7 +741,9 @@ def mitsuba_mat_composite_visibility():
 		result["mat%i_weight" % i] = {'nElements' : Logic_Operator({'gte' : i})}
 	return result
 
+@MitsubaAddon.addon_register_class
 class mitsuba_mat_composite(declarative_property_group):
+	ef_attach_to = ['mitsuba_material']
 	controls = [
 		'nElements'
 	] + sum(map(lambda x: x.get_controls(), param_mat), [])

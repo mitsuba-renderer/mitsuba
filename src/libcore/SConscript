@@ -25,7 +25,7 @@ if coreEnv.has_key('JPEGLIB'):
 
 coreEnv.Prepend(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_CORE']])
 libcore_objects = [
-	'class.cpp', 'object.cpp', 'statistics.cpp', 'thread.cpp',
+	'class.cpp', 'object.cpp', 'statistics.cpp', 'thread.cpp', 'brent.cpp',
 	'logger.cpp', 'appender.cpp', 'formatter.cpp', 'lock.cpp', 
 	'random.cpp', 'timer.cpp',  'util.cpp', 'properties.cpp', 
 	'transform.cpp', 'spectrum.cpp', 'aabb.cpp', 'stream.cpp', 

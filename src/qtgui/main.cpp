@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -102,6 +102,7 @@ int main(int argc, char *argv[]) {
 	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
+	Thread::initializeOpenMP(getProcessorCount());
 	Logger::staticInitialization();
 	Spectrum::staticInitialization();
 	Scheduler::staticInitialization();
@@ -158,7 +159,7 @@ int main(int argc, char *argv[]) {
 		ref<Logger> logger = Thread::getThread()->getLogger();
 		for (size_t i=0; i<logger->getAppenderCount(); ++i) {
 			Appender *appender = logger->getAppender(i);
-			if (appender->getClass()->derivesFrom(StreamAppender::m_theClass))
+			if (appender->getClass()->derivesFrom(MTS_CLASS(StreamAppender)))
 				logger->removeAppender(appender);
 		}
 

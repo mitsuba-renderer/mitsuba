@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -31,7 +31,7 @@ public:
 
 	IndependentSampler(const Properties &props) : Sampler(props) {
 		/* Number of samples per pixel when used with a sampling-based integrator */
-		m_sampleCount = (uint64_t) props.getLong("sampleCount", 1);
+		m_sampleCount = props.getSize("sampleCount", 4);
 		m_random = new Random();
 	}
 

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -44,7 +44,6 @@ Medium::Medium(const Properties &props)
 
 Medium::Medium(Stream *stream, InstanceManager *manager)
  : NetworkedObject(stream, manager) {
-	m_aabb = AABB(stream);
 	m_densityMultiplier = stream->readFloat();
 	m_sigmaA = Spectrum(stream);
 	m_sigmaS = Spectrum(stream);
@@ -53,14 +52,10 @@ Medium::Medium(Stream *stream, InstanceManager *manager)
 	m_phaseFunction = static_cast<PhaseFunction *>(manager->getInstance(stream));
 }
 	
-void Medium::preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job, 
-	int sceneResID, int cameraResID, int samplerResID) {
-}
-
 void Medium::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
 
-	if (cClass->derivesFrom(PhaseFunction::m_theClass)) {
+	if (cClass->derivesFrom(MTS_CLASS(PhaseFunction))) {
 		Assert(m_phaseFunction == NULL);
 		m_phaseFunction = static_cast<PhaseFunction *>(child);
 	} else {
@@ -72,13 +67,12 @@ void Medium::addChild(const std::string &name, ConfigurableObject *child) {
 void Medium::configure() {
 	if (m_phaseFunction == NULL) {
 		m_phaseFunction = static_cast<PhaseFunction *> (PluginManager::getInstance()->
-				createObject(PhaseFunction::m_theClass, Properties("isotropic")));
+				createObject(MTS_CLASS(PhaseFunction), Properties("isotropic")));
 	}
 }
 
 void Medium::serialize(Stream *stream, InstanceManager *manager) const {
 	NetworkedObject::serialize(stream, manager);
-	m_aabb.serialize(stream);
 	stream->writeFloat(m_densityMultiplier);
 	m_sigmaA.serialize(stream);
 	m_sigmaS.serialize(stream);
@@ -95,8 +89,7 @@ std::string MediumSamplingRecord::toString() const {
 		<< "  pdfFailure = " << pdfFailure << "," << std::endl
 		<< "  pdfSuccess = " << pdfSuccess << "," << std::endl
 		<< "  pdfSuccessRev = " << pdfSuccessRev << "," << std::endl
-		<< "  attenuation = " << attenuation.toString() << "," << std::endl
-		<< "  medium = " << indent(((Object *) medium)->toString()) << std::endl
+		<< "  transmittance = " << transmittance.toString()
 		<< "]";
 	return oss.str();
 }

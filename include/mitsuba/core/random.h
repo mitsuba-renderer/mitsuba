@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -120,10 +120,10 @@ public:
 	void seed(uint64_t *values, uint64_t length);
 
 	/// Return an integer on the [0, 2^63-1]-interval 
-	uint64_t nextLong();
+	uint64_t nextULong();
 
 	/// Return an integer on the [0, n)-interval 
-	unsigned int nextInteger(unsigned int n);
+	uint32_t nextUInt(uint32_t n);
 
 	/// Return a floating point value on the [0, 1) interval
 	Float nextFloat();
@@ -136,7 +136,7 @@ public:
 	 */
 	template <typename Iterator> void shuffle(Iterator it1, Iterator it2) {
 		for (Iterator it = it2 - 1; it > it1; --it) 
-			std::iter_swap(it, it1 + nextInteger((int) (it-it1)));
+			std::iter_swap(it, it1 + nextUInt((uint32_t) (it-it1)));
 	}
 
 	/// Serialize a random generator to a binary data stream

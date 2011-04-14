@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -48,12 +48,12 @@ void NSGLSession::processEvents() {
 
 	/* Separate autorelease pool */
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-	NSDate *distantPast = [NSDate distantPast];
 	NSEvent *event;
 
 	/* NSRunloop emulation */
 	do {
-		event = [NSApp nextEventMatchingMask: NSAnyEventMask untilDate: distantPast inMode: NSDefaultRunLoopMode dequeue: YES];
+		event = [NSApp nextEventMatchingMask: NSAnyEventMask 
+			untilDate: nil inMode: NSDefaultRunLoopMode dequeue: YES];
 		if (event == nil)
 			break;
 		[NSApp sendEvent: event];
@@ -61,12 +61,45 @@ void NSGLSession::processEvents() {
 
 	[pool release];
 
-	/* After the events have been delivered to the devices,
-	   process them */
-	for (; it!=m_devices.end(); ++it) {
-		NSGLDevice *device = static_cast<NSGLDevice *>(*it);
-		device->processEvents();
+	/* After the events have been delivered to the devices, process them */
+	for (std::vector<Device *>::iterator it = m_devices.begin(); it!=m_devices.end(); ++it)
+		static_cast<NSGLDevice *>(*it)->processEvents();
+}
+
+void NSGLSession::processEventsBlocking(bool &stop) {
+	/* Separate autorelease pool */
+	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+	NSEvent *event;
+
+	/* NSRunloop emulation */
+	while (true) {
+		event = [NSApp nextEventMatchingMask: NSAnyEventMask 
+			untilDate: nil inMode: NSDefaultRunLoopMode dequeue: YES];
+
+		if (event != nil) {
+			[NSApp sendEvent: event];
+		} else {
+			/* No more event -- process them */
+			for (std::vector<Device *>::iterator it = m_devices.begin(); it!=m_devices.end(); ++it)
+				static_cast<NSGLDevice *>(*it)->processEvents();
+
+			if (stop)
+				break;
+
+			/* Wait for the next event (blocking) */
+			event = [NSApp nextEventMatchingMask: NSAnyEventMask 
+				untilDate: [NSDate distantFuture] inMode: NSDefaultRunLoopMode dequeue: YES];
+
+			if (event != nil)
+				[NSApp sendEvent: event];
+		}
 	}
+
+	[pool release];
+
+	/* After the events have been delivered to the devices, process them */
+	for (std::vector<Device *>::iterator it = m_devices.begin(); it!=m_devices.end(); ++it)
+		static_cast<NSGLDevice *>(*it)->processEvents();
 }
 
 MTS_IMPLEMENT_CLASS(NSGLSession, false, Session)

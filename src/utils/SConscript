@@ -6,5 +6,6 @@ plugins += env.SharedLibrary('#plugins/cylclip', ['cylclip.cpp'])
 plugins += env.SharedLibrary('#plugins/kdbench', ['kdbench.cpp'])
 plugins += env.SharedLibrary('#plugins/ttest', ['ttest.cpp'])
 plugins += env.SharedLibrary('#plugins/tonemap', ['tonemap.cpp'])
+#plugins += env.SharedLibrary('#plugins/uflakefit', ['uflakefit.cpp'])
 
 Export('plugins')

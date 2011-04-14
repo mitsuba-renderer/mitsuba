@@ -16,9 +16,11 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from .. import MitsubaAddon
 from extensions_framework import declarative_property_group
 from extensions_framework import util as efutil
 
+@MitsubaAddon.addon_register_class
 class mitsuba_integrator(declarative_property_group):
 	'''
 	Storage class for Mitsuba Integrator settings.
@@ -26,8 +28,11 @@ class mitsuba_integrator(declarative_property_group):
 	object.
 	'''
 
+	ef_attach_to = ['Scene']
+
 	controls = [
 		'type',
+		'maxdepth',
 		['motionblur',
 		'shuttertime']
 	]
@@ -42,10 +47,12 @@ class mitsuba_integrator(declarative_property_group):
 			'attr': 'type',
 			'name': 'Type',
 			'description': 'Specifies the type of integrator to use',
-			'default': 'ldintegrator',
+			'default': 'direct',
 			'items': [
-				('direct', 'Direct Illumination', 'direct'),
+				('volpath', 'Volumetric path tracer', 'volpath'),
 				('path', 'Path tracer', 'path'),
+				('direct', 'Direct Illumination', 'direct'),
+				('ptracer', 'Adjoint Particle Tracer', 'ptracer')
 			],
 			'save_in_preset': True
 		},
@@ -66,6 +73,16 @@ class mitsuba_integrator(declarative_property_group):
 			'min': 0,
 			'max': 100,
 			'default': 1
+		},
+		{
+			'type': 'int',
+			'attr': 'maxdepth',
+			'name': 'Max. path depth',
+			'description': 'Maximum path depth to be rendered. 2 corresponds to direct illumination, 3 is 1-bounce indirect illumination, etc.',
+			'save_in_preset': True,
+			'min': 2,
+			'max': 100,
+			'default': 4
 		}
 	]
 

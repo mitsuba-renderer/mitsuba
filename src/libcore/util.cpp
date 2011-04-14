@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -244,15 +244,16 @@ bool enableFPExceptions() {
 	bool exceptionsWereEnabled = false;
 #if defined(WIN32)
 	_clearfp();
-	unsigned int cw = _controlfp(0, 0);
+	uint32_t cw = _controlfp(0, 0);
 	exceptionsWereEnabled = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 	cw &= ~(_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 	_controlfp(cw, _MCW_EM);
 #elif defined(__OSX__)
 #if !defined(MTS_SSE)
-#error SSE must be enabled to handle FP exceptions on OSX
-#endif
+#warning SSE must be enabled to handle FP exceptions on OSX
+#else
 	exceptionsWereEnabled = query_fpexcept_sse() != 0;
+#endif
 #else
 	exceptionsWereEnabled = 
 		fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
@@ -268,12 +269,16 @@ bool disableFPExceptions() {
 	bool exceptionsWereEnabled = false;
 #if defined(WIN32)
 	_clearfp();
-	unsigned int cw = _controlfp(0, 0);
+	uint32_t cw = _controlfp(0, 0);
 	exceptionsWereEnabled = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 	cw |= _EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW;
 	_controlfp(cw, _MCW_EM);
 #elif defined(__OSX__)
+#if !defined(MTS_SSE)
+#warning SSE must be enabled to handle FP exceptions on OSX
+#else
 	exceptionsWereEnabled = query_fpexcept_sse() != 0;
+#endif
 #else
 	exceptionsWereEnabled = 
 		fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
@@ -288,10 +293,14 @@ bool disableFPExceptions() {
 void restoreFPExceptions(bool oldState) {
 	bool currentState;
 #if defined(WIN32)
-	unsigned int cw = _controlfp(0, 0);
+	uint32_t cw = _controlfp(0, 0);
 	currentState = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 #elif defined(__OSX__)
-	currentState = query_fpexcept_sse() != 0;
+#if !defined(MTS_SSE)
+#warning SSE must be enabled to handle FP exceptions on OSX
+#else
+	currentState = query_fpexcept_sse() != 0
+#endif
 #else
 	currentState = fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 #endif
@@ -354,7 +363,7 @@ std::string getFQDN() {
 }
 
 Float log2(Float value) {
-	static Float invLn2 = (Float) 1.0f / std::log((Float) 2.0f);
+	const Float invLn2 = (Float) 1.0f / std::log((Float) 2.0f);
 	return std::log(value) * invLn2;
 }
 
@@ -362,6 +371,22 @@ std::string formatString(const char *fmt, ...) {
 	char tmp[512];
 	va_list iterator;
 
+#if defined(WIN32)
+	va_start(iterator, fmt);
+	size_t size = _vscprintf(fmt, iterator) + 1;
+
+	if (size >= sizeof(tmp)) {
+		char *dest = new char[size];
+		vsnprintf_s(dest, size, size-1, fmt, iterator);
+		va_end(iterator);
+		std::string result(dest);
+		delete[] dest;
+		return result;
+	}
+
+	vsnprintf_s(tmp, size, size-1, fmt, iterator);
+	va_end(iterator);
+#else
 	va_start(iterator, fmt);
 	size_t size = vsnprintf(tmp, sizeof(tmp), fmt, iterator);
 	va_end(iterator);
@@ -377,15 +402,23 @@ std::string formatString(const char *fmt, ...) {
 		delete[] dest;
 		return result;
 	}
+#endif
 
 	return std::string(tmp);
 }
 
-int log2i(int value) {
-  int r = 0;
-  while ((value >> r) != 0)
-    r++;
-  return r-1;
+int log2i(uint32_t value) {
+	int r = 0;
+	while ((value >> r) != 0)
+		r++;
+	return r-1;
+}
+
+int log2i(uint64_t value) {
+	int r = 0;
+	while ((value >> r) != 0)
+		r++;
+	return r-1;
 }
 
 int modulo(int a, int b) {
@@ -394,11 +427,7 @@ int modulo(int a, int b) {
 }
 
 /* Fast rounding & power-of-two test algorithms from PBRT */
-bool isPowerOfTwo(unsigned int i) {
-	return (i & (i-1)) == 0;
-}
-
-unsigned int roundToPowerOfTwo(unsigned int i) {
+uint32_t roundToPow2(uint32_t i) {
 	i--;
 	i |= i >> 1; i |= i >> 2;
 	i |= i >> 4; i |= i >> 8;
@@ -406,6 +435,13 @@ unsigned int roundToPowerOfTwo(unsigned int i) {
 	return i+1;
 }
 
+uint64_t roundToPow2(uint64_t i) {
+	i--;
+	i |= i >> 1;  i |= i >> 2;
+	i |= i >> 4;  i |= i >> 8;
+	i |= i >> 16; i |= i >> 32;
+	return i+1;
+}
 
 // -----------------------------------------------------------------------
 //  Numerical utility functions
@@ -497,7 +533,7 @@ void latinHypercube(Random *random, Float *dest, int nSamples, int nDim) {
 			dest[nDim * i + j] = (i + random->nextFloat()) * delta;
 	for (int i = 0; i < nDim; ++i) {
 		for (int j = 0; j < nSamples; ++j) {
-			int other = random->nextInteger(nSamples);
+			int other = random->nextUInt(nSamples);
 			std::swap(dest[nDim * j + i], dest[nDim * other + i]);
 		}
 	}
@@ -580,10 +616,13 @@ Point2 squareToTriangle(const Point2 &sample) {
 }
 
 Point2 toSphericalCoordinates(const Vector &v) {
-	return Point2(
+	Point2 result(
 		std::acos(v.z),
 		std::atan2(v.y, v.x)
 	);
+	if (result.y < 0)
+		result.y += 2*M_PI;
+	return result;
 }
 
 Point2 squareToDiskConcentric(const Point2 &sample) {
@@ -716,7 +755,7 @@ Float radicalInverseIncremental(int b, Float x) {
 	return x;
 }
 
-std::string timeToString(Float time, bool precise) {
+std::string timeString(Float time, bool precise) {
 	std::ostringstream os;
 	char suffix = 's';
 #ifdef WIN32

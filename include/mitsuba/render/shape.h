@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -34,9 +34,12 @@ public:
 	/// Create a sampling record (does no initialization!)
 	inline ShapeSamplingRecord() { }
 
-	/// Create a sampling record with the specified position and normal
+	/// Initialize a sampling record from the specified position and normal
 	inline ShapeSamplingRecord(const Point &p, const Normal &n)
 		: p(p), n(n) { }
+	
+	/// Initialize a sampling record from the specified intersection record
+	inline ShapeSamplingRecord(const Intersection &its);
 
 	/// Return a string representation
 	std::string toString() const;
@@ -79,6 +82,26 @@ public:
 
 	/// Does the intersected shape have a subsurface integrator?
 	inline bool hasSubsurface() const;
+	
+	/// Does the surface mark a transition between two media?
+	inline bool isMediumTransition() const;
+	
+	/**
+	 * \brief Determine the target medium
+	 *
+	 * When \c isMediumTransition() = \c true, determine the medium that
+	 * contains the ray (\c this->p, \c d)
+	 */
+	inline const Medium *getTargetMedium(const Vector &d) const;
+
+	/**
+	 * \brief Determine the target medium based on the cosine
+	 * of the angle between the geometric normal and a direction
+	 *
+	 * Returns the exterior medium when \c cosTheta > 0 and
+	 * the interior medium when \c cosTheta <= 0.
+	 */
+	inline const Medium *getTargetMedium(Float cosTheta) const;
 
 	/**
 	 * Returns the BSDF of the intersected shape. The
@@ -152,6 +175,13 @@ public:
  */
 class MTS_EXPORT_RENDER Shape : public ConfigurableObject {
 public:
+	// =============================================================
+	//! @{ \name Query functions to be implemented in subclasses
+	// =============================================================
+
+	/// Return the name of this shape
+	virtual std::string getName() const;
+
 	/// Is this a compound shape consisting of several sub-objects?
 	virtual bool isCompound() const;
 
@@ -163,6 +193,7 @@ public:
 	 * that no more elements are available.
 	 */
 	virtual Shape *getElement(int i);
+
 
 	/// Return the shape's surface area
 	virtual Float getSurfaceArea() const = 0;
@@ -179,6 +210,23 @@ public:
 	 * returned by \ref getAABB() and clips it to \a box.
 	 */
 	virtual AABB getClippedAABB(const AABB &box) const;
+
+	/**
+	 * \brief Create a triangle mesh approximation of this shape
+	 *
+	 * This function is used by the realtime preview and 
+	 * certain integrators, which rely on hardware rasterization.
+	 *
+	 * The default implementation simply returns \a NULL.
+	 */
+	virtual ref<TriMesh> createTriMesh();
+	
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Ray tracing routines
+	// =============================================================
 
 	/**
 	 * \brief Fast ray intersection test
@@ -200,8 +248,8 @@ public:
 	 * No details about the intersection are returned, hence the
 	 * function is only useful for visibility queries. For most
 	 * shapes, this will simply call forward the call to \ref 
-	 * rayIntersect. When the shape actually contains a nested kd-tree, 
-	 * some optimizations are possible.
+	 * rayIntersect. When the shape actually contains a nested 
+	 * kd-tree, some optimizations are possible.
 	 */
 	virtual bool rayIntersect(const Ray &ray, Float mint, Float maxt) const;
 
@@ -212,6 +260,21 @@ public:
 	virtual void fillIntersectionRecord(const Ray &ray, 
 			const void *temp, Intersection &its) const;
 
+	/**
+	 * \brief Return the internal kd-tree of this shape (if any)
+	 *
+	 * This function is used by the kd-tree visualization in
+	 * the interactive walkthrough. The default implementation
+	 * simply returns NULL.
+	 */
+	virtual const KDTreeBase<AABB> *getKDTree() const;
+
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Sampling routines
+	// =============================================================
 	/**
 	 * \brief Sample a point on the shape
 	 *
@@ -229,11 +292,11 @@ public:
 
 	/**
 	 * \brief Sample a point on the shape and return the associated
-	 * probability wrt. solid angle.
+	 * probability with respect to solid angle at \c x.
 	 *
 	 * Should ideally be uniform wrt. solid angle as seen 
 	 * from \a x. The default implementation, just uses
-	 * \ref sampleArea, which can lead to lots of noise.
+	 * \ref sampleArea, which can produce high variance.
 	 */
 	virtual Float sampleSolidAngle(ShapeSamplingRecord &sRec, 
 			const Point &x, const Point2 &sample) const;
@@ -245,34 +308,25 @@ public:
 	virtual Float pdfSolidAngle(const ShapeSamplingRecord &sRec, 
 			const Point &x) const;
 
-	/**
-	 * \brief Return the internal kd-tree of this shape (if any)
-	 *
-	 * This function is used by the kd-tree visualization in
-	 * the interactive walkthrough. The default implementation
-	 * simply returns NULL.
-	 */
-	virtual const KDTreeBase<AABB> *getKDTree() const;
-
-	/**
-	 * \brief Create a triangle mesh approximation of this shape
-	 *
-	 * This function is used by the realtime preview and 
-	 * certain integrators, which rely on hardware rasterization.
-	 *
-	 * The default implementation simply returns \a NULL.
-	 */
-	virtual ref<TriMesh> createTriMesh();
-
-	/// Return the shape's BSDF
-	inline const BSDF *getBSDF() const { return m_bsdf.get(); }
-	/// Return the shape's BSDF
-	inline BSDF *getBSDF() { return m_bsdf.get(); }
-	/// Set the BSDF of this shape
-	inline void setBSDF(BSDF *bsdf) { m_bsdf = bsdf; }
-
-	/// Return the name of this shape
-	virtual std::string getName() const;
+	//! @}
+	// =============================================================
+	
+	// =============================================================
+	//! @{ \name Miscellaneous
+	// =============================================================
+	
+	/// Does the shape act as an occluder?
+	inline bool isOccluder() const { return m_occluder; }
+	/// Does the surface of this shape mark a medium transition?
+	inline bool isMediumTransition() const { return m_interiorMedium.get() || m_exteriorMedium.get(); }
+	/// Return the medium that lies on the interior of this shape (\c NULL == vacuum)
+	inline Medium *getInteriorMedium() { return m_interiorMedium; }
+	/// Return the medium that lies on the interior of this shape (\c NULL == vacuum, const version)
+	inline const Medium *getInteriorMedium() const { return m_interiorMedium.get(); }
+	/// Return the medium that lies on the exterior of this shape (\c NULL == vacuum)
+	inline Medium *getExteriorMedium() { return m_exteriorMedium; }
+	/// Return the medium that lies on the exterior of this shape (\c NULL == vacuum, const version)
+	inline const Medium *getExteriorMedium() const { return m_exteriorMedium.get(); }
 
 	/// Does this shape have a sub-surface integrator?
 	inline bool hasSubsurface() const { return m_subsurface.get() != NULL; }
@@ -290,6 +344,15 @@ public:
 	/// Set the luminaire of this shape
 	inline void setLuminaire(Luminaire *luminaire) { m_luminaire = luminaire; }
 
+	/// Does the shape have a BSDF?
+	inline bool hasBSDF() const { return m_bsdf.get() != NULL; }
+	/// Return the shape's BSDF
+	inline const BSDF *getBSDF() const { return m_bsdf.get(); }
+	/// Return the shape's BSDF
+	inline BSDF *getBSDF() { return m_bsdf.get(); }
+	/// Set the BSDF of this shape
+	inline void setBSDF(BSDF *bsdf) { m_bsdf = bsdf; m_occluder = (bsdf != NULL); }
+
 	/// Called once after parsing
 	virtual void configure();
 	/// Serialize this shape to a stream
@@ -297,6 +360,9 @@ public:
 
 	/// Add a child (e.g. a luminaire/sub surface integrator) to this shape
 	void addChild(const std::string &name, ConfigurableObject *child);
+
+	//! @}
+	// =============================================================
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -312,7 +378,13 @@ protected:
 	ref<BSDF> m_bsdf;
 	ref<Subsurface> m_subsurface;
 	ref<Luminaire> m_luminaire;
+	ref<Medium> m_interiorMedium;
+	ref<Medium> m_exteriorMedium;
+	bool m_occluder;
 };
+
+inline ShapeSamplingRecord::ShapeSamplingRecord(const Intersection &its)
+	: p(its.p), n(its.geoFrame.n) { }
 
 MTS_NAMESPACE_END
 

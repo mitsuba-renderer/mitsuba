@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -78,9 +78,9 @@ public:
 				for (int k=0; k<3; ++k)
 					sum += m_transform.m[i][k] * m_transform.m[j][k];
 
-				if (i == j && std::abs(sum-1) > Epsilon)
+				if (i == j && std::abs(sum-1) > 1e-3f)
 					return true;
-				else if (i != j && std::abs(sum) > Epsilon)
+				else if (i != j && std::abs(sum) > 1e-3f)
 					return true;
 			}
 		}

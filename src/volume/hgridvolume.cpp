@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -105,7 +105,7 @@ public:
 			props.setBoolean("sendData", false);
 
 			VolumeDataSource *content = static_cast<VolumeDataSource *> (PluginManager::getInstance()->
-					createObject(VolumeDataSource::m_theClass, props));
+					createObject(MTS_CLASS(VolumeDataSource), props));
 			content->configure();
 
 			m_blocks[(m_res.y * block.z + block.y) * m_res.x + block.x] = content;
@@ -138,7 +138,9 @@ public:
 
 	Float lookupFloat(const Point &_p) const {
 		const Point p = m_worldToGrid.transformAffine(_p);
-		int x = (int) p.x, y = (int) p.y, z = (int) p.z;
+		const int x = floorToInt(p.x),
+			  y = floorToInt(p.y),
+			  z = floorToInt(p.z);
 		if (x < 0 || x >= m_res.x ||
 			y < 0 || y >= m_res.y ||
 			z < 0 || z >= m_res.z) 
@@ -153,7 +155,9 @@ public:
 
 	Spectrum lookupSpectrum(const Point &_p) const {
 		const Point p = m_worldToGrid.transformAffine(_p);
-		int x = (int) p.x, y = (int) p.y, z = (int) p.z;
+		const int x = floorToInt(p.x),
+			  y = floorToInt(p.y),
+			  z = floorToInt(p.z);
 		if (x < 0 || x >= m_res.x ||
 			y < 0 || y >= m_res.y ||
 			z < 0 || z >= m_res.z)
@@ -168,11 +172,13 @@ public:
 
 	Vector lookupVector(const Point &_p) const {
 		const Point p = m_worldToGrid.transformAffine(_p);
-		int x = (int) p.x, y = (int) p.y, z = (int) p.z;
+		const int x = floorToInt(p.x),
+			  y = floorToInt(p.y),
+			  z = floorToInt(p.z);
 		if (x < 0 || x >= m_res.x ||
 			y < 0 || y >= m_res.y ||
 			z < 0 || z >= m_res.z)
-			return Vector();
+			return Vector(0.0f);
 
 		VolumeDataSource *block = m_blocks[((z * m_res.y) + y) * m_res.x + x];
 		if (block == NULL)

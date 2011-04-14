@@ -16,11 +16,12 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy 
-from properties_material import MaterialButtonsPanel
+import bpy, bl_ui
+
+from ... import MitsubaAddon
+from ...outputs import MtsLog
 
 from extensions_framework.ui import property_group_renderer
-from mitsuba.outputs import MtsLog
 from extensions_framework import util as efutil
 
 material_cache = {}
@@ -36,8 +37,8 @@ def copy(value):
 	else:
 		raise Exception("Copy: don't know how to handle '%s'" % str(vlaue))
 
-class mitsuba_material_base(MaterialButtonsPanel, property_group_renderer):
-	COMPAT_ENGINES	= {'mitsuba'}
+class mitsuba_material_base(bl_ui.properties_material.MaterialButtonsPanel, property_group_renderer):
+	COMPAT_ENGINES	= { MitsubaAddon.BL_IDNAME }
 	MTS_PROPS	   = ['type']
 
 	def validate(self, context):
@@ -60,7 +61,7 @@ class mitsuba_material_base(MaterialButtonsPanel, property_group_renderer):
 		if repaint:
 			# Cause a repaint
 			MtsLog("Forcing a repaint")
-			context.material.preview_render_type = context.material.preview_render_type 
+			#context.material.preview_render_type = context.material.preview_render_type 
 
 	def draw(self, context):
 		if not hasattr(context, 'material'):
@@ -71,8 +72,8 @@ class mitsuba_material_base(MaterialButtonsPanel, property_group_renderer):
 	def get_contents(self, mat):
 		return mat.mitsuba_material
 
-class mitsuba_material_sub(MaterialButtonsPanel, property_group_renderer):
-	COMPAT_ENGINES	= {'mitsuba'}
+class mitsuba_material_sub(bl_ui.properties_material.MaterialButtonsPanel, property_group_renderer):
+	COMPAT_ENGINES	= { MitsubaAddon.BL_IDNAME }
 	MTS_COMPAT		= set()
 	MTS_PROPS	   = []
 
@@ -113,12 +114,13 @@ class mitsuba_material_sub(MaterialButtonsPanel, property_group_renderer):
 		if repaint:
 			# Cause a repaint
 			MtsLog("Forcing a repaint")
-			context.material.preview_render_type = context.material.preview_render_type 
+			#context.material.preview_render_type = context.material.preview_render_type 
 		return super().draw(context)
 
-class MATERIAL_PT_preview_mts(MaterialButtonsPanel, bpy.types.Panel):
+@MitsubaAddon.addon_register_class
+class MATERIAL_PT_preview_mts(bl_ui.properties_material.MaterialButtonsPanel, bpy.types.Panel):
 	bl_label = "Preview"
-	COMPAT_ENGINES = {'mitsuba'}
+	COMPAT_ENGINES	= { MitsubaAddon.BL_IDNAME }
 
 	def draw(self, context):
 		if not hasattr(context, 'material'):
@@ -137,15 +139,15 @@ class MATERIAL_PT_preview_mts(MaterialButtonsPanel, bpy.types.Panel):
 			cached_spp = engine.preview_spp
 			if actualChange:
 				MtsLog("Forcing a repaint")
-				context.material.preview_render_type = context.material.preview_render_type 
+				#context.material.preview_render_type = context.material.preview_render_type 
 				efutil.write_config_value('mitsuba', 'defaults', 'preview_spp', str(cached_spp))
 				efutil.write_config_value('mitsuba', 'defaults', 'preview_depth', str(cached_depth))
 
-
-class MATERIAL_PT_context_material_mts(MaterialButtonsPanel, bpy.types.Panel):
+@MitsubaAddon.addon_register_class
+class MATERIAL_PT_context_material_mts(bl_ui.properties_material.MaterialButtonsPanel, bpy.types.Panel):
 	bl_label = ""
 	bl_options = {'HIDE_HEADER'}
-	COMPAT_ENGINES = {'mitsuba'}
+	COMPAT_ENGINES	= { MitsubaAddon.BL_IDNAME }
 
 	@classmethod
 	def poll(cls, context):

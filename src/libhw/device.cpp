@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -46,6 +46,7 @@ Device::Device(Session *name) {
 	m_fpsCounter = 0;
 	m_lastTime = 0;
 	m_timer = new Timer();
+	m_resizeAllowed = true;
 }
 
 Device::~Device() {
@@ -122,6 +123,11 @@ void Device::setDoubleBuffer(bool doubleBuffer) {
 void Device::setFullscreen(bool fullscreen) {
 	Assert(!m_initialized);
     m_fullscreen = fullscreen;
+}
+
+void Device::setResizeAllowed(bool resizeAllowed) {
+	Assert(!m_initialized);
+    m_resizeAllowed = resizeAllowed;
 }
 
 void Device::setCenter(bool center) {

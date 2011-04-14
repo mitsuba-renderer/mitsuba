@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -103,7 +103,7 @@ size_t Scheduler::getLocalWorkerCount() const {
 	size_t count = 0;
 	m_mutex->lock();
 	for (size_t i=0; i<m_workers.size(); ++i) {
-		if (m_workers[i]->getClass() == LocalWorker::m_theClass)
+		if (m_workers[i]->getClass() == MTS_CLASS(LocalWorker))
 			count++;
 	}
 	m_mutex->unlock();

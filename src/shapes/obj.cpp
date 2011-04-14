@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -19,9 +19,11 @@
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/timer.h>
 #include <mitsuba/render/luminaire.h>
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
+#include <mitsuba/render/medium.h>
 #include <set>
 
 MTS_NAMESPACE_BEGIN
@@ -91,6 +93,7 @@ public:
 		if (is.bad() || is.fail())
 			Log(EError, "Geometry file '%s' not found!", path.file_string().c_str());
 
+		ref<Timer> timer = new Timer();
 		std::string buf;
 		std::vector<Point> vertices;
 		std::vector<Normal> normals;
@@ -200,6 +203,8 @@ public:
 		generateGeometry(name, vertices, normals, texcoords, 
 			triangles, hasNormals, hasTexcoords, currentMaterial,
 			objectToWorld);
+
+		Log(EInfo, "Done with \"%s\" (took %i ms)", path.leaf().c_str(), timer->getMilliseconds());
 	}
 
 	WavefrontOBJ(Stream *stream, InstanceManager *manager) : Shape(stream, manager) {
@@ -281,7 +286,7 @@ public:
 		props.setSpectrum("reflectance", diffuse);
 		props.setID(name);
 		BSDF *bsdf = static_cast<BSDF *> (PluginManager::getInstance()->
-			createObject(BSDF::m_theClass, props));
+			createObject(MTS_CLASS(BSDF), props));
 		bsdf->incRef();
 		m_materials[name] = bsdf;
 	}
@@ -327,7 +332,7 @@ public:
 			const Transform &objectToWorld) {
 		if (triangles.size() == 0)
 			return;
-		Log(EInfo, "Loading geometry \"%s\"", name.c_str());
+		Log(EInfo, "Loading mesh \"%s\"", name.c_str());
 
 		std::map<Vertex, int, vertex_key_order> vertexMap;
 		std::vector<Vertex> vertexBuffer;
@@ -438,22 +443,28 @@ public:
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		const Class *cClass = child->getClass();
-		if (cClass->derivesFrom(BSDF::m_theClass)) {
+		if (cClass->derivesFrom(MTS_CLASS(BSDF))) {
 			m_bsdf = static_cast<BSDF *>(child);
 			for (size_t i=0; i<m_meshes.size(); ++i) 
 				m_meshes[i]->addChild(name, child);
 			Assert(m_meshes.size() > 0);
 			m_bsdf->setParent(NULL);
-		} else if (cClass->derivesFrom(Luminaire::m_theClass)) {
+		} else if (cClass->derivesFrom(MTS_CLASS(Luminaire))) {
 			Assert(m_luminaire == NULL && m_meshes.size() == 1);
 			m_luminaire = static_cast<Luminaire *>(child);
 			for (size_t i=0; i<m_meshes.size(); ++i) {
 				child->setParent(m_meshes[i]);
 				m_meshes[i]->addChild(name, child);
 			}
-		} else if (cClass->derivesFrom(Subsurface::m_theClass)) {
+		} else if (cClass->derivesFrom(MTS_CLASS(Subsurface))) {
 			Assert(m_subsurface == NULL);
 			m_subsurface = static_cast<Subsurface *>(child);
+			for (size_t i=0; i<m_meshes.size(); ++i) { 
+				child->setParent(m_meshes[i]);
+				m_meshes[i]->addChild(name, child);
+			}
+		} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
+			Assert(m_subsurface == NULL);
 			for (size_t i=0; i<m_meshes.size(); ++i) { 
 				child->setParent(m_meshes[i]);
 				m_meshes[i]->addChild(name, child);

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -39,7 +39,8 @@ void SceneLoader::run() {
 	for(size_t i=0; i<m_filename.size();++i)
 		lowerCase[i] = std::tolower(m_filename[i]);
 
-	SceneHandler *handler = new SceneHandler(SceneHandler::ParameterMap());
+	SceneHandler *handler = new SceneHandler(parser,
+			SceneHandler::ParameterMap());
 	m_result = new SceneContext();
 	try {
 		QSettings settings("mitsuba-renderer.org", "qtgui");
@@ -73,6 +74,7 @@ void SceneLoader::run() {
 			parser->setValidationSchemaFullChecking(true);
 			parser->setValidationScheme(SAXParser::Val_Always);
 			parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
+			parser->setCalculateSrcOfs(true);
 
 			/* Set the SAX handler */
 			parser->setDoNamespaces(true);
@@ -81,6 +83,7 @@ void SceneLoader::run() {
 
 			fs::path 
 				filename = m_filename,
+				filePath = fs::complete(filename).parent_path(),
 				baseName = fs::basename(filename);
 
 			SLog(EInfo, "Parsing scene description from \"%s\" ..", m_filename.c_str());
@@ -88,7 +91,7 @@ void SceneLoader::run() {
 			ref<Scene> scene = handler->getScene();
 
 			scene->setSourceFile(m_filename);
-			scene->setDestinationFile(baseName.file_string());
+			scene->setDestinationFile(filePath / baseName);
 			scene->initialize();
 
 			if (scene->getIntegrator() == NULL)

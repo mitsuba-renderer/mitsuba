@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -23,119 +23,30 @@
 
 MTS_NAMESPACE_BEGIN
 
-/* Precompute cosine/sine values for quick conversions
-	from quantized spherical coordinates to floating 
-	point vectors. (Precomputation idea based on 
-	Jensen's implementation.) */
-Float PhotonMap::m_cosTheta[256];
-Float PhotonMap::m_sinTheta[256];
-Float PhotonMap::m_cosPhi[256];
-Float PhotonMap::m_sinPhi[256];
-Float PhotonMap::m_expTable[256];
-
-bool PhotonMap::createPrecompTables() {
-	// Compiler sanity check
-#if !defined(DOUBLE_PRECISION) && SPECTRUM_SAMPLES == 3
-	if (sizeof(Photon) != 24) {
-		cerr << "Internal error - incorrect photon storage size" << endl;
-		exit(-1);
-	}
-#endif
-
-	for (int i=0; i<256; i++) {
-		Float angle = (Float) i * ((Float) M_PI / 256.0f);
-		m_cosPhi[i] = std::cos(2.0f * angle);
-		m_sinPhi[i] = std::sin(2.0f * angle);
-		/* Theta has twice the angular resolution */
-		m_cosTheta[i] = std::cos(angle);
-		m_sinTheta[i] = std::sin(angle);
-	
-		m_expTable[i] = std::ldexp((Float) 1, i - (128+8));
-	}
-	m_expTable[0] = 0;
-
-	return true;
-}
-
-bool PhotonMap::m_precompTableReady = PhotonMap::createPrecompTables();
-
-PhotonMap::Photon::Photon(const Point &p, const Normal &normal,
-						  const Vector &dir, const Spectrum &P,
-						  uint16_t _depth) {
-	if (P.isNaN()) 
-		Log(EWarn, "Creating an invalid photon with power: %s", P.toString().c_str());
-
-	/* Possibly convert to single precision floating point
-	   (if Mitsuba is configured to use double precision) */
-	pos[0] = (float) p.x;
-	pos[1] = (float) p.y;
-	pos[2] = (float) p.z;
-	depth = _depth;
-	unused = 0;
-	axis = -1;
-
-	/* Convert the direction into an approximate spherical 
-	   coordinate format to reduce storage requirements */
-	theta = (unsigned char) std::min(255,
-		(int) (std::acos(dir.z) * (256.0 / M_PI)));
-
-	int tmp = std::min(255,
-		(int) (std::atan2(dir.y, dir.x) * (256.0 / (2.0 * M_PI))));
-	if (tmp < 0)
-		phi = (unsigned char) (tmp + 256);
-	else
-		phi = (unsigned char) tmp;
-	
-	if (normal.isZero()) {
-		thetaN = phiN = 0;
-	} else {
-		thetaN = (unsigned char) std::min(255,
-			(int) (std::acos(normal.z) * (256.0 / M_PI)));
-		tmp = std::min(255,
-			(int) (std::atan2(normal.y, normal.x) * (256.0 / (2.0 * M_PI))));
-		if (tmp < 0)
-			phiN = (unsigned char) (tmp + 256);
-		else
-			phiN = (unsigned char) tmp;
-	}
-
-#if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
-	power = P;
-#else
-	/* Pack the photon power into Greg Ward's RGBE format */
-	P.toRGBE(power);
-#endif
-}
-
 PhotonMap::PhotonMap(size_t maxPhotons) 
- : m_photonCount(0), m_maxPhotons(maxPhotons), m_minPhotons(8),
-   m_numThreads(-1), m_balanced(false), m_scale(1.0f), m_context(NULL) {
-	Assert(m_precompTableReady);
+ : m_photonCount(0), m_maxPhotons(maxPhotons), m_balanced(false), m_scale(1.0f) {
+	Assert(Photon::m_precompTableReady);
 
 	/* For convenient heap addressing, the the photon list
 	   entries start with number 1 */
-	m_photons = new Photon[maxPhotons + 1];
+	m_photons = (Photon *) allocAligned(sizeof(Photon) * (maxPhotons+1));
 }
 	
-PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager) 
- : m_numThreads(-1), m_context(NULL) {
+PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager) { 
 	m_aabb = AABB(stream);
 	m_balanced = stream->readBool();
-	m_maxPhotons = (size_t) stream->readULong();
-	m_minPhotons = (size_t) stream->readULong();
-	m_lastInnerNode = (size_t) stream->readULong();
-	m_lastRChildNode = (size_t) stream->readULong();
+	m_maxPhotons = stream->readSize();
+	m_lastInnerNode = stream->readSize();
+	m_lastRChildNode = stream->readSize();
 	m_scale = (Float) stream->readFloat();
-	m_photonCount = (size_t) stream->readULong();
+	m_photonCount = stream->readSize();
 	m_photons = new Photon[m_maxPhotons + 1];
 	for (size_t i=1; i<=m_maxPhotons; ++i) 
 		m_photons[i] = Photon(stream);
 }
 
 PhotonMap::~PhotonMap() {
-	if (m_context)
-		delete[] m_context;
-	delete[] m_photons;
+	freeAligned(m_photons);
 }
 
 std::string PhotonMap::toString() const {
@@ -144,7 +55,6 @@ std::string PhotonMap::toString() const {
 		<< "  aabb = " << m_aabb.toString() << "," << endl
 		<< "  photonCount = " << m_photonCount << "," << endl
 		<< "  maxPhotons = " << m_maxPhotons << "," << endl
-		<< "  minPhotons = " << m_minPhotons << "," << endl
 		<< "  balanced = " << m_balanced << "," << endl
 		<< "  scale = " << m_scale << endl
 		<< "]";
@@ -156,12 +66,11 @@ void PhotonMap::serialize(Stream *stream, InstanceManager *manager) const {
 		m_photonCount * 20.0f / 1024.0f);
 	m_aabb.serialize(stream);
 	stream->writeBool(m_balanced);
-	stream->writeULong(m_maxPhotons);
-	stream->writeULong(m_minPhotons);
-	stream->writeULong(m_lastInnerNode);
-	stream->writeULong(m_lastRChildNode);
+	stream->writeSize(m_maxPhotons);
+	stream->writeSize(m_lastInnerNode);
+	stream->writeSize(m_lastRChildNode);
 	stream->writeFloat(m_scale);
-	stream->writeULong(m_photonCount);
+	stream->writeSize(m_photonCount);
 	for (size_t i=1; i<=m_maxPhotons; ++i)
 		m_photons[i].serialize(stream);
 }
@@ -195,40 +104,6 @@ bool PhotonMap::storePhoton(const Photon &photon) {
 
 	return true;
 }
-
-
-void PhotonMap::prepareSMP(int numThreads) {
-	size_t photonsPerThread = m_maxPhotons / numThreads;
-	size_t remainder = m_maxPhotons - photonsPerThread * numThreads;
-
-	m_numThreads = numThreads;
-	m_context = new ThreadContext[numThreads];
-	for (int i=0; i<numThreads; ++i) {
-		m_context[i].photonOffset = 1 + i*photonsPerThread;
-		m_context[i].maxPhotons = photonsPerThread;
-		m_context[i].photonCount = 0;
-	}
-	m_context[numThreads-1].maxPhotons += remainder;
-}
-
-bool PhotonMap::storePhotonSMP(int thread, const Point &pos, const Normal &normal, 
-		const Vector &dir, const Spectrum &power, uint16_t depth) {
-	Assert(!m_balanced);
-	Assert(!power.isNaN());
-
-	/* Overflow check */
-	if (m_context[thread].photonCount >= m_context[thread].maxPhotons)
-		return false;
-
-	/* Keep track of the volume covered by all stored photons */
-	m_context[thread].aabb.expandBy(pos);
-
-	size_t idx = m_context[thread].photonCount++;
-	m_photons[m_context[thread].photonOffset + idx] = Photon(pos, normal, dir, power, depth);
-
-	return true;
-}
-
 
 /**
  * Relaxed partitioning algorithm based on code in stl_algo.h and Jensen's
@@ -308,44 +183,6 @@ void PhotonMap::quickPartition(photon_iterator left, photon_iterator right,
 }
 
 /**
- * This algorithm is based on Donald Knuth's book
- * "The Art of Computer Programming, Volume 3: Sorting and Searching"
- * (1st edition, section 5.2, page 595)
- *
- * Given a permutation and an array of values, it applies the permutation
- * in linear time without requiring additional memory. This is based on
- * the fact that each permutation can be decomposed into a disjoint set
- * of permutations, which can then be applied individually.
- */
-template <typename T> void permute_inplace(T *values, std::vector<size_t> &perm) {
-	for (size_t i=0; i<perm.size(); i++) {
-		if (perm[i] != i) {
-			/* The start of a new cycle has been found. Save
-			   the value at this position, since it will be
-			   overwritten */
-			size_t j = i;
-			T curval = values[i];
-
-			do {
-				/* Shuffle backwards */
-				size_t k = perm[j];
-				values[j] = values[k];
-
-				/* Also fix the permutations on the way */
-				perm[j] = j;
-				j = k;
-
-				/* Until the end of the cycle has been found */
-			} while (perm[j] != i);
-
-			/* Fix the final position with the saved value */
-			values[j] = curval;
-			perm[j] = j;
-		}
-	}
-}
-
-/**
  * Given a number of entries, this method calculates the maximum amount of
  * nodes on the left subtree of a left-balanced tree. There are two main 
  * cases here:
@@ -385,18 +222,6 @@ size_t PhotonMap::leftSubtreeSize(size_t treeSize) const {
 void PhotonMap::balance() {
 	Assert(!m_balanced);
 
-	/* Unify the results from all gather threads */
-	if (m_context != NULL) {
-		for (int i=0; i<m_numThreads; ++i) {
-			Assert(m_context[i].maxPhotons == m_context[i].photonCount);
-			m_photonCount += m_context[i].photonCount;
-			m_aabb.expandBy(m_context[i].aabb);
-		}
-
-		/* Check if the photon map was properly filled */
-		Assert(m_photonCount == m_maxPhotons);
-	}
-
 	/* Shuffle pointers instead of copying photons back and forth */
 	std::vector<photon_ptr> photonPointers(m_photonCount + 1);
 	/* Destination for the final heap permutation. Indexed starting at 1 */
@@ -406,14 +231,23 @@ void PhotonMap::balance() {
 	for (size_t i=0; i<=m_photonCount; i++)
 		photonPointers[i] = &m_photons[i];
 
-	Log(EInfo, "Photon map: balancing %i photons ..", m_photonCount);
+	ref<Timer> timer = new Timer();
+
+	Log(EInfo, "Photon map: balancing %i photons (%s)..", m_photonCount,
+		memString(sizeof(Photon) * (m_photonCount+1)).c_str());
+
 	balanceRecursive(photonPointers.begin(), photonPointers.begin()+1, 
 		photonPointers.end(), heapPermutation, m_aabb, 1);
+
+	Log(EInfo, "Done (took %i ms)", timer->getMilliseconds());
+	timer->reset();
 
 	/* 'heapPointers' now contains a permutation representing
 	    the properly left-balanced photon map. Apply this permutation
 		to the photon array. */
 	permute_inplace(m_photons, heapPermutation);
+
+	Log(EInfo, "Applied permutation (took %i ms)", timer->getMilliseconds());
 
 	/* We want to quickly be able to determine whether a node at
 	   a given index is an inner node (e.g. it has left or right
@@ -570,10 +404,6 @@ Spectrum PhotonMap::estimateIrradiance(const Point &p, const Normal &n,
 		* sizeof(search_result)));
 	size_t resultCount = nnSearch(p, distSquared, maxPhotons, results);
 
-	/* Avoid very noisy estimates */
-	if (resultCount < m_minPhotons)
-		return result;
-
 	/* Sum over all contributions */
 	for (size_t i=0; i<resultCount; i++) {
 		const Photon &photon = *results[i].second;
@@ -602,10 +432,6 @@ Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n,
 	Float distSquared = searchRadius*searchRadius;
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
 	size_t resultCount = nnSearch(p, distSquared, maxPhotons, results);
-
-	/* Avoid very noisy estimates */
-	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
-		return result;
 
 	/* Sum over all contributions */
 	for (size_t i=0; i<resultCount; i++) {
@@ -640,10 +466,6 @@ Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n,
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
 	size_t resultCount = nnSearch(p, distSquared, maxPhotons, results);
 
-	/* Avoid very noisy estimates */
-	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
-		return Spectrum(0.0f);
-
 	/* Sum over all contributions */
 	for (size_t i=0; i<resultCount; i++) {
 		const Float photonDistanceSqr = results[i].first;
@@ -658,7 +480,7 @@ Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n,
 		const __m128 
 			mantissa = _mm_cvtepi32_ps(
 				_mm_set_epi32(photon.power[0], photon.power[1], photon.power[2], 0)),
-			exponent = _mm_load1_ps(&m_expTable[photon.power[3]]),
+			exponent = _mm_load1_ps(&Photon::m_expTable[photon.power[3]]),
 			packedWeight = _mm_load1_ps(&weight),
 			value = _mm_mul_ps(packedWeight, _mm_mul_ps(mantissa, exponent));
 
@@ -689,10 +511,6 @@ Spectrum PhotonMap::estimateRadianceFiltered(const Intersection &its,
 	Float distSquared = searchRadius*searchRadius;
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
 	size_t resultCount = nnSearch(its.p, distSquared, maxPhotons, results);
-
-	/* Avoid very noisy estimates */
-	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
-		return Spectrum(0.0f);
 
 	/* Sum over all contributions */
 	for (size_t i=0; i<resultCount; i++) {
@@ -801,10 +619,6 @@ Spectrum PhotonMap::estimateVolumeRadiance(const MediumSamplingRecord &mRec, con
 	search_result *results = static_cast<search_result *>(alloca((maxPhotons+1) * sizeof(search_result)));
 	size_t resultCount = nnSearch(ray.o, distSquared, maxPhotons, results);
 
-	/* Avoid very noisy estimates */
-	if (EXPECT_NOT_TAKEN(resultCount < m_minPhotons))
-		return Spectrum(0.0f);
-
 	const PhaseFunction *phase = medium->getPhaseFunction();
 	Vector wo = -ray.d;
 
@@ -820,20 +634,11 @@ Spectrum PhotonMap::estimateVolumeRadiance(const MediumSamplingRecord &mRec, con
 	return result * (m_scale / volFactor);
 }
 
-
-void PhotonMap::setScale(Float value) {
-	m_scale = value;
-}
-	
-void PhotonMap::setMinPhotons(int minPhotons) {
-	m_minPhotons = minPhotons;
-}
-	
 void PhotonMap::dumpOBJ(const std::string &filename) {
 	std::ofstream os(filename.c_str());
 	os << "o Photons" << endl;
 	for (size_t i=1; i<=getPhotonCount(); i++) {
-		Point p = getPhotonPosition(i);
+		Point p = getPhoton(i).getPosition();
 		os << "v " << p.x << " " << p.y << " " << p.z << endl;
 	}
 

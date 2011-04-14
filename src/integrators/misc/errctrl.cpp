@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -75,8 +75,8 @@ public:
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		const Class *cClass = child->getClass();
 
-		if (cClass->derivesFrom(Integrator::m_theClass)) {
-			if (!cClass->derivesFrom(SampleIntegrator::m_theClass))
+		if (cClass->derivesFrom(MTS_CLASS(Integrator))) {
+			if (!cClass->derivesFrom(MTS_CLASS(SampleIntegrator)))
 				Log(EError, "The sub-integrator must be derived from the class SampleIntegrator");
 			m_subIntegrator = static_cast<SampleIntegrator *>(child);
 		} else {
@@ -108,11 +108,13 @@ public:
 		const int nSamples = 10000;
 		Float luminance = 0, timeSample = 0;
 		RadianceQueryRecord rRec(scene, sampler);
+
+		/* Estimate the overall luminance on the image plane */
 		for (int i=0; i<nSamples; ++i) {
 			Point2 sample, lensSample;
 			RayDifferential eyeRay;
 			sampler->generate();
-			rRec.newQuery(RadianceQueryRecord::ERadiance);
+			rRec.newQuery(RadianceQueryRecord::ERadiance, camera->getMedium());
 			if (needsLensSample)
 				lensSample = rRec.nextSample2D();
 			if (needsTimeSample)
@@ -124,6 +126,7 @@ public:
 
 			luminance += m_subIntegrator->Li(eyeRay, rRec).getLuminance();
 		}
+
 		m_averageLuminance = luminance / nSamples;
 		m_quantile = (Float) normalQuantile(1-m_pval/2);
 		Log(EInfo, "Configuring for a %.1f%% confidence interval, quantile=%f, avg. luminance=%f", 
@@ -162,7 +165,7 @@ public:
 
 				block->snapshot(offset.x, offset.y);
 				while (!stop) {
-					rRec.newQuery(RadianceQueryRecord::ECameraRay);
+					rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
 					if (needsTimeSample)
@@ -221,6 +224,7 @@ public:
 				++pixelsRendered;
 			}
 		} else {
+			/* Use a basic grid traversal */
 			for (y = sy; y < ey; y++) {
 				for (x = sx; x < ex; x++) {
 					sampler->generate();
@@ -229,7 +233,7 @@ public:
 
 					block->snapshot(x, y);
 					while (!stop) {
-						rRec.newQuery(RadianceQueryRecord::ECameraRay);
+						rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 						if (needsLensSample)
 							lensSample = rRec.nextSample2D();
 						if (needsTimeSample)
@@ -293,10 +297,12 @@ public:
 	Spectrum Li(const RayDifferential &ray, RadianceQueryRecord &rRec) const {
 		return m_subIntegrator->Li(ray, rRec);
 	}
-	
-	Spectrum E(const Scene *scene, const Point &p, const Normal &n, Float time, 
-			Sampler *sampler, int irrSamples, bool irrIndirect) const {
-		return m_subIntegrator->E(scene, p, n, time, sampler, irrSamples, irrIndirect);
+
+	Spectrum E(const Scene *scene, const Point &p, const
+			Normal &n, Float time, const Medium *medium, Sampler *sampler,
+			int nSamples, bool includeIndirect) const { 
+		return m_subIntegrator->E(scene, p, n, time, medium,
+			sampler, nSamples, includeIndirect);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {

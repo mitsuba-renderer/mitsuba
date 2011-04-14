@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -19,6 +19,7 @@
 #include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
 #include <errno.h>
+#include <omp.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -41,8 +42,8 @@ protected:
 
 class OpenMPThread : public Thread {
 public:
-	OpenMPThread() : Thread("main") {
-	}
+	OpenMPThread(int threadIdx)
+		: Thread(formatString("omp%i", threadIdx)) { }
 
 	virtual void run() {
 		Log(EError, "The OpenMP thread is already running!");
@@ -280,7 +281,12 @@ void Thread::staticInitialization() {
 #endif
 }
 
+static std::vector<OpenMPThread *> __ompThreads;
+
 void Thread::staticShutdown() {
+	for (size_t i=0; i<__ompThreads.size(); ++i)
+		__ompThreads[i]->decRef();
+	__ompThreads.clear();
 	getThread()->m_running = false;
 	m_self->set(NULL);
 	delete m_self;
@@ -293,22 +299,27 @@ void Thread::staticShutdown() {
 #endif
 }
 
-void Thread::initializeOpenMP() {
+void Thread::initializeOpenMP(size_t threadCount) {
 	ref<Logger> logger = Thread::getThread()->getLogger();
 	ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
+
+	omp_set_num_threads(threadCount);
 
 	#pragma omp parallel
 	{
 		Thread *thread = Thread::getThread();
 		if (!thread) {
-			thread = new OpenMPThread();
+			thread = new OpenMPThread(omp_get_thread_num());
 			thread->m_running = true;
 			thread->m_thread = pthread_self();
 			thread->m_joinMutex = new Mutex();
 			thread->m_joined = false;
 			thread->m_fresolver = fResolver;
 			thread->m_logger = logger;
+			thread->incRef();
 			m_self->set(thread);
+			#pragma omp critical
+			__ompThreads.push_back((OpenMPThread *) thread);
 		}
 	}
 }

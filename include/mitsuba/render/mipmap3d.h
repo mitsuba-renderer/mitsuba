@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -32,13 +32,13 @@ public:
 	/**
 	 * Construct a new mipmap from the given volume data
 	 *
-	 * @param aabb
+	 * \param aabb
 	 *    Axis-aligned bounding box specifying the size of the volume region
-	 * @param size
+	 * \param size
 	 *    Size-length of the volume data in pixels (must be a power of two)
-	 * @param maxError
+	 * \param maxError
 	 *    Maximum permitted "relative error"
-	 * @param offset
+	 * \param offset
 	 *    Fudge factor for the denominator, meant to avoid the relative
 	 *    error singularity at zero
 	 */
@@ -57,18 +57,18 @@ public:
 	/**
 	 * Invert a line integral through the octree
 	 *
-	 * @param ray
+	 * \param ray
 	 *    Specifies the ray, along which the integral should be inverted.
 	 *    Coordinates are expected to be in the same coordinate system as the
 	 *    provided AABB.
-	 * @param desiredDensity
+	 * \param desiredDensity
 	 *    Try to integrate, until this much density has been accumulated
-	 * @param accumDensity
+	 * \param accumDensity
 	 *    When the inversion fails and the function returns false, this 
 	 *    parameter records the actual amount of accumulated density.
-	 * @param samplePos
+	 * \param samplePos
 	 *    Upon sucess, this parameter returns the sampled position.
-	 * @param sampleDensity
+	 * \param sampleDensity
 	 *    Upon success, this parameter stores the density value at the 
 	 *    right integration domain boundary.
 	 */

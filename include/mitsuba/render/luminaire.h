@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -25,21 +25,16 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Data structure used to record information associated with
- * sampled shadow rays
+ * \brief Data structure used by the direct illumination / shadow ray
+ * sampling methods in the class \ref Luminaire.
  */
 struct MTS_EXPORT_RENDER LuminaireSamplingRecord {
 public:
-	/// Create an invalid record
+	/// Create an invalid shadow ray sampling record
 	inline LuminaireSamplingRecord() : luminaire(NULL) { }
-	
-	/**
-	 * When a ray strikes a luminaire that is part of the scene,
-	 * the associated intersection record can be converted into
-	 * a luminaire sampling record in order to query the luminaire
-	 * for emitted radiance. (defined in records.inl)
-	 */
-	LuminaireSamplingRecord(const Intersection &its, const Vector &direction);
+
+	/// Create a shadow ray sampling record based on a surface intersection
+	inline LuminaireSamplingRecord(const Intersection &its, const Vector &direction);
 
 	/// Return a string representation
 	std::string toString() const;
@@ -53,23 +48,31 @@ public:
 	/// Direction vector pointing away from the light source
 	Vector d;
 
-	/// Probability density of the sampled point on the luminaire
+	/**
+	 * \brief Probability density (wrt. solid angle) of the sampled 
+	 * point on the luminaire
+	 */
 	Float pdf;
 
 	/**
-	 * Emitted radiance at 'p' into direction 'd' divided by the associated
-	 * probability. Already contains the geometric term and optionally 
-	 * attenuation when generated via Scene::sampleLuminaireAttenuated.
+	 * \brief Emitted radiance at \c p into direction \c d divided by
+	 * the associated probability. Already contains the geometric term
+	 * and optionally also transmittance when generated via 
+	 * \ref Scene::sampleAttenuatedLuminaire.
 	 */
-	Spectrum Le;
+	Spectrum value;
 };
 
 /**
- * Data structure used to record information associated with
- * luminaire emission sampling
+ * \brief Data structure used to record information associated with
+ * emission sampling in the class \ref Luminaire.
  */
 struct MTS_EXPORT_RENDER EmissionRecord {
 public:
+	/**
+	 * \brief This class supports a special \a preview mode when
+	 * sampling emissions for use in a VPL-style rendering algorithm
+	 */
 	enum ESamplingType {
 		ENormal,
 		EPreview
@@ -97,13 +100,14 @@ public:
 	Vector d;
 
 	/**
-	 * Radiant emittance at the sampled point. When this 
-	 * record was populated using Scene::sampleEmission(), 'P'
-	 * has already been multiplied by the directional 
-	 * scattering distribution and divided by the associated 
-	 * sampling densities.
+	 * \brief Stores the spatial component of the radiant
+	 * emittance
+	 *
+	 * When the record was populated using Scene::sampleEmission(),
+	 * \c P will also be modulated by the directional scattering
+	 * distribution and divided by the associated sampling densities.
 	 */
-	Spectrum P;
+	Spectrum value;
 
 	/// Area probability density
 	Float pdfArea;
@@ -113,159 +117,242 @@ public:
 };
 
 /**
- * Abstract implementation of a luminaire. Supports emission and
- * direct illumination sampling strategies and computes related probabilities.
+ * \brief Abstract implementation of a luminaire. Supports emission and
+ * direct illumination sampling strategies, and computes related probabilities.
  */
 class MTS_EXPORT_RENDER Luminaire : public ConfigurableObject, public HWResource {
 public:
+	/**
+	 * \brief Non-exhaustive list of flags that can be used to characterize 
+	 * light sources in \ref getType()
+	 */
 	enum EType {
+		/// The light source has a degenerate directional density
 		EDeltaDirection = 0x1,
+
+		/// The light source is perfectly diffuse with respect to direction.
 		EDiffuseDirection = 0x02,
+
+		/// The light source is associated with a surface
 		EOnSurface = 0x04,
+
+		/// The light source has a degenerate spatial density
 		EDeltaPosition = 0x8,
+
+		/// The light source has a degenerate spatial \a or directional density
 		EDelta = EDeltaDirection | EDeltaPosition
 	};
+	
+	// =============================================================
+	//! @{ \name General information
+	// =============================================================
 
-	/// ================= Direct illumination sampling ================= 
+	/// Return the name of this luminaire
+	inline const std::string &getName() const { return m_name; }
+
+	/// Return the luminaire type (a combination of the properties in \ref EType)
+	inline int getType() const { return m_type; }
+
 	/**
-	 * Return the radiant emittance into a given direction. This is
-	 * primarily used when an area light source has been hit by a ray, 
-	 * and it subsequently needs to be queried for the emitted radiance
-	 * passing into the opposite direction.
+	 * \brief Return an estimate of the total amount of power emitted 
+	 * by this luminaire.
 	 */
-	virtual Spectrum Le(const LuminaireSamplingRecord &lRec) const = 0;
+	virtual Spectrum getPower() const = 0;
+
+	/// Is this luminaire intersectable (e.g. can it be encountered by a tracing a ray)?
+	inline bool isIntersectable() const { return m_intersectable; }
+
+	/// Specify the medium that surrounds the luminaire
+	inline void setMedium(Medium *medium) { m_medium = medium; }
+
+	/// Return a pointer to the medium that surrounds the luminaire
+	inline Medium *getMedium() { return m_medium.get(); }
+
+	/// Return a pointer to the medium that surrounds the luminaire (const version)
+	inline const Medium *getMedium() const { return m_medium.get(); }
 
 	/**
-	 * Return the radiant emittance along a ray which does not
-	 * intersect any scene objects. The default implementation
-	 * returns zero - this can be used to implement background light sources.
+	 * \brief Return the luminaire's sampling weight
+	 *
+	 * This is used by the luminaire importance sampling
+	 * routines in \ref Scene.
 	 */
-	virtual Spectrum Le(const Ray &ray) const;
+	inline Float getSamplingWeight() const { return m_samplingWeight; }
+
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Direct illumination sampling strategies
+	// =============================================================
 
 	/**
-	 * Shadow ray sampling routine: Given an arbitrary 3D position
-	 * generate a sample point on the luminaire and fill the 
-	 * sampling record with all associated information.
-	 * Sampling is ideally wrt. solid angle at 'p'.
+	 * \brief Shadow ray sampling routine: Given an arbitrary 3D position,
+	 * generate a sample point on the luminaire and fill the supplied sampling
+	 * record with relevant information.
+	 *
+	 * Sampling is ideally done with respect to solid angle at \c p.
 	 */
 	virtual void sample(const Point &p, 
 		LuminaireSamplingRecord &lRec, const Point2 &sample) const = 0;
 
 	/**
-	 * Shadow ray sampling routine: Given a surface intersection, 
-	 * generate a sample point on the luminaire and fill the 
-	 * sampling record with all associated information.
-	 * Sampling is ideally wrt. solid angle at 'its'.
-	 */
-	virtual void sample(const Intersection &its, 
-		LuminaireSamplingRecord &lRec, const Point2 &sample) const = 0;
-
-	/**
-	 * Calculate the probability of generating this sample using
-	 * the luminaire sampling strategy implemented by this class.
+	 * \brief Calculate the solid angle density for generating this sample
+	 * using the luminaire sampling strategy implemented by this class.
+	 *
+	 * When \c delta is set to true, only components with a Dirac delta density
+	 * are considered in the query. Otherwise, they are left out.
 	 */
 	virtual Float pdf(const Point &p, 
 		const LuminaireSamplingRecord &lRec, bool delta) const = 0;
+	
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Emission sampling strategies
+	// =============================================================
 
 	/**
-	 * Calculate the probability of generating this sample using
-	 * the luminaire sampling strategy implemented by this class
-	 * (as above, but for surface interactions)
-	 */
-	virtual Float pdf(const Intersection &its, 
-		const LuminaireSamplingRecord &lRec, bool delta) const = 0;
-
-	/// ================= Emission sampling ================= 
-
-	/**
-	 * Sample a particle leaving this luminaire and return a ray describing its path
-	 * as well as record containing detailed probability density information. 
-	 * Two uniformly distributed 2D samples are required.
+	 * \brief Sample a particle leaving this luminaire and return a ray 
+	 * describing its path as well as record containing detailed probability
+	 * density information. 
+	 *
+	 * Two uniformly distributed 2D samples are required. This method does
+	 * exactly the same as calling \c sampleEmissionArea and 
+	 * \c sampleEmissionDirection in sequence, modulating \c eRec.Le
+	 * by the return value of the latter and dividing by the product
+	 * of the spatial and directional sampling densities.
 	 */
 	virtual void sampleEmission(EmissionRecord &eRec,
 		const Point2& areaSample, const Point2 &dirSample) const = 0;
 
 	/**
-	 * Sample only the spatial dimension of the emission sampling strategy
-	 * implemented in <tt>sampleEmission</tt>. An examplary use of this is in
-	 * bidirectional path tracing or MLT, where the area and direction sampling
-	 * steps take place in different vertices (essentially, the directional
-	 * variation is similar to a BSDF that modulates the spatially dependent
-	 * radiance component). After the function call terminates, the area density 
-	 * as well as the spatially dependent emittance will be stored in <tt>eRec</tt>.
+	 * \brief Sample only the spatial part of the emission sampling strategy
+	 * implemented in \c sampleEmission.
+	 *
+	 * An examplary use of this method is bidirectional path tracing or MLT, 
+	 * where the area and direction sampling steps take place in different 
+	 * vertices.
+	 *
+	 * After the function call terminates, the area density as well as the
+	 * spatially dependent emittance component will be stored in \c eRec.
 	 */
-	virtual void sampleEmissionArea(EmissionRecord &lRec, const Point2 &sample) const = 0;
+	virtual void sampleEmissionArea(EmissionRecord &lRec,
+			const Point2 &sample) const = 0;
 
 	/**
-	 * As above, but handles only the directional part. Must be called *after*
-	 * sampleEmissionArea(). The return value is to be understood as a BRDF,
-	 * which modulates the radiant emittance.
+	 * \brief Sample only the directional part of the emission sampling strategy
+	 * implemented in \c sampleEmission.
+	 *
+	 * Can only be called \a after a preceding invocation of
+	 * \ref sampleEmissionArea() with the same emission sampling record. 
+	 *
+	 * The return value of this function should be used to modulate the spatial 
+	 * component of the radiant emittance obtained in \ref sampleEmissionArea.
 	 */
-	virtual Spectrum sampleEmissionDirection(EmissionRecord &lRec, const Point2 &sample) const = 0;
+	virtual Spectrum sampleEmissionDirection(EmissionRecord &lRec, 
+			const Point2 &sample) const = 0;
 
 	/**
-	 * Given an emitted particle, populate the emission record with the relevant 
-	 * probability densities. When \a delta is set to true, only components
-	 * with a Dirac delta density are queried.
+	 * \brief Given an emitted particle, populate the emission record with the 
+	 * relevant probability densities.
+	 *
+	 * When \c delta is set to true, only components with a Dirac delta density
+	 * are considered in the query. Otherwise, they are left out.
 	 */
 	virtual void pdfEmission(EmissionRecord &eRec, bool delta) const = 0;
 
 	/**
-	 * Evaluate the directional scattering distribution of this light source
-	 * at a given point. Similar to Le(), except that this function is 
-	 * normalized like a BSDF.
-	 */
-	virtual Spectrum f(const EmissionRecord &eRec) const = 0;
-
-	/**
-	 * Evaluate the radiant emittance at a point on the luminaire 
-	 * (ignoring any directional variations).
+	 * \brief Evaluate the spatial component of the radiant emittance at a
+	 * point on the luminaire (ignoring any directional variations).
 	 */
 	virtual Spectrum fArea(const EmissionRecord &eRec) const = 0;
 
-	/// ================= Misc. ================= 
+	/**
+	 * \brief Evaluate the directional emission distribution of this light source
+	 * at a given point (ignoring the spatial component).
+	 *
+	 * This function is normalized so that it integrates to one.
+	 */
+	virtual Spectrum fDirection(const EmissionRecord &eRec) const = 0;
+
+	//! @}
+	// =============================================================
+	
+	// =============================================================
+	//! @{ \name Area luminaire support 
+	// =============================================================
 
 	/**
-	 * \brief Fill the supplied emission record with information matching 
-	 * the associated ray.
+	 * \brief This function is specific to area luminaires (i.e. luminaires
+	 * that can be intersected by a \ref Scene::rayIntersect). It returns the
+	 * radiant emittance into a given direction.
 	 *
-	 * This function is only relevant to background luminaires. The default
-	 * implementation throws an exception, which states that the method is
-	 * unimplemented.
-	 *
-	 * \return \a true upon success
+	 * This is function is used when an area light source has been hit by a 
+	 * ray in a path tracing-style integrator, and it subsequently needs to
+	 * be queried for the emitted radiance along the negative ray direction.
+	 
+	 * The default implementation throws an exception, which states that
+	 * the method is not implemented.
 	 */
-	virtual bool createEmissionRecord(EmissionRecord &eRec, const Ray &ray) const;
+	virtual Spectrum Le(const ShapeSamplingRecord &sRec,
+			const Vector &d) const;
 
-	/**
-	 * Return an estimate of the total amount of power emitted 
-	 * by this luminaire.
-	 */
-	virtual Spectrum getPower() const = 0;
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Background luminaire support 
+	// =============================================================
 
 	/// Is this a background luminaire (e.g. an environment map?)
 	virtual bool isBackgroundLuminaire() const;
 
-	/// Is this luminaire intersetable (e.g. can it be found by a tracing a ray)?
-	inline bool isIntersectable() const { return m_intersectable; }
+	/**
+	 * \brief Return the radiant emittance along a ray which does not
+	 * intersect any scene objects.
+	 *
+	 * The default implementation throws an exception, which states that
+	 * the method is not implemented.
+	 */
+	virtual Spectrum Le(const Ray &ray) const;
 
-	/// Serialize this luminaire to disk
+	/**
+	 * \brief This function fills an emission sampling record with relevant
+	 * information for the supplied ray (which doesn't intersect \a any 
+	 * scene objects).
+	 * 
+	 * The record will be populated with the radiant emittance, as well as
+	 * the spatial and directional densities for sampling an emitted ray along
+	 * the opposite ray direction.
+	 *
+	 * This function is only relevant to background luminaires. The 
+	 * default implementation throws an exception, which states that
+	 * the method is not implemented.
+	 *
+	 * \return \c true upon success
+	 */
+	virtual bool createEmissionRecord(EmissionRecord &eRec, const Ray &ray) const;
+
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Miscellaneous
+	// =============================================================
+
+	/// Serialize this luminaire to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
-	
-	/// Return the name of this luminaire
-	inline const std::string &getName() const { return m_name; }
-
-	/// Return the luminaire type
-	inline int getType() const { return m_type; }
 
 	/// Optional pre-process step before rendering starts
 	virtual void preprocess(const Scene *scene);
 
-	/**
-	 * \brief Return the luminaire's sampling weight. This is used by
-	 * the luminaire importance sampling routines in \ref Scene.
-	 */
-	inline Float getSamplingWeight() const { return m_samplingWeight; }
+	/// Add a child (e.g. a medium reference) to this luminaire
+	void addChild(const std::string &name, ConfigurableObject *child);
+
+	//! @}
+	// =============================================================
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -280,6 +367,7 @@ protected:
 protected:
 	Transform m_worldToLuminaire, m_luminaireToWorld;
 	Float m_samplingWeight;
+	ref<Medium> m_medium;
 	int m_type;
 	bool m_intersectable;
 	std::string m_name;

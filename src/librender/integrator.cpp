@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -51,32 +51,32 @@ void SampleIntegrator::serialize(Stream *stream, InstanceManager *manager) const
 }
 
 Spectrum SampleIntegrator::E(const Scene *scene, const Point &p, const Normal &n, Float time,
-	Sampler *sampler, int irrSamples, bool irrIndirect) const {
+		const Medium *medium, Sampler *sampler, int nSamples, bool handleIndirect) const {
 	Spectrum E(0.0f);
 	LuminaireSamplingRecord lRec;
 	RadianceQueryRecord rRec(scene, sampler);
 	Frame frame(n);
 
 	sampler->generate();
-	for (int i=0; i<irrSamples; i++) {
-		rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission);
+	for (int i=0; i<nSamples; i++) {
+		rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission, medium);
 
 		/* Direct */
-		if (scene->sampleLuminaireAttenuated(p, lRec, time, rRec.nextSample2D())) {
+		if (scene->sampleAttenuatedLuminaire(p, time, medium, lRec, rRec.nextSample2D())) {
 			Float dp = dot(lRec.d, n);
 			if (dp < 0) 
-				E -= lRec.Le * dp;
+				E -= lRec.value * dp;
 		}
 
 		/* Indirect */
-		if (irrIndirect) {
+		if (handleIndirect) {
 			Vector d = frame.toWorld(squareToHemispherePSA(rRec.nextSample2D()));
 			++rRec.depth;
 			E += Li(RayDifferential(p, d, time), rRec) * M_PI;
 		}
 		sampler->advance();
 	}
-	return E / (Float) irrSamples;
+	return E / (Float) nSamples;
 }
 
 void SampleIntegrator::cancel() {
@@ -93,7 +93,7 @@ bool SampleIntegrator::render(Scene *scene,
 
 	size_t nCores = sched->getCoreCount();
 	const Sampler *sampler = static_cast<const Sampler *>(sched->getResource(samplerResID, 0));
-	uint64_t sampleCount = sampler->getSampleCount();
+	size_t sampleCount = sampler->getSampleCount();
 
 	Log(EInfo, "Starting render job (%ix%i, %lld %s, " SIZE_T_FMT 
 		" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y, 
@@ -148,13 +148,12 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 		/* Use a prescribed traversal order (e.g. using a space-filling curve) */
 		if (!block->collectStatistics()) {
 			for (size_t i=0; i<points->size(); ++i) {
-				Point2i offset = points->operator[](i) 
-					+ Vector2i(block->getOffset());
+				Point2i offset = (*points)[i] + Vector2i(block->getOffset());
 				if (stop) 
 					break;
 				sampler->generate();
-				for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
-					rRec.newQuery(RadianceQueryRecord::ECameraRay);
+				for (size_t j = 0; j<sampler->getSampleCount(); j++) {
+					rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
 					if (needsTimeSample)
@@ -172,14 +171,13 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 		} else {
 			Spectrum mean, meanSqr;
 			for (size_t i=0; i<points->size(); ++i) {
-				Point2i offset = points->operator[](i) 
-					+ Vector2i(block->getOffset());
+				Point2i offset = (*points)[i] + Vector2i(block->getOffset());
 				if (stop) 
 					break;
 				sampler->generate();
 				mean = meanSqr = Spectrum(0.0f);
-				for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
-					rRec.newQuery(RadianceQueryRecord::ECameraRay);
+				for (size_t j = 0; j<sampler->getSampleCount(); j++) {
+					rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
 					if (needsTimeSample)
@@ -216,8 +214,8 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 					if (stop) 
 						break;
 					sampler->generate();
-					for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
-						rRec.newQuery(RadianceQueryRecord::ECameraRay);
+					for (size_t j = 0; j<sampler->getSampleCount(); j++) {
+						rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 						if (needsLensSample)
 							lensSample = rRec.nextSample2D();
 						if (needsTimeSample)
@@ -241,8 +239,8 @@ void SampleIntegrator::renderBlock(const Scene *scene,
 						break;
 					sampler->generate();
 					mean = meanSqr = Spectrum(0.0f);
-					for (uint64_t j = 0; j<sampler->getSampleCount(); j++) {
-						rRec.newQuery(RadianceQueryRecord::ECameraRay);
+					for (size_t j = 0; j<sampler->getSampleCount(); j++) {
+						rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
 						if (needsLensSample)
 							lensSample = rRec.nextSample2D();
 						if (needsTimeSample)
@@ -298,11 +296,11 @@ std::string RadianceQueryRecord::toString() const {
 		<< "  type = { ";
 	if (type & EEmittedRadiance) oss << "emitted ";
 	if (type & ESubsurfaceRadiance) oss << "subsurface ";
-	if (type & EDirectRadiance) oss << "direct ";
-	if (type & EIndirectRadiance) oss << "indirect ";
+	if (type & EDirectSurfaceRadiance) oss << "direct ";
+	if (type & EIndirectSurfaceRadiance) oss << "indirect ";
 	if (type & ECausticRadiance) oss << "caustic ";
-	if (type & EInscatteredDirectRadiance) oss << "inscatteredDirect ";
-	if (type & EInscatteredIndirectRadiance) oss << "inscatteredIndirect ";
+	if (type & EDirectMediumRadiance) oss << "inscatteredDirect ";
+	if (type & EIndirectMediumRadiance) oss << "inscatteredIndirect ";
 	if (type & EDistance) oss << "distance ";
 	if (type & EOpacity) oss << "opacity ";
 	if (type & EIntersection) oss << "intersection ";

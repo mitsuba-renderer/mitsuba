@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -68,6 +68,12 @@ public:
 	
 	/// Set a boolean parameter by name
 	inline void setParameter(const std::string &name, bool value, 
+		bool failIfMissing = true) {
+		setParameter(getParameterID(name, failIfMissing), value);
+	}
+
+	/// Set a integer parameter by name
+	inline void setParameter(const std::string &name, int value, 
 		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
@@ -180,6 +186,9 @@ public:
 
 	/// Set a float parameter
 	virtual void setParameter(int id, Float value) = 0;
+
+	/// Set a int parameter
+	virtual void setParameter(int id, int value) = 0;
 
 	/// Set a Vector parameter
 	virtual void setParameter(int id, const Vector &value) = 0;

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -57,7 +57,7 @@ public:
 	 * This does not always work -- for instance, Linux 
 	 * requires root privileges for this operation.
 	 *
-	 * \return \a true upon success.
+	 * \return \c true upon success.
 	 */
 	bool setPriority(EThreadPriority priority);
 
@@ -66,7 +66,7 @@ public:
 	 * 
 	 * When an thread marked critical crashes from an uncaught 
 	 * exception, the whole process is brought down. 
-	 * The default is \a false.
+	 * The default is \c false.
 	 */
 	inline void setCritical(bool critical) { m_critical = critical; }
 
@@ -148,7 +148,7 @@ public:
 	static void staticShutdown();
 
 	/// Initialize Mitsuba's threading system for simultaneous use of OpenMP
-	static void initializeOpenMP();
+	static void initializeOpenMP(size_t threadCount);
 
 	MTS_DECLARE_CLASS()
 protected:

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -68,7 +68,7 @@ public:
 		Properties props("independent");
 		props.setInteger("sampleCount", m_resolution * 3 * m_resolution);
 		m_sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, props));
+			createObject(MTS_CLASS(Sampler), props));
 		m_subIntegrator->wakeup(m_resources);
 
 		m_irrCache = new IrradianceCache(m_scene->getAABB());
@@ -107,6 +107,8 @@ public:
 				m_camera->generateRayDifferential(sample, lensSample, 0.0f, eyeRay);
 				if (m_scene->rayIntersect(eyeRay, its)) {
 					const BSDF *bsdf = its.shape->getBSDF();
+					if (!bsdf)
+						continue;
 					if (!bsdf->getType() == BSDF::EDiffuseReflection)
 						continue;
 					if (m_irrCache->get(its, E))
@@ -122,7 +124,8 @@ public:
 						for (unsigned int k=0; k<m_hs->getN(); k++) {
 							HemisphereSampler::SampleEntry &entry = (*m_hs)(j, k);
 							entry.dist = std::numeric_limits<Float>::infinity();
-							rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission | RadianceQueryRecord::EDistance);
+							rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission
+								| RadianceQueryRecord::EDistance, m_camera->getMedium());
 							rRec.depth = 2;
 							rRec.extra = 1; // mark as irradiance cache query
 							entry.L = integrator->Li(RayDifferential(its.p, entry.d, 0.0f), rRec);

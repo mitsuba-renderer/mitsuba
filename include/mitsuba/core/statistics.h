@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -27,21 +27,23 @@ MTS_NAMESPACE_BEGIN
 //  Statistics collection
 // -----------------------------------------------------------------------
 
-/// Size of the console-based progress message
+/// Size (in characters) of the console-based progress message
 #define PROGRESS_MSG_SIZE 56
 
 /**
  * Specifies the number of internal counters associated with each 
- * statistics counter. Needed for SMP/ccNUMA systems where different 
- * processors might be contending for a cache line containing a counter. 
- * The solution used here tries to ensure that every processor has 
- * its own local counter.
+ * \ref StatsCounter instance.
+ *
+ * This is needed for SMP/ccNUMA systems where different processors might 
+ * be contending for a cache line containing a counter. The solution used
+ * here tries to ensure that every processor has  its own local counter.
  */
-
 #define NUM_COUNTERS       128   // Must be a power of 2
+
+/// Bitmask for \ref NUM_COUNTERS
 #define NUM_COUNTERS_MASK (NUM_COUNTERS-1)
 
-/// Determines the multiples (e.g. 1000, 1024) and units
+/// Determines the multiples (e.g. 1000, 1024) and units of a \ref StatsCounter
 enum EStatsType {
 	ENumberValue = 0, ///< Simple unitless number, e.g. # of rays
 	EByteCount,       ///< Number of read/written/transferred bytes
@@ -52,8 +54,7 @@ enum EStatsType {
 /**
  * \brief Counter data structure, which is suitable for ccNUMA/SMP machines
  *
- * This counter takes up at least one cache line
- * to reduce false sharing.
+ * This counter takes up at least one cache line to reduce false sharing.
  */
 struct CacheLineCounter { 
 #if (defined(WIN32) && !defined(WIN64)) || (defined(__POWERPC__) && !defined(_LP64))
@@ -185,6 +186,13 @@ public:
 	}
 #endif
 
+	/// Reset the stored counter values
+	inline void reset() {
+		for (int i=0; i<NUM_COUNTERS; ++i) {
+			m_value[i].value = m_base[i].value = 0;
+		}
+	}
+
 	/// Sorting by name (for the statistics)
 	bool operator<(const StatsCounter &v) const;
 private:
@@ -196,6 +204,11 @@ private:
 };
 
 /** \brief General-purpose progress reporter
+ *
+ * This class is used to track the progress of various operations that might
+ * take longer than, say, a second. It provides interactive feedback on both
+ * the console binaries and within Mitsuba's Qt-based GUI.
+ *
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE ProgressReporter {
@@ -241,8 +254,9 @@ private:
 	const void *m_ptr;
 };
 
-/** \brief Collects various rendering statistics. Only
- * one instance is created during a program run
+/** \brief Collects various rendering statistics and presents them
+ * in a human-readable form.
+ *
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE Statistics : public Object {

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -38,7 +38,8 @@ public:
 		/// When the file contains multiple meshes, this index specifies which one to load 
 		int shapeIndex = props.getInteger("shapeIndex", 0);
 
-		m_name = (props.getID() != "unnamed") ? props.getID() : formatString("%s@%i", filePath.stem().c_str(), shapeIndex); 
+		m_name = (props.getID() != "unnamed") ? props.getID() 
+			: formatString("%s@%i", filePath.stem().c_str(), shapeIndex); 
 
 		/* Load the geometry */
 		Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.leaf().c_str());
@@ -73,8 +74,14 @@ public:
 			for (size_t i=0; i<m_vertexCount; ++i)
 				m_positions[i] = objectToWorld(m_positions[i]);
 			if (m_normals) {
-				for (size_t i=0; i<m_vertexCount; ++i)
+				for (size_t i=0; i<m_vertexCount; ++i) 
 					m_normals[i] = objectToWorld(m_normals[i]);
+			}
+		}
+		if (objectToWorld.det3x3() < 0) {
+			for (size_t i=0; i<m_triangleCount; ++i) {
+				Triangle &t = m_triangles[i];
+				std::swap(t.idx[0], t.idx[1]);
 			}
 		}
 	}

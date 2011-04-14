@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -31,9 +31,9 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 		  m_wrapMode(wrapMode), m_maxAnisotropy(maxAnisotropy) {
 	Spectrum *texture = pixels;
 
-	if (!isPowerOfTwo(width) || !isPowerOfTwo(height)) {
-		m_width = roundToPowerOfTwo(width);
-		m_height = roundToPowerOfTwo(height);
+	if (!isPow2(width) || !isPow2(height)) {
+		m_width = (int) roundToPow2((uint32_t) width);
+		m_height = (int) roundToPow2((uint32_t) height);
 
 		/* The texture needs to be up-sampled */
 		Spectrum *texture1 = new Spectrum[m_width*height];
@@ -87,7 +87,7 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 		delete[] texture1;
 	}
 
-	m_levels = 1 + log2i(std::max(width, height));
+	m_levels = 1 + log2i((uint32_t) std::max(width, height));
 	m_pyramid = new Spectrum*[m_levels];
 	m_pyramid[0] = texture;
 	m_levelWidth = new int[m_levels];

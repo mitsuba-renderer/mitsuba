@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -579,10 +579,8 @@ void NSGLDevice::processEvents() {
 	Assert(m_initialized);
 
 	m_mutex->lock();
-	std::vector<DeviceEvent>::iterator it = m_deviceEvents.begin();
-	for (; it!=m_deviceEvents.end(); ++it) {
+	for (std::vector<DeviceEvent>::iterator it = m_deviceEvents.begin(); it!=m_deviceEvents.end(); ++it) 
 		fireDeviceEvent(*it);
-	}
 	m_deviceEvents.clear();
 	m_mutex->unlock();
 }

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -70,7 +70,7 @@ void help() {
 	cout <<  "               workloads (default: 32). Only applies to some integrators." << endl << endl;
 	cout <<  "   -v          Be more verbose" << endl << endl;
 	cout <<  "   -w          Treat warnings as errors" << endl << endl;
-	cout <<  "   -b          Disable progress bars" << endl << endl;
+	cout <<  "   -z          Disable progress bars" << endl << endl;
 	cout <<  " The README file included with the distribution contains further information." << endl;
 }
 
@@ -217,6 +217,9 @@ int ubi_main(int argc, char **argv) {
 
 		ProgressReporter::setEnabled(progressBars);
 
+		/* Initialize OpenMP */
+		Thread::initializeOpenMP(nprocs);
+
 		/* Configure the logging subsystem */
 		ref<Logger> log = Thread::getThread()->getLogger();
 		log->setLogLevel(logLevel);
@@ -225,7 +228,7 @@ int ubi_main(int argc, char **argv) {
 		/* Disable the default appenders */
 		for (size_t i=0; i<log->getAppenderCount(); ++i) {
 			Appender *appender = log->getAppender(i);
-			if (appender->getClass()->derivesFrom(StreamAppender::m_theClass))
+			if (appender->getClass()->derivesFrom(MTS_CLASS(StreamAppender)))
 				log->removeAppender(appender);
 		}
 
@@ -308,9 +311,10 @@ int ubi_main(int argc, char **argv) {
 		parser->setValidationSchemaFullChecking(true);
 		parser->setValidationScheme(SAXParser::Val_Always);
 		parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
+		parser->setCalculateSrcOfs(true);
 
 		/* Set the handler */
-		SceneHandler *handler = new SceneHandler(parameters);
+		SceneHandler *handler = new SceneHandler(parser, parameters);
 		parser->setDoNamespaces(true);
 		parser->setDocumentHandler(handler);
 		parser->setErrorHandler(handler);
@@ -343,9 +347,9 @@ int ubi_main(int argc, char **argv) {
 			parser->parse(filename.file_string().c_str());
 			ref<Scene> scene = handler->getScene();
 
-			scene->setSourceFile(filename.file_string());
-			scene->setDestinationFile(destFile.length() > 0 ? destFile 
-				: baseName.file_string());
+			scene->setSourceFile(filename);
+			scene->setDestinationFile(destFile.length() > 0 ? 
+				fs::path(destFile) : (filePath / baseName));
 			scene->setBlockSize(blockSize);
 
 			if (scene->destinationExists() && skipExisting)

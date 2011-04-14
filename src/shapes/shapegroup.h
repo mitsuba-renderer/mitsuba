@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -25,10 +25,11 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief "Fake" shape that groups sub-shapes into a
- * separate KD-tree. When this shape is used by itself,
- * it doesn't actually generate any intersectable geometry.
- * Instead, the "instance" plugin must be used to create
- * references to the geometry stored inside it.
+ * separate KD-tree.
+ *
+ * This shape doesn't actually generate any intersectable 
+ * geometry on its own. Instead, the "instance" plugin must 
+ * be used to create references to the geometry stored inside it.
  */
 class ShapeGroup : public Shape {
 public:

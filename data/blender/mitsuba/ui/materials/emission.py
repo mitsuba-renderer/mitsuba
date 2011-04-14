@@ -16,11 +16,11 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
+import bpy, bl_ui
+from ... import MitsubaAddon
+from ...ui.materials import mitsuba_material_base
 
-from mitsuba.ui.materials import mitsuba_material_base
-from properties_material import active_node_mat
-
+@MitsubaAddon.addon_register_class
 class emission(mitsuba_material_base, bpy.types.Panel):
 	'''
 	Material Emission Settings
@@ -39,6 +39,6 @@ class emission(mitsuba_material_base, bpy.types.Panel):
 
 	def draw_header(self, context):
 		if hasattr(context, "material"):
-			mat = active_node_mat(context.material)
+			mat = bl_ui.properties_material.active_node_mat(context.material)
 			self.layout.prop(mat.mitsuba_emission, "use_emission", text="")
 			self.validate(context)

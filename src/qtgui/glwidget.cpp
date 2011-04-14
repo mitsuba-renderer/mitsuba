@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -35,6 +35,8 @@ GLWidget::GLWidget(QWidget *parent) :
 	setAutoBufferSwap(false);
 	setFocusPolicy(Qt::StrongFocus);
 	m_clock = new Timer();
+	m_wheelTimer = new Timer();
+	m_animationTimer = new Timer();
 	m_movementTimer = new QTimer(parent);
 	m_movementTimer->setInterval(20);
 	m_movementTimer->setSingleShot(false);
@@ -44,6 +46,7 @@ GLWidget::GLWidget(QWidget *parent) :
 	connect(m_redrawTimer, SIGNAL(timeout()), this, SLOT(updateGL()));
 	m_renderer = Renderer::create(NULL);
 	m_device = new QtDevice(this);
+	m_gizmo = new Gizmo();
 	m_preview = new PreviewThread(m_device, m_renderer);
 	connect(m_preview, SIGNAL(caughtException(const QString &)), 
 		this, SLOT(onException(const QString &)), Qt::QueuedConnection);
@@ -60,10 +63,15 @@ GLWidget::GLWidget(QWidget *parent) :
 #endif
 	m_ignoreResizeEvents = false;
 	m_ignoreScrollEvents = false;
+	m_animation = false;
 	setAcceptDrops(true);
 }
 
 GLWidget::~GLWidget() {
+	shutdown();
+}
+
+void GLWidget::shutdown() {
 	if (m_preview)
 		m_preview->quit();
 }
@@ -114,6 +122,9 @@ void GLWidget::initializeGL() {
 	if (!m_renderer->getCapabilities()->isSupported(
 		RendererCapabilities::EVertexBufferObjects))
 		missingExtensions.push_back("Vertex buffer objects");
+	if (!m_renderer->getCapabilities()->isSupported(
+		RendererCapabilities::EBufferBlit))
+		missingExtensions.push_back("Fast blitting");
 
 	if (missingExtensions.size() > 0 || m_softwareFallback) {
 #if !defined(MTS_GUI_SOFTWARE_FALLBACK)
@@ -149,9 +160,10 @@ void GLWidget::initializeGL() {
 		);
 
 		m_gammaTonemap->setSource(GPUProgram::EFragmentProgram,
-			"uniform sampler2D source;\n"
+			"#version 120\n"
+			"uniform sampler2D colorSource, depthSource;\n"
 			"uniform float invWhitePoint, invGamma;\n"
-			"uniform bool sRGB;\n"
+			"uniform bool sRGB, hasDepth;\n"
 			"\n"
 			"float toSRGB(float value) {\n"
 			"	if (value < 0.0031308)\n"
@@ -160,11 +172,12 @@ void GLWidget::initializeGL() {
 			"}\n"
 			"\n"
 			"void main() {\n"
-			"	vec4 color = texture2D(source, gl_TexCoord[0].xy) * invWhitePoint;\n"
+			"	vec4 color = texture2D(colorSource, gl_TexCoord[0].xy) * invWhitePoint;\n"
 			"	if (sRGB)\n"
-			"		gl_FragColor = vec4(toSRGB(color.r), toSRGB(color.g), toSRGB(color.b), 1);"
+			"		gl_FragColor = vec4(toSRGB(color.r), toSRGB(color.g), toSRGB(color.b), 1);\n"
 			"	else\n"
 			"		gl_FragColor = vec4(pow(color.rgb, vec3(invGamma)), 1);\n"
+			"	gl_FragDepth = hasDepth ? texture2D(depthSource, gl_TexCoord[0].xy).r : 0.5;\n"
 			"}\n"
 		);
 
@@ -176,9 +189,10 @@ void GLWidget::initializeGL() {
 		);
 
 		m_reinhardTonemap->setSource(GPUProgram::EFragmentProgram,
-			"uniform sampler2D source;\n"
+			"#version 120\n"
+			"uniform sampler2D colorSource, depthSource;\n"
 			"uniform float key, invWpSqr, invGamma, multiplier;\n"
-			"uniform bool sRGB;\n"
+			"uniform bool sRGB, hasDepth;\n"
 			"\n"
 			"float toSRGB(float value) {\n"
 			"	if (value < 0.0031308)\n"
@@ -195,7 +209,7 @@ void GLWidget::initializeGL() {
 			"                            -0.969256,  1.875991,  0.041556,\n"
 			"					          0.055648, -0.204043,  1.057311);\n"
 			"\n"
-			"	vec4 color = texture2D(source, gl_TexCoord[0].xy)*multiplier;\n"
+			"	vec4 color = texture2D(colorSource, gl_TexCoord[0].xy)*multiplier;\n"
 			"   vec3 xyz = rgb2xyz * color.rgb;\n"
 			"   float normalization = 1.0/(xyz.x + xyz.y + xyz.z);\n"
 			"   vec3 Yxy = vec3(xyz.x*normalization, xyz.y*normalization, xyz.y);\n"
@@ -207,6 +221,7 @@ void GLWidget::initializeGL() {
 			"		gl_FragColor = vec4(toSRGB(color.r), toSRGB(color.g), toSRGB(color.b), 1);\n"
 			"	else\n"
 			"		gl_FragColor = vec4(pow(color.rgb, vec3(invGamma)), 1);\n"
+			"	gl_FragDepth = hasDepth ? texture2D(depthSource, gl_TexCoord[0].xy).r : 0.5;\n"
 			"}\n"
 		);
 
@@ -288,6 +303,9 @@ void GLWidget::initializeGL() {
 	m_logoTexture->init();
 	m_font->init(m_renderer);
 	m_redrawTimer->start();
+	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+	glEnable(GL_LINE_SMOOTH);
+	glLineWidth(0.6f);
 }
 
 void GLWidget::setScene(SceneContext *context) {
@@ -299,8 +317,9 @@ void GLWidget::setScene(SceneContext *context) {
 		context = NULL;
 	m_preview->setSceneContext(context, true, false);
 	m_framebufferChanged = true;
-	m_mouseButtonDown = false;
+	m_mouseButtonDown = m_animation = false;
 	m_leftKeyDown = m_rightKeyDown = m_upKeyDown = m_downKeyDown = false;
+	m_gizmo->reset();
 	updateGeometry();
 	updateScrollBars();
 	updateGL();
@@ -469,27 +488,45 @@ void GLWidget::timerImpulse() {
 		m_movementTimer->stop();
 		return;
 	}
-	Camera *camera = m_context->scene->getCamera();
-	Float moveSpeed = m_context->movementScale
-		* m_clock->getMilliseconds();
-	m_clock->reset();
+	ProjectiveCamera *camera 
+		= static_cast<ProjectiveCamera *>(m_context->scene->getCamera());
 
-	if (m_leftKeyDown)
-		camera->setViewTransform(
-		Transform::translate(Vector(moveSpeed,0,0))
-		* camera->getViewTransform());
-	if (m_rightKeyDown)
-		camera->setViewTransform(
-		Transform::translate(Vector(-moveSpeed,0,0))
-		* camera->getViewTransform());
-	if (m_downKeyDown)
-		camera->setViewTransform(
-		Transform::translate(Vector(0,0,moveSpeed))
-		* camera->getViewTransform());
-	if (m_upKeyDown)
-		camera->setViewTransform(
-		Transform::translate(Vector(0,0,-moveSpeed))
-		* camera->getViewTransform());
+	if (m_animation) {
+		Float x = std::min(m_animationTimer->getMilliseconds() / 500.0f, 1.0f);
+		Float t = x*x*x*(x*(x*6-15)+10); // smootherstep by Ken Perlin
+
+		Point origin = (1-t) * m_animationOrigin0 + t * m_animationOrigin1;
+		Point target = (1-t) * m_animationTarget0 + t * m_animationTarget1;
+
+		camera->setInverseViewTransform(Transform::lookAt(origin, target, m_up));
+
+		if (x == 1.0f)
+			m_animation = false;
+	}
+
+	if (!m_gizmo->isDragging() && !m_animation) {
+		Float moveSpeed = m_context->movementScale
+			* m_clock->getMilliseconds();
+
+		if (m_leftKeyDown)
+			camera->setViewTransform(
+			Transform::translate(Vector(moveSpeed,0,0))
+			* camera->getViewTransform());
+		if (m_rightKeyDown)
+			camera->setViewTransform(
+			Transform::translate(Vector(-moveSpeed,0,0))
+			* camera->getViewTransform());
+		if (m_downKeyDown)
+			camera->setViewTransform(
+			Transform::translate(Vector(0,0,moveSpeed))
+			* camera->getViewTransform());
+		if (m_upKeyDown)
+			camera->setViewTransform(
+			Transform::translate(Vector(0,0,-moveSpeed))
+			* camera->getViewTransform());
+	}
+
+	m_clock->reset();
 
 	if (m_context->renderJob) {
 		m_context->renderJob->cancel();
@@ -502,6 +539,12 @@ void GLWidget::timerImpulse() {
 		emit stopRendering(); 
 	}
 
+	if (!(m_leftKeyDown || m_rightKeyDown || m_upKeyDown || m_downKeyDown 
+		|| m_wheelTimer->getMilliseconds() < 200 || m_animation)) {
+		if (m_movementTimer->isActive()) 
+			m_movementTimer->stop();
+	}
+
 	resetPreview();
 }
 
@@ -509,7 +552,8 @@ void GLWidget::resetPreview() {
 	if (!m_context || !m_context->scene || !m_preview->isRunning())
 		return;
 	bool motion = m_leftKeyDown || m_rightKeyDown || 
-		m_upKeyDown || m_downKeyDown || m_mouseButtonDown;
+		m_upKeyDown || m_downKeyDown || m_mouseButtonDown ||
+		m_wheelTimer->getMilliseconds() < 200 || m_animation;
 	m_preview->setSceneContext(m_context, false, motion);
 	updateGL();
 }
@@ -517,27 +561,39 @@ void GLWidget::resetPreview() {
 void GLWidget::keyPressEvent(QKeyEvent *event) {
 	if (event->key() == Qt::Key_Escape)
 		emit quit();
-	if (event->key() == Qt::Key_R)
+	else if (event->key() == Qt::Key_R)
 		emit beginRendering();
 
 	if (event->isAutoRepeat() || !m_context)
 		return;
-
+	
 	switch (event->key()) {
 		case Qt::Key_PageUp:   m_context->movementScale *= 2; break;
 		case Qt::Key_PageDown: m_context->movementScale /= 2; break;
-		case Qt::Key_A:
 		case Qt::Key_Left:
 			m_leftKeyDown = true; break;
-		case Qt::Key_D:
 		case Qt::Key_Right:
 			m_rightKeyDown = true; break;
-		case Qt::Key_W:
 		case Qt::Key_Up:
 			m_upKeyDown = true; break;
-		case Qt::Key_S:
 		case Qt::Key_Down:
 			m_downKeyDown = true; break;
+		case Qt::Key_A: {
+			if (m_context->selectionMode == EScene) {
+				m_context->selectionMode = ENothing;
+				m_gizmo->reset();
+			} else {
+				m_context->selectionMode = EScene;
+				m_gizmo->init(m_context->scene->getBSphere());
+			}
+			m_context->selectedShape = NULL;
+		}
+		// break intentionally missing
+		case Qt::Key_F: {
+			if (m_gizmo->isActive())
+				reveal(m_gizmo->getBSphere());
+		};
+		break;
 	}
 	if (!m_movementTimer->isActive() && (m_leftKeyDown || m_rightKeyDown || m_upKeyDown || m_downKeyDown)) {
 		m_clock->reset();
@@ -549,16 +605,12 @@ void GLWidget::keyReleaseEvent(QKeyEvent *event) {
 	if (event->isAutoRepeat() || !m_context || !m_preview->isRunning())
 		return;
 	switch (event->key()) {
-		case Qt::Key_A:
 		case Qt::Key_Left:
 			m_leftKeyDown = false; break;
-		case Qt::Key_D:
 		case Qt::Key_Right:
 			m_rightKeyDown = false; break;
-		case Qt::Key_W:
 		case Qt::Key_Up:
 			m_upKeyDown = false; break;
-		case Qt::Key_S:
 		case Qt::Key_Down:
 			m_downKeyDown = false; break;
 		case Qt::Key_BracketLeft:
@@ -575,21 +627,14 @@ void GLWidget::keyReleaseEvent(QKeyEvent *event) {
 			}
 			break;
 	}
-
-	if (!(m_leftKeyDown || m_rightKeyDown || m_upKeyDown || m_downKeyDown)) {
-		if (m_movementTimer->isActive()) {
-			m_movementTimer->stop();
-			resetPreview();
-		}
-	}
 }
 
 void GLWidget::mouseMoveEvent(QMouseEvent *event) {
-	if (!m_preview->isRunning())
+	if (!m_preview->isRunning() || m_animation)
 		return;
 
 	QPoint previousPos = m_mousePos, 
-		   rel         = event->pos() - m_mousePos;
+		   rel = event->pos() - m_mousePos;
 	m_mousePos = event->pos();
 
 	if (!m_context || !m_context->scene || !m_mouseButtonDown || rel == QPoint(0,0))
@@ -601,7 +646,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		return;
 	}
 
-	if (!m_didSetCursor) {
+	if (!m_didSetCursor && !(m_navigationMode == EArcBall && event->buttons() & Qt::LeftButton)) {
 		QApplication::setOverrideCursor(Qt::BlankCursor);
 		m_didSetCursor = true;
 	}
@@ -610,54 +655,66 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 	Point p = camera->getInverseViewTransform()(Point(0,0,0));
 	Vector direction = camera->getInverseViewTransform()(Vector(0,0,1));
 	Vector up;
-	
-	if (m_navigationMode == EFlythrough)
-		up = camera->getInverseViewTransform()(Vector(0,1,0));
-	else if (m_navigationMode == EFlythroughFixedYaw)
-		up = m_context->up;
-	else
-		SLog(EError, "Unknown navigation mode encountered!");
-
 	bool didMove = false;
-
-	if (event->buttons() & Qt::LeftButton) {
-		Float yaw = -.03f * rel.x() * m_mouseSensitivity;
-		Float pitch = -.03f * rel.y() * m_mouseSensitivity;
-		if (m_invertMouse) 
-			pitch *= -1;
-
-		Transform trafo = Transform::rotate(Vector(0,1,0), yaw)
-				* Transform::rotate(Vector(1,0,0), pitch)
-				* camera->getViewTransform();
-		direction = trafo.inverse()(Vector(0,0,1));
-
-		if (camera->getViewTransform().det3x3() < 0) {
-			camera->setInverseViewTransform(Transform::lookAt(p, p+direction, up));
-		} else {
-			camera->setInverseViewTransform(
-				Transform::lookAt(p, p+direction, up) *
-				Transform::scale(Vector(-1,1,1))
-			);
+	
+	if (m_navigationMode == EArcBall) {
+		if (event->buttons() & Qt::LeftButton && m_gizmo->canDrag()) {
+			Ray ray;
+			Point2i offset = upperLeft();
+			Point2 sample = Point2(m_mousePos.x() - offset.x, m_mousePos.y() - offset.y);
+			camera->setViewTransform(m_storedViewTransform);
+			camera->generateRay(sample, Point2(0, 0), 0, ray);
+			m_gizmo->dragTo(ray, camera);
+			camera->setViewTransform(m_storedViewTransform * m_gizmo->getTransform());
+			didMove = true;
 		}
-		didMove = true;
-	}
+	} else {
+		if (m_navigationMode == EFlythrough)
+			up = camera->getInverseViewTransform()(Vector(0,1,0));
+		else if (m_navigationMode == EFlythroughFixedYaw)
+			up = m_context->up;
+		else
+			SLog(EError, "Unknown navigation mode encountered!");
 
-	if (event->buttons() & Qt::RightButton) {
-		Float roll = rel.x() * m_mouseSensitivity * .02f;
-		Float fovChange = rel.y() * m_mouseSensitivity * .03f;
+		if (event->buttons() & Qt::LeftButton) {
+			Float yaw = -.03f * rel.x() * m_mouseSensitivity;
+			Float pitch = -.03f * rel.y() * m_mouseSensitivity;
+			if (m_invertMouse) 
+				pitch *= -1;
 
-		if (camera->getViewTransform().det3x3() < 0) {
-			m_context->up = Transform::rotate(direction, roll)(up);
-			camera->setInverseViewTransform(Transform::lookAt(p, p+direction, m_context->up));
-		} else {
-			m_context->up = Transform::rotate(direction, -roll)(up);
-			camera->setInverseViewTransform(
-				Transform::lookAt(p, p+direction, m_context->up) *
-				Transform::scale(Vector(-1,1,1))
-			);
+			Transform trafo = Transform::rotate(Vector(0,1,0), yaw)
+					* Transform::rotate(Vector(1,0,0), pitch)
+					* camera->getViewTransform();
+			direction = trafo.inverse()(Vector(0,0,1));
+
+			if (camera->getViewTransform().det3x3() < 0) {
+				camera->setInverseViewTransform(Transform::lookAt(p, p+direction, up));
+			} else {
+				camera->setInverseViewTransform(
+					Transform::lookAt(p, p+direction, up) *
+					Transform::scale(Vector(-1,1,1))
+				);
+			}
+			didMove = true;
 		}
 
-		camera->setFov(std::min(std::max((Float) 1.0f, camera->getFov() + fovChange), (Float) 100.0f));
+		if (event->buttons() & Qt::RightButton) {
+			Float roll = rel.x() * m_mouseSensitivity * .02f;
+			Float fovChange = rel.y() * m_mouseSensitivity * .03f;
+
+			if (camera->getViewTransform().det3x3() < 0) {
+				m_context->up = Transform::rotate(direction, roll)(up);
+				camera->setInverseViewTransform(Transform::lookAt(p, p+direction, m_context->up));
+			} else {
+				m_context->up = Transform::rotate(direction, -roll)(up);
+				camera->setInverseViewTransform(
+					Transform::lookAt(p, p+direction, m_context->up) *
+					Transform::scale(Vector(-1,1,1))
+				);
+			}
+
+			camera->setFov(std::min(std::max((Float) 1.0f, camera->getFov() + fovChange), (Float) 100.0f));
+		}
 		camera->configure();
 
 		didMove = true;
@@ -665,21 +722,23 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 
 	if (event->buttons() & Qt::MidButton) {
 		camera->setViewTransform(
-			Transform::translate(Vector(-(Float) rel.x(), (Float) rel.y(), 0) 
+			Transform::translate(Vector((Float) rel.x(), (Float) -rel.y(), 0) 
 				* m_mouseSensitivity * .6f * m_context->movementScale)
 			* camera->getViewTransform());
 		didMove = true;
 	}
 
-	QPoint global = mapToGlobal(m_mousePos);
-	QDesktopWidget *desktop = QApplication::desktop();
+	if (m_navigationMode != EArcBall) {
+		QPoint global = mapToGlobal(m_mousePos);
+		QDesktopWidget *desktop = QApplication::desktop();
 
-	if (global.x() < 50 || global.y() < 50 ||
-		global.x() > desktop->width()-50 || 
-		global.y() > desktop->height()-50) {
-		QPoint target(desktop->width()/2, desktop->height()/2);
-		m_ignoreMouseEvent = target - global;
-		QCursor::setPos(target);
+		if (global.x() < 50 || global.y() < 50 ||
+			global.x() > desktop->width()-50 || 
+			global.y() > desktop->height()-50) {
+			QPoint target(desktop->width()/2, desktop->height()/2);
+			m_ignoreMouseEvent = target - global;
+			QCursor::setPos(target);
+		}
 	}
 
 	if (didMove)
@@ -689,22 +748,49 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 void GLWidget::wheelEvent(QWheelEvent *event) {
 	QScrollBar *bar = event->orientation() == Qt::Vertical
 		? m_vScroll : m_hScroll;
-
-	if (!bar->isVisible() || !m_preview->isRunning())
+	if (!m_preview->isRunning() || m_animation) 
 		return;
 
-	int oldStep = bar->singleStep();
-	bar->setSingleStep(event->delta()/4);
+	if (bar->isVisible()) {
+		int oldStep = bar->singleStep();
+		bar->setSingleStep(event->delta()/4);
 #if defined(__OSX__)
-	/* Support two-finger swipes */
-	if (std::abs(event->delta()) < 8*15)
-		bar->setSingleStep(event->delta());
+		/* Support two-finger swipes */
+		if (std::abs(event->delta()) < 8*15)
+			bar->setSingleStep(event->delta());
 #endif
 
-	bar->triggerAction(event->delta() > 0 ? 
-		  QAbstractSlider::SliderSingleStepSub
-		: QAbstractSlider::SliderSingleStepAdd);
-	bar->setSingleStep(oldStep);
+		bar->triggerAction(event->delta() > 0 ? 
+			QAbstractSlider::SliderSingleStepSub
+			: QAbstractSlider::SliderSingleStepAdd);
+		bar->setSingleStep(oldStep);
+	} else {
+		ProjectiveCamera *camera 
+			= static_cast<ProjectiveCamera *>(m_context->scene->getCamera());
+		Vector up;
+		if (m_navigationMode == EFlythroughFixedYaw)
+			up = m_context->up;
+		else 
+			up = camera->getInverseViewTransform()(Vector(0,1,0));
+		Vector d = Vector(camera->getImagePlaneNormal());
+		Point o = camera->getPosition();
+		Intersection its;
+		Float nearClip = camera->getNearClip(), farClip = camera->getFarClip();
+
+		if (m_context->scene->rayIntersect(Ray(o, d, nearClip, farClip, 0), its)) {
+			Float length = (its.p - o).length();
+
+			length = std::min(std::max(length * std::pow(1 - 1e-3f, 
+					event->delta()), 1.2f*nearClip), farClip/1.2f);
+			camera->setInverseViewTransform(
+				Transform::lookAt(its.p - length*d, its.p, up));
+			m_wheelTimer->reset();
+			if (!m_movementTimer->isActive())
+				m_movementTimer->start();
+			resetPreview();
+		}
+
+	}
 	event->accept();
 }
 
@@ -714,25 +800,73 @@ void GLWidget::mousePressEvent(QMouseEvent *event) {
 	m_mousePos = event->pos();
 	m_initialMousePos = mapToGlobal(m_mousePos);
 	m_mouseButtonDown = true;
+	ProjectiveCamera *camera = static_cast<ProjectiveCamera *>(m_context->scene->getCamera());
+
+	if (m_navigationMode == EArcBall && event->buttons() & Qt::LeftButton) {
+		Point2i offset = upperLeft();
+		Point2 sample = Point2(m_mousePos.x() - offset.x, m_mousePos.y() - offset.y);
+		Intersection its;
+		Ray ray;
+		Float t;
+			
+		camera->generateRay(sample, Point2(0, 0), 0, ray);
+		m_gizmo->rayIntersect(ray, t); 
+
+		if (m_context->scene->rayIntersect(ray, its)) {
+			if (its.t < t) {
+				SLog(EInfo, "Selected shape \"%s\"", its.shape->getName().c_str());
+				m_context->selectedShape = its.shape;
+				BSphere bsphere = its.shape->getAABB().getBSphere();
+				bool newSelection = (bsphere != m_gizmo->getBSphere());
+				m_gizmo->init(bsphere);
+				m_context->selectionMode = EShape;
+				if (newSelection) 
+					return;
+			}
+		} else {
+			if (t == std::numeric_limits<Float>::infinity()) {
+				m_gizmo->reset();
+				m_context->selectionMode = ENothing;
+				m_context->selectedShape = NULL;
+				return;
+			}
+		}
+
+		m_gizmo->startDrag(ray);
+		m_storedViewTransform = camera->getViewTransform();
+	}
 }
+
+void GLWidget::mouseDoubleClickEvent(QMouseEvent *event) {
+	if (!m_preview->isRunning())
+		return;
+	if (m_navigationMode == EArcBall && m_gizmo->isActive()
+		&& event->buttons() & Qt::LeftButton) 
+		reveal(m_gizmo->getBSphere());
+}
+
 
 void GLWidget::mouseReleaseEvent(QMouseEvent *event) {
 	if (!m_preview->isRunning())
 		return;
 	if (event->buttons() == 0) {
 		m_mouseButtonDown = false;
+
 		if (m_didSetCursor) {
 			resetPreview();
 			QApplication::restoreOverrideCursor();
 			QCursor::setPos(m_initialMousePos);
 			m_didSetCursor = false;
+		} else if (m_gizmo->isDragging()) {
+			m_gizmo->stopDrag();
+			resetPreview();
 		}
 	}
 }
 
 void GLWidget::paintGL() {
-	m_renderer->setDepthMask(false);
-	m_renderer->setDepthTest(false);
+	m_renderer->setDepthTest(true);
+	m_renderer->setDepthMask(true);
 	if (m_context == NULL) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		m_renderer->clear();
@@ -740,9 +874,9 @@ void GLWidget::paintGL() {
 		m_renderer->blitTexture(m_logoTexture);
 		m_renderer->setBlendMode(Renderer::EBlendNone);
 	} else if (m_context != NULL) {
-		Point3i size;
+		Vector2i size;
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		PreviewQueueEntry entry;
 		GPUTexture *buffer = NULL;
 
@@ -753,14 +887,15 @@ void GLWidget::paintGL() {
 				return;
 			}
 			bool motion = m_leftKeyDown || m_rightKeyDown || 
-				m_upKeyDown || m_downKeyDown || m_mouseButtonDown;
+				m_upKeyDown || m_downKeyDown || m_mouseButtonDown ||
+				m_wheelTimer->getMilliseconds() < 200 || m_animation;
 			entry = m_preview->acquireBuffer(motion ? -1 : 50);
 			if (entry.buffer == NULL) {
 				/* Unsuccessful at acquiring a buffer in the 
 				   alloted time - just leave and keep the current display */
 				return;
 			}
-			size = entry.buffer->getSize();
+			size = Vector2i(entry.buffer->getSize().x, entry.buffer->getSize().y);
 			buffer = entry.buffer;
 		} else if (m_context->mode == ERender) {
 			if (m_framebuffer == NULL ||
@@ -806,9 +941,14 @@ void GLWidget::paintGL() {
 				m_framebufferChanged = false;
 			}
 
-			size = m_framebuffer->getSize();
+			size = Vector2i(m_framebuffer->getSize().x, m_framebuffer->getSize().y);
 			buffer = m_framebuffer;
+		} else {
+			return;
 		}
+		bool hasDepth = m_context->mode == EPreview
+			&& (m_context->previewMethod == EOpenGL ||
+				m_context->previewMethod == EOpenGLSinglePass);
 
 		if (m_softwareFallback) {
 			buffer->bind();
@@ -822,17 +962,19 @@ void GLWidget::paintGL() {
 			if (m_context->mode == EPreview)
 				invWhitePoint /= entry.vplSampleOffset;
 
-			buffer->bind();
+			if (hasDepth)
+				buffer->bind(1, 1);
 			m_gammaTonemap->bind();
-			m_gammaTonemap->setParameter("source", buffer);
+			m_gammaTonemap->setParameter("colorSource", 0);
+			m_gammaTonemap->setParameter("depthSource", 1);
 			m_gammaTonemap->setParameter("invWhitePoint", invWhitePoint);
 			m_gammaTonemap->setParameter("invGamma", 1/m_context->gamma);
 			m_gammaTonemap->setParameter("sRGB", m_context->srgb);
+			m_gammaTonemap->setParameter("hasDepth", hasDepth);
 			m_renderer->blitTexture(buffer, m_context->mode == EPreview, 
 				!m_hScroll->isVisible(), !m_vScroll->isVisible(),
 				-m_context->scrollOffset);
 			m_gammaTonemap->unbind();
-			buffer->unbind();
 		} else if (m_context->toneMappingMethod == EReinhard) {
 			if (m_luminanceBuffer[0] == NULL || m_luminanceBuffer[0]->getSize() != Point3i(size.x, size.y, 1)) {
 				for (int i=0; i<2; ++i) {
@@ -892,19 +1034,21 @@ void GLWidget::paintGL() {
 				logLuminance = 1;
 			}
 
-			buffer->bind();
+			if (hasDepth)
+				buffer->bind(1, 1);
 			m_reinhardTonemap->bind();
-			m_reinhardTonemap->setParameter("source", buffer);
+			m_reinhardTonemap->setParameter("colorSource", 0);
+			m_reinhardTonemap->setParameter("depthSource", 1);
 			m_reinhardTonemap->setParameter("key", m_context->reinhardKey/logLuminance);
 			m_reinhardTonemap->setParameter("multiplier", multiplier);
 			m_reinhardTonemap->setParameter("invWpSqr", std::pow((Float) 2, m_context->reinhardBurn));
 			m_reinhardTonemap->setParameter("invGamma", 1/m_context->gamma);
 			m_reinhardTonemap->setParameter("sRGB", m_context->srgb);
+			m_reinhardTonemap->setParameter("hasDepth", hasDepth);
 			m_renderer->blitTexture(buffer, m_context->mode == EPreview, 
 				!m_hScroll->isVisible(), !m_vScroll->isVisible(),
 				-m_context->scrollOffset);
 			m_reinhardTonemap->unbind();
-			buffer->unbind();
 		}
 
 		if (m_context->mode == EPreview) {
@@ -917,19 +1061,14 @@ void GLWidget::paintGL() {
 			}
 		}
 
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-
 		GLint viewport[4];	
 		glGetIntegerv(GL_VIEWPORT, viewport);
-		Vector2 scrSize(viewport[2], viewport[3]);
-
-		if (scrSize.x > size.x || scrSize.y > size.y) {
+		if (viewport[2] > size.x || viewport[3] > size.y) {
 			/* Draw a border to highlight the region occupied by the image */
-			Vector2i upperLeft((scrSize.x - size.x)/2,
-							   (scrSize.y - size.y)/2);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			Vector2i upperLeft((viewport[2] - size.x)/2, (viewport[3] - size.y)/2);
 			Vector2i lowerRight = upperLeft + Vector2i(size.x, size.y);
-
 			glColor4f(0.4f, 0.4f, 0.4f, 1.0f);
 			glBegin(GL_LINE_LOOP);
 			glVertex2f(upperLeft.x, upperLeft.y);
@@ -939,9 +1078,73 @@ void GLWidget::paintGL() {
 			glEnd();
 			glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 		}
+
+		if (m_context->mode == EPreview) {
+			const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>
+				(m_context->scene->getCamera());
+			glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+			m_renderer->setCamera(camera);
+			glPushAttrib(GL_VIEWPORT_BIT);
+			Point2i offset = upperLeft(true);
+			glViewport(offset.x, offset.y, size.x, size.y);
+			m_renderer->setDepthMask(false);
+			m_renderer->setDepthTest(true);
+			m_renderer->setBlendMode(Renderer::EBlendAdditive);
+
+			if (m_context->showKDTree) {
+				oglRenderKDTree(m_context->scene->getKDTree());
+				const std::vector<Shape *> shapes = m_context->scene->getShapes();
+				for (size_t j=0; j<shapes.size(); ++j) 
+					if (shapes[j]->getKDTree())
+						oglRenderKDTree(shapes[j]->getKDTree());
+			}
+
+			if (m_navigationMode == EArcBall && m_gizmo->isActive()) 
+				m_gizmo->draw(m_renderer, camera);
+
+			m_renderer->setBlendMode(Renderer::EBlendNone);
+			glPopAttrib();
+		}
 	}
 	swapBuffers();
 }
+
+void GLWidget::oglRenderKDTree(const KDTreeBase<AABB> *kdtree) {
+	std::stack<boost::tuple<const KDTreeBase<AABB>::KDNode *, AABB, uint32_t> > stack;
+
+	stack.push(boost::make_tuple(kdtree->getRoot(), kdtree->getTightAABB(), 0));
+	Float brightness = 0.1f;
+
+	while (!stack.empty()) {
+		const KDTreeBase<AABB>::KDNode *node = boost::get<0>(stack.top());
+		AABB aabb = boost::get<1>(stack.top());
+		int level = boost::get<2>(stack.top());
+		stack.pop();
+		m_renderer->setColor(Spectrum(brightness));
+		m_renderer->drawAABB(aabb);
+
+		if (!node->isLeaf()) {
+			int axis = node->getAxis();
+			float split = node->getSplit();
+			if (level + 1 <= m_context->shownKDTreeLevel) {
+				Float tmp = aabb.max[axis];
+				aabb.max[axis] = split;
+				stack.push(boost::make_tuple(node->getLeft(), aabb, level+1));
+				aabb.max[axis] = tmp;
+				aabb.min[axis] = split;
+				stack.push(boost::make_tuple(node->getRight(), aabb, level+1));
+			} else {
+				aabb.min[axis] = split;
+				aabb.max[axis] = split;
+				Spectrum color;
+				color.fromLinearRGB(0, 0, 4*brightness);
+				m_renderer->setColor(color);
+				m_renderer->drawAABB(aabb);
+			}
+		}
+	}
+}
+
 
 void GLWidget::resizeEvent(QResizeEvent *event) {
 	if (m_context && m_ignoreResizeEvents) {
@@ -1050,6 +1253,42 @@ void GLWidget::resumePreview() {
 
 void GLWidget::onUpdateView() {
 	m_framebufferChanged = true;
+}
+
+Point2i GLWidget::upperLeft(bool flipY) const {
+	if (!m_context)
+		return Point2i(0, 0);
+	Vector2i filmSize = m_context->scene->getCamera()->getFilm()->getSize();
+	Vector2i deviceSize = m_device->getSize();
+
+	return Point2i(
+		deviceSize.x < filmSize.x ? (-m_context->scrollOffset.x) : (deviceSize.x - filmSize.x)/2,
+		deviceSize.y < filmSize.y ? (flipY ? (deviceSize.y-filmSize.y 
+			+ m_context->scrollOffset.y) : -m_context->scrollOffset.y) : (deviceSize.y - filmSize.y)/2);
+}
+
+void GLWidget::reveal(const BSphere &bsphere) {
+	if (!m_context || m_animation)
+		return;
+	PinholeCamera *camera = static_cast<PinholeCamera *>(m_context->scene->getCamera());
+	if (m_navigationMode == EFlythroughFixedYaw)
+		m_up = m_context->up;
+	else 
+		m_up = camera->getInverseViewTransform()(Vector(0,1,0));
+	if (m_gizmo->isDragging())
+		m_gizmo->stopDrag();
+	Vector d = Vector(camera->getImagePlaneNormal());
+	Float fov = std::min(camera->getXFov(), camera->getYFov())*0.9f/2;
+	Float distance = bsphere.radius/std::tan(fov * M_PI/180.0f);
+
+	m_animationTimer->reset();
+	m_animationOrigin0 = camera->getPosition();
+	m_animationOrigin1 = bsphere.center - distance*d;
+	m_animationTarget0 = m_animationOrigin0 + d;
+	m_animationTarget1 = m_animationOrigin1 + d;
+	m_animation = true;
+	if (!m_movementTimer->isActive())
+		m_movementTimer->start();
 }
 
 void GLWidget::resizeGL(int width, int height) {

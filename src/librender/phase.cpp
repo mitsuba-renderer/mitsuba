@@ -15,7 +15,17 @@ std::string PhaseFunctionQueryRecord::toString() const {
 }
 
 Float PhaseFunction::pdf(const PhaseFunctionQueryRecord &pRec) const {
-	return f(pRec)[0];
+	return f(pRec);
+}
+	
+bool PhaseFunction::needsDirectionallyVaryingCoefficients() const {
+	return false;
+}
+	
+Float PhaseFunction::sigmaDir(Float cosTheta) const {
+	Log(EError, "sigmaDir(): Not implemented! (this is not"
+		" an anisotropic medium)");
+	return 0.0f;
 }
 
 MTS_IMPLEMENT_CLASS(PhaseFunction, true, ConfigurableObject)

@@ -16,36 +16,30 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from extensions_framework import declarative_property_group
+from .. import MitsubaAddon
 
+from extensions_framework import declarative_property_group
+from ..properties.world import MediumParameter
+
+@MitsubaAddon.addon_register_class
 class mitsuba_lamp(declarative_property_group):
+	ef_attach_to = ['Lamp']
+
 	controls = [
 		'samplingWeight',
 		'envmap_type',
-		'envmap_file'
+		'envmap_file',
+		'inside_medium',
+		'medium'
 	]
 
 	visibility = {
 		'envmap_type': { 'type': 'ENV' },
-		'envmap_file': { 'type': 'ENV', 'envmap_type' : 'envmap' }
+		'envmap_file': { 'type': 'ENV', 'envmap_type' : 'envmap' },
+		'medium' : { 'inside_medium': True }
 	}
 
 	properties = [
-		{
-			'type': 'enum',
-			'attr': 'type',
-			'name': 'Light source type',
-			'description': 'Specifies the behavior of the light source',
-			'default': 'POINT',
-			'items': [
-				('POINT', 'Point', 'Omnidirectional spot light source'),
-				('SUN', 'Dir', 'Constant direction parallel light source'),
-				('SPOT', 'Spot', 'Directional cone light source'),
-				('ENV', 'Env', 'Environment map light source'),
-				('AREA', 'Area', 'Diffuse area light source')
-			],
-			'save_in_preset': True
-		},
 		{
 			'type': 'float',
 			'attr': 'samplingWeight',
@@ -90,6 +84,14 @@ class mitsuba_lamp(declarative_property_group):
 			'description': 'EXR image to use for lighting (in latitude-longitude format)',
 			'default': '',
 			'save_in_preset': True
+		},
+		{
+			'type': 'bool',
+			'attr': 'inside_medium',
+			'name': 'Located inside a medium',
+			'description': 'Check if the lamp lies within a participating medium',
+			'default': False,
+			'save_in_preset': True
 		}
-	]
+	] + MediumParameter('lamp', 'Lamp')
 

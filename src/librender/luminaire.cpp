@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -18,6 +18,7 @@
 
 #include <mitsuba/core/properties.h>
 #include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/medium.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -40,6 +41,7 @@ Luminaire::Luminaire(const Properties &props)
 
 Luminaire::Luminaire(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
+	m_medium = static_cast<Medium *>(manager->getInstance(stream));
 	m_samplingWeight = stream->readFloat();
 	m_type = (EType) stream->readInt();
 	m_intersectable = stream->readBool();
@@ -51,9 +53,19 @@ Luminaire::Luminaire(Stream *stream, InstanceManager *manager)
 Luminaire::~Luminaire() {
 }
 
+void Luminaire::addChild(const std::string &name, ConfigurableObject *child) {
+	const Class *cClass = child->getClass();
+	if (cClass->derivesFrom(MTS_CLASS(Medium))) {
+		Assert(m_medium == NULL);
+		m_medium = static_cast<Medium *>(child);
+	} else {
+		ConfigurableObject::addChild(name, child);
+	}
+}
+
 void Luminaire::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
-
+	manager->serialize(stream, m_medium.get());
 	stream->writeFloat(m_samplingWeight);
 	stream->writeInt(m_type);
 	stream->writeBool(m_intersectable);
@@ -74,15 +86,21 @@ bool Luminaire::isBackgroundLuminaire() const {
 }
 
 Spectrum Luminaire::Le(const Ray &ray) const {
+	Log(EError, "Luminaire::Le(const Ray &) is not implemented!");
 	return Spectrum(0.0f);
 }
 	
+Spectrum Luminaire::Le(const ShapeSamplingRecord &sRec, const Vector &d) const {
+	Log(EError, "Luminaire::Le(const ShapeSamplingRecord sRec&, const Vector &) is not implemented!");
+	return Spectrum(0.0f);
+}
+
 std::string EmissionRecord::toString() const {
 	std::ostringstream oss;
 	oss << "EmissionRecord[" << std::endl
 		<< "  sRec = " << indent(sRec.toString()) << "," << std::endl
 		<< "  d = " << d.toString() << "," << std::endl
-		<< "  P = " << P.toString() << "," << std::endl
+		<< "  value = " << value.toString() << "," << std::endl
 		<< "  pdfArea = " << pdfArea << "," << std::endl
 		<< "  pdfDir = " << pdfDir << "," << std::endl
 		<< "  luminaire = " << ((luminaire == NULL ) ? "null" : indent(((Object *) luminaire)->toString()).c_str()) << std::endl
@@ -96,7 +114,7 @@ std::string LuminaireSamplingRecord::toString() const {
 		<< "  sRec = " << indent(sRec.toString()) << "," << std::endl
 		<< "  d = " << d.toString() << "," << std::endl
 		<< "  pdf = " << pdf << "," << std::endl
-		<< "  Le = " << Le.toString() << "," << std::endl
+		<< "  value = " << value.toString() << "," << std::endl
 		<< "  luminaire = " << ((luminaire == NULL ) ? "null" : indent(((Object *) luminaire)->toString()).c_str()) << std::endl
 		<< "]";
 	return oss.str();

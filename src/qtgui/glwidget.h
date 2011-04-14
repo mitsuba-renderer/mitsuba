@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -28,6 +28,7 @@
 #include <mitsuba/hw/gpuprogram.h>
 #include <mitsuba/hw/gpusync.h>
 #include <mitsuba/hw/vpl.h>
+#include <mitsuba/hw/gizmo.h>
 #if defined(WIN32)
 #include <mitsuba/hw/wgldevice.h>
 #endif
@@ -45,6 +46,7 @@ public:
 	void resumePreview();
 	void refreshScene();
 	void resetPreview();
+	void shutdown();
 	inline const RendererCapabilities *getRendererCapabilities() const {
 		return m_renderer->getCapabilities();
 	}
@@ -92,6 +94,7 @@ protected:
 	void mousePressEvent(QMouseEvent *event);
 	void mouseMoveEvent(QMouseEvent *event);
 	void mouseReleaseEvent(QMouseEvent *event);
+	void mouseDoubleClickEvent(QMouseEvent *event);
 	void keyPressEvent(QKeyEvent *event);
 	void keyReleaseEvent(QKeyEvent *event);
 	void focusOutEvent(QFocusEvent *event);
@@ -99,6 +102,9 @@ protected:
 	void wheelEvent(QWheelEvent *event);
 	void dragEnterEvent(QDragEnterEvent *event);
 	void dropEvent(QDropEvent *event);
+	void oglRenderKDTree(const KDTreeBase<AABB> *kdtree);
+	Point2i upperLeft(bool flipY = false) const;
+	void reveal(const BSphere &bsphere);
 
 	/* Masquerade QGLWidget as a GL device for libhw */
 #if defined(WIN32)
@@ -130,22 +136,26 @@ private:
 	ref<GPUProgram> m_downsamplingProgram, m_luminanceProgram;
 	ref<QtDevice> m_device;
 	ref<Font> m_font;
+	ref<Gizmo> m_gizmo;
 	SceneContext *m_context;
 	bool m_framebufferChanged, m_mouseButtonDown;
 	bool m_leftKeyDown, m_rightKeyDown;
-	bool m_upKeyDown, m_downKeyDown;
+	bool m_upKeyDown, m_downKeyDown, m_animation;
 	Vector2 m_logoSize;
 	Vector m_up;
+	Point m_animationOrigin0, m_animationOrigin1;
+	Point m_animationTarget0, m_animationTarget1;
 	QPoint m_mousePos, m_ignoreMouseEvent, m_initialMousePos;
 	QTimer *m_movementTimer, *m_redrawTimer;
 	QScrollBar *m_hScroll, *m_vScroll;
-	ref<Timer> m_clock;
+	ref<Timer> m_clock, m_wheelTimer, m_animationTimer;
 	ENavigationMode m_navigationMode;
 	bool m_invertMouse, m_didSetCursor;
 	bool m_ignoreScrollEvents, m_ignoreResizeEvents;
 	int m_mouseSensitivity, m_softwareFallback;
 	ref<Bitmap> m_fallbackBitmap;
 	QString m_errorString;
+	Transform m_storedViewTransform;
 };
 
 #endif /* __GLWIDGET_H */

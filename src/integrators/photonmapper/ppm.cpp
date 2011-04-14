@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -115,7 +115,7 @@ public:
 		size_t nCores = sched->getCoreCount();
 		Sampler *cameraSampler = (Sampler *) sched->getResource(samplerResID, 0);
 	
-		uint64_t sampleCount = cameraSampler->getSampleCount();
+		size_t sampleCount = cameraSampler->getSampleCount();
 		Log(EInfo, "Starting render job (%ix%i, %lld %s, " SIZE_T_FMT 
 			" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y, 
 			sampleCount, sampleCount == 1 ? "sample" : "samples", nCores, 
@@ -124,9 +124,6 @@ public:
 		Vector2i cropSize = film->getCropSize();
 		Point2i cropOffset = film->getCropOffset();
 
-#if !defined(__OSX__) && defined(_OPENMP)
-		omp_set_num_threads(nCores);
-#endif
 		m_gatherPoints.clear();
 		m_running = true;
 		for (size_t i=0; i<m_blocks.size(); ++i)
@@ -145,7 +142,7 @@ public:
 		int borderSize = (int) std::ceil(std::max(filterSize.x, filterSize.y));
 
 		ref<Sampler> independentSampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, Properties("independent")));
+			createObject(MTS_CLASS(Sampler), Properties("independent")));
 
 		/* Create a sampler instance for every core */
 		std::vector<SerializableObject *> samplers(sched->getCoreCount());
@@ -182,7 +179,7 @@ public:
 						int y = cropOffset.y + yofs + yofsInt;
 						int x = cropOffset.x + xofs + xofsInt;
 						cameraSampler->generate();
-						for (uint64_t j = 0; j<sampleCount; j++) {
+						for (size_t j = 0; j<sampleCount; j++) {
 							if (needsLensSample)
 								lensSample = cameraSampler->next2D();
 							if (needsTimeSample)
@@ -280,7 +277,7 @@ public:
 		/* Generate the global photon map */
 		ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 			GatherPhotonProcess::EAllSurfacePhotons, m_photonCount,
-			m_granularity, m_maxDepth == -1 ? -1 : (m_maxDepth-1), m_rrDepth, job);
+			m_granularity, m_maxDepth == -1 ? -1 : (m_maxDepth-1), m_rrDepth, true, job);
 
 		proc->bindResource("scene", sceneResID);
 		proc->bindResource("camera", cameraResID);
@@ -291,11 +288,11 @@ public:
 
 		ref<PhotonMap> photonMap = proc->getPhotonMap();
 		photonMap->balance();
-		Log(EInfo, "Global photon map full. Shot " SIZE_T_FMT " photons, excess due to parallelism: " 
-			SIZE_T_FMT, proc->getShotPhotons(), proc->getExcess());
+		Log(EDebug, "Photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+			SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
 		Log(EInfo, "Gathering ..");
-		m_totalEmitted += proc->getShotPhotons();
+		m_totalEmitted += proc->getShotParticles();
 		film->clear();
 		#pragma omp parallel for schedule(dynamic)
 		for (int blockIdx = 0; blockIdx<(int) m_blocks.size(); ++blockIdx) {

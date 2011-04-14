@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -54,30 +54,25 @@ public:
 		   <tt>2</tt> will lead to single-bounce (direct-only) illumination, and so on. */
 		m_maxDepth = props.getInteger("maxDepth", -1);
 
-		/* Should the multiple scattering term be included? */
-		m_multipleScattering = props.getBoolean("multipleScattering", true);
-
 		/* Granularity of the work units used in parallelizing 
 		   the particle tracing task (default: 200K samples).
 		   Should be high enough so that sending and accumulating
 		   the partially exposed films is not the bottleneck. */
-		m_granularity = (size_t) props.getLong("granularity", 200000);
+		m_granularity = props.getSize("granularity", 200000);
 	}
 	
 	AdjointParticleTracer(Stream *stream, InstanceManager *manager) 
 		: Integrator(stream, manager) {
 		m_maxDepth = stream->readInt();
 		m_rrDepth = stream->readInt();
-		m_granularity = (size_t) stream->readULong();
-		m_multipleScattering = stream->readBool();
+		m_granularity = stream->readSize();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Integrator::serialize(stream, manager);
 		stream->writeInt(m_maxDepth);
 		stream->writeInt(m_rrDepth);
-		stream->writeULong((uint64_t) m_granularity);
-		stream->writeBool(m_multipleScattering);
+		stream->writeSize(m_granularity);
 	}
 
 	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
@@ -103,7 +98,7 @@ public:
 		ref<Scheduler> scheduler = Scheduler::getInstance();
 		ref<Camera> camera = scene->getCamera();
 		const Film *film = camera->getFilm();
-		uint64_t sampleCount = scene->getSampler()->getSampleCount();
+		size_t sampleCount = scene->getSampler()->getSampleCount();
 		size_t nCores = scheduler->getCoreCount();
 		Log(EInfo, "Starting render job (%ix%i, %lld samples, " SIZE_T_FMT 
 			" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y, 
@@ -111,7 +106,7 @@ public:
 
 		ref<ParallelProcess> process = new CaptureParticleProcess(
 			job, queue, m_sampleCount, m_granularity,
-			m_maxDepth, m_multipleScattering, m_rrDepth);
+			m_maxDepth, m_rrDepth);
 
 		process->bindResource("scene", sceneResID);
 		process->bindResource("camera", cameraResID);
@@ -132,7 +127,6 @@ protected:
 	ref<ParallelProcess> m_process;
 	int m_maxDepth, m_rrDepth;
 	size_t m_sampleCount, m_granularity;
-	bool m_multipleScattering;
 };
 
 MTS_IMPLEMENT_CLASS_S(AdjointParticleTracer, false, Integrator)

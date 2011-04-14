@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -36,6 +36,9 @@ void GLProgram::init() {
 	Assert(m_id[0] == 0 && m_id[1] == 0 && m_program == 0);
 
 	Log(EDebug, "Uploading a GPU program : %s", toString().c_str());
+	if (!GLEW_ARB_shader_objects)
+		Log(EError, "Your OpenGL implementation does not support shader objects!");
+
 	m_program = glCreateProgramObjectARB();
 
 	m_id[EVertexProgram] = createShader(GL_VERTEX_SHADER_ARB, 
@@ -81,6 +84,9 @@ void GLProgram::init() {
 int GLProgram::createShader(int type, const std::string &source) {
 	if (source == "")
 		return 0;
+
+	if (type == GL_GEOMETRY_SHADER_ARB && !GLEW_ARB_geometry_shader4)
+		Log(EError, "Your OpenGL implementation does not support geometry shaders!");
 
 	int id = glCreateShaderObjectARB(type);
 
@@ -162,6 +168,12 @@ void GLProgram::setParameter(int id, Float value) {
 	if (id == -1)
 		return;
 	glUniform1f(id, (GLfloat) value);
+}
+
+void GLProgram::setParameter(int id, int value) {
+	if (id == -1)
+		return;
+	glUniform1i(id, value);
 }
 
 void GLProgram::setParameter(int id, const Vector &value) {

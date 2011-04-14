@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -23,7 +23,6 @@ MTS_NAMESPACE_BEGIN
 class CylClip : public Viewer {
 public:
 	CylClip() : m_red(0.0f), m_blue(0.0f), m_gray(.5f), m_angle(0) {
-		m_projTransform = Transform::glPerspective(45, 1e-4, 1e4);
 		m_viewTransform = Transform::lookAt(Point(10*std::sin(m_angle), 0, std::cos(m_angle)*10), 
 				Point(0, 0, 0), Vector(0, 1, 0));
 		m_lineParams = Point2(M_PI/2, 0.28f);
@@ -35,6 +34,12 @@ public:
 		m_showRectangles = false;
 		m_showClippedAABB = false;
 		m_radius = .2f;
+	}
+
+	void windowResized(const DeviceEvent &event) {
+		Float aspect = m_device->getAspect();
+		m_projTransform = Transform::glPerspective(45, 1e-4, 1e4)
+			* Transform::scale(Vector(1.0f, aspect, 1.0f));
 	}
 
 	void mouseDragged(const DeviceEvent &event) {
@@ -54,6 +59,7 @@ public:
 				event.getMouseRelative().y / 300.0f
 			);
 		}
+		redraw();
 	}
 
 	/**
@@ -217,6 +223,7 @@ public:
 				m_radius /= 1.1;
 				break;
 		}
+		redraw();
 	}
 
 	bool init(int argc, char **argv) {

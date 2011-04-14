@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -88,75 +88,7 @@ namespace std {
 };
 using std::select2nd;
 using std::compose1;
-
 #endif	
-
-/* Forward declarations */
-MTS_NAMESPACE_BEGIN
-extern MTS_EXPORT_CORE void * __restrict allocAligned(size_t size);
-extern MTS_EXPORT_CORE void freeAligned(void *ptr);
-
-/**
- * \brief Aligned memory allocator for use with SSE2-based code
- * \headerfile mitsuba/core/stl.h mitsuba/mitsuba.h
- * 
- * Basic implementaiton, which forwards all calls to \ref allocAligned.
- */
-template <typename T> class aligned_allocator {
-public:
-	typedef size_t    size_type;
-	typedef ptrdiff_t difference_type;
-	typedef T*        pointer;
-	typedef const T*  const_pointer;
-	typedef T&        reference;
-	typedef const T&  const_reference;
-	typedef T         value_type;
-
-	/// \cond
-	template <class U> struct rebind {
-		typedef aligned_allocator<U> other;
-	};
-	/// \endcond
-
-	pointer address (reference value) const {
-		return &value;
-	}
-
-	const_pointer address (const_reference value) const {
-		return &value;
-	}
-	
-	aligned_allocator() throw() { }	
-
-	aligned_allocator(const aligned_allocator&) throw() { }
-
-	template <class U> aligned_allocator (const aligned_allocator<U>&) throw()  { }
-
-	~aligned_allocator() throw() { }
-
-	size_type max_size () const throw() {
-		return INT_MAX;
-	}
-
-
-	T* __restrict allocate (size_type num, const_pointer *hint = 0) {
-		return (T *) mitsuba::allocAligned(num*sizeof(T));
-	}
-
-	void construct (pointer p, const T& value) {
-		*p=value;
-	}
-
-	void destroy (pointer p) {
-		p->~T();
-	};
-	
-	void deallocate (pointer p, size_type num) {
-		freeAligned(p);
-	}
-};
-
-MTS_NAMESPACE_END
 
 #if defined(WIN32)
 inline bool mts_isnan(float f) {

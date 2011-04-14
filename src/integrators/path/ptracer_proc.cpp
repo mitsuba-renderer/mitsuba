@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -45,12 +45,12 @@ void CaptureParticleWorkResult::save(Stream *stream) const {
 void CaptureParticleWorker::prepare() {
 	ParticleTracer::prepare();
 	m_camera = static_cast<Camera *>(getResource("camera"));
-	m_isPinholeCamera = m_camera->getClass()->derivesFrom(PinholeCamera::m_theClass);
+	m_isPinholeCamera = m_camera->getClass()->derivesFrom(MTS_CLASS(PinholeCamera));
 	m_filter = m_camera->getFilm()->getTabulatedFilter();
 }
 
 ref<WorkProcessor> CaptureParticleWorker::clone() const {
-	return new CaptureParticleWorker(m_maxDepth, m_multipleScattering, 
+	return new CaptureParticleWorker(m_maxDepth, 
 		m_rrDepth);
 }
 
@@ -71,13 +71,26 @@ void CaptureParticleWorker::process(const WorkUnit *workUnit, WorkResult *workRe
 	m_workResult = NULL;
 }
 
-void CaptureParticleWorker::handleSurfaceInteraction(int, bool,
-		const Intersection &its, const Spectrum &weight) {
+void CaptureParticleWorker::handleSurfaceInteraction(int depth,
+		bool caustic, const Intersection &its, const Medium *medium,
+		const Spectrum &weight) {
+	const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>(m_camera.get());
 	Point2 screenSample;
 
-	if (m_camera->positionToSample(its.p, screenSample)) {
-		Point cameraPosition = m_camera->getPosition(screenSample);
-		if (m_scene->isOccluded(cameraPosition, its.p, its.time)) 
+	if (camera->positionToSample(its.p, screenSample)) {
+		Point cameraPosition = camera->getPosition(screenSample);
+	
+		Float t = dot(camera->getImagePlaneNormal(), its.p-cameraPosition);
+		if (t < camera->getNearClip() || t > camera->getFarClip())
+			return;
+
+		if (its.isMediumTransition()) 
+			medium = its.getTargetMedium(cameraPosition - its.p);
+
+		Spectrum transmittance = m_scene->getTransmittance(its.p,
+				cameraPosition, its.time, medium);
+
+		if (transmittance.isZero())
 			return;
 
 		const BSDF *bsdf = its.shape->getBSDF();
@@ -89,11 +102,12 @@ void CaptureParticleWorker::handleSurfaceInteraction(int, bool,
 
 		Float importance; 
 		if (m_isPinholeCamera)
-			importance = ((PinholeCamera *) m_camera.get())->importance(screenSample) / (dist * dist);
+			importance = ((const PinholeCamera *) camera)->importance(screenSample) / (dist * dist);
 		else
-			importance = 1/m_camera->areaDensity(screenSample);
+			importance = 1/camera->areaDensity(screenSample);
 
 		Vector wi = its.toWorld(its.wi);
+
 		/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
 		Float wiDotGeoN = dot(its.geoFrame.n, wi),
 			  woDotGeoN = dot(its.geoFrame.n, wo);
@@ -106,23 +120,32 @@ void CaptureParticleWorker::handleSurfaceInteraction(int, bool,
 			(Frame::cosTheta(bRec.wi) * woDotGeoN)/
 			(Frame::cosTheta(bRec.wo) * wiDotGeoN));
 
-		/* Compute Le * importance and store it in an accumulation buffer */
+		/* Splat onto the accumulation buffer */
 		Ray ray(its.p, wo, 0, dist, its.time);
 		Spectrum sampleVal = weight * bsdf->fCos(bRec) 
-			* m_scene->getAttenuation(ray) * (importance * correction);
+			* transmittance * (importance * correction);
 
 		m_workResult->splat(screenSample, sampleVal, m_filter);
 	}
 }
 
-void CaptureParticleWorker::handleMediumInteraction(int, bool, 
-		const MediumSamplingRecord &mRec, Float time, const Vector &wi, 
-		const Spectrum &weight) {
+void CaptureParticleWorker::handleMediumInteraction(int depth, bool caustic,
+		const MediumSamplingRecord &mRec, const Medium *medium,
+		Float time, const Vector &wi, const Spectrum &weight) {
+	const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>(m_camera.get());
 	Point2 screenSample;
 
-	if (m_camera->positionToSample(mRec.p, screenSample)) {
-		Point cameraPosition = m_camera->getPosition(screenSample);
-		if (m_scene->isOccluded(cameraPosition, mRec.p, time))
+	if (camera->positionToSample(mRec.p, screenSample)) {
+		Point cameraPosition = camera->getPosition(screenSample);
+
+		Float t = dot(camera->getImagePlaneNormal(), mRec.p-cameraPosition);
+		if (t < camera->getNearClip() || t > camera->getFarClip())
+			return;
+
+		Spectrum transmittance = m_scene->getTransmittance(mRec.p,
+			cameraPosition, time, medium);
+
+		if (transmittance.isZero())
 			return;
 
 		Vector wo = cameraPosition - mRec.p;
@@ -130,16 +153,15 @@ void CaptureParticleWorker::handleMediumInteraction(int, bool,
 
 		Float importance; 
 		if (m_isPinholeCamera)
-			importance = ((PinholeCamera *) m_camera.get())->importance(screenSample) / (dist * dist);
+			importance = ((const PinholeCamera *) camera)->importance(screenSample) / (dist * dist);
 		else
-			importance = 1/m_camera->areaDensity(screenSample);
+			importance = 1/camera->areaDensity(screenSample);
 
-		/* Compute Le * importance and store in accumulation buffer */
+		/* Splat onto the accumulation buffer */
 		Ray ray(mRec.p, wo, 0, dist, time);
 
-		Spectrum sampleVal = weight * mRec.medium->getPhaseFunction()->f(
-			  PhaseFunctionQueryRecord(mRec, wi, wo))
-			* m_scene->getAttenuation(ray) * importance;
+		Spectrum sampleVal = weight * medium->getPhaseFunction()->f(
+			  PhaseFunctionQueryRecord(mRec, wi, wo)) * transmittance * importance;
 
 		m_workResult->splat(screenSample, sampleVal, m_filter);
 	}
@@ -214,8 +236,7 @@ void CaptureParticleProcess::bindResource(const std::string &name, int id) {
 }
 
 ref<WorkProcessor> CaptureParticleProcess::createWorkProcessor() const {
-	return new CaptureParticleWorker(m_maxDepth-1, m_multipleScattering, 
-		m_rrDepth);
+	return new CaptureParticleWorker(m_maxDepth-1, m_rrDepth);
 }
 
 MTS_IMPLEMENT_CLASS(CaptureParticleProcess, false, ParticleProcess)

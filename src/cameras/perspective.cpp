@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -33,10 +33,6 @@ class PerspectiveCamera : public PinholeCamera {
 public:
 	PerspectiveCamera(const Properties &props) 
 		: PinholeCamera(props) {
-		/* Near clipping plane distance */
-		m_nearClip = props.getFloat("nearClip", 1e-2f);
-		/* Far clipping plane distance */
-		m_farClip = props.getFloat("farClip", 1e4f);
 		/* Distance to the focal plane */
 		m_focalDistance = props.getFloat("focalDistance", m_farClip);
 		/* World-space lens radius */
@@ -52,8 +48,6 @@ public:
 		m_worldToScreen = Transform(stream);
 		m_rasterToCamera = Transform(stream);
 		m_cameraToRaster = Transform(stream);
-		m_nearClip = stream->readFloat();
-		m_farClip = stream->readFloat();
 		m_rasterToScreen = Transform(stream);
 		m_screenToRaster = Transform(stream);
 		m_lensRadius = stream->readFloat();
@@ -104,8 +98,6 @@ public:
 		m_worldToScreen.serialize(stream);
 		m_rasterToCamera.serialize(stream);
 		m_cameraToRaster.serialize(stream);
-		stream->writeFloat(m_nearClip);
-		stream->writeFloat(m_farClip);
 		m_rasterToScreen.serialize(stream);
 		m_screenToRaster.serialize(stream);
 		stream->writeFloat(m_lensRadius);
@@ -209,7 +201,6 @@ public:
 private:
 	Transform m_worldToScreen;
 	Transform m_rasterToCamera, m_cameraToRaster;
-	Float m_nearClip, m_farClip;
 	Transform m_rasterToScreen, m_screenToRaster;
 	Float m_lensRadius, m_focalDistance;
 };

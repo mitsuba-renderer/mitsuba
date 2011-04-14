@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -121,7 +121,7 @@ public:
 		m_totalEmitted = 0;
 
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, Properties("independent")));
+			createObject(MTS_CLASS(Sampler), Properties("independent")));
 
 		/* Allocate memory */
 		m_bitmap = new Bitmap(film->getSize().x, film->getSize().y, 128);
@@ -149,10 +149,6 @@ public:
 
 		int samplerResID = sched->registerManifoldResource(
 			static_cast<std::vector<SerializableObject*> &>(samplers)); 
-
-#if !defined(__OSX__) && defined(_OPENMP)
-		omp_set_num_threads(nCores);
-#endif
 
 #ifdef MTS_DEBUG_FP
 		enableFPExceptions();
@@ -269,7 +265,7 @@ public:
 		/* Generate the global photon map */
 		ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 			GatherPhotonProcess::EAllSurfacePhotons, m_photonCount,
-			m_granularity, m_maxDepth-1, m_rrDepth, job);
+			m_granularity, m_maxDepth-1, m_rrDepth, true, job);
 
 		proc->bindResource("scene", sceneResID);
 		proc->bindResource("camera", cameraResID);
@@ -280,11 +276,11 @@ public:
 
 		ref<PhotonMap> photonMap = proc->getPhotonMap();
 		photonMap->balance();
-		Log(EInfo, "Global photon map full. Shot " SIZE_T_FMT " photons, excess due to parallelism: " 
-			SIZE_T_FMT, proc->getShotPhotons(), proc->getExcess());
+		Log(EDebug, "Photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+			SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
 		Log(EInfo, "Gathering ..");
-		m_totalEmitted += proc->getShotPhotons();
+		m_totalEmitted += proc->getShotParticles();
 		film->clear();
 		#pragma omp parallel for schedule(dynamic)
 		for (int blockIdx = 0; blockIdx<(int) m_gatherBlocks.size(); ++blockIdx) {
@@ -309,7 +305,7 @@ public:
 				} else {
 					Float ratio = (N + m_alpha * M) / (N + M);
 					gp.flux = (gp.flux + gp.weight * (flux + 
-						gp.emission * proc->getShotPhotons() * M_PI * gp.radius*gp.radius)) * ratio;
+						gp.emission * proc->getShotParticles() * M_PI * gp.radius*gp.radius)) * ratio;
 					gp.radius = gp.radius * std::sqrt(ratio);
 					gp.N = N + m_alpha * M;
 					contrib = gp.flux / ((Float) m_totalEmitted * gp.radius*gp.radius * M_PI);

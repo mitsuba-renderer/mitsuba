@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -38,14 +38,9 @@ public:
 		m_beamWidth = degToRad(m_beamWidth);
 		m_cutoffAngle = degToRad(m_cutoffAngle);
 		Assert(m_cutoffAngle >= m_beamWidth);
-		m_cosBeamWidth = std::cos(m_beamWidth);
-		m_cosCutoffAngle = std::cos(m_cutoffAngle);
-		m_position = m_luminaireToWorld(Point(0, 0, 0));
 		m_type = EDeltaPosition;
 		m_texture = new ConstantTexture(
 			props.getSpectrum("texture", Spectrum(1.0f)));
-		m_uvFactor = std::tan(m_beamWidth/2);
-		m_invTransitionWidth = 1.0 / (m_cutoffAngle - m_beamWidth);
 	}
 
 	SpotLuminaire(Stream *stream, InstanceManager *manager) 
@@ -54,6 +49,10 @@ public:
 		m_intensity = Spectrum(stream);
 		m_beamWidth = stream->readFloat();
 		m_cutoffAngle = stream->readFloat();
+		configure();
+	}
+
+	void configure() {
 		m_cosBeamWidth = std::cos(m_beamWidth);
 		m_cosCutoffAngle = std::cos(m_cutoffAngle);
 		m_position = m_luminaireToWorld(Point(0, 0, 0));
@@ -86,10 +85,10 @@ public:
 		Vector localDir = m_worldToLuminaire(d);
 		const Float cosTheta = localDir.z;
 		
-		if (cosTheta < m_cosCutoffAngle)
+		if (cosTheta <= m_cosCutoffAngle)
 			return Spectrum(0.0f);
 
-		if (m_texture->getClass() != ConstantTexture::m_theClass) {
+		if (m_texture->getClass() != MTS_CLASS(ConstantTexture)) {
 			Intersection its;
 			its.hasUVPartials = false;
 			its.uv.x = .5+localDir.x / (localDir.z / m_uvFactor);
@@ -97,38 +96,27 @@ public:
 			result *= m_texture->getValue(its);
 		}
 
-		if (cosTheta > m_cosBeamWidth)
+		if (cosTheta >= m_cosBeamWidth)
 			return result;
-		return result * ((m_cutoffAngle - std::acos(cosTheta)) * m_invTransitionWidth);
+
+		return result * ((m_cutoffAngle - std::acos(cosTheta))
+				* m_invTransitionWidth);
 	}
 
-	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
-		return Spectrum(0.0f);
-	}
-
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
+	Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 		/* PDF is a delta function - zero probability when a sample point was not
 		   generated using sample() */
 		return delta ? 1.0f : 0.0f;
 	}
 	
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
-		return SpotLuminaire::pdf(its.p, lRec, delta);
-	}
-
-	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
+	void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
 		Vector lumToP = p - m_position;
 		Float invDist = 1.0f / lumToP.length();
 		lRec.sRec.p = m_position;
 		lRec.d = lumToP * invDist;
 		lRec.pdf = 1.0f;
-		lRec.Le = falloffCurve(lRec.d) * (invDist*invDist);
-	}
-
-	void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
-		const Point2 &sample) const {
-		SpotLuminaire::sample(its.p, lRec, sample);
+		lRec.value = falloffCurve(lRec.d) * (invDist*invDist);
 	}
 
 	void sampleEmission(EmissionRecord &eRec, 
@@ -137,19 +125,19 @@ public:
 		m_luminaireToWorld(squareToCone(m_cosCutoffAngle, sample2), eRec.d);
 		eRec.pdfDir = squareToConePdf(m_cosCutoffAngle);
 		eRec.pdfArea = 1;
-		eRec.P = falloffCurve(eRec.d);
+		eRec.value = falloffCurve(eRec.d);
 	}
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		eRec.sRec.p = m_position;
 		eRec.pdfArea = 1;
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 	}
 
 	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {
 		m_luminaireToWorld(squareToCone(m_cosCutoffAngle, sample), eRec.d);
 		eRec.pdfDir = squareToConePdf(m_cosCutoffAngle);
-		return Spectrum(falloffCurve(eRec.d, true));
+		return falloffCurve(eRec.d, true);
 	}
 
 	void pdfEmission(EmissionRecord &eRec, bool delta) const {
@@ -160,7 +148,7 @@ public:
 		eRec.pdfArea = delta ? 1.0f : 0.0f;
 	}
 
-	Spectrum f(const EmissionRecord &eRec) const {
+	Spectrum fDirection(const EmissionRecord &eRec) const {
 		return falloffCurve(eRec.d, true);
 	}
 
@@ -169,7 +157,7 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(Texture::m_theClass) && name == "texture") {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "texture") {
 			m_texture = static_cast<Texture *>(child);
 		} else {
 			Luminaire::addChild(name, child);

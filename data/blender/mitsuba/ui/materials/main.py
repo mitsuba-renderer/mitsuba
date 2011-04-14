@@ -17,9 +17,10 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+from ... import MitsubaAddon
+from ...ui.materials import mitsuba_material_base
 
-from mitsuba.ui.materials import mitsuba_material_base
-
+@MitsubaAddon.addon_register_class
 class main(mitsuba_material_base, bpy.types.Panel):
 	'''
 	Material Editor UI Panel
@@ -36,5 +37,12 @@ class main(mitsuba_material_base, bpy.types.Panel):
 		row.menu("MITSUBA_MT_presets_material", text=bpy.types.MITSUBA_MT_presets_material.bl_label)
 		row.operator("mitsuba.preset_material_add", text="", icon="ZOOMIN")
 		row.operator("mitsuba.preset_material_add", text="", icon="ZOOMOUT").remove_active = True
-		
+	
+		row = self.layout.row(align=True)
+		row.operator("mitsuba.convert_all_materials", icon='WORLD_DATA')
+		row = self.layout.row(align=True)
+		row.operator("mitsuba.convert_material", icon='MATERIAL_DATA')
+		row = self.layout.row(align=True)
+
+		row.menu('MATERIAL_MT_mitsuba_type', text=context.material.mitsuba_material.type_label)
 		super().draw(context)

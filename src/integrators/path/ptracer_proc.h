@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -74,10 +74,8 @@ protected:
  */
 class CaptureParticleWorker : public ParticleTracer {
 public:
-	inline CaptureParticleWorker(int maxDepth, bool multipleScattering, 
-		int rrDepth) : ParticleTracer(maxDepth, 
-			multipleScattering, rrDepth) {
-	}
+	inline CaptureParticleWorker(int maxDepth, int rrDepth)
+		: ParticleTracer(maxDepth, rrDepth) { }
 
 	inline CaptureParticleWorker(Stream *stream, InstanceManager *manager) 
 	 : ParticleTracer(stream, manager) { }
@@ -95,7 +93,8 @@ public:
 	 * pixel of the accumulation buffer.
 	 */
 	void handleSurfaceInteraction(int depth, bool caustic,
-		const Intersection &its, const Spectrum &weight);
+		const Intersection &its, const Medium *medium,
+		const Spectrum &weight);
 
 	/**
 	 * Handles particles interacting with a medium - if a reflection to the
@@ -103,8 +102,8 @@ public:
 	 * pixel of the accumulation buffer.
 	 */
 	void handleMediumInteraction(int depth, bool caustic,
-		const MediumSamplingRecord &mRec, Float time, const Vector &wi, 
-		const Spectrum &weight);
+			const MediumSamplingRecord &mRec, const Medium *medium,
+			Float time, const Vector &wi, const Spectrum &weight);
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -127,11 +126,10 @@ private:
 class CaptureParticleProcess : public ParticleProcess {
 public:
 	CaptureParticleProcess(const RenderJob *job, RenderQueue *queue, 
-		size_t sampleCount, size_t granularity, int maxDepth, bool multipleScattering,
-		int rrDepth) : ParticleProcess(ParticleProcess::ETrace, sampleCount, 
+		size_t sampleCount, size_t granularity, int maxDepth, int rrDepth)
+		: ParticleProcess(ParticleProcess::ETrace, sampleCount, 
 		  granularity, "Rendering", job), m_job(job), m_queue(queue), 
-		  m_maxDepth(maxDepth), m_multipleScattering(multipleScattering), 
-		  m_rrDepth(rrDepth) {
+		  m_maxDepth(maxDepth), m_rrDepth(rrDepth) {
 	}
 
 	void develop();
@@ -152,7 +150,6 @@ private:
 	ref<Bitmap> m_accumBitmap;
 	ref<Bitmap> m_finalBitmap;
 	int m_maxDepth;
-	bool m_multipleScattering;
 	int m_rrDepth;
 };
 

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -52,7 +52,7 @@ public:
 		m_points.reserve(m_size.x*m_size.y);
 		m_size = size; m_pos = PointType(0);
 		generate(
-			log2i(std::max(m_size.x, m_size.y)),
+			log2i((uint32_t) std::max(m_size.x, m_size.y)),
 			ENorth, EEast, ESouth, EWest);
 	}
 

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -44,7 +44,7 @@ void ShapeKDTree::addShape(const Shape *shape) {
 	Assert(!isBuilt());
 	if (shape->isCompound())
 		Log(EError, "Cannot add compound shapes to a kd-tree - expand them first!");
-	if (shape->getClass()->derivesFrom(TriMesh::m_theClass)) {
+	if (shape->getClass()->derivesFrom(MTS_CLASS(TriMesh))) {
 		// Triangle meshes are expanded into individual primitives,
 		// which are visible to the tree construction code. Generic
 		// primitives are only handled by their AABBs
@@ -130,6 +130,52 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 	}
 	return false;
 }
+
+bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape, Normal &n) const {
+	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
+	Float mint, maxt;
+	
+	t = std::numeric_limits<Float>::infinity();
+
+	++shadowRaysTraced;
+	if (m_aabb.rayIntersect(ray, mint, maxt)) {
+		/* Use an adaptive ray epsilon */
+		Float rayMinT = ray.mint;
+		if (rayMinT == Epsilon)
+			rayMinT *= std::max(std::max(std::abs(ray.o.x), 
+				std::abs(ray.o.y)), std::abs(ray.o.z));
+
+		if (rayMinT > mint) mint = rayMinT;
+		if (ray.maxt < maxt) maxt = ray.maxt;
+
+		if (EXPECT_TAKEN(maxt > mint)) {
+			if (rayIntersectHavran<false>(ray, mint, maxt, t, temp)) {
+				const IntersectionCache *cache = reinterpret_cast<const IntersectionCache *>(temp);
+				shape = m_shapes[cache->shapeIndex];
+
+				if (m_triangleFlag[cache->shapeIndex]) {
+					const TriMesh *trimesh = static_cast<const TriMesh *>(shape);
+					const Triangle &tri = trimesh->getTriangles()[cache->primIndex];
+					const Point *vertexPositions = trimesh->getVertexPositions();
+					const Point &p0 = vertexPositions[tri.idx[0]];
+					const Point &p1 = vertexPositions[tri.idx[1]];
+					const Point &p2 = vertexPositions[tri.idx[2]];
+					n = cross(p1-p0, p2-p0);
+				} else {
+					/// Uh oh... -- much unnecessary work is done here
+					Intersection its;
+					shape->fillIntersectionRecord(ray, 
+						reinterpret_cast<const uint8_t*>(temp) + 8, its);
+					n = its.geoFrame.n;
+				}
+
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 
 bool ShapeKDTree::rayIntersect(const Ray &ray) const {
 	Float mint, maxt, t = std::numeric_limits<Float>::infinity();

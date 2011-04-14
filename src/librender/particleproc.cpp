@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -24,11 +24,17 @@
 
 MTS_NAMESPACE_BEGIN
 
-ParticleProcess::ParticleProcess(EMode mode, size_t workCount, 
-	size_t granularity, const std::string &progressText,
-	const void *progressReporterPayload) : 
-	m_mode(mode), m_workCount(workCount), m_numGenerated(0), 
-	m_granularity(granularity), m_receivedResultCount(0) {
+ParticleProcess::ParticleProcess(EMode mode, size_t workCount, size_t granularity,
+		const std::string &progressText, const void *progressReporterPayload)
+	: m_mode(mode), m_workCount(workCount), m_numGenerated(0),
+	  m_granularity(granularity), m_receivedResultCount(0) {
+
+	/* Choose a suitable work unit granularity if none was specified */
+	if (m_granularity == 0)
+		m_granularity = std::max((size_t) 1, workCount /
+			(16 * Scheduler::getInstance()->getWorkerCount()));
+
+	/* Create a visual progress reporter */
 	m_progress = new ProgressReporter(progressText, workCount, 
 		progressReporterPayload);
 	m_resultMutex = new Mutex();
@@ -39,22 +45,24 @@ ParticleProcess::~ParticleProcess() {
 }
 
 ParallelProcess::EStatus ParticleProcess::generateWork(WorkUnit *unit, int worker) {
+	RangeWorkUnit *range = static_cast<RangeWorkUnit *>(unit);
+	size_t workUnitSize;
+
 	if (m_mode == ETrace) {
 		if (m_numGenerated == m_workCount)
-			return EFailure;
-		/* Reserve a sequence of at most 'granularity' particles */
-		size_t workSize = std::min(m_granularity, m_workCount - m_numGenerated);
-		RangeWorkUnit *range = static_cast<RangeWorkUnit *>(unit);
-		range->setRange(m_numGenerated, m_numGenerated + workSize - 1);
-		m_numGenerated += workSize;
+			return EFailure; // There is no more work
+
+		workUnitSize = std::min(m_granularity, m_workCount - m_numGenerated);
 	} else {
 		if (m_receivedResultCount >= m_workCount)
-			return EFailure;
-		/* Reserve a sequence of exactly 'granularity' particles */
-		RangeWorkUnit *range = static_cast<RangeWorkUnit *>(unit);
-		range->setRange(m_numGenerated, m_numGenerated + m_granularity - 1);
-		m_numGenerated += m_granularity;
+			return EFailure; // There is no more work
+
+		workUnitSize = m_granularity;
 	}
+
+	range->setRange(m_numGenerated, m_numGenerated + workUnitSize - 1);
+	m_numGenerated += workUnitSize;
+
 
 	return ESuccess;
 }
@@ -70,13 +78,11 @@ ParticleTracer::ParticleTracer(Stream *stream, InstanceManager *manager)
 	: WorkProcessor(stream, manager) {
 
 	m_maxDepth = stream->readInt();	
-	m_multipleScattering = stream->readBool();	
 	m_rrDepth = stream->readInt();	
 }
 
 void ParticleTracer::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeInt(m_maxDepth);
-	stream->writeBool(m_multipleScattering);
 	stream->writeInt(m_rrDepth);
 }
 
@@ -103,6 +109,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 	ref<Camera> camera = m_scene->getCamera();
 	Float shutterOpen     = camera->getShutterOpen(), 
 		  shutterOpenTime = camera->getShutterOpenTime();
+	bool needsTimeSample = (shutterOpenTime != 0);
 
 	m_sampler->generate();
 	for (size_t index = range->getRangeStart(); index <= range->getRangeEnd() && !stop; ++index) {
@@ -112,9 +119,16 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 
 		/* Sample an emitted particle */
 		m_scene->sampleEmission(eRec, areaSample, dirSample);
+		const Medium *medium = eRec.luminaire->getMedium();
 
-		ray = Ray(eRec.sRec.p, eRec.d, shutterOpen + shutterOpenTime * m_sampler->next1D());
-		weight = eRec.P;
+		ray = Ray(eRec.sRec.p, eRec.d, shutterOpen);
+		
+		if (needsTimeSample)
+			ray.time += shutterOpenTime * m_sampler->next1D();
+
+		handleEmission(eRec, medium, ray.time);
+
+		weight = eRec.value;
 		depth = 1;
 		caustic = true;
 
@@ -124,21 +138,19 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
             /* ==================================================================== */
             /*                 Radiative Transfer Equation sampling                 */
             /* ==================================================================== */
-			if (m_scene->sampleDistance(Ray(ray, 0, its.t), mRec, m_sampler)) {
+			if (medium && medium->sampleDistance(Ray(ray, 0, its.t), mRec, m_sampler)) {
 				/* Sample the integral
 				  \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
 				*/
 
-				weight *= mRec.sigmaS * mRec.attenuation / mRec.pdfSuccess;
-				handleMediumInteraction(depth, caustic, mRec, ray.time, -ray.d, weight);
+				weight *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
+				handleMediumInteraction(depth, caustic, mRec, medium,
+					ray.time, -ray.d, weight);
 	
-				if (!m_multipleScattering)
-					break;
-
 				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
 				pRec.quantity = EImportance;
 
-				weight *= mRec.medium->getPhaseFunction()->sample(pRec, m_sampler);
+				weight *= medium->getPhaseFunction()->sample(pRec, m_sampler);
 				caustic = false;
 
 				/* Russian roulette */
@@ -154,16 +166,29 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				/* There is no surface in this direction */
 				break;
 			} else {
-				ray.mint = 0; ray.maxt = its.t;
-
 				/* Sample 
-					tau(x, y) * (Surface integral). This happens with probability mRec.pdfFailure
-					Divide this out and multiply with the proper per color channel attenuation.
+					tau(x, y) (Surface integral). This happens with probability mRec.pdfFailure
+					Account for this and multiply by the proper per-color-channel transmittance.
 				*/
-				weight *= m_scene->getAttenuation(ray) / mRec.pdfFailure;
-				handleSurfaceInteraction(depth, caustic, its, weight);
+				if (medium)
+					weight *= mRec.transmittance / mRec.pdfFailure;
 
 				const BSDF *bsdf = its.shape->getBSDF();
+
+				if (bsdf)
+					handleSurfaceInteraction(depth, caustic, its, medium, weight);
+
+				if (!bsdf) {
+					/* Pass right through the surface (there is no BSDF) */
+					ray.setOrigin(its.p);
+
+					if (its.isMediumTransition())
+						medium = its.getTargetMedium(ray.d);
+
+					++depth;
+					continue;
+				}
+	
 				BSDFQueryRecord bRec(its);
 				bRec.quantity = EImportance;
 				bsdfVal = bsdf->sampleCos(bRec, m_sampler->next2D());
@@ -184,14 +209,18 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 
 				weight *= bsdfVal;
 				Vector wi = -ray.d, wo = its.toWorld(bRec.wo);
-				ray = Ray(its.p, wo, ray.time);
+				ray.setOrigin(its.p);
+				ray.setDirection(wo);
 
 				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
 				Float wiDotGeoN = dot(its.geoFrame.n, wi),
-						woDotGeoN = dot(its.geoFrame.n, wo);
+				      woDotGeoN = dot(its.geoFrame.n, wo);
 				if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 || 
 					woDotGeoN * Frame::cosTheta(bRec.wo) <= 0)
 					break;
+
+				if (its.isMediumTransition())
+					medium = its.getTargetMedium(woDotGeoN);
 
 				/* Adjoint BSDF for shading normals -- [Veach, p. 155] */
 				weight *= std::abs(
@@ -199,21 +228,21 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 					(Frame::cosTheta(bRec.wo) * wiDotGeoN));
 
 				caustic &= (bRec.sampledType & BSDF::EDelta) ? true : false;
-
 			}
 			++depth;
 		}
 	}
 }
 
+void ParticleTracer::handleEmission(const EmissionRecord &eRec,
+	const Medium *medium, Float time) { }
+
 void ParticleTracer::handleSurfaceInteraction(int depth, bool caustic,
-	const Intersection &its, const Spectrum &weight) {
-}
+	const Intersection &its, const Medium *medium, const Spectrum &weight) { }
 
 void ParticleTracer::handleMediumInteraction(int depth, bool caustic,
-	const MediumSamplingRecord &mRec, Float time, const Vector &wi, 
-	const Spectrum &weight) {
-}
+	const MediumSamplingRecord &mRec, const Medium *medium, Float time,
+	const Vector &wi, const Spectrum &weight) { }
 
 MTS_IMPLEMENT_CLASS(RangeWorkUnit, false, WorkUnit)
 MTS_IMPLEMENT_CLASS(ParticleProcess, true, ParallelProcess)

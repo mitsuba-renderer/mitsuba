@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -87,6 +87,7 @@ void GPUTexture::setFrameBufferType(EFrameBufferType type) {
 
 	switch (m_fbType) {
 		case EColorBuffer:
+		case EColorAndDepthBuffer:
 			break;
 		case EDepthBuffer:	
 			m_format = EDepth;
@@ -164,6 +165,7 @@ static const char *toString(GPUTexture::EFrameBufferType fbType) {
 		case GPUTexture::ENone: return "none";
 		case GPUTexture::EDepthBuffer: return "depthBuffer";
 		case GPUTexture::EColorBuffer: return "colorBuffer";
+		case GPUTexture::EColorAndDepthBuffer: return "colorAndDepthBuffer";
         default: SLog(EError, "Invalid framebuffer type"); return NULL;
     }
 }

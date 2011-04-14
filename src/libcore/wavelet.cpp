@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
 
 Wavelet2D::Wavelet2D(const Bitmap *bitmap, int selectedChannel) {
 	Assert(bitmap->getWidth() == bitmap->getHeight());
-	Assert(isPowerOfTwo(bitmap->getWidth()));
+	Assert(isPow2(bitmap->getWidth()));
 
 	m_size = bitmap->getWidth();
 	m_data = new float[m_size * m_size];
@@ -60,7 +60,7 @@ Wavelet2D::Wavelet2D(const Bitmap *bitmap, int selectedChannel) {
 }
 
 Wavelet2D::Wavelet2D(const SparseWavelet2D *sw) {
-	Assert(isPowerOfTwo(sw->getSize()));
+	Assert(isPow2(sw->getSize()));
 	m_size = sw->getSize();
 	m_data = new float[m_size * m_size];
 	m_temp = new float[m_size];
@@ -336,14 +336,14 @@ SparseWavelet2D::SparseWavelet2D(const SparseWavelet2D *sw)
 }
 
 SparseWavelet2D::SparseWavelet2D(Stream *stream, InstanceManager *Manager) {
-	m_size = (size_t) stream->readULong();
+	m_size = stream->readSize();
 	m_scalingFunction = stream->readSingle();
-	size_t coefficientCount = (size_t) stream->readULong();
+	size_t coefficientCount = stream->readSize();
 #if defined(USE_GOOGLE_DENSE_HASHMAP)
 	m_data.set_empty_key(0xFFFFFFFFFFFFFFFFULL);
 #endif
 	for (size_t i=0; i<coefficientCount; i++) {
-		uint64_t key = stream->readULong();
+		uint64_t key = stream->readSize();
 		m_data[key] = stream->readSingle();
 	}
 	m_maxLevel = log2i(m_size)-1;
@@ -377,12 +377,12 @@ Float SparseWavelet2D::getPixel(const Point2i &pt) const {
 }
 
 void SparseWavelet2D::serialize(Stream *stream, InstanceManager *Manager) const {
-	stream->writeULong(m_size);
+	stream->writeSize(m_size);
 	stream->writeSingle(m_scalingFunction);
-	stream->writeULong(m_data.size());
+	stream->writeSize(m_data.size());
 
 	for (CoefficientIterator it = m_data.begin(); it != m_data.end(); ++it) {
-		stream->writeULong((*it).first);
+		stream->writeSize((*it).first);
 		stream->writeSingle((*it).second);
 	}
 }
@@ -467,7 +467,7 @@ std::string SparseWavelet2D::toString() const {
 /* ==================================================================== */
 
 Wavelet3D::Wavelet3D(const float *data, size_t resolution) {
-	Assert(isPowerOfTwo(resolution));
+	Assert(isPow2(resolution));
 
 	m_size = resolution;
 	size_t nEntries = m_size * m_size * m_size;

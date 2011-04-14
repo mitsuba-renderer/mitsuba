@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -279,7 +279,7 @@ public:
 	 *        together in a packed format)
 	 * \param piv Storage for the permutation created by the pivoting
 	 * \param pivsign Sign of the permutation
-	 * \return \a true if the matrix was nonsingular.
+	 * \return \c true if the matrix was nonsingular.
 	 *
 	 * Based on the implementation in JAMA.
 	 */
@@ -291,7 +291,7 @@ public:
 	 *
 	 * \param L Target matrix (a lower triangular matrix such
 	 *    that A=L*L')
-	 * \return \a false If the matrix is not symmetric positive
+	 * \return \c false If the matrix is not symmetric positive
 	 *    definite.
 	 * Based on the implementation in JAMA.
 	 */

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -79,13 +79,13 @@ public:
 		stream->writeFloat(m_exponent);
 	}
 
-	Spectrum sample(PhaseFunctionQueryRecord &pRec,
+	Float sample(PhaseFunctionQueryRecord &pRec,
 			Sampler *sampler) const {
 		pRec.wo = squareToSphere(sampler->next2D());
 		return f(pRec) * (4 * M_PI);
 	}
 
-	Spectrum sample(PhaseFunctionQueryRecord &pRec, 
+	Float sample(PhaseFunctionQueryRecord &pRec, 
 			Float &pdf, Sampler *sampler) const {
 		pRec.wo = squareToSphere(sampler->next2D());
 		pdf = 1/(4 * M_PI);
@@ -96,9 +96,9 @@ public:
 		return 1/(4 * M_PI);
 	}
 
-	Spectrum f(const PhaseFunctionQueryRecord &pRec) const {
+	Float f(const PhaseFunctionQueryRecord &pRec) const {
 		if (pRec.mRec.orientation.length() == 0)
-			return Spectrum(m_kd / (4*M_PI));
+			return m_kd / (4*M_PI);
 
 		Frame frame(normalize(pRec.mRec.orientation));
 		Vector reflectedLocal = frame.toLocal(pRec.wo);
@@ -110,8 +110,8 @@ public:
 		reflectedLocal.x *= a;
 		Vector R = frame.toWorld(reflectedLocal);
 
-		return Spectrum((std::pow(std::max((Float) 0, dot(R, pRec.wo)), m_exponent))
-			* m_normalization * m_ks + m_kd / (4*M_PI));
+		return std::pow(std::max((Float) 0, dot(R, pRec.wo)), m_exponent)
+			* m_normalization * m_ks + m_kd / (4*M_PI);
 	}
 
 	std::string toString() const {

@@ -16,15 +16,14 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from .. import MitsubaAddon
+
 from extensions_framework import declarative_property_group
 from extensions_framework import util as efutil
 
+@MitsubaAddon.addon_register_class
 class mitsuba_engine(declarative_property_group):
-	'''
-	Storage class for Mitsuba Engine settings.
-	This class will be instantiated within a Blender scene
-	object.
-	'''
+	ef_attach_to = ['Scene']
 
 	controls = [
 		'export_mode',
@@ -68,7 +67,7 @@ class mitsuba_engine(declarative_property_group):
 			'subtype': 'DIR_PATH',
 			'attr': 'binary_path',
 			'name': 'Executable path',
-			'description': 'Path to the "mitsuba" executable',
+			'description': 'Path to the Mitsuba install',
 			'default': efutil.find_config_value('mitsuba', 'defaults', 'binary_path', '')
 		},
 		{

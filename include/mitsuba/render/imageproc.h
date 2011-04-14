@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -31,19 +31,25 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER BlockedImageProcess : public ParallelProcess {
 public:
-	/* ParallelProcess interface */
+	// ======================================================================
+	//! @{ \name Implementation of the ParallelProcess interface
+	// ======================================================================
+
 	virtual EStatus generateWork(WorkUnit *unit, int worker);
+	
+	//! @}
+	// ======================================================================
 
 	MTS_DECLARE_CLASS()
 protected:
 	/**
 	 * Initialize the image process
 	 *
-	 * @param offset
+	 * \param offset
 	 *    Integer offset of the image region to be processed
-	 * @param size
+	 * \param size
 	 *    Size of the image region to be processed
-	 * @param blockSize
+	 * \param blockSize
 	 *    Size of the generated square pixel blocks
 	 */
 	void init(const Point2i &offset, const Vector2i &size, int blockSize);

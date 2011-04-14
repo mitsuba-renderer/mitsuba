@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -71,11 +71,7 @@ public:
 		return m_intensity;
 	}
 
-	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
-		return m_intensity;
-	}
-
-	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
+	void sample(const Point &p, LuminaireSamplingRecord &lRec,
 		const Point2 &sample) const {
 		Vector d = squareToSphere(sample);
 	
@@ -85,25 +81,16 @@ public:
 			lRec.pdf = 1.0f / (4*M_PI);
 			lRec.sRec.n = normalize(m_bsphere.center - lRec.sRec.p);
 			lRec.d = -d;
-			lRec.Le = m_intensity;
+			lRec.value = m_intensity;
 		} else {
 			lRec.pdf = 0.0f;
 		}
 	}
 	
-	inline void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
-		const Point2 &sample) const {
-		ConstantLuminaire::sample(its.p, lRec, sample);
-	}
-
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
+	Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
 		return delta ? 0.0f : 1.0f / (4*M_PI);
 	}
 	
-	inline Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
-		return delta ? 0.0f : 1.0f / (4*M_PI);
-	}
-
 	/**
 	 * This is the tricky bit - we want to sample a ray that
 	 * has uniform density over the set of all rays passing
@@ -126,7 +113,7 @@ public:
 		Float length = eRec.d.length();
 
 		if (length == 0) {
-			eRec.P = Spectrum(0.0f);
+			eRec.value = Spectrum(0.0f);
 			eRec.pdfArea = eRec.pdfDir = 1.0f;
 			return;
 		}
@@ -134,7 +121,7 @@ public:
 		eRec.d /= length;
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 	}
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
@@ -147,7 +134,7 @@ public:
 		eRec.sRec.p = m_bsphere.center + d * radius;
 		eRec.sRec.n = Normal(-d);
 		eRec.pdfArea = 1.0f / (4 * M_PI * radius * radius);
-		eRec.P = m_intensity * M_PI;
+		eRec.value = m_intensity * M_PI;
 	}
 
 	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {
@@ -192,12 +179,12 @@ public:
 		eRec.d = -ray.d;
 		eRec.pdfArea = m_invSurfaceArea;
 		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
-		eRec.P = m_intensity;
+		eRec.value = m_intensity;
 		eRec.luminaire = this;
 		return true;
 	}
 
-	Spectrum f(const EmissionRecord &eRec) const {
+	Spectrum fDirection(const EmissionRecord &eRec) const {
 		return Spectrum(INV_PI);
 	}
 

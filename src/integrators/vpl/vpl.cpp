@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -51,20 +51,25 @@ public:
 
 	/// Draw the full scene using additive blending and shadow maps
 	void drawShadowedScene(const Scene *scene, const VPL &vpl) {
+	const std::vector<std::pair<const TriMesh *, Transform> > meshes = m_shaderManager->getMeshes();
 		const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>(scene->getCamera());
 		Point2 jitter(0.5f - m_random->nextFloat(), 0.5f - m_random->nextFloat());
 		Transform projectionTransform = camera->getGLProjectionTransform(jitter);
 		m_renderer->setCamera(projectionTransform.getMatrix(), camera->getViewTransform().getMatrix());
 		Transform clipToWorld = camera->getViewTransform().inverse() * projectionTransform.inverse();
-		const std::vector<const TriMesh *> meshes = m_shaderManager->getMeshes();
 		Point camPos = scene->getCamera()->getPosition();
 
 		m_renderer->beginDrawingMeshes();
 		for (unsigned int j=0; j<meshes.size(); j++) {
-			m_shaderManager->configure(vpl, meshes[j]->getBSDF(), 
-				meshes[j]->getLuminaire(), camPos, 
-				!meshes[j]->hasVertexNormals());
-			m_renderer->drawTriMesh(meshes[j]);
+			const TriMesh *mesh = meshes[j].first;
+			bool hasTransform = !meshes[j].second.isIdentity();
+			m_shaderManager->configure(vpl, mesh->getBSDF(), mesh->getLuminaire(),
+				camPos, !mesh->hasVertexNormals());
+			if (hasTransform)
+				m_renderer->pushTransform(meshes[j].second);
+			m_renderer->drawTriMesh(mesh);
+			if (hasTransform)
+				m_renderer->popTransform();
 			m_shaderManager->unbind();
 		}
 		m_renderer->endDrawingMeshes();
@@ -94,7 +99,7 @@ public:
 		ref<Film> film = camera->getFilm();
 		m_cancel = false;
 
-		if (!camera->getClass()->derivesFrom(ProjectiveCamera::m_theClass))
+		if (!camera->getClass()->derivesFrom(MTS_CLASS(ProjectiveCamera)))
 			Log(EError, "The VPL renderer requires a projective camera!");
 
 		/* Initialize hardware rendering */

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -216,15 +216,15 @@ public:
 	/**
 	 * \brief Create a new stream backend
 	 *
-	 * @param name
+	 * \param name
 	 *    Name of the created thread
-	 * @param scheduler
+	 * \param scheduler
 	 *    Scheduler instance used to process work units
-	 * @param nodeName
+	 * \param nodeName
 	 *    Exposed name of this node
-	 * @param stream
+	 * \param stream
 	 *    Stream used for communications
-	 * @param detach
+	 * \param detach
 	 *    Should the associated thread be joinable or detach instead?
 	 */
 	StreamBackend(const std::string &name, Scheduler *scheduler, 

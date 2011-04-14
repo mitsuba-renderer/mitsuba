@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -37,7 +37,7 @@ typedef Spectrum TranslationalGradient[3];
  * Krivanek J., Gautron P., Bouatouch K., Pattanaik S.
  * (Proceedings of SCCG 2005)
  *
- * @author Wenzel Jakob
+ * \author Wenzel Jakob
  */
 class MTS_EXPORT_RENDER HemisphereSampler : public Object {
 public:
@@ -53,21 +53,21 @@ public:
 	 * Allocate storage for a hemispherical sample with M
 	 * elevation and N azimuthal samples.
 	 */
-	HemisphereSampler(int M, int N);
+	HemisphereSampler(uint32_t M, uint32_t N);
 
 	/// Return the elevational resolution
-	inline unsigned int getM() const { return m_M; }
+	inline uint32_t getM() const { return m_M; }
 	
 	/// Return the azimuthal resolution
-	inline unsigned int getN() const { return m_N; }
+	inline uint32_t getN() const { return m_N; }
 
 	/// Access a cell by index
-	inline SampleEntry &operator() (int j, int k) {
+	inline SampleEntry &operator() (uint32_t j, uint32_t k) {
 		return m_entries[j*m_N + k];
 	}
 
 	/// Access a cell by index (const version)
-	inline const SampleEntry &operator() (int j, int k) const {
+	inline const SampleEntry &operator() (uint32_t j, uint32_t k) const {
 		return m_entries[j*m_N + k];
 	}
 
@@ -112,7 +112,7 @@ protected:
 	/// Free all memory
 	virtual ~HemisphereSampler();
 private:
-	unsigned int m_M, m_N;
+	uint32_t m_M, m_N;
 	SampleEntry *m_entries;
 	Vector *m_uk, *m_vk, *m_vkMinus;
 	Spectrum m_E;
@@ -139,7 +139,7 @@ private:
  * "An Approximate Global Illumination System for Computer Generated Films"
  * by E. Tabellion and A. Lamorlette (SIGGRAPH 2004)
  *
- * @author Wenzel Jakob
+ * \author Wenzel Jakob
  */
 class MTS_EXPORT_RENDER IrradianceCache : public SerializableObject {
 public:
@@ -190,11 +190,11 @@ public:
 	/**
 	 * Add a sample to the irradiance cache
 	 *
-	 * @param ray
+	 * \param ray
 	 * 		Ray differentials (if they exist)
-	 * @param its 
+	 * \param its 
 	 * 		The position/normal of the surface in question
-	 * @param sample
+	 * \param sample
 	 *      Record containing all hemispherical samples and 
 	 *      derived gradient information
 	 */

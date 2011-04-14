@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -18,6 +18,7 @@
 
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/render/gatherproc.h>
+#include "bre.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -30,7 +31,7 @@ class PhotonMapIntegrator : public SampleIntegrator {
 public:
 	PhotonMapIntegrator(const Properties &props) : SampleIntegrator(props) {
 		/* Number of luminaire samples for direct illumination */
-		m_directSamples = props.getInteger("directSamples", 1);
+		m_directSamples = props.getInteger("directSamples", 16);
 		/* Number of BSDF samples when intersecting a glossy material */
 		m_glossySamples = props.getInteger("glossySamples", 32);
 		/* Depth to start using russian roulette when tracing photons */
@@ -39,33 +40,26 @@ public:
 		m_maxDepth = props.getInteger("maxDepth", 40);
 		/* Depth cutoff when recursively tracing specular materials */
 		m_maxSpecularDepth = props.getInteger("maxSpecularDepth", 6);
-		/* Granularity of photon tracing work units (in shot particles) */
-		m_granularity = props.getInteger("granularity", 1000);
-
+		/* Granularity of photon tracing work units (in shot particles, 0 => decide automatically) */
+		m_granularity = props.getInteger("granularity", 0);
 		/* Number of photons to collect for the global photon map */
-		m_globalPhotons = (size_t) props.getLong("globalPhotons", 200000);
+		m_globalPhotons = props.getSize("globalPhotons", 200000);
 		/* Number of photons to collect for the caustic photon map */
-		m_causticPhotons = (size_t) props.getLong("causticPhotons", 200000);
+		m_causticPhotons = props.getSize("causticPhotons", 200000);
 		/* Number of photons to collect for the volumetric photon map */
-		m_volumePhotons = (size_t) props.getLong("volumePhotons", 200000);
+		m_volumePhotons = props.getSize("volumePhotons", 200000);
 		/* Radius of lookups in the global photon map (relative to the scene size) */
 		m_globalLookupRadiusRel = props.getFloat("globalLookupRadius", 0.05f);
 		/* Radius of lookups in the caustic photon map (relative to the scene size) */
 		m_causticLookupRadiusRel = props.getFloat("causticLookupRadius", 0.0125f);
-		/* Radius of lookups in the volumetric photon map (relative to the scene size) */
-		m_volumeLookupRadiusRel = props.getFloat("volumeLookupRadius", 0.05f);
-		/* Minimum amount of photons to consider a global photon map lookup valid */
-		m_globalMinPhotons = props.getInteger("globalMinPhotons", 8);
-		/* Minimum amount of photons to consider a caustic photon map lookup valid */
-		m_causticMinPhotons = props.getInteger("causticMinPhotons", 100);
 		/* Minimum amount of photons to consider a volumetric photon map lookup valid */
-		m_volumeMinPhotons = props.getInteger("volumeMinPhotons", 8);
-		/* Maximum number of results for global photon map lookups */
-		m_globalLookupSize = props.getInteger("globalLookupSize", 200);
+		m_globalLookupSize = props.getInteger("globalLookupSize", 120);
 		/* Maximum number of results for caustic photon map lookups */
-		m_causticLookupSize = props.getInteger("causticLookupSize", 200);
-		/* Maximum number of results for volumetric photon map lookups */
-		m_volumeLookupSize = props.getInteger("volumeLookupSize", 200);
+		m_causticLookupSize = props.getInteger("causticLookupSize", 120);
+		/* Approximate number of volume photons to be used in a lookup */
+		m_volumeLookupSize = props.getInteger("volumeLookupSize", 120);
+		/* Should photon gathering steps exclusively run on the local machine? */
+		m_gatherLocally = props.getBoolean("gatherLocally", true);
 	}
 
 	/// Unserialize from a binary data stream
@@ -74,18 +68,15 @@ public:
 		m_directSamples = stream->readInt();
 		m_glossySamples = stream->readInt();
 		m_maxSpecularDepth = stream->readInt();
-		m_globalPhotons = (size_t) stream->readULong();
-		m_causticPhotons = (size_t) stream->readULong();
-		m_volumePhotons = (size_t) stream->readULong();
+		m_globalPhotons = stream->readSize();
+		m_causticPhotons = stream->readSize();
+		m_volumePhotons = stream->readSize();
 		m_globalLookupRadius = stream->readFloat();
 		m_causticLookupRadius = stream->readFloat();
-		m_volumeLookupRadius = stream->readFloat();
-		m_globalMinPhotons = stream->readInt();
-		m_causticMinPhotons = stream->readInt();
-		m_volumeMinPhotons = stream->readInt();
 		m_globalLookupSize = stream->readInt();
 		m_causticLookupSize = stream->readInt();
 		m_volumeLookupSize = stream->readInt();
+		m_gatherLocally = stream->readBool();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -93,18 +84,15 @@ public:
 		stream->writeInt(m_directSamples);
 		stream->writeInt(m_glossySamples);
 		stream->writeInt(m_maxSpecularDepth);
-		stream->writeULong(m_globalPhotons);
-		stream->writeULong(m_causticPhotons);
-		stream->writeULong(m_volumePhotons);
+		stream->writeSize(m_globalPhotons);
+		stream->writeSize(m_causticPhotons);
+		stream->writeSize(m_volumePhotons);
 		stream->writeFloat(m_globalLookupRadius);
 		stream->writeFloat(m_causticLookupRadius);
-		stream->writeFloat(m_volumeLookupRadius);
-		stream->writeInt(m_globalMinPhotons);
-		stream->writeInt(m_causticMinPhotons);
-		stream->writeInt(m_volumeMinPhotons);
 		stream->writeInt(m_globalLookupSize);
 		stream->writeInt(m_causticLookupSize);
 		stream->writeInt(m_volumeLookupSize);
+		stream->writeBool(m_gatherLocally);
 	}
 
 	/// Configure the sampler for a specified amount of direct illumination samples
@@ -120,14 +108,15 @@ public:
 		/* Create a deterministic sampler for the photon gathering step */
 		ref<Scheduler> sched = Scheduler::getInstance();
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(Sampler::m_theClass, Properties("halton")));
+			createObject(MTS_CLASS(Sampler), Properties("halton")));
 		int qmcSamplerID = sched->registerResource(sampler);
 
 		/* Don't create a caustic photon map if the scene does not contain specular materials */
 		const std::vector<Shape *> &shapes = scene->getShapes();
 		bool foundSpecular = false;
 		for (size_t i=0; i<shapes.size(); ++i) {
-			if (shapes[i]->getBSDF()->getType() & BSDF::EDelta) {
+			const BSDF *bsdf = shapes[i]->getBSDF();
+			if (bsdf && bsdf->getType() & BSDF::EDelta) {
 				foundSpecular = true;
 				break;
 			}
@@ -136,8 +125,15 @@ public:
 			m_causticPhotons = 0;
 
 		/* Don't create a volumetric photon map if there are no participating media */
-		if (!scene->hasMedia())
+		const std::set<Medium *> &media = scene->getMedia();
+		if (media.size() == 0)
 			m_volumePhotons = 0;
+
+		for (std::set<Medium *>::const_iterator it = media.begin(); it != media.end(); ++it) {
+			if (!(*it)->isHomogeneous())
+				Log(EError, "Inhomogeneous media are currently not supported by the photon mapper!");
+		}
+
 
 		if (m_globalPhotonMap.get() == NULL && m_globalPhotons > 0) {
 			/* Adapt to scene extents */
@@ -146,7 +142,7 @@ public:
 			/* Generate the global photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::ESurfacePhotons, m_globalPhotons,
-				m_granularity, m_maxDepth, m_rrDepth, job);
+				m_granularity, m_maxDepth, m_rrDepth, m_gatherLocally, job);
 
 			proc->bindResource("scene", sceneResID);
 			proc->bindResource("camera", cameraResID);
@@ -160,12 +156,12 @@ public:
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
 
+			Log(EDebug, "Global photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
+
 			m_globalPhotonMap = proc->getPhotonMap();
-			m_globalPhotonMap->setScale(1 / (Float) proc->getShotPhotons());
-			m_globalPhotonMap->setMinPhotons(m_globalMinPhotons);
+			m_globalPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
 			m_globalPhotonMap->balance();
-			Log(EDebug, "Global photon map full. Shot " SIZE_T_FMT " photons, excess due to parallelism: " 
-				SIZE_T_FMT, proc->getShotPhotons(), proc->getExcess());
 			m_globalPhotonMapID = sched->registerResource(m_globalPhotonMap);
 		}
 
@@ -176,9 +172,10 @@ public:
 			/* Generate the caustic photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::ECausticPhotons, m_causticPhotons,
-				m_granularity, 2, m_rrDepth, job);
+				m_granularity, 2, m_rrDepth, m_gatherLocally, job);
 
 			proc->bindResource("scene", sceneResID);
+			proc->bindResource("camera", cameraResID);
 			proc->bindResource("sampler", qmcSamplerID);
 
 			m_proc = proc;
@@ -188,26 +185,24 @@ public:
 	
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
+			
+			Log(EDebug, "Caustic photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
 			m_causticPhotonMap = proc->getPhotonMap();
-			m_causticPhotonMap->setScale(1 / (Float) proc->getShotPhotons());
-			m_causticPhotonMap->setMinPhotons(m_causticMinPhotons);
+			m_causticPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
 			m_causticPhotonMap->balance();
-			Log(EDebug, "Caustic photon map - excess photons due to parallelism: " 
-				SIZE_T_FMT, proc->getExcess());
 			m_causticPhotonMapID = sched->registerResource(m_causticPhotonMap);
 		}
 
 		if (m_volumePhotonMap.get() == NULL && m_volumePhotons > 0) {
-			/* Adapt to scene extents */
-			m_volumeLookupRadius = m_volumeLookupRadiusRel * scene->getBSphere().radius;
-
 			/* Generate the volume photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::EVolumePhotons, m_volumePhotons,
-				m_granularity, m_maxDepth, m_rrDepth, job);
+				m_granularity, m_maxDepth, m_rrDepth, m_gatherLocally, job);
 
 			proc->bindResource("scene", sceneResID);
+			proc->bindResource("camera", cameraResID);
 			proc->bindResource("sampler", qmcSamplerID);
 
 			m_proc = proc;
@@ -218,13 +213,15 @@ public:
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
 
-			m_volumePhotonMap = proc->getPhotonMap();
-			m_volumePhotonMap->setScale(1 / (Float) proc->getShotPhotons());
-			m_volumePhotonMap->setMinPhotons(m_volumeMinPhotons);
-			m_volumePhotonMap->balance();
-			Log(EDebug, "Volumetric photon map - excess photons due to parallelism: " 
-				SIZE_T_FMT, proc->getExcess());
-			m_volumePhotonMapID = sched->registerResource(m_volumePhotonMap);
+			Log(EDebug, "Volume photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
+
+			ref<PhotonMap> volumePhotonMap = proc->getPhotonMap();
+			volumePhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
+			volumePhotonMap->balance();
+	
+			m_bre = new BeamRadianceEstimator(volumePhotonMap, m_volumeLookupSize);
+			m_breID = sched->registerResource(m_bre);
 		}
 
 		sched->unregisterResource(qmcSamplerID);
@@ -238,8 +235,8 @@ public:
 			proc->bindResource("globalPhotonMap", m_globalPhotonMapID);
 		if (m_causticPhotonMap.get())
 			proc->bindResource("causticPhotonMap", m_causticPhotonMapID);
-		if (m_volumePhotonMap.get())
-			proc->bindResource("volumePhotonMap", m_volumePhotonMapID);
+		if (m_bre.get())
+			proc->bindResource("bre", m_breID);
 	}
 
 	/// Connect to globally shared resources
@@ -248,10 +245,10 @@ public:
 			m_globalPhotonMap = static_cast<PhotonMap *>(params["globalPhotonMap"]);
 		if (!m_causticPhotonMap.get() && params.find("causticPhotonMap") != params.end())
 			m_causticPhotonMap = static_cast<PhotonMap *>(params["causticPhotonMap"]);
-		if (!m_volumePhotonMap.get() && params.find("volumetricPhotonMap") != params.end())
-			m_volumePhotonMap = static_cast<PhotonMap *>(params["volumetricPhotonMap"]);
+		if (!m_bre.get() && params.find("bre") != params.end())
+			m_bre = static_cast<BeamRadianceEstimator *>(params["bre"]);
 
-		if (getParent() != NULL && getParent()->getClass()->derivesFrom(SampleIntegrator::m_theClass))
+		if (getParent() != NULL && getParent()->getClass()->derivesFrom(MTS_CLASS(SampleIntegrator)))
 			m_parentIntegrator = static_cast<SampleIntegrator *>(getParent());
 		else
 			m_parentIntegrator = this;
@@ -265,7 +262,7 @@ public:
 	}
 
 	Spectrum Li(const RayDifferential &ray, RadianceQueryRecord &rRec) const {
-		Spectrum Li(0.0f), LiVol(0.0f);
+		Spectrum LiSurf(0.0f), LiMedium(0.0f), transmittance(1.0f);
 		Intersection &its = rRec.its;
 		LuminaireSamplingRecord lRec;
 	
@@ -273,23 +270,45 @@ public:
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
 
+		if (rRec.medium) {
+			Ray mediumRaySegment(ray, 0, its.t);
+			transmittance = rRec.medium->getTransmittance(mediumRaySegment);
+			mediumRaySegment.mint = ray.mint;
+			if (rRec.type & RadianceQueryRecord::EVolumeRadiance)
+				LiMedium = m_bre->query(mediumRaySegment, rRec.medium);
+		}
+
 		if (!its.isValid()) {
 			/* If no intersection could be found, possibly return 
 			   attenuated radiance from a background luminaire */
 			if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
-				Li += rRec.scene->LeBackground(ray);
-			return Li;
+				LiSurf += rRec.scene->LeBackground(ray);
+			return LiSurf * transmittance + LiMedium;
 		}
 
 		/* Possibly include emitted radiance if requested */
 		if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance)) 
-			Li += its.Le(-ray.d);
+			LiSurf += its.Le(-ray.d);
 
 		/* Include radiance from a subsurface integrator if requested */
 		if (its.hasSubsurface() && (rRec.type & RadianceQueryRecord::ESubsurfaceRadiance))
-			Li += its.LoSub(rRec.scene, -ray.d);
+			LiSurf += its.LoSub(rRec.scene, -ray.d);
 
 		const BSDF *bsdf = its.getBSDF(ray);
+				
+		if (bsdf == NULL) {
+			if (rRec.depth+1 < m_maxSpecularDepth) {
+				RadianceQueryRecord rRec2;
+				rRec2.recursiveQuery(rRec);
+	
+				if (its.isMediumTransition())
+					rRec2.medium = its.getTargetMedium(ray.d);
+
+				LiSurf += m_parentIntegrator->Li(RayDifferential(its.p, ray.d, ray.time), rRec2);
+			}
+			return LiSurf * transmittance + LiMedium;
+		}
+
 		int bsdfType = bsdf->getType();
 
 		Point2 *sampleArray, sample;
@@ -304,35 +323,30 @@ public:
 		}
 
 		/* Estimate the direct illumination if this is requested */
-		if (rRec.type & RadianceQueryRecord::EDirectRadiance) {
+		if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) {
 			Float weight = 1 / (Float) numDirectSamples;
 
 			for (int i=0; i<numDirectSamples; ++i) {
-				if (rRec.scene->sampleLuminaire(its, lRec, sampleArray[i])) {
+				if (rRec.scene->sampleAttenuatedLuminaire(its, rRec.medium, lRec, sampleArray[i])) {
 					/* Allocate a record for querying the BSDF */
-					const BSDFQueryRecord bRec(rRec, its, its.toLocal(-lRec.d));
+					const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 
 					/* Evaluate BSDF * cos(theta) */
 					const Spectrum bsdfVal = bsdf->fCos(bRec);
 
-					Li += lRec.Le * bsdfVal * weight;
+					LiSurf += lRec.value * bsdfVal * weight;
 				}
 			}
 		}
 
-//		if (rRec.type & RadianceQueryRecord:EVolumeRadiance) {
-			/* Ray marching */
-//		}
-
-
 		if (bsdfType == BSDF::EDiffuseReflection) {
 			/* Hit a diffuse material - do a direct photon map visualization. */
-			if (rRec.type & RadianceQueryRecord::EIndirectRadiance) 
-				Li += m_globalPhotonMap->estimateIrradianceFiltered(its.p, 
+			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)
+				LiSurf += m_globalPhotonMap->estimateIrradianceFiltered(its.p, 
 					its.shFrame.n, m_globalLookupRadius, m_globalLookupSize)
 						* bsdf->getDiffuseReflectance(its) * INV_PI;
 			if (rRec.type & RadianceQueryRecord::ECausticRadiance && m_causticPhotonMap.get())
-				Li += m_causticPhotonMap->estimateIrradianceFiltered(its.p,
+				LiSurf += m_causticPhotonMap->estimateIrradianceFiltered(its.p,
 					its.shFrame.n, m_causticLookupRadius, m_causticLookupSize)
 							* bsdf->getDiffuseReflectance(its) * INV_PI;
 		} else if ((bsdfType & BSDF::EDelta) != 0
@@ -355,7 +369,7 @@ public:
 
 					rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadiance);
 					recursiveRay = Ray(its.p, its.toWorld(bRec.wo), ray.time);
-					Li += m_parentIntegrator->Li(recursiveRay, rRec2) * bsdfVal;
+					LiSurf += m_parentIntegrator->Li(recursiveRay, rRec2) * bsdfVal;
 				}
 			}
 		} else if (rRec.depth == 1 && (bsdf->getType() & BSDF::EGlossy)) {
@@ -367,19 +381,19 @@ public:
 			Float weight = 1 / (Float) m_glossySamples;
 
 			for (int i=0; i<m_glossySamples; ++i) {
-				BSDFQueryRecord bRec(rRec, its);
+				BSDFQueryRecord bRec(its);
 				Spectrum bsdfVal = bsdf->sampleCos(bRec, sampleArray[i]);
 
 				rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadianceNoEmission);
 				recursiveRay = Ray(its.p, its.toWorld(bRec.wo), ray.time);
-				Li += m_parentIntegrator->Li(recursiveRay, rRec2) * bsdfVal * weight;
+				LiSurf += m_parentIntegrator->Li(recursiveRay, rRec2) * bsdfVal * weight;
 			}
 		} else {
-			Li += m_globalPhotonMap->estimateRadianceFiltered(its,
+			LiSurf += m_globalPhotonMap->estimateRadianceFiltered(its,
 				m_globalLookupRadius, m_globalLookupSize);
 		}
 
-		return Li * LiVol;
+		return LiSurf * transmittance + LiMedium;
 	}
 	
 	std::string toString() const {
@@ -400,19 +414,18 @@ private:
 	ref<PhotonMap> m_causticPhotonMap;
 	ref<PhotonMap> m_volumePhotonMap;
 	ref<ParallelProcess> m_proc;
+	ref<BeamRadianceEstimator> m_bre;
 	SampleIntegrator *m_parentIntegrator;
-	int m_globalPhotonMapID, m_causticPhotonMapID, m_volumePhotonMapID;
+	int m_globalPhotonMapID, m_causticPhotonMapID, m_breID;
 	size_t m_globalPhotons, m_causticPhotons, m_volumePhotons;
-	int m_globalMinPhotons, m_globalLookupSize;
-	int m_causticMinPhotons, m_causticLookupSize;
-	int m_volumeMinPhotons, m_volumeLookupSize;
+	int m_globalLookupSize, m_causticLookupSize, m_volumeLookupSize;
 	Float m_globalLookupRadiusRel, m_globalLookupRadius;
 	Float m_causticLookupRadiusRel, m_causticLookupRadius;
-	Float m_volumeLookupRadiusRel, m_volumeLookupRadius;
 	int m_granularity;
 	int m_directSamples, m_glossySamples;
 	int m_rrDepth;
 	int m_maxDepth, m_maxSpecularDepth;
+	bool m_gatherLocally;
 };
 
 MTS_IMPLEMENT_CLASS_S(PhotonMapIntegrator, false, SampleIntegrator)

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -40,25 +40,25 @@ public:
 	/**
 	 * Construct a new image block of the requested size
 	 *
-	 * @param maxBlockSize
+	 * \param maxBlockSize
 	 *    Upper bound on the horizontal & vertical size of a block
 	 *
-	 * @param borderSize
+	 * \param borderSize
 	 *    Size of the border region storing contributions that
 	 *    affect neighboring blocks due to the use of image 
 	 *    reconstruction filters
 	 *
-	 * @param supportWeights
+	 * \param supportWeights
 	 *    Should per-pixel weights be supported? (required for
 	 *    image reconstruction filters)
 	 *
-	 * @param supportAlpha
+	 * \param supportAlpha
 	 *    Should per-pixel alpha values be supported?
 	 *
-	 * @param supportSnapshot
+	 * \param supportSnapshot
 	 *    Should the snapshot feature be supported?
 	 *
-	 * @param supportStatistics
+	 * \param supportStatistics
 	 *    Should per-pixel variance estimates be supported?
 	 */
 	ImageBlock(const Vector2i &maxBlockSize, int borderSize, 
@@ -70,11 +70,6 @@ public:
 
 	/// Add another image block to this one
 	void add(const ImageBlock *block);
-
-	/* WorkResult interface */
-	void load(Stream *stream);
-	void save(Stream *stream) const;
-	std::string toString() const;
 
 	/**
 	 * \brief Add a sample to the image block -- returns false if the 
@@ -313,6 +308,17 @@ public:
 	 * special flags etc. associated with this block)
 	 */
 	inline void setExtra(int32_t value) { extra = value; }
+
+	// ======================================================================
+	//! @{ \name Implementation of the WorkResult interface
+	// ======================================================================
+
+	void load(Stream *stream);
+	void save(Stream *stream) const;
+	std::string toString() const;
+
+	//! @}
+	// ======================================================================
 
 	MTS_DECLARE_CLASS()
 protected:

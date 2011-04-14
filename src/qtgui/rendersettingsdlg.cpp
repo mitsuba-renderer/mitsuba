@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -19,6 +19,7 @@
 #include "rendersettingsdlg.h"
 #include "ui_rendersettingsdlg.h"
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/fresolver.h>
 
 /* ====================== Some helper routines ====================== */
 
@@ -182,17 +183,10 @@ void RenderSettingsDialog::onTreeSelectionChange(const QItemSelection &selected,
 
 void RenderSettingsDialog::update() {
 	int index = ui->integratorBox->currentIndex();
-	Properties integratorProps;
+	Properties integratorProps, samplerProps;
 
-	int sampleCount = -1;
-	if (sender() == ui->samplerBox) {
-		Properties samplerProps;
+	if (sender() == ui->samplerBox)
 		m_samplerNode->putProperties(samplerProps);
-		if (samplerProps.hasProperty("sampleCount"))
-			sampleCount = samplerProps.getInteger("sampleCount");
-		else if (samplerProps.hasProperty("resolution"))
-			sampleCount = (int) std::pow((Float) samplerProps.getInteger("resolution"), (Float) 2);
-	}
 
 	if (sender() == ui->integratorBox)
 		m_integratorNode->putProperties(integratorProps);
@@ -223,23 +217,19 @@ void RenderSettingsDialog::update() {
 		m_aiNode = m_model->updateClass(m_aiNode, "", "");
 	}
 
-	if (sender() == ui->samplerBox && sampleCount != -1) {
-		std::string samplerPlugin = getPluginName(ui->samplerBox);
-		for (int i=0; i<m_samplerNode->childCount(); ++i) {
-			TreeItem *treeItem = m_samplerNode->child(i);
-			if (treeItem->getName() == "sampleCount") {
-				treeItem->setValue(sampleCount);
-			} else if (treeItem->getName() == "resolution") {
-				treeItem->setValue((int) std::sqrt((Float) sampleCount));
-			}
-		}
-	}
-
 	if (sender() == ui->integratorBox) {
 		for (int i=0; i<m_integratorNode->childCount(); ++i) {
 			TreeItem *treeItem = m_integratorNode->child(i);
 			if (integratorProps.hasProperty(treeItem->getName().toStdString())) 
 				m_integratorNode->setProperty(treeItem->getName().toStdString(), integratorProps);
+		}
+	}
+	
+	if (sender() == ui->samplerBox) {
+		for (int i=0; i<m_samplerNode->childCount(); ++i) {
+			TreeItem *treeItem = m_samplerNode->child(i);
+			if (samplerProps.hasProperty(treeItem->getName().toStdString())) 
+				m_samplerNode->setProperty(treeItem->getName().toStdString(), samplerProps);
 		}
 	}
 
@@ -301,23 +291,30 @@ void RenderSettingsDialog::load(const SceneContext *ctx) {
 
 void RenderSettingsDialog::apply(SceneContext *ctx) {
 	Scene *scene = new Scene(ctx->scene);
-	const PinholeCamera *oldCamera = static_cast<const PinholeCamera *>(scene->getCamera());
+	PinholeCamera *oldCamera = static_cast<PinholeCamera *>(scene->getCamera());
 	Properties filmProps = oldCamera->getFilm()->getProperties();
 	ref<PluginManager> pluginMgr = PluginManager::getInstance();
+
+	/* Temporarily set up a new file resolver */
+	ref<Thread> thread = Thread::getThread();
+	ref<FileResolver> oldResolver = thread->getFileResolver();
+	ref<FileResolver> newResolver = oldResolver->clone();
+	newResolver->addPath(fs::complete(scene->getSourceFile()).parent_path());
+	thread->setFileResolver(newResolver);
 
 	/* Configure the reconstruction filter */
 	Properties rFilterProps(getPluginName(ui->rFilterBox));
 	if (m_rFilterNode != NULL) 
 		m_rFilterNode->putProperties(rFilterProps);
 	ref<ReconstructionFilter> rFilter = static_cast<ReconstructionFilter *> 
-		(pluginMgr->createObject(ReconstructionFilter::m_theClass, rFilterProps));
+		(pluginMgr->createObject(MTS_CLASS(ReconstructionFilter), rFilterProps));
 
 	/* Configure the sampler */
 	Properties samplerProps(getPluginName(ui->samplerBox));
 	if (m_samplerNode != NULL) 
 		m_samplerNode->putProperties(samplerProps);
 	ref<Sampler> sampler = static_cast<Sampler *> 
-		(pluginMgr->createObject(Sampler::m_theClass, samplerProps));
+		(pluginMgr->createObject(MTS_CLASS(Sampler), samplerProps));
 	sampler->configure();
 	
 	/* Configure the integrator */
@@ -325,7 +322,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	if (m_integratorNode != NULL) 
 		m_integratorNode->putProperties(integratorProps);
 	ref<Integrator> integrator = static_cast<Integrator *> 
-		(pluginMgr->createObject(Integrator::m_theClass, integratorProps));
+		(pluginMgr->createObject(MTS_CLASS(Integrator), integratorProps));
 	integrator->configure();
 
 	if (ui->icBox->isChecked()) {
@@ -333,7 +330,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 		if (m_icNode != NULL) 
 			m_icNode->putProperties(icProps);
 		ref<Integrator> ic = static_cast<Integrator *> 
-			(pluginMgr->createObject(Integrator::m_theClass, icProps));
+			(pluginMgr->createObject(MTS_CLASS(Integrator), icProps));
 		ic->addChild("", integrator);
 		ic->configure();
 		integrator = ic;
@@ -344,7 +341,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 		if (m_aiNode != NULL) 
 			m_aiNode->putProperties(aiProps);
 		ref<Integrator> ai = static_cast<Integrator *> 
-			(pluginMgr->createObject(Integrator::m_theClass, aiProps));
+			(pluginMgr->createObject(MTS_CLASS(Integrator), aiProps));
 		ai->addChild("", integrator);
 		ai->configure();
 		integrator = ai;
@@ -356,7 +353,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	int width = resolution[0].toInt(), height = resolution[1].toInt();
 	filmProps.setInteger("width", width, false);
 	filmProps.setInteger("height", height, false);
-	ref<Film> film = static_cast<Film *> (pluginMgr->createObject(Film::m_theClass, filmProps));
+	ref<Film> film = static_cast<Film *> (pluginMgr->createObject(MTS_CLASS(Film), filmProps));
 	film->addChild("", rFilter);
 	film->configure();
 	if (width != ctx->framebuffer->getWidth() ||
@@ -369,11 +366,12 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	/* Configure the camera */
 	Properties cameraProps = oldCamera->getProperties();
 	ref<PinholeCamera> camera = static_cast<PinholeCamera *> 
-		(pluginMgr->createObject(Camera::m_theClass, cameraProps));
+		(pluginMgr->createObject(MTS_CLASS(Camera), cameraProps));
 	camera->addChild("", sampler);
 	camera->addChild("", film);
 	camera->setViewTransform(oldCamera->getViewTransform());
 	camera->setFov(oldCamera->getFov());
+	camera->setMedium(oldCamera->getMedium());
 	camera->configure();
 	
 	/* Update the scene with the newly constructed elements */
@@ -383,6 +381,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	scene->configure();
 
 	ctx->scene = scene;
+	thread->setFileResolver(oldResolver);
 }
 
 RenderSettingsDialog::~RenderSettingsDialog() {

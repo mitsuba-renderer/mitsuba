@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -21,54 +21,61 @@
 
 MTS_NAMESPACE_BEGIN
 	
-inline BSDFQueryRecord::BSDFQueryRecord(RadianceQueryRecord &rRec, 
-	const Intersection &its): rRec(&rRec), 
-	its(its), wi(its.wi), quantity(ERadiance),
-	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
-}
-
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its)
-	: rRec(NULL), its(its), wi(its.wi), quantity(ERadiance),
+	: its(its), wi(its.wi), quantity(ERadiance),
 	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
 }
 
-inline BSDFQueryRecord::BSDFQueryRecord(RadianceQueryRecord &rRec, 
-		const Intersection &its, const Vector &wo)
-	: rRec(&rRec), its(its), wi(its.wi), wo(wo), quantity(ERadiance),
-	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
-}
-	
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wo)	  
-	: rRec(NULL), its(its), wi(its.wi), wo(wo), quantity(ERadiance),
+	: its(its), wi(its.wi), wo(wo), quantity(ERadiance),
     typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
 }
 	
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wi, const Vector &wo) 
-  : rRec(NULL), its(its), wi(wi), wo(wo), quantity(ERadiance),
+  : its(its), wi(wi), wo(wo), quantity(ERadiance),
   typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
 }
 
 inline bool Intersection::hasSubsurface() const {
 	return shape->hasSubsurface();
 }
+
 inline bool Intersection::isLuminaire() const {
 	return shape->isLuminaire();
 }
 
 inline Spectrum Intersection::Le(const Vector &d) const {
-	return shape->getLuminaire()->Le(
-		LuminaireSamplingRecord(*this, d));
+	return shape->getLuminaire()->Le(ShapeSamplingRecord(*this), d);
 }
 
 inline Spectrum Intersection::LoSub(const Scene *scene, const Vector &d) const {
 	return shape->getSubsurface()->Lo(scene, *this, d);
 }
-	
+
 inline const BSDF *Intersection::getBSDF(const RayDifferential &ray) {
 	const BSDF *bsdf = shape->getBSDF();
-	if (bsdf->usesRayDifferentials() && !hasUVPartials)
+
+	if (bsdf && bsdf->usesRayDifferentials() && !hasUVPartials)
 			computePartials(ray);
 	return bsdf;
+}
+
+inline bool Intersection::isMediumTransition() const {
+	return shape->isMediumTransition();
+}
+
+inline const Medium *Intersection::getTargetMedium(const Vector &d) const {
+	if (dot(d, geoFrame.n) > 0)
+		return shape->getExteriorMedium();
+	else
+		return shape->getInteriorMedium();
+}
+	
+inline const Medium *Intersection::getTargetMedium(Float cosTheta) const {
+	if (cosTheta > 0)
+		return shape->getExteriorMedium();
+	else
+		return shape->getInteriorMedium();
 }
 
 inline LuminaireSamplingRecord::LuminaireSamplingRecord(const Intersection &its, const Vector &dir) {
@@ -77,14 +84,19 @@ inline LuminaireSamplingRecord::LuminaireSamplingRecord(const Intersection &its,
 	d = dir;
 	luminaire = its.shape->getLuminaire();
 }
-	
+
 inline bool RadianceQueryRecord::rayIntersect(const RayDifferential &ray) {
 	/* Only search for an intersection if this was explicitly requested */
 	if (type & EIntersection) {
 		scene->rayIntersect(ray, its);
-		if (type & EOpacity)
-			alpha = its.isValid() ? 1 : (1 - scene->getAttenuation(
-				Ray(ray.o, ray.d, 0, its.t, ray.time)).average());
+		if (type & EOpacity) {
+			if (its.isValid())
+				alpha = 1.0f;
+			else if (medium == NULL)
+				alpha = 0.0f;
+			else
+				alpha = 1-medium->getTransmittance(ray).average();
+		}
 		if (type & EDistance)
 			dist = its.t;
 		type ^= EIntersection; // unset the intersection bit

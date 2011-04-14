@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -56,7 +56,7 @@ public:
 	void unbind();
 
 	/// Return all bound triangle meshes
-	inline const std::vector<const TriMesh *> &getMeshes() const { return m_meshes; }
+	inline const std::vector<std::pair<const TriMesh *, Transform> > &getMeshes() const { return m_meshes; }
 
 	/// Return the shadow cube map for debugging purposes
 	inline GPUTexture *getShadowMap() { return m_shadowMap; }
@@ -271,7 +271,8 @@ private:
 	VPLProgramConfiguration m_targetConfig;
 	ref<GPUProgram> m_backgroundProgram;
 	VPLDependencyNode m_backgroundDependencies;
-	std::vector<const TriMesh *> m_meshes;
+	std::vector<std::pair<const TriMesh *, Transform> > m_meshes;
+	std::vector<std::pair<const GPUGeometry *, Transform> > m_drawList;
 };
 
 MTS_NAMESPACE_END

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -40,7 +40,9 @@
 #define WGL_STENCIL_BITS_ARB                                    0x2023
 #define WGL_DOUBLE_BUFFER_ARB                                   0x2011
 #define WGL_FULL_ACCELERATION_ARB                               0x2027
-typedef BOOL (APIENTRY * wglChoosePixelFormatARBProc) (HDC hdc, const int *piAttribIList, const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
+
+typedef BOOL (APIENTRY * wglChoosePixelFormatARBProc) (HDC hdc, const int *piAttribIList, 
+		const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
 #endif
 
 MTS_NAMESPACE_BEGIN
@@ -65,8 +67,14 @@ LONG WINAPI WGLDevice::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		case WM_CREATE:
 			device->initPixelFormat(hWnd);
 			break;
-		case WM_SIZE: 
-			device->m_size = Vector2i(LOWORD(lParam), HIWORD(lParam));
+		case WM_SIZE: {
+				Vector2i size = Vector2i(LOWORD(lParam), HIWORD(lParam));
+				if (device->m_size != size) {
+					device->m_size = size;
+					deviceEvent.setType(EResizeEvent);
+					device->fireDeviceEvent(deviceEvent);
+				}
+			}
 			break;
 		case WM_PAINT:
 			BeginPaint(hWnd, &ps);
@@ -274,10 +282,14 @@ void WGLDevice::init(Device *other) {
 		   (windows is soo bugged!), the second pass creates the actual 
 		   window with the matching pixel format
 		*/
+		int extra = 0;
+		if (m_resizeAllowed) 
+			extra = WS_SIZEBOX | WS_MAXIMIZEBOX;
+
 		m_hwnd = CreateWindow(
 			session->m_wndClassName.c_str(),
 			m_title.c_str(),
-			m_fullscreen ? WS_POPUP : (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX),
+			m_fullscreen ? WS_POPUP : (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | extra),
 			CW_USEDEFAULT,
 			CW_USEDEFAULT,
 			getSize().x, getSize().y,
@@ -633,7 +645,6 @@ void WGLDevice::setGrab(bool grab) {
 	m_grab = grab;
 	showCursor(!grab);
 }
-
 
 void WGLDevice::shutdown() {
 	Device::shutdown();

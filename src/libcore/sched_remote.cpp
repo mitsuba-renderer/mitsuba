@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -334,7 +334,7 @@ StreamBackend::StreamBackend(const std::string &thrName, Scheduler *scheduler,
 }
 
 StreamBackend::~StreamBackend() {
-	if (m_stream->getClass()->derivesFrom(SocketStream::m_theClass)) {
+	if (m_stream->getClass()->derivesFrom(MTS_CLASS(SocketStream))) {
 		SocketStream *sstream = static_cast<SocketStream *>(m_stream.get());
 		Log(EInfo, "Closing connection to %s - received %i KB / sent %i KB",
 			sstream->getPeer().c_str(), (int) (sstream->getReceivedBytes() / 1024),
@@ -346,7 +346,7 @@ void StreamBackend::run() {
 	if (m_detach)
 		detach();
 
-	if (m_stream->getClass()->derivesFrom(SocketStream::m_theClass)) {
+	if (m_stream->getClass()->derivesFrom(MTS_CLASS(SocketStream))) {
 		SocketStream *sstream = static_cast<SocketStream *>(m_stream.get());
 		Log(EInfo, "Incoming connection from %s", sstream->getPeer().c_str());
 	}

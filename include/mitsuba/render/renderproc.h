@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -26,19 +26,29 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Parallel process for rendering with sampling-based integrators. Splits
- * an image into square pixel regions, which can be processed independently.
+ * \brief Parallel process for rendering with sampling-based integrators.
+ *
+ * Splits an image into independent rectangular pixel regions, which are
+ * then rendered in parallel.
+ *
+ * \sa SampleIntegrator
  */
 class MTS_EXPORT_RENDER BlockedRenderProcess : public BlockedImageProcess {
 public:
 	BlockedRenderProcess(const RenderJob *parent, RenderQueue *queue, 
 		int blockSize);
 
-	/* ParallelProcess interface */
+	// ======================================================================
+	//! @{ \name Implementation of the ParallelProcess interface
+	// ======================================================================
+
 	ref<WorkProcessor> createWorkProcessor() const;
 	void processResult(const WorkResult *result, bool cancelled);
 	void bindResource(const std::string &name, int id);
 	EStatus generateWork(WorkUnit *unit, int worker);
+	
+	//! @}
+	// ======================================================================
 
 	MTS_DECLARE_CLASS()
 protected:

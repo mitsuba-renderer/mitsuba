@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -21,17 +21,35 @@
 
 #include <mitsuba/mitsuba.h>
 #include <zlib.h>
-#define ZSTREAM_BUFSIZE 16384
+
+/// Buffer size used to communicate with zlib. The larger the better.
+#define ZSTREAM_BUFSIZE 32768
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Transparent compression/decompression stream based on ZLIB.
+/**
+ * \brief Transparent compression/decompression stream based on \c zlib.
+ *
+ * This class transparently decompresses and compresses reads and writes
+ * to a nested stream, respectively. 
+ *
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE ZStream : public Stream {
 public:
+	// =============================================================
+	//! @{ \name Constructors
+	// =============================================================
+
 	/// Create a new compression stream
 	ZStream(Stream *childStream, int level = Z_DEFAULT_COMPRESSION);
+
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Compression stream-specific features
+	// =============================================================
 
 	/// Return the child stream of this compression stream
 	inline const Stream *getChildStream() const { return m_childStream.get(); }
@@ -39,7 +57,13 @@ public:
 	/// Return the child stream of this compression stream
 	inline Stream *getChildStream() { return m_childStream; }
 
-	/* Stream implementation */
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Implementation of the Stream interface
+	// =============================================================
+
 	void read(void *ptr, size_t size);
 	void write(const void *ptr, size_t size);
 	void setPos(size_t pos);
@@ -49,6 +73,9 @@ public:
 	void flush();
 	bool canWrite() const;
 	bool canRead() const;
+
+	//! @}
+	// =============================================================
 
 	/// Return a string representation
 	std::string toString() const;

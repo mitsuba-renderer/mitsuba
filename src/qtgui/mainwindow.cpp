@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -21,6 +21,7 @@
 #include "rendersettingsdlg.h"
 #include "previewsettingsdlg.h"
 #include "programsettingsdlg.h"
+#include "sceneinfodlg.h"
 #include "sceneloader.h"
 #include "logwidget.h"
 #include "navdlg.h"
@@ -141,7 +142,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->glView->setInvertMouse(settings.value("invertMouse", false).toBool());
 	ui->glView->setMouseSensitivity(settings.value("mouseSensitivity", 3).toInt());
 	ui->glView->setNavigationMode((ENavigationMode) settings.value("navigationMode", 
-		EFlythrough).toInt());
+		EArcBall).toInt());
 	m_searchPaths = settings.value("searchPaths", QStringList()).toStringList();
 	m_blockSize = settings.value("blockSize", 32).toInt();
 	m_listenPort = settings.value("listenPort", MTS_DEFAULT_PORT).toInt();
@@ -496,6 +497,28 @@ void MainWindow::on_actionShowKDTree_triggered() {
 		ui->glView->resetPreview();
 }
 
+void MainWindow::on_actionSceneDescription_triggered() {
+	int currentIndex = ui->tabBar->currentIndex();
+	if (currentIndex == -1)
+		return;
+	SceneContext *context= m_context[currentIndex];
+	SceneInformationDialog *dialog = new SceneInformationDialog(this,
+		context->scene);
+	QDesktopWidget *desktop = QApplication::desktop();
+	dialog->move(QPoint((desktop->width() - dialog->width()) / 2, (desktop->height() - dialog->height())/2));
+	connect(dialog, SIGNAL(finished(int)), this, SLOT(onSceneInformationClose(int)));
+	m_currentChild = dialog;
+	// prevent a tab drawing artifact on Qt/OSX
+	m_activeWindowHack = true;
+	dialog->show();
+	qApp->processEvents();
+	m_activeWindowHack = false;
+}
+
+void MainWindow::onSceneInformationClose(int reason) {
+	m_currentChild = NULL;
+}
+
 void MainWindow::changeEvent(QEvent *e) {
     QMainWindow::changeEvent(e);
     switch (e->type()) {
@@ -700,6 +723,7 @@ void MainWindow::updateUI() {
 	ui->actionAdjustSize->setEnabled(hasTab);
 	ui->actionShowKDTree->setEnabled(hasTab);
 	ui->actionShowKDTree->setChecked(hasTab && context->showKDTree);
+	ui->actionSceneDescription->setEnabled(hasTab);
 #if !defined(__OSX__)
 	ui->actionPreviewSettings->setEnabled(!fallback && hasTab);
 #else
@@ -863,6 +887,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 			return;
 		}
 	}
+	ui->glView->shutdown();
 	QMainWindow::closeEvent(event);
 	m_logWidget->hide();
 	Logger *logger = Thread::getThread()->getLogger();
@@ -1033,7 +1058,7 @@ void MainWindow::on_actionSettings_triggered() {
 	size_t workerCount = sched->getWorkerCount();
 	for (size_t i=0; i<workerCount; ++i) {
 		Worker *worker = sched->getWorker(i);
-		if (worker->getClass()->derivesFrom(LocalWorker::m_theClass))
+		if (worker->getClass()->derivesFrom(MTS_CLASS(LocalWorker)))
 			localWorkers.push_back(worker);
 	}
 
@@ -1369,7 +1394,6 @@ void MainWindow::onSaveAsDialogClose(int reason) {
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;
 	if (reason == QDialog::Accepted) {
-		m_currentChild = NULL;
         QString fileName = dialog->selectedFiles().value(0);
 		settings.setValue("fileDialogState", dialog->saveState());
 		saveScene(this, context, fileName);
@@ -1649,15 +1673,22 @@ QString ServerConnection::toString() const {
 
 SceneContext::SceneContext(SceneContext *ctx) {
 	if (ctx->scene) {
+		/* Temporarily set up a new file resolver */
+		ref<Thread> thread = Thread::getThread();
+		ref<FileResolver> oldResolver = thread->getFileResolver();
+		ref<FileResolver> newResolver = oldResolver->clone();
+		newResolver->addPath(fs::complete(ctx->scene->getSourceFile()).parent_path());
+		thread->setFileResolver(newResolver);
+
 		scene = new Scene(ctx->scene);
 		ref<PluginManager> pluginMgr = PluginManager::getInstance();
 		ref<PinholeCamera> oldCamera = static_cast<PinholeCamera *>(ctx->scene->getCamera());
 		ref<PinholeCamera> camera = static_cast<PinholeCamera *> 
-			(pluginMgr->createObject(Camera::m_theClass, oldCamera->getProperties()));
+			(pluginMgr->createObject(MTS_CLASS(Camera), oldCamera->getProperties()));
 		ref<Sampler> sampler = static_cast<Sampler *> 
-			(pluginMgr->createObject(Sampler::m_theClass, ctx->scene->getSampler()->getProperties()));
+			(pluginMgr->createObject(MTS_CLASS(Sampler), ctx->scene->getSampler()->getProperties()));
 		ref<Film> film = static_cast<Film *> 
-			(pluginMgr->createObject(Film::m_theClass, oldCamera->getFilm()->getProperties()));
+			(pluginMgr->createObject(MTS_CLASS(Film), oldCamera->getFilm()->getProperties()));
 		const Integrator *oldIntegrator = ctx->scene->getIntegrator();
 		ref<Integrator> currentIntegrator;
 
@@ -1665,7 +1696,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 		std::vector<Integrator *> integratorList;
 		while (oldIntegrator != NULL) {
 			ref<Integrator> integrator = static_cast<Integrator *> (pluginMgr->createObject(
-				Integrator::m_theClass, oldIntegrator->getProperties()));
+				MTS_CLASS(Integrator), oldIntegrator->getProperties()));
 			if (depth++ == 0) 
 				scene->setIntegrator(integrator);
 			else 
@@ -1679,7 +1710,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 			integratorList[i]->configure();
 
 		ref<ReconstructionFilter> rfilter = static_cast<ReconstructionFilter *> 
-			(pluginMgr->createObject(ReconstructionFilter::m_theClass, oldCamera->getFilm()->
+			(pluginMgr->createObject(MTS_CLASS(ReconstructionFilter), oldCamera->getFilm()->
 				getReconstructionFilter()->getProperties()));
 
 		rfilter->configure();
@@ -1696,6 +1727,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 		scene->configure();
 		sceneResID = ctx->sceneResID;
 		Scheduler::getInstance()->retainResource(sceneResID);
+		thread->setFileResolver(oldResolver);
 	} else {
 		sceneResID = -1;
 		renderJob = NULL;
@@ -1726,6 +1758,8 @@ SceneContext::SceneContext(SceneContext *ctx) {
 	diffuseSources = ctx->diffuseSources;
 	showKDTree = ctx->showKDTree;
 	shownKDTreeLevel = ctx->shownKDTreeLevel;
+	selectedShape = ctx->selectedShape;
+	selectionMode = ctx->selectionMode;
 }
 
 SceneContext::~SceneContext() {

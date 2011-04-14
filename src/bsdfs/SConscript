@@ -12,5 +12,6 @@ plugins += env.SharedLibrary('#plugins/microfacet', ['microfacet.cpp'])
 plugins += env.SharedLibrary('#plugins/roughglass', ['roughglass.cpp'])
 plugins += env.SharedLibrary('#plugins/roughmetal', ['roughmetal.cpp'])
 plugins += env.SharedLibrary('#plugins/composite', ['composite.cpp'])
+plugins += env.SharedLibrary('#plugins/twosided', ['twosided.cpp'])
 
 Export('plugins')

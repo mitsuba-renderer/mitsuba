@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -39,11 +39,9 @@ GLEWContextStruct *glewGetContext() {
 MTS_NAMESPACE_BEGIN
 
 GLRenderer::GLRenderer(Session *session)
- : Renderer(session) {
-}
+ : Renderer(session) { }
 
-GLRenderer::~GLRenderer() {
-}
+GLRenderer::~GLRenderer() { }
 
 void GLRenderer::init(Device *device, Renderer *other) {
 	Renderer::init(device, other);
@@ -207,6 +205,10 @@ GPUProgram *GLRenderer::createGPUProgram(const std::string &name) {
 	
 GPUSync *GLRenderer::createGPUSync() {
 	return new GLSync();
+}
+
+void GLRenderer::reconfigure(const Device *device) {
+	glViewport(0, 0, device->getSize().x, device->getSize().y);
 }
 
 void GLRenderer::clear() {
@@ -527,13 +529,22 @@ void GLRenderer::endDrawingMeshes() {
 	}
 }
 	
-void GLRenderer::drawAll() {
+void GLRenderer::drawAll(const std::vector<std::pair<const GPUGeometry *, Transform> > &geo) {
+	GLfloat temp[16];
 	GLRenderer::beginDrawingMeshes(true);
-	std::map<const TriMesh *, GPUGeometry *>::iterator it;
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	std::vector<std::pair<const GPUGeometry *, Transform> >::const_iterator it;
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
-		for (it = m_geometry.begin(); it != m_geometry.end(); ++it) {
-			const TriMesh *mesh = static_cast<const TriMesh *>((*it).first);
-			const GLGeometry *geometry = static_cast<const GLGeometry *>((*it).second);
+		for (it = geo.begin(); it != geo.end(); ++it) {
+			const GLGeometry *geometry = static_cast<const GLGeometry *>(it->first);
+			const TriMesh *mesh = geometry->getTriMesh();
+			int pos=0;
+			for (int j=0; j<4; j++)
+				for (int i=0; i<4; i++)
+					temp[pos++] = (GLfloat) it->second.getMatrix().m[i][j];
+			glLoadMatrixf(temp);
+
 			int stride = geometry->m_stride;
 			if (stride != m_stride) {
 				glVertexFormatNV(3, GL_FLOAT, stride);
@@ -566,11 +577,17 @@ void GLRenderer::drawAll() {
 						finish();
 				}
 			}
+			glPopMatrix();
 		}
 	} else {
-		for (it = m_geometry.begin(); it != m_geometry.end(); ++it) {
-			const TriMesh *mesh = static_cast<const TriMesh *>((*it).first);
-			const GLGeometry *geometry = static_cast<const GLGeometry *>((*it).second);
+		for (it = geo.begin(); it != geo.end(); ++it) {
+			const GLGeometry *geometry = static_cast<const GLGeometry *>(it->first);
+			const TriMesh *mesh = geometry->getTriMesh();
+			int pos=0;
+			for (int j=0; j<4; j++)
+				for (int i=0; i<4; i++)
+					temp[pos++] = (GLfloat) it->second.getMatrix().m[i][j];
+			glLoadMatrixf(temp);
 
 			glBindBuffer(GL_ARRAY_BUFFER, geometry->m_vertexID);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry->m_indexID);
@@ -599,9 +616,11 @@ void GLRenderer::drawAll() {
 						finish();
 				}
 			}
+			glPopMatrix();
 		}
 	}
 	GLRenderer::endDrawingMeshes();
+	glPopMatrix();
 }
 
 void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
@@ -734,6 +753,51 @@ void GLRenderer::blitQuad(bool flipVertically) {
 	glVertex3f(scrSize.x, scrSize.y, zDepth);
 	glTexCoord2f(0.0f, flipVertically ? 0.0f : 1.0f);
 	glVertex3f(0.0f, scrSize.y, zDepth);
+	glEnd();
+}
+
+void GLRenderer::drawCircle(const Point &center, 
+		const Normal &normal, Float radius) {
+	int nDiscr = 80;
+	Vector X, Y;
+	Float stepSize = 2*M_PI/nDiscr;
+	coordinateSystem(normal, X, Y);
+
+	glBegin(GL_LINE_LOOP);
+	for (int i=0; i<nDiscr; ++i) {
+		Float sinTheta = std::sin(i * stepSize) * radius;
+		Float cosTheta = std::cos(i * stepSize) * radius;
+		Point p = center + X*cosTheta + Y*sinTheta;
+		glVertex3f(p.x, p.y, p.z);
+	}
+	glEnd();
+}
+
+void GLRenderer::drawArc(const Point &center,
+		const Point &p1, const Point &p2, bool shorterPiece) {
+	if (p1 == p2 || p1 == center || p2 == center)
+		return;
+	Vector X = normalize(p1 - center), Y = p2 - center;
+	Float radius = Y.length(); Y /= radius;
+	Float angle = unitAngle(X, Y);
+
+	Y = normalize(Y - dot(Y, X) * X);
+
+	if (!shorterPiece) {
+		angle = 2*M_PI - angle;
+		Y = -Y;
+	}
+
+	int nDiscr = 80;
+	Float stepSize = angle/(nDiscr-1);
+	glBegin(GL_LINE_STRIP);
+	for (int i=0; i<nDiscr; ++i) {
+		Float sinTheta = std::sin(i * stepSize) * radius;
+		Float cosTheta = std::cos(i * stepSize) * radius;
+
+		Point p = center + X*cosTheta + Y*sinTheta;
+		glVertex3f(p.x, p.y, p.z);
+	}
 	glEnd();
 }
 
@@ -916,6 +980,23 @@ void GLRenderer::setDepthTest(bool value) {
 void GLRenderer::setColorMask(bool value) {
 	GLboolean flag = value ? GL_TRUE : GL_FALSE;
 	glColorMask(flag, flag, flag, flag);
+}
+
+void GLRenderer::pushTransform(const Transform &trafo) {
+	const Matrix4x4 &matrix = trafo.getMatrix();
+	GLfloat temp[16];
+	int pos=0;
+	for (int j=0; j<4; j++)
+		for (int i=0; i<4; i++)
+			temp[pos++] = (GLfloat) matrix.m[i][j];
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glMultMatrixf(temp);
+}
+	
+void GLRenderer::popTransform() {
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
 }
 
 void GLRenderer::flush() {

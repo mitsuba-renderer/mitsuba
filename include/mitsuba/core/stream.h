@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -67,7 +67,9 @@ public:
 	/// Return a string representation
 	virtual std::string toString() const;
 
-	/// @{ \name Abstract methods to be implemented by subclasses
+	// ======================================================================
+	/// @{ \name Abstract methods that need to be implemented by subclasses
+	// ======================================================================
 
 	/// Read a specified amount of data from the stream
 	virtual void read(void *ptr, size_t size) = 0;
@@ -97,8 +99,11 @@ public:
 	virtual bool canRead() const = 0;
 
 	/// @}
+	// ======================================================================
 	
-	/// @{ \name Convenience functions
+	// ======================================================================
+	/// @{ \name Convenience functions with automatic endianness conversion
+	// ======================================================================
 
 	/// Skip the given number of bytes
 	void skip(size_t amount);
@@ -139,9 +144,12 @@ public:
 	/// Write an array of signed ints (64 bit) to the stream
 	void writeLongArray(const int64_t *values, size_t size);
 
-	/// Write an unsigned int (32 bit) to the stream
+	/// Write an unsigned int (64 bit) to the stream
 	void writeULong(uint64_t value);
-	
+
+	/// Write a size value to the stream
+	void writeSize(size_t value) { writeULong((uint64_t) value); }
+
 	/// Write an array of unsigned ints (64 bit) to the stream
 	void writeULongArray(const uint64_t *values, size_t size);
 
@@ -225,6 +233,9 @@ public:
 
 	/// Read an unsigned int (64 bit) from the stream
 	uint64_t readULong();
+	
+	/// Read a size value from the stream
+	size_t readSize() { return (size_t) readULong(); }
 
 	/// Read an array of unsigned ints (64 bit) from the stream
 	void readULongArray(uint64_t *dst, size_t size);

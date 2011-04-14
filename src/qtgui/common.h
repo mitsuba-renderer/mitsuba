@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -33,8 +33,15 @@ enum EConnectionType {
 };
 
 enum ENavigationMode {
-	EFlythroughFixedYaw = 0,
+	EArcBall = 0,
+	EFlythroughFixedYaw,
 	EFlythrough
+};
+
+enum ESelectionMode {
+	ENothing = 0,
+	EShape,
+	EScene
 };
 
 namespace mitsuba {
@@ -184,13 +191,16 @@ struct SceneContext {
 	bool diffuseReceivers;
 	bool showKDTree;
 	int shownKDTreeLevel;
+	ESelectionMode selectionMode;
+	const Shape *selectedShape;
 
 	/* Preview state */
 	std::deque<VPL> vpls;
 	PreviewQueueEntry previewBuffer;
 
-	SceneContext() : scene(NULL), sceneResID(-1), renderJob(NULL) {
-	}
+	SceneContext() : scene(NULL), sceneResID(-1), 
+		renderJob(NULL), selectionMode(ENothing),
+		selectedShape(NULL) { }
 
 	/// Detect the path length
 	int detectPathLength() const;
