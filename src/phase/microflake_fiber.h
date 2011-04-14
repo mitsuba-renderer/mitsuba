@@ -16,20 +16,30 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__MICROFLAKE_SIGMA_T_H)
-#define __MICROFLAKE_SIGMA_T_H
+#if !defined(__MICROFLAKE_FIBER_DIST_H)
+#define __MICROFLAKE_FIBER_DIST_H
 
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/brent.h>
-#include <boost/math/special_functions/erf.hpp>
 #include <boost/bind.hpp>
+#include <boost/math/special_functions/erf.hpp>
 
 MTS_NAMESPACE_BEGIN
 
-#define SIGMA_T_RANGE_MIN 4e-08
-#define SIGMA_T_RANGE_MAX 4
-#define SIGMA_T_ELEMENTS  100
-#define SIGMA_T_COEFFS    10
+FINLINE Float mts_erf(Float arg) {
+	#if defined(__GNUC__) && defined(SINGLE_PRECISION)
+		return erff(arg);
+	#elif defined(__GNUC__) && defined(DOUBLE_PRECISION)
+		return erf(arg);
+	#else
+		return boost::math::erf<Float>(arg);
+	#endif
+}
+
+#define FIBERDIST_STDDEV_MIN        4e-08
+#define FIBERDIST_STDDEV_MAX        4
+#define FIBERDIST_SIGMA_T_ELEMENTS  100
+#define FIBERDIST_SIGMA_T_COEFFS    10
 
 /**
  * Each row of this table table stores an expansion of \sigma_t in terms of
@@ -37,11 +47,11 @@ MTS_NAMESPACE_BEGIN
  * fiber axis and the incident direction. The standard deviation of the
  * underlying distribution increases from row to row using a nonlinear 
  * mapping to capture the `interesting' parts more efficiently (see
- * \ref sigmaT_fiberGaussian())
+ * \ref sigmaT_fiberSigmaT())
  *
  * The implementation here has an average absolute error of 3.17534e-05.
  */
-const double fiberGaussianCoeffs[SIGMA_T_ELEMENTS][SIGMA_T_COEFFS] = {
+const double fiberSigmaTCoeffs[FIBERDIST_SIGMA_T_ELEMENTS][FIBERDIST_SIGMA_T_COEFFS] = {
 	{ 2.5037347588631811e-08,   6.3661860705430207e-01,   1.7827351092236654e-05,  -1.3015084365974872e-04,   5.2848718115683369e-04,  -1.2810825925271274e-03,   1.8970200528656278e-03,  -1.6818874867112754e-03,   8.1991128831759852e-04,  -1.6898472595983094e-04 },
 	{ 4.0059757909494120e-07,   6.3660112034736627e-01,   2.8523763553955916e-04,  -2.0824136415171779e-03,   8.4557955473769653e-03,  -2.0497323170502568e-02,   3.0352323203715059e-02,  -2.6910202150020268e-02,   1.3118581833396092e-02,  -2.7037558688078889e-03 },
 	{ 2.0280252492606374e-06,   6.3652534713591225e-01,   1.4440155345667449e-03,  -1.0542219099960448e-02,   4.2807465147063795e-02,  -1.0376769900017280e-01,   1.5365863698661997e-01,  -1.3623289910560743e-01,   6.6412820861387445e-02,  -1.3687764171763206e-02 },
@@ -144,27 +154,27 @@ const double fiberGaussianCoeffs[SIGMA_T_ELEMENTS][SIGMA_T_COEFFS] = {
 	{ 4.9740122861160618e-01,   4.9788891152147130e-06,   3.7427454517739989e-03,   1.2662117029549336e-03,  -3.7139444921194809e-03,   2.9874687143092160e-03,   6.6568975580594270e-03,  -1.6932579956119298e-02,   1.3976501563774946e-02,  -4.0922961870819563e-03 }
 };
 
-double sigmaT_fiberGaussian(double stddev, double sinTheta) {
+double sigmaT_fiberDist(double stddev, double sinTheta) {
 	/* Undo the nonlinear mapping */
-	const double factor = SIGMA_T_ELEMENTS / std::pow(SIGMA_T_RANGE_MAX, 0.25);
+	const double factor = FIBERDIST_SIGMA_T_ELEMENTS / std::pow(FIBERDIST_STDDEV_MAX, 0.25);
 	double pos = std::pow(stddev, 0.25) * factor - 1;
 
 	/* Clamp to the supported parameter range */
-	pos = std::min(std::max(0.0, pos), (double) (SIGMA_T_ELEMENTS-1));
+	pos = std::min(std::max(0.0, pos), (double) (FIBERDIST_SIGMA_T_ELEMENTS-1));
 
 	/* Linearly interpolate coefficients using \c alpha */
 	int idx0 = (int) std::floor(pos), idx1 = (int) std::ceil(pos);
 	double alpha = pos - idx0, base = 1, result = 0;
 
 	SAssert(
-		idx0 >= 0 && idx0 < SIGMA_T_ELEMENTS &&
-		idx1 >= 0 && idx1 < SIGMA_T_ELEMENTS
+		idx0 >= 0 && idx0 < FIBERDIST_SIGMA_T_ELEMENTS &&
+		idx1 >= 0 && idx1 < FIBERDIST_SIGMA_T_ELEMENTS
 	);
 
-	/* Compute the expansion */
-	for (int i=0; i<SIGMA_T_COEFFS; ++i) {
-		result += base * ((1-alpha) * fiberGaussianCoeffs[idx0][i]
-				+ alpha * fiberGaussianCoeffs[idx1][i]);
+	/* Evaluate the expansion */
+	for (int i=0; i<FIBERDIST_SIGMA_T_COEFFS; ++i) {
+		result += base * ((1-alpha) * fiberSigmaTCoeffs[idx0][i]
+				+ alpha * fiberSigmaTCoeffs[idx1][i]);
 		base *= sinTheta;
 	}
 
@@ -176,56 +186,106 @@ static StatsCounter brentSolves("Micro-flake model",
 static StatsCounter avgBrentFunEvals("Micro-flake model",
 		"Average Brent solver function evaluations", EAverage);
 
-struct GaussianFiberDistribution {
+class GaussianFiberDistribution {
 public:
+	inline GaussianFiberDistribution() {}
+
 	inline GaussianFiberDistribution(Float stddev) : m_stddev(stddev) {
-		m_normalization = 1/(std::sqrt(2*M_PI) * m_stddev * 
-				boost::math::erf<Float>(1/(SQRT_TWO * m_stddev)));
-		m_c1 = 1.0f/boost::math::erf<Float>(1/(SQRT_TWO * m_stddev));
+		m_normalization = 1/(std::pow(2*M_PI, 3.0f/2.0f) * m_stddev * 
+				mts_erf(1/(SQRT_TWO * m_stddev)));
+		m_c1 = 1.0f/mts_erf(1/(SQRT_TWO * m_stddev));
+
+		if (stddev < FIBERDIST_STDDEV_MIN || stddev > FIBERDIST_STDDEV_MAX)
+			SLog(EError, "Standard deviation parameter is out of range (must "
+				"be in [%f, %f])!", FIBERDIST_STDDEV_MIN, FIBERDIST_STDDEV_MAX);
+
+		/* Determine expansion coefficients of sigma_t for a fixed stddev */
+		Float pos = std::pow(stddev / FIBERDIST_STDDEV_MAX, 0.25) * 
+			FIBERDIST_SIGMA_T_ELEMENTS - 1;
+
+		pos = std::min(std::max((Float) 0, pos), (Float) (FIBERDIST_SIGMA_T_ELEMENTS-1));
+
+		int idx0 = (int) std::floor(pos), idx1 = (int) std::ceil(pos);
+		Float alpha = pos - idx0;
+
+		for (int i=0; i<FIBERDIST_SIGMA_T_COEFFS; ++i)
+			m_coeffs[i] = (Float) (((1-alpha) * fiberSigmaTCoeffs[idx0][i]
+				+ alpha * fiberSigmaTCoeffs[idx1][i]));
 	}
 
 	/// Evaluate \sigma_t as a function of \cos\theta
-	Float sigmaT(Float cosTheta) const {
-		return sigmaT_fiberGaussian(m_stddev, 
-			std::sqrt(std::max((Float) 0, 1-cosTheta*cosTheta)));
+	inline Float sigmaT(Float cosTheta) const {
+		Float sinTheta = std::sqrt(std::max(
+				(Float) 0, 1-cosTheta*cosTheta)),
+			  base = 1.0f, result = 0.0f;
+
+		/* Evaluate the expansion */
+		for (int i=0; i<FIBERDIST_SIGMA_T_COEFFS; ++i) {
+			result += base * m_coeffs[i];
+			base *= sinTheta;
+		}
+
+		return result;
 	}
 
-	/// Evaluate the longitudinal density as a function of \cos\theta
-	Float pdfCosTheta(Float cosTheta) const {
-		return std::exp(-cosTheta*cosTheta/(2*m_stddev*m_stddev)) * m_normalization;
+	/// Evaluate the density as a function of \cos\theta
+	inline Float pdfCosTheta(Float cosTheta) const {
+		return std::exp(-cosTheta*cosTheta 
+			/ (2*m_stddev*m_stddev)) * m_normalization;
 	}
 
-	/// Evaluate the longitudinal CDF as a function of \cos\theta
-	inline Float cdf(Float theta) const {
-		return 0.5f * (1.0f - 
-			boost::math::erf<Float>(std::cos(theta)/(SQRT_TWO * m_stddev))*m_c1);
+	/// Evaluate the density as a function of direction
+	inline Float pdf(const Vector &d) const {
+		return std::exp(-d.z*d.z
+			/ (2*m_stddev*m_stddev)) * m_normalization;
 	}
 
 	/**
-	 * Apply the inversion method to sample \theta given 
-	 * a uniformly distributed \xi on [0, 1]
+	 * \brief Apply the inversion method to sample \cos\theta given 
+	 * a uniformly distributed r.v. \xi on [0, 1]
 	 */
-	Float sample(Float xi) const {
+	Vector sample(const Point2 &sample) const {
 		BrentSolver brentSolver(100, 1e-6f);
 		BrentSolver::Result result = brentSolver.solve(
-			boost::bind(&GaussianFiberDistribution::cdfFunctor, this, xi, _1), 0, M_PI);
+			boost::bind(&GaussianFiberDistribution::cdfFunctor, 
+				this, sample.x, _1), -1, 1);
 		SAssert(result.success);
 		avgBrentFunEvals.incrementBase();
 		++brentSolves;
-		return result.x;
-	}
-private:
-	Float cdfFunctor(Float theta, Float xi) const {
-		++avgBrentFunEvals;
-		return cdf(theta)-xi;
+
+		Float cosTheta = result.x, 
+			  sinTheta = std::sqrt(std::max((Float) 0, 1-cosTheta*cosTheta)),
+			  phi = 2 * M_PI * sample.y,
+			  sinPhi = std::sin(phi), cosPhi = std::cos(phi);
+
+		return Vector(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
 	}
 
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "GaussianFiberDistribution[stddev="
+			<< m_stddev << "]";
+		return oss.str();
+	}
+protected:
+	/// Evaluate the longitudinal CDF as a function of \cos\theta
+	inline Float cdf(Float cosTheta) const {
+		return 0.5f * (1.0f - 
+			mts_erf(cosTheta / (SQRT_TWO * m_stddev)) * m_c1);
+	}
+
+	Float cdfFunctor(Float xi, Float cosTheta) const {
+		++avgBrentFunEvals;
+		return cdf(cosTheta)-xi;
+	}
+
+protected:
 	Float m_stddev;
 	Float m_normalization;
 	Float m_c1;
+	Float m_coeffs[FIBERDIST_SIGMA_T_COEFFS];
 };
-
 
 MTS_NAMESPACE_END
 
-#endif /* __MICROFLAKE_SIGMA_T_H */
+#endif /* __MICROFLAKE_FIBER_DIST_H */

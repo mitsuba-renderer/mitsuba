@@ -616,10 +616,13 @@ Point2 squareToTriangle(const Point2 &sample) {
 }
 
 Point2 toSphericalCoordinates(const Vector &v) {
-	return Point2(
+	Point2 result(
 		std::acos(v.z),
 		std::atan2(v.y, v.x)
 	);
+	if (result.y < 0)
+		result.y += 2*M_PI;
+	return result;
 }
 
 Point2 squareToDiskConcentric(const Point2 &sample) {

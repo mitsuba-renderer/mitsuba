@@ -16,16 +16,24 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/core/chisquare.h>
 #include <mitsuba/render/phase.h>
 #include <mitsuba/render/sampler.h>
-#include "microflake.h"
+#include "microflake_fiber.h"
 
 MTS_NAMESPACE_BEGIN
 
 class MicroflakePhaseFunction : public PhaseFunction {
 public:
-	MicroflakePhaseFunction(const Properties &props) 
-		: PhaseFunction(props) {
+	MicroflakePhaseFunction(const Properties &props) : PhaseFunction(props) {
+		m_fiberDistr = GaussianFiberDistribution(props.getFloat("stddev"));
+		ChiSquareTest test(7);
+		test.fill(
+			boost::bind(&GaussianFiberDistribution::sample, m_fiberDistr, _1),
+			boost::bind(&GaussianFiberDistribution::pdf, m_fiberDistr, _1)
+		);
+		test.dumpTables("test.m");
+		test.runTest(1);
 	}
 
 	MicroflakePhaseFunction(Stream *stream, InstanceManager *manager) 
@@ -60,10 +68,16 @@ public:
 	}
 
 	std::string toString() const {
-		return "MicroflakePhaseFunction[]";
+		std::ostringstream oss;
+		oss << "MicroflakePhaseFunction[" << endl
+			<< "   fiberDistr = " << indent(m_fiberDistr.toString()) << endl
+			<< "]";
+		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
+private:
+	GaussianFiberDistribution m_fiberDistr;
 };
 
 

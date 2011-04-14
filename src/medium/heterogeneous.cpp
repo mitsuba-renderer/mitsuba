@@ -356,7 +356,7 @@ public:
 
 					x -= fx/dfx;
 
-					if (x <= a || x >= b || dfx == 0) 
+					if (EXPECT_NOT_TAKEN(x <= a || x >= b || dfx == 0)) 
 						x = 0.5f * (b + a);
 
 					/* Integrated version of the above Lagrange polynomial */
