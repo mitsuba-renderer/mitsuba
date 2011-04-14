@@ -22,7 +22,9 @@
 #include <mitsuba/render/medium.h>
 #include <mitsuba/render/sampler.h>
 
-#define MICROFLAKE_STATISTICS 1
+/// Generate a few statistics related to the implementation?
+// #define MICROFLAKE_STATISTICS 1
+
 #include "microflake_fiber.h"
 
 MTS_NAMESPACE_BEGIN
@@ -71,7 +73,8 @@ public:
 	Float f(const PhaseFunctionQueryRecord &pRec) const {
 		if (pRec.mRec.orientation.isZero()) {
 			/* Switch to uniform sampling */
-			return 1/(4*M_PI);
+//			return 1/(4*M_PI);
+			return 0.0f;
 		}
 
 		Frame frame(pRec.mRec.orientation);
@@ -90,8 +93,8 @@ public:
 	inline Float sample(PhaseFunctionQueryRecord &pRec, Sampler *sampler) const {
 		if (pRec.mRec.orientation.isZero()) {
 			/* Switch to uniform sampling */
-			pRec.wo = squareToSphere(sampler->next2D());
-			return 1.0f;
+			//pRec.wo = squareToSphere(sampler->next2D());
+			return 0.0f;
 		}
 
 		Frame frame(pRec.mRec.orientation);

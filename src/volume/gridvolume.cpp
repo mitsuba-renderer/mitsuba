@@ -270,14 +270,37 @@ public:
 		    y2 >= m_res.y || z2 >= m_res.z) 
 			return Vector(0.0f);
 
-		const Float fx = p.x-x1, fy = p.y-y1, fz = p.z-z1;
+		const Float fx = p.x - x1, fy = p.y - y1, fz = p.z - z1;
 		const float3 *vectorData = (float3 *) m_data;
 
-		/* Nearest neighbor */
-		return m_volumeToWorld(vectorData[
-		   (((fz < .5) ? z1 : z2)  * m_res.y +
-		    ((fy < .5) ? y1 : y2)) * m_res.x +
-		    ((fx < .5) ? x1 : x2)].toVector());
+		#if 0
+			/* Nearest neighbor */
+			Vector value = vectorData[
+				(((fz < .5) ? z1 : z2)  * m_res.y +
+				((fy < .5) ? y1 : y2)) * m_res.x +
+				((fx < .5) ? x1 : x2)].toVector();
+		#else
+			Float _fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
+			const float3
+				&d000 = vectorData[(z1*m_res.y + y1)*m_res.x + x1],
+				&d001 = vectorData[(z1*m_res.y + y1)*m_res.x + x2],
+				&d010 = vectorData[(z1*m_res.y + y2)*m_res.x + x1],
+				&d011 = vectorData[(z1*m_res.y + y2)*m_res.x + x2],
+				&d100 = vectorData[(z2*m_res.y + y1)*m_res.x + x1],
+				&d101 = vectorData[(z2*m_res.y + y1)*m_res.x + x2],
+				&d110 = vectorData[(z2*m_res.y + y2)*m_res.x + x1],
+				&d111 = vectorData[(z2*m_res.y + y2)*m_res.x + x2];
+
+			Vector value = (((d000*_fx + d001*fx)*_fy +
+					(d010*_fx + d011*fx)*fy)*_fz +
+					((d100*_fx + d101*fx)*_fy +
+					(d110*_fx + d111*fx)*fy)*fz).toVector();
+		#endif
+
+		if (!value.isZero())
+			return normalize(m_volumeToWorld(value));
+		else
+			return Vector(0.0f);
 	}
 	
 	bool supportsFloatLookups() const {

@@ -30,7 +30,7 @@ MTS_NAMESPACE_BEGIN
 #define HETVOL_EARLY_EXIT 1
 
 /// Generate a few statistics related to the implementation?
-#define HETVOL_STATISTICS 1
+// #define HETVOL_STATISTICS 1
 
 #if defined(HETVOL_STATISTICS)
 static StatsCounter avgNewtonIterations("Heterogeneous volume", 
