@@ -22,7 +22,6 @@
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/quad.h>
 #include <mitsuba/core/timer.h>
-#include <mitsuba/core/random.h>
 #include <boost/bind.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
 
@@ -42,10 +41,16 @@ MTS_NAMESPACE_BEGIN
  * integrated over the area of each bin. Comparing the actual and reference
  * bin counts yields the desired test statistic.
  *
- * Given a BSDF/phase function with the following interface
+ * Given a probability distribution with the following interface
+ *
  * <code>
  * class MyDistribution {
- *     Vector sample(const Point2 &uniformSample) const;
+ *     // Sample a (optionally weighted) direction. A non-unity weight
+ *     // in the return value is needed when the sampling distribution
+ *     // doesn't exactly match the implementation in pdf()
+ *     std::pair<Vector, Float> generateSample() const;
+ *
+ *     /// Compute the probability density for the specified direction
  *     Float pdf(const Vector &direction) const;
  * };
  * </code>
@@ -58,7 +63,7 @@ MTS_NAMESPACE_BEGIN
  *
  * // Initialize the tables used by the chi-square test
  * chiSqr.fill(
- *    boost::bind(&MyDistribution::sample, myDistrInstance, _1),
+ *    boost::bind(&MyDistribution::generateSample, myDistrInstance),
  *    boost::bind(&MyDistribution::pdf, myDistrInstance, _1)
  * );
  *
@@ -85,7 +90,7 @@ public:
 	 *
 	 * \param sampleCount
 	 *    Number of samples to be used when computing the bin
-	 *    values. The default is \c thetaBins*phiBins*1000
+	 *    values. The default is \c thetaBins*phiBins*5000
 	 */
 	ChiSquareTest(int thetaBins = 10, int phiBins = 0, size_t sampleCount = 0)
 	    	: m_thetaBins(thetaBins), m_phiBins(phiBins), m_sampleCount(sampleCount) {
@@ -93,7 +98,7 @@ public:
 			m_phiBins = 2*m_thetaBins;
 		if (m_sampleCount == 0)
 			m_sampleCount = m_thetaBins * m_phiBins * 1000;
-		m_table = new uint32_t[m_thetaBins*m_phiBins];
+		m_table = new Float[m_thetaBins*m_phiBins];
 		m_refTable = new Float[m_thetaBins*m_phiBins];
 	}
 
@@ -110,10 +115,9 @@ public:
 	 * on how to invoke this function
 	 */
 	void fill(
-		const boost::function<Vector (const Point2 &)> &sampleFn,
+		const boost::function<std::pair<Vector, Float>()> &sampleFn,
 		const boost::function<Float (const Vector &)> &pdfFn) {
-		ref<Random> random = new Random();
-		memset(m_table, 0, m_thetaBins*m_phiBins*sizeof(uint32_t));
+		memset(m_table, 0, m_thetaBins*m_phiBins*sizeof(Float));
 
 		SLog(EInfo, "Accumulating " SIZE_T_FMT " samples into a %ix%i"
 				" contingency table", m_sampleCount, m_thetaBins, m_phiBins);
@@ -121,15 +125,15 @@ public:
 
 		ref<Timer> timer = new Timer();
 		for (size_t i=0; i<m_sampleCount; ++i) {
-			Point2 sample(random->nextFloat(), random->nextFloat());
-			Point2 sphCoords = toSphericalCoordinates(sampleFn(sample));
+			std::pair<Vector, Float> sample = sampleFn();
+			Point2 sphCoords = toSphericalCoordinates(sample.first);
 
 			int thetaBin = std::min(std::max(0,
 				floorToInt(sphCoords.x * factor.x)), m_thetaBins-1);
 			int phiBin = std::min(std::max(0,
 				floorToInt(sphCoords.y * factor.y)), m_phiBins-1);
 
-			++m_table[thetaBin * m_phiBins + phiBin];
+			m_table[thetaBin * m_phiBins + phiBin] += sample.second;
 		}
 		SLog(EInfo, "Done, took %i ms.", timer->getMilliseconds());
 		factor = Point2(M_PI / m_thetaBins, (2*M_PI) / m_phiBins);
@@ -139,7 +143,7 @@ public:
 		Float min[2], max[2];
 		size_t idx = 0;
 
-		NDIntegrator integrator(1, 2, 50000, 0, 1e-6f);
+		NDIntegrator integrator(1, 2, 100000, 0, 1e-6f);
 		Float maxError = 0, integral = 0;
 		for (int i=0; i<m_thetaBins; ++i) {
 			min[0] = i * factor.x;
@@ -269,7 +273,7 @@ protected:
 private:
 	int m_thetaBins, m_phiBins;
 	size_t m_sampleCount;
-	uint32_t *m_table;
+	Float *m_table;
 	Float *m_refTable;
 };
 

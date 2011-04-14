@@ -72,7 +72,7 @@ public:
 	 * \brief Evaluate the phase function for an outward-pointing 
 	 * pair of directions (wi, wo)
 	 */
-	virtual Spectrum f(const PhaseFunctionQueryRecord &pRec) const = 0;
+	virtual Float f(const PhaseFunctionQueryRecord &pRec) const = 0;
 
 	/**
 	 * \brief Importance sample the phase function. 
@@ -83,7 +83,7 @@ public:
 	 *     Weight value equal to the throughput divided by 
 	 *     the probability of the sampled direction.
 	 */
-	virtual Spectrum sample(PhaseFunctionQueryRecord &pRec, 
+	virtual Float sample(PhaseFunctionQueryRecord &pRec, 
 		Sampler *sampler) const = 0;
 
 	/**
@@ -95,7 +95,7 @@ public:
 	 * \return
 	 *     Phase function value for the direction pair (wi, wo)
 	 */
-	virtual Spectrum sample(PhaseFunctionQueryRecord &pRec,
+	virtual Float sample(PhaseFunctionQueryRecord &pRec,
 		Float &pdf, Sampler *sampler) const = 0;
 
 	/**

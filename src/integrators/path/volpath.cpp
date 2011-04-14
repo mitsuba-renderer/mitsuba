@@ -81,9 +81,9 @@ public:
 				if (rRec.type & RadianceQueryRecord::EDirectMediumRadiance && 
 					scene->sampleAttenuatedLuminaire(mRec.p, ray.time, rRec.medium, lRec, rRec.nextSample2D())) {
 					/* Evaluate the phase function */
-					Spectrum phaseVal = phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
+					Float phaseVal = phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 
-					if (!phaseVal.isZero()) {
+					if (phaseVal != 0) {
 						/* Calculate prob. of having sampled that direction using 
 						   phase function sampling */
 						Float phasePdf = (lRec.luminaire->isIntersectable() 
@@ -102,8 +102,8 @@ public:
 
 				Float phasePdf;
 				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
-				Spectrum phaseVal = phase->sample(pRec, phasePdf, rRec.sampler);
-				if (phaseVal.isZero())
+				Float phaseVal = phase->sample(pRec, phasePdf, rRec.sampler);
+				if (phaseVal == 0)
 					break;
 				phaseVal /= phasePdf;
 

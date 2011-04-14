@@ -89,8 +89,8 @@ public:
 				/* ==================================================================== */
 
 				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
-				Spectrum phaseVal = phase->sample(pRec, rRec.sampler);
-				if (phaseVal.isZero())
+				Float phaseVal = phase->sample(pRec, rRec.sampler);
+				if (phaseVal == 0)
 					break;
 
 				/* Trace a ray in this direction */

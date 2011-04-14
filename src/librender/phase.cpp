@@ -15,7 +15,7 @@ std::string PhaseFunctionQueryRecord::toString() const {
 }
 
 Float PhaseFunction::pdf(const PhaseFunctionQueryRecord &pRec) const {
-	return f(pRec)[0];
+	return f(pRec);
 }
 
 MTS_IMPLEMENT_CLASS(PhaseFunction, true, ConfigurableObject)

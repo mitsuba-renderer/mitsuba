@@ -50,7 +50,7 @@ public:
 		stream->writeFloat(m_g);
 	}
 
-	inline Spectrum sample(PhaseFunctionQueryRecord &pRec,
+	inline Float sample(PhaseFunctionQueryRecord &pRec,
 			Sampler *sampler) const {
 		Point2 sample(sampler->next2D());
 
@@ -71,21 +71,19 @@ public:
 			cosTheta);
 		pRec.wo = Frame(-pRec.wi).toWorld(dir);
 
-		return Spectrum(1.0f);
+		return 1.0f;
 	}
 
-	Spectrum sample(PhaseFunctionQueryRecord &pRec,
+	Float sample(PhaseFunctionQueryRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
 		HGPhaseFunction::sample(pRec, sampler);
-
-		pdf = HGPhaseFunction::f(pRec)[0];
-		return Spectrum(pdf);
+		return HGPhaseFunction::f(pRec);
 	}
 
 
-	Spectrum f(const PhaseFunctionQueryRecord &pRec) const {
-		return Spectrum(1/(4*M_PI) * (1 - m_g*m_g) /
-			std::pow(1.f + m_g*m_g - 2.f * m_g * dot(-pRec.wi, pRec.wo), (Float) 1.5f));
+	Float f(const PhaseFunctionQueryRecord &pRec) const {
+		return 1/(4*M_PI) * (1 - m_g*m_g) /
+			std::pow(1.f + m_g*m_g - 2.f * m_g * dot(-pRec.wi, pRec.wo), (Float) 1.5f);
 	}
 
 	std::string toString() const {

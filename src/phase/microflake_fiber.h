@@ -181,10 +181,10 @@ double sigmaT_fiberDist(double stddev, double sinTheta) {
 	return result;
 }
 
-static StatsCounter brentSolves("Micro-flake model",
-		"Brent solver calls");
+#if defined(MICROFLAKE_STATISTICS)
 static StatsCounter avgBrentFunEvals("Micro-flake model",
 		"Average Brent solver function evaluations", EAverage);
+#endif
 
 class GaussianFiberDistribution {
 public:
@@ -250,8 +250,10 @@ public:
 			boost::bind(&GaussianFiberDistribution::cdfFunctor, 
 				this, sample.x, _1), -1, 1);
 		SAssert(result.success);
-		avgBrentFunEvals.incrementBase();
-		++brentSolves;
+
+		#if defined(MICROFLAKE_STATISTICS)
+			avgBrentFunEvals.incrementBase();
+		#endif
 
 		Float cosTheta = result.x, 
 			  sinTheta = std::sqrt(std::max((Float) 0, 1-cosTheta*cosTheta)),
@@ -275,7 +277,9 @@ protected:
 	}
 
 	Float cdfFunctor(Float xi, Float cosTheta) const {
-		++avgBrentFunEvals;
+		#if defined(MICROFLAKE_STATISTICS)
+			++avgBrentFunEvals;
+		#endif
 		return cdf(cosTheta)-xi;
 	}
 
