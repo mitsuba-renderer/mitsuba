@@ -25,7 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t lookupSize) {
-	size_t reducedLookupSize = std::sqrt(lookupSize);
+	size_t reducedLookupSize = (size_t) std::sqrt((Float) lookupSize);
 	Float sizeFactor = (Float) lookupSize/ (Float) reducedLookupSize;
 
 	m_photonCount = pmap->getPhotonCount();
