@@ -200,7 +200,7 @@ public:
 				"be in [%f, %f])!", FIBERDIST_STDDEV_MIN, FIBERDIST_STDDEV_MAX);
 
 		/* Determine expansion coefficients of sigma_t for a fixed stddev */
-		Float pos = std::pow(stddev / FIBERDIST_STDDEV_MAX, 0.25) * 
+		Float pos = std::pow(stddev / FIBERDIST_STDDEV_MAX, (Float) 0.25) * 
 			FIBERDIST_SIGMA_T_ELEMENTS - 1;
 
 		pos = std::min(std::max((Float) 0, pos), (Float) (FIBERDIST_SIGMA_T_ELEMENTS-1));
