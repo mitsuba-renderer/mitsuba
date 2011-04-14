@@ -33,7 +33,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \ingroup libcore
  */
-class BrentSolver {
+class MTS_EXPORT_CORE BrentSolver {
 public:
 	/// Return value of \ref BrentSolver::solve()
 	struct Result {
