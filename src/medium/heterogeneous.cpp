@@ -99,6 +99,8 @@ public:
 		if (m_albedo.get() == NULL)
 			Log(EError, "No albedo specified!");
 		m_aabb = m_densities->getAABB();
+		m_directionallyVaryingCoefficients = 
+			m_phaseFunction->needsDirectionallyVaryingCoefficients();
 
 		if (m_stepSize == 0) {
 			m_stepSize = std::min(
@@ -111,6 +113,10 @@ public:
 				Log(EError, "Unable to infer a suitable step size, please specify one "
 						"manually using the 'stepSize' parameter.");
 		}
+		
+		if (m_directionallyVaryingCoefficients && m_orientations.get() == NULL)
+			Log(EError, "Cannot use anisotropic phase function: "
+				"did not specify a particle orientation field!");
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
@@ -186,8 +192,8 @@ public:
 		#endif
 
 		/* Perform lookups at the first and last node */
-		Float integratedDensity = m_densities->lookupFloat(p) 
-			+ m_densities->lookupFloat(pLast);
+		Float integratedDensity = lookupDensity(p, ray.d)
+			+ lookupDensity(pLast, ray.d);
 
 		#if defined(HETVOL_EARLY_EXIT)
 			const Float stopAfterDensity = -std::log(Epsilon);
@@ -199,7 +205,7 @@ public:
 
 		Float m = 4;
 		for (uint32_t i=1; i<nSteps; ++i) {
-			integratedDensity += m * m_densities->lookupFloat(p);
+			integratedDensity += m * lookupDensity(p, ray.d);
 			m = 6 - m;
 
 			#if defined(HETVOL_STATISTICS)
@@ -305,7 +311,7 @@ public:
 		Vector fullStep = ray.d * stepSize,
 			   halfStep = fullStep * .5f;
 
-		Float node1 = m_densities->lookupFloat(p);
+		Float node1 = lookupDensity(p, ray.d);
 
 		if (ray.mint == mint)
 			densityAtMinT = node1 * m_densityMultiplier;
@@ -317,8 +323,8 @@ public:
 		#endif
 
 		for (uint32_t i=0; i<nSteps; ++i) {
-			Float node2 = m_densities->lookupFloat(p + halfStep),
-				  node3 = m_densities->lookupFloat(p + fullStep),
+			Float node2 = lookupDensity(p + halfStep, ray.d),
+				  node3 = lookupDensity(p + fullStep, ray.d),
 				  newDensity = integratedDensity + multiplier * 
 						(node1+node2*4+node3);
 			#if defined(HETVOL_STATISTICS)
@@ -437,9 +443,9 @@ public:
 		mRec.transmittance = Spectrum(expVal);
 		mRec.pdfFailure = expVal;
 		mRec.pdfSuccess = expVal * 
-			m_densities->lookupFloat(ray(ray.maxt)) * m_densityMultiplier;
+			lookupDensity(ray(ray.maxt), ray.d) * m_densityMultiplier;
 		mRec.pdfSuccessRev = expVal * 
-			m_densities->lookupFloat(ray(ray.mint)) * m_densityMultiplier;
+			lookupDensity(ray(ray.mint), ray.d) * m_densityMultiplier;
 	}
 
 	bool isHomogeneous() const {
@@ -459,12 +465,22 @@ public:
 	}
 
 	MTS_DECLARE_CLASS()
-private:
+protected:
+	inline Float lookupDensity(const Point &p, const Vector &d) const {
+		Float density = m_densities->lookupFloat(p);
+		if (m_directionallyVaryingCoefficients) {
+			Float cosTheta = dot(d, m_orientations->lookupVector(p));
+			density *= m_phaseFunction->sigmaDir(cosTheta);
+		}
+		return density;
+	}
+protected:
 	ref<VolumeDataSource> m_densities;
 	ref<VolumeDataSource> m_albedo;
 	ref<VolumeDataSource> m_orientations;
 	Float m_stepSize;
 	AABB m_aabb;
+	bool m_directionallyVaryingCoefficients;
 };
 
 MTS_IMPLEMENT_CLASS_S(HeterogeneousMedium, false, Medium)

@@ -133,7 +133,9 @@ public:
 
 	bool needsDirectionallyVaryingCoefficients() const { return true; }
 
-	Float coeffMultiplier(Float cosTheta) const {
+	Float sigmaDir(Float cosTheta) const {
+		// Scaled such that replacing an isotropic phase function with an
+		// isotropic microflake distribution does not cause changes
 		return 2 * m_fiberDistr.sigmaT(cosTheta);
 	}
 

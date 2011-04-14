@@ -125,7 +125,7 @@ public:
 	 *    Angle between the axis of rotational symmetry and the
 	 *    direction of propagation
 	 */
-	virtual Float coeffMultiplier(Float cosTheta) const;
+	virtual Float sigmaDir(Float cosTheta) const;
 
 	/// Return a string representation
 	virtual std::string toString() const = 0;

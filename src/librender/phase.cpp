@@ -22,8 +22,8 @@ bool PhaseFunction::needsDirectionallyVaryingCoefficients() const {
 	return false;
 }
 	
-Float PhaseFunction::coeffMultiplier(Float cosTheta) const {
-	Log(EError, "coeffMultiplier(): Not implemented! (this is not"
+Float PhaseFunction::sigmaDir(Float cosTheta) const {
+	Log(EError, "sigmaDir(): Not implemented! (this is not"
 		" an anisotropic medium)");
 	return 0.0f;
 }
