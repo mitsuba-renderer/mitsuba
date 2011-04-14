@@ -434,6 +434,9 @@ public:
 		mRec.pdfSuccessRev = expVal * densityAtMinT;
 		mRec.transmittance = Spectrum(expVal);
 
+		if (mRec.pdfSuccess == 0)
+			return false;
+
 		return success;
 	}
 

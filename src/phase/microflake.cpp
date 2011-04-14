@@ -71,11 +71,8 @@ public:
 	}
 
 	Float f(const PhaseFunctionQueryRecord &pRec) const {
-		if (pRec.mRec.orientation.isZero()) {
-			/* Switch to uniform sampling */
-//			return 1/(4*M_PI);
+		if (pRec.mRec.orientation.isZero()) 
 			return 0.0f;
-		}
 
 		Frame frame(pRec.mRec.orientation);
 		Vector wi = frame.toLocal(pRec.wi);
@@ -91,11 +88,8 @@ public:
 	}
 
 	inline Float sample(PhaseFunctionQueryRecord &pRec, Sampler *sampler) const {
-		if (pRec.mRec.orientation.isZero()) {
-			/* Switch to uniform sampling */
-			//pRec.wo = squareToSphere(sampler->next2D());
+		if (pRec.mRec.orientation.isZero()) 
 			return 0.0f;
-		}
 
 		Frame frame(pRec.mRec.orientation);
 		Vector wi = frame.toLocal(pRec.wi);

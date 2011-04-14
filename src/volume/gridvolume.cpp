@@ -26,10 +26,10 @@
 // Uncomment to enable nearest-neighbor direction interpolation
 //#define VINTERP_NEAREST_NEIGHBOR
 
-// Uncomment to enable linear direction interpolation (usually bad)
+// Uncomment to enable linear direction interpolation (usually a bad idea)
 //#define VINTERP_LINEAR
 
-// Uncomment to enable structure tensor-based direction interpolation (best, but slow)
+// Uncomment to enable structure tensor-based direction interpolation (best, but slowest)
 #define VINTERP_STRUCTURE_TENSOR
 
 // Number of power iteration steps used to find the dominant direction
@@ -45,9 +45,22 @@ MTS_NAMESPACE_BEGIN
  *
  * Bytes 1-3   :  ASCII Bytes 'V', 'O', and 'L' 
  * Byte  4     :  Version identifier (currently 3)
- * Bytes 5-8   :  Encoding identifier using a double word. Currently,
- *                only one setting is supported:
- *                    1 => Dense single-precision representation
+ * Bytes 5-8   :  Encoding identifier using a double word
+ *
+ *                    1 => Dense float32-based representation
+ *
+ *                    2 => Dense float16-based representation 
+ *                         NOT YET SUPPORTED BY THIS IMPLEMENTATION
+ *
+ *                    3 => Dense uint8-based representation
+ *                         The range 0..255 will be mapped to 0..1.
+ *                         ONLY SUPPORTED FOR DENSITY (1 CHANNEL)
+ *                         VOLUMES BY THIS IMPLEMENTATION
+ *
+ *                    4 => Dense quantized directions
+ *                         The directions are stored in spherical coordinates,
+ *                         with a total storage cost of 16 bit per entry.
+ *
  * Bytes 9-12  :  Number of cells along the X axis (double word)
  * Bytes 13-16 :  Number of cells along the Y axis (double word)
  * Bytes 17-20 :  Number of cells along the Z axis (double word)
@@ -65,6 +78,13 @@ MTS_NAMESPACE_BEGIN
  */
 class GridDataSource : public VolumeDataSource {
 public:
+	enum EVolumeType {
+		EFloat32 = 1,
+		EFloat16 = 2,
+		EUInt8 = 3,
+		EQuantizedDirections = 4
+	};
+
 	GridDataSource(const Properties &props) 
 		: VolumeDataSource(props) {
 		m_volumeToWorld = props.getTransform("toWorld", Transform());
@@ -81,7 +101,7 @@ public:
 		 * is transmitted. A following unserialization of the 
 		 * stream causes the implementation to then look for 
 		 * the file (which had better exist if unserialization 
-		 * occurs on a remote machine)
+		 * occurs on a remote machine). 
 		 */
 		 m_sendData = props.getBoolean("sendData", false);
 
@@ -94,12 +114,13 @@ public:
 		m_dataAABB = AABB(stream);
 		m_sendData = stream->readBool();
 		if (m_sendData) { 
+			m_volumeType = (EVolumeType) stream->readInt();
 			m_res = Vector3i(stream);
 			m_channels = stream->readInt();
 			m_filename = stream->readString();
-			size_t nEntries = m_res.x*m_res.y*m_res.z*m_channels;
-			m_data = new float[nEntries];
-			stream->readSingleArray(m_data, nEntries);
+			size_t volumeSize = getVolumeSize();
+			m_data = new uint8_t[volumeSize];
+			stream->read(m_data, volumeSize);
 		} else {
 			fs::path filename = stream->readString();
 			loadFromFile(filename);
@@ -112,6 +133,20 @@ public:
 			delete[] m_data;
 	}
 
+	size_t getVolumeSize() const {
+		size_t nEntries = (size_t) m_res.x 
+			* (size_t) m_res.y * (size_t) m_res.z;
+		switch (m_volumeType) {
+			case EFloat32: return 4 * nEntries * m_channels;
+			case EFloat16: return 2 * nEntries * m_channels;
+			case EUInt8:   return 1 * nEntries * m_channels;
+			case EQuantizedDirections:  return 2 * nEntries;
+			default:
+				Log(EError, "Unknown volume format!");
+				return 0;
+		}
+	}
+
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		VolumeDataSource::serialize(stream, manager);
 
@@ -120,11 +155,11 @@ public:
 		stream->writeBool(m_sendData);
 
 		if (m_sendData) {
+			stream->writeInt(m_volumeType);
 			m_res.serialize(stream);
 			stream->writeInt(m_channels);
 			stream->writeString(m_filename.file_string());
-			size_t nEntries = m_res.x*m_res.y*m_res.z*m_channels;
-			stream->writeSingleArray(m_data, nEntries);
+			stream->write(m_data, getVolumeSize());
 		} else {
 			stream->writeString(m_filename.file_string());
 		}
@@ -144,6 +179,19 @@ public:
 		m_aabb.reset();
 		for (int i=0; i<8; ++i)
 			m_aabb.expandBy(m_volumeToWorld(m_dataAABB.getCorner(i)));
+
+		/* Precompute cosine and sine lookup tables */
+		for (int i=0; i<255; i++) {
+			Float angle = (float) i * ((float) M_PI / 255.0f);
+			m_cosPhi[i] = std::cos(2.0f * angle);
+			m_sinPhi[i] = std::sin(2.0f * angle);
+			m_cosTheta[i] = std::cos(angle);
+			m_sinTheta[i] = std::sin(angle);
+			m_densityMap[i] = i/255.0f;
+		}
+		m_cosPhi[255] = m_sinPhi[255] = 0;
+		m_cosTheta[255] = m_sinTheta[255] = 0;
+		m_densityMap[255] = 1.0f;
 	}
 
 	void loadFromFile(const fs::path &filename) {
@@ -164,9 +212,6 @@ public:
 			Log(EError, "Encountered an invalid volume data file "
 				"(incorrect file version)");
 		int type = stream->readInt();
-		if (type != 1)
-			Log(EError, "Encountered an invalid volume data file "
-				"(incorrect data type)");
 
 		int xres = stream->readInt(),
 			yres = stream->readInt(),
@@ -174,9 +219,31 @@ public:
 		m_res = Vector3i(xres, yres, zres);
 		m_channels = stream->readInt();
 
-		if (m_channels != 1 && m_channels != 3)
-			Log(EError, "Encountered an invalid volume data file (%i channels, "
-				"only 1 and 3 are supported)", m_channels);
+		switch (type) {
+			case EFloat32:
+				if (m_channels != 1 && m_channels != 3)
+					Log(EError, "Encountered an unsupported float32 volume data "
+						"file (%i channels, only 1 and 3 are supported)",
+						m_channels);
+				break;
+			case EFloat16:
+				Log(EError, "Error: float16 volumes are not yet supported!");
+			case EUInt8:
+				if (m_channels != 1)
+					Log(EError, "Encountered an unsupported uint8 volume data "
+						"file (%i channels, only 1 is supported)", m_channels);
+				break;
+			case EQuantizedDirections:
+				if (m_channels != 3)
+					Log(EError, "Encountered an unsupported quantized direction "
+							"volume data file (%i channels, only 3 are supported)",
+							m_channels);
+				break;
+			default:
+				Log(EError, "Encountered a volume data file of unknown type!");
+		}
+
+		m_volumeType = (EVolumeType) type;
 
 		if (!m_dataAABB.isValid()) {
 			Float xmin = stream->readSingle(),
@@ -191,7 +258,7 @@ public:
 		Log(EDebug, "Mapped \"%s\" into memory: %ix%ix%i (%i channels), %i KiB, %s", 
 			resolved.filename().c_str(), m_res.x, m_res.y, m_res.z, m_channels,
 			memString(m_mmap->getSize()).c_str(), m_dataAABB.toString().c_str());
-		m_data = ((float *) m_mmap->getData()) + 12;
+		m_data = (uint8_t *) (((float *) m_mmap->getData()) + 12);
 	}
 
 	/**
@@ -200,6 +267,8 @@ public:
 	 */
 	struct float3 {
 		float value[3];
+
+		inline float3() { }
 
 		inline float3(float a, float b, float c) {
 			value[0] = a; value[1] = b; value[2] = c;
@@ -246,20 +315,43 @@ public:
 		const Float fx = p.x - x1, fy = p.y - y1, fz = p.z - z1,
 				_fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
 
-		const Float
-			d000 = m_data[(z1*m_res.y + y1)*m_res.x + x1],
-			d001 = m_data[(z1*m_res.y + y1)*m_res.x + x2],
-			d010 = m_data[(z1*m_res.y + y2)*m_res.x + x1],
-			d011 = m_data[(z1*m_res.y + y2)*m_res.x + x2],
-			d100 = m_data[(z2*m_res.y + y1)*m_res.x + x1],
-			d101 = m_data[(z2*m_res.y + y1)*m_res.x + x2],
-			d110 = m_data[(z2*m_res.y + y2)*m_res.x + x1],
-			d111 = m_data[(z2*m_res.y + y2)*m_res.x + x2];
+		switch (m_volumeType) {
+			case EFloat32: {
+				const float *floatData = (float *) m_data;
+				const Float
+					d000 = floatData[(z1*m_res.y + y1)*m_res.x + x1],
+					d001 = floatData[(z1*m_res.y + y1)*m_res.x + x2],
+					d010 = floatData[(z1*m_res.y + y2)*m_res.x + x1],
+					d011 = floatData[(z1*m_res.y + y2)*m_res.x + x2],
+					d100 = floatData[(z2*m_res.y + y1)*m_res.x + x1],
+					d101 = floatData[(z2*m_res.y + y1)*m_res.x + x2],
+					d110 = floatData[(z2*m_res.y + y2)*m_res.x + x1],
+					d111 = floatData[(z2*m_res.y + y2)*m_res.x + x2];
 
-		return ((d000*_fx + d001*fx)*_fy +
-				(d010*_fx + d011*fx)*fy)*_fz +
-				((d100*_fx + d101*fx)*_fy +
-				(d110*_fx + d111*fx)*fy)*fz;
+				return ((d000*_fx + d001*fx)*_fy +
+						(d010*_fx + d011*fx)*fy)*_fz +
+					   ((d100*_fx + d101*fx)*_fy +
+						(d110*_fx + d111*fx)*fy)*fz;
+			}
+			case EUInt8: {
+				const Float
+					d000 = m_densityMap[m_data[(z1*m_res.y + y1)*m_res.x + x1]],
+					d001 = m_densityMap[m_data[(z1*m_res.y + y1)*m_res.x + x2]],
+					d010 = m_densityMap[m_data[(z1*m_res.y + y2)*m_res.x + x1]],
+					d011 = m_densityMap[m_data[(z1*m_res.y + y2)*m_res.x + x2]],
+					d100 = m_densityMap[m_data[(z2*m_res.y + y1)*m_res.x + x1]],
+					d101 = m_densityMap[m_data[(z2*m_res.y + y1)*m_res.x + x2]],
+					d110 = m_densityMap[m_data[(z2*m_res.y + y2)*m_res.x + x1]],
+					d111 = m_densityMap[m_data[(z2*m_res.y + y2)*m_res.x + x2]];
+
+				return ((d000*_fx + d001*fx)*_fy +
+						(d010*_fx + d011*fx)*fy)*_fz +
+					   ((d100*_fx + d101*fx)*_fy +
+						(d110*_fx + d111*fx)*fy)*fz;
+			}
+			default:
+				return 0.0f;
+		}
 	}
 
 	Spectrum lookupSpectrum(const Point &_p) const {
@@ -276,21 +368,26 @@ public:
 		const Float fx = p.x - x1, fy = p.y - y1, fz = p.z - z1,
 				_fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
 
-		const float3 *spectrumData = (float3 *) m_data;
-		const float3
-			&d000 = spectrumData[(z1*m_res.y + y1)*m_res.x + x1],
-			&d001 = spectrumData[(z1*m_res.y + y1)*m_res.x + x2],
-			&d010 = spectrumData[(z1*m_res.y + y2)*m_res.x + x1],
-			&d011 = spectrumData[(z1*m_res.y + y2)*m_res.x + x2],
-			&d100 = spectrumData[(z2*m_res.y + y1)*m_res.x + x1],
-			&d101 = spectrumData[(z2*m_res.y + y1)*m_res.x + x2],
-			&d110 = spectrumData[(z2*m_res.y + y2)*m_res.x + x1],
-			&d111 = spectrumData[(z2*m_res.y + y2)*m_res.x + x2];
+		switch (m_volumeType) {
+			case EFloat32: {
+				const float3 *spectrumData = (float3 *) m_data;
+				const float3
+					&d000 = spectrumData[(z1*m_res.y + y1)*m_res.x + x1],
+					&d001 = spectrumData[(z1*m_res.y + y1)*m_res.x + x2],
+					&d010 = spectrumData[(z1*m_res.y + y2)*m_res.x + x1],
+					&d011 = spectrumData[(z1*m_res.y + y2)*m_res.x + x2],
+					&d100 = spectrumData[(z2*m_res.y + y1)*m_res.x + x1],
+					&d101 = spectrumData[(z2*m_res.y + y1)*m_res.x + x2],
+					&d110 = spectrumData[(z2*m_res.y + y2)*m_res.x + x1],
+					&d111 = spectrumData[(z2*m_res.y + y2)*m_res.x + x2];
 
-		return (((d000*_fx + d001*fx)*_fy +
-				(d010*_fx + d011*fx)*fy)*_fz +
-				((d100*_fx + d101*fx)*_fy +
-				(d110*_fx + d111*fx)*fy)*fz).toSpectrum();
+				return (((d000*_fx + d001*fx)*_fy +
+						 (d010*_fx + d011*fx)*fy)*_fz +
+						((d100*_fx + d101*fx)*_fy +
+						 (d110*_fx + d111*fx)*fy)*fz).toSpectrum();
+				}
+			default: return Spectrum(0.0f);
+		}
 	}
 
 	Vector lookupVector(const Point &_p) const {
@@ -305,65 +402,89 @@ public:
 			return Vector(0.0f);
 
 		const Float fx = p.x - x1, fy = p.y - y1, fz = p.z - z1;
-		const float3 *vectorData = (float3 *) m_data;
 		Vector value;
 
 		#if defined(VINTERP_NEAREST_NEIGHBOR)
 			/* Nearest neighbor */
-			value = vectorData[
-				(((fz < .5) ? z1 : z2)  * m_res.y +
-				((fy < .5) ? y1 : y2)) * m_res.x +
-				((fx < .5) ? x1 : x2)].toVector();
-		#elif defined(VINTERP_LINEAR)
-			Float _fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
-			const float3
-				&d000 = vectorData[(z1*m_res.y + y1)*m_res.x + x1],
-				&d001 = vectorData[(z1*m_res.y + y1)*m_res.x + x2],
-				&d010 = vectorData[(z1*m_res.y + y2)*m_res.x + x1],
-				&d011 = vectorData[(z1*m_res.y + y2)*m_res.x + x2],
-				&d100 = vectorData[(z2*m_res.y + y1)*m_res.x + x1],
-				&d101 = vectorData[(z2*m_res.y + y1)*m_res.x + x2],
-				&d110 = vectorData[(z2*m_res.y + y2)*m_res.x + x1],
-				&d111 = vectorData[(z2*m_res.y + y2)*m_res.x + x2];
-
-			value = (((d000*_fx + d001*fx)*_fy +
-					(d010*_fx + d011*fx)*fy)*_fz +
-					((d100*_fx + d101*fx)*_fy +
-					(d110*_fx + d111*fx)*fy)*fz).toVector();
-		#elif defined(VINTERP_STRUCTURE_TENSOR)
-			Float _fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
-
-			const float3
-				d000 = vectorData[(z1*m_res.y + y1)*m_res.x + x1],
-				d001 = vectorData[(z1*m_res.y + y1)*m_res.x + x2],
-				d010 = vectorData[(z1*m_res.y + y2)*m_res.x + x1],
-				d011 = vectorData[(z1*m_res.y + y2)*m_res.x + x2],
-				d100 = vectorData[(z2*m_res.y + y1)*m_res.x + x1],
-				d101 = vectorData[(z2*m_res.y + y1)*m_res.x + x2],
-				d110 = vectorData[(z2*m_res.y + y2)*m_res.x + x1],
-				d111 = vectorData[(z2*m_res.y + y2)*m_res.x + x2];
-
-			Matrix3x3 tensor =
-				   ((d000.tensor()*_fx + d001.tensor()*fx)*_fy +
-					(d010.tensor()*_fx + d011.tensor()*fx)*fy)*_fz +
-				   ((d100.tensor()*_fx + d101.tensor()*fx)*_fy +
-					(d110.tensor()*_fx + d111.tensor()*fx)*fy)*fz;
-
-			if (tensor.isZero())
-				return Vector(0.0f);
-
-			// Square the structure tensor for faster convergence
-			tensor *= tensor;
-
-			const Float invSqrt3 = 0.577350269189626f;
-			value = Vector(invSqrt3, invSqrt3, invSqrt3);
-
-			/* Determine the dominat eigenvector using power iteration */
-			for (int i=0; i<POWER_ITERATION_STEPS-1; ++i)
-				value = normalize(tensor * value);
-			value = tensor * value;
+			switch (m_volumeType) {
+				case EFloat32: {
+					const float3 *vectorData = (float3 *) m_data;
+					value = vectorData[
+						(((fz < .5) ? z1 : z2) * m_res.y +
+						((fy < .5) ? y1 : y2)) * m_res.x +
+						((fx < .5) ? x1 : x2)].toVector();
+					};
+					break;
+				case EQuantizedDirections: {
+					value = lookupQuantizedDirection(
+						(((fz < .5) ? z1 : z2) * m_res.y +
+						((fy < .5) ? y1 : y2)) * m_res.x +
+						((fx < .5) ? x1 : x2));
+					break;
+				default:
+					return Vector(0.0f);
+			}
 		#else
-			#error Need to choose a vector interpolation method!
+			Float _fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
+			float3 d000, d001, d010, d011, d100, d101, d110, d111;
+
+			switch (m_volumeType) {
+				case EFloat32: {
+						const float3 *vectorData = (float3 *) m_data;
+						d000 = vectorData[(z1*m_res.y + y1)*m_res.x + x1];
+						d001 = vectorData[(z1*m_res.y + y1)*m_res.x + x2];
+						d010 = vectorData[(z1*m_res.y + y2)*m_res.x + x1];
+						d011 = vectorData[(z1*m_res.y + y2)*m_res.x + x2];
+						d100 = vectorData[(z2*m_res.y + y1)*m_res.x + x1];
+						d101 = vectorData[(z2*m_res.y + y1)*m_res.x + x2];
+						d110 = vectorData[(z2*m_res.y + y2)*m_res.x + x1];
+						d111 = vectorData[(z2*m_res.y + y2)*m_res.x + x2];
+					}
+					break;
+				case EQuantizedDirections: {
+						d000 = lookupQuantizedDirection((z1*m_res.y + y1)*m_res.x + x1);
+						d001 = lookupQuantizedDirection((z1*m_res.y + y1)*m_res.x + x2);
+						d010 = lookupQuantizedDirection((z1*m_res.y + y2)*m_res.x + x1);
+						d011 = lookupQuantizedDirection((z1*m_res.y + y2)*m_res.x + x2);
+						d100 = lookupQuantizedDirection((z2*m_res.y + y1)*m_res.x + x1);
+						d101 = lookupQuantizedDirection((z2*m_res.y + y1)*m_res.x + x2);
+						d110 = lookupQuantizedDirection((z2*m_res.y + y2)*m_res.x + x1);
+						d111 = lookupQuantizedDirection((z2*m_res.y + y2)*m_res.x + x2);
+					}
+					break;
+				default:
+					return Vector(0.0f);
+			}
+
+			#if defined(VINTERP_LINEAR)
+				value = (((d000*_fx + d001*fx)*_fy +
+						(d010*_fx + d011*fx)*fy)*_fz +
+						((d100*_fx + d101*fx)*_fy +
+						(d110*_fx + d111*fx)*fy)*fz).toVector();
+			#elif defined(VINTERP_STRUCTURE_TENSOR)
+				Matrix3x3 tensor =
+					((d000.tensor()*_fx + d001.tensor()*fx)*_fy +
+						(d010.tensor()*_fx + d011.tensor()*fx)*fy)*_fz +
+					((d100.tensor()*_fx + d101.tensor()*fx)*_fy +
+						(d110.tensor()*_fx + d111.tensor()*fx)*fy)*fz;
+
+				if (tensor.isZero())
+					return Vector(0.0f);
+
+				/* Square the structure tensor for faster convergence */
+				tensor *= tensor;
+
+				const Float invSqrt3 = 0.577350269189626f;
+				value = Vector(invSqrt3, invSqrt3, invSqrt3);
+
+				/* Determine the dominant eigenvector using
+				a few power iterations */
+				for (int i=0; i<POWER_ITERATION_STEPS-1; ++i)
+					value = normalize(tensor * value);
+				value = tensor * value;
+			#else
+				#error Need to choose a vector interpolation method!
+			#endif
 		#endif
 
 		if (!value.isZero())
@@ -372,27 +493,27 @@ public:
 			return Vector(0.0f);
 	}
 	
-	bool supportsFloatLookups() const {
-		return m_channels == 1;
-	}
-	
-	bool supportsSpectrumLookups() const {
-		return m_channels == 3;
-	}
-	
-	bool supportsVectorLookups() const {
-		return m_channels == 3;
-	}
-
-	Float getStepSize() const {
-		return m_stepSize;
-	}
+	bool supportsFloatLookups() const { return m_channels == 1; }
+	bool supportsSpectrumLookups() const { return m_channels == 3; }
+	bool supportsVectorLookups() const { return m_channels == 3; }
+	Float getStepSize() const { return m_stepSize; }
 
 	MTS_DECLARE_CLASS()
+protected: 
+	inline float3 lookupQuantizedDirection(size_t index) const {
+		uint8_t theta = m_data[2*index], phi = m_data[2*index+1];
+		return float3(
+			m_cosPhi[phi] * m_sinTheta[theta],
+			m_sinPhi[phi] * m_sinTheta[theta],
+			m_cosTheta[theta]
+		);
+	}
+
 protected:
 	fs::path m_filename;
-	float *m_data;
+	uint8_t *m_data;
 	bool m_sendData;
+	EVolumeType m_volumeType;
 	Vector3i m_res;
 	int m_channels;
 	Transform m_worldToGrid;
@@ -401,6 +522,9 @@ protected:
 	Float m_stepSize;
 	AABB m_dataAABB;
 	ref<MemoryMappedFile> m_mmap;
+	float m_cosTheta[256], m_sinTheta[256];
+	float m_cosPhi[256], m_sinPhi[256];
+	Float m_densityMap[256];
 };
 
 MTS_IMPLEMENT_CLASS_S(GridDataSource, false, VolumeDataSource);
