@@ -22,6 +22,19 @@
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/mmap.h>
 
+
+// Uncomment to enable nearest-neighbor direction interpolation
+//#define VINTERP_NEAREST_NEIGHBOR
+
+// Uncomment to enable linear direction interpolation (usually bad)
+//#define VINTERP_LINEAR
+
+// Uncomment to enable structure tensor-based direction interpolation (best, but slow)
+#define VINTERP_STRUCTURE_TENSOR
+
+// Number of power iteration steps used to find the dominant direction
+#define POWER_ITERATION_STEPS 5
+
 MTS_NAMESPACE_BEGIN
 
 /**
@@ -46,6 +59,9 @@ MTS_NAMESPACE_BEGIN
  *                operation makes sense after the file has been mapped into memory:
  *                   "data[((zpos*yres + ypos)*xres + xpos)*channels + chan]"
  *                where (xpos, ypos, zpos, chan) denotes the lookup location.
+ *
+ * Note that Mitsuba expects that entries in direction volumes are either
+ * zero or valid unit vectors.
  */
 class GridDataSource : public VolumeDataSource {
 public:
@@ -140,31 +156,41 @@ public:
 		char header[3];
 		stream->read(header, 3);
 		if (header[0] != 'V' || header[1] != 'O' || header[2] != 'L')
-			Log(EError, "Encountered an invalid volume data file (incorrect header identifier)");
+			Log(EError, "Encountered an invalid volume data file "
+				"(incorrect header identifier)");
 		uint8_t version;
 		stream->read(&version, 1);
 		if (version != 3)
-			Log(EError, "Encountered an invalid volume data file (incorrect file version)");
+			Log(EError, "Encountered an invalid volume data file "
+				"(incorrect file version)");
 		int type = stream->readInt();
 		if (type != 1)
-			Log(EError, "Encountered an invalid volume data file (incorrect data type)");
+			Log(EError, "Encountered an invalid volume data file "
+				"(incorrect data type)");
 
-		int xres = stream->readInt(), yres=stream->readInt(), zres=stream->readInt();
+		int xres = stream->readInt(),
+			yres = stream->readInt(),
+			zres = stream->readInt();
 		m_res = Vector3i(xres, yres, zres);
 		m_channels = stream->readInt();
+
 		if (m_channels != 1 && m_channels != 3)
-			Log(EError, "Encountered an invalid volume data file (%i channels, only "
-				"1 and 3 are supported)", m_channels);
+			Log(EError, "Encountered an invalid volume data file (%i channels, "
+				"only 1 and 3 are supported)", m_channels);
 
 		if (!m_dataAABB.isValid()) {
-			Float xmin = stream->readSingle(), ymin = stream->readSingle(), zmin = stream->readSingle();
-			Float xmax = stream->readSingle(), ymax = stream->readSingle(), zmax = stream->readSingle();
+			Float xmin = stream->readSingle(),
+				  ymin = stream->readSingle(),
+				  zmin = stream->readSingle();
+			Float xmax = stream->readSingle(),
+				  ymax = stream->readSingle(),
+				  zmax = stream->readSingle();
 			m_dataAABB = AABB(Point(xmin, ymin, zmin), Point(xmax, ymax, zmax));
 		}
 
-		Log(EDebug, "Mapped \"%s\" into memory: %ix%ix%i (%i channels), %i KiB, %s", resolved.filename().c_str(), 
-			m_res.x, m_res.y, m_res.z, m_channels, memString(m_mmap->getSize()).c_str(),
-			m_dataAABB.toString().c_str());
+		Log(EDebug, "Mapped \"%s\" into memory: %ix%ix%i (%i channels), %i KiB, %s", 
+			resolved.filename().c_str(), m_res.x, m_res.y, m_res.z, m_channels,
+			memString(m_mmap->getSize()).c_str(), m_dataAABB.toString().c_str());
 		m_data = ((float *) m_mmap->getData()) + 12;
 	}
 
@@ -195,6 +221,14 @@ public:
 		
 		inline Vector toVector() const {
 			return Vector(value[0], value[1], value[2]);
+		}
+
+		inline Matrix3x3 tensor() const {
+			return Matrix3x3(
+				value[0]*value[0], value[0]*value[1], value[0]*value[2],
+				value[1]*value[0], value[1]*value[1], value[1]*value[2],
+				value[2]*value[0], value[2]*value[1], value[2]*value[2]
+			);
 		}
 	};
 
@@ -272,14 +306,15 @@ public:
 
 		const Float fx = p.x - x1, fy = p.y - y1, fz = p.z - z1;
 		const float3 *vectorData = (float3 *) m_data;
+		Vector value;
 
-		#if 0
+		#if defined(VINTERP_NEAREST_NEIGHBOR)
 			/* Nearest neighbor */
-			Vector value = vectorData[
+			value = vectorData[
 				(((fz < .5) ? z1 : z2)  * m_res.y +
 				((fy < .5) ? y1 : y2)) * m_res.x +
 				((fx < .5) ? x1 : x2)].toVector();
-		#else
+		#elif defined(VINTERP_LINEAR)
 			Float _fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
 			const float3
 				&d000 = vectorData[(z1*m_res.y + y1)*m_res.x + x1],
@@ -291,10 +326,44 @@ public:
 				&d110 = vectorData[(z2*m_res.y + y2)*m_res.x + x1],
 				&d111 = vectorData[(z2*m_res.y + y2)*m_res.x + x2];
 
-			Vector value = (((d000*_fx + d001*fx)*_fy +
+			value = (((d000*_fx + d001*fx)*_fy +
 					(d010*_fx + d011*fx)*fy)*_fz +
 					((d100*_fx + d101*fx)*_fy +
 					(d110*_fx + d111*fx)*fy)*fz).toVector();
+		#elif defined(VINTERP_STRUCTURE_TENSOR)
+			Float _fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
+
+			const float3
+				d000 = vectorData[(z1*m_res.y + y1)*m_res.x + x1],
+				d001 = vectorData[(z1*m_res.y + y1)*m_res.x + x2],
+				d010 = vectorData[(z1*m_res.y + y2)*m_res.x + x1],
+				d011 = vectorData[(z1*m_res.y + y2)*m_res.x + x2],
+				d100 = vectorData[(z2*m_res.y + y1)*m_res.x + x1],
+				d101 = vectorData[(z2*m_res.y + y1)*m_res.x + x2],
+				d110 = vectorData[(z2*m_res.y + y2)*m_res.x + x1],
+				d111 = vectorData[(z2*m_res.y + y2)*m_res.x + x2];
+
+			Matrix3x3 tensor =
+				   ((d000.tensor()*_fx + d001.tensor()*fx)*_fy +
+					(d010.tensor()*_fx + d011.tensor()*fx)*fy)*_fz +
+				   ((d100.tensor()*_fx + d101.tensor()*fx)*_fy +
+					(d110.tensor()*_fx + d111.tensor()*fx)*fy)*fz;
+
+			if (tensor.isZero())
+				return Vector(0.0f);
+
+			// Square the structure tensor for faster convergence
+			tensor *= tensor;
+
+			const Float invSqrt3 = 0.577350269189626f;
+			value = Vector(invSqrt3, invSqrt3, invSqrt3);
+
+			/* Determine the dominat eigenvector using power iteration */
+			for (int i=0; i<POWER_ITERATION_STEPS-1; ++i)
+				value = normalize(tensor * value);
+			value = tensor * value;
+		#else
+			#error Need to choose a vector interpolation method!
 		#endif
 
 		if (!value.isZero())

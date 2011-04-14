@@ -338,6 +338,15 @@ public:
 
 	T cholDet() const;
 
+	/// Check if the matrix is identically zeor
+	inline bool isZero() const {
+		for (int i=0; i<M; ++i)
+			for (int j=0; j<N; ++j)
+				if (m[i][j] != 0)
+					return false;
+		return true;
+	}
+
 	/**
 	 * \brief Compute the determinant of a square matrix (internally
 	 * creates a LU decomposition)
