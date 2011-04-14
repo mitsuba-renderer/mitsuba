@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -106,6 +106,27 @@ public:
 	 */
 	virtual Float pdf(const PhaseFunctionQueryRecord &pRec) const;
 
+	/**
+	 * \brief Does this phase function require directionally varying scattering
+	 * and extinction coefficients?
+	 *
+	 * This is used to implement rendering of media that have an anisotropic
+	 * structure (cf. "A radiative transfer framework for rendering materials with
+	 *   anisotropic structure" by Wenzel Jakob, Adam Arbree, Jonathan T. Moon,
+	 *   Kavita Bala, and Steve Marschner, SIGGRAPH 2010)
+	 */
+	virtual bool needsDirectionallyVaryingCoefficients() const;
+
+	/**
+	 * For anisotropic media: evaluate the directionally varying component
+	 * of the scattering and absorption coefficients.
+	 *
+	 * \param cosTheta
+	 *    Angle between the axis of rotational symmetry and the
+	 *    direction of propagation
+	 */
+	virtual Float coeffMultiplier(Float cosTheta) const;
+
 	/// Return a string representation
 	virtual std::string toString() const = 0;
 
@@ -121,6 +142,8 @@ protected:
 
 	/// Virtual destructor
 	virtual ~PhaseFunction() { }
+private:
+	bool m_dvSigmaT;
 };
 
 MTS_NAMESPACE_END

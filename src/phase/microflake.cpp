@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2011 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -25,8 +25,6 @@
 #define MICROFLAKE_STATISTICS 1
 #include "microflake_fiber.h"
 
-#include <mitsuba/core/plugin.h>///XXX
-
 MTS_NAMESPACE_BEGIN
 
 #if defined(MICROFLAKE_STATISTICS)
@@ -34,32 +32,40 @@ static StatsCounter avgSampleIterations("Micro-flake model",
 		"Average rejection sampling iterations", EAverage);
 #endif
 
+/**
+ * Implements the anisotropic micro-flake phase function described in
+ *
+ * "A radiative transfer framework for rendering materials with
+ * anisotropic structure" by Wenzel Jakob, Adam Arbree, 
+ * Jonathan T. Moon, Kavita Bala, and Steve Marschner,
+ * ACM SIGGRAPH 2010
+ *
+ * The optimized implementation here works without the use of 
+ * spherical harmonics and is specific to rough fibers and a 
+ * Gaussian-type distribution. This distribution, as well as the
+ * implemented sampling method are described in the paper
+ * 
+ * "Building Volumetric Appearance Models of Fabric using 
+ * Micro CT Imaging" by Shuang Zhao, Wenzel Jakob, Steve Marschner,
+ * and Kavita Bala, ACM SIGGRAPH 2011
+ */
 class MicroflakePhaseFunction : public PhaseFunction {
 public:
 	MicroflakePhaseFunction(const Properties &props) : PhaseFunction(props) {
+		/// Standard deviation of the flake distribution
 		m_fiberDistr = GaussianFiberDistribution(props.getFloat("stddev"));
-		ChiSquareTest test(7);
-		Sampler *sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-				createObject(MTS_CLASS(Sampler), Properties("independent")));
-		test.fill(
-			boost::bind(&MicroflakePhaseFunction::testSample, this, sampler),
-			boost::bind(&MicroflakePhaseFunction::testF, this, _1)
-		);
-		test.dumpTables("test.m");
-		test.runTest(1);
 	}
 
 	MicroflakePhaseFunction(Stream *stream, InstanceManager *manager) 
 		: PhaseFunction(stream, manager) {
+		m_fiberDistr = GaussianFiberDistribution(stream->readFloat());
 	}
 
 	virtual ~MicroflakePhaseFunction() { }
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		PhaseFunction::serialize(stream, manager);
-	}
-
-	void configure() {
+		stream->writeFloat(m_fiberDistr.getStdDev());
 	}
 
 	Float f(const PhaseFunctionQueryRecord &pRec) const {
@@ -75,8 +81,7 @@ public:
 		if (length == 0)
 			return 0.0f;
 
-		Float cosThetaH = H.z/length;
-		return 0.5 * m_fiberDistr.pdfCosTheta(cosThetaH)
+		return 0.5 * m_fiberDistr.pdfCosTheta(Frame::cosTheta(H)/length)
 				/ m_fiberDistr.sigmaT(Frame::cosTheta(wi));
 	}
 
@@ -120,11 +125,16 @@ public:
 	Float sample(PhaseFunctionQueryRecord &pRec, 
 			Float &pdf, Sampler *sampler) const {
 		if (sample(pRec, sampler) == 0) {
-			pdf = 0;
-			return 0.0f;
+			pdf = 0; return 0.0f;
 		}
 		pdf = f(pRec);
 		return pdf;
+	}
+
+	bool needsDirectionallyVaryingCoefficients() const { return true; }
+
+	Float coeffMultiplier(Float cosTheta) const {
+		return 2 * m_fiberDistr.sigmaT(cosTheta);
 	}
 
 	std::string toString() const {
@@ -139,7 +149,6 @@ public:
 private:
 	GaussianFiberDistribution m_fiberDistr;
 };
-
 
 MTS_IMPLEMENT_CLASS_S(MicroflakePhaseFunction, false, PhaseFunction)
 MTS_EXPORT_PLUGIN(MicroflakePhaseFunction, "Microflake phase function");

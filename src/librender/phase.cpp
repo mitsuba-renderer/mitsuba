@@ -17,6 +17,16 @@ std::string PhaseFunctionQueryRecord::toString() const {
 Float PhaseFunction::pdf(const PhaseFunctionQueryRecord &pRec) const {
 	return f(pRec);
 }
+	
+bool PhaseFunction::needsDirectionallyVaryingCoefficients() const {
+	return false;
+}
+	
+Float PhaseFunction::coeffMultiplier(Float cosTheta) const {
+	Log(EError, "coeffMultiplier(): Not implemented! (this is not"
+		" an anisotropic medium)");
+	return 0.0f;
+}
 
 MTS_IMPLEMENT_CLASS(PhaseFunction, true, ConfigurableObject)
 MTS_NAMESPACE_END
