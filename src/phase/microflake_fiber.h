@@ -191,7 +191,7 @@ public:
 	inline GaussianFiberDistribution() {}
 
 	inline GaussianFiberDistribution(Float stddev) : m_stddev(stddev) {
-		m_normalization = 1/(std::pow(2*M_PI, 3.0f/2.0f) * m_stddev * 
+		m_normalization = 1/(std::pow(2*M_PI, (Float) 3 / (Float) 2) * m_stddev * 
 				mts_erf(1/(SQRT_TWO * m_stddev)));
 		m_c1 = 1.0f/mts_erf(1/(SQRT_TWO * m_stddev));
 

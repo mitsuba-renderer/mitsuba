@@ -267,7 +267,7 @@ protected:
 		const boost::function<Float (const Vector &)> &pdfFn,
 			size_t nPts, const Float *in, Float *out) {
 		#pragma omp parallel for
-		for (size_t i=0; i<nPts; ++i)
+		for (int i=0; i<(int) nPts; ++i)
 			out[i] = pdfFn(sphericalDirection(in[2*i], in[2*i+1])) * std::sin(in[2*i]);
 	}
 private:
