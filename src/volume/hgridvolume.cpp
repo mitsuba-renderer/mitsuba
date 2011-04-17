@@ -74,19 +74,19 @@ public:
 		stream->setByteOrder(Stream::ELittleEndian);
 		Float xmin = stream->readSingle(), ymin = stream->readSingle(), zmin = stream->readSingle();
 		Float xmax = stream->readSingle(), ymax = stream->readSingle(), zmax = stream->readSingle();
-		m_aabb = AABB(Point(xmin, ymin, zmin), Point(xmax, ymax, zmax));
+		AABB aabb = AABB(Point(xmin, ymin, zmin), Point(xmax, ymax, zmax));
 		m_res = Vector3i(stream);
 		m_filename = filename;
 		size_t nCells = m_res.x*m_res.y*m_res.z;
 		m_blocks = new VolumeDataSource*[nCells];
 		memset(m_blocks, 0, nCells*sizeof(VolumeDataSource *));
-		Vector extents = m_aabb.getExtents();
+		Vector extents = aabb.getExtents();
 		m_worldToVolume = m_volumeToWorld.inverse();
 		m_worldToGrid = Transform::scale(Vector(
 				(m_res[0]) / extents[0],
 				(m_res[1]) / extents[1],
 				(m_res[2]) / extents[2])
-			) * Transform::translate(-Vector(m_aabb.min)) * m_worldToVolume;
+			) * Transform::translate(-Vector(aabb.min)) * m_worldToVolume;
 
 		m_supportsFloatLookups = true;
 		m_supportsVectorLookups = true;
@@ -117,7 +117,11 @@ public:
 			++numBlocks;
 		}
 		Log(EInfo, "%i blocks total, %s, stepSize=%f, resolution=%s", numBlocks, 
-				m_aabb.toString().c_str(), m_stepSize, m_res.toString().c_str());
+				aabb.toString().c_str(), m_stepSize, m_res.toString().c_str());
+
+		m_aabb.reset();
+		for (int i=0; i<8; ++i)
+			m_aabb.expandBy(m_volumeToWorld(aabb.getCorner(i)));
 	}
 
 	bool supportsFloatLookups() const {

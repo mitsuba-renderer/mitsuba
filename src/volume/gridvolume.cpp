@@ -24,7 +24,7 @@
 
 
 // Uncomment to enable nearest-neighbor direction interpolation
-//#define VINTERP_NEAREST_NEIGHBOR
+// #define VINTERP_NEAREST_NEIGHBOR
 
 // Uncomment to enable linear direction interpolation (usually a bad idea)
 //#define VINTERP_LINEAR
@@ -413,13 +413,14 @@ public:
 						(((fz < .5) ? z1 : z2) * m_res.y +
 						((fy < .5) ? y1 : y2)) * m_res.x +
 						((fx < .5) ? x1 : x2)].toVector();
-					};
+					}
 					break;
 				case EQuantizedDirections: {
 					value = lookupQuantizedDirection(
 						(((fz < .5) ? z1 : z2) * m_res.y +
 						((fy < .5) ? y1 : y2)) * m_res.x +
-						((fx < .5) ? x1 : x2));
+						((fx < .5) ? x1 : x2)).toVector();
+					}
 					break;
 				default:
 					return Vector(0.0f);
