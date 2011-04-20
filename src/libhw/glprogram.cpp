@@ -85,7 +85,7 @@ int GLProgram::createShader(int type, const std::string &source) {
 	if (source == "")
 		return 0;
 
-	if (type == GL_GEOMETRY_SHADER_ARB && !GLEW_ARB_geometry_shader4)
+	if (type == GL_GEOMETRY_SHADER_ARB && !GLEW_ARB_geometry_shader4 && !GLEW_EXT_geometry_shader4)
 		Log(EError, "Your OpenGL implementation does not support geometry shaders!");
 
 	int id = glCreateShaderObjectARB(type);
