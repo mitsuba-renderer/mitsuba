@@ -36,17 +36,26 @@ public:
 		EClamp
 	};
 
+	enum EFilterType {
+		/// Elliptically weighted average
+		EEWA,
+		/// Trilinear filtering
+		ETrilinear,
+		/// No filtering
+		ENone
+	};
+
 	/**
 	 * Construct a new mip-map from the given texture. Does not
 	 * need to have a power-of-two size.
 	 */
 	MIPMap(int width, int height, Spectrum *pixels, 
-		bool isotropic = false, EWrapMode wrapMode = ERepeat,
+		EFilterType filterType = EEWA, EWrapMode wrapMode = ERepeat,
 		Float maxAnisotropy = 8.0f);
 
 	/// Construct a mip map from a HDR bitmap
 	static ref<MIPMap> fromBitmap(Bitmap *bitmap, 
-		bool isotropic = false, EWrapMode wrapMode = ERepeat,
+		EFilterType filterType = EEWA, EWrapMode wrapMode = ERepeat,
 		Float maxAnisotropy = 8.0f);
 
 	/// Do a mip-map lookup at the appropriate level
@@ -115,7 +124,7 @@ private:
 	int *m_levelWidth;
 	int *m_levelHeight;
 	Spectrum **m_pyramid;
-	bool m_isotropic;
+	EFilterType m_filterType;
 	EWrapMode m_wrapMode;
 	Float *m_weightLut;
 	Float m_maxAnisotropy;

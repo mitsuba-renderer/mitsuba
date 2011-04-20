@@ -372,7 +372,7 @@ public:
 	}
 #else
 	/// Compute the AABB of a segment (only used during tree construction)
-	AABB getAABB(int index) const {
+	AABB getAABB(index_type index) const {
 		index_type iv = m_segIndex.at(index);
 
 		// cosine of steepest miter angle
@@ -393,7 +393,7 @@ public:
 	}
 
 	/// Compute the clipped AABB of a segment (only used during tree construction)
-	AABB getClippedAABB(int index, const AABB &box) const {
+	AABB getClippedAABB(index_type index, const AABB &box) const {
 		AABB aabb(getAABB(index));
 		aabb.clip(box);
 		return aabb;

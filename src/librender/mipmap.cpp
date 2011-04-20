@@ -26,12 +26,12 @@ static StatsCounter ewaLookups("Texture", "EWA texture lookups");
 
 /* Isotropic/anisotropic EWA mip-map texture map class based on PBRT */
 MIPMap::MIPMap(int width, int height, Spectrum *pixels, 
-	bool isotropic, EWrapMode wrapMode, Float maxAnisotropy) 
-		: m_width(width), m_height(height), m_isotropic(isotropic), 
+	EFilterType filterType, EWrapMode wrapMode, Float maxAnisotropy) 
+		: m_width(width), m_height(height), m_filterType(filterType), 
 		  m_wrapMode(wrapMode), m_maxAnisotropy(maxAnisotropy) {
 	Spectrum *texture = pixels;
 
-	if (!isPow2(width) || !isPow2(height)) {
+	if (filterType != ENone && (!isPow2(width) || !isPow2(height))) {
 		m_width = (int) roundToPow2((uint32_t) width);
 		m_height = (int) roundToPow2((uint32_t) height);
 
@@ -87,7 +87,11 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 		delete[] texture1;
 	}
 
-	m_levels = 1 + log2i((uint32_t) std::max(width, height));
+	if (m_filterType != ENone)
+		m_levels = 1 + log2i((uint32_t) std::max(width, height));
+	else
+		m_levels = 1;
+
 	m_pyramid = new Spectrum*[m_levels];
 	m_pyramid[0] = texture;
 	m_levelWidth = new int[m_levels];
@@ -111,7 +115,7 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 		}
 	}
 
-	if (!isotropic) {
+	if (m_filterType == EEWA) {
 		m_weightLut = static_cast<Float *>(allocAligned(sizeof(Float)*MIPMAP_LUTSIZE));
 		for (int i=0; i<MIPMAP_LUTSIZE; ++i) {
 			Float pos = (Float) i / (Float) (MIPMAP_LUTSIZE-1);
@@ -121,7 +125,7 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 }
 
 MIPMap::~MIPMap() {
-	if (!m_isotropic)
+	if (m_filterType == EEWA) 
 		freeAligned(m_weightLut);
 	for (int i=0; i<m_levels; i++)
 		delete[] m_pyramid[i];
@@ -149,7 +153,7 @@ Spectrum MIPMap::getMaximum() const {
 	return max;
 }
 	
-ref<MIPMap> MIPMap::fromBitmap(Bitmap *bitmap, bool isotropic, 
+ref<MIPMap> MIPMap::fromBitmap(Bitmap *bitmap, EFilterType filterType,
 		EWrapMode wrapMode, Float maxAnisotropy) {
 	int width = bitmap->getWidth();
 	int height = bitmap->getHeight();
@@ -169,7 +173,7 @@ ref<MIPMap> MIPMap::fromBitmap(Bitmap *bitmap, bool isotropic,
 	}
 
 	return new MIPMap(width, height, pixels,
-		isotropic, wrapMode, maxAnisotropy);
+		filterType, wrapMode, maxAnisotropy);
 }
 
 MIPMap::ResampleWeight *MIPMap::resampleWeights(int oldRes, int newRes) const {
@@ -179,7 +183,7 @@ MIPMap::ResampleWeight *MIPMap::resampleWeights(int oldRes, int newRes) const {
 	ResampleWeight *weights = new ResampleWeight[newRes];
 	for (int i=0; i<newRes; i++) {
 		Float center = (i + .5f) * oldRes / newRes;
-		weights[i].firstTexel = (int) std::floor(center - filterWidth + (Float) 0.5f);
+		weights[i].firstTexel = floorToInt(center - filterWidth + (Float) 0.5f);
 		Float weightSum = 0;
 		for (int j=0; j<4; j++) {
 			Float pos = weights[i].firstTexel + j + .5f;
@@ -221,20 +225,26 @@ Spectrum MIPMap::getTexel(int level, int x, int y) const {
 }
 	
 Spectrum MIPMap::triangle(int level, Float x, Float y) const {
-	level = clamp(level, 0, m_levels - 1);
-	x = x * m_levelWidth[level] - 0.5f;
-	y = y * m_levelHeight[level] - 0.5f;
-	int xPos = (int) std::floor(x), yPos = (int) std::floor(y);
-	Float dx = x - xPos, dy = y - yPos;
-	return getTexel(level, xPos, yPos) * (1.0f - dx) * (1.0f - dy)
-		+ getTexel(level, xPos, yPos + 1) * (1.0f - dx) * dy
-		+ getTexel(level, xPos + 1, yPos) * dx * (1.0f - dy)
-		+ getTexel(level, xPos + 1, yPos + 1) * dx * dy;
+	if (m_filterType == ENone) {
+		int xPos = floorToInt(x*m_levelWidth[0]),
+			yPos = floorToInt(y*m_levelHeight[0]);
+		return getTexel(0, xPos, yPos);
+	} else {
+		level = clamp(level, 0, m_levels - 1);
+		x = x * m_levelWidth[level] - 0.5f;
+		y = y * m_levelHeight[level] - 0.5f;
+		int xPos = floorToInt(x), yPos = floorToInt(y);
+		Float dx = x - xPos, dy = y - yPos;
+		return getTexel(level, xPos, yPos) * (1.0f - dx) * (1.0f - dy)
+			+ getTexel(level, xPos, yPos + 1) * (1.0f - dx) * dy
+			+ getTexel(level, xPos + 1, yPos) * dx * (1.0f - dy)
+			+ getTexel(level, xPos + 1, yPos + 1) * dx * dy;
+	}	
 }
 		
 Spectrum MIPMap::getValue(Float u, Float v, 
 		Float dudx, Float dudy, Float dvdx, Float dvdy) const {
-	if (m_isotropic) {
+	if (m_filterType == ETrilinear) {
 		++mipmapLookups;
 		/* Conservatively estimate a square lookup region */
 		Float width = 2.0f * std::max(
@@ -256,7 +266,7 @@ Spectrum MIPMap::getValue(Float u, Float v,
 			return triangle(level, u, v) * (1.0f - delta)
 				+ triangle(level, u, v) * delta;
 		}
-	} else {
+	} else if (m_filterType == EEWA) {
 		if (dudx*dudx + dudy*dudy < dvdx*dvdx + dvdy*dvdy) {
 			std::swap(dudx, dvdx);
 			std::swap(dudy, dvdy);
@@ -278,11 +288,15 @@ Spectrum MIPMap::getValue(Float u, Float v,
 		Float lod = 
 			std::min(std::max((Float) 0, m_levels - 1 + log2(minorLength)), 
 				(Float) (m_levels-1));
-		int ilod = (int) std::floor(lod);
+		int ilod = floorToInt(lod);
 		Float d = lod - ilod;
 
 		return EWA(u, v, dudx, dudy, dvdx, dvdy, ilod)   * (1-d) +
 			   EWA(u, v, dudx, dudy, dvdx, dvdy, ilod+1) * d;
+	} else {
+		int xPos = floorToInt(u*m_levelWidth[0]),
+			yPos = floorToInt(v*m_levelHeight[0]);
+		return getTexel(0, xPos, yPos);
 	}
 }
 	

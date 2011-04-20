@@ -113,7 +113,7 @@ struct Ray {
 	/// Return a string representation of this ray
 	inline std::string toString() const {
 		std::ostringstream oss;
-		oss << "Ray[orig=" << o.toString() << ", dest=" 
+		oss << "Ray[orig=" << o.toString() << ", dir=" 
 			<< d.toString() << ", mint=" << mint 
 			<< ", maxt=" << maxt << ", time=" << time << "]";
 		return oss.str();
@@ -188,7 +188,7 @@ struct RayDifferential : public Ray {
 		std::ostringstream oss;
 		oss << "RayDifferential[" << endl
 			<< "  orig = " << o.toString() << "," << endl
-			<< "  dest = " << d.toString() << "," << endl
+			<< "  dir  = " << d.toString() << "," << endl
 			<< "  mint = " << mint << "," << endl
 			<< "  maxt = " << maxt << "," << endl
 			<< "  time = " << time << "," << endl

@@ -28,6 +28,10 @@ Texture::Texture(const Properties &props)
 Texture::Texture(Stream *stream, InstanceManager *manager) 
  : ConfigurableObject(stream, manager) {
 }
+	
+Vector3i Texture::getResolution() const {
+	return Vector3i(0);
+}
 
 Texture::~Texture() {
 }

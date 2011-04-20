@@ -16,7 +16,6 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/core/chisquare.h>
 #include <mitsuba/core/frame.h>
 #include <mitsuba/render/phase.h>
 #include <mitsuba/render/medium.h>
@@ -50,6 +49,8 @@ static StatsCounter avgSampleIterations("Micro-flake model",
  * "Building Volumetric Appearance Models of Fabric using 
  * Micro CT Imaging" by Shuang Zhao, Wenzel Jakob, Steve Marschner,
  * and Kavita Bala, ACM SIGGRAPH 2011
+ *
+ * \author Wenzel Jakob
  */
 class MicroflakePhaseFunction : public PhaseFunction {
 public:
@@ -71,8 +72,14 @@ public:
 	}
 
 	Float f(const PhaseFunctionQueryRecord &pRec) const {
-		if (pRec.mRec.orientation.isZero()) 
-			return 0.0f;
+		if (pRec.mRec.orientation.isZero()) {
+			/* What to do when the local orientation is undefined */
+			#if 0
+				return 1.0f / (4 * M_PI);
+			#else
+				return 0.0f;
+			#endif
+		}
 
 		Frame frame(pRec.mRec.orientation);
 		Vector wi = frame.toLocal(pRec.wi);
@@ -88,8 +95,15 @@ public:
 	}
 
 	inline Float sample(PhaseFunctionQueryRecord &pRec, Sampler *sampler) const {
-		if (pRec.mRec.orientation.isZero()) 
-			return 0.0f;
+		if (pRec.mRec.orientation.isZero()) {
+			/* What to do when the local orientation is undefined */
+			#if 0
+				pRec.wo = squareToSphere(sampler->next2D());
+				return 1.0f;
+			#else
+				return 0.0f;
+			#endif
+		}
 
 		Frame frame(pRec.mRec.orientation);
 		Vector wi = frame.toLocal(pRec.wi);

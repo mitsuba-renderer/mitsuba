@@ -464,11 +464,8 @@ public:
 				m_meshes[i]->addChild(name, child);
 			}
 		} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
-			Assert(m_subsurface == NULL);
-			for (size_t i=0; i<m_meshes.size(); ++i) { 
-				child->setParent(m_meshes[i]);
+			for (size_t i=0; i<m_meshes.size(); ++i) 
 				m_meshes[i]->addChild(name, child);
-			}
 		} else {
 			Shape::addChild(name, child);
 		}

@@ -13,5 +13,6 @@ plugins += env.SharedLibrary('#plugins/roughglass', ['roughglass.cpp'])
 plugins += env.SharedLibrary('#plugins/roughmetal', ['roughmetal.cpp'])
 plugins += env.SharedLibrary('#plugins/composite', ['composite.cpp'])
 plugins += env.SharedLibrary('#plugins/twosided', ['twosided.cpp'])
+plugins += env.SharedLibrary('#plugins/irawan', ['irawan.cpp'])
 
 Export('plugins')

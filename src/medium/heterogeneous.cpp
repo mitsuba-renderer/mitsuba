@@ -35,7 +35,7 @@ MTS_NAMESPACE_BEGIN
 #if defined(HETVOL_STATISTICS)
 static StatsCounter avgNewtonIterations("Heterogeneous volume", 
 		"Avg. # of Newton-Bisection iterations", EAverage);
-static StatsCounter avgRayMarchingStepsTransmission("Heterogeneous volume", 
+static StatsCounter avgRayMarchingStepsTransmittance("Heterogeneous volume", 
 		"Avg. # of ray marching steps (transmittance)", EAverage);
 static StatsCounter avgRayMarchingStepsSampling("Heterogeneous volume", 
 		"Avg. # of ray marching steps (sampling)", EAverage);
@@ -45,7 +45,7 @@ static StatsCounter earlyExits("Heterogeneous volume",
 
 /**
  * Flexible heterogeneous medium implementation, which acquires its data from 
- * nested <tt>Volume</tt> instances. These can be constant, use a procedural 
+ * nested \ref Volume instances. These can be constant, use a procedural 
  * function, or fetch data from disk, e.g. using a memory-mapped density grid.
  *
  * Instead of allowing separate volumes to be provided for the scattering
@@ -53,14 +53,16 @@ static StatsCounter earlyExits("Heterogeneous volume",
  * enforcing a spectrally uniform sigma_t, which must be provided using a 
  * nested scalar-valued volume named 'density'.
  *
- * A nested spectrum-valued 'albedo' volume must also be provided, which is 
+ * Another nested spectrum-valued 'albedo' volume must also be provided, which is 
  * used to compute the parameter sigma_s using the expression
  * "sigma_s = density * albedo" (i.e. 'albedo' contains the single-scattering
  * albedo of the medium).
  *
  * Optionally, one can also provide an vector-valued 'orientation' volume,
  * which contains local particle orientation that will be passed to
- * scattering models such as Kajiya-Kay phase function.
+ * scattering models such as a the Micro-flake or Kajiya-Kay phase functions.
+ *
+ * \author Wenzel Jakob
  */
 class HeterogeneousMedium : public Medium {
 public:
@@ -98,7 +100,7 @@ public:
 			Log(EError, "No density specified!");
 		if (m_albedo.get() == NULL)
 			Log(EError, "No albedo specified!");
-		m_aabb = m_density->getAABB();
+		m_densityAABB = m_density->getAABB();
 		m_directionallyVaryingCoefficients = 
 			m_phaseFunction->needsDirectionallyVaryingCoefficients();
 
@@ -162,7 +164,7 @@ public:
 		/* Determine the ray segment, along which the
 		   density integration should take place */
 		Float mint, maxt;
-		if (!m_aabb.rayIntersect(ray, mint, maxt))
+		if (!m_densityAABB.rayIntersect(ray, mint, maxt))
 			return 0.0f;
 
 		mint = std::max(mint, ray.mint);
@@ -171,23 +173,20 @@ public:
 
 		Point p = ray(mint), pLast = ray(maxt);
 
-		for (int i=0; i<3; ++i) {
-			maxComp = std::max(maxComp, std::abs(p[i]));
-			maxComp = std::max(maxComp, std::abs(pLast[i]));
-		}
-
 		/* Ignore degenerate path segments */
+		for (int i=0; i<3; ++i) 
+			maxComp = std::max(std::max(maxComp,
+				std::abs(p[i])), std::abs(pLast[i]));
 		if (length < 1e-6f * maxComp) 
 			return 0.0f;
 
 		/* Compute a suitable step size */
-		uint32_t nSteps = (uint32_t) std::ceil(length / m_stepSize);
-		nSteps += nSteps % 2;
+		uint32_t nSteps = (uint32_t) std::ceil(length / m_stepSize)*2;
 		const Float stepSize = length/nSteps;
 		const Vector increment = ray.d * stepSize;
 
 		#if defined(HETVOL_STATISTICS)
-			avgRayMarchingStepsTransmission.incrementBase();
+			avgRayMarchingStepsTransmittance.incrementBase();
 			earlyExits.incrementBase();
 		#endif
 
@@ -209,7 +208,7 @@ public:
 			m = 6 - m;
 
 			#if defined(HETVOL_STATISTICS)
-				++avgRayMarchingStepsTransmission;
+				++avgRayMarchingStepsTransmittance;
 			#endif
 			
 			#if defined(HETVOL_EARLY_EXIT)
@@ -287,19 +286,17 @@ public:
 		/* Determine the ray segment, along which the
 		   density integration should take place */
 		Float mint, maxt;
-		if (!m_aabb.rayIntersect(ray, mint, maxt))
+		if (!m_densityAABB.rayIntersect(ray, mint, maxt))
 			return false;
 		mint = std::max(mint, ray.mint);
 		maxt = std::min(maxt, ray.maxt);
 		Float length = maxt - mint, maxComp = 0;
 		Point p = ray(mint), pLast = ray(maxt);
 
-		for (int i=0; i<3; ++i) {
-			maxComp = std::max(maxComp, std::abs(p[i]));
-			maxComp = std::max(maxComp, std::abs(pLast[i]));
-		}
-
 		/* Ignore degenerate path segments */
+		for (int i=0; i<3; ++i) 
+			maxComp = std::max(std::max(maxComp,
+				std::abs(p[i])), std::abs(pLast[i]));
 		if (length < 1e-6f * maxComp) 
 			return 0.0f;
 
@@ -434,10 +431,7 @@ public:
 		mRec.pdfSuccessRev = expVal * densityAtMinT;
 		mRec.transmittance = Spectrum(expVal);
 
-		if (mRec.pdfSuccess == 0)
-			return false;
-
-		return success;
+		return success && mRec.pdfSuccess > 0;
 	}
 
 	void pdfDistance(const Ray &ray, MediumSamplingRecord &mRec) const {
@@ -458,9 +452,9 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "HeterogeneousMedium[" << endl
+			<< "  density = " << indent(m_density.toString()) << "," << endl
 			<< "  albedo = " << indent(m_albedo.toString()) << "," << endl
 			<< "  orientation = " << indent(m_orientation.toString()) << "," << endl
-			<< "  density = " << indent(m_density.toString()) << "," << endl
 			<< "  stepSize = " << m_stepSize << "," << endl
 			<< "  densityMultiplier = " << m_densityMultiplier << endl
 			<< "]";
@@ -475,6 +469,11 @@ protected:
 			Vector orientation = m_orientation->lookupVector(p);
 			if (!orientation.isZero())
 				density *= m_phaseFunction->sigmaDir(dot(d, orientation));
+			///////// HACKY WORKAROUND FOR ZERO DENSITIES /////////
+			else
+				return 0;
+			///////// HACKY WORKAROUND FOR ZERO DENSITIES /////////
+
 		}
 		return density;
 	}
@@ -483,7 +482,7 @@ protected:
 	ref<VolumeDataSource> m_albedo;
 	ref<VolumeDataSource> m_orientation;
 	Float m_stepSize;
-	AABB m_aabb;
+	AABB m_densityAABB;
 	bool m_directionallyVaryingCoefficients;
 };
 

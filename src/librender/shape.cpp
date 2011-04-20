@@ -126,6 +126,12 @@ void Shape::serialize(Stream *stream, InstanceManager *manager) const {
 	manager->serialize(stream, m_exteriorMedium.get());
 	stream->writeBool(m_occluder);
 }
+	
+Float Shape::getSurfaceArea() const {
+	Log(EError, "%s::getSurfaceArea(): Not implemented!",
+			getClass()->getName().c_str());
+	return 0.0f;
+}
 
 bool Shape::rayIntersect(const Ray &ray, Float mint, 
 		Float maxt, Float &t, void *temp) const {

@@ -195,8 +195,12 @@ public:
 	virtual Shape *getElement(int i);
 
 
-	/// Return the shape's surface area
-	virtual Float getSurfaceArea() const = 0;
+	/**
+	 * \brief Return the shape's surface area
+	 *
+	 * The default implementation throws an exception
+	 */
+	virtual Float getSurfaceArea() const;
 
 	/// Return a bounding box containing the shape
 	virtual AABB getAABB() const = 0;

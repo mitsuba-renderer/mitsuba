@@ -35,11 +35,6 @@ MTS_NAMESPACE_BEGIN
  */
 class LDRTexture : public Texture2D {
 public:
-	enum EFilterType {
-		EEWAFilter = 0,
-		EIsotropicFilter
-	};
-
 	LDRTexture(const Properties &props) : Texture2D(props) {
 		m_filename = Thread::getThread()->getFileResolver()->resolve(
 			props.getString("filename"));
@@ -53,12 +48,14 @@ public:
 		std::string wrapMode = props.getString("wrapMode", "repeat");
 
 		if (filterType == "ewa")
-			m_anisotropic = true;
-		else if (filterType == "isotropic")
-			m_anisotropic = false;
+			m_filterType = MIPMap::EEWA;
+		else if (filterType == "trilinear")
+			m_filterType = MIPMap::ETrilinear;
+		else if (filterType == "none")
+			m_filterType = MIPMap::ENone;
 		else
 			Log(EError, "Unknown filter type '%s' -- must be "
-				"'ewa' or 'isotropic'!", filterType.c_str());
+				"'ewa', 'isotropic', or 'none'!", filterType.c_str());
 
 		if (wrapMode == "repeat")
 			m_wrapMode = MIPMap::ERepeat;
@@ -95,7 +92,7 @@ public:
 		Log(EInfo, "Unserializing texture \"%s\"", m_filename.leaf().c_str());
 		m_gamma = stream->readFloat();
 		m_format = static_cast<Bitmap::EFileFormat>(stream->readInt());
-		m_anisotropic = stream->readBool();
+		m_filterType = (MIPMap::EFilterType) stream->readInt();
 		m_wrapMode = (MIPMap::EWrapMode) stream->readUInt();
 		m_maxAnisotropy = stream->readFloat();
 		uint32_t size = stream->readUInt();
@@ -204,7 +201,7 @@ public:
 			Log(EError, "%i bpp images are currently not supported!", bitmap->getBitsPerPixel());
 		}
 
-		m_mipmap = MIPMap::fromBitmap(corrected, !m_anisotropic,
+		m_mipmap = MIPMap::fromBitmap(corrected, m_filterType,
 				m_wrapMode, m_maxAnisotropy);
 		m_average = m_mipmap->triangle(m_mipmap->getLevels()-1, 0, 0);
 		m_maximum = m_mipmap->getMaximum();
@@ -215,7 +212,7 @@ public:
 		stream->writeString(m_filename.file_string());
 		stream->writeFloat(m_gamma);
 		stream->writeInt(m_format);
-		stream->writeBool(m_anisotropic);
+		stream->writeInt(m_filterType);
 		stream->writeUInt(m_wrapMode);
 		stream->writeFloat(m_maxAnisotropy);
 
@@ -251,6 +248,14 @@ public:
 		return true;
 	}
 
+	Vector3i getResolution() const {
+		return Vector3i(
+			m_mipmap->getWidth(),
+			m_mipmap->getHeight(),
+			1
+		);
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "LDRTexture[" << endl
@@ -268,9 +273,9 @@ protected:
 	ref<MemoryStream> m_stream;
 	fs::path m_filename;
 	Bitmap::EFileFormat m_format;
+	MIPMap::EFilterType m_filterType;
 	Spectrum m_average, m_maximum;
 	Float m_gamma;
-	bool m_anisotropic;
 	MIPMap::EWrapMode m_wrapMode;
 	Float m_maxAnisotropy;
 };
@@ -340,7 +345,8 @@ private:
 Shader *LDRTexture::createShader(Renderer *renderer) const {
 	return new LDRTextureShader(renderer, m_filename.leaf(), 
 			m_mipmap->getLDRBitmap(), m_uvOffset, m_uvScale,
-			m_wrapMode, m_anisotropic ? m_maxAnisotropy : 1.0f);
+			m_wrapMode, (m_filterType == MIPMap::EEWA)
+			? m_maxAnisotropy : 1.0f);
 }
 
 MTS_IMPLEMENT_CLASS_S(LDRTexture, false, Texture2D)

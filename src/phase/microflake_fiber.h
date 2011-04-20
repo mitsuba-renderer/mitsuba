@@ -186,6 +186,18 @@ static StatsCounter avgBrentFunEvals("Micro-flake model",
 		"Average Brent solver function evaluations", EAverage);
 #endif
 
+
+/**
+ * \brief Flake distribution for simulating rough fibers
+ *
+ * This class implements the Gaussian flake distribution proposed in
+ *
+ * "Building Volumetric Appearance Models of Fabric using 
+ * Micro CT Imaging" by Shuang Zhao, Wenzel Jakob, Steve Marschner,
+ * and Kavita Bala, ACM SIGGRAPH 2011
+ *
+ * \author Wenzel Jakob
+ */
 class GaussianFiberDistribution {
 public:
 	inline GaussianFiberDistribution() {}

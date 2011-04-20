@@ -87,6 +87,14 @@ public:
 		return true;
 	}
 
+	Vector3i getResolution() const {
+		return Vector3i(
+			m_mipmap->getWidth(),
+			m_mipmap->getHeight(),
+			1
+		);
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "EXRTexture[filename=\"" << m_filename.file_string() << "\"]";

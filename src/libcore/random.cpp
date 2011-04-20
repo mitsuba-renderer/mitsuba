@@ -80,6 +80,11 @@ Random::Random(Random *random) {
 	seed(random);
 }
 
+Random::Random(uint64_t seedval) {
+	mti=MT_N+1; /* mti==N+1 means mt[N] is not initialized */
+	seed(seedval);
+}
+
 Random::Random(Stream *stream, InstanceManager *manager) 
 		: SerializableObject(stream, manager) {
 	mti = stream->readInt();

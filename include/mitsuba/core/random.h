@@ -101,6 +101,11 @@ public:
 	 */
 	Random();
 
+	/**
+	 * \brief Construct a random generator with a custom seed
+	 */
+	Random(uint64_t seed);
+
 	/// Construct a new random generator seeded from a pre-existing one
 	Random(Random *random);
 
