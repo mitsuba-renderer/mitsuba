@@ -66,7 +66,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
 	ui->label->setText(ui->label->text().replace("CONFIG_FLAGS", configFlags));
 
 #if defined(__OSX__)
-	ui->label1->setText(ui->label->text().replace("font-size:10pt", "font-size:14pt"));
+	ui->label->setText(ui->label->text().replace("font-size:10pt", "font-size:14pt"));
 #endif
 }
 

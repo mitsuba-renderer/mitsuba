@@ -299,7 +299,7 @@ void restoreFPExceptions(bool oldState) {
 #if !defined(MTS_SSE)
 #warning SSE must be enabled to handle FP exceptions on OSX
 #else
-	currentState = query_fpexcept_sse() != 0
+	currentState = query_fpexcept_sse() != 0;
 #endif
 #else
 	currentState = fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
