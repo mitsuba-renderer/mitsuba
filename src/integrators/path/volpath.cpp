@@ -54,7 +54,6 @@ public:
 		/* Perform the first ray intersection (or ignore if the 
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
-		ray.mint = Epsilon;
 
 		Spectrum pathThroughput(1.0f);
 
@@ -109,6 +108,8 @@ public:
 
 				/* Trace a ray in this direction */
 				ray = Ray(mRec.p, pRec.wo, ray.time);
+				ray.mint = 0;
+
 				bool hitLuminaire = false;
 				Spectrum transmittance;
 

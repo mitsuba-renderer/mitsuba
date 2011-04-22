@@ -95,6 +95,7 @@ public:
 
 				/* Trace a ray in this direction */
 				ray = Ray(mRec.p, pRec.wo, ray.time);
+				ray.mint = 0;
 				computeIntersection = true;
 
 				/* ==================================================================== */
