@@ -155,8 +155,8 @@ struct WeavePattern {
 		hWidth = stream->readFloat();
 		warpArea = stream->readFloat();
 		weftArea = stream->readFloat();
-		tileWidth = stream->readInt();
-		tileHeight = stream->readInt();
+		tileWidth = stream->readUInt();
+		tileHeight = stream->readUInt();
 		dWarpUmaxOverDWarp = stream->readFloat();
 		dWarpUmaxOverDWeft = stream->readFloat();
 		dWeftUmaxOverDWarp = stream->readFloat();
@@ -164,7 +164,7 @@ struct WeavePattern {
 		fineness = stream->readFloat();
 		period = stream->readFloat();
 		pattern.resize(tileWidth * tileHeight);
-		stream->read(&pattern[0], pattern.size());
+		stream->readUIntArray(&pattern[0], pattern.size());
 		size_t yarnCount = stream->readSize();
 		yarns.resize(yarnCount);
 		for (size_t i=0; i<yarnCount; ++i)
@@ -187,7 +187,7 @@ struct WeavePattern {
 		stream->writeFloat(dWeftUmaxOverDWeft);
 		stream->writeFloat(fineness);
 		stream->writeFloat(period);
-		stream->write(&pattern[0], pattern.size());
+		stream->writeUIntArray(&pattern[0], pattern.size());
 		stream->writeSize(yarns.size());
 		for (size_t i=0; i<yarns.size(); ++i)
 			yarns[i].serialize(stream);

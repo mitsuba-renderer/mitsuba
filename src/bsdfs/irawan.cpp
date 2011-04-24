@@ -68,6 +68,12 @@ public:
 		bool result = phrase_parse(begin, end, g, sg, m_pattern);
 		if (!result)
 			Log(EError, "Unable to parse the weave pattern file \"%s\"!", path.file_string().c_str());
+		
+		/* Some sanity checks */
+		SAssert(m_pattern.pattern.size() == 
+				m_pattern.tileWidth * m_pattern.tileHeight);
+		for (size_t i=0; i<m_pattern.pattern.size(); ++i)
+			SAssert(m_pattern.pattern[i] <= m_pattern.yarns.size()); 
 
 		/* U and V tile count */
 		m_repeatU = props.getFloat("repeatU");
@@ -83,6 +89,10 @@ public:
 		m_diffuseReflectance = static_cast<Texture2D *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture2D *>(manager->getInstance(stream));
 		m_pattern = WeavePattern(stream);
+		m_repeatU = stream->readFloat();
+		m_repeatV = stream->readFloat();
+		m_kd = stream->readFloat();
+		m_ks = stream->readFloat();
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
 		m_combinedType = m_type[0] = EGlossyReflection | EAnisotropicMaterial;
@@ -270,6 +280,10 @@ public:
 		manager->serialize(stream, m_diffuseReflectance.get());
 		manager->serialize(stream, m_specularReflectance.get());
 		m_pattern.serialize(stream);
+		stream->writeFloat(m_repeatU);
+		stream->writeFloat(m_repeatV);
+		stream->writeFloat(m_kd);
+		stream->writeFloat(m_ks);
 	}
 
 	/** parameters:
