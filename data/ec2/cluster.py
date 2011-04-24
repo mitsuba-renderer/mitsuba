@@ -25,25 +25,30 @@ AWS_ACCESS_KEY_ID     = 'XXXXXXXXXXXXXXXXXXXX'
 AWS_SECRET_ACCESS_KEY = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
 KEYPAIR_NAME          = 'XXXXXXXXX'
 
-# Where do you want to start nodes?
-AWS_REGION            = 'eu-west-1'
-#AWS_REGION            = 'us-east-1'
+# Where do you want to start nodes? (e.g. us-east-1, eu-west-1, etc..)
+AWS_REGION            = 'us-east-1'
 
 # Ensure that the SSH private key file of the following name is
 # located in the same directory as this script
-SSH_PRIVATE_KEY_FILE  = 'id_rsa-' + KEYPAIR_NAME + "-" + AWS_REGION
+SSH_PRIVATE_KEY_FILE  = KEYPAIR_NAME + ".pem"
 
 # Repository to be used for fetching Mitsuba Ubuntu packages
-PKG_REPOSITORY        = 'deb XXXXXXXXXXX binary/'
+PKG_REPOSITORY        = 'deb https://www.mitsuba-renderer.org binary/'
 
 # Optional: when syncing additional files to the cluster nodes,
 # you can specify the relevant S3 bucket here
 S3_PATH               = 's3://XXXXXX'
 
-# Used system image (stateless Ubuntu Maverick). This should not be changed
-AMI_ID                = 'ami-08f40561' if AWS_REGION == 'us-east-1' else 'ami-1b9ca96f'
-
 conn = None
+
+# AMI ID: Stateless Ubuntu Maverick 64bit
+ami_ids = {
+	'ap-northeast-1' : 'ami-420fa443',
+	'ap-southeast-1' : 'ami-12423c40',	
+	'eu-west-1'	: 'ami-1b9ca96f',
+	'us-east-1'	: 'ami-08f40561',
+	'us-west-1'	: 'ami-a17e2ee4'
+}
 
 def remoteCommand(host, cmd, quiet = True):
 	#print('Executing command "%s" on node %s' % (cmd, host))
@@ -94,7 +99,8 @@ def parse_timestamp(s):
 		
 def addNodes(instanceType, nodeCount, groupName):
 	print('Booting %i nodes of type %s (group name = "%s") ..' % (nodeCount, instanceType, groupName))
-	image = conn.get_image(AMI_ID)
+	ami_id = ami_ids[AWS_REGION]
+	image = conn.get_image(ami_id)
 	reservation = image.run(min_count=nodeCount, max_count=nodeCount,
 			instance_type = instanceType, key_name = KEYPAIR_NAME,
 			user_data=groupName)
@@ -114,7 +120,8 @@ def addNodes(instanceType, nodeCount, groupName):
 
 def addSpotNodes(instanceType, nodeCount, maxPrice, groupName):
 	print('Requesting %i spot nodes of type %s (group name = "%s", max. price=%f)..' % (nodeCount, instanceType, groupName, maxPrice))
-	conn.request_spot_instances(str(maxPrice), AMI_ID, count=nodeCount,
+	ami_id = ami_ids[AWS_REGION]
+	conn.request_spot_instances(str(maxPrice), ami_id, count=nodeCount,
 			instance_type = instanceType, key_name = KEYPAIR_NAME,
 			user_data=groupName, type='one-time')
 	print('Done.')
@@ -198,7 +205,7 @@ def install(groupName):
 	for i in instances:
 		if i.state == u'running' and getGroup(i) == groupName:
 			print("Sending command to node %s" % i.public_dns_name)
-			processes += [remoteAdminCommand(i.public_dns_name, 'echo \"%s\" > /etc/apt/sources.list.d/mitsuba.list; dpkg --purge mitsuba; apt-get clean; apt-get update; apt-get -y --allow-unauthenticated install mitsuba s3cmd; chown ubuntu /mnt' % PKG_REPOSITORY)]
+			processes += [remoteAdminCommand(i.public_dns_name, 'echo \"%s\" > /etc/apt/sources.list.d/mitsuba.list; dpkg --purge mitsuba; apt-get clean; export DEBIAN_FRONTEND=noninteractive; apt-get update; apt-get -q -y --allow-unauthenticated install mitsuba s3cmd; chown ubuntu /mnt' % PKG_REPOSITORY)]
 	while True:
 		doneCount = 0
 		time.sleep(2)
@@ -308,6 +315,10 @@ def login(name):
 if len(sys.argv) == 1:
 	print('')
 	print('                    Mitsuba Amazon EC2 instance launcher')
+	print('')
+	print(' Copyright (C) 2007-2011 by Wenzel Jakob and others. This is free software;')
+	print(' see the source for copying conditions. There is NO warranty; not even for')
+	print(' MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.')
 	print('')
 	print(' Syntax: ./cluster.py <command> [arguments]    where command is one of')
 	print('')
