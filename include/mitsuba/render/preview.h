@@ -32,11 +32,11 @@ class MTS_EXPORT_RENDER PreviewWorker : public WorkProcessor {
 public:
 	inline PreviewWorker(int blockSize, Point cameraO, Vector cameraTL, 
 		Vector cameraDx, Vector cameraDy, const VPL &vpl, Float minDist, bool coherent,
-		bool diffuseSources, bool diffuseReceivers) 
+		bool diffuseSources, bool diffuseReceivers, Float backgroundScale) 
 		: m_blockSize(blockSize), m_cameraO(cameraO), m_cameraTL(cameraTL),
 		m_cameraDx(cameraDx), m_cameraDy(cameraDy), m_vpl(vpl), 
 		m_minDist(minDist), m_coherent(coherent), m_diffuseSources(diffuseSources),
-		m_diffuseReceivers(diffuseReceivers) {
+		m_diffuseReceivers(diffuseReceivers), m_backgroundScale(backgroundScale) {
 	}
 
 	void processIncoherent(const WorkUnit *workUnit, WorkResult *workResult, 
@@ -71,6 +71,7 @@ private:
 	const std::vector<const Shape *> *m_shapes;
 	bool m_coherent;
 	bool m_diffuseSources, m_diffuseReceivers;
+	Float m_backgroundScale;
 };
 
 MTS_NAMESPACE_END

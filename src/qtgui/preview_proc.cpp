@@ -19,8 +19,8 @@
 #include <mitsuba/render/rectwu.h>
 #include "preview_proc.h"
 
-PreviewProcess::PreviewProcess(const Scene *scene, int sceneResID, int blockSize) 
-	: m_vpl(NULL) {
+PreviewProcess::PreviewProcess(const Scene *scene, int sceneResID, 
+		int blockSize) : m_vpl(NULL) {
 	m_blockSize = blockSize;
 	m_logLevel = ETrace;
 	m_mutex = new Mutex();
@@ -73,7 +73,7 @@ void PreviewProcess::processResult(const WorkResult *result, bool cancelled) {
 
 void PreviewProcess::configure(const VPL &vpl, Float minDist, const Point2 &jitter, 
 		const Bitmap *source, Bitmap *target, bool coherent, bool diffuseSources,
-		bool diffuseReceivers) {
+		bool diffuseReceivers, Float backgroundScale) {
 	BlockedImageProcess::init(m_film->getCropOffset(), m_film->getCropSize(), m_blockSize);
 	m_source = source;
 	m_target = target;
@@ -83,6 +83,7 @@ void PreviewProcess::configure(const VPL &vpl, Float minDist, const Point2 &jitt
 	m_coherent = coherent;
 	m_diffuseSources = diffuseSources;
 	m_diffuseReceivers = diffuseReceivers;
+	m_backgroundScale = backgroundScale;
 
 	/* It is not necessary to shoot normalized rays. Instead, interpolate: 
 	   here, we generate the upper left corner ray as well as the 
@@ -109,7 +110,7 @@ void PreviewProcess::configure(const VPL &vpl, Float minDist, const Point2 &jitt
 ref<WorkProcessor> PreviewProcess::createWorkProcessor() const {
 	return new PreviewWorker(m_blockSize, m_cameraO, m_cameraTL,
 		m_cameraDx, m_cameraDy, *m_vpl, m_minDist, m_coherent,
-		m_diffuseSources, m_diffuseReceivers);
+		m_diffuseSources, m_diffuseReceivers, m_backgroundScale);
 }
 
 

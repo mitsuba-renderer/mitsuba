@@ -50,7 +50,7 @@ public:
 		const Luminaire *luminaire, const Point &camPos, bool faceNormals);
 
 	/// Draw the background if there is an environment luminaire
-	void drawBackground(const Transform &clipToWorld, const Point &camPos);
+	void drawBackground(const Transform &clipToWorld, const Point &camPos, Float scaleFactor);
 
 	/// Release bound resources
 	void unbind();

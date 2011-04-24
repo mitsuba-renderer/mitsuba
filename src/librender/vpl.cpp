@@ -18,11 +18,48 @@
 
 #include <mitsuba/render/vpl.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/statistics.h>
 
 MTS_NAMESPACE_BEGIN
 
-size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDepth, 
-		std::deque<VPL> &vpls) {
+static StatsCounter prunedVPLs("VPL generator", "Pruned VPLs", EPercentage);
+
+static void appendVPL(const Scene *scene, Random *random,
+	VPL &vpl, bool prune, std::deque<VPL> &vpls) {
+	prunedVPLs.incrementBase();
+	if (prune) {
+		/* Possibly reject VPLs if they are unlikely to be
+		visible from the camera */
+		int nSuccesses = 0, nSamples = 50;
+		const Shape *shape;
+		Normal n;
+		Ray ray;
+		Float t;
+		for (int i=0; i<nSamples; ++i) {
+			scene->getCamera()->generateRay(Point2(random->nextFloat(),
+				random->nextFloat()), Point2(0.0f), 0, ray);
+			if (scene->rayIntersect(ray, t, shape, n)) {
+				if (!scene->isOccluded(ray(t), vpl.its.p, 0))
+					++nSuccesses;
+			} else {
+				++nSuccesses; // be conservative
+			}
+		}
+		/// Have a small chance of acceptance in any case
+		Float acceptanceProb = (nSuccesses+1) / (Float) (nSamples+1);
+		if (random->nextFloat() < acceptanceProb) {
+			vpl.P /= acceptanceProb;
+			vpls.push_back(vpl);
+		} else {
+			++prunedVPLs;
+		}
+	} else {
+		vpls.push_back(vpl);
+	}
+}
+
+size_t generateVPLs(const Scene *scene, Random *random,
+		size_t offset, size_t count, int maxDepth, bool prune, std::deque<VPL> &vpls) {
 	ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 		createObject(MTS_CLASS(Sampler), Properties("halton")));
 	EmissionRecord eRec;
@@ -50,7 +87,7 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 		lumVPL.its.shFrame = (eRec.luminaire->getType() & Luminaire::EOnSurface)
 			? Frame(eRec.sRec.n) : stdFrame;
 		lumVPL.luminaire = eRec.luminaire;
-		vpls.push_back(lumVPL);
+		appendVPL(scene, random, lumVPL, prune, vpls);
 
 		weight *= eRec.luminaire->sampleEmissionDirection(eRec, dirSample);
 		Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface)
@@ -87,7 +124,7 @@ size_t generateVPLs(const Scene *scene, size_t offset, size_t count, int maxDept
 
 			VPL vpl(ESurfaceVPL, weight);
 			vpl.its = its;
-			vpls.push_back(vpl);
+			appendVPL(scene, random, vpl, prune, vpls);
 	
 			weight *= bsdfVal;
 		

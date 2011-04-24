@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/core/statistics.h>
+#include <mitsuba/core/plugin.h>
 #include <mitsuba/hw/vpl.h>
 #include <mitsuba/hw/session.h>
 #include <mitsuba/hw/device.h>
@@ -46,6 +47,7 @@ public:
 		m_session = Session::create();
 		m_device = Device::create(m_session);
 		m_renderer = Renderer::create(m_session);
+	
 		m_random = new Random();
 	}
 
@@ -73,7 +75,7 @@ public:
 			m_shaderManager->unbind();
 		}
 		m_renderer->endDrawingMeshes();
-		m_shaderManager->drawBackground(clipToWorld, camPos);
+		m_shaderManager->drawBackground(clipToWorld, camPos, 1.0f);
 	}
 
 	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
@@ -81,7 +83,8 @@ public:
 		Integrator::preprocess(scene, queue, job, sceneResID, cameraResID, samplerResID);
 
 		if (m_vpls.size() == 0) {
-			Float normalization = (Float) 1 / generateVPLs(scene, 0, m_vplCount, m_maxDepth, m_vpls);
+			Float normalization = (Float) 1 / generateVPLs(scene, m_random,
+					0, m_vplCount, m_maxDepth, true, m_vpls);
 			for (size_t i=0; i<m_vpls.size(); ++i)
 				m_vpls[i].P *= normalization;
 			Log(EInfo, "Generated %i virtual point lights", m_vpls.size());

@@ -84,11 +84,11 @@ private:
 	ref<GPUTexture> m_framebuffer;
 	ref<GPUProgram> m_accumProgram;
 	ref<PreviewProcess> m_previewProc;
+	ref<Random> m_random;
 	int m_accumProgramParam_source1;
 	int m_accumProgramParam_source2;
 	const GPUTexture *m_accumBuffer;
 	ref<Mutex> m_mutex;
-	ref<Random> m_random;
 	ref<ConditionVariable> m_queueCV;
 	ref<Timer> m_timer;
 	ref<WaitFlag> m_started;
@@ -101,6 +101,7 @@ private:
 	std::vector<GPUTexture *> m_releaseList;
 	Point m_camPos;
 	Transform m_camViewTransform;
+	Float m_backgroundScaleFactor;
 	bool m_quit, m_sleep, m_motion, m_useSync;
 	bool m_refreshScene;
 };

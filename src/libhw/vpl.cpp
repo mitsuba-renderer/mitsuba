@@ -177,8 +177,9 @@ void VPLShaderManager::init() {
 
 		oss << "varying vec3 d;" << endl
 			<< "uniform vec3 camPos;" << endl
+			<< "uniform float scale;" << endl
 			<< "void main() {" << endl
-			<< "  gl_FragColor.rgb = " << evalName << "_background(normalize(d - camPos));" << endl
+			<< "  gl_FragColor.rgb = scale * " << evalName << "_background(normalize(d - camPos));" << endl
 			<< "  gl_FragColor.a = 1.0;" << endl
 			<< "}" << endl;
 
@@ -606,7 +607,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 	m_targetConfig.bind(program, config, textureUnitOffset);
 }
 
-void VPLShaderManager::drawBackground(const Transform &clipToWorld, const Point &camPos) {
+void VPLShaderManager::drawBackground(const Transform &clipToWorld, const Point &camPos, Float scaleFactor) {
 	if (m_backgroundProgram == NULL)
 		return;
 	int textureUnitOffset = 0;	
@@ -615,6 +616,7 @@ void VPLShaderManager::drawBackground(const Transform &clipToWorld, const Point 
 		m_backgroundDependencies, textureUnitOffset);
 	m_backgroundProgram->setParameter("clipToWorld", clipToWorld, false);
 	m_backgroundProgram->setParameter("camPos", camPos, false);
+	m_backgroundProgram->setParameter("scale", scaleFactor);
 	m_renderer->blitQuad(false);
 	m_backgroundProgram->unbind();
 	m_backgroundDependencies.recursiveUnbind();

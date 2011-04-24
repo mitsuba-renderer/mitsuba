@@ -29,8 +29,8 @@ PreviewThread::PreviewThread(Device *parentDevice, Renderer *parentRenderer)
 	m_renderer = Renderer::create(m_session);
 	m_mutex = new Mutex();
 	m_queueCV = new ConditionVariable(m_mutex);
-	m_random = new Random();
 	m_bufferCount = 3;
+	m_backgroundScaleFactor = 1.0f;
 	m_queueEntryIndex = 0;
 	m_session->init();
 	m_timer = new Timer();
@@ -57,6 +57,8 @@ PreviewThread::PreviewThread(Device *parentDevice, Renderer *parentRenderer)
 	m_framebuffer = m_renderer->createGPUTexture("Framebuffer");
 	for (int i=0; i<m_bufferCount; ++i) 
 		m_recycleQueue.push_back(PreviewQueueEntry(m_queueEntryIndex++));
+	
+	m_random = new Random();
 
 	MTS_AUTORELEASE_END()
 }
@@ -350,9 +352,12 @@ void PreviewThread::run() {
 					m_timer->reset();
 				}
 
-				if (m_vpls.empty())
-					m_vplSampleOffset = generateVPLs(m_context->scene, m_vplSampleOffset,
-						1, m_context->pathLength, m_vpls);
+				if (m_vpls.empty()) {
+					size_t oldOffset = m_vplSampleOffset;
+					m_vplSampleOffset = generateVPLs(m_context->scene, m_random,
+						m_vplSampleOffset, 1, m_context->pathLength, !m_motion, m_vpls);
+					m_backgroundScaleFactor = m_vplSampleOffset - oldOffset;
+				}
 
 				VPL vpl = m_vpls.front();
 				m_vpls.pop_front();
@@ -388,9 +393,12 @@ void PreviewThread::run() {
 					m_timer->reset();
 				}
 
-				if (m_vpls.empty())
-					m_vplSampleOffset = generateVPLs(m_context->scene, m_vplSampleOffset,
-						1, m_context->pathLength, m_vpls);
+				if (m_vpls.empty()) {
+					size_t oldOffset = m_vplSampleOffset;
+					m_vplSampleOffset = generateVPLs(m_context->scene, m_random,
+						m_vplSampleOffset, 1, m_context->pathLength, !m_motion, m_vpls);
+					m_backgroundScaleFactor = m_vplSampleOffset - oldOffset;
+				}
 
 				VPL vpl = m_vpls.front();
 				m_vpls.pop_front();
@@ -500,7 +508,8 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 		m_shaderManager->unbind();
 	}
 	m_renderer->endDrawingMeshes();
-	m_shaderManager->drawBackground(clipToWorld, camPos);
+	m_shaderManager->drawBackground(clipToWorld, camPos,
+		m_backgroundScaleFactor);
 	m_framebuffer->releaseTarget();
 
 	target.buffer->activateTarget();
@@ -592,7 +601,8 @@ void PreviewThread::rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 		target.buffer->getBitmap(), 
 		m_context->previewMethod == ERayTraceCoherent,
 		m_context->diffuseSources,
-		m_context->diffuseReceivers);
+		m_context->diffuseReceivers,
+		m_backgroundScaleFactor);
 	m_mutex->unlock();
 
 	ref<Scheduler> sched = Scheduler::getInstance();

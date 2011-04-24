@@ -46,16 +46,20 @@ struct VPL {
 
 /**
  * Generate a series of point light sources by sampling from the Halton
- * sequence (as is done in Instant Radiosity). The parameter <code>offset</code> 
+ * sequence (as is done in Instant Radiosity). The parameter \c offset
  * allows setting the initial QMC sample index (should be set to 0 if no offset is
  * desired), and the last index is returned after the function finishes. This can 
  * be used to generate an arbitrary number of VPLs incrementally. Note that the 
- * parameter <code>count</code> is only a suggestion. Generally, the implementation 
- * will produce a few more VPLs. After VPL generation is done, their power must be scaled
- * by the inverse of the returned index.
+ * value supplied with the parameter \c count is only a suggestion to the implementation.
+ * Generally, it will produce a few more VPLs than the requsted amount. After VPL
+ * generation is done, their power must be scaled by the inverse of the returned index.
+ * The implementation here also needs an pseudorandom number generator, which
+ * is used to prune VPLs in an unbiased manner.
  */
-extern MTS_EXPORT_RENDER size_t generateVPLs(const Scene *scene, size_t offset, 
-	size_t count, int maxDepth, std::deque<VPL> &vpls);
+extern MTS_EXPORT_RENDER size_t generateVPLs(const Scene *scene,
+		Random *random, size_t offset, 
+		size_t count, int maxDepth, bool prune,
+		std::deque<VPL> &vpls);
 
 MTS_NAMESPACE_END
 

@@ -36,7 +36,7 @@ public:
 
 	void configure(const VPL &vpl, Float minDist, const Point2 &jitter, 
 		const Bitmap *source, Bitmap *target, bool coherent,
-		bool diffuseSources, bool diffuseReceivers); 
+		bool diffuseSources, bool diffuseReceivers, Float backgroundScale); 
 	inline int getRayCount() const { return m_numRays; }
 	inline const Scene *getScene() const { return m_scene; }
 
@@ -63,6 +63,7 @@ private:
 	bool m_coherent;
 	bool m_diffuseSources;
 	bool m_diffuseReceivers;
+	Float m_backgroundScale;
 };
 
 #endif /* __PREVIEW_PROC_H */

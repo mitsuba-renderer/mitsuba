@@ -79,7 +79,7 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 
 			++numRays;
 			if (!m_kdtree->rayIntersect(primary, its)) {
-				block->setPixel(pos++, m_scene->LeBackground(primary));
+				block->setPixel(pos++, m_scene->LeBackground(primary)*m_backgroundScale);
 				continue;
 			}
 
@@ -283,7 +283,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 						Point(primRay4.o[0].f[idx], primRay4.o[1].f[idx], primRay4.o[2].f[idx]),
 						Vector(primRay4.d[0].f[idx], primRay4.d[1].f[idx], primRay4.d[2].f[idx]),
 						0.0f
-					));
+					)) * m_backgroundScale;
 					memset(&direct[idx], 0, sizeof(Spectrum));
 					continue;
 				}
@@ -457,7 +457,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 ref<WorkProcessor> PreviewWorker::clone() const {
 	return new PreviewWorker(m_blockSize, m_cameraO, m_cameraTL, 
 		m_cameraDx, m_cameraDy, m_vpl, m_minDist, m_coherent,
-		m_diffuseSources, m_diffuseReceivers);
+		m_diffuseSources, m_diffuseReceivers, m_backgroundScale);
 }
 
 MTS_IMPLEMENT_CLASS(PreviewWorker, false, WorkProcessor)
