@@ -285,18 +285,18 @@ void FileStream::read(void *pPtr, size_t size) {
 		Log(EError, "Error while reading from file \"%s\": %s",
 			m_path.file_string().c_str(), lastErrorText().c_str());
 	}
-	if (lpNumberOfBytesRead != (DWORD) size) {
-		Log(EError, "Read less data than expected (%i bytes required) "
-			"from file \"%s\"", size, m_path.file_string().c_str());
-	}
+	if (lpNumberOfBytesRead != (DWORD) size) 
+		throw EOFException(formatString("Read less data than expected (%i bytes required) "
+			"from file \"%s\"", size, m_path.file_string().c_str()), (size_t) lpNumberOfBytesRead);
 #else
-	if (fread(pPtr, size, 1, m_file) != 1) {
+	size_t bytesRead;
+	if ((bytesRead = fread(pPtr, 1, size, m_file)) != size) {
 		if (ferror(m_file) != 0) {
 			Log(EError, "Error while reading from file \"%s\": %s",
 				m_path.file_string().c_str(), strerror(errno));
 		}
-		Log(EError, "Read less data than expected (%i bytes required) "
-			"from file \"%s\"", size, m_path.file_string().c_str());
+		throw EOFException(formatString("Read less data than expected (%i bytes required) "
+			"from file \"%s\"", size, m_path.file_string().c_str()), bytesRead);
 	}
 #endif
 }
@@ -314,18 +314,17 @@ void FileStream::write(const void *pPtr, size_t size) {
 		Log(EError, "Error while writing to file \"%s\": %s",
 			m_path.file_string().c_str(), lastErrorText().c_str());
 	}
-	if (lpNumberOfBytesWritten != (DWORD) size) {
-		Log(EError, "Wrote less data than expected (%i bytes required) "
-			"to file \"%s\"", size, m_path.file_string().c_str());
-	}
+	if (lpNumberOfBytesWritten != (DWORD) size) 
+		throw EOFException(formatString("Wrote less data than expected (%i bytes required) "
+			"to file \"%s\"", size, m_path.file_string().c_str()), (size_t) lpNumberOfBytesWritten);
 #else
-	if (fwrite(pPtr, size, 1, m_file) != 1) {
-		if (ferror(m_file)) {
+	size_t bytesWritten;
+	if ((bytesWritten = fwrite(pPtr, 1, size, m_file)) != size) {
+		if (ferror(m_file))
 			Log(EError, "Error while writing to file \"%s\": %s",
 				m_path.file_string().c_str(), strerror(errno));
-		}
-		Log(EError, "Wrote less data than expected (%i bytes required) "
-			"to file \"%s\"", size, m_path.file_string().c_str());
+		throw EOFException(formatString("Wrote less data than expected (%i bytes required) "
+			"to file \"%s\"", size, m_path.file_string().c_str()), bytesWritten);
 	}
 #endif
 }

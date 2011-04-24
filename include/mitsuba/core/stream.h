@@ -23,6 +23,20 @@
 
 MTS_NAMESPACE_BEGIN
 
+/// \brief This exception is thrown after an incomplete IO read/write operation
+class EOFException : public std::runtime_error {
+public:
+	inline EOFException(const std::string &str, size_t completed)
+		: std::runtime_error(str), m_completed(completed) { }
+
+	/// Return the number of bytes that successfully completed
+	inline size_t getCompleted() const {
+		return m_completed;
+	}
+private:
+	size_t m_completed;
+};
+
 /** \brief Abstract seekable stream class
  *
  * Specifies all functions to be implemented by stream 
@@ -55,6 +69,13 @@ public:
 	 */
 	Stream();
 	
+	/// Return a string representation
+	virtual std::string toString() const;
+
+	// ======================================================================
+	/// @{ \name Endianness-related
+	// ======================================================================
+	
 	/// Set the stream byte order
 	void setByteOrder(EByteOrder byteOrder);
 
@@ -63,18 +84,26 @@ public:
 
 	/// Return the byte order of the underlying machine
 	inline EByteOrder getHostByteOrder() { return m_hostByteOrder; }
-
-	/// Return a string representation
-	virtual std::string toString() const;
+	
+	/// @}
+	// ======================================================================
 
 	// ======================================================================
 	/// @{ \name Abstract methods that need to be implemented by subclasses
 	// ======================================================================
 
-	/// Read a specified amount of data from the stream
+	/**
+	 * \brief Read a specified amount of data from the stream
+	 * 
+	 * Throws an exception when the stream ended prematurely
+	 */
 	virtual void read(void *ptr, size_t size) = 0;
 
-	/// Write a specified amount of data into the stream
+	/**
+	 * \brief Write a specified amount of data into the stream
+	 *
+	 * Throws an exception when not all data could be written
+	 */
 	virtual void write(const void *ptr, size_t size) = 0;
 
 	/// Seek to a position inside the stream

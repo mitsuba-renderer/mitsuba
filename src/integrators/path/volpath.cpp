@@ -192,6 +192,7 @@ public:
 					if (its.isMediumTransition())
 						rRec.medium = its.getTargetMedium(ray.d);
 					ray.setOrigin(its.p);
+					ray.mint = Epsilon;
 					scene->rayIntersect(ray, its);
 					continue;
 				}

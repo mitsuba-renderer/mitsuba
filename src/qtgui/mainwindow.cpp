@@ -1237,8 +1237,8 @@ inline float toSRGB(float value) {
 
 void MainWindow::on_actionExportImage_triggered() {
 	QFileDialog *dialog = new QFileDialog(this, tr("Export image .."),
-		"", tr("All supported formats (*.exr *.png);;Linear EXR Image (*.exr)"
-			";; Tonemapped 8-bit PNG Image (*.png)"));
+		"", tr("All supported formats (*.exr *.png *.jpg *.jpeg);;Linear EXR image (*.exr)"
+			";; Tonemapped 8-bit image (*.png *.jpg *.jpeg)"));
 
 	QSettings settings("mitsuba-renderer.org", "qtgui");
 	dialog->setViewMode(QFileDialog::Detail);
@@ -1277,8 +1277,10 @@ void MainWindow::onExportDialogClose(int reason) {
 			format = Bitmap::EEXR;
 		} else if (fileName.endsWith(".png")) {
 			format = Bitmap::EPNG;
+		} else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+			format = Bitmap::EJPEG;
 		} else {
-			SLog(EError, "Unknown file type -- the filename must end in either .exr or .png");
+			SLog(EError, "Unknown file type -- the filename must end in either .exr, .png, .jpg, or .jpeg");
 			return;
 		}
 

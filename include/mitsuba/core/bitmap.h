@@ -143,6 +143,9 @@ protected:
 	/// Save a file using the PNG file format
 	void savePNG(Stream *stream, int compression) const;
 
+	/// Save a file using the JPEG file format
+	void saveJPEG(Stream *stream, int quality = 100) const;
+
 	/// Save a file using the EXR file format
 	void saveEXR(Stream *stream) const;
 protected:

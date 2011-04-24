@@ -162,6 +162,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				}
 
 				ray = Ray(mRec.p, pRec.wo, ray.time);
+				ray.mint = 0;
 			} else if (its.t == std::numeric_limits<Float>::infinity()) {
 				/* There is no surface in this direction */
 				break;
@@ -181,6 +182,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				if (!bsdf) {
 					/* Pass right through the surface (there is no BSDF) */
 					ray.setOrigin(its.p);
+					ray.mint = Epsilon;
 
 					if (its.isMediumTransition())
 						medium = its.getTargetMedium(ray.d);
@@ -211,6 +213,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				Vector wi = -ray.d, wo = its.toWorld(bRec.wo);
 				ray.setOrigin(its.p);
 				ray.setDirection(wo);
+				ray.mint = Epsilon;
 
 				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
 				Float wiDotGeoN = dot(its.geoFrame.n, wi),

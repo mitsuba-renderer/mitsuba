@@ -121,33 +121,88 @@ static void png_error_func(png_structp png_ptr, png_const_charp msg) {
  * ========================== */
 
 extern "C" {
-	typedef struct {
-		struct jpeg_source_mgr pub;
-		JOCTET * buffer;
-		size_t buflen;
-	} jbuf_t;
+	static const size_t jpeg_bufferSize = 0x8000;
 
-	METHODDEF(void) dsm_init_source(j_decompress_ptr cinfo) {
+	typedef struct {
+		struct jpeg_source_mgr mgr;
+		JOCTET * buffer;
+		mitsuba::Stream *stream;
+	} jbuf_in_t;
+
+	typedef struct {
+		struct jpeg_destination_mgr mgr;
+		JOCTET * buffer;
+		mitsuba::Stream *stream;
+	} jbuf_out_t;
+
+	METHODDEF(void) jpeg_init_source(j_decompress_ptr cinfo) {
+		jbuf_in_t *p = (jbuf_in_t *) cinfo->src;
+		p->buffer = new JOCTET[jpeg_bufferSize];
 	}
 
+	METHODDEF(boolean) jpeg_fill_input_buffer (j_decompress_ptr cinfo) {
+		jbuf_in_t *p = (jbuf_in_t *) cinfo->src;
+		size_t nBytes;
 
-	METHODDEF(boolean) dsm_fill_input_buffer (j_decompress_ptr cinfo) {
-		ERREXIT(cinfo, JERR_INPUT_EOF);
+		try {
+			p->stream->read(p->buffer, jpeg_bufferSize);
+			nBytes = jpeg_bufferSize;
+		} catch (const EOFException &e) {
+			nBytes = e.getCompleted();
+			if (nBytes == 0) {
+				/* Insert a fake EOI marker */
+				p->buffer[0] = (JOCTET) 0xFF;
+				p->buffer[1] = (JOCTET) JPEG_EOI;
+				nBytes = 2;
+			}
+		}
+
+		cinfo->src->bytes_in_buffer = nBytes;
+		cinfo->src->next_input_byte = p->buffer;
 		return TRUE;
 	}
   
-	METHODDEF(void) dsm_skip_input_data (j_decompress_ptr cinfo, long num_bytes) {
-		jbuf_t *p = (jbuf_t *)cinfo->src;
-		long i = (long) (p->pub.bytes_in_buffer - num_bytes);
-		if (i < 0) i = 0;
-		p->pub.bytes_in_buffer = i;
-		p->pub.next_input_byte += num_bytes;
+	METHODDEF(void) jpeg_skip_input_data (j_decompress_ptr cinfo, long num_bytes) {
+		if (num_bytes > 0) {
+			while (num_bytes > (long) cinfo->src->bytes_in_buffer) {
+				num_bytes -= (long) cinfo->src->bytes_in_buffer;
+				jpeg_fill_input_buffer(cinfo);
+			}
+			cinfo->src->next_input_byte += (size_t) num_bytes;
+			cinfo->src->bytes_in_buffer -= (size_t) num_bytes;
+		}
 	}
 
-	METHODDEF(void) dsm_term_source (j_decompress_ptr cinfo) {
+	METHODDEF(void) jpeg_term_source (j_decompress_ptr cinfo) {
+		jbuf_in_t *p = (jbuf_in_t *) cinfo->src;
+		delete[] p->buffer;
 	}
 
-	METHODDEF(void) dsm_error_exit (j_common_ptr cinfo) {
+	METHODDEF(void) jpeg_init_destination(j_compress_ptr cinfo) { 
+		jbuf_out_t *p = (jbuf_out_t *)cinfo->dest;
+
+		p->buffer = new JOCTET[jpeg_bufferSize];
+		p->mgr.next_output_byte = p->buffer;
+		p->mgr.free_in_buffer = jpeg_bufferSize;
+	}
+
+	METHODDEF(boolean) jpeg_empty_output_buffer(j_compress_ptr cinfo) { 
+		jbuf_out_t *p = (jbuf_out_t *)cinfo->dest;
+		p->stream->write(p->buffer, jpeg_bufferSize);
+		p->mgr.next_output_byte = p->buffer;
+		p->mgr.free_in_buffer = jpeg_bufferSize;
+		return 1;
+	}
+
+	METHODDEF(void) jpeg_term_destination(j_compress_ptr cinfo) {
+		jbuf_out_t *p = (jbuf_out_t *)cinfo->dest;
+		p->stream->write(p->buffer, 
+			jpeg_bufferSize-p->mgr.free_in_buffer);
+		delete[] p->buffer;
+		p->mgr.free_in_buffer = 0;
+	}
+
+	METHODDEF(void) jpeg_error_exit (j_common_ptr cinfo) {
 		char msg[JMSG_LENGTH_MAX];
 		(*cinfo->err->format_message) (cinfo, msg);
 		SLog(EError, "Critcal libjpeg error: %s", msg);
@@ -171,7 +226,7 @@ Bitmap::Bitmap(int width, int height, int bpp)
 
 	// 1-bit masks are stored in a packed format. 
 	m_size = (size_t) std::ceil(((double) m_width * m_height * m_bpp) / 8.0);
-	m_data = static_cast<unsigned char *>(allocAligned(m_size));
+	m_data = static_cast<uint8_t *>(allocAligned(m_size));
 }
 
 Bitmap::Bitmap(EFileFormat format, Stream *stream) : m_data(NULL) {
@@ -200,9 +255,9 @@ void Bitmap::loadEXR(Stream *stream) {
 	m_size = m_width * m_height * 16;
 	m_bpp = 4*4*8;
 	m_gamma = 1.0f;
-	m_data = static_cast<unsigned char *>(allocAligned(m_size));
+	m_data = static_cast<uint8_t *>(allocAligned(m_size));
 	Imf::Rgba *rgba = new Imf::Rgba[m_width*m_height];
-	Log(ETrace, "Reading %ix%i EXR file", m_width, m_height);
+	Log(ETrace, "Reading a %ix%i EXR file", m_width, m_height);
 
 	/* Convert to 32-bit floating point per channel */
 	file.setFrameBuffer(rgba, 1, m_width);
@@ -230,7 +285,7 @@ void Bitmap::loadTGA(Stream *stream) {
 	int y2 = stream->readShort();
 	m_width = x2-x1;
 	m_height = y2-y1;
-	Log(EInfo, "Reading %ix%i TGA file", m_width, m_height);
+	Log(EInfo, "Reading a %ix%i TGA file", m_width, m_height);
 
 	stream->setPos(16);
 	m_bpp = stream->readUChar();
@@ -240,7 +295,7 @@ void Bitmap::loadTGA(Stream *stream) {
 	m_gamma = -1;
 	int channels = m_bpp / 8;
 	m_size = m_width * m_height * channels;
-	m_data = static_cast<unsigned char *>(allocAligned(m_size));
+	m_data = static_cast<uint8_t *>(allocAligned(m_size));
 	stream->setPos(18 + headerSize);
 	stream->read(m_data, m_size);
 
@@ -315,8 +370,8 @@ void Bitmap::loadBMP(Stream *stream) {
 	m_bpp = DIBHeader.bitspp;
 
 	m_size = m_width * m_height * (m_bpp / 8);
-	m_data = static_cast<unsigned char *>(allocAligned(m_size));
-	Log(ETrace, "Reading %ix%ix%i BMP file", m_width, m_height, m_bpp);
+	m_data = static_cast<uint8_t *>(allocAligned(m_size));
+	Log(ETrace, "Reading a %ix%ix%i BMP file", m_width, m_height, m_bpp);
 
 	int nChannels = m_bpp / 8;
 	int lineWidth = m_width * nChannels; 
@@ -418,7 +473,7 @@ void Bitmap::loadPNG(Stream *stream) {
 		m_gamma = 1.0f/2.2f;
 	}
 
-	Log(ETrace, "Reading %ix%ix%i PNG file", width, height, m_bpp);
+	Log(ETrace, "Reading a %ix%ix%i PNG file", width, height, m_bpp);
 
 	/* Update the information */
 	png_read_update_info(png_ptr, info_ptr);
@@ -429,13 +484,13 @@ void Bitmap::loadPNG(Stream *stream) {
 	m_width = width; m_height = height;
 
 	m_size = (size_t) std::ceil((m_width * m_height * m_bpp) / 8.0);
-	m_data = static_cast<unsigned char *>(allocAligned(m_size));
+	m_data = static_cast<uint8_t *>(allocAligned(m_size));
 
 	rows = new png_bytep[m_height];
 
 	if (m_bpp == 1) {
 		for (int i=0; i<m_height; i++)
-			rows[i] = new unsigned char[m_width];
+			rows[i] = new uint8_t[m_width];
 	} else {
 		int rowBytes = m_width * (m_bpp / 8);
 		for (int i=0; i<m_height; i++)
@@ -463,27 +518,21 @@ void Bitmap::loadPNG(Stream *stream) {
 void Bitmap::loadJPEG(Stream *stream) {
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;
-	jbuf_t jbuf;
-	size_t length = stream->getSize();
+	jbuf_in_t jbuf;
 
-	memset(&jbuf, 0, sizeof(jbuf_t));
+	memset(&jbuf, 0, sizeof(jbuf_in_t));
+
 	cinfo.err = jpeg_std_error(&jerr);
-	jerr.error_exit = dsm_error_exit;
-
+	jerr.error_exit = jpeg_error_exit;
 	jpeg_create_decompress(&cinfo);
 	cinfo.src = (struct jpeg_source_mgr *) &jbuf;
-	jbuf.buffer = new JOCTET[length];
-	jbuf.pub.init_source = dsm_init_source;
-	jbuf.pub.fill_input_buffer = dsm_fill_input_buffer;
-	jbuf.pub.skip_input_data = dsm_skip_input_data;
+	jbuf.mgr.init_source = jpeg_init_source;
+	jbuf.mgr.fill_input_buffer = jpeg_fill_input_buffer;
+	jbuf.mgr.skip_input_data = jpeg_skip_input_data;
+	jbuf.mgr.term_source = jpeg_term_source;
+	jbuf.mgr.resync_to_restart = jpeg_resync_to_restart;
+	jbuf.stream = stream;
 
- 	/* Use default method (in libjpeg) */
-	jbuf.pub.resync_to_restart = jpeg_resync_to_restart;
-	jbuf.pub.term_source = dsm_term_source;
-	jbuf.buflen = jbuf.pub.bytes_in_buffer = length;
-	jbuf.pub.next_input_byte = jbuf.buffer;
-  
-	stream->read(jbuf.buffer, length);
 	jpeg_read_header(&cinfo, TRUE);
 	jpeg_start_decompress(&cinfo);
 
@@ -492,25 +541,24 @@ void Bitmap::loadJPEG(Stream *stream) {
 	m_bpp = cinfo.output_components*8;
 	m_gamma = 1.0f/2.2f;
 	m_size = m_width * m_height * cinfo.output_components;
-	Log(ETrace, "Reading %ix%ix%i JPG file", m_width, m_height, m_bpp);
+	Log(ETrace, "Reading a %ix%ix%i JPG file", m_width, m_height, m_bpp);
 
 	int row_stride = cinfo.output_width * cinfo.output_components;
-	unsigned char **buffer = new unsigned char *[m_height];
-	m_data = static_cast<unsigned char *>(allocAligned(m_size));
+	uint8_t **scanlines = new uint8_t *[m_height];
+	m_data = static_cast<uint8_t *>(allocAligned(m_size));
 	for (int i=0; i<m_height; ++i) 
-		buffer[i] = m_data + row_stride*i;
+		scanlines[i] = m_data + row_stride*i;
 
 	/* Process scanline by scanline */	
 	int counter = 0;
 	while (cinfo.output_scanline < (unsigned int) m_height) 
-		counter += jpeg_read_scanlines(&cinfo, &buffer[counter], m_height);
+		counter += jpeg_read_scanlines(&cinfo, &scanlines[counter], m_height);
 
 	/* Release the libjpeg data structures */
 	jpeg_finish_decompress(&cinfo);
 	jpeg_destroy_decompress(&cinfo);
 
-	delete[] buffer;
-	delete[] jbuf.buffer;
+	delete[] scanlines;
 }
 
 Bitmap::~Bitmap() {
@@ -542,12 +590,14 @@ void Bitmap::save(EFileFormat format, Stream *stream, int compression) const {
 		saveEXR(stream);
 	else if (format == EPNG)
 		savePNG(stream, compression);
+	else if (format == EJPEG)
+		saveJPEG(stream);
 	else
 		Log(EError, "Bitmap: Invalid file format!");
 }
 
 void Bitmap::saveEXR(Stream *stream) const {
-	Log(EDebug, "Writing %ix%i EXR file", m_width, m_height);
+	Log(EDebug, "Writing a %ix%i EXR file", m_width, m_height);
 	EXROStream ostr(stream);
 	Imf::RgbaOutputFile file(ostr, Imf::Header(m_width, m_height), 
 		Imf::WRITE_RGBA);
@@ -584,9 +634,9 @@ void Bitmap::savePNG(Stream *stream, int compression) const {
 	volatile png_bytepp rows = NULL;
 
 	if (m_gamma == -1)
-		Log(EDebug, "Writing %ix%ix%i sRGB PNG file", m_width, m_height, m_bpp);
+		Log(EDebug, "Writing a %ix%ix%i sRGB PNG file", m_width, m_height, m_bpp);
 	else
-		Log(EDebug, "Writing %ix%ix%i PNG file (gamma=%.1f)", m_width, m_height, m_bpp, m_gamma);
+		Log(EDebug, "Writing a %ix%ix%i PNG file (gamma=%.1f)", m_width, m_height, m_bpp, m_gamma);
 
 	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, &png_error_func, NULL);
 	if (png_ptr == NULL) {
@@ -657,7 +707,7 @@ void Bitmap::savePNG(Stream *stream, int compression) const {
 	if (m_bpp == 1) {
 		/* Convert to 8 bit */
 		for (int i=0; i<m_height; i++) {
-			rows[i] = new unsigned char[m_width];
+			rows[i] = new uint8_t[m_width];
 			for (int o=0; o<m_width; o++) {
 				int pos = i * m_width + o;
 				rows[i][o] = (m_data[pos / 8] & (1 << (pos % 8))) == false ? 0 : 1;
@@ -679,6 +729,60 @@ void Bitmap::savePNG(Stream *stream, int compression) const {
 	}
 
 	delete[] rows;
+}
+
+void Bitmap::saveJPEG(Stream *stream, int quality) const {
+	struct jpeg_compress_struct cinfo;
+	struct jpeg_error_mgr jerr;
+	jbuf_out_t jbuf;
+	memset(&jbuf, 0, sizeof(jbuf_out_t));
+
+	cinfo.err = jpeg_std_error(&jerr);
+	jerr.error_exit = jpeg_error_exit;
+	jpeg_create_compress(&cinfo);
+
+	cinfo.dest = (struct jpeg_destination_mgr *) &jbuf;
+	jbuf.mgr.init_destination = jpeg_init_destination;
+	jbuf.mgr.empty_output_buffer = jpeg_empty_output_buffer;
+	jbuf.mgr.term_destination = jpeg_term_destination;
+	jbuf.stream = stream;
+
+	cinfo.image_width = m_width;
+	cinfo.image_height = m_height;
+	cinfo.input_components = (m_bpp == 24 || m_bpp==32) ? 3 : 1;
+	cinfo.in_color_space = JCS_RGB;
+
+	jpeg_set_defaults(&cinfo);
+	jpeg_set_quality(&cinfo, quality, TRUE);
+	jpeg_start_compress(&cinfo, TRUE);
+
+	Log(ETrace, "Writing a %ix%ix%i JPG file", m_width, m_height, m_bpp);
+
+	/* Write scanline by scanline */	
+	int components = m_bpp/8;
+	uint8_t *temp = NULL;
+	if (components == 4)
+		temp = new uint8_t[m_width*3];
+	for (int i=0; i<m_height; ++i) {
+		uint8_t *source = m_data + i*m_width*components;
+		if (temp) {
+			for (int j=0; j<m_width; ++j) {
+				temp[3*j+0] = source[4*j+0];
+				temp[3*j+1] = source[4*j+1];
+				temp[3*j+2] = source[4*j+2];
+			}
+			jpeg_write_scanlines(&cinfo, &temp, 1);
+		} else {
+			jpeg_write_scanlines(&cinfo, &source, 1);
+		}
+	}
+
+	/* Release the libjpeg data structures */
+	jpeg_finish_compress(&cinfo);
+	jpeg_destroy_compress(&cinfo);
+
+	if (temp)
+		delete[] temp;
 }
 
 std::string Bitmap::toString() const {

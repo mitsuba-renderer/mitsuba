@@ -58,7 +58,6 @@ public:
 		while (rRec.depth < m_maxDepth || m_maxDepth < 0) {
 			if (computeIntersection)
 				scene->rayIntersect(ray, its);
-			ray.mint = Epsilon;
 
 			/* ==================================================================== */
 			/*                 Radiative Transfer Equation sampling                 */
@@ -150,6 +149,7 @@ public:
 					if (its.isMediumTransition())
 						rRec.medium = its.getTargetMedium(ray.d);
 					ray.setOrigin(its.p);
+					ray.mint = Epsilon;
 					continue;
 				}
 

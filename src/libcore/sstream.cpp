@@ -159,10 +159,14 @@ void SocketStream::read(void *ptr, size_t size) {
 #else
 		int n = recv(m_socket, data, size, 0);
 #endif
-		if (n == 0)
-			Log(EError, "Connection closed while reading!");
-		else if (n == -1)
-			handleError("recv");
+		if (n == 0) {
+			throw EOFException("Connection closed while reading!",
+					(size_t) (data - (char *) ptr));
+		} else if (n == -1) {
+			handleError("recv", EWarn);
+			throw EOFException("Connection closed while reading!",
+					(size_t) (data - (char *) ptr));
+		}
 		size -= n;
 		data += n;
 	}
@@ -183,8 +187,11 @@ void SocketStream::write(const void *ptr, size_t size) {
 #else
 		int n = send(m_socket, data, size, 0);
 #endif
-		if (n == SOCKET_ERROR)
-			handleError("send");
+		if (n == SOCKET_ERROR) {
+			handleError("send", EWarn);
+			throw EOFException("Connection closed while writing!",
+					(size_t) (data - (char *) ptr));
+		}
 		size -= n;
 		data += n;
 	}
