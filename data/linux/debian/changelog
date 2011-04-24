@@ -1,3 +1,9 @@
+mitsuba (0.2.1-1) unstable; urgency=low
+
+  * Upgrade to version 0.2.1, which contains a completely rewritten layer for handling participating media -- see the blog for a full change list
+
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Tue, 24 Apr 2011 22:17:00 -0400
+
 mitsuba (0.2.0-1) unstable; urgency=low
 
   * The COLLADA importer is more robust and should handle most scenes (hm, this sounds familiar). Rather than generating hundreds of translated mesh files, the new version instead produces one single compressed file.
