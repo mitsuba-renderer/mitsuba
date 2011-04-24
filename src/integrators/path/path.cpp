@@ -84,6 +84,12 @@ public:
 			/*                          Luminaire sampling                          */
 			/* ==================================================================== */
 
+			/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+			Float wiDotGeoN = -dot(its.geoFrame.n, ray.d),
+				  wiDotShN  = Frame::cosTheta(its.wi);
+			if (wiDotGeoN * wiDotShN < 0 && m_strictNormals) 
+				break;
+
 			/* Estimate the direct illumination if this is requested */
 			LuminaireSamplingRecord lRec;
 			if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
@@ -118,9 +124,16 @@ public:
 			if (bsdfVal.isZero()) 
 				break;
 			bsdfVal /= bsdfPdf;
+	
+			/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+			const Vector wo = its.toWorld(bRec.wo);
+			Float woDotGeoN = dot(its.geoFrame.n, wo);
+			if (woDotGeoN * Frame::cosTheta(bRec.wo) <= 0 && m_strictNormals)
+				break;
 
 			/* Trace a ray in this direction */
-			ray = Ray(its.p, its.toWorld(bRec.wo), ray.time);
+			ray = Ray(its.p, wo, ray.time);
+
 			bool hitLuminaire = false;
 			if (scene->rayIntersect(ray, its)) {
 				/* Intersected something - check if it was a luminaire */
@@ -203,7 +216,8 @@ public:
 		std::ostringstream oss;
 		oss << "MIPathTracer[" << std::endl
 			<< "  maxDepth = " << m_maxDepth << "," << std::endl
-			<< "  rrDepth = " << m_rrDepth << std::endl
+			<< "  rrDepth = " << m_rrDepth << "," << std::endl
+			<< "  strictNormals = " << m_strictNormals << std::endl
 			<< "]";
 		return oss.str();
 	}

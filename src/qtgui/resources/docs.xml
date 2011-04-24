@@ -42,6 +42,23 @@
 		<param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="10" importance="1">
 			Depth to start using russian roulette
 		</param>
+		<param name="strictNormals" readableName="Strict surface normals" type="boolean" default="false" importance="1">
+			<p>
+			This parameter specifies the action to be taken when the geometric
+			and shading normals of a surface inconsistently classify a ray as
+			being located *both* on the front and back-side.
+			</p>
+			<p>
+			When <tt>strictNormals</tt> is set to <tt>false</tt>, the shading normal has 
+			precedence, and rendering proceeds normally at the risk of
+			introducing small light leaks (this is the default).
+			</p>
+			<p>
+			When <tt>strictNormals</tt> is set to <tt>true</tt>, the random walk is
+			terminated when encountering such a situation. This may
+			produce black silhouette edges on badly tesselated meshes.
+			</p>
+		</param>
 	</plugin>
 
 	<plugin type="integrator" name="irrcache" readableName="Irradiance cache"

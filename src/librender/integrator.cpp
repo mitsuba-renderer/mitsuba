@@ -271,10 +271,26 @@ MonteCarloIntegrator::MonteCarloIntegrator(const Properties &props) : SampleInte
 	/* Depth to begin using russian roulette */
 	m_rrDepth = props.getInteger("rrDepth", 10);
 
-	/* Longest visualized path length (<tt>-1</tt>=infinite). 
-	   A value of <tt>1</tt> will visualize only directly visible light sources.
-	   <tt>2</tt> will lead to single-bounce (direct-only) illumination, and so on. */
+	/* Longest visualized path length (\c -1 = infinite). 
+	   A value of \c 1 will visualize only directly visible light sources.
+	   \c 2 will lead to single-bounce (direct-only) illumination, and so on. */
 	m_maxDepth = props.getInteger("maxDepth", -1);
+
+	/**
+	 * This parameter specifies the action to be taken when the geometric
+	 * and shading normals of a surface inconsistently classify a ray as
+	 * being located *both* on the front and back-side.
+	 *
+	 * When \c strictNormals is set to \c false, the shading normal has 
+	 * precedence, and rendering proceeds normally at the risk of
+	 * introducing small light leaks (this is the default).
+	 *
+	 * When \c strictNormals is set to \c true, the random walk is
+	 * terminated when encountering such a situation. This may
+	 * produce black silhouette edges on badly tesselated meshes.
+	 */
+	m_strictNormals = props.getBoolean("strictNormals", false);
+
 	AssertEx(m_rrDepth > 0, "rrDepth == 0 breaks the computation of alpha values!");
 }
 
@@ -282,12 +298,14 @@ MonteCarloIntegrator::MonteCarloIntegrator(Stream *stream, InstanceManager *mana
 	: SampleIntegrator(stream, manager) {
 	m_rrDepth = stream->readInt();
 	m_maxDepth = stream->readInt();
+	m_strictNormals = stream->readBool();
 }
 
 void MonteCarloIntegrator::serialize(Stream *stream, InstanceManager *manager) const {
 	SampleIntegrator::serialize(stream, manager);
 	stream->writeInt(m_rrDepth);
 	stream->writeInt(m_maxDepth);
+	stream->writeBool(m_strictNormals);
 }
 
 std::string RadianceQueryRecord::toString() const {

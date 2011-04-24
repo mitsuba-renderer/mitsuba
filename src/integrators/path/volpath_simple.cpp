@@ -152,6 +152,12 @@ public:
 					ray.mint = Epsilon;
 					continue;
 				}
+				
+				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+				Float wiDotGeoN = -dot(its.geoFrame.n, ray.d),
+					  wiDotShN  = Frame::cosTheta(its.wi);
+				if (wiDotGeoN * wiDotShN < 0 && m_strictNormals) 
+					break;
 
 				/* ==================================================================== */
 				/*                          Luminaire sampling                          */
@@ -175,7 +181,11 @@ public:
 				if (bsdfVal.isZero()) 
 					break;
 	
-				Vector wo = its.toWorld(bRec.wo);
+				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+				const Vector wo = its.toWorld(bRec.wo);
+				Float woDotGeoN = dot(its.geoFrame.n, wo);
+				if (woDotGeoN * Frame::cosTheta(bRec.wo) <= 0 && m_strictNormals)
+					break;
 
 				if (its.isMediumTransition())
 					rRec.medium = its.getTargetMedium(wo);
@@ -250,12 +260,15 @@ public:
 		std::ostringstream oss;
 		oss << "SimpleVolumetricPathTracer[" << std::endl
 			<< "  maxDepth = " << m_maxDepth << "," << std::endl
-			<< "  rrDepth = " << m_rrDepth << std::endl
+			<< "  rrDepth = " << m_rrDepth << "," << std::endl
+			<< "  strictNormals = " << m_strictNormals << std::endl
 			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
+private:
+	bool m_strictNormals;
 };
 
 MTS_IMPLEMENT_CLASS_S(SimpleVolumetricPathTracer, false, MonteCarloIntegrator)

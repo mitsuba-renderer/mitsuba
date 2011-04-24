@@ -418,6 +418,7 @@ protected:
 protected:
     int m_maxDepth;
     int m_rrDepth;
+	bool m_strictNormals;
 };
 
 MTS_NAMESPACE_END

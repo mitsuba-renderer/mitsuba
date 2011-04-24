@@ -196,6 +196,12 @@ public:
 					scene->rayIntersect(ray, its);
 					continue;
 				}
+			
+				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+				Float wiDotGeoN = -dot(its.geoFrame.n, ray.d),
+					  wiDotShN  = Frame::cosTheta(its.wi);
+				if (wiDotGeoN * wiDotShN < 0 && m_strictNormals) 
+					break;
 
 				/* ==================================================================== */
 				/*                          Luminaire sampling                          */
@@ -235,10 +241,15 @@ public:
 					break;
 	
 				bsdfVal /= bsdfPdf;
-				Intersection prevIts = its;
+
+				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+				const Vector wo = its.toWorld(bRec.wo);
+				Float woDotGeoN = dot(its.geoFrame.n, wo);
+				if (woDotGeoN * Frame::cosTheta(bRec.wo) <= 0 && m_strictNormals)
+					break;
 
 				/* Trace a ray in this direction */
-				ray = Ray(its.p, its.toWorld(bRec.wo), ray.time);
+				ray = Ray(its.p, wo, ray.time);
 
 				if (its.isMediumTransition())
 					rRec.medium = its.getTargetMedium(ray.d);
@@ -269,7 +280,7 @@ public:
 				if (hitLuminaire && rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) {
 					/* Prob. of having generated this sample using luminaire sampling */
 					const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ?
-						scene->pdfLuminaire(prevIts.p, lRec) : 0;
+						scene->pdfLuminaire(ray.o, lRec) : 0;
 					const Float weight = miWeight(bsdfPdf, lumPdf);
 					Li += pathThroughput * lRec.value * bsdfVal * weight * transmittance;
 				}
@@ -319,7 +330,8 @@ public:
 		std::ostringstream oss;
 		oss << "VolumetricPathTracer[" << std::endl
 			<< "  maxDepth = " << m_maxDepth << "," << std::endl
-			<< "  rrDepth = " << m_rrDepth << std::endl
+			<< "  rrDepth = " << m_rrDepth << "," << std::endl
+			<< "  strictNormals = " << m_strictNormals << std::endl
 			<< "]";
 		return oss.str();
 	}
