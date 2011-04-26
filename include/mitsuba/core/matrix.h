@@ -680,6 +680,7 @@ template <typename T, int M1, int N1, int M2, int N2> inline Matrix<M1, N2, T>
 
 /**
  * \brief Fast 3x3 eigenvalue decomposition
+ *
  * \param m
  *    Matrix in question -- will be replaced with the eigenvectors
  * \param lambda
@@ -688,6 +689,16 @@ template <typename T, int M1, int N1, int M2, int N2> inline Matrix<M1, N2, T>
  *    \c true upon success.
  */
 extern MTS_EXPORT_CORE bool eig3(Matrix3x3 &m, Float lambda[3]);
+
+/**
+ * \brief Fast non-iterative 3x3 eigenvalue decomposition
+ * 
+ * \param m
+ *    Matrix in question -- will be replaced with the eigenvectors
+ * \param lambda
+ *    Parameter used to returns the eigenvalues
+ */
+extern MTS_EXPORT_CORE void eig3_noniter(Matrix3x3 &m, Float lambda[3]);
 
 MTS_NAMESPACE_END
 

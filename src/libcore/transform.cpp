@@ -207,8 +207,8 @@ std::string Transform::toString() const {
 }
 
 /**
- * \brief Tridiagonalizes a matrix using a Householder transformation
- * and returns the result.
+ * \brief Tridiagonalizes a 3x3 matrix using a single 
+ * Householder transformation and returns the result.
  *
  * Based on "Geometric Tools" by David Eberly.
  */
@@ -351,5 +351,246 @@ bool eig3(Matrix3x3 &m, Float lambda[3]) {
 	return true;
 }
 
+/**
+ * Compute the roots of the cubic polynomial.  Double-precision arithmetic
+ * is used to minimize the effects due to subtractive cancellation.  The
+ * roots are returned in increasing order.\
+ *
+ * Based on "Geometric Tools" by David Eberly.
+ */
+static void eig3_evals(const Matrix3x3 &A, double root[3]) {
+	const double msInv3 = 1.0 / 3.0, msRoot3 = std::sqrt(3.0);
+
+	// Convert the unique matrix entries to double precision.
+	double a00 = (double) A(0, 0), a01 = (double) A(0, 1), a02 = (double) A(0, 2),
+		a11 = (double) A(1, 1), a12 = (double) A(1, 2), a22 = (double) A(2, 2);
+
+	// The characteristic equation is x^3 - c2*x^2 + c1*x - c0 = 0.  The
+	// eigenvalues are the roots to this equation, all guaranteed to be
+	// real-valued, because the matrix is symmetric.
+	double c0 = a00*a11*a22 + 2.0*a01*a02*a12 - a00*a12*a12 -
+		a11*a02*a02 - a22*a01*a01;
+
+	double c1 = a00*a11 - a01*a01 + a00*a22 - a02*a02 +
+		a11*a22 - a12*a12;
+
+	double c2 = a00 + a11 + a22;
+
+	// Construct the parameters used in classifying the roots of the equation
+	// and in solving the equation for the roots in closed form.
+	double c2Div3 = c2*msInv3;
+	double aDiv3 = (c1 - c2*c2Div3)*msInv3;
+	if (aDiv3 > 0.0) 
+		aDiv3 = 0.0;
+
+	double halfMB = 0.5*(c0 + c2Div3*(2.0*c2Div3*c2Div3 - c1));
+
+	double q = halfMB*halfMB + aDiv3*aDiv3*aDiv3;
+	if (q > 0.0)
+		q = 0.0;
+
+	// Compute the eigenvalues by solving for the roots of the polynomial.
+	double magnitude = std::sqrt(-aDiv3);
+	double angle = std::atan2(std::sqrt(-q), halfMB)*msInv3;
+	double cs = std::cos(angle);
+	double sn = std::sin(angle);
+	double root0 = c2Div3 + 2.0*magnitude*cs;
+	double root1 = c2Div3 - magnitude*(cs + msRoot3*sn);
+	double root2 = c2Div3 - magnitude*(cs - msRoot3*sn);
+
+	// Sort in increasing order.
+	if (root1 <= root0) {
+		root[0] = root0;
+		root[1] = root1;
+	} else {
+		root[0] = root1;
+		root[1] = root0;
+	}
+
+	if (root2 <= root[1]) {
+		root[2] = root2;
+	} else {
+		root[2] = root[1];
+		if (root2 <= root[0]) {
+			root[1] = root2;
+		} else {
+			root[1] = root[0];
+			root[0] = root2;
+		}
+	}
+}
+
+/**
+ * Determine if M has positive rank.  The maximum-magnitude entry of M is
+ * returned.  The row in which it is contained is also returned.
+ *
+ * Based on "Geometric Tools" by David Eberly.
+ */
+static bool eig3_rank(const Matrix3x3 &m, Float& maxEntry, Vector &maxRow) {
+    // Locate the maximum-magnitude entry of the matrix.
+    maxEntry = -1.0f;
+    int maxRowIndex = -1;
+    for (int row = 0; row < 3; ++row) {
+        for (int col = row; col < 3; ++col) {
+            Float absValue = std::abs(m(row, col));
+            if (absValue > maxEntry) {
+                maxEntry = absValue;
+                maxRowIndex = row;
+            }
+        }
+    }
+
+    // Return the row containing the maximum, to be used for eigenvector
+    // construction.
+    maxRow = m.row(maxRowIndex);
+
+    return maxEntry >= std::numeric_limits<Float>::epsilon();
+}
+
+/**
+ * Compute the eigenvectors
+ *
+ * Based on "Geometric Tools" by David Eberly.
+ */
+static void eig3_evecs(Matrix3x3& A, const Float lambda[3], const Vector& U2, int i0, int i1, int i2) {
+	Vector U0, U1;
+	coordinateSystem(normalize(U2), U0, U1);
+
+	// V[i2] = c0*U0 + c1*U1,  c0^2 + c1^2=1
+	// e2*V[i2] = c0*A*U0 + c1*A*U1
+	// e2*c0 = c0*U0.Dot(A*U0) + c1*U0.Dot(A*U1) = d00*c0 + d01*c1
+	// e2*c1 = c0*U1.Dot(A*U0) + c1*U1.Dot(A*U1) = d01*c0 + d11*c1
+	Vector tmp = A*U0, evecs[3];
+
+	Float p00 = lambda[i2] - dot(U0, tmp),
+		  p01 = dot(U1, tmp),
+		  p11 = lambda[i2] - dot(U1, A*U1),
+		  maxValue = std::abs(p00),
+		  absValue = std::abs(p01),
+		  invLength;
+
+	if (absValue > maxValue) 
+		maxValue = absValue;
+
+	int row = 0;
+	absValue = std::abs(p11);
+	if (absValue > maxValue) {
+		maxValue = absValue;
+		row = 1;
+	}
+
+	if (maxValue >= std::numeric_limits<Float>::epsilon()) {
+		if (row == 0) {
+			invLength = 1/std::sqrt(p00*p00 + p01*p01);
+			p00 *= invLength;
+			p01 *= invLength;
+			evecs[i2] = p01*U0 + p00*U1;
+		} else {
+			invLength = 1/std::sqrt(p11*p11 + p01*p01);
+			p11 *= invLength;
+			p01 *= invLength;
+			evecs[i2] = p11*U0 + p01*U1;
+		}
+	} else {
+		if (row == 0) 
+			evecs[i2] = U1;
+		else
+			evecs[i2] = U0;
+	}
+
+	// V[i0] = c0*U2 + c1*Cross(U2,V[i2]) = c0*R + c1*S
+	// e0*V[i0] = c0*A*R + c1*A*S
+	// e0*c0 = c0*R.Dot(A*R) + c1*R.Dot(A*S) = d00*c0 + d01*c1
+	// e0*c1 = c0*S.Dot(A*R) + c1*S.Dot(A*S) = d01*c0 + d11*c1
+	Vector S = cross(U2, evecs[i2]);
+	tmp = A*U2;
+	p00 = lambda[i0] - dot(U2, tmp);
+	p01 = dot(S, tmp);
+	p11 = lambda[i0] - dot(S, A*S);
+	maxValue = std::abs(p00);
+	row = 0;
+	absValue = std::abs(p01);
+	if (absValue > maxValue) 
+		maxValue = absValue;
+	absValue = std::abs(p11);
+	if (absValue > maxValue) {
+		maxValue = absValue;
+		row = 1;
+	}
+
+	if (maxValue >= std::numeric_limits<Float>::epsilon()) {
+		if (row == 0) {
+			invLength = 1/std::sqrt(p00*p00 + p01*p01);
+			p00 *= invLength;
+			p01 *= invLength;
+			evecs[i0] = p01*U2 + p00*S;
+		} else {
+			invLength = 1/std::sqrt(p11*p11 + p01*p01);
+			p11 *= invLength;
+			p01 *= invLength;
+			evecs[i0] = p11*U2 + p01*S;
+		}
+	} else {
+		if (row == 0)
+			evecs[i0] = S;
+		else
+			evecs[i0] = U2;
+	}
+
+	evecs[i1] = cross(evecs[i2], evecs[i0]);
+	A = Matrix3x3(
+		evecs[0].x, evecs[1].x, evecs[2].x,
+		evecs[0].y, evecs[1].y, evecs[2].y,
+		evecs[0].z, evecs[1].z, evecs[2].z
+	);
+}
+
+/**
+ * \brief Fast non-iterative 3x3 eigenvalue decomposition
+ * 
+ * Based on "Geometric Tools" by David Eberly.
+ */
+void eig3_noniter(Matrix3x3 &A, Float lambda[3]) {
+	// Compute the eigenvalues using double-precision arithmetic.
+	double root[3];
+	eig3_evals(A, root);
+	lambda[0] = (Float) root[0];
+	lambda[1] = (Float) root[1];
+	lambda[2] = (Float) root[2];
+	Matrix3x3 eigs;
+
+	Float maxEntry[3];
+	Vector maxRow[3];
+	for (int i = 0; i < 3; ++i) {
+		Matrix3x3 M(A);
+		M(0, 0) -= lambda[i];
+		M(1, 1) -= lambda[i];
+		M(2, 2) -= lambda[i];
+		if (!eig3_rank(M, maxEntry[i], maxRow[i])) {
+			A.setIdentity();
+			return;
+		}
+	}
+
+	Float totalMax = maxEntry[0];
+	int i = 0;
+	if (maxEntry[1] > totalMax) {
+		totalMax = maxEntry[1];
+		i = 1;
+	} if (maxEntry[2] > totalMax) {
+		i = 2;
+	}
+
+	if (i == 0) {
+		maxRow[0] = normalize(maxRow[0]);
+		eig3_evecs(A, lambda, maxRow[0], 1, 2, 0);
+	} else if (i == 1) {
+		maxRow[1] = normalize(maxRow[1]);
+		eig3_evecs(A, lambda, maxRow[1], 2, 0, 1);
+	} else {
+		maxRow[2] = normalize(maxRow[2]);
+		eig3_evecs(A, lambda, maxRow[2], 0, 1, 2);
+	}
+}
 
 MTS_NAMESPACE_END

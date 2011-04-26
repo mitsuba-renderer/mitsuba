@@ -173,7 +173,7 @@ public:
 			) * Transform::translate(-Vector(m_dataAABB.min)) * m_worldToVolume;
 		m_stepSize = std::numeric_limits<Float>::infinity();
 		for (int i=0; i<3; ++i)
-			m_stepSize = std::min(m_stepSize, extents[i] / (Float) (m_res[i]-1));
+			m_stepSize = 0.5f * std::min(m_stepSize, extents[i] / (Float) (m_res[i]-1));
 		m_aabb.reset();
 		for (int i=0; i<8; ++i)
 			m_aabb.expandBy(m_volumeToWorld(m_dataAABB.getCorner(i)));
@@ -514,18 +514,14 @@ public:
 						for (int j=0; j<3; ++j) 
 							tensor(i, j) += factor * d[k][i] * d[k][j];
 				}
-	
-				Float lambda[3];
-				Matrix3x3 Q(tensor);
-				if (!eig3(Q, lambda)) {
-					Log(EWarn, "lookupVector(): Eigendecomposition failed!");
-					return Vector(0.0f);
-				}
-//				Float specularity = 1-lambda[1]/lambda[0];
-				value = Q.col(0);
-#if 0
 				if (tensor.isZero())
 					return Vector(0.0f);
+	
+#if 0
+				Float lambda[3];
+				eig3_noniter(tensor, lambda);
+				value = tensor.col(0);
+#else
 
 				/* Square the structure tensor for faster convergence */
 				tensor *= tensor;
@@ -539,6 +535,8 @@ public:
 					value = normalize(tensor * value);
 				value = tensor * value;
 #endif
+
+//				Float specularity = 1-lambda[1]/lambda[0];
 			#else
 				#error Need to choose a vector interpolation method!
 			#endif

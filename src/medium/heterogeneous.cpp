@@ -181,7 +181,7 @@ public:
 			return 0.0f;
 
 		/* Compute a suitable step size */
-		uint32_t nSteps = (uint32_t) std::ceil(length / m_stepSize)*2;
+		uint32_t nSteps = (uint32_t) std::ceil(length / m_stepSize);
 		const Float stepSize = length/nSteps;
 		const Vector increment = ray.d * stepSize;
 
@@ -300,8 +300,9 @@ public:
 		if (length < 1e-6f * maxComp) 
 			return 0.0f;
 
-		/* Compute a suitable step size */
-		uint32_t nSteps = (uint32_t) std::ceil(length / m_stepSize);
+		/* Compute a suitable step size (this routine samples the integrand
+		   between steps, hence the factor of 2) */
+		uint32_t nSteps = (uint32_t) std::ceil(length / (2*m_stepSize));
 		Float stepSize = length / nSteps,
 			  multiplier = (1.0f / 6.0f) * stepSize
 				  * m_densityMultiplier;
