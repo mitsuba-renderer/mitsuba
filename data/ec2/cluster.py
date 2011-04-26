@@ -167,7 +167,7 @@ def terminate(name):
 	for i in instances:
 		if i.state == u'running' and i.public_dns_name == name:
 			print("Stopping node %s .." % i.public_dns_name)
-			i.stop()
+			i.terminate()
 			return
 	print('Node could not be found or is not running')
 
@@ -179,7 +179,7 @@ def terminateAll(groupName):
 	for i in instances:
 		if i.state == u'running' and getGroup(i) == groupName:
 			print("Stopping node %s .." % i.public_dns_name)
-			i.stop()
+			i.terminate()
 
 def cancelSpot(id):
 	print('Terminating spot request \"%s\" ..' % id)
@@ -225,6 +225,25 @@ def systemLoad(groupName):
 	for i in instances:
 		if i.state == u'running' and getGroup(i) == groupName:
 			processes += [remoteCommand(i.public_dns_name, 'echo `cat /proc/loadavg | cut --delimiter=" " --fields=1-3`  --  `ec2metadata --public-hostname`', False)]
+	while True:
+		doneCount = 0
+		time.sleep(1)
+		for p in processes:
+			if p.poll() != None:
+				doneCount += 1
+		if doneCount == len(processes):
+			print("Done.")
+			break;
+
+def runCommand(cmd, groupName):
+	print('Executing command "%s" on all nodes of group "%s" ..' % (cmd, groupName))
+	reservations = conn.get_all_instances()
+	instances = [i for r in reservations for i in r.instances]
+	processes = []
+	for i in instances:
+		if i.state == u'running' and getGroup(i) == groupName:
+			print("Sending command to node %s" % i.public_dns_name)
+			processes += [remoteCommand(i.public_dns_name, cmd, False)]
 	while True:
 		doneCount = 0
 		time.sleep(1)
@@ -372,6 +391,9 @@ if len(sys.argv) == 1:
 	print('   systemLoad <group> -- Prints the system load (1, 5 and 15-minute averages)')
 	print('                for each machine in the specified group')
 	print('')
+	print('   runCommand "cmd args" <group> -- Runs the specified command on each machine')
+	print('                in the specified group. Note that it has to be in quotes')
+	print('')
 	print('   syncData [prefix] <group> -- Downloads a file from the registered S3 bucket')
 	print('               so that it is available to any rendering jobs. The download is')
 	print('               simultaneously performed on all nodes of the specified group. ')
@@ -474,6 +496,13 @@ elif sys.argv[1] == 'systemLoad':
 		systemLoad(sys.argv[2])
 	else:
 		systemLoad('systemLoad: Invalid number of arguments!')
+elif sys.argv[1] == 'runCommand':
+	if len(sys.argv) == 3:
+		runCommand(sys.argv[2], 'default')
+	elif len(sys.argv) == 4:
+		runCommand(sys.argv[2], sys.argv[3])
+	else:
+		print('runCommand: Invalid number of arguments!')
 elif sys.argv[1] == 'regions':
 	for r in conn.get_all_regions():
 		print(r.name)
