@@ -24,12 +24,9 @@
 
 
 // Uncomment to enable nearest-neighbor direction interpolation
-// #define VINTERP_NEAREST_NEIGHBOR
+//#define VINTERP_NEAREST_NEIGHBOR
 
-// Uncomment to enable linear direction interpolation (usually a bad idea)
-//#define VINTERP_LINEAR
-
-// Uncomment to enable structure tensor-based direction interpolation (best, but slowest)
+// Uncomment to enable structure tensor-based direction interpolation (better, but slow)
 #define VINTERP_STRUCTURE_TENSOR
 
 // Number of power iteration steps used to find the dominant direction
@@ -462,7 +459,7 @@ public:
 					value = lookupQuantizedDirection(
 						(((fz < .5) ? z1 : z2) * m_res.y +
 						((fy < .5) ? y1 : y2)) * m_res.x +
-						((fx < .5) ? x1 : x2)).toVector();
+						((fx < .5) ? x1 : x2));
 					}
 					break;
 				default:
@@ -470,76 +467,73 @@ public:
 			}
 		#else
 			Float _fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
-			float3 d[8];
 
+			Matrix3x3 tensor(0.0f);
 			switch (m_volumeType) {
 				case EFloat32: {
 						const float3 *vectorData = (float3 *) m_data;
-						d[0] = vectorData[(z1*m_res.y + y1)*m_res.x + x1];
-						d[1] = vectorData[(z1*m_res.y + y1)*m_res.x + x2];
-						d[2] = vectorData[(z1*m_res.y + y2)*m_res.x + x1];
-						d[3] = vectorData[(z1*m_res.y + y2)*m_res.x + x2];
-						d[4] = vectorData[(z2*m_res.y + y1)*m_res.x + x1];
-						d[5] = vectorData[(z2*m_res.y + y1)*m_res.x + x2];
-						d[6] = vectorData[(z2*m_res.y + y2)*m_res.x + x1];
-						d[7] = vectorData[(z2*m_res.y + y2)*m_res.x + x2];
+						for (int k=0; k<8; ++k) {
+							uint32_t index = (((k & 4) ? z2 : z1) * m_res.y + 
+								((k & 2) ? y2 : y1)) * m_res.x + ((k & 1) ? x2 : x1);
+							Float factor = ((k & 1) ? fx : _fx) * ((k & 2) ? fy : _fy) 
+								* ((k & 4) ? fz : _fz);
+							Vector d = vectorData[index].toVector();
+							tensor(0, 0) += factor * d.x * d.x;
+							tensor(0, 1) += factor * d.x * d.y;
+							tensor(0, 2) += factor * d.x * d.z;
+							tensor(1, 1) += factor * d.y * d.y;
+							tensor(1, 2) += factor * d.y * d.z;
+							tensor(2, 2) += factor * d.z * d.z;
+						}
 					}
 					break;
 				case EQuantizedDirections: {
-						d[0] = lookupQuantizedDirection((z1*m_res.y + y1)*m_res.x + x1);
-						d[1] = lookupQuantizedDirection((z1*m_res.y + y1)*m_res.x + x2);
-						d[2] = lookupQuantizedDirection((z1*m_res.y + y2)*m_res.x + x1);
-						d[3] = lookupQuantizedDirection((z1*m_res.y + y2)*m_res.x + x2);
-						d[4] = lookupQuantizedDirection((z2*m_res.y + y1)*m_res.x + x1);
-						d[5] = lookupQuantizedDirection((z2*m_res.y + y1)*m_res.x + x2);
-						d[6] = lookupQuantizedDirection((z2*m_res.y + y2)*m_res.x + x1);
-						d[7] = lookupQuantizedDirection((z2*m_res.y + y2)*m_res.x + x2);
+						for (int k=0; k<8; ++k) {
+							uint32_t index = (((k & 4) ? z2 : z1) * m_res.y + 
+								((k & 2) ? y2 : y1)) * m_res.x + ((k & 1) ? x2 : x1);
+							Float factor = ((k & 1) ? fx : _fx) * ((k & 2) ? fy : _fy) 
+								* ((k & 4) ? fz : _fz);
+							Vector d = lookupQuantizedDirection(index);
+							tensor(0, 0) += factor * d.x * d.x;
+							tensor(0, 1) += factor * d.x * d.y;
+							tensor(0, 2) += factor * d.x * d.z;
+							tensor(1, 1) += factor * d.y * d.y;
+							tensor(1, 2) += factor * d.y * d.z;
+							tensor(2, 2) += factor * d.z * d.z;
+						}
 					}
 					break;
 				default:
 					return Vector(0.0f);
 			}
 
-			#if defined(VINTERP_LINEAR)
-				value = (((d[0]*_fx + d[1]*fx)*_fy +
-						  (d[2]*_fx + d[3]*fx)* fy)*_fz +
-						 ((d[4]*_fx + d[5]*fx)*_fy +
-						  (d[6]*_fx + d[7]*fx)* fy)* fz).toVector();
-			#elif defined(VINTERP_STRUCTURE_TENSOR)
-				Matrix3x3 tensor(0.0f);
-				for (int k=0; k<8; ++k) {
-					Float factor = ((k & 1) ? fx : _fx) * ((k & 2) ? fy : _fy) 
-						* ((k & 4) ? fz : _fz);
-					for (int i=0; i<3; ++i) 
-						for (int j=0; j<3; ++j) 
-							tensor(i, j) += factor * d[k][i] * d[k][j];
-				}
-				if (tensor.isZero())
-					return Vector(0.0f);
-	
+			tensor(1, 0) = tensor(0, 1);
+			tensor(2, 0) = tensor(0, 2);
+			tensor(2, 1) = tensor(1, 2);
+
+			if (tensor.isZero())
+				return Vector(0.0f);
+
 #if 0
-				Float lambda[3];
-				eig3_noniter(tensor, lambda);
-				value = tensor.col(0);
+			Float lambda[3];
+			eig3_noniter(tensor, lambda);
+			value = tensor.col(0);
 #else
 
-				/* Square the structure tensor for faster convergence */
-				tensor *= tensor;
+			/* Square the structure tensor for faster convergence */
+			tensor *= tensor;
 
-				const Float invSqrt3 = 0.577350269189626f;
-				value = Vector(invSqrt3, invSqrt3, invSqrt3);
+			const Float invSqrt3 = 0.577350269189626f;
+			value = Vector(invSqrt3, invSqrt3, invSqrt3);
 
-				/* Determine the dominant eigenvector using
-				a few power iterations */
-				for (int i=0; i<POWER_ITERATION_STEPS-1; ++i)
-					value = normalize(tensor * value);
-				value = tensor * value;
+			/* Determine the dominant eigenvector using
+			a few power iterations */
+			for (int i=0; i<POWER_ITERATION_STEPS-1; ++i)
+				value = normalize(tensor * value);
+			value = tensor * value;
 #endif
 
-//				Float specularity = 1-lambda[1]/lambda[0];
-			#else
-				#error Need to choose a vector interpolation method!
-			#endif
+//			Float specularity = 1-lambda[1]/lambda[0];
 		#endif
 
 		if (!value.isZero())
@@ -555,9 +549,9 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected: 
-	inline float3 lookupQuantizedDirection(size_t index) const {
+	FINLINE Vector lookupQuantizedDirection(size_t index) const {
 		uint8_t theta = m_data[2*index], phi = m_data[2*index+1];
-		return float3(
+		return Vector(
 			m_cosPhi[phi] * m_sinTheta[theta],
 			m_sinPhi[phi] * m_sinTheta[theta],
 			m_cosTheta[theta]
@@ -577,8 +571,8 @@ protected:
 	Float m_stepSize;
 	AABB m_dataAABB;
 	ref<MemoryMappedFile> m_mmap;
-	float m_cosTheta[256], m_sinTheta[256];
-	float m_cosPhi[256], m_sinPhi[256];
+	Float m_cosTheta[256], m_sinTheta[256];
+	Float m_cosPhi[256], m_sinPhi[256];
 	Float m_densityMap[256];
 };
 
