@@ -452,6 +452,7 @@ bool Scene::attenuatedRayIntersect(const Ray &_ray, const Medium *medium,
 				: its.shape->getInteriorMedium();
 
 		ray.o = ray(its.t);
+		ray.mint = Epsilon;
 
 		if (++iterations > 100) { /// Just a precaution..
 			Log(EWarn, "attenuatedRayIntersect(): round-off error issues?");

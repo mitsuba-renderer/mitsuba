@@ -54,8 +54,6 @@ MTS_NAMESPACE_BEGIN
  *
  *                    3 => Dense uint8-based representation
  *                         The range 0..255 will be mapped to 0..1.
- *                         ONLY SUPPORTED FOR DENSITY (1 CHANNEL)
- *                         VOLUMES BY THIS IMPLEMENTATION
  *
  *                    4 => Dense quantized directions
  *                         The directions are stored in spherical coordinates,
@@ -229,9 +227,9 @@ public:
 			case EFloat16:
 				Log(EError, "Error: float16 volumes are not yet supported!");
 			case EUInt8:
-				if (m_channels != 1)
+				if (m_channels != 1 && m_channels != 3)
 					Log(EError, "Encountered an unsupported uint8 volume data "
-						"file (%i channels, only 1 is supported)", m_channels);
+						"file (%i channels, only 1 and 3 are supported)", m_channels);
 				break;
 			case EQuantizedDirections:
 				if (m_channels != 3)
@@ -385,6 +383,47 @@ public:
 						 (d010*_fx + d011*fx)*fy)*_fz +
 						((d100*_fx + d101*fx)*_fy +
 						 (d110*_fx + d111*fx)*fy)*fz).toSpectrum();
+				}
+			case EUInt8: {
+				const float3
+					d000 = float3(
+						m_densityMap[m_data[3*((z1*m_res.y + y1)*m_res.x + x1)+0]],
+						m_densityMap[m_data[3*((z1*m_res.y + y1)*m_res.x + x1)+1]],
+						m_densityMap[m_data[3*((z1*m_res.y + y1)*m_res.x + x1)+2]]),
+					d001 = float3(
+						m_densityMap[m_data[3*((z1*m_res.y + y1)*m_res.x + x2)+0]],
+						m_densityMap[m_data[3*((z1*m_res.y + y1)*m_res.x + x2)+1]],
+						m_densityMap[m_data[3*((z1*m_res.y + y1)*m_res.x + x2)+2]]),
+					d010 = float3(
+						m_densityMap[m_data[3*((z1*m_res.y + y2)*m_res.x + x1)+0]],
+						m_densityMap[m_data[3*((z1*m_res.y + y2)*m_res.x + x1)+1]],
+						m_densityMap[m_data[3*((z1*m_res.y + y2)*m_res.x + x1)+2]]),
+					d011 = float3(
+						m_densityMap[m_data[3*((z1*m_res.y + y2)*m_res.x + x2)+0]],
+						m_densityMap[m_data[3*((z1*m_res.y + y2)*m_res.x + x2)+1]],
+						m_densityMap[m_data[3*((z1*m_res.y + y2)*m_res.x + x2)+2]]),
+					d100 = float3(
+						m_densityMap[m_data[3*((z2*m_res.y + y1)*m_res.x + x1)+0]],
+						m_densityMap[m_data[3*((z2*m_res.y + y1)*m_res.x + x1)+1]],
+						m_densityMap[m_data[3*((z2*m_res.y + y1)*m_res.x + x1)+2]]),
+					d101 = float3(
+						m_densityMap[m_data[3*((z2*m_res.y + y1)*m_res.x + x2)+0]],
+						m_densityMap[m_data[3*((z2*m_res.y + y1)*m_res.x + x2)+1]],
+						m_densityMap[m_data[3*((z2*m_res.y + y1)*m_res.x + x2)+2]]),
+					d110 = float3(
+						m_densityMap[m_data[3*((z2*m_res.y + y2)*m_res.x + x1)+0]],
+						m_densityMap[m_data[3*((z2*m_res.y + y2)*m_res.x + x1)+1]],
+						m_densityMap[m_data[3*((z2*m_res.y + y2)*m_res.x + x1)+2]]),
+					d111 = float3(
+						m_densityMap[m_data[3*((z2*m_res.y + y2)*m_res.x + x2)+0]],
+						m_densityMap[m_data[3*((z2*m_res.y + y2)*m_res.x + x2)+1]],
+						m_densityMap[m_data[3*((z2*m_res.y + y2)*m_res.x + x2)+2]]);
+
+				return (((d000*_fx + d001*fx)*_fy +
+						 (d010*_fx + d011*fx)*fy)*_fz +
+						((d100*_fx + d101*fx)*_fy +
+						 (d110*_fx + d111*fx)*fy)*fz).toSpectrum();
+
 				}
 			default: return Spectrum(0.0f);
 		}
