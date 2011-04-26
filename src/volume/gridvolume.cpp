@@ -289,6 +289,10 @@ public:
 		inline Vector toVector() const {
 			return Vector(value[0], value[1], value[2]);
 		}
+	
+		float operator[](int i) const {
+			return value[i];
+		}
 
 		inline Matrix3x3 tensor() const {
 			return Matrix3x3(
@@ -466,30 +470,30 @@ public:
 			}
 		#else
 			Float _fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
-			float3 d000, d001, d010, d011, d100, d101, d110, d111;
+			float3 d[8];
 
 			switch (m_volumeType) {
 				case EFloat32: {
 						const float3 *vectorData = (float3 *) m_data;
-						d000 = vectorData[(z1*m_res.y + y1)*m_res.x + x1];
-						d001 = vectorData[(z1*m_res.y + y1)*m_res.x + x2];
-						d010 = vectorData[(z1*m_res.y + y2)*m_res.x + x1];
-						d011 = vectorData[(z1*m_res.y + y2)*m_res.x + x2];
-						d100 = vectorData[(z2*m_res.y + y1)*m_res.x + x1];
-						d101 = vectorData[(z2*m_res.y + y1)*m_res.x + x2];
-						d110 = vectorData[(z2*m_res.y + y2)*m_res.x + x1];
-						d111 = vectorData[(z2*m_res.y + y2)*m_res.x + x2];
+						d[0] = vectorData[(z1*m_res.y + y1)*m_res.x + x1];
+						d[1] = vectorData[(z1*m_res.y + y1)*m_res.x + x2];
+						d[2] = vectorData[(z1*m_res.y + y2)*m_res.x + x1];
+						d[3] = vectorData[(z1*m_res.y + y2)*m_res.x + x2];
+						d[4] = vectorData[(z2*m_res.y + y1)*m_res.x + x1];
+						d[5] = vectorData[(z2*m_res.y + y1)*m_res.x + x2];
+						d[6] = vectorData[(z2*m_res.y + y2)*m_res.x + x1];
+						d[7] = vectorData[(z2*m_res.y + y2)*m_res.x + x2];
 					}
 					break;
 				case EQuantizedDirections: {
-						d000 = lookupQuantizedDirection((z1*m_res.y + y1)*m_res.x + x1);
-						d001 = lookupQuantizedDirection((z1*m_res.y + y1)*m_res.x + x2);
-						d010 = lookupQuantizedDirection((z1*m_res.y + y2)*m_res.x + x1);
-						d011 = lookupQuantizedDirection((z1*m_res.y + y2)*m_res.x + x2);
-						d100 = lookupQuantizedDirection((z2*m_res.y + y1)*m_res.x + x1);
-						d101 = lookupQuantizedDirection((z2*m_res.y + y1)*m_res.x + x2);
-						d110 = lookupQuantizedDirection((z2*m_res.y + y2)*m_res.x + x1);
-						d111 = lookupQuantizedDirection((z2*m_res.y + y2)*m_res.x + x2);
+						d[0] = lookupQuantizedDirection((z1*m_res.y + y1)*m_res.x + x1);
+						d[1] = lookupQuantizedDirection((z1*m_res.y + y1)*m_res.x + x2);
+						d[2] = lookupQuantizedDirection((z1*m_res.y + y2)*m_res.x + x1);
+						d[3] = lookupQuantizedDirection((z1*m_res.y + y2)*m_res.x + x2);
+						d[4] = lookupQuantizedDirection((z2*m_res.y + y1)*m_res.x + x1);
+						d[5] = lookupQuantizedDirection((z2*m_res.y + y1)*m_res.x + x2);
+						d[6] = lookupQuantizedDirection((z2*m_res.y + y2)*m_res.x + x1);
+						d[7] = lookupQuantizedDirection((z2*m_res.y + y2)*m_res.x + x2);
 					}
 					break;
 				default:
@@ -497,17 +501,29 @@ public:
 			}
 
 			#if defined(VINTERP_LINEAR)
-				value = (((d000*_fx + d001*fx)*_fy +
-						(d010*_fx + d011*fx)*fy)*_fz +
-						((d100*_fx + d101*fx)*_fy +
-						(d110*_fx + d111*fx)*fy)*fz).toVector();
+				value = (((d[0]*_fx + d[1]*fx)*_fy +
+						  (d[2]*_fx + d[3]*fx)* fy)*_fz +
+						 ((d[4]*_fx + d[5]*fx)*_fy +
+						  (d[6]*_fx + d[7]*fx)* fy)* fz).toVector();
 			#elif defined(VINTERP_STRUCTURE_TENSOR)
-				Matrix3x3 tensor =
-					((d000.tensor()*_fx + d001.tensor()*fx)*_fy +
-						(d010.tensor()*_fx + d011.tensor()*fx)*fy)*_fz +
-					((d100.tensor()*_fx + d101.tensor()*fx)*_fy +
-						(d110.tensor()*_fx + d111.tensor()*fx)*fy)*fz;
-
+				Matrix3x3 tensor(0.0f);
+				for (int k=0; k<8; ++k) {
+					Float factor = ((k & 1) ? fx : _fx) * ((k & 2) ? fy : _fy) 
+						* ((k & 4) ? fz : _fz);
+					for (int i=0; i<3; ++i) 
+						for (int j=0; j<3; ++j) 
+							tensor(i, j) += factor * d[k][i] * d[k][j];
+				}
+	
+				Float lambda[3];
+				Matrix3x3 Q(tensor);
+				if (!eig3(Q, lambda)) {
+					Log(EWarn, "lookupVector(): Eigendecomposition failed!");
+					return Vector(0.0f);
+				}
+//				Float specularity = 1-lambda[1]/lambda[0];
+				value = Q.col(0);
+#if 0
 				if (tensor.isZero())
 					return Vector(0.0f);
 
@@ -522,6 +538,7 @@ public:
 				for (int i=0; i<POWER_ITERATION_STEPS-1; ++i)
 					value = normalize(tensor * value);
 				value = tensor * value;
+#endif
 			#else
 				#error Need to choose a vector interpolation method!
 			#endif
@@ -532,7 +549,7 @@ public:
 		else
 			return Vector(0.0f);
 	}
-	
+
 	bool supportsFloatLookups() const { return m_channels == 1; }
 	bool supportsSpectrumLookups() const { return m_channels == 3; }
 	bool supportsVectorLookups() const { return m_channels == 3; }

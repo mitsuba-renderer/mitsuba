@@ -206,4 +206,150 @@ std::string Transform::toString() const {
 	return m_transform.toString();
 }
 
+/**
+ * \brief Tridiagonalizes a matrix using a Householder transformation
+ * and returns the result.
+ *
+ * Based on "Geometric Tools" by David Eberly.
+ */
+static inline void tred3(Matrix3x3 &m, Float *diag, Float *subd) {
+	Float m00 = m(0, 0), m01 = m(0, 1), m02 = m(0, 2),
+	      m11 = m(1, 1), m12 = m(1, 2), m22 = m(2, 2);
+
+	diag[0] = m00;
+	subd[2] = 0;
+	if (std::abs(m02) > std::numeric_limits<Float>::epsilon()) {
+		Float length = std::sqrt(m01*m01 + m02*m02),
+			  invLength = 1 / length;
+		m01 *= invLength;
+		m02 *= invLength;
+		Float q = 2*m01*m12 + m02*(m22 - m11);
+		diag[1] = m11 + m02*q;
+		diag[2] = m22 - m02*q;
+		subd[0] = length;
+		subd[1] = m12 - m01*q;
+		m = Matrix3x3(
+			1, 0, 0,
+			0, m01, m02,
+			0, m02, -m01);
+	} else {
+		/* The matrix is already tridiagonal,
+		   return an identity transformation matrix */
+		diag[1] = m11;
+		diag[2] = m22;
+		subd[0] = m01;
+		subd[1] = m12;
+		m = Matrix3x3(
+			1, 0, 0,
+			0, 1, 0,
+			0, 0, 1);
+	}
+}
+
+/**
+ * Compute the eigenvalues and eigenvectors of a 3x3 symmetric tridiagonal
+ * matrix using the QL algorithm with implicit shifts
+ *
+ * Based on "Geometric Tools" by David Eberly and Numerical Recipes by
+ * Teukolsky, et al. Originally, this code goes back to the Handbook 
+ * for Automatic Computation by Wilkionson and Reinsch, as well as
+ * the corresponding EISPACK routine.
+ */
+
+static inline bool ql3(Matrix3x3 &m, Float *diag, Float *subd) {
+	const int maxIter = 32;
+
+	for (int i = 0; i < 3; ++i) {
+		int k;
+		for (k = 0; k < maxIter; ++k) {
+			int j;
+			for (j = i; j < 2; ++j) {
+				Float tmp = std::abs(diag[j]) + std::abs(diag[j+1]);
+				if (std::abs(subd[j]) + tmp == tmp) 
+					break;
+			}
+			if (j == i)
+				break;
+
+			Float value0 = (diag[i + 1] - diag[i])/(2*subd[i]);
+			Float value1 = std::sqrt(value0*value0 + 1);
+			value0 = diag[j] - diag[i] + subd[i] / 
+				((value0 < 0) ? (value0 - value1) : (value0 + value1));
+
+			Float sn = 1, cs = 1, value2 = 0;
+			for (int l = j - 1; l >= i; --l) {
+				Float value3 = sn*subd[l], value4 = cs*subd[l];
+				if (std::abs(value3) >= std::abs(value0)) {
+					cs = value0 / value3;
+					value1 = std::sqrt(cs*cs + 1);
+					subd[l + 1] = value3*value1;
+					sn = 1.0f / value1;
+					cs *= sn;
+				} else {
+					sn = value3 / value0;
+					value1 = std::sqrt(sn*sn + 1);
+					subd[l + 1] = value0*value1;
+					cs = 1.0f / value1;
+					sn *= cs;
+				}
+				value0 = diag[l + 1] - value2;
+				value1 = (diag[l] - value0)*sn + 2*value4*cs;
+				value2 = sn*value1;
+				diag[l + 1] = value0 + value2;
+				value0 = cs*value1 - value4;
+
+				for (int t = 0; t < 3; ++t) {
+					value3 = m(t, l + 1);
+					m(t, l + 1) = sn*m(t, l) + cs*value3;
+					m(t, l) = cs*m(t, l) - sn*value3;
+				}
+			}
+			diag[i] -= value2;
+			subd[i] = value0;
+			subd[j] = 0;
+		}
+		if (k == maxIter)
+			return false;
+	}
+	return true;
+}
+
+/// Fast 3x3 eigenvalue decomposition
+bool eig3(Matrix3x3 &m, Float lambda[3]) {
+	Float subd[3];
+
+	/* Reduce to Hessenberg form */
+	tred3(m, lambda, subd);
+
+	/* Iteratively find the eigenvalues and eigenvectors
+	   using implicitly shifted QL iterations */
+	if (!ql3(m, lambda, subd))
+		return false;
+
+	/* Sort the eigenvalues in decreasing order */
+	for (int i=0; i<2; ++i) {
+		/* Locate the maximum eigenvalue. */
+		int largest = i;
+		Float maxValue = lambda[largest];
+		for (int j = i+1; j<3; ++j) {
+			if (lambda[j] > maxValue) {
+				largest = j;
+				maxValue = lambda[largest];
+			}
+		}
+
+		if (largest != i) {
+			// Swap the eigenvalues.
+			std::swap(lambda[i], lambda[largest]);
+
+			// Swap the eigenvectors
+			for (int j=0; j<3; ++j) 
+				std::swap(m(j, i), m(j, largest));
+		}
+	}
+	
+	return true;
+}
+
+
 MTS_NAMESPACE_END
