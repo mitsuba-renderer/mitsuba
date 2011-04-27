@@ -62,7 +62,7 @@ public:
 		typedef spirit::istream_iterator iterator_type;
 		iterator_type end, begin(in);
 
-		WeavePatternGrammar<iterator_type> g;
+		WeavePatternGrammar<iterator_type> g(props);
 		SkipGrammar<iterator_type> sg;
 
 		bool result = phrase_parse(begin, end, g, sg, m_pattern);

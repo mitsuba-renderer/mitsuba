@@ -24,10 +24,12 @@
 
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
+#include <boost/spirit/include/phoenix_bind.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
 #include <boost/spirit/include/phoenix_stl.hpp>
 #include <boost/spirit/include/support_istream_iterator.hpp>
 #include <boost/spirit/home/phoenix/bind/bind_member_variable.hpp>
+#include <boost/spirit/home/phoenix/bind/bind_member_function.hpp>
 #include <boost/spirit/home/phoenix/statement/if.hpp>
 
 MTS_NAMESPACE_BEGIN
@@ -62,10 +64,14 @@ struct Yarn {
 	Float centerU;
 	/// v coordinate of the yarn segment center
 	Float centerV;
+	/// Diffuse color
+	Spectrum kd;
+	/// Specular color
+	Spectrum ks;
 
 	Yarn() : type(EWarp),
 		psi(0), umax(0), kappa(0), width(0), length(0),
-		centerU(0), centerV(0) { }
+		centerU(0), centerV(0), kd(0.0f), ks(0.0f) { }
 
 	Yarn(Stream *stream) {
 		type = (EYarnType) stream->readInt();
@@ -76,6 +82,8 @@ struct Yarn {
 		length = stream->readFloat();
 		centerU = stream->readFloat();
 		centerV = stream->readFloat();
+		kd = Spectrum(stream);
+		ks = Spectrum(stream);
 	}
 
 	void serialize(Stream *stream) const {
@@ -87,24 +95,34 @@ struct Yarn {
 		stream->writeFloat(length);
 		stream->writeFloat(centerU);
 		stream->writeFloat(centerV);
+		kd.serialize(stream);
+		ks.serialize(stream);
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "yarn {" << endl 
-			<< "  type = " << ((type == EWarp) ? "warp" : "weft") << "," << endl
-			<< "  /* Fiber twist angle */" << endl
-			<< "  psi = " << psi * 180 / M_PI << "," << endl
-			<< "  /* Maximum inclination angle */" << endl
-			<< "  umax = " << umax * 180 / M_PI << "," << endl
-			<< "  /* Spine curvature */" << endl
-			<< "  kappa = " << kappa << "," << endl
-			<< "  /* Width and length of the segment rectangle */" << endl
+			<< "  type = " << ((type == EWarp) ? "warp" : "weft") << "," << endl;
+		if (psi != 0)
+			oss << "  /* Fiber twist angle */" << endl
+				<< "  psi = " << psi * 180 / M_PI << "," << endl;
+		oss << "  /* Maximum inclination angle */" << endl
+			<< "  umax = " << umax * 180 / M_PI << "," << endl;
+		if (kappa != 0)
+			oss << "  /* Spine curvature */" << endl
+				<< "  kappa = " << kappa << "," << endl;
+		oss << "  /* Width and length of the segment rectangle */" << endl
 			<< "  width = " << width << "," << endl
 			<< "  length = " << length << "," << endl
 			<< "  /* Yarn segment center in tile space */" << endl
 			<< "  centerU = " << centerU << "," << endl
-			<< "  centerV = " << centerV << endl
+			<< "  centerV = " << centerV << "," << endl
+			<< "  /* Diffuse and specular color */" << endl;
+		Float r, g, b;
+		kd.toLinearRGB(r, g, b);
+		oss << "  kd = {" << r << ", " << g << ", " << b << "}," << endl;
+		ks.toLinearRGB(r, g, b);
+		oss << "  ks = {" << r << ", " << g << ", " << b << "}," << endl
 			<< "}";
 		return oss.str();
 	}
@@ -210,13 +228,20 @@ struct WeavePattern {
 			<< "  /* Combined warp/weft size */" << endl
 			<< "  warpArea = " << warpArea << "," << endl
 			<< "  weftArea = " << weftArea << "," << endl << endl
-			<< "  /* Noise-related parameters */" << endl
-			<< "  dWarpUmaxOverDWarp = " << dWarpUmaxOverDWarp * 180 / M_PI << "," << endl
-			<< "  dWarpUmaxOverDWeft = " << dWarpUmaxOverDWeft * 180 / M_PI << "," << endl
-			<< "  dWeftUmaxOverDWarp = " << dWeftUmaxOverDWarp * 180 / M_PI << "," << endl
-			<< "  dWeftUmaxOverDWeft = " << dWeftUmaxOverDWeft * 180 / M_PI << "," << endl
-			<< "  fineness = " << fineness << "," << endl
-			<< "  period = " << period << "," << endl << endl
+			<< "  /* Noise-related parameters */" << endl;
+		if (dWarpUmaxOverDWarp != 0)
+			oss << "  dWarpUmaxOverDWarp = " << dWarpUmaxOverDWarp * 180 / M_PI << "," << endl;
+		if (dWeftUmaxOverDWeft != 0)
+			oss << "  dWarpUmaxOverDWeft = " << dWarpUmaxOverDWeft * 180 / M_PI << "," << endl;
+		if (dWarpUmaxOverDWarp != 0)
+			oss << "  dWeftUmaxOverDWarp = " << dWeftUmaxOverDWarp * 180 / M_PI << "," << endl;
+		if (dWeftUmaxOverDWeft != 0)
+			oss << "  dWeftUmaxOverDWeft = " << dWeftUmaxOverDWeft * 180 / M_PI << "," << endl;
+		if (fineness != 0)
+			oss << "  fineness = " << fineness << "," << endl;
+		if (period != 0)
+			oss << "  period = " << period << "," << endl;
+		oss << endl
 			<< "  /* Weave pattern description */" << endl
 			<< "  pattern {" << endl
 			<< "    ";
@@ -251,10 +276,20 @@ template <typename Iterator> struct SkipGrammar : qi::grammar<Iterator> {
 	qi::rule<Iterator> start;
 };
 
+inline Spectrum lookupSpectrum(const std::map<std::string, Spectrum> &map, const std::vector<char> &_name) {
+	std::string name = std::string(&_name[0]);
+	std::map<std::string, Spectrum>::const_iterator it = map.find(name);
+	if (it == map.end())
+		SLog(EError, "Unable to find key \"%s\"", name.c_str());
+	return it->second;
+}
+
 template <typename Iterator> struct YarnGrammar : qi::grammar<Iterator, Yarn(), SkipGrammar<Iterator> > {
-	YarnGrammar() : YarnGrammar::base_type(start) {
+	YarnGrammar(const Properties &props) 
+			: YarnGrammar::base_type(start), props(props) {
 		using namespace qi::labels;
 		using qi::float_;
+		using qi::char_;
 		using qi::lit;
 		using qi::_val;
 		using ph::bind;
@@ -262,27 +297,42 @@ template <typename Iterator> struct YarnGrammar : qi::grammar<Iterator, Yarn(), 
 		type = (qi::string("warp") | qi::string("weft"))
 			[ ph::if_else(_1 == "warp", _val = Yarn::EWarp, _val = Yarn::EWeft ) ];
 
+		qi::rule<Iterator, std::string()> id = qi::lexeme[ lit('$') >> +char_("a-zA-Z0-9") ];
+
+		spec = ((lit("{") >> float_ >> lit(",") >> float_ >> lit(",") >> float_ >> lit("}")) 
+					[ ph::bind(&Spectrum::fromLinearRGB, _val, _1, _2, _3) ])
+		      | (id [ _val = bind(&Properties::getSpectrum, ph::ref(props), _1)]);
+
+		flt = (float_ [ _val = _1 ])
+		      | (id [ _val = bind(&Properties::getFloat, ph::ref(props), _1)]);
+
 		start = lit("yarn")
 			>> lit("{")
 			>> (
-				 (lit("type")     >> lit("=") >> type   [ bind(&Yarn::type,    _val) = _1 ])
-			   | (lit("psi")      >> lit("=") >> float_ [ bind(&Yarn::psi,     _val) = _1 * M_PI / 180 ])
-			   | (lit("umax")     >> lit("=") >> float_ [ bind(&Yarn::umax,    _val) = _1 * M_PI / 180 ])
-			   | (lit("kappa")    >> lit("=") >> float_ [ bind(&Yarn::kappa,   _val) = _1 ])
-			   | (lit("width")    >> lit("=") >> float_ [ bind(&Yarn::width,   _val) = _1 ])
-			   | (lit("length")   >> lit("=") >> float_ [ bind(&Yarn::length,  _val) = _1 ])
-			   | (lit("centerU")  >> lit("=") >> float_ [ bind(&Yarn::centerU, _val) = _1 ])
-			   | (lit("centerV")  >> lit("=") >> float_ [ bind(&Yarn::centerV, _val) = _1 ])
+				 (lit("type")     >> lit("=") >> type  [ bind(&Yarn::type,    _val) = _1 ])
+			   | (lit("psi")      >> lit("=") >> flt   [ bind(&Yarn::psi,     _val) = _1 * M_PI / 180 ])
+			   | (lit("umax")     >> lit("=") >> flt   [ bind(&Yarn::umax,    _val) = _1 * M_PI / 180 ])
+			   | (lit("kappa")    >> lit("=") >> flt   [ bind(&Yarn::kappa,   _val) = _1 ])
+			   | (lit("width")    >> lit("=") >> flt   [ bind(&Yarn::width,   _val) = _1 ])
+			   | (lit("length")   >> lit("=") >> flt   [ bind(&Yarn::length,  _val) = _1 ])
+			   | (lit("centerU")  >> lit("=") >> flt   [ bind(&Yarn::centerU, _val) = _1 ])
+			   | (lit("centerV")  >> lit("=") >> flt   [ bind(&Yarn::centerV, _val) = _1 ])
+			   | (lit("kd")       >> lit("=") >> spec  [ bind(&Yarn::kd,      _val) = _1 ])
+			   | (lit("ks")       >> lit("=") >> spec  [ bind(&Yarn::ks,      _val) = _1 ])
 			) % ','
 			>> lit("}");
 	}
 
 	qi::rule<Iterator, Yarn::EYarnType(), SkipGrammar<Iterator> > type;
 	qi::rule<Iterator, Yarn(), SkipGrammar<Iterator> > start;
+	qi::rule<Iterator, Spectrum(), SkipGrammar<Iterator> > spec;
+	qi::rule<Iterator, float(), SkipGrammar<Iterator> > flt;
+	const Properties &props;
 };
 
 template <typename Iterator> struct WeavePatternGrammar : qi::grammar<Iterator, WeavePattern(), SkipGrammar<Iterator> > {
-	WeavePatternGrammar() : WeavePatternGrammar::base_type(start) {
+	WeavePatternGrammar(const Properties &props) 
+			: WeavePatternGrammar::base_type(start), yarn(props), props(props) {
 		using namespace qi::labels;
 		using qi::float_;
 		using qi::uint_;
@@ -298,32 +348,39 @@ template <typename Iterator> struct WeavePatternGrammar : qi::grammar<Iterator, 
 		
 		name = ("\"" >> *(char_ - "\"") >> "\"");
 
+		qi::rule<Iterator, std::string()> id = qi::lexeme[ lit('$') >> +char_("a-zA-Z0-9") ];
+
+		flt = (float_ [ _val = _1 ])
+		      | (id [ _val = bind(&Properties::getFloat, ph::ref(props), _1)]);
+
 		start = lit("weave") >> lit("{") >> (
 			  lit("name")               >> lit("=") >> name   [ bind(&WeavePattern::name,               _val) = _1 ]
 			| lit("tileWidth")          >> lit("=") >> uint_  [ bind(&WeavePattern::tileWidth,          _val) = _1 ]
 			| lit("tileHeight")         >> lit("=") >> uint_  [ bind(&WeavePattern::tileHeight,         _val) = _1 ]
-			| lit("ss")                 >> lit("=") >> float_ [ bind(&WeavePattern::ss,                 _val) = _1 ]
-			| lit("alpha")              >> lit("=") >> float_ [ bind(&WeavePattern::alpha,              _val) = _1 ]
-			| lit("beta")               >> lit("=") >> float_ [ bind(&WeavePattern::beta,               _val) = _1 ]
-			| lit("warpArea")           >> lit("=") >> float_ [ bind(&WeavePattern::warpArea,           _val) = _1 ]
-			| lit("weftArea")           >> lit("=") >> float_ [ bind(&WeavePattern::weftArea,           _val) = _1 ]
-			| lit("hWidth")             >> lit("=") >> float_ [ bind(&WeavePattern::hWidth,             _val) = _1 ]
-			| lit("dWarpUmaxOverDWarp") >> lit("=") >> float_ [ bind(&WeavePattern::dWarpUmaxOverDWarp, _val) = _1 * M_PI / 180 ]
-			| lit("dWarpUmaxOverDWeft") >> lit("=") >> float_ [ bind(&WeavePattern::dWarpUmaxOverDWeft, _val) = _1 * M_PI / 180 ]
-			| lit("dWeftUmaxOverDWarp") >> lit("=") >> float_ [ bind(&WeavePattern::dWeftUmaxOverDWarp, _val) = _1 * M_PI / 180 ]
-			| lit("dWeftUmaxOverDWeft") >> lit("=") >> float_ [ bind(&WeavePattern::dWeftUmaxOverDWeft, _val) = _1 * M_PI / 180 ]
-			| lit("fineness")           >> lit("=") >> float_ [ bind(&WeavePattern::fineness,           _val) = _1 ]
-			| lit("period")             >> lit("=") >> float_ [ bind(&WeavePattern::period,             _val) = _1 ]
+			| lit("ss")                 >> lit("=") >> flt    [ bind(&WeavePattern::ss,                 _val) = _1 ]
+			| lit("alpha")              >> lit("=") >> flt    [ bind(&WeavePattern::alpha,              _val) = _1 ]
+			| lit("beta")               >> lit("=") >> flt    [ bind(&WeavePattern::beta,               _val) = _1 ]
+			| lit("warpArea")           >> lit("=") >> flt    [ bind(&WeavePattern::warpArea,           _val) = _1 ]
+			| lit("weftArea")           >> lit("=") >> flt    [ bind(&WeavePattern::weftArea,           _val) = _1 ]
+			| lit("hWidth")             >> lit("=") >> flt    [ bind(&WeavePattern::hWidth,             _val) = _1 ]
+			| lit("dWarpUmaxOverDWarp") >> lit("=") >> flt    [ bind(&WeavePattern::dWarpUmaxOverDWarp, _val) = _1 * M_PI / 180 ]
+			| lit("dWarpUmaxOverDWeft") >> lit("=") >> flt    [ bind(&WeavePattern::dWarpUmaxOverDWeft, _val) = _1 * M_PI / 180 ]
+			| lit("dWeftUmaxOverDWarp") >> lit("=") >> flt    [ bind(&WeavePattern::dWeftUmaxOverDWarp, _val) = _1 * M_PI / 180 ]
+			| lit("dWeftUmaxOverDWeft") >> lit("=") >> flt    [ bind(&WeavePattern::dWeftUmaxOverDWeft, _val) = _1 * M_PI / 180 ]
+			| lit("fineness")           >> lit("=") >> flt    [ bind(&WeavePattern::fineness,           _val) = _1 ]
+			| lit("period")             >> lit("=") >> flt    [ bind(&WeavePattern::period,             _val) = _1 ]
 			| pattern                                         [ bind(&WeavePattern::pattern,            _val) = _1 ] 
 			| yarn                                            [ push_back(bind(&WeavePattern::yarns, _val), _1)    ] 
 		) % ','
 		>> lit("}");
 	}
 
-	qi::rule<Iterator, std::vector<uint32_t>(), SkipGrammar<Iterator> > pattern;
 	qi::rule<Iterator, WeavePattern(), SkipGrammar<Iterator> > start;
+	qi::rule<Iterator, std::vector<uint32_t>(), SkipGrammar<Iterator> > pattern;
 	qi::rule<Iterator, std::string(), SkipGrammar<Iterator> > name;
+	qi::rule<Iterator, float(), SkipGrammar<Iterator> > flt;
 	YarnGrammar<Iterator> yarn;
+	const Properties &props;
 };
 
 

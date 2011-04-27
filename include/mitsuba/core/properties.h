@@ -30,7 +30,7 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE Properties {
 public:
-	enum PropertyType {
+	enum EPropertyType {
 		EBoolean = 0,
 		EInteger,
 		EFloat,
@@ -131,7 +131,7 @@ public:
 	bool hasProperty(const std::string &name) const;
 
 	/// Return the property of a type
-	PropertyType getType(const std::string &name) const;
+	EPropertyType getType(const std::string &name) const;
 
 	/// Return the list of un-queried attributed
 	std::vector<std::string> getUnqueried() const;
@@ -141,7 +141,7 @@ public:
 private:
 	/// \cond
 	struct Element {
-		PropertyType type;
+		EPropertyType type;
 		union {
 			bool v_boolean;
 			int64_t v_long;

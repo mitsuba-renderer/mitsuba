@@ -37,7 +37,7 @@ std::vector<std::string> Properties::getUnqueried() const {
 	return result;
 }
 
-Properties::PropertyType Properties::getType(const std::string &name) const {
+Properties::EPropertyType Properties::getType(const std::string &name) const {
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if (it == m_elements.end())
 		SLog(EError, "Property \"%s\" has not been specified!", name.c_str());
