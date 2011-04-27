@@ -138,7 +138,8 @@ public:
 	 * [mint, maxt] associated with the ray. It is assumed
 	 * that the ray has a normalized direction value.
 	 */
-	virtual Spectrum getTransmittance(const Ray &ray) const = 0;
+	virtual Spectrum getTransmittance(const Ray &ray,
+		Sampler *sampler = NULL) const = 0;
 
 	/// Return the phase function of this medium
 	inline const PhaseFunction *getPhaseFunction() const { return m_phaseFunction.get(); }

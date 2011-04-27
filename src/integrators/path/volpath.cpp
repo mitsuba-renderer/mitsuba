@@ -78,7 +78,7 @@ public:
 
 				/* Estimate the single scattering component if this is requested */
 				if (rRec.type & RadianceQueryRecord::EDirectMediumRadiance && 
-					scene->sampleAttenuatedLuminaire(mRec.p, ray.time, rRec.medium, lRec, rRec.nextSample2D())) {
+					scene->sampleAttenuatedLuminaire(mRec.p, ray.time, rRec.medium, lRec, rRec.nextSample2D(), rRec.sampler)) {
 					/* Evaluate the phase function */
 					Float phaseVal = phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 
@@ -113,7 +113,7 @@ public:
 				bool hitLuminaire = false;
 				Spectrum transmittance;
 
-				if (scene->attenuatedRayIntersect(ray, rRec.medium, its, transmittance)) {
+				if (scene->attenuatedRayIntersect(ray, rRec.medium, its, transmittance, rRec.sampler)) {
 					/* Intersected something - check if it was a luminaire */
 					if (its.isLuminaire()) {
 						lRec = LuminaireSamplingRecord(its, -ray.d);
@@ -209,7 +209,7 @@ public:
 
 				/* Estimate the direct illumination if this is requested */
 				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
-					scene->sampleAttenuatedLuminaire(its, rRec.medium, lRec, rRec.nextSample2D())) {
+					scene->sampleAttenuatedLuminaire(its, rRec.medium, lRec, rRec.nextSample2D(), rRec.sampler)) {
 					/* Allocate a record for querying the BSDF */
 					const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 
@@ -257,7 +257,7 @@ public:
 				bool hitLuminaire = false;
 				Spectrum transmittance;
 
-				if (scene->attenuatedRayIntersect(ray, rRec.medium, its, transmittance)) {
+				if (scene->attenuatedRayIntersect(ray, rRec.medium, its, transmittance, rRec.sampler)) {
 					/* Intersected something - check if it was a luminaire */
 					if (its.isLuminaire()) {
 						lRec = LuminaireSamplingRecord(its, -ray.d);

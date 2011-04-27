@@ -156,6 +156,10 @@ public:
 		return 2 * m_fiberDistr.sigmaT(cosTheta);
 	}
 
+	Float sigmaDirMax() const {
+		return sigmaDir(0);
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "MicroflakePhaseFunction[" << endl

@@ -77,7 +77,7 @@ public:
 				/* Estimate the single scattering component if this is requested */
 				if (rRec.type & RadianceQueryRecord::EDirectMediumRadiance && 
 					scene->sampleAttenuatedLuminaire(mRec.p, ray.time,
-						rRec.medium, lRec, rRec.nextSample2D())) {
+						rRec.medium, lRec, rRec.nextSample2D(), rRec.sampler)) {
 
 					Li += pathThroughput * lRec.value * phase->f(
 							PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
@@ -165,7 +165,8 @@ public:
 
 				/* Estimate the direct illumination if this is requested */
 				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
-					scene->sampleAttenuatedLuminaire(its, rRec.medium, lRec, rRec.nextSample2D())) {
+					scene->sampleAttenuatedLuminaire(its, rRec.medium, lRec, 
+						rRec.nextSample2D(), rRec.sampler)) {
 					/* Allocate a record for querying the BSDF */
 					const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 					Li += pathThroughput * lRec.value * bsdf->fCos(bRec);

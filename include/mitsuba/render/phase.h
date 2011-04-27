@@ -118,7 +118,7 @@ public:
 	virtual bool needsDirectionallyVaryingCoefficients() const;
 
 	/**
-	 * For anisotropic media: evaluate the directionally varying component
+	 * \brief For anisotropic media: evaluate the directionally varying component
 	 * of the scattering and absorption coefficients.
 	 *
 	 * \param cosTheta
@@ -126,6 +126,12 @@ public:
 	 *    direction of propagation
 	 */
 	virtual Float sigmaDir(Float cosTheta) const;
+
+	/**
+	 * \brief Returns the maximum value take on on by \ref sigmaDirMax(). 
+	 * This is useful when implementing Woodcock tracking.
+	 */
+	virtual Float sigmaDirMax() const;
 
 	/// Return a string representation
 	virtual std::string toString() const = 0;

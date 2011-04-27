@@ -138,7 +138,7 @@ public:
 		stream->writeFloat(m_mediumSamplingWeight);
 	}
 
-	Spectrum getTransmittance(const Ray &ray) const {
+	Spectrum getTransmittance(const Ray &ray, Sampler *) const {
 		return (m_sigmaT * (ray.mint - ray.maxt)).exp();
 	}
 

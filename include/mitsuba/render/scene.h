@@ -181,7 +181,7 @@ public:
 	 * \return \c true if an intersection was found
 	 */
 	bool attenuatedRayIntersect(const Ray &ray, const Medium *medium,
-		Intersection &its, Spectrum &transmittance) const;
+		Intersection &its, Spectrum &transmittance, Sampler *sampler = NULL) const;
 
 	/**
 	 * \brief Intersect a ray against all primitives stored in the scene
@@ -244,7 +244,7 @@ public:
 	 */
 
 	Spectrum getTransmittance(const Point &p1, const Point &p2, Float time, 
-		const Medium *medium) const;
+		const Medium *medium, Sampler *sampler = NULL) const;
 	
 	/// Return an axis-aligned bounding box containing the whole scene
 	inline const AABB &getAABB() const {
@@ -303,7 +303,7 @@ public:
 	 */
 	bool sampleAttenuatedLuminaire(const Point &p, Float time, 
 		const Medium *medium, LuminaireSamplingRecord &lRec, 
-		const Point2 &sample) const;
+		const Point2 &sample, Sampler *sampler = NULL) const;
 
 	/**
 	 * \brief Convenience method - similar to \ref sampleLuminaire(), but also attenuates
@@ -322,7 +322,7 @@ public:
 	 */
 	bool sampleAttenuatedLuminaire(const Intersection &its, 
 		const Medium *medium, LuminaireSamplingRecord &lRec, 
-		const Point2 &sample) const;
+		const Point2 &sample, Sampler *sampler = NULL) const;
 
 	/**
 	 * \brief Return the probability density associated with the sample \c lRec 
@@ -393,12 +393,12 @@ public:
 	 *
 	 * This is primarily meant for path tracing-style integrators.
 	 */
-	inline Spectrum LeAttenuatedBackground(const Ray &ray, const Medium *medium) const {
+	inline Spectrum LeAttenuatedBackground(const Ray &ray, const Medium *medium, Sampler *sampler) const {
 		if (!m_backgroundLuminaire)
 			return Spectrum(0.0f);
 		Spectrum result = LeBackground(ray);
 		if (medium)
-			result *= medium->getTransmittance(ray);
+			result *= medium->getTransmittance(ray, sampler);
 		return result;
 	}
 	

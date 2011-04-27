@@ -383,7 +383,7 @@ bool Scene::sampleLuminaire(const Point &p, Float time,
 }
 
 Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
-		Float time, const Medium *medium) const {
+		Float time, const Medium *medium, Sampler *sampler) const {
 	if (m_media.size() == 0) {
 		return Spectrum(isOccluded(p1, p2, time)
 			? 0.0f : 1.0f);
@@ -405,7 +405,7 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 			bool surface = rayIntersect(ray, t, shape, n);
 
 			if (medium) 
-				transmittance *= medium->getTransmittance(Ray(ray, 0, std::min(t, remaining)));
+				transmittance *= medium->getTransmittance(Ray(ray, 0, std::min(t, remaining)), sampler);
 
 			if (!surface) 
 				break;
@@ -431,7 +431,7 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 }
 
 bool Scene::attenuatedRayIntersect(const Ray &_ray, const Medium *medium,
-		Intersection &its, Spectrum &transmittance) const {
+		Intersection &its, Spectrum &transmittance, Sampler *sampler) const {
 	Ray ray(_ray);
 	transmittance = Spectrum(1.0f);
 	int iterations = 0;
@@ -440,7 +440,7 @@ bool Scene::attenuatedRayIntersect(const Ray &_ray, const Medium *medium,
 		bool surface = m_kdtree->rayIntersect(ray, its);
 
 		if (medium) 
-			transmittance *= medium->getTransmittance(Ray(ray, 0, its.t));
+			transmittance *= medium->getTransmittance(Ray(ray, 0, its.t), sampler);
 
 		if (!surface)
 			return false;
@@ -463,7 +463,7 @@ bool Scene::attenuatedRayIntersect(const Ray &_ray, const Medium *medium,
 
 bool Scene::sampleAttenuatedLuminaire(const Point &p, Float time, 
 	const Medium *medium, LuminaireSamplingRecord &lRec, 
-	const Point2 &s) const {
+	const Point2 &s, Sampler *sampler) const {
 	Point2 sample(s);
 	Float lumPdf;
 	const Luminaire *luminaire = m_luminaires[
@@ -471,7 +471,7 @@ bool Scene::sampleAttenuatedLuminaire(const Point &p, Float time,
 	luminaire->sample(p, lRec, sample);
 
 	if (lRec.pdf != 0) {
-		lRec.value *= getTransmittance(p, lRec.sRec.p, time, medium);
+		lRec.value *= getTransmittance(p, lRec.sRec.p, time, medium, sampler);
 		if (lRec.value.isZero())
 			return false;
 		lRec.pdf *= lumPdf;
@@ -484,7 +484,7 @@ bool Scene::sampleAttenuatedLuminaire(const Point &p, Float time,
 
 bool Scene::sampleAttenuatedLuminaire(const Intersection &its, 
 	const Medium *medium, LuminaireSamplingRecord &lRec, 
-	const Point2 &s) const {
+	const Point2 &s, Sampler *sampler) const {
 	Point2 sample(s);
 	Float lumPdf;
 	const Luminaire *luminaire = m_luminaires[
@@ -494,7 +494,7 @@ bool Scene::sampleAttenuatedLuminaire(const Intersection &its,
 	if (lRec.pdf != 0) {
 		if (its.isMediumTransition())
 			medium = its.getTargetMedium(lRec.sRec.p - its.p);
-		lRec.value *= getTransmittance(its.p, lRec.sRec.p, its.time, medium);
+		lRec.value *= getTransmittance(its.p, lRec.sRec.p, its.time, medium, sampler);
 		if (lRec.value.isZero())
 			return false;
 		lRec.pdf *= lumPdf;

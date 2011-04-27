@@ -518,8 +518,8 @@ public:
 			Float lambda[3];
 			eig3_noniter(tensor, lambda);
 			value = tensor.col(0);
+			Float specularity = 1-lambda[1]/lambda[0];
 #else
-
 			/* Square the structure tensor for faster convergence */
 			tensor *= tensor;
 
@@ -527,13 +527,12 @@ public:
 			value = Vector(invSqrt3, invSqrt3, invSqrt3);
 
 			/* Determine the dominant eigenvector using
-			a few power iterations */
+			   a few power iterations */
 			for (int i=0; i<POWER_ITERATION_STEPS-1; ++i)
 				value = normalize(tensor * value);
 			value = tensor * value;
 #endif
 
-//			Float specularity = 1-lambda[1]/lambda[0];
 		#endif
 
 		if (!value.isZero())
