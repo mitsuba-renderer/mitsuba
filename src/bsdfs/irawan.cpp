@@ -67,7 +67,8 @@ public:
 
 		bool result = phrase_parse(begin, end, g, sg, m_pattern);
 		if (!result)
-			Log(EError, "Unable to parse the weave pattern file \"%s\"!", path.file_string().c_str());
+			Log(EError, "Unable to parse the weave pattern file \"%s\"!", 
+				path.file_string().c_str());
 		
 		/* Some sanity checks */
 		SAssert(m_pattern.pattern.size() == 
@@ -108,7 +109,8 @@ public:
 			|| bRec.wi.z <= 0 || bRec.wo.z <= 0)
 			return Spectrum(0.0f);
 
-		Point2 uv = Point2(bRec.its.uv.x * m_repeatU, (1 - bRec.its.uv.y) * m_repeatV);
+		Point2 uv = Point2(bRec.its.uv.x * m_repeatU,
+			(1 - bRec.its.uv.y) * m_repeatV);
 		Point2 xy(uv.x * m_pattern.tileWidth, uv.y * m_pattern.tileHeight); 
 
 		Point2i lookup(
@@ -213,7 +215,7 @@ public:
 
 				ref<Random> random = new Random(seed);
 				Float xi = random->nextFloat();
-				intensityVariation = std::min(-std::log(xi), 10.0f);
+				intensityVariation = std::min(-std::log(xi), (Float) 10.0f);
 			}
 
 			result = specular * (intensityVariation * m_ks * integrand);
@@ -258,9 +260,11 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture2D)) && name == "diffuseReflectance") {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture2D))
+				&& name == "diffuseReflectance") {
 			m_diffuseReflectance = static_cast<Texture2D *>(child);
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture2D)) && name == "specularReflectance") {
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture2D))
+				&& name == "specularReflectance") {
 			m_specularReflectance = static_cast<Texture2D *>(child);
 		} else {
 			BSDF::addChild(name, child);
@@ -303,8 +307,9 @@ public:
 	 *	w	 width of segment rectangle
 	 *	l	 length of segment rectangle
 	 */
-	Float evalFilamentIntegrand(Float u, Float v, const Vector &om_i, const Vector &om_r,  
-			Float alpha, Float beta, Float ss, Float umax, Float kappa, Float w, Float l) const {
+	Float evalFilamentIntegrand(Float u, Float v, const Vector &om_i, 
+			const Vector &om_r, Float alpha, Float beta, Float ss,
+			Float umax, Float kappa, Float w, Float l) const {
 		// 0 <= ss < 1.0
 		if (ss < 0.0f || ss >= 1.0f)
 			return 0.0f;
@@ -394,8 +399,9 @@ public:
 	 *	w	 width of segment rectangle
 	 *	l	 length of segment rectangle
 	 */
-	Float evalStapleIntegrand(Float u, Float v, const Vector &om_i, const Vector &om_r, 
-			Float alpha, Float beta, Float psi, Float umax, Float kappa, Float w, Float l) const {
+	Float evalStapleIntegrand(Float u, Float v, const Vector &om_i, 
+			const Vector &om_r, Float alpha, Float beta, Float psi, 
+			Float umax, Float kappa, Float w, Float l) const {
 		// w * sin(umax) < l
 		if (w * std::sin(umax) >= l)
 			return 0.0f;
@@ -409,7 +415,7 @@ public:
 
 		// v_of_u is location of specular reflection.
 		Float D = (h.y*std::cos(u) - h.z*std::sin(u))
-			/ (std::sqrt(h.x * h.x + std::pow(h.y * std::sin(u) + h.z * std::cos(u), 2.0f)) * std::tan(psi));
+			/ (std::sqrt(h.x * h.x + std::pow(h.y * std::sin(u) + h.z * std::cos(u), (Float) 2.0f)) * std::tan(psi));
 		Float v_of_u = std::atan2(-h.y * std::sin(u) - h.z * std::cos(u), h.x) + std::acos(D);
 
 		// Check if v_of_u within the range of valid v values
@@ -477,19 +483,19 @@ public:
 			Float ahat = bhat / rhat;
 			Float t = std::atan(rhat * std::tan(u));
 			R = std::pow(bhat * bhat * std::cos(t) * std::cos(t)
-				+ ahat * ahat * std::sin(t) * std::sin(t), 1.5f) / (ahat * bhat);
+			  + ahat * ahat * std::sin(t) * std::sin(t),(Float) 1.5f) / (ahat * bhat);
 		} else if (rhat < 0.0f) { // hyperbola; see Subsection 5.3.3.
 			Float tmax = -atanh(rhat * std::tan(umax));
 			Float bhat = (0.5f * l - a * std::sin(umax)) / std::sinh(tmax);
 			Float ahat = bhat / rhat;
 			Float t = -atanh(rhat * std::tan(u));
 			R = -std::pow(bhat * bhat * std::cosh(t) * std::cosh(t)
-					+ ahat * ahat * std::sinh(t) * std::sinh(t), 1.5f) / (ahat * bhat);
+			    + ahat * ahat * std::sinh(t) * std::sinh(t), (Float) 1.5f) / (ahat * bhat);
 		} else { // rhat == 0  // parabola; see Subsection 5.3.2.
 			Float tmax = std::tan(umax);
 			Float ahat = (0.5f * l - a * std::sin(umax)) / (2 * tmax);
 			Float t = std::tan(u);
-			R = 2 * ahat * std::pow(1 + t * t, 1.5f);
+			R = 2 * ahat * std::pow(1 + t * t, (Float) 1.5f);
 		}
 		return R;
 	}
@@ -521,8 +527,8 @@ public:
 	/// Attenuation term
 	Float seeliger(Float cos_th1, Float cos_th2, Float sg_a, Float sg_s) const {
 		Float al = sg_s / (sg_a + sg_s); // albedo
-		Float c1 = std::max(0.0f, cos_th1);
-		Float c2 = std::max(0.0f, cos_th2);
+		Float c1 = std::max((Float) 0, cos_th1);
+		Float c2 = std::max((Float) 0, cos_th2);
 		if (c1 == 0.0f || c2 == 0.0f)
 			return 0.0f;
 		return al / (4.0f * M_PI) * c1 * c2 / (c1 + c2);
