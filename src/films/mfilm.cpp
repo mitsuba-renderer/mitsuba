@@ -188,7 +188,8 @@ public:
 			for (int x=0; x<m_cropSize.x; x++) {
 				Pixel &pixel = m_pixels[pos];
 				if (m_exportSpectra) {
-					Spectrum spec(pixel.spec / pixel.weight);
+					Float invWeight = pixel.weight > 0 ? 1/pixel.weight : 1;
+					Spectrum spec = invWeight*pixel.spec;
 					for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
 						if (!m_hasVariances)
 							fprintf(f, "%f", spec[i]);
@@ -200,7 +201,8 @@ public:
 					if (x + 1 < m_cropSize.x)
 						fprintf(f, ", ");
 				} else {
-					Float luminance = (pixel.spec / pixel.weight).getLuminance();
+					Float invWeight = pixel.weight > 0 ? 1/pixel.weight : 1;
+					Float luminance = invWeight*pixel.spec.getLuminance();
 					if (!m_hasVariances)
 						fprintf(f, "%f", luminance);
 					else
