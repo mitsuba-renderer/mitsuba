@@ -27,7 +27,6 @@
 #include <boost/spirit/include/phoenix_bind.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
 #include <boost/spirit/include/phoenix_stl.hpp>
-#include <boost/spirit/include/support_istream_iterator.hpp>
 #include <boost/spirit/home/phoenix/bind/bind_member_variable.hpp>
 #include <boost/spirit/home/phoenix/bind/bind_member_function.hpp>
 #include <boost/spirit/home/phoenix/statement/if.hpp>
@@ -276,14 +275,6 @@ template <typename Iterator> struct SkipGrammar : qi::grammar<Iterator> {
 	qi::rule<Iterator> start;
 };
 
-inline Spectrum lookupSpectrum(const std::map<std::string, Spectrum> &map, const std::vector<char> &_name) {
-	std::string name = std::string(&_name[0]);
-	std::map<std::string, Spectrum>::const_iterator it = map.find(name);
-	if (it == map.end())
-		SLog(EError, "Unable to find key \"%s\"", name.c_str());
-	return it->second;
-}
-
 template <typename Iterator> struct YarnGrammar : qi::grammar<Iterator, Yarn(), SkipGrammar<Iterator> > {
 	YarnGrammar(const Properties &props) 
 			: YarnGrammar::base_type(start), props(props) {
@@ -297,14 +288,15 @@ template <typename Iterator> struct YarnGrammar : qi::grammar<Iterator, Yarn(), 
 		type = (qi::string("warp") | qi::string("weft"))
 			[ ph::if_else(_1 == "warp", _val = Yarn::EWarp, _val = Yarn::EWeft ) ];
 
-		qi::rule<Iterator, std::string()> id = qi::lexeme[ lit('$') >> +char_("a-zA-Z0-9") ];
+		identifier = qi::lexeme[ lit('$') >> (qi::alpha | char_('_')) 
+			>> *(qi::alnum | char_('_')) ];
 
 		spec = ((lit("{") >> float_ >> lit(",") >> float_ >> lit(",") >> float_ >> lit("}")) 
 					[ ph::bind(&Spectrum::fromLinearRGB, _val, _1, _2, _3) ])
-		      | (id [ _val = bind(&Properties::getSpectrum, ph::ref(props), _1)]);
+		     | (identifier [ _val = bind(&Properties::getSpectrum, ph::ref(props), _1)]);
 
 		flt = (float_ [ _val = _1 ])
-		      | (id [ _val = bind(&Properties::getFloat, ph::ref(props), _1)]);
+		    | (identifier [ _val = bind(&Properties::getFloat, ph::ref(props), _1)]);
 
 		start = lit("yarn")
 			>> lit("{")
@@ -327,6 +319,7 @@ template <typename Iterator> struct YarnGrammar : qi::grammar<Iterator, Yarn(), 
 	qi::rule<Iterator, Yarn(), SkipGrammar<Iterator> > start;
 	qi::rule<Iterator, Spectrum(), SkipGrammar<Iterator> > spec;
 	qi::rule<Iterator, float(), SkipGrammar<Iterator> > flt;
+	qi::rule<Iterator, std::string()> identifier;
 	const Properties &props;
 };
 
@@ -346,12 +339,13 @@ template <typename Iterator> struct WeavePatternGrammar : qi::grammar<Iterator, 
 				>> uint_ [ push_back(_val, _1) ] % ','
 				>> lit("}");
 		
-		name = ("\"" >> *(char_ - "\"") >> "\"");
+		name = qi::lexeme [ lit("\"") >> *(char_ - "\"") >> lit("\"") ];
 
-		qi::rule<Iterator, std::string()> id = qi::lexeme[ lit('$') >> +char_("a-zA-Z0-9") ];
+		identifier = qi::lexeme[ lit('$') >> (qi::alpha | char_('_')) 
+			>> *(qi::alnum | char_('_')) ];
 
 		flt = (float_ [ _val = _1 ])
-		      | (id [ _val = bind(&Properties::getFloat, ph::ref(props), _1)]);
+		      | (identifier [ _val = bind(&Properties::getFloat, ph::ref(props), _1)]);
 
 		start = lit("weave") >> lit("{") >> (
 			  lit("name")               >> lit("=") >> name   [ bind(&WeavePattern::name,               _val) = _1 ]
@@ -372,13 +366,14 @@ template <typename Iterator> struct WeavePatternGrammar : qi::grammar<Iterator, 
 			| pattern                                         [ bind(&WeavePattern::pattern,            _val) = _1 ] 
 			| yarn                                            [ push_back(bind(&WeavePattern::yarns, _val), _1)    ] 
 		) % ','
-		>> lit("}");
+		>> lit("}") >> qi::eoi;
 	}
 
 	qi::rule<Iterator, WeavePattern(), SkipGrammar<Iterator> > start;
 	qi::rule<Iterator, std::vector<uint32_t>(), SkipGrammar<Iterator> > pattern;
 	qi::rule<Iterator, std::string(), SkipGrammar<Iterator> > name;
 	qi::rule<Iterator, float(), SkipGrammar<Iterator> > flt;
+	qi::rule<Iterator, std::string()> identifier;
 	YarnGrammar<Iterator> yarn;
 	const Properties &props;
 };

@@ -19,7 +19,6 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/texture.h>
@@ -37,9 +36,9 @@ MTS_NAMESPACE_BEGIN
  * This plugin implements the Irawan & Marschner woven cloth BRDF model
  * It is a port of a previous Java implementation by Piti Irawan. 
  *
- * To use the model, you must provide a special weave pattern file, as well
- * as diffuse and specular texture maps. For an example of what these look
- * like, please see the included example scenes.
+ * To use the model, you must provide a special weave pattern file --
+ * for an example of what these look like, please see the included 
+ * example scenes.
  *
  * For reference, the model is described in detail in the PhD
  * thesis of Piti Irawan ("The Appearance of Woven Cloth",
@@ -74,26 +73,25 @@ public:
 		SAssert(m_pattern.pattern.size() == 
 				m_pattern.tileWidth * m_pattern.tileHeight);
 		for (size_t i=0; i<m_pattern.pattern.size(); ++i)
-			SAssert(m_pattern.pattern[i] <= m_pattern.yarns.size()); 
+			SAssert(m_pattern.pattern[i] > 0 &&
+					m_pattern.pattern[i] <= m_pattern.yarns.size()); 
 
 		/* U and V tile count */
 		m_repeatU = props.getFloat("repeatU");
 		m_repeatV = props.getFloat("repeatV");
 
-		/* Diffuse and specular multiplier */
-		m_kd = props.getFloat("kd");
-		m_ks = props.getFloat("ks");
+		/* Diffuse and specular multipliers */
+		m_kdMultiplier = props.getFloat("kdMultiplier");
+		m_ksMultiplier = props.getFloat("ksMultiplier");
 	}
 
 	IrawanClothBRDF(Stream *stream, InstanceManager *manager) 
 		: BSDF(stream, manager) {
-		m_diffuseReflectance = static_cast<Texture2D *>(manager->getInstance(stream));
-		m_specularReflectance = static_cast<Texture2D *>(manager->getInstance(stream));
 		m_pattern = WeavePattern(stream);
 		m_repeatU = stream->readFloat();
 		m_repeatV = stream->readFloat();
-		m_kd = stream->readFloat();
-		m_ks = stream->readFloat();
+		m_kdMultiplier = stream->readFloat();
+		m_ksMultiplier = stream->readFloat();
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
 		m_combinedType = m_type[0] = EGlossyReflection | EAnisotropicMaterial;
@@ -120,10 +118,6 @@ public:
 		int yarnID = m_pattern.pattern[lookup.x + lookup.y * m_pattern.tileWidth] - 1;
 
 		const Yarn &yarn = m_pattern.yarns.at(yarnID);
-
-		Spectrum diffuse = m_diffuseReflectance->getValue(uv);
-		Spectrum specular = m_specularReflectance->getValue(uv);
-
 		// store center of the yarn segment
 		Point2 center
 			(((int) xy.x / m_pattern.tileWidth) * m_pattern.tileWidth 
@@ -195,7 +189,7 @@ public:
 
 		// Compute specular contribution.
 		Spectrum result(0.0f);
-		if (m_ks > 0.0f) {
+		if (m_ksMultiplier > 0.0f) {
 			Float integrand;
 			if (psi != 0.0f)
 				integrand = evalStapleIntegrand(u, v, om_i, om_r, m_pattern.alpha, 
@@ -218,18 +212,27 @@ public:
 				intensityVariation = std::min(-std::log(xi), (Float) 10.0f);
 			}
 
-			result = specular * (intensityVariation * m_ks * integrand);
+			result = yarn.ks * (intensityVariation * m_ksMultiplier * integrand);
 			if (type == Yarn::EWarp)
 				result *= (m_pattern.warpArea + m_pattern.weftArea) / m_pattern.warpArea;
 			else
 				result *= (m_pattern.warpArea + m_pattern.weftArea) / m_pattern.weftArea;
 		}
 
-		return result + diffuse * m_kd;
+		return result + yarn.kd * m_kdMultiplier;
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_diffuseReflectance->getValue(its);
+		Point2 uv = Point2(its.uv.x * m_repeatU,
+			(1 - its.uv.y) * m_repeatV);
+		Point2 xy(uv.x * m_pattern.tileWidth, uv.y * m_pattern.tileHeight); 
+		Point2i lookup(
+			modulo((int) xy.x, m_pattern.tileWidth),
+			modulo((int) xy.y, m_pattern.tileHeight));
+		int yarnID = m_pattern.pattern[lookup.x + lookup.y * m_pattern.tileWidth] - 1;
+		const Yarn &yarn = m_pattern.yarns.at(yarnID);
+
+		return yarn.kd * m_kdMultiplier;
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec) const {
@@ -259,35 +262,14 @@ public:
 		return f(bRec);
 	}
 
-	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture2D))
-				&& name == "diffuseReflectance") {
-			m_diffuseReflectance = static_cast<Texture2D *>(child);
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture2D))
-				&& name == "specularReflectance") {
-			m_specularReflectance = static_cast<Texture2D *>(child);
-		} else {
-			BSDF::addChild(name, child);
-		}
-	}
-
-	void configure() {
-		if (m_diffuseReflectance == NULL ||
-			m_specularReflectance == NULL)
-			Log(EError, "Missing texture component (diffuse "
-				"+ specular map are required)");
-	}
-
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
-		manager->serialize(stream, m_diffuseReflectance.get());
-		manager->serialize(stream, m_specularReflectance.get());
 		m_pattern.serialize(stream);
 		stream->writeFloat(m_repeatU);
 		stream->writeFloat(m_repeatV);
-		stream->writeFloat(m_kd);
-		stream->writeFloat(m_ks);
+		stream->writeFloat(m_kdMultiplier);
+		stream->writeFloat(m_ksMultiplier);
 	}
 
 	/** parameters:
@@ -537,20 +519,21 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "IrawanClothBRDF[" << endl
-			<< "  diffuseReflectance = " << indent(m_diffuseReflectance.toString()) << "," << endl
-			<< "  specularReflectance = " << indent(m_specularReflectance.toString()) << endl
-			<< "  weavePattern = " << indent(m_pattern.toString()) << endl
+			<< "  weavePattern = " << indent(m_pattern.toString()) << "," << endl
+			<< "  repeatU = " << m_repeatU << "," << endl
+			<< "  repeatV = " << m_repeatV << "," << endl
+			<< "  kdMultiplier = " << m_kdMultiplier << "," << endl
+			<< "  ksMultiplier = " << m_ksMultiplier << endl
 			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	ref<Texture2D> m_diffuseReflectance;
-	ref<Texture2D> m_specularReflectance;
 	WeavePattern m_pattern;
 	Float m_repeatU, m_repeatV;
-	Float m_kd, m_ks;
+	Float m_kdMultiplier;
+	Float m_ksMultiplier;
 };
 
 MTS_IMPLEMENT_CLASS_S(IrawanClothBRDF, false, BSDF)
