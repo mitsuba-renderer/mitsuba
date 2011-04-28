@@ -795,7 +795,7 @@ void GLWidget::wheelEvent(QWheelEvent *event) {
 }
 
 void GLWidget::mousePressEvent(QMouseEvent *event) {
-	if (!m_preview->isRunning())
+	if (!m_preview->isRunning() || m_context == NULL || m_context->scene == NULL)
 		return;
 	m_mousePos = event->pos();
 	m_initialMousePos = mapToGlobal(m_mousePos);
