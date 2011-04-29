@@ -116,7 +116,7 @@ public:
 		Sampler *cameraSampler = (Sampler *) sched->getResource(samplerResID, 0);
 	
 		size_t sampleCount = cameraSampler->getSampleCount();
-		Log(EInfo, "Starting render job (%ix%i, %lld %s, " SIZE_T_FMT 
+		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " %s, " SIZE_T_FMT 
 			" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y, 
 			sampleCount, sampleCount == 1 ? "sample" : "samples", nCores, 
 			nCores == 1 ? "core" : "cores");

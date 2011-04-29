@@ -100,7 +100,7 @@ public:
 		const Film *film = camera->getFilm();
 		size_t sampleCount = scene->getSampler()->getSampleCount();
 		size_t nCores = scheduler->getCoreCount();
-		Log(EInfo, "Starting render job (%ix%i, %lld samples, " SIZE_T_FMT 
+		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " samples, " SIZE_T_FMT 
 			" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y, 
 			sampleCount, nCores, nCores == 1 ? "core" : "cores");
 
