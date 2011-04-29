@@ -189,7 +189,7 @@ public:
 							camera->generateRayDifferential(sample, 
 								lensSample, timeSample, eyeRay);
 							size_t offset = gatherPoints.size();
-							int count = createGatherPoints(scene, eyeRay, sample, 
+							Float count = (Float) createGatherPoints(scene, eyeRay, sample, 
 									cameraSampler, Spectrum(1.0f),
 								gatherPoints, 1);
 							if (count > 1) { // necessary because of filter weight computation
@@ -311,8 +311,9 @@ public:
 					continue;
 				}
 
-				Float M = photonMap->estimateRadianceRaw(
-					g.its, g.radius, flux, m_maxDepth == -1 ? INT_MAX : (m_maxDepth-g.depth)), N = g.N;
+				Float M = (Float) photonMap->estimateRadianceRaw(
+					g.its, g.radius, flux, m_maxDepth == -1 ? INT_MAX : (m_maxDepth-g.depth));
+				Float N = g.N;
 
 				if (N+M == 0) {
 					g.flux = contrib = Spectrum(0.0f);
