@@ -343,7 +343,7 @@ SparseWavelet2D::SparseWavelet2D(Stream *stream, InstanceManager *Manager) {
 	m_data.set_empty_key(0xFFFFFFFFFFFFFFFFULL);
 #endif
 	for (size_t i=0; i<coefficientCount; i++) {
-		uint64_t key = stream->readSize();
+		uint64_t key = stream->readULong();
 		m_data[key] = stream->readSingle();
 	}
 	m_maxLevel = log2i(m_size)-1;
@@ -382,7 +382,7 @@ void SparseWavelet2D::serialize(Stream *stream, InstanceManager *Manager) const 
 	stream->writeSize(m_data.size());
 
 	for (CoefficientIterator it = m_data.begin(); it != m_data.end(); ++it) {
-		stream->writeSize((*it).first);
+		stream->writeULong((*it).first);
 		stream->writeSingle((*it).second);
 	}
 }
