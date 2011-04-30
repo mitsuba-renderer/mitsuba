@@ -293,7 +293,7 @@ public:
 			m_gpuTexture->setWrapType(GPUTexture::ERepeat);
 		else
 			m_gpuTexture->setWrapType(GPUTexture::EClampToEdge);
-		m_gpuTexture->setMaxAnisotropy((int) maxAnisotropy);
+		m_gpuTexture->setMaxAnisotropy(maxAnisotropy);
 		m_gpuTexture->init();
 		/* Release the memory on the host side */
 		m_gpuTexture->setBitmap(0, NULL);

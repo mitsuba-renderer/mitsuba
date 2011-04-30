@@ -293,7 +293,7 @@ public:
 				Spectrum flux, contrib;
 
 				if (gp.depth != -1) {
-					M = photonMap->estimateRadianceRaw(
+					M = (Float) photonMap->estimateRadianceRaw(
 						gp.its, gp.radius, flux, m_maxDepth-gp.depth);
 				} else {
 					M = 0;
@@ -305,7 +305,7 @@ public:
 				} else {
 					Float ratio = (N + m_alpha * M) / (N + M);
 					gp.flux = (gp.flux + gp.weight * (flux + 
-						gp.emission * proc->getShotParticles() * M_PI * gp.radius*gp.radius)) * ratio;
+						gp.emission * (Float) proc->getShotParticles() * M_PI * gp.radius*gp.radius)) * ratio;
 					gp.radius = gp.radius * std::sqrt(ratio);
 					gp.N = N + m_alpha * M;
 					contrib = gp.flux / ((Float) m_totalEmitted * gp.radius*gp.radius * M_PI);

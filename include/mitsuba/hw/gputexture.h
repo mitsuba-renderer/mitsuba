@@ -214,7 +214,7 @@ public:
 	inline void setSize(const Point3i &size) { m_size = size; }
 
 	/// Get the maximal anisotropy
-	inline float getMaxAnisotropy() const { return m_maxAnisotropy; }
+	inline Float getMaxAnisotropy() const { return m_maxAnisotropy; }
 
 	/** \brief Set the maximal anisotropy.
 	 * 
@@ -222,7 +222,7 @@ public:
 	 * texture filtering. A value of 0 (default) will
 	 * use the global max. anisotropy value
 	 */
-	inline void setMaxAnisotropy(float maxAnisotropy) { m_maxAnisotropy = maxAnisotropy; }
+	inline void setMaxAnisotropy(Float maxAnisotropy) { m_maxAnisotropy = maxAnisotropy; }
 
 	/// Return whether mipmapping is enabled
 	inline bool isMipMapped() const { return m_mipmapped; }
@@ -363,7 +363,7 @@ protected:
 	EDepthMode m_depthMode;
     bool m_mipmapped;
 	mutable PrimitiveThreadLocal<std::set<int> > m_textureUnits;
-	float m_maxAnisotropy;
+	Float m_maxAnisotropy;
 	int m_samples;
 	std::vector<Bitmap *> m_bitmaps;
 	Point3i m_size;

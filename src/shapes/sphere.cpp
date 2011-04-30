@@ -141,7 +141,7 @@ public:
 		if (phi < 0)
 			phi += 2*M_PI;
 
-		its.uv.x = phi * (0.5 * INV_PI);
+		its.uv.x = phi * (0.5f * INV_PI);
 		its.uv.y = theta * INV_PI;
 		its.dpdu = m_objectToWorld(Vector(-local.y, local.x, 0) * (2*M_PI));
     	its.geoFrame.n = normalize(its.p - m_center);
