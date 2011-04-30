@@ -131,8 +131,8 @@ public:
 		Log(EInfo, "   Memory limit per core     = %s", memString(memoryLimitPerCore).c_str());
 		Log(EInfo, "   Max. blocks per core      = %i", m_blocksPerCore);
 		Log(EInfo, "   Effective resolution      = %s", totalCells.toString().c_str());
-		Log(EInfo, "   Effective storage         = %s", memString(
-			totalCells[0]*totalCells[1]*totalCells[2]*sizeof(float)*m_channels).c_str());
+		Log(EInfo, "   Effective storage         = %s", memString((size_t)
+			(totalCells[0]*totalCells[1]*totalCells[2]*sizeof(float)*m_channels)).c_str());
 	}
 
 	Float lookupFloat(const Point &_p) const {
@@ -263,7 +263,7 @@ public:
 		for (int z = 0; z<m_blockRes; ++z) {
 			for (int y = 0; y<m_blockRes; ++y) {
 				for (int x = 0; x<m_blockRes; ++x) {
-					Point p = offset + Vector(x, y, z) * m_voxelWidth;
+					Point p = offset + Vector((Float) x, (Float) y, (Float) z) * m_voxelWidth;
 					float value = (float) m_nested->lookupFloat(p);
 					result[idx++] = value;
 					nonempty |= (value != 0);

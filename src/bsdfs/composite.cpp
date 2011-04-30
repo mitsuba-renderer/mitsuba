@@ -40,7 +40,7 @@ public:
 		Float totalWeight = 0;
 		char *end_ptr = NULL;
 		for (size_t i=0; i<weights.size(); ++i) {
-			Float weight = strtod(weights[i].c_str(), &end_ptr);
+			Float weight = (Float) strtod(weights[i].c_str(), &end_ptr);
 			if (*end_ptr != '\0')
 				SLog(EError, "Could not parse the BRDF weights!");
 			if (weight < 0)

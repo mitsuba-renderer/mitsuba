@@ -84,17 +84,17 @@ public:
 					fitParameters = true;
 					break;
 				case 'i': 
-					intersectionCost = strtod(optarg, &end_ptr);
+					intersectionCost = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the intersection cost!");
 					break;
 				case 't': 
-					traversalCost = strtod(optarg, &end_ptr);
+					traversalCost = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the traversal cost!");
 					break;
 				case 'e': 
-					emptySpaceBonus = strtod(optarg, &end_ptr);
+					emptySpaceBonus = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the empty space bonus!");
 					break;

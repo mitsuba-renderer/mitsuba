@@ -137,7 +137,7 @@ size_t Properties::getSize(const std::string &name) const {
 	if ((*it).second.v_long < 0)
 		SLog(EError, "Size property \"%s\": expected a nonnegative value!");
 	(*it).second.queried = true;
-	return (*it).second.v_long;
+	return (size_t) (*it).second.v_long;
 }
 
 size_t Properties::getSize(const std::string &name, size_t defVal) const {
@@ -149,7 +149,7 @@ size_t Properties::getSize(const std::string &name, size_t defVal) const {
 	if ((*it).second.v_long < 0)
 		SLog(EError, "Size property \"%s\": expected a nonnegative value!");
 	(*it).second.queried = true;
-	return (*it).second.v_long;
+	return (size_t) (*it).second.v_long;
 }
 
 

@@ -654,13 +654,13 @@ void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
 
 		const float zDepth = -1.0f; // just before the far plane
 		glTexCoord2f(0.0f, 0.0f);
-		glVertex3f(upperLeft.x, upperLeft.y, zDepth);
+		glVertex3f((float) upperLeft.x, (float) upperLeft.y, zDepth);
 		glTexCoord2f(1.0f, 0.0f);
-		glVertex3f(lowerRight.x, upperLeft.y, zDepth);
+		glVertex3f((float) lowerRight.x, (float) upperLeft.y, zDepth);
 		glTexCoord2f(1.0f, 1.0f);
-		glVertex3f(lowerRight.x, lowerRight.y, zDepth);
+		glVertex3f((float) lowerRight.x, (float) lowerRight.y, zDepth);
 		glTexCoord2f(0.0f, 1.0f);
-		glVertex3f(upperLeft.x, lowerRight.y, zDepth);
+		glVertex3f((float) upperLeft.x, (float) lowerRight.y, zDepth);
 		glEnd();
 	} else if (tex->getType() == GPUTexture::ETextureCubeMap) {
 		glMatrixMode(GL_PROJECTION);
@@ -737,7 +737,7 @@ void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
 void GLRenderer::blitQuad(bool flipVertically) {
 	GLint viewport[4];	
 	glGetIntegerv(GL_VIEWPORT, viewport);
-	Vector2 scrSize(viewport[2], viewport[3]);
+	Vector2 scrSize((float) viewport[2], (float) viewport[3]);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0, scrSize.x, scrSize.y, 0, -1, 1);
@@ -830,11 +830,11 @@ void GLRenderer::drawText(const Point2i &_pos,
 
 		const Font::Glyph &glyph = font->getGlyph(character);
 
-		Point2i start = pos + Vector2i(
+		Point2 start = Point2(pos + Vector2i(
 			glyph.horizontalBearing,
 			font->getMaxVerticalBearing() - glyph.verticalBearing
-		);
-		Point2i end = start + glyph.size;
+		));
+		Point2 end = start + Vector2(glyph.size);
 		Point2 txStart = glyph.tx;
 		Point2 txEnd = txStart + glyph.ts;
 

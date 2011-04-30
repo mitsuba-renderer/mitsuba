@@ -261,7 +261,7 @@ public:
 						Float Lp = Y * reinhardKey;
 						Y = Lp * (1.0f + Lp*invWpSqr) / (1.0f + Lp);
 						X = x * (Y/y); 
-						Z = (Y/y) * (1.0 - x - y);
+						Z = (Y/y) * (1.0f - x - y);
 						spec.fromXYZ(X, Y, Z);
 					}
 
@@ -310,7 +310,7 @@ public:
 						Float Lp = Y * reinhardKey;
 						Y = Lp * (1.0f + Lp*invWpSqr) / (1.0f + Lp);
 						X = x * (Y/y); 
-						Z = (Y/y) * (1.0 - x - y);
+						Z = (Y/y) * (1.0f - x - y);
 						spec.fromXYZ(X, Y, Z);
 					}
 
