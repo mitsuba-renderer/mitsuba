@@ -193,7 +193,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 			stream->close();
 			os << "\t\t<string name=\"filename\" value=\"meshes/" << filename.c_str() << "\"/>" << endl;
 		} else {
-			m_geometryDict.push_back(m_geometryFile->getPos());
+			m_geometryDict.push_back((uint32_t) m_geometryFile->getPos());
 			SLog(EInfo, "Saving mesh \"%s\"", mesh->getName().c_str());
 			mesh->serialize(m_geometryFile);
 			os << "\t\t<string name=\"filename\" value=\"" << m_geometryFileName.filename() << "\"/>" << endl;

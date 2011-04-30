@@ -335,7 +335,8 @@ private:
 	ref<Bitmap> m_bitmap;
 	Float m_initialRadius, m_alpha;
 	int m_photonCount, m_granularity;
-	int m_maxDepth, m_rrDepth, m_totalEmitted;
+	int m_maxDepth, m_rrDepth;
+	size_t m_totalEmitted;
 	int m_blockSize;
 	bool m_running;
 };

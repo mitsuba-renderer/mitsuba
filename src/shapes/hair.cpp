@@ -42,6 +42,7 @@ class HairKDTree : public SAHKDTree3D<HairKDTree> {
 	friend class SAHKDTree3D<HairKDTree>;
 public:
 	using SAHKDTree3D<HairKDTree>::index_type;
+	using SAHKDTree3D<HairKDTree>::size_type;
 
 	HairKDTree(std::vector<Point> &vertices, 
 			std::vector<bool> &vertexStartsFiber, Float radius)
@@ -403,8 +404,8 @@ public:
 #endif
 
 	/// Return the total number of segments
-	inline size_t getPrimitiveCount() const {
-		return m_segIndex.size();
+	inline size_type getPrimitiveCount() const {
+		return (size_type) m_segIndex.size();
 	}
 
 	inline bool intersect(const Ray &ray, index_type iv, 
@@ -645,7 +646,7 @@ public:
 	ref<TriMesh> createTriMesh() {
 		size_t nSegments = m_kdtree->getSegmentCount();
 		/// Use very approximate geometry for large hair meshes
-		const size_t phiSteps = (nSegments > 100000) ? 4 : 10;
+		const uint32_t phiSteps = (nSegments > 100000) ? 4 : 10;
 		const Float dPhi   = (2*M_PI) / phiSteps;
 
 		ref<TriMesh> mesh = new TriMesh("Hair mesh approximation",
@@ -666,10 +667,10 @@ public:
 			cosPhi[i] = std::cos(i*dPhi);
 		}
 
-		size_t hairIdx = 0;
+		uint32_t hairIdx = 0;
 		for (HairKDTree::index_type iv=0; iv<(HairKDTree::index_type) hairVertices.size()-1; iv++) {
 			if (!vertexStartsFiber[iv+1]) {
-				for (size_t phi=0; phi<phiSteps; ++phi) {
+				for (uint32_t phi=0; phi<phiSteps; ++phi) {
 					Vector tangent = m_kdtree->tangent(iv);
 					Vector dir = Frame(tangent).toWorld(
 							Vector(cosPhi[phi], sinPhi[phi], 0));
