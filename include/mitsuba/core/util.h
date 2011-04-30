@@ -277,7 +277,7 @@ extern MTS_EXPORT_CORE bool solveQuadratic(Float a, Float b,
  * in Computer Graphics Proceedings, Annual Conference Series, 
  * SIGGRAPH 97, pp. 49-56. 
  */
-extern MTS_EXPORT_CORE Float radicalInverse(int b, int i);
+extern MTS_EXPORT_CORE Float radicalInverse(int b, size_t i);
 
 /**
  * Incrementally calculate the radical inverse function
@@ -386,7 +386,7 @@ extern MTS_EXPORT_CORE void stratifiedSample2D(Random *random, Point2 *dest,
 	int countX, int countY, bool jitter);
 
 /// Generate latin hypercube samples
-extern MTS_EXPORT_CORE void latinHypercube(Random *random, Float *dest, int nSamples, int nDim);
+extern MTS_EXPORT_CORE void latinHypercube(Random *random, Float *dest, size_t nSamples, size_t nDim);
 
 /// Convert spherical coordinates to a direction
 extern MTS_EXPORT_CORE Vector sphericalDirection(Float theta, Float phi);

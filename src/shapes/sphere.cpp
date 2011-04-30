@@ -247,16 +247,16 @@ public:
 	
 	ref<TriMesh> createTriMesh() {
 		/// Choice of discretization
-		const size_t thetaSteps = 20;
-		const size_t phiSteps = thetaSteps * 2;
+		const uint32_t thetaSteps = 20;
+		const uint32_t phiSteps = thetaSteps * 2;
 		const Float dTheta = M_PI / (thetaSteps-1);
 		const Float dPhi   = (2*M_PI) / phiSteps;
-		size_t topIdx = (thetaSteps-2) * phiSteps, botIdx = topIdx+1;
+		uint32_t topIdx = (thetaSteps-2) * phiSteps, botIdx = topIdx+1;
 
 		/// Precompute cosine and sine tables
 		Float *cosPhi = new Float[phiSteps];
 		Float *sinPhi = new Float[phiSteps];
-		for (size_t i=0; i<phiSteps; ++i) {
+		for (uint32_t i=0; i<phiSteps; ++i) {
 			sinPhi[i] = std::sin(i*dPhi);
 			cosPhi[i] = std::cos(i*dPhi);
 		}
@@ -269,12 +269,12 @@ public:
 		Point *vertices = mesh->getVertexPositions();
 		Normal *normals = mesh->getVertexNormals();
 		Triangle *triangles = mesh->getTriangles();
-		size_t vertexIdx = 0;
-		for (size_t theta=1; theta<thetaSteps-1; ++theta) {
+		uint32_t vertexIdx = 0;
+		for (uint32_t theta=1; theta<thetaSteps-1; ++theta) {
 			Float sinTheta = std::sin(theta * dTheta);
 			Float cosTheta = std::cos(theta * dTheta);
 
-			for (size_t phi=0; phi<phiSteps; ++phi) {
+			for (uint32_t phi=0; phi<phiSteps; ++phi) {
 				Vector v(
 					sinTheta * cosPhi[phi],
 					sinTheta * sinPhi[phi],
@@ -290,11 +290,11 @@ public:
 		normals[vertexIdx++] = m_objectToWorld(Normal(0, 0, -1));
 		Assert(vertexIdx == botIdx+1);
 
-		size_t triangleIdx = 0;
-		for (size_t theta=1; theta<thetaSteps; ++theta) {
-			for (size_t phi=0; phi<phiSteps; ++phi) {
-				size_t nextPhi = (phi + 1) % phiSteps;
-				size_t idx0, idx1, idx2, idx3;
+		uint32_t triangleIdx = 0;
+		for (uint32_t theta=1; theta<thetaSteps; ++theta) {
+			for (uint32_t phi=0; phi<phiSteps; ++phi) {
+				uint32_t nextPhi = (phi + 1) % phiSteps;
+				uint32_t idx0, idx1, idx2, idx3;
 				if (theta == 1) {
 					idx0 = idx1 = topIdx;
 				} else {

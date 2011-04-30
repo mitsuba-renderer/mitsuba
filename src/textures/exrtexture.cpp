@@ -48,7 +48,7 @@ public:
 	 : Texture2D(stream, manager) {
 		m_filename = stream->readString();
 		Log(EInfo, "Unserializing texture \"%s\"", m_filename.leaf().c_str());
-		int size = stream->readInt();
+		size_t size = stream->readSize();
 		ref<MemoryStream> mStream = new MemoryStream(size);
 		stream->copyTo(mStream, size);
 		mStream->setPos(0);
@@ -62,7 +62,7 @@ public:
 		Texture2D::serialize(stream, manager);
 		stream->writeString(m_filename.file_string());
 		ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
-		stream->writeInt(is->getSize());
+		stream->writeSize(is->getSize());
 		is->copyTo(stream);
 	}
 

@@ -129,7 +129,8 @@ namespace mitsuba {
 };
 
 struct PreviewQueueEntry {
-	int id, vplSampleOffset;
+	int id;
+	size_t vplSampleOffset;
 	GPUTexture *buffer;
 	GPUSync *sync;
 

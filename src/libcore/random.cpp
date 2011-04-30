@@ -189,6 +189,24 @@ uint32_t Random::nextUInt(uint32_t n) {
 	return result;
 }
 
+size_t Random::nextSize(size_t n) {
+	/* Determine a bit mask */
+	size_t result, bitmask = n;
+	bitmask |= bitmask >> 1;
+	bitmask |= bitmask >> 2;
+	bitmask |= bitmask >> 4;
+	bitmask |= bitmask >> 8;
+	bitmask |= bitmask >> 16;
+	if (sizeof(size_t) == 8)
+		bitmask |= bitmask >> 32;
+
+	/* Generate numbers until one in [0, n) is found */
+	while ((result = (size_t) (nextULong() & bitmask)) >= n)
+		;
+
+	return result;
+}
+
 #if defined(DOUBLE_PRECISION)
 Float Random::nextFloat() { 
 	return (Float) ((nextULong() >> 11) * (1.0/9007199254740992.0));

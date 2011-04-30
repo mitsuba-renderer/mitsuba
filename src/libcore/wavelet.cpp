@@ -70,19 +70,19 @@ Wavelet2D::Wavelet2D(const SparseWavelet2D *sw) {
 	m_data[0] = sw->getScalingFunction();
 
 	/* Loop over the resolution hierarchy and extract the coefficients */
-	size_t level = 0;
-	size_t size = 1, offset = 1;
+	uint8_t level = 0;
+	uint16_t size = 1, offset = 1;
 	while (size < m_size) {
 		/* Loop over the different types of differentiation */
-		for (int type=0; type<3; type++) {
+		for (uint8_t type=0; type<3; type++) {
 			size_t offsetX = 0, offsetY = 0;
 			switch (type) {
 				case 0: offsetX = offset; break;
 				case 1: offsetY = offset; break;
 				case 2: offsetX = offset; offsetY = offset; break;
 			}
-			for (size_t j=0; j<size; j++) {
-				for (size_t i=0; i<size; i++) {
+			for (uint16_t j=0; j<size; j++) {
+				for (uint16_t i=0; i<size; i++) {
 					size_t pos = (j+offsetY)*m_size + i + offsetX;
 					Assert(pos < m_size*m_size);
 					m_data[pos] = sw->get(SparseWavelet2D::Key::create(level, type, i, j));
@@ -100,8 +100,8 @@ SparseWavelet2D *Wavelet2D::toSparseWavelet() const {
 	sparse->setScalingFunction(m_data[0]);
 
 	/* Loop over the resolution hierarchy and extract the coefficients */
-	size_t level = 0;
-	size_t size = 1, offset = 1;
+	uint8_t level = 0;
+	uint16_t size = 1, offset = 1;
 
 	while (size < m_size) {
 		/* Loop over the different types of differentiation */
@@ -113,8 +113,8 @@ SparseWavelet2D *Wavelet2D::toSparseWavelet() const {
 				case 2: offsetX = offset; offsetY = offset; break;
 			}
 
-			for (size_t j=0; j<size; j++) {
-				for (size_t i=0; i<size; i++) {
+			for (uint16_t j=0; j<size; j++) {
+				for (uint16_t i=0; i<size; i++) {
 					size_t pos = (j+offsetY)*m_size + i + offsetX;
 					Assert(pos < m_size*m_size);
 					if (m_data[pos] == 0.0f)
@@ -390,9 +390,9 @@ void SparseWavelet2D::serialize(Stream *stream, InstanceManager *Manager) const 
 Float SparseWavelet2D::lineIntegral(Point2 start, Point2 end) const {
 	Vector2 d = end-start;
 	Float accum = 0, maxt = d.length();
-	int res = m_size;
+	size_t res = m_size;
 	Key key;
-	
+
 	d/= maxt;
 	key.empty = 0;
 

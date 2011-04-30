@@ -27,11 +27,11 @@ Sampler::Sampler(const Properties &props)
 Sampler::Sampler(Stream *stream, InstanceManager *manager) 
  : ConfigurableObject(stream, manager) {
 	m_sampleCount = stream->readSize();
-	uint32_t n1DArrays = stream->readUInt();
-	for (uint32_t i=0; i<n1DArrays; ++i) 
+	size_t n1DArrays = stream->readSize();
+	for (size_t i=0; i<n1DArrays; ++i) 
 		request1DArray(stream->readUInt());
-	uint32_t n2DArrays = stream->readUInt();
-	for (uint32_t i=0; i<n2DArrays; ++i) 
+	size_t n2DArrays = stream->readSize();
+	for (size_t i=0; i<n2DArrays; ++i) 
 		request2DArray(stream->readUInt());
 }
 
@@ -39,10 +39,10 @@ void Sampler::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 
 	stream->writeSize(m_sampleCount);
-	stream->writeUInt(m_req1D.size());
+	stream->writeSize(m_req1D.size());
 	for (size_t i=0; i<m_req1D.size(); ++i)
 		stream->writeUInt(m_req1D[i]);
-	stream->writeUInt(m_req2D.size());
+	stream->writeSize(m_req2D.size());
 	for (size_t i=0; i<m_req2D.size(); ++i)
 		stream->writeUInt(m_req2D[i]);
 }

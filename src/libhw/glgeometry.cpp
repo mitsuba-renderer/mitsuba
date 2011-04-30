@@ -50,8 +50,8 @@ void GLGeometry::refresh() {
 		m_stride += 3;
 	m_stride *= sizeof(GLfloat);
 
-	m_vertexSize = m_mesh->getVertexCount() * m_stride;
-	m_indexSize = m_mesh->getTriangleCount() * sizeof(GLuint) * 3;
+	m_vertexSize = (GLuint) (m_mesh->getVertexCount() * m_stride);
+	m_indexSize = (GLuint) (m_mesh->getTriangleCount() * sizeof(GLuint) * 3);
 
 	Log(ETrace, "Uploading a GPU geometry object (\"%s\", " SIZE_T_FMT 
 		" vertices, " SIZE_T_FMT " triangles, %s)",

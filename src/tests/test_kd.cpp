@@ -164,7 +164,7 @@ public:
 					nTraversals += kdtree.nnSearch(p, k, results);
 					resultsBF.clear();
 					for (size_t j=0; j<nPoints; ++j)
-						resultsBF.push_back(KDTree2::SearchResult((kdtree[j].getPosition()-p).lengthSquared(), j));
+						resultsBF.push_back(KDTree2::SearchResult((kdtree[j].getPosition()-p).lengthSquared(), (uint32_t) j));
 					std::sort(results.begin(), results.end(), KDTree2::SearchResultComparator());
 					std::sort(resultsBF.begin(), resultsBF.end(), KDTree2::SearchResultComparator());
 					for (int j=0; j<k; ++j) 

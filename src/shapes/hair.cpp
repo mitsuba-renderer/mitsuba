@@ -55,7 +55,7 @@ public:
 			if (m_vertexStartsFiber[i])
 				m_hairCount++;
 			if (!m_vertexStartsFiber[i+1])
-				m_segIndex.push_back(i);
+				m_segIndex.push_back((index_type) i);
 		}
 		m_segmentCount = m_segIndex.size();
 
@@ -401,7 +401,7 @@ public:
 #endif
 
 	/// Return the total number of segments
-	inline int getPrimitiveCount() const {
+	inline size_t getPrimitiveCount() const {
 		return m_segIndex.size();
 	}
 
@@ -665,7 +665,7 @@ public:
 		}
 
 		size_t hairIdx = 0;
-		for (size_t iv=0; iv<hairVertices.size()-1; iv++) {
+		for (index_type iv=0; iv<(index_type) hairVertices.size()-1; iv++) {
 			if (!vertexStartsFiber[iv+1]) {
 				for (size_t phi=0; phi<phiSteps; ++phi) {
 					Vector tangent = m_kdtree->tangent(iv);
@@ -682,8 +682,8 @@ public:
 					normals[vertexIdx] = normal;
 					vertices[vertexIdx++] = m_kdtree->secondVertex(iv) + radius*dir - tangent*t2;
 
-					int idx0 = 2*(phi + hairIdx*phiSteps), idx1 = idx0+1;
-					int idx2 = (2*phi+2) % (2*phiSteps) + 2*hairIdx*phiSteps, idx3 = idx2+1;
+					uint32_t idx0 = 2*(phi + hairIdx*phiSteps), idx1 = idx0+1;
+					uint32_t idx2 = (2*phi+2) % (2*phiSteps) + 2*hairIdx*phiSteps, idx3 = idx2+1;
 					triangles[triangleIdx].idx[0] = idx0;
 					triangles[triangleIdx].idx[1] = idx2;
 					triangles[triangleIdx].idx[2] = idx1;

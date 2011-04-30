@@ -175,7 +175,7 @@ VertexData *fetchVertexData(Transform transform,
 			semantic = vertInputs[vertInputIndex]->getSemantic();
 
 			if (vertInputIndex > 0) {
-				offset = result->data.size();
+				offset = (int) result->data.size();
 				result->data.push_back(NULL);
 			}
 
@@ -466,7 +466,7 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 		stream->close();
 		filename = "meshes/" + filename;
 	} else {
-		ctx.cvt->m_geometryDict.push_back(ctx.cvt->m_geometryFile->getPos());
+		ctx.cvt->m_geometryDict.push_back((uint32_t) ctx.cvt->m_geometryFile->getPos());
 		mesh->serialize(ctx.cvt->m_geometryFile);
 		filename = ctx.cvt->m_geometryFileName.filename();
 	}

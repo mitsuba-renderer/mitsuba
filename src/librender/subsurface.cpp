@@ -53,9 +53,9 @@ Subsurface::Subsurface(Stream *stream, InstanceManager *manager) :
 	m_sigmaA = Spectrum(stream);
 	m_eta = stream->readFloat();
 	m_densityMultiplier = stream->readFloat();
-	unsigned int shapeCount = stream->readUInt();
+	size_t shapeCount = stream->readSize();
 
-	for (unsigned int i=0; i<shapeCount; ++i) {
+	for (size_t i=0; i<shapeCount; ++i) {
 		Shape *shape = static_cast<Shape *>(manager->getInstance(stream));
 		m_shapes.push_back(shape);
 	}
@@ -86,7 +86,7 @@ void Subsurface::serialize(Stream *stream, InstanceManager *manager) const {
 	m_sigmaA.serialize(stream);
 	stream->writeFloat(m_eta);
 	stream->writeFloat(m_densityMultiplier);
-	stream->writeUInt(m_shapes.size());
+	stream->writeSize(m_shapes.size());
 	for (unsigned int i=0; i<m_shapes.size(); ++i)
 		manager->serialize(stream, m_shapes[i]);
 }

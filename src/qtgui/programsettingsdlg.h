@@ -71,7 +71,7 @@ public:
 	}
 
 	inline void setLocalWorkerCount(size_t count) {
-		ui->localWorkerBox->setValue(count);
+		ui->localWorkerBox->setValue((int) count);
 	}
 
 	inline int getLocalWorkerCount() {

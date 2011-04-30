@@ -29,7 +29,7 @@ MTS_NAMESPACE_BEGIN
 class Composite : public BSDF {
 public:
 	Composite(const Properties &props) 
-		: BSDF(props), m_bsdfCount(0), m_bsdfWeight(NULL) {
+		: BSDF(props), m_bsdfWeight(NULL) {
 		/* Parse the weight parameter */
 		std::vector<std::string> weights = 
 			tokenize(props.getString("weights", ""), " ,;");
@@ -54,11 +54,11 @@ public:
 	}
 
 	Composite(Stream *stream, InstanceManager *manager) 
-	 : BSDF(stream, manager), m_bsdfCount(0), m_bsdfWeight(NULL) {
-		m_bsdfCount = stream->readInt();
+	 : BSDF(stream, manager), m_bsdfWeight(NULL) {
+		m_bsdfCount = stream->readSize();
 		m_bsdfWeight = new Float[m_bsdfCount];
 		m_bsdfOffset = new int[m_bsdfCount];
-		for (int i=0; i<m_bsdfCount; ++i) {
+		for (size_t i=0; i<m_bsdfCount; ++i) {
 			m_bsdfWeight[i] = stream->readFloat();
 			BSDF *bsdf = static_cast<BSDF *>(manager->getInstance(stream));
 			bsdf->incRef();
@@ -81,8 +81,8 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 		
-		stream->writeInt(m_bsdfCount);
-		for (int i=0; i<m_bsdfCount; ++i) {
+		stream->writeSize(m_bsdfCount);
+		for (size_t i=0; i<m_bsdfCount; ++i) {
 			stream->writeFloat(m_bsdfWeight[i]);
 			manager->serialize(stream, m_bsdfs[i]);
 		}
@@ -95,18 +95,18 @@ public:
 		m_usesRayDifferentials = false;
 		m_componentCount = 0;
 
-		if ((int) m_bsdfs.size() != m_bsdfCount)
-			Log(EError, "BSDF count mismatch: %i bsdfs, but specified %i weights",
-				(int) m_bsdfs.size(), m_bsdfCount);
+		if (m_bsdfs.size() != m_bsdfCount)
+			Log(EError, "BSDF count mismatch: " SIZE_T_FMT " bsdfs, but specified " SIZE_T_FMT " weights",
+				m_bsdfs.size(), m_bsdfCount);
 
 		int offset = 0;
-		for (int i=0; i<m_bsdfCount; ++i)
+		for (size_t i=0; i<m_bsdfCount; ++i)
 			m_componentCount = m_bsdfs[i]->getComponentCount();
 
 		m_pdf = DiscretePDF(m_bsdfs.size());
 
 		m_type = new unsigned int[m_componentCount];
-		for (int i=0; i<m_bsdfCount; ++i) {
+		for (size_t i=0; i<m_bsdfCount; ++i) {
 			BSDF *bsdf = m_bsdfs[i];
 			m_bsdfOffset[i] = offset;
 			for (int j=0; j<bsdf->getComponentCount(); ++j) {
@@ -123,7 +123,7 @@ public:
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
 		Spectrum result(0.0f);
-		for (int i=0; i<m_bsdfCount; ++i)
+		for (size_t i=0; i<m_bsdfCount; ++i)
 			result+= m_bsdfs[i]->getDiffuseReflectance(its) * m_bsdfWeight[i];
 		return result;
 	}
@@ -132,11 +132,11 @@ public:
 		Spectrum result(0.0f);
 
 		if (bRec.component == -1) {
-			for (int i=0; i<m_bsdfCount; ++i)
+			for (size_t i=0; i<m_bsdfCount; ++i)
 				result += m_bsdfs[i]->f(bRec) * m_bsdfWeight[i];
 		} else {
 			/* Pick out an individual component */
-			for (int i=0; i<m_bsdfCount; ++i) {
+			for (size_t i=0; i<m_bsdfCount; ++i) {
 				int component = bRec.component - m_bsdfOffset[i];
 				if (component < 0 || component >= m_bsdfs[i]->getComponentCount())
 					continue;
@@ -154,11 +154,11 @@ public:
 		Spectrum result(0.0f);
 
 		if (bRec.component == -1) {
-			for (int i=0; i<m_bsdfCount; ++i)
+			for (size_t i=0; i<m_bsdfCount; ++i)
 				result += m_bsdfs[i]->fDelta(bRec) * m_bsdfWeight[i];
 		} else {
 			/* Pick out an individual component */
-			for (int i=0; i<m_bsdfCount; ++i) {
+			for (size_t i=0; i<m_bsdfCount; ++i) {
 				int component = bRec.component - m_bsdfOffset[i];
 				if (component < 0 || component >= m_bsdfs[i]->getComponentCount())
 					continue;
@@ -176,11 +176,11 @@ public:
 		Float result = 0.0f;
 
 		if (bRec.component == -1) {
-			for (int i=0; i<m_bsdfCount; ++i)
+			for (size_t i=0; i<m_bsdfCount; ++i)
 				result += m_bsdfs[i]->pdf(bRec) * m_pdf[i];
 		} else {
 			/* Pick out an individual component */
-			for (int i=0; i<m_bsdfCount; ++i) {
+			for (size_t i=0; i<m_bsdfCount; ++i) {
 				int component = bRec.component - m_bsdfOffset[i];
 				if (component < 0 || component >= m_bsdfs[i]->getComponentCount())
 					continue;
@@ -198,11 +198,11 @@ public:
 		Float result = 0.0f;
 
 		if (bRec.component == -1) {
-			for (int i=0; i<m_bsdfCount; ++i)
+			for (size_t i=0; i<m_bsdfCount; ++i)
 				result += m_bsdfs[i]->pdfDelta(bRec) * m_pdf[i];
 		} else {
 			/* Pick out an individual component */
-			for (int i=0; i<m_bsdfCount; ++i) {
+			for (size_t i=0; i<m_bsdfCount; ++i) {
 				int component = bRec.component - m_bsdfOffset[i];
 				if (component < 0 || component >= m_bsdfs[i]->getComponentCount())
 					continue;
@@ -227,7 +227,7 @@ public:
 			return result * m_bsdfWeight[entry];
 		} else {
 			/* Pick out an individual component */
-			for (int i=0; i<m_bsdfCount; ++i) {
+			for (size_t i=0; i<m_bsdfCount; ++i) {
 				int component = bRec.component - m_bsdfOffset[i];
 				if (component < 0 || component >= m_bsdfs[i]->getComponentCount())
 					continue;
@@ -255,7 +255,7 @@ public:
 			return result * m_bsdfWeight[entry];
 		} else {
 			/* Pick out an individual component */
-			for (int i=0; i<m_bsdfCount; ++i) {
+			for (size_t i=0; i<m_bsdfCount; ++i) {
 				int component = bRec.component - m_bsdfOffset[i];
 				if (component < 0 || component >= m_bsdfs[i]->getComponentCount())
 					continue;
@@ -298,7 +298,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	int m_bsdfCount;
+	size_t m_bsdfCount;
 	Float *m_bsdfWeight;
 	int *m_bsdfOffset;
 	std::vector<BSDF *> m_bsdfs;
