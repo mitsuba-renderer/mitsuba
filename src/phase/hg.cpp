@@ -77,7 +77,8 @@ public:
 	Float sample(PhaseFunctionQueryRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
 		HGPhaseFunction::sample(pRec, sampler);
-		return HGPhaseFunction::f(pRec);
+		pdf = HGPhaseFunction::f(pRec);
+		return pdf;
 	}
 
 
