@@ -41,6 +41,8 @@ class HairKDTree : public SAHKDTree3D<HairKDTree> {
 	friend class GenericKDTree<AABB, SurfaceAreaHeuristic, HairKDTree>;
 	friend class SAHKDTree3D<HairKDTree>;
 public:
+	using SAHKDTree3D<HairKDTree>::index_type;
+
 	HairKDTree(std::vector<Point> &vertices, 
 			std::vector<bool> &vertexStartsFiber, Float radius)
 			: m_radius(radius) {
@@ -581,7 +583,7 @@ public:
 	Hair(Stream *stream, InstanceManager *manager) 
 		: Shape(stream, manager) {
 		Float radius = stream->readFloat();
-		size_t vertexCount = (size_t) stream->readUInt();
+		size_t vertexCount = stream->readSize();
 
 		std::vector<Point> vertices(vertexCount);
 		std::vector<bool> vertexStartsFiber(vertexCount+1);
@@ -601,7 +603,7 @@ public:
 		const std::vector<bool> &vertexStartsFiber = m_kdtree->getStartFiber();
 
 		stream->writeFloat(m_kdtree->getRadius());
-		stream->writeUInt((uint32_t) vertices.size());
+		stream->writeSize(vertices.size());
 		stream->writeFloatArray((Float *) &vertices[0], vertices.size() * 3);
 		for (size_t i=0; i<vertices.size(); ++i)
 			stream->writeBool(vertexStartsFiber[i]);
@@ -665,7 +667,7 @@ public:
 		}
 
 		size_t hairIdx = 0;
-		for (index_type iv=0; iv<(index_type) hairVertices.size()-1; iv++) {
+		for (HairKDTree::index_type iv=0; iv<(HairKDTree::index_type) hairVertices.size()-1; iv++) {
 			if (!vertexStartsFiber[iv+1]) {
 				for (size_t phi=0; phi<phiSteps; ++phi) {
 					Vector tangent = m_kdtree->tangent(iv);
