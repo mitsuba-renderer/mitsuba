@@ -197,8 +197,11 @@ size_t Random::nextSize(size_t n) {
 	bitmask |= bitmask >> 4;
 	bitmask |= bitmask >> 8;
 	bitmask |= bitmask >> 16;
-	if (sizeof(size_t) == 8)
+
+#if defined(WIN64) || defined(__LINUX__) || defined(__OSX__)
+	if (sizeof(size_t) > 4)
 		bitmask |= bitmask >> 32;
+#endif
 
 	/* Generate numbers until one in [0, n) is found */
 	while ((result = (size_t) (nextULong() & bitmask)) >= n)
