@@ -106,7 +106,7 @@ public:
 	GatherPhotonWorker(Stream *stream, InstanceManager *manager) 
 	 : ParticleTracer(stream, manager) {
 		m_type = (GatherPhotonProcess::EGatherType) stream->readInt();
-		m_granularity = stream->readUInt();
+		m_granularity = stream->readSize();
 	}
 
 	ref<WorkProcessor> clone() const {
@@ -117,7 +117,7 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		ParticleTracer::serialize(stream, manager);
 		stream->writeInt(m_type);
-		stream->writeUInt(m_granularity);
+		stream->writeSize(m_granularity);
 	}
 
 	ref<WorkResult> createWorkResult() const {

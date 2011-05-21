@@ -38,12 +38,12 @@ public:
 	/// Return value of \ref BrentSolver::solve()
 	struct Result {
 		bool success;
-		int iterations;
+		size_t iterations;
 		Float x;
 		Float y;
 
 		/// Create a new result instance
-		inline Result(bool success, int iterations, Float x, Float y)
+		inline Result(bool success, size_t iterations, Float x, Float y)
 			: success(success), iterations(iterations), x(x), y(y) { }
 
 		/// Return a string representation of the result

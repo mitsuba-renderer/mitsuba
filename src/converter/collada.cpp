@@ -175,7 +175,7 @@ VertexData *fetchVertexData(Transform transform,
 			semantic = vertInputs[vertInputIndex]->getSemantic();
 
 			if (vertInputIndex > 0) {
-				offset = result->data.size();
+				offset = (int) result->data.size();
 				result->data.push_back(NULL);
 			}
 
@@ -466,7 +466,7 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 		stream->close();
 		filename = "meshes/" + filename;
 	} else {
-		ctx.cvt->m_geometryDict.push_back(ctx.cvt->m_geometryFile->getPos());
+		ctx.cvt->m_geometryDict.push_back((uint32_t) ctx.cvt->m_geometryFile->getPos());
 		mesh->serialize(ctx.cvt->m_geometryFile);
 		filename = ctx.cvt->m_geometryFileName.filename();
 	}
@@ -1428,19 +1428,19 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 				domListOfFloats &floatArray = source->getFloat_array()->getValue();
 				SAssert(stride == 1);
 				for (size_t i=0; i<size; ++i) 
-					track->setTime(i, floatArray[i]);
+					track->setTime(i, (Float) floatArray[i]);
 			} else if (semantic == "OUTPUT") {
 				domListOfFloats &floatArray = source->getFloat_array()->getValue();
 				if (trackType == VectorTrack::ETranslationXYZ || trackType == VectorTrack::EScaleXYZ) {
 					SAssert(stride == 3);
 					for (size_t i=0; i<size; ++i)
 						((VectorTrack *) track)->setValue(i, 
-							Vector(floatArray[i*3+0], floatArray[i*3+1], 
-							floatArray[i*3+2]));
+							Vector((Float) floatArray[i*3+0], (Float) floatArray[i*3+1], 
+								(Float) floatArray[i*3+2]));
 				} else {
 					SAssert(stride == 1);
 					for (size_t i=0; i<size; ++i) 
-						((FloatTrack *) track)->setValue(i, floatArray[i]);
+						((FloatTrack *) track)->setValue(i, (Float) floatArray[i]);
 				}
 			} else if (semantic == "INTERPOLATION") {
 				/// Ignored for now
@@ -1537,8 +1537,8 @@ GLvoid __stdcall tessCombine(GLdouble coords[3], void *vertex_data[4],
 
 		// this will be very slow -- let's hope that it happens rarely
 		Vec4 *oldVec = tess_vdata->data[offset];
-		Vec4 *newVec = new Vec4[size+1];
-		memcpy(newVec, oldVec, size * sizeof(Vec4));
+		Vec4 *newVec = new Vec4[(size_t) size + 1];
+		memcpy(newVec, oldVec, (size_t) size * sizeof(Vec4));
 
 		newVec[size] = Vec4(0.0f);
 		for (int j=0; j<4; ++j) {

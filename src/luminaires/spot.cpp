@@ -34,7 +34,7 @@ public:
 	SpotLuminaire(const Properties &props) : Luminaire(props) {
 		m_intensity = props.getSpectrum("intensity", Spectrum(1.0f));
 		m_cutoffAngle = props.getFloat("cutoffAngle", 20);
-		m_beamWidth = props.getFloat("beamWidth", m_cutoffAngle * 3.0/4.0);
+		m_beamWidth = props.getFloat("beamWidth", m_cutoffAngle * 3.0f/4.0f);
 		m_beamWidth = degToRad(m_beamWidth);
 		m_cutoffAngle = degToRad(m_cutoffAngle);
 		Assert(m_cutoffAngle >= m_beamWidth);
@@ -57,7 +57,7 @@ public:
 		m_cosCutoffAngle = std::cos(m_cutoffAngle);
 		m_position = m_luminaireToWorld(Point(0, 0, 0));
 		m_uvFactor = std::tan(m_beamWidth/2);
-		m_invTransitionWidth = 1.0 / (m_cutoffAngle - m_beamWidth);
+		m_invTransitionWidth = 1.0f / (m_cutoffAngle - m_beamWidth);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -91,8 +91,8 @@ public:
 		if (m_texture->getClass() != MTS_CLASS(ConstantTexture)) {
 			Intersection its;
 			its.hasUVPartials = false;
-			its.uv.x = .5+localDir.x / (localDir.z / m_uvFactor);
-			its.uv.y = .5+localDir.y / (localDir.z / m_uvFactor);
+			its.uv.x = 0.5f + localDir.x / (localDir.z / m_uvFactor);
+			its.uv.y = 0.5f + localDir.y / (localDir.z / m_uvFactor);
 			result *= m_texture->getValue(its);
 		}
 

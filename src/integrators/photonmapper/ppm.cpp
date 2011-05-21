@@ -116,7 +116,7 @@ public:
 		Sampler *cameraSampler = (Sampler *) sched->getResource(samplerResID, 0);
 	
 		size_t sampleCount = cameraSampler->getSampleCount();
-		Log(EInfo, "Starting render job (%ix%i, %lld %s, " SIZE_T_FMT 
+		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " %s, " SIZE_T_FMT 
 			" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y, 
 			sampleCount, sampleCount == 1 ? "sample" : "samples", nCores, 
 			nCores == 1 ? "core" : "cores");
@@ -189,7 +189,7 @@ public:
 							camera->generateRayDifferential(sample, 
 								lensSample, timeSample, eyeRay);
 							size_t offset = gatherPoints.size();
-							int count = createGatherPoints(scene, eyeRay, sample, 
+							Float count = (Float) createGatherPoints(scene, eyeRay, sample, 
 									cameraSampler, Spectrum(1.0f),
 								gatherPoints, 1);
 							if (count > 1) { // necessary because of filter weight computation
@@ -311,8 +311,9 @@ public:
 					continue;
 				}
 
-				Float M = photonMap->estimateRadianceRaw(
-					g.its, g.radius, flux, m_maxDepth == -1 ? INT_MAX : (m_maxDepth-g.depth)), N = g.N;
+				Float M = (Float) photonMap->estimateRadianceRaw(
+					g.its, g.radius, flux, m_maxDepth == -1 ? INT_MAX : (m_maxDepth-g.depth));
+				Float N = g.N;
 
 				if (N+M == 0) {
 					g.flux = contrib = Spectrum(0.0f);
@@ -346,7 +347,8 @@ private:
 	ref<Mutex> m_mutex;
 	Float m_initialRadius, m_alpha;
 	int m_photonCount, m_granularity;
-	int m_maxDepth, m_rrDepth, m_totalEmitted;
+	int m_maxDepth, m_rrDepth;
+	size_t m_totalEmitted;
 	int m_blockSize;
 	bool m_running;
 };

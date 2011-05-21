@@ -390,8 +390,8 @@ public:
 		for (size_t phi=0; phi<phiSteps; ++phi) {
 			Float sinPhi = std::sin(phi * dPhi);
 			Float cosPhi = std::cos(phi * dPhi);
-			int idx0 = vertexIdx, idx1 = idx0+1;
-			int idx2 = (vertexIdx+2) % (2*phiSteps), idx3 = idx2+1;
+			uint32_t idx0 = (uint32_t) vertexIdx, idx1 = idx0+1;
+			uint32_t idx2 = (vertexIdx+2) % (2*phiSteps), idx3 = idx2+1;
 			normals[vertexIdx] = m_objectToWorld(Normal(cosPhi, sinPhi, 0));
 			vertices[vertexIdx++] = m_objectToWorld(Point(cosPhi*m_radius, sinPhi*m_radius, 0));
 			normals[vertexIdx] = m_objectToWorld(Normal(cosPhi, sinPhi, 0));

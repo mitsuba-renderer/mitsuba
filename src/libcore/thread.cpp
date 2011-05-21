@@ -303,7 +303,7 @@ void Thread::initializeOpenMP(size_t threadCount) {
 	ref<Logger> logger = Thread::getThread()->getLogger();
 	ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
 
-	omp_set_num_threads(threadCount);
+	omp_set_num_threads((int) threadCount);
 
 	#pragma omp parallel
 	{

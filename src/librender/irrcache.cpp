@@ -239,9 +239,9 @@ IrradianceCache::IrradianceCache(Stream *stream, InstanceManager *manager) :
 	m_clampScreen = stream->readBool();
 	m_clampNeighbor = stream->readBool();
 	m_useGradients = stream->readBool();
-	uint32_t recordCount = stream->readUInt();
+	size_t recordCount = stream->readSize();
 	m_records.reserve(recordCount);
-	for (uint32_t i=0; i<recordCount; ++i) {
+	for (size_t i=0; i<recordCount; ++i) {
 		Record *sample = new Record(stream);
 		Float validRadius = sample->R0 / (2*m_kappa);
 		m_octree.insert(sample, AABB(
@@ -266,7 +266,7 @@ void IrradianceCache::serialize(Stream *stream, InstanceManager *manager) const 
 	stream->writeBool(m_clampScreen);
 	stream->writeBool(m_clampNeighbor);
 	stream->writeBool(m_useGradients);
-	stream->writeUInt(m_records.size());
+	stream->writeSize(m_records.size());
 	for (uint32_t i=0; i<m_records.size(); ++i)
 		m_records[i]->serialize(stream);
 }

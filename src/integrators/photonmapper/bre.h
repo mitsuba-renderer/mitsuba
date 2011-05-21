@@ -55,13 +55,13 @@ protected:
 	virtual ~BeamRadianceEstimator();
 
 	/// Fit a hierarchy of bounding boxes to the stored photons
-	AABB buildHierarchy(size_t index);
+	AABB buildHierarchy(uint32_t index);
 
 	/// Heap convenience routines
-	inline size_t leftChild(size_t index) const { return 2*index; }
-	inline size_t rightChild(size_t index) const { return 2*index + 1; }
-	inline bool isInnerNode(size_t index) const { return index <= m_lastInnerNode; }
-	inline bool hasRightChild(size_t index) const { return index <= m_lastRChildNode; }
+	inline uint32_t leftChild(uint32_t index) const { return 2*index; }
+	inline uint32_t rightChild(uint32_t index) const { return 2*index + 1; }
+	inline bool isInnerNode(uint32_t index) const { return index <= m_lastInnerNode; }
+	inline bool hasRightChild(uint32_t index) const { return index <= m_lastRChildNode; }
 private:
 	struct BRENode {
 		AABB aabb;
@@ -70,9 +70,9 @@ private:
 	};
 
 	BRENode *m_nodes;
-	size_t m_photonCount;
-	size_t m_lastInnerNode;
-	size_t m_lastRChildNode;
+	uint32_t m_photonCount;
+	uint32_t m_lastInnerNode;
+	uint32_t m_lastRChildNode;
 	int m_depth;
 	Float m_scaleFactor;
 };

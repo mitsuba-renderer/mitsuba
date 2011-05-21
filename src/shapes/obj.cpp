@@ -45,7 +45,7 @@ public:
 			return false;
 		if (line == "")
 			return true;
-		int lastCharacter = line.size()-1;
+		int lastCharacter = (int) line.size() - 1;
 		while (lastCharacter >= 0 && 
 				(line[lastCharacter] == '\r' ||
 					line[lastCharacter] == '\n' ||

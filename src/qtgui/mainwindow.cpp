@@ -1057,7 +1057,7 @@ void MainWindow::on_actionSettings_triggered() {
 
 	size_t workerCount = sched->getWorkerCount();
 	for (size_t i=0; i<workerCount; ++i) {
-		Worker *worker = sched->getWorker(i);
+		Worker *worker = sched->getWorker((int) i);
 		if (worker->getClass()->derivesFrom(MTS_CLASS(LocalWorker)))
 			localWorkers.push_back(worker);
 	}

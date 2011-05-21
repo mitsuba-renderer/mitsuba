@@ -392,7 +392,7 @@ inline void ply::ply_parser::parse_scalar_property_definition(const std::string&
   }
   if (!scalar_property_callback) {
     if (warning_callback_) {
-      warning_callback_(line_number_, "property ‘" + std::string(type_traits<scalar_type>::name()) + " " + property_name + "’ of element ‘" + current_element_->name + "’ is not handled");
+      warning_callback_(line_number_, "property '" + std::string(type_traits<scalar_type>::name()) + " " + property_name + "' of element '" + current_element_->name + "' is not handled");
     }
   }
   current_element_->properties.push_back(std::tr1::shared_ptr<property>(new scalar_property<scalar_type>(property_name, scalar_property_callback)));
@@ -416,7 +416,7 @@ inline void ply::ply_parser::parse_list_property_definition(const std::string& p
   }
   if (!std::tr1::get<0>(list_property_callbacks) || !std::tr1::get<1>(list_property_callbacks) || !std::tr1::get<2>(list_property_callbacks)) {
     if (warning_callback_) {
-      warning_callback_(line_number_, "property ‘list " + std::string(type_traits<size_type>::name()) + " " + std::string(type_traits<scalar_type>::name()) + " " + property_name + "’ of element ‘" + current_element_->name + "’ is not handled");
+      warning_callback_(line_number_, "property 'list " + std::string(type_traits<size_type>::name()) + " " + std::string(type_traits<scalar_type>::name()) + " " + property_name + "' of element '" + current_element_->name + "' is not handled");
     }
   }
   current_element_->properties.push_back(std::tr1::shared_ptr<property>(new list_property<size_type, scalar_type>(property_name, std::tr1::get<0>(list_property_callbacks), std::tr1::get<1>(list_property_callbacks), std::tr1::get<2>(list_property_callbacks))));

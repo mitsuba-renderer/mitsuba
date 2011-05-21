@@ -130,6 +130,9 @@ public:
 	/// Return an integer on the [0, n)-interval 
 	uint32_t nextUInt(uint32_t n);
 
+	/// Return an integer on the [0, n)-interval 
+	size_t nextSize(size_t n);
+
 	/// Return a floating point value on the [0, 1) interval
 	Float nextFloat();
 
@@ -141,7 +144,7 @@ public:
 	 */
 	template <typename Iterator> void shuffle(Iterator it1, Iterator it2) {
 		for (Iterator it = it2 - 1; it > it1; --it) 
-			std::iter_swap(it, it1 + nextUInt((uint32_t) (it-it1)));
+			std::iter_swap(it, it1 + nextSize((size_t) (it-it1)));
 	}
 
 	/// Serialize a random generator to a binary data stream

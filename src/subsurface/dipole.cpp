@@ -284,7 +284,7 @@ public:
 		int index = -1;
 		for (size_t i=0; i<ssIntegrators.size(); ++i) {
 			if (ssIntegrators[i] == this) {
-				index = i;
+				index = (int) i;
 				break;
 			}
 		}

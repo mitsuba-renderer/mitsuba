@@ -125,7 +125,7 @@ public:
 	inline void generate1D(Float *samples, size_t sampleCount) {
 		uint32_t scramble = m_random->nextULong() & 0xFFFFFFFF;
 		for (size_t i = 0; i < sampleCount; ++i)
-			samples[i] = vanDerCorput(i, scramble);
+			samples[i] = vanDerCorput((uint32_t) i, scramble);
 		m_random->shuffle(samples, samples + sampleCount);
 	}
 
@@ -136,7 +136,7 @@ public:
 		} scramble;
 		scramble.qword = m_random->nextULong();
 		for (size_t i = 0; i < sampleCount; ++i)
-			sample02(i, scramble.dword, samples[i]);
+			sample02((uint32_t) i, scramble.dword, samples[i]);
 		m_random->shuffle(samples, samples + sampleCount);
 	}
 

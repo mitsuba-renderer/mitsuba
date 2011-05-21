@@ -526,14 +526,14 @@ void stratifiedSample2D(Random *random, Point2 *dest, int countX, int countY, bo
 	}
 }
 
-void latinHypercube(Random *random, Float *dest, int nSamples, int nDim) {
+void latinHypercube(Random *random, Float *dest, size_t nSamples, size_t nDim) {
 	Float delta = 1 / (Float) nSamples;
-	for (int i = 0; i < nSamples; ++i)
-		for (int j = 0; j < nDim; ++j)
+	for (size_t i = 0; i < nSamples; ++i)
+		for (size_t j = 0; j < nDim; ++j)
 			dest[nDim * i + j] = (i + random->nextFloat()) * delta;
-	for (int i = 0; i < nDim; ++i) {
-		for (int j = 0; j < nSamples; ++j) {
-			int other = random->nextUInt(nSamples);
+	for (size_t i = 0; i < nDim; ++i) {
+		for (size_t j = 0; j < nSamples; ++j) {
+			size_t other = random->nextSize(nSamples);
 			std::swap(dest[nDim * j + i], dest[nDim * other + i]);
 		}
 	}
@@ -725,7 +725,7 @@ Float fresnel(Float cosTheta1, Float etaExt, Float etaInt) {
 		etaInt, etaExt);
 }
 
-Float radicalInverse(int b, int i) {
+Float radicalInverse(int b, size_t i) {
 	Float invB = (Float) 1 / (Float) b;
 	Float x = 0.0f, f = invB;
 	

@@ -25,10 +25,10 @@
 MTS_NAMESPACE_BEGIN
 
 BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t lookupSize) {
-	size_t reducedLookupSize = (size_t) std::sqrt((Float) lookupSize);
+	uint32_t reducedLookupSize = (uint32_t) std::sqrt((Float) lookupSize);
 	Float sizeFactor = (Float) lookupSize/ (Float) reducedLookupSize;
 
-	m_photonCount = pmap->getPhotonCount();
+	m_photonCount = (uint32_t) pmap->getPhotonCount();
 	m_scaleFactor = pmap->getScaleFactor();
 	m_lastInnerNode = m_photonCount/2;
 	m_lastRChildNode = (m_photonCount-1)/2;
@@ -73,7 +73,7 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 }
 
 BeamRadianceEstimator::BeamRadianceEstimator(Stream *stream, InstanceManager *manager) {
-	m_photonCount = stream->readSize();
+	m_photonCount = stream->readUInt();
 	m_scaleFactor = stream->readFloat();
 	m_lastInnerNode = m_photonCount/2;
 	m_lastRChildNode = (m_photonCount-1)/2;
@@ -88,7 +88,7 @@ BeamRadianceEstimator::BeamRadianceEstimator(Stream *stream, InstanceManager *ma
 }
 
 void BeamRadianceEstimator::serialize(Stream *stream, InstanceManager *manager) const {
-	stream->writeSize(m_photonCount);
+	stream->writeUInt(m_photonCount);
 	stream->writeFloat(m_scaleFactor);
 	for (size_t i=1; i<=m_photonCount; ++i) {
 		BRENode &node = m_nodes[i];
@@ -98,7 +98,7 @@ void BeamRadianceEstimator::serialize(Stream *stream, InstanceManager *manager) 
 	}
 }
 
-AABB BeamRadianceEstimator::buildHierarchy(size_t index) {
+AABB BeamRadianceEstimator::buildHierarchy(uint32_t index) {
 	BRENode &node = m_nodes[index];
 
 	if (isInnerNode(index)) {
@@ -127,7 +127,7 @@ Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium) const 
 	uint32_t *stack = (uint32_t *) alloca((m_depth+1) * sizeof(uint32_t));
 	uint32_t index = 1, stackPos = 1;
 	Spectrum result(0.0f);
-	size_t nNodes = 0;
+	uint32_t nNodes = 0;
 
 	const Spectrum &sigmaT = medium->getSigmaT();
 	const PhaseFunction *phase = medium->getPhaseFunction();

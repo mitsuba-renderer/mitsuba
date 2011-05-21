@@ -62,12 +62,12 @@ public:
 					}
 					break;
 				case 'g': 
-					gamma = strtod(optarg, &end_ptr);
+					gamma = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the gamma value!");
 					break;
 				case 'm': 
-					multiplier = strtod(optarg, &end_ptr);
+					multiplier = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the multiplier!");
 					break;

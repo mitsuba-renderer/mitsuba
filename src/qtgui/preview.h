@@ -94,7 +94,8 @@ private:
 	ref<WaitFlag> m_started;
 	std::list<PreviewQueueEntry> m_readyQueue, m_recycleQueue;
 	SceneContext *m_context;
-	int m_vplSampleOffset, m_minVPLs, m_vplCount;
+	size_t m_vplSampleOffset;
+	int m_minVPLs, m_vplCount;
 	int m_vplsPerSecond, m_raysPerSecond;
 	int m_bufferCount, m_queueEntryIndex;
 	std::deque<VPL> m_vpls;

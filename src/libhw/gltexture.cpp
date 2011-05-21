@@ -242,7 +242,7 @@ void GLTexture::refresh() {
 		//Assert(m_size.x == m_size.y);
 
 		/* Anisotropic texture filtering */
-		float anisotropy = getMaxAnisotropy();
+		float anisotropy = (float) getMaxAnisotropy();
 		if (anisotropy > 1.0f) {
 			if (isMipMapped() && m_filterType == EMipMapLinear) {
 				/* Only use anisotropy when it makes sense - otherwise some

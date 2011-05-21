@@ -41,6 +41,9 @@ class HairKDTree : public SAHKDTree3D<HairKDTree> {
 	friend class GenericKDTree<AABB, SurfaceAreaHeuristic, HairKDTree>;
 	friend class SAHKDTree3D<HairKDTree>;
 public:
+	using SAHKDTree3D<HairKDTree>::index_type;
+	using SAHKDTree3D<HairKDTree>::size_type;
+
 	HairKDTree(std::vector<Point> &vertices, 
 			std::vector<bool> &vertexStartsFiber, Float radius)
 			: m_radius(radius) {
@@ -55,7 +58,7 @@ public:
 			if (m_vertexStartsFiber[i])
 				m_hairCount++;
 			if (!m_vertexStartsFiber[i+1])
-				m_segIndex.push_back(i);
+				m_segIndex.push_back((index_type) i);
 		}
 		m_segmentCount = m_segIndex.size();
 
@@ -401,8 +404,8 @@ public:
 #endif
 
 	/// Return the total number of segments
-	inline int getPrimitiveCount() const {
-		return m_segIndex.size();
+	inline size_type getPrimitiveCount() const {
+		return (size_type) m_segIndex.size();
 	}
 
 	inline bool intersect(const Ray &ray, index_type iv, 
@@ -581,7 +584,7 @@ public:
 	Hair(Stream *stream, InstanceManager *manager) 
 		: Shape(stream, manager) {
 		Float radius = stream->readFloat();
-		size_t vertexCount = (size_t) stream->readUInt();
+		size_t vertexCount = stream->readSize();
 
 		std::vector<Point> vertices(vertexCount);
 		std::vector<bool> vertexStartsFiber(vertexCount+1);
@@ -601,7 +604,7 @@ public:
 		const std::vector<bool> &vertexStartsFiber = m_kdtree->getStartFiber();
 
 		stream->writeFloat(m_kdtree->getRadius());
-		stream->writeUInt((uint32_t) vertices.size());
+		stream->writeSize(vertices.size());
 		stream->writeFloatArray((Float *) &vertices[0], vertices.size() * 3);
 		for (size_t i=0; i<vertices.size(); ++i)
 			stream->writeBool(vertexStartsFiber[i]);
@@ -643,7 +646,7 @@ public:
 	ref<TriMesh> createTriMesh() {
 		size_t nSegments = m_kdtree->getSegmentCount();
 		/// Use very approximate geometry for large hair meshes
-		const size_t phiSteps = (nSegments > 100000) ? 4 : 10;
+		const uint32_t phiSteps = (nSegments > 100000) ? 4 : 10;
 		const Float dPhi   = (2*M_PI) / phiSteps;
 
 		ref<TriMesh> mesh = new TriMesh("Hair mesh approximation",
@@ -664,10 +667,10 @@ public:
 			cosPhi[i] = std::cos(i*dPhi);
 		}
 
-		size_t hairIdx = 0;
-		for (size_t iv=0; iv<hairVertices.size()-1; iv++) {
+		uint32_t hairIdx = 0;
+		for (HairKDTree::index_type iv=0; iv<(HairKDTree::index_type) hairVertices.size()-1; iv++) {
 			if (!vertexStartsFiber[iv+1]) {
-				for (size_t phi=0; phi<phiSteps; ++phi) {
+				for (uint32_t phi=0; phi<phiSteps; ++phi) {
 					Vector tangent = m_kdtree->tangent(iv);
 					Vector dir = Frame(tangent).toWorld(
 							Vector(cosPhi[phi], sinPhi[phi], 0));
@@ -682,8 +685,8 @@ public:
 					normals[vertexIdx] = normal;
 					vertices[vertexIdx++] = m_kdtree->secondVertex(iv) + radius*dir - tangent*t2;
 
-					int idx0 = 2*(phi + hairIdx*phiSteps), idx1 = idx0+1;
-					int idx2 = (2*phi+2) % (2*phiSteps) + 2*hairIdx*phiSteps, idx3 = idx2+1;
+					uint32_t idx0 = 2*(phi + hairIdx*phiSteps), idx1 = idx0+1;
+					uint32_t idx2 = (2*phi+2) % (2*phiSteps) + 2*hairIdx*phiSteps, idx3 = idx2+1;
 					triangles[triangleIdx].idx[0] = idx0;
 					triangles[triangleIdx].idx[1] = idx2;
 					triangles[triangleIdx].idx[2] = idx1;

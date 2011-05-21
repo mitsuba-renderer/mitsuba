@@ -335,10 +335,10 @@ struct vertex_key_order : public
 
 /// Used in \ref TriMesh::rebuildTopology()
 struct TopoData {
-	uint32_t idx;   /// Triangle index
+	size_t idx;   /// Triangle index
 	bool clustered; /// Has the tri-vert. pair been assigned to a cluster?
 	inline TopoData() { }
-	inline TopoData(uint32_t idx, bool clustered)
+	inline TopoData(size_t idx, bool clustered)
 		: idx(idx), clustered(clustered) { }
 };
 
