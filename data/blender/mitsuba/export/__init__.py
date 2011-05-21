@@ -330,6 +330,8 @@ class MtsExporter:
 			self.exportWorldTrafo(lamp.matrix_world)
 
 			self.openElement('luminaire', { 'id' : '%s-arealight' % name, 'type' : 'area'})
+			if lamp.data.mitsuba_lamp.inside_medium:
+				self.element('ref', {'id' : lamp.data.mitsuba_lamp.lamp_medium})
 			self.parameter('rgb', 'intensity', { 'value' : "%f %f %f"
 					% (lamp.data.color.r*mult, lamp.data.color.g*mult, lamp.data.color.b*mult)})
 			self.closeElement()
