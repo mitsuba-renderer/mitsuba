@@ -300,7 +300,7 @@ class MtsExporter:
 
 	def exportLamp(self, scene, lamp, idx):
 		ltype = lamp.data.type
-		name = translate_id(lamp.data.name)
+		name = translate_id(lamp.name)
 		mult = lamp.data.mitsuba_lamp.intensity
 		if lamp.data.mitsuba_lamp.inside_medium:
 			self.exportMedium(scene.mitsuba_media.media[lamp.data.mitsuba_lamp.lamp_medium])
