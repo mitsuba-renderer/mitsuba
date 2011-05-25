@@ -35,7 +35,7 @@ public:
 
 	virtual ~TwoSidedBRDF() {
 		if (m_type)
-			delete m_type;
+			delete[] m_type;
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
