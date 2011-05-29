@@ -283,7 +283,6 @@ template <typename Iterator> struct YarnGrammar : qi::grammar<Iterator, Yarn(), 
 		using qi::char_;
 		using qi::lit;
 		using qi::_val;
-		using ph::bind;
 
 		type = (qi::string("warp") | qi::string("weft"))
 			[ ph::if_else(_1 == "warp", _val = Yarn::EWarp, _val = Yarn::EWeft ) ];
@@ -293,24 +292,24 @@ template <typename Iterator> struct YarnGrammar : qi::grammar<Iterator, Yarn(), 
 
 		spec = ((lit("{") >> float_ >> lit(",") >> float_ >> lit(",") >> float_ >> lit("}")) 
 					[ ph::bind(&Spectrum::fromLinearRGB, _val, _1, _2, _3) ])
-		     | (identifier [ _val = bind(&Properties::getSpectrum, ph::ref(props), _1)]);
+		     | (identifier [ _val = ph::bind(&Properties::getSpectrum, ph::ref(props), _1)]);
 
 		flt = (float_ [ _val = _1 ])
-		    | (identifier [ _val = bind(&Properties::getFloat, ph::ref(props), _1)]);
+		    | (identifier [ _val = ph::bind(&Properties::getFloat, ph::ref(props), _1)]);
 
 		start = lit("yarn")
 			>> lit("{")
 			>> (
-				 (lit("type")     >> lit("=") >> type  [ bind(&Yarn::type,    _val) = _1 ])
-			   | (lit("psi")      >> lit("=") >> flt   [ bind(&Yarn::psi,     _val) = _1 * M_PI / 180 ])
-			   | (lit("umax")     >> lit("=") >> flt   [ bind(&Yarn::umax,    _val) = _1 * M_PI / 180 ])
-			   | (lit("kappa")    >> lit("=") >> flt   [ bind(&Yarn::kappa,   _val) = _1 ])
-			   | (lit("width")    >> lit("=") >> flt   [ bind(&Yarn::width,   _val) = _1 ])
-			   | (lit("length")   >> lit("=") >> flt   [ bind(&Yarn::length,  _val) = _1 ])
-			   | (lit("centerU")  >> lit("=") >> flt   [ bind(&Yarn::centerU, _val) = _1 ])
-			   | (lit("centerV")  >> lit("=") >> flt   [ bind(&Yarn::centerV, _val) = _1 ])
-			   | (lit("kd")       >> lit("=") >> spec  [ bind(&Yarn::kd,      _val) = _1 ])
-			   | (lit("ks")       >> lit("=") >> spec  [ bind(&Yarn::ks,      _val) = _1 ])
+				 (lit("type")     >> lit("=") >> type  [ ph::bind(&Yarn::type,    _val) = _1 ])
+			   | (lit("psi")      >> lit("=") >> flt   [ ph::bind(&Yarn::psi,     _val) = _1 * M_PI / 180 ])
+			   | (lit("umax")     >> lit("=") >> flt   [ ph::bind(&Yarn::umax,    _val) = _1 * M_PI / 180 ])
+			   | (lit("kappa")    >> lit("=") >> flt   [ ph::bind(&Yarn::kappa,   _val) = _1 ])
+			   | (lit("width")    >> lit("=") >> flt   [ ph::bind(&Yarn::width,   _val) = _1 ])
+			   | (lit("length")   >> lit("=") >> flt   [ ph::bind(&Yarn::length,  _val) = _1 ])
+			   | (lit("centerU")  >> lit("=") >> flt   [ ph::bind(&Yarn::centerU, _val) = _1 ])
+			   | (lit("centerV")  >> lit("=") >> flt   [ ph::bind(&Yarn::centerV, _val) = _1 ])
+			   | (lit("kd")       >> lit("=") >> spec  [ ph::bind(&Yarn::kd,      _val) = _1 ])
+			   | (lit("ks")       >> lit("=") >> spec  [ ph::bind(&Yarn::ks,      _val) = _1 ])
 			) % ','
 			>> lit("}");
 	}
@@ -332,7 +331,6 @@ template <typename Iterator> struct WeavePatternGrammar : qi::grammar<Iterator, 
 		using qi::char_;
 		using qi::lit;
 		using qi::_val;
-		using ph::bind;
 		using ph::push_back;
 
 		pattern = lit("pattern") >> lit("{")
@@ -345,26 +343,26 @@ template <typename Iterator> struct WeavePatternGrammar : qi::grammar<Iterator, 
 			>> *(qi::alnum | char_('_')) ];
 
 		flt = (float_ [ _val = _1 ])
-		      | (identifier [ _val = bind(&Properties::getFloat, ph::ref(props), _1)]);
+		      | (identifier [ _val = ph::bind(&Properties::getFloat, ph::ref(props), _1)]);
 
 		start = lit("weave") >> lit("{") >> (
-			  lit("name")               >> lit("=") >> name   [ bind(&WeavePattern::name,               _val) = _1 ]
-			| lit("tileWidth")          >> lit("=") >> uint_  [ bind(&WeavePattern::tileWidth,          _val) = _1 ]
-			| lit("tileHeight")         >> lit("=") >> uint_  [ bind(&WeavePattern::tileHeight,         _val) = _1 ]
-			| lit("ss")                 >> lit("=") >> flt    [ bind(&WeavePattern::ss,                 _val) = _1 ]
-			| lit("alpha")              >> lit("=") >> flt    [ bind(&WeavePattern::alpha,              _val) = _1 ]
-			| lit("beta")               >> lit("=") >> flt    [ bind(&WeavePattern::beta,               _val) = _1 ]
-			| lit("warpArea")           >> lit("=") >> flt    [ bind(&WeavePattern::warpArea,           _val) = _1 ]
-			| lit("weftArea")           >> lit("=") >> flt    [ bind(&WeavePattern::weftArea,           _val) = _1 ]
-			| lit("hWidth")             >> lit("=") >> flt    [ bind(&WeavePattern::hWidth,             _val) = _1 ]
-			| lit("dWarpUmaxOverDWarp") >> lit("=") >> flt    [ bind(&WeavePattern::dWarpUmaxOverDWarp, _val) = _1 * M_PI / 180 ]
-			| lit("dWarpUmaxOverDWeft") >> lit("=") >> flt    [ bind(&WeavePattern::dWarpUmaxOverDWeft, _val) = _1 * M_PI / 180 ]
-			| lit("dWeftUmaxOverDWarp") >> lit("=") >> flt    [ bind(&WeavePattern::dWeftUmaxOverDWarp, _val) = _1 * M_PI / 180 ]
-			| lit("dWeftUmaxOverDWeft") >> lit("=") >> flt    [ bind(&WeavePattern::dWeftUmaxOverDWeft, _val) = _1 * M_PI / 180 ]
-			| lit("fineness")           >> lit("=") >> flt    [ bind(&WeavePattern::fineness,           _val) = _1 ]
-			| lit("period")             >> lit("=") >> flt    [ bind(&WeavePattern::period,             _val) = _1 ]
-			| pattern                                         [ bind(&WeavePattern::pattern,            _val) = _1 ] 
-			| yarn                                            [ push_back(bind(&WeavePattern::yarns, _val), _1)    ] 
+			  lit("name")               >> lit("=") >> name   [ ph::bind(&WeavePattern::name,               _val) = _1 ]
+			| lit("tileWidth")          >> lit("=") >> uint_  [ ph::bind(&WeavePattern::tileWidth,          _val) = _1 ]
+			| lit("tileHeight")         >> lit("=") >> uint_  [ ph::bind(&WeavePattern::tileHeight,         _val) = _1 ]
+			| lit("ss")                 >> lit("=") >> flt    [ ph::bind(&WeavePattern::ss,                 _val) = _1 ]
+			| lit("alpha")              >> lit("=") >> flt    [ ph::bind(&WeavePattern::alpha,              _val) = _1 ]
+			| lit("beta")               >> lit("=") >> flt    [ ph::bind(&WeavePattern::beta,               _val) = _1 ]
+			| lit("warpArea")           >> lit("=") >> flt    [ ph::bind(&WeavePattern::warpArea,           _val) = _1 ]
+			| lit("weftArea")           >> lit("=") >> flt    [ ph::bind(&WeavePattern::weftArea,           _val) = _1 ]
+			| lit("hWidth")             >> lit("=") >> flt    [ ph::bind(&WeavePattern::hWidth,             _val) = _1 ]
+			| lit("dWarpUmaxOverDWarp") >> lit("=") >> flt    [ ph::bind(&WeavePattern::dWarpUmaxOverDWarp, _val) = _1 * M_PI / 180 ]
+			| lit("dWarpUmaxOverDWeft") >> lit("=") >> flt    [ ph::bind(&WeavePattern::dWarpUmaxOverDWeft, _val) = _1 * M_PI / 180 ]
+			| lit("dWeftUmaxOverDWarp") >> lit("=") >> flt    [ ph::bind(&WeavePattern::dWeftUmaxOverDWarp, _val) = _1 * M_PI / 180 ]
+			| lit("dWeftUmaxOverDWeft") >> lit("=") >> flt    [ ph::bind(&WeavePattern::dWeftUmaxOverDWeft, _val) = _1 * M_PI / 180 ]
+			| lit("fineness")           >> lit("=") >> flt    [ ph::bind(&WeavePattern::fineness,           _val) = _1 ]
+			| lit("period")             >> lit("=") >> flt    [ ph::bind(&WeavePattern::period,             _val) = _1 ]
+			| pattern                                         [ ph::bind(&WeavePattern::pattern,            _val) = _1 ] 
+			| yarn                                            [ push_back(ph::bind(&WeavePattern::yarns, _val), _1)    ] 
 		) % ','
 		>> lit("}") >> qi::eoi;
 	}

@@ -47,7 +47,7 @@ if sys.platform == 'win32':
 		compilerType = 'vc100'
 	else:
 		raise Exception('Unknown compiler version!')
-	installTargets += env.Install('#dist', dllprefix + '%s/libcollada14dom21.dll' % compilerType)
+	installTargets += env.Install('#dist', dllprefix + '%s/libcollada14dom23.dll' % compilerType)
 	installTargets += env.Install('#dist', dllprefix + '%s/boost_system-%s-mt-1_44.dll' % (compilerType, compilerType))
 	installTargets += env.Install('#dist', dllprefix + '%s/boost_filesystem-%s-mt-1_44.dll' % (compilerType, compilerType))
 	if hasQt:
