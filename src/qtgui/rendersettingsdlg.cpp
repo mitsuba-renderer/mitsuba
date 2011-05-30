@@ -291,7 +291,7 @@ void RenderSettingsDialog::load(const SceneContext *ctx) {
 
 void RenderSettingsDialog::apply(SceneContext *ctx) {
 	Scene *scene = new Scene(ctx->scene);
-	PinholeCamera *oldCamera = static_cast<PinholeCamera *>(scene->getCamera());
+	PerspectiveCamera *oldCamera = static_cast<PerspectiveCamera *>(scene->getCamera());
 	Properties filmProps = oldCamera->getFilm()->getProperties();
 	ref<PluginManager> pluginMgr = PluginManager::getInstance();
 
@@ -365,7 +365,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 
 	/* Configure the camera */
 	Properties cameraProps = oldCamera->getProperties();
-	ref<PinholeCamera> camera = static_cast<PinholeCamera *> 
+	ref<PerspectiveCamera> camera = static_cast<PerspectiveCamera *> 
 		(pluginMgr->createObject(MTS_CLASS(Camera), cameraProps));
 	camera->addChild("", sampler);
 	camera->addChild("", film);

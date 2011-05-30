@@ -103,7 +103,8 @@ protected:
 	void dropEvent(QDropEvent *event);
 	void oglRenderKDTree(const KDTreeBase<AABB> *kdtree);
 	Point2i upperLeft(bool flipY = false) const;
-	void reveal(const BSphere &bsphere);
+	void reveal(const AABB &aabb);
+	Float autoFocus() const;
 
 	/* Masquerade QGLWidget as a GL device for libhw */
 #if defined(WIN32)
@@ -135,10 +136,9 @@ private:
 	ref<GPUProgram> m_downsamplingProgram, m_luminanceProgram;
 	ref<QtDevice> m_device;
 	ref<Font> m_font;
+	ref<Bitmap> m_fallbackBitmap;
 	SceneContext *m_context;
-	bool m_framebufferChanged, m_mouseButtonDown;
-	bool m_leftKeyDown, m_rightKeyDown;
-	bool m_upKeyDown, m_downKeyDown, m_animation;
+	int m_mouseSensitivity;
 	Vector2 m_logoSize;
 	Vector m_up;
 	Point m_animationOrigin0, m_animationOrigin1;
@@ -147,13 +147,16 @@ private:
 	QTimer *m_movementTimer, *m_redrawTimer;
 	QScrollBar *m_hScroll, *m_vScroll;
 	ref<Timer> m_clock, m_wheelTimer, m_animationTimer;
-	ENavigationMode m_navigationMode;
+	bool m_framebufferChanged, m_mouseDrag;
+	bool m_leftKeyDown, m_rightKeyDown;
+	bool m_upKeyDown, m_downKeyDown, m_animation;
 	bool m_invertMouse, m_didSetCursor;
 	bool m_ignoreScrollEvents, m_ignoreResizeEvents;
-	int m_mouseSensitivity, m_softwareFallback;
-	ref<Bitmap> m_fallbackBitmap;
+	bool m_softwareFallback;
+	ENavigationMode m_navigationMode;
 	QString m_errorString;
 	Transform m_storedViewTransform;
+	AABB m_aabb;
 };
 
 #endif /* __GLWIDGET_H */

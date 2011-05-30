@@ -1678,8 +1678,8 @@ SceneContext::SceneContext(SceneContext *ctx) {
 
 		scene = new Scene(ctx->scene);
 		ref<PluginManager> pluginMgr = PluginManager::getInstance();
-		ref<PinholeCamera> oldCamera = static_cast<PinholeCamera *>(ctx->scene->getCamera());
-		ref<PinholeCamera> camera = static_cast<PinholeCamera *> 
+		ref<PerspectiveCamera> oldCamera = static_cast<PerspectiveCamera *>(ctx->scene->getCamera());
+		ref<PerspectiveCamera> camera = static_cast<PerspectiveCamera *> 
 			(pluginMgr->createObject(MTS_CLASS(Camera), oldCamera->getProperties()));
 		ref<Sampler> sampler = static_cast<Sampler *> 
 			(pluginMgr->createObject(MTS_CLASS(Sampler), ctx->scene->getSampler()->getProperties()));

@@ -132,7 +132,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 		camera.setAttribute("type", "perspective");
 		root.insertAfter(camera, QDomNode());
 	}
-	const PinholeCamera *sceneCamera = static_cast<const PinholeCamera *>(ctx->scene->getCamera());
+	const PerspectiveCamera *sceneCamera = static_cast<const PerspectiveCamera *>(ctx->scene->getCamera());
 	
 	QDomElement fovProperty = findProperty(camera, "fov");
 	if (fovProperty.isNull()) {

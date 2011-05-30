@@ -24,38 +24,24 @@ MTS_NAMESPACE_BEGIN
 static StatsCounter cameraRays("General", "Camera ray generations");
 
 /**
- * Perspective camera model. Depth of field can optionally 
- * be activated by specifying both focal distance and lens 
- * radius (uses a thin lens approximation).
- * Based on the PBRT camera implementation.
+ * Perspective camera implementation
  */
-class PerspectiveCamera : public PinholeCamera {
+class PerspectiveCameraImpl : public PerspectiveCamera {
 public:
-	PerspectiveCamera(const Properties &props) : PinholeCamera(props) {
-		/* Distance to the focal plane */
-		focusDistance = props.getFloat("focusDistance", m_farClip);
-		/* World-space aperture radius */
-		m_apertureRadius = props.getFloat("apertureRadius", 0.0f);
+	PerspectiveCameraImpl(const Properties &props) : PerspectiveCamera(props) {
 		if (m_cameraToWorld.hasScale()) 
 			Log(EError, "Mitsuba's perspective camera does not allow scale "
 				"factors in the camera-to-world transformation! Please remove those factors, "
 				"since they can cause inconsistencies in some parts of the renderer.");
 	}
 
-	PerspectiveCamera(Stream *stream, InstanceManager *manager) 
-	 : PinholeCamera(stream, manager) {
-		m_worldToScreen = Transform(stream);
-		m_rasterToCamera = Transform(stream);
-		m_cameraToRaster = Transform(stream);
-		m_rasterToScreen = Transform(stream);
-		m_screenToRaster = Transform(stream);
-		m_apertureRadius = stream->readFloat();
-		focusDistance = stream->readFloat();
+	PerspectiveCameraImpl(Stream *stream, InstanceManager *manager) 
+	 : PerspectiveCamera(stream, manager) {
 		configure();
 	}
 
 	void configure() {
-		PinholeCamera::configure();
+		PerspectiveCamera::configure();
 
 		/* Maps from the image plane space to raster space. The
 		   smaller 2D coordinate axis on the film will have
@@ -63,13 +49,14 @@ public:
 		   the flag mapSmallerSide is specified) . Also inverts
 		   the Y coordinate
 		*/
+		Transform screenToRaster;
 		if ((m_aspect >= 1.0f) ^ !m_mapSmallerSide) {
-			m_screenToRaster = 
+			screenToRaster = 
 				Transform::scale(Vector((Float) m_film->getSize().x, (Float) m_film->getSize().y, 1.0f))
 				* Transform::scale(Vector(1/(2*m_aspect), -0.5f, 1.0f))
 				* Transform::translate(Vector(m_aspect, -1.0f, 0));
 		} else {
-			m_screenToRaster = 
+			screenToRaster = 
 				Transform::scale(Vector((Float) m_film->getSize().x, (Float) m_film->getSize().y, 1.0f))
 				* Transform::scale(Vector(0.5f, -0.5f * m_aspect, 1.0f))
 				* Transform::translate(Vector(1.0f, - 1 / m_aspect, 0));
@@ -79,26 +66,12 @@ public:
 		m_cameraToScreenGL = Transform::glPerspective(m_yfov, m_nearClip, m_farClip)
 			* Transform::scale(Vector(1/m_aspect, 1.0f, 1.0f));
 
-		m_rasterToScreen = m_screenToRaster.inverse();
-		m_worldToScreen = m_cameraToScreen * m_worldToCamera;
-		m_rasterToCamera = m_cameraToScreen.inverse() * m_rasterToScreen;
+		m_rasterToCamera = m_cameraToScreen.inverse() * screenToRaster.inverse();
 		m_cameraToRaster = m_rasterToCamera.inverse();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
-		PinholeCamera::serialize(stream, manager);
-
-		m_worldToScreen.serialize(stream);
-		m_rasterToCamera.serialize(stream);
-		m_cameraToRaster.serialize(stream);
-		m_rasterToScreen.serialize(stream);
-		m_screenToRaster.serialize(stream);
-		stream->writeFloat(m_apertureRadius);
-		stream->writeFloat(focusDistance);
-	}
-
-	bool needsLensSample() const {
-		return m_apertureRadius > 0.0f;
+		PerspectiveCamera::serialize(stream, manager);
 	}
 
 	void generateRay(const Point2 &dirSample, const Point2 &lensSample,
@@ -121,7 +94,7 @@ public:
 
 			/* Calculate the intersection with the focal plane */
 			Point itsFocal = 
-				localRay(focusDistance / localRay.d.z);
+				localRay(m_focusDepth / localRay.d.z);
 
 			/* Perturb the ray accordingly */
 			localRay.o.x += lensPos.x;
@@ -182,7 +155,7 @@ public:
 			<< "  shutterOpen = " << m_shutterOpen << "," << std::endl
 			<< "  shutterClose = " << m_shutterClose << "," << std::endl
 			<< "  apertureRadius = " << m_apertureRadius << "," << std::endl
-			<< "  focusDistance = " << focusDistance << "," << std::endl
+			<< "  focusDepth = " << m_focusDepth << "," << std::endl
 			<< "  cameraToWorld = " << indent(m_cameraToWorld.toString()) << "," << std::endl
 			<< "  cameraToScreen = " << indent(m_cameraToScreen.toString()) << "," << std::endl
 			<< "  rasterToCamera = " << indent(m_rasterToCamera.toString()) << std::endl
@@ -192,13 +165,10 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	Transform m_worldToScreen;
 	Transform m_rasterToCamera, m_cameraToRaster;
-	Transform m_rasterToScreen, m_screenToRaster;
-	Float m_apertureRadius, focusDistance;
 };
 
 
-MTS_IMPLEMENT_CLASS_S(PerspectiveCamera, false, PinholeCamera)
-MTS_EXPORT_PLUGIN(PerspectiveCamera, "Perspective camera");
+MTS_IMPLEMENT_CLASS_S(PerspectiveCameraImpl, false, PerspectiveCamera)
+MTS_EXPORT_PLUGIN(PerspectiveCameraImpl, "Perspective camera");
 MTS_NAMESPACE_END
