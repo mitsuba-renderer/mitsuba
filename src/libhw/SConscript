@@ -4,7 +4,7 @@ libhw_objects = [
 	'session.cpp', 'device.cpp', 'gputexture.cpp', 'gpugeometry.cpp', 
 	'gpuprogram.cpp', 'renderer.cpp', 'glrenderer.cpp', 'glprogram.cpp', 
 	'glgeometry.cpp', 'gltexture.cpp', 'gpusync.cpp', 'glsync.cpp',
-	'vpl.cpp', 'font.cpp', 'viewer.cpp', 'gizmo.cpp']
+	'vpl.cpp', 'font.cpp', 'viewer.cpp']
 
 if sys.platform == 'win32':
 	libhw_objects += ['wglsession.cpp',

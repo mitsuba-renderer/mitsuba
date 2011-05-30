@@ -28,7 +28,6 @@
 #include <mitsuba/hw/gpuprogram.h>
 #include <mitsuba/hw/gpusync.h>
 #include <mitsuba/hw/vpl.h>
-#include <mitsuba/hw/gizmo.h>
 #if defined(WIN32)
 #include <mitsuba/hw/wgldevice.h>
 #endif
@@ -136,7 +135,6 @@ private:
 	ref<GPUProgram> m_downsamplingProgram, m_luminanceProgram;
 	ref<QtDevice> m_device;
 	ref<Font> m_font;
-	ref<Gizmo> m_gizmo;
 	SceneContext *m_context;
 	bool m_framebufferChanged, m_mouseButtonDown;
 	bool m_leftKeyDown, m_rightKeyDown;

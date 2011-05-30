@@ -78,12 +78,14 @@ void Camera::serialize(Stream *stream, InstanceManager *manager) const {
 
 void Camera::generateRayDifferential(const Point2 &sample,
 	const Point2 &lensSample, Float timeSample, RayDifferential &ray) const {
-
+	Ray tempRay;
 	generateRay(sample, lensSample, timeSample, ray);
 	Point2 temp = sample; temp.x += 1; 
-	generateRay(temp, lensSample, timeSample, ray.rx);
+	generateRay(temp, lensSample, timeSample, tempRay);
+	ray.rxOrigin = tempRay.o; ray.rxDirection = tempRay.d;
 	temp = sample; temp.y += 1;
-	generateRay(temp, lensSample, timeSample, ray.ry);
+	generateRay(temp, lensSample, timeSample, tempRay);
+	ray.ryOrigin = tempRay.o; ray.ryDirection = tempRay.d;
 	ray.hasDifferentials = true;
 }
 

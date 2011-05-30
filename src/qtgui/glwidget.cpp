@@ -46,7 +46,6 @@ GLWidget::GLWidget(QWidget *parent) :
 	connect(m_redrawTimer, SIGNAL(timeout()), this, SLOT(updateGL()));
 	m_renderer = Renderer::create(NULL);
 	m_device = new QtDevice(this);
-	m_gizmo = new Gizmo();
 	m_preview = new PreviewThread(m_device, m_renderer);
 	connect(m_preview, SIGNAL(caughtException(const QString &)), 
 		this, SLOT(onException(const QString &)), Qt::QueuedConnection);
@@ -79,11 +78,9 @@ void GLWidget::shutdown() {
 void GLWidget::onException(const QString &what) {
 	QString errorString("A critical exception occurred in the preview rendering thread. "
 			"Please make sure that you are using the most recent graphics drivers. "
-			"Mitsuba will now switch "
-			"to a slow software fallback mode, which only supports "
-			"the rendering preview but no tonemapping and no "
-			"real-time preview/navigation. "
-			"The encountered error was:\n\n%1");
+			"Mitsuba will now switch to a slow software fallback mode, which only "
+			"supports the rendering preview but no tonemapping and no real-time "
+			"preview/navigation. The encountered error was:\n\n%1");
 	QMessageBox::critical(this, tr("Critical exception"),
 		errorString.arg(what), QMessageBox::Ok);
 	m_softwareFallback = true;
@@ -319,7 +316,6 @@ void GLWidget::setScene(SceneContext *context) {
 	m_framebufferChanged = true;
 	m_mouseButtonDown = m_animation = false;
 	m_leftKeyDown = m_rightKeyDown = m_upKeyDown = m_downKeyDown = false;
-	m_gizmo->reset();
 	updateGeometry();
 	updateScrollBars();
 	updateGL();

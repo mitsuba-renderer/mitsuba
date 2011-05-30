@@ -113,7 +113,7 @@ struct Ray {
 	/// Return a string representation of this ray
 	inline std::string toString() const {
 		std::ostringstream oss;
-		oss << "Ray[orig=" << o.toString() << ", dir=" 
+		oss << "Ray[origin=" << o.toString() << ", direction=" 
 			<< d.toString() << ", mint=" << mint 
 			<< ", maxt=" << maxt << ", time=" << time << "]";
 		return oss.str();
@@ -125,8 +125,9 @@ struct Ray {
    \ingroup libcore
 */
 struct RayDifferential : public Ray {
+	Point rxOrigin, ryOrigin;
+	Vector rxDirection, ryDirection;
 	bool hasDifferentials;
-	Ray rx, ry;
 
 	inline RayDifferential() 
 		: hasDifferentials(false) {
@@ -141,14 +142,16 @@ struct RayDifferential : public Ray {
 	}
 
 	inline RayDifferential(const RayDifferential &ray) 
-		: Ray(ray), hasDifferentials(ray.hasDifferentials), rx(ray.rx), ry(ray.ry) {
+		: Ray(ray), rxOrigin(ray.rxOrigin), ryOrigin(ray.ryOrigin),
+		  rxDirection(ray.rxDirection), ryDirection(ray.ryDirection),
+		  hasDifferentials(ray.hasDifferentials) {
 	}
     
 	void scaleDifferential(Float amount) {
-		rx.setOrigin(o + (rx.o - o) * amount);
-		ry.setOrigin(o + (ry.o - o) * amount);
-		rx.setDirection(d + (rx.d - d) * amount);
-		ry.setDirection(d + (ry.d - d) * amount);
+		rxOrigin = o + (rxOrigin - o) * amount;
+		ryOrigin = o + (ryOrigin - o) * amount;
+		rxDirection = d + (rxDirection - d) * amount;
+		ryDirection = d + (ryDirection - d) * amount;
     }
 
 	inline void operator=(const RayDifferential &ray) {
@@ -164,8 +167,10 @@ struct RayDifferential : public Ray {
 		restoreFPExceptions(state);
 #endif
 		hasDifferentials = ray.hasDifferentials;
-		rx = ray.rx;
-		ry = ray.ry;
+		rxOrigin = ray.rxOrigin;
+		ryOrigin = ray.ryOrigin;
+		rxDirection = ray.rxDirection;
+		ryDirection = ray.ryDirection;
 	}
 
 	inline void operator=(const Ray &ray) {
@@ -187,13 +192,15 @@ struct RayDifferential : public Ray {
 	inline std::string toString() const {
 		std::ostringstream oss;
 		oss << "RayDifferential[" << endl
-			<< "  orig = " << o.toString() << "," << endl
-			<< "  dir  = " << d.toString() << "," << endl
+			<< "  origin = " << o.toString() << "," << endl
+			<< "  direction  = " << d.toString() << "," << endl
 			<< "  mint = " << mint << "," << endl
 			<< "  maxt = " << maxt << "," << endl
 			<< "  time = " << time << "," << endl
-			<< "  rx = " << indent(rx.toString()) << "," << endl
-			<< "  ry = " << indent(ry.toString()) << endl
+			<< "  rxOrigin = " << rxOrigin.toString() << "," << endl
+			<< "  ryOrigin = " << ryOrigin.toString() << "," << endl
+			<< "  rxDirection = " << rxDirection.toString() << "," << endl
+			<< "  ryDirection = " << ryDirection.toString() << endl
 			<< "]" << endl;
 		return oss.str();
 	}

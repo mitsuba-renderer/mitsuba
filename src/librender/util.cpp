@@ -38,7 +38,6 @@ ref<Scene> Utility::loadScene(const std::string &filename,
 	parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 	parser->setCalculateSrcOfs(true);
 
-	std::map<std::string, std::string> parameters;
 	SceneHandler *handler = new SceneHandler(parser, params);
 	parser->setDoNamespaces(true);
 	parser->setDocumentHandler(handler);

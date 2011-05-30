@@ -288,15 +288,16 @@ IrradianceCache::Record *IrradianceCache::put(const RayDifferential &ray, const 
 	   Illumination System for Computer Generated Films") */
 	if (m_clampScreen && ray.hasDifferentials) {
 		const Float d = -dot(its.geoFrame.n, Vector(its.p));
-		const Float txRecip = dot(its.geoFrame.n, ray.rx.d),
-		            tyRecip = dot(its.geoFrame.n, ray.ry.d);
+		const Float txRecip = dot(its.geoFrame.n, ray.rxDirection),
+		            tyRecip = dot(its.geoFrame.n, ray.ryDirection);
 		if (txRecip != 0 && tyRecip != 0) {
 			// Ray distances traveled 
-			const Float tx = -(dot(its.geoFrame.n, Vector(ray.rx.o)) + d) / 
+			const Float tx = -(dot(its.geoFrame.n, Vector(ray.rxOrigin)) + d) / 
 				txRecip;
-			const Float ty = -(dot(its.geoFrame.n, Vector(ray.ry.o)) + d) / 
+			const Float ty = -(dot(its.geoFrame.n, Vector(ray.ryOrigin)) + d) / 
 				tyRecip;
-			Point px = ray.rx(tx), py = ray.ry(ty);
+			Point px = ray.rxOrigin + ray.rxDirection * tx,
+				  py = ray.ryOrigin + ray.ryDirection * ty;
 			Float sqrtArea = std::sqrt(cross(px-its.p, py-its.p).length())*2;
 
 			R0_min = 3.0f*sqrtArea;

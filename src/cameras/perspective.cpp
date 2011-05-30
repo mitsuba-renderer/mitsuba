@@ -31,16 +31,15 @@ static StatsCounter cameraRays("General", "Camera ray generations");
  */
 class PerspectiveCamera : public PinholeCamera {
 public:
-	PerspectiveCamera(const Properties &props) 
-		: PinholeCamera(props) {
+	PerspectiveCamera(const Properties &props) : PinholeCamera(props) {
 		/* Distance to the focal plane */
-		m_focalDistance = props.getFloat("focalDistance", m_farClip);
-		/* World-space lens radius */
-		m_lensRadius = props.getFloat("lensRadius", 0.0f);
+		focusDistance = props.getFloat("focusDistance", m_farClip);
+		/* World-space aperture radius */
+		m_apertureRadius = props.getFloat("apertureRadius", 0.0f);
 		if (m_cameraToWorld.hasScale()) 
 			Log(EError, "Mitsuba's perspective camera does not allow scale "
 				"factors in the camera-to-world transformation! Please remove those factors, "
-				"since they will cause inconsistencies in various parts of the renderer.");
+				"since they can cause inconsistencies in some parts of the renderer.");
 	}
 
 	PerspectiveCamera(Stream *stream, InstanceManager *manager) 
@@ -50,27 +49,21 @@ public:
 		m_cameraToRaster = Transform(stream);
 		m_rasterToScreen = Transform(stream);
 		m_screenToRaster = Transform(stream);
-		m_lensRadius = stream->readFloat();
-		m_focalDistance = stream->readFloat();
+		m_apertureRadius = stream->readFloat();
+		focusDistance = stream->readFloat();
 		configure();
 	}
 
 	void configure() {
 		PinholeCamera::configure();
 
-		bool mapYToNDC01 = (m_aspect >= 1.0f);
-		if (!m_mapSmallerSide)
-			mapYToNDC01 = !mapYToNDC01;
-		
 		/* Maps from the image plane space to raster space. The
 		   smaller 2D coordinate axis on the film will have
 		   normalized device coordinates in [0, 1] (unless 
 		   the flag mapSmallerSide is specified) . Also inverts
 		   the Y coordinate
 		*/
-		m_cameraToScreen = Transform::perspective(m_fov, m_nearClip, m_farClip);
-
-		if (mapYToNDC01) {
+		if ((m_aspect >= 1.0f) ^ !m_mapSmallerSide) {
 			m_screenToRaster = 
 				Transform::scale(Vector((Float) m_film->getSize().x, (Float) m_film->getSize().y, 1.0f))
 				* Transform::scale(Vector(1/(2*m_aspect), -0.5f, 1.0f))
@@ -82,11 +75,11 @@ public:
 				* Transform::translate(Vector(1.0f, - 1 / m_aspect, 0));
 		}
 
+		m_cameraToScreen = Transform::perspective(m_fov, m_nearClip, m_farClip);
 		m_cameraToScreenGL = Transform::glPerspective(m_yfov, m_nearClip, m_farClip)
 			* Transform::scale(Vector(1/m_aspect, 1.0f, 1.0f));
 
 		m_rasterToScreen = m_screenToRaster.inverse();
-
 		m_worldToScreen = m_cameraToScreen * m_worldToCamera;
 		m_rasterToCamera = m_cameraToScreen.inverse() * m_rasterToScreen;
 		m_cameraToRaster = m_rasterToCamera.inverse();
@@ -100,12 +93,12 @@ public:
 		m_cameraToRaster.serialize(stream);
 		m_rasterToScreen.serialize(stream);
 		m_screenToRaster.serialize(stream);
-		stream->writeFloat(m_lensRadius);
-		stream->writeFloat(m_focalDistance);
+		stream->writeFloat(m_apertureRadius);
+		stream->writeFloat(focusDistance);
 	}
 
 	bool needsLensSample() const {
-		return m_lensRadius > 0.0f;
+		return m_apertureRadius > 0.0f;
 	}
 
 	void generateRay(const Point2 &dirSample, const Point2 &lensSample,
@@ -121,14 +114,14 @@ public:
 		Ray localRay(Point(0, 0, 0), Vector(imageCoords),
 			m_shutterOpen + m_shutterOpenTime * timeSample);
 
-		if (m_lensRadius > 0.0f) {
+		if (m_apertureRadius > 0.0f) {
 			/* Sample a point on the aperture */
 			Point2 lensPos = squareToDiskConcentric(lensSample)
-				* m_lensRadius;
+				* m_apertureRadius;
 
 			/* Calculate the intersection with the focal plane */
 			Point itsFocal = 
-				localRay(m_focalDistance / localRay.d.z);
+				localRay(focusDistance / localRay.d.z);
 
 			/* Perturb the ray accordingly */
 			localRay.o.x += lensPos.x;
@@ -188,8 +181,8 @@ public:
 			<< "  farClip = " << m_farClip << "," << std::endl
 			<< "  shutterOpen = " << m_shutterOpen << "," << std::endl
 			<< "  shutterClose = " << m_shutterClose << "," << std::endl
-			<< "  lensRadius = " << m_lensRadius << "," << std::endl
-			<< "  focalDistance = " << m_focalDistance << "," << std::endl
+			<< "  apertureRadius = " << m_apertureRadius << "," << std::endl
+			<< "  focusDistance = " << focusDistance << "," << std::endl
 			<< "  cameraToWorld = " << indent(m_cameraToWorld.toString()) << "," << std::endl
 			<< "  cameraToScreen = " << indent(m_cameraToScreen.toString()) << "," << std::endl
 			<< "  rasterToCamera = " << indent(m_rasterToCamera.toString()) << std::endl
@@ -202,7 +195,7 @@ private:
 	Transform m_worldToScreen;
 	Transform m_rasterToCamera, m_cameraToRaster;
 	Transform m_rasterToScreen, m_screenToRaster;
-	Float m_lensRadius, m_focalDistance;
+	Float m_apertureRadius, focusDistance;
 };
 
 

@@ -119,7 +119,6 @@ private slots:
 	void on_actionSave_triggered();
 	void on_actionSaveAs_triggered();
 	void on_actionExportImage_triggered();
-	void on_actionNavigationControls_triggered();
 	void on_actionReferenceManual_triggered();
 	void on_actionImport_triggered();
 	void on_actionDuplicateTab_triggered();

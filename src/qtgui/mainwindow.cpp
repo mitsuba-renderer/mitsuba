@@ -24,7 +24,6 @@
 #include "sceneinfodlg.h"
 #include "sceneloader.h"
 #include "logwidget.h"
-#include "navdlg.h"
 #include "aboutdlg.h"
 #include "importdlg.h"
 #include "loaddlg.h"
@@ -1404,11 +1403,6 @@ void MainWindow::onSaveAsDialogClose(int reason) {
 		ui->tabBar->setTabText(currentIndex, context->shortName);
 		addRecentFile(fileName);
 	}
-}
-
-void MainWindow::on_actionNavigationControls_triggered() {
-	NavigationDialog nav(this);
-	nav.exec();
 }
 
 void MainWindow::on_actionReferenceManual_triggered() {
