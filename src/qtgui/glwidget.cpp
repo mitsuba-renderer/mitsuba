@@ -495,7 +495,7 @@ void GLWidget::timerImpulse() {
 		Point origin = (1-t) * m_animationOrigin0 + t * m_animationOrigin1;
 		Point target = (1-t) * m_animationTarget0 + t * m_animationTarget1;
 
-		camera->setInverseViewTransform(Transform::lookAt(origin, target, m_up));
+		camera->setInverseViewTransform(Transform::lookAt(origin, target, m_context->up));
 
 		if (x == 1.0f)
 			m_animation = false;
@@ -649,30 +649,40 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 
 	PerspectiveCamera *camera = static_cast<PerspectiveCamera *>(m_context->scene->getCamera());
 	Point p = camera->getInverseViewTransform()(Point(0,0,0));
-	Vector direction = camera->getInverseViewTransform()(Vector(0,0,1));
+	Vector d = camera->getInverseViewTransform()(Vector(0,0,1));
 	bool didMove = false;
 	
-	Vector up;
-	if (m_navigationMode == EFlythroughFixedYaw)
-		up = m_context->up;
-	else
-		up = camera->getInverseViewTransform()(Vector(0,1,0));
-	
-	if (m_navigationMode == EArcBall) {
-		if (event->buttons() & Qt::LeftButton) {
-#if 0
-			Ray ray;
-			Point2i offset = upperLeft();
-			Point2 sample = Point2(m_mousePos.x() - offset.x, m_mousePos.y() - offset.y);
-			camera->setViewTransform(m_storedViewTransform);
-			camera->generateRay(sample, Point2(0, 0), 0, ray);
-			m_gizmo->dragTo(ray, camera);
-			camera->setViewTransform(m_storedViewTransform * m_gizmo->getTransform());
-			didMove = true;
-#endif
-		}
-	} else {
-		if (event->buttons() & Qt::LeftButton) {
+	Float focusDepth = camera->getFocusDepth(),
+		nearClip = camera->getNearClip(),
+		farClip = camera->getFarClip();
+
+	if (focusDepth <= nearClip || focusDepth >= farClip) {
+		focusDepth = autoFocus();
+		camera->setFocusDepth(focusDepth);
+	}
+
+	Point target = p + d * focusDepth;
+	Vector up = m_context->up;
+
+	if (event->buttons() & Qt::LeftButton) {
+		if (m_navigationMode == EStandard) {
+			Frame frame(up);
+			Point2 coords = toSphericalCoordinates(frame.toLocal(normalize(p-target)));
+			coords.y -=  0.001f * rel.x() * m_mouseSensitivity * (m_invertMouse ? -1.0f : 1.0f);
+			coords.x -=  0.001f * rel.y() * m_mouseSensitivity;
+			p = target + focusDepth * frame.toWorld(sphericalDirection(coords.x, coords.y));
+
+			if (coords.x < 0 || coords.x > M_PI) 
+				m_context->up *= -1;
+
+			if (camera->getViewTransform().det3x3() < 0) 
+				camera->setInverseViewTransform(Transform::lookAt(p, target, m_context->up));
+			else
+				camera->setInverseViewTransform(
+					Transform::lookAt(p, target, m_context->up) *
+					Transform::scale(Vector(-1,1,1))
+				);
+		} else {
 			Float yaw = -.03f * rel.x() * m_mouseSensitivity;
 			Float pitch = -.03f * rel.y() * m_mouseSensitivity;
 			if (m_invertMouse) 
@@ -681,68 +691,69 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			Transform trafo = Transform::rotate(Vector(0,1,0), yaw)
 					* Transform::rotate(Vector(1,0,0), pitch)
 					* camera->getViewTransform();
-			direction = trafo.inverse()(Vector(0,0,1));
+			d = trafo.inverse()(Vector(0,0,1));
 
-			if (camera->getViewTransform().det3x3() < 0) {
-				camera->setInverseViewTransform(Transform::lookAt(p, p+direction, up));
-			} else {
+			if (camera->getViewTransform().det3x3() < 0) 
+				camera->setInverseViewTransform(Transform::lookAt(p, p+d, up));
+			else
 				camera->setInverseViewTransform(
-					Transform::lookAt(p, p+direction, up) *
+					Transform::lookAt(p, p+d, up) *
 					Transform::scale(Vector(-1,1,1))
 				);
-			}
-			didMove = true;
 		}
-
-		if (event->buttons() & Qt::RightButton) {
-			Float roll = rel.x() * m_mouseSensitivity * .02f;
-			Float fovChange = rel.y() * m_mouseSensitivity * .03f;
-
-			if (camera->getViewTransform().det3x3() < 0) {
-				m_context->up = Transform::rotate(direction, roll)(up);
-				camera->setInverseViewTransform(Transform::lookAt(p, p+direction, m_context->up));
-			} else {
-				m_context->up = Transform::rotate(direction, -roll)(up);
-				camera->setInverseViewTransform(
-					Transform::lookAt(p, p+direction, m_context->up) *
-					Transform::scale(Vector(-1,1,1))
-				);
-			}
-
-			camera->setFov(std::min(std::max((Float) 1.0f, camera->getFov() + fovChange), (Float) 100.0f));
-		}
-		camera->configure();
-
 		didMove = true;
-	}
-
-	if (event->buttons() & Qt::MidButton) {
+	} else if (event->buttons() & Qt::MidButton) {
 		camera->setViewTransform(
 			Transform::translate(Vector((Float) rel.x(), (Float) -rel.y(), 0) 
 				* m_mouseSensitivity * .6f * m_context->movementScale)
 			* camera->getViewTransform());
 		didMove = true;
 	} else if (event->buttons() & Qt::RightButton) {
-		Float focusDepth = camera->getFocusDepth(),
-			nearClip = camera->getNearClip(),
-			farClip = camera->getFarClip();
+		if (event->modifiers() & Qt::ShiftModifier) {
+			Float roll = rel.x() * m_mouseSensitivity * .02f;
+			Float fovChange = rel.y() * m_mouseSensitivity * .03f;
 
-		if (focusDepth <= nearClip || focusDepth >= farClip) 
-			focusDepth = autoFocus();
+			if (camera->getViewTransform().det3x3() < 0) {
+				m_context->up = Transform::rotate(d, roll)(up);
+				camera->setInverseViewTransform(Transform::lookAt(p, p+d, m_context->up));
+			} else {
+				m_context->up = Transform::rotate(d, -roll)(up);
+				camera->setInverseViewTransform(
+					Transform::lookAt(p, p+d, m_context->up) *
+					Transform::scale(Vector(-1,1,1))
+				);
+			}
 
-		Float oldFocusDepth = focusDepth;
-		focusDepth = std::min(std::max(focusDepth * std::pow(1 - 2e-3f,
-				(float) -rel.y() * m_mouseSensitivity * m_context->movementScale),
-				1.2f*nearClip), farClip/1.2f);
+			camera->setFov(std::min(std::max((Float) 1.0f, camera->getFov() 
+				+ fovChange), (Float) 150.0f));
+		} else {
+			Float focusDepth = camera->getFocusDepth(),
+				nearClip = camera->getNearClip(),
+				farClip = camera->getFarClip();
 
-		camera->setFocusDepth(focusDepth);
-		Vector d = Vector(camera->getImagePlaneNormal());
-		Point o = camera->getPosition() + (oldFocusDepth - focusDepth) * d;
+			if (focusDepth <= nearClip || focusDepth >= farClip) 
+				focusDepth = autoFocus();
 
-		camera->setInverseViewTransform(
-				Transform::lookAt(o, o+d, up));
+			Float oldFocusDepth = focusDepth;
+			focusDepth = std::min(std::max(focusDepth * std::pow(1 - 2e-3f,
+					(float) -rel.y() * m_mouseSensitivity * m_context->movementScale),
+					1.2f*nearClip), farClip/1.2f);
+
+			camera->setFocusDepth(focusDepth);
+			Vector d = Vector(camera->getImagePlaneNormal());
+			p = p + (oldFocusDepth - focusDepth) * d;
+
+			if (camera->getViewTransform().det3x3() < 0) 
+				camera->setInverseViewTransform(Transform::lookAt(p, p+d, up));
+			else
+				camera->setInverseViewTransform(
+					Transform::lookAt(p, p+d, up) *
+					Transform::scale(Vector(-1,1,1))
+				);
+		}
 		didMove = true;
 	}
+	camera->configure();
 
 	/* Re-center cursor as needed */
 	QPoint global = mapToGlobal(m_mousePos);
@@ -848,7 +859,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event) {
 	m_mouseDrag = true;
 	ProjectiveCamera *camera = static_cast<ProjectiveCamera *>(m_context->scene->getCamera());
 
-	if (m_navigationMode == EArcBall && event->buttons() & Qt::LeftButton) {
+	if (m_navigationMode == EStandard && event->buttons() & Qt::LeftButton) {
 		Point2i offset = upperLeft();
 		Point2 sample = Point2(m_mousePos.x() - offset.x, m_mousePos.y() - offset.y);
 		Intersection its;
@@ -885,7 +896,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event) {
 void GLWidget::mouseDoubleClickEvent(QMouseEvent *event) {
 	if (!m_preview->isRunning())
 		return;
-	if (m_navigationMode == EArcBall && m_aabb.isValid()
+	if (m_navigationMode == EStandard && m_aabb.isValid()
 		&& event->buttons() & Qt::LeftButton) 
 		reveal(m_aabb);
 }
@@ -1140,7 +1151,7 @@ void GLWidget::paintGL() {
 						oglRenderKDTree(shapes[j]->getKDTree());
 			}
 
-			if (m_navigationMode == EArcBall && m_aabb.isValid())
+			if (m_navigationMode == EStandard && m_aabb.isValid())
 				m_renderer->drawAABB(m_aabb);
 
 			m_renderer->setBlendMode(Renderer::EBlendNone);
@@ -1313,11 +1324,6 @@ void GLWidget::reveal(const AABB &aabb) {
 		return;
 	BSphere bsphere = aabb.getBSphere();
 	PerspectiveCamera *camera = static_cast<PerspectiveCamera *>(m_context->scene->getCamera());
-
-	if (m_navigationMode == EFlythroughFixedYaw)
-		m_up = m_context->up;
-	else 
-		m_up = camera->getInverseViewTransform()(Vector(0, 1, 0));
 
 	Vector d = Vector(camera->getImagePlaneNormal());
 	Float fov = std::min(camera->getXFov(), camera->getYFov())*0.9f/2;

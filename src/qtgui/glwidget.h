@@ -140,7 +140,6 @@ private:
 	SceneContext *m_context;
 	int m_mouseSensitivity;
 	Vector2 m_logoSize;
-	Vector m_up;
 	Point m_animationOrigin0, m_animationOrigin1;
 	Point m_animationTarget0, m_animationTarget1;
 	QPoint m_mousePos, m_ignoreMouseEvent, m_initialMousePos;
