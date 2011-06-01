@@ -49,8 +49,8 @@ Mutex::~Mutex() {
 	if (rv != 0) {
 		switch (rv) {
 			case EBUSY: Log(EWarn, "Could not destroy a mutex: held by another thread"); break;
-			case EINVAL: Log(EWarn, "Could not destroy a mutex: data corruption"); break;
-			default: Log(EWarn, "Could not destroy a mutex: unknown reason");
+			case EINVAL: Log(EError, "Could not destroy a mutex: data corruption"); break;
+			default: Log(EError, "Could not destroy a mutex: unknown reason (%i)", rv);
 		}
 	}
 }
@@ -82,7 +82,7 @@ bool ConditionVariable::wait(int ms) {
 			case ETIMEDOUT: return false;
 			case EINVAL: Log(EError, "Invalid condition variable/mutex!");
 			case EPERM: Log(EError, "Mutex is not owned by the current thread");
-			default: Log(EError, "Unknown return value!");
+			default: Log(EError, "Unknown return value (%i)!", retval);
 				return false;
 		}
 	}
