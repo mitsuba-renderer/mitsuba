@@ -55,9 +55,9 @@
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Debug\</IntDir>
-    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">scons --parallelize --cfg=..\build\config-msvc2010-win32-debug.py</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">scons --parallelize --cfg=..\build\config-msvc2010-win32-debug.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2010-win32-debug.py</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">scons --parallelize --cfg=..\build\config-msvc2010-win32-debug.py -c</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32-debug.py</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32-debug.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32-debug.py</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32-debug.py -c</NMakeCleanCommandLine>
     <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">dist\mtsgui.exe</NMakeOutput>
     <NMakePreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
@@ -66,9 +66,9 @@
     <NMakeForcedUsingAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(NMakeForcedUsingAssemblies)</NMakeForcedUsingAssemblies>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Release\</IntDir>
-    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">scons --parallelize --cfg=..\build\config-msvc2010-win32.py</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">scons --parallelize --cfg=..\build\config-msvc2010-win32.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2010-win32.py</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">scons --parallelize --cfg=..\build\config-msvc2010-win32.py -c</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32.py</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32.py</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32.py -c</NMakeCleanCommandLine>
     <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">dist\mtsgui.exe</NMakeOutput>
     <NMakePreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">WIN32;NDEBUG;SINGLE_PRECISION;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
@@ -77,9 +77,9 @@
     <NMakeForcedUsingAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(NMakeForcedUsingAssemblies)</NMakeForcedUsingAssemblies>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Debug\</IntDir>
-    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">scons --parallelize --cfg=..\build\config-msvc2010-win64-debug.py</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">scons --parallelize --cfg=..\build\config-msvc2010-win64-debug.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2010-win64-debug.py</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">scons --parallelize --cfg=..\build\config-msvc2010-win64-debug.py -c</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64-debug.py</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64-debug.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64-debug.py</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64-debug.py -c</NMakeCleanCommandLine>
     <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">dist\mtsgui.exe</NMakeOutput>
     <NMakePreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
@@ -88,9 +88,9 @@
     <NMakeForcedUsingAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(NMakeForcedUsingAssemblies)</NMakeForcedUsingAssemblies>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Release\</IntDir>
-    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">scons --parallelize --cfg=..\build\config-msvc2010-win64.py</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">scons --parallelize --cfg=..\build\config-msvc2010-win64.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2010-win64.py</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">scons --parallelize --cfg=..\build\config-msvc2010-win64.py -c</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64.py</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64.py</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64.py -c</NMakeCleanCommandLine>
     <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">dist\mtsgui.exe</NMakeOutput>
     <NMakePreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">WIN32;NDEBUG;SINGLE_PRECISION;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
@@ -111,13 +111,17 @@
     </Filter>
   </ItemGroup>
   <ItemGroup Label="Header Files">
-  <ClInclude Include="..\.\src\converter\converter.h">
+  <ClInclude Include="..\.\src\bsdfs\irawan.h">
+			</ClInclude>
+		<ClInclude Include="..\.\src\converter\converter.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\films\banner.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\integrators\misc\irrcache_proc.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\integrators\path\ptracer_proc.h">
+			</ClInclude>
+		<ClInclude Include="..\.\src\integrators\photonmapper\bre.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\libhw\vera14_dsc.h">
 			</ClInclude>
@@ -128,6 +132,8 @@
 		<ClInclude Include="..\.\src\libhw\veramono14_png.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\medium\maxexp.h">
+			</ClInclude>
+		<ClInclude Include="..\.\src\phase\microflake_fiber.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\aboutdlg.h">
 			</ClInclude>
@@ -149,8 +155,6 @@
 			</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\mainwindow.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\navdlg.h">
-			</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\preview.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\previewsettingsdlg.h">
@@ -167,6 +171,8 @@
 			</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\sceneimporter.h">
 			</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\sceneinfodlg.h">
+			</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\sceneloader.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\server.h">
@@ -176,6 +182,8 @@
 		<ClInclude Include="..\.\src\qtgui\updatedlg.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\xmltreemodel.h">
+			</ClInclude>
+		<ClInclude Include="..\.\src\shapes\instance.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\shapes\shapegroup.h">
 			</ClInclude>
@@ -196,6 +204,8 @@
 		<ClInclude Include="..\.\include\mitsuba\core\brent.h">
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\bsphere.h">
+			</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\chisquare.h">
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\class.h">
 			</ClInclude>
@@ -401,6 +411,8 @@
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\render\phase.h">
 			</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\photon.h">
+			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\render\photonmap.h">
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\render\preview.h">
@@ -463,6 +475,8 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\difftrans.cpp">
 			</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\irawan.cpp">
+			</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\lambertian.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\mask.cpp">
@@ -478,6 +492,8 @@
 		<ClCompile Include="..\.\src\bsdfs\roughmetal.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\transparent.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\twosided.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\ward.cpp">
 			</ClCompile>
@@ -517,6 +533,8 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\integrators\path\volpath_simple.cpp">
 			</ClCompile>
+		<ClCompile Include="..\.\src\integrators\photonmapper\bre.cpp">
+			</ClCompile>
 		<ClCompile Include="..\.\src\integrators\photonmapper\photonmapper.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\integrators\photonmapper\ppm.cpp">
@@ -530,6 +548,8 @@
 		<ClCompile Include="..\.\src\libcore\appender.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\libcore\bitmap.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\libcore\brent.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\libcore\class.cpp">
 			</ClCompile>
@@ -673,6 +693,8 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\librender\phase.cpp">
 			</ClCompile>
+		<ClCompile Include="..\.\src\librender\photon.cpp">
+			</ClCompile>
 		<ClCompile Include="..\.\src\librender\photonmap.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\librender\preview.cpp">
@@ -729,8 +751,6 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\luminaires\spot.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\medium\heterogeneous-flake.cpp">
-			</ClCompile>
 		<ClCompile Include="..\.\src\medium\heterogeneous.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\medium\homogeneous.cpp">
@@ -746,6 +766,8 @@
 		<ClCompile Include="..\.\src\phase\isotropic.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\phase\kkay.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\phase\microflake.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\qtgui\aboutdlg.cpp">
 			</ClCompile>
@@ -767,8 +789,6 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\qtgui\mainwindow.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\navdlg.cpp">
-			</ClCompile>
 		<ClCompile Include="..\.\src\qtgui\preview.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\qtgui\previewsettingsdlg.cpp">
@@ -784,6 +804,8 @@
 		<ClCompile Include="..\.\src\qtgui\save.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\qtgui\sceneimporter.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\sceneinfodlg.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\qtgui\sceneloader.cpp">
 			</ClCompile>
@@ -847,6 +869,8 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\tests\test_la.cpp">
 			</ClCompile>
+		<ClCompile Include="..\.\src\tests\test_quad.cpp">
+			</ClCompile>
 		<ClCompile Include="..\.\src\tests\test_samplers.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\tests\test_sh.cpp">
@@ -873,11 +897,15 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\utils\ttest.cpp">
 			</ClCompile>
+		<ClCompile Include="..\.\src\utils\uflakefit.cpp">
+			</ClCompile>
 		<ClCompile Include="..\.\src\volume\constvolume.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\volume\gridvolume.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\volume\hgridvolume.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\volume\volcache.cpp">
 			</ClCompile>
 		</ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets"/>

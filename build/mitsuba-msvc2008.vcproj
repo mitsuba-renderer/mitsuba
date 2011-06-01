@@ -7,16 +7,16 @@
 	</ToolFiles>
 	<Configurations>
 		<Configuration Name="Debug|Win32" OutputDirectory="Debug" IntermediateDirectory="Debug" ConfigurationType="0">
-			<Tool Name="VCNMakeTool" BuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32-debug.py" ReBuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32-debug.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2008-win32-debug.py" CleanCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32-debug.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;_DEBUG;" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
+			<Tool Name="VCNMakeTool" BuildCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win32-debug.py" ReBuildCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win32-debug.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win32-debug.py" CleanCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win32-debug.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;_DEBUG;" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
 		</Configuration>
 		<Configuration Name="Release|Win32" OutputDirectory="Release" IntermediateDirectory="Release" ConfigurationType="0">
-			<Tool Name="VCNMakeTool" BuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32.py" ReBuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2008-win32.py" CleanCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;NDEBUG;SINGLE_PRECISION" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
+			<Tool Name="VCNMakeTool" BuildCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win32.py" ReBuildCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win32.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win32.py" CleanCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win32.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;NDEBUG;SINGLE_PRECISION" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
 		</Configuration>
 		<Configuration Name="Debug|x64" OutputDirectory="Debug" IntermediateDirectory="Debug" ConfigurationType="0">
-			<Tool Name="VCNMakeTool" BuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64-debug.py" ReBuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64-debug.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2008-win64-debug.py" CleanCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64-debug.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;_DEBUG;" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
+			<Tool Name="VCNMakeTool" BuildCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win64-debug.py" ReBuildCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win64-debug.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win64-debug.py" CleanCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win64-debug.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;_DEBUG;" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
 		</Configuration>
 		<Configuration Name="Release|x64" OutputDirectory="Release" IntermediateDirectory="Release" ConfigurationType="0">
-			<Tool Name="VCNMakeTool" BuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64.py" ReBuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2008-win64.py" CleanCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;NDEBUG;SINGLE_PRECISION" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
+			<Tool Name="VCNMakeTool" BuildCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win64.py" ReBuildCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win64.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win64.py" CleanCommandLine="cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2008-win64.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;NDEBUG;SINGLE_PRECISION" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
 		</Configuration>
 	</Configurations>
 	<References>
@@ -32,6 +32,7 @@
 		<File RelativePath="..\.\include\mitsuba\core\bitmap.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\brent.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\bsphere.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\chisquare.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\class.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\cobject.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\constants.h"/>
@@ -138,6 +139,7 @@
 		<File RelativePath="..\.\include\mitsuba\render\noise.h"/>
 		<File RelativePath="..\.\include\mitsuba\render\particleproc.h"/>
 		<File RelativePath="..\.\include\mitsuba\render\phase.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\photon.h"/>
 		<File RelativePath="..\.\include\mitsuba\render\photonmap.h"/>
 		<File RelativePath="..\.\include\mitsuba\render\preview.h"/>
 		<File RelativePath="..\.\include\mitsuba\render\range.h"/>
@@ -173,6 +175,8 @@
 		<File RelativePath="..\.\src\bsdfs\composite.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\dielectric.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\difftrans.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\irawan.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\irawan.h"/>
 		<File RelativePath="..\.\src\bsdfs\lambertian.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\mask.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\microfacet.cpp"/>
@@ -181,6 +185,7 @@
 		<File RelativePath="..\.\src\bsdfs\roughglass.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\roughmetal.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\transparent.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\twosided.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\ward.cpp"/>
 		</Filter>
 		<Filter Name="cameras">
@@ -219,6 +224,8 @@
 		<File RelativePath="..\.\src\integrators\path\volpath_simple.cpp"/>
 		</Filter>
 		<Filter Name="photonmapper">
+		<File RelativePath="..\.\src\integrators\photonmapper\bre.cpp"/>
+		<File RelativePath="..\.\src\integrators\photonmapper\bre.h"/>
 		<File RelativePath="..\.\src\integrators\photonmapper\photonmapper.cpp"/>
 		<File RelativePath="..\.\src\integrators\photonmapper\ppm.cpp"/>
 		<File RelativePath="..\.\src\integrators\photonmapper\sppm.cpp"/>
@@ -231,6 +238,7 @@
 		<File RelativePath="..\.\src\libcore\aabb.cpp"/>
 		<File RelativePath="..\.\src\libcore\appender.cpp"/>
 		<File RelativePath="..\.\src\libcore\bitmap.cpp"/>
+		<File RelativePath="..\.\src\libcore\brent.cpp"/>
 		<File RelativePath="..\.\src\libcore\class.cpp"/>
 		<File RelativePath="..\.\src\libcore\cstream.cpp"/>
 		<File RelativePath="..\.\src\libcore\formatter.cpp"/>
@@ -310,6 +318,7 @@
 		<File RelativePath="..\.\src\librender\noise.cpp"/>
 		<File RelativePath="..\.\src\librender\particleproc.cpp"/>
 		<File RelativePath="..\.\src\librender\phase.cpp"/>
+		<File RelativePath="..\.\src\librender\photon.cpp"/>
 		<File RelativePath="..\.\src\librender\photonmap.cpp"/>
 		<File RelativePath="..\.\src\librender\preview.cpp"/>
 		<File RelativePath="..\.\src\librender\rectwu.cpp"/>
@@ -342,7 +351,6 @@
 		<File RelativePath="..\.\src\luminaires\spot.cpp"/>
 		</Filter>
 		<Filter Name="medium">
-		<File RelativePath="..\.\src\medium\heterogeneous-flake.cpp"/>
 		<File RelativePath="..\.\src\medium\heterogeneous.cpp"/>
 		<File RelativePath="..\.\src\medium\homogeneous.cpp"/>
 		<File RelativePath="..\.\src\medium\maxexp.h"/>
@@ -356,6 +364,8 @@
 		<File RelativePath="..\.\src\phase\hg.cpp"/>
 		<File RelativePath="..\.\src\phase\isotropic.cpp"/>
 		<File RelativePath="..\.\src\phase\kkay.cpp"/>
+		<File RelativePath="..\.\src\phase\microflake.cpp"/>
+		<File RelativePath="..\.\src\phase\microflake_fiber.h"/>
 		</Filter>
 		<Filter Name="qtgui">
 		<File RelativePath="..\.\src\qtgui\aboutdlg.cpp"/>
@@ -378,8 +388,6 @@
 		<File RelativePath="..\.\src\qtgui\main.cpp"/>
 		<File RelativePath="..\.\src\qtgui\mainwindow.cpp"/>
 		<File RelativePath="..\.\src\qtgui\mainwindow.h"/>
-		<File RelativePath="..\.\src\qtgui\navdlg.cpp"/>
-		<File RelativePath="..\.\src\qtgui\navdlg.h"/>
 		<File RelativePath="..\.\src\qtgui\preview.cpp"/>
 		<File RelativePath="..\.\src\qtgui\preview.h"/>
 		<File RelativePath="..\.\src\qtgui\previewsettingsdlg.cpp"/>
@@ -398,6 +406,8 @@
 		<File RelativePath="..\.\src\qtgui\save.h"/>
 		<File RelativePath="..\.\src\qtgui\sceneimporter.cpp"/>
 		<File RelativePath="..\.\src\qtgui\sceneimporter.h"/>
+		<File RelativePath="..\.\src\qtgui\sceneinfodlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\sceneinfodlg.h"/>
 		<File RelativePath="..\.\src\qtgui\sceneloader.cpp"/>
 		<File RelativePath="..\.\src\qtgui\sceneloader.h"/>
 		<File RelativePath="..\.\src\qtgui\server.cpp"/>
@@ -428,6 +438,7 @@
 		<File RelativePath="..\.\src\shapes\cylinder.cpp"/>
 		<File RelativePath="..\.\src\shapes\hair.cpp"/>
 		<File RelativePath="..\.\src\shapes\instance.cpp"/>
+		<File RelativePath="..\.\src\shapes\instance.h"/>
 		<File RelativePath="..\.\src\shapes\obj.cpp"/>
 		<Filter Name="ply">
 		<Filter Name="ply">
@@ -451,6 +462,7 @@
 		<Filter Name="tests">
 		<File RelativePath="..\.\src\tests\test_kd.cpp"/>
 		<File RelativePath="..\.\src\tests\test_la.cpp"/>
+		<File RelativePath="..\.\src\tests\test_quad.cpp"/>
 		<File RelativePath="..\.\src\tests\test_samplers.cpp"/>
 		<File RelativePath="..\.\src\tests\test_sh.cpp"/>
 		</Filter>
@@ -468,11 +480,13 @@
 		<File RelativePath="..\.\src\utils\kdbench.cpp"/>
 		<File RelativePath="..\.\src\utils\tonemap.cpp"/>
 		<File RelativePath="..\.\src\utils\ttest.cpp"/>
+		<File RelativePath="..\.\src\utils\uflakefit.cpp"/>
 		</Filter>
 		<Filter Name="volume">
 		<File RelativePath="..\.\src\volume\constvolume.cpp"/>
 		<File RelativePath="..\.\src\volume\gridvolume.cpp"/>
 		<File RelativePath="..\.\src\volume\hgridvolume.cpp"/>
+		<File RelativePath="..\.\src\volume\volcache.cpp"/>
 		</Filter>
 		</Filter>
 	</Files>

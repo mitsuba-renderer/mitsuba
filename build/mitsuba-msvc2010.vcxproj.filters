@@ -9,103 +9,103 @@
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
    <Filter Include="Source Files\bsdfs">
-			<UniqueIdentifier>{946f0c57-1652-439f-b8c7-0f271d19b2a6}</UniqueIdentifier>
+			<UniqueIdentifier>{7cc9fd52-85aa-46ba-8f63-1769e6160a13}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\cameras">
-			<UniqueIdentifier>{3e23c542-badb-49b9-aac6-1a4410618842}</UniqueIdentifier>
+			<UniqueIdentifier>{0a402cf3-60ad-462b-b13d-01dbf7e24ef1}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\converter">
-			<UniqueIdentifier>{6b253b0e-d582-49af-aacd-9bab4119ed6e}</UniqueIdentifier>
+			<UniqueIdentifier>{e8a642af-0a0c-4ade-b0bf-38aedce8496a}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\films">
-			<UniqueIdentifier>{a331500b-4b79-407d-8e8d-e1a807fce1c7}</UniqueIdentifier>
+			<UniqueIdentifier>{ca686a71-4bde-45dd-b982-54540bf2b201}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators">
-			<UniqueIdentifier>{10280703-66aa-47fc-93f2-987bebc2af2a}</UniqueIdentifier>
+			<UniqueIdentifier>{3a049a11-b32f-47c9-b268-6c5f6785d54c}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators\direct">
-			<UniqueIdentifier>{a183b2b4-7a54-4cbf-a70f-dc86d2ee63ef}</UniqueIdentifier>
+			<UniqueIdentifier>{5866cfd1-bf8c-468c-ab14-2a5a29c96fe7}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators\misc">
-			<UniqueIdentifier>{a9a29be9-59f2-4eae-a7af-6e44bfe9e0d5}</UniqueIdentifier>
+			<UniqueIdentifier>{9b747d82-a094-4395-bd54-29b5fc8c80e3}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators\path">
-			<UniqueIdentifier>{f9b644d2-be0a-469c-a9f9-86447a5512b2}</UniqueIdentifier>
+			<UniqueIdentifier>{04355f36-da7a-48a3-b176-de47068aab65}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators\photonmapper">
-			<UniqueIdentifier>{7116297a-8256-4230-9bc6-41f67129b23b}</UniqueIdentifier>
+			<UniqueIdentifier>{aca75731-874b-42be-9ee5-c0f30a0d1eef}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators\vpl">
-			<UniqueIdentifier>{6fe82647-9f8d-4c60-8a01-24037b89560b}</UniqueIdentifier>
+			<UniqueIdentifier>{f90fb88d-8c0b-4bde-a02e-2796fde95bec}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\libcore">
-			<UniqueIdentifier>{c5cdeff3-9733-47ca-9b5d-7b1ca3e5198d}</UniqueIdentifier>
+			<UniqueIdentifier>{7f53cc5f-06e8-415d-8f3c-c7c2cb606cc6}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\libhw">
-			<UniqueIdentifier>{21145e8d-53ed-4aff-b258-2104ff3829b2}</UniqueIdentifier>
+			<UniqueIdentifier>{8ea6bfa1-15cf-49da-a038-1156ec313d12}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\librender">
-			<UniqueIdentifier>{e59507a8-1d48-4716-aa76-a52123fc1094}</UniqueIdentifier>
+			<UniqueIdentifier>{e694e818-ffb0-4412-8158-cd28a98ff7fb}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\luminaires">
-			<UniqueIdentifier>{d8d296c4-253b-4811-9f06-3ef3a3b20b01}</UniqueIdentifier>
+			<UniqueIdentifier>{de000fb1-6d0e-4318-9901-6b4ccaadbbf9}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\medium">
-			<UniqueIdentifier>{ab1dc6fc-86f2-4bcf-afa6-a9d73541bd85}</UniqueIdentifier>
+			<UniqueIdentifier>{e96338d7-42a6-4253-b1c7-a154e36405d2}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\mitsuba">
-			<UniqueIdentifier>{a6e9c824-1816-4909-a452-da5e85018fe7}</UniqueIdentifier>
+			<UniqueIdentifier>{c60f7eae-6c97-494b-ae30-3db86089f477}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\phase">
-			<UniqueIdentifier>{03b89763-c33d-48d3-851e-c014f69ca2eb}</UniqueIdentifier>
+			<UniqueIdentifier>{6851b0a6-ef2f-40c4-aa07-15dbf665d562}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\qtgui">
-			<UniqueIdentifier>{32d55097-3f47-45ac-95a1-8c9aad809af4}</UniqueIdentifier>
+			<UniqueIdentifier>{7c86af5b-e9d3-4999-9f3e-bd761db1e610}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\qtgui\resources">
-			<UniqueIdentifier>{5cb5854c-4e92-46b7-8e23-e129c033a921}</UniqueIdentifier>
+			<UniqueIdentifier>{7fc76ed5-bb1c-4185-99a1-135ab120a324}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\rfilters">
-			<UniqueIdentifier>{8adc9585-8210-4d77-be2d-7637a01a18a1}</UniqueIdentifier>
+			<UniqueIdentifier>{646b3917-a5e5-44b0-bfb7-621c6fa4c321}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\samplers">
-			<UniqueIdentifier>{70a920dc-cbb9-4415-82ee-b16213685d5e}</UniqueIdentifier>
+			<UniqueIdentifier>{9cae7fac-088c-4c04-9376-74f5e003c068}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\shapes">
-			<UniqueIdentifier>{41abd3e2-4c35-4eb3-8985-b7b14cbb294f}</UniqueIdentifier>
+			<UniqueIdentifier>{8f0b87e6-51c9-4c38-8dbd-0141e2d201f6}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\shapes\ply">
-			<UniqueIdentifier>{68482996-7bb2-4e67-8eb2-2acb168f22aa}</UniqueIdentifier>
+			<UniqueIdentifier>{667e4f90-6a0c-4cab-a17f-1a7a0d7daf97}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\shapes\ply\ply">
-			<UniqueIdentifier>{e26a071b-c784-4339-8d23-6f6146f23562}</UniqueIdentifier>
+			<UniqueIdentifier>{5b58e373-de5f-4679-857f-4cf4ea228be1}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\subsurface">
-			<UniqueIdentifier>{9a0eb3a3-9d66-419d-ae41-32c2141b0f8d}</UniqueIdentifier>
+			<UniqueIdentifier>{cad7a7f1-7c4d-4dc5-a1f4-6cede9526ac3}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\tests">
-			<UniqueIdentifier>{8b145198-86fa-4e56-80fb-4865890136cb}</UniqueIdentifier>
+			<UniqueIdentifier>{71910c3c-fe18-48b4-b318-aa6eda3510e5}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\textures">
-			<UniqueIdentifier>{e1562631-0fc9-40ce-8d0d-eae4dac52b68}</UniqueIdentifier>
+			<UniqueIdentifier>{194ce64b-1611-4fc7-8572-b00dc8abbeef}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\utils">
-			<UniqueIdentifier>{ac9c65e9-43b4-4594-8927-df667333d1bf}</UniqueIdentifier>
+			<UniqueIdentifier>{34ce6e04-4d1e-4c14-9b3e-4d09003dbb44}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\volume">
-			<UniqueIdentifier>{b04fde90-b6e1-4b42-afab-e93b51134b23}</UniqueIdentifier>
+			<UniqueIdentifier>{9a6a92af-c29d-45f8-b209-c4e6c8af09cb}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Header Files\mitsuba">
-			<UniqueIdentifier>{72e050ae-938f-44f2-9fb7-1d449a5c8a2a}</UniqueIdentifier>
+			<UniqueIdentifier>{2445c3b8-6a59-4685-ac89-989371c1a1f2}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Header Files\mitsuba\core">
-			<UniqueIdentifier>{0daa58ea-dbd9-40b3-8306-ea0fbb6bc524}</UniqueIdentifier>
+			<UniqueIdentifier>{70fcace6-74e4-462c-b501-8677a6950e6a}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Header Files\mitsuba\hw">
-			<UniqueIdentifier>{e573162a-319e-4769-93f2-405012065840}</UniqueIdentifier>
+			<UniqueIdentifier>{292ae7ab-f2f8-448e-8d84-ea5f555b31e4}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Header Files\mitsuba\render">
-			<UniqueIdentifier>{65a938b6-6f21-4a91-ab81-1e3e40205313}</UniqueIdentifier>
+			<UniqueIdentifier>{ada272f5-c12c-4248-8a85-9e0bcd9b7416}</UniqueIdentifier>
 		</Filter>
 		</ItemGroup>
   <ItemGroup Label="Source Files">
@@ -116,6 +116,9 @@
 			<Filter>Source Files\bsdfs</Filter>
 		</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\difftrans.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\irawan.cpp">
 			<Filter>Source Files\bsdfs</Filter>
 		</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\lambertian.cpp">
@@ -140,6 +143,9 @@
 			<Filter>Source Files\bsdfs</Filter>
 		</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\transparent.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\twosided.cpp">
 			<Filter>Source Files\bsdfs</Filter>
 		</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\ward.cpp">
@@ -199,6 +205,9 @@
 		<ClCompile Include="..\.\src\integrators\path\volpath_simple.cpp">
 			<Filter>Source Files\integrators\path</Filter>
 		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\photonmapper\bre.cpp">
+			<Filter>Source Files\integrators\photonmapper</Filter>
+		</ClCompile>
 		<ClCompile Include="..\.\src\integrators\photonmapper\photonmapper.cpp">
 			<Filter>Source Files\integrators\photonmapper</Filter>
 		</ClCompile>
@@ -218,6 +227,9 @@
 			<Filter>Source Files\libcore</Filter>
 		</ClCompile>
 		<ClCompile Include="..\.\src\libcore\bitmap.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\brent.cpp">
 			<Filter>Source Files\libcore</Filter>
 		</ClCompile>
 		<ClCompile Include="..\.\src\libcore\class.cpp">
@@ -433,6 +445,9 @@
 		<ClCompile Include="..\.\src\librender\phase.cpp">
 			<Filter>Source Files\librender</Filter>
 		</ClCompile>
+		<ClCompile Include="..\.\src\librender\photon.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
 		<ClCompile Include="..\.\src\librender\photonmap.cpp">
 			<Filter>Source Files\librender</Filter>
 		</ClCompile>
@@ -517,9 +532,6 @@
 		<ClCompile Include="..\.\src\luminaires\spot.cpp">
 			<Filter>Source Files\luminaires</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\medium\heterogeneous-flake.cpp">
-			<Filter>Source Files\medium</Filter>
-		</ClCompile>
 		<ClCompile Include="..\.\src\medium\heterogeneous.cpp">
 			<Filter>Source Files\medium</Filter>
 		</ClCompile>
@@ -542,6 +554,9 @@
 			<Filter>Source Files\phase</Filter>
 		</ClCompile>
 		<ClCompile Include="..\.\src\phase\kkay.cpp">
+			<Filter>Source Files\phase</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\phase\microflake.cpp">
 			<Filter>Source Files\phase</Filter>
 		</ClCompile>
 		<ClCompile Include="..\.\src\qtgui\aboutdlg.cpp">
@@ -574,9 +589,6 @@
 		<ClCompile Include="..\.\src\qtgui\mainwindow.cpp">
 			<Filter>Source Files\qtgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\navdlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
-		</ClCompile>
 		<ClCompile Include="..\.\src\qtgui\preview.cpp">
 			<Filter>Source Files\qtgui</Filter>
 		</ClCompile>
@@ -599,6 +611,9 @@
 			<Filter>Source Files\qtgui</Filter>
 		</ClCompile>
 		<ClCompile Include="..\.\src\qtgui\sceneimporter.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\sceneinfodlg.cpp">
 			<Filter>Source Files\qtgui</Filter>
 		</ClCompile>
 		<ClCompile Include="..\.\src\qtgui\sceneloader.cpp">
@@ -694,6 +709,9 @@
 		<ClCompile Include="..\.\src\tests\test_la.cpp">
 			<Filter>Source Files\tests</Filter>
 		</ClCompile>
+		<ClCompile Include="..\.\src\tests\test_quad.cpp">
+			<Filter>Source Files\tests</Filter>
+		</ClCompile>
 		<ClCompile Include="..\.\src\tests\test_samplers.cpp">
 			<Filter>Source Files\tests</Filter>
 		</ClCompile>
@@ -733,6 +751,9 @@
 		<ClCompile Include="..\.\src\utils\ttest.cpp">
 			<Filter>Source Files\utils</Filter>
 		</ClCompile>
+		<ClCompile Include="..\.\src\utils\uflakefit.cpp">
+			<Filter>Source Files\utils</Filter>
+		</ClCompile>
 		<ClCompile Include="..\.\src\volume\constvolume.cpp">
 			<Filter>Source Files\volume</Filter>
 		</ClCompile>
@@ -742,9 +763,15 @@
 		<ClCompile Include="..\.\src\volume\hgridvolume.cpp">
 			<Filter>Source Files\volume</Filter>
 		</ClCompile>
+		<ClCompile Include="..\.\src\volume\volcache.cpp">
+			<Filter>Source Files\volume</Filter>
+		</ClCompile>
 		</ItemGroup>
   <ItemGroup Label="Header Files">
-  <ClInclude Include="..\.\src\converter\converter.h">
+  <ClInclude Include="..\.\src\bsdfs\irawan.h">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\converter\converter.h">
 			<Filter>Source Files\converter</Filter>
 		</ClInclude>
 		<ClInclude Include="..\.\src\films\banner.h">
@@ -755,6 +782,9 @@
 		</ClInclude>
 		<ClInclude Include="..\.\src\integrators\path\ptracer_proc.h">
 			<Filter>Source Files\integrators\path</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\integrators\photonmapper\bre.h">
+			<Filter>Source Files\integrators\photonmapper</Filter>
 		</ClInclude>
 		<ClInclude Include="..\.\src\libhw\vera14_dsc.h">
 			<Filter>Source Files\libhw</Filter>
@@ -770,6 +800,9 @@
 		</ClInclude>
 		<ClInclude Include="..\.\src\medium\maxexp.h">
 			<Filter>Source Files\medium</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\phase\microflake_fiber.h">
+			<Filter>Source Files\phase</Filter>
 		</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\aboutdlg.h">
 			<Filter>Source Files\qtgui</Filter>
@@ -801,9 +834,6 @@
 		<ClInclude Include="..\.\src\qtgui\mainwindow.h">
 			<Filter>Source Files\qtgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\navdlg.h">
-			<Filter>Source Files\qtgui</Filter>
-		</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\preview.h">
 			<Filter>Source Files\qtgui</Filter>
 		</ClInclude>
@@ -828,6 +858,9 @@
 		<ClInclude Include="..\.\src\qtgui\sceneimporter.h">
 			<Filter>Source Files\qtgui</Filter>
 		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\sceneinfodlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\sceneloader.h">
 			<Filter>Source Files\qtgui</Filter>
 		</ClInclude>
@@ -842,6 +875,9 @@
 		</ClInclude>
 		<ClInclude Include="..\.\src\qtgui\xmltreemodel.h">
 			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\shapes\instance.h">
+			<Filter>Source Files\shapes</Filter>
 		</ClInclude>
 		<ClInclude Include="..\.\src\shapes\shapegroup.h">
 			<Filter>Source Files\shapes</Filter>
@@ -871,6 +907,9 @@
 			<Filter>Header Files\mitsuba\core</Filter>
 		</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\bsphere.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\chisquare.h">
 			<Filter>Header Files\mitsuba\core</Filter>
 		</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\class.h">
@@ -1177,6 +1216,9 @@
 			<Filter>Header Files\mitsuba\render</Filter>
 		</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\render\phase.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\photon.h">
 			<Filter>Header Files\mitsuba\render</Filter>
 		</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\render\photonmap.h">
