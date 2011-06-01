@@ -111,6 +111,7 @@ def generate(env):
 
 	icpp_path = os.environ.get('ICPP_COMPOSER2011')
 	merge_script_vars(env, os.path.join(icpp_path, 'bin/iclvars.bat'), arch + ' ' + vsrelease)
+	env['REDIST_PATH'] = os.path.join(os.path.join(os.path.join(icpp_path, 'redist'), arch), 'compiler')
 
 def exists(env):
 	if 'INTEL_COMPILER' not in env or env['INTEL_COMPILER'] != True:

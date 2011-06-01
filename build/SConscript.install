@@ -63,6 +63,9 @@ if sys.platform == 'win32':
 	install('#dist', ['libcollada14dom23.dll', 'boost_system-%s-mt-1_44.dll' % compilerType,
 		'boost_filesystem-%s-mt-1_44.dll' % compilerType], dllprefix + '/' + compilerType + '/')
 
+	if 'REDIST_PATH' in env:
+		install('#dist', ['libmmd.dll', 'libiomp5md.dll'], prefix = env['REDIST_PATH'])
+
 	if hasQt:
 		install('#dist', ['qtgui/mtsgui.exe'])
 		install('#dist', ['QtCore4.dll', 'QtGui4.dll', 'QtXml4.dll',
