@@ -80,7 +80,7 @@ bool ConditionVariable::wait(int ms) {
 		switch (retval) {
 			case 0: return true;
 #if defined(WIN32)
-			case WSAETIMEDOUD: return false;
+			case WSAETIMEDOUT: return false;
 #endif
 			case ETIMEDOUT: return false;
 			case EINVAL: Log(EError, "Invalid condition variable/mutex or time interval (%i)!", ms);
