@@ -1,5 +1,6 @@
 BUILDDIR       = '#build/release'
 CXX			   = 'g++'
+CC			   = 'gcc'
 CXXFLAGS       = ['-arch', 'i386', '-arch', 'x86_64', '-mmacosx-version-min=10.5', '-march=nocona', '-msse2', '-mfpmath=sse', '-ftree-vectorize', '-funsafe-math-optimizations', '-fno-rounding-math', '-fno-signaling-nans', '-fomit-frame-pointer', '-isysroot', '/Developer/SDKs/MacOSX10.5.sdk', '-O3', '-Wall', '-g', '-pipe', '-DMTS_DEBUG', '-DSINGLE_PRECISION', '-DMTS_SSE', '-DMTS_HAS_COHERENT_RT', '-fopenmp', '-fstrict-aliasing', '-fsched-interblock', '-freorder-blocks']
 LINKFLAGS      = ['-framework', 'OpenGL', '-framework', 'Cocoa', '-arch', 'i386', '-arch', 'x86_64', '-mmacosx-version-min=10.5', '-Wl,-syslibroot,/Developer/SDKs/MacOSX10.5.sdk']
 BASEINCLUDE    = ['#include']

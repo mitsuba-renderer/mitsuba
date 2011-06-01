@@ -1,6 +1,6 @@
 BUILDDIR       = '#build/debug'
 CXX            = 'cl'
-GCC            = 'cl'
+CC             = 'cl'
 # /Ox=optimize for speed, global optimizations, intrinsic functions, favor fast code, frame pointer omission
 # /EHsc=C++ exceptions, /fp:fast=Enable reasonable FP optimizations, /GS-=No buffer security checks, /GL=whole program optimizations
 # To include debug information add '/Z7' to CXXFLAGS and '/DEBUG' to LINKFLAGS

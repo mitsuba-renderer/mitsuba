@@ -1,10 +1,8 @@
 BUILDDIR       = '#build/release'
-CXX            = 'cl'
-CC             = 'cl'
-# /Ox=optimize for speed, global optimizations, intrinsic functions, favor fast code, frame pointer omission
-# /EHsc=C++ exceptions, /fp:fast=Enable reasonable FP optimizations, /GS-=No buffer security checks, /GL=whole program optimizations
-# To include debug information add '/Z7' to CXXFLAGS and '/DEBUG' to LINKFLAGS
-CXXFLAGS       = ['/nologo', '/Ox', '/fp:fast', '/D', 'WIN32', '/D', 'WIN64', '/W3', '/EHsc', '/GS-', '/GL', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/openmp']
+CXX            = 'icl'
+CC             = 'icl'
+LINK           = 'xilink'
+CXXFLAGS       = ['/nologo', '/O3', '/Qipo', '/Qprec-div-', '/QxSSE2', '/QaxSSE3,SSE4.2', '/fp:fast=2', '/D', 'WIN32', '/D', 'WIN64', '/W3', '/EHsc', '/GS-', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/Qopenmp']
 SHCXXFLAGS     = CXXFLAGS
 TARGET_ARCH    = 'x86_64'
 MSVC_VERSION   = '10.0'

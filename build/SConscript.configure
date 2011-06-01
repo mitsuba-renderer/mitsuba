@@ -68,11 +68,11 @@ vars.Add('MSVC_VERSION',  'MS Visual C++ compiler version')
 vars.Add('QTDIR',         'Qt installation directory')
 
 try:
-	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt4'], toolpath=['#data'])
+	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt4', 'icl12'], toolpath=['#data/scons'])
 	print 'Checking for Qt 4.x... yes'
 	hasQt = True
 except Exception:
-	env = Environment(options=vars, ENV = os.environ, tools=['default'])
+	env = Environment(options=vars, ENV = os.environ, tools=['default', 'icl12'], toolpath=['#data/scons'])
 	print 'Unable to detect a Qt installation -- not building the GUI!'
 	hasQt = False
 
