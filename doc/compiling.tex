@@ -204,55 +204,16 @@ If all goes well, the build process will finish successfully after a few
 minutes. In comparison to the other platforms, you don't have to run the \code{setpath.sh} script at this point. 
 All binaries are now located in the \code{dist} directory, and they should be executed directly from there.
 \subsubsection{Integration with the Visual Studio interface}
-If you plan to modify Mitsuba and you enjoy working within the Visual
-Studio interface, the following steps should help you integrate the two
-(thanks to Marios Papas for this description!). They are written for Visual Studio 2008,
-hence some changes may be necessary on other versions. Also, they assume
-that you followed all of the previous steps.
+Basic Visual Studio 2008 and 2010 integration with support for code completion 
+exists for those who develop Mitsuba code on Windows. 
+To use the supplied projects, simply double-click on \code{build/mitsuba-msvc2008.sln} 
+or \code{build/mitsuba-msvc2010.sln}. These Visual Studio projects still internally
+use the SCons-based build system to compile Mitsuba; whatever 
+build configuration is selected within Visual Studio will be used to pick a matching
+configuration file from the \texttt{build} directory. Note that you will
+potentially have to add a \code{QTDIR=\"...\"} line to each of the
+affected configuration files when building directly from Visual Studio.
 
-\begin{enumerate}
-\item Create a copy of the file \code{config.py} in the Mitsuba root directory and
-save it as \code{config\_debug.py}. This configuration 
-will later be used to support debug
-builds. Open the file and make the following changes:
-\begin{enumerate}
-\item In \code{CXXFLAGS}, replace \code{/Ox} by \code{/Od} (this disables
-optimizations, which is necessary to see variable contents in the debugger)
-\item In \code{CXXFLAGS}, add an entry \code{'/Z7'}.
-\item In \code{LINKFLAGS}, add an entry \code{'/DEBUG'}.
-\end{enumerate}
-\item Now, start a fresh instance of Visual Studio and click on 
-the \emph{File$\to$New$\to$Project From Existing Code} menu entry.
-\item Choose \emph{Visual C++} from the drop-down menu and press \emph{Next}
-\item Specify the Mitsuba root directory at the top and enter \emph{mitsuba}
-as the project name. 
-
-In \emph{Add files to the project from these folders}, remove the Mitsuba 
-root directory and only add the \code{src} and \code{include} subdirectories. 
-This is crucial for IntelliSense to work.
-Uncheck \emph{Show all files in Solution explorer} and
-press \emph{Next}.
-\item Choose \emph{Use external build system} and press \emph{Next}.
-\item In the following, feel free to replace any occurrence of
-\code{scons} by \code{scons -jX}, where \code{X} is the number of
-cores in your machine (this will provide faster build times). 
-Fill in the following values:
-
-\begin{tabular}{lp{9cm}}
-\emph{Build command line}:&\code{scons {-}-cfg=config\_debug.py}\\
-\emph{Rebuild command line}:&\code{scons {-}-cfg=config\_debug.py -c \&\& scons {-}-cfg=config\_debug.py}\\
-\emph{Clean command line}:&\code{scons {-}-cfg=config\_debug.py -c}\\
-\emph{Output}:&\code{dist\textbackslash mtsgui.exe}\\
-\emph{Include search paths}:&\code{C:\textbackslash Qt\textbackslash
-include} (or wherever the Qt headers are installed on your machine)
-\end{tabular}
-\item On the next page, uncheck \emph{Same as Debug configuration}.
-Afterwards, enter exactly the same values as before except leaving out
-the \code{{-}-cfg=config\_debug.py} parameter to \code{scons}.
-\item Click \emph{Finish} and wait for IntelliSense to refresh (this might take
-a while).
-\item Switch to the Release configuration.
-\end{enumerate}
 \subsection{Building on Mac OS X}
 On Mac OS X, you will need to install both scons (\code{www.scons.org}) and 
 a recent release of XCode. You will also need to get Qt 4.7.0 or a newer version
