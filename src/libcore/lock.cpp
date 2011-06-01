@@ -80,9 +80,9 @@ bool ConditionVariable::wait(int ms) {
 		switch (retval) {
 			case 0: return true;
 			case ETIMEDOUT: return false;
-			case EINVAL: Log(EError, "Invalid condition variable/mutex!");
+			case EINVAL: Log(EError, "Invalid condition variable/mutex or time interval (%i)!", ms);
 			case EPERM: Log(EError, "Mutex is not owned by the current thread");
-			default: Log(EError, "Unknown return value (%i)!", retval);
+			default: Log(EError, "Unknown return value (%i) in ConditionVariable::wait(%i)!", retval, ms);
 				return false;
 		}
 	}
