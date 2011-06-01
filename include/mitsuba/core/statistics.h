@@ -124,7 +124,7 @@ public:
 	inline void operator+=(size_t amount) { }
 #elif defined(WIN64)
 	inline void operator+=(size_t amount) {
-		InterlockedExchangeAdd64(reinterpret_cast<LONG64 *>(&m_value[Thread::getID() & NUM_COUNTERS_MASK].value), 1);
+		InterlockedExchangeAdd64(reinterpret_cast<LONG64 *>(&m_value[Thread::getID() & NUM_COUNTERS_MASK].value), amount);
 	}
 #elif defined(WIN32)
 	inline void operator+=(size_t amount) {
@@ -141,7 +141,7 @@ public:
 	inline void incrementBase(size_t amount = 1) { }
 #elif defined(WIN64)
 	inline void incrementBase(size_t amount = 1) {
-		InterlockedExchangeAdd64(reinterpret_cast<LONG64 *>(&m_base[Thread::getID() & NUM_COUNTERS_MASK].value), 1);
+		InterlockedExchangeAdd64(reinterpret_cast<LONG64 *>(&m_base[Thread::getID() & NUM_COUNTERS_MASK].value), amount);
 	}
 #elif defined(WIN32)
 	inline void incrementBase(size_t amount = 1) {
