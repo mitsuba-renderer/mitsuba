@@ -25,7 +25,8 @@ if sys.platform == 'linux2':
 		pass
 	for plugin in plugins:
 		installTargets += env.Install('#dist/plugins', plugin)
-	install('#dist', ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil'])#, 'converter/mtsimport'])
+	install('#dist', ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil',
+		'converter/mtsimport', 'qtgui/mtsgui'])
 	install('#dist', ['libcore/libmitsuba-core.so', 'libhw/libmitsuba-hw.so',
 			'librender/libmitsuba-render.so'])
 if sys.platform == 'win32':
