@@ -77,11 +77,15 @@ bool ConditionVariable::wait(int ms) {
 		ts.tv_nsec = (tv.tv_usec + ms % 1000) * 1000;
 
 		int retval = pthread_cond_timedwait(&m_cond, &m_mutex->m_mutex, &ts);
+#if defined(WIN32)
+		/* Should be outside of the switch statement (depending
+		   on the used compiler, the constants ETIMEDOUT and WSAETIMEDOUT
+		   are potentially identical */   
+		if (retval == WSAETIMEDOUT)
+			return false;
+#endif
 		switch (retval) {
 			case 0: return true;
-#if defined(WIN32)
-			case WSAETIMEDOUT: return false;
-#endif
 			case ETIMEDOUT: return false;
 			case EINVAL: Log(EError, "Invalid condition variable/mutex or time interval (%i)!", ms);
 			case EPERM: Log(EError, "Mutex is not owned by the current thread");
