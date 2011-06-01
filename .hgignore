@@ -6,60 +6,32 @@
 ^doc/.*\.pdf$
 ^doc/.*\.toc$
 
-# Qt-related
-.*ui_.*\.h$
-.*moc_.*\.cc$
-.*qrc_.*\.cc$
-
 # Build-related
 ^\.sconf_temp/.*$
+^build/release/.*$
+^build/debug/.*$
 ^debian/.*$
+^plugins/.*$
 ^.sconsign.dblite$
 ^config.py$
 ^config.log$
 .*\.pyc$
+
+# MSVC++-related
+^build/mitsuba-msvc2010.sdf$
+^build/mitsuba-msvc2010.suo$
+^build/mitsuba-msvc2010.vcxproj.user$
+^build/mitsuba-msvc2008.ncb$
+^build/mitsuba-msvc2008.suo$
+^build/mitsuba-msvc2008\..*\.user$
+^data/windows/mitsuba_res.res$
+^dist/.*$
 
 # Dependencies
 ^dependencies/.*$
 
 # OSX binaries and byproducts
 ^Mitsuba.app/.*$
-\.DS_Store
-.*\.dylib$
-
-# Linux binaries and byproducts
-^src/utils/createvol$
-^src/utils/dumpimage$
-^src/utils/joinrgb$
-^src/utils/ttest$
-^mitsuba$
-^mtssrv$
-^mtsgui$
-^mtsimport$
-^mtsutil$
-.*\.so$
-.*\.os$
-.*\.o$
-
-
-# Windows binaries and byproducts
-^Release/.*$
-^Debug/.*$
-^mitsuba.ncb$
-^mitsuba.suo$
-^mitsuba\.vcproj\..*$
-.*\.exe$
-.*\.obj$
-^src/.*\.lib$
-^src/.*\.dll$
-^plugins/.*\.lib$
-^plugins/.*\.dll$
-^dist/.*$
-data/windows/mitsuba_res.res
-.*\.pdb$
-.*\.manifest$
-.*\.exp$
-
 
 # Imported geometry and some default output types
 ^meshes/.*$
