@@ -93,12 +93,14 @@ def merge_script_vars(env,script,args=None,vars=None):
 		env.PrependENVPath(k, v, delete_existing=1)
 
 def generate(env):
+	if 'INTEL_COMPILER' not in env or env['INTEL_COMPILER'] != True:
+		return
 	if env['TARGET_ARCH'] == 'x86':
 		arch = 'ia32'
-	elif env['TARGET_ARCH'] == 'x86_64':
+	elif env['TARGET_ARCH'] == 'x86_64' or env['TARGET_ARCH'] == 'amd64':
 		arch = 'ia32_intel64'
 	else:
-		raise Exception('Unknown architecture!')
+		raise Exception('Unknown architecture ' + env['TARGET_ARCH'])
 
 	if env['MSVC_VERSION'] == '9.0':
 		vsrelease = 'vs2008'
@@ -111,5 +113,7 @@ def generate(env):
 	merge_script_vars(env, os.path.join(icpp_path, 'bin/iclvars.bat'), arch + ' ' + vsrelease)
 
 def exists(env):
+	if 'INTEL_COMPILER' not in env or env['INTEL_COMPILER'] != True:
+		return False
 	return 'ICPP_COMPOSER2011' in os.environ
 
