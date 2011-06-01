@@ -24,7 +24,6 @@
 #include "sceneinfodlg.h"
 #include "sceneloader.h"
 #include "logwidget.h"
-#include "navdlg.h"
 #include "aboutdlg.h"
 #include "importdlg.h"
 #include "loaddlg.h"
@@ -141,8 +140,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	/* Load defaults from app settings file */
 	ui->glView->setInvertMouse(settings.value("invertMouse", false).toBool());
 	ui->glView->setMouseSensitivity(settings.value("mouseSensitivity", 3).toInt());
-	ui->glView->setNavigationMode((ENavigationMode) settings.value("navigationMode", 
-		EArcBall).toInt());
+	ui->glView->setNavigationMode((ENavigationMode) settings.value("navMode", 
+		EStandard).toInt());
 	m_searchPaths = settings.value("searchPaths", QStringList()).toStringList();
 	m_blockSize = settings.value("blockSize", 32).toInt();
 	m_listenPort = settings.value("listenPort", MTS_DEFAULT_PORT).toInt();
@@ -1094,7 +1093,7 @@ void MainWindow::on_actionSettings_triggered() {
 		settings.setValue("mouseSensitivity", d.getMouseSensitivity());
 		settings.setValue("listenPort", d.getListenPort());
 		settings.setValue("nodeName", d.getNodeName());
-		settings.setValue("navigationMode", (int) d.getNavigationMode());
+		settings.setValue("navMode", (int) d.getNavigationMode());
 		settings.setValue("workerPriority", d.getWorkerPriority());
 
 		logger->setLogLevel(d.getLogLevel());
@@ -1406,11 +1405,6 @@ void MainWindow::onSaveAsDialogClose(int reason) {
 	}
 }
 
-void MainWindow::on_actionNavigationControls_triggered() {
-	NavigationDialog nav(this);
-	nav.exec();
-}
-
 void MainWindow::on_actionReferenceManual_triggered() {
 	QDesktopServices::openUrl(QUrl("http://www.mitsuba-renderer.org/docs.html"));
 }
@@ -1684,8 +1678,8 @@ SceneContext::SceneContext(SceneContext *ctx) {
 
 		scene = new Scene(ctx->scene);
 		ref<PluginManager> pluginMgr = PluginManager::getInstance();
-		ref<PinholeCamera> oldCamera = static_cast<PinholeCamera *>(ctx->scene->getCamera());
-		ref<PinholeCamera> camera = static_cast<PinholeCamera *> 
+		ref<PerspectiveCamera> oldCamera = static_cast<PerspectiveCamera *>(ctx->scene->getCamera());
+		ref<PerspectiveCamera> camera = static_cast<PerspectiveCamera *> 
 			(pluginMgr->createObject(MTS_CLASS(Camera), oldCamera->getProperties()));
 		ref<Sampler> sampler = static_cast<Sampler *> 
 			(pluginMgr->createObject(MTS_CLASS(Sampler), ctx->scene->getSampler()->getProperties()));

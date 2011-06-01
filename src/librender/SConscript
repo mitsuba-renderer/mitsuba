@@ -1,4 +1,4 @@
-Import('env', 'sys')
+Import('env', 'sys', 'os')
 
 renderEnv = env.Clone()
 renderEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_RENDER']] )
@@ -26,4 +26,4 @@ if sys.platform == "darwin":
 	renderEnv.AddPostAction(librender, 'install_name_tool -id @executable_path/../Frameworks/libmitsuba-render.dylib $TARGET')
 
 env.Append(LIBS=['mitsuba-render'])
-env.Append(LIBPATH=['#src/librender'])
+env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'librender')])

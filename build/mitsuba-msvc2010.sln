@@ -1,7 +1,7 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mitsuba", "mitsuba.vcproj", "{BA3C2621-9FB1-4348-9059-AFC8CCAB25E9}"
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mitsuba", "mitsuba-msvc2010.vcxproj", "{BA3C2621-9FB1-4348-9059-AFC8CCAB25E9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

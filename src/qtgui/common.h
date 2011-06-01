@@ -33,8 +33,7 @@ enum EConnectionType {
 };
 
 enum ENavigationMode {
-	EArcBall = 0,
-	EFlythroughFixedYaw,
+	EStandard = 0,
 	EFlythrough
 };
 

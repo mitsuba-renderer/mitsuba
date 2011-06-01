@@ -1,13 +1,13 @@
-CXX            = 'cl'
-GCC            = 'cl'
-# /Ox=optimize for speed, global optimizations, intrinsic functions, favor fast code, frame pointer omission
-# /EHsc=C++ exceptions, /fp:fast=Enable reasonable FP optimizations, /GS-=No buffer security checks, /GL=whole program optimizations
-# To include debug information add '/Z7' to CXXFLAGS and '/DEBUG' to LINKFLAGS
-CXXFLAGS       = ['/nologo', '/Od', '/Z7', '/fp:fast', '/arch:SSE2' ,'/D', 'WIN32', '/W3', '/EHsc', '/GS-', '/GL', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/openmp']
+BUILDDIR       = '#build/release'
+CXX            = 'icl'
+CC             = 'icl'
+LINK           = 'xilink'
+CXXFLAGS       = ['/nologo', '/O3', '/Qipo', '/QxSSE2', '/QaxSSE3,SSE4.2', '/fp:fast=2', '/D', 'WIN32', '/W3', '/Qdiag-disable:2586', '/EHsc', '/GS-', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/Qopenmp']
 SHCXXFLAGS     = CXXFLAGS
 TARGET_ARCH    = 'x86'
 MSVC_VERSION   = '10.0'
-LINKFLAGS      = ['/nologo', '/SUBSYSTEM:CONSOLE', '/DEBUG', '/MACHINE:X86', '/FIXED:NO', '/OPT:REF', '/OPT:ICF', '/LTCG', '/NODEFAULTLIB:LIBCMT']
+INTEL_COMPILER = True
+LINKFLAGS      = ['/nologo', '/SUBSYSTEM:CONSOLE', '/MACHINE:X86', '/FIXED:NO', '/OPT:REF', '/OPT:ICF', '/NODEFAULTLIB:LIBCMT', '/MANIFEST', '/Qdiag-disable:11024']
 BASEINCLUDE    = ['#include', '#dependencies/windows/include']
 BASELIB        = ['pthreadVCE2', 'msvcrt', 'ws2_32']
 OEXRINCLUDE    = ['#dependencies/windows/include/OpenEXR']

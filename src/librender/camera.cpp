@@ -78,12 +78,14 @@ void Camera::serialize(Stream *stream, InstanceManager *manager) const {
 
 void Camera::generateRayDifferential(const Point2 &sample,
 	const Point2 &lensSample, Float timeSample, RayDifferential &ray) const {
-
+	Ray tempRay;
 	generateRay(sample, lensSample, timeSample, ray);
 	Point2 temp = sample; temp.x += 1; 
-	generateRay(temp, lensSample, timeSample, ray.rx);
+	generateRay(temp, lensSample, timeSample, tempRay);
+	ray.rxOrigin = tempRay.o; ray.rxDirection = tempRay.d;
 	temp = sample; temp.y += 1;
-	generateRay(temp, lensSample, timeSample, ray.ry);
+	generateRay(temp, lensSample, timeSample, tempRay);
+	ray.ryOrigin = tempRay.o; ray.ryDirection = tempRay.d;
 	ray.hasDifferentials = true;
 }
 
@@ -150,37 +152,41 @@ void ProjectiveCamera::serialize(Stream *stream, InstanceManager *manager) const
 	stream->writeFloat(m_aspect);
 }
 
-PinholeCamera::PinholeCamera(const Properties &props)
+PerspectiveCamera::PerspectiveCamera(const Properties &props)
  : ProjectiveCamera(props) {
 	/* Field of view of the camera (in degrees) */
-	m_fov = props.getFloat("fov", 90);
+	m_fov = props.getFloat("fov", 45);
 	/* Specifies which side of the image plane should cover the
 	   field of view specified in the <tt>fov</tt> parameter
 	*/
 	m_mapSmallerSide = props.getBoolean("mapSmallerSide", true);
+	/* Distance to the focal plane */
+	m_focusDepth = props.getFloat("focusDepth", m_farClip);
+	/* World-space aperture radius */
+	m_apertureRadius = props.getFloat("apertureRadius", 0.0f);
 }
 	
-PinholeCamera::PinholeCamera(Stream *stream, InstanceManager *manager)
+PerspectiveCamera::PerspectiveCamera(Stream *stream, InstanceManager *manager)
  : ProjectiveCamera(stream, manager) {
 	m_fov = stream->readFloat();
+	m_apertureRadius = stream->readFloat();
+	m_focusDepth = stream->readFloat();
 	m_mapSmallerSide = stream->readBool();
 }
 
-void PinholeCamera::serialize(Stream *stream, InstanceManager *manager) const {
+void PerspectiveCamera::serialize(Stream *stream, InstanceManager *manager) const {
 	ProjectiveCamera::serialize(stream, manager);
 
 	stream->writeFloat(m_fov);
+	stream->writeFloat(m_apertureRadius);
+	stream->writeFloat(m_focusDepth);
 	stream->writeBool(m_mapSmallerSide);
 }
 
-void PinholeCamera::configure() {
+void PerspectiveCamera::configure() {
 	ProjectiveCamera::configure();
 
-	bool mapYToNDC01 = (m_aspect >= 1.0f);
-	if (!m_mapSmallerSide)
-		mapYToNDC01 = !mapYToNDC01;
-
-	if (mapYToNDC01) {
+	if ((m_aspect >= 1.0f) ^ !m_mapSmallerSide) {
 		m_yfov = m_fov;
 		m_xfov = radToDeg(2 * std::atan(std::tan(degToRad(m_fov)/2) * m_aspect));
 	} else {
@@ -195,14 +201,14 @@ void PinholeCamera::configure() {
 	m_imagePlaneInvArea = 1 / (m_imagePlaneSize.x * m_imagePlaneSize.y);
 }
 
-Float PinholeCamera::importance(const Point2 &p) const {
+Float PerspectiveCamera::importance(const Point2 &p) const {
 	Float x = (p.x * m_imagePlanePixelSize.x) - .5f * m_imagePlaneSize.x;
 	Float y = (p.y * m_imagePlanePixelSize.y) - .5f * m_imagePlaneSize.y;
 
 	return std::pow(1 + x*x+y*y, (Float) (3.0/2.0)) * m_imagePlaneInvArea;
 }
 
-Float PinholeCamera::importance(const Vector &v) const {
+Float PerspectiveCamera::importance(const Vector &v) const {
 	Vector localV;
 	m_worldToCamera(v, localV);
 	if (localV.z <= 0.0f) 
@@ -216,11 +222,15 @@ Float PinholeCamera::importance(const Vector &v) const {
 		(Float) (3.0/2.0)) * m_imagePlaneInvArea;
 }
 
-Vector2 PinholeCamera::getImagePlaneSize(Float dist) const {
+bool PerspectiveCamera::needsLensSample() const {
+	return m_apertureRadius > 0.0f;
+}
+
+Vector2 PerspectiveCamera::getImagePlaneSize(Float dist) const {
 	return m_imagePlaneSize * dist;
 }
 
 MTS_IMPLEMENT_CLASS(Camera, true, ConfigurableObject)
 MTS_IMPLEMENT_CLASS(ProjectiveCamera, true, Camera)
-MTS_IMPLEMENT_CLASS(PinholeCamera, true, ProjectiveCamera)
+MTS_IMPLEMENT_CLASS(PerspectiveCamera, true, ProjectiveCamera)
 MTS_NAMESPACE_END

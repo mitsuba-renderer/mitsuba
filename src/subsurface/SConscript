@@ -1,6 +1,6 @@
 Import('env', 'plugins')
 
-plugins += env.SharedLibrary('#plugins/dipole', 
+plugins += env.SharedLibrary('dipole', 
 	['dipole.cpp', 'irrproc.cpp', 'irrtree.cpp'])
 
 Export('plugins')

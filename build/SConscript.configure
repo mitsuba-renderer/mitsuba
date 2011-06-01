@@ -1,6 +1,6 @@
 import multiprocessing
 
-Import('sys', 'os', 'SCons')
+Import('sys', 'os', 'SCons', 'resources')
 
 AddOption("--cfg", dest="cfg", type="string", nargs=1, action='store', help='Manually specify a configuration file')
 configFile = GetOption('cfg')
@@ -16,7 +16,7 @@ if parallelize == True:
 	SetOption('num_jobs', multiprocessing.cpu_count())
 
 if not os.path.exists(configFile):
-	print 'A configuration file must be selected! Have a look at \"README\"'
+	print 'A configuration file must be selected! Have a look at http://www.mitsuba-renderer.org/docs.html'
 	Exit(1)
 
 if (sys.platform == 'win32' or sys.platform == 'darwin') and not os.path.exists(GetBuildPath('#dependencies')):
@@ -25,6 +25,7 @@ if (sys.platform == 'win32' or sys.platform == 'darwin') and not os.path.exists(
 
 # Parse configuration options
 vars = Variables(configFile)
+vars.Add('BUILDDIR',      'Target directory for intermediate files')
 vars.Add('CXX',           'C++ compiler')
 vars.Add('CC',            'C compiler')
 vars.Add('CXXFLAGS',      'C++ flags')
@@ -65,13 +66,14 @@ vars.Add('BOOSTLIBDIR',   'Boost library path')
 vars.Add('TARGET_ARCH',   'Target architecture')
 vars.Add('MSVC_VERSION',  'MS Visual C++ compiler version')
 vars.Add('QTDIR',         'Qt installation directory')
+vars.Add('INTEL_COMPILER','Should the Intel C++ compiler be used?')
 
 try:
-	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt4'], toolpath=['#data'])
+	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt4', 'icl12'], toolpath=['#data/scons'])
 	print 'Checking for Qt 4.x... yes'
 	hasQt = True
 except Exception:
-	env = Environment(options=vars, ENV = os.environ, tools=['default'])
+	env = Environment(options=vars, ENV = os.environ, tools=['default', 'icl12'], toolpath=['#data/scons'])
 	print 'Unable to detect a Qt installation -- not building the GUI!'
 	hasQt = False
 
@@ -90,7 +92,6 @@ if env.has_key('BASELIBDIR'):
 	env.Append(LIBPATH=env['BASELIBDIR'])
 
 env.Decider('MD5-timestamp')
-#env.SetOption('num_jobs', multiprocessing.cpu_count())
 
 AddOption("--dist", dest="dist", action="store_true", help='Make an official release')
 
@@ -211,6 +212,7 @@ else:
 Export('MTS_VERSION')
 
 env = conf.Finish()
+
 dist = GetOption('dist') != None
 Export('dist')
 
@@ -232,11 +234,6 @@ if sys.platform == 'win32':
 	env['LINKCOM'] = [env['LINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;1']
 	env['SHLINKCOM'] = [env['SHLINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;2']
 
-try:
-	os.mkdir(env.GetBuildPath('#plugins'))
-except:
-	pass
-
-env.Export('hasQt', 'hasCollada')
+env.Export('hasQt', 'hasCollada', 'resources')
 
 Return('env')

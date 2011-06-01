@@ -1,0 +1,1306 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <ItemGroup Label="Filters">
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+   <Filter Include="Source Files\bsdfs">
+			<UniqueIdentifier>{7cc9fd52-85aa-46ba-8f63-1769e6160a13}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\cameras">
+			<UniqueIdentifier>{0a402cf3-60ad-462b-b13d-01dbf7e24ef1}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\converter">
+			<UniqueIdentifier>{e8a642af-0a0c-4ade-b0bf-38aedce8496a}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\films">
+			<UniqueIdentifier>{ca686a71-4bde-45dd-b982-54540bf2b201}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\integrators">
+			<UniqueIdentifier>{3a049a11-b32f-47c9-b268-6c5f6785d54c}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\integrators\direct">
+			<UniqueIdentifier>{5866cfd1-bf8c-468c-ab14-2a5a29c96fe7}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\integrators\misc">
+			<UniqueIdentifier>{9b747d82-a094-4395-bd54-29b5fc8c80e3}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\integrators\path">
+			<UniqueIdentifier>{04355f36-da7a-48a3-b176-de47068aab65}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\integrators\photonmapper">
+			<UniqueIdentifier>{aca75731-874b-42be-9ee5-c0f30a0d1eef}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\integrators\vpl">
+			<UniqueIdentifier>{f90fb88d-8c0b-4bde-a02e-2796fde95bec}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\libcore">
+			<UniqueIdentifier>{7f53cc5f-06e8-415d-8f3c-c7c2cb606cc6}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\libhw">
+			<UniqueIdentifier>{8ea6bfa1-15cf-49da-a038-1156ec313d12}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\librender">
+			<UniqueIdentifier>{e694e818-ffb0-4412-8158-cd28a98ff7fb}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\luminaires">
+			<UniqueIdentifier>{de000fb1-6d0e-4318-9901-6b4ccaadbbf9}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\medium">
+			<UniqueIdentifier>{e96338d7-42a6-4253-b1c7-a154e36405d2}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\mitsuba">
+			<UniqueIdentifier>{c60f7eae-6c97-494b-ae30-3db86089f477}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\phase">
+			<UniqueIdentifier>{6851b0a6-ef2f-40c4-aa07-15dbf665d562}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\qtgui">
+			<UniqueIdentifier>{7c86af5b-e9d3-4999-9f3e-bd761db1e610}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\qtgui\resources">
+			<UniqueIdentifier>{7fc76ed5-bb1c-4185-99a1-135ab120a324}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\rfilters">
+			<UniqueIdentifier>{646b3917-a5e5-44b0-bfb7-621c6fa4c321}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\samplers">
+			<UniqueIdentifier>{9cae7fac-088c-4c04-9376-74f5e003c068}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\shapes">
+			<UniqueIdentifier>{8f0b87e6-51c9-4c38-8dbd-0141e2d201f6}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\shapes\ply">
+			<UniqueIdentifier>{667e4f90-6a0c-4cab-a17f-1a7a0d7daf97}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\shapes\ply\ply">
+			<UniqueIdentifier>{5b58e373-de5f-4679-857f-4cf4ea228be1}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\subsurface">
+			<UniqueIdentifier>{cad7a7f1-7c4d-4dc5-a1f4-6cede9526ac3}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\tests">
+			<UniqueIdentifier>{71910c3c-fe18-48b4-b318-aa6eda3510e5}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\textures">
+			<UniqueIdentifier>{194ce64b-1611-4fc7-8572-b00dc8abbeef}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\utils">
+			<UniqueIdentifier>{34ce6e04-4d1e-4c14-9b3e-4d09003dbb44}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Source Files\volume">
+			<UniqueIdentifier>{9a6a92af-c29d-45f8-b209-c4e6c8af09cb}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Header Files\mitsuba">
+			<UniqueIdentifier>{2445c3b8-6a59-4685-ac89-989371c1a1f2}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Header Files\mitsuba\core">
+			<UniqueIdentifier>{70fcace6-74e4-462c-b501-8677a6950e6a}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Header Files\mitsuba\hw">
+			<UniqueIdentifier>{292ae7ab-f2f8-448e-8d84-ea5f555b31e4}</UniqueIdentifier>
+		</Filter>
+		<Filter Include="Header Files\mitsuba\render">
+			<UniqueIdentifier>{ada272f5-c12c-4248-8a85-9e0bcd9b7416}</UniqueIdentifier>
+		</Filter>
+		</ItemGroup>
+  <ItemGroup Label="Source Files">
+  <ClCompile Include="..\.\src\bsdfs\composite.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\dielectric.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\difftrans.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\irawan.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\lambertian.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\mask.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\microfacet.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\mirror.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\phong.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\roughglass.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\roughmetal.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\transparent.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\twosided.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\ward.cpp">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\cameras\orthographic.cpp">
+			<Filter>Source Files\cameras</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\cameras\perspective.cpp">
+			<Filter>Source Files\cameras</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\converter\collada.cpp">
+			<Filter>Source Files\converter</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\converter\converter.cpp">
+			<Filter>Source Files\converter</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\converter\mtsimport.cpp">
+			<Filter>Source Files\converter</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\converter\obj.cpp">
+			<Filter>Source Files\converter</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\films\exrfilm.cpp">
+			<Filter>Source Files\films</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\films\mfilm.cpp">
+			<Filter>Source Files\films</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\films\pngfilm.cpp">
+			<Filter>Source Files\films</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\direct\direct.cpp">
+			<Filter>Source Files\integrators\direct</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\misc\errctrl.cpp">
+			<Filter>Source Files\integrators\misc</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\misc\irrcache.cpp">
+			<Filter>Source Files\integrators\misc</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\misc\irrcache_proc.cpp">
+			<Filter>Source Files\integrators\misc</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\path\path.cpp">
+			<Filter>Source Files\integrators\path</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\path\ptracer.cpp">
+			<Filter>Source Files\integrators\path</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\path\ptracer_proc.cpp">
+			<Filter>Source Files\integrators\path</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\path\volpath.cpp">
+			<Filter>Source Files\integrators\path</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\path\volpath_simple.cpp">
+			<Filter>Source Files\integrators\path</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\photonmapper\bre.cpp">
+			<Filter>Source Files\integrators\photonmapper</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\photonmapper\photonmapper.cpp">
+			<Filter>Source Files\integrators\photonmapper</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\photonmapper\ppm.cpp">
+			<Filter>Source Files\integrators\photonmapper</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\photonmapper\sppm.cpp">
+			<Filter>Source Files\integrators\photonmapper</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\integrators\vpl\vpl.cpp">
+			<Filter>Source Files\integrators\vpl</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\aabb.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\appender.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\bitmap.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\brent.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\class.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\cstream.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\formatter.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\fresolver.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\fstream.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\getopt.c">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\lock.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\logger.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\mmap.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\mstream.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\object.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\platform_win32.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\plugin.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\properties.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\quad.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\random.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\sched.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\sched_remote.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\serialization.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\shvector.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\spectrum.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\sshstream.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\sstream.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\statistics.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\stream.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\thread.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\timer.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\transform.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\triangle.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\util.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\wavelet.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libcore\zstream.cpp">
+			<Filter>Source Files\libcore</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\device.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\font.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\glgeometry.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\glprogram.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\glrenderer.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\glsync.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\gltexture.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\glxdevice.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\glxrenderer.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\gpugeometry.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\gpuprogram.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\gpusync.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\gputexture.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\renderer.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\session.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\viewer.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\vpl.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\wgldevice.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\wglrenderer.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\wglsession.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\x11device.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\libhw\x11session.cpp">
+			<Filter>Source Files\libhw</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\bsdf.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\camera.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\common.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\film.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\gatherproc.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\imageblock.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\imageproc.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\integrator.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\intersection.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\irrcache.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\luminaire.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\medium.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\mipmap.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\mipmap3d.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\noise.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\particleproc.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\phase.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\photon.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\photonmap.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\preview.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\rectwu.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\renderjob.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\renderproc.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\renderqueue.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\rfilter.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\sampler.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\scene.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\scenehandler.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\shader.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\shape.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\skdtree.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\subsurface.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\testcase.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\texture.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\track.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\trimesh.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\util.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\volume.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\librender\vpl.cpp">
+			<Filter>Source Files\librender</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\luminaires\area.cpp">
+			<Filter>Source Files\luminaires</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\luminaires\collimated.cpp">
+			<Filter>Source Files\luminaires</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\luminaires\constant.cpp">
+			<Filter>Source Files\luminaires</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\luminaires\directional.cpp">
+			<Filter>Source Files\luminaires</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\luminaires\envmap.cpp">
+			<Filter>Source Files\luminaires</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\luminaires\point.cpp">
+			<Filter>Source Files\luminaires</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\luminaires\spot.cpp">
+			<Filter>Source Files\luminaires</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\medium\heterogeneous.cpp">
+			<Filter>Source Files\medium</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\medium\homogeneous.cpp">
+			<Filter>Source Files\medium</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\mitsuba\mitsuba.cpp">
+			<Filter>Source Files\mitsuba</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\mitsuba\mtssrv.cpp">
+			<Filter>Source Files\mitsuba</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\mitsuba\mtsutil.cpp">
+			<Filter>Source Files\mitsuba</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\phase\hg.cpp">
+			<Filter>Source Files\phase</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\phase\isotropic.cpp">
+			<Filter>Source Files\phase</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\phase\kkay.cpp">
+			<Filter>Source Files\phase</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\phase\microflake.cpp">
+			<Filter>Source Files\phase</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\aboutdlg.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\acknowledgmentdlg.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\addserverdlg.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\glwidget.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\importdlg.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\loaddlg.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\locateresourcedlg.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\logwidget.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\main.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\mainwindow.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\preview.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\previewsettingsdlg.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\previewsettingsdlg_cocoa.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\preview_proc.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\programsettingsdlg.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\rendersettingsdlg.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\save.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\sceneimporter.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\sceneinfodlg.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\sceneloader.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\server.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\tabbar.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\updatedlg.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\qtgui\xmltreemodel.cpp">
+			<Filter>Source Files\qtgui</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\rfilters\box.cpp">
+			<Filter>Source Files\rfilters</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\rfilters\catmullrom.cpp">
+			<Filter>Source Files\rfilters</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\rfilters\gaussian.cpp">
+			<Filter>Source Files\rfilters</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\rfilters\mitchell.cpp">
+			<Filter>Source Files\rfilters</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\rfilters\wsinc.cpp">
+			<Filter>Source Files\rfilters</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\samplers\halton.cpp">
+			<Filter>Source Files\samplers</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\samplers\hammersley.cpp">
+			<Filter>Source Files\samplers</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\samplers\independent.cpp">
+			<Filter>Source Files\samplers</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\samplers\ldsampler.cpp">
+			<Filter>Source Files\samplers</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\samplers\stratified.cpp">
+			<Filter>Source Files\samplers</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\shapes\animatedinstance.cpp">
+			<Filter>Source Files\shapes</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\shapes\cylinder.cpp">
+			<Filter>Source Files\shapes</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\shapes\hair.cpp">
+			<Filter>Source Files\shapes</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\shapes\instance.cpp">
+			<Filter>Source Files\shapes</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\shapes\obj.cpp">
+			<Filter>Source Files\shapes</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\shapes\ply\ply.cpp">
+			<Filter>Source Files\shapes\ply</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\shapes\ply\ply_parser.cpp">
+			<Filter>Source Files\shapes\ply</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\shapes\serialized.cpp">
+			<Filter>Source Files\shapes</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\shapes\shapegroup.cpp">
+			<Filter>Source Files\shapes</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\shapes\sphere.cpp">
+			<Filter>Source Files\shapes</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\subsurface\adipole.cpp">
+			<Filter>Source Files\subsurface</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\subsurface\dipole.cpp">
+			<Filter>Source Files\subsurface</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\subsurface\irrproc.cpp">
+			<Filter>Source Files\subsurface</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\subsurface\irrtree.cpp">
+			<Filter>Source Files\subsurface</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\tests\test_kd.cpp">
+			<Filter>Source Files\tests</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\tests\test_la.cpp">
+			<Filter>Source Files\tests</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\tests\test_quad.cpp">
+			<Filter>Source Files\tests</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\tests\test_samplers.cpp">
+			<Filter>Source Files\tests</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\tests\test_sh.cpp">
+			<Filter>Source Files\tests</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\textures\checkerboard.cpp">
+			<Filter>Source Files\textures</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\textures\exrtexture.cpp">
+			<Filter>Source Files\textures</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\textures\gridtexture.cpp">
+			<Filter>Source Files\textures</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\textures\ldrtexture.cpp">
+			<Filter>Source Files\textures</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\textures\vertexcolors.cpp">
+			<Filter>Source Files\textures</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\utils\addimages.cpp">
+			<Filter>Source Files\utils</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\utils\cylclip.cpp">
+			<Filter>Source Files\utils</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\utils\joinrgb.cpp">
+			<Filter>Source Files\utils</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\utils\kdbench.cpp">
+			<Filter>Source Files\utils</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\utils\tonemap.cpp">
+			<Filter>Source Files\utils</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\utils\ttest.cpp">
+			<Filter>Source Files\utils</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\utils\uflakefit.cpp">
+			<Filter>Source Files\utils</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\volume\constvolume.cpp">
+			<Filter>Source Files\volume</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\volume\gridvolume.cpp">
+			<Filter>Source Files\volume</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\volume\hgridvolume.cpp">
+			<Filter>Source Files\volume</Filter>
+		</ClCompile>
+		<ClCompile Include="..\.\src\volume\volcache.cpp">
+			<Filter>Source Files\volume</Filter>
+		</ClCompile>
+		</ItemGroup>
+  <ItemGroup Label="Header Files">
+  <ClInclude Include="..\.\src\bsdfs\irawan.h">
+			<Filter>Source Files\bsdfs</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\converter\converter.h">
+			<Filter>Source Files\converter</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\films\banner.h">
+			<Filter>Source Files\films</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\integrators\misc\irrcache_proc.h">
+			<Filter>Source Files\integrators\misc</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\integrators\path\ptracer_proc.h">
+			<Filter>Source Files\integrators\path</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\integrators\photonmapper\bre.h">
+			<Filter>Source Files\integrators\photonmapper</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\libhw\vera14_dsc.h">
+			<Filter>Source Files\libhw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\libhw\vera14_png.h">
+			<Filter>Source Files\libhw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\libhw\veramono14_dsc.h">
+			<Filter>Source Files\libhw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\libhw\veramono14_png.h">
+			<Filter>Source Files\libhw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\medium\maxexp.h">
+			<Filter>Source Files\medium</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\phase\microflake_fiber.h">
+			<Filter>Source Files\phase</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\aboutdlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\acknowledgmentdlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\addserverdlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\common.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\glwidget.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\importdlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\loaddlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\locateresourcedlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\logwidget.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\mainwindow.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\preview.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\previewsettingsdlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\previewsettingsdlg_cocoa.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\preview_proc.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\programsettingsdlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\rendersettingsdlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\save.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\sceneimporter.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\sceneinfodlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\sceneloader.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\server.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\tabbar.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\updatedlg.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\qtgui\xmltreemodel.h">
+			<Filter>Source Files\qtgui</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\shapes\instance.h">
+			<Filter>Source Files\shapes</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\shapes\shapegroup.h">
+			<Filter>Source Files\shapes</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\subsurface\irrproc.h">
+			<Filter>Source Files\subsurface</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\src\subsurface\irrtree.h">
+			<Filter>Source Files\subsurface</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\aabb.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\aabb_sse.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\appender.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\atomic.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\bitmap.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\brent.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\bsphere.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\chisquare.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\class.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\cobject.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\constants.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\cstream.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\formatter.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\frame.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\fresolver.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\fstream.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\fwd.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\getopt.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\grid.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\kdtree.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\lock.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\logger.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\lrucache.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\matrix.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\matrix.inl">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\mempool.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\mmap.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\mstream.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\netobject.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\normal.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\object.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\octree.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\pdf.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\platform.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\plugin.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\point.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\properties.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\quad.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\quat.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\random.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\ray.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\ref.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\sched.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\sched_remote.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\serialization.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\sfcurve.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\shvector.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\shvector4d.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\spectrum.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\sse.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\sshstream.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\sstream.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\statistics.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\stl.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\stream.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\thread.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\timer.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\tls.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\transform.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\triangle.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\util.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\vector.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\wavelet.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\zstream.h">
+			<Filter>Header Files\mitsuba\core</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\device.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\font.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\glgeometry.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\glprogram.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\glrenderer.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\glsync.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\gltexture.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\glxdevice.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\glxrenderer.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\gpugeometry.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\gpuprogram.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\gpusync.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\gputexture.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\nsgldevice.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\nsglkeys.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\nsglrenderer.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\nsglsession.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\renderer.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\session.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\viewer.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\vpl.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\wgldevice.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\wglrenderer.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\wglsession.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\x11device.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\x11session.h">
+			<Filter>Header Files\mitsuba\hw</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\mitsuba.h">
+			<Filter>Header Files\mitsuba</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\bsdf.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\camera.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\common.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\consttexture.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\film.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\fwd.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\gatherproc.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\gkdtree.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\imageblock.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\imageproc.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\integrator.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\irrcache.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\luminaire.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\medium.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\mipmap.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\mipmap3d.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\noise.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\particleproc.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\phase.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\photon.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\photonmap.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\preview.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\range.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\records.inl">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\rectwu.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\renderjob.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\renderproc.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\renderqueue.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\rfilter.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\sahkdtree3.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\sampler.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\scene.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\scenehandler.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\shader.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\shape.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\skdtree.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\spiral.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\subsurface.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\testcase.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\texture.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\track.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\triaccel.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\triaccel_sse.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\trimesh.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\util.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\volume.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\render\vpl.h">
+			<Filter>Header Files\mitsuba\render</Filter>
+		</ClInclude>
+		</ItemGroup>
+</Project>

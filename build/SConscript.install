@@ -1,0 +1,125 @@
+import fnmatch
+
+Import('env', 'os', 'sys', 'plugins', 'dist', 
+	'MTS_VERSION', 'hasQt', 'hasCollada')
+
+installTargets = []
+
+def install(target, paths, prefix = None):
+	global installTargets
+	if prefix == None:
+		prefix = env['BUILDDIR']
+	for path in paths:
+		if os.path.splitext(path)[1] == '.dylib':
+			installTargets += env.OSXLibInst(target, prefix + '/' + path)
+		else:
+			installTargets += env.Install(target, prefix + '/' + path)
+
+if sys.platform == 'linux2':
+	try:
+		distDir = env.GetBuildPath('#dist')
+		os.mkdir(distDir)
+		os.mkdir(distDir+'/plugins')
+		os.mkdir(distDir+'/schema')
+	except:
+		pass
+	for plugin in plugins:
+		installTargets += env.Install('#dist/plugins', plugin)
+	install('#dist', ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil',
+		'converter/mtsimport', 'qtgui/mtsgui'])
+	install('#dist', ['libcore/libmitsuba-core.so', 'libhw/libmitsuba-hw.so',
+			'librender/libmitsuba-render.so'])
+if sys.platform == 'win32':
+	try:
+		distDir = env.GetBuildPath('#dist')
+		os.mkdir(distDir)
+		os.mkdir(distDir+'/plugins')
+		os.mkdir(distDir+'/schema')
+	except:
+		pass
+	for plugin in plugins:
+		if '.dll' in plugin.__str__():
+			installTargets += env.Install('#dist/plugins', plugin)
+	installTargets += env.Install('#dist/schema', '#schema/scene.xsd')
+
+	if 'WIN64' in env['CXXFLAGS']:
+		dllprefix='#dependencies/windows/lib64'
+	else:
+		dllprefix='#dependencies/windows/lib32'
+
+	if env['MSVC_VERSION'] == '9.0':
+		compilerType = 'vc90'
+	elif env['MSVC_VERSION'] == '10.0':
+		compilerType = 'vc100'
+	else:
+		raise Exception('Unknown compiler version!')
+
+	install('#dist', ['mitsuba/mitsuba.exe', 'mitsuba/mtssrv.exe', 'mitsuba/mtsutil.exe', 'converter/mtsimport.exe'])
+	install('#dist', ['libcore/libmitsuba-core.dll', 'libhw/libmitsuba-hw.dll',
+			'librender/libmitsuba-render.dll'])
+	install('#dist', ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',
+		'libpng13.dll',	'jpeg62.dll', 'pthreadVCE2.dll', 'xerces-c_3_0.dll', 'glew32mx.dll'],
+		prefix=dllprefix)
+	install('#dist', ['libcollada14dom23.dll', 'boost_system-%s-mt-1_44.dll' % compilerType,
+		'boost_filesystem-%s-mt-1_44.dll' % compilerType], dllprefix + '/' + compilerType + '/')
+
+	if 'REDIST_PATH' in env:
+		install('#dist', ['libmmd.dll', 'libiomp5md.dll'], prefix = env['REDIST_PATH'])
+
+	if hasQt:
+		install('#dist', ['qtgui/mtsgui.exe'])
+		install('#dist', ['QtCore4.dll', 'QtGui4.dll', 'QtXml4.dll',
+			'QtNetwork4.dll', 'QtOpenGL4.dll'], prefix = env['QT4_BINPATH'])
+elif sys.platform == 'darwin':
+	for i in plugins:
+		installTargets += env.Install('#Mitsuba.app/plugins', i)
+	installTargets += env.Install('#Mitsuba.app/schema', '#schema/scene.xsd')
+	install('#Mitsuba.app/Contents/MacOS', ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil', 'converter/mtsimport'])
+	plist = env.Install('#Mitsuba.app/Contents', '#data/darwin/Info.plist')
+	installTargets += plist
+	installTargets += env.AddPostAction(plist, 'perl -pi -e "s/MTS_VERSION/%s/" $TARGET' % MTS_VERSION)
+	installTargets += env.Install('#Mitsuba.app/Contents', '#data/darwin/PkgInfo')
+	installTargets += env.Install('#Mitsuba.app/Contents/Resources', '#data/darwin/Resources/mitsuba.icns')
+
+	install('#Mitsuba.app/Contents/Frameworks', ['libcore/libmitsuba-core.dylib', 'libhw/libmitsuba-hw.dylib',
+		'librender/libmitsuba-render.dylib'])
+	install('#Mitsuba.app/Contents/Frameworks', [
+		'GLEW.framework/Resources/libs/libGLEW.dylib', 'OpenEXR.framework/Resources/lib/libHalf.6.dylib',
+		'OpenEXR.framework/Resources/lib/libIex.6.dylib', 'OpenEXR.framework/Resources/lib/libImath.6.dylib',
+		'OpenEXR.framework/Resources/lib/libIlmThread.6.dylib', 'OpenEXR.framework/Resources/lib/libIlmImf.6.dylib',
+		'Xerces-C.framework/Resources/lib/libxerces-c-3.0.dylib', 'libpng.framework/Resources/lib/libpng.dylib', 
+		'libjpeg.framework/Resources/lib/libjpeg.dylib', 'libboost.framework/Resources/lib/libboost_system.dylib',
+		'libboost.framework/Resources/lib/libboost_filesystem.dylib'], '#dependencies/darwin')
+	if hasCollada:
+		install('#Mitsuba.app/Contents/Frameworks', [
+			'Collada14Dom.framework/Resources/lib/libCollada14Dom.dylib'], '#dependencies/darwin')
+	if hasQt:
+		install('#Mitsuba.app/Contents/MacOS', ['qtgui/mtsgui'])
+		installTargets += env.OSXLibInst('#Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtCore.framework/Versions/4/QtCore')
+		opengl = env.OSXLibInst('#Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtOpenGL.framework/Versions/4/QtOpenGL')
+		xml = env.OSXLibInst('#Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtXml.framework/Versions/4/QtXml')
+		network = env.OSXLibInst('#Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtNetwork.framework/Versions/4/QtNetwork')
+		gui = env.OSXLibInst('#Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtGui.framework/Versions/4/QtGui')
+		installTargets += env.AddPostAction(xml, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
+		installTargets += env.AddPostAction(network, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
+		installTargets += env.AddPostAction(gui, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
+		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
+		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @executable_path/../Frameworks/QtGui $TARGET')
+		installTargets += env.Install('#Mitsuba.app/Contents/Resources', '/Library/Frameworks//QtGui.framework/Versions/4/Resources/qt_menu.nib')
+		installTargets += env.Install('#Mitsuba.app/Contents/Resources/PreviewSettings.nib', '#data/darwin/PreviewSettings.nib/designable.nib')
+		installTargets += env.Install('#Mitsuba.app/Contents/Resources/PreviewSettings.nib', '#data/darwin/PreviewSettings.nib/keyedobjects.nib')
+		installTargets += env.Install('#Mitsuba.app/Contents/Resources', '#data/darwin/qt.conf')
+		installTargets += env.Install('#Mitsuba.app/Contents/Frameworks/BWToolkitFramework.framework/Versions/A', '#dependencies/darwin/BWToolkitFramework.framework/Versions/A/BWToolkitFramework')
+		for file in os.listdir(env.GetBuildPath('#dependencies/darwin/BWToolkitFramework.framework/Versions/A/Resources')):
+			if fnmatch.fnmatch(file, '*.pdf') or fnmatch.fnmatch(file, '*.tiff') or fnmatch.fnmatch(file, '*.tif') or fnmatch.fnmatch(file, '*.png') or fnmatch.fnmatch(file, '*.rtf') or fnmatch.fnmatch(file, '*.plist'):
+				installTargets += env.Install('#Mitsuba.app/Contents/Frameworks/BWToolkitFramework.framework/Resources', '#dependencies/darwin/BWToolkitFramework.framework/Versions/A/Resources/' + file)
+
+if dist:
+	if sys.platform == 'win32':
+		distTarget = env.Command("Mitsuba %s.zip" % MTS_VERSION, [], "#data\\windows\\build-dist.bat %s" % MTS_VERSION)
+		Depends(distTarget, installTargets)
+	elif sys.platform == 'darwin':
+		distTarget = env.Command("Mitsuba %s.dmg" % MTS_VERSION, [], "#data/darwin/build-dmg.sh %s" % MTS_VERSION)
+		Depends(distTarget, installTargets)
+	elif sys.platform == 'linux2':
+		env.Command("mitsuba-%s.tar.gz" % MTS_VERSION, [], "#data/linux/build-sourcedist.sh %s" % MTS_VERSION)

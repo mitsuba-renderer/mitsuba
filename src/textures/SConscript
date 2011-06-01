@@ -1,9 +1,9 @@
 Import('env', 'plugins')
 
-plugins += env.SharedLibrary('#plugins/exrtexture', ['exrtexture.cpp'])
-plugins += env.SharedLibrary('#plugins/ldrtexture', ['ldrtexture.cpp'])
-plugins += env.SharedLibrary('#plugins/gridtexture', ['gridtexture.cpp'])
-plugins += env.SharedLibrary('#plugins/checkerboard', ['checkerboard.cpp'])
-plugins += env.SharedLibrary('#plugins/vertexcolors', ['vertexcolors.cpp'])
+plugins += env.SharedLibrary('exrtexture', ['exrtexture.cpp'])
+plugins += env.SharedLibrary('ldrtexture', ['ldrtexture.cpp'])
+plugins += env.SharedLibrary('gridtexture', ['gridtexture.cpp'])
+plugins += env.SharedLibrary('checkerboard', ['checkerboard.cpp'])
+plugins += env.SharedLibrary('vertexcolors', ['vertexcolors.cpp'])
 
 Export('plugins')

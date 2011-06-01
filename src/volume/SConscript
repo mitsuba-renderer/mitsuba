@@ -1,8 +1,8 @@
 Import('env', 'plugins')
 
-plugins += env.SharedLibrary('#plugins/constvolume', ['constvolume.cpp'])
-plugins += env.SharedLibrary('#plugins/gridvolume', ['gridvolume.cpp'])
-plugins += env.SharedLibrary('#plugins/hgridvolume', ['hgridvolume.cpp'])
-plugins += env.SharedLibrary('#plugins/volcache', ['volcache.cpp'])
+plugins += env.SharedLibrary('constvolume', ['constvolume.cpp'])
+plugins += env.SharedLibrary('gridvolume', ['gridvolume.cpp'])
+plugins += env.SharedLibrary('hgridvolume', ['hgridvolume.cpp'])
+plugins += env.SharedLibrary('volcache', ['volcache.cpp'])
 
 Export('plugins')

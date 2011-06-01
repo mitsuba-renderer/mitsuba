@@ -1,7 +1,7 @@
 Import('env', 'plugins')
 
-plugins += env.SharedLibrary('#plugins/exrfilm', ['exrfilm.cpp'])
-plugins += env.SharedLibrary('#plugins/pngfilm', ['pngfilm.cpp'])
-plugins += env.SharedLibrary('#plugins/mfilm', ['mfilm.cpp'])
+plugins += env.SharedLibrary('exrfilm', ['exrfilm.cpp'])
+plugins += env.SharedLibrary('pngfilm', ['pngfilm.cpp'])
+plugins += env.SharedLibrary('mfilm', ['mfilm.cpp'])
 
 Export('plugins')

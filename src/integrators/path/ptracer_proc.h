@@ -113,7 +113,7 @@ private:
 	ref<const Camera> m_camera;
 	ref<const TabulatedFilter> m_filter;
 	ref<CaptureParticleWorkResult> m_workResult;
-	bool m_isPinholeCamera;
+	bool m_isPerspectiveCamera;
 };
 
 /* ==================================================================== */

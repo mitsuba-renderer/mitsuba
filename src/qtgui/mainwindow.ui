@@ -135,7 +135,6 @@
      <bool>false</bool>
     </property>
     <addaction name="actionReferenceManual"/>
-    <addaction name="actionNavigationControls"/>
     <addaction name="separator"/>
     <addaction name="actionFeedback"/>
     <addaction name="actionReportBug"/>
@@ -379,15 +378,6 @@
    </property>
    <property name="text">
     <string>Check for &amp;Updates ..</string>
-   </property>
-  </action>
-  <action name="actionNavigationControls">
-   <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/resources/controls.png</normaloff>:/resources/controls.png</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Navigation Controls</string>
    </property>
   </action>
   <action name="actionReferenceManual">

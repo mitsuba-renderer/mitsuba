@@ -1,40 +1,45 @@
 \section{Compiling the renderer}
 To compile Mitsuba, you will need a recent C++ compiler (e.g. GCC 4.1+ or 
 Visual Studio 2008+) and some additional libraries, which Mitsuba uses internally. 
-Builds on all three supported platforms are done using a unified system
-based on SCons (\url{http://www.scons.org}), a flexible python-based 
+Builds on all supported platforms are done using a unified system
+based on SCons (\url{http://www.scons.org}), which is a Python-based 
 software construction tool. There are some minor differences between operating systems though: for
 more details, please refer to one of the next sections depending on which one you use.
 
 \subsection{Common steps}
-To get started, you will need to download a recent version of Mitsuba: make sure that you have the Mercurial (\url{http://mercurial.selenic.com/})
-versioning system installed and enter the following at the command prompt:
+To get started, you will need to download a recent version of Mitsuba. Make sure that you have the Mercurial (\url{http://mercurial.selenic.com/}) versioning system installed\footnote{On Windows, you might also want the convenient TortoiseHG shell extension (\url{http://tortoisehg.bitbucket.org/}) to run the subsequent steps directly from the Explorer.} and enter the following at the command prompt:
 \begin{shell}
 $\texttt{\$}$ hg clone https://www.mitsuba-renderer.org/hg/mitsuba
 \end{shell}
-On Windows, you can instead use the more convenient TortoiseHG shell extension (\url{http://tortoisehg.bitbucket.org/}) 
-to do this directly from the Explorer.
-
+Afterwards, you will need to download the precompiled dependencies into the
+subdirectory \code{mitsuba/dependencies}:
+\begin{shell}
+$\texttt{\$}$ cd mitsuba
+$\texttt{\$}$ hg clone https://www.mitsuba-renderer.org/hg/dependencies
+\end{shell}
 Common to all platforms is that a build configuration file must be chosen: amongst the
 following, please copy the best matching file into a new file to the root of the Mitsuba
 directory and rename it into \code{config.py}.
 \begin{shell}
-config/config-linux.py  
-config/config-darwin-x86_64.py  
-config/config-darwin-x86.py  
-config/config-darwin-universal.py  
-config/config-icl11-win32.py  
-config/config-icl11-win64.py
-config/config-msvc2008-win32.py  
-config/config-msvc2008-win64.py
-config/config-msvc2010-win32.py  
-config/config-msvc2010-win64.py
+build/config-linux.py  
+build/config-darwin-x86_64.py  
+build/config-darwin-x86.py  
+build/config-darwin-universal.py  
+build/config-msvc2008-win32.py  
+build/config-msvc2008-win64.py
+build/config-msvc2010-win32.py  
+build/config-msvc2010-win64.py
+build/config-icl12-msvc2010-win32.py
+build/config-icl12-msvc2010-win64.py
 \end{shell}
 
-Some minor adjustments may have to be made to this file based on your configuration. 
-You may also set adjust certain compilation flags here:
+Usually, you will not have to make any modification to this fine, but sometimes a few minor 
+edits may be necessary. In particular, you might want to add or remove certain
+compilation flags from the \code{CXXFLAGS} parameter. The following settings
+affect the behavior of Mitsuba:
 \begin{description}
-\item[\texttt{MTS\_DEBUG}] Enable assertions etc. Usually a good idea.
+\item[\texttt{MTS\_DEBUG}] Enable assertions etc. Usually a good idea, and
+enabled by default.
 \item[\texttt{MTS\_KD\_DEBUG}] Enable additional checks in the kd-Tree. This
 is quite slow and mainly useful to track down bugs when they are suspected.
 \item[\texttt{MTS\_KD\_CONSERVE\_MEMORY}] Use less memory for storing geometry (at the cost of speed).
@@ -44,14 +49,14 @@ Off by default.
 \texttt{MTS\_SSE}, \texttt{MTS\_HAS\_COHERENT\_RT}, and \texttt{MTS\_DEBUG\_FP}.
 \item[\texttt{MTS\_SSE}]Activate optimized SSE routines.
 \item[\texttt{MTS\_HAS\_COHERENT\_RT}]Include coherent ray tracing support (depends on \texttt{MTS\_SSE}).
-\item[\texttt{MTS\_DEBUG\_FP}]Generated NaNs will cause floating point exceptions, which can be caught in a debugger. Warning: This is slow!
+\item[\texttt{MTS\_DEBUG\_FP}]Generated NaNs and overflows will cause floating point exceptions, which can be caught in a debugger. This is slow and mainly meant as a debugging tool for developers.
 \item[\texttt{MTS\_GUI\_SOFTWARE\_FALLBACK}]Forces the GUI to use a software
 fallback mode, which is considerably slower and removes the realtime preview.
 This is useful when running the interface on a remote machine
 accessed via the Remote Desktop Protocol (RDP).
 \end{description}
-All default configurations use the flags \code{MTS\_DEBUG}, \code{SINGLE\_PRECISION}, \code{MTS\_SSE}, \code{MTS\_HAS\_COHERENT\_RT}.
-Initially, it is a good idea to just leave the configuration the way it is.
+All default configurations use the flags \code{MTS\_DEBUG}, \code{SINGLE\_PRECISION}, \code{MTS\_SSE},
+as well as \code{MTS\_HAS\_COHERENT\_RT}.
 
 \subsection{Building on Ubuntu Linux}
 You'll first need to install a number of dependencies. It is assumed here
@@ -62,9 +67,9 @@ First, run
 \begin{shell}
 $\text{\$}$ sudo apt-get install build-essential scons qt4-dev-tools scons libpng12-dev libjpeg62-dev libilmbase-dev libopenexr-dev libxerces-c-dev libboost-dev libglewmx1.5-dev libxxf86vm-dev libboost-system-dev libboost-filesystem-dev
 \end{shell}
-To get COLLADA support, you will also need to install the \texttt{collada-dom} packages or build them from scratch. Here, we install the \code{x86\_64} binaries and development headers included with Mitsuba:
+To get COLLADA support, you will also need to install the \texttt{collada-dom} packages or build them from scratch. Here, we install the \code{x86\_64} binaries and development headers available on the Mitsuba website:
 \begin{shell}
-$\text{\$}$ sudo dpkg --install tools/linux/collada-dom2.2_2.2-1_amd64.deb tools/linux/collada-dom-dev_2.2-1_amd64.deb
+$\text{\$}$ sudo dpkg --install collada-dom2.2_2.2-2_amd64.deb collada-dom-dev_2.2-2_amd64.deb
 \end{shell}
 Afterwards, simply run
 \begin{shell}
@@ -165,85 +170,50 @@ After installing you will be able to run the renderer from the command line.
 
 If for some reason you are unable access the Aur files, they are also hosted at (\url{https://www.mitsuba-renderer.org/releases/contrib/archlinux/})
 
-
 \subsection{Building on Windows}
-This section assumes that Visual Studio 2008 is installed, but the instructions should work analogously for other versions.
 On the Windows platform, Mitsuba already includes most of the dependencies in precompiled form.
 You will still need to set up a few things though: first, you need to install Python 
-(\url{www.python.org}) and SCons (\url{http://www.scons.org}) and ensure that they are contained
-in the \code{\%PATH\%} environment variable so that entering \code{scons} on the command prompt
-(\code{cmd.exe}) launches the build system (it will complain about not finding a project file though).
+(\url{www.python.org}) and SCons\footnote{Note that on some Windows machines, the SCons installer generates a warning about not finding Python in the registry. In this case, you can instead run \code{python setup.py install} within the source release of SCons.} (\url{http://www.scons.org}) and ensure that they are contained in the \code{\%PATH\%} environment variable so that entering \code{scons} on the command prompt (\code{cmd.exe}) launches the build system.
+
+Next, you will either need to compile Qt 4.7 (or a newer version) from source or grab pre-built binaries (e.g. from \url{http://code.google.com/p/qt-msvc-installer}). It is crucial that the Qt build configuration matches that of Mitsuba: for instance, if you were planning to use the 64-bit compiler in Visual Studio 2010, both binaries must be created with that same compiler.
+To build Qt from source, start the correct Visual Studio command prompt, and enter
 \begin{shell}
-C:\Users\Wenzel>scons
-scons: ** No SConstruct file found.
+C:\Qt>configure.exe -release -no-webkit -no-phonon -no-phonon-backend -no-script
+      -no-scripttools -no-qt3support -no-multimedia -no-ltcg
+..(configuration messages)..
+C:\Qt>nmake
 \end{shell}
-\emph{Note: }On some setups, the SCons installer generates a warning about not finding Python in the registry. In this case, you can instead run \code{python setup.py install} within the source release of SCons.
-Next, install Qt (\url{http://qt.nokia.com/downloads/windows-cpp-vs2008} -- you should get the release for Visual Studio 2008). Again, you need to make sure that the 
-Qt utilities are reachable through the \code{\%PATH\%} environment variable so that you can for example launch \code{moc.exe} from the command line.
+inside the Qt directory.
 
-Note that since the official release of Qt currently only contains 32-bit binaries, you will accordingly have to 
-build Mitsuba in 32-bit mode (i.e. you should use the configuration file \code{config-msvc2008-win32.py}). If you would rather like compile it in 64-bit mode, 
-you can either compile your own 64-bit Qt binaries or use the prebuilt
-packages available here: \url{http://code.google.com/p/qt-msvc-installer}.
-
-Having installed these dependencies, run the ``Visual Studio 2008 Command 
+Having installed all dependencies, run the ``Visual Studio \emph{2008/2010} Command 
 Prompt'' from the Start Menu (\code{x86} for 32-bit or \code{x64} for 64bit). Afterwards,
-navigate to the Mitsuba directory and run \code{scons}. 
+navigate to the Mitsuba directory.
+Depending on whether or not the Qt binaries are on the \code{\%PATH\%}
+environment variable, you might have to specify the Qt path:
+\begin{shell}
+C:\Mitsuba\>$\texttt{set}$ QTDIR=C:\Qt
+\end{shell}
+where \code{C:$\backslash$Qt} is the path to your Qt installation.
+Afterwards, simply run
+\begin{shell}
+C:\Mitsuba\>scons
+\end{shell}
 In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the \code{scons} command.
 
 If all goes well, the build process will finish successfully after a few
 minutes. In comparison to the other platforms, you don't have to run the \code{setpath.sh} script at this point. 
 All binaries are now located in the \code{dist} directory, and they should be executed directly from there.
 \subsubsection{Integration with the Visual Studio interface}
-If you plan to modify Mitsuba and you enjoy working within the Visual
-Studio interface, the following steps should help you integrate the two
-(thanks to Marios Papas for this description!). They are written for Visual Studio 2008,
-hence some changes may be necessary on other versions. Also, they assume
-that you followed all of the previous steps.
+Basic Visual Studio 2008 and 2010 integration with support for code completion 
+exists for those who develop Mitsuba code on Windows. 
+To use the supplied projects, simply double-click on \code{build/mitsuba-msvc2008.sln} 
+or \code{build/mitsuba-msvc2010.sln}. These Visual Studio projects still internally
+use the SCons-based build system to compile Mitsuba; whatever 
+build configuration is selected within Visual Studio will be used to pick a matching
+configuration file from the \texttt{build} directory. Note that you will
+potentially have to add a \code{QTDIR=\"...\"} line to each of the
+affected configuration files when building directly from Visual Studio.
 
-\begin{enumerate}
-\item Create a copy of the file \code{config.py} in the Mitsuba root directory and
-save it as \code{config\_debug.py}. This configuration 
-will later be used to support debug
-builds. Open the file and make the following changes:
-\begin{enumerate}
-\item In \code{CXXFLAGS}, replace \code{/Ox} by \code{/Od} (this disables
-optimizations, which is necessary to see variable contents in the debugger)
-\item In \code{CXXFLAGS}, add an entry \code{'/Z7'}.
-\item In \code{LINKFLAGS}, add an entry \code{'/DEBUG'}.
-\end{enumerate}
-\item Now, start a fresh instance of Visual Studio and click on 
-the \emph{File$\to$New$\to$Project From Existing Code} menu entry.
-\item Choose \emph{Visual C++} from the drop-down menu and press \emph{Next}
-\item Specify the Mitsuba root directory at the top and enter \emph{mitsuba}
-as the project name. 
-
-In \emph{Add files to the project from these folders}, remove the Mitsuba 
-root directory and only add the \code{src} and \code{include} subdirectories. 
-This is crucial for IntelliSense to work.
-Uncheck \emph{Show all files in Solution explorer} and
-press \emph{Next}.
-\item Choose \emph{Use external build system} and press \emph{Next}.
-\item In the following, feel free to replace any occurrence of
-\code{scons} by \code{scons -jX}, where \code{X} is the number of
-cores in your machine (this will provide faster build times). 
-Fill in the following values:
-
-\begin{tabular}{lp{9cm}}
-\emph{Build command line}:&\code{scons {-}-cfg=config\_debug.py}\\
-\emph{Rebuild command line}:&\code{scons {-}-cfg=config\_debug.py -c \&\& scons {-}-cfg=config\_debug.py}\\
-\emph{Clean command line}:&\code{scons {-}-cfg=config\_debug.py -c}\\
-\emph{Output}:&\code{dist\textbackslash mtsgui.exe}\\
-\emph{Include search paths}:&\code{C:\textbackslash Qt\textbackslash
-include} (or wherever the Qt headers are installed on your machine)
-\end{tabular}
-\item On the next page, uncheck \emph{Same as Debug configuration}.
-Afterwards, enter exactly the same values as before except leaving out
-the \code{{-}-cfg=config\_debug.py} parameter to \code{scons}.
-\item Click \emph{Finish} and wait for IntelliSense to refresh (this might take
-a while).
-\item Switch to the Release configuration.
-\end{enumerate}
 \subsection{Building on Mac OS X}
 On Mac OS X, you will need to install both scons (\code{www.scons.org}) and 
 a recent release of XCode. You will also need to get Qt 4.7.0 or a newer version

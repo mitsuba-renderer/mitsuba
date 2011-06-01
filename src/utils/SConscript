@@ -1,11 +1,11 @@
 Import('env', 'plugins')
 
-plugins += env.SharedLibrary('#plugins/addimages', ['addimages.cpp'])
-plugins += env.SharedLibrary('#plugins/joinrgb', ['joinrgb.cpp'])
-plugins += env.SharedLibrary('#plugins/cylclip', ['cylclip.cpp'])
-plugins += env.SharedLibrary('#plugins/kdbench', ['kdbench.cpp'])
-plugins += env.SharedLibrary('#plugins/ttest', ['ttest.cpp'])
-plugins += env.SharedLibrary('#plugins/tonemap', ['tonemap.cpp'])
-#plugins += env.SharedLibrary('#plugins/uflakefit', ['uflakefit.cpp'])
+plugins += env.SharedLibrary('addimages', ['addimages.cpp'])
+plugins += env.SharedLibrary('joinrgb', ['joinrgb.cpp'])
+plugins += env.SharedLibrary('cylclip', ['cylclip.cpp'])
+plugins += env.SharedLibrary('kdbench', ['kdbench.cpp'])
+plugins += env.SharedLibrary('ttest', ['ttest.cpp'])
+plugins += env.SharedLibrary('tonemap', ['tonemap.cpp'])
+#plugins += env.SharedLibrary('uflakefit', ['uflakefit.cpp'])
 
 Export('plugins')

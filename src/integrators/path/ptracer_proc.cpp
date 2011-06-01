@@ -45,7 +45,7 @@ void CaptureParticleWorkResult::save(Stream *stream) const {
 void CaptureParticleWorker::prepare() {
 	ParticleTracer::prepare();
 	m_camera = static_cast<Camera *>(getResource("camera"));
-	m_isPinholeCamera = m_camera->getClass()->derivesFrom(MTS_CLASS(PinholeCamera));
+	m_isPerspectiveCamera = m_camera->getClass()->derivesFrom(MTS_CLASS(PerspectiveCamera));
 	m_filter = m_camera->getFilm()->getTabulatedFilter();
 }
 
@@ -101,8 +101,8 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 		bRec.quantity = EImportance;
 
 		Float importance; 
-		if (m_isPinholeCamera)
-			importance = ((const PinholeCamera *) camera)->importance(screenSample) / (dist * dist);
+		if (m_isPerspectiveCamera)
+			importance = ((const PerspectiveCamera *) camera)->importance(screenSample) / (dist * dist);
 		else
 			importance = 1/camera->areaDensity(screenSample);
 
@@ -152,8 +152,8 @@ void CaptureParticleWorker::handleMediumInteraction(int depth, bool caustic,
 		Float dist = wo.length(); wo /= dist;
 
 		Float importance; 
-		if (m_isPinholeCamera)
-			importance = ((const PinholeCamera *) camera)->importance(screenSample) / (dist * dist);
+		if (m_isPerspectiveCamera)
+			importance = ((const PerspectiveCamera *) camera)->importance(screenSample) / (dist * dist);
 		else
 			importance = 1/camera->areaDensity(screenSample);
 

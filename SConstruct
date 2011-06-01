@@ -11,7 +11,7 @@ Export('SCons', 'sys', 'os', 'glob', 'resources',
 	'plugins', 'stubs')
 
 # Configure the build framework
-env = SConscript('config/SConscript.configure')
+env = SConscript('build/SConscript.configure')
 
 Export('env')
 
@@ -19,26 +19,31 @@ if sys.platform == 'win32':
 	# Set an application icon on Windows
 	resources += [ env.RES('data/windows/mitsuba_res.rc') ]
 
+def build(scriptFile, exports = [], duplicate = 0):
+	dirname = '/'.join(os.path.dirname(scriptFile).split('/')[1:])
+	return SConscript(scriptFile, exports, 
+		variant_dir=os.path.join(env['BUILDDIR'], dirname), duplicate=duplicate)
+
 # ===== Build the support libraries ====
 
 # Core support library
-SConscript('src/libcore/SConscript')
+build('src/libcore/SConscript')
 # Rendering-related APIs
-SConscript('src/librender/SConscript')
+build('src/librender/SConscript')
 # Hardware acceleration
-SConscript('src/libhw/SConscript')
+build('src/libhw/SConscript')
 
 # ===== Build the applications =====
 env = env.Clone()
 
 # Build the command-line binaries
-mainEnv = SConscript('src/mitsuba/SConscript')
+mainEnv = build('src/mitsuba/SConscript')
 
 # Build the COLLADA converter
-converter_objects = SConscript('src/converter/SConscript', ['mainEnv'])
+converter_objects = build('src/converter/SConscript', ['mainEnv'])
 
 # Build the Qt-based GUI binaries
-SConscript('src/qtgui/SConscript', ['mainEnv', 'converter_objects'])
+build('src/qtgui/SConscript', ['mainEnv', 'converter_objects'], duplicate=True)
 
 # ===== Build the plugins =====
 
@@ -46,35 +51,35 @@ env['SHLIBPREFIX']=''
 Export('env')
 
 # Utilities 
-SConscript('src/utils/SConscript')
+build('src/utils/SConscript')
 # Surface scattering models
-SConscript('src/bsdfs/SConscript')
+build('src/bsdfs/SConscript')
 # Phase functions
-SConscript('src/phase/SConscript')
+build('src/phase/SConscript')
 # Intersection shapes
-SConscript('src/shapes/SConscript')
+build('src/shapes/SConscript')
 # Sample generators
-SConscript('src/samplers/SConscript')
+build('src/samplers/SConscript')
 # Reconstruction filters
-SConscript('src/rfilters/SConscript')
+build('src/rfilters/SConscript')
 # Film implementations
-SConscript('src/films/SConscript')
+build('src/films/SConscript')
 # Cameras
-SConscript('src/cameras/SConscript')
+build('src/cameras/SConscript')
 # Participating media
-SConscript('src/medium/SConscript')
+build('src/medium/SConscript')
 # Volumetric data sources
-SConscript('src/volume/SConscript')
+build('src/volume/SConscript')
 # Sub-surface integrators
-SConscript('src/subsurface/SConscript')
+build('src/subsurface/SConscript')
 # Texture types
-SConscript('src/textures/SConscript')
+build('src/textures/SConscript')
 # Light sources
-SConscript('src/luminaires/SConscript')
+build('src/luminaires/SConscript')
 # Integrators
-SConscript('src/integrators/SConscript')
+build('src/integrators/SConscript')
 # Testcases
-SConscript('src/tests/SConscript')
+build('src/tests/SConscript')
 
 # ===== Move everything to its proper place =====
-SConscript('config/SConscript.install')
+SConscript('build/SConscript.install')

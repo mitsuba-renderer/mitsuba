@@ -49,8 +49,8 @@ Mutex::~Mutex() {
 	if (rv != 0) {
 		switch (rv) {
 			case EBUSY: Log(EWarn, "Could not destroy a mutex: held by another thread"); break;
-			case EINVAL: Log(EWarn, "Could not destroy a mutex: data corruption"); break;
-			default: Log(EWarn, "Could not destroy a mutex: unknown reason");
+			case EINVAL: Log(EError, "Could not destroy a mutex: data corruption"); break;
+			default: Log(EError, "Could not destroy a mutex: unknown reason (%i)", rv);
 		}
 	}
 }
@@ -77,12 +77,19 @@ bool ConditionVariable::wait(int ms) {
 		ts.tv_nsec = (tv.tv_usec + ms % 1000) * 1000;
 
 		int retval = pthread_cond_timedwait(&m_cond, &m_mutex->m_mutex, &ts);
+#if defined(WIN32)
+		/* Should be outside of the switch statement (depending
+		   on the used compiler, the constants ETIMEDOUT and WSAETIMEDOUT
+		   are potentially identical */   
+		if (retval == WSAETIMEDOUT)
+			return false;
+#endif
 		switch (retval) {
 			case 0: return true;
 			case ETIMEDOUT: return false;
-			case EINVAL: Log(EError, "Invalid condition variable/mutex!");
+			case EINVAL: Log(EError, "Invalid condition variable/mutex or time interval (%i)!", ms);
 			case EPERM: Log(EError, "Mutex is not owned by the current thread");
-			default: Log(EError, "Unknown return value!");
+			default: Log(EError, "Unknown return value (%i) in ConditionVariable::wait(%i)!", retval, ms);
 				return false;
 		}
 	}

@@ -418,7 +418,7 @@ void PLYLoader::loadPLY(const fs::path &path) {
 
 	ply::at<ply::uint32, ply::int32>(list_property_definition_callbacks) = std::tr1::bind(
 		&PLYLoader::list_property_definition_callback<ply::uint32, ply::int32>, this, _1, _2);
-	
+
 	ply::at<ply::uint8, ply::uint32>(list_property_definition_callbacks) = std::tr1::bind(
 		&PLYLoader::list_property_definition_callback<ply::uint8, ply::uint32>, this, _1, _2);
 

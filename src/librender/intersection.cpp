@@ -20,8 +20,8 @@ void Intersection::computePartials(const RayDifferential &ray) {
 	/* Offset of the plane passing through the surface */
 	const Float d = -dot(geoFrame.n, Vector(p));
 
-	const Float txRecip = dot(geoFrame.n, ray.rx.d),
-				tyRecip = dot(geoFrame.n, ray.ry.d);
+	const Float txRecip = dot(geoFrame.n, ray.rxDirection),
+				tyRecip = dot(geoFrame.n, ray.ryDirection);
 
 	if (EXPECT_NOT_TAKEN(txRecip == 0 || tyRecip == 0)) {
 		dudx = dvdx = dudy = dvdy = 0.0f;
@@ -29,9 +29,9 @@ void Intersection::computePartials(const RayDifferential &ray) {
 	}
 
 	/* Ray distances traveled */
-	const Float tx = -(dot(geoFrame.n, Vector(ray.rx.o)) + d) / 
+	const Float tx = -(dot(geoFrame.n, Vector(ray.rxOrigin)) + d) / 
 		txRecip;
-	const Float ty = -(dot(geoFrame.n, Vector(ray.ry.o)) + d) / 
+	const Float ty = -(dot(geoFrame.n, Vector(ray.ryOrigin)) + d) / 
 		tyRecip;
 
 	/* Calculate the U and V partials by solving two out
@@ -54,7 +54,8 @@ void Intersection::computePartials(const RayDifferential &ray) {
 	A[1][1] = dpdv[axes[1]];
 
 	/* Auxilary intersection point of the adjacent rays */
-	Point px = ray.rx(tx), py = ray.ry(ty);
+	Point px = ray.rxOrigin + ray.rxDirection * tx,
+		  py = ray.ryOrigin + ray.ryDirection * ty;
 	Bx[0] = px[axes[0]] - p[axes[0]];
 	Bx[1] = px[axes[1]] - p[axes[1]];
 	By[0] = py[axes[0]] - p[axes[0]];

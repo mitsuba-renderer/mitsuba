@@ -25,10 +25,10 @@ if sys.platform == 'darwin':
 	mainEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing')
 	stubs += [mainEnv_osx.StaticObject('darwin_stub.mm')]
 
-mainEnv.Program('#mtsutil', resources + stubs + ['mtsutil.cpp'])
+mainEnv.Program('mtsutil', resources + stubs + ['mtsutil.cpp'])
 
 # Build the command-line+GUI interface
-mainEnv.Program('#mtssrv', resources + ['mtssrv.cpp'])
-mainEnv.Program('#mitsuba', resources + ['mitsuba.cpp'])
+mainEnv.Program('mtssrv', resources + ['mtssrv.cpp'])
+mainEnv.Program('mitsuba', resources + ['mitsuba.cpp'])
 
 Return('mainEnv')
