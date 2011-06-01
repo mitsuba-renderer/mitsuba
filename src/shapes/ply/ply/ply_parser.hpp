@@ -17,6 +17,11 @@
 #  else
 #  define MTS_USE_BOOST_TR1 0
 #  endif
+#define ADT_WORKAROUND 1
+#endif
+
+#if defined(__INTEL_COMPILER)
+#define ADT_WORKAROUND 1
 #endif
 
 #if MTS_USE_BOOST_TR1
@@ -118,7 +123,7 @@ public:
     {
       return static_cast<callbacks_element<ScalarType>&>(callbacks_).callback;
     }
-#if !defined(__clang__)
+#if !defined(ADT_WORKAROUND)
     template <typename ScalarType>
     friend typename scalar_property_definition_callback_type<ScalarType>::type& at(scalar_property_definition_callbacks_type& scalar_property_definition_callbacks)
     {
@@ -210,7 +215,7 @@ public:
     {
       return static_cast<const callbacks_element<boost::mpl::pair<SizeType, ScalarType> >&>(callbacks_).callback;
     }
-#if !defined(__clang__)
+#if !defined(ADT_WORKAROUND)
     template <typename SizeType, typename ScalarType>
     friend typename list_property_definition_callback_type<SizeType, ScalarType>::type& at(list_property_definition_callbacks_type& list_property_definition_callbacks)
     {
@@ -549,7 +554,7 @@ inline bool ply::ply_parser::parse_list_property(format_type format, std::istrea
   }
 }
 
-#if defined(__clang__)
+#if defined(ADT_WORKAROUND)
 // Horrible workaround for ADT failure as of Clang 2.8
 namespace ply
 {

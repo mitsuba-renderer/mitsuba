@@ -617,7 +617,9 @@ protected:
 #if defined(WIN32)
 /* Use strict IEEE 754 floating point computations 
    for the following kd-tree building code */
+MTS_NAMESPACE_END
 #pragma float_control(precise, on)
+MTS_NAMESPACE_BEGIN
 #endif
 
 #define KDLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
@@ -2636,7 +2638,9 @@ protected:
 #if defined(WIN32)
 /* Revert back to fast / non-strict IEEE 754 
    floating point computations */
+MTS_NAMESPACE_END
 #pragma float_control(precise, off)
+MTS_NAMESPACE_BEGIN
 #endif
 
 template <typename AABBType>
