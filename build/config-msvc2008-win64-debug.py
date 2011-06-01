@@ -1,3 +1,4 @@
+BUILDDIR       = '#build/debug'
 CXX            = 'cl'
 GCC            = 'cl'
 # /Ox=optimize for speed, global optimizations, intrinsic functions, favor fast code, frame pointer omission

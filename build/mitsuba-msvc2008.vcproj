@@ -1,0 +1,481 @@
+<VisualStudioProject ProjectType="Visual C++" Version="9.00" Name="mitsuba" ProjectGUID="{BA3C2621-9FB1-4348-9059-AFC8CCAB25E9}" RootNamespace="mitsuba" Keyword="MakeFileProj" TargetFrameworkVersion="0">
+	<Platforms>
+		<Platform Name="Win32"/>
+		<Platform Name="x64"/>
+	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
+	<Configurations>
+		<Configuration Name="Debug|Win32" OutputDirectory="Debug" IntermediateDirectory="Debug" ConfigurationType="0">
+			<Tool Name="VCNMakeTool" BuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32-debug.py" ReBuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32-debug.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2008-win32-debug.py" CleanCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32-debug.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;_DEBUG;" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
+		</Configuration>
+		<Configuration Name="Release|Win32" OutputDirectory="Release" IntermediateDirectory="Release" ConfigurationType="0">
+			<Tool Name="VCNMakeTool" BuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32.py" ReBuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2008-win32.py" CleanCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win32.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;NDEBUG;SINGLE_PRECISION" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
+		</Configuration>
+		<Configuration Name="Debug|x64" OutputDirectory="Debug" IntermediateDirectory="Debug" ConfigurationType="0">
+			<Tool Name="VCNMakeTool" BuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64-debug.py" ReBuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64-debug.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2008-win64-debug.py" CleanCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64-debug.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;_DEBUG;" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
+		</Configuration>
+		<Configuration Name="Release|x64" OutputDirectory="Release" IntermediateDirectory="Release" ConfigurationType="0">
+			<Tool Name="VCNMakeTool" BuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64.py" ReBuildCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64.py -c &amp;&amp; scons --parallelize --cfg=..\build\config-msvc2008-win64.py" CleanCommandLine="scons --parallelize --cfg=..\build\config-msvc2008-win64.py -c" Output="dist\mtsgui.exe" PreprocessorDefinitions="WIN32;NDEBUG;SINGLE_PRECISION" IncludeSearchPath="..\include" ForcedIncludes="" AssemblySearchPath="" ForcedUsingAssemblies="" CompileAsManaged=""/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<Filter Name="Header Files" Filter="h;hpp;hxx;hm;inl;inc;xsd" UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
+		<Filter Name="mitsuba">
+		<Filter Name="core">
+		<File RelativePath="..\.\include\mitsuba\core\aabb.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\aabb_sse.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\appender.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\atomic.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\bitmap.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\brent.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\bsphere.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\class.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\cobject.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\constants.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\cstream.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\formatter.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\frame.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\fresolver.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\fstream.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\fwd.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\getopt.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\grid.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\kdtree.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\lock.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\logger.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\lrucache.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\matrix.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\matrix.inl"/>
+		<File RelativePath="..\.\include\mitsuba\core\mempool.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\mmap.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\mstream.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\netobject.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\normal.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\object.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\octree.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\pdf.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\platform.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\plugin.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\point.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\properties.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\quad.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\quat.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\random.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\ray.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\ref.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\sched.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\sched_remote.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\serialization.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\sfcurve.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\shvector.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\shvector4d.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\spectrum.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\sse.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\sshstream.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\sstream.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\statistics.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\stl.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\stream.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\thread.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\timer.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\tls.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\transform.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\triangle.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\util.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\vector.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\wavelet.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\zstream.h"/>
+		</Filter>
+		<Filter Name="hw">
+		<File RelativePath="..\.\include\mitsuba\hw\device.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\font.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\glgeometry.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\glprogram.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\glrenderer.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\glsync.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\gltexture.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\glxdevice.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\glxrenderer.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\gpugeometry.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\gpuprogram.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\gpusync.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\gputexture.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\nsgldevice.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\nsglkeys.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\nsglrenderer.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\nsglsession.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\renderer.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\session.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\viewer.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\vpl.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\wgldevice.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\wglrenderer.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\wglsession.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\x11device.h"/>
+		<File RelativePath="..\.\include\mitsuba\hw\x11session.h"/>
+		</Filter>
+		<File RelativePath="..\.\include\mitsuba\mitsuba.h"/>
+		<Filter Name="render">
+		<File RelativePath="..\.\include\mitsuba\render\bsdf.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\camera.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\common.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\consttexture.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\film.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\fwd.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\gatherproc.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\gkdtree.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\imageblock.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\imageproc.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\integrator.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\irrcache.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\luminaire.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\medium.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\mipmap.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\mipmap3d.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\noise.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\particleproc.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\phase.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\photonmap.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\preview.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\range.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\records.inl"/>
+		<File RelativePath="..\.\include\mitsuba\render\rectwu.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\renderjob.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\renderproc.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\renderqueue.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\rfilter.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\sahkdtree3.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\sampler.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\scene.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\scenehandler.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\shader.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\shape.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\skdtree.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\spiral.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\subsurface.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\testcase.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\texture.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\track.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\triaccel.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\triaccel_sse.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\trimesh.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\util.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\volume.h"/>
+		<File RelativePath="..\.\include\mitsuba\render\vpl.h"/>
+		</Filter>
+		</Filter>
+		</Filter>
+		<Filter Name="Source Files" Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx" UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
+		<Filter Name="bsdfs">
+		<File RelativePath="..\.\src\bsdfs\composite.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\dielectric.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\difftrans.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\lambertian.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\mask.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\microfacet.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\mirror.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\phong.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\roughglass.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\roughmetal.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\transparent.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\ward.cpp"/>
+		</Filter>
+		<Filter Name="cameras">
+		<File RelativePath="..\.\src\cameras\orthographic.cpp"/>
+		<File RelativePath="..\.\src\cameras\perspective.cpp"/>
+		</Filter>
+		<Filter Name="converter">
+		<File RelativePath="..\.\src\converter\collada.cpp"/>
+		<File RelativePath="..\.\src\converter\converter.cpp"/>
+		<File RelativePath="..\.\src\converter\converter.h"/>
+		<File RelativePath="..\.\src\converter\mtsimport.cpp"/>
+		<File RelativePath="..\.\src\converter\obj.cpp"/>
+		</Filter>
+		<Filter Name="films">
+		<File RelativePath="..\.\src\films\banner.h"/>
+		<File RelativePath="..\.\src\films\exrfilm.cpp"/>
+		<File RelativePath="..\.\src\films\mfilm.cpp"/>
+		<File RelativePath="..\.\src\films\pngfilm.cpp"/>
+		</Filter>
+		<Filter Name="integrators">
+		<Filter Name="direct">
+		<File RelativePath="..\.\src\integrators\direct\direct.cpp"/>
+		</Filter>
+		<Filter Name="misc">
+		<File RelativePath="..\.\src\integrators\misc\errctrl.cpp"/>
+		<File RelativePath="..\.\src\integrators\misc\irrcache.cpp"/>
+		<File RelativePath="..\.\src\integrators\misc\irrcache_proc.cpp"/>
+		<File RelativePath="..\.\src\integrators\misc\irrcache_proc.h"/>
+		</Filter>
+		<Filter Name="path">
+		<File RelativePath="..\.\src\integrators\path\path.cpp"/>
+		<File RelativePath="..\.\src\integrators\path\ptracer.cpp"/>
+		<File RelativePath="..\.\src\integrators\path\ptracer_proc.cpp"/>
+		<File RelativePath="..\.\src\integrators\path\ptracer_proc.h"/>
+		<File RelativePath="..\.\src\integrators\path\volpath.cpp"/>
+		<File RelativePath="..\.\src\integrators\path\volpath_simple.cpp"/>
+		</Filter>
+		<Filter Name="photonmapper">
+		<File RelativePath="..\.\src\integrators\photonmapper\photonmapper.cpp"/>
+		<File RelativePath="..\.\src\integrators\photonmapper\ppm.cpp"/>
+		<File RelativePath="..\.\src\integrators\photonmapper\sppm.cpp"/>
+		</Filter>
+		<Filter Name="vpl">
+		<File RelativePath="..\.\src\integrators\vpl\vpl.cpp"/>
+		</Filter>
+		</Filter>
+		<Filter Name="libcore">
+		<File RelativePath="..\.\src\libcore\aabb.cpp"/>
+		<File RelativePath="..\.\src\libcore\appender.cpp"/>
+		<File RelativePath="..\.\src\libcore\bitmap.cpp"/>
+		<File RelativePath="..\.\src\libcore\class.cpp"/>
+		<File RelativePath="..\.\src\libcore\cstream.cpp"/>
+		<File RelativePath="..\.\src\libcore\formatter.cpp"/>
+		<File RelativePath="..\.\src\libcore\fresolver.cpp"/>
+		<File RelativePath="..\.\src\libcore\fstream.cpp"/>
+		<File RelativePath="..\.\src\libcore\getopt.c"/>
+		<File RelativePath="..\.\src\libcore\lock.cpp"/>
+		<File RelativePath="..\.\src\libcore\logger.cpp"/>
+		<File RelativePath="..\.\src\libcore\mmap.cpp"/>
+		<File RelativePath="..\.\src\libcore\mstream.cpp"/>
+		<File RelativePath="..\.\src\libcore\object.cpp"/>
+		<File RelativePath="..\.\src\libcore\platform_win32.cpp"/>
+		<File RelativePath="..\.\src\libcore\plugin.cpp"/>
+		<File RelativePath="..\.\src\libcore\properties.cpp"/>
+		<File RelativePath="..\.\src\libcore\quad.cpp"/>
+		<File RelativePath="..\.\src\libcore\random.cpp"/>
+		<File RelativePath="..\.\src\libcore\sched.cpp"/>
+		<File RelativePath="..\.\src\libcore\sched_remote.cpp"/>
+		<File RelativePath="..\.\src\libcore\serialization.cpp"/>
+		<File RelativePath="..\.\src\libcore\shvector.cpp"/>
+		<File RelativePath="..\.\src\libcore\spectrum.cpp"/>
+		<File RelativePath="..\.\src\libcore\sshstream.cpp"/>
+		<File RelativePath="..\.\src\libcore\sstream.cpp"/>
+		<File RelativePath="..\.\src\libcore\statistics.cpp"/>
+		<File RelativePath="..\.\src\libcore\stream.cpp"/>
+		<File RelativePath="..\.\src\libcore\thread.cpp"/>
+		<File RelativePath="..\.\src\libcore\timer.cpp"/>
+		<File RelativePath="..\.\src\libcore\transform.cpp"/>
+		<File RelativePath="..\.\src\libcore\triangle.cpp"/>
+		<File RelativePath="..\.\src\libcore\util.cpp"/>
+		<File RelativePath="..\.\src\libcore\wavelet.cpp"/>
+		<File RelativePath="..\.\src\libcore\zstream.cpp"/>
+		</Filter>
+		<Filter Name="libhw">
+		<File RelativePath="..\.\src\libhw\device.cpp"/>
+		<File RelativePath="..\.\src\libhw\font.cpp"/>
+		<File RelativePath="..\.\src\libhw\glgeometry.cpp"/>
+		<File RelativePath="..\.\src\libhw\glprogram.cpp"/>
+		<File RelativePath="..\.\src\libhw\glrenderer.cpp"/>
+		<File RelativePath="..\.\src\libhw\glsync.cpp"/>
+		<File RelativePath="..\.\src\libhw\gltexture.cpp"/>
+		<File RelativePath="..\.\src\libhw\glxdevice.cpp"/>
+		<File RelativePath="..\.\src\libhw\glxrenderer.cpp"/>
+		<File RelativePath="..\.\src\libhw\gpugeometry.cpp"/>
+		<File RelativePath="..\.\src\libhw\gpuprogram.cpp"/>
+		<File RelativePath="..\.\src\libhw\gpusync.cpp"/>
+		<File RelativePath="..\.\src\libhw\gputexture.cpp"/>
+		<File RelativePath="..\.\src\libhw\renderer.cpp"/>
+		<File RelativePath="..\.\src\libhw\session.cpp"/>
+		<File RelativePath="..\.\src\libhw\vera14_dsc.h"/>
+		<File RelativePath="..\.\src\libhw\vera14_png.h"/>
+		<File RelativePath="..\.\src\libhw\veramono14_dsc.h"/>
+		<File RelativePath="..\.\src\libhw\veramono14_png.h"/>
+		<File RelativePath="..\.\src\libhw\viewer.cpp"/>
+		<File RelativePath="..\.\src\libhw\vpl.cpp"/>
+		<File RelativePath="..\.\src\libhw\wgldevice.cpp"/>
+		<File RelativePath="..\.\src\libhw\wglrenderer.cpp"/>
+		<File RelativePath="..\.\src\libhw\wglsession.cpp"/>
+		<File RelativePath="..\.\src\libhw\x11device.cpp"/>
+		<File RelativePath="..\.\src\libhw\x11session.cpp"/>
+		</Filter>
+		<Filter Name="librender">
+		<File RelativePath="..\.\src\librender\bsdf.cpp"/>
+		<File RelativePath="..\.\src\librender\camera.cpp"/>
+		<File RelativePath="..\.\src\librender\common.cpp"/>
+		<File RelativePath="..\.\src\librender\film.cpp"/>
+		<File RelativePath="..\.\src\librender\gatherproc.cpp"/>
+		<File RelativePath="..\.\src\librender\imageblock.cpp"/>
+		<File RelativePath="..\.\src\librender\imageproc.cpp"/>
+		<File RelativePath="..\.\src\librender\integrator.cpp"/>
+		<File RelativePath="..\.\src\librender\intersection.cpp"/>
+		<File RelativePath="..\.\src\librender\irrcache.cpp"/>
+		<File RelativePath="..\.\src\librender\luminaire.cpp"/>
+		<File RelativePath="..\.\src\librender\medium.cpp"/>
+		<File RelativePath="..\.\src\librender\mipmap.cpp"/>
+		<File RelativePath="..\.\src\librender\mipmap3d.cpp"/>
+		<File RelativePath="..\.\src\librender\noise.cpp"/>
+		<File RelativePath="..\.\src\librender\particleproc.cpp"/>
+		<File RelativePath="..\.\src\librender\phase.cpp"/>
+		<File RelativePath="..\.\src\librender\photonmap.cpp"/>
+		<File RelativePath="..\.\src\librender\preview.cpp"/>
+		<File RelativePath="..\.\src\librender\rectwu.cpp"/>
+		<File RelativePath="..\.\src\librender\renderjob.cpp"/>
+		<File RelativePath="..\.\src\librender\renderproc.cpp"/>
+		<File RelativePath="..\.\src\librender\renderqueue.cpp"/>
+		<File RelativePath="..\.\src\librender\rfilter.cpp"/>
+		<File RelativePath="..\.\src\librender\sampler.cpp"/>
+		<File RelativePath="..\.\src\librender\scene.cpp"/>
+		<File RelativePath="..\.\src\librender\scenehandler.cpp"/>
+		<File RelativePath="..\.\src\librender\shader.cpp"/>
+		<File RelativePath="..\.\src\librender\shape.cpp"/>
+		<File RelativePath="..\.\src\librender\skdtree.cpp"/>
+		<File RelativePath="..\.\src\librender\subsurface.cpp"/>
+		<File RelativePath="..\.\src\librender\testcase.cpp"/>
+		<File RelativePath="..\.\src\librender\texture.cpp"/>
+		<File RelativePath="..\.\src\librender\track.cpp"/>
+		<File RelativePath="..\.\src\librender\trimesh.cpp"/>
+		<File RelativePath="..\.\src\librender\util.cpp"/>
+		<File RelativePath="..\.\src\librender\volume.cpp"/>
+		<File RelativePath="..\.\src\librender\vpl.cpp"/>
+		</Filter>
+		<Filter Name="luminaires">
+		<File RelativePath="..\.\src\luminaires\area.cpp"/>
+		<File RelativePath="..\.\src\luminaires\collimated.cpp"/>
+		<File RelativePath="..\.\src\luminaires\constant.cpp"/>
+		<File RelativePath="..\.\src\luminaires\directional.cpp"/>
+		<File RelativePath="..\.\src\luminaires\envmap.cpp"/>
+		<File RelativePath="..\.\src\luminaires\point.cpp"/>
+		<File RelativePath="..\.\src\luminaires\spot.cpp"/>
+		</Filter>
+		<Filter Name="medium">
+		<File RelativePath="..\.\src\medium\heterogeneous-flake.cpp"/>
+		<File RelativePath="..\.\src\medium\heterogeneous.cpp"/>
+		<File RelativePath="..\.\src\medium\homogeneous.cpp"/>
+		<File RelativePath="..\.\src\medium\maxexp.h"/>
+		</Filter>
+		<Filter Name="mitsuba">
+		<File RelativePath="..\.\src\mitsuba\mitsuba.cpp"/>
+		<File RelativePath="..\.\src\mitsuba\mtssrv.cpp"/>
+		<File RelativePath="..\.\src\mitsuba\mtsutil.cpp"/>
+		</Filter>
+		<Filter Name="phase">
+		<File RelativePath="..\.\src\phase\hg.cpp"/>
+		<File RelativePath="..\.\src\phase\isotropic.cpp"/>
+		<File RelativePath="..\.\src\phase\kkay.cpp"/>
+		</Filter>
+		<Filter Name="qtgui">
+		<File RelativePath="..\.\src\qtgui\aboutdlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\aboutdlg.h"/>
+		<File RelativePath="..\.\src\qtgui\acknowledgmentdlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\acknowledgmentdlg.h"/>
+		<File RelativePath="..\.\src\qtgui\addserverdlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\addserverdlg.h"/>
+		<File RelativePath="..\.\src\qtgui\common.h"/>
+		<File RelativePath="..\.\src\qtgui\glwidget.cpp"/>
+		<File RelativePath="..\.\src\qtgui\glwidget.h"/>
+		<File RelativePath="..\.\src\qtgui\importdlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\importdlg.h"/>
+		<File RelativePath="..\.\src\qtgui\loaddlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\loaddlg.h"/>
+		<File RelativePath="..\.\src\qtgui\locateresourcedlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\locateresourcedlg.h"/>
+		<File RelativePath="..\.\src\qtgui\logwidget.cpp"/>
+		<File RelativePath="..\.\src\qtgui\logwidget.h"/>
+		<File RelativePath="..\.\src\qtgui\main.cpp"/>
+		<File RelativePath="..\.\src\qtgui\mainwindow.cpp"/>
+		<File RelativePath="..\.\src\qtgui\mainwindow.h"/>
+		<File RelativePath="..\.\src\qtgui\navdlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\navdlg.h"/>
+		<File RelativePath="..\.\src\qtgui\preview.cpp"/>
+		<File RelativePath="..\.\src\qtgui\preview.h"/>
+		<File RelativePath="..\.\src\qtgui\previewsettingsdlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\previewsettingsdlg.h"/>
+		<File RelativePath="..\.\src\qtgui\previewsettingsdlg_cocoa.cpp"/>
+		<File RelativePath="..\.\src\qtgui\previewsettingsdlg_cocoa.h"/>
+		<File RelativePath="..\.\src\qtgui\preview_proc.cpp"/>
+		<File RelativePath="..\.\src\qtgui\preview_proc.h"/>
+		<File RelativePath="..\.\src\qtgui\programsettingsdlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\programsettingsdlg.h"/>
+		<File RelativePath="..\.\src\qtgui\rendersettingsdlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\rendersettingsdlg.h"/>
+		<Filter Name="resources">
+		</Filter>
+		<File RelativePath="..\.\src\qtgui\save.cpp"/>
+		<File RelativePath="..\.\src\qtgui\save.h"/>
+		<File RelativePath="..\.\src\qtgui\sceneimporter.cpp"/>
+		<File RelativePath="..\.\src\qtgui\sceneimporter.h"/>
+		<File RelativePath="..\.\src\qtgui\sceneloader.cpp"/>
+		<File RelativePath="..\.\src\qtgui\sceneloader.h"/>
+		<File RelativePath="..\.\src\qtgui\server.cpp"/>
+		<File RelativePath="..\.\src\qtgui\server.h"/>
+		<File RelativePath="..\.\src\qtgui\tabbar.cpp"/>
+		<File RelativePath="..\.\src\qtgui\tabbar.h"/>
+		<File RelativePath="..\.\src\qtgui\updatedlg.cpp"/>
+		<File RelativePath="..\.\src\qtgui\updatedlg.h"/>
+		<File RelativePath="..\.\src\qtgui\xmltreemodel.cpp"/>
+		<File RelativePath="..\.\src\qtgui\xmltreemodel.h"/>
+		</Filter>
+		<Filter Name="rfilters">
+		<File RelativePath="..\.\src\rfilters\box.cpp"/>
+		<File RelativePath="..\.\src\rfilters\catmullrom.cpp"/>
+		<File RelativePath="..\.\src\rfilters\gaussian.cpp"/>
+		<File RelativePath="..\.\src\rfilters\mitchell.cpp"/>
+		<File RelativePath="..\.\src\rfilters\wsinc.cpp"/>
+		</Filter>
+		<Filter Name="samplers">
+		<File RelativePath="..\.\src\samplers\halton.cpp"/>
+		<File RelativePath="..\.\src\samplers\hammersley.cpp"/>
+		<File RelativePath="..\.\src\samplers\independent.cpp"/>
+		<File RelativePath="..\.\src\samplers\ldsampler.cpp"/>
+		<File RelativePath="..\.\src\samplers\stratified.cpp"/>
+		</Filter>
+		<Filter Name="shapes">
+		<File RelativePath="..\.\src\shapes\animatedinstance.cpp"/>
+		<File RelativePath="..\.\src\shapes\cylinder.cpp"/>
+		<File RelativePath="..\.\src\shapes\hair.cpp"/>
+		<File RelativePath="..\.\src\shapes\instance.cpp"/>
+		<File RelativePath="..\.\src\shapes\obj.cpp"/>
+		<Filter Name="ply">
+		<Filter Name="ply">
+		</Filter>
+		<File RelativePath="..\.\src\shapes\ply\ply.cpp"/>
+		<File RelativePath="..\.\src\shapes\ply\ply_parser.cpp"/>
+		</Filter>
+		<File RelativePath="..\.\src\shapes\serialized.cpp"/>
+		<File RelativePath="..\.\src\shapes\shapegroup.cpp"/>
+		<File RelativePath="..\.\src\shapes\shapegroup.h"/>
+		<File RelativePath="..\.\src\shapes\sphere.cpp"/>
+		</Filter>
+		<Filter Name="subsurface">
+		<File RelativePath="..\.\src\subsurface\adipole.cpp"/>
+		<File RelativePath="..\.\src\subsurface\dipole.cpp"/>
+		<File RelativePath="..\.\src\subsurface\irrproc.cpp"/>
+		<File RelativePath="..\.\src\subsurface\irrproc.h"/>
+		<File RelativePath="..\.\src\subsurface\irrtree.cpp"/>
+		<File RelativePath="..\.\src\subsurface\irrtree.h"/>
+		</Filter>
+		<Filter Name="tests">
+		<File RelativePath="..\.\src\tests\test_kd.cpp"/>
+		<File RelativePath="..\.\src\tests\test_la.cpp"/>
+		<File RelativePath="..\.\src\tests\test_samplers.cpp"/>
+		<File RelativePath="..\.\src\tests\test_sh.cpp"/>
+		</Filter>
+		<Filter Name="textures">
+		<File RelativePath="..\.\src\textures\checkerboard.cpp"/>
+		<File RelativePath="..\.\src\textures\exrtexture.cpp"/>
+		<File RelativePath="..\.\src\textures\gridtexture.cpp"/>
+		<File RelativePath="..\.\src\textures\ldrtexture.cpp"/>
+		<File RelativePath="..\.\src\textures\vertexcolors.cpp"/>
+		</Filter>
+		<Filter Name="utils">
+		<File RelativePath="..\.\src\utils\addimages.cpp"/>
+		<File RelativePath="..\.\src\utils\cylclip.cpp"/>
+		<File RelativePath="..\.\src\utils\joinrgb.cpp"/>
+		<File RelativePath="..\.\src\utils\kdbench.cpp"/>
+		<File RelativePath="..\.\src\utils\tonemap.cpp"/>
+		<File RelativePath="..\.\src\utils\ttest.cpp"/>
+		</Filter>
+		<Filter Name="volume">
+		<File RelativePath="..\.\src\volume\constvolume.cpp"/>
+		<File RelativePath="..\.\src\volume\gridvolume.cpp"/>
+		<File RelativePath="..\.\src\volume\hgridvolume.cpp"/>
+		</Filter>
+		</Filter>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

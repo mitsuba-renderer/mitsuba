@@ -1,6 +1,6 @@
-BUILDDIR       = '#build/release'
+BUILDDIR       = '#build/debug'
 CXX			   = 'g++'
-CXXFLAGS       = ['-O3', '-Wall', '-g', '-pipe', '-march=nocona', '-msse2', '-ftree-vectorize', '-mfpmath=sse', '-funsafe-math-optimizations', '-fno-rounding-math', '-fno-signaling-nans', '-fomit-frame-pointer', '-DMTS_DEBUG', '-DSINGLE_PRECISION', '-DMTS_SSE', '-DMTS_HAS_COHERENT_RT', '-fopenmp']
+CXXFLAGS       = ['-O0', '-Wall', '-g', '-pipe', '-march=nocona', '-msse2', '-ftree-vectorize', '-mfpmath=sse', '-funsafe-math-optimizations', '-fno-rounding-math', '-fno-signaling-nans', '-fomit-frame-pointer', '-DMTS_DEBUG', '-DSINGLE_PRECISION', '-DMTS_SSE', '-DMTS_HAS_COHERENT_RT', '-fopenmp']
 LINKFLAGS      = []
 SHLINKFLAGS    = ['-rdynamic', '-shared', '-fPIC']
 BASEINCLUDE    = ['#include']

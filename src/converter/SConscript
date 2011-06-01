@@ -18,7 +18,7 @@ if hasCollada:
 		colladaEnv.StaticObject('obj.cpp'),
 		colladaEnv.StaticObject('converter.cpp')
 	]
-	colladaEnv.Program('#mtsimport', stubs + ['mtsimport.cpp'] 
+	colladaEnv.Program('mtsimport', stubs + ['mtsimport.cpp'] 
 		+ resources + converter_objects)
 
 Return('converter_objects')

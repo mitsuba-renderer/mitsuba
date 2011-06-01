@@ -1,3 +1,4 @@
+BUILDDIR       = '#build/release'
 CXX            = 'icl'
 GCC            = 'icl'
 CXXFLAGS       = ['/nologo', '/O3', '/Qipo', '/QxSSSE3', '/QaxSSE4.2,SSE4.1', '/fp:fast=2', '/D', 'WIN32', '/D', 'WIN64', '/W3', '/EHsc', '/GS-', '/GL', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/Qopenmp']

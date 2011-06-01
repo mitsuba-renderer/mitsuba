@@ -3,21 +3,21 @@ Import('env', 'os', 'glob', 'sys', 'hasQt', 'hasCollada', 'mainEnv',
 
 # For running Uic & Moc (below)
 def recursiveDirs(root) :
-    return filter( (lambda a : a.rfind(".svn") == -1),  [ a[0] for a in os.walk(root)])
+	return filter((lambda a : a.rfind(".svn") == -1), [a[0] for a in os.walk(root)])
 
 def unique(list) :
-    return dict.fromkeys(list).keys()
+	return dict.fromkeys(list).keys()
 
 def scanFiles(dir, accept=["*.cpp"], reject=[]) :
-    sources = []
-    paths = recursiveDirs(dir)
-    for path in paths :
-        for pattern in accept :
-            sources+=glob.glob(path+"/"+pattern)
-    for pattern in reject :
-        sources = filter( (lambda a : a.rfind(pattern)==-1 ),  sources )
-    return unique(sources)
-
+	sources = []
+	paths = recursiveDirs(dir)
+	for path in paths:
+		for pattern in accept :
+			sources+=glob.glob(path + "/" + pattern)
+	for pattern in reject:
+		sources = filter((lambda a : a.rfind(pattern) == -1), sources)
+	sources = map((lambda a : os.path.basename(a)), sources)
+	return unique(sources)
 
 if hasQt:
 	qtEnv = mainEnv.Clone()
@@ -35,13 +35,13 @@ if hasQt:
 	elif sys.platform == 'darwin':
 		qtEnv.Append(LINKFLAGS=['-Fdependencies/darwin', '-framework', 'BWToolkitFramework'])
 
-	qtInterfaces = [qtEnv.Uic4(uic) for uic in scanFiles('.', ['*.ui'])]
-	qtResources = [qtEnv.Qrc(qrc) for qrc in scanFiles('.', ['*.qrc'])]
+	bpath = env.GetBuildPath('#src/qtgui')
+	qtInterfaces = [qtEnv.Uic4(uic) for uic in scanFiles(bpath, ['*.ui'])]
+	qtResources = [qtEnv.Qrc(qrc) for qrc in scanFiles(bpath, ['*.qrc'])]
+	qtSources = scanFiles(bpath, ['*.cpp']) + qtResources + resources
 
-	qtgui_files = scanFiles('.', ['*.cpp']) + qtResources + resources
-	
 	if hasCollada:
-		qtgui_files += converter_objects
+		qtSources += converter_objects
 		if env.has_key('COLLADALIBDIR'):
 			qtEnv.Prepend(LIBPATH=env['COLLADALIBDIR'])
 		if env.has_key('COLLADALIB'):
@@ -54,10 +54,10 @@ if hasQt:
 		qtEnv_osx['CXXFLAGS'].remove('-ftree-vectorize')
 		qtEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing')
 		qtEnv_osx['CXXFLAGS'].append(['-Fdependencies/darwin', '-framework', 'BWToolkitFramework'])
-		qtgui_files += qtEnv_osx.StaticObject('previewsettingsdlg_cocoa_impl.mm')
+		qtSources += qtEnv_osx.StaticObject('previewsettingsdlg_cocoa_impl.mm')
 	else:
-		qtgui_files = [x for x in qtgui_files if (not isinstance(x, str) or 'cocoa' not in x)]
-	qtgui = qtEnv.Program('#mtsgui', qtgui_files)
+		qtSources = [x for x in qtSources if (not isinstance(x, str) or 'cocoa' not in x)]
+	qtgui = qtEnv.Program('mtsgui', qtSources)
 	if sys.platform == 'darwin':
 		qtEnv.AddPostAction(qtgui, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @executable_path/../Frameworks/QtGui $TARGET')
 		qtEnv.AddPostAction(qtgui, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
