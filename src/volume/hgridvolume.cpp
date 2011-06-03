@@ -108,7 +108,7 @@ public:
 					createObject(MTS_CLASS(VolumeDataSource), props));
 			content->configure();
 
-			m_maxFloatValue = contents->getMaximumFloatValue();
+			m_maxFloatValue = content->getMaximumFloatValue();
 			m_blocks[(m_res.y * block.z + block.y) * m_res.x + block.x] = content;
 			m_stepSize = std::min(m_stepSize, content->getStepSize());
 			m_supportsVectorLookups = m_supportsVectorLookups && content->supportsVectorLookups();
