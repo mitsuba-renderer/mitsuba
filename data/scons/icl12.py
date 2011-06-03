@@ -97,8 +97,10 @@ def generate(env):
 		return
 	if env['TARGET_ARCH'] == 'x86':
 		arch = 'ia32'
+		arch_redist = 'ia32'
 	elif env['TARGET_ARCH'] == 'x86_64' or env['TARGET_ARCH'] == 'amd64':
 		arch = 'ia32_intel64'
+		arch_redist = 'intel64'
 	else:
 		raise Exception('Unknown architecture ' + env['TARGET_ARCH'])
 
@@ -111,7 +113,7 @@ def generate(env):
 
 	icpp_path = os.environ.get('ICPP_COMPOSER2011')
 	merge_script_vars(env, os.path.join(icpp_path, 'bin/iclvars.bat'), arch + ' ' + vsrelease)
-	env['REDIST_PATH'] = os.path.join(os.path.join(os.path.join(icpp_path, 'redist'), arch), 'compiler')
+	env['REDIST_PATH'] = os.path.join(os.path.join(os.path.join(icpp_path, 'redist'), arch_redist), 'compiler')
 
 def exists(env):
 	if 'INTEL_COMPILER' not in env or env['INTEL_COMPILER'] != True:
