@@ -1,8 +1,16 @@
 mitsuba (0.2.1-1) unstable; urgency=low
 
-  * Upgrade to version 0.2.1, which contains a completely rewritten layer for handling participating media -- see the blog for a full change list
+  * Completely rewritten participating layer with better robustness and support for many participating media within the same scene
+  * Rewritten micro-flake model implementation, which is faster, more accurate, and supports a larger range of material parameters
+  * Added the Irawan & Marschner woven cloth BRDF model
+  * Includes a script to automate the cration of render farms on the Amazon Elastic Compute Cloud (EC2).
+  * The Blender plugin was fixed so that it works with Blender 2.56
+  * Volumetric Photon Mapping is now supported using the Beam Radiance Estimate
+  * The COLLADA importer handles larger files, which previously lead to crashes
+  * New and more intuitive rotation controller for the interactive preview
+  * Many bugfixes
 
- -- Wenzel Jakob <wenzel@cs.cornell.edu>  Tue, 24 Apr 2011 22:17:00 -0400
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Tue, 3 Jun 2011 23:17:00 -0400
 
 mitsuba (0.2.0-1) unstable; urgency=low
 
