@@ -219,12 +219,17 @@ public:
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 		if (bRec.component == -1) {
-			Float componentPDF;
-			int entry = m_pdf.sampleReuse(sample.x, componentPDF);
-			Spectrum result = m_bsdfs[entry]->sample(bRec, pdf, sample);
+			int entry = m_pdf.sampleReuse(sample.x);
+			m_bsdfs[entry]->sample(bRec, sample);
 			bRec.sampledComponent += m_bsdfOffset[entry];
-			pdf *= componentPDF;
-			return result * m_bsdfWeight[entry];
+
+			if (bRec.sampledType & BSDF::EDelta) {
+				pdf = pdfDelta(bRec);
+				return fDelta(bRec);
+			} else {
+				pdf = Composite::pdf(bRec);
+				return f(bRec);
+			}
 		} else {
 			/* Pick out an individual component */
 			for (size_t i=0; i<m_bsdfCount; ++i) {
@@ -247,12 +252,14 @@ public:
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
 		Point2 sample(_sample);
 		if (bRec.component == -1) {
-			Float componentPDF;
-			int entry = m_pdf.sampleReuse(sample.x, componentPDF);
-			Spectrum result = m_bsdfs[entry]->sample(bRec, sample);
-			result /= componentPDF;
+			int entry = m_pdf.sampleReuse(sample.x);
+			m_bsdfs[entry]->sample(bRec, sample);
 			bRec.sampledComponent += m_bsdfOffset[entry];
-			return result * m_bsdfWeight[entry];
+
+			if (bRec.sampledType & BSDF::EDelta)
+				return fDelta(bRec)/pdfDelta(bRec);
+			else
+				return f(bRec)/pdf(bRec);
 		} else {
 			/* Pick out an individual component */
 			for (size_t i=0; i<m_bsdfCount; ++i) {
