@@ -29,6 +29,7 @@ if sys.platform == 'linux2':
 		'converter/mtsimport', 'qtgui/mtsgui'])
 	install('#dist', ['libcore/libmitsuba-core.so', 'libhw/libmitsuba-hw.so',
 			'librender/libmitsuba-render.so'])
+	env.Install('#dist/schema', '#schema/scene.xsd')
 if sys.platform == 'win32':
 	try:
 		distDir = env.GetBuildPath('#dist')
