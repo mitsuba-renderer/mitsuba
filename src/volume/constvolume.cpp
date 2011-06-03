@@ -95,6 +95,10 @@ public:
 		return std::numeric_limits<Float>::infinity();
 	}
 
+	Float getMaximumFloatValue() const {
+		return m_float;
+	}
+
 	MTS_DECLARE_CLASS()
 protected:
 	int m_type;

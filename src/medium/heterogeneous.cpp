@@ -133,7 +133,7 @@ public:
 
 		/* Assumes that the density medium does not 
 		   contain values greater than one! */
-		m_maxDensity = m_densityMultiplier;
+		m_maxDensity = m_densityMultiplier * m_density->getMaximumFloatValue();
 		if (m_anisotropicMedium)
 			m_maxDensity *= m_phaseFunction->sigmaDirMax();
 		m_invMaxDensity = 1.0f/m_maxDensity;
@@ -146,8 +146,9 @@ public:
 					m_orientation->getStepSize());
 
 			if (m_stepSize == std::numeric_limits<Float>::infinity()) 
-				Log(EError, "Unable to infer a suitable step size, please specify one "
-						"manually using the 'stepSize' parameter.");
+				Log(EError, "Unable to infer a suitable step size for deterministic "
+						"integration, please specify one manually using the 'stepSize' "
+						"parameter.");
 		}
 		
 		if (m_anisotropicMedium && m_orientation.get() == NULL)
@@ -216,6 +217,7 @@ public:
 
 		/* Compute a suitable step size */
 		uint32_t nSteps = (uint32_t) std::ceil(length / m_stepSize);
+		nSteps += nSteps % 2;
 		const Float stepSize = length/nSteps;
 		const Vector increment = ray.d * stepSize;
 
@@ -442,6 +444,9 @@ public:
 		if (m_method == ESimpsonQuadrature || sampler == NULL) {
 			return Spectrum(std::exp(-integrateDensity(ray)));
 		} else {
+			/* When Woodcock tracking is selected as the sampling method,
+			   we can use this method to get a noisy estimate of 
+			   the transmittance */
 			Float mint, maxt;
 			if (!m_densityAABB.rayIntersect(ray, mint, maxt))
 				return Spectrum(1.0f);
@@ -451,10 +456,10 @@ public:
 			#if defined(HETVOL_STATISTICS)
 				avgRayMarchingStepsTransmittance.incrementBase();
 			#endif
-			int nSteps = 2; /// XXX make configurable
+			int nSamples = 2; /// XXX make configurable
 			Float result = 0;
 
-			for (int i=0; i<nSteps; ++i) {
+			for (int i=0; i<nSamples; ++i) {
 				Float t = mint;
 				while (true) {
 					t -= std::log(1-sampler->next1D()) * m_invMaxDensity;
@@ -474,7 +479,7 @@ public:
 						break;
 				}
 			}
-			return Spectrum(result/nSteps);
+			return Spectrum(result/nSamples);
 		}
 	}
 

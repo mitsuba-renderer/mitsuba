@@ -288,6 +288,10 @@ public:
 		delete[] ptr;
 	}
 
+	Float getMaximumFloatValue() const {
+		return m_nested->getMaximumFloatValue();
+	}
+
 	MTS_DECLARE_CLASS()
 protected:
 	ref<VolumeDataSource> m_nested;

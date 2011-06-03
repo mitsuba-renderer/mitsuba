@@ -56,10 +56,18 @@ public:
 	virtual Vector lookupVector(const Point &p) const;
 
 	/**
-	 * Returns the recommended step size for numerical 
+	 * \brief Return the recommended step size for numerical 
 	 * integration or inifinity if this is not known/applicable
 	 */
 	virtual Float getStepSize() const = 0;
+
+	/**
+	 * \brief Return the maximum floating point value that
+	 * could be returned by \ref lookupFloat.
+	 *
+	 * This is useful when implementing Woodcock-Tracking.
+	 */
+	virtual Float getMaximumFloatValue() const = 0;
 
 	MTS_DECLARE_CLASS()
 protected:

@@ -108,6 +108,7 @@ public:
 					createObject(MTS_CLASS(VolumeDataSource), props));
 			content->configure();
 
+			m_maxFloatValue = contents->getMaximumFloatValue();
 			m_blocks[(m_res.y * block.z + block.y) * m_res.x + block.x] = content;
 			m_stepSize = std::min(m_stepSize, content->getStepSize());
 			m_supportsVectorLookups = m_supportsVectorLookups && content->supportsVectorLookups();
@@ -191,6 +192,9 @@ public:
 			return block->lookupVector(_p);
 	}
 
+	Float getMaximumFloatValue() const {
+		return m_maxFloatValue;
+	}
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -204,7 +208,7 @@ protected:
 	bool m_supportsFloatLookups;
 	bool m_supportsSpectrumLookups;
 	bool m_supportsVectorLookups;
-	Float m_stepSize;
+	Float m_stepSize, m_maxFloatValue;
 };
 
 MTS_IMPLEMENT_CLASS_S(HierarchicalGridDataSource, false, VolumeDataSource);

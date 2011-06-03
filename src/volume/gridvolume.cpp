@@ -70,6 +70,13 @@ MTS_NAMESPACE_BEGIN
  *
  * Note that Mitsuba expects that entries in direction volumes are either
  * zero or valid unit vectors.
+ *
+ * When using this data source to represent floating point density volumes, 
+ * please ensure that the values are all normalized to lie in the 
+ * range [0, 1] -- otherwise, the Woocock-Tracking integration method in
+ * heterogeneous.cpp will produce incorrect results. You can use
+ * the 'densityMultiplier' parameter of that class to re-scale the
+ * densities if neccessary.
  */
 class GridDataSource : public VolumeDataSource {
 public:
@@ -545,6 +552,10 @@ public:
 	bool supportsSpectrumLookups() const { return m_channels == 3; }
 	bool supportsVectorLookups() const { return m_channels == 3; }
 	Float getStepSize() const { return m_stepSize; }
+
+	Float getMaximumFloatValue() const {
+		return 1.0f;
+	}
 
 	MTS_DECLARE_CLASS()
 protected: 
