@@ -9,103 +9,103 @@
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
    <Filter Include="Source Files\bsdfs">
-			<UniqueIdentifier>{7cc9fd52-85aa-46ba-8f63-1769e6160a13}</UniqueIdentifier>
+			<UniqueIdentifier>{e5a397d7-3fee-4fdb-af27-3c1592f23865}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\cameras">
-			<UniqueIdentifier>{0a402cf3-60ad-462b-b13d-01dbf7e24ef1}</UniqueIdentifier>
+			<UniqueIdentifier>{77676724-c505-492b-87d4-7f2afc711fa0}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\converter">
-			<UniqueIdentifier>{e8a642af-0a0c-4ade-b0bf-38aedce8496a}</UniqueIdentifier>
+			<UniqueIdentifier>{fc03c9d3-a5c1-4bdb-b4ab-bd996cf1996e}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\films">
-			<UniqueIdentifier>{ca686a71-4bde-45dd-b982-54540bf2b201}</UniqueIdentifier>
+			<UniqueIdentifier>{ef280573-ed89-4fee-a484-176c24c9a3b5}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators">
-			<UniqueIdentifier>{3a049a11-b32f-47c9-b268-6c5f6785d54c}</UniqueIdentifier>
+			<UniqueIdentifier>{27a9c637-7cd3-4f5b-80fe-0f0a25d686c3}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators\direct">
-			<UniqueIdentifier>{5866cfd1-bf8c-468c-ab14-2a5a29c96fe7}</UniqueIdentifier>
+			<UniqueIdentifier>{b2219db5-124e-4756-9ff5-e43199837979}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators\misc">
-			<UniqueIdentifier>{9b747d82-a094-4395-bd54-29b5fc8c80e3}</UniqueIdentifier>
+			<UniqueIdentifier>{09202e48-67c2-4d8f-b3b4-1db1ca84f73d}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators\path">
-			<UniqueIdentifier>{04355f36-da7a-48a3-b176-de47068aab65}</UniqueIdentifier>
+			<UniqueIdentifier>{59f57db0-b0b8-4815-b9d7-1f60d95969f8}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators\photonmapper">
-			<UniqueIdentifier>{aca75731-874b-42be-9ee5-c0f30a0d1eef}</UniqueIdentifier>
+			<UniqueIdentifier>{52e70061-0374-4316-8082-d1eb420d2097}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\integrators\vpl">
-			<UniqueIdentifier>{f90fb88d-8c0b-4bde-a02e-2796fde95bec}</UniqueIdentifier>
+			<UniqueIdentifier>{61b9addc-3d40-47d2-a6c9-b92954dabb49}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\libcore">
-			<UniqueIdentifier>{7f53cc5f-06e8-415d-8f3c-c7c2cb606cc6}</UniqueIdentifier>
+			<UniqueIdentifier>{9a855649-2c23-4503-9d33-5a62d04b47d2}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\libhw">
-			<UniqueIdentifier>{8ea6bfa1-15cf-49da-a038-1156ec313d12}</UniqueIdentifier>
+			<UniqueIdentifier>{b219ad2c-e2a2-4e73-a88d-b305a9d5441c}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\librender">
-			<UniqueIdentifier>{e694e818-ffb0-4412-8158-cd28a98ff7fb}</UniqueIdentifier>
+			<UniqueIdentifier>{e05c54de-78fa-49f7-a645-451c8a2a4743}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\luminaires">
-			<UniqueIdentifier>{de000fb1-6d0e-4318-9901-6b4ccaadbbf9}</UniqueIdentifier>
+			<UniqueIdentifier>{15f4abe8-dd81-4317-ad68-09ec10730fb1}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\medium">
-			<UniqueIdentifier>{e96338d7-42a6-4253-b1c7-a154e36405d2}</UniqueIdentifier>
+			<UniqueIdentifier>{6b9b9112-d06c-47fc-9828-991a52a4dd97}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\mitsuba">
-			<UniqueIdentifier>{c60f7eae-6c97-494b-ae30-3db86089f477}</UniqueIdentifier>
+			<UniqueIdentifier>{d73ea77c-04c7-424a-885f-6014322d08be}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\phase">
-			<UniqueIdentifier>{6851b0a6-ef2f-40c4-aa07-15dbf665d562}</UniqueIdentifier>
+			<UniqueIdentifier>{629f51ab-8f77-4abd-9c1c-38e13b2db010}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\qtgui">
-			<UniqueIdentifier>{7c86af5b-e9d3-4999-9f3e-bd761db1e610}</UniqueIdentifier>
+			<UniqueIdentifier>{7922cc88-966d-4a2a-ad99-0f932bf0eda3}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\qtgui\resources">
-			<UniqueIdentifier>{7fc76ed5-bb1c-4185-99a1-135ab120a324}</UniqueIdentifier>
+			<UniqueIdentifier>{12abdb4a-638a-4680-b01d-af8075fc74ee}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\rfilters">
-			<UniqueIdentifier>{646b3917-a5e5-44b0-bfb7-621c6fa4c321}</UniqueIdentifier>
+			<UniqueIdentifier>{c2953411-4eea-45b1-9181-cd2cecde85be}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\samplers">
-			<UniqueIdentifier>{9cae7fac-088c-4c04-9376-74f5e003c068}</UniqueIdentifier>
+			<UniqueIdentifier>{ed72bd93-2aed-4f7d-b572-69b902530be8}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\shapes">
-			<UniqueIdentifier>{8f0b87e6-51c9-4c38-8dbd-0141e2d201f6}</UniqueIdentifier>
+			<UniqueIdentifier>{24390d9e-aa63-404b-b587-52692e958954}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\shapes\ply">
-			<UniqueIdentifier>{667e4f90-6a0c-4cab-a17f-1a7a0d7daf97}</UniqueIdentifier>
+			<UniqueIdentifier>{ca7616e7-d5fb-445d-a964-847b1dd02d95}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\shapes\ply\ply">
-			<UniqueIdentifier>{5b58e373-de5f-4679-857f-4cf4ea228be1}</UniqueIdentifier>
+			<UniqueIdentifier>{f820d453-643a-48fa-9366-5909df6e17e2}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\subsurface">
-			<UniqueIdentifier>{cad7a7f1-7c4d-4dc5-a1f4-6cede9526ac3}</UniqueIdentifier>
+			<UniqueIdentifier>{81218ac9-9a3b-44f5-a63f-03fc0df4c5a5}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\tests">
-			<UniqueIdentifier>{71910c3c-fe18-48b4-b318-aa6eda3510e5}</UniqueIdentifier>
+			<UniqueIdentifier>{cd74c6a0-3343-4510-90a4-fe383ead5926}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\textures">
-			<UniqueIdentifier>{194ce64b-1611-4fc7-8572-b00dc8abbeef}</UniqueIdentifier>
+			<UniqueIdentifier>{5220b652-4f79-40a8-a42d-50d334358f81}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\utils">
-			<UniqueIdentifier>{34ce6e04-4d1e-4c14-9b3e-4d09003dbb44}</UniqueIdentifier>
+			<UniqueIdentifier>{e1ca3dd3-4dff-4860-96fd-6aca1bcb4dab}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\volume">
-			<UniqueIdentifier>{9a6a92af-c29d-45f8-b209-c4e6c8af09cb}</UniqueIdentifier>
+			<UniqueIdentifier>{f9b4d83c-2fcd-4340-81c0-a7e3233c2abe}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Header Files\mitsuba">
-			<UniqueIdentifier>{2445c3b8-6a59-4685-ac89-989371c1a1f2}</UniqueIdentifier>
+			<UniqueIdentifier>{2d9e6031-454a-4fbc-81c8-e12d4aee6846}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Header Files\mitsuba\core">
-			<UniqueIdentifier>{70fcace6-74e4-462c-b501-8677a6950e6a}</UniqueIdentifier>
+			<UniqueIdentifier>{6d76fac9-0455-4324-bf0e-eaca3b59bb53}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Header Files\mitsuba\hw">
-			<UniqueIdentifier>{292ae7ab-f2f8-448e-8d84-ea5f555b31e4}</UniqueIdentifier>
+			<UniqueIdentifier>{f00ee13c-7e58-4247-95d5-2b1a4b81e279}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Header Files\mitsuba\render">
-			<UniqueIdentifier>{ada272f5-c12c-4248-8a85-9e0bcd9b7416}</UniqueIdentifier>
+			<UniqueIdentifier>{1318e3a9-6b1e-4013-a462-598910e27fa4}</UniqueIdentifier>
 		</Filter>
 		</ItemGroup>
   <ItemGroup Label="Source Files">
