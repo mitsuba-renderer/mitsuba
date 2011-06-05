@@ -63,6 +63,11 @@ if sys.platform == 'win32':
 		prefix=dllprefix)
 	install('#dist', ['libcollada14dom23.dll', 'boost_system-%s-mt-1_44.dll' % compilerType,
 		'boost_filesystem-%s-mt-1_44.dll' % compilerType], dllprefix + '/' + compilerType + '/')
+	if 'WIN64' in env['CXXFLAGS']:
+		installTargets += env.Install('#dist', '#dependencies/windows/bin/vcredist_2010_sp1_x64.exe')
+	else:
+		installTargets += env.Install('#dist', '#dependencies/windows/bin/vcredist_2010_sp1_x86.exe')
+	installTargets += env.Install('#dist', '#data/windows/README.txt')
 
 	if 'REDIST_PATH' in env:
 		install('#dist', ['libmmd.dll', 'libiomp5md.dll'], prefix = env['REDIST_PATH'])
