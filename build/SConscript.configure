@@ -9,6 +9,8 @@ if configFile == None:
 
 configFile = os.path.normpath(os.path.join(os.path.dirname(os.getcwd()), configFile))
 
+print("Using configuation file \"%s\"" % configFile)
+
 AddOption("--parallelize", dest="parallelize", action='store_true', help='Parallelize to the available number of cores?')
 parallelize = GetOption('parallelize')
 
