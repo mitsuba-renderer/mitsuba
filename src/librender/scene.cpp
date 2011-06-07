@@ -431,7 +431,8 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 }
 
 bool Scene::attenuatedRayIntersect(const Ray &_ray, const Medium *medium,
-		Intersection &its, Spectrum &transmittance, Sampler *sampler) const {
+		Intersection &its, bool &indexMatchedMediumTransition,
+		Spectrum &transmittance, Sampler *sampler) const {
 	Ray ray(_ray);
 	transmittance = Spectrum(1.0f);
 	int iterations = 0;
@@ -446,10 +447,12 @@ bool Scene::attenuatedRayIntersect(const Ray &_ray, const Medium *medium,
 			return false;
 		else if (its.shape->isOccluder())
 			return true;
-		else if (its.shape->isMediumTransition()) 
+		else if (its.shape->isMediumTransition()) {
 			medium = dot(its.geoFrame.n, ray.d) > 0 ?
 				  its.shape->getExteriorMedium()
 				: its.shape->getInteriorMedium();
+			indexMatchedMediumTransition = true;
+		}
 
 		ray.o = ray(its.t);
 		ray.mint = Epsilon;

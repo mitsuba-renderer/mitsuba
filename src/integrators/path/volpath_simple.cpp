@@ -78,7 +78,6 @@ public:
 				if (rRec.type & RadianceQueryRecord::EDirectMediumRadiance && 
 					scene->sampleAttenuatedLuminaire(mRec.p, ray.time,
 						rRec.medium, lRec, rRec.nextSample2D(), rRec.sampler)) {
-
 					Li += pathThroughput * lRec.value * phase->f(
 							PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 				}
@@ -153,7 +152,7 @@ public:
 					continue;
 				}
 				
-				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+				/* Prevent light leaks due to the use of shading normals */
 				Float wiDotGeoN = -dot(its.geoFrame.n, ray.d),
 					  wiDotShN  = Frame::cosTheta(its.wi);
 				if (wiDotGeoN * wiDotShN < 0 && m_strictNormals) 
@@ -168,8 +167,14 @@ public:
 					scene->sampleAttenuatedLuminaire(its, rRec.medium, lRec, 
 						rRec.nextSample2D(), rRec.sampler)) {
 					/* Allocate a record for querying the BSDF */
-					const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
-					Li += pathThroughput * lRec.value * bsdf->fCos(bRec);
+					const Vector wo = -lRec.d;
+					const BSDFQueryRecord bRec(its, its.toLocal(wo));
+					
+					Float woDotGeoN = dot(its.geoFrame.n, wo);
+					/* Prevent light leaks due to the use of shading normals */
+					if (!m_strictNormals ||
+						woDotGeoN * Frame::cosTheta(bRec.wo) > 0)
+						Li += pathThroughput * lRec.value * bsdf->fCos(bRec);
 				}
 
 				/* ==================================================================== */
@@ -182,7 +187,7 @@ public:
 				if (bsdfVal.isZero()) 
 					break;
 	
-				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+				/* Prevent light leaks due to the use of shading normals */
 				const Vector wo = its.toWorld(bRec.wo);
 				Float woDotGeoN = dot(its.geoFrame.n, wo);
 				if (woDotGeoN * Frame::cosTheta(bRec.wo) <= 0 && m_strictNormals)
@@ -231,8 +236,9 @@ public:
 					}
 				}
 
-				/* Russian roulette - Possibly stop the recursion. Don't use for transmission
-				   due to IOR weighting factors, which throw the heuristic off */
+				/* Russian roulette - Possibly stop the recursion. Don't do this when
+				   dealing with a transmission component, since solid angle compression
+				   factors cause problems with the heuristic below */
 				if (rRec.depth >= m_rrDepth && !(bRec.sampledType & BSDF::ETransmission)) {
 					/* Assuming that BSDF importance sampling is perfect,
 					   'bsdfVal.max()' should equal the maximum albedo

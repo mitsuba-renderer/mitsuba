@@ -75,10 +75,11 @@ public:
 				/* ==================================================================== */
 				/*                          Luminaire sampling                          */
 				/* ==================================================================== */
-
+				
 				/* Estimate the single scattering component if this is requested */
 				if (rRec.type & RadianceQueryRecord::EDirectMediumRadiance && 
-					scene->sampleAttenuatedLuminaire(mRec.p, ray.time, rRec.medium, lRec, rRec.nextSample2D(), rRec.sampler)) {
+					scene->sampleAttenuatedLuminaire(mRec.p, ray.time, rRec.medium, 
+						lRec, rRec.nextSample2D(), rRec.sampler)) {
 					/* Evaluate the phase function */
 					Float phaseVal = phase->f(PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 
@@ -94,7 +95,7 @@ public:
 						Li += pathThroughput * lRec.value * phaseVal * weight;
 					}
 				}
-
+				
 				/* ==================================================================== */
 				/*                         Phase function sampling                      */
 				/* ==================================================================== */
@@ -110,10 +111,11 @@ public:
 				ray = Ray(mRec.p, pRec.wo, ray.time);
 				ray.mint = 0;
 
-				bool hitLuminaire = false;
+				bool hitLuminaire = false, indexMatchedMediumTransition = false;
 				Spectrum transmittance;
 
-				if (scene->attenuatedRayIntersect(ray, rRec.medium, its, transmittance, rRec.sampler)) {
+				if (scene->attenuatedRayIntersect(ray, rRec.medium, its, 
+						indexMatchedMediumTransition, transmittance, rRec.sampler)) {
 					/* Intersected something - check if it was a luminaire */
 					if (its.isLuminaire()) {
 						lRec = LuminaireSamplingRecord(its, -ray.d);
@@ -130,7 +132,7 @@ public:
 						hitLuminaire = true;
 					}
 				}
-
+				
 				/* If a luminaire was hit, estimate the local illumination and
 				   weight using the power heuristic */
 				if (hitLuminaire && (rRec.type & RadianceQueryRecord::EDirectMediumRadiance)) {
@@ -138,6 +140,14 @@ public:
 					const Float lumPdf = scene->pdfLuminaire(mRec.p, lRec);
 					Float weight = miWeight(phasePdf, lumPdf);
 					Li += pathThroughput * lRec.value * phaseVal * weight * transmittance;
+				}
+
+				if (indexMatchedMediumTransition) {
+					/* The previous ray intersection code passed through an index-matched
+					   medium transition while looking for a luminaire. For the recursion,
+					   we need to rewind and account for this transition -- therefore,
+					   another ray intersection call is neccessary */
+					scene->rayIntersect(ray, its);
 				}
 
 				/* ==================================================================== */
@@ -174,7 +184,7 @@ public:
 						Li += pathThroughput * scene->LeBackground(ray);
 					break;
 				}
-
+				
 				/* Possibly include emitted radiance if requested */
 				if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
 					Li += pathThroughput * its.Le(-ray.d);
@@ -185,19 +195,19 @@ public:
 
 				if (rRec.depth == m_maxDepth && m_maxDepth > 0)
 					break;
-
+				
 				const BSDF *bsdf = its.getBSDF(ray);
 				if (!bsdf) {
 					/* Pass right through the surface (there is no BSDF) */
-					if (its.isMediumTransition())
+					if (its.isMediumTransition()) 
 						rRec.medium = its.getTargetMedium(ray.d);
 					ray.setOrigin(its.p);
 					ray.mint = Epsilon;
 					scene->rayIntersect(ray, its);
 					continue;
 				}
-			
-				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+
+				/* Prevent light leaks due to the use of shading normals */
 				Float wiDotGeoN = -dot(its.geoFrame.n, ray.d),
 					  wiDotShN  = Frame::cosTheta(its.wi);
 				if (wiDotGeoN * wiDotShN < 0 && m_strictNormals) 
@@ -209,14 +219,21 @@ public:
 
 				/* Estimate the direct illumination if this is requested */
 				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
-					scene->sampleAttenuatedLuminaire(its, rRec.medium, lRec, rRec.nextSample2D(), rRec.sampler)) {
-					/* Allocate a record for querying the BSDF */
-					const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
+					scene->sampleAttenuatedLuminaire(its, rRec.medium, lRec, 
+						rRec.nextSample2D(), rRec.sampler)) {
+					const Vector wo = -lRec.d;
 
+					/* Allocate a record for querying the BSDF */
+					const BSDFQueryRecord bRec(its, its.toLocal(wo));
+	
 					/* Evaluate BSDF * cos(theta) */
 					const Spectrum bsdfVal = bsdf->fCos(bRec);
 
-					if (!bsdfVal.isZero()) {
+					Float woDotGeoN = dot(its.geoFrame.n, wo);
+
+					/* Prevent light leaks due to the use of shading normals */
+					if (!bsdfVal.isZero() && (!m_strictNormals
+							|| woDotGeoN * Frame::cosTheta(bRec.wo) > 0)) {
 						/* Calculate prob. of having sampled that direction
 						   using BSDF sampling */
 						Float bsdfPdf = (lRec.luminaire->isIntersectable() 
@@ -242,7 +259,7 @@ public:
 	
 				bsdfVal /= bsdfPdf;
 
-				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+				/* Prevent light leaks due to the use of shading normals */
 				const Vector wo = its.toWorld(bRec.wo);
 				Float woDotGeoN = dot(its.geoFrame.n, wo);
 				if (woDotGeoN * Frame::cosTheta(bRec.wo) <= 0 && m_strictNormals)
@@ -254,10 +271,11 @@ public:
 				if (its.isMediumTransition())
 					rRec.medium = its.getTargetMedium(ray.d);
 
-				bool hitLuminaire = false;
+				bool hitLuminaire = false, indexMatchedMediumTransition = false;
 				Spectrum transmittance;
 
-				if (scene->attenuatedRayIntersect(ray, rRec.medium, its, transmittance, rRec.sampler)) {
+				if (scene->attenuatedRayIntersect(ray, rRec.medium, its,
+						indexMatchedMediumTransition, transmittance, rRec.sampler)) {
 					/* Intersected something - check if it was a luminaire */
 					if (its.isLuminaire()) {
 						lRec = LuminaireSamplingRecord(its, -ray.d);
@@ -285,6 +303,14 @@ public:
 					Li += pathThroughput * lRec.value * bsdfVal * weight * transmittance;
 				}
 
+				if (indexMatchedMediumTransition) {
+					/* The previous ray intersection code passed through an index-matched
+					   medium transition while looking for a luminaire. For the recursion,
+					   we need to rewind and account for this transition -- therefore,
+					   another ray intersection call is neccessary */
+					scene->rayIntersect(ray, its);
+				}
+
 				/* ==================================================================== */
 				/*                         Indirect illumination                        */
 				/* ==================================================================== */
@@ -294,8 +320,9 @@ public:
 					break;
 				rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 
-				/* Russian roulette - Possibly stop the recursion. Don't use for transmission
-				   due to IOR weighting factors, which throw the heuristic off */
+				/* Russian roulette - Possibly stop the recursion. Don't do this when
+				   dealing with a transmission component, since solid angle compression
+				   factors cause problems with the heuristic below */
 				if (rRec.depth >= m_rrDepth && !(bRec.sampledType & BSDF::ETransmission)) {
 					/* Assuming that BSDF importance sampling is perfect,
 					   'bsdfVal.max()' should equal the maximum albedo
@@ -317,8 +344,7 @@ public:
 	}
 
 	inline Float miWeight(Float pdfA, Float pdfB) const {
-		pdfA *= pdfA;
-		pdfB *= pdfB;
+		pdfA *= pdfA; pdfB *= pdfB;
 		return pdfA / (pdfA + pdfB);
 	}
 

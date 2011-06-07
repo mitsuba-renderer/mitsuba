@@ -23,6 +23,7 @@
 #include <mitsuba/core/timer.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/render/subsurface.h>
+#include <mitsuba/render/medium.h>
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/luminaire.h>
 
@@ -803,8 +804,12 @@ std::string TriMesh::toString() const {
 		<< "  surfaceArea = " << m_surfaceArea << "," << endl
 		<< "  aabb = " << m_aabb.toString() << "," << endl
 		<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl
-		<< "  subsurface = " << indent(m_subsurface.toString()) << "," << endl
-		<< "  luminaire = " << indent(m_luminaire.toString()) << endl
+		<< "  subsurface = " << indent(m_subsurface.toString()) << "," << endl;
+	if (isMediumTransition()) {
+		oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
+			<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
+	}
+	oss << "  luminaire = " << indent(m_luminaire.toString()) << endl
 		<< "]";
 	return oss.str();
 }

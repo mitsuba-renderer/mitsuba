@@ -167,12 +167,17 @@ public:
 	 *    extent information, as well as a time (which applies when
 	 *    the shapes are animated)
 	 *
+	 * \param medium
+	 *    Initial medium containing the ray \c ray
+	 *
 	 * \param its
 	 *    A detailed intersection record, which will be filled by the
 	 *    intersection query
 	 *
-	 * \param medium
-	 *    Initial medium containing the ray \c ray.
+	 * \param indexMatchedMediumTransition
+	 *    This parameter is used to return whether or not this routine
+	 *    passed through an index-matched medium-to-medium transition 
+	 *    while computing the attenuation.
 	 *
 	 * \param transmittance
 	 *    Transmittance from the ray origin to the returned intersection
@@ -180,8 +185,9 @@ public:
 	 *
 	 * \return \c true if an intersection was found
 	 */
-	bool attenuatedRayIntersect(const Ray &ray, const Medium *medium,
-		Intersection &its, Spectrum &transmittance, Sampler *sampler = NULL) const;
+	bool attenuatedRayIntersect(const Ray &ray, const Medium * medium,
+		Intersection &its, bool &indexMatchedMediumTransition,
+		Spectrum &transmittance, Sampler *sampler = NULL) const;
 
 	/**
 	 * \brief Intersect a ray against all primitives stored in the scene

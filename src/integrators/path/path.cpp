@@ -84,7 +84,7 @@ public:
 			/*                          Luminaire sampling                          */
 			/* ==================================================================== */
 
-			/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+			/* Prevent light leaks due to the use of shading normals */
 			Float wiDotGeoN = -dot(its.geoFrame.n, ray.d),
 				  wiDotShN  = Frame::cosTheta(its.wi);
 			if (wiDotGeoN * wiDotShN < 0 && m_strictNormals) 
@@ -95,12 +95,17 @@ public:
 			if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
 				scene->sampleLuminaire(its.p, ray.time, lRec, rRec.nextSample2D())) {
 				/* Allocate a record for querying the BSDF */
-				const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
-
+				const Vector wo = -lRec.d;
+				const BSDFQueryRecord bRec(its, its.toLocal(wo));
+	
 				/* Evaluate BSDF * cos(theta) */
 				const Spectrum bsdfVal = bsdf->fCos(bRec);
 
-				if (!bsdfVal.isZero()) {
+				Float woDotGeoN = dot(its.geoFrame.n, wo);
+
+				/* Prevent light leaks due to the use of shading normals */
+				if (!bsdfVal.isZero() && (!m_strictNormals
+						|| woDotGeoN * Frame::cosTheta(bRec.wo) > 0)) {
 					/* Calculate prob. of having sampled that direction
 					   using BSDF sampling */
 					Float bsdfPdf = (lRec.luminaire->isIntersectable() 
@@ -125,7 +130,7 @@ public:
 				break;
 			bsdfVal /= bsdfPdf;
 	
-			/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+			/* Prevent light leaks due to the use of shading normals */
 			const Vector wo = its.toWorld(bRec.wo);
 			Float woDotGeoN = dot(its.geoFrame.n, wo);
 			if (woDotGeoN * Frame::cosTheta(bRec.wo) <= 0 && m_strictNormals)
@@ -178,8 +183,9 @@ public:
 				break;
 			rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 
-			/* Russian roulette - Possibly stop the recursion. Don't use for transmission
-			   due to IOR weighting factors, which throw the heuristic off */
+			/* Russian roulette - Possibly stop the recursion. Don't do this when
+			   dealing with a transmission component, since solid angle compression
+			   factors cause problems with the heuristic below */
 			if (rRec.depth >= m_rrDepth && !(bRec.sampledType & BSDF::ETransmission)) {
 				/* Assuming that BSDF importance sampling is perfect,
 				   'bsdfVal.max()' should equal the maximum albedo
