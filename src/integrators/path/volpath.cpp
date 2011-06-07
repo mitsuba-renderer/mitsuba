@@ -62,14 +62,14 @@ public:
 			/*                 Radiative Transfer Equation sampling                 */
 			/* ==================================================================== */
 			if (rRec.medium && rRec.medium->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
+				/* Sample the integral
+				   \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
+				*/
 				const PhaseFunction *phase = rRec.medium->getPhaseFunction();
 
 				if (rRec.depth == m_maxDepth && m_maxDepth > 0) // No more scattering events allowed
 					break;
 
-				/* Sample the integral
-				   \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
-				*/
 				pathThroughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 
 				/* ==================================================================== */
