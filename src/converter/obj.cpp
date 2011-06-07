@@ -204,6 +204,8 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 				mtlList.find(mesh->getBSDF()->getName()) != mtlList.end()) { 
 			const std::string &matID = mesh->getBSDF()->getName();
 			os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
+		} else {
+			os << "\t\t<bsdf type=\"lambertian\"/>" << endl;
 		}
 		os << "\t</shape>" << endl << endl;
 	}

@@ -501,7 +501,7 @@ void GLWidget::timerImpulse() {
 			m_animation = false;
 	}
 
-	if (!m_mouseDrag && !m_animation) {
+	if (!(m_mouseDrag && m_navigationMode == EStandard) && !m_animation) {
 		Float moveSpeed = m_context->movementScale
 			* m_clock->getMilliseconds();
 
@@ -668,8 +668,8 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		if (m_navigationMode == EStandard) {
 			Frame frame(up);
 			Point2 coords = toSphericalCoordinates(frame.toLocal(normalize(p-target)));
-			coords.y -=  0.001f * rel.x() * m_mouseSensitivity * (m_invertMouse ? -1.0f : 1.0f);
-			coords.x -=  0.001f * rel.y() * m_mouseSensitivity;
+			coords.y -=  0.001f * rel.x() * m_mouseSensitivity * (camera->getViewTransform().det3x3() < 0 ? 1 : -1);
+			coords.x -=  0.001f * rel.y() * m_mouseSensitivity * (m_invertMouse ? -1.0f : 1.0f);
 			p = target + focusDepth * frame.toWorld(sphericalDirection(coords.x, coords.y));
 
 			if (coords.x < 0 || coords.x > M_PI) 
