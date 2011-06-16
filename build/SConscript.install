@@ -25,10 +25,12 @@ if sys.platform == 'linux2':
 		pass
 	for plugin in plugins:
 		installTargets += env.Install('#dist/plugins', plugin)
-	install('#dist', ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil',
-		'converter/mtsimport', 'qtgui/mtsgui'])
 	install('#dist', ['libcore/libmitsuba-core.so', 'libhw/libmitsuba-hw.so',
 			'librender/libmitsuba-render.so'])
+	install('#dist', ['mitsuba/mitsuba', 'mitsuba/mtssrv',
+		'mitsuba/mtsutil', 'qtgui/mtsgui'])
+	if hasCollada:
+		install('#dist', ['converter/mtsimport'])
 	env.Install('#dist/schema', '#schema/scene.xsd')
 if sys.platform == 'win32':
 	try:
@@ -55,7 +57,9 @@ if sys.platform == 'win32':
 	else:
 		raise Exception('Unknown compiler version!')
 
-	install('#dist', ['mitsuba/mitsuba.exe', 'mitsuba/mtssrv.exe', 'mitsuba/mtsutil.exe', 'converter/mtsimport.exe'])
+	if hasCollada:
+		install('#dist', ['converter/mtsimport.exe'])
+	install('#dist', ['mitsuba/mitsuba.exe', 'mitsuba/mtssrv.exe', 'mitsuba/mtsutil.exe'])
 	install('#dist', ['libcore/libmitsuba-core.dll', 'libhw/libmitsuba-hw.dll',
 			'librender/libmitsuba-render.dll'])
 	install('#dist', ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',
@@ -80,7 +84,9 @@ elif sys.platform == 'darwin':
 	for i in plugins:
 		installTargets += env.Install('#Mitsuba.app/plugins', i)
 	installTargets += env.Install('#Mitsuba.app/schema', '#schema/scene.xsd')
-	install('#Mitsuba.app/Contents/MacOS', ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil', 'converter/mtsimport'])
+	install('#Mitsuba.app/Contents/MacOS', ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil'])
+	if hasCollada:
+		install('#Mitsuba.app/Contents/MacOS', ['converter/mtsimport'])
 	plist = env.Install('#Mitsuba.app/Contents', '#data/darwin/Info.plist')
 	installTargets += plist
 	installTargets += env.AddPostAction(plist, 'perl -pi -e "s/MTS_VERSION/%s/" $TARGET' % MTS_VERSION)
