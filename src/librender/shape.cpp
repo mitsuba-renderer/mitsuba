@@ -94,10 +94,16 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 			m_luminaire->setMedium(m_exteriorMedium);
 	} else if (cClass->derivesFrom(MTS_CLASS(Subsurface))) {
 		Assert(m_subsurface == NULL);
+		if (m_interiorMedium != NULL)
+			Log(EError, "Shape \"%s\" has both an interior medium "
+				"and a subsurface integrator -- please choose one or the other!", getName().c_str());
 		m_subsurface = static_cast<Subsurface *>(child);
 	} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
 		if (name == "interior") {
 			Assert(m_interiorMedium == NULL);
+			if (m_subsurface != NULL)
+				Log(EError, "Shape \"%s\" has both an interior medium "
+					"and a subsurface integrator -- please choose one or the other!", getName().c_str());
 			m_interiorMedium = static_cast<Medium *>(child);
 		} else if (name == "exterior") {
 			Assert(m_exteriorMedium == NULL);
