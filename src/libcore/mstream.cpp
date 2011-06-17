@@ -86,8 +86,13 @@ void MemoryStream::truncate(size_t size) {
 }
 
 void MemoryStream::read(void *ptr, size_t size) {
-	if (m_pos + size > m_size) 
-		Log(EError, "Reading over the end of a memory stream!");
+	if (m_pos + size > m_size) {
+		size_t sizeRead = m_size - m_pos;
+		memcpy(ptr, m_data + m_pos, sizeRead);
+		m_pos += sizeRead;
+		throw EOFException(formatString("Reading over the end of a memory stream  (amount requested=" SIZE_T_FMT
+			", amount read=" SIZE_T_FMT ")!", size, sizeRead), sizeRead);
+	}
 	memcpy(ptr, m_data + m_pos, size);
 	m_pos += size;
 }
