@@ -106,7 +106,7 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 				m_luminaire->setMedium(m_exteriorMedium);
 		} else {
 			Log(EError, "Shape: Invalid medium child (must be named "
-				"'interiorMedium' or 'exteriorMedium')!");
+				"'interior' or 'exterior')!");
 		}
 	} else {
 		ConfigurableObject::addChild(name, child);
