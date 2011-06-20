@@ -25,9 +25,14 @@
 
 MTS_NAMESPACE_BEGIN
 
-#define XMLLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
-	level, NULL, __FILE__, __LINE__, "Near file offset %i: " fmt, \
-	(int) m_parser->getSrcOffset(), ## __VA_ARGS__)
+#if !defined(__OSX__)
+	#define XMLLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
+		level, NULL, __FILE__, __LINE__, "Near file offset %i: " fmt, \
+		(int) m_parser->getSrcOffset(), ## __VA_ARGS__)
+#else
+	#define XMLLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
+		level, NULL, __FILE__, __LINE__, fmt, ## __VA_ARGS__)
+#endif
 
 SceneHandler::SceneHandler(const SAXParser *parser,
 	const ParameterMap &params, NamedObjectMap *namedObjects,
@@ -390,7 +395,10 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		parser->setDoNamespaces(true);
 		parser->setDocumentHandler(handler);
 		parser->setErrorHandler(handler);
-		parser->setCalculateSrcOfs(true);
+		#if !defined(__OSX__)
+			/// Not supported on OSX
+			parser->setCalculateSrcOfs(true);
+		#endif
 		fs::path path = resolver->resolve(context.attributes["filename"]);
 		XMLLog(EInfo, "Parsing included file \"%s\" ..", path.filename().c_str());
 		parser->parse(path.file_string().c_str());
