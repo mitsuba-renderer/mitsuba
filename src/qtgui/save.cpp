@@ -142,6 +142,14 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	}
 	fovProperty.setAttribute("value", QString::number(sceneCamera->getFov()));
 
+	QDomElement focusDepthProperty = findProperty(camera, "focusDepth");
+	if (focusDepthProperty.isNull()) {
+		focusDepthProperty = doc.createElement("float");
+		focusDepthProperty.setAttribute("name", "focusDepth");
+		camera.insertBefore(focusDepthProperty, QDomNode());
+	}
+	focusDepthProperty.setAttribute("value", QString::number(sceneCamera->getFocusDepth()));
+
 	QDomElement cameraTransform = findUniqueChild(camera, "transform");
 	if (cameraTransform.isNull()) {
 		cameraTransform = doc.createElement("transform");
