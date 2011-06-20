@@ -48,8 +48,8 @@ inline Spectrum Intersection::Le(const Vector &d) const {
 	return shape->getLuminaire()->Le(ShapeSamplingRecord(*this), d);
 }
 
-inline Spectrum Intersection::LoSub(const Scene *scene, const Vector &d) const {
-	return shape->getSubsurface()->Lo(scene, *this, d);
+inline Spectrum Intersection::LoSub(const Scene *scene, const Vector &d, int depth) const {
+	return shape->getSubsurface()->Lo(scene, *this, d, depth);
 }
 
 inline const BSDF *Intersection::getBSDF(const RayDifferential &ray) {
