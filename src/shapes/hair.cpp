@@ -16,7 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/shape.h>
+#include "hair.h"
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/luminaire.h>
@@ -496,252 +496,253 @@ protected:
 	Float m_radius;
 };
 
-class Hair : public Shape {
-public:
-	Hair(const Properties &props) : Shape(props) {
-		fs::path path = Thread::getThread()->getFileResolver()->resolve(
-			props.getString("filename"));
-		Float radius = props.getFloat("radius", 0.05f);
-		/* Skip segments, whose tangent differs by less than one degree
-		   compared to the previous one */
-		Float angleThreshold = degToRad(props.getFloat("angleThreshold", 1.0f));
-		Float dpThresh = std::cos(angleThreshold);
+HairShape::HairShape(const Properties &props) : Shape(props) {
+	fs::path path = Thread::getThread()->getFileResolver()->resolve(
+		props.getString("filename"));
+	Float radius = props.getFloat("radius", 0.05f);
+	/* Skip segments, whose tangent differs by less than one degree
+		compared to the previous one */
+	Float angleThreshold = degToRad(props.getFloat("angleThreshold", 1.0f));
+	Float dpThresh = std::cos(angleThreshold);
 
-		/* Object-space -> World-space transformation */
-		Transform objectToWorld = props.getTransform("toWorld", Transform());
+	/* Object-space -> World-space transformation */
+	Transform objectToWorld = props.getTransform("toWorld", Transform());
 
-		Log(EInfo, "Loading hair geometry from \"%s\" ..", path.leaf().c_str());
+	Log(EInfo, "Loading hair geometry from \"%s\" ..", path.leaf().c_str());
 
-		fs::ifstream is(path);
-		if (is.fail())
-			Log(EError, "Could not open \"%s\"!", path.file_string().c_str());
+	fs::ifstream is(path);
+	if (is.fail())
+		Log(EError, "Could not open \"%s\"!", path.file_string().c_str());
 
-		std::string line;
-		bool newFiber = true;
-		Point p, lastP(0.0f);
-		std::vector<Point> vertices;
-		std::vector<bool> vertexStartsFiber;
-		Vector tangent(0.0f);
-		size_t nDegenerate = 0, nSkipped = 0;
+	std::string line;
+	bool newFiber = true;
+	Point p, lastP(0.0f);
+	std::vector<Point> vertices;
+	std::vector<bool> vertexStartsFiber;
+	Vector tangent(0.0f);
+	size_t nDegenerate = 0, nSkipped = 0;
 
-		while (is.good()) {
-			std::getline(is, line);
-			if (line.length() > 0 && line[0] == '#') {
-				newFiber = true;
-				continue;
-			}
-			std::istringstream iss(line);
-			iss >> p.x >> p.y >> p.z;
-			if (!iss.fail()) {
-				p = objectToWorld(p);
-				if (newFiber) {
+	while (is.good()) {
+		std::getline(is, line);
+		if (line.length() > 0 && line[0] == '#') {
+			newFiber = true;
+			continue;
+		}
+		std::istringstream iss(line);
+		iss >> p.x >> p.y >> p.z;
+		if (!iss.fail()) {
+			p = objectToWorld(p);
+			if (newFiber) {
+				vertices.push_back(p);
+				vertexStartsFiber.push_back(newFiber);
+				lastP = p;
+				tangent = Vector(0.0f);
+			} else if (p != lastP) {
+				if (tangent.isZero()) {
 					vertices.push_back(p);
 					vertexStartsFiber.push_back(newFiber);
+					tangent = normalize(p - lastP);
 					lastP = p;
-					tangent = Vector(0.0f);
-				} else if (p != lastP) {
-					if (tangent.isZero()) {
+				} else {
+					Vector nextTangent = normalize(p - lastP);
+					if (dot(nextTangent, tangent) > dpThresh) {
+						/* Too small of a difference in the tangent value,
+							just overwrite the previous vertex by the current one */
+						tangent = normalize(p - vertices[vertices.size()-2]);
+						vertices[vertices.size()-1] = p;
+						++nSkipped;
+					} else {
 						vertices.push_back(p);
 						vertexStartsFiber.push_back(newFiber);
-						tangent = normalize(p - lastP);
-						lastP = p;
-					} else {
-						Vector nextTangent = normalize(p - lastP);
-						if (dot(nextTangent, tangent) > dpThresh) {
-							/* Too small of a difference in the tangent value,
-							   just overwrite the previous vertex by the current one */
-							tangent = normalize(p - vertices[vertices.size()-2]);
-							vertices[vertices.size()-1] = p;
-							++nSkipped;
-						} else {
-							vertices.push_back(p);
-							vertexStartsFiber.push_back(newFiber);
-							tangent = nextTangent;
-						}
-						lastP = p;
+						tangent = nextTangent;
 					}
-				} else {
-					nDegenerate++;
+					lastP = p;
 				}
-				newFiber = false;
 			} else {
-				newFiber = true;
+				nDegenerate++;
 			}
+			newFiber = false;
+		} else {
+			newFiber = true;
 		}
-
-		if (nDegenerate > 0)
-			Log(EInfo, "Encountered " SIZE_T_FMT 
-				" degenerate segments!", nDegenerate);
-		if (nSkipped > 0)
-			Log(EInfo, "Skipped " SIZE_T_FMT 
-				" low-curvature segments.", nSkipped);
-
-		vertexStartsFiber.push_back(true);
-
-		m_kdtree = new HairKDTree(vertices, vertexStartsFiber, radius);
 	}
 
-	Hair(Stream *stream, InstanceManager *manager) 
-		: Shape(stream, manager) {
-		Float radius = stream->readFloat();
-		size_t vertexCount = stream->readSize();
+	if (nDegenerate > 0)
+		Log(EInfo, "Encountered " SIZE_T_FMT 
+			" degenerate segments!", nDegenerate);
+	if (nSkipped > 0)
+		Log(EInfo, "Skipped " SIZE_T_FMT 
+			" low-curvature segments.", nSkipped);
 
-		std::vector<Point> vertices(vertexCount);
-		std::vector<bool> vertexStartsFiber(vertexCount+1);
-		stream->readFloatArray((Float *) &vertices[0], vertexCount * 3);
+	vertexStartsFiber.push_back(true);
 
-		for (size_t i=0; i<vertexCount; ++i) 
-			vertexStartsFiber[i] = stream->readBool();
-		vertexStartsFiber[vertexCount] = true;
+	m_kdtree = new HairKDTree(vertices, vertexStartsFiber, radius);
+}
 
-		m_kdtree = new HairKDTree(vertices, vertexStartsFiber, radius);
+HairShape::HairShape(Stream *stream, InstanceManager *manager) 
+	: Shape(stream, manager) {
+	Float radius = stream->readFloat();
+	size_t vertexCount = stream->readSize();
+
+	std::vector<Point> vertices(vertexCount);
+	std::vector<bool> vertexStartsFiber(vertexCount+1);
+	stream->readFloatArray((Float *) &vertices[0], vertexCount * 3);
+
+	for (size_t i=0; i<vertexCount; ++i) 
+		vertexStartsFiber[i] = stream->readBool();
+	vertexStartsFiber[vertexCount] = true;
+
+	m_kdtree = new HairKDTree(vertices, vertexStartsFiber, radius);
+}
+
+void HairShape::serialize(Stream *stream, InstanceManager *manager) const {
+	Shape::serialize(stream, manager);
+
+	const std::vector<Point> &vertices = m_kdtree->getVertices();
+	const std::vector<bool> &vertexStartsFiber = m_kdtree->getStartFiber();
+
+	stream->writeFloat(m_kdtree->getRadius());
+	stream->writeSize(vertices.size());
+	stream->writeFloatArray((Float *) &vertices[0], vertices.size() * 3);
+	for (size_t i=0; i<vertices.size(); ++i)
+		stream->writeBool(vertexStartsFiber[i]);
+}
+
+bool HairShape::rayIntersect(const Ray &ray, Float mint, 
+		Float maxt, Float &t, void *temp) const {
+	return m_kdtree->rayIntersect(ray, mint, maxt, t, temp);
+}
+
+bool HairShape::rayIntersect(const Ray &ray, Float mint, Float maxt) const {
+	return m_kdtree->rayIntersect(ray, mint, maxt);
+}
+
+void HairShape::fillIntersectionRecord(const Ray &ray, 
+	const void *temp, Intersection &its) const {
+	its.p = ray(its.t);
+
+	/* No UV coordinates for now */
+	its.uv = Point2(0,0);
+	its.dpdu = Vector(0,0,0);
+	its.dpdv = Vector(0,0,0);
+
+	const HairKDTree::index_type *storage = 
+		static_cast<const HairKDTree::index_type *>(temp);
+	HairKDTree::index_type iv = *storage;
+
+	const Vector axis = m_kdtree->tangent(iv);
+	its.geoFrame.s = axis;
+	const Vector relHitPoint = its.p - m_kdtree->firstVertex(iv);
+	its.geoFrame.n = Normal(normalize(relHitPoint - dot(axis, relHitPoint) * axis));
+	its.geoFrame.t = cross(its.geoFrame.n, its.geoFrame.s);
+	its.shFrame = its.geoFrame;
+	its.wi = its.toLocal(-ray.d);
+	its.hasUVPartials = false;
+	its.shape = this;
+}
+
+ref<TriMesh> HairShape::createTriMesh() {
+	size_t nSegments = m_kdtree->getSegmentCount();
+	/// Use very approximate geometry for large hair meshes
+	const uint32_t phiSteps = (nSegments > 100000) ? 4 : 10;
+	const Float dPhi   = (2*M_PI) / phiSteps;
+
+	ref<TriMesh> mesh = new TriMesh("Hair mesh approximation",
+		phiSteps*2*nSegments, phiSteps*2*nSegments, true, false, false);
+
+	Point *vertices = mesh->getVertexPositions();
+	Normal *normals = mesh->getVertexNormals();
+	Triangle *triangles = mesh->getTriangles();
+	size_t triangleIdx = 0, vertexIdx = 0;
+	
+	const std::vector<Point> &hairVertices = m_kdtree->getVertices();
+	const std::vector<bool> &vertexStartsFiber = m_kdtree->getStartFiber();
+	const Float radius = m_kdtree->getRadius();
+	Float *cosPhi = new Float[phiSteps];
+	Float *sinPhi = new Float[phiSteps];
+	for (size_t i=0; i<phiSteps; ++i) {
+		sinPhi[i] = std::sin(i*dPhi);
+		cosPhi[i] = std::cos(i*dPhi);
 	}
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Shape::serialize(stream, manager);
+	uint32_t hairIdx = 0;
+	for (HairKDTree::index_type iv=0; iv<(HairKDTree::index_type) hairVertices.size()-1; iv++) {
+		if (!vertexStartsFiber[iv+1]) {
+			for (uint32_t phi=0; phi<phiSteps; ++phi) {
+				Vector tangent = m_kdtree->tangent(iv);
+				Vector dir = Frame(tangent).toWorld(
+						Vector(cosPhi[phi], sinPhi[phi], 0));
+				Normal miterNormal1 = m_kdtree->firstMiterNormal(iv);
+				Normal miterNormal2 = m_kdtree->secondMiterNormal(iv);
+				Float t1 = dot(miterNormal1, radius*dir) / dot(miterNormal1, tangent);
+				Float t2 = dot(miterNormal2, radius*dir) / dot(miterNormal2, tangent);
 
-		const std::vector<Point> &vertices = m_kdtree->getVertices();
-		const std::vector<bool> &vertexStartsFiber = m_kdtree->getStartFiber();
+				Normal normal(normalize(dir));
+				normals[vertexIdx] = normal;
+				vertices[vertexIdx++] = m_kdtree->firstVertex(iv) + radius*dir - tangent*t1;
+				normals[vertexIdx] = normal;
+				vertices[vertexIdx++] = m_kdtree->secondVertex(iv) + radius*dir - tangent*t2;
 
-		stream->writeFloat(m_kdtree->getRadius());
-		stream->writeSize(vertices.size());
-		stream->writeFloatArray((Float *) &vertices[0], vertices.size() * 3);
-		for (size_t i=0; i<vertices.size(); ++i)
-			stream->writeBool(vertexStartsFiber[i]);
-	}
-
-	bool rayIntersect(const Ray &ray, Float mint, 
-			Float maxt, Float &t, void *temp) const {
-		return m_kdtree->rayIntersect(ray, mint, maxt, t, temp);
-	}
-
-	bool rayIntersect(const Ray &ray, Float mint, Float maxt) const {
-		return m_kdtree->rayIntersect(ray, mint, maxt);
-	}
-
-	void fillIntersectionRecord(const Ray &ray, 
-		const void *temp, Intersection &its) const {
-		its.p = ray(its.t);
-
-		/* No UV coordinates for now */
-		its.uv = Point2(0,0);
-		its.dpdu = Vector(0,0,0);
-		its.dpdv = Vector(0,0,0);
-
-		const HairKDTree::index_type *storage = 
-			static_cast<const HairKDTree::index_type *>(temp);
-		HairKDTree::index_type iv = *storage;
-
-		const Vector axis = m_kdtree->tangent(iv);
-		its.geoFrame.s = axis;
-		const Vector relHitPoint = its.p - m_kdtree->firstVertex(iv);
-		its.geoFrame.n = Normal(normalize(relHitPoint - dot(axis, relHitPoint) * axis));
-		its.geoFrame.t = cross(its.geoFrame.n, its.geoFrame.s);
-		its.shFrame = its.geoFrame;
-		its.wi = its.toLocal(-ray.d);
-		its.hasUVPartials = false;
-		its.shape = this;
-	}
-
-	ref<TriMesh> createTriMesh() {
-		size_t nSegments = m_kdtree->getSegmentCount();
-		/// Use very approximate geometry for large hair meshes
-		const uint32_t phiSteps = (nSegments > 100000) ? 4 : 10;
-		const Float dPhi   = (2*M_PI) / phiSteps;
-
-		ref<TriMesh> mesh = new TriMesh("Hair mesh approximation",
-			phiSteps*2*nSegments, phiSteps*2*nSegments, true, false, false);
-
-		Point *vertices = mesh->getVertexPositions();
-		Normal *normals = mesh->getVertexNormals();
-		Triangle *triangles = mesh->getTriangles();
-		size_t triangleIdx = 0, vertexIdx = 0;
-		
-		const std::vector<Point> &hairVertices = m_kdtree->getVertices();
-		const std::vector<bool> &vertexStartsFiber = m_kdtree->getStartFiber();
-		const Float radius = m_kdtree->getRadius();
-		Float *cosPhi = new Float[phiSteps];
-		Float *sinPhi = new Float[phiSteps];
-		for (size_t i=0; i<phiSteps; ++i) {
-			sinPhi[i] = std::sin(i*dPhi);
-			cosPhi[i] = std::cos(i*dPhi);
-		}
-
-		uint32_t hairIdx = 0;
-		for (HairKDTree::index_type iv=0; iv<(HairKDTree::index_type) hairVertices.size()-1; iv++) {
-			if (!vertexStartsFiber[iv+1]) {
-				for (uint32_t phi=0; phi<phiSteps; ++phi) {
-					Vector tangent = m_kdtree->tangent(iv);
-					Vector dir = Frame(tangent).toWorld(
-							Vector(cosPhi[phi], sinPhi[phi], 0));
-					Normal miterNormal1 = m_kdtree->firstMiterNormal(iv);
-					Normal miterNormal2 = m_kdtree->secondMiterNormal(iv);
-					Float t1 = dot(miterNormal1, radius*dir) / dot(miterNormal1, tangent);
-					Float t2 = dot(miterNormal2, radius*dir) / dot(miterNormal2, tangent);
-
-					Normal normal(normalize(dir));
-					normals[vertexIdx] = normal;
-					vertices[vertexIdx++] = m_kdtree->firstVertex(iv) + radius*dir - tangent*t1;
-					normals[vertexIdx] = normal;
-					vertices[vertexIdx++] = m_kdtree->secondVertex(iv) + radius*dir - tangent*t2;
-
-					uint32_t idx0 = 2*(phi + hairIdx*phiSteps), idx1 = idx0+1;
-					uint32_t idx2 = (2*phi+2) % (2*phiSteps) + 2*hairIdx*phiSteps, idx3 = idx2+1;
-					triangles[triangleIdx].idx[0] = idx0;
-					triangles[triangleIdx].idx[1] = idx2;
-					triangles[triangleIdx].idx[2] = idx1;
-					triangleIdx++;
-					triangles[triangleIdx].idx[0] = idx1;
-					triangles[triangleIdx].idx[1] = idx2;
-					triangles[triangleIdx].idx[2] = idx3;
-					triangleIdx++;
-				}
-				hairIdx++;
+				uint32_t idx0 = 2*(phi + hairIdx*phiSteps), idx1 = idx0+1;
+				uint32_t idx2 = (2*phi+2) % (2*phiSteps) + 2*hairIdx*phiSteps, idx3 = idx2+1;
+				triangles[triangleIdx].idx[0] = idx0;
+				triangles[triangleIdx].idx[1] = idx2;
+				triangles[triangleIdx].idx[2] = idx1;
+				triangleIdx++;
+				triangles[triangleIdx].idx[0] = idx1;
+				triangles[triangleIdx].idx[1] = idx2;
+				triangles[triangleIdx].idx[2] = idx3;
+				triangleIdx++;
 			}
+			hairIdx++;
 		}
-		Assert(triangleIdx == phiSteps*2*nSegments);
-		Assert(vertexIdx == phiSteps*2*nSegments);
-
-		delete[] cosPhi;
-		delete[] sinPhi;
-
-		mesh->setBSDF(m_bsdf);
-		mesh->setLuminaire(m_luminaire);
-		mesh->configure();
-
-		return mesh.get();
 	}
+	Assert(triangleIdx == phiSteps*2*nSegments);
+	Assert(vertexIdx == phiSteps*2*nSegments);
 
-	const KDTreeBase<AABB> *getKDTree() const {
-		return m_kdtree.get();
-	}
+	delete[] cosPhi;
+	delete[] sinPhi;
 
-	AABB getAABB() const {
-		return m_kdtree->getAABB();
-	}
+	mesh->setBSDF(m_bsdf);
+	mesh->setLuminaire(m_luminaire);
+	mesh->configure();
 
-	Float getSurfaceArea() const {
-		Log(EError, "Hair::getSurfaceArea(): Not implemented.");
-		return -1;
-	}
+	return mesh.get();
+}
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "Hair[" << endl
-			<< "   numVertices = " << m_kdtree->getVertexCount() << ","
-			<< "   numSegments = " << m_kdtree->getSegmentCount() << ","
-			<< "   numHairs = " << m_kdtree->getHairCount() << ","
-			<< "   radius = " << m_kdtree->getRadius()
-			<< "]";
-		return oss.str();
-	}
+const KDTreeBase<AABB> *HairShape::getKDTree() const {
+	return m_kdtree.get();
+}
 
-	MTS_DECLARE_CLASS()
-private:
-	ref<HairKDTree> m_kdtree;
-};
+const std::vector<Point> &HairShape::getVertices() const {
+	return m_kdtree->getVertices();
+}
+
+const std::vector<bool> &HairShape::getStartFiber() const {
+	return m_kdtree->getStartFiber();
+}
+
+AABB HairShape::getAABB() const {
+	return m_kdtree->getAABB();
+}
+
+Float HairShape::getSurfaceArea() const {
+	Log(EError, "HairShape::getSurfaceArea(): Not implemented.");
+	return -1;
+}
+
+std::string HairShape::toString() const {
+	std::ostringstream oss;
+	oss << "Hair[" << endl
+		<< "   numVertices = " << m_kdtree->getVertexCount() << ","
+		<< "   numSegments = " << m_kdtree->getSegmentCount() << ","
+		<< "   numHairs = " << m_kdtree->getHairCount() << ","
+		<< "   radius = " << m_kdtree->getRadius()
+		<< "]";
+	return oss.str();
+}
 
 MTS_IMPLEMENT_CLASS(HairKDTree, false, KDTreeBase)
-MTS_IMPLEMENT_CLASS_S(Hair, false, Shape)
-MTS_EXPORT_PLUGIN(Hair, "Hair intersection primitive");
+MTS_IMPLEMENT_CLASS_S(HairShape, false, Shape)
+MTS_EXPORT_PLUGIN(HairShape, "Hair intersection shape");
 MTS_NAMESPACE_END

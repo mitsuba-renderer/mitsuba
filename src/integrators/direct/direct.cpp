@@ -86,7 +86,7 @@ public:
 
 		/* Include radiance from a subsurface integrator if requested */
 		if (its.hasSubsurface() && (rRec.type & RadianceQueryRecord::ESubsurfaceRadiance))
-			Li += its.LoSub(scene, -ray.d);
+			Li += its.LoSub(scene, rRec.sampler, -ray.d, rRec.depth);
 
 		const BSDF *bsdf = its.getBSDF(ray);
 

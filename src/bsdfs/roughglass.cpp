@@ -72,7 +72,7 @@ public:
 
 	/**
 	 * Beckmann distribution function for gaussian random surfaces
-	 * @param thetaM Tangent of the angle between M and N.
+	 * \param thetaM Tangent of the angle between M and N.
 	 */
 	inline Float beckmannD(const Vector &m, Float alphaB) const {
 		Float ex = Frame::tanTheta(m) / alphaB;
@@ -96,8 +96,8 @@ public:
 
 	/**
 	 * Smith's shadow-masking function G1 for the Beckmann distribution
-	 * @param m The microsurface normal
-	 * @param v An arbitrary direction
+	 * \param m The microsurface normal
+	 * \param v An arbitrary direction
 	 */
 	Float smithBeckmannG1(const Vector &v, const Vector &m) const {
 		if (dot(v, m)*Frame::cosTheta(v) <= 0)

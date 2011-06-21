@@ -18,21 +18,22 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/core/plugin.h>
+#include "../shapes/hair.h"
 
 MTS_NAMESPACE_BEGIN
 
-class MarschnerShader : public Subsurface {
+class MarschnerModel : public Subsurface {
 public:
-	MarschnerShader(const Properties &props)
+	MarschnerModel(const Properties &props)
 		: Subsurface(props) {
 	}
 
-	MarschnerShader(Stream *stream, InstanceManager *manager)
+	MarschnerModel(Stream *stream, InstanceManager *manager)
 	 : Subsurface(stream, manager) {
 		configure();
 	}
 
-	virtual ~MarschnerShader() {
+	virtual ~MarschnerModel() {
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -46,35 +47,49 @@ public:
 		return true;
 	}
 
-	void cancel() {
+	void configure() {
+		/* Precompute certain things if necessary */
 	}
 
-	Spectrum Lo(const Scene *scene, const Intersection &its, const Vector &d, int depth) const {
-//		Vector wiLocal = its.wi;
-	//	Vector wiWorld = d;
+	/// Set the parent object
+	void setParent(ConfigurableObject *parent) {
+		/// Can't use derivesFrom() here for subtle linker/shared
+		/// library reasons on windows
+		if (parent->getClass()->getName() != "HairShape")
+			Log(EError, "Can only be attached to a HairShape!");
+	}
 
+	Spectrum Lo(const Scene *scene, Sampler *sampler, 
+			const Intersection &its, const Vector &d, int depth) const {
+		Spectrum result(0.0f);
+
+		const HairShape *shape = static_cast<const HairShape *>(its.shape);
+
+		Vector wiLocal = its.wi, wiWorld = d;
+
+		LuminaireSamplingRecord lRec;
+		if (scene->sampleLuminaire(its.p, its.time, lRec, sampler->next2D())) {
+			/* Do something with lRec */
+		}
+
+		/* Recursively gather radiance, but don't include emission */
+		RadianceQueryRecord rRec(scene, sampler);
+		rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission, NULL);
+		rRec.depth = depth + 1;
+		
 		/// Compute scattered direction
 		Vector wo = -d;
-		const Shape *shape = its.shape;
 
-		RadianceQueryRecord rRec(scene, const_cast<Sampler *>(scene->getSampler()));
-		rRec.newQuery(RadianceQueryRecord::ERadiance, NULL);
-		rRec.depth = depth + 1;
-		Spectrum recursiveRadiance = static_cast<const SampleIntegrator *>(scene->getIntegrator())->Li(RayDifferential(its.p, wo, its.time), rRec);
+		Spectrum recursiveRadiance = static_cast<const SampleIntegrator *>(
+			scene->getIntegrator())->Li(RayDifferential(its.p, wo, its.time), rRec);
 
-		Spectrum modelResult(0.5f);
-
-		return modelResult * recursiveRadiance;
+		return result;
 	}
-
-	void configure() {
-	}
-
 
 	MTS_DECLARE_CLASS()
 private:
 };
 
-MTS_IMPLEMENT_CLASS_S(MarschnerShader, false, Subsurface)
-MTS_EXPORT_PLUGIN(MarschnerShader, "Marschner model");
+MTS_IMPLEMENT_CLASS_S(MarschnerModel, false, Subsurface)
+MTS_EXPORT_PLUGIN(MarschnerModel, "Marschner hair scattering model");
 MTS_NAMESPACE_END

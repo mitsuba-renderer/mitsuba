@@ -64,6 +64,9 @@ Subsurface::Subsurface(Stream *stream, InstanceManager *manager) :
 
 Subsurface::~Subsurface() {
 }
+	
+void Subsurface::cancel() {
+}
 
 void Subsurface::setParent(ConfigurableObject *parent) {
 	if (parent->getClass()->derivesFrom(MTS_CLASS(Shape))) {
