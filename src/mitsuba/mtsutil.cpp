@@ -194,7 +194,7 @@ int mtsutil(int argc, char **argv) {
 	
 		/* Initialize OpenMP */
 		Thread::initializeOpenMP(nprocs);
-		
+
 		/* Disable the default appenders */
 		for (size_t i=0; i<log->getAppenderCount(); ++i) {
 			Appender *appender = log->getAppender(i);

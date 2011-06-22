@@ -391,6 +391,8 @@ NSGLDevice::~NSGLDevice() {
 void NSGLDevice::init(Device *other) {
 	Device::init(other);
 
+	__ubi_init_cocoa();
+
 	NSOpenGLPixelFormatAttribute attribs[32];
 	uint i=0;
 

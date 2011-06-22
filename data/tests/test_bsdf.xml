@@ -1,0 +1,18 @@
+<scene>
+	<!-- Test the lambertian model -->
+	<bsdf type="lambertian"/>
+
+	<!-- Test the diffuse transmission model -->
+	<bsdf type="difftrans"/>
+
+	<!-- Test the phong model with both diffuse + specular components -->
+	<bsdf type="phong">
+		<float name="diffuseAmount" value="0.5"/>
+		<float name="specularAmount" value="0.5"/>
+
+		<spectrum name="diffuseReflectance" value="1"/>
+		<spectrum name="specularReflectance" value="1"/>
+	</bsdf>
+
+	<camera type="perspective"/>
+</scene>

@@ -31,6 +31,7 @@ MTS_NAMESPACE_BEGIN
 #define assertEqualsEpsilon(expected, actual, epsilon) assertEqualsImpl(expected, actual, epsilon, __FILE__, __LINE__)
 #define assertTrue(expr) assertTrueImpl(expr, #expr, __FILE__, __LINE__)
 #define assertFalse(expr) assertFalseImpl(expr, #expr, __FILE__, __LINE__)
+#define failAndContinue(msg) failAndContinueImpl(msg, __FILE__, __LINE__)
 #endif
 
 /** \brief Base class of all testcases. Implementations of this
@@ -103,6 +104,12 @@ protected:
 
 	/// Asserts that a condition is false
 	void assertFalseImpl(bool condition, const char *expr, const char *file, int line);
+
+	/// Note a failure and continue
+	void failAndContinueImpl(const std::string &msg, const char *file, int line);
+
+	/// Increase the number of succeeded tests
+	void succeed();
 protected:
 	int m_executed, m_succeeded;
 };

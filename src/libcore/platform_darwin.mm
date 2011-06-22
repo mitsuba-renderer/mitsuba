@@ -21,7 +21,8 @@
 
 MTS_NAMESPACE_BEGIN
 
-pthread_key_t __ubi_autorelease_key;
+static pthread_key_t __ubi_autorelease_key;
+static bool __ubi_cocoa_initialized = false;
 	
 void __ubi_autorelease_init() {
 	pthread_key_create(&__ubi_autorelease_key, NULL);
@@ -48,6 +49,14 @@ void __ubi_chdir_to_bundlepath() {
 
 std::string __ubi_bundlepath() {
 	return [[[NSBundle mainBundle] bundlePath] fileSystemRepresentation];
+}
+
+void __ubi_init_cocoa() {
+	if (!__ubi_cocoa_initialized) {
+		[NSApplication sharedApplication]; /* Creates a connection to the windowing environment */
+		[NSApp activateIgnoringOtherApps:YES]; /* Pop to front */
+		__ubi_cocoa_initialized = true;
+	}
 }
 
 MTS_NAMESPACE_END

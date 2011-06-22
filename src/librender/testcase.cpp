@@ -98,6 +98,16 @@ void TestCase::assertEqualsImpl(const Vector4 &expected, const Vector4 &actual, 
 			"expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
 }
 
+void TestCase::failAndContinueImpl(const std::string &msg, const char *file, int line) {
+	Thread::getThread()->getLogger()->log(EWarn, NULL, file, line, "Failure: %s", msg.c_str());
+	m_executed++;
+}
+
+void TestCase::succeed() {
+	m_executed++;
+	m_succeeded++;
+}
+
 struct Sample {
 	Float value;
 	Float variance;
