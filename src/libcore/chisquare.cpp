@@ -59,9 +59,9 @@ bool ChiSquareTest::runTest(int distParams, Float pvalThresh) {
 		Log(m_logLevel, "Pooled %i cells with an expected "
 			"number of < 5 entries!", pooledCells);
 		if (pooledRef < 5) {
-			Log(EWarn, "Even after pooling, the expected "
+			Log(EWarn, "Even after pooling %i cells, the expected "
 				"number of entries is < 5 (%f), expect badness!",
-				pooledRef);
+				pooledCells, pooledRef);
 		}
 		Float diff = pooledCounts - pooledRef;
 		chsq += (diff*diff) / pooledRef;
@@ -78,7 +78,7 @@ bool ChiSquareTest::runTest(int distParams, Float pvalThresh) {
 	Log(m_logLevel, pval > 0.01 ? "P-value = %.4f" : "P-value = %e", pval);
 
 	if (pval < pvalThresh) {
-		Log(EWarn, "Rejecting the null hypothesis");
+		Log(EWarn, "Rejecting the null hypothesis (P-value=%e)", pval);
 		return false;
 	}
 	return true;

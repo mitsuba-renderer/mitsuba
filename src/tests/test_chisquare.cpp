@@ -36,13 +36,14 @@ public:
 
 	class BSDFFunctor {
 	public:
-		BSDFFunctor(const BSDF *bsdf, Random *random, const Vector &wi)
-				: m_bsdf(bsdf), m_random(random), m_wi(wi) { }
+		BSDFFunctor(const BSDF *bsdf, Random *random, const Vector &wi, int component = -1)
+				: m_bsdf(bsdf), m_random(random), m_wi(wi), m_component(component) { }
 
 		std::pair<Vector, Float> generateSample() {
 			Point2 sample(m_random->nextFloat(), m_random->nextFloat());
 			Intersection its;
 			BSDFQueryRecord bRec(its);
+			bRec.component = m_component;
 			bRec.wi = m_wi;
 			m_bsdf->sample(bRec, sample);
 
@@ -52,6 +53,7 @@ public:
 		Float pdf(const Vector &wo) const {
 			Intersection its;
 			BSDFQueryRecord bRec(its);
+			bRec.component = m_component;
 			bRec.wi = m_wi;
 			bRec.wo = wo;
 			return m_bsdf->pdf(bRec);
@@ -60,6 +62,7 @@ public:
 		ref<const BSDF> m_bsdf;
 		ref<Random> m_random;
 		Vector m_wi;
+		int m_component;
 	};
 	
 	void test01_BSDF() {
@@ -67,17 +70,18 @@ public:
 		ref<Scene> scene = loadScene("data/tests/test_bsdf.xml");
 	
 		const std::vector<ConfigurableObject *> objects = scene->getReferencedObjects();
-		size_t thetaBins = 10, wiSamples = 5;
+		size_t thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
 		ref<Random> random = new Random();
 
+		Log(EInfo, "Verifying BSDF sampling routines ..");
 		for (size_t i=0; i<objects.size(); ++i) {
 			if (!objects[i]->getClass()->derivesFrom(MTS_CLASS(BSDF)))
 				continue;
 
 			const BSDF *bsdf = static_cast<const BSDF *>(objects[i]);
 
-			Log(EInfo, "Checking sampling with %i different incident directions, BSDF:\n%s", 
-					wiSamples, bsdf->toString().c_str());
+			Log(EInfo, "Processing BSDF model %s", bsdf->toString().c_str());
+			Log(EInfo, "Checking the combined model for %i incident directions", wiSamples);
 
 			/* Test for a number of different incident directions */
 			for (size_t j=0; j<wiSamples; ++j) {
@@ -90,6 +94,7 @@ public:
 
 				BSDFFunctor functor(bsdf, random, wi);
 				ref<ChiSquareTest> chiSqr = new ChiSquareTest(thetaBins);
+				chiSqr->setLogLevel(EDebug);
 
 				// Initialize the tables used by the chi-square test
 				chiSqr->fill(
@@ -97,16 +102,58 @@ public:
 					boost::bind(&BSDFFunctor::pdf, functor, _1)
 				);
 
-				// (the folowing assumes that the distribution has 1 parameter, e.g. exponent value)
+				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
 				if (!chiSqr->runTest(1)) {
-					// Optional: dump the tables to a MATLAB file for external analysis
-					chiSqr->dumpTables("failure.m");
-					failAndContinue("Oh oh, the chi-square test failed! Dumped the contingency tables to 'failure.m'");
+					std::string filename = formatString("failure_%i.m", failureCount++);
+					chiSqr->dumpTables(filename);
+					failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
+						"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis", 
+						wi.toString().c_str(), filename.c_str()));
 				} else {
 					succeed();
 				}
+				++testCount;
+			}
+
+			if (bsdf->getComponentCount() > 1) {
+				for (int comp=0; comp<bsdf->getComponentCount(); ++comp) {
+					Log(EInfo, "Checking BSDF component %i", comp);
+
+					/* Test for a number of different incident directions */
+					for (size_t j=0; j<wiSamples; ++j) {
+						Vector wi;
+			
+						if (bsdf->getType(comp) & (BSDF::EDiffuseTransmission | BSDF::EGlossyTransmission))
+							wi = squareToSphere(Point2(random->nextFloat(), random->nextFloat()));
+						else
+							wi = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));
+
+						BSDFFunctor functor(bsdf, random, wi, comp);
+						ref<ChiSquareTest> chiSqr = new ChiSquareTest(thetaBins);
+						chiSqr->setLogLevel(EDebug);
+
+						// Initialize the tables used by the chi-square test
+						chiSqr->fill(
+							boost::bind(&BSDFFunctor::generateSample, functor),
+							boost::bind(&BSDFFunctor::pdf, functor, _1)
+						);
+
+						// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
+						if (!chiSqr->runTest(1)) {
+							std::string filename = formatString("failure_%i.m", failureCount++);
+							chiSqr->dumpTables(filename);
+							failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
+								"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis", 
+								wi.toString().c_str(), filename.c_str()));
+						} else {
+							succeed();
+						}
+						++testCount;
+					}
+				}
 			}
 		}
+		Log(EInfo, "%i/%i BSDF checks succeeded", testCount-failureCount, testCount);
 	}
 };
 

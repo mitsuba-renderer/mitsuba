@@ -95,7 +95,7 @@ public:
 	ChiSquareTest(int thetaBins = 10, int phiBins = 0, size_t sampleCount = 0);
 
 	/// Set the log level
-	inline void setLogLevel(ELogLevel logLevel) { m_logLevel = EInfo; }
+	inline void setLogLevel(ELogLevel logLevel) { m_logLevel = logLevel; }
 
 	/**
 	 * \brief Fill the actual and reference bin counts
