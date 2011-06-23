@@ -8,6 +8,11 @@
 	<!-- Test the diffuse transmission model -->
 	<bsdf type="difftrans"/>
 
+	<!-- Test the rough glass model -->
+	<bsdf type="roughglass">
+		<float name="alphaB" value="0.1"/>
+	</bsdf>
+
 	<!-- Test the Phong model -->
 	<bsdf type="phong">
 		<float name="diffuseAmount" value="0.5"/>
@@ -55,10 +60,5 @@
 		<float name="alphaB" value="0.1"/>
 	</bsdf>
 	
-	<!-- Test the rough glass model -->
-	<bsdf type="roughglass">
-		<float name="alphaB" value="0.1"/>
-	</bsdf>
-
 	<camera type="perspective"/>
 </scene>
