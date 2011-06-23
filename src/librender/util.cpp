@@ -30,6 +30,7 @@ ref<Scene> Utility::loadScene(const std::string &filename,
 	FileResolver *resolver = Thread::getThread()->getFileResolver();
 	SAXParser* parser = new SAXParser();
 	fs::path schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
+	Log(EDebug, "Loading scene \"%s\" ..", filename.c_str());
 
 	/* Check against the 'scene.xsd' XML Schema */
 	parser->setDoSchema(true);
