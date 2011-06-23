@@ -22,6 +22,11 @@
 
 MTS_NAMESPACE_BEGIN
 
+/**
+ * Turns a one-sided BRDF onto a two-sided one that
+ * can be used to render meshes where the back-side
+ * is visible.
+ */
 class TwoSidedBRDF : public BSDF {
 public:
 	TwoSidedBRDF(const Properties &props) 
@@ -87,31 +92,31 @@ public:
 
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		bool flip = false;
+		bool flipped = false;
 		if (bRec.wi.z < 0) {
 			bRec.wi.z *= -1;
-			flip = true;
+			flipped = true;
 		}
 		Spectrum result = m_nestedBRDF->sample(bRec, sample);
-		if (bRec.wi.z < 0 && !result.isZero()) {
+		if (flipped) {
 			bRec.wi.z *= -1;
-			bRec.wo.z *= -1;
-			flip = true;
+			if (!result.isZero()) 
+				bRec.wo.z *= -1;
 		}
 		return result;
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
-		bool flip = false;
+		bool flipped = false;
 		if (bRec.wi.z < 0) {
 			bRec.wi.z *= -1;
-			flip = true;
+			flipped = true;
 		}
 		Spectrum result = m_nestedBRDF->sample(bRec, pdf, sample);
-		if (bRec.wi.z < 0 && !result.isZero()) {
+		if (flipped) {
 			bRec.wi.z *= -1;
-			bRec.wo.z *= -1;
-			flip = true;
+			if (!result.isZero() && pdf != 0)
+				bRec.wo.z *= -1;
 		}
 		return result;
 	}

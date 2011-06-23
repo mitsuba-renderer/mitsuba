@@ -182,7 +182,13 @@ public:
 		if (bRec.wo.z <= 0) 
 			return Spectrum(0.0f);
 
-		return f(bRec) / pdf(bRec);
+		Float pdfVal = pdf(bRec); 
+	
+		// guard against numerical issues
+		if (pdfVal == 0)
+			return Spectrum(0.0f);
+		else
+			return f(bRec) / pdfVal;
 	}
 
 	inline Float pdfDiffuse(const BSDFQueryRecord &bRec) const {
