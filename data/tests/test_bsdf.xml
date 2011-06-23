@@ -2,6 +2,17 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
+	<!-- Test the anisotropic Ward model -->
+	<bsdf type="ward">
+		<float name="diffuseAmount" value="0"/>
+		<float name="specularAmount" value="1"/>
+		<float name="alphaX" value="0.1"/>
+		<float name="alphaY" value="0.3"/>
+
+		<spectrum name="diffuseReflectance" value="1"/>
+		<spectrum name="specularReflectance" value="1"/>
+	</bsdf>
+
 	<!-- Test the lambertian model -->
 	<bsdf type="lambertian"/>
 
@@ -28,17 +39,6 @@
 			<spectrum name="diffuseReflectance" value="1"/>
 			<spectrum name="specularReflectance" value="1"/>
 		</bsdf>
-	</bsdf>
-
-	<!-- Test the anisotropic Ward model -->
-	<bsdf type="ward">
-		<float name="diffuseAmount" value="0.5"/>
-		<float name="specularAmount" value="0.5"/>
-		<float name="alphaX" value="0.1"/>
-		<float name="alphaY" value="0.3"/>
-
-		<spectrum name="diffuseReflectance" value="1"/>
-		<spectrum name="specularReflectance" value="1"/>
 	</bsdf>
 
 	<!-- Test the microfacet model -->

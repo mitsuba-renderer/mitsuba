@@ -69,7 +69,7 @@ public:
 			bool mismatch = false;
 
 			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-				Float a = sampled[i], b=sampled2[i];
+				Float a = sampled[i], b = sampled2[i];
 				SAssert(a >= 0 && b >= 0);
 				Float min = std::min(a, b);
 				Float err = std::abs(a - b);

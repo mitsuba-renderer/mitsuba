@@ -68,7 +68,7 @@ public:
 		else if (distr == "ggx")
 			m_distribution = EGGX;
 		else 
-			Log(EError, "Invalid distribution function \"%s\", must be "
+			Log(EError, "Specified an invalid distribution \"%s\", must be "
 				"\"beckmann\", \"phong\", or \"ggx\"!", distr.c_str());
 
 		if (m_distribution == EPhong) {

@@ -19,19 +19,38 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/consttexture.h>
 #include <mitsuba/hw/gpuprogram.h>
+#include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * Anisotropic Ward BRDF model based on
+ * Anisotropic Ward BRDF model based on the following four papers
+ *
  *   "Measuring and Modeling Anisotropic Reflection" by 
  *   Gregory J. Ward, SIGGRAPH 1992
- * and
+ *
  *   "Notes on the Ward BRDF" by Bruce Walter, Technical Report 
  *   PCG-05-06, Cornell University
+ *
+ *   "An Improved Normalization for the Ward Reflectance Model"
+ *   by Arne Duer, Journal of Graphics Tools 11, 1 (2006), 51–59
+ *
+ *   "A New Ward BRDF Model with Bounded Albedo" by
+ *   by David Geisler-Moroder and Arne Dur, 
+ *   Computer Graphics Forum, Volume 29, Issue 4
  */
 class Ward : public BSDF {
 public:
+	/// Supported model types
+	enum EModelType {
+		/// The original Ward model
+		EWard = 0,
+		/// Ward model with correction by Arne Duer
+		EWardDuer = 1,
+		/// Energy-balanced Ward model
+		EBalanced = 2
+	};
+
 	Ward(const Properties &props) 
 		: BSDF(props) {
 		m_diffuseReflectance = new ConstantTexture(
@@ -41,6 +60,17 @@ public:
 		
 		m_kd = props.getFloat("diffuseAmount", 1.0f);
 		m_ks = props.getFloat("specularAmount", 1.0f);
+
+		std::string type = boost::to_lower_copy(props.getString("type", "balanced"));
+		if (type == "ward")
+			m_modelType = EWard;
+		else if (type == "ward-duer")
+			m_modelType = EWardDuer;
+		else if (type == "balanced")
+			m_modelType = EBalanced;
+		else
+			Log(EError, "Specified an invalid model type \"%s\", must be "
+				"\"ward\", \"ward-duer\", or \"balanced\"!", type.c_str());
 
 		m_verifyEnergyConservation = props.getBoolean("verifyEnergyConservation", true);
 		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", -1);
@@ -59,6 +89,7 @@ public:
 
 	Ward(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
+		m_modelType = (EModelType) stream->readUInt();
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_alphaX = stream->readFloat();
@@ -121,15 +152,32 @@ public:
 
 		if (hasGlossy) {
 			Vector H = bRec.wi+bRec.wo;
-			Float factor1 = 1.0f / (4.0f * M_PI * m_alphaX * m_alphaY * 
-				std::sqrt(Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo)));
+			
+			Float factor1 = 0.0f;
+			switch (m_modelType) {
+				case EWard:
+					factor1 = 1.0f / (4.0f * M_PI * m_alphaX * m_alphaY * 
+						std::sqrt(Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo)));
+					break;
+				case EWardDuer:
+					factor1 = 1.0f / (4.0f * M_PI * m_alphaX * m_alphaY * 
+						Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo));
+					break;
+				case EBalanced:
+					factor1 = dot(H,H) / (M_PI * m_alphaX * m_alphaY 
+						* std::pow(Frame::cosTheta(H),4));
+					break;
+				default:
+					Log(EError, "Unknown model type!");
+			}
+
 			Float factor2 = H.x / m_alphaX, factor3 = H.y / m_alphaY;
 			Float exponent = -(factor2*factor2+factor3*factor3)/(H.z*H.z);
 			Float specRef = factor1 * std::exp(exponent) * m_ks;
 			/* Important to prevent numeric issues when evaluating the
 			   sampling density of the Ward model in places where it takes
 			   on miniscule values (Veach-MLT does this for instance) */
-			if (specRef > Epsilon)
+			if (specRef > 1e-10f)
 				result += m_specularReflectance->getValue(bRec.its) * specRef;
 		}
 
@@ -182,8 +230,8 @@ public:
 
 		Float thetaH = std::atan(std::sqrt(std::max((Float) 0.0f, 
 			-std::log(sample.x) / (
-				(cosPhiH*cosPhiH)/(m_alphaX*m_alphaX) +
-				(sinPhiH*sinPhiH)/(m_alphaY*m_alphaY)
+				(cosPhiH*cosPhiH) / (m_alphaX*m_alphaX) +
+				(sinPhiH*sinPhiH) / (m_alphaY*m_alphaY)
 		))));
 		Vector H = sphericalDirection(thetaH, phiH);
 		bRec.wo = H * (2.0f * dot(bRec.wi, H)) - bRec.wi;
@@ -251,6 +299,7 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
+		stream->writeUInt(m_modelType);
 		manager->serialize(stream, m_diffuseReflectance.get());
 		manager->serialize(stream, m_specularReflectance.get());
 		stream->writeFloat(m_alphaX);
@@ -266,7 +315,16 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Ward[" << endl
-			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
+			<< "  type = ";
+
+		switch (m_modelType) {
+			case EWard: oss << "ward," << endl; break;
+			case EWardDuer: oss << "wardDuer," << endl; break;
+			case EBalanced: oss << "balanced," << endl; break;
+			default: Log(EError, "Unknown model type!");
+		}
+
+		oss << "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  diffuseAmount = " << m_kd << "," << endl
 			<< "  specularAmount = " << m_ks << "," << endl
@@ -279,6 +337,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
+	EModelType m_modelType;
 	ref<const Texture> m_diffuseReflectance;
 	ref<const Texture> m_specularReflectance;
 	Float m_alphaX, m_alphaY;
@@ -292,12 +351,12 @@ private:
 
 class WardShader : public Shader {
 public:
-	WardShader(Renderer *renderer, 
+	WardShader(Renderer *renderer, Ward::EModelType type, 
 			const Texture *diffuseColor,
 			const Texture *specularColor,
 			Float ks, Float kd,
 			Float alphaX, Float alphaY) : Shader(renderer, EBSDFShader), 
-			m_diffuseReflectance(diffuseColor),
+			m_modelType(type), m_diffuseReflectance(diffuseColor),
 			m_specularReflectance(specularColor),
 			m_ks(ks), m_kd(kd), m_alphaX(alphaX), m_alphaY(alphaY) {
 		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
@@ -322,7 +381,8 @@ public:
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		oss << "uniform float " << evalName << "_alphaX;" << endl
+		oss << "uniform int " << evalName << "_type;" << endl
+			<< "uniform float " << evalName << "_alphaX;" << endl
 			<< "uniform float " << evalName << "_alphaY;" << endl
 			<< "uniform float " << evalName << "_ks;" << endl
 			<< "uniform float " << evalName << "_kd;" << endl
@@ -331,8 +391,16 @@ public:
 			<< "    if (wi.z <= 0.0 || wo.z <= 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
 			<< "    vec3 H = normalize(wi + wo);" << endl
-			<< "    float factor1 = 1/(12.566 * " << evalName << "_alphaX * " 
+			<< "    float factor1;" << endl
+			<< "    if (" << evalName << "_type == 1)" << endl
+			<< "        factor1 = 1/(12.566 * " << evalName << "_alphaX * "  << endl
 			<< "                    " << evalName << "_alphaY * sqrt(wi.z * wo.z));" << endl
+			<< "    else if (" << evalName << "_type == 2)" << endl
+			<< "        factor1 = 1/(12.566 * " << evalName << "_alphaX * " << endl
+			<< "                    " << evalName << "_alphaY * wi.z * wo.z);" << endl
+			<< "    else" << endl
+			<< "        factor1 = dot(H, H)/(3.1415 * " << evalName << "_alphaX * "  << endl
+			<< "                    " << evalName << "_alphaY * (H.z * H.z) * (H.z * H.z));" << endl
 			<< "    float factor2 = H.x / " << evalName << "_alphaX;" << endl
 			<< "    float factor3 = H.y / " << evalName << "_alphaY;" << endl
 			<< "    float exponent = -(factor2*factor2 + factor3*factor3)/(H.z*H.z);" << endl
@@ -348,6 +416,7 @@ public:
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_type"));
 		parameterIDs.push_back(program->getParameterID(evalName + "_alphaX"));
 		parameterIDs.push_back(program->getParameterID(evalName + "_alphaY"));
 		parameterIDs.push_back(program->getParameterID(evalName + "_ks"));
@@ -355,14 +424,16 @@ public:
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
-		program->setParameter(parameterIDs[0], m_alphaX);
-		program->setParameter(parameterIDs[1], m_alphaY);
-		program->setParameter(parameterIDs[2], m_ks);
-		program->setParameter(parameterIDs[3], m_kd);
+		program->setParameter(parameterIDs[0], (int) m_modelType);
+		program->setParameter(parameterIDs[1], m_alphaX);
+		program->setParameter(parameterIDs[2], m_alphaY);
+		program->setParameter(parameterIDs[3], m_ks);
+		program->setParameter(parameterIDs[4], m_kd);
 	}
 
 	MTS_DECLARE_CLASS()
 private:
+	Ward::EModelType m_modelType;
 	ref<const Texture> m_diffuseReflectance;
 	ref<const Texture> m_specularReflectance;
 	ref<Shader> m_diffuseReflectanceShader;
@@ -372,7 +443,7 @@ private:
 };
 
 Shader *Ward::createShader(Renderer *renderer) const { 
-	return new WardShader(renderer, m_diffuseReflectance.get(),
+	return new WardShader(renderer, m_modelType, m_diffuseReflectance.get(),
 		m_specularReflectance.get(), m_ks, m_kd, m_alphaX, m_alphaY);
 }
 
