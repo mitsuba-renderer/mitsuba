@@ -305,12 +305,14 @@ public:
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
 			return Spectrum(0.0f);
 
-		Float etaI = m_extIOR, etaO = m_intIOR;
+		Float etaI = m_extIOR, etaT = m_intIOR;
 		if (Frame::cosTheta(bRec.wi) < 0)
-			std::swap(etaI, etaO);
+			std::swap(etaI, etaT);
 
 		/* Calculate the transmission half-vector */
-		Vector Ht = -normalize(bRec.wi*etaI+bRec.wo*etaO);
+		Vector Ht = -normalize(bRec.wi*etaI + bRec.wo*etaT);
+		if (m_extIOR > m_intIOR)
+			Ht *= -1;
 
 		/* Fresnel factor */
 		Float F = 1.0f - fresnel(dot(bRec.wi, Ht), m_extIOR, m_intIOR);
@@ -328,12 +330,11 @@ public:
 		Float value = F * D * G * std::abs((dot(bRec.wi, Ht)*dot(bRec.wo, Ht)) / 
 			(Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo)));
 
-		if (bRec.quantity == ERadiance)
-			value *= (etaI*etaI)/(etaO*etaO);
+		Float sqrtDenom = etaI * dot(bRec.wi, Ht) + etaT * dot(bRec.wo, Ht);
+		value *= (etaT * etaT) / (sqrtDenom*sqrtDenom);
 
-		/* Half-angle Jacobian for refraction */
-		Float sqrtDenom = etaI * dot(bRec.wi, Ht) + etaO * dot(bRec.wo, Ht);
-		value *= (etaO*etaO) / (sqrtDenom*sqrtDenom);
+		if (bRec.quantity == ERadiance)
+			value *= (etaI*etaI) / (etaT*etaT);
 
 		return m_specularTransmittance * value;
 	}
@@ -381,6 +382,8 @@ public:
 			std::swap(etaI, etaT);
 
 		Vector Ht = -normalize(bRec.wi*etaI + bRec.wo*etaT);
+		if (m_extIOR > m_intIOR)
+			Ht *= -1;
 
 		/* Jacobian of the half-direction transform. */
 		Float sqrtDenom = etaI * dot(bRec.wi, Ht) + etaT * dot(bRec.wo, Ht);
