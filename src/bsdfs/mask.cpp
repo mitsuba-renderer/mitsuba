@@ -55,13 +55,15 @@ public:
 		BSDF::configure();
 		if (!m_nestedBSDF)
 			Log(EError, "A child BSDF is required");
-		m_combinedType = m_nestedBSDF->getType() | EDeltaTransmission;
 		m_usesRayDifferentials = m_nestedBSDF->usesRayDifferentials();
 		m_componentCount = m_nestedBSDF->getComponentCount() + 1;
+		if (m_type)
+			delete[] m_type;
 		m_type = new unsigned int[m_componentCount];
 		for (int i=0; i<m_nestedBSDF->getComponentCount(); ++i)
 			m_type[i] = m_nestedBSDF->getType(i);
-		m_type[m_nestedBSDF->getComponentCount()] = EDeltaTransmission;
+		m_type[m_nestedBSDF->getComponentCount()] = EDeltaTransmission | EFrontSide | EBackSide;
+		m_combinedType = m_nestedBSDF->getType() | m_type[m_nestedBSDF->getComponentCount()];
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
@@ -170,6 +172,14 @@ public:
 
 	Shader *createShader(Renderer *renderer) const;
 
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "Mask[" << endl
+			<< "  opacity = " << indent(m_opacity->toString()) << "," << endl
+			<< "  nestedBSDF = " << indent(m_nestedBSDF.toString()) << endl
+			<< "]";
+		return oss.str();
+	}
 	MTS_DECLARE_CLASS()
 protected:
 	ref<Texture> m_opacity;

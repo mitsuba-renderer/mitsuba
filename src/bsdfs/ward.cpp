@@ -49,12 +49,10 @@ public:
 		m_alphaY = props.getFloat("alphaY", .1f);
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDiffuseReflection;
-		m_type[1] = EGlossyReflection;
-		if (m_alphaX != m_alphaY) {
-			m_type[0] |= EAnisotropicMaterial;
-			m_type[1] |= EAnisotropicMaterial;
-		}
+		m_type[0] = EDiffuseReflection | EFrontSide;
+		m_type[1] = EGlossyReflection | EFrontSide;
+		if (m_alphaX != m_alphaY) 
+			m_type[1] |= EAnisotropic;
 		m_combinedType = m_type[0] | m_type[1];
 		m_usesRayDifferentials = false;
 	}
@@ -72,8 +70,10 @@ public:
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDiffuseReflection;
-		m_type[1] = EGlossyReflection;
+		m_type[0] = EDiffuseReflection | EFrontSide;
+		m_type[1] = EGlossyReflection | EFrontSide;
+		if (m_alphaX != m_alphaY) 
+			m_type[1] |= EAnisotropic;
 		m_combinedType = m_type[0] | m_type[1];
 		m_usesRayDifferentials = 
 			m_diffuseReflectance->usesRayDifferentials() ||

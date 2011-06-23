@@ -50,7 +50,7 @@ public:
 		: BSDF(props) {
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EGlossyReflection;
+		m_type[0] = m_combinedType = EGlossyReflection | EFrontSide | EAnisotropic;
 		m_usesRayDifferentials = true;
 
 		FileResolver *fResolver = Thread::getThread()->getFileResolver();
@@ -94,7 +94,7 @@ public:
 		m_ksMultiplier = stream->readFloat();
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EGlossyReflection | EAnisotropicMaterial;
+		m_type[0] = m_combinedType = EGlossyReflection | EFrontSide | EAnisotropic;
 		m_usesRayDifferentials = true;
 	}
 

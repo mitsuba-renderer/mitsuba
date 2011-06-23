@@ -45,8 +45,8 @@ public:
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDeltaReflection;
-		m_type[1] = EDeltaTransmission;
+		m_type[0] = EDeltaReflection | EFrontSide;
+		m_type[1] = EDeltaTransmission | EFrontSide | EBackSide;
 		m_combinedType = m_type[0] | m_type[1];
 		m_usesRayDifferentials = false;
 	}
@@ -60,8 +60,8 @@ public:
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDeltaReflection;
-		m_type[1] = EDeltaTransmission;
+		m_type[0] = EDeltaReflection | EFrontSide;
+		m_type[1] = EDeltaTransmission | EFrontSide | EBackSide;
 		m_combinedType = m_type[0] | m_type[1];
 		m_usesRayDifferentials = false;
 	}
@@ -246,8 +246,10 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Dielectric[" << endl
-			<< "  intIOR=" << m_intIOR << "," << endl 
-			<< "  extIOR=" << m_extIOR << endl
+			<< "  intIOR = " << m_intIOR << "," << endl 
+			<< "  extIOR = " << m_extIOR << "," << endl
+			<< "  reflectance = " << m_reflectance.toString() << "," << endl
+			<< "  transmittance = " << m_transmittance.toString() << endl
 			<< "]";
 		return oss.str();
 	}

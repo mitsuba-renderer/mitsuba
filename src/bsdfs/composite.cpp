@@ -112,8 +112,8 @@ public:
 			for (int j=0; j<bsdf->getComponentCount(); ++j) {
 				int componentType = bsdf->getType(j);
 				m_type[offset+j] = componentType;
-				m_combinedType |= componentType;
 			}
+			m_combinedType |= bsdf->getType();
 			offset += bsdf->getComponentCount();
 			m_usesRayDifferentials |= bsdf->usesRayDifferentials();
 			m_pdf[i] = m_bsdfWeight[i];

@@ -45,7 +45,7 @@ public:
 			props.getSpectrum("reflectance", Spectrum(.5f)));
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EDiffuseReflection;
+		m_combinedType = m_type[0] = EDiffuseReflection | EFrontSide;
 		m_usesRayDifferentials = false;
 	}
 
@@ -54,7 +54,7 @@ public:
 		m_reflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EDiffuseReflection;
+		m_combinedType = m_type[0] = EDiffuseReflection | EFrontSide;
 		m_usesRayDifferentials = m_reflectance->usesRayDifferentials();
 	}
 

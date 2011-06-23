@@ -122,7 +122,7 @@ public:
 			for (size_t j=0; j<wiSamples; ++j) {
 				Vector wi;
 	
-				if (bsdf->getType() & (BSDF::EDiffuseTransmission | BSDF::EGlossyTransmission))
+				if (bsdf->getType() & BSDF::EBackSide)
 					wi = squareToSphere(Point2(random->nextFloat(), random->nextFloat()));
 				else
 					wi = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));
@@ -159,7 +159,7 @@ public:
 					for (size_t j=0; j<wiSamples; ++j) {
 						Vector wi;
 			
-						if (bsdf->getType(comp) & (BSDF::EDiffuseTransmission | BSDF::EGlossyTransmission))
+						if (bsdf->getType(comp) & BSDF::EBackSide)
 							wi = squareToSphere(Point2(random->nextFloat(), random->nextFloat()));
 						else
 							wi = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));

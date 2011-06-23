@@ -47,15 +47,19 @@ public:
 	void configure() {
 		if (!m_nestedBRDF)
 			Log(EError, "TwoSidedBRDF: A child BRDF instance is required");
-		m_combinedType = m_nestedBRDF->getType();
 		if (m_combinedType & BSDF::ETransmission)
 			Log(EError, "TwoSidedBRDF: only BRDF child instances (without "
 				"transmission) are supported");
 		m_usesRayDifferentials = m_nestedBRDF->usesRayDifferentials();
 		m_componentCount = m_nestedBRDF->getComponentCount();
+		if (m_type)
+			delete[] m_type;
 		m_type = new unsigned int[m_componentCount];
-		for (int i=0; i<m_nestedBRDF->getComponentCount(); ++i)
-			m_type[i] = m_nestedBRDF->getType(i);
+		m_combinedType = 0;
+		for (int i=0; i<m_nestedBRDF->getComponentCount(); ++i) {
+			m_type[i] = m_nestedBRDF->getType(i) | EFrontSide | EBackSide;
+			m_combinedType |= m_type[i];
+		}
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {

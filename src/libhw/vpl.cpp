@@ -361,7 +361,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 		return;
 	}
 
-	bool anisotropic = bsdf->getType() & BSDF::EAnisotropicMaterial;
+	bool anisotropic = bsdf->getType() & BSDF::EAnisotropic;
 
 	m_targetConfig = VPLProgramConfiguration(vplShader, bsdfShader, 
 			lumShader, faceNormals);

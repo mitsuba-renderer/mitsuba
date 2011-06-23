@@ -30,8 +30,7 @@ public:
 		m_transmission = props.getSpectrum("transmission", Spectrum(0.8f));
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDeltaTransmission;
-		m_combinedType = m_type[0];
+		m_combinedType = m_type[0] = EDeltaTransmission | EFrontSide | EBackSide;
 		m_usesRayDifferentials = false;
 	}
 
@@ -41,7 +40,7 @@ public:
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
 		m_type[0] = EDeltaTransmission;
-		m_combinedType = m_type[0];
+		m_combinedType = m_type[0] = EDeltaTransmission | EFrontSide | EBackSide;
 		m_usesRayDifferentials = false;
 	}
 
@@ -97,6 +96,14 @@ public:
 	
 	Spectrum fDelta(const BSDFQueryRecord &bRec) const {
 		return m_transmission;
+	}
+
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "Transparent[" << endl
+			<< "  transmission = " << m_transmission.toString() << endl
+			<< "]";
+		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()

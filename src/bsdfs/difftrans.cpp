@@ -34,7 +34,7 @@ public:
 			props.getSpectrum("transmittance", Spectrum(.5f)));
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EDiffuseTransmission;
+		m_combinedType = m_type[0] = EDiffuseTransmission | EFrontSide | EBackSide;
 		m_usesRayDifferentials = false;
 	}
 
@@ -43,7 +43,7 @@ public:
 		m_transmittance = static_cast<Texture *>(manager->getInstance(stream));
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EDiffuseTransmission;
+		m_combinedType = m_type[0] = EDiffuseTransmission | EFrontSide | EBackSide;
 		m_usesRayDifferentials = m_transmittance->usesRayDifferentials();
 	}
 
@@ -113,7 +113,9 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "DiffuseTransmitter[transmittance=" << m_transmittance->toString() << "]";
+		oss << "DiffuseTransmitter[" << endl
+			<< "  transmittance = " << indent(m_transmittance->toString()) << endl
+			<< "]";
 		return oss.str();
 	}
 

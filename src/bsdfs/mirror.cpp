@@ -30,8 +30,7 @@ public:
 		m_reflectance = props.getSpectrum("specularReflectance", Spectrum(0.8f));
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDeltaReflection;
-		m_combinedType = m_type[0];
+		m_type[0] = m_combinedType = EDeltaReflection | EFrontSide;
 		m_usesRayDifferentials = false;
 	}
 
@@ -40,8 +39,8 @@ public:
 		m_reflectance = Spectrum(stream);
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDeltaReflection;
-		m_combinedType = m_type[0];
+		m_type[0] = m_combinedType = EDeltaReflection | EFrontSide;
+		m_combinedType = m_type[0] | EFrontSide;
 		m_usesRayDifferentials = false;
 	}
 
@@ -94,6 +93,13 @@ public:
 		return m_reflectance;
 	}
 
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "Mirror[" << endl
+			<< "  reflectance = " << m_reflectance.toString() << endl
+			<< "]";
+		return oss.str();
+	}
 
 	MTS_DECLARE_CLASS()
 protected:

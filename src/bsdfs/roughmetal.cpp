@@ -42,7 +42,7 @@ public:
 
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EGlossyReflection;
+		m_combinedType = m_type[0] = EGlossyReflection | EFrontSide;
 		m_usesRayDifferentials = false;
 	}
 
@@ -55,7 +55,7 @@ public:
 
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EGlossyReflection;
+		m_combinedType = m_type[0] = EGlossyReflection | EFrontSide;
 		m_usesRayDifferentials = 
 			m_specularReflectance->usesRayDifferentials();
 	}
@@ -187,7 +187,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "RoughMetal[" << endl
-			<< "  specularReflectance=" << m_specularReflectance.toString() << "," << std::endl
+			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << std::endl
 			<< "  ior = " << m_ior.toString() << "," << std::endl
 			<< "  k = " << m_k.toString() << "," << std::endl
 			<< "  alphaB = " << m_alphaB << std::endl

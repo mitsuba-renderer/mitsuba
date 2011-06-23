@@ -383,7 +383,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					its.p.x = secRay4.o[0].f[idx];
 					its.p.y = secRay4.o[1].f[idx];
 					its.p.z = secRay4.o[2].f[idx];
-					if (EXPECT_NOT_TAKEN(bsdf->getType() & BSDF::EAnisotropicMaterial)) {
+					if (EXPECT_NOT_TAKEN(bsdf->getType() & BSDF::EAnisotropic)) {
 						its.shFrame.s = normalize(its.dpdu - its.shFrame.n
 							* dot(its.shFrame.n, its.dpdu));
 						its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);

@@ -99,13 +99,24 @@ public:
 	 */
 	enum EBSDFType {
 		EUnknown              = 0x0000,
-		EDiffuseReflection    = 0x0001, /* Perfect diffuse reflection */
-		EDiffuseTransmission  = 0x0002, /* Perfect diffuse transmission */
-		EDeltaReflection      = 0x0004, /* Reflection using a delta function */
-		EDeltaTransmission    = 0x0008, /* Transmission using a delta function */
-		EGlossyReflection     = 0x0010, /* Glossy reflection */
-		EGlossyTransmission   = 0x0020, /* Glossy transmission */
-		EAnisotropicMaterial  = 0x1000  /* Reflection is not invariant to rotation */
+		/// Perfect diffuse reflection 
+		EDiffuseReflection    = 0x0001, 
+		/// Perfect diffuse transmission
+		EDiffuseTransmission  = 0x0002,
+		/// Reflection using a delta function
+		EDeltaReflection      = 0x0004,
+		/// Transmission using a delta function
+		EDeltaTransmission    = 0x0008,
+		/// Glossy reflection
+		EGlossyReflection     = 0x0010,
+		/// Glossy transmission
+		EGlossyTransmission   = 0x0020,
+		/// Reflection is not invariant to rotation
+		EAnisotropic          = 0x1000,
+		/// Supports interactions on the front-facing side
+		EFrontSide            = 0x2000,
+		/// Supports interactions on the back-facing side
+		EBackSide             = 0x4000  
 	};
 
 	/// Type combinations
