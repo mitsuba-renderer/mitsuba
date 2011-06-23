@@ -45,7 +45,7 @@ public:
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDeltaReflection | EFrontSide;
+		m_type[0] = EDeltaReflection | EFrontSide | EBackSide;
 		m_type[1] = EDeltaTransmission | EFrontSide | EBackSide;
 		m_combinedType = m_type[0] | m_type[1];
 		m_usesRayDifferentials = false;
@@ -60,7 +60,7 @@ public:
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDeltaReflection | EFrontSide;
+		m_type[0] = EDeltaReflection | EFrontSide | EBackSide;
 		m_type[1] = EDeltaTransmission | EFrontSide | EBackSide;
 		m_combinedType = m_type[0] | m_type[1];
 		m_usesRayDifferentials = false;
