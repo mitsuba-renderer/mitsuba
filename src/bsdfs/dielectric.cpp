@@ -113,7 +113,6 @@ public:
 		if (sinThetaTSqr > 1.0f) /* Total internal reflection! */
 			return 0.0f;
 
-		/* Compute the cosine, but guard against numerical imprecision */
 		Float cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
 		if (entering)
 			cosThetaT = -cosThetaT;
@@ -132,7 +131,7 @@ public:
 	}
 
 	inline Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		Float pdf=1;
+		Float pdf = 0;
 		Spectrum spec = Dielectric::sample(bRec, pdf, sample);
 		if (pdf == 0 || spec.isZero())
 			return Spectrum(0.0f);
@@ -202,10 +201,7 @@ public:
 				result = 0.5f;
 			} else {
 				Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-				if (reflection)
-					result = fr;
-				else
-					result = 1-fr;
+				result = reflection ? fr : (1-fr);
 			}
 		} else if (sampleReflection) {
 			result = reflection ? 1.0f : 0.0f;
@@ -221,23 +217,25 @@ public:
 		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
 		bool reflection = bRec.wo.z * bRec.wi.z > 0;
-		Float intIOR = m_intIOR, extIOR = m_extIOR;
-		Float fr = fresnel(Frame::cosTheta(bRec.wi), extIOR, intIOR);
+		Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+		
 		if (sampleReflection && !sampleTransmission && !reflection) 
 			return Spectrum(0.0f);
 		else if (!sampleReflection && sampleTransmission && reflection)
 			return Spectrum(0.0f);
-		if (reflection)
+
+		if (reflection) {
 			return m_reflectance * fr;
-		else {
+		} else {
+			Float etaI = m_extIOR, etaT = m_intIOR;
 			bool entering = Frame::cosTheta(bRec.wi) > 0.0f;
 			if (!entering)
-				std::swap(intIOR, extIOR);
+				std::swap(etaI, etaT);
 
 			Float factor = (bRec.quantity == ERadiance) 
-				? (extIOR*extIOR)/(intIOR*intIOR) : 1.0f;
+				? (etaI*etaI) / (etaT*etaT) : 1.0f;
 
-			return m_transmittance  * factor * (1-fr);
+			return m_transmittance  * factor * (1 - fr);
 		}
 
 	}

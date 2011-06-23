@@ -17,7 +17,7 @@
 */
 
 #include <mitsuba/core/plugin.h>
-#include <mitsuba/core/plugin.h>
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/core/chisquare.h>
 #include <mitsuba/render/testcase.h>
 
@@ -73,7 +73,7 @@ public:
 				SAssert(a >= 0 && b >= 0);
 				Float min = std::min(a, b);
 				Float err = std::abs(a - b);
-				m_largestWeight = std::max(m_largestWeight, a);
+				m_largestWeight = std::max(m_largestWeight, a * Frame::cosTheta(bRec.wo));
 
 				if (min < Epsilon && err > Epsilon) // absolute error threshold
 					mismatch = true;
@@ -115,6 +115,7 @@ public:
 		const std::vector<ConfigurableObject *> objects = scene->getReferencedObjects();
 		size_t thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
 		ref<Random> random = new Random();
+		ProgressReporter *progress = new ProgressReporter("Checking", wiSamples, NULL);
 
 		Log(EInfo, "Verifying BSDF sampling routines ..");
 		for (size_t i=0; i<objects.size(); ++i) {
@@ -125,8 +126,8 @@ public:
 			Float largestWeight = 0;
 
 			Log(EInfo, "Processing BSDF model %s", bsdf->toString().c_str());
-#if 0
-			Log(EInfo, "Checking the combined model for %i incident directions", wiSamples);
+			Log(EInfo, "Checking the model for %i incident directions", wiSamples);
+			progress->reset();
 
 			/* Test for a number of different incident directions */
 			for (size_t j=0; j<wiSamples; ++j) {
@@ -160,12 +161,13 @@ public:
 				}
 				largestWeight = std::max(largestWeight, adapter.getLargestWeight());
 				++testCount;
+				progress->update(j+1);
 			}
-#endif
 
 			if (bsdf->getComponentCount() > 1) {
 				for (int comp=0; comp<bsdf->getComponentCount(); ++comp) {
-					Log(EInfo, "Checking BSDF component %i", comp);
+					progress->reset();
+					Log(EInfo, "Individually checking BSDF component %i", comp);
 
 					/* Test for a number of different incident directions */
 					for (size_t j=0; j<wiSamples; ++j) {
@@ -200,12 +202,14 @@ public:
 						}
 						largestWeight = std::max(largestWeight, adapter.getLargestWeight());
 						++testCount;
+						progress->update(j+1);
 					}
 				}
 			}
-			Log(EInfo, "Done with this model. The largest encountered sampling weight was = %f", largestWeight);
+			Log(EInfo, "Done with this model. The largest encountered importance weight was = %.2f", largestWeight);
 		}
 		Log(EInfo, "%i/%i BSDF checks succeeded", testCount-failureCount, testCount);
+		delete progress;
 	}
 };
 

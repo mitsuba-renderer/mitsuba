@@ -2,33 +2,6 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
-	<!-- Test the rough glass model with the 
-		 Beckmann microfacet distribution -->
-	<bsdf type="roughglass">
-		<string name="distribution" value="beckmann"/>
-		<float name="alpha" value="1"/>
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1.0"/>
-	</bsdf>
-
-	<!-- Test the rough glass model with the 
-		 GGX microfacet distribution -->
-	<bsdf type="roughglass">
-		<string name="distribution" value="ggx"/>
-		<float name="alpha" value="0.5"/>
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1.0"/>
-	</bsdf>
-
-	<!-- Test the rough glass model with the 
-		 Phong microfacet distribution -->
-	<bsdf type="roughglass">
-		<string name="distribution" value="phong"/>
-		<float name="alpha" value="0.4"/>
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1.0"/>
-	</bsdf>
-
 	<!-- Test the lambertian model -->
 	<bsdf type="lambertian"/>
 
@@ -81,6 +54,33 @@
 	<bsdf type="roughmetal">
 		<float name="alphaB" value="0.1"/>
 	</bsdf>
-	
+
+	<!-- Test the rough glass model with the 
+		 Beckmann microfacet distribution -->
+	<bsdf type="roughglass">
+		<string name="distribution" value="beckmann"/>
+		<float name="alpha" value=".3"/>
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1.0"/>
+	</bsdf>
+
+	<!-- Test the rough glass model with the 
+		 GGX microfacet distribution -->
+	<bsdf type="roughglass">
+		<string name="distribution" value="ggx"/>
+		<float name="alpha" value="0.4"/>
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1.0"/>
+	</bsdf>
+
+	<!-- Test the rough glass model with the 
+		 Phong microfacet distribution -->
+	<bsdf type="roughglass">
+		<string name="distribution" value="phong"/>
+		<float name="alpha" value="0.3"/>
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1.0"/>
+	</bsdf>
+
 	<camera type="perspective"/>
 </scene>

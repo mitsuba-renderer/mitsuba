@@ -29,6 +29,7 @@ ChiSquare::ChiSquare(int thetaBins, int phiBins, int numTests,
 		m_sampleCount = m_thetaBins * m_phiBins * 1000;
 	m_table = new Float[m_thetaBins*m_phiBins];
 	m_refTable = new Float[m_thetaBins*m_phiBins];
+	m_tolerance = m_sampleCount * 1e-4f;
 }
 
 ChiSquare::~ChiSquare() {
@@ -91,7 +92,7 @@ void ChiSquare::fill(
 	Float min[2], max[2];
 	size_t idx = 0;
 
-	NDIntegrator integrator(1, 2, 1000000, 1e-8f, 1e-8f);
+	NDIntegrator integrator(1, 2, 100000, 0, 1e-6f);
 	Float maxError = 0, integral = 0;
 	for (int i=0; i<m_thetaBins; ++i) {
 		min[0] = i * factor.x;
@@ -138,15 +139,16 @@ ChiSquare::ETestResult ChiSquare::runTest(int distParams, Float pvalThresh) {
 		cells[i].expCount = m_refTable[i];
 		cells[i].idx = i;
 	}
+
 	std::sort(cells.begin(), cells.end(), SortedCellFunctor());
 
 	std::vector<SortedCell>::iterator it = cells.begin();
 
 	while (it != cells.end()) {
 		int idx = it->idx;
-	
+
 		if (m_refTable[idx] == 0) {
-			if (m_table[idx] != 0) {
+			if (m_table[idx] > m_tolerance) {
 				/* Special handler for cells with an expected frequency of zero */
 				Log(EWarn, "Encountered a cell (%i) with an expected frequency of zero, "
 					"where the actual number of observations is %f! Rejecting the "
@@ -202,11 +204,11 @@ ChiSquare::ETestResult ChiSquare::runTest(int distParams, Float pvalThresh) {
 
 	if (pval < alpha) {
 		Log(EWarn, "Rejected the null hypothesis (P-value = %e, "
-			"significance level = %f)", pval, alpha);
+			"significance level = %e)", pval, alpha);
 		return EReject;
 	} else {
 		Log(m_logLevel, "Accepted the null hypothesis (P-value = %e, "
-			"significance level = %f)", pval, alpha);
+			"significance level = %e)", pval, alpha);
 		return EAccept;
 	}
 }

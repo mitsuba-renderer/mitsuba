@@ -46,6 +46,7 @@ public:
 		if (props.hasProperty("alphaB")) {
 			Log(EWarn, "Deprecation warning: the 'alphaB' parameter "
 				"has been renamed to 'alpha'");
+
 			m_alpha = props.getFloat("alphaB");
 		} else {
 			m_alpha = props.getFloat("alpha", .1f);
@@ -87,12 +88,12 @@ public:
 
 	RoughGlass(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
+		m_distribution = (EDistribution) stream->readInt();
 		m_specularReflectance = Spectrum(stream);
 		m_specularTransmittance = Spectrum(stream);
 		m_alpha = stream->readFloat();
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
-		m_distribution = (EDistribution) stream->readInt();
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
@@ -154,9 +155,9 @@ public:
 				return 0.0f;
 		}
 
-		/* Prevent numerical issues in other stages of the model */
-		//if (result < 1e-40)
-		//	result = 0;
+		/* Prevent potential numerical issues in other stages of the model */
+		if (result < 1e-40)
+			result = 0;
 
 		return result;
 	}
@@ -244,47 +245,30 @@ public:
 				Log(EError, "Invalid distribution function!");
 		}
 
-		Normal result(sphericalDirection(thetaM, phiM));
-		Assert(result.z >= 0);
-		return result;
+		return Normal(sphericalDirection(thetaM, phiM));
 	}
 
+	inline Vector reflect(const Vector &wi, const Normal &m) const {
+		return 2 * dot(wi, m) * Vector(m) - wi;
+	}
 
-	inline Vector reflect(const Vector &wi, const Normal &n) const {
-		return Vector(n*(2.0f*dot(n, wi))) - wi;
+	inline bool refract(const Vector &wi, Vector &wo, const Normal &m) const {
+		Float etaI = m_extIOR, etaT = m_intIOR;
+		if (Frame::cosTheta(wi) < 0)
+			std::swap(etaI, etaT);
+
+		Float eta = etaI / etaT, c = dot(wi, m);
+		Float cosThetaTSqr = 1 + eta * eta * (c*c-1);
+		if (cosThetaTSqr < 0) // Total internal reflection
+			return false;
+
+		wo = m * (eta*c - signum(wi.z)
+			   * std::sqrt(cosThetaTSqr)) - wi * eta;
+		return true;
 	}
 
 	inline Float signum(Float value) const {
 		return (value < 0) ? -1.0f : 1.0f;
-	}
-
-	bool refract(const Vector &wi, Vector &wo) const {
-		Float cosThetaI = Frame::cosTheta(wi),
-			  etaI = m_extIOR, etaT = m_intIOR;
-		bool entering = cosThetaI > 0.0f;
-
-		if (!entering)
-			std::swap(etaT, etaI);
-
-		Float eta = etaI / etaT;
-
-		/* Using Snell's law, calculate the squared sine of the
-		   angle between the normal and the transmitted ray */
-		Float sinThetaTSqr = eta*eta * Frame::sinTheta2(wi);
-
-		if (sinThetaTSqr > 1.0f) /* Total internal reflection! */
-			return false;
-
-		/* Compute the cosine, but guard against numerical imprecision */
-		Float cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
-		if (entering)
-			cosThetaT = -cosThetaT;
-
-		/* With cos(N, transmittedRay) avilable, calculating the 
-		   transmission direction is straightforward */
-		wo = Vector(-eta*wi.x, -eta*wi.y, cosThetaT);
-
-		return true;
 	}
 
 	inline Spectrum fReflection(const BSDFQueryRecord &bRec) const {
@@ -414,9 +398,8 @@ public:
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 
 		   values <= 4. See also \ref sample() */
-//		Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
-//				std::abs(Frame::cosTheta(bRec.wi))));
-		Float alpha = m_alpha;
+		Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
+				std::abs(Frame::cosTheta(bRec.wi))));
 
 		if (hasReflection && hasTransmission) {
 			/* PDF for importance sampling according to approximate 
@@ -459,31 +442,12 @@ public:
 	}
 
 	inline Spectrum sampleTransmission(BSDFQueryRecord &bRec, Float alpha, const Point2 &sample) const {
+		/* Sample the microfacet normal */
 		Vector m = sampleD(sample, alpha);
-		cout << endl;
-#if 1
-		Float etaI = m_extIOR, etaT = m_intIOR;
 
-		if (Frame::cosTheta(bRec.wi) < 0)
-			std::swap(etaI, etaT);
-
-		Float eta = etaI / etaT, c = dot(bRec.wi, m);
-
-		Vector wo2 = m * (eta*c - signum(bRec.wi.z) * std::sqrt(1 + eta * (c*c-1)))
-			- bRec.wi * eta;
-#endif
-		cout << "wo2: " << wo2.toString() << endl;
-#if 1
-		/* Sample M, the microsurface normal */
-		Frame mFrame(m);
-
-		/* Perfect specular reflection along the microsurface normal */
-		if (!refract(mFrame.toLocal(bRec.wi), bRec.wo))
+		/* Refract */
+		if (!refract(bRec.wi, bRec.wo, m))
 			return Spectrum(0.0f);
-
-		bRec.wo = mFrame.toWorld(bRec.wo);
-#endif
-		cout << "bRec.wo: " << bRec.wo.toString() << endl;
 
 		bRec.sampledComponent = 1;
 		bRec.sampledType = EGlossyTransmission;
@@ -512,10 +476,8 @@ public:
 		   value of alpha. This in practice limits the weights to 
 		   values <= 4. The change is of course also accounted for 
 		   in \ref pdf(), hence no error is introduced. */
-		//Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
-		//		std::abs(Frame::cosTheta(bRec.wi))));
-		
-		Float alpha = m_alpha;
+		Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
+				std::abs(Frame::cosTheta(bRec.wi))));
 
 		if (hasReflection && hasTransmission) {
 			/* PDF for importance sampling according to approximate 
@@ -542,41 +504,40 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
+		stream->writeInt(m_distribution);
 		m_specularReflectance.serialize(stream);
 		m_specularTransmittance.serialize(stream);
 		stream->writeFloat(m_alpha);
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
-		stream->writeInt(m_distribution);
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "RoughGlass[" << std::endl
-			<< "  specularReflectance = " << m_specularReflectance.toString() << "," << std::endl
-			<< "  specularTransmittance = " << m_specularTransmittance.toString() << "," << std::endl
-			<< "  intIOR = " << m_intIOR << "," << std::endl
-			<< "  extIOR = " << m_extIOR << "," << std::endl
-			<< "  alpha = " << m_alpha << "," << std::endl
+		oss << "RoughGlass[" << endl
 			<< "  distribution = ";
 		switch (m_distribution) {
-			case EBeckmann: oss << "beckmann" << endl; break;
-			case EGGX: oss << "ggx" << endl; break;
-			case EPhong: oss << "phong" << endl; break;
+			case EBeckmann: oss << "beckmann," << endl; break;
+			case EGGX: oss << "ggx," << endl; break;
+			case EPhong: oss << "phong," << endl; break;
 			default:
 				Log(EError, "Invalid distribution function");
-
 		}
-		oss << "]";
+		oss << "  specularReflectance = " << m_specularReflectance.toString() << "," << endl
+			<< "  specularTransmittance = " << m_specularTransmittance.toString() << "," << endl
+			<< "  intIOR = " << m_intIOR << "," << endl
+			<< "  extIOR = " << m_extIOR << "," << endl
+			<< "  alpha = " << m_alpha << endl
+			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
 private:
+	EDistribution m_distribution;
 	Spectrum m_specularReflectance;
 	Spectrum m_specularTransmittance;
 	Float m_alpha, m_intIOR, m_extIOR;
-	EDistribution m_distribution;
 };
 
 MTS_IMPLEMENT_CLASS_S(RoughGlass, false, BSDF)
