@@ -34,9 +34,10 @@ public:
 	MTS_DECLARE_TEST(test01_BSDF)
 	MTS_END_TESTCASE()
 
-	class BSDFFunctor {
+	/// Adapter to use BSDFs in the chi-square test
+	class BSDFAdapter {
 	public:
-		BSDFFunctor(const BSDF *bsdf, Random *random, const Vector &wi, int component = -1)
+		BSDFAdapter(const BSDF *bsdf, Random *random, const Vector &wi, int component = -1)
 				: m_bsdf(bsdf), m_random(random), m_wi(wi), m_component(component) { }
 
 		std::pair<Vector, Float> generateSample() {
@@ -45,7 +46,41 @@ public:
 			BSDFQueryRecord bRec(its);
 			bRec.component = m_component;
 			bRec.wi = m_wi;
-			m_bsdf->sample(bRec, sample);
+	
+			/* Check the various sampling routines for agreement amongst each other */
+			Float pdfVal;
+			Spectrum f = m_bsdf->sample(bRec, pdfVal, sample);
+			Spectrum sampled = m_bsdf->sample(bRec, sample);
+			
+			if (f.isZero() || pdfVal == 0) {
+				if (!sampled.isZero()) 
+					Log(EWarn, "Inconsistency: f=%s, pdf=%f, sampled f/pdf=%s",
+						f.toString().c_str(), pdfVal, sampled.toString().c_str());
+				return std::make_pair(bRec.wo, 0.0f);
+			} else if (sampled.isZero()) {
+				if (!f.isZero() && pdfVal != 0)
+					Log(EWarn, "Inconsistency: f=%s, pdf=%f, sampled f/pdf=%s",
+						f.toString().c_str(), pdfVal, sampled.toString().c_str());
+				return std::make_pair(bRec.wo, 0.0f);
+			}
+
+			Spectrum sampled2 = f/pdfVal;
+			bool mismatch = false;
+
+			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
+				Float a = sampled[i], b=sampled2[i];
+				Float min = std::min(std::abs(a), std::abs(b));
+				Float err = std::abs(a-b);
+
+				if (min < Epsilon && err > Epsilon) // absolute error threshold
+					mismatch = true;
+				else if (min > Epsilon && err/min > Epsilon) // relative error threshold
+					mismatch = true;
+			}
+						
+			if (mismatch)
+				Log(EWarn, "Inconsistency: f=%s, pdf=%f, sampled f/pdf=%s",
+					f.toString().c_str(), pdfVal, sampled.toString().c_str());
 
 			return std::make_pair(bRec.wo, 1.0f);
 		}
@@ -70,7 +105,7 @@ public:
 		ref<Scene> scene = loadScene("data/tests/test_bsdf.xml");
 	
 		const std::vector<ConfigurableObject *> objects = scene->getReferencedObjects();
-		size_t thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
+		size_t thetaBins = 10, wiSamples = 10, failureCount = 0, testCount = 0;
 		ref<Random> random = new Random();
 
 		Log(EInfo, "Verifying BSDF sampling routines ..");
@@ -92,14 +127,14 @@ public:
 				else
 					wi = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));
 
-				BSDFFunctor functor(bsdf, random, wi);
+				BSDFAdapter adapter(bsdf, random, wi);
 				ref<ChiSquareTest> chiSqr = new ChiSquareTest(thetaBins);
 				chiSqr->setLogLevel(EDebug);
 
 				// Initialize the tables used by the chi-square test
 				chiSqr->fill(
-					boost::bind(&BSDFFunctor::generateSample, functor),
-					boost::bind(&BSDFFunctor::pdf, functor, _1)
+					boost::bind(&BSDFAdapter::generateSample, adapter),
+					boost::bind(&BSDFAdapter::pdf, adapter, _1)
 				);
 
 				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
@@ -128,14 +163,14 @@ public:
 						else
 							wi = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));
 
-						BSDFFunctor functor(bsdf, random, wi, comp);
+						BSDFAdapter adapter(bsdf, random, wi, comp);
 						ref<ChiSquareTest> chiSqr = new ChiSquareTest(thetaBins);
 						chiSqr->setLogLevel(EDebug);
 
 						// Initialize the tables used by the chi-square test
 						chiSqr->fill(
-							boost::bind(&BSDFFunctor::generateSample, functor),
-							boost::bind(&BSDFFunctor::pdf, functor, _1)
+							boost::bind(&BSDFAdapter::generateSample, adapter),
+							boost::bind(&BSDFAdapter::pdf, adapter, _1)
 						);
 
 						// (the following assumes that the distribution has 1 parameter, e.g. exponent value)

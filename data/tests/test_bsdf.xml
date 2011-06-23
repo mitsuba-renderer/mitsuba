@@ -1,3 +1,6 @@
+<!-- This file defines a series of BSDF instances
+	 to be tested for consistency. This is done
+	 using the testcase 'test_chisquare' -->
 <scene>
 	<!-- Test the lambertian model -->
 	<bsdf type="lambertian"/>
@@ -9,10 +12,23 @@
 	<bsdf type="phong">
 		<float name="diffuseAmount" value="0.5"/>
 		<float name="specularAmount" value="0.5"/>
+		<float name="exponent" value="20"/>
 
 		<spectrum name="diffuseReflectance" value="1"/>
 		<spectrum name="specularReflectance" value="1"/>
 	</bsdf>
+
+<!--
+	<bsdf type="ward"/>
+
+	<bsdf type="microfacet">
+		<float name="diffuseAmount" value="0.5"/>
+		<float name="specularAmount" value="0.5"/>
+		<float name="alphaB" value="0.1"/>
+		<spectrum name="diffuseReflectance" value="1"/>
+		<spectrum name="specularReflectance" value="1"/>
+	</bsdf>
+-->
 
 	<camera type="perspective"/>
 </scene>
