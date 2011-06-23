@@ -91,6 +91,8 @@ public:
 			bRec.component = m_component;
 			bRec.wi = m_wi;
 			bRec.wo = wo;
+			if (m_bsdf->f(bRec).isZero())
+				return 0.0f;
 			return m_bsdf->pdf(bRec);
 		}
 	private:

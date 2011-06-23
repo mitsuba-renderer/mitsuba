@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/bsdf.h>
+#include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -28,20 +29,58 @@ MTS_NAMESPACE_BEGIN
  */
 class RoughGlass : public BSDF {
 public:
+	//// Microfacet distribution types supported by the model
+	enum EDistribution  {
+		EBeckmann = 0x0000,
+		EPhong    = 0x0001,
+		EGGX      = 0x0002
+	};
+
 	RoughGlass(const Properties &props) 
 		: BSDF(props) {
 		m_specularReflectance = props.getSpectrum("specularReflectance", 
 			Spectrum(1.0f));
 		m_specularTransmittance = props.getSpectrum("specularTransmittance", 
 			Spectrum(1.0f));
-		m_alphaB = props.getFloat("alphaB", .1f);
+
+		if (props.hasProperty("alphaB")) {
+			Log(EWarn, "Deprecation warning: the 'alphaB' parameter "
+				"has been renamed to 'alpha'");
+			m_alpha = props.getFloat("alphaB");
+		} else {
+			m_alpha = props.getFloat("alpha", .1f);
+		}
+
 		m_intIOR = props.getFloat("intIOR", 1.5);
 		m_extIOR = props.getFloat("extIOR", 1.0f);
+
+		if (m_intIOR == m_extIOR)
+			Log(EError, "Indices of refraction must differ!");
+
+		std::string distr = 
+			boost::to_lower_copy(props.getString("distribution", "beckmann"));
+
+		if (distr == "beckmann")
+			m_distribution = EBeckmann;
+		else if (distr == "phong")
+			m_distribution = EPhong;
+		else if (distr == "ggx")
+			m_distribution = EGGX;
+		else 
+			Log(EError, "Invalid distribution function \"%s\", must be "
+				"\"beckmann\", \"phong\", or \"ggx\"!", distr.c_str());
+
+		if (m_distribution == EPhong) {
+			/* Transform the Phong exponent to make it behave
+			   similarly to the Beckmann microfacet distribution */
+			m_alpha = 2 / (m_alpha * m_alpha) - 2;
+			Assert(m_alpha > 0);
+		}
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
 		m_type[0] = EGlossyReflection | EFrontSide | EBackSide;
-		m_type[1] = EGlossyTransmission | EFrontSide | EBackSide;
+		m_type[1] = EGlossyReflection | EFrontSide | EBackSide;
 		m_combinedType = m_type[0] | m_type[1];
 		m_usesRayDifferentials = false;
 	}
@@ -50,14 +89,15 @@ public:
 	 : BSDF(stream, manager) {
 		m_specularReflectance = Spectrum(stream);
 		m_specularTransmittance = Spectrum(stream);
-		m_alphaB = stream->readFloat();
+		m_alpha = stream->readFloat();
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
+		m_distribution = (EDistribution) stream->readInt();
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
 		m_type[0] = EGlossyReflection | EFrontSide | EBackSide;
-		m_type[1] = EGlossyTransmission | EFrontSide | EBackSide;
+		m_type[1] = EGlossyReflection | EFrontSide | EBackSide;
 		m_combinedType = m_type[0] | m_type[1];
 		m_usesRayDifferentials = false;
 	}
@@ -71,51 +111,142 @@ public:
 	}
 
 	/**
-	 * Beckmann distribution function for gaussian random surfaces
-	 * \param thetaM Tangent of the angle between M and N.
-	 */
-	inline Float beckmannD(const Vector &m, Float alphaB) const {
-		Float ex = Frame::tanTheta(m) / alphaB;
-		Float value = std::exp(-(ex*ex)) / (M_PI * alphaB*alphaB * 
-			std::pow(Frame::cosTheta(m), (Float) 4.0f));
-		if (value < Epsilon)
-			return 0;
-		return value;
-	}
-
-	/**
-	 * Sample microsurface normals according to 
-	 * the Beckmann distribution
-	 */
-	Normal sampleBeckmannD(Point2 sample, Float alphaB) const {
-		Float thetaM = std::atan(std::sqrt(-alphaB*alphaB 
-			* std::log(1.0f - sample.x)));
-		Float phiM = (2.0f * M_PI) * sample.y;
-		return Normal(sphericalDirection(thetaM, phiM));
-	}
-
-	/**
-	 * Smith's shadow-masking function G1 for the Beckmann distribution
+	 * \brief Implements the microfacet distribution function D
+	 *
 	 * \param m The microsurface normal
 	 * \param v An arbitrary direction
 	 */
-	Float smithBeckmannG1(const Vector &v, const Vector &m) const {
-		if (dot(v, m)*Frame::cosTheta(v) <= 0)
-			return 0.0;
+	Float evalD(const Vector &m, Float alpha) const {
+		if (Frame::cosTheta(m) < 0)
+			return 0.0f;
+	
+		Float result;
+		switch (m_distribution) {
+			case EBeckmann: {
+					/* Beckmann distribution function for Gaussian random surfaces */
+					const Float ex = Frame::tanTheta(m) / alpha;
+					result = std::exp(-(ex*ex)) / (M_PI * alpha*alpha * 
+							std::pow(Frame::cosTheta(m), (Float) 4.0f));
+				}
+				break;
 
+			case EPhong: {
+					/* Phong distribution function */
+					result = (alpha + 2) * INV_TWOPI 
+							* std::pow(Frame::cosTheta(m), alpha);
+				}
+				break;
+
+			case EGGX: {
+					/* Empirical GGX distribution function for rough surfaces */
+					const Float tanTheta = Frame::tanTheta(m);
+					const Float cosTheta = Frame::cosTheta(m);
+
+					const Float root = alpha / (cosTheta*cosTheta * 
+								(alpha*alpha + tanTheta*tanTheta));
+
+					result = INV_PI * (root*root);
+				}
+				break;
+
+			default :
+				Log(EError, "Invalid distribution function!");
+				return 0.0f;
+		}
+
+		/* Prevent numerical issues in other stages of the model */
+		if (result < 1e-10)
+			result = 0;
+
+		return result;
+	}
+
+	/**
+	 * \brief Smith's shadow-masking function G1 for each
+	 * of the supported microfacet distributions
+	 *
+	 * \param m The microsurface normal
+	 * \param v An arbitrary direction
+	 */
+	Float smithG1(const Vector &v, const Vector &m) const {
 		const Float tanTheta = std::abs(Frame::tanTheta(v));
+		Float alpha = m_alpha;
 
+		/* perpendicular incidence -- no shadowing/masking */
 		if (tanTheta == 0.0f)
 			return 1.0f;
+			
+		/* Can't see the back side from the front and vice versa */
+		if (dot(v, m) * Frame::cosTheta(v) <= 0)
+			return 0.0f;
 
-		const Float a = 1.0f / (m_alphaB * tanTheta);
-		const Float aSqr = a * a;
+		switch (m_distribution) {
+			case EPhong:
+				/* Approximation recommended by Bruce Walter: Use
+				   the Beckmann shadowing-masking function with
+				   a modified alpha value */
+				alpha = std::sqrt(0.5f * alpha + 1) / tanTheta;
 
-		if (a >= 1.6f)
-			return 1.0f;
+			case EBeckmann: {
+					const Float a = 1.0f / (alpha * tanTheta);
+					const Float aSqr = a * a;
 
-		return (3.535f * a + 2.181f * aSqr)/(1.0f + 2.276f * a + 2.577f * aSqr);
+					if (a >= 1.6f)
+						return 1.0f;
+
+					return (3.535f * a + 2.181f * aSqr) 
+						 / (1.0f + 2.276f * a + 2.577f * aSqr);
+				}
+				break;
+
+			case EGGX: {
+					const Float root = m_alpha * tanTheta;
+					return 2.0f / (1.0f + std::sqrt(1.0f + root*root));
+				}
+				break;
+
+			default:
+				Log(EError, "Invalid distribution function!");
+				return 0.0f;
+		}
 	}
+
+	/**
+	 * \brief Sample microsurface normals according to 
+	 * the selected distribution
+	 *
+	 * \param sample  A uniformly distributed 2D sample
+	 * \param alpha   Surface roughness
+	 */
+	Normal sampleD(const Point2 &sample, Float alpha) const {
+		/* The azimuthal component is always selected 
+		   uniformly regardless of the distribution */
+		Float phiM = (2.0f * M_PI) * sample.y,
+			  thetaM = 0.0f;
+
+		switch (m_distribution) {
+			case EBeckmann: 
+				thetaM = std::atan(std::sqrt(-alpha*alpha *
+						 std::log(1.0f - sample.x)));
+				break;
+
+			case EPhong:
+				thetaM = std::acos(std::pow(sample.x, (Float) 1 / 
+						 (alpha + 2)));
+				break;
+
+			case EGGX: 
+				thetaM = std::atan(alpha * std::sqrt(sample.x) /
+						 std::sqrt(1.0f - sample.x));
+				break;
+
+			default: 
+				Log(EError, "Invalid distribution function!");
+		}
+
+		return Normal(sphericalDirection(thetaM, phiM));
+	}
+
 
 	inline Vector reflect(const Vector &wi, const Normal &n) const {
 		return Vector(n*(2.0f*dot(n, wi))) - wi;
@@ -157,7 +288,6 @@ public:
 		/* Finally compute transmission coefficient. When transporting
 		   radiance, account for the change at boundaries with different 
 		   indices of refraction. */
-
 		if (quantity == ERadiance)
 			return (extIOR*extIOR)/(intIOR*intIOR) * 
 				(1.0f - fresnel(Frame::cosTheta(wi), extIOR, intIOR));
@@ -183,10 +313,10 @@ public:
 		Float F = fresnel(dot(bRec.wi, Hr), m_extIOR, m_intIOR);
 
 		/* Microsurface normal distribution */
-		Float D = beckmannD(Hr, m_alphaB);
+		Float D = evalD(Hr, m_alpha);
 
-		/* Smith's shadow-masking function for the Beckmann distribution */
-		Float G = smithBeckmannG1(bRec.wi, Hr) * smithBeckmannG1(bRec.wo, Hr);
+		/* Smith's shadow-masking function */
+		Float G = smithG1(bRec.wi, Hr) * smithG1(bRec.wo, Hr);
 
 		/* Calculate the total amount of reflection */
 		Float value = F * D * G / 
@@ -210,14 +340,13 @@ public:
 		Float F = 1.0f - fresnel(dot(bRec.wi, Ht), m_extIOR, m_intIOR);
 
 		/* Microsurface normal distribution */
-		Float D = beckmannD(Ht, m_alphaB);
+		Float D = evalD(Ht, m_alpha);
 
-		/* Smith's shadow-masking function for the Beckmann distribution */
-		Float G;
-		if (Ht.z > 0) 
-			G = smithBeckmannG1(bRec.wi, Ht) * smithBeckmannG1(bRec.wo, Ht);
-		else
-			G = smithBeckmannG1(bRec.wi, -Ht) * smithBeckmannG1(bRec.wo, -Ht);
+		if (D == 0)
+			return Spectrum(0.0f);
+
+		/* Smith's shadow-masking function */
+		Float G = smithG1(bRec.wi,  Ht) * smithG1(bRec.wo,  Ht);
 
 		/* Calculate the total amount of transmission */
 		Float value = F * D * G * std::abs((dot(bRec.wi, Ht)*dot(bRec.wo, Ht)) / 
@@ -228,7 +357,7 @@ public:
 
 		/* Half-angle Jacobian for refraction */
 		Float sqrtDenom = etaI * dot(bRec.wi, Ht) + etaO * dot(bRec.wo, Ht);
-		value *= (etaO*etaO)/(sqrtDenom*sqrtDenom);
+		value *= (etaO*etaO) / (sqrtDenom*sqrtDenom);
 
 		return m_specularTransmittance * value;
 	}
@@ -244,7 +373,7 @@ public:
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool hasTransmission = (bRec.typeMask & EGlossyTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
-
+		
 		if (hasReflection)
 			result += fReflection(bRec);
 		if (hasTransmission)
@@ -253,20 +382,20 @@ public:
 		return result;
 	}
 	
-	inline Float pdfReflection(const BSDFQueryRecord &bRec, Float alphaB) const {
+	inline Float pdfReflection(const BSDFQueryRecord &bRec, Float alpha) const {
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) < 0)
 			return 0.0f;
 
-		Vector Hr = normalize(bRec.wo+bRec.wi) 
+		Vector Hr = normalize(bRec.wo + bRec.wi) 
 			* signum(Frame::cosTheta(bRec.wi));
 
 		/* Jacobian of the half-direction transform */
 		Float dwhr_dwo = 1.0f / (4.0f * absDot(bRec.wo, Hr));
 
-		return beckmannD(Hr, alphaB) * std::abs(Frame::cosTheta(Hr)) * dwhr_dwo;
+		return evalD(Hr, alpha) * std::abs(Frame::cosTheta(Hr)) * dwhr_dwo;
 	}
 
-	inline Float pdfTransmission(const BSDFQueryRecord &bRec, Float alphaB) const {
+	inline Float pdfTransmission(const BSDFQueryRecord &bRec, Float alpha) const {
 		Float etaI = m_extIOR, etaO = m_intIOR;
 
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
@@ -281,7 +410,7 @@ public:
 		Float sqrtDenom = etaI * dot(bRec.wi, Ht) + etaO * dot(bRec.wo, Ht);
 		Float dwht_dwo = (etaO*etaO * absDot(bRec.wo, Ht)) / (sqrtDenom*sqrtDenom);
 
-		return beckmannD(Ht, alphaB) * std::abs(Frame::cosTheta(Ht)) * dwht_dwo;
+		return evalD(Ht, alpha) * std::abs(Frame::cosTheta(Ht)) * dwht_dwo;
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec) const {
@@ -289,30 +418,33 @@ public:
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool hasTransmission = (bRec.typeMask & EGlossyTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
-
+		
 		/* Suggestion by Bruce Walter: sample using a slightly different 
-		   value of alphaB. This in practice limits the weights to 
+		   value of alpha. This in practice limits the weights to 
 		   values <= 4. See also \ref sample() */
-		Float alphaB = m_alphaB * (1.2f - 0.2f * std::sqrt(
+		Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
 				std::abs(Frame::cosTheta(bRec.wi))));
 
 		if (hasReflection && hasTransmission) {
+			/* PDF for importance sampling according to approximate F
+			   Fresnel coefficients (approximate, because we don't know 
+			   the microfacet normal at this point) */
 			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
 			fr = std::min(std::max(fr, (Float) 0.05f), (Float) 0.95f);
-			return fr * pdfReflection(bRec, alphaB) +
-				   (1-fr) * pdfTransmission(bRec, alphaB);
+			return fr * pdfReflection(bRec, alpha) +
+				   (1-fr) * pdfTransmission(bRec, alpha);
 		} else if (hasReflection) {
-			return pdfReflection(bRec, alphaB);
+			return pdfReflection(bRec, alpha);
 		} else if (hasTransmission) {
-			return pdfTransmission(bRec, alphaB);
+			return pdfTransmission(bRec, alpha);
 		}
 
 		return 0.0f;
 	}
 
-	inline Spectrum sampleReflection(BSDFQueryRecord &bRec, Float alphaB, const Point2 &sample) const {
+	inline Spectrum sampleReflection(BSDFQueryRecord &bRec, Float alpha, const Point2 &sample) const {
 		/* Sample M, the microsurface normal */
-		Normal m = sampleBeckmannD(sample, alphaB);
+		Normal m = sampleD(sample, alpha);
 
 		/* Perfect specular reflection along the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
@@ -320,19 +452,22 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
 
-		/* Sidedness test */
-		if (Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo) <= 0)
+		/* Side check */
+		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
 
 		Float pdfValue = pdf(bRec);
+
+		/* Guard against numerical imprecisions */
 		if (pdfValue == 0)
 			return Spectrum(0.0f);
-		return f(bRec) / pdfValue;
+		else
+			return f(bRec) / pdfValue;
 	}
 
-	inline Spectrum sampleTransmission(BSDFQueryRecord &bRec, Float alphaB, const Point2 &sample) const {
+	inline Spectrum sampleTransmission(BSDFQueryRecord &bRec, Float alpha, const Point2 &sample) const {
 		/* Sample M, the microsurface normal */
-		Frame mFrame(sampleBeckmannD(sample, alphaB));
+		Frame mFrame(sampleD(sample, alpha));
 
 		/* Perfect specular reflection along the microsurface normal */
 		if (refract(mFrame.toLocal(bRec.wi), bRec.wo, bRec.quantity) == 0)
@@ -343,13 +478,17 @@ public:
 		bRec.sampledComponent = 1;
 		bRec.sampledType = EGlossyTransmission;
 
-		if (Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo) >= 0)
+		/* Side check */
+		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
 			return Spectrum(0.0f);
 			
 		Float pdfValue = pdf(bRec);
+		
+		/* Guard against numerical imprecisions */
 		if (pdfValue == 0)
 			return Spectrum(0.0f);
-		return f(bRec) / pdfValue;
+		else
+			return f(bRec) / pdfValue;
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
@@ -360,26 +499,29 @@ public:
 		Point2 sample(_sample);
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
-		   value of alphaB. This in practice limits the weights to 
+		   value of alpha. This in practice limits the weights to 
 		   values <= 4. The change is of course also accounted for 
 		   in \ref pdf(), hence no error is introduced. */
-		Float alphaB = m_alphaB * (1.2f - 0.2f * std::sqrt(
+		Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
 				std::abs(Frame::cosTheta(bRec.wi))));
 
 		if (hasReflection && hasTransmission) {
+			/* PDF for importance sampling according to approximate F
+			   Fresnel coefficients (approximate, because we don't know 
+			   the microfacet normal at this point) */
 			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
 			fr = std::min(std::max(fr, (Float) 0.05f), (Float) 0.95f);
 			if (sample.x < fr) {
 				sample.x /= fr;
-				return sampleReflection(bRec, alphaB, sample);
+				return sampleReflection(bRec, alpha, sample);
 			} else {
 				sample.x = (sample.x - fr) / (1-fr);
-				return sampleTransmission(bRec, alphaB, sample);
+				return sampleTransmission(bRec, alpha, sample);
 			}
 		} else if (hasReflection) {
-			return sampleReflection(bRec, alphaB, sample);
+			return sampleReflection(bRec, alpha, sample);
 		} else if (hasTransmission) {
-			return sampleTransmission(bRec, alphaB, sample);
+			return sampleTransmission(bRec, alpha, sample);
 		}
 
 		return Spectrum(0.0f);
@@ -390,9 +532,10 @@ public:
 
 		m_specularReflectance.serialize(stream);
 		m_specularTransmittance.serialize(stream);
-		stream->writeFloat(m_alphaB);
+		stream->writeFloat(m_alpha);
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
+		stream->writeInt(m_distribution);
 	}
 
 	std::string toString() const {
@@ -402,8 +545,17 @@ public:
 			<< "  specularTransmittance = " << m_specularTransmittance.toString() << "," << std::endl
 			<< "  intIOR = " << m_intIOR << "," << std::endl
 			<< "  extIOR = " << m_extIOR << "," << std::endl
-			<< "  alphaB = " << m_alphaB << std::endl
-			<< "]";
+			<< "  alpha = " << m_alpha << "," << std::endl
+			<< "  distribution = ";
+		switch (m_distribution) {
+			case EBeckmann: oss << "beckmann" << endl; break;
+			case EGGX: oss << "ggx" << endl; break;
+			case EPhong: oss << "phong" << endl; break;
+			default:
+				Log(EError, "Invalid distribution function");
+
+		}
+		oss << "]";
 		return oss.str();
 	}
 
@@ -411,7 +563,8 @@ public:
 private:
 	Spectrum m_specularReflectance;
 	Spectrum m_specularTransmittance;
-	Float m_alphaB, m_intIOR, m_extIOR;
+	Float m_alpha, m_intIOR, m_extIOR;
+	EDistribution m_distribution;
 };
 
 MTS_IMPLEMENT_CLASS_S(RoughGlass, false, BSDF)

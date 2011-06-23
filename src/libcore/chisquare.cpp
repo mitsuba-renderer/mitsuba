@@ -148,9 +148,9 @@ ChiSquare::ETestResult ChiSquare::runTest(int distParams, Float pvalThresh) {
 		if (m_refTable[idx] == 0) {
 			if (m_table[idx] != 0) {
 				/* Special handler for cells with an expected frequency of zero */
-				Log(EWarn, "Encountered a cell with an expected frequency of zero, "
-					"where the actual number of observations is %i! Rejecting the "
-					"null hypothesis.", m_table[idx]);
+				Log(EWarn, "Encountered a cell (%i) with an expected frequency of zero, "
+					"where the actual number of observations is %f! Rejecting the "
+					"null hypothesis.", idx, m_table[idx]);
 				return EReject;
 			}
 		} else if (m_refTable[idx] < CHISQR_MIN_EXP_FREQUENCY) {
