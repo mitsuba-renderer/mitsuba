@@ -678,11 +678,11 @@ Float lanczosSinc(Float t, Float tau) {
 	PBRT and the paper "Derivation of Refraction Formulas" 
 	by Paul S. Heckbert. */
 Float fresnelDielectric(Float cosTheta1, Float cosTheta2, 
-						Float etaExt, Float etaInt) {
-	Float Rs = (etaExt * cosTheta1 - etaInt * cosTheta2)
-			/ (etaExt * cosTheta1 + etaInt * cosTheta2);
-	Float Rp = (etaInt * cosTheta1 - etaExt * cosTheta2)
-			/ (etaInt * cosTheta1 + etaExt * cosTheta2);
+						Float etaI, Float etaT) {
+	Float Rs = (etaI * cosTheta1 - etaT * cosTheta2)
+			/ (etaI * cosTheta1 + etaT * cosTheta2);
+	Float Rp = (etaT * cosTheta1 - etaI * cosTheta2)
+			/ (etaT * cosTheta1 + etaI * cosTheta2);
 
 	return (Rs * Rs + Rp * Rp) / 2.0f;
 }
@@ -701,28 +701,27 @@ Spectrum fresnelConductor(Float cosTheta, const Spectrum &eta, const Spectrum &k
 	return (rParl2 + rPerp2) / 2.0f;
 }
 
-Float fresnel(Float cosTheta1, Float etaExt, Float etaInt) {
+Float fresnel(Float cosThetaI, Float etaExt, Float etaInt) {
+	Float etaI = etaExt, etaT = etaInt;
+
 	/* Swap the indices of refraction if the interaction starts
 		at the inside of the object */
-	if (cosTheta1 < 0.0f)
-		std::swap(etaInt, etaExt);
+	if (cosThetaI < 0.0f)
+		std::swap(etaI, etaT);
 
 	/* Using Snell's law, calculate the sine of the angle
 		between the transmitted ray and the surface normal */
-	Float sinTheta2 = etaExt/etaInt * 
-		std::sqrt(std::max((Float) 0.0f, 1.0f - cosTheta1*cosTheta1));
+	Float sinThetaT = etaI / etaT * 
+		std::sqrt(std::max((Float) 0.0f, 1.0f - cosThetaI*cosThetaI));
 
-	if (sinTheta2 > 1.0f)
+	if (sinThetaT > 1.0f)
 		return 1.0f;  /* Total internal reflection! */
 
-	/* Use the sin^2+cos^2=1 identity - max() guards against
-		numerical imprecision*/
-	Float cosTheta2 = std::sqrt(std::max((Float) 0.0f, 
-		1.0f - sinTheta2*sinTheta2));
+	Float cosThetaT = std::sqrt(1.0f - sinThetaT*sinThetaT);
 
 	/* Finally compute the reflection coefficient */
-	return fresnelDielectric(std::abs(cosTheta1), cosTheta2, 
-		etaInt, etaExt);
+	return fresnelDielectric(std::abs(cosThetaI),
+		cosThetaT, etaI, etaT);
 }
 
 Float radicalInverse(int b, size_t i) {

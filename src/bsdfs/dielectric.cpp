@@ -97,37 +97,36 @@ public:
 
 	Float refract(Float intIOR, Float extIOR, 
 			const Vector &wi, Vector &wo, ETransportQuantity quantity) const {
-		Float cosTheta1 = Frame::cosTheta(wi);
-		bool entering = cosTheta1 > 0.0f;
+		Float cosThetaI = Frame::cosTheta(wi),
+			  etaI = extIOR, etaT = intIOR;
+		bool entering = cosThetaI > 0.0f;
 
-		/* Swap the indices of refraction if the interaction starts
-		   at the inside of the object */
 		if (!entering)
-			std::swap(intIOR, extIOR);
+			std::swap(etaT, etaI);
 
-		Float eta = extIOR/intIOR;
+		Float eta = etaI / etaT;
 
 		/* Using Snell's law, calculate the squared sine of the
 		   angle between the normal and the transmitted ray */
-		Float sinTheta2Sqr = eta*eta * Frame::sinTheta2(wi);
+		Float sinThetaTSqr = eta*eta * Frame::sinTheta2(wi);
 
-		if (sinTheta2Sqr > 1.0f) /* Total internal reflection! */
+		if (sinThetaTSqr > 1.0f) /* Total internal reflection! */
 			return 0.0f;
 
 		/* Compute the cosine, but guard against numerical imprecision */
-		Float cosTheta2 = std::sqrt(std::max((Float) 0.0f, 1.0f - sinTheta2Sqr));
+		Float cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
 		if (entering)
-			cosTheta2 = -cosTheta2;
+			cosThetaT = -cosThetaT;
 
-		/* With cos(N, transmittedRay) on tap, calculating the 
+		/* With cos(N, transmittedRay) avilable, calculating the 
 		   transmission direction is straightforward */
-		wo = Vector(-eta*wi.x, -eta*wi.y, cosTheta2);
+		wo = Vector(-eta*wi.x, -eta*wi.y, cosThetaT);
 
 		/* Finally compute transmission coefficient. When transporting
-		   radiance, account for the change at boundaries with different 
-		   indices of refraction. */
+		   radiance, account for the solid angle change at boundaries 
+		   with different indices of refraction. */
 		if (quantity == ERadiance)
-			return (extIOR*extIOR)/(intIOR*intIOR);
+			return (etaI*etaI) / (etaT*etaT);
 		else
 			return 1.0f;
 	}

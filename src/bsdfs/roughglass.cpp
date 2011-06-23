@@ -155,8 +155,8 @@ public:
 		}
 
 		/* Prevent numerical issues in other stages of the model */
-		if (result < 1e-10)
-			result = 0;
+		//if (result < 1e-40)
+		//	result = 0;
 
 		return result;
 	}
@@ -169,7 +169,7 @@ public:
 	 * \param v An arbitrary direction
 	 */
 	Float smithG1(const Vector &v, const Vector &m) const {
-		const Float tanTheta = std::abs(Frame::tanTheta(v));
+		const Float tanTheta = std::abs(Frame::tanTheta(v)); 
 		Float alpha = m_alpha;
 
 		/* perpendicular incidence -- no shadowing/masking */
@@ -244,7 +244,9 @@ public:
 				Log(EError, "Invalid distribution function!");
 		}
 
-		return Normal(sphericalDirection(thetaM, phiM));
+		Normal result(sphericalDirection(thetaM, phiM));
+		Assert(result.z >= 0);
+		return result;
 	}
 
 
@@ -256,43 +258,33 @@ public:
 		return (value < 0) ? -1.0f : 1.0f;
 	}
 
-	Float refract(const Vector &wi, Vector &wo, ETransportQuantity quantity) const {
-		Float cosTheta1 = Frame::cosTheta(wi);
-		Float intIOR = m_intIOR, extIOR = m_extIOR;
-		bool entering = cosTheta1 > 0.0f;
+	bool refract(const Vector &wi, Vector &wo) const {
+		Float cosThetaI = Frame::cosTheta(wi),
+			  etaI = m_extIOR, etaT = m_intIOR;
+		bool entering = cosThetaI > 0.0f;
 
-		/* Swap the indices of refraction if the interaction starts
-		   at the inside of the object */
 		if (!entering)
-			std::swap(intIOR, extIOR);
+			std::swap(etaT, etaI);
 
-		Float eta = extIOR/intIOR;
+		Float eta = etaI / etaT;
 
 		/* Using Snell's law, calculate the squared sine of the
 		   angle between the normal and the transmitted ray */
-		Float sinTheta2Sqr = eta*eta * Frame::sinTheta2(wi);
+		Float sinThetaTSqr = eta*eta * Frame::sinTheta2(wi);
 
-		if (sinTheta2Sqr > 1.0f) /* Total internal reflection! */
-			return 0.0f;
+		if (sinThetaTSqr > 1.0f) /* Total internal reflection! */
+			return false;
 
-		/* Use the sin^2+cos^2=1 identity - max() guards against
-		   numerical imprecision*/
-		Float cosTheta2 = std::sqrt(std::max((Float) 0.0f, 1.0f - sinTheta2Sqr));
+		/* Compute the cosine, but guard against numerical imprecision */
+		Float cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
 		if (entering)
-			cosTheta2 = -cosTheta2;
+			cosThetaT = -cosThetaT;
 
-		/* Having cos(N, transmittedRay), calculating the actual
-		   direction becomes easy. */
-		wo = Vector(-eta*wi.x, -eta*wi.y, cosTheta2);
+		/* With cos(N, transmittedRay) avilable, calculating the 
+		   transmission direction is straightforward */
+		wo = Vector(-eta*wi.x, -eta*wi.y, cosThetaT);
 
-		/* Finally compute transmission coefficient. When transporting
-		   radiance, account for the change at boundaries with different 
-		   indices of refraction. */
-		if (quantity == ERadiance)
-			return (extIOR*extIOR)/(intIOR*intIOR) * 
-				(1.0f - fresnel(Frame::cosTheta(wi), extIOR, intIOR));
-		else
-			return 1.0f - fresnel(Frame::cosTheta(wi), extIOR, intIOR);
+		return true;
 	}
 
 	inline Spectrum fReflection(const BSDFQueryRecord &bRec) const {
@@ -396,19 +388,19 @@ public:
 	}
 
 	inline Float pdfTransmission(const BSDFQueryRecord &bRec, Float alpha) const {
-		Float etaI = m_extIOR, etaO = m_intIOR;
+		Float etaI = m_extIOR, etaT = m_intIOR;
 
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
 			return 0.0f;
 
 		if (Frame::cosTheta(bRec.wi) < 0)
-			std::swap(etaI, etaO);
+			std::swap(etaI, etaT);
 
-		Vector Ht = -normalize(bRec.wi*etaI+bRec.wo*etaO);
+		Vector Ht = -normalize(bRec.wi*etaI + bRec.wo*etaT);
 
 		/* Jacobian of the half-direction transform. */
-		Float sqrtDenom = etaI * dot(bRec.wi, Ht) + etaO * dot(bRec.wo, Ht);
-		Float dwht_dwo = (etaO*etaO * absDot(bRec.wo, Ht)) / (sqrtDenom*sqrtDenom);
+		Float sqrtDenom = etaI * dot(bRec.wi, Ht) + etaT * dot(bRec.wo, Ht);
+		Float dwht_dwo = (etaT*etaT * absDot(bRec.wo, Ht)) / (sqrtDenom*sqrtDenom);
 
 		return evalD(Ht, alpha) * std::abs(Frame::cosTheta(Ht)) * dwht_dwo;
 	}
@@ -422,11 +414,12 @@ public:
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 
 		   values <= 4. See also \ref sample() */
-		Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
-				std::abs(Frame::cosTheta(bRec.wi))));
+//		Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
+//				std::abs(Frame::cosTheta(bRec.wi))));
+		Float alpha = m_alpha;
 
 		if (hasReflection && hasTransmission) {
-			/* PDF for importance sampling according to approximate F
+			/* PDF for importance sampling according to approximate 
 			   Fresnel coefficients (approximate, because we don't know 
 			   the microfacet normal at this point) */
 			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
@@ -466,14 +459,31 @@ public:
 	}
 
 	inline Spectrum sampleTransmission(BSDFQueryRecord &bRec, Float alpha, const Point2 &sample) const {
+		Vector m = sampleD(sample, alpha);
+		cout << endl;
+#if 1
+		Float etaI = m_extIOR, etaT = m_intIOR;
+
+		if (Frame::cosTheta(bRec.wi) < 0)
+			std::swap(etaI, etaT);
+
+		Float eta = etaI / etaT, c = dot(bRec.wi, m);
+
+		Vector wo2 = m * (eta*c - signum(bRec.wi.z) * std::sqrt(1 + eta * (c*c-1)))
+			- bRec.wi * eta;
+#endif
+		cout << "wo2: " << wo2.toString() << endl;
+#if 1
 		/* Sample M, the microsurface normal */
-		Frame mFrame(sampleD(sample, alpha));
+		Frame mFrame(m);
 
 		/* Perfect specular reflection along the microsurface normal */
-		if (refract(mFrame.toLocal(bRec.wi), bRec.wo, bRec.quantity) == 0)
+		if (!refract(mFrame.toLocal(bRec.wi), bRec.wo))
 			return Spectrum(0.0f);
 
 		bRec.wo = mFrame.toWorld(bRec.wo);
+#endif
+		cout << "bRec.wo: " << bRec.wo.toString() << endl;
 
 		bRec.sampledComponent = 1;
 		bRec.sampledType = EGlossyTransmission;
@@ -502,11 +512,13 @@ public:
 		   value of alpha. This in practice limits the weights to 
 		   values <= 4. The change is of course also accounted for 
 		   in \ref pdf(), hence no error is introduced. */
-		Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
-				std::abs(Frame::cosTheta(bRec.wi))));
+		//Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
+		//		std::abs(Frame::cosTheta(bRec.wi))));
+		
+		Float alpha = m_alpha;
 
 		if (hasReflection && hasTransmission) {
-			/* PDF for importance sampling according to approximate F
+			/* PDF for importance sampling according to approximate 
 			   Fresnel coefficients (approximate, because we don't know 
 			   the microfacet normal at this point) */
 			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
@@ -515,7 +527,7 @@ public:
 				sample.x /= fr;
 				return sampleReflection(bRec, alpha, sample);
 			} else {
-				sample.x = (sample.x - fr) / (1-fr);
+				sample.x = (sample.x - fr) / (1 - fr);
 				return sampleTransmission(bRec, alpha, sample);
 			}
 		} else if (hasReflection) {

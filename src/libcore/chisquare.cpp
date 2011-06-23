@@ -91,7 +91,7 @@ void ChiSquare::fill(
 	Float min[2], max[2];
 	size_t idx = 0;
 
-	NDIntegrator integrator(1, 2, 100000, 0, 1e-6f);
+	NDIntegrator integrator(1, 2, 1000000, 1e-8f, 1e-8f);
 	Float maxError = 0, integral = 0;
 	for (int i=0; i<m_thetaBins; ++i) {
 		min[0] = i * factor.x;

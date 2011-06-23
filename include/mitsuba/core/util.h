@@ -423,30 +423,30 @@ extern MTS_EXPORT_CORE Point2 squareToTriangle(const Point2 &sample);
  * Calculates the unpolarized fresnel reflection coefficient for a 
  * dielectric material
  *
- * \param cosTheta1
+ * \param cosThetaI
  * 		Cosine of the angle between the normal and the incident ray
- * \param cosTheta2
+ * \param cosThetaT
  * 		Cosine of the angle between the normal and the transmitted ray
- * \param etaExt
- * 		Refraction coefficient outside of the material
- * \param etaInt
- * 		Refraction coefficient inside the material
+ * \param etaI
+ * 		Refraction coefficient at the incident direction
+ * \param etaT
+ * 		Refraction coefficient at the transmitted direction
  */
-extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosTheta1, 
-		Float cosTheta2, Float etaExt, Float etaInt);
+extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI, 
+		Float cosThetaT, Float etaI, Float etaT);
 
 /**
  * Calculates the unpolarized fresnel reflection coefficient for a 
  * dielectric material. Handles incidence from either sides.
  *
- * \param cosTheta1
+ * \param cosThetaI
  * 		Cosine of the angle between the normal and the incident ray
  * \param etaExt
  * 		Refraction coefficient outside of the material
  * \param etaInt
  * 		Refraction coefficient inside the material
  */
-extern MTS_EXPORT_CORE Float fresnel(Float cosTheta1, Float etaExt,
+extern MTS_EXPORT_CORE Float fresnel(Float cosThetaI, Float etaExt,
 		Float etaInt);
 
 /**

@@ -38,7 +38,8 @@ public:
 	class BSDFAdapter {
 	public:
 		BSDFAdapter(const BSDF *bsdf, Random *random, const Vector &wi, int component = -1)
-				: m_bsdf(bsdf), m_random(random), m_wi(wi), m_component(component) { }
+			: m_bsdf(bsdf), m_random(random), m_wi(wi), m_component(component),
+			  m_largestWeight(0) { }
 
 		std::pair<Vector, Float> generateSample() {
 			Point2 sample(m_random->nextFloat(), m_random->nextFloat());
@@ -69,15 +70,17 @@ public:
 
 			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
 				Float a = sampled[i], b=sampled2[i];
-				Float min = std::min(std::abs(a), std::abs(b));
-				Float err = std::abs(a-b);
+				SAssert(a >= 0 && b >= 0);
+				Float min = std::min(a, b);
+				Float err = std::abs(a - b);
+				m_largestWeight = std::max(m_largestWeight, a);
 
 				if (min < Epsilon && err > Epsilon) // absolute error threshold
 					mismatch = true;
 				else if (min > Epsilon && err/min > Epsilon) // relative error threshold
 					mismatch = true;
 			}
-						
+
 			if (mismatch)
 				Log(EWarn, "Inconsistency: f=%s, pdf=%f, sampled f/pdf=%s",
 					f.toString().c_str(), pdfVal, sampled.toString().c_str());
@@ -95,11 +98,14 @@ public:
 				return 0.0f;
 			return m_bsdf->pdf(bRec);
 		}
+
+		inline Float getLargestWeight() const { return m_largestWeight; }
 	private:
 		ref<const BSDF> m_bsdf;
 		ref<Random> m_random;
 		Vector m_wi;
 		int m_component;
+		Float m_largestWeight;
 	};
 	
 	void test01_BSDF() {
@@ -116,8 +122,10 @@ public:
 				continue;
 
 			const BSDF *bsdf = static_cast<const BSDF *>(objects[i]);
+			Float largestWeight = 0;
 
 			Log(EInfo, "Processing BSDF model %s", bsdf->toString().c_str());
+#if 0
 			Log(EInfo, "Checking the combined model for %i incident directions", wiSamples);
 
 			/* Test for a number of different incident directions */
@@ -135,8 +143,8 @@ public:
 
 				// Initialize the tables used by the chi-square test
 				chiSqr->fill(
-					boost::bind(&BSDFAdapter::generateSample, adapter),
-					boost::bind(&BSDFAdapter::pdf, adapter, _1)
+					boost::bind(&BSDFAdapter::generateSample, &adapter),
+					boost::bind(&BSDFAdapter::pdf, &adapter, _1)
 				);
 
 				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
@@ -150,8 +158,10 @@ public:
 				} else {
 					succeed();
 				}
+				largestWeight = std::max(largestWeight, adapter.getLargestWeight());
 				++testCount;
 			}
+#endif
 
 			if (bsdf->getComponentCount() > 1) {
 				for (int comp=0; comp<bsdf->getComponentCount(); ++comp) {
@@ -167,13 +177,14 @@ public:
 							wi = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));
 
 						BSDFAdapter adapter(bsdf, random, wi, comp);
+
 						ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
 						chiSqr->setLogLevel(EDebug);
 
 						// Initialize the tables used by the chi-square test
 						chiSqr->fill(
-							boost::bind(&BSDFAdapter::generateSample, adapter),
-							boost::bind(&BSDFAdapter::pdf, adapter, _1)
+							boost::bind(&BSDFAdapter::generateSample, &adapter),
+							boost::bind(&BSDFAdapter::pdf, &adapter, _1)
 						);
 
 						// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
@@ -187,10 +198,12 @@ public:
 						} else {
 							succeed();
 						}
+						largestWeight = std::max(largestWeight, adapter.getLargestWeight());
 						++testCount;
 					}
 				}
 			}
+			Log(EInfo, "Done with this model. The largest encountered sampling weight was = %f", largestWeight);
 		}
 		Log(EInfo, "%i/%i BSDF checks succeeded", testCount-failureCount, testCount);
 	}
