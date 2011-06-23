@@ -641,7 +641,7 @@ Point2 squareToDiskConcentric(const Point2 &sample) {
 		if (r1<r2)
 			coords = Point2(-r1, (M_PI/4.0f) * (4.0f + r2/r1));
 		else 
-			coords = Point2(-r2, (M_PI/4.0f) * (6.0f- - r1/r2));
+			coords = Point2(-r2, (M_PI/4.0f) * (6.0f - r1/r2));
 	}
 	return Point2(
 		coords.x*std::cos(coords.y),
