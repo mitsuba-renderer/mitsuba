@@ -20,9 +20,9 @@
 
 MTS_NAMESPACE_BEGIN
 
-ChiSquareTest::ChiSquareTest(int thetaBins, int phiBins, size_t sampleCount) 
-    	: m_logLevel(EInfo), m_thetaBins(thetaBins), m_phiBins(phiBins), 
-		  m_sampleCount(sampleCount) {
+ChiSquare::ChiSquare(int thetaBins, int phiBins, int numTests,
+		size_t sampleCount) : m_logLevel(EInfo), m_thetaBins(thetaBins), 
+		  m_phiBins(phiBins), m_numTests(numTests), m_sampleCount(sampleCount) {
 	if (m_phiBins == 0)
 		m_phiBins = 2*m_thetaBins;
 	if (m_sampleCount == 0)
@@ -31,60 +31,12 @@ ChiSquareTest::ChiSquareTest(int thetaBins, int phiBins, size_t sampleCount)
 	m_refTable = new Float[m_thetaBins*m_phiBins];
 }
 
-ChiSquareTest::~ChiSquareTest() {
+ChiSquare::~ChiSquare() {
 	delete[] m_table;
 	delete[] m_refTable;
 }
 
-bool ChiSquareTest::runTest(int distParams, Float pvalThresh) {
-	/* Compute the chi-square statistic */
-	Float chsq = 0.0f;
-	Float pooledCounts = 0, pooledRef = 0;
-	int pooledCells = 0;
-	int df = 0;
-
-	for (int i=0; i<m_thetaBins*m_phiBins; ++i) {
-		if (m_refTable[i] < 5) {
-			pooledCounts += m_table[i];
-			pooledRef += m_refTable[i];
-			++pooledCells;
-		} else {
-			Float diff = m_table[i]-m_refTable[i];
-			chsq += (diff*diff) / m_refTable[i];
-			++df;
-		}
-	}
-
-	if (pooledCells > 0 && pooledRef != 0) {
-		Log(m_logLevel, "Pooled %i cells with an expected "
-			"number of < 5 entries!", pooledCells);
-		if (pooledRef < 5) {
-			Log(EWarn, "Even after pooling %i cells, the expected "
-				"number of entries is < 5 (%f), expect badness!",
-				pooledCells, pooledRef);
-		}
-		Float diff = pooledCounts - pooledRef;
-		chsq += (diff*diff) / pooledRef;
-		++df;
-	}
-
-	df -= distParams + 1;
-	Log(m_logLevel, "Chi-square statistic = %e (df=%i)", chsq, df);
-	boost::math::chi_squared chSqDist(df);
-	/* Probability of obtaining a test statistic at least
-	   as extreme as the one observed under the assumption
-	   that the distributions match */
-	Float pval = 1 - boost::math::cdf(chSqDist, chsq);
-	Log(m_logLevel, pval > 0.01 ? "P-value = %.4f" : "P-value = %e", pval);
-
-	if (pval < pvalThresh) {
-		Log(EWarn, "Rejecting the null hypothesis (P-value=%e)", pval);
-		return false;
-	}
-	return true;
-}
-
-void ChiSquareTest::dumpTables(const fs::path &filename) {
+void ChiSquare::dumpTables(const fs::path &filename) {
 	fs::ofstream out(filename);
 	out << "tbl_counts = [ ";
 	for (int i=0; i<m_thetaBins; ++i) {
@@ -111,7 +63,7 @@ void ChiSquareTest::dumpTables(const fs::path &filename) {
 	out.close();
 }
 
-void ChiSquareTest::fill(
+void ChiSquare::fill(
 	const boost::function<std::pair<Vector, Float>()> &sampleFn,
 	const boost::function<Float (const Vector &)> &pdfFn) {
 	memset(m_table, 0, m_thetaBins*m_phiBins*sizeof(Float));
@@ -151,7 +103,7 @@ void ChiSquareTest::fill(
 			size_t evals;
 
 			integrator.integrateVectorized(
-				boost::bind(&ChiSquareTest::integrand, pdfFn, _1, _2, _3),
+				boost::bind(&ChiSquare::integrand, pdfFn, _1, _2, _3),
 				min, max, &result, &error, evals
 			);
 
@@ -164,5 +116,100 @@ void ChiSquareTest::fill(
 			timer->getMilliseconds(), maxError, integral);
 }
 
-MTS_IMPLEMENT_CLASS(ChiSquareTest, false, Object)
+struct SortedCell {
+	Float expCount;
+	int idx;
+};
+
+struct SortedCellFunctor {
+	inline bool operator()(const SortedCell &c1, const SortedCell &c2) const {
+		return c1.expCount < c2.expCount;
+	}
+};
+
+ChiSquare::ETestResult ChiSquare::runTest(int distParams, Float pvalThresh) {
+	/* Compute the chi-square statistic */
+	Float pooledCounts = 0, pooledRef = 0, chsq = 0.0f;
+	int pooledCells = 0, df = 0;
+
+	/* Process cells in order sorted by their expected counts */
+	std::vector<SortedCell> cells(m_thetaBins*m_phiBins);
+	for (int i=0; i<m_thetaBins*m_phiBins; ++i) {
+		cells[i].expCount = m_refTable[i];
+		cells[i].idx = i;
+	}
+	std::sort(cells.begin(), cells.end(), SortedCellFunctor());
+
+	std::vector<SortedCell>::iterator it = cells.begin();
+
+	while (it != cells.end()) {
+		int idx = it->idx;
+	
+		if (m_refTable[idx] == 0) {
+			if (m_table[idx] != 0) {
+				/* Special handler for cells with an expected frequency of zero */
+				Log(EWarn, "Encountered a cell with an expected frequency of zero, "
+					"where the actual number of observations is %i! Rejecting the "
+					"null hypothesis.", m_table[idx]);
+				return EReject;
+			}
+		} else if (m_refTable[idx] < CHISQR_MIN_EXP_FREQUENCY) {
+			/* Pool cells with low expected frequencies */
+			pooledCounts += m_table[idx];
+			pooledRef += m_refTable[idx];
+			++pooledCells;
+		} else if (pooledRef > 0 && pooledRef < CHISQR_MIN_EXP_FREQUENCY) {
+			/* Pool more cells until the merged cell 
+			   has a sufficiently high frequency */
+			pooledCounts += m_table[idx];
+			pooledRef += m_refTable[idx];
+			++pooledCells;
+		} else {
+			Float diff = m_table[idx]-m_refTable[idx];
+			chsq += (diff*diff) / m_refTable[idx];
+			++df;
+		}
+
+		++it;
+	}
+
+	if (pooledCells > 0) {
+		Log(m_logLevel, "Pooled %i cells to ensure sufficiently "
+			"high expected frequencies (> %f).", pooledCells,
+			(Float) CHISQR_MIN_EXP_FREQUENCY);
+		Float diff = pooledCounts - pooledRef;
+		chsq += (diff*diff) / pooledRef;
+		++df;
+	}
+
+	df -= distParams + 1;
+
+	Log(m_logLevel, "Chi-square statistic = %e (df=%i)", chsq, df);
+	
+	if (df <= 0) {
+		Log(EWarn, "The number of degrees of freedom (%i) is too low!", df);
+		return ELowDoF;
+	}
+
+	/* Probability of obtaining a test statistic at least
+	   as extreme as the one observed under the assumption
+	   that the distributions match */
+	boost::math::chi_squared chSqDist(df);
+	Float pval = 1 - boost::math::cdf(chSqDist, chsq);
+
+	/* Apply the Sidak correction for multiple independent hypothesis tests */
+	Float alpha = 1 - std::pow(1 - pvalThresh, 1 / (Float) m_numTests);
+
+	if (pval < alpha) {
+		Log(EWarn, "Rejected the null hypothesis (P-value = %e, "
+			"significance level = %f)", pval, alpha);
+		return EReject;
+	} else {
+		Log(m_logLevel, "Accepted the null hypothesis (P-value = %e, "
+			"significance level = %f)", pval, alpha);
+		return EAccept;
+	}
+}
+
+MTS_IMPLEMENT_CLASS(ChiSquare, false, Object)
 MTS_NAMESPACE_END

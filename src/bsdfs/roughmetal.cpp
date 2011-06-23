@@ -188,9 +188,9 @@ public:
 		std::ostringstream oss;
 		oss << "RoughMetal[" << endl
 			<< "  specularReflectance=" << m_specularReflectance.toString() << "," << std::endl
-			<< ", ior=" << m_ior.toString() << "," << std::endl
-			<< ", k=" << m_k.toString() << "," << std::endl
-			<< ", alphaB=" << m_alphaB << std::endl
+			<< "  ior = " << m_ior.toString() << "," << std::endl
+			<< "  k = " << m_k.toString() << "," << std::endl
+			<< "  alphaB = " << m_alphaB << std::endl
 			<< "]";
 		return oss.str();
 	}

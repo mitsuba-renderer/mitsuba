@@ -105,7 +105,7 @@ public:
 		ref<Scene> scene = loadScene("data/tests/test_bsdf.xml");
 	
 		const std::vector<ConfigurableObject *> objects = scene->getReferencedObjects();
-		size_t thetaBins = 10, wiSamples = 10, failureCount = 0, testCount = 0;
+		size_t thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
 		ref<Random> random = new Random();
 
 		Log(EInfo, "Verifying BSDF sampling routines ..");
@@ -128,7 +128,7 @@ public:
 					wi = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));
 
 				BSDFAdapter adapter(bsdf, random, wi);
-				ref<ChiSquareTest> chiSqr = new ChiSquareTest(thetaBins);
+				ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
 				chiSqr->setLogLevel(EDebug);
 
 				// Initialize the tables used by the chi-square test
@@ -138,7 +138,8 @@ public:
 				);
 
 				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-				if (!chiSqr->runTest(1)) {
+				ChiSquare::ETestResult result = chiSqr->runTest(1);
+				if (result == ChiSquare::EReject) {
 					std::string filename = formatString("failure_%i.m", failureCount++);
 					chiSqr->dumpTables(filename);
 					failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
@@ -164,7 +165,7 @@ public:
 							wi = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));
 
 						BSDFAdapter adapter(bsdf, random, wi, comp);
-						ref<ChiSquareTest> chiSqr = new ChiSquareTest(thetaBins);
+						ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
 						chiSqr->setLogLevel(EDebug);
 
 						// Initialize the tables used by the chi-square test
@@ -174,7 +175,8 @@ public:
 						);
 
 						// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-						if (!chiSqr->runTest(1)) {
+						ChiSquare::ETestResult result = chiSqr->runTest(1);
+						if (result == ChiSquare::EReject) {
 							std::string filename = formatString("failure_%i.m", failureCount++);
 							chiSqr->dumpTables(filename);
 							failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "

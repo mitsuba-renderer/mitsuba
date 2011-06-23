@@ -27,6 +27,9 @@
 
 MTS_NAMESPACE_BEGIN
 
+/// Minimum expected cell frequency. Cells below this value will be pooled
+#define CHISQR_MIN_EXP_FREQUENCY 5
+
 /**
  * \brief Chi-square goodness-of-fit test on the sphere
  *
@@ -59,7 +62,7 @@ MTS_NAMESPACE_BEGIN
  * 
  * <code>
  * MyDistribution myDistrInstance;
- * ChiSquareTest chiSqr;
+ * ChiSquare chiSqr;
  *
  * // Initialize the tables used by the chi-square test
  * chiSqr.fill(
@@ -75,8 +78,18 @@ MTS_NAMESPACE_BEGIN
  *    Log(EError, "Uh oh -- test failed, the implementation is probably incorrect!");
  * </code>
  */
-class MTS_EXPORT_CORE ChiSquareTest : public Object {
+class MTS_EXPORT_CORE ChiSquare : public Object {
 public:
+	/// Possible outcomes in \ref runTest()
+	enum ETestResult {
+		/// The null hypothesis was rejected
+		EReject = 0,
+		/// The null hypothesis was accepted
+		EAccept = 1,
+		/// The degrees of freedom were too low
+		ELowDoF = 2
+	};
+
 	/**
 	 * \brief Create a new Chi-square test instance with the given
 	 * resolution and sample count
@@ -88,11 +101,16 @@ public:
 	 *    Number of bins wrt. azimuth. The default is to use
 	 *    twice the number of \c thetaBins
 	 *
+	 * \param numTests
+	 *    Number of independent tests that will be performed. This
+	 *    is used to compute the Sidak-correction factor.
+	 *
 	 * \param sampleCount
 	 *    Number of samples to be used when computing the bin
 	 *    values. The default is \c thetaBins*phiBins*5000
 	 */
-	ChiSquareTest(int thetaBins = 10, int phiBins = 0, size_t sampleCount = 0);
+	ChiSquare(int thetaBins = 10, int phiBins = 0, 
+			int numTests = 1, size_t sampleCount = 0);
 
 	/// Set the log level
 	inline void setLogLevel(ELogLevel logLevel) { m_logLevel = logLevel; }
@@ -125,15 +143,14 @@ public:
 	 *     when the computed p-value lies below this parameter
 	 *     (default: 0.01f)
 	 *
-	 * \return \c false if the null hypothesis was rejected
-	 *     and \c true otherwise.
+	 * \return A status value of type \ref ETestResult
 	 */
-	bool runTest(int distParams, Float pvalThresh = 0.01f);
+	ETestResult runTest(int distParams, Float pvalThresh = 0.01f);
 
 	MTS_DECLARE_CLASS()
 protected:
 	/// Release all memory
-	virtual ~ChiSquareTest();
+	virtual ~ChiSquare();
 
 	/// Functor to evaluate the pdf values in parallel using OpenMP
 	static void integrand(
@@ -146,6 +163,7 @@ protected:
 private:
 	ELogLevel m_logLevel;
 	int m_thetaBins, m_phiBins;
+	int m_numTests;
 	size_t m_sampleCount;
 	Float *m_table;
 	Float *m_refTable;
