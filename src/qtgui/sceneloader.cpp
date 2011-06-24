@@ -98,13 +98,13 @@ void SceneLoader::run() {
 			scene->initialize();
 
 			if (scene->getIntegrator() == NULL)
-				SLog(EError, "The scene contains no integrator! Aborting..");
+				SLog(EError, "Unable to load scene: no integrator found!");
 			if (scene->getCamera() == NULL)
-				SLog(EError, "The scene contains no camera! Aborting..");
+				SLog(EError, "Unable to load scene: no camera found!");
 			if (scene->getCamera()->getFilm() == NULL)
-				SLog(EError, "The scene contains no film! Aborting..");
+				SLog(EError, "Unable to load scene: no film found!");
 			if (scene->getLuminaires().size() == 0)
-				SLog(EError, "The scene contains no light sources! Aborting..");
+				SLog(EError, "Unable to load scene: no light sources found!");
 		
 			Vector2i size = scene->getFilm()->getSize();
 			Camera *camera = scene->getCamera();

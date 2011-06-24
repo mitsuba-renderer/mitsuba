@@ -225,26 +225,27 @@ void Scene::configure() {
 		m_integrator->configure();
 	}
 	if (m_camera == NULL) {
-		Log(EWarn, "No camera found! Adding a default camera.");
-
 		Properties props("perspective");
 		/* Create a perspective camera with 45deg. FOV, which can see the whole scene */
 		AABB aabb;
 		for (size_t i=0; i<m_shapes.size(); ++i)
 			aabb.expandBy(m_shapes[i]->getAABB());
-		if (!aabb.isValid())
-			Log(EError, "Unable to set up a default camera -- does the scene contain anything at all?");
-		Point center = aabb.getCenter();
-		Vector extents = aabb.getExtents();
-		Float maxExtents = std::max(extents.x, extents.y);
-		Float distance = maxExtents/(2.0f * std::tan(45 * .5f * M_PI/180));
+		if (aabb.isValid()) {
+			Log(EInfo, "No camera found! Adding a default camera.");
+			Point center = aabb.getCenter();
+			Vector extents = aabb.getExtents();
+			Float maxExtents = std::max(extents.x, extents.y);
+			Float distance = maxExtents/(2.0f * std::tan(45 * .5f * M_PI/180));
 
-		props.setTransform("toWorld", Transform::translate(Vector(center.x, center.y, aabb.min.z - distance)));
-		props.setFloat("fov", 45.0f);
+			props.setTransform("toWorld", Transform::translate(Vector(center.x, center.y, aabb.min.z - distance)));
+			props.setFloat("fov", 45.0f);
 
-		m_camera = static_cast<Camera *> (PluginManager::getInstance()->createObject(MTS_CLASS(Camera), props));
-		m_camera->configure();
-		m_sampler = m_camera->getSampler();
+			m_camera = static_cast<Camera *> (PluginManager::getInstance()->createObject(MTS_CLASS(Camera), props));
+			m_camera->configure();
+			m_sampler = m_camera->getSampler();
+		} else {
+			Log(EWarn, "Unable to set up a default camera -- does the scene contain anything at all?");
+		}
 	}
 
 	m_integrator->configureSampler(m_sampler);

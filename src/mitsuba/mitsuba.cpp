@@ -350,6 +350,9 @@ int ubi_main(int argc, char **argv) {
 			parser->parse(filename.file_string().c_str());
 			ref<Scene> scene = handler->getScene();
 
+			if (scene->getCamera() == NULL)
+				SLog(EError, "Scene does not contain a camera!");
+
 			scene->setSourceFile(filename);
 			scene->setDestinationFile(destFile.length() > 0 ? 
 				fs::path(destFile) : (filePath / baseName));
