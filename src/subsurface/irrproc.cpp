@@ -122,14 +122,14 @@ private:
 
 void IrradianceRecordVector::load(Stream *stream) {
 	clear();
-	size_t count = stream->readUInt();
+	size_t count = stream->readSize();
 	m_samples.resize(count);
 	for (size_t i=0; i<count; ++i)
 		m_samples[i] = IrradianceSample(stream);
 }
 
 void IrradianceRecordVector::save(Stream *stream) const {
-	stream->writeUInt((unsigned int) m_samples.size());
+	stream->writeSize(m_samples.size());
 	for (size_t i=0; i<m_samples.size(); ++i)
 		m_samples[i].serialize(stream);
 }
@@ -171,7 +171,7 @@ ParallelProcess::EStatus IrradianceSamplingProcess::generateWork(WorkUnit *unit,
 	/* Reserve a sequence of at most 'granularity' samples */
 	size_t workSize = std::min(m_granularity, m_sampleCount - m_samplesRequested);
 	RangeWorkUnit *range = static_cast<RangeWorkUnit *>(unit);
-	range->setRange(m_samplesRequested, m_samplesRequested + workSize - 1);
+	range->setRange(m_samplesRequested, m_samplesRequested + workSize);
 	m_samplesRequested += workSize;
 
 	return ESuccess;
