@@ -73,7 +73,7 @@ public:
 				SAssert(a >= 0 && b >= 0);
 				Float min = std::min(a, b);
 				Float err = std::abs(a - b);
-				m_largestWeight = std::max(m_largestWeight, a * Frame::cosTheta(bRec.wo));
+				m_largestWeight = std::max(m_largestWeight, a * std::abs(Frame::cosTheta(bRec.wo)));
 
 				if (min < Epsilon && err > Epsilon) // absolute error threshold
 					mismatch = true;
@@ -205,8 +205,10 @@ public:
 						progress->update(j+1);
 					}
 				}
+				Log(EInfo, "Done with this BSDF. The largest encountered "
+						"importance weight was = %.2f", largestWeight);
+				largestWeight = 0;
 			}
-			Log(EInfo, "Done with this model. The largest encountered importance weight was = %.2f", largestWeight);
 		}
 		Log(EInfo, "%i/%i BSDF checks succeeded", testCount-failureCount, testCount);
 		delete progress;

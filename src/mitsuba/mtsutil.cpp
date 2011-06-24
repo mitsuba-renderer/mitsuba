@@ -66,6 +66,8 @@ void help() {
 	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 	std::ostringstream utilities, testcases;
 
+	cout << "[ Loading plugin list .. ]" << endl << endl;
+	
 	testcases << "The following testcases are available:" << endl << endl;
 	utilities << endl << "The following utilities are available:" << endl << endl;
 

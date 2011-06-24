@@ -111,6 +111,37 @@ public:
 		return Spectrum(0.0f);
 	}
 
+	inline Vector reflect(const Vector &wi, const Normal &m) const {
+		return 2 * dot(wi, m) * Vector(m) - wi;
+	}
+
+	inline bool refract(const Vector &wi, Vector &wo, const Normal &m) const {
+		/* Determine the appropriate indices of refraction */
+		Float etaI = m_extIOR, etaT = m_intIOR;
+		if (Frame::cosTheta(wi) < 0)
+			std::swap(etaI, etaT);
+
+		Float eta = etaI / etaT, c = dot(wi, m);
+
+		/* Using Snell's law, calculate the squared cosine of the
+		   angle between the normal and the transmitted ray */
+		Float cosThetaTSqr = 1 + eta * eta * (c*c-1);
+
+		if (cosThetaTSqr < 0) 
+			return false; // Total internal reflection
+
+		/* Compute the transmitted direction */
+		wo = m * (eta*c - signum(wi.z)
+			   * std::sqrt(cosThetaTSqr)) - wi * eta;
+
+		return true;
+	}
+
+	inline Float signum(Float value) const {
+		return (value < 0) ? -1.0f : 1.0f;
+	}
+
+
 	/**
 	 * \brief Implements the microfacet distribution function D
 	 *
@@ -246,29 +277,6 @@ public:
 		}
 
 		return Normal(sphericalDirection(thetaM, phiM));
-	}
-
-	inline Vector reflect(const Vector &wi, const Normal &m) const {
-		return 2 * dot(wi, m) * Vector(m) - wi;
-	}
-
-	inline bool refract(const Vector &wi, Vector &wo, const Normal &m) const {
-		Float etaI = m_extIOR, etaT = m_intIOR;
-		if (Frame::cosTheta(wi) < 0)
-			std::swap(etaI, etaT);
-
-		Float eta = etaI / etaT, c = dot(wi, m);
-		Float cosThetaTSqr = 1 + eta * eta * (c*c-1);
-		if (cosThetaTSqr < 0) // Total internal reflection
-			return false;
-
-		wo = m * (eta*c - signum(wi.z)
-			   * std::sqrt(cosThetaTSqr)) - wi * eta;
-		return true;
-	}
-
-	inline Float signum(Float value) const {
-		return (value < 0) ? -1.0f : 1.0f;
 	}
 
 	inline Spectrum fReflection(const BSDFQueryRecord &bRec) const {
@@ -448,7 +456,7 @@ public:
 		/* Sample the microfacet normal */
 		Vector m = sampleD(sample, alpha);
 
-		/* Refract */
+		/* Refract based on 'm' */
 		if (!refract(bRec.wi, bRec.wo, m))
 			return Spectrum(0.0f);
 

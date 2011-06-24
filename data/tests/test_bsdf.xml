@@ -41,6 +41,31 @@
 		</bsdf>
 	</bsdf>
 
+	<!-- Test the composite material adapter with
+		 a mix of two previously tested materials -->
+	<bsdf type="composite">
+		<string name="weights" value="0.4, 0.6"/>
+
+		<bsdf type="phong">
+			<float name="diffuseAmount" value="0.5"/>
+			<float name="specularAmount" value="0.5"/>
+			<float name="exponent" value="20"/>
+
+			<spectrum name="diffuseReflectance" value="1"/>
+			<spectrum name="specularReflectance" value="1"/>
+		</bsdf>
+
+		<bsdf type="ward">
+			<float name="diffuseAmount" value="0.5"/>
+			<float name="specularAmount" value="0.5"/>
+			<float name="alphaX" value="0.1"/>
+			<float name="alphaY" value="0.3"/>
+
+			<spectrum name="diffuseReflectance" value="1"/>
+			<spectrum name="specularReflectance" value="1"/>
+		</bsdf>
+	</bsdf>
+
 	<!-- Test the microfacet model -->
 	<bsdf type="microfacet">
 		<float name="diffuseAmount" value="0.5"/>
@@ -53,15 +78,6 @@
 	<!-- Test the rough metal model -->
 	<bsdf type="roughmetal">
 		<float name="alphaB" value="0.1"/>
-	</bsdf>
-
-	<!-- Test the rough glass model with the 
-		 Beckmann microfacet distribution -->
-	<bsdf type="roughglass">
-		<string name="distribution" value="beckmann"/>
-		<float name="alpha" value=".3"/>
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1.0"/>
 	</bsdf>
 
 	<!-- Test the rough glass model with the 
@@ -78,6 +94,15 @@
 	<bsdf type="roughglass">
 		<string name="distribution" value="phong"/>
 		<float name="alpha" value="0.3"/>
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1.0"/>
+	</bsdf>
+
+	<!-- Test the rough glass model with the 
+		 Beckmann microfacet distribution -->
+	<bsdf type="roughglass">
+		<string name="distribution" value="beckmann"/>
+		<float name="alpha" value=".3"/>
 		<float name="intIOR" value="1.5"/>
 		<float name="extIOR" value="1.0"/>
 	</bsdf>
