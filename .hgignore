@@ -27,6 +27,9 @@
 ^data/windows/mitsuba_res.res$
 ^dist/.*$
 
+# Debugging history files
+^\.gdb_history$
+
 # Dependencies
 ^dependencies/.*$
 

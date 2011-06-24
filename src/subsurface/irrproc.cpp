@@ -80,7 +80,7 @@ public:
 		ref<Camera> camera = m_scene->getCamera();
 
 		result->clear();
-		for (size_t i=range->getRangeStart(); i<range->getRangeEnd(); ++i) {
+		for (size_t i=range->getRangeStart(); i<=range->getRangeEnd(); ++i) {
 			m_sampler->setSampleIndex(i);
 			Point2 sample = m_sampler->next2D();
 
@@ -171,7 +171,7 @@ ParallelProcess::EStatus IrradianceSamplingProcess::generateWork(WorkUnit *unit,
 	/* Reserve a sequence of at most 'granularity' samples */
 	size_t workSize = std::min(m_granularity, m_sampleCount - m_samplesRequested);
 	RangeWorkUnit *range = static_cast<RangeWorkUnit *>(unit);
-	range->setRange(m_samplesRequested, m_samplesRequested + workSize);
+	range->setRange(m_samplesRequested, m_samplesRequested + workSize - 1);
 	m_samplesRequested += workSize;
 
 	return ESuccess;
