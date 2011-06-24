@@ -1,111 +1,24 @@
-<!-- This file defines a series of BSDF instances
-	 to be tested for consistency. This is done
-	 using the testcase 'test_chisquare' -->
+<!-- This file defines a series of phase function instances
+	 to be tested for consistency. This is done using the 
+	 testcase 'test_chisquare' -->
 <scene>
-	<!-- Test the lambertian model -->
-	<bsdf type="lambertian"/>
+	<!-- Test the isotropic phase function -->
+	<phase type="isotropic"/>
+	
+	<!-- Test the Henyey-Greenstein phase function
+		 configured as highly forward-scattering -->
+	<phase type="hg">
+		<float name="g" value="0.9"/>
+	</phase>
 
-	<!-- Test the diffuse transmission model -->
-	<bsdf type="difftrans"/>
-
-	<!-- Test the Phong model -->
-	<bsdf type="phong">
-		<float name="diffuseAmount" value="0.5"/>
-		<float name="specularAmount" value="0.5"/>
-		<float name="exponent" value="20"/>
-
-		<spectrum name="diffuseReflectance" value="1"/>
-		<spectrum name="specularReflectance" value="1"/>
-	</bsdf>
-
-	<!-- Test the anisotropic Ward model -->
-	<bsdf type="ward">
-		<float name="diffuseAmount" value="0.5"/>
-		<float name="specularAmount" value="0.5"/>
-		<float name="alphaX" value="0.1"/>
-		<float name="alphaY" value="0.3"/>
-
-		<spectrum name="diffuseReflectance" value="1"/>
-		<spectrum name="specularReflectance" value="1"/>
-	</bsdf>
-
-	<!-- Test the two-sided BRDF adapter -->
-	<bsdf type="twosided">
-		<bsdf type="phong">
-			<float name="diffuseAmount" value="0.5"/>
-			<float name="specularAmount" value="0.5"/>
-			<float name="exponent" value="20"/>
-
-			<spectrum name="diffuseReflectance" value="1"/>
-			<spectrum name="specularReflectance" value="1"/>
-		</bsdf>
-	</bsdf>
-
-	<!-- Test the composite material adapter with
-		 a mix of two previously tested materials -->
-	<bsdf type="composite">
-		<string name="weights" value="0.4, 0.6"/>
-
-		<bsdf type="phong">
-			<float name="diffuseAmount" value="0.5"/>
-			<float name="specularAmount" value="0.5"/>
-			<float name="exponent" value="20"/>
-
-			<spectrum name="diffuseReflectance" value="1"/>
-			<spectrum name="specularReflectance" value="1"/>
-		</bsdf>
-
-		<bsdf type="ward">
-			<float name="diffuseAmount" value="0.5"/>
-			<float name="specularAmount" value="0.5"/>
-			<float name="alphaX" value="0.1"/>
-			<float name="alphaY" value="0.3"/>
-
-			<spectrum name="diffuseReflectance" value="1"/>
-			<spectrum name="specularReflectance" value="1"/>
-		</bsdf>
-	</bsdf>
-
-	<!-- Test the microfacet model -->
-	<bsdf type="microfacet">
-		<float name="diffuseAmount" value="0.5"/>
-		<float name="specularAmount" value="0.5"/>
-		<float name="alphaB" value="0.1"/>
-		<spectrum name="diffuseReflectance" value="1"/>
-		<spectrum name="specularReflectance" value="1"/>
-	</bsdf>
-
-	<!-- Test the rough metal model -->
-	<bsdf type="roughmetal">
-		<float name="alphaB" value="0.1"/>
-	</bsdf>
-
-	<!-- Test the rough glass model with the 
-		 Beckmann microfacet distribution -->
-	<bsdf type="roughglass">
-		<string name="distribution" value="beckmann"/>
-		<float name="alpha" value=".3"/>
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1.0"/>
-	</bsdf>
-
-	<!-- Test the rough glass model with the 
-		 GGX microfacet distribution -->
-	<bsdf type="roughglass">
-		<string name="distribution" value="ggx"/>
-		<float name="alpha" value="0.4"/>
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1.0"/>
-	</bsdf>
-
-	<!-- Test the rough glass model with the 
-		 Phong microfacet distribution -->
-	<bsdf type="roughglass">
-		<string name="distribution" value="phong"/>
-		<float name="alpha" value="0.3"/>
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1.0"/>
-	</bsdf>
-
-	<camera type="perspective"/>
+	<!-- Test the Henyey-Greenstein phase function
+		 configured as slightly backward-scattering -->
+	<phase type="hg">
+		<float name="g" value="-0.3"/>
+	</phase>
+	
+	<!-- Test the micro-flake phase function -->
+	<phase type="microflake">
+		<float name="stddev" value="0.1"/>
+	</phase>
 </scene>
