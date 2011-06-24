@@ -17,6 +17,10 @@
 */
 
 #include <mitsuba/core/chisquare.h>
+#include <mitsuba/core/quad.h>
+#include <mitsuba/core/timer.h>
+#include <boost/math/distributions/chi_squared.hpp>
+#include <boost/bind.hpp>
 
 MTS_NAMESPACE_BEGIN
 

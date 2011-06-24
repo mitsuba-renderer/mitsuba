@@ -20,6 +20,12 @@
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/chisquare.h>
 #include <mitsuba/render/testcase.h>
+#include <boost/bind.hpp>
+
+/* Statistical significance level of the test. Set to
+   1/2 percent by default -- we want there to be notable
+   evidence before failing a test case */
+#define SIGNIFICANCE_LEVEL 0.005f
 
 MTS_NAMESPACE_BEGIN
 
@@ -149,7 +155,7 @@ public:
 				);
 
 				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-				ChiSquare::ETestResult result = chiSqr->runTest(1);
+				ChiSquare::ETestResult result = chiSqr->runTest(1, SIGNIFICANCE_LEVEL);
 				if (result == ChiSquare::EReject) {
 					std::string filename = formatString("failure_%i.m", failureCount++);
 					chiSqr->dumpTables(filename);
@@ -190,7 +196,7 @@ public:
 						);
 
 						// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-						ChiSquare::ETestResult result = chiSqr->runTest(1);
+						ChiSquare::ETestResult result = chiSqr->runTest(1, SIGNIFICANCE_LEVEL);
 						if (result == ChiSquare::EReject) {
 							std::string filename = formatString("failure_%i.m", failureCount++);
 							chiSqr->dumpTables(filename);

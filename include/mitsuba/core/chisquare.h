@@ -20,10 +20,7 @@
 #define __CHI_SQUARE_TEST_H
 
 #include <mitsuba/core/fresolver.h>
-#include <mitsuba/core/quad.h>
-#include <mitsuba/core/timer.h>
-#include <boost/bind.hpp>
-#include <boost/math/distributions/chi_squared.hpp>
+#include <boost/function.hpp>
 
 MTS_NAMESPACE_BEGIN
 
