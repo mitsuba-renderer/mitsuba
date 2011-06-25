@@ -5,9 +5,7 @@
 
 \usepackage[english]{babel}
 \usepackage[T1]{fontenc}
-\usepackage{textcomp}
-\usepackage{lmodern}
-\usepackage{charter}
+\usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{array}
 \usepackage{booktabs}
@@ -15,8 +13,14 @@
 \usepackage{listings}
 \usepackage{amsmath}
 \usepackage{enumerate}
-\usepackage{calc}
-\usepackage[utf8]{inputenc}
+
+% Make sure that ligatures remain searchable in the PDF
+\input glyphtounicode
+\pdfgentounicode=1
+
+\IfFileExists{MinionPro.sty}
+   {\usepackage[opticals,fullfamily,lf]{MinionPro}}
+      {\message{Package MinionPro.sty was not found.}}
 
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
@@ -38,9 +42,7 @@
 
 \typearea[current]{last}
 \raggedbottom
-
-\usepackage[expansion=false]{microtype}
-\UseMicrotypeSet[protrusion]{basictext}
+\usepackage[expansion=false, babel=true]{microtype}
 \renewcommand*\ttdefault{txtt}
 
 \usepackage{scrpage2}
@@ -61,7 +63,7 @@
 \definecolor{lstshade}{gray}{0.94}
 \definecolor{lstframe}{gray}{0.75}
 \definecolor{lstcomment}{gray}{0.5}
-\definecolor{lstattrib}{rgb}{0,0.25,0}
+\definecolor{lstattrib}{rgb}{0,0.34,0}
 
 % Cite a figure/listing
 \renewcommand{\lstlistingname}{Listing}
@@ -76,6 +78,7 @@
 
 % Listings settings
 \lstset{
+	basicstyle = \small\ttfamily\raggedright,
 	mathescape = true,
 	frame = lrtb,
 	backgroundcolor = \color{lstshade},
@@ -85,7 +88,6 @@
 	keepspaces,
 	belowskip = \smallskipamount,
 	framerule = .7pt,
-	basicstyle = \small\ttfamily\raggedright,
 	breaklines = true,
 	showstringspaces = false,
 	keywordstyle = \bfseries,
