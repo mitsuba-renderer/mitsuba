@@ -22,10 +22,16 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Turns a one-sided BRDF onto a two-sided one that
- * can be used to render meshes where the back-side
- * is visible.
+/*! \plugin{twosided}{Two-sided BRDF adapter}
+ * 
+ * Turns a nested one-sided BRDF onto a two-sided version that
+ * can be used to render meshes where the back-side is visible.
+ *
+ * \begin{xml}
+ * <bsdf type="twosided">
+ *   <bsdf type="lambertian"/>
+ * </bsdf>
+ * \end{xml}
  */
 class TwoSidedBRDF : public BSDF {
 public:

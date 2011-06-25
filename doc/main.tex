@@ -62,8 +62,11 @@
 % Cite a figure/listing
 \newcommand{\cfig}[1]{\mbox{Figure \ref{fig:#1}}}
 \newcommand{\clst}[1]{\mbox{Listing \ref{lst:#1}}}
-
 \newcommand{\code}[1]{\texttt{#1}}
+
+% Macros for plugin documentation
+\newcommand{\plugin}[2]{\subsection{#2 (\texttt{#1})}\label{plg:#1}}
+\newcommand{\pluginref}[1]{\texttt{\hyperref[plg:#1]{#1}}}
 
 % Listings settings
 \lstset{
@@ -107,16 +110,16 @@
 
 \tableofcontents
 
-\include{introduction}
-\include{compiling}
-\include{basics}
-\include{format}
-\include{plugins}
-\include{import}
-\include{development}
-\include{integrator}
-\include{parallelization}
-\include{acknowledgements}
+%\include{introduction}
+%\include{compiling}
+%\include{basics}
+%\include{format}
+\IfFileExists{plugins_generated.tex}{\include{plugins_generated}}{}
+%\include{import}
+%\include{development}
+%\include{integrator}
+%\include{parallelization}
+%\include{acknowledgements}
 
 
 \end{document}

@@ -1,10 +1,11 @@
 # Documentation
-^doc/doxygen/.*$
+^doc/apidocs/.*$
 ^doc/.*\.aux$
 ^doc/.*\.log$
 ^doc/.*\.out$
 ^doc/.*\.pdf$
 ^doc/.*\.toc$
+^doc/plugins_generated.tex$
 
 # Build-related
 ^\.sconf_temp/.*$

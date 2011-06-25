@@ -23,20 +23,24 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*!
-The Lambertian material represents a one-sided ideal diffuse material
-with the specified amount of reflectance. Optionally, a texture map may
-be applied. If no extra information is provided, the material will revert to 
-the default of uniform 50% reflectance.
-
-Seen from the back side, this material will appear completely black.
-
-\verbatim
-<bsdf type="lambertian">
-    <srgb name="reflectance" value="#a4da85"/>
-</bsdf>
-\endverbatim
-*/
+/*! \plugin{lambertian}{Ideally diffuse / Lambertian material}
+ * 
+ * The Lambertian material represents an ideally diffuse material
+ * with the specified amount of reflectance. When nothing is specified,
+ * the default of 50% reflectance is used.
+ *
+ * Optionally, a texture map may be applied. 
+ *
+ * Note that this material is one-sided --- that is, observed from the 
+ * back side, it will be completely black. If this is undesirable, 
+ * consider using the \pluginref{twosided} BRDF adapter plugin.
+ *
+ * \begin{xml}
+ * <bsdf type="lambertian">
+ *   <srgb name="reflectance" value="#a4da85"/>
+ * </bsdf>
+ * \end{xml}
+ */
 class Lambertian : public BSDF {
 public:
 	Lambertian(const Properties &props) 
