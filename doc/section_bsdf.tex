@@ -1,0 +1,47 @@
+\subsection{Surface scattering models}
+Surface scattering models describe the way in which light reflects
+from surfaces in the scene. Even slight adjustments to such a description
+can significantly change the appearance of a rendering.
+To achieve realistic results, Mitsuba comes with a library of 
+both general-purpose models (smooth or rough glass, metal, plastic, ..) and 
+more specialized models (woven cloth, masks, ..).
+
+Throughout the documentation and within the scene description language, 
+the word \emph{BSDF} is used synonymously with the term ``surface
+scattering model''. This is an abbreviation for 
+\emph{Bidirectional Scattering Distribution Function}, a more 
+precise technical description of the model's properties.
+
+In Mitsuba, BSDFs are assigned to \emph{shapes}, which
+describe the visible surfaces in the scene. In the scene 
+description language, this assignment must
+either be performed by nesting BSDFs within shapes, 
+or they can be named and then later referenced 
+by by name.
+
+The following fragment shows an example of both kinds of usages:
+\begin{xml}
+<scene>
+	<!-- Creating a named BSDF for later use -->
+	<bsdf type=".. BSDF type .." id="myNamedMaterial">
+		<!-- BSDF parameters go here -->
+	</bsdf>
+
+	<shape type="sphere">
+		<!-- Example of referencing a named material -->
+
+		<ref id="myNamedMaterial"/>
+	</shape>
+
+	<shape type="sphere">
+		<!-- Example of using an unnamed material -->
+
+		<bsdf type=".. BSDF type ..">
+			<!-- BSDF parameters go here -->
+		</bsdf>
+	</shape>
+</scene>
+\end{xml}
+It is generally more economical to use named BSDFs when they
+are used in several places, since this reduces Mitsuba's internal
+memory usage.

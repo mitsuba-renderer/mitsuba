@@ -24,7 +24,16 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{lambertian}{Ideally diffuse / Lambertian material}
- * 
+ *
+ * \begin{center}
+ * \begin{tabular}{c@{\hspace{1cm}}c}
+ * \fbox{\includegraphics[width=6cm]{images/bsdf_lambertian_plain.jpg}}&
+ * \fbox{\includegraphics[width=6cm]{images/bsdf_lambertian_textured.jpg}}\\
+ * Homogeneous reflectance, see \lstref{lambertian-uniform}&
+ * Textured reflectance, see \lstref{lambertian-textured}
+ * \end{tabular}
+ * \end{center}
+ *
  * The Lambertian material represents an ideally diffuse material
  * with the specified amount of reflectance. When nothing is specified,
  * the default of 50% reflectance is used.
@@ -35,9 +44,17 @@ MTS_NAMESPACE_BEGIN
  * back side, it will be completely black. If this is undesirable, 
  * consider using the \pluginref{twosided} BRDF adapter plugin.
  *
- * \begin{xml}
+ * \begin{xml}[caption=Reflectance specified as an sRGB color, label=lst:lambertian-uniform]
  * <bsdf type="lambertian">
- *   <srgb name="reflectance" value="#a4da85"/>
+ *   <srgb name="reflectance" value="#6d7185"/>
+ * </bsdf>
+ * \end{xml}
+ *
+ * \begin{xml}[caption=Lambertian material with a texture map, label=lst:lambertian-textured]
+ * <bsdf type="lambertian">
+ *   <texture type="ldrtexture" name="reflectance">
+ *     <string name="filename" value="wood.jpg"/>
+ *   </texture>
  * </bsdf>
  * \end{xml}
  */

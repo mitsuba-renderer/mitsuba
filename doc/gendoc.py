@@ -10,7 +10,7 @@ def process(target, filename):
 	f = open(filename)
 	inheader = False
 	for line in f.readlines():
-		match = re.match(r'^/\*!(.*)$', line)
+		match = re.match(r'^/\*! ?(.*)$', line)
 		if match != None:
 			print("Processing %s" % filename)
 			line = match.group(1).replace('%', '\%')
@@ -22,7 +22,7 @@ def process(target, filename):
 		if re.search(r'^[\s\*]*\*/$', line):
 			inheader = False
 			continue
-		match = re.match(r'^\s*\**(.*)$', line)
+		match = re.match(r'^\s*\** ?(.*)$', line)
 		if match != None:
 			line = match.group(1).replace('%', '\%')
 			target.write(line + '\n')
@@ -43,6 +43,7 @@ def traverse(target, dirname, files):
 os.chdir(os.path.dirname(__file__))
 f = open('plugins_generated.tex', 'w')
 f.write('\section{Plugin reference}\n')
-os.path.walk('../src', traverse, f)
+f.write('\input{section_bsdf}\n')
+os.path.walk('../src/bsdfs', traverse, f)
 f.close()
 os.system('pdflatex main.tex')

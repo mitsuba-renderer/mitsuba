@@ -15,29 +15,32 @@
 \usepackage{listings}
 \usepackage{amsmath}
 \usepackage{enumerate}
+\usepackage{calc}
 \usepackage[utf8]{inputenc}
 
-\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+\newcommand{\MitsubaVersion}{0.2.1}
 
 \usepackage[
-	bookmarks
-	,bookmarksnumbered
-	,colorlinks
-	,linkcolor=myblue
-	,urlcolor=myblue
-	,citecolor=myblue
-	,pdfpagelabels
-	,pdftitle={Mitsuba documentation}
-	,pdfauthor={Wenzel Jakob}
-	,pdfstartview=FitH
+	bookmarks,
+	bookmarksnumbered,
+	colorlinks,
+	linkcolor=myblue,
+	urlcolor=myblue,
+	citecolor=myblue,
+	pdfpagelabels,
+	pdftitle={Mitsuba \MitsubaVersion\, Documentation},
+	pdfauthor={Wenzel Jakob},
+	pdfstartview=FitH
 ]{hyperref}
 
 \typearea[current]{last}
 \raggedbottom
 
 \usepackage[expansion=false]{microtype}
-%\UseMicrotypeSet[protrusion]{basictext}
-
+\UseMicrotypeSet[protrusion]{basictext}
 \renewcommand*\ttdefault{txtt}
 
 \usepackage{scrpage2}
@@ -58,39 +61,60 @@
 \definecolor{lstshade}{gray}{0.94}
 \definecolor{lstframe}{gray}{0.75}
 \definecolor{lstcomment}{gray}{0.5}
+\definecolor{lstattrib}{rgb}{0,0.25,0}
 
 % Cite a figure/listing
-\newcommand{\cfig}[1]{\mbox{Figure \ref{fig:#1}}}
-\newcommand{\clst}[1]{\mbox{Listing \ref{lst:#1}}}
+\renewcommand{\lstlistingname}{Listing}
+\newcommand{\figref}[1]{\mbox{Figure \ref{fig:#1}}}
+\newcommand{\lstref}[1]{\mbox{Listing \ref{lst:#1}}}
 \newcommand{\code}[1]{\texttt{#1}}
 
 % Macros for plugin documentation
-\newcommand{\plugin}[2]{\subsection{#2 (\texttt{#1})}\label{plg:#1}}
+\newcommand{\plugin}[2]{\subsubsection{#2 (\texttt{#1})}\label{plg:#1}}
 \newcommand{\pluginref}[1]{\texttt{\hyperref[plg:#1]{#1}}}
+
 
 % Listings settings
 \lstset{
 	mathescape = true,
-	captionpos = b,
-	frame = single,
+	frame = lrtb,
 	backgroundcolor = \color{lstshade},
 	rulecolor = \color{lstframe},
 	tabsize = 4,
 	columns = flexible,
 	keepspaces,
 	belowskip = \smallskipamount,
-	keywordstyle = \bfseries,
-	commentstyle=\color{lstcomment}\itshape,
-	basicstyle = \small\ttfamily,
+	framerule = .7pt,
+	basicstyle = \small\ttfamily\raggedright,
 	breaklines = true,
-	showstringspaces = false
+	showstringspaces = false,
+	keywordstyle = \bfseries,
+	captionpos = b,
+	upquote = true
 }
 
-\lstnewenvironment{cpp}{\lstset{language=c++}}
+
+\lstdefinelanguage{xml} {
+	sensitive=true,
+	morecomment=[s][\color{lstcomment}\itshape]{<!--}{-->},
+	morecomment=[s][\color{lstcomment}]{<?}{?>},
+	string=[b]", stringstyle=\color{lstattrib},
+	keywords= [1] {
+		shape,bsdf,scene,texture,phase,integer,float,
+		string,transform,ref,rgb,srgb,spectrum,blackbody,
+		medium,camera,film,sampler
+	},
+}
+
+% Thick frames for images
+\setlength\fboxsep{0pt}
+\setlength\fboxrule{1.5pt}
+
+\lstnewenvironment{cpp}[1][]{\lstset{language=c++, #1}}
 	{}
-\lstnewenvironment{xml}{\lstset{language=xml}}
+\lstnewenvironment{xml}[1][]{\lstset{language=xml, #1}}
 	{}
-\lstnewenvironment{shell}{\lstset{language=bash}}
+\lstnewenvironment{shell}[1]{\lstset{language=bash, #1}}
 	{}
 \lstnewenvironment{console}[1][]{\lstset{basicstyle=\footnotesize\ttfamily, float, #1}}
 	{}
@@ -98,7 +122,8 @@
 % ----- 8< ----- 8< ------
 
 \title{
-	Mitsuba Documentation
+	Mitsuba Documentation\\\vspace{3mm}
+	\large Version \MitsubaVersion
 }
 \author{Wenzel Jakob}
 \date{\today}
