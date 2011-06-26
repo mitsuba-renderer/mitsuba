@@ -23,38 +23,43 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{lambertian}{Ideally diffuse / Lambertian material}
+/*! \newpage\plugin{lambertian}{Ideally diffuse / Lambertian material}
  *
- * \begin{center}
- * \begin{tabular}{c@{\hspace{1cm}}c}
- * \fbox{\includegraphics[width=6cm]{images/bsdf_lambertian_plain.jpg}}&
- * \fbox{\includegraphics[width=6cm]{images/bsdf_lambertian_textured.jpg}}\\
- * Homogeneous reflectance, see \lstref{lambertian-uniform}&
- * Textured reflectance, see \lstref{lambertian-textured}
- * \end{tabular}
- * \end{center}
+ * \parameters{
+ *     \lastparameter{reflectance}{\Spectrum\Or\Texture}{
+ *       Specifies the diffuse reflectance / albedo of the material \linebreak(Default: 0.5)
+ *     }
+ * }
+ *
+ * \renderings{
+ *     \rendering{Homogeneous reflectance, see \lstref{lambertian-uniform}}{bsdf_lambertian_plain}
+ *     \rendering{Textured reflectance, see \lstref{lambertian-textured}}{bsdf_lambertian_textured}
+ * }
  *
  * The Lambertian material represents an ideally diffuse material
- * with the specified amount of reflectance. When nothing is specified,
- * the default of 50% reflectance is used.
+ * with a user-specified amount of reflectance. Apart from a 
+ * homogeneous reflectance value, the plugin can also accept a nested 
+ * or referenced texture map to be used as the source of reflectance 
+ * information, which is then mapped onto the shape based on its UV
+ * parameterization.
+ * When no parameters are specified, the model uses the default 
+ * of 50% reflectance.
  *
- * Optionally, a texture map may be applied. 
- *
- * Note that this material is one-sided --- that is, observed from the 
+ * Note that this material is one-sided---that is, observed from the 
  * back side, it will be completely black. If this is undesirable, 
  * consider using the \pluginref{twosided} BRDF adapter plugin.
  *
  * \begin{xml}[caption=Reflectance specified as an sRGB color, label=lst:lambertian-uniform]
  * <bsdf type="lambertian">
- *   <srgb name="reflectance" value="#6d7185"/>
+ *     <srgb name="reflectance" value="#6d7185"/>
  * </bsdf>
  * \end{xml}
  *
  * \begin{xml}[caption=Lambertian material with a texture map, label=lst:lambertian-textured]
  * <bsdf type="lambertian">
- *   <texture type="ldrtexture" name="reflectance">
- *     <string name="filename" value="wood.jpg"/>
- *   </texture>
+ *     <texture type="ldrtexture" name="reflectance">
+ *       <string name="filename" value="wood.jpg"/>
+ *     </texture>
  * </bsdf>
  * \end{xml}
  */

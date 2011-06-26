@@ -1,22 +1,20 @@
 \subsection{Surface scattering models}
-Surface scattering models describe the way in which light reflects
-from surfaces in the scene. Even slight adjustments to such a description
-can significantly change the appearance of a rendering.
-To achieve realistic results, Mitsuba comes with a library of 
-both general-purpose models (smooth or rough glass, metal, plastic, ..) and 
-more specialized models (woven cloth, masks, ..).
+Surface scattering models describe the manner in which light is reflected
+by surfaces in the scene, which is fundamentally related to the perceptual
+material appearance of an object. To achieve realistic results, Mitsuba 
+comes with a library of both general-purpose models (smooth or rough glass, 
+metal, plastic, etc.) and specializations to particular materials 
+(woven cloth, masks, etc.).
 
 Throughout the documentation and within the scene description language, 
 the word \emph{BSDF} is used synonymously with the term ``surface
-scattering model''. This is an abbreviation for 
-\emph{Bidirectional Scattering Distribution Function}, a more 
-precise technical description of the model's properties.
-In Mitsuba, BSDFs are assigned to \emph{shapes}, which
-describe the visible surfaces in the scene. In the scene 
-description language, this assignment must
-either be performed by nesting BSDFs within shapes, 
-or they can be named and then later referenced 
-by by name.
+scattering model''. This is an abbreviation for  \emph{Bidirectional 
+Scattering Distribution Function}, a more precise technical 
+description of the model's properties. In Mitsuba, BSDFs are 
+assigned to \emph{shapes}, which describe the visible surfaces in
+the scene. In the scene description language, this assignment can
+either be performed by nesting BSDFs within shapes, or they can 
+be named and then later referenced by their name.
 
 The following fragment shows an example of both kinds of usages:
 \begin{xml}

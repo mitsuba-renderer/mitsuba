@@ -1,0 +1,58 @@
+% Cite a figure/listing
+\renewcommand{\lstlistingname}{Listing}
+\newcommand{\figref}[1]{\mbox{Figure \ref{fig:#1}}}
+\newcommand{\lstref}[1]{\mbox{Listing \ref{lst:#1}}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+% Macros that are used in the plugin documentation
+\newcommand{\plugin}[2]{\subsubsection{#2 (\texttt{#1})}\label{plg:#1}}
+\newcommand{\pluginref}[1]{\texttt{\hyperref[plg:#1]{#1}}}
+
+\newcommand{\Spectrum}{\texttt{spectrum}}
+\newcommand{\String}{\texttt{string}}
+\newcommand{\Float}{\texttt{float}}
+\newcommand{\Texture}{\texttt{texture}}
+\newcommand{\Or}{~~\small or \footnotesize}
+\newcolumntype{P}[1]{>{\RaggedRight\hspace{0pt}}p{#1}}
+
+\newcommand{\showbreak}{$\rhookswarrow$ }
+
+\newcommand{\otoprule}{\midrule[.8pt]}
+\newlength\fboxrulebackup
+\newcommand{\parameters}[1]{
+	\setlength\fboxrulebackup\fboxrule
+	\setlength\fboxrule{0.8pt}
+	\begin{figure}[h]\centering\arrayrulecolor{lstframe}
+	\fcolorbox{lstframe}{lstshade}{\begin{tabular}{@{\hspace{3mm}}P{3cm}P{2.2cm}p{8.3cm}@{\hspace{3mm}}}
+ 		%\toprule
+		\\[-2.2ex]
+		\textbf{Parameter}&\textbf{Type}&\textbf{Description}\\
+		\otoprule
+		#1
+		%\bottomrule
+	\end{tabular}}
+	\end{figure}
+	\setlength\fboxrule\fboxrulebackup
+	}
+	
+\newcommand{\renderings}[1]{
+	\begin{figure}[h]
+		\centering
+		\hfill
+		#1
+	\end{figure}
+}
+
+\newcommand{\rendering}[2]{
+	\subfigure[#1]{\fbox{\includegraphics[width=0.4\textwidth]{images/#2}}}
+	\hfill
+}
+
+\newcommand{\parameter}[3]{
+		\small\texttt{#1} & \small #2 & \small #3\\
+		\otoprule
+	}
+
+\newcommand{\lastparameter}[3]{
+		\small\texttt{#1} & \small #2 & \small #3\\
+	}

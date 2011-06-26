@@ -21,12 +21,34 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
+/*! \newpage\plugin{roughglass}{Rough dielectric/glass material}
+ * \parameters{
+ *     \parameter{alpha}{\Float}{Roughness value (Default: 0.1)}
+ *     \parameter{intIOR}{\Float}{Interior index of refraction (Default: 1.5046)}
+ *     \parameter{extIOR}{\Float}{Exterior index of refraction (Default: 1)}
+ *     \parameter{specular\showbreak Reflectance}{\Spectrum}{Modulation)}
+ *     \parameter{specular\showbreak Transmittance}{\Spectrum}{Modulation)}
+ *     \lastparameter{distribution}{\String}{
+ *       Specifies the microfacet distribution
+ *       \begin{enumerate}[(i)]
+ *           \item \code{beckmann}: Beckmann distribution derived from
+ *               Gaussian random surfaces.
+ *           \item \code{phong}: Phong distribution
+ *           \item \code{ggx}: New distribution proposed by
+ *               Walter et al., meant to better handle the long
+ *               tails observed in measurements of rough glass.
+ *       \end{enumerate}
+ *     }
+ * }
+ *
  * Rough glass BSDF model based on
  * "Microfacet Models for Refraction through Rough Surfaces"
  * by Bruce Walter, Stephen R. Marschner, Hongsong Li
  * and Kenneth E. Torrance
+ * The default settings are set to a borosilicate glass BK7/air interface.
  */
+
+
 class RoughGlass : public BSDF {
 public:
 	//// Microfacet distribution types supported by the model
@@ -52,7 +74,7 @@ public:
 			m_alpha = props.getFloat("alpha", .1f);
 		}
 
-		m_intIOR = props.getFloat("intIOR", 1.5);
+		m_intIOR = props.getFloat("intIOR", 1.5046f);
 		m_extIOR = props.getFloat("extIOR", 1.0f);
 
 		if (m_intIOR == m_extIOR)

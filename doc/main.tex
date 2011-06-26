@@ -7,12 +7,17 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
+\usepackage{amsmath}
 \usepackage{array}
 \usepackage{booktabs}
+\usepackage{tabularx}
 \usepackage{color}
+\usepackage{colortbl}
 \usepackage{listings}
-\usepackage{amsmath}
+\usepackage{subfigure}
 \usepackage{enumerate}
+\usepackage{ragged2e} % Ragged-right columns with hyphenation
+\usepackage{macros}
 
 % Make sure that ligatures remain searchable in the PDF
 \input glyphtounicode
@@ -60,20 +65,10 @@
 
 \definecolor{myblue}{rgb}{0,.1,.6}
 \definecolor{myred}{rgb}{0.63,.16,.16}
-\definecolor{lstshade}{gray}{0.94}
-\definecolor{lstframe}{gray}{0.75}
+\definecolor{lstshade}{gray}{0.95}
+\definecolor{lstframe}{gray}{0.80}
 \definecolor{lstcomment}{gray}{0.5}
 \definecolor{lstattrib}{rgb}{0,0.34,0}
-
-% Cite a figure/listing
-\renewcommand{\lstlistingname}{Listing}
-\newcommand{\figref}[1]{\mbox{Figure \ref{fig:#1}}}
-\newcommand{\lstref}[1]{\mbox{Listing \ref{lst:#1}}}
-\newcommand{\code}[1]{\texttt{#1}}
-
-% Macros for plugin documentation
-\newcommand{\plugin}[2]{\subsubsection{#2 (\texttt{#1})}\label{plg:#1}}
-\newcommand{\pluginref}[1]{\texttt{\hyperref[plg:#1]{#1}}}
 
 
 % Listings settings
@@ -111,6 +106,9 @@
 % Thick frames for images
 \setlength\fboxsep{0pt}
 \setlength\fboxrule{1.5pt}
+
+% Less vertical spacing for \figure[h] floats
+\setlength{\intextsep}{3pt}
 
 \lstnewenvironment{cpp}[1][]{\lstset{language=c++, #1}}
 	{}
