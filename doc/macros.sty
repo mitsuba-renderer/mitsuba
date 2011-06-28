@@ -5,14 +5,14 @@
 \newcommand{\code}[1]{\texttt{#1}}
 
 % Macros that are used in the plugin documentation
-\newcommand{\plugin}[2]{\subsubsection{#2 (\texttt{#1})}\label{plg:#1}}
+\newcommand{\plugin}[2]{\newpage\subsubsection{#2 (\texttt{#1})}\label{plg:#1}}
 \newcommand{\pluginref}[1]{\texttt{\hyperref[plg:#1]{#1}}}
 
 \newcommand{\Spectrum}{\texttt{spectrum}}
 \newcommand{\String}{\texttt{string}}
 \newcommand{\Float}{\texttt{float}}
 \newcommand{\Texture}{\texttt{texture}}
-\newcommand{\Or}{~~\small or \footnotesize}
+\newcommand{\Or}{~~\small or \small}
 \newcolumntype{P}[1]{>{\RaggedRight\hspace{0pt}}p{#1}}
 
 \newcommand{\showbreak}{$\rhookswarrow$ }
@@ -56,3 +56,5 @@
 \newcommand{\lastparameter}[3]{
 		\small\texttt{#1} & \small #2 & \small #3\\
 	}
+ 
+\newcommand{\default}[1]{ (Default: #1)}

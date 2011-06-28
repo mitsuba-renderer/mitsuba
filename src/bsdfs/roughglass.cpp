@@ -17,35 +17,48 @@
 */
 
 #include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/consttexture.h>
 #include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
 
-/*! \newpage\plugin{roughglass}{Rough dielectric/glass material}
+/*! \plugin{roughglass}{Rough dielectric/glass material}
  * \parameters{
- *     \parameter{alpha}{\Float}{Roughness value (Default: 0.1)}
- *     \parameter{intIOR}{\Float}{Interior index of refraction (Default: 1.5046)}
- *     \parameter{extIOR}{\Float}{Exterior index of refraction (Default: 1)}
- *     \parameter{specular\showbreak Reflectance}{\Spectrum}{Modulation)}
- *     \parameter{specular\showbreak Transmittance}{\Spectrum}{Modulation)}
- *     \lastparameter{distribution}{\String}{
- *       Specifies the microfacet distribution
+  *     \parameter{distribution}{\String}{
+ *       Specifies the type of microfacet normal distribution 
+ *       used to model the surface roughness.
  *       \begin{enumerate}[(i)]
  *           \item \code{beckmann}: Beckmann distribution derived from
  *               Gaussian random surfaces.
- *           \item \code{phong}: Phong distribution
+ *           \item \code{phong}: Classical $\cos^p\theta$-style Phong distribution.
+ *              The Phong exponent $p$ is obtained 
+ *              using the transformation
+ *              $p\coloneqq\texttt{alpha}^{-2}-2$ -- this
+ *              produces roughness that is similar to a Beckmann 
+ *              distribution with the same parameter.
  *           \item \code{ggx}: New distribution proposed by
- *               Walter et al., meant to better handle the long
- *               tails observed in measurements of rough glass.
+ *               Walter et al. meant to better handle the long
+ *               tails observed in transmission measurements through
+ *               ground glass.
  *       \end{enumerate}
+ *       Default: \code{beckmann}
  *     }
+ *     \parameter{alpha}{\Float\Or\Texture}{Roughness value \default{0.1}}
+ *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}
+ *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1}}
+ *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
+ *         factor used to modulate the reflectance component\default{1}}
+ *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
+ *         factor used to modulate the transmittance component\default{1}}
  * }
  *
- * Rough glass BSDF model based on
+ * Implements the microfacet model for rendering rough dielectrics 
+ * presented in
  * "Microfacet Models for Refraction through Rough Surfaces"
  * by Bruce Walter, Stephen R. Marschner, Hongsong Li
  * and Kenneth E. Torrance
- * The default settings are set to a borosilicate glass BK7/air interface.
+ * The default settings are set to a borosilicate glass BK7/air interface
+ * with a light amount of rougness.
  */
 
 
@@ -60,18 +73,19 @@ public:
 
 	RoughGlass(const Properties &props) 
 		: BSDF(props) {
-		m_specularReflectance = props.getSpectrum("specularReflectance", 
-			Spectrum(1.0f));
-		m_specularTransmittance = props.getSpectrum("specularTransmittance", 
-			Spectrum(1.0f));
+		m_specularReflectance = new ConstantTexture(
+			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
+		m_specularTransmittance = new ConstantTexture(
+			props.getSpectrum("specularTransmittance", Spectrum(1.0f)));
 
+		Float alpha;
 		if (props.hasProperty("alphaB")) {
 			Log(EWarn, "Deprecation warning: the 'alphaB' parameter "
 				"has been renamed to 'alpha'");
 
-			m_alpha = props.getFloat("alphaB");
+			alpha = props.getFloat("alphaB");
 		} else {
-			m_alpha = props.getFloat("alpha", .1f);
+			alpha = props.getFloat("alpha", .1f);
 		}
 
 		m_intIOR = props.getFloat("intIOR", 1.5046f);
@@ -96,9 +110,12 @@ public:
 		if (m_distribution == EPhong) {
 			/* Transform the Phong exponent to make it behave
 			   similarly to the Beckmann microfacet distribution */
-			m_alpha = 2 / (m_alpha * m_alpha) - 2;
-			Assert(m_alpha > 0);
+			alpha = 2 / (alpha * alpha) - 2;
+			AssertEx(alpha > 0, "Oops -- unable to map to a "
+				"valid Phong exponent.");
 		}
+
+		m_alpha = new ConstantTexture(Spectrum(alpha));
 
 		m_componentCount = 2;
 		m_type = new unsigned int[m_componentCount];
@@ -111,9 +128,9 @@ public:
 	RoughGlass(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
 		m_distribution = (EDistribution) stream->readInt();
-		m_specularReflectance = Spectrum(stream);
-		m_specularTransmittance = Spectrum(stream);
-		m_alpha = stream->readFloat();
+		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
+		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
+		m_specularTransmittance = static_cast<Texture *>(manager->getInstance(stream));
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
 
@@ -122,7 +139,10 @@ public:
 		m_type[0] = EGlossyReflection | EFrontSide | EBackSide;
 		m_type[1] = EGlossyTransmission | EFrontSide | EBackSide;
 		m_combinedType = m_type[0] | m_type[1];
-		m_usesRayDifferentials = false;
+		m_usesRayDifferentials = 
+			m_alpha->usesRayDifferentials() ||
+			m_specularReflectance->usesRayDifferentials() ||
+			m_specularTransmittance->usesRayDifferentials();
 	}
 
 	virtual ~RoughGlass() {
@@ -221,10 +241,10 @@ public:
 	 *
 	 * \param m The microsurface normal
 	 * \param v An arbitrary direction
+	 * \param alpha The surface roughness
 	 */
-	Float smithG1(const Vector &v, const Vector &m) const {
+	Float smithG1(const Vector &v, const Vector &m, Float alpha) const {
 		const Float tanTheta = std::abs(Frame::tanTheta(v)); 
-		Float alpha = m_alpha;
 
 		/* perpendicular incidence -- no shadowing/masking */
 		if (tanTheta == 0.0f)
@@ -254,7 +274,7 @@ public:
 				break;
 
 			case EGGX: {
-					const Float root = m_alpha * tanTheta;
+					const Float root = alpha * tanTheta;
 					return 2.0f / (1.0f + std::sqrt(1.0f + root*root));
 				}
 				break;
@@ -318,17 +338,20 @@ public:
 		/* Fresnel factor */
 		Float F = fresnel(dot(bRec.wi, Hr), m_extIOR, m_intIOR);
 
+		/* Evaluate the roughness */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+
 		/* Microsurface normal distribution */
-		Float D = evalD(Hr, m_alpha);
+		Float D = evalD(Hr, alpha);
 
 		/* Smith's shadow-masking function */
-		Float G = smithG1(bRec.wi, Hr) * smithG1(bRec.wo, Hr);
+		Float G = smithG1(bRec.wi, Hr, alpha) * smithG1(bRec.wo, Hr, alpha);
 
 		/* Calculate the total amount of reflection */
 		Float value = F * D * G / 
 			(4.0f * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
 		
-		return m_specularReflectance * value; 
+		return m_specularReflectance->getValue(bRec.its) * value; 
 	}
 
 	Spectrum fTransmission(const BSDFQueryRecord &bRec) const {
@@ -347,14 +370,17 @@ public:
 		/* Fresnel factor */
 		Float F = 1.0f - fresnel(dot(bRec.wi, Ht), m_extIOR, m_intIOR);
 
+		/* Evaluate the roughness */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+
 		/* Microsurface normal distribution */
-		Float D = evalD(Ht, m_alpha);
+		Float D = evalD(Ht, alpha);
 
 		if (D == 0)
 			return Spectrum(0.0f);
 
 		/* Smith's shadow-masking function */
-		Float G = smithG1(bRec.wi,  Ht) * smithG1(bRec.wo,  Ht);
+		Float G = smithG1(bRec.wi,  Ht, alpha) * smithG1(bRec.wo,  Ht, alpha);
 
 		/* Calculate the total amount of transmission */
 		Float value = F * D * G * std::abs((dot(bRec.wi, Ht)*dot(bRec.wo, Ht)) / 
@@ -366,7 +392,7 @@ public:
 		if (bRec.quantity == ERadiance)
 			value *= (etaI*etaI) / (etaT*etaT);
 
-		return m_specularTransmittance * value;
+		return m_specularTransmittance->getValue(bRec.its) * value;
 	}
 
 
@@ -427,11 +453,14 @@ public:
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool hasTransmission = (bRec.typeMask & EGlossyTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
-		
+
+		/* Evaluate the roughness */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 
 		   values <= 4. See also \ref sample() */
-		Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
+		alpha = alpha * (1.2f - 0.2f * std::sqrt(
 				std::abs(Frame::cosTheta(bRec.wi))));
 
 		if (hasReflection && hasTransmission) {
@@ -505,11 +534,14 @@ public:
 				&& (bRec.component == -1 || bRec.component == 1);
 		Point2 sample(_sample);
 
+		/* Evaluate the roughness */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 
 		   values <= 4. The change is of course also accounted for 
 		   in \ref pdf(), hence no error is introduced. */
-		Float alpha = m_alpha * (1.2f - 0.2f * std::sqrt(
+		alpha = alpha * (1.2f - 0.2f * std::sqrt(
 				std::abs(Frame::cosTheta(bRec.wi))));
 
 		if (hasReflection && hasTransmission) {
@@ -534,13 +566,28 @@ public:
 		return Spectrum(0.0f);
 	}
 
+	void addChild(const std::string &name, ConfigurableObject *child) {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alpha") {
+			m_alpha = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_alpha->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
+			m_specularReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularTransmittance") {
+			m_specularTransmittance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_specularTransmittance->usesRayDifferentials();
+		} else {
+			BSDF::addChild(name, child);
+		}
+	}
+
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
 		stream->writeInt(m_distribution);
-		m_specularReflectance.serialize(stream);
-		m_specularTransmittance.serialize(stream);
-		stream->writeFloat(m_alpha);
+		manager->serialize(stream, m_alpha.get());
+		manager->serialize(stream, m_specularReflectance.get());
+		manager->serialize(stream, m_specularTransmittance.get());
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
 	}
@@ -556,11 +603,11 @@ public:
 			default:
 				Log(EError, "Invalid distribution function");
 		}
-		oss << "  specularReflectance = " << m_specularReflectance.toString() << "," << endl
-			<< "  specularTransmittance = " << m_specularTransmittance.toString() << "," << endl
+		oss << "  alpha = " << indent(m_alpha->toString()) << "," << endl
+			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
+			<< "  specularTransmittance = " << indent(m_specularTransmittance->toString()) << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl
-			<< "  extIOR = " << m_extIOR << "," << endl
-			<< "  alpha = " << m_alpha << endl
+			<< "  extIOR = " << m_extIOR << endl
 			<< "]";
 		return oss.str();
 	}
@@ -568,9 +615,10 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	EDistribution m_distribution;
-	Spectrum m_specularReflectance;
-	Spectrum m_specularTransmittance;
-	Float m_alpha, m_intIOR, m_extIOR;
+	ref<Texture> m_specularTransmittance;
+	ref<Texture> m_specularReflectance;
+	ref<Texture> m_alpha;
+	Float m_intIOR, m_extIOR;
 };
 
 MTS_IMPLEMENT_CLASS_S(RoughGlass, false, BSDF)

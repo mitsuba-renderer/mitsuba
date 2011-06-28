@@ -300,7 +300,7 @@ public:
 		Float result = 0.0f;
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
 			result += s[i];
-		return result / SPECTRUM_SAMPLES;
+		return result * (1.0f / SPECTRUM_SAMPLES);
 	}
 
 	/// Component-wise square root

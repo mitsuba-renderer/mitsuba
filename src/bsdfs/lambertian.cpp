@@ -23,7 +23,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \newpage\plugin{lambertian}{Ideally diffuse / Lambertian material}
+/*! \plugin{lambertian}{Ideally diffuse / Lambertian material}
  *
  * \parameters{
  *     \lastparameter{reflectance}{\Spectrum\Or\Texture}{
