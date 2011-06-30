@@ -22,17 +22,17 @@
 MTS_NAMESPACE_BEGIN
 	
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its)
-	: its(its), wi(its.wi), quantity(ERadiance),
+	: its(its), sampler(NULL), wi(its.wi), quantity(ERadiance),
 	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
 }
 
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wo)	  
-	: its(its), wi(its.wi), wo(wo), quantity(ERadiance),
+	: its(its), sampler(NULL), wi(its.wi), wo(wo), quantity(ERadiance),
     typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
 }
 	
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wi, const Vector &wo) 
-  : its(its), wi(wi), wo(wo), quantity(ERadiance),
+  : its(its), sampler(NULL), wi(wi), wo(wo), quantity(ERadiance),
   typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
 }
 

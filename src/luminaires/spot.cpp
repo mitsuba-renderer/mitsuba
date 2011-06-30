@@ -39,7 +39,7 @@ public:
 		m_cutoffAngle = degToRad(m_cutoffAngle);
 		Assert(m_cutoffAngle >= m_beamWidth);
 		m_type = EDeltaPosition;
-		m_texture = new ConstantTexture(
+		m_texture = new ConstantSpectrumTexture(
 			props.getSpectrum("texture", Spectrum(1.0f)));
 	}
 
@@ -88,7 +88,7 @@ public:
 		if (cosTheta <= m_cosCutoffAngle)
 			return Spectrum(0.0f);
 
-		if (m_texture->getClass() != MTS_CLASS(ConstantTexture)) {
+		if (m_texture->getClass() != MTS_CLASS(ConstantSpectrumTexture)) {
 			Intersection its;
 			its.hasUVPartials = false;
 			its.uv.x = 0.5f + localDir.x / (localDir.z / m_uvFactor);

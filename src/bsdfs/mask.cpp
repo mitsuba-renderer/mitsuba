@@ -29,7 +29,7 @@ class Mask : public BSDF {
 public:
 	Mask(const Properties &props) 
 		: BSDF(props) {
-		m_opacity = new ConstantTexture(props.getSpectrum("opacity", Spectrum(.5f)));
+		m_opacity = new ConstantSpectrumTexture(props.getSpectrum("opacity", Spectrum(.5f)));
 	}
 
 	Mask(Stream *stream, InstanceManager *manager) 

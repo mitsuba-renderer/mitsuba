@@ -62,35 +62,89 @@ public:
 	/// Return a string representation
 	std::string toString() const;
 public:
-	/* Surface interaction */
+	/// Reference to the underlying surface interaction
 	const Intersection &its;
 
-	/* Incident direction */
+	/**
+	 * \brief Pointer to a \ref Sampler instance (optional).
+	 *
+	 * Some BSDF implementations can significantly improve 
+	 * the quality of their importance sampling routines 
+	 * when having access to extra random numbers. This
+	 * attribute provides a means of providing this capability
+	 * to the BSDF.
+	 */
+	Sampler *sampler;
+
+	/**
+	 * \brief Normalized incident direction in local coordinates
+	 *
+	 * Mitsuba uses the convention that \c wi and \c wo 
+	 * point away from the scattering event
+	 */
 	Vector wi;
 
-	/* Outgoing/sampled direction */
+	/**
+	 * \brief Normalized outgoing direction in local coordinates
+	 *
+	 * Mitsuba uses the convention that \c wi and \c wo 
+	 * point away from the scattering event
+	 */
 	Vector wo;
 
-	/* Transported quantity (radiance or importance) -- required for 
-	   rendering with non-reciprocal BSDFs such as transmission 
-	   through a dielectric material */
+	/** \brief Transported quantity (radiance or importance)
+	 * 
+	 * This information is required for rendering with non-reciprocal 
+	 * BSDFs such as transmission through a dielectric material
+	 */
 	ETransportQuantity quantity;
 
-	/* Bit mask containing the component types, which may be sampled.
-	   After sampling has been performed, the component type is stored
-	   inside 'sampledType'. */
-	unsigned int typeMask, sampledType;
+	/**
+	 * \brief Bit mask containing the requested BSDF component types that 
+	 * should be sampled/evaluated.
+	 *
+	 * Set to \c 0xFFFFFFFF by default. After sampling has been performed, 
+	 * the component type is stored inside \ref sampledType.
+	 * 
+	 * \sa BSDF::EBSDFType
+	 */
+	unsigned int typeMask;
 
-	/* To sample a specific BSDF component, this entry must be non-negative.
-	   After sampling has been performed, the component index is stored
-	   inside 'sampledComponent' */
-	int component, sampledComponent;
+	/**
+	 * \brief Stores the component type that was sampled by \ref BSDF::sample()
+	 * \sa BSDF::EBSDFType
+	 */
+	unsigned int sampledType;
+
+	/**
+	 * \brief Integer value specifying the requested BSDF component index that 
+	 * should be sampled/evaluated (for multi-lobed BSDFs).
+	 *
+	 * After sampling has been performed, the component index is stored
+	 * inside \ref sampledComponent.
+	 */
+	int component;
+
+	/**
+	 * \brief Stores the component index that was sampled by \ref BSDF::sample()
+	 */
+	int sampledComponent;
 };
 
-/** \brief Abstract BSDF base-class, which supports reflection and
- * transmission using a common interface for sampling and evaluation.
- * A BSDF can consist of several components, which can optionally be
- * independently sampled and/or evaluated.
+/** 
+ * \brief Abstract BSDF base-class.
+ *
+ * This class implements an abstract interface to all BSDF plugins in Mitsuba.
+ * It exposes functions for evaluating and sampling the model, and it allows
+ * querying the probability density of the sampling method. Both smooth
+ * and Dirac delta densities are handled within the same framework.
+ *
+ * For improved flexibility with respect to the various rendering algorithms, 
+ * this class can sample and evaluate a complete BRDF, but it also allows to
+ * pick and choose individual components of multi-lobed BRDFs based on their 
+ * properties and component indices.
+ *
+ * \sa BSDFQueryRecord
  */
 class MTS_EXPORT_RENDER BSDF : public ConfigurableObject, public HWResource {
 public:
@@ -98,25 +152,27 @@ public:
 	 * BSDF classification types, can be combined using binary OR.
 	 */
 	enum EBSDFType {
-		EUnknown              = 0x0000,
+		EUnknown              = 0x00000,
 		/// Perfect diffuse reflection 
-		EDiffuseReflection    = 0x0001, 
+		EDiffuseReflection    = 0x00001, 
 		/// Perfect diffuse transmission
-		EDiffuseTransmission  = 0x0002,
+		EDiffuseTransmission  = 0x00002,
 		/// Reflection using a delta function
-		EDeltaReflection      = 0x0004,
+		EDeltaReflection      = 0x00004,
 		/// Transmission using a delta function
-		EDeltaTransmission    = 0x0008,
+		EDeltaTransmission    = 0x00008,
 		/// Glossy reflection
-		EGlossyReflection     = 0x0010,
+		EGlossyReflection     = 0x00010,
 		/// Glossy transmission
-		EGlossyTransmission   = 0x0020,
+		EGlossyTransmission   = 0x00020,
 		/// Reflection is not invariant to rotation
-		EAnisotropic          = 0x1000,
+		EAnisotropic          = 0x01000,
 		/// Supports interactions on the front-facing side
-		EFrontSide            = 0x2000,
+		EFrontSide            = 0x02000,
 		/// Supports interactions on the back-facing side
-		EBackSide             = 0x4000  
+		EBackSide             = 0x04000,
+		/// Can use a sampler instance to improve the sampling method
+		ECanUseSampler        = 0x10000  
 	};
 
 	/// Type combinations
@@ -127,7 +183,7 @@ public:
 		EReflection   = EDiffuseReflection | EDeltaReflection | EGlossyReflection,
 		ETransmission = EDiffuseTransmission | EDeltaTransmission | EGlossyTransmission,
 		ENonDelta     = EDiffuse | EGlossy,
-		EAll          = EDiffuse | EDelta | EGlossy
+		EAll          = EDiffuse | EGlossy | EDelta
 	};
 
 	/// Return the number of components of this BSDF
@@ -135,12 +191,19 @@ public:
 		return m_componentCount;
 	}
 
-	/// Return an (OR-ed) integer listing this BSDF's components
+	/**
+	 * \brief Return a listing this BSDF's component types and
+	 * properties, combined using binary OR.
+	 * \sa EBSDFType
+	 */
 	inline unsigned int getType() const {
 		return m_combinedType;
 	}
 
-	/// Returns the BSDF type for a specific component
+	/**
+	 * Returns the BSDF type for a specific component
+	 * \sa EBSDFType
+	 */
 	inline unsigned int getType(int component) const {
 		return m_type[component];
 	}
@@ -159,18 +222,26 @@ public:
 	virtual Spectrum getDiffuseReflectance(const Intersection &its) const = 0;
 
 	/**
-	 * Sample the BSDF and divide by the probability of the sample. If a
-	 * component mask or a specific component index is given, the sample
-	 * is drawn from the matching component. Depending on the transport type
-	 * the BSDF or its adjoint version is used. 
+	 * \brief Sample the BSDF and divide by the probability of the sample. 
+	 *
+	 * When the probability density is not explicitly required, this function
+	 * should be preferred, since it is potentially faster by making use of
+	 * cancellations during the division.
+	 * 
+	 * If a component mask or a specific component index is given, the sample
+	 * is drawn only from the matching component. Depending on the transport type
+	 * either the BSDF or its adjoint version is used. 
+	 *
 	 * \return The BSDF value divided by the sample probability
 	 */
 	virtual Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const = 0;
 
 	/**
-	 * Convenience method - similar to sample(), but also multiplies
-	 * by the cosine factor of the sampled direction.
-	 * \return The BSDF value divided by the sample probability
+	 * \brief Convenience method - similar to sample(), but also multiplies
+	 * by the cosine foreshorening factor with respect to the sampled direction.
+	 *
+	 * \return The BSDF value multiplied by \c absDot(N, bRec.wo) and divided by
+	 * the sample probability
 	 */
 	inline Spectrum sampleCos(BSDFQueryRecord &bRec, const Point2 &_sample) const {
 		Spectrum bsdfVal = sample(bRec, _sample);
@@ -180,20 +251,24 @@ public:
 	}
 
 	/**
-	 * Sample the BSDF and explicitly provided the probability density
-	 * of the sampled direction. If a component mask or a specific 
-	 * component index is given, the sample is drawn from the matching 
-	 * component. Depending on the transport type the BSDF or its adjoint 
-	 * version is used. 
-	 * \return The BSDF value (not divided by the probability)
+	 * \c Sample the BSDF and explicitly provide the probability density
+	 * of the sampled direction. 
+	 *
+	 * If a component mask or a specific component index is given, the 
+	 * sample is drawn from the matching component. Depending on the 
+	 * transport type, either the BSDF or its adjoint version is used. 
+	 *
+	 * \return The BSDF value (\a not divided by the probability)
 	 */
 	virtual Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, 
 		const Point2 &sample) const;
 
 	/**
-	 * Convenience method - similar to sample(), but also multiplies
-	 * by the cosine factor of the sampled direction.
-	 * \return The BSDF value (not divided by the probability)
+	 * \brief Convenience method - similar to sample(), but also multiplies
+	 * by the cosine foreshorening factor with respect to the sampled direction.
+	 *
+	 * \return The BSDF value multiplied by \c absDot(N, bRec.wo) (and
+	 * \a not divided by the sample probability)
 	 */
 	inline Spectrum sampleCos(BSDFQueryRecord &bRec, Float &pdf,
 			const Point2 &_sample) const {
@@ -207,20 +282,22 @@ public:
 	virtual Spectrum f(const BSDFQueryRecord &bRec) const = 0;
 
 	/**
-	 * Evaluate the BSDF f(wi, wo) or its adjoint version f^{*}(wi, wo).
-	 * Also multiplies by the cosine factor of the sampled direction.
+	 * \brief Evaluate the BSDF f(wi, wo) or its adjoint version f^{*}(wi, wo).
+	 *
+	 * Also multiplies by the cosine foreshorening factor with respect
+	 * to the outgoing direction.
 	 */
 	inline Spectrum fCos(const BSDFQueryRecord &bRec) const  {
 		return f(bRec) * std::abs(Frame::cosTheta(bRec.wo));
 	}
 
-	/// Calculate the probability of sampling wi (given wo) -- continuous component
+	/// Calculate the probability of sampling wi (given wo) -- continuous version
 	virtual Float pdf(const BSDFQueryRecord &bRec) const = 0;
 
-	/// Calculate the probability of sampling wi (given wo) -- 0D (discrete) component
+	/// Calculate the probability of sampling wi (given wo) -- degenerate 0D (Dirac delta) version
 	virtual Float pdfDelta(const BSDFQueryRecord &bRec) const;
 
-	/// Evaluate the transfport from wi to wo -- 0D (discrete) component
+	/// Evaluate the transfport from wi to wo -- degenerate 0D (Dirac delta) component
 	virtual Spectrum fDelta(const BSDFQueryRecord &bRec) const;
 
 	/// Return the name of this BSDF

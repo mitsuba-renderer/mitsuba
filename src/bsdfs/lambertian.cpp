@@ -67,7 +67,7 @@ class Lambertian : public BSDF {
 public:
 	Lambertian(const Properties &props) 
 		: BSDF(props) {
-		m_reflectance = new ConstantTexture(
+		m_reflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("reflectance", Spectrum(.5f)));
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];

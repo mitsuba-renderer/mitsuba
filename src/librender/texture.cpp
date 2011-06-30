@@ -81,20 +81,30 @@ Spectrum Texture2D::getValue(const Intersection &its) const {
 	}
 }
 
-ConstantTexture::ConstantTexture(Stream *stream, InstanceManager *manager) 
+ConstantSpectrumTexture::ConstantSpectrumTexture(Stream *stream, InstanceManager *manager) 
  : Texture(stream, manager) {
 	m_value = Spectrum(stream);
 }
 
-void ConstantTexture::serialize(Stream *stream, InstanceManager *manager) const {
+void ConstantSpectrumTexture::serialize(Stream *stream, InstanceManager *manager) const {
 	Texture::serialize(stream, manager);
 
 	m_value.serialize(stream);
 }
 
-class ConstantTextureShader : public Shader {
+ConstantFloatTexture::ConstantFloatTexture(Stream *stream, InstanceManager *manager) 
+ : Texture(stream, manager) {
+	m_value = stream->readFloat();
+}
+
+void ConstantFloatTexture::serialize(Stream *stream, InstanceManager *manager) const {
+	Texture::serialize(stream, manager);
+	stream->writeFloat(m_value);
+}
+
+class ConstantSpectrumTextureShader : public Shader {
 public:
-	ConstantTextureShader(Renderer *renderer, const Spectrum &value) 
+	ConstantSpectrumTextureShader(Renderer *renderer, const Spectrum &value) 
 		: Shader(renderer, ETextureShader), m_value(value) {
 	}
 
@@ -121,12 +131,49 @@ private:
 	Spectrum m_value;
 };
 
-Shader *ConstantTexture::createShader(Renderer *renderer) const { 
-	return new ConstantTextureShader(renderer, m_value);
+class ConstantFloatTextureShader : public Shader {
+public:
+	ConstantFloatTextureShader(Renderer *renderer, const Float &value) 
+		: Shader(renderer, ETextureShader), m_value(value) {
+	}
+
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "uniform float " << evalName << "_value;" << endl
+			<< endl
+			<< "float " << evalName << "(vec2 uv) {" << endl
+			<< "    return " << evalName << "_value;" << endl
+			<< "}" << endl;
+	}
+
+	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_value"));
+	}
+
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
+		program->setParameter(parameterIDs[0], m_value);
+	}
+
+	MTS_DECLARE_CLASS()
+private:
+	Float m_value;
+};
+
+Shader *ConstantSpectrumTexture::createShader(Renderer *renderer) const { 
+	return new ConstantSpectrumTextureShader(renderer, m_value);
 }
+
+Shader *ConstantFloatTexture::createShader(Renderer *renderer) const { 
+	return new ConstantFloatTextureShader(renderer, m_value);
+}
+
+
 
 MTS_IMPLEMENT_CLASS(Texture, true, ConfigurableObject)
 MTS_IMPLEMENT_CLASS(Texture2D, true, Texture)
-MTS_IMPLEMENT_CLASS_S(ConstantTexture, false, Texture)
-MTS_IMPLEMENT_CLASS(ConstantTextureShader, false, Shader)
+MTS_IMPLEMENT_CLASS_S(ConstantSpectrumTexture, false, Texture)
+MTS_IMPLEMENT_CLASS(ConstantSpectrumTextureShader, false, Shader)
+MTS_IMPLEMENT_CLASS_S(ConstantFloatTexture, false, Texture)
+MTS_IMPLEMENT_CLASS(ConstantFloatTextureShader, false, Shader)
 MTS_NAMESPACE_END

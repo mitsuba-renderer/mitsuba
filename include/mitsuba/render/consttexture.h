@@ -24,18 +24,18 @@
 
 MTS_NAMESPACE_BEGIN
 
-class MTS_EXPORT_RENDER ConstantTexture : public Texture {
+class MTS_EXPORT_RENDER ConstantSpectrumTexture : public Texture {
 public:
-	inline ConstantTexture(const Spectrum &value)
+	inline ConstantSpectrumTexture(const Spectrum &value)
 		: Texture(Properties()), m_value(value) {
 	}
 
-	ConstantTexture(Stream *stream, InstanceManager *manager);
+	ConstantSpectrumTexture(Stream *stream, InstanceManager *manager);
 
 	inline Spectrum getValue(const Intersection &its) const {
 		return m_value;
 	}
-	
+
 	inline Spectrum getAverage() const {
 		return m_value;
 	}
@@ -46,7 +46,7 @@ public:
 
 	inline std::string toString() const {
 		std::ostringstream oss;
-		oss << "ConstantTexture[value=" << m_value.toString() << "]";
+		oss << "ConstantSpectrumTexture[value=" << m_value.toString() << "]";
 		return oss.str();
 	}
 
@@ -62,6 +62,47 @@ public:
 protected:
 	Spectrum m_value;
 };
+
+class MTS_EXPORT_RENDER ConstantFloatTexture : public Texture {
+public:
+	inline ConstantFloatTexture(const Float &value)
+		: Texture(Properties()), m_value(value) {
+	}
+
+	ConstantFloatTexture(Stream *stream, InstanceManager *manager);
+
+
+	inline Spectrum getValue(const Intersection &its) const {
+		return Spectrum(m_value);
+	}
+
+	inline Spectrum getAverage() const {
+		return Spectrum(m_value);
+	}
+	
+	inline Spectrum getMaximum() const {
+		return Spectrum(m_value);
+	}
+
+	inline std::string toString() const {
+		std::ostringstream oss;
+		oss << "ConstantFloatTexture[value=" << m_value << "]";
+		return oss.str();
+	}
+
+	inline bool usesRayDifferentials() const {
+		return false;
+	}
+
+	Shader *createShader(Renderer *renderer) const;
+
+	void serialize(Stream *stream, InstanceManager *manager) const;
+
+	MTS_DECLARE_CLASS()
+protected:
+	Float m_value;
+};
+
 
 MTS_NAMESPACE_END
 

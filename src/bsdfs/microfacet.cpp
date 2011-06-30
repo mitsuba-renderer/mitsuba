@@ -36,9 +36,9 @@ class Microfacet : public BSDF {
 public:
 	Microfacet(const Properties &props) 
 		: BSDF(props) {
-		m_diffuseReflectance = new ConstantTexture(
+		m_diffuseReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("diffuseReflectance", Spectrum(0.0f)));
-		m_specularReflectance = new ConstantTexture(
+		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 
 		m_kd = props.getFloat("diffuseAmount", 1.0f);

@@ -34,7 +34,7 @@ class BlockListener;
 class BSDF;
 struct BSDFQueryRecord;
 class Camera;
-class ConstantTexture;
+class ConstantSpectrumTexture;
 struct EmissionRecord;
 class Film;
 class GatherPhotonProcess;

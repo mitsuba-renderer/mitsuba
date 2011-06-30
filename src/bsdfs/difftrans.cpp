@@ -64,7 +64,7 @@ class DiffuseTransmitter : public BSDF {
 public:
 	DiffuseTransmitter(const Properties &props) 
 		: BSDF(props) {
-		m_transmittance = new ConstantTexture(
+		m_transmittance = new ConstantSpectrumTexture(
 			props.getSpectrum("transmittance", Spectrum(.5f)));
 		m_componentCount = 1;
 		m_type = new unsigned int[m_componentCount];

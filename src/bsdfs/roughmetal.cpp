@@ -34,7 +34,7 @@ class RoughMetal : public BSDF {
 public:
 	RoughMetal(const Properties &props) 
 		: BSDF(props) {
-		m_specularReflectance = new ConstantTexture(
+		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 		m_alphaB = props.getFloat("alphaB", .1f);
 		m_ior = props.getSpectrum("ior", Spectrum(0.370f));  /* Gold */

@@ -396,23 +396,31 @@ void MainWindow::checkForUpdates(bool manualUpdateCheck) {
 
 void MainWindow::onNetworkFinished(QNetworkReply *reply) {
 	if (reply->error() == QNetworkReply::NoError) {
-		QSettings settings("mitsuba-renderer.org", "qtgui");
-		ProgramVersion remote(QString(reply->readAll()));
-		ProgramVersion ignoredVersion(settings.value("ignoredVersion", "0.0.0").toString());
-		ProgramVersion local(MTS_VERSION);
+		try {
+			QSettings settings("mitsuba-renderer.org", "qtgui");
+			ProgramVersion remote(QString(reply->readAll()));
+			ProgramVersion ignoredVersion(settings.value("ignoredVersion", "0.0.0").toString());
+			ProgramVersion local(MTS_VERSION);
 
-		if (local < remote) {
-			if (!m_manualUpdateCheck && remote == ignoredVersion)
-				return;
-			UpdateDialog *dialog = new UpdateDialog(this, local, remote);
-			dialog->setAttribute(Qt::WA_DeleteOnClose);
-			dialog->setWindowModality(Qt::WindowModal);
-			dialog->show();
-		} else if (m_manualUpdateCheck) {
-			QMessageBox::information(this, tr("Installed version is current"),
-				QString("<p>You're up to date!</p>"
-					"<p>Mitsuba <b>%1</b> is still the newest version available.</p>")
-					.arg(local.toString()), QMessageBox::Ok);
+			if (local < remote) {
+				if (!m_manualUpdateCheck && remote == ignoredVersion)
+					return;
+				UpdateDialog *dialog = new UpdateDialog(this, local, remote);
+				dialog->setAttribute(Qt::WA_DeleteOnClose);
+				dialog->setWindowModality(Qt::WindowModal);
+				dialog->show();
+			} else if (m_manualUpdateCheck) {
+				QMessageBox::information(this, tr("Installed version is current"),
+					QString("<p>You're up to date!</p>"
+						"<p>Mitsuba <b>%1</b> is still the newest version available.</p>")
+						.arg(local.toString()), QMessageBox::Ok);
+			}
+		} catch (const std::exception &e) {
+			/* Got something weird and couldn't parse the version string -- 
+			   very likely due to some Internet cafe login page. Ignore unless
+			   a manual update check was done. */
+			if (m_manualUpdateCheck)
+				throw e;
 		}
 	} else {
 		if (m_manualUpdateCheck)
