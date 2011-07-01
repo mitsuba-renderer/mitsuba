@@ -32,6 +32,8 @@ build('src/libcore/SConscript')
 build('src/librender/SConscript')
 # Hardware acceleration
 build('src/libhw/SConscript')
+# Bidirectional support library
+build('src/libbidir/SConscript')
 
 # ===== Build the applications =====
 env = env.Clone()

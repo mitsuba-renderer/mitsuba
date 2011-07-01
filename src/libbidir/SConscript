@@ -1,0 +1,12 @@
+Import('env', 'sys', 'os')
+
+bidirEnv = env.Clone()
+bidirEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_BIDIR']] )
+
+libbidir = bidirEnv.SharedLibrary('mitsuba-bidir', ['rsampler.cpp'])
+
+if sys.platform == "darwin":
+	bidirEnv.AddPostAction(libbidir, 'install_name_tool -id @executable_path/../Frameworks/libmitsuba-bidir.dylib $TARGET')
+
+env.Append(LIBS=['mitsuba-bidir'])
+env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'libbidir')])

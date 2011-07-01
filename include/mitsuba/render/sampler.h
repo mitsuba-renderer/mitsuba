@@ -33,8 +33,8 @@ MTS_NAMESPACE_BEGIN
  * algorithm can then request subsequent 1D or 2D components of this point 
  * using the \ref next1D() and \ref next2D() functions. Some implementations
  * make certain guarantees about the stratification of the first n components
- * with respect to the other pixel samples. (the low-discrepancy and 
- * stratified samplers do this for instance). 
+ * with respect to the other points that are sampled within a pixel. (the 
+ * low-discrepancy and stratified samplers do this for instance). 
  *
  * The general interaction between a sampler and a rendering algorithm is as 
  * follows: Before beginning to render a pixel, the rendering algorithm calls 
@@ -47,6 +47,17 @@ MTS_NAMESPACE_BEGIN
  * the \ref next1D(), \ref next2D(), \ref next1DArray() and 
  * \ref next2DArray() functions.
  *
+ * The difference between calling \ref next1D(), \ref next2D() a number of
+ * times versus using the array variants \ref next1DArray() and 
+ * \ref next2DArray() is that the latter can provide stratification 
+ * not only with respect to random numbers obtained within another pixel
+ * sample, but also within the array itself. This is useful e.g. in the
+ * direct illumination strategy, which spawns several rays after hitting
+ * a surface when computing a pixel sample. Since this is done over and 
+ * over again for each one of the pixel samples, it makes sense to 
+ * stratify over all of the rays that are ultimately generated, and the
+ * \ref next1DArray() and \ref next2DArray() methods allow to do this.
+ * See the file \c direct.cpp for an example.
  */
 class MTS_EXPORT_RENDER Sampler : public ConfigurableObject {
 public:

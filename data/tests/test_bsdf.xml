@@ -8,8 +8,8 @@
 	<!-- Test the rough glass model with the 
 		 Beckmann microfacet distribution -->
 	<bsdf type="roughglass">
-		<string name="distribution" value="beckmann"/>
-		<float name="alpha" value=".3"/>
+		<string name="distribution" value="ggx"/>
+		<float name="alpha" value=".4"/>
 		<float name="intIOR" value="1.5"/>
 		<float name="extIOR" value="1.0"/>
 	</bsdf>

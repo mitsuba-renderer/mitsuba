@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/sampler.h>
 #include <mitsuba/render/consttexture.h>
 #include <boost/algorithm/string.hpp>
 
@@ -28,14 +29,14 @@ MTS_NAMESPACE_BEGIN
  *          Specifies the type of microfacet normal distribution 
  *          used to model the surface roughness.
  *       \begin{enumerate}[(i)]
- *           \item \code{beckmann}: Beckmann distribution derived from
- *               Gaussian random surfaces.
- *           \item \code{phong}: Classical $\cos^p\theta$ Phong distribution.
- *              The Phong exponent $p$ is obtained 
- *              using the transformation
- *              $p\coloneqq\texttt{alpha}^{-2}-2$ -- this
- *              produces roughness that is similar to a Beckmann 
- *              distribution with the same parameter.
+ *           \item \code{beckmann}: Physically-based distribution derived from
+ *               Gaussian random surfaces. This is the default choice.
+ *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
+ *              The Phong exponent $p$ is obtained using a transformation that
+ *              produces roughness similar to a Beckmann distribution with the same 
+ *              parameter. Note that due to the underlying microfacet theory, 
+ *              the use of this distribution here leads to more realistic 
+ *              behavior than the separately available \pluginref{phong} plugin.
  *           \item \code{ggx}: New distribution proposed by
  *               Walter et al. meant to better handle the long
  *               tails observed in transmission measurements through
@@ -43,7 +44,12 @@ MTS_NAMESPACE_BEGIN
  *       \end{enumerate}
  *       Default: \code{beckmann}
  *     }
- *     \parameter{alpha}{\Float\Or\Texture}{Roughness value \default{0.1}}
+ *     \parameter{alpha}{\Float\Or\Texture}{Roughness value of the
+ *         unresolved surface microgeometry. When the Beckmann
+ *         distribution is used, this parameter specifies the 
+ *         \emph{root mean square} (RMS) slope of the microfacets.
+ *         \default{0.1}
+ *     }
  *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}
  *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
@@ -53,16 +59,23 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * This plugin implements a realistic microfacet scattering model for rendering
- * rough dielectric surfaces, such as ground glass. It is essentially the 
- * roughened equivalent of the plugin \pluginref{dielectric}. It supports 
- * several types of microfacet distributions and a texturable roughness.
+ * rough dielectric surfaces, such as ground glass. Microfacet theory
+ * describes surfaces as an arrangement of unresolved and ideally specular 
+ * facets, whose normals are given by a specially chosen \emph{microfacet 
+ * distribution}. By accounting for shadowing and masking effects between 
+ * these facets, it is possible to reproduce the off-specular reflections 
+ * peaks observed in measurements of real-world materials.
+ *
+ * This plugin is essentially the ``roughened'' equivalent of the 
+ * plugin \pluginref{dielectric}. The model supports several types of 
+ * microfacet distributions and a texturable roughness.
  * The default settings are set to a borosilicate glass BK7/air interface
- * with a light amount of rougness.
+ * with a light amount of rougness modeled by a Beckmann distribution.
  *
  * The implementation is based on the paper ``Microfacet Models for Refraction 
  * through Rough Surfaces'' \cite{Walter07Microfacet}. It furthermore uses an 
  * improved sampling technique presented in \cite{Zhao11Building} when given
- * access to an arbitrary amount of random numbers.
+ * access to an arbitrarily long stream of random numbers.
  */
 
 class RoughGlass : public BSDF {
@@ -194,7 +207,7 @@ public:
 	 * \param v An arbitrary direction
 	 */
 	Float evalD(const Vector &m, Float alpha) const {
-		if (Frame::cosTheta(m) < 0)
+		if (Frame::cosTheta(m) <= 0)
 			return 0.0f;
 	
 		Float result;
@@ -459,12 +472,22 @@ public:
 		Float prob = evalD(H, alpha);
 
 		if (sampleTransmission && sampleReflection) {
-			Float sampleF = std::min((Float) 0.95f, std::max((Float) 0.05f,
-				fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR)));
-			if (reflect)
-				prob *= sampleF;
-			else
-				prob *= 1-sampleF;
+			/* Please see the sample() methods if the 
+			   following seems confusing */
+			Float F;
+			if (bRec.sampler) {
+				/* We have access to extra random numbers, hence
+				   the exact Fresnel term with respect to the
+				   microfacet normal is sampled */
+				F = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
+			} else {
+				/* Only a simple 2D sample is given, and hence the
+				   best we can do is to sample a clamped Fresnel term 
+				   that is taken with respect to the surface normal */
+				F = std::min((Float) 0.9f, std::max((Float) 0.1f,
+					fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR)));
+			}
+			prob *= reflect ? F : (1-F);
 		}
 
 		return std::abs(prob * Frame::cosTheta(H) * dwh_dwo);
@@ -477,22 +500,45 @@ public:
 							  && (bRec.typeMask & EGlossyReflection)),
 		     sampleTransmission = ((bRec.component == -1 || bRec.component == 1)
 							  && (bRec.typeMask & EGlossyTransmission)),
-		     choseReflection = sampleReflection;
+		     choseReflection = sampleReflection,
+			 sampleExactFresnelTerm = false;
 
 		Float sampleF = 1.0f;
 		if (sampleReflection && sampleTransmission) {
-			sampleF = std::min((Float) 0.95f, std::max((Float) 0.05f,
-				fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR)));
-			if (sample.x < sampleF) {
-				sample.x /= sampleF;
+			if (!bRec.sampler) {
+				/* By default, the sample() method is given exactly two
+				   uniformly chosen random numbers, which is a problem
+				   when wanting to choose between the reflection and the
+				   transmission component: by the time the microfacet normal
+				   has been sampled, we have already "used up" both of them,
+				   and no random bits are left. Therefore, the following
+				   somewhat crude approach is taken here when no extra sampler
+				   instance is provided:
+				      1. Take the Fresnel term with respect to the surface
+					     normal to be a good approximation to the microsurface
+						 Fresnel term -- this will be less true for higher 
+						 rougness values. To be safe, clamp it to some 
+						 reasonable range.
+					  2. Use this approximate term and a random number to
+					     choose between reflection and refraction component.
+					  3. Recycle the used random number! This is possible,
+					     since we so far only used the knowledge that it is
+						 smaller or larget than the purely deterministic value
+						 from step 2.
+				*/
+				sampleF = std::min((Float) 0.9f, std::max((Float) 0.1f,
+					fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR)));
+				if (sample.x < sampleF) {
+					sample.x /= sampleF;
+				} else {
+					sample.x = (sample.x - sampleF) / (1 - sampleF);
+					choseReflection = false;
+				}
 			} else {
-				sample.x = (sample.x - sampleF) / (1 - sampleF);
-				choseReflection = false;
+				sampleExactFresnelTerm = true;
 			}
 		} else if (!sampleReflection && !sampleTransmission) {
 			return Spectrum(0.0f);
-		} else if (sampleTransmission) {
-			sampleF = 0.0f;
 		}
 
 		/* Evaluate the roughness */
@@ -506,10 +552,16 @@ public:
 
 		/* Sample M, the microsurface normal */
 		const Normal m = sampleD(sample, sampleAlpha);
+	
+		if (sampleExactFresnelTerm) {
+			sampleF = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
+			if (bRec.sampler->next1D() > sampleF)
+				choseReflection = false;
+		}
 
 		Spectrum result;
 		if (choseReflection) {
-			/* Perfect specular reflection along the microsurface normal */
+			/* Perfect specular reflection based on the microsurface normal */
 			bRec.wo = reflect(bRec.wi, m);
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EGlossyReflection;
@@ -540,39 +592,72 @@ public:
 				* ((bRec.quantity == ERadiance) ? ((etaI*etaI) / (etaT*etaT)) : (Float) 1);
 		}
 
-		Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR),
-			  D = evalD(m, alpha),
-			  sampleD = evalD(m, sampleAlpha),
-			  G = smithG1(bRec.wi, m, alpha) * smithG1(bRec.wo, m, alpha);
+		Float numerator = evalD(m, alpha)
+			* smithG1(bRec.wi, m, alpha)
+			* smithG1(bRec.wo, m, alpha)
+			* dot(bRec.wi, m);
 
-		if (!choseReflection) {
-			sampleF = 1-sampleF;
-			F = 1-F;
+		Float denominator = evalD(m, sampleAlpha)
+			* Frame::cosTheta(m) 
+			* Frame::cosTheta(bRec.wi) 
+			* Frame::cosTheta(bRec.wo);
+
+		if (!sampleExactFresnelTerm) {
+			Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
+			if (!choseReflection) {
+				sampleF = 1-sampleF;
+				F = 1-F;
+			}
+			numerator *= F;
+			if (sampleReflection && sampleTransmission) 
+				denominator *= sampleF;
 		}
 
-		return 
-			result * (F * D * G * std::abs(dot(bRec.wi, m) / 
-			  (sampleF * sampleD * Frame::cosTheta(m) *
-			   Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo))));
+		return  result * std::abs(numerator / denominator);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float _pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 
 		bool sampleReflection = ((bRec.component == -1 || bRec.component == 0)
 							  && (bRec.typeMask & EGlossyReflection)),
 		     sampleTransmission = ((bRec.component == -1 || bRec.component == 1)
 							  && (bRec.typeMask & EGlossyTransmission)),
-		     choseReflection = sampleReflection;
+		     choseReflection = sampleReflection,
+			 sampleExactFresnelTerm = false;
 
 		if (sampleReflection && sampleTransmission) {
-			Float sampleF = std::min((Float) 0.95f, std::max((Float) 0.05f,
-				fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR)));
-			if (sample.x < sampleF) {
-				sample.x /= sampleF;
+			if (!bRec.sampler) {
+				/* By default, the sample() method is given exactly two
+				   uniformly chosen random numbers, which is a problem
+				   when wanting to choose between the reflection and the
+				   transmission component: by the time the microfacet normal
+				   has been sampled, we have already "used up" both of them,
+				   and no random bits are left. Therefore, the following
+				   somewhat crude approach is taken here when no extra sampler
+				   instance is provided:
+				      1. Take the Fresnel term with respect to the surface
+					     normal to be a good approximation to the microsurface
+						 Fresnel term -- this will be less true for higher 
+						 rougness values. To be safe, clamp it to some 
+						 reasonable range.
+					  2. Use this approximate term and a random number to
+					     choose between reflection and refraction component.
+					  3. Recycle the used random number! This is possible,
+					     since we so far only used the knowledge that it is
+						 smaller or larget than the purely deterministic value
+						 from step 2.
+				*/
+				Float sampleF = std::min((Float) 0.9f, std::max((Float) 0.1f,
+					fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR)));
+				if (sample.x < sampleF) {
+					sample.x /= sampleF;
+				} else {
+					sample.x = (sample.x - sampleF) / (1 - sampleF);
+					choseReflection = false;
+				}
 			} else {
-				sample.x = (sample.x - sampleF) / (1 - sampleF);
-				choseReflection = false;
+				sampleExactFresnelTerm = true;
 			}
 		} else if (!sampleReflection && !sampleTransmission) {
 			return Spectrum(0.0f);
@@ -589,14 +674,15 @@ public:
 
 		/* Sample M, the microsurface normal */
 		const Normal m = sampleD(sample, sampleAlpha);
-			
-		/* Determine the appropriate indices of refraction */
-		Float etaI = m_extIOR, etaT = m_intIOR;
-		if (Frame::cosTheta(bRec.wi) < 0)
-			std::swap(etaI, etaT);
+	
+		if (sampleExactFresnelTerm) {
+			Float sampleF = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
+			if (bRec.sampler->next1D() > sampleF)
+				choseReflection = false;
+		}
 
 		if (choseReflection) {
-			/* Perfect specular reflection along the microsurface normal */
+			/* Perfect specular reflection based on the microsurface normal */
 			bRec.wo = reflect(bRec.wi, m);
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EGlossyReflection;
@@ -605,6 +691,11 @@ public:
 			if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) <= 0)
 				return Spectrum(0.0f);
 		} else {
+			/* Determine the appropriate indices of refraction */
+			Float etaI = m_extIOR, etaT = m_intIOR;
+			if (Frame::cosTheta(bRec.wi) < 0)
+				std::swap(etaI, etaT);
+
 			/* Perfect specular transmission based on the microsurface normal */
 			if (!refract(bRec.wi, bRec.wo, m, etaI, etaT))
 				return Spectrum(0.0f);
@@ -616,7 +707,7 @@ public:
 			if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
 				return Spectrum(0.0f);
 		}
-		
+
 		/* Guard against numerical imprecisions */
 		_pdf = pdf(bRec);
 
@@ -625,7 +716,6 @@ public:
 		else
 			return f(bRec);
 	}
-
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alpha") {

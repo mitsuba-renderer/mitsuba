@@ -29,7 +29,11 @@
 
 /* Relative bound on what is still accepted as roundoff 
    error -- be quite tolerant */
-#define ERROR_REQ 1e-3f
+#if defined(SINGLE_PRECISION)
+	#define ERROR_REQ 1e-2f
+#else
+	#define ERROR_REQ 1e-5
+#endif
 
 MTS_NAMESPACE_BEGIN
 
@@ -45,13 +49,56 @@ public:
 	MTS_DECLARE_TEST(test02_PhaseFunction)
 	MTS_END_TESTCASE()
 
+	/**
+	 * Replayable fake sampler
+	 */
+	class FakeSampler : public Sampler {
+	public:
+		FakeSampler(Sampler *sampler)
+			: Sampler(Properties()), m_sampler(sampler) { }
+
+		Float next1D() {
+			while (m_sampleIndex >= m_values.size())
+				m_values.push_back(m_sampler->next1D());
+			return m_values[m_sampleIndex++];
+		}
+
+		Point2 next2D() {
+			return Point2(next1D(), next1D());
+		}
+
+		void clear() {
+			m_values.clear();
+			m_sampleIndex = 0;
+		}
+
+		void rewind() {
+			m_sampleIndex = 0;
+		}
+		
+		Float independent1D() { SLog(EError, "Not supported!"); return 0; }
+		Point2 independent2D() { SLog(EError, "Not supported!"); return Point2(0.0f); }
+
+		ref<Sampler> clone() {
+			SLog(EError, "Not supported!");
+			return NULL;
+		}
+
+		std::string toString() const { return "FakeSampler[]"; }
+	private:
+		ref<Sampler> m_sampler;
+		std::vector<Float> m_values;
+	};
+
 	/// Adapter to use BSDFs in the chi-square test
 	class BSDFAdapter {
 	public:
 		BSDFAdapter(const BSDF *bsdf, Sampler *sampler, const Vector &wi, 
 				int component, bool passSamplerToBSDF)
 			: m_bsdf(bsdf), m_sampler(sampler), m_wi(wi), m_component(component),
-			  m_largestWeight(0), m_passSamplerToBSDF(passSamplerToBSDF) { }
+			  m_largestWeight(0), m_passSamplerToBSDF(passSamplerToBSDF) {
+			m_fakeSampler = new FakeSampler(m_sampler);
+		}
 
 		std::pair<Vector, Float> generateSample() {
 			Point2 sample(m_sampler->next2D());
@@ -59,6 +106,10 @@ public:
 			BSDFQueryRecord bRec(its);
 			bRec.component = m_component;
 			bRec.wi = m_wi;
+			
+			#if defined(MTS_DEBUG_FP)
+				enableFPExceptions();
+			#endif
 	
 			Float pdfVal;
 	
@@ -69,30 +120,42 @@ public:
 			   a single uniform 2D sample */
 	
 			if (m_passSamplerToBSDF)
-				bRec.sampler = m_sampler;
+				bRec.sampler = m_fakeSampler;
 
 			/* Check the various sampling routines for agreement amongst each other */
+			m_fakeSampler->clear();
 			Spectrum f = m_bsdf->sample(bRec, pdfVal, sample);
+			m_fakeSampler->rewind();
 			Spectrum sampled = m_bsdf->sample(bRec, sample);
 
 			if (f.isZero() || pdfVal == 0) {
 				if (!sampled.isZero()) 
 					Log(EWarn, "Inconsistency (1): f=%s, pdf=%f, sampled f/pdf=%s, bRec=%s",
 						f.toString().c_str(), pdfVal, sampled.toString().c_str(), bRec.toString().c_str());
+				#if defined(MTS_DEBUG_FP)
+					disableFPExceptions();
+				#endif
 				return std::make_pair(bRec.wo, 0.0f);
 			} else if (sampled.isZero()) {
 				if (!f.isZero() && pdfVal != 0)
 					Log(EWarn, "Inconsistency (2): f=%s, pdf=%f, sampled f/pdf=%s, bRec=%s",
 						f.toString().c_str(), pdfVal, sampled.toString().c_str(), bRec.toString().c_str());
+				#if defined(MTS_DEBUG_FP)
+					disableFPExceptions();
+				#endif
 				return std::make_pair(bRec.wo, 0.0f);
 			}
 
 			Spectrum sampled2 = f/pdfVal;
-			bool mismatch = false;
+			if (!sampled.isValid() || !sampled2.isValid()) {
+				Log(EWarn, "Ooops: f=%s, pdf=%f, sampled f/pdf=%s, bRec=%s",
+					f.toString().c_str(), pdfVal, sampled.toString().c_str(), bRec.toString().c_str());
+				return std::make_pair(bRec.wo, 0.0f);
+			}
 
+			bool mismatch = false;
 			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
 				Float a = sampled[i], b = sampled2[i];
-				SAssert(a >= 0 && b >= 0);
 				Float min = std::min(a, b);
 				Float err = std::abs(a - b);
 				m_largestWeight = std::max(m_largestWeight, a * std::abs(Frame::cosTheta(bRec.wo)));
@@ -106,6 +169,10 @@ public:
 			if (mismatch)
 				Log(EWarn, "Potential inconsistency (3): f/pdf=%s, sampled f/pdf=%s",
 					sampled2.toString().c_str(), sampled.toString().c_str());
+			
+			#if defined(MTS_DEBUG_FP)
+				disableFPExceptions();
+			#endif
 
 			return std::make_pair(bRec.wo, 1.0f);
 		}
@@ -118,15 +185,26 @@ public:
 			bRec.wo = wo;
 			if (m_passSamplerToBSDF)
 				bRec.sampler = m_sampler;
+
+			#if defined(MTS_DEBUG_FP)
+				enableFPExceptions();
+			#endif
+
 			if (m_bsdf->f(bRec).isZero())
 				return 0.0f;
-			return m_bsdf->pdf(bRec);
+			Float result = m_bsdf->pdf(bRec);
+
+			#if defined(MTS_DEBUG_FP)
+				disableFPExceptions();
+			#endif
+			return result;
 		}
 
 		inline Float getLargestWeight() const { return m_largestWeight; }
 	private:
 		ref<const BSDF> m_bsdf;
 		ref<Sampler> m_sampler;
+		ref<FakeSampler> m_fakeSampler;
 		Vector m_wi;
 		int m_component;
 		Float m_largestWeight;
@@ -144,7 +222,11 @@ public:
 		std::pair<Vector, Float> generateSample() {
 			Point2 sample(m_sampler->next2D());
 			PhaseFunctionQueryRecord pRec(m_mRec, m_wi);
-	
+			
+			#if defined(MTS_DEBUG_FP)
+				enableFPExceptions();
+			#endif
+
 			/* Check the various sampling routines for agreement amongst each other */
 			Float pdfVal;
 			Float f = m_phase->sample(pRec, pdfVal, m_sampler);
@@ -154,11 +236,17 @@ public:
 				if (sampled != 0)
 					Log(EWarn, "Inconsistency: f=%f, pdf=%f, sampled f/pdf=%f",
 						f, pdfVal, sampled);
+				#if defined(MTS_DEBUG_FP)
+					disableFPExceptions();
+				#endif
 				return std::make_pair(pRec.wo, 0.0f);
 			} else if (sampled == 0) {
 				if (f != 0 && pdfVal != 0)
 					Log(EWarn, "Inconsistency: f=%f, pdf=%f, sampled f/pdf=%f",
 						f, pdfVal, sampled);
+				#if defined(MTS_DEBUG_FP)
+					disableFPExceptions();
+				#endif
 				return std::make_pair(pRec.wo, 0.0f);
 			}
 
@@ -179,14 +267,24 @@ public:
 				Log(EWarn, "Inconsistency: f=%f, pdf=%f, sampled f/pdf=%f",
 					f, pdfVal, sampled);
 
+			#if defined(MTS_DEBUG_FP)
+				disableFPExceptions();
+			#endif
 			return std::make_pair(pRec.wo, 1.0f);
 		}
  
 		Float pdf(const Vector &wo) const {
 			PhaseFunctionQueryRecord pRec(m_mRec, m_wi, wo);
+			#if defined(MTS_DEBUG_FP)
+				enableFPExceptions();
+			#endif
 			if (m_phase->f(pRec) == 0)
 				return 0.0f;
-			return m_phase->pdf(pRec);
+			Float result = m_phase->pdf(pRec);
+			#if defined(MTS_DEBUG_FP)
+				disableFPExceptions();
+			#endif
+			return result;
 		}
 
 		inline Float getLargestWeight() const { return m_largestWeight; }

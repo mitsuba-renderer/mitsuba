@@ -103,7 +103,7 @@ struct Frame {
 		Float temp = 1 - v.z*v.z;
 		if (temp <= 0.0f)
 			return 0.0f;
-		return std::sqrt(temp)/v.z;
+		return std::sqrt(temp) / v.z;
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate

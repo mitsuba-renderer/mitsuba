@@ -26,7 +26,7 @@ if sys.platform == 'linux2':
 	for plugin in plugins:
 		installTargets += env.Install('#dist/plugins', plugin)
 	install('#dist', ['libcore/libmitsuba-core.so', 'libhw/libmitsuba-hw.so',
-			'librender/libmitsuba-render.so'])
+			'librender/libmitsuba-render.so', 'libbidir/libmitsuba-bidir.so'])
 	install('#dist', ['mitsuba/mitsuba', 'mitsuba/mtssrv',
 		'mitsuba/mtsutil', 'qtgui/mtsgui'])
 	if hasCollada:
@@ -61,7 +61,7 @@ if sys.platform == 'win32':
 		install('#dist', ['converter/mtsimport.exe'])
 	install('#dist', ['mitsuba/mitsuba.exe', 'mitsuba/mtssrv.exe', 'mitsuba/mtsutil.exe'])
 	install('#dist', ['libcore/libmitsuba-core.dll', 'libhw/libmitsuba-hw.dll',
-			'librender/libmitsuba-render.dll'])
+			'librender/libmitsuba-render.dll', 'libbidir/libmitsuba-bidir.dll'])
 	install('#dist', ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',
 		'libpng13.dll',	'jpeg62.dll', 'pthreadVCE2.dll', 'xerces-c_3_0.dll', 'glew32mx.dll'],
 		prefix=dllprefix)
@@ -94,7 +94,7 @@ elif sys.platform == 'darwin':
 	installTargets += env.Install('#Mitsuba.app/Contents/Resources', '#data/darwin/Resources/mitsuba.icns')
 
 	install('#Mitsuba.app/Contents/Frameworks', ['libcore/libmitsuba-core.dylib', 'libhw/libmitsuba-hw.dylib',
-		'librender/libmitsuba-render.dylib'])
+		'librender/libmitsuba-render.dylib', 'libbidir/libmitsuba-bidir.dylib'])
 	install('#Mitsuba.app/Contents/Frameworks', [
 		'GLEW.framework/Resources/libs/libGLEW.dylib', 'OpenEXR.framework/Resources/lib/libHalf.6.dylib',
 		'OpenEXR.framework/Resources/lib/libIex.6.dylib', 'OpenEXR.framework/Resources/lib/libImath.6.dylib',

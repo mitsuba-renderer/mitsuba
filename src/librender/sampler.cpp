@@ -21,7 +21,8 @@
 MTS_NAMESPACE_BEGIN
 
 Sampler::Sampler(const Properties &props) 
- : ConfigurableObject(props), m_properties(props) {
+ : ConfigurableObject(props), m_sampleCount(0), 
+	m_sampleIndex(0), m_properties(props) {
 }
 
 Sampler::Sampler(Stream *stream, InstanceManager *manager) 
