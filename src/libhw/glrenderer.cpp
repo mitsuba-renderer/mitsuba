@@ -534,6 +534,7 @@ void GLRenderer::drawAll(const std::vector<std::pair<const GPUGeometry *, Transf
 	GLRenderer::beginDrawingMeshes(true);
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
+
 	std::vector<std::pair<const GPUGeometry *, Transform> >::const_iterator it;
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
 		for (it = geo.begin(); it != geo.end(); ++it) {
@@ -577,7 +578,6 @@ void GLRenderer::drawAll(const std::vector<std::pair<const GPUGeometry *, Transf
 						finish();
 				}
 			}
-			glPopMatrix();
 		}
 	} else {
 		for (it = geo.begin(); it != geo.end(); ++it) {
@@ -616,7 +616,6 @@ void GLRenderer::drawAll(const std::vector<std::pair<const GPUGeometry *, Transf
 						finish();
 				}
 			}
-			glPopMatrix();
 		}
 	}
 	GLRenderer::endDrawingMeshes();
@@ -633,6 +632,10 @@ void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
 		glGetIntegerv(GL_VIEWPORT, viewport);
 		Vector2i scrSize = Vector2i(viewport[2], viewport[3]);
 		Vector2i texSize = Vector2i(tex->getSize().x, tex->getSize().y);
+		if (scrSize.x == 0 || scrSize.y == 0) {
+			tex->unbind();
+			return;
+		}
 
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();

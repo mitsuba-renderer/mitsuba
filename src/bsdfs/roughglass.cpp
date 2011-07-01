@@ -33,14 +33,14 @@ MTS_NAMESPACE_BEGIN
  *               Gaussian random surfaces. This is the default choice.
  *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
  *              The Phong exponent $p$ is obtained using a transformation that
- *              produces roughness similar to a Beckmann distribution with the same 
+ *              produces roughness similar to a Beckmann distribution of the same 
  *              parameter. Note that due to the underlying microfacet theory, 
  *              the use of this distribution here leads to more realistic 
  *              behavior than the separately available \pluginref{phong} plugin.
  *           \item \code{ggx}: New distribution proposed by
  *               Walter et al. meant to better handle the long
  *               tails observed in transmission measurements through
- *               ground glass.
+ *               ground glass. 
  *       \end{enumerate}
  *       Default: \code{beckmann}
  *     }
@@ -51,11 +51,11 @@ MTS_NAMESPACE_BEGIN
  *         \default{0.1}
  *     }
  *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}
- *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1}}
+ *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1.0}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the reflectance component\default{1}}
+ *         factor used to modulate the reflectance component\default{1.0}}
  *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the transmittance component\default{0.9}}
+ *         factor used to modulate the transmittance component\default{1.0}}
  * }
  *
  * This plugin implements a realistic microfacet scattering model for rendering
@@ -66,18 +66,14 @@ MTS_NAMESPACE_BEGIN
  * these facets, it is possible to reproduce the off-specular reflections 
  * peaks observed in measurements of real-world materials.
  *
- * This plugin is essentially the ``roughened'' equivalent of the 
- * plugin \pluginref{dielectric}. The model supports several types of 
- * microfacet distributions and a texturable roughness.
- * The default settings are set to a borosilicate glass BK7/air interface
- * with a light amount of rougness modeled by a Beckmann distribution.
- *
- * The implementation is based on the paper ``Microfacet Models for Refraction 
- * through Rough Surfaces'' \cite{Walter07Microfacet}. It furthermore uses an 
- * improved sampling technique presented in \cite{Zhao11Building} when given
- * access to an arbitrarily long stream of random numbers.
+ * This plugin is essentially the ``roughened'' equivalent of the plugin
+ * \pluginref{dielectric}. Its implementation is based on the paper 
+ * ``Microfacet Models for Refraction through Rough Surfaces'' 
+ * \cite{Walter07Microfacet}. The model supports several types of microfacet
+ * distributions and a texturable roughness. The default settings are set 
+ * to a borosilicate glass BK7/air interface with a light amount of rougness 
+ * modeled using a Beckmann distribution.
  */
-
 class RoughGlass : public BSDF {
 public:
 	//// Microfacet distribution types supported by the model
@@ -95,7 +91,7 @@ public:
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 		m_specularTransmittance = new ConstantSpectrumTexture(
-			props.getSpectrum("specularTransmittance", Spectrum(0.9f)));
+			props.getSpectrum("specularTransmittance", Spectrum(1.9f)));
 
 		Float alpha;
 		if (props.hasProperty("alphaB")) {
@@ -229,13 +225,13 @@ public:
 
 			case EGGX: {
 					/* Empirical GGX distribution function for rough surfaces */
-					const Float tanTheta = Frame::tanTheta(m);
-					const Float cosTheta = Frame::cosTheta(m);
+					const Float tanTheta = Frame::tanTheta(m),
+						        cosTheta = Frame::cosTheta(m);
 
 					const Float root = alpha / (cosTheta*cosTheta * 
 								(alpha*alpha + tanTheta*tanTheta));
 
-					result = INV_PI * (root*root);
+					result = INV_PI * (root * root);
 				}
 				break;
 

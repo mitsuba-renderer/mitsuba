@@ -23,6 +23,11 @@ SceneInformationDialog::SceneInformationDialog(QWidget *parent, Scene *scene) :
 		QDialog(parent),
 	ui(new Ui::SceneInformationDialog) {
 	ui->setupUi(this);
+#if defined(__OSX__)
+	QFont font = ui->textEdit->currentFont();
+	font.setPointSize(12);
+	ui->textEdit->setCurrentFont(font);
+#endif
 	ui->textEdit->setText(scene->toString().c_str());
 }
 

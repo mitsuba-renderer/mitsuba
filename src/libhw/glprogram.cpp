@@ -29,11 +29,15 @@ MTS_NAMESPACE_BEGIN
 
 GLProgram::GLProgram(const std::string &name) 
  : GPUProgram(name) {
-	m_id[0] = m_id[1] = m_program = 0;
+	m_id[EVertexProgram] = 0;
+	m_id[EFragmentProgram] = 0;
+	m_id[EGeometryProgram] = 0;
+	m_program = 0;
 }
 
 void GLProgram::init() {
-	Assert(m_id[0] == 0 && m_id[1] == 0 && m_program == 0);
+	Assert(m_id[EVertexProgram] == 0 && m_id[EFragmentProgram] == 0
+		&& m_id[EGeometryProgram] == 0 && m_program == 0);
 
 	Log(EDebug, "Uploading a GPU program : %s", toString().c_str());
 	if (!GLEW_ARB_shader_objects)

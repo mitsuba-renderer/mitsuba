@@ -705,12 +705,12 @@ Float fresnel(Float cosThetaI, Float etaExt, Float etaInt) {
 	Float etaI = etaExt, etaT = etaInt;
 
 	/* Swap the indices of refraction if the interaction starts
-		at the inside of the object */
+	   at the inside of the object */
 	if (cosThetaI < 0.0f)
 		std::swap(etaI, etaT);
 
 	/* Using Snell's law, calculate the sine of the angle
-		between the transmitted ray and the surface normal */
+	   between the transmitted ray and the surface normal */
 	Float sinThetaT = etaI / etaT * 
 		std::sqrt(std::max((Float) 0.0f, 1.0f - cosThetaI*cosThetaI));
 
