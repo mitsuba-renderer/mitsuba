@@ -28,14 +28,21 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1.0}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the reflectance component\default{1.0}}
- *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
+ *     \lastparameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the transmittance component\default{1.0}}
  * }
  *
- * Models an interface between two materials with non-matched indices of refraction.
- * The microscopic surface structure is assumed to be perfectly flat, resulting 
- * in a BSDF equal to a Dirac delta function. 
- * The default settings are set to a borosilicate glass BK7/air interface.
+ * This plugin models an interface between two materials having mismatched 
+ * indices of refraction (e.g. a boundary between water and air).
+ * The microscopic surface structure of the surface is assumed to be perfectly 
+ * smooth, resulting in a degenerate BSDF described by a Dirac delta function.
+ * For non-smooth interfaces, please take a look at the \pluginref{roughglass}
+ * model. When using this plugin, it is crucial that the scene contains
+ * meaningful and mutally compatible index of refraction change -- see
+ * \figref{glass-explanation} for an example.
+ * 
+ * The default settings of this plugin are set to a borosilicate glass BK7/air 
+ * interface.
  */
 class Dielectric : public BSDF {
 public:

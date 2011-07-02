@@ -23,19 +23,26 @@ MTS_NAMESPACE_BEGIN
 
 static StatsCounter avgPathLength("Path tracer", "Average path length", EAverage);
 
- /**
-  * Extended path tracer -- uses multiple importance sampling to combine 
-  * two sampling strategies, namely BSDF and luminaire sampling. 
-  * This class does not attempt to solve the full radiative transfer 
-  * equation (see <tt>volpath</tt> if this is needed).
-  */
+/*! \plugin{path}{Path tracer with multiple importance sampling}
+ * \parameters{
+ *     \parameter{maxDepth}{\Integer}{Maximum path depth \default{-1}}
+ *     \parameter{strictNormals}{\Boolean}{Strict normals?}
+ * }
+ * Extended path tracer -- uses multiple importance sampling to combine 
+ * two sampling strategies, namely BSDF and luminaire sampling. 
+ * This class does not attempt to solve the full radiative transfer 
+ * equation (see <tt>volpath</tt> if this is needed).
+ */
 class MIPathTracer : public MonteCarloIntegrator {
 public:
-	MIPathTracer(const Properties &props) : MonteCarloIntegrator(props) { }
+	MIPathTracer(const Properties &props)
+		: MonteCarloIntegrator(props) {
+		//m_shadingSamples = props.getInteger("shadingSamples");
+	}
 
 	/// Unserialize from a binary data stream
 	MIPathTracer(Stream *stream, InstanceManager *manager)
-	 : MonteCarloIntegrator(stream, manager) { }
+		: MonteCarloIntegrator(stream, manager) { }
 
 	Spectrum Li(const RayDifferential &r, RadianceQueryRecord &rRec) const {
 		/* Some aliases and local variables */

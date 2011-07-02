@@ -73,6 +73,10 @@ MTS_NAMESPACE_BEGIN
  * distributions and a texturable roughness. The default settings are set 
  * to a borosilicate glass BK7/air interface with a light amount of rougness 
  * modeled using a Beckmann distribution.
+ *
+ * When using this plugin, it is crucial that the scene contains
+ * meaningful and mutally compatible index of refraction change -- see
+ * \figref{glass-explanation} for an example.
  */
 class RoughGlass : public BSDF {
 public:

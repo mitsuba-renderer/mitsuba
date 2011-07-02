@@ -1,19 +1,26 @@
 % Cite a figure/listing
 \renewcommand{\lstlistingname}{Listing}
-\newcommand{\figref}[1]{\mbox{Figure \ref{fig:#1}}}
-\newcommand{\lstref}[1]{\mbox{Listing \ref{lst:#1}}}
+\newcommand{\figref}[1]{\mbox{Figure~\ref{fig:#1}}}
+\newcommand{\secref}[1]{\mbox{Section~\ref{sec:#1}}}
+\newcommand{\lstref}[1]{\mbox{Listing~\ref{lst:#1}}}
 \newcommand{\code}[1]{\texttt{#1}}
 
 % Macros that are used in the plugin documentation
 \newcommand{\plugin}[2]{\newpage\subsubsection{#2 (\texttt{#1})}\label{plg:#1}}
 \newcommand{\pluginref}[1]{\texttt{\hyperref[plg:#1]{#1}}}
 
+\newcommand{\Transform}{\texttt{transform}}
 \newcommand{\Spectrum}{\texttt{spectrum}}
+\newcommand{\Integer}{\texttt{integer}}
 \newcommand{\String}{\texttt{string}}
+\newcommand{\Boolean}{\texttt{boolean}}
 \newcommand{\Float}{\texttt{float}}
+\newcommand{\Vector}{\texttt{vector}}
+\newcommand{\Point}{\texttt{point}}
 \newcommand{\Texture}{\texttt{texture}}
 \newcommand{\Or}{~~\small or \small}
 \newcolumntype{P}[1]{>{\RaggedRight\hspace{0pt}}p{#1}}
+\newcommand{\MtsVer}{\color{lstattrib}\texttt{"\MitsubaVersion"}}
 
 \newcommand{\showbreak}{$\rhookswarrow$ }
 
@@ -45,6 +52,11 @@
 
 \newcommand{\rendering}[2]{
 	\subfigure[#1]{\fbox{\includegraphics[width=0.4\textwidth]{images/#2}}}
+	\hfill
+}
+
+\newcommand{\smallrendering}[2]{
+	\subfigure[#1]{\fbox{\includegraphics[width=0.2\textwidth]{images/#2}}}
 	\hfill
 }
 
