@@ -1,14 +1,20 @@
 Import('env', 'plugins')
 
-plugins += env.SharedLibrary('lambertian', ['lambertian.cpp'])
+
+# Dielectric microfacet materials
 plugins += env.SharedLibrary('dielectric', ['dielectric.cpp'])
+plugins += env.SharedLibrary('roughdielectric', ['roughdielectric.cpp'])
+
+plugins += env.SharedLibrary('lambertian', ['lambertian.cpp'])
+
+
+
 plugins += env.SharedLibrary('mirror', ['mirror.cpp'])
 plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
 plugins += env.SharedLibrary('mask', ['mask.cpp'])
 plugins += env.SharedLibrary('ward', ['ward.cpp'])
 plugins += env.SharedLibrary('phong', ['phong.cpp'])
 plugins += env.SharedLibrary('microfacet', ['microfacet.cpp'])
-plugins += env.SharedLibrary('roughglass', ['roughglass.cpp'])
 plugins += env.SharedLibrary('roughmetal', ['roughmetal.cpp'])
 plugins += env.SharedLibrary('composite', ['composite.cpp'])
 plugins += env.SharedLibrary('twosided', ['twosided.cpp'])

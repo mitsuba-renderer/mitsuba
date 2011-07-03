@@ -48,7 +48,7 @@ MTS_NAMESPACE_BEGIN
  * smooth, resulting in a degenerate\footnote{Meaning that for any given incoming ray of light,
  * the model always scatters into a discrete set of directions, as opposed to a continuum.} 
  * BSDF described by a Dirac delta function. For a similar model that describes a rough 
- * surface microstructure, take a look at the \pluginref{roughglass} plugin. 
+ * surface microstructure, take a look at the \pluginref{roughdielectric} plugin. 
  *
  * \begin{xml}[caption=A simple air-to-water interface, label=lst:dielectric-water]
  * <shape type="...">
@@ -80,7 +80,6 @@ MTS_NAMESPACE_BEGIN
  *     </medium>
  * <shape>
  * \end{xml}
- * 
  */
 class SmoothDielectric : public BSDF {
 public:

@@ -23,7 +23,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{roughglass}{Rough dielectric material}
+/*! \plugin{roughdielectric}{Rough dielectric material}
  * \parameters{
  *     \parameter{distribution}{\String}{
  *          Specifies the type of microfacet normal distribution 
@@ -84,7 +84,7 @@ MTS_NAMESPACE_BEGIN
  * meaningful and mutally compatible index of refraction change -- see
  * \figref{glass-explanation} for an example.
  */
-class RoughGlass : public BSDF {
+class RoughDielectric : public BSDF {
 public:
 	//// Microfacet distribution types supported by the model
 	enum EDistribution  {
@@ -96,7 +96,7 @@ public:
 		EGGX      = 0x0002
 	};
 
-	RoughGlass(const Properties &props) 
+	RoughDielectric(const Properties &props) 
 		: BSDF(props) {
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
@@ -151,7 +151,7 @@ public:
 		m_usesRayDifferentials = false;
 	}
 
-	RoughGlass(Stream *stream, InstanceManager *manager) 
+	RoughDielectric(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
 		m_distribution = (EDistribution) stream->readInt();
 		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
@@ -171,7 +171,7 @@ public:
 			m_specularTransmittance->usesRayDifferentials();
 	}
 
-	virtual ~RoughGlass() {
+	virtual ~RoughDielectric() {
 		delete[] m_type;
 	}
 
@@ -751,7 +751,7 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "RoughGlass[" << endl
+		oss << "RoughDielectric[" << endl
 			<< "  distribution = ";
 		switch (m_distribution) {
 			case EBeckmann: oss << "beckmann," << endl; break;
@@ -783,9 +783,9 @@ private:
 /* Fake glass shader -- it is really hopeless to visualize
    this material in the VPL renderer, so let's try to do at least 
    something that suggests the presence of a transparent boundary */
-class RoughGlassShader : public Shader {
+class RoughDielectricShader : public Shader {
 public:
-	RoughGlassShader(Renderer *renderer) :
+	RoughDielectricShader(Renderer *renderer) :
 		Shader(renderer, EBSDFShader) {
 		m_flags = ETransparent;
 	}
@@ -803,11 +803,11 @@ public:
 	MTS_DECLARE_CLASS()
 };
 
-Shader *RoughGlass::createShader(Renderer *renderer) const { 
-	return new RoughGlassShader(renderer);
+Shader *RoughDielectric::createShader(Renderer *renderer) const { 
+	return new RoughDielectricShader(renderer);
 }
 
-MTS_IMPLEMENT_CLASS(RoughGlassShader, false, Shader)
-MTS_IMPLEMENT_CLASS_S(RoughGlass, false, BSDF)
-MTS_EXPORT_PLUGIN(RoughGlass, "Rough glass BSDF");
+MTS_IMPLEMENT_CLASS(RoughDielectricShader, false, Shader)
+MTS_IMPLEMENT_CLASS_S(RoughDielectric, false, BSDF)
+MTS_EXPORT_PLUGIN(RoughDielectric, "Rough glass BSDF");
 MTS_NAMESPACE_END
