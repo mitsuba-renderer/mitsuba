@@ -742,9 +742,11 @@ void GLRenderer::blitQuad(bool flipVertically) {
 	glGetIntegerv(GL_VIEWPORT, viewport);
 	Vector2 scrSize((float) viewport[2], (float) viewport[3]);
 	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
 	glLoadIdentity();
 	glOrtho(0, scrSize.x, scrSize.y, 0, -1, 1);
 	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
 	glLoadIdentity();
 	const Float zDepth = -1.0f;
 	glBegin(GL_QUADS);
@@ -757,6 +759,9 @@ void GLRenderer::blitQuad(bool flipVertically) {
 	glTexCoord2f(0.0f, flipVertically ? 0.0f : 1.0f);
 	glVertex3f(0.0f, scrSize.y, zDepth);
 	glEnd();
+	glPopMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
 }
 
 void GLRenderer::drawText(const Point2i &_pos, 
@@ -966,10 +971,10 @@ void GLRenderer::finish() {
 	m_queuedTriangles = 0;
 }
 
-void GLRenderer::setColor(const Spectrum &spec) {
+void GLRenderer::setColor(const Spectrum &spec, Float alpha) {
 	Float r, g, b;
 	spec.toLinearRGB(r, g, b);
-	glColor4f(r, g, b, 1);
+	glColor4f(r, g, b, alpha);
 }
 
 void GLRenderer::setBlendMode(EBlendMode mode) {

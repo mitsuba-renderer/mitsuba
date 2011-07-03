@@ -21,7 +21,7 @@
 MTS_NAMESPACE_BEGIN
 	
 Shader::Shader(Renderer *renderer, EShaderType type)
-  : m_type(type) {
+  : m_type(type), m_flags(0) {
 }
 
 Shader::~Shader() {

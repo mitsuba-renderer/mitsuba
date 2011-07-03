@@ -21,7 +21,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{dielectric}{Ideal dielectric/glass material}
+/*! \plugin{dielectric}{Smooth dielectric material}
  *
  * \parameters{
  *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}
@@ -32,21 +32,59 @@ MTS_NAMESPACE_BEGIN
  *         factor used to modulate the transmittance component\default{1.0}}
  * }
  *
- * This plugin models an interface between two materials having mismatched 
- * indices of refraction (e.g. a boundary between water and air).
- * The microscopic surface structure of the surface is assumed to be perfectly 
- * smooth, resulting in a degenerate BSDF described by a Dirac delta function.
- * For non-smooth interfaces, please take a look at the \pluginref{roughglass}
- * model. When using this plugin, it is crucial that the scene contains
- * meaningful and mutally compatible index of refraction change -- see
- * \figref{glass-explanation} for an example.
+ * \renderings{
+ *     \medrendering{Air-Water (IOR: 1$\leftrightarrow$1.33) interface, see \lstref{dielectric-water}}{bsdf_dielectric_water}
+ *     \medrendering{Air-Diamond (IOR: 1$\leftrightarrow$2.419)}{bsdf_dielectric_diamond}
+ *     \medrendering{Air-Glass (1$\leftrightarrow$1.504) interface with absorption, see \lstref{dielectric-glass}}{bsdf_dielectric_glass}
+ * }
+ *
+ * This plugin models an interface between two dielectric materials having mismatched 
+ * indices of refraction (for instance, water and air). Exterior and interior IOR values
+ * can each be independently specified, where ``exterior'' refers to the side that contains 
+ * the surface normal. When no parameters are given, the plugin activates the defaults, which
+ * describe a borosilicate glass BK7/air interface.
+ *
+ * In this model, the microscopic surface structure of the surface is assumed to be perfectly 
+ * smooth, resulting in a degenerate\footnote{Meaning that for any given incoming ray of light,
+ * the model always scatters into a discrete set of directions, as opposed to a continuum.} 
+ * BSDF described by a Dirac delta function. For a similar model that describes a rough 
+ * surface microstructure, take a look at the \pluginref{roughglass} plugin. 
+ *
+ * \begin{xml}[caption=A simple air-to-water interface, label=lst:dielectric-water]
+ * <shape type="...">
+ *     <bsdf type="dielectric">
+ *         <float name="intIOR" value="1.33"/>
+ *         <float name="extIOR" value="1.0"/>
+ *     </bsdf>
+ * <shape>
+ * \end{xml}
+ *
+ * When using this model, it is crucial that the scene contains
+ * meaningful and mutally compatible indices of refraction changes---see
+ * \figref{glass-explanation} for a description of what this entails.
  * 
- * The default settings of this plugin are set to a borosilicate glass BK7/air 
- * interface.
+ * In many cases, we will want to additionally describe the \emph{medium} within a
+ * dielectric material. This requires the use of a rendering technique that is
+ * aware of media (e.g. the volumetric path tracer). An example of how one might
+ * describe a slightly absorbing piece of glass is given below:
+ *
+ * \begin{xml}[caption=A glass material with absorption, label=lst:dielectric-glass]
+ * <shape type="...">
+ *     <bsdf type="dielectric">
+ *         <float name="intIOR" value="1.504"/>
+ *         <float name="extIOR" value="1.0"/>
+ *     </bsdf>
+ *     <medium type="homogeneous" name="interior">
+ *			<rgb name="sigmaS" value="0, 0, 0"/>
+ *			<rgb name="sigmaA" value="4, 4, 2"/>
+ *     </medium>
+ * <shape>
+ * \end{xml}
+ * 
  */
-class Dielectric : public BSDF {
+class SmoothDielectric : public BSDF {
 public:
-	Dielectric(const Properties &props) 
+	SmoothDielectric(const Properties &props) 
 			: BSDF(props) {
 		/* Specifies the internal index of refraction at the interface */
 		m_intIOR = props.getFloat("intIOR", 1.5046f);
@@ -66,7 +104,7 @@ public:
 		m_usesRayDifferentials = false;
 	}
 
-	Dielectric(Stream *stream, InstanceManager *manager) 
+	SmoothDielectric(Stream *stream, InstanceManager *manager) 
 			: BSDF(stream, manager) {
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
@@ -81,7 +119,7 @@ public:
 		m_usesRayDifferentials = false;
 	}
 
-	virtual ~Dielectric() {
+	virtual ~SmoothDielectric() {
 		delete[] m_type;
 	}
 
@@ -339,7 +377,7 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Dielectric[" << endl
+		oss << "SmoothDielectric[" << endl
 			<< "  intIOR = " << m_intIOR << "," << endl 
 			<< "  extIOR = " << m_extIOR << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
@@ -348,6 +386,8 @@ public:
 		return oss.str();
 	}
 
+	Shader *createShader(Renderer *renderer) const;
+
 	MTS_DECLARE_CLASS()
 private:
 	Float m_intIOR, m_extIOR;
@@ -355,7 +395,34 @@ private:
 	ref<Texture> m_specularReflectance;
 };
 
+/* Fake glass shader -- it is really hopeless to visualize
+   this material in the VPL renderer, so let's try to do at least 
+   something that suggests the presence of a transparent boundary */
+class SmoothDielectricShader : public Shader {
+public:
+	SmoothDielectricShader(Renderer *renderer) :
+		Shader(renderer, EBSDFShader) {
+		m_flags = ETransparent;
+	}
 
-MTS_IMPLEMENT_CLASS_S(Dielectric, false, BSDF)
-MTS_EXPORT_PLUGIN(Dielectric, "Dielectric BSDF");
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return vec3(0.08);" << endl
+			<< "}" << endl;
+		oss << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return vec3(0.08);" << endl
+			<< "}" << endl;
+	}
+	MTS_DECLARE_CLASS()
+};
+
+Shader *SmoothDielectric::createShader(Renderer *renderer) const { 
+	return new SmoothDielectricShader(renderer);
+}
+
+MTS_IMPLEMENT_CLASS(SmoothDielectricShader, false, Shader)
+MTS_IMPLEMENT_CLASS_S(SmoothDielectric, false, BSDF)
+MTS_EXPORT_PLUGIN(SmoothDielectric, "Smooth dielectric BSDF");
 MTS_NAMESPACE_END

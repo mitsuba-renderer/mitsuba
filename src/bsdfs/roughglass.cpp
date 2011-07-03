@@ -23,7 +23,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{roughglass}{Rough dielectric/glass material}
+/*! \plugin{roughglass}{Rough dielectric material}
  * \parameters{
  *     \parameter{distribution}{\String}{
  *          Specifies the type of microfacet normal distribution 
@@ -58,13 +58,19 @@ MTS_NAMESPACE_BEGIN
  *         factor used to modulate the transmittance component\default{1.0}}
  * }
  *
+ * \renderings{
+ *     \medrendering{Beckmann, $\alpha$=0.2}{bsdf_dielectric_glass}
+ *     \medrendering{Beckmann, $\alpha$=0.3}{bsdf_dielectric_glass}
+ *     \medrendering{Beckmann, $\alpha$=0.4}{bsdf_dielectric_glass}
+ * }
+ *
  * This plugin implements a realistic microfacet scattering model for rendering
- * rough dielectric surfaces, such as ground glass. Microfacet theory
- * describes surfaces as an arrangement of unresolved and ideally specular 
+ * rough interfaces between dielectric materials, such as a transition from air to ground glass. 
+ * Microfacet theory describes surfaces as an arrangement of unresolved and ideally specular 
  * facets, whose normals are given by a specially chosen \emph{microfacet 
  * distribution}. By accounting for shadowing and masking effects between 
  * these facets, it is possible to reproduce the off-specular reflections 
- * peaks observed in measurements of real-world materials.
+ * peaks observed in real-world measurements of such materials.
  *
  * This plugin is essentially the ``roughened'' equivalent of the plugin
  * \pluginref{dielectric}. Its implementation is based on the paper 
@@ -95,7 +101,7 @@ public:
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 		m_specularTransmittance = new ConstantSpectrumTexture(
-			props.getSpectrum("specularTransmittance", Spectrum(1.9f)));
+			props.getSpectrum("specularTransmittance", Spectrum(1.0f)));
 
 		Float alpha;
 		if (props.hasProperty("alphaB")) {
@@ -763,6 +769,8 @@ public:
 		return oss.str();
 	}
 
+	Shader *createShader(Renderer *renderer) const;
+
 	MTS_DECLARE_CLASS()
 private:
 	EDistribution m_distribution;
@@ -772,6 +780,34 @@ private:
 	Float m_intIOR, m_extIOR;
 };
 
+/* Fake glass shader -- it is really hopeless to visualize
+   this material in the VPL renderer, so let's try to do at least 
+   something that suggests the presence of a transparent boundary */
+class RoughGlassShader : public Shader {
+public:
+	RoughGlassShader(Renderer *renderer) :
+		Shader(renderer, EBSDFShader) {
+		m_flags = ETransparent;
+	}
+
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return vec3(0.08);" << endl
+			<< "}" << endl;
+		oss << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return vec3(0.08);" << endl
+			<< "}" << endl;
+	}
+	MTS_DECLARE_CLASS()
+};
+
+Shader *RoughGlass::createShader(Renderer *renderer) const { 
+	return new RoughGlassShader(renderer);
+}
+
+MTS_IMPLEMENT_CLASS(RoughGlassShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(RoughGlass, false, BSDF)
 MTS_EXPORT_PLUGIN(RoughGlass, "Rough glass BSDF");
 MTS_NAMESPACE_END

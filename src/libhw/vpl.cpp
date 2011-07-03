@@ -55,7 +55,7 @@ void VPLShaderManager::init() {
 			"varying float depth;\n"
 			"\n"
 			"void main() {\n"
-			"	depth = 0;\n" // avoid a (incorrect?) warning
+			"	depth = 0;\n" // avoid an (incorrect?) warning
 			"   for (int side = 0; side < 6; side++) {\n"
 			"	    gl_Layer = side;\n"
 			"       for (int i = 0; i < gl_VerticesIn; i++) {\n"
@@ -118,7 +118,7 @@ void VPLShaderManager::init() {
 
 	const std::vector<Shape *> shapes = m_scene->getShapes();
 	const std::vector<Luminaire *> luminaires = m_scene->getLuminaires();
-
+	
 	for (size_t i=0; i<shapes.size(); ++i) {
 		ref<TriMesh> triMesh = shapes[i]->createTriMesh();
 		if (!triMesh) {
@@ -134,8 +134,12 @@ void VPLShaderManager::init() {
 					GPUGeometry *gpuGeo = m_renderer->registerGeometry(triMesh);
 					Shader *shader = triMesh->hasBSDF() ? 
 						m_renderer->registerShaderForResource(triMesh->getBSDF()) : NULL;
-					if (shader != NULL && !shader->isComplete())
+					if (shader != NULL && !shader->isComplete()) {
 						m_renderer->unregisterShaderForResource(triMesh->getBSDF());
+					} else if (shader->getFlags() & Shader::ETransparent) {
+						m_transparentMeshes.push_back(std::make_pair(triMesh.get(), instance->getWorldTransform()));
+						continue;
+					}
 					m_meshes.push_back(std::make_pair(triMesh.get(), instance->getWorldTransform()));
 					if (gpuGeo)
 						m_drawList.push_back(std::make_pair(gpuGeo, instance->getWorldTransform()));
@@ -146,8 +150,12 @@ void VPLShaderManager::init() {
 		GPUGeometry *gpuGeo = m_renderer->registerGeometry(triMesh);
 		Shader *shader = triMesh->hasBSDF() ? 
 			m_renderer->registerShaderForResource(triMesh->getBSDF()) : NULL;
-		if (shader != NULL && !shader->isComplete())
+		if (shader != NULL && !shader->isComplete()) {
 			m_renderer->unregisterShaderForResource(triMesh->getBSDF());
+		} else if (shader->getFlags() & Shader::ETransparent) {
+			m_transparentMeshes.push_back(std::make_pair(triMesh.get(), Transform()));
+			continue;
+		}
 		m_meshes.push_back(std::make_pair(triMesh.get(), Transform()));
 		if (gpuGeo)
 			m_drawList.push_back(std::make_pair(gpuGeo, Transform()));
@@ -353,13 +361,19 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 		: m_renderer->getShaderForResource(luminaire);
 	std::ostringstream oss;
 
-	
 	if (bsdfShader == NULL || vplShader == NULL ||
 		(luminaire != NULL && lumShader == NULL)) {
 		/* Unsupported! */
 		m_renderer->setColor(Spectrum(0.0f));
 		return;
 	}
+
+#if 0
+	if (bsdfShader->getFlags() & Shader::ETransparent) {
+		m_renderer->setColor(Spectrum(1.0f), 0.3f);
+		return;
+	}
+#endif
 
 	bool anisotropic = bsdf->getType() & BSDF::EAnisotropic;
 
@@ -464,7 +478,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 			<< "/* Uniform inputs */" << endl
 			<< "uniform samplerCube shadowMap;" << endl
 			<< "uniform vec3 vplPower, vplS, vplT, vplN, vplWi;" << endl
-			<< "uniform float nearClip, invClipRange, minDist;" << endl
+			<< "uniform float nearClip, invClipRange, minDist, alpha;" << endl
 			<< "uniform vec2 vplUV;" << endl
 			<< "uniform bool diffuseSources, diffuseReceivers;" << endl
 			<< "varying vec3 vertexColor;" << endl
@@ -546,7 +560,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 		} else {
 			oss << ";" << endl;
 		}
-		oss << "   gl_FragColor.a = 1.0;" << endl
+		oss << "   gl_FragColor.a = alpha;" << endl
 			<< "}" << endl;
 
 		program->setSource(GPUProgram::EFragmentProgram, oss.str());
@@ -572,6 +586,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 		m_targetConfig.param_minDist = program->getParameterID("minDist", false);
 		m_targetConfig.param_diffuseSources = program->getParameterID("diffuseSources", false);
 		m_targetConfig.param_diffuseReceivers = program->getParameterID("diffuseReceivers", false);
+		m_targetConfig.param_alpha = program->getParameterID("alpha", false);
 		m_current.program = program;
 		m_current.config = m_targetConfig;
 		m_programs[configName] = m_current;
@@ -589,11 +604,16 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 	program->setParameter(config.param_vplN, vpl.its.shFrame.n);
 	program->setParameter(config.param_vplS, vpl.its.shFrame.s);
 	program->setParameter(config.param_vplT, vpl.its.shFrame.t);
+	
+	program->setParameter(config.param_alpha, 
+		bsdfShader->getFlags() & Shader::ETransparent ? 0.5f : 1.0f);
+
 	if (vpl.type == ESurfaceVPL) {
 		program->setParameter(config.param_vplWi, vpl.its.wi);
 		program->setParameter(config.param_vplUV, vpl.its.uv);
 		program->setParameter(config.param_diffuseSources, m_diffuseSources);
 	}
+
 	Spectrum power = vpl.P;
 	if (m_diffuseSources && vpl.type == ESurfaceVPL)
 		power *= vpl.its.shape->getBSDF()->getDiffuseReflectance(vpl.its) * INV_PI;

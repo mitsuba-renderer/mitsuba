@@ -159,7 +159,7 @@ public:
 	void setColorMask(bool value);
 
 	/// Set the current fixed-function pipeline color
-	void setColor(const Spectrum &spec);
+	void setColor(const Spectrum &spec, Float alpha = 1.0f);
 
 	/// Push a view transformation onto the matrix stack
 	void pushTransform(const Transform &trafo);
