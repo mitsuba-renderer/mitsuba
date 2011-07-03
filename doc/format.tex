@@ -10,12 +10,16 @@ An simple scene with a single mesh and the default lighting and camera setup mig
 something like this:
 \begin{xml}
 <?xml version="1.0" encoding="utf-8"?>
-<scene>
+<scene version=$\MtsVer$>
 	<shape type="obj">
 		<string name="filename" value="dragon.obj"/>
 	</shape>
 </scene>
 \end{xml}
+The scene version attribute denotes the release of Mitsuba that was used to
+create the scene. This information allows Mitsuba to always correctly process the 
+file irregardless of any potential future changes in the scene description language.
+
 This example already contains the most important things to know about format: you can have
 \emph{objects} (such as the objects instantiated by the \code{scene} or \code{shape} tags), which are allowed to be nested within
 each other. Each object optionally accepts \emph{properties} (such as the \code{string} tag),
@@ -29,7 +33,7 @@ the certainly case for the plugin named \code{obj} (it contains a WaveFront OBJ 
 Similarly, you could write
 \begin{xml}
 <?xml version="1.0" encoding="utf-8"?>
-<scene>
+<scene version=$\MtsVer$>
 	<shape type="sphere">
 		<float name="radius" value="10"/>
 	</shape>
@@ -43,7 +47,7 @@ The most common scene setup is to declare an integrator, some geometry, a camera
 and one or more luminaires. Here is a more complex example:
 \begin{xml}
 <?xml version="1.0" encoding="utf-8"?>
-<scene>
+<scene version=$\MtsVer$>
 	<integrator type="path"> <!-- Path trace an 8-bounce GI solution -->
 		<integer name="maxDepth" value="8"/>
 	</integrator>
@@ -202,8 +206,8 @@ Quite often, you will find yourself using an object (such as a material) in many
 to declare it over and over again, which wastes memory, you can make use of references. Here is an example
 of how this works:
 \begin{xml}
-<scene>
-	<texture type="ldrtexture" id="myImage">
+<scene version=$\MtsVer$>
+	<texture type="bitmap" id="myImage">
 		<string name="filename" value="textures/myImage.jpg"/>
 	</texture>
 

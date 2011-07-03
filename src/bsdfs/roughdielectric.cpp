@@ -30,7 +30,7 @@ MTS_NAMESPACE_BEGIN
  *          used to model the surface roughness.
  *       \begin{enumerate}[(i)]
  *           \item \code{beckmann}: Physically-based distribution derived from
- *               Gaussian random surfaces. This is the default choice.
+ *               Gaussian random surfaces. This is the default.
  *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
  *              The Phong exponent $p$ is obtained using a transformation that
  *              produces roughness similar to a Beckmann distribution of the same 
@@ -55,35 +55,62 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1.0}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the reflectance component\default{1.0}}
- *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
+ *     \lastparameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the transmittance component\default{1.0}}
  * }
  *
- * \renderings{
- *     \medrendering{Beckmann, $\alpha$=0.2}{bsdf_dielectric_glass}
- *     \medrendering{Beckmann, $\alpha$=0.3}{bsdf_dielectric_glass}
- *     \medrendering{Beckmann, $\alpha$=0.4}{bsdf_dielectric_glass}
- * }
  *
  * This plugin implements a realistic microfacet scattering model for rendering
- * rough interfaces between dielectric materials, such as a transition from air to ground glass. 
- * Microfacet theory describes surfaces as an arrangement of unresolved and ideally specular 
- * facets, whose normals are given by a specially chosen \emph{microfacet 
- * distribution}. By accounting for shadowing and masking effects between 
- * these facets, it is possible to reproduce the off-specular reflections 
- * peaks observed in real-world measurements of such materials.
+ * rough interfaces between dielectric materials, such as a transition from air to 
+ * ground glass. Microfacet theory describes rough surfaces as an arrangement of 
+ * unresolved and ideally specular facets, whose normal directions are given by 
+ * a specially chosen \emph{microfacet distribution}. By accounting for shadowing
+ * and masking effects between these facets, it is possible to reproduce the 
+ * off-specular reflections peaks observed in real-world measurements of such 
+ * materials.
+ * \renderings{
+ *     \rendering{Rough glass (Beckmann, $\alpha$=0.1)}{bsdf_roughdielectric_beckmann_0_1.jpg}
+ *     \rendering{Ground glass (GGX, $\alpha$=0.304, \lstref{roughdielectric-roughglass})}{bsdf_roughdielectric_ggx_0_304.jpg}
+ * }
  *
  * This plugin is essentially the ``roughened'' equivalent of the plugin
- * \pluginref{dielectric}. Its implementation is based on the paper 
- * ``Microfacet Models for Refraction through Rough Surfaces'' 
- * \cite{Walter07Microfacet}. The model supports several types of microfacet
- * distributions and a texturable roughness. The default settings are set 
+ * \pluginref{dielectric}. As the roughness value is decreased, it increasingly
+ * approximates that model. Its implementation is based on the paper 
+ * ``Microfacet Models for Refraction through Rough Surfaces'' by Walter et
+ * al. \cite{Walter07Microfacet}. The model supports several types of microfacet
+ * distributions and has a texturable roughness parameter. 
+ * The default settings are set 
  * to a borosilicate glass BK7/air interface with a light amount of rougness 
  * modeled using a Beckmann distribution.
  *
  * When using this plugin, it is crucial that the scene contains
- * meaningful and mutally compatible index of refraction change -- see
- * \figref{glass-explanation} for an example.
+ * meaningful and mutally compatible index of refraction change---see
+ * \figref{glass-explanation} for an example. Also, please note that
+ * the importance sampling implementation of this model is close, but 
+ * not perfect a perfect match to the underlying scattering distribution,
+ * particularly for high roughness values and when the \texttt{GGX} 
+ * model is used. Hence, such renderings may converge slowly.
+ *
+ * \begin{xml}[caption=Ground glass, label=lst:roughdielectric-roughglass]
+ * <bsdf type="roughdielectric">
+ *     <string name="distribution" value="ggx"/>
+ *     <float name="alpha" value="0.304"/>
+ *     <float name="intIOR" value="1.5046"/>
+ *     <float name="extIOR" value="1.0"/>
+ * </bsdf>
+ * \end{xml}
+ *
+ * \begin{xml}[caption=Textured rougness, label=lst:roughdielectric-textured]
+ * <bsdf type="roughdielectric">
+ *     <string name="distribution" value="beckmann"/>
+ *     <float name="intIOR" value="1.5046"/>
+ *     <float name="extIOR" value="1.0"/>
+ *
+ *     <texture type="bitmap" name="alpha">
+ *         <string name="filename" value="roughness.exr"/>
+ *     </texture>
+ * </bsdf>
+ * \end{xml}
  */
 class RoughDielectric : public BSDF {
 public:
@@ -384,7 +411,8 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		const Float alpha = m_alpha->getValue(bRec.its).average();
+		const Float alpha = 
+			std::max(m_alpha->getValue(bRec.its).average(), (Float) 1e-4f);
 
 		/* Microsurface normal distribution */
 		const Float D = evalD(H, alpha);
@@ -467,7 +495,8 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alpha = 
+			std::max(m_alpha->getValue(bRec.its).average(), (Float) 1e-4f);
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 
@@ -549,7 +578,8 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alpha = 
+			std::max(m_alpha->getValue(bRec.its).average(), (Float) 1e-4f);
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 
@@ -671,7 +701,8 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alpha = 
+			std::max(m_alpha->getValue(bRec.its).average(), (Float) 1e-4f);
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 

@@ -1,7 +1,6 @@
 Import('env', 'plugins')
 
-plugins += env.SharedLibrary('exrtexture', ['exrtexture.cpp'])
-plugins += env.SharedLibrary('ldrtexture', ['ldrtexture.cpp'])
+plugins += env.SharedLibrary('bitmap', ['bitmap.cpp'])
 plugins += env.SharedLibrary('gridtexture', ['gridtexture.cpp'])
 plugins += env.SharedLibrary('checkerboard', ['checkerboard.cpp'])
 plugins += env.SharedLibrary('vertexcolors', ['vertexcolors.cpp'])

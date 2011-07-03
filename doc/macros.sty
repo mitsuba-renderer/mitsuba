@@ -44,13 +44,14 @@
 	
 \newcommand{\renderings}[1]{
 	\begin{figure}[h!]
+		\setcounter{subfigure}{0}
 		\centering
 		\hfill
 		#1
 	\end{figure}
 }
 
-\newcommand{\rendering}[2]{\subfigure[#1]{\fbox{\includegraphics[width=0.4\textwidth]{images/#2}}}\hfill}
+\newcommand{\rendering}[2]{\subfigure[#1]{\fbox{\includegraphics[width=0.47\textwidth]{images/#2}}}\hfill}
 \newcommand{\medrendering}[2]{ \subfigure[#1]{\fbox{\includegraphics[width=0.3\textwidth]{images/#2}}}\hfill}
 \newcommand{\smallrendering}[2]{ \subfigure[#1]{\fbox{\includegraphics[width=0.2\textwidth]{images/#2}}}\hfill}
 

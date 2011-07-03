@@ -57,8 +57,8 @@ MTS_NAMESPACE_BEGIN
  *
  * \begin{xml}[caption=Lambertian material with a texture map, label=lst:lambertian-textured]
  * <bsdf type="lambertian">
- *     <texture type="ldrtexture" name="reflectance">
- *       <string name="filename" value="wood.jpg"/>
+ *     <texture type="bitmap" name="reflectance">
+ *         <string name="filename" value="wood.jpg"/>
  *     </texture>
  * </bsdf>
  * \end{xml}

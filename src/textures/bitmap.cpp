@@ -31,14 +31,17 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Gamma-corrected bitmap texture using the JPG, PNG, TGA or BMP
+ * Gamma-corrected bitmap texture using the EXR, JPG, PNG, TGA or BMP
+ * file formats.
  */
-class LDRTexture : public Texture2D {
+class BitmapTexture : public Texture2D {
 public:
-	LDRTexture(const Properties &props) : Texture2D(props) {
+	BitmapTexture(const Properties &props) : Texture2D(props) {
 		m_filename = Thread::getThread()->getFileResolver()->resolve(
 			props.getString("filename"));
-		m_gamma = props.getFloat("gamma", -1); /* -1 means sRGB */
+
+		/* -1 means sRGB. Gamma is ignored when loading EXR files */
+		m_gamma = props.getFloat("gamma", -1);
 		Log(EInfo, "Loading texture \"%s\"", m_filename.leaf().c_str());
 
 		ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
@@ -71,7 +74,9 @@ public:
 	
 		m_maxAnisotropy = props.getFloat("maxAnisotropy", 8);
 
-		if (extension == ".jpg" || extension == ".jpeg")
+		if (extension == ".exr")
+			m_format = Bitmap::EEXR;
+		else if (extension == ".jpg" || extension == ".jpeg")
 			m_format = Bitmap::EJPEG;
 		else if (extension == ".png")
 			m_format = Bitmap::EPNG;
@@ -86,7 +91,7 @@ public:
 		initializeFrom(bitmap);
 	}
 
-	LDRTexture(Stream *stream, InstanceManager *manager) 
+	BitmapTexture(Stream *stream, InstanceManager *manager) 
 	 : Texture2D(stream, manager) {
 		m_filename = stream->readString();
 		Log(EInfo, "Unserializing texture \"%s\"", m_filename.leaf().c_str());
@@ -121,84 +126,91 @@ public:
 	}
 
 	void initializeFrom(Bitmap *bitmap) {
-		ref<Bitmap> corrected = new Bitmap(bitmap->getWidth(), bitmap->getHeight(), 128);
-
-		float tbl[256];
-		if (m_gamma == -1) {
-			for (int i=0; i<256; ++i) 
-				tbl[i] = fromSRGBComponent((Float) i / (Float) 255);
+		ref<Bitmap> corrected;
+		m_bpp = bitmap->getBitsPerPixel();
+		if (bitmap->getBitsPerPixel() == 128) {
+			/* Nothing needs to be done */
+			corrected = bitmap;
 		} else {
-			for (int i=0; i<256; ++i)
-				tbl[i] = std::pow((Float) i / (Float) 255, m_gamma);
-		}
+			corrected = new Bitmap(bitmap->getWidth(), bitmap->getHeight(), 128);
 
-		uint8_t *data = bitmap->getData();
-		float *flData = corrected->getFloatData();
-		if (bitmap->getBitsPerPixel() == 32) {
-			for (int y=0; y<bitmap->getHeight(); ++y) {
-				for (int x=0; x<bitmap->getWidth(); ++x) {
-					float
-						r = tbl[*data++],
-						g = tbl[*data++],
-						b = tbl[*data++],
-						a = *data++ / 255.0f;
-					*flData++ = r;
-					*flData++ = g;
-					*flData++ = b;
-					*flData++ = a;
-				}
+			float tbl[256];
+			if (m_gamma == -1) {
+				for (int i=0; i<256; ++i) 
+					tbl[i] = fromSRGBComponent((Float) i / (Float) 255);
+			} else {
+				for (int i=0; i<256; ++i)
+					tbl[i] = std::pow((Float) i / (Float) 255, m_gamma);
 			}
-		} else if (bitmap->getBitsPerPixel() == 24) {
-			for (int y=0; y<bitmap->getHeight(); ++y) {
-				for (int x=0; x<bitmap->getWidth(); ++x) {
-					float
-						r = tbl[*data++],
-						g = tbl[*data++],
-						b = tbl[*data++];
-					*flData++ = r;
-					*flData++ = g;
-					*flData++ = b;
-					*flData++ = 1.0f;
+
+			uint8_t *data = bitmap->getData();
+			float *flData = corrected->getFloatData();
+			if (bitmap->getBitsPerPixel() == 32) {
+				for (int y=0; y<bitmap->getHeight(); ++y) {
+					for (int x=0; x<bitmap->getWidth(); ++x) {
+						float
+							r = tbl[*data++],
+							g = tbl[*data++],
+							b = tbl[*data++],
+							a = *data++ / 255.0f;
+						*flData++ = r;
+						*flData++ = g;
+						*flData++ = b;
+						*flData++ = a;
+					}
 				}
-			}
-		} else if (bitmap->getBitsPerPixel() == 16) {
-			for (int y=0; y<bitmap->getHeight(); ++y) {
-				for (int x=0; x<bitmap->getWidth(); ++x) {
-					float col = tbl[*data++],
-						a = *data++ / 255.0f;
-					*flData++ = col;
-					*flData++ = col;
-					*flData++ = col;
-					*flData++ = a;
+			} else if (bitmap->getBitsPerPixel() == 24) {
+				for (int y=0; y<bitmap->getHeight(); ++y) {
+					for (int x=0; x<bitmap->getWidth(); ++x) {
+						float
+							r = tbl[*data++],
+							g = tbl[*data++],
+							b = tbl[*data++];
+						*flData++ = r;
+						*flData++ = g;
+						*flData++ = b;
+						*flData++ = 1.0f;
+					}
 				}
-			}
-		} else if (bitmap->getBitsPerPixel() == 8) {
-			for (int y=0; y<bitmap->getHeight(); ++y) {
-				for (int x=0; x<bitmap->getWidth(); ++x) {
-					float col = tbl[*data++];
-					*flData++ = col;
-					*flData++ = col;
-					*flData++ = col;
-					*flData++ = 1.0f;
+			} else if (bitmap->getBitsPerPixel() == 16) {
+				for (int y=0; y<bitmap->getHeight(); ++y) {
+					for (int x=0; x<bitmap->getWidth(); ++x) {
+						float col = tbl[*data++],
+							a = *data++ / 255.0f;
+						*flData++ = col;
+						*flData++ = col;
+						*flData++ = col;
+						*flData++ = a;
+					}
 				}
-			}
-		} else if (bitmap->getBitsPerPixel() == 1) {
-			int pos = 0;
-			for (int y=0; y<bitmap->getHeight(); ++y) {
-				for (int x=0; x<bitmap->getWidth(); ++x) {
-					int entry = pos / 8;
-					int bit   = pos % 8;
-					int value = (data[entry] & (1 << bit)) ? 255 : 0;
-					float col = tbl[value];
-					*flData++ = col;
-					*flData++ = col;
-					*flData++ = col;
-					*flData++ = 1.0f;
-					pos++;
+			} else if (bitmap->getBitsPerPixel() == 8) {
+				for (int y=0; y<bitmap->getHeight(); ++y) {
+					for (int x=0; x<bitmap->getWidth(); ++x) {
+						float col = tbl[*data++];
+						*flData++ = col;
+						*flData++ = col;
+						*flData++ = col;
+						*flData++ = 1.0f;
+					}
 				}
+			} else if (bitmap->getBitsPerPixel() == 1) {
+				int pos = 0;
+				for (int y=0; y<bitmap->getHeight(); ++y) {
+					for (int x=0; x<bitmap->getWidth(); ++x) {
+						int entry = pos / 8;
+						int bit   = pos % 8;
+						int value = (data[entry] & (1 << bit)) ? 255 : 0;
+						float col = tbl[value];
+						*flData++ = col;
+						*flData++ = col;
+						*flData++ = col;
+						*flData++ = 1.0f;
+						pos++;
+					}
+				}
+			} else {
+				Log(EError, "%i bpp images are currently not supported!", bitmap->getBitsPerPixel());
 			}
-		} else {
-			Log(EError, "%i bpp images are currently not supported!", bitmap->getBitsPerPixel());
 		}
 
 		m_mipmap = MIPMap::fromBitmap(corrected, m_filterType,
@@ -258,10 +270,16 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "LDRTexture[" << endl
+		oss << "BitmapTexture[" << endl
 			<< "  filename = \"" << m_filename << "\"," << endl
-			<< "  gamma = " << m_gamma << endl
-			<< "]";
+			<< "  bpp = " << m_bpp;
+		if (m_bpp < 128) {
+			oss << "," << endl
+				<< "  gamma = " << m_gamma << endl;
+		} else {
+			oss << endl;
+		}
+		oss << "]";
 		return oss.str();
 	}
 
@@ -278,13 +296,14 @@ protected:
 	Float m_gamma;
 	MIPMap::EWrapMode m_wrapMode;
 	Float m_maxAnisotropy;
+	int m_bpp;
 };
 
 // ================ Hardware shader implementation ================ 
 
-class LDRTextureShader : public Shader {
+class BitmapTextureShader : public Shader {
 public:
-	LDRTextureShader(Renderer *renderer, std::string filename, ref<Bitmap> bitmap,
+	BitmapTextureShader(Renderer *renderer, std::string filename, ref<Bitmap> bitmap,
 			const Point2 &uvOffset, const Vector2 &uvScale, MIPMap::EWrapMode wrapMode, 
 			Float maxAnisotropy) 
 		: Shader(renderer, ETextureShader), m_uvOffset(uvOffset), m_uvScale(uvScale) {
@@ -342,14 +361,14 @@ private:
 	Vector2 m_uvScale;
 };
 
-Shader *LDRTexture::createShader(Renderer *renderer) const {
-	return new LDRTextureShader(renderer, m_filename.leaf(), 
+Shader *BitmapTexture::createShader(Renderer *renderer) const {
+	return new BitmapTextureShader(renderer, m_filename.leaf(), 
 			m_mipmap->getLDRBitmap(), m_uvOffset, m_uvScale,
 			m_wrapMode, (m_filterType == MIPMap::EEWA)
 			? m_maxAnisotropy : 1.0f);
 }
 
-MTS_IMPLEMENT_CLASS_S(LDRTexture, false, Texture2D)
-MTS_IMPLEMENT_CLASS(LDRTextureShader, false, Shader)
-MTS_EXPORT_PLUGIN(LDRTexture, "LDR texture (JPG/PNG/TGA/BMP)");
+MTS_IMPLEMENT_CLASS_S(BitmapTexture, false, Texture2D)
+MTS_IMPLEMENT_CLASS(BitmapTextureShader, false, Shader)
+MTS_EXPORT_PLUGIN(BitmapTexture, "Bitmap texture (EXR/JPG/PNG/TGA/BMP)");
 MTS_NAMESPACE_END
