@@ -95,7 +95,7 @@ public:
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 		m_specularTransmittance = new ConstantSpectrumTexture(
-			props.getSpectrum("specularTransmittance", Spectrum(1.9f)));
+			props.getSpectrum("specularTransmittance", Spectrum(1.0f)));
 
 		Float alpha;
 		if (props.hasProperty("alphaB")) {
