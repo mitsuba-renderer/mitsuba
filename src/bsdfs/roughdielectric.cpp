@@ -40,7 +40,8 @@ MTS_NAMESPACE_BEGIN
  *           \item \code{ggx}: New distribution proposed by
  *               Walter et al. meant to better handle the long
  *               tails observed in transmission measurements through
- *               ground glass. 
+ *               ground glass. Renderings with this distribution may
+ *               converge slowly.
  *       \end{enumerate}
  *       Default: \code{beckmann}
  *     }

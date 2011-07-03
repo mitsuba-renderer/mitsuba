@@ -33,9 +33,9 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * \renderings{
- *     \medrendering{Air-Water (IOR: 1$\leftrightarrow$1.33) interface, see \lstref{dielectric-water}}{bsdf_dielectric_water}
- *     \medrendering{Air-Diamond (IOR: 1$\leftrightarrow$2.419)}{bsdf_dielectric_diamond}
- *     \medrendering{Air-Glass (1$\leftrightarrow$1.504) interface with absorption, see \lstref{dielectric-glass}}{bsdf_dielectric_glass}
+ *     \medrendering{Air$\leftrightarrow$Water (IOR: 1.33) interface. See \lstref{dielectric-water}.}{bsdf_dielectric_water}
+ *     \medrendering{Air$\leftrightarrow$Diamond (IOR: 2.419)}{bsdf_dielectric_diamond}
+ *     \medrendering{Air$\leftrightarrow$Glass (IOR: 1.504) interface and absorption within. See \lstref{dielectric-glass}.}{bsdf_dielectric_glass}
  * }
  *
  * This plugin models an interface between two dielectric materials having mismatched 
