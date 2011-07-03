@@ -224,7 +224,8 @@ public:
 					const Vector wo = -lRec.d;
 
 					/* Allocate a record for querying the BSDF */
-					const BSDFQueryRecord bRec(its, its.toLocal(wo));
+					BSDFQueryRecord bRec(its, its.toLocal(wo));
+					bRec.sampler = rRec.sampler;
 	
 					/* Evaluate BSDF * cos(theta) */
 					const Spectrum bsdfVal = bsdf->fCos(bRec);
@@ -252,6 +253,7 @@ public:
 
 				/* Sample BSDF * cos(theta) */
 				BSDFQueryRecord bRec(its);
+				bRec.sampler = rRec.sampler;
 				Float bsdfPdf;
 				Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, rRec.nextSample2D());
 				if (bsdfVal.isZero())

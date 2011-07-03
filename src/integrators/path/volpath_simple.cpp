@@ -168,7 +168,8 @@ public:
 						rRec.nextSample2D(), rRec.sampler)) {
 					/* Allocate a record for querying the BSDF */
 					const Vector wo = -lRec.d;
-					const BSDFQueryRecord bRec(its, its.toLocal(wo));
+					BSDFQueryRecord bRec(its, its.toLocal(wo));
+					bRec.sampler = rRec.sampler;
 					
 					Float woDotGeoN = dot(its.geoFrame.n, wo);
 					/* Prevent light leaks due to the use of shading normals */
@@ -183,6 +184,7 @@ public:
 
 				/* Sample BSDF * cos(theta) */
 				BSDFQueryRecord bRec(its);
+				bRec.sampler = rRec.sampler;
 				Spectrum bsdfVal = bsdf->sampleCos(bRec, rRec.nextSample2D());
 				if (bsdfVal.isZero()) 
 					break;
