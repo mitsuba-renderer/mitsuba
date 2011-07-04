@@ -66,10 +66,6 @@ public:
 		m_combinedType = m_nestedBSDF->getType() | m_type[m_nestedBSDF->getComponentCount()];
 	}
 
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_nestedBSDF->getDiffuseReflectance(its) * (m_opacity->getValue(its).getLuminance());
-	}
-
 	Spectrum f(const BSDFQueryRecord &bRec) const {
 		return m_nestedBSDF->f(bRec) * (m_opacity->getValue(bRec.its).getLuminance());
 	}

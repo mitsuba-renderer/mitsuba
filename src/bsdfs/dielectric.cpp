@@ -33,9 +33,11 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * \renderings{
- *     \medrendering{Air$\leftrightarrow$Water (IOR: 1.33) interface. See \lstref{dielectric-water}.}{bsdf_dielectric_water}
+ *     \medrendering{Air$\leftrightarrow$Water (IOR: 1.33) interface. 
+ *         See \lstref{dielectric-water}.}{bsdf_dielectric_water}
  *     \medrendering{Air$\leftrightarrow$Diamond (IOR: 2.419)}{bsdf_dielectric_diamond}
- *     \medrendering{Air$\leftrightarrow$Glass (IOR: 1.504) interface and absorption within. See \lstref{dielectric-glass}.}{bsdf_dielectric_glass}
+ *     \medrendering{Air$\leftrightarrow$Glass (IOR: 1.504) interface and absorption within. 
+ *         See \lstref{dielectric-glass}.}{bsdf_dielectric_glass}
  * }
  *
  * This plugin models an interface between two dielectric materials having mismatched 
@@ -95,11 +97,8 @@ public:
 		m_specularTransmittance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularTransmittance", Spectrum(1.0f)));
 
-		m_componentCount = 2;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDeltaReflection | EFrontSide | EBackSide;
-		m_type[1] = EDeltaTransmission | EFrontSide | EBackSide;
-		m_combinedType = m_type[0] | m_type[1];
+		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide);
+		m_components.push_back(EDeltaTransmission | EFrontSide | EBackSide);
 		m_usesRayDifferentials = false;
 	}
 
@@ -109,18 +108,14 @@ public:
 		m_extIOR = stream->readFloat();
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularTransmittance = static_cast<Texture *>(manager->getInstance(stream));
-
-		m_componentCount = 2;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDeltaReflection | EFrontSide | EBackSide;
-		m_type[1] = EDeltaTransmission | EFrontSide | EBackSide;
-		m_combinedType = m_type[0] | m_type[1];
-		m_usesRayDifferentials = false;
+		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide);
+		m_components.push_back(EDeltaTransmission | EFrontSide | EBackSide);
+		m_usesRayDifferentials = 
+			m_specularReflectance->usesRayDifferentials() ||
+			m_specularTransmittance->usesRayDifferentials();
 	}
 
-	virtual ~SmoothDielectric() {
-		delete[] m_type;
-	}
+	virtual ~SmoothDielectric() { }
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
@@ -131,16 +126,16 @@ public:
 		manager->serialize(stream, m_specularTransmittance.get());
 	}
 
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return Spectrum(0.0f);
-	}
-
-	Spectrum f(const BSDFQueryRecord &bRec) const {
-		return Spectrum(0.0f);
-	}
-
-	Float pdf(const BSDFQueryRecord &bRec) const {
-		return 0.0f;
+	void addChild(const std::string &name, ConfigurableObject *child) {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
+			m_specularReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularTransmittance") {
+			m_specularTransmittance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_specularTransmittance->usesRayDifferentials();
+		} else {
+			BSDF::addChild(name, child);
+		}
 	}
 
 	/// Reflection in local coordinates
@@ -200,12 +195,11 @@ public:
 				bRec.sampledType = EDeltaReflection;
 				bRec.wo = reflect(bRec.wi);
 
-				return m_specularReflectance->getValue(bRec.its) 
-					/ std::abs(Frame::cosTheta(bRec.wo));
+				return m_specularReflectance->getValue(bRec.its);
 			} else {
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDeltaTransmission;
-
+;
 				/* Given cos(N, transmittedRay), compute the 
 				   transmitted direction */
 				bRec.wo = refract(bRec.wi, eta, cosThetaT);
@@ -213,15 +207,13 @@ public:
 				/* When transporting radiance, account for the solid angle
 				   change at boundaries with different indices of refraction. */
 				return m_specularTransmittance->getValue(bRec.its) 
-					* (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1)
-					/ std::abs(Frame::cosTheta(bRec.wo));
+					* (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1);
 			}
 		} else if (sampleReflection) {
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
-			return m_specularReflectance->getValue(bRec.its) * (Fr
-				/ std::abs(Frame::cosTheta(bRec.wo)));
+			return m_specularReflectance->getValue(bRec.its) * Fr;
 		} else {
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDeltaTransmission;
@@ -234,8 +226,55 @@ public:
 			/* When transporting radiance, account for the solid angle
 			   change at boundaries with different indices of refraction. */
 			return m_specularTransmittance->getValue(bRec.its) 
-				* ((1-Fr) * (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1))
-				/ std::abs(Frame::cosTheta(bRec.wo));
+				* ((1-Fr) * (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1));
+		}
+	}
+
+	Spectrum eval(const BSDFQueryRecord &bRec) const {
+		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
+				&& (bRec.component == -1 || bRec.component == 0);
+		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
+				&& (bRec.component == -1 || bRec.component == 1);
+		bool reflection = BSDF::cosTheta(bRec.wo) * BSDF::cosTheta(bRec.wi) > 0;
+		
+		if ((reflection && !sampleReflection) || 
+		   (!reflection && !sampleTransmission))
+			return Spectrum(0.0f);
+
+		Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+
+		if (reflection) {
+			return m_specularReflectance->getValue(bRec.its) * fr;
+		} else {
+			Float etaI = m_extIOR, etaT = m_intIOR;
+			bool entering = Frame::cosTheta(bRec.wi) > 0.0f;
+			if (!entering)
+				std::swap(etaI, etaT);
+
+			Float factor = (bRec.quantity == ERadiance) 
+				? (etaI*etaI) / (etaT*etaT) : 1.0f;
+
+			return m_specularTransmittance->getValue(bRec.its)  * factor * (1 - fr);
+		}
+	}
+
+	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
+				&& (bRec.component == -1 || bRec.component == 0);
+		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
+				&& (bRec.component == -1 || bRec.component == 1);
+
+		if (measure != EDiscrete || (!sampleReflection && !sampleTransmission))
+			return 0.0f;
+
+		bool reflection = Frame::costheta(bRec.wo)
+			* Frame::cosTheta(bRec.wi) > 0;
+
+		if (sampleTransmission && sampleReflection) {
+			Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+			return reflection ? Fr : (1 - Fr);
+		} else {
+			return sampleReflection == reflection ? 1.0f : 0.0f;
 		}
 	}
 
@@ -286,7 +325,7 @@ public:
 				bRec.sampledType = EDeltaReflection;
 				bRec.wo = reflect(bRec.wi);
 
-				pdf = Fr * std::abs(Frame::cosTheta(bRec.wo));
+				pdf = Fr;
 				return m_specularReflectance->getValue(bRec.its) * Fr;
 			} else {
 				bRec.sampledComponent = 1;
@@ -296,7 +335,7 @@ public:
 				   transmitted direction */
 				bRec.wo = refract(bRec.wi, eta, cosThetaT);
 					
-				pdf = (1-Fr) * std::abs(Frame::cosTheta(bRec.wo));
+				pdf = 1-Fr;
 
 				/* When transporting radiance, account for the solid angle
 				   change at boundaries with different indices of refraction. */
@@ -307,7 +346,7 @@ public:
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
-			pdf = std::abs(Frame::cosTheta(bRec.wo));
+			pdf = 1;
 			return m_specularReflectance->getValue(bRec.its) * Fr;
 		} else {
 			bRec.sampledComponent = 1;
@@ -317,61 +356,13 @@ public:
 				return Spectrum(0.0f);
 
 			bRec.wo = refract(bRec.wi, eta, cosThetaT);
-			pdf = std::abs(Frame::cosTheta(bRec.wo));
+			pdf = 1;
 
 			/* When transporting radiance, account for the solid angle
 			   change at boundaries with different indices of refraction. */
 			return m_specularTransmittance->getValue(bRec.its) 
 				* ((1-Fr) * (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1));
 		}
-	}
-
-	Float pdfDelta(const BSDFQueryRecord &bRec) const {
-		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
-				&& (bRec.component == -1 || bRec.component == 1);
-		bool reflection = bRec.wo.z * bRec.wi.z > 0;
-
-		Float result = 0.0f;
-		if (sampleTransmission && sampleReflection) {
-			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-			result = reflection ? fr : (1-fr);
-		} else if (sampleReflection) {
-			result = reflection ? 1.0f : 0.0f;
-		} else if (sampleTransmission) {
-			result = reflection ? 0.0f : 1.0f;
-		}
-		return result * std::abs(Frame::cosTheta(bRec.wo));
-	}
-
-	Spectrum fDelta(const BSDFQueryRecord &bRec) const {
-		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
-				&& (bRec.component == -1 || bRec.component == 1);
-		bool reflection = bRec.wo.z * bRec.wi.z > 0;
-		Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-		
-		if (sampleReflection && !sampleTransmission && !reflection) 
-			return Spectrum(0.0f);
-		else if (!sampleReflection && sampleTransmission && reflection)
-			return Spectrum(0.0f);
-
-		if (reflection) {
-			return m_specularReflectance->getValue(bRec.its) * fr;
-		} else {
-			Float etaI = m_extIOR, etaT = m_intIOR;
-			bool entering = Frame::cosTheta(bRec.wi) > 0.0f;
-			if (!entering)
-				std::swap(etaI, etaT);
-
-			Float factor = (bRec.quantity == ERadiance) 
-				? (etaI*etaI) / (etaT*etaT) : 1.0f;
-
-			return m_specularTransmittance->getValue(bRec.its)  * factor * (1 - fr);
-		}
-
 	}
 
 	std::string toString() const {

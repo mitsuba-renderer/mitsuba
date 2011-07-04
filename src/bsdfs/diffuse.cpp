@@ -23,7 +23,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{lambertian}{Ideally diffuse / Lambertian material}
+/*! \plugin{diffuse}{Smooth diffuse material}
  *
  * \parameters{
  *     \lastparameter{reflectance}{\Spectrum\Or\Texture}{
@@ -32,101 +32,105 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * \renderings{
- *     \rendering{Homogeneous reflectance, see \lstref{lambertian-uniform}}{bsdf_lambertian_plain}
- *     \rendering{Textured reflectance, see \lstref{lambertian-textured}}{bsdf_lambertian_textured}
+ *     \rendering{Homogeneous reflectance, see \lstref{diffuse-uniform}}{bsdf_diffuse_plain}
+ *     \rendering{Textured reflectance, see \lstref{diffuse-textured}}{bsdf_diffuse_textured}
  * }
  *
- * The Lambertian material represents an ideally diffuse material
- * with a user-specified amount of reflectance. Apart from a 
- * homogeneous reflectance value, the plugin can also accept a nested 
- * or referenced texture map to be used as the source of reflectance 
+ * The smooth diffuse material (often referred to as ``Lambertian'' materials)
+ * represents an ideally diffuse material with a user-specified amount of 
+ * reflectance. Any received illumination is scattered so that the surface 
+ * looks the same independently of the direction of observation.
+ *
+ * Apart from a  homogeneous reflectance value, the plugin can also accept 
+ * a nested or referenced texture map to be used as the source of reflectance 
  * information, which is then mapped onto the shape based on its UV
- * parameterization.
- * When no parameters are specified, the model uses the default 
+ * parameterization. When no parameters are specified, the model uses the default 
  * of 50% reflectance.
  *
  * Note that this material is one-sided---that is, observed from the 
  * back side, it will be completely black. If this is undesirable, 
  * consider using the \pluginref{twosided} BRDF adapter plugin.
  *
- * \begin{xml}[caption=Reflectance specified as an sRGB color, label=lst:lambertian-uniform]
- * <bsdf type="lambertian">
+ * \begin{xml}[caption=Reflectance specified as an sRGB color, label=lst:diffuse-uniform]
+ * <bsdf type="diffuse">
  *     <srgb name="reflectance" value="#6d7185"/>
  * </bsdf>
  * \end{xml}
  *
- * \begin{xml}[caption=Lambertian material with a texture map, label=lst:lambertian-textured]
- * <bsdf type="lambertian">
+ * \begin{xml}[caption=Diffuse material with a texture map, label=lst:diffuse-textured]
+ * <bsdf type="diffuse">
  *     <texture type="bitmap" name="reflectance">
  *         <string name="filename" value="wood.jpg"/>
  *     </texture>
  * </bsdf>
  * \end{xml}
  */
-class Lambertian : public BSDF {
+class SmoothDiffuse : public BSDF {
 public:
-	Lambertian(const Properties &props) 
+	SmoothDiffuse(const Properties &props) 
 		: BSDF(props) {
-		m_reflectance = new ConstantSpectrumTexture(
-			props.getSpectrum("reflectance", Spectrum(.5f)));
-		m_componentCount = 1;
-		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EDiffuseReflection | EFrontSide;
+		/* For better compatibility with other models, support both
+		   'reflectance' and 'diffuseReflectance' as parameter names */
+		m_reflectance = new ConstantSpectrumTexture(props.getSpectrum(
+			props.hasProperty("reflectance") ? "reflectance" 
+				: "diffuseReflectance", Spectrum(.5f)));
+		m_components.push_back(EDiffuseReflection | EFrontSide);
 		m_usesRayDifferentials = false;
 	}
 
-	Lambertian(Stream *stream, InstanceManager *manager) 
+	SmoothDiffuse(Stream *stream, InstanceManager *manager) 
 		: BSDF(stream, manager) {
 		m_reflectance = static_cast<Texture *>(manager->getInstance(stream));
-		m_componentCount = 1;
-		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EDiffuseReflection | EFrontSide;
+		m_components.push_back(EDiffuseReflection | EFrontSide);
 		m_usesRayDifferentials = m_reflectance->usesRayDifferentials();
 	}
 
-	virtual ~Lambertian() {
-		delete[] m_type;
-	}
+	virtual ~SmoothDiffuse() { }
 
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_reflectance->getValue(its);
-	}
-
-	Spectrum f(const BSDFQueryRecord &bRec) const {
-		if (!(bRec.typeMask & m_combinedType)
-			|| bRec.wi.z <= 0 || bRec.wo.z <= 0)
+	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
+			|| Frame::cosTheta(bRec.wi) <= 0 
+			|| Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
-
-		return m_reflectance->getValue(bRec.its) * INV_PI;
+			
+		return m_reflectance->getValue(bRec.its)
+			* (INV_PI * Frame::cosTheta(bRec.wo));
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec) const {
-		if (bRec.wi.z <= 0 || bRec.wo.z <= 0)
+	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
+			|| Frame::cosTheta(bRec.wi) <= 0 
+			|| Frame::cosTheta(bRec.wo) <= 0)
 			return 0.0f;
+
 		return Frame::cosTheta(bRec.wo) * INV_PI;
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		if (!(bRec.typeMask & m_combinedType) || bRec.wi.z <= 0)
+		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0) 
 			return Spectrum(0.0f);
+
 		bRec.wo = squareToHemispherePSA(sample);
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
-		return m_reflectance->getValue(bRec.its) / Frame::cosTheta(bRec.wo);
+		return m_reflectance->getValue(bRec.its);
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
-		if (!(bRec.typeMask & m_combinedType) || bRec.wi.z <= 0)
+		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
+		
 		bRec.wo = squareToHemispherePSA(sample);
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
 		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-		return m_reflectance->getValue(bRec.its) * INV_PI;
+		return m_reflectance->getValue(bRec.its) 
+			* (INV_PI * Frame::cosTheta(bRec.wo));
 	}
-		
+
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "reflectance") {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) 
+				&& (name == "reflectance" || name == "diffuseReflectance")) {
 			m_reflectance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_reflectance->usesRayDifferentials();
 		} else {
@@ -142,7 +146,7 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Lambertian[" << endl
+		oss << "SmoothDiffuse[" << endl
 			<< "  reflectance = " << indent(m_reflectance->toString()) << endl
 			<< "]";
 		return oss.str();
@@ -157,9 +161,9 @@ private:
 
 // ================ Hardware shader implementation ================ 
 
-class LambertianShader : public Shader {
+class SmoothDiffuseShader : public Shader {
 public:
-	LambertianShader(Renderer *renderer, const Texture *reflectance) 
+	SmoothDiffuseShader(Renderer *renderer, const Texture *reflectance) 
 		: Shader(renderer, EBSDFShader), m_reflectance(reflectance) {
 		m_reflectanceShader = renderer->registerShaderForResource(m_reflectance.get());
 	}
@@ -180,10 +184,11 @@ public:
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
 		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (wi.z < 0.0 || wo.z < 0.0)" << endl
+			<< "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
-			<< "    return " << depNames[0] << "(uv) * 0.31831;" << endl
+			<< "    return " << depNames[0] << "(uv) * 0.31831 * cosTheta(wo);" << endl
 			<< "}" << endl
+			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    return " << evalName << "(uv, wi, wo);" << endl
 			<< "}" << endl;
@@ -195,11 +200,11 @@ private:
 	ref<Shader> m_reflectanceShader;
 };
 
-Shader *Lambertian::createShader(Renderer *renderer) const { 
-	return new LambertianShader(renderer, m_reflectance.get());
+Shader *SmoothDiffuse::createShader(Renderer *renderer) const { 
+	return new SmoothDiffuseShader(renderer, m_reflectance.get());
 }
 
-MTS_IMPLEMENT_CLASS(LambertianShader, false, Shader)
-MTS_IMPLEMENT_CLASS_S(Lambertian, false, BSDF)
-MTS_EXPORT_PLUGIN(Lambertian, "Lambertian BRDF")
+MTS_IMPLEMENT_CLASS(SmoothDiffuseShader, false, Shader)
+MTS_IMPLEMENT_CLASS_S(SmoothDiffuse, false, BSDF)
+MTS_EXPORT_PLUGIN(SmoothDiffuse, "Smooth diffuse BRDF")
 MTS_NAMESPACE_END

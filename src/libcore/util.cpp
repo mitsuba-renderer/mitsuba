@@ -677,12 +677,12 @@ Float lanczosSinc(Float t, Float tau) {
 	directions in addition to the fresnel coefficients. Based on 
 	PBRT and the paper "Derivation of Refraction Formulas" 
 	by Paul S. Heckbert. */
-Float fresnelDielectric(Float cosTheta1, Float cosTheta2, 
+Float fresnelDielectric(Float cosThetaI, Float cosThetaT, 
 						Float etaI, Float etaT) {
-	Float Rs = (etaI * cosTheta1 - etaT * cosTheta2)
-			/ (etaI * cosTheta1 + etaT * cosTheta2);
-	Float Rp = (etaT * cosTheta1 - etaI * cosTheta2)
-			/ (etaT * cosTheta1 + etaI * cosTheta2);
+	Float Rs = (etaI * cosThetaI - etaT * cosThetaT)
+			/ (etaI * cosThetaI + etaT * cosThetaT);
+	Float Rp = (etaT * cosThetaI - etaI * cosThetaT)
+			/ (etaT * cosThetaI + etaI * cosThetaT);
 
 	return (Rs * Rs + Rp * Rp) / 2.0f;
 }

@@ -107,7 +107,7 @@ public:
 				bRec.sampler = rRec.sampler;
 	
 				/* Evaluate BSDF * cos(theta) */
-				const Spectrum bsdfVal = bsdf->fCos(bRec);
+				const Spectrum bsdfVal = bsdf->eval(bRec);
 
 				Float woDotGeoN = dot(its.geoFrame.n, wo);
 
@@ -134,7 +134,7 @@ public:
 			BSDFQueryRecord bRec(its);
 			bRec.sampler = rRec.sampler;
 			Float bsdfPdf;
-			Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, rRec.nextSample2D());
+			Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, rRec.nextSample2D());
 			if (bsdfVal.isZero()) 
 				break;
 			bsdfVal /= bsdfPdf;

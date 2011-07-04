@@ -227,7 +227,7 @@ public:
 		GatherPoint p;
 		if (scene->rayIntersect(ray, p.its)) {
 			const BSDF *bsdf = p.its.shape->getBSDF();
-			if (bsdf->getType() & BSDF::ENonDelta) {
+			if (bsdf->getType() & BSDF::ESmooth) {
 				p.weight = weight;
 				p.sample = sample;
 				p.radius = m_initialRadius;
@@ -246,10 +246,10 @@ public:
 					/* Sample the BSDF and recurse */
 					BSDFQueryRecord bRec(p.its);
 					bRec.component = i;
-					Spectrum bsdfVal = bsdf->sampleCos(bRec, Point2(0.0f));
+					Spectrum bsdfVal = bsdf->sample(bRec, Point2(0.0f));
 					if (bsdfVal.isZero())
 						continue;
-					bsdfVal = bsdf->fDelta(bRec);
+					bsdfVal = bsdf->eval(bRec, EDiscrete);
 
 					const Float rrProb = depth < 4 ? 1 : 0.8f;
 					if (sampler->independent1D() < rrProb) {

@@ -123,6 +123,7 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 
 		context.attributes[transcode(xmlAttributes.getName(i))] = attrValue;
 	}
+
 	if (name == "transform")
 		m_transform = Transform();
 

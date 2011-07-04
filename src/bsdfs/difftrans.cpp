@@ -27,111 +27,88 @@ MTS_NAMESPACE_BEGIN
  *
  * \parameters{
  *     \lastparameter{transmittance}{\Spectrum\Or\Texture}{
- *       Specifies the diffuse transmittance / albedo of the material
+ *       Specifies the diffuse transmittance of the material
  *       \default{0.5}
  *     }
  * }
  *
  * \renderings{
- *     \rendering{Homogeneous reflectance, see \lstref{lambertian-uniform}}{bsdf_lambertian_plain}
- *     \rendering{Textured reflectance, see \lstref{lambertian-textured}}{bsdf_lambertian_textured}
+ *     \rendering{The model with default parameters}{bsdf_difftrans}
  * }
  *
- * The Lambertian material represents an ideally diffuse material
- * with a user-specified amount of reflectance. Apart from a 
- * homogeneous reflectance value, the plugin can also accept a nested 
- * or referenced texture map to be used as the source of reflectance 
- * information, which is then mapped onto the shape based on its UV
- * parameterization.
- * When no parameters are specified, the model uses the default 
- * of 50% reflectance.
- *
- * \begin{xml}[caption=Reflectance specified as an sRGB color, label=lst:lambertian-uniform]
- * <bsdf type="lambertian">
- *     <srgb name="reflectance" value="#6d7185"/>
- * </bsdf>
- * \end{xml}
- * \begin{xml}[caption=Lambertian material with a texture map, label=lst:lambertian-textured]
- * <bsdf type="lambertian">
- *     <texture type="bitmap" name="reflectance">
- *         <string name="filename" value="wood.jpg"/>
- *     </texture>
- * </bsdf>
- * \end{xml}
+ * This BSDF models a non-reflective material, where any entering light loses 
+ * its directionality and is diffusely transmitted from the other side. This 
+ * model can be combined\footnote{For instance using the \pluginref{mixture} 
+ * plugin.} with a surface reflection model to describe translucent substances
+ * that have internal multiple scattering processes (e.g. plant leaves).
  */
 
 class DiffuseTransmitter : public BSDF {
 public:
 	DiffuseTransmitter(const Properties &props) 
 		: BSDF(props) {
-		m_transmittance = new ConstantSpectrumTexture(
-			props.getSpectrum("transmittance", Spectrum(.5f)));
-		m_componentCount = 1;
-		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EDiffuseTransmission | EFrontSide | EBackSide;
+		/* For better compatibility with other models, support both
+		   'transmittance' and 'diffuseTransmittance' as parameter names */
+		m_transmittance = new ConstantSpectrumTexture(props.getSpectrum(
+			props.hasProperty("transmittance") ? "transmittance" 
+				: "diffuseTransmittance", Spectrum(.5f)));
+		m_components.push_back(EDiffuseTransmission | EFrontSide | EBackSide);
 		m_usesRayDifferentials = false;
 	}
 
 	DiffuseTransmitter(Stream *stream, InstanceManager *manager) 
 		: BSDF(stream, manager) {
 		m_transmittance = static_cast<Texture *>(manager->getInstance(stream));
-		m_componentCount = 1;
-		m_type = new unsigned int[m_componentCount];
-		m_combinedType = m_type[0] = EDiffuseTransmission | EFrontSide | EBackSide;
+		m_components.push_back(EDiffuseTransmission | EFrontSide | EBackSide);
 		m_usesRayDifferentials = m_transmittance->usesRayDifferentials();
 	}
 
-	virtual ~DiffuseTransmitter() {
-		delete[] m_type;
-	}
+	virtual ~DiffuseTransmitter() { }
 
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return Spectrum(0.0f);
-	}
-
-	Spectrum f(const BSDFQueryRecord &bRec) const {
-		if (!(bRec.typeMask & m_combinedType)
-			|| bRec.wi.z*bRec.wo.z >= 0)
+	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		if (!(bRec.typeMask & EDiffuseTransmission) || measure != ESolidAngle
+			|| Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
 			return Spectrum(0.0f);
 
-		return m_transmittance->getValue(bRec.its) * INV_PI;
+		return m_transmittance->getValue(bRec.its)
+			* (INV_PI * std::abs(Frame::cosTheta(bRec.wo)));
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec) const {
-		if (bRec.wi.z*bRec.wo.z >= 0)
+	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		if (!(bRec.typeMask & EDiffuseTransmission) || measure != ESolidAngle
+			|| Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
 			return 0.0f;
+
 		return std::abs(Frame::cosTheta(bRec.wo)) * INV_PI;
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		if (!(bRec.typeMask & m_combinedType))
+		if (!(bRec.typeMask & EDiffuseTransmission))
 			return Spectrum(0.0f);
 		bRec.wo = squareToHemispherePSA(sample);
-		if (bRec.wi.z > 0)
+		if (Frame::cosTheta(bRec.wi) > 0)
 			bRec.wo.z *= -1;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseTransmission;
-		if (Frame::cosTheta(bRec.wo) == 0)
-			return Spectrum(0.0f);
-		return m_transmittance->getValue(bRec.its) / std::abs(Frame::cosTheta(bRec.wo));
+		return m_transmittance->getValue(bRec.its);
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (!(bRec.typeMask & m_combinedType)) 
 			return Spectrum(0.0f);
 		bRec.wo = squareToHemispherePSA(sample);
-		if (bRec.wi.z > 0)
+		if (Frame::cosTheta(bRec.wi) > 0)
 			bRec.wo.z *= -1;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseTransmission;
 		pdf = std::abs(Frame::cosTheta(bRec.wo)) * INV_PI;
-		if (Frame::cosTheta(bRec.wo) == 0)
-			return Spectrum(0.0f);
-		return m_transmittance->getValue(bRec.its) * INV_PI;
+		return m_transmittance->getValue(bRec.its) 
+			* (INV_PI * std::abs(Frame::cosTheta(bRec.wo)));
 	}
-		
+
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "transmittance") {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && 
+			 	(name == "transmittance" || name == "diffuseTransmittance")) {
 			m_transmittance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_transmittance->usesRayDifferentials();
 		} else {
@@ -185,10 +162,11 @@ public:
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
 		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (wi.z*wo.z >= 0.0)" << endl
+			<< "    if (cosTheta(wi) * cosTheta(wo) >= 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
-			<< "    return " << depNames[0] << "(uv) * 0.31831;" << endl
+			<< "    return " << depNames[0] << "(uv) * 0.31831 * abs(cosTheta(wo));" << endl
 			<< "}" << endl
+			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    return " << evalName << "(uv, wi, wo);" << endl
 			<< "}" << endl;

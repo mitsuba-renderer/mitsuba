@@ -64,10 +64,6 @@ public:
 		delete[] m_type;
 	}
 
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return Spectrum(0.0f);
-	}
-
 	/**
 	 * Beckmann distribution function for gaussian random surfaces
 	 * \param thetaM Tangent of the angle between M and N.

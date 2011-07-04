@@ -44,10 +44,7 @@ public:
 		configure();
 	}
 
-	virtual ~TwoSidedBRDF() {
-		if (m_type)
-			delete[] m_type;
-	}
+	virtual ~TwoSidedBRDF() { }
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
@@ -57,33 +54,24 @@ public:
 
 	void configure() {
 		if (!m_nestedBRDF)
-			Log(EError, "TwoSidedBRDF: A child BRDF instance is required");
+			Log(EError, "A nested one-sided material is required!");
 		m_usesRayDifferentials = m_nestedBRDF->usesRayDifferentials();
-		m_componentCount = m_nestedBRDF->getComponentCount();
-		if (m_type)
-			delete[] m_type;
-		m_type = new unsigned int[m_componentCount];
-		m_combinedType = 0;
-		for (int i=0; i<m_nestedBRDF->getComponentCount(); ++i) {
-			m_type[i] = m_nestedBRDF->getType(i) | EFrontSide | EBackSide;
-			m_combinedType |= m_type[i];
-		}
+		m_components.clear();
+		for (int i=0; i<m_nestedBRDF->getComponentCount(); ++i) 
+			m_components.push_back(m_nestedBRDF->getType(i) | EFrontSide | EBackSide);
+		BSDF::configure();
 		if (m_combinedType & BSDF::ETransmission)
-			Log(EError, "TwoSidedBRDF: only BRDF child instances (without "
-				"transmission) are supported");
+			Log(EError, "Only materials without "
+				"a transmission component can be nested!");
 	}
 
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_nestedBRDF->getDiffuseReflectance(its);
-	}
-
-	Spectrum f(const BSDFQueryRecord &bRec) const {
+	Spectrum eval(const BSDFQueryRecord &bRec) const {
 		BSDFQueryRecord b(bRec);
-		if (b.wi.z < 0) {
+		if (Frame::cosTheta(b.wi) < 0) {
 			b.wi.z *= -1;
 			b.wo.z *= -1;
 		}
-		return m_nestedBRDF->f(b);
+		return m_nestedBRDF->eval(b);
 	}
 
 
@@ -96,14 +84,15 @@ public:
 		return m_nestedBRDF->pdf(b);
 	}
 
-
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		bool flipped = false;
-		if (bRec.wi.z < 0) {
+		if (Frame::cosTheta(bRec.wi) < 0) {
 			bRec.wi.z *= -1;
 			flipped = true;
 		}
+	
 		Spectrum result = m_nestedBRDF->sample(bRec, sample);
+
 		if (flipped) {
 			bRec.wi.z *= -1;
 			if (!result.isZero()) 
@@ -114,13 +103,16 @@ public:
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		bool flipped = false;
-		if (bRec.wi.z < 0) {
+		if (Frame::cosTheta(bRec.wi) < 0) {
 			bRec.wi.z *= -1;
 			flipped = true;
 		}
+
 		Spectrum result = m_nestedBRDF->sample(bRec, pdf, sample);
+
 		if (flipped) {
 			bRec.wi.z *= -1;
+	
 			if (!result.isZero() && pdf != 0)
 				bRec.wo.z *= -1;
 		}
@@ -129,6 +121,8 @@ public:
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(BSDF::m_theClass)) {
+			if (m_nestedBRDF != NULL)
+				Log(EError, "Only a single nested BRDF can be added!");
 			m_nestedBRDF = static_cast<BSDF *>(child);
 		} else {
 			BSDF::addChild(name, child);
@@ -178,13 +172,13 @@ public:
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
 		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (wi.z <= 0.0) {" << endl
+			<< "    if (cosTheta(wi) <= 0.0) {" << endl
 			<< "    	wi.z *= -1; wo.z *= -1;" << endl
 			<< "    }" << endl
 			<< "    return " << depNames[0] << "(uv, wi, wo);" << endl
 			<< "}" << endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (wi.z <= 0.0) {" << endl
+			<< "    if (cosTheta(wi) <= 0.0) {" << endl
 			<< "    	wi.z *= -1; wo.z *= -1;" << endl
 			<< "    }" << endl
 			<< "    return " << depNames[0] << "_diffuse(uv, wi, wo);" << endl

@@ -332,7 +332,7 @@ public:
 					const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 
 					/* Evaluate BSDF * cos(theta) */
-					const Spectrum bsdfVal = bsdf->fCos(bRec);
+					const Spectrum bsdfVal = bsdf->eval(bRec);
 
 					LiSurf += lRec.value * bsdfVal * weight;
 				}
@@ -363,7 +363,7 @@ public:
 					/* Sample the BSDF and recurse */
 					BSDFQueryRecord bRec(its);
 					bRec.component = i;
-					Spectrum bsdfVal = bsdf->sampleCos(bRec, Point2(0.0f));
+					Spectrum bsdfVal = bsdf->sample(bRec, Point2(0.0f));
 					if (bsdfVal.isZero())
 						continue;
 
@@ -382,7 +382,8 @@ public:
 
 			for (int i=0; i<m_glossySamples; ++i) {
 				BSDFQueryRecord bRec(its);
-				Spectrum bsdfVal = bsdf->sampleCos(bRec, sampleArray[i]);
+				bRec.sampler = rRec.sampler;
+				Spectrum bsdfVal = bsdf->sample(bRec, sampleArray[i]);
 
 				rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadianceNoEmission);
 				recursiveRay = Ray(its.p, its.toWorld(bRec.wo), ray.time);

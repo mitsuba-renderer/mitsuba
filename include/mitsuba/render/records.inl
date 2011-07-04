@@ -21,19 +21,19 @@
 
 MTS_NAMESPACE_BEGIN
 	
-inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its)
-	: its(its), sampler(NULL), wi(its.wi), quantity(ERadiance),
-	typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
+inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, ETransportQuantity quantity)
+	: its(its), sampler(NULL), wi(its.wi), quantity(quantity),
+	typeMask(BSDF::EAll), sampledType(0), component(-1), sampledComponent(-1) {
 }
 
-inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wo)	  
-	: its(its), sampler(NULL), wi(its.wi), wo(wo), quantity(ERadiance),
-    typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
+inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wo, ETransportQuantity quantity)
+	: its(its), sampler(NULL), wi(its.wi), wo(wo), quantity(quantity),
+    typeMask(BSDF::EAll), sampledType(0), component(-1), sampledComponent(-1) {
 }
 	
-inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wi, const Vector &wo) 
-  : its(its), sampler(NULL), wi(wi), wo(wo), quantity(ERadiance),
-  typeMask(0xFFFFFFFF), sampledType(0), component(-1), sampledComponent(-1) {
+inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wi, const Vector &wo, ETransportQuantity quantity) 
+  : its(its), sampler(NULL), wi(wi), wo(wo), quantity(quantity),
+  typeMask(BSDF::EAll), sampledType(0), component(-1), sampledComponent(-1) {
 }
 
 inline bool Intersection::hasSubsurface() const {

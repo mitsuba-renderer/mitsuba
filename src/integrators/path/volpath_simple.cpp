@@ -78,7 +78,7 @@ public:
 				if (rRec.type & RadianceQueryRecord::EDirectMediumRadiance && 
 					scene->sampleAttenuatedLuminaire(mRec.p, ray.time,
 						rRec.medium, lRec, rRec.nextSample2D(), rRec.sampler)) {
-					Li += pathThroughput * lRec.value * phase->f(
+					Li += pathThroughput * lRec.value * phase->eval(
 							PhaseFunctionQueryRecord(mRec, -ray.d, -lRec.d));
 				}
 
@@ -175,7 +175,7 @@ public:
 					/* Prevent light leaks due to the use of shading normals */
 					if (!m_strictNormals ||
 						woDotGeoN * Frame::cosTheta(bRec.wo) > 0)
-						Li += pathThroughput * lRec.value * bsdf->fCos(bRec);
+						Li += pathThroughput * lRec.value * bsdf->eval(bRec);
 				}
 
 				/* ==================================================================== */
@@ -185,7 +185,7 @@ public:
 				/* Sample BSDF * cos(theta) */
 				BSDFQueryRecord bRec(its);
 				bRec.sampler = rRec.sampler;
-				Spectrum bsdfVal = bsdf->sampleCos(bRec, rRec.nextSample2D());
+				Spectrum bsdfVal = bsdf->sample(bRec, rRec.nextSample2D());
 				if (bsdfVal.isZero()) 
 					break;
 	

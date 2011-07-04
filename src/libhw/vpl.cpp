@@ -136,7 +136,7 @@ void VPLShaderManager::init() {
 						m_renderer->registerShaderForResource(triMesh->getBSDF()) : NULL;
 					if (shader != NULL && !shader->isComplete()) {
 						m_renderer->unregisterShaderForResource(triMesh->getBSDF());
-					} else if (shader->getFlags() & Shader::ETransparent) {
+					} else if (shader != NULL && shader->getFlags() & Shader::ETransparent) {
 						m_transparentMeshes.push_back(std::make_pair(triMesh.get(), instance->getWorldTransform()));
 						continue;
 					}
@@ -152,7 +152,7 @@ void VPLShaderManager::init() {
 			m_renderer->registerShaderForResource(triMesh->getBSDF()) : NULL;
 		if (shader != NULL && !shader->isComplete()) {
 			m_renderer->unregisterShaderForResource(triMesh->getBSDF());
-		} else if (shader->getFlags() & Shader::ETransparent) {
+		} else if (shader != NULL && shader->getFlags() & Shader::ETransparent) {
 			m_transparentMeshes.push_back(std::make_pair(triMesh.get(), Transform()));
 			continue;
 		}
@@ -508,11 +508,11 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 		} else {
 			oss << "   vec3 S;" << endl
 				<< "   if (abs(N.x) > abs(N.y)) {" << endl
-				<< "      float invLen = 1.0 / sqrt(N.x*N.x + N.z*N.z);" << endl
-				<< "      S = vec3(-N.z * invLen, 0.0, N.x * invLen);" << endl
+				<< "        float invLen = 1.0 / sqrt(N.x*N.x + N.z*N.z);" << endl
+				<< "        S = vec3(-N.z * invLen, 0.0, N.x * invLen);" << endl
 				<< "   } else {" << endl
-				<< "      float invLen = 1.0 / sqrt(N.y*N.y + N.z*N.z);" << endl
-				<< "      S = vec3(0.0, -N.z * invLen, N.y * invLen);" << endl
+				<< "        float invLen = 1.0 / sqrt(N.y*N.y + N.z*N.z);" << endl
+				<< "        S = vec3(0.0, -N.z * invLen, N.y * invLen);" << endl
 				<< "   }" << endl;
 		}
 		oss << "   vec3 T = cross(N, S);" << endl
@@ -542,17 +542,19 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 				oss << "(vplUV, vplWi, vplWo);" << endl;
 			else
 				oss << "_dir(vplWo);" << endl;
+			if (vpl.type == ESurfaceVPL)
+				oss << "   else contrib *= abs(cosTheta(vplWo));" << endl;
 		oss << "   if (d < minDist) d = minDist;" << endl
 			<< "   if (!diffuseReceivers)" << endl
 			<< "      contrib *= "<< bsdfEvalName << "(uv, wi, wo);" << endl
 			<< "   else" << endl
 			<< "      contrib *= " << bsdfEvalName << "_diffuse(uv, wi, wo);" << endl
 			<< "   gl_FragColor.rgb = contrib";
-		if (vpl.type == ESurfaceVPL || (vpl.type == ELuminaireVPL 
-				&& (vpl.luminaire->getType() & Luminaire::EOnSurface)))
-			oss << " * (shadow * abs(cosTheta(wo) * cosTheta(vplWo)) / (d*d))";
+		if (vpl.type == ELuminaireVPL 
+				&& (vpl.luminaire->getType() & Luminaire::EOnSurface))
+			oss << " * (shadow * abs(cosTheta(vplWo)) / (d*d))";
 		else 
-			oss << " * (shadow * abs(cosTheta(wo)) / (d*d))";
+			oss << " * (shadow / (d*d))";
 		if (luminaire != NULL) {
 			oss << endl;
 			oss << "                      + " << lumEvalName << "_area(uv)"

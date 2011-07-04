@@ -97,8 +97,7 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 		Vector wo = cameraPosition - its.p;
 		Float dist = wo.length(); wo /= dist;
 
-		BSDFQueryRecord bRec(its, its.toLocal(wo));
-		bRec.quantity = EImportance;
+		BSDFQueryRecord bRec(its, its.toLocal(wo), EImportance);
 
 		Float importance; 
 		if (m_isPerspectiveCamera)
@@ -122,7 +121,7 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 
 		/* Splat onto the accumulation buffer */
 		Ray ray(its.p, wo, 0, dist, its.time);
-		Spectrum sampleVal = weight * bsdf->fCos(bRec) 
+		Spectrum sampleVal = weight * bsdf->eval(bRec) 
 			* transmittance * (importance * correction);
 
 		m_workResult->splat(screenSample, sampleVal, m_filter);
@@ -160,8 +159,9 @@ void CaptureParticleWorker::handleMediumInteraction(int depth, bool caustic,
 		/* Splat onto the accumulation buffer */
 		Ray ray(mRec.p, wo, 0, dist, time);
 
-		Spectrum sampleVal = weight * medium->getPhaseFunction()->f(
-			  PhaseFunctionQueryRecord(mRec, wi, wo)) * transmittance * importance;
+		Spectrum sampleVal = weight * medium->getPhaseFunction()->eval(
+			  PhaseFunctionQueryRecord(mRec, wi, wo, EImportance)) 
+			  * transmittance * importance;
 
 		m_workResult->splat(screenSample, sampleVal, m_filter);
 	}

@@ -48,7 +48,7 @@ public:
 	/// Add a child (default implementation throws an error)
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
 
-	/** \brief Configure the object (called <em>once</em> after construction
+	/** \brief Configure the object (called \a once after construction
 	   and addition of all child ConfigurableObjects) */
 	virtual void configure();
 

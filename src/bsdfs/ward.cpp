@@ -135,10 +135,6 @@ public:
 		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
 	}
 
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_diffuseReflectance->getValue(its) * m_kd;
-	}
-
 	Spectrum f(const BSDFQueryRecord &bRec) const {
 		Spectrum result(0.0f);
 

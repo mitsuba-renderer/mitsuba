@@ -147,8 +147,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				handleMediumInteraction(depth, caustic, mRec, medium,
 					ray.time, -ray.d, weight);
 	
-				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
-				pRec.quantity = EImportance;
+				PhaseFunctionQueryRecord pRec(mRec, -ray.d, EImportance);
 
 				weight *= medium->getPhaseFunction()->sample(pRec, m_sampler);
 				caustic = false;
@@ -191,9 +190,9 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 					continue;
 				}
 	
-				BSDFQueryRecord bRec(its);
-				bRec.quantity = EImportance;
-				bsdfVal = bsdf->sampleCos(bRec, m_sampler->next2D());
+				BSDFQueryRecord bRec(its, EImportance);
+				bRec.sampler = m_sampler;
+				bsdfVal = bsdf->sample(bRec, m_sampler->next2D());
 				if (bsdfVal.isZero())
 					break;
 

@@ -19,7 +19,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/sampler.h>
 #include <mitsuba/render/consttexture.h>
-#include <boost/algorithm/string.hpp>
+#include "microfacet.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -69,19 +69,25 @@ MTS_NAMESPACE_BEGIN
  * off-specular reflections peaks observed in real-world measurements of such 
  * materials.
  * \renderings{
- *     \rendering{Rough glass (Beckmann, $\alpha$=0.1)}{bsdf_roughdielectric_beckmann_0_1.jpg}
- *     \rendering{Ground glass (GGX, $\alpha$=0.304, \lstref{roughdielectric-roughglass})}{bsdf_roughdielectric_ggx_0_304.jpg}
+ *     \medrendering{Rough glass (Beckmann, $\alpha$=0.1)}
+ *     	   {bsdf_roughdielectric_beckmann_0_1.jpg}
+ *     \medrendering{Ground glass (GGX, $\alpha$=0.304, 
+ *     	   \lstref{roughdielectric-roughglass})}{bsdf_roughdielectric_ggx_0_304.jpg}
+ *     \medrendering{Textured rougness (\lstref{roughdielectric-textured})}
+ *         {bsdf_roughdielectric_textured.jpg}
  * }
  *
  * This plugin is essentially the ``roughened'' equivalent of the plugin
- * \pluginref{dielectric}. As the roughness value is decreased, it increasingly
- * approximates that model. Its implementation is based on the paper 
- * ``Microfacet Models for Refraction through Rough Surfaces'' by Walter et
- * al. \cite{Walter07Microfacet}. The model supports several types of microfacet
- * distributions and has a texturable roughness parameter. 
- * The default settings are set 
- * to a borosilicate glass BK7/air interface with a light amount of rougness 
- * modeled using a Beckmann distribution.
+ * \pluginref{dielectric}. As the roughness parameter $\alpha$ decreases, it 
+ * will increasingly approximate the smooth model. The implementation of this
+ * plugin is based on the paper ``Microfacet Models for Refraction through 
+ * Rough Surfaces'' by Walter et al. \cite{Walter07Microfacet}. It supports 
+ * several types of microfacet distributions and has a texturable roughness 
+ * parameter.  Exterior and interior IOR values can each be independently 
+ * specified, where ``exterior'' refers to the side that contains the surface
+ * normal. When no parameters are given, the plugin activates the defaults, which
+ * describe a borosilicate glass BK7/air interface with a light amount of 
+ * rougness modeled using a Beckmann distribution.
  *
  * When using this plugin, it is crucial that the scene contains
  * meaningful and mutally compatible index of refraction change---see
@@ -106,7 +112,7 @@ MTS_NAMESPACE_BEGIN
  *     <float name="intIOR" value="1.5046"/>
  *     <float name="extIOR" value="1.0"/>
  *
- *     <texture type="bitmap" name="alpha">
+ *     <texture name="alpha" type="bitmap">
  *         <string name="filename" value="roughness.exr"/>
  *     </texture>
  * </bsdf>
@@ -114,16 +120,6 @@ MTS_NAMESPACE_BEGIN
  */
 class RoughDielectric : public BSDF {
 public:
-	//// Microfacet distribution types supported by the model
-	enum EDistribution  {
-		/// Beckmann distribution derived from Gaussian random surfaces
-		EBeckmann = 0x0000,
-		/// Classical Phong distribution
-		EPhong    = 0x0001,
-		/// Long-tailed distribution proposed by Walter et al.
-		EGGX      = 0x0002
-	};
-
 	RoughDielectric(const Properties &props) 
 		: BSDF(props) {
 		m_specularReflectance = new ConstantSpectrumTexture(
@@ -148,235 +144,47 @@ public:
 			Log(EError, "The interior and exterior indices of "
 				"refraction must be positive and differ!");
 
-		std::string distr = 
-			boost::to_lower_copy(props.getString("distribution", "beckmann"));
-
-		if (distr == "beckmann")
-			m_distribution = EBeckmann;
-		else if (distr == "phong")
-			m_distribution = EPhong;
-		else if (distr == "ggx")
-			m_distribution = EGGX;
-		else 
-			Log(EError, "Specified an invalid distribution \"%s\", must be "
-				"\"beckmann\", \"phong\", or \"ggx\"!", distr.c_str());
-
-		if (m_distribution == EPhong) {
-			/* Transform the Phong exponent to make it behave
-			   similarly to the Beckmann microfacet distribution */
-			alpha = 2 / (alpha * alpha) - 2;
-			AssertEx(alpha > 0, "Oops -- unable to map to a "
-				"valid Phong exponent.");
-		}
+		m_distribution = MicrofacetDistribution(
+			m_props.getString("distribution", "beckmann")
+		);
 
 		m_alpha = new ConstantFloatTexture(alpha);
 
-		m_componentCount = 2;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler;
-		m_type[1] = EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler;
-		m_combinedType = m_type[0] | m_type[1];
+		m_components.push_back(
+			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler);
+		m_components.push_back(
+			EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler);
 		m_usesRayDifferentials = false;
 	}
 
 	RoughDielectric(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
-		m_distribution = (EDistribution) stream->readInt();
+		m_distribution = MicrofacetDistribution(
+			(MicrofacetDistribution::EType) stream->readUInt()
+		);
 		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularTransmittance = static_cast<Texture *>(manager->getInstance(stream));
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
 
-		m_componentCount = 2;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler;
-		m_type[1] = EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler;
-		m_combinedType = m_type[0] | m_type[1];
+		m_components.push_back(
+			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler);
+		m_components.push_back(
+			EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler);
 		m_usesRayDifferentials = 
 			m_alpha->usesRayDifferentials() ||
 			m_specularReflectance->usesRayDifferentials() ||
 			m_specularTransmittance->usesRayDifferentials();
 	}
 
-	virtual ~RoughDielectric() {
-		delete[] m_type;
-	}
-
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return Spectrum(0.0f);
-	}
-
-	/// Helper function: reflect \c wi with respect to a given surface normal
-	inline Vector reflect(const Vector &wi, const Normal &m) const {
-		return 2 * dot(wi, m) * Vector(m) - wi;
-	}
-
-	/// Helper function: refract \c wi with respect to a given surface normal
-	inline bool refract(const Vector &wi, Vector &wo, const Normal &m, Float etaI, Float etaT) const {
-		Float eta = etaI / etaT, c = dot(wi, m);
-
-		/* Using Snell's law, calculate the squared cosine of the
-		   angle between the normal and the transmitted ray */
-		Float cosThetaTSqr = 1 + eta * eta * (c*c-1);
-
-		if (cosThetaTSqr < 0) 
-			return false; // Total internal reflection
-
-		/* Compute the transmitted direction */
-		wo = m * (eta*c - signum(wi.z)
-			   * std::sqrt(cosThetaTSqr)) - wi * eta;
-
-		return true;
-	}
+	virtual ~RoughDielectric() { }
 
 	inline Float signum(Float value) const {
 		return (value < 0) ? -1.0f : 1.0f;
 	}
 
-	/**
-	 * \brief Implements the microfacet distribution function D
-	 *
-	 * \param m The microsurface normal
-	 * \param v An arbitrary direction
-	 */
-	Float evalD(const Vector &m, Float alpha) const {
-		if (Frame::cosTheta(m) <= 0)
-			return 0.0f;
-	
-		Float result;
-		switch (m_distribution) {
-			case EBeckmann: {
-					/* Beckmann distribution function for Gaussian random surfaces */
-					const Float ex = Frame::tanTheta(m) / alpha;
-					result = std::exp(-(ex*ex)) / (M_PI * alpha*alpha * 
-							std::pow(Frame::cosTheta(m), (Float) 4.0f));
-				}
-				break;
-
-			case EPhong: {
-					/* Phong distribution function */
-					result = (alpha + 2) * INV_TWOPI 
-							* std::pow(Frame::cosTheta(m), alpha);
-				}
-				break;
-
-			case EGGX: {
-					/* Empirical GGX distribution function for rough surfaces */
-					const Float tanTheta = Frame::tanTheta(m),
-						        cosTheta = Frame::cosTheta(m);
-
-					const Float root = alpha / (cosTheta*cosTheta * 
-								(alpha*alpha + tanTheta*tanTheta));
-
-					result = INV_PI * (root * root);
-				}
-				break;
-
-			default :
-				Log(EError, "Invalid distribution function!");
-				return 0.0f;
-		}
-
-		/* Prevent potential numerical issues in other stages of the model */
-		if (result < 1e-40)
-			result = 0;
-
-		return result;
-	}
-
-	/**
-	 * \brief Sample microsurface normals according to 
-	 * the selected distribution
-	 *
-	 * \param sample  A uniformly distributed 2D sample
-	 * \param alpha   Surface roughness
-	 */
-	Normal sampleD(const Point2 &sample, Float alpha) const {
-		/* The azimuthal component is always selected 
-		   uniformly regardless of the distribution */
-		Float phiM = (2.0f * M_PI) * sample.y,
-			  thetaM = 0.0f;
-
-		switch (m_distribution) {
-			case EBeckmann: 
-				thetaM = std::atan(std::sqrt(-alpha*alpha *
-						 std::log(1.0f - sample.x)));
-				break;
-
-			case EPhong:
-				thetaM = std::acos(std::pow(sample.x, (Float) 1 / 
-						 (alpha + 2)));
-				break;
-
-			case EGGX: 
-				thetaM = std::atan(alpha * std::sqrt(sample.x) /
-						 std::sqrt(1.0f - sample.x));
-				break;
-
-			default: 
-				Log(EError, "Invalid distribution function!");
-		}
-
-		return Normal(sphericalDirection(thetaM, phiM));
-	}
-
-	/**
-	 * \brief Smith's shadow-masking function G1 for each
-	 * of the supported microfacet distributions
-	 *
-	 * \param m The microsurface normal
-	 * \param v An arbitrary direction
-	 * \param alpha The surface roughness
-	 */
-	Float smithG1(const Vector &v, const Vector &m, Float alpha) const {
-		const Float tanTheta = std::abs(Frame::tanTheta(v)); 
-
-		/* perpendicular incidence -- no shadowing/masking */
-		if (tanTheta == 0.0f)
-			return 1.0f;
-
-		/* Can't see the back side from the front and vice versa */
-		if (dot(v, m) * Frame::cosTheta(v) <= 0)
-			return 0.0f;
-
-		switch (m_distribution) {
-			case EPhong:
-				/* Approximation recommended by Bruce Walter: Use
-				   the Beckmann shadowing-masking function with
-				   specially chosen roughness value */
-				alpha = std::sqrt(0.5f * alpha + 1) / tanTheta;
-
-			case EBeckmann: {
-					/* Use a fast and accurate (<0.35% rel. error) rational
-					   approximation to the shadowing-masking function */
-					const Float a = 1.0f / (alpha * tanTheta);
-					const Float aSqr = a * a;
-
-					if (a >= 1.6f)
-						return 1.0f;
-
-					return (3.535f * a + 2.181f * aSqr) 
-						 / (1.0f + 2.276f * a + 2.577f * aSqr);
-				}
-				break;
-
-			case EGGX: {
-					const Float root = alpha * tanTheta;
-					return 2.0f / (1.0f + std::sqrt(1.0f + root*root));
-				}
-				break;
-
-			default:
-				Log(EError, "Invalid distribution function!");
-				return 0.0f;
-		}
-	}
-
-	/**
-	 * \brief Evaluate the BSDF f(wi, wo) or its adjoint version f^{*}(wi, wo)
-	 */
-	Spectrum f(const BSDFQueryRecord &bRec) const {
+	Spectrum eval(const BSDFQueryRecord &bRec) const {
 		/* Determine the type of interaction */
 		bool reflect = Frame::cosTheta(bRec.wi) 
 			* Frame::cosTheta(bRec.wo) > 0;
@@ -411,11 +219,11 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		const Float alpha = 
-			std::max(m_alpha->getValue(bRec.its).average(), (Float) 1e-4f);
+		Float alpha = m_distribution.transform( 
+			m_alpha->getValue(bRec.its).average());
 
 		/* Microsurface normal distribution */
-		const Float D = evalD(H, alpha);
+		const Float D = m_distribution.eval(H, alpha);
 		if (D == 0)
 			return Spectrum(0.0f);
 
@@ -428,14 +236,14 @@ public:
 		if (reflect) {
 			/* Calculate the total amount of reflection */
 			Float value = F * D * G / 
-				(4.0f * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
+				(4.0f * Frame::cosTheta(bRec.wi));
 
 			return m_specularReflectance->getValue(bRec.its) * value; 
 		} else {
 			/* Calculate the total amount of transmission */
 			Float sqrtDenom = etaI * dot(bRec.wi, H) + etaT * dot(bRec.wo, H);
 			Float value = ((1 - F) * D * G * etaT * etaT * dot(bRec.wi, H)*dot(bRec.wo, H)) / 
-				(Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) * sqrtDenom * sqrtDenom);
+				(Frame::cosTheta(bRec.wi) * sqrtDenom * sqrtDenom);
 
 			/* Missing term in the original paper: account for the solid angle 
 			   compression when tracing radiance -- this is necessary for
@@ -495,8 +303,8 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = 
-			std::max(m_alpha->getValue(bRec.its).average(), (Float) 1e-4f);
+		Float alpha = m_distribution.transform( 
+			m_alpha->getValue(bRec.its).average());
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 
@@ -505,7 +313,7 @@ public:
 			std::abs(Frame::cosTheta(bRec.wi))));
 
 		/* Microsurface normal distribution */
-		Float prob = evalD(H, alpha);
+		Float prob = m_distribution.eval(H, alpha);
 
 		if (sampleTransmission && sampleReflection) {
 			/* Please see the sample() methods if the 
@@ -578,8 +386,8 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = 
-			std::max(m_alpha->getValue(bRec.its).average(), (Float) 1e-4f);
+		Float alpha = m_distribution.transform( 
+			m_alpha->getValue(bRec.its).average());
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 
@@ -629,15 +437,14 @@ public:
 				* ((bRec.quantity == ERadiance) ? ((etaI*etaI) / (etaT*etaT)) : (Float) 1);
 		}
 
-		Float numerator = evalD(m, alpha)
-			* smithG1(bRec.wi, m, alpha)
-			* smithG1(bRec.wo, m, alpha)
+		Float numerator = m_distribution.eval(m, alpha)
+			* m_distribution.smithG1(bRec.wi, m, alpha)
+			* m_distribution.smithG1(bRec.wo, m, alpha)
 			* dot(bRec.wi, m);
 
-		Float denominator = evalD(m, sampleAlpha)
+		Float denominator = m_distribution.eval(m, sampleAlpha)
 			* Frame::cosTheta(m) 
-			* Frame::cosTheta(bRec.wi) 
-			* Frame::cosTheta(bRec.wo);
+			* Frame::cosTheta(bRec.wi);
 
 		if (!sampleExactFresnelTerm) {
 			Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
@@ -650,7 +457,7 @@ public:
 				denominator *= sampleF;
 		}
 
-		return  result * std::abs(numerator / denominator);
+		return result * std::abs(numerator / denominator);
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float _pdf, const Point2 &_sample) const {
@@ -701,8 +508,8 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = 
-			std::max(m_alpha->getValue(bRec.its).average(), (Float) 1e-4f);
+		Float alpha = m_distribution.transform( 
+			m_alpha->getValue(bRec.its).average());
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 
@@ -773,7 +580,7 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
-		stream->writeInt(m_distribution);
+		stream->writeUInt((uint32_t) m_distribution.getType());
 		manager->serialize(stream, m_alpha.get());
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_specularTransmittance.get());
@@ -784,15 +591,8 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "RoughDielectric[" << endl
-			<< "  distribution = ";
-		switch (m_distribution) {
-			case EBeckmann: oss << "beckmann," << endl; break;
-			case EGGX: oss << "ggx," << endl; break;
-			case EPhong: oss << "phong," << endl; break;
-			default:
-				Log(EError, "Invalid distribution function");
-		}
-		oss << "  alpha = " << indent(m_alpha->toString()) << "," << endl
+			<< "  distribution = " << m_distribution.toString() << "," << endl;
+			<< "  alpha = " << indent(m_alpha->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  specularTransmittance = " << indent(m_specularTransmittance->toString()) << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl
@@ -805,16 +605,16 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	EDistribution m_distribution;
+	MicrofacetDistribution m_distribution;
 	ref<Texture> m_specularTransmittance;
 	ref<Texture> m_specularReflectance;
 	ref<Texture> m_alpha;
 	Float m_intIOR, m_extIOR;
 };
 
-/* Fake glass shader -- it is really hopeless to visualize
+/* Fake dielectric shader -- it is really hopeless to visualize
    this material in the VPL renderer, so let's try to do at least 
-   something that suggests the presence of a transparent boundary */
+   something that suggests the presence of a translucent boundary */
 class RoughDielectricShader : public Shader {
 public:
 	RoughDielectricShader(Renderer *renderer) :
@@ -826,10 +626,11 @@ public:
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
 		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return vec3(0.08);" << endl
-			<< "}" << endl;
-		oss << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return vec3(0.08);" << endl
+			<< "    return vec3(0.08) * cosTheta(wo);" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return " << evalName << "(uv, wi, wo);" << endl
 			<< "}" << endl;
 	}
 	MTS_DECLARE_CLASS()

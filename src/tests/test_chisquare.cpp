@@ -23,9 +23,10 @@
 #include <boost/bind.hpp>
 
 /* Statistical significance level of the test. Set to
-   1/2 percent by default -- we want there to be notable
-   evidence before failing a test case */
-#define SIGNIFICANCE_LEVEL 0.005f
+   1/4 percent by default -- we want there to be strong 
+   evidence of an implementaiton error before failing 
+   a test case */
+#define SIGNIFICANCE_LEVEL 0.0025f
 
 /* Relative bound on what is still accepted as roundoff 
    error -- be quite tolerant */
@@ -158,7 +159,7 @@ public:
 				Float a = sampled[i], b = sampled2[i];
 				Float min = std::min(a, b);
 				Float err = std::abs(a - b);
-				m_largestWeight = std::max(m_largestWeight, a * std::abs(Frame::cosTheta(bRec.wo)));
+				m_largestWeight = std::max(m_largestWeight, a);
 
 				if (min < ERROR_REQ && err > ERROR_REQ) // absolute error threshold
 					mismatch = true;
@@ -190,7 +191,7 @@ public:
 				enableFPExceptions();
 			#endif
 
-			if (m_bsdf->f(bRec).isZero())
+			if (m_bsdf->eval(bRec).isZero())
 				return 0.0f;
 			Float result = m_bsdf->pdf(bRec);
 
@@ -278,7 +279,7 @@ public:
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
-			if (m_phase->f(pRec) == 0)
+			if (m_phase->eval(pRec) == 0)
 				return 0.0f;
 			Float result = m_phase->pdf(pRec);
 			#if defined(MTS_DEBUG_FP)
