@@ -2,6 +2,12 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
+	<!-- Test the dielectric model -->
+	<bsdf type="dielectric">
+		<string name="intIOR" value="water"/>
+		<string name="extIOR" value="air"/>
+	</bsdf>
+
 	<!-- Test the diffuse model -->
 	<bsdf type="diffuse"/>
 

@@ -18,14 +18,17 @@
 
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/consttexture.h>
+#include "ior.h"
 
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{dielectric}{Smooth dielectric material}
  *
  * \parameters{
- *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}
- *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1.0}}
+ *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
+ *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
+ *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
+ *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the reflectance component\default{1.0}}
  *     \lastparameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
@@ -49,14 +52,14 @@ MTS_NAMESPACE_BEGIN
  * In this model, the microscopic surface structure of the surface is assumed to be perfectly 
  * smooth, resulting in a degenerate\footnote{Meaning that for any given incoming ray of light,
  * the model always scatters into a discrete set of directions, as opposed to a continuum.} 
- * BSDF described by a Dirac delta function. For a similar model that describes a rough 
- * surface microstructure, take a look at the \pluginref{roughdielectric} plugin. 
+ * BSDF described by a Dirac delta function. For a similar model that instead describes a 
+ * rough surface microstructure, take a look at the \pluginref{roughdielectric} plugin. 
  *
  * \begin{xml}[caption=A simple air-to-water interface, label=lst:dielectric-water]
  * <shape type="...">
  *     <bsdf type="dielectric">
- *         <float name="intIOR" value="1.33"/>
- *         <float name="extIOR" value="1.0"/>
+ *         <string name="intIOR" value="water"/>
+ *         <string name="extIOR" value="air"/>
  *     </bsdf>
  * <shape>
  * \end{xml}
@@ -68,29 +71,74 @@ MTS_NAMESPACE_BEGIN
  * In many cases, we will want to additionally describe the \emph{medium} within a
  * dielectric material. This requires the use of a rendering technique that is
  * aware of media (e.g. the volumetric path tracer). An example of how one might
- * describe a slightly absorbing piece of glass is given below:
- *
- * \begin{xml}[caption=A glass material with absorption, label=lst:dielectric-glass]
+ * describe a slightly absorbing piece of glass is given on the next page:
+ * \newpage
+ * \begin{xml}[caption=A glass material with absorption (based on the 
+ *    Beer-Lambert law). This material can only be used by an integrator
+ *    that is aware of participating media., label=lst:dielectric-glass]
  * <shape type="...">
  *     <bsdf type="dielectric">
  *         <float name="intIOR" value="1.504"/>
  *         <float name="extIOR" value="1.0"/>
  *     </bsdf>
+ *
  *     <medium type="homogeneous" name="interior">
  *			<rgb name="sigmaS" value="0, 0, 0"/>
  *			<rgb name="sigmaA" value="4, 4, 2"/>
  *     </medium>
  * <shape>
  * \end{xml}
+ * \vspace{1cm}
+ *
+ * \begin{table}[h!]
+ *     \centering
+ *     \begin{tabular}{>{\ttfamily}p{5cm}r@{.}lp{.8cm}>{\ttfamily}p{5cm}r@{.}l}
+ *         \toprule
+ *         \rmfamily Name & \multicolumn{2}{l}{Value}& &
+ *         \rmfamily Name & \multicolumn{2}{l}{Value}\\
+ *         \cmidrule{1-3} \cmidrule{5-7}
+ *         vacuum               & 1 & 0 &  &
+ *         silicone oil         & 1 & 52045\\
+ *         helium               & 1 & 00004 & &
+ *         bromine              & 1 & 661\\
+ *         hydrogen             & 1 & 00013& &
+ *         water ice            & 1 & 31\\[-.8mm]
+ *         \cmidrule{5-7}\\[-5.5mm]
+ *         air                  & 1 & 00028& &
+ *         fused quartz         & 1 & 458\\
+ *         carbon dioxide       & 1 & 00045& &
+ *         pyrex                & 1 & 470\\[-.8mm]
+ *         \cmidrule{1-3}\\[-5.5mm]
+ *         water                & 1 & 3330& &
+ *         acrylic glass        & 1 & 490\\
+ *         acetone              & 1 & 36 & &
+ *         bk7                  & 1 & 5046\\
+ *         ethanol              & 1 & 361& &
+ *         sodium chloride      & 1 & 544\\
+ *         carbon tetrachloride & 1 & 461& &
+ *         amber                & 1 & 55\\
+ *         glycerol             & 1 & 4729& &
+ *         pet                  & 1 & 575\\
+ *         benzene              & 1 & 501& &
+ *         diamond              & 2 & 419\\
+ *         \bottomrule
+ *     \end{tabular}
+ *     \caption{
+ *         \label{tbl:dielectric-iors}
+ *          This table lists all supported material names that can be passed
+ *          into the \pluginref{dielectric} plugin, along with the associated 
+ *          index of refraction at standard conditions.
+ *     }
+ * \end{table}
  */
 class SmoothDielectric : public BSDF {
 public:
-	SmoothDielectric(const Properties &props) 
-			: BSDF(props) {
+	SmoothDielectric(const Properties &props) : BSDF(props) {
 		/* Specifies the internal index of refraction at the interface */
-		m_intIOR = props.getFloat("intIOR", 1.5046f);
+		m_intIOR = lookupIOR(props, "intIOR", "bk7");
+
 		/* Specifies the external index of refraction at the interface */
-		m_extIOR = props.getFloat("extIOR", 1);
+		m_extIOR = lookupIOR(props, "extIOR", "air");
 
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
@@ -199,7 +247,7 @@ public:
 			} else {
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDeltaTransmission;
-;
+
 				/* Given cos(N, transmittedRay), compute the 
 				   transmitted direction */
 				bRec.wo = refract(bRec.wi, eta, cosThetaT);
@@ -230,15 +278,15 @@ public:
 		}
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec) const {
+	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
-		bool reflection = BSDF::cosTheta(bRec.wo) * BSDF::cosTheta(bRec.wi) > 0;
+		bool reflection = Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) > 0;
 		
 		if ((reflection && !sampleReflection) || 
-		   (!reflection && !sampleTransmission))
+		   (!reflection && !sampleTransmission) || measure != EDiscrete)
 			return Spectrum(0.0f);
 
 		Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
@@ -263,18 +311,18 @@ public:
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
-
-		if (measure != EDiscrete || (!sampleReflection && !sampleTransmission))
-			return 0.0f;
-
-		bool reflection = Frame::costheta(bRec.wo)
+		bool reflection = Frame::cosTheta(bRec.wo)
 			* Frame::cosTheta(bRec.wi) > 0;
+
+		if ((reflection && !sampleReflection) || 
+		   (!reflection && !sampleTransmission) || measure != EDiscrete)
+			return 0.0f;
 
 		if (sampleTransmission && sampleReflection) {
 			Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
 			return reflection ? Fr : (1 - Fr);
 		} else {
-			return sampleReflection == reflection ? 1.0f : 0.0f;
+			return 1.0f;
 		}
 	}
 

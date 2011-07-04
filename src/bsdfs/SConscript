@@ -13,6 +13,8 @@ Import('env', 'plugins')
 #plugins += env.SharedLibrary('roughdiffuse', ['roughdiffuse.cpp'])
 
 
+plugins += env.SharedLibrary('dielectric', ['dielectric.cpp'])
+
 # Diffuse models
 plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
 plugins += env.SharedLibrary('diffuse', ['diffuse.cpp'])
@@ -21,7 +23,6 @@ plugins += env.SharedLibrary('diffuse', ['diffuse.cpp'])
 plugins += env.SharedLibrary('mixture', ['mixture.cpp'])
 
 #plugins += env.SharedLibrary('twosided', ['twosided.cpp'])
-#plugins += env.SharedLibrary('dielectric', ['dielectric.cpp'])
 
 #plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
 #plugins += env.SharedLibrary('mask', ['mask.cpp'])
