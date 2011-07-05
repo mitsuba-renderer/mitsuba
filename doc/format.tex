@@ -161,9 +161,10 @@ file:
 <spectrum name="spectrumProperty" filename="measuredSpectrum.spd"/>
 \end{xml}
 The file should contain a single measurement per line, with the corresponding
-wavelength in nanometers and the measured value separated by a space. Here is
-an example:
+wavelength in nanometers and the measured value separated by a space. Comments
+are allowed. Here is an example:
 \begin{xml}
+# This file contains a measured spectral power distribution
 406.13 0.703313
 413.88 0.744563
 422.03 0.791625
@@ -172,8 +173,7 @@ an example:
 ...
 \end{xml}
 
-It is also possible to specify a completely flat spectral power distribution by specifying
-just one value:
+Passing a single value to \texttt{spectrum} will result in a a completely flat spectral power distribution:
 \begin{xml}
 <spectrum name="spectrumProperty" value="0.56"/>
 \end{xml}

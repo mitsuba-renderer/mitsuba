@@ -1,34 +1,27 @@
 Import('env', 'plugins')
 
-
-# Basic materials (one smooth & microfacet version of each)
-#plugins += env.SharedLibrary('roughdielectric', ['roughdielectric.cpp'])
-#plugins += env.SharedLibrary('plastic', ['plastic.cpp'])
-#plugins += env.SharedLibrary('roughplastic', ['roughplastic.cpp'])
-#plugins += env.SharedLibrary('varnish', ['varnish.cpp'])
-#plugins += env.SharedLibrary('conductor', ['conductor.cpp'])
-#plugins += env.SharedLibrary('roughconductor', ['roughconductor.cpp'])
-
-#plugins += env.SharedLibrary('diffuse', ['diffuse.cpp'])
-#plugins += env.SharedLibrary('roughdiffuse', ['roughdiffuse.cpp'])
-
-
+# Basic materials (smooth & rough versions of each)
 plugins += env.SharedLibrary('dielectric', ['dielectric.cpp'])
-
-# Diffuse models
-plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
+plugins += env.SharedLibrary('conductor', ['conductor.cpp'])
 plugins += env.SharedLibrary('diffuse', ['diffuse.cpp'])
+#plugins += env.SharedLibrary('plastic', ['plastic.cpp'])
+
+#plugins += env.SharedLibrary('roughdielectric', ['roughdielectric.cpp'])
+#plugins += env.SharedLibrary('roughconductor', ['roughconductor.cpp'])
+#plugins += env.SharedLibrary('roughdiffuse', ['roughdiffuse.cpp'])
+#plugins += env.SharedLibrary('roughplastic', ['roughplastic.cpp'])
+
+# Other
+plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
 
 # Plugins that act as modifiers
 plugins += env.SharedLibrary('mixture', ['mixture.cpp'])
-
 #plugins += env.SharedLibrary('twosided', ['twosided.cpp'])
-
-#plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
 #plugins += env.SharedLibrary('mask', ['mask.cpp'])
+#plugins += env.SharedLibrary('coating', ['coating.cpp'])
+
 #plugins += env.SharedLibrary('ward', ['ward.cpp'])
 #plugins += env.SharedLibrary('phong', ['phong.cpp'])
-#plugins += env.SharedLibrary('microfacet', ['microfacet.cpp'])
 #plugins += env.SharedLibrary('irawan', ['irawan.cpp'])
 
 Export('plugins')

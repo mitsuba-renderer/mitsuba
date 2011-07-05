@@ -27,7 +27,11 @@ namespace fs = boost::filesystem;
 #define SPECTRUM_MIN_WAVELENGTH   400
 #define SPECTRUM_MAX_WAVELENGTH   700
 #define SPECTRUM_RANGE            (SPECTRUM_MAX_WAVELENGTH-SPECTRUM_MIN_WAVELENGTH+1)
-#define SPECTRUM_SAMPLES          3
+
+#if !defined(SPECTRUM_SAMPLES)
+#error The desired number of spectral samples must be specified \
+	in the configuration file!
+#endif
 
 MTS_NAMESPACE_BEGIN
 

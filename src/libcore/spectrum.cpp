@@ -268,11 +268,21 @@ InterpolatedSpectrum::InterpolatedSpectrum(const fs::path &path) {
 		SLog(EError, "InterpolatedSpectrum: could not open \"%s\"",
 			path.file_string().c_str());
 
-	while (is.good() && !is.eof()) {
+	std::string line;
+	while (true) {
+		if (!std::getline(is, line))
+			break;
+		line = trim(line);
+		if (line.length() == 0 || line[0] == '#')
+			continue;
+		std::istringstream iss(line);
 		Float lambda, value;
-		is >> lambda >> value;
+		if (!(iss >> lambda >> value))
+			break;
 		appendSample(lambda, value);
 	}
+	SLog(EInfo, "Loaded a spectral power distribution with " SIZE_T_FMT
+			" entries", m_wavelength.size());
 }
 
 void InterpolatedSpectrum::appendSample(Float lambda, Float value) {

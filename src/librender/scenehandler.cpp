@@ -393,7 +393,6 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 	} else if (name == "transform") {
 		context.parent->properties.setTransform(context.attributes["name"],
 			m_transform);
-		/* Do nothing */
 	} else if (name == "include") {
 		SAXParser* parser = new SAXParser();
 		FileResolver *resolver = Thread::getThread()->getFileResolver();

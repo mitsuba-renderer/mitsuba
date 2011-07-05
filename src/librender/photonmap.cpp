@@ -421,7 +421,7 @@ Spectrum PhotonMap::estimateIrradiance(const Point &p, const Normal &n,
 	return result * (m_scale * INV_PI / distSquared);
 }
 
-#if !defined(MTS_SSE)
+#if !defined(MTS_SSE) || SPECTRUM_SAMPLES != 3
 Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n, 
 	Float searchRadius, size_t maxPhotons) const {
 	Spectrum result(0.0f);

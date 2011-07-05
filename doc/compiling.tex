@@ -3,7 +3,7 @@ To compile Mitsuba, you will need a recent C++ compiler (e.g. GCC 4.1+ or
 Visual Studio 2008+) and some additional libraries, which Mitsuba uses internally. 
 Builds on all supported platforms are done using a unified system
 based on SCons (\url{http://www.scons.org}), which is a Python-based 
-software construction tool. There are some minor differences between operating systems though: for
+software construction tool. There are some differences between the different operating systems---for
 more details, please refer to one of the next sections depending on which one you use.
 
 \subsection{Common steps}
@@ -11,8 +11,8 @@ To get started, you will need to download a recent version of Mitsuba. Make sure
 \begin{shell}
 $\texttt{\$}$ hg clone https://www.mitsuba-renderer.org/hg/mitsuba
 \end{shell}
-Afterwards, you will need to download the precompiled dependencies into the
-subdirectory \code{mitsuba/dependencies}:
+Afterwards, you will need to download the precompiled dependencies into a new
+subdirectory named \code{mitsuba/dependencies}:
 \begin{shell}
 $\texttt{\$}$ cd mitsuba
 $\texttt{\$}$ hg clone https://www.mitsuba-renderer.org/hg/dependencies
@@ -33,7 +33,7 @@ build/config-icl12-msvc2010-win32.py
 build/config-icl12-msvc2010-win64.py
 \end{shell}
 
-Usually, you will not have to make any modification to this fine, but sometimes a few minor 
+Usually, you will not have to make any modification to this file, but sometimes a few minor 
 edits may be necessary. In particular, you might want to add or remove certain
 compilation flags from the \code{CXXFLAGS} parameter. The following settings
 affect the behavior of Mitsuba:
@@ -42,20 +42,28 @@ affect the behavior of Mitsuba:
 enabled by default.
 \item[\texttt{MTS\_KD\_DEBUG}] Enable additional checks in the kd-Tree. This
 is quite slow and mainly useful to track down bugs when they are suspected.
-\item[\texttt{MTS\_KD\_CONSERVE\_MEMORY}] Use less memory for storing geometry (at the cost of speed).
+\item[\texttt{MTS\_KD\_CONSERVE\_MEMORY}] Use a more compact representation 
+for triangle geometry (at the cost of speed). This flag causes Mitsuba to use the somewhat slower
+Moeller-Trumbore triangle intersection method instead of the default Wald
+intersection test, which has an overhead of 48 bytes per triangle.
 Off by default.
-\item[\texttt{SINGLE\_PRECISION}] Do all computation in single precision. This is usually sufficient.
-\item[\texttt{DOUBLE\_PRECISION}] Do all computation in double precision. Incompatible with
+\item[\texttt{MTS\_SSE}]Activate optimized SSE routines. On by default.
+\item[\texttt{MTS\_HAS\_COHERENT\_RT}]Include coherent ray tracing support (depends on \texttt{MTS\_SSE}). This flag is activated by default. 
+\item[\texttt{MTS\_DEBUG\_FP}]Generated NaNs and overflows will cause floating point exceptions, which can be caught in a debugger. This is slow and mainly meant as a debugging tool for developers. Off by default.
+\item[\texttt{MTS\_SPECTRUM\_SAMPLES=}$\langle ..\rangle$]This setting defines the number of evenly-spaced 
+spectral samples in the 400-700nm range that Mitsuba uses when rendering scenes.
+The default is 3 samples, in which case the renderer automatically turns into an
+RGB-based system.
+\item[\texttt{SINGLE\_PRECISION}] Do all computation in single precision. This is normally sufficient and therefore used as the default setting.
+\item[\texttt{DOUBLE\_PRECISION}] Do all computation in double precision. This flag is incompatible with
 \texttt{MTS\_SSE}, \texttt{MTS\_HAS\_COHERENT\_RT}, and \texttt{MTS\_DEBUG\_FP}.
-\item[\texttt{MTS\_SSE}]Activate optimized SSE routines.
-\item[\texttt{MTS\_HAS\_COHERENT\_RT}]Include coherent ray tracing support (depends on \texttt{MTS\_SSE}).
-\item[\texttt{MTS\_DEBUG\_FP}]Generated NaNs and overflows will cause floating point exceptions, which can be caught in a debugger. This is slow and mainly meant as a debugging tool for developers.
 \item[\texttt{MTS\_GUI\_SOFTWARE\_FALLBACK}]Forces the GUI to use a software
 fallback mode, which is considerably slower and removes the realtime preview.
-This is useful when running the interface on a remote machine
+This is useful when running the interface on a remote Windows machine
 accessed via the Remote Desktop Protocol (RDP).
 \end{description}
-All default configurations use the flags \code{MTS\_DEBUG}, \code{SINGLE\_PRECISION}, \code{MTS\_SSE},
+All of the default configurations files located in the \texttt{build} directory use the flags 
+\code{SINGLE\_PRECISION}, \code{SPECTRUM\_SAMPLES=3}, \code{MTS\_DEBUG}, \code{MTS\_SSE},
 as well as \code{MTS\_HAS\_COHERENT\_RT}.
 
 \subsection{Building on Ubuntu Linux}
@@ -67,9 +75,9 @@ First, run
 \begin{shell}
 $\text{\$}$ sudo apt-get install build-essential scons qt4-dev-tools scons libpng12-dev libjpeg62-dev libilmbase-dev libopenexr-dev libxerces-c-dev libboost-dev libglewmx1.5-dev libxxf86vm-dev libboost-system-dev libboost-filesystem-dev
 \end{shell}
-To get COLLADA support, you will also need to install the \texttt{collada-dom} packages or build them from scratch. Here, we install the \code{x86\_64} binaries and development headers available on the Mitsuba website:
+To get COLLADA support, you will also need to install the \texttt{collada-dom} packages or build it from scratch. Here, we install the \code{x86\_64} binaries and development headers that can be found in the \texttt{dependencies/linux} directory\footnote{The directory also contains source packages in case these binaries don't work for you.}:
 \begin{shell}
-$\text{\$}$ sudo dpkg --install collada-dom2.2_2.2-2_amd64.deb collada-dom-dev_2.2-2_amd64.deb
+$\text{\$}$ sudo dpkg --install collada-dom_2.3.1-1_amd64.deb collada-dom-dev_2.2-2_amd64.deb
 \end{shell}
 Afterwards, simply run
 \begin{shell}
@@ -85,6 +93,7 @@ To be able to run the renderer from the command line, you will also have to impo
 $\text{\$}$ . setpath.sh
 \end{shell}
 (note the period at the beginning -- this assumes that you are using \code{bash}).
+Having set up everything, you can now move on to \secref{basics}.
 
 \subsection{Building on Fedora Core}
 You'll first need to install a number of dependencies. It is assumed here
@@ -96,8 +105,8 @@ First, run
 $\text{\$}$ yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel
 \end{shell}
 You will also need the \texttt{glew-mx} and \texttt{collada-dom} packages, which are not included in the Fedora package repository. 
-You can grab source, \texttt{i386}, and \text{x86\_64} \texttt{RPM} files here: \texttt{http://www.mitsuba-renderer.org/releases}.
-Afterwards, simply run
+You can grab source, \texttt{i386}, and \text{x86\_64} \texttt{RPM} files at the following location: \texttt{http://www.mitsuba-renderer.org/releases}.
+After installing them, simply run
 \begin{shell}
 $\text{\$}$ scons
 \end{shell}
@@ -111,24 +120,25 @@ To be able to run the renderer from the command line, you will also have to impo
 $\text{\$}$ . setpath.sh
 \end{shell}
 (note the period at the beginning -- this assumes that you are using \code{bash}).
+Having set up everything, you can now move on to \secref{basics}.
 
 \subsection{Building on Arch Linux}
 There are two ways to install Mitsuba on Archlinux, the Arch way, and the other way.
 
 The Arch Way is to use the Aur software repository. 
-Accessing software in the Aur repository is made a lot easier by using a script called packer.
+Accessing software in the Aur repository is easiest when using a script called \texttt{packer}.
 
-First download packer then use makepkg to build and install it. 
-The -is flags will prompt you for your sudo password and then install the package after it has finished building as well as install any needed dependencies.
+First download packer then use \texttt{makepkg} to build and install it. 
+The \texttt{-is} flags will prompt you for your sudo password and then install the package after it has finished building as well as install any needed dependencies.
 \begin{shell}
 $\text{\$}$ mkdir packer && cd packer
 $\text{\$}$ wget http://aur.archlinux.org/packages/packer/packer/PKGBUILD
 $\text{\$}$ makepkg -is
 \end{shell}
 
-Next use packer to automatically download, build, and install Mitsuba as well as any needed dependencies.
-The optional --noedit flag is used if you do not wish to edit the files after they are downloaded.
-The optional --noconfirm flag is used if you do not wish to confirm each step of the installation. 
+Next, use packer to automatically download, build, and install Mitsuba as well as any needed dependencies.
+The optional \code{--noedit} flag is used if you do not wish to edit the files after they are downloaded.
+The optional \code{--noconfirm} flag is used if you do not wish to confirm each step of the installation. 
 \begin{shell}
 $\text{\$}$ sudo packer -S --noedit --noconfirm mitsuba-hg glewmx collada-dom
 \end{shell}
@@ -165,10 +175,11 @@ To uninstall do this
 \begin{shell}
 $\text{\$}$ sudo pacman -R mitsuba-hg glewmx collada-dom
 \end{shell}
-
 After installing you will be able to run the renderer from the command line.
+Having set up everything, you can now move on to \secref{basics}.
 
-If for some reason you are unable access the Aur files, they are also hosted at (\url{https://www.mitsuba-renderer.org/releases/contrib/archlinux/})
+If for some reason you are unable access the Aur files, they are also hosted at 
+(\url{https://www.mitsuba-renderer.org/releases/contrib/archlinux/}).
 
 \subsection{Building on Windows}
 On the Windows platform, Mitsuba already includes most of the dependencies in precompiled form.
@@ -179,9 +190,9 @@ installer generates a warning about not finding Python in the registry. In this 
 Next, you will either need to compile Qt 4.7 (or a newer version) from 
 source or grab pre-built binaries (e.g. from 
 \url{http://code.google.com/p/qt-msvc-installer}). 
-It is crucial that the Qt build configuration matches that of Mitsuba: 
+It is crucial that the Qt build configuration \emph{exactly} matches that of Mitsuba: 
 for instance, if you were planning to use the 64-bit compiler in Visual 
-Studio 2010, both projects must be built with that \emph{exact} same compiler.
+Studio 2010, both projects must be built with that exact same compiler.
 
 When building Qt from source, an important point is to install any 
 Visual Studio service packs prior to this step---for instance, 64-bit
@@ -209,16 +220,17 @@ Afterwards, simply run
 \begin{shell}
 C:\Mitsuba\>scons
 \end{shell}
-In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the \code{scons} command.
+In the case that you have multiple processors, you might want to parallelize the build by appending the option \code{-j }\emph{core count} to the \code{scons} command.
 
 If all goes well, the build process will finish successfully after a few
 minutes. In comparison to the other platforms, you don't have to run the \code{setpath.sh} script at this point. 
 All binaries are now located in the \code{dist} directory, and they should be executed directly from there.
+
 \subsubsection{Integration with the Visual Studio interface}
 Basic Visual Studio 2008 and 2010 integration with support for code completion 
 exists for those who develop Mitsuba code on Windows. 
-To use the supplied projects, simply double-click on \code{build/mitsuba-msvc2008.sln} 
-or \code{build/mitsuba-msvc2010.sln}. These Visual Studio projects still internally
+To use the supplied projects, simply double-click on one of the two files \code{build/mitsuba-msvc2008.sln} 
+and \code{build/mitsuba-msvc2010.sln}. These Visual Studio projects still internally
 use the SCons-based build system to compile Mitsuba; whatever 
 build configuration is selected within Visual Studio will be used to pick a matching
 configuration file from the \texttt{build} directory. Note that you will
@@ -230,7 +242,6 @@ On Mac OS X, you will need to install both scons (\code{www.scons.org}) and
 a recent release of XCode. You will also need to get Qt 4.7.0 or a newer version
 --- make sure that you get the normal Cocoa release (i.e. \emph{not} the one based on Carbon). All of the
 other dependencies are already included in precompiled form.
-
 Now open a Terminal and run
 \begin{shell}
 $\text{\$}$ scons
