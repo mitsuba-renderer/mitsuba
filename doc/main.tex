@@ -101,7 +101,9 @@
 	keywords= [1] {
 		shape,bsdf,scene,texture,phase,integer,float,
 		string,transform,ref,rgb,srgb,spectrum,blackbody,
-		medium,camera,film,sampler,integrator
+		medium,camera,film,sampler,integrator,luminaire,
+		translate,rotate,scale,lookAt,point,vector,matrix,
+		include
 	},
 }
 
@@ -140,7 +142,7 @@
 \include{introduction}
 %\include{compiling}
 %\include{basics}
-%\include{format}
+\include{format}
 \IfFileExists{plugins_generated.tex}{\include{plugins_generated}}{}
 %\include{import}
 %\include{development}

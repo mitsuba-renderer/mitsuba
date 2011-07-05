@@ -2,7 +2,7 @@
 Mitsuba uses a very simple and general XML-based format to represent scenes.  
 Since the framework's philosophy is to represent discrete blocks of functionality as plugins, 
 a scene file can essentially be interpreted as description that determines which 
-plugins should be instantiated and how they should be interface with each other.
+plugins should be instantiated and how they should interface with each other.
 In the following, we'll look at a few examples to get a feeling for the scope of the
 format.
 
@@ -21,15 +21,15 @@ create the scene. This information allows Mitsuba to always correctly process th
 file irregardless of any potential future changes in the scene description language.
 
 This example already contains the most important things to know about format: you can have
-\emph{objects} (such as the objects instantiated by the \code{scene} or \code{shape} tags), which are allowed to be nested within
-each other. Each object optionally accepts \emph{properties} (such as the \code{string} tag),
-which further characterize its behavior. All objects except for the root object (the \code{scene})
-cause the renderer to load and instantiate a plugin, hence you must provide the plugin name using
-\code{type=".."} parameter. 
+\emph{objects} (such as the objects instantiated by the \code{scene} or \code{shape} tags), 
+which are allowed to be nested within each other. Each object optionally accepts \emph{properties} 
+(such as the \code{string} tag), which further characterize its behavior. All objects except 
+for the root object (the \code{scene}) cause the renderer to search and load a plugin from disk,
+hence you must provide the plugin name using \code{type=".."} parameter. 
 
 The object tags also let the renderer know \emph{what kind} of object is to be instantiated: for instance, 
-any plugin loaded using the \code{shape} tag must conform to the \emph{Shape} interface, which
-the certainly case for the plugin named \code{obj} (it contains a WaveFront OBJ loader).
+any plugin loaded using the \code{shape} tag must conform to the \emph{Shape} interface, which is
+certainly the case for the plugin named \code{obj} (it contains a WaveFront OBJ loader).
 Similarly, you could write
 \begin{xml}
 <?xml version="1.0" encoding="utf-8"?>
@@ -41,16 +41,20 @@ Similarly, you could write
 \end{xml}
 This loads a different plugin (\code{sphere}) which is still a \emph{Shape}, but instead represents 
 a sphere configured with a radius of 10 world-space units. Mitsuba ships with 
-a large number of plugins; please refer to the next chapter for a reference.
+a large number of plugins; please refer to the next chapter for a detailed
+overview of them.
 
 The most common scene setup is to declare an integrator, some geometry, a camera, a film, a sampler  
 and one or more luminaires. Here is a more complex example:
 \begin{xml}
 <?xml version="1.0" encoding="utf-8"?>
+
 <scene version=$\MtsVer$>
-	<integrator type="path"> <!-- Path trace an 8-bounce GI solution -->
+	<integrator type="path">
+		<!-- Path trace with a max. path length of 8 -->
 		<integer name="maxDepth" value="8"/>
 	</integrator>
+
 	<!-- Instantiate a perspective camera with 45 degrees field of view -->
 	<camera type="perspective">
 		<!-- Rotate the camera around the Y axis by 180 degrees -->
@@ -72,17 +76,18 @@ and one or more luminaires. Here is a more complex example:
 		</film>
 	</camera>
 
-	<!-- Add a dragon mesh made of rough glass (stored as OBJ) -->
+	<!-- Add a dragon mesh made of rough glass (stored as OBJ file) -->
 	<shape type="obj">
 		<string name="filename" value="dragon.obj"/>
 
-		<bsdf type="roughglass">
+		<bsdf type="roughdielectric">
 			<!-- Tweak the roughness parameter of the material -->
-			<float name="alphaB" value="0.01"/>
+			<float name="alpha" value="0.01"/>
 		</bsdf>
 	</shape>
 
-	<!-- Add a mesh stored using a more compact representation -->
+	<!-- Add another mesh -- this time, stored using Mitsuba's own
+	     (compact) binary representation -->
 	<shape type="serialized">
 		<string name="filename" value="lightsource.serialized"/>
 		<transform name="toWorld">
@@ -134,18 +139,41 @@ these values are directly used. The renderer can also be configured to sample th
 number of samples, in which case the RGB values are first converted into spectra using a simple heuristic.
 
 You can also directly supply the spectral color samples that Mitsuba internally uses if spectral rendering is
-active. This unfortunately closely couples the interpretation of a scene to how Mitsuba is compiled, which can be a disadvantage.
-For instance, the below example assumes that 6 spectral samples are being used:
+active. This unfortunately closely couples the interpretation of a scene to how Mitsuba is compiled, which 
+can be a disadvantage.
+For instance, the below example assumes that 6 spectral samples in the 400-700nm range are being used:
 \begin{xml}
 <spectrum name="spectrumProperty" value="0.2, 0.8, 0.4, 0.6, 0.1, 0.9"/>
 \end{xml}
 A safer way is to specify a linearly interpolated spectral power distribution, which is converted into
-the internal spectral representation as the scene is loaded.
+the internal spectral representation when the scene is loaded.
 \begin{xml}
 <spectrum name="spectrumProperty" value="400:0.56, 500:0.18, 600:0.58, 700:0.24"/>
 \end{xml}
-This is essentially a mapping from wavelength in nanometers (before the colon) to a reflectance or intensity value (after the colon). Missing values are linearly interpolated from the two closest neighbors.
-To specify a constant spectrum, simply provide just one value
+This is essentially a mapping from wavelength in nanometers (before the colon) to a reflectance or 
+intensity value (after the colon). Missing values are linearly interpolated from the two closest neighbors.
+
+When spectral power distributions are obtained from measurements (e.g. at 10nm intervals), they are
+usually quite unwiedy and can clutter the scene description. For this reason,
+there is yet another way to pass a spectrum by loading it from an external
+file:
+\begin{xml}
+<spectrum name="spectrumProperty" filename="measuredSpectrum.spd"/>
+\end{xml}
+The file should contain a single measurement per line, with the corresponding
+wavelength in nanometers and the measured value separated by a space. Here is
+an example:
+\begin{xml}
+406.13 0.703313
+413.88 0.744563
+422.03 0.791625
+430.62 0.822125
+435.09 0.834000
+...
+\end{xml}
+
+It is also possible to specify a completely flat spectral power distribution by specifying
+just one value:
 \begin{xml}
 <spectrum name="spectrumProperty" value="0.56"/>
 \end{xml}
@@ -163,8 +191,8 @@ Points and vectors can be specified as follows:
 It is important that whatever you choose as world-space units (meters, inches, etc.) is 
 used consistently in all places.
 \subsubsection{Transformations}
-Transformations are the only kind of property, which require more than a single tag. The idea is that, starting
-with the identity, you build up a transformation using nested commands. For instance, a transformation that 
+Transformations are the only kind of property that require more than a single tag. The idea is that, starting
+with the identity, one can build up a transformation using a sequence of commands. For instance, a transformation that 
 does a translation followed by a rotation might be written like this:
 \begin{xml}
 <transform name="trafoProperty">
@@ -211,9 +239,9 @@ of how this works:
 		<string name="filename" value="textures/myImage.jpg"/>
 	</texture>
 
-	<bsdf type="lambertian" id="myMaterial">
+	<bsdf type="diffuse" id="myMaterial">
 		<!-- Reference the texture named myImage and pass it 
-			to the BRDF as the reflectance channel -->
+			to the BRDF as the reflectance parameter -->
 		<ref name="reflectance" id="myImage"/>
 	</bsdf>
 
@@ -225,14 +253,28 @@ of how this works:
 	</shape>
 </scene>
 \end{xml}
-Note that this feature cannot yet be used to do geometry instancing.
+By providing a unique \texttt{id} attribute in the
+object declaration, the object is bound to that identifier 
+upon instantiation.
+Referencing this identifier at a later point (using the \texttt{<ref id="..."/>} tag)
+will add the instance to the parent object, with no further memory
+allocation taking place. Note that some plugins expect their child objects
+to be named\footnote{For instance, material plugins such as \pluginref{diffuse} require that
+nested texture instances explicitly specify the parameter to which they want to bind (e.g. ``\texttt{reflectance}'').}.
+For this reason, a name can also be associated with the reference.
+
+Note that while this feature is meant to efficiently handle materials,
+textures, and participating media that are referenced from multiple places,
+it cannot be used to instantiate geometry---if this functionality is needed,
+take a look at the \pluginref{instance} plugin.
+
 \subsection{Including external files}
 A scene can be split into multiple pieces for better readability. 
 to include an external file, please use the following command:
 \begin{xml}
 <include filename="nested-scene.xml"/>
 \end{xml}
-In this case, the file \code{nested-scene.xml} must still be a proper scene file with a \code{<scene>} tag at the root.
+In this case, the file \code{nested-scene.xml} must be a proper scene file with a \code{<scene>} tag at the root.
 This feature is sometimes very convenient in conjunction with the \code{-D key=value} flag of the \code{mitsuba} command line renderer (see the previous section for details).
 This lets you include different parts of a scene configuration by changing the command line parameters (and without having to touch the XML file):
 \begin{xml}

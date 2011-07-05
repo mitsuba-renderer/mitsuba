@@ -20,6 +20,9 @@
 #define __SPECTRUM_H
 
 #include <mitsuba/mitsuba.h>
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
 
 #define SPECTRUM_MIN_WAVELENGTH   400
 #define SPECTRUM_MAX_WAVELENGTH   700
@@ -76,6 +79,10 @@ private:
 /**
  * \brief Linearly interpolated spectral power distribution
  *
+ * This class implements a linearly interpolated spectral
+ * power distribution that is defined over a discrete set of 
+ * measurements at different wavelengths.
+ *
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE InterpolatedSpectrum : public SmoothSpectrum {
@@ -88,6 +95,12 @@ public:
 		m_wavelength.reserve(size);
 		m_value.reserve(size);
 	}
+
+	/**
+	 * Read an interpolated spectrum from a simple
+	 * ASCII format
+	 */
+	InterpolatedSpectrum(const fs::path &path);
 
 	/**
 	 * \brief Append an entry to the spectral power distribution.

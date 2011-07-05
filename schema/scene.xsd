@@ -21,7 +21,7 @@
 				<xsd:element name="boolean" type="boolean"/>
 				<xsd:element name="transform" type="transform"/>
 				<xsd:element name="string" type="string"/>
-				<xsd:element name="spectrum" type="string"/>
+				<xsd:element name="spectrum" type="spectrum"/>
 				<xsd:element name="rgb" type="string"/>
 				<xsd:element name="srgb" type="string"/>
 				<xsd:element name="blackbody" type="blackbody"/>
@@ -41,7 +41,7 @@
 			<xsd:element name="boolean" type="boolean"/>
 			<xsd:element name="transform" type="transform"/>
 			<xsd:element name="string" type="string"/>
-			<xsd:element name="spectrum" type="string"/>
+			<xsd:element name="spectrum" type="spectrum"/>
 			<xsd:element name="rgb" type="string"/>
 			<xsd:element name="srgb" type="string"/>
 			<xsd:element name="blackbody" type="blackbody"/>
@@ -274,6 +274,12 @@
 	<xsd:complexType name="string">
 		<xsd:attribute name="name" type="xsd:string" use="required"/>
 		<xsd:attribute name="value" type="xsd:string" use="required"/>
+	</xsd:complexType>
+
+	<xsd:complexType name="spectrum">
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+		<xsd:attribute name="filename" type="xsd:string" use="optional"/>
+		<xsd:attribute name="value" type="xsd:string" use="optional"/>
 	</xsd:complexType>
 
 	<xsd:complexType name="include">

@@ -344,36 +344,50 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		discrete.fromSmoothSpectrum(&bb);
 		context.parent->properties.setSpectrum(context.attributes["name"], discrete);
 	} else if (name == "spectrum") {
-		std::vector<std::string> tokens = tokenize(
-			context.attributes["value"], ", ");
-		Float value[SPECTRUM_SAMPLES];
-		if (tokens.size() == 1) {
-			value[0] = parseFloat(name, tokens[0]);
-			context.parent->properties.setSpectrum(context.attributes["name"],
-				Spectrum(value[0]));
-		} else {
-			if (tokens[0].find(':') != std::string::npos) {
-				InterpolatedSpectrum interp(tokens.size());
-				/* Wavelength -> Value mapping */
-				for (size_t i=0; i<tokens.size(); i++) {
-					std::vector<std::string> tokens2 = tokenize(tokens[i], ":");
-					if (tokens2.size() != 2) 
-						XMLLog(EError, "Invalid spectrum->value mapping specified");
-					Float wavelength = parseFloat(name, tokens2[0]);
-					Float value = parseFloat(name, tokens2[1]);
-					interp.appendSample(wavelength, value);
-				}
-				Spectrum discrete;
-				discrete.fromSmoothSpectrum(&interp);
+		bool hasValue = context.attributes.find("value") != context.attributes.end();
+		bool hasFilename = context.attributes.find("filename") != context.attributes.end();
+
+		if (hasValue == hasFilename) {
+			SLog(EError, "Spectrum: please provide one of 'value' or 'filename'");
+		} else if (hasFilename) {
+			FileResolver *resolver = Thread::getThread()->getFileResolver();
+			fs::path path = resolver->resolve(context.attributes["filename"]);
+			InterpolatedSpectrum interp(path);
+			Spectrum discrete;
+			discrete.fromSmoothSpectrum(&interp);
+			context.parent->properties.setSpectrum(context.attributes["name"], discrete);
+		} else if (hasValue) {
+			std::vector<std::string> tokens = tokenize(
+				context.attributes["value"], ", ");
+			Float value[SPECTRUM_SAMPLES];
+			if (tokens.size() == 1) {
+				value[0] = parseFloat(name, tokens[0]);
 				context.parent->properties.setSpectrum(context.attributes["name"],
-					discrete);
+					Spectrum(value[0]));
 			} else {
-				if (tokens.size() != SPECTRUM_SAMPLES)
-					XMLLog(EError, "Invalid spectrum value specified (incorrect length)");
-				for (int i=0; i<SPECTRUM_SAMPLES; i++) 
-					value[i] = parseFloat(name, tokens[i]);
-				context.parent->properties.setSpectrum(context.attributes["name"],
-					Spectrum(value));
+				if (tokens[0].find(':') != std::string::npos) {
+					InterpolatedSpectrum interp(tokens.size());
+					/* Wavelength -> Value mapping */
+					for (size_t i=0; i<tokens.size(); i++) {
+						std::vector<std::string> tokens2 = tokenize(tokens[i], ":");
+						if (tokens2.size() != 2) 
+							XMLLog(EError, "Invalid spectrum->value mapping specified");
+						Float wavelength = parseFloat(name, tokens2[0]);
+						Float value = parseFloat(name, tokens2[1]);
+						interp.appendSample(wavelength, value);
+					}
+					Spectrum discrete;
+					discrete.fromSmoothSpectrum(&interp);
+					context.parent->properties.setSpectrum(context.attributes["name"],
+						discrete);
+				} else {
+					if (tokens.size() != SPECTRUM_SAMPLES)
+						XMLLog(EError, "Invalid spectrum value specified (incorrect length)");
+					for (int i=0; i<SPECTRUM_SAMPLES; i++) 
+						value[i] = parseFloat(name, tokens[i]);
+					context.parent->properties.setSpectrum(context.attributes["name"],
+						Spectrum(value));
+				}
 			}
 		}
 	} else if (name == "transform") {

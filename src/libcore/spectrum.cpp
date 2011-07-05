@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/mitsuba.h>
+#include <boost/filesystem/fstream.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -47,7 +48,7 @@ void Spectrum::staticInitialization() {
 }
 
 void Spectrum::staticShutdown() {
-	/* Do nothing */
+	/* Nothing to do */
 }
 
 void Spectrum::fromSmoothSpectrum(const SmoothSpectrum *smooth) {
@@ -260,9 +261,24 @@ Float BlackBodySpectrum::eval(Float l) const {
 		/ (1e9*1e4*(std::exp((h/k)*c/(lambda*m_temperature)) - 1.0));
 	return (Float) I;
 }
+	
+InterpolatedSpectrum::InterpolatedSpectrum(const fs::path &path) {
+	fs::ifstream is(path);
+	if (is.bad() || is.fail())
+		SLog(EError, "InterpolatedSpectrum: could not open \"%s\"",
+			path.file_string().c_str());
+
+	while (is.good() && !is.eof()) {
+		Float lambda, value;
+		is >> lambda >> value;
+		appendSample(lambda, value);
+	}
+}
 
 void InterpolatedSpectrum::appendSample(Float lambda, Float value) {
-	SAssert(m_wavelength.size() == 0 || m_wavelength[m_wavelength.size()-1] < lambda);
+	if (m_wavelength.size() != 0 && m_wavelength[m_wavelength.size()-1] >= lambda)
+		SLog(EError, "InterpolatedSpectrum: spectral power distribution values must "
+			"be provided in order of increasing wavelength!");
 	m_wavelength.push_back(lambda);
 	m_value.push_back(value);
 }

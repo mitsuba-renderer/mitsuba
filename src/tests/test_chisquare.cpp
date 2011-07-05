@@ -101,7 +101,7 @@ public:
 			m_fakeSampler = new FakeSampler(m_sampler);
 		}
 
-		std::pair<Vector, Float> generateSample() {
+		boost::tuple<Vector, Float, EMeasure> generateSample() {
 			Point2 sample(m_sampler->next2D());
 			Intersection its;
 			BSDFQueryRecord bRec(its);
@@ -136,7 +136,7 @@ public:
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
-				return std::make_pair(bRec.wo, 0.0f);
+				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			} else if (sampled.isZero()) {
 				if (!f.isZero() && pdfVal != 0)
 					Log(EWarn, "Inconsistency (2): f=%s, pdf=%f, sampled f/pdf=%s, bRec=%s",
@@ -144,14 +144,14 @@ public:
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
-				return std::make_pair(bRec.wo, 0.0f);
+				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			}
 
 			Spectrum sampled2 = f/pdfVal;
 			if (!sampled.isValid() || !sampled2.isValid()) {
 				Log(EWarn, "Ooops: f=%s, pdf=%f, sampled f/pdf=%s, bRec=%s",
 					f.toString().c_str(), pdfVal, sampled.toString().c_str(), bRec.toString().c_str());
-				return std::make_pair(bRec.wo, 0.0f);
+				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			}
 
 			bool mismatch = false;
@@ -175,10 +175,11 @@ public:
 				disableFPExceptions();
 			#endif
 
-			return std::make_pair(bRec.wo, 1.0f);
+			return boost::make_tuple(bRec.wo, 1.0f, 
+				BSDF::getMeasure(bRec.sampledType));
 		}
  
-		Float pdf(const Vector &wo) {
+		Float pdf(const Vector &wo, EMeasure measure) {
 			Intersection its;
 			BSDFQueryRecord bRec(its);
 			bRec.component = m_component;
@@ -191,9 +192,10 @@ public:
 				enableFPExceptions();
 			#endif
 
-			if (m_bsdf->eval(bRec).isZero())
+			if (m_bsdf->eval(bRec, measure).isZero())
 				return 0.0f;
-			Float result = m_bsdf->pdf(bRec);
+
+			Float result = m_bsdf->pdf(bRec, measure);
 
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
@@ -220,7 +222,7 @@ public:
 			: m_mRec(mRec), m_phase(phase), m_sampler(sampler), m_wi(wi), 
 			  m_largestWeight(0) { }
 
-		std::pair<Vector, Float> generateSample() {
+		boost::tuple<Vector, Float, EMeasure> generateSample() {
 			Point2 sample(m_sampler->next2D());
 			PhaseFunctionQueryRecord pRec(m_mRec, m_wi);
 			
@@ -240,7 +242,7 @@ public:
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
-				return std::make_pair(pRec.wo, 0.0f);
+				return boost::make_tuple(pRec.wo, 0.0f, ESolidAngle);
 			} else if (sampled == 0) {
 				if (f != 0 && pdfVal != 0)
 					Log(EWarn, "Inconsistency: f=%f, pdf=%f, sampled f/pdf=%f",
@@ -248,7 +250,7 @@ public:
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
-				return std::make_pair(pRec.wo, 0.0f);
+				return boost::make_tuple(pRec.wo, 0.0f, ESolidAngle);
 			}
 
 			Float sampled2 = f/pdfVal;
@@ -271,10 +273,13 @@ public:
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
-			return std::make_pair(pRec.wo, 1.0f);
+			return boost::make_tuple(pRec.wo, 1.0f, ESolidAngle);
 		}
  
-		Float pdf(const Vector &wo) const {
+		Float pdf(const Vector &wo, EMeasure measure) const {
+			if (measure != ESolidAngle)
+				return 0.0f;
+
 			PhaseFunctionQueryRecord pRec(m_mRec, m_wi, wo);
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
@@ -351,11 +356,11 @@ public:
 					// Initialize the tables used by the chi-square test
 					chiSqr->fill(
 						boost::bind(&BSDFAdapter::generateSample, &adapter),
-						boost::bind(&BSDFAdapter::pdf, &adapter, _1)
+						boost::bind(&BSDFAdapter::pdf, &adapter, _1, _2)
 					);
 
 					// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-					ChiSquare::ETestResult result = chiSqr->runTest(1, SIGNIFICANCE_LEVEL);
+					ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
 					if (result == ChiSquare::EReject) {
 						std::string filename = formatString("failure_%i.m", failureCount++);
 						chiSqr->dumpTables(filename);
@@ -394,11 +399,11 @@ public:
 							// Initialize the tables used by the chi-square test
 							chiSqr->fill(
 								boost::bind(&BSDFAdapter::generateSample, &adapter),
-								boost::bind(&BSDFAdapter::pdf, &adapter, _1)
+								boost::bind(&BSDFAdapter::pdf, &adapter, _1, _2)
 							);
 
 							// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-							ChiSquare::ETestResult result = chiSqr->runTest(1, SIGNIFICANCE_LEVEL);
+							ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
 							if (result == ChiSquare::EReject) {
 								std::string filename = formatString("failure_%i.m", failureCount++);
 								chiSqr->dumpTables(filename);
@@ -460,11 +465,11 @@ public:
 				// Initialize the tables used by the chi-square test
 				chiSqr->fill(
 					boost::bind(&PhaseFunctionAdapter::generateSample, &adapter),
-					boost::bind(&PhaseFunctionAdapter::pdf, &adapter, _1)
+					boost::bind(&PhaseFunctionAdapter::pdf, &adapter, _1, _2)
 				);
 
 				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-				ChiSquare::ETestResult result = chiSqr->runTest(1, SIGNIFICANCE_LEVEL);
+				ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
 				if (result == ChiSquare::EReject) {
 					std::string filename = formatString("failure_%i.m", failureCount++);
 					chiSqr->dumpTables(filename);
