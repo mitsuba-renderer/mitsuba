@@ -22,7 +22,7 @@
 				<xsd:element name="transform" type="transform"/>
 				<xsd:element name="string" type="string"/>
 				<xsd:element name="spectrum" type="spectrum"/>
-				<xsd:element name="rgb" type="string"/>
+				<xsd:element name="rgb" type="rgb"/>
 				<xsd:element name="srgb" type="string"/>
 				<xsd:element name="blackbody" type="blackbody"/>
 			</xsd:choice>
@@ -42,7 +42,7 @@
 			<xsd:element name="transform" type="transform"/>
 			<xsd:element name="string" type="string"/>
 			<xsd:element name="spectrum" type="spectrum"/>
-			<xsd:element name="rgb" type="string"/>
+			<xsd:element name="rgb" type="rgb"/>
 			<xsd:element name="srgb" type="string"/>
 			<xsd:element name="blackbody" type="blackbody"/>
 		</xsd:choice>
@@ -274,6 +274,12 @@
 	<xsd:complexType name="string">
 		<xsd:attribute name="name" type="xsd:string" use="required"/>
 		<xsd:attribute name="value" type="xsd:string" use="required"/>
+	</xsd:complexType>
+
+	<xsd:complexType name="rgb">
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+		<xsd:attribute name="value" type="xsd:string" use="required"/>
+		<xsd:attribute name="intent" type="xsd:string" use="optional"/>
 	</xsd:complexType>
 
 	<xsd:complexType name="spectrum">

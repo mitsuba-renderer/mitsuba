@@ -11,142 +11,19 @@ A quick video tutorial on using the GUI can be found here: \url{http://vimeo.com
 \subsection{Command line interface}
 \label{sec:mitsuba}
 The \texttt{mitsuba} binary is an alternative non-interactive rendering 
-frontend for command-line use and batch job operation.
+frontend for command-line usage and batch job operation.
 To get a listing of the parameters it supports, run
 the executable without parameters:
 \begin{shell}
 $\texttt{\$}$ mitsuba 
 \end{shell}
-\lstref{mitsuba-cli} shows the output resulting from this command. The most common
-mode of operation is to render a single scene, which is provided as a parameter, e.g.
-\begin{shell}
-$\texttt{\$}$ mitsuba path-to/my-scene.xml
-\end{shell}
-It is also possible to connect to network render nodes, which essentially lets Mitsuba parallelize
-over additional cores. To do this, pass a semicolon-separated list of machines to 
-the \code{-c} parameter. 
-\begin{shell}
-$\texttt{\$}$ mitsuba -c machine1;machine2;... path-to/my-scene.xml
-\end{shell}
-There are two different ways in which you can access render nodes:
-\begin{itemize}
-\item\textbf{Direct}: Here, you create a direct connection to a running \code{mtssrv} instance on
-another machine (\code{mtssrv} is the Mitsuba server process). From the the performance 
-standpoint, this approach should always be preferred over the SSH method described below when there is 
-a choice between them. There are some disadvantages though: first, you need to manually start
-\code{mtssrv} on every machine you want to use. 
-
-And perhaps more importantly: the direct communication
-protocol makes no provisions for a malicious user on the remote side. It is too costly
-to constantly check the communication stream for illegal data sequences, so Mitsuba simply doesn't do it.
-The consequence of this is that you should only use the direct communication approach within
-trusted networks.
-
-For direct connections, you can specify the remote port as follows:
-\begin{shell}
-$\texttt{\$}$ mitsuba -c machine:1234 path-to/my-scene.xml
-\end{shell}
-When none is given, Mitsuba assumes that the server uses default port 7554. 
-\item \textbf{SSH}: 
-    This approach works as follows: The renderer creates a SSH connection 
-	to the remote side, where it launches a Mitsuba worker instance.
-	All subsequent communication then passes through the encrypted link. 
-	This is completely secure but slower due to the encryption overhead.
-	If you are rendering a complex scene, there is a good chance that it
-	won't matter much since most time is spent doing computations rather than
-	communicating
-
-	Such an SSH link can be created simply by using a slightly different syntax:
-\begin{shell}
-$\texttt{\$}$ mitsuba -c username@machine path-to/my-scene.xml
-\end{shell}
-	The above line assumes that the remote home directory contains
-	a Mitsuba source directory (with compiled binaries) named \code{mitsuba}.
-	If that is not the case, you need to provide the path to such a directory manually, e.g:
-\begin{shell}
-$\texttt{\$}$ mitsuba -c username@machine:/opt/mitsuba path-to/my-scene.xml
-\end{shell}
-	For the SSH connection approach to work, you \emph{must} enable passwordless 
-	authentication.
-	Try opening a terminal window and running the command \code{ssh username@machine} 
-	(replace with the details of your remote connection).
-	If you are asked for a password, something is not set up correctly --- please see 
-	\url{http://www.debian-administration.org/articles/152} for instructions.
-
-	On Windows, the situation is a bit more difficult since there is no suitable SSH client by
-	default. To get SSH connections to work, Mitsuba requires \code{plink.exe} (from PuTTY) to
-	be on the path. For passwordless authentication with a Linux/OSX-based
-	server, convert your private key to PuTTY's format using \code{puttygen.exe}.
-	Afterwards, start \code{pageant.exe} to load and  authenticate the key. All 
-	of these binaries are available from the PuTTY website, and there is also
-	a copy in the \code{tools/windows/bin}
-	directory in the Mitsuba repository.
-
-	It is possible to mix the two approaches to access some machines directly and others
-	over SSH.
-\end{itemize}
-When doing many network-based renders over the command line, it can become tedious to
-specify the connections every time. They can alternatively be loaded from a text file
-where each line contains a separate connection description as discussed previously:
-\begin{shell}
-$\texttt{\$}$ mitsuba -s servers.txt path-to/my-scene.xml
-\end{shell}
-where \code{servers.txt} e.g. contains
-\begin{shell}
-user1@machine1.domain.org:/opt/mitsuba
-machine2.domain.org
-machine3.domain.org:7346
-\end{shell}
-\subsubsection{Passing parameters}
-Any attribute in the scene XML file can be parameterized from the
-command line.
-For instance, you can render a scene several times with different reflectance values
-on a certain material by changing its description to something like 
-\begin{xml}
-<bsdf type="lambertian">
-	<spectrum name="reflectance" value="$\texttt{\$}$reflectance"/>
-</bsdf>
-\end{xml}
-and running Mitsuba as follows:
-\begin{shell}
-$\texttt{\$}$ mitsuba -Dreflectance=0.1 -o ref_0.1.exr scene.xml 
-$\texttt{\$}$ mitsuba -Dreflectance=0.2 -o ref_0.2.exr scene.xml 
-$\texttt{\$}$ mitsuba -Dreflectance=0.5 -o ref_0.5.exr scene.xml 
-\end{shell}
-
-\subsubsection{Writing partial images to disk}
-When doing lengthy command line renders on Linux or OSX, it is possible 
-to send a signal to the process using 
-\begin{shell}	
-$\texttt{\$}$ killall -HUP mitsuba
-\end{shell}
-This causes the renderer to write out the partially finished 
-image, after which it continues rendering. This can sometimes be useful to 
-check if everything is working correctly.
-
-\subsubsection{Rendering an animation}
-The command line interface is ideally suited for rendering large amounts of files in batch
-operation. You can simply pass in the files using a wildcard in the filename. If you've
-already rendered a subset of the frames and you only want to complete the remainder, add the
-\texttt{-x} flag, and all files with existing output will be skipped. You can also 
-let the scheduler work on several scenes at once using the \texttt{-j} parameter --- this is 
-especially useful when you are 
-parallelizing over multiple machines: as some of the participating cores 
-finish rendering the current frame, they can immediately start working on the next one
-instead of having to wait for all other cores to finish. Altogether, you
-might start the renderer something like this
-\begin{shell}
-$\texttt{\$}$ mitsuba -xj 2 -c machine1;machine2;...  animation/frame_*.xml
-\end{shell}
-
-
 \begin{console}[label=lst:mitsuba-cli,caption=Command line options of the \texttt{mitsuba} binary]
-Mitsuba version 0.1.1, Copyright (c) 2010 Wenzel Jakob
+Mitsuba version 0.2.1, Copyright (c) 2011 Wenzel Jakob
 Usage: mitsuba [options] <One or more scene XML files>
 Options/Arguments:
    -h          Display this help text
 
-   -D key=val  Define a constant, which can referenced as "$\texttt{\$}$key" in the scene
+   -D key=val  Define a constant, which can referenced as "$\$$key" in the scene
 
    -o fname    Write the output image to the file denoted by "fname"
 
@@ -179,15 +56,139 @@ Options/Arguments:
 
    -x          Skip rendering of files where output already exists
 
+   -r sec      Write (partial) output images every 'sec' seconds
+
    -b res      Specify the block resolution used to split images into parallel
                workloads (default: 32). Only applies to some integrators.
 
    -v          Be more verbose
 
-   -b          Disable progress bars
+   -w          Treat warnings as errors
 
- The README file included with the distribution contains further information.
+   -z          Disable progress bars
+
+ For documentation, please refer to http://www.mitsuba-renderer.org/docs.html
 \end{console}
+\lstref{mitsuba-cli} shows the output resulting from this command. The most common
+mode of operation is to render a single scene, which is provided as a parameter, e.g.
+\begin{shell}
+$\texttt{\$}$ mitsuba path-to/my-scene.xml
+\end{shell}
+It is also possible to connect to network render nodes, which essentially lets Mitsuba parallelize
+over additional cores. To do this, pass a semicolon-separated list of machines to 
+the \code{-c} parameter. 
+\begin{shell}
+$\texttt{\$}$ mitsuba -c machine1;machine2;... path-to/my-scene.xml
+\end{shell}
+There are two different ways in which you can access render nodes:
+\begin{itemize}
+\item\textbf{Direct}: Here, you create a direct connection to a running \code{mtssrv} instance on
+another machine (\code{mtssrv} is the Mitsuba server process). From the the performance 
+standpoint, this approach should always be preferred over the SSH method described below when there is 
+a choice between them. There are some disadvantages though: first, you need to manually start
+\code{mtssrv} on every machine you want to use. 
+
+And perhaps more importantly: the direct communication
+protocol makes no provisions for a malicious user on the remote side. It is too costly
+to constantly check the communication stream for illegal data sequences, so Mitsuba simply doesn't do it.
+The consequence of this is that you should only use the direct communication approach within
+trusted networks.
+
+For direct connections, you can specify the remote port as follows:
+\begin{shell}
+$\texttt{\$}$ mitsuba -c machine:1234 path-to/my-scene.xml
+\end{shell}
+When no port is explicitly specified, Mitsuba uses default value of 7554. 
+\item \textbf{SSH}: 
+    This approach works as follows: The renderer creates a SSH connection 
+	to the remote side, where it launches a Mitsuba worker instance.
+	All subsequent communication then passes through the encrypted link. 
+	This is completely secure but slower due to the encryption overhead.
+	If you are rendering a complex scene, there is a good chance that it
+	won't matter much since most time is spent doing computations rather than
+	communicating
+
+	Such an SSH link can be created simply by using a slightly different syntax:
+\begin{shell}
+$\texttt{\$}$ mitsuba -c username@machine path-to/my-scene.xml
+\end{shell}
+	The above line assumes that the remote home directory contains
+	a Mitsuba source directory named \code{mitsuba},
+	which contains the compiled Mitsuba binaries.
+	If that is not the case, you need to provide the path to such a directory manually, e.g:
+\begin{shell}
+$\texttt{\$}$ mitsuba -c username@machine:/opt/mitsuba path-to/my-scene.xml
+\end{shell}
+	For the SSH connection approach to work, you \emph{must} enable passwordless 
+	authentication.
+	Try opening a terminal window and running the command \code{ssh username@machine} 
+	(replace with the details of your remote connection).
+	If you are asked for a password, something is not set up correctly --- please see 
+	\url{http://www.debian-administration.org/articles/152} for instructions.
+
+	On Windows, the situation is a bit more difficult since there is no suitable SSH client by
+	default. To get SSH connections to work, Mitsuba requires \code{plink.exe} (from PuTTY) to
+	be on the path. For passwordless authentication with a Linux/OSX-based
+	server, convert your private key to PuTTY's format using \code{puttygen.exe}.
+	Afterwards, start \code{pageant.exe} to load and  authenticate the key. All 
+	of these binaries are available from the PuTTY website.
+
+	It is possible to mix the two approaches to access some machines directly and others
+	over SSH.
+\end{itemize}
+When doing many network-based renders over the command line, it can become tedious to
+specify the connections every time. They can alternatively be loaded from a text file
+where each line contains a separate connection description as discussed previously:
+\begin{shell}
+$\texttt{\$}$ mitsuba -s servers.txt path-to/my-scene.xml
+\end{shell}
+where \code{servers.txt} e.g. contains
+\begin{shell}
+user1@machine1.domain.org:/opt/mitsuba
+machine2.domain.org
+machine3.domain.org:7346
+\end{shell}
+\subsubsection{Passing parameters}
+Any attribute in the XML-based scene description language can be parameterized from the
+command line.
+For instance, you can render a scene several times with different reflectance values
+on a certain material by changing its description to something like 
+\begin{xml}
+<bsdf type="diffuse">
+	<spectrum name="reflectance" value="$\texttt{\$}$reflectance"/>
+</bsdf>
+\end{xml}
+and running Mitsuba as follows:
+\begin{shell}
+$\texttt{\$}$ mitsuba -Dreflectance=0.1 -o ref_0.1.exr scene.xml 
+$\texttt{\$}$ mitsuba -Dreflectance=0.2 -o ref_0.2.exr scene.xml 
+$\texttt{\$}$ mitsuba -Dreflectance=0.5 -o ref_0.5.exr scene.xml 
+\end{shell}
+
+\subsubsection{Writing partial images to disk}
+When doing lengthy command line renders on Linux or OSX, it is possible 
+to send a signal to the process using 
+\begin{shell}	
+$\texttt{\$}$ killall -HUP mitsuba
+\end{shell}
+This causes the renderer to write out the partially finished 
+image, after which it continues rendering. This can sometimes be useful to 
+check if everything is working correctly.
+
+\subsubsection{Rendering an animation}
+The command line interface is ideally suited for rendering large amounts of files in batch
+operation. You can simply pass in the files using a wildcard in the filename. 
+
+If you've already rendered a subset of the frames and you only want to complete the remainder, 
+add the \texttt{-x} flag, and all files with existing output will be skipped. You can also 
+let the scheduler work on several scenes at once using the \texttt{-j} parameter --- this is 
+especially useful when parallelizing over multiple machines: as some of the participating machines
+finish rendering the current frame, they can immediately start working on the next one
+instead of having to wait for all other cores to finish. Altogether, you
+might start the with parameters such as the following
+\begin{shell}
+$\texttt{\$}$ mitsuba -xj 2 -c machine1;machine2;...  animation/frame_*.xml
+\end{shell}
 \subsection{Direct connection server}
 A Mitsuba compute node can be created using the \code{mtssrv} executable. By default,
 it will listen on port 7554:
@@ -204,13 +205,19 @@ $\texttt{\$}$ mtssrv -i maxwell.cs.cornell.edu
 \end{shell}
 As advised in Section~\ref{sec:mitsuba}, it is advised to run \code{mtssrv} \emph{only} in trusted networks.
 
-One nice feature of \code{mtssrv} is that it (like \code{mitsuba}) also supports the \code{-c} and \code{-s} 
-parameters, which can be used to connect to additional compute servers. 
-This allows building large hierarchies of nodes,
-where communication occurs only amongst neighbors and the root node presents itself as
-a computer with hundreds of cores.
-Connecting clients will not be able to distinguish additional cores obtained in this manner  
-from the actual server cores. 
+One nice feature of \code{mtssrv} is that it (like the \code{mitsuba} executable) 
+also supports the \code{-c} and \code{-s} parameters, which create connections 
+to additional compute servers.
+Using this feature, one can create hierarchies of compute nodes. For instance,
+the root \code{mttsrv} instance of such a hierarchy could share its work with a 
+number of other  machines running \code{mtssrv}, and each of these might also 
+share their work with further machines, and so on...
+
+The parallelization over such hierarchies happens transparently---when 
+connecting a renderering process to the root node, it sees a machine 
+with hundreds or thousands of cores, to which it can submit work without
+needing to worry about how exactly it is going to be spread out in 
+the hierarchy.
 
 Such hierarchies are mainly useful to reduce communication bottlenecks when distributing
 large resources (such as scenes) to remote machines. Imagine the following hypothetical scenario:
@@ -222,7 +229,7 @@ connection and the need to transmit your scene to every single compute node invo
 Using \code{mtssrv}, you can
 instead designate a central scheduling node at your workplace, which accepts connections and delegates
 rendering tasks to the other machines. In this case, you will only have to transmit the scene once,
-and the remaining distribution happens over the comparatively fast ethernet at your workplace.
+and the remaining distribution happens over the fast local network at your workplace.
 \subsection{Utility launcher}
 \label{sec:mtsutil}
 When working on a larger project, one often needs to implement various utility programs that 

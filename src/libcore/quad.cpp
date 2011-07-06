@@ -23,7 +23,6 @@ MTS_NAMESPACE_BEGIN
  FOR A PARTICULAR PURPOSE. See the license for more details.
 */
 
-
 const Float GaussLobattoIntegrator::m_alpha = (Float) std::sqrt(2.0/3.0); 
 const Float GaussLobattoIntegrator::m_beta  = (Float) (1.0/std::sqrt(5.0));
 const Float GaussLobattoIntegrator::m_x1	= (Float) 0.94288241569547971906; 
@@ -31,11 +30,12 @@ const Float GaussLobattoIntegrator::m_x2	= (Float) 0.64185334234578130578;
 const Float GaussLobattoIntegrator::m_x3	= (Float) 0.23638319966214988028;
 
 GaussLobattoIntegrator::GaussLobattoIntegrator(size_t maxEvals,
-	Float absError, Float relError, bool useConvergenceEstimate)
+	Float absError, Float relError, bool useConvergenceEstimate, bool warn)
 	: m_absError(absError), 
 	  m_relError(relError),
 	  m_maxEvals(maxEvals),
-	  m_useConvergenceEstimate(useConvergenceEstimate) {
+	  m_useConvergenceEstimate(useConvergenceEstimate),
+      m_warn(warn) {
 	if (m_absError == 0 && m_relError == 0)
 		SLog(EError, "GaussLobattoIntegrator:: Absolute and relative "
 			"error requirements can't both be zero!");
@@ -53,9 +53,9 @@ Float GaussLobattoIntegrator::integrate(
 	}
 	const Float absTolerance = calculateAbsTolerance(f, a, b, evals);
 	evals += 2;
-	if (evals >= m_maxEvals)
-		SLog(EWarn, "GaussLobattoIntegrator: Maximum number of evaluations reached!");
 	Float result = factor * adaptiveGaussLobattoStep(f, a, b, f(a), f(b), absTolerance, evals);
+	if (evals >= m_maxEvals && m_warn)
+		SLog(EWarn, "GaussLobattoIntegrator: Maximum number of evaluations reached!");
 	if (_evals)
 		*_evals = evals;
 	return result;
@@ -73,17 +73,14 @@ Float GaussLobattoIntegrator::calculateAbsTolerance(
 	const Float y11= f(m+m_alpha*h);
 	const Float y13= f(b);
 
-	Float acc=h*((Float) 0.0158271919734801831*(y1+y13)
-			  +(Float) 0.0942738402188500455*(f(m-m_x1*h)+f(m+m_x1*h))
-			  +(Float) 0.1550719873365853963*(y3+y11)
-			  +(Float) 0.1888215739601824544*(f(m-m_x2*h)+ f(m+m_x2*h))
-			  +(Float) 0.1997734052268585268*(y5+y9) 
-			  +(Float) 0.2249264653333395270*(f(m-m_x3*h)+f(m+m_x3*h))
-			  +(Float) 0.2426110719014077338*y7);  
+	Float acc = h*((Float) 0.0158271919734801831*(y1+y13)
+				 + (Float) 0.0942738402188500455*(f(m-m_x1*h)+f(m+m_x1*h))
+				 + (Float) 0.1550719873365853963*(y3+y11)
+				 + (Float) 0.1888215739601824544*(f(m-m_x2*h)+ f(m+m_x2*h))
+				 + (Float) 0.1997734052268585268*(y5+y9) 
+				 + (Float) 0.2249264653333395270*(f(m-m_x3*h)+f(m+m_x3*h))
+				 + (Float) 0.2426110719014077338*y7);  
 	evals += 13;
-
-	if (acc == 0)
-		SLog(EError, "GaussLobattoIntegrator: Cannot calculate absolute error from relative error");
 
 	Float r = 1.0;
 	if (m_useConvergenceEstimate) {
@@ -98,7 +95,7 @@ Float GaussLobattoIntegrator::calculateAbsTolerance(
 	}
 	Float result = std::numeric_limits<Float>::infinity();
 
-	if (m_relError != 0)	
+	if (m_relError != 0 && acc != 0)
 		result = acc * std::max(m_relError,
 			std::numeric_limits<Float>::epsilon())
 			/ (r*std::numeric_limits<Float>::epsilon());
@@ -134,16 +131,11 @@ Float GaussLobattoIntegrator::adaptiveGaussLobattoStep(
 
 	evals += 5;
 
-	if (evals >= m_maxEvals) {
-		if (evals-5 < m_maxEvals) // Warn once
-			SLog(EWarn, "GaussLobattoIntegrator: Maximum number of evaluations reached!");
+	if (evals >= m_maxEvals) 
 		return integral1;
-	}
 
 	Float dist = acc + (integral1-integral2);
-	if(dist==acc || mll<=a || b<=mrr) {
-		if (m<=a || b<=m)
-			SLog(EWarn, "GaussLobattoIntegrator: Interval contains no more machine numbers!");
+	if (dist==acc || mll<=a || b<=mrr) {
 		return integral1;
 	} else {
 		return  adaptiveGaussLobattoStep(f,a,mll,fa,fmll,acc,evals)  

@@ -29,8 +29,8 @@ namespace fs = boost::filesystem;
 	specified in the configuration file!
 #endif
 
-#define SPECTRUM_MIN_WAVELENGTH   400
-#define SPECTRUM_MAX_WAVELENGTH   700
+#define SPECTRUM_MIN_WAVELENGTH   360
+#define SPECTRUM_MAX_WAVELENGTH   830
 #define SPECTRUM_RANGE                \
 	(SPECTRUM_MAX_WAVELENGTH-SPECTRUM_MIN_WAVELENGTH)
 
@@ -154,8 +154,8 @@ public:
 	 * for the specified number of samples
 	 */
 	inline InterpolatedSpectrum(size_t size = 0) {
-		m_wavelength.reserve(size);
-		m_value.reserve(size);
+		m_wavelengths.reserve(size);
+		m_values.reserve(size);
 	}
 
 	/**
@@ -195,6 +195,9 @@ public:
 	 */
 	void zeroExtend();
 
+	/// Clear all stored entries
+	void clear();
+
 	/**
 	 * \brief Return the value of the spectral power distribution
 	 * at the given wavelength.
@@ -226,11 +229,11 @@ public:
 	/// Virtual destructor
 	virtual ~InterpolatedSpectrum() { }
 private:
-	std::vector<Float> m_wavelength, m_value;
+	std::vector<Float> m_wavelengths, m_values;
 };
 
 /** \brief Discrete spectral power distribution based on a number 
- * of wavelength bins over the 400-700 nm range. 
+ * of wavelength bins over the 360-830 nm range. 
  *
  * This class defines a vector-like data type that can be used for 
  * computations involving radiance.
@@ -524,7 +527,7 @@ public:
 	Float eval(Float lambda) const;
 
 	/// \brief Return the wavelength range covered by a spectral bin
-	std::pair<Float, Float> getBinCoverage(size_t index) const;
+	static std::pair<Float, Float> getBinCoverage(size_t index);
 
 	/// Return the luminance in candelas.
 #if SPECTRUM_SAMPLES == 3
@@ -558,7 +561,7 @@ public:
 
 	/// Convert from linear RGB
 	inline void fromLinearRGB(Float r, Float g, Float b,
-			EConversionIntent /* unused */) {
+			EConversionIntent intent = EReflectance /* unused */) {
 		/* Nothing to do -- the renderer is in RGB mode */
 		s[0] = r; s[1] = g; s[2] = b;
 	}

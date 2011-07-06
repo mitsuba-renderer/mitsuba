@@ -122,40 +122,77 @@ Integer and floating point values can be passed as follows:
 Note that you must adhere to the format expected by the object, i.e. you can't pass an integer property
 to an object, which expects a floating-point value associated with that name.
 \subsubsection{Strings}
-Passing strings is very straightforward:
+Passing strings is straightforward:
 \begin{xml}
 <string name="stringProperty" value="This is a string"/>
 \end{xml}
 \subsubsection{Color spectra}
-There are several different ways of passing color spectra to objects, which can be used interchangeably.
-The most basic one is to supply linear RGB or sRGB values as floating-point triplets or hex values
+Depending on the compilation flags of Mitsuba (see \secref{compiling-flags} for
+details), the renderer internally either represents colors using discretized color spectra
+(when \texttt{SPECTRUM\_SAMPLES} is set to a value other than 3), or it
+uses a basic linear RGB representation\footnote{The official
+releases all use linear RGB---to do spectral renderings, you will have
+to compile Mitsuba yourself.}.
+Irrespective of which internal representation is used, Mitsuba supports
+several different ways of specifying color information, which is then 
+converted appropriately.
+
+The preferred way of passing color spectra to the renderer is to explicitly 
+denote the  associated wavelengths of each value:
+\begin{xml}
+<spectrum name="spectrumProperty" value="400:0.56, 500:0.18, 600:0.58, 700:0.24"/>
+\end{xml}
+This is a mapping from wavelength in nanometers (before the colon) 
+to a reflectance or intensity value (after the colon).
+Values in between are linearly interpolated from the two closest neighbors.
+A useful shortcut to get a completely uniform spectrum, it is to provide 
+only a single value:
+\begin{xml}
+<spectrum name="spectrumProperty" value="0.56"/>
+\end{xml}
+
+Another (discouraged) option is to directly provide the spectrum in Mitsuba's
+internal representation, avoiding the need for any kind of conversion. 
+However, this is problematic, since the associated scene will likely not work
+anymore when Mitsuba is compiled with a different value of 
+\texttt{SPECTRUM\_SAMPLES}. 
+For completeness, the possibility is explained nonetheless. Assuming that 
+the 360-830$nm$ range is discretized into ten 47$nm$-sized blocks 
+(i.e. \texttt{SPECTRUM\_SAMPLES} is set to 10), their values can be specified 
+as follows:
+\begin{xml}
+<spectrum name="spectrumProperty" value=".2, .2, .8, .4, .6, .5, .1, .9, .4, .2"/>
+\end{xml}
+
+Another convenient way of providing color spectra is by specifying linear RGB 
+or sRGB values using floating-point triplets or hex values:
 \begin{xml}
 <rgb name="spectrumProperty" value="0.2, 0.8, 0.4"/>
 <srgb name="spectrumProperty" value="0.4, 0.3, 0.2"/>
 <srgb name="spectrumProperty" value="#f9aa34"/>
 \end{xml}
-When Mitsuba is compiled with the default settings, it internally uses linear RGB to represent colors, so
-these values are directly used. The renderer can also be configured to sample the color spectrum using a specified
-number of samples, in which case the RGB values are first converted into spectra using a simple heuristic.
+When Mitsuba is compiled with the default settings, it internally uses 
+linear RGB to represent colors, so these values can directly be used. 
+However, when configured for doing spectral rendering, a suitable color
+spectrum with the requested RGB reflectance must be found. This is a tricky
+problem, since there is an infinite number of spectra with this property.
 
-You can also directly supply the spectral color samples that Mitsuba internally uses if spectral rendering is
-active. This unfortunately closely couples the interpretation of a scene to how Mitsuba is compiled, which 
-can be a disadvantage.
-For instance, the below example assumes that 6 spectral samples in the 400-700nm range are being used:
+Mitsuba uses a method by Smits et al. \cite{Smits2005RGB} to find a
+``plausible'' spectrum that is as smooth as possible. To do so, it uses
+one of two methods depending on whether the spectrum contains a
+unitless reflectance value, or a radiance-valued intensity.
 \begin{xml}
-<spectrum name="spectrumProperty" value="0.2, 0.8, 0.4, 0.6, 0.1, 0.9"/>
+<rgb name="spectrumProperty" intent="reflectance" value="0.2, 0.8, 0.4"/>
+<rgb name="spectrumProperty" intent="illuminant" value="0.2, 0.8, 0.4"/>
 \end{xml}
-A safer way is to specify a linearly interpolated spectral power distribution, which is converted into
-the internal spectral representation when the scene is loaded.
-\begin{xml}
-<spectrum name="spectrumProperty" value="400:0.56, 500:0.18, 600:0.58, 700:0.24"/>
-\end{xml}
-This is essentially a mapping from wavelength in nanometers (before the colon) to a reflectance or 
-intensity value (after the colon). Missing values are linearly interpolated from the two closest neighbors.
+The \texttt{reflectance} intent is used by default, so remember to
+set it to \texttt{illuminant} when defining the brightness of a
+light source with the \texttt{<rgb>} tag.
 
-When spectral power distributions are obtained from measurements (e.g. at 10nm intervals), they are
-usually quite unwiedy and can clutter the scene description. For this reason,
-there is yet another way to pass a spectrum by loading it from an external
+When spectral power distributions are obtained from measurements 
+(e.g. at 10$nm$ intervals), they are usually quite unwiedy and can clutter
+the scene description. For this reason, there is yet another way to pass 
+a spectrum by loading it from an external
 file:
 \begin{xml}
 <spectrum name="spectrumProperty" filename="measuredSpectrum.spd"/>
@@ -171,11 +208,6 @@ are allowed. Here is an example:
 430.62 0.822125
 435.09 0.834000
 ...
-\end{xml}
-
-Passing a single value to \texttt{spectrum} will result in a a completely flat spectral power distribution:
-\begin{xml}
-<spectrum name="spectrumProperty" value="0.56"/>
 \end{xml}
 
 Finally, it is also possible to specify the spectral distribution of a black body emitter, where the temperature is given in Kelvin.
@@ -233,8 +265,8 @@ choices are available:
 \end{xml}
 \item Scaling operations. The coefficients may also be negative to obtain a flip, e.g.
 \begin{xml}
-<scale x="2" y="1" z="-1"/>
-<scale value="5"/> <!-- (uniform scale) -->
+<scale value="5"/>           <!-- uniform scale -->
+<scale x="2" y="1" z="-1"/>  <!-- non-unform scale -->
 \end{xml}
 \item Explicit 4$\times$4 matrices, e.g
 \begin{xml}

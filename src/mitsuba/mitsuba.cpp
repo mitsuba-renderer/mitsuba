@@ -71,7 +71,7 @@ void help() {
 	cout <<  "   -v          Be more verbose" << endl << endl;
 	cout <<  "   -w          Treat warnings as errors" << endl << endl;
 	cout <<  "   -z          Disable progress bars" << endl << endl;
-	cout <<  " The README file included with the distribution contains further information." << endl;
+	cout <<  " For documentation, please refer to http://www.mitsuba-renderer.org/docs.html" << endl;
 }
 
 ref<RenderQueue> renderQueue = NULL;

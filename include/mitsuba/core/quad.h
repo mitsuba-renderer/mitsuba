@@ -68,11 +68,15 @@ public:
 	 * \param useConvergenceEstimate Estimate the convergence behavior
 	 *     of the GL-quadrature by comparing the 4, 7 and 13-point
 	 *     variants and increase the absolute tolerance accordingly.
+	 *
+	 * \param warn Should the integrator warn when the number of
+	 *     function evaluations is exceeded?
 	 */
 	GaussLobattoIntegrator(size_t maxEvals,
 						 Float absError = 0,
 						 Float relError = 0,
-						 bool useConvergenceEstimate = true);
+						 bool useConvergenceEstimate = true,
+						 bool warn = true);
 
 	/**
 	 * \brief Integrate the function \c f from \c a to \c b.
@@ -106,8 +110,8 @@ protected:
 protected:
 	Float m_absError, m_relError;
 	size_t m_maxEvals;
-	bool m_exceededEvals;
-	const bool m_useConvergenceEstimate;
+	bool m_useConvergenceEstimate;
+	bool m_warn;
 	static const Float m_alpha;
 	static const Float m_beta;
 	static const Float m_x1;

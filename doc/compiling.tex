@@ -1,4 +1,5 @@
 \section{Compiling the renderer}
+\label{sec:compiling}
 To compile Mitsuba, you will need a recent C++ compiler (e.g. GCC 4.1+ or 
 Visual Studio 2008+) and some additional libraries, which Mitsuba uses internally. 
 Builds on all supported platforms are done using a unified system
@@ -33,6 +34,8 @@ build/config-icl12-msvc2010-win32.py
 build/config-icl12-msvc2010-win64.py
 \end{shell}
 
+\subsection{Compilation flags}
+\label{sec:compiling-flags}
 Usually, you will not have to make any modification to this file, but sometimes a few minor 
 edits may be necessary. In particular, you might want to add or remove certain
 compilation flags from the \code{CXXFLAGS} parameter. The following settings
@@ -50,9 +53,7 @@ Off by default.
 \item[\texttt{MTS\_SSE}]Activate optimized SSE routines. On by default.
 \item[\texttt{MTS\_HAS\_COHERENT\_RT}]Include coherent ray tracing support (depends on \texttt{MTS\_SSE}). This flag is activated by default. 
 \item[\texttt{MTS\_DEBUG\_FP}]Generated NaNs and overflows will cause floating point exceptions, which can be caught in a debugger. This is slow and mainly meant as a debugging tool for developers. Off by default.
-\item[\texttt{MTS\_SPECTRUM\_SAMPLES=}$\langle ..\rangle$]This setting defines the number of spectral samples (in the 400-700 $nm$ range) used to render scenes.
-The default is 3 samples, in which case the renderer automatically turns into an RGB-based system. For high-quality spectral rendering, this should
-be set to 30 or higher.
+\item[\texttt{SPECTRUM\_SAMPLES=}$\langle ..\rangle$]This setting defines the number of spectral samples (in the 368-830 $nm$ range) that are used to render scenes. The default is 3 samples, in which case the renderer automatically turns into an RGB-based system. For high-quality spectral rendering, this should be set to 30 or higher.
 \item[\texttt{SINGLE\_PRECISION}] Do all computation in single precision. This is normally sufficient and therefore used as the default setting.
 \item[\texttt{DOUBLE\_PRECISION}] Do all computation in double precision. This flag is incompatible with
 \texttt{MTS\_SSE}, \texttt{MTS\_HAS\_COHERENT\_RT}, and \texttt{MTS\_DEBUG\_FP}.

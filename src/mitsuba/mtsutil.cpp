@@ -119,7 +119,8 @@ void help() {
 		}
 	}
 
-	cout << testcases.str() << utilities.str();
+	cout << testcases.str() << utilities.str() << endl;
+	cout <<  " For documentation, please refer to http://www.mitsuba-renderer.org/docs.html" << endl << endl;
 }
 
 

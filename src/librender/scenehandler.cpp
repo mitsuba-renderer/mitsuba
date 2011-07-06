@@ -286,6 +286,18 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 
 		context.parent->properties.setPoint(context.attributes["name"], Point(x, y, z));
 	} else if (name == "rgb") {
+		Spectrum::EConversionIntent intent = Spectrum::EReflectance;
+		if (context.attributes.find("intent") != context.attributes.end()) {
+			std::string intentString = boost::to_lower_copy(context.attributes["intent"]);
+			if (intentString == "reflectance")
+				intent = Spectrum::EReflectance;
+			else if (intentString == "illuminant")
+				intent = Spectrum::EIlluminant;
+			else
+				SLog(EError, "Invalid intent \"%s\", must be "
+					"\"reflectance\" or \"illuminant\"", intentString.c_str());
+		}
+
 		std::string valueStr = context.attributes["value"];
 		std::vector<std::string> tokens = tokenize(valueStr, ", ");
 		Float value[3];
@@ -308,7 +320,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			XMLLog(EError, "Invalid RGB value specified");
 		}
 		Spectrum specValue;
-		specValue.fromLinearRGB(value[0], value[1], value[2]);
+		specValue.fromLinearRGB(value[0], value[1], value[2], intent);
 		context.parent->properties.setSpectrum(context.attributes["name"],
 			specValue);
 	} else if (name == "srgb") {
