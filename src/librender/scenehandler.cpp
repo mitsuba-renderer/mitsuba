@@ -339,10 +339,13 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			specValue);
 	} else if (name == "blackbody") {
 		Float temperature = parseFloat(name, context.attributes["temperature"]);
+		Float multiplier = 1;
+		if (context.attributes.find("multiplier") != context.attributes.end())
+			multiplier = parseFloat(name, context.attributes["multiplier"]);
 		BlackBodySpectrum bb(temperature);
 		Spectrum discrete;
-		discrete.fromSmoothSpectrum(&bb);
-		context.parent->properties.setSpectrum(context.attributes["name"], discrete);
+		discrete.fromContinuousSpectrum(bb);
+		context.parent->properties.setSpectrum(context.attributes["name"], discrete * multiplier);
 	} else if (name == "spectrum") {
 		bool hasValue = context.attributes.find("value") != context.attributes.end();
 		bool hasFilename = context.attributes.find("filename") != context.attributes.end();
@@ -353,8 +356,9 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			FileResolver *resolver = Thread::getThread()->getFileResolver();
 			fs::path path = resolver->resolve(context.attributes["filename"]);
 			InterpolatedSpectrum interp(path);
+			interp.zeroExtend();
 			Spectrum discrete;
-			discrete.fromSmoothSpectrum(&interp);
+			discrete.fromContinuousSpectrum(interp);
 			context.parent->properties.setSpectrum(context.attributes["name"], discrete);
 		} else if (hasValue) {
 			std::vector<std::string> tokens = tokenize(
@@ -374,10 +378,11 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 							XMLLog(EError, "Invalid spectrum->value mapping specified");
 						Float wavelength = parseFloat(name, tokens2[0]);
 						Float value = parseFloat(name, tokens2[1]);
-						interp.appendSample(wavelength, value);
+						interp.append(wavelength, value);
 					}
+					interp.zeroExtend();
 					Spectrum discrete;
-					discrete.fromSmoothSpectrum(&interp);
+					discrete.fromContinuousSpectrum(interp);
 					context.parent->properties.setSpectrum(context.attributes["name"],
 						discrete);
 				} else {

@@ -42,9 +42,9 @@ GaussLobattoIntegrator::GaussLobattoIntegrator(size_t maxEvals,
 }
 
 Float GaussLobattoIntegrator::integrate(
-		const boost::function<Float (Float)>& f, Float a, Float b, size_t &evals) const {
+		const boost::function<Float (Float)>& f, Float a, Float b, size_t *_evals) const {
 	Float factor = 1;
-	evals = 0;
+	size_t evals = 0;
 	if (a == b) {
 		return 0;
 	} else if (b < a) {
@@ -53,7 +53,12 @@ Float GaussLobattoIntegrator::integrate(
 	}
 	const Float absTolerance = calculateAbsTolerance(f, a, b, evals);
 	evals += 2;
-	return factor * adaptiveGaussLobattoStep(f, a, b, f(a), f(b), absTolerance, evals);
+	if (evals >= m_maxEvals)
+		SLog(EWarn, "GaussLobattoIntegrator: Maximum number of evaluations reached!");
+	Float result = factor * adaptiveGaussLobattoStep(f, a, b, f(a), f(b), absTolerance, evals);
+	if (_evals)
+		*_evals = evals;
+	return result;
 }
 
 Float GaussLobattoIntegrator::calculateAbsTolerance(
@@ -109,9 +114,6 @@ Float GaussLobattoIntegrator::adaptiveGaussLobattoStep(
 								 const boost::function<Float (Float)>& f,
 								 Float a, Float b, Float fa, Float fb,
 								 Float acc, size_t &evals) const {
-	if (evals >= m_maxEvals)
-		SLog(EError, "GaussLobattoIntegrator: Maximum number of evaluations reached!");
-
 	const Float h=(b-a)/2; 
 	const Float m=(a+b)/2;
 	
@@ -131,6 +133,12 @@ Float GaussLobattoIntegrator::adaptiveGaussLobattoStep(
 		+ 432*(fmll+fmrr) + 625*(fml+fmr) + 672*fm);
 
 	evals += 5;
+
+	if (evals >= m_maxEvals) {
+		if (evals-5 < m_maxEvals) // Warn once
+			SLog(EWarn, "GaussLobattoIntegrator: Maximum number of evaluations reached!");
+		return integral1;
+	}
 
 	Float dist = acc + (integral1-integral2);
 	if(dist==acc || mll<=a || b<=mrr) {

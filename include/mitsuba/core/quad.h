@@ -57,8 +57,10 @@ public:
 	 * Initialize a Gauss-Lobatto integration scheme
 	 *
 	 * \param maxEvals Maximum number of function evaluations. The
-	 *    integrator will throw an exception when this limit is
-	 *    exceeded.
+	 *    integrator will print a warning when this limit is
+	 *    exceeded. It will then stop the recursion, but a few
+	 *    further evaluations may still take place. Hence the limit
+	 *    is not a strict one.
 	 *
 	 * \param absError Absolute error requirement (0 to disable)
 	 * \param relError Relative error requirement (0 to disable)
@@ -75,10 +77,10 @@ public:
 	/**
 	 * \brief Integrate the function \c f from \c a to \c b.
 	 *
-	 * Also returns the total number of evaluations
+	 * Also returns the total number of evaluations if requested
 	 */
 	Float integrate(const Integrand &f, Float a, Float b,
-		size_t &evals) const;
+		size_t *evals = NULL) const;
 protected:
 	/**
 	 * \brief Perform one step of the 4-point Gauss-Lobatto rule, then
@@ -104,6 +106,7 @@ protected:
 protected:
 	Float m_absError, m_relError;
 	size_t m_maxEvals;
+	bool m_exceededEvals;
 	const bool m_useConvergenceEstimate;
 	static const Float m_alpha;
 	static const Float m_beta;

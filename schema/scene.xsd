@@ -336,5 +336,6 @@
 	<xsd:complexType name="blackbody">
 		<xsd:attribute name="name" type="xsd:string" use="required"/>
 		<xsd:attribute name="temperature" type="doubleType" use="required"/>
+		<xsd:attribute name="multiplier" type="doubleType" use="optional"/>
 	</xsd:complexType>
 </xsd:schema>

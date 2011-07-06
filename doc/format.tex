@@ -180,8 +180,28 @@ Passing a single value to \texttt{spectrum} will result in a a completely flat s
 
 Finally, it is also possible to specify the spectral distribution of a black body emitter, where the temperature is given in Kelvin.
 \begin{xml}
-<blackbody name="spectrumProperty" temperature="10000"/>
+<blackbody name="spectrumProperty" temperature="5000"/>
 \end{xml}
+Note that attaching a black body spectrum to the \texttt{intensity} property
+of a luminaire introduces physical units into the rendering process of 
+Mitsuba, which is ordinarily a unitless system\footnote{This means that the 
+units of pixel values in a rendering are completely dependent on the units of 
+the user input, including the unit of world-space distance and the units of 
+the light source emission profile.}.
+
+Specifically, the black body spectrum has units of power ($W$) per 
+unit area ($m^{-2}$) per steradian ($sr^{-1}$) per unit wavelength ($nm^{-1}$).
+Assuming that the scene is modeled in units of meters, 
+the spectral power distribution of pixels rendered by a perspective 
+camera will then have the exact same units (i.e. $W\cdot m^{-2}\cdot sr^{-1} \cdot nm^{-1}$).
+
+If these units are inconsistent with your scene, you may use the
+optional \texttt{multiplier} attribute: 
+\begin{xml}
+<!-- Oops, the scene is modeled in centimeters, not meters -->
+<blackbody name="spectrumProperty" temperature="5000" multiplier="0.01"/>
+\end{xml}
+
 \subsubsection{Vectors, Positions}
 Points and vectors can be specified as follows:
 \begin{xml}

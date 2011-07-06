@@ -61,7 +61,7 @@ public:
 		GaussLobattoIntegrator quad(1024, 0, 1e-5f);
 		size_t evals;
 		Float result = quad.integrate(boost::bind(
-			&TestQuadrature::testF, this, _1), 0, 10, evals);
+			&TestQuadrature::testF, this, _1), 0, 10, &evals);
 		Float ref = 2 * std::pow(std::sin((Float) 5.0f), (Float) 2.0f);
 		Log(EInfo, "test01_quad(): used " SIZE_T_FMT " function evaluations", evals);
 		assertEqualsEpsilon(result, ref, 1e-5f);

@@ -62,6 +62,9 @@ AboutDialog::AboutDialog(QWidget *parent) :
 	configFlags += "MTS_HAS_COLLADA ";
 #endif
 
+	configFlags += formatString("SPECTRUM_SAMPLES=%i ",
+		SPECTRUM_SAMPLES).c_str();
+
 	ui->label->setText(ui->label->text().replace("MTS_VERSION", MTS_VERSION));
 	ui->label->setText(ui->label->text().replace("CONFIG_FLAGS", configFlags));
 

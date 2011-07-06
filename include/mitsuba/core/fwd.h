@@ -65,7 +65,7 @@ struct SHRotation;
 class SHSampler;
 struct SHVector;
 struct SHVector4D;
-class SmoothSpectrum;
+class ContinuousSpectrum;
 class SocketStream;
 class SparseWavelet2D;
 class SparseWaveletOctree;
