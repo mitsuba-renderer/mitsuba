@@ -1,0 +1,16 @@
+# data from www.luxpop.com database
+# ;  Optical constants for VC
+# ; 
+# ;   taken from:
+# ;
+# ;   'Handbook of Optical Constants of Solids II', Ed. by Edward D. Palik,
+# ;   Academic Press, Inc., 1991.
+# ;   
+# ;    Lambda (A)            n            k
+# ;-----------------------------------------
+309.950012 2.470000
+354.229004 2.590000
+413.266998 2.770000
+495.920013 2.840000
+619.900024 3.010000
+826.533020 3.370000

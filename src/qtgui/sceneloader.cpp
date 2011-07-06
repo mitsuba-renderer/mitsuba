@@ -67,7 +67,7 @@ void SceneLoader::run() {
 			m_result->shortName = QFileInfo(m_filename.c_str()).fileName();
 			m_result->pathLength = 2;
 		} else {
-			fs::path schemaPath = m_resolver->resolveAbsolute("schema/scene.xsd");
+			fs::path schemaPath = m_resolver->resolveAbsolute("data/schema/scene.xsd");
 
 			/* Check against the 'scene.xsd' XML Schema */
 			parser->setDoSchema(true);

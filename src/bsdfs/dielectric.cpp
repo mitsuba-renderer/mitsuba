@@ -94,8 +94,8 @@ MTS_NAMESPACE_BEGIN
  *     \centering
  *     \begin{tabular}{>{\ttfamily}p{5cm}r@{.}lp{.8cm}>{\ttfamily}p{5cm}r@{.}l}
  *         \toprule
- *         \rmfamily Name & \multicolumn{2}{l}{Value}& &
- *         \rmfamily Name & \multicolumn{2}{l}{Value}\\
+ *         \rmfamily \textbf{Name} & \multicolumn{2}{l}{\textbf{Value}}& &
+ *         \rmfamily \textbf{Name} & \multicolumn{2}{l}{\textbf{Value}}\\
  *         \cmidrule{1-3} \cmidrule{5-7}
  *         vacuum               & 1 & 0 &  &
  *         silicone oil         & 1 & 52045\\

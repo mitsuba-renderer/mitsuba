@@ -1,0 +1,22 @@
+# data from www.luxpop.com database
+# ;  Optical constants for polycrystalline CuO
+# ; 
+# ;   taken from:
+# ;
+# ;   'Handbook of Optical Constants of Solids II', Ed. by Edward D. Palik,
+# ;   Academic Press, Inc., 1991.
+# ;   
+# ;    Lambda (A)            n            k
+# ;-----------------------------------------
+350.028015 2.240000
+399.935028 2.340000
+449.854980 2.450000
+499.919006 2.540000
+549.799988 2.580000
+599.806030 2.650000
+649.789978 2.720000
+700.056030 2.880000
+750.029968 2.970000
+799.871033 2.940000
+849.759949 2.810000
+899.709961 2.740000

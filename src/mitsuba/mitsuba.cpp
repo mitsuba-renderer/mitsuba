@@ -304,7 +304,7 @@ int ubi_main(int argc, char **argv) {
 
 		/* Prepare for parsing scene descriptions */
 		SAXParser* parser = new SAXParser();
-		fs::path schemaPath = fileResolver->resolveAbsolute("schema/scene.xsd");
+		fs::path schemaPath = fileResolver->resolveAbsolute("data/schema/scene.xsd");
 
 		/* Check against the 'scene.xsd' XML Schema */
 		parser->setDoSchema(true);

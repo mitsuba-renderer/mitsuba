@@ -481,8 +481,14 @@ InterpolatedSpectrum::InterpolatedSpectrum(const fs::path &path) {
 			break;
 		append(lambda, value);
 	}
+
+	if (m_wavelengths.size() == 0)
+		SLog(EError, "\"%s\": unable to parse any entries!", 
+				path.file_string().c_str());
+
 	SLog(EInfo, "\"%s\": loaded a spectral power distribution with " SIZE_T_FMT
-			" entries", path.leaf().c_str(), m_wavelengths.size());
+			" entries (between %f and %f nm)", path.leaf().c_str(), m_wavelengths.size(),
+			m_wavelengths[0], m_wavelengths[m_wavelengths.size()-1]);
 }
 	
 InterpolatedSpectrum::InterpolatedSpectrum(const Float *wavelengths, const Float *values, size_t nEntries) {

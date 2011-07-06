@@ -1,0 +1,15 @@
+# data from www.luxpop.com database
+# ;  Optical constants for VN
+# ;  
+# ;  Concatenation of:
+# ;
+# ;  VN_llnl_cxro + VN_palik
+# ;
+# ;    Lambda (A)            n            k
+# ;-----------------------------------------
+309.950012 1.540000
+354.229004 1.580000
+413.266998 1.700000
+495.920013 1.980000
+619.900024 2.470000
+826.533020 2.920000

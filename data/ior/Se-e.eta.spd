@@ -1,0 +1,20 @@
+# data from www.luxpop.com database
+# ;  Optical constants for Se, extraordinary ray
+# ; 
+# ;   taken from:
+# ;
+# ;   'Handbook of Optical Constants of Solids II', Ed. by Edward D. Palik,
+# ;   Academic Press, Inc., 1991.
+# ;   
+# ;    Lambda (A)            n            k
+# ;-----------------------------------------
+344.389008 3.390000
+364.647003 3.690000
+387.437988 3.920000
+413.266998 4.440000
+442.785980 4.590000
+476.846008 4.400000
+516.583008 4.280000
+563.545044 4.490000
+619.900024 4.790000
+688.778015 4.460000

@@ -413,7 +413,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 	} else if (name == "include") {
 		SAXParser* parser = new SAXParser();
 		FileResolver *resolver = Thread::getThread()->getFileResolver();
-		fs::path schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
+		fs::path schemaPath = resolver->resolveAbsolute("data/schema/scene.xsd");
 
 		/* Check against the 'scene.xsd' XML Schema */
 		parser->setDoSchema(true);

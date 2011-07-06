@@ -29,7 +29,7 @@ ref<Scene> Utility::loadScene(const std::string &filename,
 	/* Prepare for parsing scene descriptions */
 	FileResolver *resolver = Thread::getThread()->getFileResolver();
 	SAXParser* parser = new SAXParser();
-	fs::path schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
+	fs::path schemaPath = resolver->resolveAbsolute("data/schema/scene.xsd");
 	Log(EDebug, "Loading scene \"%s\" ..", filename.c_str());
 
 	/* Check against the 'scene.xsd' XML Schema */
