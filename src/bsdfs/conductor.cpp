@@ -22,7 +22,8 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{conductor}{Smooth conductor}
+/*!\plugin{conductor}{Smooth conductor}
+ * \order{5}
  * \parameters{
  *     \parameter{preset}{\String}{Name of a material preset, see 
  *           \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}
@@ -71,9 +72,9 @@ MTS_NAMESPACE_BEGIN
  * separate measurements correponding to their two indices of 
  * refraction (named ``ordinary'' and ``extraordinary ray'').
  *
- * When using this plugin, you should compile Mitsuba with support for spectral 
- * renderings to get the most accurate results. While it also works in RGB mode, 
- * the computations will be much more approximate in this case.
+ * When using this plugin, you should ideally compile Mitsuba with support for 
+ * spectral renderings to get the most accurate results. While it also works 
+ * in RGB mode, the computations will be much more approximate in this case.
  *
  * \begin{xml}[caption=Material configuration for a smooth conductor with 
  *    measured gold data, label=lst:conductor-gold]
@@ -85,7 +86,8 @@ MTS_NAMESPACE_BEGIN
  * \end{xml}
  * \vspace{5mm}
  * It is also possible to load spectrally varying index of refraction data from 
- * two external files (see \secref{format-spectra} for details on the file 
+ * two external files containing the real and imaginary components,
+ * respectively (see \secref{format-spectra} for details on the file 
  * format):
  * \begin{xml}[caption=Rendering a smooth conductor with custom data]
  * <shape type="...">

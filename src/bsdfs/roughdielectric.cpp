@@ -30,7 +30,8 @@ MTS_NAMESPACE_BEGIN
 */
 #define ENLARGE_LOBE_TRICK 1
 
-/*! \plugin{roughdielectric}{Rough dielectric material}
+/*!\plugin{roughdielectric}{Rough dielectric material}
+ * \order{4}
  * \parameters{
  *     \parameter{distribution}{\String}{
  *          Specifies the type of microfacet normal distribution 
@@ -70,7 +71,7 @@ MTS_NAMESPACE_BEGIN
  *         factor used to modulate the reflectance component\default{1.0}}
  *     \lastparameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the transmittance component\default{1.0}}
- * }
+ * }\vspace{4mm}
  *
  * This plugin implements a realistic microfacet scattering model for rendering
  * rough interfaces between dielectric materials, such as a transition from air to 
@@ -81,12 +82,10 @@ MTS_NAMESPACE_BEGIN
  * off-specular reflections peaks observed in real-world measurements of such 
  * materials.
  * \renderings{
- *     \medrendering{Rough glass (Beckmann, $\alpha$=0.1)}
+ *     \rendering{Anti-glare glass (Beckmann, $\alpha=0.02$)}
+ *     	   {bsdf_roughdielectric_beckmann_0_0_2.jpg}
+ *     \rendering{Rough glass (Beckmann, $\alpha=0.1$)}
  *     	   {bsdf_roughdielectric_beckmann_0_1.jpg}
- *     \medrendering{Ground glass (GGX, $\alpha$=0.304, 
- *     	   \lstref{roughdielectric-roughglass})}{bsdf_roughdielectric_ggx_0_304.jpg}
- *     \medrendering{Textured rougness (\lstref{roughdielectric-textured})}
- *         {bsdf_roughdielectric_textured.jpg}
  * }
  *
  * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
@@ -94,11 +93,11 @@ MTS_NAMESPACE_BEGIN
  * be very similar, though scenes using this plugin will take longer to render 
  * due to the additional computational burden of tracking surface roughness.
  * 
- * The implementation of this plugin is based on the paper ``Microfacet Models
+ * The implementation is based on the paper ``Microfacet Models
  * for Refraction through Rough Surfaces'' by Walter et al. 
  * \cite{Walter07Microfacet}. It supports several different types of microfacet
  * distributions and has a texturable roughness parameter. Exterior and 
- * interior IOR values can be independently specified, where ``exterior'' 
+ * interior IOR values can be specified independently, where ``exterior'' 
  * refers to the side that contains the surface normal. Similar to the 
  * \pluginref{dielectric} plugin, IOR values can either be specified 
  * numerically, or based on a list of known materials (see 
@@ -107,16 +106,28 @@ MTS_NAMESPACE_BEGIN
  * glass BK7/air interface with a light amount of roughness modeled using a 
  * Beckmann distribution.
  *
- * To get an intuition about the range and effects of the surface roughness
- * parameter $\alpha$, consider the following: a value of 
- * $\alpha=0.001-0.01$ corresponds a material with slight imperfections on an
+ * To get an intuition about the effect of the surface roughness
+ * parameter $\alpha$, consider the following approximate differentiation: 
+ * a value of $\alpha=0.001-0.01$ corresponds to a material 
+ * with slight imperfections on an
  * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
- * and $\alpha=0.3-0.5$ is \emph{extremely} rough (e.g. a etched or ground
+ * and $\alpha=0.3-0.5$ is \emph{extremely} rough (e.g. an etched or ground
  * finish).
  * 
- * When using the Ashikhmin-Shirley or Phong models, a conversion method is
- * used to turn the specified $\alpha$ roughness value into the exponents 
- * of these distributions. This is done in a way, such that the different 
+ * Please note that when using this plugin, it is crucial that the scene contains
+ * meaningful and mutally compatible index of refraction changes---see
+ * \figref{glass-explanation} for an example of what this entails. Also, note that
+ * the importance sampling implementation of this model is close, but 
+ * not always a perfect a perfect match to the underlying scattering distribution,
+ * particularly for high roughness values and when the \texttt{ggx} 
+ * microfacet distribution is used. Hence, such renderings may 
+ * converge slowly.
+ *
+ * \subsubsection*{Techical details}
+ * When rendering with the Ashikhmin-Shirley or Phong microfacet 
+ * distributions, a conversion is used to turn the specified 
+ * $\alpha$ roughness value into the exponents of these distributions.
+ * This is done in a way, such that the different 
  * distributions all produce a similar appearance for the same value of 
  * $\alpha$.
  *
@@ -124,18 +135,16 @@ MTS_NAMESPACE_BEGIN
  * of two distinct roughness values along the tangent and bitangent
  * directions. This can be used to provide a material with a ``brushed''
  * appearance. The alignment of the anisotropy will follow the UV
- * parameterization of the underlying mesh\footnote{Therefore, 
- * such anisotropic materials cannot be applied to triangle meshes that 
- * are missing texture coordinates.}.
+ * parameterization of the underlying mesh in this case. This means that
+ * such an anisotropic material cannot be applied to triangle meshes that 
+ * are missing texture coordinates.\newpage
  *
- * When using this plugin, it is crucial that the scene contains
- * meaningful and mutally compatible index of refraction changes---see
- * \figref{glass-explanation} for an example. Also, please note that
- * the importance sampling implementation of this model is close, but 
- * not always a perfect a perfect match to the underlying scattering distribution,
- * particularly for high roughness values and when the \texttt{ggx} 
- * microfacet distribution is used. Hence, such renderings may 
- * converge slowly.
+ * \renderings{
+ *     \rendering{Ground glass (GGX, $\alpha$=0.304, 
+ *     	   \lstref{roughdielectric-roughglass})}{bsdf_roughdielectric_ggx_0_304.jpg}
+ *     \rendering{Textured rougness (\lstref{roughdielectric-textured})}
+ *         {bsdf_roughdielectric_textured.jpg}
+ * }
  *
  * \begin{xml}[caption=A material definition for ground glass, label=lst:roughdielectric-roughglass]
  * <bsdf type="roughdielectric">

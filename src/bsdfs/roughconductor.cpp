@@ -33,7 +33,8 @@ MTS_NAMESPACE_BEGIN
 */
 #define ENLARGE_LOBE_TRICK 0
 
-/*! \plugin{roughconductor}{Rough conductor material}
+/*!\plugin{roughconductor}{Rough conductor material}
+ * \order{6}
  * \parameters{
  *     \parameter{distribution}{\String}{
  *          Specifies the type of microfacet normal distribution 

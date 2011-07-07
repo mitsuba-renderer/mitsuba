@@ -322,6 +322,11 @@ public:
 			return smithG1(wi, m, alphaU)
 				 * smithG1(wo, m, alphaU);
 		} else {
+			/* Can't see the back side from the front and vice versa */
+			if (dot(wi, m) * Frame::cosTheta(wi) <= 0 ||
+				dot(wo, m) * Frame::cosTheta(wo) <= 0)
+				return 0.0f;
+	
 			/* Infinite groove shadowing/masking */
 			const Float nDotM  = std::abs(Frame::cosTheta(m)),
 						nDotWo = std::abs(Frame::cosTheta(wo)),

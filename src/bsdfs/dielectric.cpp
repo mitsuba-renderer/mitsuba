@@ -22,8 +22,8 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{dielectric}{Smooth dielectric material}
- *
+/*!\plugin{dielectric}{Smooth dielectric material}
+ * \order{4}
  * \parameters{
  *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
@@ -45,7 +45,7 @@ MTS_NAMESPACE_BEGIN
  *
  * This plugin models an interface between two dielectric materials having mismatched 
  * indices of refraction (for instance, water and air). Exterior and interior IOR values
- * can be independently specified, where ``exterior'' refers to the side that contains 
+ * can be specified independently, where ``exterior'' refers to the side that contains 
  * the surface normal. When no parameters are given, the plugin activates the defaults, which
  * describe a borosilicate glass BK7/air interface.
  *
@@ -126,11 +126,11 @@ MTS_NAMESPACE_BEGIN
  *     \caption{
  *         \label{tbl:dielectric-iors}
  *          This table lists all supported material names along with
- *          along with the associated index of refraction at 
- *          standard conditions. These can be used with the plugins
+ *          along with their associated index of refraction at standard
+ *          conditions. These material names can be used with the plugins
  *          \pluginref{dielectric},\
  *          \pluginref{roughdielectric},\
- *          \pluginref{plastic}, and
+ *          \pluginref{plastic}, as well as 
  *          \pluginref{roughplastic}.
  *     }
  * \end{table}
