@@ -127,15 +127,6 @@ public:
 		m_specularTransmittance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularTransmittance", Spectrum(1.0f)));
 
-		Float alpha;
-		if (props.hasProperty("alphaB")) {
-			Log(EWarn, "Deprecation warning: the 'alphaB' parameter "
-				"has been renamed to 'alpha'");
-
-			alpha = props.getFloat("alphaB");
-		} else {
-			alpha = props.getFloat("alpha", 0.1f);
-		}
 
 		m_intIOR = props.getFloat("intIOR", 1.5046f);
 		m_extIOR = props.getFloat("extIOR", 1.0f);
@@ -145,10 +136,11 @@ public:
 				"refraction must be positive and differ!");
 
 		m_distribution = MicrofacetDistribution(
-			m_props.getString("distribution", "beckmann")
+			props.getString("distribution", "beckmann")
 		);
 
-		m_alpha = new ConstantFloatTexture(alpha);
+		m_alpha = new ConstantFloatTexture(
+			props.getFloat("alpha", 0.1f));
 
 		m_components.push_back(
 			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler);
@@ -184,7 +176,10 @@ public:
 		return (value < 0) ? -1.0f : 1.0f;
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec) const {
+	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		if (measure != ESolidAngle)
+			return Spectrum(0.0f);
+
 		/* Determine the type of interaction */
 		bool reflect = Frame::cosTheta(bRec.wi) 
 			* Frame::cosTheta(bRec.wo) > 0;
@@ -219,7 +214,7 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = m_distribution.transform( 
+		Float alpha = m_distribution.transformRoughness( 
 			m_alpha->getValue(bRec.its).average());
 
 		/* Microsurface normal distribution */
@@ -231,7 +226,7 @@ public:
 		const Float F = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
 
 		/* Smith's shadow-masking function */
-		const Float G = smithG1(bRec.wi, H, alpha) * smithG1(bRec.wo, H, alpha);
+		const Float G = m_distribution.smithG(bRec.wi, bRec.wo, H, alpha);
 
 		if (reflect) {
 			/* Calculate the total amount of reflection */
@@ -255,7 +250,10 @@ public:
 		}
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec) const {
+	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		if (measure != ESolidAngle)
+			return 0.0f;
+
 		/* Determine the type of interaction */
 		bool sampleReflection   = ((bRec.component == -1 || bRec.component == 0)
 							  && (bRec.typeMask & EGlossyReflection)),
@@ -303,7 +301,7 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = m_distribution.transform( 
+		Float alpha = m_distribution.transformRoughness( 
 			m_alpha->getValue(bRec.its).average());
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
@@ -386,7 +384,7 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = m_distribution.transform( 
+		Float alpha = m_distribution.transformRoughness( 
 			m_alpha->getValue(bRec.its).average());
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
@@ -396,7 +394,7 @@ public:
 			std::abs(Frame::cosTheta(bRec.wi))));
 
 		/* Sample M, the microsurface normal */
-		const Normal m = sampleD(sample, sampleAlpha);
+		const Normal m = m_distribution.sampleD(sample, sampleAlpha);
 	
 		if (sampleExactFresnelTerm) {
 			sampleF = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
@@ -438,8 +436,7 @@ public:
 		}
 
 		Float numerator = m_distribution.eval(m, alpha)
-			* m_distribution.smithG1(bRec.wi, m, alpha)
-			* m_distribution.smithG1(bRec.wo, m, alpha)
+			* m_distribution.smithG(bRec.wi, bRec.wo, m, alpha)
 			* dot(bRec.wi, m);
 
 		Float denominator = m_distribution.eval(m, sampleAlpha)
@@ -508,7 +505,7 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = m_distribution.transform( 
+		Float alpha = m_distribution.transformRoughness( 
 			m_alpha->getValue(bRec.its).average());
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
@@ -518,7 +515,7 @@ public:
 			std::abs(Frame::cosTheta(bRec.wi))));
 
 		/* Sample M, the microsurface normal */
-		const Normal m = sampleD(sample, sampleAlpha);
+		const Normal m = m_distribution.sampleD(sample, sampleAlpha);
 	
 		if (sampleExactFresnelTerm) {
 			Float sampleF = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);

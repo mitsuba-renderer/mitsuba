@@ -50,8 +50,7 @@ public:
 	 * (ggx/phong/beckmann)
 	 */
 	MicrofacetDistribution(const std::string &name) {
-		std::string distr = 
-			boost::to_lower_copy(props.getString("distribution", "beckmann"));
+		std::string distr = boost::to_lower_copy(name);
 
 		if (distr == "beckmann")
 			m_type = EBeckmann;
@@ -171,8 +170,8 @@ public:
 	 * \brief Smith's shadow-masking function G1 for each
 	 * of the supported microfacet distributions
 	 *
-	 * \param m The microsurface normal
 	 * \param v An arbitrary direction
+	 * \param m The microsurface normal
 	 * \param alpha The surface roughness
 	 */
 	Float smithG1(const Vector &v, const Vector &m, Float alpha) const {
@@ -218,9 +217,22 @@ public:
 				return 0.0f;
 		}
 	}
+
+	/**
+	 * \brief Smith's shadow-masking function G1 for each
+	 * of the supported microfacet distributions
+	 *
+	 * \param wi The incident direction
+	 * \param wo The exitant direction
+	 * \param m The microsurface normal
+	 * \param alpha The surface roughness
+	 */
+	Float smithG(const Vector &wi, const Vector &wo, const Vector &m, Float alpha) const {
+		return smithG1(wi, m, alpha) * smithG1(wo, m, alpha);
+	}
 	
 	std::string toString() const {
-		switch (m_distribution) {
+		switch (m_type) {
 			case EBeckmann: return "beckmann"; break;
 			case EPhong: return "phong"; break;
 			case EGGX: return "ggx"; break;
@@ -230,7 +242,7 @@ public:
 		}
 	}
 private:
-	EType type;
+	EType m_type;
 };
 
 MTS_NAMESPACE_END

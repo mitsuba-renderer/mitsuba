@@ -687,16 +687,16 @@ Float fresnelDielectric(Float cosThetaI, Float cosThetaT,
 	return (Rs * Rs + Rp * Rp) / 2.0f;
 }
 
-Spectrum fresnelConductor(Float cosTheta, const Spectrum &eta, const Spectrum &k) {
-	Spectrum tmp = (eta*eta + k*k) * (cosTheta * cosTheta);
+Spectrum fresnelConductor(Float cosThetaI, const Spectrum &eta, const Spectrum &k) {
+	Spectrum tmp = (eta*eta + k*k) * (cosThetaI * cosThetaI);
 
-	Spectrum rParl2 = (tmp - (eta * (2.0f * cosTheta)) + Spectrum(1.0f))
-					/ (tmp + (eta * (2.0f * cosTheta)) + Spectrum(1.0f));
+	Spectrum rParl2 = (tmp - (eta * (2.0f * cosThetaI)) + Spectrum(1.0f))
+					/ (tmp + (eta * (2.0f * cosThetaI)) + Spectrum(1.0f));
 
 	Spectrum tmpF = eta*eta + k*k;
 
-	Spectrum rPerp2 = (tmpF - (eta * (2.0f * cosTheta)) + Spectrum(cosTheta*cosTheta)) /
-					  (tmpF + (eta * (2.0f * cosTheta)) + Spectrum(cosTheta*cosTheta));
+	Spectrum rPerp2 = (tmpF - (eta * (2.0f * cosThetaI)) + Spectrum(cosThetaI*cosThetaI)) /
+					  (tmpF + (eta * (2.0f * cosThetaI)) + Spectrum(cosThetaI*cosThetaI));
 
 	return (rParl2 + rPerp2) / 2.0f;
 }

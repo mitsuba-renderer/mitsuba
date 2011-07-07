@@ -196,6 +196,54 @@ public:
 		return Vector(-eta*wi.x, -eta*wi.y, cosThetaT);
 	}
 
+	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
+				&& (bRec.component == -1 || bRec.component == 0);
+		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
+				&& (bRec.component == -1 || bRec.component == 1);
+		bool reflection = Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) > 0;
+		
+		if ((reflection && !sampleReflection) || 
+		   (!reflection && !sampleTransmission) || measure != EDiscrete)
+			return Spectrum(0.0f);
+
+		Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+
+		if (reflection) {
+			return m_specularReflectance->getValue(bRec.its) * fr;
+		} else {
+			Float etaI = m_extIOR, etaT = m_intIOR;
+			bool entering = Frame::cosTheta(bRec.wi) > 0.0f;
+			if (!entering)
+				std::swap(etaI, etaT);
+
+			Float factor = (bRec.quantity == ERadiance) 
+				? (etaI*etaI) / (etaT*etaT) : 1.0f;
+
+			return m_specularTransmittance->getValue(bRec.its)  * factor * (1 - fr);
+		}
+	}
+
+	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
+				&& (bRec.component == -1 || bRec.component == 0);
+		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
+				&& (bRec.component == -1 || bRec.component == 1);
+		bool reflection = Frame::cosTheta(bRec.wo)
+			* Frame::cosTheta(bRec.wi) > 0;
+
+		if ((reflection && !sampleReflection) || 
+		   (!reflection && !sampleTransmission) || measure != EDiscrete)
+			return 0.0f;
+
+		if (sampleTransmission && sampleReflection) {
+			Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+			return reflection ? Fr : (1 - Fr);
+		} else {
+			return 1.0f;
+		}
+	}
+
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
@@ -275,54 +323,6 @@ public:
 			   change at boundaries with different indices of refraction. */
 			return m_specularTransmittance->getValue(bRec.its) 
 				* ((1-Fr) * (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1));
-		}
-	}
-
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
-				&& (bRec.component == -1 || bRec.component == 1);
-		bool reflection = Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) > 0;
-		
-		if ((reflection && !sampleReflection) || 
-		   (!reflection && !sampleTransmission) || measure != EDiscrete)
-			return Spectrum(0.0f);
-
-		Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-
-		if (reflection) {
-			return m_specularReflectance->getValue(bRec.its) * fr;
-		} else {
-			Float etaI = m_extIOR, etaT = m_intIOR;
-			bool entering = Frame::cosTheta(bRec.wi) > 0.0f;
-			if (!entering)
-				std::swap(etaI, etaT);
-
-			Float factor = (bRec.quantity == ERadiance) 
-				? (etaI*etaI) / (etaT*etaT) : 1.0f;
-
-			return m_specularTransmittance->getValue(bRec.its)  * factor * (1 - fr);
-		}
-	}
-
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
-				&& (bRec.component == -1 || bRec.component == 1);
-		bool reflection = Frame::cosTheta(bRec.wo)
-			* Frame::cosTheta(bRec.wi) > 0;
-
-		if ((reflection && !sampleReflection) || 
-		   (!reflection && !sampleTransmission) || measure != EDiscrete)
-			return 0.0f;
-
-		if (sampleTransmission && sampleReflection) {
-			Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-			return reflection ? Fr : (1 - Fr);
-		} else {
-			return 1.0f;
 		}
 	}
 

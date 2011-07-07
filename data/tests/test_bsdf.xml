@@ -24,4 +24,7 @@
 			<rgb name="transmittance" value="0 .5 0"/>
 		</bsdf>
 	</bsdf>
+
+	<!-- Test the conductor model -->
+	<bsdf type="conductor"/>
 </scene>

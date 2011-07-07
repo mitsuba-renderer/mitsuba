@@ -21,7 +21,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{varnish}{Smooth varnish layer}
+/*! \plugin{coating}{Smooth coating layer}
  *
  * \parameters{
  *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}

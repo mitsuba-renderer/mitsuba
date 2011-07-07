@@ -96,6 +96,8 @@ Float Spectrum::m_wavelengths[SPECTRUM_SAMPLES + 1];
 void Spectrum::staticInitialization() {
 #if SPECTRUM_SAMPLES != 3
 	std::ostringstream oss;
+	oss << std::fixed;
+	oss.precision(2);
 	Float stepSize = SPECTRUM_RANGE / (Float) SPECTRUM_SAMPLES;
 	for (int i=0; i<SPECTRUM_SAMPLES + 1; i++) {
 		Float value = SPECTRUM_MIN_WAVELENGTH + stepSize * i;
@@ -406,12 +408,16 @@ void Spectrum::fromRGBE(const uint8_t rgbe[4], EConversionIntent intent) {
 std::string Spectrum::toString() const {
 	std::ostringstream oss;
 	oss << "[";
+	oss << std::fixed;
 	for (int i=0; i<SPECTRUM_SAMPLES; i++) {
 #if SPECTRUM_SAMPLES == 3
 		oss << s[i];
 #else
+		oss.precision(1);
 		oss << m_wavelengths[i] << "-" 
-			<< m_wavelengths[i+1] << "nm => " << s[i];
+			<< m_wavelengths[i+1] << "nm => ";
+		oss.precision(3);
+		oss << s[i];
 #endif
 		if (i < SPECTRUM_SAMPLES - 1)
 			oss << ", ";
@@ -607,9 +613,13 @@ Float InterpolatedSpectrum::eval(Float lambda) const {
 
 std::string InterpolatedSpectrum::toString() const {
 	std::ostringstream oss;
+	oss << std::fixed;
 	oss << "InterpolatedSpectrum[" << endl;
 	for (size_t i=0; i<m_wavelengths.size(); ++i) {
-		oss << "  " << m_wavelengths[i] << " nm  =>  " << m_values[i];
+		oss.precision(1);
+		oss << "  " << m_wavelengths[i] << " nm  =>  ";
+		oss.precision(3);
+		oss << m_values[i];
 		if (i+1 < m_wavelengths.size())
 			oss << ",";
 		oss << endl;
