@@ -83,9 +83,12 @@ public:
 	 * \brief Implements the microfacet distribution function D
 	 *
 	 * \param m The microsurface normal
-	 * \param v An arbitrary direction
+	 * \param alphaX  Surface roughness in the tangent directoin
+	 * \param alphaY  Surface roughness in the bitangent direction
 	 */
-	Float eval(const Vector &m, Float alpha) const {
+	Float eval(const Vector &m, Float alphaX, Float alphaY) const {
+		Float alpha = 0.5f * (alphaX + alphaY);
+
 		if (Frame::cosTheta(m) <= 0)
 			return 0.0f;
 	
@@ -135,9 +138,12 @@ public:
 	 * the selected distribution
 	 *
 	 * \param sample  A uniformly distributed 2D sample
-	 * \param alpha   Surface roughness
+	 * \param alphaX  Surface roughness in the tangent directoin
+	 * \param alphaY  Surface roughness in the bitangent direction
 	 */
-	Normal sample(const Point2 &sample, Float alpha) const {
+	Normal sample(const Point2 &sample, Float alphaX, Float alphaY) const {
+		Float alpha = 0.5f * (alphaX + alphaY);
+
 		/* The azimuthal component is always selected 
 		   uniformly regardless of the distribution */
 		Float phiM = (2.0f * M_PI) * sample.y,
@@ -176,7 +182,7 @@ public:
 	 */
 	Float smithG1(const Vector &v, const Vector &m, Float alpha) const {
 		const Float tanTheta = std::abs(Frame::tanTheta(v)); 
-	
+
 		/* perpendicular incidence -- no shadowing/masking */
 		if (tanTheta == 0.0f)
 			return 1.0f;
@@ -219,15 +225,16 @@ public:
 	}
 
 	/**
-	 * \brief Smith's shadow-masking function G1 for each
-	 * of the supported microfacet distributions
+	 * \brief Shadow-masking function for each of the supported 
+	 * microfacet distributions
 	 *
 	 * \param wi The incident direction
 	 * \param wo The exitant direction
 	 * \param m The microsurface normal
 	 * \param alpha The surface roughness
 	 */
-	Float smithG(const Vector &wi, const Vector &wo, const Vector &m, Float alpha) const {
+	Float G(const Vector &wi, const Vector &wo, const Vector &m, Float alphaX, Float alphaY) const {
+		Float alpha = 0.5f * (alphaX + alphaY);
 		return smithG1(wi, m, alpha) * smithG1(wo, m, alpha);
 	}
 	

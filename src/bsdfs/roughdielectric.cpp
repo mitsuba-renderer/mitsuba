@@ -127,7 +127,6 @@ public:
 		m_specularTransmittance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularTransmittance", Spectrum(1.0f)));
 
-
 		m_intIOR = props.getFloat("intIOR", 1.5046f);
 		m_extIOR = props.getFloat("extIOR", 1.0f);
 
@@ -139,13 +138,16 @@ public:
 			props.getString("distribution", "beckmann")
 		);
 
-		m_alpha = new ConstantFloatTexture(
-			props.getFloat("alpha", 0.1f));
+		Float alpha = props.getFloat("alpha", 0.1f),
+			  alphaX = props.getFloat("alphaX", alpha),
+			  alphaY = props.getFloat("alphaY", alpha);
 
-		m_components.push_back(
-			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler);
-		m_components.push_back(
-			EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler);
+		m_alphaX = new ConstantFloatTexture(alphaX);
+		if (alphaX == alphaY)
+			m_alphaY = m_alphaX;
+		else
+			m_alphaY = new ConstantFloatTexture(alphaY);
+
 		m_usesRayDifferentials = false;
 	}
 
@@ -154,7 +156,8 @@ public:
 		m_distribution = MicrofacetDistribution(
 			(MicrofacetDistribution::EType) stream->readUInt()
 		);
-		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
+		m_alphaX = static_cast<Texture *>(manager->getInstance(stream));
+		m_alphaY = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularTransmittance = static_cast<Texture *>(manager->getInstance(stream));
 		m_intIOR = stream->readFloat();
@@ -164,10 +167,25 @@ public:
 			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler);
 		m_components.push_back(
 			EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler);
+
 		m_usesRayDifferentials = 
-			m_alpha->usesRayDifferentials() ||
+			m_alphaX->usesRayDifferentials() ||
+			m_alphaY->usesRayDifferentials() ||
 			m_specularReflectance->usesRayDifferentials() ||
 			m_specularTransmittance->usesRayDifferentials();
+		configure();
+	}
+
+	void configure() {
+		unsigned int extraFlags = 0;
+		m_components.clear();
+		if (m_alphaX != m_alphaY)
+			extraFlags |= EAnisotropic;
+		m_components.push_back(
+			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+		m_components.push_back(
+			EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+		BSDF::configure();
 	}
 
 	virtual ~RoughDielectric() { }
@@ -214,11 +232,13 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = m_distribution.transformRoughness( 
-			m_alpha->getValue(bRec.its).average());
+		Float alphaX = m_distribution.transformRoughness( 
+					m_alphaX->getValue(bRec.its).average()),
+			  alphaY = m_distribution.transformRoughness( 
+					m_alphaY->getValue(bRec.its).average());
 
 		/* Microsurface normal distribution */
-		const Float D = m_distribution.eval(H, alpha);
+		const Float D = m_distribution.eval(H, alphaX, alphaY);
 		if (D == 0)
 			return Spectrum(0.0f);
 
@@ -226,7 +246,7 @@ public:
 		const Float F = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
 
 		/* Smith's shadow-masking function */
-		const Float G = m_distribution.smithG(bRec.wi, bRec.wo, H, alpha);
+		const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaX, alphaY);
 
 		if (reflect) {
 			/* Calculate the total amount of reflection */
@@ -301,17 +321,20 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = m_distribution.transformRoughness( 
-			m_alpha->getValue(bRec.its).average());
+		Float alphaX = m_distribution.transformRoughness( 
+					m_alphaX->getValue(bRec.its).average()),
+			  alphaY = m_distribution.transformRoughness( 
+					m_alphaY->getValue(bRec.its).average());
 
-		/* Suggestion by Bruce Walter: sample using a slightly different 
-		   value of alpha. This in practice limits the weights to 
+		/* Suggestion by Bruce Walter: sample using a slightly wider
+		   density function. This in practice limits the weights to 
 		   values <= 4. See also \ref sample() */
-		alpha = alpha * (1.2f - 0.2f * std::sqrt(
+		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
+		alphaX *= factor; alphaY *= factor;
 
 		/* Microsurface normal distribution */
-		Float prob = m_distribution.eval(H, alpha);
+		Float prob = m_distribution.eval(H, alphaX, alphaY);
 
 		if (sampleTransmission && sampleReflection) {
 			/* Please see the sample() methods if the 
@@ -384,18 +407,23 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = m_distribution.transformRoughness( 
-			m_alpha->getValue(bRec.its).average());
+		Float alphaX = m_distribution.transformRoughness( 
+					m_alphaX->getValue(bRec.its).average()),
+			  alphaY = m_distribution.transformRoughness( 
+					m_alphaY->getValue(bRec.its).average());
 
-		/* Suggestion by Bruce Walter: sample using a slightly different 
-		   value of alpha. This in practice limits the weights to 
+		/* Suggestion by Bruce Walter: sample using a slightly wider
+		   density function. This in practice limits the weights to 
 		   values <= 4. See also \ref sample() */
-		Float sampleAlpha = alpha * (1.2f - 0.2f * std::sqrt(
+		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
+		Float sampleAlphaX = alphaX * factor,
+			  sampleAlphaY = alphaY * factor;
 
 		/* Sample M, the microsurface normal */
-		const Normal m = m_distribution.sampleD(sample, sampleAlpha);
-	
+		const Normal m = m_distribution.sample(sample,
+				sampleAlphaX, sampleAlphaY);
+
 		if (sampleExactFresnelTerm) {
 			sampleF = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
 			if (bRec.sampler->next1D() > sampleF)
@@ -435,11 +463,11 @@ public:
 				* ((bRec.quantity == ERadiance) ? ((etaI*etaI) / (etaT*etaT)) : (Float) 1);
 		}
 
-		Float numerator = m_distribution.eval(m, alpha)
-			* m_distribution.smithG(bRec.wi, bRec.wo, m, alpha)
+		Float numerator = m_distribution.eval(m, alphaX, alphaY)
+			* m_distribution.G(bRec.wi, bRec.wo, m, alphaX, alphaY)
 			* dot(bRec.wi, m);
 
-		Float denominator = m_distribution.eval(m, sampleAlpha)
+		Float denominator = m_distribution.eval(m, sampleAlphaX, sampleAlphaY)
 			* Frame::cosTheta(m) 
 			* Frame::cosTheta(bRec.wi);
 
@@ -457,7 +485,7 @@ public:
 		return result * std::abs(numerator / denominator);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float _pdf, const Point2 &_sample) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 
 		bool sampleReflection = ((bRec.component == -1 || bRec.component == 0)
@@ -505,18 +533,22 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alpha = m_distribution.transformRoughness( 
-			m_alpha->getValue(bRec.its).average());
+		Float alphaX = m_distribution.transformRoughness( 
+					m_alphaX->getValue(bRec.its).average()),
+			  alphaY = m_distribution.transformRoughness( 
+					m_alphaY->getValue(bRec.its).average());
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 
 		   values <= 4. See also \ref sample() */
-		Float sampleAlpha = alpha * (1.2f - 0.2f * std::sqrt(
+		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
+		Float sampleAlphaX = alphaX * factor,
+			  sampleAlphaY = alphaY * factor;
 
 		/* Sample M, the microsurface normal */
-		const Normal m = m_distribution.sampleD(sample, sampleAlpha);
-	
+		const Normal m = m_distribution.sample(sample, sampleAlphaX, sampleAlphaY);
+
 		if (sampleExactFresnelTerm) {
 			Float sampleF = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
 			if (bRec.sampler->next1D() > sampleF)
@@ -551,18 +583,24 @@ public:
 		}
 
 		/* Guard against numerical imprecisions */
-		_pdf = pdf(bRec);
+		_pdf = pdf(bRec, ESolidAngle);
 
 		if (_pdf == 0) 
 			return Spectrum(0.0f);
 		else
-			return f(bRec);
+			return eval(bRec, ESolidAngle);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alpha") {
-			m_alpha = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_alpha->usesRayDifferentials();
+			m_alphaX = m_alphaY = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_alphaX->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alphaX") {
+			m_alphaX = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_alphaX->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alphaY") {
+			m_alphaY = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_alphaY->usesRayDifferentials();
 		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
 			m_specularReflectance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
@@ -578,7 +616,8 @@ public:
 		BSDF::serialize(stream, manager);
 
 		stream->writeUInt((uint32_t) m_distribution.getType());
-		manager->serialize(stream, m_alpha.get());
+		manager->serialize(stream, m_alphaX.get());
+		manager->serialize(stream, m_alphaY.get());
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_specularTransmittance.get());
 		stream->writeFloat(m_intIOR);
@@ -588,8 +627,9 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "RoughDielectric[" << endl
-			<< "  distribution = " << m_distribution.toString() << "," << endl;
-			<< "  alpha = " << indent(m_alpha->toString()) << "," << endl
+			<< "  distribution = " << m_distribution.toString() << "," << endl
+			<< "  alphaX = " << indent(m_alphaX->toString()) << "," << endl
+			<< "  alphaY = " << indent(m_alphaY->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  specularTransmittance = " << indent(m_specularTransmittance->toString()) << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl
@@ -605,7 +645,7 @@ private:
 	MicrofacetDistribution m_distribution;
 	ref<Texture> m_specularTransmittance;
 	ref<Texture> m_specularReflectance;
-	ref<Texture> m_alpha;
+	ref<Texture> m_alphaX, m_alphaY;
 	Float m_intIOR, m_extIOR;
 };
 
