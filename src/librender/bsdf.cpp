@@ -23,11 +23,17 @@ MTS_NAMESPACE_BEGIN
 
 BSDF::BSDF(const Properties &props)
  : ConfigurableObject(props), m_name(props.getID()) {
+	/* By default, verify whether energy conservation holds
+	   for the user-specified parameter values. This step
+	   is completely up to the particular BSDF implementations */
+	m_ensureEnergyConservation = props.getBoolean(
+		"ensureEnergyConservation", true);
 }
 
 BSDF::BSDF(Stream *stream, InstanceManager *manager) 
  : ConfigurableObject(stream, manager) {
 	m_name = stream->readString();
+	m_ensureEnergyConservation = stream->readBool();
 }
 
 BSDF::~BSDF() { }
@@ -35,6 +41,7 @@ BSDF::~BSDF() { }
 void BSDF::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 	stream->writeString(m_name);
+	stream->writeBool(m_ensureEnergyConservation);
 }
 
 void BSDF::setParent(ConfigurableObject *parent) {
@@ -57,6 +64,28 @@ Spectrum BSDF::getDiffuseReflectance(const Intersection &its) const {
 	bRec.typeMask = EDiffuseReflection;
 	return eval(bRec) * M_PI;
 }
+
+Texture *BSDF::ensureEnergyConservation(Texture *texture, 
+		const std::string &paramName, Float max) const {
+	if (!m_ensureEnergyConservation)
+		return texture;
+
+	Float actualMax = texture->getMaximum().max();
+	if (actualMax > max) {
+		std::ostringstream oss;
+		Float scale = 0.99f * (max / actualMax);
+		oss << "The BSDF" << endl << toString() << endl
+			<< "violates energy conservation! The parameter \"" << paramName << "\" " 
+			<< "has a component-wise maximum of "<< actualMax << " (which is > " << max << "!) "
+			<< "and will therefore be scaled by " << scale << " to prevent "
+			<< "issues. Specify the parameter ensureEnergyConservation=false "
+			<< "to the BSDF to prevent this from happening.";
+		Log(EWarn, "%s", oss.str().c_str());
+		return new ScaleTexture(texture, scale);
+	}
+	return texture;
+}
+
 
 static std::string typeMaskToString(unsigned int typeMask) {
 	std::ostringstream oss;

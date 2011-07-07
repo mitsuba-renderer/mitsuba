@@ -17,7 +17,7 @@
 */
 
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/consttexture.h>
+#include <mitsuba/render/texture.h>
 #include <mitsuba/core/fresolver.h>
 
 MTS_NAMESPACE_BEGIN
@@ -178,6 +178,13 @@ public:
 		} else {
 			BSDF::addChild(name, child);
 		}
+	}
+
+	void configure() {
+		BSDF::configure();
+		/* Verify the input parameter and fix them if necessary */
+		m_specularReflectance = ensureEnergyConservation(
+			m_specularReflectance, "specularReflectance", 1.0f);
 	}
 
 	/// Reflection in local coordinates

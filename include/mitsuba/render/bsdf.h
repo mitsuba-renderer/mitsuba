@@ -422,12 +422,26 @@ protected:
 	/// Unserialize a BSDF instance
 	BSDF(Stream *stream, InstanceManager *manager);
 
+	/**
+	 * \brief Convenience function to ensure energy conservation
+	 *
+	 * This function determines the component-wise maximum of the
+	 * texture \c tex and checks if it is below \c max. If yes,
+	 * it returns the texture unmodified. Otherwise, it wraps
+	 * the texture into a \ref ScaleTexture instance (with a 
+	 * scaling factor chosen so that the desired maximum \c max 
+	 * is abided) and prints a warning.
+	 */
+	Texture *ensureEnergyConservation(Texture *tex, 
+		const std::string &paramName, Float max) const;
+
 	/// Virtual destructor
 	virtual ~BSDF();
 protected:
 	std::vector<unsigned int> m_components;
 	unsigned int m_combinedType;
 	bool m_usesRayDifferentials;
+	bool m_ensureEnergyConservation;
 	std::string m_name;
 };
 

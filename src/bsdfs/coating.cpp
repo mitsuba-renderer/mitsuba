@@ -17,7 +17,7 @@
 */
 
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/consttexture.h>
+#include <mitsuba/render/texture.h>
 
 MTS_NAMESPACE_BEGIN
 

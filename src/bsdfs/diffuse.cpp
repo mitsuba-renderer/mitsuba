@@ -17,8 +17,7 @@
 */
 
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/consttexture.h>
-#include <mitsuba/core/properties.h>
+#include <mitsuba/render/texture.h>
 #include <mitsuba/hw/renderer.h>
 
 MTS_NAMESPACE_BEGIN
@@ -87,6 +86,16 @@ public:
 
 	virtual ~SmoothDiffuse() { }
 
+	void configure() {
+		BSDF::configure();
+		/* Verify the input parameter and fix them if necessary */
+		m_reflectance = ensureEnergyConservation(m_reflectance, "reflectance", 1.0f);
+	}
+
+	Spectrum getDiffuseReflectance(const Intersection &its) const {
+		return m_reflectance->getValue(its);
+	}
+
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
 			|| Frame::cosTheta(bRec.wi) <= 0 
@@ -147,6 +156,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SmoothDiffuse[" << endl
+			<< "  name = \"" << getName() << "\"," << endl
 			<< "  reflectance = " << indent(m_reflectance->toString()) << endl
 			<< "]";
 		return oss.str();

@@ -18,8 +18,9 @@
 
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/sampler.h>
-#include <mitsuba/render/consttexture.h>
+#include <mitsuba/render/texture.h>
 #include "microfacet.h"
+#include "ior.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -123,8 +124,8 @@ MTS_NAMESPACE_BEGIN
  * \begin{xml}[caption=A texture can be attached to the roughness parameter, label=lst:roughdielectric-textured]
  * <bsdf type="roughdielectric">
  *     <string name="distribution" value="beckmann"/>
- *     <float name="intIOR" value="1.5046"/>
- *     <float name="extIOR" value="1.0"/>
+ *     <string name="intIOR" value="bk7"/>
+ *     <string name="extIOR" value="air"/>
  *
  *     <texture name="alpha" type="bitmap">
  *         <string name="filename" value="roughness.exr"/>
@@ -141,8 +142,11 @@ public:
 		m_specularTransmittance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularTransmittance", Spectrum(1.0f)));
 
-		m_intIOR = props.getFloat("intIOR", 1.5046f);
-		m_extIOR = props.getFloat("extIOR", 1.0f);
+		/* Specifies the internal index of refraction at the interface */
+		m_intIOR = lookupIOR(props, "intIOR", "bk7");
+
+		/* Specifies the external index of refraction at the interface */
+		m_extIOR = lookupIOR(props, "extIOR", "air");
 
 		if (m_intIOR < 0 || m_extIOR < 0 || m_intIOR == m_extIOR)
 			Log(EError, "The interior and exterior indices of "
@@ -207,6 +211,12 @@ public:
 			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
 		m_components.push_back(
 			EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+
+		/* Verify the input parameter and fix them if necessary */
+		m_specularReflectance = ensureEnergyConservation(
+			m_specularReflectance, "specularReflectance", 1.0f);
+		m_specularTransmittance = ensureEnergyConservation(
+			m_specularTransmittance, "specularTransmittance", 1.0f);
 
 		BSDF::configure();
 	}
@@ -303,7 +313,8 @@ public:
 		} else {
 			/* Calculate the total amount of transmission */
 			Float sqrtDenom = etaI * dot(bRec.wi, H) + etaT * dot(bRec.wo, H);
-			Float value = ((1 - F) * D * G * etaT * etaT * dot(bRec.wi, H)*dot(bRec.wo, H)) / 
+			Float value = ((1 - F) * D * G * etaT * etaT 
+				* dot(bRec.wi, H) * dot(bRec.wo, H)) / 
 				(Frame::cosTheta(bRec.wi) * sqrtDenom * sqrtDenom);
 
 			/* Missing term in the original paper: account for the solid angle 
@@ -380,6 +391,7 @@ public:
 			std::abs(Frame::cosTheta(bRec.wi))));
 		alphaU *= factor; alphaV *= factor;
 #endif
+
 		/* Microsurface normal sampling density */
 		Float prob = m_distribution.pdf(H, alphaU, alphaV);
 
@@ -512,7 +524,8 @@ public:
 				return Spectrum(0.0f);
 
 			result = m_specularTransmittance->getValue(bRec.its)
-				* ((bRec.quantity == ERadiance) ? ((etaI*etaI) / (etaT*etaT)) : (Float) 1);
+				* ((bRec.quantity == ERadiance) ?
+					((etaI*etaI) / (etaT*etaT)) : (Float) 1);
 		}
 
 		Float numerator = m_distribution.eval(m, alphaU, alphaV)
@@ -603,7 +616,8 @@ public:
 #endif
 
 		/* Sample M, the microsurface normal */
-		const Normal m = m_distribution.sample(sample, sampleAlphaU, sampleAlphaV);
+		const Normal m = m_distribution.sample(sample,
+				sampleAlphaU, sampleAlphaV);
 
 		if (sampleExactFresnelTerm) {
 			Float sampleF = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);

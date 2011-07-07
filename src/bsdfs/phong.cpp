@@ -41,7 +41,7 @@ public:
 
 		m_exponent = props.getFloat("exponent", 10.0f);
 
-		m_verifyEnergyConservation = props.getBoolean("verifyEnergyConservation", true);
+		m_ensureEnergyConservation = props.getBoolean("ensureEnergyConservation", true);
 		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", -1);
 
 		m_componentCount = 2;
@@ -78,14 +78,14 @@ public:
 
 	void configure() {
 		BSDF::configure();
-		if (m_verifyEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
+		if (m_ensureEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
 				+ m_ks * m_specularReflectance->getMaximum().max() > 1.0f)) {
 			Log(EWarn, "Material \"%s\": Energy conservation is potentially violated!", getName().c_str());
 			Log(EWarn, "Max. diffuse reflectance = %f * %f = %f", m_kd, m_diffuseReflectance->getMaximum().max(), m_kd*m_diffuseReflectance->getMaximum().max());
 			Log(EWarn, "Max. specular reflectance = %f * %f = %f", m_ks, m_specularReflectance->getMaximum().max(), m_ks*m_specularReflectance->getMaximum().max());
 			Float normalization = 1/(m_kd * m_diffuseReflectance->getMaximum().max() + m_ks * m_specularReflectance->getMaximum().max());
 			Log(EWarn, "Reducing the albedo to %.1f%% of the original value to be on the safe side. "
-				"Specify verifyEnergyConservation=false to prevent this.", normalization * 100);
+				"Specify ensureEnergyConservation=false to prevent this.", normalization * 100);
 			m_kd *= normalization; m_ks *= normalization;
 		}
 
@@ -275,7 +275,7 @@ private:
 	Float m_kd, m_ks;
 	Float m_specularSamplingWeight;
 	Float m_diffuseSamplingWeight;
-	bool m_verifyEnergyConservation;
+	bool m_ensureEnergyConservation;
 };
 
 // ================ Hardware shader implementation ================ 

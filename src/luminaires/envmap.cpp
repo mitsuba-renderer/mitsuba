@@ -390,7 +390,7 @@ public:
 			// into doing correct texture filtering across the u=0 to u=1 seam.
 			<< "   if (u < 0.1)" << endl 
 			<< "       return texture2D(" << evalName << "_texture, vec2(u+1.0, v)).rgb * " << evalName << "_intensityScale;" << endl
-			<< "   else"
+			<< "   else" << endl
 			<< "       return texture2D(" << evalName << "_texture, vec2(u, v)).rgb * " << evalName << "_intensityScale;" << endl
 			<< "}" << endl;
 	}

@@ -17,11 +17,10 @@
 */
 
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/consttexture.h>
+#include <mitsuba/render/texture.h>
 #include <mitsuba/hw/renderer.h>
 
 MTS_NAMESPACE_BEGIN
-
 
 /*! \plugin{difftrans}{Diffuse transmitter}
  *
@@ -42,7 +41,6 @@ MTS_NAMESPACE_BEGIN
  * plugin.} with a surface reflection model to describe translucent substances
  * that have internal multiple scattering processes (e.g. plant leaves).
  */
-
 class DiffuseTransmitter : public BSDF {
 public:
 	DiffuseTransmitter(const Properties &props) 
@@ -64,6 +62,12 @@ public:
 	}
 
 	virtual ~DiffuseTransmitter() { }
+
+	void configure() {
+		BSDF::configure();
+		/* Verify the input parameter and fix them if necessary */
+		m_transmittance = ensureEnergyConservation(m_transmittance, "transmittance", 1.0f);
+	}
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		if (!(bRec.typeMask & EDiffuseTransmission) || measure != ESolidAngle
