@@ -34,11 +34,13 @@ public:
 	/// Supported distribution types
 	enum EType {
 		/// Beckmann distribution derived from Gaussian random surfaces
-		EBeckmann = 0,
+		EBeckmann         = 0,
 		/// Classical Phong distribution
-		EPhong    = 1,
+		EPhong            = 1,
 		/// Long-tailed distribution proposed by Walter et al.
-		EGGX      = 2
+		EGGX              = 2,
+		/// Anisotropic distribution by Ashikhmin and Shirley
+		EAshikhminShirley = 3
 	};
 
 	/// Create a microfacet distribution of the specified type
@@ -47,7 +49,7 @@ public:
 
 	/**
 	 * \brief Create a microfacet distribution of the specified name
-	 * (ggx/phong/beckmann)
+	 * (ggx/phong/beckmann/as)
 	 */
 	MicrofacetDistribution(const std::string &name) {
 		std::string distr = boost::to_lower_copy(name);
@@ -58,9 +60,11 @@ public:
 			m_type = EPhong;
 		else if (distr == "ggx")
 			m_type = EGGX;
+		else if (distr == "as")
+			m_type = EAshikhminShirley;
 		else 
 			SLog(EError, "Specified an invalid distribution \"%s\", must be "
-				"\"beckmann\", \"phong\", or \"ggx\"!", distr.c_str());
+				"\"beckmann\", \"phong\", \"ggx\", or \"as\"!", distr.c_str());
 	}
 
 	/// Return the distribution type
@@ -74,7 +78,7 @@ public:
 	 * (For lower roughness values, please switch to the smooth BSDF variants)
 	 */
 	Float transformRoughness(Float value) const {
-		if (m_type == EPhong)
+		if (m_type == EPhong || m_type == EAshikhminShirley)
 			value = 2 / (value * value) - 2;
 		return std::max(value, (Float) 1e-4f);
 	}
@@ -83,11 +87,11 @@ public:
 	 * \brief Implements the microfacet distribution function D
 	 *
 	 * \param m The microsurface normal
-	 * \param alphaX  Surface roughness in the tangent directoin
-	 * \param alphaY  Surface roughness in the bitangent direction
+	 * \param alphaU  Surface roughness in the tangent directoin
+	 * \param alphaV  Surface roughness in the bitangent direction
 	 */
-	Float eval(const Vector &m, Float alphaX, Float alphaY) const {
-		Float alpha = 0.5f * (alphaX + alphaY);
+	Float eval(const Vector &m, Float alphaU, Float alphaV) const {
+		Float alpha = 0.5f * (alphaU + alphaV);
 
 		if (Frame::cosTheta(m) <= 0)
 			return 0.0f;
@@ -120,6 +124,15 @@ public:
 					result = INV_PI * (root * root);
 				}
 				break;
+
+			case EAshikhminShirley: {
+					const Float cosTheta = Frame::cosTheta(m);
+					const Float exponent = (alphaU * m.x * m.x + alphaV * m.y * m.y)
+						/ std::max((Float) 0, 1 - cosTheta * cosTheta);
+					result = std::sqrt((alphaU + 1) * (alphaV + 1))
+						* INV_TWOPI * std::pow(cosTheta, exponent);
+				}
+				break;
 	
 			default:
 				SLog(EError, "Invalid distribution function!");
@@ -132,17 +145,30 @@ public:
 	
 		return result;
 	}
-	
+
+	/// Helper routine: sample the first quadrant of the A&S distribution
+	void sampleFirstQuadrant(Float alphaU, Float alphaV, Float u1, Float u2,
+			Float &phi, Float &cosTheta) const {
+		if (alphaU == alphaV)
+			phi = M_PI * u1 * 0.5f;
+		else
+			phi = std::atan(sqrtf((alphaU + 1.0f) / (alphaV + 1.0f)) *
+				std::tan(M_PI * u1 * 0.5f));
+		const Float cosPhi = std::cos(phi), sinPhi = std::sin(phi);
+		cosTheta = std::pow(u2, 1.0f / 
+			(alphaU * cosPhi * cosPhi + alphaV * sinPhi * sinPhi + 1.0f));
+	}
+
 	/**
 	 * \brief Sample microsurface normals according to 
 	 * the selected distribution
 	 *
 	 * \param sample  A uniformly distributed 2D sample
-	 * \param alphaX  Surface roughness in the tangent directoin
-	 * \param alphaY  Surface roughness in the bitangent direction
+	 * \param alphaU  Surface roughness in the tangent directoin
+	 * \param alphaV  Surface roughness in the bitangent direction
 	 */
-	Normal sample(const Point2 &sample, Float alphaX, Float alphaY) const {
-		Float alpha = 0.5f * (alphaX + alphaY);
+	Normal sample(const Point2 &sample, Float alphaU, Float alphaV) const {
+		Float alpha = 0.5f * (alphaU + alphaV);
 
 		/* The azimuthal component is always selected 
 		   uniformly regardless of the distribution */
@@ -163,6 +189,35 @@ public:
 			case EGGX: 
 				thetaM = std::atan(alpha * std::sqrt(sample.x) /
 						 std::sqrt(1.0f - sample.x));
+				break;
+			
+			case EAshikhminShirley: {
+					/* Sampling method based on code from PBRT */
+					Float phi, cosTheta;
+					if (sample.x < .25f) {
+						sampleFirstQuadrant(alphaU, alphaV,
+							4 * sample.x, sample.y, phi, cosTheta);
+					} else if (sample.x < 0.5f) {
+						sampleFirstQuadrant(alphaU, alphaV,
+							4 * (0.5f - sample.x), sample.y, phi, cosTheta);
+						phi = M_PI - phi;
+					} else if (sample.x < 0.75f) {
+						sampleFirstQuadrant(alphaU, alphaV,
+							4 * (sample.x - 0.5f), sample.y, phi, cosTheta);
+						phi += M_PI;
+					} else {
+						sampleFirstQuadrant(alphaU, alphaV,
+							4 * (1 - sample.x), sample.y, phi, cosTheta);
+						phi = 2 * M_PI - phi;
+					}
+					const Float sinTheta = std::sqrt(
+						std::max((Float) 0, 1 - cosTheta*cosTheta));
+					return Vector(
+						sinTheta * std::cos(phi),
+						sinTheta * std::sin(phi),
+						cosTheta
+					);
+				}
 				break;
 	
 			default: 
@@ -233,16 +288,30 @@ public:
 	 * \param m The microsurface normal
 	 * \param alpha The surface roughness
 	 */
-	Float G(const Vector &wi, const Vector &wo, const Vector &m, Float alphaX, Float alphaY) const {
-		Float alpha = 0.5f * (alphaX + alphaY);
-		return smithG1(wi, m, alpha) * smithG1(wo, m, alpha);
+	Float G(const Vector &wi, const Vector &wo, const Vector &m, Float alphaU, Float alphaV) const {
+		Float alpha = 0.5f * (alphaU + alphaV);
+		if (EXPECT_TAKEN(m_type != EAshikhminShirley)) {
+			return smithG1(wi, m, alpha) * smithG1(wo, m, alpha);
+		} else {
+			/* Infinite groove shadowing/masking */
+			const Float nDotM  = std::abs(Frame::cosTheta(m)),
+						nDotWo = std::abs(Frame::cosTheta(wo)),
+						nDotWi = std::abs(Frame::cosTheta(wi)),
+						woDotM = absDot(wo, m),
+						wiDotM = absDot(wi, m);
+
+			return std::max((Float) 0, std::min((Float) 1, 
+				std::min(2 * nDotM * nDotWo / woDotM,
+						 2 * nDotM * nDotWi / wiDotM)));
+		}
 	}
-	
+
 	std::string toString() const {
 		switch (m_type) {
 			case EBeckmann: return "beckmann"; break;
 			case EPhong: return "phong"; break;
 			case EGGX: return "ggx"; break;
+			case EAshikhminShirley: return "as"; break;
 			default:
 				SLog(EError, "Invalid distribution function");
 				return "";

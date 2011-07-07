@@ -32,24 +32,29 @@ MTS_NAMESPACE_BEGIN
  *           \item \code{beckmann}: Physically-based distribution derived from
  *               Gaussian random surfaces. This is the default.
  *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
- *              The Phong exponent $p$ is obtained using a transformation that
- *              produces roughness similar to a Beckmann distribution of the same 
- *              parameter. Note that due to the underlying microfacet theory, 
+ *              Due to the underlying microfacet theory, 
  *              the use of this distribution here leads to more realistic 
  *              behavior than the separately available \pluginref{phong} plugin.
  *           \item \code{ggx}: New distribution proposed by
- *               Walter et al. meant to better handle the long
- *               tails observed in transmission measurements through
- *               ground glass. Renderings with this distribution may
- *               converge slowly.
+ *              Walter et al. meant to better handle the long
+ *              tails observed in transmission measurements through
+ *              ground glass. Renderings with this distribution may
+ *              converge slowly.
+ *           \item \code{as}: Anisotropic microfacet distribution proposed by
+ *              Ashikhmin and Shirley \cite{Ashikhmin2005Anisotropic}.\vspace{-3mm}
  *       \end{enumerate}
- *       Default: \code{beckmann}
  *     }
- *     \parameter{alpha}{\Float\Or\Texture}{Roughness value of the
- *         unresolved surface microgeometry. When the Beckmann
- *         distribution is used, this parameter specifies the 
- *         \emph{root mean square} (RMS) slope of the microfacets.
- *         \default{0.1}
+ *     \parameter{alpha}{\Float\Or\Texture}{
+ *         Specifies the roughness value of the unresolved surface microgeometry. 
+ *         When the Beckmann distribution is used, this parameter is equal to the 
+ *         \emph{root mean square} (RMS) slope of the microfacets. This
+ *         parameter is only valid when \texttt{distribution=beckmann/phong/ggx}.
+ *         \default{0.1}. 
+ *     }
+ *     \parameter{alphaU, alphaV}{\Float\Or\Texture}{
+ *         Specifies the anisotropic rougness values along the tangent and bitangent directions. This
+ *         parameter is only valid when \texttt{distribution=as}.
+ *         \default{0.1}. 
  *     }
  *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}
  *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1.0}}
@@ -59,13 +64,12 @@ MTS_NAMESPACE_BEGIN
  *         factor used to modulate the transmittance component\default{1.0}}
  * }
  *
- *
  * This plugin implements a realistic microfacet scattering model for rendering
  * rough interfaces between dielectric materials, such as a transition from air to 
  * ground glass. Microfacet theory describes rough surfaces as an arrangement of 
  * unresolved and ideally specular facets, whose normal directions are given by 
  * a specially chosen \emph{microfacet distribution}. By accounting for shadowing
- * and masking effects between these facets, it is possible to reproduce the 
+ * and masking effects between these facets, it is possible to reproduce the important 
  * off-specular reflections peaks observed in real-world measurements of such 
  * materials.
  * \renderings{
@@ -85,19 +89,24 @@ MTS_NAMESPACE_BEGIN
  * several types of microfacet distributions and has a texturable roughness 
  * parameter.  Exterior and interior IOR values can each be independently 
  * specified, where ``exterior'' refers to the side that contains the surface
- * normal. When no parameters are given, the plugin activates the defaults, which
- * describe a borosilicate glass BK7/air interface with a light amount of 
- * rougness modeled using a Beckmann distribution.
+ * normal. When no parameters are given, the plugin activates the default 
+ * settings, which describe a borosilicate glass BK7/air interface with a 
+ * light amount of roughness modeled using a Beckmann distribution.
+ * 
+ * When using the Ashikmin-Shirley or Phong models, a conversion method is
+ * used to turn the specified $\alpha$ roughness value into the exponents 
+ * of these distributions. This is done so that the different distributions 
+ * all produce a similar appearance for the same value of $\alpha$.
  *
  * When using this plugin, it is crucial that the scene contains
- * meaningful and mutally compatible index of refraction change---see
+ * meaningful and mutally compatible index of refraction changes---see
  * \figref{glass-explanation} for an example. Also, please note that
  * the importance sampling implementation of this model is close, but 
  * not perfect a perfect match to the underlying scattering distribution,
  * particularly for high roughness values and when the \texttt{GGX} 
- * model is used. Hence, such renderings may converge slowly.
+ * model is used. Hence, such renderings may converge slowly.\vspace{1cm}
  *
- * \begin{xml}[caption=Ground glass, label=lst:roughdielectric-roughglass]
+ * \begin{xml}[caption=Material definition for ground glass, label=lst:roughdielectric-roughglass]
  * <bsdf type="roughdielectric">
  *     <string name="distribution" value="ggx"/>
  *     <float name="alpha" value="0.304"/>
@@ -106,7 +115,7 @@ MTS_NAMESPACE_BEGIN
  * </bsdf>
  * \end{xml}
  *
- * \begin{xml}[caption=Textured rougness, label=lst:roughdielectric-textured]
+ * \begin{xml}[caption=A texture can be attached to the roughness parameter, label=lst:roughdielectric-textured]
  * <bsdf type="roughdielectric">
  *     <string name="distribution" value="beckmann"/>
  *     <float name="intIOR" value="1.5046"/>
@@ -139,14 +148,14 @@ public:
 		);
 
 		Float alpha = props.getFloat("alpha", 0.1f),
-			  alphaX = props.getFloat("alphaX", alpha),
-			  alphaY = props.getFloat("alphaY", alpha);
+			  alphaU = props.getFloat("alphaU", alpha),
+			  alphaV = props.getFloat("alphaV", alpha);
 
-		m_alphaX = new ConstantFloatTexture(alphaX);
-		if (alphaX == alphaY)
-			m_alphaY = m_alphaX;
+		m_alphaU = new ConstantFloatTexture(alphaU);
+		if (alphaU == alphaV)
+			m_alphaV = m_alphaU;
 		else
-			m_alphaY = new ConstantFloatTexture(alphaY);
+			m_alphaV = new ConstantFloatTexture(alphaV);
 
 		m_usesRayDifferentials = false;
 	}
@@ -156,8 +165,8 @@ public:
 		m_distribution = MicrofacetDistribution(
 			(MicrofacetDistribution::EType) stream->readUInt()
 		);
-		m_alphaX = static_cast<Texture *>(manager->getInstance(stream));
-		m_alphaY = static_cast<Texture *>(manager->getInstance(stream));
+		m_alphaU = static_cast<Texture *>(manager->getInstance(stream));
+		m_alphaV = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularTransmittance = static_cast<Texture *>(manager->getInstance(stream));
 		m_intIOR = stream->readFloat();
@@ -169,8 +178,8 @@ public:
 			EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler);
 
 		m_usesRayDifferentials = 
-			m_alphaX->usesRayDifferentials() ||
-			m_alphaY->usesRayDifferentials() ||
+			m_alphaU->usesRayDifferentials() ||
+			m_alphaV->usesRayDifferentials() ||
 			m_specularReflectance->usesRayDifferentials() ||
 			m_specularTransmittance->usesRayDifferentials();
 		configure();
@@ -179,7 +188,7 @@ public:
 	void configure() {
 		unsigned int extraFlags = 0;
 		m_components.clear();
-		if (m_alphaX != m_alphaY)
+		if (m_alphaU != m_alphaV)
 			extraFlags |= EAnisotropic;
 		m_components.push_back(
 			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
@@ -192,6 +201,29 @@ public:
 
 	inline Float signum(Float value) const {
 		return (value < 0) ? -1.0f : 1.0f;
+	}
+
+	/// Helper function: reflect \c wi with respect to a given surface normal
+	inline Vector reflect(const Vector &wi, const Normal &m) const {
+		return 2 * dot(wi, m) * Vector(m) - wi;
+	}
+
+	/// Helper function: refract \c wi with respect to a given surface normal
+	inline bool refract(const Vector &wi, Vector &wo, const Normal &m, Float etaI, Float etaT) const {
+		Float eta = etaI / etaT, c = dot(wi, m);
+
+		/* Using Snell's law, calculate the squared cosine of the
+		   angle between the normal and the transmitted ray */
+		Float cosThetaTSqr = 1 + eta * eta * (c*c-1);
+
+		if (cosThetaTSqr < 0) 
+			return false; // Total internal reflection
+
+		/* Compute the transmitted direction */
+		wo = m * (eta*c - signum(wi.z)
+			   * std::sqrt(cosThetaTSqr)) - wi * eta;
+
+		return true;
 	}
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
@@ -232,13 +264,13 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alphaX = m_distribution.transformRoughness( 
-					m_alphaX->getValue(bRec.its).average()),
-			  alphaY = m_distribution.transformRoughness( 
-					m_alphaY->getValue(bRec.its).average());
+		Float alphaU = m_distribution.transformRoughness( 
+					m_alphaU->getValue(bRec.its).average()),
+			  alphaV = m_distribution.transformRoughness( 
+					m_alphaV->getValue(bRec.its).average());
 
 		/* Microsurface normal distribution */
-		const Float D = m_distribution.eval(H, alphaX, alphaY);
+		const Float D = m_distribution.eval(H, alphaU, alphaV);
 		if (D == 0)
 			return Spectrum(0.0f);
 
@@ -246,12 +278,12 @@ public:
 		const Float F = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
 
 		/* Smith's shadow-masking function */
-		const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaX, alphaY);
+		const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaU, alphaV);
 
 		if (reflect) {
 			/* Calculate the total amount of reflection */
 			Float value = F * D * G / 
-				(4.0f * Frame::cosTheta(bRec.wi));
+				(4.0f * std::abs(Frame::cosTheta(bRec.wi)));
 
 			return m_specularReflectance->getValue(bRec.its) * value; 
 		} else {
@@ -321,20 +353,20 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alphaX = m_distribution.transformRoughness( 
-					m_alphaX->getValue(bRec.its).average()),
-			  alphaY = m_distribution.transformRoughness( 
-					m_alphaY->getValue(bRec.its).average());
+		Float alphaU = m_distribution.transformRoughness( 
+					m_alphaU->getValue(bRec.its).average()),
+			  alphaV = m_distribution.transformRoughness( 
+					m_alphaV->getValue(bRec.its).average());
 
 		/* Suggestion by Bruce Walter: sample using a slightly wider
 		   density function. This in practice limits the weights to 
 		   values <= 4. See also \ref sample() */
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
-		alphaX *= factor; alphaY *= factor;
+		alphaU *= factor; alphaV *= factor;
 
 		/* Microsurface normal distribution */
-		Float prob = m_distribution.eval(H, alphaX, alphaY);
+		Float prob = m_distribution.eval(H, alphaU, alphaV);
 
 		if (sampleTransmission && sampleReflection) {
 			/* Please see the sample() methods if the 
@@ -407,22 +439,22 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alphaX = m_distribution.transformRoughness( 
-					m_alphaX->getValue(bRec.its).average()),
-			  alphaY = m_distribution.transformRoughness( 
-					m_alphaY->getValue(bRec.its).average());
+		Float alphaU = m_distribution.transformRoughness( 
+					m_alphaU->getValue(bRec.its).average()),
+			  alphaV = m_distribution.transformRoughness( 
+					m_alphaV->getValue(bRec.its).average());
 
 		/* Suggestion by Bruce Walter: sample using a slightly wider
 		   density function. This in practice limits the weights to 
 		   values <= 4. See also \ref sample() */
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
-		Float sampleAlphaX = alphaX * factor,
-			  sampleAlphaY = alphaY * factor;
+		Float sampleAlphaU = alphaU * factor,
+			  sampleAlphaV = alphaV * factor;
 
 		/* Sample M, the microsurface normal */
 		const Normal m = m_distribution.sample(sample,
-				sampleAlphaX, sampleAlphaY);
+				sampleAlphaU, sampleAlphaV);
 
 		if (sampleExactFresnelTerm) {
 			sampleF = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
@@ -463,11 +495,11 @@ public:
 				* ((bRec.quantity == ERadiance) ? ((etaI*etaI) / (etaT*etaT)) : (Float) 1);
 		}
 
-		Float numerator = m_distribution.eval(m, alphaX, alphaY)
-			* m_distribution.G(bRec.wi, bRec.wo, m, alphaX, alphaY)
+		Float numerator = m_distribution.eval(m, alphaU, alphaV)
+			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
 			* dot(bRec.wi, m);
 
-		Float denominator = m_distribution.eval(m, sampleAlphaX, sampleAlphaY)
+		Float denominator = m_distribution.eval(m, sampleAlphaU, sampleAlphaV)
 			* Frame::cosTheta(m) 
 			* Frame::cosTheta(bRec.wi);
 
@@ -533,21 +565,21 @@ public:
 		}
 
 		/* Evaluate the roughness */
-		Float alphaX = m_distribution.transformRoughness( 
-					m_alphaX->getValue(bRec.its).average()),
-			  alphaY = m_distribution.transformRoughness( 
-					m_alphaY->getValue(bRec.its).average());
+		Float alphaU = m_distribution.transformRoughness( 
+					m_alphaU->getValue(bRec.its).average()),
+			  alphaV = m_distribution.transformRoughness( 
+					m_alphaV->getValue(bRec.its).average());
 
 		/* Suggestion by Bruce Walter: sample using a slightly different 
 		   value of alpha. This in practice limits the weights to 
 		   values <= 4. See also \ref sample() */
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
-		Float sampleAlphaX = alphaX * factor,
-			  sampleAlphaY = alphaY * factor;
+		Float sampleAlphaU = alphaU * factor,
+			  sampleAlphaV = alphaV * factor;
 
 		/* Sample M, the microsurface normal */
-		const Normal m = m_distribution.sample(sample, sampleAlphaX, sampleAlphaY);
+		const Normal m = m_distribution.sample(sample, sampleAlphaU, sampleAlphaV);
 
 		if (sampleExactFresnelTerm) {
 			Float sampleF = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
@@ -593,14 +625,14 @@ public:
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alpha") {
-			m_alphaX = m_alphaY = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_alphaX->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alphaX") {
-			m_alphaX = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_alphaX->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alphaY") {
-			m_alphaY = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_alphaY->usesRayDifferentials();
+			m_alphaU = m_alphaV = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_alphaU->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alphaU") {
+			m_alphaU = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_alphaU->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alphaV") {
+			m_alphaV = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_alphaV->usesRayDifferentials();
 		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
 			m_specularReflectance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
@@ -616,8 +648,8 @@ public:
 		BSDF::serialize(stream, manager);
 
 		stream->writeUInt((uint32_t) m_distribution.getType());
-		manager->serialize(stream, m_alphaX.get());
-		manager->serialize(stream, m_alphaY.get());
+		manager->serialize(stream, m_alphaU.get());
+		manager->serialize(stream, m_alphaV.get());
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_specularTransmittance.get());
 		stream->writeFloat(m_intIOR);
@@ -628,8 +660,8 @@ public:
 		std::ostringstream oss;
 		oss << "RoughDielectric[" << endl
 			<< "  distribution = " << m_distribution.toString() << "," << endl
-			<< "  alphaX = " << indent(m_alphaX->toString()) << "," << endl
-			<< "  alphaY = " << indent(m_alphaY->toString()) << "," << endl
+			<< "  alphaU = " << indent(m_alphaU->toString()) << "," << endl
+			<< "  alphaV = " << indent(m_alphaV->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  specularTransmittance = " << indent(m_specularTransmittance->toString()) << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl
@@ -645,7 +677,7 @@ private:
 	MicrofacetDistribution m_distribution;
 	ref<Texture> m_specularTransmittance;
 	ref<Texture> m_specularReflectance;
-	ref<Texture> m_alphaX, m_alphaY;
+	ref<Texture> m_alphaU, m_alphaV;
 	Float m_intIOR, m_extIOR;
 };
 
@@ -663,7 +695,7 @@ public:
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
 		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return vec3(0.08) * cosTheta(wo);" << endl
+			<< "    return vec3(0.08);" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl

@@ -8,14 +8,36 @@
 		<string name="extIOR" value="air"/>
 	</bsdf>
 
+	<!-- Test the rough glass model with the 
+		 Ashikhmin-Shirley microfacet distribution -->
+	<bsdf type="roughdielectric">
+		<string name="distribution" value="as"/>
+		<float name="alphaU" value=".3"/>
+		<float name="alphaV" value=".1"/>
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1.0"/>
+	</bsdf>
+
+
+	<!-- Test the rough glass model with the 
+		 Beckmann microfacet distribution -->
+	<bsdf type="roughdielectric">
+		<string name="distribution" value="beckmann"/>
+		<float name="alpha" value=".3"/>
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1.0"/>
+	</bsdf>
+
 	<!-- Test the diffuse model -->
 	<bsdf type="diffuse"/>
 
 	<!-- Test the diffuse transmission model -->
 	<bsdf type="difftrans"/>
 
+	<!-- Test a simple mixture between diffuse
+		 transmittance and reflectance -->
 	<bsdf type="mixture">
-		<string name="weights" value=".5 .5"/>
+		<string name="weights" value=".5 .3"/>
 
 		<bsdf type="diffuse">
 			<rgb name="reflectance" value=".5 0 0"/>
