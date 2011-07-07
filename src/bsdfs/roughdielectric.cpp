@@ -23,6 +23,11 @@
 
 MTS_NAMESPACE_BEGIN
 
+/* Suggestion by Bruce Walter: sample using a slightly wider
+   density function. This in practice limits the importance 
+   weights to values <= 4. See also \ref sample() */
+#define ENLARGE_LOBE_TRICK 1
+
 /*! \plugin{roughdielectric}{Rough dielectric material}
  * \parameters{
  *     \parameter{distribution}{\String}{
@@ -188,12 +193,21 @@ public:
 	void configure() {
 		unsigned int extraFlags = 0;
 		m_components.clear();
-		if (m_alphaU != m_alphaV)
+		if (m_alphaU != m_alphaV) {
 			extraFlags |= EAnisotropic;
+			if (m_distribution.getType() != 
+				MicrofacetDistribution::EAshikhminShirley)
+				Log(EError, "Different roughness values along the tangent and "
+						"bitangent directions are only supported when using the "
+						"anisotropic Ashikhmin-Shirley microfacet distribution "
+						"(named \"as\")");
+		}
+
 		m_components.push_back(
 			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
 		m_components.push_back(
 			EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+
 		BSDF::configure();
 	}
 
@@ -358,15 +372,16 @@ public:
 			  alphaV = m_distribution.transformRoughness( 
 					m_alphaV->getValue(bRec.its).average());
 
+#if defined(ENLARGE_LOBE_TRICK)
 		/* Suggestion by Bruce Walter: sample using a slightly wider
-		   density function. This in practice limits the weights to 
-		   values <= 4. See also \ref sample() */
+		   density function. This in practice limits the importance 
+		   weights to values <= 4. See also \ref sample() */
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
 		alphaU *= factor; alphaV *= factor;
-
-		/* Microsurface normal distribution */
-		Float prob = m_distribution.eval(H, alphaU, alphaV);
+#endif
+		/* Microsurface normal sampling density */
+		Float prob = m_distribution.pdf(H, alphaU, alphaV);
 
 		if (sampleTransmission && sampleReflection) {
 			/* Please see the sample() methods if the 
@@ -387,7 +402,7 @@ public:
 			prob *= reflect ? F : (1-F);
 		}
 
-		return std::abs(prob * Frame::cosTheta(H) * dwh_dwo);
+		return std::abs(prob * dwh_dwo);
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
@@ -445,12 +460,17 @@ public:
 					m_alphaV->getValue(bRec.its).average());
 
 		/* Suggestion by Bruce Walter: sample using a slightly wider
-		   density function. This in practice limits the weights to 
-		   values <= 4. See also \ref sample() */
+		   density function. This in practice limits the importance 
+		   weights to values <= 4. See also \ref sample() */
+#if defined(ENLARGE_LOBE_TRICK)
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
 		Float sampleAlphaU = alphaU * factor,
 			  sampleAlphaV = alphaV * factor;
+#else
+		Float sampleAlphaU = alphaU,
+			  sampleAlphaV = alphaV;
+#endif
 
 		/* Sample M, the microsurface normal */
 		const Normal m = m_distribution.sample(sample,
@@ -499,8 +519,7 @@ public:
 			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
 			* dot(bRec.wi, m);
 
-		Float denominator = m_distribution.eval(m, sampleAlphaU, sampleAlphaV)
-			* Frame::cosTheta(m) 
+		Float denominator = m_distribution.pdf(m, sampleAlphaU, sampleAlphaV)
 			* Frame::cosTheta(bRec.wi);
 
 		if (!sampleExactFresnelTerm) {
@@ -570,13 +589,18 @@ public:
 			  alphaV = m_distribution.transformRoughness( 
 					m_alphaV->getValue(bRec.its).average());
 
-		/* Suggestion by Bruce Walter: sample using a slightly different 
-		   value of alpha. This in practice limits the weights to 
-		   values <= 4. See also \ref sample() */
+		/* Suggestion by Bruce Walter: sample using a slightly wider
+		   density function. This in practice limits the importance 
+		   weights to values <= 4. See also \ref sample() */
+#if defined(ENLARGE_LOBE_TRICK)
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
 		Float sampleAlphaU = alphaU * factor,
 			  sampleAlphaV = alphaV * factor;
+#else
+		Float sampleAlphaU = alphaU,
+			  sampleAlphaV = alphaV;
+#endif
 
 		/* Sample M, the microsurface normal */
 		const Normal m = m_distribution.sample(sample, sampleAlphaU, sampleAlphaV);
@@ -711,5 +735,5 @@ Shader *RoughDielectric::createShader(Renderer *renderer) const {
 
 MTS_IMPLEMENT_CLASS(RoughDielectricShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(RoughDielectric, false, BSDF)
-MTS_EXPORT_PLUGIN(RoughDielectric, "Rough glass BSDF");
+MTS_EXPORT_PLUGIN(RoughDielectric, "Rough dielectric BSDF");
 MTS_NAMESPACE_END

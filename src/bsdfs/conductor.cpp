@@ -24,10 +24,13 @@ MTS_NAMESPACE_BEGIN
 
 /*! \plugin{conductor}{Smooth conductor}
  * \parameters{
- *     \parameter{preset}{\String}{Name of a material preset, see \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}
- *     \parameter{eta}{\Spectrum}{Real part of the material's index of refraction \default{based on the value of \texttt{preset}}}
- *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of refraction, also known as absorption coefficient.
- *                              \default{based on the value of \texttt{preset}}}
+ *     \parameter{preset}{\String}{Name of a material preset, see 
+ *           \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}
+ *     \parameter{eta}{\Spectrum}{Real part of the material's index of refraction
+ *           \default{based on the value of \texttt{preset}}}
+ *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of 
+ *             refraction, also known as absorption coefficient.
+ *             \default{based on the value of \texttt{preset}}}
  *     \lastparameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the reflectance component\default{1.0}}
  * }

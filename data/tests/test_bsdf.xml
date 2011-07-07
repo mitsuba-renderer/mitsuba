@@ -2,22 +2,22 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
-	<!-- Test the dielectric model -->
-	<bsdf type="dielectric">
-		<string name="intIOR" value="water"/>
-		<string name="extIOR" value="air"/>
-	</bsdf>
 
 	<!-- Test the rough glass model with the 
 		 Ashikhmin-Shirley microfacet distribution -->
 	<bsdf type="roughdielectric">
 		<string name="distribution" value="as"/>
-		<float name="alphaU" value=".3"/>
-		<float name="alphaV" value=".1"/>
+		<float name="alphaU" value=".1"/>
+		<float name="alphaV" value=".3"/>
 		<float name="intIOR" value="1.5"/>
 		<float name="extIOR" value="1.0"/>
 	</bsdf>
 
+	<!-- Test the dielectric model -->
+	<bsdf type="dielectric">
+		<string name="intIOR" value="water"/>
+		<string name="extIOR" value="air"/>
+	</bsdf>
 
 	<!-- Test the rough glass model with the 
 		 Beckmann microfacet distribution -->
