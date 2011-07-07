@@ -41,29 +41,29 @@ MTS_NAMESPACE_BEGIN
  *       \begin{enumerate}[(i)]
  *           \item \code{beckmann}: Physically-based distribution derived from
  *               Gaussian random surfaces. This is the default.
+ *           \item \code{ggx}: New distribution proposed by
+ *              Walter et al. \cite{Walter07Microfacet}, which is meant to better handle 
+ *              the long tails observed in measurements of ground surfaces. 
+ *              Renderings with this distribution may converge slowly.
  *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
  *              Due to the underlying microfacet theory, 
  *              the use of this distribution here leads to more realistic 
  *              behavior than the separately available \pluginref{phong} plugin.
- *           \item \code{ggx}: New distribution proposed by
- *              Walter et al. meant to better handle the long
- *              tails observed in measurements of ground surfaces. 
- *              Renderings with this distribution may converge slowly.
  *           \item \code{as}: Anisotropic Phong-style microfacet distribution proposed by
  *              Ashikhmin and Shirley \cite{Ashikhmin2005Anisotropic}.\vspace{-3mm}
  *       \end{enumerate}
  *     }
  *     \parameter{alpha}{\Float\Or\Texture}{
- *         Specifies the roughness value of the unresolved surface microgeometry. 
+ *         Specifies the roughness of the unresolved surface microgeometry. 
  *         When the Beckmann distribution is used, this parameter is equal to the 
  *         \emph{root mean square} (RMS) slope of the microfacets. This
  *         parameter is only valid when \texttt{distribution=beckmann/phong/ggx}.
  *         \default{0.1}. 
  *     }
  *     \parameter{alphaU, alphaV}{\Float\Or\Texture}{
- *         Specifies the anisotropic rougness values along the tangent and bitangent directions. These
- *         parameter are only valid when \texttt{distribution=as}.
- *         \default{0.1}. 
+ *         Specifies the anisotropic rougness values along the tangent and 
+ *         bitangent directions. These parameter are only valid when 
+ *         \texttt{distribution=as}. \default{0.1}. 
  *     }
  *     \parameter{preset}{\String}{Name of a material preset, see 
  *           \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}

@@ -38,29 +38,29 @@ MTS_NAMESPACE_BEGIN
  *       \begin{enumerate}[(i)]
  *           \item \code{beckmann}: Physically-based distribution derived from
  *               Gaussian random surfaces. This is the default.
+ *           \item \code{ggx}: New distribution proposed by
+ *              Walter et al. \cite{Walter07Microfacet}, which is meant to better handle 
+ *              the long tails observed in measurements of ground surfaces. 
+ *              Renderings with this distribution may converge slowly.
  *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
  *              Due to the underlying microfacet theory, 
  *              the use of this distribution here leads to more realistic 
  *              behavior than the separately available \pluginref{phong} plugin.
- *           \item \code{ggx}: New distribution proposed by
- *              Walter et al. meant to better handle the long
- *              tails observed in measurements of ground surfaces. 
- *              Renderings with this distribution may converge slowly.
  *           \item \code{as}: Anisotropic Phong-style microfacet distribution proposed by
  *              Ashikhmin and Shirley \cite{Ashikhmin2005Anisotropic}.\vspace{-3mm}
  *       \end{enumerate}
  *     }
  *     \parameter{alpha}{\Float\Or\Texture}{
- *         Specifies the roughness value of the unresolved surface microgeometry. 
+ *         Specifies the roughness of the unresolved surface microgeometry. 
  *         When the Beckmann distribution is used, this parameter is equal to the 
  *         \emph{root mean square} (RMS) slope of the microfacets. This
  *         parameter is only valid when \texttt{distribution=beckmann/phong/ggx}.
  *         \default{0.1}. 
  *     }
  *     \parameter{alphaU, alphaV}{\Float\Or\Texture}{
- *         Specifies the anisotropic rougness values along the tangent and bitangent directions. These
- *         parameter are only valid when \texttt{distribution=as}.
- *         \default{0.1}. 
+ *         Specifies the anisotropic rougness values along the tangent and 
+ *         bitangent directions. These parameter are only valid when 
+ *         \texttt{distribution=as}. \default{0.1}. 
  *     }
  *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
@@ -89,25 +89,44 @@ MTS_NAMESPACE_BEGIN
  *         {bsdf_roughdielectric_textured.jpg}
  * }
  *
- * This plugin is essentially the ``roughened'' equivalent of the plugin
- * \pluginref{dielectric}. As the roughness parameter $\alpha$ decreases, it 
- * will increasingly approximate the smooth model. The implementation of this
- * plugin is based on the paper ``Microfacet Models for Refraction through 
- * Rough Surfaces'' by Walter et al. \cite{Walter07Microfacet}. It supports 
- * several types of microfacet distributions and has a texturable roughness 
- * parameter.  Exterior and interior IOR values can be independently 
- * specified, where ``exterior'' refers to the side that contains the surface
- * normal. Similar to the \pluginref{dielectric} plugin, IOR values can either
- * be specified numerically, or based on a list of known materials (see
+ * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
+ * \pluginref{dielectric}. For very low values of $\alpha$, the two will
+ * be very similar, though scenes using this plugin will take longer to render 
+ * due to the additional computational burden of tracking surface roughness.
+ * 
+ * The implementation of this plugin is based on the paper ``Microfacet Models
+ * for Refraction through Rough Surfaces'' by Walter et al. 
+ * \cite{Walter07Microfacet}. It supports several different types of microfacet
+ * distributions and has a texturable roughness parameter. Exterior and 
+ * interior IOR values can be independently specified, where ``exterior'' 
+ * refers to the side that contains the surface normal. Similar to the 
+ * \pluginref{dielectric} plugin, IOR values can either be specified 
+ * numerically, or based on a list of known materials (see 
  * \tblref{dielectric-iors} for an overview). When no parameters are given, 
  * the plugin activates the default settings, which describe a borosilicate 
  * glass BK7/air interface with a light amount of roughness modeled using a 
  * Beckmann distribution.
+ *
+ * To get an intuition about the range and effects of the surface roughness
+ * parameter $\alpha$, consider the following: a value of 
+ * $\alpha=0.001-0.01$ corresponds a material with slight imperfections on an
+ * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
+ * and $\alpha=0.3-0.5$ is \emph{extremely} rough (e.g. a etched or ground
+ * finish).
  * 
- * When using the Ashikmin-Shirley or Phong models, a conversion method is
+ * When using the Ashikhmin-Shirley or Phong models, a conversion method is
  * used to turn the specified $\alpha$ roughness value into the exponents 
  * of these distributions. This is done in a way, such that the different 
- * distributions all produce a similar appearance for the same value of $\alpha$.
+ * distributions all produce a similar appearance for the same value of 
+ * $\alpha$.
+ *
+ * The Ashikhmin-Shirley microfacet distribution allows the specification
+ * of two distinct roughness values along the tangent and bitangent
+ * directions. This can be used to provide a material with a ``brushed''
+ * appearance. The alignment of the anisotropy will follow the UV
+ * parameterization of the underlying mesh\footnote{Therefore, 
+ * such anisotropic materials cannot be applied to triangle meshes that 
+ * are missing texture coordinates.}.
  *
  * When using this plugin, it is crucial that the scene contains
  * meaningful and mutally compatible index of refraction changes---see
@@ -116,7 +135,7 @@ MTS_NAMESPACE_BEGIN
  * not always a perfect a perfect match to the underlying scattering distribution,
  * particularly for high roughness values and when the \texttt{ggx} 
  * microfacet distribution is used. Hence, such renderings may 
- * converge slowly.\vspace{1cm}
+ * converge slowly.
  *
  * \begin{xml}[caption=A material definition for ground glass, label=lst:roughdielectric-roughglass]
  * <bsdf type="roughdielectric">

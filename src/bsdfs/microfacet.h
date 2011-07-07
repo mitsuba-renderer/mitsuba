@@ -318,8 +318,21 @@ public:
 	 * \param alpha The surface roughness
 	 */
 	Float G(const Vector &wi, const Vector &wo, const Vector &m, Float alphaU, Float alphaV) const {
-		Float alpha = std::max(alphaU, alphaV);
-		return smithG1(wi, m, alpha) * smithG1(wo, m, alpha);
+		if (m_type != EAshikhminShirley) {
+			return smithG1(wi, m, alphaU)
+				 * smithG1(wo, m, alphaU);
+		} else {
+			/* Infinite groove shadowing/masking */
+			const Float nDotM  = std::abs(Frame::cosTheta(m)),
+						nDotWo = std::abs(Frame::cosTheta(wo)),
+						nDotWi = std::abs(Frame::cosTheta(wi)),
+						woDotM = absDot(wo, m),
+						wiDotM = absDot(wi, m);
+
+			return std::max((Float) 0, std::min((Float) 1, 
+				std::min(2 * nDotM * nDotWo / woDotM,
+						 2 * nDotM * nDotWi / wiDotM)));
+		}
 	}
 
 	std::string toString() const {

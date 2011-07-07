@@ -2,15 +2,6 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
-	<!-- Test the rough dielectric model with the anisotropic
-		 Ashikhmin-Shirley microfacet distribution -->
-	<bsdf type="roughconductor">
-		<string name="preset" value="Au"/>
-		<string name="distribution" value="as"/>
-		<float name="alphaU" value="0.1"/>
-		<float name="alphaV" value="0.3"/>
-	</bsdf>
-
 	<!-- Test the diffuse model -->
 	<bsdf type="diffuse"/>
 
@@ -96,5 +87,14 @@
 	<bsdf type="roughconductor">
 		<string name="distribution" value="beckmann"/>
 		<float name="alpha" value=".3"/>
+	</bsdf>
+
+	<!-- Test the rough dielectric model with the anisotropic
+		 Ashikhmin-Shirley microfacet distribution -->
+	<bsdf type="roughconductor">
+		<string name="preset" value="Au"/>
+		<string name="distribution" value="as"/>
+		<float name="alphaU" value="0.1"/>
+		<float name="alphaV" value="0.3"/>
 	</bsdf>
 </scene>
