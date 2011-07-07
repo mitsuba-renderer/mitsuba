@@ -274,7 +274,6 @@ public:
 	
 		switch (m_type) {
 			case EPhong:
-			case EAshikhminShirley:
 			case EBeckmann: {
 					Float a;
 					/* Approximation recommended by Bruce Walter: Use
@@ -326,17 +325,17 @@ public:
 			if (dot(wi, m) * Frame::cosTheta(wi) <= 0 ||
 				dot(wo, m) * Frame::cosTheta(wo) <= 0)
 				return 0.0f;
-	
-			/* Infinite groove shadowing/masking */
-			const Float nDotM  = std::abs(Frame::cosTheta(m)),
-						nDotWo = std::abs(Frame::cosTheta(wo)),
-						nDotWi = std::abs(Frame::cosTheta(wi)),
-						woDotM = absDot(wo, m),
-						wiDotM = absDot(wi, m);
 
-			return std::max((Float) 0, std::min((Float) 1, 
-				std::min(2 * nDotM * nDotWo / woDotM,
-						 2 * nDotM * nDotWi / wiDotM)));
+			/* Infinite groove shadowing/masking */
+			const Float nDotM  = Frame::cosTheta(m),
+						nDotWo = Frame::cosTheta(wo),
+						nDotWi = Frame::cosTheta(wi),
+						woDotM = dot(wo, m),
+						wiDotM = dot(wi, m);
+
+			return std::min((Float) 1, 
+				std::min(std::abs(2 * nDotM * nDotWo / woDotM),
+						 std::abs(2 * nDotM * nDotWi / wiDotM)));
 		}
 	}
 

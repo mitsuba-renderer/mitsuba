@@ -20,6 +20,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/sampler.h>
 #include <mitsuba/render/texture.h>
+#include <mitsuba/hw/gpuprogram.h>
 #include "microfacet.h"
 
 MTS_NAMESPACE_BEGIN
@@ -76,6 +77,14 @@ MTS_NAMESPACE_BEGIN
  *     \lastparameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the reflectance component\default{1.0}}
  * }
+ * \renderings{
+ *     \rendering{Rough copper (Beckmann, $\alpha=0.1$)}
+ *     	   {bsdf_roughconductor_copper.jpg}
+ *     \rendering{Vertically brushed aluminium (Ashikhmin-Shirley, 
+ *         $\alpha_u=0.05,\
+ *         \alpha_v=0.3$)}{bsdf_roughconductor_anisotropic_aluminium.jpg}
+ * }
+ *
  */
 class RoughConductor : public BSDF {
 public:
@@ -369,32 +378,114 @@ private:
 	Spectrum m_eta, m_k;
 };
 
-/* Fake conductor shader -- it is really hopeless to visualize
-   this material in the VPL renderer, so let's try to do at least 
-   something that suggests the presence of a translucent boundary */
+/**
+ * GLSL port of the rough conductor shader. This version is much more
+ * approximate -- it only supports the Ashikhmin-Shirley distribution, 
+ * does everything in RGB, and it uses the Schlick approximation to the
+ * Fresnel reflectance.
+ */
 class RoughConductorShader : public Shader {
 public:
-	RoughConductorShader(Renderer *renderer) :
-		Shader(renderer, EBSDFShader) {
-		m_flags = ETransparent;
+	RoughConductorShader(Renderer *renderer, const Texture *specularReflectance,
+			const Texture *alphaU, const Texture *alphaV, const Spectrum &eta,
+			const Spectrum &k) : Shader(renderer, EBSDFShader), 
+			m_specularReflectance(specularReflectance), m_alphaU(alphaU), m_alphaV(alphaV){
+		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
+		m_alphaUShader = renderer->registerShaderForResource(m_alphaU.get());
+		m_alphaVShader = renderer->registerShaderForResource(m_alphaV.get());
+
+		/* Compute the reflectance at perpendicular incidence */
+		m_R0 = fresnelConductor(1.0f, eta, k);
+	}
+
+	bool isComplete() const {
+		return m_specularReflectanceShader.get() != NULL &&
+			   m_alphaUShader.get() != NULL &&
+			   m_alphaVShader.get() != NULL;
+	}
+
+	void putDependencies(std::vector<Shader *> &deps) {
+		deps.push_back(m_specularReflectanceShader.get());
+		deps.push_back(m_alphaUShader.get());
+		deps.push_back(m_alphaVShader.get());
+	}
+
+	void cleanup(Renderer *renderer) {
+		renderer->unregisterShaderForResource(m_specularReflectance.get());
+		renderer->unregisterShaderForResource(m_alphaU.get());
+		renderer->unregisterShaderForResource(m_alphaV.get());
+	}
+
+	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_R0", false));
+	}
+
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
+		program->setParameter(parameterIDs[0], m_R0);
 	}
 
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return vec3(0.08);" << endl
+		oss << "uniform vec3 " << evalName << "_R0;" << endl
+			<< endl
+			<< "float " << evalName << "_D(vec3 m, float alphaU, float alphaV) {" << endl
+			<< "    float ct = cosTheta(m), ds = 1-ct*ct;" << endl
+			<< "    if (ds <= 0.0)" << endl
+			<< "        return 0.0f;" << endl
+			<< "    alphaU = 2 / (alphaU * alphaU) - 2;" << endl
+			<< "    alphaV = 2 / (alphaV * alphaV) - 2;" << endl
+			<< "    float exponent = (alphaU*m.x*m.x + alphaV*m.y*m.y)/ds;" << endl
+			<< "    return sqrt((alphaU+2) * (alphaV+2)) * 0.15915 * pow(ct, exponent);" << endl
+			<< "}" << endl
+			<< endl
+			<< "float " << evalName << "_G(vec3 m, vec3 wi, vec3 wo) {" << endl
+			<< "    if ((dot(wi, m) * cosTheta(wi)) <= 0 || " << endl
+			<< "        (dot(wo, m) * cosTheta(wo)) <= 0)" << endl
+			<< "        return 0.0;" << endl
+			<< "    float nDotM = cosTheta(m);" << endl
+			<< "    return min(1.0, min(" << endl
+			<< "        abs(2 * nDotM * cosTheta(wo) / dot(wo, m))," << endl
+			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "_schlick(vec3 wi) {" << endl
+			<< "    float ct = cosTheta(wi), ctSqr = ct*ct," << endl
+			<< "          ct5 = ctSqr*ctSqr*ct;" << endl
+			<< "    return " << evalName << "_R0 + (vec3(1.0) - " << evalName << "_R0) * ct5;" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "   if (cosTheta(wi) <= 0 || cosTheta(wo) <= 0)" << endl
+			<< "    	return vec3(0.0);" << endl
+			<< "   vec3 H = normalize(wi + wo);" << endl
+			<< "   vec3 reflectance = " << depNames[0] << "(uv);" << endl
+			<< "   float alphaU = " << depNames[1] << "(uv).r;" << endl
+			<< "   float alphaV = " << depNames[2] << "(uv).r;" << endl
+			<< "   float D = " << evalName << "_D(H, alphaU, alphaV)" << ";" << endl
+			<< "   float G = " << evalName << "_G(H, wi, wo);" << endl
+			<< "   vec3 Fr = " << evalName << "_schlick(wi);" << endl
+			<< "   return reflectance * Fr * (D * G / (4*cosTheta(wi)));" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return " << evalName << "(uv, wi, wo);" << endl
+			<< "    return " << evalName << "_R0 * 0.31831 * cosTheta(wo);"<< endl
 			<< "}" << endl;
 	}
 	MTS_DECLARE_CLASS()
+private:
+	ref<const Texture> m_specularReflectance;
+	ref<const Texture> m_alphaU;
+	ref<const Texture> m_alphaV;
+	ref<Shader> m_specularReflectanceShader;
+	ref<Shader> m_alphaUShader;
+	ref<Shader> m_alphaVShader;
+	Spectrum m_R0;
 };
 
 Shader *RoughConductor::createShader(Renderer *renderer) const { 
-	return new RoughConductorShader(renderer);
+	return new RoughConductorShader(renderer,
+		m_specularReflectance.get(), m_alphaU.get(), m_alphaV.get(), m_eta, m_k);
 }
 
 MTS_IMPLEMENT_CLASS(RoughConductorShader, false, Shader)

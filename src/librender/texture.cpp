@@ -154,8 +154,8 @@ public:
 			const std::vector<std::string> &depNames) const {
 		oss << "uniform float " << evalName << "_value;" << endl
 			<< endl
-			<< "float " << evalName << "(vec2 uv) {" << endl
-			<< "    return " << evalName << "_value;" << endl
+			<< "vec3 " << evalName << "(vec2 uv) {" << endl
+			<< "    return vec3(" << evalName << "_value);" << endl
 			<< "}" << endl;
 	}
 
