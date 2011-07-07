@@ -90,24 +90,26 @@ Texture *BSDF::ensureEnergyConservation(Texture *texture,
 static std::string typeMaskToString(unsigned int typeMask) {
 	std::ostringstream oss;
 	oss << "{ ";
-	if (typeMask & BSDF::EAll) { oss << "all "; typeMask &= ~BSDF::EAll; }
-	if (typeMask & BSDF::ESmooth) { oss << "smooth "; typeMask &= ~BSDF::ESmooth; }
-	if (typeMask & BSDF::EDiffuse) { oss << "diffuse "; typeMask &= ~BSDF::EDiffuse; }
-	if (typeMask & BSDF::EGlossy) { oss << "glossy "; typeMask &= ~BSDF::EGlossy; }
-	if (typeMask & BSDF::EDelta) { oss << "delta"; typeMask &= ~BSDF::EDelta; }
-	if (typeMask & BSDF::EDelta1D) { oss << "delta1D "; typeMask &= ~BSDF::EDelta1D; }
-	if (typeMask & BSDF::EDiffuseReflection) { oss << "diffuseReflection "; typeMask &= ~BSDF::EDiffuseReflection; }
-	if (typeMask & BSDF::EDiffuseTransmission) { oss << "diffuseTransmission "; typeMask &= ~BSDF::EDiffuseTransmission; }
-	if (typeMask & BSDF::EGlossyReflection) { oss << "glossyReflection "; typeMask &= ~BSDF::EGlossyReflection; }
-	if (typeMask & BSDF::EGlossyTransmission) { oss << "glossyTransmission "; typeMask &= ~BSDF::EGlossyTransmission; }
-	if (typeMask & BSDF::EDeltaReflection) { oss << "deltaReflection "; typeMask &= ~BSDF::EDeltaReflection; }
-	if (typeMask & BSDF::EDeltaTransmission) { oss << "deltaTransmission "; typeMask &= ~BSDF::EDeltaTransmission; }
-	if (typeMask & BSDF::EDelta1DReflection) { oss << "delta1DReflection "; typeMask &= ~BSDF::EDelta1DReflection; }
-	if (typeMask & BSDF::EDelta1DTransmission) { oss << "delta1DTransmission "; typeMask &= ~BSDF::EDelta1DTransmission; }
-	if (typeMask & BSDF::EAnisotropic) { oss << "anisotropic "; typeMask &= ~BSDF::EAnisotropic; }
-	if (typeMask & BSDF::EFrontSide) { oss << "frontSide "; typeMask &= ~BSDF::EFrontSide; }
-	if (typeMask & BSDF::EBackSide) { oss << "backSide "; typeMask &= ~BSDF::EBackSide; }
-	if (typeMask & BSDF::ECanUseSampler) { oss << "canUseSampler "; typeMask &= ~BSDF::ECanUseSampler; }
+	#define isset(mask) (typeMask & mask) == mask
+	if (isset(BSDF::EAll)) { oss << "all "; typeMask &= ~BSDF::EAll; }
+	if (isset(BSDF::ESmooth)) { oss << "smooth "; typeMask &= ~BSDF::ESmooth; }
+	if (isset(BSDF::EDiffuse)) { oss << "diffuse "; typeMask &= ~BSDF::EDiffuse; }
+	if (isset(BSDF::EGlossy)) { oss << "glossy "; typeMask &= ~BSDF::EGlossy; }
+	if (isset(BSDF::EDelta)) { oss << "delta"; typeMask &= ~BSDF::EDelta; }
+	if (isset(BSDF::EDelta1D)) { oss << "delta1D "; typeMask &= ~BSDF::EDelta1D; }
+	if (isset(BSDF::EDiffuseReflection)) { oss << "diffuseReflection "; typeMask &= ~BSDF::EDiffuseReflection; }
+	if (isset(BSDF::EDiffuseTransmission)) { oss << "diffuseTransmission "; typeMask &= ~BSDF::EDiffuseTransmission; }
+	if (isset(BSDF::EGlossyReflection)) { oss << "glossyReflection "; typeMask &= ~BSDF::EGlossyReflection; }
+	if (isset(BSDF::EGlossyTransmission)) { oss << "glossyTransmission "; typeMask &= ~BSDF::EGlossyTransmission; }
+	if (isset(BSDF::EDeltaReflection)) { oss << "deltaReflection "; typeMask &= ~BSDF::EDeltaReflection; }
+	if (isset(BSDF::EDeltaTransmission)) { oss << "deltaTransmission "; typeMask &= ~BSDF::EDeltaTransmission; }
+	if (isset(BSDF::EDelta1DReflection)) { oss << "delta1DReflection "; typeMask &= ~BSDF::EDelta1DReflection; }
+	if (isset(BSDF::EDelta1DTransmission)) { oss << "delta1DTransmission "; typeMask &= ~BSDF::EDelta1DTransmission; }
+	if (isset(BSDF::EAnisotropic)) { oss << "anisotropic "; typeMask &= ~BSDF::EAnisotropic; }
+	if (isset(BSDF::EFrontSide)) { oss << "frontSide "; typeMask &= ~BSDF::EFrontSide; }
+	if (isset(BSDF::EBackSide)) { oss << "backSide "; typeMask &= ~BSDF::EBackSide; }
+	if (isset(BSDF::ECanUseSampler)) { oss << "canUseSampler "; typeMask &= ~BSDF::ECanUseSampler; }
+	#undef isset
 	oss << "}";
 	return oss.str();
 }

@@ -112,7 +112,7 @@ public:
 				enableFPExceptions();
 			#endif
 	
-			Float pdfVal;
+			Float pdfVal, pdfVal2;
 	
 			/* Only make the sampler available to the BSDF when requested
 			   by the testcase. This allows testing both sampling variants
@@ -123,42 +123,48 @@ public:
 			if (m_passSamplerToBSDF)
 				bRec.sampler = m_fakeSampler;
 
-			/* Check the various sampling routines for agreement amongst each other */
+			/* Check the various sampling routines for agreement 
+			   amongst each other */
 			m_fakeSampler->clear();
 			Spectrum f = m_bsdf->sample(bRec, pdfVal, sample);
 			m_fakeSampler->rewind();
 			Spectrum sampled = m_bsdf->sample(bRec, sample);
+			EMeasure measure = ESolidAngle;
+			if (!f.isZero())
+				measure = BSDF::getMeasure(bRec.sampledType);
+			Spectrum f2 = m_bsdf->eval(bRec, measure);
+			pdfVal2 = m_bsdf->pdf(bRec, measure);
 
-			if (f.isZero() || pdfVal == 0) {
-				if (!sampled.isZero()) 
-					Log(EWarn, "Inconsistency (1): f=%s, pdf=%f, sampled f/pdf=%s, bRec=%s",
-						f.toString().c_str(), pdfVal, sampled.toString().c_str(), bRec.toString().c_str());
+			if (f.isZero() || pdfVal == 0 || pdfVal2 == 0) {
+				if (!sampled.isZero())
+					Log(EWarn, "Inconsistency (1): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s, measure=%i",
+						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str(), measure);
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
 				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			} else if (sampled.isZero()) {
-				if (!f.isZero() && pdfVal != 0)
-					Log(EWarn, "Inconsistency (2): f=%s, pdf=%f, sampled f/pdf=%s, bRec=%s",
-						f.toString().c_str(), pdfVal, sampled.toString().c_str(), bRec.toString().c_str());
+				if ((!f.isZero() && pdfVal != 0) || (!f2.isZero() && pdfVal2 != 0))
+					Log(EWarn, "Inconsistency (2): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s, measure=%i",
+						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str(), measure);
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
 				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			}
 
-			Spectrum sampled2 = f/pdfVal;
-			if (!sampled.isValid() || !sampled2.isValid()) {
-				Log(EWarn, "Ooops: f=%s, pdf=%f, sampled f/pdf=%s, bRec=%s",
-					f.toString().c_str(), pdfVal, sampled.toString().c_str(), bRec.toString().c_str());
+			Spectrum sampled2 = f/pdfVal, evaluated = f2/pdfVal2;
+			if (!sampled.isValid() || !sampled2.isValid() || !evaluated.isValid()) {
+				Log(EWarn, "Ooops: f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s, measure=%i",
+					f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str(), measure);
 				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			}
 
 			bool mismatch = false;
 			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-				Float a = sampled[i], b = sampled2[i];
-				Float min = std::min(a, b);
-				Float err = std::abs(a - b);
+				Float a = sampled[i], b = sampled2[i], c = evaluated[i];
+				Float min = std::min(std::min(a, b), c);
+				Float err = std::max(std::max(std::abs(a - b), std::abs(a - c)), std::abs(b - c));
 				m_largestWeight = std::max(m_largestWeight, a);
 
 				if (min < ERROR_REQ && err > ERROR_REQ) // absolute error threshold
@@ -168,15 +174,14 @@ public:
 			}
 
 			if (mismatch)
-				Log(EWarn, "Potential inconsistency (3): f/pdf=%s, sampled f/pdf=%s",
-					sampled2.toString().c_str(), sampled.toString().c_str());
-			
+				Log(EWarn, "Potential inconsistency (3): f/pdf=%s (method 1), f/pdf=%s (methdod 2), sampled f/pdf=%s",
+					sampled2.toString().c_str(), evaluated.toString().c_str(), sampled.toString().c_str());
+
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
 
-			return boost::make_tuple(bRec.wo, 1.0f, 
-				BSDF::getMeasure(bRec.sampledType));
+			return boost::make_tuple(bRec.wo, 1.0f, measure);
 		}
  
 		Float pdf(const Vector &wo, EMeasure measure) {

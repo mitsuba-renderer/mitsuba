@@ -37,7 +37,6 @@ public:
 			Log(EError, "No weights were supplied!");
 		m_weights.resize(weights.size());
 
-		Float totalWeight = 0;
 		char *end_ptr = NULL;
 		for (size_t i=0; i<weights.size(); ++i) {
 			Float weight = (Float) strtod(weights[i].c_str(), &end_ptr);
@@ -46,13 +45,7 @@ public:
 			if (weight < 0)
 				SLog(EError, "Invalid BRDF weight!");
 			m_weights[i] = weight;
-			totalWeight += weight;
 		}
-
-		if (totalWeight > 1)
-			Log(EWarn, "Energy conservation is violated!");
-		if (totalWeight == 0)
-			Log(EError, "Combined weight must be > 0!");
 	}
 
 	MixtureBSDF(Stream *stream, InstanceManager *manager) 
@@ -90,6 +83,27 @@ public:
 		if (m_bsdfs.size() != m_weights.size())
 			Log(EError, "BSDF count mismatch: " SIZE_T_FMT " bsdfs, but specified " SIZE_T_FMT " weights",
 				m_bsdfs.size(), m_bsdfs.size());
+
+		Float totalWeight = 0;
+		for (size_t i=0; i<m_weights.size(); ++i)
+			totalWeight += m_weights[i];
+
+		if (totalWeight <= 0)
+			Log(EError, "The weights must sum to a value greater than zero!");
+
+		if (m_ensureEnergyConservation && totalWeight > 1) {
+			std::ostringstream oss;
+			Float scale = 1.0f / totalWeight;
+			oss << "The BSDF" << endl << toString() << endl
+				<< "potentially violates energy conservation, since the weights "
+				<< "sum to " << totalWeight << ", which is greater than one! "
+				<< "They will be re-scaled to avoid potential issues. Specify "
+				<< "the parameter ensureEnergyConservation=false to prevent "
+				<< "this from happening.";
+			Log(EWarn, "%s", oss.str().c_str());
+			for (size_t i=0; i<m_weights.size(); ++i)
+				m_weights[i] *= scale;
+		}
 
 		for (size_t i=0; i<m_bsdfs.size(); ++i)
 			componentCount += m_bsdfs[i]->getComponentCount();
@@ -239,6 +253,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "MixtureBSDF[" << endl
+			<< "  name = \"" << getName() << "\"," << endl
 			<< "  weights = {";
 		for (size_t i=0; i<m_bsdfs.size(); ++i) {
 			oss << " " << m_weights[i];

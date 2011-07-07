@@ -129,6 +129,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "DiffuseTransmitter[" << endl
+			<< "  name = \"" << getName() << "\"," << endl
 			<< "  transmittance = " << indent(m_transmittance->toString()) << endl
 			<< "]";
 		return oss.str();

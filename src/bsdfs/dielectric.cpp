@@ -477,6 +477,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SmoothDielectric[" << endl
+			<< "  name = \"" << getName() << "\"," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl 
 			<< "  extIOR = " << m_extIOR << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl

@@ -2,22 +2,6 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
-	<!-- Test the rough dielectric model with the anisotropic
-		 Ashikhmin-Shirley microfacet distribution -->
-	<bsdf type="roughdielectric">
-		<string name="distribution" value="as"/>
-		<float name="alphaU" value=".1"/>
-		<float name="alphaV" value=".3"/>
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1.0"/>
-	</bsdf>
-
-	<!-- Test the dielectric model -->
-	<bsdf type="dielectric">
-		<string name="intIOR" value="water"/>
-		<string name="extIOR" value="air"/>
-	</bsdf>
-
 	<!-- Test the diffuse model -->
 	<bsdf type="diffuse"/>
 
@@ -39,6 +23,27 @@
 
 	<!-- Test the conductor model -->
 	<bsdf type="conductor"/>
+
+	<!-- Test the dielectric model -->
+	<bsdf type="dielectric">
+		<string name="intIOR" value="water"/>
+		<string name="extIOR" value="air"/>
+	</bsdf>
+
+	<!-- Test a mixture of degenerate materials -->
+	<bsdf type="mixture">
+		<string name="weights" value=".8 .2"/>
+		<bsdf type="dielectric"/>
+		<bsdf type="conductor"/>
+	</bsdf>
+	
+	<!-- Test a mixture of degenerate and
+		 non-degenerate materials -->
+	<bsdf type="mixture">
+		<string name="weights" value=".8 .2"/>
+		<bsdf type="dielectric"/>
+		<bsdf type="diffuse"/>
+	</bsdf>
 
 	<!-- Test the rough glass model with the 
 		 Beckmann microfacet distribution -->

@@ -265,6 +265,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SmoothConductor[" << endl
+			<< "  name = \"" << getName() << "\"," << endl
 			<< "  eta = " << m_eta.toString() << "," << endl
 			<< "  k = " << m_k.toString() << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << endl
