@@ -26,17 +26,20 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{preset}{\String}{Name of a material preset, see 
  *           \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}
- *     \parameter{eta}{\Spectrum}{Real part of the material's index of refraction
- *           \default{based on the value of \texttt{preset}}}
+ *     \parameter{eta}{\Spectrum}{Real part of the material's index 
+ *           of refraction \default{based on the value of \texttt{preset}}}
  *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of 
  *             refraction, also known as absorption coefficient.
  *             \default{based on the value of \texttt{preset}}}
- *     \lastparameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the reflectance component\default{1.0}}
+ *     \lastparameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{
+ *        Optional factor used to modulate the reflectance component
+ *        \default{1.0}}
  * }
  * \renderings{
- *     \rendering{Measured copper material (the default)}{bsdf_conductor_copper.jpg}
- *     \rendering{Measured gold material (\lstref{conductor-gold})}{bsdf_conductor_gold.jpg}
+ *     \rendering{Measured copper material (the default)}
+ *         {bsdf_conductor_copper.jpg}
+ *     \rendering{Measured gold material (\lstref{conductor-gold})}
+ *         {bsdf_conductor_gold.jpg}
  * }
  
  * This plugin implements a perfectly smooth interface to a conducting material, 
@@ -50,18 +53,20 @@ MTS_NAMESPACE_BEGIN
  * 
  * To faciliate the tedious task of specifying spectrally-varying index of 
  * refraction information, Mitsuba ships with a set of measured data for a 
- * several materials, where visible-spectrum information was publicly available\footnote{
- *   These index of refraction values are identical to the data distributed with PBRT. 
- *   They are originally from the Luxpop database (\url{www.luxpop.com}) and 
- *   are based on data by Palik et al. \cite{Palik1998Handbook} and measurements 
- *   of atomic scattering factors made by the Center For X-Ray Optics (CXRO) 
- *   at Berkeley and the Lawrence Livermore National Laboratory (LLNL).
+ * several materials, where visible-spectrum information was publicly 
+ * available\footnote{
+ *   These index of refraction values are identical to the data distributed 
+ *   with PBRT. They are originally from the Luxpop database
+ *   (\url{www.luxpop.com}) and are based on data by Palik et al. 
+ *   \cite{Palik1998Handbook} and measurements of atomic scattering factors 
+ *   made by the Center For X-Ray Optics (CXRO) at Berkeley and the 
+ *   Lawrence Livermore National Laboratory (LLNL).
  * }. 
  * 
- * Note that \tblref{conductor-iors} also includes several popular optical coatings, which are
- * not actually conductors. These materials can also be used with this plugin,
- * though note that the plugin will ignore any refraction component that the actual 
- * material might have had.
+ * Note that \tblref{conductor-iors} also includes several popular optical 
+ * coatings, which are not actually conductors. These materials can also 
+ * be used with this plugin, though note that the plugin will ignore any 
+ * refraction component that the actual material might have had.
  * The table also contains a few birefingent materials, which are split into
  * separate measurements correponding to their two indices of 
  * refraction (named ``ordinary'' and ``extraordinary ray'').
@@ -70,7 +75,8 @@ MTS_NAMESPACE_BEGIN
  * renderings to get the most accurate results. While it also works in RGB mode, 
  * the computations will be much more approximate in this case.
  *
- * \begin{xml}[caption=Material configuration for a smooth conductor with measured gold data, label=lst:conductor-gold]
+ * \begin{xml}[caption=Material configuration for a smooth conductor with 
+ *    measured gold data, label=lst:conductor-gold]
  * <shape type="...">
  *     <bsdf type="conductor">
  *         <string name="preset" value="Au"/>
@@ -79,7 +85,8 @@ MTS_NAMESPACE_BEGIN
  * \end{xml}
  * \vspace{5mm}
  * It is also possible to load spectrally varying index of refraction data from 
- * two external files (see \secref{format-spectra} for details on the file format):
+ * two external files (see \secref{format-spectra} for details on the file 
+ * format):
  * \begin{xml}[caption=Rendering a smooth conductor with custom data]
  * <shape type="...">
  *     <bsdf type="conductor">
@@ -121,12 +128,13 @@ MTS_NAMESPACE_BEGIN
  * \end{tabular}
  * \caption{
  *     \label{tbl:conductor-iors}
- *      This table lists all supported material names that can be passed into the
- *      \pluginref{conductor} plugin. Note that some of them are not actually 
- *      conductors---this is not a problem, they can be used regardless (though only
- *      the reflection component and no transmission will be simulated).
- *      In most cases, there are multiple entries for each material, which 
- *      represent different measurements.
+ *      This table lists all supported materials that can be passed into the
+ *      \pluginref{conductor} and \pluginref{roughconductor} plugins. Note that
+ *      some of them are not actually conductors---this is not a problem, 
+ *      they can be used regardless (though only the reflection component and
+ *      no transmission will be simulated). In most cases, there are 
+ *      multiple entries for each material, which represent measurements by 
+ *      different authors.
  * }
  * \end{table}
  */
@@ -196,9 +204,12 @@ public:
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 
+		/* Verify that the provided direction pair matches an ideal
+		   specular reflection; tolerate some roundoff errors */
 		if (!sampleReflection || measure != EDiscrete ||
 			Frame::cosTheta(bRec.wi) <= 0 ||
-			Frame::cosTheta(bRec.wo) <= 0)
+			Frame::cosTheta(bRec.wo) <= 0 ||
+			std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) > Epsilon)
 			return Spectrum(0.0f);
 
 		return m_specularReflectance->getValue(bRec.its) *
@@ -208,10 +219,15 @@ public:
 	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
-		if (!sampleReflection || measure != EDiscrete || 
+
+		/* Verify that the provided direction pair matches an ideal
+		   specular reflection; tolerate some roundoff errors */
+		if (!sampleReflection || measure != EDiscrete ||
 			Frame::cosTheta(bRec.wi) <= 0 ||
-			Frame::cosTheta(bRec.wo) <= 0)
+			Frame::cosTheta(bRec.wo) <= 0 ||
+			std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) > Epsilon)
 			return 0.0f;
+
 		return 1.0f;
 	}
 

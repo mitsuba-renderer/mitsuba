@@ -43,10 +43,9 @@ MTS_NAMESPACE_BEGIN
  *              behavior than the separately available \pluginref{phong} plugin.
  *           \item \code{ggx}: New distribution proposed by
  *              Walter et al. meant to better handle the long
- *              tails observed in transmission measurements through
- *              ground glass. Renderings with this distribution may
- *              converge slowly.
- *           \item \code{as}: Anisotropic microfacet distribution proposed by
+ *              tails observed in measurements of ground surfaces. 
+ *              Renderings with this distribution may converge slowly.
+ *           \item \code{as}: Anisotropic Phong-style microfacet distribution proposed by
  *              Ashikhmin and Shirley \cite{Ashikhmin2005Anisotropic}.\vspace{-3mm}
  *       \end{enumerate}
  *     }
@@ -58,12 +57,14 @@ MTS_NAMESPACE_BEGIN
  *         \default{0.1}. 
  *     }
  *     \parameter{alphaU, alphaV}{\Float\Or\Texture}{
- *         Specifies the anisotropic rougness values along the tangent and bitangent directions. This
- *         parameter is only valid when \texttt{distribution=as}.
+ *         Specifies the anisotropic rougness values along the tangent and bitangent directions. These
+ *         parameter are only valid when \texttt{distribution=as}.
  *         \default{0.1}. 
  *     }
- *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}
- *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1.0}}
+ *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
+ *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
+ *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
+ *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the reflectance component\default{1.0}}
  *     \lastparameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
@@ -93,39 +94,43 @@ MTS_NAMESPACE_BEGIN
  * plugin is based on the paper ``Microfacet Models for Refraction through 
  * Rough Surfaces'' by Walter et al. \cite{Walter07Microfacet}. It supports 
  * several types of microfacet distributions and has a texturable roughness 
- * parameter.  Exterior and interior IOR values can each be independently 
+ * parameter.  Exterior and interior IOR values can be independently 
  * specified, where ``exterior'' refers to the side that contains the surface
- * normal. When no parameters are given, the plugin activates the default 
- * settings, which describe a borosilicate glass BK7/air interface with a 
- * light amount of roughness modeled using a Beckmann distribution.
+ * normal. Similar to the \pluginref{dielectric} plugin, IOR values can either
+ * be specified numerically, or based on a list of known materials (see
+ * \tblref{dielectric-iors} for an overview). When no parameters are given, 
+ * the plugin activates the default settings, which describe a borosilicate 
+ * glass BK7/air interface with a light amount of roughness modeled using a 
+ * Beckmann distribution.
  * 
  * When using the Ashikmin-Shirley or Phong models, a conversion method is
  * used to turn the specified $\alpha$ roughness value into the exponents 
- * of these distributions. This is done so that the different distributions 
- * all produce a similar appearance for the same value of $\alpha$.
+ * of these distributions. This is done in a way, such that the different 
+ * distributions all produce a similar appearance for the same value of $\alpha$.
  *
  * When using this plugin, it is crucial that the scene contains
  * meaningful and mutally compatible index of refraction changes---see
  * \figref{glass-explanation} for an example. Also, please note that
  * the importance sampling implementation of this model is close, but 
- * not perfect a perfect match to the underlying scattering distribution,
- * particularly for high roughness values and when the \texttt{GGX} 
- * model is used. Hence, such renderings may converge slowly.\vspace{1cm}
+ * not always a perfect a perfect match to the underlying scattering distribution,
+ * particularly for high roughness values and when the \texttt{ggx} 
+ * microfacet distribution is used. Hence, such renderings may 
+ * converge slowly.\vspace{1cm}
  *
- * \begin{xml}[caption=Material definition for ground glass, label=lst:roughdielectric-roughglass]
+ * \begin{xml}[caption=A material definition for ground glass, label=lst:roughdielectric-roughglass]
  * <bsdf type="roughdielectric">
  *     <string name="distribution" value="ggx"/>
  *     <float name="alpha" value="0.304"/>
- *     <float name="intIOR" value="1.5046"/>
- *     <float name="extIOR" value="1.0"/>
+ *     <string name="intIOR" value="bk7"/>
+ *     <string name="extIOR" value="air"/>
  * </bsdf>
  * \end{xml}
  *
  * \begin{xml}[caption=A texture can be attached to the roughness parameter, label=lst:roughdielectric-textured]
  * <bsdf type="roughdielectric">
  *     <string name="distribution" value="beckmann"/>
- *     <string name="intIOR" value="bk7"/>
- *     <string name="extIOR" value="air"/>
+ *     <float name="intIOR" value="1.5046"/>
+ *     <float name="extIOR" value="1.0"/>
  *
  *     <texture name="alpha" type="bitmap">
  *         <string name="filename" value="roughness.exr"/>

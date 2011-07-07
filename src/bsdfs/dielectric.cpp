@@ -45,14 +45,14 @@ MTS_NAMESPACE_BEGIN
  *
  * This plugin models an interface between two dielectric materials having mismatched 
  * indices of refraction (for instance, water and air). Exterior and interior IOR values
- * can each be independently specified, where ``exterior'' refers to the side that contains 
+ * can be independently specified, where ``exterior'' refers to the side that contains 
  * the surface normal. When no parameters are given, the plugin activates the defaults, which
  * describe a borosilicate glass BK7/air interface.
  *
- * In this model, the microscopic surface structure of the surface is assumed to be perfectly 
+ * In this model, the microscopic structure of the surface is assumed to be perfectly 
  * smooth, resulting in a degenerate\footnote{Meaning that for any given incoming ray of light,
  * the model always scatters into a discrete set of directions, as opposed to a continuum.} 
- * BSDF described by a Dirac delta function. For a similar model that instead describes a 
+ * BSDF described by a Dirac delta distribution. For a similar model that instead describes a 
  * rough surface microstructure, take a look at the \pluginref{roughdielectric} plugin. 
  *
  * \begin{xml}[caption=A simple air-to-water interface, label=lst:dielectric-water]
@@ -125,9 +125,13 @@ MTS_NAMESPACE_BEGIN
  *     \end{tabular}
  *     \caption{
  *         \label{tbl:dielectric-iors}
- *          This table lists all supported material names that can be passed
- *          into the \pluginref{dielectric} plugin, along with the associated 
- *          index of refraction at standard conditions.
+ *          This table lists all supported material names along with
+ *          along with the associated index of refraction at 
+ *          standard conditions. These can be used with the plugins
+ *          \pluginref{dielectric},\
+ *          \pluginref{roughdielectric},\
+ *          \pluginref{plastic}, and
+ *          \pluginref{roughplastic}.
  *     }
  * \end{table}
  */
@@ -200,8 +204,39 @@ public:
 		return Vector(-wi.x, -wi.y, wi.z);
 	}
 
-	/// Refraction in local coordinates
+	/// Refraction in local coordinates (reuses computed information)
 	inline Vector refract(const Vector &wi, Float eta, Float cosThetaT) const {
+		return Vector(-eta*wi.x, -eta*wi.y, cosThetaT);
+	}
+
+	/// Refraction in local coordinates (full version)
+	inline Vector refract(const Vector &wi) const {
+		Float cosThetaI = Frame::cosTheta(wi),
+			  etaI = m_extIOR,
+			  etaT = m_intIOR;
+
+		bool entering = cosThetaI > 0.0f;
+
+		/* Determine the respective indices of refraction */
+		if (!entering)
+			std::swap(etaI, etaT);
+
+		/* Using Snell's law, calculate the squared sine of the
+		   angle between the normal and the transmitted ray */
+		Float eta = etaI / etaT,
+			  sinThetaTSqr = eta*eta * Frame::sinTheta2(wi);
+
+		Float cosThetaT = 0;
+		if (sinThetaTSqr >= 1.0f) {
+			/* Total internal reflection */
+			return Vector(0.0f);
+		} else {
+			cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
+
+			if (entering)
+				cosThetaT = -cosThetaT;
+		}
+
 		return Vector(-eta*wi.x, -eta*wi.y, cosThetaT);
 	}
 
@@ -210,16 +245,25 @@ public:
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
-		bool reflection = Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) > 0;
-		
-		if ((reflection && !sampleReflection) || 
-		   (!reflection && !sampleTransmission) || measure != EDiscrete)
+
+		/* Check if the provided direction pair matches an ideal
+		   specular reflection; tolerate some roundoff errors */
+		bool reflection = std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) < Epsilon;
+		if (measure != EDiscrete || (reflection && !sampleReflection))
 			return Spectrum(0.0f);
 
-		Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+		if (!reflection) {
+			/* Check if the provided direction pair matches an ideal
+			   specular refraction; tolerate some roundoff errors */
+			bool refraction = std::abs(1 - dot(refract(bRec.wi), bRec.wo)) < Epsilon;
+			if (!refraction || !sampleTransmission)
+				return Spectrum(0.0f);
+		}
+
+		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
 
 		if (reflection) {
-			return m_specularReflectance->getValue(bRec.its) * fr;
+			return m_specularReflectance->getValue(bRec.its) * Fr;
 		} else {
 			Float etaI = m_extIOR, etaT = m_intIOR;
 			bool entering = Frame::cosTheta(bRec.wi) > 0.0f;
@@ -229,7 +273,7 @@ public:
 			Float factor = (bRec.quantity == ERadiance) 
 				? (etaI*etaI) / (etaT*etaT) : 1.0f;
 
-			return m_specularTransmittance->getValue(bRec.its)  * factor * (1 - fr);
+			return m_specularTransmittance->getValue(bRec.its)  * factor * (1 - Fr);
 		}
 	}
 
@@ -238,12 +282,20 @@ public:
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
-		bool reflection = Frame::cosTheta(bRec.wo)
-			* Frame::cosTheta(bRec.wi) > 0;
 
-		if ((reflection && !sampleReflection) || 
-		   (!reflection && !sampleTransmission) || measure != EDiscrete)
+		/* Check if the provided direction pair matches an ideal
+		   specular reflection; tolerate some roundoff errors */
+		bool reflection = std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) < Epsilon;
+		if (measure != EDiscrete || (reflection && !sampleReflection))
 			return 0.0f;
+
+		if (!reflection) {
+			/* Check if the provided direction pair matches an ideal
+			   specular refraction; tolerate some roundoff errors */
+			bool refraction = std::abs(1 - dot(refract(bRec.wi), bRec.wo)) < Epsilon;
+			if (!refraction || !sampleTransmission)
+				return 0.0f;
+		}
 
 		if (sampleTransmission && sampleReflection) {
 			Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
