@@ -35,10 +35,10 @@ public:
 	enum EType {
 		/// Beckmann distribution derived from Gaussian random surfaces
 		EBeckmann         = 0,
-		/// Classical Phong distribution
-		EPhong            = 1,
 		/// Long-tailed distribution proposed by Walter et al.
-		EGGX              = 2,
+		EGGX              = 1,
+		/// Classical Phong distribution
+		EPhong            = 2,
 		/// Anisotropic distribution by Ashikhmin and Shirley
 		EAshikhminShirley = 3
 	};
@@ -104,13 +104,6 @@ public:
 				}
 				break;
 	
-			case EPhong: {
-					/* Phong distribution function */
-					result = (alphaU + 2) * INV_TWOPI 
-							* std::pow(Frame::cosTheta(m), alphaU);
-				}
-				break;
-
 			case EGGX: {
 					/* Empirical GGX distribution function for rough surfaces */
 					const Float tanTheta = Frame::tanTheta(m),
@@ -120,6 +113,13 @@ public:
 								(alphaU*alphaU + tanTheta*tanTheta));
 	
 					result = INV_PI * (root * root);
+				}
+				break;
+
+			case EPhong: {
+					/* Phong distribution function */
+					result = (alphaU + 2) * INV_TWOPI 
+							* std::pow(Frame::cosTheta(m), alphaU);
 				}
 				break;
 
@@ -208,16 +208,16 @@ public:
 						 std::log(1.0f - sample.x)));
 				break;
 	
-			case EPhong:
-				thetaM = std::acos(std::pow(sample.x, (Float) 1 / 
-						 (alphaU + 2)));
-				break;
-	
 			case EGGX: 
 				thetaM = std::atan(alphaU * std::sqrt(sample.x) /
 						 std::sqrt(1.0f - sample.x));
 				break;
 
+			case EPhong:
+				thetaM = std::acos(std::pow(sample.x, (Float) 1 / 
+						 (alphaU + 2)));
+				break;
+	
 			case EAshikhminShirley: {
 					/* Sampling method based on code from PBRT */
 					Float phi, cosTheta;
@@ -273,24 +273,24 @@ public:
 			return 0.0f;
 	
 		switch (m_type) {
-			case EAshikhminShirley:
 			case EPhong:
-				/* Approximation recommended by Bruce Walter: Use
-				   the Beckmann shadowing-masking function with
-				   specially chosen roughness value */
-				cout << alpha << endl;
-				alpha = std::sqrt(0.5f * alpha + 1) / tanTheta;
-				cout << " becomes " << alpha << endl;
-	
+			case EAshikhminShirley:
 			case EBeckmann: {
-					/* Use a fast and accurate (<0.35% rel. error) rational
-					   approximation to the shadowing-masking function */
-					const Float a = 1.0f / (alpha * tanTheta);
-					const Float aSqr = a * a;
-	
+					Float a;
+					/* Approximation recommended by Bruce Walter: Use
+					   the Beckmann shadowing-masking function with
+					   specially chosen roughness value */
+					if (m_type != EBeckmann)
+						a = std::sqrt(0.5f * alpha + 1) / tanTheta;
+					else
+						a = 1.0f / (alpha * tanTheta);
+
 					if (a >= 1.6f)
 						return 1.0f;
 	
+					/* Use a fast and accurate (<0.35% rel. error) rational
+					   approximation to the shadowing-masking function */
+					const Float aSqr = a * a;
 					return (3.535f * a + 2.181f * aSqr) 
 						 / (1.0f + 2.276f * a + 2.577f * aSqr);
 				}
