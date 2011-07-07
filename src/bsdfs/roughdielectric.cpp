@@ -24,9 +24,10 @@
 
 MTS_NAMESPACE_BEGIN
 
-/* Suggestion by Bruce Walter: sample using a slightly wider
-   density function. This in practice limits the importance 
-   weights to values <= 4. See also \ref sample() */
+/* Suggestion by Bruce Walter: sample the model using a slightly 
+   wider density function. This in practice limits the importance 
+   weights to values <= 4. 
+*/
 #define ENLARGE_LOBE_TRICK 1
 
 /*! \plugin{roughdielectric}{Rough dielectric material}
@@ -140,8 +141,7 @@ MTS_NAMESPACE_BEGIN
  */
 class RoughDielectric : public BSDF {
 public:
-	RoughDielectric(const Properties &props) 
-		: BSDF(props) {
+	RoughDielectric(const Properties &props) : BSDF(props) {
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 		m_specularTransmittance = new ConstantSpectrumTexture(
@@ -186,22 +186,17 @@ public:
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
 
-		m_components.push_back(
-			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler);
-		m_components.push_back(
-			EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler);
-
 		m_usesRayDifferentials = 
 			m_alphaU->usesRayDifferentials() ||
 			m_alphaV->usesRayDifferentials() ||
 			m_specularReflectance->usesRayDifferentials() ||
 			m_specularTransmittance->usesRayDifferentials();
+
 		configure();
 	}
 
 	void configure() {
 		unsigned int extraFlags = 0;
-		m_components.clear();
 		if (m_alphaU != m_alphaV) {
 			extraFlags |= EAnisotropic;
 			if (m_distribution.getType() != 
@@ -212,6 +207,7 @@ public:
 						"(named \"as\")");
 		}
 
+		m_components.clear();
 		m_components.push_back(
 			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
 		m_components.push_back(
@@ -298,7 +294,7 @@ public:
 			  alphaV = m_distribution.transformRoughness( 
 					m_alphaV->getValue(bRec.its).average());
 
-		/* Microsurface normal distribution */
+		/* Evaluate the microsurface normal distribution */
 		const Float D = m_distribution.eval(H, alphaU, alphaV);
 		if (D == 0)
 			return Spectrum(0.0f);
@@ -388,16 +384,13 @@ public:
 			  alphaV = m_distribution.transformRoughness( 
 					m_alphaV->getValue(bRec.its).average());
 
-#if defined(ENLARGE_LOBE_TRICK)
-		/* Suggestion by Bruce Walter: sample using a slightly wider
-		   density function. This in practice limits the importance 
-		   weights to values <= 4. See also \ref sample() */
+#if ENLARGE_LOBE_TRICK == 1
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
 		alphaU *= factor; alphaV *= factor;
 #endif
 
-		/* Microsurface normal sampling density */
+		/* Evaluate the microsurface normal sampling density */
 		Float prob = m_distribution.pdf(H, alphaU, alphaV);
 
 		if (sampleTransmission && sampleReflection) {
@@ -476,10 +469,7 @@ public:
 			  alphaV = m_distribution.transformRoughness( 
 					m_alphaV->getValue(bRec.its).average());
 
-		/* Suggestion by Bruce Walter: sample using a slightly wider
-		   density function. This in practice limits the importance 
-		   weights to values <= 4. See also \ref sample() */
-#if defined(ENLARGE_LOBE_TRICK)
+#if ENLARGE_LOBE_TRICK == 1
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
 		Float sampleAlphaU = alphaU * factor,
@@ -607,10 +597,7 @@ public:
 			  alphaV = m_distribution.transformRoughness( 
 					m_alphaV->getValue(bRec.its).average());
 
-		/* Suggestion by Bruce Walter: sample using a slightly wider
-		   density function. This in practice limits the importance 
-		   weights to values <= 4. See also \ref sample() */
-#if defined(ENLARGE_LOBE_TRICK)
+#if ENLARGE_LOBE_TRICK == 1
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
 		Float sampleAlphaU = alphaU * factor,
@@ -702,6 +689,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "RoughDielectric[" << endl
+			<< "  name = \"" << getName() << "\"," << endl
 			<< "  distribution = " << m_distribution.toString() << "," << endl
 			<< "  alphaU = " << indent(m_alphaU->toString()) << "," << endl
 			<< "  alphaV = " << indent(m_alphaV->toString()) << "," << endl

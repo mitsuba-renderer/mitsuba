@@ -137,16 +137,16 @@ public:
 
 			if (f.isZero() || pdfVal == 0 || pdfVal2 == 0) {
 				if (!sampled.isZero())
-					Log(EWarn, "Inconsistency (1): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s, measure=%i",
-						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str(), measure);
+					Log(EWarn, "Inconsistency (1): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s",
+						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str());
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
 				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			} else if (sampled.isZero()) {
 				if ((!f.isZero() && pdfVal != 0) || (!f2.isZero() && pdfVal2 != 0))
-					Log(EWarn, "Inconsistency (2): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s, measure=%i",
-						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str(), measure);
+					Log(EWarn, "Inconsistency (2): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s",
+						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str());
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
@@ -155,8 +155,8 @@ public:
 
 			Spectrum sampled2 = f/pdfVal, evaluated = f2/pdfVal2;
 			if (!sampled.isValid() || !sampled2.isValid() || !evaluated.isValid()) {
-				Log(EWarn, "Ooops: f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s, measure=%i",
-					f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str(), measure);
+				Log(EWarn, "Ooops: f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s",
+					f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str());
 				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			}
 

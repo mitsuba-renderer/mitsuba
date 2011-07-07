@@ -157,7 +157,8 @@ public:
 			return eval(m, alphaU, alphaV) * Frame::cosTheta(m);
 
 		/* For the Ashikhmin-Shirley model, the sampling density
-		   does not include the cos(theta_M) factor */
+		   does not include the cos(theta_M) factor, and the
+		   normalization is slightly different than in eval(). */
 		const Float cosTheta = Frame::cosTheta(m);
 		const Float ds = 1 - cosTheta * cosTheta;
 		if (ds < 0)
@@ -277,7 +278,9 @@ public:
 				/* Approximation recommended by Bruce Walter: Use
 				   the Beckmann shadowing-masking function with
 				   specially chosen roughness value */
+				cout << alpha << endl;
 				alpha = std::sqrt(0.5f * alpha + 1) / tanTheta;
+				cout << " becomes " << alpha << endl;
 	
 			case EBeckmann: {
 					/* Use a fast and accurate (<0.35% rel. error) rational
