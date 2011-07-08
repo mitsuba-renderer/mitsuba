@@ -101,7 +101,6 @@ and one or more luminaires. Here is a more complex example:
 	</shape>
 </scene>
 \end{xml}
-\newpage
 This example introduces several new object types (\code{integrator, camera, bsdf, sampler, film}, and \code{luminaire})
 and property types (\code{integer}, \code{transform}, and \code{rgb}). 
 As you can see in the example, objects are usually declared at the top level except if there is some
@@ -281,7 +280,6 @@ provide the camera origin, \textbf{t} specifies the target and \textbf{u} is the
 \end{itemize}
 Cordinates that are zero (for \code{translate} and \code{rotate}) or one (for \code{scale})
 do not explicitly have to be specified.
-\newpage
 \subsection{Instancing}
 Quite often, you will find yourself using an object (such as a material) in many places. To avoid having
 to declare it over and over again, which wastes memory, you can make use of references. Here is an example
