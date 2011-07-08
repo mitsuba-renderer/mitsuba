@@ -2,9 +2,6 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
-	<!-- Test the smooth plastic model -->
-	<bsdf type="plastic"/>
-
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
 
@@ -32,6 +29,9 @@
 		<string name="intIOR" value="water"/>
 		<string name="extIOR" value="air"/>
 	</bsdf>
+
+	<!-- Test the smooth plastic model -->
+	<bsdf type="plastic"/>
 
 	<!-- Test a mixture of degenerate materials -->
 	<bsdf type="mixture">

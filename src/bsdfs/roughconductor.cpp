@@ -513,10 +513,10 @@ public:
 			<< "    if ((dot(wi, m) * cosTheta(wi)) <= 0 || " << endl
 			<< "        (dot(wo, m) * cosTheta(wo)) <= 0)" << endl
 			<< "        return 0.0;" << endl
-			<< "    float nDotM = cosTheta(m);" << endl
+			<< "    float nDotM = cosTheta(m), tmp = 1.0 / dot(wo, m);" << endl
 			<< "    return min(1.0, min(" << endl
-			<< "        abs(2 * nDotM * cosTheta(wo) / dot(wo, m))," << endl
-			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
+			<< "        abs(2 * nDotM * cosTheta(wo) * tmp)," << endl
+			<< "        abs(2 * nDotM * cosTheta(wi) * tmp)));" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_schlick(vec3 wi) {" << endl

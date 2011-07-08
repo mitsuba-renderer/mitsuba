@@ -6,7 +6,7 @@ plugins += env.SharedLibrary('dielectric', ['dielectric.cpp'])
 plugins += env.SharedLibrary('conductor', ['conductor.cpp'])
 plugins += env.SharedLibrary('plastic', ['plastic.cpp'])
 
-#plugins += env.SharedLibrary('roughdiffuse', ['roughdiffuse.cpp'])
+plugins += env.SharedLibrary('roughdiffuse', ['roughdiffuse.cpp'])
 plugins += env.SharedLibrary('roughdielectric', ['roughdielectric.cpp'])
 plugins += env.SharedLibrary('roughconductor', ['roughconductor.cpp'])
 #plugins += env.SharedLibrary('roughplastic', ['roughplastic.cpp'])

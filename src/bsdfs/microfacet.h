@@ -330,12 +330,11 @@ public:
 			const Float nDotM  = Frame::cosTheta(m),
 						nDotWo = Frame::cosTheta(wo),
 						nDotWi = Frame::cosTheta(wi),
-						woDotM = dot(wo, m),
-						wiDotM = dot(wi, m);
+						woDotM = dot(wo, m);
 
 			return std::min((Float) 1, 
 				std::min(std::abs(2 * nDotM * nDotWo / woDotM),
-						 std::abs(2 * nDotM * nDotWi / wiDotM)));
+						 std::abs(2 * nDotM * nDotWi / woDotM)));
 		}
 	}
 

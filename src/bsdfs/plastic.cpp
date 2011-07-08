@@ -31,17 +31,34 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the specular component\default{1.0}}
- *     \lastparameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
+ *     \lastparameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the diffuse component\default{0.5}}
  * }
  *
  * \renderings{
- *     \medrendering{Air$\leftrightarrow$Water (IOR: 1.33) interface. 
- *         See \lstref{dielectric-water}.}{bsdf_dielectric_water}
- *     \medrendering{Air$\leftrightarrow$Diamond (IOR: 2.419)}{bsdf_dielectric_diamond}
- *     \medrendering{Air$\leftrightarrow$Glass (IOR: 1.504) interface and absorption within. 
- *         See \lstref{dielectric-glass}.}{bsdf_dielectric_glass}
+ *     \rendering{A rendering with the default parameters}{bsdf_plastic_default}
+ *     \rendering{A rendering with custom parameters (\lstref{plastic-shiny})}{bsdf_plastic_shiny}
  * }
+ *
+ * This plugin describes a perfectly smooth plastic-like dielectric material
+ * with internal scattering. The model interpolates between ideally specular 
+ * and ideally diffuse reflection based on the Fresnel reflectance (i.e. it 
+ * does so in a way that depends on the angle of incidence). Similar to the 
+ * \pluginref{dielectric} plugin, IOR values can either be specified 
+ * numerically, or based on a list of known materials (see 
+ * \tblref{dielectric-iors} for an overview). 
+ *
+ * Since it is very simple and fast, this model is often a better choice
+ * than the \pluginref{phong}, \pluginref{ward}, and \pluginref{roughplastic}
+ * plugins when rendering very smooth plastic-like materials. \vspace{4mm}
+ *
+ * \begin{xml}[caption=A shiny material whose diffuse reflectance is 
+ *     specified using sRGB, label=lst:plastic-shiny]
+ * <bsdf type="plastic">
+ *     <srgb name="diffuseReflectance" value="#18455c"/>
+ *     <float name="intIOR" value="1.9"/>
+ * </bsdf>
+ * \end{xml}
  */
 class SmoothPlastic : public BSDF {
 public:
@@ -157,8 +174,8 @@ public:
 					fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR) : 1.0f;
 		} else if (measure == ESolidAngle && sampleDiffuse) {
 			return Frame::cosTheta(bRec.wo) * INV_PI *
-				sampleSpecular ? (1 - fresnel(Frame::cosTheta(bRec.wi),
-				m_extIOR, m_intIOR)) : 1.0f;
+				(sampleSpecular ? (1 - fresnel(Frame::cosTheta(bRec.wi),
+				m_extIOR, m_intIOR)) : 1.0f);
 		}
 
 		return 0.0f;
@@ -170,7 +187,7 @@ public:
 		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
 				&& (bRec.component == -1 || bRec.component == 1);
 		
-		if ((!sampleDiffuse && !sampleSpecular) || Frame::cosTheta(bRec.wi) < 0)
+		if ((!sampleDiffuse && !sampleSpecular) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 
 		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
@@ -205,7 +222,7 @@ public:
 			if (Fr == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
 				
-			bRec.wo = squareToSphere(sample);
+			bRec.wo = squareToHemispherePSA(sample);
 				
 			return m_diffuseReflectance->getValue(bRec.its) * (1-Fr);
 		}
@@ -217,7 +234,7 @@ public:
 		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
 				&& (bRec.component == -1 || bRec.component == 1);
 		
-		if ((!sampleDiffuse && !sampleSpecular) || Frame::cosTheta(bRec.wi) < 0)
+		if ((!sampleDiffuse && !sampleSpecular) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 
 		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
@@ -257,7 +274,7 @@ public:
 			if (Fr == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
 				
-			bRec.wo = squareToSphere(sample);
+			bRec.wo = squareToHemispherePSA(sample);
 				
 			pdf = Frame::cosTheta(bRec.wo) * INV_PI;
 

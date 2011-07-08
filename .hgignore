@@ -5,6 +5,8 @@
 ^doc/.*\.out$
 ^doc/.*\.pdf$
 ^doc/.*\.toc$
+^doc/.*\.bbl$
+^doc/.*\.blg$
 ^doc/plugins_generated.tex$
 
 # Build-related
