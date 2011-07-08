@@ -19,6 +19,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/texture.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/hw/gpuprogram.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -275,6 +276,8 @@ public:
 		return oss.str();
 	}
 
+	Shader *createShader(Renderer *renderer) const; 
+
 	MTS_DECLARE_CLASS()
 private:
 	ref<Texture> m_specularReflectance;
@@ -282,6 +285,102 @@ private:
 	Spectrum m_k;
 };
 
+/* Smooth conductor shader -- it is really hopeless to visualize
+   this material in the VPL renderer, so let's try to do at least 
+   something that suggests the presence of a specularly-reflecting
+   conductor.
+
+   The code below is an isotropic version of the shader in
+   roughconductor.cpp, with \alpha fixed to 0.4f
+*/
+class SmoothConductorShader : public Shader {
+public:
+	SmoothConductorShader(Renderer *renderer, const Texture *specularReflectance,
+			const Spectrum &eta, const Spectrum &k) : Shader(renderer, EBSDFShader), 
+			m_specularReflectance(specularReflectance) {
+		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
+
+		/* Compute the reflectance at perpendicular incidence */
+		m_R0 = fresnelConductor(1.0f, eta, k);
+
+		m_alpha = 0.4f;
+	}
+
+	bool isComplete() const {
+		return m_specularReflectanceShader.get() != NULL;
+	}
+
+	void putDependencies(std::vector<Shader *> &deps) {
+		deps.push_back(m_specularReflectanceShader.get());
+	}
+
+	void cleanup(Renderer *renderer) {
+		renderer->unregisterShaderForResource(m_specularReflectance.get());
+	}
+
+	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_R0", false));
+	}
+
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
+		program->setParameter(parameterIDs[0], m_R0);
+	}
+
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "uniform vec3 " << evalName << "_R0;" << endl
+			<< endl
+			<< "float " << evalName << "_D(vec3 m, float alpha) {" << endl
+			<< "    alpha = 2 / (alpha * alpha) - 2;" << endl
+			<< "    return (alpha + 2) * 0.15915 * pow(cosTheta(m), alpha);" << endl
+			<< "}" << endl
+			<< endl
+			<< "float " << evalName << "_G(vec3 m, vec3 wi, vec3 wo) {" << endl
+			<< "    if ((dot(wi, m) * cosTheta(wi)) <= 0 || " << endl
+			<< "        (dot(wo, m) * cosTheta(wo)) <= 0)" << endl
+			<< "        return 0.0;" << endl
+			<< "    float nDotM = cosTheta(m);" << endl
+			<< "    return min(1.0, min(" << endl
+			<< "        abs(2 * nDotM * cosTheta(wo) / dot(wo, m))," << endl
+			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "_schlick(vec3 wi) {" << endl
+			<< "    float ct = cosTheta(wi), ctSqr = ct*ct," << endl
+			<< "          ct5 = ctSqr*ctSqr*ct;" << endl
+			<< "    return " << evalName << "_R0 + (vec3(1.0) - " << evalName << "_R0) * ct5;" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "   if (cosTheta(wi) <= 0 || cosTheta(wo) <= 0)" << endl
+			<< "    	return vec3(0.0);" << endl
+			<< "   vec3 H = normalize(wi + wo);" << endl
+			<< "   vec3 reflectance = " << depNames[0] << "(uv);" << endl
+			<< "   float D = " << evalName << "_D(H, " << m_alpha << ")" << ";" << endl
+			<< "   float G = " << evalName << "_G(H, wi, wo);" << endl
+			<< "   vec3 Fr = " << evalName << "_schlick(wi);" << endl
+			<< "   return reflectance * Fr * (D * G / (4*cosTheta(wi)));" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return " << evalName << "_R0 * 0.31831 * cosTheta(wo);"<< endl
+			<< "}" << endl;
+	}
+	MTS_DECLARE_CLASS()
+private:
+	ref<const Texture> m_specularReflectance;
+	ref<Shader> m_specularReflectanceShader;
+	Spectrum m_R0;
+	Float m_alpha;
+};
+
+Shader *SmoothConductor::createShader(Renderer *renderer) const { 
+	return new SmoothConductorShader(renderer,
+		m_specularReflectance.get(), m_eta, m_k);
+}
+
+MTS_IMPLEMENT_CLASS(SmoothConductorShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(SmoothConductor, false, BSDF)
 MTS_EXPORT_PLUGIN(SmoothConductor, "Smooth conductor");
 MTS_NAMESPACE_END

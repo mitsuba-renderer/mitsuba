@@ -382,7 +382,9 @@ private:
  * GLSL port of the rough conductor shader. This version is much more
  * approximate -- it only supports the Ashikhmin-Shirley distribution, 
  * does everything in RGB, and it uses the Schlick approximation to the
- * Fresnel reflectance.
+ * Fresnel reflectance of conductors. When the roughness is lower than 
+ * \alpha < 0.2, the shader clamps it to 0.2 so that it will still perform
+ * reasonably well in a VPL-based preview.
  */
 class RoughConductorShader : public Shader {
 public:
@@ -460,8 +462,8 @@ public:
 			<< "    	return vec3(0.0);" << endl
 			<< "   vec3 H = normalize(wi + wo);" << endl
 			<< "   vec3 reflectance = " << depNames[0] << "(uv);" << endl
-			<< "   float alphaU = " << depNames[1] << "(uv).r;" << endl
-			<< "   float alphaV = " << depNames[2] << "(uv).r;" << endl
+			<< "   float alphaU = max(0.2, " << depNames[1] << "(uv).r);" << endl
+			<< "   float alphaV = max(0.2, " << depNames[2] << "(uv).r);" << endl
 			<< "   float D = " << evalName << "_D(H, alphaU, alphaV)" << ";" << endl
 			<< "   float G = " << evalName << "_G(H, wi, wo);" << endl
 			<< "   vec3 Fr = " << evalName << "_schlick(wi);" << endl
