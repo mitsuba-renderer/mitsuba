@@ -43,22 +43,27 @@ MTS_NAMESPACE_BEGIN
  * such as plaster, sand, clay, or concrete.
  * The underlying theory was developed by Oren and Nayar 
  * \cite{Oren1994Generalization}, who model the microscopic surface structure as 
- * an arrangement of unresolved planar facets with different slopes, where each facet
+ * unresolved planar facets arranged in V-shaped grooves, where each facet
  * is an ideal diffuse reflector. The model takes into account shadowing,
  * masking, as well as interreflections between the facets.
  *
  * Since the original publication in 1994, this approach has been shown to 
- * be a very good match for many real-world materials, in particular 
- * compared to Lambertian scattering, which does not take surface 
- * roughness into account.
+ * be a good match for many real-world materials, particularly compared 
+ * to Lambertian scattering, which does not take surface roughness into account.
  *
- * To get an intuition about the effect of the surface roughness
+ * The implementation in Mitsuba uses a surface roughness parameter $\alpha$ that
+ * is slighly different from the slope-area variance in the original paper. 
+ * The reason for this change is to make the parameter $\alpha$ portable
+ * across different models (i.e. \pluginref{roughglass},
+ * \pluginref{roughconductor}).
+ *
+ * To get an intuition about the effect of the 
  * parameter $\alpha$, consider the following approximate differentiation: 
  * a value of $\alpha=0.001-0.01$ corresponds to a material 
  * with slight imperfections on an otherwise smooth surface (for such small
  * values, the model will behave almost identically to \pluginref{diffuse}), $\alpha=0.1$ 
  * is relatively rough, and $\alpha=0.3-0.5$ is \emph{extremely} rough 
- * (e.g. an etched or ground finish). 
+ * (e.g. an etched or ground surface). 
  *
  * Note that this material is one-sided---that is, observed from the 
  * back side, it will be completely black. If this is undesirable, 

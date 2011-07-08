@@ -118,55 +118,6 @@ protected:
 	Float m_value;
 };
 
-/**
- * \brief Scaling passthrough texture
- *
- * Includes a \ref Shader implementation for hardware rendering
- */
-class MTS_EXPORT_RENDER ScaleTexture : public Texture {
-public:
-	inline ScaleTexture(const Texture *nested, const Float &scale)
-		: Texture(Properties()), m_nested(nested), m_scale(scale) {
-	}
-
-	ScaleTexture(Stream *stream, InstanceManager *manager);
-
-
-	inline Spectrum getValue(const Intersection &its) const {
-		return m_nested->getValue(its) * m_scale;
-	}
-
-	inline Spectrum getAverage() const {
-		return m_nested->getAverage() * m_scale;
-	}
-	
-	inline Spectrum getMaximum() const {
-		return m_nested->getMaximum() * m_scale;
-	}
-
-	inline std::string toString() const {
-		std::ostringstream oss;
-		oss << "ScaleTexture[" << endl
-			<< "  nested = " << indent(m_nested->toString()) << "," << endl
-			<< "  scale = " << m_scale << endl
-			<< "]";
-		return oss.str();
-	}
-
-	inline bool usesRayDifferentials() const {
-		return m_nested->usesRayDifferentials();
-	}
-
-	Shader *createShader(Renderer *renderer) const;
-
-	void serialize(Stream *stream, InstanceManager *manager) const;
-
-	MTS_DECLARE_CLASS()
-protected:
-	ref<const Texture> m_nested;
-	Float m_scale;
-};
-
 MTS_NAMESPACE_END
 
 #endif /* __BASIC_SHADER_H */

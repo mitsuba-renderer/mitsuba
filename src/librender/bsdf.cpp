@@ -84,8 +84,11 @@ Texture *BSDF::ensureEnergyConservation(Texture *texture,
 		Log(EWarn, "%s", oss.str().c_str());
 		Properties props("scale");
 		props.setFloat("value", scale);
-		return static_cast<Texture *> (PluginManager::getInstance()->
+		Texture *scaleTexture = static_cast<Texture *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(Texture), props));
+		scaleTexture->addChild("", texture);
+		scaleTexture->configure();
+		return scaleTexture;
 	}
 	return texture;
 }
