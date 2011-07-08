@@ -26,13 +26,13 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{conductor}{Smooth conductor}
  * \order{5}
  * \parameters{
- *     \parameter{preset}{\String}{Name of a material preset, see 
+ *     \parameter{material}{\String}{Name of a material preset, see 
  *           \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}
  *     \parameter{eta}{\Spectrum}{Real part of the material's index 
- *           of refraction \default{based on the value of \texttt{preset}}}
+ *           of refraction \default{based on the value of \texttt{material}}}
  *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of 
  *             refraction, also known as absorption coefficient.
- *             \default{based on the value of \texttt{preset}}}
+ *             \default{based on the value of \texttt{material}}}
  *     \lastparameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{
  *        Optional factor used to modulate the reflectance component
  *        \default{1.0}}
@@ -54,7 +54,7 @@ MTS_NAMESPACE_BEGIN
  * considerable changes throughout the visible color spectrum. 
  * 
  * To faciliate the tedious task of specifying spectrally-varying index of 
- * refraction information, Mitsuba ships with a set of measured data for a 
+ * refraction information, Mitsuba ships with a set of measured data for  
  * several materials, where visible-spectrum information was publicly 
  * available\footnote{
  *   These index of refraction values are identical to the data distributed 
@@ -74,14 +74,17 @@ MTS_NAMESPACE_BEGIN
  * refraction (named ``ordinary'' and ``extraordinary ray'').
  *
  * When using this plugin, you should ideally compile Mitsuba with support for 
- * spectral renderings to get the most accurate results. While it also works 
+ * spectral rendering to get the most accurate results. While it also works 
  * in RGB mode, the computations will be much more approximate in this case.
+ * Also note that this material is one-sided---that is, observed from the 
+ * back side, it will be completely black. If this is undesirable, 
+ * consider using the \pluginref{twosided} BRDF adapter plugin.\vspace{4mm}
  *
- * \begin{xml}[caption=Material configuration for a smooth conductor with 
+ * \begin{xml}[caption=A material configuration for a smooth conductor with 
  *    measured gold data, label=lst:conductor-gold]
  * <shape type="...">
  *     <bsdf type="conductor">
- *         <string name="preset" value="Au"/>
+ *         <string name="material" value="Au"/>
  *     </bsdf>
  * <shape>
  * \end{xml}
@@ -149,15 +152,15 @@ public:
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 
-		std::string preset = props.getString("preset", "Cu");
-		Spectrum presetEta, presetK;
-		presetEta.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + preset + ".eta.spd")));
-		presetK.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + preset + ".k.spd")));
+		std::string material = props.getString("material", "Cu");
+		Spectrum materialEta, materialK;
+		materialEta.fromContinuousSpectrum(InterpolatedSpectrum(
+			fResolver->resolve("data/ior/" + material + ".eta.spd")));
+		materialK.fromContinuousSpectrum(InterpolatedSpectrum(
+			fResolver->resolve("data/ior/" + material + ".k.spd")));
 
-		m_eta = props.getSpectrum("eta", presetEta);
-		m_k = props.getSpectrum("k", presetK);
+		m_eta = props.getSpectrum("eta", materialEta);
+		m_k = props.getSpectrum("k", materialK);
 
 		m_components.push_back(EDeltaReflection | EFrontSide);
 		m_usesRayDifferentials = false;
@@ -193,7 +196,8 @@ public:
 
 	void configure() {
 		BSDF::configure();
-		/* Verify the input parameter and fix them if necessary */
+
+		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
 			m_specularReflectance, "specularReflectance", 1.0f);
 	}

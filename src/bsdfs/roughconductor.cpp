@@ -67,24 +67,92 @@ MTS_NAMESPACE_BEGIN
  *         bitangent directions. These parameter are only valid when 
  *         \texttt{distribution=as}. \default{0.1}. 
  *     }
- *     \parameter{preset}{\String}{Name of a material preset, see 
+ *     \parameter{material}{\String}{Name of a material preset, see 
  *           \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}
  *     \parameter{eta}{\Spectrum}{Real part of the material's index 
- *           of refraction \default{based on the value of \texttt{preset}}}
+ *           of refraction \default{based on the value of \texttt{material}}}
  *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of 
  *             refraction, also known as absorption coefficient.
- *             \default{based on the value of \texttt{preset}}}
+ *             \default{based on the value of \texttt{material}}}
  *     \lastparameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the reflectance component\default{1.0}}
  * }
+ * This plugin implements a realistic microfacet scattering model for rendering
+ * rough conducting materials, such as metals. Microfacet theory describes rough 
+ * surfaces as an arrangement of unresolved and ideally specular facets, whose 
+ * normal directions are given by a specially chosen \emph{microfacet distribution}. 
+ * By accounting for shadowing and masking effects between these facets, it is 
+ * possible to reproduce the important off-specular reflections peaks observed 
+ * in real-world measurements of such materials.
+
  * \renderings{
  *     \rendering{Rough copper (Beckmann, $\alpha=0.1$)}
  *     	   {bsdf_roughconductor_copper.jpg}
  *     \rendering{Vertically brushed aluminium (Ashikhmin-Shirley, 
- *         $\alpha_u=0.05,\
- *         \alpha_v=0.3$)}{bsdf_roughconductor_anisotropic_aluminium.jpg}
+ *         $\alpha_u=0.05,\ \alpha_v=0.3$), see 
+ *         \lstref{roughconductor-aluminium}}
+ *         {bsdf_roughconductor_anisotropic_aluminium.jpg}
+ *     \vspace{-7mm}
  * }
  *
+ * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
+ * \pluginref{conductor}. For very low values of $\alpha$, the two will
+ * be very similar, though scenes using this plugin will take longer to render 
+ * due to the additional computational burden of tracking surface roughness.
+ * 
+ * The implementation is based on the paper ``Microfacet Models
+ * for Refraction through Rough Surfaces'' by Walter et al. 
+ * \cite{Walter07Microfacet}. It supports several different types of microfacet
+ * distributions and has a texturable roughness parameter. 
+ * To faciliate the tedious task of specifying spectrally-varying index of 
+ * refraction information, this plugin can access a set of measured materials
+ * for which visible-spectrum information was publicly available  
+ * (see \tblref{conductor-iors} for the full list).
+ *
+ * When no parameters are given, the plugin activates the default settings, 
+ * which describe copper with a light amount of roughness modeled using a 
+ * Beckmann distribution.
+ *
+ * To get an intuition about the effect of the surface roughness
+ * parameter $\alpha$, consider the following approximate differentiation: 
+ * a value of $\alpha=0.001-0.01$ corresponds to a material 
+ * with slight imperfections on an
+ * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
+ * and $\alpha=0.3-0.5$ is \emph{extremely} rough (e.g. an etched or ground
+ * finish).
+ * \vspace{-2mm}
+ * \subsubsection*{Techical details}\vspace{-2mm}
+ * When rendering with the Ashikhmin-Shirley or Phong microfacet 
+ * distributions, a conversion is used to turn the specified 
+ * $\alpha$ roughness value into the exponents of these distributions.
+ * This is done in a way, such that the different 
+ * distributions all produce a similar appearance for the same value of 
+ * $\alpha$.
+ *
+ * The Ashikhmin-Shirley microfacet distribution allows the specification
+ * of two distinct roughness values along the tangent and bitangent
+ * directions. This can be used to provide a material with a ``brushed''
+ * appearance. The alignment of the anisotropy will follow the UV
+ * parameterization of the underlying mesh in this case. This means that
+ * such an anisotropic material cannot be applied to triangle meshes that 
+ * are missing texture coordinates.
+ *
+ * When using this plugin, you should ideally compile Mitsuba with support for 
+ * spectral rendering to get the most accurate results. While it also works 
+ * in RGB mode, the computations will be much more approximate in this case.
+ * Also note that this material is one-sided---that is, observed from the 
+ * back side, it will be completely black. If this is undesirable, 
+ * consider using the \pluginref{twosided} BRDF adapter plugin.
+ *
+ * \begin{xml}[caption={A material definition for brushed aluminium}, label=lst:roughconductor-aluminium]
+ * <bsdf type="roughconductor">
+ *     <string name="material" value="Cu"/>
+ *     <string name="distribution" value="as"/>
+ *     <float name="alphaU" value="0.05"/>
+ *     <float name="alphaV" value="0.3"/>
+ * </bsdf>
+ * \end{xml}
+ * 
  */
 class RoughConductor : public BSDF {
 public:
@@ -94,15 +162,15 @@ public:
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 
-		std::string preset = props.getString("preset", "Cu");
-		Spectrum presetEta, presetK;
-		presetEta.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + preset + ".eta.spd")));
-		presetK.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + preset + ".k.spd")));
+		std::string material = props.getString("material", "Cu");
+		Spectrum materialEta, materialK;
+		materialEta.fromContinuousSpectrum(InterpolatedSpectrum(
+			fResolver->resolve("data/ior/" + material + ".eta.spd")));
+		materialK.fromContinuousSpectrum(InterpolatedSpectrum(
+			fResolver->resolve("data/ior/" + material + ".k.spd")));
 
-		m_eta = props.getSpectrum("eta", presetEta);
-		m_k = props.getSpectrum("k", presetK);
+		m_eta = props.getSpectrum("eta", materialEta);
+		m_k = props.getSpectrum("k", materialK);
 
 		m_distribution = MicrofacetDistribution(
 			props.getString("distribution", "beckmann")
@@ -156,7 +224,7 @@ public:
 		m_components.push_back(
 			EGlossyReflection | EFrontSide | extraFlags);
 
-		/* Verify the input parameter and fix them if necessary */
+		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
 			m_specularReflectance, "specularReflectance", 1.0f);
 

@@ -65,7 +65,8 @@ public:
 
 	void configure() {
 		BSDF::configure();
-		/* Verify the input parameter and fix them if necessary */
+
+		/* Verify the input parameters and fix them if necessary */
 		m_transmittance = ensureEnergyConservation(m_transmittance, "transmittance", 1.0f);
 	}
 

@@ -98,19 +98,19 @@ MTS_NAMESPACE_BEGIN
  *         \rmfamily \textbf{Name} & \multicolumn{2}{l}{\textbf{Value}}\\
  *         \cmidrule{1-3} \cmidrule{5-7}
  *         vacuum               & 1 & 0 &  &
- *         silicone oil         & 1 & 52045\\
- *         helium               & 1 & 00004 & &
  *         bromine              & 1 & 661\\
+ *         helium               & 1 & 00004 & &
+ *         water ice            & 1 & 31\\
  *         hydrogen             & 1 & 00013& &
- *         water ice            & 1 & 31\\[-.8mm]
+ *         fused quartz         & 1 & 458\\[-.8mm]
  *         \cmidrule{5-7}\\[-5.5mm]
  *         air                  & 1 & 00028& &
- *         fused quartz         & 1 & 458\\
+ *         pyrex                & 1 & 470\\
  *         carbon dioxide       & 1 & 00045& &
- *         pyrex                & 1 & 470\\[-.8mm]
+ *         acrylic glass        & 1 & 49\\[-.8mm]
  *         \cmidrule{1-3}\\[-5.5mm]
  *         water                & 1 & 3330& &
- *         acrylic glass        & 1 & 490\\
+ *         polypropylene        & 1 & 49\\
  *         acetone              & 1 & 36 & &
  *         bk7                  & 1 & 5046\\
  *         ethanol              & 1 & 361& &
@@ -121,6 +121,7 @@ MTS_NAMESPACE_BEGIN
  *         pet                  & 1 & 575\\
  *         benzene              & 1 & 501& &
  *         diamond              & 2 & 419\\
+ *         silicone oil         & 1 & 52045\\
  *         \bottomrule
  *     \end{tabular}
  *     \caption{
@@ -192,7 +193,8 @@ public:
 
 	void configure() {
 		BSDF::configure();
-		/* Verify the input parameter and fix them if necessary */
+
+		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
 			m_specularReflectance, "specularReflectance", 1.0f);
 		m_specularTransmittance = ensureEnergyConservation(
@@ -344,9 +346,8 @@ public:
 				cosThetaT = -cosThetaT;
 		}
 
-		/* Calculate the refracted/reflected vectors+coefficients */
 		if (sampleTransmission && sampleReflection) {
-			/* Importance sample according to the reflectance/transmittance */
+			/* Importance sample wrt. the Fresnel reflectance */
 			if (sample.x <= Fr) {
 				bRec.sampledComponent = 0;
 				bRec.sampledType = EDeltaReflection;
@@ -426,9 +427,7 @@ public:
 				cosThetaT = -cosThetaT;
 		}
 
-		/* Calculate the refracted/reflected vectors+coefficients */
 		if (sampleTransmission && sampleReflection) {
-			/* Importance sample according to the reflectance/transmittance */
 			if (sample.x <= Fr) {
 				bRec.sampledComponent = 0;
 				bRec.sampledType = EDeltaReflection;

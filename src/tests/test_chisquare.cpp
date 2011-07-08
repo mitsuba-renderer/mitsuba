@@ -173,9 +173,11 @@ public:
 					mismatch = true;
 			}
 
-			if (mismatch)
-				Log(EWarn, "Potential inconsistency (3): f/pdf=%s (method 1), f/pdf=%s (methdod 2), sampled f/pdf=%s",
+			if (mismatch) {
+				Log(EWarn, "Potential inconsistency (3): f/pdf=%s (method 1), f/pdf=%s (method 2), sampled f/pdf=%s",
 					sampled2.toString().c_str(), evaluated.toString().c_str(), sampled.toString().c_str());
+				Log(EWarn, "  f=%s, f2=%s, pdf=%f, pdf2=%f", f.toString().c_str(), f.toString().c_str(), pdfVal, pdfVal2);
+			}
 
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();

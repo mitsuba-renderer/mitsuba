@@ -241,7 +241,7 @@ public:
 		m_components.push_back(
 			EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
 
-		/* Verify the input parameter and fix them if necessary */
+		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
 			m_specularReflectance, "specularReflectance", 1.0f);
 		m_specularTransmittance = ensureEnergyConservation(

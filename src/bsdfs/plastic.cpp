@@ -17,40 +17,48 @@
 */
 
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/consttexture.h>
+#include <mitsuba/render/texture.h>
+#include "ior.h"
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{plastic}{Smooth plastic material}
- *
+/*!\plugin{plastic}{Smooth plastic material}
+ * \order{7}
  * \parameters{
- *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}
- *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1.0}}
- *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the diffuse reflectance component\default{1.0}}
+ *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
+ *      numerically or using a known material name. \default{\texttt{polypropylene} / 1.49}}
+ *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
+ *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the specular reflectance component\default{1.0}}
+ *         factor used to modulate the specular component\default{1.0}}
+ *     \lastparameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
+ *         factor used to modulate the diffuse component\default{0.5}}
+ * }
+ *
+ * \renderings{
+ *     \medrendering{Air$\leftrightarrow$Water (IOR: 1.33) interface. 
+ *         See \lstref{dielectric-water}.}{bsdf_dielectric_water}
+ *     \medrendering{Air$\leftrightarrow$Diamond (IOR: 2.419)}{bsdf_dielectric_diamond}
+ *     \medrendering{Air$\leftrightarrow$Glass (IOR: 1.504) interface and absorption within. 
+ *         See \lstref{dielectric-glass}.}{bsdf_dielectric_glass}
  * }
  */
 class SmoothPlastic : public BSDF {
 public:
-	SmoothPlastic(const Properties &props) 
-			: BSDF(props) {
+	SmoothPlastic(const Properties &props) : BSDF(props) {
 		/* Specifies the internal index of refraction at the interface */
-		m_intIOR = props.getFloat("intIOR", 1.5046f);
-		/* Specifies the external index of refraction at the interface */
-		m_extIOR = props.getFloat("extIOR", 1);
+		m_intIOR = lookupIOR(props, "intIOR", "polypropylene");
 
-		m_diffuseReflectance = new ConstantSpectrumTexture(
-			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
+		/* Specifies the external index of refraction at the interface */
+		m_extIOR = lookupIOR(props, "extIOR", "air");
+
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
+		m_diffuseReflectance = new ConstantSpectrumTexture(
+			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
 
-		m_componentCount = 2;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDiffuseReflection | EFrontSide;
-		m_type[1] = EDeltaTransmission | EFrontSide;
-		m_combinedType = m_type[0] | m_type[1];
+		m_components.push_back(EDeltaReflection | EFrontSide);
+		m_components.push_back(EDiffuseReflection | EFrontSide);
 		m_usesRayDifferentials = false;
 	}
 
@@ -58,241 +66,225 @@ public:
 			: BSDF(stream, manager) {
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
-		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
-
-		m_componentCount = 2;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDiffuseReflection | EFrontSide;
-		m_type[1] = EDeltaTransmission | EFrontSide;
-		m_combinedType = m_type[0] | m_type[1];
+		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
+		m_components.push_back(EDeltaReflection | EFrontSide);
+		m_components.push_back(EDiffuseReflection | EFrontSide);
 		m_usesRayDifferentials = 
-			m_diffuseReflectance->usesRayDifferentials() ||
-			m_specularReflectance->usesRayDifferentials();
+			m_specularReflectance->usesRayDifferentials() ||
+			m_diffuseReflectance->usesRayDifferentials();
 	}
 
-	virtual ~SmoothPlastic() {
-		delete[] m_type;
-	}
+	virtual ~SmoothPlastic() { }
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
-		manager->serialize(stream, m_diffuseReflectance.get());
 		manager->serialize(stream, m_specularReflectance.get());
+		manager->serialize(stream, m_diffuseReflectance.get());
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "diffuseReflectance") {
-			m_diffuseReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
 			m_specularReflectance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "diffuseReflectance") {
+			m_diffuseReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
 		} else {
 			BSDF::addChild(name, child);
 		}
 	}
 
+	void configure() {
+		BSDF::configure();
+
+		/* Verify the input parameters and fix them if necessary */
+		m_specularReflectance = ensureEnergyConservation(
+			m_specularReflectance, "specularReflectance", 1.0f);
+		m_diffuseReflectance = ensureEnergyConservation(
+			m_diffuseReflectance, "diffuseReflectance", 1.0f);
+	}
+
+	/// Reflection in local coordinates
 	inline Vector reflect(const Vector &wi) const {
 		return Vector(-wi.x, -wi.y, wi.z);
 	}
 
-	Spectrum f(const BSDFQueryRecord &bRec) const {
+	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		bool sampleSpecular   = (bRec.typeMask & EDeltaReflection)
+				&& (bRec.component == -1 || bRec.component == 0);
 		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
-			&& (bRec.component == -1 || bRec.component == 0);
+				&& (bRec.component == -1 || bRec.component == 1);
 
-		if (Frame::cosTheta(bRec.wi) <= 0 || 
-			Frame::cosTheta(bRec.wo) <= 0 || !sampleDiffuse)
+		if (Frame::cosTheta(bRec.wo) <= 0 || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
-
-		return m_diffuseReflectance->getValue(bRec.its) * INV_PI * 
-			(1 - fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR));
-	}
-
-	Spectrum fDelta(const BSDFQueryRecord &bRec) const {
-		bool sampleSpecular = (bRec.typeMask & EDeltaReflection)
-			&& (bRec.component == -1 || bRec.component == 1);
-		if (Frame::cosTheta(bRec.wi) <= 0 || 
-			Frame::cosTheta(bRec.wo) <= 0 || !sampleSpecular)
-			return Spectrum(0.0f);
-
-		return m_specularReflectance->getValue(bRec.its) * 
-			fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-	}
-
-	Float pdf(const BSDFQueryRecord &bRec) const {
-		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
-			&& (bRec.component == -1 || bRec.component == 0);
-
-		if (Frame::cosTheta(bRec.wi) <= 0 || 
-			Frame::cosTheta(bRec.wo) <= 0 || !sampleDiffuse)
-			return 0.0f;
-
-		bool sampleSpecular = (bRec.typeMask & EDeltaReflection)
-			&& (bRec.component == -1 || bRec.component == 1);
-
-		Float pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-		if (sampleSpecular)
-			pdf *= 1 - fresnel(Frame::cosTheta(bRec.wi),
-					m_extIOR, m_intIOR);
-
-		return pdf;
-	}
-
-	Float pdfDelta(const BSDFQueryRecord &bRec) const {
-		bool sampleSpecular = (bRec.typeMask & EDeltaReflection)
-			&& (bRec.component == -1 || bRec.component == 1);
-
-		if (Frame::cosTheta(bRec.wi) <= 0 || 
-			Frame::cosTheta(bRec.wo) <= 0 || !sampleSpecular)
-			return 0.0f;
-
-		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
-			&& (bRec.component == -1 || bRec.component == 0);
-
-		Float pdf = std::abs(Frame::cosTheta(bRec.wo));
-		if (sampleDiffuse)
-			pdf *= fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-
-		return pdf;
-	}
-
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
-		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
-			&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleSpecular = (bRec.typeMask & EDeltaReflection)
-			&& (bRec.component == -1 || bRec.component == 1);
-
-		if ((!sampleDiffuse && !sampleSpecular) || Frame::cosTheta(bRec.wi) <= 0)
-			return Spectrum(0.0f);
-			
+				  
 		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-		Point2 sample(_sample);
 
-		if (sampleDiffuse && sampleSpecular) {
-			if (sample.x > Fr) {
-				sample.x = (sample.x - Fr) / (1 - Fr);
-				bRec.wo = squareToHemispherePSA(sample);
-				bRec.sampledComponent = 0;
-				bRec.sampledType = EDiffuseReflection;
-				pdf = Frame::cosTheta(bRec.wo) * INV_PI * (1-Fr);
-				return m_diffuseReflectance->getValue(bRec.its) * INV_PI * (1-Fr);
-			} else {
-				bRec.sampledComponent = 1;
-				bRec.sampledType = EDeltaReflection;
-				bRec.wo = reflect(bRec.wi);
-				pdf = std::abs(Frame::cosTheta(bRec.wo)) * Fr;
+		if (measure == EDiscrete && sampleSpecular) {
+			/* Check if the provided direction pair matches an ideal
+			   specular reflection; tolerate some roundoff errors */
+			bool reflection = std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) < Epsilon;
+			if (reflection)
 				return m_specularReflectance->getValue(bRec.its) * Fr;
-			}
-		} else if (sampleDiffuse) {
-			bRec.wo = squareToHemispherePSA(sample);
-			bRec.sampledComponent = 0;
-			bRec.sampledType = EDiffuseReflection;
-			pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-			return m_diffuseReflectance->getValue(bRec.its) * INV_PI * (1-Fr);
-		} else {
-			bRec.sampledComponent = 1;
-			bRec.sampledType = EDeltaReflection;
-			bRec.wo = reflect(bRec.wi);
-			pdf = std::abs(Frame::cosTheta(bRec.wo));
-			return m_specularReflectance->getValue(bRec.its) * Fr;
+		} else if (measure == ESolidAngle && sampleDiffuse) {
+			if (sampleDiffuse)
+				return m_diffuseReflectance->getValue(bRec.its) 
+					* (INV_PI * Frame::cosTheta(bRec.wo) * (1-Fr));
 		}
+
+		return Spectrum(0.0f);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
+	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		bool sampleSpecular   = (bRec.typeMask & EDeltaReflection)
+				&& (bRec.component == -1 || bRec.component == 0);
 		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
-			&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleSpecular = (bRec.typeMask & EDeltaReflection)
-			&& (bRec.component == -1 || bRec.component == 1);
+				&& (bRec.component == -1 || bRec.component == 1);
 
-		if ((!sampleDiffuse && !sampleSpecular) || Frame::cosTheta(bRec.wi) <= 0)
+		if (Frame::cosTheta(bRec.wo) <= 0 || Frame::cosTheta(bRec.wi) <= 0)
+			return 0.0f;
+
+		if (measure == EDiscrete && sampleSpecular) {
+			/* Check if the provided direction pair matches an ideal
+			   specular reflection; tolerate some roundoff errors */
+			bool reflection = std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) < Epsilon;
+			if (reflection) 
+				return sampleDiffuse ? 
+					fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR) : 1.0f;
+		} else if (measure == ESolidAngle && sampleDiffuse) {
+			return Frame::cosTheta(bRec.wo) * INV_PI *
+				sampleSpecular ? (1 - fresnel(Frame::cosTheta(bRec.wi),
+				m_extIOR, m_intIOR)) : 1.0f;
+		}
+
+		return 0.0f;
+	}
+
+	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+		bool sampleSpecular   = (bRec.typeMask & EDeltaReflection)
+				&& (bRec.component == -1 || bRec.component == 0);
+		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
+				&& (bRec.component == -1 || bRec.component == 1);
+		
+		if ((!sampleDiffuse && !sampleSpecular) || Frame::cosTheta(bRec.wi) < 0)
 			return Spectrum(0.0f);
-			
+
 		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-		Point2 sample(_sample);
 
 		if (sampleDiffuse && sampleSpecular) {
-			if (sample.x > Fr) {
-				sample.x = (sample.x - Fr) / (1 - Fr);
-				bRec.wo = squareToHemispherePSA(sample);
+			/* Importance sample wrt. the Fresnel reflectance */
+			if (sample.x <= Fr) {
 				bRec.sampledComponent = 0;
-				bRec.sampledType = EDiffuseReflection;
-				return m_diffuseReflectance->getValue(bRec.its)
-				   / Frame::cosTheta(bRec.wo);
-			} else {
-				bRec.sampledComponent = 1;
 				bRec.sampledType = EDeltaReflection;
 				bRec.wo = reflect(bRec.wi);
-				return m_specularReflectance->getValue(bRec.its)
-					/ std::abs(Frame::cosTheta(bRec.wo));
+
+				return m_specularReflectance->getValue(bRec.its);
+			} else {
+				bRec.sampledComponent = 1;
+				bRec.sampledType = EDiffuseReflection;
+				bRec.wo = squareToHemispherePSA(Point2(
+					(sample.x - Fr) / (1 - Fr),
+					sample.y
+				));
+
+				return m_diffuseReflectance->getValue(bRec.its);
 			}
-		} else if (sampleDiffuse) {
-			bRec.wo = squareToHemispherePSA(sample);
+		} else if (sampleSpecular) {
 			bRec.sampledComponent = 0;
-			bRec.sampledType = EDiffuseReflection;
-			return m_diffuseReflectance->getValue(bRec.its) * (1-Fr)
-				/ Frame::cosTheta(bRec.wo);
-		} else {
-			bRec.sampledComponent = 1;
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
-			return m_specularReflectance->getValue(bRec.its) * Fr
-				/ std::abs(Frame::cosTheta(bRec.wo));
+			return m_specularReflectance->getValue(bRec.its) * Fr;
+		} else {
+			bRec.sampledComponent = 1;
+			bRec.sampledType = EDiffuseReflection;
+
+			if (Fr == 1.0f) /* Total internal reflection */
+				return Spectrum(0.0f);
+				
+			bRec.wo = squareToSphere(sample);
+				
+			return m_diffuseReflectance->getValue(bRec.its) * (1-Fr);
 		}
 	}
 
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+		bool sampleSpecular   = (bRec.typeMask & EDeltaReflection)
+				&& (bRec.component == -1 || bRec.component == 0);
+		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
+				&& (bRec.component == -1 || bRec.component == 1);
+		
+		if ((!sampleDiffuse && !sampleSpecular) || Frame::cosTheta(bRec.wi) < 0)
+			return Spectrum(0.0f);
+
+		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+
+		if (sampleDiffuse && sampleSpecular) {
+			/* Importance sample wrt. the Fresnel reflectance */
+			if (sample.x <= Fr) {
+				bRec.sampledComponent = 0;
+				bRec.sampledType = EDeltaReflection;
+				bRec.wo = reflect(bRec.wi);
+
+				pdf = Fr;
+				return m_specularReflectance->getValue(bRec.its) * Fr;
+			} else {
+				bRec.sampledComponent = 1;
+				bRec.sampledType = EDiffuseReflection;
+				bRec.wo = squareToHemispherePSA(Point2(
+					(sample.x - Fr) / (1 - Fr),
+					sample.y
+				));
+
+				pdf = (1-Fr) * Frame::cosTheta(bRec.wo) * INV_PI;
+
+				return m_diffuseReflectance->getValue(bRec.its) 
+					* (INV_PI * Frame::cosTheta(bRec.wo) * (1-Fr));
+			}
+		} else if (sampleSpecular) {
+			bRec.sampledComponent = 0;
+			bRec.sampledType = EDeltaReflection;
+			bRec.wo = reflect(bRec.wi);
+			pdf = 1;
+			return m_specularReflectance->getValue(bRec.its) * Fr;
+		} else {
+			bRec.sampledComponent = 1;
+			bRec.sampledType = EDiffuseReflection;
+
+			if (Fr == 1.0f) /* Total internal reflection */
+				return Spectrum(0.0f);
+				
+			bRec.wo = squareToSphere(sample);
+				
+			pdf = Frame::cosTheta(bRec.wo) * INV_PI;
+
+			return m_diffuseReflectance->getValue(bRec.its) 
+				* (INV_PI * Frame::cosTheta(bRec.wo) * (1-Fr));
+		}
+	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SmoothPlastic[" << endl
+			<< "  name = \"" << getName() << "\"," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl 
 			<< "  extIOR = " << m_extIOR << "," << endl
-			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
-			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << endl
+			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
+			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << endl
 			<< "]";
 		return oss.str();
 	}
 
-	Shader *createShader(Renderer *renderer) const;
-
 	MTS_DECLARE_CLASS()
 private:
 	Float m_intIOR, m_extIOR;
-	ref<Texture> m_specularReflectance;
 	ref<Texture> m_diffuseReflectance;
+	ref<Texture> m_specularReflectance;
 };
 
-/* Fake glass shader -- it is really hopeless to visualize
-   this material in the VPL renderer, so let's try to do at least 
-   something that suggests the presence of a transparent boundary */
-class SmoothPlasticShader : public Shader {
-public:
-	SmoothPlasticShader(Renderer *renderer) :
-		Shader(renderer, EBSDFShader) {
-		m_flags = ETransparent;
-	}
-
-	void generateCode(std::ostringstream &oss,
-			const std::string &evalName,
-			const std::vector<std::string> &depNames) const {
-		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return vec3(0.08);" << endl
-			<< "}" << endl;
-		oss << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return vec3(0.08);" << endl
-			<< "}" << endl;
-	}
-	MTS_DECLARE_CLASS()
-};
-
-Shader *SmoothPlastic::createShader(Renderer *renderer) const { 
-	return new SmoothPlasticShader(renderer);
-}
-
-MTS_IMPLEMENT_CLASS(SmoothPlasticShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(SmoothPlastic, false, BSDF)
 MTS_EXPORT_PLUGIN(SmoothPlastic, "Smooth plastic BSDF");
 MTS_NAMESPACE_END
