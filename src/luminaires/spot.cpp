@@ -56,7 +56,7 @@ public:
 		m_cosBeamWidth = std::cos(m_beamWidth);
 		m_cosCutoffAngle = std::cos(m_cutoffAngle);
 		m_position = m_luminaireToWorld(Point(0, 0, 0));
-		m_uvFactor = std::tan(m_beamWidth/2);
+		m_uvFactor = std::tan(m_cutoffAngle);
 		m_invTransitionWidth = 1.0f / (m_cutoffAngle - m_beamWidth);
 	}
 
@@ -91,8 +91,8 @@ public:
 		if (m_texture->getClass() != MTS_CLASS(ConstantSpectrumTexture)) {
 			Intersection its;
 			its.hasUVPartials = false;
-			its.uv.x = 0.5f + localDir.x / (localDir.z / m_uvFactor);
-			its.uv.y = 0.5f + localDir.y / (localDir.z / m_uvFactor);
+			its.uv.x = 0.5f + 0.5f * localDir.x / (localDir.z * m_uvFactor);
+			its.uv.y = 0.5f + 0.5f * localDir.y / (localDir.z * m_uvFactor);
 			result *= m_texture->getValue(its);
 		}
 
@@ -228,7 +228,7 @@ public:
 			<< "    float cosTheta = localDir.z;" << endl
 			<< "    if (cosTheta < " << evalName << "_cosCutoffAngle)" << endl
 			<< "        return vec3(0.0);" << endl
-			<< "    vec2 uv = 0.5 + (localDir.xy / localDir.z * " << evalName << "_uvFactor);" << endl
+			<< "    vec2 uv = 0.5 + 0.5 * (localDir.xy / localDir.z * " << evalName << "_uvFactor);" << endl
 			<< "    vec3 color = " << depNames[0] << "(uv);" << endl
 			<< "    if (cosTheta > " << evalName << "_cosBeamWidth)" << endl
 			<< "        return color;" << endl
