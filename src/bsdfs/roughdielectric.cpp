@@ -18,7 +18,7 @@
 
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/sampler.h>
-#include <mitsuba/render/texture.h>
+#include <mitsuba/hw/basicshader.h>
 #include "microfacet.h"
 #include "ior.h"
 

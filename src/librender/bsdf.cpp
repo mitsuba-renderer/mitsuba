@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/core/frame.h>
+#include <mitsuba/core/plugin.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -81,7 +82,10 @@ Texture *BSDF::ensureEnergyConservation(Texture *texture,
 			<< "issues. Specify the parameter ensureEnergyConservation=false "
 			<< "to the BSDF to prevent this from happening.";
 		Log(EWarn, "%s", oss.str().c_str());
-		return new ScaleTexture(texture, scale);
+		Properties props("scale");
+		props.setFloat("value", scale);
+		return static_cast<Texture *> (PluginManager::getInstance()->
+				createObject(MTS_CLASS(Texture), props));
 	}
 	return texture;
 }

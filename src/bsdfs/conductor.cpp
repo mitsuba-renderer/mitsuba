@@ -17,9 +17,8 @@
 */
 
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/texture.h>
 #include <mitsuba/core/fresolver.h>
-#include <mitsuba/hw/gpuprogram.h>
+#include <mitsuba/hw/basicshader.h>
 
 MTS_NAMESPACE_BEGIN
 

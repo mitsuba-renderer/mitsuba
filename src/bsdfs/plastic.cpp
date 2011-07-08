@@ -17,7 +17,7 @@
 */
 
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/texture.h>
+#include <mitsuba/hw/basicshader.h>
 #include "ior.h"
 
 MTS_NAMESPACE_BEGIN
