@@ -189,11 +189,10 @@ The \texttt{reflectance} intent is used by default, so remember to
 set it to \texttt{illuminant} when defining the brightness of a
 light source with the \texttt{<rgb>} tag.
 
-When spectral power distributions are obtained from measurements 
+When spectral power or reflectance distributions are obtained from measurements 
 (e.g. at 10$nm$ intervals), they are usually quite unwiedy and can clutter
 the scene description. For this reason, there is yet another way to pass 
-a spectrum by loading it from an external
-file:
+a spectrum by loading it from an external file:
 \begin{xml}
 <spectrum name="spectrumProperty" filename="measuredSpectrum.spd"/>
 \end{xml}
@@ -201,7 +200,7 @@ The file should contain a single measurement per line, with the corresponding
 wavelength in nanometers and the measured value separated by a space. Comments
 are allowed. Here is an example:
 \begin{xml}
-# This file contains a measured spectral power distribution
+# This file contains a measured spectral power/reflectance distribution
 406.13 0.703313
 413.88 0.744563
 422.03 0.791625

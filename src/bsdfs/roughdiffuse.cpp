@@ -21,60 +21,65 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*!\plugin{diffuse}{Rough diffuse material}
+/*!\plugin{roughdiffuse}{Rough diffuse material}
  * \order{2}
  * \parameters{
  *     \parameter{reflectance}{\Spectrum\Or\Texture}{
- *         Specifies the reflectance / albedo of the material \linebreak(Default: 0.5)
+ *         Specifies the diffuse albedo of the 
+ *         material. \default{0.5}
  *     }
- *     \lastparameter{alpha}{\Spectrum\Or\Texture}{
- *         Specifies the roughness of the unresolved surface microgeometry. 
- *         This parameter is approximately equal to the \emph{root mean square} 
- *         (RMS) slope of the microfacets.\default{0.1}
+ *     \parameter{alpha}{\Spectrum\Or\Texture}{
+ *         Specifies the roughness of the unresolved surface microgeometry
+ *         using the \emph{root mean square} (RMS) slope of the 
+ *         microfacets. \default{0.2}
+ *     }
+ *     \parameter{useFastApprox}{\Boolean}{
+ *         This parameter selects between the full version of the model
+ *         or a fast approximation that still retains most qualitative features.
+ *         \default{\texttt{false}, i.e. use the high-quality version}
  *     }
  * }
  *
  * \renderings{
- *     \rendering{Homogeneous reflectance, see \lstref{diffuse-uniform}}{bsdf_diffuse_plain}
- *     \rendering{Textured reflectance, see \lstref{diffuse-textured}}{bsdf_diffuse_textured}
+ *     \rendering{Smooth diffuse surface ($\alpha=0$)}
+ *        {bsdf_roughdiffuse_0}
+ *     \rendering{Very rough diffuse surface ($\alpha=0.7$)}
+ *        {bsdf_roughdiffuse_0_7}
+ *   \vspace{-3mm}
+ *   \caption{The effect of switching from smooth to rough diffuse scattering 
+ *   is fairly subtle on this model---generally, there will be higher 
+ *   reflectance at grazing angles, as well as an overall reduced contrast.}\vspace{3mm}
  * }
  * 
- * This reflectance model describes scattering from a rough diffuse material,
- * such as plaster, sand, clay, or concrete.
+ * This reflectance model describes the interaction of light with a rough 
+ * diffuse material, such as plaster, sand, clay, or concrete.
  * The underlying theory was developed by Oren and Nayar 
  * \cite{Oren1994Generalization}, who model the microscopic surface structure as 
  * unresolved planar facets arranged in V-shaped grooves, where each facet
  * is an ideal diffuse reflector. The model takes into account shadowing,
  * masking, as well as interreflections between the facets.
  *
- * Since the original publication in 1994, this approach has been shown to 
+ * Since the original publication, this approach has been shown to 
  * be a good match for many real-world materials, particularly compared 
  * to Lambertian scattering, which does not take surface roughness into account.
  *
  * The implementation in Mitsuba uses a surface roughness parameter $\alpha$ that
- * is slighly different from the slope-area variance in the original paper. 
+ * is slighly different from the slope-area variance in the original 1994 paper. 
  * The reason for this change is to make the parameter $\alpha$ portable
- * across different models (i.e. \pluginref{roughglass},
+ * across different models (i.e. \pluginref{roughglass}, \pluginref{roughplastic}, 
  * \pluginref{roughconductor}).
  *
  * To get an intuition about the effect of the 
  * parameter $\alpha$, consider the following approximate differentiation: 
  * a value of $\alpha=0.001-0.01$ corresponds to a material 
  * with slight imperfections on an otherwise smooth surface (for such small
- * values, the model will behave almost identically to \pluginref{diffuse}), $\alpha=0.1$ 
- * is relatively rough, and $\alpha=0.3-0.5$ is \emph{extremely} rough 
+ * values, the model will behave identically to \pluginref{diffuse}), $\alpha=0.1$ 
+ * is relatively rough, and $\alpha=0.3-0.7$ is \emph{extremely} rough 
  * (e.g. an etched or ground surface). 
  *
  * Note that this material is one-sided---that is, observed from the 
  * back side, it will be completely black. If this is undesirable, 
  * consider using the \pluginref{twosided} BRDF adapter plugin.
- * \vspace{4mm}
- *
- * \begin{xml}[caption={A diffuse material, whose reflectance is specified as an sRGB color}, label=lst:diffuse-uniform]
- * <bsdf type="diffuse">
- *     <srgb name="reflectance" value="#6d7185"/>
- * </bsdf>
- * \end{xml}
  */
 class RoughDiffuse : public BSDF {
 public:
@@ -84,9 +89,11 @@ public:
 		   'reflectance' and 'diffuseReflectance' as parameter names */
 		m_reflectance = new ConstantSpectrumTexture(props.getSpectrum(
 			props.hasProperty("reflectance") ? "reflectance" 
-				: "diffuseReflectance", Spectrum(.5f)));
+				: "diffuseReflectance", Spectrum(0.5f)));
 
-		m_alpha = new ConstantFloatTexture(props.getFloat("alpha", 0.1f));
+		m_useFastApprox = props.getBoolean("useFastApprox", false);
+
+		m_alpha = new ConstantFloatTexture(props.getFloat("alpha", 0.2f));
 		m_components.push_back(EGlossyReflection | EFrontSide);
 		m_usesRayDifferentials = false;
 	}
@@ -95,6 +102,7 @@ public:
 		: BSDF(stream, manager) {
 		m_reflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
+		m_useFastApprox = stream->readBool();
 		m_components.push_back(EGlossyReflection | EFrontSide);
 		m_usesRayDifferentials = m_reflectance->usesRayDifferentials();
 	}
@@ -110,7 +118,7 @@ public:
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		if (!(bRec.typeMask & EGlossyReflection) || measure != ESolidAngle
-			|| Frame::cosTheta(bRec.wi) <= 0 
+			|| Frame::cosTheta(bRec.wi) <= 0
 			|| Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
 
@@ -124,12 +132,80 @@ public:
 		Float sigma = m_alpha->getValue(bRec.its).average() 
 			* conversionFactor;
 
-		Float sigma2 = sigma*sigma;
-		Float A = 10.f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
-		Float B = 0.45f * sigma2 / (sigma2 + 0.09f);
+		const Float sigma2 = sigma*sigma;
 
-		return m_reflectance->getValue(bRec.its)
-			* (INV_PI * Frame::cosTheta(bRec.wo));
+		Float sinThetaI = Frame::sinTheta(bRec.wi),
+			  sinThetaO = Frame::sinTheta(bRec.wo);
+
+		Float cosPhiDiff = 0;
+		if (sinThetaI > Epsilon && sinThetaO > Epsilon) {
+			/* Compute cos(phiO-phiI) using the half-angle formulae */
+			Float sinPhiI = Frame::sinPhi(bRec.wi),
+				  cosPhiI = Frame::cosPhi(bRec.wi),
+				  sinPhiO = Frame::sinPhi(bRec.wo),
+				  cosPhiO = Frame::cosPhi(bRec.wo);
+			cosPhiDiff = cosPhiI * cosPhiO + sinPhiI * sinPhiO;
+		}
+
+		if (m_useFastApprox) {
+			Float A = 1.0f - 0.5f * sigma2 / (sigma2 + 0.33f),
+				  B = 0.45f * sigma2 / (sigma2 + 0.09f),
+				  sinAlpha, tanBeta;
+	
+			if (Frame::cosTheta(bRec.wi) > Frame::cosTheta(bRec.wo)) {
+				sinAlpha = sinThetaO;
+				tanBeta = sinThetaI / Frame::cosTheta(bRec.wi);
+			} else {
+				sinAlpha = sinThetaI;
+				tanBeta = sinThetaO / Frame::cosTheta(bRec.wo);
+			}
+	
+			return m_reflectance->getValue(bRec.its)
+				* (INV_PI * Frame::cosTheta(bRec.wo) * (A + B
+				* std::max(cosPhiDiff, (Float) 0.0f) * sinAlpha * tanBeta));
+		} else {
+			Float sinThetaI = Frame::sinTheta(bRec.wi),
+				  sinThetaO = Frame::sinTheta(bRec.wo),
+				  thetaI = std::acos(Frame::cosTheta(bRec.wi)),
+				  thetaO = std::acos(Frame::cosTheta(bRec.wo)),
+				  alpha = std::max(thetaI, thetaO),
+				  beta = std::min(thetaI, thetaO);
+	
+			Float sinAlpha, sinBeta, tanBeta;
+			if (Frame::cosTheta(bRec.wi) > Frame::cosTheta(bRec.wo)) {
+				sinAlpha = sinThetaO; sinBeta = sinThetaI;
+				tanBeta = sinThetaI / Frame::cosTheta(bRec.wi);
+			} else {
+				sinAlpha = sinThetaI; sinBeta = sinThetaO;
+				tanBeta = sinThetaO / Frame::cosTheta(bRec.wo);
+			}
+	
+			Float tmp = sigma2 / (sigma2 + 0.09f),
+				  tmp2 = (4*INV_PI*INV_PI) * alpha * beta,
+				  tmp3 = 2*beta*INV_PI;
+	
+			Float C1 = 1.0f - 0.5f * sigma2 / (sigma2 + 0.33f),
+				  C2 = 0.45f * tmp,
+				  C3 = 0.125f * tmp * tmp2 * tmp2,
+				  C4 = 0.17f * sigma2 / (sigma2 + 0.13f);
+	
+			if (cosPhiDiff > 0)
+				C2 *= sinAlpha;
+			else
+				C2 *= sinAlpha - tmp3*tmp3*tmp3;
+	
+			/* Compute tan(0.5 * (alpha+beta)) using the half-angle formulae */
+			Float tanHalf = (sinAlpha + sinBeta) / (
+					std::sqrt(std::max((Float) 0.0f, 1.0f - sinAlpha * sinAlpha)) +
+					std::sqrt(std::max((Float) 0.0f, 1.0f - sinBeta  * sinBeta)));
+	
+			Spectrum rho = m_reflectance->getValue(bRec.its),
+					 snglScat = rho * (C1 + cosPhiDiff * C2 * tanBeta +
+					    (1.0f - std::abs(cosPhiDiff)) * C3 * tanHalf),
+					 dblScat = rho * rho * (C4 * (1.0f - cosPhiDiff*tmp3*tmp3));
+	
+			return  (snglScat + dblScat) * (INV_PI * Frame::cosTheta(bRec.wo));
+		}
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
@@ -148,7 +224,8 @@ public:
 		bRec.wo = squareToHemispherePSA(sample);
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
-		return m_reflectance->getValue(bRec.its);
+		return eval(bRec, ESolidAngle) /
+			(Frame::cosTheta(bRec.wo) * INV_PI);
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
@@ -159,8 +236,7 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
 		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-		return m_reflectance->getValue(bRec.its) 
-			* (INV_PI * Frame::cosTheta(bRec.wo));
+		return eval(bRec, ESolidAngle);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
@@ -182,6 +258,7 @@ public:
 
 		manager->serialize(stream, m_reflectance.get());
 		manager->serialize(stream, m_alpha.get());
+		stream->writeBool(m_useFastApprox);
 	}
 
 	std::string toString() const {
@@ -189,7 +266,8 @@ public:
 		oss << "RoughDiffuse[" << endl
 			<< "  name = \"" << getName() << "\"," << endl
 			<< "  reflectance = " << indent(m_reflectance->toString()) << "," << endl
-			<< "  alpha = " << indent(m_alpha->toString()) << endl
+			<< "  alpha = " << indent(m_alpha->toString()) << "," << endl
+			<< "  useFastApprox = " << m_useFastApprox << endl
 			<< "]";
 		return oss.str();
 	}
@@ -200,6 +278,7 @@ public:
 private:
 	ref<Texture> m_reflectance;
 	ref<Texture> m_alpha;
+	bool m_useFastApprox;
 };
 
 // ================ Hardware shader implementation ================ 
@@ -233,11 +312,27 @@ public:
 		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
-			<< "    return " << depNames[0] << "(uv) * 0.31831 * cosTheta(wo);" << endl
+			<< "    float sigma = " << depNames[1] << "(uv)[0] * 0.70711;" << endl
+			<< "    float sigma2 = sigma * sigma;" << endl
+			<< "    float A = 1.0 - 0.5 * sigma2 / (sigma2 + 0.33);" << endl
+			<< "    float B = 0.45 * sigma2 / (sigma2 + 0.09);" << endl
+			<< "    float maxCos = max(0.0, cosPhi(wi)*cosPhi(wo)+sinPhi(wi)*sinPhi(wo));" << endl
+			<< "    float sinAlpha, tanBeta;" << endl
+			<< "    if (cosTheta(wi) > cosTheta(wo)) {" << endl
+			<< "        sinAlpha = sinTheta(wo);" << endl
+			<< "        tanBeta = sinTheta(wi) / cosTheta(wi);" << endl
+			<< "    } else {" << endl
+			<< "        sinAlpha = sinTheta(wi);" << endl
+			<< "        tanBeta = sinTheta(wo) / cosTheta(wo);" << endl
+			<< "    }" << endl
+			<< "    float value = A + B * maxCos * sinAlpha * tanBeta;" << endl
+			<< "    return " << depNames[0] << "(uv) * 0.31831 * cosTheta(wo) * value;" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return " << evalName << "(uv, wi, wo);" << endl
+			<< "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
+			<< "    	return vec3(0.0);" << endl
+			<< "    return " << depNames[0] << "(uv) * 0.31831 * cosTheta(wo);" << endl
 			<< "}" << endl;
 	}
 

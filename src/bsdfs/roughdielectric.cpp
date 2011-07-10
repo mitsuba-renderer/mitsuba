@@ -59,7 +59,7 @@ MTS_NAMESPACE_BEGIN
  *         \default{0.1}. 
  *     }
  *     \parameter{alphaU, alphaV}{\Float\Or\Texture}{
- *         Specifies the anisotropic rougness values along the tangent and 
+ *         Specifies the anisotropic roughness values along the tangent and 
  *         bitangent directions. These parameter are only valid when 
  *         \texttt{distribution=as}. \default{0.1}. 
  *     }
@@ -69,7 +69,7 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the reflectance component\default{1.0}}
- *     \lastparameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
+ *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the transmittance component\default{1.0}}
  * }\vspace{4mm}
  *
@@ -111,7 +111,7 @@ MTS_NAMESPACE_BEGIN
  * a value of $\alpha=0.001-0.01$ corresponds to a material 
  * with slight imperfections on an
  * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
- * and $\alpha=0.3-0.5$ is \emph{extremely} rough (e.g. an etched or ground
+ * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
  * finish).
  * 
  * Please note that when using this plugin, it is crucial that the scene contains
@@ -142,7 +142,7 @@ MTS_NAMESPACE_BEGIN
  * \renderings{
  *     \rendering{Ground glass (GGX, $\alpha$=0.304, 
  *     	   \lstref{roughdielectric-roughglass})}{bsdf_roughdielectric_ggx_0_304.jpg}
- *     \rendering{Textured rougness (\lstref{roughdielectric-textured})}
+ *     \rendering{Textured roughness (\lstref{roughdielectric-textured})}
  *         {bsdf_roughdielectric_textured.jpg}
  * }
  *
@@ -467,7 +467,7 @@ public:
 				      1. Take the Fresnel term with respect to the surface
 					     normal to be a good approximation to the microsurface
 						 Fresnel term -- this will be less true for higher 
-						 rougness values. To be safe, clamp it to some 
+						 roughness values. To be safe, clamp it to some 
 						 reasonable range.
 					  2. Use this approximate term and a random number to
 					     choose between reflection and refraction component.
@@ -595,7 +595,7 @@ public:
 				      1. Take the Fresnel term with respect to the surface
 					     normal to be a good approximation to the microsurface
 						 Fresnel term -- this will be less true for higher 
-						 rougness values. To be safe, clamp it to some 
+						 roughness values. To be safe, clamp it to some 
 						 reasonable range.
 					  2. Use this approximate term and a random number to
 					     choose between reflection and refraction component.

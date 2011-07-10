@@ -237,14 +237,17 @@ void Scene::configure() {
 			Float maxExtents = std::max(extents.x, extents.y);
 			Float distance = maxExtents/(2.0f * std::tan(45 * .5f * M_PI/180));
 
-			props.setTransform("toWorld", Transform::translate(Vector(center.x, center.y, aabb.min.z - distance)));
+			props.setTransform("toWorld", Transform::translate(Vector(center.x, 
+					center.y, aabb.min.z - distance)));
 			props.setFloat("fov", 45.0f);
 
-			m_camera = static_cast<Camera *> (PluginManager::getInstance()->createObject(MTS_CLASS(Camera), props));
+			m_camera = static_cast<Camera *> (PluginManager::getInstance()->
+					createObject(MTS_CLASS(Camera), props));
 			m_camera->configure();
 			m_sampler = m_camera->getSampler();
 		} else {
-			Log(EWarn, "Unable to set up a default camera -- does the scene contain anything at all?");
+			Log(EWarn, "Unable to set up a default camera -- does the scene "
+				"contain anything at all?");
 		}
 	}
 

@@ -32,7 +32,7 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of 
  *             refraction, also known as absorption coefficient.
  *             \default{based on the value of \texttt{material}}}
- *     \lastparameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{
+ *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{
  *        Optional factor used to modulate the reflectance component
  *        \default{1.0}}
  * }

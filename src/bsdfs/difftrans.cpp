@@ -25,7 +25,7 @@ MTS_NAMESPACE_BEGIN
 /*! \plugin{difftrans}{Diffuse transmitter}
  *
  * \parameters{
- *     \lastparameter{transmittance}{\Spectrum\Or\Texture}{
+ *     \parameter{transmittance}{\Spectrum\Or\Texture}{
  *       Specifies the diffuse transmittance of the material
  *       \default{0.5}
  *     }

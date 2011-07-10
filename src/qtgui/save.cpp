@@ -165,7 +165,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 		   u = ctx->up;
 	Point t, p = sceneCamera->getInverseViewTransform()(Point(0,0,0));
 
-	if (sceneCamera->getViewTransform().det3x3() > 0) {
+	if (sceneCamera->getViewTransform().det3x3() < 0) {
 		QDomElement scale = doc.createElement("scale");
 		scale.setAttribute("x", "-1");
 		cameraTransform.insertBefore(scale, lookAt);

@@ -31,7 +31,7 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the specular component\default{1.0}}
- *     \lastparameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
+ *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the diffuse component\default{0.5}}
  * }
  *

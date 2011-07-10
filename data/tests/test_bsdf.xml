@@ -5,6 +5,9 @@
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
 
+	<!-- Test the rough diffuse model -->
+	<bsdf type="roughdiffuse"/>
+
 	<!-- Test the diffuse transmission model -->
 	<bsdf type="difftrans"/>
 

@@ -308,6 +308,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 				case 4: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, 1), Vector(0, 1, 0)).inverse(); break;
 				case 5: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, -1), Vector(0, 1, 0)).inverse(); break;
 			}
+			lightViewTrafo = Transform::scale(Vector(-1, 1, 1)) * lightViewTrafo;
 			const Matrix4x4 &viewMatrix = lightViewTrafo.getMatrix();
 			m_shadowProgram->setParameter(m_shadowProgramParam_cubeMapTransform[i], lightProjTrafo * lightViewTrafo);
 			m_shadowProgram->setParameter(m_shadowProgramParam_depthVec[i], Vector4(
@@ -331,6 +332,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 				case 4: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, 1), Vector(0, 1, 0)).inverse(); break;
 				case 5: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, -1), Vector(0, 1, 0)).inverse(); break;
 			}
+			lightViewTrafo = Transform::scale(Vector(-1, 1, 1)) * lightViewTrafo;
 			const Matrix4x4 &viewMatrix = lightViewTrafo.getMatrix();
 
 			m_altShadowProgram->setParameter(m_altShadowProgramParam_cubeMapTransform, lightProjTrafo * lightViewTrafo);
@@ -367,13 +369,6 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 		m_renderer->setColor(Spectrum(0.0f));
 		return;
 	}
-
-#if 0
-	if (bsdfShader->getFlags() & Shader::ETransparent) {
-		m_renderer->setColor(Spectrum(1.0f), 0.3f);
-		return;
-	}
-#endif
 
 	bool anisotropic = bsdf->getType() & BSDF::EAnisotropic;
 
@@ -495,6 +490,8 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 			<< "float sinTheta2(vec3 v) { return 1.0-v.z*v.z; }" << endl
 			<< "float sinTheta(vec3 v) { float st2 = sinTheta2(v); if (st2 <= 0) return 0.0; else return sqrt(sinTheta2(v)); }" << endl
 			<< "float tanTheta(vec3 v) { return sinTheta(v)/cosTheta(v); }" << endl
+			<< "float sinPhi(vec3 v) { return v.y/sinTheta(v); }" << endl
+			<< "float cosPhi(vec3 v) { return v.x/sinTheta(v); }" << endl
 			<< endl;
 
 		std::string vplEvalName, bsdfEvalName, lumEvalName;

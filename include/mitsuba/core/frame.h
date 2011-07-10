@@ -112,6 +112,38 @@ struct Frame {
 		return 1.0f - v.z * v.z;
 	}
 
+	/** \brief Assuming that the given direction is in the local coordinate 
+	 * system, return the sine of the phi parameter in spherical coordinates */
+	inline static Float sinPhi(const Vector &v) {
+		Float sinTheta = Frame::sinTheta(v);
+		if (sinTheta == 0.0f)
+			return 1.0f;
+		return clamp(v.y / sinTheta, -1.0f, 1.0f);
+	}
+
+	/** \brief Assuming that the given direction is in the local coordinate 
+	 * system, return the cosine of the phi parameter in spherical coordinates */
+	inline static Float cosPhi(const Vector &v) {
+		Float sinTheta = Frame::sinTheta(v);
+		if (sinTheta == 0.0f)
+			return 1.0f;
+		return clamp(v.x / sinTheta, -1.0f, 1.0f);
+	}
+
+	/** \brief Assuming that the given direction is in the local coordinate
+	 * system, return the squared sine of the phi parameter in  spherical
+	 * coordinates */
+	inline static Float sinPhiSquared(const Vector &v) {
+		return clamp(v.y * v.y / sinTheta2(v), 0.0f, 1.0f);
+	}
+
+	/** \brief Assuming that the given direction is in the local coordinate
+	 * system, return the squared cosine of the phi parameter in  spherical
+	 * coordinates */
+	inline static Float cosPhiSquared(const Vector &v) {
+		return clamp(v.x * v.x / sinTheta2(v), 0.0f, 1.0f);
+	}
+
 	/// Return a string representation of this frame
 	inline std::string toString() const {
 		std::ostringstream oss;

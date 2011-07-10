@@ -675,7 +675,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			if (coords.x < 0 || coords.x > M_PI) 
 				m_context->up *= -1;
 
-			if (camera->getViewTransform().det3x3() < 0) 
+			if (camera->getViewTransform().det3x3() > 0) 
 				camera->setInverseViewTransform(Transform::lookAt(p, target, m_context->up));
 			else
 				camera->setInverseViewTransform(
@@ -693,7 +693,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 					* camera->getViewTransform();
 			d = trafo.inverse()(Vector(0,0,1));
 
-			if (camera->getViewTransform().det3x3() < 0) 
+			if (camera->getViewTransform().det3x3() > 0) 
 				camera->setInverseViewTransform(Transform::lookAt(p, p+d, up));
 			else
 				camera->setInverseViewTransform(
@@ -713,7 +713,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			Float roll = rel.x() * m_mouseSensitivity * .02f;
 			Float fovChange = rel.y() * m_mouseSensitivity * .03f;
 
-			if (camera->getViewTransform().det3x3() < 0) {
+			if (camera->getViewTransform().det3x3() > 0) {
 				m_context->up = Transform::rotate(d, roll)(up);
 				camera->setInverseViewTransform(Transform::lookAt(p, p+d, m_context->up));
 			} else {
@@ -743,7 +743,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			Vector d = Vector(camera->getImagePlaneNormal());
 			p = p + (oldFocusDepth - focusDepth) * d;
 
-			if (camera->getViewTransform().det3x3() < 0) 
+			if (camera->getViewTransform().det3x3() > 0) 
 				camera->setInverseViewTransform(Transform::lookAt(p, p+d, up));
 			else
 				camera->setInverseViewTransform(
@@ -809,8 +809,13 @@ void GLWidget::wheelEvent(QWheelEvent *event) {
 		Vector d = Vector(camera->getImagePlaneNormal());
 		Point o = camera->getPosition() + (oldFocusDepth - focusDepth) * d;
 
-		camera->setInverseViewTransform(
-				Transform::lookAt(o, o+d, up));
+		if (camera->getViewTransform().det3x3() > 0) 
+			camera->setInverseViewTransform(Transform::lookAt(o, o+d, up));
+		else
+			camera->setInverseViewTransform(
+				Transform::lookAt(o, o+d, up) *
+				Transform::scale(Vector(-1,1,1))
+			);
 
 		m_wheelTimer->reset();
 		if (!m_movementTimer->isActive())

@@ -1103,7 +1103,7 @@ void loadCamera(ColladaContext &ctx, Transform transform, domCamera &camera) {
 	int xres=768;
 
 	// Cameras in Mitsuba point along the positive Z axis (COLLADA: neg. Z)
-	transform = transform * Transform::scale(Vector(1,1,-1));
+	transform = transform * Transform::scale(Vector(1, 1, -1));
 
 	std::ostringstream matrix;
 	for (int i=0; i<4; ++i)
@@ -1130,14 +1130,8 @@ void loadCamera(ColladaContext &ctx, Transform transform, domCamera &camera) {
 			xres = ctx.cvt->m_xres;
 			aspect = (Float) ctx.cvt->m_xres / (Float) ctx.cvt->m_yres;
 		} else {
-			if (persp->getAspect_ratio().cast() != 0) {
+			if (persp->getAspect_ratio().cast() != 0)
 				aspect = (Float) persp->getAspect_ratio()->getValue();
-				if (std::abs(aspect-0.1) < Epsilon) {
-					SLog(EWarn, "Found the suspicious aspect ratio \"0.1\", which is likely due to a bug in Blender 2.5"
-						" - setting to 1.0. Please use the \"-r\" parameter to override the resolution.");
-					aspect = 1.0f;
-				}
-			}
 		}
 		ctx.os << "\t<camera id=\"" << identifier << "\" type=\"perspective\">" << endl;
 		if (persp->getXfov().cast()) {

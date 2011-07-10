@@ -62,7 +62,7 @@ MTS_NAMESPACE_BEGIN
  *         \default{0.1}. 
  *     }
  *     \parameter{alphaU, alphaV}{\Float\Or\Texture}{
- *         Specifies the anisotropic rougness values along the tangent and 
+ *         Specifies the anisotropic roughness values along the tangent and 
  *         bitangent directions. These parameter are only valid when 
  *         \texttt{distribution=as}. \default{0.1}. 
  *     }
@@ -73,7 +73,7 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of 
  *             refraction, also known as absorption coefficient.
  *             \default{based on the value of \texttt{material}}}
- *     \lastparameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
+ *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the reflectance component\default{1.0}}
  * }
  * This plugin implements a realistic microfacet scattering model for rendering
@@ -117,7 +117,7 @@ MTS_NAMESPACE_BEGIN
  * a value of $\alpha=0.001-0.01$ corresponds to a material 
  * with slight imperfections on an
  * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
- * and $\alpha=0.3-0.5$ is \emph{extremely} rough (e.g. an etched or ground
+ * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
  * finish).
  * \vspace{-2mm}
  * \subsubsection*{Techical details}\vspace{-2mm}

@@ -25,17 +25,20 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{diffuse}{Smooth diffuse material}
  * \order{1}
  * \parameters{
- *     \lastparameter{reflectance}{\Spectrum\Or\Texture}{
- *       Specifies the diffuse reflectance / albedo of the material \linebreak(Default: 0.5)
+ *     \parameter{reflectance}{\Spectrum\Or\Texture}{
+ *       Specifies the diffuse albedo of the 
+ *       material \default{0.5}
  *     }
  * }
  *
  * \renderings{
- *     \rendering{Homogeneous reflectance, see \lstref{diffuse-uniform}}{bsdf_diffuse_plain}
- *     \rendering{Textured reflectance, see \lstref{diffuse-textured}}{bsdf_diffuse_textured}
+ *     \rendering{Homogeneous reflectance, see \lstref{diffuse-uniform}}
+ *         {bsdf_diffuse_plain}
+ *     \rendering{Textured reflectance, see \lstref{diffuse-textured}}
+ *         {bsdf_diffuse_textured}
  * }
  *
- * The smooth diffuse material (sometimes referred to as ``Lambertian'')
+ * The smooth diffuse material (also referred to as ``Lambertian'')
  * represents an ideally diffuse material with a user-specified amount of 
  * reflectance. Any received illumination is scattered so that the surface 
  * looks the same independently of the direction of observation.
@@ -51,13 +54,15 @@ MTS_NAMESPACE_BEGIN
  * consider using the \pluginref{twosided} BRDF adapter plugin.
  * \vspace{4mm}
  *
- * \begin{xml}[caption={A diffuse material, whose reflectance is specified as an sRGB color}, label=lst:diffuse-uniform]
+ * \begin{xml}[caption={A diffuse material, whose reflectance is specified 
+ *     as an sRGB color}, label=lst:diffuse-uniform]
  * <bsdf type="diffuse">
  *     <srgb name="reflectance" value="#6d7185"/>
  * </bsdf>
  * \end{xml}
  *
- * \begin{xml}[caption=A diffuse material with a texture map, label=lst:diffuse-textured]
+ * \begin{xml}[caption=A diffuse material with a texture map,
+ *     label=lst:diffuse-textured]
  * <bsdf type="diffuse">
  *     <texture type="bitmap" name="reflectance">
  *         <string name="filename" value="wood.jpg"/>
