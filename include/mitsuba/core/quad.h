@@ -181,7 +181,7 @@ public:
 	 * results of the evaluation into the \c out array using \c fDim entries.
 	 */
 	EResult integrate(const Integrand &f, const Float *min, const Float *max,
-			Float *result, Float *error, size_t &evals) const;
+			Float *result, Float *error, size_t *evals = NULL) const;
 
 	/**
 	 * \brief Integrate the function \c f over the rectangular domain 
@@ -211,7 +211,7 @@ public:
 	 * several hundred.
 	 */
 	EResult integrateVectorized(const VectorizedIntegrand &f, const Float *min, 
-		const Float *max, Float *result, Float *error, size_t &evals) const;
+		const Float *max, Float *result, Float *error, size_t *evals = NULL) const;
 protected:
 	size_t m_fdim, m_dim, m_maxEvals;
 	Float m_absError, m_relError;

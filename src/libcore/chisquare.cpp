@@ -147,11 +147,10 @@ m_table[thetaBin * m_phiBins + phiBin] += boost::get<1>(sample);
 			min[1] = j * factor.y;
 			max[1] = (j+1) * factor.y;
 			Float result, error;
-			size_t evals;
 
 			integrator.integrateVectorized(
 				boost::bind(&ChiSquare::integrand, pdfFn, _1, _2, _3),
-				min, max, &result, &error, evals
+				min, max, &result, &error
 			);
 
 			integral += result;

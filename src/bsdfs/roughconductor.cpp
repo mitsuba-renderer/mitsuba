@@ -24,15 +24,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-/* Suggestion by Bruce Walter: sample the model using a slightly 
-   wider density function. This in practice limits the importance 
-   weights to values <= 4. 
-
-   Turned off by default, since it seems to increase the variance
-   of the reflection component.
-*/
-#define ENLARGE_LOBE_TRICK 0
-
 /*!\plugin{roughconductor}{Rough conductor material}
  * \order{6}
  * \parameters{
@@ -45,7 +36,6 @@ MTS_NAMESPACE_BEGIN
  *           \item \code{ggx}: New distribution proposed by
  *              Walter et al. \cite{Walter07Microfacet}, which is meant to better handle 
  *              the long tails observed in measurements of ground surfaces. 
- *              Renderings with this distribution may converge slowly.
  *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
  *              Due to the underlying microfacet theory, 
  *              the use of this distribution here leads to more realistic 
@@ -289,12 +279,6 @@ public:
 			  alphaV = m_distribution.transformRoughness( 
 					m_alphaV->getValue(bRec.its).average());
 
-#if ENLARGE_LOBE_TRICK == 1
-		Float factor = (1.2f - 0.2f * std::sqrt(
-			std::abs(Frame::cosTheta(bRec.wi))));
-		alphaU *= factor; alphaV *= factor;
-#endif
-
 		return m_distribution.pdf(H, alphaU, alphaV)
 			/ (4 * absDot(bRec.wo, H));
 	}
@@ -311,19 +295,8 @@ public:
 			  alphaV = m_distribution.transformRoughness( 
 					m_alphaV->getValue(bRec.its).average());
 
-#if ENLARGE_LOBE_TRICK == 1
-		Float factor = (1.2f - 0.2f * std::sqrt(
-			std::abs(Frame::cosTheta(bRec.wi))));
-		Float sampleAlphaU = alphaU * factor,
-			  sampleAlphaV = alphaV * factor;
-#else
-		Float sampleAlphaU = alphaU,
-			  sampleAlphaV = alphaV;
-#endif
-
 		/* Sample M, the microsurface normal */
-		const Normal m = m_distribution.sample(sample,
-				sampleAlphaU, sampleAlphaV);
+		const Normal m = m_distribution.sample(sample, alphaU, alphaV);
 
 		/* Perfect specular reflection based on the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
@@ -337,11 +310,10 @@ public:
 		const Spectrum F = fresnelConductor(Frame::cosTheta(bRec.wi),
 				m_eta, m_k);
 
-		Float numerator = m_distribution.eval(m, alphaU, alphaV)
-			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
+		Float numerator = m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
 			* dot(bRec.wi, m);
 
-		Float denominator = m_distribution.pdf(m, sampleAlphaU, sampleAlphaV)
+		Float denominator = Frame::cosTheta(m)
 			* Frame::cosTheta(bRec.wi);
 
 		return m_specularReflectance->getValue(bRec.its) * F
@@ -360,19 +332,8 @@ public:
 			  alphaV = m_distribution.transformRoughness( 
 					m_alphaV->getValue(bRec.its).average());
 
-#if ENLARGE_LOBE_TRICK == 1
-		Float factor = (1.2f - 0.2f * std::sqrt(
-			std::abs(Frame::cosTheta(bRec.wi))));
-		Float sampleAlphaU = alphaU * factor,
-			  sampleAlphaV = alphaV * factor;
-#else
-		Float sampleAlphaU = alphaU,
-			  sampleAlphaV = alphaV;
-#endif
-
 		/* Sample M, the microsurface normal */
-		const Normal m = m_distribution.sample(sample,
-				sampleAlphaU, sampleAlphaV);
+		const Normal m = m_distribution.sample(sample, alphaU, alphaV);
 
 		/* Perfect specular reflection based on the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
@@ -512,10 +473,10 @@ public:
 			<< "    if ((dot(wi, m) * cosTheta(wi)) <= 0 || " << endl
 			<< "        (dot(wo, m) * cosTheta(wo)) <= 0)" << endl
 			<< "        return 0.0;" << endl
-			<< "    float nDotM = cosTheta(m), tmp = 1.0 / dot(wo, m);" << endl
+			<< "    float nDotM = cosTheta(m);" << endl
 			<< "    return min(1.0, min(" << endl
-			<< "        abs(2 * nDotM * cosTheta(wo) * tmp)," << endl
-			<< "        abs(2 * nDotM * cosTheta(wi) * tmp)));" << endl
+			<< "        abs(2 * nDotM * cosTheta(wo) / dot(wo, m))," << endl
+			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_schlick(vec3 wi) {" << endl

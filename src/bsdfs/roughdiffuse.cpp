@@ -51,7 +51,7 @@ MTS_NAMESPACE_BEGIN
  *   reflectance at grazing angles, as well as an overall reduced contrast.}\vspace{3mm}
  * }
  * 
- * This reflectance model describes the interaction of light with a rough 
+ * This reflectance model describes the interaction of light with a \emph{rough} 
  * diffuse material, such as plaster, sand, clay, or concrete.
  * The underlying theory was developed by Oren and Nayar 
  * \cite{Oren1994Generalization}, who model the microscopic surface structure as 

@@ -21,7 +21,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{coating}{Smooth coating}
+/*! \plugin{coating}{Smooth dieletric coating}
  *
  * \parameters{
  *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}

@@ -19,8 +19,11 @@
 #if !defined(__MICROFACET_H)
 #define __MICROFACET_H
 
-#include <mitsuba/mitsuba.h>
+#include <mitsuba/core/quad.h>
+#include <mitsuba/core/timer.h>
+#include <mitsuba/core/spline.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/bind.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -51,7 +54,7 @@ public:
 	 * \brief Create a microfacet distribution of the specified name
 	 * (ggx/phong/beckmann/as)
 	 */
-	MicrofacetDistribution(const std::string &name) {
+	MicrofacetDistribution(const std::string &name) : m_type(EBeckmann) {
 		std::string distr = boost::to_lower_copy(name);
 
 		if (distr == "beckmann")
@@ -70,6 +73,11 @@ public:
 	/// Return the distribution type
 	inline EType getType() const { return m_type; }
 
+	/// Is this an anisotropic microfacet distribution?
+	bool isAnisotropic() const {
+		return m_type == EAshikhminShirley;
+	}
+
 	/**
 	 * \brief Convert the roughness values so that they behave similarly to the
 	 * Beckmann distribution.
@@ -82,13 +90,23 @@ public:
 			value = 2 / (value * value) - 2;
 		return std::max(value, (Float) 1e-4f);
 	}
+	
+	/**
+	 * \brief Implements the microfacet distribution function D
+	 *
+	 * \param m The microsurface normal
+	 * \param alpha  The surface roughness
+	 */
+	inline Float eval(const Vector &m, Float alpha) const {
+		return eval(m, alpha, alpha);
+	}
 
 	/**
 	 * \brief Implements the microfacet distribution function D
 	 *
 	 * \param m The microsurface normal
-	 * \param alphaU  Surface roughness in the tangent directoin
-	 * \param alphaV  Surface roughness in the bitangent direction
+	 * \param alphaU  The surface roughness in the tangent direction
+	 * \param alphaV  The surface roughness in the bitangent direction
 	 */
 	Float eval(const Vector &m, Float alphaU, Float alphaV) const {
 		if (Frame::cosTheta(m) <= 0)
@@ -149,7 +167,20 @@ public:
 
 	/**
 	 * \brief Returns the density function associated with
-	 * the \ref{sample} function.
+	 * the \ref sample() function.
+	 * \param m The microsurface normal
+	 * \param alpha  The surface roughness 
+	 */
+	inline Float pdf(const Vector &m, Float alpha) const {
+		return pdf(m, alpha, alpha);
+	}
+
+	/**
+	 * \brief Returns the density function associated with
+	 * the \ref sample() function.
+	 * \param m The microsurface normal
+	 * \param alphaU  The surface roughness in the tangent direction
+	 * \param alphaV  The surface roughness in the bitangent direction
 	 */
 	Float pdf(const Vector &m, Float alphaU, Float alphaV) const {
 		/* Usually, this is just D(m) * cos(theta_M) */
@@ -193,8 +224,18 @@ public:
 	 * \brief Draw a sample from the microsurface normal distribution
 	 *
 	 * \param sample  A uniformly distributed 2D sample
-	 * \param alphaU  Surface roughness in the tangent directoin
-	 * \param alphaV  Surface roughness in the bitangent direction
+	 * \param alpha  The surface roughness 
+	 */
+	inline Normal sample(const Point2 &sample, Float alpha) const {
+		return MicrofacetDistribution::sample(sample, alpha, alpha);
+	}
+
+	/**
+	 * \brief Draw a sample from the microsurface normal distribution
+	 *
+	 * \param sample  A uniformly distributed 2D sample
+	 * \param alphaU  The surface roughness in the tangent direction
+	 * \param alphaV  The surface roughness in the bitangent direction
 	 */
 	Normal sample(const Point2 &sample, Float alphaU, Float alphaV) const {
 		/* The azimuthal component is always selected 
@@ -251,6 +292,32 @@ public:
 		}
 	
 		return Normal(sphericalDirection(thetaM, phiM));
+	}
+
+	/**
+	 * \brief Draw a sample from an isotropic microsurface normal
+	 * distribution and return the magnitude of its 'z' component.
+	 *
+	 * \param sample  A uniformly distributed number on [0,1]
+	 * \param alphaU  The surface roughness 
+	 */
+	Float sampleIsotropic(Float sample, Float alpha) const {
+		switch (m_type) {
+			case EBeckmann: 
+				return 1.0f / std::sqrt(1 + 
+					std::abs(-alpha*alpha * std::log(1.0f - sample)));
+	
+			case EGGX: 
+				return 1.0f / std::sqrt(1 + 
+					alpha * alpha * sample / (1.0f - sample));
+
+			case EPhong:
+				return std::pow(sample, (Float) 1 / (alpha + 2));
+
+			default: 
+				SLog(EError, "Invalid distribution function!");
+				return 0.0f;
+		}
 	}
 	
 	/**
@@ -316,6 +383,20 @@ public:
 	 * \param m The microsurface normal
 	 * \param alpha The surface roughness
 	 */
+	inline Float G(const Vector &wi, const Vector &wo, const Vector &m, Float alpha) const {
+		return G(wi, wo, m, alpha, alpha);
+	}
+
+	/**
+	 * \brief Shadow-masking function for each of the supported 
+	 * microfacet distributions
+	 *
+	 * \param wi The incident direction
+	 * \param wo The exitant direction
+	 * \param m The microsurface normal
+	 * \param alphaU  The surface roughness in the tangent direction
+	 * \param alphaV  The surface roughness in the bitangent direction
+	 */
 	Float G(const Vector &wi, const Vector &wo, const Vector &m, Float alphaU, Float alphaV) const {
 		if (m_type != EAshikhminShirley) {
 			return smithG1(wi, m, alphaU)
@@ -330,12 +411,58 @@ public:
 			const Float nDotM  = Frame::cosTheta(m),
 						nDotWo = Frame::cosTheta(wo),
 						nDotWi = Frame::cosTheta(wi),
-						woDotM = dot(wo, m);
+						woDotM = dot(wo, m),
+						wiDotM = dot(wi, m);
 
 			return std::min((Float) 1, 
 				std::min(std::abs(2 * nDotM * nDotWo / woDotM),
-						 std::abs(2 * nDotM * nDotWi / woDotM)));
+						 std::abs(2 * nDotM * nDotWi / wiDotM)));
 		}
+	}
+
+	/**
+	 * \brief Precompute the aggregate Fresnel transmittance through
+	 * a rough interface
+	 *
+	 * This function efficiently computes the integral of 
+	 *      \int_{S^2} D(m) * (1 - Fr(m<->wi)) dm
+	 * for incident directions 'wi' with a range of different inclinations
+	 * (where Fr denotes the fresnel reflectance). It returns a cubic spline 
+	 * interpolation parameterized by the cosine of the angle between 'wi' 
+	 * and the (macro-) surface normal.
+	 */
+	CubicSpline *getRoughTransmittance(Float extIOR, Float intIOR, Float alpha, size_t resolution) const {
+		if (isAnisotropic())
+			SLog(EError, "MicrofacetDistribution::getRoughTransmission(): only "
+				"supports isotropic distributions!");
+
+		NDIntegrator integrator(1, 2, 5000, 0, 1e-5f);
+		CubicSpline *spline = new CubicSpline(resolution);
+		size_t nEvals, nEvalsTotal = 0;
+		ref<Timer> timer = new Timer();
+
+		Float stepSize = (1.0f-2*Epsilon)/(resolution-1);
+		for (size_t i=0; i<resolution; ++i) {
+			Float z = stepSize * i + Epsilon;
+			Vector wi(std::sqrt(std::max((Float) 0, 1-z*z)), 0, z);
+			Float min[2] = {0, 0}, max[2] = {1, 1},
+				  integral = 0, error = 0;
+
+			integrator.integrateVectorized(
+				boost::bind(&MicrofacetDistribution::integrand, this,
+					wi, extIOR, intIOR, alpha, _1, _2, _3),
+				min, max, &integral, &error, &nEvals
+			);
+
+			spline->append(z, 1-integral);
+
+			nEvalsTotal += nEvals;
+		}
+		SLog(EInfo, "Created a " SIZE_T_FMT "-node cubic spline approximation to the rough Frensel "
+				"transmittance (integration took %i ms and " SIZE_T_FMT " function evaluations)",
+				resolution, timer->getMilliseconds(), nEvalsTotal);
+		spline->build();
+		return spline;
 	}
 
 	std::string toString() const {
@@ -349,7 +476,26 @@ public:
 				return "";
 		}
 	}
-private:
+protected:
+	/// Integrand helper function called by \ref getRoughTransmission
+	void integrand(const Vector &wi, Float extIOR, Float intIOR, Float alpha,
+			size_t nPts, const Float *in, Float *out) const {
+		for (int i=0; i<(int) nPts; ++i) {
+			Normal m = sample(Point2(in[2*i], in[2*i+1]), alpha);
+			Vector wo = 2 * dot(wi, m) * Vector(m) - wi;
+			if (Frame::cosTheta(wi) <= 0 || Frame::cosTheta(wo) <= 0) {
+				out[i] = 0;
+				continue;
+			}
+
+			/* Calculate the specular reflection component */
+			out[i] = std::abs(fresnel(dot(wi, m), extIOR, intIOR)
+				* G(wi, wo, m, alpha) * dot(wi, m) /
+				  (Frame::cosTheta(wi) * Frame::cosTheta(m)));
+		}
+	}
+
+protected:
 	EType m_type;
 };
 

@@ -1148,17 +1148,25 @@ NDIntegrator::NDIntegrator(size_t fDim, size_t dim,
   m_relError(relError) { }
 
 NDIntegrator::EResult NDIntegrator::integrate(const Integrand &f, const Float *min, 
-		const Float *max, Float *result, Float *error, size_t &evals) const {
+		const Float *max, Float *result, Float *error, size_t *_evals) const {
 	VectorizationAdapter adapter(f, m_fdim, m_dim);
-	return mitsuba::integrate((unsigned int) m_fdim, boost::bind(
+	size_t evals = 0;
+	EResult retval = mitsuba::integrate((unsigned int) m_fdim, boost::bind(
 		&VectorizationAdapter::f, &adapter, _1, _2, _3), (unsigned int) m_dim,
 		min, max, m_maxEvals, m_absError, m_relError, result, error, evals, false);
+	if (_evals)
+		*_evals = evals;
+	return retval;
 }
 
 NDIntegrator::EResult NDIntegrator::integrateVectorized(const VectorizedIntegrand &f, const Float *min, 
-		const Float *max, Float *result, Float *error, size_t &evals) const {
-	return mitsuba::integrate((unsigned int) m_fdim, f, (unsigned int) m_dim,
+		const Float *max, Float *result, Float *error, size_t *_evals) const {
+	size_t evals = 0;
+	EResult retval = mitsuba::integrate((unsigned int) m_fdim, f, (unsigned int) m_dim,
 		min, max, m_maxEvals, m_absError, m_relError, result, error, evals, true);
+	if (_evals)
+		*_evals = evals;
+	return retval;
 }
 
 MTS_NAMESPACE_END

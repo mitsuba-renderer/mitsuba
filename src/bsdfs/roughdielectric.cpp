@@ -426,9 +426,9 @@ public:
 			   following seems confusing */
 			Float F;
 			if (bRec.sampler) {
-				/* We have access to extra random numbers, hence
-				   the exact Fresnel term with respect to the
-				   microfacet normal is sampled */
+				/* We have access to extra random numbers and are
+				   thus able to sample the exact Fresnel term 
+				   with respect to the microfacet normal */
 				F = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
 			} else {
 				/* Only a simple 2D sample is given, and hence the

@@ -2,6 +2,13 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
+	<!-- Test the rough plastic model with the 
+		 Beckmann microfacet distribution -->
+	<bsdf type="roughplastic">
+		<string name="distribution" value="beckmann"/>
+		<float name="alpha" value=".3"/>
+	</bsdf>
+
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
 
