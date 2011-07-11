@@ -6,7 +6,7 @@
 		 Beckmann microfacet distribution -->
 	<bsdf type="roughplastic">
 		<string name="distribution" value="beckmann"/>
-		<float name="alpha" value=".3"/>
+		<float name="alpha" value=".7"/>
 	</bsdf>
 
 	<!-- Test the smooth diffuse model -->

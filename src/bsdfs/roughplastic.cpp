@@ -24,6 +24,8 @@
 
 MTS_NAMESPACE_BEGIN
 
+#define SPLINE_PRECOMP_NODES 200
+
 /*!\plugin{roughplastic}{Rough plastic material}
  * \order{8}
  * \parameters{
@@ -44,7 +46,7 @@ MTS_NAMESPACE_BEGIN
  *              \vspace{-4mm}
  *       \end{enumerate}
  *     }
- *     \parameter{alpha}{\Float\Or\Texture}{
+ *     \parameter{alpha}{\Float}{
  *         Specifies the roughness of the unresolved surface microgeometry. 
  *         When the Beckmann distribution is used, this parameter is equal to the 
  *         \emph{root mean square} (RMS) slope of the microfacets. 
@@ -91,7 +93,7 @@ public:
 			Log(EError, "The 'roughplastic' plugin does not support "
 				"anisotropic microfacet distributions!");
 
-		m_alpha = new ConstantFloatTexture(
+		m_alpha = m_distribution.transformRoughness(
 			props.getFloat("alpha", 0.1f));
 
 		m_usesRayDifferentials = false;
@@ -102,15 +104,15 @@ public:
 		m_distribution = MicrofacetDistribution(
 			(MicrofacetDistribution::EType) stream->readUInt()
 		);
-		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_roughTransmittance = static_cast<CubicSpline *>(manager->getInstance(stream));
+		m_diffuseProb = static_cast<CubicSpline *>(manager->getInstance(stream));
+		m_alpha = stream->readFloat();
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
 
 		m_usesRayDifferentials = 
-			m_alpha->usesRayDifferentials() ||
 			m_specularReflectance->usesRayDifferentials() ||
 			m_diffuseReflectance->usesRayDifferentials();
 
@@ -119,8 +121,8 @@ public:
 
 	void configure() {
 		m_components.clear();
-		m_components.push_back(EGlossyReflection | EFrontSide);
-		m_components.push_back(EDiffuseReflection | EFrontSide);
+		m_components.push_back(EGlossyReflection | ECanUseSampler | EFrontSide);
+		m_components.push_back(EDiffuseReflection | ECanUseSampler | EFrontSide);
 
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
@@ -128,10 +130,22 @@ public:
 		m_diffuseReflectance = ensureEnergyConservation(
 			m_diffuseReflectance, "diffuseReflectance", 1.0f);
 
-		if (m_roughTransmittance == NULL) {
-			Float alpha = m_distribution.transformRoughness(m_alpha->getValue(Intersection()).average());
-			m_roughTransmittance = m_distribution.computeRoughTransmittance(m_extIOR, m_intIOR, alpha, 200);
-		}
+		/* Compute weights that further steer samples towards
+		   the specular or diffuse components */
+		Float dAvg = m_diffuseReflectance->getAverage().getLuminance(),
+			  sAvg = m_specularReflectance->getAverage().getLuminance();
+		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
+
+		/* Precompute the rough transmittance through the interface */
+		m_roughTransmittance = m_distribution.computeRoughTransmittance(
+				m_extIOR, m_intIOR, m_alpha, SPLINE_PRECOMP_NODES);
+
+		/* Precompute a spline that specifies the probability of
+		   sampling the diffuse component for different angles
+		   of incidence. */
+		m_diffuseProb = m_distribution.computeTransmissionProbability(
+				m_extIOR, m_intIOR, m_alpha, m_specularSamplingWeight,
+				SPLINE_PRECOMP_NODES);
 
 		BSDF::configure();
 	}
@@ -157,21 +171,17 @@ public:
 	
 		Spectrum result(0.0f);
 		if (sampleSpecular) {
-			/* Evaluate the roughness */
-			Float alpha = m_distribution.transformRoughness( 
-						m_alpha->getValue(bRec.its).average());
-
 			/* Calculate the reflection half-vector */
 			const Vector H = normalize(bRec.wo+bRec.wi);
 
 			/* Evaluate the microsurface normal distribution */
-			const Float D = m_distribution.eval(H, alpha);
+			const Float D = m_distribution.eval(H, m_alpha);
 
 			/* Fresnel term */
 			const Float F = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
 
 			/* Smith's shadow-masking function */
-			const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alpha);
+			const Float G = m_distribution.G(bRec.wi, bRec.wo, H, m_alpha);
 
 			/* Calculate the specular reflection component */
 			Float value = F * D * G / 
@@ -199,34 +209,50 @@ public:
 			Frame::cosTheta(bRec.wo) <= 0 ||
 			(!sampleSpecular && !sampleDiffuse))
 			return 0.0f;
-	
-		/* Calculate the reflection half-vector */
-		Vector H = normalize(bRec.wo+bRec.wi);
 
-		Float roughTransmittance = 0.0f;
-		if (sampleDiffuse && sampleSpecular)
-			roughTransmittance = m_roughTransmittance->eval(
-				Frame::cosTheta(bRec.wi));
+		/* Calculate the reflection half-vector */
+		const Vector H = normalize(bRec.wo+bRec.wi);
+
+		Float probSpecular, probDiffuse;
+		if (sampleSpecular && sampleDiffuse) {
+			if (bRec.sampler && false) {
+				/* Fancy sampling strategy */
+				probSpecular = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
+				
+				/* Reallocate samples */
+				probSpecular = (probSpecular*m_specularSamplingWeight) /
+					(probSpecular*m_specularSamplingWeight + 
+					(1-probSpecular) * (1-m_specularSamplingWeight));
+	
+				probDiffuse = m_diffuseProb->eval(Frame::cosTheta(bRec.wi));
+			} else {
+				/* Basic sampling strategy that only needs 2 random numbers */
+				probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
+
+				/* Reallocate samples */
+				probSpecular = (probSpecular*m_specularSamplingWeight) /
+					(probSpecular*m_specularSamplingWeight + 
+					(1-probSpecular) * (1-m_specularSamplingWeight));
+
+				probDiffuse = 1 - probSpecular;
+			}
+		} else {
+			probDiffuse = probSpecular = 1.0f;
+		}
 
 		Float result = 0.0f;
 		if (sampleSpecular) {
-			/* Evaluate the roughness */
-			Float alpha = m_distribution.transformRoughness( 
-						m_alpha->getValue(bRec.its).average());
-
 			/* Jacobian of the half-direction transform */
-			Float dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, H));
+			const Float dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, H));
 
 			/* Evaluate the microsurface normal distribution */
-			Float prob = m_distribution.pdf(H, alpha);
+			const Float prob = m_distribution.pdf(H, m_alpha);
 
-			result += prob * dwh_dwo *
-				(sampleDiffuse ? (1-roughTransmittance) : 1.0f);
+			result = prob * dwh_dwo * probSpecular;
 		}
 
 		if (sampleDiffuse) 
-			result += Frame::cosTheta(bRec.wo) * INV_PI *
-				(sampleSpecular ? roughTransmittance : 1.0f);
+			result += Frame::cosTheta(bRec.wo) * INV_PI * probDiffuse;
 
 		return result;
 	}
@@ -240,30 +266,57 @@ public:
 		if (Frame::cosTheta(bRec.wi) <= 0 || (!sampleSpecular && !sampleDiffuse))
 			return Spectrum(0.0f);
 
-		bool choseReflection = sampleSpecular;
 
+		bool choseSpecular = sampleSpecular;
+		Normal m;
 		Point2 sample(_sample);
+
 		if (sampleSpecular && sampleDiffuse) {
-			Float roughTransmittance = m_roughTransmittance->eval(
-				Frame::cosTheta(bRec.wi));
-			if (sample.x < roughTransmittance) {
-				sample.x /= roughTransmittance;
-				choseReflection = false;
+			if (bRec.sampler && false) {
+				/**
+				 * We have access to a sampler -- use a good sampling 
+				 * technique, which is somewhat wasteful in terms of
+				 * random numbers
+				 */
+				m = m_distribution.sample(sample, m_alpha);
+
+				Float probSpecular = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
+
+				/* Reallocate samples */
+				probSpecular = (probSpecular*m_specularSamplingWeight) /
+					(probSpecular*m_specularSamplingWeight + 
+					(1-probSpecular) * (1-m_specularSamplingWeight));
+
+				if (bRec.sampler->next1D() > probSpecular) {
+					choseSpecular = false;
+					sample = bRec.sampler->next2D();
+				}
 			} else {
-				sample.x = (sample.x - roughTransmittance)
-					/ (1 - roughTransmittance);
+				/**
+				 * Basic strategy -- use a clamped Fresnel coefficient 
+				 * wrt. the macro-surface normal to choose between 
+				 * diffuse and specular component. 
+				 */
+				Float probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
+
+				/* Reallocate samples */
+				probSpecular = (probSpecular*m_specularSamplingWeight) /
+					(probSpecular*m_specularSamplingWeight + 
+					(1-probSpecular) * (1-m_specularSamplingWeight));
+				
+				if (sample.x < probSpecular) {
+					sample.x /= probSpecular;
+					m = m_distribution.sample(sample, m_alpha);
+				} else {
+					sample.x = (sample.x - probSpecular) / (1 - probSpecular);
+					choseSpecular = false;
+				}
 			}
-		} 
+		} else if (choseSpecular) {
+			m = m_distribution.sample(sample, m_alpha);
+		}
 
-		if (choseReflection) {
-			/* Evaluate the roughness */
-			Float alpha = m_distribution.transformRoughness( 
-						m_alpha->getValue(bRec.its).average());
-
-			/* Sample M, the microsurface normal */
-			const Normal m = m_distribution.sample(sample, alpha);
-
-
+		if (choseSpecular) {
 			/* Perfect specular reflection based on the microsurface normal */
 			bRec.wo = reflect(bRec.wi, m);
 			bRec.sampledComponent = 0;
@@ -288,10 +341,7 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alpha") {
-			m_alpha = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_alpha->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
 			m_specularReflectance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
 		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "diffuseReflectance") {
@@ -316,10 +366,11 @@ public:
 		BSDF::serialize(stream, manager);
 
 		stream->writeUInt((uint32_t) m_distribution.getType());
-		manager->serialize(stream, m_alpha.get());
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_diffuseReflectance.get());
 		manager->serialize(stream, m_roughTransmittance.get());
+		manager->serialize(stream, m_diffuseProb.get());
+		stream->writeFloat(m_alpha);
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
 	}
@@ -329,9 +380,11 @@ public:
 		oss << "RoughPlastic[" << endl
 			<< "  name = \"" << getName() << "\"," << endl
 			<< "  distribution = " << m_distribution.toString() << "," << endl
-			<< "  alpha = " << indent(m_alpha->toString()) << "," << endl
+			<< "  alpha = " << m_alpha << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
+			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
+			<< "  diffuseSamplingWeight = " << (1-m_specularSamplingWeight) << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl
 			<< "  extIOR = " << m_extIOR << endl
 			<< "]";
@@ -344,10 +397,11 @@ public:
 private:
 	MicrofacetDistribution m_distribution;
 	ref<CubicSpline> m_roughTransmittance;
+	ref<CubicSpline> m_diffuseProb;
 	ref<Texture> m_diffuseReflectance;
 	ref<Texture> m_specularReflectance;
-	ref<Texture> m_alpha;
-	Float m_intIOR, m_extIOR;
+	Float m_alpha, m_intIOR, m_extIOR;
+	Float m_specularSamplingWeight;
 };
 
 /* Fake plastic shader -- it is really hopeless to visualize

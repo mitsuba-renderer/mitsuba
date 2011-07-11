@@ -44,7 +44,8 @@ public:
 		ref<Stream> is = new FileStream(m_path, FileStream::EReadOnly);
 		ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, is);
 
-		m_mipmap = MIPMap::fromBitmap(bitmap);
+		m_mipmap = MIPMap::fromBitmap(bitmap, MIPMap::ETrilinear,
+				MIPMap::ERepeat, 0.0f, Spectrum::EIlluminant);
 		m_average = m_mipmap->triangle(m_mipmap->getLevels()-1, 0, 0) * m_intensityScale;
 		m_type = EOnSurface;
 	}
@@ -60,7 +61,8 @@ public:
 		stream->copyTo(mStream, size);
 		mStream->setPos(0);
 		ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, mStream);
-		m_mipmap = MIPMap::fromBitmap(bitmap);
+		m_mipmap = MIPMap::fromBitmap(bitmap, MIPMap::ETrilinear,
+				MIPMap::ERepeat, 0.0f, Spectrum::EIlluminant);
 		m_average = m_mipmap->triangle(m_mipmap->getLevels()-1, 0, 0) * m_intensityScale;
 		m_surfaceArea = 4 * m_bsphere.radius * m_bsphere.radius * M_PI;
 		m_invSurfaceArea = 1/m_surfaceArea;
