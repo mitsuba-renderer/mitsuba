@@ -90,7 +90,7 @@ public:
 		);
 
 		if (m_distribution.isAnisotropic())
-			Log(EError, "The 'roughplastic' plugin does not support "
+			Log(EError, "The 'roughplastic' plugin currently does not support "
 				"anisotropic microfacet distributions!");
 
 		m_alpha = m_distribution.transformRoughness(
@@ -248,17 +248,19 @@ public:
 
 
 		bool choseSpecular = sampleSpecular;
-		Normal m;
 		Point2 sample(_sample);
 
+		Float probSpecular, probDiffuse;
 		if (sampleSpecular && sampleDiffuse) {
 			/* Find the probability of sampling the diffuse component */
-			Float probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
+			probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
 				(probSpecular*m_specularSamplingWeight + 
 				(1-probSpecular) * (1-m_specularSamplingWeight));
+
+			probDiffuse = 1 - probSpecular;
 
 			if (sample.x <= probSpecular) {
 				sample.x /= probSpecular;
@@ -270,7 +272,7 @@ public:
 
 		if (choseSpecular) {
 			/* Perfect specular reflection based on the microsurface normal */
-			m = m_distribution.sample(sample, m_alpha);
+			Normal m = m_distribution.sample(sample, m_alpha);
 			bRec.wo = reflect(bRec.wi, m);
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EGlossyReflection;
@@ -282,6 +284,7 @@ public:
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDiffuseReflection;
 			bRec.wo = squareToHemispherePSA(sample);
+			m = normalize(bRec.wo+bRec.wi);
 		}
 
 		/* Guard against numerical imprecisions */
@@ -291,18 +294,6 @@ public:
 			return Spectrum(0.0f);
 		else
 			return eval(bRec, ESolidAngle);
-	}
-
-	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
-			m_specularReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "diffuseReflectance") {
-			m_diffuseReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
-		} else {
-			BSDF::addChild(name, child);
-		}
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
@@ -325,6 +316,18 @@ public:
 		stream->writeFloat(m_alpha);
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
+	}
+
+	void addChild(const std::string &name, ConfigurableObject *child) {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
+			m_specularReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "diffuseReflectance") {
+			m_diffuseReflectance = static_cast<Texture *>(child);
+			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
+		} else {
+			BSDF::addChild(name, child);
+		}
 	}
 
 	std::string toString() const {
