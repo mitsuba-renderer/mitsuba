@@ -130,7 +130,7 @@ public:
 
 		if (m_roughTransmittance == NULL) {
 			Float alpha = m_distribution.transformRoughness(m_alpha->getValue(Intersection()).average());
-			m_roughTransmittance = m_distribution.getRoughTransmittance(m_extIOR, m_intIOR, alpha, 200);
+			m_roughTransmittance = m_distribution.computeRoughTransmittance(m_extIOR, m_intIOR, alpha, 200);
 		}
 
 		BSDF::configure();
