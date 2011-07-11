@@ -467,57 +467,6 @@ public:
 		return spline;
 	}
 
-	/**
-	 * \brief Compute a spline representation that gives the probability
-	 * of choosing a reflection event when importance sampling wrt. the
-	 * Fresnel coefficient between a sampled microsurface normal and the
-	 * incident direction.
-	 *
-	 * This function is currently used by the plugin 'roughplastic'.
-	 *
-	 * Like \ref computeRoughTransmittance, the spline is parameterized by the
-	 * cosine of the angle between the indident direction and the (macro-) 
-	 * surface normal.
-	 * 
-	 * \remark This function only works for isotropic microfacet distributions
-	 */
-	CubicSpline *computeTransmissionProbability(Float extIOR, Float intIOR, 
-			Float alpha, Float specularSamplingWeight, size_t resolution) const {
-		if (isAnisotropic())
-			SLog(EError, "MicrofacetDistribution::computeTransmissionProbability(): only "
-				"supports isotropic distributions!");
-
-		NDIntegrator integrator(1, 2, 5000, 0, 1e-5f);
-		CubicSpline *spline = new CubicSpline(resolution);
-		size_t nEvals, nEvalsTotal = 0;
-		ref<Timer> timer = new Timer();
-
-		Float stepSize = (1.0f-2*Epsilon)/(resolution-1);
-		for (size_t i=0; i<resolution; ++i) {
-			Float z = stepSize * i + Epsilon;
-			Vector wi(std::sqrt(std::max((Float) 0, 1-z*z)), 0, z);
-			Float min[2] = {0, 0}, max[2] = {1, 1},
-				  integral = 0, error = 0;
-
-			integrator.integrateVectorized(
-				boost::bind(&MicrofacetDistribution::integrand2, this,
-					wi, extIOR, intIOR, alpha, specularSamplingWeight, _1, _2, _3),
-				min, max, &integral, &error, &nEvals
-			);
-
-			spline->append(z, integral);
-
-			nEvalsTotal += nEvals;
-		}
-		SLog(EInfo, "Created a " SIZE_T_FMT "-node cubic spline approximation to the "
-				"transmission probability (integration took %i ms and " SIZE_T_FMT 
-				" function evaluations)", resolution, timer->getMilliseconds(), 
-				nEvalsTotal);
-
-		spline->build();
-		return spline;
-	}
-
 	std::string toString() const {
 		switch (m_type) {
 			case EBeckmann: return "beckmann"; break;
@@ -547,20 +496,6 @@ protected:
 				  (Frame::cosTheta(wi) * Frame::cosTheta(m)));
 		}
 	}
-
-	/// Integrand helper function called by \ref computeTransmissionProbability
-	void integrand2(const Vector &wi, Float extIOR, Float intIOR, Float alpha,
-			Float specularSamplingWeight, size_t nPts, const Float *in, Float *out) const {
-		for (int i=0; i<(int) nPts; ++i) {
-			Normal m = sample(Point2(in[2*i], in[2*i+1]), alpha);
-			Float probSpecular = fresnel(dot(wi, m), extIOR, intIOR);
-			probSpecular = (probSpecular*specularSamplingWeight) /
-				(probSpecular*specularSamplingWeight + 
-				(1-probSpecular) * (1-specularSamplingWeight));
-			out[i] = 1-probSpecular;
-		}
-	}
-
 protected:
 	EType m_type;
 };

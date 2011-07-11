@@ -24,7 +24,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-#define SPLINE_PRECOMP_NODES 200
+#define TRANSMITTANCE_PRECOMP_NODES 200
 
 /*!\plugin{roughplastic}{Rough plastic material}
  * \order{8}
@@ -107,7 +107,6 @@ public:
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_roughTransmittance = static_cast<CubicSpline *>(manager->getInstance(stream));
-		m_diffuseProb = static_cast<CubicSpline *>(manager->getInstance(stream));
 		m_alpha = stream->readFloat();
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
@@ -121,8 +120,8 @@ public:
 
 	void configure() {
 		m_components.clear();
-		m_components.push_back(EGlossyReflection | ECanUseSampler | EFrontSide);
-		m_components.push_back(EDiffuseReflection | ECanUseSampler | EFrontSide);
+		m_components.push_back(EGlossyReflection | EFrontSide);
+		m_components.push_back(EDiffuseReflection | EFrontSide);
 
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
@@ -138,14 +137,7 @@ public:
 
 		/* Precompute the rough transmittance through the interface */
 		m_roughTransmittance = m_distribution.computeRoughTransmittance(
-				m_extIOR, m_intIOR, m_alpha, SPLINE_PRECOMP_NODES);
-
-		/* Precompute a spline that specifies the probability of
-		   sampling the diffuse component for different angles
-		   of incidence. */
-		m_diffuseProb = m_distribution.computeTransmissionProbability(
-				m_extIOR, m_intIOR, m_alpha, m_specularSamplingWeight,
-				SPLINE_PRECOMP_NODES);
+				m_extIOR, m_intIOR, m_alpha, TRANSMITTANCE_PRECOMP_NODES);
 
 		BSDF::configure();
 	}
@@ -213,29 +205,17 @@ public:
 		/* Calculate the reflection half-vector */
 		const Vector H = normalize(bRec.wo+bRec.wi);
 
-		Float probSpecular, probDiffuse;
+		Float probDiffuse, probSpecular;
 		if (sampleSpecular && sampleDiffuse) {
-			if (bRec.sampler && false) {
-				/* Fancy sampling strategy */
-				probSpecular = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
-				
-				/* Reallocate samples */
-				probSpecular = (probSpecular*m_specularSamplingWeight) /
-					(probSpecular*m_specularSamplingWeight + 
-					(1-probSpecular) * (1-m_specularSamplingWeight));
-	
-				probDiffuse = m_diffuseProb->eval(Frame::cosTheta(bRec.wi));
-			} else {
-				/* Basic sampling strategy that only needs 2 random numbers */
-				probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
+			/* Find the probability of sampling the specular component */
+			probSpecular = 1-m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
 
-				/* Reallocate samples */
-				probSpecular = (probSpecular*m_specularSamplingWeight) /
-					(probSpecular*m_specularSamplingWeight + 
-					(1-probSpecular) * (1-m_specularSamplingWeight));
+			/* Reallocate samples */
+			probSpecular = (probSpecular*m_specularSamplingWeight) /
+				(probSpecular*m_specularSamplingWeight + 
+				(1-probSpecular) * (1-m_specularSamplingWeight));
 
-				probDiffuse = 1 - probSpecular;
-			}
+			probDiffuse = 1 - probSpecular;
 		} else {
 			probDiffuse = probSpecular = 1.0f;
 		}
@@ -272,52 +252,25 @@ public:
 		Point2 sample(_sample);
 
 		if (sampleSpecular && sampleDiffuse) {
-			if (bRec.sampler && false) {
-				/**
-				 * We have access to a sampler -- use a good sampling 
-				 * technique, which is somewhat wasteful in terms of
-				 * random numbers
-				 */
-				m = m_distribution.sample(sample, m_alpha);
+			/* Find the probability of sampling the diffuse component */
+			Float probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
 
-				Float probSpecular = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
+			/* Reallocate samples */
+			probSpecular = (probSpecular*m_specularSamplingWeight) /
+				(probSpecular*m_specularSamplingWeight + 
+				(1-probSpecular) * (1-m_specularSamplingWeight));
 
-				/* Reallocate samples */
-				probSpecular = (probSpecular*m_specularSamplingWeight) /
-					(probSpecular*m_specularSamplingWeight + 
-					(1-probSpecular) * (1-m_specularSamplingWeight));
-
-				if (bRec.sampler->next1D() > probSpecular) {
-					choseSpecular = false;
-					sample = bRec.sampler->next2D();
-				}
+			if (sample.x <= probSpecular) {
+				sample.x /= probSpecular;
 			} else {
-				/**
-				 * Basic strategy -- use a clamped Fresnel coefficient 
-				 * wrt. the macro-surface normal to choose between 
-				 * diffuse and specular component. 
-				 */
-				Float probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
-
-				/* Reallocate samples */
-				probSpecular = (probSpecular*m_specularSamplingWeight) /
-					(probSpecular*m_specularSamplingWeight + 
-					(1-probSpecular) * (1-m_specularSamplingWeight));
-				
-				if (sample.x < probSpecular) {
-					sample.x /= probSpecular;
-					m = m_distribution.sample(sample, m_alpha);
-				} else {
-					sample.x = (sample.x - probSpecular) / (1 - probSpecular);
-					choseSpecular = false;
-				}
+				sample.x = (sample.x - probSpecular) / (1 - probSpecular);
+				choseSpecular = false;
 			}
-		} else if (choseSpecular) {
-			m = m_distribution.sample(sample, m_alpha);
 		}
 
 		if (choseSpecular) {
 			/* Perfect specular reflection based on the microsurface normal */
+			m = m_distribution.sample(sample, m_alpha);
 			bRec.wo = reflect(bRec.wi, m);
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EGlossyReflection;
@@ -369,7 +322,6 @@ public:
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_diffuseReflectance.get());
 		manager->serialize(stream, m_roughTransmittance.get());
-		manager->serialize(stream, m_diffuseProb.get());
 		stream->writeFloat(m_alpha);
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
@@ -397,7 +349,6 @@ public:
 private:
 	MicrofacetDistribution m_distribution;
 	ref<CubicSpline> m_roughTransmittance;
-	ref<CubicSpline> m_diffuseProb;
 	ref<Texture> m_diffuseReflectance;
 	ref<Texture> m_specularReflectance;
 	Float m_alpha, m_intIOR, m_extIOR;
