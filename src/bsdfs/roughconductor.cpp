@@ -479,9 +479,8 @@ public:
 			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
 			<< "}" << endl
 			<< endl
-			<< "vec3 " << evalName << "_schlick(vec3 wi) {" << endl
-			<< "    float ct = cosTheta(wi), ctSqr = ct*ct," << endl
-			<< "          ct5 = ctSqr*ctSqr*ct;" << endl
+			<< "vec3 " << evalName << "_schlick(float ct) {" << endl
+			<< "    float ctSqr = ct*ct, ct5 = ctSqr*ctSqr*ct;" << endl
 			<< "    return " << evalName << "_R0 + (vec3(1.0) - " << evalName << "_R0) * ct5;" << endl
 			<< "}" << endl
 			<< endl
@@ -494,8 +493,8 @@ public:
 			<< "   float alphaV = max(0.2, " << depNames[2] << "(uv).r);" << endl
 			<< "   float D = " << evalName << "_D(H, alphaU, alphaV)" << ";" << endl
 			<< "   float G = " << evalName << "_G(H, wi, wo);" << endl
-			<< "   vec3 Fr = " << evalName << "_schlick(wi);" << endl
-			<< "   return reflectance * Fr * (D * G / (4*cosTheta(wi)));" << endl
+			<< "   vec3 F = " << evalName << "_schlick(1-dot(wi, H));" << endl
+			<< "   return reflectance * F * (D * G / (4*cosTheta(wi)));" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl

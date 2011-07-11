@@ -144,6 +144,10 @@ public:
 
 	virtual ~RoughPlastic() { }
 
+	Spectrum getDiffuseReflectance(const Intersection &its) const {
+		return m_diffuseReflectance->getValue(its);
+	}
+
 	/// Helper function: reflect \c wi with respect to a given surface normal
 	inline Vector reflect(const Vector &wi, const Normal &m) const {
 		return 2 * dot(wi, m) * Vector(m) - wi;
@@ -246,7 +250,6 @@ public:
 		if (Frame::cosTheta(bRec.wi) <= 0 || (!sampleSpecular && !sampleDiffuse))
 			return Spectrum(0.0f);
 
-
 		bool choseSpecular = sampleSpecular;
 		Point2 sample(_sample);
 
@@ -284,7 +287,6 @@ public:
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDiffuseReflection;
 			bRec.wo = squareToHemispherePSA(sample);
-			m = normalize(bRec.wo+bRec.wi);
 		}
 
 		/* Guard against numerical imprecisions */
@@ -358,32 +360,116 @@ private:
 	Float m_specularSamplingWeight;
 };
 
-/* Fake plastic shader -- it is really hopeless to visualize
-   this material in the VPL renderer, so let's try to do at least 
-   something that suggests the presence of a translucent boundary */
+/**
+ * GLSL port of the rough plastic shader. This version is much more
+ * approximate -- it only supports the Beckmann distribution, 
+ * does everything in RGB, uses a cheaper shadowing-masking term, and 
+ * it also makes use of the Schlick approximation to the Fresnel 
+ * reflectance of dielectrics. When the roughness is lower than 
+ * \alpha < 0.2, the shader clamps it to 0.2 so that it will still perform
+ * reasonably well in a VPL-based preview.
+ */
 class RoughPlasticShader : public Shader {
 public:
-	RoughPlasticShader(Renderer *renderer) :
-		Shader(renderer, EBSDFShader) {
-		m_flags = ETransparent;
+	RoughPlasticShader(Renderer *renderer, const Texture *specularReflectance,
+			const Texture *diffuseReflectance, Float alpha, Float extIOR, 
+			Float intIOR) : Shader(renderer, EBSDFShader), 
+			m_specularReflectance(specularReflectance), 
+			m_diffuseReflectance(diffuseReflectance), 
+			m_alpha(alpha), m_extIOR(extIOR), m_intIOR(intIOR) {
+		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
+		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
+		m_alpha = std::max(m_alpha, (Float) 0.2f);
+		m_R0 = fresnel(1.0f, m_extIOR, m_intIOR);
+	}
+
+	bool isComplete() const {
+		return m_specularReflectanceShader.get() != NULL &&
+			m_diffuseReflectanceShader.get() != NULL;
+	}
+
+	void putDependencies(std::vector<Shader *> &deps) {
+		deps.push_back(m_specularReflectanceShader.get());
+		deps.push_back(m_diffuseReflectanceShader.get());
+	}
+
+	void cleanup(Renderer *renderer) {
+		renderer->unregisterShaderForResource(m_specularReflectance.get());
+		renderer->unregisterShaderForResource(m_diffuseReflectance.get());
+	}
+
+	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_alpha", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_R0", false));
+	}
+
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
+		program->setParameter(parameterIDs[0], m_alpha);
+		program->setParameter(parameterIDs[1], m_R0);
 	}
 
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return vec3(0.08);" << endl
+		oss << "uniform float " << evalName << "_alpha;" << endl
+			<< "uniform float " << evalName << "_R0;" << endl
+			<< endl
+			<< "float " << evalName << "_D(vec3 m) {" << endl
+			<< "    float ct = cosTheta(m);" << endl
+			<< "    if (cosTheta(m) <= 0.0)" << endl
+			<< "        return 0.0;" << endl
+			<< "    float ex = tanTheta(m) / " << evalName << "_alpha;" << endl
+			<< "    return exp(-(ex*ex)) / (pi * " << evalName << "_alpha" << endl
+			<< "        * " << evalName << "_alpha * pow(cosTheta(m), 4.0));" << endl
+			<< "}" << endl
+			<< endl
+			<< "float " << evalName << "_G(vec3 m, vec3 wi, vec3 wo) {" << endl
+			<< "    if ((dot(wi, m) * cosTheta(wi)) <= 0 || " << endl
+			<< "        (dot(wo, m) * cosTheta(wo)) <= 0)" << endl
+			<< "        return 0.0;" << endl
+			<< "    float nDotM = cosTheta(m);" << endl
+			<< "    return min(1.0, min(" << endl
+			<< "        abs(2 * nDotM * cosTheta(wo) / dot(wo, m))," << endl
+			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
+			<< "}" << endl
+			<< endl
+			<< endl
+			<< "float " << evalName << "_schlick(float ct) {" << endl
+			<< "    float ctSqr = ct*ct, ct5 = ctSqr*ctSqr*ct;" << endl
+			<< "    return " << evalName << "_R0 + (1.0 - " << evalName << "_R0) * ct5;" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    if (cosTheta(wi) <= 0 || cosTheta(wo) <= 0)" << endl
+			<< "        return vec3(0.0);" << endl
+			<< "    vec3 H = normalize(wi + wo);" << endl
+			<< "    vec3 specRef = " << depNames[0] << "(uv);" << endl
+			<< "    vec3 diffuseRef = " << depNames[1] << "(uv);" << endl
+			<< "    float D = " << evalName << "_D(H)" << ";" << endl
+			<< "    float G = " << evalName << "_G(H, wi, wo);" << endl
+			<< "    float F = " << evalName << "_schlick(1-dot(wi, H));" << endl
+			<< "    return specRef    * (F * D * G / (4*cosTheta(wi))) + " << endl
+			<< "           diffuseRef * ((1-F) * cosTheta(wo) * 0.31831);" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return " << evalName << "(uv, wi, wo);" << endl
+			<< "    vec3 diffuseRef = " << depNames[1] << "(uv);" << endl
+			<< "    return diffuseRef * 0.31831 * cosTheta(wo);"<< endl
 			<< "}" << endl;
 	}
 	MTS_DECLARE_CLASS()
+private:
+	ref<const Texture> m_specularReflectance;
+	ref<const Texture> m_diffuseReflectance;
+	ref<Shader> m_specularReflectanceShader;
+	ref<Shader> m_diffuseReflectanceShader;
+	Float m_alpha, m_extIOR, m_intIOR, m_R0;
 };
 
 Shader *RoughPlastic::createShader(Renderer *renderer) const { 
-	return new RoughPlasticShader(renderer);
+	return new RoughPlasticShader(renderer,
+		m_specularReflectance.get(), m_diffuseReflectance.get(),
+		m_alpha, m_extIOR, m_intIOR);
 }
 
 MTS_IMPLEMENT_CLASS(RoughPlasticShader, false, Shader)

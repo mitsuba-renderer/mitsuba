@@ -701,8 +701,8 @@ Spectrum fresnelConductor(Float cosThetaI, const Spectrum &eta, const Spectrum &
 	return (rParl2 + rPerp2) / 2.0f;
 }
 
-Float fresnel(Float cosThetaI, Float etaExt, Float etaInt) {
-	Float etaI = etaExt, etaT = etaInt;
+Float fresnel(Float cosThetaI, Float extIOR, Float intIOR) {
+	Float etaI = extIOR, etaT = intIOR;
 
 	/* Swap the indices of refraction if the interaction starts
 	   at the inside of the object */

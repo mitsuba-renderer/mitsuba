@@ -441,13 +441,13 @@ extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI,
  *
  * \param cosThetaI
  * 		Cosine of the angle between the normal and the incident ray
- * \param etaExt
+ * \param extIOR
  * 		Refraction coefficient outside of the material
- * \param etaInt
+ * \param intIOR
  * 		Refraction coefficient inside the material
  */
-extern MTS_EXPORT_CORE Float fresnel(Float cosThetaI, Float etaExt,
-		Float etaInt);
+extern MTS_EXPORT_CORE Float fresnel(Float cosThetaI, Float extIOR,
+		Float intIOR);
 
 /**
  * Calculates the unpolarized fresnel reflection coefficient on

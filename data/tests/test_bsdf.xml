@@ -2,13 +2,6 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
-	<!-- Test the rough plastic model with the 
-		 Beckmann microfacet distribution -->
-	<bsdf type="roughplastic">
-		<string name="distribution" value="beckmann"/>
-		<float name="alpha" value=".7"/>
-	</bsdf>
-
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
 
@@ -39,9 +32,6 @@
 		<string name="intIOR" value="water"/>
 		<string name="extIOR" value="air"/>
 	</bsdf>
-
-	<!-- Test the smooth plastic model -->
-	<bsdf type="plastic"/>
 
 	<!-- Test a mixture of degenerate materials -->
 	<bsdf type="mixture">
@@ -109,5 +99,15 @@
 		<string name="distribution" value="as"/>
 		<float name="alphaU" value="0.1"/>
 		<float name="alphaV" value="0.3"/>
+	</bsdf>
+
+	<!-- Test the smooth plastic model -->
+	<bsdf type="plastic"/>
+
+	<!-- Test the rough plastic model with the 
+		 Beckmann microfacet distribution -->
+	<bsdf type="roughplastic">
+		<string name="distribution" value="beckmann"/>
+		<float name="alpha" value=".7"/>
 	</bsdf>
 </scene>

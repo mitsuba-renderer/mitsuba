@@ -58,7 +58,7 @@ public:
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_value"));
+		parameterIDs.push_back(program->getParameterID(evalName + "_value", false));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
@@ -87,7 +87,7 @@ public:
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_value"));
+		parameterIDs.push_back(program->getParameterID(evalName + "_value", false));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {

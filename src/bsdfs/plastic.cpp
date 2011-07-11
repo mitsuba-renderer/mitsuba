@@ -37,7 +37,8 @@ MTS_NAMESPACE_BEGIN
  *
  * \renderings{
  *     \rendering{A rendering with the default parameters}{bsdf_plastic_default}
- *     \rendering{A rendering with custom parameters (\lstref{plastic-shiny})}{bsdf_plastic_shiny}
+ *     \rendering{A rendering with custom parameters (\lstref{plastic-shiny})}
+ *         {bsdf_plastic_shiny}
  * }
  *
  * This plugin describes a perfectly smooth plastic-like dielectric material
@@ -90,9 +91,14 @@ public:
 		m_usesRayDifferentials = 
 			m_specularReflectance->usesRayDifferentials() ||
 			m_diffuseReflectance->usesRayDifferentials();
+		configure();
 	}
 
 	virtual ~SmoothPlastic() { }
+
+	Spectrum getDiffuseReflectance(const Intersection &its) const {
+		return m_diffuseReflectance->getValue(its);
+	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
@@ -123,6 +129,13 @@ public:
 			m_specularReflectance, "specularReflectance", 1.0f);
 		m_diffuseReflectance = ensureEnergyConservation(
 			m_diffuseReflectance, "diffuseReflectance", 1.0f);
+
+		/* Compute weights that further steer samples towards
+		   the specular or diffuse components */
+		Float dAvg = m_diffuseReflectance->getAverage().getLuminance(),
+			  sAvg = m_specularReflectance->getAverage().getLuminance();
+		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
+
 	}
 
 	/// Reflection in local coordinates
@@ -165,17 +178,22 @@ public:
 		if (Frame::cosTheta(bRec.wo) <= 0 || Frame::cosTheta(bRec.wi) <= 0)
 			return 0.0f;
 
+		Float probSpecular = 1.0f;
+		if (sampleSpecular && sampleDiffuse) {
+			probSpecular = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+			probSpecular = (probSpecular*m_specularSamplingWeight) /
+				(probSpecular*m_specularSamplingWeight + 
+				(1-probSpecular) * (1-m_specularSamplingWeight));
+		}
+
 		if (measure == EDiscrete && sampleSpecular) {
 			/* Check if the provided direction pair matches an ideal
 			   specular reflection; tolerate some roundoff errors */
-			bool reflection = std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) < Epsilon;
-			if (reflection) 
-				return sampleDiffuse ? 
-					fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR) : 1.0f;
+			if (std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) < Epsilon)
+				return sampleDiffuse ? probSpecular : 1.0f;
 		} else if (measure == ESolidAngle && sampleDiffuse) {
 			return Frame::cosTheta(bRec.wo) * INV_PI *
-				(sampleSpecular ? (1 - fresnel(Frame::cosTheta(bRec.wi),
-				m_extIOR, m_intIOR)) : 1.0f);
+				(sampleSpecular ? (1 - probSpecular) : 1.0f);
 		}
 
 		return 0.0f;
@@ -192,23 +210,29 @@ public:
 
 		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
 
+		Float probSpecular = (Fr*m_specularSamplingWeight) /
+			(Fr*m_specularSamplingWeight + 
+			(1-Fr) * (1-m_specularSamplingWeight));
+
 		if (sampleDiffuse && sampleSpecular) {
 			/* Importance sample wrt. the Fresnel reflectance */
-			if (sample.x <= Fr) {
+			if (sample.x <= probSpecular) {
 				bRec.sampledComponent = 0;
 				bRec.sampledType = EDeltaReflection;
 				bRec.wo = reflect(bRec.wi);
 
-				return m_specularReflectance->getValue(bRec.its);
+				return m_specularReflectance->getValue(bRec.its) *
+					Fr / probSpecular;
 			} else {
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDiffuseReflection;
 				bRec.wo = squareToHemispherePSA(Point2(
-					(sample.x - Fr) / (1 - Fr),
+					(sample.x - probSpecular) / (1 - probSpecular),
 					sample.y
 				));
 
-				return m_diffuseReflectance->getValue(bRec.its);
+				return m_diffuseReflectance->getValue(bRec.its) *
+					(1-Fr) / (1-probSpecular);
 			}
 		} else if (sampleSpecular) {
 			bRec.sampledComponent = 0;
@@ -223,7 +247,7 @@ public:
 				return Spectrum(0.0f);
 				
 			bRec.wo = squareToHemispherePSA(sample);
-				
+
 			return m_diffuseReflectance->getValue(bRec.its) * (1-Fr);
 		}
 	}
@@ -238,15 +262,18 @@ public:
 			return Spectrum(0.0f);
 
 		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+		Float probSpecular = (Fr*m_specularSamplingWeight) /
+			(Fr*m_specularSamplingWeight + 
+			(1-Fr) * (1-m_specularSamplingWeight));
 
 		if (sampleDiffuse && sampleSpecular) {
 			/* Importance sample wrt. the Fresnel reflectance */
-			if (sample.x <= Fr) {
+			if (sample.x <= probSpecular) {
 				bRec.sampledComponent = 0;
 				bRec.sampledType = EDeltaReflection;
 				bRec.wo = reflect(bRec.wi);
 
-				pdf = Fr;
+				pdf = probSpecular;
 				return m_specularReflectance->getValue(bRec.its) * Fr;
 			} else {
 				bRec.sampledComponent = 1;
@@ -256,7 +283,7 @@ public:
 					sample.y
 				));
 
-				pdf = (1-Fr) * Frame::cosTheta(bRec.wo) * INV_PI;
+				pdf = (1-probSpecular) * Frame::cosTheta(bRec.wo) * INV_PI;
 
 				return m_diffuseReflectance->getValue(bRec.its) 
 					* (INV_PI * Frame::cosTheta(bRec.wo) * (1-Fr));
@@ -283,14 +310,18 @@ public:
 		}
 	}
 
+	Shader *createShader(Renderer *renderer) const;
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SmoothPlastic[" << endl
 			<< "  name = \"" << getName() << "\"," << endl
-			<< "  intIOR = " << m_intIOR << "," << endl 
-			<< "  extIOR = " << m_extIOR << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
-			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << endl
+			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
+			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
+			<< "  diffuseSamplingWeight = " << (1-m_specularSamplingWeight) << "," << endl
+			<< "  intIOR = " << m_intIOR << "," << endl 
+			<< "  extIOR = " << m_extIOR << endl
 			<< "]";
 		return oss.str();
 	}
@@ -300,7 +331,118 @@ private:
 	Float m_intIOR, m_extIOR;
 	ref<Texture> m_diffuseReflectance;
 	ref<Texture> m_specularReflectance;
+	Float m_specularSamplingWeight;
 };
+
+/**
+ * Smooth plastic shader -- it is really hopeless to visualize
+ * this material in the VPL renderer, so let's try to do at least 
+ * something that suggests the presence of a specularly-reflecting
+ * dielectric coating.
+ */
+class SmoothPlasticShader : public Shader {
+public:
+	SmoothPlasticShader(Renderer *renderer, const Texture *specularReflectance,
+			const Texture *diffuseReflectance, Float extIOR, 
+			Float intIOR) : Shader(renderer, EBSDFShader), 
+			m_specularReflectance(specularReflectance), 
+			m_diffuseReflectance(diffuseReflectance), 
+			m_extIOR(extIOR), m_intIOR(intIOR) {
+		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
+		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
+		m_alpha = 0.4f;
+		m_R0 = fresnel(1.0f, m_extIOR, m_intIOR);
+	}
+
+	bool isComplete() const {
+		return m_specularReflectanceShader.get() != NULL &&
+			m_diffuseReflectanceShader.get() != NULL;
+	}
+
+	void putDependencies(std::vector<Shader *> &deps) {
+		deps.push_back(m_specularReflectanceShader.get());
+		deps.push_back(m_diffuseReflectanceShader.get());
+	}
+
+	void cleanup(Renderer *renderer) {
+		renderer->unregisterShaderForResource(m_specularReflectance.get());
+		renderer->unregisterShaderForResource(m_diffuseReflectance.get());
+	}
+
+	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_alpha", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_R0", false));
+	}
+
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
+		program->setParameter(parameterIDs[0], m_alpha);
+		program->setParameter(parameterIDs[1], m_R0);
+	}
+
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "uniform float " << evalName << "_alpha;" << endl
+			<< "uniform float " << evalName << "_R0;" << endl
+			<< endl
+			<< "float " << evalName << "_D(vec3 m) {" << endl
+			<< "    float ct = cosTheta(m);" << endl
+			<< "    if (cosTheta(m) <= 0.0)" << endl
+			<< "        return 0.0;" << endl
+			<< "    float ex = tanTheta(m) / " << evalName << "_alpha;" << endl
+			<< "    return exp(-(ex*ex)) / (pi * " << evalName << "_alpha" << endl
+			<< "        * " << evalName << "_alpha * pow(cosTheta(m), 4.0));" << endl
+			<< "}" << endl
+			<< endl
+			<< "float " << evalName << "_G(vec3 m, vec3 wi, vec3 wo) {" << endl
+			<< "    if ((dot(wi, m) * cosTheta(wi)) <= 0 || " << endl
+			<< "        (dot(wo, m) * cosTheta(wo)) <= 0)" << endl
+			<< "        return 0.0;" << endl
+			<< "    float nDotM = cosTheta(m);" << endl
+			<< "    return min(1.0, min(" << endl
+			<< "        abs(2 * nDotM * cosTheta(wo) / dot(wo, m))," << endl
+			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
+			<< "}" << endl
+			<< endl
+			<< endl
+			<< "float " << evalName << "_schlick(float ct) {" << endl
+			<< "    float ctSqr = ct*ct, ct5 = ctSqr*ctSqr*ct;" << endl
+			<< "    return " << evalName << "_R0 + (1.0 - " << evalName << "_R0) * ct5;" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    if (cosTheta(wi) <= 0 || cosTheta(wo) <= 0)" << endl
+			<< "        return vec3(0.0);" << endl
+			<< "    vec3 H = normalize(wi + wo);" << endl
+			<< "    vec3 specRef = " << depNames[0] << "(uv);" << endl
+			<< "    vec3 diffuseRef = " << depNames[1] << "(uv);" << endl
+			<< "    float D = " << evalName << "_D(H)" << ";" << endl
+			<< "    float G = " << evalName << "_G(H, wi, wo);" << endl
+			<< "    float F = " << evalName << "_schlick(1-dot(wi, H));" << endl
+			<< "    return specRef    * (F * D * G / (4*cosTheta(wi))) + " << endl
+			<< "           diffuseRef * ((1-F) * cosTheta(wo) * 0.31831);" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    vec3 diffuseRef = " << depNames[1] << "(uv);" << endl
+			<< "    return diffuseRef * 0.31831 * cosTheta(wo);"<< endl
+			<< "}" << endl;
+	}
+	MTS_DECLARE_CLASS()
+private:
+	ref<const Texture> m_specularReflectance;
+	ref<const Texture> m_diffuseReflectance;
+	ref<Shader> m_specularReflectanceShader;
+	ref<Shader> m_diffuseReflectanceShader;
+	Float m_alpha, m_extIOR, m_intIOR, m_R0;
+};
+
+Shader *SmoothPlastic::createShader(Renderer *renderer) const { 
+	return new SmoothPlasticShader(renderer,
+		m_specularReflectance.get(), m_diffuseReflectance.get(), m_extIOR, m_intIOR);
+}
+
+MTS_IMPLEMENT_CLASS(SmoothPlasticShader, false, Shader)
 
 MTS_IMPLEMENT_CLASS_S(SmoothPlastic, false, BSDF)
 MTS_EXPORT_PLUGIN(SmoothPlastic, "Smooth plastic BSDF");

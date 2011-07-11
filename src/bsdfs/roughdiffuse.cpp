@@ -116,6 +116,10 @@ public:
 		m_reflectance = ensureEnergyConservation(m_reflectance, "reflectance", 1.0f);
 	}
 
+	Spectrum getDiffuseReflectance(const Intersection &its) const {
+		return m_reflectance->getValue(its);
+	}
+
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		if (!(bRec.typeMask & EGlossyReflection) || measure != ESolidAngle
 			|| Frame::cosTheta(bRec.wi) <= 0
@@ -310,7 +314,7 @@ public:
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
 		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
+			<< "    if (cosTheta(wi) <= 0.0 || cosTheta(wo) <= 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
 			<< "    float sigma = " << depNames[1] << "(uv)[0] * 0.70711;" << endl
 			<< "    float sigma2 = sigma * sigma;" << endl
@@ -330,7 +334,7 @@ public:
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
+			<< "    if (cosTheta(wi) <= 0.0 || cosTheta(wo) <= 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
 			<< "    return " << depNames[0] << "(uv) * 0.31831 * cosTheta(wo);" << endl
 			<< "}" << endl;
