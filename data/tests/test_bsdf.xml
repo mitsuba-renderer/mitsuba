@@ -127,4 +127,9 @@
 		<float name="alphaU" value=".1"/>
 		<float name="alphaV" value=".3"/>
 	</bsdf>
+
+	<!-- Test the mask model -->
+	<bsdf type="mask">
+		<bsdf type="lambertian"/>
+	</bsdf>
 </scene>

@@ -291,7 +291,7 @@ template <typename Iterator> struct YarnGrammar : qi::grammar<Iterator, Yarn(), 
 			>> *(qi::alnum | char_('_')) ];
 
 		spec = ((lit("{") >> float_ >> lit(",") >> float_ >> lit(",") >> float_ >> lit("}")) 
-					[ ph::bind(&Spectrum::fromLinearRGB, _val, _1, _2, _3) ])
+					[ ph::bind(&Spectrum::fromLinearRGB, _val, _1, _2, _3, Spectrum::EReflectance) ])
 		     | (identifier [ _val = ph::bind(&Properties::getSpectrum, ph::ref(props), _1)]);
 
 		flt = (float_ [ _val = _1 ])

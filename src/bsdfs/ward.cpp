@@ -23,13 +23,13 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{ward}{Anisotropic Ward BRDF}
- * \order{10}
+ * \order{11}
  * \parameters{
  *     \parameter{variant}{\String}{
  *         Determines the variant of the Ward model to use:
  *         \begin{enumerate}[(i)]
- *             \item \code{ward}: The original model by Ward \cite{Ward1992Measuring} --- suffers from
- *             energy loss at grazing angles.
+ *             \item \code{ward}: The original model by Ward \cite{Ward1992Measuring}
+ *             --- suffers from energy loss at grazing angles.
  *             \item \code{ward-duer}: Corrected Ward model with lower energy loss 
  *             at grazing angles \cite{Dur2006Improved}.
  *             Does not always conserve energy. 
@@ -66,12 +66,12 @@ MTS_NAMESPACE_BEGIN
  * \end{enumerate}
  *
  * Like the Phong BRDF, the Ward model does not take the Fresnel reflectance
- * of the material into account. In an experimental study performed by Ngan et al. 
- * \cite{Ngan2005Experimental}, the Ward model generally performed worse than
- * microfacet-based approaches. 
+ * of the material into account. In an experimental study by Ngan et al. 
+ * \cite{Ngan2005Experimental}, the Ward model performed noticeably worse than
+ * models based on microfacets.
  *
- * For this reason, it is usually preferable to switch to a microfacet theory-based model 
- * that incorporate knowledge about the material's index of refraction. In Mitsuba, 
+ * For this reason, it is usually preferable to switch to a microfacet model 
+ * that incorporates knowledge about the material's index of refraction. In Mitsuba, 
  * two such alternatives to \pluginref{ward} are given by the plugins 
  * \pluginref{roughconductor} and \pluginref{roughplastic} (depending on the
  * material type).

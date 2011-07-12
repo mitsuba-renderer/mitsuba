@@ -88,8 +88,9 @@ void LoadDialog::close() {
 void LoadDialog::onTextMessage(ELogLevel level, const QString &message) {
 	QColor color;
 	int idx = message.indexOf("] ");
-	if (idx != -1 && ui->progressBar->value() != 100) 
+	if (idx != -1 && ui->progressBar->value() != 100 && message.indexOf("\n") == -1) { 
 		ui->statusLabel->setText(message.mid(idx+2));
+	}
 	switch (level) {
 		case ETrace: 
 		case EDebug: 

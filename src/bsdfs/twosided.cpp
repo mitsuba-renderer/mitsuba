@@ -22,7 +22,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{twosided}{Two-sided BRDF adapter}
+/*!\plugin{twosided}{Two-sided BRDF adapter}
  * \renderings{
  *     \unframedrendering{From this angle, the Cornell box scene shows visible back-facing geometry}
  *         {bsdf_twosided_before}

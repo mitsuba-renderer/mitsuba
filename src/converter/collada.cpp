@@ -588,7 +588,7 @@ void loadGeometry(ColladaContext &ctx, const std::string &instanceName,
 			tess_data.push_back(indices[j]);
 		std::string matID;
 		if (triangles->getMaterial() == NULL || matLookupTable.find(triangles->getMaterial()) == matLookupTable.end())
-			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
+			SLog(EWarn, "Referenced material could not be found, substituting a diffuse BRDF.");
 		else
 			matID = matLookupTable[triangles->getMaterial()];
 		writeGeometry(ctx, prefixName, identifier, geomIndex, matID, transform, data, triMap, exportShapeGroup);
@@ -647,7 +647,7 @@ void loadGeometry(ColladaContext &ctx, const std::string &instanceName,
 
 		std::string matID;
 		if (polygons->getMaterial() == NULL || matLookupTable.find(polygons->getMaterial()) == matLookupTable.end())
-			SLog(EWarn, "Referenced material could not be found, substituting a lambertian BRDF.");
+			SLog(EWarn, "Referenced material could not be found, substituting a diffuse BRDF.");
 		else
 			matID = matLookupTable[polygons->getMaterial()];
 
@@ -709,7 +709,7 @@ void loadGeometry(ColladaContext &ctx, const std::string &instanceName,
 
 		std::string matID;
 		if (polylist->getMaterial() == NULL || matLookupTable.find(polylist->getMaterial()) == matLookupTable.end())
-			SLog(EWarn, "Referenced material \"%s\" could not be found, substituting a lambertian BRDF.", polylist->getMaterial());
+			SLog(EWarn, "Referenced material \"%s\" could not be found, substituting a diffuse BRDF.", polylist->getMaterial());
 		else
 			matID = matLookupTable[polylist->getMaterial()];
 
@@ -857,7 +857,7 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 				isDiffuse = true;
 		}
 		if (isDiffuse) {
-			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
+			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"diffuse\">" << endl;
 			loadMaterialParam(ctx, "reflectance", diffuse, false);
 			loadMaterialParam(ctx, "reflectance", diffuse, true);
 			ctx.os << "\t</bsdf>" << endl << endl;
@@ -873,7 +873,7 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 		}
 	} else if (lambert) {
 		domCommon_color_or_texture_type* diffuse = lambert->getDiffuse();
-		ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
+		ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"diffuse\">" << endl;
 		loadMaterialParam(ctx, "reflectance", diffuse, false);
 		loadMaterialParam(ctx, "reflectance", diffuse, true);
 		ctx.os << "\t</bsdf>" << endl << endl;
@@ -893,7 +893,7 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 				isDiffuse = true;
 		}
 		if (isDiffuse) {
-			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\">" << endl;
+			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"diffuse\">" << endl;
 			loadMaterialParam(ctx, "reflectance", diffuse, false);
 			loadMaterialParam(ctx, "reflectance", diffuse, true);
 			ctx.os << "\t</bsdf>" << endl << endl;
@@ -918,7 +918,7 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 		} else {
 			SLog(EWarn, "\"%s\": Encountered a \"constant\" COLLADA material, which is currently "
 				"unsupported in Mitsuba -- replacing it using a Lambertian material.", identifier.c_str());
-			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"lambertian\"/>" << endl << endl;
+			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"diffuse\"/>" << endl << endl;
 		}
 	} else {
 		SLog(EError, "Material type not supported! (must be Lambertian/Phong/Blinn/Constant)");
@@ -1080,7 +1080,7 @@ void loadImage(ColladaContext &ctx, domImage &image) {
 		}
 	}
 
-	ctx.os << "\t<texture id=\"" << identifier << "\" type=\"ldrtexture\">" << endl;
+	ctx.os << "\t<texture id=\"" << identifier << "\" type=\"bitmap\">" << endl;
 	ctx.os << "\t\t<string name=\"filename\" value=\"textures/" << targetPath.leaf() << "\"/>" << endl;
 	ctx.os << "\t</texture>" << endl << endl;
 }
