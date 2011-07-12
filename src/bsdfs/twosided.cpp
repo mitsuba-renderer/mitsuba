@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
  * 
  * By default, all non-transmissive scattering models in Mitsuba 
  * are \emph{one-sided} --- in other words, they absorb all light 
- * that is received on the backs-side or interior of any surfaces 
+ * that is received on the backs-side of any surfaces 
  * associated with them. Holes in a mesh will thus be 
  *
  * This is usually a good idea, since it will expose modeling
