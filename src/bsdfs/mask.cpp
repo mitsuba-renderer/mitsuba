@@ -31,13 +31,14 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{Rendering without an opacity mask}
  *         {bsdf_mask_before.jpg}
  *     \rendering{Rendering \emph{with} an opacity mask (\lstref{mask-leaf})}
- *         {bsdf_mask_before.jpg}
+ *         {bsdf_mask_after.jpg}
  * }
  * This plugin applies an opacity mask to add nested BSDF instance. It interpolates
  * between perfectly transparent and completely opaque based on the \code{opacity}
  * parameter.
  *
  * The transparency is implemented as a forward-facing Diract delta distribution.
+ * \vspace{5mm}
  *
  * \begin{xml}[caption=Material configuration for a transparent leaf,
  *    label=lst:mask-leaf]
@@ -72,8 +73,6 @@ public:
 		configure();
 	}
 
-	virtual ~Mask() { }
-
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
@@ -84,6 +83,7 @@ public:
 	void configure() {
 		if (!m_nestedBSDF)
 			Log(EError, "A child BSDF is required");
+		m_components.clear();
 		for (int i=0; i<m_nestedBSDF->getComponentCount(); ++i)
 			m_components.push_back(m_nestedBSDF->getType(i));
 		m_components.push_back(EDeltaTransmission | EFrontSide | EBackSide);

@@ -88,8 +88,6 @@ public:
 		configure();
 	}
 
-	virtual ~SmoothDiffuse() { }
-
 	void configure() {
 		/* Verify the input parameter and fix them if necessary */
 		m_reflectance = ensureEnergyConservation(m_reflectance, "reflectance", 1.0f);

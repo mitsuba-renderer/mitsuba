@@ -2,6 +2,12 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
+	<bsdf type="coating">
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1"/>
+		<bsdf type="diffuse"/>
+	</bsdf>
+
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
 
@@ -130,6 +136,6 @@
 
 	<!-- Test the mask model -->
 	<bsdf type="mask">
-		<bsdf type="lambertian"/>
+		<bsdf type="diffuse"/>
 	</bsdf>
 </scene>

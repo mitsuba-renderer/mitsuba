@@ -121,8 +121,6 @@ public:
 		m_ksMultiplier = stream->readFloat();
 	}
 
-	virtual ~IrawanClothBRDF() { }
-
 	void configure() {
 		m_components.clear();
 		m_components.push_back(EGlossyReflection | EAnisotropic | EFrontSide);

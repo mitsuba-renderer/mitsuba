@@ -202,8 +202,6 @@ public:
 		BSDF::configure();
 	}
 
-	virtual ~RoughPlastic() { }
-
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
 		return m_diffuseReflectance->getValue(its);
 	}

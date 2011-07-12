@@ -85,8 +85,6 @@ public:
 		configure();
 	}
 
-	virtual ~SmoothPlastic() { }
-
 	void configure() {
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(

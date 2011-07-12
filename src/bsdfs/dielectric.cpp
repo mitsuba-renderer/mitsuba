@@ -159,8 +159,6 @@ public:
 		m_specularTransmittance = static_cast<Texture *>(manager->getInstance(stream));
 	}
 
-	virtual ~SmoothDielectric() { }
-
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
@@ -228,18 +226,15 @@ public:
 		Float eta = etaI / etaT,
 			  sinThetaTSqr = eta*eta * Frame::sinTheta2(wi);
 
-		Float cosThetaT = 0;
 		if (sinThetaTSqr >= 1.0f) {
 			/* Total internal reflection */
 			return Vector(0.0f);
 		} else {
-			cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
+			Float cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
 
-			if (entering)
-				cosThetaT = -cosThetaT;
+			return Vector(-eta*wi.x, -eta*wi.y, 
+				entering ? -cosThetaT : cosThetaT);
 		}
-
-		return Vector(-eta*wi.x, -eta*wi.y, cosThetaT);
 	}
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {

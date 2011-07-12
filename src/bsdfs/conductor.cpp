@@ -172,8 +172,6 @@ public:
 		configure();
 	}
 
-	virtual ~SmoothConductor() { }
-
 	void configure() {
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(

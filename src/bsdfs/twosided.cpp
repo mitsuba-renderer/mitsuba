@@ -64,8 +64,6 @@ public:
 		configure();
 	}
 
-	virtual ~TwoSidedBRDF() { }
-
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 

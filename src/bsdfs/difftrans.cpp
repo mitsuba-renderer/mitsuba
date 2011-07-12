@@ -50,24 +50,22 @@ public:
 		m_transmittance = new ConstantSpectrumTexture(props.getSpectrum(
 			props.hasProperty("transmittance") ? "transmittance" 
 				: "diffuseTransmittance", Spectrum(.5f)));
-		m_components.push_back(EDiffuseTransmission | EFrontSide | EBackSide);
 		m_usesRayDifferentials = false;
 	}
 
 	DiffuseTransmitter(Stream *stream, InstanceManager *manager) 
 		: BSDF(stream, manager) {
 		m_transmittance = static_cast<Texture *>(manager->getInstance(stream));
-		m_components.push_back(EDiffuseTransmission | EFrontSide | EBackSide);
 		m_usesRayDifferentials = m_transmittance->usesRayDifferentials();
 	}
 
-	virtual ~DiffuseTransmitter() { }
-
 	void configure() {
-		BSDF::configure();
-
 		/* Verify the input parameters and fix them if necessary */
 		m_transmittance = ensureEnergyConservation(m_transmittance, "transmittance", 1.0f);
+
+		m_components.clear();
+		m_components.push_back(EDiffuseTransmission | EFrontSide | EBackSide);
+		BSDF::configure();
 	}
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {

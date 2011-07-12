@@ -11,15 +11,14 @@ plugins += env.SharedLibrary('roughconductor', ['roughconductor.cpp'])
 plugins += env.SharedLibrary('roughplastic', ['roughplastic.cpp'])
 
 # Materials that act as modifiers
-#plugins += env.SharedLibrary('coating', ['coating.cpp'])
 plugins += env.SharedLibrary('twosided', ['twosided.cpp'])
 plugins += env.SharedLibrary('mask', ['mask.cpp'])
 plugins += env.SharedLibrary('mixture', ['mixture.cpp'])
-
+plugins += env.SharedLibrary('coating', ['coating.cpp'])
 
 # Other materials
-plugins += env.SharedLibrary('phong', ['phong.cpp'])
 plugins += env.SharedLibrary('ward', ['ward.cpp'])
+plugins += env.SharedLibrary('phong', ['phong.cpp'])
 plugins += env.SharedLibrary('irawan', ['irawan.cpp'])
 plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
 

@@ -248,8 +248,6 @@ public:
 		BSDF::configure();
 	}
 
-	virtual ~RoughDielectric() { }
-
 	inline Float signum(Float value) const {
 		return (value < 0) ? -1.0f : 1.0f;
 	}

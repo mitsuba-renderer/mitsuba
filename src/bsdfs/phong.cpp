@@ -51,8 +51,8 @@ MTS_NAMESPACE_BEGIN
  *
  * When using this plugin, note that the diffuse and specular reflectance
  * components should add up to a value less than or equal to one (for each 
- * color channel). Otherwise, they will be scaled appropriately to ensure 
- * energy conservation.
+ * color channel). Otherwise, they will automatically be scaled appropriately 
+ * to ensure energy conservation.
  */
 class Phong : public BSDF {
 public:
@@ -74,8 +74,6 @@ public:
 
 		configure();
 	}
-
-	virtual ~Phong() { }
 
 	void configure() {
 		m_components.clear();

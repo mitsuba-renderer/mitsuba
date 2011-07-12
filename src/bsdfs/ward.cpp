@@ -58,7 +58,7 @@ MTS_NAMESPACE_BEGIN
  * \begin{enumerate}[(i)]
  *    \item ``Measuring and Modeling Anisotropic Reflection'' 
  *      by Greg Ward \cite{Ward1992Measuring}
- *    \item ``Notes on the Ward BRDF'' by Bruce Walter\cite{Walter2005Notes}
+ *    \item ``Notes on the Ward BRDF'' by Bruce Walter \cite{Walter2005Notes}
  *    \item ``An Improved Normalization for the Ward Reflectance Model''
  *      by Arne D\"ur \cite{Dur2006Improved}
  *    \item ``A New Ward BRDF Model with Bounded Albedo'' by
@@ -78,8 +78,8 @@ MTS_NAMESPACE_BEGIN
  *
  * When using this plugin, note that the diffuse and specular reflectance
  * components should add up to a value less than or equal to one (for each 
- * color channel). Otherwise, they will be scaled appropriately to ensure 
- * energy conservation.
+ * color channel). Otherwise, they will automatically be scaled appropriately 
+ * to ensure energy conservation.
  */
 class Ward : public BSDF {
 public:
@@ -133,8 +133,6 @@ public:
 
 		configure();
 	}
-
-	virtual ~Ward() { }
 
 	void configure() {
 		unsigned int extraFlags = 0;
