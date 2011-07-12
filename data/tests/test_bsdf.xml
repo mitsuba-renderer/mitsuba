@@ -8,6 +8,11 @@
 	<!-- Test the rough diffuse model -->
 	<bsdf type="roughdiffuse"/>
 
+	<!-- Test the two-sided model -->
+	<bsdf type="twosided">
+		<bsdf type="diffuse"/>
+	</bsdf>
+
 	<!-- Test the diffuse transmission model -->
 	<bsdf type="difftrans"/>
 
@@ -110,4 +115,5 @@
 		<string name="distribution" value="beckmann"/>
 		<float name="alpha" value=".7"/>
 	</bsdf>
+
 </scene>

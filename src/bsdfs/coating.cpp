@@ -27,6 +27,7 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}
  *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1.0}}
  * }
+ * This class implements a smooth dielectric coating in the style of \cite{Weidlich2007Arbitrarily}.
  *
  *  XXX cancel out cosine factors?
  *  XXX did I get the measure conversion terms right?

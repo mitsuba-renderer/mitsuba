@@ -135,7 +135,7 @@ MTS_NAMESPACE_BEGIN
  * of two distinct roughness values along the tangent and bitangent
  * directions. This can be used to provide a material with a ``brushed''
  * appearance. The alignment of the anisotropy will follow the UV
- * parameterization of the underlying mesh in this case. This means that
+ * parameterization of the underlying mesh in this case. This also means that
  * such an anisotropic material cannot be applied to triangle meshes that 
  * are missing texture coordinates.\newpage
  *

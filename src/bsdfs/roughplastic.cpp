@@ -53,7 +53,7 @@ MTS_NAMESPACE_BEGIN
  *         \default{0.1}. 
  *     }
  *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
- *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
+ *      numerically or using a known material name. \default{\texttt{polypropylene} / 1.49}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
@@ -62,10 +62,73 @@ MTS_NAMESPACE_BEGIN
  *         factor used to modulate the diffuse reflectance component\default{0.5}}
  * }
  * \renderings{
- *     \rendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_ggx}
- *     \rendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}
+ *     \medrendering{Beckmann, $\alpha=0.05$, \texttt{diffuse}
+ *         \showbreak\texttt{Reflectance=0}, \lstref{roughplastic-lacquer}}{bsdf_roughplastic_beckmann_lacquer}
+ *     \medrendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
+ *     \medrendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}
  * }
  *
+ * This plugin implements a realistic microfacet scattering model for rendering
+ * rough dielectric materials with internal scattering, such as plastic. It can 
+ * be interpreted as a fancy version of the Cook-Torrance model and should be 
+ * preferred over empirical models like \pluginref{phong} and \pluginref{ward} 
+ * when possible.
+ *
+ * Microfacet theory describes rough surfaces as an arrangement of unresolved and 
+ * ideally specular facets, whose normal directions are given by a specially
+ * chosen \emph{microfacet distribution}. 
+ * By accounting for shadowing and masking effects between these facets, it is 
+ * possible to reproduce the important off-specular reflections peaks observed 
+ * in real-world measurements of such materials.
+ *
+ * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
+ * \pluginref{plastic}. For very low values of $\alpha$, the two will
+ * be very similar, though scenes using this plugin will take longer to render 
+ * due to the additional computational burden of tracking surface roughness.
+ *
+ * The model uses the integrated specular reflectance to interpolate between the 
+ * specular and diffuse components (i.e. any light that is not scattered
+ * specularly is assumed to contribute to the diffuse component).
+ * Similar to the \pluginref{dielectric} plugin, IOR values 
+ * can either be specified numerically, or based on a list of known materials 
+ * (see \tblref{dielectric-iors} for an overview). 
+ * 
+ * The implementation is based on the paper ``Microfacet Models
+ * for Refraction through Rough Surfaces'' by Walter et al. 
+ * \cite{Walter07Microfacet}. It supports several different types of microfacet
+ * distributions. Note that the choices are a bit more restricted here---in 
+ * comparison to other rough scattering models in Mitsuba,
+ * the roughness cannot be textured, and anisotropic microfacet 
+ * distributions are not allowed.
+ *
+ * When no parameters are given, the plugin activates the default settings, 
+ * which describe a white polypropylene plastic material with a light amount
+ * of roughness modeled using the Beckmann distribution.
+ *
+ * To get an intuition about the effect of the surface roughness
+ * parameter $\alpha$, consider the following approximate differentiation: 
+ * a value of $\alpha=0.001-0.01$ corresponds to a material 
+ * with slight imperfections on an
+ * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
+ * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
+ * finish). Values significantly above that are probably not too realistic.
+*
+ * When rendering with the Phong microfacet 
+ * distributions, a conversion is used to turn the specified 
+ * $\alpha$ roughness value into the Phong exponent.
+ * This is done in a way, such that the different 
+ * distributions all produce a similar appearance for 
+ * the same value of $\alpha$.\vspace{5mm}
+ *
+ * \begin{xml}[caption={A material definition for rough, black laquer.}, label=lst:roughplastic-lacquer]
+ * <bsdf type="roughplastic">
+ *     <string name="distribution" value="beckmann"/>
+ *     <float name="alpha" value="0.05"/>
+ *     <float name="intIOR" value="1.61"/>
+ *     <spectrum name="diffuseReflectance" value="0"/>
+ * </bsdf>
+ * \end{xml}
+*
  */
 class RoughPlastic : public BSDF {
 public:
@@ -76,7 +139,7 @@ public:
 			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
 
 		/* Specifies the internal index of refraction at the interface */
-		m_intIOR = lookupIOR(props, "intIOR", "bk7");
+		m_intIOR = lookupIOR(props, "intIOR", "polypropylene");
 
 		/* Specifies the external index of refraction at the interface */
 		m_extIOR = lookupIOR(props, "extIOR", "air");

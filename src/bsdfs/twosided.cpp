@@ -24,7 +24,17 @@ MTS_NAMESPACE_BEGIN
 
 /*! \plugin{twosided}{Two-sided BRDF adapter}
  * 
- * Turns a nested one-sided BRDF onto a two-sided version that
+ * By default, all non-transmissive scattering models in Mitsuba 
+ * are \emph{one-sided} --- in other words, they absorb all light 
+ * that is received on the backs-side or interior of any surfaces 
+ * associated with them. Holes in a mesh will thus be 
+ *
+ * This is usually a good idea, since it will expose modeling
+ * issues early on. But sometimes one is forced to deal with such
+ * a bad mesh. In this case, this plugin that cannot be fixed.
+ * 
+ *
+ * This plugin turns a nested one-sided model onto a two-sided version that
  * can be used to render meshes where the back-side is visible.
  *
  * \begin{xml}
@@ -65,23 +75,22 @@ public:
 				"a transmission component can be nested!");
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec) const {
+	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		BSDFQueryRecord b(bRec);
 		if (Frame::cosTheta(b.wi) < 0) {
 			b.wi.z *= -1;
 			b.wo.z *= -1;
 		}
-		return m_nestedBRDF->eval(b);
+		return m_nestedBRDF->eval(b, measure);
 	}
 
-
-	Float pdf(const BSDFQueryRecord &bRec) const {
+	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		BSDFQueryRecord b(bRec);
 		if (b.wi.z < 0) {
 			b.wi.z *= -1;
 			b.wo.z *= -1;
 		}
-		return m_nestedBRDF->pdf(b);
+		return m_nestedBRDF->pdf(b, measure);
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
@@ -112,7 +121,7 @@ public:
 
 		if (flipped) {
 			bRec.wi.z *= -1;
-	
+
 			if (!result.isZero() && pdf != 0)
 				bRec.wo.z *= -1;
 		}

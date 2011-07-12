@@ -36,6 +36,7 @@ MTS_NAMESPACE_BEGIN
  *           \item \code{ggx}: New distribution proposed by
  *              Walter et al. \cite{Walter07Microfacet}, which is meant to better handle 
  *              the long tails observed in measurements of ground surfaces. 
+ *              Renderings with this distribution may converge slowly.
  *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
  *              Due to the underlying microfacet theory, 
  *              the use of this distribution here leads to more realistic 
@@ -67,13 +68,9 @@ MTS_NAMESPACE_BEGIN
  *         factor used to modulate the reflectance component\default{1.0}}
  * }
  * This plugin implements a realistic microfacet scattering model for rendering
- * rough conducting materials, such as metals. Microfacet theory describes rough 
- * surfaces as an arrangement of unresolved and ideally specular facets, whose 
- * normal directions are given by a specially chosen \emph{microfacet distribution}. 
- * By accounting for shadowing and masking effects between these facets, it is 
- * possible to reproduce the important off-specular reflections peaks observed 
- * in real-world measurements of such materials.
-
+ * rough conducting materials, such as metals. It can be interpreted as a fancy 
+ * version of the Cook-Torrance model and should be preferred over 
+ * empirical models like \pluginref{phong} and \pluginref{ward} when possible.
  * \renderings{
  *     \rendering{Rough copper (Beckmann, $\alpha=0.1$)}
  *     	   {bsdf_roughconductor_copper.jpg}
@@ -81,8 +78,15 @@ MTS_NAMESPACE_BEGIN
  *         $\alpha_u=0.05,\ \alpha_v=0.3$), see 
  *         \lstref{roughconductor-aluminium}}
  *         {bsdf_roughconductor_anisotropic_aluminium.jpg}
- *     \vspace{-7mm}
+ *     \vspace{-8mm}
  * }
+ *
+ * Microfacet theory describes rough 
+ * surfaces as an arrangement of unresolved and ideally specular facets, whose 
+ * normal directions are given by a specially chosen \emph{microfacet distribution}. 
+ * By accounting for shadowing and masking effects between these facets, it is 
+ * possible to reproduce the important off-specular reflections peaks observed 
+ * in real-world measurements of such materials.
  *
  * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
  * \pluginref{conductor}. For very low values of $\alpha$, the two will
@@ -108,8 +112,8 @@ MTS_NAMESPACE_BEGIN
  * with slight imperfections on an
  * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
  * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
- * finish).
- * \vspace{-2mm}
+ * finish). Values significantly above that are probably not too realistic.
+ * \vspace{-6mm}
  * \subsubsection*{Techical details}\vspace{-2mm}
  * When rendering with the Ashikhmin-Shirley or Phong microfacet 
  * distributions, a conversion is used to turn the specified 
@@ -122,7 +126,7 @@ MTS_NAMESPACE_BEGIN
  * of two distinct roughness values along the tangent and bitangent
  * directions. This can be used to provide a material with a ``brushed''
  * appearance. The alignment of the anisotropy will follow the UV
- * parameterization of the underlying mesh in this case. This means that
+ * parameterization of the underlying mesh in this case. This also means that
  * such an anisotropic material cannot be applied to triangle meshes that 
  * are missing texture coordinates.
  *
@@ -131,7 +135,7 @@ MTS_NAMESPACE_BEGIN
  * in RGB mode, the computations will be much more approximate in this case.
  * Also note that this material is one-sided---that is, observed from the 
  * back side, it will be completely black. If this is undesirable, 
- * consider using the \pluginref{twosided} BRDF adapter plugin.
+ * consider using the \pluginref{twosided} BRDF adapter.
  *
  * \begin{xml}[caption={A material definition for brushed aluminium}, label=lst:roughconductor-aluminium]
  * <bsdf type="roughconductor">
@@ -310,10 +314,11 @@ public:
 		const Spectrum F = fresnelConductor(Frame::cosTheta(bRec.wi),
 				m_eta, m_k);
 
-		Float numerator = m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
+		Float numerator = m_distribution.eval(m, alphaU, alphaV)
+			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
 			* dot(bRec.wi, m);
 
-		Float denominator = Frame::cosTheta(m)
+		Float denominator = m_distribution.pdf(m, alphaU, alphaV)
 			* Frame::cosTheta(bRec.wi);
 
 		return m_specularReflectance->getValue(bRec.its) * F

@@ -460,7 +460,7 @@ public:
 
 			nEvalsTotal += nEvals;
 		}
-		SLog(EInfo, "Created a " SIZE_T_FMT "-node cubic spline approximation to the rough Frensel "
+		SLog(EInfo, "Created a " SIZE_T_FMT "-node cubic spline approximation to the rough Fresnel "
 				"transmittance (integration took %i ms and " SIZE_T_FMT " function evaluations)",
 				resolution, timer->getMilliseconds(), nEvalsTotal);
 		spline->build();
