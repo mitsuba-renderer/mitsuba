@@ -156,7 +156,6 @@ public:
 		return oss.str();
 	}
 
-
 	Shader *createShader(Renderer *renderer) const;
 
 	MTS_DECLARE_CLASS()

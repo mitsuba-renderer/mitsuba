@@ -79,24 +79,26 @@ public:
 		m_reflectance = new ConstantSpectrumTexture(props.getSpectrum(
 			props.hasProperty("reflectance") ? "reflectance" 
 				: "diffuseReflectance", Spectrum(.5f)));
-		m_components.push_back(EDiffuseReflection | EFrontSide);
-		m_usesRayDifferentials = false;
 	}
 
 	SmoothDiffuse(Stream *stream, InstanceManager *manager) 
 		: BSDF(stream, manager) {
 		m_reflectance = static_cast<Texture *>(manager->getInstance(stream));
-		m_components.push_back(EDiffuseReflection | EFrontSide);
-		m_usesRayDifferentials = m_reflectance->usesRayDifferentials();
+
+		configure();
 	}
 
 	virtual ~SmoothDiffuse() { }
 
 	void configure() {
-		BSDF::configure();
-
 		/* Verify the input parameter and fix them if necessary */
 		m_reflectance = ensureEnergyConservation(m_reflectance, "reflectance", 1.0f);
+
+		m_components.clear();
+		m_components.push_back(EDiffuseReflection | EFrontSide);
+		m_usesRayDifferentials = m_reflectance->usesRayDifferentials();
+
+		BSDF::configure();
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
@@ -148,7 +150,6 @@ public:
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) 
 				&& (name == "reflectance" || name == "diffuseReflectance")) {
 			m_reflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_reflectance->usesRayDifferentials();
 		} else {
 			BSDF::addChild(name, child);
 		}

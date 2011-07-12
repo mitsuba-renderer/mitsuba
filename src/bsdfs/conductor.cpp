@@ -161,8 +161,6 @@ public:
 		m_eta = props.getSpectrum("eta", materialEta);
 		m_k = props.getSpectrum("k", materialK);
 
-		m_components.push_back(EDeltaReflection | EFrontSide);
-		m_usesRayDifferentials = false;
 	}
 
 	SmoothConductor(Stream *stream, InstanceManager *manager) 
@@ -170,12 +168,25 @@ public:
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_eta = Spectrum(stream);
 		m_k = Spectrum(stream);
-		m_components.push_back(EDeltaReflection | EFrontSide);
-		m_usesRayDifferentials = 
-			m_specularReflectance->usesRayDifferentials();
+
+		configure();
 	}
 
 	virtual ~SmoothConductor() { }
+
+	void configure() {
+		/* Verify the input parameters and fix them if necessary */
+		m_specularReflectance = ensureEnergyConservation(
+			m_specularReflectance, "specularReflectance", 1.0f);
+		
+		m_usesRayDifferentials = 
+			m_specularReflectance->usesRayDifferentials();
+
+		m_components.clear();
+		m_components.push_back(EDeltaReflection | EFrontSide);
+		
+		BSDF::configure();
+	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
@@ -191,14 +202,6 @@ public:
 		} else {
 			BSDF::addChild(name, child);
 		}
-	}
-
-	void configure() {
-		BSDF::configure();
-
-		/* Verify the input parameters and fix them if necessary */
-		m_specularReflectance = ensureEnergyConservation(
-			m_specularReflectance, "specularReflectance", 1.0f);
 	}
 
 	/// Reflection in local coordinates

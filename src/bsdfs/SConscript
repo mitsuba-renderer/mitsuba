@@ -18,9 +18,9 @@ plugins += env.SharedLibrary('mixture', ['mixture.cpp'])
 
 
 # Other materials
-plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
 plugins += env.SharedLibrary('phong', ['phong.cpp'])
-#plugins += env.SharedLibrary('ward', ['ward.cpp'])
+plugins += env.SharedLibrary('ward', ['ward.cpp'])
 #plugins += env.SharedLibrary('irawan', ['irawan.cpp'])
+plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
 
 Export('plugins')

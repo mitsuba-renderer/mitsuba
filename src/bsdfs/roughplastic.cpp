@@ -62,8 +62,7 @@ MTS_NAMESPACE_BEGIN
  *         factor used to modulate the diffuse reflectance component\default{0.5}}
  * }
  * \renderings{
- *     \medrendering{Beckmann, $\alpha=0.05$, \texttt{diffuse}
- *         \showbreak\texttt{Reflectance=0}, \lstref{roughplastic-lacquer}}{bsdf_roughplastic_beckmann_lacquer}
+ *     \medrendering{Beckmann, $\alpha=0.05$, diffuseReflectance=0}{bsdf_roughplastic_beckmann_lacquer}
  *     \medrendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
  *     \medrendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}
  * }
@@ -125,10 +124,10 @@ MTS_NAMESPACE_BEGIN
  *     <string name="distribution" value="beckmann"/>
  *     <float name="alpha" value="0.05"/>
  *     <float name="intIOR" value="1.61"/>
- *     <spectrum name="diffuseReflectance" value="0"/>
+ *     <specturm name="diffuseReflectance" value="0"/>
  * </bsdf>
  * \end{xml}
-*
+ *
  */
 class RoughPlastic : public BSDF {
 public:
@@ -158,8 +157,6 @@ public:
 
 		m_alpha = m_distribution.transformRoughness(
 			props.getFloat("alpha", 0.1f));
-
-		m_usesRayDifferentials = false;
 	}
 
 	RoughPlastic(Stream *stream, InstanceManager *manager) 
@@ -173,10 +170,6 @@ public:
 		m_alpha = stream->readFloat();
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
-
-		m_usesRayDifferentials = 
-			m_specularReflectance->usesRayDifferentials() ||
-			m_diffuseReflectance->usesRayDifferentials();
 
 		configure();
 	}
@@ -201,6 +194,10 @@ public:
 		/* Precompute the rough transmittance through the interface */
 		m_roughTransmittance = m_distribution.computeRoughTransmittance(
 				m_extIOR, m_intIOR, m_alpha, TRANSMITTANCE_PRECOMP_NODES);
+
+		m_usesRayDifferentials = 
+			m_specularReflectance->usesRayDifferentials() ||
+			m_diffuseReflectance->usesRayDifferentials();
 
 		BSDF::configure();
 	}
@@ -384,12 +381,13 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
-			m_specularReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "diffuseReflectance") {
-			m_diffuseReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
+			if (name == "specularReflectance") 
+				m_specularReflectance = static_cast<Texture *>(child);
+			else if (name == "diffuseReflectance")
+				m_diffuseReflectance = static_cast<Texture *>(child);
+			else 
+				BSDF::addChild(name, child);
 		} else {
 			BSDF::addChild(name, child);
 		}

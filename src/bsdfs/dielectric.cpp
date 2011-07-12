@@ -149,10 +149,6 @@ public:
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 		m_specularTransmittance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularTransmittance", Spectrum(1.0f)));
-
-		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide);
-		m_components.push_back(EDeltaTransmission | EFrontSide | EBackSide);
-		m_usesRayDifferentials = false;
 	}
 
 	SmoothDielectric(Stream *stream, InstanceManager *manager) 
@@ -161,11 +157,6 @@ public:
 		m_extIOR = stream->readFloat();
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularTransmittance = static_cast<Texture *>(manager->getInstance(stream));
-		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide);
-		m_components.push_back(EDeltaTransmission | EFrontSide | EBackSide);
-		m_usesRayDifferentials = 
-			m_specularReflectance->usesRayDifferentials() ||
-			m_specularTransmittance->usesRayDifferentials();
 	}
 
 	virtual ~SmoothDielectric() { }
@@ -179,26 +170,35 @@ public:
 		manager->serialize(stream, m_specularTransmittance.get());
 	}
 
-	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
-			m_specularReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularTransmittance") {
-			m_specularTransmittance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_specularTransmittance->usesRayDifferentials();
-		} else {
-			BSDF::addChild(name, child);
-		}
-	}
-
 	void configure() {
-		BSDF::configure();
-
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
 			m_specularReflectance, "specularReflectance", 1.0f);
 		m_specularTransmittance = ensureEnergyConservation(
 			m_specularTransmittance, "specularTransmittance", 1.0f);
+		
+		m_components.clear();
+		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide);
+		m_components.push_back(EDeltaTransmission | EFrontSide | EBackSide);
+		
+		m_usesRayDifferentials = 
+			m_specularReflectance->usesRayDifferentials() ||
+			m_specularTransmittance->usesRayDifferentials();
+		
+		BSDF::configure();
+	}
+
+	void addChild(const std::string &name, ConfigurableObject *child) {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
+			if (name == "specularReflectance")
+				m_specularReflectance = static_cast<Texture *>(child);
+			else if (name == "specularTransmittance")
+				m_specularTransmittance = static_cast<Texture *>(child);
+			else
+				BSDF::addChild(name, child);
+		} else {
+			BSDF::addChild(name, child);
+		}
 	}
 
 	/// Reflection in local coordinates

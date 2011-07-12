@@ -92,10 +92,7 @@ public:
 				: "diffuseReflectance", Spectrum(0.5f)));
 
 		m_useFastApprox = props.getBoolean("useFastApprox", false);
-
 		m_alpha = new ConstantFloatTexture(props.getFloat("alpha", 0.2f));
-		m_components.push_back(EGlossyReflection | EFrontSide);
-		m_usesRayDifferentials = false;
 	}
 
 	RoughDiffuse(Stream *stream, InstanceManager *manager) 
@@ -103,17 +100,22 @@ public:
 		m_reflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
 		m_useFastApprox = stream->readBool();
-		m_components.push_back(EGlossyReflection | EFrontSide);
-		m_usesRayDifferentials = m_reflectance->usesRayDifferentials();
+		
+		configure();
 	}
 
 	virtual ~RoughDiffuse() { }
 
 	void configure() {
-		BSDF::configure();
-
 		/* Verify the input parameter and fix them if necessary */
 		m_reflectance = ensureEnergyConservation(m_reflectance, "reflectance", 1.0f);
+		
+		m_components.clear();
+		m_components.push_back(EGlossyReflection | EFrontSide);
+		m_usesRayDifferentials = m_reflectance->usesRayDifferentials() ||
+			m_alpha->usesRayDifferentials();
+		
+		BSDF::configure();
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
@@ -244,14 +246,13 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) 
-				&& (name == "reflectance" || name == "diffuseReflectance")) {
-			m_reflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_reflectance->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) 
-				&& name == "alpha") {
-			m_alpha = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_reflectance->usesRayDifferentials();
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
+			if (name == "reflectance" || name == "diffuseReflectance")
+				m_reflectance = static_cast<Texture *>(child);
+			if (name == "alpha")
+				m_alpha = static_cast<Texture *>(child);
+			else 
+				BSDF::addChild(name, child);
 		} else {
 			BSDF::addChild(name, child);
 		}

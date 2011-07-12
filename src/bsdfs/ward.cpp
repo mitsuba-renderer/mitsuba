@@ -17,8 +17,7 @@
 */
 
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/consttexture.h>
-#include <mitsuba/hw/gpuprogram.h>
+#include <mitsuba/hw/basicshader.h>
 #include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
@@ -58,10 +57,8 @@ public:
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(0.2f)));
 		
-		m_kd = props.getFloat("diffuseAmount", 1.0f);
-		m_ks = props.getFloat("specularAmount", 1.0f);
-
-		std::string type = boost::to_lower_copy(props.getString("type", "balanced"));
+		std::string type = 
+			boost::to_lower_copy(props.getString("type", "balanced"));
 		if (type == "ward")
 			m_modelType = EWard;
 		else if (type == "ward-duer")
@@ -72,19 +69,15 @@ public:
 			Log(EError, "Specified an invalid model type \"%s\", must be "
 				"\"ward\", \"ward-duer\", or \"balanced\"!", type.c_str());
 
-		m_ensureEnergyConservation = props.getBoolean("ensureEnergyConservation", true);
-		m_specularSamplingWeight = props.getFloat("specularSamplingWeight", -1);
+		Float alpha = props.getFloat("alpha", 0.1f),
+			  alphaU = props.getFloat("alphaU", alpha),
+			  alphaV = props.getFloat("alphaV", alpha);
 
-		m_alphaX = props.getFloat("alphaX", .1f);
-		m_alphaY = props.getFloat("alphaY", .1f);
-		m_componentCount = 2;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDiffuseReflection | EFrontSide;
-		m_type[1] = EGlossyReflection | EFrontSide;
-		if (m_alphaX != m_alphaY) 
-			m_type[1] |= EAnisotropic;
-		m_combinedType = m_type[0] | m_type[1];
-		m_usesRayDifferentials = false;
+		m_alphaU = new ConstantFloatTexture(alphaU);
+		if (alphaU == alphaV)
+			m_alphaV = m_alphaU;
+		else
+			m_alphaV = new ConstantFloatTexture(alphaV);
 	}
 
 	Ward(Stream *stream, InstanceManager *manager) 
@@ -92,84 +85,82 @@ public:
 		m_modelType = (EModelType) stream->readUInt();
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
-		m_alphaX = stream->readFloat();
-		m_alphaY = stream->readFloat();
-		m_kd = stream->readFloat();
-		m_ks = stream->readFloat();
-		m_specularSamplingWeight = stream->readFloat();
-		m_diffuseSamplingWeight = stream->readFloat();
+		m_alphaU = static_cast<Texture *>(manager->getInstance(stream));
+		m_alphaV = static_cast<Texture *>(manager->getInstance(stream));
 
-		m_componentCount = 2;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDiffuseReflection | EFrontSide;
-		m_type[1] = EGlossyReflection | EFrontSide;
-		if (m_alphaX != m_alphaY) 
-			m_type[1] |= EAnisotropic;
-		m_combinedType = m_type[0] | m_type[1];
-		m_usesRayDifferentials = 
-			m_diffuseReflectance->usesRayDifferentials() ||
-			m_specularReflectance->usesRayDifferentials();
+		configure();
 	}
 
-	virtual ~Ward() {
-		delete[] m_type;
-	}
+	virtual ~Ward() { }
 
 	void configure() {
-		if (m_ensureEnergyConservation && (m_kd * m_diffuseReflectance->getMaximum().max() 
-				+ m_ks * m_specularReflectance->getMaximum().max() > 1.0f)) {
-			Log(EWarn, "Material \"%s\": Energy conservation is potentially violated!", getName().c_str());
-			Log(EWarn, "Max. diffuse reflectance = %f * %f = %f", m_kd, m_diffuseReflectance->getMaximum().max(), m_kd*m_diffuseReflectance->getMaximum().max());
-			Log(EWarn, "Max. specular reflectance = %f * %f = %f", m_ks, m_specularReflectance->getMaximum().max(), m_ks*m_specularReflectance->getMaximum().max());
-			Float normalization = 1/(m_kd * m_diffuseReflectance->getMaximum().max() + m_ks * m_specularReflectance->getMaximum().max());
-			Log(EWarn, "Reducing the albedo to %.1f%% of the original value to be on the safe side. "
-				"Specify ensureEnergyConservation=false to prevent this.", normalization * 100);
-			m_kd *= normalization; m_ks *= normalization;
-		}
+		unsigned int extraFlags = 0;
+		if (m_alphaU != m_alphaV)
+			extraFlags |= EAnisotropic;
 
-		if (m_specularSamplingWeight == -1) {
-			Float avgDiffReflectance = m_diffuseReflectance->getAverage().average() * m_kd;
-			Float avgSpecularReflectance = m_specularReflectance->getAverage().average() * m_ks;
-			m_specularSamplingWeight = avgSpecularReflectance / (avgDiffReflectance + avgSpecularReflectance);
-		}
-		m_diffuseSamplingWeight = 1.0f - m_specularSamplingWeight;
+		m_components.clear();
+		m_components.push_back(EGlossyReflection | EFrontSide | extraFlags);
+		m_components.push_back(EDiffuseReflection | EFrontSide | extraFlags);
+
+		/* Verify the input parameters and fix them if necessary */
+		std::pair<Texture *, Texture *> result = ensureEnergyConservation(
+			m_specularReflectance, m_diffuseReflectance,
+			"specularReflectance", "diffuseReflectance", 1.0f);
+		m_specularReflectance = result.first;
+		m_diffuseReflectance = result.second;
+
+		/* Compute weights that steer samples towards
+		   the specular or diffuse components */
+		Float dAvg = m_diffuseReflectance->getAverage().getLuminance(),
+			  sAvg = m_specularReflectance->getAverage().getLuminance();
+		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
+
+		m_usesRayDifferentials = 
+			m_diffuseReflectance->usesRayDifferentials() ||
+			m_specularReflectance->usesRayDifferentials() ||
+			m_alphaU->usesRayDifferentials() ||
+			m_alphaV->usesRayDifferentials();
+
+		BSDF::configure();
 	}
 
-	Spectrum f(const BSDFQueryRecord &bRec) const {
-		Spectrum result(0.0f);
+	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		if (Frame::cosTheta(bRec.wi) <= 0 ||
+			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
+			return Spectrum(0.0f);
 
-		if (bRec.wi.z <= 0 || bRec.wo.z <= 0)
-			return result;
-
-		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection)
+		bool hasSpecular = (bRec.typeMask & EGlossyReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
-		bool hasGlossy   = (bRec.typeMask & EGlossyReflection)
+		bool hasDiffuse  = (bRec.typeMask & EDiffuseReflection)
 				&& (bRec.component == -1 || bRec.component == 1);
 
-		if (hasGlossy) {
+		Spectrum result(0.0f);
+		if (hasSpecular) {
 			Vector H = bRec.wi+bRec.wo;
+			Float alphaU = m_alphaU->getValue(bRec.its).average();
+			Float alphaV = m_alphaV->getValue(bRec.its).average();
 			
 			Float factor1 = 0.0f;
 			switch (m_modelType) {
 				case EWard:
-					factor1 = 1.0f / (4.0f * M_PI * m_alphaX * m_alphaY * 
+					factor1 = 1.0f / (4.0f * M_PI * alphaU * alphaV * 
 						std::sqrt(Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo)));
 					break;
 				case EWardDuer:
-					factor1 = 1.0f / (4.0f * M_PI * m_alphaX * m_alphaY * 
+					factor1 = 1.0f / (4.0f * M_PI * alphaU * alphaV * 
 						Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo));
 					break;
 				case EBalanced:
-					factor1 = dot(H,H) / (M_PI * m_alphaX * m_alphaY 
+					factor1 = dot(H,H) / (M_PI * alphaU * alphaV 
 						* std::pow(Frame::cosTheta(H),4));
 					break;
 				default:
 					Log(EError, "Unknown model type!");
 			}
 
-			Float factor2 = H.x / m_alphaX, factor3 = H.y / m_alphaY;
+			Float factor2 = H.x / alphaU, factor3 = H.y / alphaV;
 			Float exponent = -(factor2*factor2+factor3*factor3)/(H.z*H.z);
-			Float specRef = factor1 * std::exp(exponent) * m_ks;
+			Float specRef = factor1 * std::exp(exponent);
 			/* Important to prevent numeric issues when evaluating the
 			   sampling density of the Ward model in places where it takes
 			   on miniscule values (Veach-MLT does this for instance) */
@@ -178,115 +169,133 @@ public:
 		}
 
 		if (hasDiffuse) 
-			result += m_diffuseReflectance->getValue(bRec.its) * (INV_PI * m_kd);
+			result += m_diffuseReflectance->getValue(bRec.its) * INV_PI;
 
-		return result;
+		return result * Frame::cosTheta(bRec.wo);
 	}
 
-	inline Float pdfSpec(const BSDFQueryRecord &bRec) const {
-		Vector H = normalize(bRec.wi+bRec.wo);
-		Float factor1 = 1.0f / (4.0f * M_PI * m_alphaX * m_alphaY * 
-			dot(H, bRec.wi) * std::pow(Frame::cosTheta(H), 3));
-		Float factor2 = H.x / m_alphaX, factor3 = H.y / m_alphaY;
-
-		Float exponent = -(factor2*factor2+factor3*factor3)/(H.z*H.z);
-		Float specPdf = factor1 * std::exp(exponent);
-		return specPdf;
-	}
-
-	Float pdf(const BSDFQueryRecord &bRec) const {
-		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
-		bool hasGlossy   = (bRec.typeMask & EGlossyReflection)
-				&& (bRec.component == -1 || bRec.component == 1);
-
-		if (bRec.wi.z <= 0 || bRec.wo.z <= 0)
+	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		if (Frame::cosTheta(bRec.wi) <= 0 ||
+			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
 			return 0.0f;
 
-		if (hasDiffuse && hasGlossy) {
-			return m_specularSamplingWeight * pdfSpec(bRec) +
-				   m_diffuseSamplingWeight * pdfLambertian(bRec);
-		} else if (hasDiffuse) {
-			return pdfLambertian(bRec);
-		} else if (hasGlossy) {
-			return pdfSpec(bRec);
-		}
-
-		return 0.0f;
-	}
-
-	inline Spectrum sampleSpecular(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		Float phiH = std::atan(m_alphaY/m_alphaX 
-			* std::tan(2.0f * M_PI * sample.y));
-		if (sample.y > 0.5f)
-			phiH += M_PI;
-		Float cosPhiH = std::cos(phiH);
-		Float sinPhiH = std::sqrt(std::max((Float) 0.0f, 
-			1.0f-cosPhiH*cosPhiH));
-
-		Float thetaH = std::atan(std::sqrt(std::max((Float) 0.0f, 
-			-std::log(sample.x) / (
-				(cosPhiH*cosPhiH) / (m_alphaX*m_alphaX) +
-				(sinPhiH*sinPhiH) / (m_alphaY*m_alphaY)
-		))));
-		Vector H = sphericalDirection(thetaH, phiH);
-		bRec.wo = H * (2.0f * dot(bRec.wi, H)) - bRec.wi;
-
-		bRec.sampledComponent = 1;
-		bRec.sampledType = EGlossyReflection;
-
-		if (Frame::cosTheta(bRec.wo) <= 0.0f)
-			return Spectrum(0.0f);
-
-		return f(bRec) / pdf(bRec);
-	}
-
-	inline Float pdfLambertian(const BSDFQueryRecord &bRec) const {
-		return Frame::cosTheta(bRec.wo) * INV_PI;
-	}
-
-	inline Spectrum sampleLambertian(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		bRec.wo = squareToHemispherePSA(sample);
-		bRec.sampledComponent = 0;
-		bRec.sampledType = EDiffuseReflection;
-		return f(bRec) / pdf(bRec);
-	}
-
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
-		Point2 sample(_sample);
-		if (bRec.wi.z <= 0)
-			return Spectrum(0.0f);
-
-		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
+		bool hasSpecular = (bRec.typeMask & EGlossyReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleGlossy   = (bRec.typeMask & EGlossyReflection)
+		bool hasDiffuse  = (bRec.typeMask & EDiffuseReflection)
 				&& (bRec.component == -1 || bRec.component == 1);
 
-		if (sampleDiffuse && sampleGlossy) {
-			if (sample.x <= m_specularSamplingWeight) {
-				sample.x = sample.x / m_specularSamplingWeight;
-				return sampleSpecular(bRec, sample);
-			} else {
-				sample.x = (sample.x - m_specularSamplingWeight)
-					/ m_diffuseSamplingWeight;
-				return sampleLambertian(bRec, sample);
-			}
-		} else if (sampleDiffuse) {
-			return sampleLambertian(bRec, sample);
-		} else if (sampleGlossy) {
-			return sampleSpecular(bRec, sample);
+		Float diffuseProb = 0.0f, specProb = 0.0f;
+
+		if (hasSpecular) {
+			Float alphaU = m_alphaU->getValue(bRec.its).average();
+			Float alphaV = m_alphaV->getValue(bRec.its).average();
+			Vector H = normalize(bRec.wi+bRec.wo);
+			Float factor1 = 1.0f / (4.0f * M_PI * alphaU * alphaV * 
+				dot(H, bRec.wi) * std::pow(Frame::cosTheta(H), 3));
+			Float factor2 = H.x / alphaU, factor3 = H.y / alphaV;
+
+			Float exponent = -(factor2*factor2+factor3*factor3)/(H.z*H.z);
+			specProb = factor1 * std::exp(exponent);
 		}
 
-		return Spectrum(0.0f);
+		if (hasDiffuse) 
+			diffuseProb = Frame::cosTheta(bRec.wo) * INV_PI;
+
+		if (hasDiffuse && hasSpecular)
+			return m_specularSamplingWeight * specProb + 
+				   (1-m_specularSamplingWeight) * diffuseProb;
+		else if (hasDiffuse)
+			return diffuseProb;
+		else if (hasSpecular)
+			return specProb;
+		else
+			return 0.0f;
 	}
-	
+
+	inline Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+		Point2 sample(_sample);
+
+		bool hasSpecular = (bRec.typeMask & EGlossyReflection)
+				&& (bRec.component == -1 || bRec.component == 0);
+		bool hasDiffuse  = (bRec.typeMask & EDiffuseReflection)
+				&& (bRec.component == -1 || bRec.component == 1);
+
+		if (!hasSpecular && !hasDiffuse)
+			return Spectrum(0.0f);
+
+		bool choseSpecular = hasSpecular;
+
+		if (hasDiffuse && hasSpecular) {
+			if (sample.x <= m_specularSamplingWeight) {
+				sample.x /= m_specularSamplingWeight;
+			} else {
+				sample.x = (sample.x - m_specularSamplingWeight)
+					/ (1-m_specularSamplingWeight);
+				choseSpecular = false;
+			}
+		}
+
+		if (choseSpecular) {
+			Float alphaU = m_alphaU->getValue(bRec.its).average();
+			Float alphaV = m_alphaV->getValue(bRec.its).average();
+
+			Float phiH = std::atan(alphaV/alphaU 
+				* std::tan(2.0f * M_PI * sample.y));
+			if (sample.y > 0.5f)
+				phiH += M_PI;
+			Float cosPhiH = std::cos(phiH);
+			Float sinPhiH = std::sqrt(std::max((Float) 0.0f, 
+				1.0f-cosPhiH*cosPhiH));
+
+			Float thetaH = std::atan(std::sqrt(std::max((Float) 0.0f, 
+				-std::log(sample.x) / (
+					(cosPhiH*cosPhiH) / (alphaU*alphaU) +
+					(sinPhiH*sinPhiH) / (alphaV*alphaV)
+			))));
+			Vector H = sphericalDirection(thetaH, phiH);
+			bRec.wo = H * (2.0f * dot(bRec.wi, H)) - bRec.wi;
+
+			bRec.sampledComponent = 1;
+			bRec.sampledType = EGlossyReflection;
+
+			if (Frame::cosTheta(bRec.wo) <= 0.0f)
+				return Spectrum(0.0f);
+		} else {
+			bRec.wo = squareToHemispherePSA(sample);
+			bRec.sampledComponent = 0;
+			bRec.sampledType = EDiffuseReflection;
+		}
+
+		_pdf = pdf(bRec, ESolidAngle);
+
+		if (_pdf == 0) 
+			return Spectrum(0.0f);
+		else
+			return eval(bRec, ESolidAngle);
+	}
+
+	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+		Float pdf=0;
+		Spectrum result = Ward::sample(bRec, pdf, sample);
+
+		if (result.isZero())
+			return Spectrum(0.0f);
+		else
+			return result / pdf;
+	}
+
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "diffuseReflectance") {
-			m_diffuseReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
-			m_specularReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
+			if (name == "alphaU")
+				m_alphaU = static_cast<Texture *>(child);
+			else if (name == "alphaV")
+				m_alphaV = static_cast<Texture *>(child);
+			else if (name == "diffuseReflectance")
+				m_diffuseReflectance = static_cast<Texture *>(child);
+			else if (name == "specularReflectance")
+				m_specularReflectance = static_cast<Texture *>(child);
+			else
+				BSDF::addChild(name, child);
 		} else {
 			BSDF::addChild(name, child);
 		}
@@ -298,15 +307,11 @@ public:
 		stream->writeUInt(m_modelType);
 		manager->serialize(stream, m_diffuseReflectance.get());
 		manager->serialize(stream, m_specularReflectance.get());
-		stream->writeFloat(m_alphaX);
-		stream->writeFloat(m_alphaY);
-		stream->writeFloat(m_kd);
-		stream->writeFloat(m_ks);
-		stream->writeFloat(m_specularSamplingWeight);
-		stream->writeFloat(m_diffuseSamplingWeight);
+		manager->serialize(stream, m_alphaU.get());
+		manager->serialize(stream, m_alphaV.get());
 	}
 
-	Shader *createShader(Renderer *renderer) const; 
+	//Shader *createShader(Renderer *renderer) const; 
 
 	std::string toString() const {
 		std::ostringstream oss;
@@ -322,11 +327,9 @@ public:
 
 		oss << "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
-			<< "  diffuseAmount = " << m_kd << "," << endl
-			<< "  specularAmount = " << m_ks << "," << endl
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
-			<< "  alphaX = " << m_alphaX << "," << endl
-			<< "  alphaY = " << m_alphaY << endl
+			<< "  alphaU = " << indent(m_alphaU->toString()) << "," << endl
+			<< "  alphaV = " << indent(m_alphaV->toString()) << endl
 			<< "]";
 		return oss.str();
 	}
@@ -334,15 +337,13 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	EModelType m_modelType;
-	ref<const Texture> m_diffuseReflectance;
-	ref<const Texture> m_specularReflectance;
-	Float m_alphaX, m_alphaY;
-	Float m_kd, m_ks;
+	ref<Texture> m_diffuseReflectance;
+	ref<Texture> m_specularReflectance;
+	ref<Texture> m_alphaU;
+	ref<Texture> m_alphaV;
 	Float m_specularSamplingWeight;
-	Float m_diffuseSamplingWeight;
-	bool m_ensureEnergyConservation;
 };
-
+#if 0
 // ================ Hardware shader implementation ================ 
 
 class WardShader : public Shader {
@@ -350,11 +351,10 @@ public:
 	WardShader(Renderer *renderer, Ward::EModelType type, 
 			const Texture *diffuseColor,
 			const Texture *specularColor,
-			Float ks, Float kd,
-			Float alphaX, Float alphaY) : Shader(renderer, EBSDFShader), 
+			Float alphaU, Float alphaV) : Shader(renderer, EBSDFShader), 
 			m_modelType(type), m_diffuseReflectance(diffuseColor),
 			m_specularReflectance(specularColor),
-			m_ks(ks), m_kd(kd), m_alphaX(alphaX), m_alphaY(alphaY) {
+			m_alphaU(alphaU), m_alphaV(alphaV) {
 		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
 		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
 	}
@@ -378,8 +378,8 @@ public:
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
 		oss << "uniform int " << evalName << "_type;" << endl
-			<< "uniform float " << evalName << "_alphaX;" << endl
-			<< "uniform float " << evalName << "_alphaY;" << endl
+			<< "uniform float " << evalName << "_alphaU;" << endl
+			<< "uniform float " << evalName << "_alphaV;" << endl
 			<< "uniform float " << evalName << "_ks;" << endl
 			<< "uniform float " << evalName << "_kd;" << endl
 			<< endl
@@ -389,16 +389,16 @@ public:
 			<< "    vec3 H = normalize(wi + wo);" << endl
 			<< "    float factor1;" << endl
 			<< "    if (" << evalName << "_type == 1)" << endl
-			<< "        factor1 = 1/(12.566 * " << evalName << "_alphaX * "  << endl
-			<< "                    " << evalName << "_alphaY * sqrt(wi.z * wo.z));" << endl
+			<< "        factor1 = 1/(12.566 * " << evalName << "_alphaU * "  << endl
+			<< "                    " << evalName << "_alphaV * sqrt(wi.z * wo.z));" << endl
 			<< "    else if (" << evalName << "_type == 2)" << endl
-			<< "        factor1 = 1/(12.566 * " << evalName << "_alphaX * " << endl
-			<< "                    " << evalName << "_alphaY * wi.z * wo.z);" << endl
+			<< "        factor1 = 1/(12.566 * " << evalName << "_alphaU * " << endl
+			<< "                    " << evalName << "_alphaV * wi.z * wo.z);" << endl
 			<< "    else" << endl
-			<< "        factor1 = dot(H, H)/(3.1415 * " << evalName << "_alphaX * "  << endl
-			<< "                    " << evalName << "_alphaY * (H.z * H.z) * (H.z * H.z));" << endl
-			<< "    float factor2 = H.x / " << evalName << "_alphaX;" << endl
-			<< "    float factor3 = H.y / " << evalName << "_alphaY;" << endl
+			<< "        factor1 = dot(H, H)/(3.1415 * " << evalName << "_alphaU * "  << endl
+			<< "                    " << evalName << "_alphaV * (H.z * H.z) * (H.z * H.z));" << endl
+			<< "    float factor2 = H.x / " << evalName << "_alphaU;" << endl
+			<< "    float factor3 = H.y / " << evalName << "_alphaV;" << endl
 			<< "    float exponent = -(factor2*factor2 + factor3*factor3)/(H.z*H.z);" << endl
 			<< "    float specRef = factor1 * exp(exponent) * " << evalName << "_ks;" << endl 
 			<< "    return " << depNames[0] << "(uv) * (0.31831 * " << evalName << "_kd)" << endl
@@ -413,18 +413,16 @@ public:
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
 		parameterIDs.push_back(program->getParameterID(evalName + "_type"));
-		parameterIDs.push_back(program->getParameterID(evalName + "_alphaX"));
-		parameterIDs.push_back(program->getParameterID(evalName + "_alphaY"));
+		parameterIDs.push_back(program->getParameterID(evalName + "_alphaU"));
+		parameterIDs.push_back(program->getParameterID(evalName + "_alphaV"));
 		parameterIDs.push_back(program->getParameterID(evalName + "_ks"));
 		parameterIDs.push_back(program->getParameterID(evalName + "_kd"));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
 		program->setParameter(parameterIDs[0], (int) m_modelType);
-		program->setParameter(parameterIDs[1], m_alphaX);
-		program->setParameter(parameterIDs[2], m_alphaY);
-		program->setParameter(parameterIDs[3], m_ks);
-		program->setParameter(parameterIDs[4], m_kd);
+		program->setParameter(parameterIDs[1], m_alphaU);
+		program->setParameter(parameterIDs[2], m_alphaV);
 	}
 
 	MTS_DECLARE_CLASS()
@@ -434,16 +432,16 @@ private:
 	ref<const Texture> m_specularReflectance;
 	ref<Shader> m_diffuseReflectanceShader;
 	ref<Shader> m_specularReflectanceShader;
-	Float m_ks, m_kd;
-	Float m_alphaX, m_alphaY;
+	Float m_alphaU, m_alphaV;
 };
 
 Shader *Ward::createShader(Renderer *renderer) const { 
 	return new WardShader(renderer, m_modelType, m_diffuseReflectance.get(),
-		m_specularReflectance.get(), m_ks, m_kd, m_alphaX, m_alphaY);
+		m_specularReflectance.get(), m_alphaU, m_alphaV);
 }
 
 MTS_IMPLEMENT_CLASS(WardShader, false, Shader)
+#endif
 MTS_IMPLEMENT_CLASS_S(Ward, false, BSDF);
 MTS_EXPORT_PLUGIN(Ward, "Anisotropic Ward BRDF");
 MTS_NAMESPACE_END

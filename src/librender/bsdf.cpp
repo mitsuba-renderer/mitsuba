@@ -29,12 +29,14 @@ BSDF::BSDF(const Properties &props)
 	   is completely up to the particular BSDF implementations */
 	m_ensureEnergyConservation = props.getBoolean(
 		"ensureEnergyConservation", true);
+	m_usesRayDifferentials = false;
 }
 
 BSDF::BSDF(Stream *stream, InstanceManager *manager) 
  : ConfigurableObject(stream, manager) {
 	m_name = stream->readString();
 	m_ensureEnergyConservation = stream->readBool();
+	m_usesRayDifferentials = false;
 }
 
 BSDF::~BSDF() { }

@@ -74,10 +74,6 @@ public:
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 		m_diffuseReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
-
-		m_components.push_back(EDeltaReflection | EFrontSide);
-		m_components.push_back(EDiffuseReflection | EFrontSide);
-		m_usesRayDifferentials = false;
 	}
 
 	SmoothPlastic(Stream *stream, InstanceManager *manager) 
@@ -86,15 +82,35 @@ public:
 		m_extIOR = stream->readFloat();
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
-		m_components.push_back(EDeltaReflection | EFrontSide);
-		m_components.push_back(EDiffuseReflection | EFrontSide);
-		m_usesRayDifferentials = 
-			m_specularReflectance->usesRayDifferentials() ||
-			m_diffuseReflectance->usesRayDifferentials();
 		configure();
 	}
 
 	virtual ~SmoothPlastic() { }
+
+	void configure() {
+		/* Verify the input parameters and fix them if necessary */
+		m_specularReflectance = ensureEnergyConservation(
+			m_specularReflectance, "specularReflectance", 1.0f);
+		m_diffuseReflectance = ensureEnergyConservation(
+			m_diffuseReflectance, "diffuseReflectance", 1.0f);
+
+		/* Compute weights that further steer samples towards
+		   the specular or diffuse components */
+		Float dAvg = m_diffuseReflectance->getAverage().getLuminance(),
+			  sAvg = m_specularReflectance->getAverage().getLuminance();
+		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
+
+		m_usesRayDifferentials = 
+			m_specularReflectance->usesRayDifferentials() ||
+			m_diffuseReflectance->usesRayDifferentials();
+		
+		m_components.clear();
+		m_components.push_back(EDeltaReflection | EFrontSide);
+		m_components.push_back(EDiffuseReflection | EFrontSide);
+		
+		BSDF::configure();
+	}
+
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
 		return m_diffuseReflectance->getValue(its);
@@ -110,32 +126,16 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
-			m_specularReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "diffuseReflectance") {
-			m_diffuseReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
+			if (name == "specularReflectance") 
+				m_specularReflectance = static_cast<Texture *>(child);
+			else if (name == "diffuseReflectance")
+				m_diffuseReflectance = static_cast<Texture *>(child);
+			else 
+				BSDF::addChild(name, child);
 		} else {
 			BSDF::addChild(name, child);
 		}
-	}
-
-	void configure() {
-		BSDF::configure();
-
-		/* Verify the input parameters and fix them if necessary */
-		m_specularReflectance = ensureEnergyConservation(
-			m_specularReflectance, "specularReflectance", 1.0f);
-		m_diffuseReflectance = ensureEnergyConservation(
-			m_diffuseReflectance, "diffuseReflectance", 1.0f);
-
-		/* Compute weights that further steer samples towards
-		   the specular or diffuse components */
-		Float dAvg = m_diffuseReflectance->getAverage().getLuminance(),
-			  sAvg = m_specularReflectance->getAverage().getLuminance();
-		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
-
 	}
 
 	/// Reflection in local coordinates

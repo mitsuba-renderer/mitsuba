@@ -178,8 +178,6 @@ public:
 			m_alphaV = m_alphaU;
 		else
 			m_alphaV = new ConstantFloatTexture(alphaV);
-
-		m_usesRayDifferentials = false;
 	}
 
 	RoughConductor(Stream *stream, InstanceManager *manager) 
@@ -192,11 +190,6 @@ public:
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_eta = Spectrum(stream);
 		m_k = Spectrum(stream);
-
-		m_usesRayDifferentials = 
-			m_alphaU->usesRayDifferentials() ||
-			m_alphaV->usesRayDifferentials() ||
-			m_specularReflectance->usesRayDifferentials();
 
 		configure();
 	}
@@ -220,6 +213,11 @@ public:
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
 			m_specularReflectance, "specularReflectance", 1.0f);
+
+		m_usesRayDifferentials = 
+			m_alphaU->usesRayDifferentials() ||
+			m_alphaV->usesRayDifferentials() ||
+			m_specularReflectance->usesRayDifferentials();
 
 		BSDF::configure();
 	}
@@ -359,18 +357,17 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alpha") {
-			m_alphaU = m_alphaV = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_alphaU->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alphaU") {
-			m_alphaU = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_alphaU->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "alphaV") {
-			m_alphaV = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_alphaV->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
-			m_specularReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
+			if (name == "alpha")
+				m_alphaU = m_alphaV = static_cast<Texture *>(child);
+			else if (name == "alphaU")
+				m_alphaU = static_cast<Texture *>(child);
+			else if (name == "alphaV")
+				m_alphaV = static_cast<Texture *>(child);
+			else if (name == "specularReflectance")
+				m_specularReflectance = static_cast<Texture *>(child);
+			else
+				BSDF::addChild(name, child);
 		} else {
 			BSDF::addChild(name, child);
 		}

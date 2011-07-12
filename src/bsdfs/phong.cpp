@@ -60,8 +60,6 @@ public:
 			props.getSpectrum("specularReflectance", Spectrum(0.2f)));
 		m_exponent = new ConstantFloatTexture(
 			props.getFloat("exponent", 30.0f));
-
-		m_usesRayDifferentials = false;
 	}
 
 	Phong(Stream *stream, InstanceManager *manager) 
@@ -69,11 +67,6 @@ public:
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_exponent = static_cast<Texture *>(manager->getInstance(stream));
-
-		m_usesRayDifferentials = 
-			m_diffuseReflectance->usesRayDifferentials() ||
-			m_specularReflectance->usesRayDifferentials() ||
-			m_exponent->usesRayDifferentials();
 
 		configure();
 	}
@@ -98,6 +91,11 @@ public:
 			  sAvg = m_specularReflectance->getAverage().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 
+		m_usesRayDifferentials = 
+			m_diffuseReflectance->usesRayDifferentials() ||
+			m_specularReflectance->usesRayDifferentials() ||
+			m_exponent->usesRayDifferentials();
+
 		BSDF::configure();
 	}
 
@@ -110,15 +108,15 @@ public:
 		return Vector(-wi.x, -wi.y, wi.z);
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {	
+		if (Frame::cosTheta(bRec.wi) <= 0 ||
+			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
+			return Spectrum(0.0f);
+
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse  = (bRec.typeMask & EDiffuseReflection)
 				&& (bRec.component == -1 || bRec.component == 1);
-		
-		if (Frame::cosTheta(bRec.wi) <= 0 ||
-			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
-			return Spectrum(0.0f);
 
 		Spectrum result(0.0f);
 		if (hasSpecular) {
@@ -138,14 +136,14 @@ public:
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		if (Frame::cosTheta(bRec.wi) <= 0 ||
+			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
+			return 0.0f;
+
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse  = (bRec.typeMask & EDiffuseReflection)
 				&& (bRec.component == -1 || bRec.component == 1);
-
-		if (Frame::cosTheta(bRec.wi) <= 0 ||
-			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
-			return 0.0f;
 
 		Float diffuseProb = 0.0f, specProb = 0.0f;
 
@@ -167,8 +165,8 @@ public:
 			return diffuseProb;
 		else if (hasSpecular)
 			return specProb;
-
-		return 0.0f;
+		else
+			return 0.0f;
 	}
 
 	inline Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
@@ -240,15 +238,15 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "exponent") {
-			m_exponent = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_exponent->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "diffuseReflectance") {
-			m_diffuseReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_diffuseReflectance->usesRayDifferentials();
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
-			m_specularReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
+			if (name == "exponent") 
+				m_exponent = static_cast<Texture *>(child);
+			else if (name == "specularReflectance") 
+				m_specularReflectance = static_cast<Texture *>(child);
+			else if (name == "diffuseReflectance")
+				m_diffuseReflectance = static_cast<Texture *>(child);
+			else 
+				BSDF::addChild(name, child);
 		} else {
 			BSDF::addChild(name, child);
 		}
