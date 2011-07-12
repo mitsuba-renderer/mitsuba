@@ -435,6 +435,20 @@ protected:
 	Texture *ensureEnergyConservation(Texture *tex, 
 		const std::string &paramName, Float max) const;
 
+	/**
+	 * \brief Convenience function to ensure energy conservation
+	 *
+	 * This function determines the component-wise maximum of the
+	 * sum \c tex1 + \c tex2 and checks if it is below \c max. If yes,
+	 * it returns the texture unmodified. Otherwise, it wraps
+	 * each the texture into a \ref ScaleTexture instance (with a 
+	 * scaling factor chosen so that the desired maximum \c max 
+	 * is abided) and prints a warning.
+	 */
+	std::pair<Texture *, Texture *> ensureEnergyConservation(
+		Texture *tex1, Texture *tex2, const std::string &paramName1,
+		const std::string &paramName2, Float max) const;
+
 	/// Virtual destructor
 	virtual ~BSDF();
 protected:

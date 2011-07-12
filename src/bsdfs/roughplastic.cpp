@@ -217,19 +217,19 @@ public:
 	}
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		bool sampleSpecular = (bRec.typeMask & EGlossyReflection) &&
+		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
 			(bRec.component == -1 || bRec.component == 0);
-		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection) &&
+		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
 			(bRec.component == -1 || bRec.component == 1);
 			
 		if (measure != ESolidAngle ||
 			Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
-			(!sampleSpecular && !sampleDiffuse))
+			(!hasSpecular && !hasDiffuse))
 			return Spectrum(0.0f);
 	
 		Spectrum result(0.0f);
-		if (sampleSpecular) {
+		if (hasSpecular) {
 			/* Calculate the reflection half-vector */
 			const Vector H = normalize(bRec.wo+bRec.wi);
 
@@ -249,7 +249,7 @@ public:
 			result += m_specularReflectance->getValue(bRec.its) * value; 
 		}
 
-		if (sampleDiffuse) 
+		if (hasDiffuse) 
 			result += m_diffuseReflectance->getValue(bRec.its) * (INV_PI
 				* m_roughTransmittance->eval(Frame::cosTheta(bRec.wi))
 				* Frame::cosTheta(bRec.wo));
@@ -258,22 +258,22 @@ public:
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		bool sampleSpecular = (bRec.typeMask & EGlossyReflection) &&
+		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
 			(bRec.component == -1 || bRec.component == 0);
-		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection) &&
+		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
 			(bRec.component == -1 || bRec.component == 1);
 
 		if (measure != ESolidAngle ||
 			Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
-			(!sampleSpecular && !sampleDiffuse))
+			(!hasSpecular && !hasDiffuse))
 			return 0.0f;
 
 		/* Calculate the reflection half-vector */
 		const Vector H = normalize(bRec.wo+bRec.wi);
 
 		Float probDiffuse, probSpecular;
-		if (sampleSpecular && sampleDiffuse) {
+		if (hasSpecular && hasDiffuse) {
 			/* Find the probability of sampling the specular component */
 			probSpecular = 1-m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
 
@@ -288,7 +288,7 @@ public:
 		}
 
 		Float result = 0.0f;
-		if (sampleSpecular) {
+		if (hasSpecular) {
 			/* Jacobian of the half-direction transform */
 			const Float dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, H));
 
@@ -298,26 +298,26 @@ public:
 			result = prob * dwh_dwo * probSpecular;
 		}
 
-		if (sampleDiffuse) 
+		if (hasDiffuse) 
 			result += Frame::cosTheta(bRec.wo) * INV_PI * probDiffuse;
 
 		return result;
 	}
 
 	inline Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
-		bool sampleSpecular = (bRec.typeMask & EGlossyReflection) &&
+		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
 			(bRec.component == -1 || bRec.component == 0);
-		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection) &&
+		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
 			(bRec.component == -1 || bRec.component == 1);
 		
-		if (Frame::cosTheta(bRec.wi) <= 0 || (!sampleSpecular && !sampleDiffuse))
+		if (Frame::cosTheta(bRec.wi) <= 0 || (!hasSpecular && !hasDiffuse))
 			return Spectrum(0.0f);
 
-		bool choseSpecular = sampleSpecular;
+		bool choseSpecular = hasSpecular;
 		Point2 sample(_sample);
 
 		Float probSpecular, probDiffuse;
-		if (sampleSpecular && sampleDiffuse) {
+		if (hasSpecular && hasDiffuse) {
 			/* Find the probability of sampling the diffuse component */
 			probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
 

@@ -93,6 +93,38 @@ Texture *BSDF::ensureEnergyConservation(Texture *texture,
 	return texture;
 }
 
+std::pair<Texture *, Texture *> BSDF::ensureEnergyConservation(
+		Texture *tex1, Texture *tex2, const std::string &paramName1,
+		const std::string &paramName2, Float max) const {
+	if (!m_ensureEnergyConservation)
+		return std::make_pair(tex1, tex2);
+	Float actualMax = (tex1->getMaximum() + tex2->getMaximum()).max();
+	if (actualMax > max) {
+		std::ostringstream oss;
+		Float scale = 0.99f * (max / actualMax);
+		oss << "The BSDF" << endl << toString() << endl
+			<< "violates energy conservation! The parameters \"" << paramName1 << "\" " 
+			<< "and \"" << paramName2 << "\" sum to a component-wise maximum of "
+			<< actualMax << " (which is > " << max << "!) and will therefore be "
+			<< "scaled by " << scale << " to prevent issues. Specify the parameter "
+			<< "ensureEnergyConservation=false to the BSDF to prevent this from "
+			<< "happening.";
+		Log(EWarn, "%s", oss.str().c_str());
+		Properties props("scale");
+		props.setFloat("value", scale);
+		Texture *scaleTexture1 = static_cast<Texture *> (PluginManager::getInstance()->
+				createObject(MTS_CLASS(Texture), props));
+		Texture *scaleTexture2 = static_cast<Texture *> (PluginManager::getInstance()->
+				createObject(MTS_CLASS(Texture), props));
+		scaleTexture1->addChild("", tex1);
+		scaleTexture1->configure();
+		scaleTexture2->addChild("", tex2);
+		scaleTexture2->configure();
+		return std::make_pair(scaleTexture1, scaleTexture2);
+	}
+
+	return std::make_pair(tex1, tex2);
+}
 
 static std::string typeMaskToString(unsigned int typeMask) {
 	std::ostringstream oss;

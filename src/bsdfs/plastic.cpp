@@ -144,9 +144,9 @@ public:
 	}
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		bool sampleSpecular   = (bRec.typeMask & EDeltaReflection)
+		bool hasSpecular   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
+		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection)
 				&& (bRec.component == -1 || bRec.component == 1);
 
 		if (Frame::cosTheta(bRec.wo) <= 0 || Frame::cosTheta(bRec.wi) <= 0)
@@ -154,14 +154,14 @@ public:
 				  
 		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
 
-		if (measure == EDiscrete && sampleSpecular) {
+		if (measure == EDiscrete && hasSpecular) {
 			/* Check if the provided direction pair matches an ideal
 			   specular reflection; tolerate some roundoff errors */
 			bool reflection = std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) < Epsilon;
 			if (reflection)
 				return m_specularReflectance->getValue(bRec.its) * Fr;
-		} else if (measure == ESolidAngle && sampleDiffuse) {
-			if (sampleDiffuse)
+		} else if (measure == ESolidAngle && hasDiffuse) {
+			if (hasDiffuse)
 				return m_diffuseReflectance->getValue(bRec.its) 
 					* (INV_PI * Frame::cosTheta(bRec.wo) * (1-Fr));
 		}
@@ -170,42 +170,42 @@ public:
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		bool sampleSpecular   = (bRec.typeMask & EDeltaReflection)
+		bool hasSpecular   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
+		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection)
 				&& (bRec.component == -1 || bRec.component == 1);
 
 		if (Frame::cosTheta(bRec.wo) <= 0 || Frame::cosTheta(bRec.wi) <= 0)
 			return 0.0f;
 
 		Float probSpecular = 1.0f;
-		if (sampleSpecular && sampleDiffuse) {
+		if (hasSpecular && hasDiffuse) {
 			probSpecular = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
 				(probSpecular*m_specularSamplingWeight + 
 				(1-probSpecular) * (1-m_specularSamplingWeight));
 		}
 
-		if (measure == EDiscrete && sampleSpecular) {
+		if (measure == EDiscrete && hasSpecular) {
 			/* Check if the provided direction pair matches an ideal
 			   specular reflection; tolerate some roundoff errors */
 			if (std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) < Epsilon)
-				return sampleDiffuse ? probSpecular : 1.0f;
-		} else if (measure == ESolidAngle && sampleDiffuse) {
+				return hasDiffuse ? probSpecular : 1.0f;
+		} else if (measure == ESolidAngle && hasDiffuse) {
 			return Frame::cosTheta(bRec.wo) * INV_PI *
-				(sampleSpecular ? (1 - probSpecular) : 1.0f);
+				(hasSpecular ? (1 - probSpecular) : 1.0f);
 		}
 
 		return 0.0f;
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		bool sampleSpecular   = (bRec.typeMask & EDeltaReflection)
+		bool hasSpecular   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
+		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection)
 				&& (bRec.component == -1 || bRec.component == 1);
 		
-		if ((!sampleDiffuse && !sampleSpecular) || Frame::cosTheta(bRec.wi) <= 0)
+		if ((!hasDiffuse && !hasSpecular) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 
 		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
@@ -214,7 +214,7 @@ public:
 			(Fr*m_specularSamplingWeight + 
 			(1-Fr) * (1-m_specularSamplingWeight));
 
-		if (sampleDiffuse && sampleSpecular) {
+		if (hasDiffuse && hasSpecular) {
 			/* Importance sample wrt. the Fresnel reflectance */
 			if (sample.x <= probSpecular) {
 				bRec.sampledComponent = 0;
@@ -234,7 +234,7 @@ public:
 				return m_diffuseReflectance->getValue(bRec.its) *
 					(1-Fr) / (1-probSpecular);
 			}
-		} else if (sampleSpecular) {
+		} else if (hasSpecular) {
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
@@ -253,12 +253,12 @@ public:
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
-		bool sampleSpecular   = (bRec.typeMask & EDeltaReflection)
+		bool hasSpecular   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleDiffuse = (bRec.typeMask & EDiffuseReflection)
+		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection)
 				&& (bRec.component == -1 || bRec.component == 1);
 		
-		if ((!sampleDiffuse && !sampleSpecular) || Frame::cosTheta(bRec.wi) <= 0)
+		if ((!hasDiffuse && !hasSpecular) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 
 		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
@@ -266,7 +266,7 @@ public:
 			(Fr*m_specularSamplingWeight + 
 			(1-Fr) * (1-m_specularSamplingWeight));
 
-		if (sampleDiffuse && sampleSpecular) {
+		if (hasDiffuse && hasSpecular) {
 			/* Importance sample wrt. the Fresnel reflectance */
 			if (sample.x <= probSpecular) {
 				bRec.sampledComponent = 0;
@@ -288,7 +288,7 @@ public:
 				return m_diffuseReflectance->getValue(bRec.its) 
 					* (INV_PI * Frame::cosTheta(bRec.wo) * (1-Fr));
 			}
-		} else if (sampleSpecular) {
+		} else if (hasSpecular) {
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);

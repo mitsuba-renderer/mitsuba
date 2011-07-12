@@ -116,4 +116,9 @@
 		<float name="alpha" value=".7"/>
 	</bsdf>
 
+	<!-- Test the modified Phong BRDF -->
+	<bsdf type="phong">
+		<spectrum name="diffuseReflectance" value="0.2"/>
+		<spectrum name="specularReflectance" value="0.4"/>
+	</bsdf>
 </scene>

@@ -361,9 +361,9 @@ public:
 			return 0.0f;
 
 		/* Determine the type of interaction */
-		bool sampleReflection   = ((bRec.component == -1 || bRec.component == 0)
+		bool hasReflection   = ((bRec.component == -1 || bRec.component == 0)
 							  && (bRec.typeMask & EGlossyReflection)),
-		     sampleTransmission = ((bRec.component == -1 || bRec.component == 1)
+		     hasTransmission = ((bRec.component == -1 || bRec.component == 1)
 							  && (bRec.typeMask & EGlossyTransmission)),
 		     reflect            = Frame::cosTheta(bRec.wi) 
 				                * Frame::cosTheta(bRec.wo) > 0;
@@ -421,7 +421,7 @@ public:
 		/* Evaluate the microsurface normal sampling density */
 		Float prob = m_distribution.pdf(H, alphaU, alphaV);
 
-		if (sampleTransmission && sampleReflection) {
+		if (hasTransmission && hasReflection) {
 			/* Please see the sample() methods if the 
 			   following seems confusing */
 			Float F;
@@ -446,15 +446,15 @@ public:
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
 		Point2 sample(_sample);
 
-		bool sampleReflection = ((bRec.component == -1 || bRec.component == 0)
+		bool hasReflection = ((bRec.component == -1 || bRec.component == 0)
 							  && (bRec.typeMask & EGlossyReflection)),
-		     sampleTransmission = ((bRec.component == -1 || bRec.component == 1)
+		     hasTransmission = ((bRec.component == -1 || bRec.component == 1)
 							  && (bRec.typeMask & EGlossyTransmission)),
-		     choseReflection = sampleReflection,
+		     choseReflection = hasReflection,
 			 sampleExactFresnelTerm = false;
 
 		Float sampleF = 1.0f;
-		if (sampleReflection && sampleTransmission) {
+		if (hasReflection && hasTransmission) {
 			if (!bRec.sampler) {
 				/* By default, the sample() method is given exactly two
 				   uniformly chosen random numbers, which is a problem
@@ -487,7 +487,7 @@ public:
 			} else {
 				sampleExactFresnelTerm = true;
 			}
-		} else if (!sampleReflection && !sampleTransmission) {
+		} else if (!hasReflection && !hasTransmission) {
 			return Spectrum(0.0f);
 		}
 
@@ -565,7 +565,7 @@ public:
 				F = 1-F;
 			}
 			numerator *= F;
-			if (sampleReflection && sampleTransmission) 
+			if (hasReflection && hasTransmission) 
 				denominator *= sampleF;
 		}
 
@@ -575,14 +575,14 @@ public:
 	Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 
-		bool sampleReflection = ((bRec.component == -1 || bRec.component == 0)
+		bool hasReflection = ((bRec.component == -1 || bRec.component == 0)
 							  && (bRec.typeMask & EGlossyReflection)),
-		     sampleTransmission = ((bRec.component == -1 || bRec.component == 1)
+		     hasTransmission = ((bRec.component == -1 || bRec.component == 1)
 							  && (bRec.typeMask & EGlossyTransmission)),
-		     choseReflection = sampleReflection,
+		     choseReflection = hasReflection,
 			 sampleExactFresnelTerm = false;
 
-		if (sampleReflection && sampleTransmission) {
+		if (hasReflection && hasTransmission) {
 			if (!bRec.sampler) {
 				/* By default, the sample() method is given exactly two
 				   uniformly chosen random numbers, which is a problem
@@ -615,7 +615,7 @@ public:
 			} else {
 				sampleExactFresnelTerm = true;
 			}
-		} else if (!sampleReflection && !sampleTransmission) {
+		} else if (!hasReflection && !hasTransmission) {
 			return Spectrum(0.0f);
 		}
 

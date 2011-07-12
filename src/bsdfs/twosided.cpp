@@ -23,23 +23,33 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{twosided}{Two-sided BRDF adapter}
+ * \renderings{
+ *     \unframedrendering{From this angle, the Cornell box scene shows visible back-facing geometry}
+ *         {bsdf_twosided_before}
+ *     \unframedrendering{Applying the \pluginref{twosided} plugin fixes the rendering}
+ *         {bsdf_twosided_after}
+ * }
  * 
  * By default, all non-transmissive scattering models in Mitsuba 
  * are \emph{one-sided} --- in other words, they absorb all light 
- * that is received on the backs-side of any surfaces 
- * associated with them. Holes in a mesh will thus be 
+ * that is received on the interior-facing side of any associated
+ * surfaces. Holes and visible back-facing parts are thus exposed 
+ * as black regions.
  *
- * This is usually a good idea, since it will expose modeling
- * issues early on. But sometimes one is forced to deal with such
- * a bad mesh. In this case, this plugin that cannot be fixed.
- * 
+ * Usually, this is a good idea, since it will reveal modeling
+ * issues early on. But sometimes one is forced to deal with
+ * improperly closed geometry, where the one-sided behavior is
+ * bothersome. In that case, this plugin can be used to turn 
+ * one-sided scattering models into proper two-sided versions of
+ * themselves. The plugin has no parameters other than a required
+ * nested BSDF specification.
+ * \vspace{4mm}
  *
- * This plugin turns a nested one-sided model onto a two-sided version that
- * can be used to render meshes where the back-side is visible.
- *
- * \begin{xml}
+ * \begin{xml}[caption=A two-sided diffuse material]
  * <bsdf type="twosided">
- *   <bsdf type="lambertian"/>
+ *     <bsdf type="diffuse">
+ *          <spectrum name="reflectance" value="0.4"/>
+ *     </bsdf>
  * </bsdf>
  * \end{xml}
  */

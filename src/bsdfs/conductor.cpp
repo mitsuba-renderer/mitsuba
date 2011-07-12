@@ -42,7 +42,7 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{Measured gold material (\lstref{conductor-gold})}
  *         {bsdf_conductor_gold.jpg}
  * }
- 
+ * 
  * This plugin implements a perfectly smooth interface to a conducting material, 
  * such as a metal. For a similar model that instead describes a rough surface 
  * microstructure, take a look at the seperately available 
