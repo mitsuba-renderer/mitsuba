@@ -27,28 +27,32 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{exponent}{\Float\Or\Texture}{
  *         Specifies the Phong exponent \default{30}. 
  *     }
- *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the specular reflectance component\default{1.0}}
- *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the diffuse reflectance component\default{0.5}}
+ *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{
+ *         Specifies the weight of the specular reflectance component.\default{0.2}}
+ *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{
+ *         Specifies the weight of the diffuse reflectance component\default{0.5}}
  * }
  * \renderings{
- *     \rendering{Exponent=60}
- *         {bsdf_phong_60}
- *     \rendering{Exponent=300)}
- *         {bsdf_phong_300}
+ *     \rendering{Exponent$\,=60$}{bsdf_phong_60}
+ *     \rendering{Exponent$\,=300$}{bsdf_phong_300}
  * }
 
  * This plugin implements the modified Phong reflectance model as described in 
  * \cite{Phong1975Illumination} and \cite{Lafortune1994Using}. This empirical 
- * model is mainly included for completness --- its use in new scenes is 
+ * model is mainly included for historical reasons---its use in new scenes is 
  * discouraged, since significantly more realistic models have been developed 
  * since 1975.
  *
  * If possible, it is recommended to switch to a BRDF that is based on 
- * microfacet theory and has knowledge about the material's index of 
- * refraction. In Mitsuba, such alternatives to \pluginref{phong} are
- * implemented in \pluginref{roughconductor} and \pluginref{roughplastic}.
+ * microfacet theory and includes knowledge about the material's index of 
+ * refraction. In Mitsuba, two good alternatives to \pluginref{phong} are
+ * the plugins \pluginref{roughconductor} and \pluginref{roughplastic}
+ * (depending on the material type).
+ *
+ * When using this plugin, note that the diffuse and specular reflectance
+ * components should add up to a value less than or equal to one (for each 
+ * color channel). Otherwise, they will be scaled appropriately to ensure 
+ * energy conservation.
  */
 class Phong : public BSDF {
 public:
@@ -336,7 +340,7 @@ public:
 			<< "           + " << depNames[2] << "(uv) * specRef) * cosTheta(wo);" << endl
 			<< "}" << endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (wi.z < 0.0 || wo.z < 0.0)" << endl
+			<< "    if (wi.z <= 0.0 || wo.z <= 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
 			<< "    return " << depNames[1] << "(uv) * (0.31831 * cosTheta(wo));" << endl
 			<< "}" << endl;

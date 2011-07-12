@@ -121,4 +121,10 @@
 		<spectrum name="diffuseReflectance" value="0.2"/>
 		<spectrum name="specularReflectance" value="0.4"/>
 	</bsdf>
+
+	<!-- Test the anisotropic Ward model -->
+	<bsdf type="ward">
+		<float name="alphaU" value=".1"/>
+		<float name="alphaV" value=".3"/>
+	</bsdf>
 </scene>

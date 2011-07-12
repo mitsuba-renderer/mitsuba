@@ -22,26 +22,69 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Anisotropic Ward BRDF model based on the following four papers
+/*!\plugin{ward}{Anisotropic Ward BRDF}
+ * \order{10}
+ * \parameters{
+ *     \parameter{variant}{\String}{
+ *         Determines the variant of the Ward model to use:
+ *         \begin{enumerate}[(i)]
+ *             \item \code{ward}: The original model by Ward \cite{Ward1992Measuring} --- suffers from
+ *             energy loss at grazing angles.
+ *             \item \code{ward-duer}: Corrected Ward model with lower energy loss 
+ *             at grazing angles \cite{Dur2006Improved}.
+ *             Does not always conserve energy. 
+ *             \item \code{balanced}: Improved version of the \code{ward-duer}
+ *             model with energy balance at all angles \cite{Geisler2010New}.
+ *             \vspace{-4mm}
+ *         \end{enumerate}
+ *     }
+ *     \parameter{alphaU, alphaV}{\Float\Or\Texture}{
+ *         Specifies the anisotropic roughness values along the tangent and 
+ *         bitangent directions. 
+ *         \default{0.1}. 
+ *     }
+ *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{
+ *         Specifies the weight of the specular reflectance component.\default{0.2}}
+ *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{
+ *         Specifies the weight of the diffuse reflectance component\default{0.5}}
+ * }
+ * \renderings{
+ *     \rendering{$\alpha_u=0.1,\ \alpha_v=0.3$}{bsdf_ward_01_03}
+ *     \rendering{$\alpha_u=0.3,\ \alpha_v=0.1$}{bsdf_ward_03_01}
+ * }
+
+ * This plugin implements the anisotropic Ward reflectance model and
+ * several extensions. They are described in the papers
+ * \begin{enumerate}[(i)]
+ *    \item ``Measuring and Modeling Anisotropic Reflection'' 
+ *      by Greg Ward \cite{Ward1992Measuring}
+ *    \item ``Notes on the Ward BRDF'' by Bruce Walter\cite{Walter2005Notes}
+ *    \item ``An Improved Normalization for the Ward Reflectance Model''
+ *      by Arne D\"ur \cite{Dur2006Improved}
+ *    \item ``A New Ward BRDF Model with Bounded Albedo'' by
+ *      Geisler-Moroder et al. \cite{Geisler2010New}
+ * \end{enumerate}
  *
- *   "Measuring and Modeling Anisotropic Reflection" by 
- *   Gregory J. Ward, SIGGRAPH 1992
+ * Like the Phong BRDF, the Ward model does not take the Fresnel reflectance
+ * of the material into account. In an experimental study performed by Ngan et al. 
+ * \cite{Ngan2005Experimental}, the Ward model generally performed worse than
+ * microfacet-based approaches. 
  *
- *   "Notes on the Ward BRDF" by Bruce Walter, Technical Report 
- *   PCG-05-06, Cornell University
+ * For this reason, it is usually preferable to switch to a microfacet theory-based model 
+ * that incorporate knowledge about the material's index of refraction. In Mitsuba, 
+ * two such alternatives to \pluginref{ward} are given by the plugins 
+ * \pluginref{roughconductor} and \pluginref{roughplastic} (depending on the
+ * material type).
  *
- *   "An Improved Normalization for the Ward Reflectance Model"
- *   by Arne Duer, Journal of Graphics Tools 11, 1 (2006), 51–59
- *
- *   "A New Ward BRDF Model with Bounded Albedo" by
- *   by David Geisler-Moroder and Arne Dur, 
- *   Computer Graphics Forum, Volume 29, Issue 4
+ * When using this plugin, note that the diffuse and specular reflectance
+ * components should add up to a value less than or equal to one (for each 
+ * color channel). Otherwise, they will be scaled appropriately to ensure 
+ * energy conservation.
  */
 class Ward : public BSDF {
 public:
 	/// Supported model types
-	enum EModelType {
+	enum EModelVariant {
 		/// The original Ward model
 		EWard = 0,
 		/// Ward model with correction by Arne Duer
@@ -58,13 +101,13 @@ public:
 			props.getSpectrum("specularReflectance", Spectrum(0.2f)));
 		
 		std::string type = 
-			boost::to_lower_copy(props.getString("type", "balanced"));
+			boost::to_lower_copy(props.getString("variant", "balanced"));
 		if (type == "ward")
-			m_modelType = EWard;
+			m_modelVariant = EWard;
 		else if (type == "ward-duer")
-			m_modelType = EWardDuer;
+			m_modelVariant = EWardDuer;
 		else if (type == "balanced")
-			m_modelType = EBalanced;
+			m_modelVariant = EBalanced;
 		else
 			Log(EError, "Specified an invalid model type \"%s\", must be "
 				"\"ward\", \"ward-duer\", or \"balanced\"!", type.c_str());
@@ -82,7 +125,7 @@ public:
 
 	Ward(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
-		m_modelType = (EModelType) stream->readUInt();
+		m_modelVariant = (EModelVariant) stream->readUInt();
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_alphaU = static_cast<Texture *>(manager->getInstance(stream));
@@ -124,6 +167,11 @@ public:
 		BSDF::configure();
 	}
 
+	Spectrum getDiffuseReflectance(const Intersection &its) const {
+		return m_diffuseReflectance->getValue(its);
+	}
+
+
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
@@ -141,7 +189,7 @@ public:
 			Float alphaV = m_alphaV->getValue(bRec.its).average();
 			
 			Float factor1 = 0.0f;
-			switch (m_modelType) {
+			switch (m_modelVariant) {
 				case EWard:
 					factor1 = 1.0f / (4.0f * M_PI * alphaU * alphaV * 
 						std::sqrt(Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo)));
@@ -304,21 +352,22 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
-		stream->writeUInt(m_modelType);
+		stream->writeUInt(m_modelVariant);
 		manager->serialize(stream, m_diffuseReflectance.get());
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_alphaU.get());
 		manager->serialize(stream, m_alphaV.get());
 	}
 
-	//Shader *createShader(Renderer *renderer) const; 
+	Shader *createShader(Renderer *renderer) const; 
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Ward[" << endl
-			<< "  type = ";
+			<< "  name = \"" << getName() << "\"," << endl
+			<< "  variant = ";
 
-		switch (m_modelType) {
+		switch (m_modelVariant) {
 			case EWard: oss << "ward," << endl; break;
 			case EWardDuer: oss << "wardDuer," << endl; break;
 			case EBalanced: oss << "balanced," << endl; break;
@@ -336,112 +385,101 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	EModelType m_modelType;
+	EModelVariant m_modelVariant;
 	ref<Texture> m_diffuseReflectance;
 	ref<Texture> m_specularReflectance;
 	ref<Texture> m_alphaU;
 	ref<Texture> m_alphaV;
 	Float m_specularSamplingWeight;
 };
-#if 0
+
 // ================ Hardware shader implementation ================ 
 
+/**
+ * GLSL port of the Ward shader. This version only implements the variant
+ * with energy balance. When the roughness is lower than 
+ * \alpha < 0.2, the shader clamps it to 0.2 so that it will still perform
+ * reasonably well in a VPL-based preview.
+ */
 class WardShader : public Shader {
 public:
-	WardShader(Renderer *renderer, Ward::EModelType type, 
+	WardShader(Renderer *renderer, 
 			const Texture *diffuseColor,
 			const Texture *specularColor,
-			Float alphaU, Float alphaV) : Shader(renderer, EBSDFShader), 
-			m_modelType(type), m_diffuseReflectance(diffuseColor),
+			const Texture *alphaU,
+			const Texture *alphaV) : Shader(renderer, EBSDFShader), 
+			m_diffuseReflectance(diffuseColor),
 			m_specularReflectance(specularColor),
 			m_alphaU(alphaU), m_alphaV(alphaV) {
 		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
 		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
+		m_alphaUShader = renderer->registerShaderForResource(m_alphaU.get());
+		m_alphaVShader = renderer->registerShaderForResource(m_alphaV.get());
 	}
 
 	bool isComplete() const {
 		return m_diffuseReflectanceShader.get() != NULL &&
-			   m_specularReflectanceShader.get() != NULL;
+			   m_specularReflectanceShader.get() != NULL &&
+			   m_alphaU.get() != NULL &&
+			   m_alphaV.get() != NULL;
 	}
 
 	void putDependencies(std::vector<Shader *> &deps) {
 		deps.push_back(m_diffuseReflectanceShader.get());
 		deps.push_back(m_specularReflectanceShader.get());
+		deps.push_back(m_alphaUShader.get());
+		deps.push_back(m_alphaVShader.get());
 	}
 
 	void cleanup(Renderer *renderer) {
 		renderer->unregisterShaderForResource(m_diffuseReflectance.get());
 		renderer->unregisterShaderForResource(m_specularReflectance.get());
+		renderer->unregisterShaderForResource(m_alphaU.get());
+		renderer->unregisterShaderForResource(m_alphaV.get());
 	}
 
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		oss << "uniform int " << evalName << "_type;" << endl
-			<< "uniform float " << evalName << "_alphaU;" << endl
-			<< "uniform float " << evalName << "_alphaV;" << endl
-			<< "uniform float " << evalName << "_ks;" << endl
-			<< "uniform float " << evalName << "_kd;" << endl
-			<< endl
-			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    if (wi.z <= 0.0 || wo.z <= 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
-			<< "    vec3 H = normalize(wi + wo);" << endl
-			<< "    float factor1;" << endl
-			<< "    if (" << evalName << "_type == 1)" << endl
-			<< "        factor1 = 1/(12.566 * " << evalName << "_alphaU * "  << endl
-			<< "                    " << evalName << "_alphaV * sqrt(wi.z * wo.z));" << endl
-			<< "    else if (" << evalName << "_type == 2)" << endl
-			<< "        factor1 = 1/(12.566 * " << evalName << "_alphaU * " << endl
-			<< "                    " << evalName << "_alphaV * wi.z * wo.z);" << endl
-			<< "    else" << endl
-			<< "        factor1 = dot(H, H)/(3.1415 * " << evalName << "_alphaU * "  << endl
-			<< "                    " << evalName << "_alphaV * (H.z * H.z) * (H.z * H.z));" << endl
-			<< "    float factor2 = H.x / " << evalName << "_alphaU;" << endl
-			<< "    float factor3 = H.y / " << evalName << "_alphaV;" << endl
+			<< "    vec3 H = wi + wo;" << endl
+			<< "    float cosSqr = H.z * H.z;" << endl
+			<< "    float alphaU = max(0.3, " << depNames[2] << "(uv)[0]);" << endl
+			<< "    float alphaV = max(0.3, " << depNames[3] << "(uv)[0]);" << endl
+			<< "    float factor1 = dot(H, H)/(3.1415*alphaU*alphaV*cosSqr*cosSqr);"  << endl
+			<< "    float factor2 = H.x / alphaU, factor3 = H.y / alphaV;" << endl
 			<< "    float exponent = -(factor2*factor2 + factor3*factor3)/(H.z*H.z);" << endl
-			<< "    float specRef = factor1 * exp(exponent) * " << evalName << "_ks;" << endl 
-			<< "    return " << depNames[0] << "(uv) * (0.31831 * " << evalName << "_kd)" << endl
-			<< "           + " << depNames[1] << "(uv) * specRef;" << endl
+			<< "    float specRef = factor1 * exp(exponent);" << endl 
+			<< "    return (" << depNames[0] << "(uv) * 0.31831" << endl
+			<< "           + " << depNames[1] << "(uv) * specRef) * cosTheta(wo);" << endl
 			<< "}" << endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (wi.z < 0.0 || wo.z < 0.0)" << endl
+			<< "    if (wi.z <= 0.0 || wo.z <= 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
-			<< "    return " << depNames[0] << "(uv) * (0.31831 * " << evalName << "_kd);" << endl
+			<< "    return " << depNames[0] << "(uv) * (0.31831 * cosTheta(wo));" << endl
 			<< "}" << endl;
-	}
-
-	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_type"));
-		parameterIDs.push_back(program->getParameterID(evalName + "_alphaU"));
-		parameterIDs.push_back(program->getParameterID(evalName + "_alphaV"));
-		parameterIDs.push_back(program->getParameterID(evalName + "_ks"));
-		parameterIDs.push_back(program->getParameterID(evalName + "_kd"));
-	}
-
-	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
-		program->setParameter(parameterIDs[0], (int) m_modelType);
-		program->setParameter(parameterIDs[1], m_alphaU);
-		program->setParameter(parameterIDs[2], m_alphaV);
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	Ward::EModelType m_modelType;
 	ref<const Texture> m_diffuseReflectance;
 	ref<const Texture> m_specularReflectance;
+	ref<const Texture> m_alphaU;
+	ref<const Texture> m_alphaV;
 	ref<Shader> m_diffuseReflectanceShader;
 	ref<Shader> m_specularReflectanceShader;
-	Float m_alphaU, m_alphaV;
+	ref<Shader> m_alphaUShader;
+	ref<Shader> m_alphaVShader;
 };
 
 Shader *Ward::createShader(Renderer *renderer) const { 
-	return new WardShader(renderer, m_modelType, m_diffuseReflectance.get(),
-		m_specularReflectance.get(), m_alphaU, m_alphaV);
+	return new WardShader(renderer, m_diffuseReflectance.get(),
+		m_specularReflectance.get(), m_alphaU.get(), m_alphaV.get());
 }
 
 MTS_IMPLEMENT_CLASS(WardShader, false, Shader)
-#endif
 MTS_IMPLEMENT_CLASS_S(Ward, false, BSDF);
 MTS_EXPORT_PLUGIN(Ward, "Anisotropic Ward BRDF");
 MTS_NAMESPACE_END
