@@ -36,8 +36,9 @@ MTS_NAMESPACE_BEGIN
  * 
  * \renderings{
  *     \rendering{Rough copper}
- *         {bsdf_roughconductor_copper}
- *     \rendering{The same material coated with a single layer of clear varnish (see \lstref{coating-roughcopper})}
+ *         {bsdf_coating_uncoated}
+ *     \rendering{The same material coated with a single layer of 
+ *         clear varnish (see \lstref{coating-roughcopper})}
  *         {bsdf_coating_roughconductor}
  * }
  *
@@ -62,7 +63,17 @@ MTS_NAMESPACE_BEGIN
  * Evaluating the internal component of this model entails refracting the 
  * incident and exitant rays through the dielectric interface, followed by
  * querying the nested material with this modified direction pair. The result 
- * is attenuated by the two Fresnel transmittances and the absorption, if any.
+ * is attenuated by the two Fresnel transmittances and the absorption, if
+ * any.\newpage
+ *
+ * \renderings{
+ *     \smallrendering{$\code{thickness}=0$}{bsdf_coating_0}
+ *     \smallrendering{$\code{thickness}=1$}{bsdf_coating_1}
+ *     \smallrendering{$\code{thickness}=5$}{bsdf_coating_5}
+ *     \smallrendering{$\code{thickness}=15$}{bsdf_coating_15}
+ *     \caption{The effect of the layer thickness parameter on
+ *        a tinted coating ($\code{sigmaT}=(0.1, 0.2, 0.5)$)}
+ * }
  *
  * \vspace{4mm}
  *
@@ -112,16 +123,6 @@ public:
 			Log(EError, "Tried to put a smooth coating layer on top of a BSDF "
 				"with a transmission component -- this is currently not allowed!");
 
-#if COMPENSATE
-		if (m_nested->getClass()->getName() == "SmoothDiffuse") {
-			/* For an ideally diffuse material, it is known how much 
-			   energy will be lost to total internal reflection */
-			m_compensation = (m_intIOR*m_intIOR) / (m_extIOR * m_extIOR);
-		} else {
-			/* Otherwise, give up (for now) */
-			m_compensation = 1.0f;
-		}
-#endif
 		unsigned int extraFlags = 0;
 		if (!m_sigmaA->isConstant())
 			extraFlags |= ESpatiallyVarying;
@@ -134,6 +135,13 @@ public:
 
 		m_usesRayDifferentials = m_nested->usesRayDifferentials()
 			|| m_sigmaA->usesRayDifferentials();
+
+		/* Compute weights that further steer samples towards
+		   the specular or nested components */
+		Float avgAbsorption = (m_sigmaA->getAverage()
+			 *(-2*m_thickness)).exp().average();
+
+		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 
 		BSDF::configure();
 	}
@@ -242,10 +250,6 @@ public:
 				result *= Frame::cosTheta(bRec.wo)
 					    / Frame::cosTheta(bRec2.wo);
 
-#ifdef COMPENSATE
-			result *= m_compensation;
-#endif
-
 			return result;
 		}
 	
@@ -261,15 +265,22 @@ public:
 			&& (bRec.component == -1 || bRec.component == (int) m_components.size()-1);
 		bool sampleNested = (bRec.typeMask & m_nested->getType() & BSDF::EAll)
 			&& (bRec.component == -1 || bRec.component < (int) m_components.size()-1);
+		
+		Float R12;
+		Vector wiPrime = -refract(bRec.wi, R12);
+
+		/* Reallocate samples */
+		Float probSpecular = (R12*m_specularSamplingWeight) /
+			(R12*m_specularSamplingWeight + 
+			(1-R12) * (1-m_specularSamplingWeight));
 
 		if (measure == EDiscrete && sampleSpecular &&
 			std::abs(1-dot(reflect(bRec.wi), bRec.wo)) < Epsilon) {
-			return sampleNested ? fresnel(
-				Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR) : 1.0f;
+			return sampleNested ? probSpecular : 1.0f;
 		} else if (sampleNested) {
-			Float R12, R21;
+			Float R21;
 			BSDFQueryRecord bRec2(bRec);
-			bRec2.wi = -refract(bRec.wi, R12);
+			bRec2.wi = wiPrime;
 			bRec2.wo = -refract(bRec.wo, R21);
 
 			if (R12 == 1 || R21 == 1) /* Total internal reflection */
@@ -284,7 +295,7 @@ public:
 			Float eta = m_extIOR / m_intIOR;
 			pdf *= eta * eta;
 
-			return sampleSpecular ? (pdf * (1-R12)) : pdf;
+			return sampleSpecular ? (pdf * (1 - probSpecular)) : pdf;
 		} else {
 			return 0.0f;
 		}
@@ -312,12 +323,17 @@ public:
 					-cosThetaT, m_extIOR, m_intIOR);
 		}
 
+		/* Reallocate samples */
+		Float probSpecular = (R12*m_specularSamplingWeight) /
+			(R12*m_specularSamplingWeight + 
+			(1-R12) * (1-m_specularSamplingWeight));
+
 		bool choseSpecular = sampleSpecular;
 
 		Point2 sample(_sample);
 		if (sampleSpecular && sampleNested) {
-			if (sample.x > R12) {
-				sample.x = (sample.x - R12) / (1 - R12);
+			if (sample.x > probSpecular) {
+				sample.x = (sample.x - probSpecular) / (1 - probSpecular);
 				choseSpecular = false;
 			}
 		}
@@ -326,7 +342,7 @@ public:
 			bRec.sampledComponent = m_components.size()-1;
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
-			pdf = sampleNested ? R12 : 1.0f;
+			pdf = sampleNested ? probSpecular : 1.0f;
 			return Spectrum(R12);
 		} else {
 			if (R12 == 1.0f) /* Total internal reflection */
@@ -355,12 +371,8 @@ public:
 			Float cosRatio = Frame::cosTheta(bRec.wo) / cosThetaWoPrime,
 				  commonTerms = (sampledSA ? cosRatio : 1.0f)* eta * eta;
 
-			pdf *= (sampleSpecular ? (1 - R12) : 1.0f) * commonTerms;
+			pdf *= (sampleSpecular ? (1 - probSpecular) : 1.0f) * commonTerms;
 			result *= (1 - R12) * (1 - R21) * commonTerms;
-
-#ifdef COMPENSATE
-			result *= m_compensation;
-#endif
 
 			return result;
 		}
@@ -382,6 +394,7 @@ public:
 			<< "  name = \"" << getName() << "\"," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl 
 			<< "  extIOR = " << m_extIOR << "," << endl
+			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
 			<< "  thickness = " << m_thickness << "," << endl
 			<< "  nested = " << indent(m_nested->toString()) << endl
@@ -391,13 +404,11 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
+	Float m_specularSamplingWeight;
 	Float m_intIOR, m_extIOR;
 	ref<Texture> m_sigmaA;
 	ref<BSDF> m_nested;
 	Float m_thickness;
-#ifdef COMPENSATE
-	Float m_compensation;
-#endif
 };
 
 MTS_IMPLEMENT_CLASS_S(SmoothCoating, false, BSDF)
