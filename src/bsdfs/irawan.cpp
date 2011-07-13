@@ -122,8 +122,10 @@ public:
 
 	void configure() {
 		m_components.clear();
-		m_components.push_back(EGlossyReflection | EAnisotropic | EFrontSide);
-		m_components.push_back(EDiffuseReflection | EFrontSide);
+		m_components.push_back(EGlossyReflection | EFrontSide
+			| EAnisotropic | ESpatiallyVarying);
+		m_components.push_back(EDiffuseReflection | EFrontSide
+			| ESpatiallyVarying);
 		BSDF::configure();
 	}
 

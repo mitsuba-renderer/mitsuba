@@ -30,37 +30,44 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
- *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Absorption coefficient within the layer. \default{0}}
- *     \parameter{thickness}{\Float}{Thickness of the absorbing layer (given in inverse units of \code{sigmaA})\default{1}}
+ *     \parameter{thickness}{\Float}{Denotes the thickness of the absorbing layer (given in inverse units of \code{sigmaA})\default{1}}
+ *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the coating layer. \default{0, i.e. there is no absorption}}
  * }
  * 
  * \renderings{
- *     \rendering{Coated rough copper (lower exposure, \lstref{coating-roughcopper})}
+ *     \rendering{Rough copper}
+ *         {bsdf_roughconductor_copper}
+ *     \rendering{The same material coated with a single layer of clear varnish (see \lstref{coating-roughcopper})}
  *         {bsdf_coating_roughconductor}
- *     \rendering{Coated rough plastic}
- *         {bsdf_coating_roughplastic}
  * }
  *
- * This plugin implements a smooth dielectric coating in the style of the
- * paper ``Arbitrarily Layered Micro-Facet Surfaces'' by Weidlich and 
- * Wilkie \cite{Weidlich2007Arbitrarily}. Any non-transmissive model can
- * be coated, and multiple layers can be applied in sequence. This allows
- * designing custom materials like car paint.
+ * This plugin implements a smooth dielectric coating (e.g. a layer of varnish) 
+ * in the style of the paper ``Arbitrarily Layered Micro-Facet Surfaces'' by 
+ * Weidlich and Wilkie \cite{Weidlich2007Arbitrarily}. Any non-transmissive
+ * BSDF in Mitsuba can be coated using this plugin, and multiple coating layers
+ * can be applied in sequence. This allows designing interesting custom materials 
+ * like car paint or glazed metal foil. The coating layer can optionally be 
+ * tinted (i.e. filled with an absorbing medium), in which case this model also 
+ * accounts for the directionally dependent absorption within the layer.
  *
- * The coating layer can optionally be filled with an absorbing medium, 
- * in which case this model also accounts for the directionally dependent
- * extinction within the layer.
+ * Note that the plugin discards illumination that undergoes internal
+ * reflection within the coating. This can lead to a noticeable energy
+ * loss for materials that reflect much of their energy near or below the critical
+ * angle (i.e. diffuse or very rough materials). 
+ * Therefore, users are discouraged to use this plugin to coat smooth
+ * diffuse materials, since there is a separately available plugin
+ * named \pluginref{smoothplastic}, which covers the same case and does not
+ * suffer from energy loss.
  *
  * Evaluating the internal component of this model entails refracting the 
  * incident and exitant rays through the dielectric interface, followed by
  * querying the nested material with this modified direction pair. The result 
- * is attenuated by the two Fresnel transmittances. Note that this model does
- * not attempt to handle illumination that is reflected by the interior of the 
- * coating---this energy is essentially lost.
+ * is attenuated by the two Fresnel transmittances and the absorption, if any.
  *
  * \vspace{4mm}
  *
- * \begin{xml}[caption=Rough copper coated with a transparent layer of lacquer, label=lst:coating-roughcopper]
+ * \begin{xml}[caption=Rough copper coated with a transparent layer of 
+ *     varnish, label=lst:coating-roughcopper]
  * <bsdf type="coating">
  *     <float name="intIOR" value="1.7"/>
  *     <bsdf type="roughconductor">
@@ -79,13 +86,13 @@ public:
 
 		/* Specifies the external index of refraction at the interface */
 		m_extIOR = lookupIOR(props, "extIOR", "air");
-		
-		/* Specifies the absorption within the layer */
-		m_sigmaA = new ConstantSpectrumTexture(
-			props.getSpectrum("sigmaA", Spectrum(0.0f)));
 
 		/* Specifies the layer's thickness using the inverse units of sigmaA */
 		m_thickness = props.getFloat("thickness", 1);
+
+		/* Specifies the absorption within the layer */
+		m_sigmaA = new ConstantSpectrumTexture(
+			props.getSpectrum("sigmaA", Spectrum(0.0f)));
 	}
 
 	SmoothCoating(Stream *stream, InstanceManager *manager) 
@@ -105,11 +112,26 @@ public:
 			Log(EError, "Tried to put a smooth coating layer on top of a BSDF "
 				"with a transmission component -- this is currently not allowed!");
 
+#if COMPENSATE
+		if (m_nested->getClass()->getName() == "SmoothDiffuse") {
+			/* For an ideally diffuse material, it is known how much 
+			   energy will be lost to total internal reflection */
+			m_compensation = (m_intIOR*m_intIOR) / (m_extIOR * m_extIOR);
+		} else {
+			/* Otherwise, give up (for now) */
+			m_compensation = 1.0f;
+		}
+#endif
+		unsigned int extraFlags = 0;
+		if (!m_sigmaA->isConstant())
+			extraFlags |= ESpatiallyVarying;
+
 		m_components.clear();
 		for (int i=0; i<m_nested->getComponentCount(); ++i) 
-			m_components.push_back(m_nested->getType(i));
+			m_components.push_back(m_nested->getType(i) | extraFlags);
+
 		m_components.push_back(EDeltaReflection | EFrontSide);
-		
+
 		m_usesRayDifferentials = m_nested->usesRayDifferentials()
 			|| m_sigmaA->usesRayDifferentials();
 
@@ -206,9 +228,10 @@ public:
 			if (R12 == 1 || R21 == 1) /* Total internal reflection */
 				return Spectrum(0.0f);
 
+			Float eta = m_extIOR / m_intIOR;
 			Spectrum result = m_nested->eval(bRec2, measure)
-				* ((1-R12) * (1-R21));
-			
+				* ((1-R12) * (1-R21) * eta * eta);
+
 			Spectrum sigmaA = m_sigmaA->getValue(bRec.its) * m_thickness;
 			if (!sigmaA.isZero()) 
 				result *= (-sigmaA *
@@ -216,10 +239,12 @@ public:
 					 1/std::abs(Frame::cosTheta(bRec2.wo)))).exp();
 
 			if (measure == ESolidAngle)
-				result *= Frame::cosTheta(bRec2.wo);
+				result *= Frame::cosTheta(bRec.wo)
+					    / Frame::cosTheta(bRec2.wo);
 
-			Float eta = m_extIOR / m_intIOR;
-			result *= eta * eta;
+#ifdef COMPENSATE
+			result *= m_compensation;
+#endif
 
 			return result;
 		}
@@ -250,9 +275,11 @@ public:
 			if (R12 == 1 || R21 == 1) /* Total internal reflection */
 				return 0.0f;
 		
-			Float pdf = m_nested->pdf(bRec2, measure)
-				* Frame::cosTheta(bRec.wo)
-				/ Frame::cosTheta(bRec2.wo);
+			Float pdf = m_nested->pdf(bRec2, measure);
+
+			if (measure == ESolidAngle)
+				pdf *= Frame::cosTheta(bRec.wo)
+					 / Frame::cosTheta(bRec2.wo);
 
 			Float eta = m_extIOR / m_intIOR;
 			pdf *= eta * eta;
@@ -324,11 +351,16 @@ public:
 
 			if (R21 == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
+			bool sampledSA = (BSDF::getMeasure(bRec.sampledType) == ESolidAngle);
+			Float cosRatio = Frame::cosTheta(bRec.wo) / cosThetaWoPrime,
+				  commonTerms = (sampledSA ? cosRatio : 1.0f)* eta * eta;
 
-			pdf *= (sampleSpecular ? (1 - R12) : 1.0f) * eta * eta *
-				Frame::cosTheta(bRec.wo) / cosThetaWoPrime;
+			pdf *= (sampleSpecular ? (1 - R12) : 1.0f) * commonTerms;
+			result *= (1 - R12) * (1 - R21) * commonTerms;
 
-			result *= (1 - R12) * (1 - R21) * cosThetaWoPrime * eta * eta;
+#ifdef COMPENSATE
+			result *= m_compensation;
+#endif
 
 			return result;
 		}
@@ -358,11 +390,14 @@ public:
 	}
 
 	MTS_DECLARE_CLASS()
-private:
+protected:
 	Float m_intIOR, m_extIOR;
 	ref<Texture> m_sigmaA;
 	ref<BSDF> m_nested;
 	Float m_thickness;
+#ifdef COMPENSATE
+	Float m_compensation;
+#endif
 };
 
 MTS_IMPLEMENT_CLASS_S(SmoothCoating, false, BSDF)

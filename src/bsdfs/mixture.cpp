@@ -28,8 +28,8 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{weights}{\String}{A comma-separated list of BSDF weights}
  * }
  * \renderings{
- *     \rendering{An exemplary combination of BSDFs 
- *     (\lstref{mixture-example})}{bsdf_mixture_test}
+ *     \rendering{An admittedly not particularly realistic linear combination of
+ *     diffuse and specular BSDFs (\lstref{mixture-example})}{bsdf_mixture_test}
  * }
  *
  * This plugin implements a ``mixture'' material, which represents  

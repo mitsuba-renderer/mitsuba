@@ -55,6 +55,10 @@ public:
 		return m_value;
 	}
 
+	inline bool isConstant() const {
+		return true;
+	}
+
 	inline std::string toString() const {
 		std::ostringstream oss;
 		oss << "ConstantSpectrumTexture[value=" << m_value.toString() << "]";
@@ -97,6 +101,10 @@ public:
 	
 	inline Spectrum getMaximum() const {
 		return Spectrum(m_value);
+	}
+
+	inline bool isConstant() const {
+		return true;
 	}
 
 	inline std::string toString() const {

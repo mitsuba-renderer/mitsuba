@@ -83,10 +83,17 @@ public:
 	void configure() {
 		if (!m_nestedBSDF)
 			Log(EError, "A child BSDF is required");
+		
+		unsigned int extraFlags = 0;
+		if (!m_opacity->isConstant())
+			extraFlags |= ESpatiallyVarying;
+
 		m_components.clear();
 		for (int i=0; i<m_nestedBSDF->getComponentCount(); ++i)
-			m_components.push_back(m_nestedBSDF->getType(i));
-		m_components.push_back(EDeltaTransmission | EFrontSide | EBackSide);
+			m_components.push_back(m_nestedBSDF->getType(i) | extraFlags);
+		m_components.push_back(EDeltaTransmission | EFrontSide 
+				| EBackSide | extraFlags);
+
 		m_usesRayDifferentials = m_nestedBSDF->usesRayDifferentials();
 		m_opacity = ensureEnergyConservation(m_opacity, "opacity", 1.0f);
 		BSDF::configure();

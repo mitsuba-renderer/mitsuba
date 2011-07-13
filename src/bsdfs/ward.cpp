@@ -140,8 +140,11 @@ public:
 			extraFlags |= EAnisotropic;
 
 		m_components.clear();
-		m_components.push_back(EGlossyReflection | EFrontSide | extraFlags);
-		m_components.push_back(EDiffuseReflection | EFrontSide | extraFlags);
+		m_components.push_back(EGlossyReflection | EFrontSide | extraFlags
+			| ((!m_specularReflectance->isConstant() || !m_alphaU->isConstant()
+			  || !m_alphaV->isConstant()) ? ESpatiallyVarying : 0));
+		m_components.push_back(EDiffuseReflection | EFrontSide | extraFlags
+			| (m_diffuseReflectance->isConstant() ? 0 : ESpatiallyVarying));
 
 		/* Verify the input parameters and fix them if necessary */
 		std::pair<Texture *, Texture *> result = ensureEnergyConservation(

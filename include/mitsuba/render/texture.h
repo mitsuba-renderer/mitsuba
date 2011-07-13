@@ -43,6 +43,9 @@ public:
 	/// Return the resolution in pixels, if applicable
 	virtual Vector3i getResolution() const;
 
+	/// Return whether the texture takes on a single constant value
+	virtual bool isConstant() const = 0;
+
 	/**
 	 * \brief Does this texture do pre-filtering when ray 
 	 * differentials are available?

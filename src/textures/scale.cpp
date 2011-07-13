@@ -68,6 +68,10 @@ public:
 		return m_nested->getMaximum() * m_scale;
 	}
 
+	bool isConstant() const {
+		return m_nested->isConstant();
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "ScalingTexture[" << endl

@@ -227,11 +227,16 @@ public:
 						"(named \"as\")");
 		}
 
+		if (!m_alphaU->isConstant() || !m_alphaV->isConstant())
+			extraFlags |= ESpatiallyVarying;
+
 		m_components.clear();
-		m_components.push_back(
-			EGlossyReflection | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
-		m_components.push_back(
-			EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+		m_components.push_back(EGlossyReflection | EFrontSide
+			| EBackSide | ECanUseSampler | extraFlags 
+			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
+		m_components.push_back(EGlossyTransmission | EFrontSide
+			| EBackSide | ECanUseSampler | extraFlags
+			| (m_specularTransmittance->isConstant() ? 0 : ESpatiallyVarying));
 
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(

@@ -176,8 +176,11 @@ public:
 
 	void configure() {
 		m_components.clear();
-		m_components.push_back(EGlossyReflection | EFrontSide);
-		m_components.push_back(EDiffuseReflection | EFrontSide);
+
+		m_components.push_back(EGlossyReflection | EFrontSide 
+			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
+		m_components.push_back(EDiffuseReflection | EFrontSide 
+			| (m_diffuseReflectance->isConstant() ? 0 : ESpatiallyVarying));
 
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
@@ -357,7 +360,7 @@ public:
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		Float pdf;
+		Float pdf = 0;
 		Spectrum result = RoughPlastic::sample(bRec, pdf, sample);
 
 		if (result.isZero())

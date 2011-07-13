@@ -64,7 +64,8 @@ public:
 		m_transmittance = ensureEnergyConservation(m_transmittance, "transmittance", 1.0f);
 
 		m_components.clear();
-		m_components.push_back(EDiffuseTransmission | EFrontSide | EBackSide);
+		m_components.push_back(EDiffuseTransmission | EFrontSide | EBackSide
+			| (m_transmittance->isConstant() ? 0 : ESpatiallyVarying));
 		BSDF::configure();
 	}
 

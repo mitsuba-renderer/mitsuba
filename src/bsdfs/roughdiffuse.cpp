@@ -107,9 +107,12 @@ public:
 	void configure() {
 		/* Verify the input parameter and fix them if necessary */
 		m_reflectance = ensureEnergyConservation(m_reflectance, "reflectance", 1.0f);
-		
+
 		m_components.clear();
-		m_components.push_back(EGlossyReflection | EFrontSide);
+		m_components.push_back(EGlossyReflection | EFrontSide
+			| ((!m_reflectance->isConstant() || !m_alpha->isConstant())
+			? ESpatiallyVarying : 0));
+
 		m_usesRayDifferentials = m_reflectance->usesRayDifferentials() ||
 			m_alpha->usesRayDifferentials();
 		

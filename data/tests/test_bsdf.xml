@@ -6,6 +6,8 @@
 	<bsdf type="coating">
 		<float name="intIOR" value="1.5"/>
 		<float name="extIOR" value="1"/>
+		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
+		<float name="thickness" value="2"/>
 		<bsdf type="diffuse"/>
 	</bsdf>
 

@@ -225,10 +225,12 @@ public:
 		// =============================================================
 		/// The lobe is not invariant to rotation around the normal
 		EAnisotropic          = 0x01000,
+		/// The BSDF depends on the UV coordinates
+		ESpatiallyVarying     = 0x02000,
 		/// Supports interactions on the front-facing side
-		EFrontSide            = 0x02000,
+		EFrontSide            = 0x04000,
 		/// Supports interactions on the back-facing side
-		EBackSide             = 0x04000,
+		EBackSide             = 0x08000,
 		/// Can use an extra sampler instance to improve the sampling method
 		ECanUseSampler        = 0x10000  
 		//! @}
@@ -276,7 +278,7 @@ public:
 	inline unsigned int getType(int component) const {
 		return m_components[component];
 	}
-	
+
 	/**
 	 * \brief Return the measure corresponding to a particular
 	 * component type

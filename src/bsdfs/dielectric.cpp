@@ -176,8 +176,10 @@ public:
 			m_specularTransmittance, "specularTransmittance", 1.0f);
 		
 		m_components.clear();
-		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide);
-		m_components.push_back(EDeltaTransmission | EFrontSide | EBackSide);
+		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide
+			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
+		m_components.push_back(EDeltaTransmission | EFrontSide | EBackSide
+			| (m_specularTransmittance->isConstant() ? 0 : ESpatiallyVarying));
 		
 		m_usesRayDifferentials = 
 			m_specularReflectance->usesRayDifferentials() ||

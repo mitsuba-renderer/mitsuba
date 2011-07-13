@@ -71,6 +71,10 @@ public:
 		return m_brightColor;
 	}
 
+	bool isConstant() const {
+		return false;
+	}
+
 	std::string toString() const {
 		return "Checkerboard[]";
 	}
@@ -128,7 +132,7 @@ public:
 		program->setParameter(parameterIDs[2], m_uvOffset);
 		program->setParameter(parameterIDs[3], m_uvScale);
 	}
-
+	
 	MTS_DECLARE_CLASS()
 private:
 	Spectrum m_brightColor;

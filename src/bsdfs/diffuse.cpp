@@ -93,7 +93,8 @@ public:
 		m_reflectance = ensureEnergyConservation(m_reflectance, "reflectance", 1.0f);
 
 		m_components.clear();
-		m_components.push_back(EDiffuseReflection | EFrontSide);
+		m_components.push_back(EDiffuseReflection | EFrontSide
+			| (m_reflectance->isConstant() ? 0 : ESpatiallyVarying));
 		m_usesRayDifferentials = m_reflectance->usesRayDifferentials();
 
 		BSDF::configure();

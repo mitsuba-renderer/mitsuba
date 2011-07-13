@@ -103,8 +103,10 @@ public:
 			m_diffuseReflectance->usesRayDifferentials();
 		
 		m_components.clear();
-		m_components.push_back(EDeltaReflection | EFrontSide);
-		m_components.push_back(EDiffuseReflection | EFrontSide);
+		m_components.push_back(EDeltaReflection | EFrontSide
+			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
+		m_components.push_back(EDiffuseReflection | EFrontSide
+			| (m_diffuseReflectance->isConstant() ? 0 : ESpatiallyVarying));
 		
 		BSDF::configure();
 	}

@@ -205,10 +205,12 @@ public:
 						"anisotropic Ashikhmin-Shirley microfacet distribution "
 						"(named \"as\")");
 		}
+		if (!m_alphaU->isConstant() || !m_alphaV->isConstant() ||
+			!m_specularReflectance->isConstant())
+			extraFlags |= ESpatiallyVarying;
 
 		m_components.clear();
-		m_components.push_back(
-			EGlossyReflection | EFrontSide | extraFlags);
+		m_components.push_back(EGlossyReflection | EFrontSide | extraFlags);
 
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(

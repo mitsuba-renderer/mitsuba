@@ -181,8 +181,9 @@ public:
 			m_specularReflectance->usesRayDifferentials();
 
 		m_components.clear();
-		m_components.push_back(EDeltaReflection | EFrontSide);
-		
+		m_components.push_back(EDeltaReflection | EFrontSide
+			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
+
 		BSDF::configure();
 	}
 

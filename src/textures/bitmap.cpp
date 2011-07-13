@@ -256,6 +256,10 @@ public:
 		return m_maximum;
 	}
 
+	bool isConstant() const {
+		return false;
+	}
+
 	bool usesRayDifferentials() const {
 		return true;
 	}
@@ -353,7 +357,7 @@ public:
 	void unbind() const {
 		m_gpuTexture->unbind();
 	}
-
+	
 	MTS_DECLARE_CLASS()
 private:
 	ref<GPUTexture> m_gpuTexture;
