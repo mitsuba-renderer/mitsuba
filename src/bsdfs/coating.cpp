@@ -30,10 +30,45 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
+ *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Absorption coefficient within the layer. \default{0}}
+ *     \parameter{thickness}{\Float}{Thickness of the absorbing layer (given in inverse units of \code{sigmaA})\default{1}}
+ * }
+ * 
+ * \renderings{
+ *     \rendering{Coated rough copper (lower exposure, \lstref{coating-roughcopper})}
+ *         {bsdf_coating_roughconductor}
+ *     \rendering{Coated rough plastic}
+ *         {bsdf_coating_roughplastic}
  * }
  *
- * This class implements a smooth dielectric coating in the style of 
- * Weidlich and Wilkie \cite{Weidlich2007Arbitrarily}.
+ * This plugin implements a smooth dielectric coating in the style of the
+ * paper ``Arbitrarily Layered Micro-Facet Surfaces'' by Weidlich and 
+ * Wilkie \cite{Weidlich2007Arbitrarily}. Any non-transmissive model can
+ * be coated, and multiple layers can be applied in sequence. This allows
+ * designing custom materials like car paint.
+ *
+ * The coating layer can optionally be filled with an absorbing medium, 
+ * in which case this model also accounts for the directionally dependent
+ * extinction within the layer.
+ *
+ * Evaluating the internal component of this model entails refracting the 
+ * incident and exitant rays through the dielectric interface, followed by
+ * querying the nested material with this modified direction pair. The result 
+ * is attenuated by the two Fresnel transmittances. Note that this model does
+ * not attempt to handle illumination that is reflected by the interior of the 
+ * coating---this energy is essentially lost.
+ *
+ * \vspace{4mm}
+ *
+ * \begin{xml}[caption=Rough copper coated with a transparent layer of lacquer, label=lst:coating-roughcopper]
+ * <bsdf type="coating">
+ *     <float name="intIOR" value="1.7"/>
+ *     <bsdf type="roughconductor">
+ *         <string name="material" value="Cu"/>
+ *         <float name="alpha" value="0.1"/>
+ *     </bsdf>
+ * </bsdf>
+ * \end{xml}
  */
 class SmoothCoating : public BSDF {
 public:
@@ -45,12 +80,12 @@ public:
 		/* Specifies the external index of refraction at the interface */
 		m_extIOR = lookupIOR(props, "extIOR", "air");
 		
-		/* Specifies the layer's thickness using the inverse units of sigmaT */
-		m_thickness = props.getFloat("thickness", 1);
+		/* Specifies the absorption within the layer */
+		m_sigmaA = new ConstantSpectrumTexture(
+			props.getSpectrum("sigmaA", Spectrum(0.0f)));
 
-		/* Specifies the attenuation within the varnish layer */
-		m_sigmaT = new ConstantSpectrumTexture(
-			props.getSpectrum("sigmaT", Spectrum(0.0f)));
+		/* Specifies the layer's thickness using the inverse units of sigmaA */
+		m_thickness = props.getFloat("thickness", 1);
 	}
 
 	SmoothCoating(Stream *stream, InstanceManager *manager) 
@@ -59,7 +94,7 @@ public:
 		m_extIOR = stream->readFloat();
 		m_thickness = stream->readFloat();
 		m_nested = static_cast<BSDF *>(manager->getInstance(stream));
-		m_sigmaT = static_cast<Texture *>(manager->getInstance(stream));
+		m_sigmaA = static_cast<Texture *>(manager->getInstance(stream));
 		configure();
 	}
 
@@ -71,12 +106,12 @@ public:
 				"with a transmission component -- this is currently not allowed!");
 
 		m_components.clear();
-		for (int i=0; i<m_nested->getComponentCount(); ++i)
+		for (int i=0; i<m_nested->getComponentCount(); ++i) 
 			m_components.push_back(m_nested->getType(i));
 		m_components.push_back(EDeltaReflection | EFrontSide);
 		
 		m_usesRayDifferentials = m_nested->usesRayDifferentials()
-			|| m_sigmaT->usesRayDifferentials();
+			|| m_sigmaA->usesRayDifferentials();
 
 		BSDF::configure();
 	}
@@ -88,7 +123,7 @@ public:
 		stream->writeFloat(m_extIOR);
 		stream->writeFloat(m_thickness);
 		manager->serialize(stream, m_nested.get());
-		manager->serialize(stream, m_sigmaT.get());
+		manager->serialize(stream, m_sigmaA.get());
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
@@ -118,8 +153,7 @@ public:
 	/// Refraction in local coordinates (full version)
 	inline Vector refract(const Vector &wi, Float &F) const {
 		Float cosThetaI = Frame::cosTheta(wi),
-			  etaI = m_extIOR,
-			  etaT = m_intIOR;
+			  etaI = m_extIOR, etaT = m_intIOR;
 
 		bool entering = cosThetaI > 0.0f;
 
@@ -132,14 +166,13 @@ public:
 		Float eta = etaI / etaT,
 			  sinThetaTSqr = eta*eta * Frame::sinTheta2(wi);
 
-		Float cosThetaT = 0;
 		if (sinThetaTSqr >= 1.0f) {
 			/* Total internal reflection */
 			F = 1.0f;
 
 			return Vector(0.0f);
 		} else {
-			cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
+			Float cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
 
 			/* Compute the Fresnel transmittance */
 			F = fresnelDielectric(std::abs(Frame::cosTheta(wi)),
@@ -169,24 +202,25 @@ public:
 			BSDFQueryRecord bRec2(bRec);
 			bRec2.wi = -refract(bRec.wi, R12);
 			bRec2.wo = -refract(bRec.wo, R21);
-			Assert(bRec2.wi.z >= 0);
-			Assert(bRec2.wo.z >= 0);
 
 			if (R12 == 1 || R21 == 1) /* Total internal reflection */
 				return Spectrum(0.0f);
 
 			Spectrum result = m_nested->eval(bRec2, measure)
 				* ((1-R12) * (1-R21));
-
-			Spectrum sigmaT = m_sigmaT->getValue(bRec.its) * m_thickness;
-			if (!sigmaT.isZero()) 
-				result *= (-sigmaT *
+			
+			Spectrum sigmaA = m_sigmaA->getValue(bRec.its) * m_thickness;
+			if (!sigmaA.isZero()) 
+				result *= (-sigmaA *
 					(1/std::abs(Frame::cosTheta(bRec2.wi)) +
 					 1/std::abs(Frame::cosTheta(bRec2.wo)))).exp();
 
 			if (measure == ESolidAngle)
 				result *= Frame::cosTheta(bRec2.wo);
-				
+
+			Float eta = m_extIOR / m_intIOR;
+			result *= eta * eta;
+
 			return result;
 		}
 	
@@ -215,12 +249,13 @@ public:
 
 			if (R12 == 1 || R21 == 1) /* Total internal reflection */
 				return 0.0f;
+		
+			Float pdf = m_nested->pdf(bRec2, measure)
+				* Frame::cosTheta(bRec.wo)
+				/ Frame::cosTheta(bRec2.wo);
 
-			Float pdf = m_nested->pdf(bRec2, measure);
-			if (measure == ESolidAngle) {
-				Float eta = m_extIOR / m_intIOR;
-				pdf /= eta * eta;
-			}
+			Float eta = m_extIOR / m_intIOR;
+			pdf *= eta * eta;
 
 			return sampleSpecular ? (pdf * (1-R12)) : pdf;
 		} else {
@@ -234,7 +269,7 @@ public:
 		bool sampleNested = (bRec.typeMask & m_nested->getType() & BSDF::EAll)
 			&& (bRec.component == -1 || bRec.component < (int) m_components.size()-1);
 
-		if ((!sampleNested && !sampleNested) || Frame::cosTheta(bRec.wi) < 0)
+		if ((!sampleSpecular && !sampleNested) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 
 		/* Refract the incident direction and compute the Fresnel reflectance */
@@ -250,54 +285,52 @@ public:
 					-cosThetaT, m_extIOR, m_intIOR);
 		}
 
+		bool choseSpecular = sampleSpecular;
+
 		Point2 sample(_sample);
-		if (sampleNested && sampleNested) {
-			if (sample.x <= R12) {
-				bRec.sampledComponent = m_components.size()-1;
-				bRec.sampledType = EDeltaReflection;
-				bRec.wo = reflect(bRec.wi);
-				pdf = R12;
-				return Spectrum(R12);
-			} else {
-				Vector wiBackup = bRec.wi;
-			//	bRec.wi = -refract(bRec.wi, eta, cosThetaT);
-				bRec.wi = -refract(bRec.wi, R12);
+		if (sampleSpecular && sampleNested) {
+			if (sample.x > R12) {
 				sample.x = (sample.x - R12) / (1 - R12);
-
-				Spectrum result = m_nested->sample(bRec, pdf, sample);
-				if (result.isZero())
-					return Spectrum(0.0f);
-
-				Spectrum sigmaT = m_sigmaT->getValue(bRec.its) * m_thickness;
-				if (!sigmaT.isZero()) 
-					result *= (-sigmaT *
-						(1/std::abs(Frame::cosTheta(bRec.wi)) +
-						 1/std::abs(Frame::cosTheta(bRec.wo)))).exp();
-
-				Float R21, cosThetaWoPrime = Frame::cosTheta(bRec.wo);
-				bRec.wi = wiBackup;
-				bRec.wo = refract(-bRec.wo, R21);
-
-				if (R21 == 1.0f) /* Total internal reflection */
-					return Spectrum(0.0f);
-	
-				pdf *= 1 - R12;
-				if (BSDF::getMeasure(bRec.sampledType) == ESolidAngle)
-					pdf /= eta * eta;
-
-				result *= (1 - R12) * (1 - R21) * cosThetaWoPrime;
-
-				return result;
+				choseSpecular = false;
 			}
-		} else if (sampleSpecular) {
-			bRec.sampledComponent = 0;
+		}
+		
+		if (choseSpecular) {
+			bRec.sampledComponent = m_components.size()-1;
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
-			pdf = 1.0f;
+			pdf = sampleNested ? R12 : 1.0f;
 			return Spectrum(R12);
 		} else {
-			// XXX not implemented
-			return Spectrum(0.0f);
+			if (R12 == 1.0f) /* Total internal reflection */
+				return Spectrum(0.0f);
+
+			Vector wiBackup = bRec.wi;
+			bRec.wi = -refract(bRec.wi, eta, cosThetaT);
+
+			Spectrum result = m_nested->sample(bRec, pdf, sample);
+			if (result.isZero()) 
+				return Spectrum(0.0f);
+
+			Spectrum sigmaA = m_sigmaA->getValue(bRec.its) * m_thickness;
+			if (!sigmaA.isZero()) 
+				result *= (-sigmaA *
+					(1/std::abs(Frame::cosTheta(bRec.wi)) +
+					 1/std::abs(Frame::cosTheta(bRec.wo)))).exp();
+
+			Float R21, cosThetaWoPrime = Frame::cosTheta(bRec.wo);
+			bRec.wo = refract(-bRec.wo, R21);
+			bRec.wi = wiBackup;
+
+			if (R21 == 1.0f) /* Total internal reflection */
+				return Spectrum(0.0f);
+
+			pdf *= (sampleSpecular ? (1 - R12) : 1.0f) * eta * eta *
+				Frame::cosTheta(bRec.wo) / cosThetaWoPrime;
+
+			result *= (1 - R12) * (1 - R21) * cosThetaWoPrime * eta * eta;
+
+			return result;
 		}
 	}
 
@@ -317,7 +350,7 @@ public:
 			<< "  name = \"" << getName() << "\"," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl 
 			<< "  extIOR = " << m_extIOR << "," << endl
-			<< "  sigmaT = " << indent(m_sigmaT->toString()) << "," << endl
+			<< "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
 			<< "  thickness = " << m_thickness << "," << endl
 			<< "  nested = " << indent(m_nested->toString()) << endl
 			<< "]";
@@ -327,11 +360,11 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	Float m_intIOR, m_extIOR;
-	ref<Texture> m_sigmaT;
+	ref<Texture> m_sigmaA;
 	ref<BSDF> m_nested;
 	Float m_thickness;
 };
 
 MTS_IMPLEMENT_CLASS_S(SmoothCoating, false, BSDF)
-MTS_EXPORT_PLUGIN(SmoothCoating, "Smooth varnish layer");
+MTS_EXPORT_PLUGIN(SmoothCoating, "Smooth dielectric coating");
 MTS_NAMESPACE_END

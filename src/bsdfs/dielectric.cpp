@@ -212,8 +212,7 @@ public:
 	/// Refraction in local coordinates (full version)
 	inline Vector refract(const Vector &wi) const {
 		Float cosThetaI = Frame::cosTheta(wi),
-			  etaI = m_extIOR,
-			  etaT = m_intIOR;
+			  etaI = m_extIOR, etaT = m_intIOR;
 
 		bool entering = cosThetaI > 0.0f;
 

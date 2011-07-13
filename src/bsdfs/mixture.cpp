@@ -22,10 +22,43 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Mixture material, represents a linear combination of 
- * one or more BRDFs.
+/*! \plugin{mixture}{Mixture material}
+ *
+ * \parameters{
+ *     \parameter{weights}{\String}{A comma-separated list of BSDF weights}
+ * }
+ * \renderings{
+ *     \rendering{An exemplary combination of BSDFs 
+ *     (\lstref{mixture-example})}{bsdf_mixture_test}
+ * }
+ *
+ * This plugin implements a ``mixture'' material, which represents  
+ * linear combinations of multiple BSDF instances. Any surface scattering
+ * model in Mitsuba (be it smooth, rough, reflecting, or transmitting) can 
+ * be mixed with others in this manner to synthesize new models. There
+ * is no limit on how many models can be mixed, but their combination
+ * weights must be nonnegative and sum to less than one to ensure 
+ * energy balance.
+ *
+ * \vspace{4mm}
+ * \begin{xml}[caption={A material definition for a mixture of 70% smooth
+ *     chromium, 20% of a greenish rough diffuse material (and 10% absorption)},
+ *     label=lst:mixture-example]
+ * <bsdf type="mixture">
+ *     <string name="weights" value="0.7, 0.2"/>
+ *
+ *     <bsdf type="conductor">
+ *         <string name="material" value="Cr"/>
+ *     </bsdf>
+ *
+ *     <bsdf type="roughdiffuse">
+ *         <rgb name="reflectance" value=".7 1 .7"/>
+ *         <float name="alpha" value="0.4"/>
+ *     </bsdf>
+ * </bsdf>
+ * \end{xml}
  */
+
 class MixtureBSDF : public BSDF {
 public:
 	MixtureBSDF(const Properties &props) 

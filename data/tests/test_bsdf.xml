@@ -2,10 +2,18 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
+	<!-- Test a smooth coating over a diffuse base material -->
 	<bsdf type="coating">
 		<float name="intIOR" value="1.5"/>
 		<float name="extIOR" value="1"/>
 		<bsdf type="diffuse"/>
+	</bsdf>
+
+	<!-- Test a smooth coating over a rough metal material -->
+	<bsdf type="coating">
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1"/>
+		<bsdf type="roughconductor"/>
 	</bsdf>
 
 	<!-- Test the smooth diffuse model -->
@@ -106,7 +114,7 @@
 	<!-- Test the rough dielectric model with the anisotropic
 		 Ashikhmin-Shirley microfacet distribution -->
 	<bsdf type="roughconductor">
-		<string name="preset" value="Au"/>
+		<string name="material" value="Au"/>
 		<string name="distribution" value="as"/>
 		<float name="alphaU" value="0.1"/>
 		<float name="alphaV" value="0.3"/>

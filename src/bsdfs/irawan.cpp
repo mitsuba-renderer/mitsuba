@@ -72,7 +72,6 @@ MTS_NAMESPACE_BEGIN
  *     \unframedmedrendering{Silk shantung}{bsdf_irawan_shantung}
  *     \unframedmedrendering{Cotton twill}{bsdf_irawan_twill}
  * }
- *
  */
 class IrawanClothBRDF : public BSDF {
 public:
