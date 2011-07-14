@@ -35,7 +35,7 @@ MTS_NAMESPACE_BEGIN
  *
  * Includes a \ref Shader implementation for hardware rendering
  */
-class MTS_EXPORT_RENDER ConstantSpectrumTexture : public Texture {
+class MTS_EXPORT_HW ConstantSpectrumTexture : public Texture {
 public:
 	inline ConstantSpectrumTexture(const Spectrum &value)
 		: Texture(Properties()), m_value(value) {
@@ -83,7 +83,7 @@ protected:
  *
  * Includes a \ref Shader implementation for hardware rendering
  */
-class MTS_EXPORT_RENDER ConstantFloatTexture : public Texture {
+class MTS_EXPORT_HW ConstantFloatTexture : public Texture {
 public:
 	inline ConstantFloatTexture(const Float &value)
 		: Texture(Properties()), m_value(value) {

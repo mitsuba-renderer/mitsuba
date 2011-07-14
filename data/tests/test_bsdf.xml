@@ -2,22 +2,6 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
-	<!-- Test a smooth coating over a diffuse base material -->
-	<bsdf type="coating">
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1"/>
-		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
-		<float name="thickness" value="2"/>
-		<bsdf type="diffuse"/>
-	</bsdf>
-
-	<!-- Test a smooth coating over a rough metal material -->
-	<bsdf type="coating">
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1"/>
-		<bsdf type="roughconductor"/>
-	</bsdf>
-
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
 
@@ -142,10 +126,30 @@
 	<bsdf type="ward">
 		<float name="alphaU" value=".1"/>
 		<float name="alphaV" value=".3"/>
+		<spectrum name="diffuseReflectance" value="0.2"/>
+		<spectrum name="specularReflectance" value="0.4"/>
 	</bsdf>
 
-	<!-- Test the mask model -->
+	<!-- Test the mask model (with constant 50% opacity) -->
 	<bsdf type="mask">
+		<spectrum name="opacity" value="0.5"/>
+
 		<bsdf type="diffuse"/>
+	</bsdf>
+
+	<!-- Test the smooth coating over a diffuse base material -->
+	<bsdf type="coating">
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1"/>
+		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
+		<float name="thickness" value="2"/>
+		<bsdf type="diffuse"/>
+	</bsdf>
+
+	<!-- Test the smooth coating over a rough metal material -->
+	<bsdf type="coating">
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1"/>
+		<bsdf type="roughconductor"/>
 	</bsdf>
 </scene>
