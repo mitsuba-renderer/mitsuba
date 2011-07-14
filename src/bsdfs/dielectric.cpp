@@ -131,8 +131,9 @@ MTS_NAMESPACE_BEGIN
  *          conditions. These material names can be used with the plugins
  *          \pluginref{dielectric},\
  *          \pluginref{roughdielectric},\
- *          \pluginref{plastic}, as well as 
- *          \pluginref{roughplastic}.
+ *          \pluginref{plastic}, \
+ *          \pluginref{roughplastic}, as well as 
+ *          \pluginref{coating}.
  *     }
  * \end{table}
  */
