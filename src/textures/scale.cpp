@@ -31,10 +31,10 @@ MTS_NAMESPACE_BEGIN
 class ScalingTexture : public Texture {
 public:
 	ScalingTexture(const Properties &props) : Texture(props) {
-		if (props.hasProperty("value") && props.getType("value") == Properties::EFloat)
-			m_scale = Spectrum(props.getFloat("value", 1.0f));
+		if (props.hasProperty("scale") && props.getType("scale") == Properties::EFloat)
+			m_scale = Spectrum(props.getFloat("scale", 1.0f));
 		else
-			m_scale = props.getSpectrum("value", Spectrum(1.0f));
+			m_scale = props.getSpectrum("scale", Spectrum(1.0f));
 	}
 
 	ScalingTexture(Stream *stream, InstanceManager *manager) 

@@ -29,7 +29,7 @@ MTS_NAMESPACE_BEGIN
  *         material. \default{0.5}
  *     }
  *     \parameter{alpha}{\Spectrum\Or\Texture}{
- *         Specifies the roughness of the unresolved surface microgeometry
+ *         Specifies the roughness of the unresolved surface micro-geometry
  *         using the \emph{root mean square} (RMS) slope of the 
  *         microfacets. \default{0.2}
  *     }
@@ -64,9 +64,9 @@ MTS_NAMESPACE_BEGIN
  * to Lambertian scattering, which does not take surface roughness into account.
  *
  * The implementation in Mitsuba uses a surface roughness parameter $\alpha$ that
- * is slighly different from the slope-area variance in the original 1994 paper. 
+ * is slightly different from the slope-area variance in the original 1994 paper. 
  * The reason for this change is to make the parameter $\alpha$ portable
- * across different models (i.e. \pluginref{roughglass}, \pluginref{roughplastic}, 
+ * across different models (i.e. \pluginref{roughdielectric}, \pluginref{roughplastic}, 
  * \pluginref{roughconductor}).
  *
  * To get an intuition about the effect of the 

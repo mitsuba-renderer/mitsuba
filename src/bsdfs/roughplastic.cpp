@@ -47,7 +47,7 @@ MTS_NAMESPACE_BEGIN
  *       \end{enumerate}
  *     }
  *     \parameter{alpha}{\Float}{
- *         Specifies the roughness of the unresolved surface microgeometry. 
+ *         Specifies the roughness of the unresolved surface micro-geometry. 
  *         When the Beckmann distribution is used, this parameter is equal to the 
  *         \emph{root mean square} (RMS) slope of the microfacets. 
  *         \default{0.1}. 

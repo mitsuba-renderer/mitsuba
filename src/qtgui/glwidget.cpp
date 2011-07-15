@@ -28,6 +28,7 @@
 #include <mitsuba/render/renderjob.h>
 #include <mitsuba/core/timer.h>
 #include <mitsuba/core/mstream.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/hw/font.h>
 
 GLWidget::GLWidget(QWidget *parent) :
@@ -1060,6 +1061,14 @@ void GLWidget::paintGL() {
 			m_luminanceProgram->unbind();
 			buffer->unbind();
 			m_luminanceBuffer[0]->releaseTarget();
+			#if 0
+				/* For debugging .. */
+				ref<Bitmap> bitmap = new Bitmap(size.x, size.y, 128);
+				m_luminanceBuffer[0]->download(bitmap);
+				ref<FileStream> fs = new FileStream("test.exr", FileStream::ETruncReadWrite);
+				bitmap->save(Bitmap::EEXR, fs);
+				fs->close();
+			#endif
 
 			/* Iteratively downsample the image until left with a 1x1 pixel sum over
 			   the whole image */

@@ -52,7 +52,7 @@ MTS_NAMESPACE_BEGIN
  *       \end{enumerate}
  *     }
  *     \parameter{alpha}{\Float\Or\Texture}{
- *         Specifies the roughness of the unresolved surface microgeometry. 
+ *         Specifies the roughness of the unresolved surface micro-geometry. 
  *         When the Beckmann distribution is used, this parameter is equal to the 
  *         \emph{root mean square} (RMS) slope of the microfacets. This
  *         parameter is only valid when \texttt{distribution=beckmann/phong/ggx}.
@@ -115,7 +115,7 @@ MTS_NAMESPACE_BEGIN
  * finish).
  * 
  * Please note that when using this plugin, it is crucial that the scene contains
- * meaningful and mutally compatible index of refraction changes---see
+ * meaningful and mutually compatible index of refraction changes---see
  * \figref{glass-explanation} for an example of what this entails. Also, note that
  * the importance sampling implementation of this model is close, but 
  * not always a perfect a perfect match to the underlying scattering distribution,
@@ -123,7 +123,7 @@ MTS_NAMESPACE_BEGIN
  * microfacet distribution is used. Hence, such renderings may 
  * converge slowly.
  *
- * \subsubsection*{Techical details}
+ * \subsubsection*{Technical details}
  * When rendering with the Ashikhmin-Shirley or Phong microfacet 
  * distributions, a conversion is used to turn the specified 
  * $\alpha$ roughness value into the exponents of these distributions.

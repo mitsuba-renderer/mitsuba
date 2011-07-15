@@ -85,7 +85,7 @@ Texture *BSDF::ensureEnergyConservation(Texture *texture,
 			<< "to the BSDF to prevent this from happening.";
 		Log(EWarn, "%s", oss.str().c_str());
 		Properties props("scale");
-		props.setFloat("value", scale);
+		props.setFloat("scale", scale);
 		Texture *scaleTexture = static_cast<Texture *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(Texture), props));
 		scaleTexture->addChild("", texture);
@@ -150,7 +150,9 @@ static std::string typeMaskToString(unsigned int typeMask) {
 	if (isset(BSDF::EFrontSide)) { oss << "frontSide "; typeMask &= ~BSDF::EFrontSide; }
 	if (isset(BSDF::EBackSide)) { oss << "backSide "; typeMask &= ~BSDF::EBackSide; }
 	if (isset(BSDF::ECanUseSampler)) { oss << "canUseSampler "; typeMask &= ~BSDF::ECanUseSampler; }
+	if (isset(BSDF::ESpatiallyVarying)) { oss << "spatiallyVarying"; typeMask &= ~BSDF::ESpatiallyVarying; }
 	#undef isset
+	SAssert(typeMask == 0);
 	oss << "}";
 	return oss.str();
 }

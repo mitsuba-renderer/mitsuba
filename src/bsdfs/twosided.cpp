@@ -23,6 +23,11 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{twosided}{Two-sided BRDF adapter}
+ * \parameters{
+ *     \parameter{\Unnamed}{\BSDF}{A nested BRDF that should
+ *     be turned into a two-sided scattering model.}
+ * }
+ * 
  * \renderings{
  *     \unframedrendering{From this angle, the Cornell box scene shows visible back-facing geometry}
  *         {bsdf_twosided_before}

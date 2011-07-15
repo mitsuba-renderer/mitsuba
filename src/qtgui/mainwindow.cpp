@@ -1314,13 +1314,15 @@ void MainWindow::onExportDialogClose(int reason) {
 				for (int y=0; y<height; ++y) {
 					for (int x=0; x<width; ++x) {
 						Spectrum spec;
-						spec.fromLinearRGB(source[(y*width+x)*4+0], source[(y*width+x)*4+1], source[(y*width+x)*4+2]);
+						spec.fromLinearRGB(source[(y*width+x)*4+0], 
+							source[(y*width+x)*4+1], source[(y*width+x)*4+2]);
 						avgLogLuminance += std::log(0.001f+spec.getLuminance());
 					}
 				}
 				avgLogLuminance = std::exp(avgLogLuminance/(width*height));
 				reinhardKey = ctx->reinhardKey / avgLogLuminance;
 			}
+			
 
 			for (int y=0; y<height; ++y) {
 				for (int x=0; x<width; ++x) {

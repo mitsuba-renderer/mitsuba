@@ -26,6 +26,8 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{opacity}{\Spectrum\Or\Texture}{
  *          Specifies the per-channel opacity (where $1=$ completely transparent)\default{0.5}. 
  *     }
+ *     \parameter{\Unnamed}{\BSDF}{A base BSDF model that represents the
+ *         non-transparent portion of the scattering}
  * }
  * \renderings{
  *     \rendering{Rendering without an opacity mask}
@@ -37,7 +39,7 @@ MTS_NAMESPACE_BEGIN
  * between perfectly transparent and completely opaque based on the \code{opacity}
  * parameter.
  *
- * The transparency is implemented as a forward-facing Diract delta distribution.
+ * The transparency is implemented as a forward-facing Dirac delta distribution.
  * \vspace{5mm}
  *
  * \begin{xml}[caption=Material configuration for a transparent leaf,

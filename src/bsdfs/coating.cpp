@@ -30,8 +30,9 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
- *     \parameter{thickness}{\Float}{Denotes the thickness of the absorbing layer (given in inverse units of \code{sigmaA})\default{1}}
+ *     \parameter{thickness}{\Float}{Denotes the thickness of the layer (to model absorption --- should be specified in inverse units of \code{sigmaA})\default{1}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the coating layer. \default{0, i.e. there is no absorption}}
+ *     \parameter{\Unnamed}{\BSDF}{A nested BSDF model that should be coated.}
  * }
  * 
  * \renderings{

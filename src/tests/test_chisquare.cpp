@@ -99,15 +99,20 @@ public:
 			: m_bsdf(bsdf), m_sampler(sampler), m_wi(wi), m_component(component),
 			  m_largestWeight(0), m_passSamplerToBSDF(passSamplerToBSDF) {
 			m_fakeSampler = new FakeSampler(m_sampler);
+			m_its.uv = Point2(0.0f);
+			m_its.dpdu = Vector(1, 0, 0);
+			m_its.dpdv = Vector(0, 1, 0);
+			m_its.dudx = m_its.dvdy = 0.01f;
+			m_its.dudy = m_its.dvdx = 0.00f;
+			m_its.shFrame = Frame(Normal(0, 0, 1));
 		}
 
 		boost::tuple<Vector, Float, EMeasure> generateSample() {
 			Point2 sample(m_sampler->next2D());
-			Intersection its;
-			BSDFQueryRecord bRec(its);
+			BSDFQueryRecord bRec(m_its);
 			bRec.component = m_component;
 			bRec.wi = m_wi;
-			
+
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
@@ -187,8 +192,7 @@ public:
 		}
  
 		Float pdf(const Vector &wo, EMeasure measure) {
-			Intersection its;
-			BSDFQueryRecord bRec(its);
+			BSDFQueryRecord bRec(m_its);
 			bRec.component = m_component;
 			bRec.wi = m_wi;
 			bRec.wo = wo;
@@ -212,6 +216,7 @@ public:
 
 		inline Float getLargestWeight() const { return m_largestWeight; }
 	private:
+		Intersection m_its;
 		ref<const BSDF> m_bsdf;
 		ref<Sampler> m_sampler;
 		ref<FakeSampler> m_fakeSampler;

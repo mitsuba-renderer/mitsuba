@@ -26,6 +26,8 @@ MTS_NAMESPACE_BEGIN
  *
  * \parameters{
  *     \parameter{weights}{\String}{A comma-separated list of BSDF weights}
+ *     \parameter{\Unnamed}{\BSDF}{Multiple BSDF instances that should be
+ *     mixed according to the specified weights}
  * }
  * \renderings{
  *     \rendering{An admittedly not particularly realistic linear combination of
@@ -37,7 +39,7 @@ MTS_NAMESPACE_BEGIN
  * model in Mitsuba (be it smooth, rough, reflecting, or transmitting) can 
  * be mixed with others in this manner to synthesize new models. There
  * is no limit on how many models can be mixed, but their combination
- * weights must be nonnegative and sum to less than one to ensure 
+ * weights must be non-negative and sum to a value of one or less to ensure
  * energy balance.
  *
  * \vspace{4mm}

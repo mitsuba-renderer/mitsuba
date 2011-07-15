@@ -37,7 +37,8 @@ MTS_NAMESPACE_BEGIN
  *        \default{1.0}}
  * }
  * \renderings{
- *     \rendering{Measured copper material (the default)}
+ *     \rendering{Measured copper material (the default), rendered using 30
+ *     spectral samples between 360 and 830$nm$}
  *         {bsdf_conductor_copper.jpg}
  *     \rendering{Measured gold material (\lstref{conductor-gold})}
  *         {bsdf_conductor_gold.jpg}
@@ -45,14 +46,14 @@ MTS_NAMESPACE_BEGIN
  * 
  * This plugin implements a perfectly smooth interface to a conducting material, 
  * such as a metal. For a similar model that instead describes a rough surface 
- * microstructure, take a look at the seperately available 
+ * microstructure, take a look at the separately available 
  * \pluginref{roughconductor} plugin.
 
  * In contrast to dielectric materials, conductors do not transmit 
  * any light. Their index of refraction is complex-valued and tends to undergo
  * considerable changes throughout the visible color spectrum. 
  * 
- * To faciliate the tedious task of specifying spectrally-varying index of 
+ * To facilitate the tedious task of specifying spectrally-varying index of 
  * refraction information, Mitsuba ships with a set of measured data for  
  * several materials, where visible-spectrum information was publicly 
  * available\footnote{
@@ -69,7 +70,7 @@ MTS_NAMESPACE_BEGIN
  * be used with this plugin, though note that the plugin will ignore any 
  * refraction component that the actual material might have had.
  * The table also contains a few birefingent materials, which are split into
- * separate measurements correponding to their two indices of 
+ * separate measurements corresponding to their two indices of 
  * refraction (named ``ordinary'' and ``extraordinary ray'').
  *
  * When using this plugin, you should ideally compile Mitsuba with support for 

@@ -65,7 +65,7 @@ MTS_NAMESPACE_BEGIN
  * \end{xml}
  *
  * When using this model, it is crucial that the scene contains
- * meaningful and mutally compatible indices of refraction changes---see
+ * meaningful and mutually compatible indices of refraction changes---see
  * \figref{glass-explanation} for a description of what this entails.
  * 
  * In many cases, we will want to additionally describe the \emph{medium} within a
@@ -83,8 +83,8 @@ MTS_NAMESPACE_BEGIN
  *     </bsdf>
  *
  *     <medium type="homogeneous" name="interior">
- *			<rgb name="sigmaS" value="0, 0, 0"/>
- *			<rgb name="sigmaA" value="4, 4, 2"/>
+ *         <rgb name="sigmaS" value="0, 0, 0"/>
+ *         <rgb name="sigmaA" value="4, 4, 2"/>
  *     </medium>
  * <shape>
  * \end{xml}

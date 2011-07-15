@@ -46,7 +46,7 @@ MTS_NAMESPACE_BEGIN
  *       \end{enumerate}
  *     }
  *     \parameter{alpha}{\Float\Or\Texture}{
- *         Specifies the roughness of the unresolved surface microgeometry. 
+ *         Specifies the roughness of the unresolved surface micro-geometry. 
  *         When the Beckmann distribution is used, this parameter is equal to the 
  *         \emph{root mean square} (RMS) slope of the microfacets. This
  *         parameter is only valid when \texttt{distribution=beckmann/phong/ggx}.
@@ -97,7 +97,7 @@ MTS_NAMESPACE_BEGIN
  * for Refraction through Rough Surfaces'' by Walter et al. 
  * \cite{Walter07Microfacet}. It supports several different types of microfacet
  * distributions and has a texturable roughness parameter. 
- * To faciliate the tedious task of specifying spectrally-varying index of 
+ * To facilitate the tedious task of specifying spectrally-varying index of 
  * refraction information, this plugin can access a set of measured materials
  * for which visible-spectrum information was publicly available  
  * (see \tblref{conductor-iors} for the full list).
@@ -114,7 +114,7 @@ MTS_NAMESPACE_BEGIN
  * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
  * finish). Values significantly above that are probably not too realistic.
  * \vspace{-6mm}
- * \subsubsection*{Techical details}\vspace{-2mm}
+ * \subsubsection*{Technical details}\vspace{-2mm}
  * When rendering with the Ashikhmin-Shirley or Phong microfacet 
  * distributions, a conversion is used to turn the specified 
  * $\alpha$ roughness value into the exponents of these distributions.
