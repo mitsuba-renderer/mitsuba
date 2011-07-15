@@ -53,12 +53,15 @@ public:
 	 * \param isLocal
 	 *     Should the parallel process only be executed locally? (sending
 	 *     photons over the network may be unnecessary and wasteful)
+	 * \param autoCancel
+	 *     Indicates if the gathering process should be canceled if there
+	 *     are not enough photons generated
 	 * \param progressReporterPayload
 	 *    Custom pointer payload to be delivered with progress messages
 	 */
 	GatherPhotonProcess(EGatherType type, size_t photonCount, 
 		size_t granularity, int maxDepth, int rrDepth, bool isLocal,
-		const void *progressReporterPayload);
+		bool autoCancel, const void *progressReporterPayload);
 
 	/**
 	 * Once the process has finished, this returns a reference 
@@ -89,6 +92,7 @@ public:
 	bool isLocal() const;
 	ref<WorkProcessor> createWorkProcessor() const; 
 	void processResult(const WorkResult *wr, bool cancelled);
+	EStatus generateWork(WorkUnit *unit, int worker);
 
 	/// @}
 	// ======================================================================
@@ -97,12 +101,23 @@ public:
 protected:
 	/// Virtual destructor
 	virtual ~GatherPhotonProcess() { }
+
+	/**
+	 * \brief Checks if the configuration of needed, generated and shot
+	 * photons indicates an unsuccessful progress of the gathering. This
+	 * check is taken from PBRT.
+	 */
+	inline bool unsuccessful(size_t needed, size_t gen, size_t shot) {
+		return (gen < needed && (gen == 0 || gen < shot/1024));
+	}
 protected:
 	EGatherType m_type;
 	ref<PhotonMap> m_photonMap;
+	size_t m_photonCount;
 	int m_maxDepth;
 	int m_rrDepth;
 	bool m_isLocal;
+	bool m_autoCancel;
 	size_t m_excess, m_numShot;
 };
 
