@@ -60,6 +60,8 @@ public:
 		m_volumeLookupSize = props.getInteger("volumeLookupSize", 120);
 		/* Should photon gathering steps exclusively run on the local machine? */
 		m_gatherLocally = props.getBoolean("gatherLocally", true);
+		/* Indicates if the gathering steps should be canceled if not enough photons are generated. */
+		m_autoCancelGathering = props.getBoolean("autoCancelGathering", true);
 	}
 
 	/// Unserialize from a binary data stream
@@ -77,6 +79,7 @@ public:
 		m_causticLookupSize = stream->readInt();
 		m_volumeLookupSize = stream->readInt();
 		m_gatherLocally = stream->readBool();
+		m_autoCancelGathering = stream->readBool();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -93,6 +96,7 @@ public:
 		stream->writeInt(m_causticLookupSize);
 		stream->writeInt(m_volumeLookupSize);
 		stream->writeBool(m_gatherLocally);
+		stream->writeBool(m_autoCancelGathering);
 	}
 
 	/// Configure the sampler for a specified amount of direct illumination samples
@@ -142,7 +146,8 @@ public:
 			/* Generate the global photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::ESurfacePhotons, m_globalPhotons,
-				m_granularity, m_maxDepth, m_rrDepth, m_gatherLocally, job);
+				m_granularity, m_maxDepth, m_rrDepth, m_gatherLocally,
+				m_autoCancelGathering, job);
 
 			proc->bindResource("scene", sceneResID);
 			proc->bindResource("camera", cameraResID);
@@ -172,7 +177,8 @@ public:
 			/* Generate the caustic photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::ECausticPhotons, m_causticPhotons,
-				m_granularity, 2, m_rrDepth, m_gatherLocally, job);
+				m_granularity, 2, m_rrDepth, m_gatherLocally,
+				m_autoCancelGathering, job);
 
 			proc->bindResource("scene", sceneResID);
 			proc->bindResource("camera", cameraResID);
@@ -199,7 +205,8 @@ public:
 			/* Generate the volume photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::EVolumePhotons, m_volumePhotons,
-				m_granularity, m_maxDepth, m_rrDepth, m_gatherLocally, job);
+				m_granularity, m_maxDepth, m_rrDepth, m_gatherLocally,
+				m_autoCancelGathering, job);
 
 			proc->bindResource("scene", sceneResID);
 			proc->bindResource("camera", cameraResID);
@@ -426,6 +433,7 @@ private:
 	int m_rrDepth;
 	int m_maxDepth, m_maxSpecularDepth;
 	bool m_gatherLocally;
+	bool m_autoCancelGathering;
 };
 
 MTS_IMPLEMENT_CLASS_S(PhotonMapIntegrator, false, SampleIntegrator)

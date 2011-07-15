@@ -64,6 +64,8 @@ public:
 		m_rrDepth = props.getInteger("rrDepth", 3);
 		/* Block size used to parallelize the photon query passes (default: 32x32 pixels). */
 		m_blockSize = props.getInteger("blockSize", 32);
+		/* Indicates if the gathering steps should be canceled if not enough photons are generated. */
+		m_autoCancelGathering = props.getBoolean("autoCancelGathering", true);
 		m_mutex = new Mutex();
 #if defined(__OSX__)
 		Log(EError, "Stochastic progressive photon mapping currently doesn't work "
@@ -265,7 +267,8 @@ public:
 		/* Generate the global photon map */
 		ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 			GatherPhotonProcess::EAllSurfacePhotons, m_photonCount,
-			m_granularity, m_maxDepth-1, m_rrDepth, true, job);
+			m_granularity, m_maxDepth-1, m_rrDepth, true,
+			m_autoCancelGathering, job);
 
 		proc->bindResource("scene", sceneResID);
 		proc->bindResource("camera", cameraResID);
@@ -339,6 +342,7 @@ private:
 	size_t m_totalEmitted;
 	int m_blockSize;
 	bool m_running;
+	bool m_autoCancelGathering;
 };
 
 MTS_IMPLEMENT_CLASS_S(StochasticProgressivePhotonMapIntegrator, false, Integrator)

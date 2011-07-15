@@ -169,10 +169,11 @@ protected:
 };
 
 GatherPhotonProcess::GatherPhotonProcess(EGatherType type, size_t photonCount, 
-	size_t granularity, int maxDepth, int rrDepth, bool isLocal, const void *progressReporterPayload) 
+	size_t granularity, int maxDepth, int rrDepth, bool isLocal, bool autoCancel,
+	const void *progressReporterPayload)
 	: ParticleProcess(ParticleProcess::EGather, photonCount, granularity, "Gathering photons", 
-	  progressReporterPayload), m_type(type), m_maxDepth(maxDepth), m_rrDepth(rrDepth),
-	  m_isLocal(isLocal), m_excess(0), m_numShot(0) {
+	  progressReporterPayload), m_type(type), m_photonCount(photonCount), m_maxDepth(maxDepth),
+	  m_rrDepth(rrDepth),  m_isLocal(isLocal), m_autoCancel(autoCancel), m_excess(0), m_numShot(0) {
 	m_photonMap = new PhotonMap(photonCount);
 }
 	
@@ -211,6 +212,16 @@ void GatherPhotonProcess::processResult(const WorkResult *wr, bool cancelled) {
 	m_resultMutex->unlock();
 }
 
+ParallelProcess::EStatus GatherPhotonProcess::generateWork(WorkUnit *unit, int worker) {
+	/* Use the same approach as PBRT for auto canceling */
+	if (m_autoCancel && m_numShot > 500000
+			&& unsuccessful(m_photonCount, m_photonMap->getPhotonCount(), m_numShot)) {
+		Log(EInfo, "Not enough photons could be collected, giving up");
+		return EFailure;
+	}
+
+	return ParticleProcess::generateWork(unit, worker);
+}
 
 MTS_IMPLEMENT_CLASS(GatherPhotonProcess, false, ParticleProcess) 
 MTS_IMPLEMENT_CLASS_S(GatherPhotonWorker, false, ParticleTracer) 
