@@ -475,7 +475,12 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	const std::vector<std::pair<const TriMesh *, Transform> > meshes = m_shaderManager->getMeshes();
 	const std::vector<std::pair<const TriMesh *, Transform> > transpMeshes = m_shaderManager->getTransparentMeshes();
 
-	m_shaderManager->setVPL(vpl);
+	try {
+		m_shaderManager->setVPL(vpl);
+	} catch (std::exception &ex) {
+		/* Fail */
+		return;
+	}
 
 	Point2 jitter(.5f, .5f);
 	if (!m_motion && !m_context->showKDTree && m_accumBuffer != NULL)

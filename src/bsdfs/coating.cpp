@@ -388,6 +388,8 @@ public:
 			return result / pdf;
 	}
 
+	Shader *createShader(Renderer *renderer) const;
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SmoothCoating[" << endl
@@ -411,6 +413,51 @@ protected:
 	Float m_thickness;
 };
 
+// ================ Hardware shader implementation ================ 
+
+/* Crude GLSL approximation -- just forwards to the nested model */
+class SmoothCoatingShader : public Shader {
+public:
+	SmoothCoatingShader(Renderer *renderer, const BSDF *nested) 
+		: Shader(renderer, EBSDFShader), m_nested(nested) {
+		m_nestedShader = renderer->registerShaderForResource(m_nested.get());
+	}
+
+	bool isComplete() const {
+		return m_nestedShader.get() != NULL;
+	}
+
+	void cleanup(Renderer *renderer) {
+		renderer->unregisterShaderForResource(m_nested.get());
+	}
+
+	void putDependencies(std::vector<Shader *> &deps) {
+		deps.push_back(m_nestedShader.get());
+	}
+
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return " << depNames[0] << "(uv, wi, wo);" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return " << depNames[0] << "_diffuse(uv, wi, wo);" << endl
+			<< "}" << endl;
+	}
+
+	MTS_DECLARE_CLASS()
+private:
+	ref<const BSDF> m_nested;
+	ref<Shader> m_nestedShader;
+};
+
+Shader *SmoothCoating::createShader(Renderer *renderer) const { 
+	return new SmoothCoatingShader(renderer, m_nested.get());
+}
+
+MTS_IMPLEMENT_CLASS(SmoothCoatingShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(SmoothCoating, false, BSDF)
 MTS_EXPORT_PLUGIN(SmoothCoating, "Smooth dielectric coating");
 MTS_NAMESPACE_END

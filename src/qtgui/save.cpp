@@ -302,12 +302,6 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 	QDomElement oldIntegratorNode = findUniqueChild(root, "integrator");
 	QDomElement newIntegratorNode = doc.createElement("integrator");
-	if (oldIntegratorNode.isNull()) {
-		film.appendChild(oldIntegratorNode);
-	} else {
-		film.insertAfter(newIntegratorNode, oldIntegratorNode);
-		film.removeChild(oldIntegratorNode);
-	}
 
 	const Integrator *integrator = ctx->scene->getIntegrator();
 	setProperties(doc, newIntegratorNode, integrator->getProperties());
@@ -321,7 +315,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 		currentIntegratorNode = childIntegratorNode;
 	}
 
-	root.insertAfter(newIntegratorNode, oldIntegratorNode);
+	root.insertBefore(newIntegratorNode, oldIntegratorNode);
 	root.removeChild(oldIntegratorNode);
 
 	file.setFileName(targetFile);
@@ -337,6 +331,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	   Beware: the code below is tailored to Qt's
 	   output and won't work on arbitrary XML files */
 	QString textContent = doc.toString();
+	cout << qPrintable(textContent) << endl;
 	QTextStream input(&textContent);
 	QTextStream output(&file);
 	QRegExp 
@@ -421,6 +416,8 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 			hasContents = true;
 		} else if (line.endsWith(" />")) {
 			line = line.left(line.size()-3) + QString("/>");
+			hasContents = true;
+		} else if (line.endsWith("/>")) {
 			hasContents = true;
 		} else if (line.endsWith(" >")) {
 			line = line.left(line.size()-2) + QString(">");

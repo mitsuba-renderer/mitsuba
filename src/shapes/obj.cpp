@@ -37,6 +37,10 @@ public:
 		unsigned int p[3];
 		unsigned int n[3];
 		unsigned int uv[3];
+
+		inline OBJTriangle() {
+			memset(this, 0, sizeof(OBJTriangle));
+		}
 	};
 
 	bool fetch_line(std::istream &is, std::string &line) {
@@ -369,12 +373,12 @@ public:
 				else
 					vertex.p = objectToWorld(vertices.at(vertexId));
 
-				if (hasNormals && normals.at(normalId) != Normal(0.0f))
+				if (hasNormals && normalId >= 0 && normals.at(normalId) != Normal(0.0f))
 					vertex.n = normalize(objectToWorld(normals.at(normalId)));
 				else
 					vertex.n = Normal(0.0f);
 
-				if (hasTexcoords)
+				if (hasTexcoords && uvId >= 0)
 					vertex.uv = texcoords.at(uvId);
 				else
 					vertex.uv = Point2(0.0f);
