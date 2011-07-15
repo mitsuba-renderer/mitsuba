@@ -271,10 +271,12 @@ choices are available:
 \begin{xml}
 <matrix value="0 -0.53 0 -1.79 0.92 0 0 8.03 0 0 0.53 0 0 0 0 1"/>
 \end{xml}
-\item LookAt transformations --- this is useful for setting up the camera. The \textbf{o} coordinates
-provide the camera origin, \textbf{t} specifies the target and \textbf{u} is the ``up'' direction.
+\item LookAt transformations --- this is primarily useful for setting up cameras (and spot lights). The \code{origin} coordinates
+specify the camera origin, \code{target} is the point that the camera will look at, and the 
+(optional) \code{up} parameter determines the ``upward'' direction in the final rendered image.
+The \code{up} parameter is not needed for spot lights.
 \begin{xml}
-<lookAt ox="10" oy="50" oz="-800" tx="0" ty="0" tz="0" ux="0" uy="1" uz="0"/>
+<lookAt origin="10, 50, -800" target="0, 0, 0" up="0, 1, 0"/>
 \end{xml}
 \end{itemize}
 Cordinates that are zero (for \code{translate} and \code{rotate}) or one (for \code{scale})

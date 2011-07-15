@@ -987,7 +987,7 @@ void loadLight(ColladaContext &ctx, Transform transform, domLight &light) {
 		ctx.os << "\t<luminaire id=\"" << identifier << "\" type=\"directional\">" << endl;
 		ctx.os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
 		ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
-		ctx.os << "\t\t\t<lookAt ox=\"" << pos.x << "\" oy=\"" << pos.y << "\" oz=\"" << pos.z << "\" tx=\"" << target.x << "\" ty=\"" << target.y << "\" tz=\"" << target.z << "\"/>" << endl;
+		ctx.os << "\t\t\t<lookAt origin=\"" << pos.x << ", " << pos.y << ", " << pos.z << "\" target=\"" << target.x << ", " << target.y << ", " << target.z << "\"/>" << endl;
 		ctx.os << "\t\t</transform>" << endl << endl;
 		ctx.os << "\t</luminaire>" << endl << endl;
 	}
@@ -1011,7 +1011,7 @@ void loadLight(ColladaContext &ctx, Transform transform, domLight &light) {
 		ctx.os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
 		ctx.os << "\t\t<float name=\"cutoffAngle\" value=\"" << falloffAngle/2 << "\"/>" << endl << endl;
 		ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
-		ctx.os << "\t\t\t<lookAt ox=\"" << pos.x << "\" oy=\"" << pos.y << "\" oz=\"" << pos.z << "\" tx=\"" << target.x << "\" ty=\"" << target.y << "\" tz=\"" << target.z << "\"/>" << endl;
+		ctx.os << "\t\t\t<lookAt origin=\"" << pos.x << ", " << pos.y << ", " << pos.z << "\" target=\"" << target.x << ", " << target.y << ", " << target.z << "\"/>" << endl;
 		ctx.os << "\t\t</transform>" << endl;
 		ctx.os << "\t</luminaire>" << endl << endl;
 	}

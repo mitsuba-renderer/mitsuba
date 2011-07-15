@@ -172,15 +172,9 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	}
 	t = p + direction;
 
-	lookAt.setAttribute("ox", QString::number(p.x));
-	lookAt.setAttribute("oy", QString::number(p.y));
-	lookAt.setAttribute("oz", QString::number(p.z));
-	lookAt.setAttribute("tx", QString::number(t.x));
-	lookAt.setAttribute("ty", QString::number(t.y));
-	lookAt.setAttribute("tz", QString::number(t.z));
-	lookAt.setAttribute("ux", QString::number(u.x));
-	lookAt.setAttribute("uy", QString::number(u.y));
-	lookAt.setAttribute("uz", QString::number(u.z));
+	lookAt.setAttribute("origin", QString("%1, %2, %3").arg(p.x).arg(p.y).arg(p.z));
+	lookAt.setAttribute("up",     QString("%1, %2, %3").arg(u.x).arg(u.y).arg(u.z));
+	lookAt.setAttribute("target", QString("%1, %2, %3").arg(t.x).arg(t.y).arg(t.z));
 
 	// ====================================================================
 	//   Serialize the sampler configuration
@@ -331,7 +325,6 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	   Beware: the code below is tailored to Qt's
 	   output and won't work on arbitrary XML files */
 	QString textContent = doc.toString();
-	cout << qPrintable(textContent) << endl;
 	QTextStream input(&textContent);
 	QTextStream output(&file);
 	QRegExp 

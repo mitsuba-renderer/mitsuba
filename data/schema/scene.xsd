@@ -323,15 +323,9 @@
 		<xsd:attribute name="angle" type="doubleType" use="required"/>
 	</xsd:complexType>
 	<xsd:complexType name="lookAt">
-		<xsd:attribute name="ox" type="doubleType" use="required"/>
-		<xsd:attribute name="oy" type="doubleType" use="required"/>
-		<xsd:attribute name="oz" type="doubleType" use="required"/>
-		<xsd:attribute name="tx" type="doubleType" use="required"/>
-		<xsd:attribute name="ty" type="doubleType" use="required"/>
-		<xsd:attribute name="tz" type="doubleType" use="required"/>
-		<xsd:attribute name="ux" type="doubleType"/>
-		<xsd:attribute name="uy" type="doubleType"/>
-		<xsd:attribute name="uz" type="doubleType"/>
+		<xsd:attribute name="origin" type="xsd:string" use="required"/>
+		<xsd:attribute name="target" type="xsd:string" use="required"/>
+		<xsd:attribute name="up" type="xsd:string" use="optional"/>
 	</xsd:complexType>
 	<xsd:complexType name="point">
 		<xsd:attribute name="name" type="xsd:string" use="required"/>

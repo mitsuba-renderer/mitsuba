@@ -225,17 +225,31 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		Float angle = parseFloat(name, context.attributes["angle"]);
 		m_transform = Transform::rotate(Vector(x, y, z), angle) * m_transform;
 	} else if (name == "lookAt") {
-		Float ox = parseFloat(name, context.attributes["ox"]);
-		Float oy = parseFloat(name, context.attributes["oy"]);
-		Float oz = parseFloat(name, context.attributes["oz"]);
-		Float tx = parseFloat(name, context.attributes["tx"]);
-		Float ty = parseFloat(name, context.attributes["ty"]);
-		Float tz = parseFloat(name, context.attributes["tz"]);
-		Float ux = parseFloat(name, context.attributes["ux"], 0);
-		Float uy = parseFloat(name, context.attributes["uy"], 0);
-		Float uz = parseFloat(name, context.attributes["uz"], 0);
-		Point o(ox, oy, oz), t(tx, ty, tz);
-		Vector u(ux, uy, uz);
+		std::vector<std::string> tokens = tokenize(context.attributes["origin"], ", ");
+		if (tokens.size() != 3)
+			XMLLog(EError, "<lookAt>: invalid 'origin' argument");
+		Point o(
+			parseFloat(name, tokens[0]),
+			parseFloat(name, tokens[1]),
+			parseFloat(name, tokens[2]));
+		tokens = tokenize(context.attributes["target"], ", ");
+		if (tokens.size() != 3)
+			XMLLog(EError, "<lookAt>: invalid 'target' argument");
+		Point t(
+			parseFloat(name, tokens[0]),
+			parseFloat(name, tokens[1]),
+			parseFloat(name, tokens[2]));
+		Vector u(0.0f);
+		tokens = tokenize(context.attributes["up"], ", ");
+		if (tokens.size() == 3)
+			u = Vector(
+				parseFloat(name, tokens[0]),
+				parseFloat(name, tokens[1]),
+				parseFloat(name, tokens[2]));
+		else if (tokens.size() == 0)
+			;
+		else
+			XMLLog(EError, "<lookAt>: invalid 'up' argument");
 
 		if (u.lengthSquared() == 0) {
 			/* If 'up' was not specified, use an arbitrary axis */
