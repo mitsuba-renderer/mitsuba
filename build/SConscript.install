@@ -30,8 +30,12 @@ if sys.platform == 'linux2':
 		'mitsuba/mtsutil', 'qtgui/mtsgui'])
 	if hasCollada:
 		install('#dist', ['converter/mtsimport'])
-	installTargets += env.Install('#dist/data/schema', '#data/schema/scene.xsd')
-	installTargets += env.Install('#dist/data/ior', '#data/ior')
+	for file in os.listdir(env.GetBuildPath('#data/schema')):
+		if fnmatch.fnmatch(file, '*.xsl') or fnmatch.fnmatch(file, '*.xsd'):
+			installTargets += env.Install('#dist/data/schema', '#data/schema/' + file)
+	for file in os.listdir(env.GetBuildPath('#data/ior')):
+		if fnmatch.fnmatch(file, '*.spd'):
+			installTargets += env.Install('#dist/data/ior', '#data/ior/' + file)
 if sys.platform == 'win32':
 	try:
 		distDir = env.GetBuildPath('#dist')
@@ -42,8 +46,12 @@ if sys.platform == 'win32':
 	for plugin in plugins:
 		if '.dll' in plugin.__str__():
 			installTargets += env.Install('#dist/plugins', plugin)
-	installTargets += env.Install('#dist/data/schema', '#data/schema/scene.xsd')
-	installTargets += env.Install('#dist/data/ior', '#data/ior')
+	for file in os.listdir(env.GetBuildPath('#data/schema')):
+		if fnmatch.fnmatch(file, '*.xsl') or fnmatch.fnmatch(file, '*.xsd'):
+			installTargets += env.Install('#dist/data/schema', '#data/schema/' + file)
+	for file in os.listdir(env.GetBuildPath('#data/ior')):
+		if fnmatch.fnmatch(file, '*.spd'):
+			installTargets += env.Install('#dist/data/ior', '#data/ior/' + file)
 
 	if 'WIN64' in env['CXXFLAGS']:
 		dllprefix='#dependencies/windows/lib64'
@@ -83,8 +91,12 @@ if sys.platform == 'win32':
 elif sys.platform == 'darwin':
 	for i in plugins:
 		installTargets += env.Install('#Mitsuba.app/plugins', i)
-	installTargets += env.Install('#Mitsuba.app/data/schema', '#data/schema/scene.xsd')
-	installTargets += env.Install('#Mitsuba.app/data/ior', '#data/ior')
+	for file in os.listdir(env.GetBuildPath('#data/schema')):
+		if fnmatch.fnmatch(file, '*.xsl') or fnmatch.fnmatch(file, '*.xsd'):
+			installTargets += env.Install('#Mitsuba.app/data/schema', '#data/schema/' + file)
+	for file in os.listdir(env.GetBuildPath('#data/ior')):
+		if fnmatch.fnmatch(file, '*.spd'):
+			installTargets += env.Install('#Mitsuba.app/data/ior', '#data/ior/' + file)
 	install('#Mitsuba.app/Contents/MacOS', ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil'])
 	if hasCollada:
 		install('#Mitsuba.app/Contents/MacOS', ['converter/mtsimport'])
