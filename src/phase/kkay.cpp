@@ -82,21 +82,21 @@ public:
 	Float sample(PhaseFunctionQueryRecord &pRec,
 			Sampler *sampler) const {
 		pRec.wo = squareToSphere(sampler->next2D());
-		return f(pRec) * (4 * M_PI);
+		return eval(pRec) * (4 * M_PI);
 	}
 
 	Float sample(PhaseFunctionQueryRecord &pRec, 
 			Float &pdf, Sampler *sampler) const {
 		pRec.wo = squareToSphere(sampler->next2D());
 		pdf = 1/(4 * M_PI);
-		return f(pRec);
+		return eval(pRec);
 	}
 
 	Float pdf(const PhaseFunctionQueryRecord &pRec) const {
 		return 1/(4 * M_PI);
 	}
 
-	Float f(const PhaseFunctionQueryRecord &pRec) const {
+	Float eval(const PhaseFunctionQueryRecord &pRec) const {
 		if (pRec.mRec.orientation.length() == 0)
 			return m_kd / (4*M_PI);
 

@@ -77,12 +77,12 @@ public:
 	Float sample(PhaseFunctionQueryRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
 		HGPhaseFunction::sample(pRec, sampler);
-		pdf = HGPhaseFunction::f(pRec);
+		pdf = HGPhaseFunction::eval(pRec);
 		return pdf;
 	}
 
 
-	Float f(const PhaseFunctionQueryRecord &pRec) const {
+	Float eval(const PhaseFunctionQueryRecord &pRec) const {
 		return 1/(4*M_PI) * (1 - m_g*m_g) /
 			std::pow(1.f + m_g*m_g - 2.f * m_g * dot(-pRec.wi, pRec.wo), (Float) 1.5f);
 	}

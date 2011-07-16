@@ -99,11 +99,11 @@ public:
 	 * \param[in] sampleValue Uniform sample
 	 * \return Sample index 
 	 */
-	inline int sample(Float sampleValue) const {
+	inline size_t sample(Float sampleValue) const {
 		std::vector<Float>::const_iterator entry = 
 				std::lower_bound(m_cdf.begin(), m_cdf.end(), sampleValue);
-		int index = std::max(0, (int) (entry - m_cdf.begin()) - 1);
-		return std::min(index, (int) m_pdf.size()-1); // should sampleValue be > 1
+		size_t index = (size_t) std::max((ptrdiff_t) 0, entry - m_cdf.begin() - 1);
+		return std::min(index, m_pdf.size()-1); // should sampleValue be > 1
 	}
 
 	/**
@@ -112,8 +112,8 @@ public:
 	 * \param[out] pdf Probability value of the sample
 	 * \return Sample index 
 	 */
-	inline int sample(Float sampleValue, Float &pdf) const {
-		int index = sample(sampleValue);
+	inline size_t sample(Float sampleValue, Float &pdf) const {
+		size_t index = sample(sampleValue);
 		pdf = m_pdf[index];
 		return index;
 	}
@@ -125,8 +125,8 @@ public:
 	 * \param[in,out] sampleValue Uniform sample
 	 * \return Sample index 
 	 */
-	inline int sampleReuse(Float &sampleValue) const {
-		int index = sample(sampleValue);
+	inline size_t sampleReuse(Float &sampleValue) const {
+		size_t index = sample(sampleValue);
 		sampleValue = (sampleValue - m_cdf[index])
 			/ (m_cdf[index + 1] - m_cdf[index]);
 		return index;
@@ -140,8 +140,8 @@ public:
 	 * \param[out] pdf Probability value of the sample
 	 * \return Sample index 
 	 */
-	inline int sampleReuse(Float &sampleValue, Float &pdf) const {
-		int index = sample(sampleValue, pdf);
+	inline size_t sampleReuse(Float &sampleValue, Float &pdf) const {
+		size_t index = sample(sampleValue, pdf);
 		sampleValue = (sampleValue - m_cdf[index])
 			/ (m_cdf[index + 1] - m_cdf[index]);
 		return index;

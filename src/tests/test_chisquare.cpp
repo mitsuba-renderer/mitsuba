@@ -23,9 +23,10 @@
 #include <boost/bind.hpp>
 
 /* Statistical significance level of the test. Set to
-   1/2 percent by default -- we want there to be notable
-   evidence before failing a test case */
-#define SIGNIFICANCE_LEVEL 0.005f
+   1/4 percent by default -- we want there to be strong 
+   evidence of an implementaiton error before failing 
+   a test case */
+#define SIGNIFICANCE_LEVEL 0.0025f
 
 /* Relative bound on what is still accepted as roundoff 
    error -- be quite tolerant */
@@ -98,20 +99,25 @@ public:
 			: m_bsdf(bsdf), m_sampler(sampler), m_wi(wi), m_component(component),
 			  m_largestWeight(0), m_passSamplerToBSDF(passSamplerToBSDF) {
 			m_fakeSampler = new FakeSampler(m_sampler);
+			m_its.uv = Point2(0.0f);
+			m_its.dpdu = Vector(1, 0, 0);
+			m_its.dpdv = Vector(0, 1, 0);
+			m_its.dudx = m_its.dvdy = 0.01f;
+			m_its.dudy = m_its.dvdx = 0.00f;
+			m_its.shFrame = Frame(Normal(0, 0, 1));
 		}
 
-		std::pair<Vector, Float> generateSample() {
+		boost::tuple<Vector, Float, EMeasure> generateSample() {
 			Point2 sample(m_sampler->next2D());
-			Intersection its;
-			BSDFQueryRecord bRec(its);
+			BSDFQueryRecord bRec(m_its);
 			bRec.component = m_component;
 			bRec.wi = m_wi;
-			
+
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
 	
-			Float pdfVal;
+			Float pdfVal, pdfVal2;
 	
 			/* Only make the sampler available to the BSDF when requested
 			   by the testcase. This allows testing both sampling variants
@@ -122,43 +128,49 @@ public:
 			if (m_passSamplerToBSDF)
 				bRec.sampler = m_fakeSampler;
 
-			/* Check the various sampling routines for agreement amongst each other */
+			/* Check the various sampling routines for agreement 
+			   amongst each other */
 			m_fakeSampler->clear();
 			Spectrum f = m_bsdf->sample(bRec, pdfVal, sample);
 			m_fakeSampler->rewind();
 			Spectrum sampled = m_bsdf->sample(bRec, sample);
+			EMeasure measure = ESolidAngle;
+			if (!f.isZero())
+				measure = BSDF::getMeasure(bRec.sampledType);
+			Spectrum f2 = m_bsdf->eval(bRec, measure);
+			pdfVal2 = m_bsdf->pdf(bRec, measure);
 
-			if (f.isZero() || pdfVal == 0) {
-				if (!sampled.isZero()) 
-					Log(EWarn, "Inconsistency (1): f=%s, pdf=%f, sampled f/pdf=%s, bRec=%s",
-						f.toString().c_str(), pdfVal, sampled.toString().c_str(), bRec.toString().c_str());
+			if (f.isZero() || pdfVal == 0 || pdfVal2 == 0) {
+				if (!sampled.isZero())
+					Log(EWarn, "Inconsistency (1): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s",
+						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str());
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
-				return std::make_pair(bRec.wo, 0.0f);
+				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			} else if (sampled.isZero()) {
-				if (!f.isZero() && pdfVal != 0)
-					Log(EWarn, "Inconsistency (2): f=%s, pdf=%f, sampled f/pdf=%s, bRec=%s",
-						f.toString().c_str(), pdfVal, sampled.toString().c_str(), bRec.toString().c_str());
+				if ((!f.isZero() && pdfVal != 0) || (!f2.isZero() && pdfVal2 != 0))
+					Log(EWarn, "Inconsistency (2): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s",
+						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str());
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
-				return std::make_pair(bRec.wo, 0.0f);
+				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			}
 
-			Spectrum sampled2 = f/pdfVal;
-			if (!sampled.isValid() || !sampled2.isValid()) {
-				Log(EWarn, "Ooops: f=%s, pdf=%f, sampled f/pdf=%s, bRec=%s",
-					f.toString().c_str(), pdfVal, sampled.toString().c_str(), bRec.toString().c_str());
-				return std::make_pair(bRec.wo, 0.0f);
+			Spectrum sampled2 = f/pdfVal, evaluated = f2/pdfVal2;
+			if (!sampled.isValid() || !sampled2.isValid() || !evaluated.isValid()) {
+				Log(EWarn, "Ooops: f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s",
+					f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str());
+				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			}
 
 			bool mismatch = false;
 			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-				Float a = sampled[i], b = sampled2[i];
-				Float min = std::min(a, b);
-				Float err = std::abs(a - b);
-				m_largestWeight = std::max(m_largestWeight, a * std::abs(Frame::cosTheta(bRec.wo)));
+				Float a = sampled[i], b = sampled2[i], c = evaluated[i];
+				Float min = std::min(std::min(a, b), c);
+				Float err = std::max(std::max(std::abs(a - b), std::abs(a - c)), std::abs(b - c));
+				m_largestWeight = std::max(m_largestWeight, a);
 
 				if (min < ERROR_REQ && err > ERROR_REQ) // absolute error threshold
 					mismatch = true;
@@ -166,20 +178,21 @@ public:
 					mismatch = true;
 			}
 
-			if (mismatch)
-				Log(EWarn, "Potential inconsistency (3): f/pdf=%s, sampled f/pdf=%s",
-					sampled2.toString().c_str(), sampled.toString().c_str());
-			
+			if (mismatch) {
+				Log(EWarn, "Potential inconsistency (3): f/pdf=%s (method 1), f/pdf=%s (method 2), sampled f/pdf=%s",
+					sampled2.toString().c_str(), evaluated.toString().c_str(), sampled.toString().c_str());
+				Log(EWarn, "  f=%s, f2=%s, pdf=%f, pdf2=%f", f.toString().c_str(), f.toString().c_str(), pdfVal, pdfVal2);
+			}
+
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
 
-			return std::make_pair(bRec.wo, 1.0f);
+			return boost::make_tuple(bRec.wo, 1.0f, measure);
 		}
  
-		Float pdf(const Vector &wo) {
-			Intersection its;
-			BSDFQueryRecord bRec(its);
+		Float pdf(const Vector &wo, EMeasure measure) {
+			BSDFQueryRecord bRec(m_its);
 			bRec.component = m_component;
 			bRec.wi = m_wi;
 			bRec.wo = wo;
@@ -190,9 +203,10 @@ public:
 				enableFPExceptions();
 			#endif
 
-			if (m_bsdf->f(bRec).isZero())
+			if (m_bsdf->eval(bRec, measure).isZero())
 				return 0.0f;
-			Float result = m_bsdf->pdf(bRec);
+
+			Float result = m_bsdf->pdf(bRec, measure);
 
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
@@ -202,6 +216,7 @@ public:
 
 		inline Float getLargestWeight() const { return m_largestWeight; }
 	private:
+		Intersection m_its;
 		ref<const BSDF> m_bsdf;
 		ref<Sampler> m_sampler;
 		ref<FakeSampler> m_fakeSampler;
@@ -219,7 +234,7 @@ public:
 			: m_mRec(mRec), m_phase(phase), m_sampler(sampler), m_wi(wi), 
 			  m_largestWeight(0) { }
 
-		std::pair<Vector, Float> generateSample() {
+		boost::tuple<Vector, Float, EMeasure> generateSample() {
 			Point2 sample(m_sampler->next2D());
 			PhaseFunctionQueryRecord pRec(m_mRec, m_wi);
 			
@@ -239,7 +254,7 @@ public:
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
-				return std::make_pair(pRec.wo, 0.0f);
+				return boost::make_tuple(pRec.wo, 0.0f, ESolidAngle);
 			} else if (sampled == 0) {
 				if (f != 0 && pdfVal != 0)
 					Log(EWarn, "Inconsistency: f=%f, pdf=%f, sampled f/pdf=%f",
@@ -247,7 +262,7 @@ public:
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
-				return std::make_pair(pRec.wo, 0.0f);
+				return boost::make_tuple(pRec.wo, 0.0f, ESolidAngle);
 			}
 
 			Float sampled2 = f/pdfVal;
@@ -270,15 +285,18 @@ public:
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
-			return std::make_pair(pRec.wo, 1.0f);
+			return boost::make_tuple(pRec.wo, 1.0f, ESolidAngle);
 		}
  
-		Float pdf(const Vector &wo) const {
+		Float pdf(const Vector &wo, EMeasure measure) const {
+			if (measure != ESolidAngle)
+				return 0.0f;
+
 			PhaseFunctionQueryRecord pRec(m_mRec, m_wi, wo);
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
-			if (m_phase->f(pRec) == 0)
+			if (m_phase->eval(pRec) == 0)
 				return 0.0f;
 			Float result = m_phase->pdf(pRec);
 			#if defined(MTS_DEBUG_FP)
@@ -350,11 +368,11 @@ public:
 					// Initialize the tables used by the chi-square test
 					chiSqr->fill(
 						boost::bind(&BSDFAdapter::generateSample, &adapter),
-						boost::bind(&BSDFAdapter::pdf, &adapter, _1)
+						boost::bind(&BSDFAdapter::pdf, &adapter, _1, _2)
 					);
 
 					// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-					ChiSquare::ETestResult result = chiSqr->runTest(1, SIGNIFICANCE_LEVEL);
+					ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
 					if (result == ChiSquare::EReject) {
 						std::string filename = formatString("failure_%i.m", failureCount++);
 						chiSqr->dumpTables(filename);
@@ -393,11 +411,11 @@ public:
 							// Initialize the tables used by the chi-square test
 							chiSqr->fill(
 								boost::bind(&BSDFAdapter::generateSample, &adapter),
-								boost::bind(&BSDFAdapter::pdf, &adapter, _1)
+								boost::bind(&BSDFAdapter::pdf, &adapter, _1, _2)
 							);
 
 							// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-							ChiSquare::ETestResult result = chiSqr->runTest(1, SIGNIFICANCE_LEVEL);
+							ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
 							if (result == ChiSquare::EReject) {
 								std::string filename = formatString("failure_%i.m", failureCount++);
 								chiSqr->dumpTables(filename);
@@ -459,11 +477,11 @@ public:
 				// Initialize the tables used by the chi-square test
 				chiSqr->fill(
 					boost::bind(&PhaseFunctionAdapter::generateSample, &adapter),
-					boost::bind(&PhaseFunctionAdapter::pdf, &adapter, _1)
+					boost::bind(&PhaseFunctionAdapter::pdf, &adapter, _1, _2)
 				);
 
 				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-				ChiSquare::ETestResult result = chiSqr->runTest(1, SIGNIFICANCE_LEVEL);
+				ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
 				if (result == ChiSquare::EReject) {
 					std::string filename = formatString("failure_%i.m", failureCount++);
 					chiSqr->dumpTables(filename);

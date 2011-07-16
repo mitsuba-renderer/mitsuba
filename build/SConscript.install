@@ -20,7 +20,6 @@ if sys.platform == 'linux2':
 		distDir = env.GetBuildPath('#dist')
 		os.mkdir(distDir)
 		os.mkdir(distDir+'/plugins')
-		os.mkdir(distDir+'/schema')
 	except:
 		pass
 	for plugin in plugins:
@@ -31,19 +30,20 @@ if sys.platform == 'linux2':
 		'mitsuba/mtsutil', 'qtgui/mtsgui'])
 	if hasCollada:
 		install('#dist', ['converter/mtsimport'])
-	env.Install('#dist/schema', '#schema/scene.xsd')
+	installTargets += env.Install('#dist/data/schema', '#data/schema/scene.xsd')
+	installTargets += env.Install('#dist/data/ior', '#data/ior')
 if sys.platform == 'win32':
 	try:
 		distDir = env.GetBuildPath('#dist')
 		os.mkdir(distDir)
 		os.mkdir(distDir+'/plugins')
-		os.mkdir(distDir+'/schema')
 	except:
 		pass
 	for plugin in plugins:
 		if '.dll' in plugin.__str__():
 			installTargets += env.Install('#dist/plugins', plugin)
-	installTargets += env.Install('#dist/schema', '#schema/scene.xsd')
+	installTargets += env.Install('#dist/data/schema', '#data/schema/scene.xsd')
+	installTargets += env.Install('#dist/data/ior', '#data/ior')
 
 	if 'WIN64' in env['CXXFLAGS']:
 		dllprefix='#dependencies/windows/lib64'
@@ -79,11 +79,12 @@ if sys.platform == 'win32':
 	if hasQt:
 		install('#dist', ['qtgui/mtsgui.exe'])
 		install('#dist', ['QtCore4.dll', 'QtGui4.dll', 'QtXml4.dll',
-			'QtNetwork4.dll', 'QtOpenGL4.dll'], prefix = env['QT4_BINPATH'])
+			'QtNetwork4.dll', 'QtOpenGL4.dll', 'QtXmlPatterns4.dll'], prefix = env['QT4_BINPATH'])
 elif sys.platform == 'darwin':
 	for i in plugins:
 		installTargets += env.Install('#Mitsuba.app/plugins', i)
-	installTargets += env.Install('#Mitsuba.app/schema', '#schema/scene.xsd')
+	installTargets += env.Install('#Mitsuba.app/data/schema', '#data/schema/scene.xsd')
+	installTargets += env.Install('#Mitsuba.app/data/ior', '#data/ior')
 	install('#Mitsuba.app/Contents/MacOS', ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil'])
 	if hasCollada:
 		install('#Mitsuba.app/Contents/MacOS', ['converter/mtsimport'])
@@ -110,9 +111,11 @@ elif sys.platform == 'darwin':
 		installTargets += env.OSXLibInst('#Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtCore.framework/Versions/4/QtCore')
 		opengl = env.OSXLibInst('#Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtOpenGL.framework/Versions/4/QtOpenGL')
 		xml = env.OSXLibInst('#Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtXml.framework/Versions/4/QtXml')
+		xmlpatterns = env.OSXLibInst('#Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtXmlPatterns.framework/Versions/4/QtXmlPatterns')
 		network = env.OSXLibInst('#Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtNetwork.framework/Versions/4/QtNetwork')
 		gui = env.OSXLibInst('#Mitsuba.app/Contents/Frameworks', '/Library/Frameworks/QtGui.framework/Versions/4/QtGui')
 		installTargets += env.AddPostAction(xml, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
+		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
 		installTargets += env.AddPostAction(network, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
 		installTargets += env.AddPostAction(gui, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
 		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')

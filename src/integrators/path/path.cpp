@@ -103,10 +103,11 @@ public:
 				scene->sampleLuminaire(its.p, ray.time, lRec, rRec.nextSample2D())) {
 				/* Allocate a record for querying the BSDF */
 				const Vector wo = -lRec.d;
-				const BSDFQueryRecord bRec(its, its.toLocal(wo));
+				BSDFQueryRecord bRec(its, its.toLocal(wo));
+				bRec.sampler = rRec.sampler;
 	
 				/* Evaluate BSDF * cos(theta) */
-				const Spectrum bsdfVal = bsdf->fCos(bRec);
+				const Spectrum bsdfVal = bsdf->eval(bRec);
 
 				Float woDotGeoN = dot(its.geoFrame.n, wo);
 
@@ -131,8 +132,9 @@ public:
 
 			/* Sample BSDF * cos(theta) */
 			BSDFQueryRecord bRec(its);
+			bRec.sampler = rRec.sampler;
 			Float bsdfPdf;
-			Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, rRec.nextSample2D());
+			Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, rRec.nextSample2D());
 			if (bsdfVal.isZero()) 
 				break;
 			bsdfVal /= bsdfPdf;

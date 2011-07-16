@@ -55,7 +55,7 @@ public:
 		return pdf;
 	}
 
-	Float f(const PhaseFunctionQueryRecord &pRec) const {
+	Float eval(const PhaseFunctionQueryRecord &pRec) const {
 		return 1/(4 * (Float) M_PI);
 	}
 

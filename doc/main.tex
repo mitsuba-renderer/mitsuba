@@ -15,7 +15,7 @@
 \usepackage{color}
 \usepackage{colortbl}
 \usepackage{listings}
-\usepackage{subfigure}
+\usepackage[hang]{subfigure}
 \usepackage{enumerate}
 \usepackage{ragged2e} % Ragged-right columns with hyphenation
 \usepackage{macros}
@@ -55,11 +55,11 @@
 \usepackage{scrpage2}
 \ofoot[]{}
 \cfoot[]{}
+\automark[subsection]{section}
 \ihead{\sc\leftmark}
 \ohead{\sc\rightmark}
 \chead{}
 \setheadsepline{.2pt}
-\automark[section]{chapter}
 \setkomafont{pagenumber}{\normalfont}
 \addtokomafont{sectioning}{\color{myblue}\rmfamily}
 \addtokomafont{descriptionlabel}{\rmfamily}
@@ -71,7 +71,6 @@
 \definecolor{lstframe}{gray}{0.80}
 \definecolor{lstcomment}{gray}{0.5}
 \definecolor{lstattrib}{rgb}{0,0.34,0}
-
 
 % Listings settings
 \lstset{
@@ -92,7 +91,6 @@
 	upquote = true
 }
 
-
 \lstdefinelanguage{xml} {
 	sensitive=true,
 	morecomment=[s][\color{lstcomment}\itshape]{<!--}{-->},
@@ -101,7 +99,9 @@
 	keywords= [1] {
 		shape,bsdf,scene,texture,phase,integer,float,
 		string,transform,ref,rgb,srgb,spectrum,blackbody,
-		medium,camera,film,sampler,integrator
+		medium,camera,film,sampler,integrator,luminaire,
+		translate,rotate,scale,lookAt,point,vector,matrix,
+		include
 	},
 }
 
@@ -112,11 +112,11 @@
 % Less vertical spacing for \figure[h] floats
 \setlength{\intextsep}{3pt}
 
+\lstnewenvironment{shell}[1][]{\lstset{#1}}
+	{}
 \lstnewenvironment{cpp}[1][]{\lstset{language=c++, #1}}
 	{}
 \lstnewenvironment{xml}[1][]{\lstset{language=xml, #1}}
-	{}
-\lstnewenvironment{shell}[1]{\lstset{language=bash, #1}}
 	{}
 \lstnewenvironment{console}[1][]{\lstset{basicstyle=\footnotesize\ttfamily, float, #1}}
 	{}
@@ -138,15 +138,15 @@
 \tableofcontents
 
 \include{introduction}
-%\include{compiling}
-%\include{basics}
-%\include{format}
+\include{compiling}
+\include{basics}
+\include{format}
 \IfFileExists{plugins_generated.tex}{\include{plugins_generated}}{}
 %\include{import}
 %\include{development}
 %\include{integrator}
 %\include{parallelization}
-%\include{acknowledgements}
+\include{acknowledgements}
 
 \bibliographystyle{acm}
 \bibliography{main}

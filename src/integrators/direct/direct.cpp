@@ -129,10 +129,11 @@ public:
 			/* Estimate the direct illumination if this is requested */
 			if (scene->sampleLuminaire(its.p, ray.time, lRec, sampleArray[i])) {
 				/* Allocate a record for querying the BSDF */
-				const BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
+				BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
+				bRec.sampler = rRec.sampler;
 
 				/* Evaluate BSDF * cos(theta) */
-				const Spectrum bsdfVal = bsdf->fCos(bRec);
+				const Spectrum bsdfVal = bsdf->eval(bRec);
 
 				if (!bsdfVal.isZero()) {
 					/* Calculate prob. of having sampled that direction
@@ -163,8 +164,9 @@ public:
 		for (int i=0; i<numBSDFSamples; ++i) {
 			/* Sample BSDF * cos(theta) */
 			BSDFQueryRecord bRec(its);
+			bRec.sampler = rRec.sampler;
 			Float bsdfPdf;
-			Spectrum bsdfVal = bsdf->sampleCos(bRec, bsdfPdf, sampleArray[i]);
+			Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, sampleArray[i]);
 			if (bsdfVal.isZero())
 				continue;
 			bsdfVal /= bsdfPdf;
@@ -203,8 +205,7 @@ public:
 	}
 
 	inline Float miWeight(Float pdfA, Float pdfB) const {
-		pdfA *= pdfA;
-		pdfB *= pdfB;
+		pdfA *= pdfA; pdfB *= pdfB;
 		return pdfA / (pdfA + pdfB);
 	}
 
@@ -216,9 +217,9 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "MIDirectIntegrator[" << std::endl
-			<< "  luminaireSamples = " << m_luminaireSamples << "," << std::endl
-			<< "  bsdfSamples = " << m_bsdfSamples 
+		oss << "MIDirectIntegrator[" << endl
+			<< "  luminaireSamples = " << m_luminaireSamples << "," << endl
+			<< "  bsdfSamples = " << m_bsdfSamples << endl
 			<< "]";
 		return oss.str();
 	}

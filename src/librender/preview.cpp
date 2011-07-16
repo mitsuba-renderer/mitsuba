@@ -100,13 +100,13 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 
 			BSDFQueryRecord rr(its, its.toLocal(toVPL));
 			rr.wi = normalize(rr.wi);
-			bsdfVal = its.shape->getBSDF()->fCos(rr);
+			bsdfVal = its.shape->getBSDF()->eval(rr);
 			length = std::max(length, m_minDist);
 
 			if (m_vpl.type == ESurfaceVPL) {
 				BSDFQueryRecord bRec(m_vpl.its, -m_vpl.its.toLocal(toVPL));
 				bRec.quantity = EImportance;
-				value += m_vpl.P * bsdfVal * m_vpl.its.shape->getBSDF()->fCos(bRec) / (length*length);
+				value += m_vpl.P * bsdfVal * m_vpl.its.shape->getBSDF()->eval(bRec) / (length*length);
 			} else {
 				EmissionRecord eRec(m_vpl.luminaire, 
 					ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), -toVPL);
@@ -400,7 +400,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 						if (m_vpl.type == ESurfaceVPL) {
 							BSDFQueryRecord bRec(m_vpl.its, m_vpl.its.toLocal(wi));
 							bRec.quantity = EImportance;
-							vplWeight = m_vpl.its.shape->getBSDF()->fCos(bRec) * m_vpl.P;
+							vplWeight = m_vpl.its.shape->getBSDF()->eval(bRec) * m_vpl.P;
 						} else {
 							EmissionRecord eRec(m_vpl.luminaire, 
 								ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), wi);
@@ -410,7 +410,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 					}
 
 					if (EXPECT_TAKEN(ctLight >= 0)) {
-						direct[idx] = (bsdf->fCos(BSDFQueryRecord(its, wo)) * vplWeight
+						direct[idx] = (bsdf->eval(BSDFQueryRecord(its, wo)) * vplWeight
 							* ((vplOnSurface ? std::max(ctLight, (Float) 0.0f) : 1.0f) * invLengthSquared.f[idx]));
 					} else {
 						memset(&direct[idx], 0, sizeof(Spectrum));

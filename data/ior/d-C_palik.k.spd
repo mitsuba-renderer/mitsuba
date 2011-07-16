@@ -1,0 +1,20 @@
+# data from www.luxpop.com database
+# ;  Optical constants for cubic diamond
+# ; 
+# ;   taken from:
+# ;
+# ;   'Handbook of Optical Constants of Solids', Ed. by Edward D. Palik,
+# ;   Academic Press, Inc., 1985.
+# ;   
+# ;    Lambda (A)            n            k
+# ;-----------------------------------------
+346.700012 0.000000
+361.037018 0.000000
+404.634003 0.000000
+467.795990 0.000000
+486.120026 0.000000
+508.552002 0.000000
+546.047058 0.000000
+588.979004 0.000000
+643.818054 0.000000
+656.257019 0.000000

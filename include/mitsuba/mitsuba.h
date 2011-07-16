@@ -34,16 +34,6 @@
 #include <stdexcept>
 #include <limits>
 
-/// Current release of Mitsuba
-#define MTS_VERSION "0.2.1"
-#define MTS_VERSION_CODE 000201
-
-/// Year of this release
-#define MTS_YEAR "2011"
-
-/// Default port of <tt>mtssrv</tt>
-#define MTS_DEFAULT_PORT 7554
-
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -51,6 +41,7 @@ using std::endl;
 /**
  * Include a basic subset of the core classes
  */
+#include <mitsuba/core/version.h>
 #include <mitsuba/core/constants.h>
 #include <mitsuba/core/fwd.h>
 #include <mitsuba/render/fwd.h>

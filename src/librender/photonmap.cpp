@@ -421,7 +421,7 @@ Spectrum PhotonMap::estimateIrradiance(const Point &p, const Normal &n,
 	return result * (m_scale * INV_PI / distSquared);
 }
 
-#if !defined(MTS_SSE)
+#if !defined(MTS_SSE) || SPECTRUM_SAMPLES != 3
 Spectrum PhotonMap::estimateIrradianceFiltered(const Point &p, const Normal &n, 
 	Float searchRadius, size_t maxPhotons) const {
 	Spectrum result(0.0f);
@@ -522,7 +522,8 @@ Spectrum PhotonMap::estimateRadianceFiltered(const Intersection &its,
 		const Float sqrTerm = 1.0f - photonDistanceSqr/distSquared,
 			weight = sqrTerm*sqrTerm;
 
-		result += photon.getPower() * (bsdf->f(BSDFQueryRecord(its, wi)) * weight);
+		result += photon.getPower() * (bsdf->eval(BSDFQueryRecord(its, wi))
+				* (weight / Frame::cosTheta(wi)));
 	}
 	/* Based on the assumption that the surface is locally flat,
 	  the estimate is divided by the area of a disc corresponding to
@@ -584,21 +585,21 @@ size_t PhotonMap::estimateRadianceRaw(const Intersection &its,
 		if (photonDistSquared < distSquared) {
 			Normal photonNormal(photon->getNormal());
 			Vector wiWorld = -photon->getDirection();
-			if (photon->getDepth() > maxDepth || dot(photonNormal, its.shFrame.n) < .1 
-				|| dot(photonNormal, wiWorld) < 1e-2)
+			if (photon->getDepth() > maxDepth
+				|| dot(photonNormal, its.shFrame.n) < 1e-1f 
+				|| dot(photonNormal, wiWorld) < 1e-2f)
 				continue;
 
 			Vector wiLocal = its.toLocal(wiWorld);
 
-			BSDFQueryRecord bRec(its, wiLocal);
-			bRec.quantity = EImportance;
+			BSDFQueryRecord bRec(its, wiLocal, EImportance);
 			std::swap(bRec.wi, bRec.wo);
 
 			Spectrum weight(1.0f);
 
-			/* Account for non-symmetry due to shading normals */
-			result += photon->getPower() * bsdf->f(bRec) * 
-				std::abs(Frame::cosTheta(wiLocal) / dot(photonNormal, wiWorld));
+			/* Account for non-symmetry due to shading normals */  /// XXX verify this
+			result += photon->getPower() * bsdf->eval(bRec) 
+					/ dot(photonNormal, wiWorld);
 
 			resultCount++;
 		}
@@ -625,7 +626,7 @@ Spectrum PhotonMap::estimateVolumeRadiance(const MediumSamplingRecord &mRec, con
 	/* Sum over all contributions */
 	for (size_t i=0; i<resultCount; i++) {
 		const Photon &photon = *results[i].second;
-		result += photon.getPower() * (phase->f(
+		result += photon.getPower() * (phase->eval(
 			PhaseFunctionQueryRecord(mRec, photon.getDirection(), wo)));
 	}
 

@@ -1,17 +1,26 @@
 Import('env', 'plugins')
 
-plugins += env.SharedLibrary('lambertian', ['lambertian.cpp'])
+# Basic library of smooth and rough materials
+plugins += env.SharedLibrary('diffuse', ['diffuse.cpp'])
 plugins += env.SharedLibrary('dielectric', ['dielectric.cpp'])
-plugins += env.SharedLibrary('mirror', ['mirror.cpp'])
-plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
+plugins += env.SharedLibrary('conductor', ['conductor.cpp'])
+plugins += env.SharedLibrary('plastic', ['plastic.cpp'])
+plugins += env.SharedLibrary('roughdiffuse', ['roughdiffuse.cpp'])
+plugins += env.SharedLibrary('roughdielectric', ['roughdielectric.cpp'])
+plugins += env.SharedLibrary('roughconductor', ['roughconductor.cpp'])
+plugins += env.SharedLibrary('roughplastic', ['roughplastic.cpp'])
+
+# Materials that act as modifiers
+plugins += env.SharedLibrary('twosided', ['twosided.cpp'])
 plugins += env.SharedLibrary('mask', ['mask.cpp'])
+plugins += env.SharedLibrary('mixture', ['mixture.cpp'])
+plugins += env.SharedLibrary('coating', ['coating.cpp'])
+plugins += env.SharedLibrary('bump', ['bump.cpp'])
+
+# Other materials
 plugins += env.SharedLibrary('ward', ['ward.cpp'])
 plugins += env.SharedLibrary('phong', ['phong.cpp'])
-plugins += env.SharedLibrary('microfacet', ['microfacet.cpp'])
-plugins += env.SharedLibrary('roughglass', ['roughglass.cpp'])
-plugins += env.SharedLibrary('roughmetal', ['roughmetal.cpp'])
-plugins += env.SharedLibrary('composite', ['composite.cpp'])
-plugins += env.SharedLibrary('twosided', ['twosided.cpp'])
 plugins += env.SharedLibrary('irawan', ['irawan.cpp'])
+plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
 
 Export('plugins')

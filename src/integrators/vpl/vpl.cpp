@@ -54,6 +54,7 @@ public:
 	/// Draw the full scene using additive blending and shadow maps
 	void drawShadowedScene(const Scene *scene, const VPL &vpl) {
 	const std::vector<std::pair<const TriMesh *, Transform> > meshes = m_shaderManager->getMeshes();
+	const std::vector<std::pair<const TriMesh *, Transform> > transpMeshes = m_shaderManager->getTransparentMeshes();
 		const ProjectiveCamera *camera = static_cast<const ProjectiveCamera *>(scene->getCamera());
 		Point2 jitter(0.5f - m_random->nextFloat(), 0.5f - m_random->nextFloat());
 		Transform projectionTransform = camera->getGLProjectionTransform(jitter);
@@ -75,7 +76,29 @@ public:
 			m_shaderManager->unbind();
 		}
 		m_renderer->endDrawingMeshes();
+
 		m_shaderManager->drawBackground(clipToWorld, camPos, 1.0f);
+
+		if (transpMeshes.size() > 0) {
+			m_renderer->setDepthMask(false);
+			m_renderer->setBlendMode(Renderer::EBlendAlpha);
+			m_renderer->beginDrawingMeshes();
+			for (unsigned int j=0; j<transpMeshes.size(); j++) {
+				const TriMesh *mesh = transpMeshes[j].first;
+				bool hasTransform = !transpMeshes[j].second.isIdentity();
+				m_shaderManager->configure(vpl, mesh->getBSDF(), mesh->getLuminaire(),
+					camPos, !mesh->hasVertexNormals());
+				if (hasTransform)
+					m_renderer->pushTransform(transpMeshes[j].second);
+				m_renderer->drawTriMesh(mesh);
+				if (hasTransform)
+					m_renderer->popTransform();
+				m_shaderManager->unbind();
+			}
+			m_renderer->endDrawingMeshes();
+			m_renderer->setDepthMask(true);
+			m_renderer->setBlendMode(Renderer::EBlendNone);
+		}
 	}
 
 	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,

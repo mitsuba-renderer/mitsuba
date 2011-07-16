@@ -20,6 +20,8 @@
 #define __CHI_SQUARE_TEST_H
 
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/render/common.h>
+#include <boost/tuple/tuple.hpp>
 #include <boost/function.hpp>
 
 MTS_NAMESPACE_BEGIN
@@ -33,7 +35,8 @@ MTS_NAMESPACE_BEGIN
  * This class performs a chi-square goodness-of-fit test of the null hypothesis
  * that a specified sampling procedure produces samples that are distributed
  * according to a supplied density function. This is very useful to verify BRDF
- * and phase function sampling codes for their correctness.
+ * and phase function sampling codes for their correctness. Currently, it
+ * supports both 2D and discrete sampling methods and mixtures thereof.
  *
  * This implementation works by generating a large batch of samples, which are
  * then accumulated into rectangular bins in spherical coordinates. To obtain
@@ -48,10 +51,10 @@ MTS_NAMESPACE_BEGIN
  *     // Sample a (optionally weighted) direction. A non-unity weight
  *     // in the return value is needed when the sampling distribution
  *     // doesn't exactly match the implementation in pdf()
- *     std::pair<Vector, Float> generateSample() const;
+ *     boost::tuple<Vector, Float, EMeasure> generateSample() const;
  *
- *     /// Compute the probability density for the specified direction
- *     Float pdf(const Vector &direction) const;
+ *     /// Compute the probability density for the specified direction and measure
+ *     Float pdf(const Vector &direction, EMeasure) const;
  * };
  * </code>
  *
@@ -64,14 +67,13 @@ MTS_NAMESPACE_BEGIN
  * // Initialize the tables used by the chi-square test
  * chiSqr.fill(
  *    boost::bind(&MyDistribution::generateSample, myDistrInstance),
- *    boost::bind(&MyDistribution::pdf, myDistrInstance, _1)
+ *    boost::bind(&MyDistribution::pdf, myDistrInstance, _1, _2)
  * );
  *
  * // Optional: dump the tables to a MATLAB file for external analysis
  * chiSqr.dumpTables("debug.m");
  *
- * // (the following assumes that the distribution has 1 parameter, e.g. exponent value)
- * if (!chiSqr.runTest(1))
+ * if (!chiSqr.runTest())
  *    Log(EError, "Uh oh -- test failed, the implementation is probably incorrect!");
  * </code>
  */
@@ -139,8 +141,8 @@ public:
 	 * on how to invoke this function
 	 */
 	void fill(
-		const boost::function<std::pair<Vector, Float>()> &sampleFn,
-		const boost::function<Float (const Vector &)> &pdfFn);
+		const boost::function<boost::tuple<Vector, Float, EMeasure>()> &sampleFn,
+		const boost::function<Float (const Vector &, EMeasure)> &pdfFn);
 
 	/**
 	 * \brief Dump the bin counts to a file using MATLAB format
@@ -150,11 +152,6 @@ public:
 	/**
 	 * \brief Perform the actual chi-square test
 	 *
-	 * \param distParams
-	 *     Number of parameters of the distribution in question.
-	 *     Anything such as lobe width, indices of refraction, etc.
-	 *     should be counted.
-	 *
 	 * \param pvalThresh
 	 *     The implementation will reject the null hypothesis
 	 *     when the computed p-value lies below this parameter
@@ -162,7 +159,7 @@ public:
 	 *
 	 * \return A status value of type \ref ETestResult
 	 */
-	ETestResult runTest(int distParams, Float pvalThresh = 0.01f);
+	ETestResult runTest(Float pvalThresh = 0.01f);
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -171,11 +168,12 @@ protected:
 
 	/// Functor to evaluate the pdf values in parallel using OpenMP
 	static void integrand(
-		const boost::function<Float (const Vector &)> &pdfFn,
+		const boost::function<Float (const Vector &, EMeasure)> &pdfFn,
 			size_t nPts, const Float *in, Float *out) {
 		#pragma omp parallel for
 		for (int i=0; i<(int) nPts; ++i)
-			out[i] = pdfFn(sphericalDirection(in[2*i], in[2*i+1])) * std::sin(in[2*i]);
+			out[i] = pdfFn(sphericalDirection(in[2*i], in[2*i+1]), ESolidAngle)
+				* std::sin(in[2*i]);
 	}
 private:
 	ELogLevel m_logLevel;

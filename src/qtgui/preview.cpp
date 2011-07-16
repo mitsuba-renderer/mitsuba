@@ -473,8 +473,14 @@ void PreviewThread::run() {
 
 void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	const std::vector<std::pair<const TriMesh *, Transform> > meshes = m_shaderManager->getMeshes();
+	const std::vector<std::pair<const TriMesh *, Transform> > transpMeshes = m_shaderManager->getTransparentMeshes();
 
-	m_shaderManager->setVPL(vpl);
+	try {
+		m_shaderManager->setVPL(vpl);
+	} catch (std::exception &ex) {
+		/* Fail */
+		return;
+	}
 
 	Point2 jitter(.5f, .5f);
 	if (!m_motion && !m_context->showKDTree && m_accumBuffer != NULL)
@@ -510,6 +516,26 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	m_renderer->endDrawingMeshes();
 	m_shaderManager->drawBackground(clipToWorld, camPos,
 		m_backgroundScaleFactor);
+	if (transpMeshes.size() > 0) {
+		m_renderer->setDepthMask(false);
+		m_renderer->setBlendMode(Renderer::EBlendAlpha);
+		m_renderer->beginDrawingMeshes();
+		for (size_t j=0; j<transpMeshes.size(); j++) {
+			const TriMesh *mesh = transpMeshes[j].first;
+			bool hasTransform = !transpMeshes[j].second.isIdentity();
+			m_shaderManager->configure(vpl, mesh->getBSDF(), 
+				mesh->getLuminaire(), camPos, !mesh->hasVertexNormals());
+			if (hasTransform)
+				m_renderer->pushTransform(transpMeshes[j].second);
+			m_renderer->drawTriMesh(mesh);
+			if (hasTransform)
+				m_renderer->popTransform();
+			m_shaderManager->unbind();
+		}
+		m_renderer->endDrawingMeshes();
+		m_renderer->setBlendMode(Renderer::EBlendNone);
+		m_renderer->setDepthMask(true);
+	}
 	m_framebuffer->releaseTarget();
 
 	target.buffer->activateTarget();

@@ -21,8 +21,26 @@
 #include <mitsuba/core/timer.h>
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/bind.hpp>
+#include <set>
 
 MTS_NAMESPACE_BEGIN
+	
+/* Simple ordering for storing vectors in a set */
+struct VectorOrder {
+	inline int compare(const Vector &v1, const Vector &v2) const {
+		if (v1.x < v2.x) return -1;
+		else if (v1.x > v2.x) return 1;
+		if (v1.y < v2.y) return -1;
+		else if (v1.y > v2.y) return 1;
+		if (v1.z < v2.z) return -1;
+		else if (v1.z > v2.z) return 1;
+		return 0;
+	}
+
+	bool operator()(const Vector &v1, const Vector &v2) const {
+		return compare(v1, v2) < 0;
+	}
+};
 
 ChiSquare::ChiSquare(int thetaBins, int phiBins, int numTests,
 		size_t sampleCount) : m_logLevel(EInfo), m_thetaBins(thetaBins), 
@@ -69,29 +87,53 @@ void ChiSquare::dumpTables(const fs::path &filename) {
 }
 
 void ChiSquare::fill(
-	const boost::function<std::pair<Vector, Float>()> &sampleFn,
-	const boost::function<Float (const Vector &)> &pdfFn) {
+	const boost::function<boost::tuple<Vector, Float, EMeasure>()> &sampleFn,
+	const boost::function<Float (const Vector &, EMeasure measure)> &pdfFn) {
 	memset(m_table, 0, m_thetaBins*m_phiBins*sizeof(Float));
+	memset(m_refTable, 0, m_thetaBins*m_phiBins*sizeof(Float));
 
 	Log(m_logLevel, "Accumulating " SIZE_T_FMT " samples into a %ix%i"
 			" contingency table", m_sampleCount, m_thetaBins, m_phiBins);
 	Point2 factor(m_thetaBins / M_PI, m_phiBins / (2*M_PI));
 
+	std::set<Vector, VectorOrder> discreteDirections;
+
 	ref<Timer> timer = new Timer();
 	for (size_t i=0; i<m_sampleCount; ++i) {
-		std::pair<Vector, Float> sample = sampleFn();
-		Point2 sphCoords = toSphericalCoordinates(sample.first);
+		boost::tuple<Vector, Float, EMeasure> sample = sampleFn();
+		Point2 sphCoords = toSphericalCoordinates(boost::get<0>(sample));
 
 		int thetaBin = std::min(std::max(0,
 			floorToInt(sphCoords.x * factor.x)), m_thetaBins-1);
 		int phiBin = std::min(std::max(0,
 			floorToInt(sphCoords.y * factor.y)), m_phiBins-1);
-
-		m_table[thetaBin * m_phiBins + phiBin] += sample.second;
+m_table[thetaBin * m_phiBins + phiBin] += boost::get<1>(sample);
+		if (boost::get<1>(sample) > 0 && boost::get<2>(sample) == EDiscrete)
+			discreteDirections.insert(boost::get<0>(sample));
 	}
+
+	if (discreteDirections.size() > 0) {
+		Log(EDebug, "Incorporating the disrete density over " 
+			SIZE_T_FMT " direction(s) into the contingency table", discreteDirections.size());
+		for (std::set<Vector, VectorOrder>::const_iterator it = discreteDirections.begin();
+			it != discreteDirections.end(); ++it) {
+			const Vector &direction = *it;
+			Point2 sphCoords = toSphericalCoordinates(direction);
+			Float pdf = pdfFn(direction, EDiscrete);
+
+			int thetaBin = std::min(std::max(0,
+				floorToInt(sphCoords.x * factor.x)), m_thetaBins-1);
+			int phiBin = std::min(std::max(0,
+				floorToInt(sphCoords.y * factor.y)), m_phiBins-1);
+
+			m_refTable[thetaBin * m_phiBins + phiBin] += pdf * m_sampleCount;
+		}
+	}
+
 	factor = Point2(M_PI / m_thetaBins, (2*M_PI) / m_phiBins);
 
-	Log(m_logLevel, "Done, took %i ms. Integrating reference contingency table ..", timer->getMilliseconds());
+	Log(m_logLevel, "Done, took %i ms. Integrating reference "
+		"contingency table ..", timer->getMilliseconds());
 	timer->reset();
 	Float min[2], max[2];
 	size_t idx = 0;
@@ -105,18 +147,18 @@ void ChiSquare::fill(
 			min[1] = j * factor.y;
 			max[1] = (j+1) * factor.y;
 			Float result, error;
-			size_t evals;
 
 			integrator.integrateVectorized(
 				boost::bind(&ChiSquare::integrand, pdfFn, _1, _2, _3),
-				min, max, &result, &error, evals
+				min, max, &result, &error
 			);
 
 			integral += result;
-			m_refTable[idx++] = result * m_sampleCount;
+			m_refTable[idx++] += result * m_sampleCount;
 			maxError = std::max(maxError, error);
 		}
 	}
+
 	Log(m_logLevel, "Done, took %i ms (max error = %f, integral=%f).", 
 			timer->getMilliseconds(), maxError, integral);
 }
@@ -132,7 +174,7 @@ struct SortedCellFunctor {
 	}
 };
 
-ChiSquare::ETestResult ChiSquare::runTest(int distParams, Float pvalThresh) {
+ChiSquare::ETestResult ChiSquare::runTest(Float pvalThresh) {
 	/* Compute the chi-square statistic */
 	Float pooledCounts = 0, pooledRef = 0, chsq = 0.0f;
 	int pooledCells = 0, df = 0;
@@ -188,12 +230,14 @@ ChiSquare::ETestResult ChiSquare::runTest(int distParams, Float pvalThresh) {
 		++df;
 	}
 
-	df -= distParams + 1;
+	/* All parameters are assumed to be known, so there is no
+	   DF reduction due to model parameters */
+	df -= 1;
 
 	Log(m_logLevel, "Chi-square statistic = %e (df=%i)", chsq, df);
 	
 	if (df <= 0) {
-		Log(EWarn, "The number of degrees of freedom (%i) is too low!", df);
+		Log(m_logLevel, "The number of degrees of freedom (%i) is too low!", df);
 		return ELowDoF;
 	}
 

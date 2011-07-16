@@ -57,7 +57,8 @@ bool Properties::getBoolean(const std::string &name) const {
 		SLog(EError, "Property \"%s\" missing", name.c_str());
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EBoolean)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <boolean>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_boolean;
 }
@@ -67,7 +68,8 @@ bool Properties::getBoolean(const std::string &name, bool defVal) const {
 		return defVal;
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EBoolean)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <boolean>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_boolean;
 }
@@ -85,7 +87,8 @@ int Properties::getInteger(const std::string &name) const {
 		SLog(EError, "Property \"%s\" missing", name.c_str());
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EInteger)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (int) (*it).second.v_long;
 }
@@ -95,7 +98,8 @@ int Properties::getInteger(const std::string &name, int defVal) const {
 		return defVal;
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EInteger)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (int) (*it).second.v_long;
 }
@@ -113,7 +117,8 @@ int64_t Properties::getLong(const std::string &name) const {
 		SLog(EError, "Property \"%s\" missing", name.c_str());
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EInteger)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_long;
 }
@@ -123,7 +128,8 @@ int64_t Properties::getLong(const std::string &name, int64_t defVal) const {
 		return defVal;
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EInteger)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_long;
 }
@@ -133,7 +139,8 @@ size_t Properties::getSize(const std::string &name) const {
 		SLog(EError, "Property \"%s\" missing", name.c_str());
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EInteger)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	if ((*it).second.v_long < 0)
 		SLog(EError, "Size property \"%s\": expected a nonnegative value!");
 	(*it).second.queried = true;
@@ -145,7 +152,8 @@ size_t Properties::getSize(const std::string &name, size_t defVal) const {
 		return defVal;
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EInteger)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	if ((*it).second.v_long < 0)
 		SLog(EError, "Size property \"%s\": expected a nonnegative value!");
 	(*it).second.queried = true;
@@ -166,7 +174,8 @@ Float Properties::getFloat(const std::string &name) const {
 		SLog(EError, "Property \"%s\" missing", name.c_str());
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EFloat)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <float>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_float;
 }
@@ -176,7 +185,8 @@ Float Properties::getFloat(const std::string &name, Float defVal) const {
 		return defVal;
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EFloat)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <float>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_float;
 }
@@ -194,7 +204,8 @@ Transform Properties::getTransform(const std::string &name) const {
 		SLog(EError, "Property \"%s\" missing", name.c_str());
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != ETransform)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <transform>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_transform;
 }
@@ -204,7 +215,8 @@ Transform Properties::getTransform(const std::string &name, const Transform &def
 		return defVal;
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != ETransform)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <transform>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_transform;
 }
@@ -222,7 +234,8 @@ Spectrum Properties::getSpectrum(const std::string &name) const {
 		SLog(EError, "Property \"%s\" missing", name.c_str());
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != ESpectrum)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <spectrum>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_spectrum;
 }
@@ -232,7 +245,8 @@ Spectrum Properties::getSpectrum(const std::string &name, const Spectrum &defVal
 		return defVal;
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != ESpectrum)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <spectrum>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_spectrum;
 }
@@ -250,7 +264,8 @@ std::string Properties::getString(const std::string &name) const {
 		SLog(EError, "Property \"%s\" missing", name.c_str());
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EString)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <string>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_string;
 }
@@ -260,7 +275,8 @@ std::string Properties::getString(const std::string &name, const std::string &de
 		return defVal;
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EString)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <string>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_string;
 }
@@ -286,7 +302,8 @@ Point Properties::getPoint(const std::string &name) const {
 		SLog(EError, "Property \"%s\" missing", name.c_str());
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EPoint)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <point>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_point;
 }
@@ -296,7 +313,8 @@ Point Properties::getPoint(const std::string &name, const Point &defVal) const {
 		return defVal;
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if ((*it).second.type != EPoint)
-		SLog(EError, "Property \"%s\" has wrong type", name.c_str());
+		SLog(EError, "The property \"%s\" has the wrong type (expected <point>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
 	(*it).second.queried = true;
 	return (*it).second.v_point;
 }

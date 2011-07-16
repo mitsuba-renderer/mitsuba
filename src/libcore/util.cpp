@@ -677,32 +677,32 @@ Float lanczosSinc(Float t, Float tau) {
 	directions in addition to the fresnel coefficients. Based on 
 	PBRT and the paper "Derivation of Refraction Formulas" 
 	by Paul S. Heckbert. */
-Float fresnelDielectric(Float cosTheta1, Float cosTheta2, 
+Float fresnelDielectric(Float cosThetaI, Float cosThetaT, 
 						Float etaI, Float etaT) {
-	Float Rs = (etaI * cosTheta1 - etaT * cosTheta2)
-			/ (etaI * cosTheta1 + etaT * cosTheta2);
-	Float Rp = (etaT * cosTheta1 - etaI * cosTheta2)
-			/ (etaT * cosTheta1 + etaI * cosTheta2);
+	Float Rs = (etaI * cosThetaI - etaT * cosThetaT)
+			/ (etaI * cosThetaI + etaT * cosThetaT);
+	Float Rp = (etaT * cosThetaI - etaI * cosThetaT)
+			/ (etaT * cosThetaI + etaI * cosThetaT);
 
 	return (Rs * Rs + Rp * Rp) / 2.0f;
 }
 
-Spectrum fresnelConductor(Float cosTheta, const Spectrum &eta, const Spectrum &k) {
-	Spectrum tmp = (eta*eta + k*k) * (cosTheta * cosTheta);
+Spectrum fresnelConductor(Float cosThetaI, const Spectrum &eta, const Spectrum &k) {
+	Spectrum tmp = (eta*eta + k*k) * (cosThetaI * cosThetaI);
 
-	Spectrum rParl2 = (tmp - (eta * (2.0f * cosTheta)) + Spectrum(1.0f))
-					/ (tmp + (eta * (2.0f * cosTheta)) + Spectrum(1.0f));
+	Spectrum rParl2 = (tmp - (eta * (2.0f * cosThetaI)) + Spectrum(1.0f))
+					/ (tmp + (eta * (2.0f * cosThetaI)) + Spectrum(1.0f));
 
 	Spectrum tmpF = eta*eta + k*k;
 
-	Spectrum rPerp2 = (tmpF - (eta * (2.0f * cosTheta)) + Spectrum(cosTheta*cosTheta)) /
-					  (tmpF + (eta * (2.0f * cosTheta)) + Spectrum(cosTheta*cosTheta));
+	Spectrum rPerp2 = (tmpF - (eta * (2.0f * cosThetaI)) + Spectrum(cosThetaI*cosThetaI)) /
+					  (tmpF + (eta * (2.0f * cosThetaI)) + Spectrum(cosThetaI*cosThetaI));
 
 	return (rParl2 + rPerp2) / 2.0f;
 }
 
-Float fresnel(Float cosThetaI, Float etaExt, Float etaInt) {
-	Float etaI = etaExt, etaT = etaInt;
+Float fresnel(Float cosThetaI, Float extIOR, Float intIOR) {
+	Float etaI = extIOR, etaT = intIOR;
 
 	/* Swap the indices of refraction if the interaction starts
 	   at the inside of the object */
@@ -849,11 +849,11 @@ double normalQuantile(double p) {
 Float hypot2(Float a, Float b) {
 	Float r;
 	if (std::abs(a) > std::abs(b)) {
-		r = b/a;
-		r = std::abs(a)*std::sqrt(1+r*r);
+		r = b / a;
+		r = std::abs(a) * std::sqrt(1 + r*r);
 	} else if (b != 0) {
-		r = a/b;
-		r = std::abs(b)*std::sqrt(1+r*r);
+		r = a / b;
+		r = std::abs(b) * std::sqrt(1 + r*r);
 	} else {
 		r = 0;
 	}

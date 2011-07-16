@@ -68,6 +68,15 @@ void LoadDialog::on_toggleButton_clicked() {
 	}
 }
 
+void LoadDialog::expand() {
+	if (!ui->console->isVisible()) {
+		ui->console->show();
+		updateGeometry();
+		resize(std::max(width(), 800), 500);
+		ui->toggleButton->setText("-");
+	}
+}
+
 void LoadDialog::close() {
 	Logger *logger = Thread::getThread()->getLogger();
 	logger->setLogLevel(m_oldLogLevel);
@@ -88,8 +97,9 @@ void LoadDialog::close() {
 void LoadDialog::onTextMessage(ELogLevel level, const QString &message) {
 	QColor color;
 	int idx = message.indexOf("] ");
-	if (idx != -1 && ui->progressBar->value() != 100) 
+	if (idx != -1 && ui->progressBar->value() != 100 && message.indexOf("\n") == -1) { 
 		ui->statusLabel->setText(message.mid(idx+2));
+	}
 	switch (level) {
 		case ETrace: 
 		case EDebug: 

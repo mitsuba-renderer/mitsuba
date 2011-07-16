@@ -1,0 +1,19 @@
+# data from www.luxpop.com database
+# ;  Optical constants for Li
+# ; 
+# ;   taken from:
+# ;
+# ;   'Handbook of Optical Constants of Solids II', Ed. by Edward D. Palik,
+# ;   Academic Press, Inc., 1991.
+# ;   
+# ;    Lambda (A)            n            k
+# ;-----------------------------------------
+306.123016 1.210000
+330.613007 1.320000
+359.362030 1.450000
+393.587006 1.600000
+435.018036 1.820000
+486.196014 2.110000
+551.022034 2.480000
+635.795044 2.940000
+751.393982 3.550000

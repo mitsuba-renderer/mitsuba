@@ -68,12 +68,12 @@ void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mt
 	if (maskMap != "") {
 		indent = "\t";
 		os << "\t<bsdf id=\"" << mtlName << "\" type=\"mask\">" << endl;
-		os << "\t\t<texture name=\"opacity\" type=\"ldrtexture\">" << endl;
+		os << "\t\t<texture name=\"opacity\" type=\"bitmap\">" << endl;
 		os << "\t\t\t<string name=\"filename\" value=\"textures/" << copyTexture(cvt, texturesDir, maskMap) << "\"/>" << endl;
 		os << "\t\t</texture>" << endl;
-		os << "\t\t<bsdf type=\"lambertian\">" << endl;
+		os << "\t\t<bsdf type=\"diffuse\">" << endl;
 	} else {
-		os << "\t<bsdf id=\"" << mtlName << "\" type=\"lambertian\">" << endl;
+		os << "\t<bsdf id=\"" << mtlName << "\" type=\"diffuse\">" << endl;
 	}
 
 	if (diffuseMap == "") {
@@ -82,7 +82,7 @@ void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mt
 		os << indent << "\t\t<rgb name=\"reflectance\" value=\"" 
 			<< r << " " << g << " " << b << "\"/>" << endl;
 	} else {
-		os << indent << "\t\t<texture name=\"reflectance\" type=\"ldrtexture\">" << endl
+		os << indent << "\t\t<texture name=\"reflectance\" type=\"bitmap\">" << endl
 		   << indent << "\t\t\t<string name=\"filename\" value=\"textures/" << copyTexture(cvt, texturesDir, diffuseMap) << "\"/>" << endl
 		   << indent << "\t\t</texture>" << endl;
 	}
@@ -205,7 +205,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 			const std::string &matID = mesh->getBSDF()->getName();
 			os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
 		} else {
-			os << "\t\t<bsdf type=\"lambertian\"/>" << endl;
+			os << "\t\t<bsdf type=\"diffuse\"/>" << endl;
 		}
 		os << "\t</shape>" << endl << endl;
 	}

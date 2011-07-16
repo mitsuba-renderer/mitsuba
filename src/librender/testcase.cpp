@@ -48,6 +48,16 @@ void TestCase::assertEqualsImpl(Float expected, Float actual, Float epsilon, con
 			"expected floating point value %f, got %f.", expected, actual);
 }
 
+void TestCase::assertEqualsImpl(const Spectrum &expected, const Spectrum &actual, Float epsilon, const char *file, int line) {
+	bool match = true;
+	for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+		if (std::abs(expected[i]-actual[i]) > epsilon)
+			match = false;
+	if (!match)
+		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
+			"expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
+}
+
 void TestCase::assertEqualsImpl(const Vector2 &expected, const Vector2 &actual, Float epsilon, const char *file, int line) {
 	bool match = true;
 	for (int i=0; i<2; ++i)
@@ -57,6 +67,7 @@ void TestCase::assertEqualsImpl(const Vector2 &expected, const Vector2 &actual, 
 		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
 			"expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
 }
+
 
 void TestCase::assertEqualsImpl(const Point2 &expected, const Point2 &actual, Float epsilon, const char *file, int line) {
 	bool match = true;

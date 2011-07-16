@@ -35,6 +35,8 @@ public:
 
 	inline SceneContext *getResult() { return m_result; }
 	inline const std::string &getError() const { return m_error; }
+	inline bool isVersionError() const { return m_versionError; }
+	inline const Version &getVersion() const { return m_version; }
 protected:
 	virtual ~SceneLoader();
 private:
@@ -42,6 +44,8 @@ private:
 	ref<WaitFlag> m_wait;
 	SceneContext *m_result;
 	std::string m_error, m_filename;
+	bool m_versionError;
+	Version m_version;
 };
 
 #endif // __SCENELOADER_H

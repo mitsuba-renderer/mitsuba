@@ -180,7 +180,7 @@ int ubi_main(int argc, char **argv) {
 					cout <<  "               To listen on stdin, specify \"-ls\" (implies -q)" << endl << endl;
 					cout <<  "   -n name     Assign a node name to this instance (Default: host name)" << endl << endl;
 					cout <<  "   -v          Be more verbose" << endl << endl;
-					cout <<  " The README file included with the distribution contains further information." << endl;
+					cout <<  " For documentation, please refer to http://www.mitsuba-renderer.org/docs.html" << endl;
 					return 0;
 			}
 		}

@@ -71,6 +71,9 @@ protected:
 
 	/// Asserts that the two floating point values are equal
 	void assertEqualsImpl(Float expected, Float actual, Float epsilon, const char *file, int line);
+	
+	/// Asserts that the two spectral power distributions are equal
+	void assertEqualsImpl(const Spectrum &expected, const Spectrum &actual, Float epsilon, const char *file, int line);
 
 	/// Asserts that the two 2D vectors are equal
 	void assertEqualsImpl(const Vector2 &expected, const Vector2 &actual, Float epsilon, const char *file, int line);

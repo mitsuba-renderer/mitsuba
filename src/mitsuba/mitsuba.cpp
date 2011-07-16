@@ -71,7 +71,7 @@ void help() {
 	cout <<  "   -v          Be more verbose" << endl << endl;
 	cout <<  "   -w          Treat warnings as errors" << endl << endl;
 	cout <<  "   -z          Disable progress bars" << endl << endl;
-	cout <<  " The README file included with the distribution contains further information." << endl;
+	cout <<  " For documentation, please refer to http://www.mitsuba-renderer.org/docs.html" << endl;
 }
 
 ref<RenderQueue> renderQueue = NULL;
@@ -304,7 +304,7 @@ int ubi_main(int argc, char **argv) {
 
 		/* Prepare for parsing scene descriptions */
 		SAXParser* parser = new SAXParser();
-		fs::path schemaPath = fileResolver->resolveAbsolute("schema/scene.xsd");
+		fs::path schemaPath = fileResolver->resolveAbsolute("data/schema/scene.xsd");
 
 		/* Check against the 'scene.xsd' XML Schema */
 		parser->setDoSchema(true);

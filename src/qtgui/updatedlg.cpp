@@ -19,19 +19,19 @@
 #include "ui_updatedlg.h"
 #include "updatedlg.h"
 
-UpdateDialog::UpdateDialog(QWidget *parent, const ProgramVersion &local,
-			const ProgramVersion &remote) : QDialog(parent),
+UpdateDialog::UpdateDialog(QWidget *parent, const Version &local,
+			const Version &remote) : QDialog(parent),
 	ui(new Ui::UpdateDialog) {
 	ui->setupUi(this);
+	m_remoteVersion = remote.toString().c_str();
     ui->versionLabel->setText(QApplication::translate("UpdateDialog", 
 			"Version %1 has been released (you are using %2). Would you like to visit the download page?", 
-			0, QApplication::UnicodeUTF8).arg(remote.toString()).arg(local.toString()));
+			0, QApplication::UnicodeUTF8).arg(m_remoteVersion).arg(local.toString().c_str()));
 	ui->changeView->setHtml("Loading change log ..");
 	m_networkManager = new QNetworkAccessManager(this);
 	connect(m_networkManager, SIGNAL(finished(QNetworkReply *)), 
 			this, SLOT(onNetworkFinished(QNetworkReply *)));
 	m_networkReply = m_networkManager->get(QNetworkRequest(QUrl("http://www.mitsuba-renderer.org/changelog.html")));
-	m_remoteVersion = remote.toString();
 }
 
 void UpdateDialog::onNetworkFinished(QNetworkReply *reply) {

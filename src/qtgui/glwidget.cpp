@@ -28,6 +28,7 @@
 #include <mitsuba/render/renderjob.h>
 #include <mitsuba/core/timer.h>
 #include <mitsuba/core/mstream.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/hw/font.h>
 
 GLWidget::GLWidget(QWidget *parent) :
@@ -675,7 +676,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			if (coords.x < 0 || coords.x > M_PI) 
 				m_context->up *= -1;
 
-			if (camera->getViewTransform().det3x3() < 0) 
+			if (camera->getViewTransform().det3x3() > 0) 
 				camera->setInverseViewTransform(Transform::lookAt(p, target, m_context->up));
 			else
 				camera->setInverseViewTransform(
@@ -693,7 +694,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 					* camera->getViewTransform();
 			d = trafo.inverse()(Vector(0,0,1));
 
-			if (camera->getViewTransform().det3x3() < 0) 
+			if (camera->getViewTransform().det3x3() > 0) 
 				camera->setInverseViewTransform(Transform::lookAt(p, p+d, up));
 			else
 				camera->setInverseViewTransform(
@@ -713,7 +714,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			Float roll = rel.x() * m_mouseSensitivity * .02f;
 			Float fovChange = rel.y() * m_mouseSensitivity * .03f;
 
-			if (camera->getViewTransform().det3x3() < 0) {
+			if (camera->getViewTransform().det3x3() > 0) {
 				m_context->up = Transform::rotate(d, roll)(up);
 				camera->setInverseViewTransform(Transform::lookAt(p, p+d, m_context->up));
 			} else {
@@ -743,7 +744,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			Vector d = Vector(camera->getImagePlaneNormal());
 			p = p + (oldFocusDepth - focusDepth) * d;
 
-			if (camera->getViewTransform().det3x3() < 0) 
+			if (camera->getViewTransform().det3x3() > 0) 
 				camera->setInverseViewTransform(Transform::lookAt(p, p+d, up));
 			else
 				camera->setInverseViewTransform(
@@ -809,8 +810,13 @@ void GLWidget::wheelEvent(QWheelEvent *event) {
 		Vector d = Vector(camera->getImagePlaneNormal());
 		Point o = camera->getPosition() + (oldFocusDepth - focusDepth) * d;
 
-		camera->setInverseViewTransform(
-				Transform::lookAt(o, o+d, up));
+		if (camera->getViewTransform().det3x3() > 0) 
+			camera->setInverseViewTransform(Transform::lookAt(o, o+d, up));
+		else
+			camera->setInverseViewTransform(
+				Transform::lookAt(o, o+d, up) *
+				Transform::scale(Vector(-1,1,1))
+			);
 
 		m_wheelTimer->reset();
 		if (!m_movementTimer->isActive())
@@ -1055,6 +1061,14 @@ void GLWidget::paintGL() {
 			m_luminanceProgram->unbind();
 			buffer->unbind();
 			m_luminanceBuffer[0]->releaseTarget();
+			#if 0
+				/* For debugging .. */
+				ref<Bitmap> bitmap = new Bitmap(size.x, size.y, 128);
+				m_luminanceBuffer[0]->download(bitmap);
+				ref<FileStream> fs = new FileStream("test.exr", FileStream::ETruncReadWrite);
+				bitmap->save(Bitmap::EEXR, fs);
+				fs->close();
+			#endif
 
 			/* Iteratively downsample the image until left with a 1x1 pixel sum over
 			   the whole image */

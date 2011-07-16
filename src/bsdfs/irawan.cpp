@@ -32,31 +32,57 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * This plugin implements the Irawan & Marschner woven cloth BRDF model
- * It is a port of a previous Java implementation by Piti Irawan. 
+/*! \plugin{irawan}{Irawan \& Marschner woven cloth BRDF}
  *
- * To use the model, you must provide a special weave pattern file --
- * for an example of what these look like, please see the included 
- * example scenes.
+ * \parameters{
+ *     \parameter{filename}{\String}{Path to a weave pattern description}
+ *     \parameter{repeatU, repeatV}{\Float}{Specifies the number
+ *         of weave pattern repetitions over a $[0,1]^2$ region of the UV
+ *         parameterization}
+ *     \parameter{ksFactor}{\Float}{Multiplicative factor of
+ *         the specular component}
+ *     \parameter{kdFactor}{\Float}{Multiplicative factor of
+ *         the diffuse component}
+ * }
  *
- * For reference, the model is described in detail in the PhD
- * thesis of Piti Irawan ("The Appearance of Woven Cloth",
- * available at http://ecommons.library.cornell.edu/handle/1813/8331)
+ * This plugin implements the Irawan \& Marschner BRDF,
+ * a realistic model for rendering woven materials.
+ * This spatially-varying reflectance model uses an explicit description
+ * of the underlying weave pattern to create fine-scale texture and 
+ * realistic reflections across a wide range of different weave types.
+ * To use the model, you must provide a special weave pattern 
+ * file---for an example of what these look like, see the 
+ * examples scenes available on the Mitsuba website.
+ *
+ * A detailed explanation of the model is beyond the scope of this manual.
+ * For reference, it is described in detail in the PhD thesis of 
+ * Piti Irawan (``The Appearance of Woven Cloth'' \cite{IrawanThesis}).
+ * The code in Mitsuba a modified port of a previous Java implementation 
+ * by Piti, which has been extended with a simple domain-specific weave
+ * pattern description language. \vspace{8mm}
+ *
+ * \renderings{
+ *     \unframedmedrendering{Silk charmeuse}{bsdf_irawan_charmeuse}
+ *     \unframedmedrendering{Cotton denim}{bsdf_irawan_denim}
+ *     \unframedmedrendering{Wool gabardine}{bsdf_irawan_gabardine}
+ * }
+ * \renderings{
+ *     \setcounter{subfigure}{3}
+ *     \unframedmedrendering{Polyester lining cloth}{bsdf_irawan_polyester}
+ *     \unframedmedrendering{Silk shantung}{bsdf_irawan_shantung}
+ *     \unframedmedrendering{Cotton twill}{bsdf_irawan_twill}
+ * }
  */
 class IrawanClothBRDF : public BSDF {
 public:
 	IrawanClothBRDF(const Properties &props) 
 		: BSDF(props) {
-		m_componentCount = 1;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = m_combinedType = EGlossyReflection | EFrontSide | EAnisotropic;
-		m_usesRayDifferentials = true;
 
 		FileResolver *fResolver = Thread::getThread()->getFileResolver();
 		fs::path path = fResolver->resolve(props.getString("filename"));
 		if (!fs::exists(path))
-			Log(EError, "Weave pattern file \"%s\" could not be found!", path.file_string().c_str());
+			Log(EError, "Weave pattern file \"%s\" could not be found!",	
+				path.file_string().c_str());
 		fs::ifstream in(path);
 		typedef spirit::istream_iterator iterator_type;
 		iterator_type end, begin(in);
@@ -92,19 +118,41 @@ public:
 		m_repeatV = stream->readFloat();
 		m_kdMultiplier = stream->readFloat();
 		m_ksMultiplier = stream->readFloat();
-		m_componentCount = 1;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = m_combinedType = EGlossyReflection | EFrontSide | EAnisotropic;
-		m_usesRayDifferentials = true;
 	}
 
-	virtual ~IrawanClothBRDF() {
-		delete[] m_type;
+	void configure() {
+		m_components.clear();
+		m_components.push_back(EGlossyReflection | EFrontSide
+			| EAnisotropic | ESpatiallyVarying);
+		m_components.push_back(EDiffuseReflection | EFrontSide
+			| ESpatiallyVarying);
+		BSDF::configure();
 	}
-	
-	Spectrum f(const BSDFQueryRecord &bRec) const {
-		if (!(bRec.typeMask & m_combinedType)
-			|| bRec.wi.z <= 0 || bRec.wo.z <= 0)
+
+	Spectrum getDiffuseReflectance(const Intersection &its) const {
+		Point2 uv = Point2(its.uv.x * m_repeatU,
+			(1 - its.uv.y) * m_repeatV);
+		Point2 xy(uv.x * m_pattern.tileWidth, uv.y * m_pattern.tileHeight); 
+		Point2i lookup(
+			modulo((int) xy.x, m_pattern.tileWidth),
+			modulo((int) xy.y, m_pattern.tileHeight));
+		int yarnID = m_pattern.pattern[lookup.x + lookup.y * m_pattern.tileWidth] - 1;
+		const Yarn &yarn = m_pattern.yarns.at(yarnID);
+
+		return yarn.kd * m_kdMultiplier;
+	}
+
+
+	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
+			(bRec.component == -1 || bRec.component == 0) && m_ksMultiplier > 0;
+		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
+			(bRec.component == -1 || bRec.component == 1) && m_kdMultiplier > 0;
+		
+		if (Frame::cosTheta(bRec.wi) <= 0 ||
+			Frame::cosTheta(bRec.wo) <= 0 ||
+			(!hasDiffuse && !hasSpecular) ||
+			measure != ESolidAngle)
 			return Spectrum(0.0f);
 
 		Point2 uv = Point2(bRec.its.uv.x * m_repeatU,
@@ -189,7 +237,7 @@ public:
 
 		// Compute specular contribution.
 		Spectrum result(0.0f);
-		if (m_ksMultiplier > 0.0f) {
+		if (hasSpecular) {
 			Float integrand;
 			if (psi != 0.0f)
 				integrand = evalStapleIntegrand(u, v, om_i, om_r, m_pattern.alpha, 
@@ -219,47 +267,60 @@ public:
 				result *= (m_pattern.warpArea + m_pattern.weftArea) / m_pattern.weftArea;
 		}
 
-		return result + yarn.kd * m_kdMultiplier;
+		if (hasDiffuse)
+			result += yarn.kd * m_kdMultiplier;
+
+		return result * Frame::cosTheta(bRec.wo);
 	}
 
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		Point2 uv = Point2(its.uv.x * m_repeatU,
-			(1 - its.uv.y) * m_repeatV);
-		Point2 xy(uv.x * m_pattern.tileWidth, uv.y * m_pattern.tileHeight); 
-		Point2i lookup(
-			modulo((int) xy.x, m_pattern.tileWidth),
-			modulo((int) xy.y, m_pattern.tileHeight));
-		int yarnID = m_pattern.pattern[lookup.x + lookup.y * m_pattern.tileWidth] - 1;
-		const Yarn &yarn = m_pattern.yarns.at(yarnID);
-
-		return yarn.kd * m_kdMultiplier;
-	}
-
-	Float pdf(const BSDFQueryRecord &bRec) const {
-		if (bRec.wi.z <= 0 || bRec.wo.z <= 0)
+	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
+			(bRec.component == -1 || bRec.component == 0) && m_ksMultiplier > 0;
+		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
+			(bRec.component == -1 || bRec.component == 1) && m_kdMultiplier > 0;
+		
+		if (Frame::cosTheta(bRec.wi) <= 0 ||
+			Frame::cosTheta(bRec.wo) <= 0 ||
+			(!hasDiffuse && !hasSpecular) ||
+			measure != ESolidAngle)
 			return 0.0f;
+
 		return Frame::cosTheta(bRec.wo) * INV_PI;
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		/* Lacking a better sampling method, generate cosine-weighted directions */
-		if (!(bRec.typeMask & m_combinedType) || bRec.wi.z <= 0)
+		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
+			(bRec.component == -1 || bRec.component == 0) && m_ksMultiplier > 0;
+		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
+			(bRec.component == -1 || bRec.component == 1) && m_kdMultiplier > 0;
+		
+		if (Frame::cosTheta(bRec.wi) <= 0 ||
+			(!hasDiffuse && !hasSpecular))
 			return Spectrum(0.0f);
+
+		/* Lacking a better sampling method, generate cosine-weighted directions */
 		bRec.wo = squareToHemispherePSA(sample);
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
-		return f(bRec) / Frame::cosTheta(bRec.wo);
+		return eval(bRec, ESolidAngle) / Frame::cosTheta(bRec.wo);
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
-		/* Lacking a better sampling method, generate cosine-weighted directions */
-		if (!(bRec.typeMask & m_combinedType) || bRec.wi.z <= 0)
+		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
+			(bRec.component == -1 || bRec.component == 0) && m_ksMultiplier > 0;
+		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
+			(bRec.component == -1 || bRec.component == 1) && m_kdMultiplier > 0;
+		
+		if (Frame::cosTheta(bRec.wi) <= 0 ||
+			(!hasDiffuse && !hasSpecular))
 			return Spectrum(0.0f);
+
+		/* Lacking a better sampling method, generate cosine-weighted directions */
 		bRec.wo = squareToHemispherePSA(sample);
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
 		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-		return f(bRec);
+		return eval(bRec, ESolidAngle);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -491,7 +552,7 @@ public:
 		// assumes a = 0, b > 0 is a concentration parameter.
 
 		Float I0, absB = std::abs(b);
-		if(std::abs(b) <= 3.75f) {
+		if (std::abs(b) <= 3.75f) {
 			Float t = absB / 3.75f;
 			t = t * t;
 			I0 = 1.0f + t*(3.5156229f + t*(3.0899424f + t*(1.2067492f

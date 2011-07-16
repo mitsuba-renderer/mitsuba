@@ -2,7 +2,7 @@ BUILDDIR       = '#build/release'
 CXX            = 'icl'
 CC             = 'icl'
 LINK           = 'xilink'
-CXXFLAGS       = ['/nologo', '/O3', '/Qipo', '/QxSSE2', '/QaxSSE3,SSE4.2', '/fp:fast=2', '/D', 'WIN32', '/W3', '/Qdiag-disable:2586', '/EHsc', '/GS-', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/Qopenmp']
+CXXFLAGS       = ['/nologo', '/O3', '/Qipo', '/QxSSE2', '/QaxSSE3,SSE4.2', '/fp:fast=2', '/D', 'WIN32', '/W3', '/Qdiag-disable:2586', '/EHsc', '/GS-', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'SPECTRUM_SAMPLES=3', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/Qopenmp']
 SHCXXFLAGS     = CXXFLAGS
 TARGET_ARCH    = 'x86'
 MSVC_VERSION   = '10.0'

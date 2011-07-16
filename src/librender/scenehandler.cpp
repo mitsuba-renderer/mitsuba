@@ -123,8 +123,37 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 
 		context.attributes[transcode(xmlAttributes.getName(i))] = attrValue;
 	}
+
 	if (name == "transform")
 		m_transform = Transform();
+
+	if (name == "scene") {
+		std::string versionString = context.attributes["version"];
+		if (versionString == "") 
+			throw VersionException(formatString("The requested scene cannot be loaded, since it "
+				"is missing version information! Since Mitsuba 0.3.0, it is "
+				"mandatory that scene XML files specify the version of Mitsuba "
+				"that was used at the time of their creation.\nThis makes it clear "
+				"how to interpret them in the presence of a changing file format. "
+				"The version should be specified within the 'scene' tag, "
+				"e.g.\n\t<scene version=\"" MTS_VERSION "\">\n"
+				"Please update your scene file with the right version number and try reloading it."),
+				Version());
+		Version fileVersion(versionString), currentVersion(MTS_VERSION);
+		if (!fileVersion.isCompatible(currentVersion)) {
+			if (fileVersion < currentVersion) {
+				throw VersionException(formatString("The requested scene is from an older version of Mitsuba "
+					"(file version: %s, current version: %s), hence the loading process was stopped. "
+					"Please open the scene from within Mitsuba's graphical user interface (mtsgui) -- "
+					"it will then be upgraded to the current format.",
+					fileVersion.toString().c_str(), MTS_VERSION), fileVersion);
+			} else {
+				XMLLog(EError, "The requested scene is from an incompatible future version of Mitsuba "
+					"(file version: %s, current version: %s). Giving up.",
+					fileVersion.toString().c_str(), MTS_VERSION);
+			}
+		}
+	}
 
 	m_context.push(context);
 }
@@ -224,17 +253,31 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		Float angle = parseFloat(name, context.attributes["angle"]);
 		m_transform = Transform::rotate(Vector(x, y, z), angle) * m_transform;
 	} else if (name == "lookAt") {
-		Float ox = parseFloat(name, context.attributes["ox"]);
-		Float oy = parseFloat(name, context.attributes["oy"]);
-		Float oz = parseFloat(name, context.attributes["oz"]);
-		Float tx = parseFloat(name, context.attributes["tx"]);
-		Float ty = parseFloat(name, context.attributes["ty"]);
-		Float tz = parseFloat(name, context.attributes["tz"]);
-		Float ux = parseFloat(name, context.attributes["ux"], 0);
-		Float uy = parseFloat(name, context.attributes["uy"], 0);
-		Float uz = parseFloat(name, context.attributes["uz"], 0);
-		Point o(ox, oy, oz), t(tx, ty, tz);
-		Vector u(ux, uy, uz);
+		std::vector<std::string> tokens = tokenize(context.attributes["origin"], ", ");
+		if (tokens.size() != 3)
+			XMLLog(EError, "<lookAt>: invalid 'origin' argument");
+		Point o(
+			parseFloat(name, tokens[0]),
+			parseFloat(name, tokens[1]),
+			parseFloat(name, tokens[2]));
+		tokens = tokenize(context.attributes["target"], ", ");
+		if (tokens.size() != 3)
+			XMLLog(EError, "<lookAt>: invalid 'target' argument");
+		Point t(
+			parseFloat(name, tokens[0]),
+			parseFloat(name, tokens[1]),
+			parseFloat(name, tokens[2]));
+		Vector u(0.0f);
+		tokens = tokenize(context.attributes["up"], ", ");
+		if (tokens.size() == 3)
+			u = Vector(
+				parseFloat(name, tokens[0]),
+				parseFloat(name, tokens[1]),
+				parseFloat(name, tokens[2]));
+		else if (tokens.size() == 0)
+			;
+		else
+			XMLLog(EError, "<lookAt>: invalid 'up' argument");
 
 		if (u.lengthSquared() == 0) {
 			/* If 'up' was not specified, use an arbitrary axis */
@@ -285,6 +328,18 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 
 		context.parent->properties.setPoint(context.attributes["name"], Point(x, y, z));
 	} else if (name == "rgb") {
+		Spectrum::EConversionIntent intent = Spectrum::EReflectance;
+		if (context.attributes.find("intent") != context.attributes.end()) {
+			std::string intentString = boost::to_lower_copy(context.attributes["intent"]);
+			if (intentString == "reflectance")
+				intent = Spectrum::EReflectance;
+			else if (intentString == "illuminant")
+				intent = Spectrum::EIlluminant;
+			else
+				XMLLog(EError, "Invalid intent \"%s\", must be "
+					"\"reflectance\" or \"illuminant\"", intentString.c_str());
+		}
+
 		std::string valueStr = context.attributes["value"];
 		std::vector<std::string> tokens = tokenize(valueStr, ", ");
 		Float value[3];
@@ -307,7 +362,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			XMLLog(EError, "Invalid RGB value specified");
 		}
 		Spectrum specValue;
-		specValue.fromLinearRGB(value[0], value[1], value[2]);
+		specValue.fromLinearRGB(value[0], value[1], value[2], intent);
 		context.parent->properties.setSpectrum(context.attributes["name"],
 			specValue);
 	} else if (name == "srgb") {
@@ -338,51 +393,69 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			specValue);
 	} else if (name == "blackbody") {
 		Float temperature = parseFloat(name, context.attributes["temperature"]);
+		Float multiplier = 1;
+		if (context.attributes.find("multiplier") != context.attributes.end())
+			multiplier = parseFloat(name, context.attributes["multiplier"]);
 		BlackBodySpectrum bb(temperature);
 		Spectrum discrete;
-		discrete.fromSmoothSpectrum(&bb);
-		context.parent->properties.setSpectrum(context.attributes["name"], discrete);
+		discrete.fromContinuousSpectrum(bb);
+		context.parent->properties.setSpectrum(context.attributes["name"], discrete * multiplier);
 	} else if (name == "spectrum") {
-		std::vector<std::string> tokens = tokenize(
-			context.attributes["value"], ", ");
-		Float value[SPECTRUM_SAMPLES];
-		if (tokens.size() == 1) {
-			value[0] = parseFloat(name, tokens[0]);
-			context.parent->properties.setSpectrum(context.attributes["name"],
-				Spectrum(value[0]));
-		} else {
-			if (tokens[0].find(':') != std::string::npos) {
-				InterpolatedSpectrum interp(tokens.size());
-				/* Wavelength -> Value mapping */
-				for (size_t i=0; i<tokens.size(); i++) {
-					std::vector<std::string> tokens2 = tokenize(tokens[i], ":");
-					if (tokens2.size() != 2) 
-						XMLLog(EError, "Invalid spectrum->value mapping specified");
-					Float wavelength = parseFloat(name, tokens2[0]);
-					Float value = parseFloat(name, tokens2[1]);
-					interp.appendSample(wavelength, value);
-				}
-				Spectrum discrete;
-				discrete.fromSmoothSpectrum(&interp);
+		bool hasValue = context.attributes.find("value") != context.attributes.end();
+		bool hasFilename = context.attributes.find("filename") != context.attributes.end();
+
+		if (hasValue == hasFilename) {
+			SLog(EError, "Spectrum: please provide one of 'value' or 'filename'");
+		} else if (hasFilename) {
+			FileResolver *resolver = Thread::getThread()->getFileResolver();
+			fs::path path = resolver->resolve(context.attributes["filename"]);
+			InterpolatedSpectrum interp(path);
+			interp.zeroExtend();
+			Spectrum discrete;
+			discrete.fromContinuousSpectrum(interp);
+			context.parent->properties.setSpectrum(context.attributes["name"], discrete);
+		} else if (hasValue) {
+			std::vector<std::string> tokens = tokenize(
+				context.attributes["value"], ", ");
+			Float value[SPECTRUM_SAMPLES];
+			if (tokens.size() == 1) {
+				value[0] = parseFloat(name, tokens[0]);
 				context.parent->properties.setSpectrum(context.attributes["name"],
-					discrete);
+					Spectrum(value[0]));
 			} else {
-				if (tokens.size() != SPECTRUM_SAMPLES)
-					XMLLog(EError, "Invalid spectrum value specified (incorrect length)");
-				for (int i=0; i<SPECTRUM_SAMPLES; i++) 
-					value[i] = parseFloat(name, tokens[i]);
-				context.parent->properties.setSpectrum(context.attributes["name"],
-					Spectrum(value));
+				if (tokens[0].find(':') != std::string::npos) {
+					InterpolatedSpectrum interp(tokens.size());
+					/* Wavelength -> Value mapping */
+					for (size_t i=0; i<tokens.size(); i++) {
+						std::vector<std::string> tokens2 = tokenize(tokens[i], ":");
+						if (tokens2.size() != 2) 
+							XMLLog(EError, "Invalid spectrum->value mapping specified");
+						Float wavelength = parseFloat(name, tokens2[0]);
+						Float value = parseFloat(name, tokens2[1]);
+						interp.append(wavelength, value);
+					}
+					interp.zeroExtend();
+					Spectrum discrete;
+					discrete.fromContinuousSpectrum(interp);
+					context.parent->properties.setSpectrum(context.attributes["name"],
+						discrete);
+				} else {
+					if (tokens.size() != SPECTRUM_SAMPLES)
+						XMLLog(EError, "Invalid spectrum value specified (incorrect length)");
+					for (int i=0; i<SPECTRUM_SAMPLES; i++) 
+						value[i] = parseFloat(name, tokens[i]);
+					context.parent->properties.setSpectrum(context.attributes["name"],
+						Spectrum(value));
+				}
 			}
 		}
 	} else if (name == "transform") {
 		context.parent->properties.setTransform(context.attributes["name"],
 			m_transform);
-		/* Do nothing */
 	} else if (name == "include") {
 		SAXParser* parser = new SAXParser();
 		FileResolver *resolver = Thread::getThread()->getFileResolver();
-		fs::path schemaPath = resolver->resolveAbsolute("schema/scene.xsd");
+		fs::path schemaPath = resolver->resolveAbsolute("data/schema/scene.xsd");
 
 		/* Check against the 'scene.xsd' XML Schema */
 		parser->setDoSchema(true);

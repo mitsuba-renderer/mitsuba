@@ -54,6 +54,10 @@ public:
 		return Spectrum(1.0f);
 	}
 
+	bool isConstant() const {
+		return false;
+	}
+
 	std::string toString() const {
 		return "VertexColors[]";
 	}

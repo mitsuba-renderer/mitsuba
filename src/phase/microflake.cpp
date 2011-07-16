@@ -71,7 +71,7 @@ public:
 		stream->writeFloat(m_fiberDistr.getStdDev());
 	}
 
-	Float f(const PhaseFunctionQueryRecord &pRec) const {
+	Float eval(const PhaseFunctionQueryRecord &pRec) const {
 		if (pRec.mRec.orientation.isZero()) {
 			/* What to do when the local orientation is undefined */
 			#if 0
@@ -144,7 +144,7 @@ public:
 		if (sample(pRec, sampler) == 0) {
 			pdf = 0; return 0.0f;
 		}
-		pdf = f(pRec);
+		pdf = eval(pRec);
 		return pdf;
 	}
 

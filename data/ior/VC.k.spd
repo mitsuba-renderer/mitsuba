@@ -1,0 +1,15 @@
+# data from www.luxpop.com database
+# ;  Optical constants for VC
+# ;  
+# ;  Concatenation of:
+# ;
+# ;  VC_llnl_cxro + VC_palik
+# ;
+# ;    Lambda (A)            n            k
+# ;-----------------------------------------
+309.950012 2.150000
+354.229004 2.120000
+413.266998 2.160000
+495.920013 2.210000
+619.900024 2.510000
+826.533020 2.880000

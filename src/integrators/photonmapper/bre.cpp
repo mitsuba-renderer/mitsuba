@@ -164,7 +164,7 @@ Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium) const 
 
 			Spectrum transmittance = Spectrum(-sigmaT * diskDistance).exp();
 			result += transmittance * node.photon.getPower()
-				* phase->f(PhaseFunctionQueryRecord(mRec, wi, -ray.d)) *
+				* phase->eval(PhaseFunctionQueryRecord(mRec, wi, -ray.d)) *
 				(weight * m_scaleFactor);
 		}
 	}

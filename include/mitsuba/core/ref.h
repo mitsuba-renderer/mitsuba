@@ -116,7 +116,8 @@ public:
 	 */
 	inline std::string toString() const {
 		if (m_ptr == NULL)
-			return "ref<null>[]";
+			return formatString("ref<%s>[null]",
+				T::m_theClass->getName().c_str());
 		else
 			return formatString("ref<%s>[ref=%i, ptr=%s]",
 					m_ptr->getClass()->getName().c_str(),

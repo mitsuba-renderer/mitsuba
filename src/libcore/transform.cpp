@@ -174,16 +174,16 @@ Transform Transform::glOrthographic(Float clipNear, Float clipFar) {
 Transform Transform::lookAt(const Point &p, const Point &t, const Vector &up) {
 	Matrix4x4 result;
 
-	Vector dirct = normalize(t-p);
-	Vector right = normalize(cross(dirct, up));
+	Vector dir = normalize(t-p);
+	Vector left = normalize(cross(normalize(up), dir));
 
 	/* Generate a new, orthogonalized up vector */
-	Vector newUp = cross(right, dirct);
+	Vector newUp = cross(dir, left);
 
 	/* Store as columns */
-	result.m[0][0] = right.x; result.m[1][0] = right.y; result.m[2][0] = right.z; result.m[3][0] = 0;
+	result.m[0][0] = left.x;  result.m[1][0] = left.y;  result.m[2][0] = left.z;  result.m[3][0] = 0;
 	result.m[0][1] = newUp.x; result.m[1][1] = newUp.y; result.m[2][1] = newUp.z; result.m[3][1] = 0;
-	result.m[0][2] = dirct.x; result.m[1][2] = dirct.y; result.m[2][2] = dirct.z; result.m[3][2] = 0;
+	result.m[0][2] = dir.x;   result.m[1][2] = dir.y;   result.m[2][2] = dir.z;   result.m[3][2] = 0;
 	result.m[0][3] = p.x;     result.m[1][3] = p.y;     result.m[2][3] = p.z;     result.m[3][3] = 1;
 
 	return Transform(result);

@@ -17,8 +17,7 @@
 */
 
 #include <mitsuba/render/scene.h>
-#include <mitsuba/render/consttexture.h>
-#include <mitsuba/hw/gpuprogram.h>
+#include <mitsuba/hw/basicshader.h>
 
 MTS_NAMESPACE_BEGIN
 

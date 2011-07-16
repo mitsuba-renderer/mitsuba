@@ -20,29 +20,63 @@
 #define __SPECTRUM_H
 
 #include <mitsuba/mitsuba.h>
+#include <boost/filesystem.hpp>
 
-#define SPECTRUM_MIN_WAVELENGTH   400
-#define SPECTRUM_MAX_WAVELENGTH   700
-#define SPECTRUM_RANGE            (SPECTRUM_MAX_WAVELENGTH-SPECTRUM_MIN_WAVELENGTH+1)
-#define SPECTRUM_SAMPLES          3
+namespace fs = boost::filesystem;
+
+#if !defined(SPECTRUM_SAMPLES)
+#error The desired number of spectral samples must be \
+	specified in the configuration file!
+#endif
+
+#define SPECTRUM_MIN_WAVELENGTH   360
+#define SPECTRUM_MAX_WAVELENGTH   830
+#define SPECTRUM_RANGE                \
+	(SPECTRUM_MAX_WAVELENGTH-SPECTRUM_MIN_WAVELENGTH)
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief Abstract smooth spectral power distribution data type,
- * which supports evaluation at arbitrary wavelengths
+ * \brief Abstract continous spectral power distribution data type,
+ * which supports evaluation at arbitrary wavelengths.
+ *
+ * Here, the term 'continous' doesn't necessarily mean that the
+ * underlying spectrum is continous, but rather emphasizes the fact
+ * that it is a function over the reals (as opposed to the discrete
+ * spectrum, which only stores samples for a discrete set of wavelengths).
  *
  * \ingroup libcore
  */
-class MTS_EXPORT_CORE SmoothSpectrum {
+class MTS_EXPORT_CORE ContinuousSpectrum {
 public:
 	/**
 	 * Evaluate the value of the spectral power distribution
 	 * at the given wavelength.
+	 *
+	 * \param lambda  A wavelength in nanometers
 	 */
 	virtual Float eval(Float lambda) const = 0;
-	
-	virtual ~SmoothSpectrum() { }
+
+	/**
+	 * \brief Integrate the spectral power distribution
+	 * over a given interval and return the average value
+	 *
+	 * Unless overridden in a subclass, the integration is done 
+	 * using adaptive Gauss-Lobatto quadrature.
+	 *
+	 * \param lambdaMin
+	 *     The lower interval bound in nanometers
+	 *
+	 * \param lambdaMax
+	 *     The upper interval bound in nanometers
+	 *
+	 * \remark If \c lambdaMin >= \c lambdaMax, the
+	 *     implementation will return zero.
+	 */
+	virtual Float average(Float lambdaMin, Float lambdaMax) const;
+
+	/// Virtual destructor
+	virtual ~ContinuousSpectrum() { }
 };
 
 /**
@@ -53,7 +87,7 @@ public:
  *
  * \ingroup libcore
  */
-class MTS_EXPORT_CORE BlackBodySpectrum : public SmoothSpectrum {
+class MTS_EXPORT_CORE BlackBodySpectrum : public ContinuousSpectrum {
 public:
 	/**
 	 * \brief Construct a new black body spectrum given the emitter's
@@ -67,6 +101,9 @@ public:
 
 	/** \brief Return the value of the spectral power distribution
 	 * at the given wavelength.
+	 *
+	 * The units are Watts per unit surface area (m^-2) 
+	 * per unit wavelength (nm^-1) per steradian (sr^-1)
 	 */
 	virtual Float eval(Float lambda) const;
 private:
@@ -74,49 +111,161 @@ private:
 };
 
 /**
+ * \brief This spectral power distribution is defined as the
+ * product of two other continuous spectra.
+ */
+class MTS_EXPORT_CORE ProductSpectrum : public ContinuousSpectrum {
+public:
+	/** \brief Return the value of the spectral power distribution
+	 * at the given wavelength.
+	 */
+	ProductSpectrum(const ContinuousSpectrum &s1, 
+		const ContinuousSpectrum &s2) : m_spec1(s1),
+	    m_spec2(s2) { }
+
+	/** \brief Return the value of the spectral power distribution
+	 * at the given wavelength.
+	 */
+	virtual Float eval(Float lambda) const;
+
+	/// Virtual destructor
+	virtual ~ProductSpectrum() { }
+private:
+	const ContinuousSpectrum &m_spec1;
+	const ContinuousSpectrum &m_spec2;
+};
+
+/**
  * \brief Linearly interpolated spectral power distribution
+ *
+ * This class implements a linearly interpolated spectral
+ * power distribution that is defined over a discrete set of 
+ * measurements at different wavelengths. Outside of the
+ * specified range, the spectrum is assumed to be zero. Hence,
+ * at least two entries are required to produce a nonzero 
+ * spectrum.
  *
  * \ingroup libcore
  */
-class MTS_EXPORT_CORE InterpolatedSpectrum : public SmoothSpectrum {
+class MTS_EXPORT_CORE InterpolatedSpectrum : public ContinuousSpectrum {
 public:
 	/**
 	 * \brief Create a new interpolated spectrum with space 
 	 * for the specified number of samples
 	 */
 	inline InterpolatedSpectrum(size_t size = 0) {
-		m_wavelength.reserve(size);
-		m_value.reserve(size);
+		m_wavelengths.reserve(size);
+		m_values.reserve(size);
 	}
+
+	/**
+	 * \brief Create a interpolated spectrum instance from
+	 * a float array
+	 */
+	InterpolatedSpectrum(const Float *wavelengths,
+		const Float *values, size_t nEntries);
+
+	/**
+	 * \brief Read an interpolated spectrum from a simple
+	 * ASCII format.
+	 *
+	 * Each line of the file should contain an entry of the form
+	 * \verbatim
+	 * <wavelength in nm> <value>
+	 * \endverbatim
+	 * Comments preceded by '#' are also valid.
+	 */
+	InterpolatedSpectrum(const fs::path &path);
 
 	/**
 	 * \brief Append an entry to the spectral power distribution.
 	 *
 	 * Entries must be added in order of increasing wavelength
 	 */
-	void appendSample(Float lambda, Float value);
+	void append(Float lambda, Float value);
+
+	/**
+	 * \brief This function adds a zero entry before and after 
+	 * the stored wavelength range.
+	 *
+	 * This is useful when handling datasets that don't fall
+	 * off to zero at the ends. The spacing of the added entries
+	 * is determined by computing the average spacing of the
+	 * existing samples.
+	 */
+	void zeroExtend();
+
+	/// Clear all stored entries
+	void clear();
 
 	/**
 	 * \brief Return the value of the spectral power distribution
 	 * at the given wavelength.
 	 */
-	virtual Float eval(Float lambda) const;
-	
+	Float eval(Float lambda) const;
+
+	/**
+	 * \brief Integrate the spectral power distribution
+	 * over a given interval and return the average value
+	 *
+	 * This method overrides the implementation in 
+	 * \ref ContinousSpectrum, since the integral can be
+	 * analytically computed for linearly interpolated spectra.
+	 *
+	 * \param lambdaMin
+	 *     The lower interval bound in nanometers
+	 *
+	 * \param lambdaMax
+	 *     The upper interval bound in nanometers
+	 *
+	 * \remark If \c lambdaMin >= \c lambdaMax, the
+	 *     implementation will return zero.
+	 */
+	Float average(Float lambdaMin, Float lambdaMax) const;
+
+	/// \brief Return a string representation
+	std::string toString() const;
+
+	/// Virtual destructor
 	virtual ~InterpolatedSpectrum() { }
 private:
-	std::vector<Float> m_wavelength, m_value;
+	std::vector<Float> m_wavelengths, m_values;
 };
 
-/** \brief Discrete spectral power distribution 
- * based on a (usually small) number of wavelength samples. 
+/** \brief Discrete spectral power distribution based on a number 
+ * of wavelength bins over the 360-830 nm range. 
  *
- * When SPECTRUM_SAMPLES is set to 3 (the default), this class 
- * falls back to linear RGB as its internal representation.
+ * This class defines a vector-like data type that can be used for 
+ * computations involving radiance.
+ *
+ * When configured for spectral rendering (i.e. when the compile-time flag
+ * \c SPECTRUM_SAMPLES is set to a value != 3), the implementation discretizes 
+ * the visible spectrum of light into a set of intervals, where the 
+ * distribution within each bin is modeled as being uniform.
+ *
+ * When SPECTRUM_SAMPLES == 3, the class reverts to a simple linear
+ * RGB-based internal representation.
+ *
+ * The implementation of this class is based on PBRT.
  *
  * \ingroup libcore
  */
 struct MTS_EXPORT_CORE Spectrum {
 public:
+	/**
+	 * \brief When converting from RGB reflectance values to
+	 * discretized color spectra, the following `intent' flag
+	 * can be provided to improve the results of this highly
+	 * under-constrained problem.
+	 */
+	enum EConversionIntent {
+		/// Unitless reflectance data is converted
+		EReflectance,
+
+		/// Radiance-valued illumination data is converted
+		EIlluminant
+	};
+
 	/// Create a new spectral power distribution, but don't initialize the contents
 #if !defined(MTS_DEBUG_UNINITIALIZED)
 	inline Spectrum() { }
@@ -126,7 +275,6 @@ public:
 			s[i] = std::numeric_limits<double>::quiet_NaN();
 	}
 #endif
-
 
 	/// Create a new spectral power distribution with all samples set to the given value
 	explicit inline Spectrum(Float v) {
@@ -229,10 +377,8 @@ public:
 	inline Spectrum operator/(Float f) const {
 		Spectrum value = *this;
 #ifdef MTS_DEBUG
-		if (f == 0) {
+		if (f == 0)
 			SLog(EWarn, "Spectrum: Division by zero!");
-		//	exit(-1);
-		}
 #endif
 		Float recip = 1.0f / f;
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
@@ -262,10 +408,8 @@ public:
 	/// Divide by a scalar
 	inline Spectrum& operator/=(Float f) {
 #ifdef MTS_DEBUG
-		if (f == 0) {
+		if (f == 0)
 			SLog(EWarn, "Spectrum: Division by zero!");
-			//exit(-1);
-		}
 #endif
 		Float recip = 1.0f / f;
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
@@ -377,10 +521,13 @@ public:
 	}
 
 	/**
-	 * \brief Evaluate the SPD at an arbitrary wavelength
-	 * (uses interpolation)
+	 * \brief Evaluate the SPD for the given wavelength
+	 * in nanometers.
 	 */
 	Float eval(Float lambda) const;
+
+	/// \brief Return the wavelength range covered by a spectral bin
+	static std::pair<Float, Float> getBinCoverage(size_t index);
 
 	/// Return the luminance in candelas.
 #if SPECTRUM_SAMPLES == 3
@@ -391,93 +538,135 @@ public:
 	Float getLuminance() const;
 #endif
 
-	/// Convert from a spectral power distribution to XYZ colors
+	/// Convert from a spectral power distribution to XYZ tristimulus values
 	void toXYZ(Float &x, Float &y, Float &z) const;
 
-	/// Convert from XYZ to a spectral power distribution
-	void fromXYZ(Float x, Float y, Float z);
+	/**
+	 * \brief Convert XYZ tristimulus into a plausible spectral
+	 * power distribution
+	 *
+	 * The \ref EConversionIntent parameter can be used to provide more 
+	 * information on how to solve this highly under-constrained problem.
+	 * The default is \ref EReflectance.
+	 */
+	void fromXYZ(Float x, Float y, Float z, 
+			EConversionIntent intent = EReflectance);
 
 #if SPECTRUM_SAMPLES == 3
 	/// Convert to linear RGB
 	inline void toLinearRGB(Float &r, Float &g, Float &b) const {
-		r = s[0];
-		g = s[1];
-		b = s[2];
+		/* Nothing to do -- the renderer is in RGB mode */
+		r = s[0]; g = s[1]; b = s[2];
 	}
 
 	/// Convert from linear RGB
-	inline void fromLinearRGB(Float r, Float g, Float b) {
-		s[0] = r;
-		s[1] = g;
-		s[2] = b;
+	inline void fromLinearRGB(Float r, Float g, Float b,
+			EConversionIntent intent = EReflectance /* unused */) {
+		/* Nothing to do -- the renderer is in RGB mode */
+		s[0] = r; s[1] = g; s[2] = b;
 	}
 #else
 	/// Convert to linear RGB
 	void toLinearRGB(Float &r, Float &g, Float &b) const;
 
-	/// Convert from linear RGB
-	void fromLinearRGB(Float r, Float g, Float b);	
+	/**
+	 * \brief Convert linear RGB colors into a plausible
+	 * spectral power distribution
+	 *
+	 * The \ref EConversionIntent parameter can be used to provide more 
+	 * information on how to solve this highly under-constrained problem.
+	 * The default is \ref EReflectance.
+	 */
+	void fromLinearRGB(Float r, Float g, Float b, 
+			EConversionIntent intent = EReflectance);	
 #endif
 
 	/// Convert to sRGB
 	void toSRGB(Float &r, Float &g, Float &b) const;
 
-	/// Convert from sRGB
+	/**
+	 * \brief Convert sRGB color values into a plausible spectral
+	 * power distribution
+	 *
+	 * Note that compared to \ref fromLinearRGB, no \c intent parameter
+	 * is available. For sRGB colors, it is assumed that the intent is 
+	 * always \ref EReflectance.
+	 */
 	void fromSRGB(Float r, Float g, Float b);
 
-	/// Linear RGBE conversion based on Bruce Walter's and Greg Ward's code
-	void fromRGBE(const uint8_t rgbe[4]);
+	/**
+	 * \brief Convert linear RGBE colors into a plausible
+	 * spectral power distribution
+	 *
+	 * Based on code by Bruce Walter and Greg ward.
+	 *
+	 * The \ref EConversionIntent parameter can be used to provide more 
+	 * information on how to solve this highly under-constrained problem.
+	 * For RGBE values, the default is \ref EIlluminant.
+	 */
+	void fromRGBE(const uint8_t rgbe[4], EConversionIntent intent = EIlluminant);
 
 	/// Linear RGBE conversion based on Bruce Walter's and Greg Ward's code 
 	void toRGBE(uint8_t rgbe[4]) const;
 
 	/// Initialize with spectral values from a smooth spectrum representation
-	void fromSmoothSpectrum(const SmoothSpectrum *smooth);
+	void fromContinuousSpectrum(const ContinuousSpectrum &smooth);
 
 	/// Serialize this spectrum to a stream
 	inline void serialize(Stream *stream) const {
 		stream->writeFloatArray(s, SPECTRUM_SAMPLES);
 	}
 
-	/// Return the wavelength corresponding to an index
-	inline static Float getWavelength(int index) {
-		SAssert(index < SPECTRUM_SAMPLES);
-		return m_wavelengths[index];
-	}
-
 	/// Return a string representation
 	std::string toString() const;
 
 	/** 
-	 * Static initialization (should be called once during the
-	 * application's initialization phase
+	 * \brief Static initialization (should be called once during the
+	 * application's initialization phase)
+	 * 
+	 * This function is responsible for choosing the wavelengths
+	 * that will be used during rendering. It also pre-integrates
+	 * the CIE matching curves so that sampled spectra can
+	 * efficiently be converted to XYZ tristimulus values.
+	 * Finally, it sets up pre-integrated color spectra for conversions
+	 * from linear RGB to plausible spectral color distributions.
 	 */
 	static void staticInitialization();
 	static void staticShutdown();
 protected:
 	Float s[SPECTRUM_SAMPLES];
 
-	/// Configured wavelengths in nanometers
-	static Float m_wavelengths[SPECTRUM_SAMPLES];
-
-	/// Normalization factor for XYZ<->RGB conversion
-	static Float m_normalization;
-
-	/// Inverse of \ref m_normalization
-	static Float m_invNormalization;
+	#if SPECTRUM_SAMPLES != 3
+	/// Configured wavelengths bins in nanometers
+	static Float m_wavelengths[SPECTRUM_SAMPLES+1];
+	
+	/// @{ \name Pre-integrated CIE 1931 XYZ color matching functions. 
+	static Spectrum CIE_X;
+	static Spectrum CIE_Y;
+	static Spectrum CIE_Z;
+	static Float CIE_normalization;
+	/// @}
 
 	/**
-	 * @{ \name CIE 1931 XYZ color matching functions. 
-	 * From http://www.cvrl.org/database/data/cmfs/ciexyz31_1.txt
+	 * @{ \name Pre-integrated Smits-style RGB to Spectrum
+	 * conversion spectra, data by Karl vom Berge
 	 */
-	static const int   CIE_start = 360;
-	static const int   CIE_end   = 830;
-	static const int   CIE_count = CIE_end - CIE_start + 1;
-	static const Float CIE_normalization;
-	static const Float CIE_X[CIE_count];
-	static const Float CIE_Y[CIE_count];
-	static const Float CIE_Z[CIE_count];
+	static Spectrum rgbRefl2SpecWhite;
+	static Spectrum rgbRefl2SpecCyan;
+	static Spectrum rgbRefl2SpecMagenta;
+	static Spectrum rgbRefl2SpecYellow;
+	static Spectrum rgbRefl2SpecRed;
+	static Spectrum rgbRefl2SpecGreen;
+	static Spectrum rgbRefl2SpecBlue;
+	static Spectrum rgbIllum2SpecWhite;
+	static Spectrum rgbIllum2SpecCyan;
+	static Spectrum rgbIllum2SpecMagenta;
+	static Spectrum rgbIllum2SpecYellow;
+	static Spectrum rgbIllum2SpecRed;
+	static Spectrum rgbIllum2SpecGreen;
+	static Spectrum rgbIllum2SpecBlue;
 	/// @}
+	#endif
 };
 
 MTS_NAMESPACE_END

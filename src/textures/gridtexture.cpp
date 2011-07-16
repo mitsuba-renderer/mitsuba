@@ -79,6 +79,10 @@ public:
 	Spectrum getAverage() const {
 		return m_brightColor; // that's not quite right
 	}
+	
+	bool isConstant() const {
+		return false;
+	}
 
 	std::string toString() const {
 		return "GridTexture[]";

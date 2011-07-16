@@ -23,7 +23,6 @@ MTS_NAMESPACE_BEGIN
  FOR A PARTICULAR PURPOSE. See the license for more details.
 */
 
-
 const Float GaussLobattoIntegrator::m_alpha = (Float) std::sqrt(2.0/3.0); 
 const Float GaussLobattoIntegrator::m_beta  = (Float) (1.0/std::sqrt(5.0));
 const Float GaussLobattoIntegrator::m_x1	= (Float) 0.94288241569547971906; 
@@ -31,20 +30,21 @@ const Float GaussLobattoIntegrator::m_x2	= (Float) 0.64185334234578130578;
 const Float GaussLobattoIntegrator::m_x3	= (Float) 0.23638319966214988028;
 
 GaussLobattoIntegrator::GaussLobattoIntegrator(size_t maxEvals,
-	Float absError, Float relError, bool useConvergenceEstimate)
+	Float absError, Float relError, bool useConvergenceEstimate, bool warn)
 	: m_absError(absError), 
 	  m_relError(relError),
 	  m_maxEvals(maxEvals),
-	  m_useConvergenceEstimate(useConvergenceEstimate) {
+	  m_useConvergenceEstimate(useConvergenceEstimate),
+      m_warn(warn) {
 	if (m_absError == 0 && m_relError == 0)
 		SLog(EError, "GaussLobattoIntegrator:: Absolute and relative "
 			"error requirements can't both be zero!");
 }
 
 Float GaussLobattoIntegrator::integrate(
-		const boost::function<Float (Float)>& f, Float a, Float b, size_t &evals) const {
+		const boost::function<Float (Float)>& f, Float a, Float b, size_t *_evals) const {
 	Float factor = 1;
-	evals = 0;
+	size_t evals = 0;
 	if (a == b) {
 		return 0;
 	} else if (b < a) {
@@ -53,7 +53,12 @@ Float GaussLobattoIntegrator::integrate(
 	}
 	const Float absTolerance = calculateAbsTolerance(f, a, b, evals);
 	evals += 2;
-	return factor * adaptiveGaussLobattoStep(f, a, b, f(a), f(b), absTolerance, evals);
+	Float result = factor * adaptiveGaussLobattoStep(f, a, b, f(a), f(b), absTolerance, evals);
+	if (evals >= m_maxEvals && m_warn)
+		SLog(EWarn, "GaussLobattoIntegrator: Maximum number of evaluations reached!");
+	if (_evals)
+		*_evals = evals;
+	return result;
 }
 
 Float GaussLobattoIntegrator::calculateAbsTolerance(
@@ -68,17 +73,14 @@ Float GaussLobattoIntegrator::calculateAbsTolerance(
 	const Float y11= f(m+m_alpha*h);
 	const Float y13= f(b);
 
-	Float acc=h*((Float) 0.0158271919734801831*(y1+y13)
-			  +(Float) 0.0942738402188500455*(f(m-m_x1*h)+f(m+m_x1*h))
-			  +(Float) 0.1550719873365853963*(y3+y11)
-			  +(Float) 0.1888215739601824544*(f(m-m_x2*h)+ f(m+m_x2*h))
-			  +(Float) 0.1997734052268585268*(y5+y9) 
-			  +(Float) 0.2249264653333395270*(f(m-m_x3*h)+f(m+m_x3*h))
-			  +(Float) 0.2426110719014077338*y7);  
+	Float acc = h*((Float) 0.0158271919734801831*(y1+y13)
+				 + (Float) 0.0942738402188500455*(f(m-m_x1*h)+f(m+m_x1*h))
+				 + (Float) 0.1550719873365853963*(y3+y11)
+				 + (Float) 0.1888215739601824544*(f(m-m_x2*h)+ f(m+m_x2*h))
+				 + (Float) 0.1997734052268585268*(y5+y9) 
+				 + (Float) 0.2249264653333395270*(f(m-m_x3*h)+f(m+m_x3*h))
+				 + (Float) 0.2426110719014077338*y7);  
 	evals += 13;
-
-	if (acc == 0)
-		SLog(EError, "GaussLobattoIntegrator: Cannot calculate absolute error from relative error");
 
 	Float r = 1.0;
 	if (m_useConvergenceEstimate) {
@@ -93,7 +95,7 @@ Float GaussLobattoIntegrator::calculateAbsTolerance(
 	}
 	Float result = std::numeric_limits<Float>::infinity();
 
-	if (m_relError != 0)	
+	if (m_relError != 0 && acc != 0)
 		result = acc * std::max(m_relError,
 			std::numeric_limits<Float>::epsilon())
 			/ (r*std::numeric_limits<Float>::epsilon());
@@ -109,9 +111,6 @@ Float GaussLobattoIntegrator::adaptiveGaussLobattoStep(
 								 const boost::function<Float (Float)>& f,
 								 Float a, Float b, Float fa, Float fb,
 								 Float acc, size_t &evals) const {
-	if (evals >= m_maxEvals)
-		SLog(EError, "GaussLobattoIntegrator: Maximum number of evaluations reached!");
-
 	const Float h=(b-a)/2; 
 	const Float m=(a+b)/2;
 	
@@ -132,10 +131,11 @@ Float GaussLobattoIntegrator::adaptiveGaussLobattoStep(
 
 	evals += 5;
 
+	if (evals >= m_maxEvals) 
+		return integral1;
+
 	Float dist = acc + (integral1-integral2);
-	if(dist==acc || mll<=a || b<=mrr) {
-		if (m<=a || b<=m)
-			SLog(EWarn, "GaussLobattoIntegrator: Interval contains no more machine numbers!");
+	if (dist==acc || mll<=a || b<=mrr) {
 		return integral1;
 	} else {
 		return  adaptiveGaussLobattoStep(f,a,mll,fa,fmll,acc,evals)  
@@ -1148,17 +1148,25 @@ NDIntegrator::NDIntegrator(size_t fDim, size_t dim,
   m_relError(relError) { }
 
 NDIntegrator::EResult NDIntegrator::integrate(const Integrand &f, const Float *min, 
-		const Float *max, Float *result, Float *error, size_t &evals) const {
+		const Float *max, Float *result, Float *error, size_t *_evals) const {
 	VectorizationAdapter adapter(f, m_fdim, m_dim);
-	return mitsuba::integrate((unsigned int) m_fdim, boost::bind(
+	size_t evals = 0;
+	EResult retval = mitsuba::integrate((unsigned int) m_fdim, boost::bind(
 		&VectorizationAdapter::f, &adapter, _1, _2, _3), (unsigned int) m_dim,
 		min, max, m_maxEvals, m_absError, m_relError, result, error, evals, false);
+	if (_evals)
+		*_evals = evals;
+	return retval;
 }
 
 NDIntegrator::EResult NDIntegrator::integrateVectorized(const VectorizedIntegrand &f, const Float *min, 
-		const Float *max, Float *result, Float *error, size_t &evals) const {
-	return mitsuba::integrate((unsigned int) m_fdim, f, (unsigned int) m_dim,
+		const Float *max, Float *result, Float *error, size_t *_evals) const {
+	size_t evals = 0;
+	EResult retval = mitsuba::integrate((unsigned int) m_fdim, f, (unsigned int) m_dim,
 		min, max, m_maxEvals, m_absError, m_relError, result, error, evals, true);
+	if (_evals)
+		*_evals = evals;
+	return retval;
 }
 
 MTS_NAMESPACE_END

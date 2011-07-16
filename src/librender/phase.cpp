@@ -15,7 +15,7 @@ std::string PhaseFunctionQueryRecord::toString() const {
 }
 
 Float PhaseFunction::pdf(const PhaseFunctionQueryRecord &pRec) const {
-	return f(pRec);
+	return eval(pRec);
 }
 	
 bool PhaseFunction::needsDirectionallyVaryingCoefficients() const {

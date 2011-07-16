@@ -25,15 +25,17 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * This class is responsible for the on-demand creation of
- * GPU shaders to render meshes with a particular material
- * illuminated by a virtual point light source. For each
- * encountered BSDF-VPL pair, a custom piece of code describing
- * the characteristic light transport between them is created 
+ * \brief This class is responsible for the on-demand creation of
+ * GPU shaders to render meshes that are illuminated by a virtual 
+ * point light source. 
+ *
+ * For each encountered BSDF-VPL pair, a custom piece of code 
+ * describing the characteristic light transport between them is created 
  * and cached. To avoid generating a potentially huge (N squared) 
  * number of very similar programs, the implementation passes some 
  * properties using uniforms, in which case already existing code 
- * can be reused and we get something more like lower case n squared.
+ * can be reused and we get something more like lower case n squared
+ * (where lower n is the number of material types).
  */
 class MTS_EXPORT_HW VPLShaderManager : public Object {
 public:
@@ -55,8 +57,11 @@ public:
 	/// Release bound resources
 	void unbind();
 
-	/// Return all bound triangle meshes
+	/// Return all bound opaque triangle meshes
 	inline const std::vector<std::pair<const TriMesh *, Transform> > &getMeshes() const { return m_meshes; }
+
+	/// Return all bound transparent triangle meshes
+	inline const std::vector<std::pair<const TriMesh *, Transform> > &getTransparentMeshes() const { return m_transparentMeshes; }
 
 	/// Return the shadow cube map for debugging purposes
 	inline GPUTexture *getShadowMap() { return m_shadowMap; }
@@ -178,7 +183,7 @@ private:
 		int param_shadowMap, param_vplPos, param_camPos, param_vplPower;
 		int param_vplN, param_vplS, param_vplT, param_vplWi, param_vplUV;
 		int param_nearClip, param_invClipRange, param_minDist;
-		int param_diffuseSources, param_diffuseReceivers;
+		int param_diffuseSources, param_diffuseReceivers, param_alpha;
 
 		inline VPLProgramConfiguration() { }
 
@@ -272,6 +277,7 @@ private:
 	ref<GPUProgram> m_backgroundProgram;
 	VPLDependencyNode m_backgroundDependencies;
 	std::vector<std::pair<const TriMesh *, Transform> > m_meshes;
+	std::vector<std::pair<const TriMesh *, Transform> > m_transparentMeshes;
 	std::vector<std::pair<const GPUGeometry *, Transform> > m_drawList;
 };
 

@@ -22,7 +22,7 @@ def scanFiles(dir, accept=["*.cpp"], reject=[]) :
 if hasQt:
 	qtEnv = mainEnv.Clone()
 	qtEnv.Append(CPPPATH=['#src/qtgui'])
-	qtEnv.EnableQt4Modules(['QtGui', 'QtCore', 'QtOpenGL', 'QtXml', 'QtNetwork'])
+	qtEnv.EnableQt4Modules(['QtGui', 'QtCore', 'QtOpenGL', 'QtXml', 'QtXmlPatterns', 'QtNetwork'])
 	if sys.platform == 'win32':
 		index = qtEnv['CXXFLAGS'].index('_CONSOLE')
 		del qtEnv['CXXFLAGS'][index-1]

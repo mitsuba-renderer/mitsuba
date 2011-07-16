@@ -441,26 +441,26 @@ extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI,
  *
  * \param cosThetaI
  * 		Cosine of the angle between the normal and the incident ray
- * \param etaExt
+ * \param extIOR
  * 		Refraction coefficient outside of the material
- * \param etaInt
+ * \param intIOR
  * 		Refraction coefficient inside the material
  */
-extern MTS_EXPORT_CORE Float fresnel(Float cosThetaI, Float etaExt,
-		Float etaInt);
+extern MTS_EXPORT_CORE Float fresnel(Float cosThetaI, Float extIOR,
+		Float intIOR);
 
 /**
  * Calculates the unpolarized fresnel reflection coefficient on
  * an interface to a conductor.
  *
- * \param cosTheta
+ * \param cosThetaI
  * 		Cosine of the angle between the normal and the incident ray
  * \param eta
- * 		Relative refractive index (per wavelength)
+ * 		Real refractive index (wavelength-dependent)
  * \param k
- * 		Absorption coefficient (per wavelength)
+ * 		Imaginary refractive index (wavelength-dependent)
  */
-extern MTS_EXPORT_CORE Spectrum fresnelConductor(Float cosTheta, 
+extern MTS_EXPORT_CORE Spectrum fresnelConductor(Float cosThetaI, 
 		const Spectrum &eta, const Spectrum &k);
 
 /*! @} */

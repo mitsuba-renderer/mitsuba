@@ -78,18 +78,22 @@ std::string Intersection::toString() const {
 	if (!isValid())
 		return "Intersection[invalid]";
 	std::ostringstream oss;
-	oss << "Intersection[" << std::endl
-		<< "  p = " << p.toString() << "," << std::endl
-		<< "  wi = " << wi.toString() << "," << std::endl
-		<< "  t = " << t << "," << std::endl
-		<< "  geoFrame = " << indent(geoFrame.toString()) << "," << std::endl
-		<< "  shFrame = " << indent(shFrame.toString()) << "," << std::endl
-		<< "  uv = " << uv.toString() << "," << std::endl
-		<< "  hasUVPartials = " << hasUVPartials << "," << std::endl
-		<< "  dpdu = " << dpdu.toString() << "," << std::endl
-		<< "  dpdv = " << dpdv.toString() << "," << std::endl
-		<< "  time = " << time << "," << std::endl
-		<< "  shape = " << indent(((Object *)shape)->toString()) << std::endl
+	oss << "Intersection[" << endl
+		<< "  p = " << p.toString() << "," << endl
+		<< "  wi = " << wi.toString() << "," << endl
+		<< "  t = " << t << "," << endl
+		<< "  geoFrame = " << indent(geoFrame.toString()) << "," << endl
+		<< "  shFrame = " << indent(shFrame.toString()) << "," << endl
+		<< "  uv = " << uv.toString() << "," << endl
+		<< "  hasUVPartials = " << hasUVPartials << "," << endl
+		<< "  dpdu = " << dpdu.toString() << "," << endl
+		<< "  dpdv = " << dpdv.toString() << "," << endl;
+	if (hasUVPartials) {
+		oss << "  dud[x,y] = [" << dudx << ", " << dudy << "]," << endl
+			<< "  dvd[x,y] = [" << dvdx << ", " << dvdy << "]," << endl;
+	}
+	oss << "  time = " << time << "," << endl
+		<< "  shape = " << indent(((Object *)shape)->toString()) << endl
 		<< "]";
 	return oss.str();
 }

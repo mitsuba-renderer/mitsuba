@@ -6,6 +6,14 @@
 
 import os, re
 
+def findOrderID(filename):
+	f = open(filename)
+	for line in f.readlines():
+		match = re.match(r'.*\\order{([^}])}.*', line)
+		if match != None:
+			return int(match.group(1))
+	return 1000
+
 def process(target, filename):
 	f = open(filename)
 	inheader = False
@@ -36,9 +44,15 @@ def traverse(target, dirname, files):
 		or suffix == 'converter' or suffix == 'qtgui':
 		return
 
+	ordering = []
 	for filename in files:
 		if '.cpp' == os.path.splitext(filename)[1]:
-			process(target,os.path.join(dirname, filename))
+			fname = os.path.join(dirname, filename)
+			ordering = ordering + [(findOrderID(fname), fname)]
+	ordering = sorted(ordering, key = lambda entry: entry[0])
+
+	for entry in ordering:
+		process(target, entry[1])
 
 os.chdir(os.path.dirname(__file__))
 f = open('plugins_generated.tex', 'w')

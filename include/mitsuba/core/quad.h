@@ -57,8 +57,10 @@ public:
 	 * Initialize a Gauss-Lobatto integration scheme
 	 *
 	 * \param maxEvals Maximum number of function evaluations. The
-	 *    integrator will throw an exception when this limit is
-	 *    exceeded.
+	 *    integrator will print a warning when this limit is
+	 *    exceeded. It will then stop the recursion, but a few
+	 *    further evaluations may still take place. Hence the limit
+	 *    is not a strict one.
 	 *
 	 * \param absError Absolute error requirement (0 to disable)
 	 * \param relError Relative error requirement (0 to disable)
@@ -66,19 +68,23 @@ public:
 	 * \param useConvergenceEstimate Estimate the convergence behavior
 	 *     of the GL-quadrature by comparing the 4, 7 and 13-point
 	 *     variants and increase the absolute tolerance accordingly.
+	 *
+	 * \param warn Should the integrator warn when the number of
+	 *     function evaluations is exceeded?
 	 */
 	GaussLobattoIntegrator(size_t maxEvals,
 						 Float absError = 0,
 						 Float relError = 0,
-						 bool useConvergenceEstimate = true);
+						 bool useConvergenceEstimate = true,
+						 bool warn = true);
 
 	/**
 	 * \brief Integrate the function \c f from \c a to \c b.
 	 *
-	 * Also returns the total number of evaluations
+	 * Also returns the total number of evaluations if requested
 	 */
 	Float integrate(const Integrand &f, Float a, Float b,
-		size_t &evals) const;
+		size_t *evals = NULL) const;
 protected:
 	/**
 	 * \brief Perform one step of the 4-point Gauss-Lobatto rule, then
@@ -104,7 +110,8 @@ protected:
 protected:
 	Float m_absError, m_relError;
 	size_t m_maxEvals;
-	const bool m_useConvergenceEstimate;
+	bool m_useConvergenceEstimate;
+	bool m_warn;
 	static const Float m_alpha;
 	static const Float m_beta;
 	static const Float m_x1;
@@ -174,7 +181,7 @@ public:
 	 * results of the evaluation into the \c out array using \c fDim entries.
 	 */
 	EResult integrate(const Integrand &f, const Float *min, const Float *max,
-			Float *result, Float *error, size_t &evals) const;
+			Float *result, Float *error, size_t *evals = NULL) const;
 
 	/**
 	 * \brief Integrate the function \c f over the rectangular domain 
@@ -204,7 +211,7 @@ public:
 	 * several hundred.
 	 */
 	EResult integrateVectorized(const VectorizedIntegrand &f, const Float *min, 
-		const Float *max, Float *result, Float *error, size_t &evals) const;
+		const Float *max, Float *result, Float *error, size_t *evals = NULL) const;
 protected:
 	size_t m_fdim, m_dim, m_maxEvals;
 	Float m_absError, m_relError;

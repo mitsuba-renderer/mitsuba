@@ -1,0 +1,16 @@
+# data from www.luxpop.com database
+# ;  Optical constants for TiN
+# ; 
+# ;   taken from:
+# ;
+# ;   'Handbook of Optical Constants of Solids II', Ed. by Edward D. Palik,
+# ;   Academic Press, Inc., 1991.
+# ;   
+# ;    Lambda (A)            n            k
+# ;-----------------------------------------
+309.950012 2.270000
+354.229004 2.140000
+413.266998 1.740000
+495.920013 1.200000
+619.900024 1.320000
+826.533020 1.820000

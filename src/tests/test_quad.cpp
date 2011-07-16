@@ -61,7 +61,7 @@ public:
 		GaussLobattoIntegrator quad(1024, 0, 1e-5f);
 		size_t evals;
 		Float result = quad.integrate(boost::bind(
-			&TestQuadrature::testF, this, _1), 0, 10, evals);
+			&TestQuadrature::testF, this, _1), 0, 10, &evals);
 		Float ref = 2 * std::pow(std::sin((Float) 5.0f), (Float) 2.0f);
 		Log(EInfo, "test01_quad(): used " SIZE_T_FMT " function evaluations", evals);
 		assertEqualsEpsilon(result, ref, 1e-5f);
@@ -72,7 +72,7 @@ public:
 		Float min = 0, max = 10, result, err;
 		size_t evals;
 		assertTrue(quad.integrate(boost::bind(
-			&TestQuadrature::testF2, this, _1, _2), &min, &max, &result, &err, evals) == NDIntegrator::ESuccess);
+			&TestQuadrature::testF2, this, _1, _2), &min, &max, &result, &err, &evals) == NDIntegrator::ESuccess);
 		Float ref = 2 * std::pow(std::sin(5.0f), 2.0f);
 		Log(EInfo, "test02_nD_01(): used " SIZE_T_FMT " function evaluations, "
 				"error=%f", evals, err);
@@ -84,7 +84,7 @@ public:
 		size_t evals;
 		Float min[3] = { -1, -1, -1 } , max[3] = { 1, 1, 1 }, result[2], err[2];
 		assertTrue(quad.integrateVectorized(boost::bind(
-			&TestQuadrature::testF3, this, _1, _2, _3), min, max, result, err, evals) == NDIntegrator::ESuccess);
+			&TestQuadrature::testF3, this, _1, _2, _3), min, max, result, err, &evals) == NDIntegrator::ESuccess);
 		Log(EInfo, "test02_nD_02(): used " SIZE_T_FMT " function evaluations, "
 				"error=[%f, %f]", evals, err[0], err[1]);
 		assertEqualsEpsilon(result[0], 1, 1e-5f);

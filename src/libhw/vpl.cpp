@@ -55,7 +55,7 @@ void VPLShaderManager::init() {
 			"varying float depth;\n"
 			"\n"
 			"void main() {\n"
-			"	depth = 0;\n" // avoid a (incorrect?) warning
+			"	depth = 0;\n" // avoid an (incorrect?) warning
 			"   for (int side = 0; side < 6; side++) {\n"
 			"	    gl_Layer = side;\n"
 			"       for (int i = 0; i < gl_VerticesIn; i++) {\n"
@@ -118,7 +118,7 @@ void VPLShaderManager::init() {
 
 	const std::vector<Shape *> shapes = m_scene->getShapes();
 	const std::vector<Luminaire *> luminaires = m_scene->getLuminaires();
-
+	
 	for (size_t i=0; i<shapes.size(); ++i) {
 		ref<TriMesh> triMesh = shapes[i]->createTriMesh();
 		if (!triMesh) {
@@ -134,8 +134,12 @@ void VPLShaderManager::init() {
 					GPUGeometry *gpuGeo = m_renderer->registerGeometry(triMesh);
 					Shader *shader = triMesh->hasBSDF() ? 
 						m_renderer->registerShaderForResource(triMesh->getBSDF()) : NULL;
-					if (shader != NULL && !shader->isComplete())
+					if (shader != NULL && !shader->isComplete()) {
 						m_renderer->unregisterShaderForResource(triMesh->getBSDF());
+					} else if (shader != NULL && shader->getFlags() & Shader::ETransparent) {
+						m_transparentMeshes.push_back(std::make_pair(triMesh.get(), instance->getWorldTransform()));
+						continue;
+					}
 					m_meshes.push_back(std::make_pair(triMesh.get(), instance->getWorldTransform()));
 					if (gpuGeo)
 						m_drawList.push_back(std::make_pair(gpuGeo, instance->getWorldTransform()));
@@ -146,8 +150,12 @@ void VPLShaderManager::init() {
 		GPUGeometry *gpuGeo = m_renderer->registerGeometry(triMesh);
 		Shader *shader = triMesh->hasBSDF() ? 
 			m_renderer->registerShaderForResource(triMesh->getBSDF()) : NULL;
-		if (shader != NULL && !shader->isComplete())
+		if (shader != NULL && !shader->isComplete()) {
 			m_renderer->unregisterShaderForResource(triMesh->getBSDF());
+		} else if (shader != NULL && shader->getFlags() & Shader::ETransparent) {
+			m_transparentMeshes.push_back(std::make_pair(triMesh.get(), Transform()));
+			continue;
+		}
 		m_meshes.push_back(std::make_pair(triMesh.get(), Transform()));
 		if (gpuGeo)
 			m_drawList.push_back(std::make_pair(gpuGeo, Transform()));
@@ -291,51 +299,63 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 		m_shadowMap->activateSide(-1);
 		m_shadowMap->clear();
 		m_shadowProgram->bind();
-		for (int i=0; i<6; ++i) {
-			switch (i) {
-				case 0: lightViewTrafo = Transform::lookAt(p, p + Vector(1, 0, 0), Vector(0, 1, 0)).inverse(); break;
-				case 1: lightViewTrafo = Transform::lookAt(p, p + Vector(-1, 0, 0), Vector(0, 1, 0)).inverse(); break;
-				case 2: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 1, 0), Vector(0, 0, -1)).inverse(); break;
-				case 3: lightViewTrafo = Transform::lookAt(p, p + Vector(0, -1, 0), Vector(0, 0, 1)).inverse(); break;
-				case 4: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, 1), Vector(0, 1, 0)).inverse(); break;
-				case 5: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, -1), Vector(0, 1, 0)).inverse(); break;
+		try {
+			for (int i=0; i<6; ++i) {
+				switch (i) {
+					case 0: lightViewTrafo = Transform::lookAt(p, p + Vector(1, 0, 0), Vector(0, 1, 0)).inverse(); break;
+					case 1: lightViewTrafo = Transform::lookAt(p, p + Vector(-1, 0, 0), Vector(0, 1, 0)).inverse(); break;
+					case 2: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 1, 0), Vector(0, 0, -1)).inverse(); break;
+					case 3: lightViewTrafo = Transform::lookAt(p, p + Vector(0, -1, 0), Vector(0, 0, 1)).inverse(); break;
+					case 4: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, 1), Vector(0, 1, 0)).inverse(); break;
+					case 5: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, -1), Vector(0, 1, 0)).inverse(); break;
+				}
+				lightViewTrafo = Transform::scale(Vector(-1, 1, 1)) * lightViewTrafo;
+				const Matrix4x4 &viewMatrix = lightViewTrafo.getMatrix();
+				m_shadowProgram->setParameter(m_shadowProgramParam_cubeMapTransform[i], lightProjTrafo * lightViewTrafo);
+				m_shadowProgram->setParameter(m_shadowProgramParam_depthVec[i], Vector4(
+					-viewMatrix.m[2][0] * m_invClipRange,
+					-viewMatrix.m[2][1] * m_invClipRange,
+					-viewMatrix.m[2][2] * m_invClipRange,
+					(-viewMatrix.m[2][3] - m_nearClip) * m_invClipRange
+				));
 			}
-			const Matrix4x4 &viewMatrix = lightViewTrafo.getMatrix();
-			m_shadowProgram->setParameter(m_shadowProgramParam_cubeMapTransform[i], lightProjTrafo * lightViewTrafo);
-			m_shadowProgram->setParameter(m_shadowProgramParam_depthVec[i], Vector4(
-				-viewMatrix.m[2][0] * m_invClipRange,
-				-viewMatrix.m[2][1] * m_invClipRange,
-				-viewMatrix.m[2][2] * m_invClipRange,
-				(-viewMatrix.m[2][3] - m_nearClip) * m_invClipRange
-			));
+			m_renderer->drawAll(m_drawList);
+		} catch (const std::exception &ex) {
+			m_shadowProgram->unbind();
+			throw ex;
 		}
-		m_renderer->drawAll(m_drawList);
 		m_shadowProgram->unbind();
 	} else {
 		/* Old-fashioned: render 6 times, once for each cube map face */
 		m_altShadowProgram->bind();
-		for (int i=0; i<6; ++i) {
-			switch (i) {
-				case 0: lightViewTrafo = Transform::lookAt(p, p + Vector(1, 0, 0), Vector(0, 1, 0)).inverse(); break;
-				case 1: lightViewTrafo = Transform::lookAt(p, p + Vector(-1, 0, 0), Vector(0, 1, 0)).inverse(); break;
-				case 2: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 1, 0), Vector(0, 0, -1)).inverse(); break;
-				case 3: lightViewTrafo = Transform::lookAt(p, p + Vector(0, -1, 0), Vector(0, 0, 1)).inverse(); break;
-				case 4: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, 1), Vector(0, 1, 0)).inverse(); break;
-				case 5: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, -1), Vector(0, 1, 0)).inverse(); break;
+		try {
+			for (int i=0; i<6; ++i) {
+				switch (i) {
+					case 0: lightViewTrafo = Transform::lookAt(p, p + Vector(1, 0, 0), Vector(0, 1, 0)).inverse(); break;
+					case 1: lightViewTrafo = Transform::lookAt(p, p + Vector(-1, 0, 0), Vector(0, 1, 0)).inverse(); break;
+					case 2: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 1, 0), Vector(0, 0, -1)).inverse(); break;
+					case 3: lightViewTrafo = Transform::lookAt(p, p + Vector(0, -1, 0), Vector(0, 0, 1)).inverse(); break;
+					case 4: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, 1), Vector(0, 1, 0)).inverse(); break;
+					case 5: lightViewTrafo = Transform::lookAt(p, p + Vector(0, 0, -1), Vector(0, 1, 0)).inverse(); break;
+				}
+				lightViewTrafo = Transform::scale(Vector(-1, 1, 1)) * lightViewTrafo;
+				const Matrix4x4 &viewMatrix = lightViewTrafo.getMatrix();
+
+				m_altShadowProgram->setParameter(m_altShadowProgramParam_cubeMapTransform, lightProjTrafo * lightViewTrafo);
+				m_altShadowProgram->setParameter(m_altShadowProgramParam_depthVec, Vector4(
+					-viewMatrix.m[2][0] * m_invClipRange,
+					-viewMatrix.m[2][1] * m_invClipRange,
+					-viewMatrix.m[2][2] * m_invClipRange,
+					(-viewMatrix.m[2][3] - m_nearClip) * m_invClipRange
+				));
+
+				m_shadowMap->activateSide(i);
+				m_shadowMap->clear();
+				m_renderer->drawAll(m_drawList);
 			}
-			const Matrix4x4 &viewMatrix = lightViewTrafo.getMatrix();
-
-			m_altShadowProgram->setParameter(m_altShadowProgramParam_cubeMapTransform, lightProjTrafo * lightViewTrafo);
-			m_altShadowProgram->setParameter(m_altShadowProgramParam_depthVec, Vector4(
-				-viewMatrix.m[2][0] * m_invClipRange,
-				-viewMatrix.m[2][1] * m_invClipRange,
-				-viewMatrix.m[2][2] * m_invClipRange,
-				(-viewMatrix.m[2][3] - m_nearClip) * m_invClipRange
-			));
-
-			m_shadowMap->activateSide(i);
-			m_shadowMap->clear();
-			m_renderer->drawAll(m_drawList);
+		} catch (std::exception &ex) {
+			m_altShadowProgram->unbind();
+			throw ex;
 		}
 
 		m_altShadowProgram->unbind();
@@ -353,7 +373,6 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 		: m_renderer->getShaderForResource(luminaire);
 	std::ostringstream oss;
 
-	
 	if (bsdfShader == NULL || vplShader == NULL ||
 		(luminaire != NULL && lumShader == NULL)) {
 		/* Unsupported! */
@@ -464,7 +483,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 			<< "/* Uniform inputs */" << endl
 			<< "uniform samplerCube shadowMap;" << endl
 			<< "uniform vec3 vplPower, vplS, vplT, vplN, vplWi;" << endl
-			<< "uniform float nearClip, invClipRange, minDist;" << endl
+			<< "uniform float nearClip, invClipRange, minDist, alpha;" << endl
 			<< "uniform vec2 vplUV;" << endl
 			<< "uniform bool diffuseSources, diffuseReceivers;" << endl
 			<< "varying vec3 vertexColor;" << endl
@@ -481,6 +500,9 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 			<< "float sinTheta2(vec3 v) { return 1.0-v.z*v.z; }" << endl
 			<< "float sinTheta(vec3 v) { float st2 = sinTheta2(v); if (st2 <= 0) return 0.0; else return sqrt(sinTheta2(v)); }" << endl
 			<< "float tanTheta(vec3 v) { return sinTheta(v)/cosTheta(v); }" << endl
+			<< "float sinPhi(vec3 v) { return v.y/sinTheta(v); }" << endl
+			<< "float cosPhi(vec3 v) { return v.x/sinTheta(v); }" << endl
+			<< "const float pi = 3.141592653589;" << endl
 			<< endl;
 
 		std::string vplEvalName, bsdfEvalName, lumEvalName;
@@ -494,11 +516,11 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 		} else {
 			oss << "   vec3 S;" << endl
 				<< "   if (abs(N.x) > abs(N.y)) {" << endl
-				<< "      float invLen = 1.0 / sqrt(N.x*N.x + N.z*N.z);" << endl
-				<< "      S = vec3(-N.z * invLen, 0.0, N.x * invLen);" << endl
+				<< "        float invLen = 1.0 / sqrt(N.x*N.x + N.z*N.z);" << endl
+				<< "        S = vec3(-N.z * invLen, 0.0, N.x * invLen);" << endl
 				<< "   } else {" << endl
-				<< "      float invLen = 1.0 / sqrt(N.y*N.y + N.z*N.z);" << endl
-				<< "      S = vec3(0.0, -N.z * invLen, N.y * invLen);" << endl
+				<< "        float invLen = 1.0 / sqrt(N.y*N.y + N.z*N.z);" << endl
+				<< "        S = vec3(0.0, -N.z * invLen, N.y * invLen);" << endl
 				<< "   }" << endl;
 		}
 		oss << "   vec3 T = cross(N, S);" << endl
@@ -528,17 +550,19 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 				oss << "(vplUV, vplWi, vplWo);" << endl;
 			else
 				oss << "_dir(vplWo);" << endl;
+			if (vpl.type == ESurfaceVPL)
+				oss << "   else contrib *= abs(cosTheta(vplWo));" << endl;
 		oss << "   if (d < minDist) d = minDist;" << endl
 			<< "   if (!diffuseReceivers)" << endl
 			<< "      contrib *= "<< bsdfEvalName << "(uv, wi, wo);" << endl
 			<< "   else" << endl
 			<< "      contrib *= " << bsdfEvalName << "_diffuse(uv, wi, wo);" << endl
 			<< "   gl_FragColor.rgb = contrib";
-		if (vpl.type == ESurfaceVPL || (vpl.type == ELuminaireVPL 
-				&& (vpl.luminaire->getType() & Luminaire::EOnSurface)))
-			oss << " * (shadow * abs(cosTheta(wo) * cosTheta(vplWo)) / (d*d))";
+		if (vpl.type == ELuminaireVPL 
+				&& (vpl.luminaire->getType() & Luminaire::EOnSurface))
+			oss << " * (shadow * abs(cosTheta(vplWo)) / (d*d))";
 		else 
-			oss << " * (shadow * abs(cosTheta(wo)) / (d*d))";
+			oss << " * (shadow / (d*d))";
 		if (luminaire != NULL) {
 			oss << endl;
 			oss << "                      + " << lumEvalName << "_area(uv)"
@@ -546,7 +570,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 		} else {
 			oss << ";" << endl;
 		}
-		oss << "   gl_FragColor.a = 1.0;" << endl
+		oss << "   gl_FragColor.a = alpha;" << endl
 			<< "}" << endl;
 
 		program->setSource(GPUProgram::EFragmentProgram, oss.str());
@@ -572,6 +596,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 		m_targetConfig.param_minDist = program->getParameterID("minDist", false);
 		m_targetConfig.param_diffuseSources = program->getParameterID("diffuseSources", false);
 		m_targetConfig.param_diffuseReceivers = program->getParameterID("diffuseReceivers", false);
+		m_targetConfig.param_alpha = program->getParameterID("alpha", false);
 		m_current.program = program;
 		m_current.config = m_targetConfig;
 		m_programs[configName] = m_current;
@@ -589,11 +614,16 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 	program->setParameter(config.param_vplN, vpl.its.shFrame.n);
 	program->setParameter(config.param_vplS, vpl.its.shFrame.s);
 	program->setParameter(config.param_vplT, vpl.its.shFrame.t);
+	
+	program->setParameter(config.param_alpha, 
+		bsdfShader->getFlags() & Shader::ETransparent ? 0.5f : 1.0f);
+
 	if (vpl.type == ESurfaceVPL) {
 		program->setParameter(config.param_vplWi, vpl.its.wi);
 		program->setParameter(config.param_vplUV, vpl.its.uv);
 		program->setParameter(config.param_diffuseSources, m_diffuseSources);
 	}
+
 	Spectrum power = vpl.P;
 	if (m_diffuseSources && vpl.type == ESurfaceVPL)
 		power *= vpl.its.shape->getBSDF()->getDiffuseReflectance(vpl.its) * INV_PI;

@@ -2,96 +2,60 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene>
-	<!-- Test the lambertian model -->
-	<bsdf type="lambertian"/>
+	<!-- Test the smooth diffuse model -->
+	<bsdf type="diffuse"/>
 
-	<!-- Test the rough glass model with the 
-		 Beckmann microfacet distribution -->
-	<bsdf type="roughglass">
-		<string name="distribution" value="ggx"/>
-		<float name="alpha" value=".4"/>
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1.0"/>
+	<!-- Test the rough diffuse model -->
+	<bsdf type="roughdiffuse"/>
+
+	<!-- Test the two-sided model -->
+	<bsdf type="twosided">
+		<bsdf type="diffuse"/>
 	</bsdf>
 
 	<!-- Test the diffuse transmission model -->
 	<bsdf type="difftrans"/>
 
-	<!-- Test the Phong model -->
-	<bsdf type="phong">
-		<float name="diffuseAmount" value="0.5"/>
-		<float name="specularAmount" value="0.5"/>
-		<float name="exponent" value="20"/>
+	<!-- Test a simple mixture between diffuse
+		 transmittance and reflectance -->
+	<bsdf type="mixture">
+		<string name="weights" value=".5 .3"/>
 
-		<spectrum name="diffuseReflectance" value="1"/>
-		<spectrum name="specularReflectance" value="1"/>
-	</bsdf>
-
-	<!-- Test the anisotropic Ward model -->
-	<bsdf type="ward">
-		<float name="diffuseAmount" value="0.5"/>
-		<float name="specularAmount" value="0.5"/>
-		<float name="alphaX" value="0.1"/>
-		<float name="alphaY" value="0.3"/>
-
-		<spectrum name="diffuseReflectance" value="1"/>
-		<spectrum name="specularReflectance" value="1"/>
-	</bsdf>
-
-	<!-- Test the two-sided BRDF adapter -->
-	<bsdf type="twosided">
-		<bsdf type="phong">
-			<float name="diffuseAmount" value="0.5"/>
-			<float name="specularAmount" value="0.5"/>
-			<float name="exponent" value="20"/>
-
-			<spectrum name="diffuseReflectance" value="1"/>
-			<spectrum name="specularReflectance" value="1"/>
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value=".5 0 0"/>
+		</bsdf>
+		<bsdf type="difftrans">
+			<rgb name="transmittance" value="0 .5 0"/>
 		</bsdf>
 	</bsdf>
 
-	<!-- Test the composite material adapter with
-		 a mix of two previously tested materials -->
-	<bsdf type="composite">
-		<string name="weights" value="0.4, 0.6"/>
+	<!-- Test the smooth conductor model -->
+	<bsdf type="conductor"/>
 
-		<bsdf type="phong">
-			<float name="diffuseAmount" value="0.5"/>
-			<float name="specularAmount" value="0.5"/>
-			<float name="exponent" value="20"/>
-
-			<spectrum name="diffuseReflectance" value="1"/>
-			<spectrum name="specularReflectance" value="1"/>
-		</bsdf>
-
-		<bsdf type="ward">
-			<float name="diffuseAmount" value="0.5"/>
-			<float name="specularAmount" value="0.5"/>
-			<float name="alphaX" value="0.1"/>
-			<float name="alphaY" value="0.3"/>
-
-			<spectrum name="diffuseReflectance" value="1"/>
-			<spectrum name="specularReflectance" value="1"/>
-		</bsdf>
+	<!-- Test the smooth dielectric model -->
+	<bsdf type="dielectric">
+		<string name="intIOR" value="water"/>
+		<string name="extIOR" value="air"/>
 	</bsdf>
 
-	<!-- Test the microfacet model -->
-	<bsdf type="microfacet">
-		<float name="diffuseAmount" value="0.5"/>
-		<float name="specularAmount" value="0.5"/>
-		<float name="alphaB" value="0.1"/>
-		<spectrum name="diffuseReflectance" value="1"/>
-		<spectrum name="specularReflectance" value="1"/>
+	<!-- Test a mixture of degenerate materials -->
+	<bsdf type="mixture">
+		<string name="weights" value=".8 .2"/>
+		<bsdf type="dielectric"/>
+		<bsdf type="conductor"/>
 	</bsdf>
-
-	<!-- Test the rough metal model -->
-	<bsdf type="roughmetal">
-		<float name="alphaB" value="0.1"/>
+	
+	<!-- Test a mixture of degenerate and
+		 non-degenerate materials -->
+	<bsdf type="mixture">
+		<string name="weights" value=".8 .2"/>
+		<bsdf type="dielectric"/>
+		<bsdf type="diffuse"/>
 	</bsdf>
 
 	<!-- Test the rough glass model with the 
 		 Beckmann microfacet distribution -->
-	<bsdf type="roughglass">
+	<bsdf type="roughdielectric">
 		<string name="distribution" value="beckmann"/>
 		<float name="alpha" value=".3"/>
 		<float name="intIOR" value="1.5"/>
@@ -99,20 +63,93 @@
 	</bsdf>
 
 	<!-- Test the rough glass model with the 
-		 GGX microfacet distribution -->
-	<bsdf type="roughglass">
-		<string name="distribution" value="ggx"/>
-		<float name="alpha" value="0.4"/>
+		 Phong microfacet distribution -->
+	<bsdf type="roughdielectric">
+		<string name="distribution" value="phong"/>
+		<float name="alpha" value=".3"/>
 		<float name="intIOR" value="1.5"/>
 		<float name="extIOR" value="1.0"/>
 	</bsdf>
 
 	<!-- Test the rough glass model with the 
-		 Phong microfacet distribution -->
-	<bsdf type="roughglass">
-		<string name="distribution" value="phong"/>
-		<float name="alpha" value="0.3"/>
+		 GGX microfacet distribution -->
+	<bsdf type="roughdielectric">
+		<string name="distribution" value="ggx"/>
+		<float name="alpha" value=".3"/>
 		<float name="intIOR" value="1.5"/>
 		<float name="extIOR" value="1.0"/>
+	</bsdf>
+
+	<!-- Test the rough dielectric model with the anisotropic
+		 Ashikhmin-Shirley microfacet distribution -->
+	<bsdf type="roughdielectric">
+		<string name="distribution" value="as"/>
+		<float name="alphaU" value=".1"/>
+		<float name="alphaV" value=".3"/>
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1.0"/>
+	</bsdf>
+
+	<!-- Test the rough conductor model with the 
+		 Beckmann microfacet distribution -->
+	<bsdf type="roughconductor">
+		<string name="distribution" value="beckmann"/>
+		<float name="alpha" value=".3"/>
+	</bsdf>
+
+	<!-- Test the rough dielectric model with the anisotropic
+		 Ashikhmin-Shirley microfacet distribution -->
+	<bsdf type="roughconductor">
+		<string name="material" value="Au"/>
+		<string name="distribution" value="as"/>
+		<float name="alphaU" value="0.1"/>
+		<float name="alphaV" value="0.3"/>
+	</bsdf>
+
+	<!-- Test the smooth plastic model -->
+	<bsdf type="plastic"/>
+
+	<!-- Test the rough plastic model with the 
+		 Beckmann microfacet distribution -->
+	<bsdf type="roughplastic">
+		<string name="distribution" value="beckmann"/>
+		<float name="alpha" value=".7"/>
+	</bsdf>
+
+	<!-- Test the modified Phong BRDF -->
+	<bsdf type="phong">
+		<spectrum name="diffuseReflectance" value="0.2"/>
+		<spectrum name="specularReflectance" value="0.4"/>
+	</bsdf>
+
+	<!-- Test the anisotropic Ward model -->
+	<bsdf type="ward">
+		<float name="alphaU" value=".1"/>
+		<float name="alphaV" value=".3"/>
+		<spectrum name="diffuseReflectance" value="0.2"/>
+		<spectrum name="specularReflectance" value="0.4"/>
+	</bsdf>
+
+	<!-- Test the mask model (with constant 50% opacity) -->
+	<bsdf type="mask">
+		<spectrum name="opacity" value="0.5"/>
+
+		<bsdf type="diffuse"/>
+	</bsdf>
+
+	<!-- Test the smooth coating over a diffuse base material -->
+	<bsdf type="coating">
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1"/>
+		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
+		<float name="thickness" value="2"/>
+		<bsdf type="diffuse"/>
+	</bsdf>
+
+	<!-- Test the smooth coating over a rough metal material -->
+	<bsdf type="coating">
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1"/>
+		<bsdf type="roughconductor"/>
 	</bsdf>
 </scene>

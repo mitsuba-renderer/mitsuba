@@ -198,12 +198,12 @@ void RemoteWorker::run() {
 		m_memStream->writeInt(id);
 		m_schedItem.workUnit->save(m_memStream);
 
-		if (++m_inFlight == BACKLOG_FACTOR * m_coreCount) {
+		if (++m_inFlight == MTS_BACKLOG_FACTOR * m_coreCount) {
 			flush();
 			/* There are now too many packets in transit. Wait
 			   until this clears up a bit before attempting to
 			   send more work */
-			while (m_inFlight > CONTINUE_FACTOR * m_coreCount) 
+			while (m_inFlight > MTS_CONTINUE_FACTOR * m_coreCount) 
 				m_finishCond->wait();
 		}
 

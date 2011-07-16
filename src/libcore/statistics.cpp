@@ -171,7 +171,8 @@ std::string Statistics::getStats() {
 		float baseValue = (float) counter->getBase();
 		int suffixIndex = 0, suffixIndex2 = 0;
 
-		if (value == 0 && counter->getType() != EPercentage)
+		if ((counter->getType() != EPercentage && value == 0) ||
+		    (counter->getType() == EPercentage && baseValue == 0))
 			continue;
 
 		if (category != counter->getCategory()) {

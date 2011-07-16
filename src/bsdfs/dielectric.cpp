@@ -17,72 +17,147 @@
 */
 
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/consttexture.h>
+#include <mitsuba/hw/basicshader.h>
+#include "ior.h"
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{dielectric}{Ideal dielectric/glass material}
- *
+/*!\plugin{dielectric}{Smooth dielectric material}
+ * \order{3}
  * \parameters{
- *     \parameter{intIOR}{\Float}{Interior index of refraction \default{1.5046}}
- *     \parameter{extIOR}{\Float}{Exterior index of refraction \default{1.0}}
+ *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
+ *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
+ *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
+ *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the reflectance component\default{1.0}}
- *     \lastparameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
+ *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the transmittance component\default{1.0}}
  * }
  *
- * This plugin models an interface between two materials having mismatched 
- * indices of refraction (e.g. a boundary between water and air).
- * The microscopic surface structure of the surface is assumed to be perfectly 
- * smooth, resulting in a degenerate BSDF described by a Dirac delta function.
- * For non-smooth interfaces, please take a look at the \pluginref{roughglass}
- * model. When using this plugin, it is crucial that the scene contains
- * meaningful and mutally compatible index of refraction change -- see
- * \figref{glass-explanation} for an example.
+ * \renderings{
+ *     \medrendering{Air$\leftrightarrow$Water (IOR: 1.33) interface. 
+ *         See \lstref{dielectric-water}.}{bsdf_dielectric_water}
+ *     \medrendering{Air$\leftrightarrow$Diamond (IOR: 2.419)}{bsdf_dielectric_diamond}
+ *     \medrendering{Air$\leftrightarrow$Glass (IOR: 1.504) interface with absorption. 
+ *         See \lstref{dielectric-glass}.}{bsdf_dielectric_glass}
+ * }
+ *
+ * This plugin models an interface between two dielectric materials having mismatched 
+ * indices of refraction (for instance, water and air). Exterior and interior IOR values
+ * can be specified independently, where ``exterior'' refers to the side that contains 
+ * the surface normal. When no parameters are given, the plugin activates the defaults, which
+ * describe a borosilicate glass BK7/air interface.
+ *
+ * In this model, the microscopic structure of the surface is assumed to be perfectly 
+ * smooth, resulting in a degenerate\footnote{Meaning that for any given incoming ray of light,
+ * the model always scatters into a discrete set of directions, as opposed to a continuum.} 
+ * BSDF described by a Dirac delta distribution. For a similar model that instead describes a 
+ * rough surface microstructure, take a look at the \pluginref{roughdielectric} plugin. 
+ *
+ * \begin{xml}[caption=A simple air-to-water interface, label=lst:dielectric-water]
+ * <shape type="...">
+ *     <bsdf type="dielectric">
+ *         <string name="intIOR" value="water"/>
+ *         <string name="extIOR" value="air"/>
+ *     </bsdf>
+ * <shape>
+ * \end{xml}
+ *
+ * When using this model, it is crucial that the scene contains
+ * meaningful and mutually compatible indices of refraction changes---see
+ * \figref{glass-explanation} for a description of what this entails.
  * 
- * The default settings of this plugin are set to a borosilicate glass BK7/air 
- * interface.
+ * In many cases, we will want to additionally describe the \emph{medium} within a
+ * dielectric material. This requires the use of a rendering technique that is
+ * aware of media (e.g. the volumetric path tracer). An example of how one might
+ * describe a slightly absorbing piece of glass is given on the next page:
+ * \newpage
+ * \begin{xml}[caption=A glass material with absorption (based on the 
+ *    Beer-Lambert law). This material can only be used by an integrator
+ *    that is aware of participating media., label=lst:dielectric-glass]
+ * <shape type="...">
+ *     <bsdf type="dielectric">
+ *         <float name="intIOR" value="1.504"/>
+ *         <float name="extIOR" value="1.0"/>
+ *     </bsdf>
+ *
+ *     <medium type="homogeneous" name="interior">
+ *         <rgb name="sigmaS" value="0, 0, 0"/>
+ *         <rgb name="sigmaA" value="4, 4, 2"/>
+ *     </medium>
+ * <shape>
+ * \end{xml}
+ * \vspace{1cm}
+ *
+ * \begin{table}[h!]
+ *     \centering
+ *     \begin{tabular}{>{\ttfamily}p{5cm}r@{.}lp{.8cm}>{\ttfamily}p{5cm}r@{.}l}
+ *         \toprule
+ *         \rmfamily \textbf{Name} & \multicolumn{2}{l}{\textbf{Value}}& &
+ *         \rmfamily \textbf{Name} & \multicolumn{2}{l}{\textbf{Value}}\\
+ *         \cmidrule{1-3} \cmidrule{5-7}
+ *         vacuum               & 1 & 0 &  &
+ *         bromine              & 1 & 661\\
+ *         helium               & 1 & 00004 & &
+ *         water ice            & 1 & 31\\
+ *         hydrogen             & 1 & 00013& &
+ *         fused quartz         & 1 & 458\\[-.8mm]
+ *         \cmidrule{5-7}\\[-5.5mm]
+ *         air                  & 1 & 00028& &
+ *         pyrex                & 1 & 470\\
+ *         carbon dioxide       & 1 & 00045& &
+ *         acrylic glass        & 1 & 49\\[-.8mm]
+ *         \cmidrule{1-3}\\[-5.5mm]
+ *         water                & 1 & 3330& &
+ *         polypropylene        & 1 & 49\\
+ *         acetone              & 1 & 36 & &
+ *         bk7                  & 1 & 5046\\
+ *         ethanol              & 1 & 361& &
+ *         sodium chloride      & 1 & 544\\
+ *         carbon tetrachloride & 1 & 461& &
+ *         amber                & 1 & 55\\
+ *         glycerol             & 1 & 4729& &
+ *         pet                  & 1 & 575\\
+ *         benzene              & 1 & 501& &
+ *         diamond              & 2 & 419\\
+ *         silicone oil         & 1 & 52045\\
+ *         \bottomrule
+ *     \end{tabular}
+ *     \caption{
+ *         \label{tbl:dielectric-iors}
+ *          This table lists all supported material names along with
+ *          along with their associated index of refraction at standard
+ *          conditions. These material names can be used with the plugins
+ *          \pluginref{dielectric},\
+ *          \pluginref{roughdielectric},\
+ *          \pluginref{plastic}, \
+ *          \pluginref{roughplastic}, as well as 
+ *          \pluginref{coating}.
+ *     }
+ * \end{table}
  */
-class Dielectric : public BSDF {
+class SmoothDielectric : public BSDF {
 public:
-	Dielectric(const Properties &props) 
-			: BSDF(props) {
+	SmoothDielectric(const Properties &props) : BSDF(props) {
 		/* Specifies the internal index of refraction at the interface */
-		m_intIOR = props.getFloat("intIOR", 1.5046f);
+		m_intIOR = lookupIOR(props, "intIOR", "bk7");
+
 		/* Specifies the external index of refraction at the interface */
-		m_extIOR = props.getFloat("extIOR", 1);
+		m_extIOR = lookupIOR(props, "extIOR", "air");
 
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 		m_specularTransmittance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularTransmittance", Spectrum(1.0f)));
-
-		m_componentCount = 2;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDeltaReflection | EFrontSide | EBackSide;
-		m_type[1] = EDeltaTransmission | EFrontSide | EBackSide;
-		m_combinedType = m_type[0] | m_type[1];
-		m_usesRayDifferentials = false;
 	}
 
-	Dielectric(Stream *stream, InstanceManager *manager) 
+	SmoothDielectric(Stream *stream, InstanceManager *manager) 
 			: BSDF(stream, manager) {
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularTransmittance = static_cast<Texture *>(manager->getInstance(stream));
-
-		m_componentCount = 2;
-		m_type = new unsigned int[m_componentCount];
-		m_type[0] = EDeltaReflection | EFrontSide | EBackSide;
-		m_type[1] = EDeltaTransmission | EFrontSide | EBackSide;
-		m_combinedType = m_type[0] | m_type[1];
-		m_usesRayDifferentials = false;
-	}
-
-	virtual ~Dielectric() {
-		delete[] m_type;
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -94,16 +169,37 @@ public:
 		manager->serialize(stream, m_specularTransmittance.get());
 	}
 
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return Spectrum(0.0f);
+	void configure() {
+		/* Verify the input parameters and fix them if necessary */
+		m_specularReflectance = ensureEnergyConservation(
+			m_specularReflectance, "specularReflectance", 1.0f);
+		m_specularTransmittance = ensureEnergyConservation(
+			m_specularTransmittance, "specularTransmittance", 1.0f);
+		
+		m_components.clear();
+		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide
+			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
+		m_components.push_back(EDeltaTransmission | EFrontSide | EBackSide
+			| (m_specularTransmittance->isConstant() ? 0 : ESpatiallyVarying));
+		
+		m_usesRayDifferentials = 
+			m_specularReflectance->usesRayDifferentials() ||
+			m_specularTransmittance->usesRayDifferentials();
+		
+		BSDF::configure();
 	}
 
-	Spectrum f(const BSDFQueryRecord &bRec) const {
-		return Spectrum(0.0f);
-	}
-
-	Float pdf(const BSDFQueryRecord &bRec) const {
-		return 0.0f;
+	void addChild(const std::string &name, ConfigurableObject *child) {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
+			if (name == "specularReflectance")
+				m_specularReflectance = static_cast<Texture *>(child);
+			else if (name == "specularTransmittance")
+				m_specularTransmittance = static_cast<Texture *>(child);
+			else
+				BSDF::addChild(name, child);
+		} else {
+			BSDF::addChild(name, child);
+		}
 	}
 
 	/// Reflection in local coordinates
@@ -111,9 +207,101 @@ public:
 		return Vector(-wi.x, -wi.y, wi.z);
 	}
 
-	/// Refraction in local coordinates
+	/// Refraction in local coordinates (reuses computed information)
 	inline Vector refract(const Vector &wi, Float eta, Float cosThetaT) const {
 		return Vector(-eta*wi.x, -eta*wi.y, cosThetaT);
+	}
+
+	/// Refraction in local coordinates (full version)
+	inline Vector refract(const Vector &wi) const {
+		Float cosThetaI = Frame::cosTheta(wi),
+			  etaI = m_extIOR, etaT = m_intIOR;
+
+		bool entering = cosThetaI > 0.0f;
+
+		/* Determine the respective indices of refraction */
+		if (!entering)
+			std::swap(etaI, etaT);
+
+		/* Using Snell's law, calculate the squared sine of the
+		   angle between the normal and the transmitted ray */
+		Float eta = etaI / etaT,
+			  sinThetaTSqr = eta*eta * Frame::sinTheta2(wi);
+
+		if (sinThetaTSqr >= 1.0f) {
+			/* Total internal reflection */
+			return Vector(0.0f);
+		} else {
+			Float cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
+
+			return Vector(-eta*wi.x, -eta*wi.y, 
+				entering ? -cosThetaT : cosThetaT);
+		}
+	}
+
+	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
+				&& (bRec.component == -1 || bRec.component == 0);
+		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
+				&& (bRec.component == -1 || bRec.component == 1);
+
+		/* Check if the provided direction pair matches an ideal
+		   specular reflection; tolerate some roundoff errors */
+		bool reflection = std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) < Epsilon;
+		if (measure != EDiscrete || (reflection && !sampleReflection))
+			return Spectrum(0.0f);
+
+		if (!reflection) {
+			/* Check if the provided direction pair matches an ideal
+			   specular refraction; tolerate some roundoff errors */
+			bool refraction = std::abs(1 - dot(refract(bRec.wi), bRec.wo)) < Epsilon;
+			if (!refraction || !sampleTransmission)
+				return Spectrum(0.0f);
+		}
+
+		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+
+		if (reflection) {
+			return m_specularReflectance->getValue(bRec.its) * Fr;
+		} else {
+			Float etaI = m_extIOR, etaT = m_intIOR;
+			bool entering = Frame::cosTheta(bRec.wi) > 0.0f;
+			if (!entering)
+				std::swap(etaI, etaT);
+
+			Float factor = (bRec.quantity == ERadiance) 
+				? (etaI*etaI) / (etaT*etaT) : 1.0f;
+
+			return m_specularTransmittance->getValue(bRec.its)  * factor * (1 - Fr);
+		}
+	}
+
+	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
+				&& (bRec.component == -1 || bRec.component == 0);
+		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
+				&& (bRec.component == -1 || bRec.component == 1);
+
+		/* Check if the provided direction pair matches an ideal
+		   specular reflection; tolerate some roundoff errors */
+		bool reflection = std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) < Epsilon;
+		if (measure != EDiscrete || (reflection && !sampleReflection))
+			return 0.0f;
+
+		if (!reflection) {
+			/* Check if the provided direction pair matches an ideal
+			   specular refraction; tolerate some roundoff errors */
+			bool refraction = std::abs(1 - dot(refract(bRec.wi), bRec.wo)) < Epsilon;
+			if (!refraction || !sampleTransmission)
+				return 0.0f;
+		}
+
+		if (sampleTransmission && sampleReflection) {
+			Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+			return reflection ? Fr : (1 - Fr);
+		} else {
+			return 1.0f;
+		}
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
@@ -155,16 +343,14 @@ public:
 				cosThetaT = -cosThetaT;
 		}
 
-		/* Calculate the refracted/reflected vectors+coefficients */
 		if (sampleTransmission && sampleReflection) {
-			/* Importance sample according to the reflectance/transmittance */
+			/* Importance sample wrt. the Fresnel reflectance */
 			if (sample.x <= Fr) {
 				bRec.sampledComponent = 0;
 				bRec.sampledType = EDeltaReflection;
 				bRec.wo = reflect(bRec.wi);
 
-				return m_specularReflectance->getValue(bRec.its) 
-					/ std::abs(Frame::cosTheta(bRec.wo));
+				return m_specularReflectance->getValue(bRec.its);
 			} else {
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDeltaTransmission;
@@ -176,15 +362,13 @@ public:
 				/* When transporting radiance, account for the solid angle
 				   change at boundaries with different indices of refraction. */
 				return m_specularTransmittance->getValue(bRec.its) 
-					* (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1)
-					/ std::abs(Frame::cosTheta(bRec.wo));
+					* (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1);
 			}
 		} else if (sampleReflection) {
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
-			return m_specularReflectance->getValue(bRec.its) * (Fr
-				/ std::abs(Frame::cosTheta(bRec.wo)));
+			return m_specularReflectance->getValue(bRec.its) * Fr;
 		} else {
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDeltaTransmission;
@@ -197,8 +381,7 @@ public:
 			/* When transporting radiance, account for the solid angle
 			   change at boundaries with different indices of refraction. */
 			return m_specularTransmittance->getValue(bRec.its) 
-				* ((1-Fr) * (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1))
-				/ std::abs(Frame::cosTheta(bRec.wo));
+				* ((1-Fr) * (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1));
 		}
 	}
 
@@ -241,15 +424,13 @@ public:
 				cosThetaT = -cosThetaT;
 		}
 
-		/* Calculate the refracted/reflected vectors+coefficients */
 		if (sampleTransmission && sampleReflection) {
-			/* Importance sample according to the reflectance/transmittance */
 			if (sample.x <= Fr) {
 				bRec.sampledComponent = 0;
 				bRec.sampledType = EDeltaReflection;
 				bRec.wo = reflect(bRec.wi);
 
-				pdf = Fr * std::abs(Frame::cosTheta(bRec.wo));
+				pdf = Fr;
 				return m_specularReflectance->getValue(bRec.its) * Fr;
 			} else {
 				bRec.sampledComponent = 1;
@@ -259,7 +440,7 @@ public:
 				   transmitted direction */
 				bRec.wo = refract(bRec.wi, eta, cosThetaT);
 					
-				pdf = (1-Fr) * std::abs(Frame::cosTheta(bRec.wo));
+				pdf = 1-Fr;
 
 				/* When transporting radiance, account for the solid angle
 				   change at boundaries with different indices of refraction. */
@@ -270,7 +451,7 @@ public:
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
-			pdf = std::abs(Frame::cosTheta(bRec.wo));
+			pdf = 1;
 			return m_specularReflectance->getValue(bRec.its) * Fr;
 		} else {
 			bRec.sampledComponent = 1;
@@ -280,7 +461,7 @@ public:
 				return Spectrum(0.0f);
 
 			bRec.wo = refract(bRec.wi, eta, cosThetaT);
-			pdf = std::abs(Frame::cosTheta(bRec.wo));
+			pdf = 1;
 
 			/* When transporting radiance, account for the solid angle
 			   change at boundaries with different indices of refraction. */
@@ -289,57 +470,10 @@ public:
 		}
 	}
 
-	Float pdfDelta(const BSDFQueryRecord &bRec) const {
-		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
-				&& (bRec.component == -1 || bRec.component == 1);
-		bool reflection = bRec.wo.z * bRec.wi.z > 0;
-
-		Float result = 0.0f;
-		if (sampleTransmission && sampleReflection) {
-			Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-			result = reflection ? fr : (1-fr);
-		} else if (sampleReflection) {
-			result = reflection ? 1.0f : 0.0f;
-		} else if (sampleTransmission) {
-			result = reflection ? 0.0f : 1.0f;
-		}
-		return result * std::abs(Frame::cosTheta(bRec.wo));
-	}
-
-	Spectrum fDelta(const BSDFQueryRecord &bRec) const {
-		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
-		bool sampleTransmission = (bRec.typeMask & EDeltaTransmission)
-				&& (bRec.component == -1 || bRec.component == 1);
-		bool reflection = bRec.wo.z * bRec.wi.z > 0;
-		Float fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-		
-		if (sampleReflection && !sampleTransmission && !reflection) 
-			return Spectrum(0.0f);
-		else if (!sampleReflection && sampleTransmission && reflection)
-			return Spectrum(0.0f);
-
-		if (reflection) {
-			return m_specularReflectance->getValue(bRec.its) * fr;
-		} else {
-			Float etaI = m_extIOR, etaT = m_intIOR;
-			bool entering = Frame::cosTheta(bRec.wi) > 0.0f;
-			if (!entering)
-				std::swap(etaI, etaT);
-
-			Float factor = (bRec.quantity == ERadiance) 
-				? (etaI*etaI) / (etaT*etaT) : 1.0f;
-
-			return m_specularTransmittance->getValue(bRec.its)  * factor * (1 - fr);
-		}
-
-	}
-
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Dielectric[" << endl
+		oss << "SmoothDielectric[" << endl
+			<< "  name = \"" << getName() << "\"," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl 
 			<< "  extIOR = " << m_extIOR << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
@@ -348,6 +482,8 @@ public:
 		return oss.str();
 	}
 
+	Shader *createShader(Renderer *renderer) const;
+
 	MTS_DECLARE_CLASS()
 private:
 	Float m_intIOR, m_extIOR;
@@ -355,7 +491,34 @@ private:
 	ref<Texture> m_specularReflectance;
 };
 
+/* Fake glass shader -- it is really hopeless to visualize
+   this material in the VPL renderer, so let's try to do at least 
+   something that suggests the presence of a transparent boundary */
+class SmoothDielectricShader : public Shader {
+public:
+	SmoothDielectricShader(Renderer *renderer) :
+		Shader(renderer, EBSDFShader) {
+		m_flags = ETransparent;
+	}
 
-MTS_IMPLEMENT_CLASS_S(Dielectric, false, BSDF)
-MTS_EXPORT_PLUGIN(Dielectric, "Dielectric BSDF");
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return vec3(0.08);" << endl
+			<< "}" << endl;
+		oss << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return vec3(0.08);" << endl
+			<< "}" << endl;
+	}
+	MTS_DECLARE_CLASS()
+};
+
+Shader *SmoothDielectric::createShader(Renderer *renderer) const { 
+	return new SmoothDielectricShader(renderer);
+}
+
+MTS_IMPLEMENT_CLASS(SmoothDielectricShader, false, Shader)
+MTS_IMPLEMENT_CLASS_S(SmoothDielectric, false, BSDF)
+MTS_EXPORT_PLUGIN(SmoothDielectric, "Smooth dielectric BSDF");
 MTS_NAMESPACE_END
