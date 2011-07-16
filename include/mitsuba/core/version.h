@@ -31,7 +31,7 @@ MTS_NAMESPACE_BEGIN
  * \brief A simple data structure for representing and comparing
  * Mitsuba version strings
  */
-struct Version {
+struct MTS_EXPORT_CORE Version {
 public:
 	/// Default constructor: initialize to an invalid version (0.0.0)
 	inline Version() : m_major(0), m_minor(0), m_release(0) { }
