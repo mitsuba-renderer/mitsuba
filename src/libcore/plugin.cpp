@@ -209,5 +209,25 @@ void PluginManager::staticShutdown() {
 	m_instance = NULL;
 }
 
+Version::Version(const std::string &versionString) {
+	std::vector<std::string> tokens = tokenize(trim(versionString), ".");
+	if (tokens.size() != 3)
+		SLog(EError, "Unable to parse version string \"%s\"!", versionString.c_str());
+	char *end_ptr = NULL;
+	m_major = strtol(tokens[0].c_str(), &end_ptr, 10);
+	if (*end_ptr != '\0')
+		SLog(EError, "Unable to parse the major program version \"%i\"!", tokens[0].c_str());
+	m_minor = strtol(tokens[1].c_str(), &end_ptr, 10);
+	if (*end_ptr != '\0')
+		SLog(EError, "Unable to parse the minor program version \"%i\"!", tokens[1].c_str());
+	m_release = strtol(tokens[2].c_str(), &end_ptr, 10);
+	if (*end_ptr != '\0')
+		SLog(EError, "Unable to parse the release program version \"%i\"!", tokens[2].c_str());
+}
+
+std::string Version::toString() const {
+	return formatString("%i.%i.%i", m_major, m_minor, m_release);
+}
+
 MTS_IMPLEMENT_CLASS(PluginManager, false, Object)
 MTS_NAMESPACE_END

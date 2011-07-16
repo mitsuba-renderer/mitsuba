@@ -246,8 +246,10 @@ void Scene::configure() {
 			m_camera->configure();
 			m_sampler = m_camera->getSampler();
 		} else {
-			Log(EWarn, "Unable to set up a default camera -- does the scene "
-				"contain anything at all?");
+			m_camera = static_cast<Camera *> (PluginManager::getInstance()->
+					createObject(MTS_CLASS(Camera), props));
+			m_camera->configure();
+			m_sampler = m_camera->getSampler();
 		}
 	}
 

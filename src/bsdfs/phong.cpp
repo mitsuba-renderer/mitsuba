@@ -64,6 +64,7 @@ public:
 			props.getSpectrum("specularReflectance", Spectrum(0.2f)));
 		m_exponent = new ConstantFloatTexture(
 			props.getFloat("exponent", 30.0f));
+		m_specularSamplingWeight = 0.0f;
 	}
 
 	Phong(Stream *stream, InstanceManager *manager) 

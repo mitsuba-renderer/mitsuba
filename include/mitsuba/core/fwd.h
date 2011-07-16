@@ -53,6 +53,7 @@ class Plugin;
 class PluginManager;
 class ProgressReporter;
 class Properties;
+struct Version;
 class Random;
 struct Ray;
 struct RayDifferential;

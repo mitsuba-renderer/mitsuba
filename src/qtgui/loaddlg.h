@@ -36,6 +36,7 @@ public:
 	void closeEvent(QCloseEvent *e) {
 		e->ignore();
 	}
+	void expand();
 protected slots:
 	void onTextMessage(ELogLevel level, const QString &message);
 	void on_toggleButton_clicked();

@@ -18,8 +18,7 @@
 
 #include <mitsuba/render/texture.h>
 #include <mitsuba/render/shape.h>
-#include <mitsuba/core/properties.h>
-#include <mitsuba/hw/gpuprogram.h>
+#include <mitsuba/hw/basicshader.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -31,6 +30,10 @@ MTS_NAMESPACE_BEGIN
 class ScalingTexture : public Texture {
 public:
 	ScalingTexture(const Properties &props) : Texture(props) {
+		if (props.hasProperty("value"))
+			m_nested = new ConstantSpectrumTexture(
+				props.getSpectrum("value"));
+
 		if (props.hasProperty("scale") && props.getType("scale") == Properties::EFloat)
 			m_scale = Spectrum(props.getFloat("scale", 1.0f));
 		else
@@ -49,11 +52,10 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)))
 			m_nested = static_cast<Texture *>(child);
-		} else {
+		else
 			Texture::addChild(name, child);
-		}
 	}
 
 	Spectrum getValue(const Intersection &its) const {

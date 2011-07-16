@@ -201,7 +201,7 @@ env.Replace(CPPFLAGS=cppFlagsPrevious)
 env.Replace(CXXFLAGS=cxxFlagsPrevious)
 sys.stdout.write("Checking for Mitsuba version .. ")
 
-file = open(env.GetBuildPath('#include/mitsuba/mitsuba.h'), 'r')
+file = open(env.GetBuildPath('#include/mitsuba/core/version.h'), 'r')
 MTS_VERSION=""
 for line in file:
 	if line.startswith("#define MTS_VERSION "):

@@ -32,6 +32,10 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{\Unnamed}{\BSDF}{A BSDF model that should
  *     be affected by the bump map}
  * }
+ * \renderings{
+ *     \rendering{Bump map based on tileable diagonal lines}{bsdf_bump_1}
+ *     \rendering{An irregular bump map}{bsdf_bump_2}
+ * }
  *
  * Bump mapping \cite{Blinn1978Simulation} is a simple technique for cheaply
  * adding surface detail to a rendering. This is done by perturbing the
@@ -41,15 +45,15 @@ MTS_NAMESPACE_BEGIN
  * without requiring any changes to the input geometry.
  *
  * The implementation in Mitsuba uses the common approach of ignoring
- * the normally negligible texture-space derivative of the base mesh 
+ * the usually negligible texture-space derivative of the base mesh 
  * surface normal. As side effect of this decision, it is invariant
  * to constant offsets in the height field texture---only variations in
  * its luminance cause changes to the shading frame.
  *
  * Note that the magnitude of the height field variations influences 
- * the strength of the displacement. If necessary, the \pluginref{scale}
- * texture plugin can be used to magnify the scale of an existing bump map.
- * \vspace{1cm}
+ * the strength of the displacement. If desired, the \pluginref{scale}
+ * texture plugin can be used to magnify or reduce the effect of a 
+ * bump map texture.
  * \begin{xml}[caption=A rough metal model with a scaled image-based bump map]
  * <bsdf type="bump">
  *     <!-- The bump map is applied to a rough metal BRDF -->

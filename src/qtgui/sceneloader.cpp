@@ -27,6 +27,7 @@
 SceneLoader::SceneLoader(FileResolver *resolver, const std::string &filename) 
 	: Thread("load"), m_resolver(resolver), m_filename(filename) {
 	m_wait = new WaitFlag();
+	m_versionError = false;
 }
 
 SceneLoader::~SceneLoader() {
@@ -35,9 +36,7 @@ SceneLoader::~SceneLoader() {
 void SceneLoader::run() {
 	Thread::getThread()->setFileResolver(m_resolver);
 	SAXParser* parser = new SAXParser();
-	std::string lowerCase = m_filename;
-	for(size_t i=0; i<m_filename.size();++i)
-		lowerCase[i] = std::tolower(m_filename[i]);
+	std::string lowerCase = boost::to_lower_copy(m_filename);
 
 	SceneHandler *handler = new SceneHandler(parser,
 			SceneHandler::ParameterMap());
@@ -90,7 +89,15 @@ void SceneLoader::run() {
 				baseName = fs::basename(filename);
 
 			SLog(EInfo, "Parsing scene description from \"%s\" ..", m_filename.c_str());
-			parser->parse(m_filename.c_str());
+
+			try {
+				parser->parse(m_filename.c_str());
+			} catch (const VersionException &ex) {
+				m_versionError = true;
+				m_version = ex.getVersion();
+				throw;
+			}
+
 			ref<Scene> scene = handler->getScene();
 
 			scene->setSourceFile(m_filename);
@@ -105,9 +112,18 @@ void SceneLoader::run() {
 				SLog(EError, "Unable to load scene: no film found!");
 			if (scene->getLuminaires().size() == 0)
 				SLog(EError, "Unable to load scene: no light sources found!");
-		
 			Vector2i size = scene->getFilm()->getSize();
 			Camera *camera = scene->getCamera();
+
+			/* Also generate a DOM representation for the Qt-based GUI */
+			QFile file(m_filename.c_str());
+			if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+				Log(EError, "Unable to open the file \"%s\"", m_filename.c_str());
+			QString errorMsg;
+			int line, column;
+			if (!m_result->doc.setContent(&file, &errorMsg, &line, &column))
+				SLog(EError, "Unable to parse file: error %s at line %i, colum %i",
+					errorMsg.toStdString().c_str(), line, column);
 
 			m_result->scene = scene;
 			m_result->sceneResID = Scheduler::getInstance()->registerResource(scene);

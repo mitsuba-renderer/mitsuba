@@ -127,6 +127,34 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 	if (name == "transform")
 		m_transform = Transform();
 
+	if (name == "scene") {
+		std::string versionString = context.attributes["version"];
+		if (versionString == "") 
+			throw VersionException(formatString("The requested scene cannot be loaded, since it "
+				"is missing version information! Since Mitsuba 0.3.0, it is "
+				"mandatory that scene XML files specify the version of Mitsuba "
+				"that was used at the time of their creation.\nThis makes it clear "
+				"how to interpret them in the presence of a changing file format. "
+				"The version should be specified within the 'scene' tag, "
+				"e.g.\n\t<scene version=\"" MTS_VERSION "\">\n"
+				"Please update your scene file with the right version number and try reloading it."),
+				Version());
+		Version fileVersion(versionString), currentVersion(MTS_VERSION);
+		if (!fileVersion.isCompatible(currentVersion)) {
+			if (fileVersion < currentVersion) {
+				throw VersionException(formatString("The requested scene is from an older version of Mitsuba "
+					"(file version: %s, current version: %s), hence the loading process was stopped. "
+					"Please open the scene from within Mitsuba's graphical user interface (mtsgui) -- "
+					"it will then be upgraded to the current format.",
+					fileVersion.toString().c_str(), MTS_VERSION), fileVersion);
+			} else {
+				XMLLog(EError, "The requested scene is from an incompatible future version of Mitsuba "
+					"(file version: %s, current version: %s). Giving up.",
+					fileVersion.toString().c_str(), MTS_VERSION);
+			}
+		}
+	}
+
 	m_context.push(context);
 }
 
@@ -308,7 +336,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			else if (intentString == "illuminant")
 				intent = Spectrum::EIlluminant;
 			else
-				SLog(EError, "Invalid intent \"%s\", must be "
+				XMLLog(EError, "Invalid intent \"%s\", must be "
 					"\"reflectance\" or \"illuminant\"", intentString.c_str());
 		}
 

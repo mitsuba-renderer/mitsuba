@@ -113,7 +113,7 @@ std::pair<Texture *, Texture *> BSDF::ensureEnergyConservation(
 			<< "happening.";
 		Log(EWarn, "%s", oss.str().c_str());
 		Properties props("scale");
-		props.setFloat("value", scale);
+		props.setFloat("scale", scale);
 		Texture *scaleTexture1 = static_cast<Texture *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(Texture), props));
 		Texture *scaleTexture2 = static_cast<Texture *> (PluginManager::getInstance()->

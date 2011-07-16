@@ -16,7 +16,20 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if !defined(__UPGRADEMGR_H)
+#define __UPGRADEMGR_H
+
 #include "common.h"
 
-extern void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile);
-extern void cleanupXML(QTextStream &input, QTextStream &output);
+class UpgradeManager : public QObject {
+    Q_OBJECT
+public:
+	UpgradeManager(const FileResolver *resolver);
+
+	void performUpgrade(const QString &path, const Version &version);
+private:
+	const FileResolver *m_resolver;
+	std::vector<std::pair<Version, fs::path> > m_transformations;
+};
+
+#endif // __UPGRADEMGR_H

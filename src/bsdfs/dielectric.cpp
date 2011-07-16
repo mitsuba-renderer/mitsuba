@@ -39,7 +39,7 @@ MTS_NAMESPACE_BEGIN
  *     \medrendering{Air$\leftrightarrow$Water (IOR: 1.33) interface. 
  *         See \lstref{dielectric-water}.}{bsdf_dielectric_water}
  *     \medrendering{Air$\leftrightarrow$Diamond (IOR: 2.419)}{bsdf_dielectric_diamond}
- *     \medrendering{Air$\leftrightarrow$Glass (IOR: 1.504) interface and absorption within. 
+ *     \medrendering{Air$\leftrightarrow$Glass (IOR: 1.504) interface with absorption. 
  *         See \lstref{dielectric-glass}.}{bsdf_dielectric_glass}
  * }
  *

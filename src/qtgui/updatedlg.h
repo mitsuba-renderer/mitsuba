@@ -29,8 +29,8 @@ namespace Ui {
 class UpdateDialog : public QDialog {
     Q_OBJECT
 public:
-	UpdateDialog(QWidget *parent, const ProgramVersion &local,
-			const ProgramVersion &remote);
+	UpdateDialog(QWidget *parent, const Version &local,
+			const Version &remote);
 	~UpdateDialog();
 protected slots:
 	void on_skipButton_clicked();

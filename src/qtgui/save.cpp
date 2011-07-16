@@ -17,7 +17,6 @@
 */
 
 #include "save.h"
-#include <QtXml>
 
 static QDomElement findUniqueChild(QDomElement element, const char *tagName) {
 	QDomElement result;
@@ -101,26 +100,7 @@ static void setProperties(QDomDocument &doc, QDomElement &element,
 }
 
 void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
-	QDomDocument doc("MitsubaScene");
-	QFile file(ctx->fileName);
-	if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-		QMessageBox::critical(parent, parent->tr("Unable to save"),
-			parent->tr("Unable to save changes: could not open the original scene file <b>%1</b>. "
-			"Was this file moved or deleted in the meantime?").arg(ctx->fileName), 
-			QMessageBox::Ok);
-		return;
-	}
-	if (!doc.setContent(&file)) {
-		QMessageBox::critical(parent, parent->tr("Unable to save"),
-			parent->tr("Unable to save changes: could not parse the original scene file <b>%1</b>. "
-			"Was this file modified in the meantime?").arg(ctx->fileName), 
-			QMessageBox::Ok);
-		file.close();
-		return;
-	}
-	file.close();
-
-	QDomElement root = doc.documentElement();
+	QDomElement root = ctx->doc.documentElement();
 
 	// ====================================================================
 	//   Serialize the camera configuration
@@ -128,7 +108,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 	QDomElement camera = findUniqueChild(root, "camera");
 	if (camera.isNull()) {
-		camera = doc.createElement("camera");
+		camera = ctx->doc.createElement("camera");
 		camera.setAttribute("type", "perspective");
 		root.insertAfter(camera, QDomNode());
 	}
@@ -136,7 +116,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	
 	QDomElement fovProperty = findProperty(camera, "fov");
 	if (fovProperty.isNull()) {
-		fovProperty = doc.createElement("float");
+		fovProperty = ctx->doc.createElement("float");
 		fovProperty.setAttribute("name", "fov");
 		camera.insertBefore(fovProperty, QDomNode());
 	}
@@ -144,7 +124,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 	QDomElement focusDepthProperty = findProperty(camera, "focusDepth");
 	if (focusDepthProperty.isNull()) {
-		focusDepthProperty = doc.createElement("float");
+		focusDepthProperty = ctx->doc.createElement("float");
 		focusDepthProperty.setAttribute("name", "focusDepth");
 		camera.insertBefore(focusDepthProperty, QDomNode());
 	}
@@ -152,13 +132,13 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 	QDomElement cameraTransform = findUniqueChild(camera, "transform");
 	if (cameraTransform.isNull()) {
-		cameraTransform = doc.createElement("transform");
+		cameraTransform = ctx->doc.createElement("transform");
 		cameraTransform.setAttribute("name", "toWorld");
 		camera.insertBefore(cameraTransform, QDomNode());
 	}
 
 	removeChildren(cameraTransform);
-	QDomElement lookAt = doc.createElement("lookAt");
+	QDomElement lookAt = ctx->doc.createElement("lookAt");
 	cameraTransform.insertAfter(lookAt, QDomNode());
 
 	Vector direction = sceneCamera->getInverseViewTransform()(Vector(0,0,1)),
@@ -166,7 +146,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	Point t, p = sceneCamera->getInverseViewTransform()(Point(0,0,0));
 
 	if (sceneCamera->getViewTransform().det3x3() < 0) {
-		QDomElement scale = doc.createElement("scale");
+		QDomElement scale = ctx->doc.createElement("scale");
 		scale.setAttribute("x", "-1");
 		cameraTransform.insertBefore(scale, lookAt);
 	}
@@ -182,15 +162,15 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 	QDomElement newSampler, sampler = findUniqueChild(camera, "sampler");
 	if (sampler.isNull()) {
-		newSampler = doc.createElement("sampler");
+		newSampler = ctx->doc.createElement("sampler");
 		camera.appendChild(newSampler);
 	} else {
-		newSampler = doc.createElement("sampler");
+		newSampler = ctx->doc.createElement("sampler");
 		camera.insertAfter(newSampler, sampler);
 		camera.removeChild(sampler);
 	}
 
-	setProperties(doc, newSampler, ctx->scene->getSampler()->getProperties());
+	setProperties(ctx->doc, newSampler, ctx->scene->getSampler()->getProperties());
 
 	// ====================================================================
 	//   Serialize the film configuration
@@ -198,7 +178,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 	QDomElement film = findUniqueChild(camera, "film");
 	if (film.isNull()) {
-		film = doc.createElement("film");
+		film = ctx->doc.createElement("film");
 		film.setAttribute("type", "exrfilm");
 		camera.insertAfter(film, QDomNode());
 	}
@@ -207,13 +187,13 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	QDomElement heightProperty = findProperty(film, "height");
 
 	if (widthProperty.isNull()) {
-		widthProperty = doc.createElement("integer");
+		widthProperty = ctx->doc.createElement("integer");
 		widthProperty.setAttribute("name", "width");
 		film.insertBefore(widthProperty, QDomNode());
 	}
 
 	if (heightProperty.isNull()) {
-		heightProperty = doc.createElement("integer");
+		heightProperty = ctx->doc.createElement("integer");
 		heightProperty.setAttribute("name", "height");
 		film.insertBefore(heightProperty, QDomNode());
 	}
@@ -227,14 +207,14 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 		QDomElement gamma = findProperty(film, "gamma");
 
 		if (method.isNull()) {
-			method = doc.createElement("string");
+			method = ctx->doc.createElement("string");
 			method.setAttribute("name", "toneMappingMethod");
 			film.insertBefore(method, QDomNode());
 		}
 		method.setAttribute("value", ctx->toneMappingMethod == EReinhard ? "reinhard" : "gamma");
 		
 		if (gamma.isNull()) {
-			gamma = doc.createElement("float");
+			gamma = ctx->doc.createElement("float");
 			gamma.setAttribute("name", "gamma");
 			film.insertBefore(gamma, QDomNode());
 		}
@@ -242,7 +222,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 		if (ctx->toneMappingMethod == EGamma) {
 			if (exposure.isNull()) {
-				exposure = doc.createElement("float");
+				exposure = ctx->doc.createElement("float");
 				exposure.setAttribute("name", "exposure");
 				film.insertBefore(exposure, QDomNode());
 			}
@@ -253,12 +233,12 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 				film.removeChild(reinhardBurn);
 		} else {
 			if (reinhardKey.isNull()) {
-				reinhardKey = doc.createElement("float");
+				reinhardKey = ctx->doc.createElement("float");
 				reinhardKey.setAttribute("name", "reinhardKey");
 				film.insertBefore(reinhardKey, QDomNode());
 			}
 			if (reinhardBurn.isNull()) {
-				reinhardBurn = doc.createElement("float");
+				reinhardBurn = ctx->doc.createElement("float");
 				reinhardBurn.setAttribute("name", "reinhardBurn");
 				film.insertBefore(reinhardBurn, QDomNode());
 			}
@@ -279,15 +259,15 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 	QDomElement newRFilter, rfilter = findUniqueChild(film, "rfilter");
 	if (rfilter.isNull()) {
-		newRFilter = doc.createElement("rfilter");
+		newRFilter = ctx->doc.createElement("rfilter");
 		film.appendChild(rfilter);
 	} else {
-		newRFilter = doc.createElement("rfilter");
+		newRFilter = ctx->doc.createElement("rfilter");
 		film.insertAfter(newRFilter, rfilter);
 		film.removeChild(rfilter);
 	}
 
-	setProperties(doc, newRFilter, ctx->scene->getCamera()->
+	setProperties(ctx->doc, newRFilter, ctx->scene->getCamera()->
 		getFilm()->getReconstructionFilter()->getProperties());
 
 	// ====================================================================
@@ -295,16 +275,16 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	// ====================================================================
 
 	QDomElement oldIntegratorNode = findUniqueChild(root, "integrator");
-	QDomElement newIntegratorNode = doc.createElement("integrator");
+	QDomElement newIntegratorNode = ctx->doc.createElement("integrator");
 
 	const Integrator *integrator = ctx->scene->getIntegrator();
-	setProperties(doc, newIntegratorNode, integrator->getProperties());
+	setProperties(ctx->doc, newIntegratorNode, integrator->getProperties());
 	QDomElement currentIntegratorNode = newIntegratorNode;
 
 	while (integrator->getSubIntegrator() != NULL) {
 		integrator = integrator->getSubIntegrator();
-		QDomElement childIntegratorNode = doc.createElement("integrator");
-		setProperties(doc, childIntegratorNode, integrator->getProperties());
+		QDomElement childIntegratorNode = ctx->doc.createElement("integrator");
+		setProperties(ctx->doc, childIntegratorNode, integrator->getProperties());
 		currentIntegratorNode.appendChild(childIntegratorNode);
 		currentIntegratorNode = childIntegratorNode;
 	}
@@ -312,6 +292,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	root.insertBefore(newIntegratorNode, oldIntegratorNode);
 	root.removeChild(oldIntegratorNode);
 
+	QFile file;
 	file.setFileName(targetFile);
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
 		QMessageBox::critical(parent, parent->tr("Unable to save"),
@@ -324,9 +305,14 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	   is more suitable for human consumption ..
 	   Beware: the code below is tailored to Qt's
 	   output and won't work on arbitrary XML files */
-	QString textContent = doc.toString();
+	QString textContent = ctx->doc.toString();
 	QTextStream input(&textContent);
 	QTextStream output(&file);
+	cleanupXML(input, output);
+	file.close();
+}
+
+void cleanupXML(QTextStream &input, QTextStream &output) {
 	QRegExp 
 		filenameRegExp("filename=\"[^\"]*\""),
 		nameRegExp("name=\"[^\"]*\""),
@@ -362,10 +348,15 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 		int nameMatch = nameRegExp.indexIn(line),
 			filenameMatch = filenameRegExp.indexIn(line),
 			nameLength = nameRegExp.matchedLength();
+
 		if (tagMatch != -1 && nameMatch != -1 && filenameMatch == -1) {
-			line = line.left(tagLength) + line.mid(nameMatch, nameLength) + " "
-				+ line.mid(tagMatch+tagLength, nameMatch-(tagMatch+tagLength))
-				+ line.mid(nameMatch+nameLength);
+			QString a = line.mid(tagLength, nameMatch-tagLength).trimmed(),
+				b = line.mid(nameMatch+nameLength).trimmed();
+			line = line.left(tagLength) + line.mid(nameMatch, nameLength);
+			if (a.length() > 0)
+				line += " " + a;
+			if (b.length() > 0)
+				line += " " + b;
 		}
 
 		/* Add an extra newline if this is an object tag, and if there
@@ -414,6 +405,8 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 			hasContents = true;
 		} else if (line.endsWith(" >")) {
 			line = line.left(line.size()-2) + QString(">");
+		} else if (line.endsWith("?>")) {
+			hasContents = true;
 		}
 
 		if (closeTag.indexIn(line) == 0)
@@ -421,6 +414,4 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 		output << line << endl;
 	}
-	file.close();
 }
-

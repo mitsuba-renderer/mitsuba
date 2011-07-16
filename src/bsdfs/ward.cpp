@@ -121,6 +121,7 @@ public:
 			m_alphaV = m_alphaU;
 		else
 			m_alphaV = new ConstantFloatTexture(alphaV);
+		m_specularSamplingWeight = 0.0f;
 	}
 
 	Ward(Stream *stream, InstanceManager *manager) 

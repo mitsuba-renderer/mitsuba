@@ -30,6 +30,7 @@
 #include "updatedlg.h"
 #include "server.h"
 #include "save.h"
+#include "upgrade.h"
 #include <QtNetwork>
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/sstream.h>
@@ -398,9 +399,9 @@ void MainWindow::onNetworkFinished(QNetworkReply *reply) {
 	if (reply->error() == QNetworkReply::NoError) {
 		try {
 			QSettings settings("mitsuba-renderer.org", "qtgui");
-			ProgramVersion remote(QString(reply->readAll()));
-			ProgramVersion ignoredVersion(settings.value("ignoredVersion", "0.0.0").toString());
-			ProgramVersion local(MTS_VERSION);
+			Version remote(QString(reply->readAll()).toStdString());
+			Version ignoredVersion(settings.value("ignoredVersion", "0.0.0").toString().toStdString());
+			Version local(MTS_VERSION);
 
 			if (local < remote) {
 				if (!m_manualUpdateCheck && remote == ignoredVersion)
@@ -413,7 +414,7 @@ void MainWindow::onNetworkFinished(QNetworkReply *reply) {
 				QMessageBox::information(this, tr("Installed version is current"),
 					QString("<p>You're up to date!</p>"
 						"<p>Mitsuba <b>%1</b> is still the newest version available.</p>")
-						.arg(local.toString()), QMessageBox::Ok);
+						.arg(local.toString().c_str()), QMessageBox::Ok);
 			}
 		} catch (const std::exception &e) {
 			/* Got something weird and couldn't parse the version string -- 
@@ -618,14 +619,16 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	newResolver->addPath(filePath);
 	for (int i=0; i<m_searchPaths.size(); ++i)
 		newResolver->addPath(m_searchPaths[i].toStdString());
-
-	ref<SceneLoader> loadingThread 
-		= new SceneLoader(newResolver, filename.file_string());
 	LoadDialog *loaddlg = new LoadDialog(this);
+	SceneContext *result = NULL;
+	ref<SceneLoader> loadingThread;
 	loaddlg->setAttribute(Qt::WA_DeleteOnClose);
 	loaddlg->setWindowModality(Qt::ApplicationModal);
 	loaddlg->setWindowTitle("Loading ..");
 	loaddlg->show();
+
+retry:
+	loadingThread = new SceneLoader(newResolver, filename.file_string());
 	loadingThread->start();
 
 	while (loadingThread->isRunning()) {
@@ -633,14 +636,55 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 		loadingThread->wait(20);
 	}
 	loadingThread->join();
-	loaddlg->close();
 
-	SceneContext *result = loadingThread->getResult();
+	result = loadingThread->getResult();
 	if (result == NULL) {
-		QMessageBox::critical(this, tr("Unable to load %1").arg(qFileName),
-			QString(loadingThread->getError().c_str()),
-			QMessageBox::Ok);
+		if (loadingThread->isVersionError()) {
+			Version version = loadingThread->getVersion();
+			int ret;
+			if (version.isValid()) {
+				ret = QMessageBox::question(this, tr("Version mismatch -- update scene file?"),
+					QString("The requested scene file is from an older version of Mitsuba "
+						"(%1). To work with version %2, it will need to be updated. If you "
+						"continue, Mitsuba will attempt a fully automated upgrade (note that a "
+						"backup copy will be made).\n\nProceed?")
+						.arg(version.toString().c_str())
+						.arg(MTS_VERSION), QMessageBox::Yes | QMessageBox::Cancel);
+			} else {
+				QMessageBox box(QMessageBox::Question, tr("Version mismatch -- update scene file?"),
+					(loadingThread->getError() + "\n\nAlternatively, if this file is from version 0.2.1"
+					 "(the last release without explicit version numbers), you can perform a fully "
+					 "automated upgrade from this version. A backup copy will be made in this case.").c_str());
+				QPushButton *version021Button = box.addButton(tr("Assume version 0.2.1?"), QMessageBox::YesRole);
+				box.addButton(tr("Cancel"), QMessageBox::RejectRole);
+				ret = box.exec();
+				if (box.clickedButton() == version021Button) {
+					version = Version(0, 2, 1);
+					ret = QMessageBox::Yes;
+				}
+			}
+			if (ret == QMessageBox::Yes) {
+				loaddlg->expand();
+
+				UpgradeManager upgradeMgr(newResolver);
+				try {
+					upgradeMgr.performUpgrade(filename.file_string().c_str(), version);
+					goto retry;
+				} catch (const std::exception &ex) {
+					QMessageBox::critical(this, tr("Unable to update %1").arg(qFileName),
+						QString(ex.what()), QMessageBox::Ok);
+				}
+			} else {
+				QMessageBox::critical(this, tr("Unable to load %1").arg(qFileName),
+					QString("No upgrade was performed -- giving up."), QMessageBox::Ok);
+			}
+		} else {
+			QMessageBox::critical(this, tr("Unable to load %1").arg(qFileName),
+				QString(loadingThread->getError().c_str()),
+				QMessageBox::Ok);
+		}
 	}
+	loaddlg->close();
 
 	return result;
 }

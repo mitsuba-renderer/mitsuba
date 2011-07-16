@@ -23,6 +23,7 @@
 #include <xercesc/sax/AttributeList.hpp>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/properties.h>
+#include <mitsuba/core/version.h>
 #include <stack>
 #include <map>
 
@@ -33,8 +34,20 @@ XERCES_CPP_NAMESPACE_END
 XERCES_CPP_NAMESPACE_USE
 MTS_NAMESPACE_BEGIN
 
+/// \brief This exception is thrown when attempting to load an outdated file
+class VersionException : public std::runtime_error {
+public:
+	inline VersionException(const std::string &str, const Version &version)
+		: std::runtime_error(str), m_version(version) { }
+
+	inline const Version &getVersion() const { return m_version; }
+private:
+	Version m_version;
+};
+
 /**
- * XML parser for mitsuba scene files. Uses Xerces-C and SAX
+ * \brief XML parser for Mitsuba scene files. To be used with the
+ * SAX interface Xerces-C++.
  */
 class MTS_EXPORT_RENDER SceneHandler : public HandlerBase {
 public:

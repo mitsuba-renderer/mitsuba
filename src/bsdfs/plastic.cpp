@@ -74,6 +74,7 @@ public:
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 		m_diffuseReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
+		m_specularSamplingWeight = 0.0f;
 	}
 
 	SmoothPlastic(Stream *stream, InstanceManager *manager) 

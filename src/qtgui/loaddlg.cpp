@@ -68,6 +68,15 @@ void LoadDialog::on_toggleButton_clicked() {
 	}
 }
 
+void LoadDialog::expand() {
+	if (!ui->console->isVisible()) {
+		ui->console->show();
+		updateGeometry();
+		resize(std::max(width(), 800), 500);
+		ui->toggleButton->setText("-");
+	}
+}
+
 void LoadDialog::close() {
 	Logger *logger = Thread::getThread()->getLogger();
 	logger->setLogLevel(m_oldLogLevel);

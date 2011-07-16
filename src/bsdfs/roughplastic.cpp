@@ -62,9 +62,8 @@ MTS_NAMESPACE_BEGIN
  *         factor used to modulate the diffuse reflectance component\default{0.5}}
  * }
  * \renderings{
- *     \medrendering{Beckmann, $\alpha=0.05$, diffuseReflectance=0}{bsdf_roughplastic_beckmann_lacquer}
- *     \medrendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
- *     \medrendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}
+ *     \rendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
+ *     \rendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}
  * }
  *
  * This plugin implements a realistic microfacet scattering model for rendering
@@ -72,6 +71,10 @@ MTS_NAMESPACE_BEGIN
  * be interpreted as a fancy version of the Cook-Torrance model and should be 
  * preferred over empirical models like \pluginref{phong} and \pluginref{ward} 
  * when possible.
+ * \renderings{
+ *     \setcounter{subfigure}{2}
+ *     \rendering{Beckmann, $\alpha=0.05$, diffuseReflectance=0}{bsdf_roughplastic_beckmann_lacquer}
+ * }
  *
  * Microfacet theory describes rough surfaces as an arrangement of unresolved and 
  * ideally specular facets, whose normal directions are given by a specially
@@ -100,7 +103,7 @@ MTS_NAMESPACE_BEGIN
  * the roughness cannot be textured, and anisotropic microfacet 
  * distributions are not allowed.
  *
- * When no parameters are given, the plugin activates the default settings, 
+ * When no parameters are given, the plugin activates the defaults, 
  * which describe a white polypropylene plastic material with a light amount
  * of roughness modeled using the Beckmann distribution.
  *
@@ -117,8 +120,7 @@ MTS_NAMESPACE_BEGIN
  * $\alpha$ roughness value into the Phong exponent.
  * This is done in a way, such that the different 
  * distributions all produce a similar appearance for 
- * the same value of $\alpha$.\vspace{5mm}
- *
+ * the same value of $\alpha$.
  * \begin{xml}[caption={A material definition for rough, black laquer.}, label=lst:roughplastic-lacquer]
  * <bsdf type="roughplastic">
  *     <string name="distribution" value="beckmann"/>
@@ -157,6 +159,7 @@ public:
 
 		m_alpha = m_distribution.transformRoughness(
 			props.getFloat("alpha", 0.1f));
+		m_specularSamplingWeight = 0.0f;
 	}
 
 	RoughPlastic(Stream *stream, InstanceManager *manager) 
