@@ -237,8 +237,7 @@ public:
 							} else {
 								/* Recurse for dielectric materials and (specific to SPPM):
 								   recursive "final gathering" for glossy materials */
-								BSDFQueryRecord bRec(gatherPoint.its);
-								bRec.sampler = sampler;
+								BSDFQueryRecord bRec(gatherPoint.its, sampler);
 								weight *= bsdf->sample(bRec, sampler->next2D());
 								if (weight.isZero()) {
 									gatherPoint.depth = -1;

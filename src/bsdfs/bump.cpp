@@ -195,9 +195,8 @@ public:
 		Intersection perturbed;
 		perturbIntersection(its, perturbed);
 
-		BSDFQueryRecord perturbedQuery(perturbed, bRec.quantity);
+		BSDFQueryRecord perturbedQuery(perturbed, bRec.sampler, bRec.quantity);
 		perturbedQuery.wi = perturbed.toLocal(its.toWorld(bRec.wi));
-		perturbedQuery.sampler = bRec.sampler;
 		perturbedQuery.typeMask = bRec.typeMask;
 		perturbedQuery.component = bRec.component;
 		Spectrum result = m_nested->sample(perturbedQuery, pdf, sample);
@@ -218,7 +217,7 @@ public:
 		Intersection perturbed;
 		perturbIntersection(its, perturbed);
 
-		BSDFQueryRecord perturbedQuery(perturbed, bRec.quantity);
+		BSDFQueryRecord perturbedQuery(perturbed, bRec.sampler, bRec.quantity);
 		perturbedQuery.wi = perturbed.toLocal(its.toWorld(bRec.wi));
 		perturbedQuery.sampler = bRec.sampler;
 		perturbedQuery.typeMask = bRec.typeMask;

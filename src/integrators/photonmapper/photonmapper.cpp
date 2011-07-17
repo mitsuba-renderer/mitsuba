@@ -368,7 +368,7 @@ public:
 				int compCount = bsdf->getComponentCount();
 				for (int i=0; i<compCount; i++) {
 					/* Sample the BSDF and recurse */
-					BSDFQueryRecord bRec(its);
+					BSDFQueryRecord bRec(its, rRec.sampler);
 					bRec.component = i;
 					Spectrum bsdfVal = bsdf->sample(bRec, Point2(0.0f));
 					if (bsdfVal.isZero())
@@ -388,7 +388,7 @@ public:
 			Float weight = 1 / (Float) m_glossySamples;
 
 			for (int i=0; i<m_glossySamples; ++i) {
-				BSDFQueryRecord bRec(its);
+				BSDFQueryRecord bRec(its, rRec.sampler);
 				bRec.sampler = rRec.sampler;
 				Spectrum bsdfVal = bsdf->sample(bRec, sampleArray[i]);
 

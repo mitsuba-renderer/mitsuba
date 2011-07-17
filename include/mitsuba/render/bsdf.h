@@ -49,12 +49,17 @@ public:
 	 *
 	 * \param its 
 	 *      An reference to the underlying intersection record
-	 * \param typeMask 
-	 *      The list of components that should be sampled
+	 *
+	 * \param sampler
+	 *      A source of (pseudo-) random numbers. Note that this sampler
+	 *      is only used when the scattering model for some reason needs
+	 *      more than the two unformly distributed numbers supplied in
+	 *      the \ref BSDF::sample() methods
+	 *
 	 * \param quantity
 	 *      The transported quantity (\ref ERadiance or \ref EImportance)
 	 */
-	explicit inline BSDFQueryRecord(const Intersection &its, 
+	explicit inline BSDFQueryRecord(const Intersection &its, Sampler *sampler, 
 			ETransportQuantity quantity = ERadiance);
 
 	/**
@@ -112,8 +117,8 @@ public:
 	 * Some BSDF implementations can significantly improve 
 	 * the quality of their importance sampling routines 
 	 * when having access to extra random numbers. This
-	 * attribute provides a means of providing this capability
-	 * to the BSDF.
+	 * attribute provides a means of providing this 
+	 * capability to the BSDF.
 	 */
 	Sampler *sampler;
 

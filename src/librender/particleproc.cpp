@@ -190,8 +190,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 					continue;
 				}
 	
-				BSDFQueryRecord bRec(its, EImportance);
-				bRec.sampler = m_sampler;
+				BSDFQueryRecord bRec(its, m_sampler, EImportance);
 				bsdfVal = bsdf->sample(bRec, m_sampler->next2D());
 				if (bsdfVal.isZero())
 					break;

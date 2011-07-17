@@ -108,7 +108,7 @@ public:
 
 		boost::tuple<Vector, Float, EMeasure> generateSample() {
 			Point2 sample(m_sampler->next2D());
-			BSDFQueryRecord bRec(m_its);
+			BSDFQueryRecord bRec(m_its, m_fakeSampler);
 			bRec.component = m_component;
 			bRec.wi = m_wi;
 
@@ -118,14 +118,6 @@ public:
 	
 			Float pdfVal, pdfVal2;
 	
-			/* Only make the sampler available to the BSDF when requested
-			   by the testcase. This allows testing both sampling variants
-			   where applicable: those that can improve by having access to 
-			   an arbitrary random number stream vs. those that only use
-			   a single uniform 2D sample */
-	
-			bRec.sampler = m_fakeSampler;
-
 			/* Check the various sampling routines for agreement 
 			   amongst each other */
 			m_fakeSampler->clear();
@@ -190,11 +182,8 @@ public:
 		}
  
 		Float pdf(const Vector &wo, EMeasure measure) {
-			BSDFQueryRecord bRec(m_its);
+			BSDFQueryRecord bRec(m_its, m_wi, wo);
 			bRec.component = m_component;
-			bRec.wi = m_wi;
-			bRec.wo = wo;
-			bRec.sampler = m_sampler;
 
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();

@@ -183,8 +183,7 @@ public:
 				/* ==================================================================== */
 
 				/* Sample BSDF * cos(theta) */
-				BSDFQueryRecord bRec(its);
-				bRec.sampler = rRec.sampler;
+				BSDFQueryRecord bRec(its, rRec.sampler, ERadiance);
 				Spectrum bsdfVal = bsdf->sample(bRec, rRec.nextSample2D());
 				if (bsdfVal.isZero()) 
 					break;

@@ -21,8 +21,8 @@
 
 MTS_NAMESPACE_BEGIN
 	
-inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, ETransportQuantity quantity)
-	: its(its), sampler(NULL), wi(its.wi), quantity(quantity),
+inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, Sampler *sampler, ETransportQuantity quantity)
+	: its(its), sampler(sampler), wi(its.wi), quantity(quantity),
 	typeMask(BSDF::EAll), sampledType(0), component(-1), sampledComponent(-1) {
 }
 

@@ -135,7 +135,6 @@ public:
 			if (scene->sampleLuminaire(its.p, ray.time, lRec, sampleArray[i])) {
 				/* Allocate a record for querying the BSDF */
 				BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
-				bRec.sampler = rRec.sampler;
 
 				/* Evaluate BSDF * cos(theta) */
 				const Spectrum bsdfVal = bsdf->eval(bRec);
@@ -167,8 +166,7 @@ public:
 
 		for (size_t i=0; i<numBSDFSamples; ++i) {
 			/* Sample BSDF * cos(theta) */
-			BSDFQueryRecord bRec(its);
-			bRec.sampler = rRec.sampler;
+			BSDFQueryRecord bRec(its, rRec.sampler, ERadiance);
 			Float bsdfPdf;
 			Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, sampleArray[i]);
 			if (bsdfVal.isZero())

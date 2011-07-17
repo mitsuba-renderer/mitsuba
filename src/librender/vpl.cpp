@@ -107,8 +107,7 @@ size_t generateVPLs(const Scene *scene, Random *random,
 				continue;
 			}
 
-			BSDFQueryRecord bRec(its, EImportance);
-			bRec.sampler = sampler;
+			BSDFQueryRecord bRec(its, sampler, EImportance);
 			bsdfVal = bsdf->sample(bRec, sampler->next2D());
 			if (bsdfVal.isZero())
 				break;

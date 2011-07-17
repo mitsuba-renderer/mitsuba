@@ -62,8 +62,7 @@ void BSDF::configure() {
 }
 
 Spectrum BSDF::getDiffuseReflectance(const Intersection &its) const {
-	BSDFQueryRecord bRec(its);
-	bRec.wi = bRec.wo = Vector(0, 0, 1);
+	BSDFQueryRecord bRec(its, Vector(0, 0, 1), Vector(0, 0, 1));
 	bRec.typeMask = EDiffuseReflection;
 	return eval(bRec) * M_PI;
 }

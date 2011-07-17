@@ -246,7 +246,7 @@ public:
 					if ((bsdf->getType(i) & BSDF::EDelta) == 0)
 						continue;
 					/* Sample the BSDF and recurse */
-					BSDFQueryRecord bRec(p.its);
+					BSDFQueryRecord bRec(p.its, sampler);
 					bRec.component = i;
 					Spectrum bsdfVal = bsdf->sample(bRec, Point2(0.0f));
 					if (bsdfVal.isZero())

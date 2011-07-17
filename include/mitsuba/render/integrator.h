@@ -115,53 +115,54 @@ public:
 	/// List of suported query types. These can be combined by a binary OR.
 	enum ERadianceQuery {
 		/// Emitted radiance from a luminaire intersected by the ray
-		EEmittedRadiance     = 0x0001,
+		EEmittedRadiance          = 0x0001,
 
 		/// Emitted radiance from a subsurface integrator */
-		ESubsurfaceRadiance  = 0x0002,
+		ESubsurfaceRadiance       = 0x0002,
 
 		/// Direct (surface) radiance */
-		EDirectSurfaceRadiance      = 0x0004,
+		EDirectSurfaceRadiance    = 0x0004,
 
 		/*! \brief Indirect (surface) radiance, where the last bounce did not go
 		    through a Dirac delta BSDF */
-		EIndirectSurfaceRadiance    = 0x0008,
+		EIndirectSurfaceRadiance  = 0x0008,
 
 		/*! \brief Indirect (surface) radiance, where the last bounce went
 		   through a Dirac delta BSDF */
-		ECausticRadiance     = 0x0010,
+		ECausticRadiance          = 0x0010,
 
 		/// In-scattered radiance due to volumetric scattering (direct)
-		EDirectMediumRadiance = 0x0020,
+		EDirectMediumRadiance     = 0x0020,
 
 		/// In-scattered radiance due to volumetric scattering (indirect)
-		EIndirectMediumRadiance = 0x0040,
+		EIndirectMediumRadiance   = 0x0040,
 
 		/// Distance to the next surface intersection
-		EDistance            = 0x0080,
+		EDistance                 = 0x0080,
 
 		/*! \brief Store an opacity value, which is equal to 1 when a shape
 		   was intersected and 0 when the ray passes through empty space. 
 		   When there is a participating medium, it can also take on fractional
 		   values. */
-		EOpacity             = 0x0100,
+		EOpacity                  = 0x0100,
 
 		/*! \brief A ray intersection may need to be performed. This can be set to 
 		   zero if the caller has already provided the intersection */
-		EIntersection        = 0x0200,
+		EIntersection             = 0x0200,
 
 		/* Radiance from volumes */
-		EVolumeRadiance      = EDirectMediumRadiance | EIndirectMediumRadiance,
+		EVolumeRadiance           = EDirectMediumRadiance | EIndirectMediumRadiance,
 
 		/// Radiance query without emitted radiance, ray intersection required
-		ERadianceNoEmission  = ESubsurfaceRadiance | EDirectSurfaceRadiance | EIndirectSurfaceRadiance
-			| ECausticRadiance | EDirectMediumRadiance | EIndirectMediumRadiance | EIntersection,
+		ERadianceNoEmission       = ESubsurfaceRadiance | EDirectSurfaceRadiance 
+			| EIndirectSurfaceRadiance | ECausticRadiance | EDirectMediumRadiance
+			| EIndirectMediumRadiance | EIntersection,
 
 		/// Default radiance query, ray intersection required
-		ERadiance = ERadianceNoEmission | EEmittedRadiance,
+		ERadiance                 = ERadianceNoEmission | EEmittedRadiance,
 
 		/// Radiance + opacity
-		ECameraRay = ERadiance | EOpacity
+		ECameraRay                = ERadiance | EOpacity
 	};
 
 	/// Construct an invalid radiance query record

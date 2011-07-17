@@ -18,7 +18,6 @@
 
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/sampler.h>
 #include <mitsuba/hw/basicshader.h>
 #include "microfacet.h"
 
