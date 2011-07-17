@@ -29,19 +29,6 @@ class LowDiscrepancySampler : public Sampler {
 public:
 	LowDiscrepancySampler() : Sampler(Properties()) { }
 
-	LowDiscrepancySampler(Stream *stream, InstanceManager *manager) 
-	 : Sampler(stream, manager) {
-		m_depth = stream->readInt();
-		m_random = static_cast<Random *>(manager->getInstance(stream));
-
-		m_samples1D = new Float*[m_depth];
-		m_samples2D = new Point2*[m_depth];
-		for (int i=0; i<m_depth; i++) {
-			m_samples1D[i] = new Float[(size_t) m_sampleCount];
-			m_samples2D[i] = new Point2[(size_t) m_sampleCount];
-		}
-	}
-
 	LowDiscrepancySampler(const Properties &props) : Sampler(props) {
 		/* Sample count (will be rounded up to the next power of two) */
 		m_sampleCount = props.getSize("sampleCount", 4);
@@ -49,8 +36,8 @@ public:
 		/* Depth, up to which which low discrepancy samples are guaranteed to be available. */
 		m_depth = props.getInteger("depth", 3);
 
-		if (!isPow2(m_sampleCount)) {
-			m_sampleCount = (size_t) roundToPow2(m_sampleCount);
+		if (!isPowerOfTwo(m_sampleCount)) {
+			m_sampleCount = roundToPowerOfTwo(m_sampleCount);
 			Log(EWarn, "Sample count should be a power of two -- rounding to "
 					SIZE_T_FMT, m_sampleCount);
 		}
@@ -66,6 +53,19 @@ public:
 		m_random = new Random();
 	}
 
+	LowDiscrepancySampler(Stream *stream, InstanceManager *manager) 
+	 : Sampler(stream, manager) {
+		m_random = static_cast<Random *>(manager->getInstance(stream));
+		m_depth = stream->readInt();
+
+		m_samples1D = new Float*[m_depth];
+		m_samples2D = new Point2*[m_depth];
+		for (int i=0; i<m_depth; i++) {
+			m_samples1D[i] = new Float[(size_t) m_sampleCount];
+			m_samples2D[i] = new Point2[(size_t) m_sampleCount];
+		}
+	}
+
 	virtual ~LowDiscrepancySampler() {
 		for (int i=0; i<m_depth; i++) {
 			delete[] m_samples1D[i];
@@ -77,8 +77,8 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Sampler::serialize(stream, manager);
-		stream->writeInt(m_depth);
 		manager->serialize(stream, m_random.get());
+		stream->writeInt(m_depth);
 	}
 
 	ref<Sampler> clone() {
@@ -198,9 +198,9 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "LowDiscrepancySampler[" << std::endl
-			<< "  sampleCount = " << m_sampleCount << "," << std::endl
-			<< "  depth = " << m_depth << std::endl
+		oss << "LowDiscrepancySampler[" << endl
+			<< "  sampleCount = " << m_sampleCount << "," << endl
+			<< "  depth = " << m_depth << endl
 			<< "]"; 
 		return oss.str();
 	}
@@ -209,7 +209,8 @@ public:
 private:
 	ref<Random> m_random;
 	int m_depth;
-	int m_sampleDepth1D, m_sampleDepth2D;
+	int m_sampleDepth1D;
+	int m_sampleDepth2D;
 	Float **m_samples1D;
 	Point2 **m_samples2D;
 };

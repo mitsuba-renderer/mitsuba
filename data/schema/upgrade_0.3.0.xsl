@@ -101,6 +101,7 @@
 					<spectrum name="specularReflectance" value="{number($specularAmount)*number($specularReflectance)}"/>
 				</xsl:otherwise>
 			</xsl:choose>
+			<xsl:apply-templates select="node()[@name!='specularReflectance' and @name!='diffuseReflectance' and @name!='diffuseAmount' and @name!='specularAmount']"/>
 		</bsdf>
 	</xsl:template>
 
@@ -172,6 +173,14 @@
 	</xsl:template>
 	<xsl:template match="bsdf[@type='roughmetal']/float[@name='ior']/@name">
 		<xsl:attribute name="name">eta</xsl:attribute>
+	</xsl:template>
+
+	<!-- Update the name of the roughglass plugin -->
+	<xsl:template match="bsdf[@type='roughglass']/@type">
+		<xsl:attribute name="type">roughdielectric</xsl:attribute>
+	</xsl:template>
+	<xsl:template match="bsdf[@type='roughglass']/float[@name='alphaB']/@name">
+		<xsl:attribute name="name">alpha</xsl:attribute>
 	</xsl:template>
 
 	<!-- Update the name of the composite plugin -->

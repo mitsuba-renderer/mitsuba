@@ -1,4 +1,4 @@
-\documentclass[footexclude,11pt,DIV11]{scrartcl}
+\documentclass[footinclude=false,11pt,DIV11]{scrartcl}
 
 % Wenzel's standard prelude
 % ----- 8< ----- 8< ------
@@ -15,11 +15,12 @@
 \usepackage{color}
 \usepackage{colortbl}
 \usepackage{listings}
-\usepackage[hang]{subfigure}
 \usepackage{enumerate}
 \usepackage{ragged2e} % Ragged-right columns with hyphenation
 \usepackage{macros}
 \usepackage[format=hang,font=small,labelfont=bf]{caption}
+\usepackage[expansion=false, babel=true]{microtype}
+\usepackage{subfig}
 
 % Make sure that ligatures remain searchable in the PDF
 \input glyphtounicode
@@ -32,24 +33,10 @@
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
 
-\newcommand{\MitsubaVersion}{0.2.1}
-
-\usepackage[
-	bookmarks,
-	bookmarksnumbered,
-	colorlinks,
-	linkcolor=myblue,
-	urlcolor=myblue,
-	citecolor=myblue,
-	pdfpagelabels,
-	pdftitle={Mitsuba \MitsubaVersion\, Documentation},
-	pdfauthor={Wenzel Jakob},
-	pdfstartview=FitH
-]{hyperref}
+\newcommand{\MitsubaVersion}{0.3.0}
 
 \typearea[current]{last}
 \raggedbottom
-\usepackage[expansion=false, babel=true]{microtype}
 \renewcommand*\ttdefault{txtt}
 
 \usepackage{scrpage2}
@@ -64,6 +51,22 @@
 \addtokomafont{sectioning}{\color{myblue}\rmfamily}
 \addtokomafont{descriptionlabel}{\rmfamily}
 \pagestyle{scrheadings}
+
+\usepackage[
+	bookmarks,
+	bookmarksnumbered,
+	colorlinks,
+	plainpages=false,
+	pdfpagelabels,
+	hypertexnames=false,
+	linkcolor=myblue,
+	urlcolor=myblue,
+	citecolor=myblue,
+	pdfpagelabels,
+	pdftitle={Mitsuba \MitsubaVersion\, Documentation},
+	pdfauthor={Wenzel Jakob},
+	pdfstartview=FitH
+]{hyperref}
 
 \definecolor{myblue}{rgb}{0,.1,.6}
 \definecolor{myred}{rgb}{0.63,.16,.16}

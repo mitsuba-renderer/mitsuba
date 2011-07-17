@@ -105,10 +105,10 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "HaltonSequence[" << std::endl
-			<< "  sampleCount = " << m_sampleCount << "," << std::endl
-			<< "  sampleIndex = " << m_sampleIndex << "," << std::endl
-			<< "  sampleDepth = " << m_sampleDepth << std::endl
+		oss << "HaltonSequence[" << endl
+			<< "  sampleCount = " << m_sampleCount << "," << endl
+			<< "  sampleIndex = " << m_sampleIndex << "," << endl
+			<< "  sampleDepth = " << m_sampleDepth << endl
 			<< "]"; 
 		return oss.str();
 	}

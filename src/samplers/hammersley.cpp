@@ -115,10 +115,10 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "HammersleySequence[" << std::endl
-			<< "  sampleCount = " << m_sampleCount << "," << std::endl
-			<< "  sampleIndex = " << m_sampleIndex << "," << std::endl
-			<< "  sampleDepth = " << m_sampleDepth << std::endl
+		oss << "HammersleySequence[" << endl
+			<< "  sampleCount = " << m_sampleCount << "," << endl
+			<< "  sampleIndex = " << m_sampleIndex << "," << endl
+			<< "  sampleDepth = " << m_sampleDepth << endl
 			<< "]"; 
 		return oss.str();
 	}

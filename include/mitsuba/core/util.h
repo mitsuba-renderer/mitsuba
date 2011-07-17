@@ -226,38 +226,38 @@ inline int log2i(size_t value) {
 #endif
 
 /// Check if an integer is a power of two (unsigned 32 bit version)
-inline bool isPow2(uint32_t i) { return (i & (i-1)) == 0; }
+inline bool isPowerOfTwo(uint32_t i) { return (i & (i-1)) == 0; }
 
 /// Check if an integer is a power of two (signed 32 bit version)
-inline bool isPow2(int32_t i) { return i > 0 && (i & (i-1)) == 0; }
+inline bool isPowerOfTwo(int32_t i) { return i > 0 && (i & (i-1)) == 0; }
 
 /// Check if an integer is a power of two (64 bit version)
-inline bool isPow2(uint64_t i) { return (i & (i-1)) == 0; }
+inline bool isPowerOfTwo(uint64_t i) { return (i & (i-1)) == 0; }
 
 /// Check if an integer is a power of two (signed 64 bit version)
-inline bool isPow2(int64_t i) { return i > 0 && (i & (i-1)) == 0; }
+inline bool isPowerOfTwo(int64_t i) { return i > 0 && (i & (i-1)) == 0; }
 
 #if defined(MTS_AMBIGUOUS_SIZE_T)
-inline bool isPow2(size_t value) {
-	if (sizeof(size_t) == 8)
-		return isPow2((uint64_t) value);
+inline bool isPowerOfTwo(size_t value) {
+	if (sizeof(size_t) == 8) /// will be optimized away
+		return isPowerOfTwo((uint64_t) value);
 	else
-		return isPow2((uint32_t) value);
+		return isPowerOfTwo((uint32_t) value);
 }
 #endif
 
 /// Round an integer to the next power of two
-extern MTS_EXPORT_CORE uint32_t roundToPow2(uint32_t i);
+extern MTS_EXPORT_CORE uint32_t roundToPowerOfTwo(uint32_t i);
 
 /// Round an integer to the next power of two (64 bit version)
-extern MTS_EXPORT_CORE uint64_t roundToPow2(uint64_t i);
+extern MTS_EXPORT_CORE uint64_t roundToPowerOfTwo(uint64_t i);
 
 #if defined(MTS_AMBIGUOUS_SIZE_T)
-inline size_t roundToPow2(size_t value) {
-	if (sizeof(size_t) == 8)
-		return (size_t) roundToPow2((uint64_t) value);
+inline size_t roundToPowerOfTwo(size_t value) {
+	if (sizeof(size_t) == 8) /// will be optimized away
+		return (size_t) roundToPowerOfTwo((uint64_t) value);
 	else
-		return (size_t) roundToPow2((uint32_t) value);
+		return (size_t) roundToPowerOfTwo((uint32_t) value);
 }
 #endif
 

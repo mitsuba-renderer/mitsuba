@@ -58,7 +58,7 @@ MTS_NAMESPACE_BEGIN
  * angle (i.e. diffuse or very rough materials). 
  * Therefore, users are discouraged to use this plugin to coat smooth
  * diffuse materials, since there is a separately available plugin
- * named \pluginref{smoothplastic}, which covers the same case and does not
+ * named \pluginref{plastic}, which covers the same case and does not
  * suffer from energy loss.
  *
  * Evaluating the internal component of this model entails refracting the 

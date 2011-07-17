@@ -60,7 +60,7 @@ MTS_NAMESPACE_BEGIN
  *         factor used to modulate the specular reflectance component\default{1.0}}
  *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the diffuse reflectance component\default{0.5}}
- * }
+ * }\vspace{-1mm}
  * \renderings{
  *     \rendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
  *     \rendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}

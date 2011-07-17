@@ -30,8 +30,7 @@ MTS_NAMESPACE_BEGIN
  */
 class StratifiedSampler : public Sampler {
 public:
-	StratifiedSampler() : Sampler(Properties()) {
-	}
+	StratifiedSampler() : Sampler(Properties()) { }
 
 	StratifiedSampler(const Properties &props) : Sampler(props) {
 		/* Sample count (will be rounded up to the next perfect square) */
@@ -195,12 +194,12 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "StratifiedSampler[" << std::endl
-			<< "  resolution = " << m_resolution << "," << std::endl
-			<< "  sampleCount = " << m_sampleCount << "," << std::endl
-			<< "  depth = " << m_depth << "," << std::endl
-			<< "  sampleIndex = " << m_sampleIndex << "," << std::endl
-			<< "  sampleDepth = " << m_depth << std::endl
+		oss << "StratifiedSampler[" << endl
+			<< "  resolution = " << m_resolution << "," << endl
+			<< "  sampleCount = " << m_sampleCount << "," << endl
+			<< "  depth = " << m_depth << "," << endl
+			<< "  sampleIndex = " << m_sampleIndex << "," << endl
+			<< "  sampleDepth = " << m_depth << endl
 			<< "]"; 
 		return oss.str();
 	}

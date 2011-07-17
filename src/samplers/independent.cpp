@@ -93,8 +93,8 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "IndependentSampler[" << std::endl
-			<< "  sampleCount = " << m_sampleCount << std::endl
+		oss << "IndependentSampler[" << endl
+			<< "  sampleCount = " << m_sampleCount << endl
 			<< "]"; 
 		return oss.str();
 	}

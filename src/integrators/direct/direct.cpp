@@ -30,27 +30,33 @@ MTS_NAMESPACE_BEGIN
 class MIDirectIntegrator : public SampleIntegrator {
 public:
 	MIDirectIntegrator(const Properties &props) : SampleIntegrator(props) {
-		/* Number of samples to take using the luminaire sampling technique */
-		m_luminaireSamples = props.getInteger("luminaireSamples", 1);
-		/* Number of samples to take using the BSDF sampling technique */
-		m_bsdfSamples = props.getInteger("bsdfSamples", 1);
+		/* Number of shading samples -- this parameter is a shorthand notation
+		   to set both 'luminaireSamples' and 'bsdfSamples' at the same time*/
+		size_t shadingSamples = props.getSize("shadingSamples", 1);
 
-		Assert(m_luminaireSamples + m_bsdfSamples > 0);
+		/* Number of samples to take using the luminaire sampling technique */
+		m_luminaireSamples = props.getSize("luminaireSamples", shadingSamples);
+		/* Number of samples to take using the BSDF sampling technique */
+		m_bsdfSamples = props.getSize("bsdfSamples", shadingSamples);
+
+		Assert(m_luminaireSamples >= 0 && m_bsdfSamples >= 0 &&
+			m_luminaireSamples + m_bsdfSamples > 0);
 	}
 
 	/// Unserialize from a binary data stream
 	MIDirectIntegrator(Stream *stream, InstanceManager *manager)
 	 : SampleIntegrator(stream, manager) {
-		m_luminaireSamples = stream->readInt();
-		m_bsdfSamples = stream->readInt();
+		m_luminaireSamples = stream->readSize();
+		m_bsdfSamples = stream->readSize();
 		configure();
 	}
 
 	void configure() {
+		size_t sum = m_luminaireSamples + m_bsdfSamples;
 		m_weightBSDF = 1 / (Float) m_bsdfSamples;
 		m_weightLum = 1 / (Float) m_luminaireSamples;
-		m_fracBSDF = m_bsdfSamples / (Float) (m_luminaireSamples + m_bsdfSamples);
-		m_fracLum = m_luminaireSamples / (Float) (m_luminaireSamples + m_bsdfSamples);
+		m_fracBSDF = m_bsdfSamples / (Float) sum;
+		m_fracLum = m_luminaireSamples / (Float) sum;
 	}
 
 	void configureSampler(Sampler *sampler) {
@@ -105,13 +111,13 @@ public:
 		/*                          Luminaire sampling                          */
 		/* ==================================================================== */
 		Point2 *sampleArray;
-		int numLuminaireSamples = m_luminaireSamples,
-			numBSDFSamples = m_bsdfSamples;
+		size_t numLuminaireSamples = m_luminaireSamples,
+			   numBSDFSamples = m_bsdfSamples;
 		Float fracLum = m_fracLum, fracBSDF = m_fracBSDF,
 		      weightLum = m_weightLum, weightBSDF = m_weightBSDF;
 
 		if (rRec.depth > 1) {
-			/* This integrator is used by another integrator.
+			/* This integrator is used recursively by another integrator.
 			   Be less accurate as this sample will not directly be observed. */
 			numBSDFSamples = numLuminaireSamples = 1;
 			fracLum = fracBSDF = .5f;
@@ -121,11 +127,10 @@ public:
 		if (numLuminaireSamples > 1) {
 			sampleArray = rRec.sampler->next2DArray(numLuminaireSamples);
 		} else {
-			sample = rRec.nextSample2D();
-			sampleArray = &sample;
+			sample = rRec.nextSample2D(); sampleArray = &sample;
 		}
 
-		for (int i=0; i<numLuminaireSamples; ++i) {
+		for (size_t i=0; i<numLuminaireSamples; ++i) {
 			/* Estimate the direct illumination if this is requested */
 			if (scene->sampleLuminaire(its.p, ray.time, lRec, sampleArray[i])) {
 				/* Allocate a record for querying the BSDF */
@@ -157,11 +162,10 @@ public:
 		if (numBSDFSamples > 1) {
 			sampleArray = rRec.sampler->next2DArray(numBSDFSamples);
 		} else {
-			sample = rRec.nextSample2D();
-			sampleArray = &sample;
+			sample = rRec.nextSample2D(); sampleArray = &sample;
 		}
 
-		for (int i=0; i<numBSDFSamples; ++i) {
+		for (size_t i=0; i<numBSDFSamples; ++i) {
 			/* Sample BSDF * cos(theta) */
 			BSDFQueryRecord bRec(its);
 			bRec.sampler = rRec.sampler;
@@ -211,8 +215,8 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		SampleIntegrator::serialize(stream, manager);
-		stream->writeInt(m_luminaireSamples);
-		stream->writeInt(m_bsdfSamples);
+		stream->writeSize(m_luminaireSamples);
+		stream->writeSize(m_bsdfSamples);
 	}
 
 	std::string toString() const {
@@ -226,7 +230,8 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	int m_luminaireSamples, m_bsdfSamples;
+	size_t m_luminaireSamples;
+	size_t m_bsdfSamples;
 	Float m_fracBSDF, m_fracLum;
 	Float m_weightBSDF, m_weightLum;
 };

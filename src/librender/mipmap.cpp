@@ -31,9 +31,9 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 		  m_wrapMode(wrapMode), m_maxAnisotropy(maxAnisotropy) {
 	Spectrum *texture = pixels;
 
-	if (filterType != ENone && (!isPow2(width) || !isPow2(height))) {
-		m_width = (int) roundToPow2((uint32_t) width);
-		m_height = (int) roundToPow2((uint32_t) height);
+	if (filterType != ENone && (!isPowerOfTwo(width) || !isPowerOfTwo(height))) {
+		m_width = (int) roundToPowerOfTwo((uint32_t) width);
+		m_height = (int) roundToPowerOfTwo((uint32_t) height);
 
 		/* The texture needs to be up-sampled */
 		Spectrum *texture1 = new Spectrum[m_width*height];

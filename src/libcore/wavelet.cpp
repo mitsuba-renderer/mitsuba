@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
 
 Wavelet2D::Wavelet2D(const Bitmap *bitmap, int selectedChannel) {
 	Assert(bitmap->getWidth() == bitmap->getHeight());
-	Assert(isPow2(bitmap->getWidth()));
+	Assert(isPowerOfTwo(bitmap->getWidth()));
 
 	m_size = bitmap->getWidth();
 	m_data = new float[m_size * m_size];
@@ -60,7 +60,7 @@ Wavelet2D::Wavelet2D(const Bitmap *bitmap, int selectedChannel) {
 }
 
 Wavelet2D::Wavelet2D(const SparseWavelet2D *sw) {
-	Assert(isPow2(sw->getSize()));
+	Assert(isPowerOfTwo(sw->getSize()));
 	m_size = sw->getSize();
 	m_data = new float[m_size * m_size];
 	m_temp = new float[m_size];
@@ -467,7 +467,7 @@ std::string SparseWavelet2D::toString() const {
 /* ==================================================================== */
 
 Wavelet3D::Wavelet3D(const float *data, size_t resolution) {
-	Assert(isPow2(resolution));
+	Assert(isPowerOfTwo(resolution));
 
 	m_size = resolution;
 	size_t nEntries = m_size * m_size * m_size;
