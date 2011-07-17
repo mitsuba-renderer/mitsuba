@@ -496,7 +496,13 @@ void GLWidget::timerImpulse() {
 		Point origin = (1-t) * m_animationOrigin0 + t * m_animationOrigin1;
 		Point target = (1-t) * m_animationTarget0 + t * m_animationTarget1;
 
-		camera->setInverseViewTransform(Transform::lookAt(origin, target, m_context->up));
+		if (camera->getViewTransform().det3x3() > 0) 
+			camera->setInverseViewTransform(
+			Transform::lookAt(origin, target, m_context->up));
+		else 
+			camera->setInverseViewTransform(
+				Transform::lookAt(origin, target, m_context->up) *
+				Transform::scale(Vector(-1,1,1)));
 
 		if (x == 1.0f)
 			m_animation = false;
