@@ -831,6 +831,8 @@ Float GLWidget::autoFocus() const {
 		return std::numeric_limits<Float>::infinity();
 	const Scene *scene = m_context->scene;
 	Vector2i filmSize(scene->getFilm()->getSize());
+	const PerspectiveCamera *camera = static_cast<const PerspectiveCamera *>(
+		scene->getCamera());
 	Float t, avgDistance = 0, importance = 0;
 	ConstShapePtr ptr;
 	Normal n;
@@ -850,9 +852,9 @@ Float GLWidget::autoFocus() const {
 			importance += weight;
 		}
 	}
-	
+
 	if (importance == 0)
-		return std::numeric_limits<Float>::infinity();
+		return 0.5f * (camera->getNearClip() + camera->getFarClip());
 	else
 		return avgDistance / importance;
 }

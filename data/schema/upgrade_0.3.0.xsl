@@ -145,12 +145,24 @@
 		<xsl:attribute name="type">diffuse</xsl:attribute>
 	</xsl:template>
 	
+	<!-- Update the parameters of the ward plugin -->
+	<xsl:template match="bsdf[@type='ward']/float[@name='alphaX']/@name">
+		<xsl:attribute name="name">alphaU</xsl:attribute>
+	</xsl:template>
+	<xsl:template match="bsdf[@type='ward']/float[@name='alphaY']/@name">
+		<xsl:attribute name="name">alphaV</xsl:attribute>
+	</xsl:template>
+	
 	<!-- Update the name of the microfacet plugin -->
 	<xsl:template match="bsdf[@type='microfacet']/@type">
 		<xsl:attribute name="type">roughplastic</xsl:attribute>
 	</xsl:template>
 	<xsl:template match="bsdf[@type='microfacet']/float[@name='alphaB']/@name">
 		<xsl:attribute name="name">alpha</xsl:attribute>
+	</xsl:template>
+
+	<xsl:template match="float[@name='sizeMultiplier']/@name">
+		<xsl:attribute name="name">densityMultiplier</xsl:attribute>
 	</xsl:template>
 	
 	<!-- There is no more 'mirror' plugin; replace with smooth chrome -->
