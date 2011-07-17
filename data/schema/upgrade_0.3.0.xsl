@@ -140,6 +140,14 @@
 		</xsl:choose>
 	</xsl:template>
 
+	<!-- Apply a diffuse material to shapes that don't have any media or BSDFs -->
+	<xsl:template match="shape[not(bsdf) and not(ref) and not(medium)]">
+		<xsl:copy>
+			<xsl:apply-templates select="@*|node()"/>
+			<bsdf type="diffuse"/>
+		</xsl:copy>
+	</xsl:template>
+
 	<!-- Update the name of the lambertian plugin -->
 	<xsl:template match="bsdf[@type='lambertian']/@type">
 		<xsl:attribute name="type">diffuse</xsl:attribute>
