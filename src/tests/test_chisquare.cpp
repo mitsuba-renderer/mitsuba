@@ -94,10 +94,9 @@ public:
 	/// Adapter to use BSDFs in the chi-square test
 	class BSDFAdapter {
 	public:
-		BSDFAdapter(const BSDF *bsdf, Sampler *sampler, const Vector &wi, 
-				int component, bool passSamplerToBSDF)
+		BSDFAdapter(const BSDF *bsdf, Sampler *sampler, const Vector &wi, int component)
 			: m_bsdf(bsdf), m_sampler(sampler), m_wi(wi), m_component(component),
-			  m_largestWeight(0), m_passSamplerToBSDF(passSamplerToBSDF) {
+			  m_largestWeight(0) {
 			m_fakeSampler = new FakeSampler(m_sampler);
 			m_its.uv = Point2(0.0f);
 			m_its.dpdu = Vector(1, 0, 0);
@@ -125,8 +124,7 @@ public:
 			   an arbitrary random number stream vs. those that only use
 			   a single uniform 2D sample */
 	
-			if (m_passSamplerToBSDF)
-				bRec.sampler = m_fakeSampler;
+			bRec.sampler = m_fakeSampler;
 
 			/* Check the various sampling routines for agreement 
 			   amongst each other */
@@ -196,8 +194,7 @@ public:
 			bRec.component = m_component;
 			bRec.wi = m_wi;
 			bRec.wo = wo;
-			if (m_passSamplerToBSDF)
-				bRec.sampler = m_sampler;
+			bRec.sampler = m_sampler;
 
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
@@ -223,7 +220,6 @@ public:
 		Vector m_wi;
 		int m_component;
 		Float m_largestWeight;
-		bool m_passSamplerToBSDF;
 	};
 
 	/// Adapter to use Phase functions in the chi-square test
@@ -334,104 +330,88 @@ public:
 
 			Log(EInfo, "Processing BSDF model %s", bsdf->toString().c_str());
 
-			for (int pass=0; pass<2; ++pass) {
-				Log(EInfo, "Checking the model for %i incident directions and 2D sampling", wiSamples);
-				progress->reset();
+			Log(EInfo, "Checking the model for %i incident directions and 2D sampling", wiSamples);
+			progress->reset();
 
-				/**
-				 * Do a second pass when the BSDF can optionally make use of 
-				 * an infinite random number stream. The sampling method is likely
-				 * quite different in this case, so everything has to be checked
-				 * again.
-				 */
+			/* Test for a number of different incident directions */
+			for (size_t j=0; j<wiSamples; ++j) {
+				Vector wi;
+	
+				if (bsdf->getType() & BSDF::EBackSide)
+					wi = squareToSphere(sampler->next2D());
+				else
+					wi = squareToHemispherePSA(sampler->next2D());
 
-				if (pass == 1) {
-					if (!(bsdf->getType() & BSDF::ECanUseSampler))
-						break;
-					else
-						Log(EInfo, "Checking the model again, but now with access to an infinite random number stream.");
+				BSDFAdapter adapter(bsdf, sampler, wi, -1);
+				ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
+				chiSqr->setLogLevel(EDebug);
+
+				// Initialize the tables used by the chi-square test
+				chiSqr->fill(
+					boost::bind(&BSDFAdapter::generateSample, &adapter),
+					boost::bind(&BSDFAdapter::pdf, &adapter, _1, _2)
+				);
+
+				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
+				ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
+				if (result == ChiSquare::EReject) {
+					std::string filename = formatString("failure_%i.m", failureCount++);
+					chiSqr->dumpTables(filename);
+					failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
+						"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis", 
+						wi.toString().c_str(), filename.c_str()));
+				} else {
+					succeed();
 				}
+				largestWeight = std::max(largestWeight, adapter.getLargestWeight());
+				++testCount;
+				progress->update(j+1);
+			}
+			Log(EInfo, "The largest encountered importance weight was = %.2f", largestWeight);
+			largestWeight = 0;
 
-				/* Test for a number of different incident directions */
-				for (size_t j=0; j<wiSamples; ++j) {
-					Vector wi;
-		
-					if (bsdf->getType() & BSDF::EBackSide)
-						wi = squareToSphere(sampler->next2D());
-					else
-						wi = squareToHemispherePSA(sampler->next2D());
+			if (bsdf->getComponentCount() > 1) {
+				for (int comp=0; comp<bsdf->getComponentCount(); ++comp) {
+					progress->reset();
+					Log(EInfo, "Individually checking BSDF component %i", comp);
 
-					BSDFAdapter adapter(bsdf, sampler, wi, -1, pass == 1);
-					ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
-					chiSqr->setLogLevel(EDebug);
+					/* Test for a number of different incident directions */
+					for (size_t j=0; j<wiSamples; ++j) {
+						Vector wi;
+			
+						if (bsdf->getType(comp) & BSDF::EBackSide)
+							wi = squareToSphere(sampler->next2D());
+						else
+							wi = squareToHemispherePSA(sampler->next2D());
 
-					// Initialize the tables used by the chi-square test
-					chiSqr->fill(
-						boost::bind(&BSDFAdapter::generateSample, &adapter),
-						boost::bind(&BSDFAdapter::pdf, &adapter, _1, _2)
-					);
+						BSDFAdapter adapter(bsdf, sampler, wi, comp);
 
-					// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-					ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
-					if (result == ChiSquare::EReject) {
-						std::string filename = formatString("failure_%i.m", failureCount++);
-						chiSqr->dumpTables(filename);
-						failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
-							"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis", 
-							wi.toString().c_str(), filename.c_str()));
-					} else {
-						succeed();
-					}
-					largestWeight = std::max(largestWeight, adapter.getLargestWeight());
-					++testCount;
-					progress->update(j+1);
-				}
-				Log(EInfo, "The largest encountered importance weight was = %.2f", largestWeight);
-				largestWeight = 0;
+						ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
+						chiSqr->setLogLevel(EDebug);
 
-				if (bsdf->getComponentCount() > 1) {
-					for (int comp=0; comp<bsdf->getComponentCount(); ++comp) {
-						progress->reset();
-						Log(EInfo, "Individually checking BSDF component %i", comp);
+						// Initialize the tables used by the chi-square test
+						chiSqr->fill(
+							boost::bind(&BSDFAdapter::generateSample, &adapter),
+							boost::bind(&BSDFAdapter::pdf, &adapter, _1, _2)
+						);
 
-						/* Test for a number of different incident directions */
-						for (size_t j=0; j<wiSamples; ++j) {
-							Vector wi;
-				
-							if (bsdf->getType(comp) & BSDF::EBackSide)
-								wi = squareToSphere(sampler->next2D());
-							else
-								wi = squareToHemispherePSA(sampler->next2D());
-
-							BSDFAdapter adapter(bsdf, sampler, wi, comp, pass == 1);
-
-							ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
-							chiSqr->setLogLevel(EDebug);
-
-							// Initialize the tables used by the chi-square test
-							chiSqr->fill(
-								boost::bind(&BSDFAdapter::generateSample, &adapter),
-								boost::bind(&BSDFAdapter::pdf, &adapter, _1, _2)
-							);
-
-							// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-							ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
-							if (result == ChiSquare::EReject) {
-								std::string filename = formatString("failure_%i.m", failureCount++);
-								chiSqr->dumpTables(filename);
-								failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
-									"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis", 
-									wi.toString().c_str(), filename.c_str()));
-							} else {
-								succeed();
-							}
-							largestWeight = std::max(largestWeight, adapter.getLargestWeight());
-							++testCount;
-							progress->update(j+1);
+						// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
+						ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
+						if (result == ChiSquare::EReject) {
+							std::string filename = formatString("failure_%i.m", failureCount++);
+							chiSqr->dumpTables(filename);
+							failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
+								"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis", 
+								wi.toString().c_str(), filename.c_str()));
+						} else {
+							succeed();
 						}
-						Log(EInfo, "The largest encountered importance weight was = %.2f", largestWeight);
-						largestWeight = 0;
+						largestWeight = std::max(largestWeight, adapter.getLargestWeight());
+						++testCount;
+						progress->update(j+1);
 					}
+					Log(EInfo, "The largest encountered importance weight was = %.2f", largestWeight);
+					largestWeight = 0;
 				}
 			}
 		}

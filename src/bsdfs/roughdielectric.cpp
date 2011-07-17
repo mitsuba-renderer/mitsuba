@@ -423,21 +423,7 @@ public:
 		Float prob = m_distribution.pdf(H, alphaU, alphaV);
 
 		if (hasTransmission && hasReflection) {
-			/* Please see the sample() methods if the 
-			   following seems confusing */
-			Float F;
-			if (bRec.sampler) {
-				/* We have access to extra random numbers and are
-				   thus able to sample the exact Fresnel term 
-				   with respect to the microfacet normal */
-				F = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
-			} else {
-				/* Only a simple 2D sample is given, and hence the
-				   best we can do is to sample a clamped Fresnel term 
-				   that is taken with respect to the surface normal */
-				F = std::min((Float) 0.9f, std::max((Float) 0.1f,
-					fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR)));
-			}
+			Float F = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
 			prob *= reflect ? F : (1-F);
 		}
 
@@ -454,43 +440,8 @@ public:
 		     choseReflection = hasReflection,
 			 sampleExactFresnelTerm = false;
 
-		Float sampleF = 1.0f;
-		if (hasReflection && hasTransmission) {
-			if (!bRec.sampler) {
-				/* By default, the sample() method is given exactly two
-				   uniformly chosen random numbers, which is a problem
-				   when wanting to choose between the reflection and the
-				   transmission component: by the time the microfacet normal
-				   has been sampled, we have already "used up" both of them,
-				   and no random bits are left. Therefore, the following
-				   somewhat crude approach is taken here when no extra sampler
-				   instance is provided:
-				      1. Take the Fresnel term with respect to the surface
-					     normal to be a good approximation to the microsurface
-						 Fresnel term -- this will be less true for higher 
-						 roughness values. To be safe, clamp it to some 
-						 reasonable range.
-					  2. Use this approximate term and a random number to
-					     choose between reflection and refraction component.
-					  3. Recycle the used random number! This is possible,
-					     since we so far only used the knowledge that it is
-						 smaller or larget than the purely deterministic value
-						 from step 2.
-				*/
-				sampleF = std::min((Float) 0.9f, std::max((Float) 0.1f,
-					fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR)));
-				if (sample.x < sampleF) {
-					sample.x /= sampleF;
-				} else {
-					sample.x = (sample.x - sampleF) / (1 - sampleF);
-					choseReflection = false;
-				}
-			} else {
-				sampleExactFresnelTerm = true;
-			}
-		} else if (!hasReflection && !hasTransmission) {
+		if (!hasReflection && !hasTransmission)
 			return Spectrum(0.0f);
-		}
 
 		/* Evaluate the roughness */
 		Float alphaU = m_distribution.transformRoughness( 
@@ -512,9 +463,9 @@ public:
 		const Normal m = m_distribution.sample(sample,
 				sampleAlphaU, sampleAlphaV);
 
-		if (sampleExactFresnelTerm) {
-			sampleF = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
-			if (bRec.sampler->next1D() > sampleF)
+		if (hasReflection && hasTransmission) {
+			Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
+			if (bRec.sampler->next1D() > F)
 				choseReflection = false;
 		}
 
@@ -559,17 +510,6 @@ public:
 		Float denominator = m_distribution.pdf(m, sampleAlphaU, sampleAlphaV)
 			* Frame::cosTheta(bRec.wi);
 
-		if (!sampleExactFresnelTerm) {
-			Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
-			if (!choseReflection) {
-				sampleF = 1-sampleF;
-				F = 1-F;
-			}
-			numerator *= F;
-			if (hasReflection && hasTransmission) 
-				denominator *= sampleF;
-		}
-
 		return result * std::abs(numerator / denominator);
 	}
 
@@ -583,42 +523,8 @@ public:
 		     choseReflection = hasReflection,
 			 sampleExactFresnelTerm = false;
 
-		if (hasReflection && hasTransmission) {
-			if (!bRec.sampler) {
-				/* By default, the sample() method is given exactly two
-				   uniformly chosen random numbers, which is a problem
-				   when wanting to choose between the reflection and the
-				   transmission component: by the time the microfacet normal
-				   has been sampled, we have already "used up" both of them,
-				   and no random bits are left. Therefore, the following
-				   somewhat crude approach is taken here when no extra sampler
-				   instance is provided:
-				      1. Take the Fresnel term with respect to the surface
-					     normal to be a good approximation to the microsurface
-						 Fresnel term -- this will be less true for higher 
-						 roughness values. To be safe, clamp it to some 
-						 reasonable range.
-					  2. Use this approximate term and a random number to
-					     choose between reflection and refraction component.
-					  3. Recycle the used random number! This is possible,
-					     since we so far only used the knowledge that it is
-						 smaller or larget than the purely deterministic value
-						 from step 2.
-				*/
-				Float sampleF = std::min((Float) 0.9f, std::max((Float) 0.1f,
-					fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR)));
-				if (sample.x < sampleF) {
-					sample.x /= sampleF;
-				} else {
-					sample.x = (sample.x - sampleF) / (1 - sampleF);
-					choseReflection = false;
-				}
-			} else {
-				sampleExactFresnelTerm = true;
-			}
-		} else if (!hasReflection && !hasTransmission) {
+		if (!hasReflection && !hasTransmission)
 			return Spectrum(0.0f);
-		}
 
 		/* Evaluate the roughness */
 		Float alphaU = m_distribution.transformRoughness( 
@@ -640,9 +546,9 @@ public:
 		const Normal m = m_distribution.sample(sample,
 				sampleAlphaU, sampleAlphaV);
 
-		if (sampleExactFresnelTerm) {
-			Float sampleF = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
-			if (bRec.sampler->next1D() > sampleF)
+		if (hasReflection && hasTransmission) {
+			Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
+			if (bRec.sampler->next1D() > F)
 				choseReflection = false;
 		}
 
