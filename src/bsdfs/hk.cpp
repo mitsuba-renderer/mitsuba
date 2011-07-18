@@ -44,6 +44,7 @@ MTS_NAMESPACE_BEGIN
  * <bsdf type="hk">
  *     <spectrum name="sigmaS" value="4"/>
  *     <spectrum name="sigmaA" value="0.1"/>
+ *     <float name="thickness" value="0.5"/>
  *     <phase type="hg">
  *         <float name="g" value="0.98"/>
  *     </phase>

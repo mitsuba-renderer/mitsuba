@@ -28,6 +28,7 @@ if (sys.platform == 'win32' or sys.platform == 'darwin') and not os.path.exists(
 # Parse configuration options
 vars = Variables(configFile)
 vars.Add('BUILDDIR',      'Target directory for intermediate files')
+vars.Add('DISTDIR',       'Target directory for the final build')
 vars.Add('CXX',           'C++ compiler')
 vars.Add('CC',            'C compiler')
 vars.Add('CXXFLAGS',      'C++ flags')

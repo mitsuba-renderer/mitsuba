@@ -1,4 +1,5 @@
 BUILDDIR       = '#build/release'
+DISTDIR        = '#dist'
 CXX            = 'cl'
 CC             = 'cl'
 # /Ox=optimize for speed, global optimizations, intrinsic functions, favor fast code, frame pointer omission

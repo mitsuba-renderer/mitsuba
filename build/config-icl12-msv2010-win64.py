@@ -1,4 +1,5 @@
 BUILDDIR       = '#build/release'
+DISTDIR        = '#dist'
 CXX            = 'icl'
 CC             = 'icl'
 LINK           = 'xilink'
