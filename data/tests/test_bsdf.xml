@@ -2,8 +2,17 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene version="0.3.0">
-	<!-- Test the Hanrahan-Krueger model -->
+	<!-- Test the Hanrahan-Krueger model with an
+		 isotropic phase function -->
 	<bsdf type="hk"/>
+	
+	<!-- Test the Hanrahan-Krueger model with a 
+		 forward-scattering phase function -->
+	<bsdf type="hk">
+		<phase type="hg">
+			<float name="g" value="0.8"/>
+		</phase>
+	</bsdf>
 
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
