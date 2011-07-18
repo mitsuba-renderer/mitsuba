@@ -1,7 +1,7 @@
 <!-- This file defines a series of phase function instances
 	 to be tested for consistency. This is done using the 
 	 testcase 'test_chisquare' -->
-<scene>
+<scene version="0.3.0">
 	<!-- Test the isotropic phase function -->
 	<phase type="isotropic"/>
 	
