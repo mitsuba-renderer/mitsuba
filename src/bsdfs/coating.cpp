@@ -84,6 +84,7 @@ MTS_NAMESPACE_BEGIN
  *     varnish, label=lst:coating-roughcopper]
  * <bsdf type="coating">
  *     <float name="intIOR" value="1.7"/>
+ *     
  *     <bsdf type="roughconductor">
  *         <string name="material" value="Cu"/>
  *         <float name="alpha" value="0.1"/>
