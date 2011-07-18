@@ -24,54 +24,79 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*!\plugin{hk}{Hanrahan-Krueger BRDF}
+/*!\plugin{hk}{Hanrahan-Krueger BSDF}
  *
- * This plugin is an implementation of the Hanrahan-Krueger scattering model 
- * \cite{Hanrahan1993Reflection}. This model provides an analytic BSDF that 
- * accounts for single scattering within thin slabs of scattering media having
- * index matched boundaries. 
+ * \parameters{
+ *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Scattering coefficient of the 
+ *      layer. \default{2.0}}
+ *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Absorption coefficient of the 
+ *      layer. \default{0.05}}
+ *     \parameter{thickness}{\Float}{Denotes the thickness of the layer.
+ *      Should be specified in inverse units of \code{sigmaA} and \code{sigmaS})\default{1}}
+ *     \parameter{\Unnamed}{\Phase}{A nested phase function instance that represents 
+ *      the type of scattering interactions occurring within the layer}
+ * }
  *
- * It also accounts for $0^{\mathrm{th}}$-order scattered light (i.e. attenuated
- * light) that did not scatter within the medium. When used in conjuction with 
- * the \pluginref{coating} plugin, it can also acount for refraction and reflection
- * at the boundaries of the medium when the indices of refraction are mismatched.
+ * This plugin provides an implementation of the Hanrahan-Krueger BSDF
+ * \cite{Hanrahan1993Reflection}. This analytic model simulates single scattering
+ * within a thin index-matched layer filled with a random medium.
+ * Apart from single scattering, the implementation also accounts for attenuated
+ * light that passes through the medium without undergoing any scattering events.
  *
- * This BSDF needs a nested phase function to model the scattering within the
- * medium. When no phase function is given, it will use an isotropic one ($g=0$)
- * by default. A sample usage is given below: 
+ * This BSDF requires a phase function to model scattering interactions within the
+ * random medium. When no phase function is explicitly specified, it uses an 
+ * isotropic one ($g=0$) by default. A sample usage for instantiating the
+ * plugin is given below: 
  *
  * \begin{xml}
  * <bsdf type="hk">
- *     <spectrum name="sigmaS" value="4"/>
- *     <spectrum name="sigmaA" value="0.1"/>
- *     <float name="thickness" value="0.5"/>
+ *     <spectrum name="sigmaS" value="2"/>
+ *     <spectrum name="sigmaA" value="0.05"/>
+ *     <float name="thickness" value="1"/>
+ *
  *     <phase type="hg">
- *         <float name="g" value="0.98"/>
+ *         <float name="g" value="0.8"/>
  *     </phase>
  * </bsdf>
  * \end{xml}
  *
- * When \texttt{sigmaS} = \texttt{sigmaA}$\ = 0$, any associated geometry 
- * will be invisible.
+ * When used in conjuction with the \pluginref{coating} plugin, it is possible 
+ * to correctly model refraction and reflection at the layer boundaries when 
+ * the indices of refraction are mismatched:
+ * \begin{xml}
+ * <bsdf type="coating">
+ *     <float name="extIOR" value="1.0"/>
+ *     <float name="intIOR" value="1.5"/>
  *
- * The sampling of this BSDF is either with respect to the phase function PDF or
- * with the delta transmission function. The weighting between the two is decided
- * based on the probability of an event within the medium.
+ *     <bsdf type="hk">
+ *         <spectrum name="sigmaS" value="2"/>
+ *         <spectrum name="sigmaA" value="0.05"/>
+ *         <float name="thickness" value="1"/>
  *
- * The implementation is based on code by Tom Kamzimier and Marios Papas.
+ *         <phase type="hg">
+ *             <float name="g" value="0.8"/>
+ *         </phase>
+ *     </bsdf>
+ * </bsdf>
+ * \end{xml}
+ *
+ * Note that when \texttt{sigmaS} = \texttt{sigmaA}$\ = 0$, or when \texttt{thickness=0},
+ * any geometry associated with this scattering model will be invisible.
+ *
+ * The implementation in Mitsuba is based on code by Tom Kazimiers and Marios Papas.
 */
 
 class HanrahanKrueger : public BSDF {
 public:
 	HanrahanKrueger(const Properties &props) : BSDF(props) {
-		/* Scattering events per scene unit */
-		m_sigmaS = props.getSpectrum("sigmaS", Spectrum(4.0f)); 
-		
-		/* Absorption events per scene unit */
-		m_sigmaA = props.getSpectrum("sigmaA", Spectrum(0.1f));  
+		/* Scattering coefficient of the layer */
+		m_sigmaS = props.getSpectrum("sigmaS", Spectrum(2.0f)); 
 
-		/* Slab Thickness in scene units*/
-		m_d = props.getFloat("thickness",0.5); 
+		/* Absorption coefficient of the layer */
+		m_sigmaA = props.getSpectrum("sigmaA", Spectrum(0.05f));  
+
+		/* Slab thickness in inverse units of sigmaS and sigmaA */
+		m_d = props.getFloat("thickness", 1); 
 
 	}
 
