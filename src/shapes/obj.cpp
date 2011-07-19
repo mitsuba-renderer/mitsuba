@@ -286,7 +286,7 @@ public:
 	}
 
 	void addMaterial(const std::string &name, const Spectrum &diffuse) {
-		Properties props("lambertian");
+		Properties props("diffuse");
 		props.setSpectrum("reflectance", diffuse);
 		props.setID(name);
 		BSDF *bsdf = static_cast<BSDF *> (PluginManager::getInstance()->
