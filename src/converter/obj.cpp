@@ -148,7 +148,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 	os << "<!--" << endl << endl;
 	os << "\tAutomatically converted from Wavefront OBJ" << endl << endl;
 	os << "-->" << endl << endl;
-	os << "<scene>" << endl;
+	os << "<scene version=\"" << MTS_VERSION << "\">" << endl;
 	os << "\t<integrator id=\"integrator\" type=\"direct\"/>" << endl << endl;
 
 	std::string buf, line;

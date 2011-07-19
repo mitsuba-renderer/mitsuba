@@ -1591,7 +1591,7 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	os << "<!--" << endl << endl;
 	os << "\tAutomatically converted from COLLADA" << endl << endl;
 	os << "-->" << endl << endl;
-	os << "<scene>" << endl;
+	os << "<scene version=\"" << MTS_VERSION << "\">" << endl;
 	os << "\t<integrator id=\"integrator\" type=\"direct\"/>" << endl << endl;
 
 	ColladaContext ctx(os);
