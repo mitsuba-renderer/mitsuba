@@ -652,7 +652,7 @@ retry:
 						.arg(MTS_VERSION), QMessageBox::Yes | QMessageBox::Cancel);
 			} else {
 				QMessageBox box(QMessageBox::Question, tr("Version mismatch -- update scene file?"),
-					(loadingThread->getError() + "\n\nAlternatively, if this file is from version 0.2.1"
+					(loadingThread->getError() + "\n\nAlternatively, if this file is from version 0.2.1 "
 					 "(the last release without explicit version numbers), you can perform a fully "
 					 "automated upgrade from this version. A backup copy will be made in this case.").c_str());
 				QPushButton *version021Button = box.addButton(tr("Assume version 0.2.1?"), QMessageBox::YesRole);

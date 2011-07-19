@@ -64,4 +64,5 @@ if hasQt:
 		qtEnv.AddPostAction(qtgui, 'install_name_tool -change QtOpenGL.framework/Versions/4/QtOpenGL @executable_path/../Frameworks/QtOpenGL $TARGET')
 		qtEnv.AddPostAction(qtgui, 'install_name_tool -change QtXml.framework/Versions/4/QtXml @executable_path/../Frameworks/QtXml $TARGET')
 		qtEnv.AddPostAction(qtgui, 'install_name_tool -change QtNetwork.framework/Versions/4/QtNetwork @executable_path/../Frameworks/QtNetwork $TARGET')
+		qtEnv.AddPostAction(qtgui, 'install_name_tool -change QtXmlPatterns.framework/Versions/4/QtXmlPatterns @executable_path/../Frameworks/QtXmlPatterns $TARGET')
 
