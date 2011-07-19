@@ -667,7 +667,7 @@ Vector squareToCone(Float cosCutoff, const Point2 &sample) {
 }
 
 Point2 squareToStdNormal(const Point2 &sample) {
-	Float tmp1 = std::sqrt(-2 * std::log(sample.x)),
+	Float tmp1 = std::sqrt(-2 * std::log(1-sample.x)),
 		  tmp2 = 2 * M_PI * sample.y;
 	return Point2(
 		tmp1 * std::cos(tmp2),

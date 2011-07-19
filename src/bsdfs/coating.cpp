@@ -94,6 +94,12 @@ MTS_NAMESPACE_BEGIN
  */
 class SmoothCoating : public BSDF {
 public:
+	/// \sa refractTo()
+	enum EDestination {
+		EInterior = 0,
+		EExterior = 1
+	};
+
 	SmoothCoating(const Properties &props) 
 			: BSDF(props) {
 		/* Specifies the internal index of refraction at the interface */
@@ -123,9 +129,6 @@ public:
 	void configure() {
 		if (!m_nested)
 			Log(EError, "A child BSDF instance is required");
-		if (m_nested->getType() & BSDF::ETransmission)
-			Log(EError, "Tried to put a smooth coating layer on top of a BSDF "
-				"with a transmission component -- this is currently not allowed!");
 
 		unsigned int extraFlags = 0;
 		if (!m_sigmaA->isConstant())
@@ -135,7 +138,7 @@ public:
 		for (int i=0; i<m_nested->getComponentCount(); ++i) 
 			m_components.push_back(m_nested->getType(i) | extraFlags);
 
-		m_components.push_back(EDeltaReflection | EFrontSide);
+		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide);
 
 		m_usesRayDifferentials = m_nested->usesRayDifferentials()
 			|| m_sigmaA->usesRayDifferentials();
@@ -175,25 +178,20 @@ public:
 		return Vector(-wi.x, -wi.y, wi.z);
 	}
 
-	/**
-	 * \brief Refraction in local coordinates 
-	 *
-	 * To be used when some of the data is already available
-	 */
-	inline Vector refract(const Vector &wi, Float eta, Float cosThetaT) const {
-		return Vector(-eta*wi.x, -eta*wi.y, cosThetaT);
-	}
+	/// Refraction in local coordinates 
+	Vector refractTo(EDestination dest,
+			const Vector &wi, Float &F) const {
+		Float etaI, etaT;
+		if (dest == EInterior) {
+			etaI = m_extIOR;
+			etaT = m_intIOR;
+		} else {
+			etaI = m_intIOR;
+			etaT = m_extIOR;
+		}
 
-	/// Refraction in local coordinates (full version)
-	inline Vector refract(const Vector &wi, Float &F) const {
-		Float cosThetaI = Frame::cosTheta(wi),
-			  etaI = m_extIOR, etaT = m_intIOR;
-
+		Float cosThetaI = Frame::cosTheta(wi);
 		bool entering = cosThetaI > 0.0f;
-
-		/* Determine the respective indices of refraction */
-		if (!entering)
-			std::swap(etaI, etaT);
 
 		/* Using Snell's law, calculate the squared sine of the
 		   angle between the normal and the transmitted ray */
@@ -210,18 +208,15 @@ public:
 
 			/* Compute the Fresnel transmittance */
 			F = fresnelDielectric(std::abs(Frame::cosTheta(wi)),
-				cosThetaT, m_extIOR, m_intIOR);
+				cosThetaT, etaI, etaT);
 
-			return Vector(-eta*wi.x, -eta*wi.y, 
-				entering ? -cosThetaT : cosThetaT);
+			/* Retain the directionality of the vector */
+			return Vector(eta*wi.x, eta*wi.y, 
+				entering ? cosThetaT : -cosThetaT);
 		}
 	}
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		if (Frame::cosTheta(bRec.wi) <= 0 || 
-			Frame::cosTheta(bRec.wo) <= 0)
-			return Spectrum(0.0f);
-
 		bool sampleSpecular = (bRec.typeMask & EDeltaReflection)
 			&& (bRec.component == -1 || bRec.component == (int) m_components.size()-1);
 		bool sampleNested = (bRec.typeMask & m_nested->getType() & BSDF::EAll)
@@ -230,29 +225,29 @@ public:
 		if (measure == EDiscrete && sampleSpecular &&
 			std::abs(1-dot(reflect(bRec.wi), bRec.wo)) < Epsilon) {
 			return Spectrum(fresnel(
-				Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR));
+				std::abs(Frame::cosTheta(bRec.wi)), m_extIOR, m_intIOR));
 		} else if (sampleNested) {
 			Float R12, R21;
-			BSDFQueryRecord bRec2(bRec);
-			bRec2.wi = -refract(bRec.wi, R12);
-			bRec2.wo = -refract(bRec.wo, R21);
+			BSDFQueryRecord bRecInt(bRec);
+			bRecInt.wi = refractTo(EInterior, bRec.wi, R12);
+			bRecInt.wo = refractTo(EInterior, bRec.wo, R21);
 
 			if (R12 == 1 || R21 == 1) /* Total internal reflection */
 				return Spectrum(0.0f);
 
 			Float eta = m_extIOR / m_intIOR;
-			Spectrum result = m_nested->eval(bRec2, measure)
+			Spectrum result = m_nested->eval(bRecInt, measure)
 				* ((1-R12) * (1-R21) * eta * eta);
 
 			Spectrum sigmaA = m_sigmaA->getValue(bRec.its) * m_thickness;
 			if (!sigmaA.isZero()) 
 				result *= (-sigmaA *
-					(1/std::abs(Frame::cosTheta(bRec2.wi)) +
-					 1/std::abs(Frame::cosTheta(bRec2.wo)))).exp();
+					(1/std::abs(Frame::cosTheta(bRecInt.wi)) +
+					 1/std::abs(Frame::cosTheta(bRecInt.wo)))).exp();
 
 			if (measure == ESolidAngle)
-				result *= Frame::cosTheta(bRec.wo)
-					    / Frame::cosTheta(bRec2.wo);
+				result *= std::abs(Frame::cosTheta(bRec.wo)
+					             / Frame::cosTheta(bRecInt.wo));
 
 			return result;
 		}
@@ -261,17 +256,13 @@ public:
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		if (Frame::cosTheta(bRec.wi) <= 0 || 
-			Frame::cosTheta(bRec.wo) <= 0)
-			return 0.0f;
-
 		bool sampleSpecular = (bRec.typeMask & EDeltaReflection)
 			&& (bRec.component == -1 || bRec.component == (int) m_components.size()-1);
 		bool sampleNested = (bRec.typeMask & m_nested->getType() & BSDF::EAll)
 			&& (bRec.component == -1 || bRec.component < (int) m_components.size()-1);
 		
 		Float R12;
-		Vector wiPrime = -refract(bRec.wi, R12);
+		Vector wiPrime = refractTo(EInterior, bRec.wi, R12);
 
 		/* Reallocate samples */
 		Float probSpecular = (R12*m_specularSamplingWeight) /
@@ -283,18 +274,18 @@ public:
 			return sampleNested ? probSpecular : 1.0f;
 		} else if (sampleNested) {
 			Float R21;
-			BSDFQueryRecord bRec2(bRec);
-			bRec2.wi = wiPrime;
-			bRec2.wo = -refract(bRec.wo, R21);
+			BSDFQueryRecord bRecInt(bRec);
+			bRecInt.wi = wiPrime;
+			bRecInt.wo = refractTo(EInterior, bRec.wo, R21);
 
 			if (R12 == 1 || R21 == 1) /* Total internal reflection */
 				return 0.0f;
 		
-			Float pdf = m_nested->pdf(bRec2, measure);
+			Float pdf = m_nested->pdf(bRecInt, measure);
 
 			if (measure == ESolidAngle)
-				pdf *= Frame::cosTheta(bRec.wo)
-					 / Frame::cosTheta(bRec2.wo);
+				pdf *= std::abs(Frame::cosTheta(bRec.wo)
+					          / Frame::cosTheta(bRecInt.wo));
 
 			Float eta = m_extIOR / m_intIOR;
 			pdf *= eta * eta;
@@ -311,21 +302,11 @@ public:
 		bool sampleNested = (bRec.typeMask & m_nested->getType() & BSDF::EAll)
 			&& (bRec.component == -1 || bRec.component < (int) m_components.size()-1);
 
-		if ((!sampleSpecular && !sampleNested) || Frame::cosTheta(bRec.wi) <= 0)
+		if ((!sampleSpecular && !sampleNested))
 			return Spectrum(0.0f);
 
-		/* Refract the incident direction and compute the Fresnel reflectance */
-		Float eta = m_extIOR / m_intIOR,
-			  sinThetaTSqr = eta*eta * Frame::sinTheta2(bRec.wi),
-			  R12, cosThetaT = 0;
-
-		if (sinThetaTSqr >= 1.0f) {
-			R12 = 1.0f; /* Total internal reflection */
-		} else {
-			cosThetaT = -std::sqrt(1.0f - sinThetaTSqr);
-			R12 = fresnelDielectric(Frame::cosTheta(bRec.wi),
-					-cosThetaT, m_extIOR, m_intIOR);
-		}
+		Float R12;
+		Vector wiPrime = refractTo(EInterior, bRec.wi, R12);
 
 		/* Reallocate samples */
 		Float probSpecular = (R12*m_specularSamplingWeight) /
@@ -353,27 +334,30 @@ public:
 				return Spectrum(0.0f);
 
 			Vector wiBackup = bRec.wi;
-			bRec.wi = -refract(bRec.wi, eta, cosThetaT);
-
+			bRec.wi = wiPrime;
 			Spectrum result = m_nested->sample(bRec, pdf, sample);
+			bRec.wi = wiBackup;
+			Vector woPrime = bRec.wo;
+	
 			if (result.isZero()) 
 				return Spectrum(0.0f);
 
 			Spectrum sigmaA = m_sigmaA->getValue(bRec.its) * m_thickness;
 			if (!sigmaA.isZero()) 
 				result *= (-sigmaA *
-					(1/std::abs(Frame::cosTheta(bRec.wi)) +
-					 1/std::abs(Frame::cosTheta(bRec.wo)))).exp();
+					(1/std::abs(Frame::cosTheta(wiPrime)) +
+					 1/std::abs(Frame::cosTheta(woPrime)))).exp();
 
-			Float R21, cosThetaWoPrime = Frame::cosTheta(bRec.wo);
-			bRec.wo = refract(-bRec.wo, R21);
-			bRec.wi = wiBackup;
+			Float R21;
+			bRec.wo = refractTo(EExterior, woPrime, R21);
 
 			if (R21 == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
+
+			Float eta = m_extIOR / m_intIOR;
 			bool sampledSA = (BSDF::getMeasure(bRec.sampledType) == ESolidAngle);
-			Float cosRatio = Frame::cosTheta(bRec.wo) / cosThetaWoPrime,
-				  commonTerms = (sampledSA ? cosRatio : 1.0f)* eta * eta;
+			Float cosRatio = std::abs(Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime)),
+				  commonTerms = (sampledSA ? cosRatio : 1.0f) * eta * eta;
 
 			pdf *= (sampleSpecular ? (1 - probSpecular) : 1.0f) * commonTerms;
 			result *= (1 - R12) * (1 - R21) * commonTerms;

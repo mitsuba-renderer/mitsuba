@@ -2,6 +2,31 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene version="0.3.0">
+	<!-- Test the coating model with a transmissive
+		 + reflective material -->
+	<bsdf type="coating">
+		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
+		<float name="thickness" value="2"/>
+
+		<bsdf type="mixture">
+			<string name="weights" value=".5 .3"/>
+
+			<bsdf type="diffuse">
+				<rgb name="reflectance" value=".5 0 0"/>
+			</bsdf>
+			<bsdf type="difftrans">
+				<rgb name="transmittance" value="0 .5 0"/>
+			</bsdf>
+		</bsdf>
+	</bsdf>
+
+	<!-- Test the coating model with the Hanrahan-Krueger model -->
+	<bsdf type="coating">
+		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
+		<float name="thickness" value="2"/>
+		<bsdf type="hk"/>
+	</bsdf>
+
 	<!-- Test the Hanrahan-Krueger model with an
 		 isotropic phase function -->
 	<bsdf type="hk"/>
@@ -13,6 +38,7 @@
 			<float name="g" value="0.8"/>
 		</phase>
 	</bsdf>
+
 
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
