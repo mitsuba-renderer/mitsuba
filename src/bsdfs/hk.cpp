@@ -105,6 +105,7 @@ public:
 		m_sigmaS = Spectrum(stream);
 		m_sigmaA = Spectrum(stream);
 		m_d      = stream->readFloat();
+		m_phase  = static_cast<PhaseFunction *>(manager->getInstance(stream));
 
 		configure();
 	}
@@ -313,7 +314,7 @@ public:
 		m_sigmaS.serialize(stream);
 		m_sigmaA.serialize(stream);
 		stream->writeFloat(m_d);
-
+		manager->serialize(stream, m_phase.get());
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {

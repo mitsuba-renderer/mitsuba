@@ -416,6 +416,9 @@ extern MTS_EXPORT_CORE Point2 squareToDiskConcentric(const Point2 &sample);
 /// Convert an uniformly distributed square sample into barycentric coordinates
 extern MTS_EXPORT_CORE Point2 squareToTriangle(const Point2 &sample);
 
+/// Sample a point on a 2D standard normal distribution (uses the Box-Muller transformation)
+extern MTS_EXPORT_CORE Point2 squareToStdNormal(const Point2 &sample);
+
 //! @}
 // -----------------------------------------------------------------------
 
