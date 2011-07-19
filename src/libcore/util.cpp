@@ -422,7 +422,12 @@ int log2i(uint64_t value) {
 }
 
 int modulo(int a, int b) {
-	int result = a - int(a/b) * b;
+	int result = a - (a/b) * b;
+	return (result < 0) ? result+b : result;
+}
+
+Float modulo(Float a, Float b) {
+	Float result = a - int(a/b) * b;
 	return (result < 0) ? result+b : result;
 }
 

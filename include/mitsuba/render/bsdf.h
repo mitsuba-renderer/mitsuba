@@ -157,12 +157,6 @@ public:
 	unsigned int typeMask;
 
 	/**
-	 * \brief Stores the component type that was sampled by \ref BSDF::sample()
-	 * \sa BSDF::EBSDFType
-	 */
-	unsigned int sampledType;
-
-	/**
 	 * \brief Integer value specifying the requested BSDF component index that 
 	 * should be sampled/evaluated (for multi-lobed BSDFs).
 	 *
@@ -170,6 +164,12 @@ public:
 	 * inside \ref sampledComponent.
 	 */
 	int component;
+
+	/**
+	 * \brief Stores the component type that was sampled by \ref BSDF::sample()
+	 * \sa BSDF::EBSDFType
+	 */
+	unsigned int sampledType;
 
 	/**
 	 * \brief Stores the component index that was sampled by \ref BSDF::sample()

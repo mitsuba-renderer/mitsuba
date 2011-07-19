@@ -206,6 +206,9 @@ extern MTS_EXPORT_CORE Float log2(Float value);
 /// Friendly modulo function (always positive)
 extern MTS_EXPORT_CORE int modulo(int a, int b);
 
+/// Friendly modulo function (always positive)
+extern MTS_EXPORT_CORE Float modulo(Float a, Float b);
+
 /// Integer floor function
 inline int floorToInt(Float value) {
 	return (int) std::floor(value);
