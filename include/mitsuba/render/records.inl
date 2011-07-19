@@ -23,17 +23,17 @@ MTS_NAMESPACE_BEGIN
 	
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, Sampler *sampler, ETransportQuantity quantity)
 	: its(its), sampler(sampler), wi(its.wi), quantity(quantity),
-	typeMask(BSDF::EAll), sampledType(0), component(-1), sampledComponent(-1) {
+	typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
 
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wo, ETransportQuantity quantity)
 	: its(its), sampler(NULL), wi(its.wi), wo(wo), quantity(quantity),
-    typeMask(BSDF::EAll), sampledType(0), component(-1), sampledComponent(-1) {
+    typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
 	
 inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wi, const Vector &wo, ETransportQuantity quantity) 
   : its(its), sampler(NULL), wi(wi), wo(wo), quantity(quantity),
-  typeMask(BSDF::EAll), sampledType(0), component(-1), sampledComponent(-1) {
+  typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
 
 inline bool Intersection::hasSubsurface() const {
