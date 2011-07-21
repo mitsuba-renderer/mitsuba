@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/core/plugin.h>
+#include "../medium/materials.h"
 #include "irrtree.h"
 
 MTS_NAMESPACE_BEGIN
@@ -121,14 +122,12 @@ public:
 		m_octreeIndex = irrOctreeIndex++;
 		irrOctreeMutex->unlock();
 		
-		/* How many samples should be taken when estimating the irradiance at a given point in the scene? 
-		This attribute is currently only used in conjunction with subsurface integrators and
-		can safely be ignored if the scene contains none of them. */
+		/* How many samples should be taken when estimating 
+		   the irradiance at a given point in the scene? */
 		m_irrSamples = props.getInteger("irrSamples", 32);
 				
 		/* When estimating the irradiance at a given point, should indirect illumination be included
-		in the final estimate? This attribute is currently only used in conjunction with 
-		subsurface integrators and can safely be ignored if the scene contains none of them. */
+		   in the final estimate? */
 		m_irrIndirect = props.getBoolean("irrIndirect", true);
 
 		/* Multiplicative factor, which can be used to adjust the number of
@@ -138,21 +137,25 @@ public:
 		m_minDelta= props.getFloat("quality", 0.1f);
 		/* Max. depth of the created octree */
 		m_maxDepth = props.getInteger("maxDepth", 40);
-		/* Multiplicative factor for the subsurface term - can be used to remove
-		   this contribution completely, making it possible to use this integrator
-		   for other interesting things.. */
+		/* Multiplicative factor for the subsurface term */
 		m_ssFactor = props.getSpectrum("ssFactor", Spectrum(1.0f));
 		m_maxDepth = props.getInteger("maxDepth", 40);
+	
 		/* Asymmetry parameter of the phase function */
 		m_g = props.getFloat("g", 0);
 		m_ready = false;
 		m_octreeResID = -1;
+
+		lookupMaterial(props, m_sigmaS, m_sigmaA, &m_eta);
 	}
-	
+
 	IsotropicDipole(Stream *stream, InstanceManager *manager) 
 	 : Subsurface(stream, manager) {
+		m_sigmaS = Spectrum(stream);
+		m_sigmaA = Spectrum(stream);
 		m_ssFactor = Spectrum(stream);
 		m_g = stream->readFloat();
+		m_eta = stream->readFloat();
 		m_sampleMultiplier = stream->readFloat();
 		m_minDelta = stream->readFloat();
 		m_maxDepth = stream->readInt();
@@ -176,8 +179,11 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Subsurface::serialize(stream, manager);
+		m_sigmaS.serialize(stream);
+		m_sigmaA.serialize(stream);
 		m_ssFactor.serialize(stream);
 		stream->writeFloat(m_g);
+		stream->writeFloat(m_eta);
 		stream->writeFloat(m_sampleMultiplier);
 		stream->writeFloat(m_minDelta);
 		stream->writeInt(m_maxDepth);
@@ -330,7 +336,8 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	Float m_minMFP, m_sampleMultiplier;
-	Float m_Fdr, m_Fdt, m_A, m_minDelta, m_g;
+	Float m_Fdr, m_Fdt, m_A, m_minDelta, m_g, m_eta;
+	Spectrum m_sigmaS, m_sigmaA;
 	Spectrum m_mfp, m_sigmaTr, m_zr, m_zv, m_alphaPrime;
 	Spectrum m_sigmaSPrime, m_sigmaTPrime, m_D, m_ssFactor;
 	ref<IrradianceOctree> m_octree;

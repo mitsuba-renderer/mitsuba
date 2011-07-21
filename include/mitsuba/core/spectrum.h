@@ -111,29 +111,45 @@ private:
 };
 
 /**
- * \brief Spectral power distribution used to model Rayleigh scattering
+ * \brief Spectral distribution for rendering participating media
+ * with Rayleigh scattering.
  *
- * This distribution captures the wavelength dependence of Rayleigh
- * scattering.
+ * This distribution captures the 1/lambda^4 wavelength dependence 
+ * of Rayleigh scattering. It can provide both the scattering and
+ * extinction coefficient needed for simulating planetary
+ * atmospheres with participating media.
  *
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE RayleighSpectrum : public ContinuousSpectrum {
 public:
-	/// Compute a new rayleigh spectrum
-	inline RayleighSpectrum() { }
+	enum EMode {
+		/// Compute the scattering coefficient
+		ESigmaS,
+		/// Compute the extinction coefficient
+		ESigmaT
+	};
+
+	/**
+	 * \brief Create a Rayleigh spectrum instance
+	 *
+	 * \param mode        Specifies the requested type of spectrum 
+	 * \param eta         Refractive index of the medium (e.g. air)
+	 * \param height      Height above sea level (in meters)
+	 */
+	RayleighSpectrum(EMode mode, Float eta = 1.000277f, Float height = 0);
 
 	virtual ~RayleighSpectrum() { }
 
-	/** \brief Return the value of the spectral power distribution
-	 * at the given wavelength.
+	/** \brief Evaluate the extinction/scattering coefficient for
+	 * a specified wavelength. 
 	 *
-	 * The units are Watts per unit surface area (m^-2) 
-	 * per unit wavelength (nm^-1) per steradian (sr^-1)
+	 * The returned value is in units of 1/meter.
 	 */
 	virtual Float eval(Float lambda) const;
+private:
+	Float m_precomp;
 };
-
 
 /**
  * \brief This spectral power distribution is defined as the

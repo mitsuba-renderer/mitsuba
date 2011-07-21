@@ -131,6 +131,11 @@ public:
 			delete m_maxExpDist;
 	}
 
+	void configure() {
+		Medium::configure();
+		m_albedo = (m_sigmaS/m_sigmaT).max();
+	}
+
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Medium::serialize(stream, manager);
 		stream->writeInt(m_strategy);
@@ -279,6 +284,7 @@ private:
 	Float m_samplingDensity, m_mediumSamplingWeight;
 	ESamplingStrategy m_strategy;
 	MaxExpDist *m_maxExpDist;
+	Float m_albedo;
 };
 
 MTS_IMPLEMENT_CLASS_S(HomogeneousMedium, false, Medium)

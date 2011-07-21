@@ -24,8 +24,13 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Abstract subsurface integrator -- can be attached to an arbitrary 
- * shape to compute exitant radiance due to internal scattering.
+ * \brief Abstract subsurface integrator
+ *
+ * Can be attached to an arbitrary shape to compute exitant 
+ * radiance due to internal scattering. How that is done is
+ * completely up to the implementation. It might for instance
+ * recursively trace rays or perform lookups into a precomputed
+ * point cloud radiance representation.
  */
 class MTS_EXPORT_RENDER Subsurface : public NetworkedObject {
 public:
@@ -64,10 +69,6 @@ protected:
 	/// Virtual destructor
 	virtual ~Subsurface();
 protected:
-	Spectrum m_sigmaS;
-	Spectrum m_sigmaA;
-	Spectrum m_sigmaT;
-	Float m_eta, m_densityMultiplier;
 	std::vector<Shape *> m_shapes;
 };
 

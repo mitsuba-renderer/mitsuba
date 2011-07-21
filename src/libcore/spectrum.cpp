@@ -444,10 +444,30 @@ Float ProductSpectrum::eval(Float lambda) const {
 	return m_spec1.eval(lambda) * m_spec2.eval(lambda);
 }
 
+RayleighSpectrum::RayleighSpectrum(EMode mode, Float eta, Float height) {
+	/* See ``Display of the Earth Taking into Account Atmospheric Scattering'',
+	 * by Nishita et al., SIGGRAPH 1993 */ 
+	Float tmp = eta * eta - 1;
+	Float rho = std::exp(-height/7794.0f);
+	//Float Ns = <molecular number density of the standard atmosphere>;
+	Float N_s = 1;
+	Float K = 2 * M_PI * M_PI * tmp*tmp / (3 * N_s);
+
+	switch (mode) {
+		case ESigmaS:
+			m_precomp = K * rho;
+			break;
+		case ESigmaT:
+			m_precomp = K * 4 * M_PI * rho;
+			break;
+		default:
+			SLog(EError, "Unknown mode!");
+	}
+}
+
 Float RayleighSpectrum::eval(Float lambda) const {
 	Float lambdaSqr = lambda*lambda;
-
-	return 1.0f / (lambdaSqr*lambdaSqr);
+	return m_precomp / (lambdaSqr*lambdaSqr);
 }
 
 Float ContinuousSpectrum::average(Float lambdaMin, Float lambdaMax) const {

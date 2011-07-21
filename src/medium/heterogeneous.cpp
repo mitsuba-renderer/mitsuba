@@ -104,6 +104,7 @@ public:
 	HeterogeneousMedium(Stream *stream, InstanceManager *manager) 
 		: Medium(stream, manager) {
 		m_method = (EIntegrationMethod) stream->readInt();
+		m_densityMultiplier = stream->readFloat();
 		m_density = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_albedo = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_orientation = static_cast<VolumeDataSource *>(manager->getInstance(stream));
@@ -115,6 +116,7 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Medium::serialize(stream, manager);
 		stream->writeInt(m_method);
+		stream->writeFloat(m_densityMultiplier);
 		manager->serialize(stream, m_density.get());
 		manager->serialize(stream, m_albedo.get());
 		manager->serialize(stream, m_orientation.get());
@@ -604,6 +606,7 @@ protected:
 	ref<VolumeDataSource> m_density;
 	ref<VolumeDataSource> m_albedo;
 	ref<VolumeDataSource> m_orientation;
+	Float m_densityMultiplier;
 	bool m_anisotropicMedium;
 	Float m_stepSize;
 	AABB m_densityAABB;

@@ -437,8 +437,7 @@ public:
 							  && (bRec.typeMask & EGlossyReflection)),
 		     hasTransmission = ((bRec.component == -1 || bRec.component == 1)
 							  && (bRec.typeMask & EGlossyTransmission)),
-		     choseReflection = hasReflection,
-			 sampleExactFresnelTerm = false;
+		     choseReflection = hasReflection;
 
 		if (!hasReflection && !hasTransmission)
 			return Spectrum(0.0f);
@@ -520,8 +519,7 @@ public:
 							  && (bRec.typeMask & EGlossyReflection)),
 		     hasTransmission = ((bRec.component == -1 || bRec.component == 1)
 							  && (bRec.typeMask & EGlossyTransmission)),
-		     choseReflection = hasReflection,
-			 sampleExactFresnelTerm = false;
+		     choseReflection = hasReflection;
 
 		if (!hasReflection && !hasTransmission)
 			return Spectrum(0.0f);

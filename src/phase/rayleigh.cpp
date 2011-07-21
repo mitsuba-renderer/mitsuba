@@ -27,11 +27,10 @@ MTS_NAMESPACE_BEGIN
  * \order{3}
  *
  * Scattering by particles that are much smaller than the wavelength
- * of light (e.g. in aerosols) is well-approxiamted by the Rayleigh
- * phase function. This plugin implements an unpolarized version of this 
- * scattering model (i.e the effects of polarization are ignored).
- * This plugin is useful for simulating scattering in planetary 
- * atmospheres.
+ * of light (e.g. individual molecules in the atmosphere) is well-approximated
+ * by the Rayleigh phase function. This plugin implements an unpolarized 
+ * version of this scattering model (i.e the effects of polarization are ignored).
+ * This plugin is useful for simulating scattering in planetary atmospheres.
  *
  * This model has no parameters.
  */

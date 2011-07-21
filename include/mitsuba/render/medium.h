@@ -190,12 +190,10 @@ protected:
 	/// Virtual destructor
 	virtual ~Medium() { }
 protected:	
+	ref<PhaseFunction> m_phaseFunction;
 	Spectrum m_sigmaA;
 	Spectrum m_sigmaS;
 	Spectrum m_sigmaT;
-	Float m_albedo;
-	ref<PhaseFunction> m_phaseFunction;
-	Float m_densityMultiplier;
 };
 
 MTS_NAMESPACE_END
