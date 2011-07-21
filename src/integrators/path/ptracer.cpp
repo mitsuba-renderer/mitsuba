@@ -32,7 +32,7 @@ MTS_NAMESPACE_BEGIN
  * For practical reasons, the integral is simultaneously computed
  * for every pixel on the image plane. This is done similarly to 
  * path tracing with next event estimation (PTNEE) by tracing a
- * shadow ray at every surface/volume interaction.
+ * shadow ray to the camera at every surface/volume interaction.
  * An independent accumulation buffer will be assigned to each
  * processor so that the rendering process can run in parallel.
  * When a perspective camera is used, the importance distribution 

@@ -164,6 +164,7 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape, N
 				} else {
 					/// Uh oh... -- much unnecessary work is done here
 					Intersection its;
+					its.t = t;
 					shape->fillIntersectionRecord(ray, 
 						reinterpret_cast<const uint8_t*>(temp) + 8, its);
 					n = its.geoFrame.n;

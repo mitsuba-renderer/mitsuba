@@ -410,8 +410,9 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 
 			bool surface = rayIntersect(ray, t, shape, n);
 
-			if (medium) 
-				transmittance *= medium->getTransmittance(Ray(ray, 0, std::min(t, remaining)), sampler);
+			if (medium)
+				transmittance *= medium->getTransmittance(
+					Ray(ray, 0, std::min(t, remaining)), sampler);
 
 			if (!surface) 
 				break;
@@ -422,7 +423,7 @@ Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 			if (remaining > 0) {
 				if (shape->isOccluder())
 					return Spectrum(0.0f);
-				else if (shape->isMediumTransition()) 
+				else if (shape->isMediumTransition())
 					medium = dot(n, d) > 0 ? shape->getExteriorMedium()
 						: shape->getInteriorMedium();
 				if (++iterations > 100) { /// Just a precaution..

@@ -444,7 +444,7 @@ Float ProductSpectrum::eval(Float lambda) const {
 	return m_spec1.eval(lambda) * m_spec2.eval(lambda);
 }
 
-Float RayleighSpectrum::eval(Float lambda) {
+Float RayleighSpectrum::eval(Float lambda) const {
 	Float lambdaSqr = lambda*lambda;
 
 	return 1.0f / (lambdaSqr*lambdaSqr);
