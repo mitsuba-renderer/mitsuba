@@ -160,6 +160,35 @@ size_t Properties::getSize(const std::string &name, size_t defVal) const {
 	return (size_t) (*it).second.v_long;
 }
 
+void Properties::setData(const std::string &name, Data value, bool warnDuplicates) {
+	if (hasProperty(name) && warnDuplicates)
+		SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str());
+	m_elements[name].type = EData;
+	m_elements[name].v_data = value;
+	m_elements[name].queried = false;
+}
+
+Properties::Data Properties::getData(const std::string &name) const {
+	if (!hasProperty(name))
+		SLog(EError, "Property \"%s\" missing", name.c_str());
+	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
+	if ((*it).second.type != EData)
+		SLog(EError, "The property \"%s\" has the wrong type (expected <data>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
+	(*it).second.queried = true;
+	return (*it).second.v_data;
+}
+
+Properties::Data Properties::getData(const std::string &name, Data defVal) const {
+	if (!hasProperty(name))
+		return defVal;
+	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
+	if ((*it).second.type != EData)
+		SLog(EError, "The property \"%s\" has the wrong type (expected <data>). The detailed "
+				"listing was:\n%s", name.c_str(), toString().c_str());
+	(*it).second.queried = true;
+	return (*it).second.v_data;
+}
 
 void Properties::setFloat(const std::string &name, Float value, bool warnDuplicates) {
 	if (hasProperty(name) && warnDuplicates)
@@ -350,6 +379,9 @@ std::string Properties::toString() const {
 				break;
 			case EString:
 				oss << "\"" << el.v_string << "\"";
+				break;
+			case EData:
+				oss << el.v_data.ptr << " (size=" << el.v_data.size << ")";
 				break;
 			default:
 				SLog(EError, "Encountered an unknown property type!");

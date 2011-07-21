@@ -30,14 +30,30 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE Properties {
 public:
+	/// Supported types of properties
 	enum EPropertyType {
+		/// Boolean value (true/false)
 		EBoolean = 0,
+		/// 64-bit signed integer
 		EInteger,
+		/// Floating point value
 		EFloat,
+		/// 3D point
 		EPoint,
+		/// 4x4 transform for homogeneous coordinates
 		ETransform,
+		/// Discretized color spectrum
 		ESpectrum,
-		EString
+		/// Arbitrary-length string
+		EString,
+		/// Arbitrary data (pointer+size)
+		EData
+	};
+
+	/// Simple pointer-size pair for passing arbitrary data (e.g. between plugins)
+	struct Data {
+		uint8_t *ptr;
+		size_t size;
 	};
 
 	/// Construct an empty property container
@@ -87,6 +103,13 @@ public:
 	Float getFloat(const std::string &name) const;
 	/// Get a single precision floating point value (with default)
 	Float getFloat(const std::string &name, Float defVal) const;
+
+	/// Set an arbitrary data value
+	void setData(const std::string &name, Data value, bool warnDuplicates = true);
+	/// Get an arbitrary data value
+	Data getData(const std::string &name) const;
+	/// Get an arbitrary data value (with default)
+	Data getData(const std::string &name, Data defVal) const;
 
 	/// Set a linear transformation
 	void setTransform(const std::string &name, const Transform &value, bool warnDuplicates = true);
@@ -146,6 +169,7 @@ private:
 			bool v_boolean;
 			int64_t v_long;
 			Float v_float;
+			Data v_data;
 		};
 		// not allowed in union (constructor)
 		Point v_point; 

@@ -95,6 +95,14 @@ Spectrum Luminaire::Le(const ShapeSamplingRecord &sRec, const Vector &d) const {
 	return Spectrum(0.0f);
 }
 
+bool Luminaire::isCompound() const {
+	return false;
+}
+
+Luminaire *Luminaire::getElement(int i) {
+	return NULL;
+}
+
 std::string EmissionRecord::toString() const {
 	std::ostringstream oss;
 	oss << "EmissionRecord[" << std::endl

@@ -195,7 +195,6 @@ public:
 	 */
 	virtual Shape *getElement(int i);
 
-
 	/**
 	 * \brief Return the shape's surface area
 	 *

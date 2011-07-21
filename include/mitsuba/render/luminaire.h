@@ -342,6 +342,18 @@ public:
 	//! @{ \name Miscellaneous
 	// =============================================================
 
+	/// Is this a compound luminaire consisting of several sub-objects?
+	virtual bool isCompound() const;
+
+	/**
+	 * \brief Return a sub-element of a compound luminaire. 
+	 *
+	 * When expanding luminaires, the scene will repeatedly call this
+	 * function with increasing indices. Returning \a NULL indicates
+	 * that no more are available.
+	 */
+	virtual Luminaire *getElement(int i);
+
 	/// Serialize this luminaire to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 

@@ -45,6 +45,7 @@ MTS_NAMESPACE_BEGIN
  * \begin{xml}[caption=Material configuration for a transparent leaf,
  *    label=lst:mask-leaf]
  * <bsdf type="mask">
+ *     <!-- Base material: a two-sided textured diffuse BSDF -->
  *     <bsdf type="twosided">
  *         <bsdf type="diffuse">
  *             <texture name="reflectance" type="bitmap">
@@ -52,6 +53,8 @@ MTS_NAMESPACE_BEGIN
  *             </texture>
  *         </bsdf>
  *     </bsdf>
+ *
+ *     <!-- Fetch the opacity mask from a bitmap -->
  *     <texture name="opacity" type="bitmap">
  *         <string name="filename" value="leaf_opacity.jpg"/>
  *         <float name="gamma" value="1"/>

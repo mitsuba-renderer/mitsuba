@@ -1,0 +1,18 @@
+\newpage
+\subsection{Phase functions}
+\label{sec:phase}
+This section contains a description of all implemented medium scattering models, which 
+are also known as \emph{phase functions}. These are very similar in principle to surface 
+scattering models (or \emph{BSDF}s), and essentially describe where light travels after 
+hitting a particle within the medium.
+
+The most commonly used models for smoke, fog, and other homogeneous media
+are isotropic scattering (\pluginref{isotropic}) and the Henyey-Greenstein 
+phase function (\pluginref{hg}). Mitsuba also supports \emph{anisotropic}
+media, where the behavior of the medium changes depending on the direction 
+of light propagation (e.g. in volumetric representations of fabric). These 
+are the Kajiya-Kay (\pluginref{kkay}) and Micro-flake (\pluginref{microflake}) 
+models.
+
+Finally, there is also a phase function for simulating scattering in
+planetary atmospheres (\pluginref{rayleigh}).

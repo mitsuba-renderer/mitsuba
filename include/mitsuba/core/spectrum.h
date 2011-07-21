@@ -111,6 +111,31 @@ private:
 };
 
 /**
+ * \brief Spectral power distribution used to model Rayleigh scattering
+ *
+ * This distribution captures the wavelength dependence of Rayleigh
+ * scattering.
+ *
+ * \ingroup libcore
+ */
+class MTS_EXPORT_CORE RayleighSpectrum : public ContinuousSpectrum {
+public:
+	/// Compute a new rayleigh spectrum
+	inline RayleighSpectrum() { }
+
+	virtual ~RayleighSpectrum() { }
+
+	/** \brief Return the value of the spectral power distribution
+	 * at the given wavelength.
+	 *
+	 * The units are Watts per unit surface area (m^-2) 
+	 * per unit wavelength (nm^-1) per steradian (sr^-1)
+	 */
+	virtual Float eval(Float lambda) const;
+};
+
+
+/**
  * \brief This spectral power distribution is defined as the
  * product of two other continuous spectra.
  */

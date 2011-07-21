@@ -23,9 +23,23 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Phase function by Henyey and Greenstein (1941). Parameterizable
- * from backward- through isotropic- to forward scattering.
+/*!\plugin{hg}{Henyey-Greenstein phase function}
+ * \order{2}
+ * \parameters{
+ *     \parameter{g}{\Float}{
+ *       This parameter must be somewhere in the range $-1$ to $1$
+ *       (but not equal to $-1$ or $1$). It denotes the \emph{mean cosine} 
+ *       of scattering interactions. A value greater than zero indicates that
+ *       medium interactions predominantly scatter incident light into a similar
+ *       direction (i.e. the medium is \emph{forward-scattering}), whereas
+ *       values smaller than zero cause the medium to be
+ *       scatter more light in the opposite direction.
+ *     }
+ * }
+ * This plugin implements the phase function model proposed by 
+ * Henyey and Greenstein \cite{Henyey1941Diffuse}. It is 
+ * parameterizable from backward- ($g<0$) through 
+ * isotropic- ($g=0$) to forward ($g>0$) scattering.
  */
 class HGPhaseFunction : public PhaseFunction {
 public:
@@ -35,6 +49,8 @@ public:
 		   lie in [-1, 1] where >0 is forward scattering and <0 is backward
 		   scattering. */
 		m_g = props.getFloat("g", 0.8f);
+		if (m_g >= 1 || m_g <= -1)
+			Log(EError, "Asymmetry parameter must be in the interval (-1, 1)!");
 	}
 
 	HGPhaseFunction(Stream *stream, InstanceManager *manager) 

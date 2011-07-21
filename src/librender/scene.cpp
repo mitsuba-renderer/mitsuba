@@ -147,44 +147,44 @@ Scene::Scene(Stream *stream, InstanceManager *manager)
 	m_aabb = AABB(stream);
 	m_bsphere = BSphere(stream);
 	m_backgroundLuminaire = static_cast<Luminaire *>(manager->getInstance(stream));
-	int count = stream->readInt();
-	for (int i=0; i<count; ++i) {
+	size_t count = stream->readSize();
+	for (size_t i=0; i<count; ++i) {
 		Shape *shape = static_cast<Shape *>(manager->getInstance(stream));
 		shape->incRef();
 		m_shapes.push_back(shape);
 	}
-	count = stream->readInt();
-	for (int i=0; i<count; ++i) {
+	count = stream->readSize();
+	for (size_t i=0; i<count; ++i) {
 		TriMesh *trimesh = static_cast<TriMesh *>(manager->getInstance(stream));
 		trimesh->incRef();
 		m_meshes.push_back(trimesh);
 	}
-	count = stream->readInt();
-	for (int i=0; i<count; ++i) {
+	count = stream->readSize();
+	for (size_t i=0; i<count; ++i) {
 		Luminaire *luminaire = static_cast<Luminaire *>(manager->getInstance(stream));
 		luminaire->incRef();
 		m_luminaires.push_back(luminaire);
 	}
-	count = stream->readInt();
-	for (int i=0; i<count; ++i) {
+	count = stream->readSize();
+	for (size_t i=0; i<count; ++i) {
 		Medium *medium = static_cast<Medium *>(manager->getInstance(stream));
 		medium->incRef();
 		m_media.insert(medium);
 	}
-	count = stream->readInt();
-	for (int i=0; i<count; ++i) {
+	count = stream->readSize();
+	for (size_t i=0; i<count; ++i) {
 		Subsurface *ssIntegrator = static_cast<Subsurface *>(manager->getInstance(stream));
 		ssIntegrator->incRef();
 		m_ssIntegrators.push_back(ssIntegrator);
 	}
-	count = stream->readInt();
-	for (int i=0; i<count; ++i) {
+	count = stream->readSize();
+	for (size_t i=0; i<count; ++i) {
 		ConfigurableObject *obj = static_cast<ConfigurableObject *>(manager->getInstance(stream));
 		obj->incRef();
 		m_objects.push_back(obj);
 	}
-	count = stream->readInt();
-	for (int i=0; i<count; ++i) {
+	count = stream->readSize();
+	for (size_t i=0; i<count; ++i) {
 		NetworkedObject *obj = static_cast<NetworkedObject *>(manager->getInstance(stream));
 		m_netObjects.push_back(obj); // Do not increase the ref. count
 	}
@@ -577,6 +577,18 @@ void Scene::addChild(const std::string &name, ConfigurableObject *child) {
 		}
 	} else if (cClass->derivesFrom(MTS_CLASS(Luminaire))) {
 		Luminaire *luminaire = static_cast<Luminaire *>(child);
+
+		if (luminaire->isCompound()) {
+			int index = 0;
+			do {
+				ref<Luminaire> element = luminaire->getElement(index++);
+				if (element == NULL)
+					break;
+				addChild(name, element);
+			} while (true);
+			return;
+		}
+
 		luminaire->incRef();
 		m_luminaires.push_back(luminaire);
 		if (luminaire->isBackgroundLuminaire()) {
@@ -700,26 +712,26 @@ void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 	m_aabb.serialize(stream);
 	m_bsphere.serialize(stream);
 	manager->serialize(stream, m_backgroundLuminaire.get());
-	stream->writeUInt((uint32_t) m_shapes.size());
+	stream->writeSize(m_shapes.size());
 	for (size_t i=0; i<m_shapes.size(); ++i) 
 		manager->serialize(stream, m_shapes[i]);
-	stream->writeUInt((uint32_t) m_meshes.size());
+	stream->writeSize(m_meshes.size());
 	for (size_t i=0; i<m_meshes.size(); ++i) 
 		manager->serialize(stream, m_meshes[i]);
-	stream->writeUInt((uint32_t) m_luminaires.size());
+	stream->writeSize(m_luminaires.size());
 	for (size_t i=0; i<m_luminaires.size(); ++i) 
 		manager->serialize(stream, m_luminaires[i]);
-	stream->writeUInt((uint32_t) m_media.size());
+	stream->writeSize(m_media.size());
 	for (std::set<Medium *>::const_iterator it = m_media.begin();
 			it != m_media.end(); ++it)
 		manager->serialize(stream, *it);
-	stream->writeUInt((uint32_t) m_ssIntegrators.size());
+	stream->writeSize(m_ssIntegrators.size());
 	for (size_t i=0; i<m_ssIntegrators.size(); ++i) 
 		manager->serialize(stream, m_ssIntegrators[i]);
-	stream->writeUInt((uint32_t) m_objects.size());
+	stream->writeSize(m_objects.size());
 	for (size_t i=0; i<m_objects.size(); ++i) 
 		manager->serialize(stream, m_objects[i]);
-	stream->writeUInt((uint32_t) m_netObjects.size());
+	stream->writeSize(m_netObjects.size());
 	for (size_t i=0; i<m_netObjects.size(); ++i) 
 		manager->serialize(stream, m_netObjects[i]);
 }

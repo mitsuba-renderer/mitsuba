@@ -2,6 +2,19 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene version="0.3.0">
+	<bsdf type="roughdiffuse">
+		<float name="alpha" value="1"/>
+	</bsdf>
+
+	<!-- Test the rough dielectric model with the anisotropic
+		 Ashikhmin-Shirley microfacet distribution -->
+	<bsdf type="roughdielectric">
+		<string name="distribution" value="ggx"/>
+		<float name="alpha" value="3"/>
+		<float name="intIOR" value="1.5"/>
+		<float name="extIOR" value="1.0"/>
+	</bsdf>
+
 	<!-- Test the coating model with a transmissive
 		 + reflective material -->
 	<bsdf type="coating">

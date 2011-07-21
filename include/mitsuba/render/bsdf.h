@@ -336,7 +336,7 @@ public:
 	virtual Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const = 0;
 
 	/**
-	 * \c Sample the BSDF and explicitly provide the probability density
+	 * \brief Sample the BSDF and explicitly provide the probability density
 	 * of the sampled direction. 
 	 *
 	 * If a component mask or a specific component index is given, the 

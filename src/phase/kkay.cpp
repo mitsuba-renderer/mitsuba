@@ -19,14 +19,15 @@
 #include <mitsuba/render/phase.h>
 #include <mitsuba/render/medium.h>
 #include <mitsuba/render/sampler.h>
-#include <mitsuba/core/random.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/frame.h>
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * \brief Kajiya-Kay phase function
+/*!\plugin{kkay}{Kajiya-Kay phase function}
+ * This plugin implements the Kajiya-Kay \cite{Kajiya1989Rendering}
+ * phase function for volumetric rendering of fibers, e.g. 
+ * hair or cloth.
  *
  * The function is normalized so that it has no energy loss when 
  * \a ks=1 and illumination arrives perpendicularly to the surface.
@@ -117,41 +118,6 @@ public:
 	std::string toString() const {
 		return "KajiyaKayPhaseFunction[]";
 	}
-
-#if 0
-	/// For testing purposes
-	Float integrateOverOutgoing(const Vector &wi) {
-		MediumSamplingRecord mRec;
-		mRec.orientation = Vector(0,0,1);
-		int res = 100;
-		/* Nested composite Simpson's rule */
-		Float hExt = M_PI / res,
-		      hInt = (2*M_PI)/(res*2);
-
-		Float result = 0;
-
-		for (int i=0; i<=res; ++i) {
-			Float theta = hExt*i;
-			Float weightExt = (i & 1) ? 4.0f : 2.0f;
-			if (i == 0 || i == res)
-				weightExt = 1;
-
-			for (int j=0; j<=res*2; ++j) {
-				Float phi = hInt*j;
-				Float weightInt = (j & 1) ? 4.0f : 2.0f;
-				if (j == 0 || j == 2*res)
-					weightInt = 1;
-
-				Float value = f(mRec, wi, sphericalDirection(theta, phi))[0]*std::sin(theta)
-					* weightExt*weightInt;
-
-				result += value;
-			}
-		}
-		
-		return hExt*hInt/9;
-	}
-#endif
 
 	MTS_DECLARE_CLASS()
 private:

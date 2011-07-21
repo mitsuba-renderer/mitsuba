@@ -2,6 +2,7 @@ Import('env', 'plugins')
 
 plugins += env.SharedLibrary('isotropic', ['isotropic.cpp'])
 plugins += env.SharedLibrary('hg', ['hg.cpp'])
+plugins += env.SharedLibrary('rayleigh', ['rayleigh.cpp'])
 plugins += env.SharedLibrary('kkay', ['kkay.cpp'])
 plugins += env.SharedLibrary('microflake', ['microflake.cpp'])
 

@@ -4,7 +4,10 @@
 <scene version="0.3.0">
 	<!-- Test the isotropic phase function -->
 	<phase type="isotropic"/>
-	
+
+	<!-- Test the Rayleigh phase function -->
+	<phase type="rayleigh"/>
+
 	<!-- Test the Henyey-Greenstein phase function
 		 configured as highly forward-scattering -->
 	<phase type="hg">

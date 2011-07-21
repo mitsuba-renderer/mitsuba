@@ -59,11 +59,11 @@ MTS_NAMESPACE_BEGIN
  *     <!-- The bump map is applied to a rough metal BRDF -->
  *     <bsdf type="roughconductor"/>
  *
- *     <texture name="scale">
+ *     <texture type="scale">
  *         <!-- The scale of the displacement gets multiplied by 10x -->
  *         <float name="scale" value="10"/>
  *
- *         <texture name="bitmap">
+ *         <texture type="bitmap">
  *             <string name="filename" value="bumpmap.png"/>
  *         </texture>
  *     </texture>

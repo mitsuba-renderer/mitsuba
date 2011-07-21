@@ -444,6 +444,12 @@ Float ProductSpectrum::eval(Float lambda) const {
 	return m_spec1.eval(lambda) * m_spec2.eval(lambda);
 }
 
+Float RayleighSpectrum::eval(Float lambda) {
+	Float lambdaSqr = lambda*lambda;
+
+	return 1.0f / (lambdaSqr*lambdaSqr);
+}
+
 Float ContinuousSpectrum::average(Float lambdaMin, Float lambdaMax) const {
 	GaussLobattoIntegrator integrator(10000, Epsilon, Epsilon, false, false);
 

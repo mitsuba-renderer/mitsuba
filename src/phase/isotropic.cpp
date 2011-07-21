@@ -21,8 +21,12 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Isotropic phase function (i.e. f=1/(4*pi))
+/*!\plugin{isotropic}{Isotropic phase function}
+ * \order{1}
+ *
+ * This phase function simulates completely uniform scattering,
+ * where all directionality is lost after a single scattering 
+ * interaction. It does not have any parameters.
  */
 class IsotropicPhaseFunction : public PhaseFunction {
 public:
