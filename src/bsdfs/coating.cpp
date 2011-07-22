@@ -236,9 +236,8 @@ public:
 			if (R12 == 1 || R21 == 1) /* Total internal reflection */
 				return Spectrum(0.0f);
 
-			Float eta = m_extIOR / m_intIOR;
 			Spectrum result = m_nested->eval(bRecInt, measure)
-				* ((1-R12) * (1-R21) * eta * eta);
+				* (1-R12) * (1-R21);
 
 			Spectrum sigmaA = m_sigmaA->getValue(bRec.its) * m_thickness;
 			if (!sigmaA.isZero()) 
@@ -246,9 +245,11 @@ public:
 					(1/std::abs(Frame::cosTheta(bRecInt.wi)) +
 					 1/std::abs(Frame::cosTheta(bRecInt.wo)))).exp();
 
-			if (measure == ESolidAngle)
-				result *= std::abs(Frame::cosTheta(bRec.wo)
+			if (measure == ESolidAngle) {
+				Float eta = m_extIOR / m_intIOR;
+				result *= eta * eta * std::abs(Frame::cosTheta(bRec.wo)
 					             / Frame::cosTheta(bRecInt.wo));
+			}
 
 			return result;
 		}
@@ -281,15 +282,15 @@ public:
 
 			if (R12 == 1 || R21 == 1) /* Total internal reflection */
 				return 0.0f;
-		
+
 			Float pdf = m_nested->pdf(bRecInt, measure);
 
-			if (measure == ESolidAngle)
-				pdf *= std::abs(Frame::cosTheta(bRec.wo)
-					          / Frame::cosTheta(bRecInt.wo));
+			if (measure == ESolidAngle) {
+				Float eta = m_extIOR / m_intIOR;
+				pdf *= eta * eta * std::abs(Frame::cosTheta(bRec.wo)
+			          / Frame::cosTheta(bRecInt.wo));
+			}
 
-			Float eta = m_extIOR / m_intIOR;
-			pdf *= eta * eta;
 
 			return sampleSpecular ? (pdf * (1 - probSpecular)) : pdf;
 		} else {
@@ -340,10 +341,10 @@ public:
 			bRec.wi = wiPrime;
 			Spectrum result = m_nested->sample(bRec, pdf, sample);
 			bRec.wi = wiBackup;
-			Vector woPrime = bRec.wo;
-
 			if (result.isZero()) 
 				return Spectrum(0.0f);
+
+			Vector woPrime = bRec.wo;
 
 			Spectrum sigmaA = m_sigmaA->getValue(bRec.its) * m_thickness;
 			if (!sigmaA.isZero()) 
@@ -353,14 +354,16 @@ public:
 
 			Float R21;
 			bRec.wo = refractTo(EExterior, woPrime, R21);
-
 			if (R21 == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
 
-			Float eta = m_extIOR / m_intIOR;
-			bool sampledSA = (BSDF::getMeasure(bRec.sampledType) == ESolidAngle);
-			Float cosRatio = std::abs(Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime)),
-				  commonTerms = (sampledSA ? cosRatio : 1.0f) * eta * eta;
+			Float commonTerms = 1.0f;
+
+			if (BSDF::getMeasure(bRec.sampledType) == ESolidAngle) {
+				Float eta = m_extIOR / m_intIOR;
+				commonTerms = eta*eta * 
+					std::abs(Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime));
+			}
 
 			pdf *= (sampleSpecular ? (1 - probSpecular) : 1.0f) * commonTerms;
 			result *= (1 - R12) * (1 - R21) * commonTerms;

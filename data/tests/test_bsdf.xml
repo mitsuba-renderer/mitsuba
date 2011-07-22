@@ -2,15 +2,6 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene version="0.3.0">	
-	<bsdf type="coating">
-		<bsdf type="mask">
-			<spectrum name="opacity" value="0.9"/>
-			<bsdf type="twosided">
-				<bsdf type="diffuse"/>
-			</bsdf>
-		</bsdf>
-	</bsdf>
-
 	<!-- Test the coating model with the Hanrahan-Krueger model -->
 	<bsdf type="coating">
 		<bsdf type="hk">
@@ -201,4 +192,12 @@
 		</bsdf>
 	</bsdf>
 
+	<!-- Test the coating model with a material that has
+		 a delta transmission component -->
+	<bsdf type="coating">
+		<bsdf type="mask">
+			<bsdf type="diffuse"/>
+			<spectrum name="opacity" value="0.5"/>
+		</bsdf>
+	</bsdf>
 </scene>

@@ -117,7 +117,7 @@ public:
 			#endif
 	
 			Float pdfVal, pdfVal2;
-	
+
 			/* Check the various sampling routines for agreement 
 			   amongst each other */
 			m_fakeSampler->clear();
@@ -132,8 +132,8 @@ public:
 
 			if (f.isZero() || pdfVal == 0 || pdfVal2 == 0) {
 				if (!sampled.isZero())
-					Log(EWarn, "Inconsistency (1): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s",
-						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str());
+					Log(EWarn, "Inconsistency (1): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s, measure=%i",
+						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str(), measure);
 				#if defined(MTS_DEBUG_FP)
 					disableFPExceptions();
 				#endif
