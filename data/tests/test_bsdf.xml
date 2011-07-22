@@ -1,43 +1,23 @@
 <!-- This file defines a series of BSDF instances
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
-<scene version="0.3.0">
-	<bsdf type="roughdiffuse">
-		<float name="alpha" value="1"/>
-	</bsdf>
-
-	<!-- Test the rough dielectric model with the anisotropic
-		 Ashikhmin-Shirley microfacet distribution -->
-	<bsdf type="roughdielectric">
-		<string name="distribution" value="ggx"/>
-		<float name="alpha" value="3"/>
-		<float name="intIOR" value="1.5"/>
-		<float name="extIOR" value="1.0"/>
-	</bsdf>
-
-	<!-- Test the coating model with a transmissive
-		 + reflective material -->
+<scene version="0.3.0">	
 	<bsdf type="coating">
-		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
-		<float name="thickness" value="2"/>
-
-		<bsdf type="mixture">
-			<string name="weights" value=".5 .3"/>
-
-			<bsdf type="diffuse">
-				<rgb name="reflectance" value=".5 0 0"/>
-			</bsdf>
-			<bsdf type="difftrans">
-				<rgb name="transmittance" value="0 .5 0"/>
+		<bsdf type="mask">
+			<spectrum name="opacity" value="0.9"/>
+			<bsdf type="twosided">
+				<bsdf type="diffuse"/>
 			</bsdf>
 		</bsdf>
 	</bsdf>
 
 	<!-- Test the coating model with the Hanrahan-Krueger model -->
 	<bsdf type="coating">
-		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
-		<float name="thickness" value="2"/>
-		<bsdf type="hk"/>
+		<bsdf type="hk">
+			<!--		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
+			<rgb name="sigmaS" value="1"/>
+			<float name="thickness" value="20"/>-->
+		</bsdf>
 	</bsdf>
 
 	<!-- Test the Hanrahan-Krueger model with an
@@ -51,7 +31,6 @@
 			<float name="g" value="0.8"/>
 		</phase>
 	</bsdf>
-
 
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
@@ -203,4 +182,23 @@
 		<float name="extIOR" value="1"/>
 		<bsdf type="roughconductor"/>
 	</bsdf>
+
+	<!-- Test the coating model with a transmissive
+		 + reflective material -->
+	<bsdf type="coating">
+		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
+		<float name="thickness" value="2"/>
+
+		<bsdf type="mixture">
+			<string name="weights" value=".5 .3"/>
+
+			<bsdf type="diffuse">
+				<rgb name="reflectance" value=".5 0 0"/>
+			</bsdf>
+			<bsdf type="difftrans">
+				<rgb name="transmittance" value="0 .5 0"/>
+			</bsdf>
+		</bsdf>
+	</bsdf>
+
 </scene>

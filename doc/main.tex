@@ -16,6 +16,7 @@
 \usepackage{colortbl}
 \usepackage{listings}
 \usepackage{enumerate}
+\usepackage[absolute]{textpos} % Manual placement of certain things
 \usepackage{ragged2e} % Ragged-right columns with hyphenation
 \usepackage{macros}
 \usepackage[format=hang,font=small,labelfont=bf]{caption}
@@ -107,6 +108,9 @@
 		include
 	},
 }
+
+% Set up textpos
+\TPGrid{68}{108}
 
 % Thick frames for images
 \setlength\fboxsep{0pt}

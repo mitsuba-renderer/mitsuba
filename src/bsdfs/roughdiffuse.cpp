@@ -23,6 +23,7 @@ MTS_NAMESPACE_BEGIN
 
 /*!\plugin{roughdiffuse}{Rough diffuse material}
  * \order{2}
+ * \icon{bsdf_roughdiffuse}
  * \parameters{
  *     \parameter{reflectance}{\Spectrum\Or\Texture}{
  *         Specifies the diffuse albedo of the 

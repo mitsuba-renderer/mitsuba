@@ -25,6 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{hk}{Hanrahan-Krueger BSDF}
+ * \icon{bsdf_hk}
  *
  * \parameters{
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Scattering coefficient of the 

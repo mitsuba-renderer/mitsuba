@@ -169,8 +169,8 @@ public:
 			}
 
 			if (mismatch) {
-				Log(EWarn, "Potential inconsistency (3): f/pdf=%s (method 1), f/pdf=%s (method 2), sampled f/pdf=%s",
-					sampled2.toString().c_str(), evaluated.toString().c_str(), sampled.toString().c_str());
+				Log(EWarn, "Potential inconsistency (3): f/pdf=%s (method 1), f/pdf=%s (method 2), sampled f/pdf=%s, measure=%i",
+					sampled2.toString().c_str(), evaluated.toString().c_str(), sampled.toString().c_str(), measure);
 				Log(EWarn, "  f=%s, f2=%s, pdf=%f, pdf2=%f", f.toString().c_str(), f.toString().c_str(), pdfVal, pdfVal2);
 			}
 
@@ -342,6 +342,7 @@ public:
 				);
 
 				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
+				chiSqr->dumpTables("test.m");
 				ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
 				if (result == ChiSquare::EReject) {
 					std::string filename = formatString("failure_%i.m", failureCount++);

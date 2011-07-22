@@ -24,6 +24,7 @@ MTS_NAMESPACE_BEGIN
 
 /*!\plugin{diffuse}{Smooth diffuse material}
  * \order{1}
+ * \icon{bsdf_diffuse}
  * \parameters{
  *     \parameter{reflectance}{\Spectrum\Or\Texture}{
  *       Specifies the diffuse albedo of the 

@@ -24,6 +24,7 @@ MTS_NAMESPACE_BEGIN
 
 /*!\plugin{plastic}{Smooth plastic material}
  * \order{7}
+ * \icon{bsdf_plastic}
  * \parameters{
  *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{polypropylene} / 1.49}}

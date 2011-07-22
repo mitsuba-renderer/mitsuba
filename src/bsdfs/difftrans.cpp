@@ -23,6 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{difftrans}{Diffuse transmitter}
+ * \icon{bsdf_difftrans}
  *
  * \parameters{
  *     \parameter{transmittance}{\Spectrum\Or\Texture}{
@@ -32,11 +33,11 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * \renderings{
- *     \rendering{The model with default parameters}{bsdf_difftrans}
+ *     \rendering{The model with default parameters}{bsdf_difftrans.jpg}
  * }
  *
  * This BSDF models a non-reflective material, where any entering light loses 
- * its directionality and is diffusely transmitted from the other side. This 
+ * its directionality and is diffusely scattered from the other side. This 
  * model can be combined\footnote{For instance using the \pluginref{mixture} 
  * plugin.} with a surface reflection model to describe translucent substances
  * that have internal multiple scattering processes (e.g. plant leaves).

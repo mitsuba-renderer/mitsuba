@@ -24,6 +24,7 @@ MTS_NAMESPACE_BEGIN
 
 /*!\plugin{dielectric}{Smooth dielectric material}
  * \order{3}
+ * \icon{bsdf_dielectric}
  * \parameters{
  *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}

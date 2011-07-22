@@ -25,6 +25,7 @@ MTS_NAMESPACE_BEGIN
 
 /*!\plugin{roughconductor}{Rough conductor material}
  * \order{6}
+ * \icon{bsdf_roughconductor}
  * \parameters{
  *     \parameter{distribution}{\String}{
  *          Specifies the type of microfacet normal distribution 
@@ -61,8 +62,8 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{eta}{\Spectrum}{Real part of the material's index 
  *           of refraction \default{based on the value of \texttt{material}}}
  *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of 
- *             refraction, also known as absorption coefficient.
- *             \default{based on the value of \texttt{material}}}
+ *             refraction (the absorption coefficient).
+ *             \default{based on \texttt{material}}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the reflectance component\default{1.0}}
  * }
@@ -112,8 +113,8 @@ MTS_NAMESPACE_BEGIN
  * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
  * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
  * finish). Values significantly above that are probably not too realistic.
- * \vspace{-6mm}
- * \subsubsection*{Technical details}\vspace{-2mm}
+ * \vspace{-7mm}
+ * \subsubsection*{Technical details}\vspace{-3mm}
  * When rendering with the Ashikhmin-Shirley or Phong microfacet 
  * distributions, a conversion is used to turn the specified 
  * $\alpha$ roughness value into the exponents of these distributions.
@@ -138,7 +139,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \begin{xml}[caption={A material definition for brushed aluminium}, label=lst:roughconductor-aluminium]
  * <bsdf type="roughconductor">
- *     <string name="material" value="Cu"/>
+ *     <string name="material" value="Al"/>
  *     <string name="distribution" value="as"/>
  *     <float name="alphaU" value="0.05"/>
  *     <float name="alphaV" value="0.3"/>

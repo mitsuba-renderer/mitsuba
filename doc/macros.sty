@@ -56,6 +56,12 @@
 	\end{figure}
 }
 
+\newcommand{\icon}[1]{
+	\begin{textblock}{3}(51,8)
+	\includegraphics[width=2.25cm]{images/#1.pdf}
+	\end{textblock}
+ 	\vspace{3mm}
+}
 \newcommand{\rendering}[2]{\subfloat[#1]{\fbox{\includegraphics[width=0.47\textwidth]{images/#2}}}\hfill}
 \newcommand{\unframedrendering}[2]{\subfloat[#1]{\includegraphics[width=0.47\textwidth]{images/#2}}\hfill}
 \newcommand{\medrendering}[2]{ \subfloat[#1]{\fbox{\includegraphics[width=0.3\textwidth]{images/#2}}}\hfill}

@@ -27,6 +27,7 @@ MTS_NAMESPACE_BEGIN
 
 /*!\plugin{roughplastic}{Rough plastic material}
  * \order{8}
+ * \icon{bsdf_roughplastic}
  * \parameters{
  *     \parameter{distribution}{\String}{
  *          Specifies the type of microfacet normal distribution 
@@ -63,7 +64,7 @@ MTS_NAMESPACE_BEGIN
  * \renderings{
  *     \rendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
  *     \rendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}
- * }
+ * }\vspace{-1mm}
  *
  * This plugin implements a realistic microfacet scattering model for rendering
  * rough dielectric materials with internal scattering, such as plastic. It can 

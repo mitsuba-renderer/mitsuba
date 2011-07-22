@@ -24,6 +24,7 @@ MTS_NAMESPACE_BEGIN
 
 /*!\plugin{conductor}{Smooth conductor}
  * \order{5}
+ * \icon{bsdf_conductor}
  * \parameters{
  *     \parameter{material}{\String}{Name of a material preset, see 
  *           \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}

@@ -24,6 +24,7 @@ MTS_NAMESPACE_BEGIN
 
 /*! \plugin{coating}{Smooth dielectric coating}
  * \order{9}
+ * \icon{bsdf_coating}
  *
  * \parameters{
  *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
@@ -320,9 +321,11 @@ public:
 			if (sample.x > probSpecular) {
 				sample.x = (sample.x - probSpecular) / (1 - probSpecular);
 				choseSpecular = false;
+			} else {
+				sample.x /= probSpecular;
 			}
 		}
-		
+
 		if (choseSpecular) {
 			bRec.sampledComponent = m_components.size()-1;
 			bRec.sampledType = EDeltaReflection;
@@ -338,7 +341,7 @@ public:
 			Spectrum result = m_nested->sample(bRec, pdf, sample);
 			bRec.wi = wiBackup;
 			Vector woPrime = bRec.wo;
-	
+
 			if (result.isZero()) 
 				return Spectrum(0.0f);
 

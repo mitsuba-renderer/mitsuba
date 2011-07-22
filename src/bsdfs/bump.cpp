@@ -22,6 +22,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{bump}{Bump map}
+ * \icon{bsdf_bump}
  *
  * \parameters{
  *     \parameter{\Unnamed}{\Texture}{

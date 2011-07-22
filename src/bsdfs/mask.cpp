@@ -116,14 +116,28 @@ public:
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		Float prob = m_opacity->getValue(bRec.its).getLuminance();
+		bool sampleTransmission = bRec.typeMask & EDeltaTransmission
+			&& (bRec.component == -1 || bRec.component == getComponentCount()-1);
+		bool sampleNested = bRec.component == -1 || bRec.component < getComponentCount()-1;
 
-		if (measure == ESolidAngle)
-			return m_nestedBSDF->pdf(bRec, ESolidAngle) * prob;
-		else if (measure == EDiscrete && std::abs(1-dot(bRec.wi, -bRec.wo)) < Epsilon)
-			return 1-prob;
-		else
+		Float prob = m_opacity->getValue(bRec.its).getLuminance();
+		if (measure == ESolidAngle) {
+			if (!sampleNested)
+				return 0.0f;
+			Float result = m_nestedBSDF->pdf(bRec, ESolidAngle);
+			if (sampleTransmission)
+				result *= prob;
+			return result;
+		} else if (measure == EDiscrete && std::abs(1-dot(bRec.wi, -bRec.wo)) < Epsilon) {
+			if (!sampleTransmission)
+				return 0.0f;
+			if (!sampleNested)
+				return 1.0f;
+			else
+				return 1-prob;
+		} else {
 			return 0.0f;
+		}
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
@@ -134,15 +148,13 @@ public:
 		Float prob = opacity.getLuminance();
 
 		bool sampleTransmission = bRec.typeMask & EDeltaTransmission
-			&& (bRec.sampledComponent == -1 ||
-				bRec.sampledComponent == getComponentCount()-1);
-		bool sampleNested = bRec.sampledComponent == -1 || 
-			bRec.sampledComponent < getComponentCount()-1;
+			&& (bRec.component == -1 || bRec.component == getComponentCount()-1);
+		bool sampleNested = bRec.component == -1 || bRec.component < getComponentCount()-1;
 
 		if (sampleTransmission && sampleNested) {
 			if (sample.x <= prob) {
 				sample.x /= prob;
-				result = m_nestedBSDF->sample(bRec, pdf, sample);
+				result = m_nestedBSDF->sample(bRec, pdf, sample) * opacity;
 				pdf *= prob;
 			} else {
 				bRec.wo = -bRec.wi;
@@ -158,7 +170,7 @@ public:
 			pdf = 1;
 			result = Spectrum(1.0f) - opacity;
 		} else if (sampleNested) {
-			result = m_nestedBSDF->sample(bRec, pdf, sample);
+			result = m_nestedBSDF->sample(bRec, pdf, sample) * opacity;
 		}
 
 		return result;
@@ -170,16 +182,14 @@ public:
 		Float prob = opacity.getLuminance();
 
 		bool sampleTransmission = bRec.typeMask & EDeltaTransmission
-			&& (bRec.sampledComponent == -1 ||
-				bRec.sampledComponent == getComponentCount()-1);
-		bool sampleNested = bRec.sampledComponent == -1 || 
-			bRec.sampledComponent < getComponentCount()-1;
+			&& (bRec.component == -1 || bRec.component == getComponentCount()-1);
+		bool sampleNested = bRec.component == -1 || bRec.component < getComponentCount()-1;
 
 		if (sampleTransmission && sampleNested) {
 			if (sample.x <= prob) {
 				Float invProb = 1.0f / prob;
 				sample.x *= invProb;
-				return m_nestedBSDF->sample(bRec, sample) * invProb;
+				return m_nestedBSDF->sample(bRec, sample) * opacity * invProb;
 			} else {
 				bRec.wo = -bRec.wi;
 				bRec.sampledComponent = getComponentCount()-1;
@@ -192,7 +202,7 @@ public:
 			bRec.sampledType = EDeltaTransmission;
 			return Spectrum(1.0f) - opacity;
 		} else if (sampleNested) {
-			return m_nestedBSDF->sample(bRec, sample);
+			return m_nestedBSDF->sample(bRec, sample) * opacity;
 		} else {
 			return Spectrum(0.0f);
 		}

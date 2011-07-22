@@ -32,6 +32,7 @@ MTS_NAMESPACE_BEGIN
 
 /*!\plugin{roughdielectric}{Rough dielectric material}
  * \order{4}
+ * \icon{bsdf_roughdielectric}
  * \parameters{
  *     \parameter{distribution}{\String}{
  *          Specifies the type of microfacet normal distribution 
@@ -462,10 +463,14 @@ public:
 		const Normal m = m_distribution.sample(sample,
 				sampleAlphaU, sampleAlphaV);
 
+		Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR),
+			  numerator = 1.0f;
+
 		if (hasReflection && hasTransmission) {
-			Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
 			if (bRec.sampler->next1D() > F)
 				choseReflection = false;
+		} else {
+			numerator = hasReflection ? F : 1-F;
 		}
 
 		Spectrum result;
@@ -502,10 +507,10 @@ public:
 					((etaI*etaI) / (etaT*etaT)) : (Float) 1);
 		}
 
-		Float numerator = m_distribution.eval(m, alphaU, alphaV)
+		numerator *= m_distribution.eval(m, alphaU, alphaV)
 			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
 			* dot(bRec.wi, m);
-
+		
 		Float denominator = m_distribution.pdf(m, sampleAlphaU, sampleAlphaV)
 			* Frame::cosTheta(bRec.wi);
 
