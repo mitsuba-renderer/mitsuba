@@ -210,7 +210,7 @@ public:
 	
 	bool destinationExists(const fs::path &baseName) const {
 		fs::path filename = baseName;
-		if (boost::to_lower_copy(filename.extension()) != ".exr")
+		if (boost::to_lower_copy(filename.extension().string()) != ".exr")
 			filename.replace_extension(".exr");
 		return fs::exists(filename);
 	}

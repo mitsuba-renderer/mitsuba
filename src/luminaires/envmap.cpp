@@ -81,7 +81,7 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Luminaire::serialize(stream, manager);
 		stream->writeFloat(m_intensityScale);
-		stream->writeString(m_path.file_string());
+		stream->writeString(m_path.native());
 		m_bsphere.serialize(stream);
 
 		if (m_stream.get()) {
@@ -354,7 +354,7 @@ class EnvMapLuminaireShader : public Shader {
 public:
 	EnvMapLuminaireShader(Renderer *renderer, const fs::path &filename, ref<Bitmap> bitmap, 
 			Float intensityScale, const Transform &worldToLuminaire) : Shader(renderer, ELuminaireShader) {
-		m_gpuTexture = renderer->createGPUTexture(filename.leaf(), bitmap);
+		m_gpuTexture = renderer->createGPUTexture(filename.leaf().string(), bitmap);
 		m_gpuTexture->setWrapType(GPUTexture::ERepeat);
 		m_gpuTexture->setMaxAnisotropy(8);
 		m_gpuTexture->init();

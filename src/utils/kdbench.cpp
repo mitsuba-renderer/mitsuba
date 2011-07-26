@@ -157,7 +157,7 @@ public:
 		if (boost::ends_with(lowercase, ".xml")) {
 			fs::path 
 				filename = fileResolver->resolve(argv[optind]),
-				filePath = fs::complete(filename).parent_path(),
+				filePath = fs::absolute(filename).parent_path(),
 				baseName = fs::basename(filename);
 			ref<FileResolver> frClone = fileResolver->clone();
 			frClone->addPath(filePath);

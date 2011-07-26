@@ -31,7 +31,7 @@ void GPUProgram::setSourceFile(EType type, const fs::path &path) {
 	fs::ifstream ifs(path);
 	if (ifs.fail() || ifs.bad()) 
 		Log(EError, "Unable to load GPU program \"%s\"",
-			path.file_string().c_str());
+			path.native().c_str());
 	std::string code, line;
 
 	while (getline(ifs, line)) {

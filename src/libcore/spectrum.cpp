@@ -498,7 +498,7 @@ InterpolatedSpectrum::InterpolatedSpectrum(const fs::path &path) {
 	fs::ifstream is(path);
 	if (is.bad() || is.fail())
 		SLog(EError, "InterpolatedSpectrum: could not open \"%s\"",
-			path.file_string().c_str());
+			path.native().c_str());
 
 	std::string line;
 	while (true) {
@@ -516,7 +516,7 @@ InterpolatedSpectrum::InterpolatedSpectrum(const fs::path &path) {
 
 	if (m_wavelengths.size() == 0)
 		SLog(EError, "\"%s\": unable to parse any entries!", 
-				path.file_string().c_str());
+				path.native().c_str());
 
 	SLog(EInfo, "\"%s\": loaded a spectral power distribution with " SIZE_T_FMT
 			" entries (between %f and %f nm)", path.leaf().c_str(), m_wavelengths.size(),

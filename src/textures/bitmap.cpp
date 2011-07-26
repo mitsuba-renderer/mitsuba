@@ -45,7 +45,7 @@ public:
 		Log(EInfo, "Loading texture \"%s\"", m_filename.leaf().c_str());
 
 		ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
-		std::string extension = boost::to_lower_copy(m_filename.extension());
+		std::string extension = boost::to_lower_copy(m_filename.extension().string());
 
 		std::string filterType = props.getString("filterType", "ewa");
 		std::string wrapMode = props.getString("wrapMode", "repeat");
@@ -85,7 +85,7 @@ public:
 		else if (extension == ".bmp")
 			m_format = Bitmap::EBMP;
 		else
-			Log(EError, "Cannot deduce the file type of '%s'!", m_filename.file_string().c_str());
+			Log(EError, "Cannot deduce the file type of '%s'!", m_filename.native().c_str());
 
 		ref<Bitmap> bitmap = new Bitmap(m_format, fs);
 		initializeFrom(bitmap);
@@ -221,7 +221,7 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Texture2D::serialize(stream, manager);
-		stream->writeString(m_filename.file_string());
+		stream->writeString(m_filename.native());
 		stream->writeFloat(m_gamma);
 		stream->writeInt(m_format);
 		stream->writeInt(m_filterType);
@@ -366,7 +366,7 @@ private:
 };
 
 Shader *BitmapTexture::createShader(Renderer *renderer) const {
-	return new BitmapTextureShader(renderer, m_filename.leaf(), 
+	return new BitmapTextureShader(renderer, m_filename.leaf().string(),
 			m_mipmap->getLDRBitmap(), m_uvOffset, m_uvScale,
 			m_wrapMode, (m_filterType == MIPMap::EEWA)
 			? m_maxAnisotropy : 1.0f);

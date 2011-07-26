@@ -28,7 +28,7 @@ public:
 	AnimatedInstance(const Properties &props) : Shape(props) {
 		FileResolver *fResolver = Thread::getThread()->getFileResolver();
 		fs::path path = fResolver->resolve(props.getString("filename"));
-		m_name = path.filename();
+		m_name = path.filename().string();
 
 		Log(EInfo, "Loading animation track from \"%s\"", m_name.c_str());
 		ref<FileStream> fs = new FileStream(path, FileStream::EReadOnly);

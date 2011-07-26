@@ -36,16 +36,16 @@ MTS_NAMESPACE_BEGIN
 Plugin::Plugin(const std::string &shortName, const fs::path &path) 
  : m_shortName(shortName), m_path(path) {
 #if defined(WIN32)
-	m_handle = LoadLibrary(path.file_string().c_str());
+	m_handle = LoadLibrary(path.native().c_str());
 	if (!m_handle) {
 		SLog(EError, "Error while loading plugin \"%s\": %s", 
-				m_path.file_string().c_str(), lastErrorText().c_str());
+				m_path.native().c_str(), lastErrorText().c_str());
 	}
 #else
-	m_handle = dlopen(path.file_string().c_str(), RTLD_LAZY | RTLD_LOCAL);
+	m_handle = dlopen(path.native().c_str(), RTLD_LAZY | RTLD_LOCAL);
 	if (!m_handle) {
 		SLog(EError, "Error while loading plugin \"%s\": %s",
-			m_path.file_string().c_str(), dlerror());
+			m_path.native().c_str(), dlerror());
 	}
 #endif
 	try {
@@ -89,13 +89,13 @@ void *Plugin::getSymbol(const std::string &sym) {
 	void *data = GetProcAddress(m_handle, sym.c_str());
 	if (!data) {
 		SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
-			sym.c_str(), m_path.file_string().c_str(), lastErrorText().c_str());
+			sym.c_str(), m_path.native().c_str(), lastErrorText().c_str());
 	}
 #else
 	void *data = dlsym(m_handle, sym.c_str());
 	if (!data) {
 		SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
-			sym.c_str(), m_path.file_string().c_str(), dlerror());
+			sym.c_str(), m_path.native().c_str(), dlerror());
 	}
 #endif
 	return data;
@@ -193,7 +193,7 @@ void PluginManager::ensurePluginLoaded(const std::string &name) {
 
 	if (fs::exists(path)) {
 		Log(EInfo, "Loading plugin \"%s\" ..", shortName.c_str());
-		m_plugins[name] = new Plugin(shortName, path.file_string());
+		m_plugins[name] = new Plugin(shortName, path.native());
 		return;
 	}
 

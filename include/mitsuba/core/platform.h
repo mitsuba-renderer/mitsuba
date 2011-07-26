@@ -120,6 +120,9 @@
 #define MTS_NAMESPACE_BEGIN namespace mitsuba {
 #define MTS_NAMESPACE_END }
 
+/* Compile with Boost filesystem v3 */
+#define BOOST_FILESYSTEM_VERSION 3
+
 #include <string>
 
 MTS_NAMESPACE_BEGIN

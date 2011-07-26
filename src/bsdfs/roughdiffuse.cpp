@@ -53,8 +53,8 @@ MTS_NAMESPACE_BEGIN
  * }
  * 
  * This reflectance model describes the interaction of light with a \emph{rough} 
- * diffuse material, such as plaster, sand, clay, or concrete.
- * The underlying theory was developed by Oren and Nayar 
+ * diffuse material, such as plaster, sand, clay, or concrete, or ``powdery''
+ * surfaces. The underlying theory was developed by Oren and Nayar 
  * \cite{Oren1994Generalization}, who model the microscopic surface structure as 
  * unresolved planar facets arranged in V-shaped grooves, where each facet
  * is an ideal diffuse reflector. The model takes into account shadowing,

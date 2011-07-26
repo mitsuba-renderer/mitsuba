@@ -512,7 +512,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 
 	fs::ifstream is(path);
 	if (is.fail())
-		Log(EError, "Could not open \"%s\"!", path.file_string().c_str());
+		Log(EError, "Could not open \"%s\"!", path.native().c_str());
 
 	std::string line;
 	bool newFiber = true;

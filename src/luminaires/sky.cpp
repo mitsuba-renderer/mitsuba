@@ -23,21 +23,92 @@
 
 #define SAMPLE_UNIFORMLY 1
 
-/* Define this to automatically set the viewing angles phi to zero if
- * its theta is zero. This means that there is only one possible
- * viewing zenith angle. Some implementitions do this, but it is
- * unclear why one should use it. */
-// #define ENFORCE_SINGLE_ZENITH_ANGLE
-
 MTS_NAMESPACE_BEGIN
 
-/*
- * A sun and skylight luminaire. In its local coordinate system, the sun
- * is "above" on positive Y direction. So when configuring, keep in mind
- * that south = x, east = y and up = z. All times in decimal form (6.25
- * = 6:15 AM) and all angles in radians.
+/*!\plugin{sky}{Skylight luminaire}
+ * \parameters{
+ *     \parameter{turbidity}{\Float}{
+ *         Specifies the amount of atmospheric extinction due to 
+ *         larger particles ($t_m$), as opposed to molecules ($t_h$). 
+ *         Lower values correspond to a clear sky, and higher values
+ *         produce illumination resembling that of a hazy, overcast sky.
+ *         Formally, the \emph{turbidity} is defined as the ratio 
+ *         $T=\frac{t_m+t_h}{t_m}$. Values between 1 and 30 
+ *         are possible, though the model will be most accurate for values 
+ *         between 2 and 6, to which it was fit using numerical
+ *         optimization. \default{2}
+ *     }
+ *     \parameter{extend}{\Boolean}{
+ *         Extend luminaire below the horizon? \default{\code{false}}
+ *     }
+ *     \parameter{resolution}{\Integer}{Specifies the resolution of the precomputed
+ *         image that is used to represent the sky environment map
+ *         \default{256}}
+ *     \parameter{scale}{\Float}{
+ *         This parameter can be used to scale the the amount of illumination
+ *         emitted by the sky luminaire, e.g. to change the units. For instance, 
+ *         to switch from photometric ($\nicefrac{W}{m^2\cdot sr})$) 
+ *         to arbitrary but convenient units in the $[0,1]$ range, set 
+ *         this parameter to XXX \default{1}.
+ *     }
+ *     \parameter{day}{\Integer}{Julian date used to compute the sun's position. 
+ *       Must be in the range 1 to 365. \default{200}}
+ *     \parameter{time}{\Float}{Fractional time used to compute the sun's
+ *       position. A time of 4:15 PM corresponds to 16.25. \default{15.00}}
+ *     \parameter{latitude, longitude}{\Float}{
+ *       These two parameters specify the oberver's latitude and longitude 
+ *       in degrees, which are required to compute the sun's position.
+ *       \default{35.6894, 139.6917 --- Tokyo}
+ *     }
+ *     \parameter{standardMeridian}{\Integer}{Denotes the
+ *       standard meridian of the time zone. This is required to compute
+ *       the sun's position. \default{135 --- Japan standard time}
+ *     }
+ *     \parameter{sunDirection}{\Vector}{Allows to 
+ *       override the sun direction. In that case, all parameters
+ *       pertaining to the computation of this direction (\code{day,
+ *       time, latitude, longitude,} as well as \code{standardMeridian}) 
+ *       become unnecessary.
+ *     }
+ * }
  *
- * The model behind it is described by Preetham et al. (2002).
+ * \renderings{
+ *     \rendering{Homogeneous reflectance, see \lstref{diffuse-uniform}}
+ *         {bsdf_diffuse_plain}
+ *     \rendering{Textured reflectance, see \lstref{diffuse-textured}}
+ *         {bsdf_diffuse_textured}
+ * }
+ *
+ * This plugin implements the physically-based skylight model proposed by 
+ * Preetham et al. \cite{Preetham1999Practical}. It can be used for realistic 
+ * daylight renderings of scenes under clear and overcast skies, assuming
+ * that the sky is observed from a position either on or close to the surface 
+ * of the earth. While the model encompasses sunrise and sunset configurations,
+ * it does not extend to the night sky where illumination from stars, galaxies,
+ * and the moon dominate. The model also does not currently handle cloudy skies.
+ *
+ * Numerous parameters allow changing the both the position on Earth, as
+ * well as the time of observation. These are used to compute the sun's 
+ * position which, together with \code{turbidity}, constitutes the main 
+ * parameter of the model. Alternatively, the sun direction can be 
+ * specified explicitly.
+ *
+ * By default, the luminaire will not emit any light below the
+ * horizon, which means that these regions will be black when they
+ * are directly observed. By setting the \code{extend} parameter to \code{true},
+ * the emitted radiance at the horizon will be extended to the entire
+ * bottom hemisphere. Note that this will significantly increase
+ * the amount of illumination present in the scene.
+ *
+ * For performance reasons, the implementation precomputes an environment 
+ * map of the entire sky that is then forwarded to the \pluginref{envmap} 
+ * plugin. The resolution of this environment map can affect the quality
+ * of the result. Due to the smoothness of the sky illumination,
+ * \code{resolution} values of around 256 (the default) are usually
+ * more than sufficient.
+ *
+ * The implementation in Mitsuba is based on code by Preetham et al. It was
+ * ported and modified by Tom Kazimiers.
  */
 class SkyLuminaire : public Luminaire {
 public:
@@ -54,134 +125,113 @@ public:
 			* props.getTransform("toWorld", Transform());
 		m_worldToLuminaire = m_luminaireToWorld.inverse();
 
-		m_skyScale = props.getFloat("skyScale", Float(1.0));
+		m_scale = props.getFloat("scale", Float(1.0));
 		m_turbidity = props.getFloat("turbidity", Float(2.0));
-		m_aConst = props.getFloat("aConst", 1.0);
-		m_bConst = props.getFloat("bConst", 1.0);
-		m_cConst = props.getFloat("cConst", 1.0);
-		m_dConst = props.getFloat("dConst", 1.0);
-		m_eConst = props.getFloat("eConst", 1.0);
-		m_clipBelowHorizon = props.getBoolean("clipBelowHorizon", true);
-		m_exposure = props.getFloat("exposure", 1.0/15.0);
+		if (m_turbidity < 1 || m_turbidity > 30)
+			Log(EError, "The turbidity parameter must be in the range [1,30]!");
 
-		/* Do some input checks for sun position information */
-		bool hasSunDir = props.hasProperty("sunDirection");
-		bool hasLatitude = props.hasProperty("latitude");
-		bool hasLongitude = props.hasProperty("longitude");
-		bool hasStdMrd = props.hasProperty("standardMeridian");
-		bool hasJulDay = props.hasProperty("julianDay");
-		bool hasTimeOfDay = props.hasProperty("timeOfDay");
+		m_extend = props.getBoolean("extend", false);
 
-		bool hasSomeLocInfo = hasLatitude || hasLongitude || hasStdMrd || hasJulDay || hasTimeOfDay;
-		bool hasAllLocInfo = hasLatitude && hasLongitude && hasStdMrd && hasJulDay && hasTimeOfDay;
+		m_resolution = props.getInteger("resolution", 256);
 
-		if (!(hasSunDir || hasSomeLocInfo)) {
-			/* If no sun position has been specified, use a default one. */
-			hasSomeLocInfo = hasAllLocInfo = true;
-		} else if (hasSunDir && hasSomeLocInfo) {
-			/* We don't allow the use of both position formats, raise error. */
-			throw std::runtime_error("Please decide for either positioning the sun by a direction vector or by some location and time information.");
-		} else if (hasSomeLocInfo && !hasAllLocInfo) {
-			/* The sun positioning by location and time information is missing
-			* some parameters in the input, raise error. */
-			throw std::runtime_error("Please give all required parameters for specifing the sun's position by location and time information. At least one is missing.");
-		} /* else we have complete positioning information */
-
-		/* The direction should always relate to "up" beeing in positive Z */
-		Vector sunDir = props.getVector("sunDirection", Vector(0.0, 0.0, 1.0));
-		Float lat = props.getFloat("latitude", 51.050891);
-		Float lon  = props.getFloat("longitude", 13.694458);
-		Float stdMrd = props.getFloat("standardMeridian", 0);
-		Float julianDay = props.getFloat("julianDay", 200);
-		Float timeOfDay = props.getFloat("timeOfDay", 15.00);
-		
 		/* configure position of sun */
-		if (hasSunDir)
-			configureSunPosition(sunDir);
-		else
-			configureSunPosition(lat, lon, stdMrd, julianDay, timeOfDay);
+		if (props.hasProperty("sunDirection")) {
+			if (props.hasProperty("latitude") || props.hasProperty("longitude")
+				|| props.hasProperty("standardMeridian") || props.hasProperty("day")
+				|| props.hasProperty("time"))
+				Log(EError, "Both the 'sunDirection' parameter and time/location "
+						"information were provided -- only one of them can be specified at a time!");
+
+			configureSunPosition(m_worldToLuminaire(
+				props.getVector("sunDirection")));
+		} else {
+			Float lat = props.getFloat("latitude", 35.6894f);
+			Float lon  = props.getFloat("longitude", 139.6917f);
+			int stdMrd = props.getInteger("standardMeridian", 135);
+
+			int day = props.getInteger("day", 200);
+			if (day < 1 || day > 365)
+				Log(EError, "The day parameter must be in the range [1, 365]!");
+
+			Float time = props.getFloat("time", 15.00f);
+			if (time < 0 || time > 24)
+				Log(EError, "The time parameter must be in the range [0, 24]!");
+
+			configureSunPosition(lat, lon, stdMrd, day, time);
+		}
 
 		configure();
 	}
 
 	SkyLuminaire(Stream *stream, InstanceManager *manager) 
 		    : Luminaire(stream, manager) {
-		m_skyScale = stream->readFloat();
+		m_scale = stream->readFloat();
 		m_turbidity = stream->readFloat();
 		m_thetaS = stream->readFloat();
 		m_phiS = stream->readFloat();
-		m_aConst = stream->readFloat();
-		m_bConst = stream->readFloat();
-		m_cConst = stream->readFloat();
-		m_dConst = stream->readFloat();
-		m_eConst = stream->readFloat();
-		m_clipBelowHorizon = stream->readBool();
+		m_extend = stream->readBool();
+		m_resolution = stream->readInt();
 
 		configure();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Luminaire::serialize(stream, manager);
-		stream->writeFloat(m_skyScale);
+		stream->writeFloat(m_scale);
 		stream->writeFloat(m_turbidity);
 		stream->writeFloat(m_thetaS);
 		stream->writeFloat(m_phiS);
-		stream->writeFloat(m_aConst);
-		stream->writeFloat(m_bConst);
-		stream->writeFloat(m_cConst);
-		stream->writeFloat(m_dConst);
-		stream->writeFloat(m_eConst);
-		stream->writeBool(m_clipBelowHorizon);
+		stream->writeBool(m_extend);
+		stream->writeInt(m_resolution);
 	}
 
 	/**
-	 * Precalculates some inernal varibles. It needs a valid sun position.
-	 * Hence it needs a configureSunPos... method called before itself.
+	 * Precalculates some inernal varibles. It needs a valid sun position,
+	 * hence the configureSunPos... method must have been called previously.
 	 */
 	void configure() {
 		Float theta2 = m_thetaS * m_thetaS;
 		Float theta3 = theta2 * m_thetaS;
-
 		Float turb2 = m_turbidity * m_turbidity;
 
 		/* calculate zenith chromaticity */
-		m_zenithX =
-		(+0.00165*theta3 - 0.00374*theta2 + 0.00208*m_thetaS + 0)       * turb2 +
-		(-0.02902*theta3 + 0.06377*theta2 - 0.03202*m_thetaS + 0.00394) * m_turbidity  +
-		(+0.11693*theta3 - 0.21196*theta2 + 0.06052*m_thetaS + 0.25885);
+		m_zenithX = 
+			(+0.00165f*theta3 - 0.00374f*theta2 + 0.00208f*m_thetaS + 0.0f)     * turb2 +
+			(-0.02902f*theta3 + 0.06377f*theta2 - 0.03202f*m_thetaS + 0.00394f) * m_turbidity  +
+			(+0.11693f*theta3 - 0.21196f*theta2 + 0.06052f*m_thetaS + 0.25885f);
 
 		m_zenithY =
-		(+0.00275*theta3 - 0.00610*theta2 + 0.00316*m_thetaS  + 0)       * turb2 +
-		(-0.04214*theta3 + 0.08970*theta2 - 0.04153*m_thetaS  + 0.00515) * m_turbidity  +
-		(+0.15346*theta3 - 0.26756*theta2 + 0.06669*m_thetaS  + 0.26688);
+			(+0.00275f*theta3 - 0.00610f*theta2 + 0.00316f*m_thetaS  + 0.0f)     * turb2 +
+			(-0.04214f*theta3 + 0.08970f*theta2 - 0.04153f*m_thetaS  + 0.00515f) * m_turbidity  +
+			(+0.15346f*theta3 - 0.26756f*theta2 + 0.06669f*m_thetaS  + 0.26688f);
 
 		/* calculate zenith luminance */
-		Float chi = (4.0/9.0 - m_turbidity / 120.0) * (M_PI - 2 * m_thetaS);
+		Float chi = (4.0f/9.0f - m_turbidity / 120.0f) * (M_PI - 2 * m_thetaS);
 
-		m_zenithL = (4.0453 * m_turbidity - 4.9710) * tan(chi)
-			- 0.2155 * m_turbidity + 2.4192;
+		m_zenithL = (4.0453f * m_turbidity - 4.9710f) * std::tan(chi)
+			- 0.2155f * m_turbidity + 2.4192f;
 
-		m_perezL[0] =  ( 0.17872 * m_turbidity  - 1.46303) * m_aConst;
-		m_perezL[1] =  (-0.35540 * m_turbidity  + 0.42749) * m_bConst;
-		m_perezL[2] =  (-0.02266 * m_turbidity  + 5.32505) * m_cConst;
-		m_perezL[3] =  ( 0.12064 * m_turbidity  - 2.57705) * m_dConst;
-		m_perezL[4] =  (-0.06696 * m_turbidity  + 0.37027) * m_eConst;
+		/* Evaluate quadratic polynomials to find the Perez sky
+		 * model coefficients for the x, y and luminance components */
+		m_perezL[0] =  0.17872f * m_turbidity  - 1.46303f;
+		m_perezL[1] = -0.35540f * m_turbidity  + 0.42749f;
+		m_perezL[2] = -0.02266f * m_turbidity  + 5.32505f;
+		m_perezL[3] =  0.12064f * m_turbidity  - 2.57705f;
+		m_perezL[4] = -0.06696f * m_turbidity  + 0.37027f;
 
-		m_perezX[0] =  (-0.01925 * m_turbidity - 0.25922) * m_aConst;
-		m_perezX[1] =  (-0.06651 * m_turbidity + 0.00081) * m_bConst;
-		m_perezX[2] =  (-0.00041 * m_turbidity + 0.21247) * m_cConst;
-		m_perezX[3] =  (-0.06409 * m_turbidity - 0.89887) * m_dConst;
-		m_perezX[4] =  (-0.00325 * m_turbidity + 0.04517) * m_eConst;
+		m_perezX[0] = -0.01925f * m_turbidity - 0.25922f;
+		m_perezX[1] = -0.06651f * m_turbidity + 0.00081f;
+		m_perezX[2] = -0.00041f * m_turbidity + 0.21247f;
+		m_perezX[3] = -0.06409f * m_turbidity - 0.89887f;
+		m_perezX[4] = -0.00325f * m_turbidity + 0.04517f;
 
-		m_perezY[0] =  (-0.01669 * m_turbidity - 0.26078) * m_aConst;
-		m_perezY[1] =  (-0.09495 * m_turbidity + 0.00921) * m_bConst;
-		m_perezY[2] =  (-0.00792 * m_turbidity + 0.21023) * m_cConst;
-		m_perezY[3] =  (-0.04405 * m_turbidity - 1.65369) * m_dConst;
-		m_perezY[4] =  (-0.01092 * m_turbidity + 0.05291) * m_eConst;
+		m_perezY[0] = -0.01669f * m_turbidity - 0.26078f;
+		m_perezY[1] = -0.09495f * m_turbidity + 0.00921f;
+		m_perezY[2] = -0.00792f * m_turbidity + 0.21023f;
+		m_perezY[3] = -0.04405f * m_turbidity - 1.65369f;
+		m_perezY[4] = -0.01092f * m_turbidity + 0.05291f;
 
-
-
-		int thetaBins = 512, phiBins = thetaBins*2;
+		int thetaBins = m_resolution, phiBins = m_resolution*2;
 		ref<Bitmap> bitmap = new Bitmap(phiBins, thetaBins, 128);
 		Point2 factor(M_PI / thetaBins, (2*M_PI) / phiBins);
 		for (int i=0; i<thetaBins; ++i) {
@@ -206,28 +256,31 @@ public:
 	 * your position on the world and time of day.
 	 * From IES Lighting Handbook pg 361.
 	 */
-	void configureSunPosition(const Float lat, const Float lon,
-			const int stdMrd, const int julDay, const Float timeOfDay) {
-		const Float solarTime = timeOfDay
-			+ (0.170 * sin(4.0 * M_PI * (julDay - 80.0) / 373.0)
-			- 0.129 * sin(2.0 * M_PI * (julDay - 8.0) / 355.0))
-			+ (stdMrd - lon) / 15.0;
+	void configureSunPosition(Float lat, Float lon, int stdMrd, 
+			int day, Float time) {
+		const Float solarTime = time
+			+ (0.170f * std::sin(4.0f * M_PI * (day - 80.0f) / 373.0f)
+			- 0.129f * std::sin(2.0f * M_PI * (day - 8.0f) / 355.0f))
+			+ (stdMrd - lon) / 15.0f;
 
-		const Float solarDeclination = (0.4093 * sin(2 * M_PI * (julDay - 81) / 368));
+		const Float solarDeclination = (0.4093f * std::sin(2 * M_PI
+				* (day - 81.0f) / 368.0f));
 
-		const Float solarAltitude = asin(sin(degToRad(lat))
-			* sin(solarDeclination) - cos(degToRad(lat))
-			* cos(solarDeclination) * cos(M_PI * solarTime / 12.0));
+		lat = degToRad(lat);
+		const Float solarAltitude = std::asin(std::sin(lat)
+			* std::sin(solarDeclination) - std::cos(lat)
+			* std::cos(solarDeclination) * std::cos(M_PI * solarTime / 12.0f));
 
-		const Float opp = -cos(solarDeclination) * sin(M_PI * solarTime / 12.0);
-		const Float adj = -(cos(degToRad(lat)) * sin(solarDeclination)
-			+ sin(degToRad(lat)) * cos(solarDeclination)
-			* cos(M_PI * solarTime / 12.0));
+		const Float opp = -std::cos(solarDeclination) 
+			* std::sin(M_PI * solarTime / 12.0f);
+		const Float adj = -(std::cos(lat) * std::sin(solarDeclination)
+			+ std::sin(lat) * std::cos(solarDeclination)
+			* std::cos(M_PI * solarTime / 12.0f));
 
-		const Float solarAzimuth = atan2(opp,adj);
+		const Float solarAzimuth = std::atan2(opp, adj);
 
 		m_phiS = -solarAzimuth;
-		m_thetaS = M_PI / 2.0 - solarAltitude;
+		m_thetaS = M_PI / 2.0f - solarAltitude;
 	}
 
 	/**
@@ -259,32 +312,17 @@ public:
 		/* Compute sky light radiance for direction */
 		Vector d = normalize(m_worldToLuminaire(direction));
 
-		if (m_clipBelowHorizon) {
-			/* if sun is below horizon, return black */
-			if (d.z < 0.0f)
-				return Spectrum(0.0f);
+		if (!m_extend && Frame::cosTheta(d) <= 0) {
+			/* If the viewing direction is below the 
+			   horizon, return black */
+			return Spectrum(0.0f);
 		}
 
-		/* make all "zero values" the same */
-		if (d.z < 0.001f)
-			d = normalize(Vector(d.x, d.y,  0.001f));
-
-		const Point2 dSpherical = toSphericalCoordinates(d);
-		const Float theta = dSpherical.x;
-
-#ifndef ENFORCE_SINGLE_ZENITH_ANGLE
-		const Float phi = dSpherical.y;
-#else
-		Float phi;
-		if (fabs(theta) < 1e-5)
-			phi = 0.0f;
-		else
-			phi = dSpherical.y;
-#endif
+		const Point2 sphCoords = toSphericalCoordinates(d);
 
 		Spectrum L;
-		getSkySpectralRadiance(theta, phi, L);
-		L *= m_skyScale;
+		getSkySpectralRadiance(sphCoords.x, sphCoords.y, L);
+		L *= m_scale;
 		
 		return L;
 	}
@@ -423,7 +461,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SkyLuminaire[" << std::endl
-			<< "  sky sscale = " << m_skyScale << "," << std::endl
+			<< "  sky sscale = " << m_scale << "," << std::endl
 			<< "  power = " << getPower().toString() << "," << std::endl
 			<< "  sun pos = theta: " << m_thetaS << ", phi: "<< m_phiS << ","  << std::endl 
 			<< "  turbidity = " << m_turbidity << "," << std::endl 
@@ -451,14 +489,14 @@ private:
 	 */
 	inline Float getAngleBetween(const Float thetav, const Float phiv,
 			const Float theta, const Float phi) const {
-		const Float cospsi = sin(thetav) * sin(theta) * cos(phi - phiv)
-			+ cos(thetav) * cos(theta);
+		const Float cospsi = std::sin(thetav) * std::sin(theta) * std::cos(phi - phiv)
+			+ std::cos(thetav) * std::cos(theta);
 
 		if (cospsi > 1.0f)
 			return 0.0f;
 		if (cospsi < -1.0f)
 			return M_PI;
-		return acos(cospsi);
+		return std::acos(cospsi);
 	}
 
 	/**
@@ -473,36 +511,36 @@ private:
 	 */
 	inline Float getDistribution(const Float *lam, const Float theta,
 			const Float gamma) const {
-		const Float cosGamma = cos(gamma);
-		const Float num = ( (1 + lam[0] * exp(lam[1] / cos(theta)))
-			* (1 + lam[2] * exp(lam[3] * gamma)
+		const Float cosGamma = std::cos(gamma);
+		const Float num = ((1 + lam[0] * std::exp(lam[1] / std::cos(theta)))
+			* (1 + lam[2] * std::exp(lam[3] * gamma)
 			+ lam[4] * cosGamma * cosGamma));
 
-		const Float cosTheta = cos(m_thetaS);
-		const Float den = ( (1 + lam[0] * exp(lam[1] /* / cos 0 */))
-			* (1 + lam[2] * exp(lam[3] * m_thetaS)
+		const Float cosTheta = std::cos(m_thetaS);
+		const Float den = ( (1 + lam[0] * std::exp(lam[1] /* / cos 0 */))
+			* (1 + lam[2] * std::exp(lam[3] * m_thetaS)
 			+ lam[4] * cosTheta * cosTheta));
 
-		return (num / den);
+		return num / den;
 	}
 
 	/**
 	 * Calculates the spectral radiance of the sky in the specified directiono.
 	 */
-	void getSkySpectralRadiance(const Float theta, const Float phi, Spectrum &dstSpect) const {
-		/* add bottom half of hemisphere with horizon colour */
-		const Float theta_fin = std::min(theta, (M_PI * 0.5f) - 0.001f);
+	void getSkySpectralRadiance(Float theta, Float phi, Spectrum &dstSpect) const {
+		/* Clip directions that are extremely close to grazing (for numerical
+		 * stability) or entirely below the horizon. This effectively extends 
+		 * the horizon luminance value to the bottom hemisphere */
+		theta = std::min(theta, (M_PI * 0.5f) - 0.001f);
 		/* get angle between sun (zenith is 0, 0) and point (theta, phi) */
 		const Float gamma = getAngleBetween(theta, phi, m_thetaS, m_phiS);
 		/* Compute xyY values by calculating the distribution for the point
 		 * point of interest and multiplying it with the the components
 		 * zenith value. */
-		const Float x = m_zenithX * getDistribution(m_perezX, theta_fin, gamma);
-		const Float y = m_zenithY * getDistribution(m_perezY, theta_fin, gamma);
-		const Float Y = m_zenithL * getDistribution(m_perezL, theta_fin, gamma);
+		const Float x = m_zenithX * getDistribution(m_perezX, theta, gamma);
+		const Float y = m_zenithY * getDistribution(m_perezY, theta, gamma);
+		const Float Y = m_zenithL * getDistribution(m_perezL, theta, gamma);
 
-		/* Apply an exponential exposure function */
-		// Y = 1.0 - exp(-m_exposure * Y);
 		/* Convert xyY to XYZ */
 		const Float yFrac = Y / y;
 		const Float X = yFrac * x;
@@ -512,8 +550,8 @@ private:
 
 		/* Create spectrum from XYZ values */
 		dstSpect.fromXYZ(X, Y, Z);
-		/* The produced spectrum contains out-of-gamut colors.
-		 * It is common to clamp resulting values to zero. */
+		/* The produced spectrum might contain out-of-gamut colors.
+		 * The common solution is to clamp resulting values to zero. */
 		dstSpect.clampNegative();
 	}
 
@@ -523,35 +561,21 @@ protected:
 	Float m_surfaceArea;
 	Float m_invSurfaceArea;
 	BSphere m_bsphere;
-	Float m_exposure;
-	Float m_skyScale;
-	/* The turbidity of the sky ranges normally from 0 to 30+.
-	 * For clear skies values in range [2,6] are useful. */
+	int m_resolution;
+	Float m_scale;
+	/* The turbidity of the sky ranges normally from 1 to 30.
+	   For clear skies values in range [2,6] are useful. */
 	Float m_turbidity;
+	/* Position of the sun in spherical coordinates */
 	Float m_thetaS, m_phiS;
-	Float m_zenithL;
-	Float m_zenithX;
-	Float m_zenithY;
+	/* Radiance at the zenith, in xyY */
+	Float m_zenithL, m_zenithX, m_zenithY;
 	/* The distribution coefficints are called A, B, C, D and E by
-	 * Preedham. Since they exist for x, y and Y (here called L)
-	 * we save the precalculated version of it
-	 *
-	 * distribution coefficients for luminance distribution function */
-	Float m_perezL[5];
-	/* distribution coefficients for x distribution function */
-	Float m_perezX[5];
-	/* distribution coefficients for y distribution function */
-	Float m_perezY[5];
-	/* distribution function tuning coefficients a, b, c, d and e.
-	 * They can be used to scale the luminance, x and y distribution
-	 * coefficints. */
-	Float m_aConst, m_bConst, m_cConst, m_dConst, m_eConst;
-
-	/* To disable clipping of incoming sky light below the horizon, set this
-	 * to false. If set to true black is returned for queries. Be awere that
-	 * a huge amount of additional radiance is coming in (i.e. it gets a
-	 * lot brighter). */
-	bool m_clipBelowHorizon;
+	   Preetham. They exist for x, y and Y (here called L). The
+	   following attributes save the precalculated version of each */
+	Float m_perezL[5], m_perezX[5], m_perezY[5];
+	/* Extend to the bottom hemisphere? */
+	bool m_extend;
 };
 
 MTS_IMPLEMENT_CLASS_S(SkyLuminaire, false, Luminaire)

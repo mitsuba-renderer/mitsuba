@@ -79,7 +79,7 @@ std::vector<fs::path> FileResolver::resolveAll(const fs::path &path) const {
 }
 
 fs::path FileResolver::resolveAbsolute(const fs::path &path) const {
-	return fs::complete(resolve(path));
+	return fs::absolute(resolve(path));
 }
 
 std::string FileResolver::toString() const {
@@ -87,7 +87,7 @@ std::string FileResolver::toString() const {
 	oss << "FileResolver[" << endl
 		<< "  paths = {" << endl;
 	for (size_t i=0; i<m_paths.size(); ++i)
-		oss << "    \"" << m_paths[i].file_string() << "\"," << endl;
+		oss << "    \"" << m_paths[i].native() << "\"," << endl;
 	oss << "  }" << endl
 		<< "]";
 	return oss.str();
