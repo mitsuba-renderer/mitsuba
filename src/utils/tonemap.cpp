@@ -85,7 +85,7 @@ public:
 			fs::path inputFile = fileResolver->resolve(argv[i]);
 			fs::path outputFile = inputFile;
 			outputFile.replace_extension(".png");
-			Log(EInfo, "Loading EXR image \"%s\" ..", inputFile.native().c_str());
+			Log(EInfo, "Loading EXR image \"%s\" ..", inputFile.string().c_str());
 			ref<FileStream> is = new FileStream(inputFile, FileStream::EReadOnly);
 			ref<Bitmap> input = new Bitmap(Bitmap::EEXR, is);
 			ref<Bitmap> output = new Bitmap(input->getWidth(), input->getHeight(), 32);
@@ -104,7 +104,7 @@ public:
 				}
 			}
 
-			Log(EInfo, "Writing tonemapped PNG image \"%s\" ..", outputFile.native().c_str());
+			Log(EInfo, "Writing tonemapped PNG image \"%s\" ..", outputFile.string().c_str());
 			ref<FileStream> os = new FileStream(outputFile, FileStream::ETruncReadWrite);
 			output->save(Bitmap::EPNG, os);
 		}

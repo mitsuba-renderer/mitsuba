@@ -81,7 +81,7 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Luminaire::serialize(stream, manager);
 		stream->writeFloat(m_intensityScale);
-		stream->writeString(m_path.native());
+		stream->writeString(m_path.string());
 		m_bsphere.serialize(stream);
 
 		if (m_stream.get()) {

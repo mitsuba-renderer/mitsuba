@@ -192,7 +192,7 @@ void TestSupervisor::analyze(const Scene *scene) {
 	fs::ifstream is_ref(refFilename);
 	if (is.fail()) {
 		result.message = formatString("Could not open '%s'!", 
-			result.output.native().c_str());
+			result.output.string().c_str());
 		m_mutex->lock();
 		m_numFailed++; m_results.push_back(result);
 		m_mutex->unlock();
@@ -200,7 +200,7 @@ void TestSupervisor::analyze(const Scene *scene) {
 	}
 	if (is_ref.fail()) {
 		result.message = formatString("Could not open '%s'!", 
-			refFilename.native().c_str());
+			refFilename.string().c_str());
 		m_mutex->lock();
 		m_numFailed++; m_results.push_back(result);
 		m_mutex->unlock();
@@ -279,7 +279,7 @@ void TestSupervisor::printSummary() const {
 		if (result.success)
 			continue;
 		Log(EWarn, "============================================================");
-		Log(EWarn, " Failure: Test case %zi (\"%s\")", i+1, result.input.native().c_str());
+		Log(EWarn, " Failure: Test case %zi (\"%s\")", i+1, result.input.string().c_str());
 		Log(EWarn, " Message: \"%s\"", result.message.c_str());
 		Log(EWarn, "============================================================");
 	}

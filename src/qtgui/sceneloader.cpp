@@ -72,7 +72,7 @@ void SceneLoader::run() {
 			parser->setDoSchema(true);
 			parser->setValidationSchemaFullChecking(true);
 			parser->setValidationScheme(SAXParser::Val_Always);
-			parser->setExternalNoNamespaceSchemaLocation(schemaPath.native().c_str());
+			parser->setExternalNoNamespaceSchemaLocation(schemaPath.string().c_str());
 			#if !defined(__OSX__)
 				/// Not supported on OSX
 				parser->setCalculateSrcOfs(true);

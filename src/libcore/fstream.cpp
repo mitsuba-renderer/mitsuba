@@ -43,7 +43,7 @@ FileStream::~FileStream() {
 std::string FileStream::toString() const {
 	std::ostringstream oss;
 	oss << "FileStream[" << Stream::toString()
-		<< ", path=\"" << m_path.native()
+		<< ", path=\"" << m_path.string()
 		<< "\", mode=" << m_mode << "]";
 	return oss.str();
 }
@@ -51,7 +51,7 @@ std::string FileStream::toString() const {
 void FileStream::open(const fs::path &path, EFileMode mode) {
 	AssertEx(m_file == 0, "A file has already been opened using this stream");
 
-	Log(ETrace, "Opening \"%s\"", path.native().c_str());
+	Log(ETrace, "Opening \"%s\"", path.string().c_str());
 
 	m_path = path;
 	m_mode = mode;
@@ -90,13 +90,13 @@ void FileStream::open(const fs::path &path, EFileMode mode) {
 		break;
 	}
 
-	m_file = CreateFile(path.native().c_str(), dwDesiredAccess, 
+	m_file = CreateFile(path.string().c_str(), dwDesiredAccess, 
 		FILE_SHARE_WRITE | FILE_SHARE_READ, 0, 
 		dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
 
 	if (m_file == INVALID_HANDLE_VALUE)
 		Log(EError, "Error while trying to open file \"%s\": %s", 
-			m_path.native().c_str(), lastErrorText().c_str());
+			m_path.string().c_str(), lastErrorText().c_str());
 	
 	if (m_mode == EAppendWrite || m_mode == EAppendReadWrite)
 		setPos(getSize());
@@ -130,28 +130,28 @@ void FileStream::open(const fs::path &path, EFileMode mode) {
 		break;
 	};
 
-	m_file = fopen(m_path.native().c_str(), modeString);
+	m_file = fopen(m_path.string().c_str(), modeString);
 
 	if (m_file == NULL) {
 		Log(EError, "Error while trying to open file \"%s\": %s", 
-			m_path.native().c_str(), strerror(errno));
+			m_path.string().c_str(), strerror(errno));
 	}
 #endif
 }
 
 void FileStream::close() {
 	AssertEx(m_file != 0, "No file is currently open");
-	Log(ETrace, "Closing \"%s\"", m_path.native().c_str());
+	Log(ETrace, "Closing \"%s\"", m_path.string().c_str());
 
 #ifdef WIN32
 	if (!CloseHandle(m_file)) {
 		Log(EError, "Error while trying to close file \"%s\": %s", 
-			m_path.native().c_str(), lastErrorText().c_str());
+			m_path.string().c_str(), lastErrorText().c_str());
 	}
 #else
 	if (fclose(m_file)) {
 		Log(EError, "Error while trying to close file \"%s\": %s", 
-			m_path.native().c_str(), strerror(errno));
+			m_path.string().c_str(), strerror(errno));
 	}
 #endif
 	m_file = 0;
@@ -160,7 +160,7 @@ void FileStream::close() {
 
 void FileStream::remove() {
 	close();
-	Log(EDebug, "Removing \"%s\"", 	m_path.native().c_str());
+	Log(EDebug, "Removing \"%s\"", 	m_path.string().c_str());
 
 	fs::remove(m_path);
 }
@@ -173,12 +173,12 @@ void FileStream::setPos(size_t pos) {
 	fpos.QuadPart = pos;
 	if (SetFilePointerEx(m_file, fpos, 0, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
 		Log(EError, "Error while trying to seek to position %i in file \"%s\": %s", 
-			pos, m_path.native().c_str(), lastErrorText().c_str());
+			pos, m_path.string().c_str(), lastErrorText().c_str());
 	}
 #else
 	if (fseek(m_file, pos, SEEK_SET)) {
 		Log(EError, "Error while trying to seek to position %i in file \"%s\": %s", 
-			pos, m_path.native().c_str(), strerror(errno));
+			pos, m_path.string().c_str(), strerror(errno));
 	}
 #endif
 }
@@ -189,7 +189,7 @@ size_t FileStream::getPos() const {
 	DWORD pos = SetFilePointer(m_file, 0, 0, FILE_CURRENT);
 	if (pos == INVALID_SET_FILE_POINTER) {
 		Log(EError, "Error while looking up the position in file \"%s\": %s",
-			m_path.native().c_str(), lastErrorText().c_str());
+			m_path.string().c_str(), lastErrorText().c_str());
 	}
 	return (size_t) pos;
 #else
@@ -197,7 +197,7 @@ size_t FileStream::getPos() const {
 	pos = ftell(m_file);
 	if (pos == -1) {
 		Log(EError, "Error while looking up the position in file \"%s\": %s", 
-			m_path.native().c_str(), strerror(errno));
+			m_path.string().c_str(), strerror(errno));
 	}
 	return (size_t) pos;
 #endif
@@ -210,7 +210,7 @@ size_t FileStream::getSize() const {
 	LARGE_INTEGER result;
 	if (GetFileSizeEx(m_file, &result) == 0) {
 		Log(EError, "Error while getting the file size of \"%s\": %s",
-			m_path.native().c_str(), lastErrorText().c_str());
+			m_path.string().c_str(), lastErrorText().c_str());
 	}
 	return (size_t) result.QuadPart;
 #else
@@ -219,12 +219,12 @@ size_t FileStream::getSize() const {
 	tmp = getPos();
 	if (fseek(m_file, 0, SEEK_END)) {
 		Log(EError, "Error while seeking within \"%s\": %s",
-			m_path.native().c_str(), strerror(errno));
+			m_path.string().c_str(), strerror(errno));
 	}
 	size = getPos();
 	if (fseek(m_file, tmp, SEEK_SET)) {
 		Log(EError, "Error while seeking within \"%s\": %s",
-			m_path.native().c_str(), strerror(errno));
+			m_path.string().c_str(), strerror(errno));
 	}
 	return size;
 #endif
@@ -242,7 +242,7 @@ void FileStream::truncate(size_t size) {
 	setPos(size);
 	if (!SetEndOfFile(m_file)) {
 		Log(EError, "Error while truncating file \"%s\": %s",
-			m_path.native().c_str(), lastErrorText().c_str());
+			m_path.string().c_str(), lastErrorText().c_str());
 	}
 #else
 	/* File truncation support blows on posix.. */
@@ -251,7 +251,7 @@ void FileStream::truncate(size_t size) {
 
 	if (ftruncate(fileno(m_file), size)) {
 		Log(EError, "Error while truncating file \"%s\": %s",
-			m_path.native().c_str(), strerror(errno));
+			m_path.string().c_str(), strerror(errno));
 	}
 #endif
 	setPos(pos);
@@ -263,12 +263,12 @@ void FileStream::flush() {
 #ifdef WIN32
 	if (!FlushFileBuffers(m_file)) {
 		Log(EError, "Error while flusing the buffers of \"%s\": %s",
-			m_path.native().c_str(), lastErrorText().c_str());
+			m_path.string().c_str(), lastErrorText().c_str());
 	}
 #else
 	if (fflush(m_file) != 0) {
 		Log(EError, "Error while flusing the buffers of \"%s\": %s",
-			m_path.native().c_str(), strerror(errno));
+			m_path.string().c_str(), strerror(errno));
 	}
 #endif
 }
@@ -283,20 +283,20 @@ void FileStream::read(void *pPtr, size_t size) {
 	DWORD lpNumberOfBytesRead;
 	if (!ReadFile(m_file, pPtr, (DWORD) size, &lpNumberOfBytesRead, 0)) {
 		Log(EError, "Error while reading from file \"%s\": %s",
-			m_path.native().c_str(), lastErrorText().c_str());
+			m_path.string().c_str(), lastErrorText().c_str());
 	}
 	if (lpNumberOfBytesRead != (DWORD) size) 
 		throw EOFException(formatString("Read less data than expected (%i bytes required) "
-			"from file \"%s\"", size, m_path.native().c_str()), (size_t) lpNumberOfBytesRead);
+			"from file \"%s\"", size, m_path.string().c_str()), (size_t) lpNumberOfBytesRead);
 #else
 	size_t bytesRead;
 	if ((bytesRead = fread(pPtr, 1, size, m_file)) != size) {
 		if (ferror(m_file) != 0) {
 			Log(EError, "Error while reading from file \"%s\": %s",
-				m_path.native().c_str(), strerror(errno));
+				m_path.string().c_str(), strerror(errno));
 		}
 		throw EOFException(formatString("Read less data than expected (%i bytes required) "
-			"from file \"%s\"", size, m_path.native().c_str()), bytesRead);
+			"from file \"%s\"", size, m_path.string().c_str()), bytesRead);
 	}
 #endif
 }
@@ -312,19 +312,19 @@ void FileStream::write(const void *pPtr, size_t size) {
 	DWORD lpNumberOfBytesWritten;
 	if (!WriteFile(m_file, pPtr, (DWORD) size, &lpNumberOfBytesWritten, 0)) {
 		Log(EError, "Error while writing to file \"%s\": %s",
-			m_path.native().c_str(), lastErrorText().c_str());
+			m_path.string().c_str(), lastErrorText().c_str());
 	}
 	if (lpNumberOfBytesWritten != (DWORD) size) 
 		throw EOFException(formatString("Wrote less data than expected (%i bytes required) "
-			"to file \"%s\"", size, m_path.native().c_str()), (size_t) lpNumberOfBytesWritten);
+			"to file \"%s\"", size, m_path.string().c_str()), (size_t) lpNumberOfBytesWritten);
 #else
 	size_t bytesWritten;
 	if ((bytesWritten = fwrite(pPtr, 1, size, m_file)) != size) {
 		if (ferror(m_file))
 			Log(EError, "Error while writing to file \"%s\": %s",
-				m_path.native().c_str(), strerror(errno));
+				m_path.string().c_str(), strerror(errno));
 		throw EOFException(formatString("Wrote less data than expected (%i bytes required) "
-			"to file \"%s\"", size, m_path.native().c_str()), bytesWritten);
+			"to file \"%s\"", size, m_path.string().c_str()), bytesWritten);
 	}
 #endif
 }

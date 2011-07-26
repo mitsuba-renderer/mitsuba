@@ -115,7 +115,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 
 		SLog(EInfo, "Applying transformation \"%s\" ..", 
 			m_transformations[i].second.filename().c_str());
-		std::string trafoFilename = m_transformations[i].second.native();
+		std::string trafoFilename = m_transformations[i].second.string();
 		QFile trafoFile(trafoFilename.c_str());
 		if (!trafoFile.open(QIODevice::ReadOnly | QIODevice::Text))
 			SLog(EError, "Unable to open the stylesheet \"%s\" -- stopping "

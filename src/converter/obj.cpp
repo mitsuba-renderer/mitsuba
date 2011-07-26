@@ -37,7 +37,7 @@ std::string copyTexture(GeometryConverter *cvt, const fs::path &textureDir, std:
 		if (!fs::exists(resolved)) {
 			resolved = fRes->resolve(path.leaf());
 			if (!fs::exists(resolved)) {
-				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.native().c_str());
+				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.string().c_str());
 				resolved = cvt->locateResource(path.leaf());
 				targetPath = targetPath.parent_path() / resolved.leaf();
 				if (resolved.empty())
@@ -95,11 +95,11 @@ void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mt
 
 void parseMaterials(GeometryConverter *cvt, std::ostream &os, const fs::path &texturesDir, 
 		const fs::path &mtlFileName, std::set<std::string> &mtlList) {
-	SLog(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.native().c_str());
+	SLog(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.string().c_str());
 	fs::ifstream is(mtlFileName);
 	if (is.bad() || is.fail())
 		SLog(EError, "Unexpected I/O error while accessing material file '%s'!", 
-			mtlFileName.native().c_str());
+			mtlFileName.string().c_str());
 	std::string buf, line;
 	std::string mtlName;
 	Spectrum diffuse(0.0f);
@@ -142,7 +142,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 
 	fs::ifstream is(inputFile);
 	if (is.bad() || is.fail())
-		SLog(EError, "Could not open OBJ file '%s'!", inputFile.native().c_str());
+		SLog(EError, "Could not open OBJ file '%s'!", inputFile.string().c_str());
 
 	os << "<?xml version=\"1.0\" encoding=\"utf-8\"?>" << endl << endl;
 	os << "<!--" << endl << endl;
@@ -171,7 +171,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 	}
 
 	Properties objProps("obj");
-	objProps.setString("filename", inputFile.native());
+	objProps.setString("filename", inputFile.string());
 
 	ref<Shape> rootShape = static_cast<Shape *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(Shape), objProps));

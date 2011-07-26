@@ -1064,7 +1064,7 @@ void loadImage(ColladaContext &ctx, domImage &image) {
 		if (!fs::exists(resolved)) {
 			resolved = fRes->resolve(path.leaf());
 			if (!fs::exists(resolved)) {
-				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.native().c_str());
+				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.string().c_str());
 				resolved = ctx.cvt->locateResource(path.leaf());
 				targetPath = targetPath.parent_path() / resolved.leaf();
 				if (resolved.empty())
@@ -1564,11 +1564,11 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	daeErrorHandler::setErrorHandler(&errorHandler);
 	DAE *dae = new DAE();
 	SLog(EInfo, "Loading \"%s\" ..", inputFile.leaf().c_str());
-	if (dae->load(inputFile.native().c_str()) != DAE_OK) 
+	if (dae->load(inputFile.string().c_str()) != DAE_OK) 
 		SLog(EError, "Could not load \"%s\"!", 
-			inputFile.native().c_str());
+			inputFile.string().c_str());
 
-	domCOLLADA *document = dae->getDom(inputFile.native().c_str());
+	domCOLLADA *document = dae->getDom(inputFile.string().c_str());
 	domVisual_scene *visualScene = daeSafeCast<domVisual_scene>
 		(document->getDescendant("visual_scene"));
 	if (!visualScene)

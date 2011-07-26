@@ -28,15 +28,30 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{sky}{Skylight luminaire}
  * \parameters{
  *     \parameter{turbidity}{\Float}{
- *         Specifies the amount of atmospheric extinction due to 
- *         larger particles ($t_m$), as opposed to molecules ($t_h$). 
- *         Lower values correspond to a clear sky, and higher values
- *         produce illumination resembling that of a hazy, overcast sky.
- *         Formally, the \emph{turbidity} is defined as the ratio 
- *         $T=\frac{t_m+t_h}{t_m}$. Values between 1 and 30 
- *         are possible, though the model will be most accurate for values 
- *         between 2 and 6, to which it was fit using numerical
- *         optimization. \default{2}
+ *         This parameter determines the amount of scattering particles (or
+ *         `haze') in the atmosphere. Smaller values ($\sim 2$) produce a 
+ *         clear blue sky, larger values ($\sim 8$) lead to an overcast sky, 
+ *         and a very high values ($\sim 20$) cause a color shift towards 
+ *         orange and red. \default{2}
+ *     }
+ *     \parameter{day}{\Integer}{Solar day used to compute the sun's position. 
+ *       Must be in the range 1 to 365. \default{180}}
+ *     \parameter{time}{\Float}{Fractional time used to compute the sun's
+ *       position. A time of 4:15 PM corresponds to 16.25. \default{15.00}}
+ *     \parameter{latitude, longitude}{\Float}{
+ *       These two parameters specify the oberver's latitude and longitude 
+ *       in degrees, which are required to compute the sun's position.
+ *       \default{35.6894, 139.6917 --- Tokyo, Japan}
+ *     }
+ *     \parameter{standardMeridian}{\Integer}{Denotes the
+ *       standard meridian of the time zone for finding
+ *       the sun's position \default{135 --- Japan standard time}
+ *     }
+ *     \parameter{sunDirection}{\Vector}{Allows to manually 
+ *       override the sun direction. In that case, all parameters
+ *       pertaining to the computation of this direction (\code{day,
+ *       time, latitude, longitude,} and \code{standardMeridian}) 
+ *       become unnecessary.
  *     }
  *     \parameter{extend}{\Boolean}{
  *         Extend luminaire below the horizon? \default{\code{false}}
@@ -46,29 +61,10 @@ MTS_NAMESPACE_BEGIN
  *         \default{256}}
  *     \parameter{scale}{\Float}{
  *         This parameter can be used to scale the the amount of illumination
- *         emitted by the sky luminaire, e.g. to change the units. For instance, 
- *         to switch from photometric ($\nicefrac{W}{m^2\cdot sr})$) 
+ *         emitted by the sky luminaire, for instance to change its units. To
+ *         switch from photometric ($\nicefrac{W}{m^2\cdot sr}$) 
  *         to arbitrary but convenient units in the $[0,1]$ range, set 
- *         this parameter to XXX \default{1}.
- *     }
- *     \parameter{day}{\Integer}{Julian date used to compute the sun's position. 
- *       Must be in the range 1 to 365. \default{200}}
- *     \parameter{time}{\Float}{Fractional time used to compute the sun's
- *       position. A time of 4:15 PM corresponds to 16.25. \default{15.00}}
- *     \parameter{latitude, longitude}{\Float}{
- *       These two parameters specify the oberver's latitude and longitude 
- *       in degrees, which are required to compute the sun's position.
- *       \default{35.6894, 139.6917 --- Tokyo}
- *     }
- *     \parameter{standardMeridian}{\Integer}{Denotes the
- *       standard meridian of the time zone. This is required to compute
- *       the sun's position. \default{135 --- Japan standard time}
- *     }
- *     \parameter{sunDirection}{\Vector}{Allows to 
- *       override the sun direction. In that case, all parameters
- *       pertaining to the computation of this direction (\code{day,
- *       time, latitude, longitude,} as well as \code{standardMeridian}) 
- *       become unnecessary.
+ *         this parameter to \code{1e-5}.\default{1}.
  *     }
  * }
  *
@@ -83,19 +79,26 @@ MTS_NAMESPACE_BEGIN
  * Preetham et al. \cite{Preetham1999Practical}. It can be used for realistic 
  * daylight renderings of scenes under clear and overcast skies, assuming
  * that the sky is observed from a position either on or close to the surface 
- * of the earth. While the model encompasses sunrise and sunset configurations,
- * it does not extend to the night sky where illumination from stars, galaxies,
- * and the moon dominate. The model also does not currently handle cloudy skies.
+ * of the earth. 
  *
  * Numerous parameters allow changing the both the position on Earth, as
  * well as the time of observation. These are used to compute the sun's 
  * position which, together with \code{turbidity}, constitutes the main 
- * parameter of the model. Alternatively, the sun direction can be 
+ * parameter of the model. If desired, the sun direction can also be 
  * specified explicitly.
+ *
+ * \emph{Turbidity}, the other important parameter, specifies the amount of 
+ * atmospheric extinction due to larger particles ($t_l$), as opposed to 
+ * molecules ($t_m$). Lower values correspond to a clear sky, and higher values
+ * produce illumination resembling that of a hazy, overcast sky. Formally, 
+ * the turbidity is defined as the ratio $T=\frac{t_m+t_l}{t_m}$. 
+ * Values between 1 and 30 are possible, though the model will be most 
+ * accurate for values between 2 and 6, to which it was fit using numerical
+ * optimization.
  *
  * By default, the luminaire will not emit any light below the
  * horizon, which means that these regions will be black when they
- * are directly observed. By setting the \code{extend} parameter to \code{true},
+ * are observed directly. By setting the \code{extend=true},
  * the emitted radiance at the horizon will be extended to the entire
  * bottom hemisphere. Note that this will significantly increase
  * the amount of illumination present in the scene.
@@ -107,6 +110,9 @@ MTS_NAMESPACE_BEGIN
  * \code{resolution} values of around 256 (the default) are usually
  * more than sufficient.
  *
+ * Note that while the model encompasses sunrise and sunset configurations,
+ * it does not extend to the night sky, where illumination from stars, galaxies,
+ * and the moon dominate. The model also currently does not handle cloudy skies.
  * The implementation in Mitsuba is based on code by Preetham et al. It was
  * ported and modified by Tom Kazimiers.
  */
@@ -149,7 +155,7 @@ public:
 			Float lon  = props.getFloat("longitude", 139.6917f);
 			int stdMrd = props.getInteger("standardMeridian", 135);
 
-			int day = props.getInteger("day", 200);
+			int day = props.getInteger("day", 180);
 			if (day < 1 || day > 365)
 				Log(EError, "The day parameter must be in the range [1, 365]!");
 
@@ -210,6 +216,7 @@ public:
 
 		m_zenithL = (4.0453f * m_turbidity - 4.9710f) * std::tan(chi)
 			- 0.2155f * m_turbidity + 2.4192f;
+		cout << toString() << endl;
 
 		/* Evaluate quadratic polynomials to find the Perez sky
 		 * model coefficients for the x, y and luminance components */
@@ -233,12 +240,16 @@ public:
 
 		int thetaBins = m_resolution, phiBins = m_resolution*2;
 		ref<Bitmap> bitmap = new Bitmap(phiBins, thetaBins, 128);
+		bitmap->clear();
+
 		Point2 factor(M_PI / thetaBins, (2*M_PI) / phiBins);
 		for (int i=0; i<thetaBins; ++i) {
 			Float theta = (i+.5f)*factor.x;
+			if (!m_extend && std::cos(theta) <= 0)
+				continue;
 			for (int j=0; j<phiBins; ++j) {
-				Float phi = (j+.5f)*factor.x;
-				Spectrum s = Le(sphericalDirection(theta, phi));
+				Float phi = (j+.5f)*factor.y;
+				Spectrum s = getSkySpectralRadiance(theta, phi) * m_scale;
 				Float r, g, b;
 				s.toLinearRGB(r, g, b);
 				bitmap->getFloatData()[(j+i*phiBins)*4 + 0] = r;
@@ -320,11 +331,7 @@ public:
 
 		const Point2 sphCoords = toSphericalCoordinates(d);
 
-		Spectrum L;
-		getSkySpectralRadiance(sphCoords.x, sphCoords.y, L);
-		L *= m_scale;
-		
-		return L;
+		return getSkySpectralRadiance(sphCoords.x, sphCoords.y) * m_scale;
 	}
 
 	inline Spectrum Le(const Ray &ray) const {
@@ -460,11 +467,11 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "SkyLuminaire[" << std::endl
-			<< "  sky sscale = " << m_scale << "," << std::endl
-			<< "  power = " << getPower().toString() << "," << std::endl
-			<< "  sun pos = theta: " << m_thetaS << ", phi: "<< m_phiS << ","  << std::endl 
-			<< "  turbidity = " << m_turbidity << "," << std::endl 
+		oss << "SkyLuminaire[" << endl
+			<< "  turbidity = " << m_turbidity << "," << endl 
+			<< "  sunPos = [theta: " << m_thetaS << ", phi: "<< m_phiS << "]," << endl 
+			<< "  zenithL = " << m_zenithL << "," << endl
+			<< "  scale = " << m_scale << endl
 			<< "]";
 		return oss.str();
 	}
@@ -484,7 +491,7 @@ public:
 
 private:
 	/**
-	 * Calculates the anlgle between two spherical cooridnates. All
+	 * Calculates the angle between two spherical cooridnates. All
 	 * angles in radians, theta angles measured from up/zenith direction.
 	 */
 	inline Float getAngleBetween(const Float thetav, const Float phiv,
@@ -527,7 +534,7 @@ private:
 	/**
 	 * Calculates the spectral radiance of the sky in the specified directiono.
 	 */
-	void getSkySpectralRadiance(Float theta, Float phi, Spectrum &dstSpect) const {
+	Spectrum getSkySpectralRadiance(Float theta, Float phi) const {
 		/* Clip directions that are extremely close to grazing (for numerical
 		 * stability) or entirely below the horizon. This effectively extends 
 		 * the horizon luminance value to the bottom hemisphere */
@@ -549,10 +556,12 @@ private:
 		const Float Z = yFrac * z;
 
 		/* Create spectrum from XYZ values */
+		Spectrum dstSpect;
 		dstSpect.fromXYZ(X, Y, Z);
 		/* The produced spectrum might contain out-of-gamut colors.
 		 * The common solution is to clamp resulting values to zero. */
 		dstSpect.clampNegative();
+		return dstSpect;
 	}
 
 	MTS_DECLARE_CLASS()

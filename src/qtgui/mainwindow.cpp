@@ -628,7 +628,7 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	loaddlg->show();
 
 retry:
-	loadingThread = new SceneLoader(newResolver, filename.native());
+	loadingThread = new SceneLoader(newResolver, filename.string());
 	loadingThread->start();
 
 	while (loadingThread->isRunning()) {
@@ -668,7 +668,7 @@ retry:
 
 				UpgradeManager upgradeMgr(newResolver);
 				try {
-					upgradeMgr.performUpgrade(filename.native().c_str(), version);
+					upgradeMgr.performUpgrade(filename.string().c_str(), version);
 					goto retry;
 				} catch (const std::exception &ex) {
 					QMessageBox::critical(this, tr("Unable to update %1").arg(qFileName),
@@ -754,6 +754,7 @@ void MainWindow::updateUI() {
 	bool isRendering = hasTab ? context->renderJob != NULL : false;
 	bool isShowingRendering = hasTab ? context->mode == ERender : false;
 	bool hasScene = hasTab && context->scene != NULL;
+	bool isInactive = hasTab ? context->renderJob == NULL : false;
 	bool isInactiveScene = (hasTab && hasScene) ? context->renderJob == NULL : false;
 	bool fallback = ui->glView->isUsingSoftwareFallback();
 
@@ -764,7 +765,7 @@ void MainWindow::updateUI() {
 		ui->actionStop->setToolTip(tr("Stop rendering"));
 
 	ui->actionRender->setEnabled(isInactiveScene);
-	ui->actionRefresh->setEnabled(isInactiveScene);
+	ui->actionRefresh->setEnabled(isInactive);
 	ui->actionRenderSettings->setEnabled(isInactiveScene);
 	ui->actionSave->setEnabled(hasScene);
 	ui->actionSaveAs->setEnabled(hasScene);
@@ -1457,7 +1458,7 @@ void MainWindow::onSaveAsDialogClose(int reason) {
 		context->fileName = fileName;
 		context->shortName = QFileInfo(fileName).fileName();
 		context->scene->setSourceFile(pathName);
-		context->scene->setDestinationFile(baseName.native());
+		context->scene->setDestinationFile(baseName.string());
 		ui->tabBar->setTabText(currentIndex, context->shortName);
 		addRecentFile(fileName);
 	}

@@ -337,7 +337,7 @@ int mtsutil(int argc, char **argv) {
 			if (!fs::exists(fullName)) {
 				/* Plugin not found! */
 				SLog(EError, "Utility \"%s\" not found (run \"mtsutil\" without arguments to "
-					"see a list of available utilities)", fullName.native().c_str());
+					"see a list of available utilities)", fullName.string().c_str());
 			}
 
 			SLog(EInfo, "Loading utility \"%s\" ..", argv[optind]);

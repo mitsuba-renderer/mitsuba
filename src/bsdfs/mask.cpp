@@ -24,7 +24,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{mask}{Opacity mask}
  * \parameters{
  *     \parameter{opacity}{\Spectrum\Or\Texture}{
- *          Specifies the per-channel opacity (where $1=$ completely transparent)\default{0.5}. 
+ *          Specifies the per-channel opacity (where $1=$ completely opaque)\default{0.5}. 
  *     }
  *     \parameter{\Unnamed}{\BSDF}{A base BSDF model that represents the
  *         non-transparent portion of the scattering}

@@ -95,7 +95,7 @@ public:
 		Log(EInfo, "Loading geometry from \"%s\" ..", path.leaf().c_str());
 		fs::ifstream is(path);
 		if (is.bad() || is.fail())
-			Log(EError, "Geometry file '%s' not found!", path.native().c_str());
+			Log(EError, "Geometry file '%s' not found!", path.string().c_str());
 
 		ref<Timer> timer = new Timer();
 		std::string buf;
@@ -172,7 +172,7 @@ public:
 					parseMaterials(mtlName);
 				else
 					Log(EWarn, "Could not find referenced material library '%s'", 
-						mtlName.native().c_str());
+						mtlName.string().c_str());
 			} else if (buf == "vt") {
 				Float u, v, w;
 				iss >> u >> v >> w;
@@ -259,7 +259,7 @@ public:
 		fs::ifstream is(mtlPath);
 		if (is.bad() || is.fail())
 			Log(EError, "Unexpected I/O error while accessing material file '%s'!", 
-				mtlPath.native().c_str());
+				mtlPath.string().c_str());
 		std::string buf;
 		std::string mtlName;
 		Spectrum diffuse;

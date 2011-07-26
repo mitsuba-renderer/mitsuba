@@ -429,7 +429,7 @@ void PLYLoader::loadPLY(const fs::path &path) {
 	ply_parser.list_property_definition_callbacks(list_property_definition_callbacks);
 
 	ref<Timer> timer = new Timer();
-	ply_parser.parse(path.native());
+	ply_parser.parse(path.string());
 
 	size_t vertexSize = sizeof(Point);
 	if (m_normals)

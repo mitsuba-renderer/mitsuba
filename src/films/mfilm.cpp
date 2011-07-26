@@ -178,7 +178,7 @@ public:
 
 		Log(EInfo, "Writing image to \"%s\" ..", filename.leaf().c_str());
 	
-		FILE *f = fopen(filename.native().c_str(), "w");
+		FILE *f = fopen(filename.string().c_str(), "w");
 		if (!f)
 			Log(EError, "Output file cannot be created!");
 

@@ -85,7 +85,7 @@ public:
 		else if (extension == ".bmp")
 			m_format = Bitmap::EBMP;
 		else
-			Log(EError, "Cannot deduce the file type of '%s'!", m_filename.native().c_str());
+			Log(EError, "Cannot deduce the file type of '%s'!", m_filename.string().c_str());
 
 		ref<Bitmap> bitmap = new Bitmap(m_format, fs);
 		initializeFrom(bitmap);
@@ -221,7 +221,7 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Texture2D::serialize(stream, manager);
-		stream->writeString(m_filename.native());
+		stream->writeString(m_filename.string());
 		stream->writeFloat(m_gamma);
 		stream->writeInt(m_format);
 		stream->writeInt(m_filterType);
