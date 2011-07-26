@@ -545,7 +545,7 @@ private:
 		const Float yFrac = Y / y;
 		const Float X = yFrac * x;
 		/* It seems the following is necassary to stay always above zero */
-		const Float z = std::max(0.0f, 1.0f - x - y);
+		const Float z = std::max((Float) 0.0f, 1.0f - x - y);
 		const Float Z = yFrac * z;
 
 		/* Create spectrum from XYZ values */
