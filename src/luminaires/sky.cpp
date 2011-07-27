@@ -32,10 +32,10 @@ MTS_NAMESPACE_BEGIN
  *         `haze') in the atmosphere. Smaller values ($\sim 2$) produce a 
  *         clear blue sky, larger values ($\sim 8$) lead to an overcast sky, 
  *         and a very high values ($\sim 20$) cause a color shift towards 
- *         orange and red. \default{2}
+ *         orange and red. \default{3}
  *     }
  *     \parameter{day}{\Integer}{Solar day used to compute the sun's position. 
- *       Must be in the range 1 to 365. \default{180}}
+ *       Must be in the range between 1 and 365. \default{180}}
  *     \parameter{time}{\Float}{Fractional time used to compute the sun's
  *       position. A time of 4:15 PM corresponds to 16.25. \default{15.00}}
  *     \parameter{latitude, longitude}{\Float}{
@@ -48,10 +48,10 @@ MTS_NAMESPACE_BEGIN
  *       the sun's position \default{135 --- Japan standard time}
  *     }
  *     \parameter{sunDirection}{\Vector}{Allows to manually 
- *       override the sun direction. In that case, all parameters
- *       pertaining to the computation of this direction (\code{day,
- *       time, latitude, longitude,} and \code{standardMeridian}) 
- *       become unnecessary.
+ *       override the sun direction in world space. When this value
+ *       is provided, parameters pertaining to the computation 
+ *       of the sun direction (\code{day, time, latitude, longitude,} 
+ *       and \code{standardMeridian}) are unnecessary. \default{none}
  *     }
  *     \parameter{extend}{\Boolean}{
  *         Extend luminaire below the horizon? \default{\code{false}}
@@ -69,10 +69,17 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * \renderings{
- *     \rendering{Homogeneous reflectance, see \lstref{diffuse-uniform}}
- *         {bsdf_diffuse_plain}
- *     \rendering{Textured reflectance, see \lstref{diffuse-textured}}
- *         {bsdf_diffuse_textured}
+ *     \tinyrendering{6AM}{preetham_06}
+ *     \tinyrendering{8AM}{preetham_08}
+ *     \tinyrendering{10AM}{preetham_10}
+ *     \tinyrendering{12PM}{preetham_12}
+ *     \tinyrendering{2PM}{preetham_14}
+ *     \tinyrendering{4PM}{preetham_16}
+ *     \tinyrendering{6PM}{preetham_18}
+ *     \tinyrendering{8PM}{preetham_20}\hfill
+ *     \vspace{-3mm}
+ *     \caption{Time series with the default settings (visualized by
+ *     projecting the sky onto a disk)}
  * }
  *
  * This plugin implements the physically-based skylight model proposed by 
@@ -82,26 +89,45 @@ MTS_NAMESPACE_BEGIN
  * of the earth. 
  *
  * Numerous parameters allow changing the both the position on Earth, as
- * well as the time of observation. These are used to compute the sun's 
- * position which, together with \code{turbidity}, constitutes the main 
+ * well as the time of observation. These are used to compute the sun 
+ * direction which, together with \code{turbidity}, constitutes the main 
  * parameter of the model. If desired, the sun direction can also be 
- * specified explicitly.
+ * specified manually.
+ *
+ * \renderings{
+ *     \tinyrendering{2}{preetham_turb_2}
+ *     \tinyrendering{3}{preetham_turb_3}
+ *     \tinyrendering{4}{preetham_turb_4}
+ *     \tinyrendering{5}{preetham_turb_5}
+ *     \tinyrendering{6}{preetham_turb_6}
+ *     \tinyrendering{7}{preetham_turb_7}
+ *     \tinyrendering{8}{preetham_turb_8}
+ *     \tinyrendering{9}{preetham_turb_9}
+ *     \vspace{-3mm}
+ *     \caption{Sky light for different turbidity values (fixed time \& location)}
+ * }
  *
  * \emph{Turbidity}, the other important parameter, specifies the amount of 
  * atmospheric extinction due to larger particles ($t_l$), as opposed to 
  * molecules ($t_m$). Lower values correspond to a clear sky, and higher values
  * produce illumination resembling that of a hazy, overcast sky. Formally, 
- * the turbidity is defined as the ratio $T=\frac{t_m+t_l}{t_m}$. 
- * Values between 1 and 30 are possible, though the model will be most 
- * accurate for values between 2 and 6, to which it was fit using numerical
- * optimization.
+ * the turbidity is defined as the ratio between the combined extinction
+ * cross-section and the cross-section only due to molecules, i.e.
+ * $T=\frac{t_m+t_l}{t_m}$. Values between 1 and 30 are possible, though 
+ * the model will be most accurate for values between 2 and 6, to which 
+ * it was fit using numerical optimization.
+  
+ * The default coordinate system of the luminaire associates the up
+ * direction with the $+Y$ axis. The east direction is associated with $+X$
+ * and the north direction is equal to $+Z$. To change this coordinate
+ * system, rotations can be applied using the \code{toWorld} parameter.
  *
  * By default, the luminaire will not emit any light below the
  * horizon, which means that these regions will be black when they
- * are observed directly. By setting the \code{extend=true},
- * the emitted radiance at the horizon will be extended to the entire
- * bottom hemisphere. Note that this will significantly increase
- * the amount of illumination present in the scene.
+ * are observed directly. By setting the \code{extend} parameter to 
+ * \code{true}, the emitted radiance at the horizon will be extended to 
+ * the entire bottom hemisphere. Note that this will significantly 
+ * increase the amount of illumination present in the scene.
  *
  * For performance reasons, the implementation precomputes an environment 
  * map of the entire sky that is then forwarded to the \pluginref{envmap} 
@@ -114,7 +140,7 @@ MTS_NAMESPACE_BEGIN
  * it does not extend to the night sky, where illumination from stars, galaxies,
  * and the moon dominate. The model also currently does not handle cloudy skies.
  * The implementation in Mitsuba is based on code by Preetham et al. It was
- * ported and modified by Tom Kazimiers.
+ * ported by Tom Kazimiers.
  */
 class SkyLuminaire : public Luminaire {
 public:
@@ -127,12 +153,12 @@ public:
 			: Luminaire(props) {
 		/* Transformation from the luminaire's local coordinates to
 		 *  world coordiantes */
-		m_luminaireToWorld = Transform::rotate(Vector(1, 0, 0),-90)
-			* props.getTransform("toWorld", Transform());
+		m_luminaireToWorld = 
+			props.getTransform("toWorld", Transform());
 		m_worldToLuminaire = m_luminaireToWorld.inverse();
 
 		m_scale = props.getFloat("scale", Float(1.0));
-		m_turbidity = props.getFloat("turbidity", Float(2.0));
+		m_turbidity = props.getFloat("turbidity", Float(3.0));
 		if (m_turbidity < 1 || m_turbidity > 30)
 			Log(EError, "The turbidity parameter must be in the range [1,30]!");
 
@@ -148,8 +174,8 @@ public:
 				Log(EError, "Both the 'sunDirection' parameter and time/location "
 						"information were provided -- only one of them can be specified at a time!");
 
-			configureSunPosition(m_worldToLuminaire(
-				props.getVector("sunDirection")));
+			configureSunPosition(
+				props.getVector("sunDirection"));
 		} else {
 			Float lat = props.getFloat("latitude", 35.6894f);
 			Float lon  = props.getFloat("longitude", 139.6917f);
@@ -239,14 +265,13 @@ public:
 		m_perezY[4] = -0.01092f * m_turbidity + 0.05291f;
 
 		int thetaBins = m_resolution, phiBins = m_resolution*2;
+
+#if 0
 		ref<Bitmap> bitmap = new Bitmap(phiBins, thetaBins, 128);
 		bitmap->clear();
-
 		Point2 factor(M_PI / thetaBins, (2*M_PI) / phiBins);
 		for (int i=0; i<thetaBins; ++i) {
 			Float theta = (i+.5f)*factor.x;
-			if (!m_extend && std::cos(theta) <= 0)
-				continue;
 			for (int j=0; j<phiBins; ++j) {
 				Float phi = (j+.5f)*factor.y;
 				Spectrum s = getSkySpectralRadiance(theta, phi) * m_scale;
@@ -258,8 +283,49 @@ public:
 				bitmap->getFloatData()[(j+i*phiBins)*4 + 3] = 1;
 			}
 		}
+#else
+		ref<Bitmap> bitmap = new Bitmap(512, 512, 128);
+		bitmap->clear();
+		for (int x=0; x<512; ++x) {
+			for (int y=0; y<512; ++y) {
+				Vector d;
+				d.x = -1.0f  + (x + 0.5f) * 2.0f/512.0f;
+				d.z = -1.0f  + (y + 0.5f) * 2.0f/512.0f;
+				Float tmp = 1-d.x*d.x - d.z*d.z;
+				Spectrum s(0.0f);
+				if (tmp > 0) {
+					d.y = std::sqrt(tmp);
+					s = Le(d);
+				}
+				Float r, g, b;
+				s.toLinearRGB(r, g, b);
+				bitmap->getFloatData()[(x+y*512)*4 + 0] = r;
+				bitmap->getFloatData()[(x+y*512)*4 + 1] = g;
+				bitmap->getFloatData()[(x+y*512)*4 + 2] = b;
+				bitmap->getFloatData()[(x+y*512)*4 + 3] = 1;
+			}
+		}
+#endif
 		ref<FileStream> fs = new FileStream("out.exr", FileStream::ETruncReadWrite);
 		bitmap->save(Bitmap::EEXR, fs);
+	}
+
+	Vector toSphere(Float theta, Float phi) const {
+		/* Spherical-to-cartesian coordinate mapping with 
+		   theta=0 => Y=1 */
+		Float cosTheta = std::cos(theta), sinTheta = std::sin(theta),
+			  cosPhi = std::cos(phi), sinPhi = std::sin(phi);
+		return m_luminaireToWorld(Vector(
+			sinTheta * sinPhi, cosTheta, -sinTheta*cosPhi));
+	}
+
+	Point2 fromSphere(const Vector &d) const {
+		Float theta = std::acos(std::max((Float) -1.0f, 
+				std::min((Float) 1.0f, d.y)));
+		Float phi = std::atan2(d.x,-d.z);
+		if (phi < 0)
+			phi += 2*M_PI;
+		return Point2(theta, phi);
 	}
 
 	/**
@@ -294,13 +360,8 @@ public:
 		m_thetaS = M_PI / 2.0f - solarAltitude;
 	}
 
-	/**
-	 * Configures the position of the sun by using a vector that points
-	 * to the sun. It is expected, that +x = south, +y = east, +z = up.
-	 */
 	void configureSunPosition(const Vector& sunDir) {
-		Vector wh = normalize(sunDir);
-		Point2 sunPos = toSphericalCoordinates(wh);
+		Point2 sunPos = fromSphere(normalize(m_luminaireToWorld(sunDir)));
 		m_thetaS = sunPos.x;
 		m_phiS = sunPos.y;
 	}
@@ -309,8 +370,6 @@ public:
 		/* Get the scene's bounding sphere and slightly enlarge it */
 		m_bsphere = scene->getBSphere();
 		m_bsphere.radius *= 1.01f;
-		m_surfaceArea = m_bsphere.radius * m_bsphere.radius * M_PI;
-		m_invSurfaceArea = 1/m_surfaceArea;
 	}
 
 	Spectrum getPower() const {
@@ -322,15 +381,7 @@ public:
 	inline Spectrum Le(const Vector &direction) const {
 		/* Compute sky light radiance for direction */
 		Vector d = normalize(m_worldToLuminaire(direction));
-
-		if (!m_extend && Frame::cosTheta(d) <= 0) {
-			/* If the viewing direction is below the 
-			   horizon, return black */
-			return Spectrum(0.0f);
-		}
-
-		const Point2 sphCoords = toSphericalCoordinates(d);
-
+		const Point2 sphCoords = fromSphere(d);
 		return getSkySpectralRadiance(sphCoords.x, sphCoords.y) * m_scale;
 	}
 
@@ -456,13 +507,6 @@ public:
 	}
 
 	void pdfEmission(EmissionRecord &eRec, bool delta) const {
-		Assert(eRec.type == EmissionRecord::ENormal);
-		Float dp = dot(eRec.sRec.n, eRec.d);
-		if (dp > 0)
-			eRec.pdfDir = delta ? 0.0f : INV_PI * dp;
-		else
-			eRec.pdfDir = 0;
-		eRec.pdfArea = delta ? 0.0f : m_invSurfaceArea;
 	}
 
 	std::string toString() const {
@@ -535,6 +579,8 @@ private:
 	 * Calculates the spectral radiance of the sky in the specified directiono.
 	 */
 	Spectrum getSkySpectralRadiance(Float theta, Float phi) const {
+		if (!m_extend && std::cos(theta) <= 0)
+			return Spectrum(0.0f);
 		/* Clip directions that are extremely close to grazing (for numerical
 		 * stability) or entirely below the horizon. This effectively extends 
 		 * the horizon luminance value to the bottom hemisphere */
@@ -557,7 +603,7 @@ private:
 
 		/* Create spectrum from XYZ values */
 		Spectrum dstSpect;
-		dstSpect.fromXYZ(X, Y, Z);
+		dstSpect.fromXYZ(X, Y, Z, Spectrum::EIlluminant);
 		/* The produced spectrum might contain out-of-gamut colors.
 		 * The common solution is to clamp resulting values to zero. */
 		dstSpect.clampNegative();
@@ -567,8 +613,6 @@ private:
 	MTS_DECLARE_CLASS()
 protected:
 	Spectrum m_average;
-	Float m_surfaceArea;
-	Float m_invSurfaceArea;
 	BSphere m_bsphere;
 	int m_resolution;
 	Float m_scale;

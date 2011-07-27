@@ -31,13 +31,14 @@ class Tonemap : public Utility {
 public:
 	void help() {
 		cout << endl;
-		cout << "Synopsis: Loads in one or more linear EXR images and writes out tonemapped 8-bit PNGs";
+		cout << "Synopsis: Loads one or more linear EXR images and writes tonemapped 8-bit PNG/JPGs";
 		cout << endl;
 		cout << "Usage: mtsutil tonemap [options] <EXR file (s)>" << endl;
 		cout << "Options/Arguments:" << endl;
 		cout << "   -h             Display this help text" << endl << endl;
 		cout << "   -g gamma       Specify the gamma value (The default is -1 => sRGB)" << endl << endl;
 		cout << "   -m multiplier  Multiply the pixel values by 'multiplier' (Default = 1)" << endl << endl;
+		cout << "   -f fmt         Specifies the output format (png/jpg, default:png)" << endl << endl;
 	}
 
 	inline float toSRGB(float value) {
@@ -52,9 +53,10 @@ public:
 		char optchar, *end_ptr = NULL;
 		optind = 1;
 		Float gamma = -1, multiplier = 1;
+		Bitmap::EFileFormat format = Bitmap::EPNG;
 
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "hg:m:")) != -1) {
+		while ((optchar = getopt(argc, argv, "hg:m:f:")) != -1) {
 			switch (optchar) {
 				case 'h': {
 						help();
@@ -65,6 +67,16 @@ public:
 					gamma = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the gamma value!");
+					break;
+				case 'f': {
+					  std::string fmt = optarg;
+					  if (fmt == "png")
+						  format = Bitmap::EPNG;
+					  else if (fmt == "jpg" || fmt == "jpeg")
+						  format = Bitmap::EJPEG;
+					  else
+						  SLog(EError, "Unknown format! (must be png/jpg)");
+					}
 					break;
 				case 'm': 
 					multiplier = (Float) strtod(optarg, &end_ptr);
@@ -83,8 +95,6 @@ public:
 
 		for (int i=optind; i<argc; ++i) {
 			fs::path inputFile = fileResolver->resolve(argv[i]);
-			fs::path outputFile = inputFile;
-			outputFile.replace_extension(".png");
 			Log(EInfo, "Loading EXR image \"%s\" ..", inputFile.string().c_str());
 			ref<FileStream> is = new FileStream(inputFile, FileStream::EReadOnly);
 			ref<Bitmap> input = new Bitmap(Bitmap::EEXR, is);
@@ -104,9 +114,20 @@ public:
 				}
 			}
 
-			Log(EInfo, "Writing tonemapped PNG image \"%s\" ..", outputFile.string().c_str());
+			fs::path outputFile = inputFile;
+			if (format == Bitmap::EPNG) {
+				outputFile.replace_extension(".png");
+				Log(EInfo, "Writing tonemapped PNG image \"%s\" ..", outputFile.string().c_str());
+				ref<FileStream> os = new FileStream(outputFile, FileStream::ETruncReadWrite);
+			} else if (format == Bitmap::EJPEG) {
+				outputFile.replace_extension(".jpg");
+				Log(EInfo, "Writing tonemapped JPEG image \"%s\" ..", outputFile.string().c_str());
+			} else {
+				Log(EError, "Unknown format!");
+			}
+
 			ref<FileStream> os = new FileStream(outputFile, FileStream::ETruncReadWrite);
-			output->save(Bitmap::EPNG, os);
+			output->save(format, os);
 		}
 		return 0;
 	}

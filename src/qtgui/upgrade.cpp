@@ -66,7 +66,7 @@ UpgradeManager::UpgradeManager(const FileResolver *resolver) : m_resolver(resolv
 		fs::path file = *it;
 		std::string extension = file.extension().string();
 		if (boost::to_lower_copy(extension) != ".xsl" ||
-           !boost::starts_with(extension, "upgrade_"))
+           !boost::starts_with(file.filename().string(), "upgrade_"))
 			continue;
 		std::string filename = file.filename().string();
 		Version version(filename.substr(8, filename.length()-12));
