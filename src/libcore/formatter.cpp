@@ -27,7 +27,7 @@ DefaultFormatter::DefaultFormatter()
 }
 
 std::string DefaultFormatter::format(ELogLevel logLevel, const Class *theClass,
-		const Thread *thread, const std::string &text, const char *file, int pLine) {
+		const Thread *thread, const std::string &text, const char *file, int line) {
 	std::ostringstream oss;
 	char buffer[128];
 
@@ -60,11 +60,14 @@ std::string DefaultFormatter::format(ELogLevel logLevel, const Class *theClass,
 
 	/* Class */
 	if (m_haveClass) {
-		if (theClass) {
+		if (theClass)
 			oss << "[" << theClass->getName() << "] ";
-		} else if (pLine != -1 && file) {
-			oss << "[" << fs::path(file).filename().string() << ":" << pLine << "] ";
-		}
+		else if (line != -1 && file)
+#if BOOST_FILESYSTEM_VERSION == 3
+			oss << "[" << fs::path(file).filename().string() << ":" << line << "] ";
+#else
+			oss << "[" << fs::path(file).filename() << ":" << line << "] ";
+#endif
 	}
 
 	/* Text */

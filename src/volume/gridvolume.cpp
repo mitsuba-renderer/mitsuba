@@ -160,10 +160,10 @@ public:
 			stream->writeInt(m_volumeType);
 			m_res.serialize(stream);
 			stream->writeInt(m_channels);
-			stream->writeString(m_filename.string());
+			stream->writeString(m_filename.file_string());
 			stream->write(m_data, getVolumeSize());
 		} else {
-			stream->writeString(m_filename.string());
+			stream->writeString(m_filename.file_string());
 		}
 	}
 

@@ -95,7 +95,7 @@ public:
 
 		for (int i=optind; i<argc; ++i) {
 			fs::path inputFile = fileResolver->resolve(argv[i]);
-			Log(EInfo, "Loading EXR image \"%s\" ..", inputFile.string().c_str());
+			Log(EInfo, "Loading EXR image \"%s\" ..", inputFile.file_string().c_str());
 			ref<FileStream> is = new FileStream(inputFile, FileStream::EReadOnly);
 			ref<Bitmap> input = new Bitmap(Bitmap::EEXR, is);
 			ref<Bitmap> output = new Bitmap(input->getWidth(), input->getHeight(), 32);
@@ -117,11 +117,11 @@ public:
 			fs::path outputFile = inputFile;
 			if (format == Bitmap::EPNG) {
 				outputFile.replace_extension(".png");
-				Log(EInfo, "Writing tonemapped PNG image \"%s\" ..", outputFile.string().c_str());
+				Log(EInfo, "Writing tonemapped PNG image \"%s\" ..", outputFile.file_string().c_str());
 				ref<FileStream> os = new FileStream(outputFile, FileStream::ETruncReadWrite);
 			} else if (format == Bitmap::EJPEG) {
 				outputFile.replace_extension(".jpg");
-				Log(EInfo, "Writing tonemapped JPEG image \"%s\" ..", outputFile.string().c_str());
+				Log(EInfo, "Writing tonemapped JPEG image \"%s\" ..", outputFile.file_string().c_str());
 			} else {
 				Log(EError, "Unknown format!");
 			}

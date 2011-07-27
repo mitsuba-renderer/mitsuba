@@ -111,7 +111,7 @@ void PreviewWorker::processIncoherent(const WorkUnit *workUnit, WorkResult *work
 				EmissionRecord eRec(m_vpl.luminaire, 
 					ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), -toVPL);
 				eRec.type = EmissionRecord::EPreview;
-				value += m_vpl.P * bsdfVal * m_vpl.luminaire->fDirection(eRec) 
+				value += m_vpl.P * bsdfVal * m_vpl.luminaire->evalDirection(eRec) 
 					* ((m_vpl.luminaire->getType() & Luminaire::EOnSurface ?
 					dot(m_vpl.its.shFrame.n, -toVPL) : (Float) 1)
 					/ (length*length));
@@ -191,7 +191,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 		diffuseVPL = m_vpl.luminaire->getType() & Luminaire::EDiffuseDirection;
 		EmissionRecord eRec(m_vpl.luminaire, 
 			ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), m_vpl.its.shFrame.n);
-		vplWeight = m_vpl.P * m_vpl.luminaire->fDirection(eRec);
+		vplWeight = m_vpl.P * m_vpl.luminaire->evalDirection(eRec);
 	}
 
 	primRay4.o[0].ps = _mm_set1_ps(m_cameraO.x);
@@ -405,7 +405,7 @@ void PreviewWorker::processCoherent(const WorkUnit *workUnit, WorkResult *workRe
 							EmissionRecord eRec(m_vpl.luminaire, 
 								ShapeSamplingRecord(m_vpl.its.p, m_vpl.its.shFrame.n), wi);
 							eRec.type = EmissionRecord::EPreview;
-							vplWeight = m_vpl.luminaire->fDirection(eRec) * m_vpl.P;
+							vplWeight = m_vpl.luminaire->evalDirection(eRec) * m_vpl.P;
 						}
 					}
 

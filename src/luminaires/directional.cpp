@@ -94,7 +94,7 @@ public:
 		Point2 posOnDisk = squareToDiskConcentric(sample1) * m_diskRadius;
 		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Vector(posOnDisk.x, posOnDisk.y, 0));
 		eRec.d = m_direction;
-		eRec.pdfArea = m_invSurfaceArea;
+		eRec.pdevalArea = m_invSurfaceArea;
 		eRec.pdfDir = 1;
 		eRec.value = m_intensity;
 	}
@@ -102,7 +102,7 @@ public:
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		Point2 posOnDisk = squareToDiskConcentric(sample) * m_diskRadius;
 		eRec.sRec.p = m_diskOrigin + Frame(m_direction).toWorld(Vector(posOnDisk.x, posOnDisk.y, 0));
-		eRec.pdfArea = m_invSurfaceArea;
+		eRec.pdevalArea = m_invSurfaceArea;
 		eRec.value = m_intensity;
 	}
 
@@ -112,17 +112,17 @@ public:
 		return Spectrum(1.0f);
 	}
 
-	Spectrum fArea(const EmissionRecord &eRec) const {
+	Spectrum evalArea(const EmissionRecord &eRec) const {
 		return m_intensity;
 	}
 
-	Spectrum fDirection(const EmissionRecord &eRec) const {
+	Spectrum evalDirection(const EmissionRecord &eRec) const {
 		/* Directional luminaire beam is not part of the scene */
 		return Spectrum(0.0f);
 	}
 
 	void pdfEmission(EmissionRecord &eRec, bool delta) const {
-		eRec.pdfArea = delta ? 0.0f : m_invSurfaceArea;
+		eRec.pdevalArea = delta ? 0.0f : m_invSurfaceArea;
 		eRec.pdfDir = delta ? 1.0f : 0.0f;
 		eRec.value = m_intensity;
 	}

@@ -114,12 +114,12 @@ public:
 
 		if (length == 0) {
 			eRec.value = Spectrum(0.0f);
-			eRec.pdfArea = eRec.pdfDir = 1.0f;
+			eRec.pdevalArea = eRec.pdfDir = 1.0f;
 			return;
 		}
 
 		eRec.d /= length;
-		eRec.pdfArea = m_invSurfaceArea;
+		eRec.pdevalArea = m_invSurfaceArea;
 		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
 		eRec.value = m_intensity;
 	}
@@ -133,7 +133,7 @@ public:
 		Vector d = squareToSphere(sample);
 		eRec.sRec.p = m_bsphere.center + d * radius;
 		eRec.sRec.n = Normal(-d);
-		eRec.pdfArea = 1.0f / (4 * M_PI * radius * radius);
+		eRec.pdevalArea = 1.0f / (4 * M_PI * radius * radius);
 		eRec.value = m_intensity * M_PI;
 	}
 
@@ -162,7 +162,7 @@ public:
 			eRec.pdfDir = delta ? 0.0f : INV_PI * dp;
 		else
 			eRec.pdfDir = 0.0f;
-		eRec.pdfArea = delta ? 0.0f : m_invSurfaceArea;
+		eRec.pdevalArea = delta ? 0.0f : m_invSurfaceArea;
 	}
 
 	bool createEmissionRecord(EmissionRecord &eRec, const Ray &ray) const {
@@ -177,18 +177,18 @@ public:
 		eRec.sRec.p = ray(nearHit);
 		eRec.sRec.n = normalize(m_bsphere.center - eRec.sRec.p);
 		eRec.d = -ray.d;
-		eRec.pdfArea = m_invSurfaceArea;
+		eRec.pdevalArea = m_invSurfaceArea;
 		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
 		eRec.value = m_intensity;
 		eRec.luminaire = this;
 		return true;
 	}
 
-	Spectrum fDirection(const EmissionRecord &eRec) const {
+	Spectrum evalDirection(const EmissionRecord &eRec) const {
 		return Spectrum(INV_PI);
 	}
 
-	Spectrum fArea(const EmissionRecord &eRec) const {
+	Spectrum evalArea(const EmissionRecord &eRec) const {
 		return m_intensity * M_PI;
 	}
 

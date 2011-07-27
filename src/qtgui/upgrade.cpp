@@ -64,11 +64,11 @@ UpgradeManager::UpgradeManager(const FileResolver *resolver) : m_resolver(resolv
 
 	for (; it != end; ++it) {
 		fs::path file = *it;
-		std::string extension = file.extension().string();
+		std::string extension = file.extension(),
+			filename = file.filename();
 		if (boost::to_lower_copy(extension) != ".xsl" ||
-           !boost::starts_with(file.filename().string(), "upgrade_"))
+           !boost::starts_with(filename, "upgrade_"))
 			continue;
-		std::string filename = file.filename().string();
 		Version version(filename.substr(8, filename.length()-12));
 		m_transformations.push_back(std::make_pair(version, file));
 	}
@@ -115,7 +115,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 
 		SLog(EInfo, "Applying transformation \"%s\" ..", 
 			m_transformations[i].second.filename().c_str());
-		std::string trafoFilename = m_transformations[i].second.string();
+		std::string trafoFilename = m_transformations[i].second.file_string();
 		QFile trafoFile(trafoFilename.c_str());
 		if (!trafoFile.open(QIODevice::ReadOnly | QIODevice::Text))
 			SLog(EError, "Unable to open the stylesheet \"%s\" -- stopping "

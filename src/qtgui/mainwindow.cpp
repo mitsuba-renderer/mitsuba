@@ -614,7 +614,7 @@ void MainWindow::onClearRecent() {
 SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
 	fs::path filename = resolver->resolve(qFileName.toStdString());
-	fs::path filePath = fs::absolute(filename).parent_path();
+	fs::path filePath = fs::complete(filename).parent_path();
 	ref<FileResolver> newResolver = resolver->clone();
 	newResolver->addPath(filePath);
 	for (int i=0; i<m_searchPaths.size(); ++i)
@@ -628,7 +628,7 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	loaddlg->show();
 
 retry:
-	loadingThread = new SceneLoader(newResolver, filename.string());
+	loadingThread = new SceneLoader(newResolver, filename.file_string());
 	loadingThread->start();
 
 	while (loadingThread->isRunning()) {
@@ -668,7 +668,7 @@ retry:
 
 				UpgradeManager upgradeMgr(newResolver);
 				try {
-					upgradeMgr.performUpgrade(filename.string().c_str(), version);
+					upgradeMgr.performUpgrade(filename.file_string().c_str(), version);
 					goto retry;
 				} catch (const std::exception &ex) {
 					QMessageBox::critical(this, tr("Unable to update %1").arg(qFileName),
@@ -1458,7 +1458,7 @@ void MainWindow::onSaveAsDialogClose(int reason) {
 		context->fileName = fileName;
 		context->shortName = QFileInfo(fileName).fileName();
 		context->scene->setSourceFile(pathName);
-		context->scene->setDestinationFile(baseName.string());
+		context->scene->setDestinationFile(baseName.file_string());
 		ui->tabBar->setTabText(currentIndex, context->shortName);
 		addRecentFile(fileName);
 	}
@@ -1732,7 +1732,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 		ref<Thread> thread = Thread::getThread();
 		ref<FileResolver> oldResolver = thread->getFileResolver();
 		ref<FileResolver> newResolver = oldResolver->clone();
-		newResolver->addPath(fs::absolute(ctx->scene->getSourceFile()).parent_path());
+		newResolver->addPath(fs::complete(ctx->scene->getSourceFile()).parent_path());
 		thread->setFileResolver(newResolver);
 
 		scene = new Scene(ctx->scene);

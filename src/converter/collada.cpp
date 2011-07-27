@@ -468,7 +468,11 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 	} else {
 		ctx.cvt->m_geometryDict.push_back((uint32_t) ctx.cvt->m_geometryFile->getPos());
 		mesh->serialize(ctx.cvt->m_geometryFile);
+#if BOOST_FILESYSTEM_VERSION == 3
 		filename = ctx.cvt->m_geometryFileName.filename().string();
+#else
+		filename = ctx.cvt->m_geometryFileName.filename();
+#endif
 	}
 
 	std::ostringstream matrix;
@@ -1064,14 +1068,14 @@ void loadImage(ColladaContext &ctx, domImage &image) {
 		if (!fs::exists(resolved)) {
 			resolved = fRes->resolve(path.leaf());
 			if (!fs::exists(resolved)) {
-				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.string().c_str());
+				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
 				resolved = ctx.cvt->locateResource(path.leaf());
 				targetPath = targetPath.parent_path() / resolved.leaf();
 				if (resolved.empty())
 					SLog(EError, "Unable to locate a resource -- aborting conversion.");
 			}
 		}
-		if (fs::absolute(resolved) != fs::absolute(targetPath)) {
+		if (fs::complete(resolved) != fs::complete(targetPath)) {
 			ref<FileStream> input = new FileStream(resolved, FileStream::EReadOnly);
 			ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
 			input->copyTo(output);
@@ -1564,11 +1568,11 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	daeErrorHandler::setErrorHandler(&errorHandler);
 	DAE *dae = new DAE();
 	SLog(EInfo, "Loading \"%s\" ..", inputFile.leaf().c_str());
-	if (dae->load(inputFile.string().c_str()) != DAE_OK) 
+	if (dae->load(inputFile.file_string().c_str()) != DAE_OK) 
 		SLog(EError, "Could not load \"%s\"!", 
-			inputFile.string().c_str());
+			inputFile.file_string().c_str());
 
-	domCOLLADA *document = dae->getDom(inputFile.string().c_str());
+	domCOLLADA *document = dae->getDom(inputFile.file_string().c_str());
 	domVisual_scene *visualScene = daeSafeCast<domVisual_scene>
 		(document->getDescendant("visual_scene"));
 	if (!visualScene)

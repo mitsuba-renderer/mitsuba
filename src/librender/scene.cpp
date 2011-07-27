@@ -521,11 +521,11 @@ void Scene::sampleEmission(EmissionRecord &eRec, Point2 &sample1, Point2 &sample
 	size_t index = m_luminairePDF.sampleReuse(sample1.x, lumPdf);
 	const Luminaire *luminaire = m_luminaires[index];
 	luminaire->sampleEmission(eRec, sample1, sample2);
-	eRec.pdfArea *= lumPdf;
+	eRec.pdevalArea *= lumPdf;
 	eRec.luminaire = luminaire;
 	Float cosTheta = (eRec.luminaire->getType() & Luminaire::EOnSurface)
 		? absDot(eRec.sRec.n, eRec.d) : 1;
-	eRec.value *= cosTheta / (eRec.pdfArea * eRec.pdfDir);
+	eRec.value *= cosTheta / (eRec.pdevalArea * eRec.pdfDir);
 }
 
 void Scene::sampleEmissionArea(EmissionRecord &eRec, Point2 &sample) const {
@@ -533,7 +533,7 @@ void Scene::sampleEmissionArea(EmissionRecord &eRec, Point2 &sample) const {
 	size_t index = m_luminairePDF.sampleReuse(sample.x, lumPdf);
 	const Luminaire *luminaire = m_luminaires[index];
 	luminaire->sampleEmissionArea(eRec, sample);
-	eRec.pdfArea *= lumPdf;
+	eRec.pdevalArea *= lumPdf;
 	eRec.luminaire = luminaire;
 }
 
@@ -548,7 +548,7 @@ void Scene::pdfEmission(EmissionRecord &eRec, bool delta) const {
 	const Float fraction = luminance / m_luminairePDF.getOriginalSum();
 
 	luminaire->pdfEmission(eRec, delta);
-	eRec.pdfArea *= fraction;
+	eRec.pdevalArea *= fraction;
 }
 
 void Scene::addChild(const std::string &name, ConfigurableObject *child) {

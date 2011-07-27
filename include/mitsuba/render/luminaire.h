@@ -110,7 +110,7 @@ public:
 	Spectrum value;
 
 	/// Area probability density
-	Float pdfArea;
+	Float pdevalArea;
 
 	/// Directional probability density (wrt. solid angle)
 	Float pdfDir;
@@ -267,7 +267,7 @@ public:
 	 * \brief Evaluate the spatial component of the radiant emittance at a
 	 * point on the luminaire (ignoring any directional variations).
 	 */
-	virtual Spectrum fArea(const EmissionRecord &eRec) const = 0;
+	virtual Spectrum evalArea(const EmissionRecord &eRec) const = 0;
 
 	/**
 	 * \brief Evaluate the directional emission distribution of this light source
@@ -275,7 +275,7 @@ public:
 	 *
 	 * This function is normalized so that it integrates to one.
 	 */
-	virtual Spectrum fDirection(const EmissionRecord &eRec) const = 0;
+	virtual Spectrum evalDirection(const EmissionRecord &eRec) const = 0;
 
 	//! @}
 	// =============================================================

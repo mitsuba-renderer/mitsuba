@@ -299,7 +299,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	ref<Thread> thread = Thread::getThread();
 	ref<FileResolver> oldResolver = thread->getFileResolver();
 	ref<FileResolver> newResolver = oldResolver->clone();
-	newResolver->addPath(fs::absolute(scene->getSourceFile()).parent_path());
+	newResolver->addPath(fs::complete(scene->getSourceFile()).parent_path());
 	thread->setFileResolver(newResolver);
 
 	/* Configure the reconstruction filter */

@@ -109,7 +109,7 @@ std::string EmissionRecord::toString() const {
 		<< "  sRec = " << indent(sRec.toString()) << "," << std::endl
 		<< "  d = " << d.toString() << "," << std::endl
 		<< "  value = " << value.toString() << "," << std::endl
-		<< "  pdfArea = " << pdfArea << "," << std::endl
+		<< "  pdevalArea = " << pdevalArea << "," << std::endl
 		<< "  pdfDir = " << pdfDir << "," << std::endl
 		<< "  luminaire = " << ((luminaire == NULL ) ? "null" : indent(((Object *) luminaire)->toString()).c_str()) << std::endl
 		<< "]";

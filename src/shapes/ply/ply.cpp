@@ -65,7 +65,7 @@ public:
 	PLYLoader(const Properties &props) : TriMesh(props) {
 		fs::path filePath = Thread::getThread()->getFileResolver()->resolve(
 			props.getString("filename"));
-		m_name = filePath.stem().string();
+		m_name = filePath.stem();
 
 		/* Determines whether vertex colors should be 
 		   treated as linear RGB or sRGB. */
@@ -429,7 +429,7 @@ void PLYLoader::loadPLY(const fs::path &path) {
 	ply_parser.list_property_definition_callbacks(list_property_definition_callbacks);
 
 	ref<Timer> timer = new Timer();
-	ply_parser.parse(path.string());
+	ply_parser.parse(path.file_string());
 
 	size_t vertexSize = sizeof(Point);
 	if (m_normals)

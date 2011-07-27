@@ -259,7 +259,7 @@ AABB TriMesh::getAABB() const {
 	return m_aabb;
 }
 
-Float TriMesh::pdfArea(const ShapeSamplingRecord &sRec) const {
+Float TriMesh::pdevalArea(const ShapeSamplingRecord &sRec) const {
 	return m_invSurfaceArea;
 }
 

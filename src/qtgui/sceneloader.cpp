@@ -72,7 +72,7 @@ void SceneLoader::run() {
 			parser->setDoSchema(true);
 			parser->setValidationSchemaFullChecking(true);
 			parser->setValidationScheme(SAXParser::Val_Always);
-			parser->setExternalNoNamespaceSchemaLocation(schemaPath.string().c_str());
+			parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 			#if !defined(__OSX__)
 				/// Not supported on OSX
 				parser->setCalculateSrcOfs(true);
@@ -85,7 +85,7 @@ void SceneLoader::run() {
 
 			fs::path 
 				filename = m_filename,
-				filePath = fs::absolute(filename).parent_path(),
+				filePath = fs::complete(filename).parent_path(),
 				baseName = fs::basename(filename);
 
 			SLog(EInfo, "Parsing scene description from \"%s\" ..", m_filename.c_str());

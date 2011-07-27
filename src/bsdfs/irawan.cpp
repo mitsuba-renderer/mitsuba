@@ -82,7 +82,7 @@ public:
 		fs::path path = fResolver->resolve(props.getString("filename"));
 		if (!fs::exists(path))
 			Log(EError, "Weave pattern file \"%s\" could not be found!",	
-				path.string().c_str());
+				path.file_string().c_str());
 		fs::ifstream in(path);
 		typedef spirit::istream_iterator iterator_type;
 		iterator_type end, begin(in);
@@ -93,7 +93,7 @@ public:
 		bool result = phrase_parse(begin, end, g, sg, m_pattern);
 		if (!result)
 			Log(EError, "Unable to parse the weave pattern file \"%s\"!", 
-				path.string().c_str());
+				path.file_string().c_str());
 		
 		/* Some sanity checks */
 		SAssert(m_pattern.pattern.size() == 

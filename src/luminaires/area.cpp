@@ -84,7 +84,7 @@ public:
 
 	void sampleEmission(EmissionRecord &eRec,
 		const Point2 &sample1, const Point2 &sample2) const {
-		eRec.pdfArea = m_shape->sampleArea(eRec.sRec, sample1);
+		eRec.pdevalArea = m_shape->sampleArea(eRec.sRec, sample1);
 		Vector wo = squareToHemispherePSA(sample2);
 		eRec.pdfDir = Frame::cosTheta(wo) * INV_PI;
 		eRec.d = Frame(eRec.sRec.n).toWorld(wo);
@@ -92,11 +92,11 @@ public:
 	}
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
-		eRec.pdfArea = m_shape->sampleArea(eRec.sRec, sample);
+		eRec.pdevalArea = m_shape->sampleArea(eRec.sRec, sample);
 		eRec.value = m_intensity * M_PI;
 	}
 
-	Spectrum fArea(const EmissionRecord &eRec) const {
+	Spectrum evalArea(const EmissionRecord &eRec) const {
 		return m_intensity * M_PI;
 	}
 
@@ -107,7 +107,7 @@ public:
 		return Spectrum(INV_PI);
 	}
 
-	Spectrum fDirection(const EmissionRecord &eRec) const {
+	Spectrum evalDirection(const EmissionRecord &eRec) const {
 		Float dp = dot(eRec.sRec.n, eRec.d);
 		if (dp > 0)
 			return Spectrum(INV_PI);
@@ -122,7 +122,7 @@ public:
 		else {
 			eRec.pdfDir = 0;
 		}
-		eRec.pdfArea = delta ? 0.0f : m_shape->pdfArea(eRec.sRec);
+		eRec.pdevalArea = delta ? 0.0f : m_shape->pdevalArea(eRec.sRec);
 	}
 
 	void setParent(ConfigurableObject *parent) {

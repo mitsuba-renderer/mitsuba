@@ -153,7 +153,7 @@ public:
 	 * \brief Return the probability density of sampling the 
 	 * given point using \ref sampleArea()
 	 */
-	Float pdfArea(const ShapeSamplingRecord &sRec) const;
+	Float pdevalArea(const ShapeSamplingRecord &sRec) const;
 	
 	//! @}
 	// =============================================================

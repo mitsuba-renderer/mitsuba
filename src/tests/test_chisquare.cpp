@@ -46,6 +46,7 @@ MTS_NAMESPACE_BEGIN
 class TestChiSquare : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
+	MTS_DECLARE_TEST(test03_Luminaire)
 	MTS_DECLARE_TEST(test01_BSDF)
 	MTS_DECLARE_TEST(test02_PhaseFunction)
 	MTS_END_TESTCASE()
@@ -302,52 +303,59 @@ public:
 	/// Adapter to use luminaires in the chi-square test
 	class LuminaireAdapter {
 	public:
-		LuminaireAdapter(
-				const Luminaire *luminaire, Sampler *sampler)
+		LuminaireAdapter(const Luminaire *luminaire, Sampler *sampler)
 			: m_luminaire(luminaire), m_sampler(sampler) { }
 
 		boost::tuple<Vector, Float, EMeasure> generateSample() {
-			Point2 sample(m_sampler->next2D());
-			EmissionRecord pRec(m_mRec, m_wi);
+			EmissionRecord eRec;
 
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
 
 			/* Check the various sampling routines for agreement amongst each other */
-			Float pdfVal;
-			Spectrum value = m_luminaire->sampleEmission(eRec, m_sampler->next2D(), m_sampler->next2D());
+			m_luminaire->sampleEmission(eRec, m_sampler->next2D(), m_sampler->next2D());
+			Spectrum value = eRec.value;
+			Spectrum value2 = 
+				m_luminaire->evalArea(eRec) * m_luminaire->evalDirection(eRec);
 
-			if (min < ERROR_REQ && err > ERROR_REQ) // absolute error threshold
-				mismatch = true;
-			else if (min > ERROR_REQ && err/min > ERROR_REQ) // relative error threshold
-				mismatch = true;
+			bool mismatch = false;
+			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
+				Float a = value[i], b = value2[i];
+				Float min = std::min(a, b);
+				Float err = std::abs(a - b);
 
-			if (mismatch)
-				Log(EWarn, "Inconsistency: f=%f, pdf=%f, sampled f/pdf=%f",
-					f, pdfVal, sampled);
+				if (min < ERROR_REQ && err > ERROR_REQ) // absolute error threshold
+					mismatch = true;
+				else if (min > ERROR_REQ && err/min > ERROR_REQ) // relative error threshold
+					mismatch = true;
+			}
+
+			if (mismatch) 
+				Log(EWarn, "Potential inconsistency (3): f/pdf=%s (sampled), f/pdf=%s (evaluated)",
+					value.toString().c_str(), value2.toString().c_str());
 
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
-			return boost::make_tuple(pRec.wo, 1.0f, ESolidAngle);
+
+			return boost::make_tuple(eRec.d, 1.0f, ESolidAngle);
 		}
  
-		Float pdf(const Vector &wo, EMeasure measure) const {
+		Float pdf(const Vector &d, EMeasure measure) const {
 			if (measure != ESolidAngle)
 				return 0.0f;
 
-			EmissionRecord pRec(m_mRec, m_wi, wo);
+			EmissionRecord eRec;
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
-			if (m_luminaire->eval(pRec) == 0)
-				return 0.0f;
-			Float result = m_luminaire->pdf(pRec);
+			eRec.d = d;
+			m_luminaire->pdfEmission(eRec, false);
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
-			return result;
+			return eRec.pdfDir;
 		}
 
 	private:
@@ -545,9 +553,9 @@ public:
 			if (!objects[i]->getClass()->derivesFrom(MTS_CLASS(Luminaire)))
 				continue;
 
-			const Luminaire *phase = static_cast<const Luminaire *>(objects[i]);
+			const Luminaire *luminaire = static_cast<const Luminaire *>(objects[i]);
 
-			Log(EInfo, "Processing phase function model %s", phase->toString().c_str());
+			Log(EInfo, "Processing luminaire function model %s", luminaire->toString().c_str());
 			Log(EInfo, "Checking the model for %i incident directions", wiSamples);
 			progress->reset();
 
@@ -569,8 +577,8 @@ public:
 					std::string filename = formatString("failure_%i.m", failureCount++);
 					chiSqr->dumpTables(filename);
 					failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
-						"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis", 
-						wi.toString().c_str(), filename.c_str()));
+						"issue. Dumped the contingency tables to '%s' for user analysis", 
+						filename.c_str()));
 				} else {
 					succeed();
 				}

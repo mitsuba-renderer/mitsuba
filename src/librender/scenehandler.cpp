@@ -461,7 +461,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		parser->setDoSchema(true);
 		parser->setValidationSchemaFullChecking(true);
 		parser->setValidationScheme(SAXParser::Val_Always);
-		parser->setExternalNoNamespaceSchemaLocation(schemaPath.string().c_str());
+		parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 
 		/* Set the handler and start parsing */
 		SceneHandler *handler = new SceneHandler(parser, m_params, m_namedObjects, true);
@@ -474,7 +474,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		#endif
 		fs::path path = resolver->resolve(context.attributes["filename"]);
 		XMLLog(EInfo, "Parsing included file \"%s\" ..", path.filename().c_str());
-		parser->parse(path.string().c_str());
+		parser->parse(path.file_string().c_str());
 
 		object = handler->getScene();
 		delete parser;

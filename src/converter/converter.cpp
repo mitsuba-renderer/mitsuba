@@ -119,12 +119,12 @@ void GeometryConverter::convert(const fs::path &inputFile,
 	}
 
 	if (!fs::exists(textureDirectory)) {
-		SLog(EInfo, "Creating directory \"%s\" ..", textureDirectory.string().c_str());
+		SLog(EInfo, "Creating directory \"%s\" ..", textureDirectory.file_string().c_str());
 		fs::create_directory(textureDirectory);
 	}
 
 	if (!fs::exists(meshesDirectory) && !m_packGeometry) {
-		SLog(EInfo, "Creating directory \"%s\" ..", meshesDirectory.string().c_str());
+		SLog(EInfo, "Creating directory \"%s\" ..", meshesDirectory.file_string().c_str());
 		fs::create_directory(meshesDirectory);
 	}
 
@@ -156,7 +156,7 @@ void GeometryConverter::convert(const fs::path &inputFile,
 			xmlString.length(), "bufID", false);
 		Wrapper4InputSource *wrapper = new Wrapper4InputSource(memBufIS, false);
 		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *doc = parser->parse(wrapper);
-		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.string().c_str());
+		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.file_string().c_str());
 		if (adj == NULL)
 			SLog(EError, "Could not parse adjustments file!");
 
@@ -286,7 +286,7 @@ void GeometryConverter::convert(const fs::path &inputFile,
 	} else {
 		fs::ofstream ofile(outputFile);
 		if (ofile.fail())
-			SLog(EError, "Could not write to \"%s\"!", outputFile.string().c_str());
+			SLog(EError, "Could not write to \"%s\"!", outputFile.file_string().c_str());
 		ofile << os.str();
 		ofile.close();
 	}

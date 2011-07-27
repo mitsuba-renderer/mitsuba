@@ -310,7 +310,7 @@ int ubi_main(int argc, char **argv) {
 		parser->setDoSchema(true);
 		parser->setValidationSchemaFullChecking(true);
 		parser->setValidationScheme(SAXParser::Val_Always);
-		parser->setExternalNoNamespaceSchemaLocation(schemaPath.string().c_str());
+		parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
 		#if !defined(__OSX__)
 			/// Not supported on OSX
 			parser->setCalculateSrcOfs(true);
@@ -339,7 +339,7 @@ int ubi_main(int argc, char **argv) {
 		for (int i=optind; i<argc; ++i) {
 			fs::path 
 				filename = fileResolver->resolve(argv[i]),
-				filePath = fs::absolute(filename).parent_path(),
+				filePath = fs::complete(filename).parent_path(),
 				baseName = fs::basename(filename);
 			ref<FileResolver> frClone = fileResolver->clone();
 			frClone->addPath(filePath);
@@ -347,7 +347,7 @@ int ubi_main(int argc, char **argv) {
 
 			SLog(EInfo, "Parsing scene description from \"%s\" ..", argv[i]);
 
-			parser->parse(filename.string().c_str());
+			parser->parse(filename.file_string().c_str());
 			ref<Scene> scene = handler->getScene();
 
 			if (scene->getCamera() == NULL)

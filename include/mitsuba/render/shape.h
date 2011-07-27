@@ -292,7 +292,7 @@ public:
 	 * Return the probability density of sampling the 
 	 * given point using sampleArea()
 	 */
-	virtual Float pdfArea(const ShapeSamplingRecord &sRec) const;
+	virtual Float pdevalArea(const ShapeSamplingRecord &sRec) const;
 
 	/**
 	 * \brief Sample a point on the shape and return the associated

@@ -70,7 +70,7 @@ public:
 	WavefrontOBJ(const Properties &props) : Shape(props) {
 		FileResolver *fResolver = Thread::getThread()->getFileResolver();
 		fs::path path = fResolver->resolve(props.getString("filename"));
-		m_name = path.stem().string();
+		m_name = path.stem();
 	
 		/* By default, any existing normals will be used for
 		   rendering. If no normals are found, Mitsuba will
@@ -95,7 +95,7 @@ public:
 		Log(EInfo, "Loading geometry from \"%s\" ..", path.leaf().c_str());
 		fs::ifstream is(path);
 		if (is.bad() || is.fail())
-			Log(EError, "Geometry file '%s' not found!", path.string().c_str());
+			Log(EError, "Geometry file '%s' not found!", path.file_string().c_str());
 
 		ref<Timer> timer = new Timer();
 		std::string buf;
@@ -166,13 +166,13 @@ public:
 				}
 			} else if (buf == "mtllib") {
 				ref<FileResolver> frClone = fResolver->clone();
-				frClone->addPath(fs::absolute(path).parent_path());
+				frClone->addPath(fs::complete(path).parent_path());
 				fs::path mtlName = frClone->resolve(trim(line.substr(6, line.length()-1)));
 				if (fs::exists(mtlName))
 					parseMaterials(mtlName);
 				else
 					Log(EWarn, "Could not find referenced material library '%s'", 
-						mtlName.string().c_str());
+						mtlName.file_string().c_str());
 			} else if (buf == "vt") {
 				Float u, v, w;
 				iss >> u >> v >> w;
@@ -259,7 +259,7 @@ public:
 		fs::ifstream is(mtlPath);
 		if (is.bad() || is.fail())
 			Log(EError, "Unexpected I/O error while accessing material file '%s'!", 
-				mtlPath.string().c_str());
+				mtlPath.file_string().c_str());
 		std::string buf;
 		std::string mtlName;
 		Spectrum diffuse;

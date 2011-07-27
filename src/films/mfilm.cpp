@@ -178,7 +178,7 @@ public:
 
 		Log(EInfo, "Writing image to \"%s\" ..", filename.leaf().c_str());
 	
-		FILE *f = fopen(filename.string().c_str(), "w");
+		FILE *f = fopen(filename.file_string().c_str(), "w");
 		if (!f)
 			Log(EError, "Output file cannot be created!");
 
@@ -222,7 +222,7 @@ public:
 	
 	bool destinationExists(const fs::path &baseName) const {
 		fs::path filename = baseName;
-		if (boost::to_lower_copy(filename.extension().string()) != ".m")
+		if (boost::to_lower_copy(filename.extension()) != ".m")
 			filename.replace_extension(".m");
 		return fs::exists(filename);
 	}

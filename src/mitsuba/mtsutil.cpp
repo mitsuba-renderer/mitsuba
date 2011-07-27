@@ -75,7 +75,7 @@ void help() {
 	std::set<std::string> seen;
 
 	for (size_t i=0; i<dirPaths.size(); ++i) {
-		fs::path dirPath = fs::absolute(dirPaths[i]);
+		fs::path dirPath = fs::complete(dirPaths[i]);
 
 		if (!fs::exists(dirPath) || !fs::is_directory(dirPath))
 			break;
@@ -85,7 +85,7 @@ void help() {
 		for (; it != end; ++it) {
 			if (!fs::is_regular_file(it->status()))
 				continue;
-			std::string extension(boost::to_lower_copy(it->path().extension().string()));
+			std::string extension(boost::to_lower_copy(it->path().extension()));
 #if defined(WIN32)
 			if (extension != ".dll")
 				continue;
@@ -98,7 +98,7 @@ void help() {
 #else
 #error Unknown operating system!
 #endif
-			std::string shortName = it->path().stem().string();
+			std::string shortName = it->path().stem();
 			if (seen.find(shortName) != seen.end())
 				continue;
 			seen.insert(shortName);
@@ -269,7 +269,7 @@ int mtsutil(int argc, char **argv) {
 			int executed = 0, succeeded = 0;
 		
 			for (size_t i=0; i<dirPaths.size(); ++i) {
-				fs::path dirPath = fs::absolute(dirPaths[i]);
+				fs::path dirPath = fs::complete(dirPaths[i]);
 
 				if (!fs::exists(dirPath) || !fs::is_directory(dirPath))
 					break;
@@ -279,7 +279,7 @@ int mtsutil(int argc, char **argv) {
 				for (; it != end; ++it) {
 					if (!fs::is_regular_file(it->status()))
 						continue;
-					std::string extension(boost::to_lower_copy(it->path().extension().string()));
+					std::string extension(boost::to_lower_copy(it->path().extension()));
 #if defined(WIN32)
 					if (extension != ".dll")
 						continue;
@@ -292,7 +292,7 @@ int mtsutil(int argc, char **argv) {
 #else
 #error Unknown operating system!
 #endif
-					std::string shortName = it->path().stem().string();
+					std::string shortName = it->path().stem();
 					if (seen.find(shortName) != seen.end() || !boost::starts_with(shortName, "test_"))
 						continue;
 					seen.insert(shortName);
@@ -337,7 +337,7 @@ int mtsutil(int argc, char **argv) {
 			if (!fs::exists(fullName)) {
 				/* Plugin not found! */
 				SLog(EError, "Utility \"%s\" not found (run \"mtsutil\" without arguments to "
-					"see a list of available utilities)", fullName.string().c_str());
+					"see a list of available utilities)", fullName.file_string().c_str());
 			}
 
 			SLog(EInfo, "Loading utility \"%s\" ..", argv[optind]);

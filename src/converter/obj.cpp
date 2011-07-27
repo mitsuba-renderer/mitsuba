@@ -37,7 +37,7 @@ std::string copyTexture(GeometryConverter *cvt, const fs::path &textureDir, std:
 		if (!fs::exists(resolved)) {
 			resolved = fRes->resolve(path.leaf());
 			if (!fs::exists(resolved)) {
-				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.string().c_str());
+				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
 				resolved = cvt->locateResource(path.leaf());
 				targetPath = targetPath.parent_path() / resolved.leaf();
 				if (resolved.empty())
@@ -45,7 +45,7 @@ std::string copyTexture(GeometryConverter *cvt, const fs::path &textureDir, std:
 			}
 		}	
 
-		if (fs::absolute(resolved) != fs::absolute(targetPath)) {
+		if (fs::complete(resolved) != fs::complete(targetPath)) {
 			ref<FileStream> input = new FileStream(resolved, FileStream::EReadOnly);
 			ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
 			input->copyTo(output);
@@ -54,7 +54,11 @@ std::string copyTexture(GeometryConverter *cvt, const fs::path &textureDir, std:
 		}
 	}
 
+#if BOOST_FILESYSTEM_VERSION == 3
 	return targetPath.leaf().string();
+#else
+	return targetPath.leaf();
+#endif
 }
 
 void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mtlName,
@@ -95,11 +99,11 @@ void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mt
 
 void parseMaterials(GeometryConverter *cvt, std::ostream &os, const fs::path &texturesDir, 
 		const fs::path &mtlFileName, std::set<std::string> &mtlList) {
-	SLog(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.string().c_str());
+	SLog(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.file_string().c_str());
 	fs::ifstream is(mtlFileName);
 	if (is.bad() || is.fail())
 		SLog(EError, "Unexpected I/O error while accessing material file '%s'!", 
-			mtlFileName.string().c_str());
+			mtlFileName.file_string().c_str());
 	std::string buf, line;
 	std::string mtlName;
 	Spectrum diffuse(0.0f);
@@ -142,7 +146,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 
 	fs::ifstream is(inputFile);
 	if (is.bad() || is.fail())
-		SLog(EError, "Could not open OBJ file '%s'!", inputFile.string().c_str());
+		SLog(EError, "Could not open OBJ file '%s'!", inputFile.file_string().c_str());
 
 	os << "<?xml version=\"1.0\" encoding=\"utf-8\"?>" << endl << endl;
 	os << "<!--" << endl << endl;
@@ -158,7 +162,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 			std::getline(is, line);
 			std::string mtlName = trim(line.substr(1, line.length()-1));
 			ref<FileResolver> fRes = Thread::getThread()->getFileResolver()->clone();
-			fRes->addPath(fs::absolute(fRes->resolve(inputFile)).parent_path());
+			fRes->addPath(fs::complete(fRes->resolve(inputFile)).parent_path());
 			fs::path fullMtlName = fRes->resolve(mtlName);
 			if (fs::exists(fullMtlName))
 				parseMaterials(this, os, textureDirectory, fullMtlName, mtlList);
@@ -171,7 +175,7 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 	}
 
 	Properties objProps("obj");
-	objProps.setString("filename", inputFile.string());
+	objProps.setString("filename", inputFile.file_string());
 
 	ref<Shape> rootShape = static_cast<Shape *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(Shape), objProps));
