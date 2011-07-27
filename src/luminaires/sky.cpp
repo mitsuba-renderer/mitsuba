@@ -78,8 +78,8 @@ MTS_NAMESPACE_BEGIN
  *     \tinyrendering{6PM}{preetham_18}
  *     \tinyrendering{8PM}{preetham_20}\hfill
  *     \vspace{-3mm}
- *     \caption{Time series with the default settings (visualized by
- *     projecting the sky onto a disk)}
+ *     \caption{Time series with the default settings (shown by
+ *     projecting the sky onto a disk. East is left.)}
  * }
  *
  * This plugin implements the physically-based skylight model proposed by 
