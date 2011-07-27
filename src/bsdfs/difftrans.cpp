@@ -58,6 +58,7 @@ public:
 		: BSDF(stream, manager) {
 		m_transmittance = static_cast<Texture *>(manager->getInstance(stream));
 		m_usesRayDifferentials = m_transmittance->usesRayDifferentials();
+		configure();
 	}
 
 	void configure() {

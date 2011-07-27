@@ -118,6 +118,7 @@ public:
 		m_repeatV = stream->readFloat();
 		m_kdMultiplier = stream->readFloat();
 		m_ksMultiplier = stream->readFloat();
+		configure();
 	}
 
 	void configure() {

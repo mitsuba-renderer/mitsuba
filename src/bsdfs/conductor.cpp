@@ -162,7 +162,6 @@ public:
 
 		m_eta = props.getSpectrum("eta", materialEta);
 		m_k = props.getSpectrum("k", materialK);
-
 	}
 
 	SmoothConductor(Stream *stream, InstanceManager *manager) 

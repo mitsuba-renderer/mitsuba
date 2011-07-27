@@ -159,6 +159,7 @@ public:
 		m_extIOR = stream->readFloat();
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularTransmittance = static_cast<Texture *>(manager->getInstance(stream));
+		configure();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
