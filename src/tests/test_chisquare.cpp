@@ -39,9 +39,9 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * This testcase checks if the sampling methods of various BSDF & phase 
- * function implementations really do what they promise in their pdf()
- * methods
+ * This testcase checks if the sampling methods of various BSDF & phase  
+ * function & luminaire implementations really do what they promise in 
+ * their pdf() methods
  */
 class TestChiSquare : public TestCase {
 public:
@@ -299,6 +299,62 @@ public:
 		Float m_largestWeight;
 	};
 
+	/// Adapter to use luminaires in the chi-square test
+	class LuminaireAdapter {
+	public:
+		LuminaireAdapter(
+				const Luminaire *luminaire, Sampler *sampler)
+			: m_luminaire(luminaire), m_sampler(sampler) { }
+
+		boost::tuple<Vector, Float, EMeasure> generateSample() {
+			Point2 sample(m_sampler->next2D());
+			EmissionRecord pRec(m_mRec, m_wi);
+
+			#if defined(MTS_DEBUG_FP)
+				enableFPExceptions();
+			#endif
+
+			/* Check the various sampling routines for agreement amongst each other */
+			Float pdfVal;
+			Spectrum value = m_luminaire->sampleEmission(eRec, m_sampler->next2D(), m_sampler->next2D());
+
+			if (min < ERROR_REQ && err > ERROR_REQ) // absolute error threshold
+				mismatch = true;
+			else if (min > ERROR_REQ && err/min > ERROR_REQ) // relative error threshold
+				mismatch = true;
+
+			if (mismatch)
+				Log(EWarn, "Inconsistency: f=%f, pdf=%f, sampled f/pdf=%f",
+					f, pdfVal, sampled);
+
+			#if defined(MTS_DEBUG_FP)
+				disableFPExceptions();
+			#endif
+			return boost::make_tuple(pRec.wo, 1.0f, ESolidAngle);
+		}
+ 
+		Float pdf(const Vector &wo, EMeasure measure) const {
+			if (measure != ESolidAngle)
+				return 0.0f;
+
+			EmissionRecord pRec(m_mRec, m_wi, wo);
+			#if defined(MTS_DEBUG_FP)
+				enableFPExceptions();
+			#endif
+			if (m_luminaire->eval(pRec) == 0)
+				return 0.0f;
+			Float result = m_luminaire->pdf(pRec);
+			#if defined(MTS_DEBUG_FP)
+				disableFPExceptions();
+			#endif
+			return result;
+		}
+
+	private:
+		ref<const Luminaire> m_luminaire;
+		ref<Sampler> m_sampler;
+	};
+
 	void test01_BSDF() {
 		/* Load a set of BSDF instances to be tested from the following XML file */
 		ref<Scene> scene = loadScene("data/tests/test_bsdf.xml");
@@ -410,7 +466,7 @@ public:
 	}
 
 	void test02_PhaseFunction() {
-		/* Load a set of BSDF instances to be tested from the following XML file */
+		/* Load a set of phase function instances to be tested from the following XML file */
 		ref<Scene> scene = loadScene("data/tests/test_phase.xml");
 	
 		const std::vector<ConfigurableObject *> objects = scene->getReferencedObjects();
@@ -472,6 +528,60 @@ public:
 		Log(EInfo, "%i/%i phase function checks succeeded", testCount-failureCount, testCount);
 		delete progress;
 	}
+
+	void test03_Luminaire() {
+		/* Load a set of luminaire instances to be tested from the following XML file */
+		ref<Scene> scene = loadScene("data/tests/test_luminaire.xml");
+	
+		const std::vector<ConfigurableObject *> objects = scene->getReferencedObjects();
+		size_t thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
+		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
+				createObject(MTS_CLASS(Sampler), Properties("independent")));
+
+		ProgressReporter *progress = new ProgressReporter("Checking", wiSamples, NULL);
+
+		Log(EInfo, "Verifying luminaire sampling routines ..");
+		for (size_t i=0; i<objects.size(); ++i) {
+			if (!objects[i]->getClass()->derivesFrom(MTS_CLASS(Luminaire)))
+				continue;
+
+			const Luminaire *phase = static_cast<const Luminaire *>(objects[i]);
+
+			Log(EInfo, "Processing phase function model %s", phase->toString().c_str());
+			Log(EInfo, "Checking the model for %i incident directions", wiSamples);
+			progress->reset();
+
+			/* Test for a number of different incident directions */
+			for (size_t j=0; j<wiSamples; ++j) {
+				LuminaireAdapter adapter(luminaire, sampler);
+				ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
+				chiSqr->setLogLevel(EDebug);
+
+				// Initialize the tables used by the chi-square test
+				chiSqr->fill(
+					boost::bind(&LuminaireAdapter::generateSample, &adapter),
+					boost::bind(&LuminaireAdapter::pdf, &adapter, _1, _2)
+				);
+
+				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
+				ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
+				if (result == ChiSquare::EReject) {
+					std::string filename = formatString("failure_%i.m", failureCount++);
+					chiSqr->dumpTables(filename);
+					failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
+						"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis", 
+						wi.toString().c_str(), filename.c_str()));
+				} else {
+					succeed();
+				}
+				++testCount;
+				progress->update(j+1);
+			}
+		}
+		Log(EInfo, "%i/%i luminaire checks succeeded", testCount-failureCount, testCount);
+		delete progress;
+	}
+
 };
 
 MTS_EXPORT_TESTCASE(TestChiSquare, "Chi-square test for various sampling functions")
