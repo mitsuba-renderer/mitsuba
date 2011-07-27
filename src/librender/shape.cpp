@@ -65,11 +65,11 @@ AABB Shape::getClippedAABB(const AABB &box) const {
 Float Shape::sampleSolidAngle(ShapeSamplingRecord &sRec, 
 		const Point &from, const Point2 &sample) const {
 	/* Turns the area sampling routine into one that samples wrt. solid angles */
-	Float pdevalArea = sampleArea(sRec, sample);
+	Float pdfArea = sampleArea(sRec, sample);
 	Vector lumToPoint = from - sRec.p;
 	Float distSquared = lumToPoint.lengthSquared(), dp = dot(lumToPoint, sRec.n);
 	if (dp > 0)
-		return pdevalArea * distSquared * std::sqrt(distSquared) / dp;
+		return pdfArea * distSquared * std::sqrt(distSquared) / dp;
 	else
 		return 0.0f;
 }
@@ -79,7 +79,7 @@ Float Shape::pdfSolidAngle(const ShapeSamplingRecord &sRec, const Point &from) c
 	Vector lumToPoint = from - sRec.p;
 	Float distSquared = lumToPoint.lengthSquared();
 	Float invDP = std::max((Float) 0, std::sqrt(distSquared) / dot(lumToPoint, sRec.n));
-	return pdevalArea(sRec) * distSquared * invDP;
+	return pdfArea(sRec) * distSquared * invDP;
 }
 
 void Shape::addChild(const std::string &name, ConfigurableObject *child) {
@@ -167,8 +167,8 @@ Float Shape::sampleArea(ShapeSamplingRecord &sRec,
 	return 0.0f;
 }
 
-Float Shape::pdevalArea(const ShapeSamplingRecord &sRec) const {
-	Log(EError, "%s::pdevalArea(): Not implemented!",
+Float Shape::pdfArea(const ShapeSamplingRecord &sRec) const {
+	Log(EError, "%s::pdfArea(): Not implemented!",
 			getClass()->getName().c_str());
 	return 0.0f;
 }

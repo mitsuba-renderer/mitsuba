@@ -3,5 +3,8 @@
 	 testcase 'test_chisquare' -->
 <scene version="0.3.0">
 	<!-- Test the constant luminaire -->
-	<phase type="constant"/>
+	<luminaire type="constant"/>
+
+	<!-- Make sure that the scene actually contains something -->
+	<shape type="sphere"/>
 </scene>

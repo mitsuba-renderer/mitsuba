@@ -110,7 +110,7 @@ public:
 	Spectrum value;
 
 	/// Area probability density
-	Float pdevalArea;
+	Float pdfArea;
 
 	/// Directional probability density (wrt. solid angle)
 	Float pdfDir;

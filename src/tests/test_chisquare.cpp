@@ -47,8 +47,8 @@ class TestChiSquare : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
 	MTS_DECLARE_TEST(test03_Luminaire)
-	MTS_DECLARE_TEST(test01_BSDF)
-	MTS_DECLARE_TEST(test02_PhaseFunction)
+//	MTS_DECLARE_TEST(test01_BSDF)
+//	MTS_DECLARE_TEST(test02_PhaseFunction)
 	MTS_END_TESTCASE()
 
 	/**
@@ -307,17 +307,16 @@ public:
 			: m_luminaire(luminaire), m_sampler(sampler) { }
 
 		boost::tuple<Vector, Float, EMeasure> generateSample() {
-			EmissionRecord eRec;
-
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
 
-			/* Check the various sampling routines for agreement amongst each other */
-			m_luminaire->sampleEmission(eRec, m_sampler->next2D(), m_sampler->next2D());
-			Spectrum value = eRec.value;
-			Spectrum value2 = 
-				m_luminaire->evalArea(eRec) * m_luminaire->evalDirection(eRec);
+			LuminaireSamplingRecord lRec;
+			m_luminaire->sample(Point(0.0f), lRec, m_sampler->next2D());
+			Spectrum value = lRec.value / lRec.pdf;
+			Float pdf = m_luminaire->pdf(Point(0.0f), lRec, false);
+			Spectrum Le = m_luminaire->Le(Ray(Point(0.0f), -lRec.d, 0.0f));
+			Spectrum value2 = Le/pdf;
 
 			bool mismatch = false;
 			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
@@ -332,30 +331,30 @@ public:
 			}
 
 			if (mismatch) 
-				Log(EWarn, "Potential inconsistency (3): f/pdf=%s (sampled), f/pdf=%s (evaluated)",
+				Log(EWarn, "Potential inconsistency: f/pdf=%s (sampled), f/pdf=%s (evaluated)",
 					value.toString().c_str(), value2.toString().c_str());
 
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
 
-			return boost::make_tuple(eRec.d, 1.0f, ESolidAngle);
+			return boost::make_tuple(lRec.d, 1.0f, ESolidAngle);
 		}
  
 		Float pdf(const Vector &d, EMeasure measure) const {
 			if (measure != ESolidAngle)
 				return 0.0f;
 
-			EmissionRecord eRec;
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
-			eRec.d = d;
-			m_luminaire->pdfEmission(eRec, false);
+			LuminaireSamplingRecord lRec;
+			lRec.d = d;
+			Float result = m_luminaire->pdf(Point(0.0f), lRec, false);
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
-			return eRec.pdfDir;
+			return result;
 		}
 
 	private:
@@ -540,8 +539,9 @@ public:
 	void test03_Luminaire() {
 		/* Load a set of luminaire instances to be tested from the following XML file */
 		ref<Scene> scene = loadScene("data/tests/test_luminaire.xml");
+		scene->initialize();
 	
-		const std::vector<ConfigurableObject *> objects = scene->getReferencedObjects();
+		const std::vector<Luminaire *> luminaires = scene->getLuminaires();
 		size_t thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(Sampler), Properties("independent")));
@@ -549,11 +549,8 @@ public:
 		ProgressReporter *progress = new ProgressReporter("Checking", wiSamples, NULL);
 
 		Log(EInfo, "Verifying luminaire sampling routines ..");
-		for (size_t i=0; i<objects.size(); ++i) {
-			if (!objects[i]->getClass()->derivesFrom(MTS_CLASS(Luminaire)))
-				continue;
-
-			const Luminaire *luminaire = static_cast<const Luminaire *>(objects[i]);
+		for (size_t i=0; i<luminaires.size(); ++i) {
+			const Luminaire *luminaire = luminaires[i];
 
 			Log(EInfo, "Processing luminaire function model %s", luminaire->toString().c_str());
 			Log(EInfo, "Checking the model for %i incident directions", wiSamples);

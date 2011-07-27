@@ -123,13 +123,13 @@ public:
 		eRec.sRec.p = m_position;
 		m_luminaireToWorld(squareToCone(m_cosCutoffAngle, sample2), eRec.d);
 		eRec.pdfDir = squareToConePdf(m_cosCutoffAngle);
-		eRec.pdevalArea = 1;
+		eRec.pdfArea = 1;
 		eRec.value = falloffCurve(eRec.d);
 	}
 
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		eRec.sRec.p = m_position;
-		eRec.pdevalArea = 1;
+		eRec.pdfArea = 1;
 		eRec.value = m_intensity;
 	}
 
@@ -144,7 +144,7 @@ public:
 			eRec.pdfDir = 0;
 		else
 			eRec.pdfDir = delta ? 0.0f : squareToConePdf(m_cosCutoffAngle);
-		eRec.pdevalArea = delta ? 1.0f : 0.0f;
+		eRec.pdfArea = delta ? 1.0f : 0.0f;
 	}
 
 	Spectrum evalDirection(const EmissionRecord &eRec) const {

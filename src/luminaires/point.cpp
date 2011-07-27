@@ -68,13 +68,13 @@ public:
 		eRec.sRec.p = m_position;
 		eRec.d = squareToSphere(sample2);
 		eRec.pdfDir = 1.0f / (4 * M_PI);
-		eRec.pdevalArea = 1;
+		eRec.pdfArea = 1;
 		eRec.value = m_intensity;
 	}
 	
 	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
 		eRec.sRec.p = m_position;
-		eRec.pdevalArea = 1;
+		eRec.pdfArea = 1;
 		eRec.value = m_intensity * (4*M_PI);
 	}
 
@@ -86,7 +86,7 @@ public:
 
 	void pdfEmission(EmissionRecord &eRec, bool delta) const {
 		eRec.pdfDir = delta ? 0.0f : 1.0f / (4 * M_PI);
-		eRec.pdevalArea = delta ? 1.0f : 0.0f;
+		eRec.pdfArea = delta ? 1.0f : 0.0f;
 	}
 
 	Spectrum evalArea(const EmissionRecord &eRec) const {

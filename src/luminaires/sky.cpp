@@ -411,12 +411,12 @@ public:
 
 		if (length == 0) {
 			eRec.value = Spectrum(0.0f);
-			eRec.pdevalArea = eRec.pdfDir = 1.0f;
+			eRec.pdfArea = eRec.pdfDir = 1.0f;
 			return;
 		}
 
 		eRec.d /= length;
-		eRec.pdevalArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
+		eRec.pdfArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
 		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
 		eRec.value = Le(-eRec.d);
 	}
@@ -426,7 +426,7 @@ public:
 			Vector d = squareToSphere(sample);
 			eRec.sRec.p = m_bsphere.center + d * m_bsphere.radius;
 			eRec.sRec.n = Normal(-d);
-			eRec.pdevalArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
+			eRec.pdfArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
 			eRec.value = Spectrum(M_PI);
 		} else {
 			/* Preview mode, which is more suitable for VPL-based rendering: approximate 
@@ -435,7 +435,7 @@ public:
 			Vector d = squareToSphere(sample);
 			eRec.sRec.p = m_bsphere.center + d * radius;
 			eRec.sRec.n = Normal(-d);
-			eRec.pdevalArea = 1.0f / (4 * M_PI * radius * radius);
+			eRec.pdfArea = 1.0f / (4 * M_PI * radius * radius);
 			eRec.value = Le(d) * M_PI;
 		}
 	}

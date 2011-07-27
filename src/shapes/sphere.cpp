@@ -179,7 +179,7 @@ public:
 		return 1.0f / (4*M_PI*m_radius*m_radius);
 	}
 
-	Float pdevalArea(const ShapeSamplingRecord &sRec) const {
+	Float pdfArea(const ShapeSamplingRecord &sRec) const {
 		return 1.0f / (4*M_PI*m_radius*m_radius);
 	}
 
