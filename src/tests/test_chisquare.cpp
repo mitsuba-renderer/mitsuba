@@ -331,8 +331,8 @@ public:
 			}
 
 			if (mismatch) 
-				Log(EWarn, "Potential inconsistency: f/pdf=%s (sampled), f/pdf=%s (evaluated)",
-					value.toString().c_str(), value2.toString().c_str());
+				Log(EWarn, "Potential inconsistency: f/pdf=%s (sampled), f/pdf=%s (evaluated), f=%s, pdf=%f, pdf2=%f",
+					value.toString().c_str(), value2.toString().c_str(), Le.toString().c_str(), pdf, lRec.pdf);
 
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
@@ -405,7 +405,6 @@ public:
 				);
 
 				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-				chiSqr->dumpTables("test.m");
 				ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
 				if (result == ChiSquare::EReject) {
 					std::string filename = formatString("failure_%i.m", failureCount++);
@@ -542,49 +541,41 @@ public:
 		scene->initialize();
 	
 		const std::vector<Luminaire *> luminaires = scene->getLuminaires();
-		size_t thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
+		size_t thetaBins = 10, failureCount = 0, testCount = 0;
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(Sampler), Properties("independent")));
-
-		ProgressReporter *progress = new ProgressReporter("Checking", wiSamples, NULL);
 
 		Log(EInfo, "Verifying luminaire sampling routines ..");
 		for (size_t i=0; i<luminaires.size(); ++i) {
 			const Luminaire *luminaire = luminaires[i];
 
 			Log(EInfo, "Processing luminaire function model %s", luminaire->toString().c_str());
-			Log(EInfo, "Checking the model for %i incident directions", wiSamples);
-			progress->reset();
 
-			/* Test for a number of different incident directions */
-			for (size_t j=0; j<wiSamples; ++j) {
-				LuminaireAdapter adapter(luminaire, sampler);
-				ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
-				chiSqr->setLogLevel(EDebug);
+			LuminaireAdapter adapter(luminaire, sampler);
+			ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, 1);
+			chiSqr->setLogLevel(EDebug);
+			chiSqr->dumpTables("test.m");
 
-				// Initialize the tables used by the chi-square test
-				chiSqr->fill(
-					boost::bind(&LuminaireAdapter::generateSample, &adapter),
-					boost::bind(&LuminaireAdapter::pdf, &adapter, _1, _2)
-				);
+			// Initialize the tables used by the chi-square test
+			chiSqr->fill(
+				boost::bind(&LuminaireAdapter::generateSample, &adapter),
+				boost::bind(&LuminaireAdapter::pdf, &adapter, _1, _2)
+			);
 
-				// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
-				ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
-				if (result == ChiSquare::EReject) {
-					std::string filename = formatString("failure_%i.m", failureCount++);
-					chiSqr->dumpTables(filename);
-					failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
-						"issue. Dumped the contingency tables to '%s' for user analysis", 
-						filename.c_str()));
-				} else {
-					succeed();
-				}
-				++testCount;
-				progress->update(j+1);
+			// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
+			ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
+			if (result == ChiSquare::EReject) {
+				std::string filename = formatString("failure_%i.m", failureCount++);
+				chiSqr->dumpTables(filename);
+				failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
+					"issue. Dumped the contingency tables to '%s' for user analysis", 
+					filename.c_str()));
+			} else {
+				succeed();
 			}
+			++testCount;
 		}
 		Log(EInfo, "%i/%i luminaire checks succeeded", testCount-failureCount, testCount);
-		delete progress;
 	}
 
 };

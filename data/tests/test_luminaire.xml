@@ -2,8 +2,14 @@
 	 to be tested for consistency. This is done using the 
 	 testcase 'test_chisquare' -->
 <scene version="0.3.0">
-	<!-- Test the constant luminaire -->
+	<!-- Test the constant luminaire 
 	<luminaire type="constant"/>
+	-->
+
+	<!-- Test the environment map luminaire -->
+	<luminaire type="envmap">
+		<string name="filename" value="data/tests/envmap.exr"/>
+	</luminaire>
 
 	<!-- Make sure that the scene actually contains something -->
 	<shape type="sphere"/>
