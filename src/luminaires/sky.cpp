@@ -266,7 +266,6 @@ public:
 
 		int thetaBins = m_resolution, phiBins = m_resolution*2;
 
-#if 0
 		ref<Bitmap> bitmap = new Bitmap(phiBins, thetaBins, 128);
 		bitmap->clear();
 		Point2 factor(M_PI / thetaBins, (2*M_PI) / phiBins);
@@ -283,31 +282,6 @@ public:
 				bitmap->getFloatData()[(j+i*phiBins)*4 + 3] = 1;
 			}
 		}
-#else
-		ref<Bitmap> bitmap = new Bitmap(512, 512, 128);
-		bitmap->clear();
-		for (int x=0; x<512; ++x) {
-			for (int y=0; y<512; ++y) {
-				Vector d;
-				d.x = -1.0f  + (x + 0.5f) * 2.0f/512.0f;
-				d.z = -1.0f  + (y + 0.5f) * 2.0f/512.0f;
-				Float tmp = 1-d.x*d.x - d.z*d.z;
-				Spectrum s(0.0f);
-				if (tmp > 0) {
-					d.y = std::sqrt(tmp);
-					s = Le(d);
-				}
-				Float r, g, b;
-				s.toLinearRGB(r, g, b);
-				bitmap->getFloatData()[(x+y*512)*4 + 0] = r;
-				bitmap->getFloatData()[(x+y*512)*4 + 1] = g;
-				bitmap->getFloatData()[(x+y*512)*4 + 2] = b;
-				bitmap->getFloatData()[(x+y*512)*4 + 3] = 1;
-			}
-		}
-#endif
-		ref<FileStream> fs = new FileStream("out.exr", FileStream::ETruncReadWrite);
-		bitmap->save(Bitmap::EEXR, fs);
 	}
 
 	Vector toSphere(Float theta, Float phi) const {
