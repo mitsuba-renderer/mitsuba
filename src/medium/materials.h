@@ -68,7 +68,7 @@ static void lookupMaterial(const Properties &props, Spectrum &sigmaS, Spectrum &
 			*eta = props.getFloat("eta", 1.3f);
 	} else {
 		std::string material = 
-			boost::to_lower_copy(props.getString("material", "skimmilk"));
+			boost::to_lower_copy(props.getString("material", "skin1"));
 		densityMultiplier *= 100;
 
 		MaterialEntry *matEntry = materialData;

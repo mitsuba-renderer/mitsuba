@@ -22,6 +22,7 @@
 #include <mitsuba/render/medium.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/hw/basicshader.h>
+#include "../medium/materials.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -29,14 +30,21 @@ MTS_NAMESPACE_BEGIN
  * \icon{bsdf_hk}
  *
  * \parameters{
+ *     \parameter{material}{\String}{Name of a material preset, see 
+ *           \tblref{medium-coefficients}.\!\default{\texttt{skin1}}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Scattering coefficient of the 
- *      layer. \default{2.0}}
+ *      layer. \default{based on \code{material}}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Absorption coefficient of the 
- *      layer. \default{0.05}}
+ *      layer. \default{based on \code{material}}}
  *     \parameter{thickness}{\Float}{Denotes the thickness of the layer.
  *      Should be specified in inverse units of \code{sigmaA} and \code{sigmaS})\default{1}}
  *     \parameter{\Unnamed}{\Phase}{A nested phase function instance that represents 
  *      the type of scattering interactions occurring within the layer}
+ * }
+ *
+ * \renderings{
+ *     \rendering{$\sigma_s=2$, $\sigma_a=1$, thickness$=0.1$}{bsdf_hk_1}
+ *     \rendering{\code{ketchup} material preset}{bsdf_hk_2}
  * }
  *
  * This plugin provides an implementation of the Hanrahan-Krueger BSDF
@@ -49,7 +57,6 @@ MTS_NAMESPACE_BEGIN
  * random medium. When no phase function is explicitly specified, it uses an 
  * isotropic one ($g=0$) by default. A sample usage for instantiating the
  * plugin is given below: 
- *
  * \begin{xml}
  * <bsdf type="hk">
  *     <spectrum name="sigmaS" value="2"/>
@@ -93,13 +100,16 @@ MTS_NAMESPACE_BEGIN
 class HanrahanKrueger : public BSDF {
 public:
 	HanrahanKrueger(const Properties &props) : BSDF(props) {
+		Spectrum sigmaS, sigmaA;
+		lookupMaterial(props, sigmaS, sigmaA);
+
 		/* Scattering coefficient of the layer */
 		m_sigmaS = new ConstantSpectrumTexture(
-			props.getSpectrum("sigmaS", Spectrum(2.0f))); 
+			props.getSpectrum("sigmaS", sigmaS));
 
 		/* Absorption coefficient of the layer */
 		m_sigmaA = new ConstantSpectrumTexture(
-			props.getSpectrum("sigmaA", Spectrum(0.05f)));
+			props.getSpectrum("sigmaA", sigmaA));
 
 		/* Slab thickness in inverse units of sigmaS and sigmaA */
 		m_thickness = props.getFloat("thickness", 1); 
