@@ -154,9 +154,11 @@ public:
 			bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
 
-			const Float cosThetaI = Frame::cosTheta(bRec.wi);
-			const Float cosThetaO = Frame::cosTheta(bRec.wo);
-			bool reflection = cosThetaI * cosThetaO > 0;
+			const Float cosThetaI = Frame::cosTheta(bRec.wi),
+				        cosThetaO = Frame::cosTheta(bRec.wo),
+				        dp = cosThetaI*cosThetaO;
+		
+			bool reflection = dp > 0, transmission = dp < 0;
 
 			/* ==================================================================== */
 			/*                        Reflection component                          */
@@ -175,13 +177,13 @@ public:
 			/*                       Transmission component                         */
 			/* ==================================================================== */
 
-			if (hasGlossyTransmission && !reflection) {
+			if (hasGlossyTransmission && transmission) {
 				MediumSamplingRecord dummy;
 				PhaseFunctionQueryRecord pRec(dummy,bRec.wi,bRec.wo);
 				const Float phaseVal = m_phase->eval(pRec);
 
 				/* Hanrahan etal 93 Single Scattering transmission term */
-				if (cosThetaI + cosThetaO == 0.0f) {
+				if (std::abs(cosThetaI + cosThetaO) < Epsilon) {
 					/* avoid division by zero */
 					result += m_albedo * phaseVal*m_tauD/std::abs(cosThetaO) * 
 									((-m_tauD/std::abs(cosThetaO)).exp());

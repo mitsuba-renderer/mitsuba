@@ -47,8 +47,8 @@ class TestChiSquare : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
 	MTS_DECLARE_TEST(test03_Luminaire)
-//	MTS_DECLARE_TEST(test01_BSDF)
-//	MTS_DECLARE_TEST(test02_PhaseFunction)
+	MTS_DECLARE_TEST(test01_BSDF)
+	MTS_DECLARE_TEST(test02_PhaseFunction)
 	MTS_END_TESTCASE()
 
 	/**

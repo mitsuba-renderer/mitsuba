@@ -247,8 +247,9 @@ public:
 
 			if (measure == ESolidAngle) {
 				Float eta = m_extIOR / m_intIOR;
-				result *= eta * eta * std::abs(Frame::cosTheta(bRec.wo)
-					             / Frame::cosTheta(bRecInt.wo));
+				/* Solid angle compression & irradiance conversion factors */
+				result *= eta * eta * std::abs(Frame::cosTheta(bRec.wi)
+				     / Frame::cosTheta(bRecInt.wi));
 			}
 
 			return result;
@@ -357,16 +358,21 @@ public:
 			if (R21 == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
 
-			Float commonTerms = 1.0f;
+			if (sampleSpecular)
+				pdf *= 1 - probSpecular;
+
+			result *= (1 - R12) * (1 - R21);
 
 			if (BSDF::getMeasure(bRec.sampledType) == ESolidAngle) {
-				Float eta = m_extIOR / m_intIOR;
-				commonTerms = eta*eta * 
+				Float eta = m_extIOR / m_intIOR, etaSqr = eta*eta;
+				/* Solid angle compression & irradiance conversion factors */
+			
+				result *= etaSqr *
+					std::abs(Frame::cosTheta(bRec.wi) / Frame::cosTheta(wiPrime));
+				pdf *= etaSqr *
 					std::abs(Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime));
 			}
 
-			pdf *= (sampleSpecular ? (1 - probSpecular) : 1.0f) * commonTerms;
-			result *= (1 - R12) * (1 - R21) * commonTerms;
 
 			return result;
 		}

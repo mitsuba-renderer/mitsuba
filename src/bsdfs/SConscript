@@ -15,6 +15,7 @@ plugins += env.SharedLibrary('twosided', ['twosided.cpp'])
 plugins += env.SharedLibrary('mask', ['mask.cpp'])
 plugins += env.SharedLibrary('mixture', ['mixture.cpp'])
 plugins += env.SharedLibrary('coating', ['coating.cpp'])
+plugins += env.SharedLibrary('coatingold', ['coatingold.cpp'])
 plugins += env.SharedLibrary('bump', ['bump.cpp'])
 
 # Other materials

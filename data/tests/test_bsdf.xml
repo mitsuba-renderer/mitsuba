@@ -5,9 +5,9 @@
 	<!-- Test the coating model with the Hanrahan-Krueger model -->
 	<bsdf type="coating">
 		<bsdf type="hk">
-			<!--		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
+			<rgb name="sigmaA" value="0.1 0.2 0.3"/>
 			<rgb name="sigmaS" value="1"/>
-			<float name="thickness" value="20"/>-->
+			<float name="thickness" value="2"/>
 		</bsdf>
 	</bsdf>
 
