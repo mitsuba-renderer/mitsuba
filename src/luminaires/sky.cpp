@@ -102,6 +102,7 @@ MTS_NAMESPACE_BEGIN
  *     \tinyrendering{9}{preetham_turb_9}
  *     \vspace{-3mm}
  *     \caption{Sky light for different turbidity values (fixed time \& location)}
+ *     \vspace{-6mm}
  * }
  *
  * \emph{Turbidity}, the other important parameter, specifies the amount of 
@@ -147,6 +148,16 @@ MTS_NAMESPACE_BEGIN
  *     </transform>
  * </luminaire>
  * \end{xml}
+ *
+ * \renderings{
+ *    \medrendering{3 PM}{luminaire_sky_3pm}
+ *    \medrendering{6 PM}{luminaire_sky_6pm}
+ *    \medrendering{8 PM}{luminaire_sky_8pm}
+ *    \vspace{-3mm}
+ *    \caption{Renderings with the \pluginref{plastic} material
+ *    under default conditions}
+ *    \vspace{-6mm}
+ * }
  */
 class SkyLuminaire : public Luminaire {
 public:

@@ -92,6 +92,13 @@ MTS_NAMESPACE_BEGIN
  *     </bsdf>
  * </bsdf>
  * \end{xml}
+ *
+ * \renderings{
+ *     \rendering{Coated rough copper with a bump map applied on top}{bsdf_coating_coatedbump}
+ *     \rendering{Bump mapped rough copper with a coating on top}{bsdf_coating_bumpcoating}
+ *     \caption{Some interesting materials can be created simply by applying
+ *     Mitsuba's material modifiers in different orders.}
+ * }
  */
 class SmoothCoating : public BSDF {
 public:
