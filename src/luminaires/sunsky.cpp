@@ -19,11 +19,9 @@
 #include <mitsuba/render/scene.h>
 #include <mitsuba/core/plugin.h>
 
-#define SAMPLE_UNIFORMLY 1
-
 MTS_NAMESPACE_BEGIN
 
-/*!\plugin{sky}{Sun and sky luminaire}
+/*!\plugin{sunsky}{Sun and sky luminaire}
  * \parameters{
  *     \parameter{turbidity}{\Float}{
  *         This parameter determines the amount of scattering particles (or
@@ -81,6 +79,10 @@ public:
 	SunSkyLuminaire(const Properties &_props)
 		: Luminaire(_props) {
 		Properties props(_props);
+		props.setPluginName("sun");
+		m_sun = static_cast<Luminaire *>(
+			PluginManager::getInstance()->createObject(
+			MTS_CLASS(Luminaire), props));
 		props.setPluginName("sky");
 		m_sky = static_cast<Luminaire *>(
 			PluginManager::getInstance()->createObject(
@@ -96,16 +98,19 @@ public:
 
 	SunSkyLuminaire(Stream *stream, InstanceManager *manager)
 		: Luminaire(stream, manager) {
+		m_sun = static_cast<Luminaire *>(manager->getInstance(stream));
 		m_sky = static_cast<Luminaire *>(manager->getInstance(stream));
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) {
 		Luminaire::serialize(stream, manager);
+		manager->serialize(stream, m_sun.get());
 		manager->serialize(stream, m_sky.get());
 	}
 
 	void configure() {
 		Luminaire::configure();
+		m_sun->configure();
 		m_sky->configure();
 	}
 
@@ -115,6 +120,8 @@ public:
 
 	Luminaire *getElement(int i) {
 		if (i == 0)
+			return m_sun;
+		else if (i == 1)
 			return m_sky;
 		else
 			return NULL;
@@ -123,6 +130,7 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	Properties m_props;
+	ref<Luminaire> m_sun;
 	ref<Luminaire> m_sky;
 };
 
