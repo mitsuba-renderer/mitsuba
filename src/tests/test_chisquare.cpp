@@ -46,9 +46,9 @@ MTS_NAMESPACE_BEGIN
 class TestChiSquare : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
-	MTS_DECLARE_TEST(test03_Luminaire)
 	MTS_DECLARE_TEST(test01_BSDF)
 	MTS_DECLARE_TEST(test02_PhaseFunction)
+	MTS_DECLARE_TEST(test03_LuminaireDirect)
 	MTS_END_TESTCASE()
 
 	/**
@@ -300,7 +300,7 @@ public:
 		Float m_largestWeight;
 	};
 
-	/// Adapter to use luminaires in the chi-square test
+	/// Adapter to use direct illumination sampling in the chi-square test
 	class LuminaireAdapter {
 	public:
 		LuminaireAdapter(const Luminaire *luminaire, Sampler *sampler)
@@ -535,7 +535,7 @@ public:
 		delete progress;
 	}
 
-	void test03_Luminaire() {
+	void test03_LuminaireDirect() {
 		/* Load a set of luminaire instances to be tested from the following XML file */
 		ref<Scene> scene = loadScene("data/tests/test_luminaire.xml");
 		scene->initialize();
@@ -577,7 +577,6 @@ public:
 		}
 		Log(EInfo, "%i/%i luminaire checks succeeded", testCount-failureCount, testCount);
 	}
-
 };
 
 MTS_EXPORT_TESTCASE(TestChiSquare, "Chi-square test for various sampling functions")
