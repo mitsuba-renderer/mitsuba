@@ -378,8 +378,13 @@ bool Scene::sampleLuminaire(const Point &p, Float time,
 	luminaire->sample(p, lRec, sample);
 
 	if (lRec.pdf != 0) {
-		if (testVisibility && isOccluded(p, lRec.sRec.p, time)) 
-			return false;
+		if (testVisibility) {
+			Vector dir = lRec.sRec.p - p;
+			Float length = dir.length();
+			Ray ray(p, dir/length, Epsilon, length*(1-ShadowEpsilon), time);
+			if (m_kdtree->rayIntersect(ray))
+				return false;
+		}
 		lRec.pdf *= lumPdf;
 		lRec.value /= lRec.pdf;
 		lRec.luminaire = luminaire;
@@ -392,8 +397,10 @@ bool Scene::sampleLuminaire(const Point &p, Float time,
 Spectrum Scene::getTransmittance(const Point &p1, const Point &p2,
 		Float time, const Medium *medium, Sampler *sampler) const {
 	if (m_media.size() == 0) {
-		return Spectrum(isOccluded(p1, p2, time)
-			? 0.0f : 1.0f);
+		Vector dir = p2-p1;
+		Float length = dir.length();
+		Ray ray(p1, dir/length, Epsilon, length*(1-ShadowEpsilon), time);
+		return Spectrum(m_kdtree->rayIntersect(ray) ? 0.0f : 1.0f);
 	} else {
 		Vector d = p2 - p1;
 		Float remaining = d.length();
