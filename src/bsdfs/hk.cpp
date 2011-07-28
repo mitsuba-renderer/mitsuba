@@ -31,11 +31,11 @@ MTS_NAMESPACE_BEGIN
  *
  * \parameters{
  *     \parameter{material}{\String}{Name of a material preset, see 
- *           \tblref{medium-coefficients}.\!\default{\texttt{skin1}}}
- *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Scattering coefficient of the 
- *      layer. \default{based on \code{material}}}
- *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Absorption coefficient of the 
- *      layer. \default{based on \code{material}}}
+ *           \tblref{medium-coefficients}. \default{\texttt{skin1}}}
+ *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Specifies the scattering coefficient 
+ *      of the internal layer. \default{based on \code{material}}}
+ *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Specifies the absorption coefficient 
+ *      of the internal layer. \default{based on \code{material}}}
  *     \parameter{thickness}{\Float}{Denotes the thickness of the layer.
  *      Should be specified in inverse units of \code{sigmaA} and \code{sigmaS})\default{1}}
  *     \parameter{\Unnamed}{\Phase}{A nested phase function instance that represents 
@@ -43,7 +43,7 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * \renderings{
- *     \rendering{$\sigma_s=2$, $\sigma_a=1$, thickness$=0.1$}{bsdf_hk_1}
+ *     \rendering{$\sigma_s=2$, $\sigma_a=0.1$, thickness$=0.1$}{bsdf_hk_1}
  *     \rendering{\code{ketchup} material preset}{bsdf_hk_2}
  * }
  *
