@@ -372,10 +372,10 @@ std::string Properties::toString() const {
 				oss << el.v_point.toString();
 				break;
 			case ETransform:
-				oss << el.v_transform.toString();
+				oss << indent(el.v_transform.toString(), 2);
 				break;
 			case ESpectrum:
-				oss << el.v_spectrum.toString();
+				oss << indent(el.v_spectrum.toString(), 2);
 				break;
 			case EString:
 				oss << "\"" << el.v_string << "\"";
@@ -391,6 +391,20 @@ std::string Properties::toString() const {
 	oss << "  }" << endl
 		<< "]" << endl;
 	return oss.str();
+}
+
+void Properties::markQueried(const std::string &name) const {
+	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
+	if (it == m_elements.end())
+		SLog(EError, "Could not find parameter \"%s\"!", name.c_str());
+	it->second.queried = true;
+}
+
+bool Properties::wasQueried(const std::string &name) const {
+	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
+	if (it == m_elements.end())
+		SLog(EError, "Could not find parameter \"%s\"!", name.c_str());
+	return it->second.queried;
 }
 
 ConfigurableObject::ConfigurableObject(Stream *stream, InstanceManager *manager) 

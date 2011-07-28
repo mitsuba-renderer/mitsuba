@@ -20,8 +20,6 @@
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/plugin.h>
 
-#define SAMPLE_UNIFORMLY 1
-
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{sky}{Skylight luminaire}
@@ -152,11 +150,6 @@ MTS_NAMESPACE_BEGIN
  */
 class SkyLuminaire : public Luminaire {
 public:
-	/**
-	 * Creates a new Sky luminaire. The defaults values origate
-	 * from the sample code of Preetham et al. and create an over
-	 * head sun on a clear day.
-	 */
 	SkyLuminaire(const Properties &props)
 			: Luminaire(props) {
 		m_scale = props.getFloat("scale", Float(1.0));

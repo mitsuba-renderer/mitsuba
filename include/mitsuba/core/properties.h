@@ -150,6 +150,12 @@ public:
 			results.push_back((*it).first);
 	}
 
+	/// Manually mark a certain property as queried
+	void markQueried(const std::string &name) const;
+
+	/// Check if a certain property was queried
+	bool wasQueried(const std::string &name) const;
+
 	/// Verify if a value with the specified name exists
 	bool hasProperty(const std::string &name) const;
 
