@@ -56,12 +56,12 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{resolution}{\Integer}{Specifies the resolution of the precomputed
  *         image that is used to represent the sky environment map
  *         \default{256}}
- *     \parameter{scale}{\Float}{
+ *     \parameter{intensityScale}{\Float}{
  *         This parameter can be used to scale the the amount of illumination
  *         emitted by the sky luminaire, for instance to change its units. To
  *         switch from photometric ($\nicefrac{W}{m^2\cdot sr}$) 
  *         to arbitrary but convenient units in the $[0,1]$ range, set 
- *         this parameter to \code{1e-5}.\default{1}.
+ *         this parameter to \code{1e-5}. \default{1}
  *     }
  * }
  *
@@ -152,7 +152,7 @@ class SkyLuminaire : public Luminaire {
 public:
 	SkyLuminaire(const Properties &props)
 			: Luminaire(props) {
-		m_scale = props.getFloat("scale", Float(1.0));
+		m_intensityScale = props.getFloat("intensityScale", Float(1.0));
 		m_turbidity = props.getFloat("turbidity", Float(3.0));
 		if (m_turbidity < 1 || m_turbidity > 30)
 			Log(EError, "The turbidity parameter must be in the range [1,30]!");
@@ -192,7 +192,7 @@ public:
 
 	SkyLuminaire(Stream *stream, InstanceManager *manager) 
 		    : Luminaire(stream, manager) {
-		m_scale = stream->readFloat();
+		m_intensityScale = stream->readFloat();
 		m_turbidity = stream->readFloat();
 		m_thetaS = stream->readFloat();
 		m_phiS = stream->readFloat();
@@ -204,7 +204,7 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Luminaire::serialize(stream, manager);
-		stream->writeFloat(m_scale);
+		stream->writeFloat(m_intensityScale);
 		stream->writeFloat(m_turbidity);
 		stream->writeFloat(m_thetaS);
 		stream->writeFloat(m_phiS);
@@ -275,7 +275,7 @@ public:
 			Float theta = (i+.5f)*factor.x;
 			for (int j=0; j<phiBins; ++j) {
 				Float phi = (j+.5f)*factor.y;
-				Spectrum s = getSkySpectralRadiance(theta, phi) * m_scale;
+				Spectrum s = getSkySpectralRadiance(theta, phi) * m_intensityScale;
 				Float r, g, b;
 				s.toLinearRGB(r, g, b);
 				*target++ = r; *target++ = g;
@@ -361,7 +361,7 @@ public:
 			<< "  turbidity = " << m_turbidity << "," << endl 
 			<< "  sunPos = [theta: " << m_thetaS << ", phi: "<< m_phiS << "]," << endl 
 			<< "  zenithL = " << m_zenithL << "," << endl
-			<< "  scale = " << m_scale << endl
+			<< "  intensityScale = " << m_intensityScale << endl
 			<< "]";
 		return oss.str();
 	}
@@ -447,7 +447,7 @@ protected:
 	/* Environment map resolution */
 	int m_resolution;
 	/* Constant scale factor applied to the model */
-	Float m_scale;
+	Float m_intensityScale;
 	/* The turbidity of the sky ranges normally from 1 to 30.
 	   For clear skies values in range [2,6] are useful. */
 	Float m_turbidity;

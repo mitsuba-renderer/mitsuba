@@ -27,11 +27,18 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Basic environment map implementation without importance sampling.
- * Uses the scene's bounding sphere to simulate an infinitely far-away
- * light source. Expects an EXR image in latitude-longitude 
- * (equirectangular) format.
+/*!\plugin{envmap}{Environment map luminaire}
+ * \parameters{
+ *     \parameter{intensityScale}{\Float}{
+ *         This parameter can be used to scale the the amount of illumination
+ *         emitted by the luminaire. \default{1}
+ *     }
+ * }
+ *
+ * This plugin implements a simple environment map luminaire with 
+ * importance sampling. It uses the scene's bounding sphere to simulate an 
+ * infinitely far-away light source and expects an EXR image in 
+ * latitude-longitude (equirectangular) format.
  */
 class EnvMapLuminaire : public Luminaire {
 public:
