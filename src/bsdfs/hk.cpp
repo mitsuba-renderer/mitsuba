@@ -215,9 +215,8 @@ public:
 						((-tauD/std::abs(cosThetaI)).exp() - (-tauD/std::abs(cosThetaO)).exp());
 				}
 			}
+			return result * std::abs(cosThetaO);
 		}
-
-
 		return result;
 	}
 

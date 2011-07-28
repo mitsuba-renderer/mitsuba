@@ -255,8 +255,9 @@ public:
 			if (measure == ESolidAngle) {
 				Float eta = m_extIOR / m_intIOR;
 				/* Solid angle compression & irradiance conversion factors */
-				result *= eta * eta * std::abs(Frame::cosTheta(bRec.wi)
-				     / Frame::cosTheta(bRecInt.wi));
+				result *= eta * eta * 
+					  Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo)
+				   / (Frame::cosTheta(bRecInt.wi) * Frame::cosTheta(bRecInt.wo));
 			}
 
 			return result;
@@ -295,8 +296,8 @@ public:
 
 			if (measure == ESolidAngle) {
 				Float eta = m_extIOR / m_intIOR;
-				pdf *= eta * eta * std::abs(Frame::cosTheta(bRec.wo)
-			          / Frame::cosTheta(bRecInt.wo));
+				pdf *= eta * eta * Frame::cosTheta(bRec.wo)
+			          / Frame::cosTheta(bRecInt.wo);
 			}
 
 
@@ -371,13 +372,13 @@ public:
 			result *= (1 - R12) * (1 - R21);
 
 			if (BSDF::getMeasure(bRec.sampledType) == ESolidAngle) {
-				Float eta = m_extIOR / m_intIOR, etaSqr = eta*eta;
 				/* Solid angle compression & irradiance conversion factors */
-			
+				Float eta = m_extIOR / m_intIOR, etaSqr = eta*eta;
+				Float temp = Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime);
+	
 				result *= etaSqr *
-					std::abs(Frame::cosTheta(bRec.wi) / Frame::cosTheta(wiPrime));
-				pdf *= etaSqr *
-					std::abs(Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime));
+					Frame::cosTheta(bRec.wi) / Frame::cosTheta(wiPrime) * temp;
+				pdf *= etaSqr * temp;
 			}
 
 
