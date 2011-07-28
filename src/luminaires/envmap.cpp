@@ -160,7 +160,8 @@ public:
 
 		Vector sampledDirection(sinTheta * sinPhi, 
 			cosTheta, -sinTheta*cosPhi);
-		pdf = pdf / (m_pdfPixelSize.x * m_pdfPixelSize.y * sinTheta);
+		pdf = pdf / (m_pdfPixelSize.x * m_pdfPixelSize.y
+			* std::max(Epsilon, sinTheta));
 
 		return m_luminaireToWorld(-sampledDirection);
 	}
