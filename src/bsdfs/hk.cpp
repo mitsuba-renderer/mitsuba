@@ -21,6 +21,7 @@
 #include <mitsuba/render/phase.h>
 #include <mitsuba/render/medium.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/hw/basicshader.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -39,8 +40,8 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * This plugin provides an implementation of the Hanrahan-Krueger BSDF
- * \cite{Hanrahan1993Reflection}. This analytic model simulates single scattering
- * within a thin index-matched layer filled with a random medium.
+ * \cite{Hanrahan1993Reflection} for simulating single scattering in thin 
+ * index-matched layers filled with random scattering media. 
  * Apart from single scattering, the implementation also accounts for attenuated
  * light that passes through the medium without undergoing any scattering events.
  *
@@ -62,8 +63,10 @@ MTS_NAMESPACE_BEGIN
  * \end{xml}
  *
  * When used in conjuction with the \pluginref{coating} plugin, it is possible 
- * to correctly model refraction and reflection at the layer boundaries when 
- * the indices of refraction are mismatched:
+ * to model refraction and reflection at the layer boundaries when the indices 
+ * of refraction are mismatched. The combination of these two plugins
+ * reproduces the full model proposed in \cite{Hanrahan1993Reflection}.
+ *
  * \begin{xml}
  * <bsdf type="coating">
  *     <float name="extIOR" value="1.0"/>
@@ -91,23 +94,24 @@ class HanrahanKrueger : public BSDF {
 public:
 	HanrahanKrueger(const Properties &props) : BSDF(props) {
 		/* Scattering coefficient of the layer */
-		m_sigmaS = props.getSpectrum("sigmaS", Spectrum(2.0f)); 
+		m_sigmaS = new ConstantSpectrumTexture(
+			props.getSpectrum("sigmaS", Spectrum(2.0f))); 
 
 		/* Absorption coefficient of the layer */
-		m_sigmaA = props.getSpectrum("sigmaA", Spectrum(0.05f));  
+		m_sigmaA = new ConstantSpectrumTexture(
+			props.getSpectrum("sigmaA", Spectrum(0.05f)));
 
 		/* Slab thickness in inverse units of sigmaS and sigmaA */
-		m_d = props.getFloat("thickness", 1); 
+		m_thickness = props.getFloat("thickness", 1); 
 
 	}
 
 	HanrahanKrueger(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager) {
-		m_sigmaS = Spectrum(stream);
-		m_sigmaA = Spectrum(stream);
-		m_d      = stream->readFloat();
-		m_phase  = static_cast<PhaseFunction *>(manager->getInstance(stream));
-
+		m_phase = static_cast<PhaseFunction *>(manager->getInstance(stream));
+		m_sigmaS = static_cast<Texture *>(manager->getInstance(stream));
+		m_sigmaA = static_cast<Texture *>(manager->getInstance(stream));
+		m_thickness = stream->readFloat();
 		configure();
 	}
 
@@ -121,22 +125,25 @@ public:
 		m_components.push_back(EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler);
 		m_components.push_back(EDeltaTransmission  | EFrontSide | EBackSide | ECanUseSampler);
 
-		/* Precompute some helper quantities to save rendering cycles */
-		m_sigmaT = m_sigmaS + m_sigmaA;
-		m_tauD   = m_sigmaT * m_d;
-		/* Avoid divisions by 0 */
-		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
-			m_albedo[i] = m_sigmaT[i] > 0.0f ? (m_sigmaS[i]/m_sigmaT[i]) : 0.0f;
-
 		BSDF::configure();
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_albedo; /* Very approximate .. */
+		Spectrum sigmaA = m_sigmaA->getValue(its),
+				 sigmaS = m_sigmaS->getValue(its),
+				 sigmaT = sigmaA + sigmaS,
+				 albedo;
+		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
+			albedo[i] = sigmaT[i] > 0 ? (sigmaS[i]/sigmaT[i]) : (Float) 0;
+		return albedo; /* Very approximate .. */
 	}
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		Spectrum result(0.0f);
+		Spectrum sigmaA = m_sigmaA->getValue(bRec.its),
+				 sigmaS = m_sigmaS->getValue(bRec.its),
+				 sigmaT = sigmaA + sigmaS,
+				 tauD = sigmaT * m_thickness,
+				 result(0.0f);
 
 		if (measure == EDiscrete) {
 			/* Figure out if the specular transmission is specifically requested */
@@ -146,13 +153,18 @@ public:
 			/* Return the attenuated light if requested */
 			if (hasSpecularTransmission &&
 				std::abs(1+dot(bRec.wi, bRec.wo)) < Epsilon)
-				result = (-m_tauD/std::abs(Frame::cosTheta(bRec.wi))).exp();
+				result = (-tauD/std::abs(Frame::cosTheta(bRec.wi))).exp();
 		} else if (measure == ESolidAngle) {
 			/* Sample single scattering events */
 			bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 			bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
+		
+			Spectrum albedo;
+			for (int i = 0; i < SPECTRUM_SAMPLES; i++)
+				albedo[i] = sigmaT[i] > 0 ? (sigmaS[i]/sigmaT[i]) : (Float) 0;
+
 
 			const Float cosThetaI = Frame::cosTheta(bRec.wi),
 				        cosThetaO = Frame::cosTheta(bRec.wo),
@@ -169,8 +181,8 @@ public:
 				PhaseFunctionQueryRecord pRec(dummy,bRec.wi,bRec.wo); 
 				const Float phaseVal = m_phase->eval(pRec);
 
-				result = m_albedo * (phaseVal*cosThetaI/(cosThetaI+cosThetaO)) *
-					(Spectrum(1.0f)-((-m_tauD/std::abs(cosThetaI))+(-m_tauD/std::abs(cosThetaO))).exp());
+				result = albedo * (phaseVal*cosThetaI/(cosThetaI+cosThetaO)) *
+					(Spectrum(1.0f)-((-tauD/std::abs(cosThetaI))+(-tauD/std::abs(cosThetaO))).exp());
 			}
 
 			/* ==================================================================== */
@@ -185,12 +197,12 @@ public:
 				/* Hanrahan etal 93 Single Scattering transmission term */
 				if (std::abs(cosThetaI + cosThetaO) < Epsilon) {
 					/* avoid division by zero */
-					result += m_albedo * phaseVal*m_tauD/std::abs(cosThetaO) * 
-									((-m_tauD/std::abs(cosThetaO)).exp());
+					result += albedo * phaseVal*tauD/std::abs(cosThetaO) * 
+								((-tauD/std::abs(cosThetaO)).exp());
 				} else {
 					/* Guaranteed to be positive even if |cosThetaO| > |cosThetaI| */
-					result += m_albedo * phaseVal*std::abs(cosThetaI)/(std::abs(cosThetaI)-std::abs(cosThetaO)) * 
-						((-m_tauD/std::abs(cosThetaI)).exp() - (-m_tauD/std::abs(cosThetaO)).exp());
+					result += albedo * phaseVal*std::abs(cosThetaI)/(std::abs(cosThetaI)-std::abs(cosThetaO)) * 
+						((-tauD/std::abs(cosThetaI)).exp() - (-tauD/std::abs(cosThetaO)).exp());
 				}
 			}
 		}
@@ -205,7 +217,12 @@ public:
 		bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
 			&& (bRec.component == -1 || bRec.component == 2);
 
-		Float probSpecularTransmission = (-m_tauD/std::abs(Frame::cosTheta(bRec.wi))).exp().average();
+		const Spectrum sigmaA = m_sigmaA->getValue(bRec.its),
+				 sigmaS = m_sigmaS->getValue(bRec.its),
+				 sigmaT = sigmaA + sigmaS,
+				 tauD = sigmaT * m_thickness;
+
+		Float probSpecularTransmission = (-tauD/std::abs(Frame::cosTheta(bRec.wi))).exp().average();
 
 		if (measure == EDiscrete) {
 			bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
@@ -244,9 +261,14 @@ public:
 		bool hasSingleScattering = (bRec.typeMask & EGlossy)
 			&& (bRec.component == -1 || bRec.component == 0 || bRec.component == 1);
 
+		const Spectrum sigmaA = m_sigmaA->getValue(bRec.its),
+				 sigmaS = m_sigmaS->getValue(bRec.its),
+				 sigmaT = sigmaA + sigmaS,
+				 tauD = sigmaT * m_thickness;
+
 		/* Probability for a specular transmission is approximated by the average (per wavelength) 
 		 * probability of a photon exiting without a scattering event or an absorption event */
-		Float probSpecularTransmission = (-m_tauD/std::abs(Frame::cosTheta(bRec.wi))).exp().average();
+		Float probSpecularTransmission = (-tauD/std::abs(Frame::cosTheta(bRec.wi))).exp().average();
 
 		bool choseSpecularTransmission = hasSpecularTransmission;
 
@@ -314,10 +336,10 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
-		m_sigmaS.serialize(stream);
-		m_sigmaA.serialize(stream);
-		stream->writeFloat(m_d);
 		manager->serialize(stream, m_phase.get());
+		manager->serialize(stream, m_sigmaS.get());
+		manager->serialize(stream, m_sigmaA.get());
+		stream->writeFloat(m_thickness);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
@@ -335,13 +357,10 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "HanrahanKrueger[" << endl
-   			<< "  sigmaS = " << m_sigmaS.toString() << "," << std::endl
-   			<< "  sigmaA = " << m_sigmaA.toString() << "," << std::endl
-   			<< "  sigmaT = " << m_sigmaT.toString() << "," << std::endl
-   			<< "  albedo = " << m_albedo.toString() << "," << std::endl
-   			<< "  tauD = "   << m_tauD.toString()   << "," << std::endl
-   			<< "  d = "      << m_d                 << "," << std::endl
-   			<< "  phase = "  << m_phase->toString() << std::endl
+   			<< "  sigmaS = " << indent(m_sigmaS->toString()) << "," << endl
+   			<< "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
+   			<< "  phase = " << indent(m_phase->toString()) << "," << endl
+   			<< "  thickness = " << m_thickness << endl
 			<< "]";
 		return oss.str();
 	}
@@ -349,14 +368,9 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	ref<PhaseFunction> m_phase;
-	Spectrum m_sigmaS, m_sigmaA;
-	Float m_d;
-
-	/* These values should not be serialized, they are evaluated 
-	 * in configure() 
-	 */
-	Spectrum m_sigmaT, m_tauD, m_albedo; 
-
+	ref<Texture> m_sigmaS;
+	ref<Texture> m_sigmaA;
+	Float m_thickness;
 };
 
 MTS_IMPLEMENT_CLASS_S(HanrahanKrueger, false, BSDF)
