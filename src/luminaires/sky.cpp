@@ -17,9 +17,8 @@
 */
 
 #include <mitsuba/render/scene.h>
-#include <mitsuba/core/util.h>
 #include <mitsuba/core/bitmap.h>
-#include <mitsuba/core/fstream.h>
+#include <mitsuba/core/plugin.h>
 
 #define SAMPLE_UNIFORMLY 1
 
@@ -141,6 +140,15 @@ MTS_NAMESPACE_BEGIN
  * and the moon dominate. The model also currently does not handle cloudy skies.
  * The implementation in Mitsuba is based on code by Preetham et al. It was
  * ported by Tom Kazimiers.
+ *
+ * \begin{xml}[caption={Rotating the sky luminaire for scenes that use $Z$ as
+ * the ``up'' direction}, label=lst:sky-up]
+ * <luminaire type="sky">
+ *     <transform name="toWorld">
+ *         <rotate x="1" angle="90"/>
+ *     </transform>
+ * </luminaire>
+ * \end{xml}
  */
 class SkyLuminaire : public Luminaire {
 public:
@@ -151,12 +159,6 @@ public:
 	 */
 	SkyLuminaire(const Properties &props)
 			: Luminaire(props) {
-		/* Transformation from the luminaire's local coordinates to
-		 *  world coordiantes */
-		m_luminaireToWorld = 
-			props.getTransform("toWorld", Transform());
-		m_worldToLuminaire = m_luminaireToWorld.inverse();
-
 		m_scale = props.getFloat("scale", Float(1.0));
 		m_turbidity = props.getFloat("turbidity", Float(3.0));
 		if (m_turbidity < 1 || m_turbidity > 30)
@@ -242,7 +244,6 @@ public:
 
 		m_zenithL = (4.0453f * m_turbidity - 4.9710f) * std::tan(chi)
 			- 0.2155f * m_turbidity + 2.4192f;
-		cout << toString() << endl;
 
 		/* Evaluate quadratic polynomials to find the Perez sky
 		 * model coefficients for the x, y and luminance components */
@@ -263,12 +264,20 @@ public:
 		m_perezY[2] = -0.00792f * m_turbidity + 0.21023f;
 		m_perezY[3] = -0.04405f * m_turbidity - 1.65369f;
 		m_perezY[4] = -0.01092f * m_turbidity + 0.05291f;
+	}
+	
+	bool isCompound() const {
+		return true;
+	}
 
+	Luminaire *getElement(int i) {
+		if (i != 0)
+			return NULL;
 		int thetaBins = m_resolution, phiBins = m_resolution*2;
 
 		ref<Bitmap> bitmap = new Bitmap(phiBins, thetaBins, 128);
-		bitmap->clear();
 		Point2 factor(M_PI / thetaBins, (2*M_PI) / phiBins);
+		float *target = bitmap->getFloatData();
 		for (int i=0; i<thetaBins; ++i) {
 			Float theta = (i+.5f)*factor.x;
 			for (int j=0; j<phiBins; ++j) {
@@ -276,18 +285,31 @@ public:
 				Spectrum s = getSkySpectralRadiance(theta, phi) * m_scale;
 				Float r, g, b;
 				s.toLinearRGB(r, g, b);
-				bitmap->getFloatData()[(j+i*phiBins)*4 + 0] = r;
-				bitmap->getFloatData()[(j+i*phiBins)*4 + 1] = g;
-				bitmap->getFloatData()[(j+i*phiBins)*4 + 2] = b;
-				bitmap->getFloatData()[(j+i*phiBins)*4 + 3] = 1;
+				*target++ = r; *target++ = g;
+				*target++ = b; *target++ = 1;
 			}
 		}
+
+		/* Instantiate a nested envmap plugin */
+		Properties props("envmap");
+		Properties::Data bitmapData;
+		bitmapData.ptr = (uint8_t *) bitmap.get();
+		bitmapData.size = sizeof(Bitmap);
+		props.setData("bitmap", bitmapData);
+		props.setTransform("toWorld", m_luminaireToWorld);
+		props.setFloat("samplingWeight", m_samplingWeight);
+		Luminaire *luminaire = static_cast<Luminaire *>(
+			PluginManager::getInstance()->createObject(
+			MTS_CLASS(Luminaire), props));
+		luminaire->configure();
+		return luminaire;
 	}
 
 	Vector toSphere(Float theta, Float phi) const {
 		/* Spherical-to-cartesian coordinate mapping with 
 		   theta=0 => Y=1 */
-		Float cosTheta = std::cos(theta), sinTheta = std::sin(theta),
+		Float cosTheta = std::cos(theta), 
+			  sinTheta = std::sqrt(1-cosTheta*cosTheta),
 			  cosPhi = std::cos(phi), sinPhi = std::sin(phi);
 		return m_luminaireToWorld(Vector(
 			sinTheta * sinPhi, cosTheta, -sinTheta*cosPhi));
@@ -340,149 +362,6 @@ public:
 		m_phiS = sunPos.y;
 	}
 
-	void preprocess(const Scene *scene) {
-		/* Get the scene's bounding sphere and slightly enlarge it */
-		m_bsphere = scene->getBSphere();
-		m_bsphere.radius *= 1.01f;
-	}
-
-	Spectrum getPower() const {
-		/* TODO */
-		return m_average * (M_PI * 4 * M_PI
-		* m_bsphere.radius * m_bsphere.radius);
-	}
-
-	inline Spectrum Le(const Vector &direction) const {
-		/* Compute sky light radiance for direction */
-		Vector d = normalize(m_worldToLuminaire(direction));
-		const Point2 sphCoords = fromSphere(d);
-		return getSkySpectralRadiance(sphCoords.x, sphCoords.y) * m_scale;
-	}
-
-	inline Spectrum Le(const Ray &ray) const {
-		return Le(normalize(ray.d));
-	}
-
-	Spectrum Le(const LuminaireSamplingRecord &lRec) const {
-		return Le(-lRec.d);
-	}
-
-	inline void sample(const Point &p, LuminaireSamplingRecord &lRec,
-			const Point2 &sample) const {
-		lRec.d = sampleDirection(sample, lRec.pdf, lRec.value);
-		lRec.sRec.p = p - lRec.d * (2 * m_bsphere.radius);
-	}
-
-	void sample(const Intersection &its, LuminaireSamplingRecord &lRec,
-		const Point2 &sample) const {
-		SkyLuminaire::sample(its.p, lRec, sample);
-	}
-
-	inline Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
-#if defined(SAMPLE_UNIFORMLY)
-		return 1.0f / (4 * M_PI);
-#endif
-	}
-
-	Float pdf(const Intersection &its, const LuminaireSamplingRecord &lRec, bool delta) const {
-		return SkyLuminaire::pdf(its.p, lRec, delta);
-	}
-
-	/**
-	 * This is the tricky bit - we want to sample a ray that
-	 * has uniform density over the set of all rays passing
-	 * through the scene.
-	 * For more detail, see "Using low-discrepancy sequences and 
-	 * the Crofton formula to compute surface areas of geometric models"
-	 * by Li, X. and Wang, W. and Martin, R.R. and Bowyer, A. 
-	 * (Computer-Aided Design vol 35, #9, pp. 771--782)
-	 */
-	void sampleEmission(EmissionRecord &eRec, 
-		const Point2 &sample1, const Point2 &sample2) const {
-		Assert(eRec.type == EmissionRecord::ENormal);
-		/* Chord model - generate the ray passing through two uniformly
-		   distributed points on a sphere containing the scene */
-		Vector d = squareToSphere(sample1);
-		eRec.sRec.p = m_bsphere.center + d * m_bsphere.radius;
-		eRec.sRec.n = Normal(-d);
-		Point p2 = m_bsphere.center + squareToSphere(sample2) * m_bsphere.radius;
-		eRec.d = p2 - eRec.sRec.p;
-		Float length = eRec.d.length();
-
-		if (length == 0) {
-			eRec.value = Spectrum(0.0f);
-			eRec.pdfArea = eRec.pdfDir = 1.0f;
-			return;
-		}
-
-		eRec.d /= length;
-		eRec.pdfArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
-		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
-		eRec.value = Le(-eRec.d);
-	}
-
-	void sampleEmissionArea(EmissionRecord &eRec, const Point2 &sample) const {
-		if (eRec.type == EmissionRecord::ENormal) {
-			Vector d = squareToSphere(sample);
-			eRec.sRec.p = m_bsphere.center + d * m_bsphere.radius;
-			eRec.sRec.n = Normal(-d);
-			eRec.pdfArea = 1.0f / (4 * M_PI * m_bsphere.radius * m_bsphere.radius);
-			eRec.value = Spectrum(M_PI);
-		} else {
-			/* Preview mode, which is more suitable for VPL-based rendering: approximate 
-			   the infinitely far-away source with set of diffuse point sources */
-			const Float radius = m_bsphere.radius * 1.5f;
-			Vector d = squareToSphere(sample);
-			eRec.sRec.p = m_bsphere.center + d * radius;
-			eRec.sRec.n = Normal(-d);
-			eRec.pdfArea = 1.0f / (4 * M_PI * radius * radius);
-			eRec.value = Le(d) * M_PI;
-		}
-	}
-
-	Spectrum sampleEmissionDirection(EmissionRecord &eRec, const Point2 &sample) const {
-		Float radius = m_bsphere.radius;
-		if (eRec.type == EmissionRecord::EPreview) 
-			radius *= 1.5f;
-		Point p2 = m_bsphere.center + squareToSphere(sample) * radius;
-		eRec.d = p2 - eRec.sRec.p;
-		Float length = eRec.d.length();
-
-		if (length == 0.0f) {
-			eRec.pdfDir = 1.0f;
-			return Spectrum(0.0f);
-		}
-
-		eRec.d /= length;
-		eRec.pdfDir = INV_PI * dot(eRec.sRec.n, eRec.d);
-		if (eRec.type == EmissionRecord::ENormal)
-			return Le(-eRec.d) * INV_PI;
-		else
-			return Spectrum(INV_PI);
-	}
-    
-	Spectrum evalDirection(const EmissionRecord &eRec) const {
-		if (eRec.type == EmissionRecord::ENormal)
-			return Le(-eRec.d) * INV_PI;
-		else
-			return Spectrum(INV_PI);
-	}
-
-	Spectrum evalArea(const EmissionRecord &eRec) const {
-		Assert(eRec.type == EmissionRecord::ENormal);
-		return Spectrum(M_PI);
-	}
-
-	Spectrum f(const EmissionRecord &eRec) const {
-		if (eRec.type == EmissionRecord::ENormal)
-			return Le(-eRec.d) * INV_PI;
-		else
-			return Spectrum(INV_PI);
-	}
-
-	void pdfEmission(EmissionRecord &eRec, bool delta) const {
-	}
-
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SkyLuminaire[" << endl
@@ -493,20 +372,6 @@ public:
 			<< "]";
 		return oss.str();
 	}
-
-	bool isBackgroundLuminaire() const {
-		return true;
-	}
-
-	Vector sampleDirection(Point2 sample, Float &pdf, Spectrum &value) const {
-#if defined(SAMPLE_UNIFORMLY)
-		pdf = 1.0f / (4*M_PI);
-		Vector d = squareToSphere(sample);
-		value = Le(-d);
-		return d;
-#endif
-	}
-
 private:
 	/**
 	 * Calculates the angle between two spherical cooridnates. All
@@ -586,9 +451,9 @@ private:
 
 	MTS_DECLARE_CLASS()
 protected:
-	Spectrum m_average;
-	BSphere m_bsphere;
+	/* Environment map resolution */
 	int m_resolution;
+	/* Constant scale factor applied to the model */
 	Float m_scale;
 	/* The turbidity of the sky ranges normally from 1 to 30.
 	   For clear skies values in range [2,6] are useful. */
@@ -606,6 +471,6 @@ protected:
 };
 
 MTS_IMPLEMENT_CLASS_S(SkyLuminaire, false, Luminaire)
-MTS_EXPORT_PLUGIN(SkyLuminaire, "Sky luminaire");
+MTS_EXPORT_PLUGIN(SkyLuminaire, "Preetham sky luminaire");
 MTS_NAMESPACE_END
 

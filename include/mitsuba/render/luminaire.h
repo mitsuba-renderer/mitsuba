@@ -157,7 +157,7 @@ public:
 	 * \brief Return an estimate of the total amount of power emitted 
 	 * by this luminaire.
 	 */
-	virtual Spectrum getPower() const = 0;
+	virtual Spectrum getPower() const;
 
 	/// Is this luminaire intersectable (e.g. can it be encountered by a tracing a ray)?
 	inline bool isIntersectable() const { return m_intersectable; }
@@ -194,7 +194,7 @@ public:
 	 * Sampling is ideally done with respect to solid angle at \c p.
 	 */
 	virtual void sample(const Point &p, 
-		LuminaireSamplingRecord &lRec, const Point2 &sample) const = 0;
+		LuminaireSamplingRecord &lRec, const Point2 &sample) const;
 
 	/**
 	 * \brief Calculate the solid angle density for generating this sample
@@ -204,7 +204,7 @@ public:
 	 * are considered in the query. Otherwise, they are left out.
 	 */
 	virtual Float pdf(const Point &p, 
-		const LuminaireSamplingRecord &lRec, bool delta) const = 0;
+		const LuminaireSamplingRecord &lRec, bool delta) const;
 	
 	//! @}
 	// =============================================================
@@ -225,7 +225,7 @@ public:
 	 * of the spatial and directional sampling densities.
 	 */
 	virtual void sampleEmission(EmissionRecord &eRec,
-		const Point2& areaSample, const Point2 &dirSample) const = 0;
+		const Point2& areaSample, const Point2 &dirSample) const;
 
 	/**
 	 * \brief Sample only the spatial part of the emission sampling strategy
@@ -239,7 +239,7 @@ public:
 	 * spatially dependent emittance component will be stored in \c eRec.
 	 */
 	virtual void sampleEmissionArea(EmissionRecord &lRec,
-			const Point2 &sample) const = 0;
+			const Point2 &sample) const;
 
 	/**
 	 * \brief Sample only the directional part of the emission sampling strategy
@@ -252,7 +252,7 @@ public:
 	 * component of the radiant emittance obtained in \ref sampleEmissionArea.
 	 */
 	virtual Spectrum sampleEmissionDirection(EmissionRecord &lRec, 
-			const Point2 &sample) const = 0;
+			const Point2 &sample) const;
 
 	/**
 	 * \brief Given an emitted particle, populate the emission record with the 
@@ -261,13 +261,13 @@ public:
 	 * When \c delta is set to true, only components with a Dirac delta density
 	 * are considered in the query. Otherwise, they are left out.
 	 */
-	virtual void pdfEmission(EmissionRecord &eRec, bool delta) const = 0;
+	virtual void pdfEmission(EmissionRecord &eRec, bool delta) const;
 
 	/**
 	 * \brief Evaluate the spatial component of the radiant emittance at a
 	 * point on the luminaire (ignoring any directional variations).
 	 */
-	virtual Spectrum evalArea(const EmissionRecord &eRec) const = 0;
+	virtual Spectrum evalArea(const EmissionRecord &eRec) const;
 
 	/**
 	 * \brief Evaluate the directional emission distribution of this light source
@@ -275,7 +275,7 @@ public:
 	 *
 	 * This function is normalized so that it integrates to one.
 	 */
-	virtual Spectrum evalDirection(const EmissionRecord &eRec) const = 0;
+	virtual Spectrum evalDirection(const EmissionRecord &eRec) const;
 
 	//! @}
 	// =============================================================

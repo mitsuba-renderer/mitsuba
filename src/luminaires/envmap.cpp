@@ -25,8 +25,6 @@
 #include <mitsuba/hw/gputexture.h>
 #include <mitsuba/hw/gpuprogram.h>
 
-//#define SAMPLE_UNIFORMLY 1
-
 MTS_NAMESPACE_BEGIN
 
 /**
@@ -39,10 +37,17 @@ class EnvMapLuminaire : public Luminaire {
 public:
 	EnvMapLuminaire(const Properties &props) : Luminaire(props) {
 		m_intensityScale = props.getFloat("intensityScale", 1);
-		m_path = Thread::getThread()->getFileResolver()->resolve(props.getString("filename"));
-		Log(EInfo, "Loading environment map \"%s\"", m_path.leaf().c_str());
-		ref<Stream> is = new FileStream(m_path, FileStream::EReadOnly);
-		ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, is);
+		ref<Bitmap> bitmap;
+
+		if (props.hasProperty("bitmap")) {
+			bitmap = reinterpret_cast<Bitmap *>(props.getData("bitmap").ptr);
+			m_path = "<unknown>";
+		} else {
+			m_path = Thread::getThread()->getFileResolver()->resolve(props.getString("filename"));
+			Log(EInfo, "Loading environment map \"%s\"", m_path.leaf().c_str());
+			ref<Stream> is = new FileStream(m_path, FileStream::EReadOnly);
+			bitmap = new Bitmap(Bitmap::EEXR, is);
+		}
 
 		m_mipmap = MIPMap::fromBitmap(bitmap, MIPMap::ETrilinear,
 				MIPMap::ERepeat, 0.0f, Spectrum::EIlluminant);
@@ -97,9 +102,11 @@ public:
 	void configure() {
 		int mipMapLevel = std::min(3, m_mipmap->getLevels()-1);
 		m_pdfResolution = m_mipmap->getLevelResolution(mipMapLevel);
-		m_pdfInvResolution = Vector2(1.0f / m_pdfResolution.x, 1.0f / m_pdfResolution.y);
+		m_pdfInvResolution = Vector2(1.0f / m_pdfResolution.x, 
+				1.0f / m_pdfResolution.y);
 
-		Log(EDebug, "Creating a %ix%i sampling density", m_pdfResolution.x, m_pdfResolution.y);
+		Log(EDebug, "Creating a %ix%i sampling density", 
+				m_pdfResolution.x, m_pdfResolution.y);
 		const Spectrum *coarseImage = m_mipmap->getImageData(mipMapLevel);
 		int index = 0;
 		m_pdf = DiscretePDF(m_pdfResolution.x * m_pdfResolution.y);
@@ -133,35 +140,45 @@ public:
 		return m_average * m_surfaceArea * M_PI;
 	}
 
+	/// Sample an emission direction
 	Vector sampleDirection(Point2 sample, Float &pdf, Spectrum &value) const {
-#if defined(SAMPLE_UNIFORMLY)
-		pdf = 1.0f / (4*M_PI);
-		Vector d = squareToSphere(sample);
-		value = Le(-d);
-		return d;
-#else
 		int idx = m_pdf.sampleReuse(sample.x, pdf);
 		int row = idx / m_pdfResolution.x;
 		int col = idx - m_pdfResolution.x * row;
 		Float x = col + sample.x, y = row + sample.y;
-		value = m_mipmap->triangle(0, x * m_pdfInvResolution.x, y * m_pdfInvResolution.y) 
-			* m_intensityScale;
-		Float theta = m_pdfPixelSize.y * y, phi = m_pdfPixelSize.x * x - M_PI;
-		Float sinTheta = std::sin(theta), cosTheta = std::cos(theta);
-		Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
+		value = m_mipmap->triangle(0, x * m_pdfInvResolution.x, 
+			y * m_pdfInvResolution.y) * m_intensityScale;
+		Float theta = m_pdfPixelSize.y * y,
+			  phi   = m_pdfPixelSize.x * x;
+
+		/* Spherical-to-cartesian coordinate mapping with 
+		   theta=0 => Y=1 */
+		Float cosTheta = std::cos(theta),
+			  sinTheta = std::sqrt(1-cosTheta*cosTheta),
+			  cosPhi = std::cos(phi),
+			  sinPhi = std::sin(phi);
+
+		Vector sampledDirection(sinTheta * sinPhi, 
+			cosTheta, -sinTheta*cosPhi);
 		pdf = pdf / (m_pdfPixelSize.x * m_pdfPixelSize.y * sinTheta);
 
-		return m_luminaireToWorld(Vector(
-			-sinTheta * sinPhi, -cosTheta, sinTheta*cosPhi));
-#endif
+		return m_luminaireToWorld(-sampledDirection);
+	}
+
+	Point2 fromSphere(const Vector &d) const {
+		Float u = std::atan2(d.x,-d.z) * (0.5f * INV_PI),
+			  v = std::acos(std::max((Float) -1.0f, 
+				  std::min((Float) 1.0f, d.y))) * INV_PI;
+		if (u < 0)
+			u += 1;
+		return Point2(u, v);
 	}
 
 	inline Spectrum Le(const Vector &direction) const {
-		const Vector d = m_worldToLuminaire(direction);
-		const Float u = .5f * (1 + std::atan2(d.x,-d.z) / M_PI);
-		const Float v = std::acos(std::max((Float) -1.0f, 
-					std::min((Float) 1.0f, d.y))) / M_PI;
-		return m_mipmap->triangle(0, u, v) * m_intensityScale;
+		Point2 uv = fromSphere(m_worldToLuminaire(direction));
+
+		return m_mipmap->triangle(0, uv.x, uv.y)
+			* m_intensityScale;
 	}
 
 	inline Spectrum Le(const Ray &ray) const {
@@ -183,21 +200,17 @@ public:
 	}
 
 	Float pdf(const Point &p, const LuminaireSamplingRecord &lRec, bool delta) const {
-#if defined(SAMPLE_UNIFORMLY)
-		return 1.0f / (4*M_PI);
-#else
-		const Vector d = m_worldToLuminaire(-lRec.d);
-		const Float x = .5f * (1 + std::atan2(d.x,-d.z) / M_PI) * m_pdfResolution.x;
-		const Float y = std::acos(std::max((Float) -1.0f, std::min((Float) 1.0f, d.y))) 
-			/ M_PI * m_pdfResolution.y;
-		int xPos = std::min(std::max((int) std::floor(x), 0), m_pdfResolution.x-1);
-		int yPos = std::min(std::max((int) std::floor(y), 0), m_pdfResolution.y-1);
+		const Vector d = m_worldToLuminaire(-lRec.d);	
+		Point2 xy = fromSphere(d);
+		xy.x *= m_pdfResolution.x;
+		xy.y *= m_pdfResolution.y;
+		int xPos = std::min(std::max((int) std::floor(xy.x), 0), m_pdfResolution.x-1);
+		int yPos = std::min(std::max((int) std::floor(xy.y), 0), m_pdfResolution.y-1);
 
 		Float pdf = m_pdf[xPos + yPos * m_pdfResolution.x];
 		Float sinTheta = std::sqrt(std::max((Float) Epsilon, 1-d.y*d.y));
 
 		return pdf / (m_pdfPixelSize.x * m_pdfPixelSize.y * sinTheta);
-#endif
 	}
 
 	/**
@@ -386,7 +399,9 @@ public:
 			<< endl
 			<< "vec3 " << evalName << "_background(vec3 wo) {" << endl
 			<< "   vec3 d = normalize((" << evalName << "_worldToLuminaire * vec4(wo, 0.0)).xyz);" << endl
-			<< "   float u = 0.5 * (1.0 + atan(d.x, -d.z) * 0.318309);" << endl
+			<< "   float u = atan(d.x, -d.z) * 0.15915;" << endl
+			<< "   if (u < 0.0)" << endl
+			<< "       u += 1.0;" << endl
 			<< "   float v = acos(max(-1.0, min(1.0, d.y))) * 0.318309;" << endl
 			// The following is not very elegant, but necessary to trick GLSL
 			// into doing correct texture filtering across the u=0 to u=1 seam.

@@ -103,6 +103,61 @@ Luminaire *Luminaire::getElement(int i) {
 	return NULL;
 }
 
+void Luminaire::sampleEmission(EmissionRecord &eRec,
+	const Point2& areaSample, const Point2 &dirSample) const {
+	Log(EError, "%s::areaDensity(): not implemented!", 
+			getClass()->getName().c_str());
+}
+
+void Luminaire::sampleEmissionArea(EmissionRecord &lRec,
+	const Point2 &sample) const {
+	Log(EError, "%s::sampleEmissionArea(): not implemented!", 
+			getClass()->getName().c_str());
+}
+
+Spectrum Luminaire::sampleEmissionDirection(EmissionRecord &lRec, 
+	const Point2 &sample) const {
+	Log(EError, "%s::sampleEmissionDirection(): not implemented!", 
+			getClass()->getName().c_str());
+	return Spectrum(0.0f);
+}
+
+void Luminaire::pdfEmission(EmissionRecord &eRec, bool delta) const {
+	Log(EError, "%s::pdfEmission(): not implemented!", 
+			getClass()->getName().c_str());
+}
+
+Spectrum Luminaire::evalArea(const EmissionRecord &eRec) const {
+	Log(EError, "%s::evalArea(): not implemented!", 
+			getClass()->getName().c_str());
+	return Spectrum(0.0f);
+}
+
+Spectrum Luminaire::evalDirection(const EmissionRecord &eRec) const {
+	Log(EError, "%s::evalDirection(): not implemented!", 
+			getClass()->getName().c_str());
+	return Spectrum(0.0f);
+}
+
+void Luminaire::sample(const Point &p, 
+	LuminaireSamplingRecord &lRec, const Point2 &sample) const {
+	Log(EError, "%s::sample(): not implemented!", 
+			getClass()->getName().c_str());
+}
+
+Float Luminaire::pdf(const Point &p, 
+		const LuminaireSamplingRecord &lRec, bool delta) const {
+	Log(EError, "%s::pdf(): not implemented!", 
+			getClass()->getName().c_str());
+	return 0.0f;
+}
+
+Spectrum Luminaire::getPower() const {
+	Log(EError, "%s::getPower(): not implemented!", 
+			getClass()->getName().c_str());
+	return Spectrum(0.0f);
+}
+
 std::string EmissionRecord::toString() const {
 	std::ostringstream oss;
 	oss << "EmissionRecord[" << std::endl

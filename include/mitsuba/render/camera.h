@@ -55,17 +55,17 @@ public:
 	 * Returns false if the computed position is not visible through 
 	 * the film's crop window
 	 */
-	virtual bool positionToSample(const Point &p, Point2 &sample) const = 0;
+	virtual bool positionToSample(const Point &p, Point2 &sample) const;
 
 	/// Does generateRay() expect a proper lens sample?
-	virtual bool needsLensSample() const = 0;
+	virtual bool needsLensSample() const;
 	
 	/// Does generateRay() expect a proper time sample?
 	inline bool needsTimeSample() const { return m_shutterOpenTime > 0; }
 
 	/// Return the time value of the shutter opening event
 	inline Float getShutterOpen() const { return m_shutterOpen; }
-	
+
 	/// Return the length, for which the shutter remains open
 	inline Float getShutterOpenTime() const { return m_shutterOpenTime; }
 
@@ -114,7 +114,7 @@ public:
 	 * Calculate the pixel area density at a position on the image plane.
 	 * Returns zero for cameras with an infinitesimal sensor (e.g. pinhole cameras).
 	 */
-	virtual Float areaDensity(const Point2 &p) const = 0;
+	virtual Float areaDensity(const Point2 &p) const;
 
 	//! @}
 	// =============================================================
@@ -174,6 +174,10 @@ public:
 
 	/// Return the properties of this camera 
 	inline const Properties &getProperties() const { return m_properties; }
+
+	/** \brief Configure the object (called _once_ after construction
+	   and addition of all child ConfigurableObjects. */
+	virtual void configure();
 
 	//! @}
 	// =============================================================

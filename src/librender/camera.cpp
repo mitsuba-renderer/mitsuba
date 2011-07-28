@@ -56,6 +56,23 @@ void Camera::setParent(ConfigurableObject *parent) {
 	// the camera subtree needs to be serialized by itself.
 }
 
+void Camera::configure() {
+	if (m_film == NULL) {
+		/* Instantiate an EXR film by default */
+		m_film = static_cast<Film*> (PluginManager::getInstance()->
+			createObject(MTS_CLASS(Film), Properties("exrfilm")));
+		m_film->configure();
+	}
+	if (m_sampler == NULL) {
+		/* No sampler has been selected - load an independent filter with 4 samples/pixel by default */
+		Properties props("independent");
+		props.setInteger("sampleCount", 4);
+		m_sampler = static_cast<Sampler *> (PluginManager::getInstance()->
+				createObject(MTS_CLASS(Sampler), props));
+		m_sampler->configure();
+	}
+}
+
 Point Camera::getPosition(const Point2 &sample) const {
 	return m_position; // default impl.
 }
@@ -107,6 +124,22 @@ void Camera::addChild(const std::string &name, ConfigurableObject *child) {
 	}
 }
 
+bool Camera::positionToSample(const Point &p, Point2 &sample) const {
+	Log(EError, "%s::positionToSample(): not implemented!", 
+			getClass()->getName().c_str());
+	return false;
+}
+
+Float Camera::areaDensity(const Point2 &p) const {
+	Log(EError, "%s::areaDensity(): not implemented!", 
+			getClass()->getName().c_str());
+	return 0.0f;
+}
+
+bool Camera::needsLensSample() const {
+	return false;
+}
+
 ProjectiveCamera::ProjectiveCamera(Stream *stream, InstanceManager *manager)
  : Camera(stream, manager) {
 	m_cameraToScreen = Transform(stream);
@@ -124,21 +157,7 @@ ProjectiveCamera::ProjectiveCamera(const Properties &props) : Camera(props) {
 }
 
 void ProjectiveCamera::configure() {
-	if (m_film == NULL) {
-		/* Instantiate an EXR film by default */
-		m_film = static_cast<Film*> (PluginManager::getInstance()->
-			createObject(MTS_CLASS(Film), Properties("exrfilm")));
-		m_film->configure();
-	}
-
-	if (m_sampler == NULL) {
-		/* No sampler has been selected - load an independent filter with 4 samples/pixel by default */
-		Properties props("independent");
-		props.setInteger("sampleCount", 4);
-		m_sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-				createObject(MTS_CLASS(Sampler), props));
-		m_sampler->configure();
-	}
+	Camera::configure();
 	m_aspect = (Float) m_film->getSize().x / (Float) m_film->getSize().y;
 }
 

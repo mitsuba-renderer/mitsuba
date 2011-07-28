@@ -554,13 +554,13 @@ public:
 			LuminaireAdapter adapter(luminaire, sampler);
 			ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, 1);
 			chiSqr->setLogLevel(EDebug);
-			chiSqr->dumpTables("test.m");
 
 			// Initialize the tables used by the chi-square test
 			chiSqr->fill(
 				boost::bind(&LuminaireAdapter::generateSample, &adapter),
 				boost::bind(&LuminaireAdapter::pdf, &adapter, _1, _2)
 			);
+			chiSqr->dumpTables("test.m");
 
 			// (the following assumes that the distribution has 1 parameter, e.g. exponent value)
 			ChiSquare::ETestResult result = chiSqr->runTest(SIGNIFICANCE_LEVEL);
