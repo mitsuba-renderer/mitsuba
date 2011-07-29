@@ -18,6 +18,9 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/bitmap.h>
+#include <mitsuba/core/fstream.h>
+#include "sun.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -80,38 +83,64 @@ public:
 		: Luminaire(_props) {
 		Properties props(_props);
 		props.setPluginName("sun");
-		m_sun = static_cast<Luminaire *>(
+		ref<Luminaire> sun = static_cast<Luminaire *>(
 			PluginManager::getInstance()->createObject(
 			MTS_CLASS(Luminaire), props));
+		sun->configure();
 		props.setPluginName("sky");
-		m_sky = static_cast<Luminaire *>(
+		ref<Luminaire> sky = static_cast<Luminaire *>(
 			PluginManager::getInstance()->createObject(
 			MTS_CLASS(Luminaire), props));
+		sky->configure();
+	
+		int resolution = props.getInteger("resolution", 512);
+		int thetaBins = resolution, phiBins = resolution*2;
 
-		/* Avoid unused parameter warnings */
-		std::vector<std::string> propNames;
-		props.putPropertyNames(propNames);
-		for (size_t i=0; i<propNames.size(); ++i)
-			if (props.wasQueried(propNames[i]))
-				_props.markQueried(propNames[i]);
+		ref<Bitmap> bitmap = new Bitmap(phiBins, thetaBins, 128);
+		Point2 factor(M_PI / thetaBins, (2*M_PI) / phiBins);
+		float *target = bitmap->getFloatData();
+		for (int i=0; i<thetaBins; ++i) {
+			Float theta = (i+.5f)*factor.x;
+			for (int j=0; j<phiBins; ++j) {
+				Float phi = (j+.5f)*factor.y;
+				Vector d = toSphere(theta, phi);
+				Ray ray(Point(0.0f), d, 0.0f);
+				Spectrum s = sun->Le(ray) + sky->Le(ray);
+				Float r, g, b;
+				s.toLinearRGB(r, g, b);
+				*target++ = r; *target++ = g;
+				*target++ = b; *target++ = 1;
+			}
+		}
+
+		/* Instantiate a nested envmap plugin */
+		Properties envProps("envmap");
+		Properties::Data bitmapData;
+		bitmapData.ptr = (uint8_t *) bitmap.get();
+		bitmapData.size = sizeof(Bitmap);
+		envProps.setData("bitmap", bitmapData);
+		envProps.setTransform("toWorld", m_luminaireToWorld);
+		envProps.setFloat("samplingWeight", m_samplingWeight);
+		m_luminaire = static_cast<Luminaire *>(
+			PluginManager::getInstance()->createObject(
+			MTS_CLASS(Luminaire), envProps));
+		ref<FileStream> fs = new FileStream("test.exr", FileStream::ETruncReadWrite);
+		bitmap->save(Bitmap::EEXR, fs);
 	}
 
 	SunSkyLuminaire(Stream *stream, InstanceManager *manager)
 		: Luminaire(stream, manager) {
-		m_sun = static_cast<Luminaire *>(manager->getInstance(stream));
-		m_sky = static_cast<Luminaire *>(manager->getInstance(stream));
+		m_luminaire = static_cast<Luminaire *>(manager->getInstance(stream));
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) {
 		Luminaire::serialize(stream, manager);
-		manager->serialize(stream, m_sun.get());
-		manager->serialize(stream, m_sky.get());
+		manager->serialize(stream, m_luminaire.get());
 	}
 
 	void configure() {
 		Luminaire::configure();
-		m_sun->configure();
-		m_sky->configure();
+		m_luminaire->configure();
 	}
 
 	bool isCompound() const {
@@ -120,18 +149,14 @@ public:
 
 	Luminaire *getElement(int i) {
 		if (i == 0)
-			return m_sun;
-		else if (i == 1)
-			return m_sky;
+			return m_luminaire;
 		else
 			return NULL;
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	Properties m_props;
-	ref<Luminaire> m_sun;
-	ref<Luminaire> m_sky;
+	ref<Luminaire> m_luminaire;
 };
 
 MTS_IMPLEMENT_CLASS_S(SunSkyLuminaire, false, Luminaire)

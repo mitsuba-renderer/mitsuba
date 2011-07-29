@@ -8,6 +8,7 @@ plugins += env.SharedLibrary('point', ['point.cpp'])
 plugins += env.SharedLibrary('collimated', ['collimated.cpp'])
 plugins += env.SharedLibrary('directional', ['directional.cpp'])
 plugins += env.SharedLibrary('sky', ['sky.cpp'])
+plugins += env.SharedLibrary('sun', ['sun.cpp'])
 plugins += env.SharedLibrary('sunsky', ['sunsky.cpp'])
 
 Export('plugins')

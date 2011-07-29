@@ -128,6 +128,8 @@ public:
 		}
 		m_pdfPixelSize = Vector2(2 * M_PI / m_pdfResolution.x, M_PI / m_pdfResolution.y);
 		m_pdf.build();
+		if (m_pdf.getOriginalSum() == 0)
+			Log(EError, "Error -- environment map does not contain any nonzero pixels!");
 	}
 
 	void preprocess(const Scene *scene) {

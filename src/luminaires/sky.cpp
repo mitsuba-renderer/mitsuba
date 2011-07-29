@@ -164,8 +164,8 @@ class SkyLuminaire : public Luminaire {
 public:
 	SkyLuminaire(const Properties &props)
 			: Luminaire(props) {
-		m_intensityScale = props.getFloat("intensityScale", Float(1.0));
-		m_turbidity = props.getFloat("turbidity", Float(3.0));
+		m_intensityScale = props.getFloat("intensityScale", 1.0f);
+		m_turbidity = props.getFloat("turbidity", 3.0f);
 		if (m_turbidity < 1 || m_turbidity > 30)
 			Log(EError, "The turbidity parameter must be in the range [1,30]!");
 
@@ -286,6 +286,11 @@ public:
 			MTS_CLASS(Luminaire), props));
 		luminaire->configure();
 		return luminaire;
+	}
+
+	Spectrum Le(const Ray &ray) const {
+		Point2 coords = fromSphere(ray.d);
+		return getSkySpectralRadiance(coords.x, coords.y) * m_intensityScale;
 	}
 
 	std::string toString() const {
