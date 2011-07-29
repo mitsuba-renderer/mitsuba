@@ -43,8 +43,8 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * \renderings{
- *     \rendering{$\sigma_s=2$, $\sigma_a=0.1$, thickness$=0.1$}{bsdf_hk_1}
- *     \rendering{\code{ketchup} material preset}{bsdf_hk_2}
+ *     \rendering{An index-matched scattering layer with parameters $\sigma_s=2$, $\sigma_a=0.1$, thickness$=0.1$}{bsdf_hk_1}
+ *     \rendering{Example of the HK model with a dielectric coating (and the \code{ketchup} material preset, see \lstref{hk-coated})}{bsdf_hk_2}
  * }
  *
  * This plugin provides an implementation of the Hanrahan-Krueger BSDF
@@ -60,8 +60,8 @@ MTS_NAMESPACE_BEGIN
  * \begin{xml}
  * <bsdf type="hk">
  *     <spectrum name="sigmaS" value="2"/>
- *     <spectrum name="sigmaA" value="0.05"/>
- *     <float name="thickness" value="1"/>
+ *     <spectrum name="sigmaA" value="0.1"/>
+ *     <float name="thickness" value="0.1"/>
  *
  *     <phase type="hg">
  *         <float name="g" value="0.8"/>
@@ -74,19 +74,14 @@ MTS_NAMESPACE_BEGIN
  * of refraction are mismatched. The combination of these two plugins
  * reproduces the full model proposed in \cite{Hanrahan1993Reflection}.
  *
- * \begin{xml}
+ * \begin{xml}[caption=A thin dielectric layer with measured ketchup scattering parameters, label=lst:hk-coated]
  * <bsdf type="coating">
  *     <float name="extIOR" value="1.0"/>
  *     <float name="intIOR" value="1.5"/>
  *
  *     <bsdf type="hk">
- *         <spectrum name="sigmaS" value="2"/>
- *         <spectrum name="sigmaA" value="0.05"/>
- *         <float name="thickness" value="1"/>
- *
- *         <phase type="hg">
- *             <float name="g" value="0.8"/>
- *         </phase>
+ *         <string name="material" value="ketchup"/>
+ *         <float name="thickness" value="0.01"/>
  *     </bsdf>
  * </bsdf>
  * \end{xml}

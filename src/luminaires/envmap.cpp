@@ -110,7 +110,7 @@ public:
 	}
 
 	void configure() {
-		int mipMapLevel = std::min(3, m_mipmap->getLevels()-1);
+		int mipMapLevel = std::min(0, m_mipmap->getLevels()-1);
 		m_pdfResolution = m_mipmap->getLevelResolution(mipMapLevel);
 		m_pdfInvResolution = Vector2(1.0f / m_pdfResolution.x, 
 				1.0f / m_pdfResolution.y);

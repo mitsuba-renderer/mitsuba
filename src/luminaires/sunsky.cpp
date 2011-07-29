@@ -58,12 +58,13 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{resolution}{\Integer}{Specifies the resolution of the precomputed
  *         image that is used to represent the sky environment map
  *         \default{256}}
- *     \parameter{scale}{\Float}{
+ *     \parameter{skyScale}{\Float}{
  *         This parameter can be used to scale the the amount of illumination
- *         emitted by the sky luminaire, for instance to change its units. To
- *         switch from photometric ($\nicefrac{W}{m^2\cdot sr}$) 
- *         to arbitrary but convenient units in the $[0,1]$ range, set 
- *         this parameter to \code{1e-5}.\default{1}.
+ *         emitted by the sky. 
+ *     }
+ *     \parameter{sunScale}{\Float}{
+ *         This parameter can be used to scale the the amount of illumination
+ *         emitted by the sun. 
  *     }
  * }
  *

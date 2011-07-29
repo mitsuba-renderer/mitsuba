@@ -54,6 +54,7 @@ void Medium::configure() {
 	if (m_phaseFunction == NULL) {
 		m_phaseFunction = static_cast<PhaseFunction *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(PhaseFunction), Properties("isotropic")));
+		m_phaseFunction->configure();
 	}
 }
 

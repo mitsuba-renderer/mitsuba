@@ -86,6 +86,7 @@ public:
 	HeterogeneousMedium(const Properties &props) 
 		: Medium(props) {
 		m_stepSize = props.getFloat("stepSize", 0);
+		m_densityMultiplier = props.getFloat("densityMultiplier", 1);
 		if (props.hasProperty("sigmaS") || props.hasProperty("sigmaA"))
 			Log(EError, "The 'sigmaS' and 'sigmaA' properties are only supported by "
 				"homogeneous media. Please use nested volume instances to supply "

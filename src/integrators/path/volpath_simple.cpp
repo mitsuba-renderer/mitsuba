@@ -275,8 +275,6 @@ public:
 	}
 
 	MTS_DECLARE_CLASS()
-private:
-	bool m_strictNormals;
 };
 
 MTS_IMPLEMENT_CLASS_S(SimpleVolumetricPathTracer, false, MonteCarloIntegrator)
