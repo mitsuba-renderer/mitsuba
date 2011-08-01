@@ -23,6 +23,12 @@ MTS_NAMESPACE_BEGIN
 
 /*!\plugin{isotropic}{Isotropic phase function}
  * \order{1}
+ 
+ * \renderings{
+ *     \rendering{Isotropic}{phase_isotropic}
+ *     \rendering{Anisotropic}{phase_microflakes_005}
+ * }
+ *
  *
  * This phase function simulates completely uniform scattering,
  * where all directionality is lost after a single scattering 

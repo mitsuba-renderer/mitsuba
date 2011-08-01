@@ -42,6 +42,12 @@ static StatsCounter avgSampleIterations("Micro-flake model",
  *       specifies the roughness of the fibers in the medium. 
  *     }
  * }
+ *
+ * \renderings{
+ *     \rendering{\code{stddev}=0.2}{phase_microflakes_02}
+ *     \rendering{\code{stddev}=0.05}{phase_microflakes_005}
+ * }
+ *
  * This plugin implements the anisotropic micro-flake phase function 
  * described in
  * ``A radiative transfer framework for rendering materials with
