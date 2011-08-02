@@ -215,9 +215,9 @@ Spectrum computeSunRadiance(Float theta, Float turbidity) {
 		// Results agree with the graph (pg 132, MI)
 		const Float w = 2.0;
 		Float tauWA = std::exp(-0.2385f * k_waCurve.eval(lambda) * w * m /
-				std::pow(1 + 20.07f * k_waCurve.eval(lambda) * w * m, 0.45f));
+				std::pow(1 + 20.07f * k_waCurve.eval(lambda) * w * m, (Float) 0.45f));
 
-		data[i] = 100.0f * solCurve.eval(lambda) * tauR * tauA * tauO * tauG * tauWA;
+		data[i] = (Float) 100.0f * solCurve.eval(lambda) * tauR * tauA * tauO * tauG * tauWA;
 		wavelengths[i] = lambda;
     }
     InterpolatedSpectrum interpolated(wavelengths, data, 91);
