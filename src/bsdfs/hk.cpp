@@ -37,7 +37,7 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Specifies the absorption coefficient 
  *      of the internal layer. \default{based on \code{material}}}
  *     \parameter{thickness}{\Float}{Denotes the thickness of the layer.
- *      Should be specified in inverse units of \code{sigmaA} and \code{sigmaS})\default{1}}
+ *      (should be specified in inverse units of \code{sigmaA} and \code{sigmaS})\default{1}}
  *     \parameter{\Unnamed}{\Phase}{A nested phase function instance that represents 
  *      the type of scattering interactions occurring within the layer}
  * }
@@ -45,12 +45,18 @@ MTS_NAMESPACE_BEGIN
  * \renderings{
  *     \rendering{An index-matched scattering layer with parameters $\sigma_s=2$, $\sigma_a=0.1$, thickness$=0.1$}{bsdf_hk_1}
  *     \rendering{Example of the HK model with a dielectric coating (and the \code{ketchup} material preset, see \lstref{hk-coated})}{bsdf_hk_2}
+ *     \vspace{-3mm}
+ *     \caption{
+ *     \label{fig:hk-example}
+ *     Renderings using the uncoated and coated form of the Hanrahan-Krueger model.
+ *     }
+ *     \vspace{1mm}
  * }
  *
  * This plugin provides an implementation of the Hanrahan-Krueger BSDF
  * \cite{Hanrahan1993Reflection} for simulating single scattering in thin 
- * index-matched layers filled with random scattering media. 
- * Apart from single scattering, the implementation also accounts for attenuated
+ * index-matched layers filled with a random scattering medium. 
+ * In addition, the implementation also accounts for attenuated
  * light that passes through the medium without undergoing any scattering events.
  *
  * This BSDF requires a phase function to model scattering interactions within the
@@ -71,8 +77,15 @@ MTS_NAMESPACE_BEGIN
  *
  * When used in conjuction with the \pluginref{coating} plugin, it is possible 
  * to model refraction and reflection at the layer boundaries when the indices 
- * of refraction are mismatched. The combination of these two plugins
- * reproduces the full model proposed in \cite{Hanrahan1993Reflection}.
+ * of refraction are mismatched. The combination of these two plugins then 
+ * reproduces the full model as it was originally proposed by Hanrahan and
+ * Krueger \cite{Hanrahan1993Reflection}.
+ *
+ * Note that this model does not account for light that undergoes multiple 
+ * scattering events within the layer. This leads to energy loss,
+ * particularly at grazing angles, which can be seen in the left-hand image of
+ * \figref{hk-example}. A solution is to use the \pluginref{chkms} plugin,
+ * which adds an approximate multiple scattering component.
  *
  * \begin{xml}[caption=A thin dielectric layer with measured ketchup scattering parameters, label=lst:hk-coated]
  * <bsdf type="coating">
@@ -87,11 +100,13 @@ MTS_NAMESPACE_BEGIN
  * \end{xml}
  *
  * Note that when \texttt{sigmaS} = \texttt{sigmaA}$\ = 0$, or when \texttt{thickness=0},
- * any geometry associated with this scattering model will be invisible.
+ * any geometry associated with this BSDF becomes invisible, as light will pass through 
+ * unchanged.
  *
  * The implementation in Mitsuba is based on code by Tom Kazimiers and Marios Papas.
-*/
-
+ * Marios Papas has kindly verified the implementation of the coated and uncoated variants 
+ * against both a path tracer and a separate reference implementation.
+ */
 class HanrahanKrueger : public BSDF {
 public:
 	HanrahanKrueger(const Properties &props) : BSDF(props) {
