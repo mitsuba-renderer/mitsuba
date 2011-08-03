@@ -67,17 +67,22 @@ All of the default configurations files located in the \texttt{build} directory 
 as well as \code{MTS\_HAS\_COHERENT\_RT}.
 
 \subsection{Building on Ubuntu Linux}
+\label{sec:compiling-ubuntu}
 You'll first need to install a number of dependencies. It is assumed here
-that you are using Ubuntu Linux, hence some of the package may be named differently if you are 
-using another distribution.
+that you are using Ubuntu Linux (Maverick Meerkat / 10.10 or later), hence some of the package may be named differently if you are 
+using another version.
 
 First, run
 \begin{shell}
-$\text{\$}$ sudo apt-get install build-essential scons qt4-dev-tools scons libpng12-dev libjpeg62-dev libilmbase-dev libopenexr-dev libxerces-c-dev libboost-dev libglewmx1.5-dev libxxf86vm-dev libboost-system-dev libboost-filesystem-dev
+$\text{\$}$ sudo apt-get install build-essential scons mercurial qt4-dev-tools libpng12-dev 
+    libjpeg62-dev libilmbase-dev libxerces-c3-dev libboost1.42-all-dev 
+	libopenexr-dev libglewmx1.5-dev libxxf86vm-dev libpcrecpp0
+	libboost-system-dev libboost-filesystem-dev libboost-dev
 \end{shell}
+Please ensure that the installed version of the boost libraries is 1.42 or later.
 To get COLLADA support, you will also need to install the \texttt{collada-dom} packages or build it from scratch. Here, we install the \code{x86\_64} binaries and development headers that can be found in the \texttt{dependencies/linux} directory\footnote{The directory also contains source packages in case these binaries don't work for you.}:
 \begin{shell}
-$\text{\$}$ sudo dpkg --install collada-dom_2.3.1-1_amd64.deb collada-dom-dev_2.2-2_amd64.deb
+$\text{\$}$ sudo dpkg --install collada-dom_2.3.1-1_amd64.deb collada-dom-dev_2.3.1-1_amd64.deb
 \end{shell}
 Afterwards, simply run
 \begin{shell}
@@ -94,6 +99,43 @@ $\text{\$}$ . setpath.sh
 \end{shell}
 (note the period at the beginning -- this assumes that you are using \code{bash}).
 Having set up everything, you can now move on to \secref{basics}.
+\subsubsection{Creating Ubuntu packages}
+For Ubuntu, the preferred way of redistristributing executables is to create
+\code{.deb} package files. To create Mitsuba packages, it is strongly recommended
+that you work with a pristine Ubuntu installation\footnote{Several commercial graphics 
+drivers ``pollute'' the OpenGL setup so that the compiled Mitsuba binaries 
+can only be used on machines using the same drivers. For this reason, it is 
+better to work from a clean boostrapped install.}. This can be done as follows:
+first, install \code{debootstrap} and download the latest version of Ubuntu
+to a subdirectory (here, we use Maverick Meerkat, or version 10.10)
+\begin{shell}
+$\text{\$}$ sudo apt-get install debootstrap
+$\text{\$}$ sudo debootstrap --arch amd64 maverick maverick-pristine
+\end{shell}
+Next, \code{chroot} into the created directory, enable the \code{multiverse} package repository,
+and install the necessary tools for creating package files:
+\begin{shell}
+$\text{\$}$ sudo chroot maverick-pristine
+$\text{\$}$ echo "deb http://archive.ubuntu.com/ubuntu maverick universe" >> /etc/apt/sources.list
+$\text{\$}$ apt-get update
+$\text{\$}$ apt-get install debhelper dpkg-dev pkg-config
+\end{shell}
+Now, you should be able to set up the remaining dependencies as described in \secref{compiling-ubuntu}.
+Once this is done, check out a copy of Mitsuba to the root directory of the \code{chroot} environment, e.g.
+\begin{shell}
+$\text{\$}$ hg clone https://www.mitsuba-renderer.org/hg/mitsuba
+\end{shell}
+To start the compilation process, enter
+\begin{shell}
+$\text{\$}$ cd mitsuba
+$\text{\$}$ cp -R data/linux/debian debian
+$\text{\$}$ dpkg-buildpackage -nc
+\end{shell}
+After everything has been built, you should find the created package files
+in the root directory.
+\subsubsection{Releasing Ubuntu packages}
+To redistribute Ubuntu packages over the Internet, it is convenient to put them 
+into an \code{apt}-compatible repository. 
 
 \subsection{Building on Fedora Core}
 You'll first need to install a number of dependencies. It is assumed here
