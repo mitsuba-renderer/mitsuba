@@ -136,17 +136,20 @@ in the root directory.
 \subsubsection{Releasing Ubuntu packages}
 To redistribute Ubuntu packages over the Internet, it is convenient to 
 put them into an \code{apt}-compatible repository. To prepare such a
-repository, put the two \code{deb}-files built in the last section, as well as the 
-\code{collada-dom} \code{deb}-files into a new directory and inside
-it, run
+repository, put the two \code{deb}-files built in the last section, 
+as well as the \code{collada-dom} \code{deb}-files into a public directory 
+made available by a HTTP server and inside it, run
 \begin{shell}
-$\text{\$}$ dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+$path-to-htdocs\text{\$}$ dpkg-scanpackages path/to/deb-directory /dev/null | gzip -9c > path/to/deb-directory/Packages.gz
 \end{shell}
 This will create a respository index file named \code{Packages.gz}.
-Finally, the whole directory can be uploaded to some public location
+Note that you must execute this command in the root directory of the
+HTTP server's web directory and provide the relative path to the 
+package files -- otherwise, the index file will specify the wrong package 
+paths. Finally, the whole directory can be uploaded to some public location
 and then referenced by placing a line following the pattern
 \begin{shell}
-deb http://<url-to-package-directory> ./
+deb http://<path-to-deb-directory> ./
 \end{shell}
 into the \code{/etc/apt/sources.list} file.
 

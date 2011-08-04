@@ -31,7 +31,7 @@
 
 \IfFileExists{MinionPro.sty}
    {\usepackage[opticals,fullfamily,lf]{MinionPro}}
-      {\message{Package MinionPro.sty was not found.}}
+   {\usepackage{charter}\message{Package MinionPro.sty was not found. Reverting to charter.}}
 
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
