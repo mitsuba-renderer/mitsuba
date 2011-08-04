@@ -26,7 +26,9 @@ MTS_NAMESPACE_BEGIN
  
  * \renderings{
  *     \rendering{Isotropic}{phase_isotropic}
- *     \rendering{Anisotropic}{phase_microflakes_005}
+ *     \rendering{Anisotropic micro-flakes}{phase_microflakes_005}
+ *     \caption{Heterogeneous volume renderings of a scarf model
+ *     with isotropic and anisotropic phase functions.}
  * }
  *
  *
