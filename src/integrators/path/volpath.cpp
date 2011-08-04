@@ -256,7 +256,6 @@ public:
 				Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, rRec.nextSample2D());
 				if (bsdfVal.isZero())
 					break;
-	
 				bsdfVal /= bsdfPdf;
 
 				/* Prevent light leaks due to the use of shading normals */
@@ -292,7 +291,7 @@ public:
 						hitLuminaire = true;
 					}
 				}
-
+		
 				/* If a luminaire was hit, estimate the local illumination and
 				   weight using the power heuristic */
 				if (hitLuminaire && rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) {

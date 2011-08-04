@@ -42,7 +42,17 @@ Shape::Shape(Stream *stream, InstanceManager *manager)
 Shape::~Shape() { }
 
 
-void Shape::configure() { }
+void Shape::configure() {
+	if (isLuminaire() && m_bsdf == NULL) {
+		/* Light source & no BSDF -> set an all-absorbing BSDF to turn
+		   the shape into an occluder. This is needed for the path
+		   tracer implementation to work correctly. */
+		Properties props("diffuse");
+		props.setSpectrum("reflectance", Spectrum(0.0f));
+		addChild("", static_cast<BSDF *> (PluginManager::getInstance()->
+			createObject(MTS_CLASS(BSDF), props)));
+	}
+}
 	
 bool Shape::isCompound() const {
 	return false;
