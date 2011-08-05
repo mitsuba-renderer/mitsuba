@@ -71,11 +71,11 @@ public:
 		return 1.0f;
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec,
+	Float sampleXXX(PhaseFunctionQueryRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
 		RayleighPhaseFunction::sample(pRec, sampler);
 		pdf = RayleighPhaseFunction::eval(pRec);
-		return pdf;
+		return 1.0f;
 	}
 
 

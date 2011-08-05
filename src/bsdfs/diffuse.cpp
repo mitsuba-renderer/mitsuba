@@ -134,7 +134,7 @@ public:
 		return m_reflectance->getValue(bRec.its);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 		
@@ -142,8 +142,7 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
 		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-		return m_reflectance->getValue(bRec.its) 
-			* (INV_PI * Frame::cosTheta(bRec.wo));
+		return m_reflectance->getValue(bRec.its);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {

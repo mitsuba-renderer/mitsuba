@@ -168,10 +168,9 @@ public:
 			/* Sample BSDF * cos(theta) */
 			BSDFQueryRecord bRec(its, rRec.sampler, ERadiance);
 			Float bsdfPdf;
-			Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, sampleArray[i]);
+			Spectrum bsdfVal = bsdf->sampleXXX(bRec, bsdfPdf, sampleArray[i]);
 			if (bsdfVal.isZero())
 				continue;
-			bsdfVal /= bsdfPdf;
 
 			/* Trace a ray in this direction */
 			Ray bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);

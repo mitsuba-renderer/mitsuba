@@ -245,9 +245,11 @@ public:
 	/// Type combinations
 	enum ETypeCombinations {
 		/// Any reflection component (scattering into discrete, 1D, or 2D set of directions)
-		EReflection   = EDiffuseReflection | EDeltaReflection | EDelta1DReflection | EGlossyReflection,
+		EReflection   = EDiffuseReflection | EDeltaReflection 
+			| EDelta1DReflection | EGlossyReflection,
 		/// Any transmission component (scattering into discrete, 1D, or 2D set of directions)
-		ETransmission = EDiffuseTransmission | EDeltaTransmission | EDelta1DTransmission | EGlossyTransmission,
+		ETransmission = EDiffuseTransmission | EDeltaTransmission 
+			| EDelta1DTransmission | EGlossyTransmission,
 		/// Diffuse scattering into a 2D set of directions
 		EDiffuse      = EDiffuseReflection | EDiffuseTransmission,
 		/// Non-diffuse scattering into a 2D set of directions
@@ -315,15 +317,17 @@ public:
 	virtual Spectrum getDiffuseReflectance(const Intersection &its) const;
 
 	/**
-	 * \brief Sample the BSDF and divide by the probability of the sample. 
+	 * \brief Sample the BSDF and return the importance weight (i.e. the
+	 * value of the BSDF divided by the probability density of the sample). 
 	 *
 	 * When the probability density is not explicitly required, this function
 	 * should be preferred, since it is potentially faster by making use of
 	 * cancellations during the division.
 	 * 
-	 * If a component mask or a specific component index is given, the sample
-	 * is drawn only from the matching component. Depending on the transport type
-	 * either the BSDF or its adjoint version is used. 
+	 * If a component mask or a specific component index is specified, the 
+	 * sample is drawn from the matching component, if it exists. Depending
+	 * on the provided transport type, either the BSDF or its adjoint version 
+	 * is used. 
 	 *
 	 * \param bRec    A BSDF query record
 	 * \param sample  A uniformly distributed sample on \f$[0,1]^2\f$
@@ -336,12 +340,14 @@ public:
 	virtual Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const = 0;
 
 	/**
-	 * \brief Sample the BSDF and explicitly provide the probability density
-	 * of the sampled direction. 
+	 * \brief Sample the BSDF and return the probability density \a and the
+	 * importance weight of the sample (i.e. the value of the BSDF divided 
+	 * by the probability density)
 	 *
-	 * If a component mask or a specific component index is given, the 
-	 * sample is drawn from the matching component. Depending on the 
-	 * transport type, either the BSDF or its adjoint version is used. 
+	 * If a component mask or a specific component index is specified, the 
+	 * sample is drawn from the matching component, if it exists. Depending
+	 * on the provided transport type, either the BSDF or its adjoint version 
+	 * is used. 
 	 * 
 	 * When sampling a continuous/non-delta component, this method also 
 	 * multiplies by the cosine foreshorening factor with respect to the
@@ -356,7 +362,7 @@ public:
 	 *         factor when a non-delta component is sampled). A zero spectrum
 	 *         means that sampling failed.
 	 */
-	virtual Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, 
+	virtual Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, 
 		const Point2 &sample) const = 0;
 
 	/**
@@ -366,7 +372,6 @@ public:
 	 * individual components. When querying a smooth (i.e. non-degenerate)
 	 * component, it already multiplies the result by the cosine
 	 * foreshortening factor with respect to the outgoing direction.
-	 * cosine foreshorening factor with respect to the outgoing direction.
 	 *
 	 * \param bRec
 	 *     A record with detailed information on the BSDF query
@@ -381,8 +386,8 @@ public:
 		EMeasure measure = ESolidAngle) const = 0;
 
 	/**
-	 * \brief Compute the probability of sampling \c bRec.wo (given \c
-	 * bRec.wi).
+	 * \brief Compute the probability of sampling \c bRec.wo (given 
+	 * \c bRec.wi).
 	 *
 	 * This method provides access to the probability density that
 	 * would result when supplying the same BSDF query record to the 

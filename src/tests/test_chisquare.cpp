@@ -117,48 +117,33 @@ public:
 				enableFPExceptions();
 			#endif
 	
-			Float pdfVal, pdfVal2;
+			Float pdfVal, sampledPDF;
 
 			/* Check the various sampling routines for agreement 
 			   amongst each other */
 			m_fakeSampler->clear();
-			Spectrum f = m_bsdf->sample(bRec, pdfVal, sample);
+			Spectrum sampled = m_bsdf->sampleXXX(bRec, sampledPDF, sample);
 			m_fakeSampler->rewind();
-			Spectrum sampled = m_bsdf->sample(bRec, sample);
+			Spectrum sampled2 = m_bsdf->sample(bRec, sample);
 			EMeasure measure = ESolidAngle;
-			if (!f.isZero())
+			if (!sampled.isZero())
 				measure = BSDF::getMeasure(bRec.sampledType);
-			Spectrum f2 = m_bsdf->eval(bRec, measure);
-			pdfVal2 = m_bsdf->pdf(bRec, measure);
+			Spectrum f = m_bsdf->eval(bRec, measure);
+			pdfVal = m_bsdf->pdf(bRec, measure);
+			Spectrum manual = f/pdfVal;
 
-			if (f.isZero() || pdfVal == 0 || pdfVal2 == 0) {
-				if (!sampled.isZero())
-					Log(EWarn, "Inconsistency (1): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s, measure=%i",
-						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str(), measure);
-				#if defined(MTS_DEBUG_FP)
-					disableFPExceptions();
-				#endif
-				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
-			} else if (sampled.isZero()) {
-				if ((!f.isZero() && pdfVal != 0) || (!f2.isZero() && pdfVal2 != 0))
-					Log(EWarn, "Inconsistency (2): f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s",
-						f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str());
-				#if defined(MTS_DEBUG_FP)
-					disableFPExceptions();
-				#endif
-				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
-			}
-
-			Spectrum sampled2 = f/pdfVal, evaluated = f2/pdfVal2;
-			if (!sampled.isValid() || !sampled2.isValid() || !evaluated.isValid()) {
-				Log(EWarn, "Ooops: f=%s, f2=%s, pdf=%f, pdf2=%f, sampled f/pdf=%s, bRec=%s",
-					f.toString().c_str(), f2.toString().c_str(), pdfVal, pdfVal2, sampled.toString().c_str(), bRec.toString().c_str());
+			if (!sampled.isValid() || !sampled2.isValid() || !manual.isValid()) {
+				Log(EWarn, "Oops: sampled=%s, sampled2=%s, manual=%s, sampledPDF=%f, "
+					"pdf=%f, f=%s, bRec=%s, measure=%i", sampled.toString().c_str(), 
+					sampled2.toString().c_str(), manual.toString().c_str(),
+					sampledPDF, pdfVal, f.toString().c_str(), bRec.toString().c_str(), 
+					measure);
 				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			}
 
 			bool mismatch = false;
 			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-				Float a = sampled[i], b = sampled2[i], c = evaluated[i];
+				Float a = sampled[i], b = sampled2[i], c = manual[i];
 				Float min = std::min(std::min(a, b), c);
 				Float err = std::max(std::max(std::abs(a - b), std::abs(a - c)), std::abs(b - c));
 				m_largestWeight = std::max(m_largestWeight, a);
@@ -169,17 +154,32 @@ public:
 					mismatch = true;
 			}
 
-			if (mismatch) {
-				Log(EWarn, "Potential inconsistency (3): f/pdf=%s (method 1), f/pdf=%s (method 2), sampled f/pdf=%s, measure=%i",
-					sampled2.toString().c_str(), evaluated.toString().c_str(), sampled.toString().c_str(), measure);
-				Log(EWarn, "  f=%s, f2=%s, pdf=%f, pdf2=%f", f.toString().c_str(), f.toString().c_str(), pdfVal, pdfVal2);
-			}
+			if (mismatch)
+				Log(EWarn, "Potential inconsistency: sampled=%s, sampled2=%s, manual=%s, sampledPDF=%f, "
+					"pdf=%f, f=%s, bRec=%s, measure=%i", sampled.toString().c_str(), 
+					sampled2.toString().c_str(), manual.toString().c_str(),
+					sampledPDF, pdfVal, f.toString().c_str(), bRec.toString().c_str(), 
+					measure);
+
+			mismatch = false;
+			Float min = std::min(pdfVal, sampledPDF);
+			Float err = std::abs(pdfVal - sampledPDF);
+
+			if (min < ERROR_REQ && err > ERROR_REQ) // absolute error threshold
+				mismatch = true;
+			else if (min > ERROR_REQ && err/min > ERROR_REQ) // relative error threshold
+				mismatch = true;
+
+			if (mismatch)
+				Log(EWarn, "Potential inconsistency: pdfVal=%f, sampledPDF=%f",
+					pdfVal, sampledPDF);
 
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
 
-			return boost::make_tuple(bRec.wo, 1.0f, measure);
+			return boost::make_tuple(bRec.wo, 
+				sampled.isZero() ? 0.0f : 1.0f, measure);
 		}
  
 		Float pdf(const Vector &wo, EMeasure measure) {
@@ -218,7 +218,9 @@ public:
 		PhaseFunctionAdapter(const MediumSamplingRecord &mRec,
 				const PhaseFunction *phase, Sampler *sampler, const Vector &wi)
 			: m_mRec(mRec), m_phase(phase), m_sampler(sampler), m_wi(wi), 
-			  m_largestWeight(0) { }
+			  m_largestWeight(0) { 
+			m_fakeSampler = new FakeSampler(m_sampler);
+		}
 
 		boost::tuple<Vector, Float, EMeasure> generateSample() {
 			Point2 sample(m_sampler->next2D());
@@ -227,36 +229,29 @@ public:
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
+			Float sampledPDF, pdfVal;
 
 			/* Check the various sampling routines for agreement amongst each other */
-			Float pdfVal;
-			Float f = m_phase->sample(pRec, pdfVal, m_sampler);
-			Float sampled = m_phase->sample(pRec, m_sampler);
+			m_fakeSampler->clear();
+			Float sampled = m_phase->sampleXXX(pRec, sampledPDF, m_fakeSampler);
+			m_fakeSampler->rewind();
+			Float sampled2 = m_phase->sample(pRec, m_fakeSampler);
+			Float f = m_phase->eval(pRec);
+			pdfVal = m_phase->pdf(pRec);
+			Float manual = f/pdfVal;
 
-			if (f == 0 || pdfVal == 0) {
-				if (sampled != 0)
-					Log(EWarn, "Inconsistency: f=%f, pdf=%f, sampled f/pdf=%f",
-						f, pdfVal, sampled);
-				#if defined(MTS_DEBUG_FP)
-					disableFPExceptions();
-				#endif
-				return boost::make_tuple(pRec.wo, 0.0f, ESolidAngle);
-			} else if (sampled == 0) {
-				if (f != 0 && pdfVal != 0)
-					Log(EWarn, "Inconsistency: f=%f, pdf=%f, sampled f/pdf=%f",
-						f, pdfVal, sampled);
-				#if defined(MTS_DEBUG_FP)
-					disableFPExceptions();
-				#endif
+			if (mts_isnan(sampled) || mts_isnan(sampled2) || mts_isnan(manual) ||
+				sampled < 0 || sampled2 < 0 || manual < 0) {
+				Log(EWarn, "Oops: sampled=%f, sampled2=%f, manual=%f, sampledPDF=%f, "
+					"pdf=%f, f=%f, pRec=%s", sampled, sampled2, manual,
+					sampledPDF, pdfVal, f, pRec.toString().c_str());
 				return boost::make_tuple(pRec.wo, 0.0f, ESolidAngle);
 			}
 
-			Float sampled2 = f/pdfVal;
 			bool mismatch = false;
-
-			SAssert(sampled >= 0 && sampled2 >= 0);
-			Float min = std::min(sampled, sampled2);
-			Float err = std::abs(sampled - sampled2);
+			Float min = std::min(std::min(sampled, sampled2), manual);
+			Float err = std::max(std::max(std::abs(sampled - sampled2), 
+					std::abs(sampled - manual)), std::abs(sampled2 - manual));
 			m_largestWeight = std::max(m_largestWeight, sampled);
 
 			if (min < ERROR_REQ && err > ERROR_REQ) // absolute error threshold
@@ -264,14 +259,27 @@ public:
 			else if (min > ERROR_REQ && err/min > ERROR_REQ) // relative error threshold
 				mismatch = true;
 
-			if (mismatch)
-				Log(EWarn, "Inconsistency: f=%f, pdf=%f, sampled f/pdf=%f",
-					f, pdfVal, sampled);
+			if (mismatch) 
+				Log(EWarn, "Potential inconsistency: sampled=%f, sampled2=%f, manual=%s, "
+					"sampledPDF=%f, pdf=%f, f=%f, pRec=%s", sampled, sampled2, manual,
+					sampledPDF, pdfVal, f, pRec.toString().c_str());
 
-			#if defined(MTS_DEBUG_FP)
-				disableFPExceptions();
-			#endif
-			return boost::make_tuple(pRec.wo, 1.0f, ESolidAngle);
+			mismatch = false;
+			min = std::min(pdfVal, sampledPDF);
+			err = std::abs(pdfVal - sampledPDF);
+
+			if (min < ERROR_REQ && err > ERROR_REQ) // absolute error threshold
+				mismatch = true;
+			else if (min > ERROR_REQ && err/min > ERROR_REQ) // relative error threshold
+				mismatch = true;
+
+			if (mismatch)
+				Log(EWarn, "Potential inconsistency: pdfVal=%f, sampledPDF=%f",
+					pdfVal, sampledPDF);
+
+
+			return boost::make_tuple(pRec.wo, 
+				sampled == 0 ? 0.0f : 1.0f, ESolidAngle);
 		}
  
 		Float pdf(const Vector &wo, EMeasure measure) const {
@@ -294,6 +302,7 @@ public:
 		inline Float getLargestWeight() const { return m_largestWeight; }
 	private:
 		const MediumSamplingRecord &m_mRec;
+		ref<FakeSampler> m_fakeSampler;
 		ref<const PhaseFunction> m_phase;
 		ref<Sampler> m_sampler;
 		Vector m_wi;

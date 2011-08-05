@@ -90,11 +90,11 @@ public:
 		return 1.0f;
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec,
+	Float sampleXXX(PhaseFunctionQueryRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
 		HGPhaseFunction::sample(pRec, sampler);
 		pdf = HGPhaseFunction::eval(pRec);
-		return pdf;
+		return 1.0f;
 	}
 
 

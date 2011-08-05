@@ -155,13 +155,13 @@ public:
 		return 1.0f;
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec, 
+	Float sampleXXX(PhaseFunctionQueryRecord &pRec, 
 			Float &pdf, Sampler *sampler) const {
 		if (sample(pRec, sampler) == 0) {
 			pdf = 0; return 0.0f;
 		}
 		pdf = eval(pRec);
-		return pdf;
+		return 1.0f;
 	}
 
 	bool needsDirectionallyVaryingCoefficients() const { return true; }

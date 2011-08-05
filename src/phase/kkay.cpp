@@ -86,11 +86,11 @@ public:
 		return eval(pRec) * (4 * M_PI);
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec, 
+	Float sampleXXX(PhaseFunctionQueryRecord &pRec, 
 			Float &pdf, Sampler *sampler) const {
 		pRec.wo = squareToSphere(sampler->next2D());
 		pdf = 1/(4 * M_PI);
-		return eval(pRec);
+		return eval(pRec)/pdf;
 	}
 
 	Float pdf(const PhaseFunctionQueryRecord &pRec) const {

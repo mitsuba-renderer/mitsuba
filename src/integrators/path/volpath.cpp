@@ -102,10 +102,9 @@ public:
 
 				Float phasePdf;
 				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
-				Float phaseVal = phase->sample(pRec, phasePdf, rRec.sampler);
+				Float phaseVal = phase->sampleXXX(pRec, phasePdf, rRec.sampler);
 				if (phaseVal == 0)
 					break;
-				phaseVal /= phasePdf;
 
 				/* Trace a ray in this direction */
 				ray = Ray(mRec.p, pRec.wo, ray.time);
@@ -253,11 +252,9 @@ public:
 				/* Sample BSDF * cos(theta) */
 				BSDFQueryRecord bRec(its, rRec.sampler, ERadiance);
 				Float bsdfPdf;
-				Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, rRec.nextSample2D());
+				Spectrum bsdfVal = bsdf->sampleXXX(bRec, bsdfPdf, rRec.nextSample2D());
 				if (bsdfVal.isZero())
 					break;
-	
-				bsdfVal /= bsdfPdf;
 
 				/* Prevent light leaks due to the use of shading normals */
 				const Vector wo = its.toWorld(bRec.wo);

@@ -107,27 +107,35 @@ public:
 	virtual Float eval(const PhaseFunctionQueryRecord &pRec) const = 0;
 
 	/**
-	 * \brief Importance sample the phase function. 
+	 * \brief Sample the phase function and return the importance weight (i.e. the
+	 * value of the phase function divided by the probability density of the sample). 
 	 *
-	 * \param sampler
-	 *     Sample generator
-	 * \return
-	 *     Weight value equal to the throughput divided by 
-	 *     the probability of the sampled direction.
+	 * When the probability density is not explicitly required, this function
+	 * should be preferred, since it is potentially faster by making use of
+	 * cancellations during the division.
+	 * 
+	 * \param pRec    A phase function query record
+	 * \param sampler A sample generator
+	 *
+	 * \return The phase function value divided by the probability 
+	 *         density of the sample
 	 */
 	virtual Float sample(PhaseFunctionQueryRecord &pRec, 
 		Sampler *sampler) const = 0;
 
 	/**
-	 * \brief Importance sample the phase function, but don't
-	 *    divide by the computed probability.
-	 * \param pdf
-	 *     The probability of sampling \a pRec.wo will be returned using
-	 *     this argument.
-	 * \return
-	 *     Phase function value for the direction pair (wi, wo)
+	 * \brief Sample the phase function and return the probability density \a and the
+	 * importance weight of the sample (i.e. the value of the phase function divided 
+	 * by the probability density)
+	 *
+	 * \param pRec    A phase function query record
+	 * \param sampler A sample generator
+	 * \param pdf     Will record the probability with respect to solid angles
+	 *
+	 * \return The phase function value divided by the probability 
+	 *         density of the sample
 	 */
-	virtual Float sample(PhaseFunctionQueryRecord &pRec,
+	virtual Float sampleXXX(PhaseFunctionQueryRecord &pRec,
 		Float &pdf, Sampler *sampler) const = 0;
 
 	/**
