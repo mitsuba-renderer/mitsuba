@@ -27,7 +27,11 @@
 \newcolumntype{P}[1]{>{\RaggedRight\hspace{0pt}}p{#1}}
 \newcommand{\MtsVer}{\color{lstattrib}\texttt{"\MitsubaVersion"}}
 
-\newcommand{\showbreak}{$\rhookswarrow$ }
+
+\IfFileExists{MinionPro.sty}
+   {\newcommand{\showbreak}{$\rhookswarrow$ }}
+   {\newcommand{\showbreak}{$\hookleftarrow$ }}
+
 \newcommand{\parheader}[1]{\vspace{2mm}\textbf{\color{myblue}#1}}
 
 \newcommand{\otoprule}{\midrule[.8pt]}
@@ -35,7 +39,7 @@
 \newcommand{\parameters}[1]{
 	\setlength\fboxrulebackup\fboxrule
 	\setlength\fboxrule{0.8pt}
-	\begin{figure}[h]\centering\arrayrulecolor{lstframe}
+	\begin{figure}[htbp]\centering\arrayrulecolor{lstframe}
 	\fcolorbox{lstframe}{lstshade}{\begin{tabular}{@{\hspace{3mm}}P{3cm}P{2.2cm}p{8.3cm}@{\hspace{3mm}}}
  		%\toprule
 		\\[-2.2ex]
@@ -48,7 +52,7 @@
 	}
 	
 \newcommand{\renderings}[1]{
-	\begin{figure}[h!]
+	\begin{figure}[htbp!]
 		\setcounter{subfigure}{0}
 		\centering
 		\hfill

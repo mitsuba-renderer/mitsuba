@@ -156,7 +156,7 @@ public:
 				}
 			} else {
 				/* No intersection found. Possibly, there is a background
-				   luminaire such as an environment map? */
+					luminaire such as an environment map? */
 				if (scene->hasBackgroundLuminaire()) {
 					lRec.luminaire = scene->getBackgroundLuminaire();
 					lRec.value = lRec.luminaire->Le(ray);

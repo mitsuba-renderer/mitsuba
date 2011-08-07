@@ -289,7 +289,7 @@ public:
 						hitLuminaire = true;
 					}
 				}
-
+		
 				/* If a luminaire was hit, estimate the local illumination and
 				   weight using the power heuristic */
 				if (hitLuminaire && rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) {
