@@ -185,7 +185,6 @@ public:
 			for (int i = 0; i < SPECTRUM_SAMPLES; i++)
 				albedo[i] = sigmaT[i] > 0 ? (sigmaS[i]/sigmaT[i]) : (Float) 0;
 
-
 			const Float cosThetaI = Frame::cosTheta(bRec.wi),
 				        cosThetaO = Frame::cosTheta(bRec.wo),
 				        dp = cosThetaI*cosThetaO;
@@ -202,7 +201,7 @@ public:
 				const Float phaseVal = m_phase->eval(pRec);
 
 				result = albedo * (phaseVal*cosThetaI/(cosThetaI+cosThetaO)) *
-					(Spectrum(1.0f)-((-tauD/std::abs(cosThetaI))+(-tauD/std::abs(cosThetaO))).exp());
+					(Spectrum(1.0f)-((-1.0f/std::abs(cosThetaI)-1.0f/std::abs(cosThetaO)) * tauD).exp());
 			}
 
 			/* ==================================================================== */
@@ -378,6 +377,8 @@ public:
 			<< "]";
 		return oss.str();
 	}
+	
+	Shader *createShader(Renderer *renderer) const;
 
 	MTS_DECLARE_CLASS()
 private:
@@ -387,6 +388,71 @@ private:
 	Float m_thickness;
 };
 
+
+// ================ Hardware shader implementation ================ 
+
+/**
+ * This is a relatively approximate GLSL shader for the HK model.
+ * It assumes that the layer is infinitely thick (i.e. there is no
+ * transmission) and that the phase function is isotropic
+ */
+class HanrahanKruegerShader : public Shader {
+public:
+	HanrahanKruegerShader(Renderer *renderer, const Texture *sigmaS, const Texture *sigmaA) 
+		: Shader(renderer, EBSDFShader), m_sigmaS(sigmaS), m_sigmaA(sigmaA) {
+		m_sigmaSShader = renderer->registerShaderForResource(m_sigmaS.get());
+		m_sigmaAShader = renderer->registerShaderForResource(m_sigmaA.get());
+	}
+
+	bool isComplete() const {
+		return m_sigmaSShader.get() != NULL
+			&& m_sigmaAShader.get() != NULL;
+	}
+
+	void cleanup(Renderer *renderer) {
+		renderer->unregisterShaderForResource(m_sigmaS.get());
+		renderer->unregisterShaderForResource(m_sigmaA.get());
+	}
+
+	void putDependencies(std::vector<Shader *> &deps) {
+		deps.push_back(m_sigmaSShader.get());
+		deps.push_back(m_sigmaAShader.get());
+	}
+
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    vec3 sigmaS = " << depNames[0] << "(uv);" << endl
+			<< "    vec3 sigmaA = " << depNames[1] << "(uv);" << endl
+			<< "    vec3 albedo = sigmaS/(sigmaS + sigmaA);" << endl
+			<< "    float cosThetaI = abs(cosTheta(wi));" << endl
+			<< "    float cosThetaO = abs(cosTheta(wo));" << endl
+			<< "    return albedo * (0.079577*cosThetaI*cosThetaO/(cosThetaI + cosThetaO));" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    vec3 sigmaS = " << depNames[0] << "(uv);" << endl
+			<< "    vec3 sigmaA = " << depNames[1] << "(uv);" << endl
+			<< "    vec3 albedo = sigmaS/(sigmaS + sigmaA);" << endl
+			<< "    float cosThetaO = abs(cosTheta(wo));" << endl
+			<< "    return albedo * 0.079577 * cosThetaO;" << endl
+			<< "}" << endl;
+	}
+
+	MTS_DECLARE_CLASS()
+private:
+	ref<const Texture> m_sigmaS;
+	ref<const Texture> m_sigmaA;
+	ref<Shader> m_sigmaSShader;
+	ref<Shader> m_sigmaAShader;
+};
+
+Shader *HanrahanKrueger::createShader(Renderer *renderer) const { 
+	return new HanrahanKruegerShader(renderer, m_sigmaS.get(), m_sigmaA.get());
+}
+
+MTS_IMPLEMENT_CLASS(HanrahanKruegerShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(HanrahanKrueger, false, BSDF)
 MTS_EXPORT_PLUGIN(HanrahanKrueger, "Hanrahan-Krueger BSDF");
 MTS_NAMESPACE_END

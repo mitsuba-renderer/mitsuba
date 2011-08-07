@@ -302,6 +302,9 @@ public:
 		const Normal m = m_distribution.sample(sample, 
 			alphaU, alphaV, microfacetPDF);
 
+		if (microfacetPDF == 0)
+			return Spectrum(0.0f);
+
 		/* Perfect specular reflection based on the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
 		bRec.sampledComponent = 0;
@@ -340,6 +343,9 @@ public:
 		/* Sample M, the microsurface normal */
 		const Normal m = m_distribution.sample(sample, 
 			alphaU, alphaV, pdf);
+
+		if (pdf == 0)
+			return Spectrum(0.0f);
 
 		/* Perfect specular reflection based on the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);

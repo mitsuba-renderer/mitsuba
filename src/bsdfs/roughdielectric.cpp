@@ -464,6 +464,9 @@ public:
 		const Normal m = m_distribution.sample(sample,
 				sampleAlphaU, sampleAlphaV, microfacetPDF);
 
+		if (microfacetPDF == 0)
+			return Spectrum(0.0f);
+
 		Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR),
 			  numerator = 1.0f;
 
@@ -551,11 +554,8 @@ public:
 		const Normal m = m_distribution.sample(sample,
 				sampleAlphaU, sampleAlphaV, microfacetPDF);
 
-#if 1
-		Float ref = m_distribution.pdf(m, sampleAlphaU, sampleAlphaV);
-		if (std::abs(ref-microfacetPDF)/ref > Epsilon)
-			cout << "OOPS! ref=" << ref << ", got=" << microfacetPDF << endl;
-#endif
+		if (microfacetPDF == 0)
+			return Spectrum(0.0f);
 
 		pdf = microfacetPDF;
 

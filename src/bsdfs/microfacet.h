@@ -367,6 +367,10 @@ public:
 							+ alphaV * sinPhiM*sinPhiM;
 					pdf = std::sqrt((alphaU + 1) * (alphaV + 1))
 						* INV_TWOPI * std::pow(cosThetaM, exponent);
+						
+					/* Prevent potential numerical issues in other stages of the model */
+					if (pdf < 1e-20f)
+						pdf = 0;
 					
 					return Vector(
 						sinThetaM * cosPhiM,
@@ -379,6 +383,10 @@ public:
 				SLog(EError, "Invalid distribution function!");
 		}
 
+		/* Prevent potential numerical issues in other stages of the model */
+		if (pdf < 1e-20f)
+			pdf = 0;
+					
 		const Float sinThetaM = std::sqrt(
 			std::max((Float) 0, 1 - cosThetaM*cosThetaM));
 		Float phiM = (2.0f * M_PI) * sample.y;
