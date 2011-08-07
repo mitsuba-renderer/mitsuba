@@ -16,7 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/phase.h>
+#include <mitsuba/render/scene.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -86,9 +86,6 @@ public:
 	}
 
 	void configure() {
-		m_usesRayDifferentials = false;
-		size_t componentCount = 0;
-
 		if (m_phaseFunctions.size() != m_weights.size())
 			Log(EError, "Phase function count mismatch: " SIZE_T_FMT " phase functions, but specified " SIZE_T_FMT " weights",
 				m_phaseFunctions.size(), m_phaseFunctions.size());
@@ -100,52 +97,27 @@ public:
 		if (totalWeight <= 0)
 			Log(EError, "The weights must sum to a value greater than zero!");
 
-		if (m_ensureEnergyConservation && totalWeight > 1) {
+		if (totalWeight > 1) {
 			std::ostringstream oss;
 			Float scale = 1.0f / totalWeight;
 			oss << "The phase function " << endl << toString() << endl
 				<< "potentially violates energy conservation, since the weights "
 				<< "sum to " << totalWeight << ", which is greater than one! "
-				<< "They will be re-scaled to avoid potential issues. Specify "
-				<< "the parameter ensureEnergyConservation=false to prevent "
-				<< "this from happening.";
+				<< "They will be re-scaled to avoid potential issues.";
 			Log(EWarn, "%s", oss.str().c_str());
 			for (size_t i=0; i<m_weights.size(); ++i)
 				m_weights[i] *= scale;
 		}
 
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
-			componentCount += m_phaseFunctions[i]->getComponentCount();
-
 		m_pdf = DiscretePDF(m_phaseFunctions.size());
-		m_components.reserve(componentCount);
-		m_components.clear();
-		m_indices.reserve(componentCount);
-		m_indices.clear();
-		m_offsets.reserve(m_phaseFunctions.size());
-		m_offsets.clear();
-
-		int offset = 0;
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i) {
-			const PhaseFunction *phase = m_phaseFunctions[i];
-			m_offsets.push_back(offset);
-
-			for (int j=0; j<phase->getComponentCount(); ++j) {
-				int componentType = phase->getType(j);
-				m_components.push_back(componentType);
-				m_indices.push_back(std::make_pair((int) i, j));
-			}
-
-			offset += phase->getComponentCount();
-			m_usesRayDifferentials |= phase->usesRayDifferentials();
+		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
 			m_pdf[i] = m_weights[i];
-		}
 		m_pdf.build();
 		PhaseFunction::configure();
 	}
 
 	Float eval(const PhaseFunctionQueryRecord &pRec) const {
-		Spectrum result(0.0f);
+		Float result = 0.0f;
 
 		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
 			result += m_phaseFunctions[i]->eval(pRec) * m_weights[i];
@@ -162,14 +134,13 @@ public:
 		return result;
 	}
 
-	Spectrum sample(PhaseFunctionQueryRecord &pRec, const Point2 &_sample) const {
-		Point2 sample(_sample);
+	Float sample(PhaseFunctionQueryRecord &pRec, Sampler *sampler) const {
 		/* Choose a component based on the normalized weights */
-		size_t entry = m_pdf.sampleReuse(sample.x);
+		size_t entry = m_pdf.sample(sampler->next1D());
 
 		Float pdf;
-		Spectrum result = m_phaseFunctions[entry]->sample(pRec, pdf, sample);
-		if (result.isZero()) // sampling failed
+		Float result = m_phaseFunctions[entry]->sample(pRec, pdf, sampler);
+		if (result == 0) // sampling failed
 			return result;
 
 		result *= m_weights[entry] * pdf;
@@ -182,17 +153,15 @@ public:
 			result += m_phaseFunctions[i]->eval(pRec) * m_weights[i];
 		}
 
-		pRec.sampledComponent += m_offsets[entry];
 		return result / pdf;
 	}
 
-	Spectrum sample(PhaseFunctionQueryRecord &pRec, Float &pdf, const Point2 &_sample) const {
-		Point2 sample(_sample);
+	Float sample(PhaseFunctionQueryRecord &pRec, Float &pdf, Sampler *sampler) const {
 		/* Choose a component based on the normalized weights */
-		size_t entry = m_pdf.sampleReuse(sample.x);
+		size_t entry = m_pdf.sample(sampler->next1D());
 
-		Spectrum result = m_phaseFunctions[entry]->sample(pRec, pdf, sample);
-		if (result.isZero()) // sampling failed
+		Float result = m_phaseFunctions[entry]->sample(pRec, pdf, sampler);
+		if (result == 0) // sampling failed
 			return result;
 
 		result *= m_weights[entry] * pdf;
@@ -205,7 +174,6 @@ public:
 			result += m_phaseFunctions[i]->eval(pRec) * m_weights[i];
 		}
 
-		pRec.sampledComponent += m_offsets[entry];
 		return result/pdf;
 	}
 
@@ -237,13 +205,9 @@ public:
 		return oss.str();
 	}
 
-	Shader *createShader(Renderer *renderer) const;
-
 	MTS_DECLARE_CLASS()
 private:
 	std::vector<Float> m_weights;
-	std::vector<std::pair<int, int> > m_indices;
-	std::vector<int> m_offsets;
 	std::vector<PhaseFunction *> m_phaseFunctions;
 	DiscretePDF m_pdf;
 };
