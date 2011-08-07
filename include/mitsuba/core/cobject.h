@@ -62,13 +62,12 @@ protected:
 	
 	/// Construct a configurable object
 	inline ConfigurableObject(const Properties &props) 
-		: SerializableObject(), m_parent(NULL), m_configured(false) { }
+		: SerializableObject(), m_parent(NULL) { }
 	
 	/// Unserialize a configurable object
 	ConfigurableObject(Stream *stream, InstanceManager *manager);
 protected:
 	ConfigurableObject *m_parent;
-	bool m_configured;
 };
 
 /** \brief This macro creates the binary interface, which Mitsuba 

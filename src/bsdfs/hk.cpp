@@ -32,7 +32,7 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{material}{\String}{Name of a material preset, see 
  *           \tblref{medium-coefficients}. \default{\texttt{skin1}}}
- *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Specifies the scattering coefficient 
+ *     \parameter{sigmaS}{\Spectrum\Or\Texture}{Specifies the scattering coefficient 
  *      of the internal layer. \default{based on \code{material}}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Specifies the absorption coefficient 
  *      of the internal layer. \default{based on \code{material}}}
