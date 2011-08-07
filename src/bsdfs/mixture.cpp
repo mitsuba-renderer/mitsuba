@@ -76,9 +76,9 @@ public:
 		for (size_t i=0; i<weights.size(); ++i) {
 			Float weight = (Float) strtod(weights[i].c_str(), &end_ptr);
 			if (*end_ptr != '\0')
-				SLog(EError, "Could not parse the BRDF weights!");
+				SLog(EError, "Could not parse the BSDF weights!");
 			if (weight < 0)
-				SLog(EError, "Invalid BRDF weight!");
+				SLog(EError, "Invalid BSDF weight!");
 			m_weights[i] = weight;
 		}
 	}
@@ -432,5 +432,5 @@ Shader *MixtureBSDF::createShader(Renderer *renderer) const {
 
 MTS_IMPLEMENT_CLASS(MixtureBSDFShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(MixtureBSDF, false, BSDF)
-MTS_EXPORT_PLUGIN(MixtureBSDF, "Mixture BRDF")
+MTS_EXPORT_PLUGIN(MixtureBSDF, "Mixture BSDF")
 MTS_NAMESPACE_END
