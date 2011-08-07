@@ -155,7 +155,7 @@ public:
 		return 1.0f;
 	}
 
-	Float sampleXXX(PhaseFunctionQueryRecord &pRec, 
+	Float sample(PhaseFunctionQueryRecord &pRec, 
 			Float &pdf, Sampler *sampler) const {
 		if (sample(pRec, sampler) == 0) {
 			pdf = 0; return 0.0f;

@@ -102,7 +102,7 @@ public:
 
 				Float phasePdf;
 				PhaseFunctionQueryRecord pRec(mRec, -ray.d);
-				Float phaseVal = phase->sampleXXX(pRec, phasePdf, rRec.sampler);
+				Float phaseVal = phase->sample(pRec, phasePdf, rRec.sampler);
 				if (phaseVal == 0)
 					break;
 
@@ -252,7 +252,7 @@ public:
 				/* Sample BSDF * cos(theta) */
 				BSDFQueryRecord bRec(its, rRec.sampler, ERadiance);
 				Float bsdfPdf;
-				Spectrum bsdfVal = bsdf->sampleXXX(bRec, bsdfPdf, rRec.nextSample2D());
+				Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, rRec.nextSample2D());
 				if (bsdfVal.isZero())
 					break;
 

@@ -306,7 +306,7 @@ public:
 		return eval(bRec, ESolidAngle) * M_PI / Frame::cosTheta(bRec.wo);
 	}
 
-	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
 			(bRec.component == -1 || bRec.component == 0) && m_ksMultiplier > 0;
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&

@@ -521,7 +521,7 @@ public:
 		return result * std::abs(numerator / denominator);
 	}
 
-	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 
 		bool hasReflection = ((bRec.component == -1 || bRec.component == 0)

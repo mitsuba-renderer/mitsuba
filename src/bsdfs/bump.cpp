@@ -212,7 +212,7 @@ public:
 		return result;
 	}
 
-	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		const Intersection& its = bRec.its;
 		Intersection perturbed;
 		perturbIntersection(its, perturbed);
@@ -221,7 +221,7 @@ public:
 		perturbedQuery.wi = perturbed.toLocal(its.toWorld(bRec.wi));
 		perturbedQuery.typeMask = bRec.typeMask;
 		perturbedQuery.component = bRec.component;
-		Spectrum result = m_nested->sampleXXX(perturbedQuery, pdf, sample);
+		Spectrum result = m_nested->sample(perturbedQuery, pdf, sample);
 
 		if (!result.isZero()) {
 			bRec.sampledComponent = perturbedQuery.sampledComponent;

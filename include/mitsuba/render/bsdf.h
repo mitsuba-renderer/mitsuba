@@ -362,7 +362,7 @@ public:
 	 *         factor when a non-delta component is sampled). A zero spectrum
 	 *         means that sampling failed.
 	 */
-	virtual Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, 
+	virtual Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, 
 		const Point2 &sample) const = 0;
 
 	/**

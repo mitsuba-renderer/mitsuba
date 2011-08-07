@@ -175,7 +175,7 @@ public:
 			return 0.0f;
 	}
 
-	inline Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+	inline Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection)
@@ -235,7 +235,7 @@ public:
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		Float pdf;
-		return Phong::sampleXXX(bRec, pdf, sample);
+		return Phong::sample(bRec, pdf, sample);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {

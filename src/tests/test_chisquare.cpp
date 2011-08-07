@@ -122,7 +122,7 @@ public:
 			/* Check the various sampling routines for agreement 
 			   amongst each other */
 			m_fakeSampler->clear();
-			Spectrum sampled = m_bsdf->sampleXXX(bRec, sampledPDF, sample);
+			Spectrum sampled = m_bsdf->sample(bRec, sampledPDF, sample);
 			m_fakeSampler->rewind();
 			Spectrum sampled2 = m_bsdf->sample(bRec, sample);
 			EMeasure measure = ESolidAngle;
@@ -236,7 +236,7 @@ public:
 
 			/* Check the various sampling routines for agreement amongst each other */
 			m_fakeSampler->clear();
-			Float sampled = m_phase->sampleXXX(pRec, sampledPDF, m_fakeSampler);
+			Float sampled = m_phase->sample(pRec, sampledPDF, m_fakeSampler);
 			m_fakeSampler->rewind();
 			Float sampled2 = m_phase->sample(pRec, m_fakeSampler);
 			Float f = m_phase->eval(pRec);

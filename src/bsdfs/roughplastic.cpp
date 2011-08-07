@@ -305,7 +305,7 @@ public:
 		return result;
 	}
 
-	inline Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+	inline Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
 			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
@@ -364,7 +364,7 @@ public:
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		Float pdf;
-		return RoughPlastic::sampleXXX(bRec, pdf, sample);
+		return RoughPlastic::sample(bRec, pdf, sample);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {

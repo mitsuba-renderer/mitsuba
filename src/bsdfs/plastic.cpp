@@ -253,7 +253,7 @@ public:
 		}
 	}
 
-	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		bool hasSpecular   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection)
@@ -403,7 +403,6 @@ public:
 			<< "        abs(2 * nDotM * cosTheta(wo) / dot(wo, m))," << endl
 			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
 			<< "}" << endl
-			<< endl
 			<< endl
 			<< "float " << evalName << "_schlick(float ct) {" << endl
 			<< "    float ctSqr = ct*ct, ct5 = ctSqr*ctSqr*ct;" << endl

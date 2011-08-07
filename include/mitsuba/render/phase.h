@@ -135,7 +135,7 @@ public:
 	 * \return The phase function value divided by the probability 
 	 *         density of the sample
 	 */
-	virtual Float sampleXXX(PhaseFunctionQueryRecord &pRec,
+	virtual Float sample(PhaseFunctionQueryRecord &pRec,
 		Float &pdf, Sampler *sampler) const = 0;
 
 	/**

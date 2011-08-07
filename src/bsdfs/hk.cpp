@@ -271,7 +271,7 @@ public:
 		return 0.0f;
 	}
 
-	inline Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+	inline Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
 		AssertEx(bRec.sampler != NULL, "The BSDFQueryRecord needs to have a sampler!");
 
 		bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
@@ -316,7 +316,7 @@ public:
 
 			/* Sample According to the phase function lobes */
 			PhaseFunctionQueryRecord pRec(MediumSamplingRecord(), bRec.wi, bRec.wo);
-			m_phase->sampleXXX(pRec, _pdf, bRec.sampler);
+			m_phase->sample(pRec, _pdf, bRec.sampler);
 
 			/* Store the sampled direction */
 			bRec.wo = pRec.wo;
@@ -343,7 +343,7 @@ public:
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		Float pdf;
-		return HanrahanKrueger::sampleXXX(bRec, pdf, sample);
+		return HanrahanKrueger::sample(bRec, pdf, sample);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {

@@ -99,7 +99,7 @@ public:
 		return m_transmittance->getValue(bRec.its);
 	}
 
-	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (!(bRec.typeMask & m_combinedType)) 
 			return Spectrum(0.0f);
 		bRec.wo = squareToHemispherePSA(sample);

@@ -60,7 +60,7 @@ public:
 		return 1.0f;
 	}
 
-	Float sampleXXX(PhaseFunctionQueryRecord &pRec, 
+	Float sample(PhaseFunctionQueryRecord &pRec, 
 			Float &pdf, Sampler *sampler) const {
 		pRec.wo = squareToSphere(sampler->next2D());
 		pdf = 1/(4 * (Float) M_PI);
