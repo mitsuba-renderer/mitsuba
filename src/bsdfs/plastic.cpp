@@ -211,7 +211,6 @@ public:
 			return Spectrum(0.0f);
 
 		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-
 		Float probSpecular = (Fr*m_specularSamplingWeight) /
 			(Fr*m_specularSamplingWeight + 
 			(1-Fr) * (1-m_specularSamplingWeight));
@@ -282,12 +281,11 @@ public:
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDiffuseReflection;
 				bRec.wo = squareToHemispherePSA(Point2(
-					(sample.x - Fr) / (1 - Fr),
+					(sample.x - probSpecular) / (1 - probSpecular),
 					sample.y
 				));
-
 				pdf = (1-probSpecular) * Frame::cosTheta(bRec.wo) * INV_PI;
-
+	
 				return m_diffuseReflectance->getValue(bRec.its) 
 					* (1-Fr) / (1-probSpecular);
 			}

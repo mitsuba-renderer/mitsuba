@@ -2,9 +2,6 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene version="0.3.0">
-	<!-- Test the smooth plastic model -->
-	<bsdf type="plastic"/>
-
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
 
