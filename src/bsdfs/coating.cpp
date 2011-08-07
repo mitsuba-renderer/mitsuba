@@ -307,7 +307,7 @@ public:
 		}
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
+	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
 		bool sampleSpecular = (bRec.typeMask & EDeltaReflection)
 			&& (bRec.component == -1 || bRec.component == (int) m_components.size()-1);
 		bool sampleNested = (bRec.typeMask & m_nested->getType() & BSDF::EAll)
@@ -341,14 +341,14 @@ public:
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
 			pdf = sampleNested ? probSpecular : 1.0f;
-			return Spectrum(R12);
+			return Spectrum(R12) / pdf;
 		} else {
 			if (R12 == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
 
 			Vector wiBackup = bRec.wi;
 			bRec.wi = wiPrime;
-			Spectrum result = m_nested->sample(bRec, pdf, sample);
+			Spectrum result = m_nested->sampleXXX(bRec, pdf, sample);
 			bRec.wi = wiBackup;
 			if (result.isZero()) 
 				return Spectrum(0.0f);
@@ -366,21 +366,20 @@ public:
 			if (R21 == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
 
-			if (sampleSpecular)
-				pdf *= 1 - probSpecular;
+			if (sampleSpecular) {
+				pdf *= 1.0f - probSpecular;
+				result /= 1.0f - probSpecular;
+			}
 
 			result *= (1 - R12) * (1 - R21);
 
 			if (BSDF::getMeasure(bRec.sampledType) == ESolidAngle) {
 				/* Solid angle compression & irradiance conversion factors */
 				Float eta = m_extIOR / m_intIOR, etaSqr = eta*eta;
-				Float temp = Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime);
-	
-				result *= etaSqr *
-					Frame::cosTheta(bRec.wi) / Frame::cosTheta(wiPrime) * temp;
-				pdf *= etaSqr * temp;
-			}
 
+				result *= Frame::cosTheta(bRec.wi) / Frame::cosTheta(wiPrime);
+				pdf *= etaSqr * Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime);
+			}
 
 			return result;
 		}
@@ -388,12 +387,7 @@ public:
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		Float pdf;
-		Spectrum result = SmoothCoating::sample(bRec, pdf, sample);
-
-		if (result.isZero())
-			return Spectrum(0.0f);
-		else
-			return result / pdf;
+		return SmoothCoating::sampleXXX(bRec, pdf, sample);
 	}
 
 	Shader *createShader(Renderer *renderer) const;

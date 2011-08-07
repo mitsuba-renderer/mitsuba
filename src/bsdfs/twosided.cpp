@@ -123,14 +123,14 @@ public:
 		return result;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		bool flipped = false;
 		if (Frame::cosTheta(bRec.wi) < 0) {
 			bRec.wi.z *= -1;
 			flipped = true;
 		}
 
-		Spectrum result = m_nestedBRDF->sample(bRec, pdf, sample);
+		Spectrum result = m_nestedBRDF->sampleXXX(bRec, pdf, sample);
 
 		if (flipped) {
 			bRec.wi.z *= -1;

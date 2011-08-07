@@ -255,7 +255,7 @@ public:
 			fresnelConductor(Frame::cosTheta(bRec.wi), m_eta, m_k);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 		

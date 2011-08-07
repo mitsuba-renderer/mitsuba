@@ -236,7 +236,7 @@ public:
 			(Frame::cosTheta(bRec.wo) * INV_PI);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (!(bRec.typeMask & EGlossyReflection) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 		
@@ -244,7 +244,7 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
 		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-		return eval(bRec, ESolidAngle);
+		return eval(bRec, ESolidAngle) / pdf;
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {

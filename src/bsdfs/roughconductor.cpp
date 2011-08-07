@@ -298,7 +298,9 @@ public:
 					m_alphaV->getValue(bRec.its).average());
 
 		/* Sample M, the microsurface normal */
-		const Normal m = m_distribution.sample(sample, alphaU, alphaV);
+		Float microfacetPDF;
+		const Normal m = m_distribution.sample(sample, 
+			alphaU, alphaV, microfacetPDF);
 
 		/* Perfect specular reflection based on the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
@@ -316,14 +318,14 @@ public:
 			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
 			* dot(bRec.wi, m);
 
-		Float denominator = m_distribution.pdf(m, alphaU, alphaV)
+		Float denominator = microfacetPDF
 			* Frame::cosTheta(bRec.wi);
 
 		return m_specularReflectance->getValue(bRec.its) * F
 				* (numerator / denominator);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &sample) const {
+	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (Frame::cosTheta(bRec.wi) < 0 ||
 			((bRec.component != -1 && bRec.component != 0) ||
 			!(bRec.typeMask & EGlossyReflection)))
@@ -336,7 +338,8 @@ public:
 					m_alphaV->getValue(bRec.its).average());
 
 		/* Sample M, the microsurface normal */
-		const Normal m = m_distribution.sample(sample, alphaU, alphaV);
+		const Normal m = m_distribution.sample(sample, 
+			alphaU, alphaV, pdf);
 
 		/* Perfect specular reflection based on the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
@@ -347,14 +350,22 @@ public:
 		if (Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
 
-		/* Guard against numerical imprecisions */
-		_pdf = pdf(bRec, ESolidAngle);
+		const Spectrum F = fresnelConductor(Frame::cosTheta(bRec.wi),
+				m_eta, m_k);
 
-		if (_pdf == 0) 
-			return Spectrum(0.0f);
-		else
-			return eval(bRec, ESolidAngle);
+		Float numerator = m_distribution.eval(m, alphaU, alphaV)
+			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
+			* dot(bRec.wi, m);
+		
+		Float denominator = pdf * Frame::cosTheta(bRec.wi);
+
+		/* Jacobian of the half-direction transform */
+		pdf /= 4.0f * dot(bRec.wo, m);
+
+		return m_specularReflectance->getValue(bRec.its) * F
+				* (numerator / denominator);
 	}
+
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {

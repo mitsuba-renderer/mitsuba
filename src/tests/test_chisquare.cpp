@@ -128,6 +128,10 @@ public:
 			EMeasure measure = ESolidAngle;
 			if (!sampled.isZero())
 				measure = BSDF::getMeasure(bRec.sampledType);
+
+			if (sampled.isZero() && sampled2.isZero())
+				return boost::make_tuple(Vector(0.0f), 0.0f, measure);
+
 			Spectrum f = m_bsdf->eval(bRec, measure);
 			pdfVal = m_bsdf->pdf(bRec, measure);
 			Spectrum manual = f/pdfVal;
@@ -178,8 +182,7 @@ public:
 				disableFPExceptions();
 			#endif
 
-			return boost::make_tuple(bRec.wo, 
-				sampled.isZero() ? 0.0f : 1.0f, measure);
+			return boost::make_tuple(bRec.wo, 1.0f, measure);
 		}
  
 		Float pdf(const Vector &wo, EMeasure measure) {
@@ -393,7 +396,7 @@ public:
 
 			Log(EInfo, "Checking the model for %i incident directions and 2D sampling", wiSamples);
 			progress->reset();
-
+#if 1
 			/* Test for a number of different incident directions */
 			for (size_t j=0; j<wiSamples; ++j) {
 				Vector wi;
@@ -429,6 +432,7 @@ public:
 				progress->update(j+1);
 			}
 			Log(EInfo, "The largest encountered importance weight was = %.2f", largestWeight);
+#endif
 			largestWeight = 0;
 
 			if (bsdf->getComponentCount() > 1) {

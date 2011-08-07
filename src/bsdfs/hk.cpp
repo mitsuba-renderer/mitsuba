@@ -272,7 +272,7 @@ public:
 		return 0.0f;
 	}
 
-	inline Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+	inline Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
 		AssertEx(bRec.sampler != NULL, "The BSDFQueryRecord needs to have a sampler!");
 
 		bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
@@ -307,7 +307,7 @@ public:
 			bRec.wo = -bRec.wi;
 
 			_pdf = hasSingleScattering ? probSpecularTransmission : 1.0f;
-			return eval(bRec, EDiscrete);
+			return eval(bRec, EDiscrete) / _pdf;
 		} else {
 			/* The glossy transmission/scattering component should be sampled */
 			bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection)
@@ -317,7 +317,7 @@ public:
 
 			/* Sample According to the phase function lobes */
 			PhaseFunctionQueryRecord pRec(MediumSamplingRecord(), bRec.wi, bRec.wo);
-			m_phase->sample(pRec, _pdf, bRec.sampler);
+			m_phase->sampleXXX(pRec, _pdf, bRec.sampler);
 
 			/* Store the sampled direction */
 			bRec.wo = pRec.wo;
@@ -337,19 +337,14 @@ public:
 			if (_pdf == 0) 
 				return Spectrum(0.0f);
 			else
-				return eval(bRec, ESolidAngle);
+				return eval(bRec, ESolidAngle) / _pdf;
 
 		}
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		Float pdf = 0;
-		Spectrum result = HanrahanKrueger::sample(bRec, pdf, sample);
-
-		if (result.isZero())
-			return Spectrum(0.0f);
-		else
-			return result / pdf;
+		Float pdf;
+		return HanrahanKrueger::sampleXXX(bRec, pdf, sample);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {

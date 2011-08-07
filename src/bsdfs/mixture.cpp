@@ -204,41 +204,6 @@ public:
 		return result;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
-		Point2 sample(_sample);
-		if (bRec.component == -1) {
-			/* Choose a component based on the normalized weights */
-			size_t entry = m_pdf.sampleReuse(sample.x);
-
-			Spectrum result = m_bsdfs[entry]->sample(bRec, pdf, sample);
-			if (result.isZero()) // sampling failed
-				return result;
-
-			result *= m_weights[entry];
-			pdf *= m_pdf[entry];
-
-			EMeasure measure = BSDF::getMeasure(bRec.sampledType);
-			for (size_t i=0; i<m_bsdfs.size(); ++i) {
-				if (entry == i)
-					continue;
-				pdf += m_bsdfs[i]->pdf(bRec, measure) * m_pdf[i];
-				result += m_bsdfs[i]->eval(bRec, measure) * m_weights[i];
-			}
-
-			bRec.sampledComponent += m_offsets[entry];
-			return result;
-		} else {
-			/* Pick out an individual component */
-			int requestedComponent = bRec.component;
-			int bsdfIndex = m_indices[requestedComponent].first;
-			bRec.component = m_indices[requestedComponent].second;
-			Spectrum result = m_bsdfs[bsdfIndex]->sample(bRec, pdf, sample)
-				* m_weights[bsdfIndex];
-			bRec.component = bRec.sampledComponent = requestedComponent;
-			return result;
-		}
-	}
-
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
 		Point2 sample(_sample);
 		if (bRec.component == -1) {
@@ -246,11 +211,11 @@ public:
 			size_t entry = m_pdf.sampleReuse(sample.x);
 
 			Float pdf;
-			Spectrum result = m_bsdfs[entry]->sample(bRec, pdf, sample);
+			Spectrum result = m_bsdfs[entry]->sampleXXX(bRec, pdf, sample);
 			if (result.isZero()) // sampling failed
 				return result;
 
-			result *= m_weights[entry];
+			result *= m_weights[entry] * pdf;
 			pdf *= m_pdf[entry];
 
 			EMeasure measure = BSDF::getMeasure(bRec.sampledType);
@@ -269,6 +234,41 @@ public:
 			int bsdfIndex = m_indices[requestedComponent].first;
 			bRec.component = m_indices[requestedComponent].second;
 			Spectrum result = m_bsdfs[bsdfIndex]->sample(bRec, sample)
+				* m_weights[bsdfIndex];
+			bRec.component = bRec.sampledComponent = requestedComponent;
+			return result;
+		}
+	}
+
+	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
+		Point2 sample(_sample);
+		if (bRec.component == -1) {
+			/* Choose a component based on the normalized weights */
+			size_t entry = m_pdf.sampleReuse(sample.x);
+
+			Spectrum result = m_bsdfs[entry]->sampleXXX(bRec, pdf, sample);
+			if (result.isZero()) // sampling failed
+				return result;
+
+			result *= m_weights[entry] * pdf;
+			pdf *= m_pdf[entry];
+			
+			EMeasure measure = BSDF::getMeasure(bRec.sampledType);
+			for (size_t i=0; i<m_bsdfs.size(); ++i) {
+				if (entry == i)
+					continue;
+				pdf += m_bsdfs[i]->pdf(bRec, measure) * m_pdf[i];
+				result += m_bsdfs[i]->eval(bRec, measure) * m_weights[i];
+			}
+
+			bRec.sampledComponent += m_offsets[entry];
+			return result/pdf;
+		} else {
+			/* Pick out an individual component */
+			int requestedComponent = bRec.component;
+			int bsdfIndex = m_indices[requestedComponent].first;
+			bRec.component = m_indices[requestedComponent].second;
+			Spectrum result = m_bsdfs[bsdfIndex]->sampleXXX(bRec, pdf, sample)
 				* m_weights[bsdfIndex];
 			bRec.component = bRec.sampledComponent = requestedComponent;
 			return result;

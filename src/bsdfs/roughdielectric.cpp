@@ -367,8 +367,8 @@ public:
 							  && (bRec.typeMask & EGlossyReflection)),
 		     hasTransmission = ((bRec.component == -1 || bRec.component == 1)
 							  && (bRec.typeMask & EGlossyTransmission)),
-		     reflect            = Frame::cosTheta(bRec.wi) 
-				                * Frame::cosTheta(bRec.wo) > 0;
+		     reflect         = Frame::cosTheta(bRec.wi) 
+				             * Frame::cosTheta(bRec.wo) > 0;
 
 		/* Determine the appropriate indices of refraction */
 		Float etaI = m_extIOR, etaT = m_intIOR;
@@ -385,10 +385,10 @@ public:
 				return 0.0f;
 
 			/* Calculate the reflection half-vector (and possibly flip it
-			   so that it lies inside the hemisphere around the normal) */
+			   so that it lies inside the hemisphere around the surface normal) */
 			H = normalize(bRec.wo+bRec.wi) 
 				* signum(Frame::cosTheta(bRec.wo));
-	
+
 			/* Jacobian of the half-direction transform */
 			dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, H));
 		} else {
@@ -460,8 +460,9 @@ public:
 #endif
 
 		/* Sample M, the microsurface normal */
+		Float microfacetPDF;
 		const Normal m = m_distribution.sample(sample,
-				sampleAlphaU, sampleAlphaV);
+				sampleAlphaU, sampleAlphaV, microfacetPDF);
 
 		Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR),
 			  numerator = 1.0f;
@@ -510,14 +511,14 @@ public:
 		numerator *= m_distribution.eval(m, alphaU, alphaV)
 			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
 			* dot(bRec.wi, m);
-		
-		Float denominator = m_distribution.pdf(m, sampleAlphaU, sampleAlphaV)
+
+		Float denominator = microfacetPDF
 			* Frame::cosTheta(bRec.wi);
 
 		return result * std::abs(numerator / denominator);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 
 		bool hasReflection = ((bRec.component == -1 || bRec.component == 0)
@@ -546,14 +547,34 @@ public:
 #endif
 
 		/* Sample M, the microsurface normal */
+		Float microfacetPDF;
 		const Normal m = m_distribution.sample(sample,
-				sampleAlphaU, sampleAlphaV);
+				sampleAlphaU, sampleAlphaV, microfacetPDF);
+
+#if 1
+		Float ref = m_distribution.pdf(m, sampleAlphaU, sampleAlphaV);
+		if (std::abs(ref-microfacetPDF)/ref > Epsilon)
+			cout << "OOPS! ref=" << ref << ", got=" << microfacetPDF << endl;
+#endif
+
+		pdf = microfacetPDF;
+
+		Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR),
+			  numerator = 1.0f;
 
 		if (hasReflection && hasTransmission) {
-			Float F = fresnel(dot(bRec.wi, m), m_extIOR, m_intIOR);
-			if (bRec.sampler->next1D() > F)
+			if (bRec.sampler->next1D() > F) {
 				choseReflection = false;
+				pdf *= (1-F);
+			} else {
+				pdf *= F;
+			}
+		} else {
+			numerator = hasReflection ? F : 1-F;
 		}
+
+		Spectrum result;
+		Float dwh_dwo;
 
 		if (choseReflection) {
 			/* Perfect specular reflection based on the microsurface normal */
@@ -564,6 +585,11 @@ public:
 			/* Side check */
 			if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) <= 0)
 				return Spectrum(0.0f);
+		
+			result = m_specularReflectance->getValue(bRec.its);
+
+			/* Jacobian of the half-direction transform */
+			dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, m));
 		} else {
 			/* Determine the appropriate indices of refraction */
 			Float etaI = m_extIOR, etaT = m_intIOR;
@@ -580,16 +606,27 @@ public:
 			/* Side check */
 			if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
 				return Spectrum(0.0f);
+
+			result = m_specularTransmittance->getValue(bRec.its)
+				* ((bRec.quantity == ERadiance) ?
+					((etaI*etaI) / (etaT*etaT)) : (Float) 1);
+
+			/* Jacobian of the half-direction transform. */
+			Float sqrtDenom = etaI * dot(bRec.wi, m) + etaT * dot(bRec.wo, m);
+			dwh_dwo = (etaT*etaT * dot(bRec.wo, m)) / (sqrtDenom*sqrtDenom);
 		}
 
-		/* Guard against numerical imprecisions */
-		_pdf = pdf(bRec, ESolidAngle);
+		numerator *= m_distribution.eval(m, alphaU, alphaV)
+			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
+			* dot(bRec.wi, m);
 
-		if (_pdf == 0) 
-			return Spectrum(0.0f);
-		else
-			return eval(bRec, ESolidAngle);
+		Float denominator = microfacetPDF * Frame::cosTheta(bRec.wi);
+
+		pdf *= std::abs(dwh_dwo);
+
+		return result * std::abs(numerator / denominator);
 	}
+
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {

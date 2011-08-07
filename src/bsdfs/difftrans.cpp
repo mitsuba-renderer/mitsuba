@@ -99,7 +99,7 @@ public:
 		return m_transmittance->getValue(bRec.its);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sampleXXX(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (!(bRec.typeMask & m_combinedType)) 
 			return Spectrum(0.0f);
 		bRec.wo = squareToHemispherePSA(sample);
@@ -108,8 +108,7 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseTransmission;
 		pdf = std::abs(Frame::cosTheta(bRec.wo)) * INV_PI;
-		return m_transmittance->getValue(bRec.its) 
-			* (INV_PI * std::abs(Frame::cosTheta(bRec.wo)));
+		return m_transmittance->getValue(bRec.its);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
