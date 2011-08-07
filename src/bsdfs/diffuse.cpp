@@ -142,8 +142,7 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
 		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-		return m_reflectance->getValue(bRec.its) 
-			* (INV_PI * Frame::cosTheta(bRec.wo));
+		return m_reflectance->getValue(bRec.its);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {

@@ -433,7 +433,7 @@ public:
 				bRec.wo = reflect(bRec.wi);
 
 				pdf = Fr;
-				return m_specularReflectance->getValue(bRec.its) * Fr;
+				return m_specularReflectance->getValue(bRec.its);
 			} else {
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDeltaTransmission;
@@ -447,7 +447,7 @@ public:
 				/* When transporting radiance, account for the solid angle
 				   change at boundaries with different indices of refraction. */
 				return m_specularTransmittance->getValue(bRec.its) 
-					* (1-Fr) * (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1);
+					* (bRec.quantity == ERadiance ? (eta*eta) : (Float) 1);
 			}
 		} else if (sampleReflection) {
 			bRec.sampledComponent = 0;

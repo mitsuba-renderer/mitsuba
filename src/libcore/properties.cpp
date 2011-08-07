@@ -408,7 +408,7 @@ bool Properties::wasQueried(const std::string &name) const {
 }
 
 ConfigurableObject::ConfigurableObject(Stream *stream, InstanceManager *manager) 
- : SerializableObject(stream, manager), m_configured(true) {
+ : SerializableObject(stream, manager) {
 	m_parent = static_cast<ConfigurableObject *>(manager->getInstance(stream));
 }
 

@@ -161,7 +161,7 @@ public:
 			pdf = 0; return 0.0f;
 		}
 		pdf = eval(pRec);
-		return pdf;
+		return 1.0f;
 	}
 
 	bool needsDirectionallyVaryingCoefficients() const { return true; }

@@ -303,7 +303,7 @@ public:
 		bRec.wo = squareToHemispherePSA(sample);
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
-		return eval(bRec, ESolidAngle) / Frame::cosTheta(bRec.wo);
+		return eval(bRec, ESolidAngle) * M_PI / Frame::cosTheta(bRec.wo);
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
@@ -321,7 +321,7 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
 		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-		return eval(bRec, ESolidAngle);
+		return eval(bRec, ESolidAngle) / pdf;
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {

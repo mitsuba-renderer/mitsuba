@@ -75,7 +75,7 @@ public:
 			Float &pdf, Sampler *sampler) const {
 		RayleighPhaseFunction::sample(pRec, sampler);
 		pdf = RayleighPhaseFunction::eval(pRec);
-		return pdf;
+		return 1.0f;
 	}
 
 

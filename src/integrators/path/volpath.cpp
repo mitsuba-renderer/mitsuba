@@ -105,7 +105,6 @@ public:
 				Float phaseVal = phase->sample(pRec, phasePdf, rRec.sampler);
 				if (phaseVal == 0)
 					break;
-				phaseVal /= phasePdf;
 
 				/* Trace a ray in this direction */
 				ray = Ray(mRec.p, pRec.wo, ray.time);
@@ -256,8 +255,6 @@ public:
 				Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, rRec.nextSample2D());
 				if (bsdfVal.isZero())
 					break;
-	
-				bsdfVal /= bsdfPdf;
 
 				/* Prevent light leaks due to the use of shading normals */
 				const Vector wo = its.toWorld(bRec.wo);

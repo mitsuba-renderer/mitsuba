@@ -171,7 +171,6 @@ public:
 			Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, sampleArray[i]);
 			if (bsdfVal.isZero())
 				continue;
-			bsdfVal /= bsdfPdf;
 
 			/* Trace a ray in this direction */
 			Ray bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);

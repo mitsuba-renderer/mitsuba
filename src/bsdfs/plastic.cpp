@@ -182,17 +182,17 @@ public:
 
 		Float probSpecular = 1.0f;
 		if (hasSpecular && hasDiffuse) {
-			probSpecular = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-			probSpecular = (probSpecular*m_specularSamplingWeight) /
-				(probSpecular*m_specularSamplingWeight + 
-				(1-probSpecular) * (1-m_specularSamplingWeight));
+			Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+			probSpecular = (Fr*m_specularSamplingWeight) /
+				(Fr*m_specularSamplingWeight + 
+				(1-Fr) * (1-m_specularSamplingWeight));
 		}
 
 		if (measure == EDiscrete && hasSpecular) {
 			/* Check if the provided direction pair matches an ideal
 			   specular reflection; tolerate some roundoff errors */
 			if (std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) < Epsilon)
-				return hasDiffuse ? probSpecular : 1.0f;
+				return probSpecular;
 		} else if (measure == ESolidAngle && hasDiffuse) {
 			return Frame::cosTheta(bRec.wo) * INV_PI *
 				(hasSpecular ? (1 - probSpecular) : 1.0f);
@@ -211,7 +211,6 @@ public:
 			return Spectrum(0.0f);
 
 		Float Fr = fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-
 		Float probSpecular = (Fr*m_specularSamplingWeight) /
 			(Fr*m_specularSamplingWeight + 
 			(1-Fr) * (1-m_specularSamplingWeight));
@@ -224,7 +223,7 @@ public:
 				bRec.wo = reflect(bRec.wi);
 
 				return m_specularReflectance->getValue(bRec.its) *
-					Fr / probSpecular;
+					(Fr / probSpecular);
 			} else {
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDiffuseReflection;
@@ -234,7 +233,7 @@ public:
 				));
 
 				return m_diffuseReflectance->getValue(bRec.its) *
-					(1-Fr) / (1-probSpecular);
+					((1-Fr) / (1-probSpecular));
 			}
 		} else if (hasSpecular) {
 			bRec.sampledComponent = 0;
@@ -276,19 +275,19 @@ public:
 				bRec.wo = reflect(bRec.wi);
 
 				pdf = probSpecular;
-				return m_specularReflectance->getValue(bRec.its) * Fr;
+				return m_specularReflectance->getValue(bRec.its)
+					* Fr / probSpecular;
 			} else {
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDiffuseReflection;
 				bRec.wo = squareToHemispherePSA(Point2(
-					(sample.x - Fr) / (1 - Fr),
+					(sample.x - probSpecular) / (1 - probSpecular),
 					sample.y
 				));
-
 				pdf = (1-probSpecular) * Frame::cosTheta(bRec.wo) * INV_PI;
-
+	
 				return m_diffuseReflectance->getValue(bRec.its) 
-					* (INV_PI * Frame::cosTheta(bRec.wo) * (1-Fr));
+					* (1-Fr) / (1-probSpecular);
 			}
 		} else if (hasSpecular) {
 			bRec.sampledComponent = 0;
@@ -304,11 +303,10 @@ public:
 				return Spectrum(0.0f);
 				
 			bRec.wo = squareToHemispherePSA(sample);
-				
+
 			pdf = Frame::cosTheta(bRec.wo) * INV_PI;
 
-			return m_diffuseReflectance->getValue(bRec.its) 
-				* (INV_PI * Frame::cosTheta(bRec.wo) * (1-Fr));
+			return m_diffuseReflectance->getValue(bRec.its) * (1-Fr);
 		}
 	}
 
@@ -405,7 +403,6 @@ public:
 			<< "        abs(2 * nDotM * cosTheta(wo) / dot(wo, m))," << endl
 			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
 			<< "}" << endl
-			<< endl
 			<< endl
 			<< "float " << evalName << "_schlick(float ct) {" << endl
 			<< "    float ctSqr = ct*ct, ct5 = ctSqr*ctSqr*ct;" << endl

@@ -300,7 +300,6 @@ public:
 			          / Frame::cosTheta(bRecInt.wo);
 			}
 
-
 			return sampleSpecular ? (pdf * (1 - probSpecular)) : pdf;
 		} else {
 			return 0.0f;
@@ -341,7 +340,7 @@ public:
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
 			pdf = sampleNested ? probSpecular : 1.0f;
-			return Spectrum(R12);
+			return Spectrum(R12) / pdf;
 		} else {
 			if (R12 == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
@@ -366,21 +365,20 @@ public:
 			if (R21 == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
 
-			if (sampleSpecular)
-				pdf *= 1 - probSpecular;
+			if (sampleSpecular) {
+				pdf *= 1.0f - probSpecular;
+				result /= 1.0f - probSpecular;
+			}
 
 			result *= (1 - R12) * (1 - R21);
 
 			if (BSDF::getMeasure(bRec.sampledType) == ESolidAngle) {
 				/* Solid angle compression & irradiance conversion factors */
 				Float eta = m_extIOR / m_intIOR, etaSqr = eta*eta;
-				Float temp = Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime);
-	
-				result *= etaSqr *
-					Frame::cosTheta(bRec.wi) / Frame::cosTheta(wiPrime) * temp;
-				pdf *= etaSqr * temp;
-			}
 
+				result *= Frame::cosTheta(bRec.wi) / Frame::cosTheta(wiPrime);
+				pdf *= etaSqr * Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime);
+			}
 
 			return result;
 		}
@@ -388,12 +386,7 @@ public:
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		Float pdf;
-		Spectrum result = SmoothCoating::sample(bRec, pdf, sample);
-
-		if (result.isZero())
-			return Spectrum(0.0f);
-		else
-			return result / pdf;
+		return SmoothCoating::sample(bRec, pdf, sample);
 	}
 
 	Shader *createShader(Renderer *renderer) const;
@@ -423,31 +416,113 @@ protected:
 
 // ================ Hardware shader implementation ================ 
 
-/* Crude GLSL approximation -- just forwards to the nested model */
+/**
+ * Simple GLSL version -- uses Schlick's approximation and approximates the
+ * ideally specular reflection with a somewhat smoothed out reflection lobe
+ */
 class SmoothCoatingShader : public Shader {
 public:
-	SmoothCoatingShader(Renderer *renderer, const BSDF *nested) 
-		: Shader(renderer, EBSDFShader), m_nested(nested) {
+	SmoothCoatingShader(Renderer *renderer, Float extIOR, Float intIOR, const BSDF *nested,
+			const Texture *sigmaA) : Shader(renderer, EBSDFShader), m_nested(nested), m_sigmaA(sigmaA) {
 		m_nestedShader = renderer->registerShaderForResource(m_nested.get());
+		m_sigmaAShader = renderer->registerShaderForResource(m_sigmaA.get());
+		m_R0 = fresnel(1.0f, extIOR, intIOR);
+		m_eta = extIOR / intIOR;
 	}
 
 	bool isComplete() const {
-		return m_nestedShader.get() != NULL;
+		return m_nestedShader.get() != NULL
+			&& m_sigmaAShader.get() != NULL;
 	}
 
 	void cleanup(Renderer *renderer) {
 		renderer->unregisterShaderForResource(m_nested.get());
+		renderer->unregisterShaderForResource(m_sigmaA.get());
 	}
 
 	void putDependencies(std::vector<Shader *> &deps) {
 		deps.push_back(m_nestedShader.get());
+		deps.push_back(m_sigmaAShader.get());
+	}
+
+	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_R0", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_eta", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_alpha", false));
+	}
+
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
+		program->setParameter(parameterIDs[0], m_R0);
+		program->setParameter(parameterIDs[1], m_eta);
+		program->setParameter(parameterIDs[2], 0.4f);
 	}
 
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return " << depNames[0] << "(uv, wi, wo);" << endl
+		oss << "uniform float " << evalName << "_R0;" << endl
+			<< "uniform float " << evalName << "_eta;" << endl
+			<< "uniform float " << evalName << "_alpha;" << endl
+			<< endl
+			<< "float " << evalName << "_schlick(float ct) {" << endl
+			<< "    float ctSqr = ct*ct, ct5 = ctSqr*ctSqr*ct;" << endl
+			<< "    return " << evalName << "_R0 + (1.0 - " << evalName << "_R0) * ct5;" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "_refract(vec3 wi, out float T) {" << endl
+			<< "    float cosThetaI = cosTheta(wi);" << endl
+			<< "    bool entering = cosThetaI > 0.0;" << endl
+			<< "    float eta = " << evalName << "_eta;" << endl
+			<< "    float sinThetaTSqr =  eta * eta * sinTheta2(wi);" << endl
+			<< "    if (sinThetaTSqr >= 1.0) {" << endl
+			<< "        T = 0.0; /* Total internal reflection */" << endl
+			<< "        return vec3(0.0);" << endl
+			<< "    } else {" << endl
+			<< "        float cosThetaT = sqrt(1.0 - sinThetaTSqr);" << endl
+			<< "        T = 1.0 - " << evalName << "_schlick(1.0 - abs(cosThetaI));" << endl
+			<< "        return vec3(eta*wi.x, eta*wi.y, entering ? cosThetaT : -cosThetaT);" << endl
+			<< "    }" << endl
+			<< "}" << endl
+			<< endl
+			<< "float " << evalName << "_D(vec3 m) {" << endl
+			<< "    float ct = cosTheta(m);" << endl
+			<< "    if (cosTheta(m) <= 0.0)" << endl
+			<< "        return 0.0;" << endl
+			<< "    float ex = tanTheta(m) / " << evalName << "_alpha;" << endl
+			<< "    return exp(-(ex*ex)) / (pi * " << evalName << "_alpha" << endl
+			<< "        * " << evalName << "_alpha * pow(cosTheta(m), 4.0));" << endl
+			<< "}" << endl
+			<< endl
+			<< "float " << evalName << "_G(vec3 m, vec3 wi, vec3 wo) {" << endl
+			<< "    if ((dot(wi, m) * cosTheta(wi)) <= 0 || " << endl
+			<< "        (dot(wo, m) * cosTheta(wo)) <= 0)" << endl
+			<< "        return 0.0;" << endl
+			<< "    float nDotM = cosTheta(m);" << endl
+			<< "    return min(1.0, min(" << endl
+			<< "        abs(2 * nDotM * cosTheta(wo) / dot(wo, m))," << endl
+			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    float T12, T21;" << endl
+			<< "    vec3 wiPrime = " << evalName << "_refract(wi, T12);" << endl
+			<< "    vec3 woPrime = " << evalName << "_refract(wo, T21);" << endl
+			<< "    vec3 nested = " << depNames[0] << "(uv, wiPrime, woPrime);" << endl
+			<< "    vec3 sigmaA = " << depNames[1] << "(uv);" << endl
+			<< "    vec3 result = nested * " << evalName << "_eta * " << evalName << "_eta" << endl
+			<< "                  * T12 * T21 * (cosTheta(wi)*cosTheta(wo)) /" << endl
+			<< "                  (cosTheta(wiPrime)*cosTheta(woPrime));" << endl
+			<< "    if (sigmaA != vec3(0.0))" << endl
+			<< "        result *= exp(-sigmaA * (1/abs(cosTheta(wiPrime)) + " << endl
+			<< "                                 1/abs(cosTheta(woPrime))));" << endl
+			<< "    if (cosTheta(wi)*cosTheta(wo) > 0) {" << endl
+			<< "        vec3 H = normalize(wi + wo);" << endl
+			<< "        float D = " << evalName << "_D(H)" << ";" << endl
+			<< "        float G = " << evalName << "_G(H, wi, wo);" << endl
+			<< "        float F = " << evalName << "_schlick(1-dot(wi, H));" << endl
+			<< "        result += vec3(F * D * G / (4*cosTheta(wi)));" << endl
+			<< "    }" << endl
+			<< "    return result;" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
@@ -458,11 +533,15 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	ref<const BSDF> m_nested;
+	ref<const Texture> m_sigmaA;
 	ref<Shader> m_nestedShader;
+	ref<Shader> m_sigmaAShader;
+	Float m_R0, m_eta;
 };
 
 Shader *SmoothCoating::createShader(Renderer *renderer) const { 
-	return new SmoothCoatingShader(renderer, m_nested.get());
+	return new SmoothCoatingShader(renderer, m_extIOR, m_intIOR, 
+		m_nested.get(), m_sigmaA.get());
 }
 
 MTS_IMPLEMENT_CLASS(SmoothCoatingShader, false, Shader)

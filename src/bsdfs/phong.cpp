@@ -230,17 +230,12 @@ public:
 		if (_pdf == 0) 
 			return Spectrum(0.0f);
 		else
-			return eval(bRec, ESolidAngle);
+			return eval(bRec, ESolidAngle) / _pdf;
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		Float pdf = 0;
-		Spectrum result = Phong::sample(bRec, pdf, sample);
-
-		if (result.isZero())
-			return Spectrum(0.0f);
-		else
-			return result / pdf;
+		Float pdf;
+		return Phong::sample(bRec, pdf, sample);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {

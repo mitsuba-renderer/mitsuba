@@ -108,8 +108,7 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseTransmission;
 		pdf = std::abs(Frame::cosTheta(bRec.wo)) * INV_PI;
-		return m_transmittance->getValue(bRec.its) 
-			* (INV_PI * std::abs(Frame::cosTheta(bRec.wo)));
+		return m_transmittance->getValue(bRec.its);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {

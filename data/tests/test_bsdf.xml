@@ -1,28 +1,7 @@
 <!-- This file defines a series of BSDF instances
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
-<scene version="0.3.0">	
-	<!-- Test the coating model with the Hanrahan-Krueger model -->
-	<bsdf type="coating">
-		<bsdf type="hk">
-			<rgb name="sigmaA" value="0.1 0.2 0.3"/>
-			<rgb name="sigmaS" value="1"/>
-			<float name="thickness" value="2"/>
-		</bsdf>
-	</bsdf>
-
-	<!-- Test the Hanrahan-Krueger model with an
-		 isotropic phase function -->
-	<bsdf type="hk"/>
-	
-	<!-- Test the Hanrahan-Krueger model with a 
-		 forward-scattering phase function -->
-	<bsdf type="hk">
-		<phase type="hg">
-			<float name="g" value="0.8"/>
-		</phase>
-	</bsdf>
-
+<scene version="0.3.0">
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
 
@@ -72,6 +51,18 @@
 		<string name="weights" value=".8 .2"/>
 		<bsdf type="dielectric"/>
 		<bsdf type="diffuse"/>
+	</bsdf>
+
+	<!-- Test the Hanrahan-Krueger model with an
+		 isotropic phase function -->
+	<bsdf type="hk"/>
+	
+	<!-- Test the Hanrahan-Krueger model with a 
+		 forward-scattering phase function -->
+	<bsdf type="hk">
+		<phase type="hg">
+			<float name="g" value="0.8"/>
+		</phase>
 	</bsdf>
 
 	<!-- Test the rough glass model with the 
@@ -198,6 +189,15 @@
 		<bsdf type="mask">
 			<bsdf type="diffuse"/>
 			<spectrum name="opacity" value="0.5"/>
+		</bsdf>
+	</bsdf>
+
+	<!-- Test the coating model with the Hanrahan-Krueger model -->
+	<bsdf type="coating">
+		<bsdf type="hk">
+			<rgb name="sigmaA" value="0.1 0.2 0.3"/>
+			<rgb name="sigmaS" value="1"/>
+			<float name="thickness" value="2"/>
 		</bsdf>
 	</bsdf>
 </scene>

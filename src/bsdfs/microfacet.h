@@ -240,86 +240,163 @@ public:
 	Normal sample(const Point2 &sample, Float alphaU, Float alphaV) const {
 		/* The azimuthal component is always selected 
 		   uniformly regardless of the distribution */
-		Float phiM = (2.0f * M_PI) * sample.y,
-			  thetaM = 0.0f;
-	
+		Float cosThetaM = 0.0f, phiM = (2.0f * M_PI) * sample.y;
+
 		switch (m_type) {
-			case EBeckmann: 
-				thetaM = std::atan(std::sqrt(-alphaU*alphaU *
-						 std::log(1.0f - sample.x)));
-				break;
-	
-			case EGGX: 
-				thetaM = std::atan(alphaU * std::sqrt(sample.x) /
-						 std::sqrt(1.0f - sample.x));
+			case EBeckmann: {
+					Float tanThetaMSqr = -alphaU*alphaU * std::log(1.0f - sample.x);
+					cosThetaM = 1.0f / std::sqrt(1 + tanThetaMSqr);
+				}
 				break;
 
-			case EPhong:
-				thetaM = std::acos(std::pow(sample.x, (Float) 1 / 
-						 (alphaU + 2)));
+			case EGGX: {
+					Float tanThetaMSqr = alphaU * alphaU * sample.x / (1.0f - sample.x);
+					cosThetaM = 1.0f / std::sqrt(1 + tanThetaMSqr);
+				}
 				break;
-	
+
+			case EPhong: {
+					cosThetaM = std::pow(sample.x, 1 / (alphaU + 2));
+				}
+				break;
+
 			case EAshikhminShirley: {
 					/* Sampling method based on code from PBRT */
-					Float phi, cosTheta;
 					if (sample.x < 0.25f) {
 						sampleFirstQuadrant(alphaU, alphaV,
-							4 * sample.x, sample.y, phi, cosTheta);
+							4 * sample.x, sample.y, phiM, cosThetaM);
 					} else if (sample.x < 0.5f) {
 						sampleFirstQuadrant(alphaU, alphaV,
-							4 * (0.5f - sample.x), sample.y, phi, cosTheta);
-						phi = M_PI - phi;
+							4 * (0.5f - sample.x), sample.y, phiM, cosThetaM);
+						phiM = M_PI - phiM;
 					} else if (sample.x < 0.75f) {
 						sampleFirstQuadrant(alphaU, alphaV,
-							4 * (sample.x - 0.5f), sample.y, phi, cosTheta);
-						phi += M_PI;
+							4 * (sample.x - 0.5f), sample.y, phiM, cosThetaM);
+						phiM += M_PI;
 					} else {
 						sampleFirstQuadrant(alphaU, alphaV,
-							4 * (1 - sample.x), sample.y, phi, cosTheta);
-						phi = 2 * M_PI - phi;
+							4 * (1 - sample.x), sample.y, phiM, cosThetaM);
+						phiM = 2 * M_PI - phiM;
 					}
-					const Float sinTheta = std::sqrt(
-						std::max((Float) 0, 1 - cosTheta*cosTheta));
+				}
+				break;
+			default: 
+				SLog(EError, "Invalid distribution function!");
+		}
+
+		const Float sinThetaM = std::sqrt(
+			std::max((Float) 0, 1 - cosThetaM*cosThetaM));
+		return Vector(
+			sinThetaM * std::cos(phiM),
+			sinThetaM * std::sin(phiM),
+			cosThetaM
+		);
+	}
+
+
+	/**
+	 * \brief Draw a sample from the microsurface normal distribution
+	 * and return the associated probability density
+	 *
+	 * \param sample  A uniformly distributed 2D sample
+	 * \param alphaU  The surface roughness in the tangent direction
+	 * \param alphaV  The surface roughness in the bitangent direction
+	 * \param pdf     The probability density wrt. solid angles
+	 */
+	Normal sample(const Point2 &sample, Float alphaU, Float alphaV, Float &pdf) const {
+		/* The azimuthal component is always selected 
+		   uniformly regardless of the distribution */
+		Float cosThetaM = 0.0f;
+
+		switch (m_type) {
+			case EBeckmann: {
+					Float tanThetaMSqr = -alphaU*alphaU * std::log(1.0f - sample.x);
+					cosThetaM = 1.0f / std::sqrt(1 + tanThetaMSqr);
+					Float cosThetaM2 = cosThetaM * cosThetaM,
+						  cosThetaM3 = cosThetaM2 * cosThetaM;
+					pdf = (1.0f - sample.x) / (M_PI * alphaU*alphaU * cosThetaM3);
+				}
+				break;
+
+			case EGGX: {
+					Float alphaUSqr = alphaU * alphaU;
+					Float tanThetaMSqr = alphaUSqr * sample.x / (1.0f - sample.x);
+					cosThetaM = 1.0f / std::sqrt(1 + tanThetaMSqr);
+
+					Float cosThetaM2 = cosThetaM * cosThetaM,
+						  cosThetaM3 = cosThetaM2 * cosThetaM,
+						  temp = alphaUSqr + tanThetaMSqr;
+
+					pdf = INV_PI * alphaUSqr / (cosThetaM3 * temp * temp);
+				}
+				break;
+
+			case EPhong: {
+					Float exponent = 1 / (alphaU + 2);
+					cosThetaM = std::pow(sample.x, exponent);
+					pdf = (alphaU + 2) * INV_TWOPI * std::pow(sample.x, (alphaU+1) * exponent);
+				}
+				break;
+
+			case EAshikhminShirley: {
+					Float phiM;
+
+					/* Sampling method based on code from PBRT */
+					if (sample.x < 0.25f) {
+						sampleFirstQuadrant(alphaU, alphaV,
+							4 * sample.x, sample.y, phiM, cosThetaM);
+					} else if (sample.x < 0.5f) {
+						sampleFirstQuadrant(alphaU, alphaV,
+							4 * (0.5f - sample.x), sample.y, phiM, cosThetaM);
+						phiM = M_PI - phiM;
+					} else if (sample.x < 0.75f) {
+						sampleFirstQuadrant(alphaU, alphaV,
+							4 * (sample.x - 0.5f), sample.y, phiM, cosThetaM);
+						phiM += M_PI;
+					} else {
+						sampleFirstQuadrant(alphaU, alphaV,
+							4 * (1 - sample.x), sample.y, phiM, cosThetaM);
+						phiM = 2 * M_PI - phiM;
+					}
+					const Float sinThetaM = std::sqrt(
+						    std::max((Float) 0, 1 - cosThetaM*cosThetaM)),
+						  sinPhiM = std::sin(phiM),
+						  cosPhiM = std::cos(phiM);
+
+					const Float exponent = alphaU * cosPhiM*cosPhiM
+							+ alphaV * sinPhiM*sinPhiM;
+					pdf = std::sqrt((alphaU + 1) * (alphaV + 1))
+						* INV_TWOPI * std::pow(cosThetaM, exponent);
+						
+					/* Prevent potential numerical issues in other stages of the model */
+					if (pdf < 1e-20f)
+						pdf = 0;
+					
 					return Vector(
-						sinTheta * std::cos(phi),
-						sinTheta * std::sin(phi),
-						cosTheta
+						sinThetaM * cosPhiM,
+						sinThetaM * sinPhiM,
+						cosThetaM
 					);
 				}
 				break;
 			default: 
 				SLog(EError, "Invalid distribution function!");
 		}
-	
-		return Normal(sphericalDirection(thetaM, phiM));
+
+		/* Prevent potential numerical issues in other stages of the model */
+		if (pdf < 1e-20f)
+			pdf = 0;
+					
+		const Float sinThetaM = std::sqrt(
+			std::max((Float) 0, 1 - cosThetaM*cosThetaM));
+		Float phiM = (2.0f * M_PI) * sample.y;
+		return Vector(
+			sinThetaM * std::cos(phiM),
+			sinThetaM * std::sin(phiM),
+			cosThetaM
+		);
 	}
 
-	/**
-	 * \brief Draw a sample from an isotropic microsurface normal
-	 * distribution and return the magnitude of its 'z' component.
-	 *
-	 * \param sample  A uniformly distributed number on [0,1]
-	 * \param alphaU  The surface roughness 
-	 */
-	Float sampleIsotropic(Float sample, Float alpha) const {
-		switch (m_type) {
-			case EBeckmann: 
-				return 1.0f / std::sqrt(1 + 
-					std::abs(-alpha*alpha * std::log(1.0f - sample)));
-	
-			case EGGX: 
-				return 1.0f / std::sqrt(1 + 
-					alpha * alpha * sample / (1.0f - sample));
-
-			case EPhong:
-				return std::pow(sample, (Float) 1 / (alpha + 2));
-
-			default: 
-				SLog(EError, "Invalid distribution function!");
-				return 0.0f;
-		}
-	}
-	
 	/**
 	 * \brief Smith's shadow-masking function G1 for each
 	 * of the supported microfacet distributions

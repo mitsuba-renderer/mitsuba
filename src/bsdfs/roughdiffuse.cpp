@@ -244,7 +244,7 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
 		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-		return eval(bRec, ESolidAngle);
+		return eval(bRec, ESolidAngle) / pdf;
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
