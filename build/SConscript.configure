@@ -232,11 +232,13 @@ if hasCollada:
 
 env.SConsignFile()
 
+hasPython = True
+
 # MSVC: Embed the manifest into libraries and executables
 if sys.platform == 'win32':
 	env['LINKCOM'] = [env['LINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;1']
 	env['SHLINKCOM'] = [env['SHLINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;2']
 
-env.Export('hasQt', 'hasCollada', 'resources')
+env.Export('hasQt', 'hasCollada', 'hasPython', 'resources')
 
 Return('env')

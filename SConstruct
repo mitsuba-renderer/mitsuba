@@ -34,6 +34,8 @@ build('src/librender/SConscript')
 build('src/libhw/SConscript')
 # Bidirectional support library
 build('src/libbidir/SConscript')
+# Python binding library
+build('src/mtspy/SConscript')
 
 # ===== Build the applications =====
 env = env.Clone()
@@ -45,7 +47,7 @@ mainEnv = build('src/mitsuba/SConscript')
 converter_objects = build('src/converter/SConscript', ['mainEnv'])
 
 # Build the Qt-based GUI binaries
-build('src/qtgui/SConscript', ['mainEnv', 'converter_objects'], duplicate=True)
+build('src/mtsgui/SConscript', ['mainEnv', 'converter_objects'], duplicate=True)
 
 # ===== Build the plugins =====
 

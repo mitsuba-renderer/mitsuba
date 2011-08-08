@@ -74,6 +74,7 @@
 	#define MTS_MODULE_RENDER 2
 	#define MTS_MODULE_HW 3
 	#define MTS_MODULE_BIDIR 4
+	#define MTS_MODULE_PYTHON 5
 
 	#define MTS_EXPORT __declspec(dllexport)
 	#define MTS_IMPORT __declspec(dllimport)
@@ -98,6 +99,11 @@
 	#else
 		#define MTS_EXPORT_BIDIR __declspec(dllimport)
 	#endif
+	#if MTS_BUILD_MODULE == MTS_MODULE_PYTHON
+		#define MTS_EXPORT_PYTHON __declspec(dllexport)
+	#else
+		#define MTS_EXPORT_PYTHON __declspec(dllimport)
+	#endif
 
 	#define SIZE_T_FMT "%Iu"
 	#define BOOST_FILESYSTEM_NO_LIB 
@@ -108,6 +114,7 @@
 	#define MTS_EXPORT_RENDER
 	#define MTS_EXPORT_HW
 	#define MTS_EXPORT_BIDIR
+	#define MTS_EXPORT_PYTHON
 	#include <stdint.h>
 
 	#define SIZE_T_FMT "%zd"

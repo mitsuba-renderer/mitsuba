@@ -49,7 +49,7 @@ UpdateDialog::~UpdateDialog() {
 }
 	
 void UpdateDialog::on_skipButton_clicked() {
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	settings.setValue("ignoredVersion", m_remoteVersion);
 	accept();
 }

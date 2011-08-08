@@ -61,7 +61,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	m_previewSettings = NULL;
 #endif
 
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	logger->setLogLevel((ELogLevel) settings.value("verbosity", EDebug).toInt());
 
 	m_logWidget = new LogWidget(NULL);
@@ -305,7 +305,7 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::initWorkers() {
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	ref<Scheduler> scheduler = Scheduler::getInstance();
 	int localWorkerCount = settings.value("localWorkers", getProcessorCount()).toInt();
 	m_workerPriority = (Thread::EThreadPriority)
@@ -398,7 +398,7 @@ void MainWindow::checkForUpdates(bool manualUpdateCheck) {
 void MainWindow::onNetworkFinished(QNetworkReply *reply) {
 	if (reply->error() == QNetworkReply::NoError) {
 		try {
-			QSettings settings("mitsuba-renderer.org", "qtgui");
+			QSettings settings("mitsuba-renderer.org", "mtsgui");
 			Version remote(QString(reply->readAll()).toStdString());
 			Version ignoredVersion(settings.value("ignoredVersion", "0.0.0").toString().toStdString());
 			Version local(MTS_VERSION);
@@ -571,7 +571,7 @@ void MainWindow::on_actionOpen_triggered() {
 	dialog->setAcceptMode(QFileDialog::AcceptOpen);
 	dialog->setViewMode(QFileDialog::Detail);
 	dialog->setWindowModality(Qt::WindowModal);
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	dialog->restoreState(settings.value("fileDialogState").toByteArray());
 	connect(dialog, SIGNAL(finished(int)), this, SLOT(onOpenDialogClose(int)));
 	m_currentChild = dialog;
@@ -583,7 +583,7 @@ void MainWindow::on_actionOpen_triggered() {
 }
 
 void MainWindow::onOpenDialogClose(int reason) {
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;
 	if (reason == QDialog::Accepted) {
@@ -605,7 +605,7 @@ void MainWindow::onOpenRecent() {
 }
 
 void MainWindow::onClearRecent() {
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	for (int j = 0; j < MAX_RECENT_FILES; ++j)
 		m_actRecent[j]->setVisible(false);
 	settings.setValue("recentFileList", QStringList());
@@ -714,7 +714,7 @@ void MainWindow::loadFile(QString filename) {
 
 void MainWindow::addRecentFile(QString fileName) {
 	/* Update recent files list */
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	QStringList files = settings.value("recentFileList").toStringList();
 	files.removeAll(fileName);
 	files.prepend(fileName);
@@ -731,7 +731,7 @@ void MainWindow::addRecentFile(QString fileName) {
 }
 
 void MainWindow::updateRecentFileActions() {
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	QStringList files = settings.value("recentFileList").toStringList();
 
 	int numRecentFiles = qMin(files.size(), MAX_RECENT_FILES);
@@ -931,7 +931,7 @@ bool MainWindow::on_tabBar_tabCloseRequested(int index) {
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	settings.setValue("pos", pos());
 	for (int i=ui->tabBar->count()-1; i>=0; --i) {
 		if (!on_tabBar_tabCloseRequested(i)) {
@@ -1037,7 +1037,7 @@ void MainWindow::on_actionPreviewSettings_triggered() {
 	connect(&d, SIGNAL(diffuseSourcesChanged(bool)), ui->glView, SLOT(setDiffuseSources(bool)));
 	d.setMaximumSize(d.minimumSize());
 	d.exec();
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	settings.setValue("preview_sRGB", context->srgb);
 	settings.setValue("preview_gamma", context->gamma);
 	settings.setValue("preview_exposure", context->exposure);
@@ -1080,7 +1080,7 @@ void MainWindow::onPreviewSettingsClose() {
 	ui->actionPreviewSettings->setEnabled(hasTab);
 	if (hasTab) {
 		SceneContext *context = m_context[index];
-		QSettings settings("mitsuba-renderer.org", "qtgui");
+		QSettings settings("mitsuba-renderer.org", "mtsgui");
 		settings.setValue("preview_sRGB", context->srgb);
 		settings.setValue("preview_gamma", context->gamma);
 		settings.setValue("preview_exposure", context->exposure);
@@ -1135,7 +1135,7 @@ void MainWindow::on_actionSettings_triggered() {
 		for (int i=0; i<connections.size(); ++i)
 			connectionData.append(connections[i].toByteArray());
 
-		QSettings settings("mitsuba-renderer.org", "qtgui");
+		QSettings settings("mitsuba-renderer.org", "mtsgui");
 		settings.setValue("verbosity", d.getLogLevel());
 		settings.setValue("invertMouse", d.getInvertMouse());
 		settings.setValue("blockSize", d.getBlockSize());
@@ -1292,7 +1292,7 @@ void MainWindow::on_actionExportImage_triggered() {
 		"", tr("All supported formats (*.exr *.png *.jpg *.jpeg);;Linear EXR image (*.exr)"
 			";; Tonemapped 8-bit image (*.png *.jpg *.jpeg)"));
 
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	dialog->setViewMode(QFileDialog::Detail);
 	dialog->setAcceptMode(QFileDialog::AcceptSave);
 
@@ -1316,7 +1316,7 @@ void MainWindow::onExportDialogClose(int reason) {
 	int currentIndex = ui->tabBar->currentIndex();
 	SceneContext *ctx = m_context[currentIndex];
 
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;
 
@@ -1427,7 +1427,7 @@ void MainWindow::on_actionSaveAs_triggered() {
 		"", tr("Mitsuba scenes (*.xml)"));
 
 	m_currentChild = dialog;
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
 	dialog->setViewMode(QFileDialog::Detail);
 	dialog->setAcceptMode(QFileDialog::AcceptSave);
@@ -1446,7 +1446,7 @@ void MainWindow::onSaveAsDialogClose(int reason) {
 	int currentIndex = ui->tabBar->currentIndex();
 	SceneContext *context = m_context[currentIndex];
 
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;
 	if (reason == QDialog::Accepted) {

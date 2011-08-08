@@ -59,10 +59,10 @@
 		<Filter Include="Source Files\phase">
 			<UniqueIdentifier>{629f51ab-8f77-4abd-9c1c-38e13b2db010}</UniqueIdentifier>
 		</Filter>
-		<Filter Include="Source Files\qtgui">
+		<Filter Include="Source Files\mtsgui">
 			<UniqueIdentifier>{7922cc88-966d-4a2a-ad99-0f932bf0eda3}</UniqueIdentifier>
 		</Filter>
-		<Filter Include="Source Files\qtgui\resources">
+		<Filter Include="Source Files\mtsgui\resources">
 			<UniqueIdentifier>{12abdb4a-638a-4680-b01d-af8075fc74ee}</UniqueIdentifier>
 		</Filter>
 		<Filter Include="Source Files\rfilters">
@@ -559,77 +559,77 @@
 		<ClCompile Include="..\.\src\phase\microflake.cpp">
 			<Filter>Source Files\phase</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\aboutdlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\aboutdlg.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\acknowledgmentdlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\acknowledgmentdlg.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\addserverdlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\addserverdlg.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\glwidget.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\glwidget.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\importdlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\importdlg.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\loaddlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\loaddlg.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\locateresourcedlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\locateresourcedlg.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\logwidget.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\logwidget.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\main.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\main.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\mainwindow.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\mainwindow.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\preview.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\preview.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\previewsettingsdlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\previewsettingsdlg.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\previewsettingsdlg_cocoa.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\previewsettingsdlg_cocoa.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\preview_proc.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\preview_proc.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\programsettingsdlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\programsettingsdlg.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\rendersettingsdlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\rendersettingsdlg.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\save.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\save.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\sceneimporter.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\sceneimporter.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\sceneinfodlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\sceneinfodlg.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\sceneloader.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\sceneloader.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\server.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\server.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\tabbar.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\tabbar.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\updatedlg.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\updatedlg.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
-		<ClCompile Include="..\.\src\qtgui\xmltreemodel.cpp">
-			<Filter>Source Files\qtgui</Filter>
+		<ClCompile Include="..\.\src\mtsgui\xmltreemodel.cpp">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClCompile>
 		<ClCompile Include="..\.\src\rfilters\box.cpp">
 			<Filter>Source Files\rfilters</Filter>
@@ -804,77 +804,77 @@
 		<ClInclude Include="..\.\src\phase\microflake_fiber.h">
 			<Filter>Source Files\phase</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\aboutdlg.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\aboutdlg.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\acknowledgmentdlg.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\acknowledgmentdlg.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\addserverdlg.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\addserverdlg.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\common.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\common.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\glwidget.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\glwidget.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\importdlg.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\importdlg.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\loaddlg.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\loaddlg.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\locateresourcedlg.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\locateresourcedlg.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\logwidget.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\logwidget.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\mainwindow.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\mainwindow.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\preview.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\preview.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\previewsettingsdlg.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\previewsettingsdlg.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\previewsettingsdlg_cocoa.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\previewsettingsdlg_cocoa.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\preview_proc.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\preview_proc.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\programsettingsdlg.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\programsettingsdlg.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\rendersettingsdlg.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\rendersettingsdlg.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\save.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\save.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\sceneimporter.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\sceneimporter.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\sceneinfodlg.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\sceneinfodlg.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\sceneloader.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\sceneloader.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\server.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\server.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\tabbar.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\tabbar.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\updatedlg.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\updatedlg.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
-		<ClInclude Include="..\.\src\qtgui\xmltreemodel.h">
-			<Filter>Source Files\qtgui</Filter>
+		<ClInclude Include="..\.\src\mtsgui\xmltreemodel.h">
+			<Filter>Source Files\mtsgui</Filter>
 		</ClInclude>
 		<ClInclude Include="..\.\src\shapes\instance.h">
 			<Filter>Source Files\shapes</Filter>
