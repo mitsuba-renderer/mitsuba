@@ -23,5 +23,7 @@ plugins += env.SharedLibrary('phong', ['phong.cpp'])
 plugins += env.SharedLibrary('irawan', ['irawan.cpp'])
 plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
 plugins += env.SharedLibrary('hk', ['hk.cpp'])
+plugins += env.SharedLibrary('dipolebrdf', ['dipolebrdf.cpp'])
+plugins += env.SharedLibrary('sssbrdf', ['sssbrdf.cpp'])
 
 Export('plugins')

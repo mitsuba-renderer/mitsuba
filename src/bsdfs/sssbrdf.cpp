@@ -26,7 +26,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*!\plugin{hk}{Coated Hanrahan-Krueger BSDF with multiple scattering}
+/*!\plugin{sssbrdf}{Subsurface scattering BRDF}
  *
  * \parameters{
  *     \parameter{material}{\String}{Name of a material preset, see 
@@ -39,14 +39,24 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
- *     \parameter{\Unnamed}{\Phase}{A nested phase function instance that represents 
- *      the type of scattering interactions occurring within the layer}
+ *     \parameter{g}{\Float\Or\String}{Specifies the phase function anisotropy
+ *     --- see the \pluginref{hg} plugin for details\default{0}}
  * }
  *
+ * This plugin implements a BRDF scattering model that emulates interactions
+ * with a participating medium embedded within a dielectric layer. By
+ * approximating these events using a BRDF, any scattered illumination
+ * is assumed to exit the material directly at the original point of incidence.
+ *
+ * Internally, the model is implemented by instantiating a 
+ * Hanrahan-Krueger BSDF for single scattering together with an approximate multiple
+ * scattering component based on Jensen's \cite{Jensen2001Practical} integrated
+ * dipole BRDF. These are then embedded into a dielectric layer using 
+ * the \pluginref{coating} plugin.
  */
-class CoatedHanrahanKruegerMS : public BSDF {
+class SSSBRDF : public BSDF {
 public:
-	CoatedHanrahanKruegerMS(const Properties &props)
+	SSSBRDF(const Properties &props)
 			: BSDF(props), m_configured(false) {
 		Properties hkProps(props);
 		hkProps.setPluginName("hk");
@@ -66,7 +76,7 @@ public:
 		props.markQueried("extIOR");
 	}
 
-	CoatedHanrahanKruegerMS(Stream *stream, InstanceManager *manager) 
+	SSSBRDF(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager), m_configured(true) {
 		m_hk = static_cast<BSDF *>(manager->getInstance(stream));
 		m_coating = static_cast<BSDF *>(manager->getInstance(stream));
@@ -126,7 +136,7 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "CoatedHanrahanKruegerMS[" << endl
+		oss << "SSSBRDF[" << endl
    			<< "  coating = " << indent(m_coating->toString()) << endl
 			<< "]";
 		return oss.str();
@@ -138,6 +148,6 @@ private:
 	bool m_configured;
 };
 
-MTS_IMPLEMENT_CLASS_S(CoatedHanrahanKruegerMS, false, BSDF)
-MTS_EXPORT_PLUGIN(CoatedHanrahanKruegerMS, "Hanrahan-Krueger BSDF");
+MTS_IMPLEMENT_CLASS_S(SSSBRDF, false, BSDF)
+MTS_EXPORT_PLUGIN(SSSBRDF, "Subsurface scattering BRDF");
 MTS_NAMESPACE_END
