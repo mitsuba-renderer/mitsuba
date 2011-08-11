@@ -1,14 +1,17 @@
-Import('env', 'sys', 'os')
+Import('env', 'sys', 'os', 'hasPython')
 
 pythonEnv = env.Clone()
 pythonEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_PYTHON']])
+pythonEnv['SHLIBPREFIX']=''
+
 
 if sys.platform == 'darwin':
 	pythonEnv.Append(CXXFLAGS = ['-framework', 'Python'],
 		CPPPATH=['/System/Library/Frameworks/Python.framework/Versions/2.5/Headers'],
 		LIBS=['boost_python', 'boost_system', 'Python'])
 
-mtspy = pythonEnv.SharedLibrary('mtspy', ['base.cpp']);
+if hasPython:
+	mtspy = pythonEnv.SharedLibrary('mtspy', ['base.cpp']);
 
-if sys.platform == "darwin":
-	pythonEnv.AddPostAction(mtspy, 'install_name_tool -id @executable_path/../Frameworks/mtspy.dylib $TARGET')
+	if sys.platform == "darwin":
+		pythonEnv.AddPostAction(mtspy, 'install_name_tool -id @executable_path/../Frameworks/mtspy.dylib $TARGET')
