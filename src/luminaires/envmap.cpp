@@ -102,6 +102,13 @@ public:
 		if (m_stream.get()) {
 			stream->writeUInt((unsigned int) m_stream->getSize());
 			stream->write(m_stream->getData(), m_stream->getSize());
+		} else if (m_path == "<unknown>") {
+			ref<MemoryStream> mStream = new MemoryStream();
+			ref<Bitmap> bitmap = m_mipmap->getBitmap();
+			bitmap->save(Bitmap::EEXR, mStream);
+			mStream->setPos(0);
+			stream->writeUInt((unsigned int) mStream->getSize());
+			mStream->copyTo(stream);
 		} else {
 			ref<Stream> is = new FileStream(m_path, FileStream::EReadOnly);
 			stream->writeUInt((uint32_t) is->getSize());
