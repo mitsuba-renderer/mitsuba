@@ -48,7 +48,7 @@ static MaterialEntry materialData[] = {
 	{ NULL,          { 0.00,  0.00,  0.00 }, { 0.00,   0.00,    0.00   },  0.0 }
 };
 
-static void lookupMaterial(const Properties &props, Spectrum &sigmaS, Spectrum &sigmaA, Float *eta = NULL) {
+static void lookupMaterial(const Properties &props, Spectrum &sigmaS, Spectrum &sigmaA, Float *eta = NULL, bool requireValues = true) {
 	bool manual = (props.hasProperty("sigmaS") || props.hasProperty("sigmaA"));
 	bool preset = props.hasProperty("material");
 
@@ -62,8 +62,13 @@ static void lookupMaterial(const Properties &props, Spectrum &sigmaS, Spectrum &
 	Float densityMultiplier = props.getFloat("densityMultiplier", 1.0f);
 
 	if (manual) {
-		sigmaS = props.getSpectrum("sigmaS") * densityMultiplier;
-		sigmaA = props.getSpectrum("sigmaA") * densityMultiplier;
+		if (requireValues) {
+			sigmaS = props.getSpectrum("sigmaS") * densityMultiplier;
+			sigmaA = props.getSpectrum("sigmaA") * densityMultiplier;
+		} else {
+			sigmaS = props.getSpectrum("sigmaS", Spectrum(0.0f)) * densityMultiplier;
+			sigmaA = props.getSpectrum("sigmaA", Spectrum(0.0f)) * densityMultiplier;
+		}
 		if (eta)
 			*eta = props.getFloat("eta", 1.3f);
 	} else {

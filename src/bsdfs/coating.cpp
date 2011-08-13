@@ -400,7 +400,7 @@ public:
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
 			<< "  thickness = " << m_thickness << "," << endl
-			<< "  nested = " << indent(m_nested->toString()) << endl
+			<< "  nested = " << indent(m_nested.toString()) << endl
 			<< "]";
 		return oss.str();
 	}

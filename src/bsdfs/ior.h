@@ -92,11 +92,22 @@ static Float lookupIOR(const std::string &name) {
 	return 0.0f;
 }
 
-static Float lookupIOR(const Properties &props, const std::string &paramName, const std::string &defaultValue) {
+inline Float lookupIOR(const Properties &props, const std::string &paramName, const std::string &defaultValue) {
 	if (props.hasProperty(paramName) && props.getType(paramName) == Properties::EFloat)
 		return props.getFloat(paramName);
 	else
 		return lookupIOR(props.getString(paramName, defaultValue));
+}
+
+inline Float lookupIOR(const Properties &props, const std::string &paramName, Float defaultValue) {
+	if (props.hasProperty(paramName)) {
+		if (props.getType(paramName) == Properties::EFloat)
+			return props.getFloat(paramName);
+		else
+			return lookupIOR(props.getString(paramName));
+	} else {
+		return defaultValue;
+	}
 }
 
 MTS_NAMESPACE_END

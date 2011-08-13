@@ -32,17 +32,18 @@ public:
 	DipoleBRDF(const Properties &props) 
 		: BSDF(props) {
 
+		Spectrum sigmaS, sigmaA;
+		Float eta;
+		lookupMaterial(props, sigmaS, sigmaA, &eta, false);
+
 		/* Specifies the internal index of refraction at the interface */
-		m_intIOR = lookupIOR(props, "intIOR", "bk7");
+		m_intIOR = lookupIOR(props, "intIOR", eta);
 
 		/* Specifies the external index of refraction at the interface */
 		m_extIOR = lookupIOR(props, "extIOR", "air");
 
 		/* Mean cosine angle of the phase function */
 		m_g = props.getFloat("g", 0.0f); 
-
-		Spectrum sigmaS, sigmaA;
-		lookupMaterial(props, sigmaS, sigmaA);
 
 		/* Scattering coefficient of the layer */
 		m_sigmaS = new ConstantSpectrumTexture(
@@ -89,6 +90,9 @@ public:
 			| (m_sigmaS->isConstant() && m_sigmaA->isConstant() ? 0 : ESpatiallyVarying));
 		m_usesRayDifferentials = m_sigmaS->usesRayDifferentials() || m_sigmaA->usesRayDifferentials();
 
+		if ((m_sigmaS->getMaximum()+m_sigmaA->getMaximum()).isZero())
+			Log(EError, "Please specify nonzero sigmaS/sigmaA-values!");
+
 		/* relative index of refraction */
 		const Float eta = m_intIOR / m_extIOR;
 
@@ -103,28 +107,25 @@ public:
 		Spectrum sigmaA = m_sigmaA->getValue(its),
 				 sigmaS = m_sigmaS->getValue(its),
 				 sigmaT = sigmaA + sigmaS,
-				 reducedAlbedo(0.0f),
-				 Rd(0.0f);
+				 reducedAlbedo;
 
 		/* ==================================================================== */
-		/*			 Diffuse Reflectance due to Multiple Scattering		   */
+		/*            Diffuse Reflectance due to Multiple Scattering            */
 		/* ==================================================================== */
-
 	
-		/* Reduced Scattering Albedo */
-		const Spectrum reducedSigmaS = sigmaS * (1.0f - m_g);
-		const Spectrum reducedSigmaT = reducedSigmaS + sigmaA;
+		/* Reduced scattering albedo */
+		const Spectrum reducedSigmaS = sigmaS * (1.0f - m_g),
+		               reducedSigmaT = reducedSigmaS + sigmaA;
 
 		/* Avoid divisions by 0 */
 		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
-			reducedAlbedo[i] = reducedSigmaT[i] > 0.0f ? (reducedSigmaS[i]/reducedSigmaT[i]) : 0.0f;
+			reducedAlbedo[i] = reducedSigmaT[i] > 0.0f ?
+				(reducedSigmaS[i]/reducedSigmaT[i]) : 0.0f;
 		
 		/* Diffuse Reflectance */
 		const Spectrum rootExp = ((Spectrum(1.0f) - reducedAlbedo) * 3.0f).sqrt();
-		Rd = (reducedAlbedo * 0.5f) * (Spectrum(1.0f) + (-rootExp*(4.0f/3.0f*m_A)).exp()) 
-									* (-rootExp).exp();
-
-		return Rd;
+		return (reducedAlbedo * 0.5f) * (Spectrum(1.0f) +
+				(-rootExp*(4.0f/3.0f*m_A)).exp()) * (-rootExp).exp();
 	}
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
@@ -146,16 +147,19 @@ public:
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
-		Float pdf;
-		return DipoleBRDF::sample(bRec, pdf, sample);
+		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0) 
+			return Spectrum(0.0f);
+		
+		bRec.wo = squareToHemispherePSA(sample);
+		bRec.sampledComponent = 0;
+		bRec.sampledType = EDiffuseReflection;
 
+		return getDiffuseReflectance(bRec.its);
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
-		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0) {
-			pdf = 0.0f;
+		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0) 
 			return Spectrum(0.0f);
-		}
 		
 		bRec.wo = squareToHemispherePSA(sample);
 		bRec.sampledComponent = 0;
@@ -258,22 +262,23 @@ public:
 			<< "uniform float " << evalName << "_g;" << endl
 			<< endl
 			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "	float cosThetaI = cosTheta(wi);" << endl
-			<< "	float cosThetaO = cosTheta(wo);" << endl
-			<< "	if (cosThetaI < 0.0 || cosThetaO < 0.0)" << endl
-			<< "		return vec3(0.0);" << endl
-			<< "	vec3 sigmaS = " << depNames[0] << "(uv);" << endl
-			<< "	vec3 sigmaA = " << depNames[1] << "(uv);" << endl
-			<< "	vec3 reducedSigmaS = (1-" << evalName << "_g)*sigmaS/(sigmaS + sigmaA);" << endl
-			<< "	vec3 reducedSigmaT = reducedSigmaS + sigmaA;" << endl
-			<< "	vec3 reducedAlbedo = reducedSigmaS/reducedSigmaT;" << endl
-			<< "	vec3 rootExp = sqrt((1.0 - reducedAlbedo) * 3.0);" << endl
-			<< "	return (reducedAlbedo * 0.5) * (1+exp(-rootExp*(4.0/3.0 * " << endl
-			<< "      " << evalName << "_A" << "))) * exp(-rootExp) * 0.31831 * abs(cosThetaO);" << endl
+			<< "    float cosThetaI = cosTheta(wi);" << endl
+			<< "    float cosThetaO = cosTheta(wo);" << endl
+			<< "    if (cosThetaI < 0.0 || cosThetaO < 0.0)" << endl
+			<< "        return vec3(0.0);" << endl
+			<< "    vec3 sigmaS = " << depNames[0] << "(uv);" << endl
+			<< "    vec3 sigmaA = " << depNames[1] << "(uv);" << endl
+			<< "    vec3 reducedSigmaS = (1.0-" << evalName << "_g)*sigmaS;" << endl
+			<< "    vec3 reducedSigmaT = reducedSigmaS + sigmaA, reducedAlbedo;" << endl
+			<< "    for (int i=0; i<3; ++i)" << endl
+			<< "        reducedAlbedo[i] = reducedSigmaT[i] > 0.0 ? reducedSigmaS[i]/reducedSigmaT[i] : 0.0;" << endl
+			<< "    vec3 rootExp = sqrt((1.0 - reducedAlbedo) * 3.0);" << endl
+			<< "    return (reducedAlbedo * 0.5) * (1+exp(-rootExp*(4.0/3.0 * " << endl
+			<< "      " << evalName << "_A" << "))) * exp(-rootExp) * 0.31831 * cosThetaO;" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "	return " << evalName << "(uv, wi, wo);" << endl
+			<< "    return " << evalName << "(uv, wi, wo);" << endl
 			<< "}" << endl;
 	}
 

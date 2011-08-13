@@ -19,7 +19,6 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/sampler.h>
 #include <mitsuba/render/phase.h>
-#include <mitsuba/render/medium.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/hw/basicshader.h>
 #include "../medium/materials.h"
@@ -32,42 +31,77 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{material}{\String}{Name of a material preset, see 
  *           \tblref{medium-coefficients}. \default{\texttt{skin1}}}
  *     \parameter{sigmaS}{\Spectrum\Or\Texture}{Specifies the scattering coefficient 
- *      of the scattering layer. \default{based on \code{material}}}
+ *      of the layer. \default{based on \code{material}}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Specifies the absorption coefficient 
- *      of the scattering layer. \default{based on \code{material}}}
+ *      of the layer. \default{based on \code{material}}}
  *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
- *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
+ *      numerically or using a known material name. \default{based on \code{material}}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{g}{\Float\Or\String}{Specifies the phase function anisotropy
- *     --- see the \pluginref{hg} plugin for details\default{0}}
+ *     --- see the \pluginref{hg} plugin for details\default{0, i.e. isotropic}}
  * }
  *
  * This plugin implements a BRDF scattering model that emulates interactions
- * with a participating medium embedded within a dielectric layer. By
+ * with a participating medium embedded inside a smooth dielectric layer. By
  * approximating these events using a BRDF, any scattered illumination
- * is assumed to exit the material directly at the original point of incidence.
+ * is assumed to exit the material \emph{directly} at the original point of incidence.
+ * To account for internal light transport with \emph{different} incident 
+ * and exitant positions, please refer to Sections~\ref{sec:media} 
+ * and \ref{sec:subsurface}.
  *
- * Internally, the model is implemented by instantiating a 
- * Hanrahan-Krueger BSDF for single scattering together with an approximate multiple
- * scattering component based on Jensen's \cite{Jensen2001Practical} integrated
- * dipole BRDF. These are then embedded into a dielectric layer using 
- * the \pluginref{coating} plugin.
+ * Internally, the model is implemented by instantiating a Hanrahan-Krueger
+ * BSDF for single scattering in an infinitely thick layer together with 
+ * an approximate multiple scattering component based on Jensen's 
+ * \cite{Jensen2001Practical} integrated dipole BRDF. These are then 
+ * embedded into a dielectric layer using the \pluginref{coating} plugin.
+ * This yields a very convenient parameterization of a scattering model
+ * that roughly behaves like a coated diffuse material, but expressed
+ * in terms of the scattering and absorption coefficients \code{sigmaS} 
+ * and \code{sigmaA}.
  */
 class SSSBRDF : public BSDF {
 public:
 	SSSBRDF(const Properties &props)
 			: BSDF(props), m_configured(false) {
+
+		Spectrum sigmaS, sigmaA; // ignored here
+		Float eta;
+		lookupMaterial(props, sigmaS, sigmaA, &eta, false);
+
+		Float g = props.getFloat("g", 0.0f);
+		Properties hgProps("hg");
+		hgProps.setFloat("g", g);
+
+		ref<PhaseFunction> hg = static_cast<PhaseFunction *> (
+			PluginManager::getInstance()->createObject(
+			MTS_CLASS(PhaseFunction), hgProps));
+
 		Properties hkProps(props);
 		hkProps.setPluginName("hk");
 		hkProps.setFloat("thickness", std::numeric_limits<Float>::infinity());
 		m_hk = static_cast<BSDF *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(BSDF), hkProps));
+		m_hk->addChild("", hg);
 
 		Properties coatingProps(props);
 		coatingProps.setPluginName("coating");
+		if (!props.hasProperty("intIOR"))
+			coatingProps.setFloat("intIOR", eta);
+
 		m_coating = static_cast<BSDF *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(BSDF), coatingProps));
+
+		Properties dipoleProps(props);
+		dipoleProps.setPluginName("dipolebrdf");
+		m_dipole = static_cast<BSDF *> (PluginManager::getInstance()->
+			createObject(MTS_CLASS(BSDF), dipoleProps));
+
+		Properties mixtureProps("mixture");
+		mixtureProps.setString("weights", "1.0, 1.0");
+		mixtureProps.setBoolean("ensureEnergyConservation", false);
+		m_mixture = static_cast<BSDF *> (PluginManager::getInstance()->
+			createObject(MTS_CLASS(BSDF), mixtureProps));
 
 		props.markQueried("material");
 		props.markQueried("sigmaS");
@@ -78,19 +112,24 @@ public:
 
 	SSSBRDF(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager), m_configured(true) {
-		m_hk = static_cast<BSDF *>(manager->getInstance(stream));
 		m_coating = static_cast<BSDF *>(manager->getInstance(stream));
+		m_hk = static_cast<BSDF *>(manager->getInstance(stream));
+		m_dipole = static_cast<BSDF *>(manager->getInstance(stream));
 	}
 
 	void configure() {
 		if (!m_configured) {
 			m_configured = true;
 			m_hk->configure();
-			m_coating->addChild("", m_hk);
+			m_dipole->configure();
+			m_mixture->addChild("", m_hk);
+			m_mixture->addChild("", m_dipole);
+			m_mixture->configure();
+			m_coating->addChild("", m_mixture);
 			m_coating->configure();
 
 			m_components.clear();
-			for (size_t i=0; i<m_coating->getComponentCount(); ++i)
+			for (int i=0; i<m_coating->getComponentCount(); ++i)
 				m_components.push_back(m_coating->getType(i));
 			BSDF::configure();
 		}
@@ -118,33 +157,39 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
-
-		manager->serialize(stream, m_hk.get());
 		manager->serialize(stream, m_coating.get());
+		manager->serialize(stream, m_hk.get());
+		manager->serialize(stream, m_dipole.get());
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		const Class *cClass = child->getClass();
-
-		if (cClass->derivesFrom(MTS_CLASS(PhaseFunction))) {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
 			m_hk->addChild(name, child);
+			m_dipole->addChild(name, child);
 		} else {
-			Log(EError, "Invalid child node! (\"%s\")",
-				cClass->getName().c_str());
+			BSDF::addChild(name, child);
 		}
+	}
+
+	Shader *createShader(Renderer *renderer) const {
+		return m_coating->createShader(renderer);
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SSSBRDF[" << endl
-   			<< "  coating = " << indent(m_coating->toString()) << endl
+   			<< "  name = \"" << m_name << "\"" << endl
+   			<< "  nested = " << indent(m_coating->toString()) << endl
 			<< "]";
 		return oss.str();
 	}
 	
 	MTS_DECLARE_CLASS()
 private:
-	ref<BSDF> m_coating, m_hk;
+	ref<BSDF> m_coating;
+	ref<BSDF> m_dipole;
+	ref<BSDF> m_hk;
+	ref<BSDF> m_mixture;
 	bool m_configured;
 };
 

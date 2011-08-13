@@ -84,7 +84,7 @@ MTS_NAMESPACE_BEGIN
  * Note that this model does not account for light that undergoes multiple 
  * scattering events within the layer. This leads to energy loss,
  * particularly at grazing angles, which can be seen in the left-hand image of
- * \figref{hk-example}. A solution is to use the \pluginref{chkms} plugin,
+ * \figref{hk-example}. A solution is to use the \pluginref{sssbrdf} plugin,
  * which adds an approximate multiple scattering component.
  *
  * \begin{xml}[caption=A thin dielectric layer with measured ketchup scattering parameters, label=lst:hk-coated]
@@ -111,7 +111,7 @@ class HanrahanKrueger : public BSDF {
 public:
 	HanrahanKrueger(const Properties &props) : BSDF(props) {
 		Spectrum sigmaS, sigmaA;
-		lookupMaterial(props, sigmaS, sigmaA);
+		lookupMaterial(props, sigmaS, sigmaA, NULL, false);
 
 		/* Scattering coefficient of the layer */
 		m_sigmaS = new ConstantSpectrumTexture(
@@ -139,6 +139,9 @@ public:
 		if (m_phase == NULL)
 			m_phase = static_cast<PhaseFunction *> (PluginManager::getInstance()->
 					createObject(MTS_CLASS(PhaseFunction), Properties("isotropic")));
+
+		if ((m_sigmaS->getMaximum()+m_sigmaA->getMaximum()).isZero())
+			Log(EError, "Please specify nonzero sigmaS/sigmaA-values!");
 
 		m_components.clear();
 		m_components.push_back(EGlossyReflection   | EFrontSide | EBackSide | ECanUseSampler);
@@ -361,9 +364,15 @@ public:
 		if (cClass->derivesFrom(MTS_CLASS(PhaseFunction))) {
 			Assert(m_phase == NULL);
 			m_phase = static_cast<PhaseFunction *>(child);
+		} else if (cClass->derivesFrom(MTS_CLASS(Texture))) {
+			if (name == "sigmaS")
+				m_sigmaS = static_cast<Texture *>(child);
+			else if (name == "sigmaA")
+				m_sigmaA = static_cast<Texture *>(child);
+			else
+				BSDF::addChild(name, child);
 		} else {
-			Log(EError, "Invalid child node! (\"%s\")",
-				cClass->getName().c_str());
+			BSDF::addChild(name, child);
 		}
 	}
 
