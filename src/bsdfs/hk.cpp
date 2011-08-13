@@ -125,9 +125,16 @@ public:
 		/* Absorption coefficient of the layer */
 		m_sigmaA = new ConstantSpectrumTexture(
 			props.getSpectrum("sigmaA", sigmaA));
-
+		
 		/* Slab thickness in inverse units of sigmaS and sigmaA */
 		m_thickness = props.getFloat("thickness", 1); 
+		
+		if (props.hasProperty("sigmaT"))
+			m_sigmaT = new ConstantSpectrumTexture(
+				props.getSpectrum("sigmaT"));
+		if (props.hasProperty("albedo"))
+			m_albedo = new ConstantSpectrumTexture(
+				props.getSpectrum("albedo"));
 	}
 
 	HanrahanKrueger(Stream *stream, InstanceManager *manager) 
@@ -156,14 +163,14 @@ public:
 			m_albedo = NULL;
 		}
 
-		if ((m_sigmaS->getMaximum()+m_sigmaA->getMaximum()).isZero())
-			Log(EError, "Please specify nonzero sigmaS/sigmaA-values!");
-
 		int extraFlags = m_sigmaS->isConstant() && m_sigmaA->isConstant() ? 0 : ESpatiallyVarying;
 		m_components.clear();
 		m_components.push_back(EGlossyReflection   | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
-		m_components.push_back(EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
-		m_components.push_back(EDeltaTransmission  | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+
+		if (m_thickness != std::numeric_limits<Float>::infinity()) {
+			m_components.push_back(EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+			m_components.push_back(EDeltaTransmission  | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+		}
 
 		m_usesRayDifferentials = m_sigmaS->usesRayDifferentials()
 			|| m_sigmaA->usesRayDifferentials();
@@ -231,7 +238,8 @@ public:
 			/*                       Transmission component                         */
 			/* ==================================================================== */
 
-			if (hasGlossyTransmission && transmission) {
+			if (hasGlossyTransmission && transmission
+					&& m_thickness < std::numeric_limits<Float>::infinity()) {
 				MediumSamplingRecord dummy;
 				PhaseFunctionQueryRecord pRec(dummy,bRec.wi,bRec.wo);
 				const Float phaseVal = m_phase->eval(pRec);

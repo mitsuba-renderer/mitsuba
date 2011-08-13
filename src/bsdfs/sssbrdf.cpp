@@ -137,8 +137,11 @@ public:
 			m_coating->configure();
 
 			m_components.clear();
-			for (int i=0; i<m_coating->getComponentCount(); ++i)
-				m_components.push_back(m_coating->getType(i));
+			for (int i=0; i<m_coating->getComponentCount(); ++i) {
+				unsigned int type = m_coating->getType(i);
+				type &= ~BSDF::EBackSide;
+				m_components.push_back(type);
+			}
 			BSDF::configure();
 		}
 	}
@@ -148,18 +151,26 @@ public:
 	}
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
+			return Spectrum(0.0f);
 		return m_coating->eval(bRec, measure);
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+		if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
+			return 0.0f;
 		return m_coating->pdf(bRec, measure);
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+		if (Frame::cosTheta(bRec.wi) <= 0)
+			return Spectrum(0.0f);
 		return m_coating->sample(bRec, pdf, sample);
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+		if (Frame::cosTheta(bRec.wi) <= 0)
+			return Spectrum(0.0f);
 		return m_coating->sample(bRec, sample);
 	}
 

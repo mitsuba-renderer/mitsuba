@@ -53,6 +53,12 @@ public:
 		m_sigmaA = new ConstantSpectrumTexture(
 			props.getSpectrum("sigmaA", sigmaA));
 
+		if (props.hasProperty("sigmaT"))
+			m_sigmaT = new ConstantSpectrumTexture(
+				props.getSpectrum("sigmaT"));
+		if (props.hasProperty("albedo"))
+			m_albedo = new ConstantSpectrumTexture(
+				props.getSpectrum("albedo"));
 	}
 
 	DipoleBRDF(Stream *stream, InstanceManager *manager) 
@@ -102,9 +108,6 @@ public:
 			| (m_sigmaS->isConstant() && m_sigmaA->isConstant() ? 0 : ESpatiallyVarying));
 		m_usesRayDifferentials = m_sigmaS->usesRayDifferentials()
 			|| m_sigmaA->usesRayDifferentials();
-
-		if ((m_sigmaS->getMaximum()+m_sigmaA->getMaximum()).isZero())
-			Log(EError, "Please specify nonzero sigmaS/sigmaA-values!");
 
 		/* relative index of refraction */
 		const Float eta = m_intIOR / m_extIOR;
