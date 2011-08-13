@@ -49,12 +49,14 @@ static MaterialEntry materialData[] = {
 };
 
 static void lookupMaterial(const Properties &props, Spectrum &sigmaS, Spectrum &sigmaA, Float *eta = NULL, bool requireValues = true) {
-	bool manual = (props.hasProperty("sigmaS") || props.hasProperty("sigmaA"));
-	bool preset = props.hasProperty("material");
+	bool hasSigmaAS = props.hasProperty("sigmaS") || props.hasProperty("sigmaA"),
+		hasSigmaTAlbedo = props.hasProperty("sigmaT") || props.hasProperty("albedo"),
+		manual = hasSigmaAS || hasSigmaTAlbedo,
+		hasPreset = props.hasProperty("material");
 
-	if (manual && preset)
-		SLog(EError, "Please specify either a preset material, or "
-			"sigmaS & sigmaA (you provided both!)");
+	if (manual && hasPreset)
+		SLog(EError, "Please specify either a preset material or "
+			"scattering coefficients (you provided both!)");
 
 	SAssertEx(!props.hasProperty("sizeMultiplier"),
 		"The sizeMultiplier property was deprecated!");
@@ -62,12 +64,29 @@ static void lookupMaterial(const Properties &props, Spectrum &sigmaS, Spectrum &
 	Float densityMultiplier = props.getFloat("densityMultiplier", 1.0f);
 
 	if (manual) {
-		if (requireValues) {
-			sigmaS = props.getSpectrum("sigmaS") * densityMultiplier;
-			sigmaA = props.getSpectrum("sigmaA") * densityMultiplier;
+		if (hasSigmaAS && hasSigmaTAlbedo) {
+			SLog(EError, "You can either specify sigmaS & sigmaA *or* "
+				"sigmaT & albedo, but no other combinations!");
+		}
+		if (hasSigmaAS) {
+			if (requireValues) {
+				sigmaS = props.getSpectrum("sigmaS") * densityMultiplier;
+				sigmaA = props.getSpectrum("sigmaA") * densityMultiplier;
+			} else {
+				sigmaS = props.getSpectrum("sigmaS", Spectrum(0.0f)) * densityMultiplier;
+				sigmaA = props.getSpectrum("sigmaA", Spectrum(0.0f)) * densityMultiplier;
+			}
 		} else {
-			sigmaS = props.getSpectrum("sigmaS", Spectrum(0.0f)) * densityMultiplier;
-			sigmaA = props.getSpectrum("sigmaA", Spectrum(0.0f)) * densityMultiplier;
+			Spectrum albedo, sigmaT;
+			if (requireValues) {
+				albedo = props.getSpectrum("albedo");
+				sigmaT = props.getSpectrum("sigmaT") * densityMultiplier;
+			} else {
+				albedo = props.getSpectrum("albedo", Spectrum(0.0f));
+				sigmaT = props.getSpectrum("sigmaT", Spectrum(0.0f)) * densityMultiplier;
+			}
+			sigmaS = albedo * sigmaT;
+			sigmaA = sigmaT - sigmaS;
 		}
 		if (eta)
 			*eta = props.getFloat("eta", 1.3f);

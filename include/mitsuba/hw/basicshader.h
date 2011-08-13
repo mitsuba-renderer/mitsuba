@@ -126,6 +126,159 @@ protected:
 	Float m_value;
 };
 
+/**
+ * \brief Componentwise addition of two textures
+ *
+ * Includes a \ref Shader implementation for hardware rendering
+ */
+class MTS_EXPORT_HW SpectrumAdditionTexture : public Texture {
+public:
+	inline SpectrumAdditionTexture(const Texture *a, const Texture *b)
+		: Texture(Properties()), m_a(a), m_b(b) { }
+
+	SpectrumAdditionTexture(Stream *stream, InstanceManager *manager);
+
+	inline Spectrum getValue(const Intersection &its) const {
+		return m_a->getValue(its) + m_b->getValue(its);
+	}
+
+	inline Spectrum getAverage() const {
+		return m_a->getAverage() + m_b->getAverage();
+	}
+
+	inline Spectrum getMaximum() const {
+		SLog(EError, "SpectrumAdditionTexture::getMaximum() -- information unavailable!");
+		return Spectrum(0.0f);
+	}
+
+	inline bool isConstant() const {
+		return m_a->isConstant() && m_b->isConstant();
+	}
+
+	inline std::string toString() const {
+		std::ostringstream oss;
+		oss << "SpectrumAdditionTexture[" << endl
+			<< "  a = " << indent(m_a->toString()) << "," << endl
+			<< "  b = " << indent(m_a->toString()) << endl
+			<< "]";
+		return oss.str();
+	}
+
+	inline bool usesRayDifferentials() const {
+		return m_a->usesRayDifferentials() || m_b->usesRayDifferentials();
+	}
+
+	Shader *createShader(Renderer *renderer) const;
+
+	void serialize(Stream *stream, InstanceManager *manager) const;
+
+	MTS_DECLARE_CLASS()
+protected:
+	ref<const Texture> m_a, m_b;
+};
+
+/**
+ * \brief Componentwise subtraction of two textures
+ *
+ * Includes a \ref Shader implementation for hardware rendering
+ */
+class MTS_EXPORT_HW SpectrumSubtractionTexture : public Texture {
+public:
+	inline SpectrumSubtractionTexture(const Texture *a, const Texture *b)
+		: Texture(Properties()), m_a(a), m_b(b) { }
+
+	SpectrumSubtractionTexture(Stream *stream, InstanceManager *manager);
+
+	inline Spectrum getValue(const Intersection &its) const {
+		return m_a->getValue(its) - m_b->getValue(its);
+	}
+
+	inline Spectrum getAverage() const {
+		return m_a->getAverage() - m_b->getAverage();
+	}
+
+	inline Spectrum getMaximum() const {
+		SLog(EError, "SpectrumSubtractionTexture::getMaximum() -- information unavailable!");
+		return Spectrum(0.0f);
+	}
+
+	inline bool isConstant() const {
+		return m_a->isConstant() && m_b->isConstant();
+	}
+
+	inline std::string toString() const {
+		std::ostringstream oss;
+		oss << "SpectrumSubtractionTexture[" << endl
+			<< "  a = " << indent(m_a->toString()) << "," << endl
+			<< "  b = " << indent(m_b->toString()) << endl
+			<< "]";
+		return oss.str();
+	}
+
+	inline bool usesRayDifferentials() const {
+		return m_a->usesRayDifferentials() || m_b->usesRayDifferentials();
+	}
+
+	Shader *createShader(Renderer *renderer) const;
+
+	void serialize(Stream *stream, InstanceManager *manager) const;
+
+	MTS_DECLARE_CLASS()
+protected:
+	ref<const Texture> m_a, m_b;
+};
+
+/**
+ * \brief Componentwise product of two textures
+ *
+ * Includes a \ref Shader implementation for hardware rendering
+ */
+class MTS_EXPORT_HW SpectrumProductTexture : public Texture {
+public:
+	inline SpectrumProductTexture(const Texture *a, const Texture *b)
+		: Texture(Properties()), m_a(a), m_b(b) { }
+
+	SpectrumProductTexture(Stream *stream, InstanceManager *manager);
+
+	inline Spectrum getValue(const Intersection &its) const {
+		return m_a->getValue(its) * m_b->getValue(its);
+	}
+
+	inline Spectrum getAverage() const {
+		SLog(EError, "SpectrumProductTexture::getAverage() -- information unavailable!");
+		return Spectrum(0.0f);
+	}
+
+	inline Spectrum getMaximum() const {
+		return m_a->getMaximum() * m_b->getMaximum();
+	}
+
+	inline bool isConstant() const {
+		return m_a->isConstant() && m_b->isConstant();
+	}
+
+	inline std::string toString() const {
+		std::ostringstream oss;
+		oss << "SpectrumProductTexture[" << endl
+			<< "  a = " << indent(m_a->toString()) << "," << endl
+			<< "  b = " << indent(m_b->toString()) << endl
+			<< "]";
+		return oss.str();
+	}
+
+	inline bool usesRayDifferentials() const {
+		return m_a->usesRayDifferentials() || m_b->usesRayDifferentials();
+	}
+
+	Shader *createShader(Renderer *renderer) const;
+
+	void serialize(Stream *stream, InstanceManager *manager) const;
+
+	MTS_DECLARE_CLASS()
+protected:
+	ref<const Texture> m_a, m_b;
+};
+
 MTS_NAMESPACE_END
 
 #endif /* __BASIC_SHADER_H */

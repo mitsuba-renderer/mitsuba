@@ -205,7 +205,7 @@
 
 	<!-- Update the name of the composite plugin -->
 	<xsl:template match="bsdf[@type='composite']/@type">
-		<xsl:attribute name="type">mixture</xsl:attribute>
+		<xsl:attribute name="type">mixturebsdf</xsl:attribute>
 	</xsl:template>
 	
 	<!-- Update the name of the exrtexture plugin -->

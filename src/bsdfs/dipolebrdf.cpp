@@ -33,7 +33,7 @@ public:
 		: BSDF(props) {
 
 		Spectrum sigmaS, sigmaA;
-		Float eta;
+		Float eta = 1.33f;
 		lookupMaterial(props, sigmaS, sigmaA, &eta, false);
 
 		/* Specifies the internal index of refraction at the interface */
@@ -85,10 +85,23 @@ public:
 	}
 
 	void configure() {
+		if (m_sigmaT != NULL || m_albedo != NULL) {
+			/* Support for the alternative scattering/absorption
+			 * coefficient parameter passing convention */
+			if (m_sigmaT == NULL || m_albedo == NULL)
+				SLog(EError, "Please provide *both* sigmaT & albedo!");
+
+			m_sigmaS = new SpectrumProductTexture(m_sigmaT, m_albedo);
+			m_sigmaA = new SpectrumSubtractionTexture(m_sigmaT, m_sigmaS);
+			m_sigmaT = NULL;
+			m_albedo = NULL;
+		}
+
 		m_components.clear();
 		m_components.push_back(EDiffuseReflection | EFrontSide
 			| (m_sigmaS->isConstant() && m_sigmaA->isConstant() ? 0 : ESpatiallyVarying));
-		m_usesRayDifferentials = m_sigmaS->usesRayDifferentials() || m_sigmaA->usesRayDifferentials();
+		m_usesRayDifferentials = m_sigmaS->usesRayDifferentials()
+			|| m_sigmaA->usesRayDifferentials();
 
 		if ((m_sigmaS->getMaximum()+m_sigmaA->getMaximum()).isZero())
 			Log(EError, "Please specify nonzero sigmaS/sigmaA-values!");
@@ -176,6 +189,10 @@ public:
 				m_sigmaS = static_cast<Texture *>(child);
 			else if (name == "sigmaA")
 				m_sigmaA = static_cast<Texture *>(child);
+			else if (name == "sigmaT")
+				m_sigmaT = static_cast<Texture *>(child);
+			else if (name == "albedo")
+				m_albedo = static_cast<Texture *>(child);
 			else
 				BSDF::addChild(name, child);
 		} else {
@@ -212,6 +229,9 @@ public:
 private:
 	Float m_intIOR, m_extIOR, m_g, m_A;
 	ref<Texture> m_sigmaS, m_sigmaA;
+	/* Temporary fields */
+	ref<Texture> m_sigmaT;
+	ref<Texture> m_albedo;
 };
 
 // ================ Hardware shader implementation ================ 

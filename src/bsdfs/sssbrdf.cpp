@@ -34,6 +34,12 @@ MTS_NAMESPACE_BEGIN
  *      of the layer. \default{based on \code{material}}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Specifies the absorption coefficient 
  *      of the layer. \default{based on \code{material}}}
+ *     \parameter{sigmaT \& albedo}{\Spectrum\Or\Texture}{
+ *      Optional: Alternatively, the scattering and absorption coefficients may also be
+ *      specified using the extinction coefficient \code{sigmaT} and the 
+ *      single-scattering albedo. Note that only one of the parameter passing 
+ *      conventions can be used at a time (i.e. use either \code{sigmaS\&sigmaA} 
+ *      \emph{or} \code{sigmaT\&albedo})}
  *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
  *      numerically or using a known material name. \default{based on \code{material}}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
@@ -97,7 +103,7 @@ public:
 		m_dipole = static_cast<BSDF *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(BSDF), dipoleProps));
 
-		Properties mixtureProps("mixture");
+		Properties mixtureProps("mixturebsdf");
 		mixtureProps.setString("weights", "1.0, 1.0");
 		mixtureProps.setBoolean("ensureEnergyConservation", false);
 		m_mixture = static_cast<BSDF *> (PluginManager::getInstance()->
@@ -106,6 +112,8 @@ public:
 		props.markQueried("material");
 		props.markQueried("sigmaS");
 		props.markQueried("sigmaA");
+		props.markQueried("coating");
+		props.markQueried("sigmaT");
 		props.markQueried("intIOR");
 		props.markQueried("extIOR");
 	}
