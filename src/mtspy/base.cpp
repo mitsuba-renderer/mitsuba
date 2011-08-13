@@ -8,6 +8,6 @@ std::string hello() {
 	return "Hello world!";
 }
 
-BOOST_PYTHON_MODULE(mitsuba) {
+BOOST_PYTHON_MODULE(mtspy) {
 	def("hello", hello, "Return hello world...");
 }

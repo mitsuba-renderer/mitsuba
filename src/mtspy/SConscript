@@ -3,12 +3,12 @@ Import('env', 'sys', 'os', 'hasPython')
 pythonEnv = env.Clone()
 pythonEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_PYTHON']])
 pythonEnv['SHLIBPREFIX']=''
-
-
-if sys.platform == 'darwin':
-	pythonEnv.Append(CXXFLAGS = ['-framework', 'Python'],
-		CPPPATH=['/System/Library/Frameworks/Python.framework/Versions/2.5/Headers'],
-		LIBS=['boost_python', 'boost_system', 'Python'])
+if pythonEnv.has_key('PYTHONINCLUDE'):
+	pythonEnv.Prepend(CPPPATH=pythonEnv['PYTHONINCLUDE'])
+if pythonEnv.has_key('PYTHONLIBDIR'):
+	pythonEnv.Prepend(LIBPATH=pythonEnv['PYTHONLIBDIR'])
+if pythonEnv.has_key('PYTHONLIB'):
+	pythonEnv.Prepend(LIBS=pythonEnv['PYTHONLIB'])
 
 if hasPython:
 	mtspy = pythonEnv.SharedLibrary('mtspy', ['base.cpp']);

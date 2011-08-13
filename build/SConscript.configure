@@ -40,6 +40,9 @@ vars.Add('SHLINKFLAGS',   'Linker flags (dynamic libraries)')
 vars.Add('BASEINCLUDE',   'Base include path')
 vars.Add('BASELIB',       'Base libraries')
 vars.Add('BASELIBDIR',    'Base library search path')
+vars.Add('PYTHONINCLUDE', 'Python include path')
+vars.Add('PYTHONLIB',     'Python libraries')
+vars.Add('PYTHONLIBDIR',  'Python library path')
 vars.Add('XERCESINCLUDE', 'Xerces-C include path')
 vars.Add('XERCESLIB',     'Xerces-C libraries')
 vars.Add('XERCESLIBDIR',  'Xerces-C library path')
@@ -81,6 +84,8 @@ except Exception:
 	hasQt = False
 
 hasCollada=True
+hasPython = True
+
 env.Append(CPPPATH=env['BASEINCLUDE'])
 env.Append(CPPFLAGS=[])
 env.Append(LIBPATH=[])
@@ -137,6 +142,8 @@ if env.has_key('COLLADAINCLUDE'):
 	env.Prepend(CPPPATH=env['COLLADAINCLUDE'])
 if env.has_key('COLLADALIBDIR'):
 	env.Prepend(LIBPATH=env['COLLADALIBDIR'])
+if env.has_key('PYTHONINCLUDE'):
+	env.Prepend(CPPPATH=env['PYTHONINCLUDE'])
 
 if not conf.CheckCXX():
 	print 'Could not compile a simple C++ fragment, verify that ' + \
@@ -159,6 +166,9 @@ if not conf.CheckCXXHeader('xercesc/dom/DOMLSParser.hpp'):
 if not conf.CheckCXXHeader('dae.h'):
 	hasCollada = False
 	print 'COLLADA DOM is missing: not building the COLLADA importer'
+if not conf.CheckCXXHeader('pyconfig.h'):
+	hasPython = False
+	print 'Python is missing: not building the python support library'
 if not conf.CheckCXXHeader('boost/math/distributions/students_t.hpp'):
 	print 'Boost is missing (install libboost-dev)!'
 	Exit(1)
@@ -231,8 +241,6 @@ if hasCollada:
 	env.Append(CPPDEFINES = [['MTS_HAS_COLLADA', 1]] )
 
 env.SConsignFile()
-
-hasPython = True
 
 # MSVC: Embed the manifest into libraries and executables
 if sys.platform == 'win32':
