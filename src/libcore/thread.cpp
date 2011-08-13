@@ -63,7 +63,7 @@ ref<Mutex> Thread::m_idMutex;
 #endif
 
 #if defined(__LINUX__)
-int __thread Thread::m_id;
+int __thread __attribute__((tls_model("initial-exec"))) Thread::m_id;
 #endif
 
 Thread::Thread(const std::string &name, unsigned int stackSize) 
