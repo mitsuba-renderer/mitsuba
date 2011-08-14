@@ -65,8 +65,9 @@ if sys.platform == 'win32':
 	install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',
 		'libpng13.dll',	'jpeg62.dll', 'pthreadVCE2.dll', 'xerces-c_3_0.dll', 'glew32mx.dll'],
 		prefix=dllprefix)
-	install(distDir, ['libcollada14dom23.dll', 'boost_system-%s-mt-1_44.dll' % compilerType,
-		'boost_filesystem-%s-mt-1_44.dll' % compilerType], dllprefix + '/' + compilerType + '/')
+	install(distDir, ['libcollada14dom23.dll', 'boost_python-%s-mt-1_44.dll' % compilerType,
+		'boost_system-%s-mt-1_44.dll' % compilerType, 'boost_filesystem-%s-mt-1_44.dll' % compilerType],
+		dllprefix + '/' + compilerType + '/')
 	if 'WIN64' in env['CXXFLAGS']:
 		installTargets += env.Install(distDir, '#dependencies/windows/bin/vcredist_2010_sp1_x64.exe')
 	else:
