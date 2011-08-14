@@ -1,21 +1,9 @@
-#include <mitsuba/mitsuba.h>
+#include "mtspy.h"
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/sched.h>
-
-namespace boost{
-	namespace python{
-		template <typename T> T* get_pointer(mitsuba::ref<T> & p) {
-			return p.get();
-		}
-		template <typename T> const T* get_pointer(const mitsuba::ref<T> & p) {
-			return p.get();
-		}
-	}
-}
-
-#include <boost/python.hpp>
+#include <mitsuba/core/transform.h>
 
 using namespace mitsuba;
 
@@ -43,11 +31,6 @@ void shutdownFramework() {
 	Class::staticShutdown();
 }
 
-template <typename T> boost::python::str as_str(const T &t) {
-	std::string str = t.toString();
-	return boost::python::str(str.c_str(), str.length());
-}
-
 template <typename T> class fixedsize_wrapper {
 public:
 	typedef typename T::value_type value_type;
@@ -72,51 +55,19 @@ public:
 	}
 };
 
-/* Support ref<..> smart pointers */
-namespace boost {
-	namespace python {
-		template <typename T> struct pointee<mitsuba::ref<T> > {
-			typedef T type;
-		};	
-	}
+void Matrix4x4_setItem(Matrix4x4 *matrix, bp::tuple tuple, Float value) {
+	cout << "Got tuple length " << bp::len(tuple) << endl;
 }
 
-class A: public Object {
-public:
-	virtual void test() { cout << "A::test()" << endl; }
-};
-
-class B: public A {
-public:
-	virtual void test() { cout << "B::test()" << endl; }
-
-	ref<A> getter() { return this; }
-};
-
-
 void export_core() {
-	namespace bp = boost::python;
-
 	bp::object coreModule(
 		bp::handle<>(bp::borrowed(PyImport_AddModule("mtspy.core"))));
 	bp::scope().attr("core") = coreModule;
-
 	bp::scope coreScope = coreModule;
 
-	bp::class_<Object, boost::noncopyable>("Object", bp::no_init)
+	bp::class_<Object, ref<Object>, boost::noncopyable>("Object", bp::no_init)
 		.def("getRefCount", &Object::getRefCount)
 		.def("__str__", &Object::toString);
-
-
-	bp::class_<A, bp::bases<Object>, boost::noncopyable >("A")
-		.def("test", &A::test);
-	
-	bp::class_<B, bp::bases<A>, boost::noncopyable >("B")
-		.def("test", &B::test).def("getter", &B::getter);
-	
-	bp::register_ptr_to_python< ref<Object> >();
-	bp::register_ptr_to_python< ref<A> >();
-	bp::register_ptr_to_python< ref<B> >();
 
 	bp::class_<Vector2>("Vector2", bp::init<Float, Float>())
 		.def(bp::init<Float>())
@@ -135,7 +86,7 @@ void export_core() {
 		.def(bp::self * Float())
 		.def(bp::self / Float())
 		.def(bp::self /= Float())
-		.def("__str__", as_str<Vector2>)
+		.def("__str__", &Vector2::toString)
 		.def("__len__", &fixedsize_wrapper<Vector2>::len)
 		.def("__getitem__", &fixedsize_wrapper<Vector2>::get)
 		.def("__setitem__", &fixedsize_wrapper<Vector2>::set);
@@ -155,7 +106,7 @@ void export_core() {
 		.def(bp::self * Float())
 		.def(bp::self / Float())
 		.def(bp::self /= Float())
-		.def("__str__", as_str<Point2>)
+		.def("__str__", &Point2::toString)
 		.def("__len__", &fixedsize_wrapper<Point2>::len)
 		.def("__getitem__", &fixedsize_wrapper<Point2>::get)
 		.def("__setitem__", &fixedsize_wrapper<Point2>::set);
@@ -178,7 +129,7 @@ void export_core() {
 		.def(bp::self * Float())
 		.def(bp::self / Float())
 		.def(bp::self /= Float())
-		.def("__str__", as_str<Vector>)
+		.def("__str__", &Vector::toString)
 		.def("__len__", &fixedsize_wrapper<Vector>::len)
 		.def("__getitem__", &fixedsize_wrapper<Vector>::get)
 		.def("__setitem__", &fixedsize_wrapper<Vector>::set);
@@ -199,7 +150,7 @@ void export_core() {
 		.def(bp::self * Float())
 		.def(bp::self / Float())
 		.def(bp::self /= Float())
-		.def("__str__", as_str<Point>)
+		.def("__str__", &Point::toString)
 		.def("__len__", &fixedsize_wrapper<Point>::len)
 		.def("__getitem__", &fixedsize_wrapper<Point>::get)
 		.def("__setitem__", &fixedsize_wrapper<Point>::set);
@@ -223,7 +174,7 @@ void export_core() {
 		.def(bp::self * Float())
 		.def(bp::self / Float())
 		.def(bp::self /= Float())
-		.def("__str__", as_str<Vector4>)
+		.def("__str__", &Vector4::toString)
 		.def("__len__", &fixedsize_wrapper<Vector4>::len)
 		.def("__getitem__", &fixedsize_wrapper<Vector4>::get)
 		.def("__setitem__", &fixedsize_wrapper<Vector4>::set);
@@ -245,7 +196,7 @@ void export_core() {
 		.def(bp::self * Float())
 		.def(bp::self / Float())
 		.def(bp::self /= Float())
-		.def("__str__", as_str<Point4>)
+		.def("__str__", &Point4::toString)
 		.def("__len__", &fixedsize_wrapper<Point4>::len)
 		.def("__getitem__", &fixedsize_wrapper<Point4>::get)
 		.def("__setitem__", &fixedsize_wrapper<Point4>::set);
@@ -266,7 +217,7 @@ void export_core() {
 		.def(bp::self * int())
 		.def(bp::self / int())
 		.def(bp::self /= int())
-		.def("__str__", as_str<Vector2i>)
+		.def("__str__", &Vector2i::toString)
 		.def("__len__", &fixedsize_wrapper<Vector2i>::len)
 		.def("__getitem__", &fixedsize_wrapper<Vector2i>::get)
 		.def("__setitem__", &fixedsize_wrapper<Vector2i>::set);
@@ -286,7 +237,7 @@ void export_core() {
 		.def(bp::self * int())
 		.def(bp::self / int())
 		.def(bp::self /= int())
-		.def("__str__", as_str<Point2i>)
+		.def("__str__", &Point2i::toString)
 		.def("__len__", &fixedsize_wrapper<Point2i>::len)
 		.def("__getitem__", &fixedsize_wrapper<Point2i>::get)
 		.def("__setitem__", &fixedsize_wrapper<Point2i>::set);
@@ -308,7 +259,7 @@ void export_core() {
 		.def(bp::self * int())
 		.def(bp::self / int())
 		.def(bp::self /= int())
-		.def("__str__", as_str<Vector3i>)
+		.def("__str__", &Vector3i::toString)
 		.def("__len__", &fixedsize_wrapper<Vector3i>::len)
 		.def("__getitem__", &fixedsize_wrapper<Vector3i>::get)
 		.def("__setitem__", &fixedsize_wrapper<Vector3i>::set);
@@ -329,20 +280,22 @@ void export_core() {
 		.def(bp::self * int())
 		.def(bp::self / int())
 		.def(bp::self /= int())
-		.def("__str__", as_str<Point3i>)
+		.def("__str__", &Point3i::toString)
 		.def("__len__", &fixedsize_wrapper<Point3i>::len)
 		.def("__getitem__", &fixedsize_wrapper<Point3i>::get)
 		.def("__setitem__", &fixedsize_wrapper<Point3i>::set);
+
+	bp::class_<Matrix4x4>("Matrix4x4", bp::init<Float>())
+		.def("__setitem__", &Matrix4x4_setItem)
+		.def("__str__", &Matrix4x4::toString);
 }
 
 BOOST_PYTHON_MODULE(mtspy) {
-	using namespace boost::python;
-
-	object package = scope();
+	bp::object package = bp::scope();
 	package.attr("__path__") = "mtspy";
 
-	def("initializeFramework", initializeFramework);
-	def("shutdownFramework", shutdownFramework);
+	bp::def("initializeFramework", initializeFramework);
+	bp::def("shutdownFramework", shutdownFramework);
 
 	export_core();
 }
