@@ -1,3 +1,5 @@
+import sys, os
+
 BUILDDIR       = '#build/debug'
 DISTDIR        = '#dist'
 CXX            = 'cl'
@@ -25,6 +27,9 @@ JPEGLIB        = ['jpeg62']
 GLLIB          = ['opengl32', 'glu32', 'glew32mx', 'gdi32', 'user32']
 GLFLAGS        = ['/D', 'GLEW_MX']
 BASELIBDIR     = ['#dependencies/windows/lib32', '#dependencies/windows/lib32/vc90']
+PYTHONINCLUDE  = [os.path.join(os.path.split(sys.executable)[0], 'include')]
+PYTHONLIBDIR   = [os.path.join(os.path.split(sys.executable)[0], 'libs')]
+PYTHONLIB      = ['boost_python-vc100-mt-1_44']
 SHLIBPREFIX    = 'lib'
 SHLIBSUFFIX    = '.dll'
 PROGSUFFIX     = '.exe'
