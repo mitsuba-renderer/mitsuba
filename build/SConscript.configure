@@ -232,10 +232,17 @@ Export('dist')
 def osxlibinst_build_function(self, target, source, pkgname = None, use_own = None):
 	inst = self.Install(target, source)
 	prefix, name = os.path.split(source)
-	self.AddPostAction(inst, 'install_name_tool -id @executable_path/../Frameworks/' + name + ' $TARGET')
+	self.AddPostAction(inst, 'install_name_tool -id @loader_path/../Frameworks/' + name + ' $TARGET')
+	return inst
+
+def osxlibinst_as_build_function(self, target, source, pkgname = None, use_own = None):
+	inst = self.InstallAs(target, source)
+	prefix, name = os.path.split(source)
+	self.AddPostAction(inst, 'install_name_tool -id @loader_path/../Frameworks/' + name + ' $TARGET')
 	return inst
 
 env.__class__.OSXLibInst = osxlibinst_build_function
+env.__class__.OSXLibInstAs = osxlibinst_as_build_function
 
 if hasCollada:
 	env.Append(CPPDEFINES = [['MTS_HAS_COLLADA', 1]] )

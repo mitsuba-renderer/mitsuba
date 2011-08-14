@@ -23,7 +23,7 @@ librender = renderEnv.SharedLibrary('mitsuba-render', [
 ])
 
 if sys.platform == "darwin":
-	renderEnv.AddPostAction(librender, 'install_name_tool -id @executable_path/../Frameworks/libmitsuba-render.dylib $TARGET')
+	renderEnv.AddPostAction(librender, 'install_name_tool -id @loader_path/../Frameworks/libmitsuba-render.dylib $TARGET')
 
 env.Append(LIBS=['mitsuba-render'])
 env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'librender')])

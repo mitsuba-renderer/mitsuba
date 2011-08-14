@@ -15,6 +15,15 @@ def install(target, paths, prefix = None):
 		else:
 			installTargets += env.Install(target, prefix + '/' + path)
 
+def installAs(target, path, prefix = None):
+	global installTargets
+	if prefix == None:
+		prefix = env['BUILDDIR']
+	if os.path.splitext(path)[1] == '.dylib':
+		installTargets += env.OSXLibInstAs(target, prefix + '/' + path)
+	else:
+		installTargets += env.InstallAs(target, prefix + '/' + path)
+
 if not 'DISTDIR' in env:
 	print 'The \"DISTDIR\" variable is missing. Please update your configuration file!'
 	Exit(1)
@@ -61,7 +70,7 @@ if sys.platform == 'win32':
 	install(distDir, ['libcore/libmitsuba-core.dll', 'libhw/libmitsuba-hw.dll',
 			'librender/libmitsuba-render.dll', 'libbidir/libmitsuba-bidir.dll'])
 	if hasPython:
-		install(distDir, ['mtspy/mtspy.dll'])
+		installAs(os.path.join(distDir, 'mtspy.pyd'), 'mtspy/mtspy.dylib')
 	install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',
 		'libpng13.dll',	'jpeg62.dll', 'pthreadVCE2.dll', 'xerces-c_3_0.dll', 'glew32mx.dll'],
 		prefix=dllprefix)
@@ -83,7 +92,16 @@ if sys.platform == 'win32':
 			'QtNetwork4.dll', 'QtOpenGL4.dll', 'QtXmlPatterns4.dll'], prefix = env['QT4_BINPATH'])
 elif sys.platform == 'darwin':
 	for i in plugins:
-		installTargets += env.Install(os.path.join(distDir, 'plugins'), i)
+		plugin = env.Install(os.path.join(distDir, 'plugins'), i)
+		plugin = env.AddPostAction(plugin,
+			'install_name_tool -change @loader_path/../Frameworks/libmitsuba-core.dylib @loader_path/../Contents/Frameworks/libmitsuba-core.dylib ${TARGET}; ' +
+			'install_name_tool -change @loader_path/../Frameworks/libmitsuba-render.dylib @loader_path/../Contents/Frameworks/libmitsuba-render.dylib ${TARGET}; ' +
+			'install_name_tool -change @loader_path/../Frameworks/libmitsuba-hw.dylib @loader_path/../Contents/Frameworks/libmitsuba-hw.dylib ${TARGET}; ' +
+			'install_name_tool -change @loader_path/../Frameworks/libmitsuba-bidir.dylib @loader_path/../Contents/Frameworks/libmitsuba-bidir.dylib ${TARGET}; ' +
+			'install_name_tool -change @loader_path/../Frameworks/libboost_system.dylib @loader_path/../Contents/Frameworks/libboost_system.dylib ${TARGET}; ' +
+			'install_name_tool -change @loader_path/../Frameworks/libboost_filesystem.dylib @loader_path/../Contents/Frameworks/libboost_filesystem.dylib ${TARGET}'
+		);
+		installTargets += plugin
 	install(os.path.join(distDir, 'Contents/MacOS'), ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil'])
 	if hasCollada:
 		install(os.path.join(distDir, 'Contents/MacOS'), ['converter/mtsimport'])
@@ -97,13 +115,14 @@ elif sys.platform == 'darwin':
 	install(frameworkDir, ['libcore/libmitsuba-core.dylib', 'libhw/libmitsuba-hw.dylib',
 		'librender/libmitsuba-render.dylib', 'libbidir/libmitsuba-bidir.dylib'])
 	if hasPython:
-		install(frameworkDir, ['mtspy/mtspy.dylib'])
+		installAs(os.path.join(frameworkDir, 'mtspy.so'), 'mtspy/mtspy.dylib')
 	install(frameworkDir, [
 		'GLEW.framework/Resources/libs/libGLEW.dylib', 'OpenEXR.framework/Resources/lib/libHalf.6.dylib',
 		'OpenEXR.framework/Resources/lib/libIex.6.dylib', 'OpenEXR.framework/Resources/lib/libImath.6.dylib',
 		'OpenEXR.framework/Resources/lib/libIlmThread.6.dylib', 'OpenEXR.framework/Resources/lib/libIlmImf.6.dylib',
 		'Xerces-C.framework/Resources/lib/libxerces-c-3.0.dylib', 'libpng.framework/Resources/lib/libpng.dylib', 
-		'libjpeg.framework/Resources/lib/libjpeg.dylib', 'libboost.framework/Resources/lib/libboost_system.dylib',
+		'libjpeg.framework/Resources/lib/libjpeg.dylib', 'libboost.framework/Resources/lib/libboost_python.dylib',
+		'libboost.framework/Resources/lib/libboost_system.dylib',
 		'libboost.framework/Resources/lib/libboost_filesystem.dylib'], '#dependencies/darwin')
 	if hasCollada:
 		install(frameworkDir, [
@@ -116,13 +135,13 @@ elif sys.platform == 'darwin':
 		xmlpatterns = env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtXmlPatterns.framework/Versions/4/QtXmlPatterns')
 		network = env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtNetwork.framework/Versions/4/QtNetwork')
 		gui = env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtGui.framework/Versions/4/QtGui')
-		installTargets += env.AddPostAction(xml, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
-		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
-		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change QtNetwork.framework/Versions/4/QtNetwork @executable_path/../Frameworks/QtNetwork $TARGET')
-		installTargets += env.AddPostAction(network, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
-		installTargets += env.AddPostAction(gui, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
-		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @executable_path/../Frameworks/QtCore $TARGET')
-		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @executable_path/../Frameworks/QtGui $TARGET')
+		installTargets += env.AddPostAction(xml, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @loader_path/../Frameworks/QtCore $TARGET')
+		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @loader_path/../Frameworks/QtCore $TARGET')
+		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change QtNetwork.framework/Versions/4/QtNetwork @loader_path/../Frameworks/QtNetwork $TARGET')
+		installTargets += env.AddPostAction(network, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @loader_path/../Frameworks/QtCore $TARGET')
+		installTargets += env.AddPostAction(gui, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @loader_path/../Frameworks/QtCore $TARGET')
+		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @loader_path/../Frameworks/QtCore $TARGET')
+		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @loader_path/../Frameworks/QtGui $TARGET')
 		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources'), '/Library/Frameworks//QtGui.framework/Versions/4/Resources/qt_menu.nib')
 		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources/PreviewSettings.nib'), '#data/darwin/PreviewSettings.nib/designable.nib')
 		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources/PreviewSettings.nib'), '#data/darwin/PreviewSettings.nib/keyedobjects.nib')

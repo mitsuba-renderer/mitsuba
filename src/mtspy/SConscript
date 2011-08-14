@@ -11,7 +11,8 @@ if pythonEnv.has_key('PYTHONLIB'):
 	pythonEnv.Prepend(LIBS=pythonEnv['PYTHONLIB'])
 
 if hasPython:
-	mtspy = pythonEnv.SharedLibrary('mtspy', ['base.cpp']);
+	mtspy_plugin = pythonEnv.SharedLibrary('mtspy', ['base.cpp']);
+	#mtspy_app = pythonEnv.SharedLibrary('mtspy', ['base.cpp']);
 
 	if sys.platform == "darwin":
-		pythonEnv.AddPostAction(mtspy, 'install_name_tool -id @executable_path/../Frameworks/mtspy.dylib $TARGET')
+		pythonEnv.AddPostAction(mtspy_plugin, 'install_name_tool -id @loader_path/mtspy.dylib $TARGET')
