@@ -5,7 +5,6 @@
 #include <mitsuba/core/sched.h>
 #include <boost/python.hpp>
 
-using namespace boost::python;
 using namespace mitsuba;
 
 void initializeFramework() {
@@ -61,13 +60,25 @@ public:
 	}
 };
 
-BOOST_PYTHON_MODULE(mtspy) {
-	def("initializeFramework", initializeFramework);
-	def("shutdownFramework", shutdownFramework);
+/* Support ref<..> smart pointers */
+namespace boost {
+	namespace python {
+		template <class T> struct pointee< ref<T> > { typedef T type; };
+	}
+}
 
-	class_<ref<Object>, boost::noncopyable>("Object");
-//		.def("getRefCount", &Object::getRefCount)
-//		.def("toString", &Object::toString);
+void export_core() {
+	using namespace boost::python;
+
+	object coreModule(
+		handle<>(borrowed(PyImport_AddModule("mtspy.core"))));
+	scope().attr("core") = coreModule;
+
+	scope coreScope = coreModule;
+
+	class_<Object, ref<Object>>("Object", no_init)
+		.def("getRefCount", &Object::getRefCount)
+		.def("toString", &Object::toString);
 
 	class_<Vector2>("Vector2", init<Float, Float>())
 		.def(init<Float>())
@@ -286,4 +297,16 @@ BOOST_PYTHON_MODULE(mtspy) {
 		.def("__len__", &fixedsize_wrapper<Point3i>::len)
 		.def("__getitem__", &fixedsize_wrapper<Point3i>::get)
 		.def("__setitem__", &fixedsize_wrapper<Point3i>::set);
+}
+
+BOOST_PYTHON_MODULE(mtspy) {
+	using namespace boost::python;
+
+	object package = scope();
+	package.attr("__path__") = "mtspy";
+
+	def("initializeFramework", initializeFramework);
+	def("shutdownFramework", shutdownFramework);
+
+	export_core();
 }
