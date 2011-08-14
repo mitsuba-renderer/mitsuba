@@ -65,6 +65,10 @@ BOOST_PYTHON_MODULE(mtspy) {
 	def("initializeFramework", initializeFramework);
 	def("shutdownFramework", shutdownFramework);
 
+	class_<ref<Object>, boost::noncopyable>("Object");
+//		.def("getRefCount", &Object::getRefCount)
+//		.def("toString", &Object::toString);
+
 	class_<Vector2>("Vector2", init<Float, Float>())
 		.def(init<Float>())
 		.def(init<Point2>())

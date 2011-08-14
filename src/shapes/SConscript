@@ -2,7 +2,7 @@ Import('env', 'plugins')
 
 plugins += env.SharedLibrary('obj', ['obj.cpp'])
 plugins += env.SharedLibrary('ply', ['ply/ply.cpp', 'ply/ply_parser.cpp'],
-	CPPPATH = env['CPPPATH'] + ['ply'])
+	CPPPATH = env['CPPPATH'] + ['ply', '#dependencies'])
 plugins += env.SharedLibrary('serialized', ['serialized.cpp'])
 plugins += env.SharedLibrary('sphere', ['sphere.cpp'])
 plugins += env.SharedLibrary('cylinder', ['cylinder.cpp'])

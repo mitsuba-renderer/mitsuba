@@ -62,8 +62,9 @@ int Thread::m_idCounter;
 ref<Mutex> Thread::m_idMutex;
 #endif
 
-#if defined(__LINUX__)
-int __thread __attribute__((tls_model("initial-exec"))) Thread::m_id;
+#if MTS_USE_ELF_TLS == 1
+__thread int Thread::m_id 
+	__attribute__((tls_model("global-dynamic")));
 #endif
 
 Thread::Thread(const std::string &name, unsigned int stackSize) 
@@ -72,7 +73,7 @@ Thread::Thread(const std::string &name, unsigned int stackSize)
 	m_joinMutex = new Mutex();
 	memset(&m_thread, 0, sizeof(pthread_t));
 }
-	
+
 void Thread::start() {
 	if (m_running)
 		Log(EError, "Thread is already running!");
@@ -155,13 +156,13 @@ void *Thread::dispatch(void *par) {
 	if (thread->getPriority() != ENormalPriority)
 		thread->setPriority(thread->getPriority());
 
-#if defined(__OSX__)
-	m_idMutex->lock();
-	thread->m_id = ++m_idCounter;
-	m_idMutex->unlock();
-#elif defined(__LINUX__)
+#if MTS_USE_ELF_TLS == 1
 	m_idMutex->lock();
 	m_id = ++m_idCounter;
+	m_idMutex->unlock();
+#elif defined(__LINUX__) or defined(__OSX__)
+	m_idMutex->lock();
+	thread->m_id = ++m_idCounter;
 	m_idMutex->unlock();
 #endif
 
@@ -263,22 +264,24 @@ void Thread::staticInitialization() {
 #endif
 
 	m_self = new ThreadLocal<Thread>();
+	Thread *mainThread = new MainThread();
 #if defined(__LINUX__) || defined(__OSX__)
 	m_idMutex = new Mutex();
 	m_idCounter = 0;
+
+	#if MTS_USE_ELF_TLS == 1
+		m_id = 0;
+	#else
+		mainThread->m_id = 0;
+	#endif
 #endif
-	Thread *mainThread = new MainThread();
 	mainThread->m_running = true;
 	mainThread->m_thread = pthread_self();
 	mainThread->m_joinMutex = new Mutex();
 	mainThread->m_joined = false;
 	mainThread->m_fresolver = new FileResolver();
 	m_self->set(mainThread);
-#if defined(__OSX__)
-	mainThread->m_id = 0;
-#elif defined(__LINUX__)
-	m_id = 0;
-#endif
+
 }
 
 static std::vector<OpenMPThread *> __ompThreads;

@@ -80,12 +80,12 @@ public:
 	inline int getStackSize() const { return m_stackSize; }
 
 	/// Return the thread ID
-#if defined(__OSX__)
-	inline static int getID() { return getThread()->m_id; }
-#elif defined(WIN32)
+#if defined(WIN32)
 	inline static int getID() { return (int) GetCurrentThreadId(); }
-#else
+#elif MTS_USE_ELF_TLS == 1
 	inline static int getID() { return m_id; }
+#else
+	inline static int getID() { return getThread()->m_id; }
 #endif
 
 	/// Return the name of this thread
@@ -184,11 +184,12 @@ private:
 #if defined(__LINUX__) || defined(__OSX__)
 	static int m_idCounter;
 	static ref<Mutex> m_idMutex;
-#endif
-#if defined(__OSX__)
+#if MTS_USE_ELF_TLS == 1
+	static __thread int m_id
+		__attribute__((tls_model("global-dynamic")));
+#else
 	int m_id;
-#elif defined(__LINUX__)
-	static int __thread m_id;
+#endif
 #endif
 };
 

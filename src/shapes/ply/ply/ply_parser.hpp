@@ -12,16 +12,21 @@
 #if defined(__clang__)
 #define MTS_USE_BOOST_TR1 (!__has_feature(cxx_variadic_templates))
 #else
-#  if defined(_MSC_VER) && (_MSC_VER < 1600)
-#  define MTS_USE_BOOST_TR1 1
+#  if defined(_MSC_VER)
+#    if _MSC_VER < 1600
+#      define MTS_USE_BOOST_TR1 1
+#    else
+#      define MTS_USE_BOOST_TR1 0
+#    endif
 #  else
-#  define MTS_USE_BOOST_TR1 0
+#    define MTS_USE_BOOST_TR1 0
 #  endif
-#define ADT_WORKAROUND 1
 #endif
 
 #if defined(__INTEL_COMPILER)
 #define ADT_WORKAROUND 1
+#else
+#define ADT_WORKAROUND 0
 #endif
 
 #if MTS_USE_BOOST_TR1
@@ -123,7 +128,7 @@ public:
     {
       return static_cast<callbacks_element<ScalarType>&>(callbacks_).callback;
     }
-#if !defined(ADT_WORKAROUND)
+#if ADT_WORKAROUND == 0
     template <typename ScalarType>
     friend typename scalar_property_definition_callback_type<ScalarType>::type& at(scalar_property_definition_callbacks_type& scalar_property_definition_callbacks)
     {
@@ -215,7 +220,7 @@ public:
     {
       return static_cast<const callbacks_element<boost::mpl::pair<SizeType, ScalarType> >&>(callbacks_).callback;
     }
-#if !defined(ADT_WORKAROUND)
+#if ADT_WORKAROUND == 0
     template <typename SizeType, typename ScalarType>
     friend typename list_property_definition_callback_type<SizeType, ScalarType>::type& at(list_property_definition_callbacks_type& list_property_definition_callbacks)
     {
@@ -554,7 +559,7 @@ inline bool ply::ply_parser::parse_list_property(format_type format, std::istrea
   }
 }
 
-#if defined(ADT_WORKAROUND)
+#if ADT_WORKAROUND == 1
 // Horrible workaround for ADT failure as of Clang 2.8
 namespace ply
 {

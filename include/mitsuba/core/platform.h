@@ -130,6 +130,12 @@
 /* Compile with Boost filesystem v2 */
 #define BOOST_FILESYSTEM_VERSION 2
 
+/* Use ELF support for thread-local storage on Linux? This
+ * is potentially faster but causes problems when dynamically
+ * loading Mitsuba from Python, so let's keep it disabled for now
+ */
+#define MTS_USE_ELF_TLS 0
+
 #include <string>
 
 MTS_NAMESPACE_BEGIN
