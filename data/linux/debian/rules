@@ -28,6 +28,7 @@ binary-arch:
 	scons -j 2
 	dh_installdirs
 	dh_auto_install
+	cat debian/mitsuba.install.template | sed -e s/PYTHONVERSION/`pkg-config --modversion python`/ > debian/mitsuba.install
 	dh_install
 	dh_installmenu
 	dh_compress

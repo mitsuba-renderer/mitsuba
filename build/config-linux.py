@@ -1,3 +1,5 @@
+import os
+
 BUILDDIR       = '#build/release'
 DISTDIR        = '#dist'
 CXX            = 'g++'
@@ -16,7 +18,13 @@ XERCESLIB      = ['xerces-c']
 GLLIB          = ['GL', 'GLU', 'GLEWmx', 'Xxf86vm', 'X11']
 GLFLAGS        = ['-DGLEW_MX']
 BOOSTLIB       = ['boost_system', 'boost_filesystem']
-PYTHONINCLUDE  = ['/usr/include/python2.6']
-PYTHONLIB      = ['python2.6', 'boost_python']
 COLLADAINCLUDE = ['/usr/include/collada-dom', '/usr/include/collada-dom/1.4']
 COLLADALIB     = ['collada14dom']
+PYTHONINCLUDE  = []
+PYTHONLIB      = ['boost_python']
+
+for entry in os.popen("pkg-config --cflags --libs python").read().split():
+	if entry[:2] == '-I':
+		PYTHONINCLUDE += [entry[2:]]
+	if entry[:2] == '-l':
+		PYTHONLIB += [entry[2:]]

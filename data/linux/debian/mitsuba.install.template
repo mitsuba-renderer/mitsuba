@@ -6,7 +6,7 @@ dist/mtsimport /usr/bin
 dist/libmitsuba-hw.so /usr/lib
 dist/libmitsuba-render.so /usr/lib
 dist/libmitsuba-core.so /usr/lib
-dist/python/mitsuba.so /usr/lib/pyshared/python2.7
+dist/python/mitsuba.so /usr/lib/pyshared/PYTHONVERSION
 dist/plugins/* /usr/share/mitsuba/plugins
 dist/data/* /usr/share/mitsuba/data
 src/qtgui/resources/mitsuba48.png /usr/share/pixmaps
