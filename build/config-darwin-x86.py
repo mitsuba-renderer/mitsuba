@@ -2,8 +2,8 @@ BUILDDIR       = '#build/release'
 DISTDIR        = '#Mitsuba.app'
 CXX			   = 'g++'
 CC			   = 'gcc'
-CXXFLAGS       = ['-arch', 'i386', '-mmacosx-version-min=10.5', '-march=nocona', '-msse2', '-mfpmath=sse', '-ftree-vectorize', '-funsafe-math-optimizations', '-fno-rounding-math', '-fno-signaling-nans', '-fomit-frame-pointer', '-isysroot', '/Developer/SDKs/MacOSX10.5.sdk', '-O3', '-Wall', '-g', '-pipe', '-DMTS_DEBUG', '-DSINGLE_PRECISION', '-DSPECTRUM_SAMPLES=3', '-DMTS_SSE', '-DMTS_HAS_COHERENT_RT', '-fopenmp', '-fstrict-aliasing', '-fsched-interblock', '-freorder-blocks']
-LINKFLAGS      = ['-framework', 'OpenGL', '-framework', 'Cocoa', '-arch', 'i386', '-mmacosx-version-min=10.5', '-Wl,-syslibroot,/Developer/SDKs/MacOSX10.5.sdk']
+CXXFLAGS       = ['-arch', 'i386', '-mmacosx-version-min=10.6', '-march=nocona', '-msse2', '-mfpmath=sse', '-ftree-vectorize', '-funsafe-math-optimizations', '-fno-rounding-math', '-fno-signaling-nans', '-fomit-frame-pointer', '-isysroot', '/Developer/SDKs/MacOSX10.6.sdk', '-O3', '-Wall', '-g', '-pipe', '-DMTS_DEBUG', '-DSINGLE_PRECISION', '-DSPECTRUM_SAMPLES=3', '-DMTS_SSE', '-DMTS_HAS_COHERENT_RT', '-fopenmp', '-fstrict-aliasing', '-fsched-interblock', '-freorder-blocks']
+LINKFLAGS      = ['-framework', 'OpenGL', '-framework', 'Cocoa', '-arch', 'i386', '-mmacosx-version-min=10.6', '-Wl,-syslibroot,/Developer/SDKs/MacOSX10.6.sdk']
 BASEINCLUDE    = ['#include']
 BASELIB        = ['m', 'pthread', 'gomp']
 OEXRINCLUDE    = ['#dependencies/darwin/OpenEXR.framework/Headers/OpenEXR']
@@ -25,7 +25,7 @@ GLFLAGS        = ['-DGLEW_MX']
 BOOSTINCLUDE   = ['#dependencies']
 BOOSTLIB       = ['boost_filesystem', 'boost_system']
 BOOSTLIBDIR    = ['#dependencies/darwin/libboost.framework/Resources/lib']
-PYTHONINCLUDE  = ['/System/Library/Frameworks/Python.framework/Versions/2.5/Headers']
+PYTHONINCLUDE  = ['/System/Library/Frameworks/Python.framework/Versions/2.6/Headers']
 PYTHONLIB      = ['boost_python', 'boost_system', 'Python']
 COLLADAINCLUDE = ['#dependencies/windows/include/colladadom', '#dependencies/windows/include/colladadom/1.4']
 COLLADALIB     = ['libCollada14Dom']
