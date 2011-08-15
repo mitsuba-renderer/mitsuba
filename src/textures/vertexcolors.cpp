@@ -97,5 +97,5 @@ Shader *VertexColors::createShader(Renderer *renderer) const {
 	
 MTS_IMPLEMENT_CLASS(VertexColorShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(VertexColors, false, Texture)
-MTS_EXPORT_PLUGIN(VertexColors, "VertexColors texture");
+MTS_EXPORT_PLUGIN(VertexColors, "Vertex color texture");
 MTS_NAMESPACE_END

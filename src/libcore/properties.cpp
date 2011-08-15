@@ -152,7 +152,7 @@ std::string Properties::toString() const {
 void Properties::markQueried(const std::string &name) const {
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if (it == m_elements.end())
-		SLog(EError, "Could not find parameter \"%s\"!", name.c_str());
+		return;
 	it->second.queried = true;
 }
 

@@ -13,8 +13,9 @@ Homepage: http://www.mitsuba-renderer.org
 Package: mitsuba
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libqt4-core, libqt4-gui, libqt4-network, libqt4-opengl, libqt4-xml, libpng12-0, libjpeg62, 
-	libilmbase6, libopenexr6, libxerces-c3.1, libboost-filesystem1.42.0, libboost-system1.42.0, libboost-python1.42.0, libglewmx1.5, libxxf86vm1, collada-dom,
-	libgl1-mesa-glx, libglu1-mesa
+	libilmbase6, libopenexr6, libxerces-c3.1, libboost-filesystem1.42.0, 
+	libboost-system1.42.0, libboost-python1.42.0, libglewmx1.5, 
+	libxxf86vm1, collada-dom, libgl1-mesa-glx, libglu1-mesa
 Description: Mitsuba renderer 
  Mitsuba is an extensible rendering framework written in portable C++. It implements unbiased as well as biased techniques and contains heavy optimizations targeted towards current CPU architectures. 
  .
@@ -24,10 +25,10 @@ Description: Mitsuba renderer
 
 Package: mitsuba-dev
 Architecture: any
-Depends: qt4-dev-tools, libpng12-dev, libjpeg62-dev, libilmbase-dev, libopenexr-dev, 
-	libxerces-c-dev, libboost-dev, libglewmx1.5-dev, libxxf86vm-dev,
-	collada-dom-dev, libboost-system-dev, libboost-filesystem-dev, 
-	libboost-python-dev, mitsuba
+Depends: qt4-dev-tools, libpng12-dev, libjpeg62-dev, libilmbase-dev, 
+	libopenexr-dev, libxerces-c-dev, libboost-dev, libglewmx1.5-dev, 
+	libxxf86vm-dev, collada-dom-dev, libboost-system-dev, 
+	libboost-filesystem-dev, libboost-python-dev, mitsuba
 Description: Mitsuba renderer -- development files
  Mitsuba is an extensible rendering framework written in portable C++. It implements unbiased as well as biased techniques and contains heavy optimizations targeted towards current CPU architectures. 
  .

@@ -110,5 +110,5 @@ std::string CubicSpline::toString() const {
 	return oss.str();
 }
 
-MTS_IMPLEMENT_CLASS(CubicSpline, false, SerializableObject)
+MTS_IMPLEMENT_CLASS_S(CubicSpline, false, SerializableObject)
 MTS_NAMESPACE_END

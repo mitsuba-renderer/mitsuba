@@ -76,7 +76,12 @@ public:
 	}
 
 	std::string toString() const {
-		return "Checkerboard[]";
+		std::ostringstream oss;
+		oss << "Checkerboard[" << endl
+			<< "    darkColor = " << m_darkColor.toString() << "," << endl
+			<< "    brightColor = " << m_brightColor.toString() << endl
+			<< "]";
+		return oss.str();
 	}
 	
 	Shader *createShader(Renderer *renderer) const;

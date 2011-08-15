@@ -1,3 +1,9 @@
+mitsuba (0.3.0-1) unstable; urgency=low
+
+  * Initial python bindings
+
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Mon, 14 Aug 2011 00:00:00 -0400
+
 mitsuba (0.2.1-1) unstable; urgency=low
 
   * Completely rewritten participating layer with better robustness and support for many participating media within the same scene

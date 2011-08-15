@@ -38,9 +38,10 @@ MTS_NAMESPACE_BEGIN
  *
  * This BSDF models a non-reflective material, where any entering light loses 
  * its directionality and is diffusely scattered from the other side. This 
- * model can be combined\footnote{For instance using the \pluginref{mixture} 
- * plugin.} with a surface reflection model to describe translucent substances
- * that have internal multiple scattering processes (e.g. plant leaves).
+ * model can be combined\footnote{For instance using the
+ * \pluginref{mixturebsdf} plugin.} with a surface reflection model to 
+ * describe translucent substances that have internal multiple scattering 
+ * processes (e.g. plant leaves).
  */
 class DiffuseTransmitter : public BSDF {
 public:

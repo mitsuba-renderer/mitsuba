@@ -22,7 +22,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{mixture}{Mixture material}
+/*! \plugin{mixturebsdf}{Mixture material}
  *
  * \parameters{
  *     \parameter{weights}{\String}{A comma-separated list of BSDF weights}
@@ -46,7 +46,7 @@ MTS_NAMESPACE_BEGIN
  * \begin{xml}[caption={A material definition for a mixture of 70% smooth
  *     chromium, 20% of a greenish rough diffuse material (and 10% absorption)},
  *     label=lst:mixture-example]
- * <bsdf type="mixture">
+ * <bsdf type="mixturebsdf">
  *     <string name="weights" value="0.7, 0.2"/>
  *
  *     <bsdf type="conductor">

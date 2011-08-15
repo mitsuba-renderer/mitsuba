@@ -36,6 +36,12 @@ MTS_NAMESPACE_BEGIN
  *      of the internal layer. \default{based on \code{material}}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Specifies the absorption coefficient 
  *      of the internal layer. \default{based on \code{material}}}
+ *     \parameter{sigmaT \& albedo}{\Spectrum\Or\Texture}{
+ *      Optional: Alternatively, the scattering and absorption coefficients may also be
+ *      specified using the extinction coefficient \code{sigmaT} and the 
+ *      single-scattering albedo. Note that only one of the parameter passing 
+ *      conventions can be used at a time (i.e. use either \code{sigmaS\&sigmaA} 
+ *      \emph{or} \code{sigmaT\&albedo})}
  *     \parameter{thickness}{\Float}{Denotes the thickness of the layer.
  *      (should be specified in inverse units of \code{sigmaA} and \code{sigmaS})\default{1}}
  *     \parameter{\Unnamed}{\Phase}{A nested phase function instance that represents 
@@ -45,12 +51,11 @@ MTS_NAMESPACE_BEGIN
  * \renderings{
  *     \rendering{An index-matched scattering layer with parameters $\sigma_s=2$, $\sigma_a=0.1$, thickness$=0.1$}{bsdf_hk_1}
  *     \rendering{Example of the HK model with a dielectric coating (and the \code{ketchup} material preset, see \lstref{hk-coated})}{bsdf_hk_2}
- *     \vspace{-3mm}
  *     \caption{
  *     \label{fig:hk-example}
  *     Renderings using the uncoated and coated form of the Hanrahan-Krueger model.
  *     }
- *     \vspace{1mm}
+ *     \vspace{3mm}
  * }
  *
  * This plugin provides an implementation of the Hanrahan-Krueger BSDF
@@ -62,7 +67,7 @@ MTS_NAMESPACE_BEGIN
  * This BSDF requires a phase function to model scattering interactions within the
  * random medium. When no phase function is explicitly specified, it uses an 
  * isotropic one ($g=0$) by default. A sample usage for instantiating the
- * plugin is given below: 
+ * plugin is given on the next page:\newpage 
  * \begin{xml}
  * <bsdf type="hk">
  *     <spectrum name="sigmaS" value="2"/>
@@ -84,7 +89,7 @@ MTS_NAMESPACE_BEGIN
  * Note that this model does not account for light that undergoes multiple 
  * scattering events within the layer. This leads to energy loss,
  * particularly at grazing angles, which can be seen in the left-hand image of
- * \figref{hk-example}. A solution is to use the \pluginref{chkms} plugin,
+ * \figref{hk-example}. A solution is to use the \pluginref{sssbrdf} plugin,
  * which adds an approximate multiple scattering component.
  *
  * \begin{xml}[caption=A thin dielectric layer with measured ketchup scattering parameters, label=lst:hk-coated]
@@ -111,7 +116,7 @@ class HanrahanKrueger : public BSDF {
 public:
 	HanrahanKrueger(const Properties &props) : BSDF(props) {
 		Spectrum sigmaS, sigmaA;
-		lookupMaterial(props, sigmaS, sigmaA);
+		lookupMaterial(props, sigmaS, sigmaA, NULL, false);
 
 		/* Scattering coefficient of the layer */
 		m_sigmaS = new ConstantSpectrumTexture(
@@ -120,10 +125,16 @@ public:
 		/* Absorption coefficient of the layer */
 		m_sigmaA = new ConstantSpectrumTexture(
 			props.getSpectrum("sigmaA", sigmaA));
-
+		
 		/* Slab thickness in inverse units of sigmaS and sigmaA */
 		m_thickness = props.getFloat("thickness", 1); 
-
+		
+		if (props.hasProperty("sigmaT"))
+			m_sigmaT = new ConstantSpectrumTexture(
+				props.getSpectrum("sigmaT"));
+		if (props.hasProperty("albedo"))
+			m_albedo = new ConstantSpectrumTexture(
+				props.getSpectrum("albedo"));
 	}
 
 	HanrahanKrueger(Stream *stream, InstanceManager *manager) 
@@ -140,10 +151,29 @@ public:
 			m_phase = static_cast<PhaseFunction *> (PluginManager::getInstance()->
 					createObject(MTS_CLASS(PhaseFunction), Properties("isotropic")));
 
+		if (m_sigmaT != NULL || m_albedo != NULL) {
+			/* Support for the alternative scattering/absorption
+			 * coefficient parameter passing convention */
+			if (m_sigmaT == NULL || m_albedo == NULL)
+				SLog(EError, "Please provide *both* sigmaT & albedo!");
+
+			m_sigmaS = new SpectrumProductTexture(m_sigmaT, m_albedo);
+			m_sigmaA = new SpectrumSubtractionTexture(m_sigmaT, m_sigmaS);
+			m_sigmaT = NULL;
+			m_albedo = NULL;
+		}
+
+		int extraFlags = m_sigmaS->isConstant() && m_sigmaA->isConstant() ? 0 : ESpatiallyVarying;
 		m_components.clear();
-		m_components.push_back(EGlossyReflection   | EFrontSide | EBackSide | ECanUseSampler);
-		m_components.push_back(EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler);
-		m_components.push_back(EDeltaTransmission  | EFrontSide | EBackSide | ECanUseSampler);
+		m_components.push_back(EGlossyReflection   | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+
+		if (m_thickness != std::numeric_limits<Float>::infinity()) {
+			m_components.push_back(EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+			m_components.push_back(EDeltaTransmission  | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+		}
+
+		m_usesRayDifferentials = m_sigmaS->usesRayDifferentials()
+			|| m_sigmaA->usesRayDifferentials();
 
 		BSDF::configure();
 	}
@@ -208,7 +238,8 @@ public:
 			/*                       Transmission component                         */
 			/* ==================================================================== */
 
-			if (hasGlossyTransmission && transmission) {
+			if (hasGlossyTransmission && transmission
+					&& m_thickness < std::numeric_limits<Float>::infinity()) {
 				MediumSamplingRecord dummy;
 				PhaseFunctionQueryRecord pRec(dummy,bRec.wi,bRec.wo);
 				const Float phaseVal = m_phase->eval(pRec);
@@ -361,9 +392,19 @@ public:
 		if (cClass->derivesFrom(MTS_CLASS(PhaseFunction))) {
 			Assert(m_phase == NULL);
 			m_phase = static_cast<PhaseFunction *>(child);
+		} else if (cClass->derivesFrom(MTS_CLASS(Texture))) {
+			if (name == "sigmaS")
+				m_sigmaS = static_cast<Texture *>(child);
+			else if (name == "sigmaA")
+				m_sigmaA = static_cast<Texture *>(child);
+			else if (name == "sigmaT")
+				m_sigmaT = static_cast<Texture *>(child);
+			else if (name == "albedo")
+				m_albedo = static_cast<Texture *>(child);
+			else
+				BSDF::addChild(name, child);
 		} else {
-			Log(EError, "Invalid child node! (\"%s\")",
-				cClass->getName().c_str());
+			BSDF::addChild(name, child);
 		}
 	}
 
@@ -386,6 +427,9 @@ private:
 	ref<Texture> m_sigmaS;
 	ref<Texture> m_sigmaA;
 	Float m_thickness;
+	/* Temporary fields */
+	ref<Texture> m_sigmaT;
+	ref<Texture> m_albedo;
 };
 
 
