@@ -18,14 +18,14 @@ if parallelize == True:
 	SetOption('num_jobs', multiprocessing.cpu_count())
 
 if not os.path.exists(configFile):
-	print 'A configuration file must be selected! Have a look at http://www.mitsuba-renderer.org/docs.html'
+	print '\nA configuration file must be selected! Have a look at http://www.mitsuba-renderer.org/docs.html'
 	Exit(1)
 
-versionFilename = GetBuildPath('#dependencies/version')
-
-if not os.path.exists(versionFilename):
-	print 'The dependencies are missing -- please check out https://www.mitsuba-renderer.org/hg/dependencies'
-	print 'and ensure that the newly created directory is a subdirectory of the main Mitsuba folder'
+if not os.path.exists(GetBuildPath('#dependencies')):
+	print '\nThe build dependency files are missing -- please check them out'
+	print 'from Mercurial by running the following command *inside* the '
+	print 'Mitsuba directory:\n'
+	print '$ hg clone https://www.mitsuba-renderer.org/hg/dependencies\n'
 	Exit(1)
 
 # Parse configuration options
@@ -227,17 +227,28 @@ else:
 	print MTS_VERSION
 Export('MTS_VERSION')
 
-with open(versionFilename) as f:
-	depVersion = f.readline().strip()
-	if MTS_VERSION != depVersion:
-		print '\nThe dependency directory and your Mitsuba codebase have different version numbers!'
-		print 'Mitsuba has version %s, and the dependencies have version %s. Please bring them ' % (MTS_VERSION, depVersion)
-		print 'into sync, either by running \n'
+versionFilename = GetBuildPath('#dependencies/version')
+versionMismatch = False
+
+if not os.path.exists(versionFilename):
+	versionMismatch = True
+	depVersion = "<unknown>"
+else:
+	with open(versionFilename) as f:
+		depVersion = f.readline().strip()
+		if MTS_VERSION != depVersion:
+			versionMismatch = True
+
+if versionMismatch:
+		print '\nThe dependency directory and your Mitsuba codebase have different version'
+		print 'numbers! Your copy of Mitsuba has version %s, whereas the dependencies ' % MTS_VERSION
+		print 'have version %s. Please bring them into sync, either by running\n' % depVersion
 		print '$ hg update -r v%s\n' % depVersion 
 		print 'in the Mitsuba directory, or by running\n'
 		print '$ cd dependencies'
-		print '$ hg update -r v%s\n' % MTS_VERSION
+		print '$ hg pull && hg update -r v%s\n' % MTS_VERSION
 		Exit(1)
+
 
 env = conf.Finish()
 
