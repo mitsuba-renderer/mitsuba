@@ -589,6 +589,7 @@ public:
 /**
  * \brief Basic 4x4 matrix data type
  * \ingroup libcore
+ * \ingroup libpython
  */
 struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 	inline Matrix4x4() { }

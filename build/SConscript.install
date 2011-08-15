@@ -43,7 +43,7 @@ if sys.platform == 'linux2':
 	install(distDir, ['libcore/libmitsuba-core.so', 'libhw/libmitsuba-hw.so',
 			'librender/libmitsuba-render.so', 'libbidir/libmitsuba-bidir.so'])
 	if hasPython:
-		install(os.path.join(distDir, 'mitsuba.so'), ['libpython/mitsuba.so'])
+		install(os.path.join(distDir, 'python'), ['libpython/mitsuba.so'])
 	install(distDir, ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil', 'mtsgui/mtsgui'])
 	if hasCollada:
 		install(distDir, ['converter/mtsimport'])

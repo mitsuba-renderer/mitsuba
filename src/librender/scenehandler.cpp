@@ -321,12 +321,18 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				mtx.m[i][j] = parseFloat(name, tokens[index++]);
 
 		m_transform = Transform(mtx) * m_transform;
-	} else if (name == "point" || name == "vector") {
+	} else if (name == "point") {
 		Float x = parseFloat(name, context.attributes["x"]);
 		Float y = parseFloat(name, context.attributes["y"]);
 		Float z = parseFloat(name, context.attributes["z"]);
 
 		context.parent->properties.setPoint(context.attributes["name"], Point(x, y, z));
+	} else if (name == "vector") {
+		Float x = parseFloat(name, context.attributes["x"]);
+		Float y = parseFloat(name, context.attributes["y"]);
+		Float z = parseFloat(name, context.attributes["z"]);
+
+		context.parent->properties.setVector(context.attributes["name"], Vector(x, y, z));
 	} else if (name == "rgb") {
 		Spectrum::EConversionIntent intent = Spectrum::EReflectance;
 		if (context.attributes.find("intent") != context.attributes.end()) {

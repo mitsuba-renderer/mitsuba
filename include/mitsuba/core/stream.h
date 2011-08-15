@@ -50,6 +50,7 @@ private:
  * \sa FileStream, MemoryStream, SocketStream, 
  *     ConsoleStream, SSHStream, ZStream
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Stream : public Object {
 public:

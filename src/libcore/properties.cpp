@@ -21,6 +21,62 @@
 
 MTS_NAMESPACE_BEGIN
 
+#define DEFINE_PROPERTY_ACCESSOR(Type, BaseType, TypeName, ReadableName) \
+	void Properties::set##TypeName(const std::string &name, const Type &value, bool warnDuplicates) { \
+		if (hasProperty(name) && warnDuplicates) \
+			SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str()); \
+		m_elements[name].data = (BaseType) value; \
+		m_elements[name].queried = false; \
+	} \
+	\
+	Type Properties::get##TypeName(const std::string &name) const { \
+		std::map<std::string, Element>::const_iterator it = m_elements.find(name); \
+		if (it == m_elements.end()) \
+			SLog(EError, "Property \"%s\" missing", name.c_str()); \
+		const BaseType *result = boost::get<BaseType>(&it->second.data); \
+		if (!result) \
+			SLog(EError, "The property \"%s\" has the wrong type (expected <" #ReadableName ">). The " \
+					"complete property record is :\n%s", name.c_str(), toString().c_str()); \
+		it->second.queried = true; \
+		return (Type) *result; \
+	} \
+	\
+	Type Properties::get##TypeName(const std::string &name, const Type &defVal) const { \
+		std::map<std::string, Element>::const_iterator it = m_elements.find(name); \
+		if (it == m_elements.end()) \
+			return defVal; \
+		const BaseType *result = boost::get<BaseType>(&it->second.data); \
+		if (!result) \
+			SLog(EError, "The property \"%s\" has the wrong type (expected <" #ReadableName ">). The " \
+					"complete property record is :\n%s", name.c_str(), toString().c_str()); \
+		it->second.queried = true; \
+		return (Type) *result; \
+	}
+
+DEFINE_PROPERTY_ACCESSOR(bool, bool, Boolean, bool)
+DEFINE_PROPERTY_ACCESSOR(int64_t, int64_t, Long, integer)
+DEFINE_PROPERTY_ACCESSOR(int, int64_t, Integer, integer)
+DEFINE_PROPERTY_ACCESSOR(size_t, int64_t, Size, integer)
+DEFINE_PROPERTY_ACCESSOR(Float, Float, Float, float)
+DEFINE_PROPERTY_ACCESSOR(Point, Point, Point, point)
+DEFINE_PROPERTY_ACCESSOR(Vector, Vector, Vector, vector)
+DEFINE_PROPERTY_ACCESSOR(Transform, Transform, Transform, transform)
+DEFINE_PROPERTY_ACCESSOR(Spectrum, Spectrum, Spectrum, spectrum)
+DEFINE_PROPERTY_ACCESSOR(std::string, std::string, String, string)
+
+class type_visitor : public boost::static_visitor<Properties::EPropertyType> {
+public:
+	Properties::EPropertyType operator()(const bool &) const             { return Properties::EBoolean; }
+	Properties::EPropertyType operator()(const int64_t &) const          { return Properties::EInteger; }
+	Properties::EPropertyType operator()(const Float &) const            { return Properties::EFloat; }
+	Properties::EPropertyType operator()(const Point &) const            { return Properties::EPoint; }
+	Properties::EPropertyType operator()(const Vector &) const           { return Properties::EVector; }
+	Properties::EPropertyType operator()(const Transform &) const        { return Properties::ETransform; }
+	Properties::EPropertyType operator()(const Spectrum &) const         { return Properties::ESpectrum; }
+	Properties::EPropertyType operator()(const std::string &) const      { return Properties::EString; }
+	Properties::EPropertyType operator()(const Properties::Data &) const { return Properties::EData; }
+};
+
 bool Properties::hasProperty(const std::string &name) const {
 	return m_elements.find(name) != m_elements.end();
 }
@@ -30,7 +86,7 @@ std::vector<std::string> Properties::getUnqueried() const {
 	std::vector<std::string> result;
 
 	for (; it != m_elements.end(); ++it) {
-		if ((*it).second.queried == false) 
+		if (!(*it).second.queried)
 			result.push_back((*it).first);
 	}
 
@@ -41,311 +97,9 @@ Properties::EPropertyType Properties::getType(const std::string &name) const {
 	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
 	if (it == m_elements.end())
 		SLog(EError, "Property \"%s\" has not been specified!", name.c_str());
-	return (*it).second.type;
-}
-
-void Properties::setBoolean(const std::string &name, bool value, bool warnDuplicates) {
-	if (hasProperty(name) && warnDuplicates)
-		SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str());
-	m_elements[name].type = EBoolean;
-	m_elements[name].v_boolean = value;
-	m_elements[name].queried = false;
-}
-
-bool Properties::getBoolean(const std::string &name) const {
-	if (!hasProperty(name))
-		SLog(EError, "Property \"%s\" missing", name.c_str());
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EBoolean)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <boolean>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_boolean;
-}
-
-bool Properties::getBoolean(const std::string &name, bool defVal) const {
-	if (!hasProperty(name))
-		return defVal;
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EBoolean)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <boolean>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_boolean;
-}
-
-void Properties::setInteger(const std::string &name, int value, bool warnDuplicates) {
-	if (hasProperty(name) && warnDuplicates)
-		SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str());
-	m_elements[name].type = EInteger;
-	m_elements[name].v_long = value;
-	m_elements[name].queried = false;
-}
-
-int Properties::getInteger(const std::string &name) const {
-	if (!hasProperty(name))
-		SLog(EError, "Property \"%s\" missing", name.c_str());
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EInteger)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (int) (*it).second.v_long;
-}
-
-int Properties::getInteger(const std::string &name, int defVal) const {
-	if (!hasProperty(name))
-		return defVal;
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EInteger)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (int) (*it).second.v_long;
-}
-
-void Properties::setLong(const std::string &name, int64_t value, bool warnDuplicates) {
-	if (hasProperty(name) && warnDuplicates)
-		SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str());
-	m_elements[name].type = EInteger;
-	m_elements[name].v_long = value;
-	m_elements[name].queried = false;
-}
-
-int64_t Properties::getLong(const std::string &name) const {
-	if (!hasProperty(name))
-		SLog(EError, "Property \"%s\" missing", name.c_str());
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EInteger)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_long;
-}
-
-int64_t Properties::getLong(const std::string &name, int64_t defVal) const {
-	if (!hasProperty(name))
-		return defVal;
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EInteger)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_long;
-}
-
-size_t Properties::getSize(const std::string &name) const {
-	if (!hasProperty(name))
-		SLog(EError, "Property \"%s\" missing", name.c_str());
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EInteger)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	if ((*it).second.v_long < 0)
-		SLog(EError, "Size property \"%s\": expected a nonnegative value!");
-	(*it).second.queried = true;
-	return (size_t) (*it).second.v_long;
-}
-
-size_t Properties::getSize(const std::string &name, size_t defVal) const {
-	if (!hasProperty(name))
-		return defVal;
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EInteger)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <integer>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	if ((*it).second.v_long < 0)
-		SLog(EError, "Size property \"%s\": expected a nonnegative value!");
-	(*it).second.queried = true;
-	return (size_t) (*it).second.v_long;
-}
-
-void Properties::setData(const std::string &name, Data value, bool warnDuplicates) {
-	if (hasProperty(name) && warnDuplicates)
-		SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str());
-	m_elements[name].type = EData;
-	m_elements[name].v_data = value;
-	m_elements[name].queried = false;
-}
-
-Properties::Data Properties::getData(const std::string &name) const {
-	if (!hasProperty(name))
-		SLog(EError, "Property \"%s\" missing", name.c_str());
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EData)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <data>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_data;
-}
-
-Properties::Data Properties::getData(const std::string &name, Data defVal) const {
-	if (!hasProperty(name))
-		return defVal;
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EData)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <data>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_data;
-}
-
-void Properties::setFloat(const std::string &name, Float value, bool warnDuplicates) {
-	if (hasProperty(name) && warnDuplicates)
-		SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str());
-	m_elements[name].type = EFloat;
-	m_elements[name].v_float = value;
-	m_elements[name].queried = false;
-}
-
-Float Properties::getFloat(const std::string &name) const {
-	if (!hasProperty(name))
-		SLog(EError, "Property \"%s\" missing", name.c_str());
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EFloat)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <float>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_float;
-}
-
-Float Properties::getFloat(const std::string &name, Float defVal) const {
-	if (!hasProperty(name))
-		return defVal;
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EFloat)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <float>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_float;
-}
-
-void Properties::setTransform(const std::string &name, const Transform &value, bool warnDuplicates) {
-	if (hasProperty(name) && warnDuplicates)
-		SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str());
-	m_elements[name].type = ETransform;
-	m_elements[name].v_transform = value;
-	m_elements[name].queried = false;
-}
-
-Transform Properties::getTransform(const std::string &name) const {
-	if (!hasProperty(name))
-		SLog(EError, "Property \"%s\" missing", name.c_str());
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != ETransform)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <transform>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_transform;
-}
-
-Transform Properties::getTransform(const std::string &name, const Transform &defVal) const {
-	if (!hasProperty(name))
-		return defVal;
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != ETransform)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <transform>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_transform;
-}
-
-void Properties::setSpectrum(const std::string &name, const Spectrum &value, bool warnDuplicates) {
-	if (hasProperty(name) && warnDuplicates)
-		SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str());
-	m_elements[name].type = ESpectrum;
-	m_elements[name].v_spectrum = value;
-	m_elements[name].queried = false;
-}
-
-Spectrum Properties::getSpectrum(const std::string &name) const {
-	if (!hasProperty(name))
-		SLog(EError, "Property \"%s\" missing", name.c_str());
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != ESpectrum)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <spectrum>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_spectrum;
-}
-
-Spectrum Properties::getSpectrum(const std::string &name, const Spectrum &defVal) const {
-	if (!hasProperty(name))
-		return defVal;
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != ESpectrum)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <spectrum>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_spectrum;
-}
-
-void Properties::setString(const std::string &name, const std::string &value, bool warnDuplicates) {
-	if (hasProperty(name) && warnDuplicates)
-		SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str());
-	m_elements[name].type = EString;
-	m_elements[name].v_string = value;
-	m_elements[name].queried = false;
-}
-
-std::string Properties::getString(const std::string &name) const {
-	if (!hasProperty(name))
-		SLog(EError, "Property \"%s\" missing", name.c_str());
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EString)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <string>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_string;
-}
-
-std::string Properties::getString(const std::string &name, const std::string &defVal) const {
-	if (!hasProperty(name))
-		return defVal;
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EString)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <string>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_string;
-}
-
-void Properties::setPoint(const std::string &name, const Point &value, bool warnDuplicates) {
-	if (hasProperty(name) && warnDuplicates)
-		SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str());
-	m_elements[name].type = EPoint;
-	m_elements[name].v_point = value;
-	m_elements[name].queried = false;
-}
-
-Vector Properties::getVector(const std::string &name) const {
-	return Vector(getPoint(name));
-}
-
-Vector Properties::getVector(const std::string &name, const Vector &defVal) const {
-	return Vector(getPoint(name, Point(defVal)));
-}
-
-Point Properties::getPoint(const std::string &name) const {
-	if (!hasProperty(name))
-		SLog(EError, "Property \"%s\" missing", name.c_str());
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EPoint)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <point>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_point;
-}
-
-Point Properties::getPoint(const std::string &name, const Point &defVal) const {
-	if (!hasProperty(name))
-		return defVal;
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if ((*it).second.type != EPoint)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <point>). The detailed "
-				"listing was:\n%s", name.c_str(), toString().c_str());
-	(*it).second.queried = true;
-	return (*it).second.v_point;
+	
+	type_visitor myVisitor;
+	return boost::apply_visitor(myVisitor, it->second.data);
 }
 
 std::string Properties::toString() const {
@@ -357,31 +111,33 @@ std::string Properties::toString() const {
 		<< "  elements = {" << endl;
 	for (; it != m_elements.end(); ++it) {
 		oss << "    \"" << (*it).first << "\" -> ";
-		const Element &el = (*it).second;
-		switch (el.type) {
+		const ElementData &data = (*it).second.data;
+		EPropertyType type = boost::apply_visitor(type_visitor(), data);
+		switch (type) {
 			case EBoolean:
-				oss << (el.v_boolean ? "true" : "false");
+				oss << (boost::get<bool>(data) ? "true" : "false");
 				break;
 			case EInteger:
-				oss << el.v_long;
+				oss << boost::get<int64_t>(data);
 				break;
 			case EFloat:
-				oss << el.v_float;
+				oss << boost::get<Float>(data);
 				break;
 			case EPoint:
-				oss << el.v_point.toString();
+				oss << boost::get<Point>(data).toString();
 				break;
 			case ETransform:
-				oss << indent(el.v_transform.toString(), 2);
+				oss << boost::get<Transform>(data).toString();
 				break;
 			case ESpectrum:
-				oss << indent(el.v_spectrum.toString(), 2);
+				oss << boost::get<Spectrum>(data).toString();
 				break;
 			case EString:
-				oss << "\"" << el.v_string << "\"";
+				oss << "\"" << boost::get<std::string>(data) << "\"";
 				break;
 			case EData:
-				oss << el.v_data.ptr << " (size=" << el.v_data.size << ")";
+				oss << boost::get<Data>(data).ptr << " (size=" 
+					<< boost::get<Data>(data).size << ")";
 				break;
 			default:
 				SLog(EError, "Encountered an unknown property type!");

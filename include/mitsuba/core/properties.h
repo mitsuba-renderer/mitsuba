@@ -21,12 +21,14 @@
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/transform.h>
+#include <boost/variant.hpp>
 
 MTS_NAMESPACE_BEGIN
 
 /** \brief Associative map for values of various types. Used to
  * construct subclasses of <tt>ConfigurableObject</tt>.
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Properties {
 public:
@@ -40,6 +42,8 @@ public:
 		EFloat,
 		/// 3D point
 		EPoint,
+		/// 3D vector
+		EVector,
 		/// 4x4 transform for homogeneous coordinates
 		ETransform,
 		/// Discretized color spectrum
@@ -73,43 +77,46 @@ public:
 	inline void setID(const std::string &id) { m_id = id; }
 
 	/// Set a boolean value
-	void setBoolean(const std::string &name, bool value, bool warnDuplicates = true);
+	void setBoolean(const std::string &name, const bool &value, bool warnDuplicates = true);
 	/// Get an boolean value
 	bool getBoolean(const std::string &name) const;
 	/// Get an boolean value (with default);
-	bool getBoolean(const std::string &name, bool defVal) const;
+	bool getBoolean(const std::string &name, const bool &defVal) const;
 
 	/// Set an integer value
-	void setInteger(const std::string &name, int value, bool warnDuplicates = true);
+	void setInteger(const std::string &name, const int &value, bool warnDuplicates = true);
 	/// Get an integer value
 	int getInteger(const std::string &name) const;
 	/// Get an integer value (with default);
-	int getInteger(const std::string &name, int defVal) const;
+	int getInteger(const std::string &name, const int &defVal) const;
 
 	/// Set an integer value
-	void setLong(const std::string &name, int64_t value, bool warnDuplicates = true);
+	void setLong(const std::string &name, const int64_t &value, bool warnDuplicates = true);
 	/// Get an integer value
 	int64_t getLong(const std::string &name) const;
 	/// Get an integer value (with default);
-	int64_t getLong(const std::string &name, int64_t defVal) const;
+	int64_t getLong(const std::string &name, const int64_t &defVal) const;
+
+	/// Set a size value
+	void setSize(const std::string &name, const size_t &value, bool warnDuplicates = true);
 	/// Get a size value
 	size_t getSize(const std::string &name) const;
 	/// Get an size value (with default);
-	size_t getSize(const std::string &name, size_t defVal) const;
+	size_t getSize(const std::string &name, const size_t &defVal) const;
 
 	/// Set a single precision floating point value
-	void setFloat(const std::string &name, Float value, bool warnDuplicates = true);
+	void setFloat(const std::string &name, const Float &value, bool warnDuplicates = true);
 	/// Get a single precision floating point value
 	Float getFloat(const std::string &name) const;
 	/// Get a single precision floating point value (with default)
-	Float getFloat(const std::string &name, Float defVal) const;
+	Float getFloat(const std::string &name, const Float &defVal) const;
 
 	/// Set an arbitrary data value
-	void setData(const std::string &name, Data value, bool warnDuplicates = true);
+	void setData(const std::string &name, const Data &value, bool warnDuplicates = true);
 	/// Get an arbitrary data value
 	Data getData(const std::string &name) const;
 	/// Get an arbitrary data value (with default)
-	Data getData(const std::string &name, Data defVal) const;
+	Data getData(const std::string &name, const Data &defVal) const;
 
 	/// Set a linear transformation
 	void setTransform(const std::string &name, const Transform &value, bool warnDuplicates = true);
@@ -131,6 +138,9 @@ public:
 	Point getPoint(const std::string &name) const;
 	/// Get a 3d point (with default)
 	Point getPoint(const std::string &name, const Point &defVal) const;
+
+	/// Set a 3d vector
+	void setVector(const std::string &name, const Vector &value, bool warnDuplicates = true);
 	/// Get a 3d vector 
 	Vector getVector(const std::string &name) const;
 	/// Get a 3d vector (with default)
@@ -169,20 +179,12 @@ public:
 	std::string toString() const;
 private:
 	/// \cond
+	typedef boost::variant<
+		bool, int64_t, Float, Point, Vector, Transform,
+		Spectrum, std::string, Data> ElementData;
+
 	struct Element {
-		EPropertyType type;
-		union {
-			bool v_boolean;
-			int64_t v_long;
-			Float v_float;
-			Data v_data;
-		};
-		// not allowed in union (constructor)
-		Point v_point; 
-		Vector v_vector;
-		Transform v_transform;
-		Spectrum v_spectrum;
-		std::string v_string;
+		ElementData data;
 		mutable bool queried;
 	};
 	/// \endcond

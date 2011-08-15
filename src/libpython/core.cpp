@@ -1,9 +1,11 @@
-#include "mtspy.h"
+#include "core.h"
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/shvector.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/sched.h>
 #include <mitsuba/core/transform.h>
+#include <mitsuba/core/properties.h>
 
 using namespace mitsuba;
 
@@ -55,6 +57,65 @@ public:
 	}
 };
 
+class properties_wrapper {
+public:
+	static bp::object get(const Properties &props, std::string name) {
+		if (!props.hasProperty(name))
+			SLog(EError, "Properties: keyword \"%s\" not found!", name.c_str());
+
+		switch (props.getType(name)) {
+			case Properties::EBoolean:
+				return bp::object(props.getBoolean(name));
+			case Properties::EString:
+				return bp::object(props.getString(name));
+			case Properties::EInteger:
+				return bp::object(props.getInteger(name));
+			case Properties::EFloat:
+				return bp::object(props.getFloat(name));
+			case Properties::EVector:
+				return bp::object(props.getFloat(name));
+			case Properties::EPoint:
+				return bp::object(props.getFloat(name));
+			default:
+				SLog(EError, "Properties: type of keyword \"%s\" is not supported!", name.c_str());
+				return bp::object();
+		}
+	}
+
+	static void set(Properties &props, const std::string name, bp::object value) {
+		bp::extract<std::string> extractString(value);
+		bp::extract<bool> extractBoolean(value);
+		bp::extract<int> extractInteger(value);
+		bp::extract<Float> extractFloat(value);
+		bp::extract<Vector> extractVector(value);
+		bp::extract<Point> extractPoint(value);
+
+		if (extractString.check()) {
+			props.setString(name, extractString());
+		} else if (extractBoolean.check() && PyObject_IsInstance(value.ptr(), (PyObject *) &PyBool_Type)) {
+			props.setBoolean(name, extractBoolean());
+		} else if (extractInteger.check()) {
+			props.setInteger(name, extractInteger());
+		} else if (extractFloat.check()) {
+			props.setFloat(name, extractFloat());
+		} else if (extractPoint.check()) {
+			props.setPoint(name, extractPoint());
+		} else if (extractVector.check()) {
+			props.setPoint(name, Point(extractVector()));
+		} else {
+			SLog(EError, "Properties: type of keyword \"%s\" is not supported!", name.c_str());
+		}
+	}
+};
+
+struct path_to_python_str {
+	static PyObject* convert(fs::path const& path) {
+		return boost::python::incref(
+			boost::python::object(path.file_string()).ptr());
+	}
+};
+
+
 void Matrix4x4_setItem(Matrix4x4 *matrix, bp::tuple tuple, Float value) {
 	if (bp::len(tuple) != 2)
 		SLog(EError, "Invalid matrix indexing operation, required a tuple of length 2");
@@ -79,25 +140,125 @@ Float Matrix4x4_getItem(Matrix4x4 *matrix, bp::tuple tuple) {
 	return matrix->operator()(i, j);
 }
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(setString_overloads, setString, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(getString_overloads, getString, 1, 2)
 
 void export_core() {
+	boost::python::to_python_converter<
+		fs::path, path_to_python_str>();
+
 	bp::object coreModule(
-		bp::handle<>(bp::borrowed(PyImport_AddModule("mtspy.core"))));
+		bp::handle<>(bp::borrowed(PyImport_AddModule("mitsuba.core"))));
 	bp::scope().attr("core") = coreModule;
-	bp::scope coreScope = coreModule;
+	bp::scope scope = coreModule;
 
 	bp::class_<Object, ref<Object>, boost::noncopyable>("Object", bp::no_init)
 		.def("getRefCount", &Object::getRefCount)
 		.def("__str__", &Object::toString);
-	
-	bp::class_<Stream, ref<Stream>, bp::bases<Object>, boost::noncopyable>("Stream", bp::no_init);
 
+	bp::class_<Stream, ref<Stream>, bp::bases<Object>, boost::noncopyable> 
+		stream("Stream", bp::no_init);
+
+	bp::scope streamScope = stream;
 	bp::enum_<Stream::EByteOrder>("EByteOrder")
 		.value("EBigEndian", Stream::EBigEndian)
 		.value("ELittleEndian", Stream::ELittleEndian)
 		.value("ENetworkByteOrder", Stream::ENetworkByteOrder)
 		.export_values();
 
+	stream.def("setByteOrder", &Stream::setByteOrder)
+		  .def("getByteOrder", &Stream::getByteOrder)
+		  .def("getHostByteOrder", &Stream::getHostByteOrder)
+		  .def("truncate", &Stream::truncate)
+		  .def("setPos", &Stream::setPos)
+		  .def("getPos", &Stream::getPos)
+		  .def("getSize", &Stream::getSize)
+		  .def("flush", &Stream::flush)
+		  .def("canWrite", &Stream::canWrite)
+		  .def("canRead", &Stream::canRead)
+		  .def("skip", &Stream::skip)
+		  .def("copyTo", &Stream::copyTo)
+		  .def("writeString", &Stream::writeString)
+		  .def("readString", &Stream::readString)
+		  .def("writeLine", &Stream::writeLine)
+		  .def("readLine", &Stream::readLine)
+		  .def("writeChar", &Stream::writeChar)
+		  .def("readChar", &Stream::readChar)
+		  .def("writeUChar", &Stream::writeUChar)
+		  .def("readUChar", &Stream::readUChar)
+		  .def("writeShort", &Stream::writeShort)
+		  .def("readShort", &Stream::readShort)
+		  .def("writeUShort", &Stream::writeUShort)
+		  .def("readUShort", &Stream::readUShort)
+		  .def("writeInt", &Stream::writeInt)
+		  .def("readInt", &Stream::readInt)
+		  .def("writeUInt", &Stream::writeUInt)
+		  .def("readUInt", &Stream::readUInt)
+		  .def("writeLong", &Stream::writeLong)
+		  .def("readLong", &Stream::readLong)
+		  .def("writeULong", &Stream::writeULong)
+		  .def("readULong", &Stream::readULong)
+		  .def("writeFloat", &Stream::writeFloat)
+		  .def("readFloat", &Stream::readFloat)
+		  .def("writeSingle", &Stream::writeSingle)
+		  .def("readSingle", &Stream::readSingle)
+		  .def("writeDouble", &Stream::writeDouble)
+		  .def("readDouble", &Stream::readDouble);
+
+	bp::scope scope2 = coreModule;
+
+	bp::class_<FileStream, ref<FileStream>, bp::bases<Stream>, boost::noncopyable> 
+		fstream("FileStream");
+	bp::scope fstreamScope = fstream;
+	bp::enum_<FileStream::EFileMode>("EFileMode")
+		.value("EReadOnly", FileStream::EReadOnly)
+		.value("EReadWrite", FileStream::EReadWrite)
+		.value("ETruncWrite", FileStream::ETruncWrite)
+		.value("ETruncReadWrite", FileStream::ETruncReadWrite)
+		.value("EAppendWrite", FileStream::EAppendWrite)
+		.value("EAppendReadWrite", FileStream::EAppendReadWrite)
+		.export_values();
+
+	fstream
+		.def(bp::init<std::string, FileStream::EFileMode>())
+		.def("getPath", &FileStream::getPath, 
+				bp::return_value_policy<bp::copy_const_reference>())
+		.def("open", &FileStream::open)
+		.def("close", &FileStream::close)
+		.def("remove", &FileStream::remove);
+
+	bp::scope scope3 = coreModule;
+
+	bp::class_<Properties> properties("Properties");
+	bp::scope propertiesScope = properties;
+	bp::enum_<Properties::EPropertyType>("EPropertyType")
+		.value("EBoolean", Properties::EBoolean)
+		.value("EInteger", Properties::EInteger)
+		.value("EFloat", Properties::EFloat)
+		.value("EPoint", Properties::EPoint)
+		.value("ETransform", Properties::ETransform)
+		.value("ESpectrum", Properties::ESpectrum)
+		.value("EString", Properties::EString)
+		.value("EData", Properties::EData)
+		.export_values();
+
+	properties
+		.def(bp::init<std::string>())
+		.def("getPluginName", &Properties::getPluginName,
+			bp::return_value_policy<bp::copy_const_reference>())
+		.def("setPluginName", &Properties::setPluginName)
+		.def("getID", &Properties::getPluginName,
+			bp::return_value_policy<bp::copy_const_reference>())
+		.def("setID", &Properties::setPluginName)
+		.def("getType", &Properties::getType)
+		.def("hasProperty", &Properties::hasProperty)
+		.def("wasQueried", &Properties::wasQueried)
+		.def("markQueried", &Properties::markQueried)
+		.def("__getitem__", &properties_wrapper::get)
+		.def("__setitem__", &properties_wrapper::set)
+		.def("__str__", &Properties::toString);
+
+	bp::scope scope4 = coreModule;
 	bp::class_<Vector2>("Vector2", bp::init<Float, Float>())
 		.def(bp::init<Float>())
 		.def(bp::init<Point2>())
@@ -147,6 +308,7 @@ void export_core() {
 	bp::class_<Vector>("Vector", bp::init<Float, Float, Float>())
 		.def(bp::init<Float>())
 		.def(bp::init<Point>())
+		.def(bp::init<Normal>())
 		.def(bp::init<Stream *>())
 		.def_readwrite("x", &Vector::x)
 		.def_readwrite("y", &Vector::y)
@@ -168,6 +330,31 @@ void export_core() {
 		.def("__len__", &fixedsize_wrapper<Vector>::len)
 		.def("__getitem__", &fixedsize_wrapper<Vector>::get)
 		.def("__setitem__", &fixedsize_wrapper<Vector>::set);
+
+	bp::class_<Normal>("Normal", bp::init<Float, Float, Float>())
+		.def(bp::init<Float>())
+		.def(bp::init<Vector>())
+		.def(bp::init<Stream *>())
+		.def_readwrite("x", &Normal::x)
+		.def_readwrite("y", &Normal::y)
+		.def_readwrite("z", &Normal::z)
+		.def("length", &Normal::length)
+		.def(bp::self != bp::self)
+		.def(bp::self == bp::self)
+		.def(-bp::self)
+		.def(bp::self + bp::self)
+		.def(bp::self += bp::self)
+		.def(bp::self - bp::self)
+		.def(bp::self -= bp::self)
+		.def(bp::self *= Float())
+		.def(bp::self * Float())
+		.def(bp::self / Float())
+		.def(bp::self /= Float())
+		.def("serialize", &Normal::serialize)
+		.def("__str__", &Normal::toString)
+		.def("__len__", &fixedsize_wrapper<Normal>::len)
+		.def("__getitem__", &fixedsize_wrapper<Normal>::get)
+		.def("__setitem__", &fixedsize_wrapper<Normal>::set);
 
 	bp::class_<Point>("Point", bp::init<Float, Float, Float>())
 		.def(bp::init<Float>())
@@ -363,9 +550,9 @@ void export_core() {
 		.def("__str__", &Matrix4x4::toString);
 }
 
-BOOST_PYTHON_MODULE(mtspy) {
+BOOST_PYTHON_MODULE(mitsuba) {
 	bp::object package = bp::scope();
-	package.attr("__path__") = "mtspy";
+	package.attr("__path__") = "mitsuba";
 
 	bp::def("initializeFramework", initializeFramework);
 	bp::def("shutdownFramework", shutdownFramework);
