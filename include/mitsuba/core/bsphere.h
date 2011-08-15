@@ -59,7 +59,6 @@ struct BSphere {
 
 	/// Expand the bounding sphere radius to contain another point.
 	inline void expandBy(const Point p) {
-		Vector dir = p - center;
 		radius = std::max(radius, (p-center).length());
 	}
 	

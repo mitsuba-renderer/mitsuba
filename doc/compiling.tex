@@ -160,15 +160,15 @@ using another distribution.
 
 First, run
 \begin{shell}
-$\text{\$}$ yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel
+$\text{\$}$ yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel
 \end{shell}
-You will also need the \texttt{glew-mx} and \texttt{collada-dom} packages, which are not included in the Fedora package repository. 
-You can grab source, \texttt{i386}, and \text{x86\_64} \texttt{RPM} files at the following location: \texttt{http://www.mitsuba-renderer.org/releases}.
 After installing them, simply run
 \begin{shell}
 $\text{\$}$ scons
 \end{shell}
-inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
+inside the Mitsuba directory. You might have to change the referenced Python
+version in \code{config.py} if the build script warns that it cannot be found.
+In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
 If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
 scons: $\texttt{done}$ building targets.
