@@ -1,6 +1,27 @@
 mitsuba (0.3.0-1) unstable; urgency=low
 
-  * Initial python bindings
+  * Added basic Python bindings that can be used to instantiate plugins
+    and control rendering processes.
+  * Spectral rendering: most of the code pertaining to spectral 
+    rendering has seen a significant overhaul. It is now faster and 
+    in certain cases more accurate.
+  * Flexible material classes: this release introduces a robust and 
+    very general suite of eight physically-based smooth and rough 
+    (microfacet-based) material classes.
+  * Material modifiers: two new material modifiers (bump & coating)
+    can be applied to BSDFs to create new materials.
+  * Material verification: the sampling methods of all material 
+    models in Mitsuba are now automatically verified with the help 
+    of statistical hypothesis tests (using Chi^2-tests).
+  * Generated documentation: there is now a javadoc-like system, 
+    which extracts documentation directly from the plugin source code 
+    and stitches it into a LaTeX reference document.
+  * lookAt: Mitsuba inherited a bug from PBRT, where the <lookAt> 
+    tag changed the handedness of the coordinate system. This is now  
+    fixed--also, the syntax of this tag has changed to make it easier to read.
+  * Scene portability: A new conversion tool ensures that old and incompatible
+    scenes can be translated into the scene description format of the 
+    most recent version.
 
  -- Wenzel Jakob <wenzel@cs.cornell.edu>  Mon, 14 Aug 2011 00:00:00 -0400
 
