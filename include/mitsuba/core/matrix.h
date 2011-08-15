@@ -80,7 +80,6 @@ public:
 		memcpy(m, mtx.m, sizeof(T) * M * N);
 	}
 
-
 	/// Initialize with the identity matrix
 	void setIdentity() {
 		for (int i=0; i<M; ++i)
