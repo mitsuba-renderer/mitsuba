@@ -317,7 +317,7 @@ public:
 		bool choseSpecular = hasSpecular;
 		Point2 sample(_sample);
 
-		Float probSpecular, probDiffuse;
+		Float probSpecular;
 		if (hasSpecular && hasDiffuse) {
 			/* Find the probability of sampling the diffuse component */
 			probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
@@ -326,8 +326,6 @@ public:
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
 				(probSpecular*m_specularSamplingWeight + 
 				(1-probSpecular) * (1-m_specularSamplingWeight));
-
-			probDiffuse = 1 - probSpecular;
 
 			if (sample.x <= probSpecular) {
 				sample.x /= probSpecular;
