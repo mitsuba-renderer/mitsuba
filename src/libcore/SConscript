@@ -50,7 +50,7 @@ elif sys.platform == 'win32':
 libcore = coreEnv.SharedLibrary('mitsuba-core', libcore_objects)
 
 if sys.platform == "darwin":
-	coreEnv.AddPostAction(libcore, 'install_name_tool -id @executable_path/../Frameworks/libmitsuba-core.dylib $TARGET')
+	coreEnv.AddPostAction(libcore, 'install_name_tool -id @loader_path/../Frameworks/libmitsuba-core.dylib $TARGET')
 
 env.Append(LIBS=['mitsuba-core'])
 env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'libcore')])
