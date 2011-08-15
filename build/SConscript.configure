@@ -246,9 +246,9 @@ if versionMismatch:
 		print '$ hg update -r v%s\n' % depVersion 
 		print 'in the Mitsuba directory, or by running\n'
 		print '$ cd dependencies'
-		print '$ hg pull && hg update -r v%s\n' % MTS_VERSION
+		print '$ hg pull'
+		print '$ hg update -r v%s\n' % MTS_VERSION
 		Exit(1)
-
 
 env = conf.Finish()
 
