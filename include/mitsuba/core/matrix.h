@@ -187,6 +187,14 @@ public:
 		return *this;
 	}
 
+	/// Matrix-scalar addition
+	inline const Matrix &operator-=(T value) {
+		for (int i=0; i<M; ++i)
+			for (int j=0; j<N; ++j)
+				m[i][j] -= value;
+		return *this;
+	}
+
 	/// Component-wise negation
 	inline Matrix operator-() const {
 		Matrix result;

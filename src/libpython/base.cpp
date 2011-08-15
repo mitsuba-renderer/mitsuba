@@ -90,9 +90,7 @@ void export_core() {
 		.def("getRefCount", &Object::getRefCount)
 		.def("__str__", &Object::toString);
 	
-	bp::class_<Stream, ref<Object>, bp::bases<Object>, boost::noncopyable>("Stream", bp::no_init)
-		.def("getRefCount", &Object::getRefCount)
-		.def("__str__", &Object::toString);
+	bp::class_<Stream, ref<Stream>, bp::bases<Object>, boost::noncopyable>("Stream", bp::no_init);
 
 	bp::enum_<Stream::EByteOrder>("EByteOrder")
 		.value("EBigEndian", Stream::EBigEndian)
@@ -341,7 +339,6 @@ void export_core() {
 		.def("__setitem__", &Matrix4x4_setItem)
 		.def("__getitem__", &Matrix4x4_getItem)
 		.def("setIdentity", &Matrix4x4::setIdentity)
-		.def("setZero", &Matrix4x4::setZero)
 		.def("isZero", &Matrix4x4::isZero)
 		.def("trace", &Matrix4x4::trace)
 		.def("det", &Matrix4x4::det)

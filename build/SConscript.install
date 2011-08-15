@@ -43,7 +43,7 @@ if sys.platform == 'linux2':
 	install(distDir, ['libcore/libmitsuba-core.so', 'libhw/libmitsuba-hw.so',
 			'librender/libmitsuba-render.so', 'libbidir/libmitsuba-bidir.so'])
 	if hasPython:
-		install(distDir, ['mtspy/mtspy.so'])
+		install(os.path.join(distDir, 'mitsuba.so'), ['libpython/mitsuba.so'])
 	install(distDir, ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil', 'mtsgui/mtsgui'])
 	if hasCollada:
 		install(distDir, ['converter/mtsimport'])
@@ -70,7 +70,7 @@ if sys.platform == 'win32':
 	install(distDir, ['libcore/libmitsuba-core.dll', 'libhw/libmitsuba-hw.dll',
 			'librender/libmitsuba-render.dll', 'libbidir/libmitsuba-bidir.dll'])
 	if hasPython:
-		installAs(os.path.join(distDir, 'mtspy.pyd'), 'mtspy/mtspy.dylib')
+		installAs(os.path.join(distDir, 'python/mitsuba.pyd'), 'libpython/mitsuba.dll')
 	install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',
 		'libpng13.dll',	'jpeg62.dll', 'pthreadVCE2.dll', 'xerces-c_3_0.dll', 'glew32mx.dll'],
 		prefix=dllprefix)
@@ -115,7 +115,7 @@ elif sys.platform == 'darwin':
 	install(frameworkDir, ['libcore/libmitsuba-core.dylib', 'libhw/libmitsuba-hw.dylib',
 		'librender/libmitsuba-render.dylib', 'libbidir/libmitsuba-bidir.dylib'])
 	if hasPython:
-		installAs(os.path.join(frameworkDir, 'mtspy.so'), 'mtspy/mtspy.dylib')
+		installAs(os.path.join(distDir, 'python/mitsuba.so'), 'libpython/mitsuba.dylib')
 	install(frameworkDir, [
 		'GLEW.framework/Resources/libs/libGLEW.dylib', 'OpenEXR.framework/Resources/lib/libHalf.6.dylib',
 		'OpenEXR.framework/Resources/lib/libIex.6.dylib', 'OpenEXR.framework/Resources/lib/libImath.6.dylib',
