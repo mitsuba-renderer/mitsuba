@@ -1,7 +1,7 @@
 BUILDDIR       = '#build/release'
 DISTDIR        = '#Mitsuba.app'
-CXX			   = 'g++'
-CC			   = 'gcc'
+CXX            = 'g++'
+CC             = 'gcc'
 CXXFLAGS       = ['-arch', 'x86_64', '-mmacosx-version-min=10.6', '-march=nocona', '-msse2', '-mfpmath=sse', '-ftree-vectorize', '-funsafe-math-optimizations', '-fno-rounding-math', '-fno-signaling-nans', '-isysroot', '/Developer/SDKs/MacOSX10.6.sdk', '-O3', '-Wall', '-g', '-pipe', '-DMTS_DEBUG', '-DSINGLE_PRECISION', '-DSPECTRUM_SAMPLES=3', '-DMTS_SSE', '-DMTS_HAS_COHERENT_RT', '-fopenmp', '-fstrict-aliasing', '-fsched-interblock', '-freorder-blocks']
 LINKFLAGS      = ['-framework', 'OpenGL', '-framework', 'Cocoa', '-arch', 'x86_64', '-mmacosx-version-min=10.6', '-Wl,-syslibroot,/Developer/SDKs/MacOSX10.6.sdk']
 BASEINCLUDE    = ['#include']
