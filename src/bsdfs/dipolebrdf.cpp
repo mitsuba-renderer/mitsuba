@@ -122,7 +122,6 @@ public:
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
 		Spectrum sigmaA = m_sigmaA->getValue(its),
 				 sigmaS = m_sigmaS->getValue(its),
-				 sigmaT = sigmaA + sigmaS,
 				 reducedAlbedo;
 
 		/* ==================================================================== */
