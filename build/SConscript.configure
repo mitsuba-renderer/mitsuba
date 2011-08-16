@@ -267,8 +267,28 @@ def osxlibinst_as_build_function(self, target, source, pkgname = None, use_own =
 	self.AddPostAction(inst, 'install_name_tool -id @loader_path/../Frameworks/' + name + ' $TARGET')
 	return inst
 
+def remove_flag(env, value):
+	try:
+		env['CXXFLAGS'].remove(value)
+	except:
+		pass
+
+def append_flag(env, value):
+	env['CXXFLAGS'].append(value)
+
+env.__class__.RemoveFlag = remove_flag
+env.__class__.AppendFlag = append_flag
 env.__class__.OSXLibInst = osxlibinst_build_function
 env.__class__.OSXLibInstAs = osxlibinst_as_build_function
+
+def prepare_for_objective_cpp(env):
+	# Objective C++ does not permit the following optimization flags
+	env.RemoveFlag('-fstrict-aliasing')
+	env.RemoveFlag('-ftree-vectorize')
+	env.RemoveFlag('-std=c++0x')
+	env.AppendFlag('-fno-strict-aliasing')
+
+env.__class__.ConfigureForObjectiveCPP = prepare_for_objective_cpp
 
 if hasCollada:
 	env.Append(CPPDEFINES = [['MTS_HAS_COLLADA', 1]] )

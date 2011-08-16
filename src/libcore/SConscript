@@ -39,13 +39,7 @@ libcore_objects = [
 # Add some platform-specific components
 if sys.platform == 'darwin':
 	coreEnv_osx = coreEnv.Clone()
-	try:
-		# Objective C++ does not permit the following optimization flags
-		coreEnv_osx['CXXFLAGS'].remove('-fstrict-aliasing')
-		coreEnv_osx['CXXFLAGS'].remove('-ftree-vectorize')
-		coreEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing')
-	except:
-		pass
+	coreEnv_osx.ConfigureForObjectiveCPP()
 	libcore_objects += coreEnv_osx.SharedObject('platform_darwin.mm')
 elif sys.platform == 'win32':
 	libcore_objects += coreEnv.SharedObject('getopt.c')

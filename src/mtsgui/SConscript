@@ -49,13 +49,7 @@ if hasQt:
 
 	if sys.platform == 'darwin':
 		qtEnv_osx = qtEnv.Clone()
-		try:
-			# Objective C++ does not permit the following optimization flags
-			qtEnv_osx['CXXFLAGS'].remove('-fstrict-aliasing')
-			qtEnv_osx['CXXFLAGS'].remove('-ftree-vectorize')
-			qtEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing')
-		except:
-			pass
+		qtEnv_osx.ConfigureForObjectiveCPP()
 		qtEnv_osx['CXXFLAGS'].append(['-Fdependencies/darwin', '-framework', 'BWToolkitFramework'])
 		qtSources += qtEnv_osx.StaticObject('previewsettingsdlg_cocoa_impl.mm')
 	else:
