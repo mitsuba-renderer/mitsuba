@@ -4,10 +4,10 @@ BUILDDIR       = '#build/release'
 DISTDIR        = '#dist'
 CXX            = 'cl'
 CC             = 'cl'
-# /Ox=optimize for speed, global optimizations, intrinsic functions, favor fast code, frame pointer omission
+# /O2=optimize for speed, global optimizations, intrinsic functions, favor fast code, frame pointer omission
 # /EHsc=C++ exceptions, /fp:fast=Enable reasonable FP optimizations, /GS-=No buffer security checks, /GL=whole program optimizations
 # To include debug information add '/Z7' to CXXFLAGS and '/DEBUG' to LINKFLAGS
-CXXFLAGS       = ['/nologo', '/Ox', '/fp:fast', '/D', 'WIN32', '/D', 'WIN64', '/W3', '/EHsc', '/GS-', '/GL', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'SPECTRUM_SAMPLES=3', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/openmp']
+CXXFLAGS       = ['/nologo', '/O2', '/fp:fast', '/D', 'WIN32', '/D', 'WIN64', '/W3', '/EHsc', '/GS-', '/GL', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'SPECTRUM_SAMPLES=3', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/openmp']
 SHCXXFLAGS     = CXXFLAGS
 TARGET_ARCH    = 'x86_64'
 MSVC_VERSION   = '9.0'
