@@ -102,16 +102,16 @@ public:
 	inline const float *getFloatData() const { return (const float *) m_data; }
 
 	/// Return the bitmap width
-	inline const int getWidth() const { return m_width; }
+	inline int getWidth() const { return m_width; }
 
 	/// Return the bitmap height 
-	inline const int getHeight() const { return m_height; }
+	inline int getHeight() const { return m_height; }
 
 	/// Return the bitmap's bits per pixel
-	inline const int getBitsPerPixel() const { return m_bpp; }
+	inline int getBitsPerPixel() const { return m_bpp; }
 
 	/// Return the bitmap size in bytes
-	inline const size_t getSize() const { return m_size; }
+	inline size_t getSize() const { return m_size; }
 
 	/// Return some human-readable information about this bitmap
 	std::string toString() const;
