@@ -85,6 +85,12 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->actionUpdateCheck->setMenuRole(QAction::ApplicationSpecificRole);
 	ui->actionFeedback->setMenuRole(QAction::ApplicationSpecificRole);
 	ui->actionReportBug->setMenuRole(QAction::ApplicationSpecificRole);
+	ui->actionEnableCommandLine->setMenuRole(QAction::ApplicationSpecificRole);
+
+#if !defined(__OSX__)
+	ui->actionEnableCommandLine->setVisible(false);
+#endif
+
 	m_progressWidget = new QWidget(centralWidget());
 	m_progressLabel = new QLabel(m_progressWidget);
 	m_progress = new QProgressBar(m_progressWidget);
@@ -194,7 +200,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	m_networkManager = new QNetworkAccessManager(this);
 
-#if defined(__OSX__)
+#if defined(__OSX__) && 0 // Disable crash reports for now
 	/* Submit crash reports on OSX */
 	QDir crashDir = QDir::home();
 	crashDir.cd("Library/Logs/CrashReporter");
@@ -1516,6 +1522,16 @@ void MainWindow::on_actionStartServer_triggered() {
 	ui->actionStartServer->setEnabled(false);
 	connect(m_serverWidget, SIGNAL(closed()), this, SLOT(onServerClosed()));
 	m_serverWidget->show();
+}
+	
+void MainWindow::on_actionEnableCommandLine_triggered() {
+	if (QMessageBox::question(this, tr("Enable command line access"),
+		tr("<p>If you proceed, Mitsuba will create symbolic links in <tt>/usr/bin</tt> and <tt>/Library/Python/2.6/site-packages</tt> "
+			"that make it possible to use the renderer via the command line and Python. Any old symlinks will simply be overwritten.</p>"),
+			QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+			
+		}
+	}
 }
 
 void MainWindow::on_actionReportBug_triggered() {

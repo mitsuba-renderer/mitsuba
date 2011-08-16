@@ -100,7 +100,7 @@
      <x>0</x>
      <y>0</y>
      <width>605</width>
-     <height>25</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -157,6 +157,7 @@
     <addaction name="separator"/>
     <addaction name="menuDeveloper"/>
     <addaction name="actionSettings"/>
+    <addaction name="actionEnableCommandLine"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuTools"/>
@@ -461,6 +462,11 @@
   <action name="actionSceneDescription">
    <property name="text">
     <string>Scene Information ..</string>
+   </property>
+  </action>
+  <action name="actionEnableCommandLine">
+   <property name="text">
+    <string>Enable command line access</string>
    </property>
   </action>
  </widget>
