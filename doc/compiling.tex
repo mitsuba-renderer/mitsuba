@@ -155,20 +155,18 @@ into the \code{/etc/apt/sources.list} file.
 
 \subsection{Building on Fedora Core}
 You'll first need to install a number of dependencies. It is assumed here
-that you are using Fedora Core, hence some of the package may be named differently if you are 
-using another distribution.
+that you are using FC15, hence some of the package may be named differently if you are 
+using another version.
 
 First, run
 \begin{shell}
 $\text{\$}$ yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel
 \end{shell}
-After installing them, simply run
+Afterwards, simply run
 \begin{shell}
 $\text{\$}$ scons
 \end{shell}
-inside the Mitsuba directory. You might have to change the referenced Python
-version in \code{config.py} if the build script warns that it cannot be found.
-In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
+inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
 If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
 scons: $\texttt{done}$ building targets.
@@ -179,7 +177,25 @@ $\text{\$}$ . setpath.sh
 \end{shell}
 (note the period at the beginning -- this assumes that you are using \code{bash}).
 Having set up everything, you can now move on to \secref{basics}.
-
+\subsubsection{Creating Fedora Core packages}
+To create \code{RPM} packages, you will need to install the \code{RPM} development tools:
+\begin{shell}
+$\text{\$}$ yum install rpmdevtools
+\end{shell}
+Once this is done, run the following command in your home directory:
+\begin{shell}
+$\text{\$}$ rpmdev-setuptree
+\end{shell}
+and create a Mitsuba source package in the appropriate directory:
+\begin{shell}
+$\text{\$}$ ln -s mitsuba mitsuba-$\code{\MitsubaVersion}$
+$\text{\$}$ tar czvf rpmbuild/SOURCES/mitsuba-$\code{\MitsubaVersion}$.tar.gz mitsuba-$\code{\MitsubaVersion}$/.
+\end{shell}
+Finally, \code{rpmbuilder} can be invoked to create the package:
+\begin{shell}
+$\text{\$}$ rpmbuild -bb mitsuba-$\code{\MitsubaVersion}$/data/linux/fedora/mitsuba.spec
+\end{shell}
+After this command finishes, its output can be found in the directory \code{rpmbuild/RPMS}.
 \subsection{Building on Arch Linux}
 There are two ways to install Mitsuba on Archlinux, the Arch way, and the other way.
 
