@@ -63,6 +63,7 @@ DEFINE_PROPERTY_ACCESSOR(Vector, Vector, Vector, vector)
 DEFINE_PROPERTY_ACCESSOR(Transform, Transform, Transform, transform)
 DEFINE_PROPERTY_ACCESSOR(Spectrum, Spectrum, Spectrum, spectrum)
 DEFINE_PROPERTY_ACCESSOR(std::string, std::string, String, string)
+DEFINE_PROPERTY_ACCESSOR(Properties::Data, Properties::Data, Data, data)
 
 class type_visitor : public boost::static_visitor<Properties::EPropertyType> {
 public:
