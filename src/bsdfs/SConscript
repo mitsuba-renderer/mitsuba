@@ -20,10 +20,16 @@ plugins += env.SharedLibrary('bump', ['bump.cpp'])
 # Other materials
 plugins += env.SharedLibrary('ward', ['ward.cpp'])
 plugins += env.SharedLibrary('phong', ['phong.cpp'])
-plugins += env.SharedLibrary('irawan', ['irawan.cpp'])
 plugins += env.SharedLibrary('difftrans', ['difftrans.cpp'])
 plugins += env.SharedLibrary('hk', ['hk.cpp'])
 plugins += env.SharedLibrary('dipolebrdf', ['dipolebrdf.cpp'])
 plugins += env.SharedLibrary('sssbrdf', ['sssbrdf.cpp'])
+
+# The Irawan-Marschner plugin uses a Boost::Spirit parser, which makes it
+# pretty heavy stuff to compile. Go easy on the compiler flags:
+irawanEnv = env.Clone()
+irawanEnv.RelaxCompilerSettings()
+
+plugins += irawanEnv.SharedLibrary('irawan', ['irawan.cpp'])
 
 Export('plugins')

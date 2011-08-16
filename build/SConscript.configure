@@ -270,8 +270,9 @@ def osxlibinst_as_build_function(self, target, source, pkgname = None, use_own =
 def remove_flag(env, value):
 	try:
 		env['CXXFLAGS'].remove(value)
+		return True
 	except:
-		pass
+		return False
 
 def append_flag(env, value):
 	env['CXXFLAGS'].append(value)
@@ -281,14 +282,29 @@ env.__class__.AppendFlag = append_flag
 env.__class__.OSXLibInst = osxlibinst_build_function
 env.__class__.OSXLibInstAs = osxlibinst_as_build_function
 
-def prepare_for_objective_cpp(env):
+def configure_for_objective_cpp(env):
 	# Objective C++ does not permit the following optimization flags
 	env.RemoveFlag('-fstrict-aliasing')
 	env.RemoveFlag('-ftree-vectorize')
 	env.RemoveFlag('-std=c++0x')
 	env.AppendFlag('-fno-strict-aliasing')
 
-env.__class__.ConfigureForObjectiveCPP = prepare_for_objective_cpp
+def relax_compiler_settings(env):
+	# Relax the compiler settings when compiling heavy templated code
+	# (e.g. Boost::Spirit parsers, etc., which don't necessarily have
+	# to be that fast)
+	env.RemoveFlag('-g')
+	env.RemoveFlag('/Z7')
+	env.RemoveFlag('-ipo')
+	env.RemoveFlag('/Qipo')
+	env.RemoveFlag('/GL')
+	if env.RemoveFlag('-O3'):
+		env.AppendFlag('-O1')
+	if env.RemoveFlag('/O2'):
+		env.AppendFlag('/O1')
+
+env.__class__.ConfigureForObjectiveCPP = configure_for_objective_cpp
+env.__class__.RelaxCompilerSettings = relax_compiler_settings
 
 if hasCollada:
 	env.Append(CPPDEFINES = [['MTS_HAS_COLLADA', 1]] )
