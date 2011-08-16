@@ -23,7 +23,7 @@ COLLADALIB     = ['collada14dom']
 PYTHONINCLUDE  = []
 PYTHONLIB      = ['boost_python']
 
-for entry in os.popen("pkg-config --cflags --libs python").read().split():
+for entry in os.popen("python-config --cflags --libs").read().split():
 	if entry[:2] == '-I':
 		PYTHONINCLUDE += [entry[2:]]
 	if entry[:2] == '-l':
