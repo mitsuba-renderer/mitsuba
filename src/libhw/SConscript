@@ -30,9 +30,13 @@ if glEnv.has_key('GLINCLUDE'):
 
 if sys.platform == 'darwin':
 	glEnv_osx = glEnv.Clone()
-	glEnv_osx['CXXFLAGS'].remove('-fstrict-aliasing')
-	glEnv_osx['CXXFLAGS'].remove('-ftree-vectorize')
-	glEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing')
+	try:
+		# Objective C++ does not permit the following optimization flags
+		glEnv_osx['CXXFLAGS'].remove('-fstrict-aliasing')
+		glEnv_osx['CXXFLAGS'].remove('-ftree-vectorize')
+		glEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing')
+	except:
+		pass
 	libhw_objects += glEnv_osx.SharedObject(['nsglsession.mm',
 		'nsgldevice.mm', 'nsglrenderer.mm'])
 
