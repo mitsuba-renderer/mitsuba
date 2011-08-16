@@ -480,7 +480,7 @@ public:
 
 		/// Initialize a leaf kd-Tree node
 		inline void initLeafNode(unsigned int offset, unsigned int numPrims) {
-			leaf.combined = ETypeMask | offset;
+			leaf.combined = (uint32_t) ETypeMask | offset;
 			leaf.end = offset + numPrims;
 		}
 
@@ -920,10 +920,6 @@ protected:
 			KDLog(EError, "The query cost must be > 0");
 		if (m_emptySpaceBonus <= 0 || m_emptySpaceBonus > 1)
 			KDLog(EError, "The empty space bonus must be in [0, 1]");
-		if (m_stopPrims < 0)
-			KDLog(EError, "The stopping primitive count must be >= 0");
-		if (m_exactPrimThreshold < 0)
-			KDLog(EError, "The exact primitive threshold must be >= 0");
 		if (m_minMaxBins <= 1)
 			KDLog(EError, "The number of min-max bins must be > 2");
 		
