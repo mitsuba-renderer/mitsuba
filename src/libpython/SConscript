@@ -3,7 +3,10 @@ Import('env', 'sys', 'os', 'hasPython')
 pythonEnv = env.Clone()
 pythonEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_PYTHON']])
 pythonEnv['SHLIBPREFIX']=''
-pythonEnv['CXXFLAGS'].remove('-g')
+try:
+	pythonEnv['CXXFLAGS'].remove('-g')
+except:
+	pass
 
 if pythonEnv.has_key('PYTHONINCLUDE'):
 	pythonEnv.Prepend(CPPPATH=pythonEnv['PYTHONINCLUDE'])
