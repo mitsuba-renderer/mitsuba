@@ -514,17 +514,17 @@ public:
 
 		/// Is this a leaf node?
 		FINLINE bool isLeaf() const {
-			return leaf.combined & ETypeMask;
+			return leaf.combined & (uint32_t) ETypeMask;
 		}
 
 		/// Is this an indirection node?
 		FINLINE bool isIndirection() const {
-			return leaf.combined & EIndirectionMask;
+			return leaf.combined & (uint32_t) EIndirectionMask;
 		}
 
 		/// Assuming this is a leaf node, return the first primitive index
 		FINLINE index_type getPrimStart() const {
-			return leaf.combined & ELeafOffsetMask;
+			return leaf.combined & (uint32_t) ELeafOffsetMask;
 		}
 
 		/// Assuming this is a leaf node, return the last primitive index
@@ -534,13 +534,13 @@ public:
 
 		/// Return the index of an indirection node
 		FINLINE index_type getIndirectionIndex() const {
-			return(inner.combined & EInnerOffsetMask) >> 2;
+			return(inner.combined & (uint32_t) EInnerOffsetMask) >> 2;
 		}
 
 		/// Return the left child (assuming that this is an interior node)
 		FINLINE const KDNode * __restrict getLeft() const {
 			return this + 
-				((inner.combined & EInnerOffsetMask) >> 2);
+				((inner.combined & (uint32_t) EInnerOffsetMask) >> 2);
 		}
 
 		/// Return the sibling of the current node
@@ -551,7 +551,7 @@ public:
 		/// Return the left child (assuming that this is an interior node)
 		FINLINE KDNode * __restrict getLeft() {
 			return this + 
-				((inner.combined & EInnerOffsetMask) >> 2);
+				((inner.combined & (uint32_t) EInnerOffsetMask) >> 2);
 		}
 
 		/// Return the left child (assuming that this is an interior node)
@@ -569,7 +569,7 @@ public:
 
 		/// Return the split axis (assuming that this is an interior node)
 		FINLINE int getAxis() const {
-			return inner.combined & EInnerAxisMask;
+			return inner.combined & (uint32_t) EInnerAxisMask;
 		}
 
 		/// Return a string representation
