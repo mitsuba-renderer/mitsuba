@@ -52,7 +52,7 @@ public:
 	virtual void generate();
 
 	/// Manually set the current sample index
-	virtual void setSampleIndex(uint64_t sampleIndex);
+	virtual void setSampleIndex(size_t sampleIndex);
 
 	/// Retrieve the next component value from the current sample
 	virtual Float next1D();

@@ -416,7 +416,11 @@ inline void ply::ply_parser::parse_list_property_definition(const std::string& p
   #if !defined(__INTEL_COMPILER)
   typename
   #endif
-  list_property_definition_callback_type<size_type, scalar_type>::type& list_property_definition_callback = list_property_definition_callbacks_.get<size_type, scalar_type>();
+  #if defined(__INTEL_COMPILER) && defined(__OSX__)
+    auto list_property_definition_callback = list_property_definition_callbacks_.get<size_type, scalar_type>();
+  #else
+    list_property_definition_callback_type<size_type, scalar_type>::type& list_property_definition_callback = list_property_definition_callbacks_.get<size_type, scalar_type>();
+  #endif
   typedef typename list_property_begin_callback_type<size_type, scalar_type>::type list_property_begin_callback_type;
   typedef typename list_property_element_callback_type<size_type, scalar_type>::type list_property_element_callback_type;
   typedef typename list_property_end_callback_type<size_type, scalar_type>::type list_property_end_callback_type;

@@ -1,3 +1,4 @@
+#include <mitsuba/mitsuba.h>
 #include <ply/ply_parser.hpp>
 
 bool ply::ply_parser::parse(std::istream& istream)
