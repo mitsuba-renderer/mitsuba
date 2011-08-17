@@ -12,7 +12,8 @@ def fixOSXPluginPath(plugin):
 		'install_name_tool -change @loader_path/../Frameworks/libmitsuba-hw.dylib @loader_path/../Contents/Frameworks/libmitsuba-hw.dylib ${TARGET}; ' +
 		'install_name_tool -change @loader_path/../Frameworks/libmitsuba-bidir.dylib @loader_path/../Contents/Frameworks/libmitsuba-bidir.dylib ${TARGET}; ' +
 		'install_name_tool -change @loader_path/../Frameworks/libboost_system.dylib @loader_path/../Contents/Frameworks/libboost_system.dylib ${TARGET}; ' +
-		'install_name_tool -change @loader_path/../Frameworks/libboost_filesystem.dylib @loader_path/../Contents/Frameworks/libboost_filesystem.dylib ${TARGET}'
+		'install_name_tool -change @loader_path/../Frameworks/libboost_filesystem.dylib @loader_path/../Contents/Frameworks/libboost_filesystem.dylib ${TARGET};' +
+		'install_name_tool -change @loader_path/../Frameworks/libboost_python.dylib @loader_path/../Contents/Frameworks/libboost_python.dylib ${TARGET}'
 	)
 
 def install(target, paths, prefix = None):
@@ -30,9 +31,11 @@ def installAs(target, path, prefix = None):
 	if prefix == None:
 		prefix = env['BUILDDIR']
 	if os.path.splitext(path)[1] == '.dylib':
-		installTargets += env.OSXLibInstAs(target, prefix + '/' + path)
+		result = env.OSXLibInstAs(target, prefix + '/' + path)
 	else:
-		installTargets += env.InstallAs(target, prefix + '/' + path)
+		result = env.InstallAs(target, prefix + '/' + path)
+	installTargets += result
+	return result
 
 if not 'DISTDIR' in env:
 	print 'The \"DISTDIR\" variable is missing. Please update your configuration file!'
@@ -117,8 +120,8 @@ elif sys.platform == 'darwin':
 	install(frameworkDir, ['libcore/libmitsuba-core.dylib', 'libhw/libmitsuba-hw.dylib',
 		'librender/libmitsuba-render.dylib', 'libbidir/libmitsuba-bidir.dylib'])
 	if hasPython:
-		fixOSXPluginPath('libpython/mitsuba.dylib')
-		installAs(os.path.join(distDir, 'python/mitsuba.so'), 'libpython/mitsuba.dylib')
+		plugin = installAs(os.path.join(distDir, 'python/mitsuba.so'), 'libpython/mitsuba.dylib')
+		installTargets += fixOSXPluginPath(plugin)
 	install(frameworkDir, [
 		'GLEW.framework/Resources/libs/libGLEW.dylib', 'OpenEXR.framework/Resources/lib/libHalf.6.dylib',
 		'OpenEXR.framework/Resources/lib/libIex.6.dylib', 'OpenEXR.framework/Resources/lib/libImath.6.dylib',
