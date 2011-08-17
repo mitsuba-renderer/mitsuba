@@ -21,6 +21,9 @@
 
 #include <mitsuba/mitsuba.h>
 
+#define BP_DECLARE_CLASS(Name, Base) \
+	bp::class_<Name, ref<Name>, bp::bases<Base>, boost::noncopyable>
+
 namespace boost {
 	namespace python {
 		template <typename T> T* get_pointer(mitsuba::ref<T> & p) {

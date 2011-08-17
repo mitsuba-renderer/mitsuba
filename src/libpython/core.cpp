@@ -139,6 +139,10 @@ Float Matrix4x4_getItem(Matrix4x4 *matrix, bp::tuple tuple) {
 
 	return matrix->operator()(i, j);
 }
+	
+ref<SerializableObject> instance_manager_getinstance(InstanceManager *manager, Stream *stream) {
+	return manager->getInstance(stream);
+}
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(setString_overloads, setString, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(getString_overloads, getString, 1, 2)
@@ -156,8 +160,7 @@ void export_core() {
 		.def("getRefCount", &Object::getRefCount)
 		.def("__str__", &Object::toString);
 
-	bp::class_<Stream, ref<Stream>, bp::bases<Object>, boost::noncopyable> 
-		stream("Stream", bp::no_init);
+	BP_DECLARE_CLASS(Stream, Object) stream("Stream", bp::no_init);
 
 	bp::scope streamScope = stream;
 	bp::enum_<Stream::EByteOrder>("EByteOrder")
@@ -207,8 +210,7 @@ void export_core() {
 
 	bp::scope scope2 = coreModule;
 
-	bp::class_<FileStream, ref<FileStream>, bp::bases<Stream>, boost::noncopyable> 
-		fstream("FileStream");
+	BP_DECLARE_CLASS(FileStream, Stream) fstream("FileStream");
 	bp::scope fstreamScope = fstream;
 	bp::enum_<FileStream::EFileMode>("EFileMode")
 		.value("EReadOnly", FileStream::EReadOnly)
@@ -228,6 +230,22 @@ void export_core() {
 		.def("remove", &FileStream::remove);
 
 	bp::scope scope3 = coreModule;
+
+	BP_DECLARE_CLASS(SerializableObject, Stream)
+		.def("serialize", &SerializableObject::serialize);
+
+	BP_DECLARE_CLASS(InstanceManager, Object)
+		.def("serialize", &InstanceManager::serialize)
+		.def("getInstance", &instance_manager_getinstance);
+
+	BP_DECLARE_CLASS(ContinuousSpectrum, SerializableObject)
+		.def("eval", &ContinuousSpectrum::eval)
+		.def("average", &ContinuousSpectrum::average);
+	
+	BP_DECLARE_CLASS(InterpolatedSpectrum, ContinuousSpectrum)
+		.def("append", &InterpolatedSpectrum::append)
+		.def("clear", &InterpolatedSpectrum::clear)
+		.def("zeroExtend", &ContinuousSpectrum::zeroExtend);
 
 	bp::class_<Properties> properties("Properties");
 	bp::scope propertiesScope = properties;
