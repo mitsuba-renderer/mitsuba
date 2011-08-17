@@ -1528,8 +1528,10 @@ void MainWindow::on_actionStartServer_triggered() {
 
 void MainWindow::on_actionEnableCommandLine_triggered() {
 	if (QMessageBox::question(this, tr("Enable command line access"),
-		tr("<p>If you proceed, Mitsuba will create symbolic links in <tt>/usr/bin</tt> and <tt>/Library/Python/2.6/site-packages</tt> "
-			"that make it possible to use the renderer via the command line and Python. Any old symlinks will simply be overwritten.</p><p>Proceed?</p>"),
+		tr("<p>If you proceed, Mitsuba will create symbolic links in <tt>/usr/bin</tt> and <tt>/Library/Python/2.6/site-packages</tt>, "
+			"which enable command line and Python usage. Note that you will have to "
+			"repeat this process every time the Mitsuba application is moved.</p>"
+			"<p>Create links?</p>"),
 			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
 		return;
 	if (!create_symlinks())

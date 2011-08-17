@@ -2,6 +2,11 @@
 #include <Authorization.h>
 #include <AuthorizationTags.h>
 #include <unistd.h>
+#include <iostream>
+
+namespace mitsuba {
+	extern std::string __ubi_bundlepath();
+};
 
 bool create_symlinks() {
 	AuthorizationFlags flags = kAuthorizationFlagDefaults;
@@ -23,8 +28,9 @@ bool create_symlinks() {
 		AuthorizationFree(ref, kAuthorizationFlagDefaults);
 		return false;
 	}
-	char *path = "/bin/bash";
-	char *args[] = { "data/install-symlinks.sh", NULL };
+	char *path = "/usr/bin/sudo";
+	std::string scriptPath = mitsuba::__ubi_bundlepath() + "/data/install-symlinks.sh";
+	char *args[] = { "bash", const_cast<char *>(scriptPath.c_str()), NULL };
 	FILE *pipe = pipe = NULL;
 	flags = kAuthorizationFlagDefaults;
 	status = AuthorizationExecuteWithPrivileges(ref, path, flags, args, &pipe);
