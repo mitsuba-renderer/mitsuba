@@ -30,18 +30,9 @@
 #endif
 
 #if MTS_USE_BOOST_TR1
-#  if defined(Float)
-#    define MTS_Float
-#    pragma push_macro("Float")
-#    undef Float
-#  endif
 #include <boost/tr1/functional.hpp>
 #include <boost/tr1/memory.hpp>
 #include <boost/tr1/tuple.hpp>
-#  if defined(MTS_Float)
-#    pragma pop_macro("Float")
-#    undef MTS_Float
-#  endif
 #else
 #if defined(_MSC_VER) && (_MSC_VER >= 1600)
 #include <functional>
