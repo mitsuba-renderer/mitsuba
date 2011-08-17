@@ -90,6 +90,7 @@ MTS_NAMESPACE_BEGIN
  * registered Appender.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Logger : public Object {
 public:

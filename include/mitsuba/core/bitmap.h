@@ -31,6 +31,7 @@ MTS_NAMESPACE_BEGIN
  * This class can efficiently handle 1-bit masks
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Bitmap : public Object {
 public:

@@ -34,6 +34,7 @@ MTS_NAMESPACE_BEGIN
  * <tt>\ref Utility</tt> classes for details
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Plugin {
 	typedef void *(*CreateInstanceFunc)(const Properties &props);
@@ -88,6 +89,7 @@ private:
  * loading external plugins.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE PluginManager : public Object {
 public:

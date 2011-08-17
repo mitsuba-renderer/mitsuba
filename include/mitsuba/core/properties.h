@@ -25,8 +25,19 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Associative map for values of various types. Used to
- * construct subclasses of <tt>ConfigurableObject</tt>.
+/** \brief Associative parameter map for constructing 
+ * subclasses of \ref ConfigurableObject.
+ *
+ * Note that the Python bindings for this class do not implement 
+ * the various type-dependent getters and setters. Instead, they
+ * are accessed just like a normal Python map, e.g:
+ *
+ * \code
+ * myProps = mitsuba.core.Properties("pluginName")
+ * myProps["stringProperty"] = "hello"
+ * myProps["spectrumProperty"] = mitsuba.core.Spectrum(1.0)
+ * \endcode
+ *
  * \ingroup libcore
  * \ingroup libpython
  */

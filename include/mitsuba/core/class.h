@@ -24,6 +24,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \headerfile mitsuba/core/class.h mitsuba/mitsuba.h
  * \brief Stores meta-information about \ref Object instances.
+ * \ingroup libcore
  *
  * This class provides a thin layer of RTTI (run-time type information),
  * which is useful for doing things like:
@@ -36,7 +37,6 @@ MTS_NAMESPACE_BEGIN
  * </ul>
  *
  * \sa ref, Object
- * \ingroup libcore
  */
 class MTS_EXPORT_CORE Class {
 public:

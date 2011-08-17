@@ -30,6 +30,7 @@ MTS_NAMESPACE_BEGIN
  * to alignment purposes and should not be changed.
  *
  * \ingroup libcore
+ * \ingroup libpython
 */
 struct Ray {
 	Point o;     ///< Ray origin

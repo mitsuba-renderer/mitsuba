@@ -21,15 +21,24 @@
 
 MTS_NAMESPACE_BEGIN
 
-/// Current release of Mitsuba
+/**
+ * Current release of Mitsuba
+ * \ingroup libcore
+ */
 #define MTS_VERSION "0.3.0"
 
-// Year of this release
+/**
+ * Current release of Mitsuba
+ * \ingroup libcore
+ */
+#define MTS_VERSION "0.3.0"
 #define MTS_YEAR "2011"
 
 /**
- * \brief A simple data structure for representing and comparing
- * Mitsuba version strings
+ * \brief A simple data structure for representing and 
+ * comparing Mitsuba version strings
+ *
+ * \ingroup libcore
  */
 struct MTS_EXPORT_CORE Version {
 public:

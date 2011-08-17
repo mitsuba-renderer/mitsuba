@@ -39,6 +39,8 @@ MTS_NAMESPACE_BEGIN
  * pageant.exe is required to load and authenticate the key.
  *
  * Note: SSH streams are set to use network byte order by default.
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE SSHStream : public Stream {
 public:

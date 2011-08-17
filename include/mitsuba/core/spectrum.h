@@ -45,6 +45,7 @@ MTS_NAMESPACE_BEGIN
  * that it is a function over the reals (as opposed to the discrete
  * spectrum, which only stores samples for a discrete set of wavelengths).
  *
+ * \ingroup libpython
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE ContinuousSpectrum {
@@ -187,6 +188,7 @@ private:
  * spectrum.
  *
  * \ingroup libcore
+ * \ingroup libpython 
  */
 class MTS_EXPORT_CORE InterpolatedSpectrum : public ContinuousSpectrum {
 public:
@@ -290,6 +292,7 @@ private:
  * The implementation of this class is based on PBRT.
  *
  * \ingroup libcore
+ * \ingroup libpython 
  */
 struct MTS_EXPORT_CORE Spectrum {
 public:
