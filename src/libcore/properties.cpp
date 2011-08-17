@@ -110,7 +110,7 @@ std::string Properties::toString() const {
 	oss << "Properties[" << endl
 		<< "  pluginName = \"" << m_pluginName << "\"," << endl
 		<< "  elements = {" << endl;
-	for (; it != m_elements.end(); ++it) {
+	while (it != m_elements.end()) {
 		oss << "    \"" << (*it).first << "\" -> ";
 		const ElementData &data = (*it).second.data;
 		EPropertyType type = boost::apply_visitor(type_visitor(), data);
@@ -143,7 +143,9 @@ std::string Properties::toString() const {
 			default:
 				SLog(EError, "Encountered an unknown property type!");
 		}
-		oss << "," << endl;
+		if (++it != m_elements.end())
+			oss << ",";
+		oss << endl;
 	}
 	oss << "  }" << endl
 		<< "]" << endl;

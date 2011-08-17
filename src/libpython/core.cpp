@@ -251,11 +251,13 @@ void export_core() {
 			bp::return_value_policy<bp::copy_const_reference>())
 		.def("setID", &Properties::setPluginName)
 		.def("getType", &Properties::getType)
+		.def("getNames", &Properties::getNames)
 		.def("hasProperty", &Properties::hasProperty)
 		.def("wasQueried", &Properties::wasQueried)
 		.def("markQueried", &Properties::markQueried)
 		.def("__getitem__", &properties_wrapper::get)
 		.def("__setitem__", &properties_wrapper::set)
+		.def("__contains__", &Properties::hasProperty)
 		.def("__str__", &Properties::toString);
 
 	bp::scope scope4 = coreModule;
@@ -530,7 +532,6 @@ void export_core() {
 		.def("trace", &Matrix4x4::trace)
 		.def("det", &Matrix4x4::det)
 		.def("serialize", &Matrix4x4::serialize)
-		.def("transpose", &Matrix4x4::transpose)
 		.def(bp::self != bp::self)
 		.def(bp::self == bp::self)
 		.def(-bp::self)
@@ -554,6 +555,12 @@ void export_core() {
 BOOST_PYTHON_MODULE(mitsuba) {
 	bp::object package = bp::scope();
 	package.attr("__path__") = "mitsuba";
+
+	/* Basic STL containers */
+	bp::class_<StringVector>("StringVector")
+		.def(bp::vector_indexing_suite<StringVector>());
+	bp::class_<StringMap>("StringMap")
+		.def(bp::map_indexing_suite<StringMap>());
 
 	/* Automatically take care of the framework
 	   initialization / shutdown */

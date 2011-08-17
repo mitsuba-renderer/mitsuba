@@ -154,10 +154,17 @@ public:
 	std::string getString(const std::string &name, const std::string &defVal) const;
 
 	/// Store an array containing the names of all stored properties
-	inline void putPropertyNames(std::vector<std::string> &results) const {
+	inline void putNames(std::vector<std::string> &results) const {
 		for (std::map<std::string, Element>::const_iterator it = m_elements.begin();
 			it != m_elements.end(); ++it) 
 			results.push_back((*it).first);
+	}
+	
+	/// Return an array containing the names of all stored properties
+	inline std::vector<std::string> getNames() const {
+		std::vector<std::string> results;
+		putNames(results);
+		return results;
 	}
 
 	/// Manually mark a certain property as queried

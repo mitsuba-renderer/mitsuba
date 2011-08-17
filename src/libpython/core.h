@@ -33,6 +33,8 @@ namespace boost {
 }
 
 #include <boost/python.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <boost/python/suite/indexing/map_indexing_suite.hpp>
 
 namespace bp = boost::python;
 
@@ -49,6 +51,8 @@ template <typename T> void registerClass() {
 	boost::python::register_ptr_to_python< mitsuba::ref<T> >();
 }
 
+typedef std::vector<std::string> StringVector;
+typedef std::map<std::string, std::string> StringMap;
 
 #endif /* __MTSPY_H */
 
