@@ -13,9 +13,8 @@ bool create_symlinks() {
 	AuthorizationRef ref;
 
 	OSStatus status = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, flags, &ref);
-	if (status != errAuthorizationSuccess) {
+	if (status != errAuthorizationSuccess)
 		return false;
-	}
 
 	AuthorizationItem items = {kAuthorizationRightExecute, 0, NULL, 0};
 	AuthorizationRights rights = { 1, &items };
@@ -28,12 +27,12 @@ bool create_symlinks() {
 		AuthorizationFree(ref, kAuthorizationFlagDefaults);
 		return false;
 	}
-	char *path = "/usr/bin/sudo";
-	std::string scriptPath = mitsuba::__ubi_bundlepath() + "/data/install-symlinks.sh";
-	char *args[] = { "bash", const_cast<char *>(scriptPath.c_str()), NULL };
-	FILE *pipe = pipe = NULL;
+	std::string bundlePath = mitsuba::__ubi_bundlepath();
+	std::string path = bundlePath + "/Contents/MacOS/symlinks_install";
+	char *args[] = { const_cast<char *>(bundlePath.c_str()), NULL };
+	FILE *pipe = NULL;
 	flags = kAuthorizationFlagDefaults;
-	status = AuthorizationExecuteWithPrivileges(ref, path, flags, args, &pipe);
+	status = AuthorizationExecuteWithPrivileges(ref, const_cast<char *>(path.c_str()), flags, args, &pipe);
 	if (status != errAuthorizationSuccess) {
 		AuthorizationFree(ref, kAuthorizationFlagDefaults);
 		return false;

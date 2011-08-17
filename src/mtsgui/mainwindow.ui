@@ -466,7 +466,7 @@
   </action>
   <action name="actionEnableCommandLine">
    <property name="text">
-    <string>Enable command line access</string>
+    <string>Command-line Access</string>
    </property>
   </action>
  </widget>

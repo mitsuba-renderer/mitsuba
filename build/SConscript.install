@@ -119,7 +119,6 @@ elif sys.platform == 'darwin':
 	if hasPython:
 		fixOSXPluginPath('libpython/mitsuba.dylib')
 		installAs(os.path.join(distDir, 'python/mitsuba.so'), 'libpython/mitsuba.dylib')
-	env.Install(os.path.join(distDir, 'data'), ['#data/darwin/install-symlinks.sh'])
 	install(frameworkDir, [
 		'GLEW.framework/Resources/libs/libGLEW.dylib', 'OpenEXR.framework/Resources/lib/libHalf.6.dylib',
 		'OpenEXR.framework/Resources/lib/libIex.6.dylib', 'OpenEXR.framework/Resources/lib/libImath.6.dylib',
@@ -133,6 +132,7 @@ elif sys.platform == 'darwin':
 			'Collada14Dom.framework/Resources/lib/libCollada14Dom.dylib'], '#dependencies/darwin')
 	if hasQt:
 		install(os.path.join(distDir, 'Contents/MacOS'), ['mtsgui/mtsgui'])
+		install(os.path.join(distDir, 'Contents/MacOS'), ['mtsgui/symlinks_install'])
 		installTargets += env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtCore.framework/Versions/4/QtCore')
 		opengl = env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtOpenGL.framework/Versions/4/QtOpenGL')
 		xml = env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtXml.framework/Versions/4/QtXml')
