@@ -5,6 +5,16 @@ Import('env', 'os', 'sys', 'plugins', 'dist',
 
 installTargets = []
 
+def fixOSXPluginPath(plugin):
+	return env.AddPostAction(plugin,
+		'install_name_tool -change @loader_path/../Frameworks/libmitsuba-core.dylib @loader_path/../Contents/Frameworks/libmitsuba-core.dylib ${TARGET}; ' +
+		'install_name_tool -change @loader_path/../Frameworks/libmitsuba-render.dylib @loader_path/../Contents/Frameworks/libmitsuba-render.dylib ${TARGET}; ' +
+		'install_name_tool -change @loader_path/../Frameworks/libmitsuba-hw.dylib @loader_path/../Contents/Frameworks/libmitsuba-hw.dylib ${TARGET}; ' +
+		'install_name_tool -change @loader_path/../Frameworks/libmitsuba-bidir.dylib @loader_path/../Contents/Frameworks/libmitsuba-bidir.dylib ${TARGET}; ' +
+		'install_name_tool -change @loader_path/../Frameworks/libboost_system.dylib @loader_path/../Contents/Frameworks/libboost_system.dylib ${TARGET}; ' +
+		'install_name_tool -change @loader_path/../Frameworks/libboost_filesystem.dylib @loader_path/../Contents/Frameworks/libboost_filesystem.dylib ${TARGET}'
+	)
+
 def install(target, paths, prefix = None):
 	global installTargets
 	if prefix == None:
@@ -93,15 +103,7 @@ if sys.platform == 'win32':
 elif sys.platform == 'darwin':
 	for i in plugins:
 		plugin = env.Install(os.path.join(distDir, 'plugins'), i)
-		plugin = env.AddPostAction(plugin,
-			'install_name_tool -change @loader_path/../Frameworks/libmitsuba-core.dylib @loader_path/../Contents/Frameworks/libmitsuba-core.dylib ${TARGET}; ' +
-			'install_name_tool -change @loader_path/../Frameworks/libmitsuba-render.dylib @loader_path/../Contents/Frameworks/libmitsuba-render.dylib ${TARGET}; ' +
-			'install_name_tool -change @loader_path/../Frameworks/libmitsuba-hw.dylib @loader_path/../Contents/Frameworks/libmitsuba-hw.dylib ${TARGET}; ' +
-			'install_name_tool -change @loader_path/../Frameworks/libmitsuba-bidir.dylib @loader_path/../Contents/Frameworks/libmitsuba-bidir.dylib ${TARGET}; ' +
-			'install_name_tool -change @loader_path/../Frameworks/libboost_system.dylib @loader_path/../Contents/Frameworks/libboost_system.dylib ${TARGET}; ' +
-			'install_name_tool -change @loader_path/../Frameworks/libboost_filesystem.dylib @loader_path/../Contents/Frameworks/libboost_filesystem.dylib ${TARGET}'
-		);
-		installTargets += plugin
+		installTargets += fixOSXPluginPath(plugin)
 	install(os.path.join(distDir, 'Contents/MacOS'), ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil'])
 	if hasCollada:
 		install(os.path.join(distDir, 'Contents/MacOS'), ['converter/mtsimport'])
@@ -115,7 +117,9 @@ elif sys.platform == 'darwin':
 	install(frameworkDir, ['libcore/libmitsuba-core.dylib', 'libhw/libmitsuba-hw.dylib',
 		'librender/libmitsuba-render.dylib', 'libbidir/libmitsuba-bidir.dylib'])
 	if hasPython:
+		fixOSXPluginPath('libpython/mitsuba.dylib')
 		installAs(os.path.join(distDir, 'python/mitsuba.so'), 'libpython/mitsuba.dylib')
+	env.Install(os.path.join(distDir, 'data'), ['#data/darwin/install-symlinks.sh'])
 	install(frameworkDir, [
 		'GLEW.framework/Resources/libs/libGLEW.dylib', 'OpenEXR.framework/Resources/lib/libHalf.6.dylib',
 		'OpenEXR.framework/Resources/lib/libIex.6.dylib', 'OpenEXR.framework/Resources/lib/libImath.6.dylib',
