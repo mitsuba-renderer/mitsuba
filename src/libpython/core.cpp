@@ -530,6 +530,7 @@ void export_core() {
 		.def("trace", &Matrix4x4::trace)
 		.def("det", &Matrix4x4::det)
 		.def("serialize", &Matrix4x4::serialize)
+		.def("transpose", &Matrix4x4::transpose)
 		.def(bp::self != bp::self)
 		.def(bp::self == bp::self)
 		.def(-bp::self)
@@ -554,8 +555,10 @@ BOOST_PYTHON_MODULE(mitsuba) {
 	bp::object package = bp::scope();
 	package.attr("__path__") = "mitsuba";
 
-	bp::def("initializeFramework", initializeFramework);
-	bp::def("shutdownFramework", shutdownFramework);
+	/* Automatically take care of the framework
+	   initialization / shutdown */
+	initializeFramework();
+	atexit(shutdownFramework);
 
 	export_core();
 }

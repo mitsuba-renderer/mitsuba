@@ -1,0 +1,23 @@
+\section{Python integration}
+\label{sec:python}
+A recent feature of Mitsuba is a simple Python interface to the renderer API. 
+While the interface is still limited at this point, it can already be
+used for simple automation tasks. To access the API, start your Python 
+interpreter and run
+\begin{python}
+import mitsuba
+\end{python}
+For this to work on MacOS X, you will first have to run the ``\emph{Apple
+Menu}$\to$\emph{Command-line Access}'' menu item from within Mitsuba.
+On Windows and non-packaged Linux builds, you must update the extension
+search path before the \code{import} command is issued:
+\begin{python}
+import sys
+
+# Update the extension search path
+# (may vary depending on your setup)
+sys.path.append('dist/python')
+
+import mitsuba
+\end{python}
+
