@@ -38,6 +38,14 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
+#if defined(DOUBLE_PRECISION)
+typedef double Float;
+#elif defined(SINGLE_PRECISION)
+typedef float Float;
+#else
+#error No precision flag was defined!
+#endif
+
 /**
  * Include a basic subset of the core classes
  */
