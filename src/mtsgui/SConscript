@@ -33,7 +33,9 @@ if hasQt:
 		qtEnv.Append(LINKFLAGS=['/SUBSYSTEM:WINDOWS'])
 		qtEnv.Append(LIBS=['qtmain'])
 	elif sys.platform == 'darwin':
-		qtEnv.Append(LINKFLAGS=['-Fdependencies/darwin', '-framework', 'BWToolkitFramework'])
+		qtEnv.Append(LINKFLAGS=['-Fdependencies/darwin', '-framework',
+			'BWToolkitFramework', '-framework', 'Security'])
+		qtEnv.Append(CPPFLAGS=['-I', '/System/Library/Frameworks/Security.framework/Headers'])
 
 	bpath = env.GetBuildPath('#src/mtsgui')
 	qtInterfaces = [qtEnv.Uic4(uic) for uic in scanFiles(bpath, ['*.ui'])]

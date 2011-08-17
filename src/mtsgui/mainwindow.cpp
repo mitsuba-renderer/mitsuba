@@ -50,6 +50,8 @@
 #include "previewsettingsdlg.h"
 #endif
 
+extern bool create_symlinks();
+
 static int localWorkerCtr = 0, remoteWorkerCtr = 0;
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -1523,15 +1525,16 @@ void MainWindow::on_actionStartServer_triggered() {
 	connect(m_serverWidget, SIGNAL(closed()), this, SLOT(onServerClosed()));
 	m_serverWidget->show();
 }
-	
+
 void MainWindow::on_actionEnableCommandLine_triggered() {
 	if (QMessageBox::question(this, tr("Enable command line access"),
 		tr("<p>If you proceed, Mitsuba will create symbolic links in <tt>/usr/bin</tt> and <tt>/Library/Python/2.6/site-packages</tt> "
-			"that make it possible to use the renderer via the command line and Python. Any old symlinks will simply be overwritten.</p>"),
-			QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
-			
-		}
-	}
+			"that make it possible to use the renderer via the command line and Python. Any old symlinks will simply be overwritten.</p><p>Proceed?</p>"),
+			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+		return;
+	if (!create_symlinks())
+		QMessageBox::critical(this, tr("Authentication error"), 
+			tr("Unable to create the symbolic links!"), QMessageBox::Ok);
 }
 
 void MainWindow::on_actionReportBug_triggered() {
