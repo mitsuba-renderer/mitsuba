@@ -197,6 +197,14 @@ $\text{\$}$ rpmbuild -bb mitsuba-$\code{\MitsubaVersion}$/data/linux/fedora/mits
 \end{shell}
 After this command finishes, its output can be found in the directory \code{rpmbuild/RPMS}.
 \subsection{Building on Arch Linux}
+You'll first need to install a number of dependencies. 
+
+First, run
+\begin{shell}
+$\text{\$}$ sudo pacman -S gcc xerces-c glew openexr boost libpng libjpeg qt scons mercurial python
+\end{shell}
+
+
 There are two ways to install Mitsuba on Archlinux, the Arch way, and the other way.
 
 The Arch Way is to use the Aur software repository. 
