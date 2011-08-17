@@ -260,7 +260,7 @@ std::string Thread::toString() const {
 
 void Thread::staticInitialization() {
 #if defined(__OSX__)
-	__ubi_autorelease_init();
+	__mts_autorelease_init();
 #endif
 
 	m_self = new ThreadLocal<Thread>();
@@ -298,7 +298,7 @@ void Thread::staticShutdown() {
 	m_idMutex = NULL;
 #endif
 #if defined(__OSX__)
-	__ubi_autorelease_shutdown();
+	__mts_autorelease_shutdown();
 #endif
 }
 

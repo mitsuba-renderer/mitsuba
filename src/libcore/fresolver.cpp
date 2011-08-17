@@ -20,7 +20,7 @@ FileResolver::FileResolver() {
 	}
 #elif defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
-	addPath(__ubi_bundlepath());
+	addPath(__mts_bundlepath());
 	MTS_AUTORELEASE_END() 
 #elif defined(WIN32)
 	char lpFilename[1024];
