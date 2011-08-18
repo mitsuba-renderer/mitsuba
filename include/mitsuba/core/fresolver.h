@@ -36,6 +36,7 @@ MTS_NAMESPACE_BEGIN
  * operating systems).
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE FileResolver : public Object {
 public:

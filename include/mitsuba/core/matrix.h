@@ -686,6 +686,10 @@ template <typename T, int M1, int N1, int M2, int N2> inline Matrix<M1, N2, T>
 	return result;
 }
 
+template <typename T, int M, int N> inline Matrix<M, N, T> operator*(T f, const Matrix<M, N, T> &m) {
+	return m*f;
+}
+
 /**
  * \brief Fast 3x3 eigenvalue decomposition
  *

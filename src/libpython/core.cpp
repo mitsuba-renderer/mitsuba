@@ -2,10 +2,12 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/fstream.h>
+#include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/sched.h>
 #include <mitsuba/core/transform.h>
 #include <mitsuba/core/properties.h>
+#include <mitsuba/core/appender.h>
 
 using namespace mitsuba;
 
@@ -33,27 +35,25 @@ void shutdownFramework() {
 	Class::staticShutdown();
 }
 
-template <typename T> class fixedsize_wrapper {
+class spectrum_wrapper {
 public:
-	typedef typename T::value_type value_type;
-
-	static value_type get(const T &vec, int i) {
-		if (i < 0 || i >= T::dim) {
+	static Float get(const Spectrum &spec, int i) {
+		if (i < 0 || i >= SPECTRUM_SAMPLES) {
 			SLog(EError, "Index %i is out of range!", i);
 			return 0.0f;
 		}
-		return vec[i];
+		return spec[i];
 	}
 	
-	static void set(T &vec, int i, value_type value) {
-		if (i < 0 || i >= T::dim) 
+	static void set(Spectrum &spec, int i, Float value) {
+		if (i < 0 || i >= SPECTRUM_SAMPLES) 
 			SLog(EError, "Index %i is out of range!", i);
 		else
-			vec[i] = value;
+			spec[i] = value;
 	}
 
-	static int len(T &) {
-		return T::dim;
+	static int len(Spectrum &) {
+		return SPECTRUM_SAMPLES;
 	}
 };
 
@@ -116,7 +116,7 @@ struct path_to_python_str {
 };
 
 
-void Matrix4x4_setItem(Matrix4x4 *matrix, bp::tuple tuple, Float value) {
+static void Matrix4x4_setItem(Matrix4x4 *matrix, bp::tuple tuple, Float value) {
 	if (bp::len(tuple) != 2)
 		SLog(EError, "Invalid matrix indexing operation, required a tuple of length 2");
 	int i = bp::extract<int>(tuple[0]);
@@ -128,7 +128,7 @@ void Matrix4x4_setItem(Matrix4x4 *matrix, bp::tuple tuple, Float value) {
 	matrix->operator()(i, j) = value;
 }
 
-Float Matrix4x4_getItem(Matrix4x4 *matrix, bp::tuple tuple) {
+static Float Matrix4x4_getItem(Matrix4x4 *matrix, bp::tuple tuple) {
 	if (bp::len(tuple) != 2)
 		SLog(EError, "Invalid matrix indexing operation, required a tuple of length 2");
 	int i = bp::extract<int>(tuple[0]);
@@ -140,12 +140,55 @@ Float Matrix4x4_getItem(Matrix4x4 *matrix, bp::tuple tuple) {
 	return matrix->operator()(i, j);
 }
 	
-ref<SerializableObject> instance_manager_getinstance(InstanceManager *manager, Stream *stream) {
+static ref<SerializableObject> instance_manager_getinstance(InstanceManager *manager, Stream *stream) {
 	return manager->getInstance(stream);
 }
 
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(setString_overloads, setString, 2, 3)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(getString_overloads, getString, 1, 2)
+void appender_logProgress(Appender *appender, Float progress, const std::string &name,
+	const std::string &formatted, const std::string &eta) {
+	appender->logProgress(progress, name, formatted, eta, NULL);
+}
+	
+void mts_log(ELogLevel level, const std::string &msg) {
+	bp::object traceback(bp::import("traceback"));
+	bp::object extract_stack(traceback.attr("extract_stack"));
+	bp::object top(extract_stack()[1]);
+	Thread::getThread()->getLogger()->log(level, 
+		NULL, bp::extract<const char *>(top[0]), 
+		bp::extract<int>(top[1]),
+		"%s: %s", (const char *) bp::extract<const char *>(top[2]), msg.c_str());
+}
+
+class AppenderWrapper : public Appender, public bp::wrapper<Appender> {
+public:
+	AppenderWrapper(PyObject *self) : m_self(self) { }
+
+	void append(ELogLevel level, const std::string &text) {
+		get_override("append")(level, text);
+	}
+
+	void logProgress(Float progress, const std::string &name,
+		const std::string &formatted, const std::string &eta, 
+		const void *ptr) {
+		get_override("logProgress")(progress, name, formatted, eta);
+	}
+private:
+	PyObject *m_self;
+};
+
+static Spectrum *spectrum_array_constructor(bp::list list) {
+	Float spec[SPECTRUM_SAMPLES];
+	if (bp::len(list) != SPECTRUM_SAMPLES)
+		SLog(EError, "Spectrum: expected %i arguments", SPECTRUM_SAMPLES);
+
+	for (int i=0; i<bp::len(list); ++i)
+		spec[i] = bp::extract<Float>(list[i]);
+
+	return new Spectrum(spec);
+}
+
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 
 void export_core() {
 	boost::python::to_python_converter<
@@ -154,64 +197,81 @@ void export_core() {
 	bp::object coreModule(
 		bp::handle<>(bp::borrowed(PyImport_AddModule("mitsuba.core"))));
 	bp::scope().attr("core") = coreModule;
-	bp::scope scope = coreModule;
+	PyObject *oldScope = bp::detail::current_scope;
+
+	BP_SETSCOPE(coreModule);
+
+	bp::enum_<ELogLevel>("ELogLevel")
+		.value("ETrace", ETrace)
+		.value("EDebug", EDebug)
+		.value("EInfo", EInfo)
+		.value("EWarn", EWarn)
+		.value("EError", EError)
+		.export_values();
+
+	bp::def("Log", &mts_log);
 
 	bp::class_<Object, ref<Object>, boost::noncopyable>("Object", bp::no_init)
 		.def("getRefCount", &Object::getRefCount)
 		.def("__str__", &Object::toString);
 
-	BP_DECLARE_CLASS(Stream, Object) stream("Stream", bp::no_init);
+	BP_CLASS(Stream, Object, bp::no_init)
+		.def("setByteOrder", &Stream::setByteOrder)
+		.def("getByteOrder", &Stream::getByteOrder)
+		.def("getHostByteOrder", &Stream::getHostByteOrder)
+		.def("truncate", &Stream::truncate)
+		.def("setPos", &Stream::setPos)
+		.def("getPos", &Stream::getPos)
+		.def("getSize", &Stream::getSize)
+		.def("flush", &Stream::flush)
+		.def("canWrite", &Stream::canWrite)
+		.def("canRead", &Stream::canRead)
+		.def("skip", &Stream::skip)
+		.def("copyTo", &Stream::copyTo)
+		.def("writeString", &Stream::writeString)
+		.def("readString", &Stream::readString)
+		.def("writeLine", &Stream::writeLine)
+		.def("readLine", &Stream::readLine)
+		.def("writeChar", &Stream::writeChar)
+		.def("readChar", &Stream::readChar)
+		.def("writeUChar", &Stream::writeUChar)
+		.def("readUChar", &Stream::readUChar)
+		.def("writeShort", &Stream::writeShort)
+		.def("readShort", &Stream::readShort)
+		.def("writeUShort", &Stream::writeUShort)
+		.def("readUShort", &Stream::readUShort)
+		.def("writeInt", &Stream::writeInt)
+		.def("readInt", &Stream::readInt)
+		.def("writeUInt", &Stream::writeUInt)
+		.def("readUInt", &Stream::readUInt)
+		.def("writeLong", &Stream::writeLong)
+		.def("readLong", &Stream::readLong)
+		.def("writeULong", &Stream::writeULong)
+		.def("readULong", &Stream::readULong)
+		.def("writeFloat", &Stream::writeFloat)
+		.def("readFloat", &Stream::readFloat)
+		.def("writeSingle", &Stream::writeSingle)
+		.def("readSingle", &Stream::readSingle)
+		.def("writeDouble", &Stream::writeDouble)
+		.def("readDouble", &Stream::readDouble);
 
-	bp::scope streamScope = stream;
+	BP_SETSCOPE(Stream_class);
 	bp::enum_<Stream::EByteOrder>("EByteOrder")
 		.value("EBigEndian", Stream::EBigEndian)
 		.value("ELittleEndian", Stream::ELittleEndian)
 		.value("ENetworkByteOrder", Stream::ENetworkByteOrder)
 		.export_values();
+	BP_SETSCOPE(coreModule);
 
-	stream.def("setByteOrder", &Stream::setByteOrder)
-		  .def("getByteOrder", &Stream::getByteOrder)
-		  .def("getHostByteOrder", &Stream::getHostByteOrder)
-		  .def("truncate", &Stream::truncate)
-		  .def("setPos", &Stream::setPos)
-		  .def("getPos", &Stream::getPos)
-		  .def("getSize", &Stream::getSize)
-		  .def("flush", &Stream::flush)
-		  .def("canWrite", &Stream::canWrite)
-		  .def("canRead", &Stream::canRead)
-		  .def("skip", &Stream::skip)
-		  .def("copyTo", &Stream::copyTo)
-		  .def("writeString", &Stream::writeString)
-		  .def("readString", &Stream::readString)
-		  .def("writeLine", &Stream::writeLine)
-		  .def("readLine", &Stream::readLine)
-		  .def("writeChar", &Stream::writeChar)
-		  .def("readChar", &Stream::readChar)
-		  .def("writeUChar", &Stream::writeUChar)
-		  .def("readUChar", &Stream::readUChar)
-		  .def("writeShort", &Stream::writeShort)
-		  .def("readShort", &Stream::readShort)
-		  .def("writeUShort", &Stream::writeUShort)
-		  .def("readUShort", &Stream::readUShort)
-		  .def("writeInt", &Stream::writeInt)
-		  .def("readInt", &Stream::readInt)
-		  .def("writeUInt", &Stream::writeUInt)
-		  .def("readUInt", &Stream::readUInt)
-		  .def("writeLong", &Stream::writeLong)
-		  .def("readLong", &Stream::readLong)
-		  .def("writeULong", &Stream::writeULong)
-		  .def("readULong", &Stream::readULong)
-		  .def("writeFloat", &Stream::writeFloat)
-		  .def("readFloat", &Stream::readFloat)
-		  .def("writeSingle", &Stream::writeSingle)
-		  .def("readSingle", &Stream::readSingle)
-		  .def("writeDouble", &Stream::writeDouble)
-		  .def("readDouble", &Stream::readDouble);
+	BP_CLASS(FileStream, Stream, bp::init<>())
+		.def(bp::init<std::string, FileStream::EFileMode>())
+		.def("getPath", &FileStream::getPath, 
+				BP_RETURN_CONSTREF)
+		.def("open", &FileStream::open)
+		.def("close", &FileStream::close)
+		.def("remove", &FileStream::remove);
 
-	bp::scope scope2 = coreModule;
-
-	BP_DECLARE_CLASS(FileStream, Stream) fstream("FileStream");
-	bp::scope fstreamScope = fstream;
+	BP_SETSCOPE(FileStream_class);
 	bp::enum_<FileStream::EFileMode>("EFileMode")
 		.value("EReadOnly", FileStream::EReadOnly)
 		.value("EReadWrite", FileStream::EReadWrite)
@@ -220,35 +280,138 @@ void export_core() {
 		.value("EAppendWrite", FileStream::EAppendWrite)
 		.value("EAppendReadWrite", FileStream::EAppendReadWrite)
 		.export_values();
+	BP_SETSCOPE(coreModule);
 
-	fstream
-		.def(bp::init<std::string, FileStream::EFileMode>())
-		.def("getPath", &FileStream::getPath, 
-				bp::return_value_policy<bp::copy_const_reference>())
-		.def("open", &FileStream::open)
-		.def("close", &FileStream::close)
-		.def("remove", &FileStream::remove);
-
-	bp::scope scope3 = coreModule;
-
-	BP_DECLARE_CLASS(SerializableObject, Stream)
+	BP_CLASS(SerializableObject, Stream, bp::no_init)
 		.def("serialize", &SerializableObject::serialize);
+	
+	typedef Object* (Thread::*get_parent_type)();
 
-	BP_DECLARE_CLASS(InstanceManager, Object)
+	BP_CLASS(Thread, Object, bp::no_init)
+		.def("getID", &Thread::getID)
+		.def("getStackSize", &Thread::getStackSize)
+		.def("setPriority", &Thread::setPriority)
+		.def("getPriority", &Thread::getPriority)
+		.def("setCritical", &Thread::setCritical)
+		.def("getCritical", &Thread::getCritical)
+		.def("setName", &Thread::setName)
+		.def("getName", &Thread::getName, BP_RETURN_CONSTREF)
+//		.def("getParent", (get_parent_type) &Thread::getParent)
+//		.def("setLogger", &Thread::setLogger)
+//		.def("getLogger", &Thread::getLogger)
+//		.def("setFileResolver", &Thread::setFileResolver)
+//		.def("getFileResolver", &Thread::getFileResolver)
+		.def("getThread", &Thread::getThread, bp::return_internal_reference<>())
+		.def("isRunning", &Thread::isRunning)
+		.def("sleep", &Thread::sleep)
+		.def("detach", &Thread::detach)
+		.def("join", &Thread::join)
+		.def("start", &Thread::start)
+		.staticmethod("sleep")
+		.staticmethod("getThread");
+
+	BP_SETSCOPE(Thread_class);
+	bp::enum_<Thread::EThreadPriority>("EThreadPriority")
+		.value("EIdlePriority", Thread::EIdlePriority)
+		.value("ELowestPriority", Thread::ELowestPriority)
+		.value("ELowPriority", Thread::ELowPriority)
+		.value("ENormalPriority", Thread::ENormalPriority)
+		.value("EHighPriority", Thread::EHighPriority)
+		.value("EHighestPriority", Thread::EHighestPriority)
+		.value("ERealtimePriority", Thread::ERealtimePriority)
+		.export_values();
+	BP_SETSCOPE(coreModule);
+
+	BP_WRAPPED_CLASS(Appender, AppenderWrapper, Object, bp::init<>())
+		.def("append", &Appender::append)
+		.def("logProgress", &appender_logProgress);
+
+	BP_CLASS(InstanceManager, Object, bp::init<>())
 		.def("serialize", &InstanceManager::serialize)
 		.def("getInstance", &instance_manager_getinstance);
 
-	BP_DECLARE_CLASS(ContinuousSpectrum, SerializableObject)
+	bp::class_<ContinuousSpectrum, boost::noncopyable>("ContinuousSpectrum", bp::no_init)
 		.def("eval", &ContinuousSpectrum::eval)
-		.def("average", &ContinuousSpectrum::average);
-	
-	BP_DECLARE_CLASS(InterpolatedSpectrum, ContinuousSpectrum)
+		.def("average", &ContinuousSpectrum::average)
+		.def("__str__", &ContinuousSpectrum::toString);
+
+	bp::class_<InterpolatedSpectrum, bp::bases<ContinuousSpectrum>, boost::noncopyable>
+			("InterpolatedSpectrum", bp::init<>())
+		.def(bp::init<size_t>())
+		.def(bp::init<fs::path>())
 		.def("append", &InterpolatedSpectrum::append)
 		.def("clear", &InterpolatedSpectrum::clear)
-		.def("zeroExtend", &ContinuousSpectrum::zeroExtend);
+		.def("zeroExtend", &InterpolatedSpectrum::zeroExtend);
+
+	BP_STRUCT(Spectrum, bp::init<>())
+		.def("__init__", bp::make_constructor(spectrum_array_constructor))
+		.def(bp::init<Float>())
+		.def(bp::init<Stream *>())
+		.def(bp::self != bp::self)
+		.def(bp::self == bp::self)
+		.def(-bp::self)
+		.def(bp::self + bp::self)
+		.def(bp::self += bp::self)
+		.def(bp::self - bp::self)
+		.def(bp::self -= bp::self)
+		.def(bp::self *= Float())
+		.def(bp::self * Float())
+		.def(bp::self *= bp::self)
+		.def(bp::self * bp::self)
+		.def(bp::self / Float())
+		.def(bp::self /= Float())
+		.def(bp::self /= bp::self)
+		.def(bp::self / bp::self)
+		.def("isValid", &Spectrum::isValid)
+		.def("isNaN", &Spectrum::isNaN)
+		.def("average", &Spectrum::average)
+		.def("sqrt", &Spectrum::sqrt)
+		.def("exp", &Spectrum::exp)
+		.def("pow", &Spectrum::pow)
+		.def("clampNegative", &Spectrum::clampNegative)
+		.def("min", &Spectrum::min)
+		.def("max", &Spectrum::max)
+		.def("isZero", &Spectrum::isZero)
+		.def("eval", &Spectrum::eval)
+		.def("getLuminance", &Spectrum::getLuminance)
+		.def("fromXYZ", &Spectrum::fromXYZ, fromXYZ_overloads())
+		.def("toXYZ", &Spectrum::toXYZ)
+		.def("fromLinearRGB", &Spectrum::fromLinearRGB, fromLinearRGB_overloads())
+		.def("toLinearRGB", &Spectrum::toLinearRGB)
+		.def("fromSRGB", &Spectrum::fromSRGB)
+		.def("toSRGB", &Spectrum::toSRGB)
+		.def("fromContinuousSpectrum", &Spectrum::fromContinuousSpectrum)
+		.def("serialize", &Spectrum::serialize)
+		.def("__str__", &Spectrum::toString)
+		.def("__len__", &spectrum_wrapper::len)
+		.def("__getitem__", &spectrum_wrapper::get)
+		.def("__setitem__", &spectrum_wrapper::set);
+
+	BP_SETSCOPE(Spectrum_struct);
+	bp::enum_<Spectrum::EConversionIntent>("EConversionIntent")
+		.value("EReflectance", Spectrum::EReflectance)
+		.value("EIlluminant", Spectrum::EIlluminant)
+		.export_values();
+	BP_SETSCOPE(coreModule);
 
 	bp::class_<Properties> properties("Properties");
-	bp::scope propertiesScope = properties;
+	properties
+		.def(bp::init<std::string>())
+		.def("getPluginName", &Properties::getPluginName, BP_RETURN_CONSTREF)
+		.def("setPluginName", &Properties::setPluginName)
+		.def("getID", &Properties::getPluginName, BP_RETURN_CONSTREF)
+		.def("setID", &Properties::setPluginName)
+		.def("getType", &Properties::getType)
+		.def("getNames", &Properties::getNames)
+		.def("hasProperty", &Properties::hasProperty)
+		.def("wasQueried", &Properties::wasQueried)
+		.def("markQueried", &Properties::markQueried)
+		.def("__getitem__", &properties_wrapper::get)
+		.def("__setitem__", &properties_wrapper::set)
+		.def("__contains__", &Properties::hasProperty)
+		.def("__str__", &Properties::toString);
+	
+	BP_SETSCOPE(properties);
 	bp::enum_<Properties::EPropertyType>("EPropertyType")
 		.value("EBoolean", Properties::EBoolean)
 		.value("EInteger", Properties::EInteger)
@@ -260,286 +423,118 @@ void export_core() {
 		.value("EData", Properties::EData)
 		.export_values();
 
-	properties
-		.def(bp::init<std::string>())
-		.def("getPluginName", &Properties::getPluginName,
-			bp::return_value_policy<bp::copy_const_reference>())
-		.def("setPluginName", &Properties::setPluginName)
-		.def("getID", &Properties::getPluginName,
-			bp::return_value_policy<bp::copy_const_reference>())
-		.def("setID", &Properties::setPluginName)
-		.def("getType", &Properties::getType)
-		.def("getNames", &Properties::getNames)
-		.def("hasProperty", &Properties::hasProperty)
-		.def("wasQueried", &Properties::wasQueried)
-		.def("markQueried", &Properties::markQueried)
-		.def("__getitem__", &properties_wrapper::get)
-		.def("__setitem__", &properties_wrapper::set)
-		.def("__contains__", &Properties::hasProperty)
-		.def("__str__", &Properties::toString);
 
-	bp::scope scope4 = coreModule;
-	bp::class_<Vector2>("Vector2", bp::init<Float, Float>())
-		.def(bp::init<Float>())
+	BP_SETSCOPE(coreModule);
+
+	BP_STRUCT(Vector2, bp::init<>())
+		.def(bp::init<Float, Float>())
 		.def(bp::init<Point2>())
-		.def(bp::init<Stream *>())
 		.def_readwrite("x", &Vector2::x)
-		.def_readwrite("y", &Vector2::y)
-		.def("length", &Vector2::length)
-		.def(bp::self != bp::self)
-		.def(bp::self == bp::self)
-		.def(-bp::self)
-		.def(bp::self + bp::self)
-		.def(bp::self += bp::self)
-		.def(bp::self - bp::self)
-		.def(bp::self -= bp::self)
-		.def(bp::self *= Float())
-		.def(bp::self * Float())
-		.def(bp::self / Float())
-		.def(bp::self /= Float())
-		.def("serialize", &Vector2::serialize)
-		.def("__str__", &Vector2::toString)
-		.def("__len__", &fixedsize_wrapper<Vector2>::len)
-		.def("__getitem__", &fixedsize_wrapper<Vector2>::get)
-		.def("__setitem__", &fixedsize_wrapper<Vector2>::set);
+		.def_readwrite("y", &Vector2::y);
 
-	bp::class_<Point2>("Point2", bp::init<Float, Float>())
-		.def(bp::init<Float>())
-		.def(bp::init<Vector2>())
-		.def(bp::init<Stream *>())
-		.def_readwrite("x", &Point2::x)
-		.def_readwrite("y", &Point2::y)
-		.def(bp::self != bp::self)
-		.def(bp::self == bp::self)
-		.def(-bp::self)
-		.def(bp::self + bp::self)
-		.def(bp::self += bp::self)
-		.def(bp::self - bp::self)
-		.def(bp::self *= Float())
-		.def(bp::self * Float())
-		.def(bp::self / Float())
-		.def(bp::self /= Float())
-		.def("serialize", &Point2::serialize)
-		.def("__str__", &Point2::toString)
-		.def("__len__", &fixedsize_wrapper<Point2>::len)
-		.def("__getitem__", &fixedsize_wrapper<Point2>::get)
-		.def("__setitem__", &fixedsize_wrapper<Point2>::set);
+	BP_STRUCT(Vector2i, bp::init<>())
+		.def(bp::init<int, int>())
+		.def(bp::init<Point2i>())
+		.def_readwrite("x", &Vector2i::x)
+		.def_readwrite("y", &Vector2i::y);
 
-	bp::class_<Vector>("Vector", bp::init<Float, Float, Float>())
-		.def(bp::init<Float>())
-		.def(bp::init<Point>())
+	BP_STRUCT(Vector3, bp::init<>())
+		.def(bp::init<Float, Float, Float>())
+		.def(bp::init<Point3>())
 		.def(bp::init<Normal>())
-		.def(bp::init<Stream *>())
-		.def_readwrite("x", &Vector::x)
-		.def_readwrite("y", &Vector::y)
-		.def_readwrite("z", &Vector::z)
-		.def("length", &Vector::length)
-		.def(bp::self != bp::self)
-		.def(bp::self == bp::self)
-		.def(-bp::self)
-		.def(bp::self + bp::self)
-		.def(bp::self += bp::self)
-		.def(bp::self - bp::self)
-		.def(bp::self -= bp::self)
-		.def(bp::self *= Float())
-		.def(bp::self * Float())
-		.def(bp::self / Float())
-		.def(bp::self /= Float())
-		.def("serialize", &Vector::serialize)
-		.def("__str__", &Vector::toString)
-		.def("__len__", &fixedsize_wrapper<Vector>::len)
-		.def("__getitem__", &fixedsize_wrapper<Vector>::get)
-		.def("__setitem__", &fixedsize_wrapper<Vector>::set);
+		.def_readwrite("x", &Vector3::x)
+		.def_readwrite("y", &Vector3::y)
+		.def_readwrite("z", &Vector3::z);
 
-	bp::class_<Normal>("Normal", bp::init<Float, Float, Float>())
-		.def(bp::init<Float>())
+	BP_STRUCT(Normal, bp::init<>())
+		.def(bp::init<Float, Float, Float>())
 		.def(bp::init<Vector>())
-		.def(bp::init<Stream *>())
 		.def_readwrite("x", &Normal::x)
 		.def_readwrite("y", &Normal::y)
-		.def_readwrite("z", &Normal::z)
-		.def("length", &Normal::length)
-		.def(bp::self != bp::self)
-		.def(bp::self == bp::self)
-		.def(-bp::self)
-		.def(bp::self + bp::self)
-		.def(bp::self += bp::self)
-		.def(bp::self - bp::self)
-		.def(bp::self -= bp::self)
-		.def(bp::self *= Float())
-		.def(bp::self * Float())
-		.def(bp::self / Float())
-		.def(bp::self /= Float())
-		.def("serialize", &Normal::serialize)
-		.def("__str__", &Normal::toString)
-		.def("__len__", &fixedsize_wrapper<Normal>::len)
-		.def("__getitem__", &fixedsize_wrapper<Normal>::get)
-		.def("__setitem__", &fixedsize_wrapper<Normal>::set);
+		.def_readwrite("z", &Normal::z);
 
-	bp::class_<Point>("Point", bp::init<Float, Float, Float>())
-		.def(bp::init<Float>())
-		.def(bp::init<Vector>())
-		.def(bp::init<Stream *>())
-		.def_readwrite("x", &Point::x)
-		.def_readwrite("y", &Point::y)
-		.def_readwrite("z", &Point::z)
-		.def(bp::self != bp::self)
-		.def(bp::self == bp::self)
-		.def(-bp::self)
-		.def(bp::self + bp::self)
-		.def(bp::self += bp::self)
-		.def(bp::self - bp::self)
-		.def(bp::self *= Float())
-		.def(bp::self * Float())
-		.def(bp::self / Float())
-		.def(bp::self /= Float())
-		.def("serialize", &Point::serialize)
-		.def("__str__", &Point::toString)
-		.def("__len__", &fixedsize_wrapper<Point>::len)
-		.def("__getitem__", &fixedsize_wrapper<Point>::get)
-		.def("__setitem__", &fixedsize_wrapper<Point>::set);
+	BP_STRUCT(Vector3i, bp::init<>())
+		.def(bp::init<int, int, int>())
+		.def(bp::init<Point3i>())
+		.def_readwrite("x", &Vector3i::x)
+		.def_readwrite("y", &Vector3i::y)
+		.def_readwrite("z", &Vector3i::z);
 
-	bp::class_<Vector4>("Vector4", bp::init<Float, Float, Float, Float>())
-		.def(bp::init<Float>())
+	BP_STRUCT(Vector4, bp::init<>())
+		.def(bp::init<Float, Float, Float, Float>())
 		.def(bp::init<Point4>())
-		.def(bp::init<Stream *>())
 		.def_readwrite("x", &Vector4::x)
 		.def_readwrite("y", &Vector4::y)
 		.def_readwrite("z", &Vector4::z)
-		.def_readwrite("w", &Vector4::w)
-		.def("length", &Vector4::length)
-		.def(bp::self != bp::self)
-		.def(bp::self == bp::self)
-		.def(-bp::self)
-		.def(bp::self + bp::self)
-		.def(bp::self += bp::self)
-		.def(bp::self - bp::self)
-		.def(bp::self -= bp::self)
-		.def(bp::self *= Float())
-		.def(bp::self * Float())
-		.def(bp::self / Float())
-		.def(bp::self /= Float())
-		.def("serialize", &Vector4::serialize)
-		.def("__str__", &Vector4::toString)
-		.def("__len__", &fixedsize_wrapper<Vector4>::len)
-		.def("__getitem__", &fixedsize_wrapper<Vector4>::get)
-		.def("__setitem__", &fixedsize_wrapper<Vector4>::set);
+		.def_readwrite("w", &Vector4::w);
 
-	bp::class_<Point4>("Point4", bp::init<Float, Float, Float, Float>())
-		.def(bp::init<Float>())
+	BP_STRUCT(Vector4i, bp::init<>())
+		.def(bp::init<int, int, int, int>())
+		.def(bp::init<Point4i>())
+		.def_readwrite("x", &Vector4i::x)
+		.def_readwrite("y", &Vector4i::y)
+		.def_readwrite("z", &Vector4i::z)
+		.def_readwrite("w", &Vector4i::w);
+
+	BP_STRUCT(Point2, bp::init<>())
+		.def(bp::init<Float, Float>())
+		.def(bp::init<Vector2>())
+		.def_readwrite("x", &Point2::x)
+		.def_readwrite("y", &Point2::y);
+
+	BP_STRUCT(Point2i, bp::init<>())
+		.def(bp::init<int, int>())
+		.def(bp::init<Vector2i>())
+		.def_readwrite("x", &Point2i::x)
+		.def_readwrite("y", &Point2i::y);
+
+	BP_STRUCT(Point3, bp::init<>())
+		.def(bp::init<Float, Float, Float>())
+		.def(bp::init<Vector3>())
+		.def(bp::init<Normal>())
+		.def_readwrite("x", &Point3::x)
+		.def_readwrite("y", &Point3::y)
+		.def_readwrite("z", &Point3::z);
+	
+	BP_STRUCT(Point3i, bp::init<>())
+		.def(bp::init<int, int, int>())
+		.def(bp::init<Vector3i>())
+		.def_readwrite("x", &Point3i::x)
+		.def_readwrite("y", &Point3i::y)
+		.def_readwrite("z", &Point3i::z);
+
+	BP_STRUCT(Point4, bp::init<>())
+		.def(bp::init<Float, Float, Float, Float>())
 		.def(bp::init<Vector4>())
-		.def(bp::init<Stream *>())
 		.def_readwrite("x", &Point4::x)
 		.def_readwrite("y", &Point4::y)
 		.def_readwrite("z", &Point4::z)
-		.def_readwrite("w", &Point4::w)
-		.def(bp::self != bp::self)
-		.def(bp::self == bp::self)
-		.def(-bp::self)
-		.def(bp::self + bp::self)
-		.def(bp::self += bp::self)
-		.def(bp::self - bp::self)
-		.def(bp::self *= Float())
-		.def(bp::self * Float())
-		.def(bp::self / Float())
-		.def(bp::self /= Float())
-		.def("serialize", &Point4::serialize)
-		.def("__str__", &Point4::toString)
-		.def("__len__", &fixedsize_wrapper<Point4>::len)
-		.def("__getitem__", &fixedsize_wrapper<Point4>::get)
-		.def("__setitem__", &fixedsize_wrapper<Point4>::set);
+		.def_readwrite("w", &Point4::w);
 
-	bp::class_<Vector2i>("Vector2i", bp::init<int, int>())
-		.def(bp::init<int>())
-		.def(bp::init<Point2i>())
-		.def(bp::init<Stream *>())
-		.def_readwrite("x", &Vector2i::x)
-		.def_readwrite("y", &Vector2i::y)
-		.def(bp::self != bp::self)
-		.def(bp::self == bp::self)
-		.def(-bp::self)
-		.def(bp::self + bp::self)
-		.def(bp::self += bp::self)
-		.def(bp::self - bp::self)
-		.def(bp::self -= bp::self)
-		.def(bp::self *= int())
-		.def(bp::self * int())
-		.def(bp::self / int())
-		.def(bp::self /= int())
-		.def("serialize", &Vector2i::serialize)
-		.def("__str__", &Vector2i::toString)
-		.def("__len__", &fixedsize_wrapper<Vector2i>::len)
-		.def("__getitem__", &fixedsize_wrapper<Vector2i>::get)
-		.def("__setitem__", &fixedsize_wrapper<Vector2i>::set);
+	BP_STRUCT(Point4i, bp::init<>())
+		.def(bp::init<int, int, int, int>())
+		.def(bp::init<Vector4i>())
+		.def_readwrite("x", &Point4i::x)
+		.def_readwrite("y", &Point4i::y)
+		.def_readwrite("z", &Point4i::z)
+		.def_readwrite("w", &Point4i::w);
 
-	bp::class_<Point2i>("Point2i", bp::init<int, int>())
-		.def(bp::init<int>())
-		.def(bp::init<Vector2i>())
-		.def(bp::init<Stream *>())
-		.def_readwrite("x", &Point2i::x)
-		.def_readwrite("y", &Point2i::y)
-		.def(bp::self != bp::self)
-		.def(bp::self == bp::self)
-		.def(-bp::self)
-		.def(bp::self + bp::self)
-		.def(bp::self += bp::self)
-		.def(bp::self - bp::self)
-		.def(bp::self *= int())
-		.def(bp::self * int())
-		.def(bp::self / int())
-		.def(bp::self /= int())
-		.def("serialize", &Point2i::serialize)
-		.def("__str__", &Point2i::toString)
-		.def("__len__", &fixedsize_wrapper<Point2i>::len)
-		.def("__getitem__", &fixedsize_wrapper<Point2i>::get)
-		.def("__setitem__", &fixedsize_wrapper<Point2i>::set);
+	BP_IMPLEMENT_VECTOR_OPS(Normal, Float, 3);
+	BP_IMPLEMENT_VECTOR_OPS(Vector2i, int, 2);
+	BP_IMPLEMENT_VECTOR_OPS(Vector3i, int, 3);
+	BP_IMPLEMENT_VECTOR_OPS(Vector4i, int, 3);
+	BP_IMPLEMENT_VECTOR_OPS(Vector2, Float, 2);
+	BP_IMPLEMENT_VECTOR_OPS(Vector3, Float, 3);
+	BP_IMPLEMENT_VECTOR_OPS(Vector4, Float, 3);
+	BP_IMPLEMENT_POINT_OPS(Point2i, int, 2);
+	BP_IMPLEMENT_POINT_OPS(Point3i, int, 3);
+	BP_IMPLEMENT_POINT_OPS(Point4i, int, 3);
+	BP_IMPLEMENT_POINT_OPS(Point2, Float, 2);
+	BP_IMPLEMENT_POINT_OPS(Point3, Float, 3);
+	BP_IMPLEMENT_POINT_OPS(Point4, Float, 3);
 
-	bp::class_<Vector3i>("Vector3i", bp::init<int, int, int>())
-		.def(bp::init<int>())
-		.def(bp::init<Point3i>())
-		.def(bp::init<Stream *>())
-		.def_readwrite("x", &Vector3i::x)
-		.def_readwrite("y", &Vector3i::y)
-		.def_readwrite("z", &Vector3i::z)
-		.def(bp::self != bp::self)
-		.def(bp::self == bp::self)
-		.def(-bp::self)
-		.def(bp::self + bp::self)
-		.def(bp::self += bp::self)
-		.def(bp::self - bp::self)
-		.def(bp::self -= bp::self)
-		.def(bp::self *= int())
-		.def(bp::self * int())
-		.def(bp::self / int())
-		.def(bp::self /= int())
-		.def("serialize", &Vector3i::serialize)
-		.def("__str__", &Vector3i::toString)
-		.def("__len__", &fixedsize_wrapper<Vector3i>::len)
-		.def("__getitem__", &fixedsize_wrapper<Vector3i>::get)
-		.def("__setitem__", &fixedsize_wrapper<Vector3i>::set);
-
-	bp::class_<Point3i>("Point3i", bp::init<int, int, int>())
-		.def(bp::init<int>())
-		.def(bp::init<Vector3i>())
-		.def(bp::init<Stream *>())
-		.def_readwrite("x", &Point3i::x)
-		.def_readwrite("y", &Point3i::y)
-		.def_readwrite("z", &Point3i::z)
-		.def(bp::self != bp::self)
-		.def(bp::self == bp::self)
-		.def(-bp::self)
-		.def(bp::self + bp::self)
-		.def(bp::self += bp::self)
-		.def(bp::self - bp::self)
-		.def(bp::self *= int())
-		.def(bp::self * int())
-		.def(bp::self / int())
-		.def(bp::self /= int())
-		.def("serialize", &Point3i::serialize)
-		.def("__str__", &Point3i::toString)
-		.def("__len__", &fixedsize_wrapper<Point3i>::len)
-		.def("__getitem__", &fixedsize_wrapper<Point3i>::get)
-		.def("__setitem__", &fixedsize_wrapper<Point3i>::set);
+	bp::scope().attr("Vector") = bp::scope().attr("Vector3");
+	bp::scope().attr("Point") = bp::scope().attr("Point3");
 
 	bp::class_<Matrix4x4>("Matrix4x4", bp::init<Float>())
 		.def(bp::init<Stream *>())
@@ -562,12 +557,15 @@ void export_core() {
 		.def(bp::self - Float())
 		.def(bp::self -= Float())
 		.def(bp::self * Float())
+		.def(Float() * bp::self)
 		.def(bp::self *= Float())
 		.def(bp::self * bp::self)
 		.def(bp::self *= bp::self)
 		.def(bp::self / Float())
 		.def(bp::self /= Float())
 		.def("__str__", &Matrix4x4::toString);
+
+	bp::detail::current_scope = oldScope;
 }
 
 BOOST_PYTHON_MODULE(mitsuba) {

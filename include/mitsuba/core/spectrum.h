@@ -75,6 +75,9 @@ public:
 	 *     implementation will return zero.
 	 */
 	virtual Float average(Float lambdaMin, Float lambdaMax) const;
+	
+	/// \brief Return a string representation
+	virtual std::string toString() const = 0;
 
 	/// Virtual destructor
 	virtual ~ContinuousSpectrum() { }
@@ -107,6 +110,9 @@ public:
 	 * per unit wavelength (nm^-1) per steradian (sr^-1)
 	 */
 	virtual Float eval(Float lambda) const;
+	
+	/// Return a string representation
+	std::string toString() const;
 private:
 	Float m_temperature;
 };
@@ -148,6 +154,9 @@ public:
 	 * The returned value is in units of 1/meter.
 	 */
 	virtual Float eval(Float lambda) const;
+	
+	/// Return a string representation
+	std::string toString() const;
 private:
 	Float m_precomp;
 };
@@ -172,6 +181,9 @@ public:
 
 	/// Virtual destructor
 	virtual ~ProductSpectrum() { }
+	
+	/// Return a string representation
+	std::string toString() const;
 private:
 	const ContinuousSpectrum &m_spec1;
 	const ContinuousSpectrum &m_spec2;
@@ -196,10 +208,7 @@ public:
 	 * \brief Create a new interpolated spectrum with space 
 	 * for the specified number of samples
 	 */
-	inline InterpolatedSpectrum(size_t size = 0) {
-		m_wavelengths.reserve(size);
-		m_values.reserve(size);
-	}
+	InterpolatedSpectrum(size_t size = 0);
 
 	/**
 	 * \brief Create a interpolated spectrum instance from
@@ -271,7 +280,7 @@ public:
 
 	/// Virtual destructor
 	virtual ~InterpolatedSpectrum() { }
-private:
+protected:
 	std::vector<Float> m_wavelengths, m_values;
 };
 
@@ -401,7 +410,7 @@ public:
 			s[i] *= spd.s[i];
 		return *this;
 	}
-	
+
 	/// Perform a component-wise division by another spectrum
 	inline Spectrum& operator/=(const Spectrum &spd) {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)

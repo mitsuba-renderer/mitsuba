@@ -440,8 +440,23 @@ Float BlackBodySpectrum::eval(Float l) const {
 	return (Float) I;
 }
 
+std::string BlackBodySpectrum::toString() const {
+	std::ostringstream oss;
+	oss << "BlackBodySpectrum[temperature=" << m_temperature << "]";
+	return oss.str();
+}
+
 Float ProductSpectrum::eval(Float lambda) const {
 	return m_spec1.eval(lambda) * m_spec2.eval(lambda);
+}
+
+std::string ProductSpectrum::toString() const {
+	std::ostringstream oss;
+	oss << "ProductSpectrum["
+		<< "  spec1 = " << indent(m_spec1.toString()) << "," << endl
+		<< "  spec2 = " << indent(m_spec2.toString()) << endl
+		<< "]";
+	return oss.str();
 }
 
 RayleighSpectrum::RayleighSpectrum(EMode mode, Float eta, Float height) {
@@ -463,6 +478,10 @@ RayleighSpectrum::RayleighSpectrum(EMode mode, Float eta, Float height) {
 		default:
 			SLog(EError, "Unknown mode!");
 	}
+}
+
+std::string RayleighSpectrum::toString() const {
+	return "RayleighSpectrum[]";
 }
 
 Float RayleighSpectrum::eval(Float lambda) const {
@@ -494,6 +513,11 @@ Float ContinuousSpectrum::average(Float lambdaMin, Float lambdaMax) const {
 	return integral / (lambdaMax - lambdaMin);
 }
 
+InterpolatedSpectrum::InterpolatedSpectrum(size_t size) {
+	m_wavelengths.reserve(size);
+	m_values.reserve(size);
+}
+	
 InterpolatedSpectrum::InterpolatedSpectrum(const fs::path &path) {
 	fs::ifstream is(path);
 	if (is.bad() || is.fail())
@@ -613,8 +637,8 @@ Float InterpolatedSpectrum::eval(Float lambda) const {
 	typedef std::vector<Float>::const_iterator iterator;
 	if (m_wavelengths.size() < 2 ||
 		lambda < m_wavelengths[0] ||
-		lambda > m_wavelengths[m_wavelengths.size()-1])
-		return 0;
+		lambda > m_wavelengths[m_wavelengths.size()-1]) 
+		return 0.0f;
 
 	/* Find the associated table entries using binary search */
 	std::pair<iterator, iterator> result = 

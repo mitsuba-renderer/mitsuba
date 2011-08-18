@@ -18,7 +18,7 @@
 
 #include <mitsuba/mitsuba.h>
 
-//#define DEBUG_ALLOCATIONS 1
+#define DEBUG_ALLOCATIONS 1
 
 MTS_NAMESPACE_BEGIN
 

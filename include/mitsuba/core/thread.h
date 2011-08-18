@@ -27,6 +27,7 @@ MTS_NAMESPACE_BEGIN
  * \headerfile mitsuba/core/thread.h mitsuba/mitsuba.h
  * \brief Cross-platform thread implementation
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Thread : public Object {
 public:
@@ -47,6 +48,8 @@ public:
 	 *   (will be shown in debug messages)
 	 * \param stackSize Initial stack size of the thread
 	 *   (0 = default)
+	 * \remark Note that it is currently not possible to
+	 *         construct Thread instances from Python
 	 */
 	Thread(const std::string &name, 
 		unsigned int stackSize = 0);
@@ -61,6 +64,9 @@ public:
 	 */
 	bool setPriority(EThreadPriority priority);
 
+	/// Return the thread priority
+	inline EThreadPriority getPriority() const { return m_priority; }
+
 	/**
 	 * \brief Specify whether or not this thread is critical
 	 * 
@@ -72,9 +78,6 @@ public:
 
 	/// Return the value of the critical flag
 	inline bool getCritical() const { return m_critical; }
-
-	/// Return the thread priority
-	inline EThreadPriority getPriority() const { return m_priority; }
 
 	/// Return the thread's stack size
 	inline int getStackSize() const { return m_stackSize; }
