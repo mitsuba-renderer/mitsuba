@@ -39,6 +39,7 @@ MTS_NAMESPACE_BEGIN
  *  estimate. The bug has been fixed in this re-implementation.
  *
  * \author Wenzel Jakob
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER PhotonMap : public SerializableObject {
 public:

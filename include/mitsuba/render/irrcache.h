@@ -38,6 +38,7 @@ typedef Spectrum TranslationalGradient[3];
  * (Proceedings of SCCG 2005)
  *
  * \author Wenzel Jakob
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER HemisphereSampler : public Object {
 public:
@@ -140,6 +141,7 @@ private:
  * by E. Tabellion and A. Lamorlette (SIGGRAPH 2004)
  *
  * \author Wenzel Jakob
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER IrradianceCache : public SerializableObject {
 public:

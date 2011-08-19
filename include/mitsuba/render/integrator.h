@@ -33,6 +33,8 @@ MTS_NAMESPACE_BEGIN
  * rasterization that directly operates on the camera's film and has 
  * no global knowledge about radiance within the scene. Other possibilities
  * are sampling- or particle tracing-based integrators.
+ *
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Integrator : public NetworkedObject {
 public:
@@ -109,6 +111,7 @@ protected:
 
 /**
  * \brief Radiance query record data structure used by \ref SampleIntegrator
+ * \ingroup librender
  */
 struct MTS_EXPORT_RENDER RadianceQueryRecord {
 public:
@@ -278,6 +281,7 @@ public:
 
 /** \brief Abstract base class, which describes integrators
  * capable of computing samples of the scene's radiance function.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER SampleIntegrator : public Integrator {
 public:
@@ -402,6 +406,7 @@ protected:
  * \brief Base class of all recursive Monte Carlo integrators, which compute
  * unbiased solutions to the rendering equation (and optionally
  * the radiative transfer equation).
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER MonteCarloIntegrator : public SampleIntegrator {
 public:

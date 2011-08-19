@@ -29,6 +29,7 @@ MTS_NAMESPACE_BEGIN
  * Render job - coordinates the process of rendering a single
  * image. Implemented as a thread so that multiple jobs can
  * be executed concurrently.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER RenderJob : public Thread {
 public:

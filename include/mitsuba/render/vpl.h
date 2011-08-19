@@ -31,6 +31,7 @@ enum EVPLType {
 /**
  * Support routines for rendering algorithms based on VPLs (virtual
  * point lights)
+ * \ingroup librender
  */
 struct VPL {
 	inline VPL(EVPLType type, const Spectrum &P) 

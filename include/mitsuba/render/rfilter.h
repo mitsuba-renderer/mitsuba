@@ -25,7 +25,8 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Abstract image reconstruction filter
+ * \brief Abstract image reconstruction filter
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER ReconstructionFilter : public ConfigurableObject {
 public:
@@ -59,8 +60,11 @@ protected:
 };
 
 /**
- * Tabulates expensive-to-evaluate filters so that they become
- * simple array lookups. Only works for symmetric filters!
+ * \brief Tabulates expensive-to-evaluate filters so that they become
+ * simple array lookups. 
+ *
+ * Only works for symmetric filters!
+ * \ingroup librender
  */
 #define FILTER_RESOLUTION 15
 class TabulatedFilter : public Object {

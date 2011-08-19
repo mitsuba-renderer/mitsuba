@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 /** \brief Abstract utility class -- can be used to implement
  * loadable utility plugins that perform various actions. They
  * can be started using the 'mtsutil' launcher.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Utility : public Object {
 public:

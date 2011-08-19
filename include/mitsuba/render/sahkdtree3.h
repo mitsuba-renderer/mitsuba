@@ -31,6 +31,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Implements the surface area heuristic for use
  * by the \ref GenericKDTree construction algorithm.
+ * \ingroup librender
  */
 class SurfaceAreaHeuristic {
 public:
@@ -94,6 +95,7 @@ private:
  * Havran's PhD thesis "Heuristic Ray Shooting Algorithms". 
  *
  * \author Wenzel Jakob
+ * \ingroup librender
  */
 template <typename Derived> 
 	class SAHKDTree3D : public GenericKDTree<AABB, SurfaceAreaHeuristic, Derived> {

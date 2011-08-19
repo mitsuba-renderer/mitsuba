@@ -25,6 +25,8 @@
 MTS_NAMESPACE_BEGIN
 
 /**
+ * \brief Storage for an image sub-block (a.k.a render bucket)
+ *
  * This class is used by image-based parallel processes and encapsulates
  * the resulting information in a rectangular region of an image. Such
  * blocks may also include a border storing contributions that are slightly
@@ -34,6 +36,8 @@ MTS_NAMESPACE_BEGIN
  * This is important to avoid bias when using large-extent reconstruction 
  * filters, while at the same time placing significantly different amounts
  * of samples into nearby pixels.
+ *
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER ImageBlock : public WorkResult {
 public:

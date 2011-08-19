@@ -28,6 +28,7 @@ MTS_NAMESPACE_BEGIN
  * integral of the RTE
  *
  * \sa Medium::sampleDistance()
+ * \ingroup librender
  */
 struct MTS_EXPORT_RENDER MediumSamplingRecord {
 public:
@@ -89,6 +90,7 @@ public:
 };
 
 /** \brief Abstract participating medium 
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Medium : public NetworkedObject {
 public:
