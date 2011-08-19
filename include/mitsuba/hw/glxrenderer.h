@@ -25,6 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief GLX (XFree86) renderer
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW GLXRenderer : public GLRenderer {
 public:

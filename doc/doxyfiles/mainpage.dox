@@ -1,36 +1,64 @@
 /**
 	\defgroup libcore Core library
-	This module contains the core support API of Mitsuba
+	This library contains the core support API of Mitsuba
  */
 /**
 	\defgroup librender Render library
-	This module contains the rendering-related API of Mitsuba
+	This library contains the rendering-related API of Mitsuba
+ */
+/**
+	\defgroup libhw Hardware acceleration library
+	This library contains the hardware acceleration API of Mitsuba
+ */
+/**
+	\defgroup libbidir Bidirectional support library
+	This library contains a support layer used to develop bidirectional
+	rendering techniques.
+ */
+/**
+	\defgroup libpython Python bindings
+	This module references all classes that have Python bindings
  */
 
 
 /**
 	\mainpage Mitsuba Renderer API Documentation
+	<center><span style="color:red">Warning:</span> The generated API documentation is still very new and currently incomplete.</center>
+	<h2>Basic Information</h2>
+	<p>Welcome to the Mitsuba API documentation. <a href="http:/www.mitsuba-renderer.org">Mitsuba</a>
+	is a modular open-source rendering framework, which consists of a small set of core libraries
+	and over 100 different plugins that implement functionality ranging from materials and light
+	sources to complete rendering algorithms. This page provides information on the interface to these core
+	libraries needed to develop custom plugins.</p> 
 
-	<center>
+	<p>The API documentation tracks the current development branch and is automatically
+	regenerated every hour. Note that it is not a substitute for the reference manual!
+	If you are planning to do any kind of serious development with Mitsuba, it is recommended that you
+	first read one the following documents (preferably the latter)</p> 
+    - <a href="http://www.mitsuba-renderer.org/documentation.pdf">Reference Manual (Current release)</a>
+    - <a href="http://www.mitsuba-renderer.org/documentation-beta.pdf">Reference Manual (Development version)</a>
 
-	<a href="http://www.mitsuba-renderer.org">www.mitsuba-renderer.org</a>
+	<h2>API Structure</h2>
+	<p>Mitsuba is split into four basic support libraries. Please use the links below to view their
+	contents:
+	</p><p>
+	The <a href="group__libcore.html">core library (<tt>libcore</tt>)</a> implements basic
+	functionality such as cross-platform file and bitmap I/O, data structures, scheduling, as well as logging 
+	and plugin management.</p>
+	<p>The <a href="group__librender.html">rendering library (<tt>librender</tt>)</a> contains abstractions 
+	needed to load and represent scenes containing  light sources, shapes, materials, and participating media.</p>
+	<p>The <a href="group__libhw.html">hardware acceleration library (<tt>libhw</tt>)</a>
+	implements a cross-platform display library, an object-oriented OpenGL
+	wrapper, as well as support for rendering interactive previews of scenes. 
+	<p>Finally, the <a href="group__libbidir.html">bidirectional library (<tt>libbidir</tt>)</a>
+	contains a support layer that is used to implement bidirectional rendering algorithms such as 
+	Bidirectional Path Tracing and Metropolis Light Transport. </p>
+	<p>Mitsuba also exposes a subset of these libraries via Python bindings. To see
+	a listing of all exported classes, <a href="group__libpython.html">click here</a>.</p>
 
-	<table width=1000 border=0 style="border: 0px solid #EEEEEE"><tr><td>
-
-	<div class="featuretitle">Basic Information</div>
-    - <a href="http://www.mitsuba-renderer.org/documentation.pdf">Reference Manual (PDF)</a>
-
-    <div class="featuretitle">API Documentation</div>
-    - <a href="annotated.html">Annotated Class List</a>
-    - <a href="classes.html">Alphabetical Class List</a>
-    - <a href="hierarchy.html">Class Hierarchy</a>
-
-	<div class="featuretitle">Community</div>
+	<h2>Community</h2>
     - <a href="http://www.mitsuba-renderer.org/devblog">Development Blog</a>
     - <a href="https://www.mitsuba-renderer.org/bugtracker/projects/mitsuba">Bug Tracker</a>
-    - <a href="https://www.mitsuba-renderer.org/hg">List of repositories</a>
-
-	</td></tr></table>
-	</center>
+    - <a href="https://www.mitsuba-renderer.org/hg/">List of repositories</a>
 */
 

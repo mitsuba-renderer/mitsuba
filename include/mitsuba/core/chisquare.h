@@ -46,7 +46,7 @@ MTS_NAMESPACE_BEGIN
  *
  * Given a probability distribution with the following interface
  *
- * <code>
+ * \code
  * class MyDistribution {
  *     // Sample a (optionally weighted) direction. A non-unity weight
  *     // in the return value is needed when the sampling distribution
@@ -56,11 +56,11 @@ MTS_NAMESPACE_BEGIN
  *     /// Compute the probability density for the specified direction and measure
  *     Float pdf(const Vector &direction, EMeasure) const;
  * };
- * </code>
+ * \endcode
  *
  * the code in this class might be used as follows
  * 
- * <code>
+ * \code
  * MyDistribution myDistrInstance;
  * ChiSquare chiSqr;
  *
@@ -75,7 +75,8 @@ MTS_NAMESPACE_BEGIN
  *
  * if (!chiSqr.runTest())
  *    Log(EError, "Uh oh -- test failed, the implementation is probably incorrect!");
- * </code>
+ * \endcode
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE ChiSquare : public Object {
 public:

@@ -2,15 +2,19 @@
 #include <Authorization.h>
 #include <AuthorizationTags.h>
 #include <unistd.h>
+#include <iostream>
+
+namespace mitsuba {
+	extern std::string __ubi_bundlepath();
+};
 
 bool create_symlinks() {
 	AuthorizationFlags flags = kAuthorizationFlagDefaults;
 	AuthorizationRef ref;
 
 	OSStatus status = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, flags, &ref);
-	if (status != errAuthorizationSuccess) {
+	if (status != errAuthorizationSuccess)
 		return false;
-	}
 
 	AuthorizationItem items = {kAuthorizationRightExecute, 0, NULL, 0};
 	AuthorizationRights rights = { 1, &items };
@@ -23,11 +27,12 @@ bool create_symlinks() {
 		AuthorizationFree(ref, kAuthorizationFlagDefaults);
 		return false;
 	}
-	char *path = "/bin/bash";
-	char *args[] = { "data/install-symlinks.sh", NULL };
-	FILE *pipe = pipe = NULL;
+	std::string bundlePath = mitsuba::__ubi_bundlepath();
+	std::string path = bundlePath + "/Contents/MacOS/symlinks_install";
+	char *args[] = { const_cast<char *>(bundlePath.c_str()), NULL };
+	FILE *pipe = NULL;
 	flags = kAuthorizationFlagDefaults;
-	status = AuthorizationExecuteWithPrivileges(ref, path, flags, args, &pipe);
+	status = AuthorizationExecuteWithPrivileges(ref, const_cast<char *>(path.c_str()), flags, args, &pipe);
 	if (status != errAuthorizationSuccess) {
 		AuthorizationFree(ref, kAuthorizationFlagDefaults);
 		return false;

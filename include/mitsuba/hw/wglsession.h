@@ -24,6 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Windows (WGL) windowing environment session
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW WGLSession : public Session {
 	friend class WGLDevice;

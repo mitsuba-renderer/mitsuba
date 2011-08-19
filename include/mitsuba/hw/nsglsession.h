@@ -24,6 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief A MacOS X (NSGL) windowing environment session
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW NSGLSession : public Session {
 public:

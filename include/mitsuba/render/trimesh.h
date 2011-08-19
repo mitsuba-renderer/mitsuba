@@ -28,6 +28,10 @@ namespace fs = boost::filesystem;
 
 MTS_NAMESPACE_BEGIN
 
+/**
+ * \brief Simple tangent space storage for surfaces
+ * \ingroup librender
+ */
 struct TangentSpace {
 	/// Position partials wrt. the UV parameterization
 	Vector dpdu;
@@ -45,6 +49,7 @@ struct TangentSpace {
 };
 
 /** \brief Abstract triangle mesh base class
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER TriMesh : public Shape {
 public:

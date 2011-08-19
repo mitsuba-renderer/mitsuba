@@ -35,6 +35,7 @@ MTS_NAMESPACE_BEGIN
  * \brief Abstract work unit -- represents a small amount of information 
  * that encodes part of a larger processing task. 
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE WorkUnit : public Object {
 public:
@@ -60,6 +61,7 @@ protected:
  * \brief Abstract work result -- represents the result of a 
  * processed <tt>\ref WorkUnit</tt> instance.
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE WorkResult : public Object {
 public:
@@ -90,6 +92,7 @@ protected:
  * and therefore no form of locking is required within instances of this class.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE WorkProcessor : public SerializableObject {
 	friend class Scheduler;
@@ -166,6 +169,7 @@ protected:
  * chunks of globally shared read-only data required during execution.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE ParallelProcess : public Object {
 	friend class Scheduler;
@@ -319,6 +323,7 @@ class Worker;
  * or sent to remote nodes over a network connection.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Scheduler : public Object {
 	friend class Worker;
@@ -642,6 +647,7 @@ private:
 
 /**
  * \brief Base class of all worker implementations
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Worker : public Thread {
 	friend class Scheduler;
@@ -727,6 +733,7 @@ protected:
  * it locally.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE LocalWorker : public Worker {
 public:

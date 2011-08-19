@@ -33,6 +33,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \sa ref, Class
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Object {
 public:

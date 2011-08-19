@@ -90,6 +90,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief %Random number generator based on Mersenne Twister
  * by Takuji Nishimura and Makoto Matsumoto.
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Random : public SerializableObject {
 public:

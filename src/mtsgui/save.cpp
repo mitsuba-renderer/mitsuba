@@ -69,7 +69,7 @@ static void setProperties(QDomDocument &doc, QDomElement &element,
 	element.setAttribute("type", props.getPluginName().c_str());
 
 	std::vector<std::string> propertyNames;
-	props.putPropertyNames(propertyNames);
+	props.putNames(propertyNames);
 	for (std::vector<std::string>::const_iterator it = propertyNames.begin();
 		it != propertyNames.end(); ++it) {
 		QDomElement property;

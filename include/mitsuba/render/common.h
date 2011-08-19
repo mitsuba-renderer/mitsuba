@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Specifies the transported quantity when 
  * sampling or evaluating a scattering function
+ * \ingroup librender
  */
 enum ETransportQuantity {
 	ERadiance = 1,
@@ -34,6 +35,7 @@ enum ETransportQuantity {
 /**
  * \brief Specifies the measure associated with 
  * a scattering function 
+ * \ingroup librender
  */
 enum EMeasure {
 	ESolidAngle = 1,

@@ -1,12 +1,30 @@
-\section{Development Guide}
+\part{Development guide}
 This chapter and the subsequent ones will provide an overview
 of the the coding conventions and general architecture of Mitsuba. 
 You should only read them if if you wish to interface with the API 
 in some way (e.g. by developing your own plugins). The coding style
-section is only relevant if you plan to submit patches, which should
-go into the main codebase.
+section is only relevant if you plan to submit patches that are meant
+to become part of the main codebase.
 
-\subsection{Coding style}
+\section{Code structure}
+Mitsuba is split into four basic support libraries:
+\begin{itemize}
+\item The core library (\code{libcore}) implements basic functionality such as 
+	cross-platform file and bitmap I/O, data structures, scheduling, as well as logging and plugin management.
+\item The rendering library (\code{librender}) contains abstractions 
+	needed to load and represent scenes containing  light sources, shapes, materials, and participating media.
+\item The hardware acceleration library (\code{libhw})
+	implements a cross-platform display library, an object-oriented OpenGL
+	wrapper, as well as support for rendering interactive previews of scenes. 
+\item Finally, the bidirectional library (\code{libbidir})
+	contains a support layer that is used to implement bidirectional rendering algorithms such as 
+	Bidirectional Path Tracing and Metropolis Light Transport.
+\end{itemize}
+A detailed reference of these APIs is available at
+\url{http://www.mitsuba-renderer.org/api}. The next sections
+present a few basic examples to get familiar with them.
+
+\section{Coding style}
 \paragraph{Indentation:} The Mitsuba codebase uses tabs for indentation, 
 which expand to \emph{four} spaces. Please make sure that you configure your editor
 this way, otherwise the source code layout will look garbled.
@@ -74,10 +92,10 @@ However, anything pertaining to the API should go into the header file.
 \paragraph{Boost:} Use the boost libraries whenever this helps to save
 time or write more compact code.
 
-\paragraph{Classes vs structures:}In Mitsuba, classes \emph{always} go onto the heap,
+\paragraph{Classes vs structures:}In Mitsuba, classes usually go onto the heap,
 whereas structures may be allocated both on the stack and the heap. 
 
-Classes that derive from \code{Object} usually implement a protected virtual
+Classes that derive from \code{Object} implement a protected virtual
 deconstructor, which explicitly prevents them from being allocated on the stack.
 The only way they can be deallocated is using the built-in reference
 counting. This is done using the \code{ref<>} template, e.g.

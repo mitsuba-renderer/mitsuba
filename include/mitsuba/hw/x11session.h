@@ -26,6 +26,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief X Window System (X11R6) session
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW X11Session : public Session {
 	friend class X11Device;

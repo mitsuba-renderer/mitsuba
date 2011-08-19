@@ -38,6 +38,8 @@ MTS_NAMESPACE_BEGIN
  * of \ref ParticleTracer with overridden functions
  * \ref ParticleTracer::handleSurfaceInteraction and
  * \ref ParticleTracer::handleMediumInteraction.
+ *
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER ParticleProcess : public ParallelProcess {
 public:
@@ -119,6 +121,8 @@ protected:
  *
  * Traces particles and performs a customizable action every time a
  * surface or volume interaction occurs.
+ *
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER ParticleTracer : public WorkProcessor {
 public:

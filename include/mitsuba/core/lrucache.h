@@ -87,7 +87,8 @@ public:
 	// Obtain value of the cached function for k
 	V get(const K& k, bool &hit) {
 		// Attempt to find existing record
-		const typename cache_type::left_iterator it = m_cache.left.find(k);
+		const typename cache_type::left_iterator it 
+			= m_cache.left.find(k);
 
 		if (it == m_cache.left.end()) {
 			// We don’t have it:

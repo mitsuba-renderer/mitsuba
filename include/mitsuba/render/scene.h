@@ -42,6 +42,7 @@ MTS_NAMESPACE_BEGIN
  * Holds information on surfaces, luminaires and participating media and 
  * coordinates rendering jobs. This class also provides useful query routines
  * that are mostly used by the \ref Integrator implementations.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Scene : public NetworkedObject {
 public:

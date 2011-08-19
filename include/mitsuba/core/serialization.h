@@ -29,6 +29,7 @@ MTS_NAMESPACE_BEGIN
  * RTTI macros \ref MTS_IMPLEMENT_CLASS_S or \ref MTS_IMPLEMENT_CLASS_IS.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE SerializableObject : public Object {
 public:
@@ -58,6 +59,7 @@ protected:
  * object graph has the same structure.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE InstanceManager : public Object {
 	friend class SerializableObject;

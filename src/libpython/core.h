@@ -21,6 +21,74 @@
 
 #include <mitsuba/mitsuba.h>
 
+#define BP_STRUCT(Name, Init) \
+	bp::class_<Name> Name ##_struct(#Name, Init); \
+	bp::register_ptr_to_python<Name*>(); \
+	Name ##_struct
+
+#define BP_CLASS(Name, Base, Init) \
+	bp::class_<Name, ref<Name>, bp::bases<Base>, boost::noncopyable> Name ##_class(#Name, Init); \
+	bp::register_ptr_to_python<Name*>(); \
+	Name ##_class
+
+#define BP_WRAPPED_CLASS(Name, Wrapper, Base, Init) \
+	bp::class_<Name, ref<Wrapper>, bp::bases<Base>, boost::noncopyable> Name ##_class(#Name, Init); \
+	bp::register_ptr_to_python<Name*>(); \
+	bp::implicitly_convertible<ref<Wrapper>, ref<Name> >(); \
+	Name ##_class
+
+#define BP_IMPLEMENT_VECTOR_OPS(Name, Scalar, Size) \
+	Name ##_struct \
+		.def(bp::init<Stream *>()) \
+		.def(bp::self != bp::self) \
+		.def(bp::self == bp::self) \
+		.def(-bp::self) \
+		.def(bp::self + bp::self) \
+		.def(bp::self += bp::self) \
+		.def(bp::self - bp::self) \
+		.def(bp::self -= bp::self) \
+		.def(bp::self *= Scalar()) \
+		.def(bp::self * Scalar()) \
+		.def(Scalar() * bp::self) \
+		.def(bp::self / Scalar()) \
+		.def(bp::self /= Scalar()) \
+		.def("serialize", &Name::serialize) \
+		.def("__str__", &Name::toString) \
+		.def("__len__", &FixedSizeSupport<Name, Scalar, Size>::len) \
+		.def("__getitem__", &FixedSizeSupport<Name, Scalar, Size>::get) \
+		.def("__setitem__", &FixedSizeSupport<Name, Scalar, Size>::set)
+
+#define BP_IMPLEMENT_POINT_OPS(Name, Scalar, Size) \
+	Name ##_struct \
+		.def(bp::init<Stream *>()) \
+		.def(bp::self != bp::self) \
+		.def(bp::self == bp::self) \
+		.def(Scalar() * bp::self) \
+		.def(-bp::self) \
+		.def(bp::self + Name::vector_type()) \
+		.def(bp::self += Name::vector_type()) \
+		.def(bp::self - Name::vector_type()) \
+		.def(bp::self -= Name::vector_type()) \
+		.def(bp::self - bp::self) \
+		.def(bp::self *= Scalar()) \
+		.def(bp::self * Scalar()) \
+		.def(bp::self / Scalar()) \
+		.def(bp::self /= Scalar()) \
+		.def("serialize", &Name::serialize) \
+		.def("__str__", &Name::toString) \
+		.def("__len__", &FixedSizeSupport<Name, Scalar, Size>::len) \
+		.def("__getitem__", &FixedSizeSupport<Name, Scalar, Size>::get) \
+		.def("__setitem__", &FixedSizeSupport<Name, Scalar, Size>::set)
+			
+#define BP_SETSCOPE(value) do { \
+		bp::detail::current_scope = value.ptr(); \
+	} while (0);
+
+#define BP_RETURN_CONSTREF bp::return_value_policy<bp::copy_const_reference>()
+#define BP_RETURN_NONCONSTREF bp::return_value_policy<bp::copy_non_const_reference>()
+#define BP_RETURN_VALUE bp::return_value_policy<bp::return_by_value>()
+#define BP_RETURN_INTREF bp::return_internal_reference<>()
+
 namespace boost {
 	namespace python {
 		template <typename T> T* get_pointer(mitsuba::ref<T> & p) {
@@ -33,6 +101,8 @@ namespace boost {
 }
 
 #include <boost/python.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <boost/python/suite/indexing/map_indexing_suite.hpp>
 
 namespace bp = boost::python;
 
@@ -41,14 +111,38 @@ namespace boost {
 	namespace python {
 		template <typename T> struct pointee< mitsuba::ref<T> > {
 			typedef T type;
-		};	
+		};
 	}
 }
 
-template <typename T> void registerClass() {
-	boost::python::register_ptr_to_python< mitsuba::ref<T> >();
-}
+template <typename T, typename Scalar, int Size> class FixedSizeSupport {
+public:
+	static Scalar get(const T &value, int i) {
+		using namespace mitsuba;
 
+		if (i < 0 || i >= Size) {
+			SLog(EError, "Index %i is out of range!", i);
+			return 0.0f;
+		}
+		return value[i];
+	}
+
+	static void set(T &value, int i, Scalar arg) {
+		using namespace mitsuba;
+
+		if (i < 0 || i >= Size) 
+			SLog(EError, "Index %i is out of range!", i);
+		else
+			value[i] = arg;
+	}
+
+	static int len(const T &) {
+		return Size;
+	}
+};
+
+typedef std::vector<std::string> StringVector;
+typedef std::map<std::string, std::string> StringMap;
 
 #endif /* __MTSPY_H */
 

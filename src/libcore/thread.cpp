@@ -248,12 +248,12 @@ void Thread::exit() {
 std::string Thread::toString() const {
 	std::ostringstream oss;
 	oss << "Thread[" << endl
-		<< "  name=\"" << m_name << "\"," << endl
-		<< "  running=" << m_running << "," << endl
-		<< "  joined=" << m_joined << "," << endl
-		<< "  priority=" << m_priority << "," << endl
-		<< "  critical=" << m_critical << "," << endl
-		<< "  stackSize=" << m_stackSize << endl
+		<< "  name = \"" << m_name << "\"," << endl
+		<< "  running = " << m_running << "," << endl
+		<< "  joined = " << m_joined << "," << endl
+		<< "  priority = " << m_priority << "," << endl
+		<< "  critical = " << m_critical << "," << endl
+		<< "  stackSize = " << m_stackSize << endl
 		<< "]";
 	return oss.str();
 }

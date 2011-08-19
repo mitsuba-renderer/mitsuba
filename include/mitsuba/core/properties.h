@@ -25,8 +25,19 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Associative map for values of various types. Used to
- * construct subclasses of <tt>ConfigurableObject</tt>.
+/** \brief Associative parameter map for constructing 
+ * subclasses of \ref ConfigurableObject.
+ *
+ * Note that the Python bindings for this class do not implement 
+ * the various type-dependent getters and setters. Instead, they
+ * are accessed just like a normal Python map, e.g:
+ *
+ * \code
+ * myProps = mitsuba.core.Properties("pluginName")
+ * myProps["stringProperty"] = "hello"
+ * myProps["spectrumProperty"] = mitsuba.core.Spectrum(1.0)
+ * \endcode
+ *
  * \ingroup libcore
  * \ingroup libpython
  */
@@ -154,10 +165,17 @@ public:
 	std::string getString(const std::string &name, const std::string &defVal) const;
 
 	/// Store an array containing the names of all stored properties
-	inline void putPropertyNames(std::vector<std::string> &results) const {
+	inline void putNames(std::vector<std::string> &results) const {
 		for (std::map<std::string, Element>::const_iterator it = m_elements.begin();
 			it != m_elements.end(); ++it) 
 			results.push_back((*it).first);
+	}
+	
+	/// Return an array containing the names of all stored properties
+	inline std::vector<std::string> getNames() const {
+		std::vector<std::string> results;
+		putNames(results);
+		return results;
 	}
 
 	/// Manually mark a certain property as queried

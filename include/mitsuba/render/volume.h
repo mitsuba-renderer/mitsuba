@@ -25,7 +25,8 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Generalized source of volumetric information
+ * \brief Generalized source of volumetric information
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER VolumeDataSource : public ConfigurableObject {
 public:

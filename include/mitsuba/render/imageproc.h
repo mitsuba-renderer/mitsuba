@@ -28,6 +28,8 @@ MTS_NAMESPACE_BEGIN
  * the subclass) on the pixels of an image where work on adjacent pixels 
  * is independent. For preview purposes, a spiraling pattern of square 
  * pixel blocks is generated.
+ *
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER BlockedImageProcess : public ParallelProcess {
 public:

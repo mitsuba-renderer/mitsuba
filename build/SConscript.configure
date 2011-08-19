@@ -1,4 +1,4 @@
-import multiprocessing
+import re, multiprocessing
 
 Import('sys', 'os', 'SCons', 'resources')
 
@@ -35,8 +35,8 @@ vars.Add('DISTDIR',       'Target directory for the final build')
 vars.Add('CXX',           'C++ compiler')
 vars.Add('CC',            'C compiler')
 vars.Add('CXXFLAGS',      'C++ flags')
-vars.Add('CCFLAGS',       'C compiler flags')
-vars.Add('SHCXXFLAGS',    'C++ flags (for shared libraries)')
+vars.Add('SHCXXFLAGS',    'Extra C++ flags (for shared libraries)')
+vars.Add('CCFLAGS',       'Extra C++ flags (for C files)')
 vars.Add('LINK',          'Linker')
 vars.Add('LINKFLAGS',     'Linker flags')
 vars.Add('SHLINKFLAGS',   'Linker flags (dynamic libraries)')
@@ -267,39 +267,65 @@ def osxlibinst_as_build_function(self, target, source, pkgname = None, use_own =
 	self.AddPostAction(inst, 'install_name_tool -id @loader_path/../Frameworks/' + name + ' $TARGET')
 	return inst
 
-def remove_flag(env, value):
+def remove_flag(env, flag):
 	try:
-		env['CXXFLAGS'].remove(value)
+		env['CXXFLAGS'].remove(flag)
 		return True
 	except:
 		return False
+
+def remove_flags(env, patterns):
+	new_cxxflags = []
+	new_linkflags = []
+	for flag in env['CXXFLAGS']:
+		found = False
+		for pattern in patterns:
+			if re.search(pattern, flag):
+				found = True
+				break
+		if not found:
+			new_cxxflags.append(flag)
+	for flag in env['LINKFLAGS']:
+		found = False
+		for pattern in patterns:
+			if re.search(pattern, flag):
+				found = True
+				break
+		if not found:
+			new_cxxflags.append(flag)
+	env['CXXFLAGS'] = new_cxxflags
+	env['LINKFLAGS'] = new_linkflags
+
 
 def append_flag(env, value):
 	env['CXXFLAGS'].append(value)
 
 env.__class__.RemoveFlag = remove_flag
+env.__class__.RemoveFlags = remove_flags
 env.__class__.AppendFlag = append_flag
 env.__class__.OSXLibInst = osxlibinst_build_function
 env.__class__.OSXLibInstAs = osxlibinst_as_build_function
 
 def configure_for_objective_cpp(env):
-	# Objective C++ does not permit the following optimization flags
-	env.RemoveFlag('-fstrict-aliasing')
-	env.RemoveFlag('-ftree-vectorize')
-	env.RemoveFlag('-std=c++0x')
+	# The OSX Objective C++ compiler does not permit the following flags
+	env.RemoveFlags(['-fstrict-aliasing', '-ftree-vectorize',
+		'-std=c\+\+0x'])
+	# Remove Intel compiler-specific optimization flags
+	env.RemoveFlags(['-x.*', '-ax.*', '-ipo', '-no-prec-div', 
+		'-fp-model', 'fast=.*', '-wd.*', '-openmp'])
 	env.AppendFlag('-fno-strict-aliasing')
+	env.AppendFlag('-fopenmp')
+	# Enforce GCC usage (Intel compiler doesn't handle Objective C/C++)
+	env['CXX'] = 'g++'
+	env['CC'] = 'gcc'
 
 def relax_compiler_settings(env):
 	# Relax the compiler settings when compiling heavy templated code
 	# (e.g. Boost::Spirit parsers, etc., which don't necessarily have
 	# to be that fast)
-	env.RemoveFlag('-g')
-	env.RemoveFlag('/Z7')
-	env.RemoveFlag('-ipo')
-	env.RemoveFlag('/Qipo')
-	env.RemoveFlag('/GL')
+	env.RemoveFlags(['-g', '/Z7', '-ipo', '/GL'])
 	if env.RemoveFlag('-O3'):
-		env.AppendFlag('-O1')
+		env.AppendFlag('-Os')
 	if env.RemoveFlag('/O2'):
 		env.AppendFlag('/O1')
 

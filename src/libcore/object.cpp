@@ -18,7 +18,7 @@
 
 #include <mitsuba/mitsuba.h>
 
-//#define DEBUG_ALLOCATIONS 1
+#define DEBUG_REFCOUNTS 0
 
 MTS_NAMESPACE_BEGIN
 
@@ -29,7 +29,7 @@ Object::Object()
 }
 
 void Object::incRef() const {
-#if defined(DEBUG_ALLOCATIONS)
+#if DEBUG_REFCOUNTS == 1
 	if (Class::rttiIsInitialized())
 		cout << this << ": Increasing reference count (" << getClass()->getName() << ") -> "
 			<< m_refCount + 1 << endl;
@@ -42,7 +42,7 @@ void Object::incRef() const {
 }
 
 void Object::decRef() const {
-#if defined(DEBUG_ALLOCATIONS)
+#if DEBUG_REFCOUNTS == 1
 	if (Class::rttiIsInitialized()) {
 		cout << this << ": Decreasing reference count (" << getClass()->getName() << ") -> "
 			<< m_refCount - 1 << endl;
@@ -55,7 +55,7 @@ void Object::decRef() const {
 #endif
 	AssertEx(count >= 0, "Reference count is below zero!");
 	if (count == 0) {
-#if defined(DEBUG_ALLOCATIONS)
+#if DEBUG_REFCOUNTS == 1
 		if (Class::rttiIsInitialized())
 			cout << this << ": Deleting an instance of " << 
 				getClass()->getName() << endl;

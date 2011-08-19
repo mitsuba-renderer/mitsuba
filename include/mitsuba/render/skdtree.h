@@ -62,6 +62,7 @@ typedef const Shape * ConstShapePtr;
  * tends to be quite a bit slower.
  *
  * \sa GenericKDTree
+ * \ingroup librender
  */
 
 class MTS_EXPORT_RENDER ShapeKDTree : public SAHKDTree3D<ShapeKDTree> {

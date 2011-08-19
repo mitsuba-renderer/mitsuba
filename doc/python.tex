@@ -1,0 +1,42 @@
+\section{Python integration}
+\label{sec:python}
+A recent feature of Mitsuba is a simple Python interface to the renderer API. 
+While the interface is still limited at this point, it can already be
+used for simple automation purposes. To access the API, start your Python 
+interpreter and enter
+\begin{python}
+import mitsuba
+\end{python}
+For this to work on MacOS X, you will first have to run the ``\emph{Apple
+Menu}$\to$\emph{Command-line access}'' menu item from within Mitsuba.
+On Windows and non-packaged Linux builds, you may have to update the extension
+search path before issuing the \code{import} command:
+\begin{python}
+import sys
+
+# Update the extension search path
+# (may vary depending on your setup)
+sys.path.append('dist/python')
+
+import mitsuba
+\end{python}
+For an overview of the currently exposed API subset, refer
+to the following page: \url{http://www.mitsuba-renderer.org/api/group__libpython.html}.
+
+\subsection{Fundamentals}
+All 
+
+Where applicable, the Python wrapper supports operator overloading,
+default arguments, and 
+\begin{python}
+import mitsuba
+from mitsuba.core import *
+
+myVector = normalize(Vector(1.0, 2.0, 3.0))
+
+print(myVector * 2)
+
+Log(EInfo, "" +)
+\end{python}
+
+

@@ -27,6 +27,7 @@ MTS_NAMESPACE_BEGIN
  * \brief Contains a few useful noise functions
  *
  * The implementations in this class are based on PBRT
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Noise {
 public:

@@ -58,6 +58,8 @@ MTS_NAMESPACE_BEGIN
  * stratify over all of the rays that are ultimately generated, and the
  * \ref next1DArray() and \ref next2DArray() methods allow to do this.
  * See the file \c direct.cpp for an example.
+ *
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Sampler : public ConfigurableObject {
 public:

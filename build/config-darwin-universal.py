@@ -3,7 +3,7 @@ DISTDIR        = '#Mitsuba.app'
 CXX            = 'g++'
 CC             = 'gcc'
 CXXFLAGS       = ['-arch', 'i386', '-arch', 'x86_64', '-mmacosx-version-min=10.6', '-march=nocona', '-msse2', '-mfpmath=sse', '-ftree-vectorize', '-funsafe-math-optimizations', '-fno-rounding-math', '-fno-signaling-nans', '-fomit-frame-pointer', '-isysroot', '/Developer/SDKs/MacOSX10.6.sdk', '-O3', '-Wall', '-g', '-pipe', '-DMTS_DEBUG', '-DSINGLE_PRECISION', '-DSPECTRUM_SAMPLES=3', '-DMTS_SSE', '-DMTS_HAS_COHERENT_RT', '-fopenmp', '-fstrict-aliasing', '-fsched-interblock', '-freorder-blocks']
-LINKFLAGS      = ['-framework', 'OpenGL', '-framework', 'Cocoa', '-arch', 'i386', '-arch', 'x86_64', '-mmacosx-version-min=10.6', '-Wl,-syslibroot,/Developer/SDKs/MacOSX10.6.sdk']
+LINKFLAGS      = ['-framework', 'OpenGL', '-framework', 'Cocoa', '-arch', 'i386', '-arch', 'x86_64', '-mmacosx-version-min=10.6', '-Wl,-syslibroot,/Developer/SDKs/MacOSX10.6.sdk', '-Wl,-headerpad,128']
 BASEINCLUDE    = ['#include']
 BASELIB        = ['m', 'pthread', 'gomp']
 OEXRINCLUDE    = ['#dependencies/darwin/OpenEXR.framework/Headers/OpenEXR']
