@@ -21,41 +21,41 @@
 
 MTS_NAMESPACE_BEGIN
 
-static pthread_key_t __ubi_autorelease_key;
-static bool __ubi_cocoa_initialized = false;
+static pthread_key_t __mts_autorelease_key;
+static bool __mts_cocoa_initialized = false;
 	
-void __ubi_autorelease_init() {
-	pthread_key_create(&__ubi_autorelease_key, NULL);
+void __mts_autorelease_init() {
+	pthread_key_create(&__mts_autorelease_key, NULL);
 }
 
-void __ubi_autorelease_shutdown() {
-	pthread_key_delete(__ubi_autorelease_key);
+void __mts_autorelease_shutdown() {
+	pthread_key_delete(__mts_autorelease_key);
 }
 
-void __ubi_autorelease_begin() {
+void __mts_autorelease_begin() {
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-	pthread_setspecific(__ubi_autorelease_key, pool);
+	pthread_setspecific(__mts_autorelease_key, pool);
 }
 
-void __ubi_autorelease_end() {
+void __mts_autorelease_end() {
 	NSAutoreleasePool *pool = 
-		static_cast<NSAutoreleasePool *>(pthread_getspecific(__ubi_autorelease_key));
+		static_cast<NSAutoreleasePool *>(pthread_getspecific(__mts_autorelease_key));
 	[pool release]; 
 }
 
-void __ubi_chdir_to_bundlepath() {
+void __mts_chdir_to_bundlepath() {
 	chdir([[[NSBundle mainBundle] bundlePath] fileSystemRepresentation]);
 }
 
-std::string __ubi_bundlepath() {
+std::string __mts_bundlepath() {
 	return [[[NSBundle mainBundle] bundlePath] fileSystemRepresentation];
 }
 
-void __ubi_init_cocoa() {
-	if (!__ubi_cocoa_initialized) {
+void __mts_init_cocoa() {
+	if (!__mts_cocoa_initialized) {
 		[NSApplication sharedApplication]; /* Creates a connection to the windowing environment */
 		[NSApp activateIgnoringOtherApps:YES]; /* Pop to front */
-		__ubi_cocoa_initialized = true;
+		__mts_cocoa_initialized = true;
 	}
 }
 
