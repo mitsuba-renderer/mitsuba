@@ -14,7 +14,7 @@
 
 /**
 	\mainpage Mitsuba Renderer API Documentation
-
+	<center><span style="color:red">Warning:</span> The generated API documentation is still very new and currently incomplete.</center>
 	<h2>Basic Information</h2>
 	<p>Welcome to the Mitsuba API documentation. <a href="http:/www.mitsuba-renderer.org">Mitsuba</a>
 	is a modular open-source rendering framework, which consists of a small set of core libraries
