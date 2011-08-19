@@ -461,12 +461,12 @@
   </action>
   <action name="actionSceneDescription">
    <property name="text">
-    <string>Scene Information ..</string>
+    <string>Scene information ..</string>
    </property>
   </action>
   <action name="actionEnableCommandLine">
    <property name="text">
-    <string>Command-line Access</string>
+    <string>Command-line access</string>
    </property>
   </action>
  </widget>
