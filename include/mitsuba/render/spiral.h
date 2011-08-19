@@ -26,7 +26,10 @@
 
 MTS_NAMESPACE_BEGIN
 
-/// Block listener callback for use with the Spiral class
+/**
+ * \brief Block listener callback for use with the \ref Spiral class
+ * \ingroup librender
+ */
 class MTS_EXPORT_RENDER BlockListener {
 public:
 	/// Called whenever an image block is acquired
@@ -52,7 +55,8 @@ protected:
  * Aug 25, 2005
  * RayTracer.java
  * Copyright 2005 Program of Computer Graphics, Cornell University
-  */
+ * \ingroup librender
+ */
 
 class MTS_EXPORT_RENDER Spiral : public Object {
 public:

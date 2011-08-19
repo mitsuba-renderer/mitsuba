@@ -27,6 +27,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Data structure used by the direct illumination / shadow ray
  * sampling methods in the class \ref Luminaire.
+ * \ingroup librender
  */
 struct MTS_EXPORT_RENDER LuminaireSamplingRecord {
 public:
@@ -66,6 +67,7 @@ public:
 /**
  * \brief Data structure used to record information associated with
  * emission sampling in the class \ref Luminaire.
+ * \ingroup librender
  */
 struct MTS_EXPORT_RENDER EmissionRecord {
 public:
@@ -119,6 +121,7 @@ public:
 /**
  * \brief Abstract implementation of a luminaire. Supports emission and
  * direct illumination sampling strategies, and computes related probabilities.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Luminaire : public ConfigurableObject, public HWResource {
 public:

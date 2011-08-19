@@ -27,6 +27,7 @@ MTS_NAMESPACE_BEGIN
 /** 
  * \brief Abstract render listener - can be used to react to 
  * progress messages (e.g. in a GUI)
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER RenderListener : public Object {
 public:
@@ -55,6 +56,7 @@ protected:
  * Render queue - used to keep track of a number of scenes
  * that are simultaneously being rendered. Also distributes
  * events regarding these scenes to registered listeners.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER RenderQueue : public Object {
 public:

@@ -36,6 +36,8 @@ MTS_NAMESPACE_BEGIN
  * properties using uniforms, in which case already existing code 
  * can be reused and we get something more like lower case n squared
  * (where lower n is the number of material types).
+ *
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW VPLShaderManager : public Object {
 public:

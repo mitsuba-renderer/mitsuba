@@ -27,6 +27,8 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Data structure, which contains information 
  * required to sample or query a phase function. 
+ *
+ * \ingroup librender
  */
 struct MTS_EXPORT_RENDER PhaseFunctionQueryRecord {
 	/**
@@ -97,6 +99,7 @@ struct MTS_EXPORT_RENDER PhaseFunctionQueryRecord {
 };
 
 /** \brief Abstract phase function.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER PhaseFunction : public ConfigurableObject {
 public:

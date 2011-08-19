@@ -24,6 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief X Windows OpenGL-capable (GLX) device
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW GLXDevice : public X11Device {
 public:

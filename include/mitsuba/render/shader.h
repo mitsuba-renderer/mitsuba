@@ -47,6 +47,8 @@ public:
  *
  * Subclasses can implement one of various things, such as a BSDF, 
  * a light source, or a texture.
+ *
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Shader : public Object {
 public:

@@ -25,7 +25,10 @@ MTS_NAMESPACE_BEGIN
 	
 template <typename T> class AnimationTrack;
 
-/// Base class of animation tracks
+/**
+ * \brief Base class of animation tracks
+ * \ingroup librender
+ */
 class MTS_EXPORT_RENDER AbstractAnimationTrack : public Object {
 	template<typename T> friend class AnimationTrack;
 public:
@@ -63,7 +66,10 @@ protected:
 	std::vector<Float> m_times;
 };
 
-/// Parameterizable animation track
+/**
+ * \brief Parameterizable animation track
+ * \ingroup librender
+ */
 template <typename T> class AnimationTrack : public AbstractAnimationTrack {
 public:
 	typedef T value_type;
@@ -155,7 +161,10 @@ template<> void AnimationTrack<Quaternion>::serialize(Stream *stream, const Quat
 	value.serialize(stream);
 }
 
-/// Animated transformation with an underlying keyframe representation
+/**
+ * \brief Animated transformation with an underlying keyframe representation
+ * \ingroup librender
+ */
 class MTS_EXPORT_RENDER AnimatedTransform : public Object {
 public:
 	/// Create a new animated transform

@@ -34,6 +34,7 @@ MTS_NAMESPACE_BEGIN
  * \brief Constant spectrum-valued texture
  *
  * Includes a \ref Shader implementation for hardware rendering
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW ConstantSpectrumTexture : public Texture {
 public:
@@ -82,6 +83,7 @@ protected:
  * \brief Constant float-valued texture
  *
  * Includes a \ref Shader implementation for hardware rendering
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW ConstantFloatTexture : public Texture {
 public:
@@ -130,6 +132,7 @@ protected:
  * \brief Componentwise addition of two textures
  *
  * Includes a \ref Shader implementation for hardware rendering
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW SpectrumAdditionTexture : public Texture {
 public:
@@ -181,6 +184,7 @@ protected:
  * \brief Componentwise subtraction of two textures
  *
  * Includes a \ref Shader implementation for hardware rendering
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW SpectrumSubtractionTexture : public Texture {
 public:
@@ -232,6 +236,7 @@ protected:
  * \brief Componentwise product of two textures
  *
  * Includes a \ref Shader implementation for hardware rendering
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW SpectrumProductTexture : public Texture {
 public:

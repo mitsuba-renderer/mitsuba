@@ -25,6 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Windows (WGL) renderer implementation
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW WGLRenderer : public GLRenderer {
 public:

@@ -25,6 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Windows (WGL) device implementation
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW WGLDevice : public Device {
 public:

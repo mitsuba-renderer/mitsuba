@@ -28,6 +28,7 @@ class Renderer;
 
 /** \brief The device event structure encapsulates event
  * information such as mouse movement or key presses
+ * \ingroup libhw
  */
 struct MTS_EXPORT_HW DeviceEvent {
 public:
@@ -114,6 +115,7 @@ private:
 };
 
 /** \brief Abstract device event callback
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW DeviceEventListener {
 public:
@@ -128,6 +130,7 @@ protected:
 };
 
 /** \brief An abstract drawing device
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW Device : public Object {
 public:

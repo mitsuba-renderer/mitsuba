@@ -34,6 +34,7 @@
 #define BP_WRAPPED_CLASS(Name, Wrapper, Base, Init) \
 	bp::class_<Name, ref<Wrapper>, bp::bases<Base>, boost::noncopyable> Name ##_class(#Name, Init); \
 	bp::register_ptr_to_python<Name*>(); \
+	bp::implicitly_convertible<ref<Wrapper>, ref<Name> >(); \
 	Name ##_class
 
 #define BP_IMPLEMENT_VECTOR_OPS(Name, Scalar, Size) \

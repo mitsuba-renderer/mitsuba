@@ -40,6 +40,7 @@ MTS_NAMESPACE_BEGIN
  * declared using the MTS_DECLARE_TEST() macro are executed. Finally,
  * the shutdown() method is called. See the files in 'mitsuba/src/tests'
  * for examples.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER TestCase : public Utility {
 public:
@@ -123,6 +124,7 @@ protected:
  * the actual generated results and a user-specified type of test is executed
  * to decide between equality or inequality. Any problems are kept in a log, 
  * which can later be printed using <tt>printSummary()</tt>.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER TestSupervisor : public Object {
 public:

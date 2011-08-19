@@ -28,6 +28,8 @@ MTS_NAMESPACE_BEGIN
  * 
  * An example usage is in \ref ParticleProcess, where this class specifies
  * sequences of particles to be traced.
+ *
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER RangeWorkUnit : public WorkUnit {
 public:

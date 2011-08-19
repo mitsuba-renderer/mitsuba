@@ -31,6 +31,8 @@ MTS_NAMESPACE_BEGIN
  * completely up to the implementation. It might for instance
  * recursively trace rays or perform lookups into a precomputed
  * point cloud radiance representation.
+ *
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Subsurface : public NetworkedObject {
 public:

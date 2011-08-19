@@ -34,7 +34,10 @@ XERCES_CPP_NAMESPACE_END
 XERCES_CPP_NAMESPACE_USE
 MTS_NAMESPACE_BEGIN
 
-/// \brief This exception is thrown when attempting to load an outdated file
+/**
+ * \brief This exception is thrown when attempting to load an outdated file
+ * \ingroup librender
+ */
 class VersionException : public std::runtime_error {
 public:
 	inline VersionException(const std::string &str, const Version &version)
@@ -48,6 +51,7 @@ private:
 /**
  * \brief XML parser for Mitsuba scene files. To be used with the
  * SAX interface Xerces-C++.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER SceneHandler : public HandlerBase {
 public:

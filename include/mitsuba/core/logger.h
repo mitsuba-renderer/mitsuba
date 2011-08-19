@@ -54,12 +54,13 @@ MTS_NAMESPACE_BEGIN
 /*! \addtogroup libcore */
 /*! @{ */
 
+/// Assert that a condition is true (to be used \a inside of classes that derive from \ref Object) 
 #define Assert(cond) do { \
 		if (!(cond)) Log(EError, "Assertion \"%s\" failed in %s:%i", \
 		#cond, __FILE__, __LINE__); \
 	} while (0)
 
-/// ``Static'' assertion (to be used outside of classes that derive from Object) 
+/// ``Static'' assertion (to be used \a outside of classes that derive from \ref Object) 
 #define SAssert(cond) do { \
 		if (!(cond)) SLog(EError, "Assertion \"%s\" failed in %s:%i", \
 		#cond, __FILE__, __LINE__); \
@@ -151,6 +152,9 @@ public:
 
 	/// Remove an appender from this logger
 	void removeAppender(Appender *appender);
+
+	/// Remove all appenders from this logger
+	void clearAppenders();
 
 	/// Return the number of registered appenders
 	inline size_t getAppenderCount() const { return m_appenders.size(); }

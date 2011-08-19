@@ -681,6 +681,7 @@ MTS_NAMESPACE_BEGIN
  * in parallel.
  *
  * \author Wenzel Jakob
+ * \ingroup librender
  */
 template <typename AABBType, typename TreeConstructionHeuristic, typename Derived> 
 	class GenericKDTree : public KDTreeBase<AABBType> {

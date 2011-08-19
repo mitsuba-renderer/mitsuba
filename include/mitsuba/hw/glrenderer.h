@@ -46,6 +46,7 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief OpenGL implementation of the \ref Renderer interface
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW GLRenderer : public Renderer {
 public:

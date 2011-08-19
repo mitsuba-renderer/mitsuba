@@ -140,15 +140,15 @@
 
 MTS_NAMESPACE_BEGIN
 #if defined(__OSX__)
-extern void __ubi_autorelease_init();
-extern void __ubi_autorelease_shutdown();
-extern void __ubi_autorelease_begin();
-extern void __ubi_autorelease_end();
-extern std::string __ubi_bundlepath();
-extern void __ubi_chdir_to_bundlepath();
-extern void __ubi_init_cocoa();
-#define MTS_AUTORELEASE_BEGIN() __ubi_autorelease_begin();
-#define MTS_AUTORELEASE_END() __ubi_autorelease_end();
+extern void __mts_autorelease_init();
+extern void __mts_autorelease_shutdown();
+extern void __mts_autorelease_begin();
+extern void __mts_autorelease_end();
+extern std::string __mts_bundlepath();
+extern void __mts_chdir_to_bundlepath();
+extern void __mts_init_cocoa();
+#define MTS_AUTORELEASE_BEGIN() __mts_autorelease_begin();
+#define MTS_AUTORELEASE_END() __mts_autorelease_end();
 #define MTS_AMBIGUOUS_SIZE_T 1
 #else
 #define MTS_AUTORELEASE_BEGIN() 

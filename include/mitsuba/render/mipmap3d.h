@@ -25,7 +25,8 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Sparse mipmap data structure based on an adaptive octree representation
+ * \brief Sparse mipmap data structure based on an adaptive octree representation
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER SparseMipmap3D : public SerializableObject {
 public:

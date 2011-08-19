@@ -28,6 +28,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Base class of all textures. Computes values for an arbitrary surface
  * point. \ref Texture2D is a specialization to UV-based textures.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Texture : public ConfigurableObject, public HWResource {
 public:
@@ -63,6 +64,10 @@ protected:
 	virtual ~Texture();
 };
 
+/**
+ * \brief Base class of all 2D textures
+ * \ingroup librender
+ */
 class MTS_EXPORT_RENDER Texture2D : public Texture {
 public:
 	/// Return the texture value at \a its

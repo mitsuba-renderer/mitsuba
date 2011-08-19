@@ -24,6 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Abstract shader program (for fragment/vertex shading)
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW GPUProgram : public Object {
 public:

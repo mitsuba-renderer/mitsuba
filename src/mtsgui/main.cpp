@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
 		/* Create a log file inside the application bundle */
 		MTS_AUTORELEASE_BEGIN() 
 		logger->addAppender(new StreamAppender(formatString("%s/mitsuba.%s.log", 
-			__ubi_bundlepath().c_str(), getHostName().c_str())));
+			__mts_bundlepath().c_str(), getHostName().c_str())));
 		MTS_AUTORELEASE_END() 
 #else
 		/* Create a log file inside the current working directory */
