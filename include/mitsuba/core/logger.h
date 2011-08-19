@@ -152,6 +152,9 @@ public:
 	/// Remove an appender from this logger
 	void removeAppender(Appender *appender);
 
+	/// Remove all appenders from this logger
+	void clearAppenders();
+
 	/// Return the number of registered appenders
 	inline size_t getAppenderCount() const { return m_appenders.size(); }
 

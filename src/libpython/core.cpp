@@ -159,25 +159,30 @@ void mts_log(ELogLevel level, const std::string &msg) {
 	bp::object extract_stack(traceback.attr("extract_stack"));
 	bp::object stack = extract_stack();
 	bp::object top(stack[bp::len(stack)-1]);
+	std::string module = bp::extract<std::string>(top[2]);
 	Thread::getThread()->getLogger()->log(level, 
 		NULL, bp::extract<const char *>(top[0]), 
-		bp::extract<int>(top[1]), "%s(): %s", 
-		(const char *) bp::extract<const char *>(top[2]), 
+		bp::extract<int>(top[1]), "%s%s: %s", 
+		module.c_str(), module[0] == '<' ? "" : "()",
 		msg.c_str());
 }
 
-class AppenderWrapper : public Appender, public bp::wrapper<Appender> {
+class AppenderWrapper : public Appender {
 public:
-	AppenderWrapper(PyObject *self) : m_self(self) { }
+	AppenderWrapper(PyObject *self) : m_self(self) { Py_INCREF(m_self); }
 
 	void append(ELogLevel level, const std::string &text) {
-		get_override("append")(level, text);
+		bp::call_method<void>(m_self, "append", level, text);
 	}
 
 	void logProgress(Float progress, const std::string &name,
 		const std::string &formatted, const std::string &eta, 
 		const void *ptr) {
-		get_override("logProgress")(progress, name, formatted, eta);
+		bp::call_method<void>(m_self, "logProgress", name, formatted, eta);
+	}
+
+	virtual ~AppenderWrapper() {
+		Py_DECREF(m_self);
 	}
 private:
 	PyObject *m_self;
@@ -221,7 +226,8 @@ void export_core() {
 	bp::class_<Object, ref<Object>, boost::noncopyable>("Object", bp::no_init)
 		.def("getRefCount", &Object::getRefCount)
 		.def("__str__", &Object::toString);
-	
+	bp::register_ptr_to_python<Object*>();
+
 	BP_CLASS(Stream, Object, bp::no_init)
 		.def("setByteOrder", &Stream::setByteOrder)
 		.def("getByteOrder", &Stream::getByteOrder)
@@ -341,13 +347,14 @@ void export_core() {
 		.def("getErrorLevel", &Logger::getErrorLevel)
 		.def("addAppender", &Logger::addAppender)
 		.def("removeAppender", &Logger::removeAppender)
+		.def("clearAppenders", &Logger::clearAppenders)
 		.def("getAppenderCount", &Logger::getAppenderCount)
 		.def("getAppender", logger_get_appender, BP_RETURN_VALUE)
 		.def("getWarningCount", &Logger::getWarningCount);
 
 	BP_CLASS(InstanceManager, Object, bp::init<>())
 		.def("serialize", &InstanceManager::serialize)
-		.def("getInstance", &instance_manager_getinstance);
+		.def("getInstance", &instance_manager_getinstance, BP_RETURN_VALUE);
 
 	bp::class_<ContinuousSpectrum, boost::noncopyable>("ContinuousSpectrum", bp::no_init)
 		.def("eval", &ContinuousSpectrum::eval)
@@ -549,6 +556,27 @@ void export_core() {
 	BP_IMPLEMENT_POINT_OPS(Point2, Float, 2);
 	BP_IMPLEMENT_POINT_OPS(Point3, Float, 3);
 	BP_IMPLEMENT_POINT_OPS(Point4, Float, 3);
+
+	Float (*dot2)(const Vector2 &, const Vector2 &) = &dot;
+	Float (*dot3)(const Vector3 &, const Vector3 &) = &dot;
+	Float (*dot4)(const Vector4 &, const Vector4 &) = &dot;
+	Float (*absDot2)(const Vector2 &, const Vector2 &) = &absDot;
+	Float (*absDot3)(const Vector3 &, const Vector3 &) = &absDot;
+	Float (*absDot4)(const Vector4 &, const Vector4 &) = &absDot;
+	Vector2 (*normalize2)(const Vector2 &) = &normalize;
+	Vector3 (*normalize3)(const Vector3 &) = &normalize;
+	Vector4 (*normalize4)(const Vector4 &) = &normalize;
+	Vector3 (*cross3)(const Vector3 &, const Vector3 &) = &cross;
+	bp::def("dot", dot2);
+	bp::def("dot", dot3);
+	bp::def("dot", dot4);
+	bp::def("absDot", absDot2);
+	bp::def("absDot", absDot3);
+	bp::def("absDot", absDot4);
+	bp::def("normalize", normalize2);
+	bp::def("normalize", normalize3);
+	bp::def("normalize", normalize4);
+	bp::def("cross", cross3);
 
 	bp::scope().attr("Vector") = bp::scope().attr("Vector3");
 	bp::scope().attr("Point") = bp::scope().attr("Point3");

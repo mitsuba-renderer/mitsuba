@@ -33,7 +33,7 @@ Logger::Logger(ELogLevel level)
 }
 
 Logger::~Logger() {
-	for (unsigned int i=0; i<m_appenders.size(); ++i)
+	for (size_t i=0; i<m_appenders.size(); ++i)
 		m_appenders[i]->decRef();
 }
 
@@ -99,7 +99,7 @@ void Logger::log(ELogLevel level, const Class *theClass,
 		m_mutex->lock();
 		if (level >= EWarn)
 			m_warningCount++;
-		for (unsigned int i=0; i<m_appenders.size(); ++i)
+		for (size_t i=0; i<m_appenders.size(); ++i)
 			m_appenders[i]->append(level, text);
 		m_mutex->unlock();
 	} else {
@@ -141,7 +141,7 @@ void Logger::log(ELogLevel level, const Class *theClass,
 void Logger::logProgress(Float progress, const std::string &name,
 	const std::string &formatted, const std::string &eta, const void *ptr) {
 	m_mutex->lock();
-	for (unsigned int i=0; i<m_appenders.size(); ++i)
+	for (size_t i=0; i<m_appenders.size(); ++i)
 		m_appenders[i]->logProgress(
 			progress, name, formatted, eta, ptr);
 	m_mutex->unlock();
@@ -160,6 +160,14 @@ void Logger::removeAppender(Appender *appender) {
 		m_appenders.end(), appender), m_appenders.end());
 	m_mutex->unlock();
 	appender->decRef();
+}
+
+void Logger::clearAppenders() {
+	m_mutex->lock();
+	for (size_t i=0; i<m_appenders.size(); ++i)
+		m_appenders[i]->decRef();
+	m_appenders.clear();
+	m_mutex->unlock();
 }
 
 void Logger::staticInitialization() {
