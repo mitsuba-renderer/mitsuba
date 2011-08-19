@@ -109,7 +109,7 @@ private:
 	int m_timeout;
 };
 
-int ubi_main(int argc, char **argv) {
+int mts_main(int argc, char **argv) {
 	char optchar, *end_ptr = NULL;
 
 	try {
@@ -427,7 +427,7 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 	
-	int retval = ubi_main(argc, argv);
+	int retval = mts_main(argc, argv);
 
 	XMLPlatformUtils::Terminate();
 

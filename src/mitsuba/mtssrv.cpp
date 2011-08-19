@@ -87,7 +87,7 @@ void collect_zombies(int s) {
 }
 #endif
 
-int ubi_main(int argc, char **argv) {
+int mts_main(int argc, char **argv) {
 	char optchar, *end_ptr = NULL;
 
 	try {
@@ -401,7 +401,7 @@ int main(int argc, char **argv) {
 	setlocale(LC_NUMERIC, "C");
 #endif
 
-	int retval = ubi_main(argc, argv);
+	int retval = mts_main(argc, argv);
 
 	/* Shutdown the core framework */
 	SHVector::staticShutdown();

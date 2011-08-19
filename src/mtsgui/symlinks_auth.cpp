@@ -5,7 +5,7 @@
 #include <iostream>
 
 namespace mitsuba {
-	extern std::string __ubi_bundlepath();
+	extern std::string __mts_bundlepath();
 };
 
 bool create_symlinks() {
@@ -27,7 +27,7 @@ bool create_symlinks() {
 		AuthorizationFree(ref, kAuthorizationFlagDefaults);
 		return false;
 	}
-	std::string bundlePath = mitsuba::__ubi_bundlepath();
+	std::string bundlePath = mitsuba::__mts_bundlepath();
 	std::string path = bundlePath + "/Contents/MacOS/symlinks_install";
 	char *args[] = { const_cast<char *>(bundlePath.c_str()), NULL };
 	FILE *pipe = NULL;

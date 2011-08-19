@@ -363,7 +363,7 @@ int mtsutil(int argc, char **argv) {
 	return 0;
 }
 
-int ubi_main(int argc, char **argv) {
+int mts_main(int argc, char **argv) {
 	/* Initialize the core framework */
 	Class::staticInitialization();
 	PluginManager::staticInitialization();
@@ -421,7 +421,7 @@ int ubi_main(int argc, char **argv) {
 
 #if !defined(__OSX__)
 int main(int argc, char **argv) {
-	return ubi_main(argc, argv);
+	return mts_main(argc, argv);
 }
 #endif
 
