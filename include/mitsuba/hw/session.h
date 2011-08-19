@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 class Device;
 
 /** \brief Abstract windowing environment session
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW Session : public Object {
 	friend class Device;

@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 
 /** \brief OpenGL shader class -- responsible from compiling
  * and linking GLSL fragments
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW GLProgram : public GPUProgram {
 public:

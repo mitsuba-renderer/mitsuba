@@ -28,6 +28,7 @@ MTS_NAMESPACE_BEGIN
  *
  * A FreeType2-based generation tool is located in the directory
  * 'tools/linux/fontgen'. Only Latin-1 is supported at the moment.
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW Font : public Object {
 public:
