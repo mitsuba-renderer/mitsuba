@@ -2,7 +2,8 @@ BUILDDIR       = '#build/release'
 DISTDIR        = '#Mitsuba.app'
 CXX            = 'icpc'
 CC             = 'icc'
-CXXFLAGS       = ['-arch', 'x86_64', '-std=c++0x', '-mmacosx-version-min=10.6', '-mfpmath=sse', '-isysroot', '/Developer/SDKs/MacOSX10.6.sdk', '-O3', '-ipo', '-xSSSE3', '-fp-model', 'fast=2', '-openmp', '-wd279', '-Wall', '-g', '-pipe', '-DMTS_DEBUG', '-DSINGLE_PRECISION', '-DSPECTRUM_SAMPLES=3', '-DMTS_SSE', '-DMTS_HAS_COHERENT_RT']
+CCFLAGS        = ['-arch', 'x86_64', '-mmacosx-version-min=10.6', '-mfpmath=sse', '-isysroot', '/Developer/SDKs/MacOSX10.6.sdk', '-O3', '-ipo', '-xSSSE3', '-fp-model', 'fast=2', '-openmp', '-wd279', '-Wall', '-g', '-pipe']
+CXXFLAGS       = ['$CCFLAGS', '-std=c++0x', '-DMTS_DEBUG', '-DSINGLE_PRECISION', '-DSPECTRUM_SAMPLES=3', '-DMTS_SSE', '-DMTS_HAS_COHERENT_RT']
 LINKFLAGS      = ['-framework', 'OpenGL', '-framework', 'Cocoa', '-arch', 'x86_64', '-mmacosx-version-min=10.6', '-Wl,-syslibroot,/Developer/SDKs/MacOSX10.6.sdk', '-openmp', '-Wl,-headerpad,128']
 BASEINCLUDE    = ['#include']
 BASELIB        = ['m', 'pthread', 'gomp']
