@@ -276,6 +276,7 @@ def remove_flag(env, flag):
 
 def remove_flags(env, patterns):
 	new_cxxflags = []
+	new_linkflags = []
 	for flag in env['CXXFLAGS']:
 		found = False
 		for pattern in patterns:
@@ -284,7 +285,17 @@ def remove_flags(env, patterns):
 				break
 		if not found:
 			new_cxxflags.append(flag)
+	for flag in env['LINKFLAGS']:
+		found = False
+		for pattern in patterns:
+			if re.search(pattern, flag):
+				found = True
+				break
+		if not found:
+			new_cxxflags.append(flag)
 	env['CXXFLAGS'] = new_cxxflags
+	env['LINKFLAGS'] = new_linkflags
+
 
 def append_flag(env, value):
 	env['CXXFLAGS'].append(value)
