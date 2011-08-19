@@ -148,15 +148,22 @@ void appender_logProgress(Appender *appender, Float progress, const std::string 
 	const std::string &formatted, const std::string &eta) {
 	appender->logProgress(progress, name, formatted, eta, NULL);
 }
+
+void logger_logProgress(Logger *logger, Float progress, const std::string &name,
+	const std::string &formatted, const std::string &eta) {
+	logger->logProgress(progress, name, formatted, eta, NULL);
+}
 	
 void mts_log(ELogLevel level, const std::string &msg) {
 	bp::object traceback(bp::import("traceback"));
 	bp::object extract_stack(traceback.attr("extract_stack"));
-	bp::object top(extract_stack()[1]);
+	bp::object stack = extract_stack();
+	bp::object top(stack[bp::len(stack)-1]);
 	Thread::getThread()->getLogger()->log(level, 
 		NULL, bp::extract<const char *>(top[0]), 
-		bp::extract<int>(top[1]),
-		"%s: %s", (const char *) bp::extract<const char *>(top[2]), msg.c_str());
+		bp::extract<int>(top[1]), "%s(): %s", 
+		(const char *) bp::extract<const char *>(top[2]), 
+		msg.c_str());
 }
 
 class AppenderWrapper : public Appender, public bp::wrapper<Appender> {
@@ -214,7 +221,7 @@ void export_core() {
 	bp::class_<Object, ref<Object>, boost::noncopyable>("Object", bp::no_init)
 		.def("getRefCount", &Object::getRefCount)
 		.def("__str__", &Object::toString);
-
+	
 	BP_CLASS(Stream, Object, bp::no_init)
 		.def("setByteOrder", &Stream::setByteOrder)
 		.def("getByteOrder", &Stream::getByteOrder)
@@ -284,9 +291,8 @@ void export_core() {
 
 	BP_CLASS(SerializableObject, Stream, bp::no_init)
 		.def("serialize", &SerializableObject::serialize);
-	
-	typedef Object* (Thread::*get_parent_type)();
 
+	Thread *(Thread::*thread_get_parent)() = &Thread::getParent;
 	BP_CLASS(Thread, Object, bp::no_init)
 		.def("getID", &Thread::getID)
 		.def("getStackSize", &Thread::getStackSize)
@@ -296,12 +302,12 @@ void export_core() {
 		.def("getCritical", &Thread::getCritical)
 		.def("setName", &Thread::setName)
 		.def("getName", &Thread::getName, BP_RETURN_CONSTREF)
-//		.def("getParent", (get_parent_type) &Thread::getParent)
-//		.def("setLogger", &Thread::setLogger)
-//		.def("getLogger", &Thread::getLogger)
-//		.def("setFileResolver", &Thread::setFileResolver)
-//		.def("getFileResolver", &Thread::getFileResolver)
-		.def("getThread", &Thread::getThread, bp::return_internal_reference<>())
+		.def("getParent", thread_get_parent, BP_RETURN_VALUE)
+		.def("setLogger", &Thread::setLogger)
+		.def("getLogger", &Thread::getLogger, BP_RETURN_VALUE)
+		.def("setFileResolver", &Thread::setFileResolver)
+		.def("getFileResolver", &Thread::getFileResolver, BP_RETURN_VALUE)
+		.def("getThread", &Thread::getThread, BP_RETURN_VALUE)
 		.def("isRunning", &Thread::isRunning)
 		.def("sleep", &Thread::sleep)
 		.def("detach", &Thread::detach)
@@ -325,6 +331,19 @@ void export_core() {
 	BP_WRAPPED_CLASS(Appender, AppenderWrapper, Object, bp::init<>())
 		.def("append", &Appender::append)
 		.def("logProgress", &appender_logProgress);
+
+	Appender *(Logger::*logger_get_appender)(size_t) = &Logger::getAppender;
+	BP_CLASS(Logger, Object, bp::init<ELogLevel>())
+		.def("logProgress", logger_logProgress)
+		.def("setLogLevel", &Logger::setLogLevel)
+		.def("getLogLevel", &Logger::getLogLevel)
+		.def("setErrorLevel", &Logger::setErrorLevel)
+		.def("getErrorLevel", &Logger::getErrorLevel)
+		.def("addAppender", &Logger::addAppender)
+		.def("removeAppender", &Logger::removeAppender)
+		.def("getAppenderCount", &Logger::getAppenderCount)
+		.def("getAppender", logger_get_appender, BP_RETURN_VALUE)
+		.def("getWarningCount", &Logger::getWarningCount);
 
 	BP_CLASS(InstanceManager, Object, bp::init<>())
 		.def("serialize", &InstanceManager::serialize)
@@ -410,7 +429,7 @@ void export_core() {
 		.def("__setitem__", &properties_wrapper::set)
 		.def("__contains__", &Properties::hasProperty)
 		.def("__str__", &Properties::toString);
-	
+
 	BP_SETSCOPE(properties);
 	bp::enum_<Properties::EPropertyType>("EPropertyType")
 		.value("EBoolean", Properties::EBoolean)
@@ -422,8 +441,6 @@ void export_core() {
 		.value("EString", Properties::EString)
 		.value("EData", Properties::EData)
 		.export_values();
-
-
 	BP_SETSCOPE(coreModule);
 
 	BP_STRUCT(Vector2, bp::init<>())

@@ -325,7 +325,7 @@ def relax_compiler_settings(env):
 	# to be that fast)
 	env.RemoveFlags(['-g', '/Z7', '-ipo', '/GL'])
 	if env.RemoveFlag('-O3'):
-		env.AppendFlag('-O1')
+		env.AppendFlag('-Os')
 	if env.RemoveFlag('/O2'):
 		env.AppendFlag('/O1')
 

@@ -104,6 +104,8 @@ public:
 	 * \param fileName Source file of the message creator
 	 * \param lineNumber Source line number of the message creator
 	 * \param fmt printf-style string formatter
+	 * \note This function is not exposed in the Python bindings.
+	 *       Instead, please use \cc mitsuba.core.Log
 	 */
 	void log(ELogLevel level, const Class *theClass, 
 		const char *fileName, int lineNumber, 
@@ -115,7 +117,10 @@ public:
 	 * \param name Title of the progress message
 	 * \param formatted Formatted string representation of the message
 	 * \param eta Estimated time until 100% is reached.
-	 * \param ptr Custom pointer payload
+	 * \param ptr Custom pointer payload. This is used to express the
+	 *    context of a progress message. When rendering a scene, it
+	 *    will usually contain a pointer to the associated \c RenderJob.
+	 * \remark The \c ptr argument is missing in the Python bindings
 	 */
 	void logProgress(Float progress, const std::string &name,
 		const std::string &formatted, const std::string &eta,
@@ -123,7 +128,7 @@ public:
 
 	/// Set the log level (everything below will be ignored)
 	void setLogLevel(ELogLevel level);
-	
+
 	/**
 	 * \brief Set the error log level (this level and anything 
 	 * above will throw exceptions).
@@ -149,7 +154,7 @@ public:
 
 	/// Return the number of registered appenders
 	inline size_t getAppenderCount() const { return m_appenders.size(); }
-	
+
 	/// Return one of the appenders
 	inline Appender *getAppender(size_t index) { return m_appenders[index]; }
 	

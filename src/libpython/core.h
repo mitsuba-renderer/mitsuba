@@ -23,14 +23,17 @@
 
 #define BP_STRUCT(Name, Init) \
 	bp::class_<Name> Name ##_struct(#Name, Init); \
+	bp::register_ptr_to_python<Name*>(); \
 	Name ##_struct
 
 #define BP_CLASS(Name, Base, Init) \
 	bp::class_<Name, ref<Name>, bp::bases<Base>, boost::noncopyable> Name ##_class(#Name, Init); \
+	bp::register_ptr_to_python<Name*>(); \
 	Name ##_class
 
 #define BP_WRAPPED_CLASS(Name, Wrapper, Base, Init) \
 	bp::class_<Name, ref<Wrapper>, bp::bases<Base>, boost::noncopyable> Name ##_class(#Name, Init); \
+	bp::register_ptr_to_python<Name*>(); \
 	Name ##_class
 
 #define BP_IMPLEMENT_VECTOR_OPS(Name, Scalar, Size) \
@@ -81,7 +84,9 @@
 	} while (0);
 
 #define BP_RETURN_CONSTREF bp::return_value_policy<bp::copy_const_reference>()
-#define BP_RETURN_INTREF bp::return_internal_reference<>
+#define BP_RETURN_NONCONSTREF bp::return_value_policy<bp::copy_non_const_reference>()
+#define BP_RETURN_VALUE bp::return_value_policy<bp::return_by_value>()
+#define BP_RETURN_INTREF bp::return_internal_reference<>()
 
 namespace boost {
 	namespace python {
