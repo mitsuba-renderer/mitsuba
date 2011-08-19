@@ -256,6 +256,7 @@ extern MTS_EXPORT_CORE uint32_t roundToPowerOfTwo(uint32_t i);
 extern MTS_EXPORT_CORE uint64_t roundToPowerOfTwo(uint64_t i);
 
 #if defined(MTS_AMBIGUOUS_SIZE_T)
+/// Round an integer to the next power of two
 inline size_t roundToPowerOfTwo(size_t value) {
 	if (sizeof(size_t) == 8) /// will be optimized away
 		return (size_t) roundToPowerOfTwo((uint64_t) value);
@@ -264,7 +265,7 @@ inline size_t roundToPowerOfTwo(size_t value) {
 }
 #endif
 
-//// Windowed sinc filter (Lanczos envelope, tau=number of cycles)
+/// Windowed sinc filter (Lanczos envelope, tau=number of cycles)
 extern MTS_EXPORT_CORE Float lanczosSinc(Float t, Float tau = 2);
 
 /**
