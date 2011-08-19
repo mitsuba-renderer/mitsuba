@@ -25,7 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Process for parallel photon map construction
+ * \brief Process for parallel photon map construction
  *
  * Given a number and type (surface/caustic/volume) of photons, this 
  * class distributes the work over an arbitrary number of machines.
