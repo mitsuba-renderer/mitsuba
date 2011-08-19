@@ -54,7 +54,7 @@ if hasQt:
 		qtEnv_osx.ConfigureForObjectiveCPP()
 		qtEnv_osx['CXXFLAGS'].append(['-Fdependencies/darwin', '-framework', 'BWToolkitFramework'])
 		qtSources += qtEnv_osx.StaticObject('previewsettingsdlg_cocoa_impl.mm')
-		env.Program('symlinks_install', ['symlinks_install.cpp'])
+		qtEnv_osx.Program('symlinks_install', ['symlinks_install.c'])
 	else:
 		qtSources = [x for x in qtSources if (not isinstance(x, str) or 'cocoa' not in x)]
 	mtsgui = qtEnv.Program('mtsgui', qtSources)
