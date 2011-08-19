@@ -1,10 +1,19 @@
 /**
 	\defgroup libcore Core library
-	This module contains the core support API of Mitsuba
+	This library contains the core support API of Mitsuba
  */
 /**
 	\defgroup librender Render library
-	This module contains the rendering-related API of Mitsuba
+	This library contains the rendering-related API of Mitsuba
+ */
+/**
+	\defgroup libhw Hardware acceleration library
+	This library contains the hardware acceleration API of Mitsuba
+ */
+/**
+	\defgroup libbidir Bidirectional support library
+	This library contains a support layer used to develop bidirectional
+	rendering techniques.
  */
 /**
 	\defgroup libpython Python bindings

@@ -180,7 +180,7 @@ public:
 
 
 /** 
- * \brief Abstract BSDF base-class.
+ * \brief Abstract %BSDF base-class.
  *
  * This class implements an abstract interface to all BSDF plugins in Mitsuba.
  * It exposes functions for evaluating and sampling the model, and it allows

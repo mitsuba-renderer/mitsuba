@@ -59,6 +59,9 @@ protected:
 	Properties m_properties;
 };
 
+/// Filter resolution for \ref TabulatedFilter
+#define FILTER_RESOLUTION 15
+
 /**
  * \brief Tabulates expensive-to-evaluate filters so that they become
  * simple array lookups. 
@@ -66,7 +69,6 @@ protected:
  * Only works for symmetric filters!
  * \ingroup librender
  */
-#define FILTER_RESOLUTION 15
 class TabulatedFilter : public Object {
 public:
 	/// Tabulate a reconstruction filter
