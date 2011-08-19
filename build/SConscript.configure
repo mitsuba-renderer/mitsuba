@@ -274,28 +274,18 @@ def remove_flag(env, flag):
 	except:
 		return False
 
-def remove_flags(env, patterns):
-	new_cxxflags = []
-	new_linkflags = []
-	for flag in env['CXXFLAGS']:
-		found = False
-		for pattern in patterns:
-			if re.search(pattern, flag):
-				found = True
-				break
-		if not found:
-			new_cxxflags.append(flag)
-	for flag in env['LINKFLAGS']:
-		found = False
-		for pattern in patterns:
-			if re.search(pattern, flag):
-				found = True
-				break
-		if not found:
-			new_cxxflags.append(flag)
-	env['CXXFLAGS'] = new_cxxflags
-	env['LINKFLAGS'] = new_linkflags
+def match_pattern(x, patterns):
+	match = False
+	for pattern in patterns:
+		if re.search(pattern, x):
+			match = True
+			break
+	return match
 
+def remove_flags(env, patterns):
+	env['CCFLAGS'][:] = [ x for x in env['CCFLAGS'] if not match_pattern(x, patterns) ]
+	env['CXXFLAGS'][:] = [ x for x in env['CXXFLAGS'] if not match_pattern(x, patterns) ]
+	env['LINKFLAGS'][:] = [ x for x in env['LINKFLAGS'] if not match_pattern(x, patterns) ]
 
 def append_flag(env, value):
 	env['CXXFLAGS'].append(value)
@@ -313,8 +303,7 @@ def configure_for_objective_cpp(env):
 	# Remove Intel compiler-specific optimization flags
 	env.RemoveFlags(['-x.*', '-ax.*', '-ipo', '-no-prec-div', 
 		'-fp-model', 'fast=.*', '-wd.*', '-openmp'])
-	env.AppendFlag('-fno-strict-aliasing')
-	env.AppendFlag('-fopenmp')
+	env['CCFLAGS'] += ['-fno-strict-aliasing']
 	# Enforce GCC usage (Intel compiler doesn't handle Objective C/C++)
 	env['CXX'] = 'g++'
 	env['CC'] = 'gcc'

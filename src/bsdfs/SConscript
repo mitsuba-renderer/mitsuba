@@ -29,7 +29,6 @@ plugins += env.SharedLibrary('sssbrdf', ['sssbrdf.cpp'])
 # pretty heavy stuff to compile. Go easy on the compiler flags:
 irawanEnv = env.Clone()
 irawanEnv.RelaxCompilerSettings()
-
 plugins += irawanEnv.SharedLibrary('irawan', ['irawan.cpp'])
 
 Export('plugins')
