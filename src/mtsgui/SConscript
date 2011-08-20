@@ -48,13 +48,15 @@ if hasQt:
 			qtEnv.Prepend(LIBPATH=env['COLLADALIBDIR'])
 		if env.has_key('COLLADALIB'):
 			qtEnv.Prepend(LIBS=env['COLLADALIB'])
-
+	
 	if sys.platform == 'darwin':
 		qtEnv_osx = qtEnv.Clone()
+		mainEnv_osx = mainEnv.Clone()
+		mainEnv_osx.ConfigureForObjectiveCPP()
 		qtEnv_osx.ConfigureForObjectiveCPP()
+		mainEnv_osx.Program('symlinks_install', ['symlinks_install.c'])
 		qtEnv_osx['CXXFLAGS'].append(['-Fdependencies/darwin', '-framework', 'BWToolkitFramework'])
 		qtSources += qtEnv_osx.StaticObject('previewsettingsdlg_cocoa_impl.mm')
-		qtEnv_osx.Program('symlinks_install', ['symlinks_install.c'])
 	else:
 		qtSources = [x for x in qtSources if (not isinstance(x, str) or 'cocoa' not in x)]
 	mtsgui = qtEnv.Program('mtsgui', qtSources)
