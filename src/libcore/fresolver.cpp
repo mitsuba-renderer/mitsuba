@@ -86,8 +86,12 @@ std::string FileResolver::toString() const {
 	std::ostringstream oss;
 	oss << "FileResolver[" << endl
 		<< "  paths = {" << endl;
-	for (size_t i=0; i<m_paths.size(); ++i)
-		oss << "    \"" << m_paths[i].file_string() << "\"," << endl;
+	for (size_t i=0; i<m_paths.size(); ++i) {
+		oss << "    \"" << m_paths[i].file_string() << "\"";
+		if (i+1 < m_paths.size())
+			oss << ",";
+		oss << endl;
+	}
 	oss << "  }" << endl
 		<< "]";
 	return oss.str();

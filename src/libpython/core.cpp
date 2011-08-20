@@ -8,6 +8,8 @@
 #include <mitsuba/core/transform.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/appender.h>
+#include <mitsuba/core/bitmap.h>
+#include <mitsuba/core/random.h>
 
 using namespace mitsuba;
 
@@ -139,7 +141,19 @@ static Float Matrix4x4_getItem(Matrix4x4 *matrix, bp::tuple tuple) {
 
 	return matrix->operator()(i, j);
 }
-	
+
+Class *object_getClass(Object *object) {
+	return const_cast<Class *>(object->getClass());
+}
+
+Class *class_forName(const char *name) {
+	return const_cast<Class *>(Class::forName(name));
+}
+
+Class *class_getSuperClass(Class *theClass) {
+	return const_cast<Class *>(theClass->getSuperClass());
+}
+
 static ref<SerializableObject> instance_manager_getinstance(InstanceManager *manager, Stream *stream) {
 	return manager->getInstance(stream);
 }
@@ -166,6 +180,25 @@ void mts_log(ELogLevel level, const std::string &msg) {
 		module.c_str(), module[0] == '<' ? "" : "()",
 		msg.c_str());
 }
+
+class FormatterWrapper : public Formatter {
+public:
+	FormatterWrapper(PyObject *self) : m_self(self) { Py_INCREF(m_self); }
+
+	std::string format(ELogLevel logLevel, const Class *theClass,
+			const Thread *thread, const std::string &text, 
+			const char *file, int line) {
+		return bp::call_method<std::string>(m_self, "format", logLevel, 
+				bp::ptr(const_cast<Class *>(theClass)),
+				bp::ptr(const_cast<Thread *>(thread)), text, file, line);
+	}
+
+	virtual ~FormatterWrapper() {
+		Py_DECREF(m_self);
+	}
+private:
+	PyObject *m_self;
+};
 
 class AppenderWrapper : public Appender {
 public:
@@ -199,12 +232,16 @@ static Spectrum *spectrum_array_constructor(bp::list list) {
 	return new Spectrum(spec);
 }
 
+static Point ray_eval(const Ray &ray, Float t) {
+	return ray(t);
+}
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 
 void export_core() {
-	boost::python::to_python_converter<
-		fs::path, path_to_python_str>();
+	bp::to_python_converter<fs::path, path_to_python_str>();
+	bp::implicitly_convertible<std::string, fs::path>();
 
 	bp::object coreModule(
 		bp::handle<>(bp::borrowed(PyImport_AddModule("mitsuba.core"))));
@@ -223,8 +260,22 @@ void export_core() {
 
 	bp::def("Log", &mts_log);
 
+	bp::class_<Class, boost::noncopyable>("Class", bp::no_init)
+		.def("getName", &Class::getName, BP_RETURN_CONSTREF)
+		.def("isAbstract", &Class::isAbstract)
+		.def("isInstantiable", &Class::isInstantiable)
+		.def("isSerializable", &Class::isSerializable)
+		.def("derivesFrom", &Class::derivesFrom)
+		.def("getSuperClass", &class_getSuperClass, BP_RETURN_INTREF)
+		.def("forName", &class_forName, BP_RETURN_INTREF)
+		.def("unserialize", &Class::unserialize, BP_RETURN_VALUE)
+		.def("instantiate", &Class::instantiate, BP_RETURN_VALUE)
+		.staticmethod("forName");
+	bp::register_ptr_to_python<Class*>();
+
 	bp::class_<Object, ref<Object>, boost::noncopyable>("Object", bp::no_init)
 		.def("getRefCount", &Object::getRefCount)
+		.def("getClass", &object_getClass, BP_RETURN_INTREF)
 		.def("__str__", &Object::toString);
 	bp::register_ptr_to_python<Object*>();
 
@@ -338,6 +389,9 @@ void export_core() {
 		.def("append", &Appender::append)
 		.def("logProgress", &appender_logProgress);
 
+	BP_WRAPPED_CLASS(Formatter, FormatterWrapper, Object, bp::init<>())
+		.def("format", &Formatter::format);
+	
 	Appender *(Logger::*logger_get_appender)(size_t) = &Logger::getAppender;
 	BP_CLASS(Logger, Object, bp::init<ELogLevel>())
 		.def("logProgress", logger_logProgress)
@@ -350,6 +404,8 @@ void export_core() {
 		.def("clearAppenders", &Logger::clearAppenders)
 		.def("getAppenderCount", &Logger::getAppenderCount)
 		.def("getAppender", logger_get_appender, BP_RETURN_VALUE)
+		.def("getFormatter", &Logger::getFormatter, BP_RETURN_VALUE)
+		.def("setFormatter", &Logger::setFormatter)
 		.def("getWarningCount", &Logger::getWarningCount);
 
 	BP_CLASS(InstanceManager, Object, bp::init<>())
@@ -368,6 +424,56 @@ void export_core() {
 		.def("append", &InterpolatedSpectrum::append)
 		.def("clear", &InterpolatedSpectrum::clear)
 		.def("zeroExtend", &InterpolatedSpectrum::zeroExtend);
+
+	BP_CLASS(Bitmap, Object, (bp::init<int, int, int>()))
+		.def(bp::init<Bitmap::EFileFormat, Stream *>())
+		.def("clone", &Bitmap::clone, BP_RETURN_VALUE)
+		.def("clear", &Bitmap::clear)
+		.def("save", &Bitmap::save)
+		.def("setTitle", &Bitmap::setTitle)
+		.def("getTitle", &Bitmap::getTitle, BP_RETURN_INTREF)
+		.def("setAuthor", &Bitmap::setAuthor)
+		.def("getAuthor", &Bitmap::getAuthor, BP_RETURN_INTREF)
+		.def("setComment", &Bitmap::setComment)
+		.def("getComment", &Bitmap::getComment, BP_RETURN_INTREF)
+		.def("setGamma", &Bitmap::setGamma)
+		.def("getGamma", &Bitmap::getGamma)
+		.def("getWidth", &Bitmap::getWidth)
+		.def("getHeight", &Bitmap::getHeight)
+		.def("getBitsPerPixel", &Bitmap::getBitsPerPixel)
+		.def("getSize", &Bitmap::getSize);
+
+	BP_SETSCOPE(Bitmap_class);
+	bp::enum_<Bitmap::EFileFormat>("EFileFormat")
+		.value("EPNG", Bitmap::EPNG)
+		.value("EEXR", Bitmap::EEXR)
+		.value("ETGA", Bitmap::ETGA)
+		.value("EBMP", Bitmap::EBMP)
+		.value("EJPEG", Bitmap::EJPEG)
+		.export_values();
+	BP_SETSCOPE(coreModule);
+
+	BP_CLASS(FileResolver, Object, bp::init<>())
+		.def("resolve", &FileResolver::resolve, BP_RETURN_VALUE)
+		.def("resolveAbsolute", &FileResolver::resolveAbsolute, BP_RETURN_VALUE)
+		.def("clone", &FileResolver::clone, BP_RETURN_VALUE)
+		.def("addPath", &FileResolver::addPath)
+		.def("clear", &FileResolver::clear);
+
+	void (Random::*random_seed_random)(Random *) = &Random::seed;
+	void (Random::*random_seed_uint64_t)(uint64_t) = &Random::seed;
+	BP_CLASS(Random, Object, bp::init<>())
+		.def(bp::init<uint64_t>())
+		.def(bp::init<Random *>())
+		.def(bp::init<Stream *, InstanceManager *>())
+		.def("set", &Random::set)
+		.def("seed", random_seed_random)
+		.def("seed", random_seed_uint64_t)
+		.def("nextULong", &Random::nextULong)
+		.def("nextUInt", &Random::nextUInt)
+		.def("nextSize", &Random::nextSize)
+		.def("nextFloat", &Random::nextFloat)
+		.def("serialize", &Random::serialize);
 
 	BP_STRUCT(Spectrum, bp::init<>())
 		.def("__init__", bp::make_constructor(spectrum_array_constructor))
@@ -609,6 +715,23 @@ void export_core() {
 		.def(bp::self / Float())
 		.def(bp::self /= Float())
 		.def("__str__", &Matrix4x4::toString);
+
+	bp::class_<Ray>("Ray", bp::init<>())
+		.def(bp::init<Ray &>())
+		.def(bp::init<Ray &, Float, Float>())
+		.def(bp::init<Point, Vector, Float>())
+		.def(bp::init<Point, Vector, Float, Float, Float>())
+		.def_readwrite("o", &Ray::o)
+		.def_readwrite("d", &Ray::d)
+		.def_readwrite("dRcp", &Ray::dRcp)
+		.def_readwrite("mint", &Ray::mint)
+		.def_readwrite("maxt", &Ray::maxt)
+		.def_readwrite("time", &Ray::time)
+		.def("setOrigin", &Ray::setOrigin)
+		.def("setDirection", &Ray::setDirection)
+		.def("setTime", &Ray::setTime)
+		.def("eval", &ray_eval, BP_RETURN_VALUE)
+		.def("__str__", &Ray::toString);
 
 	bp::detail::current_scope = oldScope;
 }

@@ -39,4 +39,41 @@ print(myVector * 2)
 Log(EInfo, "" +)
 \end{python}
 
+\subsection{Taking control of the logging system}
+Many operations in Mitsuba will print one or more log messages
+during their execution. By default, they will be printed to the console,
+which may be undesirable. Similar to the C++ side, it is possible to define
+custom \code{Formatter} and \code{Appender} classes to interpret and direct
+the flow of these messages. 
 
+Roughly, a \code{Formatter} turns detailed
+information about a logging event into a human-readable string, and a
+\code{Appender} routes it to some destination (e.g. by appending it to
+a file or a log viewer in a graphical user interface). Here is an example
+of how to activate such extensions:
+\begin{python}
+import mitsuba
+from mitsuba.core import *
+
+class MyFormatter(Formatter):
+	def format(self, logLevel, sourceClass, sourceThread, message, filename, line):
+		return "%s (log level: %s, thread: %s, class %s, file %s, line %i)" % \
+				(message, str(logLevel), sourceThread.getName(), sourceClass, 
+				 filename, line)
+
+class MyAppender(Appender):
+	def append(self, logLevel, message):
+		print(message)
+
+	def logProgress(self, progress, name, formatted, eta):
+		print("Progress message: " + formatted)
+
+# Get the logger associated with the current thread
+logger = Thread.getThread().getLogger()
+logger.setFormatter(MyFormatter())
+logger.clearAppenders()
+logger.addAppender(MyAppender())
+logger.setLogLevel(EDebug)
+
+Log(EInfo, "Test message")
+\end{python}

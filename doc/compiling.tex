@@ -95,7 +95,7 @@ If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
 scons: $\texttt{done}$ building targets.
 \end{shell}
-To be able to run the renderer from the command line, you will also have to import it into your path:
+To be able to run the renderer from the command line, you will first have to import it into your path:
 \begin{shell}
 $\text{\$}$ . setpath.sh
 \end{shell}
@@ -173,7 +173,7 @@ If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
 scons: $\texttt{done}$ building targets.
 \end{shell}
-To be able to run the renderer from the command line, you will also have to import it into your path:
+To be able to run the renderer from the command line, you will first have to import it into your path:
 \begin{shell}
 $\text{\$}$ . setpath.sh
 \end{shell}
@@ -199,71 +199,42 @@ $\text{\$}$ rpmbuild -bb mitsuba-$\code{\MitsubaVersion}$/data/linux/fedora/mits
 \end{shell}
 After this command finishes, its output can be found in the directory \code{rpmbuild/RPMS}.
 \subsection{Building on Arch Linux}
-You'll first need to install a number of dependencies. 
-
-First, run
+You'll first need to install a number of dependencies: run
 \begin{shell}
 $\text{\$}$ sudo pacman -S gcc xerces-c glew openexr boost libpng libjpeg qt scons mercurial python
 \end{shell}
-
-
-There are two ways to install Mitsuba on Archlinux, the Arch way, and the other way.
-
-The Arch Way is to use the Aur software repository. 
-Accessing software in the Aur repository is easiest when using a script called \texttt{packer}.
-
-First download packer then use \texttt{makepkg} to build and install it. 
-The \texttt{-is} flags will prompt you for your sudo password and then install the package after it has finished building as well as install any needed dependencies.
+For COLLADA support, you will also have to install the \code{collada-dom}
+library. For this, you can either install the binary package available on
+the Mitsuba website, or you can compile it yourself using the \code{PKGBUILD}
+supplied with Mitsuba, i.e.
 \begin{shell}
-$\text{\$}$ mkdir packer && cd packer
-$\text{\$}$ wget http://aur.archlinux.org/packages/packer/packer/PKGBUILD
-$\text{\$}$ makepkg -is
+$\text{\$}$ cd <some-temporary-directory>
+$\text{\$}$ cp <path-to-mitsuba>/data/linux/arch/collada-dom/PKGBUILD .
+$\text{\$}$ makepkg PKGBUILD
+<..compiling..>
+$\text{\$}$ sudo pacman -U <generated package file>
 \end{shell}
-
-Next, use packer to automatically download, build, and install Mitsuba as well as any needed dependencies.
-The optional \code{--noedit} flag is used if you do not wish to edit the files after they are downloaded.
-The optional \code{--noconfirm} flag is used if you do not wish to confirm each step of the installation. 
+Once all dependencies are taken care of, simply run
 \begin{shell}
-$\text{\$}$ sudo packer -S --noedit --noconfirm mitsuba-hg glewmx collada-dom
+$\text{\$}$ scons
 \end{shell}
-
-Periodically you may wish to update Mitsuba to the latest version.
-To do this simply reinstall it and packer will pull and build the latest version.
+inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
+If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
-$\text{\$}$ sudo packer -S --noedit --noconfirm mitsuba-hg
+scons: $\texttt{done}$ building targets.
 \end{shell}
-
-Alternatively you can skip using packer and manually download the files and install them one at a time yourself.
-First install glewmx
+To be able to run the renderer from the command line, you will first have to import it into your path:
 \begin{shell}
-$\text{\$}$ mkdir glewmx && cd glewmx
-$\text{\$}$ wget http://aur.archlinux.org/packages/glewmx/glewmx/PKGBUILD
-$\text{\$}$ makepkg -is
+$\text{\$}$ . setpath.sh
 \end{shell}
-
-And then collada-dom
-\begin{shell}
-$\text{\$}$ mkdir collada-dom && cd collada-dom
-$\text{\$}$ wget http://aur.archlinux.org/packages/collada-dom/collada-dom/PKGBUILD
-$\text{\$}$ makepkg -is
-\end{shell}
-
-And finally Mitsuba
-\begin{shell}
-$\text{\$}$ mkdir mitsuba-hg && cd mitsuba-hg
-$\text{\$}$ wget http://aur.archlinux.org/packages/mitsuba-hg/mitsuba-hg/PKGBUILD
-$\text{\$}$ makepkg -is
-\end{shell}
-
-To uninstall do this
-\begin{shell}
-$\text{\$}$ sudo pacman -R mitsuba-hg glewmx collada-dom
-\end{shell}
-After installing you will be able to run the renderer from the command line.
+(note the period at the beginning -- this assumes that you are using \code{bash}).
 Having set up everything, you can now move on to \secref{basics}.
-
-If for some reason you are unable access the Aur files, they are also hosted at 
-(\url{https://www.mitsuba-renderer.org/releases/contrib/archlinux/}).
+\subsubsection{Creating Arch Linux packages}
+Mitsuba ships with a \code{PKGBUILD} file, which automatically builds
+a package from the most recent repository version:
+\begin{shell}
+$\text{\$}$ makepkg data/linux/arch/mitsuba/PKGBUILD
+\end{shell}
 
 \subsection{Building on Windows}
 On the Windows platform, Mitsuba already includes most of the dependencies in precompiled form.
