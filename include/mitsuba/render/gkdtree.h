@@ -640,6 +640,7 @@ MTS_NAMESPACE_BEGIN
  * can theoretically support any kind of shape. However, subclasses still 
  * need to provide the following signatures for a functional implementation:
  *
+ * \code
  * /// Return the total number of primitives
  * inline size_type getPrimitiveCount() const;
  *
@@ -648,6 +649,7 @@ MTS_NAMESPACE_BEGIN
  *
  * /// Return the AABB of a primitive when clipped to another AABB
  * inline AABB getClippedAABB(index_type primIdx, const AABBType &aabb) const;
+ * \endcode
  *
  * This class follows the "Curiously recurring template" design pattern 
  * so that the above functions can be inlined (in particular, no virtual 

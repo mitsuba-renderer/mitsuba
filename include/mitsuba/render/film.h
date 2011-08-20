@@ -83,6 +83,8 @@ public:
 
 	/// Add a child node
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
+	/// Add an unnamed child
+	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
 	/// Configure the film
 	virtual void configure();

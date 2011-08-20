@@ -365,6 +365,8 @@ public:
 
 	/// Add a child (e.g. a medium reference) to this luminaire
 	void addChild(const std::string &name, ConfigurableObject *child);
+	/// Add an unnamed child
+	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
 	//! @}
 	// =============================================================

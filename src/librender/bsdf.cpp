@@ -87,7 +87,7 @@ Texture *BSDF::ensureEnergyConservation(Texture *texture,
 		props.setFloat("scale", scale);
 		Texture *scaleTexture = static_cast<Texture *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(Texture), props));
-		scaleTexture->addChild("", texture);
+		scaleTexture->addChild(texture);
 		scaleTexture->configure();
 		return scaleTexture;
 	}
@@ -117,9 +117,9 @@ std::pair<Texture *, Texture *> BSDF::ensureEnergyConservation(
 				createObject(MTS_CLASS(Texture), props));
 		Texture *scaleTexture2 = static_cast<Texture *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(Texture), props));
-		scaleTexture1->addChild("", tex1);
+		scaleTexture1->addChild(tex1);
 		scaleTexture1->configure();
-		scaleTexture2->addChild("", tex2);
+		scaleTexture2->addChild(tex2);
 		scaleTexture2->configure();
 		return std::make_pair(scaleTexture1, scaleTexture2);
 	}

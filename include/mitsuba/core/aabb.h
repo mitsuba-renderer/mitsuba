@@ -295,6 +295,7 @@ template <typename T> struct TAABB {
  * various convenience functions to query or change them.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 struct MTS_EXPORT_CORE AABB : public TAABB<Point> {
 public:

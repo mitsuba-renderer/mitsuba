@@ -167,6 +167,8 @@ public:
 
 	/// Add a child ConfigurableObject
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
+	/// Add an unnamed child
+	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
 	/// Serialize this camera to a binary data stream	
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;

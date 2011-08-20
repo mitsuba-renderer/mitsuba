@@ -47,6 +47,8 @@ public:
 
 	/// Add a child object
 	void addChild(const std::string &name, ConfigurableObject *child);
+	/// Add an unnamed child
+	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
 	/// Return whether or not the shape is a compound object
 	bool isCompound() const;

@@ -34,7 +34,6 @@ MTS_NAMESPACE_BEGIN
  * <tt>\ref Utility</tt> classes for details
  *
  * \ingroup libcore
- * \ingroup libpython
  */
 class MTS_EXPORT_CORE Plugin {
 	typedef void *(*CreateInstanceFunc)(const Properties &props);
@@ -83,7 +82,6 @@ private:
 	CreateUtilityFunc m_createUtility;
 };
 
-
 /**
  * \brief The plugin manager is responsible for resolving and
  * loading external plugins.
@@ -105,7 +103,9 @@ public:
 	std::vector<std::string> getLoadedPlugins() const;
 
 	/**
-	 * \brief Instantiate an object using a plugin
+	 * \brief Instantiate a plugin, verify its type,
+	 * and return the newly created instance. 
+	 * 
 	 * \param classType Expected type of the plugin. An
 	 *    exception will be thrown if it turns out not
 	 *    to derive from this class.
@@ -115,6 +115,18 @@ public:
 	 */
 	ConfigurableObject *createObject(
 		const Class *classType,
+		const Properties &props
+	);
+
+	/**
+	 * \brief Instantiate a plugin and return the new
+	 * instance (without verifying its type). 
+	 * 
+	 * \param props A \ref Properties instance containing
+	 *    all information required to find and construct 
+	 *    the plugin.
+	 */
+	ConfigurableObject *createObject(
 		const Properties &props
 	);
 

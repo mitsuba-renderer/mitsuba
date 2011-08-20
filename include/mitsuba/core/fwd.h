@@ -97,6 +97,7 @@ typedef TVector2<float>    Vector2f;
 typedef TVector2<double>   Vector2d;
 /// \ingroup libpython
 typedef TVector3<Float>    Vector;
+/// \ingroup libpython
 typedef TVector3<Float>    Vector3;
 /// \ingroup libpython
 typedef TVector3<int>      Vector3i;
@@ -115,6 +116,7 @@ typedef TPoint2<float>     Point2f;
 typedef TPoint2<double>    Point2d;
 /// \ingroup libpython
 typedef TPoint3<Float>     Point;
+/// \ingroup libpython
 typedef TPoint3<Float>     Point3;
 /// \ingroup libpython
 typedef TPoint3<int>       Point3i;

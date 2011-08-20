@@ -174,6 +174,8 @@ public:
 
 	/// Add a child ConfigurableObject
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
+	/// Add an unnamed child
+	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
 	/// Return a string representation
 	virtual std::string toString() const = 0;

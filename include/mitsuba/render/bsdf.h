@@ -422,6 +422,8 @@ public:
 
 	/// Add a child object
 	virtual void addChild(const std::string &string, ConfigurableObject *obj);
+	/// Add an unnamed child
+	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
 	/// Serialize this object to a stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;

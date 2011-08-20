@@ -288,7 +288,7 @@ void Scene::initialize() {
 			skyProps.setBoolean("extend", true);
 			ref<Luminaire> luminaire = static_cast<Luminaire *>(
 				PluginManager::getInstance()->createObject(MTS_CLASS(Luminaire), skyProps));
-			addChild("", luminaire);
+			addChild(luminaire);
 			luminaire->configure();
 		}
 

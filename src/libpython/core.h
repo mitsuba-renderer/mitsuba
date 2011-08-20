@@ -40,6 +40,7 @@
 #define BP_IMPLEMENT_VECTOR_OPS(Name, Scalar, Size) \
 	Name ##_struct \
 		.def(bp::init<Stream *>()) \
+		.def(bp::init<Name>()) \
 		.def(bp::self != bp::self) \
 		.def(bp::self == bp::self) \
 		.def(-bp::self) \
@@ -61,6 +62,7 @@
 #define BP_IMPLEMENT_POINT_OPS(Name, Scalar, Size) \
 	Name ##_struct \
 		.def(bp::init<Stream *>()) \
+		.def(bp::init<Name>()) \
 		.def(bp::self != bp::self) \
 		.def(bp::self == bp::self) \
 		.def(Scalar() * bp::self) \

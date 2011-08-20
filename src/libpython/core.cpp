@@ -10,6 +10,7 @@
 #include <mitsuba/core/appender.h>
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/random.h>
+#include <mitsuba/core/aabb.h>
 
 using namespace mitsuba;
 
@@ -236,6 +237,15 @@ static Point ray_eval(const Ray &ray, Float t) {
 	return ray(t);
 }
 
+void aabb_expandby_aabb(AABB *aabb, const AABB &aabb2) { aabb->expandBy(aabb2); }
+void aabb_expandby_point(AABB *aabb, const Point &p) { aabb->expandBy(p); }
+Float aabb_distanceto_aabb(AABB *aabb, const AABB &aabb2) { return aabb->distanceTo(aabb2); }
+Float aabb_distanceto_point(AABB *aabb, const Point &p) { return aabb->distanceTo(p); }
+Float aabb_sqrdistanceto_aabb(AABB *aabb, const AABB &aabb2) { return aabb->squaredDistanceTo(aabb2); }
+Float aabb_sqrdistanceto_point(AABB *aabb, const Point &p) { return aabb->squaredDistanceTo(p); }
+bool aabb_contains_aabb(AABB *aabb, const AABB &aabb2) { return aabb->contains(aabb2); }
+bool aabb_contains_point(AABB *aabb, const Point &p) { return aabb->contains(p); }
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 
@@ -346,8 +356,19 @@ void export_core() {
 		.export_values();
 	BP_SETSCOPE(coreModule);
 
-	BP_CLASS(SerializableObject, Stream, bp::no_init)
+	BP_CLASS(SerializableObject, Object, bp::no_init)
 		.def("serialize", &SerializableObject::serialize);
+
+	ConfigurableObject *(ConfigurableObject::*cobject_get_parent)() = &ConfigurableObject::getParent;
+	void (ConfigurableObject::*cobject_add_child_1)(ConfigurableObject *) = &ConfigurableObject::addChild;
+	void (ConfigurableObject::*cobject_add_child_2)(const std::string &, ConfigurableObject *) = &ConfigurableObject::addChild;
+
+	BP_CLASS(ConfigurableObject, SerializableObject, bp::no_init)
+		.def("getParent", cobject_get_parent, BP_RETURN_VALUE)
+		.def("setParent", &ConfigurableObject::setParent)
+		.def("addChild", cobject_add_child_1)
+		.def("addChild", cobject_add_child_2)
+		.def("configure", &ConfigurableObject::configure);
 
 	Thread *(Thread::*thread_get_parent)() = &Thread::getParent;
 	BP_CLASS(Thread, Object, bp::no_init)
@@ -474,6 +495,17 @@ void export_core() {
 		.def("nextSize", &Random::nextSize)
 		.def("nextFloat", &Random::nextFloat)
 		.def("serialize", &Random::serialize);
+
+	ConfigurableObject *(PluginManager::*pluginmgr_createobject_1)(const Properties &) = &PluginManager::createObject;
+	ConfigurableObject *(PluginManager::*pluginmgr_createobject_2)(const Class *, const Properties &) = &PluginManager::createObject;
+
+	BP_CLASS(PluginManager, Object, bp::no_init)
+		.def("ensurePluginLoaded", &PluginManager::ensurePluginLoaded)
+		.def("getLoadedPlugins", &PluginManager::getLoadedPlugins)
+		.def("createObject", pluginmgr_createobject_1, BP_RETURN_VALUE)
+		.def("createObject", pluginmgr_createobject_2, BP_RETURN_VALUE)
+		.def("getInstance", &PluginManager::getInstance, BP_RETURN_VALUE)
+		.staticmethod("getInstance");
 
 	BP_STRUCT(Spectrum, bp::init<>())
 		.def("__init__", bp::make_constructor(spectrum_array_constructor))
@@ -732,6 +764,54 @@ void export_core() {
 		.def("setTime", &Ray::setTime)
 		.def("eval", &ray_eval, BP_RETURN_VALUE)
 		.def("__str__", &Ray::toString);
+
+	bp::class_<BSphere>("BSphere", bp::init<>())
+		.def(bp::init<BSphere>())
+		.def(bp::init<Point, Float>())
+		.def(bp::init<Stream *>())
+		.def_readwrite("center", &BSphere::center)
+		.def_readwrite("radius", &BSphere::radius)
+		.def("isEmpty", &BSphere::isEmpty)
+		.def("expandBy", &BSphere::expandBy)
+		.def("contains", &BSphere::contains)
+		.def(bp::self == bp::self)
+		.def(bp::self != bp::self)
+		.def("rayIntersect", &AABB::rayIntersect)
+		.def("serialize", &AABB::serialize)
+		.def("__str__", &AABB::toString);
+
+	bp::class_<AABB>("AABB", bp::init<>())
+		.def(bp::init<AABB>())
+		.def(bp::init<Point>())
+		.def(bp::init<Point, Point>())
+		.def(bp::init<Stream *>())
+		.def_readwrite("min", &AABB::min)
+		.def_readwrite("max", &AABB::max)
+		.def("getSurfaceArea", &AABB::getSurfaceArea)
+		.def("getVolume", &AABB::getVolume)
+		.def("getCorner", &AABB::getCorner)
+		.def("overlaps", &AABB::overlaps)
+		.def("getCenter", &AABB::getCenter)
+		.def("reset", &AABB::reset)
+		.def("clip", &AABB::clip)
+		.def("isValid", &AABB::isValid)
+		.def("expandBy", &aabb_expandby_aabb)
+		.def("expandBy", &aabb_expandby_point)
+		.def("distanceTo", &aabb_distanceto_aabb)
+		.def("distanceTo", &aabb_distanceto_point)
+		.def("squaredDistanceTo", &aabb_sqrdistanceto_aabb)
+		.def("squaredDistanceTo", &aabb_sqrdistanceto_point)
+		.def("contains", &aabb_contains_aabb)
+		.def("contains", &aabb_contains_point)
+		.def("getLargestAxis", &AABB::getLargestAxis)
+		.def("getShortestAxis", &AABB::getShortestAxis)
+		.def("getExtents", &AABB::getExtents)
+		.def(bp::self == bp::self)
+		.def(bp::self != bp::self)
+		.def("rayIntersect", &AABB::rayIntersect)
+		.def("getBSphere", &AABB::getBSphere)
+		.def("serialize", &AABB::serialize)
+		.def("__str__", &AABB::toString);
 
 	bp::detail::current_scope = oldScope;
 }

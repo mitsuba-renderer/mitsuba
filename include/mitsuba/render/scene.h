@@ -124,6 +124,9 @@ public:
 	/// Add a child node to the scene
 	void addChild(const std::string &name, ConfigurableObject *child);
 
+	/// Add an unnamed child
+	inline void addChild(ConfigurableObject *child) { addChild("", child); }
+
 	/** \brief Configure this object (called _once_ after construction
 	   and addition of all child ConfigurableObjects.) */
 	void configure();

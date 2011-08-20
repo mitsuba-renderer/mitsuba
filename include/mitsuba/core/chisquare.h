@@ -130,8 +130,7 @@ public:
 	 * errors in a system based on finite-precision arithmetic, it 
 	 * may be a good idea to tolerate at least a few samples without 
 	 * immediately rejecting the null hypothesis. This parameter 
-	 * sets this threshold. The default value is <number of
-	 * sample> * 1e-4f
+	 * sets this threshold. The default value is \c number-of-samples*1e-4f
 	 */
 	inline void setTolerance(Float tolerance) { m_tolerance = tolerance; }
 

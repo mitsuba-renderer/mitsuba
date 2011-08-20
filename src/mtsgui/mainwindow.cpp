@@ -1776,7 +1776,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 			if (depth++ == 0) 
 				scene->setIntegrator(integrator);
 			else 
-				currentIntegrator->addChild("", integrator);
+				currentIntegrator->addChild(integrator);
 			currentIntegrator = integrator;
 			integratorList.push_back(integrator);
 			oldIntegrator = oldIntegrator->getSubIntegrator();
@@ -1790,11 +1790,11 @@ SceneContext::SceneContext(SceneContext *ctx) {
 				getReconstructionFilter()->getProperties()));
 
 		rfilter->configure();
-		film->addChild("", rfilter);
+		film->addChild(rfilter);
 		film->configure();
 		sampler->configure();
-		camera->addChild("", sampler);
-		camera->addChild("", film);
+		camera->addChild(sampler);
+		camera->addChild(film);
 		camera->setViewTransform(oldCamera->getViewTransform());
 		camera->setFov(oldCamera->getFov());
 		camera->configure();

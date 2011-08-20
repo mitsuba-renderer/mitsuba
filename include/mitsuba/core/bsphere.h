@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 /** \brief Bounding sphere data structure in three dimensions
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 struct BSphere {
 	Point center;

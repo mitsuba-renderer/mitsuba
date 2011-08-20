@@ -415,7 +415,7 @@ public:
 
 		mesh->incRef();
 		if (currentMaterial)
-			mesh->addChild("", currentMaterial);
+			mesh->addChild(currentMaterial);
 		m_meshes.push_back(mesh);
 		Log(EInfo, "%s: Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
 			" vertices (merged " SIZE_T_FMT " vertices).", name.c_str(),
