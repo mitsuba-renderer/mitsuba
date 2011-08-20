@@ -1,0 +1,64 @@
+# Contributer: N30N <archlinux@alunamation.com>
+# Contributer: Alex Combas <blenderwell@gmail.com>
+# Contributer: Wenzel Jakob <wenzel@mitsuba-renderer.org>
+pkgname="mitsuba-hg"
+pkgver=1
+pkgrel=1
+pkgdesc="Mitsuba physically based renderer"
+url="http://mitsuba-renderer.org/"
+license=("GPL3")
+arch=("i686" "x86_64")
+depends=("xerces-c" "glew" "openexr" "boost" "libpng" "libjpeg" "qt" "collada-dom")
+makedepends=("mercurial" "scons")
+provides=("mitsuba")
+
+_hgroot="https://mitsuba-renderer.org/hg"
+_hgrepo="mitsuba"
+
+build() {
+	cd ${_hgrepo}
+	cp build/config-linux.py config.py
+	if [ -e dependencies ]; then
+		cd dependencies
+		hg pull -u
+		cd ..
+	else
+		hg clone https://www.mitsuba-renderer.org/hg/dependencies
+	fi
+
+	scons --jobs=$[${MAKEFLAGS/-j/} - 1]
+}
+
+package() {
+	install -d \
+		${pkgdir}/usr/bin \
+		${pkgdir}/usr/lib \
+		${pkgdir}/usr/share/mitsuba/plugins \
+		${pkgdir}/usr/share/mitsuba/data/schema \
+		${pkgdir}/usr/share/mitsuba/data/ior \
+		${pkgdir}/usr/share/applications \
+		${pkgdir}/usr/share/pixmaps \
+		${pkgdir}/usr/include/mitsuba/{core,hw,render,bidir} \
+		${pkgdir}/usr/lib/python2.7/lib-dynload
+
+	cd ${_hgrepo}
+	install -m755 dist/mitsuba dist/mtsgui dist/mtsimport dist/mtssrv dist/mtsutil ${pkgdir}/usr/bin
+	install -m755 dist/libmitsuba-core.so \
+		dist/libmitsuba-hw.so \
+		dist/libmitsuba-render.so \
+		dist/libmitsuba-bidir.so \
+		${pkgdir}/usr/lib
+	install -m755 dist/plugins/* ${pkgdir}/usr/share/mitsuba/plugins
+	install -m644 dist/data/schema/* ${pkgdir}/usr/share/mitsuba/data/schema
+	install -m644 dist/data/ior/* ${pkgdir}/usr/share/mitsuba/data/ior
+	install -m644 dist/python/mitsuba.so ${pkgdir}/usr/lib/python2.7/lib-dynload
+	install -m644 data/linux/mitsuba.desktop ${pkgdir}/usr/share/applications
+	install -m644 src/mtsgui/resources/mitsuba48.png ${pkgdir}/usr/share/pixmaps
+	install -m644 include/mitsuba/*.h ${pkgdir}/usr/include/mitsuba
+	install -m644 include/mitsuba/core/* ${pkgdir}/usr/include/mitsuba/core
+	install -m644 include/mitsuba/render/* ${pkgdir}/usr/include/mitsuba/render
+	install -m644 include/mitsuba/hw/* ${pkgdir}/usr/include/mitsuba/hw
+	install -m644 include/mitsuba/bidir/* ${pkgdir}/usr/include/mitsuba/bidir
+}
+
+# vim: set noet ff=unix:

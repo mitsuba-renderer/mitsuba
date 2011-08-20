@@ -1,0 +1,32 @@
+# Contributer: N30N <archlinux@alunamation.com>
+# Contributer: Wenzel Jakob <wenzel@mitsuba-renderer.org>
+
+pkgname="collada-dom"
+pkgver=2.3.1
+pkgrel=1
+pkgdesc="An API that provides a C++ object representation of a COLLADA XML instance document."
+url="http://collada-dom.sourceforge.net/"
+license=("MIT")
+arch=("i686" "x86_64")
+depends=("libxml2" "boost" "pcre") #"libminizip"
+# makedepends=()
+source=("http://downloads.sourceforge.net/${pkgname}/collada_dom-${pkgver}-src.tgz")
+md5sums=("a74d19c1187806a713cec90c2f0f692c")
+
+build() {
+	cd ${pkgname}-${pkgver}/dom
+	make project=dom
+}
+
+package() {
+	cd ${pkgname}-${pkgver}/dom
+
+	install -d ${pkgdir}/usr/lib ${pkgdir}/usr/include
+	make prefix=${pkgdir}/usr project=dom install
+	mv ${pkgdir}/usr/include/colladadom ${pkgdir}/usr/include/collada-dom
+
+	install -m755 build/linux-1.4/libminizip.so* ${pkgdir}/usr/lib
+	install -D -m644 license.txt "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+
+# vim: set noet ff=unix:
