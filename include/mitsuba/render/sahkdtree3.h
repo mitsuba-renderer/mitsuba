@@ -80,10 +80,10 @@ private:
 };
 
 /**
- * This class specializes \ref GenericKDTree to a three-dimensional
- * tree to be used for ray tracing. One additional function call
- * must be implemented by subclasses:
+ * \brief Specializes \ref GenericKDTree to a three-dimensional
+ * tree to be used for ray tracing. 
  *
+ * One additional function call must be implemented by subclasses:
  * \code
  * /// Check whether a primitive is intersected by the given ray. 
  * /// Some temporary space is supplied, which can be used to cache  
