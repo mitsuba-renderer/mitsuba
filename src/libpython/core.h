@@ -143,7 +143,12 @@ public:
 	}
 };
 
+namespace mitsuba {
+	class SerializableObject;
+};
+
 typedef std::vector<std::string> StringVector;
+typedef std::vector<mitsuba::SerializableObject *> SerializableObjectVector;
 typedef std::map<std::string, std::string> StringMap;
 
 #endif /* __MTSPY_H */

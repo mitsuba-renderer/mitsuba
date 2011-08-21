@@ -11,6 +11,7 @@
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/random.h>
 #include <mitsuba/core/aabb.h>
+#include <mitsuba/core/sched_remote.h>
 
 using namespace mitsuba;
 
@@ -505,6 +506,81 @@ void export_core() {
 		.def("createObject", pluginmgr_createobject_1, BP_RETURN_VALUE)
 		.def("createObject", pluginmgr_createobject_2, BP_RETURN_VALUE)
 		.def("getInstance", &PluginManager::getInstance, BP_RETURN_VALUE)
+		.staticmethod("getInstance");
+
+	BP_CLASS(WorkUnit, Object, bp::no_init)
+		.def("set", &WorkUnit::set)
+		.def("load", &WorkUnit::load)
+		.def("save", &WorkUnit::save);
+	
+	BP_CLASS(WorkResult, Object, bp::no_init)
+		.def("load", &WorkResult::load)
+		.def("save", &WorkResult::save);
+	
+	BP_CLASS(WorkProcessor, SerializableObject, bp::no_init)
+		.def("createWorkUnit", &WorkProcessor::createWorkUnit, BP_RETURN_VALUE)
+		.def("createWorkResult", &WorkProcessor::createWorkResult, BP_RETURN_VALUE)
+		.def("clone", &WorkProcessor::clone, BP_RETURN_VALUE)
+		.def("prepare", &WorkProcessor::prepare)
+		.def("process", &WorkProcessor::process);
+
+	BP_CLASS(ParallelProcess, Object, bp::no_init)
+		.def("generateWork", &ParallelProcess::generateWork)
+		.def("processResult", &ParallelProcess::processResult)
+		.def("handleCancellation", &ParallelProcess::handleCancellation)
+		.def("getReturnStatus", &ParallelProcess::getReturnStatus)
+		.def("createWorkProcessor", &ParallelProcess::createWorkProcessor)
+		.def("bindResource", &ParallelProcess::bindResource)
+		.def("isLocal", &ParallelProcess::isLocal)
+		.def("getLogLevel", &ParallelProcess::getLogLevel)
+		.def("getRequiredPlugins", &ParallelProcess::getRequiredPlugins, BP_RETURN_VALUE);
+	
+	BP_SETSCOPE(ParallelProcess_class);
+	bp::enum_<ParallelProcess::EStatus>("EStatus")
+		.value("EUnknown", ParallelProcess::EUnknown)
+		.value("EPause", ParallelProcess::EPause)
+		.value("ESuccess", ParallelProcess::ESuccess)
+		.value("EFailure", ParallelProcess::EFailure)
+		.export_values();
+	BP_SETSCOPE(coreModule);
+	
+	BP_CLASS(Worker, Thread, bp::no_init)
+		.def("getCoreCount", &Worker::getCoreCount)
+		.def("isRemoteWorker", &Worker::isRemoteWorker);
+
+	BP_CLASS(LocalWorker, Worker, bp::init<const std::string>()) 
+		.def(bp::init<const std::string, Thread::EThreadPriority>());
+
+	BP_CLASS(RemoteWorker, Worker, (bp::init<const std::string, Stream *>()))
+		.def("getNodeName", &RemoteWorker::getNodeName, BP_RETURN_VALUE);
+
+	bp::class_<SerializableObjectVector>("SerializableObjectVector")
+		.def(bp::vector_indexing_suite<SerializableObjectVector>());
+
+	bool (Scheduler::*scheduler_cancel)(ParallelProcess *)= &Scheduler::cancel;
+	BP_CLASS(Scheduler, Object, bp::no_init)
+		.def("schedule", &Scheduler::schedule)
+		.def("wait", &Scheduler::wait)
+		.def("cancel", scheduler_cancel)
+		.def("registerResource", &Scheduler::registerResource)
+		.def("registerManifoldResource", &Scheduler::registerManifoldResource)
+		.def("retainResource", &Scheduler::retainResource)
+		.def("unregisterResource", &Scheduler::unregisterResource)
+		.def("getResourceID", &Scheduler::getResourceID)
+		.def("registerWorker", &Scheduler::registerWorker)
+		.def("unregisterWorker", &Scheduler::unregisterWorker)
+		.def("getWorkerCount", &Scheduler::getWorkerCount)
+		.def("getLocalWorkerCount", &Scheduler::getLocalWorkerCount)
+		.def("getWorker", &Scheduler::getWorker, BP_RETURN_VALUE)
+		.def("start", &Scheduler::start)
+		.def("pause", &Scheduler::pause)
+		.def("stop", &Scheduler::stop)
+		.def("getCoreCount", &Scheduler::getCoreCount)
+		.def("hasLocalWorkers", &Scheduler::hasLocalWorkers)
+		.def("hasRemoteWorkers", &Scheduler::hasRemoteWorkers)
+		.def("getInstance", &Scheduler::getInstance, BP_RETURN_VALUE)
+		.def("isRunning", &Scheduler::isRunning)
+		.def("isBusy", &Scheduler::isBusy)
 		.staticmethod("getInstance");
 
 	BP_STRUCT(Spectrum, bp::init<>())

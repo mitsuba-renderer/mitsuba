@@ -33,7 +33,14 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Abstract work unit -- represents a small amount of information 
- * that encodes part of a larger processing task. 
+ * that encodes part of a larger processing task.
+ *
+ * Instead of the usual serialization function and unserialization
+ * constructor, implementations of this class supply \ref load() 
+ * and \ref save() methods that can be used for essentially the
+ * same purpose, but without requiring any memory allocations.
+ *
+ * \sa WorkProcessor
  * \ingroup libcore
  * \ingroup libpython
  */
@@ -59,7 +66,14 @@ protected:
 
 /**
  * \brief Abstract work result -- represents the result of a 
- * processed <tt>\ref WorkUnit</tt> instance.
+ * processed \ref WorkUnit instance.
+ *
+ * Instead of the usual serialization function and unserialization
+ * constructor, implementations of this class supply \ref load() 
+ * and \ref save() methods that can be used for essentially the
+ * same purpose, but without requiring any memory allocations.
+ *
+ * \sa WorkProcessor
  * \ingroup libcore
  * \ingroup libpython
  */
@@ -82,15 +96,22 @@ protected:
 
 /**
  * \brief Abstract work processor -- takes work units and turns them into 
- * <tt>WorkResult</tt> instances.
+ *\ref WorkResult instances.
  * 
+ * When executing a parallel task using Mitsuba's scheduling system, the
+ * actual work is done in an implementation of this interface.
+ *
  * The class is serializable so that it can be sent over the network if 
- * required. It is possible to keep local state in <tt>WorkProcessor</tt> 
+ * required. It is possible to keep local state in \ref WorkProcessor
  * instances (e.g. scratch space for computations), though anything not 
- * returned in the form of <tt>WorkResult</tt>s will eventually be lost. 
- * Each worker (both locally and remotely) has its own <tt>WorkProcessor</tt>, 
+ * returned in the form of a \ref WorkResult will eventually be lost. 
+ * Each \ref Worker (both locally and remotely) has its own \ref WorkProcessor, 
  * and therefore no form of locking is required within instances of this class.
  *
+ * \sa WorkUnit
+ * \sa WorkResult
+ * \sa ParallelProcess
+ * \sa Scheduler 
  * \ingroup libcore
  * \ingroup libpython
  */
@@ -105,10 +126,11 @@ public:
 
 	/**
 	 * \brief Create a copy of this work processor instance. 
-	 *
-	 * Note: Before the cloned work processor is used, its 
-	 * prepare() method will be called - therefore, state 
-	 * that is initialized there does not have to be copied.
+	 * 
+	 * \remark In practice, before the cloned work processor 
+	 * is actually used, its \ref prepare() method will be called.
+	 * Therefore, any state that is initialized in \ref prepeare()
+	 * does not have to be copied.
 	 */
 	virtual ref<WorkProcessor> clone() const = 0;
 
@@ -157,14 +179,15 @@ protected:
 /**
  * \brief Abstract parallelizable task. 
  *
- * Models a larger piece of work that can be split into independent 
- * `units' and subsequently farmed out over a cluster or processed locally.
- * After the work units have been completed, the results are pieced back 
- * together to a solution of the original large-scale problem. This class 
- * implements the core logic running on the central scheduling server, 
- * i.e. the part that is responsible for generating work units and 
+ * Instances of this class model a larger piece of work that can be split 
+ * into independent `units' and subsequently farmed out over a cluster or 
+ * processed locally. After the work units have been completed, the results 
+ * are pieced back together to a solution of the original large-scale problem. 
+ *
+ * This class implements the core logic running on the central scheduling 
+ * server, i.e. the part that is responsible for generating work units and 
  * accepting their results. The module that performs the actual computation 
- * is an instance of <tt>WorkProcessor</tt>, which is also specified here.
+ * is an instance of \ref WorkProcessor, which is also specified here.
  * Finally, the this class references `resources', which denote 
  * chunks of globally shared read-only data required during execution.
  *
@@ -188,18 +211,18 @@ public:
 	/**
 	 * \brief Generate a piece of work.
 	 *
-	 * Takes a pre-allocated <tt>\ref WorkUnit</tt> instance of 
+	 * Takes a pre-allocated \ref WorkUnit instance of 
 	 * the appropriate sub-type and size (as specified by 
-	 * <tt>\ref ParallelProcess::getWorkUnitName()</tt>) and 
+	 * \ref ParallelProcess::getWorkUnitName()) and 
 	 * fills it with the appropriate content. Returns ESuccess
 	 * on success and EFailure or EPause when no more work is
 	 * left -- in that case, the work unit will be ignored and 
 	 * the process completed (\ref EFailure) or temporarily 
 	 * paused (\ref EPause). When \ref EPause was used, 
-	 * resubmission via <tt>\ref Scheduler::schedule()</tt> will 
+	 * resubmission via \ref Scheduler::schedule() will 
 	 * be required once more work is available. In some cases, it 
 	 * is useful to distribute 'nearby' pieces of work to the same
-	 * processor -- the <tt>worker</tt> parameter can be used to 
+	 * processor -- the \c worker parameter can be used to 
 	 * implement this.
 	 * This function should run as quickly as possible, since it 
 	 * will be executed while the scheduler mutex is held. A 
@@ -220,7 +243,7 @@ public:
 	 * in \ref generateWork().
 	 *
 	 * When a work unit is only partially completed due to
-	 * a call to <tt>Scheduler::cancel</tt>, the second
+	 * a call to \ref Scheduler::cancel(), the second
 	 * parameter is set to true.
 	 * A thrown exception will lead to the termination of 
 	 * the parallel process.
@@ -243,7 +266,7 @@ public:
 	 * \brief Query the return status of a process after its
 	 * execution has finished.
 	 * 
-	 * Returns one of <tt>\ref Success, \ref Failure or \ref Unknown</tt> 
+	 * Returns one of \ref Success, \ref Failure or \ref Unknown.
 	 * (\ref EUnknown means that the process is either still running 
 	 * or has never been scheduled).
 	 */
@@ -318,7 +341,7 @@ class Worker;
  *
  * Accepts parallelizable jobs and distributes their computational load 
  * both locally and remotely. This is done by associating different types 
- * of <tt>\ref Worker</tt>s with the scheduler. These try to acquire work 
+ * of \ref Worker instances with the scheduler. These try to acquire work 
  * units from the scheduler, which are then executed on the current machine 
  * or sent to remote nodes over a network connection.
  *
@@ -343,7 +366,7 @@ public:
 	 * or canceled prematurely. 
 	 *
 	 * Returns false if the process does not exist or has already 
-	 * finished by the time <tt>\ref wait()</tt> is invoked.
+	 * finished by the time \ref wait() is invoked.
 	 */
 	bool wait(const ParallelProcess *process);
 
@@ -374,8 +397,8 @@ public:
 	 * \a Manifold means that in comparison to the previous method, a separate 
 	 * instance is provided  for every core. An example where this is useful 
 	 * is to distribute random generator state when performing parallel 
-	 * Monte Carlo simulations. <tt>resources</tt> must be a vector whose 
-	 * length is equal to <tt>\ref getCoreCount()</tt>.
+	 * Monte Carlo simulations. \c resources must be a vector whose 
+	 * length is equal to \ref getCoreCount().
 	 */
 	int registerManifoldResource(std::vector<SerializableObject *> &resources);
 
@@ -427,7 +450,7 @@ public:
 	 * running workers.
 	 *
 	 * Any currently scheduled work units are still completed.
-	 * Processing can be resumed via <tt>\ref start()</tt>.
+	 * Processing can be resumed via \ref start().
 	 */
 	void pause();
 
@@ -469,7 +492,7 @@ public:
 		int inflight;
 		/* Is the parallel process still generating work */
 		bool morework;
-		/* Was the process cancelled using <tt>cancel()</tt>?*/
+		/* Was the process cancelled using \c cancel()?*/
 		bool cancelled;
 		/* Is the process currently in the queue? */
 		bool active;

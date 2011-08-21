@@ -28,7 +28,7 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_HW GPUGeometry : public Object {
 public:
-	/// Create an empty program
+	/// Create an empty geometry object
 	GPUGeometry(const TriMesh *mesh);
 
 	/// Return the name of this geometry object
