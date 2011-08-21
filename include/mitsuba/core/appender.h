@@ -27,6 +27,7 @@ MTS_NAMESPACE_BEGIN
  * for logging-relevant information
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Appender : public Object {
 public:
@@ -39,10 +40,14 @@ public:
 	 * \param name Title of the progress message
 	 * \param formatted Formatted string representation of the message
 	 * \param eta Estimated time until 100% is reached.
-	 * \param ptr Custom pointer payload
+	 * \param ptr Custom pointer payload. This is used to express the
+	 *    context of a progress message. When rendering a scene, it
+	 *    will usually contain a pointer to the associated \c RenderJob.
+	 * \remark The \c ptr argument is missing in the Python bindings
 	 */
 	virtual void logProgress(Float progress, const std::string &name,
-		const std::string &formatted, const std::string &eta, const void *ptr) = 0;
+		const std::string &formatted, const std::string &eta, 
+		const void *ptr) = 0;
 
 	MTS_DECLARE_CLASS()
 protected:

@@ -65,7 +65,7 @@ void ReplayableSampler::request2DArray(unsigned int size) {
 void ReplayableSampler::generate() { }
 void ReplayableSampler::advance() { }
 
-void ReplayableSampler::setSampleIndex(uint64_t sampleIndex) {
+void ReplayableSampler::setSampleIndex(size_t sampleIndex) {
 	if (sampleIndex < m_sampleIndex) {
 		m_sampleIndex = 0;
 		m_random->set(m_initial);

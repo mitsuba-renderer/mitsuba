@@ -74,6 +74,7 @@
 	#define MTS_MODULE_RENDER 2
 	#define MTS_MODULE_HW 3
 	#define MTS_MODULE_BIDIR 4
+	#define MTS_MODULE_PYTHON 5
 
 	#define MTS_EXPORT __declspec(dllexport)
 	#define MTS_IMPORT __declspec(dllimport)
@@ -98,6 +99,11 @@
 	#else
 		#define MTS_EXPORT_BIDIR __declspec(dllimport)
 	#endif
+	#if MTS_BUILD_MODULE == MTS_MODULE_PYTHON
+		#define MTS_EXPORT_PYTHON __declspec(dllexport)
+	#else
+		#define MTS_EXPORT_PYTHON __declspec(dllimport)
+	#endif
 
 	#define SIZE_T_FMT "%Iu"
 	#define BOOST_FILESYSTEM_NO_LIB 
@@ -108,6 +114,7 @@
 	#define MTS_EXPORT_RENDER
 	#define MTS_EXPORT_HW
 	#define MTS_EXPORT_BIDIR
+	#define MTS_EXPORT_PYTHON
 	#include <stdint.h>
 
 	#define SIZE_T_FMT "%zd"
@@ -123,19 +130,25 @@
 /* Compile with Boost filesystem v2 */
 #define BOOST_FILESYSTEM_VERSION 2
 
+/* Use ELF support for thread-local storage on Linux? This
+ * is potentially faster but causes problems when dynamically
+ * loading Mitsuba from Python, so let's keep it disabled for now
+ */
+#define MTS_USE_ELF_TLS 0
+
 #include <string>
 
 MTS_NAMESPACE_BEGIN
 #if defined(__OSX__)
-extern void __ubi_autorelease_init();
-extern void __ubi_autorelease_shutdown();
-extern void __ubi_autorelease_begin();
-extern void __ubi_autorelease_end();
-extern std::string __ubi_bundlepath();
-extern void __ubi_chdir_to_bundlepath();
-extern void __ubi_init_cocoa();
-#define MTS_AUTORELEASE_BEGIN() __ubi_autorelease_begin();
-#define MTS_AUTORELEASE_END() __ubi_autorelease_end();
+extern void __mts_autorelease_init();
+extern void __mts_autorelease_shutdown();
+extern void __mts_autorelease_begin();
+extern void __mts_autorelease_end();
+extern std::string __mts_bundlepath();
+extern void __mts_chdir_to_bundlepath();
+extern void __mts_init_cocoa();
+#define MTS_AUTORELEASE_BEGIN() __mts_autorelease_begin();
+#define MTS_AUTORELEASE_END() __mts_autorelease_end();
 #define MTS_AMBIGUOUS_SIZE_T 1
 #else
 #define MTS_AUTORELEASE_BEGIN() 

@@ -32,6 +32,7 @@ MTS_NAMESPACE_BEGIN
  * is in how instances of <tt>Normal</tt> are treated by linear transformations.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 struct Normal : public TVector3<Float> {
 	/** \brief Construct a new normal without initializing it.

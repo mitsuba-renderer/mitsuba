@@ -27,6 +27,7 @@ MTS_NAMESPACE_BEGIN
  * \headerfile mitsuba/core/thread.h mitsuba/mitsuba.h
  * \brief Cross-platform thread implementation
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Thread : public Object {
 public:
@@ -47,6 +48,8 @@ public:
 	 *   (will be shown in debug messages)
 	 * \param stackSize Initial stack size of the thread
 	 *   (0 = default)
+	 * \remark Note that it is currently not possible to
+	 *         construct Thread instances from Python
 	 */
 	Thread(const std::string &name, 
 		unsigned int stackSize = 0);
@@ -61,6 +64,9 @@ public:
 	 */
 	bool setPriority(EThreadPriority priority);
 
+	/// Return the thread priority
+	inline EThreadPriority getPriority() const { return m_priority; }
+
 	/**
 	 * \brief Specify whether or not this thread is critical
 	 * 
@@ -73,19 +79,16 @@ public:
 	/// Return the value of the critical flag
 	inline bool getCritical() const { return m_critical; }
 
-	/// Return the thread priority
-	inline EThreadPriority getPriority() const { return m_priority; }
-
 	/// Return the thread's stack size
 	inline int getStackSize() const { return m_stackSize; }
 
 	/// Return the thread ID
-#if defined(__OSX__)
-	inline static int getID() { return getThread()->m_id; }
-#elif defined(WIN32)
+#if defined(WIN32)
 	inline static int getID() { return (int) GetCurrentThreadId(); }
-#else
+#elif MTS_USE_ELF_TLS == 1
 	inline static int getID() { return m_id; }
+#else
+	inline static int getID() { return getThread()->m_id; }
 #endif
 
 	/// Return the name of this thread
@@ -184,11 +187,12 @@ private:
 #if defined(__LINUX__) || defined(__OSX__)
 	static int m_idCounter;
 	static ref<Mutex> m_idMutex;
-#endif
-#if defined(__OSX__)
+#if MTS_USE_ELF_TLS == 1
+	static __thread int m_id
+		__attribute__((tls_model("global-dynamic")));
+#else
 	int m_id;
-#elif defined(__LINUX__)
-	static int __thread m_id;
+#endif
 #endif
 };
 

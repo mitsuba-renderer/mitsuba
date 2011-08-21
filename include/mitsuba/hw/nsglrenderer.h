@@ -29,6 +29,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief A MacOS X (NSGL) OpenGL Renderer
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW NSGLRenderer : public GLRenderer {
 public:

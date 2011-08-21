@@ -33,6 +33,7 @@ MTS_NAMESPACE_BEGIN
  * requests in the XML file.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE ConfigurableObject : public SerializableObject {
 public:
@@ -47,6 +48,9 @@ public:
 
 	/// Add a child (default implementation throws an error)
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
+
+	/// Add an unnamed child
+	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
 	/** \brief Configure the object (called \a once after construction
 	   and addition of all child ConfigurableObjects) */

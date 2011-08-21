@@ -49,7 +49,7 @@ void Shape::configure() {
 		   tracer implementation to work correctly. */
 		Properties props("diffuse");
 		props.setSpectrum("reflectance", Spectrum(0.0f));
-		addChild("", static_cast<BSDF *> (PluginManager::getInstance()->
+		addChild(static_cast<BSDF *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(BSDF), props)));
 	}
 }

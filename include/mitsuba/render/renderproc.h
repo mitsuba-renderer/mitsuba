@@ -32,6 +32,7 @@ MTS_NAMESPACE_BEGIN
  * then rendered in parallel.
  *
  * \sa SampleIntegrator
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER BlockedRenderProcess : public BlockedImageProcess {
 public:

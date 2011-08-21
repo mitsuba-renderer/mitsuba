@@ -26,31 +26,7 @@ MTS_NAMESPACE_BEGIN
 
 ref<Scene> Utility::loadScene(const std::string &filename,
 		const ParameterMap &params) {
-	/* Prepare for parsing scene descriptions */
-	FileResolver *resolver = Thread::getThread()->getFileResolver();
-	SAXParser* parser = new SAXParser();
-	fs::path schemaPath = resolver->resolveAbsolute("data/schema/scene.xsd");
-	Log(EDebug, "Loading scene \"%s\" ..", filename.c_str());
-
-	/* Check against the 'scene.xsd' XML Schema */
-	parser->setDoSchema(true);
-	parser->setValidationSchemaFullChecking(true);
-	parser->setValidationScheme(SAXParser::Val_Always);
-	parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
-	parser->setCalculateSrcOfs(true);
-
-	SceneHandler *handler = new SceneHandler(parser, params);
-	parser->setDoNamespaces(true);
-	parser->setDocumentHandler(handler);
-	parser->setErrorHandler(handler);
-		
-	parser->parse(filename.c_str());
-	ref<Scene> scene = handler->getScene();
-
-	delete parser;
-	delete handler;
-
-	return scene;
+	return SceneHandler::loadScene(filename, params);
 }
 
 MTS_IMPLEMENT_CLASS(Utility, true, Object)

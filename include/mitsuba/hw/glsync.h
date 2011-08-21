@@ -25,6 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief OpenGL-based GPUSync implementation
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW GLSync : public GPUSync {
 public:

@@ -28,6 +28,7 @@ MTS_NAMESPACE_BEGIN
  * integral of the RTE
  *
  * \sa Medium::sampleDistance()
+ * \ingroup librender
  */
 struct MTS_EXPORT_RENDER MediumSamplingRecord {
 public:
@@ -89,6 +90,7 @@ public:
 };
 
 /** \brief Abstract participating medium 
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Medium : public NetworkedObject {
 public:
@@ -172,6 +174,8 @@ public:
 
 	/// Add a child ConfigurableObject
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
+	/// Add an unnamed child
+	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
 	/// Return a string representation
 	virtual std::string toString() const = 0;

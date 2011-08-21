@@ -24,12 +24,15 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Specialized sampler implementation used to seed MLT-style algorithm. Allows
- * to query for the current sample index, which can later be used to rewind
+ * \brief Specialized sampler implementation used to seed MLT-style algorithm. 
+ *
+ * Allows to query for the current sample index, which can later be used to rewind
  * back to this state. In the case of MLT, this makes it possible to sample paths 
  * approximately proportional to their contribution without actually having
  * to store millions of path. Note that `rewinding' is naive -- it just 
  * resets & regenerates the whole random number sequence, which might be slow.
+ *
+ * \ingroup libbidir
  */
 class MTS_EXPORT_BIDIR ReplayableSampler : public Sampler {
 public:
@@ -52,7 +55,7 @@ public:
 	virtual void generate();
 
 	/// Manually set the current sample index
-	virtual void setSampleIndex(uint64_t sampleIndex);
+	virtual void setSampleIndex(size_t sampleIndex);
 
 	/// Retrieve the next component value from the current sample
 	virtual Float next1D();

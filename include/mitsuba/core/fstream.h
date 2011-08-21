@@ -33,6 +33,7 @@ MTS_NAMESPACE_BEGIN
  * WIN32 API when used on Windows.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE FileStream : public Stream {
 public:

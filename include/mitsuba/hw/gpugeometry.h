@@ -24,10 +24,11 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief Abstract geometry storage on a graphics card
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW GPUGeometry : public Object {
 public:
-	/// Create an empty program
+	/// Create an empty geometry object
 	GPUGeometry(const TriMesh *mesh);
 
 	/// Return the name of this geometry object

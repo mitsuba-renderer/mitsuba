@@ -36,6 +36,7 @@ MTS_NAMESPACE_BEGIN
  * operating systems).
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE FileResolver : public Object {
 public:
@@ -61,6 +62,8 @@ public:
 	 * 
 	 * In comparison to \ref resolve(), this funtion returns all
 	 * matches instead of only the first one.
+	 *
+	 * \remark This function is not exposed in the Python bindings
 	 */
 	std::vector<fs::path> resolveAll(const fs::path &path) const;
 
@@ -75,10 +78,10 @@ public:
 
 	/// Add a search path to the resolver
 	void addPath(const fs::path &path);
-	
+
 	/// Clear all stored search paths
 	void clear();
-	
+
 	/// Return a human-readable string representation
 	std::string toString() const;
 

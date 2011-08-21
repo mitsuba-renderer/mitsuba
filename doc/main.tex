@@ -81,6 +81,8 @@
 % Listings settings
 \lstset{
 	basicstyle = \small\ttfamily\raggedright,
+	commentstyle=\color{lstcomment}\itshape,
+	stringstyle=\color{lstattrib},
 	mathescape = true,
 	frame = lrtb,
 	backgroundcolor = \color{lstshade},
@@ -111,6 +113,7 @@
 	},
 }
 
+
 % Set up textpos
 \TPGrid{68}{108}
 
@@ -125,6 +128,8 @@
 	{}
 \lstnewenvironment{cpp}[1][]{\lstset{language=c++, #1}}
 	{}
+\lstnewenvironment{python}[1][]{\lstset{language=Python, #1}}
+	{}
 \lstnewenvironment{xml}[1][]{\lstset{language=xml, #1}}
 	{}
 \lstnewenvironment{console}[1][]{\lstset{basicstyle=\footnotesize\ttfamily, float, #1}}
@@ -133,6 +138,7 @@
 % ----- 8< ----- 8< ------
 
 \title{
+	\includegraphics[width=4cm]{images/logo_plain.pdf}\\\vspace{2cm}
 	Mitsuba Documentation\\\vspace{3mm}
 	\large Version \MitsubaVersion
 }
@@ -152,9 +158,10 @@
 \include{format}
 \IfFileExists{plugins_generated.tex}{\include{plugins_generated}}{}
 %\include{import}
-%\include{development}
-%\include{integrator}
-%\include{parallelization}
+\include{development}
+\include{integrator}
+\include{parallelization}
+\include{python}
 \include{acknowledgements}
 
 \bibliographystyle{acm}

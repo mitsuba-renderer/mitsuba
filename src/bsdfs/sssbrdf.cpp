@@ -88,7 +88,7 @@ public:
 		hkProps.setFloat("thickness", std::numeric_limits<Float>::infinity());
 		m_hk = static_cast<BSDF *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(BSDF), hkProps));
-		m_hk->addChild("", hg);
+		m_hk->addChild(hg);
 
 		Properties coatingProps(props);
 		coatingProps.setPluginName("coating");
@@ -130,10 +130,10 @@ public:
 			m_configured = true;
 			m_hk->configure();
 			m_dipole->configure();
-			m_mixture->addChild("", m_hk);
-			m_mixture->addChild("", m_dipole);
+			m_mixture->addChild(m_hk);
+			m_mixture->addChild(m_dipole);
 			m_mixture->configure();
-			m_coating->addChild("", m_mixture);
+			m_coating->addChild(m_mixture);
 			m_coating->configure();
 
 			m_components.clear();

@@ -33,7 +33,8 @@ class Bitmap;
 class Font;
 
 /**
- * Helper class, which documents the capabilities of a renderer implementation
+ * \brief Helper class, which documents the capabilities of a renderer implementation
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW RendererCapabilities : public Object {
 public:
@@ -71,6 +72,7 @@ protected:
 };
 
 /** \brief Abstract renderer implementation
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW Renderer : public Object {
 public:

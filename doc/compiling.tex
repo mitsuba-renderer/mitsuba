@@ -8,7 +8,7 @@ software construction tool. There are some differences between the different ope
 more details, please refer to one of the next sections depending on which one you use.
 
 \subsection{Common steps}
-To get started, you will need to download a recent version of Mitsuba. Make sure that you have the Mercurial (\url{http://mercurial.selenic.com/}) versioning system installed\footnote{On Windows, you might also want the convenient TortoiseHG shell extension (\url{http://tortoisehg.bitbucket.org/}) to run the subsequent steps directly from the Explorer.} and enter the following at the command prompt:
+To get started, you will need to download a recent version of Mitsuba. Make sure that you have the Mercurial (\url{http://mercurial.selenic.com/}) versioning system installed\footnote{On Windows, you might want to use the convenient TortoiseHG shell extension (\url{http://tortoisehg.bitbucket.org/}) to run the subsequent steps directly from the Explorer.} and enter the following at the command prompt:
 \begin{shell}
 $\texttt{\$}$ hg clone https://www.mitsuba-renderer.org/hg/mitsuba
 \end{shell}
@@ -32,6 +32,8 @@ build/config-msvc2010-win32.py
 build/config-msvc2010-win64.py
 build/config-icl12-msvc2010-win32.py
 build/config-icl12-msvc2010-win64.py
+build/config-icl12-darwin-x86_64.py
+build/config-icl12-darwin-x86.py
 \end{shell}
 
 \subsection{Compilation flags}
@@ -77,7 +79,7 @@ First, run
 $\text{\$}$ sudo apt-get install build-essential scons mercurial qt4-dev-tools libpng12-dev 
     libjpeg62-dev libilmbase-dev libxerces-c3-dev libboost1.42-all-dev 
 	libopenexr-dev libglewmx1.5-dev libxxf86vm-dev libpcrecpp0
-	libboost-system-dev libboost-filesystem-dev libboost-dev
+	libboost-system-dev libboost-filesystem-dev libboost-python-dev libboost-dev
 \end{shell}
 Please ensure that the installed version of the boost libraries is 1.42 or later.
 To get COLLADA support, you will also need to install the \texttt{collada-dom} packages or build it from scratch. Here, we install the \code{x86\_64} binaries and development headers that can be found in the \texttt{dependencies/linux} directory\footnote{The directory also contains source packages in case these binaries don't work for you.}:
@@ -93,7 +95,7 @@ If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
 scons: $\texttt{done}$ building targets.
 \end{shell}
-To be able to run the renderer from the command line, you will also have to import it into your path:
+To be able to run the renderer from the command line, you will first have to import it into your path:
 \begin{shell}
 $\text{\$}$ . setpath.sh
 \end{shell}
@@ -155,16 +157,14 @@ into the \code{/etc/apt/sources.list} file.
 
 \subsection{Building on Fedora Core}
 You'll first need to install a number of dependencies. It is assumed here
-that you are using Fedora Core, hence some of the package may be named differently if you are 
-using another distribution.
+that you are using FC15, hence some of the package may be named differently if you are 
+using another version.
 
 First, run
 \begin{shell}
-$\text{\$}$ yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel
+$\text{\$}$ yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel
 \end{shell}
-You will also need the \texttt{glew-mx} and \texttt{collada-dom} packages, which are not included in the Fedora package repository. 
-You can grab source, \texttt{i386}, and \text{x86\_64} \texttt{RPM} files at the following location: \texttt{http://www.mitsuba-renderer.org/releases}.
-After installing them, simply run
+Afterwards, simply run
 \begin{shell}
 $\text{\$}$ scons
 \end{shell}
@@ -173,71 +173,68 @@ If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
 scons: $\texttt{done}$ building targets.
 \end{shell}
-To be able to run the renderer from the command line, you will also have to import it into your path:
+To be able to run the renderer from the command line, you will first have to import it into your path:
 \begin{shell}
 $\text{\$}$ . setpath.sh
 \end{shell}
 (note the period at the beginning -- this assumes that you are using \code{bash}).
 Having set up everything, you can now move on to \secref{basics}.
-
+\subsubsection{Creating Fedora Core packages}
+To create \code{RPM} packages, you will need to install the \code{RPM} development tools:
+\begin{shell}
+$\text{\$}$ yum install rpmdevtools
+\end{shell}
+Once this is done, run the following command in your home directory:
+\begin{shell}
+$\text{\$}$ rpmdev-setuptree
+\end{shell}
+and create a Mitsuba source package in the appropriate directory:
+\begin{shell}
+$\text{\$}$ ln -s mitsuba mitsuba-$\code{\MitsubaVersion}$
+$\text{\$}$ tar czvf rpmbuild/SOURCES/mitsuba-$\code{\MitsubaVersion}$.tar.gz mitsuba-$\code{\MitsubaVersion}$/.
+\end{shell}
+Finally, \code{rpmbuilder} can be invoked to create the package:
+\begin{shell}
+$\text{\$}$ rpmbuild -bb mitsuba-$\code{\MitsubaVersion}$/data/linux/fedora/mitsuba.spec
+\end{shell}
+After this command finishes, its output can be found in the directory \code{rpmbuild/RPMS}.
 \subsection{Building on Arch Linux}
-There are two ways to install Mitsuba on Archlinux, the Arch way, and the other way.
-
-The Arch Way is to use the Aur software repository. 
-Accessing software in the Aur repository is easiest when using a script called \texttt{packer}.
-
-First download packer then use \texttt{makepkg} to build and install it. 
-The \texttt{-is} flags will prompt you for your sudo password and then install the package after it has finished building as well as install any needed dependencies.
+You'll first need to install a number of dependencies: 
 \begin{shell}
-$\text{\$}$ mkdir packer && cd packer
-$\text{\$}$ wget http://aur.archlinux.org/packages/packer/packer/PKGBUILD
-$\text{\$}$ makepkg -is
+$\text{\$}$ sudo pacman -S gcc xerces-c glew openexr boost libpng libjpeg qt scons mercurial python
 \end{shell}
-
-Next, use packer to automatically download, build, and install Mitsuba as well as any needed dependencies.
-The optional \code{--noedit} flag is used if you do not wish to edit the files after they are downloaded.
-The optional \code{--noconfirm} flag is used if you do not wish to confirm each step of the installation. 
+For COLLADA support, you will also have to install the \code{collada-dom}
+library. For this, you can either install the binary package available on
+the Mitsuba website, or you can compile it yourself using the \code{PKGBUILD}
+supplied with Mitsuba, i.e.
 \begin{shell}
-$\text{\$}$ sudo packer -S --noedit --noconfirm mitsuba-hg glewmx collada-dom
+$\text{\$}$ cd <some-temporary-directory>
+$\text{\$}$ cp <path-to-mitsuba>/data/linux/arch/collada-dom/PKGBUILD .
+$\text{\$}$ makepkg PKGBUILD
+<..compiling..>
+$\text{\$}$ sudo pacman -U <generated package file>
 \end{shell}
-
-Periodically you may wish to update Mitsuba to the latest version.
-To do this simply reinstall it and packer will pull and build the latest version.
+Once all dependencies are taken care of, simply run
 \begin{shell}
-$\text{\$}$ sudo packer -S --noedit --noconfirm mitsuba-hg
+$\text{\$}$ scons
 \end{shell}
-
-Alternatively you can skip using packer and manually download the files and install them one at a time yourself.
-First install glewmx
+inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
+If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
-$\text{\$}$ mkdir glewmx && cd glewmx
-$\text{\$}$ wget http://aur.archlinux.org/packages/glewmx/glewmx/PKGBUILD
-$\text{\$}$ makepkg -is
+scons: $\texttt{done}$ building targets.
 \end{shell}
-
-And then collada-dom
+To be able to run the renderer from the command line, you will first have to import it into your path:
 \begin{shell}
-$\text{\$}$ mkdir collada-dom && cd collada-dom
-$\text{\$}$ wget http://aur.archlinux.org/packages/collada-dom/collada-dom/PKGBUILD
-$\text{\$}$ makepkg -is
+$\text{\$}$ . setpath.sh
 \end{shell}
-
-And finally Mitsuba
-\begin{shell}
-$\text{\$}$ mkdir mitsuba-hg && cd mitsuba-hg
-$\text{\$}$ wget http://aur.archlinux.org/packages/mitsuba-hg/mitsuba-hg/PKGBUILD
-$\text{\$}$ makepkg -is
-\end{shell}
-
-To uninstall do this
-\begin{shell}
-$\text{\$}$ sudo pacman -R mitsuba-hg glewmx collada-dom
-\end{shell}
-After installing you will be able to run the renderer from the command line.
+(note the period at the beginning -- this assumes that you are using \code{bash}).
 Having set up everything, you can now move on to \secref{basics}.
-
-If for some reason you are unable access the Aur files, they are also hosted at 
-(\url{https://www.mitsuba-renderer.org/releases/contrib/archlinux/}).
+\subsubsection{Creating Arch Linux packages}
+Mitsuba ships with a \code{PKGBUILD} file, which automatically builds
+a package from the most recent repository version:
+\begin{shell}
+$\text{\$}$ makepkg data/linux/arch/mitsuba/PKGBUILD
+\end{shell}
 
 \subsection{Building on Windows}
 On the Windows platform, Mitsuba already includes most of the dependencies in precompiled form.

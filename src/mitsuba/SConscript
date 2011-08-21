@@ -20,9 +20,7 @@ if mainEnv.has_key('GLINCLUDE'):
 if sys.platform == 'darwin':
 	# On OSX, we need this stub to access OpenGL from the command line
 	mainEnv_osx = mainEnv.Clone()
-	mainEnv_osx['CXXFLAGS'].remove('-fstrict-aliasing')
-	mainEnv_osx['CXXFLAGS'].remove('-ftree-vectorize')
-	mainEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing')
+	mainEnv_osx.ConfigureForObjectiveCPP()
 	stubs += [mainEnv_osx.StaticObject('darwin_stub.mm')]
 
 mainEnv.Program('mtsutil', resources + stubs + ['mtsutil.cpp'])

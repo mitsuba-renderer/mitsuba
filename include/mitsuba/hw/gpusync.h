@@ -25,6 +25,7 @@ MTS_NAMESPACE_BEGIN
 
 /** \brief Abstract GPU synchronization object implementing
  * a memory fence operation.
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW GPUSync : public Object {
 public:

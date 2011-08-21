@@ -104,7 +104,6 @@ public:
 		std::vector<Point2> texcoords;
 		std::vector<OBJTriangle> triangles;
 		bool hasNormals = false, hasTexcoords = false;
-		bool firstVertex = true;
 		BSDF *currentMaterial = NULL;
 		std::string name = m_name, line;
 		std::set<std::string> geomNames;
@@ -151,7 +150,6 @@ public:
 					geomIdx++;
 					hasNormals = false;
 					hasTexcoords = false;
-					firstVertex = false;
 				} else {
 					nameBeforeGeometry = true;
 				}
@@ -180,7 +178,6 @@ public:
 				hasTexcoords = true;
 			} else if (buf == "f") {
 				std::string  tmp;
-				firstVertex = true;
 				OBJTriangle t;
 				iss >> tmp; parse(t, 0, tmp);
 				iss >> tmp; parse(t, 1, tmp);
@@ -418,7 +415,7 @@ public:
 
 		mesh->incRef();
 		if (currentMaterial)
-			mesh->addChild("", currentMaterial);
+			mesh->addChild(currentMaterial);
 		m_meshes.push_back(mesh);
 		Log(EInfo, "%s: Loaded " SIZE_T_FMT " triangles, " SIZE_T_FMT 
 			" vertices (merged " SIZE_T_FMT " vertices).", name.c_str(),

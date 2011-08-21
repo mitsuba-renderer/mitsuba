@@ -25,6 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief OpenGL-based GPUTexture implementation
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW GLTexture : public GPUTexture {
 public:

@@ -163,7 +163,28 @@ ConfigurableObject *PluginManager::createObject(const Class *classType,
 		props.getPluginName().c_str());
 	return object;
 }
-	
+
+ConfigurableObject *PluginManager::createObject(const Properties &props) {
+	ConfigurableObject *object;
+
+	m_mutex->lock();
+	try {
+		ensurePluginLoaded(props.getPluginName());
+		object = m_plugins[props.getPluginName()]->createInstance(props);
+	} catch (std::runtime_error &e) {
+		m_mutex->unlock();
+		throw e;
+	} catch (std::exception &e) {
+		m_mutex->unlock();
+		throw e;
+	}
+	m_mutex->unlock();
+	if (object->getClass()->isAbstract())
+		Log(EError, "Error when loading plugin \"%s\": Identifies itself as an abstract class",
+		props.getPluginName().c_str());
+	return object;
+}
+
 std::vector<std::string> PluginManager::getLoadedPlugins() const {
 	std::vector<std::string> list;
 	m_mutex->lock();

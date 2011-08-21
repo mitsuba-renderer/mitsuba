@@ -80,7 +80,6 @@ public:
 		memcpy(m, mtx.m, sizeof(T) * M * N);
 	}
 
-
 	/// Initialize with the identity matrix
 	void setIdentity() {
 		for (int i=0; i<M; ++i)
@@ -182,6 +181,14 @@ public:
 
 	/// Matrix-scalar subtraction
 	inline const Matrix &operator-(T value) {
+		for (int i=0; i<M; ++i)
+			for (int j=0; j<N; ++j)
+				m[i][j] -= value;
+		return *this;
+	}
+
+	/// Matrix-scalar addition
+	inline const Matrix &operator-=(T value) {
 		for (int i=0; i<M; ++i)
 			for (int j=0; j<N; ++j)
 				m[i][j] -= value;
@@ -582,6 +589,7 @@ public:
 /**
  * \brief Basic 4x4 matrix data type
  * \ingroup libcore
+ * \ingroup libpython
  */
 struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 	inline Matrix4x4() { }
@@ -676,6 +684,10 @@ template <typename T, int M1, int N1, int M2, int N2> inline Matrix<M1, N2, T>
 		}
 	}
 	return result;
+}
+
+template <typename T, int M, int N> inline Matrix<M, N, T> operator*(T f, const Matrix<M, N, T> &m) {
+	return m*f;
 }
 
 /**

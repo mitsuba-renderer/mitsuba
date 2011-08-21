@@ -31,6 +31,7 @@ MTS_NAMESPACE_BEGIN
  * This class can efficiently handle 1-bit masks
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Bitmap : public Object {
 public:
@@ -66,7 +67,7 @@ public:
 	void save(EFileFormat format, Stream *stream, int compression = 5) const;
 
 	/// Return the image's title identifier
-	inline const std::string &getTile() const { return m_title; }
+	inline const std::string &getTitle() const { return m_title; }
 	
 	/// Return the image's author identifier
 	inline const std::string &getAuthor() const { return m_author; }
@@ -89,29 +90,41 @@ public:
 	/// Set the image's gamma identifier (-1: sRGB)
 	inline void setGamma(Float gamma) { m_gamma = gamma; }
 
-	/// Access the underlying raster
+	/**
+	 * \brief Access the underlying raster
+	 * \remark This function is not exposed in the Python bindings
+	 */
 	inline unsigned char *getData() { return m_data; }
 	
-	/// Access the underlying bit raster
+	/**
+	 * \brief Access the underlying raster
+	 * \remark This function is not exposed in the Python bindings
+	 */
 	inline const unsigned char *getData() const { return m_data; }
 
-	/// Access the underlying raster (only meant for 128bpp images)
+	/**
+	 * \brief Access the underlying raster (128bpp images)
+	 * \remark This function is not exposed in the Python bindings
+	 */
 	inline float *getFloatData() { return (float *) m_data; }
 
-	/// Access the underlying raster (only meant for 128bpp images)
+	/**
+	 * \brief Access the underlying raster (128bpp images)
+	 * \remark This function is not exposed in the Python bindings
+	 */
 	inline const float *getFloatData() const { return (const float *) m_data; }
 
 	/// Return the bitmap width
-	inline const int getWidth() const { return m_width; }
+	inline int getWidth() const { return m_width; }
 
 	/// Return the bitmap height 
-	inline const int getHeight() const { return m_height; }
+	inline int getHeight() const { return m_height; }
 
 	/// Return the bitmap's bits per pixel
-	inline const int getBitsPerPixel() const { return m_bpp; }
+	inline int getBitsPerPixel() const { return m_bpp; }
 
 	/// Return the bitmap size in bytes
-	inline const size_t getSize() const { return m_size; }
+	inline size_t getSize() const { return m_size; }
 
 	/// Return some human-readable information about this bitmap
 	std::string toString() const;

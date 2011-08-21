@@ -31,6 +31,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Implements the surface area heuristic for use
  * by the \ref GenericKDTree construction algorithm.
+ * \ingroup librender
  */
 class SurfaceAreaHeuristic {
 public:
@@ -79,21 +80,24 @@ private:
 };
 
 /**
- * This class specializes \ref GenericKDTree to a three-dimensional
- * tree to be used for ray tracing. One additional function call
- * must be implemented by subclasses:
+ * \brief Specializes \ref GenericKDTree to a three-dimensional
+ * tree to be used for ray tracing. 
  *
+ * One additional function call must be implemented by subclasses:
+ * \code
  * /// Check whether a primitive is intersected by the given ray. 
  * /// Some temporary space is supplied, which can be used to cache  
  * /// information about the intersection
  * bool intersect(const Ray &ray, index_type idx, 
  *     Float mint, Float maxt, Float &t, void *tmp);
+ * \endcode
  *
  * This class implements an epsilon-free version of the optimized ray 
  * traversal algorithm (TA^B_{rec}), which is explained in Vlastimil 
  * Havran's PhD thesis "Heuristic Ray Shooting Algorithms". 
  *
  * \author Wenzel Jakob
+ * \ingroup librender
  */
 template <typename Derived> 
 	class SAHKDTree3D : public GenericKDTree<AABB, SurfaceAreaHeuristic, Derived> {

@@ -37,6 +37,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \sa ref, Object
  * \ingroup libcore
+ * \ingroup librender
  */
 class MTS_EXPORT_CORE Class {
 public:
@@ -124,11 +125,34 @@ private:
 
 /*! @{ */
 
+/**
+ * \brief Return the \ref Class object corresponding to a named class.
+ *
+ * Call the Macro without quotes, e.g. \c MTS_CLASS(SerializableObject)
+ */
 #define MTS_CLASS(x) x::m_theClass
 
 /**
- * \brief This macro must be used in the declaration of 
- * all classes derived from \ref Object.
+ * \brief This macro must be used in the initial definition in 
+ * classes that derive from \ref Object.
+ *
+ * This is needed for the basic RTTI support provided by Mitsuba objects.
+ * For instance, a class definition might look like the following:
+ *
+ * \code
+ * class MyObject : public Object {
+ * public:
+ *     MyObject();
+ *
+ *     /// Important: declare RTTI data structures
+ *     MTS_DECLARE_CLASS()
+ * protected:
+ *     /// Important: needs to declare a protected virtual destructor
+ *     virtual ~MyObject();
+ *
+ * };
+ * \endcode
+ *
  */
 #define MTS_DECLARE_CLASS() \
 	virtual const Class *getClass() const; \
@@ -137,6 +161,17 @@ public: \
 
 /**
  * \brief Creates basic RTTI support for a class
+ *
+ * This macro or one of its variants should be invoked in the main
+ * implementation \c .cpp file of any class that derives from \ref Object.
+ * This is needed for the basic RTTI support provided by Mitsuba objects.
+ * For instance, the corresponding piece for the example shown in the
+ * documentation of \ref MTS_DECLARE_CLASS might look like this:
+ *
+ * \code
+ * MTS_IMPLEMENT_CLASS(MyObject, false, Object)
+ * \endcode
+ *
  * \param name Name of the class
  * \param abstract \c true if the class contains pure virtual methods
  * \param super Name of the parent class
@@ -148,8 +183,13 @@ public: \
 	}
 
 /**
- * \brief Creates basic RTTI support for a class. Assumes that
- * the class can be instantiated by name.
+ * \brief Creates basic RTTI support for a class. To be used when the class
+ * has a \a simple constructor (i.e. one wich does not take any arguments)
+ *
+ * This macro or one of its variants should be invoked in the main
+ * implementation \c .cpp file of any class that derives from \ref Object.
+ * This is needed for the basic RTTI support provided by Mitsuba objects.
+ *
  * \param name Name of the class
  * \param abstract \c true if the class contains pure virtual methods
  * \param super Name of the parent class
@@ -164,8 +204,13 @@ public: \
 	}
 
 /**
- * \brief Creates basic RTTI support for a class. Assumes that
- * the class can be unserialized from a binary data stream.
+ * \brief Creates basic RTTI support for a class. To be used when the class
+ * can be unserialized from a binary data stream.
+ *
+ * This macro or one of its variants should be invoked in the main
+ * implementation \c .cpp file of any class that derives from \ref Object.
+ * This is needed for the basic RTTI support provided by Mitsuba objects.
+ *
  * \param name Name of the class
  * \param abstract \c true if the class contains pure virtual methods
  * \param super Name of the parent class
@@ -180,9 +225,14 @@ public: \
 	}
 
 /**
- * \brief Creates basic RTTI support for a class. Assumes that
- * the class can be unserialized from a binary data stream as well
- * as instantiated by name.
+ * \brief Creates basic RTTI support for a class. To be used when the class
+ * can be unserialized from a binary data stream as well as instantiated 
+ * by a constructor that does not take any arguments.
+ *
+ * This macro or one of its variants should be invoked in the main
+ * implementation \c .cpp file of any class that derives from \ref Object.
+ * This is needed for the basic RTTI support provided by Mitsuba objects.
+ *
  * \param name Name of the class
  * \param abstract \c true if the class contains pure virtual methods
  * \param super Name of the parent class

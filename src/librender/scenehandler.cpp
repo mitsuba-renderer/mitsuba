@@ -321,12 +321,18 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				mtx.m[i][j] = parseFloat(name, tokens[index++]);
 
 		m_transform = Transform(mtx) * m_transform;
-	} else if (name == "point" || name == "vector") {
+	} else if (name == "point") {
 		Float x = parseFloat(name, context.attributes["x"]);
 		Float y = parseFloat(name, context.attributes["y"]);
 		Float z = parseFloat(name, context.attributes["z"]);
 
 		context.parent->properties.setPoint(context.attributes["name"], Point(x, y, z));
+	} else if (name == "vector") {
+		Float x = parseFloat(name, context.attributes["x"]);
+		Float y = parseFloat(name, context.attributes["y"]);
+		Float z = parseFloat(name, context.attributes["z"]);
+
+		context.parent->properties.setVector(context.attributes["name"], Vector(x, y, z));
 	} else if (name == "rgb") {
 		Spectrum::EConversionIntent intent = Spectrum::EReflectance;
 		if (context.attributes.find("intent") != context.attributes.end()) {
@@ -548,6 +554,50 @@ void SceneHandler::fatalError(const SAXParseException& e) {
 	SLog(EError, "Fatal error in file \"%s\" (line %i): %s",
 		transcode(e.getSystemId()).c_str(), e.getLineNumber(),
 		transcode(e.getMessage()).c_str());
+}
+
+// -----------------------------------------------------------------------
+
+ref<Scene> SceneHandler::loadScene(const fs::path &filename, const ParameterMap &params) {
+	/* Prepare for parsing scene descriptions */
+	FileResolver *resolver = Thread::getThread()->getFileResolver();
+	SAXParser* parser = new SAXParser();
+	fs::path schemaPath = resolver->resolveAbsolute("data/schema/scene.xsd");
+	SLog(EDebug, "Loading scene \"%s\" ..", filename.file_string().c_str());
+
+	/* Check against the 'scene.xsd' XML Schema */
+	parser->setDoSchema(true);
+	parser->setValidationSchemaFullChecking(true);
+	parser->setValidationScheme(SAXParser::Val_Always);
+	parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
+	parser->setCalculateSrcOfs(true);
+
+	SceneHandler *handler = new SceneHandler(parser, params);
+	parser->setDoNamespaces(true);
+	parser->setDocumentHandler(handler);
+	parser->setErrorHandler(handler);
+		
+	parser->parse(filename.file_string().c_str());
+	ref<Scene> scene = handler->getScene();
+
+	delete parser;
+	delete handler;
+
+	return scene;
+}
+
+void SceneHandler::staticInitialization() {
+	/* Initialize Xerces-C */
+	try {
+		XMLPlatformUtils::Initialize();
+	} catch(const XMLException &toCatch) {
+		SLog(EError, "Error during Xerces initialization: %s",
+			XMLString::transcode(toCatch.getMessage()));
+	}
+}
+
+void SceneHandler::staticShutdown() {
+	XMLPlatformUtils::Terminate();
 }
 
 MTS_NAMESPACE_END

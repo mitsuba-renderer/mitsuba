@@ -30,6 +30,7 @@ MTS_NAMESPACE_BEGIN
  * to alignment purposes and should not be changed.
  *
  * \ingroup libcore
+ * \ingroup libpython
 */
 struct Ray {
 	Point o;     ///< Ray origin
@@ -107,7 +108,13 @@ struct Ray {
 #endif
 	}
 
-	/// Return 3d coordinates of a point on the ray
+	/**
+	 * \brief Return 3D coordinates of a point along the ray
+	 *
+	 * \remark In the Python bindings, this operator is 
+	 * exposed as a function named \c eval -- i.e. 
+	 * position lookups should be written as \c ray.eval(t)
+	 */
 	inline Point operator() (Float t) const { return o + t * d; }
 
 	/// Return a string representation of this ray

@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 
 /** \brief A data structure for 1/2/3D and cube texture mapping. Also
  * has optional render-to-texture functionality.
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW GPUTexture : public Object {
 public:

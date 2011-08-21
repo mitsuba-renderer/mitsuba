@@ -30,15 +30,13 @@ if glEnv.has_key('GLINCLUDE'):
 
 if sys.platform == 'darwin':
 	glEnv_osx = glEnv.Clone()
-	glEnv_osx['CXXFLAGS'].remove('-fstrict-aliasing')
-	glEnv_osx['CXXFLAGS'].remove('-ftree-vectorize')
-	glEnv_osx['CXXFLAGS'].append('-fno-strict-aliasing')
+	glEnv_osx.ConfigureForObjectiveCPP()
 	libhw_objects += glEnv_osx.SharedObject(['nsglsession.mm',
 		'nsgldevice.mm', 'nsglrenderer.mm'])
 
 libhw = glEnv.SharedLibrary('mitsuba-hw', libhw_objects)
 if sys.platform == "darwin":
-	glEnv.AddPostAction(libhw, 'install_name_tool -id @executable_path/../Frameworks/libmitsuba-hw.dylib $TARGET')
+	glEnv.AddPostAction(libhw, 'install_name_tool -id @loader_path/../Frameworks/libmitsuba-hw.dylib $TARGET')
 
 env.Append(LIBS=['mitsuba-hw'])
 env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'libhw')])

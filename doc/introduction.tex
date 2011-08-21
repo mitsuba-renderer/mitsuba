@@ -1,14 +1,17 @@
-\section{Introduction}
+\part{Using Mitsuba}
 \textbf{Disclaimer:} This is manual documents the usage, file format, and
 internal design of the Mitsuba rendering system. It is currently a work 
 in progress, hence some parts may still be incomplete or missing.
 
-\subsection{About Mitsuba}
+\section{About Mitsuba}
 Mitsuba is a research-oriented rendering system in the style of PBRT 
 (\url{www.pbrt.org}), from which it derives much inspiration.
 It is written in portable C++, implements unbiased as well 
 as biased techniques, and contains heavy optimizations targeted 
-towards current CPU architectures.
+towards current CPU architectures. 
+Mitsuba is extremely modular: it consists of a small set of core libraries 
+and over 100 different plugins that implement functionality ranging 
+from materials and light sources to complete rendering algorithms.
 
 In comparison to other open source renderers, Mitsuba places a strong 
 emphasis on experimental rendering techniques, such as path-based 
@@ -46,13 +49,24 @@ it can get.
 The renderer also tries to be very conservative in its use of memory, which allows it to handle 
 large scenes (>30 million triangles) and multi-gigabyte heterogeneous volumes on consumer hardware.
 
+\parheader{Realism and accuracy:} Mitsuba comes with a large repository of physically-based
+reflectance models for surfaces and participating media. These implementations
+are designed so that they can be used to build complex shader networks, while
+providing enough flexibility to be compatible with a wide range of different
+rendering techniques, including path tracing, photon mapping, hardware-accelerated rendering 
+and bidirectional methods.
+
+The unbiased path tracers in Mitsuba are battle-proven and produce 
+reference-quality results that can be used for predictive rendering, and to verify 
+implementations of other rendering methods. 
+
 \parheader{Usability:}
 Mitsuba comes with a graphical user interface to interactively explore scenes. Once a suitable 
 viewpoint has been found, it is straightforward to perform renderings using any of the 
 implemented rendering techniques, while tweaking their parameters to find the most suitable 
 settings. Experimental integration into Blender 2.5 is also available.
 
-\subsection{License}
+\section{License}
 Mitsuba is free software and can be redistributed and modified under the terms of the GNU General 
 Public License (Version 3) as provided by the Free Software Foundation.
 

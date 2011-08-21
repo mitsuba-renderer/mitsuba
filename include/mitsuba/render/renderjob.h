@@ -26,29 +26,54 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Render job - coordinates the process of rendering a single
- * image. Implemented as a thread so that multiple jobs can
+ * \brief Coordinates the process of rendering a single image. 
+ *
+ * Implemented as a thread so that multiple jobs can 
  * be executed concurrently.
+ *
+ * \ingroup librender
+ * \ingroup libpython
  */
 class MTS_EXPORT_RENDER RenderJob : public Thread {
 public:
 	/**
-	 * Create a new render job for the given scene. When the
-	 * scene, sampler or camera are already registered with the scheduler, 
-	 * the last parameters can optionally be specified (that way 
-	 * they do not have to be re-sent to network rendering servers).
+	 * \brief Create a new render job for the given scene. 
+	 *
+	 * When the Resource ID parameters (\c sceneResID, \c cameraResID, ..) are
+	 * set to \c -1, the implementation will automatically register the
+	 * associated objects (scene, camera, sampler) with the scheduler and 
+	 * forward copies to all involved network rendering workers. When some 
+	 * of these resources have already been registered with
+	 * the scheduler, their IDs can be provided to avoid this extra
+	 * communication cost.
+	 *
+	 * \param threadName
+	 *     Thread name identifier for this render job
+	 * \param scene
+	 *     Scene to be rendered
+	 * \param queue
+	 *     Pointer to a queue, to which this job should be added
+	 * \param sceneResID
+	 *     Resource ID of \c scene (or \c -1)
+	 * \param cameraResID
+	 *     Resource ID of \c scene->getCamera() (or \c -1)
+	 * \param samplerResID
+	 *     Resource ID of the sample generator (or \c -1)
+	 * \param threadIsCritical
+	 *     When set to \c true, the entire program will terminate 
+	 *     if this thread fails unexpectedly.
+	 * \param testSupervisor
+	 *     When this image is being rendered as part of a test suite,
+	 *     this parameter points to the associated \ref TestSupervisor
+	 *     instance.
 	 */
 	RenderJob(const std::string &threadName, 
 		Scene *scene, RenderQueue *queue,
-		TestSupervisor *testSupervisor,
 		int sceneResID = -1,
 		int cameraResID = -1,
 		int samplerResID = -1,
 		bool threadIsCritical = true,
-		bool visualFeedback = false);
-
-	/// Should visual feedback be provided (true when rendering using the GUI)
-	inline bool hasVisualFeedback() const { return m_visualFeedback; }
+		TestSupervisor *testSupervisor = NULL);
 
 	/// Write out the current (partially rendered) image
 	inline void flush() { m_scene->flush(); }
@@ -73,7 +98,6 @@ private:
 	bool m_ownsSceneResource;
 	bool m_ownsCameraResource;
 	bool m_ownsSamplerResource;
-	bool m_visualFeedback;
 	bool m_cancelled;
 };
 

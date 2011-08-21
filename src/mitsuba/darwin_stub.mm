@@ -18,11 +18,11 @@
 
 #import <Cocoa/Cocoa.h>
 
-extern int ubi_main(int argc, char **argv);
+extern int mts_main(int argc, char **argv);
 
 int main(int argc, char **argv) {
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-	int retval = ubi_main(argc, argv);
+	int retval = mts_main(argc, argv);
 	[pool release];
 	return retval;
 }

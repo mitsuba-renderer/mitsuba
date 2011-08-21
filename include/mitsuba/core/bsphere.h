@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 /** \brief Bounding sphere data structure in three dimensions
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 struct BSphere {
 	Point center;
@@ -59,7 +60,6 @@ struct BSphere {
 
 	/// Expand the bounding sphere radius to contain another point.
 	inline void expandBy(const Point p) {
-		Vector dir = p - center;
 		radius = std::max(radius, (p-center).length());
 	}
 	
@@ -81,6 +81,10 @@ struct BSphere {
 	/**
 	 * \brief Calculate the intersection points with the given ray
 	 * \return \c true if the ray intersects the bounding sphere
+	 *
+	 * \remark In the Python bindings, this function returns the
+	 * \c nearT and \c farT values as a tuple (or \c None, when no
+	 * intersection was found)
 	 */
 	inline bool rayIntersect(const Ray &ray, Float &nearHit, Float &farHit) const {
 		Vector originToCenter = center - ray.o;

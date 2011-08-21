@@ -89,25 +89,36 @@ template <typename T> struct TPoint2;
 template <typename T> struct TPoint3;
 template <typename T> struct TPoint4;
 template <typename T> struct TQuaternion;
+/// \ingroup libpython
 typedef TVector2<Float>    Vector2;
+/// \ingroup libpython
 typedef TVector2<int>      Vector2i;
 typedef TVector2<float>    Vector2f;
 typedef TVector2<double>   Vector2d;
+/// \ingroup libpython
 typedef TVector3<Float>    Vector;
+/// \ingroup libpython
 typedef TVector3<Float>    Vector3;
+/// \ingroup libpython
 typedef TVector3<int>      Vector3i;
 typedef TVector3<float>    Vector3f;
 typedef TVector3<double>   Vector3d;
+/// \ingroup libpython
 typedef TVector4<Float>    Vector4;
 typedef TVector4<int>      Vector4i;
 typedef TVector4<float>    Vector4f;
 typedef TVector4<double>   Vector4d;
+/// \ingroup libpython
 typedef TPoint2<Float>     Point2;
+/// \ingroup libpython
 typedef TPoint2<int>       Point2i;
 typedef TPoint2<float>     Point2f;
 typedef TPoint2<double>    Point2d;
+/// \ingroup libpython
 typedef TPoint3<Float>     Point;
+/// \ingroup libpython
 typedef TPoint3<Float>     Point3;
+/// \ingroup libpython
 typedef TPoint3<int>       Point3i;
 typedef TPoint3<float>     Point3f;
 typedef TPoint3<double>    Point3d;

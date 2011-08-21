@@ -27,6 +27,7 @@ MTS_NAMESPACE_BEGIN
  * \brief Work unit that specifies a rectangular region in an image.
  *
  * Used for instance in \ref BlockedImageProcess
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER RectangularWorkUnit : public WorkUnit {
 public:

@@ -132,7 +132,7 @@ void TreeItem::setProperty(const std::string &name, const Properties &props) {
 
 void TreeItem::setProperties(const Properties &props) {
 	std::vector<std::string> propertyNames;
-	props.putPropertyNames(propertyNames);
+	props.putNames(propertyNames);
 
 	for (std::vector<std::string>::const_iterator it = propertyNames.begin();
 		it != propertyNames.end(); ++it) 

@@ -34,7 +34,10 @@ XERCES_CPP_NAMESPACE_END
 XERCES_CPP_NAMESPACE_USE
 MTS_NAMESPACE_BEGIN
 
-/// \brief This exception is thrown when attempting to load an outdated file
+/**
+ * \brief This exception is thrown when attempting to load an outdated file
+ * \ingroup librender
+ */
 class VersionException : public std::runtime_error {
 public:
 	inline VersionException(const std::string &str, const Version &version)
@@ -47,7 +50,12 @@ private:
 
 /**
  * \brief XML parser for Mitsuba scene files. To be used with the
- * SAX interface Xerces-C++.
+ * SAX interface of Xerces-C++.
+ *
+ * \remark In the Python bindings, only the static function
+ *         \ref loadScene() is exposed.
+ * \ingroup librender
+ * \ingroup libpython
  */
 class MTS_EXPORT_RENDER SceneHandler : public HandlerBase {
 public:
@@ -57,6 +65,16 @@ public:
 	SceneHandler(const SAXParser *parser, const ParameterMap &params,
 			NamedObjectMap *objects = NULL, bool isIncludedFile = false);
 	virtual ~SceneHandler();
+
+	/// Convenience method -- load a scene from a given filename 
+	static ref<Scene> loadScene(const fs::path &filename,
+		const ParameterMap &params= ParameterMap());
+
+	/// Initialize Xerces-C++ (needs to be called once at program startup)
+	static void staticInitialization();
+
+	/// Free the memory taken up by staticInitialization()
+	static void staticShutdown();
 
 	// -----------------------------------------------------------------------
 	//  Implementation of the SAX DocumentHandler interface

@@ -71,7 +71,7 @@ void ShapeGroup::addChild(const std::string &name, ConfigurableObject *child) {
 				ref<Shape> element = shape->getElement(index++);
 				if (element == NULL)
 					break;
-				addChild("", element);
+				addChild(element);
 			} while (true);
 		} else {
 			m_kdtree->addShape(shape);

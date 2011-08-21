@@ -1,11 +1,13 @@
+import sys, os
+
 BUILDDIR       = '#build/release'
 DISTDIR        = '#dist'
 CXX            = 'cl'
 CC             = 'cl'
-# /Ox=optimize for speed, global optimizations, intrinsic functions, favor fast code, frame pointer omission
+# /O2=optimize for speed, global optimizations, intrinsic functions, favor fast code, frame pointer omission
 # /EHsc=C++ exceptions, /fp:fast=Enable reasonable FP optimizations, /GS-=No buffer security checks, /GL=whole program optimizations
 # To include debug information add '/Z7' to CXXFLAGS and '/DEBUG' to LINKFLAGS
-CXXFLAGS       = ['/nologo', '/Ox', '/fp:fast', '/D', 'WIN32', '/D', 'WIN64', '/W3', '/EHsc', '/GS-', '/GL', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'SPECTRUM_SAMPLES=3', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/openmp']
+CXXFLAGS       = ['/nologo', '/O2', '/fp:fast', '/D', 'WIN32', '/D', 'WIN64', '/W3', '/EHsc', '/GS-', '/GL', '/MD', '/D', 'MTS_DEBUG', '/D', 'SINGLE_PRECISION', '/D', 'SPECTRUM_SAMPLES=3', '/D', 'MTS_SSE', '/D', 'MTS_HAS_COHERENT_RT', '/D', '_CONSOLE', '/D', 'NDEBUG', '/openmp']
 SHCXXFLAGS     = CXXFLAGS
 TARGET_ARCH    = 'x86_64'
 MSVC_VERSION   = '10.0'
@@ -25,6 +27,9 @@ JPEGLIB        = ['jpeg62']
 GLLIB          = ['opengl32', 'glu32', 'glew32mx', 'gdi32', 'user32']
 GLFLAGS        = ['/D', 'GLEW_MX']
 BASELIBDIR     = ['#dependencies/windows/lib64', '#dependencies/windows/lib64/vc100']
+PYTHONINCLUDE  = [os.path.join(os.path.split(sys.executable)[0], 'include')]
+PYTHONLIBDIR   = [os.path.join(os.path.split(sys.executable)[0], 'libs')]
+PYTHONLIB      = ['boost_python-vc100-mt-1_44']
 SHLIBPREFIX    = 'lib'
 SHLIBSUFFIX    = '.dll'
 PROGSUFFIX     = '.exe'

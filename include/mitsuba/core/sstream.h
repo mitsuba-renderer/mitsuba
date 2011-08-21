@@ -36,6 +36,7 @@ MTS_NAMESPACE_BEGIN
  * order (= big endian).
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE SocketStream : public Stream {
 public:
@@ -43,7 +44,10 @@ public:
 	//! @{ \name Constructors
 	// =============================================================
 
-	/// Create a stream from an existing socket
+	/**
+	 * \brief Create a stream from an existing socket
+	 * \remark This function is not exposed in the Python bindings
+	 */
 #if defined(WIN32)
 	SocketStream(SOCKET socket);
 #else

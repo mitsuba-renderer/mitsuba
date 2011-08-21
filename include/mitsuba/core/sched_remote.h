@@ -43,6 +43,7 @@ class StreamBackend;
  * it to a processing node reachable through a \ref Stream.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE RemoteWorker : public Worker {
 	friend class RemoteWorkerReader;

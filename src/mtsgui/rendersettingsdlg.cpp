@@ -331,7 +331,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 			m_icNode->putProperties(icProps);
 		ref<Integrator> ic = static_cast<Integrator *> 
 			(pluginMgr->createObject(MTS_CLASS(Integrator), icProps));
-		ic->addChild("", integrator);
+		ic->addChild(integrator);
 		ic->configure();
 		integrator = ic;
 	}
@@ -342,7 +342,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 			m_aiNode->putProperties(aiProps);
 		ref<Integrator> ai = static_cast<Integrator *> 
 			(pluginMgr->createObject(MTS_CLASS(Integrator), aiProps));
-		ai->addChild("", integrator);
+		ai->addChild(integrator);
 		ai->configure();
 		integrator = ai;
 	}
@@ -354,7 +354,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	filmProps.setInteger("width", width, false);
 	filmProps.setInteger("height", height, false);
 	ref<Film> film = static_cast<Film *> (pluginMgr->createObject(MTS_CLASS(Film), filmProps));
-	film->addChild("", rFilter);
+	film->addChild(rFilter);
 	film->configure();
 	if (width != ctx->framebuffer->getWidth() ||
 		height != ctx->framebuffer->getHeight()) {
@@ -367,8 +367,8 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	Properties cameraProps = oldCamera->getProperties();
 	ref<PerspectiveCamera> camera = static_cast<PerspectiveCamera *> 
 		(pluginMgr->createObject(MTS_CLASS(Camera), cameraProps));
-	camera->addChild("", sampler);
-	camera->addChild("", film);
+	camera->addChild(sampler);
+	camera->addChild(film);
 	camera->setViewTransform(oldCamera->getViewTransform());
 	camera->setFov(oldCamera->getFov());
 	camera->setMedium(oldCamera->getMedium());

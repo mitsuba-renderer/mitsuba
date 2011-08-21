@@ -25,6 +25,8 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Simple natural cubic spline interpolation
+ *
+ * \ingroup libcore
  */
 class MTS_EXPORT_CORE CubicSpline : public SerializableObject {
 public:

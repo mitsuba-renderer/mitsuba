@@ -23,27 +23,8 @@
 #include <mitsuba/core/timer.h>
 #include <ply/ply_parser.hpp>
 
-#if defined(__clang__)
-#define MTS_USE_BOOST_TR1 (!__has_feature(cxx_variadic_templates))
-#else
-#  if defined(_MSC_VER) && (_MSC_VER < 1600)
-#  define MTS_USE_BOOST_TR1 1
-#  else
-#  define MTS_USE_BOOST_TR1 0
-#  endif
-#endif
-
 #if MTS_USE_BOOST_TR1
-#  if defined(Float)
-#    define MTS_Float
-#    pragma push_macro("Float")
-#    undef Float
-#  endif
 #include <boost/tr1/functional.hpp>
-#  if defined(MTS_Float)
-#    pragma pop_macro("Float")
-#    undef MTS_Float
-#  endif
 #else
 #if defined(_MSC_VER) && (_MSC_VER >= 1600)
 #include <functional>

@@ -28,6 +28,7 @@ MTS_NAMESPACE_BEGIN
 
 /** \brief Data record, which holds sampling-related information
  *  for a shape.
+ * \ingroup librender
  */
 struct MTS_EXPORT_RENDER ShapeSamplingRecord {
 public:
@@ -53,6 +54,7 @@ public:
 
 /** \brief Container for all information related to
  * a surface intersection
+ * \ingroup librender
  */
 struct MTS_EXPORT_RENDER Intersection {
 public:
@@ -173,6 +175,7 @@ public:
 };
 
 /** \brief Abstract base class of all shapes
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER Shape : public ConfigurableObject {
 public:
@@ -364,6 +367,8 @@ public:
 
 	/// Add a child (e.g. a luminaire/sub surface integrator) to this shape
 	void addChild(const std::string &name, ConfigurableObject *child);
+	/// Add an unnamed child
+	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
 	//! @}
 	// =============================================================

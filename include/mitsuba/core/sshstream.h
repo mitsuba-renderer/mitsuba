@@ -39,6 +39,9 @@ MTS_NAMESPACE_BEGIN
  * pageant.exe is required to load and authenticate the key.
  *
  * Note: SSH streams are set to use network byte order by default.
+ *
+ * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE SSHStream : public Stream {
 public:
@@ -47,10 +50,11 @@ public:
 	// =============================================================
 
 	/**
-	 * Create a new SSH stream. The timeout parameter specifies specifies
-	 * the maximum amount of time that can be spent before failing to 
-	 * create the initial connection. This feature is unsupported 
-	 * (and ignored) on Windows.
+	 * \brief Create a new SSH stream. 
+	 *
+	 * The timeout parameter specifies specifies the maximum amount of 
+	 * time that can be spent before failing to create the initial 
+	 * connection. This feature is unsupported (and ignored) on Windows.
 	 * 
 	 * \param userName Username to use for the authentication
 	 * \param hostName Destination host name

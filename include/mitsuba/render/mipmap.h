@@ -26,6 +26,7 @@ MTS_NAMESPACE_BEGIN
 #define MIPMAP_LUTSIZE 128
 
 /** \brief Isotropic/anisotropic EWA mip-map texture map class based on PBRT 
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER MIPMap : public Object {
 public:

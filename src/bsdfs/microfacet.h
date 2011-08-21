@@ -379,7 +379,8 @@ public:
 					);
 				}
 				break;
-			default: 
+			default:
+				pdf = 0;
 				SLog(EError, "Invalid distribution function!");
 		}
 

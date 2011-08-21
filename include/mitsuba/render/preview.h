@@ -27,6 +27,7 @@ MTS_NAMESPACE_BEGIN
  * Preview worker - can be used to render a quick preview of a scene
  * (illuminated by a VPL). The implementation uses coherent ray tracing 
  * when compiled in single precision and SSE is available.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER PreviewWorker : public WorkProcessor {
 public:

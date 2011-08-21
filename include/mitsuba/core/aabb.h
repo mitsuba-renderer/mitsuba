@@ -295,6 +295,7 @@ template <typename T> struct TAABB {
  * various convenience functions to query or change them.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 struct MTS_EXPORT_CORE AABB : public TAABB<Point> {
 public:
@@ -345,6 +346,10 @@ public:
 
 	/** \brief Calculate the near and far ray-AABB intersection
 	 * points (if they exist).
+	 *
+	 * \remark In the Python bindings, this function returns the
+	 * \c nearT and \c farT values as a tuple (or \c None, when no
+	 * intersection was found)
 	 */
 	FINLINE bool rayIntersect(const Ray &ray, Float &nearT, Float &farT) const {
 		nearT = -std::numeric_limits<Float>::infinity();

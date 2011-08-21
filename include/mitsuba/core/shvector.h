@@ -33,7 +33,9 @@ namespace ublas  = boost::numeric::ublas;
 struct SHVector;
 
 /**
- * \brief Stores the diagonal blocks of a spherical harmonic rotation matrix
+ * \brief Stores the diagonal blocks of a spherical harmonic 
+ * rotation matrix
+ *
  * \ingroup libcore
  */
 struct MTS_EXPORT_CORE SHRotation {
@@ -65,14 +67,14 @@ struct MTS_EXPORT_CORE SHRotation {
  * 
  * The Mathematica equivalent of the basis functions implemented here is:
  *
- * <pre>
+ * \code
  * SphericalHarmonicQ[l_, m_, \[Theta]_, \[Phi]_] :=
  *   Piecewise[{
  *      {SphericalHarmonicY[l, m, \[Theta], \[Phi]], m == 0},
  *      {Sqrt[2]*Re[SphericalHarmonicY[l, m, \[Theta], \[Phi]]], m > 0},
  *      {Sqrt[2]*Im[SphericalHarmonicY[l, -m, \[Theta], \[Phi]]], m < 0}
  *  }]
- * </pre>
+ * \endcode
  *
  * \ingroup libcore
  */
@@ -338,10 +340,10 @@ public:
 	 */
 	static void rotation(const Transform &t, SHRotation &rot);
 	
-	/** \brief Precomputes normalization coefficients for the first few bands */
+	/// Precomputes normalization coefficients for the first few bands
 	static void staticInitialization();
 
-	/// Free the memory taken by staticInitialization()
+	/// Free the memory taken up by staticInitialization()
 	static void staticShutdown();
 protected:
 	/// Helper function for rotation() -- computes a diagonal block based on the previous level

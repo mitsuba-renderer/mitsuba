@@ -33,6 +33,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \sa BSDF::f()
  * \sa BSDF::sample()
+ * \ingroup librender
  */
 struct MTS_EXPORT_RENDER BSDFQueryRecord {
 public:
@@ -179,7 +180,7 @@ public:
 
 
 /** 
- * \brief Abstract BSDF base-class.
+ * \brief Abstract %BSDF base-class.
  *
  * This class implements an abstract interface to all BSDF plugins in Mitsuba.
  * It exposes functions for evaluating and sampling the model, and it allows
@@ -191,7 +192,9 @@ public:
  * this class can sample and evaluate a complete BSDF, but it also allows to
  * pick and choose individual components of multi-lobed BSDFs based on their 
  * properties and component indices. This selection is done using a
+ *
  * \ref BSDFQueryRecord.
+ * \ingroup librender
  */
 class MTS_EXPORT_RENDER BSDF : public ConfigurableObject, public HWResource {
 public:
@@ -419,6 +422,8 @@ public:
 
 	/// Add a child object
 	virtual void addChild(const std::string &string, ConfigurableObject *obj);
+	/// Add an unnamed child
+	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
 	/// Serialize this object to a stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;

@@ -50,6 +50,8 @@
 #include "previewsettingsdlg.h"
 #endif
 
+extern bool create_symlinks();
+
 static int localWorkerCtr = 0, remoteWorkerCtr = 0;
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -61,7 +63,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	m_previewSettings = NULL;
 #endif
 
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	logger->setLogLevel((ELogLevel) settings.value("verbosity", EDebug).toInt());
 
 	m_logWidget = new LogWidget(NULL);
@@ -85,6 +87,12 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->actionUpdateCheck->setMenuRole(QAction::ApplicationSpecificRole);
 	ui->actionFeedback->setMenuRole(QAction::ApplicationSpecificRole);
 	ui->actionReportBug->setMenuRole(QAction::ApplicationSpecificRole);
+	ui->actionEnableCommandLine->setMenuRole(QAction::ApplicationSpecificRole);
+
+#if !defined(__OSX__)
+	ui->actionEnableCommandLine->setVisible(false);
+#endif
+
 	m_progressWidget = new QWidget(centralWidget());
 	m_progressLabel = new QLabel(m_progressWidget);
 	m_progress = new QProgressBar(m_progressWidget);
@@ -194,7 +202,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	m_networkManager = new QNetworkAccessManager(this);
 
-#if defined(__OSX__)
+#if defined(__OSX__) && 0 // Disable crash reports for now
 	/* Submit crash reports on OSX */
 	QDir crashDir = QDir::home();
 	crashDir.cd("Library/Logs/CrashReporter");
@@ -305,7 +313,7 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::initWorkers() {
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	ref<Scheduler> scheduler = Scheduler::getInstance();
 	int localWorkerCount = settings.value("localWorkers", getProcessorCount()).toInt();
 	m_workerPriority = (Thread::EThreadPriority)
@@ -398,7 +406,7 @@ void MainWindow::checkForUpdates(bool manualUpdateCheck) {
 void MainWindow::onNetworkFinished(QNetworkReply *reply) {
 	if (reply->error() == QNetworkReply::NoError) {
 		try {
-			QSettings settings("mitsuba-renderer.org", "qtgui");
+			QSettings settings("mitsuba-renderer.org", "mtsgui");
 			Version remote(QString(reply->readAll()).toStdString());
 			Version ignoredVersion(settings.value("ignoredVersion", "0.0.0").toString().toStdString());
 			Version local(MTS_VERSION);
@@ -571,7 +579,7 @@ void MainWindow::on_actionOpen_triggered() {
 	dialog->setAcceptMode(QFileDialog::AcceptOpen);
 	dialog->setViewMode(QFileDialog::Detail);
 	dialog->setWindowModality(Qt::WindowModal);
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	dialog->restoreState(settings.value("fileDialogState").toByteArray());
 	connect(dialog, SIGNAL(finished(int)), this, SLOT(onOpenDialogClose(int)));
 	m_currentChild = dialog;
@@ -583,7 +591,7 @@ void MainWindow::on_actionOpen_triggered() {
 }
 
 void MainWindow::onOpenDialogClose(int reason) {
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;
 	if (reason == QDialog::Accepted) {
@@ -605,7 +613,7 @@ void MainWindow::onOpenRecent() {
 }
 
 void MainWindow::onClearRecent() {
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	for (int j = 0; j < MAX_RECENT_FILES; ++j)
 		m_actRecent[j]->setVisible(false);
 	settings.setValue("recentFileList", QStringList());
@@ -714,7 +722,7 @@ void MainWindow::loadFile(QString filename) {
 
 void MainWindow::addRecentFile(QString fileName) {
 	/* Update recent files list */
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	QStringList files = settings.value("recentFileList").toStringList();
 	files.removeAll(fileName);
 	files.prepend(fileName);
@@ -731,7 +739,7 @@ void MainWindow::addRecentFile(QString fileName) {
 }
 
 void MainWindow::updateRecentFileActions() {
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	QStringList files = settings.value("recentFileList").toStringList();
 
 	int numRecentFiles = qMin(files.size(), MAX_RECENT_FILES);
@@ -931,7 +939,7 @@ bool MainWindow::on_tabBar_tabCloseRequested(int index) {
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	settings.setValue("pos", pos());
 	for (int i=ui->tabBar->count()-1; i>=0; --i) {
 		if (!on_tabBar_tabCloseRequested(i)) {
@@ -1037,7 +1045,7 @@ void MainWindow::on_actionPreviewSettings_triggered() {
 	connect(&d, SIGNAL(diffuseSourcesChanged(bool)), ui->glView, SLOT(setDiffuseSources(bool)));
 	d.setMaximumSize(d.minimumSize());
 	d.exec();
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	settings.setValue("preview_sRGB", context->srgb);
 	settings.setValue("preview_gamma", context->gamma);
 	settings.setValue("preview_exposure", context->exposure);
@@ -1080,7 +1088,7 @@ void MainWindow::onPreviewSettingsClose() {
 	ui->actionPreviewSettings->setEnabled(hasTab);
 	if (hasTab) {
 		SceneContext *context = m_context[index];
-		QSettings settings("mitsuba-renderer.org", "qtgui");
+		QSettings settings("mitsuba-renderer.org", "mtsgui");
 		settings.setValue("preview_sRGB", context->srgb);
 		settings.setValue("preview_gamma", context->gamma);
 		settings.setValue("preview_exposure", context->exposure);
@@ -1135,7 +1143,7 @@ void MainWindow::on_actionSettings_triggered() {
 		for (int i=0; i<connections.size(); ++i)
 			connectionData.append(connections[i].toByteArray());
 
-		QSettings settings("mitsuba-renderer.org", "qtgui");
+		QSettings settings("mitsuba-renderer.org", "mtsgui");
 		settings.setValue("verbosity", d.getLogLevel());
 		settings.setValue("invertMouse", d.getInvertMouse());
 		settings.setValue("blockSize", d.getBlockSize());
@@ -1234,8 +1242,8 @@ void MainWindow::on_actionRender_triggered() {
 
 	Scene *scene = context->scene;
 	scene->setBlockSize(m_blockSize);
-	context->renderJob = new RenderJob("rend", scene, m_renderQueue, NULL, 
-		context->sceneResID, -1, -1, false, true);
+	context->renderJob = new RenderJob("rend", scene, m_renderQueue,  
+		context->sceneResID, -1, -1, false);
 	context->cancelMode = ERender;
 	if (context->mode != ERender)
 		ui->glView->downloadFramebuffer();
@@ -1292,7 +1300,7 @@ void MainWindow::on_actionExportImage_triggered() {
 		"", tr("All supported formats (*.exr *.png *.jpg *.jpeg);;Linear EXR image (*.exr)"
 			";; Tonemapped 8-bit image (*.png *.jpg *.jpeg)"));
 
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	dialog->setViewMode(QFileDialog::Detail);
 	dialog->setAcceptMode(QFileDialog::AcceptSave);
 
@@ -1316,7 +1324,7 @@ void MainWindow::onExportDialogClose(int reason) {
 	int currentIndex = ui->tabBar->currentIndex();
 	SceneContext *ctx = m_context[currentIndex];
 
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;
 
@@ -1427,7 +1435,7 @@ void MainWindow::on_actionSaveAs_triggered() {
 		"", tr("Mitsuba scenes (*.xml)"));
 
 	m_currentChild = dialog;
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
 	dialog->setViewMode(QFileDialog::Detail);
 	dialog->setAcceptMode(QFileDialog::AcceptSave);
@@ -1446,7 +1454,7 @@ void MainWindow::onSaveAsDialogClose(int reason) {
 	int currentIndex = ui->tabBar->currentIndex();
 	SceneContext *context = m_context[currentIndex];
 
-	QSettings settings("mitsuba-renderer.org", "qtgui");
+	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;
 	if (reason == QDialog::Accepted) {
@@ -1516,6 +1524,19 @@ void MainWindow::on_actionStartServer_triggered() {
 	ui->actionStartServer->setEnabled(false);
 	connect(m_serverWidget, SIGNAL(closed()), this, SLOT(onServerClosed()));
 	m_serverWidget->show();
+}
+
+void MainWindow::on_actionEnableCommandLine_triggered() {
+	if (QMessageBox::question(this, tr("Enable command line access"),
+		tr("<p>If you proceed, Mitsuba will create symbolic links in <tt>/usr/bin</tt> and <tt>/Library/Python/2.6/site-packages</tt>, "
+			"which enable command line and Python usage. Note that you will have to "
+			"repeat this process every time the Mitsuba application is moved.</p>"
+			"<p>Create links?</p>"),
+			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+		return;
+	if (!create_symlinks())
+		QMessageBox::critical(this, tr("Authentication error"), 
+			tr("Unable to create the symbolic links!"), QMessageBox::Ok);
 }
 
 void MainWindow::on_actionReportBug_triggered() {
@@ -1755,7 +1776,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 			if (depth++ == 0) 
 				scene->setIntegrator(integrator);
 			else 
-				currentIntegrator->addChild("", integrator);
+				currentIntegrator->addChild(integrator);
 			currentIntegrator = integrator;
 			integratorList.push_back(integrator);
 			oldIntegrator = oldIntegrator->getSubIntegrator();
@@ -1769,11 +1790,11 @@ SceneContext::SceneContext(SceneContext *ctx) {
 				getReconstructionFilter()->getProperties()));
 
 		rfilter->configure();
-		film->addChild("", rfilter);
+		film->addChild(rfilter);
 		film->configure();
 		sampler->configure();
-		camera->addChild("", sampler);
-		camera->addChild("", film);
+		camera->addChild(sampler);
+		camera->addChild(film);
 		camera->setViewTransform(oldCamera->getViewTransform());
 		camera->setFov(oldCamera->getFov());
 		camera->configure();

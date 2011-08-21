@@ -27,9 +27,9 @@ using __gnu_cxx::compose1;
 #else
 #include <functional>
 
+/// \cond
+// (Don't include in the documentation)
 namespace std {
-	/// \cond
-	// (Don't include in the documentation)
 	template <class _Pair> struct _Select1st : public unary_function<_Pair, typename _Pair::first_type> {
 		const typename _Pair::first_type& operator()(const _Pair& __x) const {
 			return __x.first;
@@ -59,7 +59,6 @@ namespace std {
 	template <class _Operation1, class _Operation2> inline unary_compose<_Operation1,_Operation2> compose1(const _Operation1& __fn1, const _Operation2& __fn2) {
 		return unary_compose<_Operation1,_Operation2>(__fn1, __fn2);
 	}
-	/// @endcond
 
 #if defined(_MSC_VER)
 	#include <float.h>
@@ -122,5 +121,6 @@ inline bool mts_isnan(double f) {
 	return std::fpclassify(f) == FP_NAN;
 }
 #endif
+/// @endcond
 #endif
 

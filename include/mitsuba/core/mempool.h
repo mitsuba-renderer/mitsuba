@@ -24,10 +24,12 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Basic memory pool -- allows repeated allocation & deallocation 
- * of objects of the same type, while attempting to keep them 
- * contiguous in memory and having only minimal interaction with the
- * underlying allocator.
+ * \brief Basic memory pool for efficient allocation and deallocation 
+ * of objects of the same type.
+ *
+ * This class attempts to keep most instances contiguous in memory, while
+ * having only minimal interaction with the underlying allocator.
+ * 
  * \ingroup libcore
  */
 template <typename T> class MemoryPool {

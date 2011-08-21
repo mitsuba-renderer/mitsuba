@@ -25,6 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 /** \brief OpenGL-based GPUGeometry implementation
+ * \ingroup libhw
  */
 class MTS_EXPORT_HW GLGeometry : public GPUGeometry {
 	friend class GLRenderer;

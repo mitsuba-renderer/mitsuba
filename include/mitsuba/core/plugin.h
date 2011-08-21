@@ -30,8 +30,8 @@ MTS_NAMESPACE_BEGIN
  * \brief Abstract plugin class -- represents loadable configurable objects
  * and utilities.
  * 
- * Please see the <tt>\ref ConfigurableObject</tt> and
- * <tt>\ref Utility</tt> classes for details
+ * Please see the \ref ConfigurableObject and \ref Utility classes for
+ * details.
  *
  * \ingroup libcore
  */
@@ -82,12 +82,50 @@ private:
 	CreateUtilityFunc m_createUtility;
 };
 
-
 /**
  * \brief The plugin manager is responsible for resolving and
  * loading external plugins.
  *
+ * Ordinarily, this class will be used by making repeated calls to 
+ * the \ref createObject() methods. The generated instances are then
+ * assembled into a final object graph, such as a scene. One such
+ * examples is the \ref SceneHandler class, which parses an XML
+ * scene file by esentially translating the XML elements into calls 
+ * to \ref createObject().
+ * 
+ * Since this kind of construction method can be tiresome when
+ * dynamically building scenes from Python, this class has an
+ * additional Python-only method \c create(), which works as follows:
+ *
+ * \code
+ * from mitsuba.core import *
+ *
+ * pmgr = PluginManager.getInstance()
+ * camera = pmgr.create({
+ *     "type" : "perspective",
+ *     "toWorld" : Transform.lookAt(
+ *         Point(0, 0, -10),
+ *         Point(0, 0, 0),
+ *         Vector(0, 1, 0)
+ *     ),
+ *     "film" : {
+ *         "type" : "pngfilm",
+ *         "width" : 1920,
+ *         "height" : 1080
+ *     }
+ * })
+ * \endcode
+ *
+ * The above snippet constructs a \ref Camera instance from a
+ * plugin named \c perspective.so/dll/dylib and adds a child object
+ * named \c film, which is a \ref Film instance loaded from the
+ * plugin \c pngfilm.so/dll/dylib. By the time the function
+ * returns, the object hierarchy has already been assembled, and the
+ * \ref ConfigurableObject::configure() methods of every object
+ * has been called.
+ *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE PluginManager : public Object {
 public:
@@ -103,7 +141,9 @@ public:
 	std::vector<std::string> getLoadedPlugins() const;
 
 	/**
-	 * \brief Instantiate an object using a plugin
+	 * \brief Instantiate a plugin, verify its type,
+	 * and return the newly created instance. 
+	 * 
 	 * \param classType Expected type of the plugin. An
 	 *    exception will be thrown if it turns out not
 	 *    to derive from this class.
@@ -113,6 +153,18 @@ public:
 	 */
 	ConfigurableObject *createObject(
 		const Class *classType,
+		const Properties &props
+	);
+
+	/**
+	 * \brief Instantiate a plugin and return the new
+	 * instance (without verifying its type). 
+	 * 
+	 * \param props A \ref Properties instance containing
+	 *    all information required to find and construct 
+	 *    the plugin.
+	 */
+	ConfigurableObject *createObject(
 		const Properties &props
 	);
 

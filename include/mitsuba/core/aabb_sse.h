@@ -22,8 +22,9 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * NaN-aware slab test using SSE by Thierry Berger-Perrin (Intersects against
- * 4 rays simultaneously). Returns false if none of the rays intersect.
+ * NaN-aware slab test using SSE by Thierry Berger-Perrin (Intersects 
+ * against 4 rays simultaneously). Returns false if none of the rays 
+ * intersect.
  */
 FINLINE bool AABB::rayIntersectPacket(const RayPacket4 &ray, 
 								   RayInterval4 &interval) const {

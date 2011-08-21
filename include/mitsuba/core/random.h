@@ -90,6 +90,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief %Random number generator based on Mersenne Twister
  * by Takuji Nishimura and Makoto Matsumoto.
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Random : public SerializableObject {
 public:
@@ -117,11 +118,15 @@ public:
 
 	/// Seed the random generator with a single 64bit value
 	void seed(uint64_t value = 5489ULL);
-	
+
 	/// Seed the random generator from another random generator
 	void seed(Random *random);
-	
-	/// Seed the random generator from an array
+
+	/**
+	 * \brief Seed the random generator from an array
+	 * \remark This function is currently not exposed 
+	 * by the Python bindings
+	 */
 	void seed(uint64_t *values, uint64_t length);
 
 	/// Return an integer on the [0, 2^63-1]-interval 
@@ -141,6 +146,9 @@ public:
 	 * given STL container.
 	 *
 	 * See Knuth, TAoCP Vol. 2 (3rd 3d), Section 3.4.2.
+	 *
+	 * \remark This function is currently not exposed 
+	 * by the Python bindings
 	 */
 	template <typename Iterator> void shuffle(Iterator it1, Iterator it2) {
 		for (Iterator it = it2 - 1; it > it1; --it) 
