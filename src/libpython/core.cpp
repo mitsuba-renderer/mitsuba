@@ -11,6 +11,7 @@
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/random.h>
 #include <mitsuba/core/aabb.h>
+#include <mitsuba/core/frame.h>
 #include <mitsuba/core/sched_remote.h>
 
 using namespace mitsuba;
@@ -77,9 +78,13 @@ public:
 			case Properties::EFloat:
 				return bp::object(props.getFloat(name));
 			case Properties::EVector:
-				return bp::object(props.getFloat(name));
+				return bp::object(props.getVector(name));
 			case Properties::EPoint:
-				return bp::object(props.getFloat(name));
+				return bp::object(props.getPoint(name));
+			case Properties::ETransform:
+				return bp::object(props.getTransform(name));
+			case Properties::ESpectrum:
+				return bp::object(props.getSpectrum(name));
 			default:
 				SLog(EError, "Properties: type of keyword \"%s\" is not supported!", name.c_str());
 				return bp::object();
@@ -93,6 +98,8 @@ public:
 		bp::extract<Float> extractFloat(value);
 		bp::extract<Vector> extractVector(value);
 		bp::extract<Point> extractPoint(value);
+		bp::extract<Transform> extractTransform(value);
+		bp::extract<Spectrum> extractSpectrum(value);
 
 		if (extractString.check()) {
 			props.setString(name, extractString());
@@ -105,7 +112,11 @@ public:
 		} else if (extractPoint.check()) {
 			props.setPoint(name, extractPoint());
 		} else if (extractVector.check()) {
-			props.setPoint(name, Point(extractVector()));
+			props.setVector(name, extractVector());
+		} else if (extractTransform.check()) {
+			props.setTransform(name, extractTransform());
+		} else if (extractSpectrum.check()) {
+			props.setSpectrum(name, extractSpectrum());
 		} else {
 			SLog(EError, "Properties: type of keyword \"%s\" is not supported!", name.c_str());
 		}
@@ -263,6 +274,13 @@ bp::object aabb_rayIntersect(AABB *aabb, const Ray &ray) {
 		return bp::object();
 
 }
+
+Vector transform_mul_vector(Transform *transform, const Vector &vector) { return transform->operator()(vector); }
+Vector4 transform_mul_vector4(Transform *transform, const Vector4 &vector) { return transform->operator()(vector); }
+Normal transform_mul_normal(Transform *transform, const Normal &normal) { return transform->operator()(normal); }
+Point transform_mul_point(Transform *transform, const Point &point) { return transform->operator()(point); }
+Ray transform_mul_ray(Transform *transform, const Ray &ray) { return transform->operator()(ray); }
+Transform transform_mul_transform(Transform *transform, const Transform &other) { return *transform * other; }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
@@ -905,6 +923,74 @@ void export_core() {
 		.def("getBSphere", &AABB::getBSphere, BP_RETURN_VALUE)
 		.def("serialize", &AABB::serialize)
 		.def("__str__", &AABB::toString);
+	
+	bp::class_<Frame>("Frame", bp::init<>())
+		.def(bp::init<Vector, Vector, Normal>())
+		.def(bp::init<Vector, Vector, Vector>())
+		.def(bp::init<Normal>())
+		.def(bp::init<Stream *>())
+		.def_readwrite("s", &Frame::s)
+		.def_readwrite("t", &Frame::t)
+		.def_readwrite("n", &Frame::n)
+		.def("serialize", &Frame::serialize)
+		.def("toLocal", &Frame::toLocal, BP_RETURN_VALUE)
+		.def("toWorld", &Frame::toWorld, BP_RETURN_VALUE)
+		.def("__str__", &Frame::toString)
+		.def("cosTheta", &Frame::cosTheta)
+		.def("sinTheta", &Frame::sinTheta)
+		.def("sinTheta2", &Frame::sinTheta2)
+		.def("tanTheta", &Frame::tanTheta)
+		.def("sinPhi", &Frame::sinPhi)
+		.def("cosPhi", &Frame::cosPhi)
+		.def("sinPhi2", &Frame::sinPhi2)
+		.def("cosPhi2", &Frame::cosPhi2)
+		.staticmethod("cosTheta")
+		.staticmethod("sinTheta")
+		.staticmethod("sinTheta2")
+		.staticmethod("tanTheta")
+		.staticmethod("sinPhi")
+		.staticmethod("cosPhi")
+		.staticmethod("sinPhi2")
+		.staticmethod("cosPhi2");
+	
+	bp::class_<Transform>("Transform", bp::init<>())
+		.def(bp::init<Stream *>())
+		.def(bp::init<const Matrix4x4 &>())
+		.def(bp::init<const Matrix4x4 &, const Matrix4x4 &>())
+		.def("inverse", &Transform::inverse, BP_RETURN_VALUE)
+		.def("getMatrix", &Transform::getMatrix, BP_RETURN_VALUE)
+		.def("getInverseMatrix", &Transform::getInverseMatrix, BP_RETURN_VALUE)
+		.def("det3x3", &Transform::det3x3)
+		.def("hasScale", &Transform::hasScale)
+		.def("isIdentity", &Transform::isIdentity)
+		.def("serialize", &Transform::serialize)
+		.def("__mul__", &transform_mul_transform, BP_RETURN_VALUE)
+		.def("__mul__", &transform_mul_point, BP_RETURN_VALUE)
+		.def("__mul__", &transform_mul_vector, BP_RETURN_VALUE)
+		.def("__mul__", &transform_mul_vector4, BP_RETURN_VALUE)
+		.def("__mul__", &transform_mul_normal, BP_RETURN_VALUE)
+		.def("__mul__", &transform_mul_ray, BP_RETURN_VALUE)
+		.def("__str__", &Transform::toString)
+		.def("translate", &Transform::translate, BP_RETURN_VALUE)
+		.def("rotate", &Transform::rotate, BP_RETURN_VALUE)
+		.def("scale", &Transform::scale, BP_RETURN_VALUE)
+		.def("lookAt", &Transform::lookAt, BP_RETURN_VALUE)
+		.def("perspective", &Transform::perspective, BP_RETURN_VALUE)
+		.def("orthographic", &Transform::orthographic, BP_RETURN_VALUE)
+		.def("glPerspective", &Transform::glPerspective, BP_RETURN_VALUE)
+		.def("glFrustum", &Transform::glFrustum, BP_RETURN_VALUE)
+		.def("glOrthographic", &Transform::glOrthographic, BP_RETURN_VALUE)
+		.def("fromFrame", &Transform::fromFrame, BP_RETURN_VALUE)
+		.staticmethod("translate")
+		.staticmethod("rotate")
+		.staticmethod("scale")
+		.staticmethod("lookAt")
+		.staticmethod("perspective")
+		.staticmethod("orthographic")
+		.staticmethod("glPerspective")
+		.staticmethod("glFrustum")
+		.staticmethod("glOrthographic")
+		.staticmethod("fromFrame");
 
 	bp::detail::current_scope = oldScope;
 }

@@ -346,6 +346,10 @@ public:
 
 	/** \brief Calculate the near and far ray-AABB intersection
 	 * points (if they exist).
+	 *
+	 * \remark In the Python bindings, this function returns the
+	 * \c nearT and \c farT values as a tuple (or \c None, when no
+	 * intersection was found)
 	 */
 	FINLINE bool rayIntersect(const Ray &ray, Float &nearT, Float &farT) const {
 		nearT = -std::numeric_limits<Float>::infinity();

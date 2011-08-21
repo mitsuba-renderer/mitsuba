@@ -99,7 +99,12 @@ public:
 		return true;
 	}
 
-	/// Matrix-vector multiplication for points in 3d space
+	/**
+	 * \brief Matrix-vector multiplication for points in 3d space
+	 *
+	 * \remark In the Python bindings, this is function implemented as
+	 * the multiplication operator (\c __mul__).
+	 */
 	inline Point operator()(const Point &p) const {
 		Float x = m_transform.m[0][0] * p.x + m_transform.m[0][1] * p.y
 				+ m_transform.m[0][2] * p.z + m_transform.m[0][3];
@@ -130,7 +135,10 @@ public:
 		return Point(x,y,z);
 	}
 
-	/// Matrix-vector multiplication for points in 3d space (no temporaries)
+	/**
+	 * \brief Matrix-vector multiplication for points in 3d space (no temporaries)
+	 * \remark This function is not available in the Python bindings
+	 */
     inline void operator()(const Point &p, Point &dest) const {
 		dest.x = m_transform.m[0][0] * p.x + m_transform.m[0][1] * p.y
 			   + m_transform.m[0][2] * p.z + m_transform.m[0][3];
@@ -149,7 +157,11 @@ public:
 			dest /= w;
 	}
 
-	/// Matrix-vector multiplication for vectors in 3d space
+	/**
+	 * \brief Matrix-vector multiplication for vectors in 3d space
+	 * \remark In the Python bindings, this is function implemented as
+	 * the multiplication operator (\c __mul__).
+	 */
     inline Vector operator()(const Vector &v) const {
 		Float x = m_transform.m[0][0] * v.x + m_transform.m[0][1] * v.y
 				+ m_transform.m[0][2] * v.z;
@@ -160,7 +172,10 @@ public:
 		return Vector(x, y, z);
 	}
 
-	/// Matrix-vector multiplication for vectors in 3d space (no temporaries)
+	/** 
+	 * \brief Matrix-vector multiplication for vectors in 3d space (no temporaries)
+	 * \remark This function is not available in the Python bindings
+	 */
     inline void operator()(const Vector &v, Vector &dest) const {
 		dest.x = m_transform.m[0][0] * v.x + m_transform.m[0][1] * v.y
 			   + m_transform.m[0][2] * v.z;
@@ -170,7 +185,11 @@ public:
 			   + m_transform.m[2][2] * v.z;
 	}
 
-	/// Matrix-normal multiplication
+	/**
+	 * \brief Matrix-normal multiplication 
+	 * \remark In the Python bindings, this is function implemented as
+	 * the multiplication operator (\c __mul__).
+	 */
     inline Normal operator()(const Normal &v) const {
 		Float x = m_invTransform.m[0][0] * v.x + m_invTransform.m[1][0] * v.y
 				+ m_invTransform.m[2][0] * v.z;
@@ -181,7 +200,10 @@ public:
 		return Normal(x, y, z);
 	}
 
-	/// Matrix-normal multiplication (no temporaries)
+	/**
+	 * \brief Matrix-normal multiplication (no temporaries)
+	 * \remark This function is not available in the Python bindings
+	 */
     inline void operator()(const Normal &v, Normal &dest) const {
 		dest.x = m_invTransform.m[0][0] * v.x + m_invTransform.m[1][0] * v.y
 			   + m_invTransform.m[2][0] * v.z;
@@ -191,7 +213,11 @@ public:
 			   + m_invTransform.m[2][2] * v.z;
 	}
 	
-	/// 4D matrix-vector multiplication
+	/**
+	 * \brief 4D matrix-vector multiplication
+	 * \remark In the Python bindings, this is function implemented as
+	 * the multiplication operator (\c __mul__).
+	 */
 	inline Vector4 operator()(const Vector4 &v) const {
 		Float x = m_transform.m[0][0] * v.x + m_transform.m[0][1] * v.y
 				+ m_transform.m[0][2] * v.z + m_transform.m[0][3] * v.w;
@@ -204,7 +230,10 @@ public:
 		return Vector4(x,y,z,w);
 	}
 
-	/// 4D matrix-vector multiplication
+	/**
+	 * \brief 4D matrix-vector multiplication (no temporaries)
+	 * \remark This function is not available in the Python bindings
+	 */
 	inline void operator()(const Vector4 &v, Vector4 &dest) const {
 		dest.x = m_transform.m[0][0] * v.x + m_transform.m[0][1] * v.y
 			   + m_transform.m[0][2] * v.z + m_transform.m[0][3] * v.w;
@@ -216,7 +245,21 @@ public:
 			   + m_transform.m[3][2] * v.z + m_transform.m[3][3] * v.w;
 	}
 
-	/// Transform a ray. Assumes that there is no scaling
+	/**
+	 * \brief Transform a ray. Assumes that there is no scaling
+	 * \remark In the Python bindings, this is function implemented as
+	 * the multiplication operator (\c __mul__).
+	 */
+	inline Ray operator()(const Ray &a) const {
+		Ray result;
+		operator()(a, result);
+		return result;
+	}
+
+	/**
+	 * \brief Transform a ray. Assumes that there is no scaling (no temporaries)
+	 * \remark This function is not available in the Python bindings
+	 */
 	inline void operator()(const Ray &a, Ray &b) const {
 		b.mint = a.mint;
 		b.maxt = a.maxt;

@@ -31,6 +31,7 @@ MTS_NAMESPACE_BEGIN
  * quantities (e.g. \ref cosTheta(), \ref tanTheta, ..).
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 struct Frame {
 	Vector s, t;
@@ -62,7 +63,7 @@ struct Frame {
 	}
 	
 	/// Serialize to a binary data stream
-	inline void serialize (Stream *stream) const {
+	inline void serialize(Stream *stream) const {
 		s.serialize(stream);
 		t.serialize(stream);
 		n.serialize(stream);
@@ -133,14 +134,14 @@ struct Frame {
 	/** \brief Assuming that the given direction is in the local coordinate
 	 * system, return the squared sine of the phi parameter in  spherical
 	 * coordinates */
-	inline static Float sinPhiSquared(const Vector &v) {
+	inline static Float sinPhi2(const Vector &v) {
 		return clamp(v.y * v.y / sinTheta2(v), 0.0f, 1.0f);
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate
 	 * system, return the squared cosine of the phi parameter in  spherical
 	 * coordinates */
-	inline static Float cosPhiSquared(const Vector &v) {
+	inline static Float cosPhi2(const Vector &v) {
 		return clamp(v.x * v.x / sinTheta2(v), 0.0f, 1.0f);
 	}
 

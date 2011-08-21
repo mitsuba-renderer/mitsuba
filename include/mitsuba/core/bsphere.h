@@ -81,6 +81,10 @@ struct BSphere {
 	/**
 	 * \brief Calculate the intersection points with the given ray
 	 * \return \c true if the ray intersects the bounding sphere
+	 *
+	 * \remark In the Python bindings, this function returns the
+	 * \c nearT and \c farT values as a tuple (or \c None, when no
+	 * intersection was found)
 	 */
 	inline bool rayIntersect(const Ray &ray, Float &nearHit, Float &farHit) const {
 		Vector originToCenter = center - ray.o;
