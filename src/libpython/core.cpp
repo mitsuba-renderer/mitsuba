@@ -246,6 +246,23 @@ Float aabb_sqrdistanceto_aabb(AABB *aabb, const AABB &aabb2) { return aabb->squa
 Float aabb_sqrdistanceto_point(AABB *aabb, const Point &p) { return aabb->squaredDistanceTo(p); }
 bool aabb_contains_aabb(AABB *aabb, const AABB &aabb2) { return aabb->contains(aabb2); }
 bool aabb_contains_point(AABB *aabb, const Point &p) { return aabb->contains(p); }
+bp::object bsphere_rayIntersect(BSphere *bsphere, const Ray &ray) {
+	Float nearT, farT;
+	if (bsphere->rayIntersect(ray, nearT, farT))
+		return bp::make_tuple(nearT, farT);
+	else
+		return bp::object();
+
+}
+
+bp::object aabb_rayIntersect(AABB *aabb, const Ray &ray) {
+	Float nearT, farT;
+	if (aabb->rayIntersect(ray, nearT, farT))
+		return bp::make_tuple(nearT, farT);
+	else
+		return bp::object();
+
+}
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
@@ -852,9 +869,9 @@ void export_core() {
 		.def("contains", &BSphere::contains)
 		.def(bp::self == bp::self)
 		.def(bp::self != bp::self)
-		.def("rayIntersect", &AABB::rayIntersect)
-		.def("serialize", &AABB::serialize)
-		.def("__str__", &AABB::toString);
+		.def("rayIntersect", &bsphere_rayIntersect)
+		.def("serialize", &BSphere::serialize)
+		.def("__str__", &BSphere::toString);
 
 	bp::class_<AABB>("AABB", bp::init<>())
 		.def(bp::init<AABB>())
@@ -865,9 +882,9 @@ void export_core() {
 		.def_readwrite("max", &AABB::max)
 		.def("getSurfaceArea", &AABB::getSurfaceArea)
 		.def("getVolume", &AABB::getVolume)
-		.def("getCorner", &AABB::getCorner)
+		.def("getCorner", &AABB::getCorner, BP_RETURN_VALUE)
 		.def("overlaps", &AABB::overlaps)
-		.def("getCenter", &AABB::getCenter)
+		.def("getCenter", &AABB::getCenter, BP_RETURN_VALUE)
 		.def("reset", &AABB::reset)
 		.def("clip", &AABB::clip)
 		.def("isValid", &AABB::isValid)
@@ -881,11 +898,11 @@ void export_core() {
 		.def("contains", &aabb_contains_point)
 		.def("getLargestAxis", &AABB::getLargestAxis)
 		.def("getShortestAxis", &AABB::getShortestAxis)
-		.def("getExtents", &AABB::getExtents)
+		.def("getExtents", &AABB::getExtents, BP_RETURN_VALUE)
 		.def(bp::self == bp::self)
 		.def(bp::self != bp::self)
-		.def("rayIntersect", &AABB::rayIntersect)
-		.def("getBSphere", &AABB::getBSphere)
+		.def("rayIntersect", &aabb_rayIntersect)
+		.def("getBSphere", &AABB::getBSphere, BP_RETURN_VALUE)
 		.def("serialize", &AABB::serialize)
 		.def("__str__", &AABB::toString);
 

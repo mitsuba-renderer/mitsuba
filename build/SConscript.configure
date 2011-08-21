@@ -14,6 +14,8 @@ print("Using configuation file \"%s\"" % configFile)
 AddOption("--parallelize", dest="parallelize", action='store_true', help='Parallelize to the available number of cores?')
 parallelize = GetOption('parallelize')
 
+EnsureSConsVersion(2, 0, 0)
+
 if parallelize == True:
 	SetOption('num_jobs', multiprocessing.cpu_count())
 
