@@ -340,10 +340,10 @@ public:
 	 */
 	static void rotation(const Transform &t, SHRotation &rot);
 	
-	/** \brief Precomputes normalization coefficients for the first few bands */
+	/// Precomputes normalization coefficients for the first few bands
 	static void staticInitialization();
 
-	/// Free the memory taken by staticInitialization()
+	/// Free the memory taken up by staticInitialization()
 	static void staticShutdown();
 protected:
 	/// Helper function for rotation() -- computes a diagonal block based on the previous level

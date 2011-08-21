@@ -257,7 +257,11 @@ private:
 /** \brief Collects various rendering statistics and presents them
  * in a human-readable form.
  *
+ * \remark Only the \ref getInstance(), \ref getStats(), and 
+ * \ref printStats() functions are implemented in the Python bindings.
+ *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Statistics : public Object {
 public:

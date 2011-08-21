@@ -8,7 +8,7 @@ software construction tool. There are some differences between the different ope
 more details, please refer to one of the next sections depending on which one you use.
 
 \subsection{Common steps}
-To get started, you will need to download a recent version of Mitsuba. Make sure that you have the Mercurial (\url{http://mercurial.selenic.com/}) versioning system installed\footnote{On Windows, you might also want the convenient TortoiseHG shell extension (\url{http://tortoisehg.bitbucket.org/}) to run the subsequent steps directly from the Explorer.} and enter the following at the command prompt:
+To get started, you will need to download a recent version of Mitsuba. Make sure that you have the Mercurial (\url{http://mercurial.selenic.com/}) versioning system installed\footnote{On Windows, you might want to use the convenient TortoiseHG shell extension (\url{http://tortoisehg.bitbucket.org/}) to run the subsequent steps directly from the Explorer.} and enter the following at the command prompt:
 \begin{shell}
 $\texttt{\$}$ hg clone https://www.mitsuba-renderer.org/hg/mitsuba
 \end{shell}
@@ -199,7 +199,7 @@ $\text{\$}$ rpmbuild -bb mitsuba-$\code{\MitsubaVersion}$/data/linux/fedora/mits
 \end{shell}
 After this command finishes, its output can be found in the directory \code{rpmbuild/RPMS}.
 \subsection{Building on Arch Linux}
-You'll first need to install a number of dependencies: run
+You'll first need to install a number of dependencies: 
 \begin{shell}
 $\text{\$}$ sudo pacman -S gcc xerces-c glew openexr boost libpng libjpeg qt scons mercurial python
 \end{shell}

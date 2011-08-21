@@ -204,7 +204,7 @@ SerializableObject *Scheduler::getResource(int id, int coreIndex) {
 			m_mutex->unlock();
 			Log(EError, "getResource(): tried to look up manifold resource %i without specifying a core index!", id);
 		}
-		result = rec->resources[coreIndex];
+		result = rec->resources.at(coreIndex);
 	} else {
 		result = rec->resources[0];
 	}

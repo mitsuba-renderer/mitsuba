@@ -16,8 +16,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__MTSPY_H)
-#define __MTSPY_H
+#if !defined(__PYTHON_BASE_H)
+#define __PYTHON_BASE_H
 
 #include <mitsuba/mitsuba.h>
 
@@ -151,5 +151,8 @@ typedef std::vector<std::string> StringVector;
 typedef std::vector<mitsuba::SerializableObject *> SerializableObjectVector;
 typedef std::map<std::string, std::string> StringMap;
 
-#endif /* __MTSPY_H */
+extern void export_core();
+extern void export_render();
+
+#endif /* __PYTHON_BASE_H */
 

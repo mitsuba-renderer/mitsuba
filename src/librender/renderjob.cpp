@@ -22,10 +22,10 @@
 MTS_NAMESPACE_BEGIN
 	
 RenderJob::RenderJob(const std::string &threadName, 
-	Scene *scene, RenderQueue *queue, TestSupervisor *testSupervisor,
-	int sceneResID, int cameraResID, int samplerResID, bool threadIsCritical,
-	bool visualFeedback) : Thread(threadName), m_scene(scene), m_queue(queue), 
-	m_testSupervisor(testSupervisor), m_visualFeedback(visualFeedback) {
+	Scene *scene, RenderQueue *queue, int sceneResID, int cameraResID, 
+	int samplerResID, bool threadIsCritical, TestSupervisor *supervisor) 
+	: Thread(threadName), m_scene(scene), m_queue(queue), 
+	  m_testSupervisor(supervisor) {
 
 	/* Optional: bring the process down when this thread crashes */
 	setCritical(threadIsCritical); 

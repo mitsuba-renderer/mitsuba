@@ -16,7 +16,6 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <xercesc/parsers/SAXParser.hpp>
 #include <QtGui/QtGui>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/sched.h>
@@ -24,6 +23,7 @@
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/appender.h>
 #include <mitsuba/core/statistics.h>
+#include <mitsuba/render/scenehandler.h>
 #if defined(__OSX__)
 #include <ApplicationServices/ApplicationServices.h>
 #endif
@@ -88,15 +88,6 @@ void collect_zombies(int s) {
 int main(int argc, char *argv[]) {
 	int retval;
 
-	/* Initialize Xerces-C */
-	try {
-		XMLPlatformUtils::Initialize();
-	} catch(const XMLException &toCatch) {
-		fprintf(stderr, "Error during Xerces initialization: %s",
-			XMLString::transcode(toCatch.getMessage()));
-		return -1;
-	}
-
 	/* Initialize the core framework */
 	Class::staticInitialization();
 	PluginManager::staticInitialization();
@@ -107,6 +98,7 @@ int main(int argc, char *argv[]) {
 	Spectrum::staticInitialization();
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
+	SceneHandler::staticInitialization();
 
 #if defined(__LINUX__)
 	XInitThreads();
@@ -191,7 +183,6 @@ int main(int argc, char *argv[]) {
 	}
 	Statistics::getInstance()->printStats();
 
-	XMLPlatformUtils::Terminate();
 
 #ifdef WIN32
 	/* Shut down WINSOCK2 */
@@ -199,6 +190,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 	/* Shutdown the core framework */
+	SceneHandler::staticShutdown();
 	SHVector::staticShutdown();
 	Scheduler::staticShutdown();
 	Spectrum::staticShutdown();

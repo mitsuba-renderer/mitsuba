@@ -362,8 +362,7 @@ int mts_main(int argc, char **argv) {
 				continue;
 
 			ref<RenderJob> thr = new RenderJob(formatString("ren%i", jobIdx++), 
-				scene, renderQueue, testSupervisor, -1, -1, -1, true,
-				flushTimer > 0);
+				scene, renderQueue, -1, -1, -1, true, testSupervisor);
 			thr->start();
 
 			renderQueue->waitLeft(numParallelScenes-1);
@@ -403,6 +402,7 @@ int main(int argc, char **argv) {
 	Spectrum::staticInitialization();
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
+	SceneHandler::staticInitialization();
 
 #ifdef WIN32
 	/* Initialize WINSOCK2 */
@@ -418,20 +418,10 @@ int main(int argc, char **argv) {
 	setlocale(LC_NUMERIC, "C");
 #endif
 
-	/* Initialize Xerces-C */
-	try {
-		XMLPlatformUtils::Initialize();
-	} catch(const XMLException &toCatch) {
-		SLog(EError, "Error during Xerces initialization: %s",
-			XMLString::transcode(toCatch.getMessage()));
-		return -1;
-	}
-	
 	int retval = mts_main(argc, argv);
 
-	XMLPlatformUtils::Terminate();
-
 	/* Shutdown the core framework */
+	SceneHandler::staticShutdown();
 	SHVector::staticShutdown();
 	Scheduler::staticShutdown();
 	Spectrum::staticShutdown();

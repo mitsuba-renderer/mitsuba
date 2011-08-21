@@ -23,13 +23,16 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Abstract interface for objects that reference shared network resources.
+/** \brief Abstract interface for objects that reference shared network 
+ * resources.
  * 
- * When a networked object is serialized as part of a parallel process executed on 
- * multiple machines, the object is first given the opportunity to bind named resources
- * to the process (by a call to <tt>\ref bindUsedResources()</tt>). These will then be 
- * distributed to all participating compute servers. Once unserialized on the remote side, 
- * <tt>\ref wakeup()</tt> is called to let the object re-associate with the shared resources.
+ * When a networked object is serialized as part of a parallel process 
+ * executed on multiple machines, the object is first given the 
+ * opportunity to bind named resources to the process (by a call to 
+ * \ref bindUsedResources()). These will then be distributed to all 
+ * participating compute servers. Once unserialized on the remote side, 
+ * \ref wakeup() is called to let the object re-associate with the 
+ * shared resources.
  *
  * \ingroup libcore
  */

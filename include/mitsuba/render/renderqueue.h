@@ -53,9 +53,12 @@ protected:
 };
 
 /** 
- * Render queue - used to keep track of a number of scenes
- * that are simultaneously being rendered. Also distributes
- * events regarding these scenes to registered listeners.
+ * \brief Render queue - used to keep track of a number of scenes
+ * that are simultaneously being rendered.
+ *
+ * This class is also responsible for distributing events about
+ * in-progress renderings to registered listeners.
+ *
  * \ingroup librender
  */
 class MTS_EXPORT_RENDER RenderQueue : public Object {

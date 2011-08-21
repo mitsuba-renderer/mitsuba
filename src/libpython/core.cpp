@@ -1,4 +1,4 @@
-#include "core.h"
+#include "base.h"
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/fstream.h>
@@ -13,6 +13,10 @@
 #include <mitsuba/core/aabb.h>
 #include <mitsuba/core/frame.h>
 #include <mitsuba/core/sched_remote.h>
+#include <mitsuba/core/netobject.h>
+#include <mitsuba/core/sstream.h>
+#include <mitsuba/core/sshstream.h>
+#include <mitsuba/render/scenehandler.h>
 
 using namespace mitsuba;
 
@@ -26,10 +30,12 @@ void initializeFramework() {
 	Spectrum::staticInitialization();
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
+	SceneHandler::staticInitialization();
 }
 
 void shutdownFramework() {
 	/* Shutdown the core framework */
+	SceneHandler::staticShutdown();
 	SHVector::staticShutdown();
 	Scheduler::staticShutdown();
 	Spectrum::staticShutdown();
@@ -282,6 +288,40 @@ Point transform_mul_point(Transform *transform, const Point &point) { return tra
 Ray transform_mul_ray(Transform *transform, const Ray &ray) { return transform->operator()(ray); }
 Transform transform_mul_transform(Transform *transform, const Transform &other) { return *transform * other; }
 
+ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dict) {
+	Properties properties;
+	bp::list list = dict.items();
+	std::map<std::string, ConfigurableObject *> children;
+
+	for (int i=0; i<bp::len(list); ++i) {
+		bp::tuple tuple = bp::extract<bp::tuple>(list[i]);
+		std::string name = bp::extract<std::string>(tuple[0]);
+		bp::extract<bp::dict> extractDict(tuple[1]);
+		bp::extract<std::string> extractString(tuple[1]);
+		bp::extract<ConfigurableObject *> extractConfigurableObject(tuple[1]);
+
+		if (name == "type") {
+			if (!extractString.check())
+				SLog(EError, "'type' property must map to a string!");
+			else
+				properties.setPluginName(extractString());
+		} else if (extractDict.check()) {
+			children[name] = pluginmgr_create(manager, extractDict());
+		} else if (extractConfigurableObject.check()) {
+			children[name] = extractConfigurableObject();
+		} else {
+			properties_wrapper::set(properties, name, tuple[1]);
+		}
+	}
+
+	ConfigurableObject *object = manager->createObject(properties);
+	for (std::map<std::string, ConfigurableObject *>::iterator it = children.begin();
+		it != children.end(); ++it) 
+		object->addChild(it->first, it->second);
+	object->configure();
+	return object;
+}
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 
@@ -295,6 +335,12 @@ void export_core() {
 	PyObject *oldScope = bp::detail::current_scope;
 
 	BP_SETSCOPE(coreModule);
+
+	/* Basic STL containers */
+	bp::class_<StringVector>("StringVector")
+		.def(bp::vector_indexing_suite<StringVector>());
+	bp::class_<StringMap>("StringMap")
+		.def(bp::map_indexing_suite<StringMap>());
 
 	bp::enum_<ELogLevel>("ELogLevel")
 		.value("ETrace", ETrace)
@@ -381,6 +427,19 @@ void export_core() {
 		.def("close", &FileStream::close)
 		.def("remove", &FileStream::remove);
 
+	BP_CLASS(SocketStream, Stream, (bp::init<std::string, int>()))
+		.def("getPeer", &SocketStream::getPeer, BP_RETURN_CONSTREF)
+		.def("getReceivedBytes", &SocketStream::getReceivedBytes)
+		.def("getSentBytes", &SocketStream::getSentBytes);
+
+	BP_CLASS(SSHStream, Stream, (bp::init<std::string, std::string, const StringVector &>()))
+		.def(bp::init<std::string, std::string, const StringVector &, int>())
+		.def(bp::init<std::string, std::string, const StringVector &, int, int>())
+		.def("getUserName", &SSHStream::getUserName, BP_RETURN_CONSTREF)
+		.def("getHostName", &SSHStream::getHostName, BP_RETURN_CONSTREF)
+		.def("getReceivedBytes", &SSHStream::getReceivedBytes)
+		.def("getSentBytes", &SSHStream::getSentBytes);
+
 	BP_SETSCOPE(FileStream_class);
 	bp::enum_<FileStream::EFileMode>("EFileMode")
 		.value("EReadOnly", FileStream::EReadOnly)
@@ -394,7 +453,7 @@ void export_core() {
 
 	BP_CLASS(SerializableObject, Object, bp::no_init)
 		.def("serialize", &SerializableObject::serialize);
-
+	
 	ConfigurableObject *(ConfigurableObject::*cobject_get_parent)() = &ConfigurableObject::getParent;
 	void (ConfigurableObject::*cobject_add_child_1)(ConfigurableObject *) = &ConfigurableObject::addChild;
 	void (ConfigurableObject::*cobject_add_child_2)(const std::string &, ConfigurableObject *) = &ConfigurableObject::addChild;
@@ -405,6 +464,9 @@ void export_core() {
 		.def("addChild", cobject_add_child_1)
 		.def("addChild", cobject_add_child_2)
 		.def("configure", &ConfigurableObject::configure);
+
+	BP_CLASS(NetworkedObject, ConfigurableObject, bp::no_init)
+		.def("bindUsedResources", &NetworkedObject::bindUsedResources);
 
 	Thread *(Thread::*thread_get_parent)() = &Thread::getParent;
 	BP_CLASS(Thread, Object, bp::no_init)
@@ -538,9 +600,16 @@ void export_core() {
 	BP_CLASS(PluginManager, Object, bp::no_init)
 		.def("ensurePluginLoaded", &PluginManager::ensurePluginLoaded)
 		.def("getLoadedPlugins", &PluginManager::getLoadedPlugins)
+		.def("create", pluginmgr_create, BP_RETURN_VALUE)
 		.def("createObject", pluginmgr_createobject_1, BP_RETURN_VALUE)
 		.def("createObject", pluginmgr_createobject_2, BP_RETURN_VALUE)
 		.def("getInstance", &PluginManager::getInstance, BP_RETURN_VALUE)
+		.staticmethod("getInstance");
+
+	BP_CLASS(Statistics, Object, bp::no_init)
+		.def("getStats", &Statistics::getStats, BP_RETURN_VALUE)
+		.def("printStats", &Statistics::printStats)
+		.def("getInstance", &Statistics::getInstance, BP_RETURN_VALUE)
 		.staticmethod("getInstance");
 
 	BP_CLASS(WorkUnit, Object, bp::no_init)
@@ -999,16 +1068,11 @@ BOOST_PYTHON_MODULE(mitsuba) {
 	bp::object package = bp::scope();
 	package.attr("__path__") = "mitsuba";
 
-	/* Basic STL containers */
-	bp::class_<StringVector>("StringVector")
-		.def(bp::vector_indexing_suite<StringVector>());
-	bp::class_<StringMap>("StringMap")
-		.def(bp::map_indexing_suite<StringMap>());
-
 	/* Automatically take care of the framework
 	   initialization / shutdown */
 	initializeFramework();
 	atexit(shutdownFramework);
 
 	export_core();
+	export_render();
 }

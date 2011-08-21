@@ -20,10 +20,20 @@
 #include <mitsuba/render/renderjob.h>
 #include <mitsuba/core/plugin.h>
 
+#define DEFAULT_BLOCKSIZE 32
+
 MTS_NAMESPACE_BEGIN
 
+Scene::Scene() 
+ : NetworkedObject(Properties()), m_blockSize(DEFAULT_BLOCKSIZE) {
+	m_kdtree = new ShapeKDTree();
+	m_testType = ENone;
+	m_testThresh = 0.0f;
+	m_importanceSampleLuminaires = true;
+}
+
 Scene::Scene(const Properties &props)
- : NetworkedObject(props), m_blockSize(32) {
+ : NetworkedObject(props), m_blockSize(DEFAULT_BLOCKSIZE) {
 	m_kdtree = new ShapeKDTree();
 	/* When test case mode is active (Mitsuba is started with the -t parameter), 
 	  this specifies the type of test performed. Mitsuba will expect a reference 
@@ -44,7 +54,7 @@ Scene::Scene(const Properties &props)
 		Log(EError, "Unknown test mode \"%s\" specified (must be \"t-test\" or \"relerr\")",
 			testType.c_str());
 	/* Error threshold for use with <tt>testType</tt> */
-	m_testThresh = props.getFloat("testThresh", 0.01);
+	m_testThresh = props.getFloat("testThresh", 0.01f);
 	/* By default, luminaire sampling chooses a luminaire with a probability 
 	  dependent on the emitted power. Setting this parameter to false switches 
 	  to uniform sampling. */

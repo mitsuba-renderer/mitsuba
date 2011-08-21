@@ -373,6 +373,7 @@ int mts_main(int argc, char **argv) {
 	Spectrum::staticInitialization();
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
+	SceneHandler::staticInitialization();
 
 #ifdef WIN32
 	/* Initialize WINSOCK2 */
@@ -388,20 +389,10 @@ int mts_main(int argc, char **argv) {
 	setlocale(LC_NUMERIC, "C");
 #endif
 
-	/* Initialize Xerces-C */
-	try {
-		XMLPlatformUtils::Initialize();
-	} catch(const XMLException &toCatch) {
-		SLog(EError, "Error during Xerces initialization: %s",
-			XMLString::transcode(toCatch.getMessage()));
-		return -1;
-	}
-	
 	int retval = mtsutil(argc, argv);
 
-	XMLPlatformUtils::Terminate();
-
 	/* Shutdown the core framework */
+	SceneHandler::staticShutdown();
 	SHVector::staticShutdown();
 	Scheduler::staticShutdown();
 	Spectrum::staticShutdown();

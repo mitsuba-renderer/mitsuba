@@ -39,10 +39,12 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Principal scene data structure
  *
- * Holds information on surfaces, luminaires and participating media and 
- * coordinates rendering jobs. This class also provides useful query routines
- * that are mostly used by the \ref Integrator implementations.
+ * This class holds information on surfaces, luminaires and participating media
+ * and coordinates rendering jobs. It also provides useful query routines that 
+ * are mostly used by the \ref Integrator implementations.
+ *
  * \ingroup librender
+ * \ingroup libpython
  */
 class MTS_EXPORT_RENDER Scene : public NetworkedObject {
 public:
@@ -64,6 +66,9 @@ public:
 	// =============================================================
 	//! @{ \name Initialization and rendering
 	// =============================================================
+	
+	/// Construct a new, empty scene (with the default properties)
+	Scene();
 
 	/// Construct a new, empty scene
 	Scene(const Properties &props);
@@ -85,7 +90,7 @@ public:
 	 * before rendering the scene. This might do a variety of things, 
 	 * such as constructing photon maps or executing distributed overture 
 	 * passes. Progress is tracked by sending status messages to a provided 
-	 * render queue. The parameter <tt>job</tt> is required to discern 
+	 * render queue. The parameter \c job is required to discern 
 	 * multiple render jobs occurring in parallel. The last three parameters 
 	 * are resource IDs of the associated scene, camera and sample generator,
 	 * which have been made available to  all local and remote workers.
@@ -97,14 +102,14 @@ public:
 	/**
 	 * Render the scene as seen by the scene's main camera. Progress is tracked
 	 * by sending status messages to a provided render queue. The parameter
-	 * <tt>job</tt> is required to discern multiple render jobs occurring in 
+	 * \c job is required to discern multiple render jobs occurring in 
 	 * parallel. The last three parameters are resource IDs of the associated 
 	 * scene, camera and sample generator, which have been made available to 
 	 * all local and remote workers. Returns true upon successful completion.
 	 */
 	bool render(RenderQueue *queue, const RenderJob *job,
 			int sceneResID, int cameraResID, int samplerResID);
-	
+
 	/// Post-process step after rendering. Parameters are explained above
 	void postprocess(RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int samplerResID);
@@ -428,12 +433,14 @@ public:
 	inline Float getTestThreshold() const { return m_testThresh; }
 
 	/**
-	 * Set the scene's camera. Note that the camera is not included
-	 * when this Scene instance is serialized -- the camera field
-	 * will be <tt>NULL</tt> after unserialization. This is intentional
-	 * so that the camera can be changed without having to re-transmit
-	 * the whole scene. Hence, the camera needs to be submitted separately
-	 * and re-attached on the remote side using <tt>setCamera</tt>.
+	 * \brief Set the scene's camera. 
+	 *
+	 * Note that the camera is not included when this Scene instance
+	 * is serialized -- the camera field will be \c NULL after 
+	 * unserialization. This is intentional so that the camera can 
+	 * be changed without having to re-transmit the whole scene. 
+	 * Hence, the camera needs to be submitted separately
+	 * and re-attached on the remote side using \ref setCamera().
 	 **/
 	inline void setCamera(Camera *camera) { m_camera = camera; }
 	/// Return the scene's camera
@@ -442,12 +449,14 @@ public:
 	inline const Camera *getCamera() const { return m_camera.get(); }
 	
 	/**
-	 * Set the scene's integrator. Note that the integrator is not included
-	 * when this Scene instance is serialized -- the integrator field
-	 * will be <tt>NULL</tt> after unserialization. This is intentional
-	 * so that the integrator can be changed without having to re-transmit
-	 * the whole scene. Hence, the integrator needs to be submitted separately
-	 * and re-attached on the remote side using <tt>setIntegrator</tt>.
+	 * \brief Set the scene's integrator. 
+	 *
+	 * Note that the integrator is not included when this Scene instance 
+	 * is serialized -- the integrator field will be \c NULL after 
+	 * unserialization. This is intentional so that the integrator can
+	 * be changed without having to re-transmit the whole scene. Hence, 
+	 * the integrator needs to be submitted separately and re-attached 
+	 * on the remote side using \ref setIntegrator().
 	 **/
 	inline void setIntegrator(Integrator *integrator) { m_integrator = integrator; }
 	/// Return the scene's integrator
@@ -456,22 +465,26 @@ public:
 	inline const Integrator *getIntegrator() const { return m_integrator.get(); }
 
 	/**
-	 * Set the scene's sampler. Note that the sampler is not included
-	 * when this Scene instance is serialized -- the sampler field
-	 * will be <tt>NULL</tt> after unserialization. This is intentional
-	 * so that the sampler can be changed without having to re-transmit
-	 * the whole scene. Hence, the sampler needs to be submitted separately
-	 * and re-attached on the remote side using <tt>setSampler</tt>.
+	 * \brief Set the scene's sampler. 
+	 *
+	 * Note that the sampler is not included when this Scene instance 
+	 * is serialized -- the sampler field will be \c NULL after 
+	 * unserialization. This is intentional so that the sampler can 
+	 * be changed without having to re-transmit the whole scene. 
+	 * Hence, the sampler needs to be submitted separately
+	 * and re-attached on the remote side using \ref setSampler().
 	 **/
 	inline void setSampler(Sampler *sampler) { m_sampler = sampler; }
 
 	/**
-	 * Return the scene's sampler. Note that when rendering using multiple
-	 * different threads, each thread will be passed a shallow copy of the
-	 * scene, which has a different sampler instance. This helps to avoid 
-	 * locking/contention issues and ensures that different threads render 
-	 * with different random number sequences. The sampler instance provided
-	 * here is a clone of the original sampler specified in the camera.
+	 * \brief Return the scene's sampler. 
+	 *
+	 * Note that when rendering using multiple different threads, each 
+	 * thread will be passed a shallow copy of the scene, which has a 
+	 * different sampler instance. This helps to avoid locking/contention 
+	 * issues and ensures that different threads render with different 
+	 * random number sequences. The sampler instance provided here is a 
+	 * clone of the original sampler specified in the camera.
 	 */
 	inline Sampler *getSampler() { return m_sampler; }
 	/// Return the scene's sampler

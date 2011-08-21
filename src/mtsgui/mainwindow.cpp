@@ -1242,8 +1242,8 @@ void MainWindow::on_actionRender_triggered() {
 
 	Scene *scene = context->scene;
 	scene->setBlockSize(m_blockSize);
-	context->renderJob = new RenderJob("rend", scene, m_renderQueue, NULL, 
-		context->sceneResID, -1, -1, false, true);
+	context->renderJob = new RenderJob("rend", scene, m_renderQueue,  
+		context->sceneResID, -1, -1, false);
 	context->cancelMode = ERender;
 	if (context->mode != ERender)
 		ui->glView->downloadFramebuffer();

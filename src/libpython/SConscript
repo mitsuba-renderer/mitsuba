@@ -13,4 +13,4 @@ if pythonEnv.has_key('PYTHONLIB'):
 	pythonEnv.Prepend(LIBS=pythonEnv['PYTHONLIB'])
 
 if hasPython:
-	libpython = pythonEnv.SharedLibrary('mitsuba', ['core.cpp']);
+	libpython = pythonEnv.SharedLibrary('mitsuba', ['core.cpp', 'render.cpp']);
