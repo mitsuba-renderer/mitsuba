@@ -109,7 +109,7 @@ public:
 					const BSDF *bsdf = its.shape->getBSDF();
 					if (!bsdf)
 						continue;
-					if (!bsdf->getType() == BSDF::EDiffuseReflection)
+					if ((bsdf->getType() & BSDF::EAll) != BSDF::EDiffuseReflection)
 						continue;
 					if (m_irrCache->get(its, E))
 						continue;
