@@ -79,9 +79,19 @@ if sys.platform == 'win32':
 
 	if hasCollada:
 		install(distDir, ['converter/mtsimport.exe'])
+	basePath = env.GetBuildPath('#')
+	sdkDir = os.path.join(distDir, "sdk")
+	sdkLibDir = os.path.join(sdkDir, "lib")
+
 	install(distDir, ['mitsuba/mitsuba.exe', 'mitsuba/mtssrv.exe', 'mitsuba/mtsutil.exe'])
 	install(distDir, ['libcore/libmitsuba-core.dll', 'libhw/libmitsuba-hw.dll',
 			'librender/libmitsuba-render.dll', 'libbidir/libmitsuba-bidir.dll'])
+	install(sdkLibDir, ['libcore/mitsuba-core.lib', 'libhw/mitsuba-hw.lib',
+			'librender/mitsuba-render.lib', 'libbidir/mitsuba-bidir.lib'])
+	for entry in os.walk(os.path.join(basePath, "include")):
+		includeDir = entry[0][len(basePath)+1:]
+		installTargets += env.Install(os.path.join(sdkDir, includeDir),
+			[ ('#' + os.path.join(includeDir, fname)) for fname in entry[2] ])
 	if hasPython:
 		installAs(os.path.join(distDir, 'python/mitsuba.pyd'), 'libpython/mitsuba.dll')
 	install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',

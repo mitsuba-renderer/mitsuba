@@ -50,7 +50,6 @@ converter_objects = build('src/converter/SConscript', ['mainEnv'])
 build('src/mtsgui/SConscript', ['mainEnv', 'converter_objects'], duplicate=True)
 
 env['SHLIBPREFIX']=''
-env['LIBPREFIX']=''
 
 # ===== Build the plugins =====
 
