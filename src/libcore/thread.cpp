@@ -302,17 +302,45 @@ void Thread::staticShutdown() {
 #endif
 }
 
+#if defined(__OSX__)
+PrimitiveThreadLocal<int> __threadID;
+int __threadCount = 0;
+
+int mts_get_thread_num() {
+	return __threadID.get();
+}
+int mts_get_max_threads() {
+	return __threadCount;
+}
+#else
+int mts_get_thread_num() {
+	return omp_get_thread_num();
+}
+int mts_get_max_threads() {
+	return omp_get_max_threads();
+}
+#endif
+
 void Thread::initializeOpenMP(size_t threadCount) {
 	ref<Logger> logger = Thread::getThread()->getLogger();
 	ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
 
+	__threadCount = (int) threadCount;
 	omp_set_num_threads((int) threadCount);
+	int counter = 0;
 
 	#pragma omp parallel
 	{
 		Thread *thread = Thread::getThread();
 		if (!thread) {
-			thread = new OpenMPThread(omp_get_thread_num());
+			#pragma omp critical
+			{
+				thread = new OpenMPThread(counter);
+				#if MTS_BROKEN_OPENMP == 1
+				__threadID.set(counter);
+				#endif
+				counter = counter++;
+			}
 			thread->m_running = true;
 			thread->m_thread = pthread_self();
 			thread->m_joinMutex = new Mutex();

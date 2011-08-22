@@ -39,7 +39,7 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 	m_nodes = new BRENode[m_photonCount+1];
 
 	Log(EInfo, "Computing photon radii ..");
-	int tcount = omp_get_max_threads();
+	int tcount = mts_get_max_threads();
 	PhotonMap::search_result **resultsPerThread = new PhotonMap::search_result*[tcount];
 	for (int i=0; i<tcount; ++i)
 		resultsPerThread[i] = new PhotonMap::search_result[reducedLookupSize+1];
@@ -47,7 +47,7 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 	ref<Timer> timer = new Timer();
 	#pragma omp parallel for
 	for (int i=1; i<=(int) m_photonCount; ++i) {
-		PhotonMap::search_result *results = resultsPerThread[omp_get_thread_num()];
+		PhotonMap::search_result *results = resultsPerThread[mts_get_thread_num()];
 		const Photon &photon = pmap->getPhoton(i);
 
 		BRENode &node = m_nodes[i];

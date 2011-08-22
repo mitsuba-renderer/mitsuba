@@ -184,11 +184,7 @@ public:
 		#pragma omp parallel for schedule(dynamic)
 		for (int i=-1; i<(int) m_gatherBlocks.size(); ++i) {
 			std::vector<GatherPoint> &gatherPoints = m_gatherBlocks[i];
-#if !defined(__OSX__) && defined(_OPENMP)
-			Sampler *sampler = static_cast<Sampler *>(samplers[omp_get_thread_num()]);
-#else
-			Sampler *sampler = static_cast<Sampler *>(samplers[0]);
-#endif
+			Sampler *sampler = static_cast<Sampler *>(samplers[mts_get_thread_num()]);
 			int xofs = m_offset[i].x, yofs = m_offset[i].y;
 			int index = 0;
 			for (int yofsInt = 0; yofsInt < m_blockSize; ++yofsInt) {
