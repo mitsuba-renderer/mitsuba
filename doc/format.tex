@@ -211,7 +211,7 @@ are allowed. Here is an example:
 
 Finally, it is also possible to specify the spectral distribution of a black body emitter, where the temperature is given in Kelvin.
 \begin{xml}
-<blackbody name="spectrumProperty" temperature="5000"/>
+<blackbody name="spectrumProperty" temperature="5000K"/>
 \end{xml}
 Note that attaching a black body spectrum to the \texttt{intensity} property
 of a luminaire introduces physical units into the rendering process of 
@@ -230,7 +230,7 @@ If these units are inconsistent with your scene, you may use the
 optional \texttt{multiplier} attribute: 
 \begin{xml}
 <!-- Oops, the scene is modeled in centimeters, not meters -->
-<blackbody name="spectrumProperty" temperature="5000" multiplier="0.01"/>
+<blackbody name="spectrumProperty" temperature="5000K" multiplier="0.01"/>
 \end{xml}
 
 \subsubsection{Vectors, Positions}

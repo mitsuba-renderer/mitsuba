@@ -57,6 +57,8 @@ def traverse(target, dirname, files):
 os.chdir(os.path.dirname(__file__))
 f = open('plugins_generated.tex', 'w')
 f.write('\section{Plugin reference}\n')
+f.write('\input{section_shapes}\n')
+os.path.walk('../src/shapes', traverse, f)
 f.write('\input{section_bsdf}\n')
 os.path.walk('../src/bsdfs', traverse, f)
 f.write('\input{section_phase}\n')
