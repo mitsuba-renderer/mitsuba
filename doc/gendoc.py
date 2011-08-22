@@ -49,7 +49,6 @@ def traverse(target, dirname, files):
 		if '.cpp' == os.path.splitext(filename)[1]:
 			fname = os.path.join(dirname, filename)
 			ordering = ordering + [(findOrderID(fname), fname)]
-	print(ordering)
 	ordering = sorted(ordering, key = lambda entry: entry[0])
 
 	for entry in ordering:

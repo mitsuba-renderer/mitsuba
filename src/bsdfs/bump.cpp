@@ -22,6 +22,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{bump}{Bump map modifier}
+ * \order{11}
  * \icon{bsdf_bump}
  *
  * \parameters{
