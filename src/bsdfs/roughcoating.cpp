@@ -25,7 +25,7 @@ MTS_NAMESPACE_BEGIN
 
 #define TRANSMITTANCE_PRECOMP_NODES 200
 
-/*!\plugin{roughcoating}{Rough coating material}
+/*!\plugin{roughcoating}{Rough dielectric coating}
  * \order{10}
  * \icon{bsdf_roughcoating}
  * \parameters{
@@ -59,8 +59,37 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the 
  *      coating layer. \default{0, i.e. there is no absorption}}
  *     \parameter{\Unnamed}{\BSDF}{A nested BSDF model that should be coated.}
+ * }\vspace{-4mm}
+ * \renderings{
+ *     \rendering{Rough gold coated with a \emph{smooth} varnish layer}
+ *         {bsdf_roughcoating_gold_smooth}
+ *     \rendering{Rough gold coated with a \emph{rough} ($\alpha\!=\!0.03$) varnish layer}
+ *         {bsdf_roughcoating_gold_rough}
  * }
  *
+ * This plugin implements a \emph{very} approximate\footnote{
+ * The model only accounts for roughness 
+ * in the specular reflection and Fresnel transmittance through the interface.
+ * The interior model receives incident illumination
+ * that is transformed \emph{as if} the coating was smooth. While
+ * that's not quite correct, it is a convenient workaround when the 
+ * \pluginref{coating} plugin produces specular highlights that are too sharp.}
+ * model that simulates a rough dielectric coating. It is essentially the 
+ * roughened version of \pluginref{coating}. 
+ * Any BSDF in Mitsuba can be coated using this plugin, and multiple coating 
+ * layers can even be applied in sequence. This allows designing interesting 
+ * custom materials. The coating layer can optionally be tinted (i.e. filled 
+ * with an absorbing medium), in which case this model also accounts for the 
+ * directionally dependent absorption within the layer.
+*
+ * Note that the plugin discards illumination that undergoes internal
+ * reflection within the coating. This can lead to a noticeable energy
+ * loss for materials that reflect much of their energy near or below the critical
+ * angle (i.e. diffuse or very rough materials). 
+ *
+ * The implementation here is influenced by the paper 
+ * ``Arbitrarily Layered Micro-Facet Surfaces'' by Weidlich and 
+ * Wilkie \cite{Weidlich2007Arbitrarily}.
  */
 class RoughCoating : public BSDF {
 public:

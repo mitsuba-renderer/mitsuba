@@ -48,9 +48,9 @@ MTS_NAMESPACE_BEGIN
  *
  * This plugin implements a smooth dielectric coating (e.g. a layer of varnish) 
  * in the style of the paper ``Arbitrarily Layered Micro-Facet Surfaces'' by 
- * Weidlich and Wilkie \cite{Weidlich2007Arbitrarily}. Any non-transmissive
- * BSDF in Mitsuba can be coated using this plugin, and multiple coating layers
- * can be applied in sequence. This allows designing interesting custom materials 
+ * Weidlich and Wilkie \cite{Weidlich2007Arbitrarily}. Any BSDF in Mitsuba 
+ * can be coated using this plugin, and multiple coating layers can even 
+ * be applied in sequence. This allows designing interesting custom materials 
  * like car paint or glazed metal foil. The coating layer can optionally be 
  * tinted (i.e. filled with an absorbing medium), in which case this model also 
  * accounts for the directionally dependent absorption within the layer.
