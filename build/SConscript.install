@@ -42,6 +42,7 @@ if not 'DISTDIR' in env:
 	Exit(1)
 
 distDir = env.GetBuildPath(env['DISTDIR'])
+basePath = env.GetBuildPath('#')
 
 for file in os.listdir(env.GetBuildPath('#data/schema')):
 	if fnmatch.fnmatch(file, '*.xsl') or fnmatch.fnmatch(file, '*.xsd'):
@@ -79,7 +80,6 @@ if sys.platform == 'win32':
 
 	if hasCollada:
 		install(distDir, ['converter/mtsimport.exe'])
-	basePath = env.GetBuildPath('#')
 	sdkDir = os.path.join(distDir, "sdk")
 	sdkLibDir = os.path.join(sdkDir, "lib")
 
@@ -117,6 +117,10 @@ elif sys.platform == 'darwin':
 	for i in plugins:
 		plugin = env.Install(os.path.join(distDir, 'plugins'), i)
 		installTargets += fixOSXPluginPath(plugin)
+	for entry in os.walk(os.path.join(basePath, "include")):
+		includeDir = entry[0][len(basePath)+1:]
+		installTargets += env.Install(os.path.join(os.path.join(distDir, 'Headers'), includeDir),
+			[ ('#' + os.path.join(includeDir, fname)) for fname in entry[2] ])
 	install(os.path.join(distDir, 'Contents/MacOS'), ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil'])
 	if hasCollada:
 		install(os.path.join(distDir, 'Contents/MacOS'), ['converter/mtsimport'])

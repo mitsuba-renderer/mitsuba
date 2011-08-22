@@ -11,6 +11,9 @@ if pythonEnv.has_key('PYTHONLIBDIR'):
 	pythonEnv.Prepend(LIBPATH=pythonEnv['PYTHONLIBDIR'])
 if pythonEnv.has_key('PYTHONLIB'):
 	pythonEnv.Prepend(LIBS=pythonEnv['PYTHONLIB'])
+if pythonEnv.has_key('XERCESINCLUDE'):
+	pythonEnv.Prepend(CPPPATH=pythonEnv['XERCESINCLUDE'])
 
 if hasPython:
-	libpython = pythonEnv.SharedLibrary('mitsuba', ['core.cpp', 'render.cpp']);
+	libpython = pythonEnv.SharedLibrary('mitsuba', 
+		['core.cpp', 'render.cpp']);

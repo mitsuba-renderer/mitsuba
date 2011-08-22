@@ -127,7 +127,21 @@
 #define MTS_NAMESPACE_BEGIN namespace mitsuba {
 #define MTS_NAMESPACE_END }
 
-/* Compile with Boost filesystem v2 */
+/* The default OpenMP implementation on OSX is seriously broken,
+ * for instance it segfaults when launching OpenMP threads
+ * from any other context than the main application thread
+ */
+#if defined(__OSX__) && !defined(__INTEL_COMPILER)
+#define MTS_BROKEN_OPENMP 1
+#else
+#define MTS_BROKEN_OPENMP 0
+#endif
+
+/* Compile with Boost filesystem v2. At some point,
+ * the transition to v3 should be made, but as of now
+ * many Linux distributions still ship with Boost 1.42,
+ * which does not support version 3.
+ */
 #define BOOST_FILESYSTEM_VERSION 2
 
 /* Use ELF support for thread-local storage on Linux? This
