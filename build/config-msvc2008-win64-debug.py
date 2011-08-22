@@ -32,4 +32,6 @@ PYTHONLIBDIR   = [os.path.join(os.path.split(sys.executable)[0], 'libs')]
 PYTHONLIB      = ['boost_python-vc100-mt-1_44']
 SHLIBPREFIX    = 'lib'
 SHLIBSUFFIX    = '.dll'
+LIBPREFIX      = 'lib'
+LIBSUFFIX      = '.lib'
 PROGSUFFIX     = '.exe'
