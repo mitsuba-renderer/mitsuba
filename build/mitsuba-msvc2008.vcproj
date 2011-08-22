@@ -24,6 +24,9 @@
 	<Files>
 		<Filter Name="Header Files" Filter="h;hpp;hxx;hm;inl;inc;xsd" UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
 		<Filter Name="mitsuba">
+		<Filter Name="bidir">
+		<File RelativePath="..\.\include\mitsuba\bidir\rsampler.h"/>
+		</Filter>
 		<Filter Name="core">
 		<File RelativePath="..\.\include\mitsuba\core\aabb.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\aabb_sse.h"/>
@@ -43,7 +46,6 @@
 		<File RelativePath="..\.\include\mitsuba\core\fstream.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\fwd.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\getopt.h"/>
-		<File RelativePath="..\.\include\mitsuba\core\grid.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\kdtree.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\lock.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\logger.h"/>
@@ -72,8 +74,8 @@
 		<File RelativePath="..\.\include\mitsuba\core\serialization.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\sfcurve.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\shvector.h"/>
-		<File RelativePath="..\.\include\mitsuba\core\shvector4d.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\spectrum.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\spline.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\sse.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\sshstream.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\sstream.h"/>
@@ -87,10 +89,12 @@
 		<File RelativePath="..\.\include\mitsuba\core\triangle.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\util.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\vector.h"/>
+		<File RelativePath="..\.\include\mitsuba\core\version.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\wavelet.h"/>
 		<File RelativePath="..\.\include\mitsuba\core\zstream.h"/>
 		</Filter>
 		<Filter Name="hw">
+		<File RelativePath="..\.\include\mitsuba\hw\basicshader.h"/>
 		<File RelativePath="..\.\include\mitsuba\hw\device.h"/>
 		<File RelativePath="..\.\include\mitsuba\hw\font.h"/>
 		<File RelativePath="..\.\include\mitsuba\hw\glgeometry.h"/>
@@ -123,7 +127,6 @@
 		<File RelativePath="..\.\include\mitsuba\render\bsdf.h"/>
 		<File RelativePath="..\.\include\mitsuba\render\camera.h"/>
 		<File RelativePath="..\.\include\mitsuba\render\common.h"/>
-		<File RelativePath="..\.\include\mitsuba\render\consttexture.h"/>
 		<File RelativePath="..\.\include\mitsuba\render\film.h"/>
 		<File RelativePath="..\.\include\mitsuba\render\fwd.h"/>
 		<File RelativePath="..\.\include\mitsuba\render\gatherproc.h"/>
@@ -172,23 +175,33 @@
 		</Filter>
 		<Filter Name="Source Files" Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx" UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
 		<Filter Name="bsdfs">
-		<File RelativePath="..\.\src\bsdfs\composite.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\bump.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\coating.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\conductor.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\dielectric.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\difftrans.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\diffuse.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\dipolebrdf.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\hk.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\ior.h"/>
 		<File RelativePath="..\.\src\bsdfs\irawan.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\irawan.h"/>
-		<File RelativePath="..\.\src\bsdfs\lambertian.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\mask.cpp"/>
-		<File RelativePath="..\.\src\bsdfs\microfacet.cpp"/>
-		<File RelativePath="..\.\src\bsdfs\mirror.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\microfacet.h"/>
+		<File RelativePath="..\.\src\bsdfs\mixturebsdf.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\phong.cpp"/>
-		<File RelativePath="..\.\src\bsdfs\roughglass.cpp"/>
-		<File RelativePath="..\.\src\bsdfs\roughmetal.cpp"/>
-		<File RelativePath="..\.\src\bsdfs\transparent.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\plastic.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\roughcoating.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\roughconductor.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\roughdielectric.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\roughdiffuse.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\roughplastic.cpp"/>
+		<File RelativePath="..\.\src\bsdfs\sssbrdf.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\twosided.cpp"/>
 		<File RelativePath="..\.\src\bsdfs\ward.cpp"/>
 		</Filter>
 		<Filter Name="cameras">
+		<File RelativePath="..\.\src\cameras\environment.cpp"/>
 		<File RelativePath="..\.\src\cameras\orthographic.cpp"/>
 		<File RelativePath="..\.\src\cameras\perspective.cpp"/>
 		</Filter>
@@ -234,11 +247,15 @@
 		<File RelativePath="..\.\src\integrators\vpl\vpl.cpp"/>
 		</Filter>
 		</Filter>
+		<Filter Name="libbidir">
+		<File RelativePath="..\.\src\libbidir\rsampler.cpp"/>
+		</Filter>
 		<Filter Name="libcore">
 		<File RelativePath="..\.\src\libcore\aabb.cpp"/>
 		<File RelativePath="..\.\src\libcore\appender.cpp"/>
 		<File RelativePath="..\.\src\libcore\bitmap.cpp"/>
 		<File RelativePath="..\.\src\libcore\brent.cpp"/>
+		<File RelativePath="..\.\src\libcore\chisquare.cpp"/>
 		<File RelativePath="..\.\src\libcore\class.cpp"/>
 		<File RelativePath="..\.\src\libcore\cstream.cpp"/>
 		<File RelativePath="..\.\src\libcore\formatter.cpp"/>
@@ -260,6 +277,7 @@
 		<File RelativePath="..\.\src\libcore\serialization.cpp"/>
 		<File RelativePath="..\.\src\libcore\shvector.cpp"/>
 		<File RelativePath="..\.\src\libcore\spectrum.cpp"/>
+		<File RelativePath="..\.\src\libcore\spline.cpp"/>
 		<File RelativePath="..\.\src\libcore\sshstream.cpp"/>
 		<File RelativePath="..\.\src\libcore\sstream.cpp"/>
 		<File RelativePath="..\.\src\libcore\statistics.cpp"/>
@@ -273,6 +291,7 @@
 		<File RelativePath="..\.\src\libcore\zstream.cpp"/>
 		</Filter>
 		<Filter Name="libhw">
+		<File RelativePath="..\.\src\libhw\basicshader.cpp"/>
 		<File RelativePath="..\.\src\libhw\device.cpp"/>
 		<File RelativePath="..\.\src\libhw\font.cpp"/>
 		<File RelativePath="..\.\src\libhw\glgeometry.cpp"/>
@@ -299,6 +318,11 @@
 		<File RelativePath="..\.\src\libhw\wglsession.cpp"/>
 		<File RelativePath="..\.\src\libhw\x11device.cpp"/>
 		<File RelativePath="..\.\src\libhw\x11session.cpp"/>
+		</Filter>
+		<Filter Name="libpython">
+		<File RelativePath="..\.\src\libpython\base.h"/>
+		<File RelativePath="..\.\src\libpython\core.cpp"/>
+		<File RelativePath="..\.\src\libpython\render.cpp"/>
 		</Filter>
 		<Filter Name="librender">
 		<File RelativePath="..\.\src\librender\bsdf.cpp"/>
@@ -348,24 +372,22 @@
 		<File RelativePath="..\.\src\luminaires\directional.cpp"/>
 		<File RelativePath="..\.\src\luminaires\envmap.cpp"/>
 		<File RelativePath="..\.\src\luminaires\point.cpp"/>
+		<File RelativePath="..\.\src\luminaires\sky.cpp"/>
 		<File RelativePath="..\.\src\luminaires\spot.cpp"/>
+		<File RelativePath="..\.\src\luminaires\sun.cpp"/>
+		<File RelativePath="..\.\src\luminaires\sun.h"/>
+		<File RelativePath="..\.\src\luminaires\sunsky.cpp"/>
 		</Filter>
 		<Filter Name="medium">
 		<File RelativePath="..\.\src\medium\heterogeneous.cpp"/>
 		<File RelativePath="..\.\src\medium\homogeneous.cpp"/>
+		<File RelativePath="..\.\src\medium\materials.h"/>
 		<File RelativePath="..\.\src\medium\maxexp.h"/>
 		</Filter>
 		<Filter Name="mitsuba">
 		<File RelativePath="..\.\src\mitsuba\mitsuba.cpp"/>
 		<File RelativePath="..\.\src\mitsuba\mtssrv.cpp"/>
 		<File RelativePath="..\.\src\mitsuba\mtsutil.cpp"/>
-		</Filter>
-		<Filter Name="phase">
-		<File RelativePath="..\.\src\phase\hg.cpp"/>
-		<File RelativePath="..\.\src\phase\isotropic.cpp"/>
-		<File RelativePath="..\.\src\phase\kkay.cpp"/>
-		<File RelativePath="..\.\src\phase\microflake.cpp"/>
-		<File RelativePath="..\.\src\phase\microflake_fiber.h"/>
 		</Filter>
 		<Filter Name="mtsgui">
 		<File RelativePath="..\.\src\mtsgui\aboutdlg.cpp"/>
@@ -412,12 +434,25 @@
 		<File RelativePath="..\.\src\mtsgui\sceneloader.h"/>
 		<File RelativePath="..\.\src\mtsgui\server.cpp"/>
 		<File RelativePath="..\.\src\mtsgui\server.h"/>
+		<File RelativePath="..\.\src\mtsgui\symlinks_auth.cpp"/>
+		<File RelativePath="..\.\src\mtsgui\symlinks_install.c"/>
 		<File RelativePath="..\.\src\mtsgui\tabbar.cpp"/>
 		<File RelativePath="..\.\src\mtsgui\tabbar.h"/>
 		<File RelativePath="..\.\src\mtsgui\updatedlg.cpp"/>
 		<File RelativePath="..\.\src\mtsgui\updatedlg.h"/>
+		<File RelativePath="..\.\src\mtsgui\upgrade.cpp"/>
+		<File RelativePath="..\.\src\mtsgui\upgrade.h"/>
 		<File RelativePath="..\.\src\mtsgui\xmltreemodel.cpp"/>
 		<File RelativePath="..\.\src\mtsgui\xmltreemodel.h"/>
+		</Filter>
+		<Filter Name="phase">
+		<File RelativePath="..\.\src\phase\hg.cpp"/>
+		<File RelativePath="..\.\src\phase\isotropic.cpp"/>
+		<File RelativePath="..\.\src\phase\kkay.cpp"/>
+		<File RelativePath="..\.\src\phase\microflake.cpp"/>
+		<File RelativePath="..\.\src\phase\microflake_fiber.h"/>
+		<File RelativePath="..\.\src\phase\mixturephase.cpp"/>
+		<File RelativePath="..\.\src\phase\rayleigh.cpp"/>
 		</Filter>
 		<Filter Name="rfilters">
 		<File RelativePath="..\.\src\rfilters\box.cpp"/>
@@ -437,6 +472,7 @@
 		<File RelativePath="..\.\src\shapes\animatedinstance.cpp"/>
 		<File RelativePath="..\.\src\shapes\cylinder.cpp"/>
 		<File RelativePath="..\.\src\shapes\hair.cpp"/>
+		<File RelativePath="..\.\src\shapes\hair.h"/>
 		<File RelativePath="..\.\src\shapes\instance.cpp"/>
 		<File RelativePath="..\.\src\shapes\instance.h"/>
 		<File RelativePath="..\.\src\shapes\obj.cpp"/>
@@ -458,19 +494,22 @@
 		<File RelativePath="..\.\src\subsurface\irrproc.h"/>
 		<File RelativePath="..\.\src\subsurface\irrtree.cpp"/>
 		<File RelativePath="..\.\src\subsurface\irrtree.h"/>
+		<File RelativePath="..\.\src\subsurface\marschner.cpp"/>
 		</Filter>
 		<Filter Name="tests">
+		<File RelativePath="..\.\src\tests\test_chisquare.cpp"/>
 		<File RelativePath="..\.\src\tests\test_kd.cpp"/>
 		<File RelativePath="..\.\src\tests\test_la.cpp"/>
 		<File RelativePath="..\.\src\tests\test_quad.cpp"/>
 		<File RelativePath="..\.\src\tests\test_samplers.cpp"/>
 		<File RelativePath="..\.\src\tests\test_sh.cpp"/>
+		<File RelativePath="..\.\src\tests\test_spectrum.cpp"/>
 		</Filter>
 		<Filter Name="textures">
+		<File RelativePath="..\.\src\textures\bitmap.cpp"/>
 		<File RelativePath="..\.\src\textures\checkerboard.cpp"/>
-		<File RelativePath="..\.\src\textures\exrtexture.cpp"/>
 		<File RelativePath="..\.\src\textures\gridtexture.cpp"/>
-		<File RelativePath="..\.\src\textures\ldrtexture.cpp"/>
+		<File RelativePath="..\.\src\textures\scale.cpp"/>
 		<File RelativePath="..\.\src\textures\vertexcolors.cpp"/>
 		</Filter>
 		<Filter Name="utils">

@@ -19,9 +19,6 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/render/gatherproc.h>
 #include <mitsuba/render/renderqueue.h>
-#if !defined(__OSX__) && defined(_OPENMP)
-#include <omp.h>
-#endif
 
 MTS_NAMESPACE_BEGIN
 
@@ -66,7 +63,7 @@ public:
 		/* Indicates if the gathering steps should be canceled if not enough photons are generated. */
 		m_autoCancelGathering = props.getBoolean("autoCancelGathering", true);
 		m_mutex = new Mutex();
-#if defined(__OSX__)
+#if MTS_BROKEN_OPENMP == 1
 		Log(EError, "Progressive photon mapping currently doesn't work "
 			"on OSX due to a bug in OpenMP that affects Leopard & Snow Leopard");
 #endif

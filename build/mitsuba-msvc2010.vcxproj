@@ -111,7 +111,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup Label="Header Files">
-  <ClInclude Include="..\.\src\bsdfs\irawan.h">
+  <ClInclude Include="..\.\src\bsdfs\ior.h">
+			</ClInclude>
+		<ClInclude Include="..\.\src\bsdfs\irawan.h">
+			</ClInclude>
+		<ClInclude Include="..\.\src\bsdfs\microfacet.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\converter\converter.h">
 			</ClInclude>
@@ -131,9 +135,13 @@
 			</ClInclude>
 		<ClInclude Include="..\.\src\libhw\veramono14_png.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\medium\maxexp.h">
+		<ClInclude Include="..\.\src\libpython\base.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\phase\microflake_fiber.h">
+		<ClInclude Include="..\.\src\luminaires\sun.h">
+			</ClInclude>
+		<ClInclude Include="..\.\src\medium\materials.h">
+			</ClInclude>
+		<ClInclude Include="..\.\src\medium\maxexp.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\mtsgui\aboutdlg.h">
 			</ClInclude>
@@ -181,7 +189,13 @@
 			</ClInclude>
 		<ClInclude Include="..\.\src\mtsgui\updatedlg.h">
 			</ClInclude>
+		<ClInclude Include="..\.\src\mtsgui\upgrade.h">
+			</ClInclude>
 		<ClInclude Include="..\.\src\mtsgui\xmltreemodel.h">
+			</ClInclude>
+		<ClInclude Include="..\.\src\phase\microflake_fiber.h">
+			</ClInclude>
+		<ClInclude Include="..\.\src\shapes\hair.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\shapes\instance.h">
 			</ClInclude>
@@ -190,6 +204,8 @@
 		<ClInclude Include="..\.\src\subsurface\irrproc.h">
 			</ClInclude>
 		<ClInclude Include="..\.\src\subsurface\irrtree.h">
+			</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\bidir\rsampler.h">
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\aabb.h">
 			</ClInclude>
@@ -226,8 +242,6 @@
 		<ClInclude Include="..\.\include\mitsuba\core\fwd.h">
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\getopt.h">
-			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\grid.h">
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\kdtree.h">
 			</ClInclude>
@@ -285,9 +299,9 @@
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\shvector.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\shvector4d.h">
-			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\spectrum.h">
+			</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\spline.h">
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\sse.h">
 			</ClInclude>
@@ -315,9 +329,13 @@
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\vector.h">
 			</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\core\version.h">
+			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\wavelet.h">
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\core\zstream.h">
+			</ClInclude>
+		<ClInclude Include="..\.\include\mitsuba\hw\basicshader.h">
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\hw\device.h">
 			</ClInclude>
@@ -378,8 +396,6 @@
 		<ClInclude Include="..\.\include\mitsuba\render\camera.h">
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\render\common.h">
-			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\consttexture.h">
 			</ClInclude>
 		<ClInclude Include="..\.\include\mitsuba\render\film.h">
 			</ClInclude>
@@ -469,33 +485,49 @@
 			</ClInclude>
 		</ItemGroup>
   <ItemGroup Label="Source Files">
-  <ClCompile Include="..\.\src\bsdfs\composite.cpp">
+  <ClCompile Include="..\.\src\bsdfs\bump.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\coating.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\conductor.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\dielectric.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\difftrans.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\irawan.cpp">
+		<ClCompile Include="..\.\src\bsdfs\diffuse.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\lambertian.cpp">
+		<ClCompile Include="..\.\src\bsdfs\dipolebrdf.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\hk.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\irawan.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\mask.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\microfacet.cpp">
-			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\mirror.cpp">
+		<ClCompile Include="..\.\src\bsdfs\mixturebsdf.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\phong.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\roughglass.cpp">
+		<ClCompile Include="..\.\src\bsdfs\plastic.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\roughmetal.cpp">
+		<ClCompile Include="..\.\src\bsdfs\roughcoating.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\transparent.cpp">
+		<ClCompile Include="..\.\src\bsdfs\roughconductor.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\roughdielectric.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\roughdiffuse.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\roughplastic.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\bsdfs\sssbrdf.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\twosided.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\bsdfs\ward.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\cameras\environment.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\cameras\orthographic.cpp">
 			</ClCompile>
@@ -543,6 +575,8 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\integrators\vpl\vpl.cpp">
 			</ClCompile>
+		<ClCompile Include="..\.\src\libbidir\rsampler.cpp">
+			</ClCompile>
 		<ClCompile Include="..\.\src\libcore\aabb.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\libcore\appender.cpp">
@@ -550,6 +584,8 @@
 		<ClCompile Include="..\.\src\libcore\bitmap.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\libcore\brent.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\libcore\chisquare.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\libcore\class.cpp">
 			</ClCompile>
@@ -593,6 +629,8 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\libcore\spectrum.cpp">
 			</ClCompile>
+		<ClCompile Include="..\.\src\libcore\spline.cpp">
+			</ClCompile>
 		<ClCompile Include="..\.\src\libcore\sshstream.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\libcore\sstream.cpp">
@@ -614,6 +652,8 @@
 		<ClCompile Include="..\.\src\libcore\wavelet.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\libcore\zstream.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\libhw\basicshader.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\libhw\device.cpp">
 			</ClCompile>
@@ -658,6 +698,10 @@
 		<ClCompile Include="..\.\src\libhw\x11device.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\libhw\x11session.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\libpython\core.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\libpython\render.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\librender\bsdf.cpp">
 			</ClCompile>
@@ -749,7 +793,13 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\luminaires\point.cpp">
 			</ClCompile>
+		<ClCompile Include="..\.\src\luminaires\sky.cpp">
+			</ClCompile>
 		<ClCompile Include="..\.\src\luminaires\spot.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\luminaires\sun.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\luminaires\sunsky.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\medium\heterogeneous.cpp">
 			</ClCompile>
@@ -760,14 +810,6 @@
 		<ClCompile Include="..\.\src\mitsuba\mtssrv.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\mitsuba\mtsutil.cpp">
-			</ClCompile>
-		<ClCompile Include="..\.\src\phase\hg.cpp">
-			</ClCompile>
-		<ClCompile Include="..\.\src\phase\isotropic.cpp">
-			</ClCompile>
-		<ClCompile Include="..\.\src\phase\kkay.cpp">
-			</ClCompile>
-		<ClCompile Include="..\.\src\phase\microflake.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\mtsgui\aboutdlg.cpp">
 			</ClCompile>
@@ -811,11 +853,29 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\mtsgui\server.cpp">
 			</ClCompile>
+		<ClCompile Include="..\.\src\mtsgui\symlinks_auth.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\mtsgui\symlinks_install.c">
+			</ClCompile>
 		<ClCompile Include="..\.\src\mtsgui\tabbar.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\mtsgui\updatedlg.cpp">
 			</ClCompile>
+		<ClCompile Include="..\.\src\mtsgui\upgrade.cpp">
+			</ClCompile>
 		<ClCompile Include="..\.\src\mtsgui\xmltreemodel.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\phase\hg.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\phase\isotropic.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\phase\kkay.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\phase\microflake.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\phase\mixturephase.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\phase\rayleigh.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\rfilters\box.cpp">
 			</ClCompile>
@@ -865,6 +925,10 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\subsurface\irrtree.cpp">
 			</ClCompile>
+		<ClCompile Include="..\.\src\subsurface\marschner.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\tests\test_chisquare.cpp">
+			</ClCompile>
 		<ClCompile Include="..\.\src\tests\test_kd.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\tests\test_la.cpp">
@@ -875,13 +939,15 @@
 			</ClCompile>
 		<ClCompile Include="..\.\src\tests\test_sh.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\textures\checkerboard.cpp">
+		<ClCompile Include="..\.\src\tests\test_spectrum.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\textures\exrtexture.cpp">
+		<ClCompile Include="..\.\src\textures\bitmap.cpp">
+			</ClCompile>
+		<ClCompile Include="..\.\src\textures\checkerboard.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\textures\gridtexture.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\textures\ldrtexture.cpp">
+		<ClCompile Include="..\.\src\textures\scale.cpp">
 			</ClCompile>
 		<ClCompile Include="..\.\src\textures\vertexcolors.cpp">
 			</ClCompile>

@@ -196,6 +196,11 @@ private:
 #endif
 };
 
+/// Like omp_get_thread_num(), but works on all platforms
+extern MTS_EXPORT_CORE int mts_get_thread_num();
+/// Like omp_get_max_threads(), but works on all platforms
+extern MTS_EXPORT_CORE int mts_get_max_threads();
+
 MTS_NAMESPACE_END
 
 #endif /* __THREAD_H */
