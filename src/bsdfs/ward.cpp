@@ -23,7 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{ward}{Anisotropic Ward BRDF}
- * \order{11}
+ * \order{12}
  * \parameters{
  *     \parameter{variant}{\String}{
  *         Determines the variant of the Ward model to use:

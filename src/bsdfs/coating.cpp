@@ -122,6 +122,10 @@ public:
 		/* Specifies the absorption within the layer */
 		m_sigmaA = new ConstantSpectrumTexture(
 			props.getSpectrum("sigmaA", Spectrum(0.0f)));
+		
+		if (m_intIOR < 0 || m_extIOR < 0 || m_intIOR == m_extIOR)
+			Log(EError, "The interior and exterior indices of "
+				"refraction must be positive and differ!");
 	}
 
 	SmoothCoating(Stream *stream, InstanceManager *manager) 
@@ -176,6 +180,8 @@ public:
 			if (m_nested != NULL)
 				Log(EError, "Only a single nested BRDF can be added!");
 			m_nested = static_cast<BSDF *>(child);
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "sigmaA") {
+			m_sigmaA = static_cast<Texture *>(m_sigmaA);
 		} else {
 			BSDF::addChild(name, child);
 		}
@@ -533,8 +539,8 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	ref<const BSDF> m_nested;
-	ref<const Texture> m_sigmaA;
 	ref<Shader> m_nestedShader;
+	ref<const Texture> m_sigmaA;
 	ref<Shader> m_sigmaAShader;
 	Float m_R0, m_eta;
 };

@@ -444,5 +444,5 @@ Shader *SmoothPlastic::createShader(Renderer *renderer) const {
 MTS_IMPLEMENT_CLASS(SmoothPlasticShader, false, Shader)
 
 MTS_IMPLEMENT_CLASS_S(SmoothPlastic, false, BSDF)
-MTS_EXPORT_PLUGIN(SmoothPlastic, "Smooth plastic BSDF");
+MTS_EXPORT_PLUGIN(SmoothPlastic, "Smooth plastic BRDF");
 MTS_NAMESPACE_END

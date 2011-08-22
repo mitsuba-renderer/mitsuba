@@ -9,7 +9,7 @@ import os, re
 def findOrderID(filename):
 	f = open(filename)
 	for line in f.readlines():
-		match = re.match(r'.*\\order{([^}])}.*', line)
+		match = re.match(r'.*\\order{([^}]*)}.*', line)
 		if match != None:
 			return int(match.group(1))
 	return 1000
@@ -49,6 +49,7 @@ def traverse(target, dirname, files):
 		if '.cpp' == os.path.splitext(filename)[1]:
 			fname = os.path.join(dirname, filename)
 			ordering = ordering + [(findOrderID(fname), fname)]
+	print(ordering)
 	ordering = sorted(ordering, key = lambda entry: entry[0])
 
 	for entry in ordering:

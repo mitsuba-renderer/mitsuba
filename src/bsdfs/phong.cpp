@@ -22,7 +22,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{phong}{Modified Phong BRDF}
- * \order{10}
+ * \order{11}
  * \parameters{
  *     \parameter{exponent}{\Float\Or\Texture}{
  *         Specifies the Phong exponent \default{30}. 
