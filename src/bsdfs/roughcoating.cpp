@@ -256,7 +256,8 @@ public:
 		Float probNested, probSpecular;
 		if (hasSpecular && hasNested) {
 			/* Find the probability of sampling the specular component */
-			probSpecular = 1-m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wi)));
+			probSpecular = 1-m_roughTransmittance->eval(
+				std::abs(Frame::cosTheta(bRec.wi)));
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -271,7 +272,7 @@ public:
 		Float result = 0.0f;
 		if (hasSpecular && Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) > 0) {
 			/* Jacobian of the half-direction transform */
-			const Float dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, H));
+			const Float dwh_dwo = 1.0f / (4.0f * absDot(bRec.wo, H));
 
 			/* Evaluate the microsurface normal distribution */
 			const Float prob = m_distribution.pdf(H, m_alpha);
@@ -284,15 +285,15 @@ public:
 			bRecInt.wi = refractTo(EInterior, bRec.wi);
 			bRecInt.wo = refractTo(EInterior, bRec.wo);
 
-			Float pdf = m_nested->pdf(bRecInt, measure);
+			Float prob = m_nested->pdf(bRecInt, measure);
 
 			if (measure == ESolidAngle) {
 				Float eta = m_extIOR / m_intIOR;
-				pdf *= eta * eta * Frame::cosTheta(bRec.wo)
+				prob *= eta * eta * Frame::cosTheta(bRec.wo)
 			          / Frame::cosTheta(bRecInt.wo);
 			}
 
-			result += pdf * probNested;
+			result += prob * probNested;
 		}
 
 		return result;
@@ -310,7 +311,7 @@ public:
 		Float probSpecular;
 		if (hasSpecular && hasNested) {
 			/* Find the probability of sampling the diffuse component */
-			probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
+			probSpecular = 1 - m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wi)));
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -336,18 +337,25 @@ public:
 			if (Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) <= 0)
 				return Spectrum(0.0f);
 		} else {
-			bRec.sampledComponent = 1;
-			bRec.sampledType = EDiffuseReflection;
-			bRec.wo = squareToHemispherePSA(sample);
+			Vector wiBackup = bRec.wi;
+			bRec.wi = refractTo(EInterior, bRec.wi);
+			Spectrum result = m_nested->sample(bRec, _pdf, sample);
+			bRec.wi = wiBackup;
+			if (result.isZero()) 
+				return Spectrum(0.0f);
+			bRec.wo = refractTo(EExterior, bRec.wo);
+			if (bRec.wo.isZero())
+				return Spectrum(0.0f);
 		}
 
 		/* Guard against numerical imprecisions */
-		_pdf = pdf(bRec, ESolidAngle);
+		EMeasure measure = getMeasure(bRec.sampledType);
+		_pdf = pdf(bRec, measure);
 
 		if (_pdf == 0) 
 			return Spectrum(0.0f);
 		else
-			return eval(bRec, ESolidAngle) / _pdf;
+			return eval(bRec, measure) / _pdf;
 	}
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
@@ -396,7 +404,7 @@ public:
 		return oss.str();
 	}
 
-//	Shader *createShader(Renderer *renderer) const;
+	Shader *createShader(Renderer *renderer) const;
 
 	MTS_DECLARE_CLASS()
 private:
@@ -408,7 +416,7 @@ private:
 	Float m_specularSamplingWeight;
 	Float m_thickness;
 };
-#if 0
+
 /**
  * GLSL port of the rough coating shader. This version is much more
  * approximate -- it only supports the Beckmann distribution, 
@@ -432,6 +440,7 @@ public:
 		m_sigmaAShader = renderer->registerShaderForResource(m_sigmaA.get());
 		m_alpha = std::max(m_alpha, (Float) 0.2f);
 		m_R0 = fresnel(1.0f, m_extIOR, m_intIOR);
+		m_eta = extIOR / intIOR;
 	}
 
 	bool isComplete() const {
@@ -450,20 +459,43 @@ public:
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_alpha", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_R0", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_eta", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_alpha", false));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
-		program->setParameter(parameterIDs[0], m_alpha);
-		program->setParameter(parameterIDs[1], m_R0);
+		program->setParameter(parameterIDs[0], m_R0);
+		program->setParameter(parameterIDs[1], m_eta);
+		program->setParameter(parameterIDs[2], m_alpha);
 	}
 
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		oss << "uniform float " << evalName << "_alpha;" << endl
-			<< "uniform float " << evalName << "_R0;" << endl
+		oss << "uniform float " << evalName << "_R0;" << endl
+			<< "uniform float " << evalName << "_eta;" << endl
+			<< "uniform float " << evalName << "_alpha;" << endl
+			<< endl
+			<< "float " << evalName << "_schlick(float ct) {" << endl
+			<< "    float ctSqr = ct*ct, ct5 = ctSqr*ctSqr*ct;" << endl
+			<< "    return " << evalName << "_R0 + (1.0 - " << evalName << "_R0) * ct5;" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "_refract(vec3 wi, out float T) {" << endl
+			<< "    float cosThetaI = cosTheta(wi);" << endl
+			<< "    bool entering = cosThetaI > 0.0;" << endl
+			<< "    float eta = " << evalName << "_eta;" << endl
+			<< "    float sinThetaTSqr =  eta * eta * sinTheta2(wi);" << endl
+			<< "    if (sinThetaTSqr >= 1.0) {" << endl
+			<< "        T = 0.0; /* Total internal reflection */" << endl
+			<< "        return vec3(0.0);" << endl
+			<< "    } else {" << endl
+			<< "        float cosThetaT = sqrt(1.0 - sinThetaTSqr);" << endl
+			<< "        T = 1.0 - " << evalName << "_schlick(1.0 - abs(cosThetaI));" << endl
+			<< "        return vec3(eta*wi.x, eta*wi.y, entering ? cosThetaT : -cosThetaT);" << endl
+			<< "    }" << endl
+			<< "}" << endl
 			<< endl
 			<< "float " << evalName << "_D(vec3 m) {" << endl
 			<< "    float ct = cosTheta(m);" << endl
@@ -484,37 +516,40 @@ public:
 			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
 			<< "}" << endl
 			<< endl
-			<< endl
-			<< "float " << evalName << "_schlick(float ct) {" << endl
-			<< "    float ctSqr = ct*ct, ct5 = ctSqr*ctSqr*ct;" << endl
-			<< "    return " << evalName << "_R0 + (1.0 - " << evalName << "_R0) * ct5;" << endl
-			<< "}" << endl
-			<< endl
 			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (cosTheta(wi) <= 0 || cosTheta(wo) <= 0)" << endl
-			<< "        return vec3(0.0);" << endl
-			<< "    vec3 H = normalize(wi + wo);" << endl
-			<< "    vec3 specRef = " << depNames[0] << "(uv);" << endl
-			<< "    vec3 diffuseRef = " << depNames[1] << "(uv);" << endl
-			<< "    float D = " << evalName << "_D(H)" << ";" << endl
-			<< "    float G = " << evalName << "_G(H, wi, wo);" << endl
-			<< "    float F = " << evalName << "_schlick(1-dot(wi, H));" << endl
-			<< "    return specRef    * (F * D * G / (4*cosTheta(wi))) + " << endl
-			<< "           diffuseRef * ((1-F) * cosTheta(wo) * 0.31831);" << endl
+			<< "    float T12, T21;" << endl
+			<< "    vec3 wiPrime = " << evalName << "_refract(wi, T12);" << endl
+			<< "    vec3 woPrime = " << evalName << "_refract(wo, T21);" << endl
+			<< "    vec3 nested = " << depNames[0] << "(uv, wiPrime, woPrime);" << endl
+			<< "    vec3 sigmaA = " << depNames[1] << "(uv);" << endl
+			<< "    vec3 result = nested * " << evalName << "_eta * " << evalName << "_eta" << endl
+			<< "                  * T12 * T21 * (cosTheta(wi)*cosTheta(wo)) /" << endl
+			<< "                  (cosTheta(wiPrime)*cosTheta(woPrime));" << endl
+			<< "    if (sigmaA != vec3(0.0))" << endl
+			<< "        result *= exp(-sigmaA * (1/abs(cosTheta(wiPrime)) + " << endl
+			<< "                                 1/abs(cosTheta(woPrime))));" << endl
+			<< "    if (cosTheta(wi)*cosTheta(wo) > 0) {" << endl
+			<< "        vec3 H = normalize(wi + wo);" << endl
+			<< "        float D = " << evalName << "_D(H)" << ";" << endl
+			<< "        float G = " << evalName << "_G(H, wi, wo);" << endl
+			<< "        float F = " << evalName << "_schlick(1-dot(wi, H));" << endl
+			<< "        result += vec3(F * D * G / (4*cosTheta(wi)));" << endl
+			<< "    }" << endl
+			<< "    return result;" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    vec3 diffuseRef = " << depNames[1] << "(uv);" << endl
-			<< "    return diffuseRef * 0.31831 * cosTheta(wo);"<< endl
+			<< "    return " << depNames[0] << "_diffuse(uv, wi, wo);" << endl
 			<< "}" << endl;
 	}
+
 	MTS_DECLARE_CLASS()
 private:
 	ref<const BSDF> m_nested;
 	ref<Shader> m_nestedShader;
 	ref<const Texture> m_sigmaA;
 	ref<Shader> m_sigmaAShader;
-	Float m_alpha, m_extIOR, m_intIOR, m_R0;
+	Float m_alpha, m_extIOR, m_intIOR, m_R0, m_eta;
 };
 
 Shader *RoughCoating::createShader(Renderer *renderer) const { 
@@ -523,7 +558,6 @@ Shader *RoughCoating::createShader(Renderer *renderer) const {
 }
 
 MTS_IMPLEMENT_CLASS(RoughCoatingShader, false, Shader)
-#endif
 MTS_IMPLEMENT_CLASS_S(RoughCoating, false, BSDF)
 MTS_EXPORT_PLUGIN(RoughCoating, "Rough coating BSDF");
 MTS_NAMESPACE_END

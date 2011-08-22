@@ -46,10 +46,14 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{g}{\Float\Or\String}{Specifies the phase function anisotropy
  *     --- see the \pluginref{hg} plugin for details\default{0, i.e. isotropic}}
+ *     \parameter{alpha}{\Float}{
+ *         Specifies the roughness of the unresolved surface micro-geometry.
+ *         \default{0.0, i.e. the surface has a smooth finish}
+ *     }
  * }
  *
  * This plugin implements a BRDF scattering model that emulates interactions
- * with a participating medium embedded inside a smooth dielectric layer. By
+ * with a participating medium embedded inside a dielectric layer. By
  * approximating these events using a BRDF, any scattered illumination
  * is assumed to exit the material \emph{directly} at the original point of incidence.
  * To account for internal light transport with \emph{different} incident 
@@ -60,9 +64,11 @@ MTS_NAMESPACE_BEGIN
  * BSDF for single scattering in an infinitely thick layer together with 
  * an approximate multiple scattering component based on Jensen's 
  * \cite{Jensen2001Practical} integrated dipole BRDF. These are then 
- * embedded into a dielectric layer using the \pluginref{coating} plugin.
+ * embedded into a dielectric layer using either the \pluginref{coating} 
+ * or \pluginref{roughcoating} plugins depending on whether or not
+ * \code{alpha}=0.
  * This yields a very convenient parameterization of a scattering model
- * that roughly behaves like a coated diffuse material, but expressed
+ * that behaves similarly to a coated diffuse material, but expressed
  * in terms of the scattering and absorption coefficients \code{sigmaS} 
  * and \code{sigmaA}.
  */
@@ -79,6 +85,8 @@ public:
 		Properties hgProps("hg");
 		hgProps.setFloat("g", g);
 
+		Float alpha = props.getFloat("alpha", 0.0f);
+
 		ref<PhaseFunction> hg = static_cast<PhaseFunction *> (
 			PluginManager::getInstance()->createObject(
 			MTS_CLASS(PhaseFunction), hgProps));
@@ -91,9 +99,11 @@ public:
 		m_hk->addChild(hg);
 
 		Properties coatingProps(props);
-		coatingProps.setPluginName("coating");
+		coatingProps.setPluginName(alpha == 0 ? "coating" : "roughcoating");
 		if (!props.hasProperty("intIOR"))
 			coatingProps.setFloat("intIOR", eta);
+		if (alpha != 0)
+			coatingProps.setFloat("alpha", alpha);
 
 		m_coating = static_cast<BSDF *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(BSDF), coatingProps));
@@ -116,6 +126,7 @@ public:
 		props.markQueried("sigmaT");
 		props.markQueried("intIOR");
 		props.markQueried("extIOR");
+		props.markQueried("alpha");
 	}
 
 	SSSBRDF(Stream *stream, InstanceManager *manager) 

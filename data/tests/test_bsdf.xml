@@ -2,6 +2,17 @@
 	 to be tested for consistency. This is done
 	 using the testcase 'test_chisquare' -->
 <scene version="0.3.0">
+	<bsdf type="roughcoating">
+		<!--
+		<bsdf type="roughconductor">
+			<string name="distribution" value="beckmann"/>
+			<float name="alpha" value=".3"/>
+		</bsdf>
+		-->
+		<bsdf type="diffuse"/>
+		<float name="alpha" value=".3"/>
+	</bsdf>
+
 	<!-- Test the smooth diffuse model -->
 	<bsdf type="diffuse"/>
 
