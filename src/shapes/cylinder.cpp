@@ -28,10 +28,10 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{cylinder}{Cylinder intersection primitive}
  * \order{2}
  * \parameters{
- *     \parameter{a}{\Point}{
+ *     \parameter{p0}{\Point}{
  *	     Starting point of the cylinder's centerline \default{(0, 0, 0)}
  *	   }
- *     \parameter{b}{\Point}{
+ *     \parameter{p1}{\Point}{
  *	     Endpoint of the cylinder's centerline \default{(0, 0, 1)}
  *	   }
  *     \parameter{radius}{\Float}{
@@ -43,6 +43,9 @@ MTS_NAMESPACE_BEGIN
  *        \default{none (i.e. object space $=$ world space)}
  *     }
  * }
+ * This shape plugin describes a simple cylinder intersection primitive. 
+ * It should always be preferred over approximations modeled using
+ * triangles.
  */
 class Cylinder : public Shape {
 private:
@@ -51,32 +54,25 @@ private:
 	Float m_radius, m_length, m_invSurfaceArea;
 public:
 	Cylinder(const Properties &props) : Shape(props) {
-		/**
-		 * There are two ways of instantiating cylinders: either,
-		 * one can specify a linear transformation to from the
-		 * unit cylinder using the 'toWorld' parameter, or one
-		 * can explicitly specify two points and a radius.
-		 */
-		if (props.hasProperty("p1") && props.hasProperty("p2")
-				&& props.hasProperty("radius")) {
-			Point p1 = props.getPoint("p1"), p2 = props.getPoint("p2");
-			Vector rel = p2 - p1;
-			Float radius = props.getFloat("radius");
-			Float length = rel.length();
+		Float radius = props.getFloat("radius", 1.0f);
+		Point p1 = props.getPoint("p0", Point(0.0f, 0.0f, 0.0f));
+		Point p2 = props.getPoint("p1", Point(0.0f, 0.0f, 1.0f));
+		Vector d = p2 - p1;
+		Float length = d.length();
+		m_objectToWorld = 
+			Transform::translate(Vector(p1)) *
+			Transform::fromFrame(Frame(d / length)) *
+			Transform::scale(Vector(radius, radius, length));
 
-			m_objectToWorld = 
-				Transform::translate(Vector(p1)) *
-				Transform::fromFrame(Frame(rel/length));
-			m_radius = radius;
-			m_length = length;
-		} else {
-			Transform objectToWorld = props.getTransform("toWorld", Transform());
-			m_radius = objectToWorld(Vector(1,0,0)).length();
-			m_length = objectToWorld(Vector(0,0,1)).length();
-			// Remove the scale from the object-to-world transform
-			m_objectToWorld = objectToWorld * Transform::scale(
-					Vector(1/m_radius, 1/m_radius, 1/m_length));
-		}
+		if (props.hasProperty("toWorld"))
+			m_objectToWorld = props.getTransform("toWorld") * m_objectToWorld;
+
+		// Remove the scale from the object-to-world transform
+		m_radius = m_objectToWorld(Vector(1,0,0)).length();
+		m_length = m_objectToWorld(Vector(0,0,1)).length();
+		m_objectToWorld = m_objectToWorld * Transform::scale(
+			Vector(1/m_radius, 1/m_radius, 1/m_length));
+
 		m_worldToObject = m_objectToWorld.inverse();
 		m_invSurfaceArea = 1/(2*M_PI*m_radius*m_length);
 		Assert(m_length > 0 && m_radius > 0);

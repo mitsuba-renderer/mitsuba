@@ -603,16 +603,15 @@ Point2 squareToDisk(const Point2 &sample) {
 	);
 }
 
-
 void coordinateSystem(const Vector &a, Vector &b, Vector &c) {
 	if (std::abs(a.x) > std::abs(a.y)) {
 		Float invLen = 1.0f / std::sqrt(a.x * a.x + a.z * a.z);
-		b = Vector(-a.z * invLen, 0.0f, a.x * invLen);
+		c = Vector(a.z * invLen, 0.0f, -a.x * invLen);
 	} else {
 		Float invLen = 1.0f / std::sqrt(a.y * a.y + a.z * a.z);
-		b = Vector(0.0f, -a.z * invLen, a.y * invLen);
+		c = Vector(0.0f, a.z * invLen, -a.y * invLen);
 	}
-	c = cross(a, b);
+	b = cross(c, a);
 }
 
 Point2 squareToTriangle(const Point2 &sample) {

@@ -145,9 +145,10 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		++nTransformations;
 	}
 	
-	if (nTransformations == 0)
+	if (nTransformations == 0) {
 		SLog(EError, "Strange -- no transformations were applied? "
 			"Stopping the upgrade operation.");
+	}
 	
 	/* Done, write back to disk */
 	SLog(EInfo, "Successfully applied %i transformations, writing the result "
@@ -157,11 +158,37 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		SLog(EError, "Unable to open \"%s\" with write access -- stopping "
 			"the upgrade operation.", filename.toStdString().c_str());
 	}
-	
+
+	int line, column;
+	QString errorMsg;
+	QDomDocument doc;
+	if (!doc.setContent(inputArray, &errorMsg, &line, &column))
+		SLog(EError, "Unable to parse file: error %s at line %i, colum %i",
+			errorMsg.toStdString().c_str(), line, column);
+	QDomElement root = doc.documentElement();
+
+	/* Search for include nodes */
+	QDomNode n = root.firstChild();
+	while (!n.isNull()) {
+		QDomElement e = n.toElement();
+		if (!e.isNull()) {
+			if (e.tagName() == "include") {
+				fs::path path = m_resolver->resolve(e.attribute("filename").toStdString());
+				SLog(EInfo, "Recursively upgrading include file \"%s\" ..",
+						path.file_string().c_str());
+				performUpgrade(path.file_string().c_str(), version);
+			}
+		}
+		n = n.nextSibling();
+	}
+
 	QTextStream input(inputArray);
 	QTextStream output(&file);
 	output << "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
 		<< endl << endl;
 	cleanupXML(input, output);
 	file.close();
+
+	QDomDocument tooltipDoc;
+
 }

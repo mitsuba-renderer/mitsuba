@@ -153,11 +153,19 @@
 		<xsl:attribute name="name">flipNormals</xsl:attribute>
 	</xsl:template>
 
+	<!-- Update the parameters of the cylinder plugin -->
+	<xsl:template match="shape[@type='cylinder']/point[@name='p1']/@name">
+		<xsl:attribute name="name">p0</xsl:attribute>
+	</xsl:template>
+	<xsl:template match="shape[@type='cylinder']/point[@name='p2']/@name">
+		<xsl:attribute name="name">p1</xsl:attribute>
+	</xsl:template>
+
 	<!-- Update the name of the lambertian plugin -->
 	<xsl:template match="bsdf[@type='lambertian']/@type">
 		<xsl:attribute name="type">diffuse</xsl:attribute>
 	</xsl:template>
-	
+
 	<!-- Update the parameters of the ward plugin -->
 	<xsl:template match="bsdf[@type='ward']/float[@name='alphaX']/@name">
 		<xsl:attribute name="name">alphaU</xsl:attribute>
@@ -165,7 +173,7 @@
 	<xsl:template match="bsdf[@type='ward']/float[@name='alphaY']/@name">
 		<xsl:attribute name="name">alphaV</xsl:attribute>
 	</xsl:template>
-	
+
 	<!-- Update the name of the microfacet plugin -->
 	<xsl:template match="bsdf[@type='microfacet']/@type">
 		<xsl:attribute name="type">roughplastic</xsl:attribute>

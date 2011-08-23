@@ -77,7 +77,7 @@ paramMap = StringMap()
 paramMap['myParameter'] = 'value'
 
 # Load the scene from an XML file
-scene = SceneHandler.loadScene(fileResolver, paramMap)
+scene = SceneHandler.loadScene(fileResolver.resolve("scene.xml"), paramMap)
 
 # Display a textual summary of the scene's contents
 print(scene)
