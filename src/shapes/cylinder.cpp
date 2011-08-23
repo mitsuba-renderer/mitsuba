@@ -28,10 +28,10 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{cylinder}{Cylinder intersection primitive}
  * \order{2}
  * \parameters{
- *     \parameter{center}{\Point}{
+ *     \parameter{a}{\Point}{
  *	     Starting point of the cylinder's centerline \default{(0, 0, 0)}
  *	   }
- *     \parameter{center}{\Point}{
+ *     \parameter{b}{\Point}{
  *	     Endpoint of the cylinder's centerline \default{(0, 0, 1)}
  *	   }
  *     \parameter{radius}{\Float}{

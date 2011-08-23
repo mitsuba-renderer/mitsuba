@@ -325,7 +325,10 @@ void Thread::initializeOpenMP(size_t threadCount) {
 	ref<Logger> logger = Thread::getThread()->getLogger();
 	ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
 
+#if defined(__OSX__)
 	__threadCount = (int) threadCount;
+#endif
+
 	omp_set_num_threads((int) threadCount);
 	int counter = 0;
 
@@ -339,7 +342,7 @@ void Thread::initializeOpenMP(size_t threadCount) {
 				#if MTS_BROKEN_OPENMP == 1
 				__threadID.set(counter);
 				#endif
-				counter = counter++;
+				counter++;
 			}
 			thread->m_running = true;
 			thread->m_thread = pthread_self();

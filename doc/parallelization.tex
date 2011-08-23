@@ -75,7 +75,6 @@ also include the position of the character in both the work units and the work r
 
 All of the relevant interfaces are contained in \code{include/mitsuba/core/sched.h}.
 For reference, here are the interfaces of \code{WorkUnit} and \code{WorkResult}:
-\newpage
 \begin{cpp}
 /**
  * Abstract work unit. Represents a small amount of information
@@ -121,7 +120,6 @@ protected:
 	virtual ~WorkResult() { }
 };
 \end{cpp}
-\newpage
 In our case, the \code{WorkUnit} implementation then looks like this:
 \begin{cpp}
 class ROT13WorkUnit : public WorkUnit {
@@ -303,8 +301,8 @@ from the main utility function (the `Hello World' code we wrote earlier). We can
 		return 0;
 	}
 \end{cpp}
-After compiling everything using \code{scons}, an exemplary usage
-would be to encode a string (e.g. \code{SECUREBYDESIGN}), while 
+After compiling everything using \code{scons}, an simple example
+involving the utility would be to encode a string (e.g. \code{SECUREBYDESIGN}), while 
 forwarding all computation to a network machine. (\code{-p0} disables
 all local worker threads). Adding a verbose flag (\code{-v}) shows 
 some additional scheduling information:
@@ -328,5 +326,3 @@ Result: FRPHEROLQRFVTA
 2010-08-17 01:35:46 DEBUG main [RemoteWorker] Shutting down
 2010-08-17 01:35:46 DEBUG net0_r[Thread] Thread "net0_r" has finished
 \end{shell}
-\subsection{Global Resources}
-TBD.
