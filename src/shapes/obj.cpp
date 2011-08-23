@@ -28,8 +28,30 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Wavefront OBJ triangle mesh loader
+/*!\plugin{obj}{Wavefront OBJ mesh loader}
+ * \order{3}
+ * \parameters{
+ *     \parameter{filename}{\String}{
+ *	     Filename of the OBJ file that should be loaded
+ *	   }
+ *     \parameter{faceNormals}{\Boolean}{
+ *       When set to \code{true}, Mitsuba will use face normals when rendering
+ *       the object, which will give it a faceted apperance. \default{\code{false}}
+ *	   }
+ *     \parameter{flipNormals}{\Boolean}{
+ *       Optional flag to flip all normals. \default{\code{false}, i.e.
+ *       the normals are left unchanged}.
+ *	   }
+ *     \parameter{toWorld}{\Transform}{
+ *	      Specifies an optional linear object-to-world transformation.
+ *        Note that non-uniform scales are not permitted!
+ *        \default{none (i.e. object space $=$ world space)}
+ *     }
+ *     \parameter{recenter}{\Boolean}{
+ *       When set to \code{true}, the geometry will be uniformly scaled 
+ *       and shifted to so that its object-space footprint fits into $[-1, 1]^3$.
+ *	   }
+ * }
  */
 class WavefrontOBJ : public Shape {
 public:

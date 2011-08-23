@@ -37,9 +37,38 @@ using namespace std::tr1::placeholders;
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * PLY mesh loader using libply by Ares Lagae
- * (http://people.cs.kuleuven.be/~ares.lagae/libply/)
+/*!\plugin{ply}{PLY (Stanford Triangle Format) mesh loader}
+ * \order{4}
+ * \parameters{
+ *     \parameter{filename}{\String}{
+ *	     Filename of the PLY file that should be loaded
+ *	   }
+ *     \parameter{faceNormals}{\Boolean}{
+ *       When set to \code{true}, Mitsuba will use face normals when rendering
+ *       the object, which will give it a faceted apperance. \default{\code{false}}
+ *	   }
+ *     \parameter{flipNormals}{\Boolean}{
+ *       Optional flag to flip all normals. \default{\code{false}, i.e.
+ *       the normals are left unchanged}.
+ *	   }
+ *     \parameter{toWorld}{\Transform}{
+ *	      Specifies an optional linear object-to-world transformation.
+ *        Note that non-uniform scales are not permitted!
+ *        \default{none (i.e. object space $=$ world space)}
+ *     }
+ *     \parameter{srgb}{\Boolean}{
+ *       When set to \code{true}, any vertex colors will be interpreted as sRGB,
+ *       instead of linear RGB \default{\code{true}}.
+ *	   }
+ * }
+ * \renderings{
+ *     \rendering{The PLY plugin is useful for loading heavy geometry. (Thai
+ *         statue courtesy of XYZ RGB.}{shape_ply_thaistatue}
+ *     \rendering{The Stanford bunny loaded with \code{faceNormals=true}. Note
+ *         the faceted appearance.}{shape_ply_bunny}
+ * }
+ * This plugin is based on the library \code{libply} by Ares Lagae
+ * (\url{http://people.cs.kuleuven.be/~ares.lagae/libply}).
  */
 class PLYLoader : public TriMesh {
 public:

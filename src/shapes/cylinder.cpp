@@ -29,10 +29,10 @@ MTS_NAMESPACE_BEGIN
  * \order{2}
  * \parameters{
  *     \parameter{p0}{\Point}{
- *	     Starting point of the cylinder's centerline \default{(0, 0, 0)}
+ *	     Object-space starting point of the cylinder's centerline \default{(0, 0, 0)}
  *	   }
  *     \parameter{p1}{\Point}{
- *	     Endpoint of the cylinder's centerline \default{(0, 0, 1)}
+ *	     Object-space endpoint of the cylinder's centerline \default{(0, 0, 1)}
  *	   }
  *     \parameter{radius}{\Float}{
  *	     Radius of the cylinder in object-space units \default{1}
@@ -43,9 +43,28 @@ MTS_NAMESPACE_BEGIN
  *        \default{none (i.e. object space $=$ world space)}
  *     }
  * }
+ * \renderings{
+ *     \rendering{Cylinder with th default one-sided shading}
+ *         {shape_cylinder_onesided}
+ *     \rendering{Cylinder with two-sided shading, see \lstref{cylinder-twosided}}
+ *         {shape_cylinder_twosided}
+ * }
  * This shape plugin describes a simple cylinder intersection primitive. 
  * It should always be preferred over approximations modeled using
- * triangles.
+ * triangles. Note that the cylinder does not have endcaps -- also,
+ * it's interior has inward-facing normals, which most scattering 
+ * models in Mitsuba will treat as fully absorbing. If this is not
+ * desirable, consider using the \pluginref{twosided} plugin.
+ *
+ * \begin{xml}[caption={A simple example for instantiating a 
+ * cylinder, whose interior is visible}, label=lst:cylinder-twosided]
+ * <shape type="cylinder">
+ *     <float name="radius" value="0.3"/>
+ *     <bsdf type="twosided">
+ *         <bsdf type="diffuse"/>
+ *     </bsdf>
+ * </shape>
+ * \end{xml}
  */
 class Cylinder : public Shape {
 private:
