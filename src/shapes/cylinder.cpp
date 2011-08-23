@@ -44,7 +44,7 @@ MTS_NAMESPACE_BEGIN
  *     }
  * }
  * \renderings{
- *     \rendering{Cylinder with th default one-sided shading}
+ *     \rendering{Cylinder with the default one-sided shading}
  *         {shape_cylinder_onesided}
  *     \rendering{Cylinder with two-sided shading, see \lstref{cylinder-twosided}}
  *         {shape_cylinder_twosided}

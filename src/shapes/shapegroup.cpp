@@ -20,6 +20,59 @@
 
 MTS_NAMESPACE_BEGIN
 
+/*!\plugin{shapegroup}{Shape group for geometry instancing}
+ * \order{5}
+ * \parameters{
+ *     \parameter{\Unnamed}{\Shape}{One or more shapes that should be
+ *         made available for geometry instancing}
+ * }
+ * 
+ * This plugin implements a container for shapes that should be
+ * made available for geometry instancing. Any shapes placed in a 
+ * \pluginref{shapegroup} will not be visible on their own---instead, the
+ * renderer will precompute ray intersection acceleration data structures
+ * so that they can efficiently be referenced many times using the 
+ * \pluginref{instance} plugin. This is useful for rendering things like 
+ * forests, where only a few distinct types of trees have to be kept
+ * in memory.
+ *
+ * \begin{xml}[caption={An example of geometry instancing}, label=lst:instancing]
+ * <!-- Declare a named shape group containing two objects -->
+ * <shape type="shapegroup" id="myShapeGroup">
+ *     <shape type="ply">
+ *         <string name="filename" value="data.ply"/>
+ *         <bsdf type="roughconductor"/>
+ *     </shape>
+ *
+ *     <shape type="sphere">
+ *         <transform name="toWorld">
+ *             <scale value="5"/>
+ *             <translate y="20"/>
+ *         </transform>
+ *         <bsdf type="diffuse"/>
+ *     </shape>
+ * </shape>
+ *
+ * <!-- Instantiate the shape group without
+ *      any kind of transformation -->
+ * <shape type="instance">
+ *     <ref id="myShapeGroup"/>
+ * </shape>
+ *
+ * <!-- Instantiate another version of the shape
+ *      group, but rotated, scaled, and translated -->
+ * <shape type="instance">
+ *     <ref id="myShapeGroup"/>
+ *
+ *     <transform name="toWorld">
+ *         <rotate x="1" angle="45"/>
+ *         <scale value="1.5"/>
+ *         <translate z="10"/>
+ *     </transform>
+ * </shape>
+ * \end{xml}
+ */
+
 ShapeGroup::ShapeGroup(const Properties &props) : Shape(props) {
 	m_kdtree = new ShapeKDTree();
 	m_name = props.getID();

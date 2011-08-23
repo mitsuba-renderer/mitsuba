@@ -23,6 +23,23 @@
 
 MTS_NAMESPACE_BEGIN
 
+/*!\plugin{animatedinstance}{Animated geometry instance}
+ * \order{6}
+ * \parameters{
+ *     \parameter{filename}{\String}{Filename of an animated
+ *     transformation}
+ *     \parameter{\Unnamed}{\ShapeGroup}{A reference to a 
+ *     shape group that should be instantiated}
+ * }
+ * 
+ * This plugin implements an \emph{animated} geometry instance,
+ * i.e. one or more shapes that are undergoing \emph{ridgid}
+ * transformations over time.
+ *
+ * The input file should contain a binary / serialized 
+ * \code{AnimatedTransform} data structure -- for details,
+ * please refer to the C++ implementation of this class.
+ */
 class AnimatedInstance : public Shape {
 public:
 	AnimatedInstance(const Properties &props) : Shape(props) {

@@ -19,6 +19,22 @@
 #include "instance.h"
 
 MTS_NAMESPACE_BEGIN
+ 
+/*!\plugin{instance}{Geometry instance}
+ * \order{6}
+ * \parameters{
+ *     \parameter{\Unnamed}{\ShapeGroup}{A reference to a 
+ *     shape group that should be instantiated}
+ *     \parameter{toWorld}{\Transform}{
+ *	      Specifies an optional linear instance-to-world transformation.
+ *        \default{none (i.e. instance space $=$ world space)}
+ *     }
+ * }
+ * 
+ * This plugin implements a geometry instance used to efficiently replicate
+ * geometry many times. For details, please refer to the \pluginref{shapegroup}
+ * plugin.
+ */
 
 Instance::Instance(const Properties &props) : Shape(props) {
 	m_objectToWorld = props.getTransform("toWorld", Transform());

@@ -63,7 +63,7 @@ MTS_NAMESPACE_BEGIN
  * }
  * \renderings{
  *     \rendering{The PLY plugin is useful for loading heavy geometry. (Thai
- *         statue courtesy of XYZ RGB.}{shape_ply_thaistatue}
+ *         statue courtesy of XYZ RGB)}{shape_ply_thaistatue}
  *     \rendering{The Stanford bunny loaded with \code{faceNormals=true}. Note
  *         the faceted appearance.}{shape_ply_bunny}
  * }

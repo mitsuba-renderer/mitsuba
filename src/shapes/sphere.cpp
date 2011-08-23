@@ -44,7 +44,7 @@ MTS_NAMESPACE_BEGIN
  *		  be flipped? \default{\code{false}, i.e. the normals point outside}
  *	   }
  * }
-
+ * 
  * \renderings{
  *     \rendering{Basic example, see \lstref{sphere-basic}}
  *         {shape_sphere_basic}

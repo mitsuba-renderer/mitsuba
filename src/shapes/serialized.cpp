@@ -23,8 +23,30 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Serialized model loader
+/*!\plugin{serialized}{Serialized mesh loader}
+ * \parameters{
+ *     \parameter{filename}{\String}{
+ *	     Filename of the gemoetry file that should be loaded
+ *	   }
+ *     \parameter{faceNormals}{\Boolean}{
+ *       When set to \code{true}, Mitsuba will use face normals when rendering
+ *       the object, which will give it a faceted apperance. \default{\code{false}}
+ *	   }
+ *     \parameter{flipNormals}{\Boolean}{
+ *       Optional flag to flip all normals. \default{\code{false}, i.e.
+ *       the normals are left unchanged}.
+ *	   }
+ *     \parameter{toWorld}{\Transform}{
+ *	      Specifies an optional linear object-to-world transformation.
+ *        Note that non-uniform scales are not permitted!
+ *        \default{none (i.e. object space $=$ world space)}
+ *     }
+ * }
+ * This plugin represents the most space and time-efficient way
+ * of getting geometry into Mitsuba. It uses a highly efficient
+ * lossless compressed format for geometry storage. Th format will
+ * be explained on this page in a subsequent revision of the
+ * documentation.
  */
 class SerializedMesh : public TriMesh {
 public:

@@ -30,13 +30,41 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * \brief Space-efficient acceleration structure for cylindrical hair
- * segments with miter joints. This class expects an ASCII file containing
- * a list of hairs made from segments. Each line should contain an X,
- * Y and Z coordinate separated by a space. An empty line indicates
- * the start of a new hair.
+/*!\plugin{hair}{Hair intersection shape}
+ * \parameters{
+ *     \parameter{filename}{\String}{
+ *	     Filename of the hair data file that should be loaded
+ *	   }
+ *     \parameter{radius}{\Float}{
+ *       Radius of the hair segments \default{0.05}.
+ *	   }
+ *     \parameter{angleThreshold}{\Float}{
+ *	     For performance reasons, the plugin will merge adjacent hair 
+ *	     segments when the angle of their tangent directions is below
+ *	     than this value (in degrees). \default{1}.
+ *	   }
+ *     \parameter{radius}{\Float}{
+ *	     Radius of the cylinder in object-space units \default{1}
+ *	   }
+ *     \parameter{toWorld}{\Transform}{
+ *	      Specifies an optional linear object-to-world transformation.
+ *        Note that non-uniform scales are not permitted!
+ *        \default{none (i.e. object space $=$ world space)}
+ *     }
+ * }
+ * \renderings{
+ *     \rendering{Cylinder with the default one-sided shading}
+ *         {shape_cylinder_onesided}
+ *     \rendering{Cylinder with two-sided shading, see \lstref{cylinder-twosided}}
+ *         {shape_cylinder_twosided}
+ * }
+ * The plugin implementa a space-efficient acceleration structure for 
+ * cylindrical hair segments with miter joints. As input, it expects an
+ * ASCII file containing a list of hairs made from segments. Each line 
+ * should contain an X, Y and Z vertex position separated by a space. 
+ * An empty line indicates the start of a new hair.
  */
+
 class HairKDTree : public SAHKDTree3D<HairKDTree> {
 	friend class GenericKDTree<AABB, SurfaceAreaHeuristic, HairKDTree>;
 	friend class SAHKDTree3D<HairKDTree>;
