@@ -535,31 +535,51 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 
 	/* Object-space -> World-space transformation */
 	Transform objectToWorld = props.getTransform("toWorld", Transform());
+	radius *= objectToWorld(Vector(0, 0, 1)).length();
 
 	Log(EInfo, "Loading hair geometry from \"%s\" ..", path.leaf().c_str());
 
-	fs::ifstream is(path);
-	if (is.fail())
-		Log(EError, "Could not open \"%s\"!", path.file_string().c_str());
+	ref<FileStream> binaryStream = new FileStream(path, FileStream::EReadOnly);
+	binaryStream->setByteOrder(Stream::ELittleEndian);
 
-	std::string line;
-	bool newFiber = true;
-	Point p, lastP(0.0f);
+	const char *binaryHeader = "BINARY_HAIR";
+	char temp[11];
+
+	bool binaryFormat = true;
+	binaryStream->read(temp, 11);
+	if (memcmp(temp, binaryHeader, 11) != 0)
+		binaryFormat = false;
+
 	std::vector<Point> vertices;
 	std::vector<bool> vertexStartsFiber;
 	Vector tangent(0.0f);
 	size_t nDegenerate = 0, nSkipped = 0;
+	Point p, lastP(0.0f);
 
-	while (is.good()) {
-		std::getline(is, line);
-		if (line.length() > 0 && line[0] == '#') {
-			newFiber = true;
-			continue;
-		}
-		std::istringstream iss(line);
-		iss >> p.x >> p.y >> p.z;
-		if (!iss.fail()) {
+	if (!binaryFormat) {
+		size_t vertexCount = binaryStream->readUInt();
+		Log(EInfo, "Loading " SIZE_T_FMT " hair vertices ..", vertices.size());
+		vertices.reserve(vertexCount);
+		vertexStartsFiber.reserve(vertexCount);
+
+		bool newFiber = true;
+		size_t verticesRead = 0;
+
+		while (verticesRead != vertexCount) {
+			Float value = binaryStream->readSingle();
+			if (std::isinf(value)) {
+				p.x = binaryStream->readSingle();
+				p.y = binaryStream->readSingle();
+				p.z = binaryStream->readSingle();
+				newFiber = true;
+			} else {
+				p.x = value;
+				p.y = binaryStream->readSingle();
+				p.z = binaryStream->readSingle();
+			}
 			p = objectToWorld(p);
+			verticesRead++;
+
 			if (newFiber) {
 				vertices.push_back(p);
 				vertexStartsFiber.push_back(newFiber);
@@ -575,7 +595,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 					Vector nextTangent = normalize(p - lastP);
 					if (dot(nextTangent, tangent) > dpThresh) {
 						/* Too small of a difference in the tangent value,
-							just overwrite the previous vertex by the current one */
+						   just overwrite the previous vertex by the current one */
 						tangent = normalize(p - vertices[vertices.size()-2]);
 						vertices[vertices.size()-1] = p;
 						++nSkipped;
@@ -590,8 +610,58 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 				nDegenerate++;
 			}
 			newFiber = false;
-		} else {
-			newFiber = true;
+		}
+		Log(EInfo, "Done.");
+	} else {
+		std::string line;
+		bool newFiber = true;
+
+		fs::ifstream is(path);
+		if (is.fail())
+			Log(EError, "Could not open \"%s\"!", path.file_string().c_str());
+		while (is.good()) {
+			std::getline(is, line);
+			if (line.length() > 0 && line[0] == '#') {
+				newFiber = true;
+				continue;
+			}
+			std::istringstream iss(line);
+			iss >> p.x >> p.y >> p.z;
+			if (!iss.fail()) {
+				p = objectToWorld(p);
+				if (newFiber) {
+					vertices.push_back(p);
+					vertexStartsFiber.push_back(newFiber);
+					lastP = p;
+					tangent = Vector(0.0f);
+				} else if (p != lastP) {
+					if (tangent.isZero()) {
+						vertices.push_back(p);
+						vertexStartsFiber.push_back(newFiber);
+						tangent = normalize(p - lastP);
+						lastP = p;
+					} else {
+						Vector nextTangent = normalize(p - lastP);
+						if (dot(nextTangent, tangent) > dpThresh) {
+							/* Too small of a difference in the tangent value,
+							   just overwrite the previous vertex by the current one */
+							tangent = normalize(p - vertices[vertices.size()-2]);
+							vertices[vertices.size()-1] = p;
+							++nSkipped;
+						} else {
+							vertices.push_back(p);
+							vertexStartsFiber.push_back(newFiber);
+							tangent = nextTangent;
+						}
+						lastP = p;
+					}
+				} else {
+					nDegenerate++;
+				}
+				newFiber = false;
+			} else {
+				newFiber = true;
+			}
 		}
 	}
 
