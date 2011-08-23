@@ -103,7 +103,6 @@ MTS_NAMESPACE_BEGIN
  * </shape>
  * \end{xml}
  */
-
 class Sphere : public Shape {
 public:
 	Sphere(const Properties &props) : Shape(props) {

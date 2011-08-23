@@ -25,6 +25,25 @@
 
 MTS_NAMESPACE_BEGIN
 
+/*!\plugin{cylinder}{Cylinder intersection primitive}
+ * \order{2}
+ * \parameters{
+ *     \parameter{center}{\Point}{
+ *	     Starting point of the cylinder's centerline \default{(0, 0, 0)}
+ *	   }
+ *     \parameter{center}{\Point}{
+ *	     Endpoint of the cylinder's centerline \default{(0, 0, 1)}
+ *	   }
+ *     \parameter{radius}{\Float}{
+ *	     Radius of the cylinder in object-space units \default{1}
+ *	   }
+ *     \parameter{toWorld}{\Transform}{
+ *	      Specifies an optional linear object-to-world transformation.
+ *        Note that non-uniform scales are not permitted!
+ *        \default{none (i.e. object space $=$ world space)}
+ *     }
+ * }
+ */
 class Cylinder : public Shape {
 private:
 	Transform m_objectToWorld;
@@ -54,7 +73,7 @@ public:
 			Transform objectToWorld = props.getTransform("toWorld", Transform());
 			m_radius = objectToWorld(Vector(1,0,0)).length();
 			m_length = objectToWorld(Vector(0,0,1)).length();
-			// Remove the scale from the object-to-world trasnsform
+			// Remove the scale from the object-to-world transform
 			m_objectToWorld = objectToWorld * Transform::scale(
 					Vector(1/m_radius, 1/m_radius, 1/m_length));
 		}
