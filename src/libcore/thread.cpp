@@ -23,6 +23,48 @@
 
 MTS_NAMESPACE_BEGIN
 
+
+#if defined(_MSC_VER)
+namespace
+{
+// Helper function to set a native thread name. MSDN:
+//   http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
+
+const DWORD MS_VC_EXCEPTION=0x406D1388;
+
+#pragma pack(push,8)
+struct THREADNAME_INFO
+{
+	DWORD dwType;     // Must be 0x1000.
+	LPCSTR szName;    // Pointer to name (in user addr space).
+	DWORD dwThreadID; // Thread ID (-1=caller thread).
+	DWORD dwFlags;    // Reserved for future use, must be zero.
+};
+#pragma pack(pop)
+
+void SetThreadName(const char* threadName, DWORD dwThreadID = -1)
+{
+	THREADNAME_INFO info;
+	info.dwType     = 0x1000;
+	info.szName     = threadName;
+	info.dwThreadID = dwThreadID;
+	info.dwFlags    = 0;
+
+	__try
+	{
+		RaiseException( MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(ULONG_PTR),
+			(ULONG_PTR*)&info );
+	}
+	__except(EXCEPTION_EXECUTE_HANDLER)
+	{
+	}
+}
+
+
+} // namespace
+#endif // _MSC_VER
+
+
 /**
  * Dummy class to associate a thread identity with the main thread
  */
@@ -164,6 +206,11 @@ void *Thread::dispatch(void *par) {
 	m_idMutex->lock();
 	thread->m_id = ++m_idCounter;
 	m_idMutex->unlock();
+#elif defined(_MSC_VER)
+	if (!thread->getName().empty()) {
+		const std::string threadName = "Mitsuba: " + thread->getName();
+		SetThreadName(threadName.c_str());
+	}
 #endif
 
 	try {

@@ -270,7 +270,6 @@ void PreviewThread::run() {
 		m_renderer->init(m_device, m_parentRenderer);
 		m_renderer->setLogLevel(EDebug);
 		m_renderer->setWarnLogLevel(EWarn);
-		m_started->set(true);
 
 		m_accumProgram->init();
 		m_accumProgramParam_source1 = m_accumProgram->getParameterID("source1");
@@ -278,6 +277,7 @@ void PreviewThread::run() {
 		m_useSync = m_renderer->getCapabilities()->isSupported(RendererCapabilities::ESyncObjects);
 
 		initializedGraphics = true;
+		m_started->set(true);
 
 		while (true) {
 			PreviewQueueEntry target;

@@ -48,6 +48,7 @@
 
 	#define _WIN32_WINNT 0x0501
 	#define NOMINMAX
+	#define WIN32_LEAN_AND_MEAN
 	#include <winsock2.h> // IPv6 support
 	#include <windows.h>
 

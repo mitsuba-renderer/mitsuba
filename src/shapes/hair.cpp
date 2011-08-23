@@ -58,11 +58,25 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{Cylinder with two-sided shading, see \lstref{cylinder-twosided}}
  *         {shape_cylinder_twosided}
  * }
- * The plugin implementa a space-efficient acceleration structure for 
- * cylindrical hair segments with miter joints. As input, it expects an
- * ASCII file containing a list of hairs made from segments. Each line 
- * should contain an X, Y and Z vertex position separated by a space. 
- * An empty line indicates the start of a new hair.
+ * The plugin implements a space-efficient acceleration structure for 
+ * hairs made from many straight cylindrical hair segments with miter 
+ * joints. Intersections with straight cylindrical hairs can efficiently be found,
+ * and curved hairs are well-approximated using a series of such segments.
+ *
+ * The plugin supports two different input formats: the simpler (but less efficient)
+ * input format is an ASCII file containing the coordinates of a hair vertex
+ * in every line. An empty line marks the beginning of a new hair, e.g.
+ * \begin{console}
+ * ..... 
+ * -18.5498 -21.7669 22.8138
+ * -18.6358 -21.3581 22.9262
+ * -18.7359 -20.9494 23.0256
+ * 
+ * -30.6367 -21.8369 6.78397
+ * -30.7289 -21.4145 6.76688
+ * -30.8226 -20.9933 6.73948
+ * ..... 
+ * \end{console}
  */
 
 class HairKDTree : public SAHKDTree3D<HairKDTree> {
