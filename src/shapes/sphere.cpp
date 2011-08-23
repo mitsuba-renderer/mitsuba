@@ -25,35 +25,105 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Sphere primitive.
+/*!\plugin{sphere}{Sphere intersection primitive}
+ * \order{1}
+ * \parameters{
+ *     \parameter{center}{\Point}{
+ *	     Center of the sphere in object-space \default{(0, 0, 0)}
+ *	   }
+ *     \parameter{radius}{\Float}{
+ *	     Radius of the sphere in object-space units \default{1}
+ *	   }
+ *     \parameter{toWorld}{\Transform}{
+ *	      Specifies an optional linear object-to-world transformation.
+ *        Note that non-uniform scales are not permitted!
+ *        \default{none (i.e. object space $=$ world space)}
+ *     }
+ *     \parameter{flipNormals}{\Boolean}{
+ *	      Is the sphere inverted, i.e. should the normal vectors
+ *		  be flipped? \default{\code{false}, i.e. the normals point outside}
+ *	   }
+ * }
+
+ * \renderings{
+ *     \rendering{Basic example, see \lstref{sphere-basic}}
+ *         {shape_sphere_basic}
+ *     \rendering{A textured sphere with the default parameterization}
+ *         {shape_sphere_parameterization}
+ * }
+ *
+ * This shape plugin describes a simple sphere intersection primitive. It should 
+ * always be preferred over sphere approximations modeled using triangles.
+ *
+ * When using a sphere as the base object of an \pluginref{area} luminaire,
+ * Mitsuba will switch to a special sphere luminaire sampling strategy 
+ * \cite{Shirley91Direct} that works much better than the default approach. 
+ * The resulting variance reduction makes it preferable to model most light
+ * sources as sphere luminaires (\figref{spherelight}).
+ * 
+ * \begin{xml}[caption={A sphere can either be configured using a linear 
+ * \code{toWorld} transformation or the \code{center} and \code{radius} parameters (or both). 
+ *    The above two declarations are equivalent.}, label=lst:sphere-basic]
+ * <shape type="sphere">
+ *     <transform name="toWorld">
+ *         <scale value="2"/>
+ *         <translate x="1" y="0" z="0"/>
+ *     </transform>
+ *     <bsdf type="diffuse"/>
+ * </shape>
+ *
+ * <shape type="sphere">
+ *     <point name="center" x="1" y="0" z="0"/>
+ *     <float name="radius" value="2"/>
+ *     <bsdf type="diffuse"/>
+ * </shape>
+ * \end{xml}
+ *
+ * \renderings{
+ *     \rendering{Spherical area light modeled using triangles}
+ *         {shape_sphere_arealum_tri}
+ *     \rendering{Spherical area light modeled using the \pluginref{sphere} plugin}
+ *         {shape_sphere_arealum_analytic}
+ *
+ *     \caption{
+ *         \label{fig:spherelight}
+ *         Area lights built from the combination of the \pluginref{area} 
+ *         and \pluginref{sphere} plugins produce renderings that have an 
+ *         overall lower variance.
+ *     }
+ * }
+ * \begin{xml}[caption=Instantiation of a sphere luminaire]
+ * <shape type="sphere">
+ *     <point name="center" x="0" y="1" z="0"/>
+ *     <float name="radius" value="1"/>
+
+ *     <luminaire type="area">
+ *         <blackbody name="intensity" temperature="7000K"/>
+ *     </luminaire>
+ * </shape>
+ * \end{xml}
  */
 
 class Sphere : public Shape {
 public:
 	Sphere(const Properties &props) : Shape(props) {
-		/**
-		 * There are two ways of instantiating spheres: either,
-		 * one can specify a linear transformation to from the
-		 * unit sphere using the 'toWorld' parameter, or one
-		 * can explicitly specify a radius and center.
-		 */
-		if (props.hasProperty("toWorld") && (props.hasProperty("center") || props.hasProperty("radius"))) {
-			Log(EError, "Deprecation error: the format for specifying spheres has changed. Please either provide "
-					"an object-to-world transformation (including scaling) or a radius and a center");
-		} else if (props.hasProperty("center") && props.hasProperty("radius")) {
+		m_objectToWorld = 
+			Transform::translate(Vector(props.getPoint("center", Point(0.0f))));
+		m_radius = props.getFloat("radius", 1.0f);
+
+		if (props.hasProperty("toWorld")) {
+			Transform objectToWorld = props.getTransform("toWorld");
+			Float radius = objectToWorld(Vector(1,0,0)).length();
+			// Remove the scale from the object-to-world transform
 			m_objectToWorld = 
-				Transform::translate(Vector(props.getPoint("center")));
-			m_radius = props.getFloat("radius");
-		} else {
-			Transform objectToWorld = props.getTransform("toWorld", Transform());
-			m_radius = objectToWorld(Vector(1,0,0)).length();
-			// Remove the scale from the object-to-world trasnsform
-			m_objectToWorld = objectToWorld * Transform::scale(Vector(1/m_radius));
+				  objectToWorld 
+				* Transform::scale(Vector(1/radius)) 
+				* m_objectToWorld;
+			m_radius *= radius;
 		}
 
 		/// Are the sphere normals pointing inwards? default: no
-		m_inverted = props.getBoolean("inverted", false);
+		m_flipNormals = props.getBoolean("flipNormals", false);
 		m_center = m_objectToWorld(Point(0,0,0));
 		m_worldToObject = m_objectToWorld.inverse();
 		m_invSurfaceArea = 1/(4*M_PI*m_radius*m_radius);
@@ -64,7 +134,7 @@ public:
 		m_objectToWorld = Transform(stream);
 		m_radius = stream->readFloat();
 		m_center = Point(stream);
-		m_inverted = stream->readBool();
+		m_flipNormals = stream->readBool();
 		m_worldToObject = m_objectToWorld.inverse();
 		m_invSurfaceArea = 1/(4*M_PI*m_radius*m_radius);
 	}
@@ -74,7 +144,7 @@ public:
 		m_objectToWorld.serialize(stream);
 		stream->writeFloat(m_radius);
 		m_center.serialize(stream);
-		stream->writeBool(m_inverted);
+		stream->writeBool(m_flipNormals);
 	}
 
 	AABB getAABB() const {
@@ -163,7 +233,7 @@ public:
 			coordinateSystem(its.geoFrame.n, its.geoFrame.s, its.geoFrame.t);
 		}
 
-		if (m_inverted)
+		if (m_flipNormals)
 			its.geoFrame.n *= -1;
 
  		its.shFrame = its.geoFrame;
@@ -351,7 +421,7 @@ private:
 	Point m_center;
 	Float m_radius;
 	Float m_invSurfaceArea;
-	bool m_inverted;
+	bool m_flipNormals;
 };
 
 MTS_IMPLEMENT_CLASS_S(Sphere, false, Shape)

@@ -398,11 +398,14 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		context.parent->properties.setSpectrum(context.attributes["name"],
 			specValue);
 	} else if (name == "blackbody") {
-		Float temperature = parseFloat(name, context.attributes["temperature"]);
+		std::string temperature = trim(context.attributes["temperature"]);
+		if (temperature.length() > 0 && std::toupper(temperature[temperature.length()-1] == 'K'))
+			temperature = temperature.substr(0, temperature.length()-1);
+		Float temperatureValue = parseFloat(name, temperature);
 		Float multiplier = 1;
 		if (context.attributes.find("multiplier") != context.attributes.end())
 			multiplier = parseFloat(name, context.attributes["multiplier"]);
-		BlackBodySpectrum bb(temperature);
+		BlackBodySpectrum bb(temperatureValue);
 		Spectrum discrete;
 		discrete.fromContinuousSpectrum(bb);
 		context.parent->properties.setSpectrum(context.attributes["name"], discrete * multiplier);

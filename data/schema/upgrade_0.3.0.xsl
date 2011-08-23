@@ -148,6 +148,11 @@
 		</xsl:copy>
 	</xsl:template>
 
+	<!-- Update the parameters of the sphere plugin -->
+	<xsl:template match="shape[@type='sphere']/boolean[@name='inverted']/@name">
+		<xsl:attribute name="name">flipNormals</xsl:attribute>
+	</xsl:template>
+
 	<!-- Update the name of the lambertian plugin -->
 	<xsl:template match="bsdf[@type='lambertian']/@type">
 		<xsl:attribute name="type">diffuse</xsl:attribute>

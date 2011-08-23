@@ -293,8 +293,9 @@ void Scene::initialize() {
 	if (!m_luminairePDF.isReady()) {
 		if (m_luminaires.size() == 0) {
 			Log(EWarn, "No luminaires found -- adding a sky luminaire");
-			Properties skyProps("sky");
-			skyProps.setFloat("intensityScale", 0.1f);
+			Properties skyProps("sunsky");
+			skyProps.setFloat("skyScale", 0.1f);
+			skyProps.setFloat("sunScale", 0.1f);
 			skyProps.setBoolean("extend", true);
 			ref<Luminaire> luminaire = static_cast<Luminaire *>(
 				PluginManager::getInstance()->createObject(MTS_CLASS(Luminaire), skyProps));
