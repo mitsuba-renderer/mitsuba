@@ -55,7 +55,11 @@
 	#pragma warning(disable : 4251) // 'field' : class 'A' needs to have dll-interface to be used by clients of class 'B'
 	#pragma warning(disable : 4800) // 'type' : forcing value to bool 'true' or 'false' (performance warning)
 	#pragma warning(disable : 4996) // Secure SCL warnings
-	#include <stdint_msvc.h>        // Does not exist in MSVC. Use a replacement
+	#if _MSC_VER < 1600
+		#include <stdint_msvc.h>    // Does not exist in MSVC. Use a replacement
+	#else
+		#include <stdint.h>
+	#endif
 	#if _MSC_VER >= 1400
 		#include <memory.h>
 		#include <string.h>
