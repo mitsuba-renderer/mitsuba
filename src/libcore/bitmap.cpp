@@ -97,17 +97,17 @@ private:
  * ========================== */
 
 static void png_flush_data(png_structp png_ptr) {
-	voidp flush_io_ptr = png_get_io_ptr(png_ptr);
+	png_voidp flush_io_ptr = png_get_io_ptr(png_ptr);
 	((Stream *) flush_io_ptr)->flush();
 }
 
 static void png_read_data(png_structp png_ptr, png_bytep data, png_size_t length) {
-	voidp read_io_ptr = png_get_io_ptr(png_ptr);
+	png_voidp read_io_ptr = png_get_io_ptr(png_ptr);
 	((Stream *) read_io_ptr)->read(data, length);
 }
 
 static void png_write_data(png_structp png_ptr, png_bytep data, png_size_t length) {
-	voidp write_io_ptr = png_get_io_ptr(png_ptr);
+	png_voidp write_io_ptr = png_get_io_ptr(png_ptr);
 	((Stream *) write_io_ptr)->write(data, length);
 }
 
