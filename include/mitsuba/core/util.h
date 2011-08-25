@@ -279,6 +279,14 @@ extern MTS_EXPORT_CORE bool solveQuadratic(Float a, Float b,
 	Float c, Float &x0, Float &x1);
 
 /**
+ * \brief Solve a double-precision quadratic equation of the 
+ * form a*x^2 + b*x + c = 0.
+ * \return \c true if a solution could be found
+ */
+extern MTS_EXPORT_CORE bool solveQuadraticDouble(double a, double b, 
+	double c, double &x0, double &x1);
+
+/**
  * \brief Calculate the radical inverse function
  *
  * (Implementation based on "Instant Radiosity" by Alexander Keller 

@@ -26,7 +26,7 @@
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
 
-#define MTS_HAIR_USE_FANCY_CLIPPING 1
+#define MTS_HAIR_USE_FANCY_CLIPPING 0
 
 MTS_NAMESPACE_BEGIN
 
@@ -43,9 +43,6 @@ MTS_NAMESPACE_BEGIN
  *	     segments when the angle of their tangent directions is below
  *	     than this value (in degrees). \default{1}.
  *	   }
- *     \parameter{radius}{\Float}{
- *	     Radius of the cylinder in object-space units \default{1}
- *	   }
  *     \parameter{toWorld}{\Transform}{
  *	      Specifies an optional linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
@@ -53,20 +50,23 @@ MTS_NAMESPACE_BEGIN
  *     }
  * }
  * \renderings{
- *     \rendering{Cylinder with the default one-sided shading}
- *         {shape_cylinder_onesided}
- *     \rendering{Cylinder with two-sided shading, see \lstref{cylinder-twosided}}
- *         {shape_cylinder_twosided}
+ *     \centering
+ *     \fbox{\includegraphics[width=6cm]{images/shape_hair}}\hspace{4.5cm}
+ *     \caption{A close-up of the hair shape rendered with a diffuse
+ *     scattering model (an actual hair scattering model will 
+ *     be needed for realistic apperance)}
  * }
  * The plugin implements a space-efficient acceleration structure for 
  * hairs made from many straight cylindrical hair segments with miter 
- * joints. Intersections with straight cylindrical hairs can efficiently be found,
- * and curved hairs are well-approximated using a series of such segments.
+ * joints. The underlying idea is that intersections with straight cylindrical 
+ * hairs can be found quite efficiently, and curved hairs are easily 
+ * approximated using a series of such segments.
  *
- * The plugin supports two different input formats: the simpler (but less efficient)
- * input format is an ASCII file containing the coordinates of a hair vertex
- * in every line. An empty line marks the beginning of a new hair, e.g.
- * \begin{console}
+ * The plugin supports two different input formats: a simple (but not
+ * particularly efficient) ASCII format containing the coordinates of a 
+ * hair vertex on every line. An empty line marks the beginning of a 
+ * new hair, e.g.
+ * \begin{xml}
  * ..... 
  * -18.5498 -21.7669 22.8138
  * -18.6358 -21.3581 22.9262
@@ -76,7 +76,15 @@ MTS_NAMESPACE_BEGIN
  * -30.7289 -21.4145 6.76688
  * -30.8226 -20.9933 6.73948
  * ..... 
- * \end{console}
+ * \end{xml}
+ *
+ * There is also a binary format, which starts with the identifier
+ * ``\texttt{BINARY\_HAIR}'' (11 bytes), followed by the number of 
+ * vertices as a 32-bit little endian integer. 
+ * The remainder of the file consists of the vertex positions stored as 
+ * single-precision XYZ coordinates (again in little-endian byte ordering).
+ * To mark the beginning of a new hair strand, a single $+\infty$ floating 
+ * point value can be inserted between the vertex data.
  */
 
 class HairKDTree : public SAHKDTree3D<HairKDTree> {
@@ -450,47 +458,66 @@ public:
 		return (size_type) m_segIndex.size();
 	}
 
+	struct IntersectionStorage {
+		index_type iv;
+		Point p;
+	};
+
 	inline bool intersect(const Ray &ray, index_type iv, 
 		Float mint, Float maxt, Float &t, void *tmp) const {
 		/* First compute the intersection with the infinite cylinder */
-		Float nearT, farT;
-		Vector axis = tangent(iv);
+		Vector3d axis = tangentDouble(iv);
 
 		// Projection of ray onto subspace normal to axis
-		Vector relOrigin = ray.o - firstVertex(iv);
-		Vector projOrigin = relOrigin - dot(axis, relOrigin) * axis;
-		Vector projDirection = ray.d - dot(axis, ray.d) * axis;
+		Point3d rayO(ray.o);
+		Vector3d rayD(ray.d);
+		Point3d v1 = firstVertexDouble(iv);
+
+		Vector3d relOrigin = rayO - v1;
+		Vector3d projOrigin = relOrigin - dot(axis, relOrigin) * axis;
+		Vector3d projDirection = rayD - dot(axis, rayD) * axis;
 
 		// Quadratic to intersect circle in projection
-		const Float A = projDirection.lengthSquared();
-		const Float B = 2 * dot(projOrigin, projDirection);
-		const Float C = projOrigin.lengthSquared() - m_radius*m_radius;
+		const double A = projDirection.lengthSquared();
+		const double B = 2 * dot(projOrigin, projDirection);
+		const double C = projOrigin.lengthSquared() - m_radius*m_radius;
 
-		if (!solveQuadratic(A, B, C, nearT, farT))
+		double nearT, farT;
+		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
 		if (nearT > maxt || farT < mint)
 			return false;
 
 		/* Next check the intersection points against the miter planes */
-		Point pointNear = ray(nearT);
-		Point pointFar = ray(farT);
-		if (dot(pointNear - firstVertex(iv), firstMiterNormal(iv)) >= 0 &&
-			dot(pointNear - secondVertex(iv), secondMiterNormal(iv)) <= 0 &&
+		Point3d pointNear = rayO + rayD * nearT;
+		Point3d pointFar = rayO + rayD * farT;
+
+		Vector3d n1 = firstMiterNormalDouble(iv); 
+		Vector3d n2 = secondMiterNormalDouble(iv); 
+		Point3d v2 = secondVertexDouble(iv);
+		IntersectionStorage *storage = static_cast<IntersectionStorage *>(tmp);
+		Point p;
+
+		if (dot(pointNear - v1, n1) >= 0 &&
+			dot(pointNear - v2, n2) <= 0 &&
 			nearT >= mint) {
-			t = nearT;
-		} else if (dot(pointFar - firstVertex(iv), firstMiterNormal(iv)) >= 0 &&
-				dot(pointFar - secondVertex(iv), secondMiterNormal(iv)) <= 0) {
+			p = Point(rayO + rayD * nearT);
+			t = (Float) nearT;
+		} else if (dot(pointFar - v1, n1) >= 0 &&
+				dot(pointFar - v2, n2) <= 0) {
 			if (farT > maxt)
 				return false;
-			t = farT;
+			p = Point(rayO + rayD * nearT);
+			t = (Float) farT;
 		} else {
 			return false;
 		}
 
-		index_type *storage = static_cast<index_type *>(tmp);
-		if (storage)
-			*storage = iv;
+		if (storage) {
+			storage->iv = iv;
+			storage-> p = p;
+		}
 
 		return true;
 	}
@@ -503,16 +530,23 @@ public:
 
 	/* Some utility functions */
 	inline Point firstVertex(index_type iv) const { return m_vertices[iv]; }
+	inline Point3d firstVertexDouble(index_type iv) const { return Point3d(m_vertices[iv]); }
 	inline Point secondVertex(index_type iv) const { return m_vertices[iv+1]; }
+	inline Point3d secondVertexDouble(index_type iv) const { return Point3d(m_vertices[iv+1]); }
 	inline Point prevVertex(index_type iv) const { return m_vertices[iv-1]; }
+	inline Point3d prevVertexDouble(index_type iv) const { return Point3d(m_vertices[iv-1]); }
 	inline Point nextVertex(index_type iv) const { return m_vertices[iv+2]; }
+	inline Point3d nextVertexDouble(index_type iv) const { return Point3d(m_vertices[iv+2]); }
 
 	inline bool prevSegmentExists(index_type iv) const { return !m_vertexStartsFiber[iv]; }
 	inline bool nextSegmentExists(index_type iv) const { return !m_vertexStartsFiber[iv+2]; }
 
 	inline Vector tangent(index_type iv) const { return normalize(secondVertex(iv) - firstVertex(iv)); }
+	inline Vector3d tangentDouble(index_type iv) const { return normalize(Vector3d(secondVertex(iv)) - Vector3d(firstVertex(iv))); }
 	inline Vector prevTangent(index_type iv) const { return normalize(firstVertex(iv) - prevVertex(iv)); }
+	inline Vector3d prevTangentDouble(index_type iv) const { return normalize(firstVertexDouble(iv) - prevVertexDouble(iv)); }
 	inline Vector nextTangent(index_type iv) const { return normalize(nextVertex(iv) - secondVertex(iv)); }
+	inline Vector3d nextTangentDouble(index_type iv) const { return normalize(nextVertexDouble(iv) - secondVertexDouble(iv)); }
 
 	inline Vector firstMiterNormal(index_type iv) const {
 		if (prevSegmentExists(iv))
@@ -527,6 +561,21 @@ public:
 		else
 			return tangent(iv);
 	}
+
+	inline Vector3d firstMiterNormalDouble(index_type iv) const {
+		if (prevSegmentExists(iv))
+			return normalize(prevTangentDouble(iv) + tangentDouble(iv));
+		else
+			return tangentDouble(iv);
+	}
+
+	inline Vector3d secondMiterNormalDouble(index_type iv) const {
+		if (nextSegmentExists(iv))
+			return normalize(tangentDouble(iv) + nextTangentDouble(iv));
+		else
+			return tangentDouble(iv);
+	}
+
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -552,6 +601,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 	radius *= objectToWorld(Vector(0, 0, 1)).length();
 
 	Log(EInfo, "Loading hair geometry from \"%s\" ..", path.leaf().c_str());
+	ref<Timer> timer = new Timer();
 
 	ref<FileStream> binaryStream = new FileStream(path, FileStream::EReadOnly);
 	binaryStream->setByteOrder(Stream::ELittleEndian);
@@ -570,9 +620,9 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 	size_t nDegenerate = 0, nSkipped = 0;
 	Point p, lastP(0.0f);
 
-	if (!binaryFormat) {
+	if (binaryFormat) {
 		size_t vertexCount = binaryStream->readUInt();
-		Log(EInfo, "Loading " SIZE_T_FMT " hair vertices ..", vertices.size());
+		Log(EInfo, "Loading " SIZE_T_FMT " hair vertices ..", vertexCount);
 		vertices.reserve(vertexCount);
 		vertexStartsFiber.reserve(vertexCount);
 
@@ -591,6 +641,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 				p.y = binaryStream->readSingle();
 				p.z = binaryStream->readSingle();
 			}
+			//cout << "Read " << verticesRead << " vertices (vs goal " << vertexCount << ") .." << endl;
 			p = objectToWorld(p);
 			verticesRead++;
 
@@ -625,7 +676,6 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 			}
 			newFiber = false;
 		}
-		Log(EInfo, "Done.");
 	} else {
 		std::string line;
 		bool newFiber = true;
@@ -685,6 +735,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 	if (nSkipped > 0)
 		Log(EInfo, "Skipped " SIZE_T_FMT 
 			" low-curvature segments.", nSkipped);
+	Log(EInfo, "Done (took %i ms)", timer->getMilliseconds());
 
 	vertexStartsFiber.push_back(true);
 
@@ -731,16 +782,15 @@ bool HairShape::rayIntersect(const Ray &ray, Float mint, Float maxt) const {
 
 void HairShape::fillIntersectionRecord(const Ray &ray, 
 	const void *temp, Intersection &its) const {
-	its.p = ray(its.t);
-
 	/* No UV coordinates for now */
 	its.uv = Point2(0,0);
 	its.dpdu = Vector(0,0,0);
 	its.dpdv = Vector(0,0,0);
 
-	const HairKDTree::index_type *storage = 
-		static_cast<const HairKDTree::index_type *>(temp);
-	HairKDTree::index_type iv = *storage;
+	const HairKDTree::IntersectionStorage *storage = 
+		static_cast<const HairKDTree::IntersectionStorage *>(temp);
+	HairKDTree::index_type iv = storage->iv;
+	its.p = storage->p;
 
 	const Vector axis = m_kdtree->tangent(iv);
 	its.geoFrame.s = axis;
