@@ -23,28 +23,47 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Grid texture
+/*!\plugin{gridtexture}{Procedural grid texture}
+ * \parameters{
+ *     \parameter{color0}{\Spectrum}{
+ *       Color values of the background
+ *       \default{0.2}
+ *     }
+ *     \parameter{color1}{\Spectrum}{
+ *       Color value of the lines
+ *       \default{0.4}
+ *     }
+ *     \parameter{lineWidth}{\Float}{Width of the grid lines in UV space
+ *        \default{0.01}
+ *     }
+ *     \parameter{uscale, vscale}{\Float}{
+ *       Multiplicative factors that should be applied to UV values before a lookup
+ *     }
+ *     \parameter{uoffset, voffset}{\Float}{
+ *       Numerical offset that should be applied to UV values before a lookup
+ *     }
+ * }
+ * This plugin implements a simple procedural grid texture.
  */
 class GridTexture : public Texture2D {
 public:
 	GridTexture(const Properties &props) : Texture2D(props) {
-		m_brightColor = props.getSpectrum("brightColor", Spectrum(.4f));
-		m_darkColor = props.getSpectrum("darkColor", Spectrum(.2f));
+		m_color0 = props.getSpectrum("color0", Spectrum(.2f));
+		m_color1 = props.getSpectrum("color1", Spectrum(.4f));
 		m_lineWidth = props.getFloat("lineWidth", .01f);
 	}
 
 	GridTexture(Stream *stream, InstanceManager *manager) 
 	 : Texture2D(stream, manager) {
-		m_brightColor = Spectrum(stream);
-		m_darkColor = Spectrum(stream);
+		m_color0 = Spectrum(stream);
+		m_color1 = Spectrum(stream);
 		m_lineWidth = stream->readFloat();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Texture2D::serialize(stream, manager);
-		m_brightColor.serialize(stream);
-		m_darkColor.serialize(stream);
+		m_color0.serialize(stream);
+		m_color1.serialize(stream);
 		stream->writeFloat(m_lineWidth);
 	}
 
@@ -58,9 +77,9 @@ public:
 			y-=1;
 
 		if (std::abs(x) < m_lineWidth || std::abs(y) < m_lineWidth)
-			return m_darkColor;
+			return m_color1;
 		else
-			return m_brightColor;
+			return m_color0;
 	}
 	
 	Spectrum getValue(const Point2 &uv, Float dudx, 
@@ -73,11 +92,11 @@ public:
 	}
 
 	Spectrum getMaximum() const {
-		return m_brightColor;
+		return m_color0;
 	}
 
 	Spectrum getAverage() const {
-		return m_brightColor; // that's not quite right
+		return m_color0; // that's not quite right
 	}
 	
 	bool isConstant() const {
@@ -92,8 +111,8 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	Spectrum m_brightColor;
-	Spectrum m_darkColor;
+	Spectrum m_color0;
+	Spectrum m_color1;
 	Float m_lineWidth;
 };
 
@@ -101,18 +120,18 @@ protected:
 
 class GridTextureShader : public Shader {
 public:
-	GridTextureShader(Renderer *renderer, const Spectrum &brightColor, 
-		const Spectrum &darkColor, Float lineWidth, const Point2 &uvOffset,
+	GridTextureShader(Renderer *renderer, const Spectrum &color0, 
+		const Spectrum &color1, Float lineWidth, const Point2 &uvOffset,
 		const Vector2 &uvScale) : Shader(renderer, ETextureShader),
-		m_brightColor(brightColor), m_darkColor(darkColor), 
+		m_color0(color0), m_color1(color1), 
 		m_lineWidth(lineWidth), m_uvOffset(uvOffset), m_uvScale(uvScale) {
 	}
 
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		oss << "uniform vec3 " << evalName << "_brightColor;" << endl
-			<< "uniform vec3 " << evalName << "_darkColor;" << endl
+		oss << "uniform vec3 " << evalName << "_color0;" << endl
+			<< "uniform vec3 " << evalName << "_color1;" << endl
 			<< "uniform float " << evalName << "_lineWidth;" << endl
 			<< "uniform vec2 " << evalName << "_uvOffset;" << endl
 			<< "uniform vec2 " << evalName << "_uvScale;" << endl
@@ -126,15 +145,15 @@ public:
 			<< "    if (x > .5) x -= 1.0;" << endl
 			<< "    if (y > .5) y -= 1.0;" << endl
 			<< "    if (abs(x) < " << evalName << "_lineWidth || abs(y) < " << evalName << "_lineWidth)" << endl
-			<< "        return " << evalName << "_darkColor;" << endl
+			<< "        return " << evalName << "_color1;" << endl
 			<< "    else" << endl
-			<< "        return " << evalName << "_brightColor;" << endl
+			<< "        return " << evalName << "_color0;" << endl
 			<< "}" << endl;
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_brightColor", false));
-		parameterIDs.push_back(program->getParameterID(evalName + "_darkColor", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_color0", false));
+		parameterIDs.push_back(program->getParameterID(evalName + "_color1", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_lineWidth", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_uvOffset", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
@@ -142,8 +161,8 @@ public:
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
 		int &textureUnitOffset) const {
-		program->setParameter(parameterIDs[0], m_brightColor);
-		program->setParameter(parameterIDs[1], m_darkColor);
+		program->setParameter(parameterIDs[0], m_color0);
+		program->setParameter(parameterIDs[1], m_color1);
 		program->setParameter(parameterIDs[2], m_lineWidth);
 		program->setParameter(parameterIDs[3], m_uvOffset);
 		program->setParameter(parameterIDs[4], m_uvScale);
@@ -151,15 +170,15 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	Spectrum m_brightColor;
-	Spectrum m_darkColor;
+	Spectrum m_color0;
+	Spectrum m_color1;
 	Float m_lineWidth;
 	Point2 m_uvOffset;
 	Vector2 m_uvScale;
 };
 
 Shader *GridTexture::createShader(Renderer *renderer) const {
-	return new GridTextureShader(renderer, m_brightColor, m_darkColor, 
+	return new GridTextureShader(renderer, m_color0, m_color1, 
 			m_lineWidth, m_uvOffset, m_uvScale);
 }
 	

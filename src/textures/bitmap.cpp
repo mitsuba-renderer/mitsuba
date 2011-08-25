@@ -30,10 +30,62 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Gamma-corrected bitmap texture using the EXR, JPG, PNG, TGA or BMP
- * file formats.
+/*!\plugin{bitmap}{Bitmap texture}
+ * \parameters{
+ *     \parameter{filename}{\String}{
+ *       Filename of the bitmap to be loaded
+ *     }
+ *     \parameter{gamma}{\Float}{
+ *       Gamma value of the source bitmap file 
+ *       \default{\emph{automatic}, i.e. linear for EXR input, 
+ *       and sRGB for everything else.}
+ *     }
+ *     \parameter{filterType}{\String}{
+ *       Specifies the texture filturing that should be used for lookups
+ *       \begin{enumerate}[(i)]
+ *           \item \code{ewa}: Elliptically weighted average (a.k.a.
+ *           anisotropic filtering). This produces the best quality
+ *           \item \code{trilinear}: Simple trilinear (isotropic) filtering.
+ *           \item \code{none}: No filtering, do nearest neighbor lookups.
+ *       \end{enumerate}
+ *       Default: \code{ewa}.
+ *     }
+ *     \parameter{wrapMode}{\String}{
+ *       This parameter defines the behavior of the texture outside of the $[0,1]$ $uv$ range.
+ *       \begin{enumerate}[(i)]
+ *           \item \code{repeat}: Repeat the texture (i.e. $uv$ coordinates
+ *           are taken modulo 2)
+ *           \item \code{clamp}: Clamp $uv$ coordinates to $[0,1]$
+ *           \item \code{black}: Switch to a zero-valued texture
+ *           \item \code{white}: Switch to a one-valued texture
+ *       \end{enumerate}
+ *       Default: \code{repeat}.
+ *     }
+ *     \parameter{maxAnisotropy}{\Float}{
+ *        Specifies an upper limit on the amount of anisotropy 
+ *        of \code{ewa} lookups\default{8}
+ *     }
+ *     \parameter{uscale, vscale}{\Float}{
+ *       Multiplicative factors that should be applied to UV values before a lookup
+ *     }
+ *     \parameter{uoffset, voffset}{\Float}{
+ *       Numerical offset that should be applied to UV values before a lookup
+ *     }
+ * }
+ * This plugin implements a bitmap-based texture, which supports the following
+ * file formats:
+ * \begin{itemize}
+ *     \item OpenEXR
+ *     \item JPEG
+ *     \item PNG (Portable Network Graphics)
+ *     \item TGA (Targa)
+ *     \item BMP (Windows bitmaps)
+ * \end{itemize}
+ *
+ * The plugin internally converts all bitmap data into a \emph{linear} space to ensure
+ * a proper workflow.
  */
+
 class BitmapTexture : public Texture2D {
 public:
 	BitmapTexture(const Properties &props) : Texture2D(props) {
@@ -46,9 +98,8 @@ public:
 
 		ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
 		std::string extension = boost::to_lower_copy(m_filename.extension());
-
-		std::string filterType = props.getString("filterType", "ewa");
-		std::string wrapMode = props.getString("wrapMode", "repeat");
+		std::string filterType = boost::to_lower_copy(props.getString("filterType", "ewa"));
+		std::string wrapMode = boost::to_lower_copy(props.getString("wrapMode", "repeat"));
 
 		if (filterType == "ewa")
 			m_filterType = MIPMap::EEWA;

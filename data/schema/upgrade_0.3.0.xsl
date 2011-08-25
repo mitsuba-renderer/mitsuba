@@ -161,6 +161,22 @@
 		<xsl:attribute name="name">p1</xsl:attribute>
 	</xsl:template>
 
+	<!-- Update the parameters of the checkerboard plugin -->
+	<xsl:template match="texture[@type='checkerboard']/spectrum[@name='brightColor']/@name">
+		<xsl:attribute name="name">color0</xsl:attribute>
+	</xsl:template>
+	<xsl:template match="texture[@type='checkerboard']/spectrum[@name='darkColor']/@name">
+		<xsl:attribute name="name">color1</xsl:attribute>
+	</xsl:template>
+
+	<!-- Update the parameters of the gridtexture plugin -->
+	<xsl:template match="texture[@type='gridtexture']/spectrum[@name='brightColor']/@name">
+		<xsl:attribute name="name">color0</xsl:attribute>
+	</xsl:template>
+	<xsl:template match="texture[@type='gridtexture']/spectrum[@name='darkColor']/@name">
+		<xsl:attribute name="name">color1</xsl:attribute>
+	</xsl:template>
+
 	<!-- Update the name of the lambertian plugin -->
 	<xsl:template match="bsdf[@type='lambertian']/@type">
 		<xsl:attribute name="type">diffuse</xsl:attribute>
