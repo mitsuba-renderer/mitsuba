@@ -24,12 +24,30 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Simple film implementation, which stores the captured image
- * as an RGBA-based high dynamic-range EXR file.
- * No gamma correction is applied and spectral radiance values
- * are converted to linear RGB using the CIE 1931 XYZ color matching 
- * functions and ITU-R Rec. BT.709
+/*!\plugin{exrfilm}{OpenEXR-based film}
+ * \parameters{
+ *     \parameter{width, height}{\Integer}{
+ *       Width and height of the camera sensor in pixels
+ *       \default{768, 576}
+ *     }
+ *     \parameter{cropOffsetX, cropOffsetY, cropWidth, cropHeight}{\Integer}{
+ *       These parameter can optionally be provided to render a sub-rectangle
+ *       of the output \default{Unused}
+ *     }
+ *     \parameter{alpha}{\Boolean}{Include an alpha channel in the output
+ *        image? \default{\code{true}}
+ *     }
+ *     \parameter{banner}{\Boolean}{Include a small Mitsuba banner in the 
+ *         output image? \default{\code{true}}
+ *     }
+ * }
+ * 
+ * This plugin implements a simple camera film that stores the captured image
+ * as an RGBA-based high dynamic-range EXR file. It does not perform any gamma
+ * correction (i.e. the EXR file will contain linear radiance values).
+ * 
+ * The measured spectral power distributions are converted to linear RGB based on
+ * CIE 1931 XYZ color matching functions and ITU-R Rec. BT.709.
  */
 class EXRFilm : public Film {
 protected:

@@ -44,26 +44,68 @@ static StatsCounter earlyExits("Heterogeneous volume",
 		"Number of early exits", EPercentage);
 #endif
 
-/**
- * Flexible heterogeneous medium implementation, which acquires its data from 
- * nested \ref Volume instances. These can be constant, use a procedural 
- * function, or fetch data from disk, e.g. using a memory-mapped density grid.
+/*!\plugin{heterogeneous}{Heterogeneous participating medium}
+ * \parameters{
+ *     \parameter{method}{\String}{
+ *         Specifies the sampling method that is used to generate
+ *         scattering events within the medium.
+ *         \begin{enumerate}[(i)]
+ *             \item \code{simpson}: Sampling is done by inverting a 
+ *             deterministic quadrature rule based on composite
+ *             Simpson integration over small ray segments.
+ *             \item \code{woodcock}: Generate samples using 
+ *             Woodcock tracking. This is usually faster and guaranteed
+ *             to be unbiased, but has the disadvantage of not providing
+ *             certain information that is required by bidirectional
+ *             rendering techniques.
+ *         \end{enumerate}
+ *         Default: \texttt{woodcock}
+ *     }
+ *     \parameter{density}{\Volume}{
+ *         Volumetric data source that supplies the medium densities
+ *         (in inverse scene units) 
+ *     }
+ *     \parameter{albedo}{\Volume}{
+ *         Volumetric data source that supplies the 
+ *         single-scattering albedo
+ *     }
+ *     \parameter{orientations}{\Volume}{
+ *         Optional: volumetric data source that supplies the 
+ *         local particle orientations throughout the medium
+ *     }
+ *     \parameter{\footnotesize{densityMultiplier}}{\Float}{
+ *         Optional multiplier that will be applied to the \code{density} parameter.
+ *         Provided for convenience when accomodating data based on different units,
+ *         or to simply tweak the density of the medium. \default{1}
+ *     }
+ *     \parameter{\Unnamed}{\Phase}{
+ *          A nested phase function that describes the directional
+ *          scattering properties of the medium. When none is specified,
+ *          the renderer will automatically use an instance of
+ *          \pluginref{isotropic}.
+ *     }
+ * }
+ * 
+ * This plugin provides a flexible hheterogeneous medium implementation, which 
+ * acquires its data from nested \code{volume} instances. These can be 
+ * constant, use a procedural function, or fetch data from disk, e.g. using a 
+ * memory-mapped density grid.
  *
  * Instead of allowing separate volumes to be provided for the scattering
- * parameters sigma_s and sigma_t, this class instead takes the approach of 
- * enforcing a spectrally uniform sigma_t, which must be provided using a 
- * nested scalar-valued volume named 'density'.
+ * absorption parameters \code{sigmaS} and \code{sigmaA} (as is done in
+ * \pluginref{homogeneous}, this class instead takes the approach of 
+ * enforcing a spectrally uniform value of \code{sigmaT}, which must be
+ * provided using a nested scalar-valued volume named \code{density}.
  *
- * Another nested spectrum-valued 'albedo' volume must also be provided, which is 
- * used to compute the parameter sigma_s using the expression
- * "sigma_s = density * albedo" (i.e. 'albedo' contains the single-scattering
- * albedo of the medium).
- *
- * Optionally, one can also provide an vector-valued 'orientation' volume,
+ * Another nested spectrum-valued \code{albedo} volume must also be provided, which is 
+ * used to compute the scattering coefficient $\sigma_s$ using the expression
+ * $\sigma_s = \code{density} * \code{albedo}$ (i.e. 'albedo' contains the 
+ * single-scattering albedo of the medium.
+ * 
+ * Optionally, one can also provide an vector-valued \code{orientation} volume,
  * which contains local particle orientation that will be passed to
- * scattering models such as a the Micro-flake or Kajiya-Kay phase functions.
- *
- * \author Wenzel Jakob
+ * scattering models that support this, such as a the Micro-flake or 
+ * Kajiya-Kay phase functions.
  */
 class HeterogeneousMedium : public Medium {
 public:
@@ -78,7 +120,8 @@ public:
 		/**
 		 * \brief Use stochastic Woodcock tracking. This is potentially
 		 * faster and more robust, but has the disadvantage of being
-		 * incompatible with bidirectional rendering methods.
+		 * incompatible with bidirectional rendering methods, which 
+		 * usually need to know the probability of a sample.
 		 */
 		EWoodcockTracking
 	};

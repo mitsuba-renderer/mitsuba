@@ -24,13 +24,44 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Simple film implementation, which stores the captured image
+/*!\plugin{pngfilm}{PNG-based film}
+ * \parameters{
+ *     \parameter{width, height}{\Integer}{
+ *       Width and height of the camera sensor in pixels
+ *       \default{768, 576}
+ *     }
+ *     \parameter{cropOffsetX, cropOffsetY, cropWidth, cropHeight}{\Integer}{
+ *       These parameter can optionally be provided to render a sub-rectangle
+ *       of the output \default{Unused}
+ *     }
+ *     \parameter{alpha}{\Boolean}{Include an alpha channel in the output
+ *        image? \default{\code{true}}
+ *     }
+ *     \parameter{banner}{\Boolean}{Include a small Mitsuba banner in the 
+ *         output image? \default{\code{true}}
+ *     }
+ *     \parameter{toneMappingMethod}{\String}{
+ *         Specifies the tonemapping method that should be used to
+ *         convert high-dynamic range images to 8 bits per channel.
+ *         \begin{enumerate}
+ *             \item \code{gamma}: Use a basic Gamma conversion
+ *             \item \code{reinhard}: Use a global version of the
+ *             Reinhard \cite{Reinhard2002Photographic} tonemapping method
+ *         \end{enumerate}
+ *     }
+ *     \parameter{reinhardKey, reinhardBurn}{\Float}{
+ *         When \code{toneMappingMethod=reinhard}, these two parameters
+ *         specify the \emph{key} and \emph{burn} parameters of that
+ *         model. \default{\code{reinhardKey}=0.18 and \code{reinhardBurn}=0}
+ *     }
+ * }
+ * 
+ * This plugin implements a simple camera film that stores the captured image
  * as an RGBA-based low dynamic-range PNG file with gamma correction.
- * Alternatively, the class supports a global version of the 
- * [Reinhard et al. 2002] tonemapping algorithm.
- * Spectral radiance values are converted to linear RGB using 
- * the CIE 1931 XYZ color matching functions and ITU-R Rec. BT.709
+ * The measured spectral power distributions are converted to linear RGB based on
+ * CIE 1931 XYZ color matching functions and ITU-R Rec. BT.709.
+ * If desired, the class can optionally apply a global version of the 
+ * Reinhard tonemapping algorithm.
  */
 class PNGFilm : public Film {
 protected:

@@ -22,10 +22,34 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Debugging film, which dumps raw luminance values as a 2D array in
- * MATLAB M-file format. When test case mode is active, the film writes 
- * a triple (luminance, variance, sample count) for every pixel.
+/*!\plugin{mfilm}{MATLAB M-file film}
+ * \parameters{
+ *     \parameter{width, height}{\Integer}{
+ *       Width and height of the camera sensor in pixels
+ *       \default{768, 576}
+ *     }
+ *     \parameter{cropOffsetX, cropOffsetY, cropWidth, cropHeight}{\Integer}{
+ *       These parameter can optionally be provided to render a sub-rectangle
+ *       of the output \default{Unused}
+ *     }
+ *     \parameter{alpha}{\Boolean}{Include an alpha channel in the output
+ *        image? \default{\code{true}}
+ *     }
+ *     \parameter{banner}{\Boolean}{Include a small Mitsuba banner in the 
+ *         output image? \default{\code{true}}
+ *     }
+ * }
+ * 
+ * This plugin provides a camera film that exports luminance
+ * values as a matrix using the MATLAB M-file format. This is
+ * useful when running Mitsuba as simulation step as part of a 
+ * larger virtual experiment. It can also come in handy when
+ * verifying parts of the renderer using a test suite.
+ *
+ * When Mitsuba is started with the ``test case mode'' parameter
+ * (\code{-t}), this class will write triples consisting of
+ * the luminance, variance, and sample count for every pixel
+ * (instead of just the luminance).
  */
 class MFilm : public Film {
 protected:
