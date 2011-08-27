@@ -31,10 +31,9 @@ MTS_NAMESPACE_BEGIN
  * This plugin provides a volume data source that is
  * constant throughout its domain. Depending on how it is used,
  * its value can either be a scalar, a color spectrum,
- * or a 3D vector.
+ * or a 3D vector.\vspace{4mm}
  *
  * \begin{xml}[caption={Definition of a heterogeneous medium with homogeneous contents}]
- *   constant albedo}]
  * <medium type="heterogeneous">
  *     <volume type="constvolume" name="density">
  *         <float name="value" value="1"/>
@@ -47,7 +46,7 @@ MTS_NAMESPACE_BEGIN
  *     </volume>
  *
  *     <!-- .... remaining parameters for 
- *          the 'heterogeneous' plugin -->
+ *          the 'heterogeneous' plugin .... -->
  * </medium>
  * \end{xml}
  */
