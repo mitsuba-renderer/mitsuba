@@ -33,10 +33,17 @@ MTS_NAMESPACE_BEGIN
  * its value can either be a scalar, a color spectrum,
  * or a 3D vector.
  *
- * \begin{xml}[caption={Definition of a heterogeneous medium with constant albedo}]
+ * \begin{xml}[caption={Definition of a heterogeneous medium with homogeneous contents}]
+ *   constant albedo}]
  * <medium type="heterogeneous">
+ *     <volume type="constvolume" name="density">
+ *         <float name="value" value="1"/>
+ *     </volume>
  *     <volume type="constvolume" name="albedo">
  *         <rgb name="value" value="0.9 0.9 0.7"/>
+ *     </volume>
+ *     <volume type="constvolume" name="orientation">
+ *         <vector name="value" x="0" y="1" z="0"/>
  *     </volume>
  *
  *     <!-- .... remaining parameters for 

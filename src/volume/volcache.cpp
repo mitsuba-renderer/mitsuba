@@ -51,13 +51,15 @@ struct Vector3iKeyOrder : public std::binary_function<Vector3i, Vector3i, bool> 
  *     }
  *     \parameter{voxelWidth}{\Float}{
  *         Width of a voxel (in a cache block) expressed in
- *         world-space units. \default{automatic}
+ *         world-space units. \default{set to the ray marching
+ *         step size of the nested medium}
  *     }
  *     \parameter{memoryLimit}{\Integer}{
- *         Max. allowed memory usage in MiB. \default{1024, i.e. 1 GiB}
+ *         Maximum allowed memory usage in MiB. \default{1024, i.e. 1 GiB}
  *     }
  *     \parameter{toWorld}{\Transform}{
- *         Optional linear transformation that should be applied to the data
+ *         Optional linear transformation that should be applied 
+ *         to the volume data
  *     }
  *     \parameter{\Unnamed}{\Volume}{
  *         A nested volume data source

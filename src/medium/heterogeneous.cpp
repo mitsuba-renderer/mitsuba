@@ -69,7 +69,7 @@ static StatsCounter earlyExits("Heterogeneous volume",
  *         Volumetric data source that supplies the 
  *         single-scattering albedo
  *     }
- *     \parameter{orientations}{\Volume}{
+ *     \parameter{orientation}{\Volume}{
  *         Optional: volumetric data source that supplies the 
  *         local particle orientations throughout the medium
  *     }
