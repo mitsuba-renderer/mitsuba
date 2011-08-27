@@ -34,49 +34,69 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * \brief This class implements access to volume data stored on a 
+/*!\plugin{gridvolume}{Grid-based volume data source}
+ * \parameters{
+ *     \parameter{filename}{\String}{
+ *       Specifies the filename of the volume data file to be loaded
+ *     }
+ *     \parameter{sendData}{\Boolean}{
+ *       When this parameter is set to \code{true}, the implementation will
+ *       send all volume data to other network render nodes. Otherwise, they
+ *       are expected to have access to an identical volume data file that can be
+ *       mapped into memory. \default{\code{false}}
+ *     }
+ *     \parameter{toWorld}{\Transform}{
+ *         Optional linear transformation that should be applied to the data
+ *     }
+ *     \parameter{min, max}{\Point}{
+ *         Optional parameter that can be used to re-scale the data so that
+ *         it lies in the bounding box between \code{min} and \code{max}.
+ *     }
+ * }
+ *
+ * This class implements access to memory-mapped volume data stored on a 
  * 3D grid using a simple binary exchange format.
+ * The format uses a little endian encoding and is specified as
+ * follows:\vspace{3mm}
  *
- * The format uses a little endian encoding and is specified as follows:
- *
- * Bytes 1-3   :  ASCII Bytes 'V', 'O', and 'L' 
- * Byte  4     :  Version identifier (currently 3)
- * Bytes 5-8   :  Encoding identifier using a double word
- *
- *                    1 => Dense float32-based representation
- *
- *                    2 => Dense float16-based representation 
- *                         NOT YET SUPPORTED BY THIS IMPLEMENTATION
- *
- *                    3 => Dense uint8-based representation
- *                         The range 0..255 will be mapped to 0..1.
- *
- *                    4 => Dense quantized directions
- *                         The directions are stored in spherical coordinates,
- *                         with a total storage cost of 16 bit per entry.
- *
- * Bytes 9-12  :  Number of cells along the X axis (double word)
- * Bytes 13-16 :  Number of cells along the Y axis (double word)
- * Bytes 17-20 :  Number of cells along the Z axis (double word)
- * Bytes 21-24 :  Number of channels (double word, supported values: 1 or 3)
- * Bytes 25-48 :  Axis-aligned bounding box of the data stored in single
- *                precision (order: xmin, ymin, zmin, xmax, ymax, zmax)
- * Bytes 49-*  :  Binary data of the volume stored in the specified encoding.
+ * \begin{center}
+ * \begin{tabular}{>{\bfseries}p{2cm}p{11cm}}
+ * \toprule
+ * Position & Content\\
+ * \midrule
+ * Bytes 1-3&   ASCII Bytes '\code{V}', '\code{O}', and '\code{L}' \\
+ * Byte  4&     File format version number (currently 3)\\
+ * Bytes 5-8&   Encoding identifier using a 32-bit integer
+ * \begin{enumerate}[(i)]
+ * \item Dense \code{float32}-based representation
+ * \item Dense \code{float16}-based representation (\emph{currently not supported by this implementation})
+ * \item Dense \code{uint8}-based representation (The range 0..255 will be mapped to 0..1)
+ * \item Dense quantized directions. The directions are stored in spherical 
+ * coordinates with a total storage cost of 16 bit per entry.
+ * \end{enumerate}\\
+ * Bytes 9-12 &  Number of cells along the X axis (32 bit integer)\\
+ * Bytes 13-16 &  Number of cells along the Y axis (32 bit integer)\\
+ * Bytes 17-20 &  Number of cells along the Z axis (32 bit integer)\\
+ * Bytes 21-24 &  Number of channels (32 bit integer, supported values: 1 or 3)\\
+ * Bytes 25-48 &  Axis-aligned bounding box of the data stored in single
+ *                precision (order: xmin, ymin, zmin, xmax, ymax, zmax)\\
+ * Bytes 49-*  &  Binary data of the volume stored in the specified encoding.
  *                The data are ordered so that the following C-style indexing
- *                operation makes sense after the file has been mapped into memory:
- *                   "data[((zpos*yres + ypos)*xres + xpos)*channels + chan]"
- *                where (xpos, ypos, zpos, chan) denotes the lookup location.
+ *                operation makes sense after the file has been mapped into memory:\newline
+ *                   \ \ \code{data[((zpos*yres + ypos)*xres + xpos)*channels + chan]}\newline
+ *                where \code{(xpos, ypos, zpos, chan)} denotes the lookup location.\\
+ *
+ * \bottomrule
+ * \end{tabular}
+ * \end{center}
  *
  * Note that Mitsuba expects that entries in direction volumes are either
  * zero or valid unit vectors.
  *
  * When using this data source to represent floating point density volumes, 
  * please ensure that the values are all normalized to lie in the 
- * range [0, 1] -- otherwise, the Woocock-Tracking integration method in
- * heterogeneous.cpp will produce incorrect results. You can use
- * the 'densityMultiplier' parameter of that class to re-scale the
- * densities if neccessary.
+ * range $[0, 1]$---otherwise, the Woocock-Tracking integration method in
+ * \pluginref{heterogeneous} will produce incorrect results. 
  */
 class GridDataSource : public VolumeDataSource {
 public:

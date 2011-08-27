@@ -86,10 +86,10 @@ static StatsCounter earlyExits("Heterogeneous volume",
  *     }
  * }
  * 
- * This plugin provides a flexible hheterogeneous medium implementation, which 
+ * This plugin provides a flexible heterogeneous medium implementation, which 
  * acquires its data from nested \code{volume} instances. These can be 
  * constant, use a procedural function, or fetch data from disk, e.g. using a 
- * memory-mapped density grid.
+ * memory-mapped density grid. See \secref{volumes} for details.
  *
  * Instead of allowing separate volumes to be provided for the scattering
  * absorption parameters \code{sigmaS} and \code{sigmaA} (as is done in
