@@ -39,13 +39,13 @@ public:
     /* ===================================================================== */
 
 	/**
-	 * Create an empty photon map and reserve memory for a specified
-	 * number of photons.
+	 * \brief Create an empty photon map and reserve memory 
+	 * for a specified number of photons.
 	 */
-	PhotonMap(size_t amount = 0);
+	PhotonMap(size_t photonCount = 0);
 
 	/**
-	 * Unserialize a photon map from a binary data stream
+	 * \brief Unserialize a photon map from a binary data stream
 	 */
 	PhotonMap(Stream *stream, InstanceManager *manager);
 
@@ -72,7 +72,7 @@ public:
 	// =============================================================
 
 	/**
-	 * Try to append a photon to the photon map
+	 * \brief Try to append a photon to the photon map
 	 *
 	 * \return \c false If the photon map is full
 	 */
