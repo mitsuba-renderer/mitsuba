@@ -20,7 +20,7 @@
 #define __PHOTON_H
 
 #include <mitsuba/core/serialization.h>
-#include <mitsuba/core/aabb.h>
+#include <mitsuba/core/kdtree.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -171,9 +171,141 @@ protected:
 	static bool createPrecompTables();
 };
 
+/**
+ * \sa NewPhoton
+ */
+struct PhotonData {
+#if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
+	uint8_t power[4];		//!< Photon power stored in Greg Ward's RGBE format
+#else
+	Spectrum power;         //!< Accurate spectral photon power representation
+#endif
+	uint8_t theta;			//!< Discretized photon direction (\a theta component)
+	uint8_t phi;			//!< Discretized photon direction (\a phi component)
+	uint8_t thetaN;			//!< Discretized surface normal (\a theta component)
+	uint8_t phiN;			//!< Discretized surface normal (\a phi component)
+	uint16_t depth;			//!< Photon depth (number of preceding interactions)
+
+};
+
+/** \brief Memory-efficient photon representation for use with
+ * \ref PointKDTree
+ *
+ * Requires 24 bytes of memory when Mitsuba is compiled with single 
+ * precision and RGB-based color spectra.
+ *
+ * \ingroup librender
+ */
+struct MTS_EXPORT_RENDER NewPhoton : public SimpleKDNode<Point, PhotonData> {
+	friend class PhotonMap;
+public:
+	/// Dummy constructor
+	inline NewPhoton() { }
+
+	/// Construct from a photon interaction 
+	NewPhoton(const Point &pos, const Normal &normal,
+			const Vector &dir, const Spectrum &power,
+			uint16_t depth);
+	
+	/// Unserialize from a binary data stream
+	NewPhoton(Stream *stream);
+
+	/// @}
+	// ======================================================================
+
+	/// Return the depth (in # of interactions)
+	inline int getDepth() const {
+		return data.depth;
+	}
+
+	/**
+	 * Convert the photon direction from quantized spherical coordinates
+	 * to a floating point vector value. Precomputation idea based on 
+	 * Jensen's implementation.
+	 */
+	inline Vector getDirection() const {
+		return Vector(
+			m_cosPhi[data.phi] * m_sinTheta[data.theta],
+			m_sinPhi[data.phi] * m_sinTheta[data.theta],
+			m_cosTheta[data.theta]
+		);
+	}
+
+	/**
+	 * Convert the normal direction from quantized spherical coordinates
+	 * to a floating point vector value.
+	 */
+	inline Normal getNormal() const {
+		return Normal(
+			m_cosPhi[data.phiN] * m_sinTheta[data.thetaN],
+			m_sinPhi[data.phiN] * m_sinTheta[data.thetaN],
+			m_cosTheta[data.thetaN]
+		);
+	}
+
+	/// Convert the photon power from RGBE to floating point
+	inline Spectrum getPower() const {
+#if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
+		Spectrum result;
+		result.fromRGBE(data.power);
+		return result;
+#else
+		return data.power;
+#endif
+	}
+
+	/// Serialize to a binary data stream
+	inline void serialize(Stream *stream) const {
+		position.serialize(stream);
+		#if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
+			stream->write(data.power, 8);
+		#else
+			data.power.serialize(stream);
+			stream->writeUChar(data.phi);
+			stream->writeUChar(data.theta);
+			stream->writeUChar(data.phiN);
+			stream->writeUChar(data.thetaN);
+		#endif
+		stream->writeUShort(data.depth);
+		stream->writeUChar(flags);
+	}
+
+	/// Return a string representation (for debugging)
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "Photon[pos = " << getPosition().toString() << ","
+			<< ", power = " << getPower().toString()
+			<< ", direction = " << getDirection().toString()
+			<< ", normal = " << getNormal().toString()
+			<< ", axis = " << getAxis()
+			<< ", depth = " << getDepth()
+			<< "]";
+		return oss.str();
+	}
+	
+protected:
+	// ======================================================================
+	/// @{ \name Precomputed lookup tables
+	// ======================================================================
+
+	static Float m_cosTheta[256];
+	static Float m_sinTheta[256];
+	static Float m_cosPhi[256];
+	static Float m_sinPhi[256];
+	static Float m_expTable[256];
+	static bool m_precompTableReady;
+
+	/// @}
+	// ======================================================================
+
+	/// Initialize the precomputed lookup tables
+	static bool createPrecompTables();
+};
+
 #if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
 /* Compiler sanity check */
 BOOST_STATIC_ASSERT(sizeof(Photon) == 24);
+//BOOST_STATIC_ASSERT(sizeof(NewPhoton) == 24);
 #endif
 
 MTS_NAMESPACE_END
