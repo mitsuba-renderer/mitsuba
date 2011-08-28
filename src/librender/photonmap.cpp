@@ -183,7 +183,7 @@ void PhotonMap::quickPartition(photon_iterator left, photon_iterator right,
 }
 
 /**
- * Given a number of entries, this method calculates the maximum amount of
+ * Given a number of entries, this method calculates the number of nodes
  * nodes on the left subtree of a left-balanced tree. There are two main 
  * cases here:
  * 
