@@ -43,10 +43,39 @@ struct Vector3iKeyOrder : public std::binary_function<Vector3i, Vector3i, bool> 
 	}
 };
 
-/**
- * This class sits in between the renderer and another data source, for which 
- * it caches all data lookups using a LRU scheme. This is useful if the nested 
- * volume data source is expensive to evaluate.
+/*!\plugin{volcache}{Caching volume data source}
+ * \parameters{
+ *     \parameter{blockSize}{\Integer}{
+ *         Size of the individual cache blocks 
+ *         \default{8, i.e. $8\times8\times 8$}
+ *     }
+ *     \parameter{voxelWidth}{\Float}{
+ *         Width of a voxel (in a cache block) expressed in
+ *         world-space units. \default{set to the ray marching
+ *         step size of the nested medium}
+ *     }
+ *     \parameter{memoryLimit}{\Integer}{
+ *         Maximum allowed memory usage in MiB. \default{1024, i.e. 1 GiB}
+ *     }
+ *     \parameter{toWorld}{\Transform}{
+ *         Optional linear transformation that should be applied 
+ *         to the volume data
+ *     }
+ *     \parameter{\Unnamed}{\Volume}{
+ *         A nested volume data source
+ *     }
+ * }
+ *
+ * This plugin can be added between the renderer and another 
+ * data source, for which it caches all data lookups using a 
+ * LRU scheme. This is useful when the nested volume data source 
+ * is expensive to evaluate.
+ *
+ * The cache works by performing on-demand rasterization of subregions 
+ * of the nested volume into blocks ($8\times 8 \times 8$ by default).
+ * These are kept in memory until a user-specifiable threshold is exeeded,
+ * after which point a \emph{least recently used} (LRU) policy removes
+ * records that haven't been accessed in a long time.
  */
 class CachingDataSource : public VolumeDataSource {
 public:
@@ -55,7 +84,7 @@ public:
 	CachingDataSource(const Properties &props) 
 		: VolumeDataSource(props) {
 		/// Size of an individual block (must be a power of 2)
-		m_blockSize = props.getInteger("blockSize", 4);
+		m_blockSize = props.getInteger("blockSize", 8);
 
 		if (!isPowerOfTwo(m_blockSize))
 			Log(EError, "Block size must be a power of two!");
@@ -65,7 +94,7 @@ public:
 		m_voxelWidth = props.getFloat("voxelWidth", -1);
 
 		/* Permissible memory usage in MiB. Default: 1GiB */
-		m_memoryLimit = (size_t) props.getLong("memoryLimit", 32) * 1024 * 1024;
+		m_memoryLimit = (size_t) props.getLong("memoryLimit", 1024) * 1024 * 1024;
 
 		m_stepSizeMultiplier = (Float) props.getFloat("stepSizeMultiplier", 1.0f);
 
