@@ -286,30 +286,33 @@ public:
 	 */
 	inline PointKDTree(size_t nodes = 0, EHeuristic heuristic = ESlidingMidpoint)
 		: m_nodes(nodes), m_heuristic(heuristic), m_depth(0) { }
-	
-	/// Clear the kd-tree node array
+
+	// =============================================================
+	//! @{ \name \c stl::vector-like interface
+	// =============================================================
+	/// Clear the kd-tree array
 	inline void clear() { m_nodes.clear(); }
-
-	/// Resize the kd-tree node array
+	/// Resize the kd-tree array
 	inline void resize(size_t size) { m_nodes.resize(size); }
-
-	/// Reserve a certain amount of memory for the kd-tree node array
+	/// Reserve a certain amount of memory for the kd-tree array
 	inline void reserve(size_t size) { m_nodes.reserve(size); }
-
+	/// Return the size of the kd-tree
+	inline size_t size() const { return m_nodes.size(); }
+	/// Return the capacity of the kd-tree
+	inline size_t capacity() const { return m_nodes.capacity(); }
 	/// Append a kd-tree node to the node array
 	inline void push_back(const NodeType &node) { m_nodes.push_back(node); }
-
 	/// Return one of the KD-tree nodes by index
 	inline NodeType &operator[](size_t idx) { return m_nodes[idx]; }
 	/// Return one of the KD-tree nodes by index (const version)
 	inline const NodeType &operator[](size_t idx) const { return m_nodes[idx]; }
+	//! @}
+	// =============================================================
 
 	/// Return the AABB of the underlying point data
 	inline const AABBType &getAABB() const { return m_aabb; }
 	/// Return the depth of the constructed KD-tree
 	inline size_t getDepth() const { return m_depth; }
-	/// Return the size of the kd-tree
-	inline size_t getSize() const { return m_nodes.size(); }
 
 	/// Construct the KD-tree hierarchy
 	void build() {
@@ -371,8 +374,7 @@ public:
 	 */
 	size_t nnSearch(const PointType &p, size_t k, std::vector<SearchResult> &results, 
 			Float &sqrSearchRadius) const {
-//		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
-		IndexType stack[30];
+		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
 		size_t index = 0, stackPos = 1, traversalSteps = 0;
 		bool isHeap = false;
 		stack[0] = 0;
@@ -393,10 +395,9 @@ public:
 				IndexType first, second;
 				bool searchBoth = distToPlane*distToPlane <= sqrSearchRadius;
 
-
 				if (distToPlane > 0) {
 					first = node.getRightIndex(index);
-					if (NodeType::leftBalancedLayout && first >= m_nodes.size())
+					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && first >= m_nodes.size()))
 						first = 0;
 
 					second = searchBoth ? node.getLeftIndex(index) : 0;
@@ -404,7 +405,7 @@ public:
 					first = node.getLeftIndex(index);
 					second = searchBoth ? node.getRightIndex(index) : 0;
 
-					if (NodeType::leftBalancedLayout && second >= m_nodes.size())
+					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && second >= m_nodes.size()))
 						second = 0;
 				}
 
@@ -413,7 +414,7 @@ public:
 					stack[stackPos++] = second;
 				} else {
 					nextIndex = first | second;
-					if (!nextIndex)
+					if (EXPECT_NOT_TAKEN(!nextIndex))
 						nextIndex = stack[--stackPos];
 				}
 			} else {
@@ -502,22 +503,27 @@ public:
 
 				if (distToPlane > 0) {
 					first = node.getRightIndex(index);
+					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && first >= m_nodes.size()))
+						first = 0;
+
 					second = searchBoth ? node.getLeftIndex(index) : 0;
 				} else {
 					first = node.getLeftIndex(index);
 					second = searchBoth ? node.getRightIndex(index) : 0;
+
+					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && second >= m_nodes.size()))
+						second = 0;
 				}
 
-				if (first != 0 && second != 0) {
+				if (first && second) {
 					nextIndex = first;
 					stack[stackPos++] = second;
-				} else if (first != 0) {
-					nextIndex = first;
-				} else if (second != 0) {
-					nextIndex = second;
 				} else {
-					nextIndex = stack[--stackPos];
+					nextIndex = first | second;
+					if (EXPECT_NOT_TAKEN(!nextIndex))
+						nextIndex = stack[--stackPos];
 				}
+
 			} else {
 				nextIndex = stack[--stackPos];
 			}
@@ -566,21 +572,25 @@ public:
 
 				if (distToPlane > 0) {
 					first = node.getRightIndex(index);
+					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && first >= m_nodes.size()))
+						first = 0;
+
 					second = searchBoth ? node.getLeftIndex(index) : 0;
 				} else {
 					first = node.getLeftIndex(index);
 					second = searchBoth ? node.getRightIndex(index) : 0;
+
+					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && second >= m_nodes.size()))
+						second = 0;
 				}
 
-				if (first != 0 && second != 0) {
+				if (first && second) {
 					nextIndex = first;
 					stack[stackPos++] = second;
-				} else if (first != 0) {
-					nextIndex = first;
-				} else if (second != 0) {
-					nextIndex = second;
 				} else {
-					nextIndex = stack[--stackPos];
+					nextIndex = first | second;
+					if (EXPECT_NOT_TAKEN(!nextIndex))
+						nextIndex = stack[--stackPos];
 				}
 			} else {
 				nextIndex = stack[--stackPos];
@@ -629,21 +639,25 @@ public:
 
 				if (distToPlane > 0) {
 					first = node.getRightIndex(index);
+					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && first >= m_nodes.size()))
+						first = 0;
+
 					second = searchBoth ? node.getLeftIndex(index) : 0;
 				} else {
 					first = node.getLeftIndex(index);
 					second = searchBoth ? node.getRightIndex(index) : 0;
+
+					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && second >= m_nodes.size()))
+						second = 0;
 				}
 
-				if (first != 0 && second != 0) {
+				if (first && second) {
 					nextIndex = first;
 					stack[stackPos++] = second;
-				} else if (first != 0) {
-					nextIndex = first;
-				} else if (second != 0) {
-					nextIndex = second;
 				} else {
-					nextIndex = stack[--stackPos];
+					nextIndex = first | second;
+					if (EXPECT_NOT_TAKEN(!nextIndex))
+						nextIndex = stack[--stackPos];
 				}
 			} else {
 				nextIndex = stack[--stackPos];
@@ -722,6 +736,7 @@ protected:
 		return p - 1;
 	}
 
+	/// Left-balanced tree construction routine
 	void buildLB(IndexType idx, size_t depth,
 			  typename std::vector<IndexType>::iterator base,
 			  typename std::vector<IndexType>::iterator rangeStart, 
@@ -765,6 +780,7 @@ protected:
 		}
 	}
 
+	/// Default tree construction routine
 	void build(size_t depth,
 			  typename std::vector<IndexType>::iterator base,
 			  typename std::vector<IndexType>::iterator rangeStart, 

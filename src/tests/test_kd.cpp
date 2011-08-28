@@ -26,8 +26,8 @@ MTS_NAMESPACE_BEGIN
 class TestKDTree : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
-//	MTS_DECLARE_TEST(test01_sutherlandHodgman)
-//	MTS_DECLARE_TEST(test02_bunnyBenchmark)
+	MTS_DECLARE_TEST(test01_sutherlandHodgman)
+	MTS_DECLARE_TEST(test02_bunnyBenchmark)
 	MTS_DECLARE_TEST(test03_pointKDTree)
 	MTS_END_TESTCASE()
 
@@ -87,8 +87,10 @@ public:
 		Properties bunnyProps("ply");
 		bunnyProps.setString("filename", "data/tests/bunny.ply");
 
-		ref<TriMesh> mesh = static_cast<TriMesh *> (PluginManager::getInstance()->
-				createObject(MTS_CLASS(TriMesh), bunnyProps));
+		PluginManager *pmgr = PluginManager::getInstance();
+		ref<TriMesh> mesh = static_cast<TriMesh *> (
+				pmgr->createObject(MTS_CLASS(TriMesh), bunnyProps));
+		mesh->addChild(pmgr->createObject(Properties("diffuse")));
 		mesh->configure();
 		ref<ShapeKDTree> tree = new ShapeKDTree();
 		tree->addShape(mesh);

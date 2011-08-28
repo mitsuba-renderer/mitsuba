@@ -60,7 +60,7 @@ public:
 		ref<PhotonMap> pmap = proc->getPhotonMap();
 		pmap->setScaleFactor(1 / (Float) proc->getShotParticles());
 
-		PointKDTree<NewPhoton> phot(pmap->getPhotonCount(), PointKDTree<NewPhoton>::EVoxelVolume);
+		PointKDTree<NewPhoton> phot(pmap->getPhotonCount());
 		for (size_t i=0; i<pmap->getPhotonCount(); ++i) {
 			const Photon &photon = pmap->getPhoton(i+1);
 			phot[i] = NewPhoton(photon.getPosition(),
