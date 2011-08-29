@@ -399,7 +399,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			specValue);
 	} else if (name == "blackbody") {
 		std::string temperature = trim(context.attributes["temperature"]);
-		if (temperature.length() > 0 && std::toupper(temperature[temperature.length()-1] == 'K'))
+		if (temperature.length() > 0 && std::toupper(temperature[temperature.length()-1]) == 'K')
 			temperature = temperature.substr(0, temperature.length()-1);
 		Float temperatureValue = parseFloat(name, temperature);
 		Float multiplier = 1;
