@@ -66,8 +66,9 @@ MTS_NAMESPACE_BEGIN
  * \midrule
  * Bytes 1-3&   ASCII Bytes '\code{V}', '\code{O}', and '\code{L}' \\
  * Byte  4&     File format version number (currently 3)\\
- * Bytes 5-8&   Encoding identifier using a 32-bit integer
- * \begin{enumerate}[(i)]
+ * Bytes 5-8&   Encoding identifier (32-bit integer). The following
+ * choices are available:
+ * \begin{enumerate}[1.]
  * \item Dense \code{float32}-based representation
  * \item Dense \code{float16}-based representation (\emph{currently not supported by this implementation})
  * \item Dense \code{uint8}-based representation (The range 0..255 will be mapped to 0..1)
