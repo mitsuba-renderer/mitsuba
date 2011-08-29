@@ -28,7 +28,7 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 	uint32_t reducedLookupSize = (uint32_t) std::sqrt((Float) lookupSize);
 	Float sizeFactor = (Float) lookupSize/ (Float) reducedLookupSize;
 
-	m_photonCount = (uint32_t) pmap->getPhotonCount();
+	m_photonCount = (uint32_t) pmap->size();
 	m_scaleFactor = pmap->getScaleFactor();
 	m_lastInnerNode = m_photonCount/2;
 	m_lastRChildNode = (m_photonCount-1)/2;
@@ -40,15 +40,15 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 
 	Log(EInfo, "Computing photon radii ..");
 	int tcount = mts_get_max_threads();
-	PhotonMap::search_result **resultsPerThread = new PhotonMap::search_result*[tcount];
-	for (int i=0; i<tcount; ++i)
-		resultsPerThread[i] = new PhotonMap::search_result[reducedLookupSize+1];
+	PhotonMap::SearchResult **resultsPerThread = new PhotonMap::SearchResult*[tcount];
+ 	for (int i=0; i<tcount; ++i)
+		resultsPerThread[i] = new PhotonMap::SearchResult[reducedLookupSize+1];
 
 	ref<Timer> timer = new Timer();
 	#pragma omp parallel for
-	for (int i=1; i<=(int) m_photonCount; ++i) {
-		PhotonMap::search_result *results = resultsPerThread[mts_get_thread_num()];
-		const Photon &photon = pmap->getPhoton(i);
+	for (uint32_t i=0; i<m_photonCount; ++i) {
+		PhotonMap::SearchResult *results = resultsPerThread[mts_get_thread_num()];
+		const Photon &photon = (*pmap)[i];
 
 		BRENode &node = m_nodes[i];
 		node.photon = photon;

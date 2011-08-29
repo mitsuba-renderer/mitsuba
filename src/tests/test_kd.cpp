@@ -145,7 +145,8 @@ public:
 				kdtree[i].setData(random->nextFloat());
 			}
 		
-			std::vector<KDTree2::SearchResult> results, resultsBF;
+			KDTree2::SearchResult results[11];
+			std::vector<KDTree2::SearchResult> resultsBF;
 
 			if (heuristic == 0) {
 				Log(EInfo, "Testing the balanced kd-tree construction heuristic");
@@ -165,25 +166,18 @@ public:
 				size_t nTraversals = 0;
 				for (size_t it = 0; it < nTries; ++it) {
 					Point2 p(random->nextFloat(), random->nextFloat());
-					nTraversals += kdtree.nnSearch(p, k, results);
+					Float searchRadius = std::numeric_limits<Float>::infinity();
+					kdtree.nnSearchCollectStatistics(p, searchRadius, k, results, nTraversals);
 					resultsBF.clear();
 					for (size_t j=0; j<nPoints; ++j)
 						resultsBF.push_back(KDTree2::SearchResult((kdtree[j].getPosition()-p).lengthSquared(), (uint32_t) j));
-					std::sort(results.begin(), results.end(), KDTree2::SearchResultComparator());
+					std::sort(results, results + k, KDTree2::SearchResultComparator());
 					std::sort(resultsBF.begin(), resultsBF.end(), KDTree2::SearchResultComparator());
 					for (int j=0; j<k; ++j) 
 						assertTrue(results[j] == resultsBF[j]);
 				}
 				Log(EInfo, "Average number of traversals for a %i-nn query = " SIZE_T_FMT, k, nTraversals / nTries);
 			}
-			
-			std::vector<uint32_t> results2;
-			size_t nTraversals = 0;
-			for (size_t it = 0; it < nTries; ++it) {
-				Point2 p(random->nextFloat(), random->nextFloat());
-				nTraversals += kdtree.search(p, 0.05, results2);
-			}
-			Log(EInfo, "Average number of traversals for a radius=0.05 search query = " SIZE_T_FMT, nTraversals / nTries);	
 		}
 		Log(EInfo, "Testing the left-balanced kd-tree construction heuristic with left-balanced nodes");
 		KDTree2Left kdtree(nPoints, KDTree2Left::ELeftBalanced);
@@ -193,7 +187,8 @@ public:
 			kdtree[i].setData(random->nextFloat());
 		}
 	
-		std::vector<KDTree2Left::SearchResult> results, resultsBF;
+		std::vector<KDTree2Left::SearchResult> resultsBF;
+		KDTree2Left::SearchResult results[11];
 
 		ref<Timer> timer = new Timer();
 		kdtree.build();
@@ -203,11 +198,12 @@ public:
 			size_t nTraversals = 0;
 			for (size_t it = 0; it < nTries; ++it) {
 				Point2 p(random->nextFloat(), random->nextFloat());
-				nTraversals += kdtree.nnSearch(p, k, results);
+				Float searchRadius = std::numeric_limits<Float>::infinity();
+				kdtree.nnSearchCollectStatistics(p, searchRadius, k, results, nTraversals);
 				resultsBF.clear();
 				for (size_t j=0; j<nPoints; ++j)
 					resultsBF.push_back(KDTree2Left::SearchResult((kdtree[j].getPosition()-p).lengthSquared(), (uint32_t) j));
-				std::sort(results.begin(), results.end(), KDTree2Left::SearchResultComparator());
+				std::sort(results, results + k, KDTree2Left::SearchResultComparator());
 				std::sort(resultsBF.begin(), resultsBF.end(), KDTree2Left::SearchResultComparator());
 				for (int j=0; j<k; ++j) 
 					assertTrue(results[j] == resultsBF[j]);
@@ -215,14 +211,6 @@ public:
 			Log(EInfo, "Average number of traversals for a %i-nn query = " SIZE_T_FMT, k, nTraversals / nTries);
 		}
 		
-		std::vector<uint32_t> results2;
-		size_t nTraversals = 0;
-		for (size_t it = 0; it < nTries; ++it) {
-			Point2 p(random->nextFloat(), random->nextFloat());
-			nTraversals += kdtree.search(p, 0.05, results2);
-		}
-		Log(EInfo, "Average number of traversals for a radius=0.05 search query = " SIZE_T_FMT, nTraversals / nTries);
-
 		Log(EInfo, "Normal node size = " SIZE_T_FMT " bytes", sizeof(KDTree2::NodeType));
 		Log(EInfo, "Left-balanced node size = " SIZE_T_FMT " bytes", sizeof(KDTree2Left::NodeType));
 	}

@@ -309,6 +309,8 @@ public:
 	//! @}
 	// =============================================================
 
+	/// Set the AABB of the underlying point data
+	inline void setAABB(const AABBType &aabb) { m_aabb = aabb; }
 	/// Return the AABB of the underlying point data
 	inline const AABBType &getAABB() const { return m_aabb; }
 	/// Return the depth of the constructed KD-tree
@@ -361,8 +363,6 @@ public:
 	 * \brief Run a k-nearest-neighbor search query
 	 *
 	 * \param p Search position
-	 * \param k Maximum number of search results
-	 * \param results Index list of search results
 	 * \param sqrSearchRadius 
 	 *      Specifies the squared maximum search radius. This parameter can be used 
 	 *      to restrict the k-nn query to a subset of the data -- it that is not
@@ -370,52 +370,50 @@ public:
 	 *      finishes, the parameter value will correspond to the (potentially lower) 
 	 *      maximum query radius that was necessary to ensure that the number of 
 	 *      results did not exceed \c k.
-	 * \return The number of used traversal steps
+	 * \param k Maximum number of search results
+	 * \param results Target array for search results. Must 
+	 *      contain storage for at least \c k+1 entries! 
+	 *      (one extra entry is needed for shuffling data around)
+	 * \return The number of search results (equal to \c k or less)
 	 */
-	size_t nnSearch(const PointType &p, size_t k, std::vector<SearchResult> &results, 
-			Float &sqrSearchRadius) const {
+	size_t nnSearch(const PointType &p, Float &_sqrSearchRadius,
+			size_t k, SearchResult *results) const {
 		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
-		size_t index = 0, stackPos = 1, traversalSteps = 0;
+		IndexType index = 0, stackPos = 1;
+		Float sqrSearchRadius = _sqrSearchRadius;
+		size_t resultCount = 0;
 		bool isHeap = false;
 		stack[0] = 0;
 
-		results.clear();
-		results.reserve(k+1);
-	
 		while (stackPos > 0) {
 			const NodeType &node = m_nodes[index];
-			++traversalSteps;
 			int nextIndex;
 	
 			/* Recurse on inner nodes */
 			if (!node.isLeaf()) {
-				Float distToPlane = p[node.getAxis()] 
-					- node.getPosition()[node.getAxis()];
+				Float distToPlane = p[node.getAxis()] - node.getPosition()[node.getAxis()];
 	
-				IndexType first, second;
 				bool searchBoth = distToPlane*distToPlane <= sqrSearchRadius;
 
 				if (distToPlane > 0) {
-					first = node.getRightIndex(index);
-					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && first >= m_nodes.size()))
-						first = 0;
-
-					second = searchBoth ? node.getLeftIndex(index) : 0;
-				} else {
-					first = node.getLeftIndex(index);
-					second = searchBoth ? node.getRightIndex(index) : 0;
-
-					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && second >= m_nodes.size()))
-						second = 0;
-				}
-
-				if (first && second) {
-					nextIndex = first;
-					stack[stackPos++] = second;
-				} else {
-					nextIndex = first | second;
-					if (EXPECT_NOT_TAKEN(!nextIndex))
+					/* The search query is located on the right side of the split. 
+					   Search this side first. */
+					if (hasRightChild(index)) {
+						if (searchBoth)
+							stack[stackPos++] = node.getLeftIndex(index);
+						nextIndex = node.getRightIndex(index);
+					} else if (searchBoth) {
+						nextIndex = node.getLeftIndex(index);
+					} else {
 						nextIndex = stack[--stackPos];
+					}
+				} else {
+					/* The search query is located on the left side of the split. 
+					Search this side first. */
+					if (searchBoth && hasRightChild(index))
+						stack[stackPos++] = node.getRightIndex(index);
+
+					nextIndex = node.getLeftIndex(index);
 				}
 			} else {
 				nextIndex = stack[--stackPos];
@@ -427,23 +425,23 @@ public:
 			if (pointDistSquared < sqrSearchRadius) {
 				/* Switch to a max-heap when the available search 
 				   result space is exhausted */
-				if (results.size() < k) {
+				if (resultCount < k) {
 					/* There is still room, just add the point to
 					   the search result list */
-					results.push_back(SearchResult(pointDistSquared, index));
+					results[resultCount++] = SearchResult(pointDistSquared, index);
 				} else {
 					if (!isHeap) {
 						/* Establish the max-heap property */
-						std::make_heap(results.begin(), results.end(), 
+						std::make_heap(results, results + resultCount, 
 								SearchResultComparator());
 						isHeap = true;
 					}
+					SearchResult *end = results + resultCount + 1;
 	
 					/* Add the new point, remove the one that is farthest away */
-					results.push_back(SearchResult(pointDistSquared, index));
-					std::push_heap(results.begin(), results.end(), SearchResultComparator());
-					std::pop_heap(results.begin(), results.end(), SearchResultComparator());
-					results.pop_back();
+					results[resultCount] = SearchResult(pointDistSquared, index);
+					std::push_heap(results, end, SearchResultComparator());
+					std::pop_heap(results, end, SearchResultComparator());
 	
 					/* Reduce the search radius accordingly */
 					sqrSearchRadius = results[0].distSquared;
@@ -451,7 +449,101 @@ public:
 			}
 			index = nextIndex;
 		}
-		return traversalSteps;
+		_sqrSearchRadius = sqrSearchRadius;
+		return resultCount;
+	}
+
+	/**
+	 * \brief Run a k-nearest-neighbor search query and record statistics
+	 *
+	 * \param p Search position
+	 * \param sqrSearchRadius 
+	 *      Specifies the squared maximum search radius. This parameter can be used 
+	 *      to restrict the k-nn query to a subset of the data -- it that is not
+	 *      desired, simply set it to positive infinity. After the query
+	 *      finishes, the parameter value will correspond to the (potentially lower) 
+	 *      maximum query radius that was necessary to ensure that the number of 
+	 *      results did not exceed \c k.
+	 * \param k Maximum number of search results
+	 * \param results
+	 *      Target array for search results. Must contain 
+	 *      storage for at least \c k+1 entries! (one 
+	 *      extra entry is needed for shuffling data around)
+	 * \return The number of used traversal steps
+	 */
+	size_t nnSearchCollectStatistics(const PointType &p, Float &sqrSearchRadius,
+			size_t k, SearchResult *results, size_t &traversalSteps) const {
+		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
+		IndexType index = 0, stackPos = 1;
+		size_t resultCount = 0;
+		bool isHeap = false;
+		stack[0] = 0;
+
+		while (stackPos > 0) {
+			const NodeType &node = m_nodes[index];
+			++traversalSteps;
+			int nextIndex;
+	
+			/* Recurse on inner nodes */
+			if (!node.isLeaf()) {
+				Float distToPlane = p[node.getAxis()] - node.getPosition()[node.getAxis()];
+	
+				bool searchBoth = distToPlane*distToPlane <= sqrSearchRadius;
+
+				if (distToPlane > 0) {
+					/* The search query is located on the right side of the split. 
+					   Search this side first. */
+					if (hasRightChild(index)) {
+						if (searchBoth)
+							stack[stackPos++] = node.getLeftIndex(index);
+						nextIndex = node.getRightIndex(index);
+					} else if (searchBoth) {
+						nextIndex = node.getLeftIndex(index);
+					} else {
+						nextIndex = stack[--stackPos];
+					}
+				} else {
+					/* The search query is located on the left side of the split. 
+					Search this side first. */
+					if (searchBoth && hasRightChild(index))
+						stack[stackPos++] = node.getRightIndex(index);
+
+					nextIndex = node.getLeftIndex(index);
+				}
+			} else {
+				nextIndex = stack[--stackPos];
+			}
+	
+			/* Check if the current point is within the query's search radius */
+			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
+	
+			if (pointDistSquared < sqrSearchRadius) {
+				/* Switch to a max-heap when the available search 
+				   result space is exhausted */
+				if (resultCount < k) {
+					/* There is still room, just add the point to
+					   the search result list */
+					results[resultCount++] = SearchResult(pointDistSquared, index);
+				} else {
+					if (!isHeap) {
+						/* Establish the max-heap property */
+						std::make_heap(results, results + resultCount, 
+								SearchResultComparator());
+						isHeap = true;
+					}
+	
+					/* Add the new point, remove the one that is farthest away */
+					results[resultCount] = SearchResult(pointDistSquared, index);
+					std::push_heap(results, results + resultCount + 1, SearchResultComparator());
+					std::pop_heap(results, results + resultCount + 1, SearchResultComparator());
+	
+					/* Reduce the search radius accordingly */
+					sqrSearchRadius = results[0].distSquared;
+				}
+			}
+			index = nextIndex;
+		}
+		return resultCount;
 	}
 
 	/**
@@ -460,18 +552,22 @@ public:
 	 *
 	 * \param p Search position
 	 * \param k Maximum number of search results
-	 * \param results Index list of search results
+	 * \param results
+	 *      Target array for search results. Must contain 
+	 *      storage for at least \c k+1 entries! (one 
+	 *      extra entry is needed for shuffling data around)
 	 * \return The number of used traversal steps
 	 */
 
-	inline size_t nnSearch(const PointType &p, size_t k, std::vector<SearchResult> &results) {
+	inline size_t nnSearch(const PointType &p, size_t k, 
+			SearchResult *results) const {
 		Float searchRadiusSqr = std::numeric_limits<Float>::infinity();
-		return nnSearch(p, k, results, searchRadiusSqr);
+		return nnSearch(p, searchRadiusSqr, k, results);
 	}
 
 	/**
 	 * \brief Execute a search query and run the specified functor on them,
-	 * while potentially modifying nodes within the search radius
+	 * which potentially modifies the nodes themselves
 	 *
 	 * The functor must have an operator() implementation, which accepts
 	 * a \a NodeType as its argument.
@@ -479,18 +575,17 @@ public:
 	 * \param p Search position
 	 * \param functor Functor to be called on each search result
 	 * \param searchRadius Search radius 
-	 * \return The number of used traversal steps
+	 * \return The number of functor invocations
 	 */
 	template <typename Functor> size_t executeModifier(const PointType &p,
 			Float searchRadius, Functor &functor) {
 		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
-		size_t index = 0, stackPos = 1, traversalSteps = 0;
+		size_t index = 0, stackPos = 1, found = 0;
 		Float distSquared = searchRadius*searchRadius;
 		stack[0] = 0;
 
 		while (stackPos > 0) {
 			NodeType &node = m_nodes[index];
-			++traversalSteps;
 			int nextIndex;
 	
 			/* Recurse on inner nodes */
@@ -498,32 +593,28 @@ public:
 				Float distToPlane = p[node.getAxis()] 
 					- node.getPosition()[node.getAxis()];
 	
-				IndexType first, second;
 				bool searchBoth = distToPlane*distToPlane <= distSquared;
 
 				if (distToPlane > 0) {
-					first = node.getRightIndex(index);
-					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && first >= m_nodes.size()))
-						first = 0;
-
-					second = searchBoth ? node.getLeftIndex(index) : 0;
-				} else {
-					first = node.getLeftIndex(index);
-					second = searchBoth ? node.getRightIndex(index) : 0;
-
-					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && second >= m_nodes.size()))
-						second = 0;
-				}
-
-				if (first && second) {
-					nextIndex = first;
-					stack[stackPos++] = second;
-				} else {
-					nextIndex = first | second;
-					if (EXPECT_NOT_TAKEN(!nextIndex))
+					/* The search query is located on the right side of the split. 
+					   Search this side first. */
+					if (hasRightChild(index)) {
+						if (searchBoth)
+							stack[stackPos++] = node.getLeftIndex(index);
+						nextIndex = node.getRightIndex(index);
+					} else if (searchBoth) {
+						nextIndex = node.getLeftIndex(index);
+					} else {
 						nextIndex = stack[--stackPos];
-				}
+					}
+				} else {
+					/* The search query is located on the left side of the split. 
+					Search this side first. */
+					if (searchBoth && hasRightChild(index))
+						stack[stackPos++] = node.getRightIndex(index);
 
+					nextIndex = node.getLeftIndex(index);
+				}
 			} else {
 				nextIndex = stack[--stackPos];
 			}
@@ -531,12 +622,14 @@ public:
 			/* Check if the current point is within the query's search radius */
 			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
 	
-			if (pointDistSquared < distSquared)
+			if (pointDistSquared < distSquared) {
 				functor(node);
+				++found;
+			}
 
 			index = nextIndex;
 		}
-		return traversalSteps;
+		return found;
 	}
 
 	/**
@@ -548,18 +641,17 @@ public:
 	 * \param p Search position
 	 * \param functor Functor to be called on each search result
 	 * \param searchRadius  Search radius 
-	 * \return The number of used traversal steps
+	 * \return The number of functor invocations
 	 */
 	template <typename Functor> size_t executeQuery(const PointType &p,
 			Float searchRadius, Functor &functor) const {
 		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
-		size_t index = 0, stackPos = 1, traversalSteps = 0;
+		size_t index = 0, stackPos = 1, found = 0;
 		Float distSquared = searchRadius*searchRadius;
 		stack[0] = 0;
 
 		while (stackPos > 0) {
 			const NodeType &node = m_nodes[index];
-			++traversalSteps;
 			int nextIndex;
 	
 			/* Recurse on inner nodes */
@@ -567,30 +659,27 @@ public:
 				Float distToPlane = p[node.getAxis()] 
 					- node.getPosition()[node.getAxis()];
 	
-				IndexType first, second;
 				bool searchBoth = distToPlane*distToPlane <= distSquared;
 
 				if (distToPlane > 0) {
-					first = node.getRightIndex(index);
-					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && first >= m_nodes.size()))
-						first = 0;
-
-					second = searchBoth ? node.getLeftIndex(index) : 0;
-				} else {
-					first = node.getLeftIndex(index);
-					second = searchBoth ? node.getRightIndex(index) : 0;
-
-					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && second >= m_nodes.size()))
-						second = 0;
-				}
-
-				if (first && second) {
-					nextIndex = first;
-					stack[stackPos++] = second;
-				} else {
-					nextIndex = first | second;
-					if (EXPECT_NOT_TAKEN(!nextIndex))
+					/* The search query is located on the right side of the split. 
+					   Search this side first. */
+					if (hasRightChild(index)) {
+						if (searchBoth)
+							stack[stackPos++] = node.getLeftIndex(index);
+						nextIndex = node.getRightIndex(index);
+					} else if (searchBoth) {
+						nextIndex = node.getLeftIndex(index);
+					} else {
 						nextIndex = stack[--stackPos];
+					}
+				} else {
+					/* The search query is located on the left side of the split. 
+					Search this side first. */
+					if (searchBoth && hasRightChild(index))
+						stack[stackPos++] = node.getRightIndex(index);
+
+					nextIndex = node.getLeftIndex(index);
 				}
 			} else {
 				nextIndex = stack[--stackPos];
@@ -599,12 +688,14 @@ public:
 			/* Check if the current point is within the query's search radius */
 			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
 	
-			if (pointDistSquared < distSquared)
+			if (pointDistSquared < distSquared) {
+				++found;
 				functor(node);
+			}
 
 			index = nextIndex;
 		}
-		return traversalSteps;
+		return found;
 	}
 
 
@@ -614,11 +705,11 @@ public:
 	 * \param p Search position
 	 * \param results Index list of search results
 	 * \param searchRadius  Search radius 
-	 * \return The number of used traversal steps
+	 * \return The number of functor invocations
 	 */
 	size_t search(const PointType &p, Float searchRadius, std::vector<IndexType> &results) const {
 		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
-		size_t index = 0, stackPos = 1, traversalSteps = 0;
+		size_t index = 0, stackPos = 1, found = 0;
 		Float distSquared = searchRadius*searchRadius;
 		stack[0] = 0;
 
@@ -626,38 +717,34 @@ public:
 	
 		while (stackPos > 0) {
 			const NodeType &node = m_nodes[index];
-			++traversalSteps;
 			int nextIndex;
 	
 			/* Recurse on inner nodes */
 			if (!node.isLeaf()) {
-				Float distToPlane = p[node.getAxis()] 
+				Float distToPlane = p[node.getAxis()]
 					- node.getPosition()[node.getAxis()];
 	
-				IndexType first, second;
 				bool searchBoth = distToPlane*distToPlane <= distSquared;
 
 				if (distToPlane > 0) {
-					first = node.getRightIndex(index);
-					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && first >= m_nodes.size()))
-						first = 0;
-
-					second = searchBoth ? node.getLeftIndex(index) : 0;
-				} else {
-					first = node.getLeftIndex(index);
-					second = searchBoth ? node.getRightIndex(index) : 0;
-
-					if (EXPECT_NOT_TAKEN(NodeType::leftBalancedLayout && second >= m_nodes.size()))
-						second = 0;
-				}
-
-				if (first && second) {
-					nextIndex = first;
-					stack[stackPos++] = second;
-				} else {
-					nextIndex = first | second;
-					if (EXPECT_NOT_TAKEN(!nextIndex))
+					/* The search query is located on the right side of the split. 
+					   Search this side first. */
+					if (hasRightChild(index)) {
+						if (searchBoth)
+							stack[stackPos++] = node.getLeftIndex(index);
+						nextIndex = node.getRightIndex(index);
+					} else if (searchBoth) {
+						nextIndex = node.getLeftIndex(index);
+					} else {
 						nextIndex = stack[--stackPos];
+					}
+				} else {
+					/* The search query is located on the left side of the split. 
+					Search this side first. */
+					if (searchBoth && hasRightChild(index))
+						stack[stackPos++] = node.getRightIndex(index);
+
+					nextIndex = node.getLeftIndex(index);
 				}
 			} else {
 				nextIndex = stack[--stackPos];
@@ -666,12 +753,14 @@ public:
 			/* Check if the current point is within the query's search radius */
 			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
 	
-			if (pointDistSquared < distSquared) 
+			if (pointDistSquared < distSquared) { 
+				++found;
 				results.push_back(index);
+			}
 
 			index = nextIndex;
 		}
-		return traversalSteps;
+		return found;
 	}
 
 protected:
@@ -699,6 +788,16 @@ protected:
 		int m_axis;
 		Scalar m_value;
 	};
+
+	/// Test if an inner node has a right child node
+	inline bool hasRightChild(IndexType index) const {
+		if (NodeType::leftBalancedLayout) {
+			return 2*index+2 < m_nodes.size();
+		} else {
+			return m_nodes[index].getRightIndex(index) != 0;
+		}
+	}
+
 	/**
 	 * Given a number of entries, this method calculates the number of nodes
 	 * nodes on the left subtree of a left-balanced tree. There are two main 

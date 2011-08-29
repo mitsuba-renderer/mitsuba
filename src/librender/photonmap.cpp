@@ -23,13 +23,16 @@
 
 MTS_NAMESPACE_BEGIN
 
-PhotonMap::PhotonMap(size_t photonCount) : m_kdtree(photonCount), m_scale(1.0f) {
+PhotonMap::PhotonMap(size_t photonCount) 
+		: m_kdtree(0, PhotonTree::ESlidingMidpoint), m_scale(1.0f) {
+	m_kdtree.reserve(photonCount);
 	Assert(Photon::m_precompTableReady);
 }
 
-PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager) { 
-	m_aabb = AABB(stream);
+PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager) 
+    : m_kdtree(0, PhotonTree::ESlidingMidpoint) {
 	m_scale = (Float) stream->readFloat();
+	m_kdtree.setAABB(AABB(stream));
 	m_kdtree.resize(stream->readSize());
 	for (size_t i=0; i<m_kdtree.size(); ++i) 
 		m_kdtree[i] = Photon(stream);
@@ -41,7 +44,7 @@ PhotonMap::~PhotonMap() {
 std::string PhotonMap::toString() const {
 	std::ostringstream oss;
 	oss << "PhotonMap[" << endl
-		<< "  aabb = " << m_aabb.toString() << "," << endl
+		<< "  aabb = " << m_kdtree.getAABB().toString() << "," << endl
 		<< "  size = " << m_kdtree.size() << "," << endl
 		<< "  capacity = " << m_kdtree.capacity() << "," << endl
 		<< "  scale = " << m_scale << endl
@@ -51,26 +54,121 @@ std::string PhotonMap::toString() const {
 
 void PhotonMap::serialize(Stream *stream, InstanceManager *manager) const {
 	Log(EDebug, "Serializing a photon map (%.2f KB)", 
-		m_photonCount * sizeof(Photon) / 1024.0f);
-	m_aabb.serialize(stream);
+		m_kdtree.size() * sizeof(Photon) / 1024.0f);
 	stream->writeFloat(m_scale);
-	stream->writeSize(m_tree.size());
-	for (size_t i=0; i<m_tree.size(); ++i)
-		m_photons[i].serialize(stream);
+	m_kdtree.getAABB().serialize(stream);
+	stream->writeSize(m_kdtree.size());
+	for (size_t i=0; i<m_kdtree.size(); ++i)
+		m_kdtree[i].serialize(stream);
 }
 
 void PhotonMap::dumpOBJ(const std::string &filename) {
 	std::ofstream os(filename.c_str());
 	os << "o Photons" << endl;
-	for (size_t i=0; i<m_tree.size(); ++i) {
-		const Point &p = m_tree[i].getPosition();
+	for (size_t i=0; i<m_kdtree.size(); ++i) {
+		const Point &p = m_kdtree[i].getPosition();
 		os << "v " << p.x << " " << p.y << " " << p.z << endl;
 	}
 
 	/// Need to generate some fake geometry so that blender will import the points
-	for (size_t i=3; i<=m_tree.size(); i++) 
+	for (size_t i=3; i<=m_kdtree.size(); i++) 
 		os << "f " << i << " " << i-1 << " " << i-2 << endl;
 	os.close();
+}
+
+Spectrum PhotonMap::estimateIrradiance(
+		const Point &p, const Normal &n, 
+		Float searchRadius,
+		size_t maxPhotons) const {
+	SearchResult *results = static_cast<SearchResult *>(
+		alloca((maxPhotons+1) * sizeof(SearchResult)));
+	Float squaredRadius = searchRadius*searchRadius,
+		  invSquaredRadius = 1.0f / squaredRadius;
+	size_t resultCount = nnSearch(p, squaredRadius, maxPhotons, results);
+
+	/* Sum over all contributions */
+	Spectrum result(0.0f);
+	for (size_t i=0; i<resultCount; i++) {
+		const SearchResult &searchResult = results[i];
+		const Photon &photon = m_kdtree[searchResult.index];
+
+		/* Don't use photons from the opposite side of the surface */
+		if (dot(photon.getDirection(), n) < 0) {
+			/* Weight the samples using Simpson's kernel */
+			Float sqrTerm = 1.0f - searchResult.distSquared*invSquaredRadius;
+			result += photon.getPower() * (sqrTerm*sqrTerm);
+		}
+	}
+
+	/* Based on the assumption that the surface is locally flat,
+	   the estimate is divided by the area of a disc corresponding to
+	   the projected spherical search region */
+	return result * (m_scale * 3 * INV_PI * invSquaredRadius);
+}
+
+Spectrum PhotonMap::estimateRadiance(const Intersection &its,
+		Float searchRadius, size_t maxPhotons) const {
+	SearchResult *results = static_cast<SearchResult *>(
+		alloca((maxPhotons+1) * sizeof(SearchResult)));
+	Float squaredRadius = searchRadius*searchRadius,
+		  invSquaredRadius = 1.0f / squaredRadius;
+	size_t resultCount = nnSearch(its.p, squaredRadius, maxPhotons, results);
+
+	/* Sum over all contributions */
+	Spectrum result(0.0f);
+	const BSDF *bsdf = its.shape->getBSDF();
+	for (size_t i=0; i<resultCount; i++) {
+		const SearchResult &searchResult = results[i];
+		const Photon &photon = m_kdtree[searchResult.index];
+		Float sqrTerm = 1.0f - searchResult.distSquared*invSquaredRadius;
+
+		Vector wi = its.toLocal(-photon.getDirection());
+
+		BSDFQueryRecord bRec(its, wi, its.wi, EImportance);
+		result += photon.getPower() * bsdf->eval(bRec) * (sqrTerm*sqrTerm);
+	}
+
+	/* Based on the assumption that the surface is locally flat,
+	   the estimate is divided by the area of a disc corresponding to
+	   the projected spherical search region */
+	return result * (m_scale * 3 * INV_PI * invSquaredRadius);
+}
+
+struct RawRadianceQuery {
+	RawRadianceQuery(const Intersection &its, int maxDepth)
+	  : its(its), maxDepth(maxDepth), result(0.0f) { 
+		bsdf = its.shape->getBSDF();
+	}
+
+	inline void operator()(const Photon &photon) {
+		Normal photonNormal(photon.getNormal());
+		Vector wi = -photon.getDirection();
+
+		if (photon.getDepth() > maxDepth
+			|| dot(photonNormal, its.shFrame.n) < 1e-1f 
+			|| dot(photonNormal, wi) < 1e-2f) /// XXX is this latter one really needed?
+			return;
+
+		BSDFQueryRecord bRec(its, its.toLocal(wi), its.wi, EImportance);
+
+		/* Account for non-symmetry due to shading normals */
+//		result += photon->getPower() * bsdf->eval(bRec) 
+//				/ dot(photonNormal, wiWorld);
+		result += photon.getPower() * bsdf->eval(bRec);
+	}
+
+	const Intersection &its;
+	const BSDF *bsdf;
+	int maxDepth;
+	Spectrum result;
+};
+
+size_t PhotonMap::estimateRadianceRaw(const Intersection &its,
+		Float searchRadius, Spectrum &result, int maxDepth) const {
+	RawRadianceQuery query(its, maxDepth);
+	size_t count = m_kdtree.executeQuery(its.p, searchRadius, query);
+	result = query.result;
+	return count;
 }
 
 MTS_IMPLEMENT_CLASS_S(PhotonMap, false, Object)

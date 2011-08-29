@@ -32,7 +32,8 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER PhotonMap : public SerializableObject {
 public:
-	typedef PointKDTree<Photon> PhotonTree;
+	typedef PointKDTree<Photon>        PhotonTree;
+	typedef PhotonTree::SearchResult   SearchResult;
 
     /* ===================================================================== */
     /*                        Public access methods                          */
@@ -71,6 +72,73 @@ public:
 	//! @}
 	// =============================================================
 
+	// =============================================================
+	//! @{ \name \c Photon map query functions
+	// =============================================================
+
+	/**
+	 * \brief Estimate the irradiance at a given surface position
+	 * 
+	 * Uses a Simpson filter to smooth the data.
+	 *
+	 * \param p
+	 * 		The surface position for the estimate
+	 * \param n
+	 * 		Normal vector of the surface in question
+	 * \param searchRadius
+	 * 		Size of the spherical photon search region
+	 * \param maxPhotons
+	 * 		How many photon should (at most) be used in the estimate?
+	 */
+	Spectrum estimateIrradiance(
+		const Point &p, const Normal &n, 
+		Float searchRadius,
+		size_t maxPhotons) const;
+
+	/**
+	 * \brief Estimate the radiance received from an intersected surface
+	 * 
+	 * Uses a Simpson filter to smooth the data.
+	 *
+	 * \param p
+	 * 		The surface position for the estimate
+	 * \param n
+	 * 		Normal vector of the surface in question
+	 * \param searchRadius
+	 * 		Size of the spherical photon search region
+	 * \param maxPhotons
+	 * 		How many photon should (at most) be used in the estimate?
+	 */
+	Spectrum estimateRadiance(const Intersection &its,
+		Float searchRadius, size_t maxPhotons) const;
+
+	/**
+	 * \brief Compute scattered contributions from all photons within
+	 * the specified radius. 
+	 *
+	 * Does no weighting/filtering/dynamic search radius reduction 
+	 * and simply sums over all photons. Only considers photons with 
+	 * a depth value less than or equal to the \c maxDepth parameter. 
+	 * This function is meant to be used with progressive photon mapping. 
+	 */
+	size_t estimateRadianceRaw(const Intersection &its,
+		Float searchRadius, Spectrum &result, int maxDepth) const;
+
+	/// Perform a nearest-neighbor query, see \ref PointKDTree for details
+	inline size_t nnSearch(const Point &p, Float &sqrSearchRadius,
+		size_t k, SearchResult *results) const {
+		return m_kdtree.nnSearch(p, sqrSearchRadius, k, results);
+	}
+
+	/// Perform a nearest-neighbor query, see \ref PointKDTree for details
+	inline size_t nnSearch(const Point &p, 
+		size_t k, SearchResult *results) const {
+		return m_kdtree.nnSearch(p, k, results);
+	}
+	//! @}
+	// =============================================================
+
+
 	/**
 	 * \brief Try to append a photon to the photon map
 	 *
@@ -104,14 +172,12 @@ public:
 		return capacity() == size();
 	}
 
-	/**
-	 * Serialize a photon map to a binary data stream
-	 */
+	/// Serialize a photon map to a binary data stream
 	void serialize(Stream *stream, InstanceManager *manager) const;
 
 	/// Dump the photons to an OBJ file to analyze their spatial distribution
 	void dumpOBJ(const std::string &filename);
-	
+
 	/// Return a string representation
 	std::string toString() const;
 

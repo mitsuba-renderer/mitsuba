@@ -22,6 +22,16 @@
 #include <mitsuba/core/serialization.h>
 #include <mitsuba/core/kdtree.h>
 
+
+/**
+ * \brief Should Mitsuba use a left-balanced photon map?
+ *
+ * This saves some memory, but at a noticeable cost in query
+ * performance. The default is to build an unbalanced 
+ * photon map using the sliding midpoint rule.
+ */
+#define MTS_PHOTONMAP_LEFT_BALANCED 0
+
 MTS_NAMESPACE_BEGIN
 
 /// Internal data record used by \ref Photon
@@ -44,7 +54,12 @@ struct PhotonData {
  * \ingroup librender
  * \sa PhotonMap
  */
-struct MTS_EXPORT_RENDER Photon : public SimpleKDNode<Point, PhotonData> {
+struct MTS_EXPORT_RENDER Photon : 
+#if MTS_PHOTONMAP_LEFT_BALANCED == 1
+	public LeftBalancedKDNode<Point, PhotonData> {
+#else
+	public SimpleKDNode<Point, PhotonData> {
+#endif
 	friend class PhotonMap;
 public:
 	/// Dummy constructor

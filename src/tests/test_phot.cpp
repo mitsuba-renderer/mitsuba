@@ -60,42 +60,24 @@ public:
 		ref<PhotonMap> pmap = proc->getPhotonMap();
 		pmap->setScaleFactor(1 / (Float) proc->getShotParticles());
 
-		PointKDTree<NewPhoton> phot(pmap->getPhotonCount());
-		for (size_t i=0; i<pmap->getPhotonCount(); ++i) {
-			const Photon &photon = pmap->getPhoton(i+1);
-			phot[i] = NewPhoton(photon.getPosition(),
-				photon.getNormal(), photon.getDirection(),
-				photon.getPower(), photon.getDepth());
-		}
-		pmap->balance();
-		phot.build();
+		pmap->build();
 
 		ref<Random> random = new Random();
-		PhotonMap::search_result results[101];
-		std::vector<PointKDTree<NewPhoton>::SearchResult> results2(101);
+		PhotonMap::SearchResult results[101];
 		size_t nQueries = 100000;
 		Point *queryPositions = new Point[nQueries];
 		for (size_t i=0; i<nQueries; ++i)
-			queryPositions[i] = pmap->getPhoton(random->nextUInt(pmap->getPhotonCount())+1).getPosition();
+			queryPositions[i] = (*pmap)[random->nextUInt(pmap->size())].getPosition();
 
 		ref<Timer> timer = new Timer();
 		Log(EInfo, "Testing query performance (photon map) ..");
-		size_t nResults1 = 0, nResults2=0;
+		size_t nResults1 = 0;
 		for (size_t i=0; i<nQueries; ++i) {
 			Float searchRadius = std::numeric_limits<Float>::infinity();
 			nResults1 += pmap->nnSearch(queryPositions[i], searchRadius, 100, results);
 		}
 		Log(EInfo, "Done. Took %i ms, got " SIZE_T_FMT " results",  timer->getMilliseconds(), nResults1);
-		timer->reset();
-		Log(EInfo, "Testing query performance .. ");
-		for (size_t i=0; i<nQueries; ++i) {
-			Float searchRadius = std::numeric_limits<Float>::infinity();
-			phot.nnSearch(queryPositions[i], 100, results2, searchRadius);
-			nResults2 += results2.size();
-		}
-		Log(EInfo, "Done. Took %i ms, got " SIZE_T_FMT " results", timer->getMilliseconds(), nResults2);
-		timer->reset();
-
+		Log(EInfo, "Photon size: %i bytes", (int) sizeof(Photon));
 	}
 };
 
