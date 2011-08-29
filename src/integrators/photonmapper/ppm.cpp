@@ -287,7 +287,7 @@ public:
 		sched->wait(proc);
 
 		ref<PhotonMap> photonMap = proc->getPhotonMap();
-		photonMap->balance();
+		photonMap->build();
 		Log(EDebug, "Photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
 			SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 

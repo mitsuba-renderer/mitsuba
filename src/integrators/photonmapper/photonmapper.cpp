@@ -166,7 +166,7 @@ public:
 
 			m_globalPhotonMap = proc->getPhotonMap();
 			m_globalPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
-			m_globalPhotonMap->balance();
+			m_globalPhotonMap->build();
 			m_globalPhotonMapID = sched->registerResource(m_globalPhotonMap);
 		}
 
@@ -197,7 +197,7 @@ public:
 
 			m_causticPhotonMap = proc->getPhotonMap();
 			m_causticPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
-			m_causticPhotonMap->balance();
+			m_causticPhotonMap->build();
 			m_causticPhotonMapID = sched->registerResource(m_causticPhotonMap);
 		}
 
@@ -225,7 +225,7 @@ public:
 
 			ref<PhotonMap> volumePhotonMap = proc->getPhotonMap();
 			volumePhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
-			volumePhotonMap->balance();
+			volumePhotonMap->build();
 	
 			m_bre = new BeamRadianceEstimator(volumePhotonMap, m_volumeLookupSize);
 			m_breID = sched->registerResource(m_bre);
@@ -346,14 +346,14 @@ public:
 			}
 		}
 
-		if (bsdfType == BSDF::EDiffuseReflection) {
+		if ((bsdfType & BSDF::EAll) == BSDF::EDiffuseReflection) {
 			/* Hit a diffuse material - do a direct photon map visualization. */
 			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)
-				LiSurf += m_globalPhotonMap->estimateIrradianceFiltered(its.p, 
+				LiSurf += m_globalPhotonMap->estimateIrradiance(its.p, 
 					its.shFrame.n, m_globalLookupRadius, m_globalLookupSize)
 						* bsdf->getDiffuseReflectance(its) * INV_PI;
 			if (rRec.type & RadianceQueryRecord::ECausticRadiance && m_causticPhotonMap.get())
-				LiSurf += m_causticPhotonMap->estimateIrradianceFiltered(its.p,
+				LiSurf += m_causticPhotonMap->estimateIrradiance(its.p,
 					its.shFrame.n, m_causticLookupRadius, m_causticLookupSize)
 							* bsdf->getDiffuseReflectance(its) * INV_PI;
 		} else if ((bsdfType & BSDF::EDelta) != 0
@@ -397,7 +397,7 @@ public:
 				LiSurf += m_parentIntegrator->Li(recursiveRay, rRec2) * bsdfVal * weight;
 			}
 		} else {
-			LiSurf += m_globalPhotonMap->estimateRadianceFiltered(its,
+			LiSurf += m_globalPhotonMap->estimateRadiance(its,
 				m_globalLookupRadius, m_globalLookupSize);
 		}
 

@@ -152,7 +152,7 @@ public:
 			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
 				/// Record the highest albedo values across channels
 				Float albedo = m_sigmaS[i] / m_sigmaT[i];
-				if (albedo > m_mediumSamplingWeight)
+				if (albedo > m_mediumSamplingWeight && m_sigmaT[i] != 0)
 					m_mediumSamplingWeight = albedo;
 			}
 			if (m_mediumSamplingWeight > 0) {
@@ -231,7 +231,11 @@ public:
 
 	void configure() {
 		Medium::configure();
-		m_albedo = (m_sigmaS/m_sigmaT).max();
+		m_albedo = 0;
+		for (size_t i=0; i<SPECTRUM_SAMPLES; ++i) {
+			if (m_sigmaT[i] != 0)
+				m_albedo = std::max(m_albedo, m_sigmaS[i]/m_sigmaT[i]);
+		}
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -242,7 +246,12 @@ public:
 	}
 
 	Spectrum getTransmittance(const Ray &ray, Sampler *) const {
-		return (m_sigmaT * (ray.mint - ray.maxt)).exp();
+		Float negLength = ray.mint - ray.maxt;
+		Spectrum transmittance;
+		for (size_t i=0; i<SPECTRUM_SAMPLES; ++i)
+			transmittance[i] = m_sigmaT[i] != 0 
+				? std::exp(m_sigmaT[i] * negLength) : (Float) 1.0f;
+		return transmittance;
 	}
 
 	bool sampleDistance(const Ray &ray, MediumSamplingRecord &mRec,
