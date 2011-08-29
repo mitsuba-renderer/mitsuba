@@ -291,7 +291,7 @@ public:
 	//! @{ \name \c stl::vector-like interface
 	// =============================================================
 	/// Clear the kd-tree array
-	inline void clear() { m_nodes.clear(); }
+	inline void clear() { m_nodes.clear(); m_aabb.reset(); }
 	/// Resize the kd-tree array
 	inline void resize(size_t size) { m_nodes.resize(size); }
 	/// Reserve a certain amount of memory for the kd-tree array
@@ -301,7 +301,10 @@ public:
 	/// Return the capacity of the kd-tree
 	inline size_t capacity() const { return m_nodes.capacity(); }
 	/// Append a kd-tree node to the node array
-	inline void push_back(const NodeType &node) { m_nodes.push_back(node); }
+	inline void push_back(const NodeType &node) {
+		m_nodes.push_back(node);
+		m_aabb.expandBy(node.getPosition());
+	}
 	/// Return one of the KD-tree nodes by index
 	inline NodeType &operator[](size_t idx) { return m_nodes[idx]; }
 	/// Return one of the KD-tree nodes by index (const version)
@@ -317,18 +320,19 @@ public:
 	inline size_t getDepth() const { return m_depth; }
 
 	/// Construct the KD-tree hierarchy
-	void build() {
+	void build(bool recomputeAABB = false) {
 		ref<Timer> timer = new Timer();
 
 		SLog(EInfo, "Building a %i-dimensional kd-tree over " SIZE_T_FMT " data points",
 			PointType::dim, m_nodes.size());
-		m_aabb.reset();
 
-		for (size_t i=0; i<m_nodes.size(); ++i)
-			m_aabb.expandBy(m_nodes[i].getPosition());
-		
+		if (recomputeAABB) {
+			m_aabb.reset();
+			for (size_t i=0; i<m_nodes.size(); ++i)
+				m_aabb.expandBy(m_nodes[i].getPosition());
+
+		}
 		int aabbTime = timer->getMilliseconds();
-
 		timer->reset();
 
 		/* Instead of shuffling around the node data itself, only modify
@@ -340,23 +344,29 @@ public:
 			indirection[i] = i;
 
 		m_depth = 0;
+		int constructionTime;
 		if (NodeType::leftBalancedLayout) {
 			std::vector<IndexType> permutation(m_nodes.size());
 			buildLB(0, 1, indirection.begin(), indirection.begin(), 
 				indirection.end(), permutation);
+			constructionTime = timer->getMilliseconds();
+			timer->reset();
 			permute_inplace(&m_nodes[0], permutation);
 		} else {
 			build(1, indirection.begin(), indirection.begin(), indirection.end());
+			constructionTime = timer->getMilliseconds();
+			timer->reset();
 			permute_inplace(&m_nodes[0], indirection);
 		}
 
-		int constructionTime = timer->getMilliseconds();
-		timer->reset();
-
 		int permutationTime = timer->getMilliseconds();
-		
-		SLog(EInfo, "Done after %i ms (breakdown: aabb: %i ms, build: %i ms, permute: %i ms). ",
+
+		if (recomputeAABB)
+			SLog(EInfo, "Done after %i ms (breakdown: aabb: %i ms, build: %i ms, permute: %i ms). ",
 				aabbTime + constructionTime + permutationTime, aabbTime, constructionTime, permutationTime);
+		else
+			SLog(EInfo, "Done after %i ms (breakdown: build: %i ms, permute: %i ms). ",
+				constructionTime + permutationTime, constructionTime, permutationTime);
 	}
 
 	/**

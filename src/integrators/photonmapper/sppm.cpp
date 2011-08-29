@@ -147,6 +147,8 @@ public:
 			samplers[i] = clonedSampler.get();
 		}
 
+		Thread::initializeOpenMP(Scheduler::getInstance()->getLocalWorkerCount());
+
 		int samplerResID = sched->registerManifoldResource(
 			static_cast<std::vector<SerializableObject*> &>(samplers)); 
 
@@ -219,8 +221,8 @@ public:
 							/* Create hit point if this is a diffuse material or a glossy
 							   one, and there has been a previous interaction with
 							   a glossy material */
-							if (bsdf->getType() == BSDF::EDiffuseReflection || 
-								bsdf->getType() == BSDF::EDiffuseTransmission) {
+							if ((bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseReflection || 
+								(bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseTransmission) {
 								gatherPoint.weight = weight;
 								gatherPoint.depth = depth;
 								if (gatherPoint.its.isLuminaire())
@@ -318,7 +320,6 @@ public:
 		film->fromBitmap(m_bitmap);
 		queue->signalRefresh(job, NULL);
 	}
-
 
 	std::string toString() const {
 		return "StochasticProgressivePhotonMapIntegrator[]";

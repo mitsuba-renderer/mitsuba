@@ -62,7 +62,6 @@ Photon::Photon(const Point &p, const Normal &normal,
 			   uint16_t _depth) {
 	if (!P.isValid()) 
 		SLog(EWarn, "Creating an invalid photon with power: %s", P.toString().c_str());
-
 	/* Possibly convert to single precision floating point
 	   (if Mitsuba is configured to use double precision) */
 	position = p;

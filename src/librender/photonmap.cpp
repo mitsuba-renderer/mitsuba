@@ -143,18 +143,25 @@ struct RawRadianceQuery {
 	inline void operator()(const Photon &photon) {
 		Normal photonNormal(photon.getNormal());
 		Vector wi = -photon.getDirection();
+		Float wiDotGeoN = absDot(photonNormal, wi);
 
 		if (photon.getDepth() > maxDepth
-			|| dot(photonNormal, its.shFrame.n) < 1e-1f 
-			|| dot(photonNormal, wi) < 1e-2f) /// XXX is this latter one really needed?
+			|| dot(photonNormal, its.shFrame.n) < 1e-1f
+			|| wiDotGeoN < 1e-2f)
 			return;
 
+		/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
 		BSDFQueryRecord bRec(its, its.toLocal(wi), its.wi, EImportance);
 
+		Spectrum value = photon.getPower() * bsdf->eval(bRec);
+		if (value.isZero())
+			return;
+
 		/* Account for non-symmetry due to shading normals */
-//		result += photon->getPower() * bsdf->eval(bRec) 
-//				/ dot(photonNormal, wiWorld);
-		result += photon.getPower() * bsdf->eval(bRec);
+		value *= Frame::cosTheta(bRec.wi) / 
+			(wiDotGeoN * Frame::cosTheta(bRec.wo));
+
+		result += value;
 	}
 
 	const Intersection &its;

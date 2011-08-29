@@ -165,7 +165,7 @@ public:
 	 * This has to be done once after all photons have been stored, 
 	 * but prior to executing any queries.
 	 */
-	inline void build() { m_kdtree.build(); }
+	inline void build(bool recomputeAABB = false) { m_kdtree.build(recomputeAABB); }
 
 	/// Determine if the photon map is completely filled
 	inline bool isFull() const {

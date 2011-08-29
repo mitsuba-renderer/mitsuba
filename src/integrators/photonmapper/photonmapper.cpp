@@ -346,7 +346,7 @@ public:
 			}
 		}
 
-		if (bsdfType == BSDF::EDiffuseReflection) {
+		if ((bsdfType & BSDF::EAll) == BSDF::EDiffuseReflection) {
 			/* Hit a diffuse material - do a direct photon map visualization. */
 			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)
 				LiSurf += m_globalPhotonMap->estimateIrradiance(its.p, 
