@@ -184,7 +184,7 @@ public:
 		/* Process the image in parallel using blocks for better memory locality */
 		Log(EInfo, "Creating %i gather points", cropSize.x*cropSize.y);
 		#pragma omp parallel for schedule(dynamic)
-		for (int i=-1; i<(int) m_gatherBlocks.size(); ++i) {
+		for (int i=0; i<(int) m_gatherBlocks.size(); ++i) {
 			std::vector<GatherPoint> &gatherPoints = m_gatherBlocks[i];
 			Sampler *sampler = static_cast<Sampler *>(samplers[mts_get_thread_num()]);
 			int xofs = m_offset[i].x, yofs = m_offset[i].y;
@@ -210,25 +210,28 @@ public:
 					camera->generateRayDifferential(sample, lensSample, timeSample, ray);
 					Spectrum weight(1.0f);
 					int depth = 1;
+					gatherPoint.emission = Spectrum(0.0f);
 
 					while (true) {
-						if (depth > m_maxDepth) {
-							gatherPoint.depth = -1;
-							break;
-						}
 						if (scene->rayIntersect(ray, gatherPoint.its)) {
+							if (gatherPoint.its.isLuminaire())
+								gatherPoint.emission += weight * gatherPoint.its.Le(-ray.d);
+
+							if (depth >= m_maxDepth) {
+								gatherPoint.depth = -1;
+								break;
+							}
+		
 							const BSDF *bsdf = gatherPoint.its.shape->getBSDF();
 							/* Create hit point if this is a diffuse material or a glossy
 							   one, and there has been a previous interaction with
 							   a glossy material */
+								
 							if ((bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseReflection || 
-								(bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseTransmission) {
+								(bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseTransmission ||
+								depth + 1 > m_maxDepth) {
 								gatherPoint.weight = weight;
 								gatherPoint.depth = depth;
-								if (gatherPoint.its.isLuminaire())
-									gatherPoint.emission = gatherPoint.its.Le(-ray.d);
-								else
-									gatherPoint.emission = Spectrum(0.0f);
 								break;
 							} else {
 								/* Recurse for dielectric materials and (specific to SPPM):
@@ -299,13 +302,18 @@ public:
 					flux = Spectrum(0.0f);
 				}
 
+				if (N == 0 && !gp.emission.isZero()) 
+					gp.N = N = 1;
+
 				if (N+M == 0) {
 					gp.flux = contrib = Spectrum(0.0f);
 				} else {
 					Float ratio = (N + m_alpha * M) / (N + M);
-					gp.flux = (gp.flux + gp.weight * (flux + 
-						gp.emission * (Float) proc->getShotParticles() * M_PI * gp.radius*gp.radius)) * ratio;
 					gp.radius = gp.radius * std::sqrt(ratio);
+
+					gp.flux = (gp.flux + 
+							gp.weight * flux + 
+							gp.emission * (Float) proc->getShotParticles() * M_PI * gp.radius*gp.radius) * ratio;
 					gp.N = N + m_alpha * M;
 					contrib = gp.flux / ((Float) m_totalEmitted * gp.radius*gp.radius * M_PI);
 				}
