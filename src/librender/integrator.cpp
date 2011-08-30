@@ -291,7 +291,8 @@ MonteCarloIntegrator::MonteCarloIntegrator(const Properties &props) : SampleInte
 	 */
 	m_strictNormals = props.getBoolean("strictNormals", false);
 
-	AssertEx(m_rrDepth > 0, "rrDepth == 0 breaks the computation of alpha values!");
+	if (m_rrDepth <= 0)
+		Log(EError, "rrDepth must be greater than zero!");
 }
 
 MonteCarloIntegrator::MonteCarloIntegrator(Stream *stream, InstanceManager *manager)

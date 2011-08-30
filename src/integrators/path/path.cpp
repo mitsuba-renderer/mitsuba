@@ -36,9 +36,7 @@ static StatsCounter avgPathLength("Path tracer", "Average path length", EAverage
 class MIPathTracer : public MonteCarloIntegrator {
 public:
 	MIPathTracer(const Properties &props)
-		: MonteCarloIntegrator(props) {
-		//m_shadingSamples = props.getInteger("shadingSamples");
-	}
+		: MonteCarloIntegrator(props) { }
 
 	/// Unserialize from a binary data stream
 	MIPathTracer(Stream *stream, InstanceManager *manager)

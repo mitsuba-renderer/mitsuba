@@ -60,6 +60,19 @@ public:
 		m_gatherLocally = props.getBoolean("gatherLocally", true);
 		/* Indicates if the gathering steps should be canceled if not enough photons are generated. */
 		m_autoCancelGathering = props.getBoolean("autoCancelGathering", true);
+
+		if (m_maxDepth == 0) {
+			Log(EError, "maxDepth must be greater than zero!");
+		} else if (m_maxDepth == -1) {
+			/**
+			 * An infinite depth is currently not supported, since 
+			 * the photon tracing step uses a Halton sequence
+			 * that is based on a finite-sized prime number table
+			 */
+			m_maxDepth = 256;
+		}
+
+		m_causticPhotonMapID = m_globalPhotonMapID = 0;
 	}
 
 	/// Unserialize from a binary data stream
@@ -78,6 +91,14 @@ public:
 		m_gatherLocally = stream->readBool();
 		m_autoCancelGathering = stream->readBool();
 		configure();
+	}
+
+	virtual ~PhotonMapIntegrator() {
+		ref<Scheduler> sched = Scheduler::getInstance();
+		if (m_globalPhotonMapID)
+			sched->unregisterResource(m_globalPhotonMapID);
+		if (m_causticPhotonMapID)
+			sched->unregisterResource(m_causticPhotonMapID);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -124,9 +145,6 @@ public:
 		}
 
 		if (m_globalPhotonMap.get() == NULL && m_globalPhotons > 0) {
-			/* Adapt to scene extents */
-			m_globalLookupRadius = m_globalLookupRadiusRel * scene->getBSphere().radius;
-
 			/* Generate the global photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::ESurfacePhotons, m_globalPhotons,
@@ -155,13 +173,10 @@ public:
 		}
 
 		if (m_causticPhotonMap.get() == NULL && m_causticPhotons > 0) {
-			/* Adapt to scene extents */
-			m_causticLookupRadius = m_causticLookupRadiusRel * scene->getBSphere().radius;
-
 			/* Generate the caustic photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::ECausticPhotons, m_causticPhotons,
-				m_granularity, 2, m_rrDepth, m_gatherLocally,
+				m_granularity, 3, m_rrDepth, m_gatherLocally,
 				m_autoCancelGathering, job);
 
 			proc->bindResource("scene", sceneResID);
@@ -215,6 +230,10 @@ public:
 			m_breID = sched->registerResource(m_bre);
 		}
 
+		/* Adapt to scene extents */
+		m_globalLookupRadius = m_globalLookupRadiusRel * scene->getBSphere().radius;
+		m_causticLookupRadius = m_causticLookupRadiusRel * scene->getBSphere().radius;
+
 		sched->unregisterResource(qmcSamplerID);
 		m_parentIntegrator = static_cast<SampleIntegrator *>(getParent());
 		return true;
@@ -261,12 +280,13 @@ public:
 		/* Perform the first ray intersection (or ignore if the 
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
-
+		
 		if (rRec.medium) {
 			Ray mediumRaySegment(ray, 0, its.t);
 			transmittance = rRec.medium->getTransmittance(mediumRaySegment);
 			mediumRaySegment.mint = ray.mint;
-			if (rRec.type & RadianceQueryRecord::EVolumeRadiance)
+			if (rRec.type & RadianceQueryRecord::EVolumeRadiance &&
+					(rRec.depth < m_maxDepth || m_maxDepth < 0))
 				LiMedium = m_bre->query(mediumRaySegment, rRec.medium);
 		}
 
@@ -287,7 +307,9 @@ public:
 			LiSurf += its.LoSub(scene, rRec.sampler, -ray.d, rRec.depth);
 
 		const BSDF *bsdf = its.getBSDF(ray);
-			
+
+		if (rRec.depth >= m_maxDepth && m_maxDepth > 0)
+			return LiSurf * transmittance + LiMedium;
 #if 0
 		if (bsdf == NULL) {
 			if (rRec.depth+1 < m_maxSpecularDepth) {
@@ -306,6 +328,14 @@ public:
 		unsigned int bsdfType = bsdf->getType() & BSDF::EAll;
 		bool isDiffuse = (bsdfType == BSDF::EDiffuseReflection);
 
+		if (isDiffuse) {
+			if (rRec.type & RadianceQueryRecord::ECausticRadiance && m_causticPhotonMap.get()) {
+				LiSurf += m_causticPhotonMap->estimateIrradiance(its.p,
+					its.shFrame.n, m_causticLookupRadius, m_causticLookupSize)
+							* bsdf->getDiffuseReflectance(its) * INV_PI;
+			} else {
+			}
+		}
 
 		/* Estimate the direct illumination if this is requested */
 		if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) {
@@ -420,7 +450,8 @@ public:
 					LiSurf += lRec.value * bsdfVal * weight;
 				}
 
-				LiSurf += bsdfVal * Li(bsdfRay, rRec2) * weightBSDF;
+				if (!isDiffuse)
+					LiSurf += bsdfVal * Li(bsdfRay, rRec2) * weightBSDF;
 			}
 		}
 
