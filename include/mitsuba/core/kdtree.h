@@ -323,6 +323,11 @@ public:
 	void build(bool recomputeAABB = false) {
 		ref<Timer> timer = new Timer();
 
+		if (m_nodes.size() == 0) {
+			SLog(EWarn, "build(): kd-tree is empty!");
+			return;
+		}
+
 		SLog(EInfo, "Building a %i-dimensional kd-tree over " SIZE_T_FMT " data points",
 			PointType::dim, m_nodes.size());
 
@@ -388,6 +393,9 @@ public:
 	 */
 	size_t nnSearch(const PointType &p, Float &_sqrSearchRadius,
 			size_t k, SearchResult *results) const {
+		if (m_nodes.size() == 0)
+			return 0;
+
 		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
 		IndexType index = 0, stackPos = 1;
 		Float sqrSearchRadius = _sqrSearchRadius;
@@ -483,6 +491,11 @@ public:
 	 */
 	size_t nnSearchCollectStatistics(const PointType &p, Float &sqrSearchRadius,
 			size_t k, SearchResult *results, size_t &traversalSteps) const {
+		traversalSteps = 0;
+
+		if (m_nodes.size() == 0)
+			return 0;
+
 		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
 		IndexType index = 0, stackPos = 1;
 		size_t resultCount = 0;
@@ -589,6 +602,9 @@ public:
 	 */
 	template <typename Functor> size_t executeModifier(const PointType &p,
 			Float searchRadius, Functor &functor) {
+		if (m_nodes.size() == 0)
+			return 0;
+
 		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
 		size_t index = 0, stackPos = 1, found = 0;
 		Float distSquared = searchRadius*searchRadius;
@@ -655,6 +671,9 @@ public:
 	 */
 	template <typename Functor> size_t executeQuery(const PointType &p,
 			Float searchRadius, Functor &functor) const {
+		if (m_nodes.size() == 0)
+			return 0;
+
 		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
 		size_t index = 0, stackPos = 1, found = 0;
 		Float distSquared = searchRadius*searchRadius;
@@ -718,13 +737,14 @@ public:
 	 * \return The number of functor invocations
 	 */
 	size_t search(const PointType &p, Float searchRadius, std::vector<IndexType> &results) const {
+		if (m_nodes.size() == 0)
+			return 0;
+
 		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
 		size_t index = 0, stackPos = 1, found = 0;
 		Float distSquared = searchRadius*searchRadius;
 		stack[0] = 0;
 
-		results.clear();
-	
 		while (stackPos > 0) {
 			const NodeType &node = m_nodes[index];
 			int nextIndex;
@@ -898,7 +918,7 @@ protected:
 		
 		size_t count = rangeEnd-rangeStart;
 		SAssert(count > 0);
-		
+
 		if (count == 1) {
 			/* Create a leaf node */
 			m_nodes[*rangeStart].setLeaf(true);

@@ -159,7 +159,7 @@ public:
 			}
 
 			ref<Timer> timer = new Timer();
-			kdtree.build();
+			kdtree.build(true);
 			Log(EInfo, "Construction time = %i ms, depth = %i", timer->getMilliseconds(), kdtree.getDepth());
 
 			for (int k=1; k<=10; ++k) {
@@ -191,7 +191,7 @@ public:
 		KDTree2Left::SearchResult results[11];
 
 		ref<Timer> timer = new Timer();
-		kdtree.build();
+		kdtree.build(true);
 		Log(EInfo, "Construction time = %i ms, depth = %i", timer->getMilliseconds(), kdtree.getDepth());
 
 		for (int k=1; k<=10; ++k) {
