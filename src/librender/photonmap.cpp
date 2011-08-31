@@ -78,19 +78,21 @@ void PhotonMap::dumpOBJ(const std::string &filename) {
 
 Spectrum PhotonMap::estimateIrradiance(
 		const Point &p, const Normal &n, 
-		Float searchRadius,
+		Float searchRadius, int maxDepth,
 		size_t maxPhotons) const {
 	SearchResult *results = static_cast<SearchResult *>(
 		alloca((maxPhotons+1) * sizeof(SearchResult)));
-	Float squaredRadius = searchRadius*searchRadius,
-		  invSquaredRadius = 1.0f / squaredRadius;
+	Float squaredRadius = searchRadius*searchRadius;
 	size_t resultCount = nnSearch(p, squaredRadius, maxPhotons, results);
+	Float invSquaredRadius = 1.0f / squaredRadius;
 
 	/* Sum over all contributions */
 	Spectrum result(0.0f);
 	for (size_t i=0; i<resultCount; i++) {
 		const SearchResult &searchResult = results[i];
 		const Photon &photon = m_kdtree[searchResult.index];
+		if (photon.getDepth() > maxDepth)
+			continue;
 
 		/* Don't use photons from the opposite side of the surface */
 		if (dot(photon.getDirection(), n) < 0) {
@@ -110,9 +112,9 @@ Spectrum PhotonMap::estimateRadiance(const Intersection &its,
 		Float searchRadius, size_t maxPhotons) const {
 	SearchResult *results = static_cast<SearchResult *>(
 		alloca((maxPhotons+1) * sizeof(SearchResult)));
-	Float squaredRadius = searchRadius*searchRadius,
-		  invSquaredRadius = 1.0f / squaredRadius;
+	Float squaredRadius = searchRadius*searchRadius;
 	size_t resultCount = nnSearch(its.p, squaredRadius, maxPhotons, results);
+	Float invSquaredRadius = 1.0f / squaredRadius;
 
 	/* Sum over all contributions */
 	Spectrum result(0.0f);

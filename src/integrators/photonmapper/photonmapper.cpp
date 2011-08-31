@@ -80,6 +80,8 @@ public:
 	 : SampleIntegrator(stream, manager) {
 		m_directSamples = stream->readInt();
 		m_glossySamples = stream->readInt();
+		m_maxDepth = stream->readInt();
+		m_rrDepth = stream->readInt();
 		m_globalPhotons = stream->readSize();
 		m_causticPhotons = stream->readSize();
 		m_volumePhotons = stream->readSize();
@@ -105,6 +107,8 @@ public:
 		SampleIntegrator::serialize(stream, manager);
 		stream->writeInt(m_directSamples);
 		stream->writeInt(m_glossySamples);
+		stream->writeInt(m_maxDepth);
+		stream->writeInt(m_rrDepth);
 		stream->writeSize(m_globalPhotons);
 		stream->writeSize(m_causticPhotons);
 		stream->writeSize(m_volumePhotons);
@@ -121,7 +125,9 @@ public:
 	void configureSampler(Sampler *sampler) {
 		if (m_directSamples > 1)
 			sampler->request2DArray(m_directSamples);
-		sampler->request2DArray(std::max(m_directSamples, m_glossySamples));
+		int glossySamples = std::max(m_directSamples, m_glossySamples);
+		if (glossySamples > 1)
+			sampler->request2DArray(glossySamples);
 	}
 
 	void configure() {
@@ -190,7 +196,7 @@ public:
 	
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
-			
+
 			Log(EDebug, "Caustic photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
 				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
@@ -329,19 +335,22 @@ public:
 		bool isDiffuse = (bsdfType == BSDF::EDiffuseReflection);
 
 		if (isDiffuse) {
-			if (rRec.type & RadianceQueryRecord::ECausticRadiance && m_causticPhotonMap.get()) {
+			int maxDepth = m_maxDepth == -1 ? INT_MAX : (m_maxDepth-rRec.depth);
+			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)
+				LiSurf += m_globalPhotonMap->estimateIrradiance(its.p,
+					its.shFrame.n, m_globalLookupRadius, maxDepth,
+					m_globalLookupSize) * bsdf->getDiffuseReflectance(its) * INV_PI;
+			if (rRec.type & RadianceQueryRecord::ECausticRadiance && m_causticPhotonMap.get())
 				LiSurf += m_causticPhotonMap->estimateIrradiance(its.p,
-					its.shFrame.n, m_causticLookupRadius, m_causticLookupSize)
-							* bsdf->getDiffuseReflectance(its) * INV_PI;
-			} else {
-			}
+					its.shFrame.n, m_causticLookupRadius, maxDepth,
+					m_causticLookupSize) * bsdf->getDiffuseReflectance(its) * INV_PI;
 		}
 
 		/* Estimate the direct illumination if this is requested */
 		if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) {
 			Point2 *sampleArray;
 			Point2 sample;
-			size_t numLuminaireSamples = m_directSamples,
+			int numLuminaireSamples = m_directSamples,
 				   numBSDFSamples;
 
 			Float weightLum, weightBSDF;
@@ -368,7 +377,7 @@ public:
 				sample = rRec.nextSample2D(); sampleArray = &sample;
 			}
 	
-			for (size_t i=0; i<numLuminaireSamples; ++i) {
+			for (int i=0; i<numLuminaireSamples; ++i) {
 				/* Estimate the direct illumination if this is requested */
 				if (scene->sampleLuminaire(its.p, ray.time, lRec, sampleArray[i])) {
 					/* Allocate a record for querying the BSDF */
@@ -406,7 +415,7 @@ public:
 			RadianceQueryRecord rRec2;
 			Intersection &bsdfIts = rRec2.its;
 
-			for (size_t i=0; i<numBSDFSamples; ++i) {
+			for (int i=0; i<numBSDFSamples; ++i) {
 				/* Sample BSDF * cos(theta) */
 				BSDFQueryRecord bRec(its, rRec.sampler, ERadiance);
 				Float bsdfPdf;
@@ -450,8 +459,37 @@ public:
 					LiSurf += lRec.value * bsdfVal * weight;
 				}
 
-				if (!isDiffuse)
+				if (!isDiffuse && (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance))
 					LiSurf += bsdfVal * Li(bsdfRay, rRec2) * weightBSDF;
+			}
+		} else if (!isDiffuse && rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) {
+			int numBSDFSamples = rRec.depth > 1 ? 1 : m_glossySamples;
+			Float weightBSDF;
+			Point2 *sampleArray;
+			Point2 sample;
+
+			if (numBSDFSamples > 1) {
+				sampleArray = rRec.sampler->next2DArray(
+					std::max(m_directSamples, m_glossySamples));
+				weightBSDF = m_invGlossySamples;
+			} else {
+				sample = rRec.nextSample2D(); sampleArray = &sample;
+				weightBSDF = 1.0f;
+			}
+
+			RadianceQueryRecord rRec2;
+			for (int i=0; i<numBSDFSamples; ++i) {
+				/* Sample BSDF * cos(theta) */
+				BSDFQueryRecord bRec(its, rRec.sampler, ERadiance);
+				Float bsdfPdf;
+				Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, sampleArray[i]);
+				if (bsdfVal.isZero())
+					continue;
+				rRec2.recursiveQuery(rRec, 
+					RadianceQueryRecord::ERadianceNoEmission);
+
+				RayDifferential bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);
+				LiSurf += bsdfVal * Li(bsdfRay, rRec2) * weightBSDF;
 			}
 		}
 

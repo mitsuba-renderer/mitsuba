@@ -87,12 +87,15 @@ public:
 	 * 		Normal vector of the surface in question
 	 * \param searchRadius
 	 * 		Size of the spherical photon search region
+	 * \param maxDepth
+	 *      Ignore photons that have undergone more than
+	 *      maxDepth interactions
 	 * \param maxPhotons
 	 * 		How many photon should (at most) be used in the estimate?
 	 */
 	Spectrum estimateIrradiance(
 		const Point &p, const Normal &n, 
-		Float searchRadius,
+		Float searchRadius, int maxDepth,
 		size_t maxPhotons) const;
 
 	/**
