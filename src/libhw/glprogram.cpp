@@ -77,7 +77,9 @@ void GLProgram::init() {
 		if (infoLog != "")
 			Log(EWarn, "%s", infoLog.c_str());
 		Log(EError, "Error linking a GPU program!");
-	} else if (!infoLog.empty() && infoLog != "No errors.") {
+	} else if (!infoLog.empty() && infoLog != "No errors." &&
+		    infoLog.find("successfully") == std::string::npos &&
+		    infoLog.find("Vertex shader(s) linked") == std::string::npos) {
 		if (infoLog.find("warning") != std::string::npos)
 			Log(EWarn, "GLSL linker warning: %s", infoLog.c_str());
 		else
@@ -118,7 +120,8 @@ int GLProgram::createShader(int type, const std::string &source) {
 			Log(EError, "Error compiling a %s shader: %s", typeStr.c_str(), infoLog.c_str());
 		else
 			Log(EError, "Unknown error encountered while compiling a shader!");
-	} else if (!infoLog.empty() && infoLog != "No errors.") {
+	} else if (!infoLog.empty() && infoLog != "No errors."
+		 && infoLog.find("successfully") == std::string::npos) {
 		if (infoLog.find("warning") != std::string::npos)
 			Log(EWarn, "GLSL compiler warning: %s", infoLog.c_str());
 		else

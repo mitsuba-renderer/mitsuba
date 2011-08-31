@@ -77,6 +77,10 @@ namespace std {
 		return ::tolower(c);
 	}
 
+	inline char toupper(char c) {
+		return ::toupper(c);
+	}
+
 	inline int isinf(double value) {
 		int type = ::_fpclass(value);
 		if (type == _FPCLASS_PINF || type == _FPCLASS_NINF)
