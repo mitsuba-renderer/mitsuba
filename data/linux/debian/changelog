@@ -1,6 +1,6 @@
 mitsuba (0.3.0-1) unstable; urgency=low
 
-  * Added basic Python bindings that can be used to instantiate plugins
+  * Added Python bindings that can be used to instantiate plugins
     and control rendering processes.
   * Spectral rendering: most of the code pertaining to spectral 
     rendering has seen a significant overhaul. It is now faster and 
@@ -22,8 +22,14 @@ mitsuba (0.3.0-1) unstable; urgency=low
   * Scene portability: A new conversion tool ensures that old and incompatible
     scenes can be translated into the scene description format of the 
     most recent version.
+  * Contributed plugins: Tom Kazimiers and Papas have contributed 
+    implementations of the Preetham Sun & Sky model and the Hanrahan-Krueger
+    scattering model.
+  * Photon mapping: The Photon map integrator has been rewritten for 
+    improved accuracy and better performance. Furthermore, the underlying
+    data structure has been replaced with a ~50% faster implementation.
 
- -- Wenzel Jakob <wenzel@cs.cornell.edu>  Mon, 14 Aug 2011 00:00:00 -0400
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Mon, 1 Sep 2011 00:00:00 -0400
 
 mitsuba (0.2.1-1) unstable; urgency=low
 
