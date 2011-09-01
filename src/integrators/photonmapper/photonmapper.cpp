@@ -331,20 +331,17 @@ public:
 
 		if (rRec.depth >= m_maxDepth && m_maxDepth > 0)
 			return LiSurf * transmittance + LiMedium;
-#if 0
+		
 		if (bsdf == NULL) {
-			if (rRec.depth+1 < m_maxSpecularDepth) {
-				RadianceQueryRecord rRec2;
-				rRec2.recursiveQuery(rRec);
-	
-				if (its.isMediumTransition())
-					rRec2.medium = its.getTargetMedium(ray.d);
+			RadianceQueryRecord rRec2;
+			rRec2.recursiveQuery(rRec);
 
-				LiSurf += m_parentIntegrator->Li(RayDifferential(its.p, ray.d, ray.time), rRec2);
-			}
+			if (its.isMediumTransition())
+				rRec2.medium = its.getTargetMedium(ray.d);
+
+			LiSurf += m_parentIntegrator->Li(RayDifferential(its.p, ray.d, ray.time), rRec2);
 			return LiSurf * transmittance + LiMedium;
 		}
-#endif
 
 		unsigned int bsdfType = bsdf->getType() & BSDF::EAll;
 		bool isDiffuse = (bsdfType == BSDF::EDiffuseReflection);
@@ -411,7 +408,8 @@ public:
 	
 			for (int i=0; i<numLuminaireSamples; ++i) {
 				/* Estimate the direct illumination if this is requested */
-				if (scene->sampleLuminaire(its.p, ray.time, lRec, sampleArray[i])) {
+				if (scene->sampleAttenuatedLuminaire(its.p, ray.time, rRec.medium, 
+						lRec, sampleArray[i], rRec.sampler)) {
 					/* Allocate a record for querying the BSDF */
 					BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
 	
@@ -461,7 +459,11 @@ public:
 				rRec2.recursiveQuery(rRec, 
 					RadianceQueryRecord::ERadianceNoEmission);
 
-				rRec2.rayIntersect(bsdfRay);
+				bool indexMatchedMediumTransition = false;
+				Spectrum transmittance;
+				scene->attenuatedRayIntersect(bsdfRay, rRec.medium, bsdfIts, 
+						indexMatchedMediumTransition, transmittance, rRec.sampler);
+				rRec2.type ^= RadianceQueryRecord::EIntersection;
 
 				bool hitLightSource = false;
 				if (bsdfIts.isValid()) {
@@ -488,11 +490,21 @@ public:
 			
 					const Float weight = miWeight(bsdfPdf * numBSDFSamples, 
 						lumPdf * numLuminaireSamples) * weightBSDF;
-					LiSurf += lRec.value * bsdfVal * weight;
+					LiSurf += lRec.value * bsdfVal * weight * transmittance;
 				}
 
-				if (!isDiffuse && (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) && !cacheQuery)
+				if (!isDiffuse && (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) && !cacheQuery) {
+					if (indexMatchedMediumTransition) {
+						/* The previous ray intersection code passed through an index-matched
+						   medium transition while looking for a luminaire. For the recursion,
+						   we need to rewind and account for this transition -- therefore,
+						   another ray intersection call is neccessary */
+						scene->rayIntersect(bsdfRay, bsdfIts);
+					}
+	
+
 					LiSurf += bsdfVal * m_parentIntegrator->Li(bsdfRay, rRec2) * weightBSDF;
+				}
 			}
 		} else if (!isDiffuse && rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance && !cacheQuery) {
 			int numBSDFSamples = rRec.depth > 1 ? 1 : m_glossySamples;

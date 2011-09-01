@@ -50,7 +50,7 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 		PhotonMap::SearchResult *results = resultsPerThread[mts_get_thread_num()];
 		const Photon &photon = (*pmap)[i];
 
-		BRENode &node = m_nodes[i];
+		BRENode &node = m_nodes[i+1];
 		node.photon = photon;
 
 		Float searchRadiusSqr = std::numeric_limits<Float>::infinity();

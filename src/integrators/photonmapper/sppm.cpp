@@ -223,10 +223,13 @@ public:
 							}
 		
 							const BSDF *bsdf = gatherPoint.its.shape->getBSDF();
+							if (!bsdf) {
+								gatherPoint.depth = -1;
+								break;
+							}
 							/* Create hit point if this is a diffuse material or a glossy
 							   one, and there has been a previous interaction with
 							   a glossy material */
-								
 							if ((bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseReflection || 
 								(bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseTransmission ||
 								depth + 1 > m_maxDepth) {

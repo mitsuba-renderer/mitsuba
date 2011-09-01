@@ -226,35 +226,42 @@ public:
 		GatherPoint p;
 		if (scene->rayIntersect(ray, p.its)) {
 			const BSDF *bsdf = p.its.shape->getBSDF();
-			if (bsdf->getType() & BSDF::ESmooth) {
-				p.weight = weight;
+			if (!bsdf) {
+				p.radius = 0;
 				p.sample = sample;
-				p.radius = m_initialRadius;
-				p.depth = depth;
-				if (p.its.isLuminaire())
-					p.emission = p.its.Le(-ray.d);
 				gatherPoints.push_back(p);
 				++count;
-			}
+			} else {
+				if (bsdf->getType() & BSDF::ESmooth) {
+					p.weight = weight;
+					p.sample = sample;
+					p.radius = m_initialRadius;
+					p.depth = depth;
+					if (p.its.isLuminaire())
+						p.emission = p.its.Le(-ray.d);
+					gatherPoints.push_back(p);
+					++count;
+				}
 
-			if (bsdf->getType() & BSDF::EDelta) {
-				int compCount = bsdf->getComponentCount();
-				for (int i=0; i<compCount; i++) {
-					if ((bsdf->getType(i) & BSDF::EDelta) == 0)
-						continue;
-					/* Sample the BSDF and recurse */
-					BSDFQueryRecord bRec(p.its, sampler);
-					bRec.component = i;
-					Spectrum bsdfVal = bsdf->sample(bRec, Point2(0.0f));
-					if (bsdfVal.isZero())
-						continue;
-					bsdfVal = bsdf->eval(bRec, EDiscrete);
+				if (bsdf->getType() & BSDF::EDelta) {
+					int compCount = bsdf->getComponentCount();
+					for (int i=0; i<compCount; i++) {
+						if ((bsdf->getType(i) & BSDF::EDelta) == 0)
+							continue;
+						/* Sample the BSDF and recurse */
+						BSDFQueryRecord bRec(p.its, sampler);
+						bRec.component = i;
+						Spectrum bsdfVal = bsdf->sample(bRec, Point2(0.0f));
+						if (bsdfVal.isZero())
+							continue;
+						bsdfVal = bsdf->eval(bRec, EDiscrete);
 
-					const Float rrProb = depth < 4 ? 1 : 0.8f;
-					if (sampler->independent1D() < rrProb) {
-						RayDifferential recursiveRay(p.its.p, p.its.toWorld(bRec.wo), ray.time);
-						count += createGatherPoints(scene, recursiveRay, sample, sampler, 
-							weight * bsdfVal / rrProb, gatherPoints, depth+1);
+						const Float rrProb = depth < 4 ? 1 : 0.8f;
+						if (sampler->independent1D() < rrProb) {
+							RayDifferential recursiveRay(p.its.p, p.its.toWorld(bRec.wo), ray.time);
+							count += createGatherPoints(scene, recursiveRay, sample, sampler, 
+								weight * bsdfVal / rrProb, gatherPoints, depth+1);
+						}
 					}
 				}
 			}
