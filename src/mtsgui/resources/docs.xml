@@ -330,7 +330,7 @@
 		</descr>
 		<param name="directSamples" readableName="Direct samples" type="integer" default="16">Number of luminaire samples for direct illumination</param>
 		<param name="glossySamples" readableName="Glossy samples" type="integer" default="32">Number of glossy samples for direct illumination</param>
-		<param name="maxDepth" readableName="Maximum depth" type="integer" default="-1">
+		<param name="maxDepth" readableName="Maximum depth" type="integer" default="5">
 			Longest visualized path length (<tt>-1</tt>=infinite). 
 			A value of <tt>1</tt> will visualize only directly visible light sources.
 			<tt>2</tt> will lead to single-bounce (direct-only) illumination, and so on.

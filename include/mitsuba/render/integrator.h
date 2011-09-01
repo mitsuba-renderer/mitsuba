@@ -201,7 +201,7 @@ public:
 		sampler = parent.sampler;
 		depth = parent.depth+1;
 		medium = parent.medium;
-		extra = 0;
+		extra = parent.extra;
 	}
 
 	/// Initialize the query record for a recursive query
@@ -211,7 +211,7 @@ public:
 		sampler = parent.sampler;
 		depth = parent.depth+1;
 		medium = parent.medium;
-		extra = 0;
+		extra = parent.extra;
 	}
 
 	/**

@@ -38,6 +38,13 @@ public:
 		   A value of \c 1 will visualize only directly visible light sources.
 		   \c 2 will lead to single-bounce (direct-only) illumination, and so on. */
 		m_maxDepth = props.getInteger("maxDepth", 5);
+		/**
+		 * When encountering an ideally specular material within the first few
+		 * boundes, the photon mapper places a sample on each lobe
+		 * (e.g. reflection *and* transmission). This greatly reduces
+		 * variance and is therefore usually worth it
+		 */
+		m_maxSpecularDepth = props.getInteger("maxSpecularDepth", 4);
 		/* Granularity of photon tracing work units (in shot particles, 0 => decide automatically) */
 		m_granularity = props.getInteger("granularity", 0);
 		/* Number of photons to collect for the global photon map */
@@ -69,7 +76,7 @@ public:
 			 * the photon tracing step uses a Halton sequence
 			 * that is based on a finite-sized prime number table
 			 */
-			m_maxDepth = 256;
+			m_maxDepth = 128;
 		}
 
 		m_causticPhotonMapID = m_globalPhotonMapID = 0;
@@ -81,6 +88,7 @@ public:
 		m_directSamples = stream->readInt();
 		m_glossySamples = stream->readInt();
 		m_maxDepth = stream->readInt();
+		m_maxSpecularDepth = stream->readInt();
 		m_rrDepth = stream->readInt();
 		m_globalPhotons = stream->readSize();
 		m_causticPhotons = stream->readSize();
@@ -108,6 +116,7 @@ public:
 		stream->writeInt(m_directSamples);
 		stream->writeInt(m_glossySamples);
 		stream->writeInt(m_maxDepth);
+		stream->writeInt(m_maxSpecularDepth);
 		stream->writeInt(m_rrDepth);
 		stream->writeSize(m_globalPhotons);
 		stream->writeSize(m_causticPhotons);
@@ -241,7 +250,12 @@ public:
 		m_causticLookupRadius = m_causticLookupRadiusRel * scene->getBSphere().radius;
 
 		sched->unregisterResource(qmcSamplerID);
-		m_parentIntegrator = static_cast<SampleIntegrator *>(getParent());
+
+		if (getParent() != NULL && getParent()->getClass()->derivesFrom(MTS_CLASS(SampleIntegrator)))
+			m_parentIntegrator = static_cast<SampleIntegrator *>(getParent());
+		else
+			m_parentIntegrator = this;
+
 		return true;
 	}
 
@@ -268,7 +282,6 @@ public:
 			m_parentIntegrator = static_cast<SampleIntegrator *>(getParent());
 		else
 			m_parentIntegrator = this;
-
 	}
 
 	void cancel() {
@@ -282,6 +295,8 @@ public:
 		Intersection &its = rRec.its;
 		LuminaireSamplingRecord lRec;
 		const Scene *scene = rRec.scene;
+
+		bool cacheQuery = (rRec.extra == 1);
 
 		/* Perform the first ray intersection (or ignore if the 
 		   intersection has already been provided). */
@@ -334,7 +349,7 @@ public:
 		unsigned int bsdfType = bsdf->getType() & BSDF::EAll;
 		bool isDiffuse = (bsdfType == BSDF::EDiffuseReflection);
 
-		if (isDiffuse) {
+		if (isDiffuse || cacheQuery) {
 			int maxDepth = m_maxDepth == -1 ? INT_MAX : (m_maxDepth-rRec.depth);
 			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)
 				LiSurf += m_globalPhotonMap->estimateIrradiance(its.p,
@@ -346,8 +361,25 @@ public:
 					m_causticLookupSize) * bsdf->getDiffuseReflectance(its) * INV_PI;
 		}
 
-		/* Estimate the direct illumination if this is requested */
-		if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) {
+		if ((bsdfType & BSDF::EDelta) && (bsdfType & ~BSDF::EDelta) == 0 && rRec.depth < m_maxSpecularDepth && !cacheQuery) {
+			if (RadianceQueryRecord::EIndirectSurfaceRadiance) {
+				int compCount = bsdf->getComponentCount();
+				RadianceQueryRecord rRec2;
+				for (int i=0; i<compCount; i++) {
+					/* Sample the BSDF and recurse */
+					BSDFQueryRecord bRec(its, rRec.sampler, ERadiance);
+					bRec.component = i;
+					Spectrum bsdfVal = bsdf->sample(bRec, Point2(0.0f));
+					if (bsdfVal.isZero())
+						continue;
+
+					rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadiance);
+					RayDifferential bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);
+					LiSurf += bsdfVal * m_parentIntegrator->Li(bsdfRay, rRec2);
+				}
+			}
+		} else if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) {
+			/* Estimate the direct illumination if this is requested */
 			Point2 *sampleArray;
 			Point2 sample;
 			int numLuminaireSamples = m_directSamples,
@@ -355,7 +387,7 @@ public:
 
 			Float weightLum, weightBSDF;
 	
-			if (rRec.depth > 1) {
+			if (rRec.depth > 1 || cacheQuery) {
 				/* This integrator is used recursively by another integrator.
 				   Be less accurate as this sample will not directly be observed. */
 				numBSDFSamples = numLuminaireSamples = 1;
@@ -459,10 +491,10 @@ public:
 					LiSurf += lRec.value * bsdfVal * weight;
 				}
 
-				if (!isDiffuse && (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance))
-					LiSurf += bsdfVal * Li(bsdfRay, rRec2) * weightBSDF;
+				if (!isDiffuse && (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) && !cacheQuery)
+					LiSurf += bsdfVal * m_parentIntegrator->Li(bsdfRay, rRec2) * weightBSDF;
 			}
-		} else if (!isDiffuse && rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) {
+		} else if (!isDiffuse && rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance && !cacheQuery) {
 			int numBSDFSamples = rRec.depth > 1 ? 1 : m_glossySamples;
 			Float weightBSDF;
 			Point2 *sampleArray;
@@ -489,7 +521,7 @@ public:
 					RadianceQueryRecord::ERadianceNoEmission);
 
 				RayDifferential bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);
-				LiSurf += bsdfVal * Li(bsdfRay, rRec2) * weightBSDF;
+				LiSurf += bsdfVal * m_parentIntegrator->Li(bsdfRay, rRec2) * weightBSDF;
 			}
 		}
 
@@ -500,6 +532,8 @@ public:
 		std::ostringstream oss;
 		oss << "PhotonMapIntegrator[" << endl
 			<< "  maxDepth = " << m_maxDepth << "," << endl
+			<< "  maxSpecularDepth = " << m_maxSpecularDepth << "," << endl
+			<< "  rrDepth = " << m_rrDepth << "," << endl
 			<< "  directSamples = " << m_directSamples << "," << endl
 			<< "  glossySamples = " << m_glossySamples << "," << endl
 			<< "  globalPhotons = " << m_globalPhotons << "," << endl
@@ -535,7 +569,7 @@ private:
 	Float m_causticLookupRadiusRel, m_causticLookupRadius;
 	Float m_invLuminaireSamples, m_invGlossySamples;
 	int m_granularity, m_directSamples, m_glossySamples;
-	int m_rrDepth, m_maxDepth;
+	int m_rrDepth, m_maxDepth, m_maxSpecularDepth;
 	bool m_gatherLocally, m_autoCancelGathering;
 };
 

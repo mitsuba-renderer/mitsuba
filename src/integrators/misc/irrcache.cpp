@@ -142,6 +142,7 @@ public:
 			if (!cClass->derivesFrom(MTS_CLASS(SampleIntegrator)))
 				Log(EError, "The sub-integrator must be derived from the class SampleIntegrator");
 			m_subIntegrator = static_cast<SampleIntegrator *>(child);
+			m_subIntegrator->setParent(this);
 		} else {
 			Integrator::addChild(name, child);
 		}
@@ -223,6 +224,7 @@ public:
 
 	Spectrum Li(const RayDifferential &ray, RadianceQueryRecord &rRec) const {
 		Intersection &its = rRec.its;
+
 		if (!m_direct && (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance))
 			rRec.type ^= RadianceQueryRecord::EDirectSurfaceRadiance;
 
