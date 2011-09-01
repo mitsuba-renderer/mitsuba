@@ -88,7 +88,9 @@ public:
 #elif MTS_USE_ELF_TLS == 1
 	inline static int getID() { return m_id; }
 #else
-	inline static int getID() { return getThread()->m_id; }
+	inline static int getID() { 
+		return getThread()->m_id;
+	}
 #endif
 
 	/// Return the name of this thread
@@ -116,9 +118,7 @@ public:
 	inline FileResolver *getFileResolver() { return m_fresolver; }
 
 	/// Return the current thread
-	inline static Thread *getThread() {
-		return m_self->get();
-	}
+	inline static Thread *getThread() { return m_self->get(); }
 
 	/// Is this thread still running?
 	inline bool isRunning() const { return m_running; }

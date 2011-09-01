@@ -20,9 +20,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-/* Precompute cosine/sine values for quick conversions
-   from quantized spherical coordinates to floating
-   point vectors. */
 Float Photon::m_cosTheta[256];
 Float Photon::m_sinTheta[256];
 Float Photon::m_cosPhi[256];
@@ -46,66 +43,61 @@ bool Photon::createPrecompTables() {
 }
 
 Photon::Photon(Stream *stream) {
-	stream->readSingleArray(pos, 3);
-#if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
-	power = Spectrum(stream);
-	phi = stream->readUChar();
-	theta = stream->readUChar();
-	phiN = stream->readUChar();
-	thetaN = stream->readUChar();
+	position = Point(stream);
+#if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
+	stream->read(data.power, 8);
 #else
-	stream->read(power, 8);
+	data.power = Spectrum(stream);
+	data.phi = stream->readUChar();
+	data.theta = stream->readUChar();
+	data.phiN = stream->readUChar();
+	data.thetaN = stream->readUChar();
 #endif
-	depth = stream->readUShort();
-	axis = stream->readUChar();
-	unused = 0;
+	data.depth = stream->readUShort();
+	flags = stream->readUChar();
 }
 
 Photon::Photon(const Point &p, const Normal &normal,
 			   const Vector &dir, const Spectrum &P,
 			   uint16_t _depth) {
-	if (P.isNaN()) 
+	if (!P.isValid()) 
 		SLog(EWarn, "Creating an invalid photon with power: %s", P.toString().c_str());
-
 	/* Possibly convert to single precision floating point
 	   (if Mitsuba is configured to use double precision) */
-	pos[0] = (float) p.x;
-	pos[1] = (float) p.y;
-	pos[2] = (float) p.z;
-	depth = _depth;
-	unused = 0;
-	axis = -1;
+	position = p;
+	data.depth = _depth;
+	flags = 0;
 
 	/* Convert the direction into an approximate spherical 
 	   coordinate format to reduce storage requirements */
-	theta = (uint8_t) std::min(255,
+	data.theta = (uint8_t) std::min(255,
 		(int) (std::acos(dir.z) * (256.0 / M_PI)));
 
 	int tmp = std::min(255,
 		(int) (std::atan2(dir.y, dir.x) * (256.0 / (2.0 * M_PI))));
 	if (tmp < 0)
-		phi = (uint8_t) (tmp + 256);
+		data.phi = (uint8_t) (tmp + 256);
 	else
-		phi = (uint8_t) tmp;
+		data.phi = (uint8_t) tmp;
 	
 	if (normal.isZero()) {
-		thetaN = phiN = 0;
+		data.thetaN = data.phiN = 0;
 	} else {
-		thetaN = (uint8_t) std::min(255,
+		data.thetaN = (uint8_t) std::min(255,
 			(int) (std::acos(normal.z) * (256.0 / M_PI)));
 		tmp = std::min(255,
 			(int) (std::atan2(normal.y, normal.x) * (256.0 / (2.0 * M_PI))));
 		if (tmp < 0)
-			phiN = (uint8_t) (tmp + 256);
+			data.phiN = (uint8_t) (tmp + 256);
 		else
-			phiN = (uint8_t) tmp;
+			data.phiN = (uint8_t) tmp;
 	}
 
-#if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
-	power = P;
-#else
+#if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
 	/* Pack the photon power into Greg Ward's RGBE format */
-	P.toRGBE(power);
+	P.toRGBE(data.power);
+#else
+	data.power = P;
 #endif
 }
 

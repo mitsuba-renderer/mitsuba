@@ -38,18 +38,17 @@ public:
 		m_photons.push_back(p);
 	}
 
-	inline size_t getPhotonCount() const {
+	inline size_t size() const {
 		return m_photons.size();
 	}
 	
 	inline size_t getParticleCount() const {
 		return m_particleIndices.size()-1;
 	}
-	
+
 	inline size_t getParticleIndex(size_t idx) const {
 		return m_particleIndices[idx];
 	}
-
 
 	inline void clear() {
 		m_photons.clear();
@@ -198,8 +197,8 @@ void GatherPhotonProcess::processResult(const WorkResult *wr, bool cancelled) {
 		++nParticles;
 		bool full = false;
 		for (size_t j=start; j<end; ++j) {
-			if (!m_photonMap->storePhoton(vec[j])) {
-				m_excess += vec.getPhotonCount() - j;
+			if (!m_photonMap->tryAppend(vec[j])) {
+				m_excess += vec.size() - j;
 				full = true;
 				break;
 			}
@@ -208,14 +207,14 @@ void GatherPhotonProcess::processResult(const WorkResult *wr, bool cancelled) {
 			break;
 	}
 	m_numShot += nParticles;
-	increaseResultCount(vec.getPhotonCount());
+	increaseResultCount(vec.size());
 	m_resultMutex->unlock();
 }
 
 ParallelProcess::EStatus GatherPhotonProcess::generateWork(WorkUnit *unit, int worker) {
 	/* Use the same approach as PBRT for auto canceling */
 	if (m_autoCancel && m_numShot > 500000
-			&& unsuccessful(m_photonCount, m_photonMap->getPhotonCount(), m_numShot)) {
+			&& unsuccessful(m_photonCount, m_photonMap->size(), m_numShot)) {
 		Log(EInfo, "Not enough photons could be collected, giving up");
 		return EFailure;
 	}

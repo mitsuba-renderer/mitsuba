@@ -67,15 +67,15 @@ void Medium::serialize(Stream *stream, InstanceManager *manager) const {
 
 std::string MediumSamplingRecord::toString() const {
 	std::ostringstream oss;
-	oss << "MediumSamplingRecord[" << std::endl
-		<< "  t = " << t << "," << std::endl
-		<< "  p = " << p.toString() << "," << std::endl
-		<< "  sigmaA = " << sigmaA.toString() << "," << std::endl
-		<< "  sigmaS = " << sigmaS.toString() << "," << std::endl
-		<< "  pdfFailure = " << pdfFailure << "," << std::endl
-		<< "  pdfSuccess = " << pdfSuccess << "," << std::endl
-		<< "  pdfSuccessRev = " << pdfSuccessRev << "," << std::endl
-		<< "  transmittance = " << transmittance.toString()
+	oss << "MediumSamplingRecord[" << endl
+		<< "  t = " << t << "," << endl
+		<< "  p = " << p.toString() << "," << endl
+		<< "  sigmaA = " << sigmaA.toString() << "," << endl
+		<< "  sigmaS = " << sigmaS.toString() << "," << endl
+		<< "  pdfFailure = " << pdfFailure << "," << endl
+		<< "  pdfSuccess = " << pdfSuccess << "," << endl
+		<< "  pdfSuccessRev = " << pdfSuccessRev << "," << endl
+		<< "  transmittance = " << transmittance.toString() << endl
 		<< "]";
 	return oss.str();
 }

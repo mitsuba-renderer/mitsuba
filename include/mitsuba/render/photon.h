@@ -20,41 +20,47 @@
 #define __PHOTON_H
 
 #include <mitsuba/core/serialization.h>
-#include <mitsuba/core/aabb.h>
+#include <mitsuba/core/kdtree.h>
+
+/**
+ * \brief Should Mitsuba use a left-balanced photon map?
+ *
+ * This saves some memory, but at a noticeable cost in query
+ * performance. The default is to build an unbalanced 
+ * photon map using the sliding midpoint rule.
+ */
+#define MTS_PHOTONMAP_LEFT_BALANCED 0
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Memory-efficient photon representation
- *
- * Requires 24 bytes when Mitsuba is compiled with single precision
- * and RGB-based color spectra.
- *
- * \ingroup librender
- */
-struct MTS_EXPORT_RENDER Photon {
-	friend class PhotonMap;
-public:
-	// ======================================================================
-	/// @{ \name Photon attributes
-	// ======================================================================
-
-	float pos[3];			//!< Photon position in single precision
-#if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
-	Spectrum power;         //!< Accurate spectral photon power representation
-#else
+/// Internal data record used by \ref Photon
+struct PhotonData {
+#if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
 	uint8_t power[4];		//!< Photon power stored in Greg Ward's RGBE format
+#else
+	Spectrum power;         //!< Accurate spectral photon power representation
 #endif
 	uint8_t theta;			//!< Discretized photon direction (\a theta component)
 	uint8_t phi;			//!< Discretized photon direction (\a phi component)
 	uint8_t thetaN;			//!< Discretized surface normal (\a theta component)
 	uint8_t phiN;			//!< Discretized surface normal (\a phi component)
 	uint16_t depth;			//!< Photon depth (number of preceding interactions)
-	uint8_t axis;			//!< Split axis in the associated KD-tree
-	uint8_t unused;			//!< Unused 8-bit field (needed for alignment)
+};
 
-	/// @}
-	// ======================================================================
-
+/** \brief Memory-efficient photon representation for use with
+ * \ref PointKDTree
+ *
+ * \ingroup librender
+ * \sa PhotonMap
+ */
+struct MTS_EXPORT_RENDER Photon : 
+#if MTS_PHOTONMAP_LEFT_BALANCED == 1
+	public LeftBalancedKDNode<Point, PhotonData> {
+#else
+	public SimpleKDNode<Point, PhotonData> {
+#endif
+	friend class PhotonMap;
+public:
 	/// Dummy constructor
 	inline Photon() { }
 
@@ -71,14 +77,7 @@ public:
 
 	/// Return the depth (in # of interactions)
 	inline int getDepth() const {
-		return depth;
-	}
-
-	/// Compute the squared distance between this photon and some point.
-	inline float distSquared(const float *q) const {
-		float dist1 = pos[0]-q[0], dist2 = pos[1]-q[1],
-		      dist3 = pos[2]-q[2];
-		return dist1*dist1 + dist2*dist2 + dist3*dist3;
+		return data.depth;
 	}
 
 	/**
@@ -88,9 +87,9 @@ public:
 	 */
 	inline Vector getDirection() const {
 		return Vector(
-			m_cosPhi[phi] * m_sinTheta[theta],
-			m_sinPhi[phi] * m_sinTheta[theta],
-			m_cosTheta[theta]
+			m_cosPhi[data.phi] * m_sinTheta[data.theta],
+			m_sinPhi[data.phi] * m_sinTheta[data.theta],
+			m_cosTheta[data.theta]
 		);
 	}
 
@@ -100,54 +99,48 @@ public:
 	 */
 	inline Normal getNormal() const {
 		return Normal(
-			m_cosPhi[phiN] * m_sinTheta[thetaN],
-			m_sinPhi[phiN] * m_sinTheta[thetaN],
-			m_cosTheta[thetaN]
+			m_cosPhi[data.phiN] * m_sinTheta[data.thetaN],
+			m_sinPhi[data.phiN] * m_sinTheta[data.thetaN],
+			m_cosTheta[data.thetaN]
 		);
-	}
-
-	/// Return the photon position as a vector
-	inline Point getPosition() const {
-		return Point(pos[0], pos[1], pos[2]);
 	}
 
 	/// Convert the photon power from RGBE to floating point
 	inline Spectrum getPower() const {
-#if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
-		return power;
-#else
+#if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
 		Spectrum result;
-		result.fromRGBE(power);
+		result.fromRGBE(data.power);
 		return result;
+#else
+		return data.power;
 #endif
 	}
 
 	/// Serialize to a binary data stream
 	inline void serialize(Stream *stream) const {
-		stream->writeSingleArray(pos, 3);
-		#if defined(DOUBLE_PRECISION) || SPECTRUM_SAMPLES > 3
-			power.serialize(stream);
-			stream->writeUChar(phi);
-			stream->writeUChar(theta);
-			stream->writeUChar(phiN);
-			stream->writeUChar(thetaN);
+		position.serialize(stream);
+		#if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
+			stream->write(data.power, 8);
 		#else
-			stream->write(power, 8);
+			data.power.serialize(stream);
+			stream->writeUChar(data.phi);
+			stream->writeUChar(data.theta);
+			stream->writeUChar(data.phiN);
+			stream->writeUChar(data.thetaN);
 		#endif
-		stream->writeUShort(depth);
-		stream->writeUChar(axis);
+		stream->writeUShort(data.depth);
+		stream->writeUChar(flags);
 	}
 
 	/// Return a string representation (for debugging)
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Photon[pos = [" << pos[0] << ", "
-			<< pos[1] << ", " << pos[2] << "]"
+		oss << "Photon[pos = " << getPosition().toString() << ","
 			<< ", power = " << getPower().toString()
 			<< ", direction = " << getDirection().toString()
 			<< ", normal = " << getNormal().toString()
-			<< ", axis = " << axis
-			<< ", depth = " << depth
+			<< ", axis = " << getAxis()
+			<< ", depth = " << getDepth()
 			<< "]";
 		return oss.str();
 	}
@@ -170,11 +163,6 @@ protected:
 	/// Initialize the precomputed lookup tables
 	static bool createPrecompTables();
 };
-
-#if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
-/* Compiler sanity check */
-BOOST_STATIC_ASSERT(sizeof(Photon) == 24);
-#endif
 
 MTS_NAMESPACE_END
 

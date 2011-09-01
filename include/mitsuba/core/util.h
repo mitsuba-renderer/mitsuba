@@ -160,20 +160,28 @@ template<typename T> inline T endianness_swap(T value) {
  * in linear time without requiring additional memory. This is based on
  * the fact that each permutation can be decomposed into a disjoint set
  * of permutations, which can then be applied individually.
+ *
+ * \param data
+ *     Pointer to the data that should be permuted
+ * \param perm
+ *     Input permutation vector having the same size as \c data. After
+ *     the function terminates, this vector will be set to the 
+ *     identity permutation.
  */
-template <typename T> void permute_inplace(T *values, std::vector<size_t> &perm) {
+template <typename DataType, typename IndexType> void permute_inplace(
+		DataType *data, std::vector<IndexType> &perm) {
 	for (size_t i=0; i<perm.size(); i++) {
 		if (perm[i] != i) {
 			/* The start of a new cycle has been found. Save
 			   the value at this position, since it will be
 			   overwritten */
-			size_t j = i;
-			T curval = values[i];
+			IndexType j = i;
+			DataType curval = data[i];
 
 			do {
 				/* Shuffle backwards */
-				size_t k = perm[j];
-				values[j] = values[k];
+				IndexType k = perm[j];
+				data[j] = data[k];
 
 				/* Also fix the permutations on the way */
 				perm[j] = j;
@@ -183,7 +191,7 @@ template <typename T> void permute_inplace(T *values, std::vector<size_t> &perm)
 			} while (perm[j] != i);
 
 			/* Fix the final position with the saved value */
-			values[j] = curval;
+			data[j] = curval; 
 			perm[j] = j;
 		}
 	}

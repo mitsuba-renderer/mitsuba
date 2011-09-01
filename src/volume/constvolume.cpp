@@ -21,6 +21,35 @@
 
 MTS_NAMESPACE_BEGIN
 
+/*!\plugin{constvolume}{Constant-valued volume data source}
+ * \parameters{
+ *     \parameter{value}{\Float\Or\Spectrum\Or\Vector}{
+ *       Specifies the value of the volume
+ *     }
+ * }
+ *
+ * This plugin provides a volume data source that is
+ * constant throughout its domain. Depending on how it is used,
+ * its value can either be a scalar, a color spectrum,
+ * or a 3D vector.\vspace{4mm}
+ *
+ * \begin{xml}[caption={Definition of a heterogeneous medium with homogeneous contents}]
+ * <medium type="heterogeneous">
+ *     <volume type="constvolume" name="density">
+ *         <float name="value" value="1"/>
+ *     </volume>
+ *     <volume type="constvolume" name="albedo">
+ *         <rgb name="value" value="0.9 0.9 0.7"/>
+ *     </volume>
+ *     <volume type="constvolume" name="orientation">
+ *         <vector name="value" x="0" y="1" z="0"/>
+ *     </volume>
+ *
+ *     <!-- .... remaining parameters for 
+ *          the 'heterogeneous' plugin .... -->
+ * </medium>
+ * \end{xml}
+ */
 class ConstantDataSource : public VolumeDataSource {
 public:
 	ConstantDataSource(const Properties &props) 

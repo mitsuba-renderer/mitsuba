@@ -391,7 +391,7 @@ void Thread::initializeOpenMP(size_t threadCount) {
 				#endif
 				counter++;
 			}
-			thread->m_running = true;
+			thread->m_running = false;
 			thread->m_thread = pthread_self();
 			thread->m_joinMutex = new Mutex();
 			thread->m_joined = false;
