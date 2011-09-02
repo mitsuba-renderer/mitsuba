@@ -31,9 +31,11 @@ PhotonMap::PhotonMap(size_t photonCount)
 
 PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager) 
     : m_kdtree(0, PhotonTree::ESlidingMidpoint) {
+	Assert(Photon::m_precompTableReady);
 	m_scale = (Float) stream->readFloat();
-	m_kdtree.setAABB(AABB(stream));
 	m_kdtree.resize(stream->readSize());
+	m_kdtree.setDepth(stream->readSize());
+	m_kdtree.setAABB(AABB(stream));
 	for (size_t i=0; i<m_kdtree.size(); ++i) 
 		m_kdtree[i] = Photon(stream);
 }
@@ -56,8 +58,9 @@ void PhotonMap::serialize(Stream *stream, InstanceManager *manager) const {
 	Log(EDebug, "Serializing a photon map (%.2f KB)", 
 		m_kdtree.size() * sizeof(Photon) / 1024.0f);
 	stream->writeFloat(m_scale);
-	m_kdtree.getAABB().serialize(stream);
 	stream->writeSize(m_kdtree.size());
+	stream->writeSize(m_kdtree.getDepth());
+	m_kdtree.getAABB().serialize(stream);
 	for (size_t i=0; i<m_kdtree.size(); ++i)
 		m_kdtree[i].serialize(stream);
 }

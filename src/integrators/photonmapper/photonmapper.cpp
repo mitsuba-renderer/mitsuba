@@ -79,7 +79,7 @@ public:
 			m_maxDepth = 128;
 		}
 
-		m_causticPhotonMapID = m_globalPhotonMapID = 0;
+		m_causticPhotonMapID = m_globalPhotonMapID = m_breID = 0;
 	}
 
 	/// Unserialize from a binary data stream
@@ -100,6 +100,7 @@ public:
 		m_volumeLookupSize = stream->readInt();
 		m_gatherLocally = stream->readBool();
 		m_autoCancelGathering = stream->readBool();
+		m_causticPhotonMapID = m_globalPhotonMapID = m_breID = 0;
 		configure();
 	}
 
@@ -109,6 +110,8 @@ public:
 			sched->unregisterResource(m_globalPhotonMapID);
 		if (m_causticPhotonMapID)
 			sched->unregisterResource(m_causticPhotonMapID);
+		if (m_breID)
+			sched->unregisterResource(m_breID);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {

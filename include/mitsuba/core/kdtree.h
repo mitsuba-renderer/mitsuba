@@ -318,6 +318,8 @@ public:
 	inline const AABBType &getAABB() const { return m_aabb; }
 	/// Return the depth of the constructed KD-tree
 	inline size_t getDepth() const { return m_depth; }
+	/// Set the depth of the constructed KD-tree (be careful with this)
+	inline void setDepth(size_t depth) { m_depth = depth; }
 
 	/// Construct the KD-tree hierarchy
 	void build(bool recomputeAABB = false) {
