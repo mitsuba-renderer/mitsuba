@@ -46,7 +46,7 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 
 	ref<Timer> timer = new Timer();
 	#pragma omp parallel for
-	for (uint32_t i=0; i<m_photonCount; ++i) {
+	for (int i=0; i<(int) m_photonCount; ++i) {
 		PhotonMap::SearchResult *results = resultsPerThread[mts_get_thread_num()];
 		const Photon &photon = (*pmap)[i];
 
