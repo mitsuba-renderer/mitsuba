@@ -4,7 +4,7 @@
 # extracts documentation that should go into the
 # reference manual
 
-import os, re
+import os, platform, re
 
 def findOrderID(filename):
 	f = open(filename)
@@ -54,29 +54,37 @@ def traverse(target, dirname, files):
 	for entry in ordering:
 		process(target, entry[1])
 
+# Wrap the walk function to make this work in python 2 and 3.
+pyVer = int(platform.python_version_tuple()[0])
+def walk(path, visit, arg):
+	if pyVer >= 3:
+		os.walk(path, visit, arg)
+	else:
+		os.path.walk(path, visit, arg)
+
 os.chdir(os.path.dirname(__file__))
 f = open('plugins_generated.tex', 'w')
 f.write('\section{Plugin reference}\n')
 f.write('\input{section_shapes}\n')
-os.path.walk('../src/shapes', traverse, f)
+walk('../src/shapes', traverse, f)
 f.write('\input{section_bsdf}\n')
-os.path.walk('../src/bsdfs', traverse, f)
+walk('../src/bsdfs', traverse, f)
 f.write('\input{section_textures}\n')
-os.path.walk('../src/textures', traverse, f)
+walk('../src/textures', traverse, f)
 f.write('\input{section_subsurface}\n')
-os.path.walk('../src/subsurface', traverse, f)
+walk('../src/subsurface', traverse, f)
 f.write('\input{section_media}\n')
-os.path.walk('../src/medium', traverse, f)
+walk('../src/medium', traverse, f)
 f.write('\input{section_phase}\n')
-os.path.walk('../src/phase', traverse, f)
+walk('../src/phase', traverse, f)
 f.write('\input{section_volumes}\n')
-os.path.walk('../src/volume', traverse, f)
+walk('../src/volume', traverse, f)
 f.write('\input{section_luminaires}\n')
-os.path.walk('../src/luminaires', traverse, f)
+walk('../src/luminaires', traverse, f)
 f.write('\input{section_integrators}\n')
-os.path.walk('../src/integrators', traverse, f)
+walk('../src/integrators', traverse, f)
 f.write('\input{section_films}\n')
-os.path.walk('../src/films', traverse, f)
+walk('../src/films', traverse, f)
 f.close()
 os.system('bibtex main.aux')
 os.system('pdflatex main.tex')
