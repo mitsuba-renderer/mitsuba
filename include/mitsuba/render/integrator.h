@@ -168,6 +168,14 @@ public:
 		ECameraRay                = ERadiance | EOpacity
 	};
 
+	/// Additional flags that can be specified in the \ref extra field
+	enum EExtraFlags {
+		/// This is a query by an irradiance cache
+		ECacheQuery    = 0x01,
+		/// This is a query by an adaptive integrator
+		EAdaptiveQuery = 0x02
+	};
+
 	/// Construct an invalid radiance query record
 	inline RadianceQueryRecord() 
 	 : type(0), scene(NULL), sampler(NULL), medium(NULL),

@@ -296,7 +296,8 @@ public:
 		LuminaireSamplingRecord lRec;
 		const Scene *scene = rRec.scene;
 
-		bool cacheQuery = (rRec.extra == 1);
+		bool cacheQuery = (rRec.extra & RadianceQueryRecord::ECacheQuery);
+		bool adaptiveQuery = (rRec.extra & RadianceQueryRecord::EAdaptiveQuery);
 
 		/* Perform the first ray intersection (or ignore if the 
 		   intersection has already been provided). */
@@ -384,7 +385,7 @@ public:
 
 			Float weightLum, weightBSDF;
 	
-			if (rRec.depth > 1 || cacheQuery) {
+			if (rRec.depth > 1 || cacheQuery || adaptiveQuery) {
 				/* This integrator is used recursively by another integrator.
 				   Be less accurate as this sample will not directly be observed. */
 				numBSDFSamples = numLuminaireSamples = 1;
@@ -507,7 +508,7 @@ public:
 				}
 			}
 		} else if (!isDiffuse && rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance && !cacheQuery) {
-			int numBSDFSamples = rRec.depth > 1 ? 1 : m_glossySamples;
+			int numBSDFSamples = (rRec.depth > 1 || adaptiveQuery) ? 1 : m_glossySamples;
 			Float weightBSDF;
 			Point2 *sampleArray;
 			Point2 sample;

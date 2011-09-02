@@ -115,6 +115,7 @@ public:
 			RayDifferential eyeRay;
 			sampler->generate();
 			rRec.newQuery(RadianceQueryRecord::ERadiance, camera->getMedium());
+			rRec.extra = RadianceQueryRecord::EAdaptiveQuery;
 			if (needsLensSample)
 				lensSample = rRec.nextSample2D();
 			if (needsTimeSample)
@@ -166,6 +167,8 @@ public:
 				block->snapshot(offset.x, offset.y);
 				while (!stop) {
 					rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
+					rRec.extra = RadianceQueryRecord::EAdaptiveQuery;
+
 					if (needsLensSample)
 						lensSample = rRec.nextSample2D();
 					if (needsTimeSample)
@@ -234,6 +237,8 @@ public:
 					block->snapshot(x, y);
 					while (!stop) {
 						rRec.newQuery(RadianceQueryRecord::ECameraRay, camera->getMedium());
+						rRec.extra = RadianceQueryRecord::EAdaptiveQuery;
+
 						if (needsLensSample)
 							lensSample = rRec.nextSample2D();
 						if (needsTimeSample)

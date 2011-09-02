@@ -110,13 +110,15 @@ public:
 		/* ==================================================================== */
 		/*                          Luminaire sampling                          */
 		/* ==================================================================== */
+		bool adaptiveQuery = (rRec.extra & RadianceQueryRecord::EAdaptiveQuery);
+
 		Point2 *sampleArray;
 		size_t numLuminaireSamples = m_luminaireSamples,
 			   numBSDFSamples = m_bsdfSamples;
 		Float fracLum = m_fracLum, fracBSDF = m_fracBSDF,
 		      weightLum = m_weightLum, weightBSDF = m_weightBSDF;
 
-		if (rRec.depth > 1) {
+		if (rRec.depth > 1 || adaptiveQuery) {
 			/* This integrator is used recursively by another integrator.
 			   Be less accurate as this sample will not directly be observed. */
 			numBSDFSamples = numLuminaireSamples = 1;

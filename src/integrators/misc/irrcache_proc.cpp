@@ -126,8 +126,8 @@ public:
 							entry.dist = std::numeric_limits<Float>::infinity();
 							rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission
 								| RadianceQueryRecord::EDistance, m_camera->getMedium());
+							rRec.extra = RadianceQueryRecord::ECacheQuery;
 							rRec.depth = 2;
-							rRec.extra = 1; // mark as irradiance cache query
 							entry.L = integrator->Li(RayDifferential(its.p, entry.d, 0.0f), rRec);
 							entry.dist = rRec.dist;
 							m_sampler->advance();
