@@ -352,7 +352,7 @@ public:
 
 		if (isDiffuse || cacheQuery) {
 			int maxDepth = m_maxDepth == -1 ? INT_MAX : (m_maxDepth-rRec.depth);
-			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)
+			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance && m_globalPhotonMap.get())
 				LiSurf += m_globalPhotonMap->estimateIrradiance(its.p,
 					its.shFrame.n, m_globalLookupRadius, maxDepth,
 					m_globalLookupSize) * bsdf->getDiffuseReflectance(its) * INV_PI;

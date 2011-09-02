@@ -30,7 +30,8 @@ PhotonMap::PhotonMap(size_t photonCount)
 }
 
 PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager) 
-    : m_kdtree(0, PhotonTree::ESlidingMidpoint) {
+    : SerializableObject(stream, manager), 
+	  m_kdtree(0, PhotonTree::ESlidingMidpoint) {
 	Assert(Photon::m_precompTableReady);
 	m_scale = (Float) stream->readFloat();
 	m_kdtree.resize(stream->readSize());
@@ -38,20 +39,6 @@ PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager)
 	m_kdtree.setAABB(AABB(stream));
 	for (size_t i=0; i<m_kdtree.size(); ++i) 
 		m_kdtree[i] = Photon(stream);
-}
-
-PhotonMap::~PhotonMap() {
-}
-
-std::string PhotonMap::toString() const {
-	std::ostringstream oss;
-	oss << "PhotonMap[" << endl
-		<< "  aabb = " << m_kdtree.getAABB().toString() << "," << endl
-		<< "  size = " << m_kdtree.size() << "," << endl
-		<< "  capacity = " << m_kdtree.capacity() << "," << endl
-		<< "  scale = " << m_scale << endl
-		<< "]";
-	return oss.str();
 }
 
 void PhotonMap::serialize(Stream *stream, InstanceManager *manager) const {
@@ -65,6 +52,20 @@ void PhotonMap::serialize(Stream *stream, InstanceManager *manager) const {
 		m_kdtree[i].serialize(stream);
 }
 
+PhotonMap::~PhotonMap() {
+}
+
+std::string PhotonMap::toString() const {
+	std::ostringstream oss;
+	oss << "PhotonMap[" << endl
+		<< "  size = " << m_kdtree.size() << "," << endl
+		<< "  capacity = " << m_kdtree.capacity() << "," << endl
+		<< "  aabb = " << m_kdtree.getAABB().toString() << "," << endl
+		<< "  depth = " << m_kdtree.getDepth() << "," << endl
+		<< "  scale = " << m_scale << endl
+		<< "]";
+	return oss.str();
+}
 void PhotonMap::dumpOBJ(const std::string &filename) {
 	std::ofstream os(filename.c_str());
 	os << "o Photons" << endl;
@@ -183,5 +184,5 @@ size_t PhotonMap::estimateRadianceRaw(const Intersection &its,
 	return count;
 }
 
-MTS_IMPLEMENT_CLASS_S(PhotonMap, false, Object)
+MTS_IMPLEMENT_CLASS_S(PhotonMap, false, SerializableObject)
 MTS_NAMESPACE_END

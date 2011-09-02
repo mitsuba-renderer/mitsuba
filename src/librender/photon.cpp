@@ -44,6 +44,8 @@ bool Photon::createPrecompTables() {
 
 Photon::Photon(Stream *stream) {
 	position = Point(stream);
+	if (!leftBalancedLayout)
+		setRightIndex(0, stream->readUInt());
 #if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
 	stream->read(data.power, 8);
 #else
@@ -56,6 +58,24 @@ Photon::Photon(Stream *stream) {
 	data.depth = stream->readUShort();
 	flags = stream->readUChar();
 }
+
+void Photon::serialize(Stream *stream) const {
+	position.serialize(stream);
+	if (!leftBalancedLayout)
+		stream->writeUInt(getRightIndex(0));
+	#if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
+		stream->write(data.power, 8);
+	#else
+		data.power.serialize(stream);
+		stream->writeUChar(data.phi);
+		stream->writeUChar(data.theta);
+		stream->writeUChar(data.phiN);
+		stream->writeUChar(data.thetaN);
+	#endif
+	stream->writeUShort(data.depth);
+	stream->writeUChar(flags);
+}
+
 
 Photon::Photon(const Point &p, const Normal &normal,
 			   const Vector &dir, const Spectrum &P,
@@ -100,5 +120,19 @@ Photon::Photon(const Point &p, const Normal &normal,
 	data.power = P;
 #endif
 }
+
+std::string Photon::toString() const {
+	std::ostringstream oss;
+	oss << "Photon[" << endl
+		<< "  pos = " << getPosition().toString() << "," << endl
+		<< "  power = " << getPower().toString() << "," << endl
+		<< "  direction = " << getDirection().toString() << "," << endl
+		<< "  normal = " << getNormal().toString() << "," << endl
+		<< "  axis = " << getAxis() << "," << endl
+		<< "  depth = " << getDepth() << endl
+		<< "]";
+	return oss.str();
+}
+	
 
 MTS_NAMESPACE_END

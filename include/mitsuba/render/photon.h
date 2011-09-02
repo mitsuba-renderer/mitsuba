@@ -117,34 +117,10 @@ public:
 	}
 
 	/// Serialize to a binary data stream
-	inline void serialize(Stream *stream) const {
-		position.serialize(stream);
-		#if defined(SINGLE_PRECISION) && SPECTRUM_SAMPLES == 3
-			stream->write(data.power, 8);
-		#else
-			data.power.serialize(stream);
-			stream->writeUChar(data.phi);
-			stream->writeUChar(data.theta);
-			stream->writeUChar(data.phiN);
-			stream->writeUChar(data.thetaN);
-		#endif
-		stream->writeUShort(data.depth);
-		stream->writeUChar(flags);
-	}
+	void serialize(Stream *stream) const;
 
 	/// Return a string representation (for debugging)
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "Photon[pos = " << getPosition().toString() << ","
-			<< ", power = " << getPower().toString()
-			<< ", direction = " << getDirection().toString()
-			<< ", normal = " << getNormal().toString()
-			<< ", axis = " << getAxis()
-			<< ", depth = " << getDepth()
-			<< "]";
-		return oss.str();
-	}
-	
+	std::string toString() const;
 protected:
 	// ======================================================================
 	/// @{ \name Precomputed lookup tables
