@@ -107,6 +107,7 @@ inline bool mts_isnan(double f) {
 }
 extern "C" {
 	extern MTS_EXPORT_CORE float nextafterf(float x, float y);
+	extern MTS_EXPORT_CORE double nextafter(double x, double y);
 };
 #elif defined(__clang__)
 inline bool mts_isnan(float f) {

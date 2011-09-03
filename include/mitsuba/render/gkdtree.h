@@ -40,6 +40,12 @@
 #define MTS_KD_BLOCKSIZE_KD  (512*1024/sizeof(KDNode))
 #define MTS_KD_BLOCKSIZE_IDX (512*1024/sizeof(uint32_t))
 
+/**
+ * \brief To avoid numerical issues, the size of the scene 
+ * bounding box is increased by this amount
+ */
+#define MTS_KD_AABB_EPSILON 1e-3f
+
 #if defined(MTS_KD_DEBUG)
 #define KDAssert(expr) SAssert(expr)
 #define KDAssertEx(expr, text) SAssertEx(expr, text)
@@ -1169,10 +1175,11 @@ protected:
 		/* Slightly enlarge the bounding box 
 		   (necessary e.g. when the scene is planar) */
 		m_tightAABB = aabb;
-		aabb.min -= (aabb.max-aabb.min) * Epsilon
-			+ vector_type(Epsilon);
-		aabb.max += (aabb.max-aabb.min) * Epsilon
-			+ vector_type(Epsilon);
+
+		const Float eps = MTS_KD_AABB_EPSILON;
+
+		aabb.min -= (aabb.max-aabb.min) * eps + vector_type(eps);
+		aabb.max += (aabb.max-aabb.min) * eps + vector_type(eps);
 
 		KDLog(EDebug, "Structural kd-tree statistics:");
 		KDLog(EDebug, "   Parallel work units         : " SIZE_T_FMT, 

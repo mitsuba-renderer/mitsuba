@@ -123,34 +123,26 @@ AABB Triangle::getClippedAABB(const Point *positions, const AABB &aabb) const {
 
 	AABB result;
 	for (int i=0; i<nVertices; ++i) {
-#if defined(SINGLE_PRECISION)
 		for (int j=0; j<3; ++j) {
 			/* Now this is really paranoid! */
 			double pos_d = vertices1[i][j];
-			float  pos_f = (float) pos_d;
-			float  pos_roundedDown, pos_roundedUp;
+			Float pos_f = (Float) pos_d;
+			Float pos_roundedDown, pos_roundedUp;
 
-			if (pos_f < pos_d) {
-				/* Float value is too small */
-				pos_roundedDown = pos_f;
-				pos_roundedUp = nextafterf(pos_f, 
-					std::numeric_limits<float>::infinity());
-			} else if (pos_f > pos_d) {
-				/* Float value is too large */
-				pos_roundedUp = pos_f;
-				pos_roundedDown = nextafterf(pos_f, 
-					-std::numeric_limits<float>::infinity());
-			} else {
-				/* Double value is exactly representable */
-				pos_roundedDown = pos_roundedUp = pos_f;
-			}
-
+#if defined(SINGLE_PRECISION)
+			pos_roundedUp = nextafterf(pos_f, 
+				std::numeric_limits<float>::infinity());
+			pos_roundedDown = nextafterf(pos_f, 
+				-std::numeric_limits<float>::infinity());
+#else
+			pos_roundedUp = nextafter(pos_f, 
+				std::numeric_limits<float>::infinity());
+			pos_roundedDown = nextafter(pos_f, 
+				-std::numeric_limits<float>::infinity());
+#endif
 			result.min[j] = std::min(result.min[j], pos_roundedDown);
 			result.max[j] = std::max(result.max[j], pos_roundedUp);
 		}
-#else
-		result.expandBy(vertices1[i]);
-#endif
 	}
 	result.clip(aabb);
 
