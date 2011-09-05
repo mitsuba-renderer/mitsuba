@@ -20,7 +20,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-std::ostream &operator<<(std::ostream &os, const ETransportQuantity &quantity) {
+std::ostream &operator<<(std::ostream &os, const ETransportMode &quantity) {
 	switch (quantity) {
 		case EImportance: os << "importance"; break;
 		case ERadiance:   os << "radiance"; break;

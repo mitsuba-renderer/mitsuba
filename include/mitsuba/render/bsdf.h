@@ -61,7 +61,7 @@ public:
 	 *      The transported quantity (\ref ERadiance or \ref EImportance)
 	 */
 	explicit inline BSDFQueryRecord(const Intersection &its, Sampler *sampler, 
-			ETransportQuantity quantity = ERadiance);
+			ETransportMode quantity = ERadiance);
 
 	/**
 	 * \brief Given a surface interaction an an incident/exitant direction 
@@ -81,7 +81,7 @@ public:
 	 *      The transported quantity (\ref ERadiance or \ref EImportance)
 	 */
 	inline BSDFQueryRecord(const Intersection &its, const Vector &wo,
-		ETransportQuantity quantity = ERadiance);
+		ETransportMode quantity = ERadiance);
 
 	/**
 	 * \brief Given a surface interaction an an incident/exitant direction 
@@ -104,7 +104,7 @@ public:
 	 */
 	inline BSDFQueryRecord(const Intersection &its, 
 		const Vector &wi, const Vector &wo,
-		ETransportQuantity quantity = ERadiance);
+		ETransportMode quantity = ERadiance);
 
 	/**
 	 * \brief Reverse the direction of light transport in the record
@@ -153,7 +153,7 @@ public:
 	 * This information is required for rendering with non-reciprocal 
 	 * BSDFs such as transmission through a dielectric material
 	 */
-	ETransportQuantity quantity;
+	ETransportMode quantity;
 
 	/**
 	 * \brief Bit mask containing the requested BSDF component types that 

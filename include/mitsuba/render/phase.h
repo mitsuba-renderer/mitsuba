@@ -52,7 +52,7 @@ struct MTS_EXPORT_RENDER PhaseFunctionQueryRecord {
 
 	/* Transported quantity (radiance or importance) -- required for 
 	   rendering with non-reciprocal phase functions */
-	ETransportQuantity quantity;
+	ETransportMode quantity;
 
 	/**
 	 * \brief Given a medium interaction and an incident direction, 
@@ -70,7 +70,7 @@ struct MTS_EXPORT_RENDER PhaseFunctionQueryRecord {
 	 */
 
 	inline PhaseFunctionQueryRecord(const MediumSamplingRecord &mRec,
-		const Vector &wi, ETransportQuantity quantity = ERadiance)
+		const Vector &wi, ETransportMode quantity = ERadiance)
 		: mRec(mRec), wi(wi), quantity(quantity) { }
 
 	/*
@@ -92,7 +92,7 @@ struct MTS_EXPORT_RENDER PhaseFunctionQueryRecord {
 	 *      The transported quantity (\ref ERadiance or \ref EImportance)
 	 */
 	inline PhaseFunctionQueryRecord(const MediumSamplingRecord &mRec,
-		const Vector &wi, const Vector &wo, ETransportQuantity quantity = ERadiance)
+		const Vector &wi, const Vector &wo, ETransportMode quantity = ERadiance)
 		: mRec(mRec), wi(wi),  wo(wo), quantity(quantity) { }
 
 	std::string toString() const;

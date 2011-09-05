@@ -21,24 +21,24 @@
 
 MTS_NAMESPACE_BEGIN
 	
-inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, Sampler *sampler, ETransportQuantity quantity)
+inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, Sampler *sampler, ETransportMode quantity)
 	: its(its), sampler(sampler), wi(its.wi), quantity(quantity),
 	typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
 
-inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wo, ETransportQuantity quantity)
+inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wo, ETransportMode quantity)
 	: its(its), sampler(NULL), wi(its.wi), wo(wo), quantity(quantity),
     typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
 	
-inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wi, const Vector &wo, ETransportQuantity quantity) 
+inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wi, const Vector &wo, ETransportMode quantity) 
   : its(its), sampler(NULL), wi(wi), wo(wo), quantity(quantity),
   typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
 
 void BSDFQueryRecord::reverse() {
 	std::swap(wo, wi);
-	quantity = (ETransportQuantity) (1-quantity);
+	quantity = (ETransportMode) (1-quantity);
 }
 
 inline bool Intersection::hasSubsurface() const {
