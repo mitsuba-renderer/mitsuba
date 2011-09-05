@@ -105,6 +105,7 @@ public:
 			m_its.dudx = m_its.dvdy = 0.01f;
 			m_its.dudy = m_its.dvdx = 0.00f;
 			m_its.shFrame = Frame(Normal(0, 0, 1));
+			m_isSymmetric = true;
 		}
 
 		boost::tuple<Vector, Float, EMeasure> generateSample() {
@@ -135,6 +136,29 @@ public:
 			Spectrum f = m_bsdf->eval(bRec, measure);
 			pdfVal = m_bsdf->pdf(bRec, measure);
 			Spectrum manual = f/pdfVal;
+
+
+			if (m_isSymmetric) {
+				/* Check for non-symmetry */
+				BSDFQueryRecord bRecRev(bRec);
+				bRecRev.reverse();
+				Spectrum fFwd = f;
+				Spectrum fRev = m_bsdf->eval(bRecRev, measure);
+				if (measure == ESolidAngle) {
+					fFwd /= std::abs(Frame::cosTheta(bRec.wo));
+					fRev /= std::abs(Frame::cosTheta(bRecRev.wo));
+				}
+				Float max = std::max(fFwd.max(), fRev.max());
+				if (max > 0) {
+					Float err = (fFwd-fRev).max() / max;
+					if (err > Epsilon) {
+						Log(EWarn, "Non-symmetry in %s: %s vs %s, %s", m_bsdf->toString().c_str(),
+							fFwd.toString().c_str(), fRev.toString().c_str(), bRec.toString().c_str());
+						m_isSymmetric = false;
+					}
+				}
+			}
+
 
 			if (!sampled.isValid() || !sampled2.isValid() || !manual.isValid()) {
 				Log(EWarn, "Oops: sampled=%s, sampled2=%s, manual=%s, sampledPDF=%f, "
@@ -205,6 +229,7 @@ public:
 		}
 
 		inline Float getLargestWeight() const { return m_largestWeight; }
+		inline bool isSymmetric() const { return m_isSymmetric; }
 	private:
 		Intersection m_its;
 		ref<const BSDF> m_bsdf;
@@ -213,6 +238,7 @@ public:
 		Vector m_wi;
 		int m_component;
 		Float m_largestWeight;
+		bool m_isSymmetric;
 	};
 
 	/// Adapter to use Phase functions in the chi-square test
@@ -430,8 +456,12 @@ public:
 				largestWeight = std::max(largestWeight, adapter.getLargestWeight());
 				++testCount;
 				progress->update(j+1);
+
+				if (!adapter.isSymmetric())
+					Log(EWarn, "****** BSDF is non-symmetric! ******");
 			}
 			Log(EInfo, "The largest encountered importance weight was = %.2f", largestWeight);
+
 #endif
 			largestWeight = 0;
 

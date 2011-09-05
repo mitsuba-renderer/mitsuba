@@ -29,8 +29,11 @@ MTS_NAMESPACE_BEGIN
  * \ingroup librender
  */
 enum ETransportQuantity {
-	ERadiance = 1,
-	EImportance = 2
+	/* Note to self: do not change enumeration values,
+	   some code depends on this. */
+
+	ERadiance = 0,
+	EImportance = 1
 };
 /**
  * \brief Specifies the measure associated with 

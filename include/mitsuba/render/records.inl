@@ -36,6 +36,11 @@ inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &w
   typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
 
+void BSDFQueryRecord::reverse() {
+	std::swap(wo, wi);
+	quantity = (ETransportQuantity) (1-quantity);
+}
+
 inline bool Intersection::hasSubsurface() const {
 	return shape->hasSubsurface();
 }

@@ -1,0 +1,2 @@
+Verify and potentially fix the symmetry of the following BSDFs: Hanrahan-Krueger, 
+Plastic, Roughplastic, Roughdielectric?, Roughconductor, Smoothcoating, Roughcoating

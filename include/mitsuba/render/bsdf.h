@@ -106,6 +106,15 @@ public:
 		const Vector &wi, const Vector &wo,
 		ETransportQuantity quantity = ERadiance);
 
+	/**
+	 * \brief Reverse the direction of light transport in the record
+	 *
+	 * This function essentially swaps \c wi and \c wo and adjusts 
+	 * \c quantity appropriately, so that non-symmetric scattering
+	 * models can be queried in the reverse direction.
+	 */
+	inline void reverse();
+
 	/// Return a string representation
 	std::string toString() const;
 public:

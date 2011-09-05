@@ -107,7 +107,7 @@ void ChiSquare::fill(
 			floorToInt(sphCoords.x * factor.x)), m_thetaBins-1);
 		int phiBin = std::min(std::max(0,
 			floorToInt(sphCoords.y * factor.y)), m_phiBins-1);
-m_table[thetaBin * m_phiBins + phiBin] += boost::get<1>(sample);
+		m_table[thetaBin * m_phiBins + phiBin] += boost::get<1>(sample);
 		if (boost::get<1>(sample) > 0 && boost::get<2>(sample) == EDiscrete)
 			discreteDirections.insert(boost::get<0>(sample));
 	}
