@@ -27,8 +27,8 @@ typedef union {
 typedef union {
   double value;
   struct {
-    u_int32_t lsw;
-    u_int32_t msw;
+    uint32_t lsw;
+    uint32_t msw;
   } parts;
 } ieee_double_shape_type;
 
