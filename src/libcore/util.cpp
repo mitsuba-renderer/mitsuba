@@ -757,15 +757,15 @@ Float fresnel(Float cosThetaI, Float extIOR, Float intIOR) {
 	if (cosThetaI < 0.0f)
 		std::swap(etaI, etaT);
 
-	/* Using Snell's law, calculate the sine of the angle
-	   between the transmitted ray and the surface normal */
-	Float sinThetaT = etaI / etaT * 
-		std::sqrt(std::max((Float) 0.0f, 1.0f - cosThetaI*cosThetaI));
+	/* Using Snell's law, calculate the squared sine of the
+	   angle between the normal and the transmitted ray */
+	Float eta = etaI / etaT,
+		  sinThetaTSqr = eta*eta * (1-cosThetaI*cosThetaI);
 
-	if (sinThetaT > 1.0f)
+	if (sinThetaTSqr > 1.0f)
 		return 1.0f;  /* Total internal reflection! */
 
-	Float cosThetaT = std::sqrt(1.0f - sinThetaT*sinThetaT);
+	Float cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
 
 	/* Finally compute the reflection coefficient */
 	return fresnelDielectric(std::abs(cosThetaI),
