@@ -87,11 +87,47 @@ namespace std {
 			return 1;
 		return 0;
 	}
+
+	inline void sincos(float theta, float *sin, float *cos) {
+		float sinValue = sinf(theta);
+		*sin = sinValue;
+		*cos = sqrtf(1.0f-sinValue*sinValue);
+	}
+
+	inline void sincos(double theta, double *sin, double *cos) {
+		double sinValue = sin(theta);
+		*sin = sinValue;
+		*cos = sqrt(1.0-sinValue*sinValue);
+	}
 #endif
 };
 using std::select2nd;
 using std::compose1;
-#endif	
+#endif
+
+namespace std {
+#if defined(_GNU_SOURCE)
+	inline void sincos(float theta, float *sin, float *cos) {
+		::sincosf(theta, sin, cos);
+	}
+
+	inline void sincos(double theta, double *sin, double *cos) {
+		::sincos(theta, sin, cos);
+	}
+#else
+	inline void sincos(float theta, float *sin, float *cos) {
+		float sinValue = sinf(theta);
+		*sin = sinValue;
+		*cos = sqrtf(1.0f-sinValue*sinValue);
+	}
+
+	inline void sincos(double theta, double *sin, double *cos) {
+		double sinValue = sin(theta);
+		*sin = sinValue;
+		*cos = sqrt(1.0-sinValue*sinValue);
+	}
+#endif
+};
 
 #if defined(WIN32)
 inline bool mts_isnan(float f) {

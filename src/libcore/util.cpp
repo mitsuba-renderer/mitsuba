@@ -586,60 +586,56 @@ void latinHypercube(Random *random, Float *dest, size_t nSamples, size_t nDim) {
 
 
 Vector sphericalDirection(Float theta, Float phi) {
-	Float sinTheta = std::sin(theta);
+	Float sinTheta, cosTheta, sinPhi, cosPhi;
+
+	std::sincos(theta, &sinTheta, &cosTheta);
+	std::sincos(phi, &sinPhi, &cosPhi);
+
 	return Vector(
-		sinTheta * std::cos(phi),
-		sinTheta * std::sin(phi),
-		std::cos(theta)
+		sinTheta * cosPhi,
+		sinTheta * sinPhi,
+		cosTheta
 	);
 }
 
 Vector squareToSphere(const Point2 &sample) {
 	Float z = 1.0f - 2.0f * sample.y;
-	Float r = 1.0f - z * z;
-	r = std::sqrt(std::max((Float) 0, r));
-	Float phi = 2.0f * M_PI * sample.x;
-	return Vector(r * std::cos(phi), r * std::sin(phi), z);
+	Float r = std::sqrt(std::max((Float) 0.0f, 1.0f - z*z));
+	Float sinPhi, cosPhi;
+	std::sincos(2.0f * M_PI * sample.x, &sinPhi, &cosPhi);
+	return Vector(r * cosPhi, r * sinPhi, z);
 }
 
 Vector squareToHemisphere(const Point2 &sample) {
-	Float phi = 2.0f * M_PI * sample.x;
-	Float r2 = sample.y;
-	Float tmp = std::sqrt(1-std::min((Float) 1, r2*r2));
+	Float z = sample.y;
+	Float tmp = std::sqrt(std::min((Float) 0, 1-z*z));
 
-	return Vector(
-		std::cos(phi) * tmp,
-		std::sin(phi) * tmp,
-		r2
-	);
+	Float sinPhi, cosPhi;
+	std::sincos(2.0f * M_PI * sample.x, &sinPhi, &cosPhi);
+
+	return Vector(cosPhi * tmp, sinPhi * tmp, z);
 }
 
 Vector squareToHemispherePSA(const Point2 &sample) {
-	Float r = std::sqrt(sample.x);
-	Float phi = 2.0f * M_PI * sample.y;
-	Float dirX = r * std::cos(phi);
-	Float dirY = r * std::sin(phi);
-	Float z = std::sqrt(1 - std::min((Float) 1, dirX*dirX + dirY*dirY));
+	Point2 p = squareToDiskConcentric(sample);
+	Float z = std::sqrt(std::max((Float) 0, 
+		1.0f - p.x*p.x - p.y*p.y));
 
-	if (EXPECT_NOT_TAKEN(z == 0)) {
-		/* Guard against numerical imprecisions */
-		return normalize(Vector(
-			dirX, dirY, Epsilon));
-	}
+	/* Guard against numerical imprecisions */
+	if (EXPECT_NOT_TAKEN(z == 0))
+		z = 1e-10f;
 
-	return Vector(
-		dirX, dirY, z
-	);
+	return Vector(p.x, p.y, z);
 }
 
 Point2 squareToDisk(const Point2 &sample) {
 	Float r = std::sqrt(sample.x);
-	Float phi = 2.0f * M_PI * sample.y;
-	Float dirX = r * std::cos(phi);
-	Float dirY = r * std::sin(phi);
+	Float sinPhi, cosPhi;
+	std::sincos(2.0f * M_PI * sample.y, &sinPhi, &cosPhi);
 
 	return Point2(
-		dirX, dirY
+		cosPhi * r,
+		sinPhi * r
 	);
 }
 
@@ -687,10 +683,10 @@ Point2 squareToDiskConcentric(const Point2 &sample) {
 		else 
 			coords = Point2(-r2, (M_PI/4.0f) * (6.0f - r1/r2));
 	}
-	return Point2(
-		coords.x*std::cos(coords.y),
-		coords.x*std::sin(coords.y)
-	);
+
+	Point2 result;
+	std::sincos(coords.y, &result.y, &result.x);
+	return result*coords.x;
 }
 
 Float squareToConePdf(Float cosCutoff) {
@@ -706,12 +702,11 @@ Vector squareToCone(Float cosCutoff, const Point2 &sample) {
 }
 
 Point2 squareToStdNormal(const Point2 &sample) {
-	Float tmp1 = std::sqrt(-2 * std::log(1-sample.x)),
-		  tmp2 = 2 * M_PI * sample.y;
-	return Point2(
-		tmp1 * std::cos(tmp2),
-		tmp1 * std::sin(tmp2)
-	);
+	Float r   = std::sqrt(-2 * std::log(1-sample.x)),
+		  phi = 2 * M_PI * sample.y;
+	Point2 result;
+	std::sincos(phi, &result.y, &result.x);
+	return result * r;
 }
 
 Float lanczosSinc(Float t, Float tau) {

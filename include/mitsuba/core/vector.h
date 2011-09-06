@@ -49,7 +49,7 @@ template <typename T> struct TVector2 {
 #if !defined(MTS_DEBUG_UNINITIALIZED)
 	TVector2() { }
 #else
-	TVector2() { x = y = std::numeric_limits<double>::quiet_NaN(); }
+	TVector2() { x = y = std::numeric_limits<T>::quiet_NaN(); }
 #endif
 
 	/// Initialize the vector with the specified X and Z components
@@ -241,7 +241,7 @@ template <typename T> struct TVector3 {
 #if !defined(MTS_DEBUG_UNINITIALIZED)
 	TVector3() { }
 #else
-	TVector3() { x = y = z = std::numeric_limits<double>::quiet_NaN(); }
+	TVector3() { x = y = z = std::numeric_limits<T>::quiet_NaN(); }
 #endif
 
 	/// Initialize the vector with the specified X, Y and Z components
@@ -447,7 +447,7 @@ template <typename T> struct TVector4 {
 #if !defined(MTS_DEBUG_UNINITIALIZED)
 	TVector4() { }
 #else
-	TVector4() { x = y = z = w = std::numeric_limits<double>::quiet_NaN(); }
+	TVector4() { x = y = z = w = std::numeric_limits<T>::quiet_NaN(); }
 #endif
 
 	/// Initialize the vector with the specified X, Y and Z components

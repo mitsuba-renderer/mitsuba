@@ -28,8 +28,9 @@ MTS_NAMESPACE_BEGIN
  * \brief Three-dimensional normal data structure
  *
  * Internally represented using floating point numbers of the chosen 
- * compile-time precision. The main difference in comparison to <tt>TVector3&lt;Float&gt;</tt>
- * is in how instances of <tt>Normal</tt> are treated by linear transformations.
+ * compile-time precision. The main difference of this data structure
+ * when compared to \ref TVector3<Float> is in how instances of 
+ * \ref Normal are treated by linear transformations.
  *
  * \ingroup libcore
  * \ingroup libpython

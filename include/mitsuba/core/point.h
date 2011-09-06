@@ -50,7 +50,7 @@ template <typename T> struct TPoint2 {
 #if !defined(MTS_DEBUG_UNINITIALIZED)
 	TPoint2() { }
 #else
-	TPoint2() { x = y = std::numeric_limits<double>::quiet_NaN(); }
+	TPoint2() { x = y = std::numeric_limits<T>::quiet_NaN(); }
 #endif
 
 	/// Initialize the point with the specified X, Y and Z components
@@ -243,7 +243,7 @@ template <typename T> struct TPoint3 {
 #if !defined(MTS_DEBUG_UNINITIALIZED)
 	TPoint3() { }
 #else
-	TPoint3() { x = y = z = std::numeric_limits<double>::quiet_NaN(); }
+	TPoint3() { x = y = z = std::numeric_limits<T>::quiet_NaN(); }
 #endif
 
 	/// Initialize the point with the specified X, Y and Z components
@@ -440,7 +440,7 @@ template <typename T> struct TPoint4 {
 #if !defined(MTS_DEBUG_UNINITIALIZED)
 	TPoint4() { }
 #else
-	TPoint4() { x = y = z = w = std::numeric_limits<double>::quiet_NaN(); }
+	TPoint4() { x = y = z = w = std::numeric_limits<T>::quiet_NaN(); }
 #endif
 
 	/// Initialize the point with the specified X, Y and Z components
