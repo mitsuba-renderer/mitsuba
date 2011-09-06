@@ -478,6 +478,26 @@ extern MTS_EXPORT_CORE Float fresnel(Float cosThetaI, Float extIOR,
 		Float intIOR);
 
 /**
+ * \brief Calculates the diffuse unpolarized fresnel reflectance of
+ * a dielectric material. 
+ *
+ * This value quantifies what fraction of completely diffuse incident 
+ * illumination will be reflected by a dielectric material on average.
+ *
+ * \param eta
+ *      Relative refraction coefficient, i.e. etaT/etaI
+ * \param fast
+ *      Compute an approximate value? If set to \c true, the 
+ *      implementation will use a polynomial approximation with
+ *      a max relative error of ~0.5% on the interval 0.5 < \c eta < 2.
+ *      When \c fast=false, the code will use Gauss-Lobatto quadrature 
+ *      to compute the diffuse reflectance more accurately, and for
+ *      a wider range of refraction coefficients, but at a cost
+ *      in terms of performance.
+ */
+extern MTS_EXPORT_CORE Float diffuseFresnelReflectance(Float eta, bool fast = false);
+
+/**
  * \brief Calculates the unpolarized fresnel reflection coefficient on
  * an interface to a conductor.
  *

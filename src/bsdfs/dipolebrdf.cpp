@@ -76,8 +76,6 @@ public:
 
 	Float evalFdr(Float eta) const {
 		if (eta > 1) {
-			/* Average reflectance due to mismatched indices of refraction
-			 * at the boundary - [Groenhuis et al. 1983] */
 			return  -1.440f / (eta * eta) + 0.710f / eta + 0.668f + 0.0636f * eta;
 		} else if (eta < 1) {
 			/* Average reflectance due to mismatched indices of refraction
