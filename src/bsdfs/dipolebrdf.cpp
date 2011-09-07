@@ -78,8 +78,6 @@ public:
 		if (eta > 1) {
 			return  -1.440f / (eta * eta) + 0.710f / eta + 0.668f + 0.0636f * eta;
 		} else if (eta < 1) {
-			/* Average reflectance due to mismatched indices of refraction
-			 * at the boundary - [Egan et al. 1973] */
 			return  -0.4399f + 0.7099f / eta - 0.3319f / (eta * eta)
 					+ 0.0636f / (eta * eta * eta);
 		} else {
@@ -107,11 +105,10 @@ public:
 		m_usesRayDifferentials = m_sigmaS->usesRayDifferentials()
 			|| m_sigmaA->usesRayDifferentials();
 
-		/* relative index of refraction */
-		const Float eta = m_intIOR / m_extIOR;
+		/* Numerically approximate the diffuse Fresnel reflectance */
+		const Float Fdr = fresnelDiffuse(m_extIOR / m_intIOR, false);
 
-		/* Approximate DipoleBRDF boundary condition term */
-		const Float Fdr = evalFdr(eta);
+		/* Compute the extrapolation distance */
 		m_A = (1 + Fdr) / (1 - Fdr);
 
 		BSDF::configure();

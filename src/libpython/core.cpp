@@ -1061,6 +1061,12 @@ void export_core() {
 		.staticmethod("glOrthographic")
 		.staticmethod("fromFrame");
 
+	/* Functions from utility.h */
+	bp::def("fresnel", &fresnel);
+	bp::def("fresnelDielectric", &fresnelDielectric);
+	bp::def("fresnelConductor", &fresnelConductor, BP_RETURN_VALUE);
+	bp::def("fresnelDiffuseReflectance", &fresnelDiffuseReflectance);
+
 	bp::detail::current_scope = oldScope;
 }
 

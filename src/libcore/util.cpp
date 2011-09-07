@@ -17,6 +17,8 @@
 */
 
 #include <mitsuba/core/random.h>
+#include <mitsuba/core/quad.h>
+#include <boost/bind.hpp>
 #include <stdarg.h>
 #include <iomanip>
 #include <errno.h>
@@ -584,7 +586,6 @@ void latinHypercube(Random *random, Float *dest, size_t nSamples, size_t nDim) {
 	}
 }
 
-
 Vector sphericalDirection(Float theta, Float phi) {
 	Float sinTheta, cosTheta, sinPhi, cosPhi;
 
@@ -727,6 +728,9 @@ Float lanczosSinc(Float t, Float tau) {
 	by Paul S. Heckbert. */
 Float fresnelDielectric(Float cosThetaI, Float cosThetaT, 
 						Float etaI, Float etaT) {
+	if (etaI == etaT)
+		return 0.0f;
+
 	Float Rs = (etaI * cosThetaI - etaT * cosThetaT)
 			/ (etaI * cosThetaI + etaT * cosThetaT);
 	Float Rp = (etaT * cosThetaI - etaI * cosThetaT)
@@ -770,6 +774,63 @@ Float fresnel(Float cosThetaI, Float extIOR, Float intIOR) {
 	/* Finally compute the reflection coefficient */
 	return fresnelDielectric(std::abs(cosThetaI),
 		cosThetaT, etaI, etaT);
+}
+
+static Float fresnelDiffuseIntegrand(Float eta, Float xi) {
+	if (eta > 1)
+		return fresnel(std::sqrt(xi), 1, eta);
+	else
+		return fresnel(std::sqrt(xi), 1/eta, 1);
+}
+
+Float fresnelDiffuseReflectance(Float eta, bool fast) {
+	if (fast) {
+		/* Fast mode: the following code approximates the
+		 * diffuse Frensel reflectance for the eta<1 and 
+		 * eta>1 cases. An evalution of the accuracy led
+		 * to the following scheme, which cherry-picks
+		 * fits from two papers where they are best.
+		 */
+		if (eta < 1) {
+			/* Fit by Egan and Hilgeman (1973). Works
+			   reasonably well for "normal" IOR values (<2).
+	
+			   Max rel. error in 1.0 - 1.5 : 0.1%
+			   Max rel. error in 1.5 - 2   : 0.6%
+			   Max rel. error in 2.0 - 5   : 9.5%
+			*/
+			return -1.4399f * (eta * eta) 
+				  + 0.7099f * eta 
+				  + 0.6681f 
+				  + 0.0636f / eta;
+		} else {
+			/* Fit by d'Eon and Irving (2011)
+			 *
+			 * Maintains a good accuracy even for 
+			 * unrealistic IOR values.
+			 *
+			 * Max rel. error in 1.0 - 2.0   : 0.1%
+			 * Max rel. error in 2.0 - 10.0  : 0.2%
+			 */
+			Float invEta = 1.0f / eta,
+				  invEta2 = invEta*invEta,
+				  invEta3 = invEta2*invEta,
+				  invEta4 = invEta3*invEta,
+				  invEta5 = invEta4*invEta;
+
+			return 0.919317f - 3.4793f * invEta 
+				 + 6.75335f * invEta2
+				 - 7.80989f * invEta3 
+				 + 4.98554f * invEta4 
+				 - 1.36881f * invEta5;
+		}
+	} else {
+		GaussLobattoIntegrator quad(1024, 0, 1e-5f);
+		return quad.integrate(
+			boost::bind(&fresnelDiffuseIntegrand, eta, _1), 0, 1);
+	}
+
+	return 0.0f;
 }
 
 Float radicalInverse(int b, size_t i) {

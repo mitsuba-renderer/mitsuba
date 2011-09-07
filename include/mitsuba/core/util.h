@@ -464,6 +464,20 @@ extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI,
 		Float cosThetaT, Float etaI, Float etaT);
 
 /**
+ * \brief Calculates the unpolarized fresnel reflection coefficient on
+ * an interface to a conductor.
+ *
+ * \param cosThetaI
+ * 		Cosine of the angle between the normal and the incident ray
+ * \param eta
+ * 		Real refractive index (wavelength-dependent)
+ * \param k
+ * 		Imaginary refractive index (wavelength-dependent)
+ */
+extern MTS_EXPORT_CORE Spectrum fresnelConductor(Float cosThetaI, 
+		const Spectrum &eta, const Spectrum &k);
+
+/**
  * \brief Calculates the unpolarized fresnel reflection coefficient for a 
  * dielectric material. Handles incidence from either sides.
  *
@@ -479,7 +493,7 @@ extern MTS_EXPORT_CORE Float fresnel(Float cosThetaI, Float extIOR,
 
 /**
  * \brief Calculates the diffuse unpolarized fresnel reflectance of
- * a dielectric material. 
+ * a dielectric material (sometimes referred to as "Fdr"). 
  *
  * This value quantifies what fraction of completely diffuse incident 
  * illumination will be reflected by a dielectric material on average.
@@ -495,21 +509,8 @@ extern MTS_EXPORT_CORE Float fresnel(Float cosThetaI, Float extIOR,
  *      a wider range of refraction coefficients, but at a cost
  *      in terms of performance.
  */
-extern MTS_EXPORT_CORE Float diffuseFresnelReflectance(Float eta, bool fast = false);
-
-/**
- * \brief Calculates the unpolarized fresnel reflection coefficient on
- * an interface to a conductor.
- *
- * \param cosThetaI
- * 		Cosine of the angle between the normal and the incident ray
- * \param eta
- * 		Real refractive index (wavelength-dependent)
- * \param k
- * 		Imaginary refractive index (wavelength-dependent)
- */
-extern MTS_EXPORT_CORE Spectrum fresnelConductor(Float cosThetaI, 
-		const Spectrum &eta, const Spectrum &k);
+extern MTS_EXPORT_CORE Float fresnelDiffuseReflectance(
+	Float eta, bool fast = false);
 
 /*! @} */
 
