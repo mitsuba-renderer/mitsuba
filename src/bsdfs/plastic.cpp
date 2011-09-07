@@ -56,7 +56,7 @@ MTS_NAMESPACE_BEGIN
  * of the illumination is specularly reflected at the material
  * boundary, which results in a sharp reflection in the mirror direction.
  * The remaining illumination refracts into the material, where it 
- * scatters from the diffuse base layer. While some of the diffuse
+ * scatters from the diffuse base layer. While some of the diffusely 
  * scattered illumination is able to directly refract outwards again, 
  * the remainder is reflected from the interior side of the dielectric boundary 
  * and will in fact remain trapped inside the material for some number of 
@@ -66,21 +66,37 @@ MTS_NAMESPACE_BEGIN
  * out the correct form of the model without ever having to spend
  * computational resources on the potentially large number of 
  * internal scattering events.
+ 
+ * Since it is simple, realistic, and fast, this model is often a better choice
+ * than the \pluginref{phong}, \pluginref{ward}, and \pluginref{roughplastic}
+ * plugins when rendering smooth plastic-like materials. 
+ *
+ *
+ * \renderings{
+ *     \medrendering{Diffuse textured rendering}{bsdf_plastic_diffuse}
+ *     \medrendering{Plastic, \code{preserveColors=true}}{bsdf_plastic_preserve}
+ *     \medrendering{Plastic, \code{preserveColors=false}}{bsdf_plastic_nopreserve}
+ *     \caption{
+ *        \label{fig:plastic-preservecolors}
+ *        When asked to do so, this model can account for subtle color shifts due
+ *        to internal scattering processes. The above images show a textured
+ *        object first rendered using \pluginref{diffuse}, then 
+ *        \pluginref{plastic} with the default parameters, and finally using
+ *        \pluginref{plastic} and support for color shifts.
+ *     }
+ * }
  *
  * Note that due to the internal scattering, the diffuse color of the 
  * material is in practice slightly different from the color of the 
  * base layer on its own---in particular, the material color will tend to shift towards 
- * higher saturation. Since this can be counter-intuitive when using bitmap 
- * textures for the base layer, these color shifts are disabled by default. Specify
- * \code{preserveColors=false} to enable them.
+ * darker colors with higher saturation. Since this can be counter-intuitive when 
+ * using bitmap textures, these color shifts are disabled by default. Specify
+ * the parameter \code{preserveColors=false} to enable them. 
+ * \figref{plastic-preservecolors} illustrates this effect.
  *
  * Similar to the \pluginref{dielectric} plugin, this model allows to specify
  * IOR values either numerically, or based on a list of known materials (see 
  * \tblref{dielectric-iors} for an overview). 
- *
- * Since it is simple, realistic, and fast, this model is often a better choice
- * than the \pluginref{phong}, \pluginref{ward}, and \pluginref{roughplastic}
- * plugins when rendering smooth plastic-like materials. 
  *
  * Note that this plugin is quite similar to what one would get by applying the
  * \pluginref{coating} plugin to the \pluginref{diffuse} material. The main
@@ -113,7 +129,7 @@ public:
 		m_diffuseReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
 
-		m_preserveColors = props.getBoolean("preserveColors", false);
+		m_preserveColors = props.getBoolean("preserveColors", true);
 
 		m_specularSamplingWeight = 0.0f;
 	}
@@ -144,6 +160,9 @@ public:
 			  sAvg = m_specularReflectance->getAverage().getLuminance();
 
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
+		
+		Float eta = m_extIOR / m_intIOR;
+		m_eta2 = eta*eta;
 
 		m_usesRayDifferentials = 
 			m_specularReflectance->usesRayDifferentials() ||
@@ -217,7 +236,7 @@ public:
 					diff /= 1 - m_fdr;
 				else
 					diff /= Spectrum(1) - m_fdr*diff;
-				return diff * (INV_PI * Frame::cosTheta(bRec.wo) * (1-Fr) * (1-Fr2));
+				return diff * (INV_PI * Frame::cosTheta(bRec.wo) * m_eta2 * (1-Fr) * (1-Fr2));
 			}
 		}
 
@@ -292,7 +311,7 @@ public:
 				else
 					diff /= Spectrum(1) - m_fdr*diff;
 
-				return diff * ((1-Fr) * (1-Fr2) / (1-probSpecular));
+				return diff * (m_eta2 * (1-Fr) * (1-Fr2) / (1-probSpecular));
 			}
 		} else if (hasSpecular) {
 			bRec.sampledComponent = 0;
@@ -311,8 +330,7 @@ public:
 			else
 				diff /= Spectrum(1) - m_fdr*diff;
 
-
-			return diff * (1-Fr) * (1-Fr2);
+			return diff * (m_eta2 * (1-Fr) * (1-Fr2));
 		}
 	}
 
@@ -357,7 +375,7 @@ public:
 
 				pdf = (1-probSpecular) * Frame::cosTheta(bRec.wo) * INV_PI;
 	
-				return diff * ((1-Fr) * (1-Fr2) / (1-probSpecular));
+				return diff * (m_eta2 * (1-Fr) * (1-Fr2) / (1-probSpecular));
 			}
 		} else if (hasSpecular) {
 			bRec.sampledComponent = 0;
@@ -368,12 +386,8 @@ public:
 		} else {
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDiffuseReflection;
-			Float Fr2 = fresnel(Frame::cosTheta(bRec.wo), m_extIOR, m_intIOR);
-
-			if (Fr == 1.0f) /* Total internal reflection */
-				return Spectrum(0.0f);
-				
 			bRec.wo = squareToHemispherePSA(sample);
+			Float Fr2 = fresnel(Frame::cosTheta(bRec.wo), m_extIOR, m_intIOR);
 
 			pdf = Frame::cosTheta(bRec.wo) * INV_PI;
 
@@ -383,7 +397,7 @@ public:
 			else
 				diff /= Spectrum(1) - m_fdr*diff;
 
-			return diff * (1-Fr) * (1-Fr2);
+			return diff * (m_eta2 * (1-Fr) * (1-Fr2));
 		}
 	}
 
@@ -407,7 +421,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	Float m_intIOR, m_extIOR, m_fdr;
+	Float m_intIOR, m_extIOR, m_fdr, m_eta2;
 	ref<Texture> m_diffuseReflectance;
 	ref<Texture> m_specularReflectance;
 	Float m_specularSamplingWeight;

@@ -118,8 +118,15 @@
 		<float name="alphaV" value="0.3"/>
 	</bsdf>
 
-	<!-- Test the smooth plastic model -->
-	<bsdf type="plastic"/>
+	<!-- Test the smooth plastic model with preserveColors=false -->
+	<bsdf type="plastic">
+		<boolean name="preserveColors" value="false"/>
+	</bsdf>
+	
+	<!-- Test the smooth plastic model with preserveColors=true -->
+	<bsdf type="plastic">
+		<boolean name="preserveColors" value="true"/>
+	</bsdf>
 
 	<!-- Test the rough plastic model with the 
 		 Beckmann microfacet distribution -->
