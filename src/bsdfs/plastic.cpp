@@ -30,19 +30,16 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{polypropylene} / 1.49}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
- *     \parameter{preserveColors}{\Boolean}{
- *      By default, this implementation accounts for light that undergoes any number 
- *      of internal reflections from the dielectric material boundary before exiting, which
- *      potentially causes the diffuse component to shift towards more saturated colors.
- *      While realistic, this behavior might not always be desirable. In that case, set 
- *      this parameter to \code{true}.
- *      \default{\code{false}}
- *     }
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the specular reflection component. Note that for physical 
  *         realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the diffuse reflection component\default{0.5}}
+ *     \parameter{preserveColors}{\Boolean}{
+ *      Account for color shifts due to internal scattering? See the main text
+ *      for a detailed description.\default{Don't account for them and
+ *      preserve the colors, i.e. \code{true}}
+ *     }
  * }
  *
  * \renderings{
@@ -51,17 +48,48 @@ MTS_NAMESPACE_BEGIN
  *         {bsdf_plastic_shiny}
  * }
  *
- * This plugin describes a perfectly smooth plastic-like dielectric material
- * with internal scattering. The model interpolates between ideally specular 
- * and ideally diffuse reflection based on the Fresnel reflectance (i.e. it 
- * does so in a way that depends on the angle of incidence). Similar to the 
- * \pluginref{dielectric} plugin, IOR values can either be specified 
- * numerically, or based on a list of known materials (see 
+ * This plugin simulates a realistic smooth plastic-like material with internal
+ * scattering. Internally, this is modeled as a diffuse base layer with a 
+ * dielectric material boundary. 
+ *
+ * Given some illumination that is incident on such a material, a portion
+ * of the illumination is specularly reflected at the material
+ * boundary, which results in a sharp reflection in the mirror direction.
+ * The remaining illumination refracts into the material, where it 
+ * scatters from the diffuse base layer. While some of the diffuse
+ * scattered illumination is able to directly refract outwards again, 
+ * the remainder is reflected from the interior side of the dielectric boundary 
+ * and will in fact remain trapped inside the material for some number of 
+ * internal scattering events until it is finally able to escape.
+ *
+ * Due to the mathematical simplicity of this setup, it is possible to work 
+ * out the correct form of the model without ever having to spend
+ * computational resources on the potentially large number of 
+ * internal scattering events.
+ *
+ * Note that due to the internal scattering, the diffuse color of the 
+ * material is in practice slightly different from the color of the 
+ * base layer on its own---in particular, the material color will tend to shift towards 
+ * higher saturation. Since this can be counter-intuitive when using bitmap 
+ * textures for the base layer, these color shifts are disabled by default. Specify
+ * \code{preserveColors=false} to enable them.
+ *
+ * Similar to the \pluginref{dielectric} plugin, this model allows to specify
+ * IOR values either numerically, or based on a list of known materials (see 
  * \tblref{dielectric-iors} for an overview). 
  *
- * Since it is simple and fast, this model is often a better choice
+ * Since it is simple, realistic, and fast, this model is often a better choice
  * than the \pluginref{phong}, \pluginref{ward}, and \pluginref{roughplastic}
- * plugins when rendering smooth plastic-like materials. \vspace{4mm}
+ * plugins when rendering smooth plastic-like materials. 
+ *
+ * Note that this plugin is quite similar to what one would get by applying the
+ * \pluginref{coating} plugin to the \pluginref{diffuse} material. The main
+ * difference is that this plugin is significantly faster, while at the same
+ * time causing less variance. Furthermore, it accounts for multiple
+ * interreflections inside the material, which mitigates a serious energy
+ * loss problem of the aforementioned plugin combination.
+ *
+ * \vspace{4mm}
  *
  * \begin{xml}[caption=A shiny material whose diffuse reflectance is 
  *     specified using sRGB, label=lst:plastic-shiny]
