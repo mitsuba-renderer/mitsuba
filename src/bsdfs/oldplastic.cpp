@@ -30,14 +30,6 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{polypropylene} / 1.49}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
- *     \parameter{preserveColors}{\Boolean}{
- *      By default, this implementation accounts for light that undergoes any number 
- *      of internal reflections from the dielectric material boundary before exiting, which
- *      potentially causes the diffuse component to shift towards more saturated colors.
- *      While realistic, this behavior might not always be desirable. In that case, set 
- *      this parameter to \code{true}.
- *      \default{\code{false}}
- *     }
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the specular reflection component. Note that for physical 
  *         realism, this parameter should never be touched. \default{1.0}}
@@ -59,9 +51,9 @@ MTS_NAMESPACE_BEGIN
  * numerically, or based on a list of known materials (see 
  * \tblref{dielectric-iors} for an overview). 
  *
- * Since it is simple and fast, this model is often a better choice
+ * Since it is very simple and fast, this model is often a better choice
  * than the \pluginref{phong}, \pluginref{ward}, and \pluginref{roughplastic}
- * plugins when rendering smooth plastic-like materials. \vspace{4mm}
+ * plugins when rendering very smooth plastic-like materials. \vspace{4mm}
  *
  * \begin{xml}[caption=A shiny material whose diffuse reflectance is 
  *     specified using sRGB, label=lst:plastic-shiny]
@@ -84,9 +76,6 @@ public:
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 		m_diffuseReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
-
-		m_preserveColors = props.getBoolean("preserveColors", false);
-
 		m_specularSamplingWeight = 0.0f;
 	}
 
@@ -94,7 +83,6 @@ public:
 			: BSDF(stream, manager) {
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
-		m_preserveColors = stream->readBool();
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		configure();
@@ -107,14 +95,10 @@ public:
 		m_diffuseReflectance = ensureEnergyConservation(
 			m_diffuseReflectance, "diffuseReflectance", 1.0f);
 
-		/* Numerically approximate the diffuse Fresnel reflectance */
-		m_fdr = fresnelDiffuseReflectance(m_extIOR / m_intIOR, false);
-
 		/* Compute weights that further steer samples towards
 		   the specular or diffuse components */
 		Float dAvg = m_diffuseReflectance->getAverage().getLuminance(),
 			  sAvg = m_specularReflectance->getAverage().getLuminance();
-
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 
 		m_usesRayDifferentials = 
@@ -140,7 +124,6 @@ public:
 
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
-		stream->writeBool(m_preserveColors);
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_diffuseReflectance.get());
 	}
@@ -181,16 +164,9 @@ public:
 			if (reflection)
 				return m_specularReflectance->getValue(bRec.its) * Fr;
 		} else if (measure == ESolidAngle && hasDiffuse) {
-			Float Fr2 = fresnel(Frame::cosTheta(bRec.wo), m_extIOR, m_intIOR);
-
-			if (hasDiffuse) {
-				Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
-				if (m_preserveColors)
-					diff /= 1 - m_fdr;
-				else
-					diff /= Spectrum(1) - m_fdr*diff;
-				return diff * (INV_PI * Frame::cosTheta(bRec.wo) * (1-Fr) * (1-Fr2));
-			}
+			if (hasDiffuse)
+				return m_diffuseReflectance->getValue(bRec.its) 
+					* (INV_PI * Frame::cosTheta(bRec.wo) * (1-Fr));
 		}
 
 		return Spectrum(0.0f);
@@ -256,15 +232,9 @@ public:
 					(sample.x - probSpecular) / (1 - probSpecular),
 					sample.y
 				));
-				Float Fr2 = fresnel(Frame::cosTheta(bRec.wo), m_extIOR, m_intIOR);
 
-				Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
-				if (m_preserveColors)
-					diff /= 1 - m_fdr;
-				else
-					diff /= Spectrum(1) - m_fdr*diff;
-
-				return diff * ((1-Fr) * (1-Fr2) / (1-probSpecular));
+				return m_diffuseReflectance->getValue(bRec.its) *
+					((1-Fr) / (1-probSpecular));
 			}
 		} else if (hasSpecular) {
 			bRec.sampledComponent = 0;
@@ -272,19 +242,15 @@ public:
 			bRec.wo = reflect(bRec.wi);
 			return m_specularReflectance->getValue(bRec.its) * Fr;
 		} else {
-			bRec.wo = squareToHemispherePSA(sample);
-			Float Fr2 = fresnel(Frame::cosTheta(bRec.wo), m_extIOR, m_intIOR);
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDiffuseReflection;
 
-			Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
-			if (m_preserveColors)
-				diff /= 1 - m_fdr;
-			else
-				diff /= Spectrum(1) - m_fdr*diff;
+			if (Fr == 1.0f) /* Total internal reflection */
+				return Spectrum(0.0f);
+				
+			bRec.wo = squareToHemispherePSA(sample);
 
-
-			return diff * (1-Fr) * (1-Fr2);
+			return m_diffuseReflectance->getValue(bRec.its) * (1-Fr);
 		}
 	}
 
@@ -319,17 +285,10 @@ public:
 					(sample.x - probSpecular) / (1 - probSpecular),
 					sample.y
 				));
-				Float Fr2 = fresnel(Frame::cosTheta(bRec.wo), m_extIOR, m_intIOR);
-
-				Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
-				if (m_preserveColors)
-					diff /= 1 - m_fdr;
-				else
-					diff /= Spectrum(1) - m_fdr*diff;
-
 				pdf = (1-probSpecular) * Frame::cosTheta(bRec.wo) * INV_PI;
 	
-				return diff * ((1-Fr) * (1-Fr2) / (1-probSpecular));
+				return m_diffuseReflectance->getValue(bRec.its) 
+					* (1-Fr) / (1-probSpecular);
 			}
 		} else if (hasSpecular) {
 			bRec.sampledComponent = 0;
@@ -340,7 +299,6 @@ public:
 		} else {
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDiffuseReflection;
-			Float Fr2 = fresnel(Frame::cosTheta(bRec.wo), m_extIOR, m_intIOR);
 
 			if (Fr == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
@@ -349,13 +307,7 @@ public:
 
 			pdf = Frame::cosTheta(bRec.wo) * INV_PI;
 
-			Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
-			if (m_preserveColors)
-				diff /= 1 - m_fdr;
-			else
-				diff /= Spectrum(1) - m_fdr*diff;
-
-			return diff * (1-Fr) * (1-Fr2);
+			return m_diffuseReflectance->getValue(bRec.its) * (1-Fr);
 		}
 	}
 
@@ -369,21 +321,18 @@ public:
 			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  diffuseSamplingWeight = " << (1-m_specularSamplingWeight) << "," << endl
-			<< "  preserveColors = " << m_preserveColors << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl 
-			<< "  extIOR = " << m_extIOR << "," << endl
-			<< "  fdr = " << m_fdr << endl
+			<< "  extIOR = " << m_extIOR << endl
 			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	Float m_intIOR, m_extIOR, m_fdr;
+	Float m_intIOR, m_extIOR;
 	ref<Texture> m_diffuseReflectance;
 	ref<Texture> m_specularReflectance;
 	Float m_specularSamplingWeight;
-	bool m_preserveColors;
 };
 
 /**
