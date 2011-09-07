@@ -31,9 +31,10 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the specular component\default{1.0}}
+ *         factor used to modulate the specular reflection component. Note that for physical 
+ *         realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the diffuse component\default{0.5}}
+ *         factor used to modulate the diffuse reflection component\default{0.5}}
  * }
  *
  * \renderings{

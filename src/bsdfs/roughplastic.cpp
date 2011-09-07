@@ -23,7 +23,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-#define TRANSMITTANCE_PRECOMP_NODES 200
+#define TRANSMITTANCE_PRECOMP_NODES 100
 
 /*!\plugin{roughplastic}{Rough plastic material}
  * \order{8}
@@ -57,9 +57,10 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the specular reflectance component\default{1.0}}
+ *         factor used to modulate the specular reflection component. Note that for physical 
+ *         realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the diffuse reflectance component\default{0.5}}
+ *         factor used to modulate the diffuse reflection component\default{0.5}}
  * }\vspace{-1mm}
  * \renderings{
  *     \rendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
@@ -73,7 +74,8 @@ MTS_NAMESPACE_BEGIN
  * when possible.
  * \renderings{
  *     \setcounter{subfigure}{2}
- *     \rendering{Beckmann, $\alpha=0.05$, diffuseReflectance=0}{bsdf_roughplastic_beckmann_lacquer}
+ *     \rendering{Beckmann, $\alpha=0.05$, diffuseReflectance=0}
+ *         {bsdf_roughplastic_beckmann_lacquer}
  * }
  *
  * Microfacet theory describes rough surfaces as an arrangement of unresolved and 

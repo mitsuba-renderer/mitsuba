@@ -106,7 +106,7 @@ public:
 			|| m_sigmaA->usesRayDifferentials();
 
 		/* Numerically approximate the diffuse Fresnel reflectance */
-		const Float Fdr = fresnelDiffuse(m_extIOR / m_intIOR, false);
+		const Float Fdr = fresnelDiffuseReflectance(m_extIOR / m_intIOR, false);
 
 		/* Compute the extrapolation distance */
 		m_A = (1 + Fdr) / (1 - Fdr);
