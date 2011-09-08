@@ -102,7 +102,7 @@ MTS_NAMESPACE_BEGIN
  * \pluginref{coating} plugin to the \pluginref{diffuse} material. The main
  * difference is that this plugin is significantly faster, while at the same
  * time causing less variance. Furthermore, it accounts for multiple
- * interreflections inside the material, which mitigates a serious energy
+ * interreflections inside the material, which avoids a serious energy
  * loss problem of the aforementioned plugin combination.
  *
  * \vspace{4mm}
