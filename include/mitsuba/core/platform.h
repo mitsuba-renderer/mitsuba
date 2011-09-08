@@ -68,9 +68,6 @@
 	#endif
 #elif defined(__APPLE__)
 	#define __OSX__
-	#if !defined(_GNU_SOURCE)
-		#define _GNU_SOURCE
-	#endif
 #elif defined(__linux)
 	#define __LINUX__
 	#if !defined(_GNU_SOURCE)
