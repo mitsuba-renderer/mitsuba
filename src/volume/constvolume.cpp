@@ -128,6 +128,21 @@ public:
 		return m_float;
 	}
 
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "ConstantDataSource[value=";
+		if (m_type == Properties::EFloat)
+			oss << m_float;
+		else if (m_type == Properties::EPoint)
+			oss << m_vector.toString();
+		else if (m_type == Properties::ESpectrum)
+			oss << m_spectrum.toString();
+		else
+			Log(EError, "Invalid volume data type!");
+		oss << "]";
+		return oss.str();
+	}
+
 	MTS_DECLARE_CLASS()
 protected:
 	int m_type;

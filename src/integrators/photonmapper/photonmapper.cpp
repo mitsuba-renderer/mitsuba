@@ -184,10 +184,13 @@ public:
 			Log(EDebug, "Global photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
 				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
-			m_globalPhotonMap = proc->getPhotonMap();
-			m_globalPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
-			m_globalPhotonMap->build();
-			m_globalPhotonMapID = sched->registerResource(m_globalPhotonMap);
+			ref<PhotonMap> globalPhotonMap = proc->getPhotonMap();
+			if (globalPhotonMap->isFull()) {
+				m_globalPhotonMap = globalPhotonMap;
+				m_globalPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
+				m_globalPhotonMap->build();
+				m_globalPhotonMapID = sched->registerResource(m_globalPhotonMap);
+			}
 		}
 
 		if (m_causticPhotonMap.get() == NULL && m_causticPhotons > 0) {
@@ -212,10 +215,13 @@ public:
 			Log(EDebug, "Caustic photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
 				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
-			m_causticPhotonMap = proc->getPhotonMap();
-			m_causticPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
-			m_causticPhotonMap->build();
-			m_causticPhotonMapID = sched->registerResource(m_causticPhotonMap);
+			ref<PhotonMap> causticPhotonMap = proc->getPhotonMap();
+			if (causticPhotonMap->isFull()) {
+				m_causticPhotonMap = causticPhotonMap;
+				m_causticPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
+				m_causticPhotonMap->build();
+				m_causticPhotonMapID = sched->registerResource(m_causticPhotonMap);
+			}
 		}
 
 		if (m_volumePhotonMap.get() == NULL && m_volumePhotons > 0) {
@@ -241,11 +247,12 @@ public:
 				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
 			ref<PhotonMap> volumePhotonMap = proc->getPhotonMap();
-			volumePhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
-			volumePhotonMap->build();
-	
-			m_bre = new BeamRadianceEstimator(volumePhotonMap, m_volumeLookupSize);
-			m_breID = sched->registerResource(m_bre);
+			if (volumePhotonMap->isFull()) {
+				volumePhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
+				volumePhotonMap->build();
+				m_bre = new BeamRadianceEstimator(volumePhotonMap, m_volumeLookupSize);
+				m_breID = sched->registerResource(m_bre);
+			}
 		}
 
 		/* Adapt to scene extents */
@@ -311,7 +318,7 @@ public:
 			transmittance = rRec.medium->getTransmittance(mediumRaySegment);
 			mediumRaySegment.mint = ray.mint;
 			if (rRec.type & RadianceQueryRecord::EVolumeRadiance &&
-					(rRec.depth < m_maxDepth || m_maxDepth < 0))
+					(rRec.depth < m_maxDepth || m_maxDepth < 0) && m_bre.get() != NULL)
 				LiMedium = m_bre->query(mediumRaySegment, rRec.medium);
 		}
 

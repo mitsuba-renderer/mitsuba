@@ -86,14 +86,21 @@ static StatsCounter earlyExits("Heterogeneous volume",
  *     }
  * }
  * 
+ * \renderings{
+ *     \medrendering{40}{medium_heterogeneous_density_40}
+ *     \medrendering{200}{medium_heterogeneous_density_200}
+ *     \medrendering{1000}{medium_heterogeneous_density_1000}
+ *     \caption{Renderings of an index-matched isotropic heterogeneous medium using different density multipliers (\lstref{hetvolume})}
+ * }
+ * 
  * This plugin provides a flexible heterogeneous medium implementation, which 
  * acquires its data from nested \code{volume} instances. These can be 
  * constant, use a procedural function, or fetch data from disk, e.g. using a 
  * memory-mapped density grid. See \secref{volumes} for details.
  *
  * Instead of allowing separate volumes to be provided for the scattering
- * absorption parameters \code{sigmaS} and \code{sigmaA} (as is done in
- * \pluginref{homogeneous}, this class instead takes the approach of 
+ * and absorption parameters \code{sigmaS} and \code{sigmaA} (as is done in
+ * \pluginref{homogeneous}), this class instead takes the approach of 
  * enforcing a spectrally uniform value of \code{sigmaT}, which must be
  * provided using a nested scalar-valued volume named \code{density}.
  *
@@ -106,6 +113,48 @@ static StatsCounter earlyExits("Heterogeneous volume",
  * which contains local particle orientation that will be passed to
  * scattering models that support this, such as a the Micro-flake or 
  * Kajiya-Kay phase functions.
+ *
+ * \vspace{4mm}
+ *
+ * \begin{xml}[label=lst:hetvolume,caption=A simple heterogeneous medium backed by a grid volume]
+ * <!-- Declare a heterogeneous participating medium named 'smoke' -->
+ * <medium type="heterogeneous" id="smoke">
+ *     <string name="method" value="simpson"/>
+ *
+ *     <!-- Acquire density values from an external data file -->
+ *     <volume name="density" type="gridvolume">
+ *         <string name="filename" value="frame_0150.vol"/>
+ *     </volume>
+ *
+ *     <!-- The albedo is constant and set to 0.9 -->
+ *     <volume name="albedo" type="constvolume">
+ *         <spectrum name="value" value="0.9"/>
+ *     </volume>
+ *
+ *     <!-- Use an isotropic phase function -->
+ *     <phase type="isotropic"/>
+ *
+ *     <!-- Scale the density values as desired -->
+ *     <float name="densityMultiplier" value="200"/>
+ *  </medium>
+ *
+ * <!-- Attach the index-matched medium to a shape in the scene -->
+ * <shape type="obj">
+ *     <!-- Load an OBJ file, which contains a mesh version
+ *          of the axis-aligned box of the volume data file -->
+ *     <string name="filename" value="bounds.obj"/>
+ * 
+ *     <!-- Reference the medium by ID -->
+ *     <ref name="interior" id="smoke"/>
+ *
+ *     <!-- If desired, this shape could also declare
+ *          a BSDF to create an index-mismatched 
+ *          transition, e.g.
+ *
+ *     <bsdf type="dielectric"/>
+ *     -->
+ * </shape>
+ * \end{xml}
  */
 class HeterogeneousMedium : public Medium {
 public:

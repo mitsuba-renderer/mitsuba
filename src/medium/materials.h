@@ -110,8 +110,6 @@ static void lookupMaterial(const Properties &props, Spectrum &sigmaS, Spectrum &
 				sigmaA *= densityMultiplier;
 				if (eta)
 					*eta = matEntry->eta;
-				SLog(EInfo, "Setting sigmaS = %s, sigmaA = %s", 
-					sigmaS.toString().c_str(), sigmaA.toString().c_str());
 				return;
 			}
 			++matEntry;
