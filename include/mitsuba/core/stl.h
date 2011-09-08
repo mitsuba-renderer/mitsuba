@@ -87,18 +87,6 @@ namespace std {
 			return 1;
 		return 0;
 	}
-
-	inline void sincos(float theta, float *sin, float *cos) {
-		float sinValue = sinf(theta);
-		*sin = sinValue;
-		*cos = sqrtf(1.0f-sinValue*sinValue);
-	}
-
-	inline void sincos(double theta, double *sin, double *cos) {
-		double sinValue = sin(theta);
-		*sin = sinValue;
-		*cos = sqrt(1.0-sinValue*sinValue);
-	}
 #endif
 };
 using std::select2nd;
@@ -115,16 +103,16 @@ namespace std {
 		::sincos(theta, sin, cos);
 	}
 #else
-	inline void sincos(float theta, float *sin, float *cos) {
+	inline void sincos(float theta, float *_sin, float *_cos) {
 		float sinValue = sinf(theta);
-		*sin = sinValue;
-		*cos = sqrtf(1.0f-sinValue*sinValue);
+		*_sin = sinValue;
+		*_cos = sqrtf(1.0f-sinValue*sinValue);
 	}
 
-	inline void sincos(double theta, double *sin, double *cos) {
+	inline void sincos(double theta, double *_sin, double *_cos) {
 		double sinValue = sin(theta);
-		*sin = sinValue;
-		*cos = sqrt(1.0-sinValue*sinValue);
+		*_sin = sinValue;
+		*_cos = sqrt(1.0-sinValue*sinValue);
 	}
 #endif
 };
