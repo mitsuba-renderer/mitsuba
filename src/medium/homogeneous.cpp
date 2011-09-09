@@ -250,7 +250,7 @@ public:
 		Spectrum transmittance;
 		for (size_t i=0; i<SPECTRUM_SAMPLES; ++i)
 			transmittance[i] = m_sigmaT[i] != 0 
-				? std::exp(m_sigmaT[i] * negLength) : (Float) 1.0f;
+				? std::fastexp(m_sigmaT[i] * negLength) : (Float) 1.0f;
 		return transmittance;
 	}
 
@@ -267,7 +267,7 @@ public:
 						* SPECTRUM_SAMPLES), SPECTRUM_SAMPLES-1);
 					samplingDensity = m_sigmaT[channel];
 				}
-				sampledDistance = -std::log(1-rand) / samplingDensity;
+				sampledDistance = -std::fastlog(1-rand) / samplingDensity;
 			} else {
 				sampledDistance = m_maxExpDist->sample(1-rand, mRec.pdfSuccess);
 			}
@@ -299,7 +299,7 @@ public:
 				mRec.pdfFailure = 0;
 				mRec.pdfSuccess = 0;
 				for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-					Float tmp = std::exp(-m_sigmaT[i] * sampledDistance);
+					Float tmp = std::fastexp(-m_sigmaT[i] * sampledDistance);
 					mRec.pdfFailure += tmp;
 					mRec.pdfSuccess += m_sigmaT[i] * tmp;
 				}
@@ -309,7 +309,7 @@ public:
 
 			case ESingle:
 			case EManual:
-				mRec.pdfFailure = std::exp(-samplingDensity * sampledDistance);
+				mRec.pdfFailure = std::fastexp(-samplingDensity * sampledDistance);
 				mRec.pdfSuccess = samplingDensity * mRec.pdfFailure;
 				break;
 
@@ -329,7 +329,7 @@ public:
 		switch (m_strategy) {
 			case EManual: 
 			case ESingle: {
-					Float temp = std::exp(-m_samplingDensity * distance);
+					Float temp = std::fastexp(-m_samplingDensity * distance);
 					mRec.pdfSuccess = m_samplingDensity * temp;
 					mRec.pdfFailure = temp;
 				}
@@ -339,7 +339,7 @@ public:
 					mRec.pdfSuccess = 0;
 					mRec.pdfFailure = 0;
 					for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-						Float temp = std::exp(-m_sigmaT[i] * distance);
+						Float temp = std::fastexp(-m_sigmaT[i] * distance);
 						mRec.pdfSuccess += m_sigmaT[i] * temp;
 						mRec.pdfFailure += temp;
 					}

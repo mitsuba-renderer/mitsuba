@@ -190,7 +190,7 @@ Spectrum computeSunRadiance(Float theta, Float turbidity) {
     for(i = 0, lambda = 350; i < 91; i++, lambda+=5) {
 		// Rayleigh Scattering
 		// Results agree with the graph (pg 115, MI) */
-		Float tauR = std::exp(-m * 0.008735f * std::pow(lambda/1000.0f, (Float) -4.08));
+		Float tauR = std::fastexp(-m * 0.008735f * std::pow(lambda/1000.0f, (Float) -4.08));
 
 		// Aerosal (water + dust) attenuation
 		// beta - amount of aerosols present 
@@ -203,18 +203,18 @@ Spectrum computeSunRadiance(Float theta, Float turbidity) {
 		// lOzone - amount of ozone in cm(NTP) 
 		// Results agree with the graph (pg 128, MI) 
 		const Float lOzone = .35f;
-		Float tauO = std::exp(-m * k_oCurve.eval(lambda) * lOzone);
+		Float tauO = std::fastexp(-m * k_oCurve.eval(lambda) * lOzone);
 
 		// Attenuation due to mixed gases absorption  
 		// Results agree with the graph (pg 131, MI)
-		Float tauG = std::exp(-1.41f * k_gCurve.eval(lambda) * m / std::pow(1 + 118.93f
+		Float tauG = std::fastexp(-1.41f * k_gCurve.eval(lambda) * m / std::pow(1 + 118.93f
 			* k_gCurve.eval(lambda) * m, (Float) 0.45f));
 
 		// Attenuation due to water vapor absorbtion  
 		// w - precipitable water vapor in centimeters (standard = 2) 
 		// Results agree with the graph (pg 132, MI)
 		const Float w = 2.0;
-		Float tauWA = std::exp(-0.2385f * k_waCurve.eval(lambda) * w * m /
+		Float tauWA = std::fastexp(-0.2385f * k_waCurve.eval(lambda) * w * m /
 				std::pow(1 + 20.07f * k_waCurve.eval(lambda) * w * m, (Float) 0.45f));
 
 		data[i] = (Float) 100.0f * solCurve.eval(lambda) * tauR * tauA * tauO * tauG * tauWA;

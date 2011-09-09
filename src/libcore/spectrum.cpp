@@ -435,7 +435,7 @@ Float BlackBodySpectrum::eval(Float l) const {
 	/* Watts per unit surface area (m^-2) per unit wavelength (nm^-1) per
 	   steradian (sr^-1) */
 	const double I = (2*h*c*c) * std::pow(lambda, -5.0)
-		/ ((std::exp((h/k)*c/(lambda*m_temperature)) - 1.0) * 1e9);
+		/ ((std::fastexp((h/k)*c/(lambda*m_temperature)) - 1.0) * 1e9);
 
 	return (Float) I;
 }
@@ -463,7 +463,7 @@ RayleighSpectrum::RayleighSpectrum(EMode mode, Float eta, Float height) {
 	/* See ``Display of the Earth Taking into Account Atmospheric Scattering'',
 	 * by Nishita et al., SIGGRAPH 1993 */ 
 	Float tmp = eta * eta - 1;
-	Float rho = std::exp(-height/7794.0f);
+	Float rho = std::fastexp(-height/7794.0f);
 	//Float Ns = <molecular number density of the standard atmosphere>;
 	Float N_s = 1;
 	Float K = 2 * M_PI * M_PI * tmp*tmp / (3 * N_s);

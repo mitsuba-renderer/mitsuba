@@ -117,7 +117,7 @@ public:
 			case EBeckmann: {
 					/* Beckmann distribution function for Gaussian random surfaces */
 					const Float ex = Frame::tanTheta(m) / alphaU;
-					result = std::exp(-(ex*ex)) / (M_PI * alphaU*alphaU * 
+					result = std::fastexp(-(ex*ex)) / (M_PI * alphaU*alphaU * 
 							std::pow(Frame::cosTheta(m), (Float) 4.0f));
 				}
 				break;
@@ -244,7 +244,7 @@ public:
 
 		switch (m_type) {
 			case EBeckmann: {
-					Float tanThetaMSqr = -alphaU*alphaU * std::log(1.0f - sample.x);
+					Float tanThetaMSqr = -alphaU*alphaU * std::fastlog(1.0f - sample.x);
 					cosThetaM = 1.0f / std::sqrt(1 + tanThetaMSqr);
 				}
 				break;
@@ -310,7 +310,7 @@ public:
 
 		switch (m_type) {
 			case EBeckmann: {
-					Float tanThetaMSqr = -alphaU*alphaU * std::log(1.0f - sample.x);
+					Float tanThetaMSqr = -alphaU*alphaU * std::fastlog(1.0f - sample.x);
 					cosThetaM = 1.0f / std::sqrt(1 + tanThetaMSqr);
 					Float cosThetaM2 = cosThetaM * cosThetaM,
 						  cosThetaM3 = cosThetaM2 * cosThetaM;

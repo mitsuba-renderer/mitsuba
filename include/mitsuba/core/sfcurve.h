@@ -51,9 +51,9 @@ public:
 		m_points.clear();
 		m_points.reserve(m_size.x*m_size.y);
 		m_size = size; m_pos = PointType(0);
-		const Float invLog2 = (Float) 1 / std::log((Float) 2);
+		const Float invLog2 = (Float) 1 / std::fastlog((Float) 2);
 		generate(
-			(int) std::ceil(invLog2 * std::log((Float) std::max(m_size.x, m_size.y))),
+			(int) std::ceil(invLog2 * std::fastlog((Float) std::max(m_size.x, m_size.y))),
 			ENorth, EEast, ESouth, EWest);
 	}
 

@@ -210,7 +210,7 @@ public:
 
 			Float factor2 = H.x / alphaU, factor3 = H.y / alphaV;
 			Float exponent = -(factor2*factor2+factor3*factor3)/(H.z*H.z);
-			Float specRef = factor1 * std::exp(exponent);
+			Float specRef = factor1 * std::fastexp(exponent);
 			/* Important to prevent numeric issues when evaluating the
 			   sampling density of the Ward model in places where it takes
 			   on miniscule values (Veach-MLT does this for instance) */
@@ -245,7 +245,7 @@ public:
 			Float factor2 = H.x / alphaU, factor3 = H.y / alphaV;
 
 			Float exponent = -(factor2*factor2+factor3*factor3)/(H.z*H.z);
-			specProb = factor1 * std::exp(exponent);
+			specProb = factor1 * std::fastexp(exponent);
 		}
 
 		if (hasDiffuse) 
@@ -298,7 +298,7 @@ public:
 				1.0f-cosPhiH*cosPhiH));
 
 			Float thetaH = std::atan(std::sqrt(std::max((Float) 0.0f, 
-				-std::log(sample.x) / (
+				-std::fastlog(sample.x) / (
 					(cosPhiH*cosPhiH) / (alphaU*alphaU) +
 					(sinPhiH*sinPhiH) / (alphaV*alphaV)
 			))));

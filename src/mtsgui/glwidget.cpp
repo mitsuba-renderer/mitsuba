@@ -850,7 +850,7 @@ Float GLWidget::autoFocus() const {
 			radicalInverse(3, sampleIndex) * filmSize.y);
 		scene->getCamera()->generateRay(sample, Point2(0, 0), 0, ray);
 		if (scene->rayIntersect(ray, t, ptr, n)) {
-			Float weight = std::exp(-0.5 / variance * (
+			Float weight = std::fastexp(-0.5 / variance * (
 				std::pow(sample.x - filmSize.x / (Float) 2, (Float) 2) +
 				std::pow(sample.y - filmSize.y / (Float) 2, (Float) 2)));
 			avgDistance += t * weight;
@@ -1101,7 +1101,7 @@ void GLWidget::paintGL() {
 			m_downsamplingProgram->unbind();
 			Float logLuminance, maxLuminance, unused;
 			m_luminanceBuffer[target]->getPixel(0, 0).toLinearRGB(logLuminance, maxLuminance, unused);
-			logLuminance = std::exp(logLuminance / (size.x*size.y));
+			logLuminance = std::fastexp(logLuminance / (size.x*size.y));
 			if (mts_isnan(logLuminance) || std::isinf(logLuminance)) {
 				SLog(EWarn, "Could not determine the average log-luminance, since the image contains NaNs/infs/negative values");
 				logLuminance = 1;

@@ -71,8 +71,8 @@ struct AnisotropicDipoleQuery {
 			Float zr = -xr[i].z, zv = xv[i].z;
 
 			temp[i] = detP[i]/(4*M_PI) * (
-				zr*(beta[i]*dr+1)*std::exp(-beta[i]*dr)/(dr*dr*dr) + 
-				zv*(beta[i]*dv+1)*std::exp(-beta[i]*dv)/(dv*dv*dv)
+				zr*(beta[i]*dr+1)*std::fastexp(-beta[i]*dr)/(dr*dr*dr) + 
+				zv*(beta[i]*dv+1)*std::fastexp(-beta[i]*dv)/(dv*dv*dv)
 			);
 		}
 		dMo.fromLinearRGB(temp[0], temp[1], temp[2]);

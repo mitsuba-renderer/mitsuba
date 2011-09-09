@@ -119,7 +119,7 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 		m_weightLut = static_cast<Float *>(allocAligned(sizeof(Float)*MIPMAP_LUTSIZE));
 		for (int i=0; i<MIPMAP_LUTSIZE; ++i) {
 			Float pos = (Float) i / (Float) (MIPMAP_LUTSIZE-1);
-			m_weightLut[i] = std::exp(-2.0f * pos) - std::exp(-2.0f);
+			m_weightLut[i] = std::fastexp(-2.0f * pos) - std::fastexp(-2.0f);
 		}
 	}
 }

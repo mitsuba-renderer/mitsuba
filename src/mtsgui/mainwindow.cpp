@@ -1369,10 +1369,10 @@ void MainWindow::onExportDialogClose(int reason) {
 						Spectrum spec;
 						spec.fromLinearRGB(source[(y*width+x)*4+0], 
 							source[(y*width+x)*4+1], source[(y*width+x)*4+2]);
-						avgLogLuminance += std::log(0.001f+spec.getLuminance());
+						avgLogLuminance += std::fastlog(0.001f+spec.getLuminance());
 					}
 				}
-				avgLogLuminance = std::exp(avgLogLuminance/(width*height));
+				avgLogLuminance = std::fastexp(avgLogLuminance/(width*height));
 				reinhardKey = ctx->reinhardKey / avgLogLuminance;
 			}
 			

@@ -265,10 +265,10 @@ public:
 					Float invWeight = 1.0f;
 					if (pixel.weight != 0.0f)
 						invWeight = 1.0f / pixel.weight;
-					avgLogLuminance += std::log(0.001f + (pixel.spec * invWeight).getLuminance());
+					avgLogLuminance += std::fastlog(0.001f + (pixel.spec * invWeight).getLuminance());
 				}
 			}
-			avgLogLuminance = std::exp(avgLogLuminance/(m_cropSize.x*m_cropSize.y));
+			avgLogLuminance = std::fastexp(avgLogLuminance/(m_cropSize.x*m_cropSize.y));
 			reinhardKey = m_reinhardKey / avgLogLuminance;
 			reinhard = true;
 			pos = 0;

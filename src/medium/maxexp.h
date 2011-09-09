@@ -41,7 +41,7 @@ public:
 
 			/* Store the interval covered by each f_i */
 			m_intervalStart[i] = (i == 0) ? 0
-				: std::log(m_sigmaT[i]/m_sigmaT[i-1]) / (m_sigmaT[i]-m_sigmaT[i-1]);
+				: std::fastlog(m_sigmaT[i]/m_sigmaT[i-1]) / (m_sigmaT[i]-m_sigmaT[i-1]);
 		}
 
 		/* Turn into a discrete CDF and keep the normalization factor */
@@ -59,11 +59,11 @@ public:
 		SAssert(index >= 0 && index < (int) m_sigmaT.size());
 
 		/* Sample according to f_i */
-		Float t = -std::log(std::exp(-m_intervalStart[index] * m_sigmaT[index]) 
+		Float t = -std::fastlog(std::fastexp(-m_intervalStart[index] * m_sigmaT[index]) 
 			- m_normalization * (u - m_cdf[index])) / m_sigmaT[index];
 	
 		/* Compute the probability of this sample */
-		pdf = m_sigmaT[index] * std::exp(-m_sigmaT[index] * t) * m_invNormalization;
+		pdf = m_sigmaT[index] * std::fastexp(-m_sigmaT[index] * t) * m_invNormalization;
 
 		return t;
 	}
@@ -73,7 +73,7 @@ public:
 				&m_intervalStart[m_intervalStart.size()], t);
 		int index = std::max(0, (int) (lowerBound - &m_intervalStart[0]) - 1);
 		SAssert(index >= 0 && index < (int) m_sigmaT.size());
-		return m_sigmaT[index] * std::exp(-m_sigmaT[index] * t) * m_invNormalization;
+		return m_sigmaT[index] * std::fastexp(-m_sigmaT[index] * t) * m_invNormalization;
 	}
 
 	Float cdf(Float t) const {
@@ -84,7 +84,7 @@ public:
 
 		Float lower = (index==0) ? -1 : -std::pow((m_sigmaT[index]/m_sigmaT[index-1]), 
 					-m_sigmaT[index] / (m_sigmaT[index]-m_sigmaT[index-1]));
-		Float upper = -std::exp(-m_sigmaT[index] * t);
+		Float upper = -std::fastexp(-m_sigmaT[index] * t);
 
 		return m_cdf[index] + (upper - lower) * m_invNormalization;
 	}

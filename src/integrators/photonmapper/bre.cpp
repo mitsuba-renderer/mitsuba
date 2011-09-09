@@ -86,6 +86,8 @@ BeamRadianceEstimator::BeamRadianceEstimator(Stream *stream, InstanceManager *ma
 }
 
 void BeamRadianceEstimator::serialize(Stream *stream, InstanceManager *manager) const {
+	Log(EDebug, "Serializing a BRE data structure (%s)", 
+			memString(m_photonCount * sizeof(BRENode)).c_str());
 	stream->writeSize(m_photonCount);
 	stream->writeSize(m_depth);
 	stream->writeFloat(m_scaleFactor);

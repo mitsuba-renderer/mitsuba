@@ -42,8 +42,8 @@ PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager)
 }
 
 void PhotonMap::serialize(Stream *stream, InstanceManager *manager) const {
-	Log(EDebug, "Serializing a photon map (%.2f KB)", 
-		m_kdtree.size() * sizeof(Photon) / 1024.0f);
+	Log(EDebug, "Serializing a photon map (%s)", 
+		memString(m_kdtree.size() * sizeof(Photon)).c_str());
 	stream->writeFloat(m_scale);
 	stream->writeSize(m_kdtree.size());
 	stream->writeSize(m_kdtree.getDepth());

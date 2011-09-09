@@ -242,13 +242,13 @@ public:
 
 	/// Evaluate the density as a function of \cos\theta
 	inline Float pdfCosTheta(Float cosTheta) const {
-		return std::exp(-cosTheta*cosTheta 
+		return std::fastexp(-cosTheta*cosTheta 
 			/ (2*m_stddev*m_stddev)) * m_normalization;
 	}
 
 	/// Evaluate the density as a function of direction
 	inline Float pdf(const Vector &d) const {
-		return std::exp(-d.z*d.z
+		return std::fastexp(-d.z*d.z
 			/ (2*m_stddev*m_stddev)) * m_normalization;
 	}
 

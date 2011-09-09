@@ -258,7 +258,7 @@ public:
 
 				ref<Random> random = new Random(seed);
 				Float xi = random->nextFloat();
-				intensityVariation = std::min(-std::log(xi), (Float) 10.0f);
+				intensityVariation = std::min(-std::fastlog(xi), (Float) 10.0f);
 			}
 
 			result = yarn.ks * (intensityVariation * m_ksMultiplier * integrand);
@@ -545,7 +545,7 @@ public:
 	}
 
 	inline Float atanh(Float arg) const {
-		return std::log((1.0f + arg) / (1.0f - arg)) / 2.0f;
+		return std::fastlog((1.0f + arg) / (1.0f - arg)) / 2.0f;
 	}
 
 	// von Mises Distribution
@@ -560,12 +560,12 @@ public:
 					+ t*(0.2659732f + t*(0.0360768f + t*0.0045813f)))));
 		} else {
 			Float t = 3.75f / absB;
-			I0 = std::exp(absB) / std::sqrt(absB) * (0.39894228f + t*(0.01328592f
+			I0 = std::fastexp(absB) / std::sqrt(absB) * (0.39894228f + t*(0.01328592f
 				+ t*(0.00225319f + t*(-0.00157565f + t*(0.00916281f + t*(-0.02057706f
 				+ t*(0.02635537f + t*(-0.01647633f + t*0.00392377f))))))));
 		}
 
-		return std::exp(b * cos_x) / (2 * M_PI * I0);
+		return std::fastexp(b * cos_x) / (2 * M_PI * I0);
 	}
 
 	/// Attenuation term

@@ -365,8 +365,8 @@ std::string getFQDN() {
 }
 
 Float log2(Float value) {
-	const Float invLn2 = (Float) 1.0f / std::log((Float) 2.0f);
-	return std::log(value) * invLn2;
+	const Float invLn2 = (Float) 1.0f / std::fastlog((Float) 2.0f);
+	return std::fastlog(value) * invLn2;
 }
 
 std::string formatString(const char *fmt, ...) {
@@ -703,7 +703,7 @@ Vector squareToCone(Float cosCutoff, const Point2 &sample) {
 }
 
 Point2 squareToStdNormal(const Point2 &sample) {
-	Float r   = std::sqrt(-2 * std::log(1-sample.x)),
+	Float r   = std::sqrt(-2 * std::fastlog(1-sample.x)),
 		  phi = 2 * M_PI * sample.y;
 	Point2 result;
 	std::sincos(phi, &result.y, &result.x);

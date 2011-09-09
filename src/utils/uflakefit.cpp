@@ -52,7 +52,7 @@ public:
 			for (int i=0; i<(int) nPts; ++i) {
 				Vector d = sphericalDirection(in[2*i], in[2*i+1]);
 				Float sinTheta = std::sin(in[2*i]);
-				Float D = sinTheta * std::exp(-std::pow(d.z, 2)/(2*m_gamma*m_gamma)) / 
+				Float D = sinTheta * std::fastexp(-std::pow(d.z, 2)/(2*m_gamma*m_gamma)) / 
 					(std::pow(2*M_PI, (Float) 3 / (Float) 2) * m_gamma * erf(1/(std::sqrt(2)*m_gamma)));
 				for (size_t j=0; j<m_res; ++j)
 					out[j*nPts+i] = D * absDot(d, m_directions[j]);

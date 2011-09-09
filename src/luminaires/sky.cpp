@@ -333,13 +333,13 @@ private:
 	inline Float getDistribution(const Float *lam, const Float theta,
 			const Float gamma) const {
 		const Float cosGamma = std::cos(gamma);
-		const Float num = ((1 + lam[0] * std::exp(lam[1] / std::cos(theta)))
-			* (1 + lam[2] * std::exp(lam[3] * gamma)
+		const Float num = ((1 + lam[0] * std::fastexp(lam[1] / std::cos(theta)))
+			* (1 + lam[2] * std::fastexp(lam[3] * gamma)
 			+ lam[4] * cosGamma * cosGamma));
 
 		const Float cosTheta = std::cos(m_thetaS);
-		const Float den = ( (1 + lam[0] * std::exp(lam[1] /* / cos 0 */))
-			* (1 + lam[2] * std::exp(lam[3] * m_thetaS)
+		const Float den = ( (1 + lam[0] * std::fastexp(lam[1] /* / cos 0 */))
+			* (1 + lam[2] * std::fastexp(lam[3] * m_thetaS)
 			+ lam[4] * cosTheta * cosTheta));
 
 		return num / den;

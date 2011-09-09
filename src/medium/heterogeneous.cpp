@@ -330,7 +330,7 @@ public:
 			+ lookupDensity(pLast, ray.d);
 
 		#if defined(HETVOL_EARLY_EXIT)
-			const Float stopAfterDensity = -std::log(Epsilon);
+			const Float stopAfterDensity = -std::fastlog(Epsilon);
 			const Float stopValue = stopAfterDensity*3.0f/(stepSize
 					* m_densityMultiplier);
 		#endif
@@ -541,7 +541,7 @@ public:
 
 	Spectrum getTransmittance(const Ray &ray, Sampler *sampler) const {
 		if (m_method == ESimpsonQuadrature || sampler == NULL) {
-			return Spectrum(std::exp(-integrateDensity(ray)));
+			return Spectrum(std::fastexp(-integrateDensity(ray)));
 		} else {
 			/* When Woodcock tracking is selected as the sampling method,
 			   we can use this method to get a noisy estimate of 
@@ -561,7 +561,7 @@ public:
 			for (int i=0; i<nSamples; ++i) {
 				Float t = mint;
 				while (true) {
-					t -= std::log(1-sampler->next1D()) * m_invMaxDensity;
+					t -= std::fastlog(1-sampler->next1D()) * m_invMaxDensity;
 					if (t >= maxt) {
 						result += 1;
 						break;
@@ -588,7 +588,7 @@ public:
 		bool success = false;
 
 		if (m_method == ESimpsonQuadrature) {
-			Float desiredDensity = -std::log(1-sampler->next1D());
+			Float desiredDensity = -std::fastlog(1-sampler->next1D());
 			if (invertDensityIntegral(ray, desiredDensity, integratedDensity, 
 					mRec.t, densityAtMinT, densityAtT)) {
 				mRec.p = ray(mRec.t);
@@ -601,7 +601,7 @@ public:
 					? m_orientation->lookupVector(mRec.p) : Vector(0.0f);
 			}
 
-			Float expVal = std::exp(-integratedDensity);
+			Float expVal = std::fastexp(-integratedDensity);
 			mRec.pdfFailure = expVal;
 			mRec.pdfSuccess = expVal * densityAtT;
 			mRec.pdfSuccessRev = expVal * densityAtMinT;
@@ -626,7 +626,7 @@ public:
 
 			Float t = mint, densityAtT = 0;
 			while (true) {
-				t -= std::log(1-sampler->next1D()) * m_invMaxDensity;
+				t -= std::fastlog(1-sampler->next1D()) * m_invMaxDensity;
 				if (t >= maxt)
 					break;
 
@@ -656,7 +656,7 @@ public:
 
 	void pdfDistance(const Ray &ray, MediumSamplingRecord &mRec) const {
 		if (m_method == ESimpsonQuadrature) {
-			Float expVal = std::exp(-integrateDensity(ray));
+			Float expVal = std::fastexp(-integrateDensity(ray));
 
 			mRec.transmittance = Spectrum(expVal);
 			mRec.pdfFailure = expVal;

@@ -512,7 +512,7 @@ public:
 	inline Spectrum exp() const {
 		Spectrum value;
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] = std::exp(s[i]);
+			value.s[i] = std::fastexp(s[i]);
 		return value;
 	}
 

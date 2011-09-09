@@ -39,7 +39,7 @@ public:
 		m_size = Vector2(halfSize, halfSize);
 
 		/* Negative offset pre-computation */
-		m_const = std::exp(-m_alpha * m_size.x * m_size.x);
+		m_const = std::fastexp(-m_alpha * m_size.x * m_size.x);
 	}
 
 	GaussianFilter(Stream *stream, InstanceManager *manager) 
@@ -61,8 +61,8 @@ public:
 	}
 
 	Float evaluate(Float x, Float y) const {
-		return std::max((Float) 0.0f, std::exp(-m_alpha * x * x) - m_const)
-			 * std::max((Float) 0.0f, std::exp(-m_alpha * y * y) - m_const);
+		return std::max((Float) 0.0f, std::fastexp(-m_alpha * x * x) - m_const)
+			 * std::max((Float) 0.0f, std::fastexp(-m_alpha * y * y) - m_const);
 	}
 
 	MTS_DECLARE_CLASS()
