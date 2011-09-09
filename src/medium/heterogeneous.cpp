@@ -52,11 +52,13 @@ static StatsCounter earlyExits("Heterogeneous volume",
  *         \begin{enumerate}[(i)]
  *             \item \code{simpson}: Sampling is done by inverting a 
  *             deterministic quadrature rule based on composite
- *             Simpson integration over small ray segments.
+ *             Simpson integration over small ray segments. Benefits
+ *             from the use of good sample generators (e.g. \pluginref{ldsampler}).
  *             \item \code{woodcock}: Generate samples using 
- *             Woodcock tracking. This is usually faster and guaranteed
- *             to be unbiased, but has the disadvantage of not providing
- *             certain information that is required by bidirectional
+ *             Woodcock tracking. This is usually faster and 
+ *             always unbiased, but has the disadvantages of not benefiting
+ *             from good sample generators and not providing
+ *             information that is required by bidirectional
  *             rendering techniques.
  *         \end{enumerate}
  *         Default: \texttt{woodcock}
@@ -90,13 +92,15 @@ static StatsCounter earlyExits("Heterogeneous volume",
  *     \medrendering{40}{medium_heterogeneous_density_40}
  *     \medrendering{200}{medium_heterogeneous_density_200}
  *     \medrendering{1000}{medium_heterogeneous_density_1000}
- *     \caption{Renderings of an index-matched isotropic heterogeneous medium using different density multipliers (\lstref{hetvolume})}
+ *     \vspace{-2mm}
+ *     \caption{Renderings of an index-matched medium using different density multipliers (\lstref{hetvolume})}
  * }
  * 
  * This plugin provides a flexible heterogeneous medium implementation, which 
  * acquires its data from nested \code{volume} instances. These can be 
  * constant, use a procedural function, or fetch data from disk, e.g. using a 
- * memory-mapped density grid. See \secref{volumes} for details.
+ * memory-mapped density grid. See \secref{volumes} for details on volume data
+ * sources.
  *
  * Instead of allowing separate volumes to be provided for the scattering
  * and absorption parameters \code{sigmaS} and \code{sigmaA} (as is done in
