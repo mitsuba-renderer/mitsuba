@@ -154,7 +154,14 @@ public:
 		ref<Scheduler> sched = Scheduler::getInstance();
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(Sampler), Properties("halton")));
-		int qmcSamplerID = sched->registerResource(sampler);
+		/* Create a sampler instance for every core */
+		std::vector<SerializableObject *> samplers(sched->getCoreCount());
+		for (size_t i=0; i<sched->getCoreCount(); ++i) {
+			ref<Sampler> clonedSampler = sampler->clone();
+			clonedSampler->incRef();
+			samplers[i] = clonedSampler.get();
+		}
+		int qmcSamplerID = sched->registerManifoldResource(samplers); 
 
 		const std::set<Medium *> &media = scene->getMedia();
 		for (std::set<Medium *>::const_iterator it = media.begin(); it != media.end(); ++it) {

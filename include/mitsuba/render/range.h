@@ -52,7 +52,7 @@ public:
 	inline std::string toString() const {
 		std::ostringstream oss;
 		oss << "RangeWorkUnit[rangeStart=" << m_rangeStart
-			<< ", rangeEnd=" << m_rangeEnd << "]" << endl;
+			<< ", rangeEnd=" << m_rangeEnd << "]";
 		return oss.str();
 	}
 

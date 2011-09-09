@@ -330,8 +330,8 @@ public:
 			return;
 		}
 
-		SLog(EInfo, "Building a %i-dimensional kd-tree over " SIZE_T_FMT " data points",
-			PointType::dim, m_nodes.size());
+		SLog(EInfo, "Building a %i-dimensional kd-tree over " SIZE_T_FMT " data points (%s)",
+			PointType::dim, m_nodes.size(), memString(m_nodes.size() * sizeof(NodeType)).c_str());
 
 		if (recomputeAABB) {
 			m_aabb.reset();

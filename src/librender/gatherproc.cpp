@@ -47,7 +47,7 @@ public:
 	}
 
 	inline size_t getParticleIndex(size_t idx) const {
-		return m_particleIndices[idx];
+		return m_particleIndices.at(idx);
 	}
 
 	inline void clear() {
@@ -213,12 +213,15 @@ void GatherPhotonProcess::processResult(const WorkResult *wr, bool cancelled) {
 
 ParallelProcess::EStatus GatherPhotonProcess::generateWork(WorkUnit *unit, int worker) {
 	/* Use the same approach as PBRT for auto canceling */
+	m_resultMutex->lock();
 	if (m_autoCancel && m_numShot > 500000
 			&& unsuccessful(m_photonCount, m_photonMap->size(), m_numShot)) {
 		Log(EInfo, "Not enough photons could be collected, giving up");
+		m_resultMutex->unlock();
 		return EFailure;
 	}
 
+	m_resultMutex->unlock();
 	return ParticleProcess::generateWork(unit, worker);
 }
 

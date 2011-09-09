@@ -63,7 +63,6 @@ ParallelProcess::EStatus ParticleProcess::generateWork(WorkUnit *unit, int worke
 	range->setRange(m_numGenerated, m_numGenerated + workUnitSize - 1);
 	m_numGenerated += workUnitSize;
 
-
 	return ESuccess;
 }
 
@@ -106,10 +105,10 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 	Spectrum weight, bsdfVal;
 	int depth;
 	bool caustic;
-	ref<Camera> camera = m_scene->getCamera();
+	ref<Camera> camera    = m_scene->getCamera();
 	Float shutterOpen     = camera->getShutterOpen(), 
 		  shutterOpenTime = camera->getShutterOpenTime();
-	bool needsTimeSample = (shutterOpenTime != 0);
+	bool needsTimeSample  = (shutterOpenTime != 0);
 
 	m_sampler->generate();
 	for (size_t index = range->getRangeStart(); index <= range->getRangeEnd() && !stop; ++index) {
