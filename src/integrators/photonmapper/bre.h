@@ -24,13 +24,15 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Implements the beam radiance estimate described in
+ * \brief Implements the beam radiance estimate described in
  * "The Beam Radiance Estimator for Volumetric Photon Mapping"
  * by Wojciech Jarosz, Matthias Zwicker, and Henrik Wann Jensen.
  */
 
 class BeamRadianceEstimator : public SerializableObject {
 public:
+	typedef PhotonMap::IndexType IndexType;
+
 	/**
 	 * \brief Create a BRE acceleration data structure from
 	 * an existing volumetric photon map
@@ -55,14 +57,29 @@ protected:
 	virtual ~BeamRadianceEstimator();
 
 	/// Fit a hierarchy of bounding boxes to the stored photons
-	AABB buildHierarchy(uint32_t index);
+	AABB buildHierarchy(IndexType index);
+	
+	/// Blurring kernel used by the BRE
+	inline Float K2(Float sqrParam) const {
+		Float tmp = 1-sqrParam;
+		return (3/M_PI) * tmp * tmp;
+	}
 
-	/// Heap convenience routines
-	inline uint32_t leftChild(uint32_t index) const { return 2*index; }
-	inline uint32_t rightChild(uint32_t index) const { return 2*index + 1; }
-	inline bool isInnerNode(uint32_t index) const { return index <= m_lastInnerNode; }
-	inline bool hasRightChild(uint32_t index) const { return index <= m_lastRChildNode; }
-private:
+	/**
+	 * \brief Return whether or not the inner node of the 
+	 * specified index has a right child node.
+	 *
+	 * This function is available for convenience and abstracts away some 
+	 * details about the underlying node representation.
+	 */
+	inline bool hasRightChild(IndexType index) const {
+		if (Photon::leftBalancedLayout) {
+			return 2*index+2 < m_photonCount;
+		} else {
+			return m_nodes[index].photon.getRightIndex(index) != 0;
+		}
+	}
+protected:
 	struct BRENode {
 		AABB aabb;
 		Photon photon;
@@ -70,11 +87,9 @@ private:
 	};
 
 	BRENode *m_nodes;
-	uint32_t m_photonCount;
-	uint32_t m_lastInnerNode;
-	uint32_t m_lastRChildNode;
-	int m_depth;
 	Float m_scaleFactor;
+	size_t m_photonCount;
+	size_t m_depth;
 };
 
 MTS_NAMESPACE_END

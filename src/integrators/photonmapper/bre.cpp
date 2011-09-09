@@ -25,18 +25,19 @@
 MTS_NAMESPACE_BEGIN
 
 BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t lookupSize) {
-	uint32_t reducedLookupSize = (uint32_t) std::sqrt((Float) lookupSize);
-	Float sizeFactor = (Float) lookupSize/ (Float) reducedLookupSize;
+	/* Use an optimization proposed by Jarosz et al, which accelerates
+	   the radius computation by extrapolating radius information obtained
+	   from a kd-tree lookup of a smaller size */
+	size_t reducedLookupSize = (size_t) std::sqrt((Float) lookupSize);
+	Float sizeFactor = (Float) lookupSize / (Float) reducedLookupSize;
 
-	m_photonCount = (uint32_t) pmap->size();
+	m_photonCount = pmap->size();
 	m_scaleFactor = pmap->getScaleFactor();
-	m_lastInnerNode = m_photonCount/2;
-	m_lastRChildNode = (m_photonCount-1)/2;
-	m_depth = log2i(m_photonCount)+1;
+	m_depth = pmap->getDepth();
 
-	Log(EInfo, "Allocating %s for the BRE acceleration data structure",
-		memString(sizeof(BRENode) * (m_photonCount+1)).c_str());
-	m_nodes = new BRENode[m_photonCount+1];
+	Log(EInfo, "Allocating %s of memory for the BRE acceleration data structure",
+		memString(sizeof(BRENode) * m_photonCount).c_str());
+	m_nodes = new BRENode[m_photonCount];
 
 	Log(EInfo, "Computing photon radii ..");
 	int tcount = mts_get_max_threads();
@@ -48,9 +49,8 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 	#pragma omp parallel for
 	for (int i=0; i<(int) m_photonCount; ++i) {
 		PhotonMap::SearchResult *results = resultsPerThread[mts_get_thread_num()];
-		const Photon &photon = (*pmap)[i];
-
-		BRENode &node = m_nodes[i+1];
+		const Photon &photon = pmap->operator[](i);
+		BRENode &node = m_nodes[i];
 		node.photon = photon;
 
 		Float searchRadiusSqr = std::numeric_limits<Float>::infinity();
@@ -64,7 +64,7 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 	Log(EInfo, "Generating a hierarchy for the beam radiance estimate");
 	timer->reset();
 
-	buildHierarchy(1);
+	buildHierarchy(0);
 	Log(EInfo, "Done (took %i ms)", timer->getMilliseconds());
 
 	for (int i=0; i<tcount; ++i)
@@ -73,13 +73,11 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 }
 
 BeamRadianceEstimator::BeamRadianceEstimator(Stream *stream, InstanceManager *manager) {
-	m_photonCount = stream->readUInt();
+	m_photonCount = stream->readSize();
+	m_depth = stream->readSize();
 	m_scaleFactor = stream->readFloat();
-	m_lastInnerNode = m_photonCount/2;
-	m_lastRChildNode = (m_photonCount-1)/2;
-	m_depth = log2i(m_photonCount)+1;
-	m_nodes = new BRENode[m_photonCount+1];
-	for (size_t i=1; i<=m_photonCount; ++i) {
+	m_nodes = new BRENode[m_photonCount];
+	for (size_t i=0; i<m_photonCount; ++i) {
 		BRENode &node = m_nodes[i];
 		node.aabb = AABB(stream);
 		node.photon = Photon(stream);
@@ -88,9 +86,10 @@ BeamRadianceEstimator::BeamRadianceEstimator(Stream *stream, InstanceManager *ma
 }
 
 void BeamRadianceEstimator::serialize(Stream *stream, InstanceManager *manager) const {
-	stream->writeUInt(m_photonCount);
+	stream->writeSize(m_photonCount);
+	stream->writeSize(m_depth);
 	stream->writeFloat(m_scaleFactor);
-	for (size_t i=1; i<=m_photonCount; ++i) {
+	for (size_t i=0; i<m_photonCount; ++i) {
 		BRENode &node = m_nodes[i];
 		node.aabb.serialize(stream);
 		node.photon.serialize(stream);
@@ -98,13 +97,17 @@ void BeamRadianceEstimator::serialize(Stream *stream, InstanceManager *manager) 
 	}
 }
 
-AABB BeamRadianceEstimator::buildHierarchy(uint32_t index) {
+AABB BeamRadianceEstimator::buildHierarchy(IndexType index) {
 	BRENode &node = m_nodes[index];
 
-	if (isInnerNode(index)) {
-		node.aabb = buildHierarchy(leftChild(index));
-		if (hasRightChild(index))
-			node.aabb.expandBy(buildHierarchy(rightChild(index)));
+	if (!node.photon.isLeaf()) {
+		IndexType left = node.photon.getLeftIndex(index);
+		IndexType right = node.photon.getRightIndex(index);
+		node.aabb.reset();
+		if (left)
+			node.aabb.expandBy(buildHierarchy(left));
+		if (right)
+			node.aabb.expandBy(buildHierarchy(right));
 	} else {
 		Point center = node.photon.getPosition();
 		Float radius = node.radius;
@@ -117,17 +120,11 @@ AABB BeamRadianceEstimator::buildHierarchy(uint32_t index) {
 	return node.aabb;
 }
 
-inline Float K2(Float sqrParam) {
-	Float tmp = 1-sqrParam;
-	return (3/M_PI) * tmp * tmp;
-}
-
 Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium) const {
 	const Ray ray(r(r.mint), r.d, 0, r.maxt - r.mint, r.time);
-	uint32_t *stack = (uint32_t *) alloca((m_depth+1) * sizeof(uint32_t));
-	uint32_t index = 1, stackPos = 1;
+	IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
+	IndexType index = 0, stackPos = 1;
 	Spectrum result(0.0f);
-	uint32_t nNodes = 0;
 
 	const Spectrum &sigmaT = medium->getSigmaT();
 	const PhaseFunction *phase = medium->getPhaseFunction();
@@ -135,6 +132,7 @@ Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium) const 
 
 	while (stackPos > 0) {
 		const BRENode &node = m_nodes[index];
+		const Photon &photon = node.photon;
 
 		/* Test against the node's bounding box */
 		Float mint, maxt;
@@ -142,13 +140,12 @@ Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium) const 
 			index = stack[--stackPos];
 			continue;
 		}
-		++nNodes;
 
-		/* Recurse on inner nodes */
-		if (isInnerNode(index)) {
+		/* Recurse on inner photons */
+		if (!photon.isLeaf()) {
 			if (hasRightChild(index))
-				stack[stackPos++] = leftChild(index);
-			index = rightChild(index);
+				stack[stackPos++] = photon.getRightIndex(index);
+			index = photon.getLeftIndex(index);
 		} else {
 			index = stack[--stackPos];
 		}

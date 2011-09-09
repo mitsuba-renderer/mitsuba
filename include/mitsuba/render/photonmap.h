@@ -33,6 +33,7 @@ MTS_NAMESPACE_BEGIN
 class MTS_EXPORT_RENDER PhotonMap : public SerializableObject {
 public:
 	typedef PointKDTree<Photon>        PhotonTree;
+	typedef PhotonTree::IndexType      IndexType;
 	typedef PhotonTree::SearchResult   SearchResult;
 
     /* ===================================================================== */
@@ -169,6 +170,9 @@ public:
 	 * but prior to executing any queries.
 	 */
 	inline void build(bool recomputeAABB = false) { m_kdtree.build(recomputeAABB); }
+
+	/// Return the depth of the constructed KD-tree
+	inline size_t getDepth() const { return m_kdtree.getDepth(); }
 
 	/// Determine if the photon map is completely filled
 	inline bool isFull() const {
