@@ -52,8 +52,8 @@ Instance::Instance(Stream *stream, InstanceManager *manager)
 
 void Instance::serialize(Stream *stream, InstanceManager *manager) const {
 	Shape::serialize(stream, manager);
-	m_objectToWorld.serialize(stream);
 	manager->serialize(stream, m_shapeGroup.get());
+	m_objectToWorld.serialize(stream);
 }
 
 void Instance::configure() {
