@@ -4,6 +4,7 @@ plugins += env.SharedLibrary('obj', ['obj.cpp'])
 plugins += env.SharedLibrary('ply', ['ply/ply.cpp', 'ply/ply_parser.cpp'],
 	CPPPATH = env['CPPPATH'] + ['ply'])
 plugins += env.SharedLibrary('serialized', ['serialized.cpp'])
+plugins += env.SharedLibrary('rectangle', ['rectangle.cpp'])
 plugins += env.SharedLibrary('sphere', ['sphere.cpp'])
 plugins += env.SharedLibrary('cylinder', ['cylinder.cpp'])
 plugins += env.SharedLibrary('hair', ['hair.cpp'])
