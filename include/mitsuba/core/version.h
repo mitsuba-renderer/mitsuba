@@ -96,6 +96,9 @@ public:
 	/// Turn into a string of the form "major.minor.release"
 	std::string toString() const;
 
+	/// Turn into a string of the form "major.minor.release (Architecture)"
+	std::string toStringComplete() const;
+
 	/// Return the major version
 	inline int getMajorVersion() const { return m_major; }
 	

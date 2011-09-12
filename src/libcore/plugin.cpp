@@ -250,5 +250,27 @@ std::string Version::toString() const {
 	return formatString("%i.%i.%i", m_major, m_minor, m_release);
 }
 
+std::string Version::toStringComplete() const {
+	std::ostringstream oss;
+
+	oss << m_major << "." << m_minor << "." << m_release << " (";
+#if defined(__WINDOWS__)
+	oss << "Windows, ";
+#elif defined(__LINUX__)
+	oss << "Linux, ";
+#elif defined(__OSX__)
+	oss << "Mac OS, ";
+#else
+	oss << "Unknown, ";
+#endif
+
+#if defined(__64BIT__)
+	oss << "64 bit)";
+#else
+	oss << "32 bit)";
+#endif
+	return oss.str();
+}
+
 MTS_IMPLEMENT_CLASS(PluginManager, false, Object)
 MTS_NAMESPACE_END

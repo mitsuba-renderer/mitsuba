@@ -75,7 +75,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	connect(m_consoleAppender, SIGNAL(criticalError(const QString &)), 
 		m_logWidget, SLOT(onCriticalError(const QString &)), Qt::QueuedConnection);
 
-	SLog(EInfo, "Mitsuba version " MTS_VERSION ", Copyright (c) " MTS_YEAR " Wenzel Jakob");
+	SLog(EInfo, "Mitsuba version %s, Copyright (c) " MTS_YEAR " Wenzel Jakob",
+		Version(MTS_VERSION).toStringComplete().c_str());
 
 	m_currentChild = NULL;
 	ui->setupUi(this);
@@ -235,7 +236,7 @@ MainWindow::MainWindow(QWidget *parent) :
 				data.append(QString("Content-Disposition: form-data; name=\"bugreport\"; filename=\"%1\"\r\n").arg(file.fileName()));
 				data.append("Content-Type: application/octet-stream\r\n\r\n");
 				QString header = QString("Bug report from machine \"%1\", user \"%2\", filename \"%3\""
-					", Mitsuba version " MTS_VERSION).arg(getFQDN().c_str()).arg(username).arg(file.fileName());
+					", Mitsuba version %4").arg(getFQDN().c_str()).arg(username).arg(file.fileName()).arg(Version(MTS_VERSION).toStringComplete().c_str());
 				data.append(header + "\r\n");
 				for (int j=0; j<header.length(); j++)
 					data.append('=');

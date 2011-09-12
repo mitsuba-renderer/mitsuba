@@ -128,6 +128,12 @@
 	#define SIZE_T_FMT "%zd"
 #endif
 
+#if defined(__x86_64__) || defined(_M_X64) || defined(__LP64__) || defined(_LP64) || defined(WIN64)
+#define __64BIT__
+#else
+#define __32BIT__
+#endif
+
 #if !defined(__LITTLE_ENDIAN__) && !defined(__BIG_ENDIAN__)
 #define __LITTLE_ENDIAN__ 1 // Little endian by default
 #endif
