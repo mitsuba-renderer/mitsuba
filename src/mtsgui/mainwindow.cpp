@@ -1837,6 +1837,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 	shownKDTreeLevel = ctx->shownKDTreeLevel;
 	selectedShape = ctx->selectedShape;
 	selectionMode = ctx->selectionMode;
+	doc = ctx->doc.cloneNode(true).toDocument();
 }
 
 SceneContext::~SceneContext() {
