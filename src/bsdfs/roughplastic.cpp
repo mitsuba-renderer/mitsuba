@@ -128,7 +128,7 @@ MTS_NAMESPACE_BEGIN
  *     <string name="distribution" value="beckmann"/>
  *     <float name="alpha" value="0.05"/>
  *     <float name="intIOR" value="1.61"/>
- *     <specturm name="diffuseReflectance" value="0"/>
+ *     <spectrum name="diffuseReflectance" value="0"/>
  * </bsdf>
  * \end{xml}
  *
