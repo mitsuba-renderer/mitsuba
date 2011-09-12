@@ -72,7 +72,7 @@ public:
 	inline Float getShutterOpenTime() const { return m_shutterOpenTime; }
 
 	/// Return the time value of the shutter closing event
-	inline Float getShutterClose() const { return m_shutterOpen; }
+	inline Float getShutterClose() const { return m_shutterClose; }
 
 	//! @}
 	// =============================================================
