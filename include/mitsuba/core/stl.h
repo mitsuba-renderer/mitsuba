@@ -148,15 +148,13 @@ namespace std {
 
 #else
 	inline void sincos(float theta, float *_sin, float *_cos) {
-		float sinValue = sinf(theta);
-		*_sin = sinValue;
-		*_cos = sqrtf(std::max(0.0f, 1.0f-sinValue*sinValue));
+		*_sin = sinf(theta);
+		*_cos = cosf(theta);
 	}
 
 	inline void sincos(double theta, double *_sin, double *_cos) {
-		double sinValue = sin(theta);
-		*_sin = sinValue;
-		*_cos = sqrt(std::max(0.0, 1.0-sinValue*sinValue));
+		*_sin = sin(theta);
+		*_cos = cos(theta);
 	}
 #endif
 };
