@@ -49,6 +49,7 @@ public:
 			: Shape(stream, manager) {
 		m_objectToWorld = Transform(stream);
 		m_worldToObject = m_objectToWorld.inverse();
+		configure();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -57,11 +58,13 @@ public:
 	}
 
 	void configure() {
-		Vector du = m_objectToWorld(Vector(1, 0, 0));
-		Vector dv = m_objectToWorld(Vector(0, 1, 0));
+		m_dpdu = m_objectToWorld(Vector(1, 0, 0));
+		m_dpdv = m_objectToWorld(Vector(0, 1, 0));
+		Normal normal = normalize(m_objectToWorld(Normal(0, 0, 1)));
+		m_frame = Frame(normalize(m_dpdu), normalize(m_dpdv), normal);
 
-		m_surfaceArea = 4 * du.length() * dv.length();
-		if (std::abs(dot(du, dv)) > Epsilon)
+		m_surfaceArea = 4 * m_dpdu.length() * m_dpdv.length();
+		if (std::abs(dot(m_dpdu, m_dpdv)) > Epsilon)
 			Log(EError, "Error: 'toWorld' transformation contains shear!");
 	}
 
@@ -78,16 +81,44 @@ public:
 		return m_surfaceArea;
 	}
 
-	bool rayIntersect(const Ray &ray, Float mint, Float maxt, Float &t, void *) const {
+	inline bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *temp) const {
+		Ray ray;
+		m_worldToObject.transformAffine(_ray, ray);
+		Float hit = -ray.o.z/ray.d.z;
+
+		if (hit < mint || hit > maxt)
+			return false;
+
+		Point local = ray(hit);
+
+		if (std::abs(local.x) > 1 || std::abs(local.y) > 1)
+			return false;
+
+		t = hit;
+
+		if (temp) {
+			Float *data = static_cast<Float *>(temp);
+			data[0] = local.x;
+			data[1] = local.y;
+		}
+
 		return true;
 	}
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt) const {
-		return true;
+		Float t;
+		return Rectangle::rayIntersect(ray, mint, maxt, t, NULL);
 	}
 
 	void fillIntersectionRecord(const Ray &ray, 
 			const void *temp, Intersection &its) const {
+		const Float *data = static_cast<const Float *>(temp);
+		its.shFrame = its.geoFrame = m_frame;
+		its.uv = Point2(data[0], data[1]);
+		its.p = ray(its.t);
+		its.wi = its.toLocal(-ray.d);
+		its.shape = this;
+ 		its.hasUVPartials = false;
 	}
 
 	std::string toString() const {
@@ -105,6 +136,8 @@ public:
 private:
 	Transform m_objectToWorld;
 	Transform m_worldToObject;
+	Frame m_frame;
+	Vector m_dpdu, m_dpdv;
 	Float m_surfaceArea;
 };
 

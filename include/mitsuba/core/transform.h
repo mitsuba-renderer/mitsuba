@@ -135,6 +135,16 @@ public:
 		return Point(x,y,z);
 	}
 
+	/// Transform a point by a affine / non-projective matrix (no temporaries)
+	inline void transformAffine(const Point &p, Point &dest) const {
+		dest.x = m_transform.m[0][0] * p.x + m_transform.m[0][1] * p.y
+				+ m_transform.m[0][2] * p.z + m_transform.m[0][3];
+		dest.y = m_transform.m[1][0] * p.x + m_transform.m[1][1] * p.y
+				+ m_transform.m[1][2] * p.z + m_transform.m[1][3];
+		dest.z = m_transform.m[2][0] * p.x + m_transform.m[2][1] * p.y
+				+ m_transform.m[2][2] * p.z + m_transform.m[2][3];
+	}
+
 	/**
 	 * \brief Matrix-vector multiplication for points in 3d space (no temporaries)
 	 * \remark This function is not available in the Python bindings
@@ -276,6 +286,32 @@ public:
 #ifdef MTS_DEBUG_FP
 		restoreFPExceptions(state);
 #endif
+	}
+
+	/// Transform a ray by an affine / non-projective matrix (no temporaries)
+	void transformAffine(const Ray &a, Ray &b) const {
+		b.mint = a.mint;
+		b.maxt = a.maxt;
+		transformAffine(a.o, b.o);
+		operator()(a.d, b.d);
+#ifdef MTS_DEBUG_FP
+		bool state = disableFPExceptions();
+#endif
+		/* Re-compute the reciprocal */
+		b.dRcp.x = 1.0f / b.d.x;
+		b.dRcp.y = 1.0f / b.d.y;
+		b.dRcp.z = 1.0f / b.d.z;
+#ifdef MTS_DEBUG_FP
+		restoreFPExceptions(state);
+#endif
+		b.time = a.time;
+	}
+
+	/// Transform a ray by an affine / non-projective matrix (no temporaries)
+	inline Ray transformAffine(const Ray &ray) const {
+		Ray result;
+		transformAffine(ray, result);
+		return result;
 	}
 	
 	/// Return the underlying matrix
