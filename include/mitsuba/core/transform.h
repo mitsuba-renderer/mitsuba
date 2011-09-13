@@ -289,7 +289,7 @@ public:
 	}
 
 	/// Transform a ray by an affine / non-projective matrix (no temporaries)
-	void transformAffine(const Ray &a, Ray &b) const {
+	inline void transformAffine(const Ray &a, Ray &b) const {
 		b.mint = a.mint;
 		b.maxt = a.maxt;
 		transformAffine(a.o, b.o);
