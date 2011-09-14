@@ -94,6 +94,8 @@ public:
 	}
 
 	void configure() {
+		Shape::configure();
+
 		m_dpdu = m_objectToWorld(Vector(1, 0, 0));
 		m_dpdv = m_objectToWorld(Vector(0, 1, 0));
 		Normal normal = normalize(m_objectToWorld(Normal(0, 0, 1)));

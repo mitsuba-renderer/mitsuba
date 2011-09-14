@@ -214,8 +214,7 @@ void ServerWidget::show() {
 	} else {
 		/* Center the dialog */
 		QDesktopWidget *desktop = QApplication::desktop();
-		QRect geo = desktop->screenGeometry(
-				static_cast<QWidget *>(parent())->geometry().center());
+		QRect geo = desktop->screenGeometry();
 		QPoint windowPos(
 			geo.left() + (geo.width() - width()) / 2, 
 			geo.top() + (geo.height() - height())/2
