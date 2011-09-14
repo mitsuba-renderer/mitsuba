@@ -453,7 +453,7 @@ public:
 			(*it).second->decRef();
 		}
 	}
-	
+
 	void configure() {
 		Shape::configure();
 

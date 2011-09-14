@@ -121,6 +121,41 @@ public:
  		its.hasUVPartials = false;
 	}
 
+	ref<TriMesh> createTriMesh() {
+		ref<TriMesh> mesh = new TriMesh(getName(),
+			2, 4, true, true, false);
+
+		Point *vertices = mesh->getVertexPositions();
+		Normal *normals = mesh->getVertexNormals();
+		Point2 *texcoords = mesh->getVertexTexcoords();
+		Triangle *triangles = mesh->getTriangles();
+
+		vertices[0] = m_objectToWorld(Point(-1, -1, 0));
+		vertices[1] = m_objectToWorld(Point( 1, -1, 0));
+		vertices[2] = m_objectToWorld(Point( 1,  1, 0));
+		vertices[3] = m_objectToWorld(Point(-1,  1, 0));
+		
+		texcoords[0] = Point2(0, 0);
+		texcoords[1] = Point2(1, 0);
+		texcoords[2] = Point2(1, 1);
+		texcoords[3] = Point2(0, 1);
+
+		normals[0] = normals[1] = normals[2] = normals[3] = m_frame.n;
+		triangles[0].idx[0] = 0;
+		triangles[0].idx[1] = 1;
+		triangles[0].idx[2] = 2;
+		
+		triangles[1].idx[0] = 2;
+		triangles[1].idx[1] = 3;
+		triangles[1].idx[2] = 0;
+
+		mesh->setBSDF(m_bsdf);
+		mesh->setLuminaire(m_luminaire);
+		mesh->configure();
+
+		return mesh.get();
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Rectangle[" << endl

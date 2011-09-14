@@ -313,14 +313,13 @@ public:
 		Float cosThetaMax = std::sqrt(std::max((Float) 0, 1 - squareTerm*squareTerm));
 		return squareToConePdf(cosThetaMax);
 	}
-	
+
 	ref<TriMesh> createTriMesh() {
 		/// Choice of discretization
 		const uint32_t thetaSteps = 20;
 		const uint32_t phiSteps = thetaSteps * 2;
 		const Float dTheta = M_PI / (thetaSteps-1);
-		const Float dPhi   = (2*M_PI) / phiSteps;
-		uint32_t topIdx = (thetaSteps-2) * phiSteps, botIdx = topIdx+1;
+		const Float dPhi   = (2*M_PI) / (phiSteps-1);
 
 		/// Precompute cosine and sine tables
 		Float *cosPhi = new Float[phiSteps];
@@ -330,16 +329,18 @@ public:
 			cosPhi[i] = std::cos(i*dPhi);
 		}
 
-		size_t numTris = 2 * phiSteps * (thetaSteps-2);
+		size_t numTris = 2 * (phiSteps-1) * (thetaSteps-1);
+		size_t numVertices = thetaSteps * phiSteps;
 
 		ref<TriMesh> mesh = new TriMesh("Sphere approximation",
-			numTris, botIdx+1, true, false, false);
+			numTris, numVertices, true, true, false);
 
 		Point *vertices = mesh->getVertexPositions();
 		Normal *normals = mesh->getVertexNormals();
+		Point2 *texcoords = mesh->getVertexTexcoords();
 		Triangle *triangles = mesh->getTriangles();
 		uint32_t vertexIdx = 0;
-		for (uint32_t theta=1; theta<thetaSteps-1; ++theta) {
+		for (uint32_t theta=0; theta<thetaSteps; ++theta) {
 			Float sinTheta = std::sin(theta * dTheta);
 			Float cosTheta = std::cos(theta * dTheta);
 
@@ -349,33 +350,21 @@ public:
 					sinTheta * sinPhi[phi],
 					cosTheta
 				);
+				texcoords[vertexIdx] = Point2(phi * dPhi * INV_TWOPI, theta * dTheta * INV_PI);
 				vertices[vertexIdx] = m_objectToWorld(Point(v*m_radius));
 				normals[vertexIdx++] = m_objectToWorld(Normal(v));
 			}
 		}
-		vertices[vertexIdx] = m_objectToWorld(Point(0, 0, m_radius));
-		normals[vertexIdx++] = m_objectToWorld(Normal(0, 0, 1));
-		vertices[vertexIdx] = m_objectToWorld(Point(0, 0, -m_radius));
-		normals[vertexIdx++] = m_objectToWorld(Normal(0, 0, -1));
-		Assert(vertexIdx == botIdx+1);
+		Assert(vertexIdx == numVertices);
 
 		uint32_t triangleIdx = 0;
 		for (uint32_t theta=1; theta<thetaSteps; ++theta) {
-			for (uint32_t phi=0; phi<phiSteps; ++phi) {
-				uint32_t nextPhi = (phi + 1) % phiSteps;
-				uint32_t idx0, idx1, idx2, idx3;
-				if (theta == 1) {
-					idx0 = idx1 = topIdx;
-				} else {
-					idx0 = phiSteps*(theta-2) + phi;
-					idx1 = phiSteps*(theta-2) + nextPhi;
-				}
-				if (theta == thetaSteps-1) {
-					idx2 = idx3 = botIdx;
-				} else {
-					idx2 = phiSteps*(theta-1) + phi;
-					idx3 = phiSteps*(theta-1) + nextPhi;
-				}
+			for (uint32_t phi=0; phi<phiSteps-1; ++phi) {
+				uint32_t nextPhi = phi + 1;
+				uint32_t idx0 = phiSteps*theta + phi;
+				uint32_t idx1 = phiSteps*theta + nextPhi;
+				uint32_t idx2 = phiSteps*(theta-1) + phi;
+				uint32_t idx3 = phiSteps*(theta-1) + nextPhi;
 
 				if (idx0 != idx1) {
 					triangles[triangleIdx].idx[0] = idx0;
