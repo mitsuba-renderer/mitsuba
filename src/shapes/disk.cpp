@@ -25,64 +25,66 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*!\plugin{rectangle}{Rectangle intersection primitive}
- * \order{3}
+/*!\plugin{disk}{Disk intersection primitive}
+ * \order{4}
  * \parameters{
  *     \parameter{toWorld}{\Transform}{
  *	      Specifies a linear object-to-world transformation.
- *        It is allowed to use non-uniform scaling, but no shear.
+ *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}
  *     }
  *     \parameter{flipNormals}{\Boolean}{
- *	      Is the rectangle inverted, i.e. should the normal vectors
+ *	      Is the disk inverted, i.e. should the normal vectors
  *		  be flipped? \default{\code{false}}
  *	   }
+ *     \vspace{-8mm}
  * }
  * \renderings{
- *     \rendering{Two rectangles configured as a reflective surface and an
- *     emitter (\lstref{rectangle})}{shape_rectangle}
+ *     \rendering{Rendering with an disk emitter and a textured disk, showing
+ *     the default parameterization. (\lstref{disk})}{shape_disk}
  * }
  * 
- * This shape plugin describes a simple rectangular intersection primitive.
- * It is mainly provided as a convenience for those cases when creating and
- * loading an external mesh with two triangles is simply too tedious, e.g. 
- * when an area light source or a simple ground plane are needed.
+ * \vspace{-1mm}
+ * This shape plugin describes a simple disk intersection primitive. It is
+ * usually preferable over discrete approximations made from triangles.
  *
- * By default, the rectangle covers the XY-range $[-1,1]\times[-1,1]$
- * and has a surface normal that points into the positive $Z$ direction.
- * To change the rectangle scale, rotation, or translation, use the 
+ * By default, the disk has unit radius and is located at the origin. Its
+ * surface normal points into the positive $Z$ direction.
+ * To change the disk scale, rotation, or translation, use the 
  * \code{toWorld} parameter.
  *
- * \vspace{2mm}
- * \begin{xml}[caption={A simple example involving two rectangle instances}, label=lst:rectangle]
+ * \begin{xml}[caption={A simple example involving two disk instances}, label=lst:disk]
  * <scene version="0.3.0">
- *     <shape type="rectangle">
- *         <bsdf type="diffuse"/>
+ *     <shape type="disk">
+ *         <bsdf type="diffuse">
+ *             <texture name="reflectance" type="checkerboard">
+ *                 <float name="uvscale" value="5"/>
+ *             </texture>
+ *         </bsdf>
  *     </shape>
- *     <shape type="rectangle">
+ *     <shape type="disk">
  *         <transform name="toWorld">
  *             <rotate x="1" angle="90"/>
- *             <scale x="0.4" y="0.3" z="0.2"/>
- *             <translate y="1" z="0.2"/>
+ *             <scale value="0.3"/>
+ *             <translate y="1" z="0.3"/>
  *         </transform>
  *         <luminaire type="area">
- *             <spectrum name="intensity" value="3"/>
+ *             <spectrum name="intensity" value="4"/>
  *         </luminaire>
  *     </shape>
- *     <!-- ... other definitions ... -->
  * </scene>
  * \end{xml}
  */
-class Rectangle : public Shape {
+class Disk : public Shape {
 public:
-	Rectangle(const Properties &props) : Shape(props) {
+	Disk(const Properties &props) : Shape(props) {
 		m_objectToWorld = props.getTransform("toWorld", Transform());
 		if (props.getBoolean("flipNormals", false))
 			m_objectToWorld = m_objectToWorld * Transform::scale(Vector(1, 1, -1));
 		m_worldToObject = m_objectToWorld.inverse();
 	}
 
-	Rectangle(Stream *stream, InstanceManager *manager) 
+	Disk(Stream *stream, InstanceManager *manager) 
 			: Shape(stream, manager) {
 		m_objectToWorld = Transform(stream);
 		m_worldToObject = m_objectToWorld.inverse();
@@ -97,22 +99,26 @@ public:
 	void configure() {
 		Shape::configure();
 
-		m_dpdu = m_objectToWorld(Vector(1, 0, 0));
-		m_dpdv = m_objectToWorld(Vector(0, 1, 0));
-		Normal normal = normalize(m_objectToWorld(Normal(0, 0, 1)));
-		m_frame = Frame(normalize(m_dpdu), normalize(m_dpdv), normal);
+		m_normal = normalize(m_objectToWorld(Normal(0, 0, 1)));
 
-		m_surfaceArea = 4 * m_dpdu.length() * m_dpdv.length();
-		if (std::abs(dot(m_dpdu, m_dpdv)) > Epsilon)
+		Vector dpdu = m_objectToWorld(Vector(1, 0, 0));
+		Vector dpdv = m_objectToWorld(Vector(0, 1, 0));
+
+		if (std::abs(dot(dpdu, dpdv)) > Epsilon)
 			Log(EError, "Error: 'toWorld' transformation contains shear!");
+
+		if (std::abs(dpdu.length() / dpdv.length() - 1) > Epsilon)
+			Log(EError, "Error: 'toWorld' transformation contains a non-uniform scale!");
+
+		m_surfaceArea = M_PI * dpdu.length() * dpdu.length();
 	}
 
 	AABB getAABB() const {
 		AABB aabb;
-		aabb.expandBy(m_objectToWorld(Point(-1, -1, 0)));
-		aabb.expandBy(m_objectToWorld(Point( 1, -1, 0)));
-		aabb.expandBy(m_objectToWorld(Point( 1,  1, 0)));
-		aabb.expandBy(m_objectToWorld(Point(-1,  1, 0)));
+		aabb.expandBy(m_objectToWorld(Point( 1,  0, 0)));
+		aabb.expandBy(m_objectToWorld(Point(-1,  0, 0)));
+		aabb.expandBy(m_objectToWorld(Point( 0,  1, 0)));
+		aabb.expandBy(m_objectToWorld(Point( 0, -1, 0)));
 		return aabb;
 	}
 
@@ -130,7 +136,7 @@ public:
 
 		Point local = ray(hit);
 
-		if (std::abs(local.x) > 1 || std::abs(local.y) > 1)
+		if (local.x * local.x + local.y * local.y > 1)
 			return false;
 
 		t = hit;
@@ -146,16 +152,28 @@ public:
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt) const {
 		Float t;
-		return Rectangle::rayIntersect(ray, mint, maxt, t, NULL);
+		return Disk::rayIntersect(ray, mint, maxt, t, NULL);
 	}
 
 	void fillIntersectionRecord(const Ray &ray, 
 			const void *temp, Intersection &its) const {
 		const Float *data = static_cast<const Float *>(temp);
-		its.shFrame = its.geoFrame = m_frame;
-		its.dpdu = m_dpdu;
-		its.dpdv = m_dpdv;
-		its.uv = Point2(0.5f * (data[0]+1), 0.5f * (data[1]+1));
+
+		Float r = std::sqrt(data[0] * data[0] + data[1] * data[1]),
+			  invR = (r == 0) ? 0.0f : (1.0f / r);
+
+		Float phi = std::atan2(data[1], data[0]);
+		if (phi < 0)
+			phi += 2*M_PI;
+
+		Float cosPhi = data[0] * invR, sinPhi = data[1] * invR;
+
+		its.dpdu = m_objectToWorld(Vector(cosPhi, sinPhi, 0));
+		its.dpdv = m_objectToWorld(Vector(-sinPhi, cosPhi, 0));
+
+		its.shFrame = its.geoFrame = Frame(
+			normalize(its.dpdu), normalize(its.dpdv), m_normal);
+		its.uv = Point2(r, phi * INV_TWOPI);
 		its.p = ray(its.t);
 		its.wi = its.toLocal(-ray.d);
 		its.shape = this;
@@ -163,32 +181,37 @@ public:
 	}
 
 	ref<TriMesh> createTriMesh() {
+		const unsigned int phiSteps = 40;
+
 		ref<TriMesh> mesh = new TriMesh(getName(),
-			2, 4, true, true, false);
+			phiSteps-1, 2*phiSteps, true, true, false);
 
 		Point *vertices = mesh->getVertexPositions();
 		Normal *normals = mesh->getVertexNormals();
 		Point2 *texcoords = mesh->getVertexTexcoords();
 		Triangle *triangles = mesh->getTriangles();
 
-		vertices[0] = m_objectToWorld(Point(-1, -1, 0));
-		vertices[1] = m_objectToWorld(Point( 1, -1, 0));
-		vertices[2] = m_objectToWorld(Point( 1,  1, 0));
-		vertices[3] = m_objectToWorld(Point(-1,  1, 0));
-		
-		texcoords[0] = Point2(0, 0);
-		texcoords[1] = Point2(1, 0);
-		texcoords[2] = Point2(1, 1);
-		texcoords[3] = Point2(0, 1);
+		Float dphi = (2 * M_PI) / (Float) (phiSteps-1);
 
-		normals[0] = normals[1] = normals[2] = normals[3] = m_frame.n;
-		triangles[0].idx[0] = 0;
-		triangles[0].idx[1] = 1;
-		triangles[0].idx[2] = 2;
-		
-		triangles[1].idx[0] = 2;
-		triangles[1].idx[1] = 3;
-		triangles[1].idx[2] = 0;
+		Point center = m_objectToWorld(Point(0.0f));
+		for (size_t i=0; i<phiSteps; ++i) {
+			Float phi = i*dphi;
+			vertices[i] = center;
+			vertices[phiSteps+i] = m_objectToWorld(
+				Point(std::cos(phi), std::sin(phi), 0)
+			);
+
+			normals[i] = m_normal;
+			normals[phiSteps+i] = m_normal;
+			texcoords[i] = Point2(0.0f, phi * INV_TWOPI);
+			texcoords[phiSteps+i] = Point2(1.0f, phi * INV_TWOPI);
+		}
+
+		for (size_t i=0; i<phiSteps-1; ++i) {
+			triangles[i].idx[0] = i;
+			triangles[i].idx[1] = i+phiSteps;
+			triangles[i].idx[2] = i+phiSteps+1;
+		}
 
 		mesh->setBSDF(m_bsdf);
 		mesh->setLuminaire(m_luminaire);
@@ -199,7 +222,7 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Rectangle[" << endl
+		oss << "Disk[" << endl
 			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << ", " << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl
 			<< "  luminaire = " << indent(m_luminaire.toString()) << "," << endl
@@ -209,8 +232,9 @@ public:
 	}
 
 	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
-		sRec.n = m_frame.n;
-		sRec.p = m_objectToWorld(Point3(sample.x * 2 - 1, sample.y * 2 - 1, 0));
+		sRec.n = m_normal;
+		Point2 p = squareToDiskConcentric(sample);
+		sRec.p = m_objectToWorld(Point3(p.x, p.y, 0));
 		return 1.0f / m_surfaceArea;
 	}
 
@@ -222,11 +246,10 @@ public:
 private:
 	Transform m_objectToWorld;
 	Transform m_worldToObject;
-	Frame m_frame;
-	Vector m_dpdu, m_dpdv;
+	Normal m_normal;
 	Float m_surfaceArea;
 };
 
-MTS_IMPLEMENT_CLASS_S(Rectangle, false, Shape)
-MTS_EXPORT_PLUGIN(Rectangle, "Rectangle intersection primitive");
+MTS_IMPLEMENT_CLASS_S(Disk, false, Shape)
+MTS_EXPORT_PLUGIN(Disk, "Disk intersection primitive");
 MTS_NAMESPACE_END

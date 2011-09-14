@@ -21,7 +21,7 @@
 MTS_NAMESPACE_BEGIN
  
 /*!\plugin{instance}{Geometry instance}
- * \order{6}
+ * \order{9}
  * \parameters{
  *     \parameter{\Unnamed}{\ShapeGroup}{A reference to a 
  *     shape group that should be instantiated}

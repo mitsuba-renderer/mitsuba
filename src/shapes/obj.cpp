@@ -29,7 +29,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{obj}{Wavefront OBJ mesh loader}
- * \order{3}
+ * \order{5}
  * \parameters{
  *     \parameter{filename}{\String}{
  *	     Filename of the OBJ file that should be loaded

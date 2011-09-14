@@ -31,6 +31,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{hair}{Hair intersection shape}
+ * \order{7}
  * \parameters{
  *     \parameter{filename}{\String}{
  *	     Filename of the hair data file that should be loaded

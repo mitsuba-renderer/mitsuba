@@ -438,6 +438,9 @@ extern MTS_EXPORT_CORE Point2 squareToDisk(const Point2 &sample);
 /// Low-distortion concentric square to disk mapping by Peter Shirley (PDF: 1/(2 * PI))
 extern MTS_EXPORT_CORE Point2 squareToDiskConcentric(const Point2 &sample);
 
+/// Low-distortion concentric disk to square mapping 
+extern MTS_EXPORT_CORE Point2 diskToSquareConcentric(const Point2 &sample);
+
 /// Convert an uniformly distributed square sample into barycentric coordinates
 extern MTS_EXPORT_CORE Point2 squareToTriangle(const Point2 &sample);
 

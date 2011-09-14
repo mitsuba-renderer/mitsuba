@@ -45,9 +45,10 @@ Texture2D::Texture2D(const Properties &props) : Texture(props) {
 			props.getFloat("uoffset", 0.0f),
 			props.getFloat("voffset", 0.0f)
 		);
+		Float uvscale = props.getFloat("uvscale", 1.0f);
 		m_uvScale = Vector2(
-			props.getFloat("uscale", 1.0f),
-			props.getFloat("vscale", 1.0f)
+			props.getFloat("uscale", uvscale),
+			props.getFloat("vscale", uvscale)
 		);
 	} else {
 		Log(EError, "Only UV coordinates are supported at the moment!");

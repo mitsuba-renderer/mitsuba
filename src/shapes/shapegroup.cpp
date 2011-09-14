@@ -21,7 +21,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{shapegroup}{Shape group for geometry instancing}
- * \order{5}
+ * \order{8}
  * \parameters{
  *     \parameter{\Unnamed}{\Shape}{One or more shapes that should be
  *         made available for geometry instancing}

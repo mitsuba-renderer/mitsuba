@@ -38,7 +38,7 @@ using namespace std::tr1::placeholders;
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{ply}{PLY (Stanford Triangle Format) mesh loader}
- * \order{4}
+ * \order{6}
  * \parameters{
  *     \parameter{filename}{\String}{
  *	     Filename of the PLY file that should be loaded

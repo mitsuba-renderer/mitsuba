@@ -24,6 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{serialized}{Serialized mesh loader}
+ * \order{11}
  * \parameters{
  *     \parameter{filename}{\String}{
  *	     Filename of the gemoetry file that should be loaded
@@ -44,7 +45,7 @@ MTS_NAMESPACE_BEGIN
  * }
  * This plugin represents the most space and time-efficient way
  * of getting geometry into Mitsuba. It uses a highly efficient
- * lossless compressed format for geometry storage. Th format will
+ * lossless compressed format for geometry storage. The format will
  * be explained on this page in a subsequent revision of the
  * documentation.
  */

@@ -24,7 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{animatedinstance}{Animated geometry instance}
- * \order{6}
+ * \order{10}
  * \parameters{
  *     \parameter{filename}{\String}{Filename of an animated
  *     transformation}

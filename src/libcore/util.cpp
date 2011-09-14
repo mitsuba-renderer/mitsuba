@@ -690,6 +690,33 @@ Point2 squareToDiskConcentric(const Point2 &sample) {
 	return result*coords.x;
 }
 
+Point2 diskToSquareConcentric(const Point2 &p) {
+	Float r   = std::sqrt(p.x * p.x + p.y * p.y),
+		  phi = std::atan2(p.y, p.x),
+		  a, b;
+
+	if (phi < -M_PI/4) {
+  		/* in range [-pi/4,7pi/4] */
+		phi += 2*M_PI;
+	}
+
+	if (phi < M_PI/4) { /* region 1 */
+		a = r;
+		b = phi * a / (M_PI/4);
+	} else if (phi < 3*M_PI/4) { /* region 2 */
+		b = r;
+		a = -(phi - M_PI/2) * b / (M_PI/4);
+	} else if (phi < 5*M_PI/4) { /* region 3 */
+		a = -r;
+		b = (phi - M_PI) * a / (M_PI/4);
+	} else { /* region 4 */
+		b = -r;
+		a = -(phi - 3*M_PI/2) * b / (M_PI/4);
+	}
+
+	return Point2(0.5f * (a+1), 0.5f * (b+1));
+}
+
 Float squareToConePdf(Float cosCutoff) {
 	return 1 / (2 * M_PI * (1 - cosCutoff));
 }
