@@ -551,7 +551,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 			else
 				oss << "_dir(vplWo);" << endl;
 			if (vpl.type == ESurfaceVPL)
-				oss << "   else contrib *= abs(cosTheta(vplWo));" << endl;
+				oss << "   else contrib *= max(0, cosTheta(vplWo));" << endl;
 		oss << "   if (d < minDist) d = minDist;" << endl
 			<< "   if (!diffuseReceivers)" << endl
 			<< "      contrib *= "<< bsdfEvalName << "(uv, wi, wo);" << endl
