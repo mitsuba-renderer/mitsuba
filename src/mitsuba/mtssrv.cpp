@@ -23,6 +23,7 @@
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/appender.h>
+#include <mitsuba/core/version.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/plugin.h>
 #include <fstream>

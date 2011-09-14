@@ -31,6 +31,7 @@
 #include <mitsuba/hw/glrenderer.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/statistics.h>
+#include <mitsuba/core/version.h>
 #if defined(WIN32)
 #include <mitsuba/core/getopt.h>
 #endif

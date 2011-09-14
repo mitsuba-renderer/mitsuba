@@ -22,6 +22,7 @@
 #include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/cobject.h>
+#include <mitsuba/core/version.h>
 
 #if !defined(WIN32)
 #include <dlfcn.h>

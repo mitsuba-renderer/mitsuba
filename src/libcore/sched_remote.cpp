@@ -20,6 +20,7 @@
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/mstream.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/version.h>
 
 MTS_NAMESPACE_BEGIN
 

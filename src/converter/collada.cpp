@@ -21,6 +21,7 @@
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/timer.h>
+#include <mitsuba/core/version.h>
 #include <mitsuba/render/track.h>
 #include <dom/domCOLLADA.h>
 #include <dae.h>

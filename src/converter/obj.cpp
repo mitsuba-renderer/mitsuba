@@ -21,6 +21,7 @@
 
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/fstream.h>
+#include <mitsuba/core/version.h>
 #include <mitsuba/render/scene.h>
 #include <boost/filesystem/fstream.hpp>
 #include "converter.h"

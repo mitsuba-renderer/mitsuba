@@ -24,6 +24,7 @@
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/version.h>
 #include <mitsuba/core/appender.h>
 #include <mitsuba/render/util.h>
 #include <mitsuba/render/renderjob.h>

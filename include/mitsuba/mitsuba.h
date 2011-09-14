@@ -49,7 +49,6 @@ typedef float Float;
 /**
  * Include a basic subset of the core classes
  */
-#include <mitsuba/core/version.h>
 #include <mitsuba/core/constants.h>
 #include <mitsuba/core/fwd.h>
 #include <mitsuba/render/fwd.h>
