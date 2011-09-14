@@ -114,7 +114,7 @@ public:
 			const void *temp, Intersection &its) const {
 		const Float *data = static_cast<const Float *>(temp);
 		its.shFrame = its.geoFrame = m_frame;
-		its.uv = Point2(data[0], data[1]);
+		its.uv = Point2(0.5f * (data[0]+1), 0.5f * (data[1]+1));
 		its.p = ray(its.t);
 		its.wi = its.toLocal(-ray.d);
 		its.shape = this;
