@@ -31,17 +31,53 @@ MTS_NAMESPACE_BEGIN
  *	      Specifies a linear object-to-world transformation.
  *        \default{none (i.e. object space $=$ world space)}
  *     }
+ *     \parameter{flipNormals}{\Boolean}{
+ *	      Is the rectangle inverted, i.e. should the normal vectors
+ *		  be flipped? \default{\code{false}}
+ *	   }
+ * }
+ * \renderings{
+ *     \rendering{Two rectangles configured as a reflective surface and an
+ *     emitter (\lstref{rectangle})}{shape_rectangle}
  * }
  * 
  * This shape plugin describes a simple rectangular intersection primitive.
+ * It is mainly provided as a convenience for those cases when creating and
+ * loading an external mesh with two triangles is simply too tedious, e.g. 
+ * when an area light source or a simple ground plane are needed.
  *
- * It is mainly provided as a convenience for those cases when loading an 
- * external mesh with two triangles is simply too tedious.
+ * By default, the rectangle covers the XY-range $[-1,1]\times[-1,1]$
+ * and has a surface normal that points into the positive $Z$ direction.
+ * To change the rectangle scale, rotation, or translation, use the 
+ * \code{toWorld} parameter.
+ *
+ * \vspace{2mm}
+ * \begin{xml}[caption={A simple example involving two rectangle instances}, label=lst:rectangle]
+ * <scene version="0.3.0">
+ *     <shape type="rectangle">
+ *         <bsdf type="diffuse"/>
+ *     </shape>
+ *
+ *     <shape type="rectangle">
+ *         <transform name="toWorld">
+ *             <rotate x="1" angle="90"/>
+ *             <scale x="0.4" y="0.3" z="0.2"/>
+ *             <translate y="1" z="0.2"/>
+ *         </transform>
+ *         <luminaire type="area">
+ *             <spectrum name="intensity" value="3"/>
+ *         </luminaire>
+ *     </shape>
+ *     <!-- ... other definitions ... -->
+ * </scene>
+ * \end{xml}
  */
 class Rectangle : public Shape {
 public:
 	Rectangle(const Properties &props) : Shape(props) {
 		m_objectToWorld = props.getTransform("toWorld", Transform());
+		if (props.getBoolean("flipNormals", false))
+			m_objectToWorld = m_objectToWorld * Transform::scale(Vector(1, 1, -1));
 		m_worldToObject = m_objectToWorld.inverse();
 	}
 
@@ -165,6 +201,16 @@ public:
 			<< "  subsurface = " << indent(m_subsurface.toString()) << endl
 			<< "]";
 		return oss.str();
+	}
+
+	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
+		sRec.n = m_frame.n;
+		sRec.p = m_objectToWorld(Point3(sample.x * 2 - 1, sample.y * 2 - 1, 0));
+		return 1.0f / m_surfaceArea;
+	}
+
+	Float pdfArea(const ShapeSamplingRecord &sRec) const {
+		return 1.0f / m_surfaceArea;
 	}
 
 	MTS_DECLARE_CLASS()
