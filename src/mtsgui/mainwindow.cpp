@@ -1475,13 +1475,14 @@ void MainWindow::onSaveAsDialogClose(int reason) {
 		settings.setValue("fileDialogState", dialog->saveState());
 		saveScene(this, context, fileName);
 		fs::path pathName = fileName.toStdString(),
+			     complete = fs::complete(pathName),
 			     baseName = fs::basename(pathName);
 		context->fileName = fileName;
 		context->shortName = QFileInfo(fileName).fileName();
 		context->scene->setSourceFile(pathName);
 		context->scene->setDestinationFile(baseName.file_string());
 		ui->tabBar->setTabText(currentIndex, context->shortName);
-		addRecentFile(fileName);
+		addRecentFile(complete.file_string().c_str());
 	}
 }
 
