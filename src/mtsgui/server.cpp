@@ -212,9 +212,15 @@ void ServerWidget::show() {
 	if (isVisible()) {
 		raise();
 	} else {
+		/* Center the dialog */
 		QDesktopWidget *desktop = QApplication::desktop();
-		move((desktop->width() - width())/2,
-			(desktop->height() - height())/2);
+		QRect geo = desktop->screenGeometry(
+				static_cast<QWidget *>(parent())->geometry().center());
+		QPoint windowPos(
+			geo.left() + (geo.width() - width()) / 2, 
+			geo.top() + (geo.height() - height())/2
+		);
+		move(windowPos);
 		QMainWindow::show();
 	}
 }

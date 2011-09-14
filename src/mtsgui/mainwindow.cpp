@@ -180,7 +180,11 @@ MainWindow::MainWindow(QWidget *parent) :
 		windowPos = settings.value("pos").toPoint();
 	} else {
 		QDesktopWidget *desktop = QApplication::desktop();
-		windowPos = QPoint((desktop->width() - width()) / 2, (desktop->height() - height())/2);
+		QRect geo = desktop->screenGeometry();
+		windowPos = QPoint(
+			geo.left() + (geo.width() - width()) / 2, 
+			geo.top() + (geo.height() - height())/2
+		);
 	}
 
 #if defined(__OSX__)
@@ -521,8 +525,16 @@ void MainWindow::on_actionSceneDescription_triggered() {
 	SceneContext *context= m_context[currentIndex];
 	SceneInformationDialog *dialog = new SceneInformationDialog(this,
 		context->scene);
+
+	/* Center the dialog */
 	QDesktopWidget *desktop = QApplication::desktop();
-	dialog->move(QPoint((desktop->width() - dialog->width()) / 2, (desktop->height() - dialog->height())/2));
+	QRect geo = desktop->screenGeometry(geometry().center());
+	QPoint windowPos(
+		geo.left() + (geo.width() - dialog->width()) / 2, 
+		geo.top() + (geo.height() - dialog->height())/2
+	);
+	dialog->move(windowPos);
+
 	connect(dialog, SIGNAL(finished(int)), this, SLOT(onSceneInformationClose(int)));
 	m_currentChild = dialog;
 	// prevent a tab drawing artifact on Qt/OSX

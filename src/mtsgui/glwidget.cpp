@@ -764,10 +764,12 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 	/* Re-center cursor as needed */
 	QPoint global = mapToGlobal(m_mousePos);
 	QDesktopWidget *desktop = QApplication::desktop();
+	QRect geo = desktop->screenGeometry(global);
+
 	if (global.x() < 50 || global.y() < 50 ||
 		global.x() > desktop->width()-50 || 
 		global.y() > desktop->height()-50) {
-		QPoint target(desktop->width()/2, desktop->height()/2);
+		QPoint target = geo.center();
 		m_ignoreMouseEvent = target - global;
 		QCursor::setPos(target);
 	}
