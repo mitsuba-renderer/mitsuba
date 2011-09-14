@@ -124,7 +124,7 @@ public:
 
 		if (i < 0 || i >= Size) {
 			SLog(EError, "Index %i is out of range!", i);
-			return 0.0f;
+			return (Scalar) 0;
 		}
 		return value[i];
 	}
