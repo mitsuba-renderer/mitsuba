@@ -387,9 +387,12 @@ public:
 					Spectrum bsdfVal = bsdf->sample(bRec, Point2(0.0f));
 					if (bsdfVal.isZero())
 						continue;
-
+					
 					rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadiance);
 					RayDifferential bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);
+					if (its.isMediumTransition())
+						rRec2.medium = its.getTargetMedium(bsdfRay.d);
+
 					LiSurf += bsdfVal * m_parentIntegrator->Li(bsdfRay, rRec2);
 				}
 			}
@@ -426,7 +429,7 @@ public:
 	
 			for (int i=0; i<numLuminaireSamples; ++i) {
 				/* Estimate the direct illumination if this is requested */
-				if (scene->sampleAttenuatedLuminaire(its.p, ray.time, rRec.medium, 
+				if (scene->sampleAttenuatedLuminaire(its, rRec.medium, 
 						lRec, sampleArray[i], rRec.sampler)) {
 					/* Allocate a record for querying the BSDF */
 					BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
@@ -476,10 +479,13 @@ public:
 
 				rRec2.recursiveQuery(rRec, 
 					RadianceQueryRecord::ERadianceNoEmission);
+					
+				if (its.isMediumTransition())
+					rRec2.medium = its.getTargetMedium(bsdfRay.d);
 
 				bool indexMatchedMediumTransition = false;
 				Spectrum transmittance;
-				scene->attenuatedRayIntersect(bsdfRay, rRec.medium, bsdfIts, 
+				scene->attenuatedRayIntersect(bsdfRay, rRec2.medium, bsdfIts, 
 						indexMatchedMediumTransition, transmittance, rRec.sampler);
 				rRec2.type ^= RadianceQueryRecord::EIntersection;
 
@@ -518,8 +524,7 @@ public:
 						   we need to rewind and account for this transition -- therefore,
 						   another ray intersection call is neccessary */
 						scene->rayIntersect(bsdfRay, bsdfIts);
-					}
-	
+					}	
 
 					LiSurf += bsdfVal * m_parentIntegrator->Li(bsdfRay, rRec2) * weightBSDF;
 				}
