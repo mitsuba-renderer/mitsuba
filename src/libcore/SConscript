@@ -33,7 +33,7 @@ libcore_objects = [
 	'serialization.cpp', 'sstream.cpp', 'cstream.cpp', 'mstream.cpp', 
 	'sched.cpp', 'sched_remote.cpp', 'sshstream.cpp', 'wavelet.cpp',
 	'zstream.cpp', 'shvector.cpp', 'fresolver.cpp', 'quad.cpp', 'mmap.cpp',
-	'chisquare.cpp', 'spline.cpp'
+	'chisquare.cpp'
 ]
 
 # Add some platform-specific components

@@ -21,6 +21,7 @@
 
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
+#include "microfacet.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -40,7 +41,7 @@ MTS_NAMESPACE_BEGIN
  * in every transmittance evaluation, this function is usually prohibitively
  * expensive. That is the motivation for this class, which instead performs 
  * lookups into an extensive precomputed three-dimensional table containing
- * regularly spaced evaluations of this function. The lookups are combined 
+ * appropriately spaced evaluations of this function. The lookups are combined 
  * using tricubic interpolation (more specifically, Catmull-Rom splines).
  *
  * The 3D array is parameterized in a way so that the transmittance
@@ -62,16 +63,26 @@ MTS_NAMESPACE_BEGIN
  * rough transmittance, which is defined as a cosine-weighted integral
  * of the rough transmittance over the incident hemisphere.
  */
-class RoughTransmittance {
+class RoughTransmittance : public Object {
 public:
 	/**
 	 * \brief Load a rough transmittance data file from disk
 	 *
-	 * \param name
-	 *     Denotes the name of a microfacet distribution, 
-	 *     i.e. 'beckmann' or 'ggx'
+	 * \param type
+	 *     Denotes the type of a microfacet distribution, 
+	 *     i.e. Beckmann or GGX
 	 */
-	RoughTransmittance(const std::string &name) : m_trans(NULL), m_diffTrans(NULL) {
+	RoughTransmittance(MicrofacetDistribution::EType type) : m_trans(NULL), m_diffTrans(NULL) {
+		std::string name;
+
+		switch (type) {
+			case MicrofacetDistribution::EBeckmann: name = "beckmann"; break;
+			case MicrofacetDistribution::EPhong: name = "phong"; break;
+			case MicrofacetDistribution::EGGX: name = "ggx"; break;
+			default:
+				SLog(EError, "RoughTransmittance: unsupported distribution type!");
+		}
+
 		/* Resolve the precomputed data file */
 		fs::path sourceFile = Thread::getThread()->getFileResolver()->resolve(
 			formatString("data/microfacet/%s.dat", name.c_str()));
@@ -130,7 +141,7 @@ public:
 	}
 
 	/// Release all memory
-	~RoughTransmittance() {
+	virtual ~RoughTransmittance() {
 		if (m_trans)
 			delete[] m_trans;
 		if (m_diffTrans)
@@ -154,14 +165,14 @@ public:
 	 * \brief Evaluate the rough transmittance for a given index of refraction,
 	 * roughness, and angle of incidence.
 	 *
-	 * \param eta
-	 *     Relative index of refraction
-	 * \param alpha
-	 *     Roughness parameter
 	 * \param cosTheta
 	 *     Cosine of the angle of incidence
+	 * \param alpha
+	 *     Roughness parameter
+	 * \param eta
+	 *     Relative index of refraction
 	 */
-	Float eval(Float eta, Float alpha, Float cosTheta) const {
+	Float eval(Float cosTheta, Float alpha = 0, Float eta = 0) const {
 		Float warpedCosTheta = std::pow(std::abs(cosTheta), 0.25f),
 			  result;
 
@@ -223,7 +234,7 @@ public:
 	 * \param alpha
 	 *     Roughness parameter
 	 */
-	Float evalDiffuse(Float eta, Float alpha) const {
+	Float evalDiffuse(Float alpha = 0, Float eta = 0) const {
 		Float result;
 
 		if (m_alphaFixed && m_etaFixed) {

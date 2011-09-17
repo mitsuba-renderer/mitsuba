@@ -19,11 +19,10 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/hw/basicshader.h>
 #include "microfacet.h"
+#include "rtrans.h"
 #include "ior.h"
 
 MTS_NAMESPACE_BEGIN
-
-#define TRANSMITTANCE_PRECOMP_NODES 100
 
 /*!\plugin{roughplastic}{Rough plastic material}
  * \order{8}
@@ -161,6 +160,7 @@ public:
 
 		m_alpha = m_distribution.transformRoughness(
 			props.getFloat("alpha", 0.1f));
+
 		m_specularSamplingWeight = 0.0f;
 	}
 
@@ -171,10 +171,10 @@ public:
 		);
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
-		m_roughTransmittance = static_cast<CubicSpline *>(manager->getInstance(stream));
 		m_alpha = stream->readFloat();
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
+
 
 		configure();
 	}
@@ -199,9 +199,15 @@ public:
 			  sAvg = m_specularReflectance->getAverage().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 
-		/* Precompute the rough transmittance through the interface */
-		m_roughTransmittance = m_distribution.computeRoughTransmittance(
-				m_extIOR, m_intIOR, m_alpha, TRANSMITTANCE_PRECOMP_NODES);
+		if (!m_roughTransmittance.get()) {
+			/* Load precomputed data used to compute the rough
+			   transmittance through the dielectric interface */
+			m_roughTransmittance = new RoughTransmittance(
+				m_distribution.getType());
+			
+			/* Reduce the rough transmittance data to a 2D slice */
+			m_roughTransmittance->setEta(m_intIOR / m_extIOR);
+		}
 
 		m_usesRayDifferentials = 
 			m_specularReflectance->usesRayDifferentials() ||
@@ -254,7 +260,7 @@ public:
 
 		if (hasDiffuse) 
 			result += m_diffuseReflectance->getValue(bRec.its) * (INV_PI
-				* m_roughTransmittance->eval(Frame::cosTheta(bRec.wi))
+				* m_roughTransmittance->eval(Frame::cosTheta(bRec.wi), m_alpha)
 				* Frame::cosTheta(bRec.wo));
 
 		return result;
@@ -278,7 +284,7 @@ public:
 		Float probDiffuse, probSpecular;
 		if (hasSpecular && hasDiffuse) {
 			/* Find the probability of sampling the specular component */
-			probSpecular = 1-m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
+			probSpecular = 1-m_roughTransmittance->eval(Frame::cosTheta(bRec.wi), m_alpha);
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -322,7 +328,7 @@ public:
 		Float probSpecular;
 		if (hasSpecular && hasDiffuse) {
 			/* Find the probability of sampling the diffuse component */
-			probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
+			probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi), m_alpha);
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -373,7 +379,6 @@ public:
 		stream->writeUInt((uint32_t) m_distribution.getType());
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_diffuseReflectance.get());
-		manager->serialize(stream, m_roughTransmittance.get());
 		stream->writeFloat(m_alpha);
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
@@ -413,7 +418,7 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	MicrofacetDistribution m_distribution;
-	ref<CubicSpline> m_roughTransmittance;
+	ref<RoughTransmittance> m_roughTransmittance;
 	ref<Texture> m_diffuseReflectance;
 	ref<Texture> m_specularReflectance;
 	Float m_alpha, m_intIOR, m_extIOR;

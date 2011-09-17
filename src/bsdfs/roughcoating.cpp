@@ -19,11 +19,10 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/hw/basicshader.h>
 #include "microfacet.h"
+#include "rtrans.h"
 #include "ior.h"
 
 MTS_NAMESPACE_BEGIN
-
-#define TRANSMITTANCE_PRECOMP_NODES 200
 
 /*!\plugin{roughcoating}{Rough dielectric coating}
  * \order{10}
@@ -135,7 +134,6 @@ public:
 		);
 		m_nested = static_cast<BSDF *>(manager->getInstance(stream));
 		m_sigmaA = static_cast<Texture *>(manager->getInstance(stream));
-		m_roughTransmittance = static_cast<CubicSpline *>(manager->getInstance(stream));
 		m_alpha = stream->readFloat();
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
@@ -165,9 +163,15 @@ public:
 
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 
-		/* Precompute the rough transmittance through the interface */
-		m_roughTransmittance = m_distribution.computeRoughTransmittance(
-				m_extIOR, m_intIOR, m_alpha, TRANSMITTANCE_PRECOMP_NODES);
+		if (!m_roughTransmittance.get()) {
+			/* Load precomputed data used to compute the rough
+			   transmittance through the dielectric interface */
+			m_roughTransmittance = new RoughTransmittance(
+				m_distribution.getType());
+			
+			/* Reduce the rough transmittance data to a 2D slice */
+			m_roughTransmittance->setEta(m_intIOR / m_extIOR);
+		}
 
 		BSDF::configure();
 	}
@@ -248,8 +252,8 @@ public:
 			bRecInt.wo = refractTo(EInterior, bRec.wo);
 
 			Spectrum nestedResult = m_nested->eval(bRecInt, measure) *
-				m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wi))) *
-				m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wo)));
+				m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wi)), m_alpha) *
+				m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wo)), m_alpha);
 
 			Spectrum sigmaA = m_sigmaA->getValue(bRec.its) * m_thickness;
 			if (!sigmaA.isZero()) 
@@ -286,7 +290,7 @@ public:
 		if (hasSpecular && hasNested) {
 			/* Find the probability of sampling the specular component */
 			probSpecular = 1-m_roughTransmittance->eval(
-				std::abs(Frame::cosTheta(bRec.wi)));
+				std::abs(Frame::cosTheta(bRec.wi)), m_alpha);
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -340,7 +344,7 @@ public:
 		Float probSpecular;
 		if (hasSpecular && hasNested) {
 			/* Find the probability of sampling the diffuse component */
-			probSpecular = 1 - m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wi)));
+			probSpecular = 1 - m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wi)), m_alpha);
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -398,7 +402,6 @@ public:
 		stream->writeUInt((uint32_t) m_distribution.getType());
 		manager->serialize(stream, m_nested.get());
 		manager->serialize(stream, m_sigmaA.get());
-		manager->serialize(stream, m_roughTransmittance.get());
 		stream->writeFloat(m_alpha);
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
@@ -438,7 +441,7 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	MicrofacetDistribution m_distribution;
-	ref<CubicSpline> m_roughTransmittance;
+	ref<RoughTransmittance> m_roughTransmittance;
 	ref<Texture> m_sigmaA;
 	ref<BSDF> m_nested;
 	Float m_alpha, m_intIOR, m_extIOR;
