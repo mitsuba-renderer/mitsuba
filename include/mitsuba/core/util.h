@@ -295,6 +295,78 @@ extern MTS_EXPORT_CORE bool solveQuadraticDouble(double a, double b,
 	double c, double &x0, double &x1);
 
 /**
+ * \brief Evaluate a cubic spline interpolant of a regularly sampled 1D function
+ * 
+ * This implementation uses Catmull-Rom splines, i.e. it uses finite
+ * differences to approximate the derivatives at the endpoints of each spline
+ * segment.
+ *
+ * \param p
+ *      Evaluation point of the interpolant
+ * \param data
+ *      Floating point array containing \c nKnots regularly spaced evaluations
+ *      in the range \a [a,b] of the function to be approximated.
+ * \param min 
+ *      Position of the first knot
+ * \param max
+ *      Position of the last knot
+ * \param size 
+ *      Total number of knots
+ * \return
+ *      The interpolated value or zero when \a t lies outside of \a [a,b]
+ */
+extern MTS_EXPORT_CORE Float interpCubic1D(Float p, const Float *data, 
+		Float min, Float max, size_t size);
+
+/**
+ * \brief Evaluate a cubic spline interpolant of a regularly sampled 2D function
+ * 
+ * This implementation uses a tensor product of Catmull-Rom splines, i.e. it uses 
+ * finite differences to approximate the derivatives at the endpoints of each spline
+ * segment.
+ *
+ * \param p
+ *      Evaluation point of the interpolant
+ * \param data
+ *      Floating point array containing \c nKnots regularly spaced evaluations
+ *      in the range \a [a,b] of the function to be approximated.
+ * \param min
+ *      Position of the first knot on each dimension
+ * \param max
+ *      Position of the last knot on each dimension
+ * \param size
+ *      Total number of knots for each dimension
+ * \return
+ *      The interpolated value or zero when \a t lies outside of the knot range
+ */
+extern MTS_EXPORT_CORE Float interpCubic2D(const Point2 &p, const Float *data, 
+		const Point2 &min, const Point2 &max, const Size2 &size);
+
+/**
+ * \brief Evaluate a cubic spline interpolant of a regularly sampled 3D function
+ * 
+ * This implementation uses a tensor product of Catmull-Rom splines, i.e. it uses 
+ * finite differences to approximate the derivatives at the endpoints of each spline
+ * segment.
+ *
+ * \param p
+ *      Evaluation point of the interpolant
+ * \param data
+ *      Floating point array containing \c nKnots regularly spaced evaluations
+ *      in the range \a [a,b] of the function to be approximated.
+ * \param min
+ *      Position of the first knot on each dimension
+ * \param max
+ *      Position of the last knot on each dimension
+ * \param size
+ *      Total number of knots for each dimension
+ * \return
+ *      The interpolated value or zero when \a t lies outside of the knot range
+ */
+extern MTS_EXPORT_CORE Float interpCubic3D(const Point3 &p, const Float *data, 
+		const Point3 &min, const Point3 &max, const Size3 &size);
+
+/**
  * \brief Calculate the radical inverse function
  *
  * (Implementation based on "Instant Radiosity" by Alexander Keller 

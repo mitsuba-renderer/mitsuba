@@ -111,6 +111,7 @@ public:
 		boost::tuple<Vector, Float, EMeasure> generateSample() {
 			Point2 sample(m_sampler->next2D());
 			BSDFQueryRecord bRec(m_its, m_fakeSampler);
+			bRec.quantity = EImportance;
 			bRec.component = m_component;
 			bRec.wi = m_wi;
 
@@ -137,11 +138,11 @@ public:
 			pdfVal = m_bsdf->pdf(bRec, measure);
 			Spectrum manual = f/pdfVal;
 
-
 			if (m_isSymmetric) {
 				/* Check for non-symmetry */
 				BSDFQueryRecord bRecRev(bRec);
 				bRecRev.reverse();
+				bRec.quantity = EImportance;
 				Spectrum fFwd = f;
 				Spectrum fRev = m_bsdf->eval(bRecRev, measure);
 				if (measure == ESolidAngle) {
@@ -211,6 +212,7 @@ public:
  
 		Float pdf(const Vector &wo, EMeasure measure) {
 			BSDFQueryRecord bRec(m_its, m_wi, wo);
+			bRec.quantity = EImportance;
 			bRec.component = m_component;
 
 			#if defined(MTS_DEBUG_FP)

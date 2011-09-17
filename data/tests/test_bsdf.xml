@@ -16,9 +16,9 @@
 	<!-- Test the diffuse transmission model -->
 	<bsdf type="difftrans"/>
 
-	<!-- Test a simple mixture between diffuse
+	<!-- Test a simple mixturebsdf between diffuse
 		 transmittance and reflectance -->
-	<bsdf type="mixture">
+	<bsdf type="mixturebsdf">
 		<string name="weights" value=".5 .3"/>
 
 		<bsdf type="diffuse">
@@ -38,16 +38,16 @@
 		<string name="extIOR" value="air"/>
 	</bsdf>
 
-	<!-- Test a mixture of degenerate materials -->
-	<bsdf type="mixture">
+	<!-- Test a mixturebsdf of degenerate materials -->
+	<bsdf type="mixturebsdf">
 		<string name="weights" value=".8 .2"/>
 		<bsdf type="dielectric"/>
 		<bsdf type="conductor"/>
 	</bsdf>
 	
-	<!-- Test a mixture of degenerate and
+	<!-- Test a mixturebsdf of degenerate and
 		 non-degenerate materials -->
-	<bsdf type="mixture">
+	<bsdf type="mixturebsdf">
 		<string name="weights" value=".8 .2"/>
 		<bsdf type="dielectric"/>
 		<bsdf type="diffuse"/>
@@ -178,7 +178,7 @@
 		<rgb name="sigmaA" value="0.1 0.2 0.3"/>
 		<float name="thickness" value="2"/>
 
-		<bsdf type="mixture">
+		<bsdf type="mixturebsdf">
 			<string name="weights" value=".5 .3"/>
 
 			<bsdf type="diffuse">

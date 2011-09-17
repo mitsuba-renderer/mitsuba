@@ -50,6 +50,9 @@ for file in os.listdir(env.GetBuildPath('#data/schema')):
 for file in os.listdir(env.GetBuildPath('#data/ior')):
 	if fnmatch.fnmatch(file, '*.spd'):
 		installTargets += env.Install(os.path.join(distDir, 'data/ior'), '#data/ior/' + file)
+for file in os.listdir(env.GetBuildPath('#data/microfacet')):
+	if fnmatch.fnmatch(file, '*.dat'):
+		installTargets += env.Install(os.path.join(distDir, 'data/microfacet'), '#data/microfacet/' + file)
 
 if sys.platform == 'linux2':
 	for plugin in plugins:

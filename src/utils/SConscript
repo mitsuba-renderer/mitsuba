@@ -7,5 +7,6 @@ plugins += env.SharedLibrary('kdbench', ['kdbench.cpp'])
 plugins += env.SharedLibrary('ttest', ['ttest.cpp'])
 plugins += env.SharedLibrary('tonemap', ['tonemap.cpp'])
 #plugins += env.SharedLibrary('uflakefit', ['uflakefit.cpp'])
+plugins += env.SharedLibrary('rdielprec', ['rdielprec.cpp'])
 
 Export('plugins')

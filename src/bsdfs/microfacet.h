@@ -82,15 +82,16 @@ public:
 	 * \brief Convert the roughness values so that they behave similarly to the
 	 * Beckmann distribution.
 	 *
-	 * Also clamps to the minimal roughness 1e-4 to avoid numerical issues 
+	 * Also clamps to the minimal exponent to to avoid numerical issues 
 	 * (For lower roughness values, please switch to the smooth BSDF variants)
 	 */
 	Float transformRoughness(Float value) const {
-		if (m_type == EPhong || m_type == EAshikhminShirley)
-			value = 2 / (value * value) - 2;
-		return std::max(value, (Float) 1e-4f);
+		value = std::max(value, (Float) 1e-5f);
+		if (m_type == EPhong || m_type == EAshikhminShirley) 
+			value = std::max(2 / (value * value) - 2, (Float) 0.1f);
+		return value;
 	}
-	
+
 	/**
 	 * \brief Implements the microfacet distribution function D
 	 *
@@ -111,7 +112,7 @@ public:
 	Float eval(const Vector &m, Float alphaU, Float alphaV) const {
 		if (Frame::cosTheta(m) <= 0)
 			return 0.0f;
-	
+
 		Float result;
 		switch (m_type) {
 			case EBeckmann: {

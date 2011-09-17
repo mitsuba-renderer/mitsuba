@@ -548,6 +548,187 @@ bool solveLinearSystem2x2(const Float a[2][2], const Float b[2], Float x[2]) {
 	return true;
 }
 
+Float interpCubic1D(Float p, const Float *data, Float min, Float max, size_t size) {
+	if (p < min || p > max)
+		return 0.0f;
+
+	/* Transform 'p' so that knots lie at integer positions */
+	Float t = ((p - min) * (size - 1)) / (max - min);
+
+	/* Index of the left knot in the queried subinterval,
+	   be robust to cases where t=b. */
+	size_t k = std::min((size_t) t, size - 2);
+
+	Float f0  = data[k], 
+		  f1  = data[k+1],
+		  d0, d1;
+
+	/* Approximate the derivatives */
+	if (k > 0)
+		d0 = 0.5f * (data[k+1] - data[k-1]);
+	else
+		d0 = data[k+1] - data[k];
+
+	if (k + 2 < size)
+		d1 = 0.5f * (data[k+2] - data[k]);
+	else
+		d1 = data[k+1] - data[k];
+
+	/* Compute the relative position within the interval */
+	t = t - (Float) k;
+
+	Float t2 = t*t, t3 = t2*t;
+
+	return 
+		( 2*t3 - 3*t2 + 1) * f0 +
+		(-2*t3 + 3*t2)     * f1 +
+		(   t3 - 2*t2 + t) * d0 +
+		(   t3 - t2)       * d1;
+}
+
+
+Float interpCubic2D(const Point2 &p, const Float *data, 
+		const Point2 &min, const Point2 &max, const Size2 &size) {
+	Float knotWeights[2][4];
+	Point2 knot;
+
+	/* Compute interpolation weights separately for each dimension */
+	for (int dim=0; dim<2; ++dim) {
+		Float *weights = knotWeights[dim];
+		if (p[dim] < min[dim] || p[dim] > max[dim])
+			return 0.0f;
+
+		/* Transform 'p' so that knots lie at integer positions */
+		Float t = ((p[dim] - min[dim]) * (size[dim] - 1))
+			/ (max[dim]-min[dim]);
+
+		/* Find the index of the left knot in the queried 
+		   subinterval, be robust to cases where t=b. */
+		knot[dim] = std::min((size_t) t, size[dim] - 2);
+
+		/* Compute the relative position within the interval */
+		t = t - (Float) knot[dim];
+
+		/* Compute node weights */
+		Float t2 = t*t, t3 = t2*t;
+		weights[0] = 0.0f;
+		weights[1] = 2*t3 - 3*t2 + 1;
+		weights[2] = -2*t3 + 3*t2;
+		weights[3] = 0.0f;
+
+		/* Derivative weights */
+		Float d0 = t3 - 2*t2 + t,
+			  d1 = t3 - t2;
+
+		/* Turn derivative weights into node weights using
+		   an appropriate chosen finite differences stencil */
+		if (knot[dim] > 0) {
+			weights[2] +=  0.5f * d0;
+			weights[0] -=  0.5f * d0;
+		} else {
+			weights[2] += d0;
+			weights[1] -= d0;
+		}
+
+		if (knot[dim] + 2 < size[dim]) {
+			weights[3] += 0.5f * d1;
+			weights[1] -= 0.5f * d1;
+		} else {
+			weights[2] += d1;
+			weights[1] -= d1;
+		}
+	}
+
+	Float result = 0.0f;
+	for (int y=-1; y<=2; ++y) {
+		Float wy = knotWeights[1][y+1];
+		for (int x=-1; x<=2; ++x) {
+			Float wxy = knotWeights[0][x+1] * wy;
+
+			if (wxy == 0)
+				continue;
+
+			size_t pos = (knot[1] + y) * size[0] + knot[0] + x;
+
+			result += data[pos] * wxy;
+		}
+	}
+	return result;
+}
+
+Float interpCubic3D(const Point3 &p, const Float *data, 
+		const Point3 &min, const Point3 &max, const Size3 &size) {
+	Float knotWeights[3][4];
+	Point3 knot;
+
+	/* Compute interpolation weights separately for each dimension */
+	for (int dim=0; dim<3; ++dim) {
+		Float *weights = knotWeights[dim];
+		if (p[dim] < min[dim] || p[dim] > max[dim])
+			return 0.0f;
+
+		/* Transform 'p' so that knots lie at integer positions */
+		Float t = ((p[dim] - min[dim]) * (size[dim] - 1))
+			/ (max[dim]-min[dim]);
+
+		/* Find the index of the left knot in the queried 
+		   subinterval, be robust to cases where t=b. */
+		knot[dim] = std::min((size_t) t, size[dim] - 2);
+
+		/* Compute the relative position within the interval */
+		t = t - (Float) knot[dim];
+
+		/* Compute node weights */
+		Float t2 = t*t, t3 = t2*t;
+		weights[0] = 0.0f;
+		weights[1] = 2*t3 - 3*t2 + 1;
+		weights[2] = -2*t3 + 3*t2;
+		weights[3] = 0.0f;
+
+		/* Derivative weights */
+		Float d0 = t3 - 2*t2 + t,
+			  d1 = t3 - t2;
+
+		/* Turn derivative weights into node weights using
+		   an appropriate chosen finite differences stencil */
+		if (knot[dim] > 0) {
+			weights[2] +=  0.5f * d0;
+			weights[0] -=  0.5f * d0;
+		} else {
+			weights[2] += d0;
+			weights[1] -= d0;
+		}
+
+		if (knot[dim] + 2 < size[dim]) {
+			weights[3] += 0.5f * d1;
+			weights[1] -= 0.5f * d1;
+		} else {
+			weights[2] += d1;
+			weights[1] -= d1;
+		}
+	}
+
+	Float result = 0.0f;
+	for (int z=-1; z<=2; ++z) {
+		Float wz = knotWeights[2][z+1];
+		for (int y=-1; y<=2; ++y) {
+			Float wyz = knotWeights[1][y+1] * wz;
+			for (int x=-1; x<=2; ++x) {
+				Float wxyz = knotWeights[0][x+1] * wyz;
+
+				if (wxyz == 0)
+					continue;
+
+				size_t pos = ((knot[2] + z) * size[1] + (knot[1] + y))
+					* size[0] + knot[0] + x;
+
+				result += data[pos] * wxyz;
+			}
+		}
+	}
+	return result;
+}
+
 void stratifiedSample1D(Random *random, Float *dest, int count, bool jitter) {
 	Float invCount = 1.0f / count;
 
@@ -995,5 +1176,4 @@ Float hypot2(Float a, Float b) {
 	}
 	return r;
 }
-
 MTS_NAMESPACE_END
