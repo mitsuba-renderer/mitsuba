@@ -69,9 +69,11 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the reflectance component\default{1.0}}
+ *         factor that can be used to modulate the specular reflection component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the transmittance component\default{1.0}}
+ *         factor that can be used to modulate the specular transmission component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  * }\vspace{4mm}
  *
  * This plugin implements a realistic microfacet scattering model for rendering

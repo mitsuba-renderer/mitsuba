@@ -56,6 +56,10 @@ public:
 		return m_value;
 	}
 
+	inline Spectrum getMinimum() const {
+		return m_value;
+	}
+
 	inline bool isConstant() const {
 		return true;
 	}
@@ -105,6 +109,10 @@ public:
 		return Spectrum(m_value);
 	}
 
+	inline Spectrum getMinimum() const {
+		return Spectrum(m_value);
+	}
+
 	inline bool isConstant() const {
 		return true;
 	}
@@ -150,8 +158,13 @@ public:
 	}
 
 	inline Spectrum getMaximum() const {
-		SLog(EError, "SpectrumAdditionTexture::getMaximum() -- information unavailable!");
-		return Spectrum(0.0f);
+		// Return a conservative estimate
+		return m_a->getMaximum() + m_b->getMaximum();
+	}
+
+	inline Spectrum getMinimum() const {
+		// Return a conservative estimate
+		return m_a->getMinimum() + m_b->getMinimum();
 	}
 
 	inline bool isConstant() const {
@@ -202,8 +215,13 @@ public:
 	}
 
 	inline Spectrum getMaximum() const {
-		SLog(EError, "SpectrumSubtractionTexture::getMaximum() -- information unavailable!");
-		return Spectrum(0.0f);
+		// Return a conservative estimate
+		return m_a->getMaximum() - m_b->getMinimum();
+	}
+
+	inline Spectrum getMinimum() const {
+		// Return a conservative estimate
+		return m_a->getMinimum() - m_b->getMaximum();
 	}
 
 	inline bool isConstant() const {
@@ -255,7 +273,13 @@ public:
 	}
 
 	inline Spectrum getMaximum() const {
+		// Return a conservative estimate
 		return m_a->getMaximum() * m_b->getMaximum();
+	}
+
+	inline Spectrum getMinimum() const {
+		// Return a conservative estimate
+		return m_a->getMinimum() * m_b->getMinimum();
 	}
 
 	inline bool isConstant() const {

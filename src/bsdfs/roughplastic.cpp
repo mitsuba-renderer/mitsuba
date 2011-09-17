@@ -158,7 +158,7 @@ public:
 			Log(EError, "The 'roughplastic' plugin currently does not support "
 				"anisotropic microfacet distributions!");
 
-		m_alpha = m_distribution.transformRoughness(
+		m_alpha = new ConstantFloatTexture(
 			props.getFloat("alpha", 0.1f));
 
 		m_specularSamplingWeight = 0.0f;
@@ -171,10 +171,9 @@ public:
 		);
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
-		m_alpha = stream->readFloat();
+		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
-
 
 		configure();
 	}
@@ -182,10 +181,14 @@ public:
 	void configure() {
 		m_components.clear();
 
+		bool constAlpha = m_alpha->isConstant();
+
 		m_components.push_back(EGlossyReflection | EFrontSide 
-			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
+			| ((constAlpha && m_specularReflectance->isConstant())
+				? 0 : ESpatiallyVarying));
 		m_components.push_back(EDiffuseReflection | EFrontSide 
-			| (m_diffuseReflectance->isConstant() ? 0 : ESpatiallyVarying));
+			| ((constAlpha && m_diffuseReflectance->isConstant()) 
+				? 0 : ESpatiallyVarying));
 
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
@@ -204,9 +207,20 @@ public:
 			   transmittance through the dielectric interface */
 			m_roughTransmittance = new RoughTransmittance(
 				m_distribution.getType());
-			
+
+			Float eta = m_intIOR / m_extIOR;
+
+			m_roughTransmittance->checkEta(eta);
+			m_roughTransmittance->checkAlpha(m_alpha->getMinimum().average());
+			m_roughTransmittance->checkAlpha(m_alpha->getMaximum().average());
+
 			/* Reduce the rough transmittance data to a 2D slice */
-			m_roughTransmittance->setEta(m_intIOR / m_extIOR);
+			m_roughTransmittance->setEta(eta);
+
+			/* If possible, even reduce it to a 1D slice */
+			if (constAlpha) 
+				m_roughTransmittance->setAlpha(
+					m_alpha->getValue(Intersection()).average());
 		}
 
 		m_usesRayDifferentials = 
@@ -236,6 +250,10 @@ public:
 			Frame::cosTheta(bRec.wo) <= 0 ||
 			(!hasSpecular && !hasDiffuse))
 			return Spectrum(0.0f);
+
+		/* Evaluate the roughness texture */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alphaT = m_distribution.transformRoughness(alpha);
 	
 		Spectrum result(0.0f);
 		if (hasSpecular) {
@@ -243,13 +261,13 @@ public:
 			const Vector H = normalize(bRec.wo+bRec.wi);
 
 			/* Evaluate the microsurface normal distribution */
-			const Float D = m_distribution.eval(H, m_alpha);
+			const Float D = m_distribution.eval(H, alphaT);
 
 			/* Fresnel term */
 			const Float F = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
 
 			/* Smith's shadow-masking function */
-			const Float G = m_distribution.G(bRec.wi, bRec.wo, H, m_alpha);
+			const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaT);
 
 			/* Calculate the specular reflection component */
 			Float value = F * D * G / 
@@ -260,7 +278,7 @@ public:
 
 		if (hasDiffuse) 
 			result += m_diffuseReflectance->getValue(bRec.its) * (INV_PI
-				* m_roughTransmittance->eval(Frame::cosTheta(bRec.wi), m_alpha)
+				* m_roughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha)
 				* Frame::cosTheta(bRec.wo));
 
 		return result;
@@ -278,13 +296,17 @@ public:
 			(!hasSpecular && !hasDiffuse))
 			return 0.0f;
 
+		/* Evaluate the roughness texture */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alphaT = m_distribution.transformRoughness(alpha);
+
 		/* Calculate the reflection half-vector */
 		const Vector H = normalize(bRec.wo+bRec.wi);
 
 		Float probDiffuse, probSpecular;
 		if (hasSpecular && hasDiffuse) {
 			/* Find the probability of sampling the specular component */
-			probSpecular = 1-m_roughTransmittance->eval(Frame::cosTheta(bRec.wi), m_alpha);
+			probSpecular = 1-m_roughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha);
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -302,7 +324,7 @@ public:
 			const Float dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, H));
 
 			/* Evaluate the microsurface normal distribution */
-			const Float prob = m_distribution.pdf(H, m_alpha);
+			const Float prob = m_distribution.pdf(H, alphaT);
 
 			result = prob * dwh_dwo * probSpecular;
 		}
@@ -325,10 +347,14 @@ public:
 		bool choseSpecular = hasSpecular;
 		Point2 sample(_sample);
 
+		/* Evaluate the roughness texture */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alphaT = m_distribution.transformRoughness(alpha);
+
 		Float probSpecular;
 		if (hasSpecular && hasDiffuse) {
-			/* Find the probability of sampling the diffuse component */
-			probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi), m_alpha);
+			/* Find the probability of sampling the specular component */
+			probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha);
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -345,7 +371,7 @@ public:
 
 		if (choseSpecular) {
 			/* Perfect specular reflection based on the microsurface normal */
-			Normal m = m_distribution.sample(sample, m_alpha);
+			Normal m = m_distribution.sample(sample, alphaT);
 			bRec.wo = reflect(bRec.wi, m);
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EGlossyReflection;
@@ -379,14 +405,16 @@ public:
 		stream->writeUInt((uint32_t) m_distribution.getType());
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_diffuseReflectance.get());
-		stream->writeFloat(m_alpha);
+		manager->serialize(stream, m_alpha.get());
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
-			if (name == "specularReflectance") 
+			if (name == "alpha")
+				m_alpha = static_cast<Texture *>(child);
+			else if (name == "specularReflectance") 
 				m_specularReflectance = static_cast<Texture *>(child);
 			else if (name == "diffuseReflectance")
 				m_diffuseReflectance = static_cast<Texture *>(child);
@@ -402,7 +430,7 @@ public:
 		oss << "RoughPlastic[" << endl
 			<< "  name = \"" << getName() << "\"," << endl
 			<< "  distribution = " << m_distribution.toString() << "," << endl
-			<< "  alpha = " << m_alpha << "," << endl
+			<< "  alpha = " << indent(m_alpha->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
@@ -421,7 +449,8 @@ private:
 	ref<RoughTransmittance> m_roughTransmittance;
 	ref<Texture> m_diffuseReflectance;
 	ref<Texture> m_specularReflectance;
-	Float m_alpha, m_intIOR, m_extIOR;
+	ref<Texture> m_alpha;
+	Float m_intIOR, m_extIOR;
 	Float m_specularSamplingWeight;
 };
 
@@ -437,55 +466,55 @@ private:
 class RoughPlasticShader : public Shader {
 public:
 	RoughPlasticShader(Renderer *renderer, const Texture *specularReflectance,
-			const Texture *diffuseReflectance, Float alpha, Float extIOR, 
+			const Texture *diffuseReflectance, const Texture *alpha, Float extIOR, 
 			Float intIOR) : Shader(renderer, EBSDFShader), 
 			m_specularReflectance(specularReflectance), 
 			m_diffuseReflectance(diffuseReflectance), 
 			m_alpha(alpha), m_extIOR(extIOR), m_intIOR(intIOR) {
 		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
 		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
-		m_alpha = std::max(m_alpha, (Float) 0.2f);
+		m_alphaShader = renderer->registerShaderForResource(m_alpha.get());
 		m_R0 = fresnel(1.0f, m_extIOR, m_intIOR);
 	}
 
 	bool isComplete() const {
 		return m_specularReflectanceShader.get() != NULL &&
-			m_diffuseReflectanceShader.get() != NULL;
+			m_diffuseReflectanceShader.get() != NULL &&
+			m_alphaShader.get() != NULL;
 	}
 
 	void putDependencies(std::vector<Shader *> &deps) {
 		deps.push_back(m_specularReflectanceShader.get());
 		deps.push_back(m_diffuseReflectanceShader.get());
+		deps.push_back(m_alphaShader.get());
 	}
 
 	void cleanup(Renderer *renderer) {
 		renderer->unregisterShaderForResource(m_specularReflectance.get());
 		renderer->unregisterShaderForResource(m_diffuseReflectance.get());
+		renderer->unregisterShaderForResource(m_alpha.get());
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_alpha", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_R0", false));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
-		program->setParameter(parameterIDs[0], m_alpha);
 		program->setParameter(parameterIDs[1], m_R0);
 	}
 
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		oss << "uniform float " << evalName << "_alpha;" << endl
-			<< "uniform float " << evalName << "_R0;" << endl
+		oss << "uniform float " << evalName << "_R0;" << endl
 			<< endl
-			<< "float " << evalName << "_D(vec3 m) {" << endl
+			<< "float " << evalName << "_D(vec3 m, float alpha) {" << endl
 			<< "    float ct = cosTheta(m);" << endl
 			<< "    if (cosTheta(m) <= 0.0)" << endl
 			<< "        return 0.0;" << endl
-			<< "    float ex = tanTheta(m) / " << evalName << "_alpha;" << endl
-			<< "    return exp(-(ex*ex)) / (pi * " << evalName << "_alpha" << endl
-			<< "        * " << evalName << "_alpha * pow(cosTheta(m), 4.0));" << endl
+			<< "    float ex = tanTheta(m) / alpha;" << endl
+			<< "    return exp(-(ex*ex)) / (pi * alpha * alpha *" << endl
+			<< "               pow(cosTheta(m), 4.0));" << endl
 			<< "}" << endl
 			<< endl
 			<< "float " << evalName << "_G(vec3 m, vec3 wi, vec3 wo) {" << endl
@@ -510,7 +539,8 @@ public:
 			<< "    vec3 H = normalize(wi + wo);" << endl
 			<< "    vec3 specRef = " << depNames[0] << "(uv);" << endl
 			<< "    vec3 diffuseRef = " << depNames[1] << "(uv);" << endl
-			<< "    float D = " << evalName << "_D(H)" << ";" << endl
+			<< "    float alpha = " << depNames[2] << "(uv)[0];" << endl
+			<< "    float D = " << evalName << "_D(H, alpha)" << ";" << endl
 			<< "    float G = " << evalName << "_G(H, wi, wo);" << endl
 			<< "    float F = " << evalName << "_schlick(1-dot(wi, H));" << endl
 			<< "    return specRef    * (F * D * G / (4*cosTheta(wi))) + " << endl
@@ -526,15 +556,17 @@ public:
 private:
 	ref<const Texture> m_specularReflectance;
 	ref<const Texture> m_diffuseReflectance;
+	ref<const Texture> m_alpha;
 	ref<Shader> m_specularReflectanceShader;
 	ref<Shader> m_diffuseReflectanceShader;
-	Float m_alpha, m_extIOR, m_intIOR, m_R0;
+	ref<Shader> m_alphaShader;
+	Float m_extIOR, m_intIOR, m_R0;
 };
 
 Shader *RoughPlastic::createShader(Renderer *renderer) const { 
 	return new RoughPlasticShader(renderer,
 		m_specularReflectance.get(), m_diffuseReflectance.get(),
-		m_alpha, m_extIOR, m_intIOR);
+		m_alpha.get(), m_extIOR, m_intIOR);
 }
 
 MTS_IMPLEMENT_CLASS(RoughPlasticShader, false, Shader)

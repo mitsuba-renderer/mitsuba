@@ -61,10 +61,17 @@ public:
 	}
 
 	Spectrum getAverage() const {
-		return Spectrum(1.0f);
+		// For lack of having a better estimate
+		return Spectrum(0.5f);
 	}
-	
+
+	Spectrum getMinimum() const {
+		// For lack of having a better estimate
+		return Spectrum(0.0f);
+	}
+
 	Spectrum getMaximum() const {
+		// For lack of having a better estimate
 		return Spectrum(1.0f);
 	}
 

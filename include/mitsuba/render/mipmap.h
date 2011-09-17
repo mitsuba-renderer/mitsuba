@@ -88,7 +88,13 @@ public:
 	}
 
 	/// Get the component-wise maximum at the zero level
-	Spectrum getMaximum() const;
+	inline const Spectrum &getMinimum() const { return m_minimum; }
+
+	/// Get the component-wise minimum
+	inline const Spectrum &getMaximum() const { return m_maximum; }
+
+	/// Get the component-wise average
+	inline const Spectrum &getAverage() const { return m_average; }
 
 	/// Return a bitmap representation of the full-resolution image
 	Bitmap *getBitmap() const;
@@ -130,6 +136,9 @@ private:
 	EWrapMode m_wrapMode;
 	Float *m_weightLut;
 	Float m_maxAnisotropy;
+	Spectrum m_minimum;
+	Spectrum m_maximum;
+	Spectrum m_average;
 };
 
 MTS_NAMESPACE_END

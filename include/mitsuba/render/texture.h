@@ -38,6 +38,9 @@ public:
 	/// Return the component-wise average value of the texture over its domain
 	virtual Spectrum getAverage() const = 0;
 
+	/// Return the component-wise minimum of the texture over its domain
+	virtual Spectrum getMinimum() const = 0;
+
 	/// Return the component-wise maximum of the texture over its domain
 	virtual Spectrum getMaximum() const = 0;
 

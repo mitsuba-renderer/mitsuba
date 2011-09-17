@@ -48,6 +48,7 @@ MTS_NAMESPACE_BEGIN
  *         {bsdf_plastic_shiny}
  * }
  *
+ * \vspace{3mm}
  * This plugin simulates a realistic smooth plastic-like material with internal
  * scattering. Internally, this is modeled as a diffuse base layer with a 
  * dielectric material boundary. 

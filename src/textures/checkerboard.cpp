@@ -75,12 +75,22 @@ public:
 		return false;
 	}
 
-	Spectrum getAverage() const {
-		return m_color1 * .5f;
-	}
-	
 	Spectrum getMaximum() const {
-		return m_color0;
+		Spectrum max;
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+			max[i] = std::max(m_color0[i], m_color1[i]);
+		return max;
+	}
+
+	Spectrum getMinimum() const {
+		Spectrum min;
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+			min[i] = std::min(m_color0[i], m_color1[i]);
+		return min;
+	}
+
+	Spectrum getAverage() const {
+		return (m_color0 + m_color1) * 0.5f;
 	}
 
 	bool isConstant() const {

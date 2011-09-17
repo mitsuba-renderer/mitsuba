@@ -266,8 +266,6 @@ public:
 
 		m_mipmap = MIPMap::fromBitmap(corrected, m_filterType,
 				m_wrapMode, m_maxAnisotropy);
-		m_average = m_mipmap->triangle(m_mipmap->getLevels()-1, 0, 0);
-		m_maximum = m_mipmap->getMaximum();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -300,11 +298,15 @@ public:
 	}
 
 	Spectrum getAverage() const {
-		return m_average;
+		return m_mipmap->getAverage();
 	}
 
 	Spectrum getMaximum() const {
-		return m_maximum;
+		return m_mipmap->getMaximum();
+	}
+
+	Spectrum getMinimum() const {
+		return m_mipmap->getMinimum();
 	}
 
 	bool isConstant() const {
@@ -347,10 +349,9 @@ protected:
 	fs::path m_filename;
 	Bitmap::EFileFormat m_format;
 	MIPMap::EFilterType m_filterType;
-	Spectrum m_average, m_maximum;
-	Float m_gamma;
 	MIPMap::EWrapMode m_wrapMode;
 	Float m_maxAnisotropy;
+	Float m_gamma;
 	int m_bpp;
 };
 

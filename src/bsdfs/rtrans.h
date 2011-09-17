@@ -101,13 +101,15 @@ public:
 		m_etaSamples = fstream->readSize();
 		m_alphaSamples = fstream->readSize();
 		m_thetaSamples = fstream->readSize();
-
-		SLog(EInfo, "Loading " SIZE_T_FMT "x" SIZE_T_FMT "x" SIZE_T_FMT 
-			" rough transmittance samples from \"%s\"", 2*m_etaSamples,
-			m_alphaSamples, m_thetaSamples, sourceFile.file_string().c_str());
-
+		
 		size_t transSize = 2 * m_etaSamples * m_alphaSamples * m_thetaSamples;
 		size_t diffTransSize = 2 * m_etaSamples * m_alphaSamples;
+
+		SLog(EDebug, "Loading " SIZE_T_FMT "x" SIZE_T_FMT "x" SIZE_T_FMT 
+			" (%s) rough transmittance samples from \"%s\"", 2*m_etaSamples,
+			m_alphaSamples, m_thetaSamples, 
+			memString((transSize + diffTransSize) * sizeof(float)).c_str(),
+			sourceFile.file_string().c_str());
 
 		m_trans = new Float[transSize];
 		m_diffTrans = new Float[diffTransSize];
@@ -119,7 +121,7 @@ public:
 		m_alphaMin = (Float) fstream->readSingle();
 		m_alphaMax = (Float) fstream->readSingle();
 
-		SLog(EInfo, "Precomputed data is available for the IOR range "
+		SLog(EDebug, "Precomputed data is available for the IOR range "
 			"[%.4f, %.1f] and roughness range [%.4f, %.1f]",  m_etaMin,
 			m_etaMax, m_alphaMin, m_alphaMax);
 
@@ -280,6 +282,12 @@ public:
 		if (m_etaFixed)
 			return;
 
+		size_t transSize = m_alphaSamples * m_thetaSamples;
+		size_t diffTransSize = m_alphaSamples;
+
+		SLog(EDebug, "Reducing dimension from 3D to 2D (%s), eta = %f", 
+			memString((transSize + diffTransSize) * sizeof(Float)).c_str(), eta);
+
 		Float *trans = m_trans,
 			  *diffTrans = m_diffTrans;
 
@@ -297,8 +305,8 @@ public:
 		Float warpedEta = std::pow((eta - m_etaMin) 
 				/ (m_etaMax-m_etaMin), 0.25f);
 
-		Float *newTrans = new Float[m_alphaSamples*m_thetaSamples];
-		Float *newDiffTrans = new Float[m_alphaSamples];
+		Float *newTrans = new Float[transSize];
+		Float *newDiffTrans = new Float[diffTransSize];
 
 		Float dAlpha = 1.0f / (m_alphaSamples - 1),
 			  dTheta = 1.0f / (m_thetaSamples - 1);
@@ -336,11 +344,17 @@ public:
 		if (m_alphaFixed)
 			return;
 
+		size_t transSize = m_thetaSamples;
+		size_t diffTransSize = 1;
+
+		SLog(EDebug, "Reducing dimension from 2D to 1D (%s), alpha = %f", 
+			memString((transSize + diffTransSize) * sizeof(Float)).c_str(), alpha);
+
 		Float warpedAlpha = std::pow((alpha - m_alphaMin) 
 				/ (m_alphaMax-m_alphaMin), 0.25f);
 
-		Float *newTrans = new Float[m_thetaSamples];
-		Float *newDiffTrans = new Float[1];
+		Float *newTrans = new Float[transSize];
+		Float *newDiffTrans = new Float[diffTransSize];
 
 		Float dTheta = 1.0f / (m_thetaSamples - 1);
 
@@ -360,6 +374,26 @@ public:
 		m_diffTrans = newDiffTrans;
 		m_alphaFixed = true;
 	}
+
+	void checkAlpha(Float alpha) {
+		if (alpha < m_alphaMin || alpha > m_alphaMax) {
+			SLog(EError, "Error: the requested roughness value alpha=%f is"
+				" outside of the supported range [%f, %f]! Please scale "
+				" your roughness value/texture to lie within this range.", 
+				alpha, m_alphaMin, m_alphaMax);
+		}
+	}
+
+	void checkEta(Float eta) {
+		if (eta < 1)
+			eta = 1/eta;
+		if (eta < m_etaMin || eta > m_etaMax) 
+			SLog(EError, "Error: the requested index of refraction eta=%f is"
+				" outside of the supported range [%f, %f]! Please update your "
+				" scene so that it uses realistic IOR values.", eta, 
+				m_etaMin, m_etaMax);
+	}
+
 protected:
 	std::string m_name;
 	size_t m_etaSamples;
