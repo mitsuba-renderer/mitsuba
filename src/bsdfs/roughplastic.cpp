@@ -56,10 +56,14 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the specular reflection component. Note that for physical 
- *         realism, this parameter should never be touched. \default{1.0}}
+ *         factor that can be used to modulate the specular reflection component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the diffuse reflection component\default{0.5}}
+ *     \parameter{preserveColors}{\Boolean}{
+ *         Account for color shifts due to internal scattering? See the main text
+ *         for a detailed description.\default{Don't account for them and
+ *         preserve the colors, i.e. \code{true}}
  * }\vspace{-1mm}
  * \renderings{
  *     \rendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
@@ -158,6 +162,8 @@ public:
 			Log(EError, "The 'roughplastic' plugin currently does not support "
 				"anisotropic microfacet distributions!");
 
+		m_preserveColors = props.getBoolean("preserveColors", true);
+
 		m_alpha = new ConstantFloatTexture(
 			props.getFloat("alpha", 0.1f));
 
@@ -174,6 +180,7 @@ public:
 		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
+		m_preserveColors = stream->readBool();
 
 		configure();
 	}
@@ -201,14 +208,14 @@ public:
 		Float dAvg = m_diffuseReflectance->getAverage().getLuminance(),
 			  sAvg = m_specularReflectance->getAverage().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
+			
+		Float eta = m_intIOR / m_extIOR;
 
 		if (!m_roughTransmittance.get()) {
 			/* Load precomputed data used to compute the rough
 			   transmittance through the dielectric interface */
 			m_roughTransmittance = new RoughTransmittance(
 				m_distribution.getType());
-
-			Float eta = m_intIOR / m_extIOR;
 
 			m_roughTransmittance->checkEta(eta);
 			m_roughTransmittance->checkAlpha(m_alpha->getMinimum().average());
@@ -276,10 +283,19 @@ public:
 			result += m_specularReflectance->getValue(bRec.its) * value; 
 		}
 
-		if (hasDiffuse) 
-			result += m_diffuseReflectance->getValue(bRec.its) * (INV_PI
-				* m_roughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha)
-				* Frame::cosTheta(bRec.wo));
+		if (hasDiffuse) { 
+			Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
+			Float T12 = m_roughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha);
+			Float T21 = m_roughTransmittance->eval(Frame::cosTheta(bRec.wo), alpha);
+			Float Fdr = 1-m_roughTransmittance->evalDiffuse(alpha);
+
+			if (m_preserveColors)
+				diff /= 1-Fdr;
+			else
+				diff /= Spectrum(1.0f) - diff * Fdr;
+
+			result += diff * (INV_PI * Frame::cosTheta(bRec.wo) * T12 * T21);
+		}
 
 		return result;
 	}
@@ -408,6 +424,7 @@ public:
 		manager->serialize(stream, m_alpha.get());
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
+		stream->writeBool(m_preserveColors);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
@@ -435,6 +452,7 @@ public:
 			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  diffuseSamplingWeight = " << (1-m_specularSamplingWeight) << "," << endl
+			<< "  preserveColors = " << m_preserveColors << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl
 			<< "  extIOR = " << m_extIOR << endl
 			<< "]";
@@ -452,6 +470,7 @@ private:
 	ref<Texture> m_alpha;
 	Float m_intIOR, m_extIOR;
 	Float m_specularSamplingWeight;
+	bool m_preserveColors;
 };
 
 /**
@@ -461,7 +480,8 @@ private:
  * it also makes use of the Schlick approximation to the Fresnel 
  * reflectance of dielectrics. When the roughness is lower than 
  * \alpha < 0.2, the shader clamps it to 0.2 so that it will still perform
- * reasonably well in a VPL-based preview.
+ * reasonably well in a VPL-based preview. There is no support for
+ * non-linear effects due to internal scattering.
  */
 class RoughPlasticShader : public Shader {
 public:

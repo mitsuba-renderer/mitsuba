@@ -31,14 +31,14 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the specular reflection component. Note that for physical 
- *         realism, this parameter should never be touched. \default{1.0}}
+ *         factor that can be used to modulate the specular reflection component. Note that 
+ *         for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the diffuse reflection component\default{0.5}}
  *     \parameter{preserveColors}{\Boolean}{
- *      Account for color shifts due to internal scattering? See the main text
- *      for a detailed description.\default{Don't account for them and
- *      preserve the colors, i.e. \code{true}}
+ *         Account for color shifts due to internal scattering? See the main text
+ *         for a detailed description.\default{Don't account for them and
+ *         preserve the colors, i.e. \code{true}}
  *     }
  * }
  *
@@ -231,14 +231,12 @@ public:
 		} else if (measure == ESolidAngle && hasDiffuse) {
 			Float Fr2 = fresnel(Frame::cosTheta(bRec.wo), m_extIOR, m_intIOR);
 
-			if (hasDiffuse) {
-				Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
-				if (m_preserveColors)
-					diff /= 1 - m_fdr;
-				else
-					diff /= Spectrum(1) - m_fdr*diff;
-				return diff * (INV_PI * Frame::cosTheta(bRec.wo) * m_eta2 * (1-Fr) * (1-Fr2));
-			}
+			Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
+			if (m_preserveColors)
+				diff /= 1 - m_fdr;
+			else
+				diff /= Spectrum(1) - diff * m_fdr;
+			return diff * (INV_PI * Frame::cosTheta(bRec.wo) * m_eta2 * (1-Fr) * (1-Fr2));
 		}
 
 		return Spectrum(0.0f);
