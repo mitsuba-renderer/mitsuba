@@ -45,7 +45,7 @@ MTS_NAMESPACE_BEGIN
  *              \vspace{-3mm}
  *       \end{enumerate}
  *     }
- *     \parameter{alpha}{\Float}{
+ *     \parameter{alpha}{\Float\Or\Texture}{
  *         Specifies the roughness of the unresolved surface micro-geometry. 
  *         When the Beckmann distribution is used, this parameter is equal to the 
  *         \emph{root mean square} (RMS) slope of the microfacets. 
@@ -89,6 +89,7 @@ MTS_NAMESPACE_BEGIN
  * be very similar, though scenes using this plugin will take longer to render 
  * due to the additional computational burden of tracking surface roughness.
  *
+ * \subsubsection*{Internal scattering}
  * The model uses the integrated specular reflectance to interpolate between the 
  * specular and diffuse components (i.e. any light that is not scattered
  * specularly is assumed to contribute to the diffuse component).
@@ -570,8 +571,7 @@ public:
 			<< "    vec3 H = normalize(wi + wo);" << endl
 			<< "    vec3 specRef = " << depNames[0] << "(uv);" << endl
 			<< "    vec3 diffuseRef = " << depNames[1] << "(uv);" << endl
-//			<< "    float alpha = max(0.2, " << depNames[2] << "(uv)[0]);" << endl
-			<< "    float alpha = 0.4;" << endl
+			<< "    float alpha = max(0.2, " << depNames[2] << "(uv)[0]);" << endl
 			<< "    float D = " << evalName << "_D(H, alpha)" << ";" << endl
 			<< "    float G = " << evalName << "_G(H, wi, wo);" << endl
 			<< "    float F = " << evalName << "_schlick(1-dot(wi, H));" << endl

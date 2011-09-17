@@ -49,9 +49,33 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * \vspace{3mm}
- * This plugin simulates a realistic smooth plastic-like material with internal
- * scattering. Internally, this is modeled as a diffuse base layer with a 
- * dielectric material boundary. 
+ * This plugin models a realistic smooth plastic-like material with internal
+ * scattering. Internally, it uses the Fresnel reflection and transmission
+ * coefficients to reproduce the direction-dependent effects of such materials.
+ * 
+ * Since it is simple, realistic, and fast, this model is often a better choice
+ * than the \pluginref{phong}, \pluginref{ward}, and \pluginref{roughplastic}
+ * plugins when rendering smooth plastic-like materials. 
+ *
+ * \renderings{
+ *     \medrendering{Diffuse textured rendering}{bsdf_plastic_diffuse}
+ *     \medrendering{Plastic, \code{nonlinear=false}}{bsdf_plastic_preserve}
+ *     \medrendering{Plastic, \code{nonlinear=true}}{bsdf_plastic_nopreserve}
+ *     \caption{
+ *        \label{fig:plastic-nonlinear}
+ *        When asked to do so, this model can account for subtle nonlinear color shifts due
+ *        to internal scattering processes. The above images show a textured
+ *        object first rendered using \pluginref{diffuse}, then 
+ *        \pluginref{plastic} with the default parameters, and finally using
+ *        \pluginref{plastic} and support for color shifts.
+ *     }
+ * }
+ *
+ * \subsubsection*{Internal scattering}
+ * Internally, this is model simulates the interaction of light with a diffuse 
+ * base layer coated by a thin dielectric layer. Note that this is mainly a convenient 
+ * abstraction rather than a restriction: there are many materials that can be rendered 
+ * with this model, even if might not not perfectly fit this description.
  *
  * Given some illumination that is incident on such a material, a portion
  * of the illumination is specularly reflected at the material
@@ -67,25 +91,6 @@ MTS_NAMESPACE_BEGIN
  * out the correct form of the model without ever having to spend
  * computational resources on the potentially large number of 
  * internal scattering events.
- 
- * Since it is simple, realistic, and fast, this model is often a better choice
- * than the \pluginref{phong}, \pluginref{ward}, and \pluginref{roughplastic}
- * plugins when rendering smooth plastic-like materials. 
- *
- *
- * \renderings{
- *     \medrendering{Diffuse textured rendering}{bsdf_plastic_diffuse}
- *     \medrendering{Plastic, \code{nonlinear=false}}{bsdf_plastic_preserve}
- *     \medrendering{Plastic, \code{nonlinear=true}}{bsdf_plastic_nopreserve}
- *     \caption{
- *        \label{fig:plastic-nonlinear}
- *        When asked to do so, this model can account for subtle nonlinear color shifts due
- *        to internal scattering processes. The above images show a textured
- *        object first rendered using \pluginref{diffuse}, then 
- *        \pluginref{plastic} with the default parameters, and finally using
- *        \pluginref{plastic} and support for color shifts.
- *     }
- * }
  *
  * Note that due to the internal scattering, the diffuse color of the 
  * material is in practice slightly different from the color of the 
