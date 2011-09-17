@@ -52,10 +52,10 @@ MTS_NAMESPACE_BEGIN
  * This plugin describes a smooth plastic-like material with internal scattering. 
  * It uses the Fresnel reflection and transmission coefficients to provide 
  * direction-dependent specular and diffuse components.
- * 
  * Since it is simple, realistic, and fast, this model is often a better choice
  * than the \pluginref{phong}, \pluginref{ward}, and \pluginref{roughplastic}
  * plugins when rendering smooth plastic-like materials. 
+ *
  * For convenience, this model allows to specify IOR values either numerically, 
  * or based on a list of known materials (see \tblref{dielectric-iors} for 
  * an overview). 
@@ -126,19 +126,18 @@ MTS_NAMESPACE_BEGIN
  * events until it is finally able to escape (\subfigref{plastic-intscat}{c}).
  *
  * Due to the mathematical simplicity of this setup, it is possible to work 
- * out the correct form of the model without ever having to spend
- * computational resources on the potentially large number of 
- * internal scattering events.
+ * out the correct form of the model without actually having to simulate
+ * the potentially large number of internal scattering events.
  *
  * Note that due to the internal scattering, the diffuse color of the 
  * material is in practice slightly different from the color of the 
  * base layer on its own---in particular, the material color will tend to shift towards 
  * darker colors with higher saturation. Since this can be counter-intuitive when 
  * using bitmap textures, these color shifts are disabled by default. Specify
- * the parameter \code{nonlinear=true} to enable them. 
- * \figref{plastic-nonlinear} illustrates this effect.
-*
- * \vspace{4mm}
+ * the parameter \code{nonlinear=true} to enable them. \figref{plastic-nonlinear} 
+ * illustrates the resulting change. This effect is also seen in real life,
+ * for instance a piece of wood will look slightly darker after coating it
+ * with a layer of varnish.
  */
 class SmoothPlastic : public BSDF {
 public:
