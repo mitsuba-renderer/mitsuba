@@ -35,10 +35,10 @@ MTS_NAMESPACE_BEGIN
  *         for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the diffuse reflection component\default{0.5}}
- *     \parameter{preserveColors}{\Boolean}{
- *         Account for color shifts due to internal scattering? See the main text
- *         for a detailed description.\default{Don't account for them and
- *         preserve the colors, i.e. \code{true}}
+ *     \parameter{nonlinear}{\Boolean}{
+ *         Account for nonlinear color shifts due to internal scattering? See the
+ *         main text for details.\default{Don't account for them and
+ *         preserve the texture colors, i.e. \code{false}}
  *     }
  * }
  *
@@ -75,11 +75,11 @@ MTS_NAMESPACE_BEGIN
  *
  * \renderings{
  *     \medrendering{Diffuse textured rendering}{bsdf_plastic_diffuse}
- *     \medrendering{Plastic, \code{preserveColors=true}}{bsdf_plastic_preserve}
- *     \medrendering{Plastic, \code{preserveColors=false}}{bsdf_plastic_nopreserve}
+ *     \medrendering{Plastic, \code{nonlinear=false}}{bsdf_plastic_preserve}
+ *     \medrendering{Plastic, \code{nonlinear=true}}{bsdf_plastic_nopreserve}
  *     \caption{
- *        \label{fig:plastic-preservecolors}
- *        When asked to do so, this model can account for subtle color shifts due
+ *        \label{fig:plastic-nonlinear}
+ *        When asked to do so, this model can account for subtle nonlinear color shifts due
  *        to internal scattering processes. The above images show a textured
  *        object first rendered using \pluginref{diffuse}, then 
  *        \pluginref{plastic} with the default parameters, and finally using
@@ -92,8 +92,8 @@ MTS_NAMESPACE_BEGIN
  * base layer on its own---in particular, the material color will tend to shift towards 
  * darker colors with higher saturation. Since this can be counter-intuitive when 
  * using bitmap textures, these color shifts are disabled by default. Specify
- * the parameter \code{preserveColors=false} to enable them. 
- * \figref{plastic-preservecolors} illustrates this effect.
+ * the parameter \code{nonlinear=true} to enable them. 
+ * \figref{plastic-nonlinear} illustrates this effect.
  *
  * Similar to the \pluginref{dielectric} plugin, this model allows to specify
  * IOR values either numerically, or based on a list of known materials (see 
@@ -130,7 +130,7 @@ public:
 		m_diffuseReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
 
-		m_preserveColors = props.getBoolean("preserveColors", true);
+		m_nonlinear = props.getBoolean("nonlinear", false);
 
 		m_specularSamplingWeight = 0.0f;
 	}
@@ -139,7 +139,7 @@ public:
 			: BSDF(stream, manager) {
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
-		m_preserveColors = stream->readBool();
+		m_nonlinear = stream->readBool();
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		configure();
@@ -153,7 +153,8 @@ public:
 			m_diffuseReflectance, "diffuseReflectance", 1.0f);
 
 		/* Numerically approximate the diffuse Fresnel reflectance */
-		m_fdr = fresnelDiffuseReflectance(m_extIOR / m_intIOR, false);
+		m_fdrInt = fresnelDiffuseReflectance(m_extIOR / m_intIOR, false);
+		m_fdrExt = fresnelDiffuseReflectance(m_intIOR / m_extIOR, false);
 
 		/* Compute weights that further steer samples towards
 		   the specular or diffuse components */
@@ -162,8 +163,8 @@ public:
 
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 		
-		Float eta = m_extIOR / m_intIOR;
-		m_eta2 = eta*eta;
+		Float invEta = m_extIOR / m_intIOR;
+		m_invEta2 = invEta*invEta;
 
 		m_usesRayDifferentials = 
 			m_specularReflectance->usesRayDifferentials() ||
@@ -178,9 +179,8 @@ public:
 		BSDF::configure();
 	}
 
-
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_diffuseReflectance->getValue(its);
+		return m_diffuseReflectance->getValue(its) * (1-m_fdrExt);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -188,7 +188,7 @@ public:
 
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
-		stream->writeBool(m_preserveColors);
+		stream->writeBool(m_nonlinear);
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_diffuseReflectance.get());
 	}
@@ -232,11 +232,11 @@ public:
 			Float Fr2 = fresnel(Frame::cosTheta(bRec.wo), m_extIOR, m_intIOR);
 
 			Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
-			if (m_preserveColors)
-				diff /= 1 - m_fdr;
+			if (m_nonlinear)
+				diff /= Spectrum(1) - diff * m_fdrInt;
 			else
-				diff /= Spectrum(1) - diff * m_fdr;
-			return diff * (INV_PI * Frame::cosTheta(bRec.wo) * m_eta2 * (1-Fr) * (1-Fr2));
+				diff /= 1 - m_fdrInt;
+			return diff * (INV_PI * Frame::cosTheta(bRec.wo) * m_invEta2 * (1-Fr) * (1-Fr2));
 		}
 
 		return Spectrum(0.0f);
@@ -305,12 +305,12 @@ public:
 				Float Fr2 = fresnel(Frame::cosTheta(bRec.wo), m_extIOR, m_intIOR);
 
 				Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
-				if (m_preserveColors)
-					diff /= 1 - m_fdr;
+				if (m_nonlinear)
+					diff /= Spectrum(1) - m_fdrInt*diff;
 				else
-					diff /= Spectrum(1) - m_fdr*diff;
+					diff /= 1 - m_fdrInt;
 
-				return diff * (m_eta2 * (1-Fr) * (1-Fr2) / (1-probSpecular));
+				return diff * (m_invEta2 * (1-Fr) * (1-Fr2) / (1-probSpecular));
 			}
 		} else if (hasSpecular) {
 			bRec.sampledComponent = 0;
@@ -324,12 +324,12 @@ public:
 			bRec.sampledType = EDiffuseReflection;
 
 			Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
-			if (m_preserveColors)
-				diff /= 1 - m_fdr;
+			if (m_nonlinear)
+				diff /= Spectrum(1) - diff*m_fdrInt;
 			else
-				diff /= Spectrum(1) - m_fdr*diff;
+				diff /= 1 - m_fdrInt;
 
-			return diff * (m_eta2 * (1-Fr) * (1-Fr2));
+			return diff * (m_invEta2 * (1-Fr) * (1-Fr2));
 		}
 	}
 
@@ -367,14 +367,14 @@ public:
 				Float Fr2 = fresnel(Frame::cosTheta(bRec.wo), m_extIOR, m_intIOR);
 
 				Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
-				if (m_preserveColors)
-					diff /= 1 - m_fdr;
+				if (m_nonlinear)
+					diff /= Spectrum(1) - diff*m_fdrInt;
 				else
-					diff /= Spectrum(1) - m_fdr*diff;
+					diff /= 1 - m_fdrInt;
 
 				pdf = (1-probSpecular) * Frame::cosTheta(bRec.wo) * INV_PI;
 	
-				return diff * (m_eta2 * (1-Fr) * (1-Fr2) / (1-probSpecular));
+				return diff * (m_invEta2 * (1-Fr) * (1-Fr2) / (1-probSpecular));
 			}
 		} else if (hasSpecular) {
 			bRec.sampledComponent = 0;
@@ -391,12 +391,12 @@ public:
 			pdf = Frame::cosTheta(bRec.wo) * INV_PI;
 
 			Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
-			if (m_preserveColors)
-				diff /= 1 - m_fdr;
+			if (m_nonlinear)
+				diff /= Spectrum(1) - diff*m_fdrInt;
 			else
-				diff /= Spectrum(1) - m_fdr*diff;
+				diff /= 1 - m_fdrInt;
 
-			return diff * (m_eta2 * (1-Fr) * (1-Fr2));
+			return diff * (m_invEta2 * (1-Fr) * (1-Fr2));
 		}
 	}
 
@@ -410,21 +410,23 @@ public:
 			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  diffuseSamplingWeight = " << (1-m_specularSamplingWeight) << "," << endl
-			<< "  preserveColors = " << m_preserveColors << "," << endl
+			<< "  nonlinear = " << m_nonlinear << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl 
 			<< "  extIOR = " << m_extIOR << "," << endl
-			<< "  fdr = " << m_fdr << endl
+			<< "  fdrInt = " << m_fdrInt << "," << endl
+			<< "  fdrExt = " << m_fdrExt << endl
 			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	Float m_intIOR, m_extIOR, m_fdr, m_eta2;
+	Float m_intIOR, m_extIOR;
+	Float m_fdrInt, m_fdrExt, m_invEta2;
 	ref<Texture> m_diffuseReflectance;
 	ref<Texture> m_specularReflectance;
 	Float m_specularSamplingWeight;
-	bool m_preserveColors;
+	bool m_nonlinear;
 };
 
 /**
@@ -512,12 +514,12 @@ public:
 			<< "    float G = " << evalName << "_G(H, wi, wo);" << endl
 			<< "    float F = " << evalName << "_schlick(1-dot(wi, H));" << endl
 			<< "    return specRef    * (F * D * G / (4*cosTheta(wi))) + " << endl
-			<< "           diffuseRef * ((1-F) * cosTheta(wo) * 0.31831);" << endl
+			<< "           diffuseRef * ((1-F) * cosTheta(wo) * inv_pi);" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    vec3 diffuseRef = " << depNames[1] << "(uv);" << endl
-			<< "    return diffuseRef * 0.31831 * cosTheta(wo);"<< endl
+			<< "    return diffuseRef * inv_pi * cosTheta(wo);"<< endl
 			<< "}" << endl;
 	}
 	MTS_DECLARE_CLASS()
