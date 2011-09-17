@@ -49,13 +49,33 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * \vspace{3mm}
- * This plugin models a realistic smooth plastic-like material with internal
- * scattering. Internally, it uses the Fresnel reflection and transmission
- * coefficients to reproduce the direction-dependent effects of such materials.
+ * This plugin describes a smooth plastic-like material with internal scattering. 
+ * It uses the Fresnel reflection and transmission coefficients to provide 
+ * direction-dependent specular and diffuse components.
  * 
  * Since it is simple, realistic, and fast, this model is often a better choice
  * than the \pluginref{phong}, \pluginref{ward}, and \pluginref{roughplastic}
  * plugins when rendering smooth plastic-like materials. 
+ * For convenience, this model allows to specify IOR values either numerically, 
+ * or based on a list of known materials (see \tblref{dielectric-iors} for 
+ * an overview). 
+ *
+ * Note that this plugin is quite similar to what one would get by applying the
+ * \pluginref{coating} plugin to the \pluginref{diffuse} material. The main
+ * difference is that this plugin is significantly faster, while at the same
+ * time causing less variance. Furthermore, it accounts for multiple
+ * interreflections inside the material (read on for details), which avoids 
+ * a serious energy loss problem of the aforementioned plugin
+ * combination.
+ * \newpage
+ *
+ * \begin{xml}[caption=A shiny material whose diffuse reflectance is 
+ *     specified using sRGB, label=lst:plastic-shiny]
+ * <bsdf type="plastic">
+ *     <srgb name="diffuseReflectance" value="#18455c"/>
+ *     <float name="intIOR" value="1.9"/>
+ * </bsdf>
+ * \end{xml}
  *
  * \renderings{
  *     \medrendering{Diffuse textured rendering}{bsdf_plastic_diffuse}
@@ -67,25 +87,43 @@ MTS_NAMESPACE_BEGIN
  *        to internal scattering processes. The above images show a textured
  *        object first rendered using \pluginref{diffuse}, then 
  *        \pluginref{plastic} with the default parameters, and finally using
- *        \pluginref{plastic} and support for color shifts.
+ *        \pluginref{plastic} and support for nonlinear color shifts.
  *     }
  * }
  *
  * \subsubsection*{Internal scattering}
  * Internally, this is model simulates the interaction of light with a diffuse 
- * base layer coated by a thin dielectric layer. Note that this is mainly a convenient 
- * abstraction rather than a restriction: there are many materials that can be rendered 
- * with this model, even if might not not perfectly fit this description.
+ * base surface coated by a thin dielectric layer. This is a convenient 
+ * abstraction rather than a restriction. In other words, there are many 
+ * materials that can be rendered with this model, even if they might not not 
+ * fit this description perfectly well.
+ * 
+ * \begin{figure}[h]
+ * \setcounter{subfigure}{0}
+ * \centering
+ * \subfloat[At the boundary, incident illumination is partly \mbox{reflected} and refracted]
+ *      {\includegraphics[width=4.9cm]{images/bsdf_plastic_intscat_1.pdf}}\hfill
+ * \subfloat[The refracted portion scatters diffusely at the base layer]
+ *     {\includegraphics[width=4.9cm]{images/bsdf_plastic_intscat_2.pdf}}\hfill
+ * \subfloat[Some of the illumination undergoes further internal scattering events]
+ *     {\includegraphics[width=4.9cm]{images/bsdf_plastic_intscat_3.pdf}}
+ * \caption{
+ *     \label{fig:plastic-intscat}
+ *     An illustration of the scattering events that are internally
+ *     handled by this plugin}
+ * \end{figure}
  *
- * Given some illumination that is incident on such a material, a portion
+ * Given illumination that is incident upon such a material, a portion
  * of the illumination is specularly reflected at the material
- * boundary, which results in a sharp reflection in the mirror direction.
+ * boundary, which results in a sharp reflection in the mirror direction
+ * (\subfigref{plastic-intscat}{a}).
  * The remaining illumination refracts into the material, where it 
- * scatters from the diffuse base layer. While some of the diffusely 
- * scattered illumination is able to directly refract outwards again, 
- * the remainder is reflected from the interior side of the dielectric boundary 
- * and will in fact remain trapped inside the material for some number of 
- * internal scattering events until it is finally able to escape.
+ * scatters from the diffuse base layer. (\subfigref{plastic-intscat}{b}).
+ * While some of the diffusely scattered illumination is able to 
+ * directly refract outwards again, the remainder is reflected from the 
+ * interior side of the dielectric boundary and will in fact remain 
+ * trapped inside the material for some number of internal scattering 
+ * events until it is finally able to escape (\subfigref{plastic-intscat}{c}).
  *
  * Due to the mathematical simplicity of this setup, it is possible to work 
  * out the correct form of the model without ever having to spend
@@ -99,27 +137,8 @@ MTS_NAMESPACE_BEGIN
  * using bitmap textures, these color shifts are disabled by default. Specify
  * the parameter \code{nonlinear=true} to enable them. 
  * \figref{plastic-nonlinear} illustrates this effect.
- *
- * Similar to the \pluginref{dielectric} plugin, this model allows to specify
- * IOR values either numerically, or based on a list of known materials (see 
- * \tblref{dielectric-iors} for an overview). 
- *
- * Note that this plugin is quite similar to what one would get by applying the
- * \pluginref{coating} plugin to the \pluginref{diffuse} material. The main
- * difference is that this plugin is significantly faster, while at the same
- * time causing less variance. Furthermore, it accounts for multiple
- * interreflections inside the material, which avoids a serious energy
- * loss problem of the aforementioned plugin combination.
- *
+*
  * \vspace{4mm}
- *
- * \begin{xml}[caption=A shiny material whose diffuse reflectance is 
- *     specified using sRGB, label=lst:plastic-shiny]
- * <bsdf type="plastic">
- *     <srgb name="diffuseReflectance" value="#18455c"/>
- *     <float name="intIOR" value="1.9"/>
- * </bsdf>
- * \end{xml}
  */
 class SmoothPlastic : public BSDF {
 public:
