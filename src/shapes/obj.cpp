@@ -47,11 +47,12 @@ MTS_NAMESPACE_BEGIN
  *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}
  *     }
- *     \parameter{recenter}{\Boolean}{
- *       When set to \code{true}, the geometry will be uniformly scaled 
- *       and shifted to so that its object-space footprint fits into $[-1, 1]^3$.
- *	   }
  * }
+ *
+ * This plugin implements a simple loader for Wavefront OBJ files. It handles
+ * triangle and quad meshes, vertex normals, and UV coordinates. Due to the
+ * heavy-weight nature of OBJ files, this loader is usually quite a bit slower
+ * than the \pluginref{ply} or \pluginref{serialized} plugins.
  */
 class WavefrontOBJ : public Shape {
 public:
@@ -102,10 +103,6 @@ public:
 		   appearance.
 		*/
 		m_faceNormals = props.getBoolean("faceNormals", false);
-
-		/* Re-center & scale all contents to move them into the 
-		   AABB [-1, -1, -1]x[1, 1, 1]? */
-		m_recenter = props.getBoolean("recenter", false);
 
 		/* Causes all normals to be flipped */
 		m_flipNormals = props.getBoolean("flipNormals", false);
@@ -360,20 +357,6 @@ public:
 		std::map<Vertex, int, vertex_key_order> vertexMap;
 		std::vector<Vertex> vertexBuffer;
 		size_t numMerged = 0;
-		Vector translate(0.0f);
-		Float scale = 0.0f;
-
-		if (m_recenter) {
-			AABB aabb;
-			for (unsigned int i=0; i<triangles.size(); i++) {
-				for (unsigned int j=0; j<3; j++) {
-					unsigned int vertexId = triangles[i].p[j];
-					aabb.expandBy(vertices.at(vertexId));
-				}
-			}
-			scale = 2/aabb.getExtents()[aabb.getLargestAxis()];
-			translate = -Vector(aabb.getCenter());
-		}
 
 		/* Collapse the mesh into a more usable form */
 		Triangle *triangleArray = new Triangle[triangles.size()];
@@ -387,10 +370,7 @@ public:
 
 				Vertex vertex;
 
-				if (m_recenter)
-					vertex.p = objectToWorld((vertices.at(vertexId) + translate)*scale);
-				else
-					vertex.p = objectToWorld(vertices.at(vertexId));
+				vertex.p = objectToWorld(vertices.at(vertexId));
 
 				if (hasNormals && normalId >= 0 && normals.at(normalId) != Normal(0.0f))
 					vertex.n = normalize(objectToWorld(normals.at(normalId)));
@@ -533,7 +513,7 @@ public:
 private:
 	std::vector<TriMesh *> m_meshes;
 	std::map<std::string, BSDF *> m_materials;
-	bool m_flipNormals, m_faceNormals, m_recenter;
+	bool m_flipNormals, m_faceNormals;
 	std::string m_name;
 	AABB m_aabb;
 };

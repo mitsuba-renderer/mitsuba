@@ -67,8 +67,15 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{The Stanford bunny loaded with \code{faceNormals=true}. Note
  *         the faceted appearance.}{shape_ply_bunny}
  * }
- * This plugin is based on the library \code{libply} by Ares Lagae
- * (\url{http://people.cs.kuleuven.be/~ares.lagae/libply}).
+ * This plugin implements a fast loader for the Stanford PLY format (both
+ * the ASCII and binary format). It is based on the \code{libply} library by 
+ * Ares Lagae (\url{http://people.cs.kuleuven.be/~ares.lagae/libply}).
+ * The current plugin implementation supports triangle meshes with optional
+ * UV coordinates, vertex normals, and vertex colors.
+ *
+ * When loading meshes that contain vertex colors, note that they need to be
+ * explicitly referenced in a BSDF using a special texture named
+ * \pluginref{vertexcolors}.
  */
 class PLYLoader : public TriMesh {
 public:

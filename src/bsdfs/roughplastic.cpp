@@ -86,7 +86,6 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}
  * }
  *
- *
  * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
  * \pluginref{plastic}. For very low values of $\alpha$, the two will
  * be identical, though scenes using this plugin will take longer to render 
@@ -108,8 +107,8 @@ MTS_NAMESPACE_BEGIN
  *
  * The simplicity of this setup makes it possible to account for interesting
  * nonlinear effects due to internal scattering, which is controlled by
- * the \texttt{nonlinear} parameter. Please refer to the description of this
- * parameter given in the the \pluginref{plastic} plugin section 
+ * the \texttt{nonlinear} parameter. For more details, please refer to the description 
+ * of this parameter given in the the \pluginref{plastic} plugin section 
  * on \pluginpage{plastic}.
  *
  *
@@ -136,18 +135,30 @@ MTS_NAMESPACE_BEGIN
  * }
  * \newpage
  * \renderings{
- *     \setcounter{subfigure}{2}
- *     \rendering{Beckmann, $\alpha=0.05$, diffuseReflectance=0}
- *         {bsdf_roughplastic_beckmann_lacquer}
+ *     \rendering{Wood material with smooth horizontal stripes}{bsdf_roughplastic_roughtex1}
+ *     \rendering{A material with imperfections at a much smaller scale than what 
+ *       is modeled e.g. using a bump map.}{bsdf_roughplastic_roughtex2}\vspace{-3mm}
+ *     \caption{
+ *         The ability to texture the roughness parameter makes it possible
+ *         to render materials with a structured finish, as well as 
+ *         ``smudgy'' objects.
+ *     }
  * }
- *
- * \begin{xml}[caption={A material definition for rough, black laquer.}, 
- *    label=lst:roughplastic-lacquer]
+ * \vspace{2mm}
+ * \begin{xml}[caption={A material definition for black plastic material with
+ *    a spatially varying roughness.}, 
+ *    label=lst:roughplastic-varyingalpha]
  * <bsdf type="roughplastic">
  *     <string name="distribution" value="beckmann"/>
- *     <float name="alpha" value="0.05"/>
  *     <float name="intIOR" value="1.61"/>
  *     <spectrum name="diffuseReflectance" value="0"/>
+ *     <!-- Fetch roughness values from a texture and slightly reduce them -->
+ *     <texture type="scale" name="alpha">
+ *         <texture name="alpha" type="bitmap">
+ *             <string name="filename" value="bump.png"/>
+ *         </texture>
+ *         <float name="scale" value="0.6"/>
+ *     </texture>
  * </bsdf>
  * \end{xml}
  *
@@ -158,6 +169,17 @@ MTS_NAMESPACE_BEGIN
  * distributions are supported. Note that the choices are slightly more 
  * restricted here---in comparison to other rough scattering models in 
  * Mitsuba, anisotropic distributions are not allowed.
+ *
+ * The implementation of this model makes heavy use of a \emph{rough
+ * Fresnel transmittance} function, which is a generalization of the 
+ * usual Fresnel transmittion coefficient to microfacet surfaces. Unfortunately,
+ * this function is normally prohibitively expensive, since each 
+ * evaluation involves a numerical integration over the sphere. 
+ *
+ * To avoid this performance issue, Mitsuba ships with data files
+ * (contained in the \code{data/microfacet} directory) containing precomputed 
+ * values of this function over a large range of parameter values. At runtime,
+ * the relevant parts are extracted using tricubic interpolation.
  *
  * When rendering with the Phong microfacet distributions, a conversion 
  * is used to turn the specified $\alpha$ roughness value into the Phong 
