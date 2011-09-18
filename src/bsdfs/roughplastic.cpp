@@ -237,9 +237,9 @@ public:
 	}
 
 	void configure() {
-		m_components.clear();
-
 		bool constAlpha = m_alpha->isConstant();
+
+		m_components.clear();
 
 		m_components.push_back(EGlossyReflection | EFrontSide 
 			| ((constAlpha && m_specularReflectance->isConstant())
@@ -286,7 +286,8 @@ public:
 
 		m_usesRayDifferentials = 
 			m_specularReflectance->usesRayDifferentials() ||
-			m_diffuseReflectance->usesRayDifferentials();
+			m_diffuseReflectance->usesRayDifferentials() ||
+			m_alpha->usesRayDifferentials();
 
 		BSDF::configure();
 	}

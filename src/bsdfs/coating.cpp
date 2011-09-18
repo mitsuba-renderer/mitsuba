@@ -181,7 +181,7 @@ public:
 				Log(EError, "Only a single nested BRDF can be added!");
 			m_nested = static_cast<BSDF *>(child);
 		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "sigmaA") {
-			m_sigmaA = static_cast<Texture *>(m_sigmaA);
+			m_sigmaA = static_cast<Texture *>(child);
 		} else {
 			BSDF::addChild(name, child);
 		}

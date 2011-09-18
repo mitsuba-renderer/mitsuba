@@ -43,7 +43,7 @@ Shape::~Shape() { }
 
 
 void Shape::configure() {
-	if (isLuminaire() && m_bsdf == NULL) {
+	if ((hasSubsurface() || isLuminaire()) && m_bsdf == NULL) {
 		/* Light source & no BSDF -> set an all-absorbing BSDF to turn
 		   the shape into an occluder. This is needed for the path
 		   tracer implementation to work correctly. */
