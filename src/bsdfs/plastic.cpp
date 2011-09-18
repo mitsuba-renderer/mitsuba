@@ -79,8 +79,8 @@ MTS_NAMESPACE_BEGIN
  *
  * \renderings{
  *     \medrendering{Diffuse textured rendering}{bsdf_plastic_diffuse}
- *     \medrendering{Plastic, \code{nonlinear=false}}{bsdf_plastic_preserve}
- *     \medrendering{Plastic, \code{nonlinear=true}}{bsdf_plastic_nopreserve}
+ *     \medrendering{Plastic model, \code{nonlinear=false}}{bsdf_plastic_preserve}
+ *     \medrendering{Plastic model, \code{nonlinear=true}}{bsdf_plastic_nopreserve}
  *     \caption{
  *        \label{fig:plastic-nonlinear}
  *        When asked to do so, this model can account for subtle nonlinear color shifts due

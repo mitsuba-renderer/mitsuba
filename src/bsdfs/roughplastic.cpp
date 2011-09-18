@@ -62,15 +62,12 @@ MTS_NAMESPACE_BEGIN
  *         factor used to modulate the diffuse reflection component\default{0.5}}
  *     \parameter{nonlinear}{\Boolean}{
  *         Account for nonlinear color shifts due to internal scattering? See the
- *         main text for details.\default{Don't account for them and
+ *         \pluginref{plastic} plugin for details.\default{Don't account for them and
  *         preserve the texture colors, i.e. \code{false}}
  *     }
  * }
- * \renderings{
- *     \rendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
- *     \rendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}
- * }
  *
+ * \vspace{3mm}
  * This plugin implements a realistic microfacet scattering model for rendering
  * rough dielectric materials with internal scattering, such as plastic. It can 
  * be interpreted as a fancy version of the Cook-Torrance model and should be 
@@ -84,36 +81,37 @@ MTS_NAMESPACE_BEGIN
  * possible to reproduce the important off-specular reflections peaks observed 
  * in real-world measurements of such materials.
  *
+ * \renderings{
+ *     \rendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
+ *     \rendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}
+ * }
+ *
+ *
  * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
  * \pluginref{plastic}. For very low values of $\alpha$, the two will
- * be very similar, though scenes using this plugin will take longer to render 
+ * be identical, though scenes using this plugin will take longer to render 
  * due to the additional computational burden of tracking surface roughness.
  *
- * \subsubsection*{Internal scattering}
- * The model uses the integrated specular reflectance to interpolate between the 
- * specular and diffuse components (i.e. any light that is not scattered
- * specularly is assumed to contribute to the diffuse component).
- * Similar to the \pluginref{dielectric} plugin, IOR values 
- * can either be specified numerically, or based on a list of known materials 
- * (see \tblref{dielectric-iors} for an overview). 
- * 
- * The implementation is based on the paper ``Microfacet Models
- * for Refraction through Rough Surfaces'' by Walter et al. 
- * \cite{Walter07Microfacet}. It supports several different types of microfacet
- * distributions. Note that the choices are a bit more restricted here---in 
- * comparison to other rough scattering models in Mitsuba,
- * the roughness cannot be textured, and anisotropic microfacet 
- * distributions are not allowed.
- *
+ * For convenience, this model allows to specify IOR values either numerically, 
+ * or based on a list of known materials (see \tblref{dielectric-iors} on 
+ * \tblpage{dielectric-iors} for an overview). 
  * When no parameters are given, the plugin activates the defaults, 
  * which describe a white polypropylene plastic material with a light amount
  * of roughness modeled using the Beckmann distribution.
  *
- * \renderings{
- *     \setcounter{subfigure}{2}
- *     \rendering{Beckmann, $\alpha=0.05$, diffuseReflectance=0}
- *         {bsdf_roughplastic_beckmann_lacquer}
- * }
+ * Like the \pluginref{plastic} material, this model internally simulates the 
+ * interaction of light with a diffuse base surface coated by a thin dielectric 
+ * layer (where the coating layer is now \emph{rough}). This is a convenient 
+ * abstraction rather than a restriction. In other words, there are many 
+ * materials that can be rendered with this model, even if they might not not 
+ * fit this description perfectly well. 
+ *
+ * The simplicity of this setup makes it possible to account for interesting
+ * nonlinear effects due to internal scattering, which is controlled by
+ * the \texttt{nonlinear} parameter. Please refer to the description of this
+ * parameter given in the the \pluginref{plastic} plugin section 
+ * on \pluginpage{plastic}.
+ *
  *
  * To get an intuition about the effect of the surface roughness
  * parameter $\alpha$, consider the following approximate differentiation: 
@@ -123,12 +121,26 @@ MTS_NAMESPACE_BEGIN
  * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
  * finish). Values significantly above that are probably not too realistic.
  *
- * When rendering with the Phong microfacet 
- * distributions, a conversion is used to turn the specified 
- * $\alpha$ roughness value into the Phong exponent.
- * This is done in a way, such that the different 
- * distributions all produce a similar appearance for 
- * the same value of $\alpha$.
+ * \renderings{
+ *     \medrendering{Diffuse textured rendering}{bsdf_plastic_diffuse}
+ *     \medrendering{Textured rough plastic model and \code{nonlinear=false}}{bsdf_roughplastic_preserve}
+ *     \medrendering{Textured rough plastic model and \code{nonlinear=true}}{bsdf_roughplastic_nopreserve}
+ *     \caption{
+ *        \label{fig:plastic-nonlinear}
+ *        When asked to do so, this model can account for subtle nonlinear color shifts due
+ *        to internal scattering processes. The above images show a textured
+ *        object first rendered using \pluginref{diffuse}, then 
+ *        \pluginref{roughplastic} with the default parameters, and finally using
+ *        \pluginref{roughplastic} and support for nonlinear color shifts.
+ *     }
+ * }
+ * \newpage
+ * \renderings{
+ *     \setcounter{subfigure}{2}
+ *     \rendering{Beckmann, $\alpha=0.05$, diffuseReflectance=0}
+ *         {bsdf_roughplastic_beckmann_lacquer}
+ * }
+ *
  * \begin{xml}[caption={A material definition for rough, black laquer.}, 
  *    label=lst:roughplastic-lacquer]
  * <bsdf type="roughplastic">
@@ -138,6 +150,19 @@ MTS_NAMESPACE_BEGIN
  *     <spectrum name="diffuseReflectance" value="0"/>
  * </bsdf>
  * \end{xml}
+ *
+ * \subsubsection*{Technical details}
+ * The implementation of this model is partly based on the paper ``Microfacet
+ * Models for Refraction through Rough Surfaces'' by Walter et al. 
+ * \cite{Walter07Microfacet}. Several different types of microfacet 
+ * distributions are supported. Note that the choices are slightly more 
+ * restricted here---in comparison to other rough scattering models in 
+ * Mitsuba, anisotropic distributions are not allowed.
+ *
+ * When rendering with the Phong microfacet distributions, a conversion 
+ * is used to turn the specified $\alpha$ roughness value into the Phong 
+ * exponent. This is done in a way, such that the different distributions 
+ * all produce a similar appearance for the same value of $\alpha$.
  *
  */
 class RoughPlastic : public BSDF {

@@ -91,7 +91,7 @@ MTS_NAMESPACE_BEGIN
  *
  * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
  * \pluginref{conductor}. For very low values of $\alpha$, the two will
- * be very similar, though scenes using this plugin will take longer to render 
+ * be identical, though scenes using this plugin will take longer to render 
  * due to the additional computational burden of tracking surface roughness.
  * 
  * The implementation is based on the paper ``Microfacet Models
