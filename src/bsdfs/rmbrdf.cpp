@@ -25,7 +25,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*!\plugin{sssbrdf}{Subsurface scattering BRDF}
+/*!\plugin{rmbrdf}{Random medium BRDF}
  *
  * \parameters{
  *     \parameter{material}{\String}{Name of a material preset, see 
@@ -46,20 +46,29 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{g}{\Float\Or\String}{Specifies the phase function anisotropy
  *     --- see the \pluginref{hg} plugin for details\default{0, i.e. isotropic}}
- *     \parameter{alpha}{\Float}{
+ *     \parameter{alpha}{\Float\Or\Texture}{
  *         Specifies the roughness of the unresolved surface micro-geometry.
- *         \default{0.0, i.e. the surface has a smooth finish}
+ *         \default{0.1, i.e. the surface has a slightly rough finish}
  *     }
  * }
  *
+ * \renderings{
+ *     \rendering{Rendering using the whole milk material preset}{bsdf_sssbrdf}
+ * }
+ *
  * This plugin implements a BRDF scattering model that emulates interactions
- * with a participating medium embedded inside a dielectric layer. By
+ * with a random medium embedded inside a dielectric layer. By
  * approximating these events using a BRDF, any scattered illumination
  * is assumed to exit the material \emph{directly} at the original point of incidence.
- * To account for internal light transport with \emph{different} incident 
- * and exitant positions, please refer to Sections~\ref{sec:media} 
+ * To simulate actual subsurface scattering, refer to Sections~\ref{sec:media} 
  * and \ref{sec:subsurface}.
  *
+ * Note that renderings with this BRDF will usually look very similar to what might
+ * also be obtained using \pluginref{plastic}. The plugin's reason for existance
+ * is that can be configured using parameters that are traditionally reserved
+ * for participating media.
+ *
+ * \subsection*{Implementation details}
  * Internally, the model is implemented by instantiating a Hanrahan-Krueger
  * BSDF for single scattering in an infinitely thick layer together with 
  * an approximate multiple scattering component based on Jensen's 
@@ -72,9 +81,9 @@ MTS_NAMESPACE_BEGIN
  * in terms of the scattering and absorption coefficients \code{sigmaS} 
  * and \code{sigmaA}.
  */
-class SSSBRDF : public BSDF {
+class RandomMediumBRDF : public BSDF {
 public:
-	SSSBRDF(const Properties &props)
+	RandomMediumBRDF(const Properties &props)
 			: BSDF(props), m_configured(false) {
 
 		Spectrum sigmaS, sigmaA; // ignored here
@@ -85,7 +94,7 @@ public:
 		Properties hgProps("hg");
 		hgProps.setFloat("g", g);
 
-		Float alpha = props.getFloat("alpha", 0.0f);
+		Float alpha = props.getFloat("alpha", 0.1f);
 
 		ref<PhaseFunction> hg = static_cast<PhaseFunction *> (
 			PluginManager::getInstance()->createObject(
@@ -129,7 +138,7 @@ public:
 		props.markQueried("alpha");
 	}
 
-	SSSBRDF(Stream *stream, InstanceManager *manager) 
+	RandomMediumBRDF(Stream *stream, InstanceManager *manager) 
 	 : BSDF(stream, manager), m_configured(true) {
 		m_coating = static_cast<BSDF *>(manager->getInstance(stream));
 		m_hk = static_cast<BSDF *>(manager->getInstance(stream));
@@ -194,8 +203,14 @@ public:
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
-			m_hk->addChild(name, child);
-			m_dipole->addChild(name, child);
+			if (name == "sigmaS" || name == "sigmaA" || name == "sigmaT" || name == "albedo") {
+				m_hk->addChild(name, child);
+				m_dipole->addChild(name, child);
+			} else if (name == "alpha") {
+				m_coating->addChild(name, child);
+			} else {
+				BSDF::addChild(name, child);
+			}
 		} else {
 			BSDF::addChild(name, child);
 		}
@@ -207,7 +222,7 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "SSSBRDF[" << endl
+		oss << "RandomMediumBRDF[" << endl
    			<< "  name = \"" << m_name << "\"" << endl
    			<< "  nested = " << indent(m_coating->toString()) << endl
 			<< "]";
@@ -223,6 +238,6 @@ private:
 	bool m_configured;
 };
 
-MTS_IMPLEMENT_CLASS_S(SSSBRDF, false, BSDF)
-MTS_EXPORT_PLUGIN(SSSBRDF, "Subsurface scattering BRDF");
+MTS_IMPLEMENT_CLASS_S(RandomMediumBRDF, false, BSDF)
+MTS_EXPORT_PLUGIN(RandomMediumBRDF, "Random medium BRDF");
 MTS_NAMESPACE_END

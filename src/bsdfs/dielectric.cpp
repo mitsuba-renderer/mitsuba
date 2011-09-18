@@ -31,9 +31,11 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the reflectance component\default{1.0}}
+ *         factor that can be used to modulate the specular reflection component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the transmittance component\default{1.0}}
+ *         factor that can be used to modulate the specular transmission component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  * }
  *
  * \renderings{
@@ -72,8 +74,7 @@ MTS_NAMESPACE_BEGIN
  * In many cases, we will want to additionally describe the \emph{medium} within a
  * dielectric material. This requires the use of a rendering technique that is
  * aware of media (e.g. the volumetric path tracer). An example of how one might
- * describe a slightly absorbing piece of glass is given on the next page:
- * \newpage
+ * describe a slightly absorbing piece of glass is shown below:
  * \begin{xml}[caption=A glass material with absorption (based on the 
  *    Beer-Lambert law). This material can only be used by an integrator
  *    that is aware of participating media., label=lst:dielectric-glass]

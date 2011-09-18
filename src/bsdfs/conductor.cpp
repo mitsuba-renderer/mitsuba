@@ -33,9 +33,9 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of 
  *             refraction, also known as absorption coefficient.
  *             \default{based on the value of \texttt{material}}}
- *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{
- *        Optional factor used to modulate the reflectance component
- *        \default{1.0}}
+ *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
+ *         factor that can be used to modulate the specular reflection component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  * }
  * \renderings{
  *     \rendering{Measured copper material (the default), rendered using 30
@@ -76,7 +76,7 @@ MTS_NAMESPACE_BEGIN
  *
  * When using this plugin, you should ideally compile Mitsuba with support for 
  * spectral rendering to get the most accurate results. While it also works 
- * in RGB mode, the computations will be much more approximate in this case.
+ * in RGB mode, the computations will be more approximate in nature.
  * Also note that this material is one-sided---that is, observed from the 
  * back side, it will be completely black. If this is undesirable, 
  * consider using the \pluginref{twosided} BRDF adapter plugin.\vspace{4mm}
@@ -369,7 +369,7 @@ public:
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return " << evalName << "_R0 * 0.31831 * cosTheta(wo);"<< endl
+			<< "    return " << evalName << "_R0 * inv_pi * cosTheta(wo);"<< endl
 			<< "}" << endl;
 	}
 	MTS_DECLARE_CLASS()

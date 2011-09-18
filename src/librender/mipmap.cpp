@@ -98,20 +98,78 @@ MIPMap::MIPMap(int width, int height, Spectrum *pixels,
 	m_levelHeight= new int[m_levels];
 	m_levelWidth[0] = m_width;
 	m_levelHeight[0] = m_height;
-
-	/* Generate the mip-map hierarchy */
-	for (int i=1; i<m_levels; i++) {
-		m_levelWidth[i]  = std::max(1, m_levelWidth[i-1]/2);
-		m_levelHeight[i] = std::max(1, m_levelHeight[i-1]/2);
-		m_pyramid[i] = new Spectrum[m_levelWidth[i] * m_levelHeight[i]];
-		for (int y = 0; y < m_levelHeight[i]; y++) {
-			for (int x = 0; x < m_levelWidth[i]; x++) {
-				m_pyramid[i][x+y*m_levelWidth[i]] = (
-					getTexel(i-1, 2*x, 2*y) + 
-					getTexel(i-1, 2*x+1, 2*y) + 
-					getTexel(i-1, 2*x, 2*y+1) + 
-					getTexel(i-1, 2*x+1, 2*y+1)) * 0.25f;
+	m_maximum = Spectrum(-std::numeric_limits<Float>::infinity());
+	m_minimum = Spectrum(std::numeric_limits<Float>::infinity());
+	m_average = Spectrum(0.0f);
+	
+	if (m_levels > 1) {
+		/* Generate the mip-map hierarchy */
+		for (int i=1; i<m_levels; i++) {
+			m_levelWidth[i]  = std::max(1, m_levelWidth[i-1]/2);
+			m_levelHeight[i] = std::max(1, m_levelHeight[i-1]/2);
+			m_pyramid[i] = new Spectrum[m_levelWidth[i] * m_levelHeight[i]];
+	
+			if (i == 1) {
+				for (int y = 0; y < m_levelHeight[i]; y++) {
+					for (int x = 0; x < m_levelWidth[i]; x++) {
+						Spectrum t00 = getTexel(i-1, 2*x, 2*y),
+								 t10 = getTexel(i-1, 2*x+1, 2*y),
+								 t01 = getTexel(i-1, 2*x, 2*y+1),
+								 t11 = getTexel(i-1, 2*x+1, 2*y+1);
+	
+						/* Compute minima and maxima while processing level 0 */
+						for (int k=0; k<SPECTRUM_SAMPLES; ++k) {
+							m_maximum[k] = std::max(m_maximum[k],
+								std::max(std::max(t00[k], t10[k]), 
+										 std::max(t01[k], t11[k])));
+							m_minimum[k] = std::min(m_minimum[k],
+								std::min(std::min(t00[k], t10[k]), 
+										 std::min(t01[k], t11[k])));
+						}
+	
+						m_pyramid[i][x+y*m_levelWidth[i]] = 
+							(t00 + t10 + t01 + t11) * 0.25f;
+					}
+				}
+			} else {
+				for (int y = 0; y < m_levelHeight[i]; y++) {
+					for (int x = 0; x < m_levelWidth[i]; x++) {
+						m_pyramid[i][x+y*m_levelWidth[i]] = (
+							getTexel(i-1, 2*x, 2*y) + 
+							getTexel(i-1, 2*x+1, 2*y) + 
+							getTexel(i-1, 2*x, 2*y+1) + 
+							getTexel(i-1, 2*x+1, 2*y+1)) * 0.25f;
+					}
+				}
 			}
+		}
+		m_average = m_pyramid[m_levels-1][0];
+	} else {
+		/* Nearest filtering, no hierarchy needed -- 
+		   still compute average/min/max values */
+		int width = m_levelWidth[0], height = m_levelHeight[0];
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				Spectrum value = m_pyramid[0][x + width * y];
+
+				/* Compute minima and maxima while processing level 0 */
+				for (int k=0; k<SPECTRUM_SAMPLES; ++k) {
+					m_maximum[k] = std::max(m_maximum[k], value[k]);
+					m_minimum[k] = std::min(m_minimum[k], value[k]);
+				}
+
+				m_average += value;
+			}
+		}
+
+		m_average /= width*height;
+	}
+			  
+	if (m_wrapMode == EBlack || m_wrapMode == EWhite) {
+		Float value = (m_wrapMode == EBlack) ? 0.0f : 1.0f;
+		for (int k=0; k<3; ++k) {
+			m_maximum[k] = std::max(m_maximum[k], value);
+			m_minimum[k] = std::min(m_minimum[k], value);
 		}
 	}
 
@@ -134,25 +192,6 @@ MIPMap::~MIPMap() {
 	delete[] m_pyramid;
 }
 
-Spectrum MIPMap::getMaximum() const {
-	Spectrum max(0.0f);
-	int height = m_levelHeight[0];
-	int width = m_levelWidth[0];
-	Spectrum *pixels = m_pyramid[0];
-	for (int y=0; y<height; ++y) {
-		for (int x=0; x<width; ++x) {
-			Spectrum value = *pixels++;
-			for (int j=0; j<SPECTRUM_SAMPLES; ++j)
-				max[j] = std::max(max[j], value[j]);
-		}
-	}
-	if (m_wrapMode == EWhite) {
-		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-			max[i] = std::max(max[i], (Float) 1.0f);
-	}
-	return max;
-}
-	
 ref<MIPMap> MIPMap::fromBitmap(Bitmap *bitmap, EFilterType filterType,
 		EWrapMode wrapMode, Float maxAnisotropy,
 		Spectrum::EConversionIntent intent) {

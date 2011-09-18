@@ -68,13 +68,13 @@ public:
 	}
 
 	inline Spectrum getValue(const Point2 &uv) const {
-		Float x = uv.x - (int) uv.x;
-		Float y = uv.y - (int) uv.y;
+		Float x = uv.x - floorToInt(uv.x);
+		Float y = uv.y - floorToInt(uv.y);
 
 		if (x > .5)
-			x-=1;
+			x -= 1;
 		if (y > .5)
-			y-=1;
+			y -= 1;
 
 		if (std::abs(x) < m_lineWidth || std::abs(y) < m_lineWidth)
 			return m_color1;
@@ -92,13 +92,26 @@ public:
 	}
 
 	Spectrum getMaximum() const {
-		return m_color0;
+		Spectrum max;
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+			max[i] = std::max(m_color0[i], m_color1[i]);
+		return max;
+	}
+
+	Spectrum getMinimum() const {
+		Spectrum min;
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+			min[i] = std::min(m_color0[i], m_color1[i]);
+		return min;
 	}
 
 	Spectrum getAverage() const {
-		return m_color0; // that's not quite right
+		Float interiorWidth = std::max((Float) 0.0f, 1-2*m_lineWidth),
+			  interiorArea = interiorWidth * interiorWidth,
+			  lineArea = 1 - interiorArea;
+		return m_color1 * lineArea + m_color0 * interiorArea;
 	}
-	
+
 	bool isConstant() const {
 		return false;
 	}

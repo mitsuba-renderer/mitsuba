@@ -19,11 +19,10 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/hw/basicshader.h>
 #include "microfacet.h"
+#include "rtrans.h"
 #include "ior.h"
 
 MTS_NAMESPACE_BEGIN
-
-#define TRANSMITTANCE_PRECOMP_NODES 200
 
 /*!\plugin{roughcoating}{Rough dielectric coating}
  * \order{10}
@@ -46,7 +45,7 @@ MTS_NAMESPACE_BEGIN
  *              \vspace{-4mm}
  *       \end{enumerate}
  *     }
- *     \parameter{alpha}{\Float}{
+ *     \parameter{alpha}{\Float\Or\Texture}{
  *         Specifies the roughness of the unresolved surface micro-geometry. 
  *         When the Beckmann distribution is used, this parameter is equal to the 
  *         \emph{root mean square} (RMS) slope of the microfacets. 
@@ -122,7 +121,7 @@ public:
 			Log(EError, "The 'roughplastic' plugin currently does not support "
 				"anisotropic microfacet distributions!");
 
-		m_alpha = m_distribution.transformRoughness(
+		m_alpha = new ConstantFloatTexture(
 			props.getFloat("alpha", 0.1f));
 
 		m_specularSamplingWeight = 0.0f;
@@ -135,8 +134,7 @@ public:
 		);
 		m_nested = static_cast<BSDF *>(manager->getInstance(stream));
 		m_sigmaA = static_cast<Texture *>(manager->getInstance(stream));
-		m_roughTransmittance = static_cast<CubicSpline *>(manager->getInstance(stream));
-		m_alpha = stream->readFloat();
+		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
 		m_thickness = stream->readFloat();
@@ -146,7 +144,7 @@ public:
 
 	void configure() {
 		unsigned int extraFlags = 0;
-		if (!m_sigmaA->isConstant())
+		if (!m_sigmaA->isConstant() || !m_alpha->isConstant())
 			extraFlags |= ESpatiallyVarying;
 
 		m_components.clear();
@@ -156,7 +154,8 @@ public:
 		m_components.push_back(EGlossyReflection | EFrontSide | EBackSide);
 
 		m_usesRayDifferentials = m_nested->usesRayDifferentials()
-			|| m_sigmaA->usesRayDifferentials();
+			|| m_sigmaA->usesRayDifferentials()
+			|| m_alpha->usesRayDifferentials();
 
 		/* Compute weights that further steer samples towards
 		   the specular or nested components */
@@ -165,9 +164,25 @@ public:
 
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 
-		/* Precompute the rough transmittance through the interface */
-		m_roughTransmittance = m_distribution.computeRoughTransmittance(
-				m_extIOR, m_intIOR, m_alpha, TRANSMITTANCE_PRECOMP_NODES);
+		if (!m_roughTransmittance.get()) {
+			/* Load precomputed data used to compute the rough
+			   transmittance through the dielectric interface */
+			m_roughTransmittance = new RoughTransmittance(
+				m_distribution.getType());
+			
+			Float eta = m_intIOR / m_extIOR;
+			m_roughTransmittance->checkEta(eta);
+			m_roughTransmittance->checkAlpha(m_alpha->getMinimum().average());
+			m_roughTransmittance->checkAlpha(m_alpha->getMaximum().average());
+			
+			/* Reduce the rough transmittance data to a 2D slice */
+			m_roughTransmittance->setEta(eta);
+
+			/* If possible, even reduce it to a 1D slice */
+			if (m_alpha->isConstant()) 
+				m_roughTransmittance->setAlpha(
+					m_alpha->getValue(Intersection()).average());
+		}
 
 		BSDF::configure();
 	}
@@ -219,7 +234,11 @@ public:
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection)
 			&& (bRec.component == -1 || bRec.component == (int) m_components.size()-1)
 			&& measure == ESolidAngle;
-			
+
+		/* Evaluate the roughness texture */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alphaT = m_distribution.transformRoughness(alpha);
+
 		Spectrum result(0.0f);
 		if (hasSpecular && Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) > 0) {
 			/* Calculate the reflection half-vector */
@@ -227,13 +246,13 @@ public:
 				* signum(Frame::cosTheta(bRec.wo));
 
 			/* Evaluate the microsurface normal distribution */
-			const Float D = m_distribution.eval(H, m_alpha);
+			const Float D = m_distribution.eval(H, alphaT);
 
 			/* Fresnel term */
 			const Float F = fresnel(absDot(bRec.wi, H), m_extIOR, m_intIOR);
 
 			/* Smith's shadow-masking function */
-			const Float G = m_distribution.G(bRec.wi, bRec.wo, H, m_alpha);
+			const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaT);
 
 			/* Calculate the specular reflection component */
 			Float value = F * D * G / 
@@ -248,8 +267,8 @@ public:
 			bRecInt.wo = refractTo(EInterior, bRec.wo);
 
 			Spectrum nestedResult = m_nested->eval(bRecInt, measure) *
-				m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wi))) *
-				m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wo)));
+				m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wi)), alpha) *
+				m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wo)), alpha);
 
 			Spectrum sigmaA = m_sigmaA->getValue(bRec.its) * m_thickness;
 			if (!sigmaA.isZero()) 
@@ -282,11 +301,15 @@ public:
 		const Vector H = normalize(bRec.wo+bRec.wi)
 				* signum(Frame::cosTheta(bRec.wo));
 
+		/* Evaluate the roughness texture */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alphaT = m_distribution.transformRoughness(alpha);
+
 		Float probNested, probSpecular;
 		if (hasSpecular && hasNested) {
 			/* Find the probability of sampling the specular component */
 			probSpecular = 1-m_roughTransmittance->eval(
-				std::abs(Frame::cosTheta(bRec.wi)));
+				std::abs(Frame::cosTheta(bRec.wi)), alpha);
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -304,7 +327,7 @@ public:
 			const Float dwh_dwo = 1.0f / (4.0f * absDot(bRec.wo, H));
 
 			/* Evaluate the microsurface normal distribution */
-			const Float prob = m_distribution.pdf(H, m_alpha);
+			const Float prob = m_distribution.pdf(H, alphaT);
 
 			result = prob * dwh_dwo * probSpecular;
 		}
@@ -337,10 +360,14 @@ public:
 		bool choseSpecular = hasSpecular;
 		Point2 sample(_sample);
 
+		/* Evaluate the roughness texture */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alphaT = m_distribution.transformRoughness(alpha);
+
 		Float probSpecular;
 		if (hasSpecular && hasNested) {
 			/* Find the probability of sampling the diffuse component */
-			probSpecular = 1 - m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wi)));
+			probSpecular = 1 - m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wi)), alpha);
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -357,7 +384,7 @@ public:
 
 		if (choseSpecular) {
 			/* Perfect specular reflection based on the microsurface normal */
-			Normal m = m_distribution.sample(sample, m_alpha);
+			Normal m = m_distribution.sample(sample, alphaT);
 			bRec.wo = reflect(bRec.wi, m);
 			bRec.sampledComponent = m_components.size()-1;
 			bRec.sampledType = EGlossyReflection;
@@ -398,8 +425,7 @@ public:
 		stream->writeUInt((uint32_t) m_distribution.getType());
 		manager->serialize(stream, m_nested.get());
 		manager->serialize(stream, m_sigmaA.get());
-		manager->serialize(stream, m_roughTransmittance.get());
-		stream->writeFloat(m_alpha);
+		manager->serialize(stream, m_alpha.get());
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
 		stream->writeFloat(m_thickness);
@@ -410,8 +436,13 @@ public:
 			if (m_nested != NULL)
 				Log(EError, "Only a single nested BRDF can be added!");
 			m_nested = static_cast<BSDF *>(child);
-		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "sigmaA") {
-			m_sigmaA = static_cast<Texture *>(m_sigmaA);
+		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
+			if (name == "sigmaA")
+				m_sigmaA = static_cast<Texture *>(child);
+			else if (name == "alpha")
+				m_alpha = static_cast<Texture *>(child);
+			else
+				BSDF::addChild(name, child);
 		} else {
 			BSDF::addChild(name, child);
 		}
@@ -422,8 +453,8 @@ public:
 		oss << "RoughCoating[" << endl
 			<< "  name = \"" << getName() << "\"," << endl
 			<< "  distribution = " << m_distribution.toString() << "," << endl
-			<< "  alpha = " << m_alpha << "," << endl
-			<< "  sigmaA = " << m_sigmaA->toString() << "," << endl
+			<< "  alpha = " << indent(m_alpha->toString()) << "," << endl
+			<< "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  diffuseSamplingWeight = " << (1-m_specularSamplingWeight) << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl
@@ -438,10 +469,11 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	MicrofacetDistribution m_distribution;
-	ref<CubicSpline> m_roughTransmittance;
+	ref<RoughTransmittance> m_roughTransmittance;
 	ref<Texture> m_sigmaA;
+	ref<Texture> m_alpha;
 	ref<BSDF> m_nested;
-	Float m_alpha, m_intIOR, m_extIOR;
+	Float m_intIOR, m_extIOR;
 	Float m_specularSamplingWeight;
 	Float m_thickness;
 };
@@ -457,46 +489,44 @@ private:
  */
 class RoughCoatingShader : public Shader {
 public:
-	RoughCoatingShader(Renderer *renderer, 
-			const BSDF *nested, 
-			const Texture *sigmaA, 
-			Float alpha, Float extIOR, 
-			Float intIOR) : Shader(renderer, EBSDFShader), 
-			m_nested(nested), 
-			m_sigmaA(sigmaA), 
-			m_alpha(alpha), m_extIOR(extIOR), m_intIOR(intIOR) {
+	RoughCoatingShader(Renderer *renderer, const BSDF *nested,
+				const Texture *sigmaA, const Texture *alpha, 
+				Float extIOR, Float intIOR) : Shader(renderer, EBSDFShader), 
+			m_nested(nested), m_sigmaA(sigmaA), m_alpha(alpha), 
+			m_extIOR(extIOR), m_intIOR(intIOR) {
 		m_nestedShader = renderer->registerShaderForResource(m_nested.get());
 		m_sigmaAShader = renderer->registerShaderForResource(m_sigmaA.get());
-		m_alpha = std::max(m_alpha, (Float) 0.2f);
+		m_alphaShader = renderer->registerShaderForResource(m_alpha.get());
 		m_R0 = fresnel(1.0f, m_extIOR, m_intIOR);
 		m_eta = extIOR / intIOR;
 	}
 
 	bool isComplete() const {
 		return m_nestedShader.get() != NULL
-			&& m_sigmaAShader.get() != NULL;
+			&& m_sigmaAShader.get() != NULL
+			&& m_alphaShader.get() != NULL;
 	}
 
 	void putDependencies(std::vector<Shader *> &deps) {
 		deps.push_back(m_nestedShader.get());
 		deps.push_back(m_sigmaAShader.get());
+		deps.push_back(m_alphaShader.get());
 	}
 
 	void cleanup(Renderer *renderer) {
 		renderer->unregisterShaderForResource(m_nested.get());
 		renderer->unregisterShaderForResource(m_sigmaA.get());
+		renderer->unregisterShaderForResource(m_alpha.get());
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
 		parameterIDs.push_back(program->getParameterID(evalName + "_R0", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_eta", false));
-		parameterIDs.push_back(program->getParameterID(evalName + "_alpha", false));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
 		program->setParameter(parameterIDs[0], m_R0);
 		program->setParameter(parameterIDs[1], m_eta);
-		program->setParameter(parameterIDs[2], m_alpha);
 	}
 
 	void generateCode(std::ostringstream &oss,
@@ -504,7 +534,6 @@ public:
 			const std::vector<std::string> &depNames) const {
 		oss << "uniform float " << evalName << "_R0;" << endl
 			<< "uniform float " << evalName << "_eta;" << endl
-			<< "uniform float " << evalName << "_alpha;" << endl
 			<< endl
 			<< "float " << evalName << "_schlick(float ct) {" << endl
 			<< "    float ctSqr = ct*ct, ct5 = ctSqr*ctSqr*ct;" << endl
@@ -526,13 +555,13 @@ public:
 			<< "    }" << endl
 			<< "}" << endl
 			<< endl
-			<< "float " << evalName << "_D(vec3 m) {" << endl
+			<< "float " << evalName << "_D(vec3 m, float alpha) {" << endl
 			<< "    float ct = cosTheta(m);" << endl
 			<< "    if (cosTheta(m) <= 0.0)" << endl
 			<< "        return 0.0;" << endl
-			<< "    float ex = tanTheta(m) / " << evalName << "_alpha;" << endl
-			<< "    return exp(-(ex*ex)) / (pi * " << evalName << "_alpha" << endl
-			<< "        * " << evalName << "_alpha * pow(cosTheta(m), 4.0));" << endl
+			<< "    float ex = tanTheta(m) / alpha;" << endl
+			<< "    return exp(-(ex*ex)) / (pi * alpha * alpha *" << endl
+			<< "               pow(cosTheta(m), 4.0));" << endl
 			<< "}" << endl
 			<< endl
 			<< "float " << evalName << "_G(vec3 m, vec3 wi, vec3 wo) {" << endl
@@ -559,7 +588,8 @@ public:
 			<< "                                 1/abs(cosTheta(woPrime))));" << endl
 			<< "    if (cosTheta(wi)*cosTheta(wo) > 0) {" << endl
 			<< "        vec3 H = normalize(wi + wo);" << endl
-			<< "        float D = " << evalName << "_D(H)" << ";" << endl
+			<< "        float alpha = max(0.2, " << depNames[2] << "(uv)[0]);" << endl
+			<< "        float D = " << evalName << "_D(H, alpha)" << ";" << endl
 			<< "        float G = " << evalName << "_G(H, wi, wo);" << endl
 			<< "        float F = " << evalName << "_schlick(1-dot(wi, H));" << endl
 			<< "        result += vec3(F * D * G / (4*cosTheta(wi)));" << endl
@@ -578,12 +608,14 @@ private:
 	ref<Shader> m_nestedShader;
 	ref<const Texture> m_sigmaA;
 	ref<Shader> m_sigmaAShader;
-	Float m_alpha, m_extIOR, m_intIOR, m_R0, m_eta;
+	ref<const Texture> m_alpha;
+	ref<Shader> m_alphaShader;
+	Float m_extIOR, m_intIOR, m_R0, m_eta;
 };
 
 Shader *RoughCoating::createShader(Renderer *renderer) const { 
 	return new RoughCoatingShader(renderer, m_nested.get(), 
-		m_sigmaA.get(), m_alpha, m_extIOR, m_intIOR);
+		m_sigmaA.get(), m_alpha.get(), m_extIOR, m_intIOR);
 }
 
 MTS_IMPLEMENT_CLASS(RoughCoatingShader, false, Shader)

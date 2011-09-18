@@ -1,14 +1,20 @@
 % Cite a figure/listing
 \renewcommand{\lstlistingname}{Listing}
-\newcommand{\figref}[1]{\mbox{Figure~\ref{fig:#1}}}
-\newcommand{\secref}[1]{\mbox{Section~\ref{sec:#1}}}
-\newcommand{\lstref}[1]{\mbox{Listing~\ref{lst:#1}}}
-\newcommand{\tblref}[1]{\mbox{Table~\ref{tbl:#1}}}
+\newcommand{\figref}[1]{\mbox{\hyperref[fig:#1]{Figure~\ref*{fig:#1}}}}
+\newcommand{\figpage}[1]{\hyperref[fig:#1]{page \pageref*{fig:#1}}}
+\newcommand{\subfigref}[2]{\mbox{\hyperref[fig:#1]{Figure~\ref*{fig:#1}#2}}}
+\newcommand{\secref}[1]{\mbox{\hyperref[sec:#1]{Section~\ref*{sec:#1}}}}
+\newcommand{\secpage}[1]{\hyperref[sec:#1]{page \pageref*{sec:#1}}}
+\newcommand{\lstref}[1]{\mbox{\hyperref[lst:#1]{Listing~\ref{lst:#1}}}}
+\newcommand{\lstpage}[1]{\hyperref[lst:#1]{page \pageref*{lst:#1}}}
+\newcommand{\tblref}[1]{\mbox{\hyperref[tbl:#1]{Table~\ref{tbl:#1}}}}
+\newcommand{\tblpage}[1]{\hyperref[tbl:#1]{page \pageref*{tbl:#1}}}
 \newcommand{\code}[1]{\texttt{#1}}
 
 % Macros that are used in the plugin documentation
 \newcommand{\plugin}[2]{\newpage\subsubsection{#2 (\texttt{#1})}\label{plg:#1}}
 \newcommand{\pluginref}[1]{\texttt{\hyperref[plg:#1]{#1}}}
+\newcommand{\pluginpage}[1]{\hyperref[plg:#1]{page \pageref*{plg:#1}}}
 \newcommand{\order}[1]{} % Ignore
 
 \newcommand{\Transform}{\texttt{transform}}

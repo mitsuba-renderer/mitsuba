@@ -125,9 +125,7 @@ public:
 	}
 
 	void test01_roughTransmittance() {
-		const char *distr = "beckmann";
-
-		RoughTransmittance rtr(distr);
+		RoughTransmittance rtr(MicrofacetDistribution::EBeckmann);
 		ref<Random> random = new Random();
 
 		for (int i=0; i<50; ++i) {
@@ -139,8 +137,8 @@ public:
 				eta = 1+1e-5f;
 			//eta = 1/eta;
 	
-			Float refD = computeDiffuseTransmittance(distr, eta, alpha);
-			Float datD = rtr.evalDiffuse(eta, alpha);
+			Float refD = computeDiffuseTransmittance("beckmann", eta, alpha);
+			Float datD = rtr.evalDiffuse(alpha, eta);
 
 			cout << "Testing " << i << "/50" << endl;
 			if (std::abs(refD-datD) > 1e-3f) {
@@ -164,8 +162,8 @@ public:
 				eta = 1+1e-5f;
 			//eta = 1/eta;
 	
-			Float ref = computeTransmittance(distr, eta, alpha, cosTheta);
-			Float dat = rtr.eval(eta, alpha, cosTheta);
+			Float ref = computeTransmittance("beckmann", eta, alpha, cosTheta);
+			Float dat = rtr.eval(cosTheta, alpha, eta);
 
 			if (i % 20 == 0)
 				cout << "Testing " << i << "/1000" << endl;
@@ -184,9 +182,7 @@ public:
 	}
 
 	void test02_roughTransmittanceFixedEta() {
-		const char *distr = "beckmann";
-
-		RoughTransmittance rtr(distr);
+		RoughTransmittance rtr(MicrofacetDistribution::EBeckmann);
 
 		Float eta = 1.5f;
 		rtr.setEta(eta);
@@ -198,8 +194,8 @@ public:
 			if (alpha < 1e-5)
 				alpha = 1e-5f;
 	
-			Float refD = computeDiffuseTransmittance(distr, eta, alpha);
-			Float datD = rtr.evalDiffuse(eta, alpha);
+			Float refD = computeDiffuseTransmittance("beckmann", eta, alpha);
+			Float datD = rtr.evalDiffuse(alpha, eta);
 
 			cout << "Testing " << i << "/50" << endl;
 			if (std::abs(refD-datD) > 1e-3f) {
@@ -218,8 +214,8 @@ public:
 			if (alpha < 1e-5)
 				alpha = 1e-5f;
 	
-			Float ref = computeTransmittance(distr, eta, alpha, cosTheta);
-			Float dat = rtr.eval(eta, alpha, cosTheta);
+			Float ref = computeTransmittance("beckmann", eta, alpha, cosTheta);
+			Float dat = rtr.eval(cosTheta, alpha, eta);
 
 			if (i % 20 == 0)
 				cout << "Testing " << i << "/1000" << endl;
@@ -238,19 +234,18 @@ public:
 	}
 
 	void test03_roughTransmittanceFixedEtaFixedAlpha() {
-		const char *distr = "beckmann";
-
-		RoughTransmittance rtr(distr);
-
+		ref<Timer> timer = new Timer();
+		RoughTransmittance rtr(MicrofacetDistribution::EBeckmann);
 		Float eta = 1.5f;
 		Float alpha = 0.2f;
 		rtr.setEta(eta);
 		rtr.setAlpha(alpha);
+		cout << "Loading and projecting took " << timer->getMilliseconds() << " ms" << endl;
 
 		ref<Random> random = new Random();
 
-		Float refD = computeDiffuseTransmittance(distr, eta, alpha);
-		Float datD = rtr.evalDiffuse(eta, alpha);
+		Float refD = computeDiffuseTransmittance("beckmann", eta, alpha);
+		Float datD = rtr.evalDiffuse(alpha, eta);
 
 		if (std::abs(refD-datD) > 1e-3f) {
 			cout << endl;
@@ -264,8 +259,8 @@ public:
 			if (cosTheta < 1e-5)
 				cosTheta = 1e-5f;
 	
-			Float ref = computeTransmittance(distr, eta, alpha, cosTheta);
-			Float dat = rtr.eval(eta, alpha, cosTheta);
+			Float ref = computeTransmittance("beckmann", eta, alpha, cosTheta);
+			Float dat = rtr.eval(cosTheta, alpha, eta);
 
 			if (i % 20 == 0)
 				cout << "Testing " << i << "/1000" << endl;

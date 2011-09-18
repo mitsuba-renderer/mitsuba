@@ -503,6 +503,7 @@ void VPLShaderManager::configure(const VPL &vpl, const BSDF *bsdf,
 			<< "float sinPhi(vec3 v) { return v.y/sinTheta(v); }" << endl
 			<< "float cosPhi(vec3 v) { return v.x/sinTheta(v); }" << endl
 			<< "const float pi = 3.141592653589;" << endl
+			<< "const float inv_pi = 0.318309886183791;" << endl
 			<< endl;
 
 		std::string vplEvalName, bsdfEvalName, lumEvalName;

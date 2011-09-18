@@ -449,13 +449,13 @@ public:
 			<< "    float factor2 = H.x / alphaU, factor3 = H.y / alphaV;" << endl
 			<< "    float exponent = -(factor2*factor2 + factor3*factor3)/(H.z*H.z);" << endl
 			<< "    float specRef = factor1 * exp(exponent);" << endl 
-			<< "    return (" << depNames[0] << "(uv) * 0.31831" << endl
+			<< "    return (" << depNames[0] << "(uv) * inv_pi" << endl
 			<< "           + " << depNames[1] << "(uv) * specRef) * cosTheta(wo);" << endl
 			<< "}" << endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    if (wi.z <= 0.0 || wo.z <= 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
-			<< "    return " << depNames[0] << "(uv) * (0.31831 * cosTheta(wo));" << endl
+			<< "    return " << depNames[0] << "(uv) * (inv_pi * cosTheta(wo));" << endl
 			<< "}" << endl;
 	}
 

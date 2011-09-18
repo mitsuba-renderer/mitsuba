@@ -38,6 +38,8 @@ public:
 			m_scale = Spectrum(props.getFloat("scale", 1.0f));
 		else
 			m_scale = props.getSpectrum("scale", Spectrum(1.0f));
+
+		Assert(m_scale.min() > 0);
 	}
 
 	ScalingTexture(Stream *stream, InstanceManager *manager) 
@@ -68,6 +70,10 @@ public:
 
 	Spectrum getMaximum() const {
 		return m_nested->getMaximum() * m_scale;
+	}
+
+	Spectrum getMinimum() const {
+		return m_nested->getMinimum() * m_scale;
 	}
 
 	bool isConstant() const {

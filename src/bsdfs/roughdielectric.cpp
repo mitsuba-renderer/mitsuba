@@ -69,9 +69,11 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the reflectance component\default{1.0}}
+ *         factor that can be used to modulate the specular reflection component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the transmittance component\default{1.0}}
+ *         factor that can be used to modulate the specular transmission component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  * }\vspace{4mm}
  *
  * This plugin implements a realistic microfacet scattering model for rendering
@@ -91,7 +93,7 @@ MTS_NAMESPACE_BEGIN
  *
  * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
  * \pluginref{dielectric}. For very low values of $\alpha$, the two will
- * be very similar, though scenes using this plugin will take longer to render 
+ * be identical, though scenes using this plugin will take longer to render 
  * due to the additional computational burden of tracking surface roughness.
  * 
  * The implementation is based on the paper ``Microfacet Models

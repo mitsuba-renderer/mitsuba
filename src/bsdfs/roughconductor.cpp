@@ -65,8 +65,10 @@ MTS_NAMESPACE_BEGIN
  *             refraction (the absorption coefficient).
  *             \default{based on \texttt{material}}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the reflectance component\default{1.0}}
+ *         factor that can be used to modulate the specular reflection component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  * }
+ * \vspace{4mm}
  * This plugin implements a realistic microfacet scattering model for rendering
  * rough conducting materials, such as metals. It can be interpreted as a fancy 
  * version of the Cook-Torrance model and should be preferred over 
@@ -78,7 +80,6 @@ MTS_NAMESPACE_BEGIN
  *         $\alpha_u=0.05,\ \alpha_v=0.3$), see 
  *         \lstref{roughconductor-aluminium}}
  *         {bsdf_roughconductor_anisotropic_aluminium.jpg}
- *     \vspace{-8mm}
  * }
  *
  * Microfacet theory describes rough 
@@ -90,7 +91,7 @@ MTS_NAMESPACE_BEGIN
  *
  * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
  * \pluginref{conductor}. For very low values of $\alpha$, the two will
- * be very similar, though scenes using this plugin will take longer to render 
+ * be identical, though scenes using this plugin will take longer to render 
  * due to the additional computational burden of tracking surface roughness.
  * 
  * The implementation is based on the paper ``Microfacet Models
@@ -113,8 +114,17 @@ MTS_NAMESPACE_BEGIN
  * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
  * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
  * finish). Values significantly above that are probably not too realistic.
- * \vspace{-7mm}
- * \subsubsection*{Technical details}\vspace{-3mm}
+ * \vspace{4mm}
+ * \begin{xml}[caption={A material definition for brushed aluminium}, label=lst:roughconductor-aluminium]
+ * <bsdf type="roughconductor">
+ *     <string name="material" value="Al"/>
+ *     <string name="distribution" value="as"/>
+ *     <float name="alphaU" value="0.05"/>
+ *     <float name="alphaV" value="0.3"/>
+ * </bsdf>
+ * \end{xml}
+ *
+ * \subsubsection*{Technical details}
  * When rendering with the Ashikhmin-Shirley or Phong microfacet 
  * distributions, a conversion is used to turn the specified 
  * $\alpha$ roughness value into the exponents of these distributions.
@@ -132,20 +142,10 @@ MTS_NAMESPACE_BEGIN
  *
  * When using this plugin, you should ideally compile Mitsuba with support for 
  * spectral rendering to get the most accurate results. While it also works 
- * in RGB mode, the computations will be much more approximate in this case.
+ * in RGB mode, the computations will be more approximate in nature.
  * Also note that this material is one-sided---that is, observed from the 
  * back side, it will be completely black. If this is undesirable, 
  * consider using the \pluginref{twosided} BRDF adapter.
- *
- * \begin{xml}[caption={A material definition for brushed aluminium}, label=lst:roughconductor-aluminium]
- * <bsdf type="roughconductor">
- *     <string name="material" value="Al"/>
- *     <string name="distribution" value="as"/>
- *     <float name="alphaU" value="0.05"/>
- *     <float name="alphaV" value="0.3"/>
- * </bsdf>
- * \end{xml}
- * 
  */
 class RoughConductor : public BSDF {
 public:
@@ -517,7 +517,7 @@ public:
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return " << evalName << "_R0 * 0.31831 * cosTheta(wo);"<< endl
+			<< "    return " << evalName << "_R0 * inv_pi * cosTheta(wo);"<< endl
 			<< "}" << endl;
 	}
 	MTS_DECLARE_CLASS()

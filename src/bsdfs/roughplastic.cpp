@@ -19,11 +19,10 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/hw/basicshader.h>
 #include "microfacet.h"
+#include "rtrans.h"
 #include "ior.h"
 
 MTS_NAMESPACE_BEGIN
-
-#define TRANSMITTANCE_PRECOMP_NODES 100
 
 /*!\plugin{roughplastic}{Rough plastic material}
  * \order{8}
@@ -43,10 +42,10 @@ MTS_NAMESPACE_BEGIN
  *              Due to the underlying microfacet theory, 
  *              the use of this distribution here leads to more realistic 
  *              behavior than the separately available \pluginref{phong} plugin.
- *              \vspace{-4mm}
+ *              \vspace{-3mm}
  *       \end{enumerate}
  *     }
- *     \parameter{alpha}{\Float}{
+ *     \parameter{alpha}{\Float\Or\Texture}{
  *         Specifies the roughness of the unresolved surface micro-geometry. 
  *         When the Beckmann distribution is used, this parameter is equal to the 
  *         \emph{root mean square} (RMS) slope of the microfacets. 
@@ -57,26 +56,23 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor used to modulate the specular reflection component. Note that for physical 
- *         realism, this parameter should never be touched. \default{1.0}}
+ *         factor that can be used to modulate the specular reflection component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the diffuse reflection component\default{0.5}}
- * }\vspace{-1mm}
- * \renderings{
- *     \rendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
- *     \rendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}
- * }\vspace{-1mm}
+ *     \parameter{nonlinear}{\Boolean}{
+ *         Account for nonlinear color shifts due to internal scattering? See the
+ *         \pluginref{plastic} plugin for details.\default{Don't account for them and
+ *         preserve the texture colors, i.e. \code{false}}
+ *     }
+ * }
  *
+ * \vspace{3mm}
  * This plugin implements a realistic microfacet scattering model for rendering
  * rough dielectric materials with internal scattering, such as plastic. It can 
  * be interpreted as a fancy version of the Cook-Torrance model and should be 
  * preferred over empirical models like \pluginref{phong} and \pluginref{ward} 
  * when possible.
- * \renderings{
- *     \setcounter{subfigure}{2}
- *     \rendering{Beckmann, $\alpha=0.05$, diffuseReflectance=0}
- *         {bsdf_roughplastic_beckmann_lacquer}
- * }
  *
  * Microfacet theory describes rough surfaces as an arrangement of unresolved and 
  * ideally specular facets, whose normal directions are given by a specially
@@ -85,29 +81,36 @@ MTS_NAMESPACE_BEGIN
  * possible to reproduce the important off-specular reflections peaks observed 
  * in real-world measurements of such materials.
  *
+ * \renderings{
+ *     \rendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
+ *     \rendering{GGX, $\alpha=0.3$}{bsdf_roughplastic_ggx}
+ * }
+ *
  * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
  * \pluginref{plastic}. For very low values of $\alpha$, the two will
- * be very similar, though scenes using this plugin will take longer to render 
+ * be identical, though scenes using this plugin will take longer to render 
  * due to the additional computational burden of tracking surface roughness.
  *
- * The model uses the integrated specular reflectance to interpolate between the 
- * specular and diffuse components (i.e. any light that is not scattered
- * specularly is assumed to contribute to the diffuse component).
- * Similar to the \pluginref{dielectric} plugin, IOR values 
- * can either be specified numerically, or based on a list of known materials 
- * (see \tblref{dielectric-iors} for an overview). 
- * 
- * The implementation is based on the paper ``Microfacet Models
- * for Refraction through Rough Surfaces'' by Walter et al. 
- * \cite{Walter07Microfacet}. It supports several different types of microfacet
- * distributions. Note that the choices are a bit more restricted here---in 
- * comparison to other rough scattering models in Mitsuba,
- * the roughness cannot be textured, and anisotropic microfacet 
- * distributions are not allowed.
- *
+ * For convenience, this model allows to specify IOR values either numerically, 
+ * or based on a list of known materials (see \tblref{dielectric-iors} on 
+ * \tblpage{dielectric-iors} for an overview). 
  * When no parameters are given, the plugin activates the defaults, 
  * which describe a white polypropylene plastic material with a light amount
  * of roughness modeled using the Beckmann distribution.
+ *
+ * Like the \pluginref{plastic} material, this model internally simulates the 
+ * interaction of light with a diffuse base surface coated by a thin dielectric 
+ * layer (where the coating layer is now \emph{rough}). This is a convenient 
+ * abstraction rather than a restriction. In other words, there are many 
+ * materials that can be rendered with this model, even if they might not not 
+ * fit this description perfectly well. 
+ *
+ * The simplicity of this setup makes it possible to account for interesting
+ * nonlinear effects due to internal scattering, which is controlled by
+ * the \texttt{nonlinear} parameter. For more details, please refer to the description 
+ * of this parameter given in the the \pluginref{plastic} plugin section 
+ * on \pluginpage{plastic}.
+ *
  *
  * To get an intuition about the effect of the surface roughness
  * parameter $\alpha$, consider the following approximate differentiation: 
@@ -116,21 +119,72 @@ MTS_NAMESPACE_BEGIN
  * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
  * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
  * finish). Values significantly above that are probably not too realistic.
-*
- * When rendering with the Phong microfacet 
- * distributions, a conversion is used to turn the specified 
- * $\alpha$ roughness value into the Phong exponent.
- * This is done in a way, such that the different 
- * distributions all produce a similar appearance for 
- * the same value of $\alpha$.
- * \begin{xml}[caption={A material definition for rough, black laquer.}, label=lst:roughplastic-lacquer]
+ *
+ * \renderings{
+ *     \medrendering{Diffuse textured rendering}{bsdf_plastic_diffuse}
+ *     \medrendering{Textured rough plastic model and \code{nonlinear=false}}{bsdf_roughplastic_preserve}
+ *     \medrendering{Textured rough plastic model and \code{nonlinear=true}}{bsdf_roughplastic_nopreserve}
+ *     \caption{
+ *        \label{fig:plastic-nonlinear}
+ *        When asked to do so, this model can account for subtle nonlinear color shifts due
+ *        to internal scattering processes. The above images show a textured
+ *        object first rendered using \pluginref{diffuse}, then 
+ *        \pluginref{roughplastic} with the default parameters, and finally using
+ *        \pluginref{roughplastic} and support for nonlinear color shifts.
+ *     }
+ * }
+ * \newpage
+ * \renderings{
+ *     \rendering{Wood material with smooth horizontal stripes}{bsdf_roughplastic_roughtex1}
+ *     \rendering{A material with imperfections at a much smaller scale than what 
+ *       is modeled e.g. using a bump map.}{bsdf_roughplastic_roughtex2}\vspace{-3mm}
+ *     \caption{
+ *         The ability to texture the roughness parameter makes it possible
+ *         to render materials with a structured finish, as well as 
+ *         ``smudgy'' objects.
+ *     }
+ * }
+ * \vspace{2mm}
+ * \begin{xml}[caption={A material definition for black plastic material with
+ *    a spatially varying roughness.}, 
+ *    label=lst:roughplastic-varyingalpha]
  * <bsdf type="roughplastic">
  *     <string name="distribution" value="beckmann"/>
- *     <float name="alpha" value="0.05"/>
  *     <float name="intIOR" value="1.61"/>
  *     <spectrum name="diffuseReflectance" value="0"/>
+ *     <!-- Fetch roughness values from a texture and slightly reduce them -->
+ *     <texture type="scale" name="alpha">
+ *         <texture name="alpha" type="bitmap">
+ *             <string name="filename" value="bump.png"/>
+ *         </texture>
+ *         <float name="scale" value="0.6"/>
+ *     </texture>
  * </bsdf>
  * \end{xml}
+ *
+ * \subsubsection*{Technical details}
+ * The implementation of this model is partly based on the paper ``Microfacet
+ * Models for Refraction through Rough Surfaces'' by Walter et al. 
+ * \cite{Walter07Microfacet}. Several different types of microfacet 
+ * distributions are supported. Note that the choices are slightly more 
+ * restricted here---in comparison to other rough scattering models in 
+ * Mitsuba, anisotropic distributions are not allowed.
+ *
+ * The implementation of this model makes heavy use of a \emph{rough
+ * Fresnel transmittance} function, which is a generalization of the 
+ * usual Fresnel transmittion coefficient to microfacet surfaces. Unfortunately,
+ * this function is normally prohibitively expensive, since each 
+ * evaluation involves a numerical integration over the sphere. 
+ *
+ * To avoid this performance issue, Mitsuba ships with data files
+ * (contained in the \code{data/microfacet} directory) containing precomputed 
+ * values of this function over a large range of parameter values. At runtime,
+ * the relevant parts are extracted using tricubic interpolation.
+ *
+ * When rendering with the Phong microfacet distributions, a conversion 
+ * is used to turn the specified $\alpha$ roughness value into the Phong 
+ * exponent. This is done in a way, such that the different distributions 
+ * all produce a similar appearance for the same value of $\alpha$.
  *
  */
 class RoughPlastic : public BSDF {
@@ -159,8 +213,11 @@ public:
 			Log(EError, "The 'roughplastic' plugin currently does not support "
 				"anisotropic microfacet distributions!");
 
-		m_alpha = m_distribution.transformRoughness(
+		m_nonlinear = props.getBoolean("nonlinear", true);
+
+		m_alpha = new ConstantFloatTexture(
 			props.getFloat("alpha", 0.1f));
+
 		m_specularSamplingWeight = 0.0f;
 	}
 
@@ -171,21 +228,25 @@ public:
 		);
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
-		m_roughTransmittance = static_cast<CubicSpline *>(manager->getInstance(stream));
-		m_alpha = stream->readFloat();
+		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
+		m_nonlinear = stream->readBool();
 
 		configure();
 	}
 
 	void configure() {
+		bool constAlpha = m_alpha->isConstant();
+
 		m_components.clear();
 
 		m_components.push_back(EGlossyReflection | EFrontSide 
-			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
+			| ((constAlpha && m_specularReflectance->isConstant())
+				? 0 : ESpatiallyVarying));
 		m_components.push_back(EDiffuseReflection | EFrontSide 
-			| (m_diffuseReflectance->isConstant() ? 0 : ESpatiallyVarying));
+			| ((constAlpha && m_diffuseReflectance->isConstant()) 
+				? 0 : ESpatiallyVarying));
 
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
@@ -198,20 +259,45 @@ public:
 		Float dAvg = m_diffuseReflectance->getAverage().getLuminance(),
 			  sAvg = m_specularReflectance->getAverage().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
+			
+		Float eta = m_intIOR / m_extIOR;
+		m_invEta2 = 1.0f / (eta*eta);
 
-		/* Precompute the rough transmittance through the interface */
-		m_roughTransmittance = m_distribution.computeRoughTransmittance(
-				m_extIOR, m_intIOR, m_alpha, TRANSMITTANCE_PRECOMP_NODES);
+		if (!m_externalRoughTransmittance.get()) {
+			/* Load precomputed data used to compute the rough
+			   transmittance through the dielectric interface */
+			m_externalRoughTransmittance = new RoughTransmittance(
+				m_distribution.getType());
+
+			m_externalRoughTransmittance->checkEta(eta);
+			m_externalRoughTransmittance->checkAlpha(m_alpha->getMinimum().average());
+			m_externalRoughTransmittance->checkAlpha(m_alpha->getMaximum().average());
+			
+			/* Reduce the rough transmittance data to a 2D slice */
+			m_internalRoughTransmittance = m_externalRoughTransmittance->clone();
+			m_externalRoughTransmittance->setEta(eta);
+			m_internalRoughTransmittance->setEta(1/eta);
+
+			/* If possible, even reduce it to a 1D slice */
+			if (constAlpha) 
+				m_externalRoughTransmittance->setAlpha(
+					m_alpha->getValue(Intersection()).average());
+		}
 
 		m_usesRayDifferentials = 
 			m_specularReflectance->usesRayDifferentials() ||
-			m_diffuseReflectance->usesRayDifferentials();
+			m_diffuseReflectance->usesRayDifferentials() ||
+			m_alpha->usesRayDifferentials();
 
 		BSDF::configure();
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_diffuseReflectance->getValue(its);
+		/* Evaluate the roughness texture */
+		Float alpha = m_alpha->getValue(its).average();
+		Float Ftr = m_externalRoughTransmittance->evalDiffuse(alpha);
+
+		return m_diffuseReflectance->getValue(its) * Ftr;
 	}
 
 	/// Helper function: reflect \c wi with respect to a given surface normal
@@ -230,6 +316,10 @@ public:
 			Frame::cosTheta(bRec.wo) <= 0 ||
 			(!hasSpecular && !hasDiffuse))
 			return Spectrum(0.0f);
+
+		/* Evaluate the roughness texture */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alphaT = m_distribution.transformRoughness(alpha);
 	
 		Spectrum result(0.0f);
 		if (hasSpecular) {
@@ -237,13 +327,13 @@ public:
 			const Vector H = normalize(bRec.wo+bRec.wi);
 
 			/* Evaluate the microsurface normal distribution */
-			const Float D = m_distribution.eval(H, m_alpha);
+			const Float D = m_distribution.eval(H, alphaT);
 
 			/* Fresnel term */
 			const Float F = fresnel(dot(bRec.wi, H), m_extIOR, m_intIOR);
 
 			/* Smith's shadow-masking function */
-			const Float G = m_distribution.G(bRec.wi, bRec.wo, H, m_alpha);
+			const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaT);
 
 			/* Calculate the specular reflection component */
 			Float value = F * D * G / 
@@ -252,10 +342,19 @@ public:
 			result += m_specularReflectance->getValue(bRec.its) * value; 
 		}
 
-		if (hasDiffuse) 
-			result += m_diffuseReflectance->getValue(bRec.its) * (INV_PI
-				* m_roughTransmittance->eval(Frame::cosTheta(bRec.wi))
-				* Frame::cosTheta(bRec.wo));
+		if (hasDiffuse) { 
+			Spectrum diff = m_diffuseReflectance->getValue(bRec.its);
+			Float T12 = m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha);
+			Float T21 = m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wo), alpha);
+			Float Fdr = 1-m_internalRoughTransmittance->evalDiffuse(alpha);
+
+			if (m_nonlinear)
+				diff /= Spectrum(1.0f) - diff * Fdr;
+			else
+				diff /= 1-Fdr;
+
+			result += diff * (INV_PI * Frame::cosTheta(bRec.wo) * T12 * T21 * m_invEta2);
+		}
 
 		return result;
 	}
@@ -272,13 +371,17 @@ public:
 			(!hasSpecular && !hasDiffuse))
 			return 0.0f;
 
+		/* Evaluate the roughness texture */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alphaT = m_distribution.transformRoughness(alpha);
+
 		/* Calculate the reflection half-vector */
 		const Vector H = normalize(bRec.wo+bRec.wi);
 
 		Float probDiffuse, probSpecular;
 		if (hasSpecular && hasDiffuse) {
 			/* Find the probability of sampling the specular component */
-			probSpecular = 1-m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
+			probSpecular = 1-m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha);
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -296,7 +399,7 @@ public:
 			const Float dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, H));
 
 			/* Evaluate the microsurface normal distribution */
-			const Float prob = m_distribution.pdf(H, m_alpha);
+			const Float prob = m_distribution.pdf(H, alphaT);
 
 			result = prob * dwh_dwo * probSpecular;
 		}
@@ -319,10 +422,14 @@ public:
 		bool choseSpecular = hasSpecular;
 		Point2 sample(_sample);
 
+		/* Evaluate the roughness texture */
+		Float alpha = m_alpha->getValue(bRec.its).average();
+		Float alphaT = m_distribution.transformRoughness(alpha);
+
 		Float probSpecular;
 		if (hasSpecular && hasDiffuse) {
-			/* Find the probability of sampling the diffuse component */
-			probSpecular = 1 - m_roughTransmittance->eval(Frame::cosTheta(bRec.wi));
+			/* Find the probability of sampling the specular component */
+			probSpecular = 1 - m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha);
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -339,7 +446,7 @@ public:
 
 		if (choseSpecular) {
 			/* Perfect specular reflection based on the microsurface normal */
-			Normal m = m_distribution.sample(sample, m_alpha);
+			Normal m = m_distribution.sample(sample, alphaT);
 			bRec.wo = reflect(bRec.wi, m);
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EGlossyReflection;
@@ -373,15 +480,17 @@ public:
 		stream->writeUInt((uint32_t) m_distribution.getType());
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_diffuseReflectance.get());
-		manager->serialize(stream, m_roughTransmittance.get());
-		stream->writeFloat(m_alpha);
+		manager->serialize(stream, m_alpha.get());
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
+		stream->writeBool(m_nonlinear);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
-			if (name == "specularReflectance") 
+			if (name == "alpha")
+				m_alpha = static_cast<Texture *>(child);
+			else if (name == "specularReflectance") 
 				m_specularReflectance = static_cast<Texture *>(child);
 			else if (name == "diffuseReflectance")
 				m_diffuseReflectance = static_cast<Texture *>(child);
@@ -397,11 +506,12 @@ public:
 		oss << "RoughPlastic[" << endl
 			<< "  name = \"" << getName() << "\"," << endl
 			<< "  distribution = " << m_distribution.toString() << "," << endl
-			<< "  alpha = " << m_alpha << "," << endl
+			<< "  alpha = " << indent(m_alpha->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  diffuseSamplingWeight = " << (1-m_specularSamplingWeight) << "," << endl
+			<< "  nonlinear = " << m_nonlinear << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl
 			<< "  extIOR = " << m_extIOR << endl
 			<< "]";
@@ -413,11 +523,14 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	MicrofacetDistribution m_distribution;
-	ref<CubicSpline> m_roughTransmittance;
+	ref<RoughTransmittance> m_externalRoughTransmittance;
+	ref<RoughTransmittance> m_internalRoughTransmittance;
 	ref<Texture> m_diffuseReflectance;
 	ref<Texture> m_specularReflectance;
-	Float m_alpha, m_intIOR, m_extIOR;
+	ref<Texture> m_alpha;
+	Float m_intIOR, m_extIOR, m_invEta2;
 	Float m_specularSamplingWeight;
+	bool m_nonlinear;
 };
 
 /**
@@ -427,60 +540,61 @@ private:
  * it also makes use of the Schlick approximation to the Fresnel 
  * reflectance of dielectrics. When the roughness is lower than 
  * \alpha < 0.2, the shader clamps it to 0.2 so that it will still perform
- * reasonably well in a VPL-based preview.
+ * reasonably well in a VPL-based preview. There is no support for
+ * non-linear effects due to internal scattering.
  */
 class RoughPlasticShader : public Shader {
 public:
 	RoughPlasticShader(Renderer *renderer, const Texture *specularReflectance,
-			const Texture *diffuseReflectance, Float alpha, Float extIOR, 
+			const Texture *diffuseReflectance, const Texture *alpha, Float extIOR, 
 			Float intIOR) : Shader(renderer, EBSDFShader), 
 			m_specularReflectance(specularReflectance), 
 			m_diffuseReflectance(diffuseReflectance), 
 			m_alpha(alpha), m_extIOR(extIOR), m_intIOR(intIOR) {
 		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
 		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
-		m_alpha = std::max(m_alpha, (Float) 0.2f);
+		m_alphaShader = renderer->registerShaderForResource(m_alpha.get());
 		m_R0 = fresnel(1.0f, m_extIOR, m_intIOR);
 	}
 
 	bool isComplete() const {
 		return m_specularReflectanceShader.get() != NULL &&
-			m_diffuseReflectanceShader.get() != NULL;
+			m_diffuseReflectanceShader.get() != NULL &&
+			m_alphaShader.get() != NULL;
 	}
 
 	void putDependencies(std::vector<Shader *> &deps) {
 		deps.push_back(m_specularReflectanceShader.get());
 		deps.push_back(m_diffuseReflectanceShader.get());
+		deps.push_back(m_alphaShader.get());
 	}
 
 	void cleanup(Renderer *renderer) {
 		renderer->unregisterShaderForResource(m_specularReflectance.get());
 		renderer->unregisterShaderForResource(m_diffuseReflectance.get());
+		renderer->unregisterShaderForResource(m_alpha.get());
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_alpha", false));
 		parameterIDs.push_back(program->getParameterID(evalName + "_R0", false));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
-		program->setParameter(parameterIDs[0], m_alpha);
-		program->setParameter(parameterIDs[1], m_R0);
+		program->setParameter(parameterIDs[0], m_R0);
 	}
 
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		oss << "uniform float " << evalName << "_alpha;" << endl
-			<< "uniform float " << evalName << "_R0;" << endl
+		oss << "uniform float " << evalName << "_R0;" << endl
 			<< endl
-			<< "float " << evalName << "_D(vec3 m) {" << endl
+			<< "float " << evalName << "_D(vec3 m, float alpha) {" << endl
 			<< "    float ct = cosTheta(m);" << endl
 			<< "    if (cosTheta(m) <= 0.0)" << endl
 			<< "        return 0.0;" << endl
-			<< "    float ex = tanTheta(m) / " << evalName << "_alpha;" << endl
-			<< "    return exp(-(ex*ex)) / (pi * " << evalName << "_alpha" << endl
-			<< "        * " << evalName << "_alpha * pow(cosTheta(m), 4.0));" << endl
+			<< "    float ex = tanTheta(m) / alpha;" << endl
+			<< "    return exp(-(ex*ex)) / (pi * alpha * alpha *" << endl
+			<< "               pow(cosTheta(m), 4.0));" << endl
 			<< "}" << endl
 			<< endl
 			<< "float " << evalName << "_G(vec3 m, vec3 wi, vec3 wo) {" << endl
@@ -505,31 +619,34 @@ public:
 			<< "    vec3 H = normalize(wi + wo);" << endl
 			<< "    vec3 specRef = " << depNames[0] << "(uv);" << endl
 			<< "    vec3 diffuseRef = " << depNames[1] << "(uv);" << endl
-			<< "    float D = " << evalName << "_D(H)" << ";" << endl
+			<< "    float alpha = max(0.2, " << depNames[2] << "(uv)[0]);" << endl
+			<< "    float D = " << evalName << "_D(H, alpha)" << ";" << endl
 			<< "    float G = " << evalName << "_G(H, wi, wo);" << endl
 			<< "    float F = " << evalName << "_schlick(1-dot(wi, H));" << endl
 			<< "    return specRef    * (F * D * G / (4*cosTheta(wi))) + " << endl
-			<< "           diffuseRef * ((1-F) * cosTheta(wo) * 0.31831);" << endl
+			<< "           diffuseRef * ((1-F) * cosTheta(wo) * inv_pi);" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    vec3 diffuseRef = " << depNames[1] << "(uv);" << endl
-			<< "    return diffuseRef * 0.31831 * cosTheta(wo);"<< endl
+			<< "    return diffuseRef * inv_pi * cosTheta(wo);"<< endl
 			<< "}" << endl;
 	}
 	MTS_DECLARE_CLASS()
 private:
 	ref<const Texture> m_specularReflectance;
 	ref<const Texture> m_diffuseReflectance;
+	ref<const Texture> m_alpha;
 	ref<Shader> m_specularReflectanceShader;
 	ref<Shader> m_diffuseReflectanceShader;
-	Float m_alpha, m_extIOR, m_intIOR, m_R0;
+	ref<Shader> m_alphaShader;
+	Float m_extIOR, m_intIOR, m_R0;
 };
 
 Shader *RoughPlastic::createShader(Renderer *renderer) const { 
 	return new RoughPlasticShader(renderer,
 		m_specularReflectance.get(), m_diffuseReflectance.get(),
-		m_alpha, m_extIOR, m_intIOR);
+		m_alpha.get(), m_extIOR, m_intIOR);
 }
 
 MTS_IMPLEMENT_CLASS(RoughPlasticShader, false, Shader)

@@ -291,7 +291,7 @@ public:
 			<< "        reducedAlbedo[i] = reducedSigmaT[i] > 0.0 ? reducedSigmaS[i]/reducedSigmaT[i] : 0.0;" << endl
 			<< "    vec3 rootExp = sqrt((1.0 - reducedAlbedo) * 3.0);" << endl
 			<< "    return (reducedAlbedo * 0.5) * (1+exp(-rootExp*(4.0/3.0 * " << endl
-			<< "      " << evalName << "_A" << "))) * exp(-rootExp) * 0.31831 * cosThetaO;" << endl
+			<< "      " << evalName << "_A" << "))) * exp(-rootExp) * inv_pi * cosThetaO;" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
