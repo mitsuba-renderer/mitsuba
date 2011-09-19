@@ -57,6 +57,9 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the 
  *      coating layer. \default{0, i.e. there is no absorption}}
+ *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
+ *         factor that can be used to modulate the specular transmission component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{\Unnamed}{\BSDF}{A nested BSDF model that should be coated.}
  * }\vspace{-4mm}
  * \renderings{
@@ -75,8 +78,8 @@ MTS_NAMESPACE_BEGIN
  * \pluginref{coating} plugin produces specular highlights that are too sharp.}
  * model that simulates a rough dielectric coating. It is essentially the 
  * roughened version of \pluginref{coating}. 
- * Any BSDF in Mitsuba can be coated using this plugin, and multiple coating 
- * layers can even be applied in sequence. This allows designing interesting 
+ * Any BSDF in Mitsuba can be coated using this plugin and multiple coating 
+ * layers can even be applied in sequence, which allows designing interesting 
  * custom materials. The coating layer can optionally be tinted (i.e. filled 
  * with an absorbing medium), in which case this model also accounts for the 
  * directionally dependent absorption within the layer.
@@ -109,6 +112,10 @@ public:
 		m_sigmaA = new ConstantSpectrumTexture(
 			props.getSpectrum("sigmaA", Spectrum(0.0f)));
 
+		/* Specifies a multiplier for the specular reflectance component */
+		m_specularReflectance = new ConstantSpectrumTexture(
+			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
+
 		if (m_intIOR < 0 || m_extIOR < 0 || m_intIOR == m_extIOR)
 			Log(EError, "The interior and exterior indices of "
 				"refraction must be positive and differ!");
@@ -134,6 +141,7 @@ public:
 		);
 		m_nested = static_cast<BSDF *>(manager->getInstance(stream));
 		m_sigmaA = static_cast<Texture *>(manager->getInstance(stream));
+		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
 		m_intIOR = stream->readFloat();
 		m_extIOR = stream->readFloat();
@@ -151,11 +159,13 @@ public:
 		for (int i=0; i<m_nested->getComponentCount(); ++i) 
 			m_components.push_back(m_nested->getType(i) | extraFlags);
 
-		m_components.push_back(EGlossyReflection | EFrontSide | EBackSide);
+		m_components.push_back(EGlossyReflection | EFrontSide | EBackSide
+			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
 
 		m_usesRayDifferentials = m_nested->usesRayDifferentials()
 			|| m_sigmaA->usesRayDifferentials()
-			|| m_alpha->usesRayDifferentials();
+			|| m_alpha->usesRayDifferentials()
+			|| m_specularReflectance->usesRayDifferentials();
 
 		/* Compute weights that further steer samples towards
 		   the specular or nested components */
@@ -163,6 +173,10 @@ public:
 			 *(-2*m_thickness)).exp().average();
 
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
+
+		/* Verify the input parameters and fix them if necessary */
+		m_specularReflectance = ensureEnergyConservation(
+			m_specularReflectance, "specularReflectance", 1.0f);
 
 		if (!m_roughTransmittance.get()) {
 			/* Load precomputed data used to compute the rough
@@ -258,7 +272,7 @@ public:
 			Float value = F * D * G / 
 				(4.0f * std::abs(Frame::cosTheta(bRec.wi)));
 
-			result += Spectrum(value);
+			result += m_specularReflectance->getValue(bRec.its) * value;
 		}
 
 		if (hasNested) {
@@ -425,6 +439,7 @@ public:
 		stream->writeUInt((uint32_t) m_distribution.getType());
 		manager->serialize(stream, m_nested.get());
 		manager->serialize(stream, m_sigmaA.get());
+		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_alpha.get());
 		stream->writeFloat(m_intIOR);
 		stream->writeFloat(m_extIOR);
@@ -455,6 +470,7 @@ public:
 			<< "  distribution = " << m_distribution.toString() << "," << endl
 			<< "  alpha = " << indent(m_alpha->toString()) << "," << endl
 			<< "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
+			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  diffuseSamplingWeight = " << (1-m_specularSamplingWeight) << "," << endl
 			<< "  intIOR = " << m_intIOR << "," << endl
@@ -472,6 +488,7 @@ private:
 	ref<RoughTransmittance> m_roughTransmittance;
 	ref<Texture> m_sigmaA;
 	ref<Texture> m_alpha;
+	ref<Texture> m_specularReflectance;
 	ref<BSDF> m_nested;
 	Float m_intIOR, m_extIOR;
 	Float m_specularSamplingWeight;

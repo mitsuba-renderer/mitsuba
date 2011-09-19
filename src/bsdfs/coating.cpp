@@ -35,6 +35,9 @@ MTS_NAMESPACE_BEGIN
  *      model absorption --- should be specified in inverse units of \code{sigmaA})\default{1}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the 
  *      coating layer. \default{0, i.e. there is no absorption}}
+ *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
+ *         factor that can be used to modulate the specular transmission component. Note 
+ *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{\Unnamed}{\BSDF}{A nested BSDF model that should be coated.}
  * }
  * 
@@ -62,13 +65,7 @@ MTS_NAMESPACE_BEGIN
  * Therefore, users are discouraged to use this plugin to coat smooth
  * diffuse materials, since there is a separately available plugin
  * named \pluginref{plastic}, which covers the same case and does not
- * suffer from energy loss.
- *
- * Evaluating the internal component of this model entails refracting the 
- * incident and exitant rays through the dielectric interface, followed by
- * querying the nested material with this modified direction pair. The result 
- * is attenuated by the two Fresnel transmittances and the absorption, if
- * any.\newpage
+ * suffer from energy loss.\newpage
  *
  * \renderings{
  *     \smallrendering{$\code{thickness}=0$}{bsdf_coating_0}
@@ -99,6 +96,13 @@ MTS_NAMESPACE_BEGIN
  *     \caption{Some interesting materials can be created simply by applying
  *     Mitsuba's material modifiers in different orders.}
  * }
+ *
+ * \subsubsection*{Technical details}
+ * Evaluating the internal component of this model entails refracting the 
+ * incident and exitant rays through the dielectric interface, followed by
+ * querying the nested material with this modified direction pair. The result 
+ * is attenuated by the two Fresnel transmittances and the absorption, if
+ * any.
  */
 class SmoothCoating : public BSDF {
 public:
@@ -122,7 +126,11 @@ public:
 		/* Specifies the absorption within the layer */
 		m_sigmaA = new ConstantSpectrumTexture(
 			props.getSpectrum("sigmaA", Spectrum(0.0f)));
-		
+
+		/* Specifies a multiplier for the specular reflectance component */
+		m_specularReflectance = new ConstantSpectrumTexture(
+			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
+
 		if (m_intIOR < 0 || m_extIOR < 0 || m_intIOR == m_extIOR)
 			Log(EError, "The interior and exterior indices of "
 				"refraction must be positive and differ!");
@@ -135,6 +143,7 @@ public:
 		m_thickness = stream->readFloat();
 		m_nested = static_cast<BSDF *>(manager->getInstance(stream));
 		m_sigmaA = static_cast<Texture *>(manager->getInstance(stream));
+		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		configure();
 	}
 
@@ -150,10 +159,12 @@ public:
 		for (int i=0; i<m_nested->getComponentCount(); ++i) 
 			m_components.push_back(m_nested->getType(i) | extraFlags);
 
-		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide);
+		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide
+			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
 
 		m_usesRayDifferentials = m_nested->usesRayDifferentials()
-			|| m_sigmaA->usesRayDifferentials();
+			|| m_sigmaA->usesRayDifferentials()
+			|| m_specularReflectance->usesRayDifferentials();
 
 		/* Compute weights that further steer samples towards
 		   the specular or nested components */
@@ -161,6 +172,10 @@ public:
 			 *(-2*m_thickness)).exp().average();
 
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
+
+		/* Verify the input parameters and fix them if necessary */
+		m_specularReflectance = ensureEnergyConservation(
+			m_specularReflectance, "specularReflectance", 1.0f);
 
 		BSDF::configure();
 	}
@@ -173,6 +188,7 @@ public:
 		stream->writeFloat(m_thickness);
 		manager->serialize(stream, m_nested.get());
 		manager->serialize(stream, m_sigmaA.get());
+		manager->serialize(stream, m_specularReflectance.get());
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
@@ -238,8 +254,8 @@ public:
 
 		if (measure == EDiscrete && sampleSpecular &&
 			std::abs(1-dot(reflect(bRec.wi), bRec.wo)) < Epsilon) {
-			return Spectrum(fresnel(
-				std::abs(Frame::cosTheta(bRec.wi)), m_extIOR, m_intIOR));
+			return m_specularReflectance->getValue(bRec.its) *
+				fresnel(std::abs(Frame::cosTheta(bRec.wi)), m_extIOR, m_intIOR);
 		} else if (sampleNested) {
 			Float R12, R21;
 			BSDFQueryRecord bRecInt(bRec);
@@ -346,7 +362,7 @@ public:
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
 			pdf = sampleNested ? probSpecular : 1.0f;
-			return Spectrum(R12) / pdf;
+			return m_specularReflectance->getValue(bRec.its) * (R12/pdf);
 		} else {
 			if (R12 == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
@@ -405,6 +421,7 @@ public:
 			<< "  extIOR = " << m_extIOR << "," << endl
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
+			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  thickness = " << m_thickness << "," << endl
 			<< "  nested = " << indent(m_nested.toString()) << endl
 			<< "]";
@@ -416,6 +433,7 @@ protected:
 	Float m_specularSamplingWeight;
 	Float m_intIOR, m_extIOR;
 	ref<Texture> m_sigmaA;
+	ref<Texture> m_specularReflectance;
 	ref<BSDF> m_nested;
 	Float m_thickness;
 };
