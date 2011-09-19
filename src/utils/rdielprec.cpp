@@ -41,7 +41,7 @@ void transmittanceIntegrand(const BSDF *bsdf, const Vector &wi, size_t nPts, con
 	Intersection its;
 
 	#pragma omp parallel for
-	for (size_t i=0; i<nPts; ++i) {
+	for (int i=0; i<(int) nPts; ++i) {
 		BSDFQueryRecord bRec(its, wi, Vector(), EImportance);
 		bRec.typeMask = BSDF::ETransmission;
 		Point2 sample(in[2*i], in[2*i+1]);
@@ -57,7 +57,7 @@ void transmittanceIntegrand(const BSDF *bsdf, const Vector &wi, size_t nPts, con
 
 void diffTransmittanceIntegrand(Float *data, size_t resolution, size_t nPts, const Float *in, Float *out) {
 	#pragma omp parallel for
-	for (size_t i=0; i<nPts; ++i) 
+	for (int i=0; i<(int) nPts; ++i) 
 		out[i] = 2 * in[i] * interpCubic1D(std::pow(in[i], 0.25f), data, 0, 1, resolution);
 }
 
