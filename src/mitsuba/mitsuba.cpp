@@ -84,6 +84,11 @@ void signalHandler(int signal) {
 		renderQueue->flush();
 	} else if (signal == SIGFPE) {
 		SLog(EWarn, "Caught a floating-point exception!");
+
+		#if defined(MTS_DEBUG_FP)
+		/* Generate a core dump! */
+		abort();
+		#endif
 	}
 }
 #endif

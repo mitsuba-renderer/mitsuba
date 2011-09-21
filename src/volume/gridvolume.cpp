@@ -26,9 +26,6 @@
 // Uncomment to enable nearest-neighbor direction interpolation
 //#define VINTERP_NEAREST_NEIGHBOR
 
-// Uncomment to enable structure tensor-based direction interpolation (better, but slow)
-#define VINTERP_STRUCTURE_TENSOR
-
 // Number of power iteration steps used to find the dominant direction
 #define POWER_ITERATION_STEPS 5
 
