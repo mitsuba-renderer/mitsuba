@@ -81,8 +81,7 @@ a single scattering event (\figref{path-explanation}).
 
 \subsubsection*{Progressive versus non-progressive}
 Some of the rendering techniques in Mitsuba are \emph{progressive}.
-What this means is that they display a rough preview, which
-improves over time. Leaving them running indefinitely will
-continually reduce noise (e.g. in Metropolis Light Transport)
-or both noise and bias (e.g. in Progressive Photon Mapping).
-
+What this means is that they display a rough preview, which improves over time. 
+Leaving them running indefinitely will continually reduce noise (in unbiased algorithms
+such as Metropolis Light Transport) or noise and bias (in biased 
+rendering techniques such as Progressive Photon Mapping).

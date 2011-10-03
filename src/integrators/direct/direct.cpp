@@ -20,12 +20,59 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Direct-only integrator using multiple importance sampling and
- * the power heuristic. Takes a user-specifiable amount of luminaire
- * and BSDF samples By setting one of the strategies to zero, this 
- * class can effectively be turned into a luminaire sampling or
- * BSDF sampling-based integrator. Ignores participating media.
+/*! \plugin{direct}{Direct illumination integrator}
+ * \parameters{
+ *     \parameter{shadingSamples}{\Integer}{This convenience parameter can be 
+ *         used to set both \code{luminaireSamples} and \code{bsdfSamples} at 
+ *         the same time.}
+ *     \parameter{luminaireSamples}{\Integer}{Optional more fine-grained
+ *        parameter: specifies the number of samples that should be generated
+ *        using the direct illumination strategies implemented by the scene's
+ *        luminaires\default{set to the value of \code{shadingSamples}}}
+ *     \parameter{bsdfSamples}{\Integer}{Optional more fine-grained
+ *        parameter: specifies the number of samples that should be generated
+ *        using the BSDF sampling strategies implemented by the scene's
+ *        surfaces\default{set to the value of \code{shadingSamples}}}
+ * }
+ *
+ * \renderings{
+ *     \medrendering{Only BSDF sampling}{integrator_direct_bsdf}
+ *     \medrendering{Only luminaire sampling}{integrator_direct_lum}
+ *     \medrendering{BSDF and luminaire sampling}{integrator_direct_both}
+ *     \caption{
+ *         \label{fig:integrator-direct}
+ *         This plugin implements two different strategies for computing the
+ *         direct illumination on surfaces. Both of them are dynamically 
+ *         combined then obtain a robust rendering algorithm.
+ *     }
+ * }
+ *
+ * This integrator implements a direct illumination technique that makes use
+ * of \emph{multiple importance sampling}: for each pixel sample, the 
+ * integrator generates a user-specifiable number of BSDF and luminaire 
+ * samples and combines them using the power heuristic. Usually, the BSDF
+ * sampling technique works very well on glossy objects but does badly 
+ * everywhere else (\subfigref{integrator-direct}{a}), while the opposite
+ * is true for the luminaire sampling technique 
+ * (\subfigref{integrator-direct}{b}). By combining these approaches, one
+ * can obtain a rendering technique that works well in both cases
+ * (\subfigref{integrator-direct}{c}).
+ *
+ * The number of samples spent on either technique is configurable, hence 
+ * it is also possible to turn this plugin into an luminaire sampling-only 
+ * or BSDF sampling-only integrator.
+ *
+ * For best results, combine the direct illumination integrator with the
+ * low-discrepancy sample generator (\code{ldsampler}). Generally, the number
+ * of pixel samples of the sample generator can be kept relatively 
+ * low (e.g. \code{sampleCount=4}), whereas the \code{shadingSamples} 
+ * parameter of this integrator should be increased until the variance in
+ * the output renderings is acceptable.
+ *
+ * \remarks{
+ *    \item This integrator does not handle participating media or
+ *          indirect illumination.
+ * }
  */
 class MIDirectIntegrator : public SampleIntegrator {
 public:

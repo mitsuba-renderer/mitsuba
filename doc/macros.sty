@@ -59,6 +59,23 @@
 	\setlength\fboxrule\fboxrulebackup
 	\arrayrulecolor{black}
 	}
+
+\newcommand{\remarks}[1]{
+	\setlength\fboxrulebackup\fboxrule
+	\setlength\fboxrule{0.8pt}
+	\vspace{1em}
+	\begin{figure}[htbp]\centering
+	\fcolorbox{remarkframe}{remark}{
+		\parbox{\columnwidth}{
+		\vspace{.6em}\hspace{.6em}\parbox{\columnwidth-1.6em}{
+		\textbf{Remarks:}\small
+		\vspace{-.4em}
+		\begin{itemize}
+		#1
+		\end{itemize}
+		}}}\end{figure}
+	\setlength\fboxrule\fboxrulebackup
+	}
 	
 \newcommand{\renderings}[1]{
 	\begin{figure}[htbp!]
