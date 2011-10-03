@@ -23,16 +23,37 @@ MTS_NAMESPACE_BEGIN
 
 static StatsCounter avgPathLength("Path tracer", "Average path length", EAverage);
 
-/*! \plugin{path}{Path tracer with multiple importance sampling}
+/*! \plugin{path}{Path tracer}
+ *
  * \parameters{
- *     \parameter{maxDepth}{\Integer}{Maximum path depth \default{-1}}
- *     \parameter{strictNormals}{\Boolean}{Strict normals?}
+ *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
+ *         in the generated output image (where \code{-1} corresponds to $\infty$).
+ *	       A value of \code{1} will only render directly visible light sources.
+ *	       \code{2} will lead to single-bounce (direct-only) illumination, 
+ *	       and so on. \default{\code{-1}}
+ *	   }
+ *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after 
+ *	      which the implementation will start to use the ``russian roulette'' 
+ *	      path termination criterion. \default{\code{10}}
+ *	   }
+ *     \parameter{strictNormals}{\Boolean}{Be strict about potential
+ *        inconsistencies involving shading normals? See \pluginref{path}
+ *        for details.\default{no, i.e. \code{false}}}
  * }
- * Extended path tracer -- uses multiple importance sampling to combine 
- * two sampling strategies, namely BSDF and luminaire sampling. 
- * This class does not attempt to solve the full radiative transfer 
- * equation (see <tt>volpath</tt> if this is needed).
+ *
+ * This integrator implements a path tracer that makes use
+ * of \emph{multiple importance sampling}: for each surface interaction, the 
+ * integrator generates a single BSDF and emitter sample and combines
+ * them using the power heuristic.
+ *
+ * For best results, combine the path tracer with the
+ * low-discrepancy sample generator (\code{ldsampler}).
+ *
+ * \remarks{
+ *    \item This integrator does not handle participating media
+ * }
  */
+
 class MIPathTracer : public MonteCarloIntegrator {
 public:
 	MIPathTracer(const Properties &props)
