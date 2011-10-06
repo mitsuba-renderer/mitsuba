@@ -100,14 +100,15 @@ template <typename T> struct TAABB {
 
 	/// Calculate the n-dimensional volume of the bounding box
 	inline value_type getVolume() const {
-		value_type result = 0;
-		for (int i=0; i<point_type::dim; ++i) {
-			value_type tmp = max[i] - min[i];
-			result += tmp*tmp;
-		}
+		vector_type diff = max-min;
+
+		value_type result = diff[0];
+		for (int i=1; i<point_type::dim; ++i) 
+			result *= diff[i];
+
 		return result;
 	}
-	
+
 	/// Calculate the n-1 dimensional volume of the boundary
 	inline Float getSurfaceArea() const {
 		vector_type d = max - min;
