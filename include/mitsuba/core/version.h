@@ -83,12 +83,12 @@ public:
 	}
 
 	/// Is this a valid version number?
-	bool isValid() {
+	inline bool isValid() {
 		return m_major != 0 || m_minor != 0 || m_release != 0;
 	}
 
 	/// Are the following two versions compatible?
-	bool isCompatible(const Version &other) const {
+	inline bool isCompatible(const Version &other) const {
 		return m_major == other.m_major &&
 			m_minor == other.m_minor;
 	}
