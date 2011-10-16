@@ -779,10 +779,11 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 }
 	
 void GLWidget::wheelEvent(QWheelEvent *event) {
+	if (!m_preview->isRunning() || m_context == NULL || m_context->scene == NULL || m_animation)
+		return;
+
 	QScrollBar *bar = event->orientation() == Qt::Vertical
 		? m_vScroll : m_hScroll;
-	if (!m_preview->isRunning() || m_animation) 
-		return;
 
 	if (bar->isVisible()) {
 		int oldStep = bar->singleStep();
