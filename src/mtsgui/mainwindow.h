@@ -41,6 +41,11 @@ class PreviewSettingsDlg;
 class QRenderListener : public QObject, public RenderListener {
 	Q_OBJECT
 public:
+	QRenderListener() {
+		m_mutex = new Mutex();
+		m_cond = new ConditionVariable(m_mutex);
+	}
+
 	/// Called when work has begun in a rectangular image region
 	inline void workBeginEvent(const RenderJob *job, const RectangularWorkUnit *wu, int worker) {
 		emit workBegin(job, wu, worker);
@@ -53,7 +58,12 @@ public:
 
 	/// Called when the whole target image has been altered in some way
 	inline void refreshEvent(const RenderJob *job, const Bitmap *bitmap) {
-		emit refresh(job, bitmap);
+		m_mutex->lock();
+		m_bitmap = bitmap;
+		emit refresh(job);
+		m_cond->wait(500);
+		m_bitmap = NULL;
+		m_mutex->unlock();
 	}
 
 	/// Called when a render job has completed successfully or unsuccessfully
@@ -61,14 +71,29 @@ public:
 		emit jobFinished(job, cancelled);
 	}
 
+	/// Lock the mutex
+	inline void lock() { m_mutex->lock(); }
+
+	/// Access the image associated with the last refresh event
+	inline const Bitmap *getBitmap() const { return m_bitmap.get(); }
+
+	/// Unlock the mutex
+	inline void unlock() { m_mutex->unlock(); }
+
 	MTS_DECLARE_CLASS()
 signals:
 	void workBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 	void workEnd(const RenderJob *job, const ImageBlock *wr);
-	void refresh(const RenderJob *job, const Bitmap *bitmap);
+	void refresh(const RenderJob *job);
 	void jobFinished(const RenderJob *job, bool cancelled);
+
 protected:
 	virtual ~QRenderListener() { }
+
+private:
+	ref<Mutex> m_mutex;
+	ref<ConditionVariable> m_cond;
+	ref<Bitmap> m_bitmap;
 };
 
 class PreviewSettingsDialog;

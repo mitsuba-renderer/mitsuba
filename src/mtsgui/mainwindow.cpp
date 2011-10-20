@@ -163,8 +163,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	connect(m_renderListener, SIGNAL(jobFinished(const RenderJob *, bool)), 
 		this, SLOT(onJobFinished(const RenderJob *, bool)), Qt::QueuedConnection);
-	connect(m_renderListener, SIGNAL(refresh(const RenderJob *, const Bitmap *)), 
-		this, SLOT(onRefresh(const RenderJob *, const Bitmap *)), Qt::BlockingQueuedConnection);
+	connect(m_renderListener, SIGNAL(refresh(const RenderJob *)), 
+		this, SLOT(onRefresh(const RenderJob *)), Qt::QueuedConnection);
 	connect(m_renderListener, SIGNAL(workEnd(const RenderJob *, const ImageBlock *)), 
 		this, SLOT(onWorkEnd(const RenderJob *, const ImageBlock *)), Qt::DirectConnection);
 	connect(m_renderListener, SIGNAL(workBegin(const RenderJob *, const RectangularWorkUnit *, int)),
@@ -1673,10 +1673,11 @@ void MainWindow::onWorkEnd(const RenderJob *job, const ImageBlock *block) {
 		emit updateView();
 }
 
-void MainWindow::onRefresh(const RenderJob *job, const Bitmap *_bitmap) {
+void MainWindow::onRefresh(const RenderJob *job) {
 	SceneContext *context = getContext(job, false);
 	if (context == NULL)
 		return;
+
 	Film *film = context->scene->getFilm();
 	Point2i co = film->getCropOffset();
 	Bitmap *bitmap = context->framebuffer;
