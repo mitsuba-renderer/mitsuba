@@ -101,7 +101,7 @@ template <typename T> struct TAABB {
 	/// Calculate the n-dimensional volume of the bounding box
 	inline value_type getVolume() const {
 		vector_type diff = max-min;
-		value_type result = diff[1];
+		value_type result = diff[0];
 		for (int i=1; i<point_type::dim; ++i)
 			result *= diff[i];
 		return result;
