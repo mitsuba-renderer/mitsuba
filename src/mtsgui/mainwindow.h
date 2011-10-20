@@ -25,6 +25,10 @@
 
 #define MAX_RECENT_FILES 10
 
+// amount of time that a rendering thread will wait for the GUI to accept a
+// render view refresh request to show intermediate progress (in ms) 
+#define REFRESH_TIMEOUT 50
+
 namespace Ui {
     class MainWindow;
 }
@@ -41,9 +45,12 @@ class PreviewSettingsDlg;
 class QRenderListener : public QObject, public RenderListener {
 	Q_OBJECT
 public:
+	typedef std::pair<const RenderJob *, const Bitmap *> RefreshRequest;
+
 	QRenderListener() {
 		m_mutex = new Mutex();
 		m_cond = new ConditionVariable(m_mutex);
+		m_refreshRequest = NULL;
 	}
 
 	/// Called when work has begun in a rectangular image region
@@ -55,14 +62,24 @@ public:
 	inline void workEndEvent(const RenderJob *job, const ImageBlock *wr) {
 		emit workEnd(job, wr);
 	}
+	
 
 	/// Called when the whole target image has been altered in some way
 	inline void refreshEvent(const RenderJob *job, const Bitmap *bitmap) {
 		m_mutex->lock();
-		m_bitmap = bitmap;
-		emit refresh(job);
-		m_cond->wait(500);
-		m_bitmap = NULL;
+		RefreshRequest request = std::make_pair(job, bitmap);
+
+		/* Potentially overwrite a previous refresh request */
+		m_refreshRequest = &request;
+
+		/* Asynchronously signal the GUI */
+		emit refresh();
+
+		/* Wait for the GUI to draw the image (or another 
+		   thread to overwrite the refresh request) */
+		m_cond->wait(REFRESH_TIMEOUT);
+
+		m_refreshRequest = NULL;
 		m_mutex->unlock();
 	}
 
@@ -71,21 +88,15 @@ public:
 		emit jobFinished(job, cancelled);
 	}
 
-	/// Lock the mutex
-	inline void lock() { m_mutex->lock(); }
-
-	/// Access the image associated with the last refresh event
-	inline const Bitmap *getBitmap() const { return m_bitmap.get(); }
-
-	/// Unlock the mutex
-	inline void unlock() { m_mutex->unlock(); }
+	inline const RefreshRequest *acquireRefreshRequest() { m_mutex->lock(); return m_refreshRequest; }
+	inline void releaseRefreshRequest() { m_refreshRequest = NULL; m_cond->signal(); m_mutex->unlock(); }
 
 	MTS_DECLARE_CLASS()
 signals:
 	void workBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 	void workEnd(const RenderJob *job, const ImageBlock *wr);
-	void refresh(const RenderJob *job);
 	void jobFinished(const RenderJob *job, bool cancelled);
+	void refresh();
 
 protected:
 	virtual ~QRenderListener() { }
@@ -93,7 +104,7 @@ protected:
 private:
 	ref<Mutex> m_mutex;
 	ref<ConditionVariable> m_cond;
-	ref<Bitmap> m_bitmap;
+	RefreshRequest *m_refreshRequest;
 };
 
 class PreviewSettingsDialog;
@@ -122,6 +133,7 @@ protected:
 	void drawVisualWorkUnit(SceneContext *context, const VisualWorkUnit &block);
 	void checkForUpdates(bool notifyIfNone = false);
 	void saveAs(SceneContext *ctx, const QString &targetFile);
+	void refresh(const RenderJob *job, const Bitmap *bitmap);
 	QSize sizeHint() const;
 
 signals:
@@ -162,7 +174,7 @@ private slots:
 	void onClearRecent();
 	void onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 	void onWorkEnd(const RenderJob *job, const ImageBlock *wr);
-	void onRefresh(const RenderJob *job, const Bitmap *bitmap);
+	void onRefresh();
 	void onJobFinished(const RenderJob *job, bool cancelled);
 	void onProgressMessage(const RenderJob *job, const QString &name, 
 		float progress, const QString &eta);
