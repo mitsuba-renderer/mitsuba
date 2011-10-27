@@ -163,12 +163,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	connect(m_renderListener, SIGNAL(jobFinished(const RenderJob *, bool)), 
 		this, SLOT(onJobFinished(const RenderJob *, bool)), Qt::QueuedConnection);
-	connect(m_renderListener, SIGNAL(refresh(const RenderJob *, const Bitmap *)), 
-		this, SLOT(onRefresh(const RenderJob *, const Bitmap *)), Qt::BlockingQueuedConnection);
 	connect(m_renderListener, SIGNAL(workEnd(const RenderJob *, const ImageBlock *)), 
 		this, SLOT(onWorkEnd(const RenderJob *, const ImageBlock *)), Qt::DirectConnection);
 	connect(m_renderListener, SIGNAL(workBegin(const RenderJob *, const RectangularWorkUnit *, int)),
         this, SLOT(onWorkBegin(const RenderJob *, const RectangularWorkUnit *, int)), Qt::DirectConnection);
+	connect(m_renderListener, SIGNAL(refresh()), this, SLOT(onRefresh()), Qt::QueuedConnection);
 	connect(m_consoleAppender, 
 		SIGNAL(progressMessage(const RenderJob *, const QString &, float, const QString &)), 
 		this, SLOT(onProgressMessage(const RenderJob *, const QString &, float, const QString &)), 
@@ -1513,7 +1512,7 @@ void MainWindow::onJobFinished(const RenderJob *job, bool cancelled) {
 				ui->glView->resumePreview();
 		}
 	}
-	onRefresh(job, NULL);
+	refresh(job, NULL);
 	context->renderJob = NULL;
 	updateUI();
 	if (ui->tabBar->currentIndex() != -1 &&
@@ -1673,10 +1672,18 @@ void MainWindow::onWorkEnd(const RenderJob *job, const ImageBlock *block) {
 		emit updateView();
 }
 
-void MainWindow::onRefresh(const RenderJob *job, const Bitmap *_bitmap) {
+void MainWindow::onRefresh() {
+	const QRenderListener::RefreshRequest *req = m_renderListener->acquireRefreshRequest();
+	if (req)
+		refresh(req->first, req->second);
+	m_renderListener->releaseRefreshRequest();
+}
+
+void MainWindow::refresh(const RenderJob *job, const Bitmap *_bitmap) {
 	SceneContext *context = getContext(job, false);
 	if (context == NULL)
 		return;
+
 	Film *film = context->scene->getFilm();
 	Point2i co = film->getCropOffset();
 	Bitmap *bitmap = context->framebuffer;

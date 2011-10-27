@@ -74,12 +74,15 @@ bool ConditionVariable::wait(int ms) {
 
 		struct timespec ts;
 		ts.tv_sec = tv.tv_sec + ms/1000;
-		ts.tv_nsec = (tv.tv_usec + ms % 1000) * 1000;
-
+		ts.tv_nsec = tv.tv_usec * 1000 + (ms % 1000) * 1000000;
+		if (ts.tv_nsec >= 1000000000) {
+			ts.tv_nsec -= 1000000000;
+			ts.tv_sec++;
+		}
 		int retval = pthread_cond_timedwait(&m_cond, &m_mutex->m_mutex, &ts);
 #if defined(WIN32)
 		/* Should be outside of the switch statement (depending
-		   on the used compiler, the constants ETIMEDOUT and WSAETIMEDOUT
+		   on the used environment, the constants ETIMEDOUT and WSAETIMEDOUT
 		   are potentially identical */   
 		if (retval == WSAETIMEDOUT)
 			return false;
