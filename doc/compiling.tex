@@ -257,13 +257,14 @@ environment variable so that entering \code{scons} on the command prompt (\code{
 launches the build system.
 
 Finally, you will need to build Qt 4.7 (or a newer version) from 
-source (pre-built binaries won't work). It is important that this 
-is done with the \emph{exact same}\footnote{The blame here goes to 
+source, as pre-built binaries will unfortunately not work. 
+At the time of this writing, a suitable source code package is available here: \url{http://get.qt.nokia.com/qt/source/qt-everywhere-opensource-src-4.7.4.zip}.
+It is important that the Qt build process
+is performed using the \emph{exact same}\footnote{The blame here goes to 
 Microsoft for changing the C++ ABI whenever they feel like it.} 
-compiler that will also be used  to build Mitsuba. This means that 
-Qt should be compiled after applying any Visual Studio service packs.
-
-Suitable commands for configuring and compiling Qt are
+compiler that will also be used to build Mitsuba. This means that 
+Qt should be compiled \emph{after} applying any Visual Studio service packs.
+To configure Qt and start the compilation process, enter
 \begin{shell}
 C:\Qt>configure.exe -release -no-webkit -no-phonon -no-phonon-backend -no-script
       -no-scripttools -no-qt3support -no-multimedia -no-ltcg
@@ -288,7 +289,7 @@ In the case that you have multiple processors, you might want to parallelize the
 
 If all goes well, the build process will finish successfully after a few
 minutes. In comparison to the other platforms, you don't have to run the \code{setpath.sh} script at this point. 
-All binaries are now located in the \code{dist} directory, and they should be executed directly from there.
+All binaries are automatically copied into the \code{dist} directory, and they should be executed directly from there.
 
 \subsubsection{Integration with the Visual Studio interface}
 Basic Visual Studio 2008 and 2010 integration with support for code completion 
