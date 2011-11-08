@@ -171,7 +171,10 @@ public:
 	const Shape *shape;
 
 	/// Have texture coordinate partials been computed
-	bool hasUVPartials;
+	bool hasUVPartials : 1;
+
+	/// Primitive index, e.g. the triangle ID (if applicable)
+	uint32_t primIndex : 31;
 };
 
 /** \brief Abstract base class of all shapes

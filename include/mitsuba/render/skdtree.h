@@ -425,6 +425,7 @@ protected:
 			its.wi = its.toLocal(-ray.d);
 			its.shape = trimesh;
 			its.hasUVPartials = false;
+			its.primIndex = cache->primIndex;
 		} else {
 			shape->fillIntersectionRecord(ray, 
 				reinterpret_cast<const uint8_t*>(temp) + 8, its);
