@@ -24,18 +24,36 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{wireframe}{Wireframe texture}
+ * \parameters{
+ *     \parameter{interiorColor}{\Spectrum}{
+ *       Color value of the interior of triangles
+ *       \default{0.5}
+ *     }
+ *     \parameter{color1}{\Spectrum}{
+ *       Edge color value
+ *       \default{0.1}
+ *     }
+ *     \parameter{lineWidth}{\Float}{
+ *        World-space width of the mesh edges
+ *        \default{automatic}
+ *     }
+ * }
+ *
+ * This plugin implements a simple two-color wireframe texture map 
+ * that reveals the structure of a triangular mesh.
  */
 class WireFrame : public Texture {
 public:
 	WireFrame(const Properties &props) : Texture(props) {
-		m_edgeColor = props.getSpectrum("edgeColor", Spectrum(0.0f));
+		m_edgeColor = props.getSpectrum("edgeColor", Spectrum(0.1f));
 		m_interiorColor = props.getSpectrum("interiorColor", Spectrum(.5f));
-		m_lineWidth = props.getFloat("lineWidth", .01f);
+		m_lineWidth = props.getFloat("lineWidth", 0.0f);
+		m_mutex = new Mutex();
 	}
 
 	WireFrame(Stream *stream, InstanceManager *manager) 
 	 : Texture(stream, manager) {
-
+		m_mutex = new Mutex();
 		m_edgeColor = Spectrum(stream);
 		m_interiorColor = Spectrum(stream);
 		m_lineWidth = stream->readFloat();
@@ -49,16 +67,35 @@ public:
 		stream->writeFloat(m_lineWidth);
 	}
 
+
 	Spectrum getValue(const Intersection &its) const {
 		if (!its.shape->getClass()->derivesFrom(MTS_CLASS(TriMesh)))
 			return m_interiorColor;
 
-		const TriMesh *trimesh = static_cast<const TriMesh *>(its.shape);
-		if (its.primIndex >= trimesh->getTriangleCount())
+		const TriMesh *triMesh = static_cast<const TriMesh *>(its.shape);
+		const Point *positions = triMesh->getVertexPositions();
+		if (its.primIndex >= triMesh->getTriangleCount())
 			return m_interiorColor;
 
-		const Triangle &tri = trimesh->getTriangles()[its.primIndex];
-		const Point *positions = trimesh->getVertexPositions();
+		if (m_lineWidth == 0) {
+			/* Somewhat hacky but probably helpful in many cases.
+			   This tries to find a suitable line width, which is set
+			   to 10% of the average average edge length */ 
+			m_mutex->lock();
+			if (m_lineWidth == 0) {
+				for (size_t i=0; i<triMesh->getTriangleCount(); ++i) {
+					const Triangle &tri = triMesh->getTriangles()[i];
+					for (int j=0; j<3; ++j)
+						m_lineWidth += (positions[tri.idx[j]] 
+							- positions[tri.idx[j+1%3]]).length();
+				}
+
+				m_lineWidth = 0.1f * m_lineWidth / (3 * triMesh->getTriangleCount());
+			}
+			m_mutex->unlock();
+		}
+
+		const Triangle &tri = triMesh->getTriangles()[its.primIndex];
 
 		Point pos[] = { positions[tri.idx[0]],
 			positions[tri.idx[1]],
@@ -71,10 +108,10 @@ public:
 			Vector d1 = normalize(next - cur),
 				   d2 = its.p - cur;
 
-			minDist = std::min(minDist, (cur + d1 * dot(d1, d2) - its.p).length());
+			minDist = std::min(minDist, (cur + d1 * dot(d1, d2) - its.p).lengthSquared());
 		}
 
-		Float value = 1-smoothStep(0, m_lineWidth, minDist);
+		Float value = 1-smoothStep(0, m_lineWidth, std::sqrt(minDist));
 
 		return m_edgeColor * value + m_interiorColor * (1-value);
 	}
@@ -112,8 +149,8 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "WireFrame[" << endl
-			<< "  edgeColor = " << m_edgeColor.toString() << ","
-			<< "  interiorColor = " << m_interiorColor.toString() << ","
+			<< "  edgeColor = " << m_edgeColor.toString() << "," << endl
+			<< "  interiorColor = " << m_interiorColor.toString() << "," << endl
 			<< "  lineWidth = " << m_lineWidth << endl
 			<< "]";
 		return oss.str();
@@ -123,9 +160,10 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
+	mutable Float m_lineWidth;
+	mutable ref<Mutex> m_mutex;
 	Spectrum m_edgeColor;
 	Spectrum m_interiorColor;
-	Float m_lineWidth;
 };
 
 // ================ Hardware shader implementation ================ 
