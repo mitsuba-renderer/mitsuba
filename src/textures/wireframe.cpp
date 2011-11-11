@@ -37,6 +37,12 @@ MTS_NAMESPACE_BEGIN
  *        World-space width of the mesh edges
  *        \default{automatic}
  *     }
+ *     \parameter{stepWidth}{\Float}{
+ *        Controls the width of of step function used for the 
+ *        color transition. It is specified as a value between zero
+ *        and one (relative to the \code{lineWidth} parameter)
+ *        \default{0.5}
+ *     }
  * }
  *
  * This plugin implements a simple two-color wireframe texture map 
@@ -44,11 +50,13 @@ MTS_NAMESPACE_BEGIN
  */
 class WireFrame : public Texture {
 public:
-	WireFrame(const Properties &props) : Texture(props) {
-		m_edgeColor = props.getSpectrum("edgeColor", Spectrum(0.1f));
-		m_interiorColor = props.getSpectrum("interiorColor", Spectrum(.5f));
-		m_lineWidth = props.getFloat("lineWidth", 0.0f);
-		m_mutex = new Mutex();
+	WireFrame(const Properties &props) : Texture(props),
+		m_lineWidth(props.getFloat("lineWidth", 0.0f)),
+		m_mutex(new Mutex()),
+		m_stepWidth(props.getFloat("stepWidth", 0.5f)),
+		m_edgeColor(props.getSpectrum("edgeColor", Spectrum(0.1f))),
+		m_interiorColor(props.getSpectrum("interiorColor", Spectrum(.5f))) { 
+		m_stepWidth = std::max(0.0f, std::min(m_stepWidth, 1.f));
 	}
 
 	WireFrame(Stream *stream, InstanceManager *manager) 
@@ -87,7 +95,7 @@ public:
 					const Triangle &tri = triMesh->getTriangles()[i];
 					for (int j=0; j<3; ++j)
 						m_lineWidth += (positions[tri.idx[j]] 
-							- positions[tri.idx[j+1%3]]).length();
+							- positions[tri.idx[(j+1)%3]]).length();
 				}
 
 				m_lineWidth = 0.1f * m_lineWidth / (3 * triMesh->getTriangleCount());
@@ -97,23 +105,19 @@ public:
 
 		const Triangle &tri = triMesh->getTriangles()[its.primIndex];
 
-		Point pos[] = { positions[tri.idx[0]],
-			positions[tri.idx[1]],
-			positions[tri.idx[2]] };
-
 		Float minDist = std::numeric_limits<Float>::infinity();
 		for (int i=0; i<3; ++i) {
-			Point cur = pos[i], next = pos[(i+1)%3];
+			const Point& cur  = positions[tri.idx[i]];
+			const Point& next = positions[tri.idx[(i+1)%3]];
 
 			Vector d1 = normalize(next - cur),
-				   d2 = its.p - cur;
+			       d2 = its.p - cur;
 
 			minDist = std::min(minDist, (cur + d1 * dot(d1, d2) - its.p).lengthSquared());
 		}
 
-		Float value = 1-smoothStep(0, m_lineWidth, std::sqrt(minDist));
-
-		return m_edgeColor * value + m_interiorColor * (1-value);
+		Float a = smoothStep(m_lineWidth*(1.f-m_stepWidth), m_lineWidth, std::sqrt(minDist));
+		return m_edgeColor*(1-a) + m_interiorColor*a;
 	}
 
 	bool usesRayDifferentials() const {
@@ -150,8 +154,9 @@ public:
 		std::ostringstream oss;
 		oss << "WireFrame[" << endl
 			<< "  edgeColor = " << m_edgeColor.toString() << "," << endl
-			<< "  interiorColor = " << m_interiorColor.toString() << "," << endl
+	 		<< "  interiorColor = " << m_interiorColor.toString() << "," << endl
 			<< "  lineWidth = " << m_lineWidth << endl
+			<< "  stepWidth = " << m_stepWidth << endl
 			<< "]";
 		return oss.str();
 	}
@@ -162,6 +167,7 @@ public:
 protected:
 	mutable Float m_lineWidth;
 	mutable ref<Mutex> m_mutex;
+	Float    m_stepWidth;
 	Spectrum m_edgeColor;
 	Spectrum m_interiorColor;
 };
@@ -203,5 +209,5 @@ Shader *WireFrame::createShader(Renderer *renderer) const {
 
 MTS_IMPLEMENT_CLASS(WireFrameShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(WireFrame, false, Texture)
-MTS_EXPORT_PLUGIN(WireFrame, "Vertex color texture");
+MTS_EXPORT_PLUGIN(WireFrame, "Wireframe texture");
 MTS_NAMESPACE_END
