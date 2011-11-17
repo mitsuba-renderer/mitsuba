@@ -61,7 +61,9 @@ if sys.platform == 'linux2':
 			'librender/libmitsuba-render.so', 'libbidir/libmitsuba-bidir.so'])
 	if hasPython:
 		install(os.path.join(distDir, 'python'), ['libpython/mitsuba.so'])
-	install(distDir, ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil', 'mtsgui/mtsgui'])
+	install(distDir, ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil'])
+	if hasQt:
+		install(distDir, ['mtsgui/mtsgui'])
 	if hasCollada:
 		install(distDir, ['converter/mtsimport'])
 if sys.platform == 'win32':
