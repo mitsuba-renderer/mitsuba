@@ -56,7 +56,7 @@ public:
 		m_stepWidth(props.getFloat("stepWidth", 0.5f)),
 		m_edgeColor(props.getSpectrum("edgeColor", Spectrum(0.1f))),
 		m_interiorColor(props.getSpectrum("interiorColor", Spectrum(.5f))) { 
-		m_stepWidth = std::max(0.0f, std::min(m_stepWidth, 1.f));
+		m_stepWidth = std::max((Float) 0.0f, std::min(m_stepWidth, (Float) 1.0f));
 	}
 
 	WireFrame(Stream *stream, InstanceManager *manager) 
