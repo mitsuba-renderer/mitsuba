@@ -202,7 +202,7 @@ void *Thread::dispatch(void *par) {
 	m_idMutex->lock();
 	m_id = ++m_idCounter;
 	m_idMutex->unlock();
-#elif defined(__LINUX__) or defined(__OSX__)
+#elif defined(__LINUX__) || defined(__OSX__)
 	m_idMutex->lock();
 	thread->m_id = ++m_idCounter;
 	m_idMutex->unlock();
