@@ -238,6 +238,7 @@ public:
 			zres = stream->readInt();
 		m_res = Vector3i(xres, yres, zres);
 		m_channels = stream->readInt();
+		std::string format;
 
 		switch (type) {
 			case EFloat32:
@@ -245,15 +246,19 @@ public:
 					Log(EError, "Encountered an unsupported float32 volume data "
 						"file (%i channels, only 1 and 3 are supported)",
 						m_channels);
+				format = "float32";
 				break;
 			case EFloat16:
+				format = "float16";
 				Log(EError, "Error: float16 volumes are not yet supported!");
 			case EUInt8:
+				format = "uint8";
 				if (m_channels != 1 && m_channels != 3)
 					Log(EError, "Encountered an unsupported uint8 volume data "
 						"file (%i channels, only 1 and 3 are supported)", m_channels);
 				break;
 			case EQuantizedDirections:
+				format = "qdir";
 				if (m_channels != 3)
 					Log(EError, "Encountered an unsupported quantized direction "
 							"volume data file (%i channels, only 3 are supported)",
@@ -275,8 +280,8 @@ public:
 			m_dataAABB = AABB(Point(xmin, ymin, zmin), Point(xmax, ymax, zmax));
 		}
 
-		Log(EDebug, "Mapped \"%s\" into memory: %ix%ix%i (%i channels), %s, %s", 
-			resolved.filename().c_str(), m_res.x, m_res.y, m_res.z, m_channels,
+		Log(EDebug, "Mapped \"%s\" into memory: %ix%ix%i (%i channels, format = %s), %s, %s", 
+			resolved.filename().c_str(), m_res.x, m_res.y, m_res.z, m_channels, format.c_str(),
 			memString(m_mmap->getSize()).c_str(), m_dataAABB.toString().c_str());
 		m_data = (uint8_t *) (((float *) m_mmap->getData()) + 12);
 	}
