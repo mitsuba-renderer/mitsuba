@@ -82,18 +82,18 @@ protected:
 	virtual ~MainThread() { }
 };
 
-class OpenMPThread : public Thread {
+class UnmanagedThread : public Thread {
 public:
-	OpenMPThread(int threadIdx)
-		: Thread(formatString("omp%i", threadIdx)) { }
+	UnmanagedThread(const std::string &name)
+		: Thread(name) { }
 
 	virtual void run() {
-		Log(EError, "The OpenMP thread is already running!");
+		Log(EError, "The unmanaged thread is already running!");
 	}
 
 	MTS_DECLARE_CLASS()
 protected:
-	virtual ~OpenMPThread() { }
+	virtual ~UnmanagedThread() { }
 };
 
 
@@ -331,12 +331,28 @@ void Thread::staticInitialization() {
 
 }
 
-static std::vector<OpenMPThread *> __ompThreads;
+static std::vector<Thread *> __unmanagedThreads;
+
+Thread *Thread::registerUnmanagedThread(const std::string &name) {
+	Thread *thread = getThread();
+	if (!thread) {
+		thread = new UnmanagedThread(name);
+		thread->m_running = false;
+		thread->m_thread = pthread_self();
+		thread->m_joinMutex = new Mutex();
+		thread->m_joined = false;
+		thread->incRef();
+		m_self->set(thread);
+		#pragma omp critical
+			__unmanagedThreads.push_back((UnmanagedThread *) thread);
+	}
+	return thread;
+}
 
 void Thread::staticShutdown() {
-	for (size_t i=0; i<__ompThreads.size(); ++i)
-		__ompThreads[i]->decRef();
-	__ompThreads.clear();
+	for (size_t i=0; i<__unmanagedThreads.size(); ++i)
+		__unmanagedThreads[i]->decRef();
+	__unmanagedThreads.clear();
 	getThread()->m_running = false;
 	m_self->set(NULL);
 	delete m_self;
@@ -385,7 +401,8 @@ void Thread::initializeOpenMP(size_t threadCount) {
 		if (!thread) {
 			#pragma omp critical
 			{
-				thread = new OpenMPThread(counter);
+				thread = new UnmanagedThread(
+					formatString("omp%i", counter));
 				#if MTS_BROKEN_OPENMP == 1
 				__threadID.set(counter);
 				#endif
@@ -400,7 +417,7 @@ void Thread::initializeOpenMP(size_t threadCount) {
 			thread->incRef();
 			m_self->set(thread);
 			#pragma omp critical
-			__ompThreads.push_back((OpenMPThread *) thread);
+			__unmanagedThreads.push_back((UnmanagedThread *) thread);
 		}
 	}
 }
@@ -412,5 +429,5 @@ Thread::~Thread() {
 
 MTS_IMPLEMENT_CLASS(Thread, true, Object)
 MTS_IMPLEMENT_CLASS(MainThread, false, Thread)
-MTS_IMPLEMENT_CLASS(OpenMPThread, false, Thread)
+MTS_IMPLEMENT_CLASS(UnmanagedThread, false, Thread)
 MTS_NAMESPACE_END

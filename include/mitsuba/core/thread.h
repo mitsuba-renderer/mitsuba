@@ -153,6 +153,15 @@ public:
 	/// Initialize Mitsuba's threading system for simultaneous use of OpenMP
 	static void initializeOpenMP(size_t threadCount);
 
+	/**
+	 * \brief Register an unmanaged thread with Mitsuba (i.e. one that 
+	 * doesn't derive from \c mitsuba::Thread)
+	 *
+	 * Should be called from the thread in question. The function returns
+	 * a Mitsuba handle to the thread
+	 */
+	static Thread *registerUnmanagedThread(const std::string &name);
+
 	MTS_DECLARE_CLASS()
 protected:
 	/// Virtual destructor

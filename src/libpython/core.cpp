@@ -485,12 +485,14 @@ void export_core() {
 		.def("getFileResolver", &Thread::getFileResolver, BP_RETURN_VALUE)
 		.def("getThread", &Thread::getThread, BP_RETURN_VALUE)
 		.def("isRunning", &Thread::isRunning)
+		.def("registerUnmanagedThread", &Thread::registerUnmanagedThread, BP_RETURN_VALUE)
 		.def("sleep", &Thread::sleep)
 		.def("detach", &Thread::detach)
 		.def("join", &Thread::join)
 		.def("start", &Thread::start)
 		.staticmethod("sleep")
-		.staticmethod("getThread");
+		.staticmethod("getThread")
+		.staticmethod("registerUnmanagedThread");
 
 	BP_SETSCOPE(Thread_class);
 	bp::enum_<Thread::EThreadPriority>("EThreadPriority")
