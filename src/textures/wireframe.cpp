@@ -91,14 +91,15 @@ public:
 			   to 10% of the average average edge length */ 
 			m_mutex->lock();
 			if (m_lineWidth == 0) {
+				Float lineWidth = 0;
 				for (size_t i=0; i<triMesh->getTriangleCount(); ++i) {
 					const Triangle &tri = triMesh->getTriangles()[i];
 					for (int j=0; j<3; ++j)
-						m_lineWidth += (positions[tri.idx[j]] 
+						lineWidth += (positions[tri.idx[j]] 
 							- positions[tri.idx[(j+1)%3]]).length();
 				}
 
-				m_lineWidth = 0.1f * m_lineWidth / (3 * triMesh->getTriangleCount());
+				m_lineWidth = 0.1f * lineWidth / (3 * triMesh->getTriangleCount());
 			}
 			m_mutex->unlock();
 		}
