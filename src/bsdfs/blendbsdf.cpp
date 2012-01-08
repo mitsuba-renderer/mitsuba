@@ -107,7 +107,7 @@ public:
 	}
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		Float weight = std::min(1.0f, std::max(0.0f, 
+		Float weight = std::min((Float) 1.0f, std::max((Float) 0.0f, 
 			m_weight->getValue(bRec.its).average()));
 
 		if (bRec.component == -1) {
@@ -128,7 +128,7 @@ public:
 	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		Spectrum result;
 
-		Float weight = std::min(1.0f, std::max(0.0f, 
+		Float weight = std::min((Float) 1.0f, std::max((Float) 0.0f, 
 			m_weight->getValue(bRec.its).average()));
 
 		if (bRec.component == -1) {
@@ -150,7 +150,7 @@ public:
 		Point2 sample(_sample);
 
 		Float weights[2];
-		weights[1] = std::min(1.0f, std::max(0.0f, 
+		weights[1] = std::min((Float) 1.0f, std::max((Float) 0.0f, 
 			m_weight->getValue(bRec.its).average()));
 		weights[0] = 1-weights[1];
 
@@ -196,7 +196,7 @@ public:
 		Point2 sample(_sample);
 
 		Float weights[2];
-		weights[1] = std::min(1.0f, std::max(0.0f, 
+		weights[1] = std::min((Float) 1.0f, std::max((Float) 0.0f, 
 			m_weight->getValue(bRec.its).average()));
 		weights[0] = 1-weights[1];
 
