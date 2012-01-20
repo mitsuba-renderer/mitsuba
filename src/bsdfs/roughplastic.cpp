@@ -125,7 +125,6 @@ MTS_NAMESPACE_BEGIN
  *     \medrendering{Textured rough plastic model and \code{nonlinear=false}}{bsdf_roughplastic_preserve}
  *     \medrendering{Textured rough plastic model and \code{nonlinear=true}}{bsdf_roughplastic_nopreserve}
  *     \caption{
- *        \label{fig:plastic-nonlinear}
  *        When asked to do so, this model can account for subtle nonlinear color shifts due
  *        to internal scattering processes. The above images show a textured
  *        object first rendered using \pluginref{diffuse}, then 

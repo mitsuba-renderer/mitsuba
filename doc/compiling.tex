@@ -142,7 +142,7 @@ repository, put the two \code{deb}-files built in the last section,
 as well as the \code{collada-dom} \code{deb}-files into a public directory 
 made available by a HTTP server and inside it, run
 \begin{shell}
-$path-to-htdocs\text{\$}$ dpkg-scanpackages path/to/deb-directory /dev/null | gzip -9c > path/to/deb-directory/Packages.gz
+path-to-htdocs$\text{\$}$ dpkg-scanpackages path/to/deb-directory /dev/null | gzip -9c > path/to/deb-directory/Packages.gz
 \end{shell}
 This will create a respository index file named \code{Packages.gz}.
 Note that you must execute this command in the root directory of the

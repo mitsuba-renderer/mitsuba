@@ -22,11 +22,32 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * \brief Scaling passthrough texture
+/*!\plugin{scale}{Scaling passthrough texture}
+ * \parameters{
+ *     \parameter{value}{\Spectrum\Or\Texture}{
+ *       Specifies the spectrum or nested texture that should be scaled
+ *     }
+ *     \parameter{value}{\Float}{
+ *       Specifies the scale value
+ *     }
+ * }
  *
- * Includes a \ref Shader implementation for hardware rendering
+ * This simple plugin wraps a nested texture plugin and multiplies its 
+ * contents by a user-specified value. This can be quite useful when a
+ * texture is too dark or too bright. The plugin can also be used to adjust
+ * the height of a bump map when using the \pluginref{bump} plugin.
+ * \begin{xml}[caption=Scaling the contents of a bitmap texture]
+ * <texture type="scale">
+ *     <float name="scale" value="0.5"/>
+ *
+ *     <texture type="bitmap">
+ *         <string name="filename" value="wood.jpg"/>
+ *     </texture>
+ * </texture>
+ * \end{xml}
+
  */
+
 class ScalingTexture : public Texture {
 public:
 	ScalingTexture(const Properties &props) : Texture(props) {

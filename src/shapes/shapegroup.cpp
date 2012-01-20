@@ -34,7 +34,15 @@ MTS_NAMESPACE_BEGIN
  * so that they can efficiently be referenced many times using the 
  * \pluginref{instance} plugin. This is useful for rendering things like 
  * forests, where only a few distinct types of trees have to be kept
- * in memory.
+ * in memory. 
+ *
+ * \remarks{
+ *   \item Note that it is currently not possible to assign a different
+ *    material to each instance --- the material assignment specified within
+ *    the shape group is the one that matters.
+ *   \item Shape groups can currently not be used to replicate shapes with
+ *   attached emitters, sensors, or subsurface integrators.
+ * }
  *
  * \begin{xml}[caption={An example of geometry instancing}, label=lst:instancing]
  * <!-- Declare a named shape group containing two objects -->
@@ -43,7 +51,6 @@ MTS_NAMESPACE_BEGIN
  *         <string name="filename" value="data.ply"/>
  *         <bsdf type="roughconductor"/>
  *     </shape>
- *
  *     <shape type="sphere">
  *         <transform name="toWorld">
  *             <scale value="5"/>
@@ -53,17 +60,14 @@ MTS_NAMESPACE_BEGIN
  *     </shape>
  * </shape>
  *
- * <!-- Instantiate the shape group without
- *      any kind of transformation -->
+ * <!-- Instantiate the shape group without any kind of transformation -->
  * <shape type="instance">
  *     <ref id="myShapeGroup"/>
  * </shape>
  *
- * <!-- Instantiate another version of the shape
- *      group, but rotated, scaled, and translated -->
+ * <!-- Create instance of the shape group, but rotated, scaled, and translated -->
  * <shape type="instance">
  *     <ref id="myShapeGroup"/>
- *
  *     <transform name="toWorld">
  *         <rotate x="1" angle="45"/>
  *         <scale value="1.5"/>

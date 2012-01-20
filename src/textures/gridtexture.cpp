@@ -43,7 +43,11 @@ MTS_NAMESPACE_BEGIN
  *       Numerical offset that should be applied to UV values before a lookup
  *     }
  * }
- * This plugin implements a simple procedural grid texture.
+ * \renderings{
+ *     \rendering{Grid texture applied to the material test object}{tex_gridtexture}
+ * }
+ * This plugin implements a simple procedural grid texture with customizable
+ * colors and line width.
  */
 class GridTexture : public Texture2D {
 public:

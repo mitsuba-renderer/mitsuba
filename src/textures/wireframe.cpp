@@ -44,6 +44,9 @@ MTS_NAMESPACE_BEGIN
  *        \default{0.5}
  *     }
  * }
+ * \renderings{
+ *     \rendering{Wireframe texture applied to the material test object}{tex_wireframe}
+ * }
  *
  * This plugin implements a simple two-color wireframe texture map 
  * that reveals the structure of a triangular mesh.

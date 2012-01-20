@@ -36,7 +36,11 @@ MTS_NAMESPACE_BEGIN
  *       Numerical offset that should be applied to UV values before a lookup
  *     }
  * }
- * This plugin implements a simple procedural checkerboard texture.
+ * \renderings{
+ *     \rendering{Checkerboard applied to the material test object}{tex_checkerboard}
+ * }
+ * This plugin implements a simple procedural checkerboard texture with
+ * customizable colors.
  */
 class Checkerboard : public Texture2D {
 public:
