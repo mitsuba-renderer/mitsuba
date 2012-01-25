@@ -26,7 +26,7 @@
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
 
-#define MTS_HAIR_USE_FANCY_CLIPPING 0
+#define MTS_HAIR_USE_FANCY_CLIPPING 1
 
 MTS_NAMESPACE_BEGIN
 
@@ -37,13 +37,23 @@ MTS_NAMESPACE_BEGIN
  *	     Filename of the hair data file that should be loaded
  *	   }
  *     \parameter{radius}{\Float}{
- *       Radius of the hair segments \default{0.05}.
+ *       Radius of the hair segments in world-space units
+ *       \default{0.025, which assumes that the scene 
+ *       is modeled in millimeters.}.
  *	   }
  *     \parameter{angleThreshold}{\Float}{
  *	     For performance reasons, the plugin will merge adjacent hair 
  *	     segments when the angle of their tangent directions is below
  *	     than this value (in degrees). \default{1}.
  *	   }
+ *     \parameter{reduction}{\Float}{
+ *       When the reduction ratio is set to a value between zero and one, the hair 
+ *       plugin stochastically culls this portion of the input data (where
+ *       1 corresponds to removing all hairs). To approximately preserve the 
+ *       appearance in renderings, the hair radius is enlarged (see Cook et al. 
+ *       \cite{Cook2007Stochastic}). This parameter is convenient for fast 
+ *       previews. \default{0, i.e. all geometry is rendered}
+ *     }
  *     \parameter{toWorld}{\Transform}{
  *	      Specifies an optional linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
@@ -66,7 +76,7 @@ MTS_NAMESPACE_BEGIN
  * The plugin supports two different input formats: a simple (but not
  * particularly efficient) ASCII format containing the coordinates of a 
  * hair vertex on every line. An empty line marks the beginning of a 
- * new hair, e.g.
+ * new hair. The following snippet is an example of this format:\newpage
  * \begin{xml}
  * ..... 
  * -18.5498 -21.7669 22.8138
@@ -120,9 +130,16 @@ public:
 		/* Ray-cylinder intersections are expensive. Use only the
 		   SAH cost as the tree subdivision stopping criterion, 
 		   not the number of primitives */
-		setStopPrims(0);
+		setStopPrims(1);
+
+		/* Some other defaults that work well in practice */
 		setTraversalCost(10);
-		setQueryCost(30);
+		setQueryCost(15);
+		setExactPrimitiveThreshold(16384);
+		setClip(true);
+		setRetract(true);
+		setEmptySpaceBonus(0.9f);
+
 		buildInternal();
 
 		Log(EDebug, "Total amount of storage (kd-tree & vertex data): %s",
@@ -219,7 +236,7 @@ public:
 		return false;
 	}
 
-#if defined(MTS_HAIR_USE_FANCY_CLIPPING)
+#if MTS_HAIR_USE_FANCY_CLIPPING == 1
 	/**
 	 * Compute the ellipse created by the intersection of an infinite
 	 * cylinder and a plane. Returns false in the degenerate case.
@@ -348,7 +365,7 @@ public:
 	}
 
 	AABB getAABB(index_type index) const {
-		index_type iv = m_segIndex.at(index);
+		index_type iv = m_segIndex[index];
 		Point center;
 		Vector axes[2];
 		Float lengths[2];
@@ -383,7 +400,7 @@ public:
 		AABB base(getAABB(index));
 		base.clip(box);
 
-		index_type iv = m_segIndex.at(index);
+		index_type iv = m_segIndex[index];
 
 		Point cylPt = firstVertex(iv);
 		Vector cylD = tangent(iv);
@@ -427,7 +444,7 @@ public:
 #else
 	/// Compute the AABB of a segment (only used during tree construction)
 	AABB getAABB(index_type index) const {
-		index_type iv = m_segIndex.at(index);
+		index_type iv = m_segIndex[index];
 
 		// cosine of steepest miter angle
 		const Float cos0 = dot(firstMiterNormal(iv), tangent(iv));
@@ -591,11 +608,24 @@ protected:
 HairShape::HairShape(const Properties &props) : Shape(props) {
 	fs::path path = Thread::getThread()->getFileResolver()->resolve(
 		props.getString("filename"));
-	Float radius = props.getFloat("radius", 0.05f);
+	Float radius = props.getFloat("radius", 0.025f);
 	/* Skip segments, whose tangent differs by less than one degree
-		compared to the previous one */
+	   compared to the previous one */
 	Float angleThreshold = degToRad(props.getFloat("angleThreshold", 1.0f));
 	Float dpThresh = std::cos(angleThreshold);
+
+	/* When set to a value n>1, the hair shape object will reduce 
+	   the input by only loading every n-th hair */
+	Float reduction = props.getFloat("reduction", 0);
+	if (reduction < 0 || reduction >= 1) {
+		Log(EError, "The 'reduction' parameter must have a value in [0, 1)!");
+	} else if (reduction > 0) {
+		Float correction = 1.0f / (1-reduction);
+		Log(EDebug, "Reducing the amount of geometry by %.2f%%, scaling radii by %f.",
+			reduction * 100, correction);
+		radius *= correction;
+	}
+	ref<Random> random = new Random();
 
 	/* Object-space -> World-space transformation */
 	Transform objectToWorld = props.getTransform("toWorld", Transform());
@@ -620,6 +650,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 	Vector tangent(0.0f);
 	size_t nDegenerate = 0, nSkipped = 0;
 	Point p, lastP(0.0f);
+	bool ignore = false;
 
 	if (binaryFormat) {
 		size_t vertexCount = binaryStream->readUInt();
@@ -637,6 +668,8 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 				p.y = binaryStream->readSingle();
 				p.z = binaryStream->readSingle();
 				newFiber = true;
+				if (reduction > 0)
+					ignore = random->nextFloat() < reduction;
 			} else {
 				p.x = value;
 				p.y = binaryStream->readSingle();
@@ -646,7 +679,10 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 			p = objectToWorld(p);
 			verticesRead++;
 
-			if (newFiber) {
+			if (ignore) {
+				// Do nothing
+				++nSkipped;
+			} else if (newFiber) {
 				vertices.push_back(p);
 				vertexStartsFiber.push_back(newFiber);
 				lastP = p;
@@ -694,7 +730,10 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 			iss >> p.x >> p.y >> p.z;
 			if (!iss.fail()) {
 				p = objectToWorld(p);
-				if (newFiber) {
+				if (ignore) {
+					// Do nothing
+					++nSkipped;
+				} else if (newFiber) {
 					vertices.push_back(p);
 					vertexStartsFiber.push_back(newFiber);
 					lastP = p;
@@ -726,6 +765,8 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 				newFiber = false;
 			} else {
 				newFiber = true;
+				if (reduction > 0)
+					ignore = random->nextFloat() < reduction;
 			}
 		}
 	}
@@ -734,8 +775,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 		Log(EInfo, "Encountered " SIZE_T_FMT 
 			" degenerate segments!", nDegenerate);
 	if (nSkipped > 0)
-		Log(EInfo, "Skipped " SIZE_T_FMT 
-			" low-curvature segments.", nSkipped);
+		Log(EInfo, "Skipped " SIZE_T_FMT " segments.", nSkipped);
 	Log(EInfo, "Done (took %i ms)", timer->getMilliseconds());
 
 	vertexStartsFiber.push_back(true);
