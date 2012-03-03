@@ -42,6 +42,11 @@ MTS_NAMESPACE_BEGIN
  *       Optional flag to flip all normals. \default{\code{false}, i.e.
  *       the normals are left unchanged}.
  *	   }
+ *     \parameter{flipTexCoords}{\Boolean}{
+ *       Treat the vertical component of the texture as inverted? Most OBJ files use
+ *       this convention. \default{\code{true}, i.e. flip them to get the
+ *       correct coordinates}.
+ *	   }
  *     \parameter{toWorld}{\Transform}{
  *	      Specifies an optional linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
@@ -106,6 +111,9 @@ public:
 
 		/* Causes all normals to be flipped */
 		m_flipNormals = props.getBoolean("flipNormals", false);
+		
+		/* Causes all texture coordinates to be vertically flipped */
+		bool flipTexCoords = props.getBoolean("flipTexCoords", true);
 
 		/* Object-space -> World-space transformation */
 		Transform objectToWorld = props.getTransform("toWorld", Transform());
@@ -193,6 +201,8 @@ public:
 			} else if (buf == "vt") {
 				Float u, v, w;
 				iss >> u >> v >> w;
+				if (flipTexCoords) 
+					v = 1-v;
 				texcoords.push_back(Point2(u, v));
 				hasTexcoords = true;
 			} else if (buf == "f") {
