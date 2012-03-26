@@ -7,7 +7,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-MemoryMappedFile::MemoryMappedFile(const fs::path &filename) : m_filename(filename) {
+MemoryMappedFile::MemoryMappedFile(const fs::path &filename) : m_filename(filename), m_data(NULL) {
 	if (!fs::exists(filename))
 		Log(EError, "The file \"%s\" does not exist!", filename.file_string().c_str());
 	m_size = (size_t) fs::file_size(filename);
@@ -41,20 +41,23 @@ MemoryMappedFile::MemoryMappedFile(const fs::path &filename) : m_filename(filena
 }
 
 MemoryMappedFile::~MemoryMappedFile() {
-#if defined(__LINUX__) || defined(__OSX__)
-	Log(ETrace, "Unmapping \"%s\" from memory", 
-		m_filename.file_string().c_str()); 
-	int retval = munmap(m_data, m_size);
-	if (retval != 0)
-		Log(EError, "munmap(): unable to unmap memory!");
-#elif defined(WIN32)
-	if (!UnmapViewOfFile(m_data))
-		Log(EError, "UnmapViewOfFile(): unable to unmap memory: %s", lastErrorText().c_str());
-	if (!CloseHandle(m_fileMapping))
-		Log(EError, "CloseHandle(): unable to close file mapping: %s", lastErrorText().c_str());
-	if (!CloseHandle(m_file))
-		Log(EError, "CloseHandle(): unable to close file: %s", lastErrorText().c_str());
-#endif
+	if (m_data) {
+		Log(ETrace, "Unmapping \"%s\" from memory", 
+			m_filename.file_string().c_str()); 
+
+		#if defined(__LINUX__) || defined(__OSX__)
+			int retval = munmap(m_data, m_size);
+			if (retval != 0)
+				Log(EError, "munmap(): unable to unmap memory!");
+		#elif defined(WIN32)
+			if (!UnmapViewOfFile(m_data))
+				Log(EError, "UnmapViewOfFile(): unable to unmap memory: %s", lastErrorText().c_str());
+			if (!CloseHandle(m_fileMapping))
+				Log(EError, "CloseHandle(): unable to close file mapping: %s", lastErrorText().c_str());
+			if (!CloseHandle(m_file))
+				Log(EError, "CloseHandle(): unable to close file: %s", lastErrorText().c_str());
+		#endif
+	}
 }
 
 MTS_IMPLEMENT_CLASS(MemoryMappedFile, false, Object)
