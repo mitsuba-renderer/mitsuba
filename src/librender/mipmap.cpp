@@ -244,7 +244,7 @@ Spectrum MIPMap::getTexel(int level, int x, int y) const {
 	int levelWidth = m_levelWidth[level];
 	int levelHeight = m_levelHeight[level];
 
-	if (x <= 0 || y < 0 || x >= levelWidth || y >= levelHeight) {
+	if (x < 0 || y < 0 || x >= levelWidth || y >= levelHeight) {
 		switch (m_wrapMode) {
 			case ERepeat:
 				x = modulo(x, levelWidth);

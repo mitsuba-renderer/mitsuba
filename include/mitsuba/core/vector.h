@@ -387,7 +387,6 @@ template <typename T> inline T absDot(const TVector3<T> &v1, const TVector3<T> &
 }
 
 template <typename T> inline TVector3<T> cross(const TVector3<T> &v1, const TVector3<T> &v2) {
-	/* Left-handed vector cross product */
 	return TVector3<T>(
 		(v1.y * v2.z) - (v1.z * v2.y), 
 		(v1.z * v2.x) - (v1.x * v2.z),
