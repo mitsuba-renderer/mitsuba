@@ -43,6 +43,16 @@
 		</lookAt>
 	</xsl:template>
 
+	<!-- The vertical component of OBJ texture coordinates is now
+	     flipped, which seems to be the standard behavior. Undo 
+		 this change for consistency in old scenes. -->
+	<xsl:template match="shape[@type='obj']">
+		<xsl:copy>
+			<xsl:apply-templates select="@*|node()"/>
+			<boolean name="flipTexCoords" value="false"/>
+		</xsl:copy>
+	</xsl:template>
+
 	<!-- There are no more 'diffuseAmount' or 'specularAmount' parameters in
 		 the microfacet/phong/ward plugins, and the default values have changed -->
 	<xsl:template match="bsdf[@type='microfacet' or @type='phong' or @type='ward']">
