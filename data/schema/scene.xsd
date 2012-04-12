@@ -197,6 +197,7 @@
 			<xsd:extension base="objectBase">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
 					<xsd:group ref="objectGroup"/>
+					<xsd:element name="phase" type="phase"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
