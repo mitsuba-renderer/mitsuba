@@ -1,3 +1,23 @@
+mitsuba (0.3.1-1) unstable; urgency=low
+
+  * Photon mapper: The photon mapper had some serious issues in the 
+    last release. These are now fixed, and it should run faster too.
+  * On Linux/x86_64, the performance of the single precision exp() and log() 
+    math library functions is extremely poor. Mitsuba now uses the double
+    prevision versions of these functions by default.
+  * Primitive clipping: Fixed numerical issues that occurred when using
+    primitive clipping in a double precision build.
+  * The adaptive integrator now better interacts with certain sub-integrators.
+  * Instanced analytic shapes (e.g. spheres, cylinders, ..) are now supported, 
+    and an error involving network rendering with instanced geometry is fixed.
+  * Fixed a serious issue that could destroy a scene file when saving from a cloned tab!
+  * Fixed some bad GUI behavior in multi-screen setups
+  * Textures applied to an OBJ mesh used to be vertically flipped. This is now fixed.
+  * Improved performance of the hair intersection primitive
+  * Fixed an off-by-one error in the texture lookup code
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Fri, 13 Apr 2012 00:00:00 -0400
+
+
 mitsuba (0.3.0-1) unstable; urgency=low
 
   * Added Python bindings that can be used to instantiate plugins

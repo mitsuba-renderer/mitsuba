@@ -1,5 +1,5 @@
 Name:		mitsuba
-Version:	0.3.0
+Version:	0.3.1
 Release:	1%{?dist}
 Summary:	Mitsuba renderer 
 Group:		Applications/Graphics
@@ -62,5 +62,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/include/*
 %changelog
 
-* Mon Aug 15 2010 Wenzel Jakob <wenzel@cs.cornell.edu> 0.3.0%{?dist}
+* Fri Apr 13 2012 Wenzel Jakob <wenzel@cs.cornell.edu> 0.3.1%{?dist}
+- Upgrade to version 0.3.1
+
+* Mon Aug 15 2011 Wenzel Jakob <wenzel@cs.cornell.edu> 0.3.0%{?dist}
 - First official Fedora Core build
