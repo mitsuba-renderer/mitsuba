@@ -55,7 +55,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \vspace{2mm}
  * \begin{xml}[caption={A simple example involving two rectangle instances}, label=lst:rectangle]
- * <scene version="0.3.0">
+ * <scene version=$\MtsVer$>
  *     <shape type="rectangle">
  *         <bsdf type="diffuse"/>
  *     </shape>

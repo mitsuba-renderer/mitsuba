@@ -54,7 +54,7 @@ MTS_NAMESPACE_BEGIN
  * \code{toWorld} parameter.
  *
  * \begin{xml}[caption={A simple example involving two disk instances}, label=lst:disk]
- * <scene version="0.3.0">
+ * <scene version=$\MtsVer$>
  *     <shape type="disk">
  *         <bsdf type="diffuse">
  *             <texture name="reflectance" type="checkerboard">
