@@ -252,6 +252,7 @@ public:
 						} else {
 							/* Generate an invalid sample */
 							gatherPoint.depth = -1;
+							gatherPoint.emission += weight * scene->LeBackground(ray);
 							break;
 						}
 					}

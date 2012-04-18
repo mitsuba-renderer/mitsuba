@@ -267,6 +267,7 @@ public:
 			}
 		} else if (depth == 1) {
 			/* Generate an invalid sample */
+			p.emission = scene->LeBackground(ray);
 			p.radius = 0;
 			p.sample = sample;
 			gatherPoints.push_back(p);
@@ -314,7 +315,7 @@ public:
 				if (g.radius == 0) {
 					/* Generate a black sample -- necessary for proper sample weight 
 					   computation at edges */
-					block->putSample(g.sample, Spectrum(0.0f), 1, m_filter);
+					block->putSample(g.sample, g.emission, 1, m_filter);
 					continue;
 				}
 
