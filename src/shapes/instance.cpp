@@ -111,10 +111,10 @@ void Instance::fillIntersectionRecord(const Ray &_ray,
 	its.shFrame.s = normalize(m_objectToWorld(its.shFrame.s));
 	its.shFrame.t = normalize(m_objectToWorld(its.shFrame.t));
 	its.geoFrame = Frame(normalize(m_objectToWorld(its.geoFrame.n)));
-	its.wi = its.shFrame.toLocal(-ray.d);
 	its.dpdu = m_objectToWorld(its.dpdu);
 	its.dpdv = m_objectToWorld(its.dpdv);
 	its.p = m_objectToWorld(its.p);
+	its.wi = normalize(its.shFrame.toLocal(-_ray.d));
 }
 
 MTS_IMPLEMENT_CLASS_S(Instance, false, Shape)
