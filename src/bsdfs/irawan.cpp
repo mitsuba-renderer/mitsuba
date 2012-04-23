@@ -269,7 +269,7 @@ public:
 		}
 
 		if (hasDiffuse)
-			result += yarn.kd * m_kdMultiplier;
+			result += yarn.kd * m_kdMultiplier * INV_PI;
 
 		return result * Frame::cosTheta(bRec.wo);
 	}
@@ -590,6 +590,8 @@ public:
 		return oss.str();
 	}
 
+	Shader *createShader(Renderer *renderer) const;
+
 	MTS_DECLARE_CLASS()
 private:
 	WeavePattern m_pattern;
@@ -598,6 +600,50 @@ private:
 	Float m_ksMultiplier;
 };
 
+// ================ Hardware shader implementation ================ 
+
+/**
+ * In place of a real shader, let's just show the average 
+ * diffuse albedo for now..
+ */
+class IrawanShader : public Shader {
+public:
+	IrawanShader(Renderer *renderer, Spectrum albedo) 
+		: Shader(renderer, EBSDFShader), m_albedo(albedo) {
+	}
+
+	void generateCode(std::ostringstream &oss,
+			const std::string &evalName,
+			const std::vector<std::string> &depNames) const {
+		Float r, g, b;
+		m_albedo.toLinearRGB(r, g, b);
+
+		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
+			<< "    	return vec3(0.0);" << endl
+			<< "    return vec3(" << r << ", " << g << ", " << b << ") * inv_pi * cosTheta(wo);" << endl
+			<< "}" << endl
+			<< endl
+			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    return " << evalName << "(uv, wi, wo);" << endl
+			<< "}" << endl;
+	}
+
+	MTS_DECLARE_CLASS()
+private:
+	Spectrum m_albedo;
+};
+
+Shader *IrawanClothBRDF::createShader(Renderer *renderer) const { 
+	Spectrum albedo(0.0f);
+	for (size_t i=0; i<m_pattern.yarns.size(); ++i)
+		albedo += m_pattern.yarns[i].kd;
+	albedo *= m_kdMultiplier / (Float) m_pattern.yarns.size();
+	return new IrawanShader(renderer, albedo);
+}
+
+
+MTS_IMPLEMENT_CLASS(IrawanShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(IrawanClothBRDF, false, BSDF)
 MTS_EXPORT_PLUGIN(IrawanClothBRDF, "Irawan & Marschner woven cloth BRDF")
 MTS_NAMESPACE_END
