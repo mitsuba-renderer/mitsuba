@@ -107,8 +107,8 @@ public:
 		m_repeatV = props.getFloat("repeatV");
 
 		/* Diffuse and specular multipliers */
-		m_kdMultiplier = props.getFloat("kdMultiplier");
-		m_ksMultiplier = props.getFloat("ksMultiplier");
+		m_kdMultiplier = props.getFloat("kdMultiplier", 1);
+		m_ksMultiplier = props.getFloat("ksMultiplier", 1);
 	}
 
 	IrawanClothBRDF(Stream *stream, InstanceManager *manager) 
