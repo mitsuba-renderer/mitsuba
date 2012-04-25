@@ -206,90 +206,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	m_networkManager = new QNetworkAccessManager(this);
 
-#if defined(__OSX__) && 0 // Disable crash reports for now
-	/* Submit crash reports on OSX */
-	QDir crashDir = QDir::home();
-	crashDir.cd("Library/Logs/CrashReporter");
-	QFileInfoList crashReports = crashDir.entryInfoList(QStringList("mtsgui_*"), 
-			QDir::Files, QDir::Name);
-
-	if (crashReports.size() > 0) {
-		if (QMessageBox::question(this, tr("Crash reports detected"),
-			QString("<p>It appears that Mitsuba has crashed on a previous run!</p><p>"
-				"%1 crash reports were found. Would you like to submit them?").arg(crashReports.size()),
-				QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
-			bool failure = false;
-			for (int i=0; i<crashReports.size(); ++i) {
-				QFile file(crashReports[i].absoluteFilePath());
-				if (!file.open(QIODevice::ReadOnly)) {
-					failure = true;
-					QMessageBox::critical(this, tr("Unable to read crash report"),
-						tr("Unable to read crash report -- please check the file permissions in ~/Library/Logs/CrashReporter."), QMessageBox::Ok);
-					break;
-				}
-
-				QString username("unknown");
-				uid_t uid = getuid();
-				struct passwd *info = getpwuid(uid);
-				if (info) 
-					username = QString(info->pw_name);
-
-				QString boundary("5da85133908e2"); // some arbitrary value
-				QByteArray data(QString("--" + boundary + "\r\n").toAscii());
-				data.append(QString("Content-Disposition: form-data; name=\"bugreport\"; filename=\"%1\"\r\n").arg(file.fileName()));
-				data.append("Content-Type: application/octet-stream\r\n\r\n");
-				QString header = QString("Bug report from machine \"%1\", user \"%2\", filename \"%3\""
-					", Mitsuba version %4").arg(getFQDN().c_str()).arg(username).arg(file.fileName()).arg(Version(MTS_VERSION).toStringComplete().c_str());
-				data.append(header + "\r\n");
-				for (int j=0; j<header.length(); j++)
-					data.append('=');
-				data.append("\r\n\r\n");
-				data.append(file.readAll());
-				data.append("\r\n--" + boundary + "--\r\n");
-
-				QNetworkRequest reqHeader;
-				reqHeader.setHeader(QNetworkRequest::ContentTypeHeader, QString("multipart/form-data; boundary=\"%1\"").arg(boundary));
-				reqHeader.setHeader(QNetworkRequest::ContentLengthHeader, QString::number(data.length()));
-				reqHeader.setUrl(QUrl("http://www.mitsuba-renderer.org/bugreporter.php"));
-				m_bugStatus = 0;
-				QNetworkReply *reply = m_networkManager->post(reqHeader, data);
-				connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(onBugReportError()));
-				connect(reply, SIGNAL(finished()), this, SLOT(onBugReportSubmitted()));
-				while (m_bugStatus == 0) {
-					qApp->processEvents();
-					Thread::sleep(50);
-				}
-				if (m_bugStatus != 1) {
-					failure = true;
-					QMessageBox::critical(this, tr("Unable to submit"),
-						tr("Unable to submit crash report -- are you connected to the internet?"), QMessageBox::Ok);
-					break;
-				}
-				reply->deleteLater();
-				if (!file.remove()) {
-					failure = true;
-					QMessageBox::critical(this, tr("Unable to delete submitted crash report"),
-						tr("Unable to delete a submitted crash report -- please check the file permissions in ~/Library/Logs/CrashReporter."), QMessageBox::Ok);
-					break;
-				}
-			}
-			if (!failure)
-				QMessageBox::information(this, tr("Crash reporter"),
-					tr("All crash reports have been submitted. Thank you!"),
-					QMessageBox::Ok);
-		} else {
-			for (int i=0; i<crashReports.size(); ++i) {
-				QFile file(crashReports[i].absoluteFilePath());
-				if (!file.remove()) {
-					QMessageBox::critical(this, tr("Unable to submitted crash report"),
-						tr("Unable to delete a crash report -- please check the file permissions in ~/Library/Logs/CrashReporter."), QMessageBox::Ok);
-					break;
-				}
-			}
-		}
-	}
-#endif
-
 	if (ui->glView->isUsingSoftwareFallback())
 		QMessageBox::warning(this, tr("Insufficient OpenGL capabilities"),
 			ui->glView->getErrorString(), QMessageBox::Ok);
@@ -375,8 +291,18 @@ void MainWindow::initWorkers() {
 	}
 
 	QStringList args = qApp->arguments();
-	for (int i=1; i<args.count(); ++i)
+	for (int i=1; i<args.count(); ++i) {
+		if (args[i].startsWith("-D")) {
+			QString value = args[i].mid(2);
+			if (value.length() == 0 && i+1<args.count())
+				value = args[++i];
+			QStringList list = value.split("=");
+			if (list.length() == 2)
+				m_parameters[list[0].toStdString()] = list[1].toStdString();
+			continue;
+		}
 		loadFile(args[i]);
+	}
 
 	scheduler->start();
 	raise();
@@ -648,7 +574,8 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	loaddlg->show();
 
 retry:
-	loadingThread = new SceneLoader(newResolver, filename.file_string());
+	loadingThread = new SceneLoader(newResolver, filename.file_string(),
+		m_parameters);
 	loadingThread->start();
 
 	while (loadingThread->isRunning()) {

@@ -28,7 +28,9 @@ using namespace mitsuba;
 
 class SceneLoader : public Thread {
 public:
-	SceneLoader(FileResolver *resolver, const std::string &filename); 
+	SceneLoader(FileResolver *resolver, 
+			const std::string &filename,
+			const std::map<std::string, std::string, SimpleStringOrdering> &parameters); 
 	void run();
 
 	inline void wait(int ms) { m_wait->wait(ms); }
@@ -46,6 +48,7 @@ private:
 	std::string m_error, m_filename;
 	bool m_versionError;
 	Version m_version;
+	const std::map<std::string, std::string, SimpleStringOrdering> &m_parameters; 
 };
 
 #endif // __SCENELOADER_H
