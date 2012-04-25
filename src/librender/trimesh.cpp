@@ -72,7 +72,7 @@ TriMesh::TriMesh(const Properties &props)
 enum ETriMeshFlags {
 	EHasNormals      = 0x0001,
 	EHasTexcoords    = 0x0002,
-	EHasTangents     = 0x0004,
+	EHasTangents     = 0x0004, // unused
 	EHasColors       = 0x0008,
 	EFaceNormals     = 0x0010,
 	ESinglePrecision = 0x1000,
