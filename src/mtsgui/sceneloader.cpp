@@ -24,8 +24,9 @@
 #include <mitsuba/core/fstream.h>
 #include <boost/algorithm/string.hpp>
 
-SceneLoader::SceneLoader(FileResolver *resolver, const std::string &filename) 
-	: Thread("load"), m_resolver(resolver), m_filename(filename) {
+SceneLoader::SceneLoader(FileResolver *resolver, const std::string &filename,
+	const std::map<std::string, std::string, SimpleStringOrdering> &parameters) 
+	: Thread("load"), m_resolver(resolver), m_filename(filename), m_parameters(parameters) {
 	m_wait = new WaitFlag();
 	m_versionError = false;
 }
@@ -38,8 +39,7 @@ void SceneLoader::run() {
 	SAXParser* parser = new SAXParser();
 	std::string lowerCase = boost::to_lower_copy(m_filename);
 
-	SceneHandler *handler = new SceneHandler(parser,
-			SceneHandler::ParameterMap());
+	SceneHandler *handler = new SceneHandler(parser, m_parameters);
 	m_result = new SceneContext();
 	try {
 		QSettings settings("mitsuba-renderer.org", "mtsgui");

@@ -291,8 +291,18 @@ void MainWindow::initWorkers() {
 	}
 
 	QStringList args = qApp->arguments();
-	for (int i=1; i<args.count(); ++i)
+	for (int i=1; i<args.count(); ++i) {
+		if (args[i].startsWith("-D")) {
+			QString value = args[i].mid(2);
+			if (value.length() == 0 && i+1<args.count())
+				value = args[++i];
+			QStringList list = value.split("=");
+			if (list.length() == 2)
+				m_parameters[list[0].toStdString()] = list[1].toStdString();
+			continue;
+		}
 		loadFile(args[i]);
+	}
 
 	scheduler->start();
 	raise();
@@ -564,7 +574,8 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	loaddlg->show();
 
 retry:
-	loadingThread = new SceneLoader(newResolver, filename.file_string());
+	loadingThread = new SceneLoader(newResolver, filename.file_string(),
+		m_parameters);
 	loadingThread->start();
 
 	while (loadingThread->isRunning()) {

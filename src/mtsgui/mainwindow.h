@@ -220,6 +220,7 @@ private:
 	bool m_activeWindowHack;
 	int m_bugStatus, m_contextIndex;
 	SceneContext *m_lastTab;
+	std::map<std::string, std::string, SimpleStringOrdering> m_parameters;
 #if defined(__OSX__)
 	PreviewSettingsDlg *m_previewSettings;
 #endif
