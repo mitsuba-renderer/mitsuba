@@ -41,7 +41,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	typedef std::map<std::string, std::string> ParameterMap;
+	typedef std::map<std::string, std::string, SimpleStringOrdering> ParameterMap;
 
 	/// Virtual destructor
 	virtual ~Utility() { }

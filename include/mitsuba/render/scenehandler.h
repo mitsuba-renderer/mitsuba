@@ -60,7 +60,7 @@ private:
 class MTS_EXPORT_RENDER SceneHandler : public HandlerBase {
 public:
 	typedef std::map<std::string, ConfigurableObject *> NamedObjectMap;
-	typedef std::map<std::string, std::string> ParameterMap;
+	typedef std::map<std::string, std::string, SimpleStringOrdering> ParameterMap;
 
 	SceneHandler(const SAXParser *parser, const ParameterMap &params,
 			NamedObjectMap *objects = NULL, bool isIncludedFile = false);

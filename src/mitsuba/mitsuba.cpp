@@ -127,7 +127,7 @@ int mts_main(int argc, char **argv) {
 		ELogLevel logLevel = EInfo;
 		ref<FileResolver> fileResolver = Thread::getThread()->getFileResolver();
 		bool testCaseMode = false, treatWarningsAsErrors = false;
-		std::map<std::string, std::string> parameters;
+		std::map<std::string, std::string, SimpleStringOrdering> parameters;
 		int blockSize = 32;
 		int flushTimer = -1;
 

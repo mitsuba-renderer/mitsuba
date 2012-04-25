@@ -76,6 +76,15 @@ template<class Iterator> std::string containerToString(const Iterator &start, co
 	return oss.str();
 }
 
+/// Simple functor for sorting string parameters by length and content
+struct SimpleStringOrdering {
+	bool operator()(const std::string &a, const std::string &b) const {
+		if (a.length() == b.length())
+			return a < b;
+		return a.length() < b.length();
+	}
+};
+
 //! @}
 // -----------------------------------------------------------------------
 

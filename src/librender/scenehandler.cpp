@@ -105,11 +105,10 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 	ParseContext context((name == "scene") ? NULL : &m_context.top());
 
 	/* Convert attributes to ISO-8859-1 */
-	for (unsigned int i=0; i<xmlAttributes.getLength(); i++) {
+	for (size_t i=0; i<xmlAttributes.getLength(); i++) {
 		std::string attrValue = transcode(xmlAttributes.getValue(i));
 		if (attrValue.length() > 0 && attrValue.find('$') != attrValue.npos) {
-			for (std::map<std::string, std::string>::const_iterator it = m_params.begin();
-				it != m_params.end(); ++it) {
+			for (ParameterMap::const_reverse_iterator it = m_params.rbegin(); it != m_params.rend(); ++it) {
 				std::string::size_type pos = 0;
 				std::string searchString = "$" + it->first;
 				while ((pos = attrValue.find(searchString, pos)) != std::string::npos) {
