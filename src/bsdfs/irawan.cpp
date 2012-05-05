@@ -28,6 +28,7 @@
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/render/scene.h>
 #include "irawan.h"
 
 MTS_NAMESPACE_BEGIN
@@ -76,7 +77,7 @@ MTS_NAMESPACE_BEGIN
 class IrawanClothBRDF : public BSDF {
 public:
 	IrawanClothBRDF(const Properties &props) 
-		: BSDF(props) {
+		: BSDF(props), m_specularNormalization(0) {
 
 		FileResolver *fResolver = Thread::getThread()->getFileResolver();
 		fs::path path = fResolver->resolve(props.getString("filename"));
@@ -90,25 +91,26 @@ public:
 		WeavePatternGrammar<iterator_type> g(props);
 		SkipGrammar<iterator_type> sg;
 
-		bool result = phrase_parse(begin, end, g, sg, m_pattern);
-		if (!result)
+		bool success = phrase_parse(begin, end, g, sg, m_pattern);
+		if (!success)
 			Log(EError, "Unable to parse the weave pattern file \"%s\"!", 
 				path.file_string().c_str());
-		
+
 		/* Some sanity checks */
 		SAssert(m_pattern.pattern.size() == 
-				m_pattern.tileWidth * m_pattern.tileHeight);
+		        m_pattern.tileWidth * m_pattern.tileHeight);
 		for (size_t i=0; i<m_pattern.pattern.size(); ++i)
 			SAssert(m_pattern.pattern[i] > 0 &&
-					m_pattern.pattern[i] <= m_pattern.yarns.size()); 
+			        m_pattern.pattern[i] <= m_pattern.yarns.size()); 
 
 		/* U and V tile count */
 		m_repeatU = props.getFloat("repeatU");
 		m_repeatV = props.getFloat("repeatV");
 
-		/* Diffuse and specular multipliers */
-		m_kdMultiplier = props.getFloat("kdMultiplier");
-		m_ksMultiplier = props.getFloat("ksMultiplier");
+		if (props.hasProperty("ksMultiplier") || props.hasProperty("kdMultiplier"))
+			Log(EError, "The 'ksMultiplier' and 'kdMultiplier' parameters were "
+				"replaced by a normalization scheme. Please remove them and"
+				"potentially adapt the 'kd' and 'ks'-values used in your model.");
 	}
 
 	IrawanClothBRDF(Stream *stream, InstanceManager *manager) 
@@ -116,9 +118,17 @@ public:
 		m_pattern = WeavePattern(stream);
 		m_repeatU = stream->readFloat();
 		m_repeatV = stream->readFloat();
-		m_kdMultiplier = stream->readFloat();
-		m_ksMultiplier = stream->readFloat();
+		m_specularNormalization = stream->readFloat();
 		configure();
+	}
+
+	void serialize(Stream *stream, InstanceManager *manager) const {
+		BSDF::serialize(stream, manager);
+
+		m_pattern.serialize(stream);
+		stream->writeFloat(m_repeatU);
+		stream->writeFloat(m_repeatV);
+		stream->writeFloat(m_specularNormalization);
 	}
 
 	void configure() {
@@ -127,6 +137,35 @@ public:
 			| EAnisotropic | ESpatiallyVarying);
 		m_components.push_back(EDiffuseReflection | EFrontSide
 			| ESpatiallyVarying);
+
+		/* Estimate the average reflectance under diffuse 
+		   illumination and use it to normalize the specular
+			component */
+		ref<Random> random = new Random();
+		size_t nSamples = 10000;
+
+		if (m_specularNormalization == 0) {
+			Intersection its;
+			BSDFQueryRecord bRec(its, NULL, ERadiance);
+			Spectrum result(0.0f);
+			m_initialization = true;
+			for (size_t i=0; i<nSamples; ++i) {
+				bRec.wi = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));
+				bRec.wo = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));
+				its.uv = Point2(random->nextFloat(), random->nextFloat());
+
+				result += eval(bRec, ESolidAngle) / Frame::cosTheta(bRec.wo);
+			}
+			m_initialization = false;
+
+			if (result.max() == 0)
+				m_specularNormalization = 0;
+			else
+				m_specularNormalization = nSamples / (result.max() * M_PI);
+			Log(EDebug, "Specular normalization factor = %f", 
+				m_specularNormalization);
+		}
+
 		BSDF::configure();
 	}
 
@@ -140,15 +179,15 @@ public:
 		int yarnID = m_pattern.pattern[lookup.x + lookup.y * m_pattern.tileWidth] - 1;
 		const Yarn &yarn = m_pattern.yarns.at(yarnID);
 
-		return yarn.kd * m_kdMultiplier;
+		return yarn.kd;
 	}
 
 
 	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
-			(bRec.component == -1 || bRec.component == 0) && m_ksMultiplier > 0;
+			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
-			(bRec.component == -1 || bRec.component == 1) && m_kdMultiplier > 0;
+			(bRec.component == -1 || bRec.component == 1);
 		
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
@@ -261,24 +300,28 @@ public:
 				intensityVariation = std::min(-std::fastlog(xi), (Float) 10.0f);
 			}
 
-			result = yarn.ks * (intensityVariation * m_ksMultiplier * integrand);
+			if (!m_initialization)
+				result = yarn.ks * (intensityVariation * integrand * m_specularNormalization);
+			else
+				result = Spectrum(intensityVariation * integrand);
+
 			if (type == Yarn::EWarp)
 				result *= (m_pattern.warpArea + m_pattern.weftArea) / m_pattern.warpArea;
 			else
 				result *= (m_pattern.warpArea + m_pattern.weftArea) / m_pattern.weftArea;
 		}
 
-		if (hasDiffuse)
-			result += yarn.kd * m_kdMultiplier * INV_PI;
+		if (hasDiffuse && !m_initialization)
+			result += yarn.kd * INV_PI;
 
 		return result * Frame::cosTheta(bRec.wo);
 	}
 
 	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
-			(bRec.component == -1 || bRec.component == 0) && m_ksMultiplier > 0;
+			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
-			(bRec.component == -1 || bRec.component == 1) && m_kdMultiplier > 0;
+			(bRec.component == -1 || bRec.component == 1);
 		
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
@@ -291,9 +334,9 @@ public:
 
 	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
-			(bRec.component == -1 || bRec.component == 0) && m_ksMultiplier > 0;
+			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
-			(bRec.component == -1 || bRec.component == 1) && m_kdMultiplier > 0;
+			(bRec.component == -1 || bRec.component == 1);
 		
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			(!hasDiffuse && !hasSpecular))
@@ -308,9 +351,9 @@ public:
 
 	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
-			(bRec.component == -1 || bRec.component == 0) && m_ksMultiplier > 0;
+			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
-			(bRec.component == -1 || bRec.component == 1) && m_kdMultiplier > 0;
+			(bRec.component == -1 || bRec.component == 1);
 		
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			(!hasDiffuse && !hasSpecular))
@@ -322,16 +365,6 @@ public:
 		bRec.sampledType = EGlossyReflection;
 		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
 		return eval(bRec, ESolidAngle) / pdf;
-	}
-
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		BSDF::serialize(stream, manager);
-
-		m_pattern.serialize(stream);
-		stream->writeFloat(m_repeatU);
-		stream->writeFloat(m_repeatV);
-		stream->writeFloat(m_kdMultiplier);
-		stream->writeFloat(m_ksMultiplier);
 	}
 
 	/** parameters:
@@ -583,9 +616,7 @@ public:
 		oss << "IrawanClothBRDF[" << endl
 			<< "  weavePattern = " << indent(m_pattern.toString()) << "," << endl
 			<< "  repeatU = " << m_repeatU << "," << endl
-			<< "  repeatV = " << m_repeatV << "," << endl
-			<< "  kdMultiplier = " << m_kdMultiplier << "," << endl
-			<< "  ksMultiplier = " << m_ksMultiplier << endl
+			<< "  repeatV = " << m_repeatV << endl
 			<< "]";
 		return oss.str();
 	}
@@ -596,8 +627,8 @@ public:
 private:
 	WeavePattern m_pattern;
 	Float m_repeatU, m_repeatV;
-	Float m_kdMultiplier;
-	Float m_ksMultiplier;
+	Float m_specularNormalization;
+	bool m_initialization;
 };
 
 // ================ Hardware shader implementation ================ 
@@ -638,7 +669,7 @@ Shader *IrawanClothBRDF::createShader(Renderer *renderer) const {
 	Spectrum albedo(0.0f);
 	for (size_t i=0; i<m_pattern.yarns.size(); ++i)
 		albedo += m_pattern.yarns[i].kd;
-	albedo *= m_kdMultiplier / (Float) m_pattern.yarns.size();
+	albedo /= (Float) m_pattern.yarns.size();
 	return new IrawanShader(renderer, albedo);
 }
 
