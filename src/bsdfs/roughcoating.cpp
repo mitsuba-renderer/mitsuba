@@ -388,10 +388,10 @@ public:
 				(probSpecular*m_specularSamplingWeight + 
 				(1-probSpecular) * (1-m_specularSamplingWeight));
 
-			if (sample.x <= probSpecular) {
-				sample.x /= probSpecular;
+			if (sample.y <= probSpecular) {
+				sample.y /= probSpecular;
 			} else {
-				sample.x = (sample.x - probSpecular) / (1 - probSpecular);
+				sample.y = (sample.y - probSpecular) / (1 - probSpecular);
 				choseSpecular = false;
 			}
 		}
