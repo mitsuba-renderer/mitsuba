@@ -109,8 +109,8 @@ public:
 
 		if (props.hasProperty("ksMultiplier") || props.hasProperty("kdMultiplier"))
 			Log(EError, "The 'ksMultiplier' and 'kdMultiplier' parameters were "
-				"replaced by a normalization scheme. Please remove them and"
-				"potentially adapt the 'kd' and 'ks'-values used in your model.");
+				"replaced by a normalization scheme. Please remove them and "
+				"appropriately set the 'kd' and 'ks'-values used in your model.");
 	}
 
 	IrawanClothBRDF(Stream *stream, InstanceManager *manager) 
@@ -140,7 +140,7 @@ public:
 
 		/* Estimate the average reflectance under diffuse 
 		   illumination and use it to normalize the specular
-			component */
+		   component */
 		ref<Random> random = new Random();
 		size_t nSamples = 10000;
 
@@ -162,8 +162,6 @@ public:
 				m_specularNormalization = 0;
 			else
 				m_specularNormalization = nSamples / (result.max() * M_PI);
-			Log(EDebug, "Specular normalization factor = %f", 
-				m_specularNormalization);
 		}
 
 		BSDF::configure();
@@ -299,7 +297,7 @@ public:
 				Float xi = random->nextFloat();
 				intensityVariation = std::min(-std::fastlog(xi), (Float) 10.0f);
 			}
-
+			
 			if (!m_initialization)
 				result = yarn.ks * (intensityVariation * integrand * m_specularNormalization);
 			else
