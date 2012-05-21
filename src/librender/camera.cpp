@@ -154,6 +154,11 @@ ProjectiveCamera::ProjectiveCamera(const Properties &props) : Camera(props) {
 	m_nearClip = props.getFloat("nearClip", 1e-2f);
 	/* Far clipping plane distance */
 	m_farClip = props.getFloat("farClip", 1e4f);
+
+	if (m_nearClip <= 0)
+		Log(EError, "The 'nearClip' parameter must be greater than zero!");
+	if (m_nearClip >= m_farClip)
+		Log(EError, "The 'nearClip' parameter must be smaller than 'farClip'.");
 }
 
 void ProjectiveCamera::configure() {
