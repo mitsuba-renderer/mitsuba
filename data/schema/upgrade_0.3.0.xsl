@@ -43,13 +43,21 @@
 		</lookAt>
 	</xsl:template>
 
-	<!-- The vertical component of OBJ texture coordinates is now
-	     flipped, which seems to be the standard behavior. Undo 
-		 this change for consistency in old scenes. -->
-	<xsl:template match="shape[@type='obj']">
+	<xsl:template match="shape">
 		<xsl:copy>
 			<xsl:apply-templates select="@*|node()"/>
-			<boolean name="flipTexCoords" value="false"/>
+
+			<!-- The vertical component of OBJ texture coordinates is now
+			     flipped, which seems to be the standard behavior. Undo 
+				 this change for consistency in old scenes. -->
+			<xsl:if test="@type='obj'">
+				<boolean name="flipTexCoords" value="false"/>
+			</xsl:if>
+
+			<!-- Apply a diffuse material to shapes that don't have any media or BSDFs -->
+			<xsl:if test="not(bsdf) and not(ref) and not(medium) and not(subsurface)">
+				<bsdf type="diffuse"/>
+			</xsl:if>
 		</xsl:copy>
 	</xsl:template>
 
@@ -148,14 +156,6 @@
 				</xsl:copy>
 			</xsl:otherwise>
 		</xsl:choose>
-	</xsl:template>
-
-	<!-- Apply a diffuse material to shapes that don't have any media or BSDFs -->
-	<xsl:template match="shape[not(bsdf) and not(ref) and not(medium)]">
-		<xsl:copy>
-			<xsl:apply-templates select="@*|node()"/>
-			<bsdf type="diffuse"/>
-		</xsl:copy>
 	</xsl:template>
 
 	<!-- Update the parameters of the sphere plugin -->
