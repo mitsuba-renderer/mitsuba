@@ -303,7 +303,7 @@ public:
 		Float ellipseLengths[2];
 
 		AABB aabb;
-		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, m_radius, 
+		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, m_radius * (1 + Epsilon), 
 			ellipseCenter, ellipseAxes, ellipseLengths)) {
 			/* Degenerate case -- return an invalid AABB. This is
 			   not a problem, since one of the other faces will provide
@@ -371,7 +371,7 @@ public:
 		Float lengths[2];
 
 		bool success = intersectCylPlane(firstVertex(iv), firstMiterNormal(iv), 
-			firstVertex(iv), tangent(iv), m_radius, center, axes, lengths);
+			firstVertex(iv), tangent(iv), m_radius * (1-Epsilon), center, axes, lengths);
 		Assert(success);
 
 		AABB result;
@@ -383,7 +383,7 @@ public:
 		}
 
 		success = intersectCylPlane(secondVertex(iv), secondMiterNormal(iv), 
-			secondVertex(iv), tangent(iv), m_radius, center, axes, lengths);
+			secondVertex(iv), tangent(iv), m_radius * (1-Epsilon), center, axes, lengths);
 		Assert(success);
 
 		axes[0] *= lengths[0]; axes[1] *= lengths[1];
@@ -439,6 +439,7 @@ public:
 				cylPt, cylD));
 
 		clippedAABB.clip(base);
+
 		return clippedAABB;
 	}
 #else
