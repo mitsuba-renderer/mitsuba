@@ -58,7 +58,7 @@ void transmittanceIntegrand(const BSDF *bsdf, const Vector &wi, size_t nPts, con
 void diffTransmittanceIntegrand(Float *data, size_t resolution, size_t nPts, const Float *in, Float *out) {
 	#pragma omp parallel for
 	for (int i=0; i<(int) nPts; ++i) 
-		out[i] = 2 * in[i] * interpCubic1D(std::pow(in[i], 0.25f), data, 0, 1, resolution);
+		out[i] = 2 * in[i] * interpCubic1D(std::pow(in[i], (Float) 0.25f), data, 0, 1, resolution);
 }
 
 class PrecomputeTransmittance : public Utility {
@@ -90,7 +90,7 @@ public:
 			if (i == 0) /* Don't go all the way to zero */
 				t = stepSize/10;
 	
-			Float cosTheta = std::pow(t, 4.0f);
+			Float cosTheta = std::pow(t, (Float) 4.0f);
 
 			Vector wi(std::sqrt(std::max((Float) 0, 
 					1-cosTheta*cosTheta)), 0, cosTheta);
@@ -155,12 +155,12 @@ public:
 
 		for (size_t i=0; i<resolutionIOR; ++i) {
 			Float t = i * iorStepSize;
-			Float ior = iorStart + (iorEnd-iorStart) * std::pow(t, 4.0f);
+			Float ior = iorStart + (iorEnd-iorStart) * std::pow(t, (Float) 4.0f);
 			cout << "ior = " << ior << endl;
 			os << "\t{" << endl;
 			for (size_t j=0; j<resolutionAlpha; ++j) {
 				Float t = j * alphaStepSize;
-				Float alpha = alphaStart + (alphaEnd-alphaStart) * std::pow(t, 4.0f);
+				Float alpha = alphaStart + (alphaEnd-alphaStart) * std::pow(t, (Float) 4.0f);
 				cout << "alpha = " << alpha << endl;
 				Float diffTrans;
 				Float *transmittance = computeTransmittance(name,

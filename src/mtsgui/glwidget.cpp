@@ -741,8 +741,8 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 				focusDepth = autoFocus();
 
 			Float oldFocusDepth = focusDepth;
-			focusDepth = std::min(std::max(focusDepth * std::pow(1 - 2e-3f,
-					(float) -rel.y() * m_mouseSensitivity * m_context->movementScale),
+			focusDepth = std::min(std::max(focusDepth * std::pow((Float) (1 - 2e-3f),
+					(Float) -rel.y() * m_mouseSensitivity * m_context->movementScale),
 					1.2f*nearClip), farClip/1.2f);
 
 			camera->setFocusDepth(focusDepth);

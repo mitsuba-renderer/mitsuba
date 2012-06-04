@@ -175,7 +175,7 @@ public:
 	 *     Relative index of refraction
 	 */
 	Float eval(Float cosTheta, Float alpha = 0, Float eta = 0) const {
-		Float warpedCosTheta = std::pow(std::abs(cosTheta), 0.25f),
+		Float warpedCosTheta = std::pow(std::abs(cosTheta), (Float) 0.25f),
 			  result;
 
 		if (m_alphaFixed && m_etaFixed) {
@@ -187,7 +187,7 @@ public:
 			SAssert(cosTheta >= 0);
 
 			Float warpedAlpha = std::pow((alpha - m_alphaMin) 
-					/ (m_alphaMax-m_alphaMin), 0.25f);
+					/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
 
 			result = interpCubic2D(Point2(warpedCosTheta, warpedAlpha),
 				m_trans, Point2(0.0f), Point2(1.0f), 
@@ -211,9 +211,9 @@ public:
 
 			/* Transform the roughness and IOR values into the warped parameter space */
 			Float warpedAlpha = std::pow((alpha - m_alphaMin) 
-					/ (m_alphaMax-m_alphaMin), 0.25f);
+					/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
 			Float warpedEta = std::pow((eta - m_etaMin) 
-					/ (m_etaMax-m_etaMin), 0.25f);
+					/ (m_etaMax-m_etaMin), (Float) 0.25f);
 			
 			result = interpCubic3D(Point3(warpedCosTheta, warpedAlpha, warpedEta),
 				data, Point3(0.0f), Point3(1.0f), 
@@ -243,7 +243,7 @@ public:
 			result = m_diffTrans[0];
 		} else if (m_etaFixed) {
 			Float warpedAlpha = std::pow((alpha - m_alphaMin) 
-					/ (m_alphaMax-m_alphaMin), 0.25f);
+					/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
 
 			result = interpCubic1D(warpedAlpha, m_diffTrans, 
 				0.0f, 1.0f, m_alphaSamples);
@@ -261,9 +261,9 @@ public:
 
 			/* Transform the roughness and IOR values into the warped parameter space */
 			Float warpedAlpha = std::pow((alpha - m_alphaMin) 
-					/ (m_alphaMax-m_alphaMin), 0.25f);
+					/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
 			Float warpedEta = std::pow((eta - m_etaMin) 
-					/ (m_etaMax-m_etaMin), 0.25f);
+					/ (m_etaMax-m_etaMin), (Float) 0.25f);
 
 			result = interpCubic2D(Point2(warpedAlpha, warpedEta), data, 
 				Point2(0.0f), Point2(1.0f), Size2(m_alphaSamples, m_etaSamples));
@@ -303,7 +303,7 @@ public:
 			eta = m_etaMin;
 		
 		Float warpedEta = std::pow((eta - m_etaMin) 
-				/ (m_etaMax-m_etaMin), 0.25f);
+				/ (m_etaMax-m_etaMin), (Float) 0.25f);
 
 		Float *newTrans = new Float[m_transSize];
 		Float *newDiffTrans = new Float[m_diffTransSize];
@@ -351,7 +351,7 @@ public:
 			memString((m_transSize + m_diffTransSize) * sizeof(Float)).c_str(), alpha);
 
 		Float warpedAlpha = std::pow((alpha - m_alphaMin) 
-				/ (m_alphaMax-m_alphaMin), 0.25f);
+				/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
 
 		Float *newTrans = new Float[m_transSize];
 		Float *newDiffTrans = new Float[m_diffTransSize];

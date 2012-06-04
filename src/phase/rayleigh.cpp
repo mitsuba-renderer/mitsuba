@@ -54,8 +54,8 @@ public:
 
 		Float z = 2 * (2*sample.x - 1),
 			  tmp = std::sqrt(z*z+1),
-			  A = std::pow(z+tmp, 1.0f/3.0f),
-			  B = std::pow(z-tmp, 1.0f/3.0f),
+			  A = std::pow(z+tmp, (Float) (1.0f/3.0f)),
+			  B = std::pow(z-tmp, (Float) (1.0f/3.0f)),
 			  cosTheta = A + B,
 			  sinTheta = std::sqrt(std::max((Float) 0, 1.0f-cosTheta*cosTheta)),
 			  phi = 2*M_PI*sample.y,

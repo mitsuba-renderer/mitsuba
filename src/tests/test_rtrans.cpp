@@ -129,8 +129,8 @@ public:
 		ref<Random> random = new Random();
 
 		for (int i=0; i<50; ++i) {
-			Float alpha = std::pow(random->nextFloat(), 4.0f)*4;
-			Float eta = 1 + std::pow(random->nextFloat(), 4.0f)*3;
+			Float alpha = std::pow(random->nextFloat(), (Float) 4.0f)*4;
+			Float eta = 1 + std::pow(random->nextFloat(), (Float) 4.0f)*3;
 			if (alpha < 1e-5)
 				alpha = 1e-5f;
 			if (eta < 1+1e-5)
@@ -152,8 +152,8 @@ public:
 		Float avgErr = 0.0f;
 		for (int i=0; i<1000; ++i) {
 			Float cosTheta = random->nextFloat();
-			Float alpha = std::pow(random->nextFloat(), 4.0f)*4;
-			Float eta = 1 + std::pow(random->nextFloat(), 4.0f)*3;
+			Float alpha = std::pow(random->nextFloat(), (Float) 4.0f)*4;
+			Float eta = 1 + std::pow(random->nextFloat(), (Float) 4.0f)*3;
 			if (cosTheta < 1e-5)
 				cosTheta = 1e-5f;
 			if (alpha < 1e-5)
@@ -190,7 +190,7 @@ public:
 		ref<Random> random = new Random();
 
 		for (int i=0; i<50; ++i) {
-			Float alpha = std::pow(random->nextFloat(), 4.0f)*4;
+			Float alpha = std::pow(random->nextFloat(), (Float) 4.0f)*4;
 			if (alpha < 1e-5)
 				alpha = 1e-5f;
 	
@@ -208,7 +208,7 @@ public:
 		Float avgErr = 0.0f;
 		for (int i=0; i<1000; ++i) {
 			Float cosTheta = random->nextFloat();
-			Float alpha = std::pow(random->nextFloat(), 4.0f)*4;
+			Float alpha = std::pow(random->nextFloat(), (Float) 4.0f)*4;
 			if (cosTheta < 1e-5)
 				cosTheta = 1e-5f;
 			if (alpha < 1e-5)
