@@ -6,6 +6,13 @@
 
 using namespace mitsuba;
 
+ref<Scene> loadScene(const fs::path &filename, const StringMap &params) {
+	SceneHandler::ParameterMap pmap;
+	for (StringMap::const_iterator it = params.begin(); it != params.end(); ++it)
+		pmap[it->first]=it->second;
+	return SceneHandler::loadScene(filename, pmap);
+}
+
 void export_render() {
 	bp::object renderModule(
 		bp::handle<>(bp::borrowed(PyImport_AddModule("mitsuba.render"))));
@@ -35,7 +42,7 @@ void export_render() {
 		.def("destinationExists", &Scene::destinationExists);
 
 	bp::class_<SceneHandler, boost::noncopyable>("SceneHandler", bp::no_init)
-		.def("loadScene", &SceneHandler::loadScene, BP_RETURN_VALUE)
+		.def("loadScene", &loadScene, BP_RETURN_VALUE)
 		.staticmethod("loadScene");
 
 	BP_CLASS(RenderJob, Thread, (bp::init<const std::string &, Scene *, RenderQueue *>()))
