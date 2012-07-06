@@ -379,8 +379,6 @@ protected:
 			if (!faceNormal.isZero())
 				faceNormal /= length;
 
-			its.geoFrame = Frame(faceNormal);
-
 			if (EXPECT_TAKEN(vertexNormals)) {
 				const Normal &n0 = vertexNormals[idx0];
 				const Normal &n1 = vertexNormals[idx1];
@@ -401,8 +399,12 @@ protected:
 					its.dpdu = dpdu;
 					its.dpdv = t0.dpdv * b.x + t1.dpdv * b.y + t2.dpdv * b.z;
 				}
+				/* Ensure that the geometric & shading normals face the same direction */
+				if (dot(faceNormal, its.shFrame.n) < 0)
+					faceNormal = -faceNormal;
+				its.geoFrame = Frame(faceNormal);
 			} else {
-				its.shFrame = its.geoFrame;
+				its.shFrame = its.geoFrame = Frame(faceNormal);
 				its.dpdu = its.dpdv = Vector(0.0f);
 			}
 
