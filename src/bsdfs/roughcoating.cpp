@@ -55,6 +55,8 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
+ *     \parameter{thickness}{\Float}{Denotes the thickness of the layer (to 
+ *      model absorption --- should be specified in inverse units of \code{sigmaA})\default{1}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the 
  *      coating layer. \default{0, i.e. there is no absorption}}
  *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
@@ -112,6 +114,9 @@ public:
 		m_sigmaA = new ConstantSpectrumTexture(
 			props.getSpectrum("sigmaA", Spectrum(0.0f)));
 
+		/* Specifies the layer's thickness using the inverse units of sigmaA */
+		m_thickness = props.getFloat("thickness", 1);
+
 		/* Specifies a multiplier for the specular reflectance component */
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
@@ -125,7 +130,7 @@ public:
 		);
 
 		if (m_distribution.isAnisotropic())
-			Log(EError, "The 'roughplastic' plugin currently does not support "
+			Log(EError, "The 'roughcoating' plugin currently does not support "
 				"anisotropic microfacet distributions!");
 
 		m_alpha = new ConstantFloatTexture(
