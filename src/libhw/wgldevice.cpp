@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -17,6 +17,15 @@
 */
 
 #include <mitsuba/hw/wglrenderer.h>
+
+#if defined(__OSX__)
+#include <OpenGL/gl.h>
+#else
+#if defined(_WIN32)
+# include <windows.h>
+#endif
+#include <GL/gl.h>
+#endif
 
 #define REPEATED_KEYMASK (1<<30)
 #define DEFINE_SPECIAL(wsym, sym) m_special[wsym] = sym

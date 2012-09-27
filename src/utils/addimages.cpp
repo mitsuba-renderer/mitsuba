@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,9 +16,10 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/util.h>
+#include <mitsuba/core/plugin.h>
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/fstream.h>
+#include <mitsuba/render/util.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -42,31 +43,64 @@ public:
 		ref<FileStream> bFile   = new FileStream(argv[4], FileStream::EReadOnly);
 		ref<FileStream> outFile = new FileStream(argv[5], FileStream::ETruncReadWrite);
 
-		ref<Bitmap> aBitmap = new Bitmap(Bitmap::EEXR, aFile);
-		ref<Bitmap> bBitmap = new Bitmap(Bitmap::EEXR, bFile);
-		ref<Bitmap> outBitmap = new Bitmap(aBitmap->getWidth(), aBitmap->getHeight(), 128);
+		ref<Bitmap> aBitmap = new Bitmap(Bitmap::EOpenEXR, aFile);
+		ref<Bitmap> bBitmap = new Bitmap(Bitmap::EOpenEXR, bFile);
 
-		float *aData = aBitmap->getFloatData();
-		float *bData = bBitmap->getFloatData();
-		float *outData = outBitmap->getFloatData();
-		int width = aBitmap->getWidth();
+		/* A few sanity checks */
+		if (aBitmap->getPixelFormat() != bBitmap->getPixelFormat())
+			Log(EError, "Error: Input bitmaps have a different pixel format!");
+		if (aBitmap->getComponentFormat() != bBitmap->getComponentFormat())
+			Log(EError, "Error: Input bitmaps have a different component format!");
+		if (aBitmap->getSize() != bBitmap->getSize())
+			Log(EError, "Error: Input bitmaps have a different size!");
 
-		for (int y=0; y<aBitmap->getHeight(); ++y) {
-			for (int x=0; x<aBitmap->getWidth(); ++x) {
-				Float ra = aData[(x + y * width) * 4] * weight1;
-				Float ga = aData[(x + y * width) * 4 + 1] * weight1;
-				Float ba = aData[(x + y * width) * 4 + 2] * weight1;
-				Float rb = bData[(x + y * width) * 4] * weight2;
-				Float gb = bData[(x + y * width) * 4 + 1] * weight2;
-				Float bb = bData[(x + y * width) * 4 + 2] * weight2;
-				outData[(x+y * width) * 4 + 0] = std::max((Float) 0, ra + rb);
-				outData[(x+y * width) * 4 + 1] = std::max((Float) 0, ga + gb);
-				outData[(x+y * width) * 4 + 2] = std::max((Float) 0, ba + bb);
-				outData[(x+y * width) * 4 + 3] = 1;
-			}
+		ref<Bitmap> outBitmap = new Bitmap(aBitmap->getPixelFormat(), 
+				aBitmap->getComponentFormat(), aBitmap->getSize());
+
+		size_t nEntries = 
+			(size_t) aBitmap->getSize().x *
+			(size_t) aBitmap->getSize().y *
+			aBitmap->getChannelCount();
+
+		switch (aBitmap->getComponentFormat()) {
+			case Bitmap::EFloat16: {
+					half *aData = aBitmap->getFloat16Data();
+					half *bData = bBitmap->getFloat16Data();
+					half *outData = outBitmap->getFloat16Data();
+					for (size_t i=0; i<nEntries; ++i)
+						*outData++ = (half) std::max((Float) 0, 
+								weight1 * (Float) (*aData++) +
+								weight2 * (Float) (*bData++));
+				}
+				break;
+
+			case Bitmap::EFloat32: {
+					float *aData = aBitmap->getFloat32Data();
+					float *bData = bBitmap->getFloat32Data();
+					float *outData = outBitmap->getFloat32Data();
+					for (size_t i=0; i<nEntries; ++i)
+						*outData++ = (float) std::max((Float) 0, 
+								weight1 * (Float) (*aData++) +
+								weight2 * (Float) (*bData++));
+				}
+				break;
+
+			case Bitmap::EUInt32: {
+					uint32_t *aData = aBitmap->getUInt32Data();
+					uint32_t *bData = bBitmap->getUInt32Data();
+					uint32_t *outData = outBitmap->getUInt32Data();
+					for (size_t i=0; i<nEntries; ++i)
+						*outData++ = (uint32_t) std::max((Float) 0, 
+								weight1 * (Float) (*aData++) +
+								weight2 * (Float) (*bData++));
+				}
+				break;
+
+			default:
+				Log(EError, "Unsupported component format!");
 		}
 
-		outBitmap->save(Bitmap::EEXR, outFile);
+		outBitmap->write(Bitmap::EOpenEXR, outFile);
 		return 0;
 	}
 

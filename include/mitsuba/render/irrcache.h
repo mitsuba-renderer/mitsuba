@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__IRRADIANCECACHE_H)
-#define __IRRADIANCECACHE_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_IRRCACHE_H_)
+#define __MITSUBA_RENDER_IRRCACHE_H_
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/core/octree.h>
@@ -73,7 +74,7 @@ public:
 	}
 
 	/// Generate a set of projected solid angle-distributed directions
-	void generateDirections(const Intersection &its, Sampler *sampler);
+	void generateDirections(const Intersection &its);
 
 	/// Compute mean distance, gradients etc.
 	void process(const Intersection &its);
@@ -120,6 +121,7 @@ private:
 	RotationalGradient m_rGrad;
 	TranslationalGradient m_tGrad;
 	Float m_hMean, m_hMin, m_hMinRestricted;
+	ref<Random> m_random;
 };
 
 
@@ -327,7 +329,7 @@ protected:
     /*                        Protected attributes                           */
     /* ===================================================================== */
 
-	Octree<Record *> m_octree;
+	DynamicOctree<Record *> m_octree;
 	std::vector<Record *> m_records;
 	Float m_kappa;
 	Float m_sceneSize;
@@ -338,4 +340,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __IRRADIANCECACHE_H */
+#endif /* __MITSUBA_RENDER_IRRCACHE_H_ */

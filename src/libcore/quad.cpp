@@ -3,8 +3,210 @@
 
 MTS_NAMESPACE_BEGIN
 
+float legendreP(int l, float x_) {
+	SAssert(l >= 0);
+
+	if (l == 0) {
+		return (float) 1.0f;
+	} else if (l == 1) {
+		return x_;
+	} else {
+		/* Evaluate the recurrence in double precision */
+		double x = (double) x_;
+		double Lppred = 1.0, Lpred = x, Lcur = 0.0;
+
+		for (int k = 2; k <= l; ++k) {
+			Lcur = ((2*k-1) * x * Lpred - (k - 1) * Lppred) / k;
+			Lppred = Lpred; Lpred = Lcur;
+		}
+
+		return (float) Lcur;
+	}
+}
+
+double legendreP(int l, double x) {
+	SAssert(l >= 0);
+
+	if (l == 0) {
+		return (double) 1.0f;
+	} else if (l == 1) {
+		return x;
+	} else {
+		double Lppred = 1.0, Lpred = x, Lcur = 0.0;
+
+		for (int k = 2; k <= l; ++k) {
+			Lcur = ((2*k-1) * x * Lpred - (k - 1) * Lppred) / k;
+			Lppred = Lpred; Lpred = Lcur;
+		}
+
+		return Lcur;
+	}
+}
+
+std::pair<float, float> legendrePD(int l, float x_) {
+	SAssert(l >= 0);
+
+	if (l == 0) {
+		return std::make_pair((float) 1.0f, (float) 0.0f);
+	} else if (l == 1) {
+		return std::make_pair(x_, (float) 1.0f);
+	} else {
+		/* Evaluate the recurrence in double precision */
+		double x = (double) x_;
+		double Lppred = 1.0, Lpred = x, Lcur = 0.0,
+		       Dppred = 0.0, Dpred = 1.0, Dcur = 0.0;
+
+		for (int k = 2; k <= l; ++k) {
+			Lcur = ((2*k-1) * x * Lpred - (k - 1) * Lppred) / k;
+			Dcur = Dppred + (2*k-1) * Lpred;
+			Lppred = Lpred; Lpred = Lcur;
+			Dppred = Dpred; Dpred = Dcur;
+		}
+
+		return std::make_pair((float) Lcur, (float) Dcur);
+	}
+}
+
+std::pair<double, double> legendrePD(int l, double x) {
+	SAssert(l >= 0);
+
+	if (l == 0) {
+		return std::make_pair(1.0, 0.0);
+	} else if (l == 1) {
+		return std::make_pair(x, 1.0);
+	} else {
+		double Lppred = 1.0, Lpred = x, Lcur = 0.0,
+		       Dppred = 0.0, Dpred = 1.0, Dcur = 0.0;
+
+		for (int k = 2; k <= l; ++k) {
+			Lcur = ((2*k-1) * x * Lpred - (k - 1) * Lppred) / k;
+			Dcur = Dppred + (2*k-1) * Lpred;
+			Lppred = Lpred; Lpred = Lcur;
+			Dppred = Dpred; Dpred = Dcur;
+		}
+
+		return std::make_pair(Lcur, Dcur);
+	}
+}
+
+/// Evaluate the function legendrePD(l+1, x) - legendrePD(l-1, x)
+static std::pair<double, double> legendreQ(int l, double x) {
+	SAssert(l >= 1);
+
+	if (l == 1) {
+		return std::make_pair(0.5 * (3*x*x-1) - 1, 3*x);
+	} else {
+		double Lppred = 1.0, Lpred = x, Lcur = 0.0,
+		       Dppred = 0.0, Dpred = 1.0, Dcur = 0.0;
+
+		for (int k = 2; k <= l; ++k) {
+			Lcur = ((2*k-1) * x * Lpred - (k-1) * Lppred) / k;
+			Dcur = Dppred + (2*k-1) * Lpred;
+			Lppred = Lpred; Lpred = Lcur;
+			Dppred = Dpred; Dpred = Dcur;
+		}
+
+		double Lnext = ((2*l+1) * x * Lpred - l * Lppred) / (l+1);
+		double Dnext = Dppred + (2*l+1) * Lpred;
+
+		return std::make_pair(Lnext - Lppred, Dnext - Dppred);
+	}
+}
+
+void gaussLegendre(int n, Float *nodes, Float *weights) {
+	if (n-- < 1)
+		SLog(EError, "gaussLegendre(): n must be >= 1");
+
+	if (n == 0) {
+		nodes[0] = 0;
+		weights[0] = 2;
+	} else if (n == 1) {
+		nodes[0] = (Float) -std::sqrt(1.0/3.0);
+		nodes[1] = -nodes[0];
+		weights[0] = weights[1] = 1;
+	}
+
+	int m = (n+1)/2;
+	for (int i=0; i<m; ++i) {
+		/* Initial guess for this root using that of a Chebyshev polynomial */
+
+		double x = -std::cos((double) (2*i + 1) / (double) (2*n + 2) * M_PI);
+		int it = 0;
+
+		while (true) {
+			if (++it > 20)
+				SLog(EError, "gaussLegendre(): did not converge after 20 iterations!");
+		
+			/* Search for the interior roots of P_{n+1}(x) using Newton's method. */
+			std::pair<double, double> L = legendrePD(n+1, x);
+			double step = L.first / L.second;
+			x -= step;
+
+			if (std::abs(step) <= 4 * std::abs(x) * std::numeric_limits<double>::epsilon())
+				break;
+		}
+
+		std::pair<double, double> L = legendrePD(n+1, x);
+		weights[i] = weights[n-i] = (Float) (2.0 / ((1-x*x) * (L.second*L.second)));
+		nodes[i] = (Float) x; nodes[n-i] = (Float) -x;
+		SAssert(i == 0 || x > nodes[i-1]);
+	}
+
+	if ((n % 2) == 0) {
+		std::pair<double, double> L = legendrePD(n+1, 0.0);
+		weights[n/2] = (Float) (2.0 / (L.second*L.second));
+		nodes[n/2] = 0;
+	}
+}
+
+
+void gaussLobatto(int n, Float *nodes, Float *weights) {
+	if (n-- < 2)
+		SLog(EError, "gaussLobatto(): n must be >= 2");
+
+	nodes[0] = -1;
+	nodes[n] =  1;
+	weights[0] = weights[n] = (Float) 2 / (Float) (n * (n+1));
+
+	int m = (n+1)/2;
+	for (int i=1; i<m; ++i) {
+		/* Initial guess for this root -- see "On the Legendre-Gauss-Lobatto Points
+		   and Weights" by Seymor V. Parter, Journal of Sci. Comp., Vol. 14, 4, 1999 */
+
+		double x = -std::cos((i + 0.25) * M_PI / n - 3/(8*n*M_PI * (i + 0.25)));
+		int it = 0;
+
+		while (true) {
+			if (++it > 20)
+				SLog(EError, "gaussLobatto(): did not converge after 20 iterations!");
+		
+			/* Search for the interior roots of P_n'(x) using Newton's method. The same 
+			   roots are also shared by P_{n+1}-P_{n-1}, which is nicer to evaluate. */
+
+			std::pair<double, double> Q = legendreQ(n, x);
+			double step = Q.first / Q.second;
+			x -= step;
+
+			if (std::abs(step) <= 4 * std::abs(x) * std::numeric_limits<double>::epsilon())
+				break;
+		}
+
+		double Ln = legendreP(n, x);
+		weights[i] = weights[n-i] = (Float) (2.0 / ((n * (n+1)) * Ln * Ln));
+		nodes[i] = (Float) x; nodes[n-i] = (Float) -x;
+		SAssert(x > nodes[i-1]);
+	}
+
+	if ((n % 2) == 0) {
+		double Ln = legendreP(n, 0.0);
+		weights[n/2] = (Float) (2.0 / ((n * (n+1)) * Ln * Ln));
+		nodes[n/2] = 0.0;
+	}
+}
+
+
 /*!
- \brief integral of a one-dimensional function using the adaptive
+ \brief integral of a one-dimensional function using an adaptive
  Gauss-Lobatto integral
 
  Copyright (C) 2008 Klaus Spanderen
@@ -1121,7 +1323,7 @@ static NDIntegrator::EResult integrate(unsigned fdim, const VectorizedIntegrand 
 class VectorizationAdapter {
 public:
 	VectorizationAdapter(const NDIntegrator::Integrand &integrand, size_t fdim,
-			size_t dim) : m_integrand(integrand), m_fdim(dim), m_dim(dim) {
+			size_t dim) : m_integrand(integrand), m_fdim(fdim), m_dim(dim) {
 		m_temp = new Float[m_fdim];
 	}
 

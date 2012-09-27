@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -54,15 +54,15 @@ ref<Sampler> ReplayableSampler::clone() {
 	return sampler.get();
 }
 
-void ReplayableSampler::request1DArray(unsigned int size) {
+void ReplayableSampler::request1DArray(size_t size) {
 	Log(EError, "ReplayableSampler::request2DArray() - unsupported!");
 }
 
-void ReplayableSampler::request2DArray(unsigned int size) {
+void ReplayableSampler::request2DArray(size_t size) {
 	Log(EError, "ReplayableSampler::request2DArray() - unsupported!");
 }
 
-void ReplayableSampler::generate() { }
+void ReplayableSampler::generate(const Point2i &) { }
 void ReplayableSampler::advance() { }
 
 void ReplayableSampler::setSampleIndex(size_t sampleIndex) {
@@ -90,18 +90,10 @@ Point2 ReplayableSampler::next2D() {
 	return Point2(value1, value2);
 }
 
-Float ReplayableSampler::independent1D() {
-	return next1D();
-}
-
-Point2 ReplayableSampler::independent2D() {
-	return next2D();
-}
-
 std::string ReplayableSampler::toString() const {
 	std::ostringstream oss;
-	oss << "ReplayableSampler[" << std::endl
-		<< "  sampleCount = " << m_sampleCount << std::endl
+	oss << "ReplayableSampler[" << endl
+		<< "  sampleCount = " << m_sampleCount << endl
 		<< "]"; 
 	return oss.str();
 }

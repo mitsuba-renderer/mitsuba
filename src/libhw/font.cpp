@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,10 +20,11 @@
 #include <mitsuba/hw/gputexture.h>
 #include <mitsuba/core/mstream.h>
 #include <mitsuba/core/bitmap.h>
-#include "veramono14_dsc.h"
-#include "veramono14_png.h"
-#include "vera14_dsc.h"
-#include "vera14_png.h"
+#include <mitsuba/core/zstream.h>
+#include "data/veramono14_dsc.h"
+#include "data/veramono14_png.h"
+#include "data/vera14_dsc.h"
+#include "data/vera14_png.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -50,8 +51,9 @@ Font::Font(EFont font) {
 			Log(EError, "Font is not available!");
 	}
 
-	ref<MemoryStream> pngStream = new MemoryStream(png_ptr, png_size);
-	ref<MemoryStream> dscStream = new MemoryStream(dsc_ptr, dsc_size);
+	ref<Stream> pngStream = new MemoryStream(png_ptr, png_size);
+	ref<Stream> dscStream = new ZStream(
+		new MemoryStream(dsc_ptr, dsc_size), ZStream::EGZipStream);
 	dscStream->setByteOrder(Stream::ENetworkByteOrder);
 	m_maxVerticalBearing = 0;
 
@@ -70,7 +72,6 @@ Font::Font(EFont font) {
 		m_maxVerticalBearing = std::max(m_maxVerticalBearing, g.verticalBearing);
 	}
 	dscStream->read(m_kerningMatrix, 256*256);
-	Assert(dscStream->getPos() == dscStream->getSize());
 }
 
 void Font::init(Renderer *renderer) {

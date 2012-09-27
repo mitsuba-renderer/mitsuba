@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -21,6 +21,7 @@
 #include <mitsuba/core/timer.h>
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/bind.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <set>
 
 MTS_NAMESPACE_BEGIN
@@ -245,7 +246,7 @@ ChiSquare::ETestResult ChiSquare::runTest(Float pvalThresh) {
 	   as extreme as the one observed under the assumption
 	   that the distributions match */
 	boost::math::chi_squared chSqDist(df);
-	Float pval = 1 - boost::math::cdf(chSqDist, chsq);
+	Float pval = 1 - (Float) boost::math::cdf(chSqDist, chsq);
 
 	/* Apply the Sidak correction for multiple independent hypothesis tests */
 	Float alpha = 1 - std::pow(1 - pvalThresh, 1 / (Float) m_numTests);

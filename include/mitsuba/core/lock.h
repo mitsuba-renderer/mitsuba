@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,15 +16,18 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__LOCK_H)
-#define __LOCK_H
+#pragma once
+#if !defined(__MITSUBA_CORE_LOCK_H_)
+#define __MITSUBA_CORE_LOCK_H_
 
 #include <mitsuba/mitsuba.h>
+
+#include <boost/scoped_ptr.hpp>
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief Thin wrapper around the recursive pthreads lock
+ * \brief Thin wrapper around the recursive boost thread lock
  *
  * \ingroup libcore
  */
@@ -35,21 +38,18 @@ public:
 	Mutex();
 
 	/// Lock the mutex
-	inline void lock() {
-		pthread_mutex_lock(&m_mutex);
-	}
+	void lock();
 
 	/// Unlock the mutex
-	inline void unlock() {
-		pthread_mutex_unlock(&m_mutex);
-	}
+	void unlock();
 
 	MTS_DECLARE_CLASS()
 protected:
 	/// Virtual destructor
 	virtual ~Mutex();
 private:
-	pthread_mutex_t m_mutex;
+	struct MutexPrivate;
+	boost::scoped_ptr<MutexPrivate> d;
 };
 
 /**
@@ -69,7 +69,7 @@ public:
 	WaitFlag(bool flag = false);
 
 	/// Return the current flag value
-	inline const bool &get() const { return m_flag; }
+	const bool &get() const;
 
 	/// Set the value of the flag
 	void set(bool value);
@@ -93,9 +93,8 @@ protected:
 	/// Virtual destructor
 	virtual ~WaitFlag();
 private:
-	bool m_flag;
-	pthread_mutex_t m_mutex;
-	pthread_cond_t m_cond;
+	struct WaitFlagPrivate;
+	boost::scoped_ptr<WaitFlagPrivate> d;
 };
 
 /**
@@ -121,9 +120,7 @@ public:
 	 * but more predictable scheduling will occur if this is the 
 	 * case.
 	 */
-	inline void signal() {
-		pthread_cond_signal(&m_cond);
-	}
+	void signal();
 
 	/**
 	 * \brief Send a signal, which wakes up any waiting threads. 
@@ -131,9 +128,7 @@ public:
 	 * The calling thread does not have to hold the lock, but more
 	 * predictable scheduling will occur if this is the case.
 	 */
-	inline void broadcast() {
-		pthread_cond_broadcast(&m_cond);
-	}
+	void broadcast();
 
 	/** 
 	 * \brief Wait for a signal and release the lock in the meanwhile.
@@ -142,9 +137,7 @@ public:
 	 * previously been acquired. After returning, the lock is
 	 * held again.
 	 */
-	inline void wait() {
-		pthread_cond_wait(&m_cond, &m_mutex->m_mutex);
-	}
+	void wait();
 
 	/**
 	 * \brief Temporarily wait for a signal and release the lock in the meanwhile.
@@ -163,12 +156,87 @@ protected:
 	/// Virtual destructor
 	virtual ~ConditionVariable();
 private:
-	bool m_flag;
-	ref<Mutex> m_mutex;
-	pthread_cond_t m_cond;
+	struct ConditionVariablePrivate;
+	boost::scoped_ptr<ConditionVariablePrivate> d;
+};
+
+/**
+ * \brief Simple RAII-style locking of a Mutex. On construction it locks the
+ * mutex and unlocks it on destruction. Based on boost::lock_guard,
+ * assumes the Mutex will outlive the lock.
+ *
+ * \ingroup libcore
+ */
+class LockGuard {
+public:
+	explicit LockGuard(Mutex * m_) : m(m_) {
+		m->lock();
+	}
+
+	~LockGuard() {
+		m->unlock();
+	}
+private:
+	Mutex* const m;
+
+	explicit LockGuard(LockGuard&);
+	LockGuard& operator=(LockGuard&);
+};
+
+/**
+ * \brief In addition to providing RAII-style locking, UniqueLock also allows
+ * for deferred locking until lock() is called explicitly. unlock() is only
+ * called by the destructor if the object has locked the mutex.
+ * Based on boost::unique_lock, assumes the Mutex will outlive the lock.
+ */
+class UniqueLock {
+public:
+	explicit UniqueLock(Mutex * mutex, bool acquire_lock = true)
+	: m(mutex), is_locked(false) {
+		if (acquire_lock)
+			lock();
+	}
+
+	~UniqueLock() {
+		if (ownsLock())
+			m->unlock();
+	}
+
+	void lock() {
+		SAssert(!ownsLock() && m != NULL);
+		m->lock();
+		is_locked = true;
+	}
+
+	void unlock() {
+		SAssert(ownsLock() && m != NULL);
+		m->unlock();
+		is_locked = false;
+	}
+
+	Mutex * release() {
+		Mutex * const mutex = m;
+		m = static_cast<Mutex*>(NULL);
+		is_locked = false;
+		return mutex;
+	}
+
+	inline bool operator!() const {
+		return !ownsLock();
+	}
+	
+	inline bool ownsLock() const {
+		return is_locked;
+	}
+
+private:
+	Mutex* m;
+	bool is_locked;
+
+	explicit UniqueLock(UniqueLock&);
+	UniqueLock& operator=(UniqueLock&);
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __LOCK_H */
-
+#endif /* __MITSUBA_CORE_LOCK_H_ */

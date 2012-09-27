@@ -12,12 +12,26 @@
 \newcommand{\code}[1]{\texttt{#1}}
 
 % Macros that are used in the plugin documentation
-\newcommand{\plugin}[2]{\newpage\subsubsection{#2 (\texttt{#1})}\label{plg:#1}}
-\newcommand{\pluginref}[1]{\texttt{\hyperref[plg:#1]{#1}}}
+\newcommand{\plugin}[3][Default]{%
+	\ifthenelse{\equal{#1}{Default}}{%
+		\newpage\subsubsection{#3 (\texttt{#2})}\label{plg:#2}%
+	}{%
+		\newpage\subsubsection{#3 (\texttt{#2})}\label{plg:#1}%
+	}%
+}
+\newcommand{\pluginref}[2][Default]{%
+	\ifthenelse{\equal{#1}{Default}}{%
+		\texttt{\hyperref[plg:#2]{#2}}%
+	}{%
+		\texttt{\hyperref[plg:#1]{#2}}%
+	}%
+}
+
 \newcommand{\pluginpage}[1]{\hyperref[plg:#1]{page \pageref*{plg:#1}}}
 \newcommand{\order}[1]{} % Ignore
 
 \newcommand{\Transform}{\texttt{transform}}
+\newcommand{\Animation}{\texttt{animation}}
 \newcommand{\Spectrum}{\texttt{spectrum}}
 \newcommand{\Integer}{\texttt{integer}}
 \newcommand{\String}{\texttt{string}}
@@ -26,9 +40,11 @@
 \newcommand{\Vector}{\texttt{vector}}
 \newcommand{\Point}{\texttt{point}}
 \newcommand{\Texture}{\texttt{texture}}
+\newcommand{\Integrator}{\texttt{integrator}}
 \newcommand{\BSDF}{\texttt{bsdf}}
 \newcommand{\Phase}{\texttt{phase}}
 \newcommand{\Shape}{\texttt{shape}}
+\newcommand{\RFilter}{\texttt{rfilter}}
 \newcommand{\ShapeGroup}{\texttt{shapegroup}}
 \newcommand{\Volume}{\texttt{volume}}
 \newcommand{\Unnamed}{\emph{(Nested plugin)}}
@@ -66,19 +82,19 @@
 	\vspace{1em}
 	\begin{figure}[htbp]\centering
 	\fcolorbox{remarkframe}{remark}{
-		\parbox{\columnwidth}{
+		\parbox{\columnwidth-1.1cm}{
 		\vspace{.6em}\hspace{.6em}\parbox{\columnwidth-1.6em}{
 		\textbf{Remarks:}\small
 		\vspace{-.4em}
 		\begin{itemize}
 		#1
 		\end{itemize}
-		}}}\end{figure}
+		}}\hspace*{1cm}}\end{figure}
 	\setlength\fboxrule\fboxrulebackup
 	}
 	
 \newcommand{\renderings}[1]{
-	\begin{figure}[htbp!]
+	\begin{figure}[htb!]
 		\setcounter{subfigure}{0}
 		\centering
 		\hfill
@@ -94,6 +110,8 @@
 }
 \newcommand{\rendering}[2]{\subfloat[#1]{\fbox{\includegraphics[width=0.47\textwidth]{images/#2}}}\hfill}
 \newcommand{\unframedrendering}[2]{\subfloat[#1]{\includegraphics[width=0.47\textwidth]{images/#2}}\hfill}
+\newcommand{\bigrendering}[2]{\subfloat[#1]{\fbox{\includegraphics[width=\textwidth]{images/#2}}}\hfill}
+\newcommand{\unframedbigrendering}[2]{\subfloat[#1]{\includegraphics[width=\textwidth]{images/#2}}\hfill}
 \newcommand{\medrendering}[2]{ \subfloat[#1]{\fbox{\includegraphics[width=0.31\textwidth]{images/#2}}}\hfill}
 \newcommand{\unframedmedrendering}[2]{\subfloat[#1]{\includegraphics[width=0.31\textwidth]{images/#2}}\hfill}
 \newcommand{\smallrendering}[2]{ \subfloat[#1]{\fbox{\includegraphics[width=0.2\textwidth]{images/#2}}}\hfill}

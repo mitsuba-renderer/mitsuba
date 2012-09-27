@@ -4,11 +4,11 @@
 	<xsd:element name="scene">
 		<xsd:complexType>
 			<xsd:choice minOccurs="0" maxOccurs="unbounded">
-				<xsd:element name="camera" type="camera"/>
+				<xsd:element name="sensor" type="sensor"/>
 				<xsd:element name="texture" type="texture"/>
 				<xsd:element name="bsdf" type="bsdf"/>
 				<xsd:element name="integrator" type="integrator"/>
-				<xsd:element name="luminaire" type="luminaire"/>
+				<xsd:element name="emitter" type="emitter"/>
 				<xsd:element name="shape" type="shape"/>
 				<xsd:element name="medium" type="medium"/>
 				<xsd:element name="phase" type="phase"/>
@@ -25,6 +25,8 @@
 				<xsd:element name="rgb" type="rgb"/>
 				<xsd:element name="srgb" type="string"/>
 				<xsd:element name="blackbody" type="blackbody"/>
+				
+				<xsd:element name="alias" type="alias"/>
 			</xsd:choice>
 			<xsd:attribute name="version" type="xsd:string"/>
 		</xsd:complexType>
@@ -77,8 +79,8 @@
 		<xsd:attribute name="id" type="xsd:string" use="required"/>
 	</xsd:complexType>
 
-	<!-- CAMERA Element -->
-	<xsd:complexType name="camera">
+	<!-- SENSOR Element -->
+	<xsd:complexType name="sensor">
 		<xsd:complexContent>
 			<xsd:extension base="objectBase">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
@@ -86,11 +88,12 @@
 					<xsd:element name="sampler" type="object"/>
 					<xsd:element name="film" type="film"/>
 					<xsd:element name="ref" type="reference"/>
+					<xsd:element name="medium" type="medium"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
 	</xsd:complexType>
-	
+
 	<!-- INTEGRATOR Element -->
 	<xsd:complexType name="integrator">
 		<xsd:complexContent>
@@ -104,22 +107,21 @@
 		</xsd:complexContent>
 	</xsd:complexType>
 
-	<!-- LUMINAIRE Element -->
-	<xsd:complexType name="luminaire">
+	<!-- EMITTER Element -->
+	<xsd:complexType name="emitter">
 		<xsd:complexContent>
 			<xsd:extension base="objectBase">
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
 					<xsd:group ref="objectGroup"/>
 					<xsd:element name="texture" type="texture"/>
-					<xsd:element name="luminaire" type="luminaire"/>
+					<xsd:element name="emitter" type="emitter"/>
 					<xsd:element name="medium" type="medium"/>
 					<xsd:element name="ref" type="reference"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
 	</xsd:complexType>
-	
-	
+
 	<!-- SHAPE Element -->
 	<xsd:complexType name="shape">
 		<xsd:complexContent>
@@ -129,7 +131,8 @@
 					<xsd:element name="bsdf" type="bsdf"/>
 					<xsd:element name="subsurface" type="object"/>
 					<xsd:element name="ref" type="reference"/>
-					<xsd:element name="luminaire" type="luminaire"/>
+					<xsd:element name="sensor" type="sensor"/>
+					<xsd:element name="emitter" type="emitter"/>
 					<xsd:element name="shape" type="shape"/>
 					<xsd:element name="medium" type="medium"/>
 				</xsd:choice>
@@ -293,12 +296,18 @@
 	<xsd:complexType name="include">
 		<xsd:attribute name="filename" type="xsd:string" use="required"/>
 	</xsd:complexType>
+	
+	<xsd:complexType name="alias">
+		<xsd:attribute name="id" type="xsd:string" use="required"/>
+		<xsd:attribute name="as" type="xsd:string" use="required"/>
+	</xsd:complexType>
 
 	<xsd:complexType name="transform">
 		<xsd:choice minOccurs="0" maxOccurs="unbounded">
 			<xsd:element name="translate" type="translate"/>
 			<xsd:element name="rotate" type="rotate"/>
 			<xsd:element name="lookAt" type="lookAt"/>
+			<xsd:element name="lookat" type="lookAt"/>
 			<xsd:element name="scale" type="scale"/>
 			<xsd:element name="matrix" type="matrix"/>
 		</xsd:choice>
@@ -338,6 +347,6 @@
 	<xsd:complexType name="blackbody">
 		<xsd:attribute name="name" type="xsd:string" use="required"/>
 		<xsd:attribute name="temperature" type="xsd:string" use="required"/>
-		<xsd:attribute name="multiplier" type="doubleType" use="optional"/>
+		<xsd:attribute name="scale" type="doubleType" use="optional"/>
 	</xsd:complexType>
 </xsd:schema>

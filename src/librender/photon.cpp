@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -76,7 +76,6 @@ void Photon::serialize(Stream *stream) const {
 	stream->writeUChar(flags);
 }
 
-
 Photon::Photon(const Point &p, const Normal &normal,
 			   const Vector &dir, const Spectrum &P,
 			   uint16_t _depth) {
@@ -91,7 +90,7 @@ Photon::Photon(const Point &p, const Normal &normal,
 	/* Convert the direction into an approximate spherical 
 	   coordinate format to reduce storage requirements */
 	data.theta = (uint8_t) std::min(255,
-		(int) (std::acos(dir.z) * (256.0 / M_PI)));
+		(int) (math::safe_acos(dir.z) * (256.0 / M_PI)));
 
 	int tmp = std::min(255,
 		(int) (std::atan2(dir.y, dir.x) * (256.0 / (2.0 * M_PI))));
@@ -104,7 +103,7 @@ Photon::Photon(const Point &p, const Normal &normal,
 		data.thetaN = data.phiN = 0;
 	} else {
 		data.thetaN = (uint8_t) std::min(255,
-			(int) (std::acos(normal.z) * (256.0 / M_PI)));
+			(int) (math::safe_acos(normal.z) * (256.0 / M_PI)));
 		tmp = std::min(255,
 			(int) (std::atan2(normal.y, normal.x) * (256.0 / (2.0 * M_PI))));
 		if (tmp < 0)

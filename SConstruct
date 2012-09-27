@@ -69,8 +69,10 @@ build('src/samplers/SConscript')
 build('src/rfilters/SConscript')
 # Film implementations
 build('src/films/SConscript')
-# Cameras
-build('src/cameras/SConscript')
+# Sensors
+build('src/sensors/SConscript')
+# Emitters
+build('src/emitters/SConscript')
 # Participating media
 build('src/medium/SConscript')
 # Volumetric data sources
@@ -79,8 +81,6 @@ build('src/volume/SConscript')
 build('src/subsurface/SConscript')
 # Texture types
 build('src/textures/SConscript')
-# Light sources
-build('src/luminaires/SConscript')
 # Integrators
 build('src/integrators/SConscript')
 # Testcases

@@ -1,0 +1,23 @@
+\newpage
+\subsection{Sample generators}
+\label{sec:samplers}
+When rendering an image, Mitsuba has to solve a high-dimensional integration problem that involves the 
+geometry, materials, lights, and sensors that make up the scene. Because of the mathematical complexity 
+of these integrals, it is generally impossible to solve them analytically --- instead, they
+are solved \emph{numerically} by evaluating the function to be integrated at a large number of 
+different positions referred to as \emph{samples}. Sample generators are an essential ingredient to this 
+process: they produce points in a (hypothetical) infinite dimensional hypercube $[0,1]^{\infty}$ that 
+constitute the canonical representation of these samples.
+
+To do its work, a rendering algorithm, or \emph{integrator}, will send many queries to the sample generator.
+Generally, it will request subsequent 1D or 2D components of this infinite-dimensional ``point'' and map 
+them into a more convenient space (for instance,  positions on surfaces). This allows it to construct
+light paths to eventually evaluate the flow of light through the scene.
+
+Since the whole process starts with a large number of points in the abstract space $[0,1]^{\infty}$,
+it is natural to consider different ways of positioning them. Desirable properties of a sampler are
+that it ``randomly'' covers the whole space evenly with samples, but without placing samples too close
+to each other. This leads to such notions as \emph{stratified sampling} and \emph{low-discrepancy}
+number sequences. The samplers in this section make different guarantees on the quality of generated 
+samples based on these criteria. To obtain intuition about their behavior, the provided point plots 
+illustrate the resulting sample placement.

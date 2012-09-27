@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -26,6 +26,22 @@
 #include <mitsuba/hw/gputexture.h>
 
 MTS_NAMESPACE_BEGIN
+
+namespace {
+	GLuint translateGeometryType(GPUProgram::EGeometryType type) {
+		switch (type) {
+			case GPUProgram::EPoints: return GL_POINTS;
+			case GPUProgram::ELines: return GL_LINES;
+			case GPUProgram::ELineStrips: return GL_LINE_STRIP;
+			case GPUProgram::ETriangles: return GL_TRIANGLES;
+			case GPUProgram::ETriangleStrips: return GL_TRIANGLE_STRIP;
+			case GPUProgram::EQuadrilaterals: return GL_QUADS;
+			default:
+				SLog(EError, "Unsupported geometry type!");
+				return 0; // make gcc happy
+		}
+	}
+}
 
 GLProgram::GLProgram(const std::string &name) 
  : GPUProgram(name) {
@@ -54,9 +70,12 @@ void GLProgram::init() {
 
 	if (m_id[EGeometryProgram] != 0) {
 		Assert(m_maxVertices > 0);
-		glProgramParameteriEXT(m_program, GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES); 
-		glProgramParameteriEXT(m_program, GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
-		glProgramParameteriEXT(m_program, GL_GEOMETRY_VERTICES_OUT_EXT, m_maxVertices);
+		glProgramParameteriEXT(m_program, GL_GEOMETRY_INPUT_TYPE_EXT,
+			translateGeometryType(m_inputGeometryType)); 
+		glProgramParameteriEXT(m_program, GL_GEOMETRY_OUTPUT_TYPE_EXT, 
+			translateGeometryType(m_outputGeometryType)); 
+		glProgramParameteriEXT(m_program, GL_GEOMETRY_VERTICES_OUT_EXT, 
+			m_maxVertices);
 	}
 
 	if (m_id[EVertexProgram] != 0)
@@ -79,6 +98,7 @@ void GLProgram::init() {
 		Log(EError, "Error linking a GPU program!");
 	} else if (!infoLog.empty() && infoLog != "No errors." &&
 		    infoLog.find("successfully") == std::string::npos &&
+		    infoLog.find("No errors.") == std::string::npos &&
 		    infoLog.find("Vertex shader(s) linked") == std::string::npos) {
 		if (infoLog.find("warning") != std::string::npos)
 			Log(EWarn, "GLSL linker warning: %s", infoLog.c_str());
@@ -96,9 +116,16 @@ int GLProgram::createShader(int type, const std::string &source) {
 
 	int id = glCreateShaderObjectARB(type);
 
-	const char *string = source.c_str();
-	GLint stringLength = (GLint) source.length();
-	glShaderSourceARB(id, 1, &string, &stringLength);
+	std::ostringstream oss;
+	oss << "#version 120" << endl;
+	for (std::map<std::string, std::string>::const_iterator it = m_definitions.begin();
+			it != m_definitions.end(); ++it)
+		oss << "#define " << it->first << " " << it->second << endl;
+	std::string completeSource = oss.str() + source;
+
+	const char *strings[1] = { completeSource.c_str() };
+	GLint stringLengths[1] = { (GLint) completeSource.length() };
+	glShaderSourceARB(id, 1, strings, stringLengths);
 	glCompileShaderARB(id);
 
 	std::string infoLog = getInfoLogShader(id);
@@ -116,11 +143,13 @@ int GLProgram::createShader(int type, const std::string &source) {
 			typeStr = "geometry";
 		else
 			typeStr = "unknown";
+		Log(EDebug, "Offending shader source code:\n%s", strings[0]);
 		if (infoLog != "")
 			Log(EError, "Error compiling a %s shader: %s", typeStr.c_str(), infoLog.c_str());
 		else
 			Log(EError, "Unknown error encountered while compiling a shader!");
 	} else if (!infoLog.empty() && infoLog != "No errors."
+		 && infoLog.find("No errors.") == std::string::npos
 		 && infoLog.find("successfully") == std::string::npos) {
 		if (infoLog.find("warning") != std::string::npos)
 			Log(EWarn, "GLSL compiler warning: %s", infoLog.c_str());
@@ -181,6 +210,12 @@ void GLProgram::setParameter(int id, int value) {
 	if (id == -1)
 		return;
 	glUniform1i(id, value);
+}
+
+void GLProgram::setParameter(int id, uint32_t value) {
+	if (id == -1)
+		return;
+	glUniform1ui(id, value);
 }
 
 void GLProgram::setParameter(int id, const Vector &value) {
@@ -300,13 +335,21 @@ void GLProgram::setParameter(int id, const Matrix4x4 &matrix) {
 #endif
 }
 
+void GLProgram::setParameter(int id, const Color3 &value) {
+	if (id == -1)
+		return;
+
+	glUniform3f(id, (float) value[0], (float) value[1], (float) value[2]);
+}
+
+
 void GLProgram::setParameter(int id, const Spectrum &value) {
 	if (id == -1)
 		return;
 
 	Float r, g, b;
 	value.toLinearRGB(r, g, b);
-	glUniform3f(id, r, g, b);
+	glUniform3f(id, (float) r, (float) g, (float) b);
 }
 
 void GLProgram::bind() {

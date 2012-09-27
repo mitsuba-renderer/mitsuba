@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -58,8 +58,10 @@ Renderer *Renderer::create(Session *session) {
 }
 
 Shader *Renderer::registerShaderForResource(const HWResource *resource) {
-	if (m_shaders.find(resource) != m_shaders.end()) {
-		ShaderRecord &sRec = m_shaders[resource];
+	std::map<const HWResource*, ShaderRecord>::iterator it = m_shaders.find(resource);
+
+	if (it != m_shaders.end()) {
+		ShaderRecord &sRec = (*it).second;
 		sRec.refCount++;
 		return sRec.shader;
 	}
@@ -79,9 +81,12 @@ Shader *Renderer::registerShaderForResource(const HWResource *resource) {
 }
 
 Shader *Renderer::getShaderForResource(const HWResource *resource) {
-	if (m_shaders.find(resource) == m_shaders.end())
+	std::map<const HWResource*, ShaderRecord>::iterator it = m_shaders.find(resource);
+
+	if (it == m_shaders.end())
 		return NULL;
-	return m_shaders[resource].shader;
+
+	return (*it).second.shader;
 }
 
 void Renderer::unregisterShaderForResource(const HWResource *resource) {
@@ -97,34 +102,43 @@ void Renderer::unregisterShaderForResource(const HWResource *resource) {
 	}
 }
 
-GPUGeometry *Renderer::registerGeometry(const TriMesh *mesh) {
+GPUGeometry *Renderer::registerGeometry(const Shape *shape) {
 	if (!m_capabilities->isSupported(RendererCapabilities::EVertexBufferObjects))
 		return NULL;
 
-	GPUGeometry *geometry;
-	if (m_geometry.find(mesh) == m_geometry.end()) {
-		geometry = createGPUGeometry(mesh);
-		m_geometry[mesh] = geometry;
-		geometry->init();
+	std::map<const Shape *, GPUGeometry *>::iterator it = m_geometry.find(shape);
+
+	GPUGeometry *gpuGeo;
+	if (it == m_geometry.end()) {
+		gpuGeo = createGPUGeometry(shape);
+		if (!gpuGeo)
+			return NULL;
+		m_geometry[shape] = gpuGeo;
+		gpuGeo->init();
 	} else {
-		geometry = m_geometry[mesh];
+		gpuGeo = (*it).second;
 	}
-	geometry->incRef();
-	return geometry;
+
+	gpuGeo->incRef();
+	return gpuGeo;
 }
 
-void Renderer::unregisterGeometry(const TriMesh *mesh) {
+bool Renderer::unregisterGeometry(const Shape *shape) {
 	if (!m_capabilities->isSupported(RendererCapabilities::EVertexBufferObjects))
-		return;
-	if (m_geometry.find(mesh) == m_geometry.end())
-		Log(EError, "Cannot unregister geometry!");
-	GPUGeometry *geometry = m_geometry[mesh];
-	int refCount = geometry->getRefCount();
+		return false;
+
+	std::map<const Shape *, GPUGeometry *>::iterator it = m_geometry.find(shape);
+	if (it == m_geometry.end())
+		return false;
+
+	GPUGeometry *gpuGeo = (*it).second;
+	int refCount = gpuGeo->getRefCount();
 	if (refCount == 1) {
-		geometry->cleanup();
-		m_geometry.erase(mesh);
+		gpuGeo->cleanup();
+		m_geometry.erase(shape);
 	}
-	geometry->decRef();
+	gpuGeo->decRef();
+	return true;
 }
 
 std::string RendererCapabilities::toString() const {

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,6 +18,7 @@
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/thread.h>
+#include <boost/filesystem.hpp>
 #include <ctime>
 
 MTS_NAMESPACE_BEGIN
@@ -63,11 +64,7 @@ std::string DefaultFormatter::format(ELogLevel logLevel, const Class *theClass,
 		if (theClass)
 			oss << "[" << theClass->getName() << "] ";
 		else if (line != -1 && file)
-#if BOOST_FILESYSTEM_VERSION == 3
 			oss << "[" << fs::path(file).filename().string() << ":" << line << "] ";
-#else
-			oss << "[" << fs::path(file).filename() << ":" << line << "] ";
-#endif
 	}
 
 	/* Text */

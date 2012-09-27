@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -27,99 +27,121 @@
 MTS_NAMESPACE_BEGIN
 
 GLGeometry::GLGeometry(const TriMesh *mesh) 
- : GPUGeometry(mesh), m_vertexID(0), m_indexID(0) {
+ : GPUGeometry(mesh) {
+	m_id[0] = m_id[1] = 0;
 }
 
 void GLGeometry::init() {
-	Assert(m_vertexID == 0 && m_indexID == 0);
-	glGenBuffers(1, &m_vertexID);
-	glGenBuffers(1, &m_indexID);
+	Assert(m_id[0] == 0 && m_id[1] == 0);
+	glGenBuffers(2, m_id);
 	refresh();
 	
 }
 void GLGeometry::refresh() {
-	Assert(m_vertexID != 0 && m_indexID != 0);
+	Assert(m_id[0] != 0 && m_id[1] != 0);
 	m_stride = 3;
-	if (m_mesh->getVertexNormals())
+	if (m_mesh->hasVertexNormals())
 		m_stride += 3;
-	if (m_mesh->getVertexTexcoords())
+	if (m_mesh->hasVertexTexcoords())
 		m_stride += 2;
-	if (m_mesh->getVertexTangents())
+	if (m_mesh->hasUVTangents())
 		m_stride += 3;
-	if (m_mesh->getVertexColors())
+	if (m_mesh->hasVertexColors())
 		m_stride += 3;
 	m_stride *= sizeof(GLfloat);
 
-	m_vertexSize = (GLuint) (m_mesh->getVertexCount() * m_stride);
-	m_indexSize = (GLuint) (m_mesh->getTriangleCount() * sizeof(GLuint) * 3);
+	size_t vertexCount = m_mesh->getVertexCount(), triCount = m_mesh->getTriangleCount();
+	m_size[EVertexID] = (GLuint) (vertexCount * m_stride);
+	m_size[EIndexID] = (GLuint) (triCount * sizeof(GLuint) * 3);
 
 	Log(ETrace, "Uploading a GPU geometry object (\"%s\", " SIZE_T_FMT 
 		" vertices, " SIZE_T_FMT " triangles, %s)",
-		getName().c_str(),
-		m_mesh->getVertexCount(),
-		m_mesh->getTriangleCount(),
-		memString(m_vertexSize + m_indexSize).c_str());
+		getName().c_str(), vertexCount, triCount,
+		memString(m_size[EVertexID] + m_size[EIndexID]).c_str());
 
-	GLfloat *vertices = new GLfloat[m_mesh->getVertexCount()
-		* m_stride/sizeof(GLfloat)];
+	GLfloat *vertices = new GLfloat[vertexCount * m_stride/sizeof(GLfloat)];
 	GLuint *indices = (GLuint *) m_mesh->getTriangles();
 	const Point *sourcePositions = m_mesh->getVertexPositions();
 	const Normal *sourceNormals = m_mesh->getVertexNormals();
 	const Point2 *sourceTexcoords = m_mesh->getVertexTexcoords();
-	const Spectrum *sourceColors = m_mesh->getVertexColors();
-	const TangentSpace *sourceTangents = m_mesh->getVertexTangents();
+	const Color3 *sourceColors = m_mesh->getVertexColors();
+	Vector *sourceTangents = NULL;
+
+	if (m_mesh->hasUVTangents()) {
+		/* Convert into per-vertex tangents */
+		const TangentSpace *triTangents = m_mesh->getUVTangents();
+		sourceTangents = new Vector[vertexCount];
+		uint32_t *count = new uint32_t[vertexCount];
+		memset(sourceTangents, 0, sizeof(Vector)*vertexCount);
+
+		for (size_t i=0; i<triCount; ++i) {
+			const Triangle &tri = m_mesh->getTriangles()[i];
+			const TangentSpace &tangents = triTangents[i];
+			for (int j=0; j<3; ++j) {
+				sourceTangents[tri.idx[j]] += tangents.dpdu;
+				++count[tri.idx[j]];
+			}
+		}
+
+		for (size_t i=0; i<vertexCount; ++i) {
+			if (count[i] == 0)
+				continue;
+			sourceTangents[i] /= (Float) count[i];
+		}
+
+		delete[] count;
+	}
 
 	size_t pos = 0;
-	for (size_t i=0; i<m_mesh->getVertexCount(); ++i) {
-		vertices[pos++] = (float) sourcePositions[i].x;
-		vertices[pos++] = (float) sourcePositions[i].y;
-		vertices[pos++] = (float) sourcePositions[i].z;
+	for (size_t i=0; i<vertexCount; ++i) {
+		vertices[pos++] = (GLfloat) sourcePositions[i].x;
+		vertices[pos++] = (GLfloat) sourcePositions[i].y;
+		vertices[pos++] = (GLfloat) sourcePositions[i].z;
 		if (sourceNormals) {
-			vertices[pos++] = (float) sourceNormals[i].x;
-			vertices[pos++] = (float) sourceNormals[i].y;
-			vertices[pos++] = (float) sourceNormals[i].z;
+			vertices[pos++] = (GLfloat) sourceNormals[i].x;
+			vertices[pos++] = (GLfloat) sourceNormals[i].y;
+			vertices[pos++] = (GLfloat) sourceNormals[i].z;
 		}
 		if (sourceTexcoords) {
-			vertices[pos++] = (float) sourceTexcoords[i].x;
-			vertices[pos++] = (float) sourceTexcoords[i].y;
+			vertices[pos++] = (GLfloat) sourceTexcoords[i].x;
+			vertices[pos++] = (GLfloat) sourceTexcoords[i].y;
 		}
 		if (sourceTangents) {
-			vertices[pos++] = (float) sourceTangents[i].dpdu.x;
-			vertices[pos++] = (float) sourceTangents[i].dpdu.y;
-			vertices[pos++] = (float) sourceTangents[i].dpdu.z;
+			vertices[pos++] = (GLfloat) sourceTangents[i].x;
+			vertices[pos++] = (GLfloat) sourceTangents[i].y;
+			vertices[pos++] = (GLfloat) sourceTangents[i].z;
 		}
 		if (sourceColors) {
-			Float r, g, b;
-			sourceColors[i].toLinearRGB(r, g, b);
-			vertices[pos++] = (float) r;
-			vertices[pos++] = (float) g;
-			vertices[pos++] = (float) b;
+			vertices[pos++] = (GLfloat) sourceColors[i][0];
+			vertices[pos++] = (GLfloat) sourceColors[i][1];
+			vertices[pos++] = (GLfloat) sourceColors[i][2];
 		}
 	}
-	Assert(pos * sizeof(GLfloat) == m_stride * m_mesh->getVertexCount());
-
+	Assert(pos * sizeof(GLfloat) == m_stride * vertexCount);
+	
 	bind();
 
-	bool bindless = glewIsSupported("GL_NV_vertex_buffer_unified_memory");
-
-	glBufferData(GL_ARRAY_BUFFER, m_vertexSize, vertices, GL_STATIC_DRAW);
-	if (bindless) {
-		glGetBufferParameterui64vNV(GL_ARRAY_BUFFER, GL_BUFFER_GPU_ADDRESS_NV, &m_vertexAddr);
+	glBufferData(GL_ARRAY_BUFFER, m_size[EVertexID], vertices, GL_STATIC_DRAW);
+	if (GLEW_NV_vertex_buffer_unified_memory) {
+		glGetBufferParameterui64vNV(GL_ARRAY_BUFFER, GL_BUFFER_GPU_ADDRESS_NV, &m_addr[EVertexID]);
 		glMakeBufferResidentNV(GL_ARRAY_BUFFER, GL_READ_ONLY);
 	}
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indexSize, indices, GL_STATIC_DRAW);
-	if (bindless) {
-		glGetBufferParameterui64vNV(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_GPU_ADDRESS_NV, &m_indexAddr);
+
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_size[EIndexID], indices, GL_STATIC_DRAW);
+	if (GLEW_NV_vertex_buffer_unified_memory) {
+		glGetBufferParameterui64vNV(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_GPU_ADDRESS_NV, &m_addr[EIndexID]);
 		glMakeBufferResidentNV(GL_ELEMENT_ARRAY_BUFFER, GL_READ_ONLY);
 	}
 	unbind();
 
 	delete[] vertices;
+	if (sourceTangents)
+		delete[] sourceTangents;
 }
 
 void GLGeometry::bind() {
-	glBindBuffer(GL_ARRAY_BUFFER, m_vertexID);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexID);
+	glBindBuffer(GL_ARRAY_BUFFER, m_id[EVertexID]);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_id[EIndexID]);
 }
 
 void GLGeometry::unbind() {
@@ -128,15 +150,14 @@ void GLGeometry::unbind() {
 }
 
 void GLGeometry::cleanup() {
-	Assert(m_vertexID != 0 && m_indexID != 0);
+	Assert(m_id[0] != 0 && m_id[1] != 0);
 	Log(ETrace, "Freeing GPU geometry object \"%s\"", getName().c_str());
-	glDeleteBuffers(1, &m_vertexID);
-	glDeleteBuffers(1, &m_indexID);
-	m_vertexID = m_indexID = 0;
+	glDeleteBuffers(2, m_id);
+	m_id[0] = m_id[1] = 0;
 }
 
 GLGeometry::~GLGeometry() {
-	if (m_vertexID != 0 || m_indexID != 0)
+	if (m_id[0] != 0 || m_id[1] != 0)
 		cleanup();
 }
 

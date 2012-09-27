@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -19,7 +19,6 @@
 #include <mitsuba/mitsuba.h>
 #if defined(__OSX__)
 #include <OpenGL/glew.h>
-#include <Carbon/Carbon.h>
 #else
 #include <GL/glew.h>
 #endif
@@ -29,6 +28,7 @@
 #include <mitsuba/hw/glprogram.h>
 #include <mitsuba/hw/glsync.h>
 #include <mitsuba/hw/font.h>
+#include <boost/algorithm/string.hpp>
 
 static mitsuba::PrimitiveThreadLocal<GLEWContextStruct> glewContext;
 
@@ -37,6 +37,45 @@ GLEWContextStruct *glewGetContext() {
 }
 
 MTS_NAMESPACE_BEGIN
+
+/* Helper functions */
+namespace {
+	FINLINE void loadMatrix(const Matrix4x4 &mat) {
+		GLfloat temp[16];
+		int pos = 0;
+
+		for (int j=0; j<4; j++)
+			for (int i=0; i<4; i++)
+				temp[pos++] = (GLfloat) mat(i, j);
+
+		glLoadMatrixf(temp);
+	}
+
+	FINLINE Matrix4x4 fetchMatrix(GLenum which) {
+		GLfloat temp[16];
+		Matrix4x4 mat;
+		int pos = 0;
+
+		glGetFloatv(which, temp);
+
+		for (int j=0; j<4; j++)
+			for (int i=0; i<4; i++)
+				mat(i, j) = (Float) temp[pos++];
+
+		return mat;
+	}
+
+	FINLINE void multMatrix(const Matrix4x4 &mat) {
+		GLfloat temp[16];
+		int pos = 0;
+
+		for (int j=0; j<4; j++)
+			for (int i=0; i<4; i++)
+				temp[pos++] = (GLfloat) mat(i, j);
+
+		glMultMatrixf(temp);
+	}
+}
 
 GLRenderer::GLRenderer(Session *session)
  : Renderer(session) { }
@@ -83,20 +122,7 @@ void GLRenderer::init(Device *device, Renderer *other) {
 		Log(m_warnLogLevel, "Capabilities: Floating point textures are NOT supported!");
 	}
 
-	bool leopardWorkaround = false;
-#if defined(__OSX__)
-	/* Floating point color render buffers sort-of work for
-	   Leopard/8600M or 9600M, but the extension is not reported */
-	SInt32 MacVersion;
-	if (Gestalt(gestaltSystemVersion, &MacVersion) == noErr) {
-		if (MacVersion >= 0x1050 && MacVersion < 0x1060) {
-			Log(EInfo, "Enabling Leopard floating point color buffer workaround");
-			leopardWorkaround = true;
-		}
-	}
-#endif
-
-	if (glewIsSupported("GL_ARB_color_buffer_float") || leopardWorkaround) {
+	if (glewIsSupported("GL_ARB_color_buffer_float")) {
 		m_capabilities->setSupported(
 			RendererCapabilities::EFloatingPointBuffer, true);
 		Log(m_logLevel, "Capabilities: Floating point color buffers are supported.");
@@ -119,7 +145,8 @@ void GLRenderer::init(Device *device, Renderer *other) {
 			RendererCapabilities::EMultisampleRenderToTexture, true);
 		Log(m_logLevel, "Capabilities: Multisample framebuffer objects are supported.");
 	} else {
-		Log(m_warnLogLevel, "Capabilities: Multisample framebuffer objects are NOT supported!");
+		Log((m_warnLogLevel == EWarn) ? EInfo : m_warnLogLevel,
+			"Capabilities: Multisample framebuffer objects are NOT supported!");
 	}
 
 	if (glewIsSupported("GL_ARB_vertex_buffer_object")) {
@@ -138,7 +165,23 @@ void GLRenderer::init(Device *device, Renderer *other) {
 		Log(m_warnLogLevel, "Capabilities: Geometry shaders are NOT supported!");
 	}
 
-	if (glewIsSupported("GL_ARB_sync")) {
+	if (glewIsSupported("GL_ARB_shader_texture_lod") || glewIsSupported("GL_EXT_gpu_shader4")) {
+		m_capabilities->setSupported(
+			RendererCapabilities::ECustomTextureFiltering, true);
+		Log(m_logLevel, "Capabilities: Custom texture filtering is supported.");
+	} else {
+		Log(m_warnLogLevel, "Capabilities: Custom texture filtering is NOT supported.");
+	}
+
+	bool radeonOnOSX = false;
+
+#if defined(__OSX__)
+	/* Synchronization objects cause problem with ATI cards on OSX -- ignore
+	   them even if the driver claims to support it */
+	radeonOnOSX = boost::to_lower_copy(m_driverRenderer).find("radeon") != std::string::npos;
+#endif
+
+	if (glewIsSupported("GL_ARB_sync") && !radeonOnOSX) {
 		m_capabilities->setSupported(
 			RendererCapabilities::ESyncObjects, true);
 		Log(m_logLevel, "Capabilities: Synchronization objects are supported.");
@@ -151,7 +194,8 @@ void GLRenderer::init(Device *device, Renderer *other) {
 			RendererCapabilities::EBindless, true);
 		Log(m_logLevel, "Capabilities: Bindless rendering is supported.");
 	} else {
-		Log(m_warnLogLevel, "Capabilities: Bindless rendering is NOT supported!");
+		Log((m_warnLogLevel == EWarn) ? EInfo : m_warnLogLevel, 
+			"Capabilities: Bindless rendering is NOT supported!");
 	}
 
 	/* Hinting */
@@ -163,7 +207,7 @@ void GLRenderer::init(Device *device, Renderer *other) {
 
 	/* Disable color value clamping */
 	if (m_capabilities->isSupported(
-			RendererCapabilities::EFloatingPointBuffer) && !leopardWorkaround) {
+			RendererCapabilities::EFloatingPointBuffer)) {
 		glClampColorARB(GL_CLAMP_VERTEX_COLOR_ARB, GL_FALSE);
 		glClampColorARB(GL_CLAMP_READ_COLOR_ARB, GL_FALSE);
 		glClampColorARB(GL_CLAMP_FRAGMENT_COLOR_ARB, GL_FALSE);
@@ -182,6 +226,7 @@ void GLRenderer::init(Device *device, Renderer *other) {
 	m_colorsEnabled = false;
 	m_stride = -1;
 	m_queuedTriangles = 0;
+	m_transmitOnlyPositions = false;
 
 	checkError();
 }
@@ -195,7 +240,10 @@ GPUTexture *GLRenderer::createGPUTexture(const std::string &name,
 	return new GLTexture(name, bitmap);
 }
 
-GPUGeometry *GLRenderer::createGPUGeometry(const TriMesh *mesh) {
+GPUGeometry *GLRenderer::createGPUGeometry(const Shape *shape) {
+	ref<TriMesh> mesh = const_cast<Shape *>(shape)->createTriMesh();
+	if (!mesh)
+		return NULL;
 	return new GLGeometry(mesh);
 }
 
@@ -234,193 +282,18 @@ void GLRenderer::beginDrawingMeshes(bool transmitOnlyPositions) {
 	}
 }
 
-void GLRenderer::drawTriMesh(const TriMesh *mesh) {
-	std::map<const TriMesh *, GPUGeometry *>::iterator it = m_geometry.find(mesh);
+void GLRenderer::drawMesh(const TriMesh *mesh) {
+	std::map<const Shape *, GPUGeometry *>::iterator it = m_geometry.find(mesh);
 	if (it != m_geometry.end()) {
-		/* Draw using vertex buffer objects (bindless if supported) */
-		GLGeometry *geometry = static_cast<GLGeometry *>((*it).second);
-		if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
-			glBufferAddressRangeNV(GL_VERTEX_ARRAY_ADDRESS_NV, 0, 
-				geometry->m_vertexAddr, geometry->m_vertexSize);
-			int stride = geometry->m_stride;
-			if (stride != m_stride) {
-				glVertexFormatNV(3, GL_FLOAT, stride);
-				glNormalFormatNV(GL_FLOAT, stride);
-				glClientActiveTexture(GL_TEXTURE0);
-				glTexCoordFormatNV(2, GL_FLOAT, stride);
-				glClientActiveTexture(GL_TEXTURE1);
-				glTexCoordFormatNV(3, GL_FLOAT, stride);
-				glColorFormatNV(3, GL_FLOAT, stride);
-				m_stride = stride;
-			}
-
-			if (!m_transmitOnlyPositions) {
-				int pos = 3 * sizeof(GLfloat);
-				
-				if (mesh->hasVertexNormals()) {
-					if (!m_normalsEnabled) {
-						glEnableClientState(GL_NORMAL_ARRAY);
-						m_normalsEnabled = true;
-					}
-					glBufferAddressRangeNV(GL_NORMAL_ARRAY_ADDRESS_NV, 0, 
-						geometry->m_vertexAddr + pos, 
-						geometry->m_vertexSize - pos);
-
-					pos += 3 * sizeof(GLfloat);
-				} else if (!m_normalsEnabled) {
-					glDisableClientState(GL_NORMAL_ARRAY);
-					m_normalsEnabled = false;
-				}
-
-				if (mesh->hasVertexTexcoords()) {
-					glClientActiveTexture(GL_TEXTURE0);
-					if (!m_texcoordsEnabled) {
-						glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-						m_texcoordsEnabled = true;
-					}
-					glBufferAddressRangeNV(GL_TEXTURE_COORD_ARRAY_ADDRESS_NV, 0,
-						geometry->m_vertexAddr + pos,
-						geometry->m_vertexSize - pos);
-
-					pos += 2 * sizeof(GLfloat);
-				} else if (m_texcoordsEnabled) {
-					glClientActiveTexture(GL_TEXTURE0);
-					glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-					m_texcoordsEnabled = false;
-				}
-
-				/* Pass 'dpdu' as second set of texture coordinates */
-				if (mesh->hasVertexTangents()) {
-					glClientActiveTexture(GL_TEXTURE1);
-					if (!m_tangentsEnabled) {
-						glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-						m_tangentsEnabled = true;
-					}
-
-					glBufferAddressRangeNV(GL_TEXTURE_COORD_ARRAY_ADDRESS_NV, 1,
-						geometry->m_vertexAddr + pos,
-						geometry->m_vertexSize - pos);
-					pos += 3 * sizeof(GLfloat);
-				} else if (m_tangentsEnabled) {
-					glClientActiveTexture(GL_TEXTURE1);
-					glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-					m_tangentsEnabled = false;
-				}
-
-				if (mesh->hasVertexColors()) {
-					if (!m_colorsEnabled) {
-						glEnableClientState(GL_COLOR_ARRAY);
-						m_colorsEnabled = true;
-					}
-
-					glBufferAddressRangeNV(GL_COLOR_ARRAY_ADDRESS_NV, 0, 
-						geometry->m_vertexAddr + pos,
-						geometry->m_vertexSize - pos);
-				} else if (m_colorsEnabled) {
-					glDisableClientState(GL_COLOR_ARRAY);
-					m_colorsEnabled = false;
-				}
-			}
-			glBufferAddressRangeNV(GL_ELEMENT_ARRAY_ADDRESS_NV, 0, 
-				geometry->m_indexAddr, geometry->m_indexSize);
-		} else {
-			glBindBuffer(GL_ARRAY_BUFFER, geometry->m_vertexID);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry->m_indexID);
-			int stride = geometry->m_stride;
-
-			/* Set up the vertex/normal arrays */
-			glVertexPointer(3, GL_FLOAT, stride, (GLfloat *) 0);
-
-			if (!m_transmitOnlyPositions) {
-				int pos = 3;
-				if (mesh->hasVertexNormals()) {
-					if (!m_normalsEnabled) {
-						glEnableClientState(GL_NORMAL_ARRAY);
-						m_normalsEnabled = true;
-					}
-					glNormalPointer(GL_FLOAT, stride, (GLfloat *) 0 + pos);
-					pos += 3;
-				} else if (m_normalsEnabled) {
-					glDisableClientState(GL_NORMAL_ARRAY);
-					m_normalsEnabled = false;
-				}
-
-				if (mesh->hasVertexTexcoords()) {
-					glClientActiveTexture(GL_TEXTURE0);
-					if (!m_texcoordsEnabled) {
-						glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-						m_texcoordsEnabled = true;
-					}
-					glTexCoordPointer(2, GL_FLOAT, stride, (GLfloat *) 0 + pos);
-					pos += 2;
-				} else if (m_texcoordsEnabled) {
-					glClientActiveTexture(GL_TEXTURE0);
-					glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-					m_texcoordsEnabled = false;
-				}
-
-				/* Pass 'dpdu' as second set of texture coordinates */
-				if (mesh->hasVertexTangents()) {
-					glClientActiveTexture(GL_TEXTURE1);
-					if (!m_tangentsEnabled) {
-						glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-						m_tangentsEnabled = true;
-					}
-					glTexCoordPointer(3, GL_FLOAT, stride, (GLfloat *) 0 + pos);
-					pos += 3;
-				} else if (m_tangentsEnabled) {
-					glClientActiveTexture(GL_TEXTURE1);
-					glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-					m_tangentsEnabled = false;
-				}
-
-				if (mesh->hasVertexColors()) {
-					if (!m_colorsEnabled) {
-						glEnableClientState(GL_COLOR_ARRAY);
-						m_colorsEnabled = true;
-					}
-					glColorPointer(3, GL_FLOAT, stride, (GLfloat *) 0 + pos);
-				} else if (m_colorsEnabled) {
-					glDisableClientState(GL_COLOR_ARRAY);
-					m_colorsEnabled = false;
-				}
-			}
-		}
-
-		size_t size = mesh->getTriangleCount();
-		if (EXPECT_TAKEN(m_queuedTriangles + size < MTS_GL_MAX_QUEUED_TRIS)) {
-			/* Draw all triangles */
-			glDrawElements(GL_TRIANGLES, (GLsizei) (size * 3), 
-				GL_UNSIGNED_INT, (GLvoid *) 0);
-			m_queuedTriangles += size;
-		} else {
-			/* Spoon-feed them (keeps the OS responsive) */
-			size_t size = mesh->getTriangleCount(), cur = 0;
-			while (cur < size) {
-				size_t drawAmt = std::min(size - cur,
-						MTS_GL_MAX_QUEUED_TRIS - m_queuedTriangles);
-				if (drawAmt > 0)
-					glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3), 
-						GL_UNSIGNED_INT, (GLuint *) 0 + cur * 3);
-				m_queuedTriangles += drawAmt; cur += drawAmt;
-				if (cur < size) {
-					finish();
-				}
-			}
-		}
-
-		if (!m_capabilities->isSupported(RendererCapabilities::EBindless)) {
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		}
+		GLRenderer::drawMesh((*it).second);
 	} else {
-		/* Draw the old-fashioned way without VBOs */
+		/* This shape is not resident in GPU memory. Draw the slow way.. */
 		const GLchar *positions = (const GLchar *) mesh->getVertexPositions();
 		const GLchar *normals = (const GLchar *) mesh->getVertexNormals();
 		const GLchar *texcoords = (const GLchar *) mesh->getVertexTexcoords();
-		const GLchar *tangents = (const GLchar *) mesh->getVertexTangents();
+		const GLchar *tangents = (const GLchar *) mesh->getUVTangents();
 		const GLchar *colors = (const GLchar *) mesh->getVertexColors();
-		const GLchar *indices  = (const GLchar *) mesh->getTriangles();
+		const GLint *indices  = (const GLint *) mesh->getTriangles();
 		GLenum dataType = sizeof(Float) == 4 ? GL_FLOAT : GL_DOUBLE;
 
 		glVertexPointer(3, dataType, 0, positions);
@@ -451,7 +324,7 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 
 			/* Pass 'dpdu' as second set of texture coordinates */
 			glClientActiveTexture(GL_TEXTURE1);
-			if (mesh->hasVertexTangents()) {
+			if (mesh->hasUVTangents()) {
 				if (!m_tangentsEnabled) {
 					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 					m_tangentsEnabled = true;
@@ -467,7 +340,6 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 					glEnableClientState(GL_COLOR_ARRAY);
 					m_colorsEnabled = true;
 				}
-				// This won't work for spectral rendering
 				glColorPointer(3, dataType, 0, colors);
 			} else if (m_colorsEnabled) {
 				glDisableClientState(GL_COLOR_ARRAY);
@@ -491,10 +363,187 @@ void GLRenderer::drawTriMesh(const TriMesh *mesh) {
 					glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3), 
 						GL_UNSIGNED_INT, indices + cur * 3);
 				m_queuedTriangles += drawAmt; cur += drawAmt;
-				if (cur < size) {
+				if (cur < size)
 					finish();
-				}
 			}
+		}
+	}
+}
+
+void GLRenderer::drawMesh(const GPUGeometry *_geo) {
+	const GLGeometry *geo = static_cast<const GLGeometry *>(_geo);
+	const TriMesh *mesh   = geo->getTriMesh();
+
+	GLuint indexSize    = geo->m_size[GLGeometry::EIndexID];
+	GLuint vertexSize   = geo->m_size[GLGeometry::EVertexID];
+
+	/* Draw using vertex buffer objects (bindless if supported) */
+	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
+		GLuint64 indexAddr  = geo->m_addr[GLGeometry::EIndexID];
+		GLuint64 vertexAddr = geo->m_addr[GLGeometry::EVertexID];
+
+		int stride = geo->m_stride;
+		if (stride != m_stride) {
+			glVertexFormatNV(3, GL_FLOAT, stride);
+			glNormalFormatNV(GL_FLOAT, stride);
+			glClientActiveTexture(GL_TEXTURE0);
+			glTexCoordFormatNV(2, GL_FLOAT, stride);
+			glClientActiveTexture(GL_TEXTURE1);
+			glTexCoordFormatNV(3, GL_FLOAT, stride);
+			glColorFormatNV(3, GL_FLOAT, stride);
+			m_stride = stride;
+		}
+		
+		glBufferAddressRangeNV(GL_VERTEX_ARRAY_ADDRESS_NV, 
+				0, vertexAddr, vertexSize);
+
+		if (!m_transmitOnlyPositions) {
+			int pos = 3 * sizeof(GLfloat);
+			
+			if (mesh->hasVertexNormals()) {
+				if (!m_normalsEnabled) {
+					glEnableClientState(GL_NORMAL_ARRAY);
+					m_normalsEnabled = true;
+				}
+				glBufferAddressRangeNV(GL_NORMAL_ARRAY_ADDRESS_NV, 0, 
+					vertexAddr + pos, vertexSize - pos);
+
+				pos += 3 * sizeof(GLfloat);
+			} else if (m_normalsEnabled) {
+				glDisableClientState(GL_NORMAL_ARRAY);
+				m_normalsEnabled = false;
+			}
+
+			if (mesh->hasVertexTexcoords()) {
+				glClientActiveTexture(GL_TEXTURE0);
+				if (!m_texcoordsEnabled) {
+					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+					m_texcoordsEnabled = true;
+				}
+				glBufferAddressRangeNV(GL_TEXTURE_COORD_ARRAY_ADDRESS_NV, 0,
+					vertexAddr + pos, vertexSize - pos);
+
+				pos += 2 * sizeof(GLfloat);
+			} else if (m_texcoordsEnabled) {
+				glClientActiveTexture(GL_TEXTURE0);
+				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				m_texcoordsEnabled = false;
+			}
+
+			/* Pass 'dpdu' as second set of texture coordinates */
+			if (mesh->hasUVTangents()) {
+				glClientActiveTexture(GL_TEXTURE1);
+				if (!m_tangentsEnabled) {
+					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+					m_tangentsEnabled = true;
+				}
+
+				glBufferAddressRangeNV(GL_TEXTURE_COORD_ARRAY_ADDRESS_NV, 1,
+					vertexAddr + pos, vertexSize - pos);
+				pos += 3 * sizeof(GLfloat);
+			} else if (m_tangentsEnabled) {
+				glClientActiveTexture(GL_TEXTURE1);
+				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				m_tangentsEnabled = false;
+			}
+
+			if (mesh->hasVertexColors()) {
+				if (!m_colorsEnabled) {
+					glEnableClientState(GL_COLOR_ARRAY);
+					m_colorsEnabled = true;
+				}
+
+				glBufferAddressRangeNV(GL_COLOR_ARRAY_ADDRESS_NV, 0, 
+					vertexAddr + pos, vertexSize - pos);
+			} else if (m_colorsEnabled) {
+				glDisableClientState(GL_COLOR_ARRAY);
+				m_colorsEnabled = false;
+			}
+		}
+		glBufferAddressRangeNV(GL_ELEMENT_ARRAY_ADDRESS_NV, 0,
+			indexAddr, indexSize);
+	} else {
+		glBindBuffer(GL_ARRAY_BUFFER, geo->m_id[GLGeometry::EVertexID]);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geo->m_id[GLGeometry::EIndexID]);
+		int stride = geo->m_stride;
+
+		/* Set up the vertex/normal arrays */
+		glVertexPointer(3, GL_FLOAT, stride, (GLfloat *) 0);
+
+		if (!m_transmitOnlyPositions) {
+			int pos = 3;
+			if (mesh->hasVertexNormals()) {
+				if (!m_normalsEnabled) {
+					glEnableClientState(GL_NORMAL_ARRAY);
+					m_normalsEnabled = true;
+				}
+				glNormalPointer(GL_FLOAT, stride, (GLfloat *) 0 + pos);
+				pos += 3;
+			} else if (m_normalsEnabled) {
+				glDisableClientState(GL_NORMAL_ARRAY);
+				m_normalsEnabled = false;
+			}
+
+			if (mesh->hasVertexTexcoords()) {
+				glClientActiveTexture(GL_TEXTURE0);
+				if (!m_texcoordsEnabled) {
+					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+					m_texcoordsEnabled = true;
+				}
+				glTexCoordPointer(2, GL_FLOAT, stride, (GLfloat *) 0 + pos);
+				pos += 2;
+			} else if (m_texcoordsEnabled) {
+				glClientActiveTexture(GL_TEXTURE0);
+				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				m_texcoordsEnabled = false;
+			}
+
+			/* Pass 'dpdu' as second set of texture coordinates */
+			if (mesh->hasUVTangents()) {
+				glClientActiveTexture(GL_TEXTURE1);
+				if (!m_tangentsEnabled) {
+					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+					m_tangentsEnabled = true;
+				}
+				glTexCoordPointer(3, GL_FLOAT, stride, (GLfloat *) 0 + pos);
+				pos += 3;
+			} else if (m_tangentsEnabled) {
+				glClientActiveTexture(GL_TEXTURE1);
+				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				m_tangentsEnabled = false;
+			}
+
+			if (mesh->hasVertexColors()) {
+				if (!m_colorsEnabled) {
+					glEnableClientState(GL_COLOR_ARRAY);
+					m_colorsEnabled = true;
+				}
+				glColorPointer(3, GL_FLOAT, stride, (GLfloat *) 0 + pos);
+			} else if (m_colorsEnabled) {
+				glDisableClientState(GL_COLOR_ARRAY);
+				m_colorsEnabled = false;
+			}
+		}
+	}
+
+	size_t size = mesh->getTriangleCount();
+	if (EXPECT_TAKEN(m_queuedTriangles + size < MTS_GL_MAX_QUEUED_TRIS)) {
+		/* Draw all triangles */
+		glDrawElements(GL_TRIANGLES, (GLsizei) (size * 3), 
+			GL_UNSIGNED_INT, (GLvoid *) 0);
+		m_queuedTriangles += size;
+	} else {
+		/* Spoon-feed them (keeps the OS responsive) */
+		size_t size = mesh->getTriangleCount(), cur = 0;
+		while (cur < size) {
+			size_t drawAmt = std::min(size - cur,
+					MTS_GL_MAX_QUEUED_TRIS - m_queuedTriangles);
+			if (drawAmt > 0)
+				glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3), 
+					GL_UNSIGNED_INT, (GLuint *) 0 + cur * 3);
+			m_queuedTriangles += drawAmt; cur += drawAmt;
+			if (cur < size) 
+				finish();
 		}
 	}
 }
@@ -505,16 +554,19 @@ void GLRenderer::endDrawingMeshes() {
 		glDisableClientState(GL_NORMAL_ARRAY);
 		m_normalsEnabled = false;
 	}
+
 	if (m_texcoordsEnabled) {
 		glClientActiveTexture(GL_TEXTURE0);
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 		m_texcoordsEnabled = false;
 	}
+
 	if (m_tangentsEnabled) {
 		glClientActiveTexture(GL_TEXTURE1);
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 		m_tangentsEnabled = false;
 	}
+
 	if (m_colorsEnabled) {
 		glDisableClientState(GL_COLOR_ARRAY);
 		m_colorsEnabled = false;
@@ -528,34 +580,42 @@ void GLRenderer::endDrawingMeshes() {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	}
 }
-	
-void GLRenderer::drawAll(const std::vector<std::pair<const GPUGeometry *, Transform> > &geo) {
-	GLfloat temp[16];
-	GLRenderer::beginDrawingMeshes(true);
+
+void GLRenderer::drawAll(const std::vector<TransformedGPUGeometry> &allGeometry) {
+	Matrix4x4 curObjTrafo;
+	curObjTrafo.setIdentity();
+
 	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
+	Matrix4x4 backup = fetchMatrix(GL_MODELVIEW_MATRIX);
 
-	std::vector<std::pair<const GPUGeometry *, Transform> >::const_iterator it;
+	GLRenderer::beginDrawingMeshes(true);
+
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
-		for (it = geo.begin(); it != geo.end(); ++it) {
-			const GLGeometry *geometry = static_cast<const GLGeometry *>(it->first);
-			const TriMesh *mesh = geometry->getTriMesh();
-			int pos=0;
-			for (int j=0; j<4; j++)
-				for (int i=0; i<4; i++)
-					temp[pos++] = (GLfloat) it->second.getMatrix().m[i][j];
-			glLoadMatrixf(temp);
+		for (std::vector<TransformedGPUGeometry>::const_iterator it = allGeometry.begin(); 
+				it != allGeometry.end(); ++it) {
+			const GLGeometry *geo  = static_cast<const GLGeometry *>((*it).first);
+			const Matrix4x4 &trafo = (*it).second;
+			const TriMesh *mesh    = geo->getTriMesh();
+			GLuint indexSize       = geo->m_size[GLGeometry::EIndexID];
+			GLuint vertexSize      = geo->m_size[GLGeometry::EVertexID];
+			GLuint64 indexAddr     = geo->m_addr[GLGeometry::EIndexID];
+			GLuint64 vertexAddr    = geo->m_addr[GLGeometry::EVertexID];
 
-			int stride = geometry->m_stride;
+			if (trafo != curObjTrafo) {
+				loadMatrix(backup * trafo);
+				curObjTrafo = trafo;
+			}
+
+			int stride = geo->m_stride;
 			if (stride != m_stride) {
 				glVertexFormatNV(3, GL_FLOAT, stride);
 				m_stride = stride;
 			}
 
-			glBufferAddressRangeNV(GL_VERTEX_ARRAY_ADDRESS_NV, 0, 
-				geometry->m_vertexAddr, geometry->m_vertexSize);
+			glBufferAddressRangeNV(GL_VERTEX_ARRAY_ADDRESS_NV, 0,
+				vertexAddr, vertexSize);
 			glBufferAddressRangeNV(GL_ELEMENT_ARRAY_ADDRESS_NV, 0, 
-				geometry->m_indexAddr, geometry->m_indexSize);
+				indexAddr, indexSize);
 
 			size_t size = mesh->getTriangleCount();
 
@@ -580,20 +640,22 @@ void GLRenderer::drawAll(const std::vector<std::pair<const GPUGeometry *, Transf
 			}
 		}
 	} else {
-		for (it = geo.begin(); it != geo.end(); ++it) {
-			const GLGeometry *geometry = static_cast<const GLGeometry *>(it->first);
-			const TriMesh *mesh = geometry->getTriMesh();
-			int pos=0;
-			for (int j=0; j<4; j++)
-				for (int i=0; i<4; i++)
-					temp[pos++] = (GLfloat) it->second.getMatrix().m[i][j];
-			glLoadMatrixf(temp);
+		for (std::vector<TransformedGPUGeometry>::const_iterator it = allGeometry.begin(); 
+				it != allGeometry.end(); ++it) {
+			const GLGeometry *geo  = static_cast<const GLGeometry *>((*it).first);
+			const Matrix4x4 &trafo = (*it).second;
+			const TriMesh *mesh    = geo->getTriMesh();
 
-			glBindBuffer(GL_ARRAY_BUFFER, geometry->m_vertexID);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry->m_indexID);
+			if (trafo != curObjTrafo) {
+				loadMatrix(backup * trafo);
+				curObjTrafo = trafo;
+			}
+
+			glBindBuffer(GL_ARRAY_BUFFER, geo->m_id[GLGeometry::EVertexID]);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geo->m_id[GLGeometry::EIndexID]);
 
 			/* Set up the vertex/normal arrays */
-			glVertexPointer(3, GL_FLOAT, geometry->m_stride, (GLfloat *) 0);
+			glVertexPointer(3, GL_FLOAT, geo->m_stride, (GLfloat *) 0);
 
 			size_t size = mesh->getTriangleCount();
 
@@ -619,7 +681,8 @@ void GLRenderer::drawAll(const std::vector<std::pair<const GPUGeometry *, Transf
 		}
 	}
 	GLRenderer::endDrawingMeshes();
-	glPopMatrix();
+	if (!curObjTrafo.isIdentity())
+		loadMatrix(backup);
 }
 
 void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
@@ -627,113 +690,45 @@ void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
 	tex->bind();
 	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-	if (tex->getType() == GPUTexture::ETexture2D) {
-		GLint viewport[4];	
-		glGetIntegerv(GL_VIEWPORT, viewport);
-		Vector2i scrSize = Vector2i(viewport[2], viewport[3]);
-		Vector2i texSize = Vector2i(tex->getSize().x, tex->getSize().y);
-		if (scrSize.x == 0 || scrSize.y == 0) {
-			tex->unbind();
-			return;
-		}
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0, scrSize.x, scrSize.y, 0, -1, 1);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		glBegin(GL_QUADS);
-
-		Vector2i upperLeft(0), lowerRight(0);
-		if (centerHoriz)
-			upperLeft.x = (scrSize.x - texSize.x)/2;
-		if (centerVert)
-			upperLeft.y = (scrSize.y - texSize.y)/2;
-		upperLeft += offset;
-		lowerRight = upperLeft + texSize;
-
-		if (flipVertically)
-			std::swap(upperLeft.y, lowerRight.y);
-
-		const float zDepth = -1.0f; // just before the far plane
-		glTexCoord2f(0.0f, 0.0f);
-		glVertex3f((float) upperLeft.x, (float) upperLeft.y, zDepth);
-		glTexCoord2f(1.0f, 0.0f);
-		glVertex3f((float) lowerRight.x, (float) upperLeft.y, zDepth);
-		glTexCoord2f(1.0f, 1.0f);
-		glVertex3f((float) lowerRight.x, (float) lowerRight.y, zDepth);
-		glTexCoord2f(0.0f, 1.0f);
-		glVertex3f((float) upperLeft.x, (float) lowerRight.y, zDepth);
-		glEnd();
-	} else if (tex->getType() == GPUTexture::ETextureCubeMap) {
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-
-		/* From OpenTK */
-		glBegin(GL_QUADS);
-		// 0 -x
-		glTexCoord3f(-1.0f, +1.0f, -1.0f);
-		glVertex2f(-1.0f, +0.333f);
-		glTexCoord3f(-1.0f, +1.0f, +1.0f);
-		glVertex2f(-0.5f, +0.333f);
-		glTexCoord3f(-1.0f, -1.0f, +1.0f);
-		glVertex2f(-0.5f, -0.333f);
-		glTexCoord3f(-1.0f, -1.0f, -1.0f);
-		glVertex2f(-1.0f, -0.333f);
-
-		// 1 +z
-		glTexCoord3f(-1.0f, +1.0f, +1.0f);
-		glVertex2f(-0.5f, +0.333f);
-		glTexCoord3f(+1.0f, +1.0f, +1.0f);
-		glVertex2f(+0.0f, +0.333f);
-		glTexCoord3f(+1.0f, -1.0f, +1.0f);
-		glVertex2f(+0.0f, -0.333f);
-		glTexCoord3f(-1.0f, -1.0f, +1.0f);
-		glVertex2f(-0.5f, -0.333f);
-
-		// 2 +x
-		glTexCoord3f(+1.0f, +1.0f, +1.0f);
-		glVertex2f(+0.0f, +0.333f);
-		glTexCoord3f(+1.0f, +1.0f, -1.0f);
-		glVertex2f(+0.5f, +0.333f);
-		glTexCoord3f(+1.0f, -1.0f, -1.0f);
-		glVertex2f(+0.5f, -0.333f);
-		glTexCoord3f(+1.0f, -1.0f, +1.0f);
-		glVertex2f(+0.0f, -0.333f);
-
-		// 3 -z
-		glTexCoord3f(+1.0f, +1.0f, -1.0f);
-		glVertex2f(+0.5f, +0.333f);
-		glTexCoord3f(-1.0f, +1.0f, -1.0f);
-		glVertex2f(+1.0f, +0.333f);
-		glTexCoord3f(-1.0f, -1.0f, -1.0f);
-		glVertex2f(+1.0f, -0.333f);
-		glTexCoord3f(+1.0f, -1.0f, -1.0f);
-		glVertex2f(+0.5f, -0.333f);
-
-		// 4 +y
-		glTexCoord3f(-1.0f, +1.0f, -1.0f);
-		glVertex2f(-0.5f, +1.0f);
-		glTexCoord3f(+1.0f, +1.0, -1.0f);
-		glVertex2f(+0.0f, +1.0);
-		glTexCoord3f(+1.0f, +1.0f, +1.0f);
-		glVertex2f(+0.0f, +0.333f);
-		glTexCoord3f(-1.0f, +1.0f, +1.0f);
-		glVertex2f(-0.5f, +0.333f);
-
-		// 5 -y
-		glTexCoord3f(-1.0f, -1.0f, +1.0f);
-		glVertex2f(-0.5f, -0.333f);
-		glTexCoord3f(+1.0f, -1.0, +1.0f);
-		glVertex2f(+0.0f, -0.333f);
-		glTexCoord3f(+1.0f, -1.0f, -1.0f);
-		glVertex2f(+0.0f, -1.0f);
-		glTexCoord3f(-1.0f, -1.0f, -1.0f);
-		glVertex2f(-0.5f, -1.0f);
-		glEnd();
+	GLint viewport[4];	
+	glGetIntegerv(GL_VIEWPORT, viewport);
+	Vector2i scrSize = Vector2i(viewport[2], viewport[3]);
+	Vector2i texSize = Vector2i(tex->getSize().x, tex->getSize().y);
+	if (scrSize.x == 0 || scrSize.y == 0) {
+		tex->unbind();
+		return;
 	}
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, scrSize.x, scrSize.y, 0, -1, 1);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(0.375f, 0.375f, 0.0f);
+	glBegin(GL_QUADS);
+
+	Vector2i upperLeft(0), lowerRight(0);
+	if (centerHoriz)
+		upperLeft.x = (scrSize.x - texSize.x)/2;
+	if (centerVert)
+		upperLeft.y = (scrSize.y - texSize.y)/2;
+	upperLeft += offset;
+	lowerRight = upperLeft + texSize;
+
+	if (flipVertically)
+		std::swap(upperLeft.y, lowerRight.y);
+
+	const float zDepth = -1.0f; // just before the far plane
+	glTexCoord2f(0.0f, 0.0f);
+	glVertex3f((float) upperLeft.x, (float) upperLeft.y, zDepth);
+	glTexCoord2f(1.0f, 0.0f);
+	glVertex3f((float) lowerRight.x, (float) upperLeft.y, zDepth);
+	glTexCoord2f(1.0f, 1.0f);
+	glVertex3f((float) lowerRight.x, (float) lowerRight.y, zDepth);
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex3f((float) upperLeft.x, (float) lowerRight.y, zDepth);
+	glEnd();
+
 	tex->unbind();
 }
 
@@ -748,7 +743,7 @@ void GLRenderer::blitQuad(bool flipVertically) {
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-	const Float zDepth = -1.0f;
+	const float zDepth = -1.0f;
 	glBegin(GL_QUADS);
 	glTexCoord2f(0.0f, flipVertically ? 1.0f : 0.0f);
 	glVertex3f(0.0f, 0.0f, zDepth);
@@ -776,7 +771,7 @@ void GLRenderer::drawText(const Point2i &_pos,
 	glLoadIdentity();
 	font->getTexture()->bind();
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_COLOR);
 	Point2i pos(_pos);
 	int initial = pos.x;
 
@@ -801,14 +796,14 @@ void GLRenderer::drawText(const Point2i &_pos,
 		Point2 txStart = glyph.tx;
 		Point2 txEnd = txStart + glyph.ts;
 
-		glTexCoord2f(txStart.x, txStart.y);
-		glVertex2f(    start.x,   start.y);
-		glTexCoord2f(txEnd.x,   txStart.y);
-		glVertex2f(    end.x,     start.y);
-		glTexCoord2f(txEnd.x,     txEnd.y);
-		glVertex2f(    end.x,       end.y);
-		glTexCoord2f(txStart.x,   txEnd.y);
-		glVertex2f(    start.x,     end.y);
+		glTexCoord2f((float) txStart.x, (float) txStart.y);
+		glVertex2f(  (float) start.x,   (float)   start.y);
+		glTexCoord2f((float) txEnd.x,   (float) txStart.y);
+		glVertex2f(  (float) end.x,     (float)   start.y);
+		glTexCoord2f((float) txEnd.x,   (float)   txEnd.y);
+		glVertex2f(  (float) end.x,     (float)     end.y);
+		glTexCoord2f((float) txStart.x, (float)   txEnd.y);
+		glVertex2f(  (float) start.x,   (float)     end.y);
 
 		pos.x += glyph.horizontalAdvance;
 
@@ -827,14 +822,76 @@ void GLRenderer::setPointSize(Float size) {
 
 void GLRenderer::drawPoint(const Point &p) {
 	glBegin(GL_POINTS);
-	glVertex3f(p.x, p.y, p.z);
+	glVertex3f((float) p.x, (float) p.y, (float) p.z);
 	glEnd();
 }
 
 void GLRenderer::drawLine(const Point &a, const Point &b) {
 	glBegin(GL_LINES);
-	glVertex3f(a.x, a.y, a.z);
-	glVertex3f(b.x, b.y, b.z);
+	glVertex3f((float) a.x, (float) a.y, (float) a.z);
+	glVertex3f((float) b.x, (float) b.y, (float) b.z);
+	glEnd();
+}
+
+void GLRenderer::drawPoint(const Point2 &p) {
+	glBegin(GL_POINTS);
+	glVertex2f((float) p.x, (float) p.y);
+	glEnd();
+}
+
+void GLRenderer::drawLine(const Point2 &a, const Point2 &b) {
+	glBegin(GL_LINES);
+	glVertex2f((float) a.x, (float) a.y);
+	glVertex2f((float) b.x, (float) b.y);
+	glEnd();
+}
+
+void GLRenderer::drawRectangle(const Point2 &a, const Point2 &b) {
+	glBegin(GL_LINE_LOOP);
+	glVertex2f((float) a.x, (float) a.y);
+	glVertex2f((float) b.x, (float) a.y);
+	glVertex2f((float) b.x, (float) b.y);
+	glVertex2f((float) a.x, (float) b.y);
+	glEnd();
+}
+
+void GLRenderer::drawFilledRectangle(const Point2 &a, const Point2 &b) {
+	glBegin(GL_QUADS);
+	glVertex2f((float) a.x, (float) a.y);
+	glVertex2f((float) b.x, (float) a.y);
+	glVertex2f((float) b.x, (float) b.y);
+	glVertex2f((float) a.x, (float) b.y);
+	glEnd();
+}
+
+void GLRenderer::drawPoint(const Point2i &p) {
+	glBegin(GL_POINTS);
+	glVertex2i(p.x, p.y);
+	glEnd();
+}
+
+void GLRenderer::drawLine(const Point2i &a, const Point2i &b) {
+	glBegin(GL_LINES);
+	glVertex2i(a.x, a.y);
+	glVertex2i(b.x, b.y);
+	glEnd();
+}
+
+void GLRenderer::drawRectangle(const Point2i &a, const Point2i &b) {
+	glBegin(GL_LINE_LOOP);
+	glVertex2i(a.x, a.y);
+	glVertex2i(b.x, a.y);
+	glVertex2i(b.x, b.y);
+	glVertex2i(a.x, b.y);
+	glEnd();
+}
+
+void GLRenderer::drawFilledRectangle(const Point2i &a, const Point2i &b) {
+	glBegin(GL_QUADS);
+	glVertex2i(a.x, a.y);
+	glVertex2i(b.x, a.y);
+	glVertex2i(b.x, b.y);
+	glVertex2i(a.x, b.y);
 	glEnd();
 }
 
@@ -862,71 +919,39 @@ void GLRenderer::drawAABB(const AABB &aabb) {
 	#undef V
 }
 
-void GLRenderer::setCamera(const ProjectiveCamera *camera) {
-	GLfloat temp1[16], temp2[16];
-	const Matrix4x4 &view = camera->getViewTransform().getMatrix();
-	const Matrix4x4 &proj = camera->getGLProjectionTransform().getMatrix();
-
-	int pos=0;
-	for (int j=0; j<4; j++) {
-		for (int i=0; i<4; i++) {
-			temp1[pos]=(GLfloat) proj.m[i][j];
-			temp2[pos++]=(GLfloat) view.m[i][j];
-		}
-	}
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(temp1);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glScalef(1.0f, 1.0f, -1.0f);
-	glMultMatrixf(temp2);
+void GLRenderer::setMatrix(EMatrixType type, const Matrix4x4 &value) {
+	glMatrixMode(type == EProjection ? GL_PROJECTION : GL_MODELVIEW);
+	loadMatrix(value);
 }
 
-void GLRenderer::setCamera(const ProjectiveCamera *camera, const Point2 &jitter) {
-	GLfloat temp1[16], temp2[16];
-	const Matrix4x4 &view = camera->getViewTransform().getMatrix();
-	const Matrix4x4 &proj = camera->getGLProjectionTransform(jitter).getMatrix();
+Matrix4x4 GLRenderer::getMatrix(EMatrixType type) const {
+	return fetchMatrix(type == EProjection ? GL_PROJECTION_MATRIX : GL_MODELVIEW_MATRIX);
+}
 
-	int pos=0;
-	for (int j=0; j<4; j++) {
-		for (int i=0; i<4; i++) {
-			temp1[pos]=(GLfloat) proj.m[i][j];
-			temp2[pos++]=(GLfloat) view.m[i][j];
-		}
-	}
+void GLRenderer::setCamera(const ProjectiveCamera *camera, 
+		const Point2 &apertureSample, const Point2 &aaSample, Float timeSample) {
+	Float time = camera->getShutterOpen() + camera->getShutterOpenTime() * timeSample;
 
 	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(temp1);
+	loadMatrix(camera->getProjectionTransform(
+		apertureSample, aaSample).getMatrix());
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	glScalef(1.0f, 1.0f, -1.0f);
-	glMultMatrixf(temp2);
+	/* Apply a rotation to account for the difference in camera 
+	   conventions. In OpenGL, forward is z=-1, in Mitsuba it is z=+1 */
+	glScalef(-1.0f, 1.0f, -1.0f);
+	multMatrix(camera->getViewTransform(time).getMatrix());
 }
 
 void GLRenderer::setCamera(const Matrix4x4 &proj, const Matrix4x4 &view) {
-	GLfloat temp1[16], temp2[16];
-	int pos=0;
-	for (int j=0; j<4; j++) {
-		for (int i=0; i<4; i++) {
-			temp1[pos]=(GLfloat) proj.m[i][j];
-			temp2[pos++]=(GLfloat) view.m[i][j];
-		}
-	}
-
 	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(temp1);
+	loadMatrix(proj);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	glScalef(1.0f, 1.0f, -1.0f);
-	glMultMatrixf(temp2);
-}
-
-void GLRenderer::setDepthOffset(Float value) {
-	if (value == 0)
-		glDisable(GL_POLYGON_OFFSET_FILL);
-    glEnable(GL_POLYGON_OFFSET_FILL);
-	glPolygonOffset(4.0f, (GLfloat) value);
+	/* Apply a rotation to account for the difference in camera 
+	   conventions. In OpenGL, forward is z=-1, in Mitsuba it is z=+1 */
+	glScalef(-1.0f, 1.0f, -1.0f);
+	multMatrix(view);
 }
 
 void GLRenderer::setDepthMask(bool value) {
@@ -940,26 +965,11 @@ void GLRenderer::setDepthTest(bool value) {
 		glDisable(GL_DEPTH_TEST);
 }
 
-void GLRenderer::setColorMask(bool value) {
-	GLboolean flag = value ? GL_TRUE : GL_FALSE;
-	glColorMask(flag, flag, flag, flag);
-}
-
-void GLRenderer::pushTransform(const Transform &trafo) {
-	const Matrix4x4 &matrix = trafo.getMatrix();
-	GLfloat temp[16];
-	int pos=0;
-	for (int j=0; j<4; j++)
-		for (int i=0; i<4; i++)
-			temp[pos++] = (GLfloat) matrix.m[i][j];
+void GLRenderer::clearTransforms() {
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
 	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glMultMatrixf(temp);
-}
-	
-void GLRenderer::popTransform() {
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
+	glLoadIdentity();
 }
 
 void GLRenderer::flush() {
@@ -971,10 +981,26 @@ void GLRenderer::finish() {
 	m_queuedTriangles = 0;
 }
 
+void GLRenderer::setColor(const Color3 &col, Float alpha) {
+	glColor4f((GLfloat) col[0], (GLfloat) col[1], (GLfloat) col[2], alpha);
+}
+	
 void GLRenderer::setColor(const Spectrum &spec, Float alpha) {
 	Float r, g, b;
 	spec.toLinearRGB(r, g, b);
-	glColor4f(r, g, b, alpha);
+	glColor4f((GLfloat) r, (GLfloat) g, (GLfloat) b, alpha);
+}
+
+void GLRenderer::setClearDepth(Float depth) {
+	glClearDepth((GLfloat) depth);
+}
+
+void GLRenderer::setClearColor(const Color3 &color) {
+	glClearColor(
+		(GLfloat) color[0],
+		(GLfloat) color[1],
+		(GLfloat) color[2], 1.0f
+	);
 }
 
 void GLRenderer::setBlendMode(EBlendMode mode) {
@@ -1011,6 +1037,12 @@ void GLRenderer::setCullMode(ECullMode mode) {
 		default:
 			Log(EError, "Invalid culling mode!");
 	}
+}
+
+
+void GLRenderer::debugString(const std::string &text) {
+	if (GLEW_GREMEDY_string_marker)
+		glStringMarkerGREMEDY(0, text.c_str());
 }
 
 MTS_IMPLEMENT_CLASS(GLRenderer, true, Renderer)

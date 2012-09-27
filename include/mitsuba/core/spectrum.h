@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,13 +16,11 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SPECTRUM_H)
-#define __SPECTRUM_H
+#pragma once
+#if !defined(__MITSUBA_CORE_SPECTRUM_H_)
+#define __MITSUBA_CORE_SPECTRUM_H_
 
 #include <mitsuba/mitsuba.h>
-#include <boost/filesystem.hpp>
-
-namespace fs = boost::filesystem;
 
 #if !defined(SPECTRUM_SAMPLES)
 #error The desired number of spectral samples must be \
@@ -284,6 +282,335 @@ protected:
 	std::vector<Float> m_wavelengths, m_values;
 };
 
+/**
+ * \brief Abstract spectral power distribution data type
+ *
+ * This class defines a vector-like data type that can be used for 
+ * computations involving radiance. A concrete instantiation for the
+ * precision and spectral discretization chosen at compile time is
+ * given by the \ref Spectrum data type.
+ *
+ * \ingroup libcore
+ */
+template <typename T, int N> struct TSpectrum {
+public:
+	typedef T          Scalar;
+
+	/// Number of dimensions
+	const static int dim = N;
+
+	/// Create a new spectral power distribution, but don't initialize the contents
+#if !defined(MTS_DEBUG_UNINITIALIZED)
+	inline TSpectrum() { }
+#else
+	inline TSpectrum() {
+		for (int i=0; i<N; i++)
+			s[i] = std::numeric_limits<Scalar>::quiet_NaN();
+	}
+#endif
+
+	/// Create a new spectral power distribution with all samples set to the given value
+	explicit inline TSpectrum(Scalar v) {
+		for (int i=0; i<N; i++)
+			s[i] = v;
+	}
+
+	/// Copy a spectral power distribution
+	explicit inline TSpectrum(Scalar spec[N]) {
+		memcpy(s, spec, sizeof(Scalar)*N);
+	}
+
+	/// Unserialize a spectral power distribution from a binary data stream
+	explicit inline TSpectrum(Stream *stream) {
+		stream->readArray(s, N);
+	}
+
+	/// Initialize with a TSpectrum data type based on a alternate representation
+	template <typename AltScalar> explicit TSpectrum(const TSpectrum<AltScalar, N> &v) {
+		for (int i=0; i<N; ++i)
+			s[i] = (Scalar) v[i];
+	}
+
+	/// Add two spectral power distributions
+	inline TSpectrum operator+(const TSpectrum &spec) const {
+		TSpectrum value = *this;
+		for (int i=0; i<N; i++)
+			value.s[i] += spec.s[i];
+		return value;
+	}
+
+	/// Add a spectral power distribution to this instance
+	inline TSpectrum& operator+=(const TSpectrum &spec) {
+		for (int i=0; i<N; i++)
+			s[i] += spec.s[i];
+		return *this;
+	}
+
+	/// Subtract a spectral power distribution
+	inline TSpectrum operator-(const TSpectrum &spec) const {
+		TSpectrum value = *this;
+		for (int i=0; i<N; i++)
+			value.s[i] -= spec.s[i];
+		return value;
+	}
+
+	/// Subtract a spectral power distribution from this instance
+	inline TSpectrum& operator-=(const TSpectrum &spec) {
+		for (int i=0; i<N; i++)
+			s[i] -= spec.s[i];
+		return *this;
+	}
+
+	/// Multiply by a scalar
+	inline TSpectrum operator*(Scalar f) const {
+		TSpectrum value = *this;
+		for (int i=0; i<N; i++)
+			value.s[i] *= f;
+		return value;
+	}
+
+	/// Multiply by a scalar
+	inline friend TSpectrum operator*(Scalar f, const TSpectrum &spec) {
+		return spec * f;
+	}
+
+	/// Multiply by a scalar
+	inline TSpectrum& operator*=(Scalar f) {
+		for (int i=0; i<N; i++)
+			s[i] *= f;
+		return *this;
+	}
+
+	/// Perform a component-wise multiplication by another spectrum
+	inline TSpectrum operator*(const TSpectrum &spec) const {
+		TSpectrum value = *this;
+		for (int i=0; i<N; i++)
+			value.s[i] *= spec.s[i];
+		return value;
+	}
+
+	/// Perform a component-wise multiplication by another spectrum
+	inline TSpectrum& operator*=(const TSpectrum &spec) {
+		for (int i=0; i<N; i++)
+			s[i] *= spec.s[i];
+		return *this;
+	}
+
+	/// Perform a component-wise division by another spectrum
+	inline TSpectrum& operator/=(const TSpectrum &spec) {
+		for (int i=0; i<N; i++)
+			s[i] /= spec.s[i];
+		return *this;
+	}
+	
+	/// Perform a component-wise division by another spectrum
+	inline TSpectrum operator/(const TSpectrum &spec) const {
+		TSpectrum value = *this;
+		for (int i=0; i<N; i++)
+			value.s[i] /= spec.s[i];
+		return value;
+	}
+
+	/// Divide by a scalar
+	inline TSpectrum operator/(Scalar f) const {
+		TSpectrum value = *this;
+#ifdef MTS_DEBUG
+		if (f == 0)
+			SLog(EWarn, "TSpectrum: Division by zero!");
+#endif
+		Scalar recip = 1.0f / f;
+		for (int i=0; i<N; i++)
+			value.s[i] *= recip;
+		return value;
+	}
+
+	/// Equality test
+	inline bool operator==(const TSpectrum &spec) const {
+		for (int i=0; i<N; i++) {
+			if (s[i] != spec.s[i])
+				return false;
+		}
+		return true;
+	}
+
+	/// Inequality test
+	inline bool operator!=(const TSpectrum &spec) const {
+		return !operator==(spec);
+	}
+
+	/// Divide by a scalar
+	inline friend TSpectrum operator/(Scalar f, TSpectrum &spec) {
+		return spec / f;
+	}
+
+	/// Divide by a scalar
+	inline TSpectrum& operator/=(Scalar f) {
+#ifdef MTS_DEBUG
+		if (f == 0)
+			SLog(EWarn, "TTSpectrum: Division by zero!");
+#endif
+		Scalar recip = 1.0f / f;
+		for (int i=0; i<N; i++)
+			s[i] *= recip;
+		return *this;
+	}
+
+	/// Check for NaNs
+	inline bool isNaN() const {
+		for (int i=0; i<N; i++)
+			if (std::isnan(s[i]))
+				return true;
+		return false;
+	}
+
+	/// Returns whether the spectrum only contains valid (non-NaN, nonnegative) samples
+	inline bool isValid() const {
+		for (int i=0; i<N; i++)
+			if (!std::isfinite(s[i]) || s[i] < 0.0f)
+				return false;
+		return true;
+	}
+
+	/// Multiply-accumulate operation, adds \a weight * \a spec
+	inline void addWeighted(Scalar weight, const TSpectrum &spec) {
+		for (int i=0; i<N; i++)
+			s[i] += weight * spec.s[i];
+	}
+
+	/// Return the average over all wavelengths
+	inline Scalar average() const {
+		Scalar result = 0.0f;
+		for (int i=0; i<N; i++)
+			result += s[i];
+		return result * (1.0f / N);
+	}
+
+	/// Component-wise square root
+	inline TSpectrum sqrt() const {
+		TSpectrum value;
+		for (int i=0; i<N; i++)
+			value.s[i] = std::sqrt(s[i]);
+		return value;
+	}
+
+	/// Component-wise exponentation
+	inline TSpectrum exp() const {
+		TSpectrum value;
+		for (int i=0; i<N; i++)
+			value.s[i] = math::fastexp(s[i]);
+		return value;
+	}
+
+	/// Component-wise power
+	inline TSpectrum pow(Scalar f) const {
+		TSpectrum value;
+		for (int i=0; i<N; i++)
+			value.s[i] = std::pow(s[i], f);
+		return value;
+	}
+
+	/// Clamp negative values
+	inline void clampNegative() {
+		for (int i=0; i<N; i++)
+			s[i] = std::max((Scalar) 0.0f, s[i]);
+	}
+
+	/// Return the highest-valued spectral sample
+	inline Scalar max() const {
+		Scalar result = s[0];
+		for (int i=1; i<N; i++)
+			result = std::max(result, s[i]);
+		return result;
+	}
+
+	/// Return the lowest-valued spectral sample
+	inline Scalar min() const {
+		Scalar result = s[0];
+		for (int i=1; i<N; i++)
+			result = std::min(result, s[i]);
+		return result;
+	}
+
+	/// Negate
+	inline TSpectrum operator-() const {
+		TSpectrum value;
+		for (int i=0; i<N; i++)
+			value.s[i] = -s[i];
+		return value;
+	}
+
+	/// Indexing operator
+	inline Scalar &operator[](int entry) {
+		return s[entry];
+	}
+
+	/// Indexing operator
+	inline Scalar operator[](int entry) const {
+		return s[entry];
+	}
+
+	/// Check if this spectrum is zero at all wavelengths
+	inline bool isZero() const {
+		for (int i=0; i<N; i++) {
+			if (s[i] != 0.0f)
+				return false;
+		}	
+		return true;
+	}
+
+	/// Serialize this spectrum to a stream
+	inline void serialize(Stream *stream) const {
+		stream->writeArray(s, N);
+	}
+
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "[";
+		for (int i=0; i<N; i++) {
+			oss << s[i];
+			if (i < N - 1)
+				oss << ", ";
+		}
+		oss << "]";
+		return oss.str();
+	}
+	
+protected:
+	Scalar s[N];
+};
+
+
+/** \brief RGB color data type
+ *
+ * \ingroup libcore
+ */
+struct MTS_EXPORT_CORE Color3 : public TSpectrum<Float, 3> {
+public:
+	typedef TSpectrum<Float, 3> Parent;
+
+	/// Create a new color value, but don't initialize the contents
+#if !defined(MTS_DEBUG_UNINITIALIZED)
+	inline Color3() { }
+#else
+	inline Color3() {
+		for (int i=0; i<3; i++)
+			s[i] = std::numeric_limits<Scalar>::quiet_NaN();
+	}
+#endif
+
+	/// Copy constructor
+	inline Color3(const Parent &s) : Parent(s) { }
+
+	/// Initialize to a constant value
+	inline Color3(Float value) : Parent(value) { }
+
+	/// Initialize to the given RGB value
+	inline Color3(Float r, Float g, Float b) {
+		s[0] = r; s[1] = g; s[2] = b;
+	}
+};
+
+
 /** \brief Discrete spectral power distribution based on a number 
  * of wavelength bins over the 360-830 nm range. 
  *
@@ -303,8 +630,10 @@ protected:
  * \ingroup libcore
  * \ingroup libpython 
  */
-struct MTS_EXPORT_CORE Spectrum {
+struct MTS_EXPORT_CORE Spectrum : public TSpectrum<Float, SPECTRUM_SAMPLES> {
 public:
+	typedef TSpectrum<Float, SPECTRUM_SAMPLES> Parent;
+
 	/**
 	 * \brief When converting from RGB reflectance values to
 	 * discretized color spectra, the following `intent' flag
@@ -325,9 +654,18 @@ public:
 #else
 	inline Spectrum() {
 		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			s[i] = std::numeric_limits<double>::quiet_NaN();
+			s[i] = std::numeric_limits<Scalar>::quiet_NaN();
 	}
 #endif
+
+	/// Construct from a TSpectrum instance
+	inline Spectrum(const Parent &s) : Parent(s) { }
+
+	/// Initialize with a TSpectrum data type based on a alternate representation
+	template <typename AltScalar> explicit Spectrum(const TSpectrum<AltScalar, SPECTRUM_SAMPLES> &v) {
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+			s[i] = (Scalar) v[i];
+	}
 
 	/// Create a new spectral power distribution with all samples set to the given value
 	explicit inline Spectrum(Float v) {
@@ -336,242 +674,12 @@ public:
 	}
 
 	/// Copy a spectral power distribution
-	explicit inline Spectrum(Float spd[SPECTRUM_SAMPLES]) {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			s[i] = spd[i];
+	explicit inline Spectrum(Float value[SPECTRUM_SAMPLES]) {
+		memcpy(s, value, sizeof(Float)*SPECTRUM_SAMPLES);
 	}
 
 	/// Unserialize a spectral power distribution from a binary data stream
-	explicit inline Spectrum(Stream *stream) {
-		stream->readFloatArray(s, SPECTRUM_SAMPLES);
-	}
-
-	/// Add two spectral power distributions
-	inline Spectrum operator+(const Spectrum &spd) const {
-		Spectrum value = *this;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] += spd.s[i];
-		return value;
-	}
-
-	/// Add a spectral power distribution to this instance
-	inline Spectrum& operator+=(const Spectrum &spd) {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			s[i] += spd.s[i];
-		return *this;
-	}
-
-	/// Subtract a spectral power distribution
-	inline Spectrum operator-(const Spectrum &spd) const {
-		Spectrum value = *this;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] -= spd.s[i];
-		return value;
-	}
-
-	/// Subtract a spectral power distribution from this instance
-	inline Spectrum& operator-=(const Spectrum &spd) {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			s[i] -= spd.s[i];
-		return *this;
-	}
-
-	/// Multiply by a scalar
-	inline Spectrum operator*(Float f) const {
-		Spectrum value = *this;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] *= f;
-		return value;
-	}
-
-	/// Multiply by a scalar
-	inline friend Spectrum operator*(Float f, Spectrum &spd) {
-		return spd * f;
-	}
-
-	/// Multiply by a scalar
-	inline Spectrum& operator*=(Float f) {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			s[i] *= f;
-		return *this;
-	}
-
-	/// Perform a component-wise multiplication by another spectrum
-	inline Spectrum operator*(const Spectrum &spd) const {
-		Spectrum value = *this;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] *= spd.s[i];
-		return value;
-	}
-
-	/// Perform a component-wise multiplication by another spectrum
-	inline Spectrum& operator*=(const Spectrum &spd) {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			s[i] *= spd.s[i];
-		return *this;
-	}
-
-	/// Perform a component-wise division by another spectrum
-	inline Spectrum& operator/=(const Spectrum &spd) {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			s[i] /= spd.s[i];
-		return *this;
-	}
-	
-	/// Perform a component-wise division by another spectrum
-	inline Spectrum operator/(Spectrum spd) const {
-		Spectrum value = *this;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] /= spd.s[i];
-		return value;
-	}
-
-	/// Divide by a scalar
-	inline Spectrum operator/(Float f) const {
-		Spectrum value = *this;
-#ifdef MTS_DEBUG
-		if (f == 0)
-			SLog(EWarn, "Spectrum: Division by zero!");
-#endif
-		Float recip = 1.0f / f;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] *= recip;
-		return value;
-	}
-
-	/// Equality test
-	inline bool operator==(Spectrum spd) const {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++) {
-			if (s[i] != spd.s[i])
-				return false;
-		}
-		return true;
-	}
-
-	/// Inequality test
-	inline bool operator!=(Spectrum spd) const {
-		return !operator==(spd);
-	}
-
-	/// Divide by a scalar
-	inline friend Spectrum operator/(Float f, Spectrum &spd) {
-		return spd / f;
-	}
-
-	/// Divide by a scalar
-	inline Spectrum& operator/=(Float f) {
-#ifdef MTS_DEBUG
-		if (f == 0)
-			SLog(EWarn, "Spectrum: Division by zero!");
-#endif
-		Float recip = 1.0f / f;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			s[i] *= recip;
-		return *this;
-	}
-
-	/// Check for NaNs
-	inline bool isNaN() const {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			if (mts_isnan(s[i]))
-				return true;
-		return false;
-	}
-
-	/// Returns whether the spectrum only contains valid (non-NaN, nonnegative) samples
-	inline bool isValid() const {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			if (mts_isnan(s[i]) || s[i] < 0.0f)
-				return false;
-		return true;
-	}
-
-	/// Multiply-accumulate operation, adds \a weight * \a spd
-	inline void addWeighted(Float weight, const Spectrum &spd) {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			s[i] += weight * spd.s[i];
-	}
-
-	/// Return the average over all wavelengths
-	inline Float average() const {
-		Float result = 0.0f;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			result += s[i];
-		return result * (1.0f / SPECTRUM_SAMPLES);
-	}
-
-	/// Component-wise square root
-	inline Spectrum sqrt() const {
-		Spectrum value;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] = std::sqrt(s[i]);
-		return value;
-	}
-
-	/// Component-wise exponentation
-	inline Spectrum exp() const {
-		Spectrum value;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] = std::fastexp(s[i]);
-		return value;
-	}
-
-	/// Component-wise power
-	inline Spectrum pow(Float f) const {
-		Spectrum value;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] = std::pow(s[i], f);
-		return value;
-	}
-
-	/// Clamp negative values
-	inline void clampNegative() {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			s[i] = std::max((Float) 0.0f, s[i]);
-	}
-
-	/// Return the highest-valued spectral sample
-	inline Float max() const {
-		Float result = s[0];
-		for (int i=1; i<SPECTRUM_SAMPLES; i++)
-			result = std::max(result, s[i]);
-		return result;
-	}
-
-	/// Return the lowest-valued spectral sample
-	inline Float min() const {
-		Float result = s[0];
-		for (int i=1; i<SPECTRUM_SAMPLES; i++)
-			result = std::min(result, s[i]);
-		return result;
-	}
-
-	/// Negate
-	inline Spectrum operator-() const {
-		Spectrum value;
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
-			value.s[i] = -s[i];
-		return value;
-	}
-
-	/// Indexing operator
-	inline Float &operator[](int entry) {
-		return s[entry];
-	}
-
-	/// Indexing operator
-	inline Float operator[](int entry) const {
-		return s[entry];
-	}
-
-	/// Check if this spectrum is zero at all wavelengths
-	inline bool isZero() const {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++) {
-			if (s[i] != 0.0f)
-				return false;
-		}	
-		return true;
-	}
+	explicit inline Spectrum(Stream *stream) : Parent(stream) { }
 
 	/**
 	 * \brief Evaluate the SPD for the given wavelength
@@ -591,7 +699,13 @@ public:
 	Float getLuminance() const;
 #endif
 
-	/// Convert from a spectral power distribution to XYZ tristimulus values
+	/**
+	 * \brief Convert from a spectral power distribution to XYZ 
+	 * tristimulus values
+	 *
+	 * In the Python API, this function returns a 3-tuple
+	 * with the result of the operation.
+	 */
 	void toXYZ(Float &x, Float &y, Float &z) const;
 
 	/**
@@ -606,7 +720,12 @@ public:
 			EConversionIntent intent = EReflectance);
 
 #if SPECTRUM_SAMPLES == 3
-	/// Convert to linear RGB
+	/**
+	 * \brief Convert to linear RGB
+	 *
+	 * In the Python API, this function returns a 3-tuple
+	 * with the result of the operation.
+	 */
 	inline void toLinearRGB(Float &r, Float &g, Float &b) const {
 		/* Nothing to do -- the renderer is in RGB mode */
 		r = s[0]; g = s[1]; b = s[2];
@@ -619,7 +738,12 @@ public:
 		s[0] = r; s[1] = g; s[2] = b;
 	}
 #else
-	/// Convert to linear RGB
+	/**
+	 * \brief Convert to linear RGB
+	 *
+	 * In the Python API, this function returns a 3-tuple
+	 * with the result of the operation.
+	 */
 	void toLinearRGB(Float &r, Float &g, Float &b) const;
 
 	/**
@@ -634,7 +758,12 @@ public:
 			EConversionIntent intent = EReflectance);	
 #endif
 
-	/// Convert to sRGB
+	/**
+	 * \brief Convert to sRGB
+	 *
+	 * In the Python API, this function returns a 3-tuple
+	 * with the result of the operation.
+	 */
 	void toSRGB(Float &r, Float &g, Float &b) const;
 
 	/**
@@ -665,9 +794,18 @@ public:
 	/// Initialize with spectral values from a smooth spectrum representation
 	void fromContinuousSpectrum(const ContinuousSpectrum &smooth);
 
-	/// Serialize this spectrum to a stream
-	inline void serialize(Stream *stream) const {
-		stream->writeFloatArray(s, SPECTRUM_SAMPLES);
+	/// Equality test
+	inline bool operator==(const Spectrum &val) const {
+		for (int i=0; i<SPECTRUM_SAMPLES; i++) {
+			if (s[i] != val.s[i])
+				return false;
+		}
+		return true;
+	}
+
+	/// Inequality test
+	inline bool operator!=(const Spectrum &val) const {
+		return !operator==(val);
 	}
 
 	/// Return a string representation
@@ -687,8 +825,6 @@ public:
 	static void staticInitialization();
 	static void staticShutdown();
 protected:
-	Float s[SPECTRUM_SAMPLES];
-
 	#if SPECTRUM_SAMPLES != 3
 	/// Configured wavelengths bins in nanometers
 	static Float m_wavelengths[SPECTRUM_SAMPLES+1];
@@ -724,4 +860,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __SPECTRUM_H */
+#endif /* __MITSUBA_CORE_SPECTRUM_H_ */

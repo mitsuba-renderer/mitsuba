@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -35,6 +35,9 @@
 #if defined(__OSX__)
 #include <OpenGL/glu.h>
 #else
+#if defined(WIN32)
+# include <windows.h>
+#endif
 #include <GL/glu.h>
 #endif
 
@@ -333,6 +336,13 @@ public:
 
 typedef std::map<SimpleTriangle, bool, triangle_key_order> TriangleMap;
 
+static inline Float fromSRGBComponent(Float value) {
+	if (value <= (Float) 0.04045)
+		return value / (Float) 12.92;
+	return std::pow((value + (Float) 0.055)
+		/ (Float) (1.0 + 0.055), (Float) 2.4);
+}
+
 void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::string id, 
 		int geomIndex, std::string matID, Transform transform, VertexData *vData, 
 		TriangleMap &triMap, bool exportShapeGroup) {
@@ -436,7 +446,7 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 	Point    *target_positions = mesh->getVertexPositions();
 	Normal   *target_normals   = mesh->getVertexNormals();
 	Point2   *target_texcoords = mesh->getVertexTexcoords();
-	Spectrum *target_colors    = mesh->getVertexColors();
+	Color3   *target_colors    = mesh->getVertexColors();
 
 	for (size_t i=0; i<vertexBuffer.size(); ++i) {
 		*target_positions++ = vertexBuffer[i].p;
@@ -448,11 +458,14 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 			Float r = vertexBuffer[i].col.x;
 			Float g = vertexBuffer[i].col.y;
 			Float b = vertexBuffer[i].col.z;
-			if (ctx.cvt->m_srgb)
-				target_colors->fromLinearRGB(r,g,b);
+			if (!ctx.cvt->m_srgb)
+				*target_colors++ = Color3(r, g, b);
 			else
-				target_colors->fromSRGB(r,g,b);
-			target_colors++;
+				*target_colors++ = Color3(
+					fromSRGBComponent(r),
+					fromSRGBComponent(g),
+					fromSRGBComponent(b)
+				);
 		}
 	}
 
@@ -469,11 +482,7 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 	} else {
 		ctx.cvt->m_geometryDict.push_back((uint32_t) ctx.cvt->m_geometryFile->getPos());
 		mesh->serialize(ctx.cvt->m_geometryFile);
-#if BOOST_FILESYSTEM_VERSION == 3
 		filename = ctx.cvt->m_geometryFileName.filename().string();
-#else
-		filename = ctx.cvt->m_geometryFileName.filename();
-#endif
 	}
 
 	std::ostringstream matrix;
@@ -747,7 +756,7 @@ void loadGeometry(ColladaContext &ctx, const std::string &instanceName,
 	}
 }
 
-void loadMaterialParam(ColladaContext &ctx, const fs::path &name, 
+void loadMaterialParam(ColladaContext &ctx, const std::string &name, 
 		domCommon_color_or_texture_type *value, bool handleRefs) {
 	if (!value)
 		return;
@@ -773,7 +782,7 @@ void loadMaterialParam(ColladaContext &ctx, const fs::path &name,
 	}
 }
 
-void loadMaterialParam(ColladaContext &ctx, const fs::path &name, 
+void loadMaterialParam(ColladaContext &ctx, const std::string &name, 
 		domCommon_float_or_param_type *value, bool handleRef) {
 	if (!value)
 		return;
@@ -978,23 +987,23 @@ void loadLight(ColladaContext &ctx, Transform transform, domLight &light) {
 		if (notQuadratic)
 			SLog(EWarn, "Point light \"%s\" is not a quadratic light! Treating it as one -- expect problems.", identifier.c_str());
 		domFloat3 &color = point->getColor()->getValue();
-		ctx.os << "\t<luminaire id=\"" << identifier << "\" type=\"point\">" << endl;
+		ctx.os << "\t<emitter id=\"" << identifier << "\" type=\"point\">" << endl;
 		ctx.os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
 		ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
 		ctx.os << "\t\t\t<translate x=\"" << pos.x << "\" y=\"" << pos.y << "\" z=\"" << pos.z << "\"/>" << endl;
 		ctx.os << "\t\t</transform>" << endl;
-		ctx.os << "\t</luminaire>" << endl << endl;
+		ctx.os << "\t</emitter>" << endl << endl;
 	}
 
 	domLight::domTechnique_common::domDirectional *directional = light.getTechnique_common()->getDirectional().cast();
 	if (directional) {
 		domFloat3 &color = directional->getColor()->getValue();
-		ctx.os << "\t<luminaire id=\"" << identifier << "\" type=\"directional\">" << endl;
-		ctx.os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
+		ctx.os << "\t<emitter id=\"" << identifier << "\" type=\"directional\">" << endl;
+		ctx.os << "\t\t<rgb name=\"irradiance\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl << endl;
 		ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
-		ctx.os << "\t\t\t<lookAt origin=\"" << pos.x << ", " << pos.y << ", " << pos.z << "\" target=\"" << target.x << ", " << target.y << ", " << target.z << "\"/>" << endl;
+		ctx.os << "\t\t\t<lookat origin=\"" << pos.x << ", " << pos.y << ", " << pos.z << "\" target=\"" << target.x << ", " << target.y << ", " << target.z << "\"/>" << endl;
 		ctx.os << "\t\t</transform>" << endl << endl;
-		ctx.os << "\t</luminaire>" << endl << endl;
+		ctx.os << "\t</emitter>" << endl << endl;
 	}
 
 	domLight::domTechnique_common::domSpot *spot = light.getTechnique_common()->getSpot().cast();
@@ -1012,20 +1021,20 @@ void loadLight(ColladaContext &ctx, Transform transform, domLight &light) {
 		Float falloffAngle = 180.0f;
 		if (spot->getFalloff_angle())
 			falloffAngle = (Float) spot->getFalloff_angle()->getValue();
-		ctx.os << "\t<luminaire id=\"" << identifier << "\" type=\"spot\">" << endl;
+		ctx.os << "\t<emitter id=\"" << identifier << "\" type=\"spot\">" << endl;
 		ctx.os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
 		ctx.os << "\t\t<float name=\"cutoffAngle\" value=\"" << falloffAngle/2 << "\"/>" << endl << endl;
 		ctx.os << "\t\t<transform name=\"toWorld\">" << endl;
-		ctx.os << "\t\t\t<lookAt origin=\"" << pos.x << ", " << pos.y << ", " << pos.z << "\" target=\"" << target.x << ", " << target.y << ", " << target.z << "\"/>" << endl;
+		ctx.os << "\t\t\t<lookat origin=\"" << pos.x << ", " << pos.y << ", " << pos.z << "\" target=\"" << target.x << ", " << target.y << ", " << target.z << "\"/>" << endl;
 		ctx.os << "\t\t</transform>" << endl;
-		ctx.os << "\t</luminaire>" << endl << endl;
+		ctx.os << "\t</emitter>" << endl << endl;
 	}
 	domLight::domTechnique_common::domAmbient *ambient = light.getTechnique_common()->getAmbient().cast();
 	if (ambient) {
 		domFloat3 &color = ambient->getColor()->getValue();
-		ctx.os << "\t<luminaire id=\"" << identifier << "\" type=\"constant\">" << endl;
-		ctx.os << "\t\t<rgb name=\"intensity\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
-		ctx.os << "\t</luminaire>" << endl << endl;
+		ctx.os << "\t<emitter id=\"" << identifier << "\" type=\"constant\">" << endl;
+		ctx.os << "\t\t<rgb name=\"radiance\" value=\"" << color[0]*intensity << " " << color[1]*intensity << " " << color[2]*intensity << "\"/>" << endl;
+		ctx.os << "\t</emitter>" << endl << endl;
 	}
 	if (!point && !spot && !ambient && !directional)
 		SLog(EWarn, "Encountered an unknown light type!");
@@ -1056,28 +1065,30 @@ void loadImage(ColladaContext &ctx, domImage &image) {
 	ctx.fileToId[filename] = identifier;
 
 	fs::path path = fs::path(filename);
-	fs::path targetPath = ctx.texturesDirectory / path.leaf();
-	fs::path resolved = filename;
+	fs::path targetPath = ctx.texturesDirectory / path.filename();
 
-	std::string extension = boost::to_lower_copy(fs::extension(path));
+	std::string extension = boost::to_lower_copy(path.extension().string());
 	if (extension == ".rgb") 
 		SLog(EWarn, "Maya RGB images must be converted to PNG, EXR or JPEG! The 'imgcvt' "
-		"utility found in the Maya binary directory can be used to do this.");
+			"utility found in the Maya binary directory can be used to do this.");
 
 	if (!fs::exists(targetPath)) {
-		ref<FileResolver> fRes = Thread::getThread()->getFileResolver();
-		if (!fs::exists(resolved)) {
-			resolved = fRes->resolve(path.leaf());
-			if (!fs::exists(resolved)) {
-				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), resolved.file_string().c_str());
-				resolved = ctx.cvt->locateResource(path.leaf());
-				targetPath = targetPath.parent_path() / resolved.leaf();
-				if (resolved.empty())
+		if (!fs::exists(path)) {
+			ref<FileResolver> fRes = Thread::getThread()->getFileResolver();
+			path = fRes->resolve(path.filename());
+
+			if (!fs::exists(path)) {
+				SLog(EWarn, "Found neither \"%s\" nor \"%s\"!", filename.c_str(), path.string().c_str());
+				path = ctx.cvt->locateResource(path.filename());
+				targetPath = targetPath.parent_path() / path.filename();
+				if (path.empty())
 					SLog(EError, "Unable to locate a resource -- aborting conversion.");
+				else
+					fRes->appendPath(path.parent_path());
 			}
 		}
-		if (fs::complete(resolved) != fs::complete(targetPath)) {
-			ref<FileStream> input = new FileStream(resolved, FileStream::EReadOnly);
+		if (fs::absolute(path) != fs::absolute(targetPath)) {
+			ref<FileStream> input = new FileStream(path, FileStream::EReadOnly);
 			ref<FileStream> output = new FileStream(targetPath, FileStream::ETruncReadWrite);
 			input->copyTo(output);
 			input->close();
@@ -1086,7 +1097,7 @@ void loadImage(ColladaContext &ctx, domImage &image) {
 	}
 
 	ctx.os << "\t<texture id=\"" << identifier << "\" type=\"bitmap\">" << endl;
-	ctx.os << "\t\t<string name=\"filename\" value=\"textures/" << targetPath.leaf() << "\"/>" << endl;
+	ctx.os << "\t\t<string name=\"filename\" value=\"textures/" << targetPath.filename().string() << "\"/>" << endl;
 	ctx.os << "\t</texture>" << endl << endl;
 }
 
@@ -1125,7 +1136,7 @@ void loadCamera(ColladaContext &ctx, Transform transform, domCamera &camera) {
 			xres = ctx.cvt->m_xres;
 			aspect = (Float) ctx.cvt->m_xres / (Float) ctx.cvt->m_yres;
 		}
-		ctx.os << "\t<camera id=\"" << identifier << "\" type=\"orthographic\">" << endl;
+		ctx.os << "\t<sensor id=\"" << identifier << "\" type=\"orthographic\">" << endl;
 	}
 
 	domCamera::domOptics::domTechnique_common::domPerspective* persp = camera.getOptics()->
@@ -1138,7 +1149,7 @@ void loadCamera(ColladaContext &ctx, Transform transform, domCamera &camera) {
 			if (persp->getAspect_ratio().cast() != 0)
 				aspect = (Float) persp->getAspect_ratio()->getValue();
 		}
-		ctx.os << "\t<camera id=\"" << identifier << "\" type=\"perspective\">" << endl;
+		ctx.os << "\t<sensor id=\"" << identifier << "\" type=\"perspective\">" << endl;
 		if (persp->getXfov().cast()) {
 			Float xFov = (Float) persp->getXfov()->getValue();
 			Float yFov = radToDeg(2 * std::atan(std::tan(degToRad(xFov)/2) / aspect));
@@ -1156,7 +1167,7 @@ void loadCamera(ColladaContext &ctx, Transform transform, domCamera &camera) {
 		}
 		ctx.os << "\t\t<float name=\"nearClip\" value=\"" << persp->getZnear()->getValue() << "\"/>" << endl;
 		ctx.os << "\t\t<float name=\"farClip\" value=\"" << persp->getZfar()->getValue() << "\"/>" << endl;
-		ctx.os << "\t\t<boolean name=\"mapSmallerSide\" value=\"" << (ctx.cvt->m_mapSmallerSide ? "true" : "false") << "\"/>" << endl;
+		ctx.os << "\t\t<string name=\"fovAxis\" value=\"" << (ctx.cvt->m_mapSmallerSide ? "smaller" : "larger") << "\"/>" << endl;
 	}
 
 	ctx.os << endl;
@@ -1171,7 +1182,7 @@ void loadCamera(ColladaContext &ctx, Transform transform, domCamera &camera) {
 	ctx.os << "\t\t\t<integer name=\"height\" value=\"" << (int) (xres/aspect) << "\"/>" << endl;
 	ctx.os << "\t\t\t<rfilter type=\"gaussian\"/>" << endl;
 	ctx.os << "\t\t</film>" << endl;
-	ctx.os << "\t</camera>" << endl << endl;
+	ctx.os << "\t</sensor>" << endl << endl;
 }
 
 void loadNode(ColladaContext &ctx, Transform transform, domNode &node, std::string prefixName) {
@@ -1567,13 +1578,18 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	const fs::path &meshesDirectory) {
 	CustomErrorHandler errorHandler;
 	daeErrorHandler::setErrorHandler(&errorHandler);
+	SLog(EInfo, "Loading \"%s\" ..", inputFile.filename().c_str());
+#if COLLADA_DOM_SUPPORT141
+	DAE *dae = new DAE(NULL, NULL, "1.4.1");
+	domCOLLADA *document = dae->open141(inputFile.string());
+	if (document == NULL) 
+		SLog(EError, "Could not load \"%s\"!", inputFile.string().c_str());
+#else
 	DAE *dae = new DAE();
-	SLog(EInfo, "Loading \"%s\" ..", inputFile.leaf().c_str());
-	if (dae->load(inputFile.file_string().c_str()) != DAE_OK) 
-		SLog(EError, "Could not load \"%s\"!", 
-			inputFile.file_string().c_str());
-
-	domCOLLADA *document = dae->getDom(inputFile.file_string().c_str());
+	if (dae->load(inputFile.string().c_str()) != DAE_OK) 
+		SLog(EError, "Could not load \"%s\"!", inputFile.string().c_str());
+	domCOLLADA *document = dae->getDom(inputFile.string().c_str());
+#endif
 	domVisual_scene *visualScene = daeSafeCast<domVisual_scene>
 		(document->getDescendant("visual_scene"));
 	if (!visualScene)

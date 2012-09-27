@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -17,6 +17,12 @@
 */
 
 #include <mitsuba/core/platform.h>
+
+// Mitsuba's "Assert" macro conflicts with Xerces' XSerializeEngine::Assert(...).
+// This becomes a problem when using a PCH which contains mitsuba/core/logger.h
+#if defined(Assert)
+# undef Assert
+#endif
 #include <xercesc/parsers/SAXParser.hpp>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/util.h>
@@ -24,9 +30,14 @@
 
 MTS_NAMESPACE_BEGIN
 
-ref<Scene> Utility::loadScene(const std::string &filename,
+ref<Scene> Utility::loadScene(const fs::path &filename,
 		const ParameterMap &params) {
 	return SceneHandler::loadScene(filename, params);
+}
+
+ref<Scene> Utility::loadSceneFromString(const std::string &content,
+		const ParameterMap &params) {
+	return SceneHandler::loadSceneFromString(content, params);
 }
 
 MTS_IMPLEMENT_CLASS(Utility, true, Object)

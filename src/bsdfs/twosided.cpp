@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -23,6 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{twosided}{Two-sided BRDF adapter}
+ * \order{18}
  * \parameters{
  *     \parameter{\Unnamed}{\BSDF}{A nested BRDF that should
  *     be turned into a two-sided scattering model. If two BRDFs
@@ -104,8 +105,8 @@ public:
 				"a transmission component can be nested!");
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		BSDFQueryRecord b(bRec);
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+		BSDFSamplingRecord b(bRec);
 
 		if (Frame::cosTheta(b.wi) > 0) {
 			return m_nestedBRDF[0]->eval(b, measure);
@@ -118,8 +119,8 @@ public:
 		}
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		BSDFQueryRecord b(bRec);
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+		BSDFSamplingRecord b(bRec);
 
 		if (b.wi.z > 0) {
 			return m_nestedBRDF[0]->pdf(b, measure);
@@ -132,7 +133,7 @@ public:
 		}
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		bool flipped = false;
 
 		if (Frame::cosTheta(bRec.wi) < 0) {
@@ -157,7 +158,7 @@ public:
 		return result;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
 		bool flipped = false;
 		if (Frame::cosTheta(bRec.wi) < 0) {
 			bRec.wi.z *= -1;
@@ -194,11 +195,25 @@ public:
 		}
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		if (component < m_nestedBRDF[0]->getComponentCount()) {
+			return m_nestedBRDF[0]->getRoughness(its, component);
+		} else {
+			return m_nestedBRDF[1]->getRoughness(its, component
+			      -m_nestedBRDF[0]->getComponentCount());
+		}
+	}
+
+	Float getEta() const {
+		return 1.0f;
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "TwoSided[" << endl
-			<< "  nestedBRDF[0] = " << indent(m_nestedBRDF[0]->toString()) << "," << endl
-			<< "  nestedBRDF[1] = " << indent(m_nestedBRDF[1]->toString()) << endl
+			<< "  id = \"" << getID() << "\"," << endl
+			<< "  nestedBRDF[0] = " << indent(m_nestedBRDF[0].toString()) << "," << endl
+			<< "  nestedBRDF[1] = " << indent(m_nestedBRDF[1].toString()) << endl
 			<< "]";
 		return oss.str();
 	}

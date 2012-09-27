@@ -15,14 +15,17 @@
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/netobject.h>
 #include <mitsuba/core/sstream.h>
+#include <mitsuba/core/qmc.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/render/scenehandler.h>
+#include <mitsuba/render/scene.h>
 
 using namespace mitsuba;
 
 void initializeFramework() {
 	/* Initialize the core framework */
 	Class::staticInitialization();
+	Object::staticInitialization();
 	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
@@ -43,6 +46,7 @@ void shutdownFramework() {
 	Thread::staticShutdown();
 	Statistics::staticShutdown();
 	PluginManager::staticShutdown();
+	Object::staticShutdown();
 	Class::staticShutdown();
 }
 
@@ -132,7 +136,7 @@ public:
 struct path_to_python_str {
 	static PyObject* convert(fs::path const& path) {
 		return boost::python::incref(
-			boost::python::object(path.file_string()).ptr());
+			boost::python::object(path.string()).ptr());
 	}
 };
 
@@ -255,6 +259,24 @@ static Point ray_eval(const Ray &ray, Float t) {
 	return ray(t);
 }
 
+static bp::tuple spectrum_toLinearRGB(const Spectrum &s) {
+	Float r, g, b;
+	s.toLinearRGB(r, g, b);
+	return bp::make_tuple(r, g, b);
+}
+
+static bp::tuple spectrum_toSRGB(const Spectrum &s) {
+	Float r, g, b;
+	s.toSRGB(r, g, b);
+	return bp::make_tuple(r, g, b);
+}
+
+static bp::tuple spectrum_toXYZ(const Spectrum &s) {
+	Float x, y, z;
+	s.toXYZ(x, y, z);
+	return bp::make_tuple(x, y, z);
+}
+
 void aabb_expandby_aabb(AABB *aabb, const AABB &aabb2) { aabb->expandBy(aabb2); }
 void aabb_expandby_point(AABB *aabb, const Point &p) { aabb->expandBy(p); }
 Float aabb_distanceto_aabb(AABB *aabb, const AABB &aabb2) { return aabb->distanceTo(aabb2); }
@@ -287,6 +309,37 @@ Normal transform_mul_normal(Transform *transform, const Normal &normal) { return
 Point transform_mul_point(Transform *transform, const Point &point) { return transform->operator()(point); }
 Ray transform_mul_ray(Transform *transform, const Ray &ray) { return transform->operator()(ray); }
 Transform transform_mul_transform(Transform *transform, const Transform &other) { return *transform * other; }
+
+
+bp::object cast(ConfigurableObject *obj) {
+	const Class *cls = obj->getClass();
+	#define TryCast(ClassName) if (cls->derivesFrom(MTS_CLASS(ClassName))) \
+		return bp::object(ref<ClassName>(static_cast<ClassName *>(obj)))
+	TryCast(BSDF);
+	TryCast(Shape);
+	TryCast(PhaseFunction);
+	TryCast(Integrator);
+	TryCast(Texture);
+	TryCast(Medium);
+	TryCast(VolumeDataSource);
+	TryCast(Film);
+	TryCast(Sensor);
+	TryCast(Emitter);
+	TryCast(Sampler);
+	TryCast(ReconstructionFilter);
+	TryCast(ConfigurableObject);
+	#undef TryCast
+	SLog(EError, "Internal error in cast()!");
+	return bp::object();
+}
+
+bp::object pluginmgr_createobject_1(PluginManager *mgr, const Properties &props) {
+	return cast(mgr->createObject(props));
+}
+
+bp::object pluginmgr_createobject_2(PluginManager *mgr, const Class *cls, const Properties &props) {
+	return cast(mgr->createObject(cls, props));
+}
 
 ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dict) {
 	Properties properties;
@@ -321,6 +374,50 @@ ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dict) {
 	object->configure();
 	return object;
 }
+
+bp::tuple mkCoordinateSystem(const Vector &n) {
+	Vector s, t;
+	coordinateSystem(n, s, t);
+
+	return bp::make_tuple(s, t);
+}
+
+bp::tuple fresnelDielectricExt1(Float cosThetaI, Float eta) {
+	Float cosThetaT;
+	Float result = fresnelDielectricExt(cosThetaI, cosThetaT, eta);
+
+	return bp::make_tuple(result, cosThetaT);
+}
+
+Float fresnelDielectricExt2(Float cosThetaI, Float eta) {
+	return fresnelDielectricExt(cosThetaI, eta);
+}
+
+Vector refract1(const Vector &wi, const Normal &n, Float eta, Float cosThetaT) {
+	return refract(wi, n, eta, cosThetaT);
+}
+
+bp::tuple refract2(const Vector &wi, const Normal &n, Float eta) {
+	Float cosThetaT, F;
+	Vector result = refract(wi, n, eta, cosThetaT, F);
+	return bp::make_tuple(result, cosThetaT, F);
+}
+
+Vector refract3(const Vector &wi, const Normal &n, Float eta) {
+	return refract(wi, n, eta);
+}
+
+
+Transform transform_glOrthographic1(Float clipNear, Float clipFar) {
+	return Transform::glOrthographic(clipNear, clipFar);
+}
+
+Transform transform_glOrthographic2(Float clipLeft, Float clipRight,
+		Float clipBottom, Float clipTop, Float clipNear, Float clipFar) {
+	return Transform::glOrthographic(clipLeft, clipRight,
+		clipBottom, clipTop, clipNear, clipFar);
+}
+
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
@@ -368,7 +465,7 @@ void export_core() {
 	bp::class_<Object, ref<Object>, boost::noncopyable>("Object", bp::no_init)
 		.def("getRefCount", &Object::getRefCount)
 		.def("getClass", &object_getClass, BP_RETURN_INTREF)
-		.def("__str__", &Object::toString);
+		.def("__repr__", &Object::toString);
 	bp::register_ptr_to_python<Object*>();
 
 	BP_CLASS(Stream, Object, bp::no_init)
@@ -376,7 +473,7 @@ void export_core() {
 		.def("getByteOrder", &Stream::getByteOrder)
 		.def("getHostByteOrder", &Stream::getHostByteOrder)
 		.def("truncate", &Stream::truncate)
-		.def("setPos", &Stream::setPos)
+		.def("seek", &Stream::seek)
 		.def("getPos", &Stream::getPos)
 		.def("getSize", &Stream::getSize)
 		.def("flush", &Stream::flush)
@@ -454,13 +551,14 @@ void export_core() {
 	BP_CLASS(SerializableObject, Object, bp::no_init)
 		.def("serialize", &SerializableObject::serialize);
 	
-	ConfigurableObject *(ConfigurableObject::*cobject_get_parent)() = &ConfigurableObject::getParent;
 	void (ConfigurableObject::*cobject_add_child_1)(ConfigurableObject *) = &ConfigurableObject::addChild;
 	void (ConfigurableObject::*cobject_add_child_2)(const std::string &, ConfigurableObject *) = &ConfigurableObject::addChild;
 
 	BP_CLASS(ConfigurableObject, SerializableObject, bp::no_init)
-		.def("getParent", cobject_get_parent, BP_RETURN_VALUE)
 		.def("setParent", &ConfigurableObject::setParent)
+		.def("getID", &ConfigurableObject::getID, BP_RETURN_VALUE)
+		.def("setID", &ConfigurableObject::setID)
+		.def("getProperties", &ConfigurableObject::getProperties, BP_RETURN_VALUE)
 		.def("addChild", cobject_add_child_1)
 		.def("addChild", cobject_add_child_2)
 		.def("configure", &ConfigurableObject::configure);
@@ -471,7 +569,6 @@ void export_core() {
 	Thread *(Thread::*thread_get_parent)() = &Thread::getParent;
 	BP_CLASS(Thread, Object, bp::no_init)
 		.def("getID", &Thread::getID)
-		.def("getStackSize", &Thread::getStackSize)
 		.def("setPriority", &Thread::setPriority)
 		.def("getPriority", &Thread::getPriority)
 		.def("setCritical", &Thread::setCritical)
@@ -536,7 +633,7 @@ void export_core() {
 	bp::class_<ContinuousSpectrum, boost::noncopyable>("ContinuousSpectrum", bp::no_init)
 		.def("eval", &ContinuousSpectrum::eval)
 		.def("average", &ContinuousSpectrum::average)
-		.def("__str__", &ContinuousSpectrum::toString);
+		.def("__repr__", &ContinuousSpectrum::toString);
 
 	bp::class_<InterpolatedSpectrum, bp::bases<ContinuousSpectrum>, boost::noncopyable>
 			("InterpolatedSpectrum", bp::init<>())
@@ -546,31 +643,64 @@ void export_core() {
 		.def("clear", &InterpolatedSpectrum::clear)
 		.def("zeroExtend", &InterpolatedSpectrum::zeroExtend);
 
-	BP_CLASS(Bitmap, Object, (bp::init<int, int, int>()))
+	BP_CLASS(Bitmap, Object, (bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &>()))
+		.def(bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &, int>())
 		.def(bp::init<Bitmap::EFileFormat, Stream *>())
 		.def("clone", &Bitmap::clone, BP_RETURN_VALUE)
+		.def("separateChannel", &Bitmap::separateChannel, BP_RETURN_VALUE)
+		.def("expand", &Bitmap::expand, BP_RETURN_VALUE)
+		.def("flipVertically", &Bitmap::flipVertically)
+		.def("crop", &Bitmap::crop)
+		.def("accumulate", &Bitmap::accumulate)
 		.def("clear", &Bitmap::clear)
-		.def("save", &Bitmap::save)
-		.def("setTitle", &Bitmap::setTitle)
-		.def("getTitle", &Bitmap::getTitle, BP_RETURN_INTREF)
-		.def("setAuthor", &Bitmap::setAuthor)
-		.def("getAuthor", &Bitmap::getAuthor, BP_RETURN_INTREF)
-		.def("setComment", &Bitmap::setComment)
-		.def("getComment", &Bitmap::getComment, BP_RETURN_INTREF)
+		.def("write", &Bitmap::write)
+		.def("setString", &Bitmap::setString)
+		.def("getString", &Bitmap::getString, BP_RETURN_VALUE)
 		.def("setGamma", &Bitmap::setGamma)
 		.def("getGamma", &Bitmap::getGamma)
 		.def("getWidth", &Bitmap::getWidth)
 		.def("getHeight", &Bitmap::getHeight)
-		.def("getBitsPerPixel", &Bitmap::getBitsPerPixel)
-		.def("getSize", &Bitmap::getSize);
+		.def("getChannelCount", &Bitmap::getChannelCount)
+		.def("getPixelFormat", &Bitmap::getPixelFormat)
+		.def("getComponentFormat", &Bitmap::getComponentFormat)
+		.def("isSquare", &Bitmap::isSquare)
+		.def("getBitsPerComponent", &Bitmap::getBitsPerComponent)
+		.def("getBytesPerComponent", &Bitmap::getBytesPerComponent)
+		.def("getBytesPerPixel", &Bitmap::getBytesPerPixel)
+		.def("getPixel", &Bitmap::getPixel, BP_RETURN_VALUE)
+		.def("setPixel", &Bitmap::setPixel)
+		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE);
 
 	BP_SETSCOPE(Bitmap_class);
+	bp::enum_<Bitmap::EPixelFormat>("EPixelFormat")
+		.value("ELuminance", Bitmap::ELuminance)
+		.value("ELuminanceAlpha", Bitmap::ELuminanceAlpha)
+		.value("ERGB", Bitmap::ERGB)
+		.value("ERGBA", Bitmap::ERGBA)
+		.value("ESpectrum", Bitmap::ESpectrum)
+		.value("ESpectrumAlpha", Bitmap::ESpectrumAlpha)
+		.value("ESpectrumAlphaWeight", Bitmap::ESpectrumAlphaWeight)
+		.value("EMultiChannel", Bitmap::EMultiChannel);
+
+	bp::enum_<Bitmap::EComponentFormat>("EComponentFormat")
+		.value("EBitmask", Bitmap::EBitmask)
+		.value("EUInt8", Bitmap::EUInt8)
+		.value("EUInt16", Bitmap::EUInt16)
+		.value("EUInt32", Bitmap::EUInt32)
+		.value("EFloat16", Bitmap::EFloat16)
+		.value("EFloat32", Bitmap::EFloat32)
+		.value("EFloat64", Bitmap::EFloat64)
+		.value("EFloat", Bitmap::EFloat)
+		.value("EInvalid", Bitmap::EInvalid)
+		.export_values();
+
 	bp::enum_<Bitmap::EFileFormat>("EFileFormat")
 		.value("EPNG", Bitmap::EPNG)
-		.value("EEXR", Bitmap::EEXR)
+		.value("EOpenEXR", Bitmap::EOpenEXR)
 		.value("ETGA", Bitmap::ETGA)
 		.value("EBMP", Bitmap::EBMP)
 		.value("EJPEG", Bitmap::EJPEG)
+		.value("EAuto", Bitmap::EAuto)
 		.export_values();
 	BP_SETSCOPE(coreModule);
 
@@ -578,7 +708,8 @@ void export_core() {
 		.def("resolve", &FileResolver::resolve, BP_RETURN_VALUE)
 		.def("resolveAbsolute", &FileResolver::resolveAbsolute, BP_RETURN_VALUE)
 		.def("clone", &FileResolver::clone, BP_RETURN_VALUE)
-		.def("addPath", &FileResolver::addPath)
+		.def("appendPath", &FileResolver::appendPath)
+		.def("prependPath", &FileResolver::prependPath)
 		.def("clear", &FileResolver::clear);
 
 	void (Random::*random_seed_random)(Random *) = &Random::seed;
@@ -595,9 +726,6 @@ void export_core() {
 		.def("nextSize", &Random::nextSize)
 		.def("nextFloat", &Random::nextFloat)
 		.def("serialize", &Random::serialize);
-
-	ConfigurableObject *(PluginManager::*pluginmgr_createobject_1)(const Properties &) = &PluginManager::createObject;
-	ConfigurableObject *(PluginManager::*pluginmgr_createobject_2)(const Class *, const Properties &) = &PluginManager::createObject;
 
 	BP_CLASS(PluginManager, Object, bp::no_init)
 		.def("ensurePluginLoaded", &PluginManager::ensurePluginLoaded)
@@ -649,7 +777,7 @@ void export_core() {
 		.value("EFailure", ParallelProcess::EFailure)
 		.export_values();
 	BP_SETSCOPE(coreModule);
-	
+
 	BP_CLASS(Worker, Thread, bp::no_init)
 		.def("getCoreCount", &Worker::getCoreCount)
 		.def("isRemoteWorker", &Worker::isRemoteWorker);
@@ -669,7 +797,7 @@ void export_core() {
 		.def("wait", &Scheduler::wait)
 		.def("cancel", scheduler_cancel)
 		.def("registerResource", &Scheduler::registerResource)
-		.def("registerManifoldResource", &Scheduler::registerManifoldResource)
+		.def("registerMultiResource", &Scheduler::registerMultiResource)
 		.def("retainResource", &Scheduler::retainResource)
 		.def("unregisterResource", &Scheduler::unregisterResource)
 		.def("getResourceID", &Scheduler::getResourceID)
@@ -721,14 +849,14 @@ void export_core() {
 		.def("eval", &Spectrum::eval)
 		.def("getLuminance", &Spectrum::getLuminance)
 		.def("fromXYZ", &Spectrum::fromXYZ, fromXYZ_overloads())
-		.def("toXYZ", &Spectrum::toXYZ)
+		.def("toXYZ", &spectrum_toXYZ)
 		.def("fromLinearRGB", &Spectrum::fromLinearRGB, fromLinearRGB_overloads())
-		.def("toLinearRGB", &Spectrum::toLinearRGB)
+		.def("toLinearRGB", &spectrum_toLinearRGB)
 		.def("fromSRGB", &Spectrum::fromSRGB)
-		.def("toSRGB", &Spectrum::toSRGB)
+		.def("toSRGB", &spectrum_toSRGB)
 		.def("fromContinuousSpectrum", &Spectrum::fromContinuousSpectrum)
 		.def("serialize", &Spectrum::serialize)
-		.def("__str__", &Spectrum::toString)
+		.def("__repr__", &Spectrum::toString)
 		.def("__len__", &spectrum_wrapper::len)
 		.def("__getitem__", &spectrum_wrapper::get)
 		.def("__setitem__", &spectrum_wrapper::set);
@@ -745,17 +873,17 @@ void export_core() {
 		.def(bp::init<std::string>())
 		.def("getPluginName", &Properties::getPluginName, BP_RETURN_CONSTREF)
 		.def("setPluginName", &Properties::setPluginName)
-		.def("getID", &Properties::getPluginName, BP_RETURN_CONSTREF)
-		.def("setID", &Properties::setPluginName)
+		.def("getID", &Properties::getID, BP_RETURN_CONSTREF)
+		.def("setID", &Properties::setID)
 		.def("getType", &Properties::getType)
-		.def("getNames", &Properties::getNames)
+		.def("getPropertyNames", &Properties::getPropertyNames)
 		.def("hasProperty", &Properties::hasProperty)
 		.def("wasQueried", &Properties::wasQueried)
 		.def("markQueried", &Properties::markQueried)
 		.def("__getitem__", &properties_wrapper::get)
 		.def("__setitem__", &properties_wrapper::set)
 		.def("__contains__", &Properties::hasProperty)
-		.def("__str__", &Properties::toString);
+		.def("__repr__", &Properties::toString);
 
 	BP_SETSCOPE(properties);
 	bp::enum_<Properties::EPropertyType>("EPropertyType")
@@ -928,7 +1056,7 @@ void export_core() {
 		.def(bp::self *= bp::self)
 		.def(bp::self / Float())
 		.def(bp::self /= Float())
-		.def("__str__", &Matrix4x4::toString);
+		.def("__repr__", &Matrix4x4::toString);
 
 	bp::class_<Ray>("Ray", bp::init<>())
 		.def(bp::init<Ray &>())
@@ -945,7 +1073,7 @@ void export_core() {
 		.def("setDirection", &Ray::setDirection)
 		.def("setTime", &Ray::setTime)
 		.def("eval", &ray_eval, BP_RETURN_VALUE)
-		.def("__str__", &Ray::toString);
+		.def("__repr__", &Ray::toString);
 
 	bp::class_<BSphere>("BSphere", bp::init<>())
 		.def(bp::init<BSphere>())
@@ -960,7 +1088,7 @@ void export_core() {
 		.def(bp::self != bp::self)
 		.def("rayIntersect", &bsphere_rayIntersect)
 		.def("serialize", &BSphere::serialize)
-		.def("__str__", &BSphere::toString);
+		.def("__repr__", &BSphere::toString);
 
 	bp::class_<AABB>("AABB", bp::init<>())
 		.def(bp::init<AABB>())
@@ -993,7 +1121,7 @@ void export_core() {
 		.def("rayIntersect", &aabb_rayIntersect)
 		.def("getBSphere", &AABB::getBSphere, BP_RETURN_VALUE)
 		.def("serialize", &AABB::serialize)
-		.def("__str__", &AABB::toString);
+		.def("__repr__", &AABB::toString);
 	
 	bp::class_<Frame>("Frame", bp::init<>())
 		.def(bp::init<Vector, Vector, Normal>())
@@ -1006,7 +1134,7 @@ void export_core() {
 		.def("serialize", &Frame::serialize)
 		.def("toLocal", &Frame::toLocal, BP_RETURN_VALUE)
 		.def("toWorld", &Frame::toWorld, BP_RETURN_VALUE)
-		.def("__str__", &Frame::toString)
+		.def("__repr__", &Frame::toString)
 		.def("cosTheta", &Frame::cosTheta)
 		.def("sinTheta", &Frame::sinTheta)
 		.def("sinTheta2", &Frame::sinTheta2)
@@ -1041,7 +1169,7 @@ void export_core() {
 		.def("__mul__", &transform_mul_vector4, BP_RETURN_VALUE)
 		.def("__mul__", &transform_mul_normal, BP_RETURN_VALUE)
 		.def("__mul__", &transform_mul_ray, BP_RETURN_VALUE)
-		.def("__str__", &Transform::toString)
+		.def("__repr__", &Transform::toString)
 		.def("translate", &Transform::translate, BP_RETURN_VALUE)
 		.def("rotate", &Transform::rotate, BP_RETURN_VALUE)
 		.def("scale", &Transform::scale, BP_RETURN_VALUE)
@@ -1050,7 +1178,8 @@ void export_core() {
 		.def("orthographic", &Transform::orthographic, BP_RETURN_VALUE)
 		.def("glPerspective", &Transform::glPerspective, BP_RETURN_VALUE)
 		.def("glFrustum", &Transform::glFrustum, BP_RETURN_VALUE)
-		.def("glOrthographic", &Transform::glOrthographic, BP_RETURN_VALUE)
+		.def("glOrthographic", &transform_glOrthographic1, BP_RETURN_VALUE)
+		.def("glOrthographic", &transform_glOrthographic2, BP_RETURN_VALUE)
 		.def("fromFrame", &Transform::fromFrame, BP_RETURN_VALUE)
 		.staticmethod("translate")
 		.staticmethod("rotate")
@@ -1064,10 +1193,26 @@ void export_core() {
 		.staticmethod("fromFrame");
 
 	/* Functions from utility.h */
-	bp::def("fresnel", &fresnel);
 	bp::def("fresnelDielectric", &fresnelDielectric);
+	bp::def("fresnelDielectricExt", &fresnelDielectricExt1);
+	bp::def("fresnelDielectricExt", &fresnelDielectricExt2);
 	bp::def("fresnelConductor", &fresnelConductor, BP_RETURN_VALUE);
 	bp::def("fresnelDiffuseReflectance", &fresnelDiffuseReflectance);
+	bp::def("reflect", &reflect);
+	bp::def("refract", &refract1);
+	bp::def("refract", &refract2);
+	bp::def("refract", &refract3);
+	bp::def("coordinateSystem", &mkCoordinateSystem);
+
+	/* Functions from qmc.h */
+	bp::def("radicalInverse2Single", radicalInverse2Single);
+	bp::def("radicalInverse2Double", radicalInverse2Double);
+	bp::def("sobol2Single", sobol2Single);
+	bp::def("sobol2Double", sobol2Double);
+	bp::def("sampleTEA", sobol2Double);
+	bp::def("radicalInverse", sobol2Double);
+	bp::def("radicalInverseFast", sobol2Double);
+	bp::def("radicalInverseIncremental", sobol2Double);
 
 	bp::detail::current_scope = oldScope;
 }

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,8 +18,10 @@
 
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/emitter.h>
+#include <mitsuba/render/sensor.h>
 #include <mitsuba/render/subsurface.h>
+#include <mitsuba/render/medium.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/properties.h>
 
@@ -65,9 +67,9 @@ MTS_NAMESPACE_BEGIN
  *             <scale x="0.4" y="0.3" z="0.2"/>
  *             <translate y="1" z="0.2"/>
  *         </transform>
- *         <luminaire type="area">
+ *         <emitter type="area">
  *             <spectrum name="intensity" value="3"/>
- *         </luminaire>
+ *         </emitter>
  *     </shape>
  *     <!-- ... other definitions ... -->
  * </scene>
@@ -97,12 +99,12 @@ public:
 	void configure() {
 		Shape::configure();
 
-		m_dpdu = m_objectToWorld(Vector(1, 0, 0));
-		m_dpdv = m_objectToWorld(Vector(0, 1, 0));
+		m_dpdu = m_objectToWorld(Vector(2, 0, 0));
+		m_dpdv = m_objectToWorld(Vector(0, 2, 0));
 		Normal normal = normalize(m_objectToWorld(Normal(0, 0, 1)));
 		m_frame = Frame(normalize(m_dpdu), normalize(m_dpdv), normal);
 
-		m_surfaceArea = 4 * m_dpdu.length() * m_dpdv.length();
+		m_invSurfaceArea = 1.0f / getSurfaceArea();
 		if (std::abs(dot(m_dpdu, m_dpdv)) > Epsilon)
 			Log(EError, "Error: 'toWorld' transformation contains shear!");
 	}
@@ -117,7 +119,7 @@ public:
 	}
 
 	Float getSurfaceArea() const {
-		return m_surfaceArea;
+		return 4 * m_dpdu.length() * m_dpdv.length();
 	}
 
 	inline bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *temp) const {
@@ -153,13 +155,14 @@ public:
 			const void *temp, Intersection &its) const {
 		const Float *data = static_cast<const Float *>(temp);
 		its.shFrame = its.geoFrame = m_frame;
+		its.shape = this;
 		its.dpdu = m_dpdu;
 		its.dpdv = m_dpdv;
 		its.uv = Point2(0.5f * (data[0]+1), 0.5f * (data[1]+1));
 		its.p = ray(its.t);
 		its.wi = its.toLocal(-ray.d);
-		its.shape = this;
  		its.hasUVPartials = false;
+		its.instance = NULL;
 	}
 
 	ref<TriMesh> createTriMesh() {
@@ -175,7 +178,7 @@ public:
 		vertices[1] = m_objectToWorld(Point( 1, -1, 0));
 		vertices[2] = m_objectToWorld(Point( 1,  1, 0));
 		vertices[3] = m_objectToWorld(Point(-1,  1, 0));
-		
+
 		texcoords[0] = Point2(0, 0);
 		texcoords[1] = Point2(1, 0);
 		texcoords[2] = Point2(1, 1);
@@ -191,31 +194,49 @@ public:
 		triangles[1].idx[2] = 0;
 
 		mesh->setBSDF(m_bsdf);
-		mesh->setLuminaire(m_luminaire);
+		mesh->setEmitter(m_emitter);
 		mesh->configure();
 
 		return mesh.get();
 	}
 
+	void getNormalDerivative(const Intersection &its,
+			Vector &dndu, Vector &dndv, bool shadingFrame) const {
+		dndu = dndv = Vector(0.0f);
+	}
+
+	void samplePosition(PositionSamplingRecord &pRec, const Point2 &sample) const {
+		pRec.p = m_objectToWorld(Point3(sample.x * 2 - 1, sample.y * 2 - 1, 0));
+		pRec.n = m_frame.n;
+		pRec.pdf = m_invSurfaceArea;
+		pRec.measure = EArea;
+	}
+
+	Float pdfPosition(const PositionSamplingRecord &pRec) const {
+		return m_invSurfaceArea;
+	}
+
+	size_t getPrimitiveCount() const {
+		return 1;
+	}
+
+	size_t getEffectivePrimitiveCount() const {
+		return 1;
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Rectangle[" << endl
-			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << ", " << endl
-			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl
-			<< "  luminaire = " << indent(m_luminaire.toString()) << "," << endl
+			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << ", " << endl;
+		if (isMediumTransition()) 
+			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
+				<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
+		oss << "  bsdf = " << indent(m_bsdf.toString()) << "," << endl
+			<< "  emitter = " << indent(m_emitter.toString()) << "," << endl
+			<< "  sensor = " << indent(m_sensor.toString()) << "," << endl
 			<< "  subsurface = " << indent(m_subsurface.toString()) << endl
 			<< "]";
 		return oss.str();
-	}
-
-	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
-		sRec.n = m_frame.n;
-		sRec.p = m_objectToWorld(Point3(sample.x * 2 - 1, sample.y * 2 - 1, 0));
-		return 1.0f / m_surfaceArea;
-	}
-
-	Float pdfArea(const ShapeSamplingRecord &sRec) const {
-		return 1.0f / m_surfaceArea;
 	}
 
 	MTS_DECLARE_CLASS()
@@ -224,7 +245,7 @@ private:
 	Transform m_worldToObject;
 	Frame m_frame;
 	Vector m_dpdu, m_dpdv;
-	Float m_surfaceArea;
+	Float m_invSurfaceArea;
 };
 
 MTS_IMPLEMENT_CLASS_S(Rectangle, false, Shape)

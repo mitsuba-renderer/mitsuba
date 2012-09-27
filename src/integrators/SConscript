@@ -1,15 +1,40 @@
-Import('env', 'plugins')
+Import('env', 'sys', 'plugins')
 
+plugins += env.SharedLibrary('ao', ['direct/ao.cpp'])
 plugins += env.SharedLibrary('direct', ['direct/direct.cpp'])
-plugins += env.SharedLibrary('errctrl', ['misc/errctrl.cpp'])
-plugins += env.SharedLibrary('irrcache', ['misc/irrcache.cpp', 'misc/irrcache_proc.cpp'])
 plugins += env.SharedLibrary('path', ['path/path.cpp'])
 plugins += env.SharedLibrary('volpath', ['path/volpath.cpp'])
 plugins += env.SharedLibrary('volpath_simple', ['path/volpath_simple.cpp'])
-plugins += env.SharedLibrary('ptracer', ['path/ptracer.cpp', 'path/ptracer_proc.cpp'])
+plugins += env.SharedLibrary('ptracer', ['ptracer/ptracer.cpp', 'ptracer/ptracer_proc.cpp'])
+
+# Photon mapping-based techniques
 plugins += env.SharedLibrary('photonmapper', ['photonmapper/photonmapper.cpp', 'photonmapper/bre.cpp'])
 plugins += env.SharedLibrary('ppm', ['photonmapper/ppm.cpp'])
 plugins += env.SharedLibrary('sppm', ['photonmapper/sppm.cpp'])
+
+# Miscellaneous
 plugins += env.SharedLibrary('vpl', ['vpl/vpl.cpp'])
+plugins += env.SharedLibrary('adaptive', ['misc/adaptive.cpp'])
+plugins += env.SharedLibrary('irrcache', ['misc/irrcache.cpp', 'misc/irrcache_proc.cpp'])
+
+# Bidirectional techniques
+bidirEnv = env.Clone()
+bidirEnv.Append(LIBS=['mitsuba-bidir'])
+bidirEnv.Append(LIBPATH=['#src/libbidir'])
+
+plugins += bidirEnv.SharedLibrary('bdpt',
+	['bdpt/bdpt.cpp', 'bdpt/bdpt_wr.cpp', 'bdpt/bdpt_proc.cpp'])
+
+plugins += bidirEnv.SharedLibrary('pssmlt',
+	['pssmlt/pssmlt.cpp', 'pssmlt/pssmlt_sampler.cpp',
+	 'pssmlt/pssmlt_proc.cpp']);
+
+plugins += bidirEnv.SharedLibrary('mlt',
+	['mlt/mlt.cpp', 'mlt/mlt_proc.cpp']
+)
+
+plugins += bidirEnv.SharedLibrary('erpt',
+	['erpt/erpt.cpp', 'erpt/erpt_proc.cpp']
+)
 
 Export('plugins')

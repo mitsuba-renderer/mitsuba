@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__REFERENCE_H)
-#define __REFERENCE_H
+#pragma once
+#if !defined(__MITSUBA_CORE_REF_H_)
+#define __MITSUBA_CORE_REF_H_
 
 #include "util.h"
 
@@ -50,15 +51,14 @@ public:
 	~ref() { if (m_ptr) ((Object *) m_ptr)->decRef(); }
 
 	/// Overwrite this reference with another reference
-	inline ref& operator= (const ref& pref) {
-		if (m_ptr == pref.m_ptr)
+	inline ref& operator= (const ref& r) {
+		if (m_ptr == r.m_ptr)
 			return *this;
-		T* tmp = m_ptr;
-		m_ptr = pref.m_ptr;
+		if (m_ptr)
+			((Object *) m_ptr)->decRef();
+		m_ptr = r.m_ptr;
 		if (m_ptr)
 			((Object *) m_ptr)->incRef();
-		if (tmp)
-			((Object *) tmp)->decRef();
 		return *this;
 	}
 	
@@ -66,12 +66,11 @@ public:
 	inline ref& operator= (T *ptr) {
 		if (m_ptr == ptr)
 			return *this;
-		T* tmp = m_ptr;
+		if (m_ptr)
+			((Object *) m_ptr)->decRef();
 		m_ptr = ptr;
 		if (m_ptr)
 			((Object *) m_ptr)->incRef();
-		if (tmp)
-			((Object *) tmp)->decRef();
 		return *this;
 	}
 
@@ -127,6 +126,44 @@ private:
 	T *m_ptr;
 };
 
+/// \cond
+
+/// Comparison operator for references
+template <typename T> struct ref_comparator {
+	bool operator() (const ref<T>& lhs, const ref<T>& rhs) const {
+		return lhs.get() < rhs.get();
+	}
+};
+
+/// \endcond
+
+/**
+ * \brief Simple reference-counted vector container based on \c std::vector and \ref ref
+ */
+template <typename T> class ref_vector : public std::vector< ref<T> > {
+public:
+	typedef std::vector< ref<T> > parent_type;
+
+	ref_vector() : parent_type() {}
+	ref_vector(size_t size) : parent_type(size) {}
+	ref_vector(const ref_vector &vec) : parent_type(vec) {}
+
+	/// Remove all duplicates (may change the order)
+	inline void ensureUnique() {
+		std::sort(this->begin(), this->end(), ref_comparator<T>());
+		this->erase(std::unique(this->begin(), this->end()), this->end());
+	}
+
+	/// Check if a certain pointer is contained in the vector
+	inline bool contains(const T *ptr) const {
+		for (typename parent_type::const_iterator it = this->begin();
+				it != this->end(); ++it)
+			if (it->get() == ptr)
+				return true;
+		return false;
+	}
+};
+
 MTS_NAMESPACE_END
 
-#endif /* __REFERENCE_H */
+#endif /* __MITSUBA_CORE_REF_H_ */

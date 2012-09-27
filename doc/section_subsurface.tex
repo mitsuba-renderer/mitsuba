@@ -1,5 +1,12 @@
 \newpage
-\subsection{Subsurface scattering}
+\subsection{Subsurface scattering models}
 \label{sec:subsurface}
-TBD
+There are two ways of simulating subsurface scattering within Mitsuba:
+participating media and subsurface scattering models. The latter are described
+in this section and can be thought of as a first-order approximation of the
+former. For this reason, subsurface scattering models should be preferred when
+visually appealing output should be generated quickly and the demands on
+physical realism are secondary.
 
+At the moment, there is only one subsurface scattering model (the
+\pluginref{dipole}), which is described on the next page.

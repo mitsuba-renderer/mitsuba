@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,16 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SSTREAM_H)
-#define __SSTREAM_H
+#pragma once
+#if !defined(__MITSUBA_CORE_SSTREAM_H_)
+#define __MITSUBA_CORE_SSTREAM_H_
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/stream.h>
-
-#ifdef WIN32
-#include <io.h>
-#include <ws2tcpip.h>
-#endif
 
 MTS_NAMESPACE_BEGIN
 
@@ -40,6 +36,15 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE SocketStream : public Stream {
 public:
+	/// Socket typedef. For Windows it is based on the code in WinSock2.h
+#if defined(_WIN64)
+	typedef uint64_t socket_t;
+#elif defined(_WIN32)
+	typedef uint32_t socket_t;
+#else
+	typedef int socket_t;
+#endif
+
 	// =============================================================
 	//! @{ \name Constructors
 	// =============================================================
@@ -48,11 +53,7 @@ public:
 	 * \brief Create a stream from an existing socket
 	 * \remark This function is not exposed in the Python bindings
 	 */
-#if defined(WIN32)
-	SocketStream(SOCKET socket);
-#else
-	SocketStream(int socket);
-#endif
+	SocketStream(socket_t socket);
 
 	/// Connect to the given host/port
 	SocketStream(const std::string &host, int port);
@@ -88,7 +89,7 @@ public:
 
 	void read(void *ptr, size_t size);
 	void write(const void *ptr, size_t size);
-	void setPos(size_t pos);
+	void seek(size_t pos);
 	size_t getPos() const;
 	size_t getSize() const;
 	void truncate(size_t size);
@@ -108,19 +109,11 @@ protected:
 	 */
 	virtual ~SocketStream();
 protected:
-#if defined(WIN32)
-	SOCKET m_socket;
-#else
-	int m_socket;
-#endif
+	socket_t m_socket;
 	size_t m_received, m_sent;
 	std::string m_peer;
 };
 
-#ifdef WIN32
-extern MTS_EXPORT_CORE const char *inet_ntop(int af, const void *src, char *dst, socklen_t len);
-#endif
-
 MTS_NAMESPACE_END
 
-#endif /* __SSTREAM_H */
+#endif /* __MITSUBA_CORE_SSTREAM_H_ */

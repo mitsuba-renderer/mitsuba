@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,19 +20,30 @@
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/timer.h>
 
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{serialized}{Serialized mesh loader}
- * \order{11}
+ * \order{7}
  * \parameters{
  *     \parameter{filename}{\String}{
- *	     Filename of the gemoetry file that should be loaded
+ *	     Filename of the geometry file that should be loaded
+ *	   }
+ *	   \parameter{shapeIndex}{\Integer}{
+ *	       A \code{.serialized} file may contain several separate meshes. This parameter
+ *	       specifies which one should be loaded. \default{\code{0}, i.e. the first one}
  *	   }
  *     \parameter{faceNormals}{\Boolean}{
- *       When set to \code{true}, Mitsuba will use face normals when rendering
- *       the object, which will give it a faceted apperance. \default{\code{false}}
+ *       When set to \code{true}, any existing or computed vertex normals are 
+ *       discarded and \emph{face normals} will instead be used during rendering.
+ *       This gives the rendered object a faceted apperance.\default{\code{false}}
  *	   }
+ *     \parameter{maxSmoothAngle}{\Float}{
+ *       When specified, Mitsuba will discard all vertex normals in the input mesh and rebuild
+ *       them in a way that is sensitive to the presence of creases and corners. For more
+ *       details on this parameter, see page~\pageref{sec:maxSmoothAngle}. Disabled by default.
+ *     }
  *     \parameter{flipNormals}{\Boolean}{
  *       Optional flag to flip all normals. \default{\code{false}, i.e.
  *       the normals are left unchanged}.
@@ -43,11 +54,86 @@ MTS_NAMESPACE_BEGIN
  *        \default{none (i.e. object space $=$ world space)}
  *     }
  * }
- * This plugin represents the most space and time-efficient way
- * of getting geometry into Mitsuba. It uses a highly efficient
- * lossless compressed format for geometry storage. The format will
- * be explained on this page in a subsequent revision of the
- * documentation.
+ * The serialized mesh format represents the most space and time-efficient way
+ * of getting geometry information into Mitsuba. It stores indexed triangle meshes
+ * in a lossless gzip-based encoding that (after decompression) nicely matches up
+ * with the internally used data structures. Loading such files is considerably 
+ * faster than the \pluginref{ply} plugin and orders of magnitude faster than 
+ * the \pluginref{obj} plugin. \vspace{-3mm}
+ *
+ * \paragraph{Format description:}
+ * The \code{serialized} file format uses the little endian encoding, hence
+ * all fields below should be interpreted accordingly. The contents are structured as
+ * follows:
+ * \begin{center}
+ * \begin{longtable}{>{\bfseries}p{2cm}p{11cm}}
+ * \toprule
+ * Type & Content\\
+ * \midrule
+ * \code{uint16}&   File format identifier: \ \  \code{0x041C}\\
+ * \code{uint16}&   File version identifier. Currently set to \ \  \code{0x0004}\\
+ * \midrule
+ * \multicolumn{2}{|c|}{\emph{From this point on, the stream is
+ * compressed by the \code{DEFLATE} algorithm.}}\\
+ * \multicolumn{2}{|c|}{\emph{The used encoding is that of
+ * the \code{zlib} library.}}\\
+ * \midrule
+ * \code{uint32}&An 32-bit integer whose bits can be used
+ * to specify the following flags:\\[-4mm]
+ * &\begin{description}
+ *	\item[\code{0x0001}] The mesh data includes per-vertex normals\vspace{-2mm}
+ *	\item[\code{0x0002}] The mesh data includes texture coordinates\vspace{-2mm}
+ *	\item[\code{0x0008}] The mesh data includes vertex colors\vspace{-2mm}
+ *	\item[\code{0x0010}] Use face normals instead of smothly interpolated vertex
+ *	normals. Equivalent to specifying \code{faceNormals=true} to the plugin. \vspace{-6mm}
+ *	\item[\code{0x1000}] The subsequent content is represented in single precision\vspace{-2mm}
+ *	\item[\code{0x2000}] The subsequent content is represented in double precision
+ * \end{description}\\[-4mm]
+ * \code{string}&A null-terminated string (latin-1), which denotes the name of the shape.\\
+ * \code{uint64}&Number of vertices in the mesh\\
+ * \code{uint64}&Number of triangles in the mesh\\
+ * \code{array}&Array of all vertex positions (X, Y, Z, X, Y, Z, ...) 
+ * specified in binary single or double precision format (as denoted by the
+ * flags)\\
+ * \code{array}&Array of all vertex normal directions (X, Y, Z, X, Y, Z, ...) 
+ * specified in binary single or double precision format. When the mesh has
+ * no vertex normals, this field is omitted.\\
+ * \code{array}&Array of all vertex texture coordinates (U, V, U, V, ...) 
+ * specified in binary single or double precision format. When the mesh has
+ * no texture coordinates, this field is omitted.\\
+ * \code{array}&Array of all vertex colors (R, G, B, R, G, B, ...) 
+ * specified in binary single or double precision format. When the mesh has
+ * no vertex colors, this field is omitted.\\
+ * \code{array}&Indexed triangle data (\code{[i1, i2, i3]}, \code{[i1, i2, i3]}, ..)
+ * specified in \code{uint32} or in \code{uint64} format (the latter
+ * is used when the number of vertices exceeds \code{0xFFFFFFFF}).\\
+ * \bottomrule
+ * \end{longtable}
+ * \end{center}
+ * \paragraph{Multiple shapes:}
+ * It is possible to store multiple meshes in a single \code{.serialized}
+ * file. This is done by simply concatenating their data streams,
+ * where every one is structured according to the above description.
+ * Hence, after each mesh, the stream briefly reverts back to an 
+ * uncompressed format, followed by an uncompressed header, and so on. 
+ * This is neccessary for efficient read access to arbitrary sub-meshes.
+ *
+ * \paragraph{End-of-file dictionary:} In addition to the previous table,
+ * a \code{.serialized} file also concludes with a brief summary at the end of 
+ * the file, which specifies the starting position of each sub-mesh:
+ * \begin{center}
+ * \begin{longtable}{>{\bfseries}p{2cm}p{11cm}}
+ * \toprule
+ * Type & Content\\
+ * \midrule
+ * \code{uint64}& File offset of the first mesh (in bytes)---this is always zero.\\
+ * \code{uint64}& File offset of the second mesh\\
+ * $\cdots$ & $\cdots$\\
+ * \code{uint64}& File offset of the last sub-shape\\
+ * \code{uint32}& Total number of meshes in the \code{.serialized} file\\
+ * \bottomrule
+ * \end{longtable}
+ * \end{center}
  */
 class SerializedMesh : public TriMesh {
 public:
@@ -65,52 +151,55 @@ public:
 			: formatString("%s@%i", filePath.stem().c_str(), shapeIndex); 
 
 		/* Load the geometry */
-		Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.leaf().c_str());
+		Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.filename().c_str());
 		ref<FileStream> stream = new FileStream(filePath, FileStream::EReadOnly);
-		stream->setByteOrder(Stream::ELittleEndian);
-		ref<TriMesh> mesh = new TriMesh(stream, shapeIndex);
-		m_triangleCount = mesh->getTriangleCount();
-		m_vertexCount = mesh->getVertexCount();
+		ref<Timer> timer = new Timer();
+		loadCompressed(stream, shapeIndex);
+		Log(EDebug, "Done (" SIZE_T_FMT " triangles, " SIZE_T_FMT " vertices, %i ms)",
+			m_triangleCount, m_vertexCount, timer->getMilliseconds());
 
-		m_positions = new Point[m_vertexCount];
-		memcpy(m_positions, mesh->getVertexPositions(), sizeof(Point) * m_vertexCount);
+		/* By default, any existing normals will be used for
+		   rendering. If no normals are found, Mitsuba will
+		   automatically generate smooth vertex normals. 
+		   Setting the 'faceNormals' parameter instead forces
+		   the use of face normals, which will result in a faceted
+		   appearance.
+		*/
+		m_faceNormals = props.getBoolean("faceNormals", false);
 
-		if (mesh->hasVertexNormals()) {
-			m_normals = new Normal[m_vertexCount];
-			memcpy(m_normals, mesh->getVertexNormals(), sizeof(Normal) * m_vertexCount);
-		}
-
-		if (mesh->hasVertexTexcoords()) {
-			m_texcoords = new Point2[m_vertexCount];
-			memcpy(m_texcoords, mesh->getVertexTexcoords(), sizeof(Point2) * m_vertexCount);
-		}
-
-		if (mesh->hasVertexColors()) {
-			m_colors = new Spectrum[m_vertexCount];
-			memcpy(m_colors, mesh->getVertexColors(), sizeof(Spectrum) * m_vertexCount);
-		}
-
-		m_triangles = new Triangle[m_triangleCount];
-		memcpy(m_triangles, mesh->getTriangles(), sizeof(Triangle) * m_triangleCount);
+		/* Causes all normals to be flipped */
+		m_flipNormals = props.getBoolean("flipNormals", false);
 
 		if (!objectToWorld.isIdentity()) {
-			for (size_t i=0; i<m_vertexCount; ++i)
-				m_positions[i] = objectToWorld(m_positions[i]);
+			m_aabb.reset();
+			for (size_t i=0; i<m_vertexCount; ++i) {
+				Point p = objectToWorld(m_positions[i]);
+				m_positions[i] = p;
+				m_aabb.expandBy(p);
+			}
 			if (m_normals) {
 				for (size_t i=0; i<m_vertexCount; ++i) 
 					m_normals[i] = objectToWorld(m_normals[i]);
 			}
 		}
+
 		if (objectToWorld.det3x3() < 0) {
 			for (size_t i=0; i<m_triangleCount; ++i) {
 				Triangle &t = m_triangles[i];
 				std::swap(t.idx[0], t.idx[1]);
 			}
 		}
+
+		if (props.hasProperty("maxSmoothAngle")) {
+			if (m_faceNormals)
+				Log(EError, "The properties 'maxSmoothAngle' and 'faceNormals' "
+				"can't be specified at the same time!");
+			rebuildTopology(props.getFloat("maxSmoothAngle"));
+		}
 	}
 
-	SerializedMesh(Stream *stream, InstanceManager *manager) : TriMesh(stream, manager) {
-	}
+	SerializedMesh(Stream *stream, InstanceManager *manager) 
+		: TriMesh(stream, manager) { }
 
 	MTS_DECLARE_CLASS()
 };

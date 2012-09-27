@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,10 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SSHSTREAM_H)
-#define __SSHSTREAM_H
+#pragma once
+#if !defined(__MITSUBA_CORE_SSHSTREAM_H_)
+#define __MITSUBA_CORE_SSHSTREAM_H_
 
 #include <mitsuba/mitsuba.h>
+#include <boost/scoped_ptr.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -76,16 +78,16 @@ public:
 	// =============================================================
 
 	/// Return the destination machine's host name
-	inline const std::string &getHostName() const { return m_hostName; }
+	const std::string &getHostName() const;
 	
 	/// Return the user name used for authentication
-	inline const std::string &getUserName() const { return m_userName; }
+	const std::string &getUserName() const;
 	
 	/// Return the number of received bytes
-	inline size_t getReceivedBytes() const { return m_received; }
+	size_t getReceivedBytes() const;
 	
 	/// Return the number of sent bytes
-	inline size_t getSentBytes() const { return m_sent; }
+	size_t getSentBytes() const;
 
 	//! @}
 	// =============================================================
@@ -96,7 +98,7 @@ public:
 
 	void read(void *ptr, size_t size);
 	void write(const void *ptr, size_t size);
-	void setPos(size_t pos);
+	void seek(size_t pos);
 	size_t getPos() const;
 	size_t getSize() const;
 	void truncate(size_t size);
@@ -120,18 +122,10 @@ protected:
 	 */
 	virtual ~SSHStream();
 private:
-	std::string m_userName, m_hostName;
-	int m_port, m_timeout;
-	size_t m_received, m_sent;
-#if defined(WIN32)
-	HANDLE m_childInRd, m_childInWr;
-	HANDLE m_childOutRd, m_childOutWr;
-#else
-	int m_infd, m_outfd;
-	FILE *m_input, *m_output;
-#endif
+	struct SSHStreamPrivate;
+	boost::scoped_ptr<SSHStreamPrivate> d;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __SSHSTREAM_H */
+#endif /* __MITSUBA_CORE_SSHSTREAM_H_ */

@@ -109,7 +109,7 @@ if (..) {
 
 \paragraph{Separation of plugins:}Mitsuba encourages that plugins are only
 used via the generic interface they implement. You will find that almost all plugins
-(e.g. luminaires) don't actually provide a header file, hence they can only be accessed
-using the generic \code{Luminaire} interface they implement. If any kind of special 
+(e.g. emitters) don't actually provide a header file, hence they can only be accessed
+using the generic \code{Emitter} interface they implement. If any kind of special 
 interaction between plugins is needed, this is usually an indication that the 
 generic interface should be extended to accomodate this.

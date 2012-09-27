@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,7 +20,7 @@
 #define MAINWINDOW_H
 
 #include "common.h"
-#include <QtNetwork>
+#include <QtNetwork/QtNetwork>
 #include <mitsuba/render/renderjob.h>
 
 #define MAX_RECENT_FILES 10
@@ -45,7 +45,6 @@ class PreviewSettingsDlg;
 class QRenderListener : public QObject, public RenderListener {
 	Q_OBJECT
 public:
-	typedef std::pair<const RenderJob *, const Bitmap *> RefreshRequest;
 
 	QRenderListener() {
 		m_mutex = new Mutex();
@@ -62,15 +61,18 @@ public:
 	inline void workEndEvent(const RenderJob *job, const ImageBlock *wr) {
 		emit workEnd(job, wr);
 	}
-	
+
+	/// Called when work has been canceled in a rectangular image region
+	inline void workCanceledEvent(const RenderJob *job, const Point2i &offset, const Vector2i &size) {
+		emit workCanceled(job, offset, size);
+	}
 
 	/// Called when the whole target image has been altered in some way
-	inline void refreshEvent(const RenderJob *job, const Bitmap *bitmap) {
-		m_mutex->lock();
-		RefreshRequest request = std::make_pair(job, bitmap);
+	inline void refreshEvent(const RenderJob *job) {
+		LockGuard lock(m_mutex);
 
 		/* Potentially overwrite a previous refresh request */
-		m_refreshRequest = &request;
+		m_refreshRequest = job;
 
 		/* Asynchronously signal the GUI */
 		emit refresh();
@@ -80,7 +82,6 @@ public:
 		m_cond->wait(REFRESH_TIMEOUT);
 
 		m_refreshRequest = NULL;
-		m_mutex->unlock();
 	}
 
 	/// Called when a render job has completed successfully or unsuccessfully
@@ -88,13 +89,14 @@ public:
 		emit jobFinished(job, cancelled);
 	}
 
-	inline const RefreshRequest *acquireRefreshRequest() { m_mutex->lock(); return m_refreshRequest; }
+	inline const RenderJob *acquireRefreshRequest() { m_mutex->lock(); return m_refreshRequest; }
 	inline void releaseRefreshRequest() { m_refreshRequest = NULL; m_cond->signal(); m_mutex->unlock(); }
 
 	MTS_DECLARE_CLASS()
 signals:
 	void workBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 	void workEnd(const RenderJob *job, const ImageBlock *wr);
+	void workCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size);
 	void jobFinished(const RenderJob *job, bool cancelled);
 	void refresh();
 
@@ -104,7 +106,7 @@ protected:
 private:
 	ref<Mutex> m_mutex;
 	ref<ConditionVariable> m_cond;
-	RefreshRequest *m_refreshRequest;
+	const RenderJob *m_refreshRequest;
 };
 
 class PreviewSettingsDialog;
@@ -133,7 +135,7 @@ protected:
 	void drawVisualWorkUnit(SceneContext *context, const VisualWorkUnit &block);
 	void checkForUpdates(bool notifyIfNone = false);
 	void saveAs(SceneContext *ctx, const QString &targetFile);
-	void refresh(const RenderJob *job, const Bitmap *bitmap);
+	void refresh(const RenderJob *job);
 	QSize sizeHint() const;
 
 signals:
@@ -149,6 +151,9 @@ private slots:
 	void on_actionRender_triggered();
 	void on_actionClose_triggered();
 	void on_actionStop_triggered();
+	void on_actionMagnify_triggered();
+	void on_actionCrop_triggered();
+	void on_actionResetView_triggered();
 	void on_actionShowLog_triggered();
 	void on_actionSettings_triggered();
 	void on_actionUpdateCheck_triggered();
@@ -163,6 +168,8 @@ private slots:
 	void on_actionReportBug_triggered();
 	void on_actionFeedback_triggered();
 	void on_actionShowKDTree_triggered();
+	void on_actionFocusSelected_triggered();
+	void on_actionFocusAll_triggered();
 	void on_actionSceneDescription_triggered();
 	void on_actionEnableCommandLine_triggered();
 	void on_tabBar_currentChanged(int index);
@@ -174,6 +181,7 @@ private slots:
 	void onClearRecent();
 	void onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 	void onWorkEnd(const RenderJob *job, const ImageBlock *wr);
+	void onWorkCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size);
 	void onRefresh();
 	void onJobFinished(const RenderJob *job, bool cancelled);
 	void onProgressMessage(const RenderJob *job, const QString &name, 
@@ -181,8 +189,6 @@ private slots:
 	void onStatusMessage(const QString &status);
 	void onNetworkFinished(QNetworkReply *reply);
 	void onServerClosed();
-	void onBugReportError();
-	void onBugReportSubmitted();
 	void updateUI();
 	void updateStatus();
 	void onPreviewSettingsClose();
@@ -192,6 +198,10 @@ private slots:
 	void onRenderSettingsClose(int reason);
 	void onImportDialogClose(int reason);
 	void onSceneInformationClose(int reason);
+	void onActivateCamera();
+	void on_glView_crop(int type, int x=0, int y=0, 
+		int width=0, int height=0);
+	void onSelectionChanged();
 
 private:
     Ui::MainWindow *ui;
@@ -218,7 +228,7 @@ private:
 	int m_blockSize, m_listenPort;
 	bool m_checkForUpdates, m_manualUpdateCheck;
 	bool m_activeWindowHack;
-	int m_bugStatus, m_contextIndex;
+	int m_contextIndex;
 	SceneContext *m_lastTab;
 	std::map<std::string, std::string, SimpleStringOrdering> m_parameters;
 #if defined(__OSX__)

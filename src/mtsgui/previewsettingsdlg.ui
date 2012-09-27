@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>428</width>
-    <height>379</height>
+    <width>420</width>
+    <height>360</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,7 +15,7 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0" colspan="2">
-    <widget class="QLabel" name="label_2">
+    <widget class="QLabel" name="previewLabel">
      <property name="font">
       <font>
        <weight>75</weight>
@@ -44,7 +44,7 @@
     </spacer>
    </item>
    <item row="1" column="1">
-    <widget class="QLabel" name="label_3">
+    <widget class="QLabel" name="previewMethodLabel">
      <property name="toolTip">
       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
@@ -76,7 +76,7 @@ p, li { white-space: pre-wrap; }
     </widget>
    </item>
    <item row="2" column="1">
-    <widget class="QLabel" name="label">
+    <widget class="QLabel" name="pathLengthLabel">
      <property name="toolTip">
       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
@@ -144,7 +144,7 @@ p, li { white-space: pre-wrap; }
     </widget>
    </item>
    <item row="3" column="1">
-    <widget class="QLabel" name="label_7">
+    <widget class="QLabel" name="clampingLabel">
      <property name="toolTip">
       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
@@ -240,7 +240,7 @@ p, li { white-space: pre-wrap; }
     </widget>
    </item>
    <item row="5" column="1">
-    <widget class="QLabel" name="label_6">
+    <widget class="QLabel" name="diffuseLabel">
      <property name="toolTip">
       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
@@ -261,7 +261,7 @@ p, li { white-space: pre-wrap; }
     </widget>
    </item>
    <item row="6" column="0" colspan="2">
-    <widget class="QLabel" name="label_4">
+    <widget class="QLabel" name="toneMappingLabel">
      <property name="font">
       <font>
        <weight>75</weight>
@@ -274,7 +274,7 @@ p, li { white-space: pre-wrap; }
     </widget>
    </item>
    <item row="7" column="1">
-    <widget class="QLabel" name="label_5">
+    <widget class="QLabel" name="toneMappingMethodLabel">
      <property name="toolTip">
       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
@@ -323,6 +323,9 @@ p, li { white-space: pre-wrap; }
     <widget class="QLabel" name="keyLabel">
      <property name="text">
       <string>Key value : </string>
+     </property>
+     <property name="buddy">
+      <cstring>keySlider</cstring>
      </property>
     </widget>
    </item>

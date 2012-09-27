@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -36,6 +36,7 @@ void Shader::resolve(const GPUProgram *program, const std::string &evalName,
 void Shader::unbind() const { }
 void Shader::cleanup(Renderer *renderer) { }
 bool Shader::isComplete() const { return true; }
+Float Shader::getAlpha() const { return 1.0f; }
 
 Shader *HWResource::createShader(Renderer *renderer) const {
 	return NULL;

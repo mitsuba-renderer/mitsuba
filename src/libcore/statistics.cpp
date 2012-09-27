@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -91,12 +91,8 @@ StatsCounter::StatsCounter(const std::string &cat, const std::string &name, ESta
 	memset(m_value, 0, sizeof(CacheLineCounter) * NUM_COUNTERS);
 	memset(m_base, 0, sizeof(CacheLineCounter) * NUM_COUNTERS);
 #if defined(WIN32) && !defined(WIN64)
-	if (sizeof(LONG) != sizeof(uint32_t)) {
-		cerr << "Internal error: sizeof(LONG) != sizeof(uint32_t)!" << endl;
-		exit(-1);
-	}
-	m_value[0].value = (LONG) initial;
-	m_base[0].value = (LONG) base;
+	m_value[0].value = (uint32_t) initial;
+	m_base[0].value = (uint32_t) base;
 #else
 	m_value[0].value = initial;
 	m_base[0].value = base;
@@ -143,13 +139,13 @@ void Statistics::printStats() {
 
 std::string Statistics::getStats() {
 	std::ostringstream oss;
-	m_mutex->lock();
-	oss << "------------------------------------------------------------" << std::endl;
+	LockGuard lock(m_mutex);
+	oss << "------------------------------------------------------------" << endl;
 
-	oss << " * Loaded plugins :" << std::endl;
+	oss << " * Loaded plugins :" << endl;
 
 	if (m_plugins.size() == 0) {
-		oss << "     none." << std::endl;
+		oss << "     none." << endl;
 	} else {
 		std::sort(m_plugins.begin(), m_plugins.end());
 		for (unsigned int i=0; i<m_plugins.size(); i++) 
@@ -167,21 +163,31 @@ std::string Statistics::getStats() {
 	for (size_t i=0; i<m_counters.size(); ++i) {
 		const StatsCounter *counter = m_counters[i];
 		char temp[128];
-		float value = (float) counter->getValue();
 		float baseValue = (float) counter->getBase();
 		int suffixIndex = 0, suffixIndex2 = 0;
+		EStatsType type = counter->getType();
 
-		if ((counter->getType() != EPercentage && value == 0) ||
-		    (counter->getType() == EPercentage && baseValue == 0))
+		float value;
+		if (type == EMinimumValue)
+			value = (float) counter->getMinimum();
+		else if (type == EMaximumValue)
+			value = (float) counter->getMaximum();
+		else
+			value = (float) counter->getValue();
+
+		if ((type != EPercentage && value == 0) ||
+		    (type == EPercentage && baseValue == 0))
 			continue;
 
 		if (category != counter->getCategory()) {
 			category = counter->getCategory();
-			oss << std::endl <<  "  * " << category << " :" << std::endl;
+			oss << endl <<  "  * " << category << " :" << endl;
 		}
 
-		switch (counter->getType()) {
+		switch (type) {
 			case ENumberValue:
+			case EMinimumValue:
+			case EMaximumValue:
 				while (value > 1000.0f) {
 					value /= 1000.0f;
 					suffixIndex++;
@@ -191,6 +197,7 @@ std::string Statistics::getStats() {
 				else
 					snprintf(temp, sizeof(temp), "    -  %s : %.3f%s", counter->getName().c_str(), value, suffixesNumber[suffixIndex].c_str());
 				break;
+
 			case EByteCount:
 				while (value > 1024.0f) {
 					value /= 1024.0f;
@@ -201,6 +208,7 @@ std::string Statistics::getStats() {
 				else
 					snprintf(temp, sizeof(temp), "    -  %s : %.3f%s", counter->getName().c_str(), value, suffixesByte[suffixIndex].c_str());
 				break;
+
 			case EPercentage: {
 					Float value2 = value, value3 = baseValue;
 					while (value2 > 1000.0f) {
@@ -211,7 +219,7 @@ std::string Statistics::getStats() {
 						value3 /= 1000.0f;
 						suffixIndex2++;
 					}
-					snprintf(temp, sizeof(temp), "    -  %s : %.1f %% (%.1f%s of %.1f%s)", 
+					snprintf(temp, sizeof(temp), "    -  %s : %.2f %% (%.2f%s of %.2f%s)", 
 						counter->getName().c_str(), baseValue == 0 ? (Float) 0 : value/baseValue * 100, 
 						value2, suffixesNumber[suffixIndex].c_str(),
 						value3, suffixesNumber[suffixIndex2].c_str());
@@ -228,7 +236,7 @@ std::string Statistics::getStats() {
 						value3 /= 1000.0f;
 						suffixIndex2++;
 					}
-					snprintf(temp, sizeof(temp), "    -  %s : %.1f (%.1f%s / %.1f%s)", 
+					snprintf(temp, sizeof(temp), "    -  %s : %.2f (%.2f%s / %.2f%s)", 
 						counter->getName().c_str(), avg,
 						value2, suffixesNumber[suffixIndex].c_str(),
 						value3, suffixesNumber[suffixIndex2].c_str());
@@ -237,17 +245,16 @@ std::string Statistics::getStats() {
 			default:
 				Log(EError, "Unknown counter type!");
 		}
-		oss << temp << std::endl;
+		oss << temp << endl;
 		++statsEntries;
 	}
 
 	if (statsEntries == 0) {
-		oss << " * Statistics:" << std::endl
-			<< "     none." << std::endl;
+		oss << " * Statistics:" << endl
+			<< "     none." << endl;
 	}
 
 	oss << "------------------------------------------------------------";
-	m_mutex->unlock();
 	return oss.str();
 }
 

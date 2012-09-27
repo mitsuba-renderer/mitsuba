@@ -66,11 +66,11 @@ from mitsuba.render import SceneHandler
 # Get a reference to the thread's file resolver
 fileResolver = Thread.getThread().getFileResolver()
 
-# Add the search path needed to load plugins
-fileResolver.addPath('<path to mitsuba directory>')
+# Register the search path needed to load plugins
+fileResolver.appendPath('<path to mitsuba directory>')
 
-# Add the search path needed to load scene resources
-fileResolver.addPath('<path to scene directory>')
+# Register the search path needed to load scene resources
+fileResolver.appendPath('<path to scene directory>')
 
 # Optional: supply parameters that can be accessed 
 # by the scene (e.g. as $\text{\color{lstcomment}\itshape\texttt{\$}}$myParameter)
@@ -138,41 +138,41 @@ Dynamically constructing Mitsuba scenes entails loading a series of external
 plugins, instantiating them with custom parameters, and finally assembling 
 them into an object graph. 
 For instance, the following snippet shows how to create a basic
-perspective camera with a film that writes PNG images:
+perspective sensor with a film that writes PNG images:
 \begin{python}
 from mitsuba.core import *
 pmgr = PluginManager.getInstance()
 
 # Encodes parameters on how to instantiate the 'perspective' plugin
-cameraProps = Properties('perspective')
-cameraProps['toWorld'] = Transform.lookAt(
+sensorProps = Properties('perspective')
+sensorProps['toWorld'] = Transform.lookAt(
 	Point(0, 0, -10),  # Camera origin
 	Point(0, 0, 0),    # Camera target
 	Vector(0, 1, 0)    # 'up' vector
 )
-cameraProps['fov'] = 45.0
+sensorProps['fov'] = 45.0
 
-# Encodes parameters on how to instantiate the 'pngfilm' plugin
-filmProps = Properties('pngfilm')
+# Encodes parameters on how to instantiate the 'ldrfilm' plugin
+filmProps = Properties('ldrfilm')
 filmProps['width'] = 1920
 filmProps['height'] = 1080
 
 # Load and instantiate the plugins
-camera = pmgr.createObject(cameraProps)
+sensor = pmgr.createObject(sensorProps)
 film = pmgr.createObject(filmProps)
 
-# First configure the film and then add it to the camera
+# First configure the film and then add it to the sensor
 film.configure()
-camera.addChild('film', film)
+sensor.addChild('film', film)
 
-# Now, the camera can be configured
-camera.configure()
+# Now, the sensor can be configured
+sensor.configure()
 \end{python}
 The above code fragment uses the plugin manager to construct a 
-\code{Camera} instance from an external plugin named 
+\code{Sensor} instance from an external plugin named 
 \texttt{perspective.so/dll/dylib} and adds a child object
 named \texttt{film}, which is a \texttt{Film} instance loaded from the
-plugin \texttt{pngfilm.so/dll/dylib}.
+plugin \texttt{ldrfilm.so/dll/dylib}.
 Each time after instantiating a plugin, all child objects are added, and
 finally the  plugin's \code{configure()} method must be called.
 
@@ -184,7 +184,7 @@ alternative that makes use of this facility:
 from mitsuba.core import *
 
 pmgr = PluginManager.getInstance()
-camera = pmgr.create({
+sensor = pmgr.create({
 	'type' : 'perspective',
 	'toWorld' : Transform.lookAt(
 		Point(0, 0, -10),
@@ -192,7 +192,7 @@ camera = pmgr.create({
 		Vector(0, 1, 0)
 	),
 	'film' : {
-		'type' : 'pngfilm',
+		'type' : 'ldrfilm',
 		'width' : 1920,
 		'height' : 1080
 	}
@@ -213,7 +213,7 @@ from mitsuba.render import Scene
 
 scene = Scene()
 
-# Create a camera, film & sample generator
+# Create a sensor, film & sample generator
 scene.addChild(pmgr.create({
 	'type' : 'perspective',
 	'toWorld' : Transform.lookAt(
@@ -222,7 +222,7 @@ scene.addChild(pmgr.create({
 		Vector(0, 1, 0)
 	),
 	'film' : {
-		'type' : 'pngfilm',
+		'type' : 'ldrfilm',
 		'width' : 1920,
 		'height' : 1080
 	},
@@ -263,7 +263,8 @@ Many operations in Mitsuba will print one or more log messages
 during their execution. By default, they will be printed to the console,
 which may be undesirable. Similar to the C++ side, it is possible to define
 custom \code{Formatter} and \code{Appender} classes to interpret and direct
-the flow of these messages. 
+the flow of these messages. This is also useful to keep track of the progress
+of rendering jobs.
 
 Roughly, a \code{Formatter} turns detailed
 information about a logging event into a human-readable string, and a

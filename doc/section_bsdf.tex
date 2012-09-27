@@ -93,17 +93,17 @@ In many rendering systems, it would be feasible to increase the
 reflectance value above $1.0$ in such a situation. But in Mitsuba, even a 
 small surface that reflects a little more light than it receives will 
 likely break the available rendering algorithms, or cause them to produce otherwise 
-unpredictable results. In fact, we should rather change the lighting setup and
-then \emph{reduce} the material's reflectance, since it is quite unlikely that 
-we could find a real-world desk with a reflectance as high as $0.9$.
+unpredictable results. In fact, the right solution in this case would be to switch to
+a different the lighting setup that causes more illumination to be received by
+the desk and then \emph{reduce} the material's reflectance---after all, it is quite unlikely that 
+one could find a real-world desk that reflects 90\% of all incident light.
 
-As an example of the necessity for a meaningful material arrangement, consider
+As another example of the necessity for a meaningful material description, consider
 the glass model illustrated in \figref{glass-explanation}. Here, careful thinking 
 is needed to decompose the object into boundaries that mark index of 
 refraction-changes. If this is done incorrectly and a beam of light can
 potentially pass through a sequence of incompatible index of refraction changes (e.g. $1.00\to 1.33$
 followed by $1.50\to1.33$), the output is undefined and will quite likely
-even contain inaccuracies in parts of the scene that are some distance
+even contain inaccuracies in parts of the scene that are far 
 away from the glass.
-
 

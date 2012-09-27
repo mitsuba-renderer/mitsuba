@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,15 +16,16 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SUBSURFACE_H)
-#define __SUBSURFACE_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_SUBSURFACE_H_)
+#define __MITSUBA_RENDER_SUBSURFACE_H_
 
 #include <mitsuba/core/netobject.h>
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief Abstract subsurface integrator
+ * \brief Abstract subsurface scattering models
  *
  * Can be attached to an arbitrary shape to compute exitant 
  * radiance due to internal scattering. How that is done is
@@ -37,9 +38,11 @@ MTS_NAMESPACE_BEGIN
 class MTS_EXPORT_RENDER Subsurface : public NetworkedObject {
 public:
 	/**
-	 * Possibly perform a pre-process task. The last three parameters are
-	 * resource IDs of the associated scene, camera and sample generator,
-	 * which have been made available to all local and remote workers.
+	 * \brief Possibly perform a pre-process task. 
+	 *
+	 * The last three parameters are resource IDs of the associated scene, 
+	 * camera and sample generator, which have been made available to all 
+	 * local and remote workers.
 	 */
 	virtual bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int samplerResID) = 0;
@@ -76,4 +79,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __SUBSURFACE_H */
+#endif /* __MITSUBA_RENDER_SUBSURFACE_H_ */

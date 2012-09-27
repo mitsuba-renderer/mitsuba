@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,13 +16,14 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__ZSTREAM_H)
-#define __ZSTREAM_H
+#pragma once
+#if !defined(__MITSUBA_CORE_ZSTREAM_H_)
+#define __MITSUBA_CORE_ZSTREAM_H_
 
 #include <mitsuba/mitsuba.h>
 #include <zlib.h>
 
-/// Buffer size used to communicate with zlib. The larger the better.
+/// Buffer size used to communicate with zlib. The larger, the better.
 #define ZSTREAM_BUFSIZE 32768
 
 MTS_NAMESPACE_BEGIN
@@ -40,9 +41,16 @@ public:
 	// =============================================================
 	//! @{ \name Constructors
 	// =============================================================
+	enum EStreamType {
+		/// A raw deflate stream
+		EDeflateStream,
+		/// A gzip-compatible stream
+		EGZipStream
+	};
 
 	/// Create a new compression stream
-	ZStream(Stream *childStream, int level = Z_DEFAULT_COMPRESSION);
+	ZStream(Stream *childStream, EStreamType streamType = EDeflateStream,
+		int level = Z_DEFAULT_COMPRESSION);
 
 	//! @}
 	// =============================================================
@@ -66,7 +74,7 @@ public:
 
 	void read(void *ptr, size_t size);
 	void write(const void *ptr, size_t size);
-	void setPos(size_t pos);
+	void seek(size_t pos);
 	size_t getPos() const;
 	size_t getSize() const;
 	void truncate(size_t size);
@@ -94,4 +102,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __ZSTREAM_H */
+#endif /* __MITSUBA_CORE_ZSTREAM_H_ */

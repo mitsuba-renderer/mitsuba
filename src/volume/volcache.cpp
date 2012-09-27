@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,9 +18,9 @@
 
 #include <mitsuba/render/volume.h>
 #include <mitsuba/core/properties.h>
-#include <mitsuba/core/lrucache.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/sched.h>
+#include <mitsuba/core/lrucache.h>
 #include <fstream>
 
 MTS_NAMESPACE_BEGIN
@@ -226,7 +226,7 @@ public:
 		const int x1 = x & m_voxelMask, y1 = y & m_voxelMask, z1 = z & m_voxelMask,
 				x2 = x1 + 1, y2 = y1 + 1, z2 = z1 + 1;
 
-		const Float fx = p.x - x, fy = p.y - y, fz = p.z - z,
+		const float fx = (float) p.x - x, fy = (float) p.y - y, fz = (float) p.z - z,
 				_fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
 
 		const float
@@ -240,9 +240,9 @@ public:
 			&d111 = blockData[(z2*m_blockRes + y2)*m_blockRes + x2];
 
 		float result = ((d000*_fx + d001*fx)*_fy +
-				(d010*_fx + d011*fx)*fy)*_fz +
+				 (d010*_fx + d011*fx)*fy)*_fz +
 				((d100*_fx + d101*fx)*_fy +
-				(d110*_fx + d111*fx)*fy)*fz;
+				 (d110*_fx + d111*fx)*fy)*fz;
 
 		return result;
 	}

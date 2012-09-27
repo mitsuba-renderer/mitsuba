@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,13 +20,17 @@
 
 MTS_NAMESPACE_BEGIN
 
-ZStream::ZStream(Stream *childStream, int level) 
+ZStream::ZStream(Stream *childStream, EStreamType streamType, int level) 
 		: m_childStream(childStream), m_didWrite(false) {
 	m_deflateStream.zalloc = Z_NULL;
 	m_deflateStream.zfree = Z_NULL;
 	m_deflateStream.opaque = Z_NULL;
 
-	int retval = deflateInit(&m_deflateStream, level);
+	int windowBits = 15 + (streamType == EGZipStream ? 16 : 0);
+
+	int retval = deflateInit2(&m_deflateStream, level,
+		Z_DEFLATED, windowBits, 8, Z_DEFAULT_STRATEGY);
+
 	if (retval != Z_OK)
 		Log(EError, "Could not initialize ZLIB: error code %i", retval);
 
@@ -36,7 +40,7 @@ ZStream::ZStream(Stream *childStream, int level)
 	m_inflateStream.avail_in = 0;
 	m_inflateStream.next_in = Z_NULL;
 
-	retval = inflateInit(&m_inflateStream);
+	retval = inflateInit2(&m_inflateStream, windowBits);
 	if (retval != Z_OK)
 		Log(EError, "Could not initialize ZLIB: error code %i", retval);
 }
@@ -49,8 +53,8 @@ bool ZStream::canRead() const {
 	return m_childStream->canRead();
 }
 
-void ZStream::setPos(size_t pos) {
-	Log(EError, "setPos(): unsupported in a ZLIB stream!");
+void ZStream::seek(size_t pos) {
+	Log(EError, "seek(): unsupported in a ZLIB stream!");
 }
 
 size_t ZStream::getPos() const {

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__PROGRAM_VERSION_H)
-#define __PROGRAM_VERSION_H
+#pragma once
+#if !defined(__MITSUBA_CORE_VERSION_H_)
+#define __MITSUBA_CORE_VERSION_H_
 
 MTS_NAMESPACE_BEGIN
 
@@ -25,13 +26,13 @@ MTS_NAMESPACE_BEGIN
  * \brief Current release of Mitsuba
  * \ingroup libcore
  */
-#define MTS_VERSION "0.3.1"
+#define MTS_VERSION "0.4.0"
 
 /**
  * \brief Year of the current release
  * \ingroup libcore
  */
-#define MTS_YEAR "2011"
+#define MTS_YEAR "2012"
 
 /**
  * \brief A simple data structure for representing and 
@@ -115,4 +116,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __PROGRAM_VERSION_H */
+#endif /* __MITSUBA_CORE_VERSION_H_ */

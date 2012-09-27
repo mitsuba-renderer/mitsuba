@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__NSGLDEVICE_H)
-#define __NSGLDEVICE_H
+#if !defined(__MITSUBA_HW_NSGLDEVICE_H_)
+#define __MITSUBA_HW_NSGLDEVICE_H_
 
 #include <mitsuba/hw/device.h>
 #include <mitsuba/hw/nsglsession.h>
@@ -29,7 +29,7 @@ MTS_NAMESPACE_END
 #ifdef __OBJC__
 #include <Cocoa/Cocoa.h>
 
-@interface CustomView : NSView {
+@interface CustomView : NSView < NSWindowDelegate > {
 	mitsuba::NSGLDevice *m_device;
 	unsigned int m_keymap[0xFF];
 	unsigned int m_modifiers;
@@ -137,4 +137,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __NSGLDEVICE_H */
+#endif /* __MITSUBA_HW_NSGLDEVICE_H_ */

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,14 +16,15 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__RAY_H)
-#define __RAY_H
+#pragma once
+#if !defined(__MITSUBA_CORE_RAY_H_)
+#define __MITSUBA_CORE_RAY_H_
 
 #include <mitsuba/mitsuba.h>
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Simple three-dimensional ray data structure with
+/** \brief Simple n-dimensional ray data structure with
  * minimum / maximum extent information.
  *
  * The somewhat peculiar ordering of the attributes is due
@@ -32,90 +33,95 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libcore
  * \ingroup libpython
 */
-struct Ray {
-	Point o;     ///< Ray origin
-	Float mint;  ///< Minimum range for intersection tests
-	Vector d;    ///< Ray direction
-	Float maxt;  ///< Maximum range for intersection tests
-	Vector dRcp; ///< Componentwise reciprocals of the ray direction
+template <typename _PointType, typename _VectorType> struct TRay {
+	typedef _PointType                  PointType;
+	typedef _VectorType                 VectorType;
+	typedef typename PointType::Scalar  Scalar;
+
+	/* The somewhat peculiar ordering of the attributes is for 
+	   alignment purposes in the 3D case and should not be changed. */
+
+	PointType o;     ///< Ray origin
+	Scalar mint;     ///< Minimum range for intersection tests
+	VectorType d;    ///< Ray direction
+	Scalar maxt;     ///< Maximum range for intersection tests
+	VectorType dRcp; ///< Componentwise reciprocals of the ray direction
 	Float time;  ///< Time value associated with this ray
 
 	/// Construct a new ray
-	inline Ray() : mint(Epsilon), 
-		maxt(std::numeric_limits<Float>::infinity()), time(0.0f) {
+	inline TRay() : mint(Epsilon), 
+		maxt(std::numeric_limits<Scalar>::infinity()), time(0) {
 	}
 
 	/// Copy constructor (1)
-	inline Ray(const Ray &ray) 
+	inline TRay(const TRay &ray) 
 	 : o(ray.o), mint(ray.mint), d(ray.d), maxt(ray.maxt), 
 	   dRcp(ray.dRcp), time(ray.time) {
 	}
 
 	/// Copy constructor (2)
-	inline Ray(const Ray &ray, Float mint, Float maxt) 
-	 : o(ray.o), mint(mint), d(ray.d), maxt(maxt), dRcp(ray.dRcp), time(ray.time) {
-	}
+	inline TRay(const TRay &ray, Scalar mint, Scalar maxt) 
+	 : o(ray.o), mint(mint), d(ray.d), maxt(maxt), 
+	   dRcp(ray.dRcp), time(ray.time) { }
 
 	/// Construct a new ray, while not specifying a direction yet
-	inline Ray(Point o, Float time) : o(o), mint(Epsilon), maxt(std::numeric_limits<Float>::infinity()), time(time) {
-	}
+	inline TRay(const PointType &o, Scalar time) : o(o), mint(Epsilon), 
+	  maxt(std::numeric_limits<Scalar>::infinity()), time(time) { }
 
 	/// Construct a new ray
-	inline Ray(Point o, Vector _d, Float time)
-		: o(o), mint(Epsilon),  d(_d), maxt(std::numeric_limits<Float>::infinity()), time(time) {
+	inline TRay(const PointType &o, const VectorType &d, Scalar time)
+		: o(o), mint(Epsilon),  d(d), 
+		  maxt(std::numeric_limits<Scalar>::infinity()), time(time) {
 #ifdef MTS_DEBUG_FP
 		bool state = disableFPExceptions();
 #endif
-		dRcp.x = (Float) 1.0f / _d.x;
-		dRcp.y = (Float) 1.0f / _d.y;
-		dRcp.z = (Float) 1.0f / _d.z;
+		for (int i=0; i<3; ++i)
+			dRcp[i] = (Scalar) 1 / d[i];
 #ifdef MTS_DEBUG_FP
 		restoreFPExceptions(state);
 #endif
 	}
 
 	/// Construct a new ray
-	inline Ray(Point o, Vector _d, Float mint, Float maxt, Float time)
-		: o(o), mint(mint),  d(_d), maxt(maxt), time(time) {
+	inline TRay(const PointType &o, const VectorType &d, Scalar mint, Scalar maxt,
+		Scalar time) : o(o), mint(mint),  d(d), maxt(maxt), time(time) {
 #ifdef MTS_DEBUG_FP
 		bool state = disableFPExceptions();
 #endif
-		dRcp.x = (Float) 1.0f / _d.x;
-		dRcp.y = (Float) 1.0f / _d.y;
-		dRcp.z = (Float) 1.0f / _d.z;
+		for (int i=0; i<3; ++i)
+			dRcp[i] = (Scalar) 1 / d[i];
 #ifdef MTS_DEBUG_FP
 		restoreFPExceptions(state);
 #endif
 	}
 
 	/// Set the origin
-	inline void setOrigin(const Point &oVal) { o = oVal; }
+	inline void setOrigin(const PointType &pos) { o = pos; }
 
 	/// Set the origin
-	inline void setTime(const Float &tval) { time = tval; }
+	inline void setTime(Scalar tval) { time = tval; }
 	
 	/// Set the direction and update the reciprocal
-	inline void setDirection(const Vector &dVal) {
-		d = dVal;
+	inline void setDirection(const VectorType &dir) {
+		d = dir;
 #ifdef MTS_DEBUG_FP
 		bool state = disableFPExceptions();
 #endif
-		dRcp.x = (Float) 1.0f / dVal.x;
-		dRcp.y = (Float) 1.0f / dVal.y;
-		dRcp.z = (Float) 1.0f / dVal.z;
+		for (int i=0; i<3; ++i)
+			dRcp[i] = (Scalar) 1 / dir[i];
 #ifdef MTS_DEBUG_FP
 		restoreFPExceptions(state);
 #endif
 	}
 
 	/**
-	 * \brief Return 3D coordinates of a point along the ray
+	 * \brief Return the position of a point along the ray
 	 *
 	 * \remark In the Python bindings, this operator is 
 	 * exposed as a function named \c eval -- i.e. 
 	 * position lookups should be written as \c ray.eval(t)
 	 */
-	inline Point operator() (Float t) const { return o + t * d; }
+	inline PointType operator() (Scalar t) const { return o + t * d; }
 
 	/// Return a string representation of this ray
 	inline std::string toString() const {
@@ -204,6 +210,7 @@ struct RayDifferential : public Ray {
 			<< "  mint = " << mint << "," << endl
 			<< "  maxt = " << maxt << "," << endl
 			<< "  time = " << time << "," << endl
+			<< "  hasDifferentials = " << hasDifferentials << "," << endl
 			<< "  rxOrigin = " << rxOrigin.toString() << "," << endl
 			<< "  ryOrigin = " << ryOrigin.toString() << "," << endl
 			<< "  rxDirection = " << rxDirection.toString() << "," << endl
@@ -213,66 +220,6 @@ struct RayDifferential : public Ray {
 	}
 };
 
-#if defined(MTS_SSE)
-/** \brief SIMD quad-packed ray for coherent ray tracing */
-struct RayPacket4 {
-	QuadVector o, d;
-	QuadVector dRcp;
-	uint8_t signs[4][4];
-
-	inline RayPacket4() {
-	}
-
-	inline bool load(const Ray *rays) {
-		for (int i=0; i<4; i++) {
-			for (int axis=0; axis<3; axis++) {
-				o[axis].f[i] = rays[i].o[axis];
-				d[axis].f[i] = rays[i].d[axis];
-				dRcp[axis].f[i] = rays[i].dRcp[axis];
-				signs[axis][i] = rays[i].d[axis] < 0 ? 1 : 0;
-				if (signs[axis][i] != signs[axis][0])
-					return false;
-			}
-		}
-		return true;
-	}
-};
-
-struct RayInterval4 {
-	SSEVector mint;
-	SSEVector maxt;
-
-	inline RayInterval4() {
-		mint = SSEConstants::eps;
-		maxt = SSEConstants::p_inf;
-	}
-
-	inline RayInterval4(const Ray *rays) {
-		for (int i=0; i<4; i++) {
-			mint.f[i] = rays[i].mint;
-			maxt.f[i] = rays[i].maxt;
-		}
-	}
-};
-
-struct Intersection4 {
-	SSEVector t;
-	SSEVector u;
-	SSEVector v;
-	SSEVector primIndex;
-	SSEVector shapeIndex;
-
-	inline Intersection4() {
-		t          = SSEConstants::p_inf;
-		u          = SSEConstants::zero;
-		v          = SSEConstants::zero;
-		primIndex  = SSEConstants::ffffffff;
-		shapeIndex = SSEConstants::ffffffff;
-	}
-};
-
-#endif
-
 MTS_NAMESPACE_END
 
-#endif /* __RAY_H */
+#endif /* __MITSUBA_CORE_RAY_H_ */

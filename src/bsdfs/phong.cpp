@@ -1,7 +1,7 @@
 /*
 	This file is part of Mitsuba, a physically based rendering system.
 
-	Copyright (c) 2007-2011 by Wenzel Jakob and others.
+	Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
 	Mitsuba is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License Version 3
@@ -18,11 +18,12 @@
 
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/hw/basicshader.h>
+#include <mitsuba/core/warp.h>
 
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{phong}{Modified Phong BRDF}
- * \order{12}
+ * \order{13}
  * \parameters{
  *     \parameter{exponent}{\Float\Or\Texture}{
  *         Specifies the Phong exponent \default{30}. 
@@ -38,7 +39,7 @@ MTS_NAMESPACE_BEGIN
  * }
 
  * This plugin implements the modified Phong reflectance model as described in 
- * \cite{Phong1975Illumination} and \cite{Lafortune1994Using}. This empirical 
+ * \cite{Phong1975Illumination} and \cite{Lafortune1994Using}. This heuristic 
  * model is mainly included for historical reasons---its use in new scenes is 
  * discouraged, since significantly more realistic models have been developed 
  * since 1975.
@@ -106,7 +107,7 @@ public:
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_diffuseReflectance->getValue(its);
+		return m_diffuseReflectance->eval(its);
 	}
 
 	/// Reflection in local coordinates
@@ -114,7 +115,7 @@ public:
 		return Vector(-wi.x, -wi.y, wi.z);
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {	
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {	
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
 			return Spectrum(0.0f);
@@ -127,21 +128,21 @@ public:
 		Spectrum result(0.0f);
 		if (hasSpecular) {
 			Float alpha    = dot(bRec.wo, reflect(bRec.wi)),
-				  exponent = m_exponent->getValue(bRec.its).average();
+				  exponent = m_exponent->eval(bRec.its).average();
 
 			if (alpha > 0.0f) {
-				result += m_specularReflectance->getValue(bRec.its) *
+				result += m_specularReflectance->eval(bRec.its) *
 					((exponent + 2) * INV_TWOPI * std::pow(alpha, exponent));
 			}
 		}
 
 		if (hasDiffuse) 
-			result += m_diffuseReflectance->getValue(bRec.its) * INV_PI;
+			result += m_diffuseReflectance->eval(bRec.its) * INV_PI;
 
 		return result * Frame::cosTheta(bRec.wo);
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
 			return 0.0f;
@@ -154,11 +155,11 @@ public:
 		Float diffuseProb = 0.0f, specProb = 0.0f;
 
 		if (hasDiffuse)
-			diffuseProb = Frame::cosTheta(bRec.wo) * INV_PI;
+			diffuseProb = Warp::squareToCosineHemispherePdf(bRec.wo);
 
 		if (hasSpecular) {
 			Float alpha    = dot(bRec.wo, reflect(bRec.wi)),
-				  exponent = m_exponent->getValue(bRec.its).average();
+				  exponent = m_exponent->eval(bRec.its).average();
 			if (alpha > 0)
 				specProb = std::pow(alpha, exponent) * 
 					(exponent + 1.0f) / (2.0f * M_PI);
@@ -175,7 +176,7 @@ public:
 			return 0.0f;
 	}
 
-	inline Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+	inline Spectrum sample(BSDFSamplingRecord &bRec, Float &_pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection)
@@ -200,7 +201,7 @@ public:
 
 		if (choseSpecular) {
 			Vector R = reflect(bRec.wi);
-			Float exponent = m_exponent->getValue(bRec.its).average();
+			Float exponent = m_exponent->eval(bRec.its).average();
 
 			/* Sample from a Phong lobe centered around (0, 0, 1) */
 			Float sinAlpha = std::sqrt(1-std::pow(sample.y, 2/(exponent + 1)));
@@ -220,10 +221,11 @@ public:
 			if (Frame::cosTheta(bRec.wo) <= 0) 
 				return Spectrum(0.0f);
 		} else {
-			bRec.wo = squareToHemispherePSA(sample);
+			bRec.wo = Warp::squareToCosineHemisphere(sample);
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EDiffuseReflection;
 		}
+		bRec.eta = 1.0f;
 
 		_pdf = pdf(bRec, ESolidAngle);
 
@@ -233,7 +235,7 @@ public:
 			return eval(bRec, ESolidAngle) / _pdf;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		Float pdf;
 		return Phong::sample(bRec, pdf, sample);
 	}
@@ -261,12 +263,10 @@ public:
 		manager->serialize(stream, m_exponent.get());
 	}
 
-	Shader *createShader(Renderer *renderer) const; 
-
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Phong[" << endl
-			<< "  name = \"" << getName() << "\"," << endl
+   			<< "  id = \"" << getID() << "\"," << endl
 			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
@@ -275,6 +275,8 @@ public:
 			<< "]";
 		return oss.str();
 	}
+
+	Shader *createShader(Renderer *renderer) const; 
 
 	MTS_DECLARE_CLASS()
 private:

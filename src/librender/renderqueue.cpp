@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -34,64 +34,62 @@ RenderQueue::~RenderQueue() {
 }
 
 void RenderQueue::addJob(RenderJob *job) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	m_jobs[job] = JobRecord(m_timer->getMilliseconds());
 	job->incRef();
-	m_mutex->unlock();
 }
 
 void RenderQueue::registerListener(RenderListener *listener) {
 	listener->incRef();
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	m_listeners.push_back(listener);
-	m_mutex->unlock();
 }
 
 void RenderQueue::unregisterListener(RenderListener *listener) {
-	m_mutex->lock();
-	m_listeners.erase(std::remove(m_listeners.begin(), m_listeners.end(), listener));
-	m_mutex->unlock();
+	{
+		LockGuard lock(m_mutex);
+		m_listeners.erase(std::remove(m_listeners.begin(), m_listeners.end(),
+			listener));
+	}
 	listener->decRef();
 }
 	
 void RenderQueue::flush() {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	std::map<RenderJob *, JobRecord>::iterator it = m_jobs.begin();
 	for (; it != m_jobs.end(); ++it) {
 		(*it).first->flush();
 	}
-	m_mutex->unlock();
 }
 
 void RenderQueue::removeJob(RenderJob *job, bool cancelled) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	std::map<RenderJob *, JobRecord>::iterator it = m_jobs.find(job);
 	if (it == m_jobs.end()) {
 		Log(EError, "RenderQueue::removeRenderJob() - job not found!");
-		m_mutex->unlock();
 	}
 	JobRecord &rec = (*it).second;
 	unsigned int ms = m_timer->getMilliseconds() - rec.startTime;
 	Log(EInfo, "Render time: %s", timeString(ms/1000.0f, true).c_str());
 	m_jobs.erase(job);
 	m_cond->broadcast();
-	m_joinMutex->lock();
-	m_joinList.push_back(job);
-	m_joinMutex->unlock();
+	{
+		LockGuard lockJoin(m_joinMutex);
+		m_joinList.push_back(job);
+	}
 	signalFinishJob(job, cancelled);
-	m_mutex->unlock();
 }
 	
 void RenderQueue::waitLeft(size_t njobs) const {
-	m_mutex->lock();
+	UniqueLock lock(m_mutex);
 	while (m_jobs.size() > njobs) 
 		m_cond->wait();
-	m_mutex->unlock();
+	lock.unlock();
 	join();
 }
 
 void RenderQueue::join() const {
-	m_joinMutex->lock();
+	LockGuard lock(m_joinMutex);
 	/* Wait for the proper termination of all stopping threads */
 	for (size_t i=0; i<m_joinList.size(); ++i) {
 		RenderJob *job = m_joinList[i];
@@ -99,35 +97,36 @@ void RenderQueue::join() const {
 		job->decRef();
 	}
 	m_joinList.clear();
-	m_joinMutex->unlock();
 }
 
 void RenderQueue::signalWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	for (size_t i=0; i<m_listeners.size(); ++i)
 		m_listeners[i]->workBeginEvent(job, wu, worker);
-	m_mutex->unlock();
 }
 
 void RenderQueue::signalWorkEnd(const RenderJob *job, const ImageBlock *wr) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	for (size_t i=0; i<m_listeners.size(); ++i)
 		m_listeners[i]->workEndEvent(job, wr);
-	m_mutex->unlock();
+}
+
+void RenderQueue::signalWorkCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size) {
+	LockGuard lock(m_mutex);
+	for (size_t i=0; i<m_listeners.size(); ++i)
+		m_listeners[i]->workCanceledEvent(job, offset, size);
 }
 
 void RenderQueue::signalFinishJob(const RenderJob *job, bool cancelled) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	for (size_t i=0; i<m_listeners.size(); ++i)
 		m_listeners[i]->finishJobEvent(job, cancelled);
-	m_mutex->unlock();
 }
 
-void RenderQueue::signalRefresh(const RenderJob *job, const Bitmap *bitmap) {
-	m_mutex->lock();
+void RenderQueue::signalRefresh(const RenderJob *job) {
+	LockGuard lock(m_mutex);
 	for (size_t i=0; i<m_listeners.size(); ++i)
-		m_listeners[i]->refreshEvent(job, bitmap);
-	m_mutex->unlock();
+		m_listeners[i]->refreshEvent(job);
 }
 
 MTS_IMPLEMENT_CLASS(RenderQueue, false, Object)

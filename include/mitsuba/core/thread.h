@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,10 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__THREAD_H)
-#define __THREAD_H
+#pragma once
+#if !defined(__MITSUBA_CORE_THREAD_H_)
+#define __MITSUBA_CORE_THREAD_H_
 
 #include <mitsuba/mitsuba.h>
+#include <boost/scoped_ptr.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -46,13 +48,10 @@ public:
 	 * \brief Create a new thread object
 	 * \param name An identifying name of this thread 
 	 *   (will be shown in debug messages)
-	 * \param stackSize Initial stack size of the thread
-	 *   (0 = default)
 	 * \remark Note that it is currently not possible to
 	 *         construct Thread instances from Python
 	 */
-	Thread(const std::string &name, 
-		unsigned int stackSize = 0);
+	Thread(const std::string &name);
 
 	/**
 	 * \brief Set the thread priority
@@ -65,7 +64,7 @@ public:
 	bool setPriority(EThreadPriority priority);
 
 	/// Return the thread priority
-	inline EThreadPriority getPriority() const { return m_priority; }
+	EThreadPriority getPriority() const;
 
 	/**
 	 * \brief Specify whether or not this thread is critical
@@ -74,54 +73,43 @@ public:
 	 * exception, the whole process is brought down. 
 	 * The default is \c false.
 	 */
-	inline void setCritical(bool critical) { m_critical = critical; }
+	void setCritical(bool critical);
 
 	/// Return the value of the critical flag
-	inline bool getCritical() const { return m_critical; }
-
-	/// Return the thread's stack size
-	inline int getStackSize() const { return m_stackSize; }
+	bool getCritical() const;
 
 	/// Return the thread ID
-#if defined(WIN32)
-	inline static int getID() { return (int) GetCurrentThreadId(); }
-#elif MTS_USE_ELF_TLS == 1
-	inline static int getID() { return m_id; }
-#else
-	inline static int getID() { 
-		return getThread()->m_id;
-	}
-#endif
+	static int getID();
 
 	/// Return the name of this thread
-	inline const std::string &getName() const { return m_name; }
+	const std::string &getName() const;
 
 	/// Set the name of this thread
-	inline void setName(const std::string &name) { m_name = name; }
+	void setName(const std::string &name);
 
 	/// Return the parent thread
-	inline Thread *getParent() { return m_parent; }
+	Thread *getParent();
 
 	/// Return the parent thread (const version)
-	inline const Thread *getParent() const { return m_parent.get(); }
+	const Thread *getParent() const;
 
 	/// Set the logger instance used to process log messages from this thread
-	inline void setLogger(Logger *logger) { m_logger = logger; }
+	void setLogger(Logger *logger);
 
 	/// Return the thread's logger instance
-	inline Logger *getLogger() { return m_logger; }
+	Logger *getLogger();
 
 	/// Set the thread's file resolver
-	inline void setFileResolver(FileResolver *fresolver) { m_fresolver = fresolver; }
+	void setFileResolver(FileResolver *fresolver);
 
 	/// Return the thread's file resolver
-	inline FileResolver *getFileResolver() { return m_fresolver; }
+	FileResolver *getFileResolver();
 
 	/// Return the current thread
-	inline static Thread *getThread() { return m_self->get(); }
+	static Thread *getThread();
 
 	/// Is this thread still running?
-	inline bool isRunning() const { return m_running; }
+	bool isRunning() const;
 
 	/// Start the thread
 	void start();
@@ -168,7 +156,7 @@ protected:
 	virtual ~Thread();
 
 	/// Thread dispatch function
-	static void *dispatch(void *par);
+	static void dispatch(Thread *thread);
 
 	/**
 	 * Exit the thread, should be called from
@@ -182,34 +170,10 @@ protected:
 	/// The thread's run method
 	virtual void run() = 0;
 private:
-	ref<Thread> m_parent;
-	ref<Logger> m_logger;
-	ref<FileResolver> m_fresolver;
-	ref<Mutex> m_joinMutex;
-	std::string m_name;
-	unsigned int m_stackSize;
-	bool m_running, m_joined;
-	EThreadPriority m_priority;
-	pthread_t m_thread;
-	static ThreadLocal<Thread> *m_self;
-	bool m_critical;
-#if defined(__LINUX__) || defined(__OSX__)
-	static int m_idCounter;
-	static ref<Mutex> m_idMutex;
-#if MTS_USE_ELF_TLS == 1
-	static __thread int m_id
-		__attribute__((tls_model("global-dynamic")));
-#else
-	int m_id;
-#endif
-#endif
+	struct ThreadPrivate;
+	boost::scoped_ptr<ThreadPrivate> d;
 };
-
-/// Like omp_get_thread_num(), but works on all platforms
-extern MTS_EXPORT_CORE int mts_get_thread_num();
-/// Like omp_get_max_threads(), but works on all platforms
-extern MTS_EXPORT_CORE int mts_get_max_threads();
 
 MTS_NAMESPACE_END
 
-#endif /* __THREAD_H */
+#endif /* __MITSUBA_CORE_THREAD_H_ */

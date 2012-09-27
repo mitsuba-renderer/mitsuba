@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__IMAGEPROC_H)
-#define __IMAGEPROC_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_IMAGEPROC_H_)
+#define __MITSUBA_RENDER_IMAGEPROC_H_
 
 #include <mitsuba/core/sched.h>
 
@@ -54,7 +55,7 @@ protected:
 	 * \param blockSize
 	 *    Size of the generated square pixel blocks
 	 */
-	void init(const Point2i &offset, const Vector2i &size, int blockSize);
+	void init(const Point2i &offset, const Vector2i &size, uint32_t blockSize);
 
 	/// Protected constructor
 	inline BlockedImageProcess() { }
@@ -79,4 +80,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __IMAGEPROC_H */
+#endif /* __MITSUBA_RENDER_IMAGEPROC_H_ */

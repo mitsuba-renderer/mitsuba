@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -21,39 +21,54 @@
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
-#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/emitter.h>
 #include <mitsuba/render/medium.h>
+#include <mitsuba/render/sensor.h>
 
 MTS_NAMESPACE_BEGIN
 
 Shape::Shape(const Properties &props) 
- : ConfigurableObject(props), m_occluder(false) { }
+ : ConfigurableObject(props) { }
 
 Shape::Shape(Stream *stream, InstanceManager *manager) 
  : ConfigurableObject(stream, manager) {
 	m_bsdf = static_cast<BSDF *>(manager->getInstance(stream));
 	m_subsurface = static_cast<Subsurface *>(manager->getInstance(stream));
-	m_luminaire = static_cast<Luminaire *>(manager->getInstance(stream));
+	m_emitter = static_cast<Emitter *>(manager->getInstance(stream));
+	m_sensor = static_cast<Sensor *>(manager->getInstance(stream));
 	m_interiorMedium = static_cast<Medium *>(manager->getInstance(stream));
 	m_exteriorMedium = static_cast<Medium *>(manager->getInstance(stream));
-	m_occluder = stream->readBool();
 }
 
 Shape::~Shape() { }
 
-
 void Shape::configure() {
-	if ((hasSubsurface() || isLuminaire()) && m_bsdf == NULL) {
-		/* Light source & no BSDF -> set an all-absorbing BSDF to turn
-		   the shape into an occluder. This is needed for the path
-		   tracer implementation to work correctly. */
-		Properties props("diffuse");
-		props.setSpectrum("reflectance", Spectrum(0.0f));
-		addChild(static_cast<BSDF *> (PluginManager::getInstance()->
-			createObject(MTS_CLASS(BSDF), props)));
+	if (m_bsdf == NULL) {
+		ref<BSDF> bsdf = NULL;
+		if (isEmitter() || isSensor() || hasSubsurface()) {
+			/* Light source / sensor and no BSDF! -> set an all-absorbing BSDF */
+			Properties props("diffuse");
+			props.setSpectrum("reflectance", Spectrum(0.0f));
+			bsdf = static_cast<BSDF *> (PluginManager::getInstance()->
+				createObject(MTS_CLASS(BSDF), props));
+		} else if (!isMediumTransition()) {
+			/* A surface without BSDF, which is not a medium
+			   transition/sensor/emitter/subsurface emitter doesn't make
+			   much sense. Assign it a 0.5 Lambertian BRDF for convenience */
+			Properties props("diffuse");
+			props.setSpectrum("reflectance", Spectrum(0.5f));
+			bsdf = static_cast<BSDF *> (PluginManager::getInstance()->
+				createObject(MTS_CLASS(BSDF), props));
+		} else {
+			/* Assign a "null" BSDF */
+			bsdf = static_cast<BSDF *> (PluginManager::getInstance()->
+				createObject(MTS_CLASS(BSDF), Properties("null")));
+		}
+		bsdf->configure();
+		addChild(bsdf);
 	}
 }
-	
+
 bool Shape::isCompound() const {
 	return false;
 }
@@ -72,54 +87,78 @@ AABB Shape::getClippedAABB(const AABB &box) const {
 	return result;
 }
 
-Float Shape::sampleSolidAngle(ShapeSamplingRecord &sRec, 
-		const Point &from, const Point2 &sample) const {
-	/* Turns the area sampling routine into one that samples wrt. solid angles */
-	Float pdfArea = sampleArea(sRec, sample);
-	Vector lumToPoint = from - sRec.p;
-	Float distSquared = lumToPoint.lengthSquared(), dp = dot(lumToPoint, sRec.n);
-	if (dp > 0)
-		return pdfArea * distSquared * std::sqrt(distSquared) / dp;
-	else
-		return 0.0f;
+void Shape::sampleDirect(DirectSamplingRecord &dRec, 
+			const Point2 &sample) const {
+	/* Piggyback on sampleArea() */
+	samplePosition(dRec, sample);
+
+	dRec.d = dRec.p - dRec.ref;
+
+	Float distSquared = dRec.d.lengthSquared();
+	dRec.dist = std::sqrt(distSquared);
+	dRec.d /= dRec.dist;
+	Float dp = absDot(dRec.d, dRec.n);
+	dRec.pdf *= dp != 0 ? (distSquared / dp) : 0.0f;
+	dRec.measure = ESolidAngle;
 }
 
-Float Shape::pdfSolidAngle(const ShapeSamplingRecord &sRec, const Point &from) const {
-	/* Turns the area sampling routine into one that samples wrt. solid angles */
-	Vector lumToPoint = from - sRec.p;
-	Float distSquared = lumToPoint.lengthSquared();
-	Float invDP = std::max((Float) 0, std::sqrt(distSquared) / dot(lumToPoint, sRec.n));
-	return pdfArea(sRec) * distSquared * invDP;
+Float Shape::pdfDirect(const DirectSamplingRecord &dRec) const {
+	Float pdfPos = pdfPosition(dRec);
+
+	if (dRec.measure == ESolidAngle)
+		return pdfPos * (dRec.dist * dRec.dist) / absDot(dRec.d, dRec.n);
+	else if (dRec.measure == EArea)
+		return pdfPos;
+	else
+		return 0.0f;
 }
 
 void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
 	if (cClass->derivesFrom(MTS_CLASS(BSDF))) {
 		m_bsdf = static_cast<BSDF *>(child);
-		m_occluder = true;
-	} else if (cClass->derivesFrom(MTS_CLASS(Luminaire))) {
-		Assert(m_luminaire == NULL);
-		m_luminaire = static_cast<Luminaire *>(child);
-		if (m_luminaire && m_exteriorMedium)
-			m_luminaire->setMedium(m_exteriorMedium);
+	} else if (cClass->derivesFrom(MTS_CLASS(Emitter))) {
+		Emitter *emitter = static_cast<Emitter *>(child);
+		if (m_emitter != NULL)
+			Log(EError, "Tried to attach multiple emitters to a shape!");
+		if (emitter) {
+			if (!emitter->isOnSurface())
+				Log(EError, "Tried to attach an incompatible emitter to a surface!");
+			if (m_exteriorMedium)
+				emitter->setMedium(m_exteriorMedium);
+		}
+		m_emitter = emitter;
+	} else if (cClass->derivesFrom(MTS_CLASS(Sensor))) {
+		Sensor *sensor = static_cast<Sensor *>(child);
+		if (m_sensor != NULL)
+			Log(EError, "Tried to attach multiple sensors to a shape!");
+		if (sensor) {
+			if (!sensor->isOnSurface())
+				Log(EError, "Tried to attach an incompatible sensor to a surface!");
+			if (m_exteriorMedium)
+				sensor->setMedium(m_exteriorMedium);
+		}
+		m_sensor = sensor;
 	} else if (cClass->derivesFrom(MTS_CLASS(Subsurface))) {
 		Assert(m_subsurface == NULL);
 		if (m_interiorMedium != NULL)
 			Log(EError, "Shape \"%s\" has both an interior medium "
-				"and a subsurface integrator -- please choose one or the other!", getName().c_str());
+				"and a subsurface scattering model -- please choose one or the other!", getName().c_str());
 		m_subsurface = static_cast<Subsurface *>(child);
 	} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
 		if (name == "interior") {
 			Assert(m_interiorMedium == NULL);
 			if (m_subsurface != NULL)
 				Log(EError, "Shape \"%s\" has both an interior medium "
-					"and a subsurface integrator -- please choose one or the other!", getName().c_str());
+					"and a subsurface scattering model -- please choose one or the other!", getName().c_str());
 			m_interiorMedium = static_cast<Medium *>(child);
 		} else if (name == "exterior") {
 			Assert(m_exteriorMedium == NULL);
 			m_exteriorMedium = static_cast<Medium *>(child);
-			if (m_luminaire)
-				m_luminaire->setMedium(m_exteriorMedium);
+			if (m_emitter)
+				m_emitter->setMedium(m_exteriorMedium);
+			if (m_sensor)
+				m_sensor->setMedium(m_exteriorMedium);
 		} else {
 			Log(EError, "Shape: Invalid medium child (must be named "
 				"'interior' or 'exterior')!");
@@ -137,63 +176,65 @@ void Shape::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 	manager->serialize(stream, m_bsdf.get());
 	manager->serialize(stream, m_subsurface.get());
-	manager->serialize(stream, m_luminaire.get());
+	manager->serialize(stream, m_emitter.get());
+	manager->serialize(stream, m_sensor.get());
 	manager->serialize(stream, m_interiorMedium.get());
 	manager->serialize(stream, m_exteriorMedium.get());
-	stream->writeBool(m_occluder);
 }
 	
-Float Shape::getSurfaceArea() const {
-	Log(EError, "%s::getSurfaceArea(): Not implemented!",
-			getClass()->getName().c_str());
-	return 0.0f;
-}
-
+Float Shape::getSurfaceArea() const { NotImplementedError("getSurfaceArea"); }
 bool Shape::rayIntersect(const Ray &ray, Float mint, 
-		Float maxt, Float &t, void *temp) const {
-	Log(EError, "%s::rayIntersect(): Not implemented!",
-			getClass()->getName().c_str());
-	return false;
-}
-
+		Float maxt, Float &t, void *temp) const { NotImplementedError("rayIntersect"); }
 bool Shape::rayIntersect(const Ray &ray, Float mint, 
-		Float maxt) const {
-	Log(EError, "%s::rayIntersect(): Not implemented!",
-			getClass()->getName().c_str());
-	return false;
-}
-
+		Float maxt) const { NotImplementedError("rayIntersect"); }
 
 void Shape::fillIntersectionRecord(const Ray &ray, 
 		const void *temp, Intersection &its) const {
-	Log(EError, "%s::fillIntersectionRecord(): Not implemented!",
-			getClass()->getName().c_str());
+	NotImplementedError("fillIntersectionRecord"); }
+
+void Shape::getCurvature(const Intersection &its, Float &H, Float &K, 
+		bool shadingFrame) const {
+	Vector dndu, dndv;
+	getNormalDerivative(its, dndu, dndv, shadingFrame);
+
+	/* Compute the coefficients of the first and second fundamental form */
+	Float 
+		E =  dot(its.dpdu, its.dpdu),
+		F =  dot(its.dpdu, its.dpdv),
+		G =  dot(its.dpdv, its.dpdv),
+		e = -dot(its.dpdu, dndu),
+		f = -dot(its.dpdv, dndu),
+		g = -dot(its.dpdv, dndv),
+		invDenom = 1.0f / (E*G - F*F);
+
+	K = (e*g - f*f) * invDenom;
+	H = .5f*(e*G - 2*f*F + g*E) * invDenom;
 }
 
-Float Shape::sampleArea(ShapeSamplingRecord &sRec, 
-		const Point2 &sample) const {
-	Log(EError, "%s::sampleArea(): Not implemented!",
-			getClass()->getName().c_str());
-	return 0.0f;
+void Shape::getNormalDerivative(const Intersection &its,
+		Vector &dndu, Vector &dndv, bool shadingFrame) const {
+	NotImplementedError("getNormalDerivative");
 }
 
-Float Shape::pdfArea(const ShapeSamplingRecord &sRec) const {
-	Log(EError, "%s::pdfArea(): Not implemented!",
-			getClass()->getName().c_str());
-	return 0.0f;
+void Shape::samplePosition(PositionSamplingRecord &pRec, const Point2 &sample) const {
+	NotImplementedError("samplePosition");
+}
+
+Float Shape::pdfPosition(const PositionSamplingRecord &pRec) const {
+	NotImplementedError("pdfPosition");
+}
+
+void Shape::copyAttachments(Shape *shape) {
+	m_bsdf = shape->getBSDF();
+	m_emitter = shape->getEmitter();
+	m_sensor = shape->getSensor();
+	m_subsurface = shape->getSubsurface();
+	m_interiorMedium = shape->getInteriorMedium();
+	m_exteriorMedium = shape->getInteriorMedium();
 }
 
 ref<TriMesh> Shape::createTriMesh() {
 	return NULL;
-}
-
-std::string ShapeSamplingRecord::toString() const {
-	std::ostringstream oss;
-	oss << "ShapeSamplingRecord[" << std::endl
-		<< "  p = " << p.toString() << "," << std::endl
-		<< "  n = " << n.toString() << std::endl
-		<< "]";
-	return oss.str();
 }
 
 MTS_IMPLEMENT_CLASS(Shape, true, ConfigurableObject)

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -24,12 +24,13 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{wireframe}{Wireframe texture}
+ * \order{6}
  * \parameters{
  *     \parameter{interiorColor}{\Spectrum}{
  *       Color value of the interior of triangles
  *       \default{0.5}
  *     }
- *     \parameter{color1}{\Spectrum}{
+ *     \parameter{edgeColor}{\Spectrum}{
  *       Edge color value
  *       \default{0.1}
  *     }
@@ -53,13 +54,13 @@ MTS_NAMESPACE_BEGIN
  */
 class WireFrame : public Texture {
 public:
-	WireFrame(const Properties &props) : Texture(props),
-		m_lineWidth(props.getFloat("lineWidth", 0.0f)),
-		m_mutex(new Mutex()),
-		m_stepWidth(props.getFloat("stepWidth", 0.5f)),
-		m_edgeColor(props.getSpectrum("edgeColor", Spectrum(0.1f))),
-		m_interiorColor(props.getSpectrum("interiorColor", Spectrum(.5f))) { 
+	WireFrame(const Properties &props) : Texture(props) {
+		m_lineWidth = props.getFloat("lineWidth", 0.0f);
+		m_stepWidth = props.getFloat("stepWidth", 0.5f);
+		m_edgeColor = props.getSpectrum("edgeColor", Spectrum(0.1f));
+		m_interiorColor = props.getSpectrum("interiorColor", Spectrum(.5f));
 		m_stepWidth = std::max((Float) 0.0f, std::min(m_stepWidth, (Float) 1.0f));
+		m_mutex = new Mutex();
 	}
 
 	WireFrame(Stream *stream, InstanceManager *manager) 
@@ -72,14 +73,12 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Texture::serialize(stream, manager);
-
 		m_edgeColor.serialize(stream);
 		m_interiorColor.serialize(stream);
 		stream->writeFloat(m_lineWidth);
 	}
 
-
-	Spectrum getValue(const Intersection &its) const {
+	Spectrum eval(const Intersection &its, bool /* unused */) const {
 		if (!its.shape->getClass()->derivesFrom(MTS_CLASS(TriMesh)))
 			return m_interiorColor;
 
@@ -92,7 +91,7 @@ public:
 			/* Somewhat hacky but probably helpful in many cases.
 			   This tries to find a suitable line width, which is set
 			   to 10% of the average average edge length */ 
-			m_mutex->lock();
+			LockGuard lock(m_mutex);
 			if (m_lineWidth == 0) {
 				Float lineWidth = 0;
 				for (size_t i=0; i<triMesh->getTriangleCount(); ++i) {
@@ -104,7 +103,6 @@ public:
 
 				m_lineWidth = 0.1f * lineWidth / (3 * triMesh->getTriangleCount());
 			}
-			m_mutex->unlock();
 		}
 
 		const Triangle &tri = triMesh->getTriangles()[its.primIndex];
@@ -131,21 +129,21 @@ public:
 	Spectrum getAverage() const {
 		Spectrum value;
 		/* Approximate ... */
-		for (size_t i=0; i<SPECTRUM_SAMPLES; ++i)
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
 			value[i] = 0.5f * (m_edgeColor[i] + m_interiorColor[i]);
 		return value;
 	}
 
 	Spectrum getMinimum() const {
 		Spectrum value;
-		for (size_t i=0; i<SPECTRUM_SAMPLES; ++i)
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
 			value[i] = std::min(m_edgeColor[i], m_interiorColor[i]);
 		return value;
 	}
 
 	Spectrum getMaximum() const {
 		Spectrum value;
-		for (size_t i=0; i<SPECTRUM_SAMPLES; ++i)
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
 			value[i] = std::max(m_edgeColor[i], m_interiorColor[i]);
 		return value;
 	}
@@ -171,7 +169,7 @@ public:
 protected:
 	mutable Float m_lineWidth;
 	mutable ref<Mutex> m_mutex;
-	Float    m_stepWidth;
+	Float m_stepWidth;
 	Spectrum m_edgeColor;
 	Spectrum m_interiorColor;
 };

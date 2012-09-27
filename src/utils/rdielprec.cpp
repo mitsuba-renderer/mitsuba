@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -42,7 +42,7 @@ void transmittanceIntegrand(const BSDF *bsdf, const Vector &wi, size_t nPts, con
 
 	#pragma omp parallel for
 	for (int i=0; i<(int) nPts; ++i) {
-		BSDFQueryRecord bRec(its, wi, Vector(), EImportance);
+		BSDFSamplingRecord bRec(its, wi, Vector(), EImportance);
 		bRec.typeMask = BSDF::ETransmission;
 		Point2 sample(in[2*i], in[2*i+1]);
 		if (sample.x == 1)
@@ -50,7 +50,7 @@ void transmittanceIntegrand(const BSDF *bsdf, const Vector &wi, size_t nPts, con
 		if (sample.y == 1)
 			sample.y = 1-Epsilon;
 		out[i] = bsdf->sample(bRec, sample)[0];
-		if (mts_isnan(out[i])) 
+		if (std::isnan(out[i])) 
 			SLog(EError, "%s\n\nNaN!", bRec.toString().c_str());
 	}
 }
@@ -92,8 +92,7 @@ public:
 	
 			Float cosTheta = std::pow(t, (Float) 4.0f);
 
-			Vector wi(std::sqrt(std::max((Float) 0, 
-					1-cosTheta*cosTheta)), 0, cosTheta);
+			Vector wi(math::safe_sqrt(1-cosTheta*cosTheta), 0, cosTheta);
 
 			Float min[2] = {0, 0}, max[2] = {1, 1};
 			intTransmittance.integrateVectorized(

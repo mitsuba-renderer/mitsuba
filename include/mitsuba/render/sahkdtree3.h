@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,10 +16,13 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SAH_KDTREE3_H)
-#define __SAH_KDTREE3_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_SAHKDTREE3_H_)
+#define __MITSUBA_RENDER_SAHKDTREE3_H_
 
 #include <mitsuba/render/gkdtree.h>
+#include <mitsuba/core/warp.h>
+#include <mitsuba/core/random.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -29,11 +32,11 @@ MTS_NAMESPACE_BEGIN
 #define MTS_KD_MAILBOX_MASK (MTS_KD_MAILBOX_SIZE-1)
 
 /**
- * \brief Implements the surface area heuristic for use
+ * \brief Implements the 3D surface area heuristic for use
  * by the \ref GenericKDTree construction algorithm.
  * \ingroup librender
  */
-class SurfaceAreaHeuristic {
+class SurfaceAreaHeuristic3 {
 public:
 	/**
 	 * \brief Initialize the surface area heuristic with the bounds of 
@@ -42,7 +45,7 @@ public:
 	 * Precomputes some information so that traversal probabilities
 	 * of potential split planes can be evaluated efficiently
 	 */
-	inline SurfaceAreaHeuristic(const AABB &aabb) {
+	inline SurfaceAreaHeuristic3(const AABB &aabb) {
 		const Vector extents(aabb.getExtents());
 		const Float temp = 1.0f / (extents.x * extents.y 
 				+ extents.y*extents.z + extents.x*extents.z);
@@ -88,7 +91,7 @@ private:
  * /// Check whether a primitive is intersected by the given ray. 
  * /// Some temporary space is supplied, which can be used to cache  
  * /// information about the intersection
- * bool intersect(const Ray &ray, index_type idx, 
+ * bool intersect(const Ray &ray, IndexType idx, 
  *     Float mint, Float maxt, Float &t, void *tmp);
  * \endcode
  *
@@ -100,12 +103,12 @@ private:
  * \ingroup librender
  */
 template <typename Derived> 
-	class SAHKDTree3D : public GenericKDTree<AABB, SurfaceAreaHeuristic, Derived> {
+	class SAHKDTree3D : public GenericKDTree<AABB, SurfaceAreaHeuristic3, Derived> {
 public:
-	typedef GenericKDTree<AABB, SurfaceAreaHeuristic, Derived> Parent;
-	typedef typename KDTreeBase<AABB>::size_type               size_type;
-	typedef typename KDTreeBase<AABB>::index_type              index_type;
-	typedef typename KDTreeBase<AABB>::KDNode                  KDNode;
+	typedef GenericKDTree<AABB, SurfaceAreaHeuristic3, Derived> Parent;
+	typedef typename KDTreeBase<AABB>::SizeType                 SizeType;
+	typedef typename KDTreeBase<AABB>::IndexType                IndexType;
+	typedef typename KDTreeBase<AABB>::KDNode                   KDNode;
 
 	using Parent::m_nodes;
 	using Parent::m_aabb;
@@ -113,9 +116,9 @@ public:
 
 protected:
 	void buildInternal() {
-		size_type primCount = cast()->getPrimitiveCount();
+		SizeType primCount = cast()->getPrimitiveCount();
 		KDLog(EInfo, "Constructing a SAH kd-tree (%i primitives) ..", primCount);
-		GenericKDTree<AABB, SurfaceAreaHeuristic, Derived>::buildInternal();
+		GenericKDTree<AABB, SurfaceAreaHeuristic3, Derived>::buildInternal();
 	}
 
 	/// Cast to the derived class
@@ -133,18 +136,18 @@ protected:
 	 */
 	struct HashedMailbox {
 		inline HashedMailbox() {
-			memset(entries, 0xFF, sizeof(index_type)*MTS_KD_MAILBOX_SIZE);
+			memset(entries, 0xFF, sizeof(IndexType)*MTS_KD_MAILBOX_SIZE);
 		}
 
-		inline void put(index_type primIndex) {
+		inline void put(IndexType primIndex) {
 			entries[primIndex & MTS_KD_MAILBOX_MASK] = primIndex;
 		}
 
-		inline bool contains(index_type primIndex) const {
+		inline bool contains(IndexType primIndex) const {
 			return entries[primIndex & MTS_KD_MAILBOX_MASK] == primIndex;
 		}
 
-		index_type entries[MTS_KD_MAILBOX_SIZE];
+		IndexType entries[MTS_KD_MAILBOX_SIZE];
 	};
 
 	/// Ray traversal stack entry for Wald-style incoherent ray tracing
@@ -264,9 +267,9 @@ protected:
 			}
 	
 			/* Reached a leaf node */
-			for (index_type entry=currNode->getPrimStart(),
+			for (IndexType entry=currNode->getPrimStart(),
 					last = currNode->getPrimEnd(); entry != last; entry++) {
-				const index_type primIdx = m_indices[entry];
+				const IndexType primIdx = m_indices[entry];
 	
 				#if defined(MTS_KD_MAILBOX_ENABLED)
 				if (mailbox.contains(primIdx)) 
@@ -303,6 +306,18 @@ protected:
 		return foundIntersection;
 	}
 
+	struct RayStatistics {
+		bool foundIntersection;
+		uint32_t numTraversals;
+		uint32_t numIntersections;
+		uint64_t time;
+
+		RayStatistics(bool foundIntersection, uint32_t numTraversals,
+			uint32_t numIntersections, uint64_t time) : 
+			foundIntersection(foundIntersection), numTraversals(numTraversals),
+			numIntersections(numIntersections), time(time) { }
+	};
+
 	/**
 	 * \brief Internal kd-tree traversal implementation (Havran variant)
 	 *
@@ -311,9 +326,8 @@ protected:
 	 * nodes, intersected shapes, as well as the time taken to do this
 	 * (measured using rtdsc).
 	 */
-	FINLINE boost::tuple<bool, uint32_t, uint32_t, uint64_t> 
-			rayIntersectHavranCollectStatistics(const Ray &ray, 
-			Float mint, Float maxt, Float &t, void *temp) const {
+	FINLINE RayStatistics rayIntersectHavranCollectStatistics(
+			const Ray &ray, Float mint, Float maxt, Float &t, void *temp) const {
 		KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
 	
 		/* Set up the entry point */
@@ -389,7 +403,7 @@ protected:
 			/* Reached a leaf node */
 			for (unsigned int entry=currNode->getPrimStart(),
 					last = currNode->getPrimEnd(); entry != last; entry++) {
-				const index_type primIdx = m_indices[entry];
+				const IndexType primIdx = m_indices[entry];
 	
 				++numIntersections;
 				bool result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
@@ -409,7 +423,7 @@ protected:
 			exPt = stack[enPt].prev;
 		}
 	
-		return boost::make_tuple(foundIntersection, numTraversals, 
+		return RayStatistics(foundIntersection, numTraversals, 
 				numIntersections, rdtsc() - timer);
 	}
 
@@ -455,7 +469,7 @@ protected:
 			} else {
 				for (unsigned int entry=node->getPrimStart(),
 						last = node->getPrimEnd(); entry != last; entry++) {
-					const index_type primIdx = m_indices[entry];
+					const IndexType primIdx = m_indices[entry];
 	
 					bool result;
 					if (!shadowRay)
@@ -483,91 +497,6 @@ protected:
 		}
 		return foundIntersection;
 	}
-
-	/**
-	 * \brief Ray tracing kd-tree traversal loop (Plain variant)
-	 *
-	 * This implementation represents the simplest possible KD-tree traversal
-	 * loop; it is generally not robust enough for rendering, since it doesn't
-	 * handle various corner cases and furthermore suffers from roundoff errors.
-	 */
-	template<bool shadowRay> FINLINE bool rayIntersectPlain(const Ray &ray, 
-		Float mint_, Float maxt_, Float &t, void *temp) const {
-		KDStackEntry stack[MTS_KD_MAXDEPTH];
-		int stackPos = 0;
-		Float mint = mint_, maxt = maxt_;
-		const KDNode *node = m_nodes;
-	
-		const int signs[3] = {
-			ray.d[0] >= 0 ? 1 : 0,
-			ray.d[1] >= 0 ? 1 : 0,
-			ray.d[2] >= 0 ? 1 : 0
-		};
-	
-		while (node != NULL) {
-			while (EXPECT_TAKEN(!node->isLeaf())) {
-				const Float split = (Float) node->getSplit();
-				const int axis = node->getAxis();
-				const float t = (split - ray.o[axis]) * ray.dRcp[axis];
-	
-				int sign = signs[axis];
-	
-				const KDNode * __restrict base = node->getLeft();
-				const KDNode * __restrict first = base + (sign^1);
-				const KDNode * __restrict second = base + sign;
-	
-				node = first;
-	
-				bool front = t > maxt,
-					 back = t < mint;
-	
-				if (front) {
-					;
-				} else if (back) {
-					node = second;
-				} else {
-					stack[stackPos].node = second;
-					stack[stackPos].mint = t;
-					stack[stackPos].maxt = maxt;
-					maxt = t;
-					++stackPos;
-				}
-			}
-			bool foundIntersection = false;
-			for (unsigned int entry=node->getPrimStart(),
-					last = node->getPrimEnd(); entry != last; entry++) {
-				const index_type primIdx = m_indices[entry];
-
-				bool result;
-				if (!shadowRay) {
-					result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
-				} else {
-					result = cast()->intersect(ray, primIdx, mint, maxt);
-				}
-	
-				if (result) {
-					if (shadowRay)
-						return true;
-					maxt = t;
-					foundIntersection = true;
-				}
-			}
-	
-			if (foundIntersection) 
-				return true;
-	
-			if (stackPos > 0) {
-				--stackPos;
-				node = stack[stackPos].node;
-				mint = stack[stackPos].mint;
-				maxt = stack[stackPos].maxt;
-			} else {
-				break;
-			}
-		}
-		return false;
-	}
-
 public:
 	/**
 	 * \brief Empirically find the best traversal and intersection 
@@ -588,23 +517,23 @@ public:
 		for (int i=0; i<nRays; ++i) {
 			Point2 sample1(random->nextFloat(), random->nextFloat()),
 				sample2(random->nextFloat(), random->nextFloat());
-			Point p1 = bsphere.center + squareToSphere(sample1) * bsphere.radius;
-			Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
+			Point p1 = bsphere.center + Warp::squareToUniformSphere(sample1) * bsphere.radius;
+			Point p2 = bsphere.center + Warp::squareToUniformSphere(sample2) * bsphere.radius;
 			Ray ray(p1, normalize(p2-p1), 0.0f);
 			Float mint, maxt, t;
 			if (m_aabb.rayIntersect(ray, mint, maxt)) {
 				if (ray.mint > mint) mint = ray.mint;
 				if (ray.maxt < maxt) maxt = ray.maxt;
 				if (EXPECT_TAKEN(maxt > mint)) {
-					boost::tuple<bool, uint32_t, uint32_t, uint64_t> statistics =
+					RayStatistics statistics =
 						rayIntersectHavranCollectStatistics(ray, mint, maxt, t, temp);
-					if (boost::get<0>(statistics))
+					if (statistics.foundIntersection)
 						nIntersections++;
 					if (i > warmup) {
 						A[idx].x = 1;
-						A[idx].y = (Float) boost::get<1>(statistics);
-						A[idx].z = (Float) boost::get<2>(statistics);
-						b[idx]   = (Float) boost::get<3>(statistics);
+						A[idx].y = (Float) statistics.numTraversals;
+						A[idx].z = (Float) statistics.numIntersections;
+						b[idx]   = (Float) statistics.time;
 						idx++;
 					}
 				}
@@ -667,4 +596,4 @@ public:
 
 MTS_NAMESPACE_END
 
-#endif /* __SAH_KDTREE3_H */
+#endif /* __MITSUBA_RENDER_SAHKDTREE3_H_ */

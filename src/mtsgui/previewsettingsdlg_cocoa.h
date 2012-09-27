@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -25,7 +25,7 @@
 class PreviewSettingsDlg;
 
 #if defined(__OBJC__)
-@interface CocoaRenderSettingsDlg : NSObject
+@interface CocoaRenderSettingsDlg : NSView < NSWindowDelegate > 
 {
 	IBOutlet NSPanel *panel;
 	IBOutlet BWTransparentPopUpButton *previewMethod;
@@ -49,6 +49,7 @@ class PreviewSettingsDlg;
 	SceneContext *context;
 	PreviewSettingsDlg *delegate;
 	bool active;
+	bool previewEnabled;
 }
 - (id) initWithParentView: (NSView *) view andDelegate: (PreviewSettingsDlg *) del;
 - (IBAction) previewMethodChanged: (id) sender;
@@ -65,6 +66,7 @@ class PreviewSettingsDlg;
 - (IBAction) reset: (id) sender;
 - (void) updateUI;
 - (void) showAt: (NSPoint) point;
+- (void) setPreviewEnabled: (BOOL) enabled;
 @end
 #else
 class CocoaRenderSettingsDlg;
@@ -81,6 +83,7 @@ public:
 	bool isVisible();
 	bool isActiveWindow() const;
 	void setContext(SceneContext *ctx);
+	void setPreviewEnabled(bool enabled);
 public:
 	void triggerPreviewMethodChanged(EPreviewMethod method) {
 		emit previewMethodChanged(method);

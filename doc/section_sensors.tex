@@ -1,0 +1,19 @@
+\newpage
+\subsection{Sensors}
+\label{sec:sensors}
+In Mitsuba, \emph{sensors}, along with a \emph{film}, are responsible for recording radiance
+measurements in some usable format. This includes default choices such as perspective
+or orthographic cameras, as well as more specialized sensors that measure the radiance
+into a given direction or the irradiance received by a certain surface. The following
+section lists the available choices.
+
+\subsubsection*{Handedness convention}
+Sensors in Mitsuba are \emph{right-handed}. 
+Any number of rotations and translations can be applied to them
+without changing this property. By default they are located at the
+origin and oriented in such a way that in the rendered image, $+X$ points left,
+$+Y$ points upwards, and $+Z$ points along the viewing direction.
+
+Left-handed sensors are also supported. To switch the handedness,
+flip any one of the axes, e.g. by passing a scale transformation like 
+\code{<scale x="-1"/>} to the sensor's \code{toWorld} parameter.

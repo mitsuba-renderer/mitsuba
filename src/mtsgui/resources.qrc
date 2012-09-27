@@ -28,9 +28,20 @@
     <file>resources/clone.png</file>
     <file>resources/server.png</file>
     <file>resources/update.png</file>
+    <file>resources/zoom.png</file>
+    <file>resources/crop.png</file>
     <file>resources/controls.png</file>
+    <file>resources/zoom-reset.png</file>
     <file>resources/preferences.png</file>
     <file>resources/stylesheet.css</file>
     <file>resources/docs.xml</file>
+    <file>shaders/downsampling.frag</file>
+    <file>shaders/downsampling.vert</file>
+    <file>shaders/gamma.frag</file>
+    <file>shaders/gamma.vert</file>
+    <file>shaders/logluminance.frag</file>
+    <file>shaders/logluminance.vert</file>
+    <file>shaders/reinhard.frag</file>
+    <file>shaders/reinhard.vert</file>
   </qresource>
 </RCC>

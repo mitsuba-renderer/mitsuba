@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -23,7 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{conductor}{Smooth conductor}
- * \order{5}
+ * \order{6}
  * \icon{bsdf_conductor}
  * \parameters{
  *     \parameter{material}{\String}{Name of a material preset, see 
@@ -70,9 +70,6 @@ MTS_NAMESPACE_BEGIN
  * coatings, which are not actually conductors. These materials can also 
  * be used with this plugin, though note that the plugin will ignore any 
  * refraction component that the actual material might have had.
- * The table also contains a few birefingent materials, which are split into
- * separate measurements corresponding to their two indices of 
- * refraction (named ``ordinary'' and ``extraordinary ray'').
  *
  * When using this plugin, you should ideally compile Mitsuba with support for 
  * spectral rendering to get the most accurate results. While it also works 
@@ -115,22 +112,22 @@ MTS_NAMESPACE_BEGIN
  * Ag                    & Silver &&                      Nb, Nb\_palik         & Niobium \\
  * Al                    & Aluminium &&                   Ni\_palik             & Nickel \\
  * AlAs, AlAs\_palik     & Cubic aluminium arsenide &&    Rh, Rh\_palik         & Rhodium \\
- * AlSb, AlSb\_palik     & Cubic aluminium antimonide &&  Se, Se\_palik         & Selenium (ord. ray) \\
- * Au                    & Gold &&                        Se-e, Se-e\_palik     & Selenium (extr. ray) \\
- * Be, Be\_palik         & Polycrystalline beryllium &&   SiC, SiC\_palik       & Hexagonal silicon carbide \\
- * Cr                    & Chromium &&                    SnTe, SnTe\_palik     & Tin telluride\\
- * CsI, CsI\_palik       & Cubic caesium iodide &&        Ta, Ta\_palik         & Tantalum \\
- * Cu, Cu\_palik         & Copper &&                      Te, Te\_palik         & Trigonal tellurium (ord. ray) \\
- * Cu2O, Cu2O\_palik     & Copper (I) oxide &&            Te-e, Te-e\_palik     & Trigonal tellurium (extr. ray) \\
- * CuO, CuO\_palik       & Copper (II) oxide &&           ThF4, ThF4\_palik     & Polycryst. thorium (IV) fluoride \\
- * d-C, d-C\_palik       & Cubic diamond &&               TiC, TiC\_palik       & Polycrystalline titanium carbide \\
- * Hg, Hg\_palik         & Mercury &&                     TiN, TiN\_palik       & Titanium nitride \\
- * HgTe, HgTe\_palik     & Mercury telluride &&           TiO2, TiO2\_palik     & Tetragonal titan. dioxide (ord. ray) \\
- * Ir, Ir\_palik         & Iridium &&                     TiO2-e, TiO2-e\_palik & Tetragonal titan. dioxide (extr. ray) \\
- * K, K\_palik           & Polycrystalline potassium &&   VC, VC\_palik         & Vanadium carbide \\
- * Li, Li\_palik         & Lithium &&                     V\_palik              & Vanadium \\
- * MgO, MgO\_palik       & Magnesium oxide &&             VN, VN\_palik         & Vanadium nitride \\
- * Mo, Mo\_palik         & Molybdenum &&                  W                     & Tungsten\\
+ * AlSb, AlSb\_palik     & Cubic aluminium antimonide &&  Se, Se\_palik         & Selenium \\
+ * Au                    & Gold &&                        SiC, SiC\_palik       & Hexagonal silicon carbide \\
+ * Be, Be\_palik         & Polycrystalline beryllium &&   SnTe, SnTe\_palik     & Tin telluride\\
+ * Cr                    & Chromium &&                    Ta, Ta\_palik         & Tantalum \\
+ * CsI, CsI\_palik       & Cubic caesium iodide &&        Te, Te\_palik         & Trigonal tellurium \\
+ * Cu, Cu\_palik         & Copper &&                      ThF4, ThF4\_palik     & Polycryst. thorium (IV) fluoride \\
+ * Cu2O, Cu2O\_palik     & Copper (I) oxide &&            TiC, TiC\_palik       & Polycrystalline titanium carbide \\
+ * CuO, CuO\_palik       & Copper (II) oxide &&           TiN, TiN\_palik       & Titanium nitride \\
+ * d-C, d-C\_palik       & Cubic diamond &&               TiO2, TiO2\_palik     & Tetragonal titan. dioxide\\
+ * Hg, Hg\_palik         & Mercury &&                     VC, VC\_palik         & Vanadium carbide \\
+ * HgTe, HgTe\_palik     & Mercury telluride &&           V\_palik              & Vanadium \\
+ * Ir, Ir\_palik         & Iridium &&                     VN, VN\_palik         & Vanadium nitride \\
+ * K, K\_palik           & Polycrystalline potassium &&   W                     & Tungsten \\
+ * Li, Li\_palik         & Lithium &&                     \\
+ * MgO, MgO\_palik       & Magnesium oxide &&             \\
+ * Mo, Mo\_palik         & Molybdenum &&                  \\
  * \bottomrule
  * \end{tabular}
  * \caption{
@@ -209,7 +206,7 @@ public:
 		return Vector(-wi.x, -wi.y, wi.z);
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 
@@ -218,14 +215,14 @@ public:
 		if (!sampleReflection || measure != EDiscrete ||
 			Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
-			std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) > Epsilon)
+			absDot(reflect(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
 			return Spectrum(0.0f);
 
-		return m_specularReflectance->getValue(bRec.its) *
+		return m_specularReflectance->eval(bRec.its) *
 			fresnelConductor(Frame::cosTheta(bRec.wi), m_eta, m_k);
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 
@@ -234,13 +231,13 @@ public:
 		if (!sampleReflection || measure != EDiscrete ||
 			Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
-			std::abs(1 - dot(reflect(bRec.wi), bRec.wo)) > Epsilon)
+			absDot(reflect(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
 			return 0.0f;
 
 		return 1.0f;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 		
@@ -250,12 +247,13 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDeltaReflection;
 		bRec.wo = reflect(bRec.wi);
+		bRec.eta = 1.0f;
 
-		return m_specularReflectance->getValue(bRec.its) *
+		return m_specularReflectance->eval(bRec.its) *
 			fresnelConductor(Frame::cosTheta(bRec.wi), m_eta, m_k);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
 		
@@ -265,16 +263,21 @@ public:
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDeltaReflection;
 		bRec.wo = reflect(bRec.wi);
+		bRec.eta = 1.0f;
 		pdf = 1;
 
-		return m_specularReflectance->getValue(bRec.its) *
+		return m_specularReflectance->eval(bRec.its) *
 			fresnelConductor(Frame::cosTheta(bRec.wi), m_eta, m_k);
+	}
+
+	Float getRoughness(const Intersection &its, int component) const {
+		return 0.0f;
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SmoothConductor[" << endl
-			<< "  name = \"" << getName() << "\"," << endl
+			<< "  id = \"" << getID() << "\"," << endl
 			<< "  eta = " << m_eta.toString() << "," << endl
 			<< "  k = " << m_k.toString() << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << endl
@@ -369,7 +372,9 @@ public:
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return " << evalName << "_R0 * inv_pi * cosTheta(wo);"<< endl
+			<< "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
+			<< "    	return vec3(0.0);" << endl
+			<< "    return " << evalName << "_R0 * inv_pi * inv_pi * cosTheta(wo);"<< endl
 			<< "}" << endl;
 	}
 	MTS_DECLARE_CLASS()

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,10 +16,16 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__DEBUG_H)
-#define __DEBUG_H
+#pragma once
+#if !defined(__MITSUBA_CORE_STATISTICS_H_)
+#define __MITSUBA_CORE_STATISTICS_H_
 
 #include <mitsuba/core/timer.h>
+#include <mitsuba/core/atomic.h>
+
+#if defined(_MSC_VER)
+# include <intrin.h>
+#endif
 
 MTS_NAMESPACE_BEGIN
 
@@ -48,8 +54,14 @@ enum EStatsType {
 	ENumberValue = 0, ///< Simple unitless number, e.g. # of rays
 	EByteCount,       ///< Number of read/written/transferred bytes
 	EPercentage,      ///< Percentage with respect to a base counter
+	EMinimumValue,    ///< Minimum observed value of some quantity
+	EMaximumValue,    ///< Maximum observed value of some quantity
 	EAverage          ///< Average value with respect to a base counter
 };
+
+#if (defined(_WIN32) && !defined(_WIN64)) || (defined(__POWERPC__) && !defined(_LP64))
+#define MTS_32BIT_COUNTERS 1
+#endif
 
 /**
  * \brief Counter data structure, which is suitable for ccNUMA/SMP machines
@@ -57,8 +69,8 @@ enum EStatsType {
  * This counter takes up at least one cache line to reduce false sharing.
  */
 struct CacheLineCounter { 
-#if (defined(WIN32) && !defined(WIN64)) || (defined(__POWERPC__) && !defined(_LP64))
-	// WIN32 & Darwin (PPC/32) doesn't support atomic 64 bit increment operations
+#if MTS_32BIT_COUNTERS == 1
+	// WIN32 & Darwin (PPC/32) don't support atomic 64 bit increment operations
 	// -> restrict counters to 32bit :(
 	uint32_t value;
 	uint32_t unused2;
@@ -95,63 +107,105 @@ public:
 	~StatsCounter();
 
 	/// Increment the counter value by one
+	inline uint64_t operator++() {
 #if defined(MTS_NO_STATISTICS)
-	inline uint64_t operator++() { return 0L; }
-#elif defined(WIN64)
-	inline uint64_t operator++() {
+		// do nothing
+#elif defined(_MSC_VER) && defined(_WIN64)
 		const int offset = Thread::getID() & NUM_COUNTERS_MASK;
-		InterlockedExchangeAdd64(reinterpret_cast<LONG64 *>(&m_value[offset].value), 1);
+		_InterlockedExchangeAdd64(reinterpret_cast<__int64 volatile *>(&m_value[offset].value), 1);
 		return m_value[offset].value;
-}
-#elif defined(WIN32)
-	inline uint32_t operator++() {
+#elif defined(_MSC_VER) && defined(_WIN32)
 		const int offset = Thread::getID() & NUM_COUNTERS_MASK;
-		InterlockedExchangeAdd(reinterpret_cast<LONG *>(&m_value[offset].value), 1);
+		_InterlockedExchangeAdd(reinterpret_cast<long volatile *>(&m_value[offset].value), 1);
 		return m_value[offset].value;
-}
 #elif defined(__POWERPC__) && !defined(_LP64)
-	inline uint64_t operator++() {
 		return (uint64_t) __sync_fetch_and_add(&m_value[Thread::getID() & NUM_COUNTERS_MASK].value, 1);
-	}
 #else
-	inline uint64_t operator++() {
 		return __sync_fetch_and_add(&m_value[Thread::getID() & NUM_COUNTERS_MASK].value, 1);
-	}
 #endif
+	}
 
 	/// Increment the counter by the specified amount
+	inline void operator+=(size_t amount) {
 #ifdef MTS_NO_STATISTICS
-	inline void operator+=(size_t amount) { }
-#elif defined(WIN64)
-	inline void operator+=(size_t amount) {
-		InterlockedExchangeAdd64(reinterpret_cast<LONG64 *>(&m_value[Thread::getID() & NUM_COUNTERS_MASK].value), amount);
-	}
-#elif defined(WIN32)
-	inline void operator+=(size_t amount) {
-		InterlockedExchangeAdd(reinterpret_cast<LONG *>(&m_value[Thread::getID() & NUM_COUNTERS_MASK].value), amount);
-	}
+		/// do nothing
+#elif defined(_MSC_VER) && defined(_WIN64)
+		_InterlockedExchangeAdd64(reinterpret_cast<__int64 volatile *>(&m_value[Thread::getID() & NUM_COUNTERS_MASK].value), amount);
+#elif defined(_MSC_VER) && defined(_WIN32)
+		_InterlockedExchangeAdd(reinterpret_cast<long volatile *>(&m_value[Thread::getID() & NUM_COUNTERS_MASK].value), amount);
 #else
-	inline void operator+=(size_t amount) {
 		__sync_fetch_and_add(&m_value[Thread::getID() & NUM_COUNTERS_MASK].value, amount);
-	}
 #endif
+	}
 	
 	/// Increment the base counter by the specified amount (only for use with EPercentage/EAverage)
+	inline void incrementBase(size_t amount = 1) {
 #ifdef MTS_NO_STATISTICS
-	inline void incrementBase(size_t amount = 1) { }
-#elif defined(WIN64)
-	inline void incrementBase(size_t amount = 1) {
-		InterlockedExchangeAdd64(reinterpret_cast<LONG64 *>(&m_base[Thread::getID() & NUM_COUNTERS_MASK].value), amount);
-	}
-#elif defined(WIN32)
-	inline void incrementBase(size_t amount = 1) {
-		InterlockedExchangeAdd(reinterpret_cast<LONG *>(&m_base[Thread::getID() & NUM_COUNTERS_MASK].value), amount);
-	}
+		/// do nothing
+#elif defined(_MSC_VER) && defined(_WIN64)
+		_InterlockedExchangeAdd64(reinterpret_cast<__int64 volatile *>(&m_base[Thread::getID() & NUM_COUNTERS_MASK].value), amount);
+#elif defined(_WIN32)
+		_InterlockedExchangeAdd(reinterpret_cast<long volatile *>(&m_base[Thread::getID() & NUM_COUNTERS_MASK].value), amount);
 #else
-	inline void incrementBase(size_t amount = 1) {
 		__sync_fetch_and_add(&m_base[Thread::getID() & NUM_COUNTERS_MASK].value, amount);
-	}
 #endif
+	}
+
+	/**
+	 * \brief When this is a minimum "counter", this function records
+	 * an observation of the quantity whose minimum is to be determined
+	 */
+	inline void recordMinimum(size_t value) {
+		int id = Thread::getID() & NUM_COUNTERS_MASK;
+		#if MTS_32BIT_COUNTERS == 1
+			volatile int32_t *ptr = 
+				(volatile int32_t *) &m_value[id].value;
+			int32_t curMinimum;
+			int32_t newMinimum = (int32_t) value;
+		#else
+			volatile int64_t *ptr = 
+				(volatile int64_t *) &m_value[id].value;
+			int64_t curMinimum;
+			int64_t newMinimum = (int64_t) value;
+		#endif
+
+		do {
+			curMinimum = *ptr;
+			if (newMinimum >= curMinimum)
+				return;
+			#if (defined(__i386__) || defined(__amd64__))
+		        __asm__ __volatile__ ("pause\n");
+			#endif
+		} while (!atomicCompareAndExchange(ptr, newMinimum, curMinimum));
+	}
+
+	/**
+	 * \brief When this is a maximum "counter", this function records
+	 * an observation of the quantity whose maximum is to be determined
+	 */
+	inline void recordMaximum(size_t value) {
+		int id = Thread::getID() & NUM_COUNTERS_MASK;
+		#if MTS_32BIT_COUNTERS == 1
+			volatile int32_t *ptr = 
+				(volatile int32_t *) &m_value[id].value;
+			int32_t curMaximum;
+			int32_t newMaximum = (int32_t) value;
+		#else
+			volatile int64_t *ptr = 
+				(volatile int64_t *) &m_value[id].value;
+			int64_t curMaximum;
+			int64_t newMaximum = (int64_t) value;
+		#endif
+
+		do {
+			curMaximum = *ptr;
+			if (newMaximum <= curMaximum)
+				return;
+			#if (defined(__i386__) || defined(__amd64__))
+		        __asm__ __volatile__ ("pause\n");
+			#endif
+		} while (!atomicCompareAndExchange(ptr, newMaximum, curMaximum));
+	}
 
 	/// Return the name of this counter
 	inline const std::string &getName() const { return m_name; }
@@ -165,11 +219,27 @@ public:
 	/// Return the value of this counter as 64-bit unsigned integer
 #ifdef MTS_NO_STATISTICS
 	inline uint64_t getValue() const { return 0L; }
+	inline uint64_t getMaximum() const { return 0L; }
+	inline uint64_t getMinimum() const { return 0L; }
 #else
 	inline uint64_t getValue() const {
 		uint64_t result = 0;
 		for (int i=0; i<NUM_COUNTERS; ++i)
 			result += m_value[i].value;
+		return result;
+	}
+
+	inline uint64_t getMinimum() const {
+		uint64_t result = 0;
+		for (int i=0; i<NUM_COUNTERS; ++i)
+			result = std::min(static_cast<uint64_t>(m_value[i].value), result);
+		return result;
+	}
+
+	inline uint64_t getMaximum() const {
+		uint64_t result = 0;
+		for (int i=0; i<NUM_COUNTERS; ++i)
+			result = std::max(static_cast<uint64_t>(m_value[i].value), result);
 		return result;
 	}
 #endif
@@ -309,4 +379,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __DEBUG_H */
+#endif /* __MITSUBA_CORE_STATISTICS_H_ */

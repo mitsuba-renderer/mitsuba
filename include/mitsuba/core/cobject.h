@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,11 +16,13 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__COBJECT_H)
-#define __COBJECT_H
+#pragma once
+#if !defined(__MITSUBA_CORE_COBJECT_H_)
+#define __MITSUBA_CORE_COBJECT_H_
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/serialization.h>
+#include <mitsuba/core/properties.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -37,14 +39,13 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE ConfigurableObject : public SerializableObject {
 public:
-	/// Set the parent object
+	/**
+	 * \brief Notify the \ref ConfigurableObject instance about 
+	 * its parent object
+	 *
+	 * The default implementation does nothing.
+	 */
 	virtual void setParent(ConfigurableObject *parent);
-
-	/// Return the parent object
-	inline ConfigurableObject *getParent() { return m_parent; }
-
-	/// Return the parent object (const version)
-	inline const ConfigurableObject *getParent() const { return m_parent; }
 
 	/// Add a child (default implementation throws an error)
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
@@ -53,11 +54,27 @@ public:
 	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
 	/** \brief Configure the object (called \a once after construction
-	   and addition of all child ConfigurableObjects) */
+	   and addition of all child \ref ConfigurableObject instances)) */
 	virtual void configure();
 
 	/// Serialize this object to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
+
+	/// Return the identifier associated with this instance (or "unnamed")
+	inline const std::string &getID() const { return m_properties.getID(); }
+
+	/// Set the identifier associated with this instance
+	inline void setID(const std::string &name) { m_properties.setID(name); }
+
+	/**
+	 * \brief Return the properties object that was originally used to 
+	 * create this instance
+	 *
+	 * This feature mainly of use for editors and other graphical
+	 * user interfaces, which present the properties of an object
+	 * in some form.
+	 */
+	inline const Properties &getProperties() const { return m_properties; }
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -66,12 +83,12 @@ protected:
 	
 	/// Construct a configurable object
 	inline ConfigurableObject(const Properties &props) 
-		: SerializableObject(), m_parent(NULL) { }
+		: SerializableObject(), m_properties(props) { }
 	
 	/// Unserialize a configurable object
 	ConfigurableObject(Stream *stream, InstanceManager *manager);
 protected:
-	ConfigurableObject *m_parent;
+	Properties m_properties;
 };
 
 /** \brief This macro creates the binary interface, which Mitsuba 
@@ -91,4 +108,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __COBJECT_H */
+#endif /* __MITSUBA_CORE_COBJECT_H_ */

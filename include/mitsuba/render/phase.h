@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__PHASE_H)
-#define __PHASE_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_PHASE_H_)
+#define __MITSUBA_RENDER_PHASE_H_
 
 #include <mitsuba/core/netobject.h>
 #include <mitsuba/render/common.h>
@@ -30,7 +31,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \ingroup librender
  */
-struct MTS_EXPORT_RENDER PhaseFunctionQueryRecord {
+struct MTS_EXPORT_RENDER PhaseFunctionSamplingRecord {
 	/**
 	 * \brief Reference to a Medium sampling record created 
 	 * by \ref Medium::sampleDistance()
@@ -43,16 +44,16 @@ struct MTS_EXPORT_RENDER PhaseFunctionQueryRecord {
 	 *
 	 * In Mitsuba, the direction convention for phase functions is the
 	 * same as for BSDFs, as opposed to much of the literature, where 
-	 * \a wi points inwards.
+	 * \c wi points inwards.
 	 */
 	Vector wi;
 
 	/// Normalized outgoing direction vector
 	Vector wo;
 
-	/* Transported quantity (radiance or importance) -- required for 
+	/* Transported mode (radiance or importance) -- required for 
 	   rendering with non-reciprocal phase functions */
-	ETransportMode quantity;
+	ETransportMode mode;
 
 	/**
 	 * \brief Given a medium interaction and an incident direction, 
@@ -65,13 +66,13 @@ struct MTS_EXPORT_RENDER PhaseFunctionQueryRecord {
 	 *      An incident direction in world coordinates. This should 
 	 *      be a normalized direction vector that points \a away from
 	 *      the scattering event.
-	 * \param quantity
-	 *      The transported quantity (\ref ERadiance or \ref EImportance)
+	 * \param mode
+	 *      The transported mode (\ref ERadiance or \ref EImportance)
 	 */
 
-	inline PhaseFunctionQueryRecord(const MediumSamplingRecord &mRec,
-		const Vector &wi, ETransportMode quantity = ERadiance)
-		: mRec(mRec), wi(wi), quantity(quantity) { }
+	inline PhaseFunctionSamplingRecord(const MediumSamplingRecord &mRec,
+		const Vector &wi, ETransportMode mode = ERadiance)
+		: mRec(mRec), wi(wi), mode(mode) { }
 
 	/*
 	 * \brief Given a medium interaction an an incident/exitant direction 
@@ -88,12 +89,24 @@ struct MTS_EXPORT_RENDER PhaseFunctionQueryRecord {
 	 *      An outgoing direction in world coordinates. This should 
 	 *      be a normalized direction vector that points \a away from
 	 *      the scattering event.
-	 * \param quantity
-	 *      The transported quantity (\ref ERadiance or \ref EImportance)
+	 * \param mode
+	 *      The transported mode (\ref ERadiance or \ref EImportance)
 	 */
-	inline PhaseFunctionQueryRecord(const MediumSamplingRecord &mRec,
-		const Vector &wi, const Vector &wo, ETransportMode quantity = ERadiance)
-		: mRec(mRec), wi(wi),  wo(wo), quantity(quantity) { }
+	inline PhaseFunctionSamplingRecord(const MediumSamplingRecord &mRec,
+		const Vector &wi, const Vector &wo, ETransportMode mode = ERadiance)
+		: mRec(mRec), wi(wi),  wo(wo), mode(mode) { }
+
+	/**
+	 * \brief Reverse the direction of light transport in the record
+	 *
+	 * This function essentially swaps \c wi and \c wo and adjusts 
+	 * \c mode appropriately, so that non-symmetric scattering
+	 * models can be queried in the reverse direction.
+	 */
+	inline void reverse() {
+		std::swap(wo, wi);
+		mode = (ETransportMode) (1-mode);
+	}
 
 	std::string toString() const;
 };
@@ -103,11 +116,34 @@ struct MTS_EXPORT_RENDER PhaseFunctionQueryRecord {
  */
 class MTS_EXPORT_RENDER PhaseFunction : public ConfigurableObject {
 public:
+	enum EPhaseFunctionType {
+		/// Completely isotropic 1/(4 pi) phase function
+		EIsotropic       = 0x01,
+		/// The phase function only depends on \c dot(wi,wo)
+		EAngleDependence = 0x04,
+		/// The opposite of \ref EAngleDependence (there is an arbitrary dependence)
+		EAnisotropic     = 0x02,
+		/// The phase function is non symmetric, i.e. eval(wi,wo) != eval(wo, wi)
+		ENonSymmetric    = 0x08
+	};
+
+	/**
+	 * \brief Return information flags of this phase function,
+	 * combined binary OR.
+	 * \sa EPhaseFunctionType
+	 */
+	inline unsigned int getType() const {
+		return m_type;
+	}
+
+	/// Configure the material (called after construction by the XML parser)
+	virtual void configure();
+
 	/**
 	 * \brief Evaluate the phase function for an outward-pointing 
 	 * pair of directions (wi, wo)
 	 */
-	virtual Float eval(const PhaseFunctionQueryRecord &pRec) const = 0;
+	virtual Float eval(const PhaseFunctionSamplingRecord &pRec) const = 0;
 
 	/**
 	 * \brief Sample the phase function and return the importance weight (i.e. the
@@ -123,7 +159,7 @@ public:
 	 * \return The phase function value divided by the probability 
 	 *         density of the sample
 	 */
-	virtual Float sample(PhaseFunctionQueryRecord &pRec, 
+	virtual Float sample(PhaseFunctionSamplingRecord &pRec, 
 		Sampler *sampler) const = 0;
 
 	/**
@@ -138,7 +174,7 @@ public:
 	 * \return The phase function value divided by the probability 
 	 *         density of the sample
 	 */
-	virtual Float sample(PhaseFunctionQueryRecord &pRec,
+	virtual Float sample(PhaseFunctionSamplingRecord &pRec,
 		Float &pdf, Sampler *sampler) const = 0;
 
 	/**
@@ -147,7 +183,7 @@ public:
 	 * Assuming that the phase function can be sampled exactly, 
 	 * the default implementation just evaluates \ref eval()
 	 */
-	virtual Float pdf(const PhaseFunctionQueryRecord &pRec) const;
+	virtual Float pdf(const PhaseFunctionSamplingRecord &pRec) const;
 
 	/**
 	 * \brief Does this phase function require directionally varying scattering
@@ -176,6 +212,14 @@ public:
 	 */
 	virtual Float sigmaDirMax() const;
 
+	/**
+	 * \brief Returns the mean cosine (often referred to by
+	 * the constant "g") of this phase function
+	 *
+	 * The default implementation throws an exception
+	 */
+	virtual Float getMeanCosine() const;
+
 	/// Return a string representation
 	virtual std::string toString() const = 0;
 
@@ -191,10 +235,10 @@ protected:
 
 	/// Virtual destructor
 	virtual ~PhaseFunction() { }
-private:
-	bool m_dvSigmaT;
+protected:
+	unsigned int m_type;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __PHASE_H */
+#endif /* __MITSUBA_RENDER_PHASE_H_ */

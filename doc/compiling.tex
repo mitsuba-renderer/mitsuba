@@ -1,51 +1,81 @@
 \section{Compiling the renderer}
 \label{sec:compiling}
-To compile Mitsuba, you will need a recent C++ compiler (e.g. GCC 4.1+ or 
-Visual Studio 2008+) and some additional libraries, which Mitsuba uses internally. 
+To compile Mitsuba, you will need a recent C++ compiler (e.g. GCC 4.2+ or 
+Visual Studio 2010) and some additional libraries, which Mitsuba uses internally. 
 Builds on all supported platforms are done using a unified system
 based on SCons (\url{http://www.scons.org}), which is a Python-based 
-software construction tool. There are some differences between the different operating systems---for
-more details, please refer to one of the next sections depending on which one you use.
+software construction tool. The exact process is different depending on 
+which operating system is used and will be explained in the following subsections.
 
 \subsection{Common steps}
-To get started, you will need to download a recent version of Mitsuba. Make sure that you have the Mercurial (\url{http://mercurial.selenic.com/}) versioning system installed\footnote{On Windows, you might want to use the convenient TortoiseHG shell extension (\url{http://tortoisehg.bitbucket.org/}) to run the subsequent steps directly from the Explorer.} and enter the following at the command prompt:
+To get started, you will need to download a recent version of the Mitsuba source code. Before
+doing this, ensure that you have read the licensing agreement 
+(Section~\ref{sec:license}), and that you abide by its contents. Note that, being a ``viral'' 
+license, the GPL automatically applies to derivative work. Amongst other things, this
+means that Mitsuba's source code is \emph{off-limits} to those who develop rendering
+software not distributed under a compatible license.
+
+Check that the Mercurial (\url{http://mercurial.selenic.com/}) versioning 
+system\footnote{On Windows, you might want to use the convenient TortoiseHG shell 
+extension (\url{http://tortoisehg.bitbucket.org/}) to run the subsequent steps directly from the Explorer.} 
+is installed, which is required to fetch the most recent source code release.
+Begin by entering the following at the command prompt (or run an equivalent command from a graphical Mercurial frontend):
 \begin{shell}
 $\texttt{\$}$ hg clone https://www.mitsuba-renderer.org/hg/mitsuba
 \end{shell}
-Afterwards, you will need to download the precompiled dependencies into a new
-subdirectory named \code{mitsuba/dependencies}:
+This should dowload a full copy of the main repository.
+
+\subsubsection{Build configurations}
+Common to all platforms is that a build configuration file must be selected. Several options are
+available on each operating system:
+\paragraph{Linux:}
+On Linux, there are two supported configurations:
+\begin{description}
+\item[\code{build/config-linux-gcc.py}:] Optimized single precision GCC build. The resulting binaries include debug symbols for convenience, but these can only be used for relatively high-level debugging due to the enabled optimizations.
+\item[\code{build/config-linux-gcc-debug.py}:] Non-optimized single precision GCC build with debug symbols. When compiled with this configuration, Mitsuba
+will run extremely slowly. Its main use is to track down elusive bugs.
+\end{description}
+\paragraph{Windows:}
+On Windows, builds can either be performed using the Visual Studio 2010\footnote{No other Visual Studio versions are currently supported.}
+compiler or Intel XE Composer (on top of Visual Studio 2010).
+Note that Visual Studio 2010 Service Pack 1 \emph{must} be installed or the resulting binaries will crash. 
+\begin{description}
+\item[\code{build/config-\{win32, win64\}-\{msvc2010, msvc2010-debug\}.py}:] Create 32 or 64 bit binaries using Microsoft Visual C++ version 2010.
+The configurations with the suffix \code{-debug} will include debug symbols in all binaries, which run very slowly.
+\item[\code{build/config-\{win32, win64\}-icl.py}:] Create 32 or 64 bit release binaries using Intel XE Composer (on top of Visual Studio 2010).
+Versions XE 2012 and 2013 are known to work.
+\end{description}
+\paragraph{Mac OS:}
+On Mac OS, builds can either be performed using the the XCode 4 \code{llvm-gcc} toolchain or Intel XE Composer.
+It is possible to target MacOS 10.6 (Snow Leopard) or 10.7 (Lion) as the oldest supported operating system release.
+In both cases, XCode must be installed along with the supplementary command line tools.
+\begin{description}
+\item[\code{config-macos\{10.6, 10.7\}-gcc-\{x86,x86\_64,universal\}.py}:] Create Intel 32 bit, 64 bit, or universal binaries using the \code{llvm-gcc} toolchain.
+\item[\code{config-macos\{10.6, 10.7\}-icl-\{x86,x86\_64\}.py}:] Create Intel 32 bit or 64 bit binaries using the Intel XE Composer toolchain.
+Versions XE 2012 and 2013 are known to work.
+\end{description}
+Note that the configuration files assume that XCode was
+installed in the \code{/Applications} folder. They must be be manually updated
+when this is not the case.
+\subsubsection{Selecting a configuration}
+Having chosen a configuration, copy it to the main directory and rename it to \code{config.py}, e.g.:
 \begin{shell}
-$\texttt{\$}$ cd mitsuba
-$\texttt{\$}$ hg clone https://www.mitsuba-renderer.org/hg/dependencies
-\end{shell}
-Common to all platforms is that a build configuration file must be chosen: amongst the
-following, please copy the best matching file into a new file to the root of the Mitsuba
-directory and rename it into \code{config.py}.
-\begin{shell}
-build/config-linux.py  
-build/config-darwin-x86_64.py  
-build/config-darwin-x86.py  
-build/config-darwin-universal.py  
-build/config-msvc2008-win32.py  
-build/config-msvc2008-win64.py
-build/config-msvc2010-win32.py  
-build/config-msvc2010-win64.py
-build/config-icl12-msvc2010-win32.py
-build/config-icl12-msvc2010-win64.py
-build/config-icl12-darwin-x86_64.py
-build/config-icl12-darwin-x86.py
+$\texttt{\$}$ cp build/config-linux-gcc.py config.py
 \end{shell}
 
 \subsection{Compilation flags}
 \label{sec:compiling-flags}
-Usually, you will not have to make any modification to this file, but sometimes a few minor 
-edits may be necessary. In particular, you might want to add or remove certain
-compilation flags from the \code{CXXFLAGS} parameter. The following settings
-affect the behavior of Mitsuba:
+There are several flags that affect the behavior of Mitsuba and must be specified at compile time.
+These usually don't need to be changed, but if you want to compile Mitsuba for spectral rendering, or 
+to use double precision for internal computations then the following may be useful. Otherwise, you may skip ahead to the subsection
+that covers your operating system.
+
+To change the compilation flags, open the \code{config.py} file that was just copied and look up the \code{CXXFLAG} parameter.
+The following options are available:
 \begin{description}
 \item[\texttt{MTS\_DEBUG}] Enable assertions etc. Usually a good idea, and
-enabled by default.
-\item[\texttt{MTS\_KD\_DEBUG}] Enable additional checks in the kd-Tree. This
+enabled by default (even in release builds).
+\item[\texttt{MTS\_KD\_DEBUG}] Enable additional checks in the kd-tree. This
 is quite slow and mainly useful to track down bugs when they are suspected.
 \item[\texttt{MTS\_KD\_CONSERVE\_MEMORY}] Use a more compact representation 
 for triangle geometry (at the cost of speed). This flag causes Mitsuba to use the somewhat slower
@@ -56,69 +86,72 @@ Off by default.
 \item[\texttt{MTS\_HAS\_COHERENT\_RT}]Include coherent ray tracing support (depends on \texttt{MTS\_SSE}). This flag is activated by default. 
 \item[\texttt{MTS\_DEBUG\_FP}]Generated NaNs and overflows will cause floating point exceptions, which can be caught in a debugger. This is slow and mainly meant as a debugging tool for developers. Off by default.
 \item[\texttt{SPECTRUM\_SAMPLES=}$\langle ..\rangle$]This setting defines the number of spectral samples (in the 368-830 $nm$ range) that are used to render scenes. The default is 3 samples, in which case the renderer automatically turns into an RGB-based system. For high-quality spectral rendering, this should be set to 30 or higher.
+Refer also to \secref{colorspaces}.
 \item[\texttt{SINGLE\_PRECISION}] Do all computation in single precision. This is normally sufficient and therefore used as the default setting.
 \item[\texttt{DOUBLE\_PRECISION}] Do all computation in double precision. This flag is incompatible with
 \texttt{MTS\_SSE}, \texttt{MTS\_HAS\_COHERENT\_RT}, and \texttt{MTS\_DEBUG\_FP}.
-\item[\texttt{MTS\_GUI\_SOFTWARE\_FALLBACK}]Forces the GUI to use a software
-fallback mode, which is considerably slower and removes the realtime preview.
-This is useful when running the interface on a remote Windows machine
-accessed via the Remote Desktop Protocol (RDP).
+\item[\texttt{MTS\_GUI\_SOFTWARE\_FALLBACK}]Causes the GUI to use a software
+fallback instead of the hardware-accelerated realtime preview.
+This is useful when the binary will be executed over a remote link using a
+protocol such as RDP (which does not provide the requisite OpenGL features).
 \end{description}
 All of the default configurations files located in the \texttt{build} directory use the flags 
 \code{SINGLE\_PRECISION}, \code{SPECTRUM\_SAMPLES=3}, \code{MTS\_DEBUG}, \code{MTS\_SSE},
 as well as \code{MTS\_HAS\_COHERENT\_RT}.
 
-\subsection{Building on Ubuntu Linux}
+\subsection{Building on Debian or Ubuntu Linux}
 \label{sec:compiling-ubuntu}
-You'll first need to install a number of dependencies. It is assumed here
-that you are using Ubuntu Linux (Maverick Meerkat / 10.10 or later), hence some of the package may be named differently if you are 
-using another version.
+You'll first need to install a number of dependencies. It is assumed here that you are using a 
+recent version of Ubuntu Linux (Precise Pangolin / 12.04 LTS or later), hence some of the 
+package may be named differently if you are using Debian Linux or another Ubuntu version.
 
 First, run
 \begin{shell}
 $\text{\$}$ sudo apt-get install build-essential scons mercurial qt4-dev-tools libpng12-dev 
-    libjpeg62-dev libilmbase-dev libxerces-c3-dev libboost1.42-all-dev 
-	libopenexr-dev libglewmx1.5-dev libxxf86vm-dev libpcrecpp0
-	libboost-system-dev libboost-filesystem-dev libboost-python-dev libboost-dev
+    libjpeg62-dev libilmbase-dev libxerces-c-dev libboost-all-dev 
+	libopenexr-dev libglewmx1.5-dev libxxf86vm-dev libpcrecpp0 libeigen3-dev
 \end{shell}
-Please ensure that the installed version of the boost libraries is 1.42 or later.
-To get COLLADA support, you will also need to install the \texttt{collada-dom} packages or build it from scratch. Here, we install the \code{x86\_64} binaries and development headers that can be found in the \texttt{dependencies/linux} directory\footnote{The directory also contains source packages in case these binaries don't work for you.}:
+To get COLLADA support, you will also need to install the \texttt{collada-dom} packages 
+or build them from scratch. Here, we install the \code{x86\_64} binaries and development 
+headers that can be found on the Mitsuba website (at \url{http://www.mitsuba-renderer.org/releases/current})
 \begin{shell}
-$\text{\$}$ sudo dpkg --install collada-dom_2.3.1-1_amd64.deb collada-dom-dev_2.3.1-1_amd64.deb
+$\text{\$}$ sudo dpkg --install collada-dom_*.deb
 \end{shell}
-Afterwards, simply run
+To start a regular build, run
 \begin{shell}
 $\text{\$}$ scons
 \end{shell}
-inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the build by appending \code{-j }\emph{core count} to the command.
+inside the Mitsuba directory. In the case that you have multiple processors, you might want to parallelize the 
+build by appending \code{-j }\emph{core count} to the \code{scons} command.
 If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
 scons: $\texttt{done}$ building targets.
 \end{shell}
-To be able to run the renderer from the command line, you will first have to import it into your path:
+To run the renderer from the command line, you first have to import it into your shell environment:
 \begin{shell}
 $\text{\$}$ . setpath.sh
 \end{shell}
 (note the period at the beginning -- this assumes that you are using \code{bash}).
 Having set up everything, you can now move on to \secref{basics}.
-\subsubsection{Creating Ubuntu packages}
-For Ubuntu, the preferred way of redistristributing executables is to create
-\code{.deb} package files. To create Mitsuba packages, it is strongly recommended
-that you work with a pristine Ubuntu installation\footnote{Several commercial graphics 
+\subsubsection{Creating Debian or Ubuntu Linux packages}
+The preferred way of redistristributing executables on Debian or Ubuntu Linux is to create
+\code{.deb} package files. To make custom Mitsuba packages, it is strongly recommended
+that you work with a pristine installation of the target operating system\footnote{Several commercial graphics 
 drivers ``pollute'' the OpenGL setup so that the compiled Mitsuba binaries 
 can only be used on machines using the same drivers. For this reason, it is 
 better to work from a clean boostrapped install.}. This can be done as follows:
-first, install \code{debootstrap} and download the latest version of Ubuntu
-to a subdirectory (here, we use Maverick Meerkat, or version 10.10)
+first, install \code{debootstrap} and download the most recent operating system release
+to a subdirectory. The following example is based on Ubuntu 12.04 LTS (``Precise Pangolin''),
+but the steps are almost identical for other versions of Ubuntu or Debian Linux.
 \begin{shell}
 $\text{\$}$ sudo apt-get install debootstrap
-$\text{\$}$ sudo debootstrap --arch amd64 maverick maverick-pristine
+$\text{\$}$ sudo debootstrap --arch amd64 precise precise-pristine
 \end{shell}
 Next, \code{chroot} into the created directory, enable the \code{multiverse} package repository,
 and install the necessary tools for creating package files:
 \begin{shell}
-$\text{\$}$ sudo chroot maverick-pristine
-$\text{\$}$ echo "deb http://archive.ubuntu.com/ubuntu maverick universe" >> /etc/apt/sources.list
+$\text{\$}$ sudo chroot precise-pristine
+$\text{\$}$ echo "deb http://archive.ubuntu.com/ubuntu precise universe" >> /etc/apt/sources.list
 $\text{\$}$ apt-get update
 $\text{\$}$ apt-get install debhelper dpkg-dev pkg-config
 \end{shell}
@@ -136,7 +169,7 @@ $\text{\$}$ dpkg-buildpackage -nc
 After everything has been built, you should find the created package files
 in the root directory.
 \subsubsection{Releasing Ubuntu packages}
-To redistribute Ubuntu packages over the Internet, it is convenient to 
+To redistribute Ubuntu packages over the Internet or a local network, it is convenient to 
 put them into an \code{apt}-compatible repository. To prepare such a
 repository, put the two \code{deb}-files built in the last section, 
 as well as the \code{collada-dom} \code{deb}-files into a public directory 
@@ -153,8 +186,8 @@ and then referenced by placing a line following the pattern
 \begin{shell}
 deb http://<path-to-deb-directory> ./
 \end{shell}
-into the \code{/etc/apt/sources.list} file.
-
+into the \code{/etc/apt/sources.list} file. This setup is convenient for
+distributing a custom Mitsuba build to many Debian or Ubuntu machines running (e.g. to nodes in a rendering cluster).
 \subsection{Building on Fedora Core}
 You'll first need to install a number of dependencies. It is assumed here
 that you are using FC15, hence some of the package may be named differently if you are 
@@ -173,7 +206,7 @@ If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
 scons: $\texttt{done}$ building targets.
 \end{shell}
-To be able to run the renderer from the command line, you will first have to import it into your path:
+To run the renderer from the command line, you first have to import it into your shell environment:
 \begin{shell}
 $\text{\$}$ . setpath.sh
 \end{shell}
@@ -223,7 +256,7 @@ If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
 scons: $\texttt{done}$ building targets.
 \end{shell}
-To be able to run the renderer from the command line, you will first have to import it into your path:
+To run the renderer from the command line, you first have to import it into your shell environment:
 \begin{shell}
 $\text{\$}$ . setpath.sh
 \end{shell}
@@ -236,83 +269,74 @@ a package from the most recent repository version:
 $\text{\$}$ makepkg data/linux/arch/mitsuba/PKGBUILD
 \end{shell}
 
-\subsection{Compiling on Gentoo Linux}
-Simon Haegler has contributed a Gentoo \code{ebuild} script that can be used to Mitsuba.
-It can be found inside the user repository \code{git://git.overlays.gentoo.org/user/mistafunk.git}
-and is located at \code{media-gfx/mitsuba/mitsuba-0.3.0.ebuild}.
+% This is currently outdated
+%\subsection{Compiling on Gentoo Linux}
+%Simon Haegler has contributed a Gentoo \code{ebuild} script that can be used to Mitsuba.
+%It can be found inside the user repository \code{git://git.overlays.gentoo.org/user/mistafunk.git}
+%and is located at \code{media-gfx/mitsuba/mitsuba-0.3.0.ebuild}.
 
 \subsection{Building on Windows}
-On the Windows platform, Mitsuba already includes many of the dependencies in precompiled form.
-There are a few things to set up though. First, please make sure that your
-installation of Visual Studio is up to date. In particular, for
-Visual Studio 2010, you'll need to apply Service Pack 1
-or the resulting Mitsuba executables will crash
-(\url{http://www.microsoft.com/download/en/details.aspx?id=23691}).
+Compiling Mitsuba's dependencies on Windows is a laborious process; for convenience, there
+is a repository that provides them in precompiled form. To use this repository, clone it
+using Mercurial and rename the directory so that it forms the \code{dependencies} subdirectory
+inside the main Mitsuba directory, i.e. run something like
+\begin{shell}
+C:\>cd mitsuba
+C:\mitsuba\>hg clone https://www.mitsuba-renderer.org/hg/dependencies_windows
+C:\mitsuba\>rename dependencies_windows dependencies
+\end{shell}
+There are a few other things that need to be set up: make sure that your
+installation of Visual Studio is up to date, since Mitsuba binaries created with versions
+prior to Service Pack 1 will crash.
 
-Next, you will need to install Python 2.6.x \footnote{
-Make sure that you get a Python binary matching the architecture, for which you plan to compile
-Mitsuba (i.e. \code{x86} or \code{x86\_64}) -- this is needed by the Python bindings. If you wish to
-use another Python version, you will have to change \code{config.py} and supply your own Boost boost 
-binaries linked against that version of Python.} 
-(\url{www.python.org}) and SCons \footnote{Note that on some Windows machines, the SCons 
+Next, you will need to install Python 2.6.x 
+(\url{www.python.org}) and SCons\footnote{Note that on some Windows machines, the SCons 
 installer generates a warning about not finding Python in the registry. In this case, you 
 can instead run \code{python setup.py install} within the source release of SCons.} 
 (\url{http://www.scons.org}, any 2.x version will do) and ensure that they are contained in the \code{\%PATH\%} 
 environment variable so that entering \code{scons} on the command prompt (\code{cmd.exe}) 
 launches the build system.
 
-Finally, you will need to build Qt 4.7 (or a newer version) from 
-source, as pre-built binaries will unfortunately not work. 
-At the time of this writing, a suitable source code package is available here: \url{http://get.qt.nokia.com/qt/source/qt-everywhere-opensource-src-4.7.4.zip}.
-It is important that the Qt build process
-is performed using the \emph{exact same}\footnote{The blame here goes to 
-Microsoft for changing the C++ ABI whenever they feel like it.} 
-compiler that will also be used to build Mitsuba. This means that 
-Qt should be compiled \emph{after} applying any Visual Studio service packs.
-To configure Qt and start the compilation process, enter
+Having installed all dependencies, run the ``Visual Studio \emph{2010} Command 
+Prompt'' from the Start Menu (\code{x86} for 32-bit or \code{x64} for 64bit), 
+navigate to the Mitsuba directory, and simply run
 \begin{shell}
-C:\Qt>configure.exe -release -no-webkit -no-phonon -no-phonon-backend -no-script
-      -no-scripttools -no-qt3support -no-multimedia -no-ltcg
-..(configuration messages)..
-C:\Qt>nmake
-\end{shell}
-
-Having installed all dependencies, run the ``Visual Studio \emph{2008/2010} Command 
-Prompt'' from the Start Menu (\code{x86} for 32-bit or \code{x64} for 64bit). Afterwards,
-navigate to the Mitsuba directory.
-Depending on whether or not the Qt binaries are on the \code{\%PATH\%}
-environment variable, you might have to explicitly specify the Qt path:
-\begin{shell}
-C:\Mitsuba\>$\texttt{set}$ QTDIR=C:\Qt
-\end{shell}
-where \code{C:$\backslash$Qt} is the path to your Qt installation.
-Afterwards, simply run
-\begin{shell}
-C:\Mitsuba\>scons
+C:\mitsuba\>scons
 \end{shell}
 In the case that you have multiple processors, you might want to parallelize the build by appending the option \code{-j }\emph{core count} to the \code{scons} command.
 
 If all goes well, the build process will finish successfully after a few
-minutes. In comparison to the other platforms, you don't have to run the \code{setpath.sh} script at this point. 
+minutes. \emph{Note} that in comparison to the other platforms, you don't have to run the \code{setpath.sh} script at this point. 
 All binaries are automatically copied into the \code{dist} directory, and they should be executed directly from there.
 
 \subsubsection{Integration with the Visual Studio interface}
-Basic Visual Studio 2008 and 2010 integration with support for code completion 
+Basic Visual Studio 2010 integration with support for code completion 
 exists for those who develop Mitsuba code on Windows. 
-To use the supplied projects, simply double-click on one of the two files \code{build/mitsuba-msvc2008.sln} 
+To use the supplied projects, simply double-click on one of the two files \code{build/mitsuba-msvc2010.sln} 
 and \code{build/mitsuba-msvc2010.sln}. These Visual Studio projects still internally
 use the SCons-based build system to compile Mitsuba; whatever 
 build configuration is selected within Visual Studio will be used to pick a matching
-configuration file from the \texttt{build} directory. Note that you will
-potentially have to add a \code{QTDIR=\"...\"} line to each of the
-used configuration files when building directly from Visual Studio.
+configuration file from the \texttt{build} directory. 
 
 \subsection{Building on Mac OS X}
-On Mac OS X, you will need to install both SCons (>2.0.0, available at \code{www.scons.org}) and 
-a recent release of XCode. You will also need to get Qt 4.7.0 or a newer version
---- make sure that you get the normal Cocoa release (i.e. \emph{not} the one based on Carbon). All of the
-other dependencies are already included in precompiled form.
-Now open a Terminal and run
+\vspace{-5mm}
+\remarks{
+	\item Due to an unfortunate bug in the Mac OS core libraries, OpenMP is not available when compiling
+	using the regular \code{llvm-gcc} toolchain (it is available when using Intel XE Composer). This will cause the following parts of Mitsuba
+	to run single-threaded: bitmap resampling (i.e. MIP map generation), blue noise point generation in the \pluginref{dipole}
+	plugin, as well as the \pluginref{ppm} and \pluginref{sppm} plugins.
+}
+Compiling Mitsuba's dependencies on Mac OS is a laborious process; for convenience, there
+is a repository that provides them in precompiled form. To use this repository, clone it
+using Mercurial and rename the directory so that it forms the \code{dependencies} subdirectory
+inside the main Mitsuba directory, i.e. run something like 
+\begin{shell}
+$\text{\$}$ cd mitsuba
+$\text{\$}$ hg clone https://www.mitsuba-renderer.org/hg/dependencies_macos
+$\text{\$}$ mv dependencies_macos dependencies
+\end{shell}
+You will also need to install SCons (>2.0.0, available at \code{www.scons.org}) and 
+a recent release of XCode, including its command-line compilation tools. Next, run
 \begin{shell}
 $\text{\$}$ scons
 \end{shell}
@@ -321,8 +345,9 @@ If all goes well, SCons should finish successfully within a few minutes:
 \begin{shell}
 scons: $\texttt{done}$ building targets.
 \end{shell}
-To be able to run the renderer from the command line, you will have to import it into your path:
+To run the renderer from the command line, you first have to import it into your shell environment:
 \begin{shell}
 $\text{\$}$ . setpath.sh
 \end{shell}
 (note the period at the beginning -- this assumes that you are using \code{bash}).
+

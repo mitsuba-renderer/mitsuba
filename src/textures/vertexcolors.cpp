@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -23,6 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{vertexcolors}{Vertex color passthrough texture}
+ * \order{5}
  * When rendering with a mesh that contains vertex colors,
  * this plugin exposes the underlying color data as a texture.
  * Currently, this is only supported by the \code{PLY}
@@ -52,7 +53,7 @@ public:
 		Texture::serialize(stream, manager);
 	}
 
-	Spectrum getValue(const Intersection &its) const {
+	Spectrum eval(const Intersection &its, bool /* unused */) const {
 		return its.color;
 	}
 

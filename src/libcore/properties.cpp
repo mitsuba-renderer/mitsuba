@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -19,19 +19,32 @@
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/netobject.h>
 
+/* Keep the boost::variant includes outside of properties.h,
+   since they noticeably add to the overall compile times */
+#include <boost/variant.hpp>
+
 MTS_NAMESPACE_BEGIN
+
+typedef boost::variant<
+	bool, int64_t, Float, Point, Vector, Transform,
+	Spectrum, std::string, Properties::Data> ElementData;
+
+struct PropertyElement {
+	ElementData data;
+	mutable bool queried;
+};
 
 #define DEFINE_PROPERTY_ACCESSOR(Type, BaseType, TypeName, ReadableName) \
 	void Properties::set##TypeName(const std::string &name, const Type &value, bool warnDuplicates) { \
 		if (hasProperty(name) && warnDuplicates) \
-			SLog(EWarn, "Property \"%s\" has already been specified!", name.c_str()); \
-		m_elements[name].data = (BaseType) value; \
-		m_elements[name].queried = false; \
+			SLog(EWarn, "Property \"%s\" was specified multiple times!", name.c_str()); \
+		(*m_elements)[name].data = (BaseType) value; \
+		(*m_elements)[name].queried = false; \
 	} \
 	\
 	Type Properties::get##TypeName(const std::string &name) const { \
-		std::map<std::string, Element>::const_iterator it = m_elements.find(name); \
-		if (it == m_elements.end()) \
+		std::map<std::string, PropertyElement>::const_iterator it = m_elements->find(name); \
+		if (it == m_elements->end()) \
 			SLog(EError, "Property \"%s\" missing", name.c_str()); \
 		const BaseType *result = boost::get<BaseType>(&it->second.data); \
 		if (!result) \
@@ -42,8 +55,8 @@ MTS_NAMESPACE_BEGIN
 	} \
 	\
 	Type Properties::get##TypeName(const std::string &name, const Type &defVal) const { \
-		std::map<std::string, Element>::const_iterator it = m_elements.find(name); \
-		if (it == m_elements.end()) \
+		std::map<std::string, PropertyElement>::const_iterator it = m_elements->find(name); \
+		if (it == m_elements->end()) \
 			return defVal; \
 		const BaseType *result = boost::get<BaseType>(&it->second.data); \
 		if (!result) \
@@ -53,7 +66,7 @@ MTS_NAMESPACE_BEGIN
 		return (Type) *result; \
 	}
 
-DEFINE_PROPERTY_ACCESSOR(bool, bool, Boolean, bool)
+DEFINE_PROPERTY_ACCESSOR(bool, bool, Boolean, boolean)
 DEFINE_PROPERTY_ACCESSOR(int64_t, int64_t, Long, integer)
 DEFINE_PROPERTY_ACCESSOR(int, int64_t, Integer, integer)
 DEFINE_PROPERTY_ACCESSOR(size_t, int64_t, Size, integer)
@@ -78,15 +91,48 @@ public:
 	Properties::EPropertyType operator()(const Properties::Data &) const { return Properties::EData; }
 };
 
+Properties::Properties() 
+: m_id("unnamed") {
+	m_elements = new std::map<std::string, PropertyElement>();
+}
+
+Properties::Properties(const std::string &pluginName)
+: m_pluginName(pluginName), m_id("unnamed") { 
+	m_elements = new std::map<std::string, PropertyElement>();
+}
+
+Properties::Properties(const Properties &props)
+: m_pluginName(props.m_pluginName), m_id(props.m_id) { 
+	m_elements = new std::map<std::string, PropertyElement>(*props.m_elements);
+}
+
+Properties::~Properties() {
+	delete m_elements;
+}
+
+void Properties::operator=(const Properties &props) {
+	m_pluginName = props.m_pluginName;
+	m_id = props.m_id;
+	*m_elements = *props.m_elements;
+}
+
 bool Properties::hasProperty(const std::string &name) const {
-	return m_elements.find(name) != m_elements.end();
+	return m_elements->find(name) != m_elements->end();
+}
+
+bool Properties::removeProperty(const std::string &name) {
+	std::map<std::string, PropertyElement>::iterator it = m_elements->find(name);
+	if (it == m_elements->end())
+		return false;
+	m_elements->erase(it);
+	return true;
 }
 
 std::vector<std::string> Properties::getUnqueried() const {
-	std::map<std::string, Element>::const_iterator it = m_elements.begin();
+	std::map<std::string, PropertyElement>::const_iterator it = m_elements->begin();
 	std::vector<std::string> result;
 
-	for (; it != m_elements.end(); ++it) {
+	for (; it != m_elements->end(); ++it) {
 		if (!(*it).second.queried)
 			result.push_back((*it).first);
 	}
@@ -95,8 +141,8 @@ std::vector<std::string> Properties::getUnqueried() const {
 }
 
 Properties::EPropertyType Properties::getType(const std::string &name) const {
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if (it == m_elements.end())
+	std::map<std::string, PropertyElement>::const_iterator it = m_elements->find(name);
+	if (it == m_elements->end())
 		SLog(EError, "Property \"%s\" has not been specified!", name.c_str());
 	
 	type_visitor myVisitor;
@@ -104,13 +150,14 @@ Properties::EPropertyType Properties::getType(const std::string &name) const {
 }
 
 std::string Properties::toString() const {
-	std::map<std::string, Element>::const_iterator it = m_elements.begin();
+	std::map<std::string, PropertyElement>::const_iterator it = m_elements->begin();
 	std::ostringstream oss;
 
 	oss << "Properties[" << endl
 		<< "  pluginName = \"" << m_pluginName << "\"," << endl
+		<< "  id = \"" << m_id << "\"," << endl
 		<< "  elements = {" << endl;
-	while (it != m_elements.end()) {
+	while (it != m_elements->end()) {
 		oss << "    \"" << (*it).first << "\" -> ";
 		const ElementData &data = (*it).second.data;
 		EPropertyType type = boost::apply_visitor(type_visitor(), data);
@@ -141,9 +188,9 @@ std::string Properties::toString() const {
 					<< boost::get<Data>(data).size << ")";
 				break;
 			default:
-				SLog(EError, "Encountered an unknown property type!");
+				oss << "<unknown>";
 		}
-		if (++it != m_elements.end())
+		if (++it != m_elements->end())
 			oss << ",";
 		oss << endl;
 	}
@@ -153,26 +200,31 @@ std::string Properties::toString() const {
 }
 
 void Properties::markQueried(const std::string &name) const {
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if (it == m_elements.end())
+	std::map<std::string, PropertyElement>::const_iterator it = m_elements->find(name);
+	if (it == m_elements->end())
 		return;
 	it->second.queried = true;
 }
 
 bool Properties::wasQueried(const std::string &name) const {
-	std::map<std::string, Element>::const_iterator it = m_elements.find(name);
-	if (it == m_elements.end())
+	std::map<std::string, PropertyElement>::const_iterator it = m_elements->find(name);
+	if (it == m_elements->end())
 		SLog(EError, "Could not find parameter \"%s\"!", name.c_str());
 	return it->second.queried;
 }
 
+void Properties::putPropertyNames(std::vector<std::string> &results) const {
+	for (std::map<std::string, PropertyElement>::const_iterator it = m_elements->begin();
+			it != m_elements->end(); ++it) 
+		results.push_back((*it).first);
+}
+
+
 ConfigurableObject::ConfigurableObject(Stream *stream, InstanceManager *manager) 
  : SerializableObject(stream, manager) {
-	m_parent = static_cast<ConfigurableObject *>(manager->getInstance(stream));
 }
 
 void ConfigurableObject::setParent(ConfigurableObject *parent) {
-	m_parent = parent;
 }
 
 void ConfigurableObject::configure() {
@@ -182,7 +234,6 @@ void ConfigurableObject::serialize(Stream *stream, InstanceManager *manager) con
 	if (!getClass()->isSerializable())
 		Log(EError, "Error: trying to serialize an instance of type '%s', which does "
 			"not have full serialization support!", getClass()->getName().c_str());
-	manager->serialize(stream, m_parent);
 }
 
 void ConfigurableObject::addChild(const std::string &name, ConfigurableObject *child) {
@@ -197,7 +248,8 @@ void NetworkedObject::serialize(Stream *stream, InstanceManager *manager) const 
 void NetworkedObject::bindUsedResources(ParallelProcess *proc) const {
 }
 
-void NetworkedObject::wakeup(std::map<std::string, SerializableObject *> &params) {
+void NetworkedObject::wakeup(ConfigurableObject *,
+	std::map<std::string, SerializableObject *> &) {
 }
 
 MTS_IMPLEMENT_CLASS(ConfigurableObject, true, SerializableObject)

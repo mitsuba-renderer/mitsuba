@@ -1,20 +1,9 @@
 import fnmatch
 
 Import('env', 'os', 'sys', 'plugins', 'dist', 
-	'MTS_VERSION', 'hasQt', 'hasCollada', 'hasPython')
+	'MTS_VERSION', 'hasQt', 'hasCollada', 'hasPython', 'hasBreakpad')
 
 installTargets = []
-
-def fixOSXPluginPath(plugin):
-	return env.AddPostAction(plugin,
-		'install_name_tool -change @loader_path/../Frameworks/libmitsuba-core.dylib @loader_path/../Contents/Frameworks/libmitsuba-core.dylib ${TARGET}; ' +
-		'install_name_tool -change @loader_path/../Frameworks/libmitsuba-render.dylib @loader_path/../Contents/Frameworks/libmitsuba-render.dylib ${TARGET}; ' +
-		'install_name_tool -change @loader_path/../Frameworks/libmitsuba-hw.dylib @loader_path/../Contents/Frameworks/libmitsuba-hw.dylib ${TARGET}; ' +
-		'install_name_tool -change @loader_path/../Frameworks/libmitsuba-bidir.dylib @loader_path/../Contents/Frameworks/libmitsuba-bidir.dylib ${TARGET}; ' +
-		'install_name_tool -change @loader_path/../Frameworks/libboost_system.dylib @loader_path/../Contents/Frameworks/libboost_system.dylib ${TARGET}; ' +
-		'install_name_tool -change @loader_path/../Frameworks/libboost_filesystem.dylib @loader_path/../Contents/Frameworks/libboost_filesystem.dylib ${TARGET};' +
-		'install_name_tool -change @loader_path/../Frameworks/libboost_python.dylib @loader_path/../Contents/Frameworks/libboost_python.dylib ${TARGET}'
-	)
 
 def install(target, paths, prefix = None):
 	global installTargets
@@ -59,8 +48,8 @@ if sys.platform == 'linux2':
 		installTargets += env.Install(os.path.join(distDir, 'plugins'), plugin)
 	install(distDir, ['libcore/libmitsuba-core.so', 'libhw/libmitsuba-hw.so',
 			'librender/libmitsuba-render.so', 'libbidir/libmitsuba-bidir.so'])
-	if hasPython:
-		install(os.path.join(distDir, 'python'), ['libpython/mitsuba.so'])
+	for ver in hasPython:
+		installAs(os.path.join(distDir, 'python/'+ver+'/mitsuba.so'), 'libpython/mitsuba_python' + ver + '.so')
 	install(distDir, ['mitsuba/mitsuba', 'mitsuba/mtssrv', 'mitsuba/mtsutil'])
 	if hasQt:
 		install(distDir, ['mtsgui/mtsgui'])
@@ -72,9 +61,9 @@ if sys.platform == 'win32':
 			installTargets += env.Install(os.path.join(distDir, 'plugins'), plugin)
 
 	if 'WIN64' in env['CXXFLAGS']:
-		dllprefix='#dependencies/windows/lib64'
+		dllprefix='#dependencies/lib/x64'
 	else:
-		dllprefix='#dependencies/windows/lib32'
+		dllprefix='#dependencies/lib/i386'
 
 	if env['MSVC_VERSION'] == '9.0':
 		compilerType = 'vc90'
@@ -92,23 +81,26 @@ if sys.platform == 'win32':
 	install(distDir, ['libcore/libmitsuba-core.dll', 'libhw/libmitsuba-hw.dll',
 			'librender/libmitsuba-render.dll', 'libbidir/libmitsuba-bidir.dll'])
 	install(sdkLibDir, ['libcore/mitsuba-core.lib', 'libhw/mitsuba-hw.lib',
-			'librender/mitsuba-render.lib', 'libbidir/mitsuba-bidir.lib'])
+			'librender/mitsuba-render.lib', 'libbidir/mitsuba-bidir.lib']) 
 	for entry in os.walk(os.path.join(basePath, "include")):
 		includeDir = entry[0][len(basePath)+1:]
 		installTargets += env.Install(os.path.join(sdkDir, includeDir),
 			[ ('#' + os.path.join(includeDir, fname)) for fname in entry[2] ])
-	if hasPython:
-		installAs(os.path.join(distDir, 'python/mitsuba.pyd'), 'libpython/mitsuba.dll')
+	for ver in hasPython:
+		installAs(os.path.join(distDir, 'python/'+ver+'/mitsuba.pyd'), 'libpython/mitsuba_python' + ver + '.dll')
 	install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',
-		'libpng13.dll',	'jpeg62.dll', 'pthreadVCE2.dll', 'xerces-c_3_0.dll', 'glew32mx.dll'],
+		'libpng15.dll',	'jpeg62.dll', 'xerces-c_3_1.dll', 'glew32mx.dll'],
 		prefix=dllprefix)
-	install(distDir, ['libcollada14dom23.dll', 'boost_python-%s-mt-1_44.dll' % compilerType,
-		'boost_system-%s-mt-1_44.dll' % compilerType, 'boost_filesystem-%s-mt-1_44.dll' % compilerType],
-		dllprefix + '/' + compilerType + '/')
+	install(distDir, ['libcollada14dom23.dll', 
+		'boost_python-vc100-mt-1_50.dll', 'boost_python3-vc100-mt-1_50.dll',
+		'boost_system-vc100-mt-1_50.dll', 'boost_filesystem-vc100-mt-1_50.dll',
+		'boost_chrono-vc100-mt-1_50.dll', 'boost_thread-vc100-mt-1_50.dll'],
+		dllprefix)
+
 	if 'WIN64' in env['CXXFLAGS']:
-		installTargets += env.Install(distDir, '#dependencies/windows/bin/vcredist_2010_sp1_x64.exe')
+		installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2010_sp1_x64.exe')
 	else:
-		installTargets += env.Install(distDir, '#dependencies/windows/bin/vcredist_2010_sp1_x86.exe')
+		installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2010_sp1_x86.exe')
 	installTargets += env.Install(distDir, '#data/windows/README.txt')
 
 	if 'REDIST_PATH' in env:
@@ -117,11 +109,11 @@ if sys.platform == 'win32':
 	if hasQt:
 		install(distDir, ['mtsgui/mtsgui.exe'])
 		install(distDir, ['QtCore4.dll', 'QtGui4.dll', 'QtXml4.dll',
-			'QtNetwork4.dll', 'QtOpenGL4.dll', 'QtXmlPatterns4.dll'], prefix = env['QT4_BINPATH'])
+			'QtNetwork4.dll', 'QtOpenGL4.dll', 'QtXmlPatterns4.dll'], prefix = env['QT4_LIBPATH'])
 elif sys.platform == 'darwin':
 	for i in plugins:
 		plugin = env.Install(os.path.join(distDir, 'plugins'), i)
-		installTargets += fixOSXPluginPath(plugin)
+		installTargets += plugin
 	for entry in os.walk(os.path.join(basePath, "include")):
 		includeDir = entry[0][len(basePath)+1:]
 		installTargets += env.Install(os.path.join(os.path.join(distDir, 'Headers'), includeDir),
@@ -138,45 +130,36 @@ elif sys.platform == 'darwin':
 
 	install(frameworkDir, ['libcore/libmitsuba-core.dylib', 'libhw/libmitsuba-hw.dylib',
 		'librender/libmitsuba-render.dylib', 'libbidir/libmitsuba-bidir.dylib'])
-	if hasPython:
-		plugin = installAs(os.path.join(distDir, 'python/mitsuba.so'), 'libpython/mitsuba.dylib')
-		installTargets += fixOSXPluginPath(plugin)
-	install(frameworkDir, [
-		'GLEW.framework/Resources/libs/libGLEW.dylib', 'OpenEXR.framework/Resources/lib/libHalf.6.dylib',
-		'OpenEXR.framework/Resources/lib/libIex.6.dylib', 'OpenEXR.framework/Resources/lib/libImath.6.dylib',
-		'OpenEXR.framework/Resources/lib/libIlmThread.6.dylib', 'OpenEXR.framework/Resources/lib/libIlmImf.6.dylib',
-		'Xerces-C.framework/Resources/lib/libxerces-c-3.0.dylib', 'libpng.framework/Resources/lib/libpng.dylib', 
-		'libjpeg.framework/Resources/lib/libjpeg.dylib', 'libboost.framework/Resources/lib/libboost_python.dylib',
-		'libboost.framework/Resources/lib/libboost_system.dylib',
-		'libboost.framework/Resources/lib/libboost_filesystem.dylib'], '#dependencies/darwin')
-	if hasCollada:
-		install(frameworkDir, [
-			'Collada14Dom.framework/Resources/lib/libCollada14Dom.dylib'], '#dependencies/darwin')
+	for ver in hasPython:
+		installTargets += installAs(os.path.join(distDir, 'python/'+ver+'/mitsuba.so'), 'libpython/mitsuba_python'+ver+'.dylib')
+	for entry in os.walk(os.path.join(basePath, "dependencies/lib")):
+		installTargets += env.Install(frameworkDir, ['#' + os.path.join('dependencies/lib', e) for e in entry[2] if not os.path.islink(os.path.join(entry[0], e))])
 	if hasQt:
 		install(os.path.join(distDir, 'Contents/MacOS'), ['mtsgui/mtsgui'])
 		install(os.path.join(distDir, 'Contents/MacOS'), ['mtsgui/symlinks_install'])
-		installTargets += env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtCore.framework/Versions/4/QtCore')
-		opengl = env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtOpenGL.framework/Versions/4/QtOpenGL')
-		xml = env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtXml.framework/Versions/4/QtXml')
-		xmlpatterns = env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtXmlPatterns.framework/Versions/4/QtXmlPatterns')
-		network = env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtNetwork.framework/Versions/4/QtNetwork')
-		gui = env.OSXLibInst(frameworkDir, '/Library/Frameworks/QtGui.framework/Versions/4/QtGui')
-		installTargets += env.AddPostAction(xml, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @loader_path/../Frameworks/QtCore $TARGET')
-		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @loader_path/../Frameworks/QtCore $TARGET')
-		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change QtNetwork.framework/Versions/4/QtNetwork @loader_path/../Frameworks/QtNetwork $TARGET')
-		installTargets += env.AddPostAction(network, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @loader_path/../Frameworks/QtCore $TARGET')
-		installTargets += env.AddPostAction(gui, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @loader_path/../Frameworks/QtCore $TARGET')
-		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @loader_path/../Frameworks/QtCore $TARGET')
-		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @loader_path/../Frameworks/QtGui $TARGET')
-		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources'), '/Library/Frameworks//QtGui.framework/Versions/4/Resources/qt_menu.nib')
-		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources/PreviewSettings.nib'), '#data/darwin/PreviewSettings.nib/designable.nib')
-		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources/PreviewSettings.nib'), '#data/darwin/PreviewSettings.nib/keyedobjects.nib')
+		installTargets += env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtCore.framework/Versions/4/QtCore')
+		opengl = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtOpenGL.framework/Versions/4/QtOpenGL')
+		xml = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtXml.framework/Versions/4/QtXml')
+		xmlpatterns = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtXmlPatterns.framework/Versions/4/QtXmlPatterns')
+		network = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtNetwork.framework/Versions/4/QtNetwork')
+		gui = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtGui.framework/Versions/4/QtGui')
+		installTargets += env.AddPostAction(xml, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change QtNetwork.framework/Versions/4/QtNetwork @rpath/QtNetwork $TARGET')
+		installTargets += env.AddPostAction(network, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(gui, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @rpath/QtGui $TARGET')
+		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources'), '$QTDIR/frameworks//QtGui.framework/Versions/4/Resources/qt_menu.nib')
+		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources'), '#data/darwin/PreviewSettings.nib')
 		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources'), '#data/darwin/qt.conf')
 		installTargets += env.Install(os.path.join(distDir, 'Contents/Frameworks/BWToolkitFramework.framework/Versions/A'),
-			'#dependencies/darwin/BWToolkitFramework.framework/Versions/A/BWToolkitFramework')
-		for file in os.listdir(env.GetBuildPath('#dependencies/darwin/BWToolkitFramework.framework/Versions/A/Resources')):
+			'#dependencies/frameworks/BWToolkitFramework.framework/Versions/A/BWToolkitFramework')
+		for file in os.listdir(env.GetBuildPath('#dependencies/frameworks/BWToolkitFramework.framework/Versions/A/Resources')):
 			if fnmatch.fnmatch(file, '*.pdf') or fnmatch.fnmatch(file, '*.tiff') or fnmatch.fnmatch(file, '*.tif') or fnmatch.fnmatch(file, '*.png') or fnmatch.fnmatch(file, '*.rtf') or fnmatch.fnmatch(file, '*.plist'):
-				installTargets += env.Install(os.path.join(distDir, 'Contents/Frameworks/BWToolkitFramework.framework/Resources'), '#dependencies/darwin/BWToolkitFramework.framework/Versions/A/Resources/' + file)
+				installTargets += env.Install(os.path.join(distDir, 'Contents/Frameworks/BWToolkitFramework.framework/Resources'), '#dependencies/frameworks/BWToolkitFramework.framework/Versions/A/Resources/' + file)
+		if hasBreakpad:
+			installTargets += env.Install(os.path.join(distDir, 'Contents/Frameworks'), '#dependencies/frameworks/Breakpad.framework')
 
 if dist:
 	if sys.platform == 'win32':

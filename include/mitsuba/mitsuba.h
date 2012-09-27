@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,11 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__MITSUBA_H)
-#define __MITSUBA_H
+#pragma once
+#if !defined(__MITSUBA_MITSUBA_H_)
+#define __MITSUBA_MITSUBA_H_
 
 #include <mitsuba/core/platform.h>
-
+#include <boost/version.hpp>
 #include <sstream>
 #include <string>
 #include <map>
@@ -38,14 +39,6 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-#if defined(DOUBLE_PRECISION)
-typedef double Float;
-#elif defined(SINGLE_PRECISION)
-typedef float Float;
-#else
-#error No precision flag was defined!
-#endif
-
 /**
  * Include a basic subset of the core classes
  */
@@ -55,7 +48,6 @@ typedef float Float;
 #include <mitsuba/core/stl.h>
 #include <mitsuba/core/object.h>
 #include <mitsuba/core/ref.h>
-#include <mitsuba/core/sse.h>
 #include <mitsuba/core/tls.h>
 #include <mitsuba/core/logger.h>
 #include <mitsuba/core/thread.h>
@@ -65,4 +57,4 @@ typedef float Float;
 #include <mitsuba/core/spectrum.h>
 #include <mitsuba/core/util.h>
 
-#endif /* __MITSUBA_H */
+#endif /* __MITSUBA_MITSUBA_H_ */

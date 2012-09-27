@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SHAPE_KDTREE_H)
-#define __SHAPE_KDTREE_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_SKDTREE_H_)
+#define __MITSUBA_RENDER_SKDTREE_H_
 
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/sahkdtree3.h>
@@ -66,7 +67,7 @@ typedef const Shape * ConstShapePtr;
  */
 
 class MTS_EXPORT_RENDER ShapeKDTree : public SAHKDTree3D<ShapeKDTree> {
-	friend class GenericKDTree<AABB, SurfaceAreaHeuristic, ShapeKDTree>;
+	friend class GenericKDTree<AABB, SurfaceAreaHeuristic3, ShapeKDTree>;
 	friend class SAHKDTree3D<ShapeKDTree>;
 	friend class Instance;
 	friend class AnimatedInstance;
@@ -87,15 +88,12 @@ public:
 	 * \brief Return the total number of low-level primitives (triangles
 	 * and other low-level primitives)
 	 */
-	inline size_type getPrimitiveCount() const {
+	inline SizeType getPrimitiveCount() const {
 		return m_shapeMap[m_shapeMap.size()-1];
 	}
 
 	/// Return an axis-aligned bounding box containing all primitives
 	inline const AABB &getAABB() const { return m_aabb; }
-
-	/// Return an bounding sphere containing all primitives
-	inline const BSphere &getBSphere() const { return m_bsphere; }
 
 	/// Build the kd-tree (needs to be called before tracing any rays)
 	void build();
@@ -147,10 +145,14 @@ public:
 	 * \param n
 	 *    The geometric surface normal will be stored in this parameter
 	 *
+	 * \param uv
+	 *    The UV coordinates associated with the intersection will
+	 *    be stored here.
+	 *
 	 * \return \c true if an intersection was found
 	 */
 	bool rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape, 
-		Normal &n) const;
+		Normal &n, Point2 &uv) const;
 
 	/**
 	 * \brief Test a ray for occlusion with respect to all primitives
@@ -198,16 +200,16 @@ protected:
 	 * When this is a triangle mesh, the \a idx parameter is updated to the
 	 * triangle index within the mesh.
 	 */
-	FINLINE index_type findShape(index_type &idx) const {
-		std::vector<index_type>::const_iterator it = std::lower_bound(
+	FINLINE IndexType findShape(IndexType &idx) const {
+		std::vector<IndexType>::const_iterator it = std::lower_bound(
 				m_shapeMap.begin(), m_shapeMap.end(), idx + 1) - 1;
 		idx -= *it;
-		return (index_type) (it - m_shapeMap.begin());
+		return (IndexType) (it - m_shapeMap.begin());
 	}
 
  	/// Return the axis-aligned bounding box of a certain primitive
-	FINLINE AABB getAABB(index_type idx) const {
-		index_type shapeIdx = findShape(idx);
+	FINLINE AABB getAABB(IndexType idx) const {
+		IndexType shapeIdx = findShape(idx);
 		const Shape *shape = m_shapes[shapeIdx];
 		if (m_triangleFlag[shapeIdx]) {
 			const TriMesh *mesh = static_cast<const TriMesh *>(shape);
@@ -218,8 +220,8 @@ protected:
 	}
 
  	/// Return the AABB of a primitive when clipped to another AABB
-	FINLINE AABB getClippedAABB(index_type idx, const AABB &aabb) const {
-		index_type shapeIdx = findShape(idx);
+	FINLINE AABB getClippedAABB(IndexType idx, const AABB &aabb) const {
+		IndexType shapeIdx = findShape(idx);
 		const Shape *shape = m_shapes[shapeIdx];
 		if (m_triangleFlag[shapeIdx]) {
 			const TriMesh *mesh = static_cast<const TriMesh *>(shape);
@@ -231,8 +233,8 @@ protected:
 
 	/// Temporarily holds some intersection information
 	struct IntersectionCache {
-		size_type shapeIndex;
-		size_type primIndex;
+		SizeType shapeIndex;
+		SizeType primIndex;
 		Float u, v;
 	};
 
@@ -241,13 +243,13 @@ protected:
 	 * temporary space is supplied to store data that can later
 	 * be used to create a detailed intersection record.
 	 */
-	FINLINE bool intersect(const Ray &ray, index_type idx, Float mint, 
+	FINLINE bool intersect(const Ray &ray, IndexType idx, Float mint, 
 		Float maxt, Float &t, void *temp) const {
 		IntersectionCache *cache = 
 			static_cast<IntersectionCache *>(temp);
 
 #if defined(MTS_KD_CONSERVE_MEMORY)
-		index_type shapeIdx = findShape(idx);
+		IndexType shapeIdx = findShape(idx);
 		if (EXPECT_TAKEN(m_triangleFlag[shapeIdx])) {
 			const TriMesh *mesh = 
 				static_cast<const TriMesh *>(m_shapes[shapeIdx]);
@@ -303,23 +305,21 @@ protected:
 	 * Check whether a primitive is intersected by the given ray. This
 	 * version is used for shadow rays, hence no temporary space is supplied.
 	 */
-	FINLINE bool intersect(const Ray &ray, index_type idx, 
+	FINLINE bool intersect(const Ray &ray, IndexType idx, 
 			Float mint, Float maxt) const {
 #if defined(MTS_KD_CONSERVE_MEMORY)
-		index_type shapeIdx = findShape(idx);
+		IndexType shapeIdx = findShape(idx);
 		if (EXPECT_TAKEN(m_triangleFlag[shapeIdx])) {
 			const TriMesh *mesh = 
 				static_cast<const TriMesh *>(m_shapes[shapeIdx]);
 			const Triangle &tri = mesh->getTriangles()[idx];
 			Float tempU, tempV, tempT;
-			if (mesh->isOccluder() &&
-				tri.rayIntersect(mesh->getVertexPositions(), ray, tempU, tempV, tempT))
+			if (tri.rayIntersect(mesh->getVertexPositions(), ray, tempU, tempV, tempT))
 				return tempT >= mint && tempT <= maxt;
 			return false;
 		} else {
 			const Shape *shape = m_shapes[shapeIdx];
-			return shape->isOccluder() &&
-				shape->rayIntersect(ray, mint, maxt);
+			return shape->rayIntersect(ray, mint, maxt);
 		}
 #else
 		const TriAccel &ta = m_triAccel[idx];
@@ -327,24 +327,12 @@ protected:
 		const Shape *shape = m_shapes[shapeIndex];
 		if (EXPECT_TAKEN(m_triAccel[idx].k != KNoTriangleFlag)) {
 			Float tempU, tempV, tempT;
-			return shape->isOccluder() &&
-				ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT);
+			return ta.rayIntersect(ray, mint, maxt, tempU, tempV, tempT);
 		} else {
-			return shape->isOccluder() && 
-				shape->rayIntersect(ray, mint, maxt);
+			return shape->rayIntersect(ray, mint, maxt);
 		}
 #endif
 	}
-
-#if defined(MTS_HAS_COHERENT_RT)
-	/// Ray traversal stack entry for uncoherent ray tracing
-	struct CoherentKDStackEntry {
-		/* Current ray interval */
-		RayInterval4 MM_ALIGN16 interval;
-		/* Pointer to the far child */
-		const KDNode * __restrict node;
-	};
-#endif
 
 	/**
 	 * \brief After having found a unique intersection, fill a proper record
@@ -360,8 +348,8 @@ protected:
 			const Point *vertexPositions = trimesh->getVertexPositions();
 			const Normal *vertexNormals = trimesh->getVertexNormals();
 			const Point2 *vertexTexcoords = trimesh->getVertexTexcoords();
-			const Spectrum *vertexColors = trimesh->getVertexColors();
-			const TangentSpace *vertexTangents = trimesh->getVertexTangents();
+			const Color3 *vertexColors = trimesh->getVertexColors();
+			const TangentSpace *vertexTangents = trimesh->getUVTangents();
 			const Vector b(1 - cache->u - cache->v, cache->u, cache->v);
 
 			const uint32_t idx0 = tri.idx[0], idx1 = tri.idx[1], idx2 = tri.idx[2];
@@ -374,38 +362,44 @@ protected:
 			else
 				its.p = ray(its.t);
 
-			Normal faceNormal(cross(p1-p0, p2-p0));
+			Vector side1(p1-p0), side2(p2-p0);
+			Normal faceNormal(cross(side1, side2));
 			Float length = faceNormal.length();
 			if (!faceNormal.isZero())
 				faceNormal /= length;
 
+			if (EXPECT_NOT_TAKEN(vertexTangents)) {
+				const TangentSpace &ts = vertexTangents[cache->primIndex];
+				its.dpdu = ts.dpdu;
+				its.dpdv = ts.dpdv;
+			} else {
+				its.dpdu = side1;
+				its.dpdv = side2;
+			}
 			if (EXPECT_TAKEN(vertexNormals)) {
-				const Normal &n0 = vertexNormals[idx0];
-				const Normal &n1 = vertexNormals[idx1];
-				const Normal &n2 = vertexNormals[idx2];
+				const Normal 
+					&n0 = vertexNormals[idx0],
+					&n1 = vertexNormals[idx1],
+					&n2 = vertexNormals[idx2];
+
+				its.shFrame.n = normalize(n0 * b.x + n1 * b.y + n2 * b.z);
 
 				if (EXPECT_TAKEN(!vertexTangents)) {
-					its.shFrame = Frame(normalize(n0 * b.x + n1 * b.y + n2 * b.z));
-					its.dpdu = its.dpdv = Vector(0.0f);
+					coordinateSystem(its.shFrame.n, its.shFrame.s, its.shFrame.t);
 				} else {
-					const TangentSpace &t0 = vertexTangents[idx0];
-					const TangentSpace &t1 = vertexTangents[idx1];
-					const TangentSpace &t2 = vertexTangents[idx2];
-					const Vector dpdu = t0.dpdu * b.x + t1.dpdu * b.y + t2.dpdu * b.z;
-					its.shFrame.n = normalize(n0 * b.x + n1 * b.y + n2 * b.z);
-					its.shFrame.s = normalize(dpdu - its.shFrame.n 
-						* dot(its.shFrame.n, dpdu));
+					/* Align shFrame.s with dpdu, use Gram-Schmidt to orthogonalize */
+					its.shFrame.s = normalize(its.dpdu - its.shFrame.n 
+						* dot(its.shFrame.n, its.dpdu));
 					its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
-					its.dpdu = dpdu;
-					its.dpdv = t0.dpdv * b.x + t1.dpdv * b.y + t2.dpdv * b.z;
 				}
+
 				/* Ensure that the geometric & shading normals face the same direction */
 				if (dot(faceNormal, its.shFrame.n) < 0)
 					faceNormal = -faceNormal;
+
 				its.geoFrame = Frame(faceNormal);
 			} else {
 				its.shFrame = its.geoFrame = Frame(faceNormal);
-				its.dpdu = its.dpdv = Vector(0.0f);
 			}
 
 			if (EXPECT_TAKEN(vertexTexcoords)) {
@@ -414,20 +408,23 @@ protected:
 				const Point2 &t2 = vertexTexcoords[idx2];
 				its.uv = t0 * b.x + t1 * b.y + t2 * b.z;
 			} else {
-				its.uv = Point2(0.0f);
+				its.uv = Point2(b.y, b.z);
 			}
 
 			if (EXPECT_NOT_TAKEN(vertexColors)) {
-				const Spectrum &c0 = vertexColors[idx0],
-							&c1 = vertexColors[idx1],
-							&c2 = vertexColors[idx2];
-				its.color = c0 * b.x + c1 * b.y + c2 * b.z;
+				const Color3 &c0 = vertexColors[idx0],
+							 &c1 = vertexColors[idx1],
+							 &c2 = vertexColors[idx2];
+				Color3 result(c0 * b.x + c1 * b.y + c2 * b.z);
+				its.color.fromLinearRGB(result[0], result[1],
+					result[2], Spectrum::EReflectance);
 			}
 
 			its.wi = its.toLocal(-ray.d);
 			its.shape = trimesh;
 			its.hasUVPartials = false;
 			its.primIndex = cache->primIndex;
+			its.instance = NULL;
 		} else {
 			shape->fillIntersectionRecord(ray, 
 				reinterpret_cast<const uint8_t*>(temp) + 8, its);
@@ -470,13 +467,12 @@ protected:
 private:
 	std::vector<const Shape *> m_shapes;
 	std::vector<bool> m_triangleFlag;
-	std::vector<index_type> m_shapeMap;
+	std::vector<IndexType> m_shapeMap;
 #if !defined(MTS_KD_CONSERVE_MEMORY)
 	TriAccel *m_triAccel;
 #endif
-	BSphere m_bsphere;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __SHAPE_KDTREE_H */
+#endif /* __MITSUBA_RENDER_SKDTREE_H_ */

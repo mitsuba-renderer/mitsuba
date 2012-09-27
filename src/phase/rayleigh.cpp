@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -48,7 +48,7 @@ public:
 		PhaseFunction::serialize(stream, manager);
 	}
 
-	inline Float sample(PhaseFunctionQueryRecord &pRec,
+	inline Float sample(PhaseFunctionSamplingRecord &pRec,
 			Sampler *sampler) const {
 		Point2 sample(sampler->next2D());
 
@@ -57,7 +57,7 @@ public:
 			  A = std::pow(z+tmp, (Float) (1.0f/3.0f)),
 			  B = std::pow(z-tmp, (Float) (1.0f/3.0f)),
 			  cosTheta = A + B,
-			  sinTheta = std::sqrt(std::max((Float) 0, 1.0f-cosTheta*cosTheta)),
+			  sinTheta = math::safe_sqrt(1.0f-cosTheta*cosTheta),
 			  phi = 2*M_PI*sample.y,
 			  cosPhi = std::cos(phi),
 			  sinPhi = std::sin(phi);
@@ -71,7 +71,7 @@ public:
 		return 1.0f;
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec,
+	Float sample(PhaseFunctionSamplingRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
 		RayleighPhaseFunction::sample(pRec, sampler);
 		pdf = RayleighPhaseFunction::eval(pRec);
@@ -79,7 +79,7 @@ public:
 	}
 
 
-	Float eval(const PhaseFunctionQueryRecord &pRec) const {
+	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
 		Float mu = dot(pRec.wi, pRec.wo);
 		return (3.0f/(16.0f*M_PI)) * (1+mu*mu);
 	}

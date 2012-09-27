@@ -48,6 +48,7 @@ struct Glyph {
 
 int main(int argc, char **argv) {
 	Class::staticInitialization();
+	Object::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
 
@@ -133,9 +134,9 @@ int main(int argc, char **argv) {
 	uint32_t xcount = (uint32_t) std::floor((float) finalSide / (float) maxWidth);
 
 	/* Create an bitmap with alpha */
-	ref<Bitmap> bitmap = new Bitmap(finalSide, finalSide, 16);
+	ref<Bitmap> bitmap = new Bitmap(Bitmap::ELuminance, Bitmap::EUInt8, Vector2i(finalSide));
 	bitmap->clear();
-	uint8_t *data = bitmap->getData();
+	uint8_t *data = bitmap->getUInt8Data();
 	ref<FileStream> fs = new FileStream(argv[3], FileStream::ETruncReadWrite);
 	fs->setByteOrder(Stream::ENetworkByteOrder);
 
@@ -158,14 +159,11 @@ int main(int argc, char **argv) {
 		uint32_t width = face->glyph->bitmap.width;
 		uint32_t height = face->glyph->bitmap.rows;
 
-		/* 32-Bit RGBA is quite wasteful for a font,
-		 * Luminance-Alpha would be much nicer .. */
 		for (uint32_t j=0; j<height; j++) {
-			uint8_t *dest = &data[((ypos+j) * finalSide + xpos) * 2];
+			uint8_t *dest = &data[((ypos+j) * finalSide + xpos)];
 
 			for (uint32_t o=0; o<width; o++) {
 				/* Copy pixel-by pixel */
-				*dest++ = 0xFF;
 				*dest++ = *buffer++;
 			}
 		}
@@ -201,7 +199,7 @@ int main(int argc, char **argv) {
 	fs->close();
 
 	fs = new FileStream(argv[2], FileStream::ETruncReadWrite);
-	bitmap->save(Bitmap::EPNG, fs);
+	bitmap->write(Bitmap::EPNG, fs);
 	fs->close();
 
 	delete[] kerningMatrix;
@@ -209,6 +207,7 @@ int main(int argc, char **argv) {
 	FT_Done_Face(face);
 	FT_Done_FreeType(library);
 	Class::staticShutdown();
+	Object::staticShutdown();
 	Thread::staticShutdown();
 	return 0;
 }

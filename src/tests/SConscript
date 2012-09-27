@@ -2,9 +2,17 @@ Import('env', 'plugins', 'glob', 'os', 'SCons')
 
 testEnv = env.Clone()
 testEnv.Append(CPPDEFINES = [['MTS_TESTCASE', '1']])
+
+bidirEnv = testEnv.Clone()
+bidirEnv.Append(LIBS=['mitsuba-bidir'])
+bidirEnv.Append(LIBPATH=['#src/libbidir'])
+
 for plugin in glob.glob(GetBuildPath('test_*.cpp')):
 	name = os.path.basename(plugin)
-	lib = testEnv.SharedLibrary(name[0:len(name)-4], name)
+	if "bidir" in name: 
+		lib = bidirEnv.SharedLibrary(name[0:len(name)-4], name)
+	else:
+		lib = testEnv.SharedLibrary(name[0:len(name)-4], name)
 	if isinstance(lib, SCons.Node.NodeList):
 		lib = lib[0]
 	plugins += [ lib ]

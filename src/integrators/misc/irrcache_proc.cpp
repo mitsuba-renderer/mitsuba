@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -26,10 +26,8 @@ MTS_NAMESPACE_BEGIN
 class OvertureWorker : public WorkProcessor {
 public:
 	OvertureWorker(int resolution, bool gradients, bool clampNeighbor, 
-		bool clampScreen, Float influenceMin, Float influenceMax, 
-		Float quality) : m_resolution(resolution), m_gradients(gradients),
+		bool clampScreen, Float quality) : m_resolution(resolution), m_gradients(gradients),
 		m_clampNeighbor(clampNeighbor), m_clampScreen(clampScreen), 
-		m_influenceMin(influenceMin), m_influenceMax(influenceMax), 
 		m_quality(quality) {
 	}
 
@@ -38,8 +36,6 @@ public:
 		m_gradients = stream->readBool();
 		m_clampNeighbor = stream->readBool();
 		m_clampScreen = stream->readBool();
-		m_influenceMin = stream->readFloat();
-		m_influenceMax = stream->readFloat();
 		m_quality = stream->readFloat();
 	}
 
@@ -48,8 +44,6 @@ public:
 		stream->writeBool(m_gradients);
 		stream->writeBool(m_clampNeighbor);
 		stream->writeBool(m_clampScreen);
-		stream->writeFloat(m_influenceMin);
-		stream->writeFloat(m_influenceMax);
 		stream->writeFloat(m_quality);
 	}
 
@@ -63,18 +57,17 @@ public:
 
 	void prepare() {
 		m_scene = static_cast<Scene *>(getResource("scene"));
-		m_camera = static_cast<Camera *>(getResource("camera"));
-		m_subIntegrator = static_cast<SampleIntegrator *>(getResource("subIntegrator"));
+		m_sensor = static_cast<Sensor *>(getResource("sensor"));
+		m_subIntegrator = static_cast<SamplingIntegrator *>(getResource("subIntegrator"));
 		Properties props("independent");
 		props.setInteger("sampleCount", m_resolution * 3 * m_resolution);
 		m_sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(Sampler), props));
-		m_subIntegrator->wakeup(m_resources);
+		m_subIntegrator->wakeup(NULL, m_resources);
 
 		m_irrCache = new IrradianceCache(m_scene->getAABB());
 		m_irrCache->clampNeighbor(m_clampNeighbor);
 		m_irrCache->clampScreen(m_clampScreen);
-		m_irrCache->clampInfluence(m_influenceMin, m_influenceMax);
 		m_irrCache->useGradients(m_gradients);
 		m_irrCache->setQuality(m_quality);
 		m_hs = new HemisphereSampler(m_resolution, 3*m_resolution);
@@ -84,14 +77,10 @@ public:
 		const bool &stop) {
 		const RectangularWorkUnit *rect = static_cast<const RectangularWorkUnit *>(workUnit);
 		IrradianceRecordVector *result = static_cast<IrradianceRecordVector *>(workResult);
-		const SampleIntegrator *integrator = m_subIntegrator.get();
+		const SamplingIntegrator *integrator = m_subIntegrator.get();
 
 		Intersection its;
-		Spectrum E;
 		RadianceQueryRecord rRec(m_scene, m_sampler);
-		const Point2 lensSample(0, 0);
-		RayDifferential eyeRay;
-		int x, y;
 
 		const int sx = rect->getOffset().x,
 				sy = rect->getOffset().y,
@@ -99,33 +88,35 @@ public:
 				ey = sy + rect->getSize().y;
 		result->clear();
 
-		for (y = sy; y < ey; y++) {
-			for (x = sx; x < ex; x++) {
+		for (int y = sy; y < ey; y++) {
+			for (int x = sx; x < ex; x++) {
 				if (stop) 
 					break;
-				Point2 sample(x + .5f, y + .5f);
-				m_camera->generateRayDifferential(sample, lensSample, 0.0f, eyeRay);
-				if (m_scene->rayIntersect(eyeRay, its)) {
-					const BSDF *bsdf = its.shape->getBSDF();
-					if (!bsdf)
-						continue;
+				Point2 pixelSample(x + .5f, y + .5f);
+				RayDifferential ray;
+				if (m_sensor->sampleRayDifferential(ray, pixelSample, Point2(0.5f), 0.5f).isZero())
+					continue;
+				if (m_scene->rayIntersect(ray, its)) {
+					const BSDF *bsdf = its.getBSDF();
 					if ((bsdf->getType() & BSDF::EAll) != BSDF::EDiffuseReflection)
 						continue;
+
+					Spectrum E;
 					if (m_irrCache->get(its, E))
 						continue;
 
 					/* Irradiance cache miss - create a record. The following
 					   generates stratified cosine-weighted samples and computes
 					   rotational + translational gradients */
-					m_hs->generateDirections(its, m_sampler);
-					m_sampler->generate();
+					m_hs->generateDirections(its);
+					m_sampler->generate(Point2i(0));
 
 					for (unsigned int j=0; j<m_hs->getM(); j++) {
 						for (unsigned int k=0; k<m_hs->getN(); k++) {
 							HemisphereSampler::SampleEntry &entry = (*m_hs)(j, k);
 							entry.dist = std::numeric_limits<Float>::infinity();
 							rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission
-								| RadianceQueryRecord::EDistance, m_camera->getMedium());
+								| RadianceQueryRecord::EDistance, m_sensor->getMedium());
 							rRec.extra = RadianceQueryRecord::ECacheQuery;
 							rRec.depth = 2;
 							entry.L = integrator->Li(RayDifferential(its.p, entry.d, 0.0f), rRec);
@@ -135,7 +126,7 @@ public:
 					}
 
 					m_hs->process(its);
-					result->put(m_irrCache->put(eyeRay, its, *m_hs));
+					result->put(m_irrCache->put(ray, its, *m_hs));
 				}
 			}
 		}
@@ -143,7 +134,7 @@ public:
 
 	ref<WorkProcessor> clone() const {
 		return new OvertureWorker(m_resolution, m_gradients, m_clampNeighbor,
-			m_clampScreen, m_influenceMin, m_influenceMax, m_quality);
+			m_clampScreen, m_quality);
 	}
 
 	MTS_DECLARE_CLASS()
@@ -151,10 +142,10 @@ protected:
 	virtual ~OvertureWorker() { }
 private:
 	ref<Scene> m_scene;
-	ref<Camera> m_camera;
+	ref<Sensor> m_sensor;
 	ref<Sampler> m_sampler;
 	ref<HemisphereSampler> m_hs;
-	ref<SampleIntegrator> m_subIntegrator;
+	ref<SamplingIntegrator> m_subIntegrator;
 	ref<IrradianceCache> m_irrCache;
 	int m_resolution;
 	bool m_gradients, m_clampNeighbor, m_clampScreen;
@@ -188,11 +179,9 @@ std::string IrradianceRecordVector::toString() const {
 }
 
 OvertureProcess::OvertureProcess(const RenderJob *job, int resolution, bool gradients, 
-	bool clampNeighbor, bool clampScreen, Float influenceMin, 
-	Float influenceMax, Float quality) : m_job(job), m_resolution(resolution), 
+	bool clampNeighbor, bool clampScreen, Float quality) : m_job(job), m_resolution(resolution), 
 	m_gradients(gradients), m_clampNeighbor(clampNeighbor), 
-	m_clampScreen(clampScreen), m_influenceMin(influenceMin),
-	m_influenceMax(influenceMax), m_quality(quality), m_progress(NULL) {
+	m_clampScreen(clampScreen), m_quality(quality), m_progress(NULL) {
 	m_resultCount = 0;
 	m_resultMutex = new Mutex();
 	m_samples = new IrradianceRecordVector();
@@ -205,16 +194,15 @@ OvertureProcess::~OvertureProcess() {
 
 ref<WorkProcessor> OvertureProcess::createWorkProcessor() const {
 	return new OvertureWorker(m_resolution, m_gradients, m_clampNeighbor,
-		m_clampScreen, m_influenceMin, m_influenceMax, m_quality);
+		m_clampScreen, m_quality);
 }
 
 void OvertureProcess::processResult(const WorkResult *wr, bool cancelled) {
 	const IrradianceRecordVector *result = static_cast<const IrradianceRecordVector *>(wr);
-	m_resultMutex->lock();
+	LockGuard lock(m_resultMutex);
 	for (size_t i=0; i<result->size(); ++i)
 		m_samples->put((*result)[i]);
 	m_progress->update(++m_resultCount);
-	m_resultMutex->unlock();
 }
 
 void OvertureProcess::bindResource(const std::string &name, int id) {

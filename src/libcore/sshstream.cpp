@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,15 +20,41 @@
 #include <mitsuba/core/statistics.h>
 
 #if !defined(WIN32)
-#include <unistd.h>
+# include <unistd.h>
+#else
+# include <windows.h>
 #endif
 #include <errno.h>
 
 MTS_NAMESPACE_BEGIN
 
+struct SSHStream::SSHStreamPrivate
+{
+	const std::string userName, hostName;
+	const int port, timeout;
+	size_t received, sent;
+#if defined(WIN32)
+	HANDLE childInRd,  childInWr;
+	HANDLE childOutRd, childOutWr;
+#else
+	int infd, outfd;
+	FILE *input, *output;
+#endif
+
+	SSHStreamPrivate(const std::string& uname, const std::string& hname,
+		int p, int tm) :
+	userName(uname), hostName(hname), port(p), timeout(tm), received(0), sent(0),
+#if defined(WIN32)
+	childInRd(0), childInWr(0), childOutRd(0), childOutWr(0)
+#else
+	infd(-1), outfd(-1), input(0), output(0)
+#endif
+	{}
+};
+
 SSHStream::SSHStream(const std::string &userName,
 	const std::string &hostName, const std::vector<std::string> &cmdLine, int port, int timeout)
- : m_userName(userName), m_hostName(hostName), m_port(port), m_timeout(timeout), m_received(0), m_sent(0)  {
+ : d(new SSHStreamPrivate(userName, hostName, port, timeout)) {
 	setByteOrder(ENetworkByteOrder);
 
 	Log(EInfo, "Establishing a SSH connection to \"%s@%s\"", 
@@ -42,17 +68,17 @@ SSHStream::SSHStream(const std::string &userName,
 	sAttr.lpSecurityDescriptor = NULL;
 
 	/* Create stdout pipe */
-	if (!CreatePipe(&m_childOutRd, &m_childOutWr, &sAttr, 0))
+	if (!CreatePipe(&(d->childOutRd), &(d->childOutWr), &sAttr, 0))
 		Log(EError, "Error in CreatePipe(): %s", lastErrorText().c_str());
 
 	/* Create stdin pipe */
-	if (!CreatePipe(&m_childInRd, &m_childInWr, &sAttr, 0))
+	if (!CreatePipe(&(d->childInRd), &(d->childInWr), &sAttr, 0))
 		Log(EError, "Error in CreatePipe(): %s", lastErrorText().c_str());
 
 	/* Only inherit one side of the pipes */
-	if (!SetHandleInformation(m_childOutRd, HANDLE_FLAG_INHERIT, 0))
+	if (!SetHandleInformation(d->childOutRd, HANDLE_FLAG_INHERIT, 0))
 		Log(EError, "Error in SetHandleInformation(): %s", lastErrorText().c_str());
-	if (!SetHandleInformation(m_childInWr, HANDLE_FLAG_INHERIT, 0))
+	if (!SetHandleInformation(d->childInWr, HANDLE_FLAG_INHERIT, 0))
 		Log(EError, "Error in SetHandleInformation(): %s", lastErrorText().c_str());
 
 	/* Start the plink process */
@@ -61,12 +87,13 @@ SSHStream::SSHStream(const std::string &userName,
 	ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 	ZeroMemory(&si, sizeof(STARTUPINFO));
 	si.cb = sizeof(STARTUPINFO);
-	si.hStdError  = m_childOutWr;
-	si.hStdOutput = m_childOutWr;
-	si.hStdInput  = m_childInRd;
+	si.hStdError  = d->childOutWr;
+	si.hStdOutput = d->childOutWr;
+	si.hStdInput  = d->childInRd;
 	si.dwFlags |= STARTF_USESTDHANDLES;
 
-	std::string params = formatString("-batch -P %i -T %s@%s", m_port, m_userName.c_str(), m_hostName.c_str());
+	std::string params = formatString("-batch -P %i -T %s@%s",
+		d->port, d->userName.c_str(), d->hostName.c_str());
 
 	for (size_t i=0; i<cmdLine.size(); ++i)
 		params = params + " " + cmdLine[i];
@@ -78,12 +105,13 @@ SSHStream::SSHStream(const std::string &userName,
 		NULL, // Use environment of the calling process
 		NULL, // Use CWD of the calling process
 		&si, &pi))
-		Log(EError, "Are you sure plink.exe exists? Take a look at sshstream.h -- OS error: CreateProcess() failed: %s", lastErrorText().c_str());
+		Log(EError, "Are you sure plink.exe exists? Take a look at sshstream.h "
+			"-- OS error: CreateProcess() failed: %s", lastErrorText().c_str());
 
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
-	CloseHandle(m_childOutWr);
-	CloseHandle(m_childInRd);
+	CloseHandle(d->childOutWr);
+	CloseHandle(d->childInRd);
 #else
 	int infd[2], outfd[2];
 
@@ -97,16 +125,16 @@ SSHStream::SSHStream(const std::string &userName,
 	int argc = 0;
 
 	argv[argc++] = strdup("ssh");
-	if (m_port != 22) {
-		argv[argc++] = strdup("-p"); argv[argc++] = strdup(formatString("%i", m_port).c_str());
+	if (d->port != 22) {
+		argv[argc++] = strdup("-p"); argv[argc++] = strdup(formatString("%i", d->port).c_str());
 	}
 	argv[argc++] = strdup("-e"); argv[argc++] = strdup("none"); /* No escape character */
 	argv[argc++] = strdup("-T"); /* Disable pseudo TTY allocation (need to be able to transfer binary data) */
 	argv[argc++] = strdup("-o"); argv[argc++] = strdup("PasswordAuthentication no"); /* Don't proceed if password auth. is required */
 	argv[argc++] = strdup("-o"); argv[argc++] = strdup("StrictHostKeyChecking no"); /* Don't ask whether to accept host keys */
-	argv[argc++] = strdup("-o"); argv[argc++] = strdup(formatString("ConnectTimeout %i", m_timeout).c_str()); /* Don't get stuck too long */
+	argv[argc++] = strdup("-o"); argv[argc++] = strdup(formatString("ConnectTimeout %i", d->timeout).c_str()); /* Don't get stuck too long */
 	argv[argc++] = strdup("-q"); /* Quiet */
-	argv[argc++] = strdup(formatString("%s@%s", m_userName.c_str(), m_hostName.c_str()).c_str());
+	argv[argc++] = strdup(formatString("%s@%s", d->userName.c_str(), d->hostName.c_str()).c_str());
 	for (size_t i=0; i<cmdLine.size(); ++i)
 		argv[argc++] = strdup(cmdLine[i].c_str());
 	argv[argc++] = NULL;
@@ -133,10 +161,10 @@ SSHStream::SSHStream(const std::string &userName,
 	} else {
 		close(outfd[0]);
 		close(infd[1]);
-		m_infd = infd[0];
-		m_outfd = outfd[1];
-		m_input = fdopen(infd[0], "rb");
-		m_output = fdopen(outfd[1], "wb");
+		d->infd = infd[0];
+		d->outfd = outfd[1];
+		d->input = fdopen(infd[0], "rb");
+		d->output = fdopen(outfd[1], "wb");
 	}
 	for (int i=0; i<argc-1; ++i)
 		free(argv[i]);
@@ -146,23 +174,39 @@ SSHStream::SSHStream(const std::string &userName,
 SSHStream::~SSHStream() {
 	Log(EDebug, "Closing SSH connection");
 #if defined(WIN32)
-	CloseHandle(m_childInWr);
-	CloseHandle(m_childOutRd);
+	CloseHandle(d->childInWr);
+	CloseHandle(d->childOutRd);
 #else
-	fclose(m_input);
-	fclose(m_output);
+	fclose(d->input);
+	fclose(d->output);
 #endif
+}
+
+const std::string& SSHStream::getHostName() const {
+	return d->hostName;
+}
+	
+const std::string& SSHStream::getUserName() const {
+	return d->userName;
+}
+	
+size_t SSHStream::getReceivedBytes() const {
+	return d->received;
+}
+	
+size_t SSHStream::getSentBytes() const {
+	return d->sent;
 }
 
 std::string SSHStream::toString() const {
 	std::ostringstream oss;
-	oss << "SSHStream[userName='"<< m_userName << "', hostName='" 
-		<< m_hostName << "', sent=" << (m_sent / 1024) << " KB, "
-		"received=" << (m_received/1024) << " KB]" << endl;
+	oss << "SSHStream[userName='"<< d->userName << "', hostName='" 
+		<< d->hostName << "', sent=" << (d->sent / 1024) << " KB, "
+		"received=" << (d->received/1024) << " KB]" << endl;
 	return oss.str();
 }
 
-void SSHStream::setPos(size_t pos) {
+void SSHStream::seek(size_t pos) {
 	Log(EError, "Cannot seek within a socket stream!");
 }
 
@@ -184,7 +228,7 @@ void SSHStream::flush() {
 #if defined(WIN32)
 	// No-op
 #else
-	if (fflush(m_output) == EOF)
+	if (fflush(d->output) == EOF)
 		Log(EError, "Error in fflush(): %s!", strerror(errno));
 #endif
 }
@@ -196,21 +240,21 @@ void SSHStream::read(void *ptr, size_t size) {
 	char *data = (char *) ptr;
 	while (left > 0) {
 		DWORD nRead = 0;
-		if (!ReadFile(m_childOutRd, ptr, (DWORD) left, &nRead, NULL))
+		if (!ReadFile(d->childOutRd, ptr, (DWORD) left, &nRead, NULL))
 			Log(EError, "Connection closed while reading: %s", lastErrorText().c_str());
 		left -= nRead;
 		data += nRead;
 	}
 #else
-	if (fread(ptr, size, 1, m_input) != 1) {
-		if (feof(m_input))
+	if (fread(ptr, size, 1, d->input) != 1) {
+		if (feof(d->input))
 			Log(EError, "Error in fread(): end of file!");
-		else if (ferror(m_input))
+		else if (ferror(d->input))
 			Log(EError, "Error in fread(): stream error!");
 		/* Otherwise, ignore (strange, but seems to be required) */
 	}
 #endif
-	m_received += size;
+	d->received += size;
 	bytesRcvd += size;
 }
 
@@ -221,21 +265,21 @@ void SSHStream::write(const void *ptr, size_t size) {
 	char *data = (char *) ptr;
 	while (left > 0) {
 		DWORD nWritten = 0;
-		if (!WriteFile(m_childInWr, ptr, (DWORD) left, &nWritten, NULL))
+		if (!WriteFile(d->childInWr, ptr, (DWORD) left, &nWritten, NULL))
 			Log(EError, "Connection closed while writing: %s", lastErrorText().c_str());
 		left -= nWritten;
 		data += nWritten;
 	}
 #else
-	if (fwrite(ptr, size, 1, m_output) != 1) {
-		if (feof(m_output))
+	if (fwrite(ptr, size, 1, d->output) != 1) {
+		if (feof(d->output))
 			Log(EError, "Error in fwrite(): end of file!");
-		else if (ferror(m_output))
+		else if (ferror(d->output))
 			Log(EError, "Error in fwrite(): stream error!");
 		/* Otherwise, ignore (strange, but seems to be required) */
 	}
 #endif
-	m_sent += size;
+	d->sent += size;
 	bytesSent += size;
 }
 

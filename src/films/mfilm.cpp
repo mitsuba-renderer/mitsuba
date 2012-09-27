@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,252 +18,335 @@
 
 #include <mitsuba/render/film.h>
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/core/plugin.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <iomanip>
 
 MTS_NAMESPACE_BEGIN
 
-/*!\plugin{mfilm}{MATLAB M-file film}
+/*!\plugin{mfilm}{MATLAB / Mathematica film}
+ * \order{4}
  * \parameters{
  *     \parameter{width, height}{\Integer}{
- *       Width and height of the camera sensor in pixels
- *       \default{768, 576}
+ *       Width and height of the sensor in pixels
+ *       \default{1, 1}
  *     }
  *     \parameter{cropOffsetX, cropOffsetY, cropWidth, cropHeight}{\Integer}{
- *       These parameter can optionally be provided to render a sub-rectangle
- *       of the output \default{Unused}
+ *       These parameters can optionally be provided to select a sub-rectangle
+ *       of the output. In this case, Mitsuba will only render the requested
+ *       regions. \default{Unused}
  *     }
- *     \parameter{alpha}{\Boolean}{Include an alpha channel in the output
- *        image? \default{\code{true}}
+ *     \parameter{fileFormat}{\String}{
+ *       Specifies the desired output format; must be one of
+ *       \code{matlab} or \code{mathematica}. \default{\code{matlab}}
  *     }
- *     \parameter{banner}{\Boolean}{Include a small Mitsuba banner in the 
- *         output image? \default{\code{true}}
+ *     \parameter{digits}{\Integer}{
+ *       Number of significant digits to be written \default{4}
  *     }
+ *     \parameter{variable}{\String}{
+ *       Name of the target variable \default{\code{"data"}}
+ *     }
+ *     \parameter{pixelFormat}{\String}{Specifies the desired pixel format
+ *         of the generated image. The options are \code{luminance},
+ *         \code{luminanceAlpha}, \code{rgb}, \code{rgba}, \code{spectrum}, 
+ *         and \code{spectrumAlpha}. In the latter two cases,
+ *         the number of written channels depends on the value assigned to
+ *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
+ *         section for details) \default{\code{rgba}}
+ *     }
+ *     \parameter{highQualityEdges}{\Boolean}{
+ *        If set to \code{true}, regions slightly outside of the film 
+ *        plane will also be sampled. This may improve the image 
+ *        quality at the edges, especially when using very large 
+ *        reconstruction filters. In general (and particularly using the
+ *        default box filter), this is not needed though. 
+ *        \default{\code{false}, i.e. disabled}
+ *     }
+ *     \parameter{\Unnamed}{\RFilter}{Reconstruction filter that should
+ *     be used by the film. \default{\code{box}, a simple box filter}}
+ * }
+ *
+ * \renderings{
+ *     \rendering{Importing and tonemapping an image in Mathematica}{film_mfilm_mathematica.jpg}
  * }
  * 
- * This plugin provides a camera film that exports luminance
- * values as a matrix using the MATLAB M-file format. This is
+ * This plugin provides a camera film that exports spectrum, RGB, XYZ, or 
+ * luminance values as a matrix to a MATLAB or Mathematica ASCII file. This is
  * useful when running Mitsuba as simulation step as part of a 
  * larger virtual experiment. It can also come in handy when
- * verifying parts of the renderer using a test suite.
- *
- * When Mitsuba is started with the ``test case mode'' parameter
- * (\code{-t}), this class will write triples consisting of
- * the luminance, variance, and sample count for every pixel
- * (instead of just the luminance).
+ * verifying parts of the renderer using an automated test suite.
  */
 class MFilm : public Film {
-protected:
-	/* Pixel data structure */
-	struct Pixel {
-		Spectrum spec;
-		Spectrum variance;
-		Float weight;
-		int nSamples;
-
-		Pixel() : spec(0.0f), variance(0.0f), weight(0.0f) {
-		}
+public:
+	enum EMode {
+		EMATLAB = 0,
+		EMathematica
 	};
 
-	Pixel *m_pixels;
-	bool m_hasVariances;
-	bool m_exportSpectra;
-public:
 	MFilm(const Properties &props) : Film(props) {
-		m_pixels = new Pixel[m_cropSize.x * m_cropSize.y];
-		/* Export luminance by default */
-		m_exportSpectra = props.getBoolean("spectra", false);
+		std::string pixelFormat = boost::to_lower_copy(
+			props.getString("pixelFormat", "luminance"));
+		
+		std::string fileFormat = boost::to_lower_copy(
+			props.getString("fileFormat", "matlab"));
+
+		if (pixelFormat == "luminance") {
+			m_pixelFormat = Bitmap::ELuminance;
+		} else if (pixelFormat == "luminancealpha") {
+			m_pixelFormat = Bitmap::ELuminanceAlpha;
+		} else if (pixelFormat == "rgb") {
+			m_pixelFormat = Bitmap::ERGB;
+		} else if (pixelFormat == "rgba") {
+			m_pixelFormat = Bitmap::ERGBA;
+		} else if (pixelFormat == "xyz") {
+			m_pixelFormat = Bitmap::EXYZ;
+		} else if (pixelFormat == "xyza") {
+			m_pixelFormat = Bitmap::EXYZA;
+		} else if (pixelFormat == "spectrum") {
+			m_pixelFormat = Bitmap::ESpectrum;
+		} else if (pixelFormat == "spectrumalpha") {
+			m_pixelFormat = Bitmap::ESpectrumAlpha;
+		} else {
+			Log(EError, "The \"pixelFormat\" parameter must either be equal to "
+				"\"luminance\", \"luminanceAlpha\", \"rgb\", \"rgba\", \"xyz\", \"xyza\", "
+				"\"spectrum\", or \"spectrumAlpha\"!");
+		}
+
+		if (SPECTRUM_SAMPLES == 3 && (m_pixelFormat == Bitmap::ESpectrum || m_pixelFormat == Bitmap::ESpectrumAlpha))
+			Log(EError, "You requested to render a spectral image, but Mitsuba is currently "
+				"configured for a RGB flow (i.e. SPECTRUM_SAMPLES = 3). You will need to recompile "
+				"it with a different configuration. Please see the documentation for details.");
+
+		if (fileFormat == "matlab") {
+			m_fileFormat = EMATLAB;
+		} else if (fileFormat == "mathematica") {
+			m_fileFormat = EMathematica;
+		} else {
+			Log(EError, "The \"fileFormat\" parameter must either be equal to "
+				"\"matlab\" or \"mathematica\"!");
+		}
+
+		m_digits = props.getInteger("digits", 4);
+		m_variable = props.getString("variable", "data");
+
+		m_storage = new ImageBlock(Bitmap::ESpectrumAlphaWeight, m_cropSize);
 	}
 
 	MFilm(Stream *stream, InstanceManager *manager) 
 		: Film(stream, manager) {
-		m_pixels = new Pixel[m_cropSize.x * m_cropSize.y];
+		m_pixelFormat = (Bitmap::EPixelFormat) stream->readUInt();
+		m_fileFormat = (EMode) stream->readUInt();
+		m_digits = stream->readInt();
+		m_variable = stream->readString();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Film::serialize(stream, manager);
+		stream->writeUInt(m_pixelFormat);
+		stream->writeUInt(m_fileFormat);
+		stream->writeInt(m_digits);
+		stream->writeString(m_variable);
 	}
 
-	virtual ~MFilm() {
-		if (m_pixels)
-			delete[] m_pixels;
+	void configure() {
+		if (m_filter == NULL) {
+			/* No reconstruction filter has been selected. Load a box filter by default */
+			m_filter = static_cast<ReconstructionFilter *> (PluginManager::getInstance()->
+					createObject(MTS_CLASS(ReconstructionFilter), Properties("box")));
+			m_filter->configure();
+		}
+
+		Film::configure();
 	}
 	
 	void clear() {
-		memset(m_pixels, 0, sizeof(Pixel) * m_cropSize.x * m_cropSize.y);
-		m_hasVariances = false;
+		m_storage->clear();
 	}
 
-	void fromBitmap(const Bitmap *bitmap) {
-		Assert(bitmap->getWidth() == m_cropSize.x 
-			&& bitmap->getHeight() == m_cropSize.y);
-		Assert(bitmap->getBitsPerPixel() == 128);
-		unsigned int lastIndex = m_cropSize.x * m_cropSize.y;
+	void put(const ImageBlock *block) {
+		m_storage->put(block);
+	}
 
-		for (unsigned int index=0; index<lastIndex; ++index) {
-			Pixel &pixel = m_pixels[index];
-			const float 
-				r = bitmap->getFloatData()[index*4+0],
-				g = bitmap->getFloatData()[index*4+1],
-				b = bitmap->getFloatData()[index*4+2];
-			pixel.spec.fromLinearRGB(r, g, b);
-			pixel.weight = 1.0f;
+	void setBitmap(const Bitmap *bitmap, Float multiplier) {
+		bitmap->convert(m_storage->getBitmap(), multiplier);
+	}
+
+	void addBitmap(const Bitmap *bitmap, Float multiplier) {
+		/* Currently, only accumulating spectrum-valued floating point images
+		   is supported. This function basically just exists to support the 
+		   somewhat peculiar film updates done by BDPT */
+
+		Vector2i size = bitmap->getSize();
+		if (bitmap->getPixelFormat() != Bitmap::ESpectrum ||
+			bitmap->getComponentFormat() != Bitmap::EFloat ||
+			bitmap->getGamma() != 1.0f ||
+			size != m_storage->getSize()) {
+			Log(EError, "addBitmap(): Unsupported bitmap format!");
 		}
-		m_hasVariances = false;
-	}
 
-	void toBitmap(Bitmap *bitmap) const {
-		Assert(bitmap->getWidth() == m_cropSize.x 
-			&& bitmap->getHeight() == m_cropSize.y);
-		Assert(bitmap->getBitsPerPixel() == 128);
-		unsigned int lastIndex = m_cropSize.x * m_cropSize.y;
-		Float r, g, b;
-
-		for (unsigned int index=0; index<lastIndex; ++index) {
-			Pixel &pixel = m_pixels[index];
-			Float invWeight = pixel.weight > 0 ? 1/pixel.weight : 0;
-			pixel.spec.toLinearRGB(r, g, b);
-			bitmap->getFloatData()[index*4+0] = r*invWeight;
-			bitmap->getFloatData()[index*4+1] = g*invWeight;
-			bitmap->getFloatData()[index*4+2] = b*invWeight;
-			bitmap->getFloatData()[index*4+3] = 1.0f;
+		size_t nPixels = (size_t) size.x * (size_t) size.y;
+		const Float *source = bitmap->getFloatData();
+		Float *target = m_storage->getBitmap()->getFloatData();
+		for (size_t i=0; i<nPixels; ++i) {
+			Float weight = target[SPECTRUM_SAMPLES + 1];
+			if (weight == 0)
+				weight = target[SPECTRUM_SAMPLES + 1] = 1;
+			weight *= multiplier;
+			for (size_t j=0; j<SPECTRUM_SAMPLES; ++j)
+				*target++ += *source++ * weight;
+			target += 2;
 		}
 	}
 
-	Spectrum getValue(int xPixel, int yPixel) {
-		xPixel -= m_cropOffset.x; yPixel -= m_cropOffset.y;
-		if (!(xPixel >= 0 && xPixel < m_cropSize.x && yPixel >= 0 && yPixel < m_cropSize.y )) {
-			Log(EWarn, "Pixel out of range : %i,%i", xPixel, yPixel); 
-			return Spectrum(0.0f);
-		}
-		Pixel &pixel = m_pixels[xPixel + yPixel * m_cropSize.x];
-		return pixel.spec / pixel.weight;
-	}
+	bool develop(const Point2i &sourceOffset, const Vector2i &size, 
+			const Point2i &targetOffset, Bitmap *target) const {
+		const Bitmap *source = m_storage->getBitmap();
+		const FormatConverter *cvt = FormatConverter::getInstance(
+			std::make_pair(Bitmap::EFloat, target->getComponentFormat())
+		);
 
-	void putImageBlock(const ImageBlock *block) {
-		int entry=0, imageY = block->getOffset().y - 
-			block->getBorder() - m_cropOffset.y - 1;
+		size_t sourceBpp = source->getBytesPerPixel();
+		size_t targetBpp = target->getBytesPerPixel();
 
-		if (!block->collectStatistics()) {
-			for (int y=0; y<block->getFullSize().y; ++y) {
-				if (++imageY < 0 || imageY >= m_cropSize.y) {
-					/// Skip a row if it is outside of the crop region
-					entry += block->getFullSize().x;
-					continue;
-				}
+		const uint8_t *sourceData = source->getUInt8Data() 
+			+ (sourceOffset.x + sourceOffset.y * source->getWidth()) * sourceBpp;
+		uint8_t *targetData = target->getUInt8Data() 
+			+ (targetOffset.x + targetOffset.y * target->getWidth()) * targetBpp;
 
-				int imageX = block->getOffset().x - block->getBorder()
-					- m_cropOffset.x - 1;
-				for (int x=0; x<block->getFullSize().x; ++x) {
-					if (++imageX < 0 || imageX >= m_cropSize.x) {
-						++entry;
-						continue;
-					}
-
-					Pixel &pixel = m_pixels[imageY * m_cropSize.x + imageX];
-
-					pixel.spec += block->getPixel(entry);
-					pixel.weight += block->getWeight(entry++);
-				}
-			}
+		if (size.x == m_cropSize.x) {
+			/* Develop a connected part of the underlying buffer */
+			cvt->convert(source->getPixelFormat(), 1.0f, sourceData,
+				target->getPixelFormat(), target->getGamma(), targetData,
+				size.x*size.y);
 		} else {
-			Assert(block->getBorder() == 0);
-			m_hasVariances = true;
-			for (int y=0; y<block->getFullSize().y; ++y) {
-				if (++imageY < 0 || imageY >= m_cropSize.y) {
-					/// Skip a row if it is outside of the crop region
-					entry += block->getFullSize().x;
-					continue;
-				}
+			/* Develop a rectangular subregion */
+			for (int i=0; i<size.y; ++i) {
+				cvt->convert(source->getPixelFormat(), 1.0f, sourceData,
+					target->getPixelFormat(), target->getGamma(), targetData,
+					size.x);
 
-				int imageX = block->getOffset().x - block->getBorder()
-					- m_cropOffset.x - 1;
-				for (int x=0; x<block->getFullSize().x; ++x) {
-					if (++imageX < 0 || imageX >= m_cropSize.x) {
-						++entry;
-						continue;
-					}
-
-					Pixel &pixel = m_pixels[imageY * m_cropSize.x + imageX];
-
-					pixel.spec += block->getPixel(entry);
-					pixel.weight = block->getWeight(entry);
-					pixel.nSamples = block->getSampleCount(entry);
-					pixel.variance = block->getVariance(entry++);
-				}
+				sourceData += source->getWidth() * sourceBpp;
+				targetData += target->getWidth() * targetBpp;
 			}
 		}
+
+		return true;
 	}
 
-	void develop(const fs::path &destFile) {
-		fs::path filename = destFile;
-		std::string extension = boost::to_lower_copy(fs::extension(filename));
+	void setDestinationFile(const fs::path &destFile, uint32_t blockSize) {
+		m_destFile = destFile;
+	}
+
+	void develop() {
+		Log(EDebug, "Developing film ..");
+
+		fs::path filename = m_destFile;
+		std::string extension = boost::to_lower_copy(filename.extension().string());
 		if (extension != ".m")
 			filename.replace_extension(".m");
 
-		Log(EInfo, "Writing image to \"%s\" ..", filename.leaf().c_str());
+		ref<Bitmap> bitmap = m_storage->getBitmap()->convert(
+			m_pixelFormat, Bitmap::EFloat);
+
+		Log(EInfo, "Writing image to \"%s\" ..", filename.filename().c_str());
 	
-		FILE *f = fopen(filename.file_string().c_str(), "w");
-		if (!f)
+		fs::ofstream os(filename);
+		if (!os.good() || os.fail())
 			Log(EError, "Output file cannot be created!");
 
-		fprintf(f, "[");
-		int pos = 0;
-		for (int y=0; y<m_cropSize.y; y++) {
-			for (int x=0; x<m_cropSize.x; x++) {
-				Pixel &pixel = m_pixels[pos];
-				if (m_exportSpectra) {
-					Float invWeight = pixel.weight > 0 ? 1/pixel.weight : 1;
-					Spectrum spec = invWeight*pixel.spec;
-					for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-						if (!m_hasVariances)
-							fprintf(f, "%f", spec[i]);
-						else
-							fprintf(f, "%f %f %i", spec[i], pixel.variance[i], pixel.nSamples);
-						if (i+1 < SPECTRUM_SAMPLES)
-							fprintf(f, " ");
-					}
-					if (x + 1 < m_cropSize.x)
-						fprintf(f, ", ");
-				} else {
-					Float invWeight = pixel.weight > 0 ? 1/pixel.weight : 1;
-					Float luminance = invWeight*pixel.spec.getLuminance();
-					if (!m_hasVariances)
-						fprintf(f, "%f", luminance);
-					else
-						fprintf(f, "%f %f %i", luminance, pixel.variance.getLuminance(), pixel.nSamples);
-					if (x + 1 < m_cropSize.x)
-						fprintf(f, ", ");
-				}
-				++pos;
-			}
-			if (y + 1 < m_cropSize.y)
-				fprintf(f, ";\n ");
-		}
+		os << std::setprecision(m_digits);
 
-		fprintf(f, "]\n");
-		fclose(f);
+		int rowSize = bitmap->getWidth();
+
+		for (int ch=0; ch<bitmap->getChannelCount(); ++ch) {
+			if (m_fileFormat == EMATLAB) {
+				if (ch == 0) {
+					os << m_variable << " = [";
+				} else {
+					os << endl << m_variable << "(:, :, " << ch + 1 << ") = [";
+				}
+			} else {
+				if (ch == 0) {
+					if (bitmap->getChannelCount() == 1)
+						os << m_variable << " = {{";
+					else
+						os << m_variable << " = Transpose[{{{";
+				}
+			}
+			Float *ptr = bitmap->getFloatData();
+			ptr += ch;
+
+			for (int y=0; y < bitmap->getHeight(); y++) {
+				for (int x=0; x < rowSize; x++) {
+					if (m_fileFormat == EMATLAB) {
+						os << *ptr;
+					} else {
+						std::ostringstream oss;
+						oss << *ptr;
+						std::string str = oss.str();
+						boost::replace_first(str, "e", " * 10^");
+						os << str;
+					}
+
+					ptr += bitmap->getChannelCount();
+					if (x + 1 < rowSize) {
+						os << ", ";
+					} else {
+						if (m_fileFormat == EMATLAB) {
+							if (y + 1 < bitmap->getHeight())
+								os << ";" << endl << "\t";
+							else
+								os << "];" << endl;
+						} else {
+							if (y + 1 < bitmap->getHeight()) {
+								os << "}," << endl << "\t{";
+							} else if (ch + 1 == bitmap->getChannelCount()){
+								if (bitmap->getChannelCount() == 1)
+									os << "}};" << endl;
+								else
+									os << "}}}, {3,1,2}];" << endl;
+							} else {
+								os << "}}," << endl << endl << "\t{{";
+							}
+						}
+					}
+				}
+			}
+		}
 	}
-	
+
 	bool destinationExists(const fs::path &baseName) const {
 		fs::path filename = baseName;
-		if (boost::to_lower_copy(filename.extension()) != ".m")
+		if (boost::to_lower_copy(filename.extension().string()) != ".m")
 			filename.replace_extension(".m");
 		return fs::exists(filename);
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "MFilm[" << std::endl
-			<< "  size = " << m_size.toString() << "," << std::endl
-			<< "  cropOffset = " << m_cropOffset.toString() << "," << std::endl
-			<< "  cropSize = " << m_cropSize.toString() << std::endl
+		oss << "MFilm[" << endl
+			<< "  size = " << m_size.toString() << "," << endl
+			<< "  pixelFormat = " << m_pixelFormat << "," << endl
+			<< "  digits = " << m_digits << "," << endl
+			<< "  variable = \"" << m_variable << "\"," << endl
+			<< "  cropOffset = " << m_cropOffset.toString() << "," << endl
+			<< "  cropSize = " << m_cropSize.toString() << "," << endl
+			<< "  filter = " << indent(m_filter->toString()) << endl
 			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
+protected:
+	Bitmap::EPixelFormat m_pixelFormat;
+	EMode m_fileFormat;
+	fs::path m_destFile;
+	ref<ImageBlock> m_storage;
+	std::string m_variable;
+	int m_digits;
 };
 
 MTS_IMPLEMENT_CLASS_S(MFilm, false, Film)
-MTS_EXPORT_PLUGIN(MFilm, "MATLAB film");
+MTS_EXPORT_PLUGIN(MFilm, "MATLAB / Mathematica film");
 MTS_NAMESPACE_END

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__UTIL_H)
-#define __UTIL_H
+#pragma once
+#if !defined(__MITSUBA_CORE_UTIL_H_)
+#define __MITSUBA_CORE_UTIL_H_
 
 #include <boost/static_assert.hpp>
 
@@ -62,15 +63,15 @@ extern MTS_EXPORT_CORE std::string memString(size_t size);
 /// Return a string representation of a list of objects
 template<class Iterator> std::string containerToString(const Iterator &start, const Iterator &end) {
 	std::ostringstream oss;
-	oss << "{" << endl;
+	oss << "{" << std::endl;
 	Iterator it = start;
 	while (it != end) {
 		oss << "  " << indent((*it)->toString());
 		++it;
 		if (it != end) 
-			oss << "," << endl;
+			oss << "," << std::endl;
 		else
-			oss << endl;
+			oss << std::endl;
 	}
 	oss << "}";
 	return oss.str();
@@ -95,16 +96,16 @@ struct SimpleStringOrdering {
 /// Allocate an aligned region of memory
 extern MTS_EXPORT_CORE void * __restrict allocAligned(size_t size);
 
+/// Free an aligned region of memory
+extern MTS_EXPORT_CORE void freeAligned(void *ptr);
+
 #if defined(WIN32)
 /// Return a string version of GetLastError()
 extern std::string MTS_EXPORT_CORE lastErrorText();
 #endif
 
-/// Free an aligned region of memory
-extern MTS_EXPORT_CORE void freeAligned(void *ptr);
-
 /// Determine the number of available CPU cores
-extern MTS_EXPORT_CORE int getProcessorCount();
+extern MTS_EXPORT_CORE int getCoreCount();
 
 /// Return the host name of this machine
 extern MTS_EXPORT_CORE std::string getHostName();
@@ -158,6 +159,28 @@ template<typename T> inline T endianness_swap(T value) {
 	return u.value;
 }
 
+#ifdef __GNUC__
+#if defined(__i386__)
+static FINLINE uint64_t rdtsc(void) {
+  uint64_t x;
+	 __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
+	 return x;
+}
+#elif defined(__x86_64__)
+static FINLINE uint64_t rdtsc(void) {
+  unsigned hi, lo;
+  __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+  return ((uint64_t) lo)| (((uint64_t) hi) << 32);
+}
+#endif
+#elif defined(__MSVC__)
+static FINLINE __int64 rdtsc(void) {
+	return __rdtsc();
+}
+#else
+# error "Cannot generate the rdtsc intrinsic."
+#endif
+
 /**
  * \brief Apply an arbitrary permutation to an array in linear time
  * 
@@ -184,7 +207,7 @@ template <typename DataType, typename IndexType> void permute_inplace(
 			/* The start of a new cycle has been found. Save
 			   the value at this position, since it will be
 			   overwritten */
-			IndexType j = i;
+			IndexType j = (IndexType) i;
 			DataType curval = data[i];
 
 			do {
@@ -213,26 +236,43 @@ template <typename DataType, typename IndexType> void permute_inplace(
 //! @{ \name Numerical utility functions
 // -----------------------------------------------------------------------
 
-static const int primeTableSize = 1000;
-/// Table of the first 1000 prime numbers
-extern const int MTS_EXPORT_CORE primeTable[primeTableSize];
-
 /// sqrt(a^2 + b^2) without underflow (like 'hypot' on compilers that support C99)
 extern MTS_EXPORT_CORE Float hypot2(Float a, Float b);
 
 /// Base-2 logarithm
 extern MTS_EXPORT_CORE Float log2(Float value);
 
-/// Friendly modulo function (always positive)
-extern MTS_EXPORT_CORE int modulo(int a, int b);
+/// Always-positive modulo function (assumes b > 0)
+inline int modulo(int a, int b) {
+	int r = a % b;
+	return (r < 0) ? r+b : r;
+}
 
-/// Friendly modulo function (always positive)
-extern MTS_EXPORT_CORE Float modulo(Float a, Float b);
+/// Always-positive modulo function, float version (assumes b > 0)
+inline Float modulo(Float a, Float b) {
+	Float r = std::fmod(a, b);
+	return (r < 0) ? r+b : r;
+}
+
+/// Compute the signum (a.k.a. "sign") function
+inline Float signum(Float value) {
+	if (value < 0)
+		return -1;
+	else if (value > 0)
+		return 1;
+	else return 0;
+}
 
 /// Integer floor function
 inline int floorToInt(Float value) {
 	return (int) std::floor(value);
 }
+
+/// Integer ceil function
+inline int ceilToInt(Float value) {
+	return (int) std::ceil(value);
+}
+
 /// Base-2 logarithm (32-bit integer version)
 extern MTS_EXPORT_CORE int log2i(uint32_t value);
 
@@ -285,9 +325,6 @@ inline size_t roundToPowerOfTwo(size_t value) {
 }
 #endif
 
-/// Windowed sinc filter (Lanczos envelope, tau=number of cycles)
-extern MTS_EXPORT_CORE Float lanczosSinc(Float t, Float tau = 2);
-
 /**
  * \brief Solve a quadratic equation of the form a*x^2 + b*x + c = 0.
  * \return \c true if a solution could be found
@@ -306,100 +343,158 @@ extern MTS_EXPORT_CORE bool solveQuadraticDouble(double a, double b,
 /**
  * \brief Evaluate a cubic spline interpolant of a regularly sampled 1D function
  * 
- * This implementation uses Catmull-Rom splines, i.e. it uses finite
+ * This implementation relies on Catmull-Rom splines, i.e. it uses finite
  * differences to approximate the derivatives at the endpoints of each spline
  * segment.
  *
- * \param p
- *      Evaluation point of the interpolant
+ * \param x
+ *      Evaluation point 
  * \param data
- *      Floating point array containing \c nKnots regularly spaced evaluations
- *      in the range \a [a,b] of the function to be approximated.
+ *      Floating point array containing \c size regularly spaced evaluations
+ *      in the range [\c min,\c max] of the function to be approximated.
  * \param min 
  *      Position of the first knot
  * \param max
  *      Position of the last knot
  * \param size 
- *      Total number of knots
+ *      Denotes the size of the \c data array
  * \return
- *      The interpolated value or zero when \a t lies outside of \a [a,b]
+ *      The interpolated value or zero when \c x lies outside of [\c min, \c max]
  */
-extern MTS_EXPORT_CORE Float interpCubic1D(Float p, const Float *data, 
+extern MTS_EXPORT_CORE Float interpCubic1D(Float x, const Float *data, 
 		Float min, Float max, size_t size);
+
+/**
+ * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 1D function
+ * 
+ * This implementation relies on Catmull-Rom splines, i.e. it uses finite
+ * differences to approximate the derivatives at the endpoints of each spline
+ * segment.
+ *
+ * \param x
+ *      Evaluation point 
+ * \param nodes
+ *      Floating point array containing \c size irregularly spaced values
+ *      denoting positions the where the function to be interpolated was evaluated.
+ *      They must be provided in \a increasing order.
+ * \param data
+ *      Floating point array containing interpolant values matched to 
+ *      the entries of \c nodes.
+ * \param size 
+ *      Denotes the size of the \c data array
+ * \return
+ *      The interpolated value or zero when \c x lies outside of \a [\c min, \c max]
+ */
+extern MTS_EXPORT Float interpCubic1DIrregular(Float x, const Float *nodes, 
+		const Float *data, size_t size);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a regularly sampled 2D function
  * 
- * This implementation uses a tensor product of Catmull-Rom splines, i.e. it uses 
+ * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses 
  * finite differences to approximate the derivatives at the endpoints of each spline
- * segment.
+ * patch.
  *
  * \param p
- *      Evaluation point of the interpolant
+ *      Evaluation point 
  * \param data
- *      Floating point array containing \c nKnots regularly spaced evaluations
- *      in the range \a [a,b] of the function to be approximated.
+ *      A 2D floating point array of <tt>size.x*size.y</tt> cells containing regularly
+ *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>. 
+ *      Consecutive entries of this array correspond to increments in the 'x' coordinate.
  * \param min
  *      Position of the first knot on each dimension
  * \param max
  *      Position of the last knot on each dimension
- * \param size
- *      Total number of knots for each dimension
+ * \param size 
+ *      Denotes the size of the \c data array (along each dimension)
  * \return
- *      The interpolated value or zero when \a t lies outside of the knot range
+ *      The interpolated value or zero when \c p lies outside of the knot range
  */
 extern MTS_EXPORT_CORE Float interpCubic2D(const Point2 &p, const Float *data, 
 		const Point2 &min, const Point2 &max, const Size2 &size);
 
 /**
+ * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 2D function
+ * 
+ * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses 
+ * finite differences to approximate the derivatives at the endpoints of each spline
+ * region.
+ *
+ * When the underlying function is sampled on a regular grid, \ref interpCubic2D()
+ * should be preferred, since data lookups will be considerably faster.
+ *
+ * \param p
+ *      Evaluation point 
+ * \param nodes
+ *      Pointer to a list for each dimension denoting the positions where the function
+ *      to be interpolated was evaluated. The <tt>i</tt>-th array must have
+ *      size <tt>size[i]</tt> and contain position values in \a increasing order.
+ * \param data
+ *      A 2D floating point array of <tt>size.x*size.y</tt> cells containing irregularly
+ *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>. 
+ *      Consecutive entries of this array correspond to increments in the 'x' coordinate.
+ * \param size 
+ *      Denotes the size of the \c data array (along each dimension)
+ * \return
+ *      The interpolated value or zero when \c p lies outside of the knot range
+ */
+extern MTS_EXPORT_CORE Float interpCubic2DIrregular(const Point2 &p, const Float **nodes, 
+		const Float *data, const Size2 &size);
+
+/**
  * \brief Evaluate a cubic spline interpolant of a regularly sampled 3D function
  * 
- * This implementation uses a tensor product of Catmull-Rom splines, i.e. it uses 
+ * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses 
  * finite differences to approximate the derivatives at the endpoints of each spline
- * segment.
+ * region.
  *
  * \param p
  *      Evaluation point of the interpolant
  * \param data
- *      Floating point array containing \c nKnots regularly spaced evaluations
- *      in the range \a [a,b] of the function to be approximated.
+ *      A 3D floating point array of <tt>size.x*size.y*size.z</tt> cells containing regularly
+ *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>. 
+ *      Consecutive entries of this array correspond to increments in the 'x' coordinate,
+ *      then 'y', and finally 'z' increments.
  * \param min
  *      Position of the first knot on each dimension
  * \param max
  *      Position of the last knot on each dimension
- * \param size
- *      Total number of knots for each dimension
+ * \param size 
+ *      Denotes the size of the \c data array (along each dimension)
  * \return
- *      The interpolated value or zero when \a t lies outside of the knot range
+ *      The interpolated value or zero when \c p lies outside of the knot range
  */
 extern MTS_EXPORT_CORE Float interpCubic3D(const Point3 &p, const Float *data, 
 		const Point3 &min, const Point3 &max, const Size3 &size);
 
 /**
- * \brief Calculate the radical inverse function
+ * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 3D function
+ * 
+ * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses 
+ * finite differences to approximate the derivatives at the endpoints of each spline
+ * region.
  *
- * (Implementation based on "Instant Radiosity" by Alexander Keller 
- * in Computer Graphics Proceedings, Annual Conference Series, 
- * SIGGRAPH 97, pp. 49-56. 
- */
-extern MTS_EXPORT_CORE Float radicalInverse(int b, size_t i);
-
-/**
- * \brief Incrementally calculate the radical inverse function
+ * When the underlying function is sampled on a regular grid, \ref interpCubic3D()
+ * should be preferred, since data lookups will be considerably faster.
  *
- * (Implementation based on "Instant Radiosity" by Alexander Keller 
- * in Computer Graphics Proceedings, Annual Conference Series, 
- * SIGGRAPH 97, pp. 49-56. 
+ * \param p
+ *      Evaluation point 
+ * \param nodes
+ *      Pointer to a list for each dimension denoting the positions where the function
+ *      to be interpolated was evaluated. The <tt>i</tt>-th array must have
+ *      size <tt>size[i]</tt> and contain position values in \a increasing order.
+ * \param data
+ *      A 2D floating point array of <tt>size.x*size.y</tt> cells containing irregularly
+ *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>. 
+ *      Consecutive entries of this array correspond to increments in the 'x' coordinate,
+ *      then 'y', and finally 'z' increments.
+ * \param size 
+ *      Denotes the size of the \c data array (along each dimension)
+ * \return
+ *      The interpolated value or zero when \c p lies outside of the knot range
  */
-extern MTS_EXPORT_CORE Float radicalInverseIncremental(int b, Float x);
-
-/** 
- * Rational approximation to the inverse normal 
- * cumulative distribution function
- * Source: http://home.online.no/~pjacklam/notes/invnorm/impl/sprouse/ltqnorm.c
- * \author Peter J. Acklam
- */
-extern MTS_EXPORT_CORE double normalQuantile(double p);
+extern MTS_EXPORT_CORE Float interpCubic3DIrregular(const Point3 &p, const Float **nodes, 
+		const Float *data, const Size3 &size);
 
 //// Convert radians to degrees
 inline Float radToDeg(Float value) { return value * (180.0f / M_PI); }
@@ -407,22 +502,9 @@ inline Float radToDeg(Float value) { return value * (180.0f / M_PI); }
 /// Convert degrees to radians
 inline Float degToRad(Float value) { return value * (M_PI / 180.0f); }
 
-/// Simple floating point clamping function
-inline Float clamp(Float value, Float min, Float max) {
-	if (value < min)
-		return min;
-	else if (value > max)
-		return max;
-	else return value;
-}
-
-/// Simple integer clamping function
-inline int clamp(int value, int min, int max) {
-	if (value < min)
-		return min;
-	else if (value > max)
-		return max;
-	else return value;
+/// Generic clamping function
+template <typename Scalar> inline Scalar clamp(Scalar value, Scalar min, Scalar max) {
+	return std::min(max, std::max(min, value));
 }
 
 /// Linearly interpolate between two values
@@ -448,9 +530,9 @@ inline Float smoothStep(Float min, Float max, Float value) {
  */
 template <typename VectorType> inline Float unitAngle(const VectorType &u, const VectorType &v) {
 	if (dot(u, v) < 0)
-		return M_PI - 2 * std::asin((v+u).length()/2);
+		return M_PI - 2 * std::asin(0.5f * (v+u).length());
 	else
-		return 2 * std::asin((v-u).length()/2);
+		return 2 * std::asin(0.5f * (v-u).length());
 }
 
 //! @}
@@ -465,8 +547,12 @@ template <typename VectorType> inline Float unitAngle(const VectorType &u, const
  */
 extern MTS_EXPORT_CORE bool solveLinearSystem2x2(const Float a[2][2], const Float b[2], Float x[2]);
 
-
-/// Complete the set {a} to an orthonormal base
+/**
+ * \brief Complete the set {a} to an orthonormal base
+ * \remark In Python, this function is used as 
+ *     follows: <tt>s, t = coordinateSystem(n)</tt>
+ * \ingroup libpython
+ */
 extern MTS_EXPORT_CORE void coordinateSystem(const Vector &a, Vector &b, Vector &c);
 
 /**
@@ -492,7 +578,8 @@ extern MTS_EXPORT_CORE void stratifiedSample2D(Random *random, Point2 *dest,
 	int countX, int countY, bool jitter);
 
 /// Generate latin hypercube samples
-extern MTS_EXPORT_CORE void latinHypercube(Random *random, Float *dest, size_t nSamples, size_t nDim);
+extern MTS_EXPORT_CORE void latinHypercube(
+		Random *random, Float *dest, size_t nSamples, size_t nDim);
 
 /// Convert spherical coordinates to a direction
 extern MTS_EXPORT_CORE Vector sphericalDirection(Float theta, Float phi);
@@ -500,56 +587,84 @@ extern MTS_EXPORT_CORE Vector sphericalDirection(Float theta, Float phi);
 /// Convert a direction to spherical coordinates
 extern MTS_EXPORT_CORE Point2 toSphericalCoordinates(const Vector &v);
 
-/// Sample a vector on the unit sphere (PDF: 1/(4 * PI), wrt. solid angles)
-extern MTS_EXPORT_CORE Vector squareToSphere(const Point2 &sample);
-
-/// Sample a vector on the unit hemisphere (PDF: 1/(2 * PI), wrt. solid angles)
-extern MTS_EXPORT_CORE Vector squareToHemisphere(const Point2 &sample);
-
-/// Sample a vector on the unit hemisphere (PDF: cos(theta) / PI, wrt. solid angles)
-extern MTS_EXPORT_CORE Vector squareToHemispherePSA(const Point2 &sample);
-
-/// Sample a vector that lies in a cone of angles
-extern MTS_EXPORT_CORE Vector squareToCone(Float cosCutoff, const Point2 &sample);
-extern MTS_EXPORT_CORE Float squareToConePdf(Float cosCutoff);
-
-/// Sample a vector on a 2D disk (PDF: 1/(2 * PI))
-extern MTS_EXPORT_CORE Point2 squareToDisk(const Point2 &sample);
-
-/// Low-distortion concentric square to disk mapping by Peter Shirley (PDF: 1/(2 * PI))
-extern MTS_EXPORT_CORE Point2 squareToDiskConcentric(const Point2 &sample);
-
-/// Low-distortion concentric disk to square mapping 
-extern MTS_EXPORT_CORE Point2 diskToSquareConcentric(const Point2 &sample);
-
-/// Convert an uniformly distributed square sample into barycentric coordinates
-extern MTS_EXPORT_CORE Point2 squareToTriangle(const Point2 &sample);
-
-/// Sample a point on a 2D standard normal distribution (uses the Box-Muller transformation)
-extern MTS_EXPORT_CORE Point2 squareToStdNormal(const Point2 &sample);
-
 //! @}
 // -----------------------------------------------------------------------
 
+// -----------------------------------------------------------------------
+//! @{ \name Fresnel reflectance computation and related things
+// -----------------------------------------------------------------------
+
 /**
- * \brief Calculates the unpolarized fresnel reflection coefficient for a 
- * dielectric material
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface between two dielectrics
+ *
+ * This is a basic implementation that just returns the value of
+ * \f[
+ * R(\cos\theta_i,\cos\theta_t,\eta)=\frac{1}{2} \left[
+ * \left(\frac{\eta\cos\theta_i-\cos\theta_t}{\eta\cos\theta_i+\cos\theta_t}\right)^2+
+ * \left(\frac{\cos\theta_i-\eta\cos\theta_t}{\cos\theta_i+\eta\cos\theta_t}\right)^2
+ * \right]
+ * \f]
+ * The transmitted direction must be provided. There is no logic pertaining to
+ * total internal reflection or negative direction cosines.
+ *
+ * \param cosThetaI
+ * 		Absolute cosine of the angle between the normal and the incident ray
+ * \param cosThetaT
+ * 		Absolute cosine of the angle between the normal and the transmitted ray
+ * \param eta
+ * 		Relative refractive index to the transmitted direction
+ * \ingroup libpython
+ */
+extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI, 
+		Float cosThetaT, Float eta);
+
+/**
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface between two dielectrics (extended version)
+ *
+ * In comparison to \ref fresnelDielectric(), this function internally 
+ * computes the transmitted direction and returns it using the \c cosThetaT 
+ * argument. When encountering total internal reflection, it sets 
+ * <tt>cosThetaT=0</tt> and returns the value 1.
+ *
+ * When <tt>cosThetaI < 0</tt>, the function computes the Fresnel reflectance 
+ * from the \a internal boundary, which is equivalent to calling the function
+ * with arguments <tt>fresnelDielectric(abs(cosThetaI), cosThetaT, 1/eta)</tt>.
+ *
+ * \remark When accessed from Python, this function has the signature
+ * "<tt>F, cosThetaT = fresnelDielectricExt(cosThetaI, eta)</tt>".
  *
  * \param cosThetaI
  * 		Cosine of the angle between the normal and the incident ray
+ * 		(may be negative)
  * \param cosThetaT
- * 		Cosine of the angle between the normal and the transmitted ray
- * \param etaI
- * 		Refraction coefficient at the incident direction
- * \param etaT
- * 		Refraction coefficient at the transmitted direction
+ * 		Argument used to return the cosine of the angle between the normal 
+ * 		and the transmitted ray, will have the opposite sign of \c cosThetaI
+ * \param eta
+ * 		Relative refractive index
+ * \ingroup libpython
  */
-extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI, 
-		Float cosThetaT, Float etaI, Float etaT);
+extern MTS_EXPORT_CORE Float fresnelDielectricExt(Float cosThetaI, 
+	Float &cosThetaT, Float eta);
 
 /**
- * \brief Calculates the unpolarized fresnel reflection coefficient on
- * an interface to a conductor.
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface between two dielectrics (extended version)
+ *
+ * This is just a convenience wrapper function around the other \c fresnelDielectricExt
+ * function, which does not return the transmitted direction cosine in case it is
+ * not needed by the application.
+ *
+ * \param cosThetaI
+ * 		Cosine of the angle between the normal and the incident ray
+ */
+inline Float fresnelDielectricExt(Float cosThetaI, Float eta) { Float cosThetaT;
+	return fresnelDielectricExt(cosThetaI, cosThetaT, eta); }
+
+/**
+ * \brief Calculates the unpolarized fresnel reflection coefficient 
+ * at a planar interface between vacuum and a conductor.
  *
  * \param cosThetaI
  * 		Cosine of the angle between the normal and the incident ray
@@ -557,33 +672,20 @@ extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI,
  * 		Real refractive index (wavelength-dependent)
  * \param k
  * 		Imaginary refractive index (wavelength-dependent)
+ * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Spectrum fresnelConductor(Float cosThetaI, 
 		const Spectrum &eta, const Spectrum &k);
 
 /**
- * \brief Calculates the unpolarized fresnel reflection coefficient for a 
- * dielectric material. Handles incidence from either sides.
- *
- * \param cosThetaI
- * 		Cosine of the angle between the normal and the incident ray
- * \param extIOR
- * 		Refraction coefficient outside of the material
- * \param intIOR
- * 		Refraction coefficient inside the material
- */
-extern MTS_EXPORT_CORE Float fresnel(Float cosThetaI, Float extIOR,
-		Float intIOR);
-
-/**
  * \brief Calculates the diffuse unpolarized fresnel reflectance of
  * a dielectric material (sometimes referred to as "Fdr"). 
  *
- * This value quantifies what fraction of completely diffuse incident 
- * illumination will be reflected by a dielectric material on average.
+ * This value quantifies what fraction of diffuse incident illumination
+ * will, on average, be reflected at a dielectric material boundary
  *
  * \param eta
- *      Relative refraction coefficient, i.e. etaT/etaI
+ *      Relative refraction coefficient
  * \param fast
  *      Compute an approximate value? If set to \c true, the 
  *      implementation will use a polynomial approximation with
@@ -592,12 +694,102 @@ extern MTS_EXPORT_CORE Float fresnel(Float cosThetaI, Float extIOR,
  *      to compute the diffuse reflectance more accurately, and for
  *      a wider range of refraction coefficients, but at a cost
  *      in terms of performance.
+ * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Float fresnelDiffuseReflectance(
 	Float eta, bool fast = false);
+
+/**
+ * \brief Specularly reflect direction \c wi with respect to the given surface normal
+ * \param wi
+ *     Incident direction
+ * \param n
+ *     Surface normal
+ * \return
+ *     Specularly reflected direction
+ * \ingroup libpython
+ */
+extern MTS_EXPORT_CORE Vector reflect(const Vector &wi, const Normal &n);
+
+/**
+ * \brief Specularly refract the direction \c wi into a planar dielectric with 
+ * the given surface normal and index of refraction.
+ *
+ * This variant internally computes the transmitted direction cosine by
+ * calling \ref fresnelDielectricExt. As a side result, the cosine and 
+ * Fresnel reflectance are computed and returned via the reference arguments
+ * \c cosThetaT and \c F.
+ *
+ * \remark When accessed from Python, this function has the signature
+ * "<tt>dir, cosThetaT, F = refract(wi, n, eta)</tt>".
+ *
+ * \param wi
+ *     Incident direction
+ * \param n
+ *     Surface normal
+ * \param eta
+ *     Relative index of refraction at the interface
+ * \param cosThetaT
+ *     Parameter used to return the signed cosine of the angle between the transmitted 
+ *     direction and the surface normal 
+ * \param F
+ *     Parameter used to return the Fresnel reflectance
+ * \return
+ *     Specularly transmitted direction (or zero in
+ *     the case of total internal reflection)
+ * \ingroup libpython
+ */
+extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n, 
+	Float eta, Float &cosThetaT, Float &F);
+
+/**
+ * \brief Specularly refract the direction \c wi into a planar dielectric with 
+ * the given surface normal and index of refraction.
+ *
+ * This variant assumes that the transmitted direction cosine has
+ * has <em>already</em> been computed, allowing it to save some time.
+ *
+ * \param wi
+ *     Incident direction
+ * \param n
+ *     Surface normal
+ * \param eta
+ *     Relative index of refraction at the interface
+ * \param cosThetaT
+ *     Signed cosine of the angle between the transmitted direction and
+ *     the surface normal obtained from a prior call to \ref fresnelDielectricExt()
+ * \return
+ *     Specularly transmitted direction
+ * \ingroup libpython
+ */
+extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n, 
+	Float eta, Float cosThetaT);
+
+/**
+ * \brief Specularly refract the direction \c wi into a planar dielectric with 
+ * the given surface normal and index of refraction.
+ *
+ * This function is a simple convenience function that only returns the refracted
+ * direction while not computing the Frensel reflectance.
+ *
+ * \param wi
+ *     Incident direction
+ * \param n
+ *     Surface normal
+ * \param eta
+ *     Relative index of refraction at the interface
+ * \return
+ *     Specularly transmitted direction (or zero in
+ *     the case of total internal reflection)
+ * \ingroup libpython
+ */
+extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n, Float eta);
+
+//! @}
+// -----------------------------------------------------------------------
 
 /*! @} */
 
 MTS_NAMESPACE_END
 
-#endif /* __UTIL_H */
+#endif /* __MITSUBA_CORE_UTIL_H_ */

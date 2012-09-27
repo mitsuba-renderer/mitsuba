@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__RENDERQUEUE_H)
-#define __RENDERQUEUE_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_RENDERQUEUE_H_)
+#define __MITSUBA_RENDER_RENDERQUEUE_H_
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/render/rectwu.h>
@@ -37,12 +38,12 @@ public:
 	/// Called when work has finished in a rectangular image region
 	virtual void workEndEvent(const RenderJob *job, const ImageBlock *wr) = 0;
 	
-	/**
-	 * \brief Called when the whole target image has been altered in some way.
-	 * \param bitmap (Optional) When a bitmap representation of the image data
-	 * 	   exists, this parameter can be used to pass it. Set to NULL by default.
-	 */
-	virtual void refreshEvent(const RenderJob *job, const Bitmap *bitmap = NULL) = 0;
+	/// Called when work has been canceled in a rectangular image region
+	virtual void workCanceledEvent(const RenderJob *job, const Point2i &offset,
+			const Vector2i &size) = 0;
+
+	/// Called when the whole target image has been altered in some way.
+	virtual void refreshEvent(const RenderJob *job) = 0;
 
 	/// Called when a render job has completed successfully or unsuccessfully
 	virtual void finishJobEvent(const RenderJob *job, bool cancelled) = 0;
@@ -96,8 +97,9 @@ public:
 	/* Event distribution */
 	void signalWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 	void signalWorkEnd(const RenderJob *job, const ImageBlock *block);
+	void signalWorkCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size);
 	void signalFinishJob(const RenderJob *job, bool cancelled);
-	void signalRefresh(const RenderJob *job, const Bitmap *bitmap);
+	void signalRefresh(const RenderJob *job);
 
 	MTS_DECLARE_CLASS()
 private:
@@ -124,4 +126,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __RENDERQUEUE_H */
+#endif /* __MITSUBA_RENDER_RENDERQUEUE_H_ */

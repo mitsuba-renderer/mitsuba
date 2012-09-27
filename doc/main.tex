@@ -24,6 +24,8 @@
 \usepackage[format=hang,font=small,labelfont=bf]{caption}
 \usepackage[expansion=false, babel=true]{microtype}
 \usepackage{subfig}
+\usepackage{ifthen}
+\usepackage{longtable}
 
 % Make sure that ligatures remain searchable in the PDF
 \input glyphtounicode
@@ -36,7 +38,7 @@
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
 
-\newcommand{\MitsubaVersion}{0.3.1}
+\newcommand{\MitsubaVersion}{0.4.0}
 \newcommand{\MitsubaYear}{2012}
 
 \typearea[current]{last}
@@ -110,9 +112,10 @@
 	keywords= [1] {
 		shape,bsdf,scene,texture,phase,integer,float,
 		string,transform,ref,rgb,srgb,spectrum,blackbody,
-		medium,camera,film,sampler,integrator,luminaire,
-		translate,rotate,scale,lookAt,point,vector,matrix,
-		include,fscat,volume
+		medium,film,sampler,integrator,emitter,sensor,
+		translate,rotate,scale,lookat,point,vector,matrix,
+		include,fscat,volume,alias,rfilter,boolean,
+		subsurface
 	},
 }
 
@@ -162,13 +165,14 @@
 \include{compiling}
 \include{basics}
 \include{format}
-\IfFileExists{plugins_generated.tex}{\include{plugins_generated}}{}
-%\include{import}
+\include{misc}
+\include{plugins}
 \include{development}
 \include{integrator}
 \include{parallelization}
 \include{python}
 \include{acknowledgements}
+\include{gpl-v3}
 
 \bibliographystyle{acm}
 \bibliography{main}

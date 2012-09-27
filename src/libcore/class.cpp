@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -69,9 +69,9 @@ void Class::initializeOnce(Class *theClass) {
 		if (__classes->find(base) != __classes->end()) {
 			theClass->m_superClass = (*__classes)[base];
 		} else {
-			std::cerr << "Critical error during the static RTTI initialization: " << std::endl
+			std::cerr << "Critical error during the static RTTI initialization: " << endl
 				<< "Could not locate the base class '" << base << "' while initializing '"
-				<< theClass->getName() << "'!" << std::endl;
+				<< theClass->getName() << "'!" << endl;
 			exit(-1);
 		}
 	}

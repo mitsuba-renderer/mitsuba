@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -23,7 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 BSDF::BSDF(const Properties &props)
- : ConfigurableObject(props), m_name(props.getID()) {
+ : ConfigurableObject(props) {
 	/* By default, verify whether energy conservation holds
 	   for the user-specified parameter values. This step
 	   is completely up to the particular BSDF implementations */
@@ -34,7 +34,6 @@ BSDF::BSDF(const Properties &props)
 
 BSDF::BSDF(Stream *stream, InstanceManager *manager) 
  : ConfigurableObject(stream, manager) {
-	m_name = stream->readString();
 	m_ensureEnergyConservation = stream->readBool();
 	m_usesRayDifferentials = false;
 }
@@ -43,7 +42,6 @@ BSDF::~BSDF() { }
 
 void BSDF::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
-	stream->writeString(m_name);
 	stream->writeBool(m_ensureEnergyConservation);
 }
 
@@ -61,8 +59,16 @@ void BSDF::configure() {
 		m_combinedType |= m_components[i];
 }
 
+Float BSDF::getEta() const {
+	return 1.0f;
+}
+
+Float BSDF::getRoughness(const Intersection &its, int component) const {
+	NotImplementedError("getRoughness");
+}
+
 Spectrum BSDF::getDiffuseReflectance(const Intersection &its) const {
-	BSDFQueryRecord bRec(its, Vector(0, 0, 1), Vector(0, 0, 1));
+	BSDFSamplingRecord bRec(its, Vector(0, 0, 1), Vector(0, 0, 1));
 	bRec.typeMask = EDiffuseReflection;
 	return eval(bRec) * M_PI;
 }
@@ -131,41 +137,45 @@ static std::string typeMaskToString(unsigned int typeMask) {
 	std::ostringstream oss;
 	oss << "{ ";
 	#define isset(mask) (typeMask & mask) == mask
-	if (isset(BSDF::EAll)) { oss << "all "; typeMask &= ~BSDF::EAll; }
-	if (isset(BSDF::ESmooth)) { oss << "smooth "; typeMask &= ~BSDF::ESmooth; }
-	if (isset(BSDF::EDiffuse)) { oss << "diffuse "; typeMask &= ~BSDF::EDiffuse; }
-	if (isset(BSDF::EGlossy)) { oss << "glossy "; typeMask &= ~BSDF::EGlossy; }
-	if (isset(BSDF::EDelta)) { oss << "delta"; typeMask &= ~BSDF::EDelta; }
-	if (isset(BSDF::EDelta1D)) { oss << "delta1D "; typeMask &= ~BSDF::EDelta1D; }
-	if (isset(BSDF::EDiffuseReflection)) { oss << "diffuseReflection "; typeMask &= ~BSDF::EDiffuseReflection; }
-	if (isset(BSDF::EDiffuseTransmission)) { oss << "diffuseTransmission "; typeMask &= ~BSDF::EDiffuseTransmission; }
-	if (isset(BSDF::EGlossyReflection)) { oss << "glossyReflection "; typeMask &= ~BSDF::EGlossyReflection; }
-	if (isset(BSDF::EGlossyTransmission)) { oss << "glossyTransmission "; typeMask &= ~BSDF::EGlossyTransmission; }
-	if (isset(BSDF::EDeltaReflection)) { oss << "deltaReflection "; typeMask &= ~BSDF::EDeltaReflection; }
-	if (isset(BSDF::EDeltaTransmission)) { oss << "deltaTransmission "; typeMask &= ~BSDF::EDeltaTransmission; }
-	if (isset(BSDF::EDelta1DReflection)) { oss << "delta1DReflection "; typeMask &= ~BSDF::EDelta1DReflection; }
-	if (isset(BSDF::EDelta1DTransmission)) { oss << "delta1DTransmission "; typeMask &= ~BSDF::EDelta1DTransmission; }
-	if (isset(BSDF::EAnisotropic)) { oss << "anisotropic "; typeMask &= ~BSDF::EAnisotropic; }
-	if (isset(BSDF::EFrontSide)) { oss << "frontSide "; typeMask &= ~BSDF::EFrontSide; }
-	if (isset(BSDF::EBackSide)) { oss << "backSide "; typeMask &= ~BSDF::EBackSide; }
-	if (isset(BSDF::ECanUseSampler)) { oss << "canUseSampler "; typeMask &= ~BSDF::ECanUseSampler; }
-	if (isset(BSDF::ESpatiallyVarying)) { oss << "spatiallyVarying"; typeMask &= ~BSDF::ESpatiallyVarying; }
+	{
+		if (isset(BSDF::EAll)) { oss << "all "; typeMask &= ~BSDF::EAll; }
+		if (isset(BSDF::ESmooth)) { oss << "smooth "; typeMask &= ~BSDF::ESmooth; }
+		if (isset(BSDF::EDiffuse)) { oss << "diffuse "; typeMask &= ~BSDF::EDiffuse; }
+		if (isset(BSDF::EGlossy)) { oss << "glossy "; typeMask &= ~BSDF::EGlossy; }
+		if (isset(BSDF::EDelta)) { oss << "delta"; typeMask &= ~BSDF::EDelta; }
+		if (isset(BSDF::EDelta1D)) { oss << "delta1D "; typeMask &= ~BSDF::EDelta1D; }
+		if (isset(BSDF::EDiffuseReflection)) { oss << "diffuseReflection "; typeMask &= ~BSDF::EDiffuseReflection; }
+		if (isset(BSDF::EDiffuseTransmission)) { oss << "diffuseTransmission "; typeMask &= ~BSDF::EDiffuseTransmission; }
+		if (isset(BSDF::EGlossyReflection)) { oss << "glossyReflection "; typeMask &= ~BSDF::EGlossyReflection; }
+		if (isset(BSDF::EGlossyTransmission)) { oss << "glossyTransmission "; typeMask &= ~BSDF::EGlossyTransmission; }
+		if (isset(BSDF::EDeltaReflection)) { oss << "deltaReflection "; typeMask &= ~BSDF::EDeltaReflection; }
+		if (isset(BSDF::EDeltaTransmission)) { oss << "deltaTransmission "; typeMask &= ~BSDF::EDeltaTransmission; }
+		if (isset(BSDF::EDelta1DReflection)) { oss << "delta1DReflection "; typeMask &= ~BSDF::EDelta1DReflection; }
+		if (isset(BSDF::EDelta1DTransmission)) { oss << "delta1DTransmission "; typeMask &= ~BSDF::EDelta1DTransmission; }
+		if (isset(BSDF::ENull)) { oss << "null "; typeMask &= ~BSDF::ENull; }
+		if (isset(BSDF::EAnisotropic)) { oss << "anisotropic "; typeMask &= ~BSDF::EAnisotropic; }
+		if (isset(BSDF::EFrontSide)) { oss << "frontSide "; typeMask &= ~BSDF::EFrontSide; }
+		if (isset(BSDF::EBackSide)) { oss << "backSide "; typeMask &= ~BSDF::EBackSide; }
+		if (isset(BSDF::EUsesSampler)) { oss << "usesSampler "; typeMask &= ~BSDF::EUsesSampler; }
+		if (isset(BSDF::ESpatiallyVarying)) { oss << "spatiallyVarying"; typeMask &= ~BSDF::ESpatiallyVarying; }
+		if (isset(BSDF::ENonSymmetric)) { oss << "nonSymmetric"; typeMask &= ~BSDF::ENonSymmetric; }
+	}
 	#undef isset
 	SAssert(typeMask == 0);
 	oss << "}";
 	return oss.str();
 }
 
-std::string BSDFQueryRecord::toString() const {
+std::string BSDFSamplingRecord::toString() const {
 	std::ostringstream oss;
-	oss << "BSDFQueryRecord[" << std::endl
-		<< "  wi = " << wi.toString() << "," << std::endl
-		<< "  wo = " << wo.toString() << "," << std::endl
-		<< "  quantity = " << quantity << "," << std::endl
-		<< "  typeMask = " << typeMaskToString(typeMask) << "," << std::endl
-		<< "  sampledType = " << typeMaskToString(sampledType) << "," << std::endl
-		<< "  component = " << component << "," << std::endl
-		<< "  sampledComponent = " << sampledComponent << "," << std::endl
+	oss << "BSDFSamplingRecord[" << endl
+		<< "  wi = " << wi.toString() << "," << endl
+		<< "  wo = " << wo.toString() << "," << endl
+		<< "  mode = " << mode << "," << endl
+		<< "  typeMask = " << typeMaskToString(typeMask) << "," << endl
+		<< "  sampledType = " << typeMaskToString(sampledType) << "," << endl
+		<< "  component = " << component << "," << endl
+		<< "  sampledComponent = " << sampledComponent << endl
 		<< "]";
 	return oss.str();
 }

@@ -29,6 +29,9 @@ signals:
 	void diffuseReceiversChanged(bool);
 	void diffuseSourcesChanged(bool);
 
+public slots:
+	void setPreviewEnabled(bool);
+
 protected slots:
 	void on_pathLengthSlider_valueChanged(int value);
 	void on_clampingSlider_valueChanged(int value);

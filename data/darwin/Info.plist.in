@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>xml</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>mitsuba.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>text/xml</string>
+				<string>application/xml</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>XML document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>TEXT</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>NSDocumentClass</key>
+			<string>MitsubaDoc</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>exr</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>mitsuba.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>image/x-exr</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>OpenEXR image</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>EXR</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>NSDocumentClass</key>
+			<string>MitsubaDoc</string>
+		</dict>
+	</array>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleExecutable</key>
+	<string>mtsgui</string>
+	<key>CFBundleIconFile</key>
+	<string>mitsuba.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>org.mitsuba.Mitsuba</string>
+	<key>CFBundleName</key>
+	<string>Mitsuba</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>@MTS_VERSION@</string>
+	<key>CSResourcesFileMapped</key>
+	<true/>
+</dict>
+</plist>

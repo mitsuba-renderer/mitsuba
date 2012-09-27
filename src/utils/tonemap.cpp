@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -21,8 +21,13 @@
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/core/plugin.h>
+#include <boost/algorithm/string.hpp>
 #if defined(WIN32)
-#include <mitsuba/core/getopt.h>
+# include <mitsuba/core/getopt.h>
+#endif
+#ifdef MTS_OPENMP
+# include <omp.h>
 #endif
 
 MTS_NAMESPACE_BEGIN
@@ -31,22 +36,35 @@ class Tonemap : public Utility {
 public:
 	void help() {
 		cout << endl;
-		cout << "Synopsis: Loads one or more linear EXR images and writes tonemapped 8-bit PNG/JPGs";
+		cout << "Synopsis: Loads one or more EXR/RGBE images and writes tonemapped 8-bit PNG/JPGs";
 		cout << endl;
-		cout << "Usage: mtsutil tonemap [options] <EXR file (s)>" << endl;
+		cout << "Usage: mtsutil tonemap [options] <EXR/RGBE file (s)>" << endl;
 		cout << "Options/Arguments:" << endl;
 		cout << "   -h             Display this help text" << endl << endl;
 		cout << "   -g gamma       Specify the gamma value (The default is -1 => sRGB)" << endl << endl;
 		cout << "   -m multiplier  Multiply the pixel values by 'multiplier' (Default = 1)" << endl << endl;
-		cout << "   -f fmt         Specifies the output format (png/jpg, default:png)" << endl << endl;
+		cout << "   -b r,g,b       Color balance: apply the specified per-channel multipliers" << endl << endl;
+		cout << "   -c x,y,w,h     Crop: tonemap a given rectangle instead of the entire image" << endl << endl;
+		cout << "   -s w,h         Resize the output image to the specified resolution" << endl << endl;
+		cout << "   -r x,y,w,h,i   Add a rectangle at the specified position and intensity, e.g." << endl;
+		cout << "                  to make paper figures. The intensity should be in [0, 255]." << endl << endl;
+		cout << "   -f fmt         Request a certain output format (png/jpg, default:png)" << endl << endl;
+		cout << "   -a             Require the output image to have an alpha channel" << endl << endl;
+		cout << "   -p key,burn    Run Reinhard et al.'s photographic tonemapping operator. 'key'" << endl;
+		cout << "                  between [0, 1] chooses between low and high-key images and" << endl
+			 << "                  'burn' (also [0, 1]) controls how much highlights may burn out" << endl << endl;
+		cout << "   -x             Temporal coherence mode: activate this flag when tonemapping " << endl
+			 << "                  frames of an animation using the '-p' option to avoid flicker" << endl << endl;
+		cout << "   -o file        Save the output with a given filename" << endl << endl;
+		cout << "   -t             Multithreaded: process several files in parallel" << endl << endl;
+		cout << " The operations are ordered as follows: 1. crop, 2. resize, 3. color-balance, " << endl;
+		cout << " 4. tonemap, 5. annotate. To simply process a directory full of EXRs in " << endl;
+		cout << " parallel, run the following: 'mtsutil tonemap -t path-to-directory/*.exr'" << endl;
 	}
 
-	inline float toSRGB(float value) {
-		if (value < 0.0031308f)
-			return 12.92f * value;
-		return 1.055f * std::pow(value, 0.41666f) - 0.055f;
-	}
-
+	typedef struct {
+		int r[5];
+	} Rect;
 
 	int run(int argc, char **argv) {
 		ref<FileResolver> fileResolver = Thread::getThread()->getFileResolver();
@@ -54,22 +72,39 @@ public:
 		optind = 1;
 		Float gamma = -1, multiplier = 1;
 		Bitmap::EFileFormat format = Bitmap::EPNG;
+		Float cbal[] = {1, 1, 1};
+		int crop[] = {0, 0, -1, -1};
+		int resize[] = {-1, -1};
+		Float tonemapper[] = {-1, -1};
+		bool temporalCoherence = false;
+		std::vector<Rect> rects;
+		std::string outputFilename;
+		Bitmap::EPixelFormat pixelFormat = Bitmap::ERGB;
+		Float logAvgLuminance = 0, maxLuminance = 0;
+		bool runParallel = false;
+		ReconstructionFilter *rfilter = NULL;
 
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "hg:m:f:")) != -1) {
+		while ((optchar = getopt(argc, argv, "htxag:m:f:r:b:c:o:p:s:")) != -1) {
 			switch (optchar) {
 				case 'h': {
 						help();
 						return 0;
 					}
 					break;
+
 				case 'g': 
 					gamma = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the gamma value!");
 					break;
+
+				case 'x':
+					temporalCoherence = true;
+					break;
+
 				case 'f': {
-					  std::string fmt = optarg;
+					  std::string fmt = boost::to_lower_copy(std::string(optarg));
 					  if (fmt == "png")
 						  format = Bitmap::EPNG;
 					  else if (fmt == "jpg" || fmt == "jpeg")
@@ -78,12 +113,98 @@ public:
 						  SLog(EError, "Unknown format! (must be png/jpg)");
 					}
 					break;
+
 				case 'm': 
 					multiplier = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the multiplier!");
 					break;
-			};
+
+				case 'a':
+					pixelFormat = Bitmap::ERGBA;
+					break;
+
+				case 'b': {
+						std::vector<std::string> tokens = tokenize(optarg, ", ");
+						if (tokens.size() != 3)
+							Log(EError, "Invalid color balancing parameter!");
+						for (int i=0; i<3; ++i) {
+							cbal[i] = (Float) std::strtod(tokens[i].c_str(), &end_ptr);
+							if (*end_ptr != '\0')
+								Log(EError, "Cannot parse floating point number "
+									"in color balancing parameter!");
+						}
+					}
+					break;
+
+				case 'c': {
+						std::vector<std::string> tokens = tokenize(optarg, ", ");
+						if (tokens.size() != 4)
+							Log(EError, "Invalid crop parameter!");
+						for (int i=0; i<4; ++i) {
+							crop[i] = (int) std::strtol(tokens[i].c_str(), &end_ptr, 10);
+							if (*end_ptr != '\0')
+								Log(EError, "Cannot parse integer in crop parameter!");
+						}
+					}
+					break;
+
+				case 'p': {
+						std::vector<std::string> tokens = tokenize(optarg, ", ");
+						if (tokens.size() != 2)
+							Log(EError, "Invalid tone mapper parameter!");
+						for (int i=0; i<2; ++i) {
+							tonemapper[i] = (Float) std::strtod(tokens[i].c_str(), &end_ptr);
+							if (*end_ptr != '\0')
+								Log(EError, "Cannot parse tone mapper parameters!");
+						}
+					}
+					break;
+
+				case 's': {
+						std::vector<std::string> tokens = tokenize(optarg, ", ");
+						if (tokens.size() != 2)
+							Log(EError, "Invalid resize parameter!");
+						for (int i=0; i<2; ++i) {
+							resize[i] = (int) std::strtol(tokens[i].c_str(), &end_ptr, 10);
+							if (*end_ptr != '\0')
+								Log(EError, "Cannot parse integer in resize parameter!");
+						}
+					}
+					break;
+
+
+				case 'r': {
+						std::vector<std::string> tokens = tokenize(optarg, ", ");
+						if (tokens.size() != 5)
+							Log(EError, "Invalid rectangle parameter!");
+						Rect r;
+						for (int i=0; i<5; ++i) {
+							r.r[i] = (int) std::strtol(tokens[i].c_str(), &end_ptr, 10);
+							if (*end_ptr != '\0')
+								Log(EError, "Cannot parse integer in rectangle parameter!");
+						}
+						rects.push_back(r);
+					}
+					break;
+
+				case 'o': 
+					outputFilename = optarg;
+					break;
+
+				case 't':
+					runParallel = true;
+					break;
+			}
+		}
+
+		if (runParallel) {
+			if (outputFilename != "" || temporalCoherence) {
+				Log(EWarn, "Requested multithreaded tonemapping along with incompatible options, disabling threading..");
+				runParallel = false;
+			} else {
+				Log(EInfo, "Performing multithreaded tonemapping ..");
+			}
 		}
 
 		if (optind == argc) {
@@ -91,43 +212,123 @@ public:
 			return 0;
 		}
 
-		Float invGamma = 1.0f/gamma;
+		if (pixelFormat == Bitmap::ERGBA && format == Bitmap::EJPEG)
+			Log(EError, "JPEG images do not support an alpha channel!");
 
-		for (int i=optind; i<argc; ++i) {
-			fs::path inputFile = fileResolver->resolve(argv[i]);
-			Log(EInfo, "Loading EXR image \"%s\" ..", inputFile.file_string().c_str());
-			ref<FileStream> is = new FileStream(inputFile, FileStream::EReadOnly);
-			ref<Bitmap> input = new Bitmap(Bitmap::EEXR, is);
-			ref<Bitmap> output = new Bitmap(input->getWidth(), input->getHeight(), 32);
-			float *inputData = input->getFloatData();
-			uint8_t *outputData = output->getData();
-			for (int y=0; y<input->getHeight(); ++y) {
-				for (int x=0; x<input->getWidth(); ++x) {
-					size_t idx = y*input->getWidth() + x;
-					for (int i=0; i<3; ++i) {
-						if (gamma == -1)
-							outputData[idx*4+i] = (uint8_t) std::max(std::min((int) (toSRGB(inputData[idx*4+i] * multiplier) * 255), 255), 0);
-						else
-							outputData[idx*4+i] = (uint8_t) std::max(std::min((int) (std::pow(inputData[idx*4+i] * multiplier, invGamma)*255), 255), 0);
-						outputData[idx*4+3] = (uint8_t) std::max(std::min((int) (inputData[idx*4+3] * 255), 255), 0);
+		if (resize[0] != -1) {
+			/* A resampling operation was requested; use a Lanczos Sinc reconstruction filter by default */
+			rfilter = static_cast<ReconstructionFilter *> (PluginManager::getInstance()->
+					createObject(MTS_CLASS(ReconstructionFilter), Properties("lanczos")));
+			rfilter->configure();
+		}
+
+		if (runParallel) {
+			ref<Logger> logger = Thread::getThread()->getLogger();
+
+			#if defined(MTS_OPENMP)
+				#pragma omp parallel for schedule(static)
+			#endif
+			for (int i=optind; i<argc; ++i) {
+				Thread *thread = Thread::getThread();
+				if (!thread) {
+					thread = Thread::registerUnmanagedThread("omp");
+					thread->setLogger(logger);
+				}
+
+				fs::path inputFile = fileResolver->resolve(argv[i]);
+				Log(EInfo, "Loading EXR image \"%s\" ..", inputFile.string().c_str());
+				ref<FileStream> is = new FileStream(inputFile, FileStream::EReadOnly);
+				ref<Bitmap> input = new Bitmap(Bitmap::EOpenEXR, is);
+
+				if (crop[2] != -1 && crop[3] != -1)
+					input = input->crop(Point2i(crop[0], crop[1]), Vector2i(crop[2], crop[3]));
+
+				if (resize[0] != -1) 
+					input = input->resample(rfilter, ReconstructionFilter::EClamp, 
+							ReconstructionFilter::EClamp, Vector2i(resize[0], resize[1]));
+
+				if (cbal[0] != 1 || cbal[1] != 1 || cbal[2] != 1)
+					input->colorBalance(cbal[0], cbal[1], cbal[2]);
+
+				if (tonemapper[0] != -1) {
+					Float logAvgLuminance = 0, maxLuminance = 0;
+					input->tonemapReinhard(logAvgLuminance, maxLuminance, tonemapper[0], tonemapper[1]);
+					Log(EInfo, "Tonemapper reports: log-average luminance = %f, max. luminance = %f", 
+						logAvgLuminance, maxLuminance);
+				}
+
+				ref<Bitmap> output = input->convert(pixelFormat, Bitmap::EUInt8, gamma, multiplier);
+	
+				for (size_t i=0; i<rects.size(); ++i) {
+					int *r = rects[i].r;
+					output->drawRect(Point2i(r[0], r[1]), Vector2i(r[2], r[3]), Spectrum(r[4]/255.0f));
+				}
+	
+				fs::path outputFile = inputFile;
+				if (format == Bitmap::EPNG)
+					outputFile.replace_extension(".png");
+				else if (format == Bitmap::EJPEG)
+					outputFile.replace_extension(".jpg");
+				else
+					Log(EError, "Unknown target format!");
+						
+				Log(EInfo, "Writing tonemapped image to \"%s\" ..", outputFile.string().c_str());
+	
+				ref<FileStream> os = new FileStream(outputFile, FileStream::ETruncReadWrite);
+				output->write(format, os);
+			}
+
+		} else {
+			for (int i=optind; i<argc; ++i) {
+				fs::path inputFile = fileResolver->resolve(argv[i]);
+				Log(EInfo, "Loading EXR image \"%s\" ..", inputFile.string().c_str());
+				ref<FileStream> is = new FileStream(inputFile, FileStream::EReadOnly);
+				ref<Bitmap> input = new Bitmap(Bitmap::EOpenEXR, is);
+
+				if (crop[2] != -1 && crop[3] != -1)
+					input = input->crop(Point2i(crop[0], crop[1]), Vector2i(crop[2], crop[3]));
+
+				if (resize[0] != -1) 
+					input = input->resample(rfilter, ReconstructionFilter::EClamp, 
+					ReconstructionFilter::EClamp, Vector2i(resize[0], resize[1]));
+
+				if (cbal[0] != 1 || cbal[1] != 1 || cbal[2] != 1)
+					input->colorBalance(cbal[0], cbal[1], cbal[2]);
+
+				if (tonemapper[0] != -1) {
+					input->tonemapReinhard(logAvgLuminance, maxLuminance, tonemapper[0], tonemapper[1]);
+					Log(EInfo, "Tonemapper reports: log-average luminance = %f, max. luminance = %f", 
+						logAvgLuminance, maxLuminance);
+					if (!temporalCoherence) {
+						logAvgLuminance = 0;
+						maxLuminance = 0;
 					}
 				}
-			}
-
-			fs::path outputFile = inputFile;
-			if (format == Bitmap::EPNG) {
-				outputFile.replace_extension(".png");
-				Log(EInfo, "Writing tonemapped PNG image \"%s\" ..", outputFile.file_string().c_str());
+	
+				ref<Bitmap> output = input->convert(pixelFormat, Bitmap::EUInt8, gamma, multiplier);
+	
+				for (size_t i=0; i<rects.size(); ++i) {
+					int *r = rects[i].r;
+					output->drawRect(Point2i(r[0], r[1]), Vector2i(r[2], r[3]), Spectrum(r[4]/255.0f));
+				}
+	
+				fs::path outputFile = inputFile;
+				if (outputFilename == "") {
+					if (format == Bitmap::EPNG)
+						outputFile.replace_extension(".png");
+					else if (format == Bitmap::EJPEG)
+						outputFile.replace_extension(".jpg");
+					else
+						Log(EError, "Unknown target format!");
+				} else {
+					outputFile = outputFilename;
+				}
+						
+				Log(EInfo, "Writing tonemapped image to \"%s\" ..", outputFile.string().c_str());
+	
 				ref<FileStream> os = new FileStream(outputFile, FileStream::ETruncReadWrite);
-			} else if (format == Bitmap::EJPEG) {
-				outputFile.replace_extension(".jpg");
-				Log(EInfo, "Writing tonemapped JPEG image \"%s\" ..", outputFile.file_string().c_str());
-			} else {
-				Log(EError, "Unknown format!");
+				output->write(format, os);
 			}
-
-			ref<FileStream> os = new FileStream(outputFile, FileStream::ETruncReadWrite);
-			output->save(format, os);
 		}
 		return 0;
 	}
@@ -135,5 +336,5 @@ public:
 	MTS_DECLARE_UTILITY()
 };
 
-MTS_EXPORT_UTILITY(Tonemap, "Simple EXR->PNG tonemapper")
+MTS_EXPORT_UTILITY(Tonemap, "Command line batch tonemapper")
 MTS_NAMESPACE_END

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,77 +16,88 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__TLS_H)
-#define __TLS_H
+#pragma once
+#if !defined(__MITSUBA_CORE_TLS_H_)
+#define __MITSUBA_CORE_TLS_H_
 
 #include <mitsuba/mitsuba.h>
+#include <boost/scoped_ptr.hpp>
 
 MTS_NAMESPACE_BEGIN
 
+///! \cond
+namespace detail {
+	/* Some forward declarations pertaining to TLS management */
+
+	extern MTS_EXPORT_CORE void initializeGlobalTLS();
+	extern MTS_EXPORT_CORE void destroyGlobalTLS();
+	extern MTS_EXPORT_CORE void initializeLocalTLS();
+	extern MTS_EXPORT_CORE void destroyLocalTLS();
+
+	class MTS_EXPORT_CORE ThreadLocalBase {
+	public:
+		/// Functor to allocate memory for a TLS object
+		typedef void *(*ConstructFunctor)();
+		/// Functor to release memory of a TLS object
+		typedef void (*DestructFunctor)(void *);
+		/// Construct a new thread local storage object
+		ThreadLocalBase(const ConstructFunctor &constructFunctor, 
+			const DestructFunctor &destructFfunctor);
+		/// Destroy the thread local storage object
+		~ThreadLocalBase();
+		/// Return the data value associated with the current thread
+		void *get();
+		/// Return the data value associated with the current thread (const version)
+		const void *get() const;
+		/// Like the other \c get(), but also returns whether the TLS object existed before
+		void *get(bool &existed);
+		/// Like the other \c get(), but also returns whether the TLS object existed before (const version)
+		const void *get(bool &existed) const;
+	protected:
+		struct ThreadLocalPrivate;
+		mutable boost::scoped_ptr<ThreadLocalPrivate> d;
+	};
+}; // namespace tls
+///! \endcond
+
 /**
  * \headerfile mitsuba/core/tls.h mitsuba/mitsuba.h
- * \brief Thin wrapper around posix thread local storage. 
+ * \brief Thin wrapper around boost thread local storage. 
  *     Stores references to Object instances.
- *
- * This class implements a simple reference-counting thread-local
- * pointer storage.
  * \sa PrimitiveThreadLocal
  * \ingroup libcore
+ *
+ * This class implements a reference counting thread local storage object which captures 
+ * references to subclasses of \ref Object. In comparison to an API like <tt>boost::thread_specific_ptr</tt>
+ * it has a much nicer cleanup mechanism. Held references are destroyed when the owning thread dies \a or 
+ * when the \c ThreadLocal instance is freed, whichever occurs first.
  */
-template <typename T> class ThreadLocal {
+template <typename ValueType> class ThreadLocal {
 public:
-	/// Create a new (empty) thread-local reference
-	inline ThreadLocal() {
-		pthread_key_create(&m_key, ThreadLocal::deletePtr);
-	}
+	/// Construct a new thread local storage object
+	ThreadLocal() : m_base(&ThreadLocal::construct, &ThreadLocal::destruct) { }
+
+	/// Update the data associated with the current thread
+	inline void set(ValueType *ptr) { ((ref<ValueType> *) m_base.get())->operator=(ptr); }
+
+	/// Return a reference to the data associated with the current thread
+	inline ValueType *get() { return ((ref<ValueType> *) m_base.get())->get(); }
 
 	/**
-	 * \brief Destroy the thread-local reference
-	 *
-	 * Beware: all threads that ever used this TLS (other than
-	 * the caller of the destructor) must either either died or 
-	 * called \ref cleanup() prior to the destructor invocation -- 
-	 * otherwise, the reference counts will be incorrect and
-	 * memory leaks will ensue..
+	 * \brief Return a reference to the data associated with the 
+	 * current thread (const version)
 	 */
-	inline ~ThreadLocal() {
-		cleanup();
-		pthread_key_delete(m_key);
+	inline const ValueType *get() const { return ((const ref<ValueType> *) m_base.get())->get(); }
+protected:
+	inline static void *construct() {
+		return new ref<ValueType>();
 	}
 
-	/**
-	 * \brief Make the thread-local reference point to the given 
-	 * instance and update the reference counts
-	 */
-	inline void set(T *value) {
-		T *previous = get();
-		if (previous != NULL)
-			previous->decRef();
-		if (value != NULL)
-			value->incRef();
-		pthread_setspecific(m_key, value);
+	inline static void destruct(void *data) {
+		delete static_cast<ref<ValueType> *>(data);
 	}
-
-	/// Return the currently stored reference 
-	inline T *get() {
-		return static_cast<T *>(pthread_getspecific(m_key));
-	}
-	
-	/// Return the currently stored reference (const version)
-	inline const T *get() const {
-		return static_cast<const T *>(pthread_getspecific(m_key));
-	}
-
-	/// Set the reference to <tt>NULL</tt> and update the reference counts.
-	void cleanup() {
-		set(NULL);
-	}
-private:
-	static void deletePtr(void *ptr) {
-		static_cast<T *>(ptr)->decRef();
-	}
-	
-	pthread_key_t m_key;
+protected:
+	detail::ThreadLocalBase m_base;
 };
 
 /**
@@ -95,72 +106,47 @@ private:
  *     Stores heap-allocated data other than Object instances.
  * \sa ThreadLocal
  * \ingroup libcore
+ * 
+ * This class implements a thread local storage object for POD-style data structures.
+ * In comparison to an API like <tt>boost::thread_specific_ptr</tt> it has a much nicer 
+ * cleanup mechanism. Held references are destroyed when the owning thread dies \a or 
+ * when the \c PrimitiveThreadLocal instance is freed, whichever occurs first.
  */
-template <typename T> class PrimitiveThreadLocal {
+template <typename ValueType> class PrimitiveThreadLocal {
 public:
-	/// Create a new thread local storage object
-	inline PrimitiveThreadLocal() {
-		pthread_key_create(&m_key, PrimitiveThreadLocal::deletePtr);
-	}
-
-	/**
-	 * \brief Destroy the thread local storage object
-	 *
-	 * Beware: all threads that ever used this TLS (other than
-	 * the caller of the destructor) must either either died or 
-	 * called \ref cleanup() prior to the destructor invocation -- 
-	 * otherwise, memory leaks will ensue..
-	 */
-	inline ~PrimitiveThreadLocal() {
-		cleanup();
-		pthread_key_delete(m_key);
-	}
+	/// Construct a new thread local storage object
+	PrimitiveThreadLocal() : m_base(&PrimitiveThreadLocal::construct,
+		&PrimitiveThreadLocal::destruct) { }
 
 	/// Update the data associated with the current thread
-	inline void set(T &value) {
+	inline void set(ValueType &value) {
 		get() = value;
 	}
 
 	/// Return a reference to the data associated with the current thread
-	inline T &get() {
-		T *value = static_cast<T *>(pthread_getspecific(m_key));
-		if (value == NULL) {
-			value = new T();
-			pthread_setspecific(m_key, value);
-		}
-
-		return *value;
+	inline ValueType &get() {
+		return *((ValueType *) m_base.get());
 	}
 
 	/**
 	 * \brief Return a reference to the data associated with the 
 	 * current thread (const version)
 	 */
-	inline const T &get() const {
-		T *value = static_cast<T *>(pthread_getspecific(m_key));
-		if (value == NULL) {
-			value = new T();
-			pthread_setspecific(m_key, value);
-		}
-
-		return *value;
+	inline const ValueType &get() const {
+		return *((const ValueType *) m_base.get());
+	}
+protected:
+	inline static void *construct() {
+		return new ValueType();
 	}
 
-	/// Delete the data record associated with the current thread
-	void cleanup() {
-		T *value = static_cast<T *>(pthread_getspecific(m_key));
-		if (value != NULL)
-			delete value;
-		pthread_setspecific(m_key, NULL);
+	inline static void destruct(void *data) {
+		delete static_cast<ValueType *>(data);
 	}
-private:
-	static void deletePtr(void *ptr) {
-		delete static_cast<T *>(ptr);
-	}
-
-	pthread_key_t m_key;
+protected:
+	detail::ThreadLocalBase m_base;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __TLS_H */
+#endif /* __MITSUBA_CORE_TLS_H_ */

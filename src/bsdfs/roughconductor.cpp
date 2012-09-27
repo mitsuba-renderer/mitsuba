@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -24,7 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{roughconductor}{Rough conductor material}
- * \order{6}
+ * \order{7}
  * \icon{bsdf_roughconductor}
  * \parameters{
  *     \parameter{distribution}{\String}{
@@ -72,7 +72,7 @@ MTS_NAMESPACE_BEGIN
  * This plugin implements a realistic microfacet scattering model for rendering
  * rough conducting materials, such as metals. It can be interpreted as a fancy 
  * version of the Cook-Torrance model and should be preferred over 
- * empirical models like \pluginref{phong} and \pluginref{ward} when possible.
+ * heuristic models like \pluginref{phong} and \pluginref{ward} when possible.
  * \renderings{
  *     \rendering{Rough copper (Beckmann, $\alpha=0.1$)}
  *     	   {bsdf_roughconductor_copper.jpg}
@@ -108,7 +108,7 @@ MTS_NAMESPACE_BEGIN
  * Beckmann distribution.
  *
  * To get an intuition about the effect of the surface roughness
- * parameter $\alpha$, consider the following approximate differentiation: 
+ * parameter $\alpha$, consider the following approximate classification: 
  * a value of $\alpha=0.001-0.01$ corresponds to a material 
  * with slight imperfections on an
  * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
@@ -229,7 +229,7 @@ public:
 		return 2 * dot(wi, m) * Vector(m) - wi;
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		/* Stop if this component was not requested */
 		if (measure != ESolidAngle ||
 			Frame::cosTheta(bRec.wi) < 0 ||
@@ -243,9 +243,9 @@ public:
 
 		/* Evaluate the roughness */
 		Float alphaU = m_distribution.transformRoughness( 
-					m_alphaU->getValue(bRec.its).average()),
+					m_alphaU->eval(bRec.its).average()),
 			  alphaV = m_distribution.transformRoughness( 
-					m_alphaV->getValue(bRec.its).average());
+					m_alphaV->eval(bRec.its).average());
 
 		/* Evaluate the microsurface normal distribution */
 		const Float D = m_distribution.eval(H, alphaU, alphaV);
@@ -253,7 +253,7 @@ public:
 			return Spectrum(0.0f);
 
 		/* Fresnel factor */
-		const Spectrum F = fresnelConductor(Frame::cosTheta(bRec.wi), m_eta, m_k);
+		const Spectrum F = fresnelConductor(dot(bRec.wi, H), m_eta, m_k);
 
 		/* Smith's shadow-masking function */
 		const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaU, alphaV);
@@ -261,10 +261,10 @@ public:
 		/* Calculate the total amount of reflection */
 		Float value = D * G / (4.0f * Frame::cosTheta(bRec.wi));
 
-		return m_specularReflectance->getValue(bRec.its) * F * value; 
+		return m_specularReflectance->eval(bRec.its) * F * value; 
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (measure != ESolidAngle ||
 			Frame::cosTheta(bRec.wi) < 0 ||
 			Frame::cosTheta(bRec.wo) < 0 ||
@@ -277,15 +277,15 @@ public:
 	
 		/* Evaluate the roughness */
 		Float alphaU = m_distribution.transformRoughness( 
-					m_alphaU->getValue(bRec.its).average()),
+					m_alphaU->eval(bRec.its).average()),
 			  alphaV = m_distribution.transformRoughness( 
-					m_alphaV->getValue(bRec.its).average());
+					m_alphaV->eval(bRec.its).average());
 
 		return m_distribution.pdf(H, alphaU, alphaV)
 			/ (4 * absDot(bRec.wo, H));
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		if (Frame::cosTheta(bRec.wi) < 0 ||
 			((bRec.component != -1 && bRec.component != 0) ||
 			!(bRec.typeMask & EGlossyReflection)))
@@ -293,9 +293,9 @@ public:
 
 		/* Evaluate the roughness */
 		Float alphaU = m_distribution.transformRoughness( 
-					m_alphaU->getValue(bRec.its).average()),
+					m_alphaU->eval(bRec.its).average()),
 			  alphaV = m_distribution.transformRoughness( 
-					m_alphaV->getValue(bRec.its).average());
+					m_alphaV->eval(bRec.its).average());
 
 		/* Sample M, the microsurface normal */
 		Float microfacetPDF;
@@ -307,6 +307,7 @@ public:
 
 		/* Perfect specular reflection based on the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
+		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
 
@@ -314,7 +315,7 @@ public:
 		if (Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
 
-		const Spectrum F = fresnelConductor(Frame::cosTheta(bRec.wi),
+		const Spectrum F = fresnelConductor(dot(bRec.wi, m),
 				m_eta, m_k);
 
 		Float numerator = m_distribution.eval(m, alphaU, alphaV)
@@ -324,11 +325,11 @@ public:
 		Float denominator = microfacetPDF
 			* Frame::cosTheta(bRec.wi);
 
-		return m_specularReflectance->getValue(bRec.its) * F
+		return m_specularReflectance->eval(bRec.its) * F
 				* (numerator / denominator);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (Frame::cosTheta(bRec.wi) < 0 ||
 			((bRec.component != -1 && bRec.component != 0) ||
 			!(bRec.typeMask & EGlossyReflection)))
@@ -336,9 +337,9 @@ public:
 
 		/* Evaluate the roughness */
 		Float alphaU = m_distribution.transformRoughness( 
-					m_alphaU->getValue(bRec.its).average()),
+					m_alphaU->eval(bRec.its).average()),
 			  alphaV = m_distribution.transformRoughness( 
-					m_alphaV->getValue(bRec.its).average());
+					m_alphaV->eval(bRec.its).average());
 
 		/* Sample M, the microsurface normal */
 		const Normal m = m_distribution.sample(sample, 
@@ -349,6 +350,7 @@ public:
 
 		/* Perfect specular reflection based on the microsurface normal */
 		bRec.wo = reflect(bRec.wi, m);
+		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
 
@@ -356,7 +358,7 @@ public:
 		if (Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
 
-		const Spectrum F = fresnelConductor(Frame::cosTheta(bRec.wi),
+		const Spectrum F = fresnelConductor(dot(bRec.wi, m),
 				m_eta, m_k);
 
 		Float numerator = m_distribution.eval(m, alphaU, alphaV)
@@ -365,10 +367,10 @@ public:
 		
 		Float denominator = pdf * Frame::cosTheta(bRec.wi);
 
-		/* Jacobian of the half-direction transform */
+		/* Jacobian of the half-direction mapping */
 		pdf /= 4.0f * dot(bRec.wo, m);
 
-		return m_specularReflectance->getValue(bRec.its) * F
+		return m_specularReflectance->eval(bRec.its) * F
 				* (numerator / denominator);
 	}
 
@@ -401,10 +403,15 @@ public:
 		m_k.serialize(stream);
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		return 0.5f * (m_alphaU->eval(its).average()
+			+ m_alphaV->eval(its).average());
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "RoughConductor[" << endl
-			<< "  name = \"" << getName() << "\"," << endl
+			<< "  id = \"" << getID() << "\"," << endl
 			<< "  distribution = " << m_distribution.toString() << "," << endl
 			<< "  alphaU = " << indent(m_alphaU->toString()) << "," << endl
 			<< "  alphaV = " << indent(m_alphaV->toString()) << "," << endl
@@ -517,7 +524,9 @@ public:
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return " << evalName << "_R0 * inv_pi * cosTheta(wo);"<< endl
+			<< "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
+			<< "    	return vec3(0.0);" << endl
+			<< "    return " << evalName << "_R0 * inv_pi * inv_pi * cosTheta(wo);"<< endl
 			<< "}" << endl;
 	}
 	MTS_DECLARE_CLASS()

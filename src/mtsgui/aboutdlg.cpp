@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -60,6 +60,22 @@ AboutDialog::AboutDialog(QWidget *parent) :
 
 #if defined(MTS_HAS_COLLADA)
 	configFlags += "MTS_HAS_COLLADA ";
+#endif
+
+#if defined(MTS_HAS_LIBJPEG)
+	configFlags += "MTS_HAS_LIBJPEG ";
+#endif
+
+#if defined(MTS_HAS_LIBPNG)
+	configFlags += "MTS_HAS_LIBPNG ";
+#endif
+
+#if defined(MTS_HAS_OPENEXR)
+	configFlags += "MTS_HAS_OPENEXR ";
+#endif
+
+#if defined(MTS_HAS_BREAKPAD)
+	configFlags += "MTS_HAS_BREAKPAD ";
 #endif
 
 	configFlags += formatString("SPECTRUM_SAMPLES=%i ",

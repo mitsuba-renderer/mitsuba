@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -17,6 +17,7 @@
 */
 
 #include <QtGui/QtGui>
+#include <QtOpenGL/QGLFormat>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/sched.h>
 #include <mitsuba/core/plugin.h>
@@ -24,6 +25,7 @@
 #include <mitsuba/core/appender.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/render/scenehandler.h>
+
 #if defined(__OSX__)
 #include <ApplicationServices/ApplicationServices.h>
 #endif
@@ -33,17 +35,83 @@
 #include <X11/Xlib.h>
 #endif
 
-#if !defined(WIN32)
+#if !defined(__WINDOWS__)
 #include <signal.h>
 #include <sys/wait.h>
 #include <errno.h>
+#else
+#include <winsock2.h>
 #endif
 
 XERCES_CPP_NAMESPACE_USE
-
 using namespace mitsuba;
-
 MainWindow *mainWindow = NULL;
+
+
+/// ================================================================
+///  Handle application crashes when compiled with MTS_HAS_BREAKPAD
+/// ================================================================
+#if defined(MTS_HAS_BREAKPAD)
+#if defined(__OSX__)
+
+extern void *__mts_init_breakpad_osx();
+extern void  __mts_destroy_breakpad_osx(void *);
+
+#elif defined(__WINDOWS__)
+
+#include <breakpad/client/windows/sender/crash_report_sender.h>
+#include <breakpad/client/windows/handler/exception_handler.h>
+
+static bool minidumpCallbackWindows(const wchar_t *dump_path,
+		const wchar_t *minidump_id, void *context,
+		EXCEPTION_POINTERS *exinfo, MDRawAssertionInfo *assertion,
+		bool succeeded) {
+	if (!dump_path || !minidump_id)
+		return false;
+
+	std::wstring filename = std::wstring(dump_path) + std::wstring(L"\\") 
+		+ std::wstring(minidump_id) + std::wstring(L".dmp");
+
+	google_breakpad::CrashReportSender sender(L"");
+	std::map<std::wstring, std::wstring> parameters;
+
+	#if defined(WIN64)
+		parameters[L"prod"] = L"Mitsuba/Win64";	
+	#else
+		parameters[L"prod"] = L"Mitsuba/Win32";	
+	#endif
+
+	std::string version = MTS_VERSION;
+	std::wstring wVersion;
+	wVersion.assign(version.begin(), version.end());
+	parameters[L"ver"] = wVersion;
+
+	std::wstring resultString;
+
+	if (MessageBox(NULL, TEXT("Mitsuba crashed due to an internal error. If you agree below, a brief "
+			"report describing the failure will be submitted to the developers. If you would like to "
+			"accelerate the debugging process further, please also create a ticket with information on "
+			"the steps that led to the problem on https://www.mitsuba-renderer.org/tracker -- thank you!"), 
+			TEXT("Error"), MB_OKCANCEL | MB_ICONERROR) != IDOK)
+		return false;
+
+	google_breakpad::ReportResult result = 
+		sender.SendCrashReport(L"http://www.mitsuba-renderer.org/bugreport.php",
+		parameters, filename, &resultString);
+
+	if (result != google_breakpad::RESULT_SUCCEEDED) {
+		MessageBox(NULL, TEXT("The error report could not be submitted due to a lack of "
+			"internet connectivity!"), TEXT("Error"), MB_OK | MB_ICONERROR);
+		return false;
+	}
+
+	return succeeded;
+}
+
+#endif
+#endif
+
+/// ================================================================
 
 class MitsubaApplication : public QApplication {
 public:
@@ -79,7 +147,7 @@ public:
 };
 
 /* Collect zombie processes */
-#if !defined(WIN32)
+#if !defined(__WINDOWS__)
 void collect_zombies(int s) {
 	while (waitpid(-1, NULL, WNOHANG) > 0);
 }
@@ -90,12 +158,14 @@ int main(int argc, char *argv[]) {
 
 	/* Initialize the core framework */
 	Class::staticInitialization();
+	Object::staticInitialization();
 	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
-	Thread::initializeOpenMP(getProcessorCount());
 	Logger::staticInitialization();
+	Thread::initializeOpenMP(getCoreCount());
 	Spectrum::staticInitialization();
+	Bitmap::staticInitialization();
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
 	SceneHandler::staticInitialization();
@@ -107,11 +177,14 @@ int main(int argc, char *argv[]) {
 #if defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
 	/* Required for the mouse relocation in GLWidget */
-	CGSetLocalEventsSuppressionInterval(0.0f);
+	CGEventSourceRef evsrc =
+		CGEventSourceCreate(kCGEventSourceStateCombinedSessionState);
+	CGEventSourceSetLocalEventsSuppressionInterval(evsrc, 0.0);
+	CFRelease(evsrc);
 	MTS_AUTORELEASE_END() 
 #endif
 
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
@@ -120,7 +193,7 @@ int main(int argc, char *argv[]) {
 		SLog(EError, "Could not find the required version of winsock.dll!");
 #endif
 
-#if !defined(WIN32)
+#if !defined(__WINDOWS__)
 	/* Avoid zombies processes when running the server */
 	struct sigaction sa;
 	sa.sa_handler = collect_zombies;
@@ -161,19 +234,58 @@ int main(int argc, char *argv[]) {
 		logger->addAppender(new StreamAppender(formatString("%s/mitsuba.%s.log", 
 			__mts_bundlepath().c_str(), getHostName().c_str())));
 		MTS_AUTORELEASE_END() 
+
+		/* Set application defaults (disable OSX synchronization feature) */
+		__mts_set_appdefaults();
 #else
 		/* Create a log file inside the current working directory */
 		logger->addAppender(new StreamAppender(formatString("mitsuba.%s.log", getHostName().c_str())));
 #endif
 
-#if !defined(WIN32)
+#if !defined(__WINDOWS__)
 		/* Correct number parsing on some locales (e.g. ru_RU) */
 		setlocale(LC_NUMERIC, "C");
+#endif
+
+#if defined(MTS_HAS_BREAKPAD)
+	#if defined(__OSX__)
+		void *breakpad = __mts_init_breakpad_osx();
+	#elif defined(__WINDOWS__)
+		_CrtSetReportMode(_CRT_ASSERT, 0);
+		std::wstring dump_path;
+		dump_path.resize(1024);
+		GetTempPathW(1024, &dump_path[0]);
+
+		google_breakpad::ExceptionHandler *breakpad = 
+			new google_breakpad::ExceptionHandler(
+				dump_path, NULL, minidumpCallbackWindows, NULL,
+				google_breakpad::ExceptionHandler::HANDLER_ALL,
+				MiniDumpNormal, NULL, NULL);
+	#endif
+#endif
+
+#if !defined(MTS_GUI_SOFTWARE_FALLBACK)
+		/* Be a bit more picky about the rendering target */
+		QGLFormat fmt;
+		fmt.setDepth(true);
+		fmt.setStencil(false);
+		fmt.setAlpha(true);
+		fmt.setStereo(false);
+		fmt.setDoubleBuffer(true);
+		QGLFormat::setDefaultFormat(fmt);
 #endif
 
 		mainWindow = new MainWindow();
 		mainWindow->initWorkers();
 		retval = app.exec();
+
+#if defined(MTS_HAS_BREAKPAD)
+	#if defined(__OSX__)
+		__mts_destroy_breakpad_osx(breakpad);
+	#elif defined(__WINDOWS__)
+		delete breakpad;
+	#endif
+#endif
 		delete mainWindow;
 	} catch (const std::exception &e) {
 		SLog(EWarn, "Critical exception during startup: %s", e.what());
@@ -184,7 +296,7 @@ int main(int argc, char *argv[]) {
 	Statistics::getInstance()->printStats();
 
 
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	/* Shut down WINSOCK2 */
 	WSACleanup();
 #endif
@@ -193,11 +305,13 @@ int main(int argc, char *argv[]) {
 	SceneHandler::staticShutdown();
 	SHVector::staticShutdown();
 	Scheduler::staticShutdown();
+	Bitmap::staticShutdown();
 	Spectrum::staticShutdown();
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();
 	PluginManager::staticShutdown();
+	Object::staticShutdown();
 	Class::staticShutdown();
 
 	return retval;

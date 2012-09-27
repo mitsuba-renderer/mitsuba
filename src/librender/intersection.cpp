@@ -8,31 +8,31 @@ void Intersection::computePartials(const RayDifferential &ray) {
 
 	/* Compute the texture coordinates partials wrt. 
 	   changes in the screen-space position. Based on PBRT */
-	if (hasUVPartials)
+	if (hasUVPartials || !ray.hasDifferentials)
 		return;
+
 	hasUVPartials = true;
 
-	if (!ray.hasDifferentials || (dpdu.isZero() && dpdv.isZero())) {
+	if (dpdu.isZero() && dpdv.isZero()) {
 		dudx = dvdx = dudy = dvdy = 0.0f;
 		return;
 	}
 
-	/* Offset of the plane passing through the surface */
-	const Float d = -dot(geoFrame.n, Vector(p));
+	/* Compute a few projections onto the surface normal */
+	const Float
+		pp  = dot(geoFrame.n, Vector(p)),
+	    pox = dot(geoFrame.n, Vector(ray.rxOrigin)),
+	    poy = dot(geoFrame.n, Vector(ray.ryOrigin)),
+	    prx = dot(geoFrame.n, ray.rxDirection),
+	    pry = dot(geoFrame.n, ray.ryDirection);
 
-	const Float txRecip = dot(geoFrame.n, ray.rxDirection),
-				tyRecip = dot(geoFrame.n, ray.ryDirection);
-
-	if (EXPECT_NOT_TAKEN(txRecip == 0 || tyRecip == 0)) {
+	if (EXPECT_NOT_TAKEN(prx == 0 || pry == 0)) {
 		dudx = dvdx = dudy = dvdy = 0.0f;
 		return;
 	}
 
-	/* Ray distances traveled */
-	const Float tx = -(dot(geoFrame.n, Vector(ray.rxOrigin)) + d) / 
-		txRecip;
-	const Float ty = -(dot(geoFrame.n, Vector(ray.ryOrigin)) + d) / 
-		tyRecip;
+	/* Compute ray-plane intersections against the offset rays */
+	const Float tx = (pp-pox) / prx, ty = (pp-poy) / pry;
 
 	/* Calculate the U and V partials by solving two out
 	   of a set of 3 equations in an overconstrained system */
@@ -56,6 +56,7 @@ void Intersection::computePartials(const RayDifferential &ray) {
 	/* Auxilary intersection point of the adjacent rays */
 	Point px = ray.rxOrigin + ray.rxDirection * tx,
 		  py = ray.ryOrigin + ray.ryDirection * ty;
+
 	Bx[0] = px[axes[0]] - p[axes[0]];
 	Bx[1] = px[axes[1]] - p[axes[1]];
 	By[0] = py[axes[0]] - p[axes[0]];

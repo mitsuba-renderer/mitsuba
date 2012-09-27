@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -73,7 +73,7 @@ RemoteWorker::RemoteWorker(const std::string &name, Stream *stream) : Worker(nam
 
 RemoteWorker::~RemoteWorker() {
 	Log(EDebug, "Shutting down");
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	m_reader->shutdown();
 	m_memStream->writeShort(StreamBackend::EQuit);
 	try {
@@ -81,7 +81,6 @@ RemoteWorker::~RemoteWorker() {
 	} catch (std::runtime_error &e) {
 		Log(EWarn, "Could not flush buffer: %s", e.what());
 	}
-	m_mutex->unlock();
 	m_reader->join();
 }
 	
@@ -91,7 +90,7 @@ void RemoteWorker::start(Scheduler *scheduler, int workerIndex, int coreOffset) 
 }
 
 void RemoteWorker::flush() {
-	m_memStream->setPos(0);
+	m_memStream->seek(0);
 	m_memStream->copyTo(m_stream);
 	m_memStream->reset();
 	m_stream->flush();
@@ -106,7 +105,8 @@ void RemoteWorker::run() {
 			if ((status = acquireWork(false, false, true)) == Scheduler::EStop)
 				break;
 		}
-		m_mutex->lock();
+		/* Acquire the lock each iteration, release it at the end of each one */
+		LockGuard lock(m_mutex);
 
 		const int id = m_schedItem.rec->id;
 		if (m_processes.find(id) == m_processes.end()) {
@@ -114,7 +114,7 @@ void RemoteWorker::run() {
 			   all information required to receive and execute work 
 			   units on the other side */
 			std::vector<std::pair<int, const MemoryStream *> > resources;
-			std::vector<std::pair<int, const SerializableObject *> > manifoldResources;
+			std::vector<std::pair<int, const SerializableObject *> > multiResources;
 
 			/* First, look up all resources required by this process (the scheduler lock
 			   needs to be held for that, so do it quickly) */
@@ -124,12 +124,12 @@ void RemoteWorker::run() {
 				int resID = (*it).second;
 
 				if (m_resources.find(resID) == m_resources.end()) {
-					if (!m_scheduler->isManifoldResource(resID)) {
+					if (!m_scheduler->isMultiResource(resID)) {
 						resources.push_back(std::pair<int, const MemoryStream *>(resID, 
 							m_scheduler->getResourceStream(resID)));
 					} else {
 						for (size_t i=0; i<m_coreCount; ++i)
-							manifoldResources.push_back(std::pair<int, const SerializableObject *>(resID, 
+							multiResources.push_back(std::pair<int, const SerializableObject *>(resID, 
 								m_scheduler->getResource(resID, (int) (m_schedItem.coreOffset + i))));
 					}
 				}
@@ -169,16 +169,16 @@ void RemoteWorker::run() {
 				m_memStream->write(resStream->getData(), resStream->getPos());
 			}
 			
-			for (size_t i=0; i<manifoldResources.size(); i += m_coreCount) {
-				int resID = manifoldResources[i].first;
+			for (size_t i=0; i<multiResources.size(); i += m_coreCount) {
+				int resID = multiResources[i].first;
 				ref<MemoryStream> resStream = new MemoryStream();
 				ref<InstanceManager> manager = new InstanceManager();
 				resStream->setByteOrder(Stream::ENetworkByteOrder);
 				for (size_t j=0; j<m_coreCount; ++j) 
-					manager->serialize(resStream, manifoldResources[i+j].second);
-				Log(EDebug, "Sending manifold resource %i to \"%s\" (%i KB)", resID, m_nodeName.c_str(),
+					manager->serialize(resStream, multiResources[i+j].second);
+				Log(EDebug, "Sending multi resource %i to \"%s\" (%i KB)", resID, m_nodeName.c_str(),
 					resStream->getPos() / 1024);
-				m_memStream->writeShort(StreamBackend::ENewManifoldResource);
+				m_memStream->writeShort(StreamBackend::ENewMultiResource);
 				m_memStream->writeInt(resID);
 				m_memStream->writeUInt((unsigned int) resStream->getPos());
 				m_memStream->write(resStream->getData(), resStream->getPos());
@@ -207,51 +207,42 @@ void RemoteWorker::run() {
 			while (m_inFlight > MTS_CONTINUE_FACTOR * m_coreCount) 
 				m_finishCond->wait();
 		}
-
-		m_mutex->unlock();
 	}
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	flush();
-	m_mutex->unlock();
 }
 
 void RemoteWorker::signalResourceExpiration(int id) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	if (m_resources.find(id) == m_resources.end()) {
-		m_mutex->unlock();
 		return;
 	}
 	m_memStream->writeShort(StreamBackend::EResourceExpired);
 	m_memStream->writeInt(id);
 	flush();
 	m_resources.erase(id);
-	m_mutex->unlock();
 }
 
 void RemoteWorker::signalProcessCancellation(int id) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	if (m_processes.find(id) == m_processes.end()) {
-		m_mutex->unlock();
 		return;
 	}
 	m_memStream->writeShort(StreamBackend::EProcessCancelled);
 	m_memStream->writeInt(id);
 	flush();
 	m_processes.erase(id);
-	m_mutex->unlock();
 }
 
 void RemoteWorker::signalProcessTermination(int id) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	if (m_processes.find(id) == m_processes.end()) {
-		m_mutex->unlock();
 		return;
 	}
 	m_memStream->writeShort(StreamBackend::EProcessTerminated);
 	m_memStream->writeInt(id);
 	flush();
 	m_processes.erase(id);
-	m_mutex->unlock();
 }
 
 void RemoteWorker::clear() {
@@ -382,7 +373,7 @@ void StreamBackend::run() {
 	m_memStream->writeShort(EHello);
 	m_memStream->writeShort((short) m_scheduler->getCoreCount());
 	m_memStream->writeString(m_nodeName);
-	m_memStream->setPos(0);
+	m_memStream->seek(0);
 	m_memStream->copyTo(m_stream);
 	m_stream->flush();
 	bool running = true;
@@ -408,24 +399,24 @@ void StreamBackend::run() {
 						ref<MemoryStream> mstream = new MemoryStream(size);
 						mstream->setByteOrder(Stream::ENetworkByteOrder);
 						m_stream->copyTo(mstream, size);
-						mstream->setPos(0);
+						mstream->seek(0);
 						ref<SerializableObject> res = static_cast<SerializableObject *>(manager->getInstance(mstream));
 						m_resources[id] = m_scheduler->registerResource(res);
 					}
 					break;
-				case ENewManifoldResource: {
+				case ENewMultiResource: {
 						int id = m_stream->readInt();
 						size_t size = m_stream->readUInt();
 						ref<InstanceManager> manager = new InstanceManager();
 						ref<MemoryStream> mstream = new MemoryStream(size);
 						mstream->setByteOrder(Stream::ENetworkByteOrder);
 						m_stream->copyTo(mstream, size);
-						mstream->setPos(0);
+						mstream->seek(0);
 						size_t coreCount = m_scheduler->getCoreCount();
 						std::vector<SerializableObject *> objects(coreCount);
 						for (size_t i=0; i<coreCount; ++i)
 							objects[i] = static_cast<SerializableObject *>(manager->getInstance(mstream));
-						m_resources[id] = m_scheduler->registerManifoldResource(objects);
+						m_resources[id] = m_scheduler->registerMultiResource(objects);
 					}
 					break;
 				case EEnsurePluginLoaded: {
@@ -503,7 +494,7 @@ void StreamBackend::run() {
 void StreamBackend::sendCancellation(int id, int numLost) {
 	Log(EInfo, "Notifying the remote side about the cancellation of process %i", id);
 
-	m_sendMutex->lock();
+	LockGuard lock(m_sendMutex);
 	m_memStream->reset();
 	m_memStream->writeShort(EProcessCancelled);
 	m_memStream->writeInt(id);
@@ -512,7 +503,7 @@ void StreamBackend::sendCancellation(int id, int numLost) {
 		m_memStream->writeInt(id);
 	}
 	try {
-		m_memStream->setPos(0);
+		m_memStream->seek(0);
 		m_memStream->copyTo(m_stream);
 		m_stream->flush();
 	} catch (std::exception &) {
@@ -520,18 +511,17 @@ void StreamBackend::sendCancellation(int id, int numLost) {
 		/* A connection failure occurred - this will eventually be
 		   caught and handled in run() and is therefore ignored for now */
 	}
-	m_sendMutex->unlock();
 }
 
 void StreamBackend::sendWorkResult(int id, const WorkResult *result, bool cancelled) {
-	m_sendMutex->lock();
+	LockGuard lock(m_sendMutex);
 	m_memStream->reset();
 	m_memStream->writeShort(cancelled ? ECancelledWorkResult : EWorkResult);
 	m_memStream->writeInt(id);
 	if (!cancelled)
 		result->save(m_memStream);
 	try {
-		m_memStream->setPos(0);
+		m_memStream->seek(0);
 		m_memStream->copyTo(m_stream);
 		m_stream->flush();
 	} catch (std::exception &) {
@@ -539,7 +529,6 @@ void StreamBackend::sendWorkResult(int id, const WorkResult *result, bool cancel
 		/* A connection failure occurred - this will eventually be
 		   caught and handled in run() and is therefore ignored for now */
 	}
-	m_sendMutex->unlock();
 }
 
 /* ==================================================================== */
@@ -567,7 +556,7 @@ RemoteProcess::~RemoteProcess() {
 ParallelProcess::EStatus RemoteProcess::generateWork(WorkUnit *unit, int worker) {
 	EStatus status;
 
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	if (m_full.size() > 0) {
 		unit->set(m_full.front());
 		m_empty.push_back(m_full.front());
@@ -576,7 +565,6 @@ ParallelProcess::EStatus RemoteProcess::generateWork(WorkUnit *unit, int worker)
 	} else {
 		status = m_done ? EFailure : EPause;
 	}
-	m_mutex->unlock();
 	return status;
 }
 
@@ -592,11 +580,10 @@ ref<WorkProcessor> RemoteProcess::createWorkProcessor() const {
 void RemoteProcess::handleCancellation() {
 	/* Also acquire the local queue mutex, purge all queued 
 	   work units and inform the remote side how many were lost */
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	m_backend->sendCancellation(m_id, (int) m_full.size());
 	m_empty.insert(m_empty.end(), m_full.begin(), m_full.end());
 	m_full.clear();
-	m_mutex->unlock();
 }
 
 MTS_IMPLEMENT_CLASS(RemoteWorker, false, Worker)

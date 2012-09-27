@@ -245,3 +245,51 @@ The general usage of this command is
 $\texttt{\$}$ mtsutil [options] <utility name> [arguments]
 \end{shell}
 For a listing of all supported options and utilities, enter the command without parameters.
+
+\subsubsection{Tonemapper}
+\label{sec:tonemapper}
+One particularly useful utility that shall be mentioned here is the batch tonemapper, which
+loads EXR/RGBE images and writes tonemapped 8-bit PNG/JPGs. This can save much time when one has to
+process many high dynamic-range images such as animation frames using the same basic operations, 
+e.g. gamma correction, changing the overall brightness, resizing, cropping, etc. The available
+command line options are shown in \lstref{tonemap-cli}.
+
+\begin{console}[label=lst:tonemap-cli,caption=Command line options of the \texttt{mtsutil tonemap} utility]
+$\texttt{\$}$ mtsutil tonemap
+Synopsis: Loads one or more EXR/RGBE images and writes tonemapped 8-bit PNG/JPGs
+Usage: mtsutil tonemap [options] <EXR/RGBE file (s)>
+Options/Arguments:
+   -h             Display this help text
+
+   -g gamma       Specify the gamma value (The default is -1 => sRGB)
+
+   -m multiplier  Multiply the pixel values by 'multiplier' (Default = 1)
+
+   -b r,g,b       Color balance: apply the specified per-channel multipliers
+
+   -c x,y,w,h     Crop: tonemap a given rectangle instead of the entire image
+
+   -s w,h         Resize the output image to the specified resolution
+
+   -r x,y,w,h,i   Add a rectangle at the specified position and intensity, e.g.
+                  to make paper figures. The intensity should be in [0, 255].
+
+   -f fmt         Request a certain output format (png/jpg, default:png)
+
+   -a             Require the output image to have an alpha channel
+
+   -p key,burn    Run Reinhard et al.'s photographic tonemapping operator. 'key'
+                  between [0, 1] chooses between low and high-key images and
+                  'burn' (also [0, 1]) controls how much highlights may burn out
+
+   -x             Temporal coherence mode: activate this flag when tonemapping 
+                  frames of an animation using the '-p' option to avoid flicker
+
+   -o file        Save the output with a given filename
+
+   -t             Multithreaded: process several files in parallel
+
+ The operations are ordered as follows: 1. crop, 2. resize, 3. color-balance, 
+ 4. tonemap, 5. annotate. To simply process a directory full of EXRs in 
+ parallel, run the following: 'mtsutil tonemap -t path-to-directory/*.exr'
+\end{console}

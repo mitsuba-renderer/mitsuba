@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__TRIACCEL_H)
-#define __TRIACCEL_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_TRIACCEL_H_)
+#define __MITSUBA_RENDER_TRIACCEL_H_
 
 #include <mitsuba/render/trimesh.h>
 
@@ -27,7 +28,8 @@ MTS_NAMESPACE_BEGIN
 static const uint32_t KNoTriangleFlag = 0xFFFFFFFF;
 
 /**
- * Pre-computed triangle representation using Ingo Wald's TriAccel layout. 
+ * \brief Pre-computed triangle representation based on Ingo Wald's TriAccel layout. 
+ *
  * Fits into three 16-byte cache lines if single precision floats are used.
  * The k parameter is also used for classification during kd-tree construction.
  * \ingroup librender
@@ -54,11 +56,6 @@ struct TriAccel {
 	/// Fast ray-triangle intersection test
 	FINLINE bool rayIntersect(const Ray &ray, Float mint, Float maxt,
 		Float &u, Float &v, Float &t) const;
-		
-#if defined(MTS_SSE)
-	FINLINE __m128 rayIntersectPacket(const RayPacket4 &packet, const
-		__m128 mint, __m128 maxt, __m128 inactive, Intersection4 &its) const;
-#endif
 };
 
 inline int TriAccel::load(const Point &A, const Point &B, const Point &C) {
@@ -137,6 +134,12 @@ FINLINE bool TriAccel::rayIntersect(const Ray &ray, Float mint, Float maxt,
 	}
 #endif
 
+
+#if defined(MTS_DEBUG_FP)
+	if (d_u * n_u + d_v * n_v + d_k == 0)
+		return false;
+#endif
+
 	/* Calculate the plane intersection (Typo in the thesis?) */
 	t = (n_d - o_u*n_u - o_v*n_v - o_k) /
 		(d_u * n_u + d_v * n_v + d_k);
@@ -156,8 +159,4 @@ FINLINE bool TriAccel::rayIntersect(const Ray &ray, Float mint, Float maxt,
 
 MTS_NAMESPACE_END
 
-#ifdef MTS_SSE
-#include <mitsuba/render/triaccel_sse.h>
-#endif
-
-#endif /* __TRIACCEL_H */
+#endif /* __MITSUBA_RENDER_TRIACCEL_H_ */

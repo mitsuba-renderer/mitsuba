@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,10 +18,13 @@
 
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/emitter.h>
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/trimesh.h>
+#include <mitsuba/render/sensor.h>
+#include <mitsuba/render/medium.h>
 #include <mitsuba/core/properties.h>
+#include <mitsuba/core/warp.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -68,9 +71,9 @@ MTS_NAMESPACE_BEGIN
  *             <scale value="0.3"/>
  *             <translate y="1" z="0.3"/>
  *         </transform>
- *         <luminaire type="area">
+ *         <emitter type="area">
  *             <spectrum name="intensity" value="4"/>
- *         </luminaire>
+ *         </emitter>
  *     </shape>
  * </scene>
  * \end{xml}
@@ -104,13 +107,13 @@ public:
 		Vector dpdu = m_objectToWorld(Vector(1, 0, 0));
 		Vector dpdv = m_objectToWorld(Vector(0, 1, 0));
 
-		if (std::abs(dot(dpdu, dpdv)) > Epsilon)
+		if (std::abs(dot(dpdu, dpdv)) > 1e-3f)
 			Log(EError, "Error: 'toWorld' transformation contains shear!");
 
-		if (std::abs(dpdu.length() / dpdv.length() - 1) > Epsilon)
+		if (std::abs(dpdu.length() / dpdv.length() - 1) > 1e-3f)
 			Log(EError, "Error: 'toWorld' transformation contains a non-uniform scale!");
 
-		m_surfaceArea = M_PI * dpdu.length() * dpdu.length();
+		m_invSurfaceArea = 1.0f / (M_PI * dpdu.length() * dpdu.length());
 	}
 
 	AABB getAABB() const {
@@ -123,7 +126,9 @@ public:
 	}
 
 	Float getSurfaceArea() const {
-		return m_surfaceArea;
+		Vector dpdu = m_objectToWorld(Vector(1, 0, 0));
+		Vector dpdv = m_objectToWorld(Vector(0, 1, 0));
+		return M_PI * dpdu.length() * dpdv.length();
 	}
 
 	inline bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *temp) const {
@@ -168,20 +173,26 @@ public:
 
 		Float cosPhi = data[0] * invR, sinPhi = data[1] * invR;
 
-		its.dpdu = m_objectToWorld(Vector(cosPhi, sinPhi, 0));
-		its.dpdv = m_objectToWorld(Vector(-sinPhi, cosPhi, 0));
+		its.shape = this;
+		if (r != 0) {
+			its.dpdu = m_objectToWorld(Vector(cosPhi, sinPhi, 0));
+			its.dpdv = m_objectToWorld(Vector(-sinPhi, cosPhi, 0));
+		} else {
+			its.dpdu = m_objectToWorld(Vector(1, 0, 0));
+			its.dpdv = m_objectToWorld(Vector(0, 1, 0));
+		}
 
 		its.shFrame = its.geoFrame = Frame(
 			normalize(its.dpdu), normalize(its.dpdv), m_normal);
 		its.uv = Point2(r, phi * INV_TWOPI);
 		its.p = ray(its.t);
 		its.wi = its.toLocal(-ray.d);
-		its.shape = this;
  		its.hasUVPartials = false;
+		its.instance = NULL;
 	}
 
 	ref<TriMesh> createTriMesh() {
-		const unsigned int phiSteps = 40;
+		const uint32_t phiSteps = 40;
 
 		ref<TriMesh> mesh = new TriMesh(getName(),
 			phiSteps-1, 2*phiSteps, true, true, false);
@@ -194,7 +205,7 @@ public:
 		Float dphi = (2 * M_PI) / (Float) (phiSteps-1);
 
 		Point center = m_objectToWorld(Point(0.0f));
-		for (size_t i=0; i<phiSteps; ++i) {
+		for (uint32_t i=0; i<phiSteps; ++i) {
 			Float phi = i*dphi;
 			vertices[i] = center;
 			vertices[phiSteps+i] = m_objectToWorld(
@@ -207,39 +218,58 @@ public:
 			texcoords[phiSteps+i] = Point2(1.0f, phi * INV_TWOPI);
 		}
 
-		for (size_t i=0; i<phiSteps-1; ++i) {
+		for (uint32_t i=0; i<phiSteps-1; ++i) {
 			triangles[i].idx[0] = i;
 			triangles[i].idx[1] = i+phiSteps;
 			triangles[i].idx[2] = i+phiSteps+1;
 		}
 
-		mesh->setBSDF(m_bsdf);
-		mesh->setLuminaire(m_luminaire);
+		mesh->copyAttachments(this);
 		mesh->configure();
 
 		return mesh.get();
+	}
+
+	void getNormalDerivative(const Intersection &its,
+			Vector &dndu, Vector &dndv, bool shadingFrame) const {
+		dndu = dndv = Vector(0.0f);
+	}
+
+	void samplePosition(PositionSamplingRecord &pRec, const Point2 &sample) const {
+		Point2 p = Warp::squareToUniformDiskConcentric(sample);
+
+		pRec.p = m_objectToWorld(Point3(p.x, p.y, 0));
+		pRec.n = m_normal;
+		pRec.pdf = m_invSurfaceArea;
+		pRec.measure = EArea;
+	}
+
+	Float pdfPosition(const PositionSamplingRecord &pRec) const {
+		return m_invSurfaceArea;
+	}
+
+	size_t getPrimitiveCount() const {
+		return 1;
+	}
+
+	size_t getEffectivePrimitiveCount() const {
+		return 1;
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Disk[" << endl
 			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << ", " << endl
-			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl
-			<< "  luminaire = " << indent(m_luminaire.toString()) << "," << endl
+			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
+		if (isMediumTransition()) {
+			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
+				<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
+		}
+		oss << "  emitter = " << indent(m_emitter.toString()) << "," << endl
+			<< "  sensor = " << indent(m_sensor.toString()) << "," << endl
 			<< "  subsurface = " << indent(m_subsurface.toString()) << endl
 			<< "]";
 		return oss.str();
-	}
-
-	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
-		sRec.n = m_normal;
-		Point2 p = squareToDiskConcentric(sample);
-		sRec.p = m_objectToWorld(Point3(p.x, p.y, 0));
-		return 1.0f / m_surfaceArea;
-	}
-
-	Float pdfArea(const ShapeSamplingRecord &sRec) const {
-		return 1.0f / m_surfaceArea;
 	}
 
 	MTS_DECLARE_CLASS()
@@ -248,6 +278,7 @@ private:
 	Transform m_worldToObject;
 	Normal m_normal;
 	Float m_surfaceArea;
+	Float m_invSurfaceArea;
 };
 
 MTS_IMPLEMENT_CLASS_S(Disk, false, Shape)

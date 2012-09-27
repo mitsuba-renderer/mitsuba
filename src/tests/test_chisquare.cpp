@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -19,6 +19,7 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/chisquare.h>
+#include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/testcase.h>
 #include <boost/bind.hpp>
 
@@ -40,7 +41,7 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * This testcase checks if the sampling methods of various BSDF & phase  
- * function & luminaire implementations really do what they promise in 
+ * function & emitter implementations really do what they promise in 
  * their pdf() methods
  */
 class TestChiSquare : public TestCase {
@@ -48,7 +49,7 @@ public:
 	MTS_BEGIN_TESTCASE()
 	MTS_DECLARE_TEST(test01_BSDF)
 	MTS_DECLARE_TEST(test02_PhaseFunction)
-	MTS_DECLARE_TEST(test03_LuminaireDirect)
+	MTS_DECLARE_TEST(test03_EmitterDirect)
 	MTS_END_TESTCASE()
 
 	/**
@@ -78,9 +79,6 @@ public:
 			m_sampleIndex = 0;
 		}
 		
-		Float independent1D() { SLog(EError, "Not supported!"); return 0; }
-		Point2 independent2D() { SLog(EError, "Not supported!"); return Point2(0.0f); }
-
 		ref<Sampler> clone() {
 			SLog(EError, "Not supported!");
 			return NULL;
@@ -105,13 +103,13 @@ public:
 			m_its.dudx = m_its.dvdy = 0.01f;
 			m_its.dudy = m_its.dvdx = 0.00f;
 			m_its.shFrame = Frame(Normal(0, 0, 1));
-			m_isSymmetric = true;
+//			m_isSymmetric = true;
 		}
 
 		boost::tuple<Vector, Float, EMeasure> generateSample() {
 			Point2 sample(m_sampler->next2D());
-			BSDFQueryRecord bRec(m_its, m_fakeSampler);
-			bRec.quantity = EImportance;
+			BSDFSamplingRecord bRec(m_its, m_fakeSampler);
+			bRec.mode = EImportance;
 			bRec.component = m_component;
 			bRec.wi = m_wi;
 
@@ -138,11 +136,12 @@ public:
 			pdfVal = m_bsdf->pdf(bRec, measure);
 			Spectrum manual = f/pdfVal;
 
+#if 0
 			if (m_isSymmetric) {
 				/* Check for non-symmetry */
-				BSDFQueryRecord bRecRev(bRec);
+				BSDFSamplingRecord bRecRev(bRec);
 				bRecRev.reverse();
-				bRec.quantity = EImportance;
+				bRec.mode = EImportance;
 				Spectrum fFwd = f;
 				Spectrum fRev = m_bsdf->eval(bRecRev, measure);
 				if (measure == ESolidAngle) {
@@ -159,7 +158,7 @@ public:
 					}
 				}
 			}
-
+#endif
 
 			if (!sampled.isValid() || !sampled2.isValid() || !manual.isValid()) {
 				Log(EWarn, "Oops: sampled=%s, sampled2=%s, manual=%s, sampledPDF=%f, "
@@ -211,8 +210,8 @@ public:
 		}
  
 		Float pdf(const Vector &wo, EMeasure measure) {
-			BSDFQueryRecord bRec(m_its, m_wi, wo);
-			bRec.quantity = EImportance;
+			BSDFSamplingRecord bRec(m_its, m_wi, wo);
+			bRec.mode = EImportance;
 			bRec.component = m_component;
 
 			#if defined(MTS_DEBUG_FP)
@@ -231,7 +230,7 @@ public:
 		}
 
 		inline Float getLargestWeight() const { return m_largestWeight; }
-		inline bool isSymmetric() const { return m_isSymmetric; }
+//		inline bool isSymmetric() const { return m_isSymmetric; }
 	private:
 		Intersection m_its;
 		ref<const BSDF> m_bsdf;
@@ -240,7 +239,7 @@ public:
 		Vector m_wi;
 		int m_component;
 		Float m_largestWeight;
-		bool m_isSymmetric;
+//		bool m_isSymmetric;
 	};
 
 	/// Adapter to use Phase functions in the chi-square test
@@ -254,8 +253,7 @@ public:
 		}
 
 		boost::tuple<Vector, Float, EMeasure> generateSample() {
-			Point2 sample(m_sampler->next2D());
-			PhaseFunctionQueryRecord pRec(m_mRec, m_wi);
+			PhaseFunctionSamplingRecord pRec(m_mRec, m_wi);
 			
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
@@ -271,7 +269,7 @@ public:
 			pdfVal = m_phase->pdf(pRec);
 			Float manual = f/pdfVal;
 
-			if (mts_isnan(sampled) || mts_isnan(sampled2) || mts_isnan(manual) ||
+			if (std::isnan(sampled) || std::isnan(sampled2) || std::isnan(manual) ||
 				sampled < 0 || sampled2 < 0 || manual < 0) {
 				Log(EWarn, "Oops: sampled=%f, sampled2=%f, manual=%f, sampledPDF=%f, "
 					"pdf=%f, f=%f, pRec=%s", sampled, sampled2, manual,
@@ -317,7 +315,7 @@ public:
 			if (measure != ESolidAngle)
 				return 0.0f;
 
-			PhaseFunctionQueryRecord pRec(m_mRec, m_wi, wo);
+			PhaseFunctionSamplingRecord pRec(m_mRec, m_wi, wo);
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
@@ -341,73 +339,64 @@ public:
 	};
 
 	/// Adapter to use direct illumination sampling in the chi-square test
-	class LuminaireAdapter {
+	class EmitterAdapter {
 	public:
-		LuminaireAdapter(const Luminaire *luminaire, Sampler *sampler)
-			: m_luminaire(luminaire), m_sampler(sampler) { }
+		EmitterAdapter(const Emitter *emitter, Sampler *sampler)
+			: m_emitter(emitter), m_sampler(sampler), m_pRec(0.0f) {
+			emitter->samplePosition(m_pRec, m_sampler->next2D());
+		}
 
 		boost::tuple<Vector, Float, EMeasure> generateSample() {
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
 
-			LuminaireSamplingRecord lRec;
-			m_luminaire->sample(Point(0.0f), lRec, m_sampler->next2D());
-			Spectrum value = lRec.value / lRec.pdf;
-			Float pdf = m_luminaire->pdf(Point(0.0f), lRec, false);
-			Spectrum Le = m_luminaire->Le(Ray(Point(0.0f), -lRec.d, 0.0f));
-			Spectrum value2 = Le/pdf;
-
-			bool mismatch = false;
-			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-				Float a = value[i], b = value2[i];
-				Float min = std::min(a, b);
-				Float err = std::abs(a - b);
-
-				if (min < ERROR_REQ && err > ERROR_REQ) // absolute error threshold
-					mismatch = true;
-				else if (min > ERROR_REQ && err/min > ERROR_REQ) // relative error threshold
-					mismatch = true;
-			}
-
-			if (mismatch) 
-				Log(EWarn, "Potential inconsistency: f/pdf=%s (sampled), f/pdf=%s (evaluated), f=%s, pdf=%f, pdf2=%f",
-					value.toString().c_str(), value2.toString().c_str(), Le.toString().c_str(), pdf, lRec.pdf);
+			DirectSamplingRecord dRec(Point(0.0f), 0);
+			m_emitter->sampleDirect(dRec, m_sampler->next2D());
 
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
 
-			return boost::make_tuple(lRec.d, 1.0f, ESolidAngle);
+			return boost::make_tuple(dRec.d, 1.0f, dRec.measure);
 		}
  
 		Float pdf(const Vector &d, EMeasure measure) const {
 			if (measure != ESolidAngle)
 				return 0.0f;
+			
+			DirectSamplingRecord dRec(Point(0.0f), 0);
+			dRec.d = d;
+			dRec.measure = ESolidAngle;
 
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
-			LuminaireSamplingRecord lRec;
-			lRec.d = d;
-			Float result = m_luminaire->pdf(Point(0.0f), lRec, false);
+	
+			Float result = m_emitter->pdfDirect(dRec);
+			
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
+
 			return result;
 		}
 
 	private:
-		ref<const Luminaire> m_luminaire;
+		ref<const Emitter> m_emitter;
 		ref<Sampler> m_sampler;
+		PositionSamplingRecord m_pRec;
 	};
 
 	void test01_BSDF() {
 		/* Load a set of BSDF instances to be tested from the following XML file */
-		ref<Scene> scene = loadScene("data/tests/test_bsdf.xml");
+		FileResolver *resolver = Thread::getThread()->getFileResolver();
+		const fs::path scenePath =
+			resolver->resolveAbsolute("data/tests/test_bsdf.xml");
+		ref<Scene> scene = loadScene(scenePath);
 	
-		const std::vector<ConfigurableObject *> objects = scene->getReferencedObjects();
-		size_t thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
+		const ref_vector<ConfigurableObject> &objects = scene->getReferencedObjects();
+		int thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(Sampler), Properties("independent")));
 		ProgressReporter *progress = new ProgressReporter("Checking", wiSamples, NULL);
@@ -417,7 +406,7 @@ public:
 			if (!objects[i]->getClass()->derivesFrom(MTS_CLASS(BSDF)))
 				continue;
 
-			const BSDF *bsdf = static_cast<const BSDF *>(objects[i]);
+			const BSDF *bsdf = static_cast<const BSDF *>(objects[i].get());
 			Float largestWeight = 0;
 
 			Log(EInfo, "Processing BSDF model %s", bsdf->toString().c_str());
@@ -426,13 +415,13 @@ public:
 			progress->reset();
 #if 1
 			/* Test for a number of different incident directions */
-			for (size_t j=0; j<wiSamples; ++j) {
+			for (int j=0; j<wiSamples; ++j) {
 				Vector wi;
 	
 				if (bsdf->getType() & BSDF::EBackSide)
-					wi = squareToSphere(sampler->next2D());
+					wi = Warp::squareToUniformSphere(sampler->next2D());
 				else
-					wi = squareToHemispherePSA(sampler->next2D());
+					wi = Warp::squareToCosineHemisphere(sampler->next2D());
 
 				BSDFAdapter adapter(bsdf, sampler, wi, -1);
 				ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
@@ -459,8 +448,8 @@ public:
 				++testCount;
 				progress->update(j+1);
 
-				if (!adapter.isSymmetric())
-					Log(EWarn, "****** BSDF is non-symmetric! ******");
+//				if (!adapter.isSymmetric())
+//					Log(EWarn, "****** BSDF is non-symmetric! ******");
 			}
 			Log(EInfo, "The largest encountered importance weight was = %.2f", largestWeight);
 
@@ -473,13 +462,13 @@ public:
 					Log(EInfo, "Individually checking BSDF component %i", comp);
 
 					/* Test for a number of different incident directions */
-					for (size_t j=0; j<wiSamples; ++j) {
+					for (int j=0; j<wiSamples; ++j) {
 						Vector wi;
 			
 						if (bsdf->getType(comp) & BSDF::EBackSide)
-							wi = squareToSphere(sampler->next2D());
+							wi = Warp::squareToUniformSphere(sampler->next2D());
 						else
-							wi = squareToHemispherePSA(sampler->next2D());
+							wi = Warp::squareToCosineHemisphere(sampler->next2D());
 
 						BSDFAdapter adapter(bsdf, sampler, wi, comp);
 
@@ -518,10 +507,13 @@ public:
 
 	void test02_PhaseFunction() {
 		/* Load a set of phase function instances to be tested from the following XML file */
-		ref<Scene> scene = loadScene("data/tests/test_phase.xml");
+		FileResolver *resolver = Thread::getThread()->getFileResolver();
+		const fs::path scenePath =
+			resolver->resolveAbsolute("data/tests/test_phase.xml");
+		ref<Scene> scene = loadScene(scenePath);
 	
-		const std::vector<ConfigurableObject *> objects = scene->getReferencedObjects();
-		size_t thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
+		const ref_vector<ConfigurableObject> &objects = scene->getReferencedObjects();
+		int thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(Sampler), Properties("independent")));
 
@@ -532,7 +524,7 @@ public:
 			if (!objects[i]->getClass()->derivesFrom(MTS_CLASS(PhaseFunction)))
 				continue;
 
-			const PhaseFunction *phase = static_cast<const PhaseFunction *>(objects[i]);
+			const PhaseFunction *phase = static_cast<const PhaseFunction *>(objects[i].get());
 			Float largestWeight = 0;
 
 			Log(EInfo, "Processing phase function model %s", phase->toString().c_str());
@@ -541,11 +533,11 @@ public:
 			MediumSamplingRecord mRec;
 
 			/* Sampler fiber/particle orientation */
-			mRec.orientation = squareToSphere(sampler->next2D());
+			mRec.orientation = Warp::squareToUniformSphere(sampler->next2D());
 
 			/* Test for a number of different incident directions */
-			for (size_t j=0; j<wiSamples; ++j) {
-				Vector wi = squareToSphere(sampler->next2D());
+			for (int j=0; j<wiSamples; ++j) {
+				Vector wi = Warp::squareToUniformSphere(sampler->next2D());
 
 				PhaseFunctionAdapter adapter(mRec, phase, sampler, wi);
 				ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
@@ -580,30 +572,33 @@ public:
 		delete progress;
 	}
 
-	void test03_LuminaireDirect() {
-		/* Load a set of luminaire instances to be tested from the following XML file */
-		ref<Scene> scene = loadScene("data/tests/test_luminaire.xml");
+	void test03_EmitterDirect() {
+		/* Load a set of emitter instances to be tested from the following XML file */
+		FileResolver *resolver = Thread::getThread()->getFileResolver();
+		const fs::path scenePath =
+			resolver->resolveAbsolute("data/tests/test_emitter.xml");
+		ref<Scene> scene = loadScene(scenePath);
 		scene->initialize();
 	
-		const std::vector<Luminaire *> luminaires = scene->getLuminaires();
-		size_t thetaBins = 10, failureCount = 0, testCount = 0;
+		const ref_vector<Emitter> &emitters = scene->getEmitters();
+		int thetaBins = 10, failureCount = 0, testCount = 0;
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(Sampler), Properties("independent")));
 
-		Log(EInfo, "Verifying luminaire sampling routines ..");
-		for (size_t i=0; i<luminaires.size(); ++i) {
-			const Luminaire *luminaire = luminaires[i];
+		Log(EInfo, "Verifying emitter sampling routines ..");
+		for (size_t i=0; i<emitters.size(); ++i) {
+			const Emitter *emitter = emitters[i].get();
 
-			Log(EInfo, "Processing luminaire function model %s", luminaire->toString().c_str());
+			Log(EInfo, "Processing emitter function model %s", emitter->toString().c_str());
 
-			LuminaireAdapter adapter(luminaire, sampler);
+			EmitterAdapter adapter(emitter, sampler);
 			ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, 1);
 			chiSqr->setLogLevel(EDebug);
 
 			// Initialize the tables used by the chi-square test
 			chiSqr->fill(
-				boost::bind(&LuminaireAdapter::generateSample, &adapter),
-				boost::bind(&LuminaireAdapter::pdf, &adapter, _1, _2)
+				boost::bind(&EmitterAdapter::generateSample, &adapter),
+				boost::bind(&EmitterAdapter::pdf, &adapter, _1, _2)
 			);
 			chiSqr->dumpTables("test.m");
 
@@ -620,7 +615,7 @@ public:
 			}
 			++testCount;
 		}
-		Log(EInfo, "%i/%i luminaire checks succeeded", testCount-failureCount, testCount);
+		Log(EInfo, "%i/%i emitter checks succeeded", testCount-failureCount, testCount);
 	}
 };
 

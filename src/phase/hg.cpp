@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -45,17 +45,17 @@ class HGPhaseFunction : public PhaseFunction {
 public:
 	HGPhaseFunction(const Properties &props) 
 		: PhaseFunction(props) {
-		/* Asymmetry parameter: must
-		   lie in [-1, 1] where >0 is forward scattering and <0 is backward
-		   scattering. */
+		/* Asymmetry parameter: must lie in [-1, 1] where >0 is 
+		   forward scattering and <0 is backward scattering. */
 		m_g = props.getFloat("g", 0.8f);
 		if (m_g >= 1 || m_g <= -1)
-			Log(EError, "Asymmetry parameter must be in the interval (-1, 1)!");
+			Log(EError, "The asymmetry parameter must lie in the interval (-1, 1)!");
 	}
 
 	HGPhaseFunction(Stream *stream, InstanceManager *manager) 
 		: PhaseFunction(stream, manager) {
 		m_g = stream->readFloat();
+		configure();
 	}
 
 	virtual ~HGPhaseFunction() { }
@@ -66,7 +66,12 @@ public:
 		stream->writeFloat(m_g);
 	}
 
-	inline Float sample(PhaseFunctionQueryRecord &pRec,
+	void configure() {
+		PhaseFunction::configure();
+		m_type = EAngleDependence;
+	}
+
+	inline Float sample(PhaseFunctionSamplingRecord &pRec,
 			Sampler *sampler) const {
 		Point2 sample(sampler->next2D());
 
@@ -78,29 +83,34 @@ public:
 			cosTheta = (1 + m_g * m_g - sqrTerm * sqrTerm) / (2 * m_g);
 		}
 
-		Float sinTheta = std::sqrt(std::max((Float) 0, 1.0f-cosTheta*cosTheta));
-		Float phi = 2*M_PI*sample.y, cosPhi = std::cos(phi), sinPhi = std::sin(phi);
+		Float sinTheta = math::safe_sqrt(1.0f-cosTheta*cosTheta),
+			  sinPhi, cosPhi;
+	
+		math::sincos(2*M_PI*sample.y, &sinPhi, &cosPhi);
 
-		Vector dir(
+		pRec.wo = Frame(-pRec.wi).toWorld(Vector(
 			sinTheta * cosPhi,
 			sinTheta * sinPhi,
-			cosTheta);
-		pRec.wo = Frame(-pRec.wi).toWorld(dir);
+			cosTheta
+		));
 
 		return 1.0f;
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec,
+	Float sample(PhaseFunctionSamplingRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
 		HGPhaseFunction::sample(pRec, sampler);
 		pdf = HGPhaseFunction::eval(pRec);
 		return 1.0f;
 	}
 
+	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
+		Float temp = 1.0f + m_g*m_g + 2.0f * m_g * dot(pRec.wi, pRec.wo);
+		return INV_FOURPI * (1 - m_g*m_g) / (temp * std::sqrt(temp));
+	}
 
-	Float eval(const PhaseFunctionQueryRecord &pRec) const {
-		return 1/(4*M_PI) * (1 - m_g*m_g) /
-			std::pow(1.f + m_g*m_g - 2.f * m_g * dot(-pRec.wi, pRec.wo), (Float) 1.5f);
+	Float getMeanCosine() const {
+		return m_g;
 	}
 
 	std::string toString() const {

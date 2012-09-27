@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -29,6 +29,7 @@
 			SLog(EError, "Unable to load PreviewSettings.nib");
 		[panel setDelegate: self];
 		active = NO;
+		previewEnabled = YES;
 	}
 	return self;
 }
@@ -69,7 +70,7 @@
 - (void) updateUI {
 	int sel_previewMethod = [previewMethod indexOfSelectedItem];
 	int sel_toneMappingMethod = [toneMappingMethod indexOfSelectedItem];
-	bool hasShadowMaps = (sel_previewMethod == EOpenGL || sel_previewMethod == EOpenGLSinglePass);
+	bool hasShadowMaps = sel_previewMethod == EOpenGL;
 	bool hasKey = (sel_toneMappingMethod == EReinhard);
 	bool hasGamma = [sRGB state] == NSOffState;
 	bool hasDiffuseSources = [diffuseSourcesBox state] == NSOnState;
@@ -77,7 +78,7 @@
 	std::string exposureStr = formatString("%.1f", [exposure floatValue]);
 
 	[exposureLabel setStringValue: hasKey ? @"Burn :" : @"Exposure"];
-	[shadowMapResolution setEnabled: (BOOL) hasShadowMaps];
+	[shadowMapResolution setEnabled: (BOOL) hasShadowMaps && previewEnabled];
 	[[shadowMapLabel animator] setAlphaValue: hasShadowMaps ? 1.0f : 0.5f];
 	[[shadowMapResolution animator] setAlphaValue: hasShadowMaps ? 1.0f : 0.5f];
 	[reinhardKey setEnabled: (BOOL) hasKey];
@@ -88,7 +89,7 @@
 	[[gamma animator] setAlphaValue: hasGamma ? 1.0f : 0.5f];
 	[gammaValueLabel setStringValue: [NSString stringWithCString: gammaStr.c_str() encoding: NSASCIIStringEncoding]];
 	[exposureValueLabel setStringValue: [NSString stringWithCString: exposureStr.c_str() encoding: NSASCIIStringEncoding]];
-	[diffuseReceiversBox setEnabled: (BOOL) hasDiffuseSources];
+	[diffuseReceiversBox setEnabled: (BOOL) hasDiffuseSources && previewEnabled];
 	[[diffuseReceiversBox animator] setAlphaValue: hasDiffuseSources ? 1.0f : 0.5f];
 }
 
@@ -221,6 +222,18 @@
 	context = ctx;
 }
 
+- (void) setPreviewEnabled: (BOOL) enabled {
+	previewEnabled = enabled;
+	[previewMethod setEnabled: enabled];
+	[shadowMapResolution setEnabled: enabled];
+	[shadowMapLabel setEnabled: enabled];
+	[pathLength setEnabled: enabled];
+	[clamping setEnabled: enabled];
+	[diffuseSourcesBox setEnabled: enabled];
+	[diffuseReceiversBox setEnabled: enabled];
+	[shadowMapLabel setEnabled: enabled];
+}
+
 @end
 
 PreviewSettingsDlg::PreviewSettingsDlg(QWidget *parent) : QObject(parent) {
@@ -258,3 +271,8 @@ void PreviewSettingsDlg::setContext(SceneContext *ctx) {
 bool PreviewSettingsDlg::isActiveWindow() const {
 	return [m_dlg isActiveWindow];
 }
+
+void PreviewSettingsDlg::setPreviewEnabled(bool enabled) {
+	[m_dlg setPreviewEnabled: (BOOL) enabled];
+}
+

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -19,7 +19,7 @@
 #include <mitsuba/render/skdtree.h>
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
-#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/emitter.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -61,6 +61,12 @@ public:
 
 	/// Return a pointer to the internal KD-tree
 	inline const ShapeKDTree *getKDTree() const { return m_kdtree.get(); }
+
+	/// Return the primitive count of the nested shapes
+	size_t getPrimitiveCount() const;
+	
+	/// Return the effective primitive count of this shape (always zero)
+	size_t getEffectivePrimitiveCount() const;
 
 	/// Return the name of the geometry group
 	std::string getName() const;

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -19,7 +19,9 @@
 #include <mitsuba/render/medium.h>
 #include <mitsuba/render/phase.h>
 #include <mitsuba/core/timer.h>
-#include <omp.h>
+#if defined(MTS_OPENMP)
+# include <omp.h>
+#endif
 #include "bre.h"
 
 MTS_NAMESPACE_BEGIN
@@ -40,15 +42,27 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 	m_nodes = new BRENode[m_photonCount];
 
 	Log(EInfo, "Computing photon radii ..");
-	int tcount = mts_get_max_threads();
+	#if defined(MTS_OPENMP)
+		int tcount = omp_get_max_threads();
+	#else
+		int tcount = 1;
+	#endif
 	PhotonMap::SearchResult **resultsPerThread = new PhotonMap::SearchResult*[tcount];
  	for (int i=0; i<tcount; ++i)
 		resultsPerThread[i] = new PhotonMap::SearchResult[reducedLookupSize+1];
 
 	ref<Timer> timer = new Timer();
-	#pragma omp parallel for
+	#if defined(MTS_OPENMP)
+		#pragma omp parallel for
+	#endif
 	for (int i=0; i<(int) m_photonCount; ++i) {
-		PhotonMap::SearchResult *results = resultsPerThread[mts_get_thread_num()];
+		#if defined(MTS_OPENMP)
+			int tid = omp_get_thread_num();
+		#else
+			int tid = 0;
+		#endif
+
+		PhotonMap::SearchResult *results = resultsPerThread[tid];
 		const Photon &photon = pmap->operator[](i);
 		BRENode &node = m_nodes[i];
 		node.photon = photon;
@@ -163,7 +177,7 @@ Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium) const 
 
 			Spectrum transmittance = Spectrum(-sigmaT * diskDistance).exp();
 			result += transmittance * node.photon.getPower()
-				* phase->eval(PhaseFunctionQueryRecord(mRec, wi, -ray.d)) *
+				* phase->eval(PhaseFunctionSamplingRecord(mRec, wi, -ray.d)) *
 				(weight * m_scaleFactor);
 		}
 	}

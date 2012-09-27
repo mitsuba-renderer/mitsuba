@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,10 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__STREAM_H)
-#define __STREAM_H
+#pragma once
+#if !defined(__MITSUBA_CORE_STREAM_H_)
+#define __MITSUBA_CORE_STREAM_H_
 
 #include <mitsuba/mitsuba.h>
+#include <mitsuba/core/half.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -41,11 +43,12 @@ private:
  *
  * Specifies all functions to be implemented by stream 
  * subclasses and provides various convenience functions
- * based on them.
+ * layered on top of on them.
  *
  * All read<b>X</b>() and write<b>X</b>() methods support transparent
- * endianness conversion based on the endianness of the underlying 
- * system and the value passed to \ref setByteOrder().
+ * conversion based on the endianness of the underlying system and the 
+ * value passed to \ref setByteOrder(). Whenever \ref getHostByteOrder()
+ * and \ref getByteOrder() disagree, the endianness is swapped.
  *
  * \sa FileStream, MemoryStream, SocketStream, 
  *     ConsoleStream, SSHStream, ZStream
@@ -84,13 +87,13 @@ public:
 	inline EByteOrder getByteOrder() const { return m_byteOrder; }
 
 	/// Return the byte order of the underlying machine
-	inline EByteOrder getHostByteOrder() { return m_hostByteOrder; }
+	inline static EByteOrder getHostByteOrder() { return m_hostByteOrder; }
 	
 	/// @}
 	// ======================================================================
 
 	// ======================================================================
-	/// @{ \name Abstract methods that need to be implemented by subclasses
+	//! @{ \name Abstract methods that need to be implemented by subclasses
 	// ======================================================================
 
 	/**
@@ -108,7 +111,7 @@ public:
 	virtual void write(const void *ptr, size_t size) = 0;
 
 	/// Seek to a position inside the stream
-	virtual void setPos(size_t pos) = 0;
+	virtual void seek(size_t pos) = 0;
 
 	/// Truncate the stream to a given size
 	virtual void truncate(size_t size) = 0;
@@ -128,11 +131,11 @@ public:
 	/// Can we read from the stream?
 	virtual bool canRead() const = 0;
 
-	/// @}
+	//! @}
 	// ======================================================================
 	
 	// ======================================================================
-	/// @{ \name Convenience functions with automatic endianness conversion
+	//! @{ \name Convenience functions with automatic endianness conversion
 	// ======================================================================
 
 	/// Skip the given number of bytes
@@ -191,7 +194,13 @@ public:
 
 	/// Write a boolean (8 bit) to the stream
 	inline void writeBool(bool value) { writeUChar(value); }
-	
+
+	/// Write a half-precision halfing point number (16 bit) to the stream
+	void writeHalf(half value);
+
+	/// Write a half-precision halfing point array (16 bit) to the stream
+	void writeHalfArray(const half *data, size_t size);
+
 	/// Write a single-precision floating point number (32 bit) to the stream
 	void writeSingle(float value);
 	
@@ -279,10 +288,16 @@ public:
 	/// Read a boolean (8 bit) from the stream
 	inline bool readBool() { return static_cast<bool> (readUChar()); }
 
+	/// Read a half-precision halfing point number (16 bit) from the stream
+	half readHalf();
+
+	/// Read a half-precision halfing point array (16 bit) from the stream
+	void readHalfArray(half *data, size_t size);
+
 	/// Read a single-precision floating point number (32 bit) from the stream
 	float readSingle();
 
-	/// Read a double-precision floating point array (64 bit) from the stream
+	/// Read a single-precision floating point array (32 bit) from the stream
 	void readSingleArray(float *data, size_t size);
 
 	/// Read a double-precision floating point number (64 bit) from the stream
@@ -342,7 +357,7 @@ public:
 	 */
 	template <typename T> void writeArray(const T *array, size_t count);
 
-	/// @}
+	//! @}
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -371,6 +386,7 @@ template <typename T> inline void Stream::writeArray(const T *array, size_t coun
 }
 
 /// \cond
+template <> inline half Stream::readElement() { return readHalf(); }
 template <> inline float Stream::readElement() { return readSingle(); }
 template <> inline double Stream::readElement() { return readDouble(); }
 template <> inline char Stream::readElement() { return readChar(); }
@@ -384,6 +400,7 @@ template <> inline int64_t Stream::readElement() { return readLong(); }
 template <> inline uint64_t Stream::readElement() { return readULong(); }
 template <> inline std::string Stream::readElement() { return readString(); }
 
+template <> inline void Stream::writeElement(half val) { return writeHalf(val); }
 template <> inline void Stream::writeElement(float val) { return writeSingle(val); }
 template <> inline void Stream::writeElement(double val) { return writeDouble(val); }
 template <> inline void Stream::writeElement(char val) { return writeChar(val); }
@@ -397,6 +414,7 @@ template <> inline void Stream::writeElement(int64_t val) { return writeLong(val
 template <> inline void Stream::writeElement(uint64_t val) { return writeULong(val); }
 template <> inline void Stream::writeElement(const std::string &val) { return writeString(val); }
 
+template <> inline void Stream::readArray(half *array, size_t count) { return readHalfArray(array, count); }
 template <> inline void Stream::readArray(float *array, size_t count) { return readSingleArray(array, count); }
 template <> inline void Stream::readArray(double *array, size_t count) { return readDoubleArray(array, count); }
 template <> inline void Stream::readArray(char *array, size_t count) { return read((uint8_t *) array, count); }
@@ -409,6 +427,7 @@ template <> inline void Stream::readArray(uint32_t *array, size_t count) { retur
 template <> inline void Stream::readArray(int64_t *array, size_t count) { return readLongArray(array, count); }
 template <> inline void Stream::readArray(uint64_t *array, size_t count) { return readULongArray(array, count); }
 
+template <> inline void Stream::writeArray(const half *array, size_t count) { return writeHalfArray(array, count); }
 template <> inline void Stream::writeArray(const float *array, size_t count) { return writeSingleArray(array, count); }
 template <> inline void Stream::writeArray(const double *array, size_t count) { return writeDoubleArray(array, count); }
 template <> inline void Stream::writeArray(const char *array, size_t count) { return write((uint8_t *) array, count); }
@@ -421,9 +440,10 @@ template <> inline void Stream::writeArray(const uint32_t *array, size_t count) 
 template <> inline void Stream::writeArray(const int64_t *array, size_t count) { return writeLongArray(array, count); }
 template <> inline void Stream::writeArray(const uint64_t *array, size_t count) { return writeULongArray(array, count); }
 
+extern MTS_EXPORT_CORE std::ostream &operator<<(std::ostream &os, const Stream::EByteOrder &value);
 
 /// \endcond
 
 MTS_NAMESPACE_END
 
-#endif /* __STREAM_H */
+#endif /* __MITSUBA_CORE_STREAM_H_ */

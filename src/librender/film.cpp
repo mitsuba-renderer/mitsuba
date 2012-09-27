@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,15 +18,18 @@
 
 #include <mitsuba/render/film.h>
 #include <mitsuba/core/plugin.h>
+#include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
 
 Film::Film(const Properties &props)
- : ConfigurableObject(props), m_properties(props) {
+ : ConfigurableObject(props) {
+	bool isMFilm = boost::to_lower_copy(props.getPluginName()) == "mfilm";
+
 	/* Horizontal and vertical film resolution in pixels */
 	m_size = Vector2i(
-		props.getInteger("width", 768),
-		props.getInteger("height", 576)
+		props.getInteger("width", isMFilm ? 1 : 768),
+		props.getInteger("height", isMFilm ? 1 : 576)
 	);
 	/* Crop window specified in pixels - by default, this
 	   matches the full sensor area */
@@ -58,11 +61,9 @@ Film::Film(Stream *stream, InstanceManager *manager)
 	m_cropSize = Vector2i(stream);
 	m_highQualityEdges = stream->readBool();
 	m_filter = static_cast<ReconstructionFilter *>(manager->getInstance(stream));
-	m_tabulatedFilter = new TabulatedFilter(m_filter);
 }
 
-Film::~Film() {
-}
+Film::~Film() { }
 
 void Film::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
@@ -79,7 +80,6 @@ void Film::addChild(const std::string &name, ConfigurableObject *child) {
 	if (cClass->derivesFrom(MTS_CLASS(ReconstructionFilter))) {
 		Assert(m_filter == NULL);
 		m_filter = static_cast<ReconstructionFilter *>(child);
-		m_tabulatedFilter = new TabulatedFilter(m_filter);
 	} else {
 		Log(EError, "Film: Invalid child node! (\"%s\")",
 			cClass->getName().c_str());
@@ -88,10 +88,10 @@ void Film::addChild(const std::string &name, ConfigurableObject *child) {
 
 void Film::configure() {
 	if (m_filter == NULL) {
-		/* No reconstruction filter has been selected. Load a gaussian filter by default */
+		/* No reconstruction filter has been selected. Load a Gaussian filter by default */
 		m_filter = static_cast<ReconstructionFilter *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(ReconstructionFilter), Properties("gaussian")));
-		m_tabulatedFilter = new TabulatedFilter(m_filter);
+		m_filter->configure();
 	}
 }
 

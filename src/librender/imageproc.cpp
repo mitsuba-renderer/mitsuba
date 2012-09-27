@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -25,10 +25,10 @@ MTS_NAMESPACE_BEGIN
 /*                          BlockedImageProcess                         */
 /* ==================================================================== */
 
-void BlockedImageProcess::init(const Point2i &offset, const Vector2i &size, int blockSize) {
+void BlockedImageProcess::init(const Point2i &offset, const Vector2i &size, uint32_t blockSize) {
 	m_offset = offset;
 	m_size = size;
-	m_blockSize = blockSize;
+	m_blockSize = (int) blockSize;
 	m_direction = ERight;
 	m_numBlocks = Vector2i(
 		(int) std::ceil((Float) size.x / (Float) blockSize),

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -24,6 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{gridtexture}{Procedural grid texture}
+ * \order{2}
  * \parameters{
  *     \parameter{color0}{\Spectrum}{
  *       Color values of the background
@@ -71,7 +72,7 @@ public:
 		stream->writeFloat(m_lineWidth);
 	}
 
-	inline Spectrum getValue(const Point2 &uv) const {
+	inline Spectrum eval(const Point2 &uv) const {
 		Float x = uv.x - floorToInt(uv.x);
 		Float y = uv.y - floorToInt(uv.y);
 
@@ -86,9 +87,10 @@ public:
 			return m_color0;
 	}
 	
-	Spectrum getValue(const Point2 &uv, Float dudx, 
-			Float dudy, Float dvdx, Float dvdy) const {
-		return GridTexture::getValue(uv);
+	Spectrum eval(const Point2 &uv,
+			const Vector2 &d0, const Vector2 &d1) const {
+		/* Filtering is currently not supported */
+		return GridTexture::eval(uv);
 	}
 
 	bool usesRayDifferentials() const {

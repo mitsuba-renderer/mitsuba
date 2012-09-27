@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -98,11 +98,20 @@ Spectrum PhotonMap::estimateIrradiance(
 		if (photon.getDepth() > maxDepth)
 			continue;
 
-		/* Don't use photons from the opposite side of the surface */
-		if (dot(photon.getDirection(), n) < 0) {
+		Vector wi = -photon.getDirection();
+		Vector photonNormal = photon.getNormal();
+		Float wiDotGeoN = dot(photonNormal, wi),
+			  wiDotShN  = dot(n, wi);
+
+		/* Only use photons from the top side of the surface */
+		if (dot(wi, n) > 0 && dot(photonNormal, n) > 1e-1f && wiDotGeoN > 1e-2f) {
+			/* Account for non-symmetry due to shading normals */
+			Spectrum power = photon.getPower() * std::abs(wiDotShN / wiDotGeoN);
+
 			/* Weight the samples using Simpson's kernel */
 			Float sqrTerm = 1.0f - searchResult.distSquared*invSquaredRadius;
-			result += photon.getPower() * (sqrTerm*sqrTerm);
+
+			result += power * (sqrTerm*sqrTerm);
 		}
 	}
 
@@ -122,7 +131,7 @@ Spectrum PhotonMap::estimateRadiance(const Intersection &its,
 
 	/* Sum over all contributions */
 	Spectrum result(0.0f);
-	const BSDF *bsdf = its.shape->getBSDF();
+	const BSDF *bsdf = its.getBSDF();
 	for (size_t i=0; i<resultCount; i++) {
 		const SearchResult &searchResult = results[i];
 		const Photon &photon = m_kdtree[searchResult.index];
@@ -130,7 +139,7 @@ Spectrum PhotonMap::estimateRadiance(const Intersection &its,
 
 		Vector wi = its.toLocal(-photon.getDirection());
 
-		BSDFQueryRecord bRec(its, wi, its.wi, EImportance);
+		BSDFSamplingRecord bRec(its, wi, its.wi, EImportance);
 		result += photon.getPower() * bsdf->eval(bRec) * (sqrTerm*sqrTerm);
 	}
 
@@ -143,7 +152,7 @@ Spectrum PhotonMap::estimateRadiance(const Intersection &its,
 struct RawRadianceQuery {
 	RawRadianceQuery(const Intersection &its, int maxDepth)
 	  : its(its), maxDepth(maxDepth), result(0.0f) { 
-		bsdf = its.shape->getBSDF();
+		bsdf = its.getBSDF();
 	}
 
 	inline void operator()(const Photon &photon) {
@@ -156,16 +165,15 @@ struct RawRadianceQuery {
 			|| wiDotGeoN < 1e-2f)
 			return;
 
-		/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
-		BSDFQueryRecord bRec(its, its.toLocal(wi), its.wi, EImportance);
+		BSDFSamplingRecord bRec(its, its.toLocal(wi), its.wi, EImportance);
 
 		Spectrum value = photon.getPower() * bsdf->eval(bRec);
 		if (value.isZero())
 			return;
 
 		/* Account for non-symmetry due to shading normals */
-		value *= Frame::cosTheta(bRec.wi) / 
-			(wiDotGeoN * Frame::cosTheta(bRec.wo));
+		value *= std::abs(Frame::cosTheta(bRec.wi) / 
+			(wiDotGeoN * Frame::cosTheta(bRec.wo)));
 
 		result += value;
 	}

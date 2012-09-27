@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -23,7 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{coating}{Smooth dielectric coating}
- * \order{9}
+ * \order{10}
  * \icon{bsdf_coating}
  *
  * \parameters{
@@ -106,19 +106,20 @@ MTS_NAMESPACE_BEGIN
  */
 class SmoothCoating : public BSDF {
 public:
-	/// \sa refractTo()
-	enum EDestination {
-		EInterior = 0,
-		EExterior = 1
-	};
-
 	SmoothCoating(const Properties &props) 
 			: BSDF(props) {
 		/* Specifies the internal index of refraction at the interface */
-		m_intIOR = lookupIOR(props, "intIOR", "bk7");
+		Float intIOR = lookupIOR(props, "intIOR", "bk7");
 
 		/* Specifies the external index of refraction at the interface */
-		m_extIOR = lookupIOR(props, "extIOR", "air");
+		Float extIOR = lookupIOR(props, "extIOR", "air");
+		
+		if (intIOR < 0 || extIOR < 0 || intIOR == extIOR)
+			Log(EError, "The interior and exterior indices of "
+				"refraction must be positive and differ!");
+
+		m_eta = intIOR / extIOR;
+		m_invEta = 1 / m_eta;
 
 		/* Specifies the layer's thickness using the inverse units of sigmaA */
 		m_thickness = props.getFloat("thickness", 1);
@@ -130,21 +131,27 @@ public:
 		/* Specifies a multiplier for the specular reflectance component */
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
-
-		if (m_intIOR < 0 || m_extIOR < 0 || m_intIOR == m_extIOR)
-			Log(EError, "The interior and exterior indices of "
-				"refraction must be positive and differ!");
 	}
 
 	SmoothCoating(Stream *stream, InstanceManager *manager) 
 			: BSDF(stream, manager) {
-		m_intIOR = stream->readFloat();
-		m_extIOR = stream->readFloat();
+		m_eta = stream->readFloat();
 		m_thickness = stream->readFloat();
 		m_nested = static_cast<BSDF *>(manager->getInstance(stream));
 		m_sigmaA = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
+		m_invEta = 1 / m_eta;
 		configure();
+	}
+
+	void serialize(Stream *stream, InstanceManager *manager) const {
+		BSDF::serialize(stream, manager);
+
+		stream->writeFloat(m_eta);
+		stream->writeFloat(m_thickness);
+		manager->serialize(stream, m_nested.get());
+		manager->serialize(stream, m_sigmaA.get());
+		manager->serialize(stream, m_specularReflectance.get());
 	}
 
 	void configure() {
@@ -180,17 +187,6 @@ public:
 		BSDF::configure();
 	}
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		BSDF::serialize(stream, manager);
-
-		stream->writeFloat(m_intIOR);
-		stream->writeFloat(m_extIOR);
-		stream->writeFloat(m_thickness);
-		manager->serialize(stream, m_nested.get());
-		manager->serialize(stream, m_sigmaA.get());
-		manager->serialize(stream, m_specularReflectance.get());
-	}
-
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(BSDF))) {
 			if (m_nested != NULL)
@@ -208,59 +204,35 @@ public:
 		return Vector(-wi.x, -wi.y, wi.z);
 	}
 
-	/// Refraction in local coordinates 
-	Vector refractTo(EDestination dest,
-			const Vector &wi, Float &F) const {
-		Float etaI, etaT;
-		if (dest == EInterior) {
-			etaI = m_extIOR;
-			etaT = m_intIOR;
-		} else {
-			etaI = m_intIOR;
-			etaT = m_extIOR;
-		}
-
-		Float cosThetaI = Frame::cosTheta(wi);
-		bool entering = cosThetaI > 0.0f;
-
-		/* Using Snell's law, calculate the squared sine of the
-		   angle between the normal and the transmitted ray */
-		Float eta = etaI / etaT,
-			  sinThetaTSqr = eta*eta * Frame::sinTheta2(wi);
-
-		if (sinThetaTSqr >= 1.0f) {
-			/* Total internal reflection */
-			F = 1.0f;
-
-			return Vector(0.0f);
-		} else {
-			Float cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
-
-			/* Compute the Fresnel transmittance */
-			F = fresnelDielectric(std::abs(Frame::cosTheta(wi)),
-				cosThetaT, etaI, etaT);
-
-			/* Retain the directionality of the vector */
-			return Vector(eta*wi.x, eta*wi.y, 
-				entering ? cosThetaT : -cosThetaT);
-		}
+	/// Refract into the material, preserve sign of direction
+	inline Vector refractIn(const Vector &wi, Float &R) const {
+		Float cosThetaT;
+		R = fresnelDielectricExt(std::abs(Frame::cosTheta(wi)), cosThetaT, m_eta);
+		return Vector(m_invEta*wi.x, m_invEta*wi.y, -math::signum(Frame::cosTheta(wi)) * cosThetaT);
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	/// Refract out of the material, preserve sign of direction
+	inline Vector refractOut(const Vector &wi, Float &R) const {
+		Float cosThetaT;
+		R = fresnelDielectricExt(std::abs(Frame::cosTheta(wi)), cosThetaT, m_invEta);
+		return Vector(m_eta*wi.x, m_eta*wi.y, -math::signum(Frame::cosTheta(wi)) * cosThetaT);
+	}
+
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		bool sampleSpecular = (bRec.typeMask & EDeltaReflection)
 			&& (bRec.component == -1 || bRec.component == (int) m_components.size()-1);
 		bool sampleNested = (bRec.typeMask & m_nested->getType() & BSDF::EAll)
 			&& (bRec.component == -1 || bRec.component < (int) m_components.size()-1);
 
 		if (measure == EDiscrete && sampleSpecular &&
-			std::abs(1-dot(reflect(bRec.wi), bRec.wo)) < Epsilon) {
-			return m_specularReflectance->getValue(bRec.its) *
-				fresnel(std::abs(Frame::cosTheta(bRec.wi)), m_extIOR, m_intIOR);
+				absDot(reflect(bRec.wi), bRec.wo) > 1-DeltaEpsilon) {
+			return m_specularReflectance->eval(bRec.its) *
+				fresnelDielectricExt(std::abs(Frame::cosTheta(bRec.wi)), m_eta);
 		} else if (sampleNested) {
 			Float R12, R21;
-			BSDFQueryRecord bRecInt(bRec);
-			bRecInt.wi = refractTo(EInterior, bRec.wi, R12);
-			bRecInt.wo = refractTo(EInterior, bRec.wo, R21);
+			BSDFSamplingRecord bRecInt(bRec);
+			bRecInt.wi = refractIn(bRec.wi, R12);
+			bRecInt.wo = refractIn(bRec.wo, R21);
 
 			if (R12 == 1 || R21 == 1) /* Total internal reflection */
 				return Spectrum(0.0f);
@@ -268,16 +240,15 @@ public:
 			Spectrum result = m_nested->eval(bRecInt, measure)
 				* (1-R12) * (1-R21);
 
-			Spectrum sigmaA = m_sigmaA->getValue(bRec.its) * m_thickness;
+			Spectrum sigmaA = m_sigmaA->eval(bRec.its) * m_thickness;
 			if (!sigmaA.isZero()) 
 				result *= (-sigmaA *
 					(1/std::abs(Frame::cosTheta(bRecInt.wi)) +
 					 1/std::abs(Frame::cosTheta(bRecInt.wo)))).exp();
 
 			if (measure == ESolidAngle) {
-				Float eta = m_extIOR / m_intIOR;
 				/* Solid angle compression & irradiance conversion factors */
-				result *= eta * eta * 
+				result *= m_invEta * m_invEta * 
 					  Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo)
 				   / (Frame::cosTheta(bRecInt.wi) * Frame::cosTheta(bRecInt.wo));
 			}
@@ -288,14 +259,14 @@ public:
 		return Spectrum(0.0f);
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		bool sampleSpecular = (bRec.typeMask & EDeltaReflection)
 			&& (bRec.component == -1 || bRec.component == (int) m_components.size()-1);
 		bool sampleNested = (bRec.typeMask & m_nested->getType() & BSDF::EAll)
 			&& (bRec.component == -1 || bRec.component < (int) m_components.size()-1);
 		
 		Float R12;
-		Vector wiPrime = refractTo(EInterior, bRec.wi, R12);
+		Vector wiPrime = refractIn(bRec.wi, R12);
 
 		/* Reallocate samples */
 		Float probSpecular = (R12*m_specularSamplingWeight) /
@@ -303,24 +274,22 @@ public:
 			(1-R12) * (1-m_specularSamplingWeight));
 
 		if (measure == EDiscrete && sampleSpecular &&
-			std::abs(1-dot(reflect(bRec.wi), bRec.wo)) < Epsilon) {
+				absDot(reflect(bRec.wi), bRec.wo) > 1-DeltaEpsilon) {
 			return sampleNested ? probSpecular : 1.0f;
 		} else if (sampleNested) {
 			Float R21;
-			BSDFQueryRecord bRecInt(bRec);
+			BSDFSamplingRecord bRecInt(bRec);
 			bRecInt.wi = wiPrime;
-			bRecInt.wo = refractTo(EInterior, bRec.wo, R21);
+			bRecInt.wo = refractIn(bRec.wo, R21);
 
 			if (R12 == 1 || R21 == 1) /* Total internal reflection */
 				return 0.0f;
 
 			Float pdf = m_nested->pdf(bRecInt, measure);
 
-			if (measure == ESolidAngle) {
-				Float eta = m_extIOR / m_intIOR;
-				pdf *= eta * eta * Frame::cosTheta(bRec.wo)
+			if (measure == ESolidAngle)
+				pdf *= m_invEta * m_invEta * Frame::cosTheta(bRec.wo)
 			          / Frame::cosTheta(bRecInt.wo);
-			}
 
 			return sampleSpecular ? (pdf * (1 - probSpecular)) : pdf;
 		} else {
@@ -328,7 +297,7 @@ public:
 		}
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &_sample) const {
 		bool sampleSpecular = (bRec.typeMask & EDeltaReflection)
 			&& (bRec.component == -1 || bRec.component == (int) m_components.size()-1);
 		bool sampleNested = (bRec.typeMask & m_nested->getType() & BSDF::EAll)
@@ -338,7 +307,7 @@ public:
 			return Spectrum(0.0f);
 
 		Float R12;
-		Vector wiPrime = refractTo(EInterior, bRec.wi, R12);
+		Vector wiPrime = refractIn(bRec.wi, R12);
 
 		/* Reallocate samples */
 		Float probSpecular = (R12*m_specularSamplingWeight) /
@@ -358,11 +327,12 @@ public:
 		}
 
 		if (choseSpecular) {
-			bRec.sampledComponent = m_components.size()-1;
+			bRec.sampledComponent = (int) m_components.size() - 1;
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
+			bRec.eta = 1.0f;
 			pdf = sampleNested ? probSpecular : 1.0f;
-			return m_specularReflectance->getValue(bRec.its) * (R12/pdf);
+			return m_specularReflectance->eval(bRec.its) * (R12/pdf);
 		} else {
 			if (R12 == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
@@ -376,14 +346,14 @@ public:
 
 			Vector woPrime = bRec.wo;
 
-			Spectrum sigmaA = m_sigmaA->getValue(bRec.its) * m_thickness;
+			Spectrum sigmaA = m_sigmaA->eval(bRec.its) * m_thickness;
 			if (!sigmaA.isZero()) 
 				result *= (-sigmaA *
 					(1/std::abs(Frame::cosTheta(wiPrime)) +
 					 1/std::abs(Frame::cosTheta(woPrime)))).exp();
 
 			Float R21;
-			bRec.wo = refractTo(EExterior, woPrime, R21);
+			bRec.wo = refractOut(woPrime, R21);
 			if (R21 == 1.0f) /* Total internal reflection */
 				return Spectrum(0.0f);
 
@@ -396,29 +366,24 @@ public:
 
 			if (BSDF::getMeasure(bRec.sampledType) == ESolidAngle) {
 				/* Solid angle compression & irradiance conversion factors */
-				Float eta = m_extIOR / m_intIOR, etaSqr = eta*eta;
-
 				result *= Frame::cosTheta(bRec.wi) / Frame::cosTheta(wiPrime);
-				pdf *= etaSqr * Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime);
+				pdf *= m_invEta * m_invEta * Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime);
 			}
-
+			
 			return result;
 		}
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		Float pdf;
 		return SmoothCoating::sample(bRec, pdf, sample);
 	}
 
-	Shader *createShader(Renderer *renderer) const;
-
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SmoothCoating[" << endl
-			<< "  name = \"" << getName() << "\"," << endl
-			<< "  intIOR = " << m_intIOR << "," << endl 
-			<< "  extIOR = " << m_extIOR << "," << endl
+			<< "  id = \"" << getID() << "\"," << endl
+			<< "  eta = " << m_eta << "," << endl 
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
@@ -428,10 +393,12 @@ public:
 		return oss.str();
 	}
 
+	Shader *createShader(Renderer *renderer) const;
+
 	MTS_DECLARE_CLASS()
 protected:
 	Float m_specularSamplingWeight;
-	Float m_intIOR, m_extIOR;
+	Float m_eta, m_invEta;
 	ref<Texture> m_sigmaA;
 	ref<Texture> m_specularReflectance;
 	ref<BSDF> m_nested;
@@ -446,12 +413,11 @@ protected:
  */
 class SmoothCoatingShader : public Shader {
 public:
-	SmoothCoatingShader(Renderer *renderer, Float extIOR, Float intIOR, const BSDF *nested,
-			const Texture *sigmaA) : Shader(renderer, EBSDFShader), m_nested(nested), m_sigmaA(sigmaA) {
+	SmoothCoatingShader(Renderer *renderer, Float eta, const BSDF *nested,
+			const Texture *sigmaA) : Shader(renderer, EBSDFShader), m_nested(nested), m_sigmaA(sigmaA), m_eta(eta) {
 		m_nestedShader = renderer->registerShaderForResource(m_nested.get());
 		m_sigmaAShader = renderer->registerShaderForResource(m_sigmaA.get());
-		m_R0 = fresnel(1.0f, extIOR, intIOR);
-		m_eta = extIOR / intIOR;
+		m_R0 = fresnelDielectricExt(1.0f, eta);
 	}
 
 	bool isComplete() const {
@@ -564,7 +530,7 @@ private:
 };
 
 Shader *SmoothCoating::createShader(Renderer *renderer) const { 
-	return new SmoothCoatingShader(renderer, m_extIOR, m_intIOR, 
+	return new SmoothCoatingShader(renderer, m_eta,
 		m_nested.get(), m_sigmaA.get());
 }
 

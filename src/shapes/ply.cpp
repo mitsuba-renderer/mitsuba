@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -33,6 +33,12 @@
 #endif
 #endif
 
+#if !MTS_USE_BOOST_TR1 && defined(_MSC_VER) && (_MSC_VER >= 1600)
+# define PLY_USE_NULLPTR 1
+#else
+# define PLY_USE_NULLPTR 0
+#endif
+
 using namespace std::tr1::placeholders;
 
 MTS_NAMESPACE_BEGIN
@@ -47,6 +53,11 @@ MTS_NAMESPACE_BEGIN
  *       When set to \code{true}, Mitsuba will use face normals when rendering
  *       the object, which will give it a faceted apperance. \default{\code{false}}
  *	   }
+ *     \parameter{maxSmoothAngle}{\Float}{
+ *       When specified, Mitsuba will discard all vertex normals in the input mesh and rebuild
+ *       them in a way that is sensitive to the presence of creases and corners. For more
+ *       details on this parameter, see page~\pageref{sec:maxSmoothAngle}. Disabled by default.
+ *     }
  *     \parameter{flipNormals}{\Boolean}{
  *       Optional flag to flip all normals. \default{\code{false}, i.e.
  *       the normals are left unchanged}.
@@ -62,8 +73,8 @@ MTS_NAMESPACE_BEGIN
  *	   }
  * }
  * \renderings{
- *     \rendering{The PLY plugin is useful for loading heavy geometry. (Thai
- *         statue courtesy of XYZ RGB)}{shape_ply_thaistatue}
+ *     \rendering{The PLY plugin is useful for loading large geometry. (Dragon
+ *         statue courtesy of XYZ RGB)}{shape_ply_dragon}
  *     \rendering{The Stanford bunny loaded with \code{faceNormals=true}. Note
  *         the faceted appearance.}{shape_ply_bunny}
  * }
@@ -82,7 +93,7 @@ public:
 	PLYLoader(const Properties &props) : TriMesh(props) {
 		fs::path filePath = Thread::getThread()->getFileResolver()->resolve(
 			props.getString("filename"));
-		m_name = filePath.stem();
+		m_name = filePath.stem().string();
 
 		/* Determines whether vertex colors should be 
 		   treated as linear RGB or sRGB. */
@@ -92,7 +103,10 @@ public:
 		m_objectToWorld = props.getTransform("toWorld", Transform());
 
 		/* Load the geometry */
-		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.leaf().c_str());
+		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.filename().c_str());
+		if (!fs::exists(filePath))
+			Log(EError, "PLY file \"%s\" could not be found!", filePath.c_str());
+
 		m_triangleCount = m_vertexCount = 0;
 		m_vertexCtr = m_triangleCtr = m_triangleIdxCtr = 0;
 		m_normal = Normal(0.0f);
@@ -103,6 +117,13 @@ public:
 		loadPLY(filePath);
 		if (m_triangleCount == 0 || m_vertexCount == 0)
 			Log(EError, "Unable to load \"%s\" (no triangles or vertices found)!");
+
+		if (props.hasProperty("maxSmoothAngle")) {
+			if (m_faceNormals)
+				Log(EError, "The properties 'maxSmoothAngle' and 'faceNormals' "
+				"can't be specified at the same time!");
+			rebuildTopology(props.getFloat("maxSmoothAngle"));
+		}
 
 		Assert(m_triangleCtr == m_triangleCount);
 		Assert(m_vertexCtr == m_vertexCount);
@@ -158,9 +179,15 @@ public:
 				std::tr1::bind(&PLYLoader::face_end_callback, this)
 			);
 		} else {
+#if PLY_USE_NULLPTR
+			return
+				std::tr1::tuple<std::tr1::function<void()>,
+				std::tr1::function<void()> >(nullptr, nullptr);
+#else
 			return
 				std::tr1::tuple<std::tr1::function<void()>,
 				std::tr1::function<void()> >(0, 0);
+#endif
 		}
 	}
 
@@ -190,30 +217,35 @@ public:
 
 	void vertex_begin_callback() { }
 	void vertex_end_callback() {
-		m_positions[m_vertexCtr] = m_objectToWorld(m_position);
+		Point p = m_objectToWorld(m_position);
+		m_aabb.expandBy(p);
+		m_positions[m_vertexCtr] = p;
 		if (m_normals)
 			m_normals[m_vertexCtr] = m_objectToWorld(m_normal);
 		if (m_texcoords)
 			m_texcoords[m_vertexCtr] = m_uv;
 		if (m_colors) {
 			if (m_sRGB)
-				m_colors[m_vertexCtr].fromSRGB(m_red, m_green, m_blue);
+				m_colors[m_vertexCtr] = Color3(
+					fromSRGBComponent(m_red),
+					fromSRGBComponent(m_green),
+					fromSRGBComponent(m_blue));
 			else
-				m_colors[m_vertexCtr].fromLinearRGB(m_red, m_green, m_blue);
+				m_colors[m_vertexCtr] = Color3(m_red, m_green, m_blue);
 		}
 		m_vertexCtr++;
 	}
 
 	void red_callback_uint8(ply::uint8 r) {
 		if (!m_colors)
-			m_colors = new Spectrum[m_vertexCount];
+			m_colors = new Color3[m_vertexCount];
 		m_red = r / 255.0f;
 	}
 	void green_callback_uint8(ply::uint8 g) { m_green = g / 255.0f; }
 	void blue_callback_uint8(ply::uint8 b) { m_blue = b / 255.0f; }
 	void red_callback(ply::float32 r) {
 		if (!m_colors)
-			m_colors = new Spectrum[m_vertexCount];
+			m_colors = new Color3[m_vertexCount];
 		m_red = r;
 	}
 	void green_callback(ply::float32 g) { m_green = g; }
@@ -310,7 +342,11 @@ template<> std::tr1::function <void (ply::float32)>
 			return std::tr1::bind(&PLYLoader::face_blue_callback, this,  _1);
 		}
 	}
+#if PLY_USE_NULLPTR
+	return nullptr;
+#else
 	return 0;
+#endif
 }
 
 template<> std::tr1::function <void (ply::uint8)> 
@@ -333,7 +369,11 @@ template<> std::tr1::function <void (ply::uint8)>
 			return std::tr1::bind(&PLYLoader::face_blue_callback_uint8, this,  _1);
 		}
 	}
+#if PLY_USE_NULLPTR
+	return nullptr;
+#else
 	return 0;
+#endif
 }
 
 template<> std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
@@ -348,9 +388,15 @@ template<> std::tr1::tuple<std::tr1::function<void (ply::uint8)>,
 			std::tr1::bind(&PLYLoader::face_vertex_indices_end, this)
 		);
 	} else {
+#if PLY_USE_NULLPTR
+		return std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
+			std::tr1::function<void (ply::int32)>, 
+			std::tr1::function<void ()> >(nullptr, nullptr, nullptr);
+#else
 		return std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
 			std::tr1::function<void (ply::int32)>, 
 			std::tr1::function<void ()> >(0, 0, 0);
+#endif
 	}
 }
 
@@ -366,9 +412,15 @@ template<> std::tr1::tuple<std::tr1::function<void (ply::uint32)>,
 			std::tr1::bind(&PLYLoader::face_vertex_indices_end, this)
 		);
 	} else {
+#if PLY_USE_NULLPTR
+		return std::tr1::tuple<std::tr1::function<void (ply::uint32)>, 
+			std::tr1::function<void (ply::int32)>, 
+			std::tr1::function<void ()> >(nullptr, nullptr, nullptr);
+#else
 		return std::tr1::tuple<std::tr1::function<void (ply::uint32)>, 
 			std::tr1::function<void (ply::int32)>, 
 			std::tr1::function<void ()> >(0, 0, 0);
+#endif
 	}
 }
 
@@ -384,9 +436,15 @@ template<> std::tr1::tuple<std::tr1::function<void (ply::uint8)>,
 			std::tr1::bind(&PLYLoader::face_vertex_indices_end, this)
 		);
 	} else {
+#if PLY_USE_NULLPTR
+		return std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
+			std::tr1::function<void (ply::uint32)>, 
+			std::tr1::function<void ()> >(nullptr, nullptr, nullptr);
+#else
 		return std::tr1::tuple<std::tr1::function<void (ply::uint8)>, 
 			std::tr1::function<void (ply::uint32)>, 
 			std::tr1::function<void ()> >(0, 0, 0);
+#endif
 	}
 }
 
@@ -402,9 +460,15 @@ template<> std::tr1::tuple<std::tr1::function<void (ply::uint32)>,
 			std::tr1::bind(&PLYLoader::face_vertex_indices_end, this)
 		);
 	} else {
+#if PLY_USE_NULLPTR
+		return std::tr1::tuple<std::tr1::function<void (ply::uint32)>, 
+			std::tr1::function<void (ply::uint32)>, 
+			std::tr1::function<void ()> >(nullptr, nullptr, nullptr);
+#else
 		return std::tr1::tuple<std::tr1::function<void (ply::uint32)>, 
 			std::tr1::function<void (ply::uint32)>, 
 			std::tr1::function<void ()> >(0, 0, 0);
+#endif
 	}
 }
 
@@ -446,7 +510,7 @@ void PLYLoader::loadPLY(const fs::path &path) {
 	ply_parser.list_property_definition_callbacks(list_property_definition_callbacks);
 
 	ref<Timer> timer = new Timer();
-	ply_parser.parse(path.file_string());
+	ply_parser.parse(path.string());
 
 	size_t vertexSize = sizeof(Point);
 	if (m_normals)

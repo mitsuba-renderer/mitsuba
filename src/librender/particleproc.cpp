@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -67,22 +67,26 @@ ParallelProcess::EStatus ParticleProcess::generateWork(WorkUnit *unit, int worke
 }
 
 void ParticleProcess::increaseResultCount(size_t resultCount) {
-	m_resultMutex->lock();
+	LockGuard lock(m_resultMutex);
 	m_receivedResultCount += resultCount;
 	m_progress->update(m_receivedResultCount);
-	m_resultMutex->unlock();
 }
+
+ParticleTracer::ParticleTracer(int maxDepth, int rrDepth, bool emissionEvents)
+	: m_maxDepth(maxDepth), m_rrDepth(rrDepth), m_emissionEvents(emissionEvents) { }
 
 ParticleTracer::ParticleTracer(Stream *stream, InstanceManager *manager)
 	: WorkProcessor(stream, manager) {
 
 	m_maxDepth = stream->readInt();	
 	m_rrDepth = stream->readInt();	
+	m_emissionEvents = stream->readBool();	
 }
 
 void ParticleTracer::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeInt(m_maxDepth);
 	stream->writeInt(m_rrDepth);
+	stream->writeBool(m_emissionEvents);
 }
 
 ref<WorkUnit> ParticleTracer::createWorkUnit() const {
@@ -90,49 +94,74 @@ ref<WorkUnit> ParticleTracer::createWorkUnit() const {
 }
 
 void ParticleTracer::prepare() {
-	m_scene = new Scene(static_cast<Scene *>(getResource("scene")));
-	m_scene->setCamera(static_cast<Camera *>(getResource("camera")));
+	Scene *scene = static_cast<Scene *>(getResource("scene"));
+	m_scene = new Scene(scene);
 	m_sampler = static_cast<Sampler *>(getResource("sampler"));
+	Sensor *newSensor = static_cast<Sensor *>(getResource("sensor"));
+	m_scene->removeSensor(scene->getSensor());
+	m_scene->addSensor(newSensor);
+	m_scene->setSensor(newSensor);
+	m_scene->initializeBidirectional();
 }
 
 void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult, 
 		const bool &stop) {	
 	const RangeWorkUnit *range = static_cast<const RangeWorkUnit *>(workUnit);
-	EmissionRecord eRec;
 	MediumSamplingRecord mRec;
-	Ray ray;
 	Intersection its;
-	Spectrum weight, bsdfVal;
-	int depth;
-	bool caustic;
-	ref<Camera> camera    = m_scene->getCamera();
-	Float shutterOpen     = camera->getShutterOpen(), 
-		  shutterOpenTime = camera->getShutterOpenTime();
-	bool needsTimeSample  = (shutterOpenTime != 0);
+	ref<Sensor> sensor    = m_scene->getSensor();
+	bool needsTimeSample  = sensor->needsTimeSample();
+	PositionSamplingRecord pRec(sensor->getShutterOpen()
+		+ 0.5f * sensor->getShutterOpenTime());
+	Ray ray;
 
-	m_sampler->generate();
+	m_sampler->generate(Point2i(0));
+
 	for (size_t index = range->getRangeStart(); index <= range->getRangeEnd() && !stop; ++index) {
 		m_sampler->setSampleIndex(index);
-		Point2 areaSample = m_sampler->next2D(), 
-		       dirSample  = m_sampler->next2D();	   
 
-		/* Sample an emitted particle */
-		m_scene->sampleEmission(eRec, areaSample, dirSample);
-		const Medium *medium = eRec.luminaire->getMedium();
-
-		ray = Ray(eRec.sRec.p, eRec.d, shutterOpen);
-		
+		/* Sample an emission */
 		if (needsTimeSample)
-			ray.time += shutterOpenTime * m_sampler->next1D();
+			pRec.time = sensor->sampleTime(m_sampler->next1D());
 
-		handleEmission(eRec, medium, ray.time);
+		const Emitter *emitter = NULL;
+		const Medium *medium;
 
-		weight = eRec.value;
-		depth = 1;
-		caustic = true;
+		Spectrum power;
+		Ray ray;
 
-		while (!weight.isZero() && (depth <= m_maxDepth || m_maxDepth < 0)) {
-			m_scene->rayIntersect(ray, its); 
+		if (m_emissionEvents) {
+			/* Sample the position and direction component separately to
+			   generate emission events */
+			power = m_scene->sampleEmitterPosition(pRec, m_sampler->next2D());
+			emitter = static_cast<const Emitter *>(pRec.object);
+			medium = emitter->getMedium();
+
+			/* Forward the sampling event to the attached handler */
+			handleEmission(pRec, medium, power);
+
+			DirectionSamplingRecord dRec;
+			power *= emitter->sampleDirection(dRec, pRec, 
+					emitter->needsDirectionSample() ? m_sampler->next2D() : Point2(0.5f));
+			ray.setTime(pRec.time);
+			ray.setOrigin(pRec.p);
+			ray.setDirection(dRec.d);
+		} else {
+			/* Sample both components together, which is potentially 
+			   faster / uses a better sampling strategy */
+
+			power = m_scene->sampleEmitterRay(ray, emitter, 
+				m_sampler->next2D(), m_sampler->next2D(), pRec.time);
+			medium = emitter->getMedium();
+			handleNewParticle();
+		}
+
+		int depth = 1;
+		bool delta = false;
+
+		Spectrum throughput(1.0f); // unitless path throughput (used for russian roulette)
+		while (!throughput.isZero() && (depth <= m_maxDepth || m_maxDepth < 0)) {
+			m_scene->rayIntersectAll(ray, its); 
 
             /* ==================================================================== */
             /*                 Radiative Transfer Equation sampling                 */
@@ -142,22 +171,16 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				  \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
 				*/
 
-				weight *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-				handleMediumInteraction(depth, caustic, mRec, medium,
-					ray.time, -ray.d, weight);
+				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
+
+				/* Forward the medium scattering event to the attached handler */
+				handleMediumInteraction(depth, 
+						delta, mRec, medium, -ray.d, throughput*power);
 	
-				PhaseFunctionQueryRecord pRec(mRec, -ray.d, EImportance);
+				PhaseFunctionSamplingRecord pRec(mRec, -ray.d, EImportance);
 
-				weight *= medium->getPhaseFunction()->sample(pRec, m_sampler);
-				caustic = false;
-
-				/* Russian roulette */
-				if (depth >= m_rrDepth) {
-					if (m_sampler->next1D() > mRec.albedo)
-						break;
-					else
-						weight /= mRec.albedo;
-				}
+				throughput *= medium->getPhaseFunction()->sample(pRec, m_sampler);
+				delta = false;
 
 				ray = Ray(mRec.p, pRec.wo, ray.time);
 				ray.mint = 0;
@@ -170,78 +193,67 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 					Account for this and multiply by the proper per-color-channel transmittance.
 				*/
 				if (medium)
-					weight *= mRec.transmittance / mRec.pdfFailure;
+					throughput *= mRec.transmittance / mRec.pdfFailure;
 
-				const BSDF *bsdf = its.shape->getBSDF();
+				const BSDF *bsdf = its.getBSDF();
 
-				if (bsdf)
-					handleSurfaceInteraction(depth, caustic, its, medium, weight);
+				/* Forward the surface scattering event to the attached handler */
+				handleSurfaceInteraction(depth, delta, its, medium, throughput*power);
 
-				if (!bsdf) {
-					/* Pass right through the surface (there is no BSDF) */
-					ray.setOrigin(its.p);
-					ray.mint = Epsilon;
-
-					if (its.isMediumTransition())
-						medium = its.getTargetMedium(ray.d);
-
-					++depth;
-					continue;
-				}
-	
-				BSDFQueryRecord bRec(its, m_sampler, EImportance);
-				bsdfVal = bsdf->sample(bRec, m_sampler->next2D());
-				if (bsdfVal.isZero())
+				BSDFSamplingRecord bRec(its, m_sampler, EImportance);
+				Spectrum bsdfWeight = bsdf->sample(bRec, m_sampler->next2D());
+				if (bsdfWeight.isZero())
 					break;
 
-				/* Russian roulette */
-				if (depth >= m_rrDepth) {
-					/* Assuming that BSDF importance sampling is perfect,
-					   the following should equal the maximum albedo
-					   over all spectral samples */
-					Float approxAlbedo = std::min((Float) 1, bsdfVal.max());
-					if (m_sampler->next1D() > approxAlbedo)
-						break;
-					else
-						weight /= approxAlbedo;
-				}
-
-				weight *= bsdfVal;
-				Vector wi = -ray.d, wo = its.toWorld(bRec.wo);
-				ray.setOrigin(its.p);
-				ray.setDirection(wo);
-				ray.mint = Epsilon;
-
 				/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
+				Vector wi = -ray.d, wo = its.toWorld(bRec.wo);
 				Float wiDotGeoN = dot(its.geoFrame.n, wi),
 				      woDotGeoN = dot(its.geoFrame.n, wo);
 				if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 || 
 					woDotGeoN * Frame::cosTheta(bRec.wo) <= 0)
 					break;
 
+				/* Keep track of the weight, medium and relative
+				   refractive index along the path */
+				throughput *= bsdfWeight;
 				if (its.isMediumTransition())
 					medium = its.getTargetMedium(woDotGeoN);
 
 				/* Adjoint BSDF for shading normals -- [Veach, p. 155] */
-				weight *= std::abs(
+				throughput *= std::abs(
 					(Frame::cosTheta(bRec.wi) * woDotGeoN)/
 					(Frame::cosTheta(bRec.wo) * wiDotGeoN));
 
-				caustic &= (bRec.sampledType & BSDF::EDelta) ? true : false;
+				ray.setOrigin(its.p);
+				ray.setDirection(wo);
+				ray.mint = Epsilon;
+				delta = (bRec.sampledType & (BSDF::EDelta & ~BSDF::ENull));
 			}
-			++depth;
+
+			if (depth++ >= m_rrDepth) {
+				/* Russian roulette: try to keep path weights equal to one,
+				   Stop with at least some probability to avoid 
+				   getting stuck (e.g. due to total internal reflection) */
+
+				Float q = std::min(throughput.max(), (Float) 0.95f);
+				if (m_sampler->next1D() >= q) 
+					break;
+				throughput /= q;
+			}
 		}
 	}
 }
 
-void ParticleTracer::handleEmission(const EmissionRecord &eRec,
-	const Medium *medium, Float time) { }
+void ParticleTracer::handleEmission(const PositionSamplingRecord &pRec, 
+		const Medium *medium, const Spectrum &weight) { }
 
-void ParticleTracer::handleSurfaceInteraction(int depth, bool caustic,
+void ParticleTracer::handleNewParticle() { }
+
+void ParticleTracer::handleSurfaceInteraction(int depth, bool delta,
 	const Intersection &its, const Medium *medium, const Spectrum &weight) { }
 
-void ParticleTracer::handleMediumInteraction(int depth, bool caustic,
-	const MediumSamplingRecord &mRec, const Medium *medium, Float time,
+void ParticleTracer::handleMediumInteraction(int depth, bool delta,
+	const MediumSamplingRecord &mRec, const Medium *medium, 
 	const Vector &wi, const Spectrum &weight) { }
 
 MTS_IMPLEMENT_CLASS(RangeWorkUnit, false, WorkUnit)

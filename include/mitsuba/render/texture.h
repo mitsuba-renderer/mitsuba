@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__TEXTURE_H)
-#define __TEXTURE_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_TEXTURE_H_)
+#define __MITSUBA_RENDER_TEXTURE_H_
 
 #include <mitsuba/core/cobject.h>
 #include <mitsuba/core/properties.h>
@@ -32,29 +33,43 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER Texture : public ConfigurableObject, public HWResource {
 public:
-	/// Return the texture value at \a its
-	virtual Spectrum getValue(const Intersection &its) const = 0;
+	/**
+	 * \brief Return the texture value at \c its
+	 * \param filter
+	 *    Specifies whether a filtered texture lookup is desired. Note
+	 *    that this does not mean that filtering will actually be used.
+	 */
+	virtual Spectrum eval(const Intersection &its, bool filter = true) const;
 
 	/// Return the component-wise average value of the texture over its domain
-	virtual Spectrum getAverage() const = 0;
+	virtual Spectrum getAverage() const;
 
 	/// Return the component-wise minimum of the texture over its domain
-	virtual Spectrum getMinimum() const = 0;
+	virtual Spectrum getMinimum() const;
 
 	/// Return the component-wise maximum of the texture over its domain
-	virtual Spectrum getMaximum() const = 0;
+	virtual Spectrum getMaximum() const;
 
 	/// Return the resolution in pixels, if applicable
 	virtual Vector3i getResolution() const;
 
 	/// Return whether the texture takes on a single constant value
-	virtual bool isConstant() const = 0;
+	virtual bool isConstant() const;
 
 	/**
-	 * \brief Does this texture do pre-filtering when ray 
-	 * differentials are available?
+	 * \brief Does this texture perform any pre-filtering when 
+	 * ray differentials are available?
 	 */
-	virtual bool usesRayDifferentials() const = 0;
+	virtual bool usesRayDifferentials() const;
+
+	/**
+	 * \brief Some textures are only proxies for an actual
+	 * implementation. This function returns the actual
+	 * texture implementation to be used.
+	 *
+	 * The default implementation returns <tt>this</tt>.
+	 */
+	virtual ref<Texture> expand();
 
 	/// Serialize to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
@@ -73,18 +88,23 @@ protected:
  */
 class MTS_EXPORT_RENDER Texture2D : public Texture {
 public:
-	/// Return the texture value at \a its
-	Spectrum getValue(const Intersection &its) const;
+	/**
+	 * \brief Return the texture value at \c its
+	 * \param filter
+	 *    Specifies whether a filtered texture lookup is desired. Note
+	 *    that this does not mean that filtering will actually be used.
+	 */
+	Spectrum eval(const Intersection &its, bool filter = true) const;
 
 	/// Serialize to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
-	/// Texture2D subclass must provide this function
-	virtual Spectrum getValue(const Point2 &uv) const = 0;
+	/// Unfiltered texture lookup -- Texture2D subclasses must provide this function
+	virtual Spectrum eval(const Point2 &uv) const = 0;
 
-	/// Texture2D subclass must provide this function
-	virtual Spectrum getValue(const Point2 &uv, Float dudx,
-			Float dudy, Float dvdx, Float dvdy) const = 0;
+	/// Filtered texture lookup -- Texture2D subclasses must provide this function
+	virtual Spectrum eval(const Point2 &uv, const Vector2 &d0,
+			const Vector2 &d1) const = 0;
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -99,4 +119,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __TEXTURE_H */
+#endif /* __MITSUBA_RENDER_TEXTURE_H_ */

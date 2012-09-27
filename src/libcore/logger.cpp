@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -22,7 +22,9 @@
 #include <stdarg.h>
 
 #if defined(__OSX__)
-#include <sys/sysctl.h>
+# include <sys/sysctl.h>
+#elif defined(WIN32)
+# include <windows.h>
 #endif
 
 MTS_NAMESPACE_BEGIN
@@ -38,9 +40,8 @@ Logger::~Logger() {
 }
 
 void Logger::setFormatter(Formatter *formatter) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	m_formatter = formatter;
-	m_mutex->unlock();
 }
 
 void Logger::setLogLevel(ELogLevel level) {
@@ -85,7 +86,7 @@ void Logger::log(ELogLevel level, const Class *theClass,
 #endif
 
 	if (m_formatter == NULL) {
-		std::cerr << "PANIC: Logging has not been properly initialized!" << std::endl;
+		std::cerr << "PANIC: Logging has not been properly initialized!" << endl;
 		exit(-1);
 	}
 
@@ -96,12 +97,11 @@ void Logger::log(ELogLevel level, const Class *theClass,
 		delete[] msg;
 
 	if (level < m_errorLevel) {
-		m_mutex->lock();
+		LockGuard lock(m_mutex);
 		if (level >= EWarn)
 			m_warningCount++;
 		for (size_t i=0; i<m_appenders.size(); ++i)
 			m_appenders[i]->append(level, text);
-		m_mutex->unlock();
 	} else {
 #if defined(__LINUX__)
 		/* A critical error occurred: trap if we're running in a debugger */
@@ -140,34 +140,48 @@ void Logger::log(ELogLevel level, const Class *theClass,
 
 void Logger::logProgress(Float progress, const std::string &name,
 	const std::string &formatted, const std::string &eta, const void *ptr) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	for (size_t i=0; i<m_appenders.size(); ++i)
 		m_appenders[i]->logProgress(
 			progress, name, formatted, eta, ptr);
-	m_mutex->unlock();
 }
 
 void Logger::addAppender(Appender *appender) {
 	appender->incRef();
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	m_appenders.push_back(appender);
-	m_mutex->unlock();
 }
 
 void Logger::removeAppender(Appender *appender) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	m_appenders.erase(std::remove(m_appenders.begin(), 
 		m_appenders.end(), appender), m_appenders.end());
-	m_mutex->unlock();
 	appender->decRef();
 }
 
+bool Logger::readLog(std::string &target) {
+	bool success = false;
+	LockGuard lock(m_mutex);
+	for (size_t i=0; i<m_appenders.size(); ++i) {
+		Appender *appender = m_appenders[i];
+		if (appender->getClass()->derivesFrom(MTS_CLASS(StreamAppender))) {
+			StreamAppender *streamAppender = 
+				static_cast<StreamAppender *>(appender);
+			if (streamAppender->logsToFile()) {
+				streamAppender->readLog(target);
+				success = true;
+				break;
+			}
+		}
+	}
+	return success;
+}
+
 void Logger::clearAppenders() {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	for (size_t i=0; i<m_appenders.size(); ++i)
 		m_appenders[i]->decRef();
 	m_appenders.clear();
-	m_mutex->unlock();
 }
 
 void Logger::staticInitialization() {

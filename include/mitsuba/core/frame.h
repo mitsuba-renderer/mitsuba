@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__FRAME_H)
-#define __FRAME_H
+#pragma once
+#if !defined(__MITSUBA_CORE_FRAME_H_)
+#define __MITSUBA_CORE_FRAME_H_
 
 #include <mitsuba/mitsuba.h>
 
@@ -119,7 +120,7 @@ struct Frame {
 		Float sinTheta = Frame::sinTheta(v);
 		if (sinTheta == 0.0f)
 			return 1.0f;
-		return clamp(v.y / sinTheta, -1.0f, 1.0f);
+		return clamp(v.y / sinTheta, (Float) -1.0f, (Float) 1.0f);
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate 
@@ -128,21 +129,31 @@ struct Frame {
 		Float sinTheta = Frame::sinTheta(v);
 		if (sinTheta == 0.0f)
 			return 1.0f;
-		return clamp(v.x / sinTheta, -1.0f, 1.0f);
+		return clamp(v.x / sinTheta, (Float) -1.0f, (Float) 1.0f);
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate
 	 * system, return the squared sine of the phi parameter in  spherical
 	 * coordinates */
 	inline static Float sinPhi2(const Vector &v) {
-		return clamp(v.y * v.y / sinTheta2(v), 0.0f, 1.0f);
+		return clamp(v.y * v.y / sinTheta2(v), (Float) 0.0f, (Float) 1.0f);
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate
 	 * system, return the squared cosine of the phi parameter in  spherical
 	 * coordinates */
 	inline static Float cosPhi2(const Vector &v) {
-		return clamp(v.x * v.x / sinTheta2(v), 0.0f, 1.0f);
+		return clamp(v.x * v.x / sinTheta2(v), (Float) 0.0f, (Float) 1.0f);
+	}
+
+	/// Equality test
+	inline bool operator==(const Frame &frame) const {
+		return frame.s == s && frame.t == t && frame.n == n;
+	}
+
+	/// Inequality test
+	inline bool operator!=(const Frame &frame) const {
+		return !operator==(frame);
 	}
 
 	/// Return a string representation of this frame
@@ -159,4 +170,4 @@ struct Frame {
 
 MTS_NAMESPACE_END
 
-#endif /* __FRAME_H */
+#endif /* __MITSUBA_CORE_FRAME_H_ */

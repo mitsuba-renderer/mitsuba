@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__GLPROGRAM_H)
-#define __GLPROGRAM_H
+#pragma once
+#if !defined(__MITSUBA_HW_GLPROGRAM_H_)
+#define __MITSUBA_HW_GLPROGRAM_H_
 
 #include <mitsuba/hw/gpuprogram.h>
 #include <mitsuba/hw/glrenderer.h>
@@ -56,6 +57,9 @@ public:
 
 	/// Set a integer parameter
 	void setParameter(int id, int value);
+	
+	/// Set a unsigned integer parameter
+	void setParameter(int id, uint32_t value);
 
 	/// Set a Vector parameter
 	void setParameter(int id, const Vector &value);
@@ -99,6 +103,9 @@ public:
 	/// Set a Spectrum parameter (will be converted to linear RGB)
 	void setParameter(int id, const Spectrum &value);
 
+	/// Set a Color3 parameter
+	void setParameter(int id, const Color3 &value);
+
 	/** Set a GPUTexture parameter. Must be executed after
 	    binding the texture to a texture unit */
 	void setParameter(int id, const GPUTexture *value); 
@@ -123,4 +130,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __GLPROGRAM_H */
+#endif /* __MITSUBA_HW_GLPROGRAM_H_ */

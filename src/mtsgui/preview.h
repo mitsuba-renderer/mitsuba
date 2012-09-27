@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,11 +20,9 @@
 #define __PREVIEW_H
 
 #include <mitsuba/core/platform.h>
-#include <QtGui>
+#include <QtGui/QtGui>
 #include <mitsuba/hw/vpl.h>
-#include <mitsuba/render/preview.h>
 #include "common.h"
-#include "preview_proc.h"
 
 using namespace mitsuba;
 
@@ -74,8 +72,10 @@ protected:
 	virtual ~PreviewThread();
 	/// Render a single VPL using OpenGL
 	void oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl);
+#if 0
 	/// Render a single VPL using real-time coherent ray tracing
 	void rtrtRenderVPL(PreviewQueueEntry &target, const VPL &vpl);
+#endif
 private:
 	ref<Session> m_session;
 	ref<Device> m_device, m_parentDevice;
@@ -83,7 +83,6 @@ private:
 	ref<VPLShaderManager> m_shaderManager;
 	ref<GPUTexture> m_framebuffer;
 	ref<GPUProgram> m_accumProgram;
-	ref<PreviewProcess> m_previewProc;
 	ref<Random> m_random;
 	int m_accumProgramParam_source1;
 	int m_accumProgramParam_source2;
@@ -100,8 +99,7 @@ private:
 	int m_bufferCount, m_queueEntryIndex;
 	std::deque<VPL> m_vpls;
 	std::vector<GPUTexture *> m_releaseList;
-	Point m_camPos;
-	Transform m_camViewTransform;
+	ref<const AnimatedTransform> m_camTransform;
 	Float m_backgroundScaleFactor;
 	bool m_quit, m_sleep, m_motion, m_useSync;
 	bool m_refreshScene;

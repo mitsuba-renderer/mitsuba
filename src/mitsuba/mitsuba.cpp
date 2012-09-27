@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -17,6 +17,12 @@
 */
 
 #include <mitsuba/core/platform.h>
+
+// Mitsuba's "Assert" macro conflicts with Xerces' XSerializeEngine::Assert(...).
+// This becomes a problem when using a PCH which contains mitsuba/core/logger.h
+#if defined(Assert)
+# undef Assert
+#endif
 #include <xercesc/parsers/SAXParser.hpp>
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/sstream.h>
@@ -30,8 +36,9 @@
 #include <fstream>
 #include <stdexcept>
 
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 #include <mitsuba/core/getopt.h>
+#include <winsock2.h>
 #else
 #include <signal.h>
 #endif
@@ -64,7 +71,6 @@ void help() {
 	cout <<  "               rendering when large amounts of processing power are available" << endl;
 	cout <<  "               (e.g. when running Mitsuba on a cluster. Default: 1)" << endl << endl;
 	cout <<  "   -n name     Assign a node name to this instance (Default: host name)" << endl << endl;
-	cout <<  "   -t          Test case mode (see Mitsuba docs for more information)" << endl << endl;
 	cout <<  "   -x          Skip rendering of files where output already exists" << endl << endl;
 	cout <<  "   -r sec      Write (partial) output images every 'sec' seconds" << endl << endl;
 	cout <<  "   -b res      Specify the block resolution used to split images into parallel" << endl;
@@ -77,7 +83,7 @@ void help() {
 
 ref<RenderQueue> renderQueue = NULL;
 
-#if !defined(WIN32)
+#if !defined(__WINDOWS__)
 /* Handle the hang-up signal and write a partially rendered image to disk */
 void signalHandler(int signal) {
 	if (signal == SIGHUP && renderQueue.get()) {
@@ -120,13 +126,13 @@ int mts_main(int argc, char **argv) {
 
 	try {
 		/* Default settings */
-		int nprocs = getProcessorCount(), numParallelScenes = 1;
+		int nprocs = getCoreCount(), numParallelScenes = 1;
 		std::string nodeName = getHostName(),
 					networkHosts = "", destFile="";
 		bool quietMode = false, progressBars = true, skipExisting = false;
 		ELogLevel logLevel = EInfo;
 		ref<FileResolver> fileResolver = Thread::getThread()->getFileResolver();
-		bool testCaseMode = false, treatWarningsAsErrors = false;
+		bool treatWarningsAsErrors = false;
 		std::map<std::string, std::string, SimpleStringOrdering> parameters;
 		int blockSize = 32;
 		int flushTimer = -1;
@@ -142,8 +148,8 @@ int mts_main(int argc, char **argv) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
-						for (unsigned int i=0; i<paths.size(); ++i) 
-							fileResolver->addPath(paths[i]);
+						for (int i=(int) paths.size()-1; i>=0; --i) 
+							fileResolver->prependPath(paths[i]);
 					}
 					break;
 				case 'c':
@@ -178,10 +184,10 @@ int mts_main(int argc, char **argv) {
 					destFile = optarg;
 					break;
 				case 'v':
-					logLevel = EDebug;
-					break;
-				case 't':
-					testCaseMode = true;
+					if (logLevel != EDebug)
+						logLevel = EDebug;
+					else
+						logLevel = ETrace;
 					break;
 				case 'x':
 					skipExisting = true;
@@ -205,8 +211,8 @@ int mts_main(int argc, char **argv) {
 					blockSize = strtol(optarg, &end_ptr, 10);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the block size!");
-					if (blockSize < 2 || blockSize > 64)
-						SLog(EError, "Invalid block size (should be in the range 2-64)");
+					if (blockSize < 2 || blockSize > 128)
+						SLog(EError, "Invalid block size (should be in the range 2-128)");
 					break;
 				case 'z':
 					progressBars = false;
@@ -283,7 +289,7 @@ int mts_main(int argc, char **argv) {
 				scheduler->registerWorker(new RemoteWorker(formatString("net%i", i), stream));
 			} catch (std::runtime_error &e) {
 				if (hostName.find("@") != std::string::npos) {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 					SLog(EWarn, "Please ensure that passwordless authentication "
 						"using plink.exe and pageant.exe is enabled (see the documentation for more information)");
 #else
@@ -297,7 +303,7 @@ int mts_main(int argc, char **argv) {
 
 		scheduler->start();
 
-#if !defined(WIN32)
+#if !defined(__WINDOWS__)
 			/* Initialize signal handlers */
 			struct sigaction sa;
 			sa.sa_handler = signalHandler;
@@ -317,7 +323,7 @@ int mts_main(int argc, char **argv) {
 		parser->setDoSchema(true);
 		parser->setValidationSchemaFullChecking(true);
 		parser->setValidationScheme(SAXParser::Val_Always);
-		parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
+		parser->setExternalNoNamespaceSchemaLocation(schemaPath.string().c_str());
 		#if !defined(__OSX__)
 			/// Not supported on OSX
 			parser->setCalculateSrcOfs(true);
@@ -331,11 +337,6 @@ int mts_main(int argc, char **argv) {
 
 		renderQueue = new RenderQueue();
 	
-		ref<TestSupervisor> testSupervisor;
-
-		if (testCaseMode)
-			testSupervisor = new TestSupervisor(argc-optind);
-
 		ref<FlushThread> flushThread;
 		if (flushTimer > 0) {
 			flushThread = new FlushThread(flushTimer);
@@ -346,19 +347,16 @@ int mts_main(int argc, char **argv) {
 		for (int i=optind; i<argc; ++i) {
 			fs::path 
 				filename = fileResolver->resolve(argv[i]),
-				filePath = fs::complete(filename).parent_path(),
-				baseName = fs::basename(filename);
+				filePath = fs::absolute(filename).parent_path(),
+				baseName = filename.stem();
 			ref<FileResolver> frClone = fileResolver->clone();
-			frClone->addPath(filePath);
+			frClone->prependPath(filePath);
 			Thread::getThread()->setFileResolver(frClone);
 
 			SLog(EInfo, "Parsing scene description from \"%s\" ..", argv[i]);
 
-			parser->parse(filename.file_string().c_str());
+			parser->parse(filename.string().c_str());
 			ref<Scene> scene = handler->getScene();
-
-			if (scene->getCamera() == NULL)
-				SLog(EError, "Scene does not contain a camera!");
 
 			scene->setSourceFile(filename);
 			scene->setDestinationFile(destFile.length() > 0 ? 
@@ -369,7 +367,7 @@ int mts_main(int argc, char **argv) {
 				continue;
 
 			ref<RenderJob> thr = new RenderJob(formatString("ren%i", jobIdx++), 
-				scene, renderQueue, -1, -1, -1, true, testSupervisor);
+				scene, renderQueue, -1, -1, -1, true, flushTimer > 0);
 			thr->start();
 
 			renderQueue->waitLeft(numParallelScenes-1);
@@ -385,11 +383,8 @@ int mts_main(int argc, char **argv) {
 		delete parser;
 
 		Statistics::getInstance()->printStats();
-
-		if (testCaseMode) 
-			testSupervisor->printSummary();
 	} catch (const std::exception &e) {
-		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
+		std::cerr << "Caught a critical exeption: " << e.what() << endl;
 		return -1;
 	} catch (...) {
 		std::cerr << "Caught a critical exeption of unknown type!" << endl;
@@ -402,16 +397,18 @@ int mts_main(int argc, char **argv) {
 int main(int argc, char **argv) {
 	/* Initialize the core framework */
 	Class::staticInitialization();
+	Object::staticInitialization();
 	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
 	Spectrum::staticInitialization();
+	Bitmap::staticInitialization();
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
 	SceneHandler::staticInitialization();
 
-#ifdef WIN32
+#if defined(__WINDOWS__) 
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
@@ -420,7 +417,7 @@ int main(int argc, char **argv) {
 		SLog(EError, "Could not find the required version of winsock.dll!");
 #endif
 
-#if !defined(WIN32)
+#if defined(__LINUX__) || defined(__OSX__)
 	/* Correct number parsing on some locales (e.g. ru_RU) */
 	setlocale(LC_NUMERIC, "C");
 #endif
@@ -431,14 +428,16 @@ int main(int argc, char **argv) {
 	SceneHandler::staticShutdown();
 	SHVector::staticShutdown();
 	Scheduler::staticShutdown();
+	Bitmap::staticShutdown();
 	Spectrum::staticShutdown();
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();
 	PluginManager::staticShutdown();
+	Object::staticShutdown();
 	Class::staticShutdown();
 	
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	/* Shut down WINSOCK2 */
 	WSACleanup();
 #endif

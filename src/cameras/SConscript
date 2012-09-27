@@ -1,7 +1,0 @@
-Import('env', 'plugins')
-
-plugins += env.SharedLibrary('perspective', ['perspective.cpp'])
-plugins += env.SharedLibrary('orthographic', ['orthographic.cpp'])
-plugins += env.SharedLibrary('environment', ['environment.cpp'])
-
-Export('plugins')

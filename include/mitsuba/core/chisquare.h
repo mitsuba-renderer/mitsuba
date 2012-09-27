@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,10 +16,10 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__CHI_SQUARE_TEST_H)
-#define __CHI_SQUARE_TEST_H
+#pragma once
+#if !defined(__MITSUBA_CORE_CHISQUARE_H_)
+#define __MITSUBA_CORE_CHISQUARE_H_
 
-#include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/common.h>
 #include <boost/tuple/tuple.hpp>
 #include <boost/function.hpp>
@@ -170,7 +170,9 @@ protected:
 	static void integrand(
 		const boost::function<Float (const Vector &, EMeasure)> &pdfFn,
 			size_t nPts, const Float *in, Float *out) {
+		#if defined(MTS_OPENMP)
 		#pragma omp parallel for
+		#endif
 		for (int i=0; i<(int) nPts; ++i)
 			out[i] = pdfFn(sphericalDirection(in[2*i], in[2*i+1]), ESolidAngle)
 				* std::sin(in[2*i]);
@@ -187,4 +189,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __CHI_SQUARE_TEST_H */
+#endif /* __MITSUBA_CORE_CHISQUARE_H_ */

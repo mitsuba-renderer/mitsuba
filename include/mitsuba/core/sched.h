@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,12 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SCHED_H)
-#define __SCHED_H
+#pragma once
+#if !defined(__MITSUBA_CORE_SCHED_H_)
+#define __MITSUBA_CORE_SCHED_H_
 
 #include <mitsuba/core/serialization.h>
 #include <mitsuba/core/lock.h>
-#include <set>
 #include <deque>
 
 /**
@@ -392,15 +392,15 @@ public:
 	int registerResource(SerializableObject *resource);
 
 	/**
-	 * \brief Register a \a manifold resource with the scheduler. 
+	 * \brief Register a \a multiple resource with the scheduler. 
 	 *
-	 * \a Manifold means that in comparison to the previous method, a separate 
+	 * \a Multi means that in comparison to the previous method, a separate 
 	 * instance is provided  for every core. An example where this is useful 
 	 * is to distribute random generator state when performing parallel 
 	 * Monte Carlo simulations. \c resources must be a vector whose 
 	 * length is equal to \ref getCoreCount().
 	 */
-	int registerManifoldResource(std::vector<SerializableObject *> &resources);
+	int registerMultiResource(std::vector<SerializableObject *> &resources);
 
 	/**
 	 * \brief Increase the reference count of a previously registered resource.
@@ -539,15 +539,15 @@ public:
 		std::vector<SerializableObject *> resources;
 		ref<MemoryStream> stream;
 		int refCount;
-		bool manifold;
+		bool multi;
 
 		inline ResourceRecord(SerializableObject *resource) 
-		 : resources(1), refCount(1), manifold(false) {
+		 : resources(1), refCount(1), multi(false) {
 			resources[0] = resource;
 		}
 
 		inline ResourceRecord(std::vector<SerializableObject *> resources) 
-		 : resources(resources), refCount(1), manifold(true) {
+		 : resources(resources), refCount(1), multi(true) {
 		}
 	};
 
@@ -569,10 +569,10 @@ public:
 	const MemoryStream *getResourceStream(int id);
 
 	/**
-	 * \brief Test whether a resource is marked as manifold, 
+	 * \brief Test whether this is a multi-resource, 
 	 * i.e. different for every core.
 	 */
-	bool isManifoldResource(int id) const;
+	bool isMultiResource(int id) const;
 protected:
 	/// Protected constructor
 	Scheduler();
@@ -599,12 +599,11 @@ protected:
 			cancel(item.proc, true);
 			return;
 		}
-		m_mutex->lock();
+		LockGuard lock(m_mutex);
 		--rec->inflight;
 		rec->cond->signal();
 		if (rec->inflight == 0 && !rec->morework && !item.stop)
 			signalProcessTermination(item.proc, item.rec);
-		m_mutex->unlock();
 	}
 
 	/**
@@ -620,10 +619,9 @@ protected:
 	 * when only the process ID is known.
 	 */
 	inline void setProcessByID(Item &item, int id) {
-		m_mutex->lock();
+		LockGuard lock(m_mutex);
 		ParallelProcess *proc = m_idToProcess[id];
 		if (proc == NULL) {
-			m_mutex->unlock();
 			Log(EError, "Process %i is not locally known!", id);
 		};
 		item.proc = proc;
@@ -639,10 +637,8 @@ protected:
 			item.workUnit = item.wp->createWorkUnit();
 			item.workResult = item.wp->createWorkResult();
 		} catch (std::exception &) {
-			m_mutex->unlock();
 			throw;
 		}
-		m_mutex->unlock();
 	}
 
 	/// Announces the termination of a process
@@ -774,6 +770,22 @@ protected:
 	virtual void signalProcessTermination(int id);
 };
 
+/**
+ * \brief Dummy work unit without contents
+ * \ingroup libcore
+ */
+class MTS_EXPORT_CORE DummyWorkUnit : public WorkUnit {
+public:
+	void set(const WorkUnit *workUnit);
+	void load(Stream *stream);
+	void save(Stream *stream) const;
+	std::string toString() const;
+
+	MTS_DECLARE_CLASS()
+protected:
+	virtual ~DummyWorkUnit() { }
+};
+
 MTS_NAMESPACE_END
 
-#endif /* __SCHED_H */
+#endif /* __MITSUBA_CORE_SCHED_H_ */

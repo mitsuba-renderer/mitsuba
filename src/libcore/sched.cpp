@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -19,6 +19,8 @@
 #include <mitsuba/core/sched.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/mstream.h>
+
+#include <boost/thread/thread.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -64,62 +66,55 @@ Scheduler::~Scheduler() {
 }
 
 void Scheduler::registerWorker(Worker *worker) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	m_workers.push_back(worker);
 	worker->incRef();
-	m_mutex->unlock();
 }
 
 void Scheduler::unregisterWorker(Worker *worker) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	m_workers.erase(std::remove(m_workers.begin(), m_workers.end(), worker), 
 		m_workers.end());
 	worker->decRef();
-	m_mutex->unlock();
 }
 
 Worker *Scheduler::getWorker(int index) {
 	Worker *result = NULL;
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	if (index < (int) m_workers.size()) {
 		result = m_workers[index];
 	} else {
-		m_mutex->unlock();
 		Log(EError, "Scheduler::getWorker() - out of bounds");
 	}
-	m_mutex->unlock();
 	return result;
 }
 
 size_t Scheduler::getWorkerCount() const {
 	size_t count;
-	m_mutex->lock(); // make valgrind/helgrind happy
+	LockGuard lock(m_mutex); // make valgrind/helgrind happy
 	count = m_workers.size();
-	m_mutex->unlock();
 	return count;
 }
 
 size_t Scheduler::getLocalWorkerCount() const {
 	size_t count = 0;
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	for (size_t i=0; i<m_workers.size(); ++i) {
 		if (m_workers[i]->getClass() == MTS_CLASS(LocalWorker))
 			count++;
 	}
-	m_mutex->unlock();
 	return count;
 }
 
 bool Scheduler::isBusy() const {
 	bool result;
-	m_mutex->lock(); // make valgrind/helgrind happy
+	LockGuard lock(m_mutex); // make valgrind/helgrind happy
 	result = m_processes.size() > 0;
-	m_mutex->unlock();
 	return result;
 }
 
 int Scheduler::registerResource(SerializableObject *object) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	int resourceID = m_resourceCounter++;
 	ResourceRecord *rec = new ResourceRecord(object);
 	if (hasRemoteWorkers()) {
@@ -137,41 +132,36 @@ int Scheduler::registerResource(SerializableObject *object) {
 	else
 		Log(EDebug, "Registered resource %i: %s", resourceID, object->getClass()->getName().c_str());
 #endif
-	m_mutex->unlock();
 	return resourceID;
 }
 
-int Scheduler::registerManifoldResource(std::vector<SerializableObject *> &objects) {
+int Scheduler::registerMultiResource(std::vector<SerializableObject *> &objects) {
 	if (objects.size() != getCoreCount())
-		Log(EError, "registerManifoldResource() : resource vector does not have the right size!");
-	m_mutex->lock();
+		Log(EError, "registerMultiResource() : resource vector does not have the right size!");
+	LockGuard lock(m_mutex);
 	int resourceID = m_resourceCounter++;
 	ResourceRecord *rec = new ResourceRecord(objects);
 	m_resources[resourceID] = rec;
 	for (size_t i=0; i<objects.size(); ++i)
 		objects[i]->incRef();
 #if defined(DEBUG_SCHED)
-	Log(EDebug, "Registered manifold resource %i: %s", resourceID, objects[0]->getClass()->getName().c_str());
+	Log(EDebug, "Registered multi resource %i: %s", resourceID, objects[0]->getClass()->getName().c_str());
 #endif
-	m_mutex->unlock();
 	return resourceID;
 }
 
 void Scheduler::retainResource(int id) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	if (m_resources.find(id) == m_resources.end()) {
-		m_mutex->unlock();
 		Log(EError, "retainResource(): could not find the resource with ID %i!", id);
 	}
 	ResourceRecord *rec = m_resources[id];
 	rec->refCount++;
-	m_mutex->unlock();
 }
 
 void Scheduler::unregisterResource(int id) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	if (m_resources.find(id) == m_resources.end()) {
-		m_mutex->unlock();
 		Log(EError, "unregisterResource(): could not find the resource with ID %i!", id);
 	}
 	ResourceRecord *rec = m_resources[id];
@@ -186,54 +176,46 @@ void Scheduler::unregisterResource(int id) {
 		for (size_t i=0; i<m_workers.size(); ++i)
 			m_workers[i]->signalResourceExpiration(id);
 	}
-	m_mutex->unlock();
 }
 
 SerializableObject *Scheduler::getResource(int id, int coreIndex) {
 	SerializableObject *result = NULL;
 
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	std::map<int, ResourceRecord *>::iterator it = m_resources.find(id);
 	if (it == m_resources.end()) {
-		m_mutex->unlock();
 		Log(EError, "getResource(): could not find the resource with ID %i!", id);
 	}
 	ResourceRecord *rec = (*it).second;
-	if (rec->manifold) {
+	if (rec->multi) {
 		if (coreIndex == -1) {
-			m_mutex->unlock();
-			Log(EError, "getResource(): tried to look up manifold resource %i without specifying a core index!", id);
+			Log(EError, "getResource(): tried to look up multi resource %i without specifying a core index!", id);
 		}
 		result = rec->resources.at(coreIndex);
 	} else {
 		result = rec->resources[0];
 	}
-	m_mutex->unlock();
 	return result;
 }
 
-bool Scheduler::isManifoldResource(int id) const {
-	m_mutex->lock();
+bool Scheduler::isMultiResource(int id) const {
+	LockGuard lock(m_mutex);
 	std::map<int, ResourceRecord *>::const_iterator it = m_resources.find(id);
 	if (it == m_resources.end()) {
-		m_mutex->unlock();
 		Log(EError, "getResourceStream(): could not find the resource with ID %i!", id);
 	}
-	bool result = (*it).second->manifold;
-	m_mutex->unlock();
+	bool result = (*it).second->multi;
 	return result;
 }
 
 const MemoryStream *Scheduler::getResourceStream(int id) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	std::map<int, ResourceRecord *>::iterator it = m_resources.find(id);
 	if (it == m_resources.end()) {
-		m_mutex->unlock();
 		Log(EError, "getResourceStream(): could not find the resource with ID %i!", id);
 	}
 	ResourceRecord *rec = (*it).second;
-	if ((*it).second->manifold) {
-		m_mutex->unlock();
+	if ((*it).second->multi) {
 		Log(EError, "getResourceStream(): only standard resource lookups are permitted!");
 	}
 
@@ -243,33 +225,29 @@ const MemoryStream *Scheduler::getResourceStream(int id) {
 		rec->stream->setByteOrder(Stream::ENetworkByteOrder);
 		manager->serialize(rec->stream, rec->resources[0]);
 	}
-	m_mutex->unlock();
 	return rec->stream;
 }
 
 int Scheduler::getResourceID(const SerializableObject *obj) const {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	std::map<int, ResourceRecord *>::const_iterator it = m_resources.begin();
 	for (; it!=m_resources.end(); ++it) {
 		ResourceRecord *rec = (*it).second;
 		for (size_t j=0; j<rec->resources.size(); ++j) {
 			if (rec->resources[j] == obj) {
 				int id = (*it).first;
-				m_mutex->unlock();
 				return id;
 			}
 		}
 	}
-	m_mutex->unlock();
 	Log(EError, "Resource could not be found!");
 	return -1; // Never reached
 }
 
 bool Scheduler::schedule(ParallelProcess *process) {
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 
 	if (process->isLocal() && !hasLocalWorkers()) {
-		m_mutex->unlock();
 		Log(EError, "Cannot schedule a local process when "
 			"there are no local workers!");
 	}
@@ -286,11 +264,9 @@ bool Scheduler::schedule(ParallelProcess *process) {
 			if (!process->isLocal())
 				m_remoteQueue.push_back(rec->id);
 			m_workAvailable->broadcast();
-			m_mutex->unlock();
 			return true;
 		}
 		/* The process is still active */
-		m_mutex->unlock();
 		return false;
 	}
 
@@ -300,7 +276,6 @@ bool Scheduler::schedule(ParallelProcess *process) {
 	for (ParallelProcess::ResourceBindings::const_iterator it = bindings.begin();
 		it != bindings.end(); ++it) {
 		if (m_resources.find((*it).second) == m_resources.end()) {
-			m_mutex->unlock();
 			Log(EError, "Unable to find resource %i (%s) referenced by %s",
 				(*it).second, (*it).first.c_str(), process->toString().c_str());
 		}
@@ -319,36 +294,32 @@ bool Scheduler::schedule(ParallelProcess *process) {
 		m_remoteQueue.push_back(rec->id);
 	process->incRef();
 	m_workAvailable->broadcast();
-	m_mutex->unlock();
 	return true;
 }
 	
 bool Scheduler::hasRemoteWorkers() const {
 	bool hasRemoteWorkers = false;
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	for (size_t i=0; i<m_workers.size(); ++i)
 		hasRemoteWorkers |= m_workers[i]->isRemoteWorker();
-	m_mutex->unlock();
 	return hasRemoteWorkers;
 }
 
 bool Scheduler::hasLocalWorkers() const {
 	bool hasLocalWorkers = false;
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	for (size_t i=0; i<m_workers.size(); ++i)
 		hasLocalWorkers |= !m_workers[i]->isRemoteWorker();
-	m_mutex->unlock();
 	return hasLocalWorkers;
 }
 
 bool Scheduler::wait(const ParallelProcess *process) {
-	m_mutex->lock();
+	UniqueLock lock(m_mutex);
 
 	std::map<const ParallelProcess *, ProcessRecord *>::iterator it = 
 		m_processes.find(process);
 	if (it == m_processes.end()) {
 		/* The process is not known */
-		m_mutex->unlock();
 		return false;
 	}
 
@@ -363,21 +334,20 @@ bool Scheduler::wait(const ParallelProcess *process) {
 
 	WaitFlag *flag = rec->done;
 	flag->incRef();
-	m_mutex->unlock();
+	lock.unlock();
 	flag->wait();
 
-	m_mutex->lock();
+	lock.lock();
 	flag->decRef();
-	m_mutex->unlock();
+	lock.unlock();
 	return true;
 }
 
 bool Scheduler::cancel(ParallelProcess *process, bool reduceInflight) {
-	m_mutex->lock();
+	UniqueLock lock(m_mutex);
 	std::map<const ParallelProcess *, ProcessRecord *>::iterator it = 
 		m_processes.find(process);
 	if (it == m_processes.end()) {
-		m_mutex->unlock();
 #if defined(DEBUG_SCHED)
 		Log(EDebug, "Scheduler::cancel() - the process is not currently running");
 #endif
@@ -395,7 +365,7 @@ bool Scheduler::cancel(ParallelProcess *process, bool reduceInflight) {
 		Log(rec->logLevel, "Scheduler::cancel() - the process is already being cancelled. "
 			"Waiting until this has happened..");
 #endif
-		m_mutex->unlock();
+		lock.unlock();
 		wait(process);
 		return true;
 	}
@@ -450,17 +420,15 @@ bool Scheduler::cancel(ParallelProcess *process, bool reduceInflight) {
 
 	delete rec;
 
-	m_mutex->unlock();
 	return true;
 }
 
 Scheduler::EStatus Scheduler::acquireWork(Item &item, 
 		bool local, bool onlyTry, bool keepLock) {
-	m_mutex->lock();
+	UniqueLock lock(m_mutex);
 	std::deque<int> &queue = local ? m_localQueue : m_remoteQueue;
 	while (true) {
 		if (onlyTry && queue.size() == 0) {
-			m_mutex->unlock();
 			return ENone;
 		}
 
@@ -470,7 +438,6 @@ Scheduler::EStatus Scheduler::acquireWork(Item &item,
 			m_workAvailable->wait();
 
 		if (!m_running) {
-			m_mutex->unlock();
 			return EStop;
 		}
 
@@ -519,9 +486,11 @@ Scheduler::EStatus Scheduler::acquireWork(Item &item,
 	item.stop = false;
 
 	if (!keepLock)
-		m_mutex->unlock();
+		lock.unlock();
+	else
+		lock.release(); /* Avoid the automatic unlocking upon destruction */
 
-	sched_yield();
+	boost::this_thread::yield();
 	return EOK;
 }
 		
@@ -571,11 +540,11 @@ void Scheduler::pause() {
 #if defined(DEBUG_SCHED)
 	Log(EDebug, "Pausing ..");
 #endif
-	m_mutex->lock();
+	UniqueLock lock(m_mutex);
 	m_running = false;
 	/* Wake up any workers waiting for work units */
 	m_workAvailable->broadcast();
-	m_mutex->unlock();
+	lock.unlock();
 	/* Return when all of them have finished */
 	for (size_t i=0; i<m_workers.size(); ++i)
 		m_workers[i]->join();
@@ -590,7 +559,7 @@ void Scheduler::stop() {
 #if defined(DEBUG_SCHED)
 	Log(EDebug, "Stopping ..");
 #endif
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	for (std::map<const ParallelProcess *, ProcessRecord *>::iterator
 			it = m_processes.begin(); it != m_processes.end(); ++it) {
 		(*it).first->decRef();
@@ -609,15 +578,13 @@ void Scheduler::stop() {
 		delete rec;
 	}
 	m_resources.clear();
-	m_mutex->unlock();
 }
 
 size_t Scheduler::getCoreCount() const {
 	size_t coreCount = 0;
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	for (size_t i=0; i<m_workers.size(); ++i)
 		coreCount += m_workers[i]->getCoreCount();
-	m_mutex->unlock();
 	return coreCount;
 }
 
@@ -707,8 +674,21 @@ void LocalWorker::signalProcessCancellation(int id) {
 		m_schedItem.stop = true;
 }
 
+
+/* ==================================================================== */
+/*                        Work unit implementations                    */
+/* ==================================================================== */
+
+void DummyWorkUnit::set(const WorkUnit *workUnit) { }
+void DummyWorkUnit::load(Stream *stream) { }
+void DummyWorkUnit::save(Stream *stream) const { }
+std::string DummyWorkUnit::toString() const {
+	return "DummyWorkUnit[]";
+}
+
 MTS_IMPLEMENT_CLASS(Worker, true, Thread)
 MTS_IMPLEMENT_CLASS(WorkUnit, true, Object)
+MTS_IMPLEMENT_CLASS(DummyWorkUnit, false, WorkUnit)
 MTS_IMPLEMENT_CLASS(WorkResult, true, Object)
 MTS_IMPLEMENT_CLASS(LocalWorker, false, Worker)
 MTS_IMPLEMENT_CLASS(WorkProcessor, true, Object)

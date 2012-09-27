@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -100,7 +100,7 @@ RenderSettingsDialog::RenderSettingsDialog(QWidget *parent) :
 		}
 		if (name == "irrcache")
 			ui->icBox->setProperty("help", docString);
-		else if (name == "errctrl")
+		else if (name == "adaptive")
 			ui->aiBox->setProperty("help", docString);
 	}
 
@@ -164,7 +164,6 @@ void RenderSettingsDialog::dataChanged() {
 	}
 }
 
-
 void RenderSettingsDialog::cbHighlighted(int index) {
 	QComboBox *comboBox = static_cast<QComboBox *>(sender());
 	setDocumentation(comboBox->itemData(index).toList().at(1).toString());
@@ -212,7 +211,7 @@ void RenderSettingsDialog::update() {
 
 	if (ui->aiBox->isChecked()) {
 		m_aiNode = m_model->updateClass(m_aiNode,
-			"ErrorControl", tr("Adaptive Integration"));
+			"AdaptiveIntegrator", tr("Adaptive Integration"));
 	} else {
 		m_aiNode = m_model->updateClass(m_aiNode, "", "");
 	}
@@ -234,6 +233,19 @@ void RenderSettingsDialog::update() {
 	}
 
 	ui->treeView->expandAll();
+
+	#if 0
+	/* Make comboboxes etc editable by default .. does not quite work yet */
+	for (int i = 0; i < m_model->rowCount(); ++i) {
+		QModelIndex index = m_model->index(i, 0);
+
+		for (int j = 1; j < m_model->rowCount(index); ++j) {
+			ui->treeView->openPersistentEditor(
+				m_model->index(j, 1, index));
+		}
+	}
+	#endif
+
 	dataChanged();
 }
 
@@ -260,7 +272,7 @@ void RenderSettingsDialog::load(const SceneContext *ctx) {
 	const Integrator *integrator = scene->getIntegrator();
 	Properties integratorProps = integrator->getProperties();
 
-	if (integratorProps.getPluginName() == "errctrl") {
+	if (integratorProps.getPluginName() == "adaptive") {
 		ui->aiBox->setChecked(true);
 		m_model->setProperties(m_aiNode, integratorProps);
 		integrator = integrator->getSubIntegrator();
@@ -275,7 +287,7 @@ void RenderSettingsDialog::load(const SceneContext *ctx) {
 	}
 
 	ui->resolutionBox->lineEdit()->setText(QString("%1x%2")
-		.arg(film->getSize().x).arg(film->getSize().y));
+		.arg(film->getCropSize().x).arg(film->getCropSize().y));
 	m_originalResolution = ui->resolutionBox->lineEdit()->text();
 
 	setComboBox(ui->integratorBox, integratorProps.getPluginName());
@@ -291,15 +303,16 @@ void RenderSettingsDialog::load(const SceneContext *ctx) {
 
 void RenderSettingsDialog::apply(SceneContext *ctx) {
 	Scene *scene = new Scene(ctx->scene);
-	PerspectiveCamera *oldCamera = static_cast<PerspectiveCamera *>(scene->getCamera());
-	Properties filmProps = oldCamera->getFilm()->getProperties();
+	ref<Sensor> oldSensor = scene->getSensor();
+	Film *oldFilm = oldSensor->getFilm();
+	Properties filmProps = oldSensor->getFilm()->getProperties();
 	ref<PluginManager> pluginMgr = PluginManager::getInstance();
 
 	/* Temporarily set up a new file resolver */
 	ref<Thread> thread = Thread::getThread();
 	ref<FileResolver> oldResolver = thread->getFileResolver();
 	ref<FileResolver> newResolver = oldResolver->clone();
-	newResolver->addPath(fs::complete(scene->getSourceFile()).parent_path());
+	newResolver->prependPath(fs::absolute(scene->getSourceFile()).parent_path());
 	thread->setFileResolver(newResolver);
 
 	/* Configure the reconstruction filter */
@@ -308,6 +321,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 		m_rFilterNode->putProperties(rFilterProps);
 	ref<ReconstructionFilter> rFilter = static_cast<ReconstructionFilter *> 
 		(pluginMgr->createObject(MTS_CLASS(ReconstructionFilter), rFilterProps));
+	rFilter->configure();
 
 	/* Configure the sampler */
 	Properties samplerProps(getPluginName(ui->samplerBox));
@@ -337,7 +351,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	}
 
 	if (ui->aiBox->isChecked()) {
-		Properties aiProps("errctrl");
+		Properties aiProps("adaptive");
 		if (m_aiNode != NULL) 
 			m_aiNode->putProperties(aiProps);
 		ref<Integrator> ai = static_cast<Integrator *> 
@@ -347,35 +361,73 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 		integrator = ai;
 	}
 
-	/* Configure the film */
 	QStringList resolution = ui->resolutionBox->currentText().split('x');
 	SAssert(resolution.size() == 2);
-	int width = resolution[0].toInt(), height = resolution[1].toInt();
-	filmProps.setInteger("width", width, false);
-	filmProps.setInteger("height", height, false);
-	ref<Film> film = static_cast<Film *> (pluginMgr->createObject(MTS_CLASS(Film), filmProps));
+	Vector2i cropSize(
+		std::max(1, resolution[0].toInt()),
+		std::max(1, resolution[1].toInt()));
+
+	/* Configure the film */
+	Vector2i oldSize = oldFilm->getSize();
+	Vector2i oldCropSize = oldFilm->getCropSize();
+	Point2i oldCropOffset = oldFilm->getCropOffset();
+
+	Vector2i size(std::ceil((oldSize.x * cropSize.x) / (Float) oldCropSize.x),
+			      std::ceil((oldSize.y * cropSize.y) / (Float) oldCropSize.y));
+
+	Point2i cropOffset(std::floor((oldCropOffset.x * cropSize.x) / (Float) oldCropSize.x),
+			           std::floor((oldCropOffset.y * cropSize.y) / (Float) oldCropSize.y));
+
+	filmProps.setInteger("width", size.x, false);
+	filmProps.setInteger("height", size.y, false);
+
+	if (size.x != cropSize.x || size.y != cropSize.y) {
+		filmProps.setInteger("cropWidth", cropSize.x, false);
+		filmProps.setInteger("cropHeight", cropSize.y, false);
+		filmProps.setInteger("cropOffsetX", cropOffset.x, false);
+		filmProps.setInteger("cropOffsetY", cropOffset.y, false);
+	} else {
+		filmProps.removeProperty("cropWidth");
+		filmProps.removeProperty("cropHeight");
+		filmProps.removeProperty("cropOffsetX");
+		filmProps.removeProperty("cropOffsetY");
+	}
+
+	ctx->originalSize = cropSize;
+
+	ref<Film> film = static_cast<Film *> (pluginMgr->createObject(
+			MTS_CLASS(Film), filmProps));
 	film->addChild(rFilter);
 	film->configure();
-	if (width != ctx->framebuffer->getWidth() ||
-		height != ctx->framebuffer->getHeight()) {
-		ctx->framebuffer = new Bitmap(width, height, 128);
+
+	if (cropSize.x != ctx->framebuffer->getWidth() ||
+		cropSize.y != ctx->framebuffer->getHeight()) {
+		ctx->framebuffer = new Bitmap(Bitmap::ERGBA, Bitmap::EFloat32, cropSize);
 		ctx->framebuffer->clear();
 		ctx->mode = EPreview;
 	}
 
-	/* Configure the camera */
-	Properties cameraProps = oldCamera->getProperties();
-	ref<PerspectiveCamera> camera = static_cast<PerspectiveCamera *> 
-		(pluginMgr->createObject(MTS_CLASS(Camera), cameraProps));
-	camera->addChild(sampler);
-	camera->addChild(film);
-	camera->setViewTransform(oldCamera->getViewTransform());
-	camera->setFov(oldCamera->getFov());
-	camera->setMedium(oldCamera->getMedium());
-	camera->configure();
-	
+	/* Configure the sensor */
+	Properties sensorProps = oldSensor->getProperties();
+
+	if (oldSensor->getClass()->derivesFrom(MTS_CLASS(PerspectiveCamera))) {
+		sensorProps.setString("fovAxis", "y", false);
+		sensorProps.setFloat("fov", 
+			static_cast<const PerspectiveCamera *>(oldSensor.get())->getYFov(), false);
+	}
+
+	ref<Sensor> newSensor = static_cast<Sensor *> 
+		(pluginMgr->createObject(MTS_CLASS(Sensor), sensorProps));
+	newSensor->addChild(sampler);
+	newSensor->addChild(film);
+	newSensor->setMedium(oldSensor->getMedium());
+	newSensor->configure();
+
 	/* Update the scene with the newly constructed elements */
-	scene->setCamera(camera);
+	scene->removeSensor(oldSensor);
+	scene->addSensor(newSensor);
+	scene->setSensor(newSensor);
+
 	scene->setSampler(sampler);
 	scene->setIntegrator(integrator);
 	scene->configure();
@@ -476,19 +528,35 @@ QStringList RenderSettingsDialog::validateConfiguration() const {
 	m_samplerNode->putProperties(samplerProps);
 
 	if (samplerName != "independent") {
-		if (integratorName == "ptracer" || integratorName == "mlt_kelemen" || integratorName == "mlt_veach")
-			messages << "Error: This integrator requires the independent sampler.";
+		if (integratorName == "pssmlt" || integratorName == "mlt")
+			messages << "Error: Metropolis Light Transport-type algorithms only work with the independent sampler.";
 		if (ui->aiBox->isChecked())
 			messages << "Error: Adaptive integration requires the independent sampler.";
 	}
+
+	if ((samplerName == "ldsampler" || samplerName == "stratified") && integratorName == "ptracer")
+		messages << "Error: the particle tracer does not support the stratified or low-discrepancy samplers!";
+	
+	if (samplerName == "halton" || samplerName == "hammersley") {
+		if (integratorName == "bdpt")
+			messages << "Error: the Bidirectional Path Tracer should not be used with the Halton/Hammersley samplers!";
+		else if (integratorName == "erpt")
+			messages << "Error: the Energy Redistribution Path Tracer should not be used with the Halton/Hammersley samplers!";
+	}
+
+	if (samplerName == "hammersley") {
+		if (integratorName == "photonmapper")
+			messages << "Error: the Hammersley sampler cannot be used with the photon mapper. Try the Halton sampler instead.";
+	}
+
 	if (ui->icBox->isChecked()) {
 		if (integratorName != "direct" && integratorName != "path" && integratorName != "volpath" && integratorName != "volpath_simple" && integratorName != "photonmapper")
-			messages << "Error: Irradiance Caching requires a sampling-based integrator.";
+			messages << "Error: Irradiance Caching is not compatible with the selected integrator.";
 
 	}
 	if (ui->aiBox->isChecked()) {
 		if (integratorName != "direct" && integratorName != "path" && integratorName != "volpath" && integratorName != "volpath_simple" && integratorName != "photonmapper")
-			messages << "Error: Adaptive integration requires a sampling-based integrator.";
+			messages << "Error: Adaptive integration is not compatible with the selected integrator.";
 	}
 	if (integratorName == "ppm") {
 		if ((samplerName == "independent" || samplerName == "ldsampler") && samplerProps.hasProperty("sampleCount")) {

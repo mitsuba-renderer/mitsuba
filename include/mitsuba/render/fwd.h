@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__RENDER_FWD_H)
-#define __RENDER_FWD_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_FWD_H_)
+#define __MITSUBA_RENDER_FWD_H_
 
 MTS_NAMESPACE_BEGIN
 
@@ -32,9 +33,10 @@ class BlockedImageProcess;
 class BlockedRenderProcess;
 class BlockListener;
 class BSDF;
-struct BSDFQueryRecord;
-class Camera;
-struct EmissionRecord;
+struct BSDFSamplingRecord;
+struct DirectionSamplingRecord;
+struct DirectSamplingRecord;
+class Emitter;
 class Film;
 class GatherPhotonProcess;
 class HemisphereSampler;
@@ -49,7 +51,6 @@ template <typename AABBType, typename TreeConstructionHeuristic, typename Derive
 template <typename Derived> class SAHKDTree3D;
 class ShapeKDTree;
 class LocalWorker;
-class Luminaire;
 struct LuminaireSamplingRecord;
 class Medium;
 struct MediumSamplingRecord;
@@ -57,12 +58,14 @@ class MIPMap;
 class MonteCarloIntegrator;
 class ParticleProcess;
 class ParticleTracer;
-struct PhaseFunctionQueryRecord;
+struct PhaseFunctionSamplingRecord;
 class PhaseFunction;
 class PhotonMap;
+struct PositionSamplingRecord;
 class PreviewWorker;
 class ProjectiveCamera;
 struct RadianceQueryRecord;
+struct PositionSamplingRecord;
 class Random;
 class RangeWorkUnit;
 class ReconstructionFilter;
@@ -70,17 +73,16 @@ class RectangularWorkUnit;
 class RenderJob;
 class RenderListener;
 class RenderQueue;
-class SampleIntegrator;
+class SamplingIntegrator;
 class Sampler;
+class Sensor;
 class Scene;
 class SceneHandler;
 class Shader;
 class Shape;
-struct ShapeSamplingRecord;
 class SparseMipmap3D;
 class Spiral;
 class Subsurface;
-class TabulatedFilter;
 class Texture;
 struct TriAccel;
 struct TriAccel4;
@@ -91,4 +93,4 @@ struct VPL;
 
 MTS_NAMESPACE_END
 
-#endif /* __RENDER_FWD_H */
+#endif /* __MITSUBA_RENDER_FWD_H_ */

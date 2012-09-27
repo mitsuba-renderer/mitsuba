@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -19,6 +19,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/texture.h>
 #include <mitsuba/hw/basicshader.h>
+#include <mitsuba/core/warp.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -94,55 +95,58 @@ public:
 		m_reflectance = ensureEnergyConservation(m_reflectance, "reflectance", 1.0f);
 
 		m_components.clear();
-		m_components.push_back(EDiffuseReflection | EFrontSide
-			| (m_reflectance->isConstant() ? 0 : ESpatiallyVarying));
-		m_usesRayDifferentials = m_reflectance->usesRayDifferentials();
+		if (m_reflectance->getMaximum().max() > 0)
+			m_components.push_back(EDiffuseReflection | EFrontSide
+				| (m_reflectance->isConstant() ? 0 : ESpatiallyVarying));
+			m_usesRayDifferentials = m_reflectance->usesRayDifferentials();
 
 		BSDF::configure();
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_reflectance->getValue(its);
+		return m_reflectance->eval(its);
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
 			|| Frame::cosTheta(bRec.wi) <= 0 
 			|| Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
 			
-		return m_reflectance->getValue(bRec.its)
+		return m_reflectance->eval(bRec.its)
 			* (INV_PI * Frame::cosTheta(bRec.wo));
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
 			|| Frame::cosTheta(bRec.wi) <= 0 
 			|| Frame::cosTheta(bRec.wo) <= 0)
 			return 0.0f;
 
-		return Frame::cosTheta(bRec.wo) * INV_PI;
+		return Warp::squareToCosineHemispherePdf(bRec.wo);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0) 
 			return Spectrum(0.0f);
 
-		bRec.wo = squareToHemispherePSA(sample);
+		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
-		return m_reflectance->getValue(bRec.its);
+		return m_reflectance->eval(bRec.its);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
-		
-		bRec.wo = squareToHemispherePSA(sample);
+
+		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
-		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
-		return m_reflectance->getValue(bRec.its);
+		pdf = Warp::squareToCosineHemispherePdf(bRec.wo);
+		return m_reflectance->eval(bRec.its);
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
@@ -160,10 +164,14 @@ public:
 		manager->serialize(stream, m_reflectance.get());
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		return std::numeric_limits<Float>::infinity();
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SmoothDiffuse[" << endl
-			<< "  name = \"" << getName() << "\"," << endl
+			<< "  id = \"" << getID() << "\"," << endl
 			<< "  reflectance = " << indent(m_reflectance->toString()) << endl
 			<< "]";
 		return oss.str();

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -19,7 +19,9 @@
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
-#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/emitter.h>
+#include <mitsuba/render/sensor.h>
+#include <mitsuba/render/medium.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/properties.h>
 
@@ -193,11 +195,12 @@ public:
 		Float phi = std::atan2(local.y, local.x);
 		if (phi < 0)
 			phi += 2*M_PI;
-		its.uv.x = local.z / m_length;
-		its.uv.y = phi / (2*M_PI);
+		its.uv.x = phi / (2*M_PI);
+		its.uv.y = local.z / m_length;
 
 		Vector dpdu = Vector(-local.y, local.x, 0) * (2*M_PI);
 		Vector dpdv = Vector(0, 0, m_length);
+		its.shape = this;
 		its.dpdu = m_objectToWorld(dpdu);
 		its.dpdv = m_objectToWorld(dpdv);
 		its.geoFrame.n = Normal(normalize(m_objectToWorld(cross(dpdu, dpdv))));
@@ -206,15 +209,23 @@ public:
 		its.shFrame = its.geoFrame;
 		its.wi = its.toLocal(-ray.d);
 		its.hasUVPartials = false;
-		its.shape = this;
+		its.instance = NULL;
 	}
 
-	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
-		Point p = Point(m_radius * std::cos(sample.y), 
-			m_radius * std::sin(sample.y), 
-			sample.x * m_length);
-		sRec.p = m_objectToWorld(p);
-		sRec.n = normalize(m_objectToWorld(Normal(p.x, p.y, 0.0f)));
+	void samplePosition(PositionSamplingRecord &pRec, const Point2 &sample) const {
+		Float sinTheta, cosTheta;
+		math::sincos(sample.y * (2 * M_PI), &sinTheta, &cosTheta);
+
+		Point p(cosTheta*m_radius, sinTheta*m_radius, sample.x * m_length);
+		Normal n(cosTheta, sinTheta, 0.0f);
+
+		pRec.p = m_objectToWorld(p);
+		pRec.n = normalize(m_objectToWorld(n));
+		pRec.pdf = m_invSurfaceArea;
+		pRec.measure = EArea;
+	}
+
+	Float pdfPosition(const PositionSamplingRecord &pRec) const {
 		return m_invSurfaceArea;
 	}
 
@@ -441,8 +452,7 @@ public:
 			triangleIdx++;
 		}
 
-		mesh->setBSDF(m_bsdf);
-		mesh->setLuminaire(m_luminaire);
+		mesh->copyAttachments(this);
 		mesh->configure();
 
 		return mesh.get();
@@ -467,14 +477,32 @@ public:
 		return 2*M_PI*m_radius*m_length;
 	}
 
+	void getNormalDerivative(const Intersection &its,
+			Vector &dndu, Vector &dndv, bool shadingFrame) const {
+		dndu = its.dpdu / m_radius;
+		dndv = Vector(0.0f);
+	}
+
+	size_t getPrimitiveCount() const {
+		return 1;
+	}
+
+	size_t getEffectivePrimitiveCount() const {
+		return 1;
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Cylinder[" << endl
 			<< "  radius = " << m_radius << ", " << endl
 			<< "  length = " << m_length << ", " << endl
 			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl
-			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl
-			<< "  luminaire = " << indent(m_luminaire.toString()) << "," << endl
+			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
+		if (isMediumTransition()) 
+			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
+				<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
+		oss << "  emitter = " << indent(m_emitter.toString()) << "," << endl
+			<< "  sensor = " << indent(m_sensor.toString()) << "," << endl
 			<< "  subsurface = " << indent(m_subsurface.toString())
 			<< "]";
 		return oss.str();

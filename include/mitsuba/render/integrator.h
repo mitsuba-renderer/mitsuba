@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__INTEGRATOR_H)
-#define __INTEGRATOR_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_INTEGRATOR_H_)
+#define __MITSUBA_RENDER_INTEGRATOR_H_
 
 #include <mitsuba/core/netobject.h>
 #include <mitsuba/core/properties.h>
@@ -29,61 +30,85 @@ MTS_NAMESPACE_BEGIN
  * \brief Abstract integrator base-class; does not make any assumptions on
  * how radiance is computed. 
  *
- * Amongst other things, the generality of this class allows for hardware-accelerated 
- * rasterization that directly operates on the camera's film and has 
- * no global knowledge about radiance within the scene. Other possibilities
- * are sampling- or particle tracing-based integrators.
+ * In Mitsuba, the different rendering techniques are collectively referred to as 
+ * \a integrators, since they perform integration over a high-dimensional
+ * space. Each integrator represents a specific approach for solving
+ * the light transport equation---usually favored in certain scenarios, but
+ * at the same time affected by its own set of intrinsic limitations.
+ * Therefore, it is important to carefully select an integrator based on 
+ * user-specified accuracy requirements and properties of the scene to be 
+ * rendered. 
+ *
+ * This is the base class of all integrators; it does not make any assumptions on
+ * how radiance is computed, which allows for many different kinds of implementations
+ * ranging from software-based path tracing and Markov-Chain based techniques such
+ * as Metropolis Light Transport up to hardware-accelerated rasterization.
  *
  * \ingroup librender
  */
 class MTS_EXPORT_RENDER Integrator : public NetworkedObject {
 public:
 	/**
-	 * Possibly perform a pre-process task. The last three parameters are
-	 * resource IDs of the associated scene, camera and sample generator,
-	 * which have been made available to all local and remote workers.
-	 * The default implementation simply returns.
+	 * \brief Possibly perform a pre-process task. 
+	 *
+	 * This function is called automatically before the main rendering process;
+	 * the default implementation does nothing.
+	 *
+	 * The last three parameters are resource IDs of the associated scene, 
+	 * sensor and sample generator, which have been made available to all 
+	 * local and remote workers.i
 	 */
 	virtual bool preprocess(const Scene *scene, RenderQueue *queue, 
-		const RenderJob *job, int sceneResID, int cameraResID, 
+		const RenderJob *job, int sceneResID, int sensorResID, 
 		int samplerResID);
 
 	/**
-	 * Render the scene as seen by the default camera. Progress is tracked
-	 * by sending status messages to a provided render queue. The parameter
-	 * <tt>job</tt> is required to discern multiple render jobs occurring in 
+	 * \brief Render the scene as seen by the default sensor. 
+	 *
+	 * Progress is tracked by sending status messages to a provided render queue. 
+	 * The parameter \c job is required to discern multiple render jobs occurring in 
 	 * parallel. The last three parameters are resource IDs of the associated 
-	 * scene, camera and sample generator, which have been made available to 
+	 * scene, sensor and sample generator, which have been made available to 
 	 * all local and remote workers. Returns true upon successful completion.
 	 */
 	virtual bool render(Scene *scene, RenderQueue *queue, const RenderJob *job, 
-		int sceneResID, int cameraResID, int samplerResID) = 0;
+		int sceneResID, int sensorResID, int samplerResID) = 0;
 
 	/**
-	 * This can be called asynchronously to cancel a running render job.
-	 * In this case, <tt>render()</tt> will quit with a return value of 
-	 * <tt>false</tt>.
+	 * \brief Cancel a running render job
+	 *
+	 * This function can be called asynchronously to cancel a running render 
+	 * job. In this case, \ref render() will quit with a return value of 
+	 * \c false.
 	 */
 	virtual void cancel() = 0;
 
 	/**
-	 * Possibly perform a post-process task. The last three parameters are
-	 * resource IDs of the associated scene, camera and sample generator,
-	 * which have been made available to all local and remote workers.
-	 * The default implementation simply returns.
+	 * \brief Possibly perform a post-process task. 
+	 *
+	 * This function is called automatically before the main rendering process;
+	 * the default implementation does nothing.
+	 *
+	 * The last three parameters are resource IDs of the associated scene, 
+	 * sensor and sample generator, which have been made available to all 
+	 * local and remote workers.i
 	 */
 	virtual void postprocess(const Scene *scene, RenderQueue *queue, 
-		const RenderJob *job, int sceneResID, int cameraResID,
+		const RenderJob *job, int sceneResID, int sensorResID,
 		int samplerResID);
 
 	/**
-	 * This is called once after instantiation and can be used to
-	 * inform the sampler implementation about sample requirements
+	 * \brief Configure the sample generator for use with this integrator
+	 *
+	 * This function is called once after instantiation and can be used to
+	 * inform the sampler implementation about specific sample requirements
 	 * of this integrator.
 	 */
-	virtual void configureSampler(Sampler *sampler);
+	virtual void configureSampler(const Scene *scene, Sampler *sampler);
 
 	/**
+	 * \brief Return the nested integrator (if any)
+	 *
 	 * When the integrator contains a nested integrator, this function can
 	 * be used to query for it
 	 */
@@ -91,9 +116,6 @@ public:
 
 	/// Serialize this integrator to a binary data stream
 	void serialize(Stream *stream, InstanceManager *manager) const;
-
-	/// Return the properties of this integrator
-	inline const Properties &getProperties() const { return m_properties; }
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -105,12 +127,10 @@ protected:
 
 	/// Virtual destructor
 	virtual ~Integrator() { }
-protected:
-	Properties m_properties;
 };
 
 /**
- * \brief Radiance query record data structure used by \ref SampleIntegrator
+ * \brief Radiance query record data structure used by \ref SamplingIntegrator
  * \ingroup librender
  */
 struct MTS_EXPORT_RENDER RadianceQueryRecord {
@@ -165,7 +185,7 @@ public:
 		ERadiance                 = ERadianceNoEmission | EEmittedRadiance,
 
 		/// Radiance + opacity
-		ECameraRay                = ERadiance | EOpacity
+		ESensorRay                = ERadiance | EOpacity
 	};
 
 	/// Additional flags that can be specified in the \ref extra field
@@ -291,7 +311,7 @@ public:
  * capable of computing samples of the scene's radiance function.
  * \ingroup librender
  */
-class MTS_EXPORT_RENDER SampleIntegrator : public Integrator {
+class MTS_EXPORT_RENDER SamplingIntegrator : public Integrator {
 public:
 	/**
 	 * \brief Sample the incident radiance along a ray. Also requires
@@ -305,16 +325,17 @@ public:
 	 *
 	 * The default implementation simply samples the hemisphere using
 	 * cosine-weighted sampling and a configurable number of rays.
+	 * An integrator such as irradiance caching will provide something
+	 * smarter.
 	 *
 	 * \param scene
 	 *     Const pointer to the underlying scene
-	 * \param p
-	 *     The surface location at which to estimate the irradiance
-	 * \param n
-	 *     The surface normal at which to estimate the irradiance
+	 * \param its
+	 *     Describes the surface location where the irradiance is to be computed
 	 * \param medium
-	 *     Const pointer to the medium that encloses \c (p, n).
-	 *     A value of \c NULL corresponds to vacuum
+	 *     Const pointer to the medium that encloses the ray 
+	 *     <tt>(its.p, its.shFrame.n)</tt>. A value of \c NULL corresponds 
+	 *     to vacuum.
 	 * \param sampler
 	 *     A pointer to a sample generator
 	 * \param nSamples
@@ -322,22 +343,23 @@ public:
 	 * \param includeIndirect
 	 *     Include indirect illumination in the estimate?
 	 */
-	virtual Spectrum E(const Scene *scene, const Point &p, const
-		Normal &n, Float time, const Medium *medium, Sampler *sampler,
-		int nSamples, bool includeIndirect) const; 
+	virtual Spectrum E(const Scene *scene, const Intersection &its,
+		const Medium *medium, Sampler *sampler, int nSamples, 
+		bool includeIndirect) const; 
 
 	/**
-	 * Perform the main rendering task. The work is automatically
-	 * parallelized to multiple cores and remote machines. The default
-	 * implementation uniformly generates samples on the camera lens 
-	 * and image plane as specified by the used sampler. The average 
-	 * of the estimated radiance along the associated rays in a pixel
-	 * region is then taken as an approximation of that pixel's 
-	 * radiance value. For adaptive strategies, have a look at the 
-	 * <tt>errctrl</tt> plugin, which is an extension of this class.
+	 * \brief Perform the main rendering task
+	 *
+	 * The work is automatically parallelized to multiple cores and 
+	 * remote machines. The default implementation uniformly generates 
+	 * samples on the sensor aperture and image plane as specified by 
+	 * the used sampler. The average of the estimated radiance along the 
+	 * associated rays in a pixel region is then taken as an approximation 
+	 * of that pixel's radiance value. For adaptive strategies, have a look at 
+	 * the \c adaptive plugin, which is an extension of this class.
 	 */
 	bool render(Scene *scene, RenderQueue *queue, const RenderJob *job, 
-		int sceneResID, int cameraResID, int samplerResID);
+		int sceneResID, int sensorResID, int samplerResID);
 
 	/**
 	 * This can be called asynchronously to cancel a running render job.
@@ -353,22 +375,23 @@ public:
 	 *
 	 * \param scene
 	 *    Pointer to the underlying scene
-	 * \param camera
-	 *    Pointer to the camera used to render the image
+	 * \param sensor
+	 *    Pointer to the sensor used to render the image
 	 * \param sampler
 	 *    Pointer to the sampler used to render the image
 	 * \param block
 	 *    Pointer to the image block to be filled 
 	 * \param points
-	 *    Optional; Can be used to set a specific traversal order,
-	 *    for example using a space-filling curve.
+	 *    Specifies the traversal order, i.e. using a space-filling 
+	 *    curve. To limit the size of the array, it is currently assumed
+	 *    that the block size is smaller than 256x256
 	 * \param stop
 	 *    Reference to a boolean, which will be set to true when
 	 *    the user has requested that the program be stopped
 	 */
-	virtual void renderBlock(const Scene *scene, const Camera *camera, 
+	virtual void renderBlock(const Scene *scene, const Sensor *sensor, 
 		Sampler *sampler, ImageBlock *block, const bool &stop,
-		const std::vector<Point2i> *points = NULL) const;
+		const std::vector< TPoint2<uint8_t> > &points) const;
 
 	/**
 	 * <tt>NetworkedObject</tt> implementation:
@@ -390,7 +413,8 @@ public:
 	 * remote machine. A list of resources bound to the associated
 	 * parallel process is given as a parameter.
 	 */
-	virtual void wakeup(std::map<std::string, SerializableObject *> &params);
+	virtual void wakeup(ConfigurableObject *parent,
+		std::map<std::string, SerializableObject *> &params);
 
 	/// Serialize this integrator to a binary data stream
 	void serialize(Stream *stream, InstanceManager *manager) const;
@@ -398,13 +422,13 @@ public:
 	MTS_DECLARE_CLASS()
 protected:
 	/// Create a integrator
-	SampleIntegrator(const Properties &props);
+	SamplingIntegrator(const Properties &props);
 
 	/// Unserialize an integrator
-	SampleIntegrator(Stream *stream, InstanceManager *manager);
+	SamplingIntegrator(Stream *stream, InstanceManager *manager);
 
 	/// Virtual destructor
-	virtual ~SampleIntegrator() { }
+	virtual ~SamplingIntegrator() { }
 protected:
 	/// Used to temporarily cache a parallel process while it is in operation
 	ref<ParallelProcess> m_process;
@@ -416,7 +440,7 @@ protected:
  * the radiative transfer equation).
  * \ingroup librender
  */
-class MTS_EXPORT_RENDER MonteCarloIntegrator : public SampleIntegrator {
+class MTS_EXPORT_RENDER MonteCarloIntegrator : public SamplingIntegrator {
 public:
 	/// Serialize this integrator to a binary data stream
 	void serialize(Stream *stream, InstanceManager *manager) const;
@@ -437,4 +461,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __INTEGRATOR_H */
+#endif /* __MITSUBA_RENDER_INTEGRATOR_H_ */

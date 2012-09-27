@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -79,6 +79,10 @@ public:
 
 	Float getSurfaceArea() const;
 	
+	size_t getPrimitiveCount() const;
+	
+	size_t getEffectivePrimitiveCount() const;
+
 	//! @}
 	// =============================================================
 

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__LOGGER_H)
-#define __LOGGER_H
+#pragma once
+#if !defined(__MITSUBA_CORE_LOGGER_H_)
+#define __MITSUBA_CORE_LOGGER_H_
 
 #include <mitsuba/core/formatter.h>
 
@@ -31,15 +32,23 @@ MTS_NAMESPACE_BEGIN
 /*! @{ */
 
 /// Write a Log message to the console (to be used within subclasses of <tt>Object</tt>)
-#define Log(level, fmt, ...) Thread::getThread()->getLogger()->log(level, m_theClass, \
-	__FILE__, __LINE__, fmt, ## __VA_ARGS__)
+#define Log(level, fmt, ...) do { \
+		mitsuba::Logger *logger = mitsuba::Thread::getThread()->getLogger(); \
+		if (level >= logger->getLogLevel()) \
+			logger->log(level, m_theClass, \
+				__FILE__, __LINE__, fmt, ## __VA_ARGS__); \
+	} while (0)
 
 /**
  * \brief Write a Log message to the console (static version - to be used
  * outside of classes that derive from Object)
  */
-#define SLog(level, fmt, ...) Thread::getThread()->getLogger()->log(level, NULL, \
-	__FILE__, __LINE__, fmt, ## __VA_ARGS__)
+#define SLog(level, fmt, ...) do { \
+		mitsuba::Logger *logger = mitsuba::Thread::getThread()->getLogger(); \
+		if (level >= logger->getLogLevel()) \
+			logger->log(level, NULL, \
+				__FILE__, __LINE__, fmt, ## __VA_ARGS__); \
+	} while (0)
 
 /*! @} */
 
@@ -78,6 +87,11 @@ MTS_NAMESPACE_BEGIN
 		#cond, __FILE__, __LINE__); \
 	} while (0)
 #endif
+
+/// Throw an exception reporting that the given function is not implemented
+#define NotImplementedError(funcName) \
+	throw std::runtime_error(formatString("%s::" funcName "(): Not implemented!", \
+			getClass()->getName().c_str()));
 
 /*! @} */
 
@@ -170,6 +184,13 @@ public:
 
 	/// Return the logger's formatter implementation
 	inline Formatter *getFormatter() { return m_formatter; }
+	
+	/**
+	 * \brief Return the contents of the log file as a string (if it exists)
+	 *
+	 * \return \c true upon success
+	 */
+	bool readLog(std::string &target);
 
 	/// Return the number of warnings reported so far
 	inline size_t getWarningCount() const { return m_warningCount; }
@@ -195,4 +216,4 @@ private:
 		
 MTS_NAMESPACE_END
 
-#endif /* __LOGGER_H */
+#endif /* __MITSUBA_CORE_LOGGER_H_ */

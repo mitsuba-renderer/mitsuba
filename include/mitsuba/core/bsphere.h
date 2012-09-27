@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__BSPHERE_H)
-#define __BSPHERE_H
+#pragma once
+#if !defined(__MITSUBA_CORE_BSPHERE_H_)
+#define __MITSUBA_CORE_BSPHERE_H_
 
 #include <mitsuba/core/ray.h>
 
@@ -33,9 +34,7 @@ struct BSphere {
 	Float radius;
 
 	/// Construct a bounding sphere at the origin having radius zero
-	inline BSphere() {
-		radius = 0.0f;
-	}
+	inline BSphere() : center(0.0f), radius(0.0f) { }
 
 	/// Unserialize a bounding sphere from a binary data stream
 	inline BSphere(Stream *stream) {
@@ -87,38 +86,12 @@ struct BSphere {
 	 * intersection was found)
 	 */
 	inline bool rayIntersect(const Ray &ray, Float &nearHit, Float &farHit) const {
-		Vector originToCenter = center - ray.o;
-		Float distToRayClosest = dot(originToCenter, ray.d);
-		Float tmp1 = originToCenter.lengthSquared() - radius*radius;
+		Vector o = ray.o - center;
+		Float A = ray.d.lengthSquared();
+		Float B = 2 * dot(o, ray.d);
+		Float C = o.lengthSquared() - radius*radius;
 
-		if (tmp1 <= 0.0f) {
-			/* Inside the sphere */
-			nearHit = farHit = 
-				std::sqrt(distToRayClosest * distToRayClosest - tmp1)
-					+ distToRayClosest;
-			return true;
-		}
-
-		/* Points in different direction */
-		if (distToRayClosest < 0.0f)
-			return false;
-
-		Float sqrOriginToCenterLength = originToCenter.lengthSquared();
-		Float sqrHalfChordDist = radius * radius - sqrOriginToCenterLength
-			+ distToRayClosest * distToRayClosest;
-
-		if (sqrHalfChordDist < 0) // Miss
-			return false;
-
-		// Hit
-		Float hitDistance = std::sqrt(sqrHalfChordDist);
-		nearHit = distToRayClosest - hitDistance;
-		farHit = distToRayClosest + hitDistance;
-
-		if (nearHit == 0)
-			nearHit = farHit;
-
-		return true;
+		return solveQuadratic(A, B, C, nearHit, farHit);
 	}
 
 	/// Serialize this bounding sphere to a binary data stream
@@ -138,4 +111,4 @@ struct BSphere {
 
 MTS_NAMESPACE_END
 
-#endif /* __BSPHERE_H */
+#endif /* __MITSUBA_CORE_BSPHERE_H_ */

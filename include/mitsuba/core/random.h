@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,53 +16,54 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__RANDOM_H)
-#define __RANDOM_H
+#pragma once
+#if !defined(__MITSUBA_CORE_RANDOM_H_)
+#define __MITSUBA_CORE_RANDOM_H_
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/cobject.h>
 
 /* 
-   A C-program for MT19937-64 (2004/9/29 version).
-   Coded by Takuji Nishimura and Makoto Matsumoto.
+   SIMD oriented Fast Mersenne Twister (SFMT) pseudorandom number generator
+   http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/
 
-   This is a 64-bit version of Mersenne Twister pseudorandom number
-   generator.
-
-   Before using, initialize the state by using init_genrand64(seed)  
-   or init_by_array64(init_key, key_length).
-
-   Copyright (C) 2004, Makoto Matsumoto and Takuji Nishimura,
-   All rights reserved.                          
+   Copyright (c) 2006,2007 Mutsuo Saito, Makoto Matsumoto and Hiroshima
+   University. All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions
-   are met:
+   modification, are permitted provided that the following conditions are
+   met:
 
-     1. Redistributions of source code must retain the above copyright
-        notice, this list of conditions and the following disclaimer.
-
-     2. Redistributions in binary form must reproduce the above copyright
-        notice, this list of conditions and the following disclaimer in the
-        documentation and/or other materials provided with the distribution.
-
-     3. The names of its contributors may not be used to endorse or promote 
-        products derived from this software without specific prior written 
-        permission.
+       * Redistributions of source code must retain the above copyright
+         notice, this list of conditions and the following disclaimer.
+       * Redistributions in binary form must reproduce the above
+         copyright notice, this list of conditions and the following
+         disclaimer in the documentation and/or other materials provided
+         with the distribution.
+       * Neither the name of the Hiroshima University nor the names of
+         its contributors may be used to endorse or promote products
+         derived from this software without specific prior written
+         permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    References:
+   M. Saito and M. Matsumoto,
+     ``SIMD-oriented Fast Mersenne Twister:
+	   a 128-bit Pseudorandom Number Generator''
+     Monte Carlo and Quasi-Monte Carlo Method 2006.
+	 Springer (2008) 607--622.
+	 DOI: 10.1007/978-3-540-74496-2_36
    T. Nishimura, ``Tables of 64-bit Mersenne Twisters''
      ACM Transactions on Modeling and 
      Computer Simulation 10. (2000) 348--357.
@@ -71,25 +72,17 @@
        uniform pseudorandom number generator''
      ACM Transactions on Modeling and 
      Computer Simulation 8. (Jan. 1998) 3--30.
-
-   Any feedback is very welcome.
-   http://www.math.hiroshima-u.ac.jp/~m-mat/MT/emt.html
-   email: m-mat @ math.sci.hiroshima-u.ac.jp (remove spaces)
  * \ingroup libcore
 */
-
-/* Period parameters */  
-#define MT_N 312
-#define MT_M 156
-#define MT_MATRIX_A 0xB5026F5AA96619E9ULL /* constant vector a */
-#define MT_UPPER_MASK 0xFFFFFFFF80000000ULL /* most significant 33 bits */
-#define MT_LOWER_MASK 0x7FFFFFFFULL /* least significant 31 bits */
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief %Random number generator based on Mersenne Twister
- * by Takuji Nishimura and Makoto Matsumoto.
+ * \brief %Random number generator based on SIMD-oriented Fast Mersenne Twister
+ * 
+ * \author Mutsuo Saito and Makoto Matsumoto at Hiroshima University.
+ *
+ * \ingroup libcore
  * \ingroup libpython
  */
 class MTS_EXPORT_CORE Random : public SerializableObject {
@@ -141,6 +134,9 @@ public:
 	/// Return a floating point value on the [0, 1) interval
 	Float nextFloat();
 
+	/// Return a normally distributed value
+	Float nextStandardNormal();
+
 	/**
 	 * \brief Draw a uniformly distributed permutation and permute the 
 	 * given STL container.
@@ -161,13 +157,13 @@ public:
 	MTS_DECLARE_CLASS()
 protected:
 	/// Virtual destructor
-	virtual ~Random() { }
+	virtual ~Random();
 private:
-	uint64_t mt[MT_N]; /* the array for the state vector  */
-	int mti;
+	struct State;
+	State *mt;
 };
 
 
 MTS_NAMESPACE_END
 
-#endif /* __RANDOM_H */
+#endif /* __MITSUBA_CORE_RANDOM_H_ */

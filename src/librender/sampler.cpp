@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -21,19 +21,17 @@
 MTS_NAMESPACE_BEGIN
 
 Sampler::Sampler(const Properties &props) 
- : ConfigurableObject(props), m_sampleCount(0), 
-	m_sampleIndex(0), m_properties(props) {
-}
+ : ConfigurableObject(props), m_sampleCount(0), m_sampleIndex(0) { }
 
 Sampler::Sampler(Stream *stream, InstanceManager *manager) 
  : ConfigurableObject(stream, manager) {
 	m_sampleCount = stream->readSize();
 	size_t n1DArrays = stream->readSize();
 	for (size_t i=0; i<n1DArrays; ++i) 
-		request1DArray(stream->readUInt());
+		request1DArray(stream->readSize());
 	size_t n2DArrays = stream->readSize();
 	for (size_t i=0; i<n2DArrays; ++i) 
-		request2DArray(stream->readUInt());
+		request2DArray(stream->readSize());
 }
 
 void Sampler::serialize(Stream *stream, InstanceManager *manager) const {
@@ -42,57 +40,65 @@ void Sampler::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeSize(m_sampleCount);
 	stream->writeSize(m_req1D.size());
 	for (size_t i=0; i<m_req1D.size(); ++i)
-		stream->writeUInt(m_req1D[i]);
+		stream->writeSize(m_req1D[i]);
 	stream->writeSize(m_req2D.size());
 	for (size_t i=0; i<m_req2D.size(); ++i)
-		stream->writeUInt(m_req2D[i]);
+		stream->writeSize(m_req2D[i]);
 }
 
-void Sampler::generate() {
+void Sampler::setFilmResolution(const Vector2i &, bool) { }
+
+void Sampler::generate(const Point2i &) {
 	m_sampleIndex = 0;
-	m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
+	m_dimension1DArray = m_dimension2DArray = 0;
 }
 
 void Sampler::advance() {
 	m_sampleIndex++;
-	m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
+	m_dimension1DArray = m_dimension2DArray = 0;
+}
+
+ref<Sampler> Sampler::clone() {
+	Log(EError, "%s::clone() is not implemented!",
+		getClass()->getName().c_str());
+	return NULL;
 }
 
 void Sampler::setSampleIndex(size_t sampleIndex) {
 	m_sampleIndex = sampleIndex;
-	m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
+	m_dimension1DArray = m_dimension2DArray = 0;
 }
 
-void Sampler::request1DArray(uint32_t size) {
+void Sampler::request1DArray(size_t size) {
 	m_req1D.push_back(size);
 	m_sampleArrays1D.push_back(new Float[m_sampleCount * size]);
 }
 
-void Sampler::request2DArray(uint32_t size) {
+void Sampler::request2DArray(size_t size) {
 	m_req2D.push_back(size);
 	m_sampleArrays2D.push_back(new Point2[m_sampleCount * size]);
 }
 
-Point2 *Sampler::next2DArray(uint32_t size) {
+Point2 *Sampler::next2DArray(size_t size) {
 	Assert(m_sampleIndex < m_sampleCount);
-	if (m_sampleDepth2DArray < (int) m_req2D.size()) {
-		Assert(m_req2D[m_sampleDepth2DArray] == size);
-		return m_sampleArrays2D[m_sampleDepth2DArray++] + m_sampleIndex * size;
+	if (m_dimension2DArray < m_req2D.size()) {
+		Assert(m_req2D[m_dimension2DArray] == size);
+		return m_sampleArrays2D[m_dimension2DArray++] + m_sampleIndex * size;
 	} else {
-		Log(EError, "Tried to retrieve a size-%i 2D array,"
-			" when this was not previously requested.", size);
+		Log(EError, "Tried to retrieve a size-" SIZE_T_FMT " 2D sample array,"
+			" which was not previously allocated.", size);
 		return NULL;
 	}
 }
 
-Float *Sampler::next1DArray(uint32_t size) {
+Float *Sampler::next1DArray(size_t size) {
 	Assert(m_sampleIndex < m_sampleCount);
-	if (m_sampleDepth1DArray < (int) m_req1D.size()) {
-		Assert(m_req1D[m_sampleDepth1DArray] == size);
-		return m_sampleArrays1D[m_sampleDepth1DArray++] + m_sampleIndex * size;
+	if (m_dimension1DArray < m_req1D.size()) {
+		Assert(m_req1D[m_dimension1DArray] == size);
+		return m_sampleArrays1D[m_dimension1DArray++] + m_sampleIndex * size;
 	} else {
-		Log(EError, "Tried to retrieve a size-%i 1D array,"
-			" when this was not previously requested.", size);
+		Log(EError, "Tried to retrieve a size-" SIZE_T_FMT " 1D sample array,"
+			" which was not previously allocated.", size);
 		return NULL;
 	}
 }

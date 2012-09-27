@@ -3,18 +3,22 @@
 
 MTS_NAMESPACE_BEGIN
 
-std::string PhaseFunctionQueryRecord::toString() const {
+std::string PhaseFunctionSamplingRecord::toString() const {
 	std::ostringstream oss;
-	oss << "PhaseFunctionQueryRecord[" << std::endl
-		<< "  mRec = " << indent(mRec.toString()) << "," << std::endl
-		<< "  wi = " << wi.toString() << "," << std::endl
-		<< "  wo = " << wo.toString() << "," << std::endl
-		<< "  quantity = " << quantity << std::endl
+	oss << "PhaseFunctionSamplingRecord[" << endl
+		<< "  mRec = " << indent(mRec.toString()) << "," << endl
+		<< "  wi = " << wi.toString() << "," << endl
+		<< "  wo = " << wo.toString() << "," << endl
+		<< "  mode = " << mode << endl
 		<< "]";
 	return oss.str();
 }
 
-Float PhaseFunction::pdf(const PhaseFunctionQueryRecord &pRec) const {
+void PhaseFunction::configure() {
+	m_type = 0;
+}
+
+Float PhaseFunction::pdf(const PhaseFunctionSamplingRecord &pRec) const {
 	return eval(pRec);
 }
 	
@@ -23,14 +27,20 @@ bool PhaseFunction::needsDirectionallyVaryingCoefficients() const {
 }
 	
 Float PhaseFunction::sigmaDir(Float cosTheta) const {
-	Log(EError, "sigmaDir(): Not implemented! (this is not"
-		" an anisotropic medium)");
+	Log(EError, "%s::sigmaDir(Float) is not implemented (this is not "
+		"an anisotropic medium!)", getClass()->getName().c_str());
 	return 0.0f;
 }
 
 Float PhaseFunction::sigmaDirMax() const {
-	Log(EError, "sigmaDirMax(): Not implemented! (this is not"
-		" an anisotropic medium)");
+	Log(EError, "%s::sigmaDirMax() is not implemented (this is not "
+		"an anisotropic medium!)", getClass()->getName().c_str());
+	return 0.0f;
+}
+	
+Float PhaseFunction::getMeanCosine() const {
+	Log(EError, "%s::getMeanCosine() is not implemented!",
+		getClass()->getName().c_str());
 	return 0.0f;
 }
 

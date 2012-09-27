@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,16 +16,16 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SCENE_H)
-#define __SCENE_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_SCENE_H_)
+#define __MITSUBA_RENDER_SCENE_H_
 
 #include <mitsuba/core/netobject.h>
-#include <mitsuba/core/pdf.h>
+#include <mitsuba/core/pmf.h>
 #include <mitsuba/core/aabb.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/render/skdtree.h>
-#include <mitsuba/render/camera.h>
-#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/sensor.h>
 #include <mitsuba/render/integrator.h>
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
@@ -39,7 +39,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Principal scene data structure
  *
- * This class holds information on surfaces, luminaires and participating media
+ * This class holds information on surfaces, emitters and participating media
  * and coordinates rendering jobs. It also provides useful query routines that 
  * are mostly used by the \ref Integrator implementations.
  *
@@ -48,21 +48,6 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER Scene : public NetworkedObject {
 public:
-	/**
-	 * When this scene is used as a test case, the following enumeration
-	 * gives more information on the performed type of test.
-	 */
-	enum ETestType {
-		/* No test */
-		ENone = 0,
-
-		/* Perform a statistical test using Student's T statistic */
-		ETTest,
-
-		/* Compare the relative error against a specified upper bound */
-		ERelativeError
-	};
-
 	// =============================================================
 	//! @{ \name Initialization and rendering
 	// =============================================================
@@ -80,39 +65,72 @@ public:
 	Scene(Stream *stream, InstanceManager *manager);
 
 	/**
-	 * \brief Initialize the scene. This function \a must be called 
-	 * before using any of the methods in this class.
+	 * \brief Initialize the scene
+	 *
+	 * This function \a must be called before using any 
+	 * of the methods in this class.
 	 */
 	void initialize();
+	
+	/**
+	 * \brief Initialize the scene for bidirectional rendering algorithms.
+	 *
+	 * This ensures that certain "special" shapes (such as the aperture
+	 * of the sensor) are added to the scene. This function should be called 
+	 * before using any of the methods in this class.
+	 */
+	void initializeBidirectional();
 
 	/**
-	 * Pre-process step - should be called after initialize() and 
-	 * before rendering the scene. This might do a variety of things, 
+	 * \brief Perform any pre-processing steps before rendering
+	 *
+	 * This function should be called after \ref initialize() and 
+	 * before rendering the scene. It might do a variety of things, 
 	 * such as constructing photon maps or executing distributed overture 
-	 * passes. Progress is tracked by sending status messages to a provided 
-	 * render queue. The parameter \c job is required to discern 
-	 * multiple render jobs occurring in parallel. The last three parameters 
-	 * are resource IDs of the associated scene, camera and sample generator,
-	 * which have been made available to  all local and remote workers.
-	 * Returns true upon successful completion.
+	 * passes. 
+	 *
+	 * Progress is tracked by sending status messages to a provided 
+	 * render queue (the parameter \c job is required to discern multiple 
+	 * render jobs occurring in parallel).
+	 *
+	 * The last three parameters are resource IDs of the associated scene, 
+	 * sensor and sample generator, which have been made available to all 
+	 * local and remote workers. 
+	 *
+	 * \return \c true upon successful completion.
 	 */
 	bool preprocess(RenderQueue *queue, const RenderJob *job,
-		int sceneResID, int cameraResID, int samplerResID);
+		int sceneResID, int sensorResID, int samplerResID);
 
 	/**
-	 * Render the scene as seen by the scene's main camera. Progress is tracked
-	 * by sending status messages to a provided render queue. The parameter
-	 * \c job is required to discern multiple render jobs occurring in 
-	 * parallel. The last three parameters are resource IDs of the associated 
-	 * scene, camera and sample generator, which have been made available to 
-	 * all local and remote workers. Returns true upon successful completion.
+	 * \brief Render the scene as seen by the scene's main sensor.
+	 *
+	 * Progress is tracked by sending status messages to a provided 
+	 * render queue (the parameter \c job is required to discern multiple 
+	 * render jobs occurring in parallel).
+	 *
+	 * The last three parameters are resource IDs of the associated scene, 
+	 * sensor and sample generator, which have been made available to all 
+	 * local and remote workers. 
+	 *
+	 * \return \c true upon successful completion.
 	 */
 	bool render(RenderQueue *queue, const RenderJob *job,
-			int sceneResID, int cameraResID, int samplerResID);
+			int sceneResID, int sensorResID, int samplerResID);
 
-	/// Post-process step after rendering. Parameters are explained above
+	/**
+	 * \brief Perform any post-processing steps after rendering
+	 *
+	 * Progress is tracked by sending status messages to a provided 
+	 * render queue (the parameter \c job is required to discern multiple 
+	 * render jobs occurring in parallel).
+	 *
+	 * The last three parameters are resource IDs of the associated scene, 
+	 * sensor and sample generator, which have been made available to all 
+	 * local and remote workers. 
+	 */
 	void postprocess(RenderQueue *queue, const RenderJob *job,
-		int sceneResID, int cameraResID, int samplerResID);
+		int sceneResID, int sensorResID, int samplerResID);
 
 	/// Write out the current (partially rendered) image
 	void flush();
@@ -132,8 +150,8 @@ public:
 	/// Add an unnamed child
 	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
-	/** \brief Configure this object (called _once_ after construction
-	   and addition of all child ConfigurableObjects.) */
+	/** \brief Configure this object (called \a once after construction
+	   and addition of all child \ref ConfigurableObject instances).) */
 	void configure();
 
 	//! @}
@@ -149,8 +167,8 @@ public:
 	 *
 	 * \param ray
 	 *    A 3-dimensional ray data structure with minimum/maximum
-	 *    extent information, as well as a time (which applies when
-	 *    the shapes are animated)
+	 *    extent information, as well as a time value (which applies 
+	 *    when the shapes are in motion)
 	 *
 	 * \param its
 	 *    A detailed intersection record, which will be filled by the
@@ -164,42 +182,6 @@ public:
 
 	/**
 	 * \brief Intersect a ray against all primitives stored in the scene
-	 * and return detailed intersection information
-	 *
-	 * This variant also computes the attenuation until the next
-	 * surface intersection (or until infinity if there is no
-	 * intersection). Index-matched medium transitions are transparently
-	 * handled and do not result in an intersection.
-	 *
-	 * \param ray
-	 *    A 3-dimensional ray data structure with minimum/maximum
-	 *    extent information, as well as a time (which applies when
-	 *    the shapes are animated)
-	 *
-	 * \param medium
-	 *    Initial medium containing the ray \c ray
-	 *
-	 * \param its
-	 *    A detailed intersection record, which will be filled by the
-	 *    intersection query
-	 *
-	 * \param indexMatchedMediumTransition
-	 *    This parameter is used to return whether or not this routine
-	 *    passed through an index-matched medium-to-medium transition 
-	 *    while computing the attenuation.
-	 *
-	 * \param transmittance
-	 *    Transmittance from the ray origin to the returned intersection
-	 *    (or infinity if there is no intersection)
-	 *
-	 * \return \c true if an intersection was found
-	 */
-	bool attenuatedRayIntersect(const Ray &ray, const Medium * medium,
-		Intersection &its, bool &indexMatchedMediumTransition,
-		Spectrum &transmittance, Sampler *sampler = NULL) const;
-
-	/**
-	 * \brief Intersect a ray against all primitives stored in the scene
 	 * and return the traveled distance and intersected shape
 	 *
 	 * This function represents a performance improvement when the
@@ -208,8 +190,8 @@ public:
 	 *
 	 * \param ray
 	 *    A 3-dimensional ray data structure with minimum/maximum
-	 *    extent information, as well as a time (which applies when
-	 *    the shapes are animated)
+	 *    extent information, as well as a time value (which applies
+	 *    when the shapes are in motion)
 	 *
 	 * \param t
 	 *    The traveled ray distance will be stored in this parameter
@@ -221,199 +203,740 @@ public:
 	 * \param n
 	 *    The geometric surface normal will be stored in this parameter
 	 *
+	 * \param uv
+	 *    The UV coordinates associated with the intersection will
+	 *    be stored here.
+	 *
 	 * \return \c true if an intersection was found
 	 */
 	inline bool rayIntersect(const Ray &ray, Float &t, 
-			ConstShapePtr &shape, Normal &n) const {
-		return m_kdtree->rayIntersect(ray, t, shape, n);
+			ConstShapePtr &shape, Normal &n, Point2 &uv) const {
+		return m_kdtree->rayIntersect(ray, t, shape, n, uv);
 	}
 
 	/**
-	 * \brief Test for occlusion between \c p1 and \c p2 at the
-	 * specified time
+	 * \brief Intersect a ray against all primitives stored in the scene
+	 * and \a only determine whether or not there is an intersection.
 	 *
-	 * \return \c true if an occluder is located on the line segment
-	 * between \c p1 and \c p2.
+	 * This is by far the fastest ray tracing method. This performance
+	 * improvement comes with a major limitation though: this function
+	 * cannot provide any additional information about the detected 
+	 * intersection (not even its position).
+	 *
+	 * \param ray
+	 *    A 3-dimensional ray data structure with minimum/maximum
+	 *    extent information, as well as a time value (which applies
+	 *    when the shapes are in motion)
+	 *
+	 * \return \c true if an intersection was found
 	 */
-	inline bool isOccluded(const Point &p1, const Point &p2, Float time) const {
-		Ray ray(p1, p2-p1, time);
-		ray.mint = ShadowEpsilon;
-		ray.maxt = 1-ShadowEpsilon;
+	inline bool rayIntersect(const Ray &ray) const {
 		return m_kdtree->rayIntersect(ray);
 	}
 
 	/**
-	 * \brief Return the transmittance between \c p1 and \c p2 at
-	 * the specified time.
+	 * \brief Return the transmittance between \c p1 and \c p2 at the
+	 * specified time.
 	 *
-	 * This function is essentially a continuous version of \ref isOccluded,
-	 * which accounts for the presence of participating media. 
+	 * This function is essentially a continuous version of \ref isOccluded(),
+	 * which additionally accounts for the presence of participating media
+	 * and surface interactions that attenuate a ray without changing
+	 * its direction (i.e. geometry with an alpha mask)
 	 *
 	 * The implementation correctly handles arbitrary amounts of index-matched
-	 * medium transitions, which means that it won't just stop and return zero
-	 * after encountering one. Mismatched boundaries need to be handled
-	 * differently though.
+	 * medium transitions. The \c interactions parameter can be used to 
+	 * specify a maximum number of possible surface interactions and medium 
+	 * transitions between \c p1 and \c p2. When this number is exceeded, 
+	 * the function returns zero.
 	 *
+	 * Note that index-mismatched boundaries (i.e. a transition from air to
+	 * water) are not supported by this function. The integrator needs to take 
+	 * care of these in some other way.
+	 *
+	 * \param p1
+	 *     Source position
+	 * \param p2
+	 *     Target position
+	 * \param p1OnSurface
+	 *     Is the source position located on a surface? This information is
+	 *     necessary to set up the right ray epsilons for the kd-tree traversal
+	 * \param p2OnSurface
+	 *     Is the target position located on a surface? 
+	 * \param medium
+	 *     The medium at \c p1
+	 * \param interactions 
+	 *    Specifies the maximum permissible number of index-matched medium
+	 *    transitions or \ref BSDF::ENull scattering events on the way
+	 *    to the light source. (<tt>interactions<0</tt> means arbitrarily many).
+	 *    When the function returns a nonzero result, this parameter will
+	 *    additionally be used to return the actual number of intermediate
+	 *    interactions.
+	 * \param time
+	 *     Associated scene time value for the transmittance computation
+	 * \param sampler
+	 *     Optional: A sample generator. This may be used
+	 *     to compute a random unbiased estimate of the transmission.
 	 * \return An spectral-valued transmittance value with components
-	 * between zero and one.
+	 *     between zero and one.
 	 */
+	Spectrum evalTransmittance(const Point &p1, bool p1OnSurface,
+		const Point &p2, bool p2OnSurface, Float time, const Medium *medium, 
+		int &interactions, Sampler *sampler = NULL) const;
 
-	Spectrum getTransmittance(const Point &p1, const Point &p2, Float time, 
-		const Medium *medium, Sampler *sampler = NULL) const;
-	
-	/// Return an axis-aligned bounding box containing the whole scene
-	inline const AABB &getAABB() const {
-		return m_aabb;
-	}
-	
-	/// Return a bounding sphere containing the whole scene
-	inline const BSphere &getBSphere() const {
-		return m_bsphere;
-	}
-	
 	//! @}
 	// =============================================================
 	
 	// =============================================================
-	//! @{ \name Luminaire query & sampling functions
+	//! @{ \name Ray tracing support for bidirectional algorithms
 	// =============================================================
 
 	/**
-	 * Sample a visible point on a luminaire (ideally uniform wrt. solid angle at \c p)
-	 * \param p
-	 *     An arbitrary point in the scene
-	 * \param time
-	 *    Associated time value -- this is needed to check the visibility when
-	 *    objects are potentially moving over time
-	 * \param lRec
-	 *    A luminaire sampling record, which will hold information such as the
-	 *    probability density, etc.
-	 * \param testVisibility
-	 *    If this is true, a shadow-ray will be cast to ensure that no surface
-	 *    blocks the path lRec.sRec.p <-> p.
-	 * \return
-     *    \c true if sampling was successful
+	 * \brief Intersect a ray against all scene primitives \a and 
+	 * "special" primitives, such as the aperture of a sensor.
+	 *
+	 * This function does exactly the same thing as \ref rayIntersect,
+	 * except that it additionally performs intersections against a
+	 * list of "special" shapes that are intentionally kept outside
+	 * of the main scene kd-tree (e.g. because they are not static 
+	 * and might change from rendering to rendering). This is needed
+	 * by some bidirectional techniques that e.g. care about 
+	 * intersections with the sensor aperture.
+	 *
+	 * \param ray
+	 *    A 3-dimensional ray data structure with minimum/maximum
+	 *    extent information, as well as a time value (which applies 
+	 *    when the shapes are in motion)
+	 *
+	 * \param its
+	 *    A detailed intersection record, which will be filled by the
+	 *    intersection query
+	 *
+	 * \return \c true if an intersection was found
 	 */
-	bool sampleLuminaire(const Point &p, Float time, LuminaireSamplingRecord &lRec,
+	bool rayIntersectAll(const Ray &ray, Intersection &its) const;
+
+	/**
+	 * \brief Intersect a ray against all normal and "special" primitives
+	 * and only return the traveled distance and intersected shape
+	 *
+	 * This function represents a performance improvement when the
+	 * intersected shape must be known, but there is no need for
+	 * a detailed intersection record.
+	 *
+	 * This function does exactly the same thing as \ref rayIntersect,
+	 * except that it additionally performs intersections against a
+	 * list of "special" shapes that are intentionally kept outside
+	 * of the main scene kd-tree (e.g. because they are not static 
+	 * and might change from rendering to rendering). This is needed
+	 * by some bidirectional techniques that e.g. care about 
+	 * intersections with the sensor aperture.
+	 *
+	 * \param ray
+	 *    A 3-dimensional ray data structure with minimum/maximum
+	 *    extent information, as well as a time value (which applies
+	 *    when the shapes are in motion)
+	 *
+	 * \param t
+	 *    The traveled ray distance will be stored in this parameter
+	 
+	 * \param shape
+	 *    A pointer to the intersected shape will be stored in this
+	 *    parameter
+	 *
+	 * \param n
+	 *    The geometric surface normal will be stored in this parameter
+	 *
+	 * \param uv
+	 *    The UV coordinates associated with the intersection will
+	 *    be stored here.
+	 *
+	 * \return \c true if an intersection was found
+	 */
+	bool rayIntersectAll(const Ray &ray, Float &t, 
+			ConstShapePtr &shape, Normal &n, Point2 &uv) const;
+
+	/**
+	 * \brief Intersect a ray against all normal and "special" primitives 
+	 * and \a only determine whether or not there is an intersection.
+	 *
+	 * This is by far the fastest ray tracing method. This performance
+	 * improvement comes with a major limitation though: this function
+	 * cannot provide any additional information about the detected 
+	 * intersection (not even its position).
+	 *
+	 * This function does exactly the same thing as \ref rayIntersect,
+	 * except that it additionally performs intersections against a
+	 * list of "special" shapes that are intentionally kept outside
+	 * of the main scene kd-tree (e.g. because they are not static 
+	 * and might change from rendering to rendering). This is needed
+	 * by some bidirectional techniques that e.g. care about 
+	 * intersections with the sensor aperture.
+	 *
+	 * \param ray
+	 *    A 3-dimensional ray data structure with minimum/maximum
+	 *    extent information, as well as a time value (which applies
+	 *    when the shapes are in motion)
+	 *
+	 * \return \c true if an intersection was found
+	 */
+	bool rayIntersectAll(const Ray &ray) const;
+
+	/**
+	 * \brief Return the transmittance between \c p1 and \c p2 at the
+	 * specified time (and acount for "special" primitives).
+	 *
+	 * This function is essentially a continuous version of \ref isOccluded(),
+	 * which additionally accounts for the presence of participating media
+	 * and surface interactions that attenuate a ray without changing
+	 * its direction (i.e. geometry with an alpha mask)
+	 *
+	 * The implementation correctly handles arbitrary amounts of index-matched
+	 * medium transitions. The \c interactions parameter can be used to 
+	 * specify a maximum number of possible surface interactions and medium 
+	 * transitions between \c p1 and \c p2. When this number is exceeded, 
+	 * the function returns zero.
+	 *
+	 * Note that index-mismatched boundaries (i.e. a transition from air to
+	 * water) are not supported by this function. The integrator needs to take 
+	 * care of these in some other way.
+	 *
+	 * This function does exactly the same thing as \ref evalTransmittance,
+	 * except that it additionally performs intersections against a
+	 * list of "special" shapes that are intentionally kept outside
+	 * of the main scene kd-tree (e.g. because they are not static 
+	 * and might change from rendering to rendering). This is needed
+	 * by some bidirectional techniques that care about intersections 
+	 * with the sensor aperture, etc.
+	 *
+	 * \param p1
+	 *     Source position
+	 * \param p2
+	 *     Target position
+	 * \param p1OnSurface
+	 *     Is the source position located on a surface? This information is
+	 *     necessary to set up the right ray epsilons for the kd-tree traversal
+	 * \param p2OnSurface
+	 *     Is the target position located on a surface? 
+	 * \param medium
+	 *     The medium at \c p1
+	 * \param interactions 
+	 *    Specifies the maximum permissible number of index-matched medium
+	 *    transitions or \ref BSDF::ENull scattering events on the way
+	 *    to the light source. (<tt>interactions<0</tt> means arbitrarily many).
+	 *    When the function returns a nonzero result, this parameter will
+	 *    additionally be used to return the actual number of intermediate
+	 *    interactions.
+	 * \param time
+	 *     Associated scene time value for the transmittance computation
+	 * \param sampler
+	 *     Optional: A sample generator. This may be used
+	 *     to compute a random unbiased estimate of the transmission.
+	 * \return An spectral-valued transmittance value with components
+	 *     between zero and one.
+	 */
+	Spectrum evalTransmittanceAll(const Point &p1, bool p1OnSurface,
+		const Point &p2, bool p2OnSurface, Float time, const Medium *medium, 
+		int &interactions, Sampler *sampler = NULL) const;
+
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Direct sampling techniques
+	// =============================================================
+
+	/**
+	 * \brief Direct illumination sampling routine
+	 *
+	 * Given an arbitrary reference point in the scene, this method samples a
+	 * position on an emitter that has a nonzero contribution towards that point.
+	 *
+	 * Ideally, the implementation should importance sample the product of
+	 * the emission profile and the geometry term between the reference point
+	 * and the position on the emitter.
+	 *
+	 * \param dRec
+	 *    A direct illumination sampling record that specifies the 
+	 *    reference point and a time value. After the function terminates,
+	 *    it will be populated with the position sample and related information
+	 *
+	 * \param sample
+	 *    A uniformly distributed 2D vector
+	 *
+	 * \param testVisibility
+	 *    When set to \c true, a shadow ray will be cast to ensure that the
+	 *    sampled emitter position and the reference point are mutually visible.
+	 *
+	 * \return
+	 *    An importance weight given by the radiance received along 
+	 *    the sampled ray divided by the sample probability.
+	 */
+	Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, 
 			const Point2 &sample, bool testVisibility = true) const;
 
 	/**
-	 * \brief Convenience method - similar to \ref sampleLuminaire(), but also attenuates
-	 * \c lRec.value by the integrated extinction coefficient along the connection path.
-	 * A visibility test is always performed. This function is meant to be used when 
-	 * \c p does not lie on a surface.
+	 * \brief "Direct illumination" sampling routine for the main scene sensor
 	 *
-	 * \param p
-	 *     An arbitrary point in the scene
-	 * \param time
-	 *    Associated time value -- this is needed to check the visibility when
-	 *    objects are potentially moving over time
-	 * \param medium
-	 *    The medium located at the ray origin (or \c NULL for vacuum).
-	 * \param lRec
-	 *    A luminaire sampling record, which will hold information such 
-	 *    as the probability density, etc.
+	 * Given an arbitrary reference point in the scene, this method samples a
+	 * position on an sensor that has a nonzero contribution towards that point.
+	 * This function can be interpreted as a generalization of a direct 
+	 * illumination sampling strategy to sensors.
+	 *
+	 * Ideally, the implementation should importance sample the product of
+	 * the response profile and the geometry term between the reference point
+	 * and the position on the emitter.
+	 *
+	 * \param dRec
+	 *    A direct illumination sampling record that specifies the 
+	 *    reference point and a time value. After the function terminates,
+	 *    it will be populated with the position sample and related information
+	 *
+	 * \param sample
+	 *    A uniformly distributed 2D vector
+	 *
+	 * \param testVisibility
+	 *    When set to \c true, a shadow ray will be cast to ensure that the
+	 *    sampled sensor position and the reference point are mutually visible.
+	 *
 	 * \return
-     *    \c true if sampling was successful
+	 *    An importance weight given by the importance emitted along 
+	 *    the sampled ray divided by the sample probability.
 	 */
-	bool sampleAttenuatedLuminaire(const Point &p, Float time, 
-		const Medium *medium, LuminaireSamplingRecord &lRec, 
-		const Point2 &sample, Sampler *sampler = NULL) const;
+	Spectrum sampleSensorDirect(DirectSamplingRecord &dRec, 
+			const Point2 &sample, bool testVisibility = true) const;
 
 	/**
-	 * \brief Convenience method - similar to \ref sampleLuminaire(), but also attenuates
-	 * \c lRec.value by the integrated extinction coefficient along the connection path.
-	 * A visibility test is always performed.
+	 * \brief Direct illumination sampling with support for participating
+	 * media (medium variant)
+	 *
+	 * Given an arbitrary reference point in the scene, this method samples a
+	 * position on an emitter that has a nonzero contribution towards that point.
+	 * In comparison to \ref sampleEmitterDirect, this version also accounts for 
+	 * attenuation by participating media and should be used when \c dRec.p
+	 * lies \a inside a medium, i.e. \a not on a surface!
+	 *
+	 * Ideally, the implementation should importance sample the product of
+	 * the emission profile and the geometry term between the reference point 
+	 * and the position on the emitter.
+	 *
+	 * \param dRec
+	 *    A direct illumination sampling record that specifies the 
+	 *    reference point and a time value. After the function terminates,
+	 *    it will be populated with the position sample and related information
+	 *
+	 * \param medium
+	 *    The medium located at the reference point (or \c NULL for vacuum).
+	 *
+	 * \param interactions
+	 *    Specifies the maximum permissible number of index-matched medium
+	 *    transitions or \ref BSDF::ENull scattering events on the way
+	 *    to the light source. (<tt>interactions<0</tt> means arbitrarily many).
+	 *    When the function returns a nonzero result, this parameter will
+	 *    additionally be used to return the actual number of intermediate
+	 *    interactions.
+	 *
+	 * \param sample
+	 *    A uniformly distributed 2D vector
+	 *
+	 * \param sampler
+	 *    Optional: a pointer to a sample generator. Some particular
+	 *    implementations can do a better job at sampling when they have
+	 *    access to additional random numbers.
+	 *
+	 * \return
+	 *    An importance weight given by the radiance received along 
+	 *    the sampled ray divided by the sample probability.
+	 */
+	Spectrum sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec,
+			const Medium *medium, int &interactions, const Point2 &sample, 
+			Sampler *sampler = NULL) const;
+
+	/**
+	 * \brief "Direct illumination" sampling routine for the main scene sensor
+	 * with support for participating media (medium variant)
+	 *
+	 * Given an arbitrary reference point in the scene, this method samples a
+	 * position on an sensor that has a nonzero response towards that point.
+	 * In comparison to \ref sampleSensorDirect, this version also accounts for 
+	 * attenuation by participating media and should be used when \c dRec.p
+	 * lies \a inside a medium, i.e. \a not on a surface!
+	 * This function can be interpreted as a generalization of a direct 
+	 * illumination sampling strategy to sensors.
+	 *
+	 * Ideally, the implementation should importance sample the product of
+	 * the response profile and the geometry term between the reference point 
+	 * and the position on the sensor.
+	 *
+	 * \param dRec
+	 *    A direct illumination sampling record that specifies the 
+	 *    reference point and a time value. After the function terminates,
+	 *    it will be populated with the position sample and related information
+	 *
+	 * \param medium
+	 *    The medium located at the reference point (or \c NULL for vacuum).
+	 *
+	 * \param interactions
+	 *    Specifies the maximum permissible number of index-matched medium
+	 *    transitions or \ref BSDF::ENull scattering events on the way
+	 *    to the light source. (<tt>interactions<0</tt> means arbitrarily many).
+	 *    When the function returns a nonzero result, this parameter will
+	 *    additionally be used to return the actual number of intermediate
+	 *    interactions.
+	 *
+	 * \param sample
+	 *    A uniformly distributed 2D vector
+	 *
+	 * \param sampler
+	 *    Optional: a pointer to a sample generator. Some particular
+	 *    implementations can do a better job at sampling when they have
+	 *    access to additional random numbers.
+	 *
+	 * \return
+	 *    An importance weight given by the radiance received along 
+	 *    the sampled ray divided by the sample probability.
+	 */
+	Spectrum sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec,
+			const Medium *medium, int &interactions, const Point2 &sample, 
+			Sampler *sampler = NULL) const;
+
+	/**
+	 * \brief Direct illumination sampling with support for participating
+	 * media (surface variant)
+	 *
+	 * Given an arbitrary reference point in the scene, this method samples a
+	 * position on an emitter that has a nonzero contribution towards that point.
+	 * In comparison to \ref sampleEmitterDirect, this version also accounts for 
+	 * attenuation by participating media and should be used when the target 
+	 * position lies on a surface.
+	 *
+	 * Ideally, the implementation should importance sample the product of
+	 * the emission profile and the geometry term between the reference point
+	 * and the position on the emitter.
+	 *
+	 * \param dRec
+	 *    A direct illumination sampling record that specifies the 
+	 *    reference point and a time value. After the function terminates,
+	 *    it will be populated with the position sample and related information
 	 *
 	 * \param its
-	 *     An arbitrary intersection
+	 *    An intersection record associated with the reference point in
+	 *    \c dRec. This record is needed to determine the participating 
+	 *    medium between the emitter sample and the reference point
+	 *    when \c its marks a medium transition.
+	 *
 	 * \param medium
-	 *    The medium located at the ray origin (or \c NULL for vacuum).
-	 * \param lRec
-	 *    A luminaire sampling record, which will hold information such 
-	 *    as the probability density, etc.
+	 *    The medium located at \c its (or \c NULL for vacuum). When the shape
+	 *    associated with \c its marks a medium transition, it does not matter 
+	 *    which of the two media is specified.
+	 *
+	 * \param interactions
+	 *    Specifies the maximum permissible number of index-matched medium
+	 *    transitions or \ref BSDF::ENull scattering events on the way
+	 *    to the light source. (<tt>interactions<0</tt> means arbitrarily many).
+	 *    When the function returns a nonzero result, this parameter will
+	 *    additionally be used to return the actual number of intermediate
+	 *    interactions.
+	 *
+	 * \param sample
+	 *    A uniformly distributed 2D vector
+	 *
+	 * \param sampler
+	 *    Optional: a pointer to a sample generator. Some particular
+	 *    implementations can do a better job at sampling when they have
+	 *    access to additional random numbers.
+	 *
 	 * \return
-     *    \c true if sampling was successful
+	 *    An importance weight given by the radiance received along 
+	 *    the sampled ray divided by the sample probability.
 	 */
-	bool sampleAttenuatedLuminaire(const Intersection &its, 
-		const Medium *medium, LuminaireSamplingRecord &lRec, 
-		const Point2 &sample, Sampler *sampler = NULL) const;
+	Spectrum sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec,
+			const Intersection &its, const Medium *medium, int &interactions,
+			const Point2 &sample, Sampler *sampler = NULL) const;
 
 	/**
-	 * \brief Return the probability density associated with the sample \c lRec 
-	 * when calling \ref sampleLuminaire() with the point \c p.
+	 * \brief "Direct illumination" sampling routine for the main scene sensor
+	 * with support for participating media (surface variant)
+	 *
+	 * Given an arbitrary reference point in the scene, this method samples a
+	 * position on an sensor that has a nonzero response towards that point.
+	 * In comparison to \ref sampleSensorDirect, this version also accounts for 
+	 * attenuation by participating media and should be used when the target 
+	 * position lies on a surface.
+	 *
+	 * Ideally, the implementation should importance sample the product of
+	 * the emission profile and the geometry term between the reference point
+	 * and the position on the sensor.
+	 *
+	 * \param dRec
+	 *    A direct illumination sampling record that specifies the 
+	 *    reference point and a time value. After the function terminates,
+	 *    it will be populated with the position sample and related information
+	 *
+	 * \param its
+	 *    An intersection record associated with the reference point in
+	 *    \c dRec. This record is needed to determine the participating 
+	 *    medium between the sensor sample and the reference point
+	 *    when \c its marks a medium transition.
+	 *
+	 * \param medium
+	 *    The medium located at \c its (or \c NULL for vacuum). When the shape
+	 *    associated with \c its marks a medium transition, it does not matter 
+	 *    which of the two media is specified.
+	 *
+	 * \param interactions
+	 *    Specifies the maximum permissible number of index-matched medium
+	 *    transitions or \ref BSDF::ENull scattering events on the way
+	 *    to the light source. (<tt>interactions<0</tt> means arbitrarily many).
+	 *    When the function returns a nonzero result, this parameter will
+	 *    additionally be used to return the actual number of intermediate
+	 *    interactions.
+	 *
+	 * \param sample
+	 *    A uniformly distributed 2D vector
+	 *
+	 * \param sampler
+	 *    Optional: a pointer to a sample generator. Some particular
+	 *    implementations can do a better job at sampling when they have
+	 *    access to additional random numbers.
+	 *
+	 * \return
+	 *    An importance weight given by the radiance received along 
+	 *    the sampled ray divided by the sample probability.
+	 */
+	Spectrum sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec,
+			const Intersection &its, const Medium *medium, int &interactions, 
+			const Point2 &sample, Sampler *sampler = NULL) const;
+
+	/**
+	 * \brief Evaluate the probability density of the \a direct sampling
+	 * method implemented by the \ref sampleEmitterDirect() method.
+	 *
+	 * \param dRec
+	 *    A direct sampling record, which specifies the query 
+	 *    location. Note that this record need not be completely 
+	 *    filled out. The important fields are \c p, \c n, \c ref,
+	 *    \c dist, \c d, \c measure, and \c uv.
 	 *
 	 * \param p
-	 *     An arbitrary point in the scene
-	 * \param lRec
-	 *     Luminaire sampling record, whose associated density is to
-	 *     be determined
-	 * \param delta
-	 *     When this parameter is set to true, only components with a
-	 *     Dirac delta density are queried. Otherwise, they are left out.
+	 *    The world-space position that would have been passed to \ref
+	 *    sampleEmitterDirect()
+	 *    
+	 * \return
+	 *    The density expressed with respect to the requested measure
+	 *    (usually \ref ESolidAngle)
 	 */
-	Float pdfLuminaire(const Point &p, const LuminaireSamplingRecord &lRec,
-			bool delta = false) const;
+	Float pdfEmitterDirect(const DirectSamplingRecord &dRec) const;
 
 	/**
-	 * \brief Sample a particle leaving one of the scene's luminaires and 
-	 * return a ray describing its path as well as record containing detailed
-	 * probability density information. 
+	 * \brief Evaluate the probability density of the \a direct sampling
+	 * method implemented by the \ref sampleSensorDirect() method.
 	 *
-	 * Two uniformly distributed 2D samples are required. This method does
-	 * exactly the same as calling \c sampleEmissionArea and 
-	 * \c eRec.luminaire->sampleEmissionDirection(..) in sequence, 
-	 * modulating \c eRec.Le by the return value of the latter and dividing
-	 * by the product of the spatial and directional sampling densities.
+	 * \param dRec
+	 *    A direct sampling record, which specifies the query 
+	 *    location. Note that this record need not be completely 
+	 *    filled out. The important fields are \c p, \c n, \c ref,
+	 *    \c dist, \c d, \c measure, and \c uv.
+	 *
+	 * \param p
+	 *    The world-space position that would have been passed to \ref
+	 *    sampleSensorDirect()
+	 *    
+	 * \return
+	 *    The density expressed with respect to the requested measure
+	 *    (usually \ref ESolidAngle)
 	 */
+	Float pdfSensorDirect(const DirectSamplingRecord &dRec) const;
 
-	void sampleEmission(EmissionRecord &lRec, Point2 &sample1, Point2 &sample2) const;
+	//! @}
+	// =============================================================
+
+	// =============================================================
+	//! @{ \name Emission sampling techniques
+	// =============================================================
 
 	/**
-	 * \brief Sample only the spatial part of the emission sampling strategy
-	 * implemented in \c sampleEmission.
+	 * \brief Sample a position according to the emission profile 
+	 * defined by the emitters in the scene.
 	 *
-	 * An examplary use of this method is bidirectional path tracing or MLT, 
-	 * where the area and direction sampling steps take place in different 
-	 * vertices.
+	 * To sample the directional component, please use the
+	 * \ref Emitter::sampleDirection() method.
 	 *
-	 * After the function call terminates, the area density as well as the
-	 * spatially dependent emittance component will be stored in \c eRec.
+	 * \param pRec
+	 *    A position record to be populated with the sampled
+	 *    position and related information
+	 *
+	 * \param sample
+	 *    A uniformly distributed 2D vector
+	 *
+	 * \return
+	 *    An importance weight associated with the sampled position.
+	 *    This accounts for the difference in the spatial part of the
+	 *    emission profile and the density function.
 	 */
-	void sampleEmissionArea(EmissionRecord &lRec, Point2 &sample) const;
+	Spectrum sampleEmitterPosition(PositionSamplingRecord &pRec,
+		const Point2 &sample) const;
 
 	/**
-	 * \brief Given an emitted particle, populate the emission record with the 
-	 * relevant probability densities.
+	 * \brief Sample a position on the main sensor of the scene. 
 	 *
-	 * When \c delta is set to true, only components with a Dirac delta density
-	 * are considered in the query. Otherwise, they are left out.
+	 * This function is provided here mainly for symmetry 
+	 * with respect to \ref sampleEmitterPosition().
+	 *
+	 * To sample the directional component, please use the
+	 * \ref Sensor::sampleDirection() method.
+	 *
+	 * \param pRec
+	 *    A position record to be populated with the sampled
+	 *    position and related information
+	 *
+	 * \param sample
+	 *    A uniformly distributed 2D vector
+	 *
+	 * \param extra
+	 *    An additional 2D vector provided to the sampling 
+	 *    routine -- its use is implementation-dependent.
+	 *
+	 * \return
+	 *    An importance weight associated with the sampled position.
+	 *    This accounts for the difference in the spatial part of the
+	 *    response profile and the density function.
 	 */
-	void pdfEmission(EmissionRecord &eRec, bool delta) const;
+	inline Spectrum sampleSensorPosition(PositionSamplingRecord &pRec,
+		const Point2 &sample, const Point2 *extra = NULL) const {
+		pRec.object = m_sensor.get();
+		return m_sensor->samplePosition(pRec, sample, extra);
+	}
 
 	/**
-	 * \brief Return the background radiance for a ray that did not intersect
+	 * \brief Evaluate the spatial component of the sampling density
+	 * implemented by the \ref sampleEmitterPosition() method
+	 *
+	 * \param pRec
+	 *    A position sampling record, which specifies the query location
+	 *
+	 * \return
+	 *    The area density at the supplied position
+	 */
+	Float pdfEmitterPosition(const PositionSamplingRecord &pRec) const;
+
+	/**
+	 * \brief Evaluate the spatial component of the sampling density
+	 * implemented by the \ref sampleSensorPosition() method
+	 *
+	 * \param pRec
+	 *    A position sampling record, which specifies the query location
+	 *
+	 * \return
+	 *    The area density at the supplied position
+	 */
+	inline Float pdfSensorPosition(const PositionSamplingRecord &pRec) const {
+		return m_sensor->pdfPosition(pRec);
+	}
+
+	/**
+	 * \brief Return the discrete probability of choosing a 
+	 * certain emitter in <tt>sampleEmitter*</tt>
+	 */
+	inline Float pdfEmitterDiscrete(const Emitter *emitter) const {
+		return emitter->getSamplingWeight() * m_emitterPDF.getNormalization();
+	}
+
+	/**
+	 * \brief Sample a position according to the emission profile 
+	 * defined by the emitters in the scene.
+	 *
+	 * To sample the directional component, please use the
+	 * \ref Emitter::sampleDirection() method.
+	 *
+	 * \param pRec
+	 *    A position record to be populated with the sampled
+	 *    position and related information
+	 *
+	 * \param sample
+	 *    A uniformly distributed 2D vector
+	 *
+	 * \return
+	 *    An importance weight associated with the sampled position.
+	 *    This accounts for the difference in the spatial part of the
+	 *    emission profile and the density function.
+	 */
+ 	/**
+	 * \brief Importance sample a ray according to the emission profile
+	 * defined by the sensors in the scene
+	 *
+	 * This function combines both steps of choosing a ray origin and 
+	 * direction value. It does not return any auxiliary sampling 
+	 * information and is mainly meant to be used by unidirectional
+	 * rendering techniques.
+	 * 
+	 * Note that this function potentially uses a different sampling 
+	 * strategy compared to the sequence of running \ref sampleEmitterPosition() 
+	 * and \ref Emitter::sampleDirection(). The reason for this is that it may
+	 * be possible to switch to a better technique when sampling both
+	 * position and direction at the same time.
+	 *
+	 * \param ray
+	 *    A ray data structure to be populated with a position 
+	 *    and direction value
+	 *
+	 * \param spatialSample
+	 *    Denotes the sample that is used to choose the spatial component
+	 *
+	 * \param directionalSample
+	 *    Denotes the sample that is used to choose the directional component
+	 *
+	 * \param time
+	 *    Scene time value to be associated with the sample
+	 *
+	 * \return
+	 *    An importance weight associated with the sampled ray.
+	 *    This accounts for the difference between the emission profile
+	 *    and the sampling density function.
+	 */
+	Spectrum sampleEmitterRay(Ray &ray,
+		const Emitter* &emitter,
+		const Point2 &spatialSample,
+		const Point2 &directionalSample,
+		Float time) const;
+
+	//! @}
+	// =============================================================
+	
+	// =============================================================
+	//! @{ \name Environment emitters
+	// =============================================================
+
+	/// Return the scene's environment emitter (if there is one)
+	inline const Emitter *getEnvironmentEmitter() const { return m_environmentEmitter.get(); }
+
+	/// Does the scene have a environment emitter?
+	inline bool hasEnvironmentEmitter() const { return m_environmentEmitter.get() != NULL; }
+
+	/**
+	 * \brief Return the environment radiance for a ray that did not intersect
 	 * any of the scene objects.
 	 *
 	 * This is primarily meant for path tracing-style integrators.
 	 */
-	inline Spectrum LeBackground(const Ray &ray) const {
-		return hasBackgroundLuminaire() ? m_backgroundLuminaire->Le(ray) : Spectrum(0.0f);
+	inline Spectrum evalEnvironment(const RayDifferential &ray) const {
+		return hasEnvironmentEmitter() ? 
+			m_environmentEmitter->evalEnvironment(ray) : Spectrum(0.0f);
 	}
 
 	/**
-	 * \brief Return the background radiance for a ray that did not intersect
+	 * \brief Return the environment radiance for a ray that did not intersect
 	 * any of the scene objects. This method additionally considers
 	 * transmittance by participating media
 	 *
 	 * This is primarily meant for path tracing-style integrators.
 	 */
-	inline Spectrum LeAttenuatedBackground(const Ray &ray, const Medium *medium, Sampler *sampler) const {
-		if (!m_backgroundLuminaire)
+	inline Spectrum evalAttenuatedEnvironment(const RayDifferential &ray, 
+			const Medium *medium, Sampler *sampler) const {
+		if (!m_environmentEmitter)
 			return Spectrum(0.0f);
-		Spectrum result = LeBackground(ray);
+		Spectrum result = evalEnvironment(ray);
 		if (medium)
-			result *= medium->getTransmittance(ray, sampler);
+			result *= medium->evalTransmittance(ray, sampler);
 		return result;
 	}
 	
@@ -424,30 +947,88 @@ public:
 	//! @{ \name Miscellaneous
 	// =============================================================
 
+	/// Return an axis-aligned bounding box containing the whole scene
+	inline const AABB &getAABB() const {
+		return m_aabb;
+	}
+
+	/**
+	 * \brief Is the main scene sensor degenerate?  (i.e. has it 
+	 * collapsed to a point or line)
+	 *
+	 * Note that this function only cares about the spatial component
+	 * of the sensor -- its value does not depend on whether the directional
+	 * response function is degenerate.
+	 */
+	inline bool hasDegenerateSensor() const { return m_degenerateSensor; }
+
+	/**
+	 * \brief Area \a all emitters in this scene degenerate?
+	 * (i.e. they has collapsed to a point or line)
+	 * 
+	 * Note that this function only cares about the spatial component
+	 * of the emitters -- its value does not depend on whether the 
+	 * directional emission profile is degenerate.
+	 */
+	inline bool hasDegenerateEmitters() const { return m_degenerateEmitters; }
+
+	/// Return a bounding sphere containing the whole scene
+	inline BSphere getBSphere() const {
+		// todo: switch to something smarter at some point
+		return m_aabb.getBSphere();
+	}
+
 	/// Does the scene contain participating media?
 	inline bool hasMedia() const { return !m_media.empty(); }
 
-	/// Return the scene's test mode
-	inline ETestType getTestType() const { return m_testType; }
-	/// Return the scene's test threshold
-	inline Float getTestThreshold() const { return m_testThresh; }
+	/**
+	 * \brief Set the main scene sensor. 
+	 *
+	 * Note that the main sensor is not included when this Scene instance
+	 * is serialized -- the sensor field will be \c NULL after 
+	 * unserialization. This is intentional so that the sensor can 
+	 * be changed without having to re-transmit the whole scene. 
+	 * Hence, it needs to be submitted separately and re-attached 
+	 * on the remote side using \ref setSensor().
+	 **/
+	void setSensor(Sensor *sensor);
+
+	/// \brief Remove a sensor from the scene's sensor list
+	void removeSensor(Sensor *sensor);
+	
+	/// \brief Add a sensor to the scene's sensor list
+	void addSensor(Sensor *sensor);
+
+	/// Return the scene's sensor
+	inline Sensor *getSensor() { return m_sensor; }
+
+	/// Return the scene's sensor (const version)
+	inline const Sensor *getSensor() const { return m_sensor.get(); }
 
 	/**
-	 * \brief Set the scene's camera. 
+	 * \brief Return the list of sensors that are specified
+	 * by the scene.
 	 *
-	 * Note that the camera is not included when this Scene instance
-	 * is serialized -- the camera field will be \c NULL after 
-	 * unserialization. This is intentional so that the camera can 
-	 * be changed without having to re-transmit the whole scene. 
-	 * Hence, the camera needs to be submitted separately
-	 * and re-attached on the remote side using \ref setCamera().
-	 **/
-	inline void setCamera(Camera *camera) { m_camera = camera; }
-	/// Return the scene's camera
-	inline Camera *getCamera() { return m_camera; }
-	/// Return the scene's camera (const version)
-	inline const Camera *getCamera() const { return m_camera.get(); }
-	
+	 * As scene can have multiple sensors -- however, during
+	 * a rendering, there will always be one "main" sensor that
+	 * is currently active.
+	 *
+	 * \sa getSensor
+	 */
+	inline ref_vector<Sensor> &getSensors() { return m_sensors; }
+
+	/**
+	 * \brief Return the list of sensors that are specified
+	 * by the scene (const version)
+	 *
+	 * As scene can have multiple sensors -- however, during
+	 * a rendering, there will always be one "main" sensor that
+	 * is currently active.
+	 *
+	 * \sa getSensor
+	 */
+	inline const ref_vector<Sensor> &getSensors() const { return m_sensors; }
+
 	/**
 	 * \brief Set the scene's integrator. 
 	 *
@@ -459,6 +1040,7 @@ public:
 	 * on the remote side using \ref setIntegrator().
 	 **/
 	inline void setIntegrator(Integrator *integrator) { m_integrator = integrator; }
+
 	/// Return the scene's integrator
 	inline Integrator *getIntegrator() { return m_integrator; }
 	/// Return the scene's integrator (const version)
@@ -484,18 +1066,16 @@ public:
 	 * different sampler instance. This helps to avoid locking/contention 
 	 * issues and ensures that different threads render with different 
 	 * random number sequences. The sampler instance provided here is a 
-	 * clone of the original sampler specified in the camera.
+	 * clone of the original sampler specified in the sensor.
 	 */
 	inline Sampler *getSampler() { return m_sampler; }
 	/// Return the scene's sampler
 	inline const Sampler *getSampler() const { return m_sampler.get(); }
 
 	/// Return the scene's film
-	inline Film *getFilm() { return m_camera->getFilm(); }
+	inline Film *getFilm() { return m_sensor->getFilm(); }
 	/// Return the scene's film
-	inline const Film *getFilm() const { return m_camera->getFilm(); }
-	/// Set the scene's film
-	inline void setFilm(Film *film) { m_camera->setFilm(film); }
+	inline const Film *getFilm() const { return m_sensor->getFilm(); }
 	
 	/// Return the scene's kd-tree accelerator
 	inline ShapeKDTree *getKDTree() { return m_kdtree; }
@@ -503,55 +1083,63 @@ public:
 	inline const ShapeKDTree *getKDTree() const { return m_kdtree.get(); }
 
 	/// Return the a list of all subsurface integrators
-	inline const std::vector<Subsurface *> &getSubsurfaceIntegrators() const { return m_ssIntegrators; }
+	inline ref_vector<Subsurface> &getSubsurfaceIntegrators() { return m_ssIntegrators; }
+	/// Return the a list of all subsurface integrators
+	inline const ref_vector<Subsurface> &getSubsurfaceIntegrators() const { return m_ssIntegrators; }
 
-	/// Return the scene's background luminaire (if there is one)
-	inline const Luminaire *getBackgroundLuminaire() const { return m_backgroundLuminaire.get(); }
-	/// Does the scene have a background luminaire?
-	inline bool hasBackgroundLuminaire() const { return m_backgroundLuminaire.get() != NULL; }
-
-	/// Return the scene's triangular meshes
+	/// Return the scene's triangular meshes (a subset of \ref getShapes())
 	inline std::vector<TriMesh *> &getMeshes() { return m_meshes; }
-	/// Return the scene's triangular meshes
+	/// Return the scene's triangular meshes (a subset of \ref getShapes())
 	inline const std::vector<TriMesh *> &getMeshes() const { return m_meshes; }
+	/// Return the scene's normal shapes (including triangular meshes)
+	inline ref_vector<Shape> &getShapes() { return m_shapes; }
+	/// Return the scene's normal shapes (including triangular meshes)
+	inline const ref_vector<Shape> &getShapes() const { return m_shapes; }
+
+	/**
+	 * \brief Return the scene's shapes (including triangular meshes)
+	 */
+	inline ref_vector<Shape> &getSpecialShapes() { return m_specialShapes; }
 	/// Return the scene's shapes (including triangular meshes)
-	inline std::vector<Shape *> &getShapes() { return m_shapes; }
-	/// Return the scene's shapes (including triangular meshes)
-	inline const std::vector<Shape *> &getShapes() const { return m_shapes; }
-	/// Return the scene's luminaires
-	inline std::vector<Luminaire *> &getLuminaires() { return m_luminaires; }
-	/// Return the scene's luminaires
-	inline const std::vector<Luminaire *> &getLuminaires() const { return m_luminaires; }
+	inline const ref_vector<Shape> &getSpecialShapes() const { return m_specialShapes; }
+
+	/// Return the scene's emitters
+	inline ref_vector<Emitter> &getEmitters() { return m_emitters; }
+	/// Return the scene's emitters
+	inline const ref_vector<Emitter> &getEmitters() const { return m_emitters; }
 	/// Return the scene's participating media
-	inline std::set<Medium *> &getMedia() { return m_media; }
+	inline ref_vector<Medium> &getMedia() { return m_media; }
 	/// Return the scene's participating media
-	inline const std::set<Medium *> &getMedia() const { return m_media; }
+	inline const ref_vector<Medium> &getMedia() const { return m_media; }
 	/// Return referenced objects (such as textures, BSDFs)
-	inline std::vector<ConfigurableObject *> &getReferencedObjects() { return m_objects; }
+	inline ref_vector<ConfigurableObject> &getReferencedObjects() { return m_objects; }
 	/// Return referenced objects (such as textures, BSDFs)
-	inline const std::vector<ConfigurableObject *> &getReferencedObjects() const { return m_objects; }
+	inline const ref_vector<ConfigurableObject> &getReferencedObjects() const { return m_objects; }
 
 	/// Return the name of the file containing the original description of this scene
-	inline const fs::path getSourceFile() const { return m_sourceFile; }
+	inline const fs::path &getSourceFile() const { return *m_sourceFile; }
 	/// Set the name of the file containing the original description of this scene
-	void setSourceFile(const fs::path &name) { m_sourceFile = name; }
+	void setSourceFile(const fs::path &name);
 	/// Return the render output filename
-	inline const fs::path getDestinationFile() const { return m_destinationFile; }
+	inline const fs::path &getDestinationFile() const { return *m_destinationFile; }
 	/// Set the render output filename
-	void setDestinationFile(const fs::path &name) { m_destinationFile = name; }
+	void setDestinationFile(const fs::path &name);
+
 	/// Does the destination file already exist?
-	inline bool destinationExists() const { return m_camera->getFilm()->destinationExists(m_destinationFile); }
+	inline bool destinationExists() const { return m_sensor->getFilm()->destinationExists(*m_destinationFile); }
 
 	/// Set the block resolution used to split images into parallel workloads
-	inline void setBlockSize(int size) { m_blockSize = size; }
+	inline void setBlockSize(uint32_t size) { m_blockSize = size; }
 	/// Return the block resolution used to split images into parallel workloads
-	inline int getBlockSize() const { return m_blockSize; }
+	inline uint32_t getBlockSize() const { return m_blockSize; }
 
 	/// Serialize the whole scene to a network/file stream
 	void serialize(Stream *stream, InstanceManager *manager) const;
+
 	/* NetworkedObject implementation */
-	virtual void bindUsedResources(ParallelProcess *proc) const;
-	virtual void wakeup(std::map<std::string, SerializableObject *> &params);
+	void bindUsedResources(ParallelProcess *proc) const;
+	void wakeup(ConfigurableObject *parent,
+		std::map<std::string, SerializableObject *> &params);
 
 	/// Return a string representation
 	std::string toString() const;
@@ -564,34 +1152,36 @@ protected:
 	/// Virtual destructor
 	virtual ~Scene();
 
+	/// \cond
 	/// Add a shape to the scene
 	void addShape(Shape *shape);
+	/// \endcond
 private:
 	ref<ShapeKDTree> m_kdtree;
-	ref<Camera> m_camera;
+	ref<Sensor> m_sensor;
 	ref<Integrator> m_integrator;
 	ref<Sampler> m_sampler;
-	ref<Luminaire> m_backgroundLuminaire;
+	ref<Emitter> m_environmentEmitter;
+	ref_vector<Shape> m_shapes;
+	ref_vector<Shape> m_specialShapes;
+	ref_vector<Sensor> m_sensors;
+	ref_vector<Emitter> m_emitters;
+	ref_vector<ConfigurableObject> m_objects;
+	ref_vector<NetworkedObject> m_netObjects;
+	ref_vector<Subsurface> m_ssIntegrators;
+	ref_vector<Medium> m_media;
 	std::vector<TriMesh *> m_meshes;
-	std::vector<Shape *> m_shapes;
-	std::vector<Luminaire *> m_luminaires;
-	std::vector<Subsurface *> m_ssIntegrators;
-	std::vector<ConfigurableObject *> m_objects;
-	std::vector<NetworkedObject *> m_netObjects;
-	std::set<Medium *> m_media;
-	fs::path m_sourceFile;
-	fs::path m_destinationFile;
-	DiscretePDF m_luminairePDF;
+	fs::path *m_sourceFile;
+	fs::path *m_destinationFile;
+	DiscreteDistribution m_emitterPDF;
 	AABB m_aabb;
-	BSphere m_bsphere;
-	bool m_importanceSampleLuminaires;
-	ETestType m_testType;
-	Float m_testThresh;
-	int m_blockSize;
+	uint32_t m_blockSize;
+	bool m_degenerateSensor;
+	bool m_degenerateEmitters;
 };
 
 MTS_NAMESPACE_END
 
 #include <mitsuba/render/records.inl>
 
-#endif /* __SCENE_H */
+#endif /* __MITSUBA_RENDER_SCENE_H_ */

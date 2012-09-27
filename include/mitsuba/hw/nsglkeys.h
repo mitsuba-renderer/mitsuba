@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -37,6 +37,9 @@
     Sam Lantinga
     slouken@libsdl.org
 */
+
+#if !defined(__MITSUBA_HW_NSGLKEYS_H_)
+#define __MITSUBA_HW_NSGLKEYS_H_
 
 /* These are the Macintosh key scancode constants -- from Inside Macintosh */
 
@@ -156,3 +159,5 @@
 #define QZ_IBOOK_RIGHT		0x3C
 #define QZ_IBOOK_DOWN		0x3D
 #define QZ_IBOOK_UP			0x3E
+
+#endif /* __MITSUBA_HW_NSGLKEYS_H_ */

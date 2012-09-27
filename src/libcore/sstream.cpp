@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,23 +20,29 @@
 #include <mitsuba/core/statistics.h>
 
 #if !defined(WIN32)
-#include <unistd.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <sys/wait.h>
-#include <signal.h>
+# include <unistd.h>
+# include <errno.h>
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <netdb.h>
+# include <arpa/inet.h>
+# include <sys/wait.h>
+# include <signal.h>
 
-#define INVALID_SOCKET -1
-#define SOCKET_ERROR   -1
+# define INVALID_SOCKET -1
+# define SOCKET_ERROR   -1
+#else
+# include <winsock2.h>
+# include <ws2tcpip.h>
 #endif
 
 MTS_NAMESPACE_BEGIN
 
-#ifdef WIN32
+namespace
+{
+#if defined(WIN32)
+// This function is natively avaiable since Windows Vista
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t len) {
 	if (af == AF_INET) {
 		struct sockaddr_in in;
@@ -61,17 +67,16 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t len) {
 }
 #endif
 
-static void *get_in_addr(struct sockaddr_storage *sa) {
+void *get_in_addr(struct sockaddr_storage *sa)
+{
 	if (sa->ss_family == AF_INET) 
 		return &(((struct sockaddr_in*)sa)->sin_addr);
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-#if defined(WIN32)
-SocketStream::SocketStream(SOCKET socket)
-#else
-SocketStream::SocketStream(int socket)
-#endif
+} // namespace
+
+SocketStream::SocketStream(socket_t socket)
  : m_socket(socket), m_received(0), m_sent(0) {
 	setByteOrder(ENetworkByteOrder);
 	struct sockaddr_storage sockaddr;
@@ -214,7 +219,7 @@ std::string SocketStream::toString() const {
 	return oss.str();
 }
 
-void SocketStream::setPos(size_t pos) {
+void SocketStream::seek(size_t pos) {
 	Log(EError, "Cannot seek within a socket stream!");
 }
 

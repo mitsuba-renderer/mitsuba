@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,14 +16,14 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__FRESOLVER_H)
-#define __FRESOLVER_H
+#pragma once
+#if !defined(__MITSUBA_CORE_FRESOLVER_H_)
+#define __MITSUBA_CORE_FRESOLVER_H_
 
 #include <mitsuba/mitsuba.h>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-
-namespace fs = boost::filesystem;
+#include <deque>
 
 MTS_NAMESPACE_BEGIN
 
@@ -76,8 +76,11 @@ public:
 	/// Create a clone of the file resolver
 	FileResolver *clone() const;
 
-	/// Add a search path to the resolver
-	void addPath(const fs::path &path);
+	/// Append a search path to the resolver
+	void appendPath(const fs::path &path);
+
+	/// Prepend a search path to the resolver
+	void prependPath(const fs::path &path);
 
 	/// Clear all stored search paths
 	void clear();
@@ -89,9 +92,9 @@ public:
 protected:
 	virtual ~FileResolver() { }
 private:
-	std::vector<fs::path> m_paths;
+	std::deque<fs::path> m_paths;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __FRESOLVER_H */
+#endif /* __MITSUBA_CORE_FRESOLVER_H_ */

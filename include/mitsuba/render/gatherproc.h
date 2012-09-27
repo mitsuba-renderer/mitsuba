@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__GATHERPHOTONPROC_H)
-#define __GATHERPHOTONPROC_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_GATHERPROC_H_)
+#define __MITSUBA_RENDER_GATHERPROC_H_
 
 #include <mitsuba/render/particleproc.h>
 #include <mitsuba/render/photonmap.h>
@@ -125,4 +126,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __GATHERPHOTONPROC_H */
+#endif /* __MITSUBA_RENDER_GATHERPROC_H_ */

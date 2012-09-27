@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,7 +20,6 @@
 #define __LRUCACHE_H
 
 #include <mitsuba/mitsuba.h>
-
 #include <boost/bimap.hpp>
 #include <boost/bimap/list_of.hpp>
 #include <boost/bimap/set_of.hpp>
@@ -32,7 +31,10 @@ MTS_NAMESPACE_BEGIN
  * \brief Generic LRU cache implementation
  *
  * Based on the bimap implementation by Tim Day
- * (http://www.bottlenose.demon.co.uk/article/lru.pdf)
+ * (http://www.bottlenose.demon.co.uk/article/lru.pdf).
+ *
+ * This cache does not support multithreading out of the box -- it
+ * will need to be protected using some form of locking mechanism.
  *
  * The original code is under the following license:
  *
@@ -99,7 +101,7 @@ public:
 			= m_cache.left.find(k);
 
 		if (it == m_cache.left.end()) {
-			// We don’t have it:
+			// We don't have it:
 			// Evaluate function and create new record
 
 			const V v = m_generatorFunction(k);

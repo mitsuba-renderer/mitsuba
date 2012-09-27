@@ -25,6 +25,11 @@
  * mesh into smaller pieces or recompile libxml with a higher limit.
  */
 
+// Mitsuba's "Assert" macro conflicts with Xerces' XSerializeEngine::Assert(...).
+// This becomes a problem when using a PCH which contains mitsuba/core/logger.h
+#if defined(Assert)
+# undef Assert
+#endif
 #include <xercesc/parsers/SAXParser.hpp>
 #include <xercesc/dom/DOMException.hpp>
 #include "converter.h"
@@ -32,7 +37,7 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/version.h>
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 #include <mitsuba/core/getopt.h>
 #endif
 
@@ -60,16 +65,16 @@ void help() {
 		<<  "   -z          Import animations" << endl << endl
 		<<  "   -y          Don't pack all geometry data into a single file" << endl << endl
 		<<  "   -n          Don't import any materials (an adjustments file will be necessary)" << endl << endl
-		<<  "   -l <type>   Override the type of film (e.g. 'exrfilm', 'pngfilm', ..)" << endl << endl
+		<<  "   -l <type>   Override the type of film (e.g. 'hdrfilm', 'ldrfilm', ..)" << endl << endl
 		<<  "   -r <w>x<h>  Override the image resolution to e.g. 1920x1080" << endl << endl
 		<< "Please see the documentation for more information." << endl;
 }
 
-int colladaMain(int argc, char **argv) {
+int importMain(int argc, char **argv) {
 	bool srgb = false, mapSmallerSide = true;
 	char optchar, *end_ptr = NULL;
 	int xres = -1, yres = -1;
-	std::string filmType = "exrfilm";
+	std::string filmType = "hdrfilm";
 	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 	ELogLevel logLevel = EInfo;
 	bool packGeometry = true, importMaterials = true,
@@ -81,8 +86,8 @@ int colladaMain(int argc, char **argv) {
 		switch (optchar) {
 			case 'a': {
 					std::vector<std::string> paths = tokenize(optarg, ";");
-					for (unsigned int i=0; i<paths.size(); ++i) 
-						fileResolver->addPath(paths[i]);
+					for (int i=(int) paths.size()-1; i>=0; --i) 
+						fileResolver->prependPath(paths[i]);
 				}
 				break;
 			case 's':
@@ -168,15 +173,17 @@ int mts_main(int argc, char **argv) {
 
 	/* Initialize the core framework */
 	Class::staticInitialization();
+	Object::staticInitialization();
 	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
 	Spectrum::staticInitialization();
+	Bitmap::staticInitialization();
 
 	Thread::getThread()->getLogger()->setLogLevel(EInfo);
 
-#if !defined(WIN32)
+#if !defined(__WINDOWS__)
 	/* Correct number parsing on some locales (e.g. ru_RU) */
 	setlocale(LC_NUMERIC, "C");
 #endif
@@ -196,7 +203,7 @@ int mts_main(int argc, char **argv) {
 		device->makeCurrent(renderer);
 		ref<Timer> timer = new Timer();
 
-		retval = colladaMain(argc, argv);
+		retval = importMain(argc, argv);
 
 		if (retval != -1)
 			cout << "Finished conversion (took " << timer->getMilliseconds() << " ms)" << endl;
@@ -213,7 +220,7 @@ int mts_main(int argc, char **argv) {
 			XMLString::transcode(toCatch.getMessage()) << endl;
 		retval = -1;
 	} catch (const std::exception &e) {
-		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
+		std::cerr << "Caught a critical exeption: " << e.what() << endl;
 		retval = -1;
 	} catch (...) {
 		std::cerr << "Caught a critical exeption of unknown type!" << endl;
@@ -223,11 +230,13 @@ int mts_main(int argc, char **argv) {
 	XMLPlatformUtils::Terminate();
 
 	/* Shutdown the core framework */
+	Bitmap::staticShutdown();
 	Spectrum::staticShutdown();
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();
 	PluginManager::staticShutdown();
+	Object::staticShutdown();
 	Class::staticShutdown();
 	
 	return retval;

@@ -1,7 +1,7 @@
 /*
 	This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__KDTREE_H)
-#define __KDTREE_H
+#pragma once
+#if !defined(__MITSUBA_CORE_KDTREE_H_)
+#define __MITSUBA_CORE_KDTREE_H_
 
 #include <mitsuba/core/aabb.h>
 #include <mitsuba/core/timer.h>
@@ -44,7 +45,7 @@ template <typename _PointType, typename _DataRecord> struct SimpleKDNode {
 	typedef _PointType                       PointType;
 	typedef _DataRecord                      DataRecord;
 	typedef uint32_t                         IndexType;
-	typedef typename PointType::value_type   Scalar;
+	typedef typename PointType::Scalar       Scalar;
 
 	enum {
 		ELeafFlag  =  0x10,
@@ -66,7 +67,7 @@ template <typename _PointType, typename _DataRecord> struct SimpleKDNode {
 		right(0), data(data), flags(0) { }
 
 	/// Given the current node's index, return the index of the right child 
-	inline IndexType getRightIndex(IndexType self) const { return right; }
+		inline IndexType getRightIndex(IndexType self) const { return right; }
 	/// Given the current node's index, set the right child index
 	inline void setRightIndex(IndexType self, IndexType value) { right = value; }
 
@@ -128,7 +129,7 @@ template <typename _PointType, typename _DataRecord> struct LeftBalancedKDNode {
 	typedef _PointType                       PointType;
 	typedef _DataRecord                      DataRecord;
 	typedef uint32_t                         IndexType;
-	typedef typename PointType::value_type   Scalar;
+	typedef typename PointType::Scalar       Scalar;
 
 	enum {
 		ELeafFlag  =  0x10,
@@ -218,8 +219,8 @@ public:
 	typedef _NodeType                        NodeType;
 	typedef typename NodeType::PointType     PointType;
 	typedef typename NodeType::IndexType     IndexType;
-	typedef typename PointType::value_type   Scalar;
-	typedef typename PointType::vector_type  VectorType;
+	typedef typename PointType::Scalar       Scalar;
+	typedef typename PointType::VectorType   VectorType;
 	typedef TAABB<PointType>                 AABBType;
 
 	/// Supported tree construction heuristics
@@ -330,7 +331,7 @@ public:
 			return;
 		}
 
-		SLog(EInfo, "Building a %i-dimensional kd-tree over " SIZE_T_FMT " data points (%s)",
+		SLog(EDebug, "Building a %i-dimensional kd-tree over " SIZE_T_FMT " data points (%s)",
 			PointType::dim, m_nodes.size(), memString(m_nodes.size() * sizeof(NodeType)).c_str());
 
 		if (recomputeAABB) {
@@ -348,7 +349,7 @@ public:
 		   be applied to the data in one pass */
 		std::vector<IndexType> indirection(m_nodes.size());
 		for (size_t i=0; i<m_nodes.size(); ++i)
-			indirection[i] = i;
+			indirection[i] = (IndexType) i;
 
 		m_depth = 0;
 		int constructionTime;
@@ -369,10 +370,10 @@ public:
 		int permutationTime = timer->getMilliseconds();
 
 		if (recomputeAABB)
-			SLog(EInfo, "Done after %i ms (breakdown: aabb: %i ms, build: %i ms, permute: %i ms). ",
+			SLog(EDebug, "Done after %i ms (breakdown: aabb: %i ms, build: %i ms, permute: %i ms). ",
 				aabbTime + constructionTime + permutationTime, aabbTime, constructionTime, permutationTime);
 		else
-			SLog(EInfo, "Done after %i ms (breakdown: build: %i ms, permute: %i ms). ",
+			SLog(EDebug, "Done after %i ms (breakdown: build: %i ms, permute: %i ms). ",
 				constructionTime + permutationTime, constructionTime, permutationTime);
 	}
 
@@ -677,7 +678,7 @@ public:
 			return 0;
 
 		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
-		size_t index = 0, stackPos = 1, found = 0;
+		IndexType index = 0, stackPos = 1, found = 0;
 		Float distSquared = searchRadius*searchRadius;
 		stack[0] = 0;
 
@@ -726,7 +727,7 @@ public:
 
 			index = nextIndex;
 		}
-		return found;
+		return (size_t) found;
 	}
 
 
@@ -743,7 +744,7 @@ public:
 			return 0;
 
 		IndexType *stack = (IndexType *) alloca((m_depth+1) * sizeof(IndexType));
-		size_t index = 0, stackPos = 1, found = 0;
+		IndexType index = 0, stackPos = 1, found = 0;
 		Float distSquared = searchRadius*searchRadius;
 		stack[0] = 0;
 
@@ -792,7 +793,7 @@ public:
 
 			index = nextIndex;
 		}
-		return found;
+		return (size_t) found;
 	}
 
 	/**
@@ -880,7 +881,7 @@ protected:
 			  typename std::vector<IndexType> &permutation) {
 		m_depth = std::max(depth, m_depth);
 
-		size_t count = rangeEnd-rangeStart;
+		IndexType count = (IndexType) (rangeEnd-rangeStart);
 		SAssert(count > 0);
 
 		if (count == 1) {
@@ -923,7 +924,7 @@ protected:
 			  typename std::vector<IndexType>::iterator rangeEnd) {
 		m_depth = std::max(depth, m_depth);
 		
-		size_t count = rangeEnd-rangeStart;
+		IndexType count = (IndexType) (rangeEnd-rangeStart);
 		SAssert(count > 0);
 
 		if (count == 1) {
@@ -1011,11 +1012,13 @@ protected:
 		splitNode.setLeaf(false);
 
 		if (split+1 != rangeEnd) 
-			splitNode.setRightIndex(rangeStart - base, split + 1 - base);
+			splitNode.setRightIndex((IndexType) (rangeStart - base),
+					(IndexType) (split + 1 - base));
 		else 
-			splitNode.setRightIndex(rangeStart - base, 0);
+			splitNode.setRightIndex((IndexType) (rangeStart - base), 0);
 
-		splitNode.setLeftIndex(rangeStart - base, rangeStart + 1 - base);
+		splitNode.setLeftIndex((IndexType) (rangeStart - base),
+				(IndexType) (rangeStart + 1 - base));
 		std::iter_swap(rangeStart, split);
 
 		/* Recursively build the children */
@@ -1041,4 +1044,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __KDTREE_H */
+#endif /* __MITSUBA_CORE_KDTREE_H_ */

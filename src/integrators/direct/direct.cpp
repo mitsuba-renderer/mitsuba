@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -21,24 +21,28 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{direct}{Direct illumination integrator}
+ * \order{1}
  * \parameters{
  *     \parameter{shadingSamples}{\Integer}{This convenience parameter can be 
- *         used to set both \code{luminaireSamples} and \code{bsdfSamples} at 
+ *         used to set both \code{emitterSamples} and \code{bsdfSamples} at 
  *         the same time.}
- *     \parameter{luminaireSamples}{\Integer}{Optional more fine-grained
+ *     \parameter{emitterSamples}{\Integer}{Optional more fine-grained
  *        parameter: specifies the number of samples that should be generated
  *        using the direct illumination strategies implemented by the scene's
- *        luminaires\default{set to the value of \code{shadingSamples}}}
+ *        emitters\default{set to the value of \code{shadingSamples}}}
  *     \parameter{bsdfSamples}{\Integer}{Optional more fine-grained
  *        parameter: specifies the number of samples that should be generated
  *        using the BSDF sampling strategies implemented by the scene's
  *        surfaces\default{set to the value of \code{shadingSamples}}}
+ *     \parameter{strictNormals}{\Boolean}{Be strict about potential
+ *        inconsistencies involving shading normals? See \pluginref{path}
+ *        for details.\default{no, i.e. \code{false}}}
  * }
  *
  * \renderings{
  *     \medrendering{Only BSDF sampling}{integrator_direct_bsdf}
- *     \medrendering{Only luminaire sampling}{integrator_direct_lum}
- *     \medrendering{BSDF and luminaire sampling}{integrator_direct_both}
+ *     \medrendering{Only emitter sampling}{integrator_direct_lum}
+ *     \medrendering{BSDF and emitter sampling}{integrator_direct_both}
  *     \caption{
  *         \label{fig:integrator-direct}
  *         This plugin implements two different strategies for computing the
@@ -49,17 +53,17 @@ MTS_NAMESPACE_BEGIN
  *
  * This integrator implements a direct illumination technique that makes use
  * of \emph{multiple importance sampling}: for each pixel sample, the 
- * integrator generates a user-specifiable number of BSDF and luminaire 
+ * integrator generates a user-specifiable number of BSDF and emitter
  * samples and combines them using the power heuristic. Usually, the BSDF
  * sampling technique works very well on glossy objects but does badly 
  * everywhere else (\subfigref{integrator-direct}{a}), while the opposite
- * is true for the luminaire sampling technique 
+ * is true for the emitter sampling technique 
  * (\subfigref{integrator-direct}{b}). By combining these approaches, one
  * can obtain a rendering technique that works well in both cases
  * (\subfigref{integrator-direct}{c}).
  *
  * The number of samples spent on either technique is configurable, hence 
- * it is also possible to turn this plugin into an luminaire sampling-only 
+ * it is also possible to turn this plugin into an emitter sampling-only 
  * or BSDF sampling-only integrator.
  *
  * For best results, combine the direct illumination integrator with the
@@ -74,41 +78,53 @@ MTS_NAMESPACE_BEGIN
  *          indirect illumination.
  * }
  */
-class MIDirectIntegrator : public SampleIntegrator {
+
+class MIDirectIntegrator : public SamplingIntegrator {
 public:
-	MIDirectIntegrator(const Properties &props) : SampleIntegrator(props) {
+	MIDirectIntegrator(const Properties &props) : SamplingIntegrator(props) {
 		/* Number of shading samples -- this parameter is a shorthand notation
-		   to set both 'luminaireSamples' and 'bsdfSamples' at the same time*/
+		   to set both 'emitterSamples' and 'bsdfSamples' at the same time*/
 		size_t shadingSamples = props.getSize("shadingSamples", 1);
 
-		/* Number of samples to take using the luminaire sampling technique */
-		m_luminaireSamples = props.getSize("luminaireSamples", shadingSamples);
+		/* Number of samples to take using the emitter sampling technique */
+		m_emitterSamples = props.getSize("emitterSamples", shadingSamples);
 		/* Number of samples to take using the BSDF sampling technique */
 		m_bsdfSamples = props.getSize("bsdfSamples", shadingSamples);
-
-		Assert(m_luminaireSamples >= 0 && m_bsdfSamples >= 0 &&
-			m_luminaireSamples + m_bsdfSamples > 0);
+		/* Be strict about potential inconsistencies involving shading normals? */
+		m_strictNormals = props.getBoolean("strictNormals", false);
+		Assert(m_emitterSamples + m_bsdfSamples > 0);
 	}
 
 	/// Unserialize from a binary data stream
 	MIDirectIntegrator(Stream *stream, InstanceManager *manager)
-	 : SampleIntegrator(stream, manager) {
-		m_luminaireSamples = stream->readSize();
+	 : SamplingIntegrator(stream, manager) {
+		m_emitterSamples = stream->readSize();
 		m_bsdfSamples = stream->readSize();
+		m_strictNormals = stream->readBool();
 		configure();
 	}
 
-	void configure() {
-		size_t sum = m_luminaireSamples + m_bsdfSamples;
-		m_weightBSDF = 1 / (Float) m_bsdfSamples;
-		m_weightLum = 1 / (Float) m_luminaireSamples;
-		m_fracBSDF = m_bsdfSamples / (Float) sum;
-		m_fracLum = m_luminaireSamples / (Float) sum;
+	void serialize(Stream *stream, InstanceManager *manager) const {
+		SamplingIntegrator::serialize(stream, manager);
+		stream->writeSize(m_emitterSamples);
+		stream->writeSize(m_bsdfSamples);
+		stream->writeBool(m_strictNormals);
 	}
 
-	void configureSampler(Sampler *sampler) {
-		if (m_luminaireSamples > 1)
-			sampler->request2DArray(m_luminaireSamples);
+	void configure() {
+		SamplingIntegrator::configure();
+
+		size_t sum = m_emitterSamples + m_bsdfSamples;
+		m_weightBSDF = 1 / (Float) m_bsdfSamples;
+		m_weightLum = 1 / (Float) m_emitterSamples;
+		m_fracBSDF = m_bsdfSamples / (Float) sum;
+		m_fracLum = m_emitterSamples / (Float) sum;
+	}
+
+	void configureSampler(const Scene *scene, Sampler *sampler) {
+		SamplingIntegrator::configureSampler(scene, sampler);
+		if (m_emitterSamples > 1)
+			sampler->request2DArray(m_emitterSamples);
 		if (m_bsdfSamples > 1)
 			sampler->request2DArray(m_bsdfSamples);
 	}
@@ -116,9 +132,8 @@ public:
 	Spectrum Li(const RayDifferential &r, RadianceQueryRecord &rRec) const {
 		/* Some aliases and local variables */
 		const Scene *scene = rRec.scene;
-		Intersection &its = rRec.its, bsdfIts;
+		Intersection &its = rRec.its;
 		RayDifferential ray(r);
-		LuminaireSamplingRecord lRec;
 		Spectrum Li(0.0f);
 		Point2 sample;
 
@@ -126,41 +141,46 @@ public:
 		   intersection has already been provided). */
 		if (!rRec.rayIntersect(ray)) {
 			/* If no intersection could be found, possibly return 
-			   radiance from a background luminaire */
+			   radiance from a background emitter */
 			if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
-				return scene->LeBackground(ray);
+				return scene->evalEnvironment(ray);
 			else
 				return Spectrum(0.0f);
 		}
 
 		/* Possibly include emitted radiance if requested */
-		if (its.isLuminaire() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
+		if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
 			Li += its.Le(-ray.d);
 
-		/* Include radiance from a subsurface integrator if requested */
+		/* Include radiance from a subsurface scattering model if requested */
 		if (its.hasSubsurface() && (rRec.type & RadianceQueryRecord::ESubsurfaceRadiance))
 			Li += its.LoSub(scene, rRec.sampler, -ray.d, rRec.depth);
 
 		const BSDF *bsdf = its.getBSDF(ray);
 
-		if (EXPECT_NOT_TAKEN(!bsdf)) {
-			/* The direct illumination integrator doesn't support
-			   surfaces without a BSDF (e.g. medium transitions)
-			   -- give up. */
+		if (!(rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance)
+			|| (m_strictNormals && dot(ray.d, its.geoFrame.n)
+				* Frame::cosTheta(its.wi) >= 0)) {
+			/* Only render the direct illumination component if
+			 * 
+			 * 1. It was requested
+			 * 2. The surface has an associated BSDF (i.e. it isn't an index-
+			 *    matched medium transition -- this is not supported by 'direct')
+			 * 3. If 'strictNormals'=true, when the geometric and shading
+			 *    normals classify the incident direction to the same side
+			 */
 			return Li;
 		}
 
-		/* Leave here if direct illumination was not requested */
-		if (!(rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance))
-			return Li;
-
 		/* ==================================================================== */
-		/*                          Luminaire sampling                          */
+		/*                          Emitter sampling                          */
 		/* ==================================================================== */
 		bool adaptiveQuery = (rRec.extra & RadianceQueryRecord::EAdaptiveQuery);
 
+		/* Figure out how many BSDF and direct illumination samples to
+		   generate, and where the random numbers should come from */
 		Point2 *sampleArray;
-		size_t numLuminaireSamples = m_luminaireSamples,
+		size_t numDirectSamples = m_emitterSamples,
 			   numBSDFSamples = m_bsdfSamples;
 		Float fracLum = m_fracLum, fracBSDF = m_fracBSDF,
 		      weightLum = m_weightLum, weightBSDF = m_weightBSDF;
@@ -168,37 +188,44 @@ public:
 		if (rRec.depth > 1 || adaptiveQuery) {
 			/* This integrator is used recursively by another integrator.
 			   Be less accurate as this sample will not directly be observed. */
-			numBSDFSamples = numLuminaireSamples = 1;
+			numBSDFSamples = numDirectSamples = 1;
 			fracLum = fracBSDF = .5f;
 			weightLum = weightBSDF = 1.0f;
 		}
 
-		if (numLuminaireSamples > 1) {
-			sampleArray = rRec.sampler->next2DArray(numLuminaireSamples);
+		if (numDirectSamples > 1) {
+			sampleArray = rRec.sampler->next2DArray(numDirectSamples);
 		} else {
 			sample = rRec.nextSample2D(); sampleArray = &sample;
 		}
+	
+		DirectSamplingRecord dRec(its);
+		if (bsdf->getType() & BSDF::ESmooth) {
+			/* Only use direct illumination sampling when the surface's
+			   BSDF has smooth (i.e. non-Dirac delta) component */
+			for (size_t i=0; i<numDirectSamples; ++i) {
+				/* Estimate the direct illumination if this is requested */
+				Spectrum value = scene->sampleEmitterDirect(dRec, sampleArray[i]);
+				if (!value.isZero()) {
+					const Emitter *emitter = static_cast<const Emitter *>(dRec.object);
+		
+					/* Allocate a record for querying the BSDF */
+					BSDFSamplingRecord bRec(its, its.toLocal(dRec.d));
 
-		for (size_t i=0; i<numLuminaireSamples; ++i) {
-			/* Estimate the direct illumination if this is requested */
-			if (scene->sampleLuminaire(its.p, ray.time, lRec, sampleArray[i])) {
-				/* Allocate a record for querying the BSDF */
-				BSDFQueryRecord bRec(its, its.toLocal(-lRec.d));
+					/* Evaluate BSDF * cos(theta) */
+					const Spectrum bsdfVal = bsdf->eval(bRec);
 
-				/* Evaluate BSDF * cos(theta) */
-				const Spectrum bsdfVal = bsdf->eval(bRec);
+					if (!bsdfVal.isZero() && (!m_strictNormals
+							|| dot(its.geoFrame.n, dRec.d) * Frame::cosTheta(bRec.wo) > 0)) {
+						/* Calculate prob. of sampling that direction using BSDF sampling */
+						Float bsdfPdf = emitter->isOnSurface() ? bsdf->pdf(bRec) : 0;
 
-				if (!bsdfVal.isZero()) {
-					/* Calculate prob. of having sampled that direction
-						using BSDF sampling */
-					Float bsdfPdf = (lRec.luminaire->isIntersectable() 
-							|| lRec.luminaire->isBackgroundLuminaire()) ? 
-						bsdf->pdf(bRec) : 0;
+						/* Weight using the power heuristic */
+						const Float weight = miWeight(dRec.pdf * fracLum, 
+								bsdfPdf * fracBSDF) * weightLum;
 
-					/* Weight using the power heuristic */
-					const Float weight = miWeight(lRec.pdf * fracLum, 
-							bsdfPdf * fracBSDF) * weightLum;
-					Li += lRec.value * bsdfVal * weight;
+						Li += value * bsdfVal * weight;
+					}
 				}
 			}
 		}
@@ -213,42 +240,55 @@ public:
 			sample = rRec.nextSample2D(); sampleArray = &sample;
 		}
 
+		Intersection bsdfIts;
 		for (size_t i=0; i<numBSDFSamples; ++i) {
-			/* Sample BSDF * cos(theta) */
-			BSDFQueryRecord bRec(its, rRec.sampler, ERadiance);
+			/* Sample BSDF * cos(theta) and also request the local density */
 			Float bsdfPdf;
+
+			BSDFSamplingRecord bRec(its, rRec.sampler, ERadiance);
 			Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, sampleArray[i]);
 			if (bsdfVal.isZero())
 				continue;
 
+			/* Prevent light leaks due to the use of shading normals */
+			const Vector wo = its.toWorld(bRec.wo);
+			Float woDotGeoN = dot(its.geoFrame.n, wo);
+			if (m_strictNormals && woDotGeoN * Frame::cosTheta(bRec.wo) <= 0)
+				continue;
+
 			/* Trace a ray in this direction */
-			Ray bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);
+			Ray bsdfRay(its.p, wo, ray.time);
+
+			Spectrum value;
 			if (scene->rayIntersect(bsdfRay, bsdfIts)) {
-				/* Intersected something - check if it was a luminaire */
-				if (bsdfIts.isLuminaire()) {
-					lRec = LuminaireSamplingRecord(bsdfIts, -bsdfRay.d);
-					lRec.value = bsdfIts.Le(-bsdfRay.d);
-				} else {
+				/* Intersected something - check if it was an emitter */
+				if (!bsdfIts.isEmitter())
 					continue;
-				}
+
+				value = bsdfIts.Le(-bsdfRay.d);
+				dRec.setQuery(bsdfRay, bsdfIts);
 			} else {
-				/* No intersection found. Possibly, there is a background
-				   luminaire such as an environment map? */
-				if (scene->hasBackgroundLuminaire()) {
-					lRec.luminaire = scene->getBackgroundLuminaire();
-					lRec.d = -bsdfRay.d;
-					lRec.value = lRec.luminaire->Le(bsdfRay);
-				} else {
+				/* Intersected nothing -- perhaps there is an environment map? */
+				const Emitter *env = scene->getEnvironmentEmitter();
+	
+				if (!env)
 					continue;
-				}
+
+				value = env->evalEnvironment(RayDifferential(bsdfRay));
+				if (!env->fillDirectSamplingRecord(dRec, bsdfRay))
+					continue;
 			}
 
+			/* Compute the prob. of generating that direction using the 
+			   implemented direct illumination sampling technique */
 			const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ? 
-				scene->pdfLuminaire(its.p, lRec) : 0;
+				scene->pdfEmitterDirect(dRec) : 0;
 	
+			/* Weight using the power heuristic */
 			const Float weight = miWeight(bsdfPdf * fracBSDF, 
 				lumPdf * fracLum) * weightBSDF;
-			Li += lRec.value * bsdfVal * weight;
+
+			Li += value * bsdfVal * weight;
 		}
 
 		return Li;
@@ -259,29 +299,25 @@ public:
 		return pdfA / (pdfA + pdfB);
 	}
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		SampleIntegrator::serialize(stream, manager);
-		stream->writeSize(m_luminaireSamples);
-		stream->writeSize(m_bsdfSamples);
-	}
-
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "MIDirectIntegrator[" << endl
-			<< "  luminaireSamples = " << m_luminaireSamples << "," << endl
-			<< "  bsdfSamples = " << m_bsdfSamples << endl
+			<< "  emitterSamples = " << m_emitterSamples << "," << endl
+			<< "  bsdfSamples = " << m_bsdfSamples << "," << endl
+			<< "  strictNormals = " << m_strictNormals << endl
 			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	size_t m_luminaireSamples;
+	size_t m_emitterSamples;
 	size_t m_bsdfSamples;
 	Float m_fracBSDF, m_fracLum;
 	Float m_weightBSDF, m_weightLum;
+	bool m_strictNormals;
 };
 
-MTS_IMPLEMENT_CLASS_S(MIDirectIntegrator, false, SampleIntegrator)
+MTS_IMPLEMENT_CLASS_S(MIDirectIntegrator, false, SamplingIntegrator)
 MTS_EXPORT_PLUGIN(MIDirectIntegrator, "Direct illumination integrator");
 MTS_NAMESPACE_END

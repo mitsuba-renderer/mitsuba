@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -89,8 +89,7 @@ MTS_NAMESPACE_BEGIN
  * Note that this model does not account for light that undergoes multiple 
  * scattering events within the layer. This leads to energy loss,
  * particularly at grazing angles, which can be seen in the left-hand image of
- * \figref{hk-example}. A solution is to use the \pluginref{sssbrdf} plugin,
- * which adds an approximate multiple scattering component.
+ * \figref{hk-example}. 
  *
  * \begin{xml}[caption=A thin dielectric layer with measured ketchup scattering parameters, label=lst:hk-coated]
  * <bsdf type="coating">
@@ -116,7 +115,7 @@ class HanrahanKrueger : public BSDF {
 public:
 	HanrahanKrueger(const Properties &props) : BSDF(props) {
 		Spectrum sigmaS, sigmaA;
-		lookupMaterial(props, sigmaS, sigmaA, NULL, false);
+		lookupMaterial(props, sigmaS, sigmaA, NULL);
 
 		/* Scattering coefficient of the layer */
 		m_sigmaS = new ConstantSpectrumTexture(
@@ -165,11 +164,11 @@ public:
 
 		int extraFlags = m_sigmaS->isConstant() && m_sigmaA->isConstant() ? 0 : ESpatiallyVarying;
 		m_components.clear();
-		m_components.push_back(EGlossyReflection   | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+		m_components.push_back(EGlossyReflection   | EFrontSide | EBackSide | EUsesSampler | extraFlags);
 
 		if (m_thickness != std::numeric_limits<Float>::infinity()) {
-			m_components.push_back(EGlossyTransmission | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
-			m_components.push_back(EDeltaTransmission  | EFrontSide | EBackSide | ECanUseSampler | extraFlags);
+			m_components.push_back(EGlossyTransmission | EFrontSide | EBackSide | EUsesSampler | extraFlags);
+			m_components.push_back(EDeltaTransmission  | EFrontSide | EBackSide | EUsesSampler | extraFlags);
 		}
 
 		m_usesRayDifferentials = m_sigmaS->usesRayDifferentials()
@@ -179,8 +178,8 @@ public:
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		Spectrum sigmaA = m_sigmaA->getValue(its),
-				 sigmaS = m_sigmaS->getValue(its),
+		Spectrum sigmaA = m_sigmaA->eval(its),
+				 sigmaS = m_sigmaS->eval(its),
 				 sigmaT = sigmaA + sigmaS,
 				 albedo;
 		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
@@ -188,9 +187,9 @@ public:
 		return albedo; /* Very approximate .. */
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		Spectrum sigmaA = m_sigmaA->getValue(bRec.its),
-				 sigmaS = m_sigmaS->getValue(bRec.its),
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+		Spectrum sigmaA = m_sigmaA->eval(bRec.its),
+				 sigmaS = m_sigmaS->eval(bRec.its),
 				 sigmaT = sigmaA + sigmaS,
 				 tauD = sigmaT * m_thickness,
 				 result(0.0f);
@@ -202,7 +201,7 @@ public:
 
 			/* Return the attenuated light if requested */
 			if (hasSpecularTransmission &&
-				std::abs(1+dot(bRec.wi, bRec.wo)) < Epsilon)
+				std::abs(1+dot(bRec.wi, bRec.wo)) < DeltaEpsilon)
 				result = (-tauD/std::abs(Frame::cosTheta(bRec.wi))).exp();
 		} else if (measure == ESolidAngle) {
 			/* Sample single scattering events */
@@ -227,7 +226,7 @@ public:
 
 			if (hasGlossyReflection && reflection) {
 				MediumSamplingRecord dummy;
-				PhaseFunctionQueryRecord pRec(dummy,bRec.wi,bRec.wo); 
+				PhaseFunctionSamplingRecord pRec(dummy,bRec.wi,bRec.wo); 
 				const Float phaseVal = m_phase->eval(pRec);
 
 				result = albedo * (phaseVal*cosThetaI/(cosThetaI+cosThetaO)) *
@@ -241,7 +240,7 @@ public:
 			if (hasGlossyTransmission && transmission
 					&& m_thickness < std::numeric_limits<Float>::infinity()) {
 				MediumSamplingRecord dummy;
-				PhaseFunctionQueryRecord pRec(dummy,bRec.wi,bRec.wo);
+				PhaseFunctionSamplingRecord pRec(dummy,bRec.wi,bRec.wo);
 				const Float phaseVal = m_phase->eval(pRec);
 
 				/* Hanrahan etal 93 Single Scattering transmission term */
@@ -260,14 +259,14 @@ public:
 		return result;
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		bool hasSingleScattering = (bRec.typeMask & EGlossy)
 			&& (bRec.component == -1 || bRec.component == 0 || bRec.component == 1);
 		bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
 			&& (bRec.component == -1 || bRec.component == 2);
 
-		const Spectrum sigmaA = m_sigmaA->getValue(bRec.its),
-				 sigmaS = m_sigmaS->getValue(bRec.its),
+		const Spectrum sigmaA = m_sigmaA->eval(bRec.its),
+				 sigmaS = m_sigmaS->eval(bRec.its),
 				 sigmaT = sigmaA + sigmaS,
 				 tauD = sigmaT * m_thickness;
 
@@ -278,7 +277,7 @@ public:
 				&& (bRec.component == -1 || bRec.component == 2);
 			/* Return the attenuated light if requested */
 			if (hasSpecularTransmission &&
-				std::abs(1+dot(bRec.wi, bRec.wo)) < Epsilon)
+				std::abs(1+dot(bRec.wi, bRec.wo)) < DeltaEpsilon)
 				return hasSingleScattering ? probSpecularTransmission : 1.0f;
 		} else if (hasSingleScattering && measure == ESolidAngle) {
 			bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection)
@@ -293,7 +292,7 @@ public:
 
 			/* Sampled according to the phase function lobe(s) */
 			MediumSamplingRecord dummy;
-			PhaseFunctionQueryRecord pRec(dummy, bRec.wi, bRec.wo);
+			PhaseFunctionSamplingRecord pRec(dummy, bRec.wi, bRec.wo);
 			Float pdf = m_phase->pdf(pRec);
 			if (hasSpecularTransmission)
 				pdf *= 1-probSpecularTransmission;
@@ -302,16 +301,16 @@ public:
 		return 0.0f;
 	}
 
-	inline Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
-		AssertEx(bRec.sampler != NULL, "The BSDFQueryRecord needs to have a sampler!");
+	inline Spectrum sample(BSDFSamplingRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+		AssertEx(bRec.sampler != NULL, "The BSDFSamplingRecord needs to have a sampler!");
 
 		bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
 			&& (bRec.component == -1 || bRec.component == 2);
 		bool hasSingleScattering = (bRec.typeMask & EGlossy)
 			&& (bRec.component == -1 || bRec.component == 0 || bRec.component == 1);
 
-		const Spectrum sigmaA = m_sigmaA->getValue(bRec.its),
-				 sigmaS = m_sigmaS->getValue(bRec.its),
+		const Spectrum sigmaA = m_sigmaA->eval(bRec.its),
+				 sigmaS = m_sigmaS->eval(bRec.its),
 				 sigmaT = sigmaA + sigmaS,
 				 tauD = sigmaT * m_thickness;
 
@@ -329,6 +328,7 @@ public:
 			}
 		}
 
+		bRec.eta = 1.0f;
 		if (choseSpecularTransmission) {
 			/* The specular transmission component was sampled */
 			bRec.sampledComponent = 2;
@@ -346,7 +346,7 @@ public:
 				&& (bRec.component == -1 || bRec.component == 1);
 
 			/* Sample According to the phase function lobes */
-			PhaseFunctionQueryRecord pRec(MediumSamplingRecord(), bRec.wi, bRec.wo);
+			PhaseFunctionSamplingRecord pRec(MediumSamplingRecord(), bRec.wi, bRec.wo);
 			m_phase->sample(pRec, _pdf, bRec.sampler);
 
 			/* Store the sampled direction */
@@ -372,7 +372,7 @@ public:
 		}
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		Float pdf;
 		return HanrahanKrueger::sample(bRec, pdf, sample);
 	}
@@ -411,6 +411,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "HanrahanKrueger[" << endl
+   			<< "  id = \"" << getID() << "\"," << endl
    			<< "  sigmaS = " << indent(m_sigmaS->toString()) << "," << endl
    			<< "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
    			<< "  phase = " << indent(m_phase->toString()) << "," << endl

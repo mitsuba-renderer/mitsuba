@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__TRANSFORM_H)
-#define __TRANSFORM_H
+#pragma once
+#if !defined(__MITSUBA_CORE_TRANSFORM_H_)
+#define __MITSUBA_CORE_TRANSFORM_H_
 
 #include <mitsuba/core/matrix.h>
 #include <mitsuba/core/ray.h>
@@ -88,15 +89,14 @@ public:
 		return false;
 	}
 
-	/// Test if this is the identity matrix
+	/// Test if this is the identity transformation
 	inline bool isIdentity() const {
-		for (int i=0; i<4; ++i) {
-			for (int j=0; j<4; ++j) {
-				if (m_transform.m[i][j] != ((i==j) ? 1 : 0))
-					return false;
-			}
-		}
-		return true;
+		return m_transform.isIdentity();
+	}
+
+	/// Test if this is the zero transformation
+	inline bool isZero() const {
+		return m_transform.isZero();
 	}
 
 	/**
@@ -107,13 +107,13 @@ public:
 	 */
 	inline Point operator()(const Point &p) const {
 		Float x = m_transform.m[0][0] * p.x + m_transform.m[0][1] * p.y
-				+ m_transform.m[0][2] * p.z + m_transform.m[0][3];
+		        + m_transform.m[0][2] * p.z + m_transform.m[0][3];
 		Float y = m_transform.m[1][0] * p.x + m_transform.m[1][1] * p.y
-				+ m_transform.m[1][2] * p.z + m_transform.m[1][3];
+		        + m_transform.m[1][2] * p.z + m_transform.m[1][3];
 		Float z = m_transform.m[2][0] * p.x + m_transform.m[2][1] * p.y
-				+ m_transform.m[2][2] * p.z + m_transform.m[2][3];
+		        + m_transform.m[2][2] * p.z + m_transform.m[2][3];
 		Float w = m_transform.m[3][0] * p.x + m_transform.m[3][1] * p.y
-				+ m_transform.m[3][2] * p.z + m_transform.m[3][3];
+		        + m_transform.m[3][2] * p.z + m_transform.m[3][3];
 #ifdef MTS_DEBUG
 		if (w == 0)
 			SLog(EWarn, "w==0 in Transform::operator(Point &)");
@@ -124,25 +124,25 @@ public:
 			return Point(x, y, z) / w;
 	}
 
-	/// Transform a point by a affine / non-projective matrix
+	/// Transform a point by an affine / non-projective matrix
 	inline Point transformAffine(const Point &p) const {
 		Float x = m_transform.m[0][0] * p.x + m_transform.m[0][1] * p.y
-				+ m_transform.m[0][2] * p.z + m_transform.m[0][3];
+		        + m_transform.m[0][2] * p.z + m_transform.m[0][3];
 		Float y = m_transform.m[1][0] * p.x + m_transform.m[1][1] * p.y
-				+ m_transform.m[1][2] * p.z + m_transform.m[1][3];
+		        + m_transform.m[1][2] * p.z + m_transform.m[1][3];
 		Float z = m_transform.m[2][0] * p.x + m_transform.m[2][1] * p.y
-				+ m_transform.m[2][2] * p.z + m_transform.m[2][3];
+		        + m_transform.m[2][2] * p.z + m_transform.m[2][3];
 		return Point(x,y,z);
 	}
 
 	/// Transform a point by a affine / non-projective matrix (no temporaries)
 	inline void transformAffine(const Point &p, Point &dest) const {
 		dest.x = m_transform.m[0][0] * p.x + m_transform.m[0][1] * p.y
-				+ m_transform.m[0][2] * p.z + m_transform.m[0][3];
+		       + m_transform.m[0][2] * p.z + m_transform.m[0][3];
 		dest.y = m_transform.m[1][0] * p.x + m_transform.m[1][1] * p.y
-				+ m_transform.m[1][2] * p.z + m_transform.m[1][3];
+		       + m_transform.m[1][2] * p.z + m_transform.m[1][3];
 		dest.z = m_transform.m[2][0] * p.x + m_transform.m[2][1] * p.y
-				+ m_transform.m[2][2] * p.z + m_transform.m[2][3];
+		       + m_transform.m[2][2] * p.z + m_transform.m[2][3];
 	}
 
 	/**
@@ -151,13 +151,13 @@ public:
 	 */
     inline void operator()(const Point &p, Point &dest) const {
 		dest.x = m_transform.m[0][0] * p.x + m_transform.m[0][1] * p.y
-			   + m_transform.m[0][2] * p.z + m_transform.m[0][3];
+		       + m_transform.m[0][2] * p.z + m_transform.m[0][3];
 		dest.y = m_transform.m[1][0] * p.x + m_transform.m[1][1] * p.y
-			   + m_transform.m[1][2] * p.z + m_transform.m[1][3];
+		       + m_transform.m[1][2] * p.z + m_transform.m[1][3];
 		dest.z = m_transform.m[2][0] * p.x + m_transform.m[2][1] * p.y
-			   + m_transform.m[2][2] * p.z + m_transform.m[2][3];
+		       + m_transform.m[2][2] * p.z + m_transform.m[2][3];
 		Float w = m_transform.m[3][0] * p.x + m_transform.m[3][1] * p.y
-				+ m_transform.m[3][2] * p.z + m_transform.m[3][3];
+		        + m_transform.m[3][2] * p.z + m_transform.m[3][3];
 
 #ifdef MTS_DEBUG
 		if (w == 0)
@@ -174,11 +174,11 @@ public:
 	 */
     inline Vector operator()(const Vector &v) const {
 		Float x = m_transform.m[0][0] * v.x + m_transform.m[0][1] * v.y
-				+ m_transform.m[0][2] * v.z;
+		        + m_transform.m[0][2] * v.z;
 		Float y = m_transform.m[1][0] * v.x + m_transform.m[1][1] * v.y
-				+ m_transform.m[1][2] * v.z;
+		        + m_transform.m[1][2] * v.z;
 		Float z = m_transform.m[2][0] * v.x + m_transform.m[2][1] * v.y
-				+ m_transform.m[2][2] * v.z;
+		        + m_transform.m[2][2] * v.z;
 		return Vector(x, y, z);
 	}
 
@@ -188,11 +188,11 @@ public:
 	 */
     inline void operator()(const Vector &v, Vector &dest) const {
 		dest.x = m_transform.m[0][0] * v.x + m_transform.m[0][1] * v.y
-			   + m_transform.m[0][2] * v.z;
+		       + m_transform.m[0][2] * v.z;
 		dest.y = m_transform.m[1][0] * v.x + m_transform.m[1][1] * v.y
-			   + m_transform.m[1][2] * v.z;
+		       + m_transform.m[1][2] * v.z;
 		dest.z = m_transform.m[2][0] * v.x + m_transform.m[2][1] * v.y
-			   + m_transform.m[2][2] * v.z;
+		       + m_transform.m[2][2] * v.z;
 	}
 
 	/**
@@ -202,11 +202,11 @@ public:
 	 */
     inline Normal operator()(const Normal &v) const {
 		Float x = m_invTransform.m[0][0] * v.x + m_invTransform.m[1][0] * v.y
-				+ m_invTransform.m[2][0] * v.z;
+		        + m_invTransform.m[2][0] * v.z;
 		Float y = m_invTransform.m[0][1] * v.x + m_invTransform.m[1][1] * v.y
-				+ m_invTransform.m[2][1] * v.z;
+		        + m_invTransform.m[2][1] * v.z;
 		Float z = m_invTransform.m[0][2] * v.x + m_invTransform.m[1][2] * v.y
-				+ m_invTransform.m[2][2] * v.z;
+		        + m_invTransform.m[2][2] * v.z;
 		return Normal(x, y, z);
 	}
 
@@ -216,11 +216,11 @@ public:
 	 */
     inline void operator()(const Normal &v, Normal &dest) const {
 		dest.x = m_invTransform.m[0][0] * v.x + m_invTransform.m[1][0] * v.y
-			   + m_invTransform.m[2][0] * v.z;
+		       + m_invTransform.m[2][0] * v.z;
 		dest.y = m_invTransform.m[0][1] * v.x + m_invTransform.m[1][1] * v.y
-			   + m_invTransform.m[2][1] * v.z;
+		       + m_invTransform.m[2][1] * v.z;
 		dest.z = m_invTransform.m[0][2] * v.x + m_invTransform.m[1][2] * v.y
-			   + m_invTransform.m[2][2] * v.z;
+		       + m_invTransform.m[2][2] * v.z;
 	}
 	
 	/**
@@ -230,13 +230,13 @@ public:
 	 */
 	inline Vector4 operator()(const Vector4 &v) const {
 		Float x = m_transform.m[0][0] * v.x + m_transform.m[0][1] * v.y
-				+ m_transform.m[0][2] * v.z + m_transform.m[0][3] * v.w;
+		        + m_transform.m[0][2] * v.z + m_transform.m[0][3] * v.w;
 		Float y = m_transform.m[1][0] * v.x + m_transform.m[1][1] * v.y
-				+ m_transform.m[1][2] * v.z + m_transform.m[1][3] * v.w;
+		        + m_transform.m[1][2] * v.z + m_transform.m[1][3] * v.w;
 		Float z = m_transform.m[2][0] * v.x + m_transform.m[2][1] * v.y
-				+ m_transform.m[2][2] * v.z + m_transform.m[2][3] * v.w;
+		        + m_transform.m[2][2] * v.z + m_transform.m[2][3] * v.w;
 		Float w = m_transform.m[3][0] * v.x + m_transform.m[3][1] * v.y
-				+ m_transform.m[3][2] * v.z + m_transform.m[3][3] * v.w;
+		        + m_transform.m[3][2] * v.z + m_transform.m[3][3] * v.w;
 		return Vector4(x,y,z,w);
 	}
 
@@ -246,24 +246,13 @@ public:
 	 */
 	inline void operator()(const Vector4 &v, Vector4 &dest) const {
 		dest.x = m_transform.m[0][0] * v.x + m_transform.m[0][1] * v.y
-			   + m_transform.m[0][2] * v.z + m_transform.m[0][3] * v.w;
+		       + m_transform.m[0][2] * v.z + m_transform.m[0][3] * v.w;
 		dest.y = m_transform.m[1][0] * v.x + m_transform.m[1][1] * v.y
-			   + m_transform.m[1][2] * v.z + m_transform.m[1][3] * v.w;
+		       + m_transform.m[1][2] * v.z + m_transform.m[1][3] * v.w;
 		dest.z = m_transform.m[2][0] * v.x + m_transform.m[2][1] * v.y
-			   + m_transform.m[2][2] * v.z + m_transform.m[2][3] * v.w;
+		       + m_transform.m[2][2] * v.z + m_transform.m[2][3] * v.w;
 		dest.w = m_transform.m[3][0] * v.x + m_transform.m[3][1] * v.y
-			   + m_transform.m[3][2] * v.z + m_transform.m[3][3] * v.w;
-	}
-
-	/**
-	 * \brief Transform a ray. Assumes that there is no scaling
-	 * \remark In the Python bindings, this is function implemented as
-	 * the multiplication operator (\c __mul__).
-	 */
-	inline Ray operator()(const Ray &a) const {
-		Ray result;
-		operator()(a, result);
-		return result;
+		       + m_transform.m[3][2] * v.z + m_transform.m[3][3] * v.w;
 	}
 
 	/**
@@ -282,10 +271,21 @@ public:
 		b.dRcp.x = 1.0f / b.d.x;
 		b.dRcp.y = 1.0f / b.d.y;
 		b.dRcp.z = 1.0f / b.d.z;
-		b.time = a.time;
 #ifdef MTS_DEBUG_FP
 		restoreFPExceptions(state);
 #endif
+		b.time = a.time;
+	}
+
+	/**
+	 * \brief Transform a ray
+	 * \remark In the Python bindings, this is function implemented as
+	 * the multiplication operator (\c __mul__).
+	 */
+	inline Ray operator()(const Ray &ray) const {
+		Ray result;
+		operator()(ray, result);
+		return result;
 	}
 
 	/// Transform a ray by an affine / non-projective matrix (no temporaries)
@@ -304,7 +304,6 @@ public:
 #ifdef MTS_DEBUG_FP
 		restoreFPExceptions(state);
 #endif
-		b.time = a.time;
 	}
 
 	/// Transform a ray by an affine / non-projective matrix (no temporaries)
@@ -313,7 +312,7 @@ public:
 		transformAffine(ray, result);
 		return result;
 	}
-	
+
 	/// Return the underlying matrix
 	inline const Matrix4x4 &getMatrix() const { return m_transform; }
 
@@ -338,7 +337,7 @@ public:
 	static Transform perspective(Float fov, Float clipNear, Float clipFar);
 	
 	/** \brief Create a perspective transformation for OpenGL.
-	 *   (Maps [near, far] to [-1, 1])
+	 *   (Maps [-near, -far] to [-1, 1])
 	 * \param fov Field of view in degrees
 	 * \param clipNear Near clipping plane distance
 	 * \param clipFar Far clipping plane distance
@@ -368,6 +367,14 @@ public:
 	 */
 	static Transform glOrthographic(Float clipNear, Float clipFar);
 
+	/** \brief Create an orthographic transformation for OpenGL
+	 *
+	 * Slightly extended variant which also handles non-unity clipping
+	 * planes on the X and Y axes and matches the 'glOrtho' spec.
+	 */
+	static Transform glOrthographic(Float clipLeft, Float clipRight,
+		Float clipBottom, Float clipTop, Float clipNear, Float clipFar);
+
 	/** \brief Create a look-at camera transformation
 	 * \param p Camera position
 	 * \param t Target vector
@@ -395,4 +402,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __TRANSFORM_H */
+#endif /* __MITSUBA_CORE_TRANSFORM_H_ */

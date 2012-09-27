@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,63 +16,125 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__VPL_HW_H)
-#define __VPL_HW_H
+#pragma once
+#if !defined(__MITSUBA_HW_VPL_H_)
+#define __MITSUBA_HW_VPL_H_
 
 #include <mitsuba/render/vpl.h>
-#include <mitsuba/hw/renderer.h>
+#include <mitsuba/hw/shadow.h>
+#include <mitsuba/hw/gpugeometry.h>
 
 MTS_NAMESPACE_BEGIN
 
 /**
  * \brief This class is responsible for the on-demand creation of
- * GPU shaders to render meshes that are illuminated by a virtual 
- * point light source. 
+ * GPU shaders to render shapes that are illuminated by virtual 
+ * point light sources. 
+ *
+ * This is used to drive the \c vpl integrator as well as the 
+ * interactive preview in the Mitsuba GUI.
  *
  * For each encountered BSDF-VPL pair, a custom piece of code 
- * describing the characteristic light transport between them is created 
- * and cached. To avoid generating a potentially huge (N squared) 
- * number of very similar programs, the implementation passes some 
- * properties using uniforms, in which case already existing code 
- * can be reused and we get something more like lower case n squared
- * (where lower n is the number of material types).
+ * describing the characteristic light transport between them is
+ * created and cached. The implementation carefully looks at
+ * the tree of shader dependencies and creates code that can be
+ * shared with other materials that have a similar configuration.
+ * This is necessary to avoid generating a potentially huge O(N^2) 
+ * number of very similar programs and brings it down to O(n^2)
+ * where n << N.
  *
  * \ingroup libhw
  */
 class MTS_EXPORT_HW VPLShaderManager : public Object {
-public:
-	VPLShaderManager(const Scene *scene, Renderer *renderer);
+public:	
+	/// Create a new shader manager
+	VPLShaderManager(Renderer *renderer);
 
-	/// To be called once before use
+	/// Upload requisite shaders to the GPU. To be called once
 	void init();
 
-	/// Generate the shadow map for a particular VPL
+	/// Issue a final cleanup (before destroying the shader manager)
+	void cleanup();
+
+	/**
+	 * \brief Associate the shader manager with a new scene
+	 *
+	 * This function uploads all relevant triangle geometry
+	 * to the GPU, and releases any resources held for the
+	 * previous scene. It is valid to call the function with
+	 * a \c NULL argument.
+	 */
+	void setScene(const Scene *scene);
+
+	/// Return the currently bound scene
+	inline const Scene *getScene() const { return m_scene.get(); }
+
+	/**
+	 * \brief Prepare the shader manager for rendering
+	 * with a new VPL
+	 *
+	 * Must be called after \ref setScene() and before 
+	 * \ref bind(). This function creates a suitable 
+	 * shadow map for the VPL.
+	 */
 	void setVPL(const VPL &vpl);
 
-	/// Prepare for rendering a material with BSDF 'bsdf' illuminated by VPL 'vpl'.
-	void configure(const VPL &vpl, const BSDF *bsdf, 
-		const Luminaire *luminaire, const Point &camPos, bool faceNormals);
+	/**
+	 * \brief Bind a shader for rendering a certain 
+	 * VPL/BSDF/Emitter triplet
+	 *
+	 * \param vpl
+	 *    Record describing the virtual point light source
+	 *
+	 * \param bsdf
+	 *    Material of the object to be rendered
+	 *
+	 * \param sensor
+	 *    Sensor from which it is viewed
+	 *
+	 * \param instanceTransform
+	 *    An additional object-to-world transformation that
+	 *    is applied to the rendered geometry. Used for instancing.
+	 *
+	 * \param faceNormals
+	 *    When set to \c true, a special shader is used to
+	 *    create face normals for the geometry
+	 */
+	void bind(const VPL &vpl, const BSDF *bsdf, 
+		const Sensor *sensor, const Emitter *emitter, 
+		const Matrix4x4 &instanceTransform, bool faceNormals);
 
-	/// Draw the background if there is an environment luminaire
-	void drawBackground(const Transform &clipToWorld, const Point &camPos, Float scaleFactor);
-
-	/// Release bound resources
+	/**
+	 * \brief Release the currently bound shader and 
+	 * any resources (textures,..) that it references
+	 */
 	void unbind();
 
-	/// Return all bound opaque triangle meshes
-	inline const std::vector<std::pair<const TriMesh *, Transform> > &getMeshes() const { return m_meshes; }
+	/**
+	 * \brief Convenience function for rendering all geometry
+	 * for a given VPL
+	 *
+	 * This function issues the necessary calls to \ref bind()
+	 * \ref unbind(), etc., and schedules draw calls for all 
+	 * of the scene geometry. 
+	 */
+	void drawAllGeometryForVPL(const VPL &vpl, const Sensor *sensor);
 
-	/// Return all bound transparent triangle meshes
-	inline const std::vector<std::pair<const TriMesh *, Transform> > &getTransparentMeshes() const { return m_transparentMeshes; }
+	/// Draw the background if there is an environment emitter
+	void drawBackground(const Sensor *sensor,
+			const Transform &projectionTransform, Float scaleFactor);
 
-	/// Return the shadow cube map for debugging purposes
-	inline GPUTexture *getShadowMap() { return m_shadowMap; }
+	/// Set the clamping distance
+	inline void setClamping(Float clamping) { m_clamping = clamping; }
 
-	/// Should the shadow map generation be done in a single pass? (requires geometry shader support)
-	inline void setSinglePass(bool singlePass) { m_singlePass = singlePass; }
-	
-	/// Is shadow map generation generation performed in a single pass?
-	inline bool isSinglePass() const { return m_singlePass; }
+	/// Return the clamping distance
+	inline Float getClamping() const { return m_clamping; }
+
+	/// Set the current shadow map resolution
+	inline void setShadowMapResolution(int resolution) { m_shadowMapResolution = resolution; }
+
+	/// Return the current shadow map resolution
+	inline int getShadowMapResolution() const { return m_shadowMapResolution; }
 
 	/// Set whether or not non-diffuse VPLs are used
 	inline void setDiffuseSources(bool diffuseSources) { m_diffuseSources = diffuseSources; }
@@ -86,203 +148,236 @@ public:
 	/// Return whether or not surfaces are assumed to be diffuse
 	inline bool getDiffuseReceivers() const { return m_diffuseReceivers; }
 
-	/// Set the current shadow map resolution
-	inline void setShadowMapResolution(int resolution) { m_shadowMapResolution = resolution; }
-
-	/// Return the current shadow map resolution
-	inline int getShadowMapResolution() const { return m_shadowMapResolution; }
-
-	/// Set the max. shadow map far plane distance
-	inline void setMaxClipDist(Float maxClipDist) { m_maxClipDist = maxClipDist; }
-	
-	/// Return the max. shadow map far plane distance
-	inline Float getMaxClipDist() const { return m_maxClipDist; }
-
-	/// Set the clamping distance
-	inline void setClamping(Float clamping) { m_clamping = clamping; }
-
-	/// Return the clamping distance
-	inline Float getClamping() const { return m_clamping; }
-
-	/// Return the associated scene
-	inline const Scene *getScene() const { return m_scene.get(); }
-
-	/// To be called once before destruction
-	void cleanup();
-
-	MTS_DECLARE_CLASS()
+	/// Reset the VPL counter
+	inline void resetCounter() { m_vplIndex = 0; }
 protected:
 	/// Virtual destructor
 	virtual ~VPLShaderManager();
-private:
-	struct VPLDependencyNode {
-		Shader *shader;
-		std::vector<VPLDependencyNode> children;
+
+	/**
+	 * \brief This helper class stores a reference to a \ref Shader and all
+	 * sub-shaders that are part of its evaluation
+	 *
+	 * It also allows to generate GLSL code for the entire chain, and to
+	 * bind any uniform parameters to the target parameters
+	 */
+	struct DependencyNode {
+		const Shader *shader;
+		std::vector<DependencyNode> children;
 		std::vector<int> parameterIDs;
-
-		inline VPLDependencyNode(const VPLDependencyNode &node) 
-			: shader(node.shader), children(node.children), parameterIDs(node.parameterIDs) {
-		}
-
-		inline VPLDependencyNode(Shader *shader = NULL) : shader(shader) {
-			if (shader == NULL)
+	
+		/// Create from a \ref Shader object
+		inline DependencyNode(Shader *shader = NULL) : shader(shader) {
+			if (!shader)
 				return;
 			std::vector<Shader *> deps;
 			shader->putDependencies(deps);
 			for (std::vector<Shader *>::iterator it = deps.begin();
 				it != deps.end(); ++it)
-				children.push_back(VPLDependencyNode(*it));
+				children.push_back(DependencyNode(*it));
 		}
-		
-		std::string recursiveGenerateCode(std::ostringstream &oss, int &id) const {
+	
+		/// Copy constructor
+		inline DependencyNode(const DependencyNode &node) 
+			: shader(node.shader), children(node.children), 
+			  parameterIDs(node.parameterIDs) { }
+	
+		/// Generate GLSL code for the entire shader chain
+		inline std::string generateCode(std::ostringstream &oss, int &id) const {
 			std::vector<std::string> depNames;
 			for (size_t i=0; i<children.size(); ++i)
-				depNames.push_back(children[i].recursiveGenerateCode(oss, id));
+				depNames.push_back(children[i].generateCode(oss, id));
 			std::string evalName = formatString("shader_%i", id++);
 			shader->generateCode(oss, evalName, depNames);
 			oss << endl;
 			return evalName;
 		}
-
-		void recursiveResolve(GPUProgram *program, int &id) {
+	
+		/// Resolve all parameters of the shader chain
+		inline void resolve(GPUProgram *program, int &id) {
 			std::vector<std::string> depNames;
 			for (size_t i=0; i<children.size(); ++i)
-				children[i].recursiveResolve(program, id);
-
+				children[i].resolve(program, id);
+	
 			std::string evalName = formatString("shader_%i", id++);
 			shader->resolve(program, evalName, parameterIDs);
 		}
-
-		void recursiveBind(GPUProgram *program, const VPLDependencyNode &targetNode, int &textureUnitOffset) {
+	
+		/// Bind all referenced resources (textures etc)
+		inline void bind(GPUProgram *program, const DependencyNode &targetNode, int &textureUnitOffset) {
+			if (!shader)
+				return;
 			for (size_t i=0; i<children.size(); ++i)
-				children[i].recursiveBind(program, targetNode.children[i], textureUnitOffset);
+				children[i].bind(program, targetNode.children[i], textureUnitOffset);
 			shader->bind(program, targetNode.parameterIDs, textureUnitOffset);
 		}
-
-		void recursiveUnbind() {
+	
+		/// Release resources that were bound by \ref bind()
+		inline void unbind() {
+			if (!shader)
+				return;
 			shader->unbind();
 			for (size_t i=0; i<children.size(); ++i)
-				children[i].recursiveUnbind();
+				children[i].unbind();
 		}
-
+	
+		/// Generate a textual summary of the entire shader chain
 		inline void toString(std::ostringstream &oss) const {
+			if (!shader)
+				return;
 			oss << shader->getClass()->getName();
 			if (children.size() > 0) {
-				oss << '{';
+				oss << '[';
 				for (size_t i=0; i<children.size(); ++i) {
 					children[i].toString(oss);
 					if (i+1<children.size())
-						oss << ',';
+						oss << ", ";
 				}
-				oss << "}";
+				oss << "]";
 			}
 		}
+		
+		inline std::string toString() const {
+			std::ostringstream oss;
+			toString(oss);
+			return oss.str();
+		}
 	};
+	
+	/**
+	 * \brief Describes the configuration of a (vpl, bsdf, emitter)
+	 * shader chain triplet
+	 */
+	struct VPLConfiguration {
+		DependencyNode vpl, bsdf, emitter;
+		bool faceNormals;
+		GPUProgram *program;
+	
+		/* GLSL program paramter IDs */
+		int param_instanceTransform, param_vplTransform;
+		int param_vplPosition, param_vplDirection;
+		int param_camPosition, param_camDirection;
+		int param_shadowMap, param_depthRange;
+		int param_emitterScale, param_vplPower;
+		int param_vplFrame, param_vplUV, param_vplWi;
+		int param_minDistSqr;
 
-	struct VPLProgramConfiguration {
-		VPLDependencyNode vpl, bsdf, luminaire;
-		bool hasLuminaire, faceNormals;
-		int param_shadowMap, param_vplPos, param_camPos, param_vplPower;
-		int param_vplN, param_vplS, param_vplT, param_vplWi, param_vplUV;
-		int param_nearClip, param_invClipRange, param_minDist;
-		int param_diffuseSources, param_diffuseReceivers, param_alpha;
+		/// Dummy constructor
+		inline VPLConfiguration() : program(NULL) { }
 
-		inline VPLProgramConfiguration() { }
-
-		inline VPLProgramConfiguration(Shader *vpl, Shader *bsdf, Shader *luminaire, bool faceNormals)
-			: vpl(vpl), bsdf(bsdf), luminaire(luminaire), faceNormals(faceNormals) {
-			hasLuminaire = (luminaire != NULL);
-		}
-
-		void generateCode(std::ostringstream &oss, std::string &vplEvalName,
-				std::string &bsdfEvalName, std::string &luminaireEvalName) const {
+		/// Create a new configuration for the given (vpl, bsdf, emitter) triplet
+		inline VPLConfiguration(Shader *vpl, Shader *bsdf, Shader *emitter, bool faceNormals)
+			: vpl(vpl), bsdf(bsdf), emitter(emitter), faceNormals(faceNormals), program(NULL) { }
+	
+		/// Generate GLSL code for the entire shader chain
+		inline void generateCode(std::ostringstream &oss, std::string &vplEvalName,
+				std::string &bsdfEvalName, std::string &emitterEvalName) const {
 			int id = 0;
-			vplEvalName = vpl.recursiveGenerateCode(oss, id);
-			bsdfEvalName = bsdf.recursiveGenerateCode(oss, id);
-			if (hasLuminaire)
-				luminaireEvalName = luminaire.recursiveGenerateCode(oss, id);
-		}
-
-		void resolve(GPUProgram *program) {
-			int id = 0;
-			vpl.recursiveResolve(program, id);
-			bsdf.recursiveResolve(program, id);
-			if (hasLuminaire)
-				luminaire.recursiveResolve(program, id);
+			vplEvalName = vpl.generateCode(oss, id);
+			bsdfEvalName = bsdf.generateCode(oss, id);
+			if (emitter.shader)
+				emitterEvalName = emitter.generateCode(oss, id);
 		}
 	
-		inline void bind(GPUProgram *program, const VPLProgramConfiguration &targetConf, int &textureUnitOffset) {
-			vpl.recursiveBind(program, targetConf.vpl, textureUnitOffset);
-			bsdf.recursiveBind(program, targetConf.bsdf, textureUnitOffset);
-			if (hasLuminaire)
-				luminaire.recursiveBind(program, targetConf.luminaire, textureUnitOffset);
+		/// Resolve all parameters of the shader chain
+		inline void resolve(GPUProgram *program) {
+			int id = 0;
+			vpl.resolve(program, id);
+			bsdf.resolve(program, id);
+			if (emitter.shader)
+				emitter.resolve(program, id);
 		}
-		
+	
+		/// Bind all referenced resources (textures etc)
+		inline void bind(const VPLConfiguration &targetConf, int textureUnitOffset) {
+			vpl.bind(targetConf.program, targetConf.vpl, textureUnitOffset);
+			bsdf.bind(targetConf.program, targetConf.bsdf, textureUnitOffset);
+			if (emitter.shader)
+				emitter.bind(targetConf.program, targetConf.emitter, textureUnitOffset);
+		}
+	
+		/// Release resources that were bound by \ref bind()
 		inline void unbind() {
-			vpl.recursiveUnbind();
-			bsdf.recursiveUnbind();
-			if (hasLuminaire)
-				luminaire.recursiveUnbind();
+			vpl.unbind();
+			bsdf.unbind();
+			if (emitter.shader)
+				emitter.unbind();
 		}
-
-		inline void toString(std::ostringstream &oss) const {
+	
+		/// Generate a textual summary of the entire shader chain
+		inline std::string toString() const {
+			std::ostringstream oss;
 			oss << "vpl=";
 			vpl.toString(oss);
 			oss << ", bsdf=";
 			bsdf.toString(oss);
-			if (hasLuminaire) {
-				oss << ", luminaire=";
-				luminaire.toString(oss);
+			if (emitter.shader) {
+				oss << ", emitter=";
+				emitter.toString(oss);
 			}
 			if (faceNormals)
 				oss << ", faceNormals";
+			return oss.str();
 		}
 	};
 
-	struct ProgramAndConfiguration {
-		GPUProgram *program;
-		VPLProgramConfiguration config;
+	/**
+	 * \brief Order materials so that they can be drawn with the least
+	 * number of GPU pipeline flushes. Draw transparent objects last.
+	 */
+	struct MaterialOrder {
+		inline bool operator()(
+				const Renderer::TransformedGPUGeometry &g1,
+				const Renderer::TransformedGPUGeometry &g2) const {
+			const Shader *shader1 = g1.first->getShader();
+			const Shader *shader2 = g2.first->getShader();
 
-		inline ProgramAndConfiguration() : program(NULL) {
-		}
+			if (shader1 && (shader1->getFlags() & Shader::ETransparent))
+				shader1 = NULL;
+			if (shader2 && (shader2->getFlags() & Shader::ETransparent))
+				shader2 = NULL;
 
-		inline ProgramAndConfiguration(GPUProgram *program, 
-			const VPLProgramConfiguration &config)
-			: program(program), config(config) {
+			return shader1 < shader2;
 		}
 	};
-
-	/* General */
-	ref<const Scene> m_scene;
+	MTS_DECLARE_CLASS()
+private:
 	ref<Renderer> m_renderer;
-	Float m_clamping, m_minDist;
-	Float m_maxClipDist;
-	bool m_initialized;
-	
-	/* Shadow mapping related */
-	ref<GPUProgram> m_shadowProgram;
-	ref<GPUProgram> m_altShadowProgram;
-	int m_shadowProgramParam_cubeMapTransform[6];
-	int m_shadowProgramParam_depthVec[6];
-	int m_altShadowProgramParam_cubeMapTransform;
-	int m_altShadowProgramParam_depthVec;
-	ref<GPUTexture> m_shadowMap;
-	Float m_nearClip, m_invClipRange;
-	int m_shadowMapResolution;
-	bool m_singlePass;
-	bool m_diffuseSources, m_diffuseReceivers;
+	ref<const Scene> m_scene;
 
-	/* Rendering related */
-	std::map<std::string, ProgramAndConfiguration> m_programs;
-	ProgramAndConfiguration m_current;
-	VPLProgramConfiguration m_targetConfig;
+	/* On-GPU geometry references */
+	std::vector<Renderer::TransformedGPUGeometry> m_geometry;
+	std::vector<Renderer::TransformedGPUGeometry> m_opaqueGeometry;
+
+	/* Shader & dependency management */
+	std::map<std::string, VPLConfiguration> m_configurations;
+	VPLConfiguration m_targetConfiguration;
+	VPLConfiguration m_currentProgram;
+
+	/* Background rendering - related */
 	ref<GPUProgram> m_backgroundProgram;
-	VPLDependencyNode m_backgroundDependencies;
-	std::vector<std::pair<const TriMesh *, Transform> > m_meshes;
-	std::vector<std::pair<const TriMesh *, Transform> > m_transparentMeshes;
-	std::vector<std::pair<const GPUGeometry *, Transform> > m_drawList;
+	DependencyNode m_backgroundDependencies;
+	int m_backgroundParam_camPosition; 
+	int m_backgroundParam_camDirection;
+	int m_backgroundParam_clipToWorld;
+	int m_backgroundParam_emitterScale;
+
+	/* Shadow map - related */
+	ShadowMapGenerator::EShadowMapType m_shadowMapType;
+	ref<ShadowMapGenerator> m_shadowGen;
+	ref<GPUTexture> m_shadowMapCube;
+	ref<GPUTexture> m_shadowMap2D;
+	GPUTexture *m_shadowMap;
+	Transform m_shadowMapTransform;
+	Float m_nearClip, m_farClip;
+
+	/* Other rendering parameters */
+	bool m_diffuseSources, m_diffuseReceivers;
+	int m_shadowMapResolution;
+	uint32_t m_vplIndex;
+	Float m_clamping, m_alpha;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __VPL_HW_H */
+#endif /* __MITSUBA_HW_VPL_H_ */

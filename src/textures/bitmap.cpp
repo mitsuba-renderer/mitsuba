@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,6 +20,7 @@
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/mstream.h>
+#include <mitsuba/core/plugin.h>
 #include <mitsuba/core/sched.h>
 #include <mitsuba/render/texture.h>
 #include <mitsuba/render/mipmap.h>
@@ -29,284 +30,425 @@
 #include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
-
+	
 /*!\plugin{bitmap}{Bitmap texture}
+ * \order{1}
  * \parameters{
  *     \parameter{filename}{\String}{
  *       Filename of the bitmap to be loaded
  *     }
+ *     \parameter{wrapMode, wrapModeU, wrapModeV}{\String}{
+ *       Behavior of texture lookups outside of the $[0,1]$ $uv$ range.\vspace{-1mm}
+ *       \begin{enumerate}[(i)]
+ *           \item \code{repeat}: Repeat the texture indefinitely\vspace{-1mm}
+ *           \item \code{mirror}: Mirror the texture along its boundaries\vspace{-1mm}
+ *           \item \code{clamp}: Clamp $uv$ coordinates to $[0,1]$ before a lookup\vspace{-1mm}
+ *           \item \code{zero}: Switch to a zero-valued texture \vspace{-1mm}
+ *           \item \code{one}: Switch to a one-valued texture \vspace{-1mm}
+ *       \end{enumerate}
+ *       Default: \code{repeat}. The parameter \code{wrapMode} is a shortcut for 
+ *       setting both \code{wrapModeU} and \code{wrapModeV} at the same time.
+ *     }
  *     \parameter{gamma}{\Float}{
- *       Gamma value of the source bitmap file 
- *       \default{\emph{automatic}, i.e. linear for EXR input, 
- *       and sRGB for everything else.}
+ *       Optional parameter to override the gamma value of the source bitmap,
+ *       where 1 indicates a linear color space and the special value -1 
+ *       corresponds to sRGB. \default{automatically detect based on the 
+ *       image type and metadata}
  *     }
  *     \parameter{filterType}{\String}{
- *       Specifies the texture filturing that should be used for lookups
+ *       Specifies the texture filturing that should be used for lookups\vspace{-1mm}
  *       \begin{enumerate}[(i)]
  *           \item \code{ewa}: Elliptically weighted average (a.k.a.
- *           anisotropic filtering). This produces the best quality
- *           \item \code{trilinear}: Simple trilinear (isotropic) filtering.
- *           \item \code{none}: No filtering, do nearest neighbor lookups.
+ *           anisotropic filtering). This produces the best quality\vspace{-1mm}
+ *           \item \code{trilinear}: Simple trilinear (isotropic) filtering.\vspace{-1mm}
+ *           \item \code{nearest}: No filtering, do nearest neighbor lookups.\vspace{-1mm}
  *       \end{enumerate}
  *       Default: \code{ewa}.
  *     }
- *     \parameter{wrapMode}{\String}{
- *       This parameter defines the behavior of the texture outside of the $[0,1]$ $uv$ range.
- *       \begin{enumerate}[(i)]
- *           \item \code{repeat}: Repeat the texture (i.e. $uv$ coordinates
- *           are taken modulo 2)
- *           \item \code{clamp}: Clamp $uv$ coordinates to $[0,1]$
- *           \item \code{black}: Switch to a zero-valued texture
- *           \item \code{white}: Switch to a one-valued texture
- *       \end{enumerate}
- *       Default: \code{repeat}.
- *     }
  *     \parameter{maxAnisotropy}{\Float}{
- *        Specifies an upper limit on the amount of anisotropy 
- *        of \code{ewa} lookups\default{8}
+ *        Specific to \code{ewa} filtering, this parameter limits the 
+ *        anisotropy (and thus the computational cost) of filtured texture lookups. The
+ *        default of 20 is a good compromise.
  *     }
- *     \parameter{uscale, vscale}{\Float}{
- *       Multiplicative factors that should be applied to UV values before a lookup
+ *     \parameter{cache}{\Boolean}{
+ *        Preserve generated MIP map data in a cache file? This will cause a file named
+ *        \emph{filename}\code{.mip} to be created.
+ *        \default{automatic---use caching for textures larger than 1M pixels.}
  *     }
  *     \parameter{uoffset, voffset}{\Float}{
  *       Numerical offset that should be applied to UV values before a lookup
  *     }
+ *     \parameter{uscale, vscale}{\Float}{
+ *       Multiplicative factors that should be applied to UV values before a lookup
+ *     }
  * }
- * This plugin implements a bitmap-based texture, which supports the following
- * file formats:
- * \begin{itemize}
- *     \item OpenEXR
- *     \item JPEG
- *     \item PNG (Portable Network Graphics)
- *     \item TGA (Targa)
- *     \item BMP (Windows bitmaps)
- * \end{itemize}
+ * This plugin provides a bitmap-backed texture source that supports \emph{filtered}
+ * texture lookups on\footnote{Some of these may not be available depending on how 
+ * Mitsuba was compiled.} JPEG, PNG, OpenEXR, RGBE, TGA, and BMP files. Filtered 
+ * lookups are useful to avoid aliasing when rendering textures that contain high 
+ * frequencies (see the next page for an example).
  *
- * The plugin internally converts all bitmap data into a \emph{linear} space to ensure
- * a proper workflow.
+ * The plugin operates as follows: when loading a bitmap file, it is first converted 
+ * into a linear color space. Following this, a MIP map is constructed that is necessary
+ * to perform filtered lookups during rendering. A \emph{MIP map} is a hierarchy of
+ * progressively lower resolution versions of the input image, where the resolution of
+ * adjacent levels differs by a factor of two. Mitsuba creates this hierarchy using
+ * Lanczos resampling to obtain very high quality results.
+ * Note that textures may have an arbitrary resolution and are not limited to powers of two.
+ * Three different filtering modes are supported: 
+ *
+ * \begin{enumerate}[(i)]
+ * \item Nearest neighbor lookups effectively disable filtering and always query the 
+ * highest-resolution version of the texture without any kind of interpolation. This is 
+ * fast and requires little memory (no MIP map is created), but results in visible aliasing.
+ * Only a single pixel value is accessed.
+ *
+ * \item The trilinear filter performs bilinear interpolation on two adjacent MIP levels
+ * and blends the results. Because it cannot do anisotropic (i.e. slanted) lookups in texture space,
+ * it must compromise either on the side of blurring or aliasing. The implementation in Mitsuba
+ * chooses blurring over aliasing (though note that (\textbf{b}) is an extreme case).
+ * Only 8 pixel values are accessed.
+ *
+ * \item The EWA filter performs anisotropicically filtered lookups on two adjacent MIP map levels 
+ * and blends them. This produces the best quality, but at the expense of computation time.
+ * Generally, 20-40 pixel values must be read for a single EWA texture lookup. To limit
+ * the number of pixel accesses, the \code{maxAnisotropy} parameter can be used to bound
+ * the amount of anisotropy that a texture lookup is allowed to have.
+ * \end{enumerate}
+ * \renderings{
+ *     \rendering{Nearest-neighbor filter. Note the aliasing}{tex_bitmap_nearest}
+ *     \rendering{Trilinear filter. Note the blurring}{tex_bitmap_trilinear}
+ *     \vspace{-5mm}
+ * }
+ * \renderings{
+ *     \setcounter{subfigure}{2}
+ *     \rendering{EWA filter}{tex_bitmap_ewa}
+ *     \rendering{Ground truth (512 samples per pixel)}{tex_bitmap_gt}
+ *     \caption{A somewhat contrived comparison of the different filters when rendering a high-frequency
+ *     checkerboard pattern using four samples per pixel. The EWA method (the default) 
+ *     pre-filters the texture anisotropically to limit blurring and aliasing, but has a 
+ *     higher computational cost than the other filters.}
+ * }
+ * \paragraph{Caching and memory requirements:}
+ * When a texture is read, Mitsuba internally converts it into an uncompressed linear format 
+ * using a half precision (\code{float16})-based representation. This is convenient for
+ * rendering but means that textures require copious amounts of memory (in particular, the 
+ * size of the occupied memory region might be orders of magnitude greater than that of the 
+ * original input file).
+ *
+ * For instance, a basic 10 megapixel image requires as much as 76 MiB of memory! Loading,
+ * color space transformation, and MIP map construction require up to several seconds in this case.
+ * To reduce these overheads, Mitsuba 0.4.0 introduced MIP map caches. When a large
+ * texture is loaded for the first time, a MIP map cache file with the name \emph{filename}\code{.mip}
+ * is generated. This is essentially a verbatim copy of the in-memory representation created
+ * during normal rendering. Storing this information as a separate file has two advantages:
+ *
+ * \begin{enumerate}[(i)]
+ *    \item MIP maps do not have to be regenerated in subsequent Mitsuba runs,
+ *     which substantially reduces scene loading times.
+ *    \item Because the texture storage is entirely disk-backed and can be \emph{memory-mapped}, 
+ *    Mitsuba is able to work with truly massive textures that would otherwise exhaust the main system memory.
+ * \end{enumerate}
+ *
+ * The texture caches are automatically regenerated when the input texture is modified.
+ * Of course, the cache files can be cumbersome when they are not needed anymore. On Linux
+ * or Mac OS, they can safely be deleted by executing the following command within a scene directory.
+ *
+ * \begin{shell}
+ * $\code{\$}$ find . -name "*.mip" -delete
+ * \end{shell}
  */
 
 class BitmapTexture : public Texture2D {
 public:
+	/* Store texture data using half precision, but perform computations in 
+	   single/double precision based on compilation flags. The following
+	   generates efficient implementations for both luminance and RGB data */
+	typedef TSpectrum<Float, 1> Color1;
+	typedef TSpectrum<Float, 3> Color3;
+	typedef TSpectrum<half, 1>  Color1h;
+	typedef TSpectrum<half, 3>  Color3h;
+	typedef TMIPMap<Color1, Color1h> MIPMap1;
+	typedef TMIPMap<Color3, Color3h> MIPMap3;
+
 	BitmapTexture(const Properties &props) : Texture2D(props) {
-		m_filename = Thread::getThread()->getFileResolver()->resolve(
-			props.getString("filename"));
+		uint64_t timestamp = 0;
+		bool tryReuseCache = false;
+		fs::path cacheFile;
+		ref<Bitmap> bitmap;
 
-		/* -1 means sRGB. Gamma is ignored when loading EXR files */
-		m_gamma = props.getFloat("gamma", -1);
-		Log(EInfo, "Loading texture \"%s\"", m_filename.leaf().c_str());
+		if (props.hasProperty("bitmap")) {
+			/* Support initialization via raw data passed from another plugin */
+			bitmap = reinterpret_cast<Bitmap *>(props.getData("bitmap").ptr);
+		} else {
+			m_filename = Thread::getThread()->getFileResolver()->resolve(
+				props.getString("filename"));
 
-		ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
-		std::string extension = boost::to_lower_copy(m_filename.extension());
+			Log(EInfo, "Loading texture \"%s\"", m_filename.filename().c_str());
+			if (!fs::exists(m_filename))
+				Log(EError, "Texture file \"%s\" could not be found!", m_filename.c_str());
+
+			boost::system::error_code ec;
+			timestamp = (uint64_t) fs::last_write_time(m_filename, ec);
+			if (ec.value())
+				Log(EError, "Could not determine modification time of \"%s\"!", m_filename.c_str());
+
+			cacheFile = m_filename;
+			cacheFile.replace_extension(".mip");
+			tryReuseCache = fs::exists(cacheFile) && props.getBoolean("cache", true);
+		}
+
 		std::string filterType = boost::to_lower_copy(props.getString("filterType", "ewa"));
-		std::string wrapMode = boost::to_lower_copy(props.getString("wrapMode", "repeat"));
+		std::string wrapMode = props.getString("wrapMode", "repeat");
+		m_wrapModeU = parseWrapMode(props.getString("wrapModeU", wrapMode));
+		m_wrapModeV = parseWrapMode(props.getString("wrapModeV", wrapMode));
+
+		m_gamma = props.getFloat("gamma", 0);
 
 		if (filterType == "ewa")
-			m_filterType = MIPMap::EEWA;
+			m_filterType = EEWA;
 		else if (filterType == "trilinear")
-			m_filterType = MIPMap::ETrilinear;
-		else if (filterType == "none")
-			m_filterType = MIPMap::ENone;
+			m_filterType = ETrilinear;
+		else if (filterType == "nearest")
+			m_filterType = ENearest;
 		else
 			Log(EError, "Unknown filter type '%s' -- must be "
-				"'ewa', 'isotropic', or 'none'!", filterType.c_str());
+				"'ewa', 'trilinear', or 'nearest'!", filterType.c_str());
 
+		m_maxAnisotropy = props.getFloat("maxAnisotropy", 20);
+
+		if (m_filterType != EEWA)
+			m_maxAnisotropy = 1.0f;
+
+		if (tryReuseCache && MIPMap3::validateCacheFile(cacheFile, timestamp,
+				Bitmap::ERGB, m_wrapModeU, m_wrapModeV, m_filterType, m_gamma)) {
+			/* Reuse an existing MIP map cache file */
+			m_mipmap3 = new MIPMap3(cacheFile, m_maxAnisotropy);
+		} else if (tryReuseCache && MIPMap1::validateCacheFile(cacheFile, timestamp,
+				Bitmap::ELuminance, m_wrapModeU, m_wrapModeV, m_filterType, m_gamma)) {
+			/* Reuse an existing MIP map cache file */
+			m_mipmap1 = new MIPMap1(cacheFile, m_maxAnisotropy);
+		} else {
+			if (bitmap == NULL) {
+				/* Load the input image if necessary */
+				ref<Timer> timer = new Timer();
+				ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
+				bitmap = new Bitmap(Bitmap::EAuto, fs);
+				if (m_gamma != 0)
+					bitmap->setGamma(m_gamma);
+				Log(EDebug, "Loaded \"%s\" in %i ms", m_filename.filename().c_str(),
+					timer->getMilliseconds());
+			}
+
+			Bitmap::EPixelFormat pixelFormat;
+			switch (bitmap->getPixelFormat()) {
+				case Bitmap::ELuminance:
+				case Bitmap::ELuminanceAlpha:
+					pixelFormat = Bitmap::ELuminance;
+					break;
+				case Bitmap::ERGB:
+				case Bitmap::ERGBA:
+					pixelFormat = Bitmap::ERGB;
+					break;
+				default:
+					Log(EError, "The input image has an unsupported pixel format!");
+					return;
+			}
+
+			/* (Re)generate the MIP map hierarchy; downsample using a 
+			    2-lobed Lanczos reconstruction filter */
+			Properties rfilterProps("lanczos");
+			rfilterProps.setInteger("lobes", 2);
+			ref<ReconstructionFilter> rfilter = static_cast<ReconstructionFilter *> (
+				PluginManager::getInstance()->createObject(
+				MTS_CLASS(ReconstructionFilter), rfilterProps));
+			rfilter->configure();
+
+			/* Potentially create a new MIP map cache file */
+			bool createCache = !cacheFile.empty() && props.getBoolean("cache", 
+				bitmap->getSize().x * bitmap->getSize().y > 1024*1024);
+
+			if (pixelFormat == Bitmap::ELuminance)
+				m_mipmap1 = new MIPMap1(bitmap, pixelFormat, Bitmap::EFloat,
+					rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy, 
+					createCache ? cacheFile : fs::path(), timestamp);
+			else
+				m_mipmap3 = new MIPMap3(bitmap, pixelFormat, Bitmap::EFloat,
+					rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy, 
+					createCache ? cacheFile : fs::path(), timestamp);
+		}
+	}
+
+	inline ReconstructionFilter::EBoundaryCondition parseWrapMode(const std::string &wrapMode) {
 		if (wrapMode == "repeat")
-			m_wrapMode = MIPMap::ERepeat;
+			return ReconstructionFilter::ERepeat;
 		else if (wrapMode == "clamp")
-			m_wrapMode = MIPMap::EClamp;
-		else if (wrapMode == "black")
-			m_wrapMode = MIPMap::EBlack;
-		else if (wrapMode == "white")
-			m_wrapMode = MIPMap::EWhite;
+			return ReconstructionFilter::EClamp;
+		else if (wrapMode == "mirror")
+			return ReconstructionFilter::EMirror;
+		else if (wrapMode == "zero" || wrapMode == "black")
+			return ReconstructionFilter::EZero;
+		else if (wrapMode == "one" || wrapMode == "white")
+			return ReconstructionFilter::EOne;
 		else
 			Log(EError, "Unknown wrap mode '%s' -- must be "
-				"'repeat', 'clamp', 'black', or 'white'!", filterType.c_str());
-	
-		m_maxAnisotropy = props.getFloat("maxAnisotropy", 8);
-
-		if (extension == ".exr")
-			m_format = Bitmap::EEXR;
-		else if (extension == ".jpg" || extension == ".jpeg")
-			m_format = Bitmap::EJPEG;
-		else if (extension == ".png")
-			m_format = Bitmap::EPNG;
-		else if (extension == ".tga")
-			m_format = Bitmap::ETGA;
-		else if (extension == ".bmp")
-			m_format = Bitmap::EBMP;
-		else
-			Log(EError, "Cannot deduce the file type of '%s'!", m_filename.file_string().c_str());
-
-		ref<Bitmap> bitmap = new Bitmap(m_format, fs);
-		initializeFrom(bitmap);
+				"'repeat', 'clamp', 'black', or 'white'!", wrapMode.c_str());
+		return ReconstructionFilter::EZero; // make gcc happy
 	}
 
 	BitmapTexture(Stream *stream, InstanceManager *manager) 
 	 : Texture2D(stream, manager) {
 		m_filename = stream->readString();
-		Log(EInfo, "Unserializing texture \"%s\"", m_filename.leaf().c_str());
+		Log(EDebug, "Unserializing texture \"%s\"", m_filename.filename().c_str());
+		m_filterType = (EMIPFilterType) stream->readUInt();
+		m_wrapModeU = (ReconstructionFilter::EBoundaryCondition) stream->readUInt();
+		m_wrapModeV = (ReconstructionFilter::EBoundaryCondition) stream->readUInt();
 		m_gamma = stream->readFloat();
-		m_format = static_cast<Bitmap::EFileFormat>(stream->readInt());
-		m_filterType = (MIPMap::EFilterType) stream->readInt();
-		m_wrapMode = (MIPMap::EWrapMode) stream->readUInt();
 		m_maxAnisotropy = stream->readFloat();
-		uint32_t size = stream->readUInt();
+
+		size_t size = stream->readSize();
 		ref<MemoryStream> mStream = new MemoryStream(size);
 		stream->copyTo(mStream, size);
-		mStream->setPos(0);
-		ref<Bitmap> bitmap = new Bitmap(m_format, mStream);
-		initializeFrom(bitmap);
+		mStream->seek(0);
+		ref<Bitmap> bitmap = new Bitmap(Bitmap::EAuto, mStream);
+		if (m_gamma != 0)
+			bitmap->setGamma(m_gamma);
 
-		if (Scheduler::getInstance()->hasRemoteWorkers()
-			&& !fs::exists(m_filename)) {
-			/* This code is running on a machine different from
-			   the one that created the stream. Because we might
-			   later have to handle a call to serialize(), the
-			   whole bitmap must be kept in memory */
-			m_stream = mStream;
-			m_stream->setPos(0);
-		}
-	}
+		/* Downsample using a 2-lobed Lanczos reconstruction filter */
+		Properties rfilterProps("lanczos");
+		rfilterProps.setInteger("lobes", 2);
+		ref<ReconstructionFilter> rfilter = static_cast<ReconstructionFilter *> (
+			PluginManager::getInstance()->createObject(
+			MTS_CLASS(ReconstructionFilter), rfilterProps));
+		rfilter->configure();
 
-	inline Float fromSRGBComponent(Float value) {
-		if (value <= (Float) 0.04045)
-			return value / (Float) 12.92;
-		return std::pow((value + (Float) 0.055)
-			/ (Float) (1.0 + 0.055), (Float) 2.4);
-	}
-
-	void initializeFrom(Bitmap *bitmap) {
-		ref<Bitmap> corrected;
-		m_bpp = bitmap->getBitsPerPixel();
-		if (bitmap->getBitsPerPixel() == 128) {
-			/* Nothing needs to be done */
-			corrected = bitmap;
-		} else {
-			corrected = new Bitmap(bitmap->getWidth(), bitmap->getHeight(), 128);
-
-			float tbl[256];
-			if (m_gamma == -1) {
-				for (int i=0; i<256; ++i) 
-					tbl[i] = fromSRGBComponent((Float) i / (Float) 255);
-			} else {
-				for (int i=0; i<256; ++i)
-					tbl[i] = std::pow((Float) i / (Float) 255, m_gamma);
-			}
-
-			uint8_t *data = bitmap->getData();
-			float *flData = corrected->getFloatData();
-			if (bitmap->getBitsPerPixel() == 32) {
-				for (int y=0; y<bitmap->getHeight(); ++y) {
-					for (int x=0; x<bitmap->getWidth(); ++x) {
-						float
-							r = tbl[*data++],
-							g = tbl[*data++],
-							b = tbl[*data++],
-							a = *data++ / 255.0f;
-						*flData++ = r;
-						*flData++ = g;
-						*flData++ = b;
-						*flData++ = a;
-					}
-				}
-			} else if (bitmap->getBitsPerPixel() == 24) {
-				for (int y=0; y<bitmap->getHeight(); ++y) {
-					for (int x=0; x<bitmap->getWidth(); ++x) {
-						float
-							r = tbl[*data++],
-							g = tbl[*data++],
-							b = tbl[*data++];
-						*flData++ = r;
-						*flData++ = g;
-						*flData++ = b;
-						*flData++ = 1.0f;
-					}
-				}
-			} else if (bitmap->getBitsPerPixel() == 16) {
-				for (int y=0; y<bitmap->getHeight(); ++y) {
-					for (int x=0; x<bitmap->getWidth(); ++x) {
-						float col = tbl[*data++],
-							a = *data++ / 255.0f;
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = a;
-					}
-				}
-			} else if (bitmap->getBitsPerPixel() == 8) {
-				for (int y=0; y<bitmap->getHeight(); ++y) {
-					for (int x=0; x<bitmap->getWidth(); ++x) {
-						float col = tbl[*data++];
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = 1.0f;
-					}
-				}
-			} else if (bitmap->getBitsPerPixel() == 1) {
-				int pos = 0;
-				for (int y=0; y<bitmap->getHeight(); ++y) {
-					for (int x=0; x<bitmap->getWidth(); ++x) {
-						int entry = pos / 8;
-						int bit   = pos % 8;
-						int value = (data[entry] & (1 << bit)) ? 255 : 0;
-						float col = tbl[value];
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = col;
-						*flData++ = 1.0f;
-						pos++;
-					}
-				}
-			} else {
-				Log(EError, "%i bpp images are currently not supported!", bitmap->getBitsPerPixel());
-			}
+		Bitmap::EPixelFormat pixelFormat;
+		switch (bitmap->getPixelFormat()) {
+			case Bitmap::ELuminance:
+			case Bitmap::ELuminanceAlpha:
+				pixelFormat = Bitmap::ELuminance;
+				break;
+			case Bitmap::ERGB:
+			case Bitmap::ERGBA:
+				pixelFormat = Bitmap::ERGB;
+				break;
+			default:
+				Log(EError, "The input image has an unsupported pixel format!");
+				return;
 		}
 
-		m_mipmap = MIPMap::fromBitmap(corrected, m_filterType,
-				m_wrapMode, m_maxAnisotropy);
+		if (pixelFormat == Bitmap::ELuminance)
+			m_mipmap1 = new MIPMap1(bitmap, pixelFormat, Bitmap::EFloat,
+				rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy, 
+				fs::path(), 0);
+		else
+			m_mipmap3 = new MIPMap3(bitmap, pixelFormat, Bitmap::EFloat,
+				rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy, 
+				fs::path(), 0);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Texture2D::serialize(stream, manager);
-		stream->writeString(m_filename.file_string());
+		stream->writeString(m_filename.string());
+		stream->writeUInt(m_filterType);
+		stream->writeUInt(m_wrapModeU);
+		stream->writeUInt(m_wrapModeV);
 		stream->writeFloat(m_gamma);
-		stream->writeInt(m_format);
-		stream->writeInt(m_filterType);
-		stream->writeUInt(m_wrapMode);
 		stream->writeFloat(m_maxAnisotropy);
 
-		if (m_stream.get()) {
-			stream->writeUInt((uint32_t) m_stream->getSize());
-			stream->write(m_stream->getData(), m_stream->getSize());
-		} else {
-			ref<Stream> mStream = new MemoryStream();
+		if (!m_filename.empty() && fs::exists(m_filename)) {
+			/* We still have access to the original image -- use that, since 
+			   it is probably much smaller than the in-memory representation */
 			ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
-			stream->writeUInt((uint32_t) is->getSize());
+			stream->writeSize(is->getSize());
 			is->copyTo(stream);
+		} else {
+			/* No access to the original image anymore. Create an EXR image
+			   from the top MIP map level and serialize that */
+			ref<MemoryStream> mStream = new MemoryStream();
+			ref<Bitmap> bitmap = m_mipmap1.get() ? 
+				m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
+			bitmap->write(Bitmap::EOpenEXR, mStream);
+
+			stream->writeSize(mStream->getSize());
+			stream->write(mStream->getData(), mStream->getSize());
 		}
 	}
 
-	Spectrum getValue(const Point2 &uv) const {
-		return m_mipmap->triangle(0, uv.x, uv.y);
+	Spectrum eval(const Point2 &uv) const {
+		/* There are no ray differentials to do any kind of 
+		   prefiltering. Evaluate the full-resolution texture */
+		
+		Spectrum result;
+		if (m_mipmap3.get()) {
+			Color3 value;
+			if (m_mipmap3->getFilterType() != ENearest)
+				value = m_mipmap3->evalBilinear(0, uv);
+			else
+				value = m_mipmap3->evalBox(0, uv);
+			result.fromLinearRGB(value[0], value[1], value[2]);
+		} else {
+			Color1 value;
+			if (m_mipmap1->getFilterType() != ENearest)
+				value = m_mipmap1->evalBilinear(0, uv);
+			else
+				value = m_mipmap1->evalBox(0, uv);
+			result = Spectrum(value[0]);
+		}
+		stats::filteredLookups.incrementBase();
+
+		return result;
 	}
 
-	Spectrum getValue(const Point2 &uv, Float dudx, 
-			Float dudy, Float dvdx, Float dvdy) const {
-		return m_mipmap->getValue(uv.x, uv.y, dudx, dudy, dvdx, dvdy);
+	Spectrum eval(const Point2 &uv, const Vector2 &d0, const Vector2 &d1) const {
+		stats::filteredLookups.incrementBase();
+		++stats::filteredLookups;
+
+		Spectrum result;
+		if (m_mipmap3.get()) {
+			Color3 value = m_mipmap3->eval(uv, d0, d1);
+			result.fromLinearRGB(value[0], value[1], value[2]);
+		} else {
+			Color1 value = m_mipmap1->eval(uv, d0, d1);
+			result = Spectrum(value[0]);
+		}
+		return result;
 	}
 
 	Spectrum getAverage() const {
-		return m_mipmap->getAverage();
+		Spectrum result;
+		if (m_mipmap3.get()) {
+			Color3 value = m_mipmap3->getAverage();
+			result.fromLinearRGB(value[0], value[1], value[2]);
+		} else {
+			Color1 value = m_mipmap1->getAverage();
+			result = Spectrum(value[0]);
+		}
+		return result;
 	}
 
 	Spectrum getMaximum() const {
-		return m_mipmap->getMaximum();
+		Spectrum result;
+		if (m_mipmap3.get()) {
+			Color3 value = m_mipmap3->getMaximum();
+			result.fromLinearRGB(value[0], value[1], value[2]);
+		} else {
+			Color1 value = m_mipmap1->getMaximum();
+			result = Spectrum(value[0]);
+		}
+		return result;
 	}
 
 	Spectrum getMinimum() const {
-		return m_mipmap->getMinimum();
+		Spectrum result;
+		if (m_mipmap3.get()) {
+			Color3 value = m_mipmap3->getMinimum();
+			result.fromLinearRGB(value[0], value[1], value[2]);
+		} else {
+			Color1 value = m_mipmap1->getMinimum();
+			result = Spectrum(value[0]);
+		}
+		return result;
 	}
 
 	bool isConstant() const {
@@ -318,24 +460,31 @@ public:
 	}
 
 	Vector3i getResolution() const {
-		return Vector3i(
-			m_mipmap->getWidth(),
-			m_mipmap->getHeight(),
-			1
-		);
+		if (m_mipmap3.get()) {
+			return Vector3i(
+				m_mipmap3->getWidth(),
+				m_mipmap3->getHeight(),
+				1
+			);
+		} else {
+			return Vector3i(
+				m_mipmap1->getWidth(),
+				m_mipmap1->getHeight(),
+				1
+			);
+		}
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "BitmapTexture[" << endl
-			<< "  filename = \"" << m_filename << "\"," << endl
-			<< "  bpp = " << m_bpp;
-		if (m_bpp < 128) {
-			oss << "," << endl
-				<< "  gamma = " << m_gamma << endl;
-		} else {
-			oss << endl;
-		}
+			<< "  filename = \"" << m_filename.string() << "\"," << endl;
+
+		if (m_mipmap3.get())
+			oss << "  mipmap = " << indent(m_mipmap3.toString()) << endl;
+		else
+			oss << "  mipmap = " << indent(m_mipmap1.toString()) << endl;
+		
 		oss << "]";
 		return oss.str();
 	}
@@ -344,34 +493,64 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	ref<MIPMap> m_mipmap;
-	ref<MemoryStream> m_stream;
+	ref<MIPMap1> m_mipmap1;
+	ref<MIPMap3> m_mipmap3;
+	EMIPFilterType m_filterType;
+	ReconstructionFilter::EBoundaryCondition m_wrapModeU;
+	ReconstructionFilter::EBoundaryCondition m_wrapModeV;
+	Float m_gamma, m_maxAnisotropy;
 	fs::path m_filename;
-	Bitmap::EFileFormat m_format;
-	MIPMap::EFilterType m_filterType;
-	MIPMap::EWrapMode m_wrapMode;
-	Float m_maxAnisotropy;
-	Float m_gamma;
-	int m_bpp;
 };
 
 // ================ Hardware shader implementation ================ 
-
 class BitmapTextureShader : public Shader {
 public:
-	BitmapTextureShader(Renderer *renderer, std::string filename, ref<Bitmap> bitmap,
-			const Point2 &uvOffset, const Vector2 &uvScale, MIPMap::EWrapMode wrapMode, 
+	BitmapTextureShader(Renderer *renderer, const std::string &filename, 
+			const BitmapTexture::MIPMap1* mipmap1,
+			const BitmapTexture::MIPMap3* mipmap3,
+			const Point2 &uvOffset, const Vector2 &uvScale, 
+			ReconstructionFilter::EBoundaryCondition wrapModeU, 
+			ReconstructionFilter::EBoundaryCondition wrapModeV, 
 			Float maxAnisotropy) 
 		: Shader(renderer, ETextureShader), m_uvOffset(uvOffset), m_uvScale(uvScale) {
+
+		ref<Bitmap> bitmap = mipmap1 ? mipmap1->toBitmap() : mipmap3->toBitmap();
 		m_gpuTexture = renderer->createGPUTexture(filename, bitmap);
-		if (wrapMode == MIPMap::ERepeat)
-			m_gpuTexture->setWrapType(GPUTexture::ERepeat);
-		else
-			m_gpuTexture->setWrapType(GPUTexture::EClampToEdge);
+
+		switch (wrapModeU) {
+			case ReconstructionFilter::EClamp: 
+				m_gpuTexture->setWrapType(GPUTexture::EClampToEdge);
+				break;
+			case ReconstructionFilter::EMirror: 
+				m_gpuTexture->setWrapType(GPUTexture::EMirror);
+				break;
+			case ReconstructionFilter::ERepeat: 
+				m_gpuTexture->setWrapType(GPUTexture::ERepeat);
+				break;
+			case ReconstructionFilter::EZero: 
+				m_gpuTexture->setWrapType(GPUTexture::EClampToBorder);
+				m_gpuTexture->setBorderColor(Color3(0.0f));
+				break;
+			case ReconstructionFilter::EOne: 
+				m_gpuTexture->setWrapType(GPUTexture::EClampToBorder);
+				m_gpuTexture->setBorderColor(Color3(1.0f));
+				break;
+			default:
+				Log(EError, "Unknown wrap mode!");
+		}
+
+		switch (mipmap1 ? mipmap1->getFilterType() : mipmap3->getFilterType()) {
+			case ENearest:
+				m_gpuTexture->setFilterType(GPUTexture::ENearest);
+				break;
+			default:
+				m_gpuTexture->setFilterType(GPUTexture::EMipMapLinear);
+				break;
+		}
+
 		m_gpuTexture->setMaxAnisotropy(maxAnisotropy);
-		m_gpuTexture->init();
-		/* Release the memory on the host side */
-		m_gpuTexture->setBitmap(0, NULL);
+		m_gpuTexture->setMaxAnisotropy(maxAnisotropy);
+		m_gpuTexture->initAndRelease();
 	}
 
 	void cleanup(Renderer *renderer) {
@@ -418,13 +597,12 @@ private:
 };
 
 Shader *BitmapTexture::createShader(Renderer *renderer) const {
-	return new BitmapTextureShader(renderer, m_filename.leaf(),
-			m_mipmap->getLDRBitmap(), m_uvOffset, m_uvScale,
-			m_wrapMode, (m_filterType == MIPMap::EEWA)
-			? m_maxAnisotropy : 1.0f);
+	return new BitmapTextureShader(renderer, m_filename.filename().string(),
+			m_mipmap1.get(), m_mipmap3.get(), m_uvOffset, m_uvScale,
+			m_wrapModeU, m_wrapModeV, m_maxAnisotropy);
 }
 
 MTS_IMPLEMENT_CLASS_S(BitmapTexture, false, Texture2D)
 MTS_IMPLEMENT_CLASS(BitmapTextureShader, false, Shader)
-MTS_EXPORT_PLUGIN(BitmapTexture, "Bitmap texture (EXR/JPG/PNG/TGA/BMP)");
+MTS_EXPORT_PLUGIN(BitmapTexture, "Bitmap texture");
 MTS_NAMESPACE_END

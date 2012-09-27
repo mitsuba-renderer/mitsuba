@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,14 +16,14 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__FSTREAM_H)
-#define __FSTREAM_H
+#pragma once
+#if !defined(__MITSUBA_CORE_FSTREAM_H_)
+#define __MITSUBA_CORE_FSTREAM_H_
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/stream.h>
 #include <boost/filesystem.hpp>
-
-namespace fs = boost::filesystem;
+#include <boost/scoped_ptr.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -65,7 +65,7 @@ public:
 	// =============================================================
 
 	/// Return the file path
-	inline const fs::path &getPath() const { return m_path; }
+	const fs::path &getPath() const;
 
 	/// Open a file with a given open mode
 	void open(const fs::path &filename, EFileMode mode = EReadOnly);
@@ -88,7 +88,7 @@ public:
 
 	void read(void *ptr, size_t size);
 	void write(const void *ptr, size_t size);
-	void setPos(size_t pos);
+	void seek(size_t pos);
 	size_t getPos() const;
 	size_t getSize() const;
 	void truncate(size_t size);
@@ -107,18 +107,11 @@ protected:
 	 * the file if it is still open
 	 */
 	virtual ~FileStream();
-protected:
-#ifdef WIN32
-	HANDLE m_file;
-#else
-	FILE* m_file;
-#endif
-	bool m_write;
-	bool m_read;
-	EFileMode m_mode;
-	fs::path m_path;
+private:
+	struct FileStreamPrivate;
+	boost::scoped_ptr<FileStreamPrivate> d;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __FSTREAM_H */
+#endif /* __MITSUBA_CORE_FSTREAM_H_ */

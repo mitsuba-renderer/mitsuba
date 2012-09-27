@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,23 +18,33 @@
 
 #include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
-#include <errno.h>
-#include <omp.h>
+#ifdef MTS_OPENMP
+# include <omp.h>
+#endif
+
+#include <boost/thread/thread.hpp>
+
+// Required for native thread functions
+#if defined(__LINUX__)
+# include <sys/prctl.h>
+#elif defined(__OSX__)
+# include <pthread.h>
+#elif defined(__WINDOWS__)
+# include <windows.h>
+#endif
 
 MTS_NAMESPACE_BEGIN
 
 
 #if defined(_MSC_VER)
-namespace
-{
+namespace {
 // Helper function to set a native thread name. MSDN:
 //   http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
 
-const DWORD MS_VC_EXCEPTION=0x406D1388;
+const DWORD MS_VC_EXCEPTION = 0x406D1388;
 
-#pragma pack(push,8)
-struct THREADNAME_INFO
-{
+#pragma pack(push, 8)
+struct THREADNAME_INFO {
 	DWORD dwType;     // Must be 0x1000.
 	LPCSTR szName;    // Pointer to name (in user addr space).
 	DWORD dwThreadID; // Thread ID (-1=caller thread).
@@ -42,36 +52,49 @@ struct THREADNAME_INFO
 };
 #pragma pack(pop)
 
-void SetThreadName(const char* threadName, DWORD dwThreadID = -1)
-{
+void SetThreadName(const char* threadName, DWORD dwThreadID = -1) {
 	THREADNAME_INFO info;
 	info.dwType     = 0x1000;
 	info.szName     = threadName;
 	info.dwThreadID = dwThreadID;
 	info.dwFlags    = 0;
 
-	__try
-	{
+	__try {
 		RaiseException( MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(ULONG_PTR),
 			(ULONG_PTR*)&info );
-	}
-	__except(EXCEPTION_EXECUTE_HANDLER)
-	{
-	}
+	} __except(EXCEPTION_EXECUTE_HANDLER) { }
 }
 
 
 } // namespace
 #endif // _MSC_VER
 
+/**
+ * Internal Thread members
+ */
+struct Thread::ThreadPrivate {
+	ref<Thread> parent;
+	ref<Logger> logger;
+	ref<FileResolver> fresolver;
+	boost::mutex joinMutex;
+	std::string name;
+	bool running, joined;
+	Thread::EThreadPriority priority;
+	static ThreadLocal<Thread> *self;
+	bool critical;
+	boost::thread thread;
+
+	ThreadPrivate(const std::string & name_) :
+		name(name_), running(false), joined(false),
+		priority(Thread::ENormalPriority), critical(false) { }
+};
 
 /**
  * Dummy class to associate a thread identity with the main thread
  */
 class MainThread : public Thread {
 public:
-	MainThread() : Thread("main") {
-	}
+	MainThread() : Thread("main") { }
 
 	virtual void run() {
 		Log(EError, "The main thread is already running!");
@@ -97,63 +120,109 @@ protected:
 };
 
 
-ThreadLocal<Thread> *Thread::m_self = NULL;
+ThreadLocal<Thread> *Thread::ThreadPrivate::self = NULL;
 
-#if defined(__LINUX__) || defined(__OSX__)
-int Thread::m_idCounter;
-ref<Mutex> Thread::m_idMutex;
+Thread::Thread(const std::string &name) 
+ : d(new ThreadPrivate(name)) { }
+
+Thread::EThreadPriority Thread::getPriority() const {
+	return d->priority;
+}
+
+void Thread::setCritical(bool critical) {
+	d->critical = critical;
+}
+
+bool Thread::getCritical() const {
+	return d->critical;
+}
+
+int Thread::getID() {
+#if defined(__WINDOWS__)
+	return static_cast<int>(GetCurrentThreadId());
+#elif defined(__OSX__)
+	return static_cast<int>(pthread_mach_thread_np(pthread_self()));
+#else
+	return (int) pthread_self();
 #endif
+}
 
-#if MTS_USE_ELF_TLS == 1
-__thread int Thread::m_id 
-	__attribute__((tls_model("global-dynamic")));
-#endif
+const std::string& Thread::getName() const {
+	return d->name;
+}
 
-Thread::Thread(const std::string &name, unsigned int stackSize) 
- : m_name(name), m_stackSize(stackSize), m_running(false), m_joined(false),
-   m_priority(ENormalPriority), m_critical(false) {
-	m_joinMutex = new Mutex();
-	memset(&m_thread, 0, sizeof(pthread_t));
+void Thread::setName(const std::string &name) {
+	d->name = name;
+}
+
+Thread* Thread::getParent() {
+	return d->parent;
+}
+
+const Thread* Thread::getParent() const {
+	return d->parent.get();
+}
+
+void Thread::setLogger(Logger *logger) {
+	d->logger = logger;
+}
+
+Logger* Thread::getLogger() {
+	return d->logger;
+}
+
+void Thread::setFileResolver(FileResolver *fresolver) {
+	d->fresolver = fresolver;
+}
+
+FileResolver* Thread::getFileResolver() {
+	return d->fresolver;
+}
+
+Thread* Thread::getThread() {
+	return ThreadPrivate::self->get();
+}
+
+bool Thread::isRunning() const {
+	return d->running;
 }
 
 void Thread::start() {
-	if (m_running)
+	if (d->running)
 		Log(EError, "Thread is already running!");
-	if (!m_self)
+	if (!d->self)
 		Log(EError, "Threading has not been initialized!");
 
-	Log(EDebug, "Spawning thread \"%s\"", m_name.c_str());
+	Log(EDebug, "Spawning thread \"%s\"", d->name.c_str());
 
-	/* Configure thread attributes */
-	pthread_attr_t attr;
-	pthread_attr_init(&attr);
-	if (m_stackSize != 0)
-		pthread_attr_setstacksize(&attr, m_stackSize);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-
-	m_parent = Thread::getThread();
+	d->parent = Thread::getThread();
 
 	/* Inherit the parent thread's logger if none was set */
-	if (!m_logger)
-		m_logger = m_parent->getLogger();
+	if (!d->logger)
+		d->logger = d->parent->getLogger();
 
 	/* Inherit the parent thread's file resolver if none was set */
-	if (!m_fresolver)
-		m_fresolver = m_parent->getFileResolver();
+	if (!d->fresolver)
+		d->fresolver = d->parent->getFileResolver();
 
-	m_running = true;
-	m_joined = false;
+	d->running = true;
+	d->joined = false;
 
 	incRef();
-	if (pthread_create(&m_thread, &attr, &Thread::dispatch, this))
+	try {
+		d->thread = boost::thread(&Thread::dispatch, this);
+	} catch (boost::thread_resource_error &ex) {
 		Log(EError, "Could not create thread!");
+		throw ex;
+	}
 }
 
 bool Thread::setPriority(EThreadPriority priority) {
-	m_priority = priority;
-	if (!m_running)
+	d->priority = priority;
+	if (!d->running)
 		return true;
 
+#if defined(__LINUX__) || defined(__OSX__)
 	Float factor;
 	switch (priority) {
 		case EIdlePriority: factor = 0.0f; break;
@@ -165,11 +234,12 @@ bool Thread::setPriority(EThreadPriority priority) {
 		default: factor = 0.0f; break;
 	}
 
+	const pthread_t threadID = d->thread.native_handle();
 	struct sched_param param;
 	int policy;
-	int retval = pthread_getschedparam(m_thread, &policy, &param);
+	int retval = pthread_getschedparam(threadID, &policy, &param);
 	if (retval) {
-		Log(EWarn, "Error in pthread_getschedparam(): %s!", strerror(retval));
+		Log(EWarn, "pthread_getschedparam(): %s!", strerror(retval));
 		return false;
 	}
 
@@ -180,127 +250,142 @@ bool Thread::setPriority(EThreadPriority priority) {
 		Log(EWarn, "Could not adjust the thread priority -- valid range is zero!");
 		return false;
 	}
-
 	param.sched_priority = (int) (min + (max-min)*factor);
 
-	retval = pthread_setschedparam(m_thread, policy, &param);
+	retval = pthread_setschedparam(threadID, policy, &param);
 	if (retval) {
-		Log(EWarn, "Could not adjust the thread priority to %i: %s!", param.sched_priority, strerror(retval));
+		Log(EWarn, "Could not adjust the thread priority to %i: %s!",
+			param.sched_priority, strerror(retval));
 		return false;
 	}
+#elif defined(__WINDOWS__)
+	int win32Priority;
+	switch (priority) {
+		case EIdlePriority:
+			win32Priority = THREAD_PRIORITY_IDLE;
+			break;
+		case ELowestPriority:
+			win32Priority = THREAD_PRIORITY_LOWEST;
+			break;
+		case ELowPriority:
+			win32Priority = THREAD_PRIORITY_BELOW_NORMAL;
+			break;
+		case EHighPriority:
+			win32Priority = THREAD_PRIORITY_ABOVE_NORMAL;
+			break;
+		case EHighestPriority:
+			win32Priority = THREAD_PRIORITY_HIGHEST;
+			break;
+		case ERealtimePriority:
+			win32Priority = THREAD_PRIORITY_TIME_CRITICAL;
+			break;
+		default:
+			win32Priority = THREAD_PRIORITY_NORMAL;
+			break;
+	}
+
+	// If the frunction succeeds, the return value is nonzero
+	const HANDLE handle = d->thread.native_handle();
+	if (SetThreadPriority(handle, win32Priority) == 0) {
+		Log(EWarn, "Could not adjust the thread priority to %i: %s!",
+			win32Priority, lastErrorText().c_str());
+		return false;
+	}
+#else
+	Log(EWarn, "Thread priority not supported by boost::thread version yet");
+#endif
 	return true;
 }
 
-void *Thread::dispatch(void *par) {
-	Thread *thread = static_cast<Thread *>(par);
-	Thread::m_self->set(thread);
+void Thread::dispatch(Thread *thread) {
+	detail::initializeLocalTLS();
+
+	Thread::ThreadPrivate::self->set(thread);
 
 	if (thread->getPriority() != ENormalPriority)
 		thread->setPriority(thread->getPriority());
 
-#if MTS_USE_ELF_TLS == 1
-	m_idMutex->lock();
-	m_id = ++m_idCounter;
-	m_idMutex->unlock();
-#elif defined(__LINUX__) || defined(__OSX__)
-	m_idMutex->lock();
-	thread->m_id = ++m_idCounter;
-	m_idMutex->unlock();
-#elif defined(_MSC_VER)
 	if (!thread->getName().empty()) {
 		const std::string threadName = "Mitsuba: " + thread->getName();
-		SetThreadName(threadName.c_str());
-	}
-#endif
+#if defined(__LINUX__)
+		// Disabled for now, since it is not yet widely available in glibc
+		// pthread_setname_np(pthread_self(), threadName.c_str());
 
+		prctl(PR_SET_NAME, threadName.c_str());
+#elif defined(__OSX__) 
+		pthread_setname_np(threadName.c_str());
+#elif defined(__WINDOWS__)
+		SetThreadName(threadName.c_str());
+#endif
+	}
+	
 	try {
 		thread->run();
 	} catch (std::exception &e) {
 		ELogLevel warnLogLevel = thread->getLogger()->getErrorLevel() == EError
 			? EWarn : EInfo;
 		Log(warnLogLevel, "Fatal error: uncaught exception: \"%s\"", e.what());
-		if (thread->m_critical)
+		if (thread->d->critical)
 			_exit(-1);
 	} catch (...) {
 		ELogLevel warnLogLevel = thread->getLogger()->getErrorLevel() == EError
 			? EWarn : EInfo;
 		Log(warnLogLevel, "Fatal error - uncaught exception (unknown type)");
-		if (thread->m_critical)
+		if (thread->d->critical)
 			_exit(-1);
 	}
 
 	thread->exit();
-
-	return NULL;
 }
 
 
 void Thread::join() {
-	/* Only one call to join() */
-	m_joinMutex->lock();
-	if (m_joined) {
-		m_joinMutex->unlock();
+	/* Only one call to join() at a time */
+	boost::lock_guard<boost::mutex> guard(d->joinMutex);
+	if (d->joined)
 		return;
+	try {
+		d->thread.join();
+	} catch (boost::thread_interrupted &ex) {
+		Log(EError, "Thread::join() - the thread was interrupted");
+		throw ex;
 	}
-	m_joinMutex->unlock();
-	int retval = pthread_join(m_thread, NULL);
-	switch (retval) {
-		case EINVAL: Log(EError, "Thread::join() - the thread is not joinable");
-		case ESRCH:
-			Log(EWarn, "Thread::join() - the thread does not exist");
-			break;
-		case EDEADLK: Log(EError, "Thread::join() - a deadlock was detected / "
-			"thread tried to join on itself");
-		default: break;
-	}
-	m_joined = true;
+	d->joined = true;
 }
 
 void Thread::detach() {
-	int retval = pthread_detach(m_thread);
-	switch (retval) {
-		case EINVAL: Log(EError, "Thread::detach() - the thread is not joinable");
-		case ESRCH: Log(EError, "Thread::detach() - the thread does not exist");
-		default: break;
-	}
+	d->thread.detach();
 }
 
 void Thread::sleep(unsigned int ms) {
-#if defined(WIN32)
-	SleepEx(ms, FALSE);
-#else
-	struct timeval tv;
-	tv.tv_sec = ms/1000;
-	tv.tv_usec = (ms * 1000) % 1000000;
-	select(0, NULL, NULL, NULL, &tv);
-#endif
+	try {
+		boost::this_thread::sleep(boost::posix_time::milliseconds(ms));
+	} catch (boost::thread_interrupted &ex) {
+		Log(EError, "Thread::sleep(ms) - interrupted!");
+		throw ex;
+	}
 }
 
 void Thread::yield() {
-#if defined(WIN32)
-	Yield();
-#else
-	sched_yield();
-#endif
+	boost::this_thread::yield();
 }
 
 void Thread::exit() {
-	Log(EDebug, "Thread \"%s\" has finished", m_name.c_str());
-	m_running = false;
+	Log(EDebug, "Thread \"%s\" has finished", d->name.c_str());
+	d->running = false;
 	decRef();
-	m_self->set(NULL);
-	pthread_exit(NULL);
+	ThreadPrivate::self->set(NULL);
+	detail::destroyLocalTLS();
 }
 
 std::string Thread::toString() const {
 	std::ostringstream oss;
 	oss << "Thread[" << endl
-		<< "  name = \"" << m_name << "\"," << endl
-		<< "  running = " << m_running << "," << endl
-		<< "  joined = " << m_joined << "," << endl
-		<< "  priority = " << m_priority << "," << endl
-		<< "  critical = " << m_critical << "," << endl
-		<< "  stackSize = " << m_stackSize << endl
+		<< "  name = \"" << d->name << "\"," << endl
+		<< "  running = " << d->running << "," << endl
+		<< "  joined = " << d->joined << "," << endl
+		<< "  priority = " << d->priority << "," << endl
+		<< "  critical = " << d->critical << endl
 		<< "]";
 	return oss.str();
 }
@@ -309,42 +394,31 @@ void Thread::staticInitialization() {
 #if defined(__OSX__)
 	__mts_autorelease_init();
 #endif
+	detail::initializeGlobalTLS();
+	detail::initializeLocalTLS();
 
-	m_self = new ThreadLocal<Thread>();
+	ThreadPrivate::self = new ThreadLocal<Thread>();
 	Thread *mainThread = new MainThread();
-#if defined(__LINUX__) || defined(__OSX__)
-	m_idMutex = new Mutex();
-	m_idCounter = 0;
-
-	#if MTS_USE_ELF_TLS == 1
-		m_id = 0;
-	#else
-		mainThread->m_id = 0;
-	#endif
-#endif
-	mainThread->m_running = true;
-	mainThread->m_thread = pthread_self();
-	mainThread->m_joinMutex = new Mutex();
-	mainThread->m_joined = false;
-	mainThread->m_fresolver = new FileResolver();
-	m_self->set(mainThread);
-
+	mainThread->d->running = true;
+	mainThread->d->joined = false;
+	mainThread->d->fresolver = new FileResolver();
+	ThreadPrivate::self->set(mainThread);
 }
 
 static std::vector<Thread *> __unmanagedThreads;
+static boost::mutex __unmanagedMutex;
 
 Thread *Thread::registerUnmanagedThread(const std::string &name) {
 	Thread *thread = getThread();
 	if (!thread) {
 		thread = new UnmanagedThread(name);
-		thread->m_running = false;
-		thread->m_thread = pthread_self();
-		thread->m_joinMutex = new Mutex();
-		thread->m_joined = false;
+		thread->d->running = false;
+		thread->d->joined = false;
 		thread->incRef();
-		m_self->set(thread);
-		#pragma omp critical
-			__unmanagedThreads.push_back((UnmanagedThread *) thread);
+		ThreadPrivate::self->set(thread);
+	
+		boost::lock_guard<boost::mutex> guard(__unmanagedMutex);
+		__unmanagedThreads.push_back((UnmanagedThread *) thread);
 	}
 	return thread;
 }
@@ -353,78 +427,57 @@ void Thread::staticShutdown() {
 	for (size_t i=0; i<__unmanagedThreads.size(); ++i)
 		__unmanagedThreads[i]->decRef();
 	__unmanagedThreads.clear();
-	getThread()->m_running = false;
-	m_self->set(NULL);
-	delete m_self;
-	m_self = NULL;
-#if defined(__LINUX__) || defined(__OSX__)
-	m_idMutex = NULL;
-#endif
+	getThread()->d->running = false;
+	ThreadPrivate::self->set(NULL);
+	delete ThreadPrivate::self;
+	ThreadPrivate::self = NULL;
+	detail::destroyLocalTLS();
+	detail::destroyGlobalTLS();
 #if defined(__OSX__)
 	__mts_autorelease_shutdown();
 #endif
 }
 
-#if defined(__OSX__)
-PrimitiveThreadLocal<int> __threadID;
-int __threadCount = 0;
-
-int mts_get_thread_num() {
-	return __threadID.get();
-}
-int mts_get_max_threads() {
-	return __threadCount;
-}
-#else
-int mts_get_thread_num() {
-	return omp_get_thread_num();
-}
-int mts_get_max_threads() {
-	return omp_get_max_threads();
-}
-#endif
-
 void Thread::initializeOpenMP(size_t threadCount) {
+#ifdef MTS_OPENMP
 	ref<Logger> logger = Thread::getThread()->getLogger();
 	ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
 
-#if defined(__OSX__)
-	__threadCount = (int) threadCount;
-#endif
-
 	omp_set_num_threads((int) threadCount);
+	omp_set_dynamic(false);
+
 	int counter = 0;
 
 	#pragma omp parallel
 	{
+		detail::initializeLocalTLS();
 		Thread *thread = Thread::getThread();
 		if (!thread) {
 			#pragma omp critical
 			{
 				thread = new UnmanagedThread(
 					formatString("omp%i", counter));
-				#if MTS_BROKEN_OPENMP == 1
-				__threadID.set(counter);
-				#endif
 				counter++;
 			}
-			thread->m_running = false;
-			thread->m_thread = pthread_self();
-			thread->m_joinMutex = new Mutex();
-			thread->m_joined = false;
-			thread->m_fresolver = fResolver;
-			thread->m_logger = logger;
+			thread->d->running = false;
+			thread->d->joined = false;
+			thread->d->fresolver = fResolver;
+			thread->d->logger = logger;
 			thread->incRef();
-			m_self->set(thread);
+			ThreadPrivate::self->set(thread);
 			#pragma omp critical
 			__unmanagedThreads.push_back((UnmanagedThread *) thread);
 		}
 	}
+#else
+	if (Thread::getThread()->getLogger() != NULL)
+		SLog(EWarn, "Mitsuba was compiled without OpenMP support.");
+#endif
 }
 
 Thread::~Thread() {
-	if (m_running)
-		Log(EWarn, "Destructor called while Thread '%s' is still running", m_name.c_str());
+	if (d->running)
+		Log(EWarn, "Destructor called while thread '%s' was still running", d->name.c_str());
 }
 
 MTS_IMPLEMENT_CLASS(Thread, true, Object)

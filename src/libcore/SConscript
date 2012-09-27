@@ -26,14 +26,15 @@ if coreEnv.has_key('JPEGLIB'):
 coreEnv.Prepend(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_CORE']])
 libcore_objects = [
 	'class.cpp', 'object.cpp', 'statistics.cpp', 'thread.cpp', 'brent.cpp',
-	'logger.cpp', 'appender.cpp', 'formatter.cpp', 'lock.cpp', 
-	'random.cpp', 'timer.cpp',  'util.cpp', 'properties.cpp', 
+	'logger.cpp', 'appender.cpp', 'formatter.cpp', 'lock.cpp', 'qmc.cpp',
+	'random.cpp', 'timer.cpp',  'util.cpp', 'properties.cpp', 'half.cpp',
 	'transform.cpp', 'spectrum.cpp', 'aabb.cpp', 'stream.cpp', 
 	'fstream.cpp', 'plugin.cpp', 'triangle.cpp', 'bitmap.cpp',
-	'serialization.cpp', 'sstream.cpp', 'cstream.cpp', 'mstream.cpp', 
-	'sched.cpp', 'sched_remote.cpp', 'sshstream.cpp', 'wavelet.cpp',
-	'zstream.cpp', 'shvector.cpp', 'fresolver.cpp', 'quad.cpp', 'mmap.cpp',
-	'chisquare.cpp'
+	'fmtconv.cpp', 'serialization.cpp', 'sstream.cpp', 'cstream.cpp', 
+	'mstream.cpp', 'sched.cpp', 'sched_remote.cpp', 'sshstream.cpp', 
+	'zstream.cpp', 'shvector.cpp', 'fresolver.cpp', 'rfilter.cpp',
+	'quad.cpp', 'mmap.cpp', 'chisquare.cpp', 'warp.cpp', 'vmf.cpp',
+	'tls.cpp', 'ssemath.cpp'
 ]
 
 # Add some platform-specific components
@@ -48,7 +49,7 @@ elif sys.platform == 'win32':
 libcore = coreEnv.SharedLibrary('mitsuba-core', libcore_objects)
 
 if sys.platform == "darwin":
-	coreEnv.AddPostAction(libcore, 'install_name_tool -id @loader_path/../Frameworks/libmitsuba-core.dylib $TARGET')
+	coreEnv.AddPostAction(libcore, 'install_name_tool -id @rpath/libmitsuba-core.dylib $TARGET')
 
 env.Append(LIBS=['mitsuba-core'])
 env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'libcore')])

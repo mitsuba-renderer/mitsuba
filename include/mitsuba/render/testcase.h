@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__TESTCASE_H)
-#define __TESTCASE_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_TESTCASE_H_)
+#define __MITSUBA_RENDER_TESTCASE_H_
 
 #include <mitsuba/render/util.h>
 
@@ -27,19 +28,21 @@ MTS_NAMESPACE_BEGIN
 /**
  * When a testcase is being compiled, define the following preprocessor macros for convenience
  */
-#define assertEquals(expected, actual) assertEqualsImpl(expected, actual, 0, __FILE__, __LINE__)
-#define assertEqualsEpsilon(expected, actual, epsilon) assertEqualsImpl(expected, actual, epsilon, __FILE__, __LINE__)
+#define assertEquals(actual, expected) assertEqualsImpl(actual, expected, 0, __FILE__, __LINE__)
+#define assertEqualsEpsilon(actual, expected, epsilon) assertEqualsImpl(actual, expected, epsilon, __FILE__, __LINE__)
 #define assertTrue(expr) assertTrueImpl(expr, #expr, __FILE__, __LINE__)
 #define assertFalse(expr) assertFalseImpl(expr, #expr, __FILE__, __LINE__)
 #define failAndContinue(msg) failAndContinueImpl(msg, __FILE__, __LINE__)
 #endif
 
-/** \brief Base class of all testcases. Implementations of this
- * interface can be executed using the 'mtsutil' command. The execution
- * order is as follows: after initializaiton using init(), any tests
+/** \brief Base class of all testcases.
+ *
+ * Implementations of this interface can be executed using the 'mtsutil' command. 
+ * The execution order is as follows: after initializaiton using init(), any tests
  * declared using the MTS_DECLARE_TEST() macro are executed. Finally,
  * the shutdown() method is called. See the files in 'mitsuba/src/tests'
  * for examples.
+ *
  * \ingroup librender
  */
 class MTS_EXPORT_RENDER TestCase : public Utility {
@@ -68,31 +71,31 @@ protected:
 	virtual ~TestCase() { }
 
 	/// Asserts that the two integer values are equal
-	void assertEqualsImpl(int expected, int actual, const char *file, int line);
+	void assertEqualsImpl(int actual, int expected, Float epsilon, const char *file, int line);
 
 	/// Asserts that the two floating point values are equal
-	void assertEqualsImpl(Float expected, Float actual, Float epsilon, const char *file, int line);
+	void assertEqualsImpl(Float actual, Float expected, Float epsilon, const char *file, int line);
 	
 	/// Asserts that the two spectral power distributions are equal
-	void assertEqualsImpl(const Spectrum &expected, const Spectrum &actual, Float epsilon, const char *file, int line);
+	void assertEqualsImpl(const Spectrum &actual, const Spectrum &expected, Float epsilon, const char *file, int line);
 
 	/// Asserts that the two 2D vectors are equal
-	void assertEqualsImpl(const Vector2 &expected, const Vector2 &actual, Float epsilon, const char *file, int line);
+	void assertEqualsImpl(const Vector2 &actual, const Vector2 &expected, Float epsilon, const char *file, int line);
 
 	/// Asserts that the two 3D vectors are equal
-	void assertEqualsImpl(const Vector &expected, const Vector &actual, Float epsilon, const char *file, int line);
+	void assertEqualsImpl(const Vector &actual, const Vector &expected, Float epsilon, const char *file, int line);
 
 	/// Asserts that the two 4D vectors are equal
-	void assertEqualsImpl(const Vector4 &expected, const Vector4 &actual, Float epsilon, const char *file, int line);
+	void assertEqualsImpl(const Vector4 &actual, const Vector4 &expected, Float epsilon, const char *file, int line);
 
 	/// Asserts that the two 2D points are equal
-	void assertEqualsImpl(const Point2 &expected, const Point2 &actual, Float epsilon, const char *file, int line);
+	void assertEqualsImpl(const Point2 &actual, const Point2 &expected, Float epsilon, const char *file, int line);
 
 	/// Asserts that the two 3D points are equal
-	void assertEqualsImpl(const Point &expected, const Point &actual, Float epsilon, const char *file, int line);
+	void assertEqualsImpl(const Point &actual, const Point &expected, Float epsilon, const char *file, int line);
 
 	/// Asserts that the two 4x4 matrices are equal
-	template<int M, int N> void assertEqualsImpl(const Matrix<M, N, Float> &expected, const Matrix<M, N, Float> &actual, Float epsilon, const char *file, int line) {
+	template<int M, int N> void assertEqualsImpl(const Matrix<M, N, Float> &actual, const Matrix<M, N, Float> &expected, Float epsilon, const char *file, int line) {
 		bool match = true;
 		for (int i=0; i<M; ++i)
 			for (int j=0; j<N; ++j)
@@ -116,40 +119,6 @@ protected:
 	void succeed();
 protected:
 	int m_executed, m_succeeded;
-};
-
-/**
- * The test supervisor is used when rendering a collection of testcases in the
- * form of scenes with analytic solutions. Reference output is compared against
- * the actual generated results and a user-specified type of test is executed
- * to decide between equality or inequality. Any problems are kept in a log, 
- * which can later be printed using <tt>printSummary()</tt>.
- * \ingroup librender
- */
-class MTS_EXPORT_RENDER TestSupervisor : public Object {
-public:
-	/// Initialize a test supervisor for a specified number of testcases
-	TestSupervisor(size_t total);
-
-	/// Analyze the output of a rendered scene
-	void analyze(const Scene *scene);
-
-	/// Summarize the executed testcases
-	void printSummary() const;
-
-	MTS_DECLARE_CLASS()
-protected:
-	virtual ~TestSupervisor() { }
-private:
-	struct TestResult {
-		bool success;
-		fs::path input, output;
-		std::string message;
-	};
-
-	size_t m_total, m_numFailed, m_numSucceeded;
-	std::vector<TestResult> m_results;
-	mutable ref<Mutex> m_mutex;
 };
 
 MTS_NAMESPACE_END
@@ -176,7 +145,7 @@ MTS_NAMESPACE_END
 
 #define MTS_END_TESTCASE()\
 		shutdown();\
-		return 0;\
+		return m_executed - m_succeeded;\
 	}
 
 #define MTS_EXPORT_TESTCASE(name, descr) \
@@ -190,4 +159,4 @@ MTS_NAMESPACE_END
 		} \
 	}
 
-#endif /* __TESTCASE_H */
+#endif /* __MITSUBA_RENDER_TESTCASE_H_ */

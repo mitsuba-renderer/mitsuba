@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,12 +16,196 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__VECTOR_H)
-#define __VECTOR_H
+#pragma once
+#if !defined(__MITSUBA_CORE_VECTOR_H_)
+#define __MITSUBA_CORE_VECTOR_H_
 
 #include <mitsuba/core/stream.h>
 
 MTS_NAMESPACE_BEGIN
+/**
+ * \headerfile mitsuba/core/vector.h mitsuba/mitsuba.h
+ * \brief Parameterizable one-dimensional vector data structure
+ * \ingroup libcore
+ */
+template <typename T> struct TVector1 {
+	typedef T          Scalar;
+	typedef TPoint1<T> PointType;
+
+	T x;
+
+	/// Number of dimensions
+	const static int dim = 1;
+
+	/** \brief Construct a new vector without initializing it.
+	 * 
+	 * This construtor is useful when the vector will either not
+	 * be used at all (it might be part of a larger data structure)
+	 * or initialized at a later point in time. Always make sure
+	 * that one of the two is the case! Otherwise your program will do
+	 * computations involving uninitialized memory, which will probably
+	 * lead to a difficult-to-find bug.
+	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
+	TVector1() { }
+#else
+	TVector1() { x = std::numeric_limits<T>::quiet_NaN(); }
+#endif
+
+	/// Initialize the vector with the specified value 
+	TVector1(T x) : x(x) {  }
+
+	/// Initialize the vector with the components of another vector data structure
+	template <typename T1> explicit TVector1(const TVector1<T1> &v) 
+		: x((T) v.x) { }
+
+	/// Initialize the vector with the components of a point data structure
+	template <typename T1> explicit TVector1(const TPoint1<T1> &p) 
+		: x((T) p.x) { }
+
+	/// Unserialize a vector from a binary data stream
+	explicit TVector1(Stream *stream) {
+		x = stream->readElement<T>();
+	}
+
+	/// Add two vectors and return the result
+	TVector1 operator+(const TVector1 &v) const {
+		return TVector1(x + v.x);
+	}
+
+	/// Subtract two vectors and return the result
+	TVector1 operator-(const TVector1 &v) const {
+		return TVector1(x - v.x);
+	}
+
+	/// Add another vector to the current one
+	TVector1& operator+=(const TVector1 &v) {
+		x += v.x; 
+		return *this;
+	}
+
+	/// Subtract another vector from the current one
+	TVector1& operator-=(const TVector1 &v) {
+		x -= v.x;
+		return *this;
+	}
+
+	/// Multiply the vector by the given scalar and return the result
+	TVector1 operator*(T f) const {
+		return TVector1(x*f);
+	}
+
+	/// Multiply the vector by the given scalar
+	TVector1 &operator*=(T f) {
+		x *= f; 
+		return *this;
+	}
+
+	/// Return a negated version of the vector
+	TVector1 operator-() const {
+		return TVector1(-x);
+	}
+
+	/// Divide the vector by the given scalar and return the result
+	TVector1 operator/(T f) const {
+#ifdef MTS_DEBUG
+		if (f == 0)
+			SLog(EWarn, "Vector1: Division by zero!");
+#endif
+		return TVector1(x / f);
+	}
+
+	/// Divide the vector by the given scalar
+	TVector1 &operator/=(T f) {
+#ifdef MTS_DEBUG
+		if (f == 0)
+			SLog(EWarn, "Vector1: Division by zero!");
+#endif
+		x /= f;
+		return *this;
+	}
+
+	/// Index into the vector's components
+	T &operator[](int i) {
+		return (&x)[i];
+	}
+
+	/// Index into the vector's components (const version)
+	T operator[](int i) const {
+		return (&x)[i];
+	}
+
+	/// Return the squared 1-norm of this vector
+	T lengthSquared() const {
+		return x*x;
+	}
+
+	/// Return the 1-norm of this vector
+	T length() const {
+		return std::abs(x);
+	}
+
+	/// Return whether or not this vector is identically zero
+	bool isZero() const {
+		return x == 0;
+	}
+
+	/// Equality test
+	bool operator==(const TVector1 &v) const {
+		return v.x == x;
+	}
+
+	/// Inequality test
+	bool operator!=(const TVector1 &v) const {
+		return v.x != x;
+	}
+
+	/// Serialize this vector to a binary data stream
+	void serialize(Stream *stream) const {
+		stream->writeElement<T>(x);
+	}
+
+	/// Return a readable string representation of this vector
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "[" << x << "]";
+		return oss.str();
+	}
+};
+
+template <typename T> inline TVector1<T> operator*(T f, const TVector1<T> &v) {
+	return v*f;
+}
+
+template <typename T> inline T dot(const TVector1<T> &v1, const TVector1<T> &v2) {
+	return v1.x * v2.x;
+}
+
+template <typename T> inline T absDot(const TVector1<T> &v1, const TVector1<T> &v2) {
+	return std::abs(dot(v1, v2));
+}
+
+template <typename T> inline TVector1<T> normalize(const TVector1<T> &v) {
+	return v / v.length();
+}
+
+template <> inline TVector1<int> TVector1<int>::operator/(int s) const {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector1i: Division by zero!");
+#endif
+	return TVector1(x/s);
+}
+
+template <> inline TVector1<int> &TVector1<int>::operator/=(int s) {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Vector1i: Division by zero!");
+#endif
+
+	x /= s;
+	return *this;
+}
 
 /**
  * \headerfile mitsuba/core/vector.h mitsuba/mitsuba.h
@@ -29,8 +213,8 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libcore
  */
 template <typename T> struct TVector2 {
-	typedef T          value_type;
-	typedef TPoint2<T> point_type;
+	typedef T          Scalar;
+	typedef TPoint2<T> PointType;
 
 	T x, y;
 
@@ -58,11 +242,11 @@ template <typename T> struct TVector2 {
 	/// Initialize all components of the the vector with the specified value
 	explicit TVector2(T val) : x(val), y(val) { }
 
-	/// Initialize the vector with the components of a point data structure
+	/// Initialize the vector with the components of another vector data structure
 	template <typename T2> explicit TVector2(const TVector2<T2> &v) 
 		: x((T) v.x), y((T) v.y) { }
 
-	/// Initialize the vector with the components of another vector data structure
+	/// Initialize the vector with the components of a point data structure
 	template <typename T2> explicit TVector2(const TPoint2<T2> &p) 
 		: x((T) p.x), y((T) p.y) { }
 
@@ -221,8 +405,8 @@ template <> inline TVector2<int> &TVector2<int>::operator/=(int s) {
  * \ingroup libcore
  */
 template <typename T> struct TVector3 {
-	typedef T          value_type;
-	typedef TPoint3<T> point_type;
+	typedef T          Scalar;
+	typedef TPoint3<T> PointType;
 
 	T x, y, z;
 	
@@ -250,11 +434,11 @@ template <typename T> struct TVector3 {
 	/// Initialize all components of the the vector with the specified value
 	explicit TVector3(T val) : x(val), y(val), z(val) { }
 
-	/// Initialize the vector with the components of a point data structure
+	/// Initialize the vector with the components of another vector data structure
 	template <typename T2> explicit TVector3(const TVector3<T2> &v) 
 		: x((T) v.x), y((T) v.y), z((T) v.z) { }
 
-	/// Initialize the vector with the components of another vector data structure
+	/// Initialize the vector with the components of a point data structure
 	template <typename T2> explicit TVector3(const TPoint3<T2> &p) 
 		: x((T) p.x), y((T) p.y), z((T) p.z) { }
 
@@ -425,8 +609,8 @@ template <> inline TVector3<int> &TVector3<int>::operator/=(int s) {
  * \ingroup libcore
  */
 template <typename T> struct TVector4 {
-	typedef T          value_type;
-	typedef TPoint4<T> point_type;
+	typedef T          Scalar;
+	typedef TPoint4<T> PointType;
 
 	T x, y, z, w;
 	
@@ -455,11 +639,11 @@ template <typename T> struct TVector4 {
 	/// Initialize all components of the the vector with the specified value
 	explicit TVector4(T val) : x(val), y(val), z(val), w(val) { }
 
-	/// Initialize the vector with the components of a point data structure
+	/// Initialize the vector with the components of another vector data structure
 	template <typename T2> explicit TVector4(const TVector4<T2> &v) 
 		: x((T) v.x), y((T) v.y), z((T) v.z), w((T) v.w) { }
 
-	/// Initialize the vector with the components of another vector data structure
+	/// Initialize the vector with the components of a point data structure
 	template <typename T2> explicit TVector4(const TPoint4<T2> &p) 
 		: x((T) p.x), y((T) p.y), z((T) p.z), w((T) p.w) { }
 
@@ -620,4 +804,4 @@ template <> inline TVector4<int> &TVector4<int>::operator/=(int s) {
 
 MTS_NAMESPACE_END
 
-#endif /* __VECTOR_H */
+#endif /* __MITSUBA_CORE_VECTOR_H_ */

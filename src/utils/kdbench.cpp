@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -157,10 +157,10 @@ public:
 		if (boost::ends_with(lowercase, ".xml")) {
 			fs::path 
 				filename = fileResolver->resolve(argv[optind]),
-				filePath = fs::complete(filename).parent_path(),
-				baseName = fs::basename(filename);
+				filePath = fs::absolute(filename).parent_path(),
+				baseName = filename.stem();
 			ref<FileResolver> frClone = fileResolver->clone();
-			frClone->addPath(filePath);
+			frClone->prependPath(filePath);
 			Thread::getThread()->setFileResolver(frClone);
 			scene = loadScene(argv[optind]);
 			kdtree = scene->getKDTree();
@@ -192,6 +192,7 @@ public:
 		if (minMaxBins != -1)
 			kdtree->setMinMaxBins(minMaxBins);
 		kdtree->setClip(clip);
+		kdtree->setRetract(retract);
 		kdtree->setParallelBuild(parallel);
 
 		/* Show some statistics, and make sure it roughly fits in 80cols */
@@ -205,7 +206,7 @@ public:
 		else
 			kdtree->build();
 
-		BSphere bsphere(kdtree->getBSphere());
+		BSphere bsphere(kdtree->getAABB().getBSphere());
 		const size_t nRays = 5000000;
 
 		if (!fitParameters) {
@@ -221,8 +222,8 @@ public:
 				for (size_t i=0; i<nRays; ++i) {
 					Point2 sample1(random->nextFloat(), random->nextFloat()),
 						sample2(random->nextFloat(), random->nextFloat());
-					Point p1 = bsphere.center + squareToSphere(sample1) * bsphere.radius;
-					Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
+					Point p1 = bsphere.center + Warp::squareToUniformSphere(sample1) * bsphere.radius;
+					Point p2 = bsphere.center + Warp::squareToUniformSphere(sample2) * bsphere.radius;
 					Ray r(p1, normalize(p2-p1), 0.0f);
 
 					Intersection its;

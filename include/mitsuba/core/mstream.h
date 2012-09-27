@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__MSTREAM_H)
-#define __MSTREAM_H
+#pragma once
+#if !defined(__MITSUBA_CORE_MSTREAM_H_)
+#define __MITSUBA_CORE_MSTREAM_H_
 
 #include <mitsuba/mitsuba.h>
 
@@ -80,7 +81,7 @@ public:
 
 	void read(void *ptr, size_t size);
 	void write(const void *ptr, size_t size);
-	void setPos(size_t pos);
+	void seek(size_t pos);
 	size_t getPos() const;
 	size_t getSize() const;
 	void truncate(size_t size);
@@ -110,4 +111,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __MSTREAM_H */
+#endif /* __MITSUBA_CORE_MSTREAM_H_ */

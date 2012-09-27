@@ -1,0 +1,12 @@
+Import('env', 'plugins')
+
+plugins += env.SharedLibrary('radiancemeter', ['radiancemeter.cpp'])
+plugins += env.SharedLibrary('irradiancemeter', ['irradiancemeter.cpp'])
+plugins += env.SharedLibrary('fluencemeter', ['fluencemeter.cpp'])
+plugins += env.SharedLibrary('perspective', ['perspective.cpp'])
+plugins += env.SharedLibrary('thinlens', ['thinlens.cpp'])
+plugins += env.SharedLibrary('orthographic', ['orthographic.cpp'])
+plugins += env.SharedLibrary('telecentric', ['telecentric.cpp'])
+plugins += env.SharedLibrary('spherical', ['spherical.cpp'])
+
+Export('plugins')

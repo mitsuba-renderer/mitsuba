@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -19,7 +19,7 @@
 #include "hair.h"
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/subsurface.h>
-#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/emitter.h>
 #include <mitsuba/render/sahkdtree3.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/properties.h>
@@ -31,7 +31,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{hair}{Hair intersection shape}
- * \order{7}
+ * \order{11}
  * \parameters{
  *     \parameter{filename}{\String}{
  *	     Filename of the hair data file that should be loaded
@@ -99,11 +99,11 @@ MTS_NAMESPACE_BEGIN
  */
 
 class HairKDTree : public SAHKDTree3D<HairKDTree> {
-	friend class GenericKDTree<AABB, SurfaceAreaHeuristic, HairKDTree>;
+	friend class GenericKDTree<AABB, SurfaceAreaHeuristic3, HairKDTree>;
 	friend class SAHKDTree3D<HairKDTree>;
 public:
-	using SAHKDTree3D<HairKDTree>::index_type;
-	using SAHKDTree3D<HairKDTree>::size_type;
+	using SAHKDTree3D<HairKDTree>::IndexType;
+	using SAHKDTree3D<HairKDTree>::SizeType;
 
 	HairKDTree(std::vector<Point> &vertices, 
 			std::vector<bool> &vertexStartsFiber, Float radius)
@@ -119,7 +119,7 @@ public:
 			if (m_vertexStartsFiber[i])
 				m_hairCount++;
 			if (!m_vertexStartsFiber[i+1])
-				m_segIndex.push_back((index_type) i);
+				m_segIndex.push_back((IndexType) i);
 		}
 		m_segmentCount = m_segIndex.size();
 
@@ -144,18 +144,18 @@ public:
 
 		Log(EDebug, "Total amount of storage (kd-tree & vertex data): %s",
 			memString(m_nodeCount * sizeof(KDNode) 
-			+ m_indexCount * sizeof(index_type)
+			+ m_indexCount * sizeof(IndexType)
 			+ vertices.size() * sizeof(Point)
 			+ vertexStartsFiber.size() / 8).c_str());
 
 		/* Optimization: replace all primitive indices by the
 		   associated vertex indices (this avoids an extra 
 		   indirection during traversal later on) */
-		for (size_type i=0; i<m_indexCount; ++i)
+		for (SizeType i=0; i<m_indexCount; ++i)
 			m_indices[i] = m_segIndex[m_indices[i]];
 
 		/* Free the segIndex array, it is not needed anymore */
-		std::vector<index_type>().swap(m_segIndex);
+		std::vector<IndexType>().swap(m_segIndex);
 	}
 
 	/// Return the AABB of the hair kd-tree
@@ -364,8 +364,8 @@ public:
 		return aabb;
 	}
 
-	AABB getAABB(index_type index) const {
-		index_type iv = m_segIndex[index];
+	AABB getAABB(IndexType index) const {
+		IndexType iv = m_segIndex[index];
 		Point center;
 		Vector axes[2];
 		Float lengths[2];
@@ -395,13 +395,12 @@ public:
 		return result;
 	}
 
-	AABB getClippedAABB(index_type index, const AABB &box) const {
+	AABB getClippedAABB(IndexType index, const AABB &box) const {
 		/* Compute a base bounding box */
 		AABB base(getAABB(index));
 		base.clip(box);
 
-		index_type iv = m_segIndex[index];
-
+		IndexType iv = m_segIndex[index];
 		Point cylPt = firstVertex(iv);
 		Vector cylD = tangent(iv);
 
@@ -444,8 +443,8 @@ public:
 	}
 #else
 	/// Compute the AABB of a segment (only used during tree construction)
-	AABB getAABB(index_type index) const {
-		index_type iv = m_segIndex[index];
+	AABB getAABB(IndexType index) const {
+		IndexType iv = m_segIndex[index];
 
 		// cosine of steepest miter angle
 		const Float cos0 = dot(firstMiterNormal(iv), tangent(iv));
@@ -465,7 +464,7 @@ public:
 	}
 
 	/// Compute the clipped AABB of a segment (only used during tree construction)
-	AABB getClippedAABB(index_type index, const AABB &box) const {
+	AABB getClippedAABB(IndexType index, const AABB &box) const {
 		AABB aabb(getAABB(index));
 		aabb.clip(box);
 		return aabb;
@@ -473,16 +472,16 @@ public:
 #endif
 
 	/// Return the total number of segments
-	inline size_type getPrimitiveCount() const {
-		return (size_type) m_segIndex.size();
+	inline SizeType getPrimitiveCount() const {
+		return (SizeType) m_segIndex.size();
 	}
 
 	struct IntersectionStorage {
-		index_type iv;
+		IndexType iv;
 		Point p;
 	};
 
-	inline bool intersect(const Ray &ray, index_type iv, 
+	inline bool intersect(const Ray &ray, IndexType iv, 
 		Float mint, Float maxt, Float &t, void *tmp) const {
 		/* First compute the intersection with the infinite cylinder */
 		Vector3d axis = tangentDouble(iv);
@@ -541,54 +540,54 @@ public:
 		return true;
 	}
 	
-	inline bool intersect(const Ray &ray, index_type iv, 
+	inline bool intersect(const Ray &ray, IndexType iv, 
 		Float mint, Float maxt) const {
 		Float tempT;
 		return intersect(ray, iv, mint, maxt, tempT, NULL);
 	}
 
 	/* Some utility functions */
-	inline Point firstVertex(index_type iv) const { return m_vertices[iv]; }
-	inline Point3d firstVertexDouble(index_type iv) const { return Point3d(m_vertices[iv]); }
-	inline Point secondVertex(index_type iv) const { return m_vertices[iv+1]; }
-	inline Point3d secondVertexDouble(index_type iv) const { return Point3d(m_vertices[iv+1]); }
-	inline Point prevVertex(index_type iv) const { return m_vertices[iv-1]; }
-	inline Point3d prevVertexDouble(index_type iv) const { return Point3d(m_vertices[iv-1]); }
-	inline Point nextVertex(index_type iv) const { return m_vertices[iv+2]; }
-	inline Point3d nextVertexDouble(index_type iv) const { return Point3d(m_vertices[iv+2]); }
+	inline Point firstVertex(IndexType iv) const { return m_vertices[iv]; }
+	inline Point3d firstVertexDouble(IndexType iv) const { return Point3d(m_vertices[iv]); }
+	inline Point secondVertex(IndexType iv) const { return m_vertices[iv+1]; }
+	inline Point3d secondVertexDouble(IndexType iv) const { return Point3d(m_vertices[iv+1]); }
+	inline Point prevVertex(IndexType iv) const { return m_vertices[iv-1]; }
+	inline Point3d prevVertexDouble(IndexType iv) const { return Point3d(m_vertices[iv-1]); }
+	inline Point nextVertex(IndexType iv) const { return m_vertices[iv+2]; }
+	inline Point3d nextVertexDouble(IndexType iv) const { return Point3d(m_vertices[iv+2]); }
 
-	inline bool prevSegmentExists(index_type iv) const { return !m_vertexStartsFiber[iv]; }
-	inline bool nextSegmentExists(index_type iv) const { return !m_vertexStartsFiber[iv+2]; }
+	inline bool prevSegmentExists(IndexType iv) const { return !m_vertexStartsFiber[iv]; }
+	inline bool nextSegmentExists(IndexType iv) const { return !m_vertexStartsFiber[iv+2]; }
 
-	inline Vector tangent(index_type iv) const { return normalize(secondVertex(iv) - firstVertex(iv)); }
-	inline Vector3d tangentDouble(index_type iv) const { return normalize(Vector3d(secondVertex(iv)) - Vector3d(firstVertex(iv))); }
-	inline Vector prevTangent(index_type iv) const { return normalize(firstVertex(iv) - prevVertex(iv)); }
-	inline Vector3d prevTangentDouble(index_type iv) const { return normalize(firstVertexDouble(iv) - prevVertexDouble(iv)); }
-	inline Vector nextTangent(index_type iv) const { return normalize(nextVertex(iv) - secondVertex(iv)); }
-	inline Vector3d nextTangentDouble(index_type iv) const { return normalize(nextVertexDouble(iv) - secondVertexDouble(iv)); }
+	inline Vector tangent(IndexType iv) const { return normalize(secondVertex(iv) - firstVertex(iv)); }
+	inline Vector3d tangentDouble(IndexType iv) const { return normalize(Vector3d(secondVertex(iv)) - Vector3d(firstVertex(iv))); }
+	inline Vector prevTangent(IndexType iv) const { return normalize(firstVertex(iv) - prevVertex(iv)); }
+	inline Vector3d prevTangentDouble(IndexType iv) const { return normalize(firstVertexDouble(iv) - prevVertexDouble(iv)); }
+	inline Vector nextTangent(IndexType iv) const { return normalize(nextVertex(iv) - secondVertex(iv)); }
+	inline Vector3d nextTangentDouble(IndexType iv) const { return normalize(nextVertexDouble(iv) - secondVertexDouble(iv)); }
 
-	inline Vector firstMiterNormal(index_type iv) const {
+	inline Vector firstMiterNormal(IndexType iv) const {
 		if (prevSegmentExists(iv))
 			return normalize(prevTangent(iv) + tangent(iv));
 		else
 			return tangent(iv);
 	}
 
-	inline Vector secondMiterNormal(index_type iv) const {
+	inline Vector secondMiterNormal(IndexType iv) const {
 		if (nextSegmentExists(iv))
 			return normalize(tangent(iv) + nextTangent(iv));
 		else
 			return tangent(iv);
 	}
 
-	inline Vector3d firstMiterNormalDouble(index_type iv) const {
+	inline Vector3d firstMiterNormalDouble(IndexType iv) const {
 		if (prevSegmentExists(iv))
 			return normalize(prevTangentDouble(iv) + tangentDouble(iv));
 		else
 			return tangentDouble(iv);
 	}
 
-	inline Vector3d secondMiterNormalDouble(index_type iv) const {
+	inline Vector3d secondMiterNormalDouble(IndexType iv) const {
 		if (nextSegmentExists(iv))
 			return normalize(tangentDouble(iv) + nextTangentDouble(iv));
 		else
@@ -600,7 +599,7 @@ public:
 protected:
 	std::vector<Point> m_vertices;
 	std::vector<bool> m_vertexStartsFiber;
-	std::vector<index_type> m_segIndex;
+	std::vector<IndexType> m_segIndex;
 	size_t m_segmentCount;
 	size_t m_hairCount;
 	Float m_radius;
@@ -632,7 +631,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 	Transform objectToWorld = props.getTransform("toWorld", Transform());
 	radius *= objectToWorld(Vector(0, 0, 1)).length();
 
-	Log(EInfo, "Loading hair geometry from \"%s\" ..", path.leaf().c_str());
+	Log(EInfo, "Loading hair geometry from \"%s\" ..", path.filename().c_str());
 	ref<Timer> timer = new Timer();
 
 	ref<FileStream> binaryStream = new FileStream(path, FileStream::EReadOnly);
@@ -720,7 +719,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 
 		fs::ifstream is(path);
 		if (is.fail())
-			Log(EError, "Could not open \"%s\"!", path.file_string().c_str());
+			Log(EError, "Could not open \"%s\"!", path.string().c_str());
 		while (is.good()) {
 			std::getline(is, line);
 			if (line.length() > 0 && line[0] == '#') {
@@ -831,10 +830,11 @@ void HairShape::fillIntersectionRecord(const Ray &ray,
 
 	const HairKDTree::IntersectionStorage *storage = 
 		static_cast<const HairKDTree::IntersectionStorage *>(temp);
-	HairKDTree::index_type iv = storage->iv;
+	HairKDTree::IndexType iv = storage->iv;
 	its.p = storage->p;
 
 	const Vector axis = m_kdtree->tangent(iv);
+	its.shape = this;
 	its.geoFrame.s = axis;
 	const Vector relHitPoint = its.p - m_kdtree->firstVertex(iv);
 	its.geoFrame.n = Normal(normalize(relHitPoint - dot(axis, relHitPoint) * axis));
@@ -842,7 +842,7 @@ void HairShape::fillIntersectionRecord(const Ray &ray,
 	its.shFrame = its.geoFrame;
 	its.wi = its.toLocal(-ray.d);
 	its.hasUVPartials = false;
-	its.shape = this;
+	its.instance = this;
 }
 
 ref<TriMesh> HairShape::createTriMesh() {
@@ -870,7 +870,7 @@ ref<TriMesh> HairShape::createTriMesh() {
 	}
 
 	uint32_t hairIdx = 0;
-	for (HairKDTree::index_type iv=0; iv<(HairKDTree::index_type) hairVertices.size()-1; iv++) {
+	for (HairKDTree::IndexType iv=0; iv<(HairKDTree::IndexType) hairVertices.size()-1; iv++) {
 		if (!vertexStartsFiber[iv+1]) {
 			for (uint32_t phi=0; phi<phiSteps; ++phi) {
 				Vector tangent = m_kdtree->tangent(iv);
@@ -907,8 +907,7 @@ ref<TriMesh> HairShape::createTriMesh() {
 	delete[] cosPhi;
 	delete[] sinPhi;
 
-	mesh->setBSDF(m_bsdf);
-	mesh->setLuminaire(m_luminaire);
+	mesh->copyAttachments(this);
 	mesh->configure();
 
 	return mesh.get();
@@ -928,6 +927,14 @@ const std::vector<bool> &HairShape::getStartFiber() const {
 
 AABB HairShape::getAABB() const {
 	return m_kdtree->getAABB();
+}
+
+size_t HairShape::getPrimitiveCount() const {
+	return m_kdtree->getHairCount();
+}
+
+size_t HairShape::getEffectivePrimitiveCount() const {
+	return m_kdtree->getHairCount();
 }
 
 Float HairShape::getSurfaceArea() const {

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -39,6 +39,18 @@ void GLTexture::init() {
 		Log(ETrace, "Uploading a texture : %s", toString().c_str());
 	else
 		Log(ETrace, "Creating a framebuffer : %s", toString().c_str());
+	
+	if (m_samples > 1) {
+		int maxSamples = 1;
+		if (GLEW_ARB_texture_multisample)
+			glGetIntegerv(GL_MAX_SAMPLES_EXT, &maxSamples);
+		if (m_samples > maxSamples) {
+			Log(EWarn, "Attempted to create a multisample framebuffer "
+				"with an unsupported number of samples (requested=%i, supported=%i)", 
+				m_samples, maxSamples);
+			m_samples = maxSamples;
+		}
+	}
 
 	lookupGLConstants();
 
@@ -51,19 +63,7 @@ void GLTexture::init() {
 	/* Set the texture filtering / wrapping modes 
 	   (don't do this for multisample textures)*/
 	if (!((m_fbType & EColorBuffer) && m_samples > 1))
-		configureTexture(); /* Multisample textures don't have parameters */
-
-	if (m_samples > 1) {
-		int samples;
-		glGetIntegerv(GL_MAX_SAMPLES_EXT, &samples);
-		if (m_samples > samples) {
-			Log(EWarn, "Attempted to create a multisample framebuffer "
-				"with an unsupported # of samples (requested=%i, supported=%i)", 
-				m_samples, samples);
-			m_samples = samples;
-		}
-	}
-
+		configureTexture(); /* Multisample textures don't have these parameters */
 
 	if (m_fbType == ENone) {
 		Assert(m_samples == 1);
@@ -85,10 +85,10 @@ void GLTexture::init() {
 							glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_depthId);
 							if (m_samples == 1)
 								glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, 
-									GL_DEPTH_COMPONENT, m_size.x, m_size.y);
+									GL_DEPTH_COMPONENT32, m_size.x, m_size.y);
 							else
 								glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER_EXT, 
-									m_samples, GL_DEPTH_COMPONENT, m_size.x, m_size.y);
+									m_samples, GL_DEPTH_COMPONENT32, m_size.x, m_size.y);
 							glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, 
 								GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthId);
 						} else {
@@ -98,11 +98,11 @@ void GLTexture::init() {
 							glTexParameteri(m_glType, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 							glTexParameteri(m_glType, GL_DEPTH_TEXTURE_MODE, GL_LUMINANCE);
 							if (m_samples == 1)
-								glTexImage2D(m_glType, 0, GL_DEPTH_COMPONENT24, m_size.x, m_size.y,
+								glTexImage2D(m_glType, 0, GL_DEPTH_COMPONENT32, m_size.x, m_size.y,
 									0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 							else
 								glTexImage2DMultisample(m_glType, 
-									m_samples, GL_DEPTH_COMPONENT24, m_size.x, m_size.y, GL_FALSE);
+									m_samples, GL_DEPTH_COMPONENT32, m_size.x, m_size.y, GL_FALSE);
 							glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, 
 								GL_DEPTH_ATTACHMENT, m_glType, m_depthId, 0);
 							glBindTexture(m_glType, m_id);
@@ -132,20 +132,30 @@ void GLTexture::init() {
 						if (isMipMapped())
 							glGenerateMipmapEXT(m_glType);
 
-						/* Generate an identifier */
-						glGenTextures(1, &m_depthId);
-						glBindTexture(m_glType, m_depthId);
-						glTexParameteri(m_glType, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-						glTexParameteri(m_glType, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+						if (depthAsTexture) {
+							/* Generate an identifier */
+							glGenTextures(1, &m_depthId);
+							glBindTexture(m_glType, m_depthId);
+							glTexParameteri(m_glType, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+							glTexParameteri(m_glType, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-						for (int i=0; i<6; i++) 
-							glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT24, 
-								m_size.x, m_size.y, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+							for (int i=0; i<6; i++) 
+								glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT32, 
+									m_size.x, m_size.y, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 
-						if (glewIsSupported("GL_EXT_geometry_shader4"))
-							activateSide(-1);
-						else
+							if (GLEW_EXT_geometry_shader4)
+								activateSide(-1);
+							else
+								activateSide(0);
+						} else {
+							glGenRenderbuffersEXT(1, &m_depthId);
+							glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_depthId);
+							glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, 
+								GL_DEPTH_COMPONENT32, m_size.x, m_size.y);
+							glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, 
+								GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthId);
 							activateSide(0);
+						}
 					} else {
 						Log(EError, "Unsupported texture type!");
 					}
@@ -162,7 +172,7 @@ void GLTexture::init() {
 					/* Allocate the texture memory */
 					glTexImage2D(m_glType, 0, m_internalFormat, 
 						m_size.x, m_size.y, 0, GL_DEPTH_COMPONENT, 
-						GL_UNSIGNED_BYTE, NULL);
+						m_dataFormat, NULL);
 
 					/* Attach the texture as a depth target */
 					glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, 
@@ -173,7 +183,7 @@ void GLTexture::init() {
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, m_internalFormat, 
 							m_size.x, m_size.y, 0, m_format, m_dataFormat, NULL);
 
-					if (glewIsSupported("GL_EXT_geometry_shader4"))
+					if (GLEW_EXT_geometry_shader4)
 						activateSide(-1);
 					else
 						activateSide(0);
@@ -187,37 +197,59 @@ void GLTexture::init() {
 			default:
 				Log(EError, "Invalid render buffer type!");
 		}
-	
-		GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-		switch (status) {
-			case GL_FRAMEBUFFER_COMPLETE_EXT:
-				break;
+
+		GLenum errorStatusID = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+		std::string errorStatus;
+		switch (errorStatusID) {
+			case GL_FRAMEBUFFER_COMPLETE_EXT: break;
 			case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT:
-				Log(EError, "FBO Error: Incomplete attachment!");
+				errorStatus = "Incomplete attachment"; break;
 			case GL_FRAMEBUFFER_UNSUPPORTED_EXT:
-				Log(EError, "FBO Error: Unsupported framebuffer format!");
+				errorStatus = "Unsupported framebuffer format"; break;
 			case GL_FRAMEBUFFER_INCOMPLETE_DUPLICATE_ATTACHMENT_EXT:
-				Log(EError, "FBO Error: Incomplete framebuffer - duplicate attachment!");
+				errorStatus = "Incomplete framebuffer - duplicate attachment"; break;
 			case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT:
-				Log(EError, "FBO Error: Incomplete framebuffer - missing attachment!");
+				errorStatus = "Incomplete framebuffer - missing attachment"; break;
 			case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT:
-				Log(EError, "FBO Error: Incomplete framebuffer - invalid dimensions!");
+				errorStatus = "Incomplete framebuffer - invalid dimensions"; break;
 			case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER_EXT:
-				Log(EError, "FBO Error: Incomplete framebuffer - no draw buffer!");
+				errorStatus = "Incomplete framebuffer - no draw buffer"; break;
 			case GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT:
-				Log(EError, "FBO Error: Incomplete framebuffer - invalid formats!");
+				errorStatus = "Incomplete framebuffer - invalid formats"; break;
 			case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER_EXT:
-				Log(EError, "FBO Error: Incomplete framebuffer - no readbuffer!");
+				errorStatus = "Incomplete framebuffer - no readbuffer"; break;
 			case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_EXT:
-				Log(EError, "FBO Error: Incomplete multisample framebuffer!");
+				errorStatus = "Incomplete multisample framebuffer"; break;
 			case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-				Log(EError, "FBO Error: Incomplete layer targets!");
+				errorStatus = "Incomplete layer targets"; break;
 			default:
-				Log(EError, "FBO Error: Unknown error status (0x%x)!", status);
+				errorStatus = "Unknown error status"; break;
 		}
+		if (!errorStatus.empty())
+			Log(EError, "FBO Error 0x%x: %s!\nFramebuffer configuration: %s", 
+				errorStatusID, errorStatus.c_str(), toString().c_str());
 	
 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, GL_NONE);
 	}
+
+	glBindTexture(m_glType, GL_NONE);
+}
+	
+void GLTexture::refresh(const Point2i &offset, const Vector2i &size) {
+	Assert(m_type == ETexture2D);
+
+	glBindTexture(m_glType, m_id);
+
+	Bitmap *bitmap = getBitmap();
+
+	uint8_t *ptr = bitmap->getUInt8Data() + 
+		bitmap->getBytesPerPixel() * (offset.x + offset.y * bitmap->getWidth());
+
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, bitmap->getWidth());
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexSubImage2D(m_glType, 0, offset.x, offset.y, size.x, size.y,
+		m_format, m_dataFormat, ptr);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 }
 
 void GLTexture::refresh() {
@@ -225,7 +257,8 @@ void GLTexture::refresh() {
 
 	/* Bind to the texture */
 	glBindTexture(m_glType, m_id);
-	
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
 	if (m_type == ETexture1D) {
 		Assert((isPowerOfTwo(m_size.x) && m_size.y == 1)
 			|| (isPowerOfTwo(m_size.y) && m_size.x == 1));
@@ -235,28 +268,17 @@ void GLTexture::refresh() {
 			gluBuild1DMipmaps(m_glType, m_internalFormat, m_size.x == 1 ? m_size.y : m_size.x,
 				m_format, m_dataFormat, bitmap->getData());
 		} else {
-			glTexImage1D(m_glType, 0, m_internalFormat, m_size.x == 1 ? m_size.y : m_size.x,
-				0, m_format, m_dataFormat, bitmap->getData());
 		}
+		glTexImage1D(m_glType, 0, m_internalFormat, m_size.x == 1 ? m_size.y : m_size.x,
+			0, m_format, m_dataFormat, bitmap->getData());
 	} else if (m_type == ETexture2D) {
-		//Assert(m_size.x == m_size.y);
-
 		/* Anisotropic texture filtering */
 		float anisotropy = (float) getMaxAnisotropy();
-		if (anisotropy > 1.0f) {
-			if (isMipMapped() && m_filterType == EMipMapLinear) {
-				/* Only use anisotropy when it makes sense - otherwise some
-				   GL implementations will enforce mipmapping */
-				glTexParameterf(m_glType, GL_TEXTURE_MAX_ANISOTROPY_EXT, 
-					anisotropy);
-			}
-		}
+		if (isMipMapped() && m_filterType == EMipMapLinear && anisotropy > 1.0f) 
+			glTexParameterf(m_glType, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);
 
 		glTexImage2D(m_glType, 0, m_internalFormat, m_size.x, m_size.y,
 			0, m_format, m_dataFormat, bitmap->getData());
-
-		if (isMipMapped())
-			glGenerateMipmapEXT(m_glType);
 	} else if (m_type == ETextureCubeMap) {
 		Assert(bitmap != NULL);
 		Assert(bitmap->getWidth() == bitmap->getHeight());
@@ -271,10 +293,10 @@ void GLTexture::refresh() {
 			switch (i) {
 				case ECubeMapPositiveX: pos = GL_TEXTURE_CUBE_MAP_POSITIVE_X; break;
 				case ECubeMapNegativeX: pos = GL_TEXTURE_CUBE_MAP_NEGATIVE_X; break;
-				case ECubeMapPositiveY: pos = GL_TEXTURE_CUBE_MAP_POSITIVE_Y_EXT; break;
-				case ECubeMapNegativeY: pos = GL_TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT; break;
-				case ECubeMapPositiveZ: pos = GL_TEXTURE_CUBE_MAP_POSITIVE_Z_EXT; break;
-				case ECubeMapNegativeZ: pos = GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_EXT; break;
+				case ECubeMapPositiveY: pos = GL_TEXTURE_CUBE_MAP_POSITIVE_Y; break;
+				case ECubeMapNegativeY: pos = GL_TEXTURE_CUBE_MAP_NEGATIVE_Y; break;
+				case ECubeMapPositiveZ: pos = GL_TEXTURE_CUBE_MAP_POSITIVE_Z; break;
+				case ECubeMapNegativeZ: pos = GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; break;
 				default: Log(EError, "Unknown cube map index"); return;
 			};
 
@@ -284,11 +306,11 @@ void GLTexture::refresh() {
 	} else {
 		Log(EError, "Unknown texture type!");
 	}
+	if (isMipMapped())
+		glGenerateMipmapEXT(m_glType);
 }
 
 void GLTexture::lookupGLConstants() {
-	m_dataFormat = GL_UNSIGNED_BYTE;
-
 	/* Convert the texture type */
 	switch (m_type) {
 		case ETexture1D: m_glType = GL_TEXTURE_1D; break;
@@ -303,76 +325,70 @@ void GLTexture::lookupGLConstants() {
 		default: Log(EError, "Invalid texture type specified"); return;
 	}
 
-	/* Convert the texture format */
-	switch (getFormat()) {
-		case ER8G8B8:
-			m_format = GL_RGB;
-			m_internalFormat = GL_RGB;
-			break;
-		case ER8G8B8A8:
-			m_format = GL_RGBA;
-			m_internalFormat = GL_RGBA;
-			break;
-		case EL8:
-			m_format = GL_LUMINANCE;
-			m_internalFormat = GL_LUMINANCE8;
-			break;
-		case EL8A8:
-			m_format = GL_LUMINANCE_ALPHA;
-			m_internalFormat = GL_LUMINANCE8_ALPHA8;
-			break;
-		case EDepth:
-			m_format = GL_DEPTH_COMPONENT;
-			m_internalFormat = GL_DEPTH_COMPONENT32;
-			break;
-		case EFloat16L:
-			m_format = GL_LUMINANCE;
-			m_internalFormat = GL_RGBA16F_ARB;
-			m_dataFormat = GL_FLOAT;
-			break;
-		case EFloat16RGB:
-			m_format = GL_RGB;
-			m_internalFormat = GL_RGBA16F_ARB;
-			m_dataFormat = GL_FLOAT;
-			break;
-		case EFloat16RGBA:
-			m_format = GL_RGBA;
-			m_internalFormat = GL_RGBA16F_ARB;
-			m_dataFormat = GL_FLOAT;
-			break;
-		case EFloat32L:
-			m_format = GL_LUMINANCE;
-			m_internalFormat = GL_RGBA32F_ARB;
-			m_dataFormat = GL_FLOAT;
-			break;
-		case EFloat32RGB:
-			m_format = GL_RGB;
-			m_internalFormat = GL_RGBA32F_ARB;
-			m_dataFormat = GL_FLOAT;
-			break;
-		case EFloat32RGBA:
-			m_format = GL_RGBA;
-			m_internalFormat = GL_RGBA32F_ARB;
-			m_dataFormat = GL_FLOAT;
-			break;
-		default: Log(EError, "Invalid texture format specified"); return;
+	switch (m_pixelFormat) {
+		case EDepth: m_format = GL_DEPTH_COMPONENT; break;
+		case ELuminance: m_format = GL_LUMINANCE; break;
+		case ELuminanceAlpha: m_format = GL_LUMINANCE_ALPHA; break;
+		case ERGB: m_format = GL_RGB; break;
+		case ERGBA: m_format = GL_RGBA; break;
+		default:
+			Log(EError, "Unknown/unsupported pixel format!");
+			return;
 	}
 
+	m_internalFormat = m_format;
+
+	switch (m_componentFormat) {
+		case EUInt8:
+			m_dataFormat = GL_UNSIGNED_BYTE;
+			break;
+		case EUInt16:
+			m_dataFormat = GL_UNSIGNED_SHORT;
+			break;
+		case EUInt32:
+			m_dataFormat = GL_UNSIGNED_INT;
+			break;
+		case EFloat16:
+			m_dataFormat = GL_HALF_FLOAT_ARB;
+			break;
+		case EFloat32:
+			m_dataFormat = GL_FLOAT;
+			break;
+		case EFloat64:
+			m_dataFormat = GL_DOUBLE;
+			break;
+		default:
+			Log(EError, "Unknown/unsupported component format!");
+			return;
+	}
+
+	if (m_componentFormat == EFloat16) {
+		switch (m_pixelFormat) {
+			case ELuminance: m_internalFormat = GL_LUMINANCE16F_ARB; break;
+			case ELuminanceAlpha: m_internalFormat = GL_LUMINANCE_ALPHA16F_ARB; break;
+			case ERGB: m_internalFormat = GL_RGB16F_ARB; break;
+			case ERGBA: m_internalFormat = GL_RGBA16F_ARB; break;
+			default:
+				Log(EError, "Unknown/unsupported pixel format!");
+				return;
+		}
+	} else if (m_componentFormat == EFloat32) {
+		switch (m_pixelFormat) {
+			case EDepth: m_internalFormat = GL_DEPTH_COMPONENT32F; break;
+			case ELuminance: m_internalFormat = GL_LUMINANCE32F_ARB; break;
+			case ELuminanceAlpha: m_internalFormat = GL_LUMINANCE_ALPHA32F_ARB; break;
+			case ERGB: m_internalFormat = GL_RGB32F_ARB; break;
+			case ERGBA: m_internalFormat = GL_RGBA32F_ARB; break;
+			default:
+				Log(EError, "Unknown/unsupported pixel format!");
+				return;
+		}
+	}
 }
 
 
 void GLTexture::configureTexture() {
-	int wrap, mag_filter, min_filter;
-
-	/* Convert the texture coordinate wrapping type */
-	switch (getWrapType()) {
-		case EClamp: wrap = GL_CLAMP; break;
-		case EClampToEdge: wrap = GL_CLAMP_TO_EDGE; break;
-		case EClampToBorder: wrap = GL_CLAMP_TO_BORDER; break;
-		case ERepeat: wrap = GL_REPEAT; break;
-		case EMirroredRepeat: wrap = GL_MIRRORED_REPEAT_ARB; break;
-		default: Log(EError, "Invalid texture wrap type specified"); return;
-	}
+	GLuint wrapU, wrapV, mag_filter, min_filter;
 
 	/* Convert the texture filter type */
 	switch (m_filterType) {
@@ -409,66 +425,115 @@ void GLTexture::configureTexture() {
 			return;
 	}
 
+	/* Convert the texture coordinate wrapping type */
+	bool border = false;
+	switch (m_wrapTypeU) {
+		case EClamp: wrapU = GL_CLAMP; border = true; break;
+		case EClampToEdge: wrapU = GL_CLAMP_TO_EDGE; break;
+		case EClampToBorder: wrapU = GL_CLAMP_TO_BORDER; border = true; break;
+		case ERepeat: wrapU = GL_REPEAT; break;
+		case EMirror: wrapU = GL_MIRRORED_REPEAT_ARB; break;
+		default: Log(EError, "Invalid texture wrap type specified"); return;
+	}
+
+	switch (m_wrapTypeV) {
+		case EClamp: wrapV = GL_CLAMP; border = true; break;
+		case EClampToEdge: wrapV = GL_CLAMP_TO_EDGE; break;
+		case EClampToBorder: wrapV = GL_CLAMP_TO_BORDER; border = true; break;
+		case ERepeat: wrapV = GL_REPEAT; break;
+		case EMirror: wrapV = GL_MIRRORED_REPEAT_ARB; break;
+		default: Log(EError, "Invalid V texture wrap type specified"); return;
+	}
+
 	/* Set the filter type */
 	glTexParameteri(m_glType, GL_TEXTURE_MAG_FILTER, mag_filter);
 	glTexParameteri(m_glType, GL_TEXTURE_MIN_FILTER, min_filter);
 
 	/* Set the texcoord wrapping type */
 	if (m_type == ETexture1D) {
-		glTexParameteri(m_glType, GL_TEXTURE_WRAP_S, wrap);
+		glTexParameteri(m_glType, GL_TEXTURE_WRAP_S, wrapU);
 	} else if (m_type == ETexture2D) {
-		glTexParameteri(m_glType, GL_TEXTURE_WRAP_S, wrap);
-		glTexParameteri(m_glType, GL_TEXTURE_WRAP_T, wrap);
+		glTexParameteri(m_glType, GL_TEXTURE_WRAP_S, wrapU);
+		glTexParameteri(m_glType, GL_TEXTURE_WRAP_T, wrapV);
 	} else if (m_type == ETextureCubeMap) {
-		glTexParameteri(m_glType, GL_TEXTURE_WRAP_S, wrap);
-		glTexParameteri(m_glType, GL_TEXTURE_WRAP_T, wrap);
-		glTexParameteri(m_glType, GL_TEXTURE_WRAP_R, wrap);
+		glTexParameteri(m_glType, GL_TEXTURE_WRAP_S, wrapU);
+		glTexParameteri(m_glType, GL_TEXTURE_WRAP_T, wrapU);
+		glTexParameteri(m_glType, GL_TEXTURE_WRAP_R, wrapU);
+	}
+
+	if (border && m_type == ETexture2D) {
+		const GLfloat color[] = { (GLfloat) m_borderColor[0], 
+			(GLfloat) m_borderColor[1], (GLfloat) m_borderColor[2], 
+			(GLfloat) 1.0f };
+		glTexParameterfv(m_glType, GL_TEXTURE_BORDER_COLOR, color);
 	}
 }
 
 void GLTexture::download(Bitmap *bitmap) {
-	Assert(m_type == ETexture2D); // Only type supported so far
-
 	if (bitmap == NULL)
 		bitmap = getBitmap();
 
 	Assert(bitmap != NULL);
-	unsigned char *temp, *pixels = bitmap->getData();
 
 	activateTarget();
-	GLenum format = 0, dataFormat = GL_UNSIGNED_BYTE;
-	switch (bitmap->getBitsPerPixel()) {
-		case 8: 
+	GLenum format, dataFormat;
+
+	switch (bitmap->getComponentFormat()) {
+		case Bitmap::EUInt8:   dataFormat = GL_UNSIGNED_BYTE; break;
+		case Bitmap::EUInt16:  dataFormat = GL_UNSIGNED_SHORT; break;
+		case Bitmap::EUInt32:  dataFormat = GL_UNSIGNED_INT; break;
+		case Bitmap::EFloat16: dataFormat = GL_HALF_FLOAT_ARB; break;
+		case Bitmap::EFloat32: dataFormat = GL_FLOAT; break;
+		case Bitmap::EFloat64: dataFormat = GL_DOUBLE; break;
+		default:
+			Log(EError, "GLTexture::download(): Unknown/unsupported component format %i!", 
+					(int) bitmap->getComponentFormat());
+			return;
+	}
+
+	switch (bitmap->getPixelFormat()) {
+		case Bitmap::ELuminance:
 			if (m_fbType == EDepthBuffer)
 				format = GL_DEPTH_COMPONENT;
 			else
 				format = GL_LUMINANCE;
 			break;
-		case 24: format = GL_RGB; break;
-		case 32: format = GL_RGBA; break;
-		case 96: format = GL_RGB; dataFormat = GL_FLOAT; break;
-		case 128: format = GL_RGBA; dataFormat = GL_FLOAT; break;
+		case Bitmap::ELuminanceAlpha: format = GL_LUMINANCE_ALPHA; break;
+		case Bitmap::ERGB: format = GL_RGB; break;
+		case Bitmap::ERGBA: format = GL_RGBA; break;
+		default:
+			Log(EError, "GLTexture::download(): Unknown/unsupported pixel format %i!", 
+					(int) bitmap->getPixelFormat());
+			return;
 	}
 
-	glReadPixels(0, 0, bitmap->getWidth(), bitmap->getHeight(), format, 
-		dataFormat, pixels);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+	switch (m_type) {
+		case ETexture2D:
+			glReadPixels(0, 0, bitmap->getWidth(), bitmap->getHeight(), format, 
+				dataFormat, bitmap->getUInt8Data());
+			/* OpenGL associates (0, 0) with the lower left position and 
+			   the resulting bitmap must thus be vertically flipped. */
+			bitmap->flipVertically();
+			break;
+		case ETextureCubeMap:
+			for (int i=0; i<6; ++i) {
+				activateSide(i);
+				bitmap = getBitmap(i);
+				glReadPixels(0, 0, bitmap->getWidth(), bitmap->getHeight(), format, 
+					dataFormat, bitmap->getUInt8Data());
+				bitmap->flipVertically();
+			}
+			break;
+		default:
+			Log(EError, "download(): Unsupported texture type!");
+	}
+
 	releaseTarget();
-
-	/* OpenGL has associates (0, 0) with the lower left position
-	   and the resulting bitmap is thus vertically flipped. */
-	int rowSize = bitmap->getWidth() * bitmap->getBitsPerPixel() / 8,
-	    halfHeight= bitmap->getHeight()/2;
-	temp = new unsigned char[rowSize];
-	for (int i=0, j=bitmap->getHeight()-1; i<halfHeight; ++i) {
-		memcpy(temp, pixels + i * rowSize, rowSize);
-		memcpy(pixels + i * rowSize, pixels + j * rowSize, rowSize);
-		memcpy(pixels + j * rowSize, temp, rowSize);
-		j--;
-	}
-	delete[] temp;
 }
 
-Spectrum GLTexture::getPixel(int x, int y) const {
+Color3 GLTexture::getPixel(int x, int y) const {
 	Assert(m_fbType == EColorBuffer);
 	float pixels[3];
 	Spectrum result;
@@ -480,8 +545,7 @@ Spectrum GLTexture::getPixel(int x, int y) const {
 	glPopAttrib();
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, GL_NONE);
 
-	result.fromLinearRGB(pixels[0], pixels[1], pixels[2]);
-	return result;
+	return Color3(pixels[0], pixels[1], pixels[2]);
 }
 
 
@@ -495,6 +559,8 @@ void GLTexture::activateTarget() {
 void GLTexture::activateSide(int side) {
 	if (side == -1) {
 		if (m_fbType == EColorBuffer) {
+			Log(EError, "GLTexture::activateTexture(-1): Not allowed for cube map color-only buffers");
+		} else if (m_fbType == EColorAndDepthBuffer) {
 			glFramebufferTextureEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, m_id, 0);
 			glFramebufferTextureEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, m_depthId, 0);
 		} else if (m_fbType == EDepthBuffer) {
@@ -504,13 +570,12 @@ void GLTexture::activateSide(int side) {
 		}
 	} else {
 		if (m_fbType == EColorBuffer) {
-			glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, 
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + side, m_id, 0);
-			glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, 
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + side, m_depthId, 0);
+			glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + side, m_id, 0);
+		} else if (m_fbType == EColorAndDepthBuffer) {
+			glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + side, m_id, 0);
+			glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + side, m_depthId, 0);
 		} else if (m_fbType == EDepthBuffer) {
-			glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, 
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + side, m_id, 0);
+			glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + side, m_id, 0);
 		} else {
 			Log(EError, "Unsupported framebuffer type!");
 		}
@@ -571,7 +636,7 @@ void GLTexture::cleanup() {
 		return;
 	if (m_fbType != ENone) {
 		Log(ETrace, "Freeing framebuffer \"%s\"", m_name.c_str());
-		if (m_fbType == EColorAndDepthBuffer || (m_fbType == EColorBuffer && m_type == ETextureCubeMap)) {
+		if (m_fbType == EColorAndDepthBuffer) {
 			glDeleteTextures(1, &m_depthId);
 		} else if (m_fbType == EColorBuffer) {
 			glDeleteRenderbuffersEXT(1, &m_depthId);

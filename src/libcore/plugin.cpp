@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -25,7 +25,9 @@
 #include <mitsuba/core/version.h>
 
 #if !defined(WIN32)
-#include <dlfcn.h>
+# include <dlfcn.h>
+#else
+# include <windows.h>
 #endif
 
 MTS_NAMESPACE_BEGIN
@@ -34,41 +36,68 @@ MTS_NAMESPACE_BEGIN
 //  Abstract plugin module implementation
 // -----------------------------------------------------------------------
 
-Plugin::Plugin(const std::string &shortName, const fs::path &path) 
- : m_shortName(shortName), m_path(path) {
+namespace
+{
+typedef void *(*CreateInstanceFunc)(const Properties &props);
+typedef void *(*CreateUtilityFunc)();
+typedef char *(*GetDescriptionFunc)();
+}
+
+struct Plugin::PluginPrivate
+{
 #if defined(WIN32)
-	m_handle = LoadLibrary(path.file_string().c_str());
-	if (!m_handle) {
+	HMODULE handle;
+#else
+	void *handle;
+#endif
+	const std::string shortName;
+	const fs::path path;
+	bool isUtility;
+	GetDescriptionFunc getDescription;
+	CreateInstanceFunc createInstance;
+	CreateUtilityFunc createUtility;
+
+	PluginPrivate(const std::string &sn, const fs::path &p) :
+	shortName(sn), path(p)
+	{}
+};
+
+Plugin::Plugin(const std::string &shortName, const fs::path &path) 
+ : d(new PluginPrivate(shortName, path))
+{
+#if defined(_WIN32)
+	d->handle = LoadLibrary(path.string().c_str());
+	if (!d->handle) {
 		SLog(EError, "Error while loading plugin \"%s\": %s", 
-				m_path.file_string().c_str(), lastErrorText().c_str());
+				d->path.string().c_str(), lastErrorText().c_str());
 	}
 #else
-	m_handle = dlopen(path.file_string().c_str(), RTLD_LAZY | RTLD_LOCAL);
-	if (!m_handle) {
+	d->handle = dlopen(path.string().c_str(), RTLD_LAZY | RTLD_LOCAL);
+	if (!d->handle) {
 		SLog(EError, "Error while loading plugin \"%s\": %s",
-			m_path.file_string().c_str(), dlerror());
+			d->path.string().c_str(), dlerror());
 	}
 #endif
 	try {
-		m_getDescription = (GetDescriptionFunc) getSymbol("GetDescription");
+		d->getDescription = (GetDescriptionFunc) getSymbol("GetDescription");
 	} catch (...) {
-#if defined(WIN32)
-		FreeLibrary(m_handle);
+#if defined(_WIN32)
+		FreeLibrary(d->handle);
 #else
-		dlclose(m_handle);
+		dlclose(d->handle);
 #endif
 		throw;
 	}
 
-	m_createInstance = NULL;
-	m_createUtility = NULL;
-	m_isUtility = false;
+	d->createInstance = NULL;
+	d->createUtility = NULL;
+	d->isUtility = false;
 
 	if (hasSymbol("CreateUtility")) {
-		m_createUtility = (CreateUtilityFunc) getSymbol("CreateUtility");
-		m_isUtility = true;
+		d->createUtility = (CreateUtilityFunc) getSymbol("CreateUtility");
+		d->isUtility = true;
 	} else {
-		m_createInstance = (CreateInstanceFunc) getSymbol("CreateInstance");
+		d->createInstance = (CreateInstanceFunc) getSymbol("CreateInstance");
 	}
 	Statistics::getInstance()->logPlugin(shortName, getDescription());
 
@@ -77,48 +106,60 @@ Plugin::Plugin(const std::string &shortName, const fs::path &path)
 }
 
 bool Plugin::hasSymbol(const std::string &sym) const {
-#if defined(WIN32)
-	void *ptr = GetProcAddress(m_handle, sym.c_str());
+#if defined(_WIN32)
+	void *ptr = GetProcAddress(d->handle, sym.c_str());
 #else
-	void *ptr = dlsym(m_handle, sym.c_str());
+	void *ptr = dlsym(d->handle, sym.c_str());
 #endif
 	return ptr != NULL;
 }
 
 void *Plugin::getSymbol(const std::string &sym) {
-#if defined(WIN32)
-	void *data = GetProcAddress(m_handle, sym.c_str());
+#if defined(_WIN32)
+	void *data = GetProcAddress(d->handle, sym.c_str());
 	if (!data) {
 		SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
-			sym.c_str(), m_path.file_string().c_str(), lastErrorText().c_str());
+			sym.c_str(), d->path.string().c_str(), lastErrorText().c_str());
 	}
 #else
-	void *data = dlsym(m_handle, sym.c_str());
+	void *data = dlsym(d->handle, sym.c_str());
 	if (!data) {
 		SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
-			sym.c_str(), m_path.file_string().c_str(), dlerror());
+			sym.c_str(), d->path.string().c_str(), dlerror());
 	}
 #endif
 	return data;
 }
 
 ConfigurableObject *Plugin::createInstance(const Properties &props) const {
-	return (ConfigurableObject *) m_createInstance(props);
+	return (ConfigurableObject *) d->createInstance(props);
 }
 
 Utility *Plugin::createUtility() const {
-	return (Utility *) m_createUtility();
+	return (Utility *) d->createUtility();
+}
+
+bool Plugin::isUtility() const {
+	return d->isUtility;
 }
 
 std::string Plugin::getDescription() const {
-	return m_getDescription();
+	return d->getDescription();
+}
+
+const fs::path& Plugin::getPath() const {
+	return d->path;
+}
+	
+const std::string& Plugin::getShortName() const {
+	return d->shortName;
 }
 
 Plugin::~Plugin() {
-#if defined(WIN32)
-	FreeLibrary(m_handle);
+#if defined(_WIN32)
+	FreeLibrary(d->handle);
 #else
-	dlclose(m_handle);
+	dlclose(d->handle);
 #endif
 }
 
@@ -144,18 +185,11 @@ ConfigurableObject *PluginManager::createObject(const Class *classType,
 	const Properties &props) {
 	ConfigurableObject *object;
 
-	m_mutex->lock();
-	try {
+	{
+		LockGuard lock(m_mutex);
 		ensurePluginLoaded(props.getPluginName());
 		object = m_plugins[props.getPluginName()]->createInstance(props);
-	} catch (std::runtime_error &e) {
-		m_mutex->unlock();
-		throw e;
-	} catch (std::exception &e) {
-		m_mutex->unlock();
-		throw e;
 	}
-	m_mutex->unlock();
 	if (!object->getClass()->derivesFrom(classType))
 		Log(EError, "Type mismatch when loading plugin \"%s\": Expected "
 		"an instance of \"%s\"", props.getPluginName().c_str(), classType->getName().c_str());
@@ -168,18 +202,11 @@ ConfigurableObject *PluginManager::createObject(const Class *classType,
 ConfigurableObject *PluginManager::createObject(const Properties &props) {
 	ConfigurableObject *object;
 
-	m_mutex->lock();
-	try {
+	{
+		LockGuard lock(m_mutex);
 		ensurePluginLoaded(props.getPluginName());
 		object = m_plugins[props.getPluginName()]->createInstance(props);
-	} catch (std::runtime_error &e) {
-		m_mutex->unlock();
-		throw e;
-	} catch (std::exception &e) {
-		m_mutex->unlock();
-		throw e;
 	}
-	m_mutex->unlock();
 	if (object->getClass()->isAbstract())
 		Log(EError, "Error when loading plugin \"%s\": Identifies itself as an abstract class",
 		props.getPluginName().c_str());
@@ -188,12 +215,11 @@ ConfigurableObject *PluginManager::createObject(const Properties &props) {
 
 std::vector<std::string> PluginManager::getLoadedPlugins() const {
 	std::vector<std::string> list;
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	for (std::map<std::string, Plugin *>::const_iterator it = m_plugins.begin();
 		it != m_plugins.end(); ++it) {
 		list.push_back((*it).first);
 	}
-	m_mutex->unlock();
 	return list;
 }
 
@@ -215,7 +241,7 @@ void PluginManager::ensurePluginLoaded(const std::string &name) {
 
 	if (fs::exists(path)) {
 		Log(EInfo, "Loading plugin \"%s\" ..", shortName.c_str());
-		m_plugins[name] = new Plugin(shortName, path.file_string());
+		m_plugins[name] = new Plugin(shortName, path.string());
 		return;
 	}
 

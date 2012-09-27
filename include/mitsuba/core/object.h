@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,11 +16,11 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__OBJECT_H)
-#define __OBJECT_H
+#pragma once
+#if !defined(__MITSUBA_CORE_OBJECT_H_)
+#define __MITSUBA_CORE_OBJECT_H_
 
 #include <mitsuba/core/class.h>
-#include <pthread.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -69,6 +69,14 @@ public:
 	 * where <tt>MyObject</tt> is the name of the subclass.
 	 */
 	virtual std::string toString() const;
+
+	/** \brief Initializes the built-in reference count 
+	 * debugger (if enabled)
+	 */
+	static void staticInitialization();
+
+	/// Free the memory taken by staticInitialization()
+	static void staticShutdown();
 protected:
 	/** \brief Virtual private deconstructor.
 	 * (Will only be called by \ref ref)
@@ -77,10 +85,10 @@ protected:
 public:
 	static Class *m_theClass; ///< Pointer to the object's class descriptor
 private:
-#ifndef WIN32
+#if !defined(_MSC_VER)
 	volatile mutable int m_refCount;
 #else
-	volatile mutable LONG m_refCount;
+	volatile mutable long m_refCount;
 #endif
 };
 
@@ -90,4 +98,4 @@ inline int Object::getRefCount() const {
 
 MTS_NAMESPACE_END
 
-#endif /* __OBJECT_H */
+#endif /* __MITSUBA_CORE_OBJECT_H_ */
