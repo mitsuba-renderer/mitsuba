@@ -117,6 +117,10 @@ static bool minidumpCallbackWindows(const wchar_t *dump_path,
 class MitsubaApplication : public QApplication {
 public:
 	MitsubaApplication(int &argc, char **argv) : QApplication(argc, argv) {
+		setOrganizationName("mitsuba-renderer.org");
+		setOrganizationDomain("mitsuba-renderer.org");
+		setApplicationName("mtsgui");
+		setApplicationVersion(MTS_VERSION);
 	}
 
 	bool event(QEvent *event) {
@@ -209,10 +213,6 @@ int main(int argc, char *argv[]) {
 	qRegisterMetaType<fs::path>("fs::path");
 
 	MitsubaApplication app(argc, argv);
-	app.setOrganizationName("mitsuba-renderer.org");
-	app.setOrganizationDomain("mitsuba-renderer.org");
-	app.setApplicationName("mtsgui");
-	app.setApplicationVersion(MTS_VERSION);
 	try {
 		QFile stylesheet(":/resources/stylesheet.css");
 
