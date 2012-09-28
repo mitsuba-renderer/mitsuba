@@ -27,7 +27,7 @@ COLLADALIB     = ['collada14dom']
 # versions at the same time by explicitly specifying e.g. PYTHON27INCLUDE, 
 # PYTHON27LIB, PYTHON27LIBDIR and PYTHON32INCLUDE, PYTHON32LIB, PYTHON32LIBDIR
 
-pyver = str(sys.version_info[0])+str(sys.version_info[1])
+pyver = os.popen("python --version 2>&1 | grep -oE '([[:digit:]].[[:digit:]])'").read().strip()
 env = locals()
 
 env['PYTHON'+pyver+'INCLUDE']  = []
