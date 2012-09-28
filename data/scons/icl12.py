@@ -111,7 +111,10 @@ def generate(env):
 	else:
 		raise Exception('Unknown version of visual studio!')
 
-	icpp_path = os.environ.get('ICPP_COMPOSER2011')
+	if 'ICPP_COMPOSER2011' in os.environ:
+		icpp_path = os.environ.get('ICPP_COMPOSER2011')
+	else:
+		icpp_path = os.environ.get('ICPP_COMPILER13')
 	merge_script_vars(env, os.path.join(icpp_path, 'bin/iclvars.bat'), arch + ' ' + vsrelease)
 	env['REDIST_PATH'] = os.path.join(os.path.join(os.path.join(icpp_path, 'redist'), arch_redist), 'compiler')
 

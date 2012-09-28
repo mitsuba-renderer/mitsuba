@@ -16,6 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/core/platform.h>
 #include <QtGui/QtGui>
 #include <QtOpenGL/QGLFormat>
 #include <mitsuba/core/shvector.h>
