@@ -14,7 +14,7 @@ PYTHONVERSION = `python-config --includes | sed -e 's/^.*python\([0-9\.]*\).*/\1
 clean:
 	dh_testdir
 	dh_testroot
-	cp build/config-linux.py config.py
+	cp build/config-linux-gcc.py config.py
 	scons -c
 	rm -f build-stamp configure-stamp
 	rm -Rf .sconsign.dblite .sconf_temp/
@@ -26,7 +26,7 @@ configure:
 binary-arch:
 	dh_testdir
 	dh_testroot
-	cp build/config-linux.py config.py
+	cp build/config-linux-gcc.py config.py
 	scons -j 2
 	dh_installdirs
 	dh_auto_install
