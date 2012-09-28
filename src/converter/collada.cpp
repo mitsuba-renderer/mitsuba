@@ -530,7 +530,7 @@ void exportAnimation(ColladaContext &ctx, const fs::path &path, const std::strin
 			continue;
 		trafo->addTrack(track);
 	}
-	SLog(EDebug, "Writing animation track \"%s\"", path.filename().c_str());
+	SLog(EDebug, "Writing animation track \"%s\"", path.filename().string().c_str());
 	ref<FileStream> fs = new FileStream(path, FileStream::ETruncReadWrite);
 	trafo->serialize(fs);
 }

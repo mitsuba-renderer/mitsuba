@@ -103,7 +103,7 @@ public:
 		m_objectToWorld = props.getTransform("toWorld", Transform());
 
 		/* Load the geometry */
-		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.filename().c_str());
+		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.filename().string().c_str());
 		if (!fs::exists(filePath))
 			Log(EError, "PLY file \"%s\" could not be found!", filePath.c_str());
 

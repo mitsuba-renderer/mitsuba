@@ -77,7 +77,7 @@ UpgradeManager::UpgradeManager(const FileResolver *resolver) : m_resolver(resolv
 
 	for (size_t i=0; i<m_transformations.size(); ++i)
 		SLog(EInfo, "  - registered transformation \"%s\", which updates to version %s", 
-			m_transformations[i].second.filename().c_str(), 
+			m_transformations[i].second.filename().string().c_str(), 
 			m_transformations[i].first.toString().c_str());
 }
 
@@ -114,7 +114,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		outputBuffer.open(QIODevice::WriteOnly | QIODevice::Truncate);
 
 		SLog(EInfo, "Applying transformation \"%s\" ..", 
-			m_transformations[i].second.filename().c_str());
+			m_transformations[i].second.filename().string().c_str());
 		std::string trafoFilename = m_transformations[i].second.string();
 		QFile trafoFile(trafoFilename.c_str());
 		if (!trafoFile.open(QIODevice::ReadOnly | QIODevice::Text))

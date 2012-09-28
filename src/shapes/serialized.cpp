@@ -148,10 +148,10 @@ public:
 		int shapeIndex = props.getInteger("shapeIndex", 0);
 
 		m_name = (props.getID() != "unnamed") ? props.getID() 
-			: formatString("%s@%i", filePath.stem().c_str(), shapeIndex); 
+			: formatString("%s@%i", filePath.stem().string().c_str(), shapeIndex); 
 
 		/* Load the geometry */
-		Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.filename().c_str());
+		Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.filename().string().c_str());
 		ref<FileStream> stream = new FileStream(filePath, FileStream::EReadOnly);
 		ref<Timer> timer = new Timer();
 		loadCompressed(stream, shapeIndex);

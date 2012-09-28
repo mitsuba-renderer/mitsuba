@@ -26,7 +26,7 @@ struct MemoryMappedFile::MemoryMappedFilePrivate
 MemoryMappedFile::MemoryMappedFile(const fs::path &filename, size_t size) 
 	: d(new MemoryMappedFilePrivate(filename, size)) {
 	Log(ETrace, "Creating memory-mapped file \"%s\" (%s)..", 
-			filename.filename().c_str(), memString(d->size).c_str());
+			filename.filename().string().c_str(), memString(d->size).c_str());
 #if defined(__LINUX__) || defined(__OSX__)
 	int fd = open(filename.string().c_str(), O_RDWR | O_CREAT | O_TRUNC, 0664);
 	if (fd == -1)
@@ -68,7 +68,7 @@ MemoryMappedFile::MemoryMappedFile(const fs::path &filename)
 		Log(EError, "The file \"%s\" does not exist!", filename.string().c_str());
 	d->size = (size_t) fs::file_size(filename);
 	Log(ETrace, "Mapping \"%s\" into memory (%s)..", 
-			filename.filename().c_str(), memString(d->size).c_str());
+			filename.filename().string().c_str(), memString(d->size).c_str());
 #if defined(__LINUX__) || defined(__OSX__)
 	int fd = open(filename.string().c_str(), O_RDONLY);
 	if (fd == -1)

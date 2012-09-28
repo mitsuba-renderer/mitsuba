@@ -184,7 +184,7 @@ public:
 			m_filename = Thread::getThread()->getFileResolver()->resolve(
 				props.getString("filename"));
 
-			Log(EInfo, "Loading texture \"%s\"", m_filename.filename().c_str());
+			Log(EInfo, "Loading texture \"%s\"", m_filename.filename().string().c_str());
 			if (!fs::exists(m_filename))
 				Log(EError, "Texture file \"%s\" could not be found!", m_filename.c_str());
 
@@ -236,7 +236,7 @@ public:
 				bitmap = new Bitmap(Bitmap::EAuto, fs);
 				if (m_gamma != 0)
 					bitmap->setGamma(m_gamma);
-				Log(EDebug, "Loaded \"%s\" in %i ms", m_filename.filename().c_str(),
+				Log(EDebug, "Loaded \"%s\" in %i ms", m_filename.filename().string().c_str(),
 					timer->getMilliseconds());
 			}
 
@@ -299,7 +299,7 @@ public:
 	BitmapTexture(Stream *stream, InstanceManager *manager) 
 	 : Texture2D(stream, manager) {
 		m_filename = stream->readString();
-		Log(EDebug, "Unserializing texture \"%s\"", m_filename.filename().c_str());
+		Log(EDebug, "Unserializing texture \"%s\"", m_filename.filename().string().c_str());
 		m_filterType = (EMIPFilterType) stream->readUInt();
 		m_wrapModeU = (ReconstructionFilter::EBoundaryCondition) stream->readUInt();
 		m_wrapModeV = (ReconstructionFilter::EBoundaryCondition) stream->readUInt();
