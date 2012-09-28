@@ -581,7 +581,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 					parser->setCalculateSrcOfs(true);
 				#endif
 				fs::path path = resolver->resolve(context.attributes["filename"]);
-				XMLLog(EInfo, "Parsing included file \"%s\" ..", path.filename().c_str());
+				XMLLog(EInfo, "Parsing included file \"%s\" ..", path.filename().string().c_str());
 				parser->parse(path.string().c_str());
 
 				object = handler->getScene();

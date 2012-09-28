@@ -310,11 +310,20 @@ def osxlibinst_as_build_function(self, target, source, pkgname = None, use_own =
 	return inst
 
 def remove_flag(env, flag):
-	try:
+	success = False
+	if flag in env['CXXFLAGS']:
 		env['CXXFLAGS'].remove(flag)
-		return True
-	except:
-		return False
+		success = True
+	if flag in env['SHCXXFLAGS']:
+		env['SHCXXFLAGS'].remove(flag)
+		success = True
+	if flag in env['CFLAGS']:
+		env['CFLAGS'].remove(flag)
+		success = True
+	if flag in env['LINKFLAGS']:
+		env['LINKFLAGS'].remove(flag)
+		success = True
+	return success
 
 def match_pattern(x, patterns):
 	match = False
@@ -327,6 +336,7 @@ def match_pattern(x, patterns):
 def remove_flags(env, patterns):
 	env['CCFLAGS'][:] = [ x for x in env['CCFLAGS'] if not match_pattern(x, patterns) ]
 	env['CXXFLAGS'][:] = [ x for x in env['CXXFLAGS'] if not match_pattern(x, patterns) ]
+	env['SHCXXFLAGS'][:] = [ x for x in env['SHCXXFLAGS'] if not match_pattern(x, patterns) ]
 	env['LINKFLAGS'][:] = [ x for x in env['LINKFLAGS'] if not match_pattern(x, patterns) ]
 
 def append_flag(env, value):
@@ -354,7 +364,7 @@ def relax_compiler_settings(env):
 	# Relax the compiler settings when compiling heavy templated code
 	# (e.g. Boost::Spirit parsers, etc., which don't necessarily have
 	# to be that fast)
-	env.RemoveFlags(['-g', '/Z7', '-ipo', '/GL'])
+	env.RemoveFlags(['-g', '/Z7', '/Zi', '-ipo', '/GL', '/DEBUG'])
 	if env.RemoveFlag('-O3'):
 		env.AppendFlag('-Os')
 	if env.RemoveFlag('/O2'):

@@ -204,7 +204,7 @@ public:
 		Transform objectToWorld = props.getTransform("toWorld", Transform());
 
 		/* Load the geometry */
-		Log(EInfo, "Loading geometry from \"%s\" ..", path.filename().c_str());
+		Log(EInfo, "Loading geometry from \"%s\" ..", path.filename().string().c_str());
 		fs::ifstream is(path);
 		if (is.bad() || is.fail())
 			Log(EError, "Wavefront OBJ file '%s' not found!", path.string().c_str());
@@ -329,7 +329,7 @@ public:
 		if (!materialLibrary.empty())
 			loadMaterialLibrary(fileResolver, materialLibrary);
 
-		Log(EInfo, "Done with \"%s\" (took %i ms)", path.filename().c_str(), timer->getMilliseconds());
+		Log(EInfo, "Done with \"%s\" (took %i ms)", path.filename().string().c_str(), timer->getMilliseconds());
 	}
 
 	WavefrontOBJ(Stream *stream, InstanceManager *manager) : Shape(stream, manager) {
@@ -401,7 +401,7 @@ public:
 			return;
 		}
 
-		Log(EInfo, "Loading OBJ materials from \"%s\" ..", mtlPath.filename().c_str());
+		Log(EInfo, "Loading OBJ materials from \"%s\" ..", mtlPath.filename().string().c_str());
 		fs::ifstream is(mtlPath);
 		if (is.bad() || is.fail())
 			Log(EError, "Unexpected I/O error while accessing material file '%s'!", 

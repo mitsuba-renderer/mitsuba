@@ -17,14 +17,8 @@ _hgrepo="mitsuba"
 
 build() {
 	cd ${_hgrepo}
-	cp build/config-linux.py config.py
-	if [ -e dependencies ]; then
-		cd dependencies
-		hg pull -u
-		cd ..
-	else
-		hg clone https://www.mitsuba-renderer.org/hg/dependencies
-	fi
+	hg update bidir-0.4.0 # TODO: remove
+	cp build/config-linux-gcc.py config.py
 
 	scons --jobs=$[${MAKEFLAGS/-j/} - 1]
 }
@@ -36,10 +30,11 @@ package() {
 		${pkgdir}/usr/share/mitsuba/plugins \
 		${pkgdir}/usr/share/mitsuba/data/schema \
 		${pkgdir}/usr/share/mitsuba/data/ior \
+		${pkgdir}/usr/share/mitsuba/data/microfacet \
 		${pkgdir}/usr/share/applications \
 		${pkgdir}/usr/share/pixmaps \
 		${pkgdir}/usr/include/mitsuba/{core,hw,render,bidir} \
-		${pkgdir}/usr/lib/python2.7/lib-dynload
+		${pkgdir}/usr/lib/python3.2/lib-dynload
 
 	cd ${_hgrepo}
 	install -m755 dist/mitsuba dist/mtsgui dist/mtsimport dist/mtssrv dist/mtsutil ${pkgdir}/usr/bin
@@ -51,7 +46,8 @@ package() {
 	install -m755 dist/plugins/* ${pkgdir}/usr/share/mitsuba/plugins
 	install -m644 dist/data/schema/* ${pkgdir}/usr/share/mitsuba/data/schema
 	install -m644 dist/data/ior/* ${pkgdir}/usr/share/mitsuba/data/ior
-	install -m644 dist/python/mitsuba.so ${pkgdir}/usr/lib/python2.7/lib-dynload
+	install -m644 dist/data/microfacet/* ${pkgdir}/usr/share/mitsuba/data/microfacet
+	install -m644 dist/python/3.2/mitsuba.so ${pkgdir}/usr/lib/python3.2/lib-dynload
 	install -m644 data/linux/mitsuba.desktop ${pkgdir}/usr/share/applications
 	install -m644 src/mtsgui/resources/mitsuba48.png ${pkgdir}/usr/share/pixmaps
 	install -m644 include/mitsuba/*.h ${pkgdir}/usr/include/mitsuba

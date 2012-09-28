@@ -631,7 +631,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 	Transform objectToWorld = props.getTransform("toWorld", Transform());
 	radius *= objectToWorld(Vector(0, 0, 1)).length();
 
-	Log(EInfo, "Loading hair geometry from \"%s\" ..", path.filename().c_str());
+	Log(EInfo, "Loading hair geometry from \"%s\" ..", path.filename().string().c_str());
 	ref<Timer> timer = new Timer();
 
 	ref<FileStream> binaryStream = new FileStream(path, FileStream::EReadOnly);

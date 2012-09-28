@@ -544,7 +544,7 @@ InterpolatedSpectrum::InterpolatedSpectrum(const fs::path &path) {
 				path.string().c_str());
 
 	SLog(EInfo, "\"%s\": loaded a spectral power distribution with " SIZE_T_FMT
-			" entries (between %f and %f nm)", path.filename().c_str(), m_wavelengths.size(),
+			" entries (between %f and %f nm)", path.filename().string().c_str(), m_wavelengths.size(),
 			m_wavelengths[0], m_wavelengths[m_wavelengths.size()-1]);
 }
 	

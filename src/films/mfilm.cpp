@@ -249,7 +249,7 @@ public:
 		ref<Bitmap> bitmap = m_storage->getBitmap()->convert(
 			m_pixelFormat, Bitmap::EFloat);
 
-		Log(EInfo, "Writing image to \"%s\" ..", filename.filename().c_str());
+		Log(EInfo, "Writing image to \"%s\" ..", filename.filename().string().c_str());
 	
 		fs::ofstream os(filename);
 		if (!os.good() || os.fail())

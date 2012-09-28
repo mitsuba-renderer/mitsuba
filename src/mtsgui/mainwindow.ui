@@ -106,7 +106,7 @@
      <x>0</x>
      <y>0</y>
      <width>605</width>
-     <height>26</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -169,6 +169,10 @@
     <widget class="QMenu" name="menuDeveloper">
      <property name="title">
       <string>Developer</string>
+     </property>
+     <property name="icon">
+      <iconset resource="resources.qrc">
+       <normaloff>:/resources/devel.png</normaloff>:/resources/devel.png</iconset>
      </property>
      <addaction name="actionShowKDTree"/>
      <addaction name="actionSceneDescription"/>
@@ -498,7 +502,7 @@
   <action name="actionMagnify">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/resources/zoom.png</normaloff>:/resources/zoom.png</iconset>
+     <normaloff>:/resources/zoomcrop.png</normaloff>:/resources/zoomcrop.png</iconset>
    </property>
    <property name="text">
     <string>Crop and &amp;Magnify</string>
@@ -532,6 +536,10 @@
    </property>
   </action>
   <action name="actionFocusSelected">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/resources/zoom.png</normaloff>:/resources/zoom.png</iconset>
+   </property>
    <property name="text">
     <string>&amp;Focus Selection</string>
    </property>
@@ -540,6 +548,10 @@
    </property>
   </action>
   <action name="actionFocusAll">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/resources/zoom-best-fit.png</normaloff>:/resources/zoom-best-fit.png</iconset>
+   </property>
    <property name="text">
     <string>Focus &amp;All</string>
    </property>
