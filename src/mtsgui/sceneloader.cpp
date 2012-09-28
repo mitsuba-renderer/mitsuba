@@ -47,7 +47,7 @@ void SceneLoader::run() {
 	SceneHandler *handler = new SceneHandler(parser, m_parameters);
 	m_result = new SceneContext();
 	try {
-		QSettings settings("mitsuba-renderer.org", "mtsgui");
+		QSettings settings;
 		m_result->srgb = settings.value("preview_sRGB", true).toBool();
 		m_result->gamma = (Float) settings.value("preview_gamma", 2.2).toDouble();
 		m_result->reinhardKey = (Float) settings.value("preview_reinhardKey", 0.18).toDouble();

@@ -209,6 +209,10 @@ int main(int argc, char *argv[]) {
 	qRegisterMetaType<fs::path>("fs::path");
 
 	MitsubaApplication app(argc, argv);
+	app.setOrganizationName("mitsuba-renderer.org");
+	app.setOrganizationDomain("mitsuba-renderer.org");
+	app.setApplicationName("mtsgui");
+	app.setApplicationVersion(MTS_VERSION);
 	try {
 		QFile stylesheet(":/resources/stylesheet.css");
 
