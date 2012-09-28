@@ -4,6 +4,7 @@
     <file>resources/play.png</file>
     <file>resources/save16.png</file>
     <file>resources/add.png</file>
+    <file>resources/devel.png</file>
     <file>resources/import16.png</file>
     <file>resources/branch-closed.png</file>
     <file>resources/clear.png</file>
@@ -29,7 +30,9 @@
     <file>resources/server.png</file>
     <file>resources/update.png</file>
     <file>resources/zoom.png</file>
+    <file>resources/zoom-best-fit.png</file>
     <file>resources/crop.png</file>
+    <file>resources/zoomcrop.png</file>
     <file>resources/controls.png</file>
     <file>resources/zoom-reset.png</file>
     <file>resources/preferences.png</file>
