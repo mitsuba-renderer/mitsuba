@@ -1578,7 +1578,7 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	const fs::path &meshesDirectory) {
 	CustomErrorHandler errorHandler;
 	daeErrorHandler::setErrorHandler(&errorHandler);
-	SLog(EInfo, "Loading \"%s\" ..", inputFile.filename().c_str());
+	SLog(EInfo, "Loading \"%s\" ..", inputFile.filename().string().c_str());
 #if COLLADA_DOM_SUPPORT141
 	DAE *dae = new DAE(NULL, NULL, "1.4.1");
 	domCOLLADA *document = dae->open141(inputFile.string());
