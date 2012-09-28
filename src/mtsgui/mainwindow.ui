@@ -106,7 +106,7 @@
      <x>0</x>
      <y>0</y>
      <width>605</width>
-     <height>26</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -161,10 +161,6 @@
     <property name="title">
      <string>View</string>
     </property>
-    <property name="icon">
-     <iconset resource="resources.qrc">
-      <normaloff>:/resources/devel.png</normaloff>:/resources/devel.png</iconset>
-    </property>
     <widget class="QMenu" name="menuCamera">
      <property name="title">
       <string>Set Camera</string>
@@ -173,6 +169,10 @@
     <widget class="QMenu" name="menuDeveloper">
      <property name="title">
       <string>Developer</string>
+     </property>
+     <property name="icon">
+      <iconset resource="resources.qrc">
+       <normaloff>:/resources/devel.png</normaloff>:/resources/devel.png</iconset>
      </property>
      <addaction name="actionShowKDTree"/>
      <addaction name="actionSceneDescription"/>
