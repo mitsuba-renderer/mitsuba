@@ -161,11 +161,6 @@ public:
 				return false;
 			}
 			Log(EInfo, "First MLT stage took %i ms", timer->getMilliseconds());
-
-			std::string debugFile = "mlt_stage1.exr";
-			Log(EInfo, "Writing upsampled luminances to \"%s\"", debugFile.c_str());
-			ref<FileStream> fs = new FileStream(debugFile, FileStream::ETruncReadWrite);
-			m_config.importanceMap->write(Bitmap::EOpenEXR, fs);
 		}
 
 		bool nested = m_config.twoStage && m_config.firstStage;
@@ -193,12 +188,17 @@ public:
 
 		ref<ReplayableSampler> rplSampler = new ReplayableSampler();
 		ref<PathSampler> pathSampler = new PathSampler(PathSampler::EBidirectional, scene, 
-			rplSampler, rplSampler, NULL, m_config.maxDepth, 10,
+			rplSampler, rplSampler, rplSampler, m_config.maxDepth, 10,
 			m_config.separateDirect, true);
-
+		
 		std::vector<PathSeed> pathSeeds;
 		ref<MLTProcess> process = new MLTProcess(job, queue, 
 				m_config, directImage, pathSeeds);
+
+		m_config.luminance = pathSampler->generateSeeds(m_config.luminanceSamples, 
+			m_config.workUnits, false, pathSeeds);
+
+		pathSeeds.clear();
 	
 		m_config.luminance = pathSampler->generateSeeds(m_config.luminanceSamples, 
 			m_config.workUnits, true, pathSeeds);

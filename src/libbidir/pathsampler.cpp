@@ -474,6 +474,14 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 			PathEdge connectionEdge;
 			m_connectionSubpath.collapseTo(connectionEdge);
 
+			/* Account for the terms of the measurement contribution 
+			   function that are coupled to the connection edge */
+			if (!sampleDirect)
+				value *= connectionEdge.evalCached(vs, vt, PathEdge::EGeneralizedGeometricTerm);
+			else
+				value *= connectionEdge.evalCached(vs, vt, PathEdge::ETransmittance |
+						(s == 1 ? PathEdge::ECosineRad : PathEdge::ECosineImp));
+
 			if (sampleDirect) {
 				/* A direct sampling strategy was used, which generated
 				   two new vertices at one of the path ends. Temporarily
@@ -487,14 +495,6 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 			/* Compute the multiple importance sampling weight */
 			value *= Path::miWeight(m_scene, m_emitterSubpath, &connectionEdge,
 				m_sensorSubpath, s, t, m_sampleDirect, m_lightImage);
-
-			/* Account for the terms of the measurement contribution 
-			   function that are coupled to the connection edge */
-			if (!sampleDirect)
-				value *= connectionEdge.evalCached(vs, vt, PathEdge::EGeneralizedGeometricTerm);
-			else
-				value *= connectionEdge.evalCached(vs, vt, PathEdge::ETransmittance |
-						(s == 1 ? PathEdge::ECosineRad : PathEdge::ECosineImp));
 
 			if (!value.isZero()) {
 				int k = (int) m_connectionSubpath.vertexCount();
