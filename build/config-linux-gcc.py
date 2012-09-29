@@ -31,7 +31,9 @@ pyver = os.popen("python --version 2>&1 | grep -oE '([[:digit:]].[[:digit:]])'")
 env = locals()
 
 env['PYTHON'+pyver+'INCLUDE']  = []
-env['PYTHON'+pyver+'LIB']      = ['boost_python']
+env['PYTHON'+pyver+'LIB']      = ['boost_python3' if pyver[0] == '3' else 'boost_python']
+
+print(env['PYTHON'+pyver+'LIB'])
 
 for entry in os.popen("python-config --cflags --libs").read().split():
 	if entry[:2] == '-I':
