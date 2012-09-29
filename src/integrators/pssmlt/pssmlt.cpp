@@ -67,7 +67,7 @@ MTS_NAMESPACE_BEGIN
  *	      number of samples. \default{\code{100000} samples}
  *     }
  *     \parameter{twoStage}{\Boolean}{Use two-stage MLT?
- *       See below for details. \default{false}}
+ *       See below for details. \default{{\footnotesize\code{false}}}}
  *	   \parameter{pLarge}{\Float}{
  *	     Rate at which the implementation tries to replace the current path
  *	     with a completely new one. Usually, there is little need to change
@@ -77,7 +77,15 @@ MTS_NAMESPACE_BEGIN
  * Primary Sample Space Metropolis Light Transport (PSSMLT) is a rendering
  * technique developed by Kelemen et al. \cite{Kelemen2002Simple} which is
  * based on Markov Chain Monte Carlo (MCMC) integration.
- *
+ * \renderings{
+ *    \vspace{-2mm}
+ *    \includegraphics[width=11cm]{images/integrator_pssmlt_sketch.pdf}\hfill\,
+ *    \vspace{-3mm}
+ *    \caption{PSSMLT piggybacks on a rendering method that can turn points
+ *    in the primary sample space (i.e. ``random numbers'') into paths. By
+ *    performing small jumps in primary sample space, it can explore the neighborhood
+ *    of a path\vspace{-5mm}}
+ * }
  * In contrast to simple methods like path tracing that render
  * images by performing a na\"ive and memoryless random search for light paths, 
  * PSSMLT actively searches for \emph{relevant} light paths (as is the case 
@@ -103,8 +111,8 @@ MTS_NAMESPACE_BEGIN
  * unidirectional volumetric path tracer or a fully-fledged bidirectional path 
  * tracer with  multiple importance sampling, and this choice is controlled by the 
  * \code{bidirectional} flag. The unidirectional path tracer is generally 
- * much faster, but it produces lower-quality samples. 
- *
+ * much faster, but it produces lower-quality samples. Depending on the input, either may be preferable.
+ * \vspace{-7mm}
  * \paragraph{Caveats:}
  * There are a few general caveats about MLT-type algorithms that are good
  * to know. The first one is that they only render ``relative'' output images,
@@ -138,10 +146,6 @@ MTS_NAMESPACE_BEGIN
  * it is preferable to disable this separation so that PSSMLT is responsible
  * for everything. This can be accomplished by setting
  * \code{directSamples=-1}.
- *
- * \remarks{
- *    \item This integrator does not work with dipole-style subsurface scattering models.
- * }
  */
 
 class PSSMLT : public Integrator {
