@@ -114,10 +114,10 @@ MTS_NAMESPACE_BEGIN
  * default, it uses 100K samples (controlled by the \code{luminanceSamples} 
  * parameter), which should be adequate for most applications.
  *
- * The second caveat is that the amount of computational expenditure
+ * The second caveat is that the amount of computational expense
  * associated with a pixel in the output image is roughly proportional to
  * its intensity. This means that when a bright object (e.g. the sun) is
- * visible in a rendering time, most resources are committed to rendering the
+ * visible in a rendering, most resources are committed to rendering the
  * sun disk at the cost of increased variance everywhere else. Since this is 
  * usually not desired, the \code{twoStage} parameter can be used to
  * enable \emph{Two-stage MLT} in this case. 
@@ -128,6 +128,17 @@ MTS_NAMESPACE_BEGIN
  * using the previously collected information to ensure that
  * the amount of time spent rendering each pixel is uniform.
  *
+ * The third caveat is that, while PSMLT can work with scenes that are extremely
+ * difficult for other methods to handle, it is not particularly efficient
+ * when rendering simple things such as direct illumination (which is more easily
+ * handled by a brute-force type algorithm). By default, the
+ * implementation in Mitsuba therefore delegates this to such a method
+ * (with the desired quality being controlled by the \code{directSamples} parameter).
+ * In very rare cases when direct illumination paths are very difficult to find,
+ * it is preferable to disable this separation so that PSSMLT is responsible
+ * for everything. This can be accomplished by setting
+ * \code{directSamples=-1}.
+ *
  * \remarks{
  *    \item This integrator does not work with dipole-style subsurface scattering models.
  * }
@@ -136,6 +147,9 @@ MTS_NAMESPACE_BEGIN
 class PSSMLT : public Integrator {
 public:
 	PSSMLT(const Properties &props) : Integrator(props) {
+		/* Note: a bunch of the parameters below are not publicly exposed,
+		   because there is really little sense for most users to ever change them. */
+
 		/* Longest visualized path length (<tt>-1</tt>=infinite). 
 		   A value of <tt>1</tt> will visualize only directly visible light 
 		   sources. <tt>2</tt> will lead to single-bounce (direct-only) 

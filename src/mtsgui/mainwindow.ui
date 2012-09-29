@@ -106,7 +106,7 @@
      <x>0</x>
      <y>0</y>
      <width>605</width>
-     <height>25</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -164,6 +164,10 @@
     <widget class="QMenu" name="menuCamera">
      <property name="title">
       <string>Set Camera</string>
+     </property>
+     <property name="icon">
+      <iconset resource="resources.qrc">
+       <normaloff>:/resources/camera.png</normaloff>:/resources/camera.png</iconset>
      </property>
     </widget>
     <widget class="QMenu" name="menuDeveloper">
