@@ -17,7 +17,6 @@
 */
 
 #include <mitsuba/bidir/util.h>
-#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/plugin.h>
 #include "pssmlt_proc.h"
 #include "pssmlt_sampler.h"
@@ -305,11 +304,6 @@ public:
 				return false;
 			}
 			Log(EInfo, "First MLT stage took %i ms", timer->getMilliseconds());
-
-			std::string debugFile = "mlt_stage1.exr";
-			Log(EInfo, "Writing upsampled luminances to \"%s\"", debugFile.c_str());
-			ref<FileStream> fs = new FileStream(debugFile, FileStream::ETruncReadWrite);
-			m_config.importanceMap->write(Bitmap::EOpenEXR, fs);
 		}
 
 		bool nested = m_config.twoStage && m_config.firstStage;

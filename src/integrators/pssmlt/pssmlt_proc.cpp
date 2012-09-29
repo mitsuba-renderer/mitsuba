@@ -104,7 +104,6 @@ public:
 		m_rplSampler->setSampleIndex(seed.sampleIndex);
 
 		m_pathSampler->sampleSplats(Point2i(-1), *current);
-		current->normalize(m_config.importanceMap);
 		result->clear();
 
 		ref<Random> random = m_origSampler->getRandom();
@@ -132,8 +131,10 @@ public:
 
 		/* MLT main loop */
 		Float cumulativeWeight = 0;
+		current->normalize(m_config.importanceMap);
 		for (uint64_t mutationCtr=0; mutationCtr<m_config.nMutations && !stop; ++mutationCtr) {
-			if (wu->getTimeout() > 0 && (mutationCtr % 8192) == 0 && (int) timer->getMilliseconds() > wu->getTimeout())
+			if (wu->getTimeout() > 0 && (mutationCtr % 8192) == 0 
+					&& (int) timer->getMilliseconds() > wu->getTimeout())
 				break;
 
 			bool largeStep = random->nextFloat() < m_config.pLarge;
@@ -156,8 +157,8 @@ public:
 			Float currentWeight, proposedWeight;
 
 			if (a > 0) {
-				if (m_config.kelemenStyleWeights) {
-					/* Kelemen-style MLT weights */
+				if (m_config.kelemenStyleWeights && !m_config.importanceMap) {
+					/* Kelemen-style MLT weights (these don't work for 2-stage MLT) */
 					currentWeight = (1 - a) * current->luminance
 						/ (current->luminance/m_config.luminance + m_config.pLarge);
 					proposedWeight = (a + (largeStep ? 1 : 0)) * proposed->luminance
@@ -282,8 +283,13 @@ void PSSMLTProcess::develop() {
 
 	/* Compute the luminance correction factor */
 	Float avgLuminance = 0;
-	for (size_t i=0; i<pixelCount; ++i)
-		avgLuminance += accum[i].getLuminance();
+	if (importanceMap) {
+		for (size_t i=0; i<pixelCount; ++i)
+			avgLuminance += accum[i].getLuminance() * importanceMap[i];
+	} else {
+		for (size_t i=0; i<pixelCount; ++i)
+			avgLuminance += accum[i].getLuminance();
+	}
 	avgLuminance /= (Float) pixelCount;
 	Float luminanceFactor = m_config.luminance / avgLuminance;
 	

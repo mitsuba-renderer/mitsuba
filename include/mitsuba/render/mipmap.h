@@ -755,10 +755,13 @@ protected:
 
 			for (int ut = u0; ut <= u1; ++ut) {
 				if (q < (Float) MTS_MIPMAP_LUT_SIZE) {
-					const Float weight = m_weightLut[(int) q];
-					result += evalTexel(level, ut, vt) * weight;
-					denominator += weight;
-					++nSamples;
+					uint32_t qi = (uint32_t) q;
+					if (qi < MTS_MIPMAP_LUT_SIZE) {
+						const Float weight = m_weightLut[(int) q];
+						result += evalTexel(level, ut, vt) * weight;
+						denominator += weight;
+						++nSamples;
+					}
 				}
 
 				q += dq;

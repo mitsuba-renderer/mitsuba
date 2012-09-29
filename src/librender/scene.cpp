@@ -673,8 +673,13 @@ bool Scene::rayIntersectAll(const Ray &ray) const {
 	if (rayIntersect(ray))
 		return true;
 
+	Float mint = ray.mint;
+	if (mint == Epsilon)
+		mint *= std::max(std::max(std::max(std::abs(ray.o.x), 
+			std::abs(ray.o.y)), std::abs(ray.o.z)), Epsilon);
+
 	for (size_t i=0; i<m_specialShapes.size(); ++i) {
-		if (m_specialShapes[i]->rayIntersect(ray, ray.mint, ray.maxt))
+		if (m_specialShapes[i]->rayIntersect(ray, mint, ray.maxt))
 			return true;
 	}
 
@@ -690,10 +695,16 @@ bool Scene::rayIntersectAll(const Ray &ray, Float &t,
 	uint8_t buffer[MTS_KD_INTERSECTION_TEMP];
 	Float tempT, maxt = result ? t : ray.maxt;
 
+	Float mint = ray.mint;
+	if (mint == Epsilon)
+		mint *= std::max(std::max(std::max(std::abs(ray.o.x), 
+			std::abs(ray.o.y)), std::abs(ray.o.z)), Epsilon);
+
+
 	for (size_t i=0; i<m_specialShapes.size(); ++i) {
 		const Shape *shape = m_specialShapes[i].get();
 
-		if (shape->rayIntersect(ray, ray.mint, maxt, tempT, buffer)) {
+		if (shape->rayIntersect(ray, mint, maxt, tempT, buffer)) {
 			/// Uh oh... -- much unnecessary work is done here
 			Intersection its;
 			its.t = tempT;
@@ -716,12 +727,16 @@ bool Scene::rayIntersectAll(const Ray &ray, Intersection &its) const {
 
 	uint8_t buffer[MTS_KD_INTERSECTION_TEMP];
 	Float maxt = result ? its.t : ray.maxt;
+	Float mint = ray.mint;
+	if (mint == Epsilon)
+		mint *= std::max(std::max(std::max(std::abs(ray.o.x), 
+			std::abs(ray.o.y)), std::abs(ray.o.z)), Epsilon);
 	Float tempT;
 
 	for (size_t i=0; i<m_specialShapes.size(); ++i) {
 		const Shape *shape = m_specialShapes[i].get();
 
-		if (shape->rayIntersect(ray, ray.mint, maxt, tempT, buffer)) {
+		if (shape->rayIntersect(ray, mint, maxt, tempT, buffer)) {
 			its.time = ray.time;
 			its.t = tempT;
 			shape->fillIntersectionRecord(ray, buffer, its);
