@@ -59,7 +59,15 @@ MTS_NAMESPACE_BEGIN
  *     	Modeled after after a scene by Eric Veach.
  *     }
  * }
- *
+ * \renderings{
+ *    \includegraphics[width=12cm]{images/integrator_bdpt_sketch.pdf}\hfill\,
+ *    \caption{The four different ways in which BDPT can create a direct illumination
+ *    path (matching the first row on the next page): \textbf{(a)} Standard path
+ *    tracing without direct illumination sampling, \textbf{(b)} path tracing with
+ *    direct illumination sampling, \textbf{(c)} Particle tracing with recording of
+ *    scattering events observed by the sensor, \textbf{(d)} Particle tracing with
+ *    recording of particles that hit the sensor.}\vspace{-3mm}
+ * }
  * \renderings{
  *     \unframedbigrendering{The individual sampling strategies that comprise BDPT, but 
  *     \emph{without} multiple importance sampling. $s$ denotes the number of steps
