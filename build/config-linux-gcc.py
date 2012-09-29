@@ -33,8 +33,6 @@ env = locals()
 env['PYTHON'+pyver+'INCLUDE']  = []
 env['PYTHON'+pyver+'LIB']      = ['boost_python3' if pyver[0] == '3' else 'boost_python']
 
-print(env['PYTHON'+pyver+'LIB'])
-
 for entry in os.popen("python-config --cflags --libs").read().split():
 	if entry[:2] == '-I':
 		env['PYTHON'+pyver+'INCLUDE'] += [entry[2:]]
