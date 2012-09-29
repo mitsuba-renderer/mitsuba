@@ -67,24 +67,14 @@ public:
 		   received by the scene's sensor */
 		m_config.luminanceSamples = props.getInteger("luminanceSamples", 100000);
 
-		/* Should direct illumination be handled separately? (i.e. not
-		   using MLT) This is usually the right way to go, since direct
-		   illumination is easily handled using more optimized rendering
-		   techniques that can make use of low-discrepancy point sets.
-		   This in turn lets MLT focus on the more difficult parts of the
-		   light transport. On the other hand, some scenes use very
-		   hard to find paths even for direct illumination, in which case
-		   it may make more sense to set this property to 'false' */
-		m_config.separateDirect = props.getBoolean("separateDirect",
-				true);
-
-		/* When 'separateDirect' is set to 'true', this parameter can
-		   be used to specify the samples per pixel used to render the
-		   direct component. Should be a power of two (otherwise, it will
+		/* This parameter can be used to specify the samples per pixel used to 
+		   render the direct component. Should be a power of two (otherwise, it will
 		   be rounded to the next one). When set to zero or less, the
 		   direct illumination component will be hidden, which is useful
-		   for analyzing the component rendered by MLT. */
+		   for analyzing the component rendered by MLT. When set to -1, 
+		   MLT will handle direct illumination as well */
 		m_config.directSamples = props.getInteger("directSamples", 16);
+		m_config.separateDirect = m_config.directSamples >= 0;
 
 		/* Specifies the number of parallel work units required for
 		   multithreaded and network rendering. When set to <tt>-1</tt>, the 

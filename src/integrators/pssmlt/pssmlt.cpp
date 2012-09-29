@@ -201,12 +201,12 @@ public:
 		   MLT variant. The default is 0.3. */
 		m_config.pLarge = props.getFloat("pLarge", 0.3f);
 
-		/* When 'separateDirect' is set to 'true', this parameter can
-		   be used to specify the samples per pixel used to render the
-		   direct component. Should be a power of two (otherwise, it will
+		/* This parameter can be used to specify the samples per pixel used to 
+		   render the direct component. Should be a power of two (otherwise, it will
 		   be rounded to the next one). When set to zero or less, the
 		   direct illumination component will be hidden, which is useful
-		   for analyzing the component rendered by MLT. */
+		   for analyzing the component rendered by MLT. When set to -1, 
+		   PSSMLT will handle direct illumination as well */
 		m_config.directSamples = props.getInteger("directSamples", 16);
 		m_config.separateDirect = m_config.directSamples >= 0;
 
@@ -314,9 +314,12 @@ public:
 			nested ? "nested " : "", cropSize.x, cropSize.y,
 			nCores, nCores == 1 ? "core" : "cores", sampleCount);
 
+		size_t desiredMutationsPerWorkUnit = 
+			m_config.technique == PathSampler::EBidirectional ? 100000 : 200000;
+
 		if (m_config.workUnits <= 0) 
 			m_config.workUnits = (size_t) std::ceil((cropSize.x * cropSize.y
-				* sampleCount) / 200000.0f);
+				* sampleCount) / (Float) desiredMutationsPerWorkUnit);
 
 		m_config.nMutations = (cropSize.x * cropSize.y *
 			sampleCount) / m_config.workUnits;
