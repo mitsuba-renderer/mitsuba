@@ -69,6 +69,15 @@ public:
 			RenderQueue *queue, int sizeFactor, ref<RenderJob> &nestedJob);
 };
 
+/// Restores the measure of a path vertex after going out of scope
+struct RestoreMeasureHelper {
+	RestoreMeasureHelper(PathVertex *vertex) 
+		: vertex(vertex), measure(vertex->measure) { }
+	~RestoreMeasureHelper() { vertex->measure = measure; }
+	PathVertex *vertex;
+	uint8_t measure;
+};
+
 MTS_NAMESPACE_END
 
 #endif /* __MITSUBA_BIDIR_UTIL_H_ */

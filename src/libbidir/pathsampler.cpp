@@ -18,6 +18,7 @@
 
 #include <mitsuba/bidir/pathsampler.h>
 #include <mitsuba/bidir/rsampler.h>
+#include <mitsuba/bidir/util.h>
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/plugin.h>
 #include <boost/bind.hpp>
@@ -129,6 +130,8 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 							*vsEdge = m_emitterSubpath.edgeOrNull(s-1),
 							*vtEdge = m_sensorSubpath.edgeOrNull(t-1);
 
+						RestoreMeasureHelper rmh0(vs), rmh1(vt);
+
 						/* Will be set to true if direct sampling was used */
 						bool sampleDirect = false;
 
@@ -178,7 +181,7 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 									continue;
 								vs = &tempSample; vsPred = &tempEndpoint; vsEdge = &tempEdge;
 								value *= vt->eval(m_scene, vtPred, vs, ERadiance);
-
+								vt->measure = EArea;
 							} else {
 								if (vs->isDegenerate())
 									continue;
@@ -189,6 +192,7 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 									continue;
 								vt = &tempSample; vtPred = &tempEndpoint; vtEdge = &tempEdge;
 								value *= vs->eval(m_scene, vsPred, vt, EImportance);
+								vs->measure = EArea;
 							}
 
 							sampleDirect = true;
@@ -200,8 +204,11 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 							value = importanceWeights[s] * radianceWeights[t] *
 								vs->eval(m_scene, vsPred, vt, EImportance) *
 								vt->eval(m_scene, vtPred, vs, ERadiance);
-						}
 
+							/* Temporarily force vertex measure to EArea. Needed to
+							   handle BSDFs with diffuse + specular components */
+							vs->measure = vt->measure = EArea;
+						}
 
 						/* Attempt to connect the two endpoints, which could result in
 						   the creation of additional vertices (index-matched boundaries etc.) */
@@ -366,6 +373,8 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 			PathEdge   
 				*vsEdge = m_emitterSubpath.edgeOrNull(s-1),
 				*vtEdge = m_sensorSubpath.edgeOrNull(t-1);
+			
+			RestoreMeasureHelper rmh0(vs), rmh1(vt);
 
 			/* Will be set to true if direct sampling was used */
 			bool sampleDirect = false;
@@ -420,6 +429,7 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 					vs = &tempSample; vsPred = &tempEndpoint; vsEdge = &tempEdge;
 					value *= vt->eval(m_scene, vtPred, vs, ERadiance);
 					vsMeasure = vs->getAbstractEmitter()->needsDirectionSample() ? EArea : EDiscrete;
+					vt->measure = EArea;
 				} else {
 					if (vs->isDegenerate())
 						continue;
@@ -431,6 +441,7 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 					vt = &tempSample; vtPred = &tempEndpoint; vtEdge = &tempEdge;
 					value *= vs->eval(m_scene, vsPred, vt, EImportance);
 					vtMeasure = vt->getAbstractEmitter()->needsDirectionSample() ? EArea : EDiscrete;
+					vs->measure = EArea;
 				}
 
 				sampleDirect = true;
@@ -442,6 +453,10 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 				value = importanceWeights[s] * radianceWeights[t] *
 					vs->eval(m_scene, vsPred, vt, EImportance) *
 					vt->eval(m_scene, vtPred, vs, ERadiance);
+
+				/* Temporarily force vertex measure to EArea. Needed to
+				   handle BSDFs with diffuse + specular components */
+				vs->measure = vt->measure = EArea;
 			}
 
 			/* Attempt to connect the two endpoints, which could result in
