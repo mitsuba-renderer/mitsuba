@@ -489,45 +489,6 @@
 		   more uniform over time image -- specifically, since MLT tends to get
 		   stuck in very bright regions at the cost of the remainder of the image.
 		</param>
-		<param name="firstStageSizeReduction" readableName="First-stage size reduction" type="integer" default="16" importance="1">
-		   When running two-stage MLT, this parameter influences the size
-		   of the downsampled image created in the first pass (i.e. setting this
-		   to 16 means that the horizontal/vertical resolution will be 16 times
-		   lower). When the two-stage process introduces noisy halos around
-		   very bright image regions, it might might be good to reduce this 
-		   parameter to 4 or even 1. Generally though, it should be safe to leave
-		   it unchanged.
-		</param>
-		<param name="stratifyLargeMutations" readableName="Stratify mutations" type="boolean" default="true">
-			Should the implementation try to achieve a better spread of the
-			image plane pixel positions associated with paths? This is done by passing 
-			stratified positions to large mutations. The default is
-			<tt>true</tt>.
-		</param>
-		<param name="sampleDirect" readableName="Use direct illumination sampling" type="boolean" default="true">
-		   Should an optimized direct illumination sampling strategy be used
-		   for s=1 paths? (as opposed to plain emission sampling). Usually
-		   a good idea. Note that this setting only applies when the 
-		   bidirectional path tracer is used internally. The optimization
-		   affects all paths, not just the ones contributing direct illumination,
-		   hence it is completely independent of the <tt>separateDirect</tt>
-		   parameter. 
-		</param>
-		<param name="workUnits" readableName="Parallel work units" type="integer" default="-1">
-		   Specifies the number of parallel work units required for
-		   multithreaded and network rendering. When set to <tt>-1</tt>, the 
-		   amount will default to four times the number of cores. Note that
-		   every additional work unit entails a significant amount of 
-		   communication overhead (a full-sized floating put image must be 
-		   transmitted), hence it is important to set this value as low as 
-		   possible, while ensuring that there are enough units to keep all 
-		   workers busy.
-		</param>
-		<param name="kelemenWeights" readableName="Kelemen-style weights" type="boolean" default="true">
-		   Should the multiple importance sampling-based weight computation by 
-		   Kelemen et al. be used? Otherwise, the implementation falls back
-		   to the 'use of expectations' technique from Veach-style MLT.
-		</param>
 		<param name="luminanceSamples" readableName="Luminance samples" type="integer" default="100000" importance="1">
 			Number of samples used to estimate the total luminance 
 			received by the camera's sensor.
@@ -539,9 +500,6 @@
 		<param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="5" importance="1">
 			Specifies the minimum path depth, after which the implementation will start to use the 
 			"russian roulette" path termination criterion (set to <tt>-1</tt> to disable). 
-		</param>
-		<param name="timeout" readableName="Timeout" type="integer" default="0" importance="1">
-			If set to a nonzero value, the rendering process will automatically be stopped after this many seconds.
 		</param>
 	</plugin>
 

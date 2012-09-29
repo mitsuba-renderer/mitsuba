@@ -209,7 +209,7 @@ public:
 		   direct illumination component will be hidden, which is useful
 		   for analyzing the component rendered by MLT. */
 		m_config.directSamples = props.getInteger("directSamples", 16);
-		m_config.separateDirect = m_config.directSamples < 0;
+		m_config.separateDirect = m_config.directSamples >= 0;
 
 		/* Should the multiple importance sampling-based weight computation by 
 		   Kelemen et al. be used? Otherwise, the implementation falls back
