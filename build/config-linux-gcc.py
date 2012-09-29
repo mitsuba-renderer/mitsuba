@@ -27,11 +27,11 @@ COLLADALIB     = ['collada14dom']
 # versions at the same time by explicitly specifying e.g. PYTHON27INCLUDE, 
 # PYTHON27LIB, PYTHON27LIBDIR and PYTHON32INCLUDE, PYTHON32LIB, PYTHON32LIBDIR
 
-pyver = os.popen("python --version 2>&1 | grep -oE '([[:digit:]].[[:digit:]])'").read().strip()
+pyver = os.popen("python --version 2>&1 | grep -oE '([[:digit:]].[[:digit:]])'").read().strip().replace('.', '')
 env = locals()
 
 env['PYTHON'+pyver+'INCLUDE']  = []
-env['PYTHON'+pyver+'LIB']      = ['boost_python']
+env['PYTHON'+pyver+'LIB']      = ['boost_python3' if pyver[0] == '3' else 'boost_python']
 
 for entry in os.popen("python-config --cflags --libs").read().split():
 	if entry[:2] == '-I':
