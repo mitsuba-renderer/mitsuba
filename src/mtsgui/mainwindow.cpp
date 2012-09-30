@@ -775,8 +775,8 @@ void MainWindow::updateUI() {
 
 	if (isRendering) {
 		if (!m_progress->isVisible()) {
-			QGridLayout *centralLayout = static_cast<QGridLayout *>(centralWidget()->layout());
-			centralLayout->addWidget(m_progressWidget, 3, 0, 1, 3);
+			static_cast<QGridLayout *>(centralWidget()->layout())->
+				addWidget(m_progressWidget, 3, 0, 1, 3);
 			m_progressWidget->show();
 		}
 		m_progress->setValue(context->progress);
@@ -831,8 +831,10 @@ void MainWindow::on_tabBar_tabMoved(int from, int to) {
 }
 
 void MainWindow::on_tabBar_currentChanged(int index) {
-	if (m_lastTab != NULL) 
+	if (m_lastTab != NULL) { 
 		m_lastTab->windowSize = size();
+		m_lastTab->wasRendering = m_lastTab->renderJob != NULL;
+	}
 
 	ui->glView->ignoreResizeEvents(true);
 	if (ui->tabBar->currentIndex() != -1)
@@ -862,8 +864,12 @@ void MainWindow::on_tabBar_currentChanged(int index) {
 	ui->menuCamera->clear();
 
 	if (index != -1) {
-		const QSize &windowSize = m_context[index]->windowSize;
+		SceneContext *context = m_context[index];
+		QSize windowSize = context->windowSize;
+
 		if (windowSize.isValid()) {
+			if (context->wasRendering && !context->renderJob)
+				windowSize -= context->sizeIncrease;
 #if defined(__LINUX__)
 			int error = (sizeHint()-windowSize).height();
 			if (error > 0 && error <= 5)
@@ -877,9 +883,9 @@ void MainWindow::on_tabBar_currentChanged(int index) {
 			adjustSize();
 		}
 
-		m_lastTab = m_context[index];
+		m_lastTab = context;
 	
-		const Scene *scene = m_context[index]->scene;
+		const Scene *scene = context->scene;
 		if (scene) {
 			const ref_vector<Sensor> &sensors = scene->getSensors();
 			for (size_t i = 0; i < sensors.size(); ++i) {
@@ -1890,6 +1896,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 	movementScale = ctx->movementScale;
 	up = ctx->up;
 	renderJob = NULL;
+	wasRendering = false;
 	cancelled = false;
 	progress = 0.0f;
 	framebuffer = ctx->framebuffer->clone();

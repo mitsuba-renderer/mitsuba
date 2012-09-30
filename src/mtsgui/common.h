@@ -179,6 +179,7 @@ struct SceneContext {
 	/* Rendering/Preview-related */
 	RenderJob *renderJob;
 	bool cancelled;
+	bool wasRendering;
 	float progress;
 	QString eta, progressName;
 	ref<Bitmap> framebuffer;
@@ -206,7 +207,8 @@ struct SceneContext {
 	PreviewQueueEntry previewBuffer;
 
 	SceneContext() : scene(NULL), sceneResID(-1), 
-		renderJob(NULL), selectionMode(ENothing),
+		renderJob(NULL), wasRendering(false),
+		selectionMode(ENothing),
 		selectedShape(NULL) { }
 
 	/// Detect the path length
