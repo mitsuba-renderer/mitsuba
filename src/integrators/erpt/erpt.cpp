@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -24,41 +24,26 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
+/*!\plugin{erpt}{Energy redistribution path tracing}
  * \order{11}
+ * \cite{Cline2005Energy}
  */
 class EnergyRedistributionPathTracing : public Integrator {
 public:
 	EnergyRedistributionPathTracing(const Properties &props) : Integrator(props) {
 		m_config.maxDepth = props.getInteger("maxDepth", -1);
-		m_config.rrDepth = props.getInteger("rrDepth", 5);
 
 		/* Specifies the number of Markov Chains that, on average, are
 		   started per pixel */
 		m_config.numChains = props.getFloat("numChains", 1.0f);
+		m_config.maxChains = props.getInteger("maxChains", 0);
 
 		/* Specifies the number of mutations to be performed in each
 		   Markov Chain */
 		m_config.chainLength = props.getInteger("chainLength", 100);
 
-		/* Should direct illumination be handled separately? (i.e. not
-		   using MLT) This is usually the right way to go, since direct
-		   illumination is easily handled using more optimized rendering
-		   techniques that can make use of low-discrepancy point sets.
-		   This in turn lets MLT focus on the more difficult parts of the
-		   light transport. On the other hand, some scenes use very
-		   hard to find paths even for direct illumination, in which case
-		   it may make more sense to set this property to 'false' */
-		m_config.separateDirect = props.getBoolean("separateDirect",
-				true);
-
-		/* When 'separateDirect' is set to 'true', this parameter can
-		   be used to specify the samples per pixel used to render the
-		   direct component. Should be a power of two (otherwise, it will
-		   be rounded to the next one). When set to zero or less, the
-		   direct illumination component will be hidden, which is useful
-		   for analyzing the component rendered by MLT. */
 		m_config.directSamples = props.getInteger("directSamples", 16);
+		m_config.separateDirect = m_config.directSamples >= 0;
 
 		/* Number of samples used to estimate the average contribution of a
 		   single sample. Usually, this parameter can be left untouched. */
@@ -68,25 +53,19 @@ public:
 		m_config.bidirectionalMutation = props.getBoolean("bidirectionalMutation", false);
 
 		/* Selectively enable/disable the lens perturbation */
-		m_config.lensPerturbation = props.getBoolean("lensPerturbation", false);
+		m_config.lensPerturbation = props.getBoolean("lensPerturbation", true);
 
 		/* Selectively enable/disable the caustic perturbation */
-		m_config.causticPerturbation = props.getBoolean("causticPerturbation", false);
+		m_config.causticPerturbation = props.getBoolean("causticPerturbation", true);
 
 		/* Selectively enable/disable the multi-chain perturbation */
-		m_config.multiChainPerturbation = props.getBoolean("multiChainPerturbation", false);
+		m_config.multiChainPerturbation = props.getBoolean("multiChainPerturbation", true);
 
 		/* Selectively enable/disable the manifold perturbation */ 
-		m_config.manifoldPerturbation = props.getBoolean("manifoldPerturbation", true);
+		m_config.manifoldPerturbation = props.getBoolean("manifoldPerturbation", false);
 		m_config.probFactor = props.getFloat("probFactor", 50);
-		m_config.enableOffsetManifolds = props.getBoolean("enableOffsetManifolds", true);
-		m_config.enableSpecularMedia = props.getBoolean("enableSpecularMedia", true);
 		m_config.avgAngleChangeSurface = props.getFloat("avgAngleChangeSurface", 0);
 		m_config.avgAngleChangeMedium = props.getFloat("avgAngleChangeMedium", 0);
-		m_config.maxChains = props.getInteger("maxChains", 0);
-
-		if (m_config.rrDepth <= 0)
-			Log(EError, "'rrDepth' must be set to a value greater than zero!");
 
 		if (m_config.maxDepth <= 0 && m_config.maxDepth != -1)
 			Log(EError, "'maxDepth' must be set to -1 (infinite) or a value greater than zero!");
@@ -148,7 +127,7 @@ public:
 		indepSampler->configure();
 
 		ref<PathSampler> pathSampler = new PathSampler(PathSampler::EBidirectional, scene, 
-			indepSampler, indepSampler, indepSampler, m_config.maxDepth, m_config.rrDepth, 
+			indepSampler, indepSampler, indepSampler, m_config.maxDepth, 10,
 			m_config.separateDirect, true, true);
 
 		m_config.luminance = pathSampler->computeAverageLuminance(

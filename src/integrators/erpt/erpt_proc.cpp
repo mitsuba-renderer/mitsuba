@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -104,7 +104,7 @@ public:
 		m_scene->initializeBidirectional();
 
 		m_pathSampler = new PathSampler(PathSampler::EBidirectional, m_scene, 
-			m_sampler, m_sampler, m_sampler, m_config.maxDepth, m_config.rrDepth, 
+			m_sampler, m_sampler, m_sampler, m_config.maxDepth, 10,
 			m_config.separateDirect, true, true);
 
 		m_pool = &m_pathSampler->getMemoryPool();
@@ -131,8 +131,7 @@ public:
 
 		if (m_config.manifoldPerturbation)
 			m_mutators.push_back(new ManifoldPerturbation(m_scene, m_indepSampler, *m_pool,
-				m_config.probFactor, m_config.enableOffsetManifolds,
-				m_config.enableSpecularMedia, 
+				m_config.probFactor, true, true,
 				m_config.avgAngleChangeSurface,
 				m_config.avgAngleChangeMedium));
 

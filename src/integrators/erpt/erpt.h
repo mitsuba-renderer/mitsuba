@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -34,7 +34,7 @@ MTS_NAMESPACE_BEGIN
  * by the ERPT rendering implementation
  */
 struct ERPTConfiguration {
-	int maxDepth, rrDepth;
+	int maxDepth;
 	bool separateDirect;
 	int directSamples;
 	bool bidirectionalMutation;
@@ -45,8 +45,6 @@ struct ERPTConfiguration {
 	Float probFactor;
 	size_t chainLength;
 	Float numChains;
-	bool enableOffsetManifolds;
-	bool enableSpecularMedia;
 	int blockSize;
 	Float luminance;
 	size_t luminanceSamples;
@@ -74,24 +72,18 @@ struct ERPTConfiguration {
 		SLog(EDebug, "   Average number of chains    : %f", numChains);
 		SLog(EDebug, "   Separate direct illum.      : %s",
 			separateDirect ? formatString("%i samples", directSamples).c_str() : "no");
-		SLog(EDebug, "   Russian roulette depth      : %i", rrDepth);
 		SLog(EDebug, "   Active mutators             : %s", oss.str().c_str());
 		SLog(EDebug, "   Block size                  : %i", blockSize);
 		SLog(EDebug, "   Overall sample luminance    : %f (%i samples)",
 			luminance, luminanceSamples);
 		SLog(EDebug, "   Universal perturb. factor   : %f", probFactor);
 		SLog(EDebug, "   Manifold max iterations     : %i", MTS_MANIFOLD_MAX_ITERATIONS);
-		SLog(EDebug, "   Enable offset manifolds     : %s", 
-			enableOffsetManifolds ? "yes" : "no");
-		SLog(EDebug, "   Enable specular media       : %s", 
-			enableSpecularMedia ? "yes" : "no");
 		SLog(EDebug, "   Quantiles                   : %f (surfaces), %f (media)", 
 				MTS_MANIFOLD_QUANTILE_SURFACE, MTS_MANIFOLD_QUANTILE_MEDIUM);
 	}
 
 	inline ERPTConfiguration(Stream *stream) {
 		maxDepth = stream->readInt();
-		rrDepth = stream->readInt();
 		separateDirect = stream->readBool();
 		directSamples = stream->readInt();
 		bidirectionalMutation = stream->readBool();
@@ -102,8 +94,6 @@ struct ERPTConfiguration {
 		probFactor = stream->readFloat();
 		chainLength = stream->readSize();
 		numChains = stream->readFloat();
-		enableOffsetManifolds = stream->readBool();
-		enableSpecularMedia = stream->readBool();
 		blockSize = stream->readInt();
 		luminance = stream->readFloat();
 		luminanceSamples = stream->readSize();
@@ -114,7 +104,6 @@ struct ERPTConfiguration {
 
 	inline void serialize(Stream *stream) const {
 		stream->writeInt(maxDepth);
-		stream->writeInt(rrDepth);
 		stream->writeBool(separateDirect);
 		stream->writeInt(directSamples);
 		stream->writeBool(bidirectionalMutation);
@@ -125,8 +114,6 @@ struct ERPTConfiguration {
 		stream->writeFloat(probFactor);
 		stream->writeSize(chainLength);
 		stream->writeFloat(numChains);
-		stream->writeBool(enableOffsetManifolds);
-		stream->writeBool(enableSpecularMedia);
 		stream->writeInt(blockSize);
 		stream->writeFloat(luminance);
 		stream->writeSize(luminanceSamples);
