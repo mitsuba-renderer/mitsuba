@@ -17,7 +17,6 @@
 */
 
 #include <mitsuba/bidir/util.h>
-#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/plugin.h>
 #include "pssmlt_proc.h"
 #include "pssmlt_sampler.h"
@@ -202,14 +201,14 @@ public:
 		   MLT variant. The default is 0.3. */
 		m_config.pLarge = props.getFloat("pLarge", 0.3f);
 
-		/* When 'separateDirect' is set to 'true', this parameter can
-		   be used to specify the samples per pixel used to render the
-		   direct component. Should be a power of two (otherwise, it will
+		/* This parameter can be used to specify the samples per pixel used to 
+		   render the direct component. Should be a power of two (otherwise, it will
 		   be rounded to the next one). When set to zero or less, the
 		   direct illumination component will be hidden, which is useful
-		   for analyzing the component rendered by MLT. */
+		   for analyzing the component rendered by MLT. When set to -1, 
+		   PSSMLT will handle direct illumination as well */
 		m_config.directSamples = props.getInteger("directSamples", 16);
-		m_config.separateDirect = m_config.directSamples < 0;
+		m_config.separateDirect = m_config.directSamples >= 0;
 
 		/* Should the multiple importance sampling-based weight computation by 
 		   Kelemen et al. be used? Otherwise, the implementation falls back
@@ -226,7 +225,7 @@ public:
 		m_config.directSampling = props.getBoolean(
 				"directSampling", true);
 
-		/* Recommended mutation sizes in the primary sample space */
+		/* Recommended mutation sizes in primary sample space */
 		m_config.mutationSizeLow  = props.getFloat("mutationSizeLow",  1.0f/1024.0f);
 		m_config.mutationSizeHigh = props.getFloat("mutationSizeHigh", 1.0f/64.0f);
 		Assert(m_config.mutationSizeLow > 0 && m_config.mutationSizeHigh > 0 &&
@@ -242,6 +241,8 @@ public:
 		   possible, while ensuring that there are enough units to keep all 
 		   workers busy. */
 		m_config.workUnits = props.getInteger("workUnits", -1);
+
+		/* Stop MLT after X seconds -- useful for equal-time comparisons */
 		m_config.timeout = props.getInteger("timeout", 0);
 	}
 
@@ -305,11 +306,6 @@ public:
 				return false;
 			}
 			Log(EInfo, "First MLT stage took %i ms", timer->getMilliseconds());
-
-			std::string debugFile = "mlt_stage1.exr";
-			Log(EInfo, "Writing upsampled luminances to \"%s\"", debugFile.c_str());
-			ref<FileStream> fs = new FileStream(debugFile, FileStream::ETruncReadWrite);
-			m_config.importanceMap->write(Bitmap::EOpenEXR, fs);
 		}
 
 		bool nested = m_config.twoStage && m_config.firstStage;
@@ -320,9 +316,12 @@ public:
 			nested ? "nested " : "", cropSize.x, cropSize.y,
 			nCores, nCores == 1 ? "core" : "cores", sampleCount);
 
+		size_t desiredMutationsPerWorkUnit = 
+			m_config.technique == PathSampler::EBidirectional ? 100000 : 200000;
+
 		if (m_config.workUnits <= 0) 
 			m_config.workUnits = (size_t) std::ceil((cropSize.x * cropSize.y
-				* sampleCount) / 200000.0f);
+				* sampleCount) / (Float) desiredMutationsPerWorkUnit);
 
 		m_config.nMutations = (cropSize.x * cropSize.y *
 			sampleCount) / m_config.workUnits;

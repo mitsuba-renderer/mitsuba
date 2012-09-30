@@ -240,6 +240,7 @@ bool PathVertex::sampleNext(const Scene *scene, Sampler *sampler,
 					return false;
 
 				ray.time = mRec.time;
+				ray.mint = 0;
 				ray.setOrigin(mRec.p);
 				ray.setDirection(pRec.wo);
 				measure = ESolidAngle;

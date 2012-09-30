@@ -454,16 +454,6 @@
 			corresponds to ∞). A value of 1 will only render directly visible light sources. 
 			2 will lead to single-bounce (direct-only) illumination, and so on.
 		</param>
-		<param name="separateDirect" readableName="Separate direct illumination" type="boolean" default="true">
-		   Should direct illumination be handled separately? (i.e. not
-		   using MLT) This is usually the right way to go, since direct
-		   illumination is easily handled using more optimized rendering
-		   techniques that can make use of low-discrepancy point sets.
-		   This in turn lets MLT focus on the more difficult parts of the
-		   light transport. On the other hand, some scenes use very
-		   hard to find paths even for direct illumination, in which case
-		   it may make more sense to set this property to <tt>false</tt>.
-		</param>
 		<param name="directSamples" readableName="Direct samples" type="integer" default="16">
 		   When <tt>separateDirect</tt> is set to <tt>true</tt>, this parameter can
 		   be used to specify the samples per pixel used to render the
@@ -489,45 +479,6 @@
 		   more uniform over time image -- specifically, since MLT tends to get
 		   stuck in very bright regions at the cost of the remainder of the image.
 		</param>
-		<param name="firstStageSizeReduction" readableName="First-stage size reduction" type="integer" default="16" importance="1">
-		   When running two-stage MLT, this parameter influences the size
-		   of the downsampled image created in the first pass (i.e. setting this
-		   to 16 means that the horizontal/vertical resolution will be 16 times
-		   lower). When the two-stage process introduces noisy halos around
-		   very bright image regions, it might might be good to reduce this 
-		   parameter to 4 or even 1. Generally though, it should be safe to leave
-		   it unchanged.
-		</param>
-		<param name="stratifyLargeMutations" readableName="Stratify mutations" type="boolean" default="true">
-			Should the implementation try to achieve a better spread of the
-			image plane pixel positions associated with paths? This is done by passing 
-			stratified positions to large mutations. The default is
-			<tt>true</tt>.
-		</param>
-		<param name="sampleDirect" readableName="Use direct illumination sampling" type="boolean" default="true">
-		   Should an optimized direct illumination sampling strategy be used
-		   for s=1 paths? (as opposed to plain emission sampling). Usually
-		   a good idea. Note that this setting only applies when the 
-		   bidirectional path tracer is used internally. The optimization
-		   affects all paths, not just the ones contributing direct illumination,
-		   hence it is completely independent of the <tt>separateDirect</tt>
-		   parameter. 
-		</param>
-		<param name="workUnits" readableName="Parallel work units" type="integer" default="-1">
-		   Specifies the number of parallel work units required for
-		   multithreaded and network rendering. When set to <tt>-1</tt>, the 
-		   amount will default to four times the number of cores. Note that
-		   every additional work unit entails a significant amount of 
-		   communication overhead (a full-sized floating put image must be 
-		   transmitted), hence it is important to set this value as low as 
-		   possible, while ensuring that there are enough units to keep all 
-		   workers busy.
-		</param>
-		<param name="kelemenWeights" readableName="Kelemen-style weights" type="boolean" default="true">
-		   Should the multiple importance sampling-based weight computation by 
-		   Kelemen et al. be used? Otherwise, the implementation falls back
-		   to the 'use of expectations' technique from Veach-style MLT.
-		</param>
 		<param name="luminanceSamples" readableName="Luminance samples" type="integer" default="100000" importance="1">
 			Number of samples used to estimate the total luminance 
 			received by the camera's sensor.
@@ -539,9 +490,6 @@
 		<param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="5" importance="1">
 			Specifies the minimum path depth, after which the implementation will start to use the 
 			"russian roulette" path termination criterion (set to <tt>-1</tt> to disable). 
-		</param>
-		<param name="timeout" readableName="Timeout" type="integer" default="0" importance="1">
-			If set to a nonzero value, the rendering process will automatically be stopped after this many seconds.
 		</param>
 	</plugin>
 
@@ -558,16 +506,6 @@
 			Specifies the longest path depth in the generated output image (where <tt>-1</tt>
 			corresponds to ∞). A value of 1 will only render directly visible light sources. 
 			2 will lead to single-bounce (direct-only) illumination, and so on.
-		</param>
-		<param name="separateDirect" readableName="Separate direct illumination" type="boolean" default="true">
-		   Should direct illumination be handled separately? (i.e. not
-		   using MLT) This is usually the right way to go, since direct
-		   illumination is easily handled using more optimized rendering
-		   techniques that can make use of low-discrepancy point sets.
-		   This in turn lets MLT focus on the more difficult parts of the
-		   light transport. On the other hand, some scenes use very
-		   hard to find paths even for direct illumination, in which case
-		   it may make more sense to set this property to <tt>false</tt>.
 		</param>
 		<param name="directSamples" readableName="Direct samples" type="integer" default="16">
 		   When <tt>separateDirect</tt> is set to <tt>true</tt>, this parameter can
@@ -586,25 +524,6 @@
 		   pass. Two-stage MLT is very useful in making the noise characteristics
 		   more uniform over time image -- specifically, since MLT tends to get
 		   stuck in very bright regions at the cost of the remainder of the image.
-		</param>
-		<param name="firstStageSizeReduction" readableName="First-stage size reduction" type="integer" default="16" importance="1">
-		   When running two-stage MLT, this parameter influences the size
-		   of the downsampled image created in the first pass (i.e. setting this
-		   to 16 means that the horizontal/vertical resolution will be 16 times
-		   lower). When the two-stage process introduces noisy halos around
-		   very bright image regions, it might might be good to reduce this 
-		   parameter to 4 or even 1. Generally though, it should be safe to leave
-		   it unchanged.
-		</param>
-		<param name="workUnits" readableName="Parallel work units" type="integer" default="-1">
-		   Specifies the number of parallel work units required for
-		   multithreaded and network rendering. When set to <tt>-1</tt>, the 
-		   amount will default to four times the number of cores. Note that
-		   every additional work unit entails a significant amount of 
-		   communication overhead (a full-sized floating put image must be 
-		   transmitted), hence it is important to set this value as low as 
-		   possible, while ensuring that there are enough units to keep all 
-		   workers busy.
 		</param>
 		<param name="luminanceSamples" readableName="Luminance samples" type="integer" default="100000" importance="1">
 			Number of samples used to estimate the total luminance 
@@ -658,16 +577,6 @@
 		<param name="chainLength" readableName="Mutations per chain" type="integer" default="100">
 			Specifies the number of mutations to be performed in each Markov Chain
 		</param>
-		<param name="separateDirect" readableName="Separate direct illumination" type="boolean" default="true">
-		   Should direct illumination be handled separately? (i.e. not
-		   using ERPT) This is usually the right way to go, since direct
-		   illumination is easily handled using more optimized rendering
-		   techniques that can make use of low-discrepancy point sets.
-		   This in turn lets ERPT focus on the more difficult parts of the
-		   light transport. On the other hand, some scenes use very
-		   hard to find paths even for direct illumination, in which case
-		   it may make more sense to set this property to <tt>false</tt>.
-	   </param>
 		<param name="directSamples" readableName="Direct samples" type="integer" default="16">
 		   When <tt>separateDirect</tt> is set to <tt>true</tt>, this parameter can
 		   be used to specify the samples per pixel used to render the

@@ -79,7 +79,7 @@ public:
 			static_cast<Sampler *>(getResource("rplSampler"))->clone().get());
 
 		m_pathSampler = new PathSampler(PathSampler::EBidirectional, m_scene, 
-			m_rplSampler, m_rplSampler, NULL, m_config.maxDepth, 10,
+			m_rplSampler, m_rplSampler, m_rplSampler, m_config.maxDepth, 10,
 			m_config.separateDirect, true);
 
 		m_pool = &m_pathSampler->getMemoryPool();
