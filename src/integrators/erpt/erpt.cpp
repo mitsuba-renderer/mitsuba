@@ -63,7 +63,16 @@ MTS_NAMESPACE_BEGIN
  *	   \parameter{lambda}{\Float}{
  *	       Jump size of the manifold perturbation \default{\code{50}}}
  * }
- *
+ * \renderings{
+ *  \rendering{A brass chandelier with 24 glass-enclosed bulbs}{integrator_mept_luminaire}
+ *  \rendering{Glossy reflective and refractive ableware, lit by the
+ *  chandelier on the left}{integrator_mept_tableware}
+ *  \vspace{-2mm}
+ *  \caption{An interior scene with complex specular and near-specular light paths,
+ *  illuminated entirely through caustics. Rendered by this plugin 
+ *  using the manifold perturbation. This scene was designed by Olesya
+ *  Isaenko.\vspace{2mm}}
+ * }
  * \renderings{
  * \medrendering{Seed paths generated using bidirectional path tracing.
  *  Note the high variance of paths that involve reflection of sunlight by
@@ -77,14 +86,21 @@ MTS_NAMESPACE_BEGIN
  * Energy Redistribution Path Tracing (ERPT) by Cline et al. \cite{Cline2005Energy}
  * combines Path Tracing with the perturbation strategies of Metropolis Light Transport.
  *
+ *
  * An initial set of \emph{seed paths} is generated using a standard bidirectional 
  * path tracer, and for each one, a MLT-style Markov Chain is subsequently started 
  * and executed for some number of steps.
  * This has the effect of redistributing the energy of the individual samples
  * over a larger area, hence the name of this method.
  *
+ * \begin{wrapfigure}{R}{0.30\textwidth}
+ *  \fbox{\includegraphics[width=.29\textwidth]{images/integrator_mept_egg.jpg}}
+ *  \caption{Another view, now with exterior lighting.}
+ *  \vspace{-2mm}
+ * \end{wrapfigure}
  * This is often a good choice when a (bidirectional) path tracer produces mostly reasonable 
- * results except that it finds certain important types of light paths too rarely. ERPT can 
+ * results except that it finds certain important types of light paths too rarely.
+ * ERPT can 
  * then explore all of the neighborhing paths as well, to prevent the
  * original sample from showing up as a ``bright pixel'' in the output image.
  *
@@ -105,7 +121,8 @@ MTS_NAMESPACE_BEGIN
  * Subsequently, one or more of these candidates are chosen (determined by 
  * \code{numChains} and \code{maxChains} parameter). For each one, a Markov 
  * Chain is created that has an initial configuration matching the seed path.
- * It is then executed for \code{chainLength} iterations.
+ * It is simulated for \code{chainLength} iterations, and each intermediate
+ * state is recorded in the output image.
  */
 class EnergyRedistributionPathTracing : public Integrator {
 public:
