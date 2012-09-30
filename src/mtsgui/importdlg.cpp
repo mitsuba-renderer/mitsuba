@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -128,9 +128,9 @@ void ImportDialog::accept() {
 	dialog->show();
 	progressBar->show();
 
-	fs::path filePath = fs::complete(fs::path(sourceFile.toStdString())).parent_path();
+	fs::path filePath = fs::absolute(fs::path(sourceFile.toStdString())).parent_path();
 	ref<FileResolver> resolver = m_resolver->clone();
-	resolver->addPath(filePath);
+	resolver->prependPath(filePath);
 
 	const Logger *logger = Thread::getThread()->getLogger();
 	size_t initialWarningCount = logger->getWarningCount();
@@ -162,7 +162,7 @@ void ImportDialog::accept() {
 			QMessageBox::warning(this, tr("Scene Import"),
 				tr("Encountered %1 warnings while importing -- please see "
 				"the log for details.").arg(warningCount), QMessageBox::Ok);
-		((MainWindow *) parent())->loadFile(QString(importingThread->getResult().file_string().c_str()));
+		((MainWindow *) parent())->loadFile(QString(importingThread->getResult().string().c_str()));
 	} else {
 		QMessageBox::critical(this, tr("Scene Import"),
 			tr("Conversion failed -- please see the log for details."),
@@ -171,8 +171,11 @@ void ImportDialog::accept() {
 }
 
 void ImportDialog::onLocateResource(const fs::path &path, fs::path *target) {
-	LocateResourceDialog locateResource(this, path.file_string().c_str());
+	LocateResourceDialog locateResource(this, path.string().c_str());
 	locateResource.setWindowModality(Qt::ApplicationModal);
-	if (locateResource.exec())
-		*target = fs::path(locateResource.getFilename().toStdString());
+	if (locateResource.exec()) {
+		fs::path newPath(locateResource.getFilename().toStdString());
+		if (fs::exists(newPath))
+			*target = newPath;
+	}
 }

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__GPUTEXTURE_H)
-#define __GPUTEXTURE_H
+#pragma once
+#if !defined(__MITSUBA_HW_GPUTEXTURE_H_)
+#define __MITSUBA_HW_GPUTEXTURE_H_
 
 #include <mitsuba/core/bitmap.h>
 #include <set>
@@ -67,6 +68,45 @@ public:
 		EColorAndDepthBuffer = 0x03
 	};
 
+	/// Supported per-component data formats
+	enum EComponentFormat {
+		/// 8-bit unsigned integer (\c uint8_t) component encoding
+		EUInt8,
+
+		/// 16-bit unsigned integer (\c uint16_t) component encoding
+		EUInt16,
+
+		/// 32-bit unsigned integer (\c uint32_t) component encoding
+		EUInt32,
+
+		/// 16-bit floating point (\c half) HDR component encoding
+		EFloat16,
+		
+		/// 32-bit floating point (\c float) HDR component encoding
+		EFloat32,
+		
+		/// 64-bit floating point (\c float) HDR component encoding
+		EFloat64
+	};
+
+	/// Supported pixel format types
+	enum EPixelFormat {
+		/// Single-channel depth map
+		EDepth = 0,
+
+		/// Single-channel luminance bitmap
+		ELuminance,
+
+		/// Two-channel luminance + alpha bitmap
+		ELuminanceAlpha,
+
+		/// RGB bitmap
+		ERGB,
+
+		/// RGB bitmap + alpha channel
+		ERGBA
+	};
+
 	/// A texture has one more slots into which bitmaps can be placed
 	enum ETexturePosition {
 		/// Default slot for 1,2,3D textures
@@ -99,33 +139,7 @@ public:
 		/// Modulo 1 operation (default)
 		ERepeat,
 		/// Mirror the coordinates at the edges
-		EMirroredRepeat
-	};
-
-	/// The texture pixel format
-	enum ETextureFormat {
-		/// RGB color values (each 8 bit)
-		ER8G8B8 = 0,
-		/// RGBA color values (each 8 bit)
-		ER8G8B8A8,
-		/// 8-bit luminance
-		EL8,
-		/// 8-bit luminance + alpha
-		EL8A8,
-		/// Depth component
-		EDepth,
-		/// Floating point luminance (16 bit)
-		EFloat16L,
-		/// Floating point RGB (16 bit)
-		EFloat16RGB,
-		/// Floating point RGBA (16 bit)
-		EFloat16RGBA,
-		/// Floating point luminance (32 bit)
-		EFloat32L,
-		/// Floating point RGB (32 bit)
-		EFloat32RGB,
-		/// Floating point RGBA (32 bit)
-		EFloat32RGBA
+		EMirror
 	};
 
 	/** \brief The interpolation filter determines which texture
@@ -183,18 +197,24 @@ public:
 
 	/// Return the texture type
 	inline ETextureType getType() const { return m_type; }
-	
+
+	/// Set the pixel format of this texture
+	inline void setPixelFormat(EPixelFormat fmt) { m_pixelFormat = fmt; }
+
+	/// Return the pixel format of this texture
+	inline EPixelFormat getPixelFormat() const { return m_pixelFormat; }
+
+	/// Set the component format of this texture
+	inline void setComponentFormat(EComponentFormat fmt) { m_componentFormat = fmt; }
+
+	/// Return the component format of this texture
+	inline EComponentFormat getComponentFormat() const { return m_componentFormat; }
+
 	/// Set the framebuffer type (applies only if type==EFrameBuffer)
 	void setFrameBufferType(EFrameBufferType frameBufferType);
 
 	/// Return the framebuffer type (applies only if type==EFrameBuffer)
 	inline EFrameBufferType getFrameBufferType() const { return m_fbType; }
-
-	/// Set the texture format
-	inline void setFormat(ETextureFormat textureFormat) { m_format = textureFormat; }
-
-	/// Return the texture format
-	inline ETextureFormat getFormat() const { return m_format; }
 
 	/// Set the filter type
 	inline void setFilterType(EFilterType filterType) { m_filterType = filterType; }
@@ -203,10 +223,21 @@ public:
 	inline EFilterType getFilterType() const { return m_filterType; }
 
 	/// Set the wrap type
-	inline void setWrapType(EWrapType wrapType) { m_wrapType = wrapType; }
+	inline void setWrapType(EWrapType wrapType) {
+		setWrapTypeU(wrapType); setWrapTypeV(wrapType);
+	}
 
-	/// Return the wrap type
-	inline EWrapType getWrapType() const { return m_wrapType; }
+	/// Set the wrap type along the U axis
+	inline void setWrapTypeU(EWrapType wrapType) { m_wrapTypeU = wrapType; }
+	
+	/// Return the wrap type along the U axis
+	inline EWrapType getWrapTypeU() { return m_wrapTypeU; }
+
+	/// Set the wrap type along the V axis
+	inline void setWrapTypeV(EWrapType wrapType) { m_wrapTypeV = wrapType; }
+
+	/// Return the wrap type along the V axis
+	inline EWrapType getWrapTypeV() { return m_wrapTypeV; }
 
 	/// Return the size in pixels
 	inline Point3i getSize() const { return m_size; }
@@ -251,18 +282,22 @@ public:
 
 	/// Upload the texture
 	virtual void init() = 0;
-	
+
+	/// Dereference the CPU bitmap associated with the texture
+	void release();
+
+	/// Run \ref init, followed by \ref release
+	void initAndRelease();
+
 	/// Refresh (re-upload) the texture
 	virtual void refresh() = 0;
-
+	
 	/**
-	 * This following applies only when textures are
-	 * shared between threads while doing multi-context
-	 * rendering. In this case, disassociate() needs to 
-	 * be called once by each thread that used this
-	 * texture before finally freeing it using cleanup().
+	 * \brief Refresh (re-upload) a subregion of the texture
+	 *
+	 * Note: this is only implemented for 2D textures
 	 */
-	void disassociate();
+	virtual void refresh(const Point2i &offset, const Vector2i &size) = 0;
 
 	/// Free the texture from GPU memory
 	virtual void cleanup() = 0;
@@ -311,6 +346,12 @@ public:
 	/// Return the number of samples (for multisample color render targets)
 	inline int getSampleCount() const { return m_samples; }
 
+	/// Set the border color (applicable if <tt>wrapMode=EClamp/EClampToBorder</tt>)
+	inline void setBorderColor(const Color3 &borderColor) { m_borderColor = borderColor; }
+	
+	/// Return the border color 
+	inline const Color3 &getBorderColor() const { return m_borderColor; }
+
 	/**
 	 * \brief Blit a render buffer into another render buffer
 	 *
@@ -345,7 +386,7 @@ public:
 	virtual void clear() = 0;
 
 	/// Assuming that this is a 2D RGB framebuffer, read a single pixel from the GPU
-	virtual Spectrum getPixel(int x, int y) const = 0;
+	virtual Color3 getPixel(int x, int y) const = 0;
 
 	/// Return a string representation
 	std::string toString() const;
@@ -357,9 +398,10 @@ protected:
 protected:
 	std::string m_name;
 	ETextureType m_type;
-	ETextureFormat m_format;
+	EPixelFormat m_pixelFormat;
+	EComponentFormat m_componentFormat;
 	EFilterType m_filterType;
-	EWrapType m_wrapType;
+	EWrapType m_wrapTypeU, m_wrapTypeV;
 	EFrameBufferType m_fbType;
 	EDepthMode m_depthMode;
     bool m_mipmapped;
@@ -368,8 +410,9 @@ protected:
 	int m_samples;
 	std::vector<Bitmap *> m_bitmaps;
 	Point3i m_size;
+	Color3 m_borderColor;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __GPUTEXTURE_H */
+#endif /* __MITSUBA_HW_GPUTEXTURE_H_ */

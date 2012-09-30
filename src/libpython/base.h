@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,6 +20,11 @@
 #define __PYTHON_BASE_H
 
 #include <mitsuba/mitsuba.h>
+
+#if defined(_MSC_VER)
+#pragma warning(disable : 4244) // 'return' : conversion from 'Py_ssize_t' to 'unsigned int', possible loss of data
+#pragma warning(disable : 4267) // 'return' : conversion from 'size_t' to 'long', possible loss of data
+#endif
 
 #define BP_STRUCT(Name, Init) \
 	bp::class_<Name> Name ##_struct(#Name, Init); \
@@ -54,7 +59,7 @@
 		.def(bp::self / Scalar()) \
 		.def(bp::self /= Scalar()) \
 		.def("serialize", &Name::serialize) \
-		.def("__str__", &Name::toString) \
+		.def("__repr__", &Name::toString) \
 		.def("__len__", &FixedSizeSupport<Name, Scalar, Size>::len) \
 		.def("__getitem__", &FixedSizeSupport<Name, Scalar, Size>::get) \
 		.def("__setitem__", &FixedSizeSupport<Name, Scalar, Size>::set)
@@ -67,17 +72,17 @@
 		.def(bp::self == bp::self) \
 		.def(Scalar() * bp::self) \
 		.def(-bp::self) \
-		.def(bp::self + Name::vector_type()) \
-		.def(bp::self += Name::vector_type()) \
-		.def(bp::self - Name::vector_type()) \
-		.def(bp::self -= Name::vector_type()) \
+		.def(bp::self + Name::VectorType()) \
+		.def(bp::self += Name::VectorType()) \
+		.def(bp::self - Name::VectorType()) \
+		.def(bp::self -= Name::VectorType()) \
 		.def(bp::self - bp::self) \
 		.def(bp::self *= Scalar()) \
 		.def(bp::self * Scalar()) \
 		.def(bp::self / Scalar()) \
 		.def(bp::self /= Scalar()) \
 		.def("serialize", &Name::serialize) \
-		.def("__str__", &Name::toString) \
+		.def("__repr__", &Name::toString) \
 		.def("__len__", &FixedSizeSupport<Name, Scalar, Size>::len) \
 		.def("__getitem__", &FixedSizeSupport<Name, Scalar, Size>::get) \
 		.def("__setitem__", &FixedSizeSupport<Name, Scalar, Size>::set)

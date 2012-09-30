@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -21,14 +21,17 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/zstream.h>
 #include <mitsuba/core/timer.h>
+#include <mitsuba/core/lock.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/medium.h>
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/emitter.h>
+#include <boost/filesystem/fstream.hpp>
 
-#define MTS_FILEFORMAT_HEADER 0x041C
-#define MTS_FILEFORMAT_VERSION_V3 0x03
+#define MTS_FILEFORMAT_HEADER     0x041C
+#define MTS_FILEFORMAT_VERSION_V3 0x0003
+#define MTS_FILEFORMAT_VERSION_V4 0x0004
 
 MTS_NAMESPACE_BEGIN
 
@@ -39,13 +42,14 @@ TriMesh::TriMesh(const std::string &name, size_t triangleCount,
 	  m_vertexCount(vertexCount), m_flipNormals(flipNormals),
 	  m_faceNormals(faceNormals) {
 	m_name = name;
-
 	m_triangles = new Triangle[m_triangleCount];
 	m_positions = new Point[m_vertexCount];
 	m_normals = hasNormals ? new Normal[m_vertexCount] : NULL;
 	m_texcoords = hasTexcoords ? new Point2[m_vertexCount] : NULL;
-	m_colors = hasVertexColors ? new Spectrum[m_vertexCount] : NULL;
+	m_colors = hasVertexColors ? new Color3[m_vertexCount] : NULL;
 	m_tangents = NULL;
+	m_surfaceArea = m_invSurfaceArea = -1;
+	m_mutex = new Mutex();
 }
 
 TriMesh::TriMesh(const Properties &props) 
@@ -66,7 +70,19 @@ TriMesh::TriMesh(const Properties &props)
 	m_flipNormals = props.getBoolean("flipNormals", false);
 	
 	m_triangles = NULL;
+	m_surfaceArea = m_invSurfaceArea = -1;
+	m_mutex = new Mutex();
 }
+
+TriMesh::TriMesh(Stream *stream, int index)
+		: Shape(Properties()), m_triangles(NULL), 
+	m_positions(NULL), m_normals(NULL), m_texcoords(NULL), 
+	m_tangents(NULL), m_colors(NULL) {
+
+	m_mutex = new Mutex();
+	loadCompressed(stream, index);
+}
+
 
 /* Flags used to identify available data during serialization */
 enum ETriMeshFlags {
@@ -111,9 +127,9 @@ TriMesh::TriMesh(Stream *stream, InstanceManager *manager)
 	}
 
 	if (flags & EHasColors) {
-		m_colors = new Spectrum[m_vertexCount];
+		m_colors = new Color3[m_vertexCount];
 		stream->readFloatArray(reinterpret_cast<Float *>(m_colors), 
-			m_vertexCount * sizeof(Spectrum)/sizeof(Float));
+			m_vertexCount * sizeof(Color3)/sizeof(Float));
 	} else {
 		m_colors = NULL;
 	}
@@ -122,6 +138,8 @@ TriMesh::TriMesh(Stream *stream, InstanceManager *manager)
 	stream->readUIntArray(reinterpret_cast<uint32_t *>(m_triangles), 
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
 	m_flipNormals = false;
+	m_surfaceArea = m_invSurfaceArea = -1;
+	m_mutex = new Mutex();
 	configure();
 }
 
@@ -153,24 +171,9 @@ static void readHelper(Stream *stream, bool fileDoublePrecision,
 	}
 }
 
-TriMesh::TriMesh(Stream *_stream, int index)
-		: Shape(Properties()), m_tangents(NULL) {
-	ref<Stream> stream = _stream;
 
-	if (index != 0) {
-		/* Determine the position of the requested substream. This
-		   is stored at the end of the file */
-		stream->setPos(stream->getSize() - sizeof(uint32_t));
-		uint32_t count = stream->readUInt();
-		if (index < 0 || index > (int) count) {
-			Log(EError, "Unable to unserialize mesh, "
-				"shape index is out of range! (requested %i out of 0..%i)",
-				index, count-1);
-		}
-		stream->setPos(stream->getSize() - sizeof(uint32_t) * (1+count-index));
-		// Seek to the correct position
-		stream->setPos(stream->readUInt());
-	}
+void TriMesh::loadCompressed(Stream *_stream, int index) {
+	ref<Stream> stream = _stream;
 
 	if (stream->getByteOrder() != Stream::ELittleEndian) 
 		Log(EError, "Tried to unserialize a shape from a stream, "
@@ -186,21 +189,57 @@ TriMesh::TriMesh(Stream *_stream, int index)
 		Log(EError, "Encountered an invalid file format!");
 
 	short version = stream->readShort();
-	if (version != MTS_FILEFORMAT_VERSION_V3)
+	if (version != MTS_FILEFORMAT_VERSION_V3 &&
+	    version != MTS_FILEFORMAT_VERSION_V4)
 		Log(EError, "Encountered an incompatible file version!");
+
+	if (index != 0) {
+		size_t streamSize = stream->getSize();
+
+		/* Determine the position of the requested substream. This
+		   is stored at the end of the file */
+		stream->seek(streamSize - sizeof(uint32_t));
+		uint32_t count = stream->readUInt();
+		if (index < 0 || index > (int) count) {
+			Log(EError, "Unable to unserialize mesh, "
+				"shape index is out of range! (requested %i out of 0..%i)",
+				index, count-1);
+		}
+
+		// Seek to the correct position
+		if (version == MTS_FILEFORMAT_VERSION_V4) {
+			stream->seek(stream->getSize() - sizeof(uint64_t) * (count-index) - sizeof(uint32_t));
+			stream->seek(stream->readSize());
+		} else {
+			stream->seek(stream->getSize() - sizeof(uint32_t) * (count-index + 1));
+			stream->seek(stream->readUInt());
+		}
+
+		stream->skip(sizeof(short) * 2);
+	}
+
 	stream = new ZStream(stream);
+	stream->setByteOrder(Stream::ELittleEndian);
 
 	uint32_t flags = stream->readUInt();
+	if (version == MTS_FILEFORMAT_VERSION_V4)
+		m_name = stream->readString();
 	m_vertexCount = stream->readSize();
 	m_triangleCount = stream->readSize();
-	
+
 	bool fileDoublePrecision = flags & EDoublePrecision;
 	m_faceNormals = flags & EFaceNormals;
+
+	if (m_positions)
+		delete[] m_positions;
 
 	m_positions = new Point[m_vertexCount];
 	readHelper(stream, fileDoublePrecision,
 			reinterpret_cast<Float *>(m_positions),
 			m_vertexCount, sizeof(Point)/sizeof(Float));
+
+	if (m_normals)
+		delete[] m_normals;
 
 	if (flags & EHasNormals) {
 		m_normals = new Normal[m_vertexCount];
@@ -211,6 +250,9 @@ TriMesh::TriMesh(Stream *_stream, int index)
 		m_normals = NULL;
 	}
 
+	if (m_texcoords)
+		delete[] m_texcoords;
+
 	if (flags & EHasTexcoords) {
 		m_texcoords = new Point2[m_vertexCount];
 		readHelper(stream, fileDoublePrecision,
@@ -220,11 +262,14 @@ TriMesh::TriMesh(Stream *_stream, int index)
 		m_texcoords = NULL;
 	}
 
+	if (m_colors)
+		delete[] m_colors;
+
 	if (flags & EHasColors) {
-		m_colors = new Spectrum[m_vertexCount];
+		m_colors = new Color3[m_vertexCount];
 		readHelper(stream, fileDoublePrecision, 
 				reinterpret_cast<Float *>(m_colors),
-				m_vertexCount, sizeof(Spectrum)/sizeof(Float));
+				m_vertexCount, sizeof(Color3)/sizeof(Float));
 	} else {
 		m_colors = NULL;
 	}
@@ -233,6 +278,7 @@ TriMesh::TriMesh(Stream *_stream, int index)
 	stream->readUIntArray(reinterpret_cast<uint32_t *>(m_triangles), 
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
 
+	m_surfaceArea = m_invSurfaceArea = -1;
 	m_flipNormals = false;
 }
 
@@ -259,52 +305,77 @@ AABB TriMesh::getAABB() const {
 	return m_aabb;
 }
 
-Float TriMesh::pdfArea(const ShapeSamplingRecord &sRec) const {
+Float TriMesh::pdfPosition(const PositionSamplingRecord &pRec) const {
 	return m_invSurfaceArea;
 }
 
 void TriMesh::configure() {
 	Shape::configure();
 
-	if (!m_areaPDF.isReady()) {
-		m_aabb.reset();
-
-		if (m_triangleCount == 0)
-			Log(EError, "Encountered an empty triangle mesh!");
-		
-		/* Determine the object bounds */
+	if (!m_aabb.isValid()) {
+		/* Most shape objects should compute the AABB while 
+		   loading the geometry -- but let's be on the safe side */
 		for (size_t i=0; i<m_vertexCount; i++) 
 			m_aabb.expandBy(m_positions[i]);
-
-		/* Generate a PDF for sampling wrt. area */
-		for (size_t i=0; i<m_triangleCount; i++) 
-			m_areaPDF.put(m_triangles[i].surfaceArea(m_positions));
-		m_surfaceArea = m_areaPDF.build();
-		m_invSurfaceArea = 1.0f / m_surfaceArea;
-
-		computeNormals();
 	}
 
-	if (hasBSDF() && ((m_bsdf->getType() & BSDF::EAnisotropic)
-		|| m_bsdf->usesRayDifferentials()) && !m_tangents) 
-		computeTangentSpaceBasis();
+	/* Potentially compute/recompute/flip normals, as specified by the user */
+	computeNormals();
+
+	/* Compute proper position partials with respect to the UV paramerization when:
+	    1. An anisotropic BRDF is attached to the shape
+		2. The material explicitly requests tangents so that it can do texture filtering
+	*/
+	if (hasBSDF() && 
+		((m_bsdf->getType() & BSDF::EAnisotropic) || m_bsdf->usesRayDifferentials()))
+		computeUVTangents();
+
+	/* For manifold exploration: always compute UV tangents when a glossy material 
+	   is involved. TODO: find a way to avoid this expense (compute on demand?) */
+	if (hasBSDF() && (m_bsdf->getType() & BSDF::EGlossy))
+		computeUVTangents();
+}
+
+void TriMesh::prepareSamplingTable() {
+	if (m_triangleCount == 0) {
+		Log(EError, "Encountered an empty triangle mesh!");
+		return;
+	}
+
+	LockGuard guard(m_mutex);
+	if (m_surfaceArea < 0) {
+		/* Generate a PDF for sampling wrt. area */
+		m_areaDistr.reserve(m_triangleCount);
+		for (size_t i=0; i<m_triangleCount; i++) 
+			m_areaDistr.append(m_triangles[i].surfaceArea(m_positions));
+		m_surfaceArea = m_areaDistr.normalize();
+		m_invSurfaceArea = 1.0f / m_surfaceArea;
+	}
 }
 
 Float TriMesh::getSurfaceArea() const {
+	if (EXPECT_NOT_TAKEN(m_surfaceArea < 0))
+		const_cast<TriMesh *>(this)->prepareSamplingTable();
+
 	return m_surfaceArea;
 }
 
-Float TriMesh::sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
-	Point2 newSeed = sample;
-	int index = m_areaPDF.sampleReuse(newSeed.y);
-	sRec.p = m_triangles[index].sample(m_positions, m_normals, sRec.n, newSeed);
-	return m_invSurfaceArea;
+void TriMesh::samplePosition(PositionSamplingRecord &pRec, 
+		const Point2 &_sample) const {
+	if (EXPECT_NOT_TAKEN(m_surfaceArea < 0))
+		const_cast<TriMesh *>(this)->prepareSamplingTable();
+
+	Point2 sample(_sample);
+	size_t index = m_areaDistr.sampleReuse(sample.y);
+	pRec.p = m_triangles[index].sample(m_positions, m_normals, pRec.n, sample);
+	pRec.pdf = m_invSurfaceArea;
+	pRec.measure = EArea;
 }
 
 struct Vertex {
 	Point p;
 	Point2 uv;
-	Spectrum col;
+	Color3 col;
 	inline Vertex() : p(0.0f), uv(0.0f), col(0.0f) { }
 };
 
@@ -367,7 +438,7 @@ void TriMesh::rebuildTopology(Float maxAngle) {
 	MMap vertexToFace;
 	std::vector<Point> newPositions;
 	std::vector<Point2> newTexcoords;
-	std::vector<Spectrum> newColors;
+	std::vector<Color3> newColors;
 	std::vector<Normal> faceNormals(m_triangleCount);
 	Triangle *newTriangles = new Triangle[m_triangleCount];
 
@@ -458,8 +529,8 @@ void TriMesh::rebuildTopology(Float maxAngle) {
 
 	if (m_colors) {
 		delete[] m_colors;
-		m_colors = new Spectrum[newColors.size()];
-		memcpy(m_colors, &newColors[0], sizeof(Spectrum) * newColors.size());
+		m_colors = new Color3[newColors.size()];
+		memcpy(m_colors, &newColors[0], sizeof(Color3) * newColors.size());
 	}
 
 	m_vertexCount = newPositions.size();
@@ -467,7 +538,7 @@ void TriMesh::rebuildTopology(Float maxAngle) {
 	Log(EInfo, "Done after %i ms (mesh now has " SIZE_T_FMT " vertices)", 
 			timer->getMilliseconds(), m_vertexCount);
 
-	computeNormals();
+	configure();
 }
 
 void TriMesh::computeNormals() {
@@ -544,128 +615,143 @@ void TriMesh::computeNormals() {
 			m_name.c_str(), invalidNormals);
 }
 
-bool TriMesh::computeTangentSpaceBasis() {
-	int zeroArea = 0, zeroNormals = 0;
+void TriMesh::computeUVTangents() {
+	int degenerate = 0;
 	if (!m_texcoords) {
 		bool anisotropic = hasBSDF() && m_bsdf->getType() & BSDF::EAnisotropic;
 		if (anisotropic)
-			Log(EError, "\"%s\": computeTangentSpace(): texture coordinates "
+			Log(EError, "\"%s\": computeUVTangents(): texture coordinates "
 				"are required to generate tangent vectors. If you want to render with an anisotropic "
 				"material, please make sure that all associated shapes have valid texture coordinates.",
 				getName().c_str());
-		return false;
+		return;
 	}
 
 	if (m_tangents)
-		Log(EError, "Tangent space vectors have already been generated!");
+		return;
 
-	if (!m_normals) {
-		Log(EWarn, "Vertex normals are required to compute a tangent space basis!");
-		return false;
-	}
-
-	m_tangents = new TangentSpace[m_vertexCount];
-	memset(m_tangents, 0, sizeof(TangentSpace));
-
-	/* No. of triangles sharing a vertex */
-	uint32_t *sharers = new uint32_t[m_vertexCount];
-
-	for (size_t i=0; i<m_vertexCount; i++) {
-		m_tangents[i].dpdu = Vector(0.0f);
-		m_tangents[i].dpdv = Vector(0.0f);
-		if (m_normals[i].isZero()) {
-			zeroNormals++;
-			m_normals[i] = Normal(1.0f, 0.0f, 0.0f);
-		}
-		sharers[i] = 0;
-	}
+	m_tangents = new TangentSpace[m_triangleCount];
+	memset(m_tangents, 0, sizeof(TangentSpace)*m_triangleCount);
 
 	for (size_t i=0; i<m_triangleCount; i++) {
 		uint32_t idx0 = m_triangles[i].idx[0],
 				 idx1 = m_triangles[i].idx[1],
 				 idx2 = m_triangles[i].idx[2];
-		const Point &v0 = m_positions[idx0];
-		const Point &v1 = m_positions[idx1];
-		const Point &v2 = m_positions[idx2];
-		const Point2 &uv0 = m_texcoords[idx0];
-		const Point2 &uv1 = m_texcoords[idx1];
-		const Point2 &uv2 = m_texcoords[idx2];
+
+		const Point
+			  &v0 = m_positions[idx0],
+			  &v1 = m_positions[idx1],
+			  &v2 = m_positions[idx2];
+
+		const Point2
+			&uv0 = m_texcoords[idx0],
+			&uv1 = m_texcoords[idx1],
+			&uv2 = m_texcoords[idx2];
 
 		Vector dP1 = v1 - v0, dP2 = v2 - v0;
 		Vector2 dUV1 = uv1 - uv0, dUV2 = uv2 - uv0;
-
-		Float invDet = 1.0f, determinant = dUV1.x * dUV2.y - dUV1.y * dUV2.x;
-		if (determinant != 0)
-			invDet = 1.0f / determinant;
-
-		Vector dpdu = ( dUV2.y * dP1 - dUV1.y * dP2) * invDet;
-		Vector dpdv = (-dUV2.x * dP1 + dUV1.x * dP2) * invDet;
-
-		if (dpdu.length() == 0.0f) {
-			/* Recovery - required to recover from invalid geometry */
-			Normal n = Normal(cross(v1 - v0, v2 - v0));
-			Float length = n.length();
-			if (length != 0) {
-				n /= length;
-				dpdu = cross(n, dpdv);
-				if (dpdu.length() == 0.0f) {
-					/* At least create some kind of tangent space basis 
-					(fair enough for isotropic BxDFs) */
-					coordinateSystem(n, dpdu, dpdv);
-				}
-			} else {
-				zeroArea++;
-			}
+		Normal n = Normal(cross(dP1, dP2));
+		Float length = n.length();
+		if (length == 0) {
+			++degenerate;
+			continue;
 		}
 
-		if (dpdv.length() == 0.0f) {
-			Normal n = Normal(cross(v1 - v0, v2 - v0));
-			Float length = n.length();
-			if (length != 0) {
-				n /= length;
-				dpdv = cross(dpdu, n);
-				if (dpdv.length() == 0.0f) {
-					/* At least create some kind of tangent space basis 
-						(fair enough for isotropic BxDFs) */
-					coordinateSystem(n, dpdu, dpdv);
-				}
-			} else {
-				zeroArea++;
-			}
-		}
-
-		m_tangents[idx0].dpdu += dpdu;
-		m_tangents[idx1].dpdu += dpdu;
-		m_tangents[idx2].dpdu += dpdu;
-		m_tangents[idx0].dpdv += dpdv;
-		m_tangents[idx1].dpdv += dpdv;
-		m_tangents[idx2].dpdv += dpdv;
-		sharers[idx0]++; sharers[idx1]++; sharers[idx2]++;
-	}
-
-	/* Orthogonalization + Normalization pass */
-	for (size_t i=0; i<m_vertexCount; i++) {
-		Vector &dpdu = m_tangents[i].dpdu;
-		Vector &dpdv = m_tangents[i].dpdv;
-
-		if (dpdu.lengthSquared() == 0.0f || dpdv.lengthSquared() == 0.0f) {
-			/* At least create some kind of tangent space basis 
-				(fair enough for isotropic BxDFs) */
-			coordinateSystem(m_normals[i], dpdu, dpdv);
+		Float determinant = dUV1.x * dUV2.y - dUV1.y * dUV2.x;
+		if (determinant == 0) {
+			/* The user-specified parameterization is degenerate. Pick 
+			   arbitrary tangents that are perpendicular to the geometric normal */
+			coordinateSystem(n/length, m_tangents[i].dpdu, m_tangents[i].dpdv);
 		} else {
-			if (sharers[i] > 0) {
-				dpdu /= (Float) sharers[i];
-				dpdv /= (Float) sharers[i];
-			}
+			Float invDet = 1.0f / determinant;
+			m_tangents[i].dpdu = ( dUV2.y * dP1 - dUV1.y * dP2) * invDet;
+			m_tangents[i].dpdv = (-dUV2.x * dP1 + dUV1.x * dP2) * invDet;
 		}
 	}
-	delete[] sharers;
 
-	if (zeroArea > 0 || zeroNormals > 0)
-		Log(EWarn, "\"%s\": computeTangentSpace(): Mesh contains invalid "
-			"geometry: %i zero area triangles and %i zero normals found!", 
-			m_name.c_str(), zeroArea, zeroNormals);
-	return true;
+	if (degenerate > 0)
+		Log(EWarn, "\"%s\": computeTangentSpace(): Mesh contains %i "
+			"degenerate triangles!", getName().c_str(), degenerate);
+}
+
+void TriMesh::getNormalDerivative(const Intersection &its,
+		Vector &dndu, Vector &dndv, bool shadingFrame) const {
+	if (!shadingFrame || !m_normals) {
+		dndu = dndv = Vector(0.0f);
+	} else {
+		Assert(its.primIndex < m_triangleCount);
+
+		const Triangle &tri = m_triangles[its.primIndex];
+
+		uint32_t idx0 = tri.idx[0],
+				 idx1 = tri.idx[1], 
+				 idx2 = tri.idx[2];
+
+		const Point
+			&p0 = m_positions[idx0],
+			&p1 = m_positions[idx1],
+			&p2 = m_positions[idx2];
+
+		/* Recompute the barycentric coordinates, since 'its.uv' may have been
+		   overwritten with coordinates of the texture "parameterization". */
+ 		Vector rel = its.p - p0, du = p1 - p0, dv = p2 - p0;
+
+		Float b1  = dot(du, rel), b2 = dot(dv, rel), /* Normal equations */
+			  a11 = dot(du, du), a12 = dot(du, dv),
+			  a22 = dot(dv, dv),
+			  det = a11 * a22 - a12 * a12;
+
+		if (det == 0) {
+			dndu = dndv = Vector(0.0f);
+			return;
+		}
+
+		Float invDet = 1.0f / det,
+		      u = ( a22 * b1 - a12 * b2) * invDet,
+		      v = (-a12 * b1 + a11 * b2) * invDet,
+		      w = 1 - u - v;
+
+		const Normal 
+			&n0 = m_normals[idx0],
+			&n1 = m_normals[idx1],
+			&n2 = m_normals[idx2];
+
+		/* Now compute the derivative of "normalize(u*n1 + v*n2 + (1-u-v)*n0)"
+		   with respect to [u, v] in the local triangle parameterization.
+
+		   Since d/du [f(u)/|f(u)|] = [d/du f(u)]/|f(u)| 
+		     - f(u)/|f(u)|^3 <f(u), d/du f(u)>, this results in
+		*/
+
+		Normal N(u * n1 + v * n2 + w * n0);
+		Float il = 1.0f / N.length(); N *= il;
+
+		dndu = (n1 - n0) * il; dndu -= N * dot(N, dndu);
+		dndv = (n2 - n0) * il; dndv -= N * dot(N, dndv);
+
+		if (m_tangents) {
+			/* Compute derivatives with respect to a specified texture 
+			   UV parameterization.  */
+			const Point2
+				&uv0 = m_texcoords[idx0],
+				&uv1 = m_texcoords[idx1],
+				&uv2 = m_texcoords[idx2];
+
+			Vector2 duv1 = uv1 - uv0, duv2 = uv2 - uv0;
+
+			det = duv1.x * duv2.y - duv1.y * duv2.x;
+
+			if (det == 0) {
+				dndu = dndv = Vector(0.0f);
+				return;
+			}
+
+			invDet = 1.0f / det;
+			Vector dndu_ = ( duv2.y * dndu - duv1.y * dndv) * invDet;
+			Vector dndv_ = (-duv2.x * dndu + duv1.x * dndv) * invDet;
+			dndu = dndu_; dndv = dndv_;
+		}
+	}
 }
 
 ref<TriMesh> TriMesh::createTriMesh() {
@@ -699,7 +785,7 @@ void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
 			m_vertexCount * sizeof(Point2)/sizeof(Float));
 	if (m_colors)
 		stream->writeFloatArray(reinterpret_cast<Float *>(m_colors), 
-			m_vertexCount * sizeof(Spectrum)/sizeof(Float));
+			m_vertexCount * sizeof(Color3)/sizeof(Float));
 	stream->writeUIntArray(reinterpret_cast<uint32_t *>(m_triangles), 
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
 }
@@ -714,6 +800,14 @@ void TriMesh::writeOBJ(const fs::path &path) const {
 			<< m_positions[i].z << endl;
 	}
 
+	if (m_texcoords) {
+		for (size_t i=0; i<m_vertexCount; ++i) {
+			os << "vt " 
+				<< m_texcoords[i].x << " "
+				<< m_texcoords[i].y << endl;
+		}
+	}
+
 	if (m_normals) {
 		for (size_t i=0; i<m_vertexCount; ++i) {
 			os << "vn " 
@@ -723,22 +817,20 @@ void TriMesh::writeOBJ(const fs::path &path) const {
 		}
 	}
 
-	if (m_normals) {
-		for (size_t i=0; i<m_triangleCount; ++i) {
-			os << "f " 
-				<< m_triangles[i].idx[0] + 1 << "//" 
-				<< m_triangles[i].idx[0] + 1 << " "
-				<< m_triangles[i].idx[1] + 1 << "//" 
-				<< m_triangles[i].idx[1] + 1 << " "
-				<< m_triangles[i].idx[2] + 1 << "//" 
-				<< m_triangles[i].idx[2] + 1 << endl;
-		}
-	} else {
-		for (size_t i=0; i<m_triangleCount; ++i) {
-			os << "f " 
-				<< m_triangles[i].idx[0] + 1 << " "
-				<< m_triangles[i].idx[1] + 1 << " "
-				<< m_triangles[i].idx[2] + 1 << endl;
+	for (size_t i=0; i<m_triangleCount; ++i) {
+		int i0 = m_triangles[i].idx[0] + 1,
+			i1 = m_triangles[i].idx[1] + 1,
+			i2 = m_triangles[i].idx[2] + 1;
+		if (m_normals && m_texcoords) {
+			os << "f " << i0 << "/" << i0 << "/" << i0 << " "
+			   <<  i1 << "/" << i1 << "/" << i1 << " "
+			   <<  i2 << "/" << i2 << "/" << i2 << endl;
+		} else if (m_normals) {
+			os << "f " << i0 << "//" << i0 << " "
+			   <<  i1 << "//" << i1 << " "
+			   <<  i2 << "//" << i2 << endl;
+		} else {
+			os << "f " << i0 << " " << i1 << " " << i2 << endl;
 		}
 	}
 
@@ -753,7 +845,7 @@ void TriMesh::serialize(Stream *_stream) const {
 			"which was not previously set to little endian byte order!");
 
 	stream->writeShort(MTS_FILEFORMAT_HEADER);
-	stream->writeShort(MTS_FILEFORMAT_VERSION_V3);
+	stream->writeShort(MTS_FILEFORMAT_VERSION_V4);
 	stream = new ZStream(stream);
 
 #if defined(SINGLE_PRECISION)
@@ -772,6 +864,7 @@ void TriMesh::serialize(Stream *_stream) const {
 		flags |= EFaceNormals;
 
 	stream->writeUInt(flags);
+	stream->writeString(m_name);
 	stream->writeSize(m_vertexCount);
 	stream->writeSize(m_triangleCount);
 
@@ -785,9 +878,17 @@ void TriMesh::serialize(Stream *_stream) const {
 			m_vertexCount * sizeof(Point2)/sizeof(Float));
 	if (m_colors)
 		stream->writeFloatArray(reinterpret_cast<Float *>(m_colors), 
-			m_vertexCount * sizeof(Spectrum)/sizeof(Float));
+			m_vertexCount * sizeof(Color3)/sizeof(Float));
 	stream->writeUIntArray(reinterpret_cast<uint32_t *>(m_triangles), 
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
+}
+
+size_t TriMesh::getPrimitiveCount() const {
+	return m_triangleCount;
+}
+
+size_t TriMesh::getEffectivePrimitiveCount() const {
+	return m_triangleCount;
 }
 
 std::string TriMesh::toString() const {
@@ -803,13 +904,12 @@ std::string TriMesh::toString() const {
 		<< "  hasColors = " << (m_colors ? "true" : "false") << "," << endl
 		<< "  surfaceArea = " << m_surfaceArea << "," << endl
 		<< "  aabb = " << m_aabb.toString() << "," << endl
-		<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl
-		<< "  subsurface = " << indent(m_subsurface.toString()) << "," << endl;
-	if (isMediumTransition()) {
+		<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
+	if (isMediumTransition()) 
 		oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
 			<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
-	}
-	oss << "  luminaire = " << indent(m_luminaire.toString()) << endl
+	oss << "  subsurface = " << indent(m_subsurface.toString()) << "," << endl
+		<< "  emitter = " << indent(m_emitter.toString()) << endl
 		<< "]";
 	return oss.str();
 }

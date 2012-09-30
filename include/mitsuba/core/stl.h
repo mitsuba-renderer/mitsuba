@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __MITSUBA_STL_H
-#define __MITSUBA_STL_H
+#pragma once
+#if !defined(__MITSUBA_CORE_STL_H_)
+#define __MITSUBA_CORE_STL_H_
  
 /* Include some SGI STL extensions, which might be missing */
 #ifdef __GNUC__
@@ -66,13 +67,6 @@ namespace std {
 	#define snprintf _snprintf
 	#define vsnprintf _vsnprintf
 	
-	inline int isinf(float value) {
-		int type = ::_fpclass(value);
-		if (type == _FPCLASS_PINF || type == _FPCLASS_NINF)
-			return 1;
-		return 0;
-	}
-	
 	inline char tolower(char c) {
 		return ::tolower(c);
 	}
@@ -81,11 +75,28 @@ namespace std {
 		return ::toupper(c);
 	}
 
-	inline int isinf(double value) {
-		int type = ::_fpclass(value);
-		if (type == _FPCLASS_PINF || type == _FPCLASS_NINF)
-			return 1;
-		return 0;
+	inline bool isnan(float f) {
+		return _isnan(f);
+	}
+
+	inline bool isnan(double f) {
+		return _isnan(f);
+	}
+
+	inline bool isfinite(float f) {
+		return _finite(f);
+	}
+
+	inline bool isfinite(double f) {
+		return _finite(f);
+	}
+
+	inline bool isinf(float f) {
+		return !_finite(f);
+	}
+
+	inline bool isinf(double f) {
+		return !_finite(f);
 	}
 #endif
 };
@@ -93,7 +104,8 @@ using std::select2nd;
 using std::compose1;
 #endif
 
-namespace std {
+namespace mitsuba {
+namespace math {
 #if defined(__LINUX__) && defined(__x86_64__)
 	/*
 	   The Linux/x86_64 single precision implementations of 'exp'
@@ -157,41 +169,55 @@ namespace std {
 		*_cos = cos(theta);
 	}
 #endif
-};
 
-#if defined(WIN32)
-inline bool mts_isnan(float f) {
-	int classification = ::_fpclass(f);
-	return classification == _FPCLASS_QNAN 
-		|| classification == _FPCLASS_SNAN;
-}
+	/// Arcsine variant that gracefully handles arguments > 1 that are due to roundoff errors
+	inline float safe_asin(float value) {
+		return std::asin(std::min(1.0f, std::max(-1.0f, value)));
+	}
 
-inline bool mts_isnan(double f) {
-	int classification = ::_fpclass(f);
-	return classification == _FPCLASS_QNAN
-		|| classification == _FPCLASS_SNAN;
-}
+	/// Arcsine variant that gracefully handles arguments > 1 that are due to roundoff errors
+	inline double safe_asin(double value) {
+		return std::asin(std::min(1.0, std::max(-1.0, value)));
+	}
+
+	/// Arccosine variant that gracefully handles arguments > 1 that are due to roundoff errors
+	inline float safe_acos(float value) {
+		return std::acos(std::min(1.0f, std::max(-1.0f, value)));
+	}
+
+	/// Arccosine variant that gracefully handles arguments > 1 that are due to roundoff errors
+	inline double safe_acos(double value) {
+		return std::acos(std::min(1.0, std::max(-1.0, value)));
+	}
+
+	/// Square root variant that gracefully handles arguments < 0 that are due to roundoff errors
+	inline float safe_sqrt(float value) {
+		return std::sqrt(std::max(0.0f, value));
+	}
+
+	/// Square root variant that gracefully handles arguments < 0 that are due to roundoff errors
+	inline double safe_sqrt(double value) {
+		return std::sqrt(std::max(0.0, value));
+	}
+
+	/// Simple signum function -- note that it returns the FP sign of the input (and never zero)
+	inline Float signum(Float value) {
+		#if defined(__WINDOWS__)
+			return (Float) _copysign(1.0, value);
+		#elif defined(SINGLE_PRECISION)
+			return copysignf((float) 1.0, value);
+		#elif defined(DOUBLE_PRECISION)
+			return copysign((double) 1.0, value);
+		#endif
+	}
+}; /* namespace math */
+}; /* namespace mitsuba */
+
+#if defined(_MSC_VER)
 extern "C" {
 	extern MTS_EXPORT_CORE float nextafterf(float x, float y);
 	extern MTS_EXPORT_CORE double nextafter(double x, double y);
 };
-#elif defined(__clang__)
-inline bool mts_isnan(float f) {
-	return std::isnan(f);
-}
-
-inline bool mts_isnan(double f) {
-	return std::isnan(f);
-}
-#else
-inline bool mts_isnan(float f) {
-	return std::fpclassify(f) == FP_NAN;
-}
-
-inline bool mts_isnan(double f) {
-	return std::fpclassify(f) == FP_NAN;
-}
 #endif
 /// @endcond
-#endif
-
+#endif /* __MITSUBA_CORE_STL_H_ */

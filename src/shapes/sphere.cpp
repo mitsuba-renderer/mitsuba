@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,10 +18,13 @@
 
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/bsdf.h>
-#include <mitsuba/render/luminaire.h>
+#include <mitsuba/render/emitter.h>
+#include <mitsuba/render/sensor.h>
 #include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/trimesh.h>
+#include <mitsuba/render/medium.h>
 #include <mitsuba/core/properties.h>
+#include <mitsuba/core/warp.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -54,12 +57,6 @@ MTS_NAMESPACE_BEGIN
  *
  * This shape plugin describes a simple sphere intersection primitive. It should 
  * always be preferred over sphere approximations modeled using triangles.
- *
- * When using a sphere as the base object of an \pluginref{area} luminaire,
- * Mitsuba will switch to a special sphere luminaire sampling strategy 
- * \cite{Shirley91Direct} that works much better than the default approach. 
- * The resulting variance reduction makes it preferable to model most light
- * sources as sphere luminaires (\figref{spherelight}).
  * 
  * \begin{xml}[caption={A sphere can either be configured using a linear 
  * \code{toWorld} transformation or the \code{center} and \code{radius} parameters (or both). 
@@ -78,7 +75,10 @@ MTS_NAMESPACE_BEGIN
  *     <bsdf type="diffuse"/>
  * </shape>
  * \end{xml}
- *
+ * When a \pluginref{sphere} shape is turned into an \pluginref{area} light source,
+ * Mitsuba switches to an efficient sampling strategy \cite{Shirley91Direct} that
+ * has particularly low variance. This makes it a good default choice for lighting 
+ * new scenes (\figref{spherelight}).
  * \renderings{
  *     \rendering{Spherical area light modeled using triangles}
  *         {shape_sphere_arealum_tri}
@@ -92,14 +92,14 @@ MTS_NAMESPACE_BEGIN
  *         overall lower variance.
  *     }
  * }
- * \begin{xml}[caption=Instantiation of a sphere luminaire]
+ * \begin{xml}[caption=Instantiation of a sphere emitter]
  * <shape type="sphere">
  *     <point name="center" x="0" y="1" z="0"/>
  *     <float name="radius" value="1"/>
 
- *     <luminaire type="area">
+ *     <emitter type="area">
  *         <blackbody name="intensity" temperature="7000K"/>
- *     </luminaire>
+ *     </emitter>
  * </shape>
  * \end{xml}
  */
@@ -126,6 +126,9 @@ public:
 		m_center = m_objectToWorld(Point(0,0,0));
 		m_worldToObject = m_objectToWorld.inverse();
 		m_invSurfaceArea = 1/(4*M_PI*m_radius*m_radius);
+
+		if (m_radius <= 0)
+			Log(EError, "Cannot create spheres of radius <= 0");
 	}
 
 	Sphere(Stream *stream, InstanceManager *manager) 
@@ -148,9 +151,8 @@ public:
 
 	AABB getAABB() const {
 		AABB aabb;
-		Float absRadius = std::abs(m_radius);
-		aabb.min = m_center - Vector(absRadius);
-		aabb.max = m_center + Vector(absRadius);
+		aabb.min = m_center - Vector(m_radius);
+		aabb.max = m_center + Vector(m_radius);
 		return aabb;
 	}
 
@@ -159,13 +161,15 @@ public:
 	}
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt, Float &t, void *tmp) const {
-		Vector o = ray.o - m_center;
-		Float A = ray.d.x*ray.d.x + ray.d.y*ray.d.y + ray.d.z*ray.d.z;
-		Float B = 2 * (ray.d.x*o.x + ray.d.y*o.y + ray.d.z*o.z);
-		Float C = o.x*o.x + o.y*o.y + o.z*o.z - m_radius*m_radius;
+		Vector3d o = Vector3d(ray.o) - Vector3d(m_center);
+		Vector3d d(ray.d);
 
-		Float nearT, farT;
-		if (!solveQuadratic(A, B, C, nearT, farT))
+		double A = d.lengthSquared();
+		double B = 2 * dot(o, d);
+		double C = o.lengthSquared() - m_radius*m_radius;
+
+		double nearT, farT;
+		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
 		if (nearT > maxt || farT < mint)
@@ -173,22 +177,24 @@ public:
 		if (nearT < mint) {
 			if (farT > maxt)
 				return false;
-			t = farT;		
+			t = (Float) farT;		
 		} else {
-			t = nearT;
+			t = (Float) nearT;
 		}
 
 		return true;
 	}
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt) const {
-		Vector o = ray.o - m_center;
-		Float A = ray.d.x*ray.d.x + ray.d.y*ray.d.y + ray.d.z*ray.d.z;
-		Float B = 2 * (ray.d.x*o.x + ray.d.y*o.y + ray.d.z*o.z);
-		Float C = o.x*o.x + o.y*o.y + o.z*o.z - m_radius*m_radius;
+		Vector3d o = Vector3d(ray.o) - Vector3d(m_center);
+		Vector3d d(ray.d);
 
-		Float nearT, farT;
-		if (!solveQuadratic(A, B, C, nearT, farT))
+		double A = d.lengthSquared();
+		double B = 2 * dot(o, d);
+		double C = o.lengthSquared() - m_radius*m_radius;
+
+		double nearT, farT;
+		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
 		if (nearT > maxt || farT < mint)
@@ -202,9 +208,14 @@ public:
 	void fillIntersectionRecord(const Ray &ray, 
 			const void *temp, Intersection &its) const {
 		its.p = ray(its.t);
+		
+		#if defined(SINGLE_PRECISION)
+			/* Re-project onto the sphere to limit cancellation effects */
+			its.p = m_center + normalize(its.p - m_center) * m_radius;
+		#endif
+
 		Vector local = m_worldToObject(its.p - m_center);
-		Float theta = std::acos(std::min(std::max(local.z/m_radius, 
-				-(Float) 1), (Float) 1));
+		Float theta = math::safe_acos(local.z/m_radius);
 		Float phi = std::atan2(local.y, local.x);
 
 		if (phi < 0)
@@ -213,8 +224,9 @@ public:
 		its.uv.x = phi * (0.5f * INV_PI);
 		its.uv.y = theta * INV_PI;
 		its.dpdu = m_objectToWorld(Vector(-local.y, local.x, 0) * (2*M_PI));
-    	its.geoFrame.n = normalize(its.p - m_center);
+		its.geoFrame.n = normalize(its.p - m_center);
 		Float zrad = std::sqrt(local.x*local.x + local.y*local.y);
+		its.shape = this;
 
 		if (zrad > 0) {
 			Float invZRad = 1.0f / zrad,
@@ -237,19 +249,32 @@ public:
 
  		its.shFrame = its.geoFrame;
  		its.wi = its.toLocal(-ray.d);
-		its.shape = this;
  		its.hasUVPartials = false;
+		its.instance = NULL;
 	}
 
-	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const {
-		Vector v = squareToSphere(sample);
-		sRec.n = Normal(v);
-		sRec.p = Point(v * m_radius) + m_center;
-		return 1.0f / (4*M_PI*m_radius*m_radius);
+	void samplePosition(PositionSamplingRecord &pRec, const Point2 &sample) const {
+		Vector v = Warp::squareToUniformSphere(sample);
+
+		pRec.p = Point(v * m_radius) + m_center;
+		pRec.n = Normal(v);
+
+		if (m_flipNormals)
+			pRec.n *= -1;
+	
+		pRec.pdf = m_invSurfaceArea;
+		pRec.measure = EArea;
 	}
 
-	Float pdfArea(const ShapeSamplingRecord &sRec) const {
-		return 1.0f / (4*M_PI*m_radius*m_radius);
+	Float pdfPosition(const PositionSamplingRecord &pRec) const {
+		return m_invSurfaceArea;
+	}
+
+	void getNormalDerivative(const Intersection &its,
+			Vector &dndu, Vector &dndv, bool shadingFrame) const {
+		Float invRadius = 1.0f / m_radius;
+		dndu = its.dpdu * invRadius;
+		dndv = its.dpdv * invRadius;
 	}
 
 	/**
@@ -257,61 +282,107 @@ public:
 	 * "Monte Carlo techniques for direct lighting calculations" by
 	 * Shirley, P. and Wang, C. and Zimmerman, K. (TOG 1996)
 	 */
-	Float sampleSolidAngle(ShapeSamplingRecord &sRec, const Point &p, const Point2 &sample) const {
-		Vector w = m_center - p; Float invDistW = 1 / w.length();
-		Float squareTerm = std::abs(m_radius * invDistW); // Support negative radii
+	void sampleDirect(DirectSamplingRecord &dRec, const Point2 &sample) const {
+		const Vector refToCenter = m_center - dRec.ref;
+		const Float refDist2 = refToCenter.lengthSquared();
+		const Float invRefDist = static_cast<Float>(1) / std::sqrt(refDist2);
 
-		if (squareTerm >= 1-Epsilon) {
-			/* We're inside the sphere - switch to uniform sampling */
-			Vector d(squareToSphere(sample));
+		/* Sine of the angle of the cone containing the
+		   sphere as seen from 'dRec.ref' */
+		const Float sinAlpha = m_radius * invRefDist;
 
-			sRec.p = m_center + d * m_radius;
-			sRec.n = Normal(d);
+		if (sinAlpha < 1-Epsilon) {
+			/* The reference point lies outside of the sphere.
+			   => sample based on the projected cone. */
 
-			Vector lumToPoint = p - sRec.p;
-			Float distSquared = lumToPoint.lengthSquared(), dp = dot(lumToPoint, sRec.n);
+			Float cosAlpha = math::safe_sqrt(1.0f - sinAlpha * sinAlpha);
 
-			if (dp > 0)
-				return m_invSurfaceArea * distSquared * std::sqrt(distSquared) / dp;
-			else
-				return 0;
+			dRec.d = Frame(refToCenter * invRefDist).toWorld(
+				Warp::squareToUniformCone(cosAlpha, sample));
+			dRec.pdf = Warp::squareToUniformConePdf(cosAlpha);
+
+			/* Distance to the projection of the sphere center 
+			   onto the ray (dRec.ref, dRec.d) */
+			const Float projDist = dot(refToCenter, dRec.d);
+
+			/* To avoid numerical problems move the query point to the
+			   intersection of the of the original direction ray and a plane
+			   with normal refToCenter which goes through the sphere's center */
+			const Float baseT = refDist2 / projDist;
+			const Point query = dRec.ref + dRec.d * baseT;
+			
+			const Vector queryToCenter = m_center - query;
+			const Float queryDist2     = queryToCenter.lengthSquared();
+			const Float queryProjDist  = dot(queryToCenter, dRec.d);
+
+			/* Try to find the intersection point between the
+			   sampled ray and the sphere. */
+			Float A = 1.0f, B = -2*queryProjDist,
+				  C = queryDist2 - m_radius*m_radius;
+
+			Float nearT, farT;
+			if (!solveQuadratic(A, B, C, nearT, farT)) {
+				/* The intersection couldn't be found due to roundoff errors..
+				   Don't give up -- one workaround is to project the closest 
+				   ray position onto the sphere */
+				nearT = queryProjDist;
+			}
+
+			dRec.dist = baseT + nearT;
+			dRec.n = normalize(dRec.d*nearT - queryToCenter);
+			dRec.p = m_center + dRec.n * m_radius;
+		} else {
+			/* The reference point lies inside the sphere
+			   => use uniform sphere sampling. */
+			Vector d = Warp::squareToUniformSphere(sample);
+
+			dRec.p = m_center + d * m_radius;
+			dRec.n = Normal(d);
+			dRec.d = dRec.p - dRec.ref;
+
+			Float dist2 = dRec.d.lengthSquared();
+			dRec.dist = std::sqrt(dist2);
+			dRec.d /= dRec.dist;
+			dRec.pdf = m_invSurfaceArea * dist2 
+				/ absDot(dRec.d, dRec.n);
 		}
 
-		Float cosThetaMax = std::sqrt(std::max((Float) 0, 1 - squareTerm*squareTerm));
+		if (m_flipNormals)
+			dRec.n *= -1;
 
-		Vector d = Frame(w*invDistW).toWorld(
-			squareToCone(cosThetaMax, sample));
-
-		Ray ray(p, d, 0.0f);
-		Float t;
-		if (!rayIntersect(ray, 0, std::numeric_limits<Float>::infinity(), t, NULL)) {
-			// This can happen sometimes due to roundoff errors - just fail to 
-			// generate a sample in this case.
-			return 0;
-		}
-
-		sRec.p = ray(t);
-		sRec.n = Normal(normalize(sRec.p-m_center));
-
-		return 1 / ((2*M_PI) * (1-cosThetaMax));
+		dRec.measure = ESolidAngle;
 	}
 
-	Float pdfSolidAngle(const ShapeSamplingRecord &sRec, const Point &p) const {
-		Vector w = p - m_center; Float invDistW = 1 / w.length();
-		Float squareTerm = std::abs(m_radius * invDistW);
+	Float pdfDirect(const DirectSamplingRecord &dRec) const {
+		const Vector refToCenter = m_center - dRec.ref;
+		const Float invRefDist = (Float) 1.0f / refToCenter.length();
 
-		if (squareTerm >= 1-Epsilon) {
-			/* We're inside the sphere - switch to uniform sampling */
-			Vector lumToPoint = p - sRec.p;
-			Float distSquared = lumToPoint.lengthSquared(), dp = dot(lumToPoint, sRec.n);
-			if (dp > 0)
-				return m_invSurfaceArea * distSquared * std::sqrt(distSquared) / dp;
+		/* Sine of the angle of the cone containing the
+		   sphere as seen from 'dRec.ref' */
+		const Float sinAlpha = m_radius * invRefDist;
+
+		if (sinAlpha < 1-Epsilon) {
+			/* The reference point lies outside the sphere */
+			Float cosAlpha = math::safe_sqrt(1 - sinAlpha*sinAlpha);
+			Float pdfSA = Warp::squareToUniformConePdf(cosAlpha);
+
+			if (dRec.measure == ESolidAngle)
+				return pdfSA;
+			else if (dRec.measure == EArea)
+				return pdfSA * absDot(dRec.d, dRec.n) 
+					/ (dRec.dist*dRec.dist);
 			else
-				return 0;
+				return 0.0f;
+		} else {
+			/* The reference point lies inside the sphere */
+			if (dRec.measure == ESolidAngle)
+				return m_invSurfaceArea * dRec.dist * dRec.dist
+					/ absDot(dRec.d, dRec.n);
+			else if (dRec.measure == EArea)
+				return m_invSurfaceArea;
+			else
+				return 0.0f;
 		}
-
-		Float cosThetaMax = std::sqrt(std::max((Float) 0, 1 - squareTerm*squareTerm));
-		return squareToConePdf(cosThetaMax);
 	}
 
 	ref<TriMesh> createTriMesh() {
@@ -366,28 +437,31 @@ public:
 				uint32_t idx2 = phiSteps*(theta-1) + phi;
 				uint32_t idx3 = phiSteps*(theta-1) + nextPhi;
 
-				if (idx0 != idx1) {
-					triangles[triangleIdx].idx[0] = idx0;
-					triangles[triangleIdx].idx[1] = idx2;
-					triangles[triangleIdx].idx[2] = idx1;
-					triangleIdx++;
-				}
-				if (idx2 != idx3) {
-					triangles[triangleIdx].idx[0] = idx1;
-					triangles[triangleIdx].idx[1] = idx2;
-					triangles[triangleIdx].idx[2] = idx3;
-					triangleIdx++;
-				}
+				triangles[triangleIdx].idx[0] = idx0;
+				triangles[triangleIdx].idx[1] = idx2;
+				triangles[triangleIdx].idx[2] = idx1;
+				triangleIdx++;
+				triangles[triangleIdx].idx[0] = idx1;
+				triangles[triangleIdx].idx[1] = idx2;
+				triangles[triangleIdx].idx[2] = idx3;
+				triangleIdx++;
 			}
 		}
 		Assert(triangleIdx == numTris);
 		delete[] cosPhi;
 		delete[] sinPhi;
-		mesh->setBSDF(m_bsdf);
-		mesh->setLuminaire(m_luminaire);
+		mesh->copyAttachments(this);
 		mesh->configure();
 
 		return mesh.get();
+	}
+
+	size_t getPrimitiveCount() const {
+		return 1;
+	}
+
+	size_t getEffectivePrimitiveCount() const {
+		return 1;
 	}
 
 	std::string toString() const {
@@ -395,8 +469,12 @@ public:
 		oss << "Sphere[" << endl
 			<< "  radius = " << m_radius << ", " << endl
 			<< "  center = " << m_center.toString() << ", " << endl
-			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl
-			<< "  luminaire = " << indent(m_luminaire.toString()) << "," << endl
+			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
+		if (isMediumTransition()) 
+			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
+				<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
+		oss << "  emitter = " << indent(m_emitter.toString()) << "," << endl
+			<< "  sensor = " << indent(m_sensor.toString()) << "," << endl
 			<< "  subsurface = " << indent(m_subsurface.toString()) << endl
 			<< "]";
 		return oss.str();

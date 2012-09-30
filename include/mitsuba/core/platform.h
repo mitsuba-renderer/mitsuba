@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,28 +16,18 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__PLATFORM_H)
-#define __PLATFORM_H
+#pragma once
+#if !defined(__MITSUBA_CORE_PLATFORM_H_)
+#define __MITSUBA_CORE_PLATFORM_H_
 
 /// Disable BOOST's autolinking feature
 #define BOOST_ALL_NO_LIB 1
 
-#if defined(_MSC_VER)
-	/* Disable MSVC STL debug + security features (slow..!) */
-	#ifdef _SECURE_SCL_THROWS
-		#undef _SECURE_SCL_THROWS
-	#endif
-	#ifdef _SCL_SECURE_NO_WARNINGS
-		#undef _SCL_SECURE_NO_WARNINGS
-	#endif
-	#ifdef _HAS_ITERATOR_DEBUGGING
-		#undef _HAS_ITERATOR_DEBUGGING
-	#endif
-	#undef _STLP_DEBUG
+#if !defined(_OPENMP) && !defined(MTS_NO_OPENMP)
+	#define MTS_NO_OPENMP
+#endif
 
-	#define _SECURE_SCL_THROWS 0
-	#define _HAS_ITERATOR_DEBUGGING 0
-	#define _SCL_SECURE_NO_WARNINGS 0
+#if defined(_MSC_VER)
 	#define __MSVC__
 	#define __WINDOWS__
 
@@ -46,20 +36,16 @@
 	#define _CRT_NONSTDC_NO_DEPRECATE
 	#define _CRT_SECURE_NO_DEPRECATE
 
-	#define _WIN32_WINNT 0x0501
+	#define _WIN32_WINNT 0x0501 // Windows XP
 	#define NOMINMAX
 	#define WIN32_LEAN_AND_MEAN
-	#include <winsock2.h> // IPv6 support
-	#include <windows.h>
 
 	#pragma warning(disable : 4251) // 'field' : class 'A' needs to have dll-interface to be used by clients of class 'B'
 	#pragma warning(disable : 4800) // 'type' : forcing value to bool 'true' or 'false' (performance warning)
 	#pragma warning(disable : 4996) // Secure SCL warnings
-	#if _MSC_VER < 1600
-		#include <stdint_msvc.h>    // Does not exist in MSVC. Use a replacement
-	#else
-		#include <stdint.h>
-	#endif
+
+	#include <stdint.h>
+
 	#if _MSC_VER >= 1400
 		#include <memory.h>
 		#include <string.h>
@@ -78,54 +64,53 @@
 #endif
 
 #ifdef __MSVC__
-	#define MTS_MODULE_CORE 1
-	#define MTS_MODULE_RENDER 2
-	#define MTS_MODULE_HW 3
-	#define MTS_MODULE_BIDIR 4
-	#define MTS_MODULE_PYTHON 5
-
-	#define MTS_EXPORT __declspec(dllexport)
-	#define MTS_IMPORT __declspec(dllimport)
-
-	#if MTS_BUILD_MODULE == MTS_MODULE_CORE
-		#define MTS_EXPORT_CORE __declspec(dllexport)
-	#else
-		#define MTS_EXPORT_CORE __declspec(dllimport)
-	#endif
-	#if MTS_BUILD_MODULE == MTS_MODULE_RENDER
-		#define MTS_EXPORT_RENDER __declspec(dllexport)
-	#else
-		#define MTS_EXPORT_RENDER __declspec(dllimport)
-	#endif
-	#if MTS_BUILD_MODULE == MTS_MODULE_HW
-		#define MTS_EXPORT_HW __declspec(dllexport)
-	#else
-		#define MTS_EXPORT_HW __declspec(dllimport)
-	#endif
-	#if MTS_BUILD_MODULE == MTS_MODULE_BIDIR
-		#define MTS_EXPORT_BIDIR __declspec(dllexport)
-	#else
-		#define MTS_EXPORT_BIDIR __declspec(dllimport)
-	#endif
-	#if MTS_BUILD_MODULE == MTS_MODULE_PYTHON
-		#define MTS_EXPORT_PYTHON __declspec(dllexport)
-	#else
-		#define MTS_EXPORT_PYTHON __declspec(dllimport)
-	#endif
-
+	#define MTS_DONT_EXPORT // not supported on MSVC
 	#define SIZE_T_FMT "%Iu"
 	#define BOOST_FILESYSTEM_NO_LIB 
 	#define BOOST_SYSTEM_NO_LIB 
+	#define MTS_EXPORT __declspec(dllexport)
+	#define MTS_IMPORT __declspec(dllimport)
+	#define MTS_MAY_ALIAS // not supported on Windows
 #else
-	#define MTS_EXPORT
-	#define MTS_EXPORT_CORE
-	#define MTS_EXPORT_RENDER
-	#define MTS_EXPORT_HW
-	#define MTS_EXPORT_BIDIR
-	#define MTS_EXPORT_PYTHON
+	#define MTS_EXPORT __attribute__ ((visibility("default")))
+	#define MTS_IMPORT
+	#define MTS_MAY_ALIAS __attribute__ ((__may_alias__))
+
 	#include <stdint.h>
 
 	#define SIZE_T_FMT "%zd"
+#endif
+
+#define MTS_MODULE_CORE 1
+#define MTS_MODULE_RENDER 2
+#define MTS_MODULE_HW 3
+#define MTS_MODULE_BIDIR 4
+#define MTS_MODULE_PYTHON 5
+
+#if MTS_BUILD_MODULE == MTS_MODULE_CORE
+	#define MTS_EXPORT_CORE MTS_EXPORT
+#else
+	#define MTS_EXPORT_CORE MTS_IMPORT
+#endif
+#if MTS_BUILD_MODULE == MTS_MODULE_RENDER
+	#define MTS_EXPORT_RENDER MTS_EXPORT
+#else
+	#define MTS_EXPORT_RENDER MTS_IMPORT
+#endif
+#if MTS_BUILD_MODULE == MTS_MODULE_HW
+	#define MTS_EXPORT_HW MTS_EXPORT
+#else
+	#define MTS_EXPORT_HW MTS_IMPORT
+#endif
+#if MTS_BUILD_MODULE == MTS_MODULE_BIDIR
+	#define MTS_EXPORT_BIDIR MTS_EXPORT
+#else
+	#define MTS_EXPORT_BIDIR MTS_IMPORT
+#endif
+#if MTS_BUILD_MODULE == MTS_MODULE_PYTHON
+	#define MTS_EXPORT_PYTHON MTS_EXPORT
+#else
+	#define MTS_EXPORT_PYTHON MTS_IMPORT
 #endif
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__LP64__) || defined(_LP64) || defined(WIN64)
@@ -141,40 +126,62 @@
 #define MTS_NAMESPACE_BEGIN namespace mitsuba {
 #define MTS_NAMESPACE_END }
 
-/* The default OpenMP implementation on OSX is seriously broken,
- * for instance it segfaults when launching OpenMP threads
- * from any other context than the main application thread
- */
-#if defined(__OSX__) && !defined(__INTEL_COMPILER)
-#define MTS_BROKEN_OPENMP 1
+#if defined(__GNUC__)
+#define FINLINE                inline __attribute__((always_inline))
+#define NOINLINE               __attribute__((noinline))
+#define EXPECT_TAKEN(a)        __builtin_expect(!!(a), true)
+#define EXPECT_NOT_TAKEN(a)    __builtin_expect(!!(a), false)
+#elif defined(__MSVC__)
+#define FINLINE                __forceinline
+#define NOINLINE               __declspec(noinline)
+#define MM_ALIGN16             __declspec(align(16))
+#define EXPECT_TAKEN(a)        (a)
+#define EXPECT_NOT_TAKEN(a)    (a)
 #else
-#define MTS_BROKEN_OPENMP 0
+#error Unsupported compiler!
 #endif
 
-/* Compile with Boost filesystem v2. At some point,
- * the transition to v3 should be made, but as of now
- * many Linux distributions still ship with Boost 1.42,
- * which does not support version 3.
- */
-#define BOOST_FILESYSTEM_VERSION 2
+#ifdef MTS_SSE
+#define SSE_STR	"SSE2 enabled"
+#else
+#define SSE_STR	"SSE2 disabled"
+#endif
 
-/* Use ELF support for thread-local storage on Linux? This
- * is potentially faster but causes problems when dynamically
- * loading Mitsuba from Python, so let's keep it disabled for now
- */
-#define MTS_USE_ELF_TLS 0
+/* The default OpenMP implementation on OSX is seriously broken,
+   for instance it segfaults when launching OpenMP threads
+   from context other than the main application thread */
+#if defined(__OSX__) && !defined(__INTEL_COMPILER) && !defined(MTS_NO_OPENMP)
+#define MTS_NO_OPENMP
+#endif
+
+#if !defined(MTS_NO_OPENMP)
+#define MTS_OPENMP
+#endif
+
+/* Compile with Boost::Filesystem v3 */
+#define BOOST_FILESYSTEM_VERSION 3 
 
 #include <string>
 
 MTS_NAMESPACE_BEGIN
+
+#if defined(DOUBLE_PRECISION)
+typedef double Float;
+#elif defined(SINGLE_PRECISION)
+typedef float Float;
+#else
+#error No precision flag was defined!
+#endif
+
 #if defined(__OSX__)
-extern void __mts_autorelease_init();
-extern void __mts_autorelease_shutdown();
-extern void __mts_autorelease_begin();
-extern void __mts_autorelease_end();
-extern std::string __mts_bundlepath();
-extern void __mts_chdir_to_bundlepath();
-extern void __mts_init_cocoa();
+extern MTS_EXPORT_CORE void __mts_autorelease_init();
+extern MTS_EXPORT_CORE void __mts_autorelease_shutdown();
+extern MTS_EXPORT_CORE void __mts_autorelease_begin();
+extern MTS_EXPORT_CORE void __mts_autorelease_end();
+extern MTS_EXPORT_CORE std::string __mts_bundlepath();
+extern MTS_EXPORT_CORE void __mts_chdir_to_bundlepath();
+extern MTS_EXPORT_CORE void __mts_init_cocoa();
+extern MTS_EXPORT_CORE void __mts_set_appdefaults();
 #define MTS_AUTORELEASE_BEGIN() __mts_autorelease_begin();
 #define MTS_AUTORELEASE_END() __mts_autorelease_end();
 #define MTS_AMBIGUOUS_SIZE_T 1
@@ -184,4 +191,4 @@ extern void __mts_init_cocoa();
 #endif
 MTS_NAMESPACE_END
 
-#endif /* __PLATFORM_H */
+#endif /* __MITSUBA_CORE_PLATFORM_H_ */

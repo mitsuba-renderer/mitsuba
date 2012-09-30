@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -28,37 +28,27 @@ public:
 		ref<FileStream> rFile   = new FileStream(s1, FileStream::EReadOnly);
 		ref<FileStream> gFile   = new FileStream(s2, FileStream::EReadOnly);
 		ref<FileStream> bFile   = new FileStream(s3, FileStream::EReadOnly);
+
+		ref<Bitmap> rBitmap = new Bitmap(Bitmap::EOpenEXR, rFile);
+		ref<Bitmap> gBitmap = new Bitmap(Bitmap::EOpenEXR, gFile);
+		ref<Bitmap> bBitmap = new Bitmap(Bitmap::EOpenEXR, bFile);
+		rBitmap = rBitmap->separateChannel(0);
+		gBitmap = gBitmap->separateChannel(0);
+		bBitmap = bBitmap->separateChannel(0);
+
+		std::vector<Bitmap *> sourceBitmaps;
+		sourceBitmaps.push_back(rBitmap);
+		sourceBitmaps.push_back(gBitmap);
+		sourceBitmaps.push_back(bBitmap);
+
+		ref<Bitmap> result = Bitmap::join(Bitmap::ERGBA, sourceBitmaps);
 		ref<FileStream> outFile = new FileStream(s4, FileStream::ETruncReadWrite);
-
-		ref<Bitmap> rBitmap = new Bitmap(Bitmap::EEXR, rFile);
-		ref<Bitmap> gBitmap = new Bitmap(Bitmap::EEXR, gFile);
-		ref<Bitmap> bBitmap = new Bitmap(Bitmap::EEXR, bFile);
-		ref<Bitmap> outBitmap = new Bitmap(rBitmap->getWidth(), rBitmap->getHeight(), 128);
-
-		float *rData = rBitmap->getFloatData();
-		float *gData = gBitmap->getFloatData();
-		float *bData = bBitmap->getFloatData();
-		float *outData = outBitmap->getFloatData();
-		int width = rBitmap->getWidth();
-
-		for (int y=0; y<rBitmap->getHeight(); ++y) {
-			for (int x=0; x<rBitmap->getWidth(); ++x) {
-				float r = rData[(x + y * width) * 4];
-				float g = gData[(x + y * width) * 4 + 1];
-				float b = bData[(x + y * width) * 4 + 2];
-				outData[(x+y * width) * 4 + 0] = r;
-				outData[(x+y * width) * 4 + 1] = g;
-				outData[(x+y * width) * 4 + 2] = b;
-				outData[(x+y * width) * 4 + 3] = 1;
-			}
-		}
-
-		outBitmap->save(Bitmap::EEXR, outFile);
+		result->write(Bitmap::EOpenEXR, outFile);
 	}
 
 	int run(int argc, char **argv) {
 		if (argc < 5) {
-			cout << "Join three monochromatic EXRs into a colored image" << endl;
+			cout << "Join three monochromatic images into a RGB-valued EXR file" << endl;
 			cout << "joinrgb <red.exr> <green.exr> <blue.exr> <combined.exr>" << endl;
 		} else {
 			joinRGB(argv[1], argv[2], argv[3], argv[4]);

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -29,7 +29,7 @@ void transmittanceIntegrand(const BSDF *bsdf, const Vector &wi, size_t nPts, con
 	Intersection its;
 
 	for (size_t i=0; i<nPts; ++i) {
-		BSDFQueryRecord bRec(its, wi, Vector(), EImportance);
+		BSDFSamplingRecord bRec(its, wi, Vector(), EImportance);
 		bRec.typeMask = BSDF::ETransmission;
 		out[i] = bsdf->sample(bRec, Point2(in[2*i], in[2*i+1]))[0];
 	}
@@ -43,11 +43,12 @@ void diffTransmittanceIntegrand(Float *data, size_t resolution, size_t nPts, con
 class TestRoughTransmittance : public TestCase {
 public:
 	MTS_BEGIN_TESTCASE()
-	MTS_DECLARE_TEST(test01_roughTransmittance)
-	MTS_DECLARE_TEST(test02_roughTransmittanceFixedEta)
-	MTS_DECLARE_TEST(test03_roughTransmittanceFixedEtaFixedAlpha)
-	MTS_END_TESTCASE()
- 
+	MTS_DECLARE_TEST(test01_smoothTransmittance)
+	MTS_DECLARE_TEST(test02_roughTransmittance)
+	MTS_DECLARE_TEST(test03_roughTransmittanceFixedEta)
+	MTS_DECLARE_TEST(test04_roughTransmittanceFixedEtaFixedAlpha)
+	MTS_END_TESTCASE()	
+
 	Float computeDiffuseTransmittance(const char *name, Float eta, Float alpha, size_t resolution = 100) {
 		Properties bsdfProps("roughdielectric");
 		if (eta < 1) {
@@ -72,8 +73,7 @@ public:
 
 		for (size_t i=0; i<resolution; ++i) {
 			Float cosTheta = stepSize * i;
-			Vector wi(std::sqrt(std::max((Float) 0, 
-					1-cosTheta*cosTheta)), 0, cosTheta);
+			Vector wi(math::safe_sqrt(1-cosTheta*cosTheta), 0, cosTheta);
 
 			Float min[2] = {0, 0}, max[2] = {1, 1};
 			intTransmittance.integrateVectorized(
@@ -112,8 +112,7 @@ public:
 
 		NDIntegrator intTransmittance(1, 2, 50000, 0, 1e-6f);
 
-		Vector wi(std::sqrt(std::max((Float) 0, 
-				1-cosTheta*cosTheta)), 0, cosTheta);
+		Vector wi(math::safe_sqrt(1-cosTheta*cosTheta), 0, cosTheta);
 		Float transmittance, error;
 
 		Float min[2] = {0, 0}, max[2] = {1, 1};
@@ -124,7 +123,22 @@ public:
 		return transmittance;
 	}
 
-	void test01_roughTransmittance() {
+	void test01_smoothTransmittance() {
+		/* Smooth diffuse transmittance - compare polynomial approximations to ground truth */
+		for (int i=0; i<=10; ++i) {
+			Float eta = 1 + i/10.0f;
+			
+			Float f1 = fresnelDiffuseReflectance(eta, false);
+			Float f2 = fresnelDiffuseReflectance(eta, true);
+			Float f3 = fresnelDiffuseReflectance(1/eta, false);
+			Float f4 = fresnelDiffuseReflectance(1/eta, true);
+
+			assertEqualsEpsilon(std::abs(f1-f2), (Float) 0, 1e-3f);
+			assertEqualsEpsilon(std::abs(f3-f4), (Float) 0, 1e-3f);
+		}
+	}
+
+	void test02_roughTransmittance() {
 		RoughTransmittance rtr(MicrofacetDistribution::EBeckmann);
 		ref<Random> random = new Random();
 
@@ -181,7 +195,7 @@ public:
 		cout << "Avg error = " << avgErr << endl;
 	}
 
-	void test02_roughTransmittanceFixedEta() {
+	void test03_roughTransmittanceFixedEta() {
 		RoughTransmittance rtr(MicrofacetDistribution::EBeckmann);
 
 		Float eta = 1.5f;
@@ -233,7 +247,7 @@ public:
 		cout << "Avg error = " << avgErr << endl;
 	}
 
-	void test03_roughTransmittanceFixedEtaFixedAlpha() {
+	void test04_roughTransmittanceFixedEtaFixedAlpha() {
 		ref<Timer> timer = new Timer();
 		RoughTransmittance rtr(MicrofacetDistribution::EBeckmann);
 		Float eta = 1.5f;

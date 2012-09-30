@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,10 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__MMAP_H)
-#define __MMAP_H
+#pragma once
+#if !defined(__MITSUBA_CORE_MMAP_H_)
+#define __MITSUBA_CORE_MMAP_H_
 
 #include <mitsuba/core/fstream.h>
+#include <boost/scoped_ptr.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -32,30 +34,27 @@ public:
 	/// Map the specified file into memory
 	MemoryMappedFile(const fs::path &filename);
 
+	/// Create a new memory-mapped file of the specified size
+	MemoryMappedFile(const fs::path &filename, size_t size);
+
 	/// Return a pointer to the file contents in memory
-	inline void *getData() { return m_data; }
+	void *getData();
 
 	/// Return a pointer to the file contents in memory (const version)
-	inline const void *getData() const { return m_data; }
+	const void *getData() const;
 
 	/// Return the size of the mapped region
-	inline size_t getSize() const { return m_size; }
+	size_t getSize() const;
 
 	/// Release all resources
 	virtual ~MemoryMappedFile();
 
 	MTS_DECLARE_CLASS()
-protected:
-	fs::path m_filename;
-
-#if defined(WIN32)
-	HANDLE m_file;
-	HANDLE m_fileMapping;
-#endif
-	size_t m_size;
-	void *m_data;
+private:
+	struct MemoryMappedFilePrivate;
+	boost::scoped_ptr<MemoryMappedFilePrivate> d;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __MMAP_H */
+#endif /* __MITSUBA_CORE_MMAP_H_ */

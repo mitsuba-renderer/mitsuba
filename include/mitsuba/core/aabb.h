@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,13 +16,13 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__AABB_H)
-#define __AABB_H
+#pragma once
+#if !defined(__MITSUBA_CORE_AABB_H_)
+#define __MITSUBA_CORE_AABB_H_
 
 #include <mitsuba/core/bsphere.h>
 
 MTS_NAMESPACE_BEGIN
-
 
 /**
  * \brief Generic multi-dimensional bounding box data structure
@@ -34,9 +34,10 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libcore
  */
 template <typename T> struct TAABB {
-	typedef T                       point_type;
-	typedef typename T::value_type  value_type;
-	typedef typename T::vector_type vector_type;
+	typedef T                           PointType;
+	typedef typename T::Scalar          Scalar;
+	typedef typename T::VectorType      VectorType;
+	typedef TRay<PointType, VectorType> RayType;
 
 	/** 
 	 * \brief Create a new invalid bounding box
@@ -51,19 +52,19 @@ template <typename T> struct TAABB {
 
 	/// Unserialize a bounding box from a binary data stream
 	inline TAABB(Stream *stream) {
-		min = point_type(stream);
-		max = point_type(stream);
+		min = PointType(stream);
+		max = PointType(stream);
 	}
 
 	/// Create a collapsed AABB from a single point
-	inline TAABB(const point_type &p) 
+	inline TAABB(const PointType &p) 
 		: min(p), max(p) { }
 
 	/// Create a bounding box from two positions
-	inline TAABB(const point_type &min, const point_type &max)
+	inline TAABB(const PointType &min, const PointType &max)
 		: min(min), max(max) {
 #if defined(MTS_DEBUG)
-		for (int i=0; i<point_type::dim; ++i) 
+		for (int i=0; i<PointType::dim; ++i) 
 			SAssert(min[i] <= max[i]);
 #endif
 	}
@@ -80,7 +81,7 @@ template <typename T> struct TAABB {
 
 	/// Clip to another bounding box
 	inline void clip(const TAABB &aabb) {
-		for (int i=0; i<point_type::dim; ++i) {
+		for (int i=0; i<PointType::dim; ++i) {
 			min[i] = std::max(min[i], aabb.min[i]);
 			max[i] = std::min(max[i], aabb.max[i]);
 		}
@@ -94,26 +95,26 @@ template <typename T> struct TAABB {
 	 * respectively.
 	 */
 	inline void reset() {
-		min = point_type( std::numeric_limits<value_type>::infinity());
-		max = point_type(-std::numeric_limits<value_type>::infinity());
+		min = PointType( std::numeric_limits<Scalar>::infinity());
+		max = PointType(-std::numeric_limits<Scalar>::infinity());
 	}
 
 	/// Calculate the n-dimensional volume of the bounding box
-	inline value_type getVolume() const {
-		vector_type diff = max-min;
-		value_type result = diff[0];
-		for (int i=1; i<point_type::dim; ++i)
+	inline Scalar getVolume() const {
+		VectorType diff = max-min;
+		Scalar result = diff[0];
+		for (int i=1; i<PointType::dim; ++i)
 			result *= diff[i];
 		return result;
 	}
-	
+
 	/// Calculate the n-1 dimensional volume of the boundary
 	inline Float getSurfaceArea() const {
-		vector_type d = max - min;
+		VectorType d = max - min;
 		Float result = 0.0f;
-		for (int i=0; i<point_type::dim; ++i) {
+		for (int i=0; i<PointType::dim; ++i) {
 			Float term = 1.0f;
-			for (int j=0; j<point_type::dim; ++j) {
+			for (int j=0; j<PointType::dim; ++j) {
 				if (i == j)
 					continue;
 				term *= d[j];
@@ -124,13 +125,13 @@ template <typename T> struct TAABB {
 	}
 
 	/// Return the center point
-	inline point_type getCenter() const {
-		return (max + min) * (value_type) 0.5;
+	inline PointType getCenter() const {
+		return (max + min) * (Scalar) 0.5;
 	}
 
 	/// Check whether a point lies on or inside the bounding box
-	inline bool contains(const point_type &vec) const {
-		for (int i=0; i<point_type::dim; ++i)
+	inline bool contains(const PointType &vec) const {
+		for (int i=0; i<PointType::dim; ++i)
 			if (vec[i] < min[i] || vec[i] > max[i])
 				return false;
 		return true;
@@ -140,7 +141,7 @@ template <typename T> struct TAABB {
 	inline bool contains(const TAABB &aabb) const {
 		if (!isValid())
 			return false;
-		for (int i=0; i<point_type::dim; ++i)
+		for (int i=0; i<PointType::dim; ++i)
 			if (aabb.min[i] < min[i] || aabb.max[i] > max[i])
 				return false;
 		return true;
@@ -148,15 +149,15 @@ template <typename T> struct TAABB {
 
 	/// Axis-aligned bounding box overlap test
 	inline bool overlaps(const TAABB &aabb) const {
-		for (int i=0; i<point_type::dim; ++i) 
+		for (int i=0; i<PointType::dim; ++i) 
 			if (max[i] < aabb.min[i] || min[i] > aabb.max[i])
 				return false;
 		return true;
 	}
 
 	/// Expand the bounding box to contain another point
-	inline void expandBy(const point_type &p) {
-		for (int i=0; i<point_type::dim; ++i) {
+	inline void expandBy(const PointType &p) {
+		for (int i=0; i<PointType::dim; ++i) {
 			min[i] = std::min(min[i], p[i]);
 			max[i] = std::max(max[i], p[i]);
 		}
@@ -164,17 +165,17 @@ template <typename T> struct TAABB {
 
 	/// Expand the bounding box to contain another bounding box
 	inline void expandBy(const TAABB &aabb) {
-		for (int i=0; i<point_type::dim; ++i) {
+		for (int i=0; i<PointType::dim; ++i) {
 			min[i] = std::min(min[i], aabb.min[i]);
 			max[i] = std::max(max[i], aabb.max[i]);
 		}
 	}
 
 	/// Calculate the squared point-AABB distance
-	inline value_type squaredDistanceTo(const point_type &p) const {
-		value_type result = 0;
-		for (int i=0; i<point_type::dim; ++i) {
-			value_type value = 0;
+	inline Scalar squaredDistanceTo(const PointType &p) const {
+		Scalar result = 0;
+		for (int i=0; i<PointType::dim; ++i) {
+			Scalar value = 0;
 			if (p[i] < min[i])
 				value = min[i] - p[i];
 			else if (p[i] > max[i])
@@ -185,16 +186,16 @@ template <typename T> struct TAABB {
 	}
 
 	/// Calculate the point-AABB distance
-	inline value_type distanceTo(const point_type &p) const {
+	inline Scalar distanceTo(const PointType &p) const {
 		return std::sqrt(squaredDistanceTo(p));
 	}
 
 	/// Calculate the minimum squared AABB-AABB distance
-	inline value_type squaredDistanceTo(const TAABB &aabb) const {
-		value_type result = 0;
+	inline Scalar squaredDistanceTo(const TAABB &aabb) const {
+		Scalar result = 0;
 
-		for (int i=0; i<point_type::dim; ++i) {
-			value_type value = 0;
+		for (int i=0; i<PointType::dim; ++i) {
+			Scalar value = 0;
 			if (aabb.max[i] < min[i])
 				value = min[i] - aabb.max[i];
 			else if (aabb.min[i] > max[i])
@@ -205,13 +206,13 @@ template <typename T> struct TAABB {
 	}
 
 	/// Calculate the minimum AABB-AABB distance
-	inline value_type distanceTo(const TAABB &aabb) const {
+	inline Scalar distanceTo(const TAABB &aabb) const {
 		return std::sqrt(squaredDistanceTo(aabb));
 	}
 
 	/// Return whether this bounding box is valid
 	inline bool isValid() const {
-		for (int i=0; i<point_type::dim; ++i) 
+		for (int i=0; i<PointType::dim; ++i) 
 			if (max[i] < min[i])
 				return false;
 		return true;
@@ -225,7 +226,7 @@ template <typename T> struct TAABB {
 	 * is considered nonempty.
 	 */
 	inline bool isEmpty() const {
-		for (int i=0; i<point_type::dim; ++i) {
+		for (int i=0; i<PointType::dim; ++i) {
 			if (max[i] > min[i])
 				return false;
 		}
@@ -234,10 +235,10 @@ template <typename T> struct TAABB {
 
 	/// Return the axis index with the largest associated side length
 	inline int getLargestAxis() const {
-		vector_type d = max - min;
+		VectorType d = max - min;
 		int largest = 0;
 
-		for (int i=1; i<point_type::dim; ++i)
+		for (int i=1; i<PointType::dim; ++i)
 			if (d[i] > d[largest])
 				largest = i;
 		return largest;
@@ -245,10 +246,10 @@ template <typename T> struct TAABB {
 
 	/// Return the axis index with the shortest associated side length
 	inline int getShortestAxis() const {
-		vector_type d = max - min;
+		VectorType d = max - min;
 		int shortest = 0;
 
-		for (int i=1; i<point_type::dim; ++i)
+		for (int i=1; i<PointType::dim; ++i)
 			if (d[i] < d[shortest])
 				shortest = i;
 		return shortest;
@@ -258,90 +259,9 @@ template <typename T> struct TAABB {
 	 * \brief Calculate the bounding box extents
 	 * \return max-min
 	 */
-	inline vector_type getExtents() const {
+	inline VectorType getExtents() const {
 		return max - min;
 	}
-
-	/// Serialize this bounding box to a binary data stream
-	inline void serialize(Stream *stream) const {
-		min.serialize(stream);
-		max.serialize(stream);
-	}
-
-	/// Return a string representation of the bounding box
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "AABB[";
-		if (!isValid()) {
-			oss << "invalid";
-		} else {
-			oss << "min=" << min.toString()
-				<< ", max=" << max.toString();
-		}
-		oss	<< "]";
-		return oss.str();
-	}
-
-	point_type min; ///< Component-wise minimum 
-	point_type max; ///< Component-wise maximum 
-};
-
-
-/**
- * \brief Axis-aligned bounding box data structure in three dimensions
- * 
- * Maintains a component-wise minimum and maximum position and provides
- * various convenience functions to query or change them.
- *
- * \ingroup libcore
- * \ingroup libpython
- */
-struct MTS_EXPORT_CORE AABB : public TAABB<Point> {
-public:
-	/** 
-	 * \brief Create a new invalid bounding box
-	 * 
-	 * Initializes the components of the minimum 
-	 * and maximum position to \f$\infty\f$ and \f$-\infty\f$,
-	 * respectively.
-	 */
-	inline AABB() : TAABB<Point>() { }
-
-	/// Unserialize a bounding box from a binary data stream
-	inline AABB(Stream *stream) : TAABB<Point>(stream) { }
-
-	/// Create a collapsed AABB from a single point
-	inline AABB(const Point &p) : TAABB<Point>(p) { }
-
-	/// Create a bounding box from two positions
-	inline AABB(const point_type &min, const point_type &max) 
-		: TAABB<Point>(min, max) {
-	}
-
-	/// Construct from a TAABB<Point>
-	inline AABB(const TAABB<Point> &aabb) 
-		: TAABB<Point>(aabb) { }
-
-	/// Calculate the surface area of the bounding box
-	inline Float getSurfaceArea() const {
-		Vector d = max - min;
-		return (Float) 2.0 * (d.x*d.y + d.x*d.z + d.y*d.z);
-	}
-
-	/**
-	 * \brief Return the position of a bounding box corner
-	 * \param corner Requested corner index (0..7)
-	 */
-	Point getCorner(uint8_t corner) const;
-
-	/**
-	 * \brief Bounding sphere-box overlap test
-	 *
-	 * Implements the technique proposed by Jim Arvo in
-	 * "A simple method for box-sphere intersection testing"
-	 * (Graphics Gems, 1990)
-	 */
-	bool overlaps(const BSphere &sphere) const;
 
 	/** \brief Calculate the near and far ray-AABB intersection
 	 * points (if they exist).
@@ -350,12 +270,12 @@ public:
 	 * \c nearT and \c farT values as a tuple (or \c None, when no
 	 * intersection was found)
 	 */
-	FINLINE bool rayIntersect(const Ray &ray, Float &nearT, Float &farT) const {
+	FINLINE bool rayIntersect(const RayType &ray, Float &nearT, Float &farT) const {
 		nearT = -std::numeric_limits<Float>::infinity();
 		farT  = std::numeric_limits<Float>::infinity();
 
 		/* For each pair of AABB planes */
-		for (int i=0; i<3; i++) {
+		for (int i=0; i<PointType::dim; i++) {
 			const Float direction = ray.d[i];
 			const Float origin = ray.o[i];
 			const Float minVal = min[i], maxVal = max[i];
@@ -385,6 +305,87 @@ public:
 		return true;
 	}
 
+	/// Serialize this bounding box to a binary data stream
+	inline void serialize(Stream *stream) const {
+		min.serialize(stream);
+		max.serialize(stream);
+	}
+
+	/// Return a string representation of the bounding box
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "AABB[";
+		if (!isValid()) {
+			oss << "invalid";
+		} else {
+			oss << "min=" << min.toString()
+				<< ", max=" << max.toString();
+		}
+		oss	<< "]";
+		return oss.str();
+	}
+
+	PointType min; ///< Component-wise minimum 
+	PointType max; ///< Component-wise maximum 
+};
+
+
+/**
+ * \brief Axis-aligned bounding box data structure in three dimensions
+ * 
+ * Maintains a component-wise minimum and maximum position and provides
+ * various convenience functions to query or change them.
+ *
+ * \ingroup libcore
+ * \ingroup libpython
+ */
+struct AABB : public TAABB<Point> {
+public:
+	/** 
+	 * \brief Create a new invalid bounding box
+	 * 
+	 * Initializes the components of the minimum 
+	 * and maximum position to \f$\infty\f$ and \f$-\infty\f$,
+	 * respectively.
+	 */
+	inline AABB() : TAABB<Point>() { }
+
+	/// Unserialize a bounding box from a binary data stream
+	inline AABB(Stream *stream) : TAABB<Point>(stream) { }
+
+	/// Create a collapsed AABB from a single point
+	inline AABB(const Point &p) : TAABB<Point>(p) { }
+
+	/// Create a bounding box from two positions
+	inline AABB(const PointType &min, const PointType &max) 
+		: TAABB<Point>(min, max) {
+	}
+
+	/// Construct from a TAABB<Point>
+	inline AABB(const TAABB<Point> &aabb) 
+		: TAABB<Point>(aabb) { }
+
+	/// Calculate the surface area of the bounding box
+	inline Float getSurfaceArea() const {
+		Vector d = max - min;
+		return (Float) 2.0 * (d.x*d.y + d.x*d.z + d.y*d.z);
+	}
+
+	/**
+	 * \brief Return the position of a bounding box corner
+	 * \param corner Requested corner index (0..7)
+	 */
+	MTS_EXPORT_CORE Point getCorner(uint8_t corner) const;
+
+	/**
+	 * \brief Bounding sphere-box overlap test
+	 *
+	 * Implements the technique proposed by Jim Arvo in
+	 * "A simple method for box-sphere intersection testing"
+	 * (Graphics Gems, 1990)
+	 */
+	MTS_EXPORT_CORE bool overlaps(const BSphere &sphere) const;
+
 #ifdef MTS_SSE
 	/**
 	 * \brief Intersect against a packet of four rays. 
@@ -394,13 +395,9 @@ public:
 #endif
 
 	/// Create a bounding sphere, which contains the axis-aligned box
-	BSphere getBSphere() const;
+	MTS_EXPORT_CORE BSphere getBSphere() const;
 };
 
 MTS_NAMESPACE_END
 
-#ifdef MTS_SSE
-#include <mitsuba/core/aabb_sse.h>
-#endif
-
-#endif /* __AABB_H */
+#endif /* __MITSUBA_CORE_AABB_H_ */

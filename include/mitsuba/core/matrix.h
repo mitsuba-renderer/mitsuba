@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(_MATRIX_H)
-#define _MATRIX_H
+#pragma once
+#if !defined(__MITSUBA_CORE_MATRIX_H_)
+#define __MITSUBA_CORE_MATRIX_H_
 
 #include <mitsuba/mitsuba.h>
 #include <boost/static_assert.hpp>
@@ -86,6 +87,12 @@ public:
 			for (int j=0; j<N; ++j)
 				m[i][j] = (i == j) ? 1.0f : 0.0f;
 	}
+
+	/// Initialize with zeroes
+	void setZero() {
+		memset(m, 0, sizeof(T) * M * N);
+	}
+
 
 	/// Indexing operator
 	inline T &operator()(int i, int j) { return m[i][j]; }
@@ -265,6 +272,15 @@ public:
 		return sum;
 	}
 
+	/// Compute the Frobenius norm
+	inline Float frob() const {
+		Float val = 0;
+		for (int i=0; i<M; ++i)
+			for (int j=0; j<N; ++j)
+				val += m[i][j] * m[i][j];
+		return std::sqrt(val);
+	}
+
 	/**
 	 * \brief Compute the LU decomposition of a matrix
 	 *
@@ -354,6 +370,17 @@ public:
 		return true;
 	}
 
+	/// Test if this is the identity matrix
+	inline bool isIdentity() const {
+		for (int i=0; i<M; ++i) {
+			for (int j=0; j<N; ++j) {
+				if (m[i][j] != ((i==j) ? 1 : 0))
+					return false;
+			}
+		}
+		return true;
+	}
+
 	/**
 	 * \brief Compute the determinant of a square matrix (internally
 	 * creates a LU decomposition)
@@ -398,18 +425,16 @@ public:
 	/// Return a string representation
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Matrix[" << M << "x" << N << ","<< std::endl;
+		oss << "Matrix" << M << "x" << N << "["<< std::endl;
 		for (int i=0; i<M; ++i) {
-			oss << "  [";
+			oss << "  ";
 			for (int j=0; j<N; ++j) {
 				oss << m[i][j];
 				if (j != N-1)
 					oss << ", ";
 			}
-			oss << "]";
-
 			if (i != M-1)
-				oss << ",";
+				oss << ";";
 			oss << std::endl;
 		}
 		oss << "]";
@@ -436,9 +461,15 @@ public:
 
 	/// Initialize the matrix from a given 2x2 array
 	explicit inline Matrix2x2(const Float _m[2][2]) : Matrix<2, 2, Float>(_m) { }
-	
+
 	/// Initialize the matrix from a given (float) 2x2 array in row-major order
 	explicit inline Matrix2x2(const Float _m[4]) : Matrix<2, 2, Float>(_m) { }
+
+	/// Initialize the matrix from two 2D column vectors
+	explicit inline Matrix2x2(const Vector2 &v1, const Vector2 &v2) {
+		m[0][0] = v1.x; m[0][1] = v2.x;
+		m[1][0] = v1.y; m[1][1] = v2.y; 
+	}
 
 	/// Unserialize a matrix from a stream
 	explicit inline Matrix2x2(Stream *stream) : Matrix<2, 2, Float>(stream) { }
@@ -458,8 +489,8 @@ public:
 	}
 
 	/// Compute the inverse (Faster than Matrix::invert)
-	inline bool invert(Matrix2x2 &target) const {
-		Float det = this->det();
+	FINLINE bool invert(Matrix2x2 &target) const {
+		Float det = m[0][0]*m[1][1] - m[0][1]*m[1][0];
 		if (det == 0)
 			return false;
 		Float invDet = 1/det;
@@ -522,6 +553,13 @@ public:
 
 	/// Initialize the matrix from a given (float) 3x3 array in row-major order
 	explicit inline Matrix3x3(const Float _m[9]) : Matrix<3, 3, Float>(_m) { }
+
+	/// Initialize the matrix from three 3D column vectors
+	explicit inline Matrix3x3(const Vector &v1, const Vector &v2, const Vector &v3) {
+		m[0][0] = v1.x; m[0][1] = v2.x; m[0][2] = v3.x;
+		m[1][0] = v1.y; m[1][1] = v2.y; m[1][2] = v3.y;
+		m[2][0] = v1.z; m[2][1] = v2.z; m[2][2] = v3.z;
+	}
 
 	/// Unserialize a matrix from a stream
 	explicit inline Matrix3x3(Stream *stream) : Matrix<3, 3, Float>(stream) { }
@@ -602,6 +640,14 @@ struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 
 	/// Initialize the matrix from a given (float) 4x4 array in row-major order
 	explicit inline Matrix4x4(const Float _m[16]) : Matrix<4, 4, Float>(_m) { }
+
+	/// Initialize the matrix from four 4D column vectors
+	explicit inline Matrix4x4(const Vector4 &v1, const Vector4 &v2, const Vector4 &v3, const Vector4 &v4) {
+		m[0][0] = v1.x; m[0][1] = v2.x; m[0][2] = v3.x; m[0][3] = v4.x;
+		m[1][0] = v1.y; m[1][1] = v2.y; m[1][2] = v3.y; m[1][3] = v4.y;
+		m[2][0] = v1.z; m[2][1] = v2.z; m[2][2] = v3.z; m[2][3] = v4.z;
+		m[3][0] = v1.w; m[3][1] = v2.w; m[3][2] = v3.w; m[3][3] = v4.w;
+	}
 
 	/// Unserialize a matrix from a stream
 	explicit inline Matrix4x4(Stream *stream) : Matrix<4, 4, Float>(stream) { }
@@ -716,4 +762,4 @@ MTS_NAMESPACE_END
 
 #include "matrix.inl"
 
-#endif /* _MATRIX_H */
+#endif /* __MITSUBA_CORE_MATRIX_H_ */

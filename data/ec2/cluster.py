@@ -2,7 +2,7 @@
 #
 # This file is part of Mitsuba, a physically based rendering system.
 #
-# Copyright (c) 2007-2010 by Wenzel Jakob and others.
+# Copyright (c) 2007-2012 by Wenzel Jakob and others.
 #
 # Mitsuba is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License Version 3
@@ -335,7 +335,7 @@ if len(sys.argv) == 1:
 	print('')
 	print('                    Mitsuba Amazon EC2 instance launcher')
 	print('')
-	print(' Copyright (C) 2007-2011 by Wenzel Jakob and others. This is free software;')
+	print(' Copyright (C) 2007-2012 by Wenzel Jakob and others. This is free software;')
 	print(' see the source for copying conditions. There is NO warranty; not even for')
 	print(' MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.')
 	print('')

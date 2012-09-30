@@ -3,10 +3,10 @@
 ^doc/.*\.aux$
 ^doc/.*\.log$
 ^doc/.*\.out$
-^doc/.*\.pdf$
 ^doc/.*\.toc$
 ^doc/.*\.bbl$
 ^doc/.*\.blg$
+^doc/main.pdf$
 ^doc/plugins_generated.tex$
 
 # Build-related

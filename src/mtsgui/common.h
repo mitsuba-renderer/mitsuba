@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,12 +20,13 @@
 #define QTGUI_COMMON_H
 
 #include <mitsuba/core/platform.h>
-#include <QtGui>
-#include <QtXml>
+#include <QtGui/QtGui>
+#include <QtXml/QtXml>
 #include <mitsuba/render/scene.h>
 #include <mitsuba/render/vpl.h>
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/version.h>
+#include <set>
 
 using namespace mitsuba;
 
@@ -113,10 +114,7 @@ enum EMode {
 
 enum EPreviewMethod {
 	EDisabled = 0,
-	EOpenGL,
-	EOpenGLSinglePass,
-	ERayTraceCoherent,
-	ERayTrace
+	EOpenGL
 };
 
 enum EToneMappingMethod {
@@ -138,12 +136,17 @@ struct PreviewQueueEntry {
 	inline PreviewQueueEntry(int id = 0) 
 		: id(id), vplSampleOffset(0), buffer(NULL), sync(NULL) {
 	}
+
+	void cleanup();
 };
 
 struct VisualWorkUnit {
 	Point2i offset;
 	Vector2i size;
 	int worker;
+
+	inline VisualWorkUnit(const Point2i &offset, const Vector2i &size, int worker = 0) 
+		: offset(offset), size(size), worker(worker) { }
 };
 
 struct block_comparator : std::binary_function<VisualWorkUnit, VisualWorkUnit, bool> {
@@ -176,6 +179,7 @@ struct SceneContext {
 	/* Rendering/Preview-related */
 	RenderJob *renderJob;
 	bool cancelled;
+	bool wasRendering;
 	float progress;
 	QString eta, progressName;
 	ref<Bitmap> framebuffer;
@@ -195,6 +199,7 @@ struct SceneContext {
 	int shownKDTreeLevel;
 	ESelectionMode selectionMode;
 	const Shape *selectedShape;
+	Vector2i originalSize;
 	QDomDocument doc;
 
 	/* Preview state */
@@ -202,7 +207,8 @@ struct SceneContext {
 	PreviewQueueEntry previewBuffer;
 
 	SceneContext() : scene(NULL), sceneResID(-1), 
-		renderJob(NULL), selectionMode(ENothing),
+		renderJob(NULL), wasRendering(false),
+		selectionMode(ENothing),
 		selectedShape(NULL) { }
 
 	/// Detect the path length

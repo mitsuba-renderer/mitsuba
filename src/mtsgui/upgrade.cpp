@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,7 +20,7 @@
 #include "save.h"
 #include <mitsuba/core/fresolver.h>
 #include <boost/algorithm/string.hpp>
-#include <QtXmlPatterns>
+#include <QtXmlPatterns/QtXmlPatterns>
 
 struct VersionComparator {
 	inline bool operator()(const std::pair<Version, fs::path> &s1, 
@@ -64,8 +64,8 @@ UpgradeManager::UpgradeManager(const FileResolver *resolver) : m_resolver(resolv
 
 	for (; it != end; ++it) {
 		fs::path file = *it;
-		std::string extension = file.extension(),
-			filename = file.filename();
+		std::string extension = file.extension().string(),
+			filename = file.filename().string();
 		if (boost::to_lower_copy(extension) != ".xsl" ||
            !boost::starts_with(filename, "upgrade_"))
 			continue;
@@ -77,7 +77,7 @@ UpgradeManager::UpgradeManager(const FileResolver *resolver) : m_resolver(resolv
 
 	for (size_t i=0; i<m_transformations.size(); ++i)
 		SLog(EInfo, "  - registered transformation \"%s\", which updates to version %s", 
-			m_transformations[i].second.filename().c_str(), 
+			m_transformations[i].second.filename().string().c_str(), 
 			m_transformations[i].first.toString().c_str());
 }
 
@@ -114,8 +114,8 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		outputBuffer.open(QIODevice::WriteOnly | QIODevice::Truncate);
 
 		SLog(EInfo, "Applying transformation \"%s\" ..", 
-			m_transformations[i].second.filename().c_str());
-		std::string trafoFilename = m_transformations[i].second.file_string();
+			m_transformations[i].second.filename().string().c_str());
+		std::string trafoFilename = m_transformations[i].second.string();
 		QFile trafoFile(trafoFilename.c_str());
 		if (!trafoFile.open(QIODevice::ReadOnly | QIODevice::Text))
 			SLog(EError, "Unable to open the stylesheet \"%s\" -- stopping "
@@ -175,8 +175,8 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 			if (e.tagName() == "include") {
 				fs::path path = m_resolver->resolve(e.attribute("filename").toStdString());
 				SLog(EInfo, "Recursively upgrading include file \"%s\" ..",
-						path.file_string().c_str());
-				performUpgrade(path.file_string().c_str(), version);
+						path.string().c_str());
+				performUpgrade(path.string().c_str(), version);
 			}
 		}
 		n = n.nextSibling();

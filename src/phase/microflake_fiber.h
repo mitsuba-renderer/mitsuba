@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -242,13 +242,13 @@ public:
 
 	/// Evaluate the density as a function of \cos\theta
 	inline Float pdfCosTheta(Float cosTheta) const {
-		return std::fastexp(-cosTheta*cosTheta 
+		return math::fastexp(-cosTheta*cosTheta 
 			/ (2*m_stddev*m_stddev)) * m_normalization;
 	}
 
 	/// Evaluate the density as a function of direction
 	inline Float pdf(const Vector &d) const {
-		return std::fastexp(-d.z*d.z
+		return math::fastexp(-d.z*d.z
 			/ (2*m_stddev*m_stddev)) * m_normalization;
 	}
 

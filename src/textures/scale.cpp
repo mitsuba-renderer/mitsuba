@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -23,6 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{scale}{Scaling passthrough texture}
+ * \order{3}
  * \parameters{
  *     \parameter{value}{\Spectrum\Or\Texture}{
  *       Specifies the spectrum or nested texture that should be scaled
@@ -81,8 +82,8 @@ public:
 			Texture::addChild(name, child);
 	}
 
-	Spectrum getValue(const Intersection &its) const {
-		return m_nested->getValue(its) * m_scale;
+	Spectrum eval(const Intersection &its, bool filter) const {
+		return m_nested->eval(its, filter) * m_scale;
 	}
 
 	Spectrum getAverage() const {
@@ -160,7 +161,7 @@ public:
 	}
 
 	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_scale"));
+		parameterIDs.push_back(program->getParameterID(evalName + "_scale", false));
 	}
 
 	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &nestedUnitOffset) const {

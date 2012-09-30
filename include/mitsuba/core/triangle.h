@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__TRIANGLE_H)
-#define __TRIANGLE_H
+#pragma once
+#if !defined(__MITSUBA_CORE_TRIANGLE_H_)
+#define __MITSUBA_CORE_TRIANGLE_H_
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/aabb.h>
@@ -45,10 +46,10 @@ struct MTS_EXPORT_CORE Triangle {
 
 	/**
 	 * \brief Returns the axis-aligned bounding box of a triangle after it has 
-	 * clipped to the extends of another, given AABB. 
+	 * clipped to the extends of another given AABB. 
 	 *
 	 * This function uses the Sutherland-Hodgman algorithm to calculate the 
-	 * convex polygon, which is created when applying all 6 AABB splitting 
+	 * convex polygon that is created when applying all 6 AABB splitting 
 	 * planes to the triangle. Afterwards, the AABB of the newly created 
 	 * convex polygon is returned. This function is an important component 
 	 * for efficiently creating 'Perfect Split' KD-trees. For more detail, 
@@ -66,12 +67,28 @@ struct MTS_EXPORT_CORE Triangle {
 
 	/** \brief Ray-triangle intersection test
 	 * 
-	 * Uses the algorithm presented by Moeller and Trumbore at
-	 * http://www.acm.org/jgt/papers/MollerTrumbore97/code.html
-	 * Returns true if an intersection has been detected
-	 * On success, \a t contains the distance from the ray origin to the
-	 * intersection point, and \a u and \a v contain the intersection point in
-	 * the local triangle coordinate system
+	 * Uses the algorithm by Moeller and Trumbore discussed at
+	 * <tt>http://www.acm.org/jgt/papers/MollerTrumbore97/code.html</tt>.
+	 *
+	 * \param p0
+	 *    Position of the first vertex
+	 * \param p1
+	 *    Position of the second vertex
+	 * \param p2
+	 *    Position of the third vertex
+	 * \param ray
+	 *    The ray segment to be used for the intersection query
+	 * \param t
+	 *    Upon success, \a t contains the distance from the ray origin to the
+	 *    intersection point,
+	 * \param u
+	 *   Upon success, \c u will contain the 'U' component of the intersection
+	 *   in barycentric coordinates
+	 * \param v
+	 *   Upon success, \c v will contain the 'V' component of the intersection
+	 *   in barycentric coordinates
+	 * \return
+	 *   \c true if an intersection has been detected
 	 */
 	FINLINE static bool rayIntersect(const Point &p0, const Point &p1, const Point &p2, 
 		const Ray &ray, Float &u, Float &v, Float &t) {
@@ -84,7 +101,7 @@ struct MTS_EXPORT_CORE Triangle {
 		/* if determinant is near zero, ray lies in plane of triangle */
 		Float det = dot(edge1, pvec);
 
-		if (det > -1e-8f && det < 1e-8f)
+		if (det == 0)
 			return false;
 		Float inv_det = 1.0f / det;
 
@@ -109,15 +126,29 @@ struct MTS_EXPORT_CORE Triangle {
 
 		return true;
 	}
-
+	
 	/** \brief Ray-triangle intersection test
 	 * 
-	 * Uses the algorithm presented by Moeller and Trumbore at
-	 * http://www.acm.org/jgt/papers/MollerTrumbore97/code.html
-	 * Returns true if an intersection has been detected
-	 * On success, \a t contains the distance from the ray origin to the
-	 * intersection point, and \a u and \a v contain the intersection point in
-	 * the local triangle coordinate system
+	 * Uses the algorithm by Moeller and Trumbore discussed at
+	 * <tt>http://www.acm.org/jgt/papers/MollerTrumbore97/code.html</tt>.
+	 *
+	 * \param positions
+	 *    Pointer to the vertex positions of the underlying triangle mesh
+	 * \param index
+	 *    Index of the triangle that should be intersected
+	 * \param ray
+	 *    The ray segment to be used for the intersection query
+	 * \param t
+	 *    Upon success, \a t contains the distance from the ray origin to the
+	 *    intersection point,
+	 * \param u
+	 *   Upon success, \c u will contain the 'U' component of the intersection
+	 *   in barycentric coordinates
+	 * \param v
+	 *   Upon success, \c v will contain the 'V' component of the intersection
+	 *   in barycentric coordinates
+	 * \return
+	 *   \c true if an intersection has been detected
 	 */
 	FINLINE bool rayIntersect(const Point *positions, const Ray &ray, Float &u, 
 		Float &v, Float &t) const {
@@ -129,4 +160,4 @@ struct MTS_EXPORT_CORE Triangle {
 
 MTS_NAMESPACE_END
 
-#endif /* __TRIANGLE_H */
+#endif /* __MITSUBA_CORE_TRIANGLE_H_ */

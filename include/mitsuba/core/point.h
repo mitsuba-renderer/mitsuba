@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,12 +16,199 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__POINT_H)
-#define __POINT_H
+#pragma once
+#if !defined(__MITSUBA_CORE_POINT_H_)
+#define __MITSUBA_CORE_POINT_H_
 
 #include <mitsuba/core/vector.h>
 
 MTS_NAMESPACE_BEGIN
+
+/**
+ * \headerfile mitsuba/core/point.h mitsuba/mitsuba.h
+ * \brief Parameterizable one-dimensional point data structure
+ *
+ * \ingroup libcore
+ */
+template <typename T> struct TPoint1 {
+	typedef T           Scalar;
+	typedef TVector1<T> VectorType;
+
+	T x;
+
+	/// Number of dimensions
+	const static int dim = 1;
+
+	/** \brief Construct a new point without initializing it.
+	 * 
+	 * This construtor is useful when the point will either not
+	 * be used at all (it might be part of a larger data structure)
+	 * or initialized at a later point in time. Always make sure
+	 * that one of the two is the case! Otherwise your program will do
+	 * computations involving uninitialized memory, which will probably
+	 * lead to a difficult-to-find bug.
+	 */
+#if !defined(MTS_DEBUG_UNINITIALIZED)
+	TPoint1() { }
+#else
+	TPoint1() { x = std::numeric_limits<T>::quiet_NaN(); }
+#endif
+
+	/// Initialize the point with the specified value
+	TPoint1(T x) : x(x) {  }
+	
+	/// Initialize the point with the components of another point
+	template <typename T1> explicit TPoint1(const TPoint1<T1> &p) 
+		: x((T) p.x) { }
+
+	/// Initialize the point with the components of a vector data structure
+	template <typename T1> explicit TPoint1(const TVector1<T1> &v) 
+		: x((T) v.x) { }
+
+	/// Unserialize a point from a binary data stream
+	explicit TPoint1(Stream *stream) {
+		x = stream->readElement<T>();
+	}
+
+	/// Add a vector to a point and return the result
+	TPoint1 operator+(const TVector1<T> &v) const {
+		return TPoint1(x + v.x);
+	}
+
+	/// Add two points and return the result (e.g. to compute a weighted position)
+	TPoint1 operator+(const TPoint1 &p) const {
+		return TPoint1(x + p.x);
+	}
+
+	/// Add a vector to this one (e.g. to compute a weighted position)
+	TPoint1& operator+=(const TVector1<T> &v) {
+		x += v.x;  
+		return *this;
+	}
+
+	/// Add a point to this one (e.g. to compute a weighted position)
+	TPoint1& operator+=(const TPoint1 &p) {
+		x += p.x; 
+		return *this;
+	}
+
+	/// Subtract a vector from this point
+	TPoint1 operator-(const TVector1<T> &v) const {
+		return TPoint1(x - v.x);
+	}
+
+	/// Subtract two points from each other and return the difference as a vector
+	TVector1<T> operator-(const TPoint1 &p) const {
+		return TVector1<T>(x - p.x);
+	}
+
+	/// Subtract a vector from this point
+	TPoint1& operator-=(const TVector1<T> &v) {
+		x -= v.x; 
+		return *this;
+	}
+
+	/// Scale the point's coordinates by the given scalar and return the result
+	TPoint1 operator*(T f) const {
+		return TPoint1(x * f);
+	}
+
+	/// Scale the point's coordinates by the given scalar
+	TPoint1 &operator*=(T f) {
+		x *= f; 
+		return *this;
+	}
+
+	/// Return a version of the point, which has been flipped along the origin
+	TPoint1 operator-() const {
+		return TPoint1(-x);
+	}
+
+	/// Divide the point's coordinates by the given scalar and return the result
+	TPoint1 operator/(T f) const {
+#ifdef MTS_DEBUG
+		if (f == 0) 
+			SLog(EWarn, "Point1: Division by zero!");
+#endif
+		return TPoint1(x / f);
+	}
+
+	/// Divide the point's coordinates by the given scalar
+	TPoint1 &operator/=(T f) {
+#ifdef MTS_DEBUG
+		if (f == 0) 
+			SLog(EWarn, "Point1: Division by zero!");
+#endif
+		x /= f; 
+		return *this;
+	}
+
+	/// Index into the point's components
+	T &operator[](int i) {
+		return (&x)[i];
+	}
+
+	/// Index into the point's components (const version)
+	T operator[](int i) const {
+		return (&x)[i];
+	}
+
+	/// Return whether or not this point is identically zero
+	bool isZero() const {
+		return x == 0;
+	}
+
+	/// Equality test
+	bool operator==(const TPoint1 &v) const {
+		return (v.x == x);
+	}
+
+	/// Inequality test
+	bool operator!=(const TPoint1 &v) const {
+		return v.x != x;
+	}
+
+	/// Serialize this point to a binary data stream
+	void serialize(Stream *stream) const {
+		stream->writeElement<T>(x);
+	}
+
+	/// Return a readable string representation of this point
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "[" << x << "]";
+		return oss.str();
+	}
+};
+
+template <typename T> inline TPoint1<T> operator*(T f, const TPoint1<T> &v) {
+	return v*f;
+}
+
+template <typename T> inline T distance(const TPoint1<T> &p1, const TPoint1<T> &p2) {
+	return std::abs(p2.x-p2.x);
+}
+
+template <typename T> inline T distanceSquared(const TPoint1<T> &p1, const TPoint1<T> &p2) {
+	return (p1-p2).lengthSquared();
+}
+
+template <> inline TPoint1<int> TPoint1<int>::operator/(int s) const {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Point1i: Division by zero!");
+#endif
+	return TPoint1(x/s);
+}
+
+template <> inline TPoint1<int> &TPoint1<int>::operator/=(int s) {
+#ifdef MTS_DEBUG
+	if (s == 0) 
+		SLog(EWarn, "Point1i: Division by zero!");
+#endif
+	x /= s;
+	return *this;
+}
 
 /**
  * \headerfile mitsuba/core/point.h mitsuba/mitsuba.h
@@ -30,8 +217,8 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libcore
  */
 template <typename T> struct TPoint2 {
-	typedef T           value_type;
-	typedef TVector2<T> vector_type;
+	typedef T           Scalar;
+	typedef TVector2<T> VectorType;
 
 	T x, y;
 
@@ -223,8 +410,8 @@ template <> inline TPoint2<int> &TPoint2<int>::operator/=(int s) {
  * \ingroup libcore
  */
 template <typename T> struct TPoint3 {
-	typedef T           value_type;
-	typedef TVector3<T> vector_type;
+	typedef T           Scalar;
+	typedef TVector3<T> VectorType;
 
 	T x, y, z;
 
@@ -420,8 +607,8 @@ template <> inline TPoint3<int> &TPoint3<int>::operator/=(int s) {
  * \ingroup libcore
  */
 template <typename T> struct TPoint4 {
-	typedef T           value_type;
-	typedef TVector4<T> vector_type;
+	typedef T           Scalar;
+	typedef TVector4<T> VectorType;
 
 	T x, y, z, w;
 	
@@ -616,5 +803,5 @@ template <> inline TPoint4<int> &TPoint4<int>::operator/=(int s) {
 
 MTS_NAMESPACE_END
 
-#endif /* __POINT_H */
+#endif /* __MITSUBA_CORE_POINT_H_ */
 

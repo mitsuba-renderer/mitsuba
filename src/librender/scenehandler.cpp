@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -17,7 +17,14 @@
 */
 
 #include <mitsuba/core/platform.h>
+
+// Mitsuba's "Assert" macro conflicts with Xerces' XSerializeEngine::Assert(...).
+// This becomes a problem when using a PCH which contains mitsuba/core/logger.h
+#if defined(Assert)
+# undef Assert
+#endif
 #include <xercesc/parsers/SAXParser.hpp>
+#include <xercesc/framework/MemBufInputSource.hpp>
 #include <mitsuba/render/scenehandler.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/scene.h>
@@ -50,6 +57,43 @@ SceneHandler::SceneHandler(const SAXParser *parser,
 #if !defined(WIN32)
 	setlocale(LC_NUMERIC, "C");
 #endif
+
+	/* Create a mapping from tag names to tag IDs and associated classes */
+	m_tags["scene"]      = TagEntry(EScene,      MTS_CLASS(Scene));
+	m_tags["shape"]      = TagEntry(EShape,      MTS_CLASS(Shape));
+	m_tags["sampler"]    = TagEntry(ESampler,    MTS_CLASS(Sampler));
+	m_tags["film"]       = TagEntry(EFilm,       MTS_CLASS(Film));
+	m_tags["integrator"] = TagEntry(EIntegrator, MTS_CLASS(Integrator));
+	m_tags["texture"]    = TagEntry(ETexture,    MTS_CLASS(Texture));
+	m_tags["sensor"]     = TagEntry(ESensor,     MTS_CLASS(Sensor));
+	m_tags["emitter"]    = TagEntry(EEmitter,    MTS_CLASS(Emitter));
+	m_tags["subsurface"] = TagEntry(ESubsurface, MTS_CLASS(Subsurface));
+	m_tags["medium"]     = TagEntry(EMedium,     MTS_CLASS(Medium));
+	m_tags["volume"]     = TagEntry(EVolume,     MTS_CLASS(VolumeDataSource));
+	m_tags["phase"]      = TagEntry(EPhase,      MTS_CLASS(PhaseFunction));
+	m_tags["bsdf"]       = TagEntry(EBSDF,       MTS_CLASS(BSDF));
+	m_tags["rfilter"]    = TagEntry(ERFilter,    MTS_CLASS(ReconstructionFilter));
+	m_tags["null"]       = TagEntry(ENull,       (Class *) NULL);
+	m_tags["ref"]        = TagEntry(EReference,  (Class *) NULL);
+	m_tags["integer"]    = TagEntry(EInteger,    (Class *) NULL);
+	m_tags["float"]      = TagEntry(EFloat,      (Class *) NULL);
+	m_tags["boolean"]    = TagEntry(EBoolean,    (Class *) NULL);
+	m_tags["string"]     = TagEntry(EString,     (Class *) NULL);
+	m_tags["translate"]  = TagEntry(ETranslate,  (Class *) NULL);
+	m_tags["rotate"]     = TagEntry(ERotate,     (Class *) NULL);
+	m_tags["lookat"]     = TagEntry(ELookAt,     (Class *) NULL);
+	m_tags["lookAt"]     = TagEntry(ELookAt,     (Class *) NULL);
+	m_tags["scale"]      = TagEntry(EScale,      (Class *) NULL);
+	m_tags["matrix"]     = TagEntry(EMatrix,     (Class *) NULL);
+	m_tags["point"]      = TagEntry(EPoint,      (Class *) NULL);
+	m_tags["vector"]     = TagEntry(EVector,     (Class *) NULL);
+	m_tags["rgb"]        = TagEntry(ERGB,        (Class *) NULL);
+	m_tags["srgb"]       = TagEntry(ESRGB,       (Class *) NULL);
+	m_tags["blackbody"]  = TagEntry(EBlackBody,  (Class *) NULL);
+	m_tags["spectrum"]   = TagEntry(ESpectrum,   (Class *) NULL);
+	m_tags["transform"]  = TagEntry(ETransform,  (Class *) NULL);
+	m_tags["include"]    = TagEntry(EInclude,    (Class *) NULL);
+	m_tags["alias"]      = TagEntry(EAlias,      (Class *) NULL);
 }
 
 SceneHandler::~SceneHandler() {
@@ -81,7 +125,10 @@ void SceneHandler::endDocument() {
 }
 
 void SceneHandler::characters(const XMLCh* const name,
-	const unsigned int length) {
+		const XMLSize_t length) {
+	std::string value = trim(transcode(name));
+	if (value != "")
+		XMLLog(EWarn, "Unexpected character data: %s", value.c_str());
 }
 
 Float SceneHandler::parseFloat(const std::string &name,
@@ -123,35 +170,45 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 		context.attributes[transcode(xmlAttributes.getName(i))] = attrValue;
 	}
 
-	if (name == "transform")
-		m_transform = Transform();
+	TagMap::const_iterator it = m_tags.find(name);
+	if (it == m_tags.end())
+		XMLLog(EError, "Unhandled tag \"%s\" encountered!", name.c_str());
 
-	if (name == "scene") {
-		std::string versionString = context.attributes["version"];
-		if (versionString == "") 
-			throw VersionException(formatString("The requested scene cannot be loaded, since it "
-				"is missing version information! Since Mitsuba 0.3.0, it is "
-				"mandatory that scene XML files specify the version of Mitsuba "
-				"that was used at the time of their creation.\nThis makes it clear "
-				"how to interpret them in the presence of a changing file format. "
-				"The version should be specified within the 'scene' tag, "
-				"e.g.\n\t<scene version=\"" MTS_VERSION "\">\n"
-				"Please update your scene file with the right version number and try reloading it."),
-				Version());
-		Version fileVersion(versionString), currentVersion(MTS_VERSION);
-		if (!fileVersion.isCompatible(currentVersion)) {
-			if (fileVersion < currentVersion) {
-				throw VersionException(formatString("The requested scene is from an older version of Mitsuba "
-					"(file version: %s, current version: %s), hence the loading process was stopped. "
-					"Please open the scene from within Mitsuba's graphical user interface (mtsgui) -- "
-					"it will then be upgraded to the current format.",
-					fileVersion.toString().c_str(), MTS_VERSION), fileVersion);
-			} else {
-				XMLLog(EError, "The requested scene is from an incompatible future version of Mitsuba "
-					"(file version: %s, current version: %s). Giving up.",
-					fileVersion.toString().c_str(), MTS_VERSION);
+	const TagEntry &tag = it->second;
+	switch (tag.first) {
+		case EScene: {
+				std::string versionString = context.attributes["version"];
+				if (versionString == "") 
+					throw VersionException(formatString("The requested scene cannot be loaded, since it "
+						"is missing version information! Since Mitsuba 0.3.0, it is "
+						"mandatory that scene XML files specify the version of Mitsuba "
+						"that was used at the time of their creation.\nThis makes it clear "
+						"how to interpret them in the presence of a changing file format. "
+						"The version should be specified within the 'scene' tag, "
+						"e.g.\n\t<scene version=\"" MTS_VERSION "\">\n"
+						"Please update your scene file with the right version number and try reloading it."),
+						Version());
+				Version fileVersion(versionString), currentVersion(MTS_VERSION);
+				if (!fileVersion.isCompatible(currentVersion)) {
+					if (fileVersion < currentVersion) {
+						throw VersionException(formatString("The requested scene is from an older version of Mitsuba "
+							"(file version: %s, current version: %s), hence the loading process was stopped. "
+							"Please open the scene from within Mitsuba's graphical user interface (mtsgui) -- "
+							"it will then be upgraded to the current format.",
+							fileVersion.toString().c_str(), MTS_VERSION), fileVersion);
+					} else {
+						XMLLog(EError, "The requested scene is from an incompatible future version of Mitsuba "
+							"(file version: %s, current version: %s). Giving up.",
+							fileVersion.toString().c_str(), MTS_VERSION);
+					}
+				}
 			}
-		}
+			break;
+		case ETransform:
+			m_transform = Transform();
+			break;
+		default:
+			break;
 	}
 
 	m_context.push(context);
@@ -167,341 +224,383 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 
 	ref<ConfigurableObject> object = NULL;
 
-	/* Construct configurable objects */
-	if (name == "scene") {
-		object = m_scene = new Scene(context.properties);
-	} else if (name == "shape") {
-		object = static_cast<Shape *> (m_pluginManager->createObject(
-			MTS_CLASS(Shape), context.properties));
-	} else if (name == "sampler") {
-		object = static_cast<Sampler *> (m_pluginManager->createObject(
-			MTS_CLASS(Sampler), context.properties));
-	} else if (name == "film") {
-		object = static_cast<Film *> (m_pluginManager->createObject(
-			MTS_CLASS(Film), context.properties));
-	} else if (name == "integrator") {
-		object = static_cast<Integrator *> (m_pluginManager->createObject(
-			MTS_CLASS(Integrator), context.properties));
-	} else if (name == "texture") {
-		object = static_cast<Texture *> (m_pluginManager->createObject(
-			MTS_CLASS(Texture), context.properties));
-	} else if (name == "camera") {
-		object = static_cast<Camera *> (m_pluginManager->createObject(
-			MTS_CLASS(Camera), context.properties));
-	} else if (name == "subsurface") {
-		object = static_cast<Subsurface *> (m_pluginManager->createObject(
-			MTS_CLASS(Subsurface), context.properties));
-	} else if (name == "luminaire") {
-		object = static_cast<Luminaire *> (m_pluginManager->createObject(
-			MTS_CLASS(Luminaire), context.properties));
-	} else if (name == "medium") {
-		object = static_cast<Medium *> (m_pluginManager->createObject(
-			MTS_CLASS(Medium), context.properties));
-	} else if (name == "volume") {
-		object = static_cast<VolumeDataSource *> (m_pluginManager->createObject(
-			MTS_CLASS(VolumeDataSource), context.properties));
-	} else if (name == "phase") {
-		object = static_cast<PhaseFunction *> (m_pluginManager->createObject(
-			MTS_CLASS(PhaseFunction), context.properties));
-	} else if (name == "bsdf") {
-		object = static_cast<BSDF *> (m_pluginManager->createObject(
-			MTS_CLASS(BSDF), context.properties));
-	} else if (name == "rfilter") {
-		object = static_cast<ReconstructionFilter *> (m_pluginManager->createObject(
-			MTS_CLASS(ReconstructionFilter), context.properties));
-	} else if (name == "null") {
-		object = NULL;
-	} else if (name == "ref") {
-		std::string id = context.attributes["id"];
-		if (m_namedObjects->find(id) == m_namedObjects->end())
-			XMLLog(EError, "Referenced object '%s' not found!", id.c_str());
-		object = (*m_namedObjects)[id];
-	/* Construct properties */
-	} else if (name == "integer") {
-		char *end_ptr = NULL;
+	TagMap::const_iterator it = m_tags.find(name);
+	if (it == m_tags.end())
+		XMLLog(EError, "Unhandled tag \"%s\" encountered!", name.c_str());
+
+	const TagEntry &tag = it->second;
+
+	switch (tag.first) {
+		case EScene:
+			object = m_scene = new Scene(context.properties);
+			break;
+
+		case ENull:
+			object = NULL;
+			break;
+
+		case EReference: {
+				std::string id = context.attributes["id"];
+				if (m_namedObjects->find(id) == m_namedObjects->end())
+					XMLLog(EError, "Referenced object '%s' not found!", id.c_str());
+				object = (*m_namedObjects)[id];
+			}
+			break;
+
+		case EInteger: {
+				char *end_ptr = NULL;
 #ifdef WIN32
-		int64_t i = _strtoi64(context.attributes["value"].c_str(), &end_ptr, 10);
+				int64_t i = _strtoi64(context.attributes["value"].c_str(), &end_ptr, 10);
 #else
-		int64_t i = strtoll(context.attributes["value"].c_str(), &end_ptr, 10);
+				int64_t i = strtoll(context.attributes["value"].c_str(), &end_ptr, 10);
 #endif
-		if (*end_ptr != '\0')
-			XMLLog(EError, "Invalid integer value specified (in <%s>)", 
-				context.attributes["name"].c_str());
-		context.parent->properties.setLong(context.attributes["name"], i);
-	} else if (name == "float") {
-		Float f = parseFloat(name, context.attributes["value"]);
-		context.parent->properties.setFloat(context.attributes["name"], f);
-	} else if (name == "boolean") {
-		bool value = false;
-		if (context.attributes["value"] == "true")
-			value = true;
-		context.parent->properties.setBoolean(context.attributes["name"],
-			value);
-	} else if (name == "string") {
-		context.parent->properties.setString(context.attributes["name"],
-			context.attributes["value"]);
-	} else if (name == "translate") {
-		Float x = parseFloat(name, context.attributes["x"], 0);
-		Float y = parseFloat(name, context.attributes["y"], 0);
-		Float z = parseFloat(name, context.attributes["z"], 0);
-		m_transform = Transform::translate(Vector(x, y, z)) * m_transform;
-	} else if (name == "rotate") {
-		Float x = parseFloat(name, context.attributes["x"], 0);
-		Float y = parseFloat(name, context.attributes["y"], 0);
-		Float z = parseFloat(name, context.attributes["z"], 0);
-		Float angle = parseFloat(name, context.attributes["angle"]);
-		m_transform = Transform::rotate(Vector(x, y, z), angle) * m_transform;
-	} else if (name == "lookAt") {
-		std::vector<std::string> tokens = tokenize(context.attributes["origin"], ", ");
-		if (tokens.size() != 3)
-			XMLLog(EError, "<lookAt>: invalid 'origin' argument");
-		Point o(
-			parseFloat(name, tokens[0]),
-			parseFloat(name, tokens[1]),
-			parseFloat(name, tokens[2]));
-		tokens = tokenize(context.attributes["target"], ", ");
-		if (tokens.size() != 3)
-			XMLLog(EError, "<lookAt>: invalid 'target' argument");
-		Point t(
-			parseFloat(name, tokens[0]),
-			parseFloat(name, tokens[1]),
-			parseFloat(name, tokens[2]));
-		Vector u(0.0f);
-		tokens = tokenize(context.attributes["up"], ", ");
-		if (tokens.size() == 3)
-			u = Vector(
-				parseFloat(name, tokens[0]),
-				parseFloat(name, tokens[1]),
-				parseFloat(name, tokens[2]));
-		else if (tokens.size() == 0)
-			;
-		else
-			XMLLog(EError, "<lookAt>: invalid 'up' argument");
+				if (*end_ptr != '\0')
+					XMLLog(EError, "Invalid integer value specified (in <%s>)", 
+						context.attributes["name"].c_str());
+				context.parent->properties.setLong(context.attributes["name"], i);
+			}
+			break;
 
-		if (u.lengthSquared() == 0) {
-			/* If 'up' was not specified, use an arbitrary axis */
-			Vector unused;
-			coordinateSystem(normalize(t-o), u, unused);
-		}
+		case EFloat: {
+				Float value = parseFloat(name, context.attributes["value"]);
+				context.parent->properties.setFloat(context.attributes["name"], value);
+			}
+			break;
 
-		m_transform =  Transform::lookAt(o, t, u) * m_transform;
-	} else if (name == "scale") {
-		bool hasXYZ = 
-			context.attributes["x"] != "" ||
-			context.attributes["y"] != "" ||
-			context.attributes["z"] != "";
-		bool hasValue = 
-			context.attributes["value"] != "";
-		Float x=0, y=0, z=0;
+		case EBoolean: {
+				const std::string &str = context.attributes["value"];
+				bool value;
+				if (str == "true") {
+					value = true;
+				} else if (str == "false") {
+					value = false;
+				} else {
+					XMLLog(EError, "Unsupported boolean constant '%s' -- must be "
+						"'true' or 'false'!", str.c_str());
+					return;
+				}
+				context.parent->properties.setBoolean(context.attributes["name"], value);
+			}
+			break;
 
-		if (hasXYZ && hasValue) {
-			XMLLog(EError, "<scale>: provided both xyz and value arguments!");
-		} else if (hasXYZ) {
-			x = parseFloat(name, context.attributes["x"], 1);
-			y = parseFloat(name, context.attributes["y"], 1);
-			z = parseFloat(name, context.attributes["z"], 1);
-		} else if (hasValue) {
-			x = y = z = parseFloat(name, context.attributes["value"]);
-		} else {
-			XMLLog(EError, "<scale>: provided neither xyz nor value arguments!");
-		}
+		case EString: {
+			context.parent->properties.setString(context.attributes["name"],
+				context.attributes["value"]);
+			}
+			break;
 
-		m_transform = Transform::scale(Vector(x, y, z)) * m_transform;
-	} else if (name == "matrix") {
-		std::vector<std::string> tokens = tokenize(
-			context.attributes["value"], ", ");
-		if (tokens.size() != 16)
-			XMLLog(EError, "Invalid matrix specified");
-		int index = 0;
-		Matrix4x4 mtx;
+		case ETranslate: {
+				Float x = parseFloat(name, context.attributes["x"], 0);
+				Float y = parseFloat(name, context.attributes["y"], 0);
+				Float z = parseFloat(name, context.attributes["z"], 0);
+				m_transform = Transform::translate(Vector(x, y, z)) * m_transform;
+			}
+			break;
 
-		for (int i=0; i<4; ++i)
-			for (int j=0; j<4; ++j)
-				mtx.m[i][j] = parseFloat(name, tokens[index++]);
+		case ERotate: {
+				Float x = parseFloat(name, context.attributes["x"], 0);
+				Float y = parseFloat(name, context.attributes["y"], 0);
+				Float z = parseFloat(name, context.attributes["z"], 0);
+				Float angle = parseFloat(name, context.attributes["angle"]);
+				m_transform = Transform::rotate(Vector(x, y, z), angle) * m_transform;
+			}
+			break;
 
-		m_transform = Transform(mtx) * m_transform;
-	} else if (name == "point") {
-		Float x = parseFloat(name, context.attributes["x"]);
-		Float y = parseFloat(name, context.attributes["y"]);
-		Float z = parseFloat(name, context.attributes["z"]);
+		case ELookAt: {
+				std::vector<std::string> tokens = tokenize(context.attributes["origin"], ", ");
+				if (tokens.size() != 3)
+					XMLLog(EError, "<lookat>: invalid 'origin' argument");
+				Point o(
+					parseFloat(name, tokens[0]),
+					parseFloat(name, tokens[1]),
+					parseFloat(name, tokens[2]));
+				tokens = tokenize(context.attributes["target"], ", ");
+				if (tokens.size() != 3)
+					XMLLog(EError, "<lookat>: invalid 'target' argument");
+				Point t(
+					parseFloat(name, tokens[0]),
+					parseFloat(name, tokens[1]),
+					parseFloat(name, tokens[2]));
+				Vector u(0.0f);
+				tokens = tokenize(context.attributes["up"], ", ");
+				if (tokens.size() == 3)
+					u = Vector(
+						parseFloat(name, tokens[0]),
+						parseFloat(name, tokens[1]),
+						parseFloat(name, tokens[2]));
+				else if (tokens.size() == 0)
+					;
+				else
+					XMLLog(EError, "<lookat>: invalid 'up' argument");
 
-		context.parent->properties.setPoint(context.attributes["name"], Point(x, y, z));
-	} else if (name == "vector") {
-		Float x = parseFloat(name, context.attributes["x"]);
-		Float y = parseFloat(name, context.attributes["y"]);
-		Float z = parseFloat(name, context.attributes["z"]);
+				if (u.lengthSquared() == 0) {
+					/* If 'up' was not specified, use an arbitrary axis */
+					Vector unused;
+					coordinateSystem(normalize(t-o), u, unused);
+				}
 
-		context.parent->properties.setVector(context.attributes["name"], Vector(x, y, z));
-	} else if (name == "rgb") {
-		Spectrum::EConversionIntent intent = Spectrum::EReflectance;
-		if (context.attributes.find("intent") != context.attributes.end()) {
-			std::string intentString = boost::to_lower_copy(context.attributes["intent"]);
-			if (intentString == "reflectance")
-				intent = Spectrum::EReflectance;
-			else if (intentString == "illuminant")
-				intent = Spectrum::EIlluminant;
-			else
-				XMLLog(EError, "Invalid intent \"%s\", must be "
-					"\"reflectance\" or \"illuminant\"", intentString.c_str());
-		}
+				m_transform =  Transform::lookAt(o, t, u) * m_transform;
+			}
+			break;
 
-		std::string valueStr = context.attributes["value"];
-		std::vector<std::string> tokens = tokenize(valueStr, ", ");
-		Float value[3];
-		if (tokens.size() == 1 && tokens[0].length() == 7 && tokens[0][0] == '#') {
-			char *end_ptr = NULL;
-			/* Parse HTML-style hexadecimal colors */
-			int encoded = strtol(tokens[0].c_str()+1, &end_ptr, 16);
-			if (*end_ptr != '\0')
-				XMLLog(EError, "Invalid rgb value specified (in <%s>)", context.attributes["name"].c_str());
-			value[0] = ((encoded & 0xFF0000) >> 16) / 255.0f;
-			value[1] = ((encoded & 0x00FF00) >> 8) / 255.0f;
-			value[2] =  (encoded & 0x0000FF) / 255.0f;
-		} else if (tokens.size() == 1) {
-			value[0] = value[1] = value[2] = parseFloat(name, tokens[0]);
-		} else if (tokens.size() == 3) {
-			for (int i=0; i<3; i++) 
-				value[i] = parseFloat(name, tokens[i]);
-		} else {
-			value[0] = value[1] = value[2] = 0; // avoid warning
-			XMLLog(EError, "Invalid RGB value specified");
-		}
-		Spectrum specValue;
-		specValue.fromLinearRGB(value[0], value[1], value[2], intent);
-		context.parent->properties.setSpectrum(context.attributes["name"],
-			specValue);
-	} else if (name == "srgb") {
-		std::string valueStr = context.attributes["value"];
-		std::vector<std::string> tokens = tokenize(valueStr, ", ");
-		Float value[3];
-		if (tokens.size() == 1 && tokens[0].length() == 7 && tokens[0][0] == '#') {
-			char *end_ptr = NULL;
-			/* Parse HTML-style hexadecimal colors */
-			int encoded = strtol(tokens[0].c_str()+1, &end_ptr, 16);
-			if (*end_ptr != '\0')
-				XMLLog(EError, "Invalid sRGB value specified (in <%s>)", context.attributes["name"].c_str());
-			value[0] = ((encoded & 0xFF0000) >> 16) / 255.0f;
-			value[1] = ((encoded & 0x00FF00) >> 8) / 255.0f;
-			value[2] =  (encoded & 0x0000FF) / 255.0f;
-		} else if (tokens.size() == 1) {
-			value[0] = value[1] = value[2] = parseFloat(name, tokens[0]);
-		} else if (tokens.size() == 3) {
-			for (int i=0; i<3; i++) 
-				value[i] = parseFloat(name, tokens[i]);
-		} else {
-			value[0] = value[1] = value[2] = 0; // avoid warning
-			XMLLog(EError, "Invalid sRGB value specified");
-		}
-		Spectrum specValue;
-		specValue.fromSRGB(value[0], value[1], value[2]);
-		context.parent->properties.setSpectrum(context.attributes["name"],
-			specValue);
-	} else if (name == "blackbody") {
-		std::string temperature = trim(context.attributes["temperature"]);
-		if (temperature.length() > 0 && std::toupper(temperature[temperature.length()-1]) == 'K')
-			temperature = temperature.substr(0, temperature.length()-1);
-		Float temperatureValue = parseFloat(name, temperature);
-		Float multiplier = 1;
-		if (context.attributes.find("multiplier") != context.attributes.end())
-			multiplier = parseFloat(name, context.attributes["multiplier"]);
-		BlackBodySpectrum bb(temperatureValue);
-		Spectrum discrete;
-		discrete.fromContinuousSpectrum(bb);
-		context.parent->properties.setSpectrum(context.attributes["name"], discrete * multiplier);
-	} else if (name == "spectrum") {
-		bool hasValue = context.attributes.find("value") != context.attributes.end();
-		bool hasFilename = context.attributes.find("filename") != context.attributes.end();
+		case EScale: {
+				bool hasXYZ = 
+					context.attributes["x"] != "" ||
+					context.attributes["y"] != "" ||
+					context.attributes["z"] != "";
+				bool hasValue = 
+					context.attributes["value"] != "";
+				Float x=0, y=0, z=0;
 
-		if (hasValue == hasFilename) {
-			SLog(EError, "Spectrum: please provide one of 'value' or 'filename'");
-		} else if (hasFilename) {
-			FileResolver *resolver = Thread::getThread()->getFileResolver();
-			fs::path path = resolver->resolve(context.attributes["filename"]);
-			InterpolatedSpectrum interp(path);
-			interp.zeroExtend();
-			Spectrum discrete;
-			discrete.fromContinuousSpectrum(interp);
-			context.parent->properties.setSpectrum(context.attributes["name"], discrete);
-		} else if (hasValue) {
-			std::vector<std::string> tokens = tokenize(
-				context.attributes["value"], ", ");
-			Float value[SPECTRUM_SAMPLES];
-			if (tokens.size() == 1) {
-				value[0] = parseFloat(name, tokens[0]);
+				if (hasXYZ && hasValue) {
+					XMLLog(EError, "<scale>: provided both xyz and value arguments!");
+				} else if (hasXYZ) {
+					x = parseFloat(name, context.attributes["x"], 1);
+					y = parseFloat(name, context.attributes["y"], 1);
+					z = parseFloat(name, context.attributes["z"], 1);
+				} else if (hasValue) {
+					x = y = z = parseFloat(name, context.attributes["value"]);
+				} else {
+					XMLLog(EError, "<scale>: provided neither xyz nor value arguments!");
+				}
+
+				m_transform = Transform::scale(Vector(x, y, z)) * m_transform;
+			}
+			break;
+
+		case EMatrix: {
+				std::vector<std::string> tokens = tokenize(
+					context.attributes["value"], ", ");
+				if (tokens.size() != 16)
+					XMLLog(EError, "Invalid matrix specified");
+				int index = 0;
+				Matrix4x4 mtx;
+
+				for (int i=0; i<4; ++i)
+					for (int j=0; j<4; ++j)
+						mtx.m[i][j] = parseFloat(name, tokens[index++]);
+
+				m_transform = Transform(mtx) * m_transform;
+			}
+			break;
+
+		case EPoint: {
+				Float x = parseFloat(name, context.attributes["x"]);
+				Float y = parseFloat(name, context.attributes["y"]);
+				Float z = parseFloat(name, context.attributes["z"]);
+
+				context.parent->properties.setPoint(context.attributes["name"], Point(x, y, z));
+			}
+			break;
+
+		case EVector: {
+				Float x = parseFloat(name, context.attributes["x"]);
+				Float y = parseFloat(name, context.attributes["y"]);
+				Float z = parseFloat(name, context.attributes["z"]);
+
+				context.parent->properties.setVector(context.attributes["name"], Vector(x, y, z));
+			}
+			break;
+
+		case ERGB: {
+				Spectrum::EConversionIntent intent = Spectrum::EReflectance;
+				if (context.attributes.find("intent") != context.attributes.end()) {
+					std::string intentString = boost::to_lower_copy(context.attributes["intent"]);
+					if (intentString == "reflectance")
+						intent = Spectrum::EReflectance;
+					else if (intentString == "illuminant")
+						intent = Spectrum::EIlluminant;
+					else
+						XMLLog(EError, "Invalid intent \"%s\", must be "
+							"\"reflectance\" or \"illuminant\"", intentString.c_str());
+				}
+
+				std::string valueStr = context.attributes["value"];
+				std::vector<std::string> tokens = tokenize(valueStr, ", ");
+				Float value[3];
+				if (tokens.size() == 1 && tokens[0].length() == 7 && tokens[0][0] == '#') {
+					char *end_ptr = NULL;
+					/* Parse HTML-style hexadecimal colors */
+					int encoded = strtol(tokens[0].c_str()+1, &end_ptr, 16);
+					if (*end_ptr != '\0')
+						XMLLog(EError, "Invalid rgb value specified (in <%s>)", context.attributes["name"].c_str());
+					value[0] = ((encoded & 0xFF0000) >> 16) / 255.0f;
+					value[1] = ((encoded & 0x00FF00) >> 8) / 255.0f;
+					value[2] =  (encoded & 0x0000FF) / 255.0f;
+				} else if (tokens.size() == 1) {
+					value[0] = value[1] = value[2] = parseFloat(name, tokens[0]);
+				} else if (tokens.size() == 3) {
+					for (int i=0; i<3; i++) 
+						value[i] = parseFloat(name, tokens[i]);
+				} else {
+					value[0] = value[1] = value[2] = 0; // avoid warning
+					XMLLog(EError, "Invalid RGB value specified");
+				}
+				Spectrum specValue;
+				specValue.fromLinearRGB(value[0], value[1], value[2], intent);
 				context.parent->properties.setSpectrum(context.attributes["name"],
-					Spectrum(value[0]));
-			} else {
-				if (tokens[0].find(':') != std::string::npos) {
-					InterpolatedSpectrum interp(tokens.size());
-					/* Wavelength -> Value mapping */
-					for (size_t i=0; i<tokens.size(); i++) {
-						std::vector<std::string> tokens2 = tokenize(tokens[i], ":");
-						if (tokens2.size() != 2) 
-							XMLLog(EError, "Invalid spectrum->value mapping specified");
-						Float wavelength = parseFloat(name, tokens2[0]);
-						Float value = parseFloat(name, tokens2[1]);
-						interp.append(wavelength, value);
-					}
+					specValue);
+			}
+			break;
+
+		case ESRGB: {
+				std::string valueStr = context.attributes["value"];
+				std::vector<std::string> tokens = tokenize(valueStr, ", ");
+				Float value[3];
+				if (tokens.size() == 1 && tokens[0].length() == 7 && tokens[0][0] == '#') {
+					char *end_ptr = NULL;
+					/* Parse HTML-style hexadecimal colors */
+					int encoded = strtol(tokens[0].c_str()+1, &end_ptr, 16);
+					if (*end_ptr != '\0')
+						XMLLog(EError, "Invalid sRGB value specified (in <%s>)", context.attributes["name"].c_str());
+					value[0] = ((encoded & 0xFF0000) >> 16) / 255.0f;
+					value[1] = ((encoded & 0x00FF00) >> 8) / 255.0f;
+					value[2] =  (encoded & 0x0000FF) / 255.0f;
+				} else if (tokens.size() == 1) {
+					value[0] = value[1] = value[2] = parseFloat(name, tokens[0]);
+				} else if (tokens.size() == 3) {
+					for (int i=0; i<3; i++) 
+						value[i] = parseFloat(name, tokens[i]);
+				} else {
+					value[0] = value[1] = value[2] = 0; // avoid warning
+					XMLLog(EError, "Invalid sRGB value specified");
+				}
+				Spectrum specValue;
+				specValue.fromSRGB(value[0], value[1], value[2]);
+				context.parent->properties.setSpectrum(context.attributes["name"],
+					specValue);
+			}
+			break;
+
+		case EBlackBody: {
+				std::string temperature = trim(context.attributes["temperature"]);
+				if (temperature.length() > 0 && std::toupper(temperature[temperature.length()-1]) == 'K')
+					temperature = temperature.substr(0, temperature.length()-1);
+				Float temperatureValue = parseFloat(name, temperature);
+				Float scale = 1;
+				if (context.attributes.find("scale") != context.attributes.end())
+					scale = parseFloat(name, context.attributes["scale"]);
+				BlackBodySpectrum bb(temperatureValue);
+				Spectrum discrete;
+				discrete.fromContinuousSpectrum(bb);
+				discrete.clampNegative();
+				context.parent->properties.setSpectrum(context.attributes["name"], discrete * scale);
+			}
+			break;
+
+		case ESpectrum: {
+				bool hasValue = context.attributes.find("value") != context.attributes.end();
+				bool hasFilename = context.attributes.find("filename") != context.attributes.end();
+
+				if (hasValue == hasFilename) {
+					SLog(EError, "Spectrum: please provide one of 'value' or 'filename'");
+				} else if (hasFilename) {
+					FileResolver *resolver = Thread::getThread()->getFileResolver();
+					fs::path path = resolver->resolve(context.attributes["filename"]);
+					InterpolatedSpectrum interp(path);
 					interp.zeroExtend();
 					Spectrum discrete;
 					discrete.fromContinuousSpectrum(interp);
-					context.parent->properties.setSpectrum(context.attributes["name"],
-						discrete);
-				} else {
-					if (tokens.size() != SPECTRUM_SAMPLES)
-						XMLLog(EError, "Invalid spectrum value specified (incorrect length)");
-					for (int i=0; i<SPECTRUM_SAMPLES; i++) 
-						value[i] = parseFloat(name, tokens[i]);
-					context.parent->properties.setSpectrum(context.attributes["name"],
-						Spectrum(value));
+					discrete.clampNegative();
+					context.parent->properties.setSpectrum(context.attributes["name"], discrete);
+				} else if (hasValue) {
+					std::vector<std::string> tokens = tokenize(
+						context.attributes["value"], ", ");
+					Float value[SPECTRUM_SAMPLES];
+					if (tokens.size() == 1) {
+						value[0] = parseFloat(name, tokens[0]);
+						context.parent->properties.setSpectrum(context.attributes["name"],
+							Spectrum(value[0]));
+					} else {
+						if (tokens[0].find(':') != std::string::npos) {
+							InterpolatedSpectrum interp(tokens.size());
+							/* Wavelength -> Value mapping */
+							for (size_t i=0; i<tokens.size(); i++) {
+								std::vector<std::string> tokens2 = tokenize(tokens[i], ":");
+								if (tokens2.size() != 2) 
+									XMLLog(EError, "Invalid spectrum->value mapping specified");
+								Float wavelength = parseFloat(name, tokens2[0]);
+								Float value = parseFloat(name, tokens2[1]);
+								interp.append(wavelength, value);
+							}
+							interp.zeroExtend();
+							Spectrum discrete;
+							discrete.fromContinuousSpectrum(interp);
+							discrete.clampNegative();
+							context.parent->properties.setSpectrum(context.attributes["name"],
+								discrete);
+						} else {
+							if (tokens.size() != SPECTRUM_SAMPLES)
+								XMLLog(EError, "Invalid spectrum value specified (incorrect length)");
+							for (int i=0; i<SPECTRUM_SAMPLES; i++) 
+								value[i] = parseFloat(name, tokens[i]);
+							context.parent->properties.setSpectrum(context.attributes["name"],
+								Spectrum(value));
+						}
+					}
 				}
 			}
-		}
-	} else if (name == "transform") {
-		context.parent->properties.setTransform(context.attributes["name"],
-			m_transform);
-	} else if (name == "include") {
-		SAXParser* parser = new SAXParser();
-		FileResolver *resolver = Thread::getThread()->getFileResolver();
-		fs::path schemaPath = resolver->resolveAbsolute("data/schema/scene.xsd");
+			break;
 
-		/* Check against the 'scene.xsd' XML Schema */
-		parser->setDoSchema(true);
-		parser->setValidationSchemaFullChecking(true);
-		parser->setValidationScheme(SAXParser::Val_Always);
-		parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
+		case ETransform: {
+				context.parent->properties.setTransform(
+					context.attributes["name"], m_transform);
+			}
+			break;
 
-		/* Set the handler and start parsing */
-		SceneHandler *handler = new SceneHandler(parser, m_params, m_namedObjects, true);
-		parser->setDoNamespaces(true);
-		parser->setDocumentHandler(handler);
-		parser->setErrorHandler(handler);
-		#if !defined(__OSX__)
-			/// Not supported on OSX
-			parser->setCalculateSrcOfs(true);
-		#endif
-		fs::path path = resolver->resolve(context.attributes["filename"]);
-		XMLLog(EInfo, "Parsing included file \"%s\" ..", path.filename().c_str());
-		parser->parse(path.file_string().c_str());
+		case EAlias: {
+				std::string id = context.attributes["id"], as = context.attributes["as"];
+				if (m_namedObjects->find(id) == m_namedObjects->end())
+					XMLLog(EError, "Referenced object '%s' not found!", id.c_str());
+				ConfigurableObject *obj = (*m_namedObjects)[id];
+				if (m_namedObjects->find(as) != m_namedObjects->end())
+					XMLLog(EError, "Duplicate ID '%s' used in scene description!", id.c_str());
+				obj->incRef();
+				(*m_namedObjects)[as] = obj;
+			}
+			break;
 
-		object = handler->getScene();
-		delete parser;
-		delete handler;
-	} else {
-		XMLLog(EError, "Unhandled tag \"%s\" encountered!", name.c_str());
+		case EInclude: {
+				SAXParser* parser = new SAXParser();
+				FileResolver *resolver = Thread::getThread()->getFileResolver();
+				fs::path schemaPath = resolver->resolveAbsolute("data/schema/scene.xsd");
+
+				/* Check against the 'scene.xsd' XML Schema */
+				parser->setDoSchema(true);
+				parser->setValidationSchemaFullChecking(true);
+				parser->setValidationScheme(SAXParser::Val_Always);
+				parser->setExternalNoNamespaceSchemaLocation(schemaPath.string().c_str());
+
+				/* Set the handler and start parsing */
+				SceneHandler *handler = new SceneHandler(parser, m_params, m_namedObjects, true);
+				parser->setDoNamespaces(true);
+				parser->setDocumentHandler(handler);
+				parser->setErrorHandler(handler);
+				#if !defined(__OSX__)
+					/// Not supported on OSX
+					parser->setCalculateSrcOfs(true);
+				#endif
+				fs::path path = resolver->resolve(context.attributes["filename"]);
+				XMLLog(EInfo, "Parsing included file \"%s\" ..", path.filename().string().c_str());
+				parser->parse(path.string().c_str());
+
+				object = handler->getScene();
+				delete parser;
+				delete handler;
+			}
+			break;
+
+		default:
+			if (tag.second == NULL)
+				XMLLog(EError, "Internal error: could not instantiate an object "
+					"corresponding to the tag '%s'", name.c_str());
+			object = m_pluginManager->createObject(tag.second, context.properties);
+			break;
 	}
 
 	if (object != NULL || name == "null") {
 		std::string id = context.attributes["id"];
 		std::string nodeName = context.attributes["name"];
-
-		if (id != "" && name != "ref") {
-			if (m_namedObjects->find(id) != m_namedObjects->end())
-				XMLLog(EError, "Duplicate ID '%s' used in scene description!", id.c_str());
-			(*m_namedObjects)[id] = object;
-			if (object)
-				object->incRef();
-		}
 
 		if (object) {
 			/* If the object has a parent, add it to the parent's children list */
@@ -525,6 +624,17 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			/* Don't configure a scene object if it is from an included file */
 			if (name != "include" && (!m_isIncludedFile || !object->getClass()->derivesFrom(MTS_CLASS(Scene)))) 
 				object->configure();
+
+			if (object->getClass()->derivesFrom(MTS_CLASS(Texture)))
+				object = static_cast<Texture *>(object.get())->expand();
+		}
+
+		if (id != "" && name != "ref") {
+			if (m_namedObjects->find(id) != m_namedObjects->end())
+				XMLLog(EError, "Duplicate ID '%s' used in scene description!", id.c_str());
+			(*m_namedObjects)[id] = object;
+			if (object)
+				object->incRef();
 		}
 	}
 
@@ -565,13 +675,13 @@ ref<Scene> SceneHandler::loadScene(const fs::path &filename, const ParameterMap 
 	FileResolver *resolver = Thread::getThread()->getFileResolver();
 	SAXParser* parser = new SAXParser();
 	fs::path schemaPath = resolver->resolveAbsolute("data/schema/scene.xsd");
-	SLog(EDebug, "Loading scene \"%s\" ..", filename.file_string().c_str());
+	SLog(EDebug, "Loading scene \"%s\" ..", filename.string().c_str());
 
 	/* Check against the 'scene.xsd' XML Schema */
 	parser->setDoSchema(true);
 	parser->setValidationSchemaFullChecking(true);
 	parser->setValidationScheme(SAXParser::Val_Always);
-	parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
+	parser->setExternalNoNamespaceSchemaLocation(schemaPath.string().c_str());
 	parser->setCalculateSrcOfs(true);
 
 	SceneHandler *handler = new SceneHandler(parser, params);
@@ -579,7 +689,7 @@ ref<Scene> SceneHandler::loadScene(const fs::path &filename, const ParameterMap 
 	parser->setDocumentHandler(handler);
 	parser->setErrorHandler(handler);
 		
-	parser->parse(filename.file_string().c_str());
+	parser->parse(filename.string().c_str());
 	ref<Scene> scene = handler->getScene();
 
 	delete parser;
@@ -587,6 +697,39 @@ ref<Scene> SceneHandler::loadScene(const fs::path &filename, const ParameterMap 
 
 	return scene;
 }
+
+ref<Scene> SceneHandler::loadSceneFromString(const std::string &content, const ParameterMap &params) {
+	/* Prepare for parsing scene descriptions */
+	FileResolver *resolver = Thread::getThread()->getFileResolver();
+	SAXParser* parser = new SAXParser();
+	fs::path schemaPath = resolver->resolveAbsolute("data/schema/scene.xsd");
+
+	/* Check against the 'scene.xsd' XML Schema */
+	parser->setDoSchema(true);
+	parser->setValidationSchemaFullChecking(true);
+	parser->setValidationScheme(SAXParser::Val_Always);
+	parser->setExternalNoNamespaceSchemaLocation(schemaPath.string().c_str());
+	parser->setCalculateSrcOfs(true);
+
+	SceneHandler *handler = new SceneHandler(parser, params);
+	parser->setDoNamespaces(true);
+	parser->setDocumentHandler(handler);
+	parser->setErrorHandler(handler);
+
+	XMLCh *inputName = XMLString::transcode("<string input>");
+
+	MemBufInputSource input((const XMLByte *) content.c_str(), 
+			content.length(), inputName);
+	parser->parse(input);
+	ref<Scene> scene = handler->getScene();
+	XMLString::release(&inputName);
+
+	delete parser;
+	delete handler;
+
+	return scene;
+}
+
 
 void SceneHandler::staticInitialization() {
 	/* Initialize Xerces-C */
@@ -601,5 +744,7 @@ void SceneHandler::staticInitialization() {
 void SceneHandler::staticShutdown() {
 	XMLPlatformUtils::Terminate();
 }
+
+VersionException::~VersionException() throw () {}
 
 MTS_NAMESPACE_END

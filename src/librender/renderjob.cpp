@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,14 +18,14 @@
 
 #include <mitsuba/render/renderjob.h>
 #include <mitsuba/render/renderproc.h>
+#include <boost/filesystem.hpp>
 
 MTS_NAMESPACE_BEGIN
 	
 RenderJob::RenderJob(const std::string &threadName, 
-	Scene *scene, RenderQueue *queue, int sceneResID, int cameraResID, 
-	int samplerResID, bool threadIsCritical, TestSupervisor *supervisor) 
-	: Thread(threadName), m_scene(scene), m_queue(queue), 
-	  m_testSupervisor(supervisor) {
+	Scene *scene, RenderQueue *queue, int sceneResID, int sensorResID, 
+	int samplerResID, bool threadIsCritical, bool interactive) 
+	: Thread(threadName), m_scene(scene), m_queue(queue), m_interactive(interactive) {
 
 	/* Optional: bring the process down when this thread crashes */
 	setCritical(threadIsCritical); 
@@ -33,7 +33,7 @@ RenderJob::RenderJob(const std::string &threadName,
 	m_queue->addJob(this);
 	ref<Scheduler> sched = Scheduler::getInstance();
 
-	ref<Camera> camera = m_scene->getCamera();
+	ref<Sensor> sensor = m_scene->getSensor();
 	ref<Sampler> sampler = m_scene->getSampler();
 
 	/* Register the scene with the scheduler if needed */
@@ -45,13 +45,13 @@ RenderJob::RenderJob(const std::string &threadName,
 		m_ownsSceneResource = false; 
 	}
 
-	/* Register the camera with the scheduler if needed */
-	if (cameraResID == -1) {
-		m_cameraResID = sched->registerResource(camera);
-		m_ownsCameraResource = true;
+	/* Register the sensor with the scheduler if needed */
+	if (sensorResID == -1) {
+		m_sensorResID = sched->registerResource(sensor);
+		m_ownsSensorResource = true;
 	} else {
-		m_cameraResID = cameraResID;
-		m_ownsCameraResource = false;
+		m_sensorResID = sensorResID;
+		m_ownsSensorResource = false;
 	}
 
 	/* Register the sampler with the scheduler if needed */
@@ -63,7 +63,7 @@ RenderJob::RenderJob(const std::string &threadName,
 			clonedSampler->incRef();
 			samplers[i] = clonedSampler.get();
 		}
-		m_samplerResID = sched->registerManifoldResource(samplers); 
+		m_samplerResID = sched->registerMultiResource(samplers); 
 		for (size_t i=0; i<sched->getCoreCount(); ++i)
 			samplers[i]->decRef();
 		m_ownsSamplerResource = true;
@@ -80,8 +80,8 @@ RenderJob::~RenderJob() {
 		sched->unregisterResource(m_sceneResID);
 	if (m_ownsSamplerResource)
 		sched->unregisterResource(m_samplerResID);
-	if (m_ownsCameraResource)
-		sched->unregisterResource(m_cameraResID);
+	if (m_ownsSensorResource)
+		sched->unregisterResource(m_sensorResID);
 }
 
 void RenderJob::run() {
@@ -89,41 +89,27 @@ void RenderJob::run() {
 	ref<Sampler> sampler = m_scene->getSampler();
 	m_cancelled = false;
 
-	if (m_testSupervisor.get()) {
-		if (film->getClass()->getName() != "MFilm")
-			Log(EError, "Only the MATLAB M-file film is supported when "
-				"running in test case mode!");
-		if (m_scene->getTestType() == Scene::ETTest) {
-			if (film->getTabulatedFilter()->getName() != "BoxFilter")
-				Log(EError, "Only the box reconstruction filter is supported when "
-					"performing a t-test in test case mode!");
-			if (!m_scene->getIntegrator()->getClass()->derivesFrom(MTS_CLASS(SampleIntegrator))) 
-				Log(EError, "Only sampling-based integrators are supported when "
-					"performing a t-test in test case mode!");
-		}
-	}
-
 	try {
-		if (!m_scene->preprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID)) {
+		m_scene->getFilm()->setDestinationFile(m_scene->getDestinationFile(),
+			m_scene->getBlockSize());
+
+		if (!m_scene->preprocess(m_queue, this, m_sceneResID, m_sensorResID, m_samplerResID)) {
 			m_cancelled = true;
 			Log(EWarn, "Preprocessing of scene \"%s\" did not complete successfully!",
-				m_scene->getSourceFile().leaf().c_str());
+				m_scene->getSourceFile().filename().string().c_str());
 		}
 
 		if (!m_cancelled) {
-			if (!m_scene->render(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID)) {
+			if (!m_scene->render(m_queue, this, m_sceneResID, m_sensorResID, m_samplerResID)) {
 				m_cancelled = true;
 				Log(EWarn, "Rendering of scene \"%s\" did not complete successfully!",
-					m_scene->getSourceFile().leaf().c_str());
+					m_scene->getSourceFile().filename().string().c_str());
 			}
-			m_scene->postprocess(m_queue, this, m_sceneResID, m_cameraResID, m_samplerResID);
+			m_scene->postprocess(m_queue, this, m_sceneResID, m_sensorResID, m_samplerResID);
 		}
-
-		if (m_testSupervisor.get()) 
-			m_testSupervisor->analyze(m_scene);
 	} catch (const std::exception &ex) {
 		Log(EWarn, "Rendering of scene \"%s\" did not complete successfully, caught exception: %s",
-			m_scene->getSourceFile().leaf().c_str(), ex.what());
+			m_scene->getSourceFile().filename().string().c_str(), ex.what());
 		m_cancelled = true;
 	}
 

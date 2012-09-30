@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SPACEFILLING_CURVE_H)
-#define __SPACEFILLING_CURVE_H
+#pragma once
+#if !defined(__MITSUBA_CORE_SFCURVE_H_)
+#define __MITSUBA_CORE_SFCURVE_H_
 
 #include <mitsuba/core/bsphere.h>
 
@@ -42,7 +43,7 @@ public:
 	typedef TPoint2<T>  PointType;
 
 	/// Create an empty Hilbert curve
-	inline HilbertCurve2D() : m_size(0), m_pos(0) { }
+	inline HilbertCurve2D() : m_size((T) 0), m_pos((T) 0) { }
 
 	/// Initialize for the specified 2D size
 	void initialize(const VectorType &size) {
@@ -50,10 +51,10 @@ public:
 			return;
 		m_points.clear();
 		m_points.reserve(m_size.x*m_size.y);
-		m_size = size; m_pos = PointType(0);
-		const Float invLog2 = (Float) 1 / std::fastlog((Float) 2);
+		m_size = size; m_pos = PointType((T) 0);
+		const Float invLog2 = (Float) 1 / math::fastlog((Float) 2);
 		generate(
-			(int) std::ceil(invLog2 * std::fastlog((Float) std::max(m_size.x, m_size.y))),
+			(int) std::ceil(invLog2 * math::fastlog((Float) std::max(m_size.x, m_size.y))),
 			ENorth, EEast, ESouth, EWest);
 	}
 
@@ -107,4 +108,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __SPACEFILLING_CURVE_H */
+#endif /* __MITSUBA_CORE_SFCURVE_H_ */

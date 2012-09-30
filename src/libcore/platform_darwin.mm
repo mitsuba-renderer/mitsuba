@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -56,6 +56,15 @@ void __mts_init_cocoa() {
 		[NSApplication sharedApplication]; /* Creates a connection to the windowing environment */
 		[NSApp activateIgnoringOtherApps:YES]; /* Pop to front */
 		__mts_cocoa_initialized = true;
+	}
+}
+
+void __mts_set_appdefaults() {
+	/* Disable annoying OSX synchronization feature. It's not supported by Qt in any case.. */
+	NSUserDefaults *prefs = [NSUserDefaults standardUserDefaults];
+	if (![prefs boolForKey: @"ApplePersistenceIgnoreState"]) {
+		[prefs setBool: YES forKey: @"ApplePersistenceIgnoreState"];
+		[prefs synchronize];
 	}
 }
 

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,31 +16,39 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <mitsuba/render/rfilter.h>
+#include <mitsuba/core/rfilter.h>
 
 MTS_NAMESPACE_BEGIN
 
 /**
- * Box filter -- fastest, but prone to aliasing.
+ * Box filter: this is the fastest, but also about the worst possible 
+ * reconstruction filter, since it is extremely prone to aliasing. 
+ *
+ * It is included mainly for completeness, though some rare situations
+ * may warrant its use.
  */
 class BoxFilter : public ReconstructionFilter {
 public:
 	BoxFilter(const Properties &props) 
 		: ReconstructionFilter(props) {
-		m_size = Vector2(0.5f, 0.5f);
+		/* Filter radius in pixels. A tiny epsilon is added, since some
+		   samplers (Hammersley and Halton in particular) place samples
+		   at positions like (0, 0). Without such an epsilon and rounding 
+		   errors, samples may end up not contributing to any pixel. */
+		m_radius = 0.5f + 1e-6f;
 	}
 
 	BoxFilter(Stream *stream, InstanceManager *manager) 
 		: ReconstructionFilter(stream, manager) {
-		m_size = Vector2(0.5f, 0.5f);
+		configure();
 	}
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		ReconstructionFilter::serialize(stream, manager);
+	Float eval(Float x) const {
+		return std::abs(x) <= (0.5f + Epsilon) ? 1.0f : 0.0f;
 	}
 
-	Float evaluate(Float x, Float y) const {
-		return 1.0f;
+	std::string toString() const {
+		return "BoxFilter[]";
 	}
 	
 	MTS_DECLARE_CLASS()

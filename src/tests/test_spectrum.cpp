@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -134,11 +134,11 @@ public:
 		   the factor of 10-difference.
 		*/
 		BlackBodySpectrum spec(5000); 
-		assertEqualsEpsilon(spec.eval(400)/10, 874, .5f);
-		assertEqualsEpsilon(spec.eval(500)/10, 1211, .5f);
-		assertEqualsEpsilon(spec.eval(600)/10, 1276, .5f);
+		assertEqualsEpsilon(spec.eval(400)/10, 874.f, .5f);
+		assertEqualsEpsilon(spec.eval(500)/10, 1211.f, .5f);
+		assertEqualsEpsilon(spec.eval(600)/10, 1276.f, .5f);
 		assertEqualsEpsilon(spec.eval(2000)/10, 115.8f, .5f);
-		assertEqualsEpsilon(spec.average(100, 1000) * .09f, 715, 1);
+		assertEqualsEpsilon(spec.average(100, 1000) * .09f, 715.f, 1);
 	}
 };
 

@@ -1,0 +1,19 @@
+<!-- This file defines a series of emitter instances
+	 to be tested for consistency. This is done using the 
+	 testcase 'test_chisquare' -->
+<scene version="0.4.0">
+	<!-- Test the emitter emitter 
+	<emitter type="emitter"/>
+	-->
+
+	<!-- Test the environment map emitter -->
+	<emitter type="envmap">
+		<string name="filename" value="data/tests/envmap.exr"/>
+		<transform name="toWorld">
+			<rotate x="1" angle="40"/>
+		</transform>
+	</emitter>
+
+	<!-- Make sure that the scene actually contains something -->
+	<shape type="sphere"/>
+</scene>

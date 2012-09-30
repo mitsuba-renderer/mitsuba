@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -21,36 +21,40 @@
 
 MTS_NAMESPACE_BEGIN
 	
-inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, Sampler *sampler, ETransportMode quantity)
-	: its(its), sampler(sampler), wi(its.wi), quantity(quantity),
+inline BSDFSamplingRecord::BSDFSamplingRecord(const Intersection &its, Sampler *sampler, ETransportMode mode)
+	: its(its), sampler(sampler), wi(its.wi), mode(mode),
 	typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
 
-inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wo, ETransportMode quantity)
-	: its(its), sampler(NULL), wi(its.wi), wo(wo), quantity(quantity),
+inline BSDFSamplingRecord::BSDFSamplingRecord(const Intersection &its, const Vector &wo, ETransportMode mode)
+	: its(its), sampler(NULL), wi(its.wi), wo(wo), mode(mode),
     typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
 	
-inline BSDFQueryRecord::BSDFQueryRecord(const Intersection &its, const Vector &wi, const Vector &wo, ETransportMode quantity) 
-  : its(its), sampler(NULL), wi(wi), wo(wo), quantity(quantity),
+inline BSDFSamplingRecord::BSDFSamplingRecord(const Intersection &its, const Vector &wi, const Vector &wo, ETransportMode mode) 
+  : its(its), sampler(NULL), wi(wi), wo(wo), mode(mode),
   typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
 
-void BSDFQueryRecord::reverse() {
+void BSDFSamplingRecord::reverse() {
 	std::swap(wo, wi);
-	quantity = (ETransportMode) (1-quantity);
+	mode = (ETransportMode) (1-mode);
 }
 
 inline bool Intersection::hasSubsurface() const {
 	return shape->hasSubsurface();
 }
 
-inline bool Intersection::isLuminaire() const {
-	return shape->isLuminaire();
+inline bool Intersection::isEmitter() const {
+	return shape->isEmitter();
+}
+
+inline bool Intersection::isSensor() const {
+	return shape->isSensor();
 }
 
 inline Spectrum Intersection::Le(const Vector &d) const {
-	return shape->getLuminaire()->Le(ShapeSamplingRecord(*this), d);
+	return shape->getEmitter()->eval(*this, d);
 }
 
 inline Spectrum Intersection::LoSub(const Scene *scene, 
@@ -58,11 +62,15 @@ inline Spectrum Intersection::LoSub(const Scene *scene,
 	return shape->getSubsurface()->Lo(scene, sampler, *this, d, depth);
 }
 
+inline const BSDF *Intersection::getBSDF() const {
+	return shape->getBSDF();
+}
+
 inline const BSDF *Intersection::getBSDF(const RayDifferential &ray) {
 	const BSDF *bsdf = shape->getBSDF();
 
 	if (bsdf && bsdf->usesRayDifferentials() && !hasUVPartials)
-			computePartials(ray);
+		computePartials(ray);
 	return bsdf;
 }
 
@@ -83,12 +91,9 @@ inline const Medium *Intersection::getTargetMedium(Float cosTheta) const {
 	else
 		return shape->getInteriorMedium();
 }
-
-inline LuminaireSamplingRecord::LuminaireSamplingRecord(const Intersection &its, const Vector &dir) {
-	sRec.p = its.p;
-	sRec.n = its.geoFrame.n;
-	d = dir;
-	luminaire = its.shape->getLuminaire();
+	
+inline const PhaseFunction *MediumSamplingRecord::getPhaseFunction() const {
+	return medium->getPhaseFunction();
 }
 
 inline bool RadianceQueryRecord::rayIntersect(const RayDifferential &ray) {
@@ -101,7 +106,7 @@ inline bool RadianceQueryRecord::rayIntersect(const RayDifferential &ray) {
 			else if (medium == NULL)
 				alpha = 0.0f;
 			else
-				alpha = 1-medium->getTransmittance(ray).average();
+				alpha = 1-medium->evalTransmittance(ray).average();
 		}
 		if (type & EDistance)
 			dist = its.t;
@@ -116,6 +121,32 @@ inline Point2 RadianceQueryRecord::nextSample2D() {
 
 inline Float RadianceQueryRecord::nextSample1D() {
 	return sampler->next1D();
+}
+
+inline PositionSamplingRecord::PositionSamplingRecord(const Intersection &its, EMeasure measure)
+	: p(its.p), time(its.time), n(its.shFrame.n), measure(measure), uv(its.uv), object(NULL) { }
+
+inline DirectionSamplingRecord::DirectionSamplingRecord(const Intersection &its, EMeasure measure)
+	: d(its.toWorld(its.wi)), measure(measure) { }
+
+inline DirectSamplingRecord::DirectSamplingRecord(const Intersection &refIts) 
+	: PositionSamplingRecord(refIts.time), ref(refIts.p), refN(0.0f) {
+	if ((refIts.shape->getBSDF()->getType() & BSDF::ETransmission) == 0)
+		refN = refIts.shFrame.n;
+}
+
+inline DirectSamplingRecord::DirectSamplingRecord(const MediumSamplingRecord &refM) 
+	: PositionSamplingRecord(refM.time), ref(refM.p), refN(0.0f) {
+}
+
+void DirectSamplingRecord::setQuery(const Ray &ray, const Intersection &its, EMeasure _measure) {
+	p = its.p;
+	n = its.shFrame.n;
+	measure = _measure;
+	uv = its.uv;
+	object = its.shape->getEmitter();
+	d = ray.d;
+	dist = its.t;
 }
 
 MTS_NAMESPACE_END

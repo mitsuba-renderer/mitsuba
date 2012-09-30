@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,6 +16,11 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+// Mitsuba's "Assert" macro conflicts with Xerces' XSerializeEngine::Assert(...).
+// This becomes a problem when using a PCH which contains mitsuba/core/logger.h
+#if defined(Assert)
+# undef Assert
+#endif
 #include <xercesc/parsers/SAXParser.hpp>
 #include "glwidget.h"
 #include "sceneloader.h"
@@ -46,24 +51,31 @@ void SceneLoader::run() {
 		m_result->srgb = settings.value("preview_sRGB", true).toBool();
 		m_result->gamma = (Float) settings.value("preview_gamma", 2.2).toDouble();
 		m_result->reinhardKey = (Float) settings.value("preview_reinhardKey", 0.18).toDouble();
-		m_result->reinhardBurn = (Float) settings.value("preview_reinhardBurn", 0.0).toDouble();
+		m_result->reinhardBurn = (Float) settings.value("preview_reinhardBurn", -10.0).toDouble();
 		m_result->exposure = (Float) settings.value("preview_exposure", 0).toDouble();
 		m_result->shadowMapResolution = settings.value("preview_shadowMapResolution", 256).toInt();
 		m_result->clamping = (Float) settings.value("preview_clamping", 0.1f).toDouble();
 		m_result->previewMethod = (EPreviewMethod) settings.value("preview_method", EOpenGL).toInt();
+		if (m_result->previewMethod != EOpenGL && m_result->previewMethod != EDisabled)
+			m_result->previewMethod = EOpenGL;
 		m_result->toneMappingMethod = (EToneMappingMethod) settings.value("preview_toneMappingMethod", EGamma).toInt();
 		m_result->diffuseSources = settings.value("preview_diffuseSources", true).toBool();
 		m_result->diffuseReceivers = settings.value("preview_diffuseReceivers", false).toBool();
 
-		if (boost::ends_with(lowerCase, ".exr")) {
+		if (boost::ends_with(lowerCase, ".exr") || boost::ends_with(lowerCase, ".png") 
+			|| boost::ends_with(lowerCase, ".jpg") || boost::ends_with(lowerCase, ".jpeg")
+			|| boost::ends_with(lowerCase, ".hdr") || boost::ends_with(lowerCase, ".rgbe")
+			|| boost::ends_with(lowerCase, ".pfm")) {
 			/* This is an image, not a scene */
 			ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
-			ref<Bitmap> bitmap = new Bitmap(Bitmap::EEXR, fs);
+			ref<Bitmap> bitmap = new Bitmap(Bitmap::EAuto, fs);
+			bitmap = bitmap->convert(Bitmap::ERGBA, Bitmap::EFloat32);
 
 			m_result->mode = ERender;
 			m_result->framebuffer = bitmap;
 			m_result->fileName = QString(m_filename.c_str());
 			m_result->shortName = QFileInfo(m_filename.c_str()).fileName();
+			m_result->scrollOffset = Vector2i(0, 0);
 			m_result->pathLength = 2;
 		} else {
 			fs::path schemaPath = m_resolver->resolveAbsolute("data/schema/scene.xsd");
@@ -72,7 +84,7 @@ void SceneLoader::run() {
 			parser->setDoSchema(true);
 			parser->setValidationSchemaFullChecking(true);
 			parser->setValidationScheme(SAXParser::Val_Always);
-			parser->setExternalNoNamespaceSchemaLocation(schemaPath.file_string().c_str());
+			parser->setExternalNoNamespaceSchemaLocation(schemaPath.string().c_str());
 			#if !defined(__OSX__)
 				/// Not supported on OSX
 				parser->setCalculateSrcOfs(true);
@@ -85,10 +97,14 @@ void SceneLoader::run() {
 
 			fs::path 
 				filename = m_filename,
-				filePath = fs::complete(filename).parent_path(),
-				baseName = fs::basename(filename);
+				filePath = fs::absolute(filename).parent_path(),
+				baseName = filename.stem();
 
 			SLog(EInfo, "Parsing scene description from \"%s\" ..", m_filename.c_str());
+
+			if (!fs::exists(filename))
+				SLog(EError, "Unable to load scene \"%s\": file not found!",
+					m_filename.c_str());
 
 			try {
 				parser->parse(m_filename.c_str());
@@ -106,14 +122,14 @@ void SceneLoader::run() {
 
 			if (scene->getIntegrator() == NULL)
 				SLog(EError, "Unable to load scene: no integrator found!");
-			if (scene->getCamera() == NULL)
-				SLog(EError, "Unable to load scene: no camera found!");
-			if (scene->getCamera()->getFilm() == NULL)
+			if (scene->getSensor() == NULL)
+				SLog(EError, "Unable to load scene: no sensor found!");
+			if (scene->getSensor()->getFilm() == NULL)
 				SLog(EError, "Unable to load scene: no film found!");
-			if (scene->getLuminaires().size() == 0)
+			if (scene->getEmitters().size() == 0)
 				SLog(EError, "Unable to load scene: no light sources found!");
-			Vector2i size = scene->getFilm()->getSize();
-			Camera *camera = scene->getCamera();
+			Vector2i size = scene->getFilm()->getCropSize();
+			Sensor *sensor = scene->getSensor();
 
 			/* Also generate a DOM representation for the Qt-based GUI */
 			QFile file(m_filename.c_str());
@@ -130,12 +146,18 @@ void SceneLoader::run() {
 			m_result->renderJob = NULL;
 			m_result->movementScale = scene->getBSphere().radius / 2000.0f;
 			m_result->mode = EPreview;
-			m_result->framebuffer = new Bitmap(size.x, size.y, 128);
+			m_result->framebuffer = new Bitmap(Bitmap::ERGBA, Bitmap::EFloat32, size);
 			m_result->framebuffer->clear();
 			m_result->fileName = QString(m_filename.c_str());
 			m_result->shortName = QFileInfo(m_filename.c_str()).fileName();
-			m_result->up = camera->getInverseViewTransform()(Vector(0, 1, 0));
+			if (sensor->getClass()->derivesFrom(MTS_CLASS(PerspectiveCamera))) {
+				m_result->up = static_cast<PerspectiveCamera *>(sensor)->getInverseViewTransform(
+					sensor->getShutterOpen() + 0.5f * sensor->getShutterOpenTime())(Vector(0, 1, 0));
+			} else {
+				m_result->up = Vector(0.0f);
+			}
 			m_result->scrollOffset = Vector2i(0, 0);
+			m_result->originalSize = m_result->scene->getFilm()->getCropSize();
 			m_result->pathLength = m_result->detectPathLength();
 			m_result->showKDTree = false;
 			m_result->shownKDTreeLevel = 0;
@@ -145,6 +167,7 @@ void SceneLoader::run() {
 		delete m_result;
 		m_result = NULL;
 	} catch (...) {
+		cout << "Don't know what" << endl;
 		m_error = "An unknown type of error occurred!";
 		delete m_result;
 		m_result = NULL;

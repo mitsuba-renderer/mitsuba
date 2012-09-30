@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,57 +20,78 @@
 #include <cerrno>
 
 #if !defined(WIN32)
-#include <unistd.h>
+# include <unistd.h>
+#else
+# include <windows.h>
 #endif
 
 MTS_NAMESPACE_BEGIN
 
+struct FileStream::FileStreamPrivate
+{
+#if defined(WIN32)
+	HANDLE file;
+#else
+	FILE* file;
+#endif
+	bool write;
+	bool read;
+	FileStream::EFileMode mode;
+	fs::path path;
+
+	FileStreamPrivate() : file(NULL) {}
+};
+
 FileStream::FileStream()
- : m_file(0) {
+ : d(new FileStreamPrivate) {
 }
 
 FileStream::FileStream(const fs::path &path, EFileMode mode)
- : m_file(0) {
+ : d(new FileStreamPrivate) {
 	open(path, mode);
 }
 
 
 FileStream::~FileStream() {
-	if (m_file != 0)
+	if (d->file != 0)
 		close();
+}
+
+const fs::path& FileStream::getPath() const {
+	return d->path;
 }
 
 std::string FileStream::toString() const {
 	std::ostringstream oss;
 	oss << "FileStream[" << Stream::toString()
-		<< ", path=\"" << m_path.file_string()
-		<< "\", mode=" << m_mode << "]";
+		<< ", path=\"" << d->path.string()
+		<< "\", mode=" << d->mode << "]";
 	return oss.str();
 }
 
 void FileStream::open(const fs::path &path, EFileMode mode) {
-	AssertEx(m_file == 0, "A file has already been opened using this stream");
+	AssertEx(d->file == 0, "A file has already been opened using this stream");
 
-	Log(ETrace, "Opening \"%s\"", path.file_string().c_str());
+	Log(ETrace, "Opening \"%s\"", path.string().c_str());
 
-	m_path = path;
-	m_mode = mode;
-	m_write = true;
-	m_read = true;
+	d->path = path;
+	d->mode = mode;
+	d->write = true;
+	d->read = true;
 
 #ifdef WIN32
 	DWORD dwDesiredAccess = GENERIC_READ;
 	DWORD dwCreationDisposition = OPEN_EXISTING;
 
-	switch (m_mode) {
+	switch (d->mode) {
 	case EReadOnly:
-		m_write = false;
+		d->write = false;
 		break;
 	case EReadWrite:
 		dwDesiredAccess |= GENERIC_WRITE;
 		break;
 	case ETruncWrite:
-		m_read = false;
+		d->read = false;
 		dwDesiredAccess = GENERIC_WRITE;
 		dwCreationDisposition = CREATE_ALWAYS;
 		break;
@@ -79,7 +100,7 @@ void FileStream::open(const fs::path &path, EFileMode mode) {
 		dwCreationDisposition = CREATE_ALWAYS;
 		break;
 	case EAppendWrite:
-		m_read = false;
+		d->read = false;
 		dwDesiredAccess = GENERIC_WRITE;
 		break;
 	case EAppendReadWrite:
@@ -90,37 +111,37 @@ void FileStream::open(const fs::path &path, EFileMode mode) {
 		break;
 	}
 
-	m_file = CreateFile(path.file_string().c_str(), dwDesiredAccess, 
+	d->file = CreateFile(path.string().c_str(), dwDesiredAccess, 
 		FILE_SHARE_WRITE | FILE_SHARE_READ, 0, 
 		dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
 
-	if (m_file == INVALID_HANDLE_VALUE)
+	if (d->file == INVALID_HANDLE_VALUE)
 		Log(EError, "Error while trying to open file \"%s\": %s", 
-			m_path.file_string().c_str(), lastErrorText().c_str());
+			d->path.string().c_str(), lastErrorText().c_str());
 	
-	if (m_mode == EAppendWrite || m_mode == EAppendReadWrite)
-		setPos(getSize());
+	if (d->mode == EAppendWrite || d->mode == EAppendReadWrite)
+		seek(getSize());
 #else
 	const char *modeString = NULL;
 
-	switch (m_mode) {
+	switch (d->mode) {
 	case EReadOnly:
 		modeString = "rb";
-		m_write = false;
+		d->write = false;
 		break;
 	case EReadWrite:
 		modeString = "rb+";
 		break;
 	case ETruncWrite:
 		modeString = "wb";
-		m_read = false;
+		d->read = false;
 		break;
 	case ETruncReadWrite:
 		modeString = "wb+";
 		break;
 	case EAppendWrite:
 		modeString = "ab";
-		m_read = false;
+		d->read = false;
 		break;
 	case EAppendReadWrite:
 		modeString = "ab+";
@@ -130,213 +151,212 @@ void FileStream::open(const fs::path &path, EFileMode mode) {
 		break;
 	};
 
-	m_file = fopen(m_path.file_string().c_str(), modeString);
+	d->file = fopen(d->path.string().c_str(), modeString);
 
-	if (m_file == NULL) {
+	if (d->file == NULL) {
 		Log(EError, "Error while trying to open file \"%s\": %s", 
-			m_path.file_string().c_str(), strerror(errno));
+			d->path.string().c_str(), strerror(errno));
 	}
 #endif
 }
 
 void FileStream::close() {
-	AssertEx(m_file != 0, "No file is currently open");
-	Log(ETrace, "Closing \"%s\"", m_path.file_string().c_str());
+	AssertEx(d->file != 0, "No file is currently open");
+	Log(ETrace, "Closing \"%s\"", d->path.string().c_str());
 
 #ifdef WIN32
-	if (!CloseHandle(m_file)) {
+	if (!CloseHandle(d->file)) {
 		Log(EError, "Error while trying to close file \"%s\": %s", 
-			m_path.file_string().c_str(), lastErrorText().c_str());
+			d->path.string().c_str(), lastErrorText().c_str());
 	}
 #else
-	if (fclose(m_file)) {
+	if (fclose(d->file)) {
 		Log(EError, "Error while trying to close file \"%s\": %s", 
-			m_path.file_string().c_str(), strerror(errno));
+			d->path.string().c_str(), strerror(errno));
 	}
 #endif
-	m_file = 0;
+	d->file = 0;
 }
 
 
 void FileStream::remove() {
 	close();
-	Log(EDebug, "Removing \"%s\"", 	m_path.file_string().c_str());
+	Log(EDebug, "Removing \"%s\"", 	d->path.string().c_str());
 
-	fs::remove(m_path);
+	fs::remove(d->path);
 }
 
-void FileStream::setPos(size_t pos) {
-	AssertEx(m_file != 0, "No file is currently open");
+void FileStream::seek(size_t pos) {
+	AssertEx(d->file != 0, "No file is currently open");
 	
 #ifdef WIN32
 	LARGE_INTEGER fpos;
 	fpos.QuadPart = pos;
-	if (SetFilePointerEx(m_file, fpos, 0, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
+	if (SetFilePointerEx(d->file, fpos, 0, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
 		Log(EError, "Error while trying to seek to position %i in file \"%s\": %s", 
-			pos, m_path.file_string().c_str(), lastErrorText().c_str());
+			pos, d->path.string().c_str(), lastErrorText().c_str());
 	}
 #else
-	if (fseek(m_file, pos, SEEK_SET)) {
+	if (fseek(d->file, pos, SEEK_SET)) {
 		Log(EError, "Error while trying to seek to position %i in file \"%s\": %s", 
-			pos, m_path.file_string().c_str(), strerror(errno));
+			pos, d->path.string().c_str(), strerror(errno));
 	}
 #endif
 }
 
 size_t FileStream::getPos() const {
-	AssertEx(m_file != 0, "No file is currently open");
+	AssertEx(d->file != 0, "No file is currently open");
 #ifdef WIN32
-	DWORD pos = SetFilePointer(m_file, 0, 0, FILE_CURRENT);
+	DWORD pos = SetFilePointer(d->file, 0, 0, FILE_CURRENT);
 	if (pos == INVALID_SET_FILE_POINTER) {
 		Log(EError, "Error while looking up the position in file \"%s\": %s",
-			m_path.file_string().c_str(), lastErrorText().c_str());
+			d->path.string().c_str(), lastErrorText().c_str());
 	}
 	return (size_t) pos;
 #else
 	long pos;
-	pos = ftell(m_file);
+	pos = ftell(d->file);
 	if (pos == -1) {
 		Log(EError, "Error while looking up the position in file \"%s\": %s", 
-			m_path.file_string().c_str(), strerror(errno));
+			d->path.string().c_str(), strerror(errno));
 	}
 	return (size_t) pos;
 #endif
 }
 
 size_t FileStream::getSize() const {
-	AssertEx(m_file != 0, "No file is currently open");
+	AssertEx(d->file != 0, "No file is currently open");
 
 #ifdef WIN32
 	LARGE_INTEGER result;
-	if (GetFileSizeEx(m_file, &result) == 0) {
+	if (GetFileSizeEx(d->file, &result) == 0) {
 		Log(EError, "Error while getting the file size of \"%s\": %s",
-			m_path.file_string().c_str(), lastErrorText().c_str());
+			d->path.string().c_str(), lastErrorText().c_str());
 	}
 	return (size_t) result.QuadPart;
 #else
 	size_t size, tmp;
 	
 	tmp = getPos();
-	if (fseek(m_file, 0, SEEK_END)) {
+	if (fseek(d->file, 0, SEEK_END)) {
 		Log(EError, "Error while seeking within \"%s\": %s",
-			m_path.file_string().c_str(), strerror(errno));
+			d->path.string().c_str(), strerror(errno));
 	}
 	size = getPos();
-	if (fseek(m_file, tmp, SEEK_SET)) {
+	if (fseek(d->file, tmp, SEEK_SET)) {
 		Log(EError, "Error while seeking within \"%s\": %s",
-			m_path.file_string().c_str(), strerror(errno));
+			d->path.string().c_str(), strerror(errno));
 	}
 	return size;
 #endif
 }
 
 void FileStream::truncate(size_t size) {
-	AssertEx(m_file != 0, "No file is currently open");
-	AssertEx(m_write, "File is not open with write access");
+	AssertEx(d->file != 0, "No file is currently open");
+	AssertEx(d->write, "File is not open with write access");
 
 	size_t pos = getPos();
 	if (pos > size) 
 		pos = size;
 
 #ifdef WIN32
-	setPos(size);
-	if (!SetEndOfFile(m_file)) {
+	seek(size);
+	if (!SetEndOfFile(d->file)) {
 		Log(EError, "Error while truncating file \"%s\": %s",
-			m_path.file_string().c_str(), lastErrorText().c_str());
+			d->path.string().c_str(), lastErrorText().c_str());
 	}
 #else
-	/* File truncation support blows on posix.. */
-	setPos(pos);
+	seek(pos);
 	flush();
 
-	if (ftruncate(fileno(m_file), size)) {
+	if (ftruncate(fileno(d->file), size)) {
 		Log(EError, "Error while truncating file \"%s\": %s",
-			m_path.file_string().c_str(), strerror(errno));
+			d->path.string().c_str(), strerror(errno));
 	}
 #endif
-	setPos(pos);
+	seek(pos);
 }
 
 void FileStream::flush() {
-	AssertEx(m_file != 0, "No file is currently open");
-	AssertEx(m_write, "File is not open with write access");
+	AssertEx(d->file != 0, "No file is currently open");
+	AssertEx(d->write, "File is not open with write access");
 #ifdef WIN32
-	if (!FlushFileBuffers(m_file)) {
+	if (!FlushFileBuffers(d->file)) {
 		Log(EError, "Error while flusing the buffers of \"%s\": %s",
-			m_path.file_string().c_str(), lastErrorText().c_str());
+			d->path.string().c_str(), lastErrorText().c_str());
 	}
 #else
-	if (fflush(m_file) != 0) {
+	if (fflush(d->file) != 0) {
 		Log(EError, "Error while flusing the buffers of \"%s\": %s",
-			m_path.file_string().c_str(), strerror(errno));
+			d->path.string().c_str(), strerror(errno));
 	}
 #endif
 }
 
 void FileStream::read(void *pPtr, size_t size) {
-	AssertEx(m_file != 0, "No file is currently open");
-	AssertEx(m_read, "File is not open with read access");
+	AssertEx(d->file != 0, "No file is currently open");
+	AssertEx(d->read, "File is not open with read access");
 	
 	if (size == 0)
 		return;
 #ifdef WIN32
 	DWORD lpNumberOfBytesRead;
-	if (!ReadFile(m_file, pPtr, (DWORD) size, &lpNumberOfBytesRead, 0)) {
+	if (!ReadFile(d->file, pPtr, (DWORD) size, &lpNumberOfBytesRead, 0)) {
 		Log(EError, "Error while reading from file \"%s\": %s",
-			m_path.file_string().c_str(), lastErrorText().c_str());
+			d->path.string().c_str(), lastErrorText().c_str());
 	}
 	if (lpNumberOfBytesRead != (DWORD) size) 
 		throw EOFException(formatString("Read less data than expected (%i bytes required) "
-			"from file \"%s\"", size, m_path.file_string().c_str()), (size_t) lpNumberOfBytesRead);
+			"from file \"%s\"", size, d->path.string().c_str()), (size_t) lpNumberOfBytesRead);
 #else
 	size_t bytesRead;
-	if ((bytesRead = fread(pPtr, 1, size, m_file)) != size) {
-		if (ferror(m_file) != 0) {
+	if ((bytesRead = fread(pPtr, 1, size, d->file)) != size) {
+		if (ferror(d->file) != 0) {
 			Log(EError, "Error while reading from file \"%s\": %s",
-				m_path.file_string().c_str(), strerror(errno));
+				d->path.string().c_str(), strerror(errno));
 		}
 		throw EOFException(formatString("Read less data than expected (%i bytes required) "
-			"from file \"%s\"", size, m_path.file_string().c_str()), bytesRead);
+			"from file \"%s\"", size, d->path.string().c_str()), bytesRead);
 	}
 #endif
 }
 
 void FileStream::write(const void *pPtr, size_t size) {
-	AssertEx(m_file != 0, "No file is currently open");
-	AssertEx(m_write, "File is not open with write access");
+	AssertEx(d->file != 0, "No file is currently open");
+	AssertEx(d->write, "File is not open with write access");
 
 	if (size == 0)
 		return;
 
 #ifdef WIN32
 	DWORD lpNumberOfBytesWritten;
-	if (!WriteFile(m_file, pPtr, (DWORD) size, &lpNumberOfBytesWritten, 0)) {
+	if (!WriteFile(d->file, pPtr, (DWORD) size, &lpNumberOfBytesWritten, 0)) {
 		Log(EError, "Error while writing to file \"%s\": %s",
-			m_path.file_string().c_str(), lastErrorText().c_str());
+			d->path.string().c_str(), lastErrorText().c_str());
 	}
 	if (lpNumberOfBytesWritten != (DWORD) size) 
 		throw EOFException(formatString("Wrote less data than expected (%i bytes required) "
-			"to file \"%s\"", size, m_path.file_string().c_str()), (size_t) lpNumberOfBytesWritten);
+			"to file \"%s\"", size, d->path.string().c_str()), (size_t) lpNumberOfBytesWritten);
 #else
 	size_t bytesWritten;
-	if ((bytesWritten = fwrite(pPtr, 1, size, m_file)) != size) {
-		if (ferror(m_file))
+	if ((bytesWritten = fwrite(pPtr, 1, size, d->file)) != size) {
+		if (ferror(d->file))
 			Log(EError, "Error while writing to file \"%s\": %s",
-				m_path.file_string().c_str(), strerror(errno));
+				d->path.string().c_str(), strerror(errno));
 		throw EOFException(formatString("Wrote less data than expected (%i bytes required) "
-			"to file \"%s\"", size, m_path.file_string().c_str()), bytesWritten);
+			"to file \"%s\"", size, d->path.string().c_str()), bytesWritten);
 	}
 #endif
 }
 
 bool FileStream::canRead() const {
-	AssertEx(m_file != 0, "No file is currently open");
-	return m_read;
+	AssertEx(d->file != 0, "No file is currently open");
+	return d->read;
 }
 
 bool FileStream::canWrite() const {
-	AssertEx(m_file != 0, "No file is currently open");
-	return m_write;
+	AssertEx(d->file != 0, "No file is currently open");
+	return d->write;
 }
 
 MTS_IMPLEMENT_CLASS(FileStream, false, Stream)

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -17,8 +17,17 @@
 */
 
 #include <mitsuba/render/scene.h>
+#include <mitsuba/render/mipmap.h>
 
 MTS_NAMESPACE_BEGIN
+
+namespace stats {
+	StatsCounter mipStorage("Texture system", "Cumulative MIP map memory allocations", EByteCount);
+	StatsCounter clampedAnisotropy("Texture system", "Lookups with clamped anisotropy", EPercentage);
+	StatsCounter avgEWASamples("Texture system", "Average EWA samples / lookup", EAverage);
+	StatsCounter filteredLookups("Texture system", "Filtered texture lookups", EPercentage);
+
+}
 
 Texture::Texture(const Properties &props)
  : ConfigurableObject(props) {
@@ -31,9 +40,19 @@ Texture::Texture(Stream *stream, InstanceManager *manager)
 Vector3i Texture::getResolution() const {
 	return Vector3i(0);
 }
-	
-Texture::~Texture() {
+
+Spectrum Texture::eval(const Intersection &its, bool filter) const { NotImplementedError("eval"); }
+Spectrum Texture::getAverage() const { NotImplementedError("getAverage"); }
+Spectrum Texture::getMinimum() const { NotImplementedError("getMinimum"); }
+Spectrum Texture::getMaximum() const { NotImplementedError("getMaximum"); }
+bool Texture::isConstant() const { NotImplementedError("isConstant"); }
+bool Texture::usesRayDifferentials() const { NotImplementedError("usesRayDifferentials"); }
+
+ref<Texture> Texture::expand() {
+	return this;
 }
+
+Texture::~Texture() { }
 
 void Texture::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
@@ -70,14 +89,14 @@ void Texture2D::serialize(Stream *stream, InstanceManager *manager) const {
 	m_uvScale.serialize(stream);
 }
 
-Spectrum Texture2D::getValue(const Intersection &its) const {
+Spectrum Texture2D::eval(const Intersection &its, bool filter) const {
 	Point2 uv = Point2(its.uv.x * m_uvScale.x, its.uv.y * m_uvScale.y) + m_uvOffset;
-	if (its.hasUVPartials) {
-		return getValue(uv, 
-			its.dudx * m_uvScale.x, its.dudy * m_uvScale.x,
-			its.dvdx * m_uvScale.y, its.dvdy * m_uvScale.y);
+	if (its.hasUVPartials && filter) {
+		return eval(uv, 
+			Vector2(its.dudx * m_uvScale.x, its.dvdx * m_uvScale.y),
+			Vector2(its.dudy * m_uvScale.x, its.dvdy * m_uvScale.y));
 	} else {
-		return getValue(uv);
+		return eval(uv);
 	}
 }
 MTS_IMPLEMENT_CLASS(Texture, true, ConfigurableObject)

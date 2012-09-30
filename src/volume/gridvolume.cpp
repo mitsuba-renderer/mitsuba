@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -178,10 +178,10 @@ public:
 			stream->writeInt(m_volumeType);
 			m_res.serialize(stream);
 			stream->writeInt(m_channels);
-			stream->writeString(m_filename.file_string());
+			stream->writeString(m_filename.string());
 			stream->write(m_data, getVolumeSize());
 		} else {
-			stream->writeString(m_filename.file_string());
+			stream->writeString(m_filename.string());
 		}
 	}
 
@@ -281,7 +281,7 @@ public:
 		}
 
 		Log(EDebug, "Mapped \"%s\" into memory: %ix%ix%i (%i channels, format = %s), %s, %s", 
-			resolved.filename().c_str(), m_res.x, m_res.y, m_res.z, m_channels, format.c_str(),
+			resolved.filename().string().c_str(), m_res.x, m_res.y, m_res.z, m_channels, format.c_str(),
 			memString(m_mmap->getSize()).c_str(), m_dataAABB.toString().c_str());
 		m_data = (uint8_t *) (((float *) m_mmap->getData()) + 12);
 	}

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -69,7 +69,7 @@ size_t MemoryStream::getSize() const {
 	return m_size;
 }
 
-void MemoryStream::setPos(size_t pPos) {
+void MemoryStream::seek(size_t pPos) {
 	m_pos = pPos;
 	if (m_pos >= m_size) {
 		m_size = pPos;

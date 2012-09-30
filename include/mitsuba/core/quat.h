@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__QUATERNION_H)
-#define __QUATERNION_H
+#pragma once
+#if !defined(__MITSUBA_CORE_QUAT_H_)
+#define __MITSUBA_CORE_QUAT_H_
 
 #include <mitsuba/core/transform.h>
 
@@ -28,7 +29,7 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libcore
  */
 template <typename T> struct TQuaternion {
-	typedef T          value_type;
+	typedef T          Scalar;
 
 	/// Used by \ref TQuaternion::fromEulerAngles
 	enum EEulerAngleConvention {
@@ -117,7 +118,7 @@ template <typename T> struct TQuaternion {
 
 	/// Quaternion multiplication
 	TQuaternion &operator*=(const TQuaternion &q) {
-		value_type tmp = w * q.w - dot(v, q.v);
+		Scalar tmp = w * q.w - dot(v, q.v);
 		v = cross(v, q.v) + q.w * v + w * q.v;
 		w = tmp;
 		return *this;
@@ -143,8 +144,7 @@ template <typename T> struct TQuaternion {
     inline TVector3<T> axis() const { return normalize(v); }
 
 	/// Return the rotation angle of this quaternion (in radians)
-    inline value_type angle() const { return 2 * std::acos(w); }
-
+    inline Scalar angle() const { return 2 * math::safe_acos(w); }
 
 	/**
 	 * \brief Compute the exponential of a quaternion with
@@ -348,8 +348,8 @@ template <typename T> inline TQuaternion<T> slerp(const TQuaternion<T> &q1,
 		// Revert to plain linear interpolation
 		return normalize(q1 * (1.0f - t) +  q2 * t);
 	} else {
-		float theta = std::acos(clamp(cosTheta, -1.0f, 1.0f));
-		float thetap = theta * t;
+		Float theta = math::safe_acos(clamp(cosTheta, (Float) -1.0f, (Float) 1.0f));
+		Float thetap = theta * t;
 		TQuaternion<T> qperp = normalize(q2 - q1 * cosTheta);
 		return q1 * std::cos(thetap) + qperp * std::sin(thetap);
 	}
@@ -358,4 +358,4 @@ template <typename T> inline TQuaternion<T> slerp(const TQuaternion<T> &q1,
 
 MTS_NAMESPACE_END
 
-#endif /* __QUATERNION_H */
+#endif /* __MITSUBA_CORE_QUAT_H_ */

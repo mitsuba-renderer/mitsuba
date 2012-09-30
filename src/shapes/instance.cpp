@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -39,7 +39,7 @@ MTS_NAMESPACE_BEGIN
 Instance::Instance(const Properties &props) : Shape(props) {
 	m_objectToWorld = props.getTransform("toWorld", Transform());
 	m_worldToObject = m_objectToWorld.inverse();
-	m_occluder = true;
+	m_invScale = 1.0f/m_objectToWorld(Vector(0, 0, 1)).length();
 }
 
 Instance::Instance(Stream *stream, InstanceManager *manager) 
@@ -47,13 +47,14 @@ Instance::Instance(Stream *stream, InstanceManager *manager)
 	m_shapeGroup = static_cast<ShapeGroup *>(manager->getInstance(stream));
 	m_objectToWorld = Transform(stream);
 	m_worldToObject = m_objectToWorld.inverse();
-	m_occluder = true;
+	m_invScale = stream->readFloat();
 }
 
 void Instance::serialize(Stream *stream, InstanceManager *manager) const {
 	Shape::serialize(stream, manager);
 	manager->serialize(stream, m_shapeGroup.get());
 	m_objectToWorld.serialize(stream);
+	stream->writeFloat(m_invScale);
 }
 
 void Instance::configure() {
@@ -86,6 +87,14 @@ void Instance::addChild(const std::string &name, ConfigurableObject *child) {
 	}
 }
 
+size_t Instance::getPrimitiveCount() const {
+	return 0;
+}
+
+size_t Instance::getEffectivePrimitiveCount() const {
+	return m_shapeGroup->getPrimitiveCount();
+}
+
 bool Instance::rayIntersect(const Ray &_ray, Float mint, 
 		Float maxt, Float &t, void *temp) const {
 	const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
@@ -107,6 +116,7 @@ void Instance::fillIntersectionRecord(const Ray &_ray,
 	Ray ray;
 	m_worldToObject(_ray, ray);
 	kdtree->fillIntersectionRecord<false>(ray, temp, its);
+
 	its.shFrame.n = normalize(m_objectToWorld(its.shFrame.n));
 	its.shFrame.s = normalize(m_objectToWorld(its.shFrame.s));
 	its.shFrame.t = normalize(m_objectToWorld(its.shFrame.t));
@@ -115,6 +125,22 @@ void Instance::fillIntersectionRecord(const Ray &_ray,
 	its.dpdv = m_objectToWorld(its.dpdv);
 	its.p = m_objectToWorld(its.p);
 	its.wi = normalize(its.shFrame.toLocal(-_ray.d));
+	its.instance = this;
+}
+
+void Instance::getNormalDerivative(const Intersection &its,
+		Vector &dndu, Vector &dndv, bool shadingFrame) const {
+	/// TODO: this is horrible
+	Intersection temp(its);
+	temp.p = m_worldToObject(its.p);
+	temp.dpdu = m_worldToObject(its.dpdu);
+	temp.dpdv = m_worldToObject(its.dpdv);
+	its.shape->getNormalDerivative(temp, dndu, dndv, shadingFrame);
+
+	/* The following will probably be incorrect for 
+	   non-rigid transformations */
+	dndu = m_objectToWorld(Normal(dndu))*m_invScale;
+	dndv = m_objectToWorld(Normal(dndv))*m_invScale;
 }
 
 MTS_IMPLEMENT_CLASS_S(Instance, false, Shape)

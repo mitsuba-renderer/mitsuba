@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -116,7 +116,7 @@ public:
 			case EBeckmann: {
 					/* Beckmann distribution function for Gaussian random surfaces */
 					const Float ex = Frame::tanTheta(m) / alphaU;
-					result = std::fastexp(-(ex*ex)) / (M_PI * alphaU*alphaU * 
+					result = math::fastexp(-(ex*ex)) / (M_PI * alphaU*alphaU * 
 							std::pow(Frame::cosTheta(m), (Float) 4.0f));
 				}
 				break;
@@ -243,7 +243,7 @@ public:
 
 		switch (m_type) {
 			case EBeckmann: {
-					Float tanThetaMSqr = -alphaU*alphaU * std::fastlog(1.0f - sample.x);
+					Float tanThetaMSqr = -alphaU*alphaU * math::fastlog(1.0f - sample.x);
 					cosThetaM = 1.0f / std::sqrt(1 + tanThetaMSqr);
 				}
 				break;
@@ -285,9 +285,13 @@ public:
 
 		const Float sinThetaM = std::sqrt(
 			std::max((Float) 0, 1 - cosThetaM*cosThetaM));
+
+		Float sinPhiM, cosPhiM;
+		math::sincos(phiM, &sinPhiM, &cosPhiM);
+
 		return Vector(
-			sinThetaM * std::cos(phiM),
-			sinThetaM * std::sin(phiM),
+			sinThetaM * cosPhiM,
+			sinThetaM * sinPhiM,
 			cosThetaM
 		);
 	}
@@ -309,7 +313,7 @@ public:
 
 		switch (m_type) {
 			case EBeckmann: {
-					Float tanThetaMSqr = -alphaU*alphaU * std::fastlog(1.0f - sample.x);
+					Float tanThetaMSqr = -alphaU*alphaU * math::fastlog(1.0f - sample.x);
 					cosThetaM = 1.0f / std::sqrt(1 + tanThetaMSqr);
 					Float cosThetaM2 = cosThetaM * cosThetaM,
 						  cosThetaM3 = cosThetaM2 * cosThetaM;
@@ -398,7 +402,7 @@ public:
 	}
 
 	/**
-	 * \brief Smith's shadow-masking function G1 for each
+	 * \brief Smith's shadowing-masking function G1 for each
 	 * of the supported microfacet distributions
 	 *
 	 * \param v An arbitrary direction

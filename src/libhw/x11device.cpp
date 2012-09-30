@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,7 +18,7 @@
 
 #include <mitsuba/hw/glxrenderer.h>
 #include <mitsuba/hw/x11device.h>
-#include <X11/keysym.h>
+#include <X11/XKBlib.h>
 
 #define DEFINE_KEY(xsym, sym) m_keymap[xsym & 0xFF] = sym
 
@@ -530,7 +530,8 @@ void X11Device::translateMouse(const XEvent &xEvent, DeviceEvent &event) {
 bool X11Device::translateKeyboard(const XEvent &xEvent, DeviceEvent &event) {
 	X11Session *session = static_cast<X11Session *>(getSession());
 
-	KeySym sym = XKeycodeToKeysym(session->m_display, xEvent.xkey.keycode, 0);
+	KeySym sym = XkbKeycodeToKeysym(session->m_display,
+		xEvent.xkey.keycode, 0, 0);
 
 	/* Default: 0 */
 	event.setKeyboardKey(0);

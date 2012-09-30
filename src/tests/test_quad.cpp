@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -28,6 +28,10 @@ public:
 	MTS_DECLARE_TEST(test01_quad)
 	MTS_DECLARE_TEST(test02_nD_01)
 	MTS_DECLARE_TEST(test03_nD_02)
+	MTS_DECLARE_TEST(test04_gaussLegendre_even)
+	MTS_DECLARE_TEST(test05_gaussLegendre_odd)
+	MTS_DECLARE_TEST(test06_gaussLobatto_even)
+	MTS_DECLARE_TEST(test07_gaussLobatto_odd)
 	MTS_END_TESTCASE()
 
 	Float testF(Float t) const {
@@ -39,7 +43,7 @@ public:
 	}
 	
 	inline Float gauss3(Vector x, Float stddev) const {
-		return std::fastexp(-0.5f * dot(x, x)/stddev)/(std::pow(2*M_PI * stddev, (Float) 3 / (Float) 2));
+		return math::fastexp(-0.5f * dot(x, x)/stddev)/(std::pow(2*M_PI * stddev, (Float) 3 / (Float) 2));
 	}
 
 	void testF3(size_t nPoints, const Float *in, Float *out) const {
@@ -87,8 +91,76 @@ public:
 			&TestQuadrature::testF3, this, _1, _2, _3), min, max, result, err, &evals) == NDIntegrator::ESuccess);
 		Log(EInfo, "test02_nD_02(): used " SIZE_T_FMT " function evaluations, "
 				"error=[%f, %f]", evals, err[0], err[1]);
-		assertEqualsEpsilon(result[0], 1, 1e-5f);
-		assertEqualsEpsilon(result[1], 1, 1e-5f);
+		assertEqualsEpsilon(result[0], 1.0f, 1e-5f);
+		assertEqualsEpsilon(result[1], 1.0f, 1e-5f);
+	}
+
+	void test04_gaussLegendre_even() {
+		Float nodes[4], weights[4];
+		gaussLegendre(4, nodes, weights);
+
+		assertEqualsEpsilon(nodes[0], (Float) (-1/35.0 * std::sqrt(525+70*std::sqrt(30.0))), 1e-8f);
+		assertEqualsEpsilon(nodes[1], (Float) (-1/35.0 * std::sqrt(525-70*std::sqrt(30.0))), 1e-8f);
+		assertEqualsEpsilon(nodes[2], (Float) ( 1/35.0 * std::sqrt(525-70*std::sqrt(30.0))), 1e-8f);
+		assertEqualsEpsilon(nodes[3], (Float) ( 1/35.0 * std::sqrt(525+70*std::sqrt(30.0))), 1e-8f);
+
+		assertEqualsEpsilon(weights[0], (Float) (1.0/36.0 * (18-std::sqrt(30.0))), 1e-8f);
+		assertEqualsEpsilon(weights[1], (Float) (1.0/36.0 * (18+std::sqrt(30.0))), 1e-8f);
+		assertEqualsEpsilon(weights[2], (Float) (1.0/36.0 * (18+std::sqrt(30.0))), 1e-8f);
+		assertEqualsEpsilon(weights[3], (Float) (1.0/36.0 * (18-std::sqrt(30.0))), 1e-8f);
+	}
+
+	void test05_gaussLegendre_odd() {
+		Float nodes[5], weights[5];
+		gaussLegendre(5, nodes, weights);
+
+		assertEqualsEpsilon(nodes[0], (Float) (-1/21.0 * std::sqrt(245+14*std::sqrt(70.0))), 1e-8f);
+		assertEqualsEpsilon(nodes[1], (Float) (-1/21.0 * std::sqrt(245-14*std::sqrt(70.0))), 1e-8f);
+		assertEqualsEpsilon(nodes[2], 0.0, 1e-8f);
+		assertEqualsEpsilon(nodes[3], (Float) ( 1/21.0 * std::sqrt(245-14*std::sqrt(70.0))), 1e-8f);
+		assertEqualsEpsilon(nodes[4], (Float) ( 1/21.0 * std::sqrt(245+14*std::sqrt(70.0))), 1e-8f);
+
+		assertEqualsEpsilon(weights[0], (Float) (1.0/900.0 * (322-13*std::sqrt(70.0))), 1e-8f);
+		assertEqualsEpsilon(weights[1], (Float) (1.0/900.0 * (322+13*std::sqrt(70.0))), 1e-8f);
+		assertEqualsEpsilon(weights[2], (Float) 128.0/225.0, 1e-8f);
+		assertEqualsEpsilon(weights[3], (Float) (1.0/900.0 * (322+13*std::sqrt(70.0))), 1e-8f);
+		assertEqualsEpsilon(weights[4], (Float) (1.0/900.0 * (322-13*std::sqrt(70.0))), 1e-8f);
+	}
+
+	void test06_gaussLobatto_even() {
+		Float nodes[6], weights[6];
+		gaussLobatto(6, nodes, weights);
+
+		assertEqualsEpsilon(nodes[0], -1.0f, 1e-8f);
+		assertEqualsEpsilon(nodes[1], (Float) -std::sqrt(1/21.0 * (7+2*std::sqrt(7.0))), 1e-8f);
+		assertEqualsEpsilon(nodes[2], (Float) -std::sqrt(1/21.0 * (7-2*std::sqrt(7.0))), 1e-8f);
+		assertEqualsEpsilon(nodes[3], (Float) std::sqrt(1/21.0 * (7-2*std::sqrt(7.0))), 1e-8f);
+		assertEqualsEpsilon(nodes[4], (Float) std::sqrt(1/21.0 * (7+2*std::sqrt(7.0))), 1e-8f);
+		assertEqualsEpsilon(nodes[5], 1.0f, 1e-8f);
+
+		assertEqualsEpsilon(weights[0], (Float) (1.0/15.0), 1e-8f);
+		assertEqualsEpsilon(weights[1], (Float) ((14 - std::sqrt(7.0))/30.0), 1e-8f);
+		assertEqualsEpsilon(weights[2], (Float) ((14 + std::sqrt(7.0))/30.0), 1e-8f);
+		assertEqualsEpsilon(weights[3], (Float) ((14 + std::sqrt(7.0))/30.0), 1e-8f);
+		assertEqualsEpsilon(weights[4], (Float) ((14 - std::sqrt(7.0))/30.0), 1e-8f);
+		assertEqualsEpsilon(weights[5], (Float) (1.0/15.0), 1e-8f);
+	}
+
+	void test07_gaussLobatto_odd() {
+		Float nodes[5], weights[5];
+		gaussLobatto(5, nodes, weights);
+
+		assertEqualsEpsilon(nodes[0], -1.0f, 1e-8f);
+		assertEqualsEpsilon(nodes[1], (Float) -(std::sqrt(21.0)/7.0), 1e-8f);
+		assertEqualsEpsilon(nodes[2], 0.0f, 1e-8f);
+		assertEqualsEpsilon(nodes[3], (Float) (std::sqrt(21.0)/7.0), 1e-8f);
+		assertEqualsEpsilon(nodes[4], 1.0f, 1e-8f);
+
+		assertEqualsEpsilon(weights[0], (Float) (1.0/10.0), 1e-8f);
+		assertEqualsEpsilon(weights[1], (Float) (49.0/90.0), 1e-8f);
+		assertEqualsEpsilon(weights[2], (Float) (32.0/45.0), 1e-8f);
+		assertEqualsEpsilon(weights[3], (Float) (49.0/90.0), 1e-8f);
+		assertEqualsEpsilon(weights[4], (Float) (1.0/10.0), 1e-8f);
 	}
 };
 

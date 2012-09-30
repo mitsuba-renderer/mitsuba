@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -21,6 +21,7 @@
 #include <mitsuba/render/sampler.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/frame.h>
+#include <mitsuba/core/warp.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -30,7 +31,7 @@ MTS_NAMESPACE_BEGIN
  * hair or cloth.
  *
  * The function is normalized so that it has no energy loss when 
- * \a ks=1 and illumination arrives perpendicularly to the surface.
+ * \code{ks}=1 and illumination arrives perpendicularly to the surface.
  */
 class KajiyaKayPhaseFunction : public PhaseFunction {
 public:
@@ -69,6 +70,7 @@ public:
 		}
 
 		m_normalization = 1/(m_normalization * stepSize/3 * 2 * M_PI);
+		m_type = EAnisotropic;
 		Log(EDebug, "Kajiya-kay normalization factor = %f", m_normalization);
 	}
 
@@ -80,24 +82,24 @@ public:
 		stream->writeFloat(m_exponent);
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec,
+	Float sample(PhaseFunctionSamplingRecord &pRec,
 			Sampler *sampler) const {
-		pRec.wo = squareToSphere(sampler->next2D());
+		pRec.wo = Warp::squareToUniformSphere(sampler->next2D());
 		return eval(pRec) * (4 * M_PI);
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec, 
+	Float sample(PhaseFunctionSamplingRecord &pRec, 
 			Float &pdf, Sampler *sampler) const {
-		pRec.wo = squareToSphere(sampler->next2D());
-		pdf = 1/(4 * M_PI);
-		return eval(pRec)/pdf;
+		pRec.wo = Warp::squareToUniformSphere(sampler->next2D());
+		pdf = Warp::squareToUniformSpherePdf();
+		return eval(pRec) * (4 * M_PI);
 	}
 
-	Float pdf(const PhaseFunctionQueryRecord &pRec) const {
-		return 1/(4 * M_PI);
+	Float pdf(const PhaseFunctionSamplingRecord &pRec) const {
+		return Warp::squareToUniformSpherePdf();
 	}
 
-	Float eval(const PhaseFunctionQueryRecord &pRec) const {
+	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
 		if (pRec.mRec.orientation.length() == 0)
 			return m_kd / (4*M_PI);
 

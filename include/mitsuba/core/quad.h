@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,13 +16,85 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__QUADRATURE_H)
-#define __QUADRATURE_H
+#pragma once
+#if !defined(__MITSUBA_CORE_QUAD_H_)
+#define __MITSUBA_CORE_QUAD_H_
 
 #include <mitsuba/mitsuba.h>
 #include <boost/function.hpp>
 
 MTS_NAMESPACE_BEGIN
+
+// -----------------------------------------------------------------------
+//! @{ \name Basic tools for non-adaptive quadrature
+// -----------------------------------------------------------------------
+
+/// Evaluate the l-th Legendre polynomial using recurrence (single precision)
+extern MTS_EXPORT_CORE float legendreP(int l, float x);
+
+/// Evaluate the l-th Legendre polynomial using recurrence (double precision)
+extern MTS_EXPORT_CORE double legendreP(int l, double x);
+
+/// Evaluate the l-th Legendre polynomial and its derivative using recurrence (single precision)
+extern MTS_EXPORT_CORE std::pair<float, float> legendrePD(int l, float x);
+
+/// Evaluate the l-th Legendre polynomial and its derivative using recurrence (double precision)
+extern MTS_EXPORT_CORE std::pair<double, double> legendrePD(int l, double x);
+
+/**
+ * \brief Computes the nodes and weights of a Gauss-Legendre quadrature
+ * (aka "Gaussian quadrature") rule with the given number of evaluations.
+ *
+ * Integration is over the interval \f$[-1, 1]\f$. Gauss-Legendre quadrature 
+ * maximizes the order of exactly integrable polynomials achieves this up to 
+ * degree \f$2n-1\f$ (where \f$n\f$ is the number of function evaluations).
+ *
+ * This method is numerically well-behaved until about \f$n=200\f$
+ * and then becomes progressively less accurate. It is generally not a 
+ * good idea to go much higher---in any case, a composite or
+ * adaptive integration scheme will be superior for large \f$n\f$.
+ *
+ * \param n
+ *     Desired number of evalution points
+ * \param nodes
+ *     Length-\c n array used to store the nodes of the quadrature rule
+ * \param nodes
+ *     Length-\c n array used to store the weights of the quadrature rule
+ */
+extern MTS_EXPORT_CORE void gaussLegendre(int n, Float *nodes, Float *weights);
+
+
+/**
+ * \brief Computes the nodes and weights of a Gauss-Lobatto quadrature
+ * rule with the given number of evaluations.
+ *
+ * Integration is over the interval \f$[-1, 1]\f$. Gauss-Lobatto quadrature 
+ * is preferable to Gauss-Legendre quadrature whenever the endpoints of the 
+ * integration domain should explicitly be included. It maximizes the order 
+ * of exactly integrable polynomials subject to this constraint and achieves 
+ * this up to degree \f$2n-3\f$ (where \f$n\f$ is the number of function 
+ * evaluations).
+ *
+ * This method is numerically well-behaved until about \f$n=200\f$
+ * and then becomes progressively less accurate. It is generally not a 
+ * good idea to go much higher---in any case, a composite or
+ * adaptive integration scheme will be superior for large \f$n\f$.
+ *
+ * \param n
+ *     Desired number of evalution points
+ * \param nodes
+ *     Length-\c n array used to store the nodes of the quadrature rule
+ * \param nodes
+ *     Length-\c n array used to store the weights of the quadrature rule
+ */
+extern MTS_EXPORT_CORE void gaussLobatto(int n, Float *nodes, Float *weights);
+
+//! @}
+// -----------------------------------------------------------------------
+
+// -----------------------------------------------------------------------
+//! @{ \name Adaptive quadrature schemes
+// -----------------------------------------------------------------------
 
 /**
  * \brief Computes the integral of a one-dimensional function
@@ -155,7 +227,7 @@ public:
 	 * \param fDim Number of integrands (i.e. dimensions of the image space)
 	 * \param nDim Number of integration dimensions (i.e. dimensions of the
 	 *      function domain)
-	 * \param maxEvals Maximum number of function evaluationn (0 means no 
+	 * \param maxEvals Maximum number of function evaluations (0 means no 
 	 *      limit). The error bounds will likely be exceeded when the
 	 *      integration is forced to stop prematurely. Note: the actual 
 	 *      number of evaluations may somewhat exceed this value.
@@ -216,6 +288,9 @@ protected:
 	Float m_absError, m_relError;
 };
 
+//! @}
+// -----------------------------------------------------------------------
+
 MTS_NAMESPACE_END
 
-#endif /* __QUADRATURE_H */
+#endif /* __MITSUBA_CORE_QUAD_H_ */

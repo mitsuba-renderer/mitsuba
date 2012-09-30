@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/phase.h>
 #include <mitsuba/render/sampler.h>
+#include <mitsuba/core/warp.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -44,31 +45,40 @@ public:
 
 	IsotropicPhaseFunction(Stream *stream, InstanceManager *manager) 
 		: PhaseFunction(stream, manager) {
+		configure();
 	}
 
 	virtual ~IsotropicPhaseFunction() { }
 
+	void configure() {
+		PhaseFunction::configure();
+		m_type = EIsotropic | EAngleDependence;
+	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		PhaseFunction::serialize(stream, manager);
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec, 
+	Float sample(PhaseFunctionSamplingRecord &pRec, 
 			Sampler *sampler) const {
 		Point2 sample(sampler->next2D());
-		pRec.wo = squareToSphere(sample);
+		pRec.wo = Warp::squareToUniformSphere(sample);
 		return 1.0f;
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec, 
+	Float sample(PhaseFunctionSamplingRecord &pRec, 
 			Float &pdf, Sampler *sampler) const {
-		pRec.wo = squareToSphere(sampler->next2D());
-		pdf = 1/(4 * (Float) M_PI);
+		pRec.wo = Warp::squareToUniformSphere(sampler->next2D());
+		pdf = Warp::squareToUniformSpherePdf();
 		return 1.0f;
 	}
 
-	Float eval(const PhaseFunctionQueryRecord &pRec) const {
-		return 1/(4 * (Float) M_PI);
+	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
+		return Warp::squareToUniformSpherePdf();
+	}
+
+	Float getMeanCosine() const {
+		return 0.0f;
 	}
 
 	std::string toString() const {

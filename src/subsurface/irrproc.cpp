@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -26,82 +26,64 @@ MTS_NAMESPACE_BEGIN
 /* Parallel irradiance sampling implementation (worker) */
 class IrradianceSamplingWorker : public WorkProcessor {
 public:
-	IrradianceSamplingWorker(size_t sampleCount, int ssIndex, int irrSamples, bool irrIndirect) 
-		: m_sampleCount(sampleCount), m_ssIndex(ssIndex), 
-		m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
+	IrradianceSamplingWorker(int irrSamples, bool irrIndirect) 
+		: m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
 	}
 
 	IrradianceSamplingWorker(Stream *stream, InstanceManager *manager) {
-		m_sampleCount = (size_t) stream->readLong();
-		m_ssIndex = stream->readInt();
 		m_irrSamples = stream->readInt();
 		m_irrIndirect = stream->readBool();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
-		stream->writeLong(m_sampleCount);
-		stream->writeInt(m_ssIndex);
 		stream->writeInt(m_irrSamples);
 		stream->writeBool(m_irrIndirect);
 	}
 
 	ref<WorkUnit> createWorkUnit() const {
-		return new RangeWorkUnit();
+		return new PositionSampleVector();
 	}
 
 	ref<WorkResult> createWorkResult() const {
-		return new IrradianceRecordVector();
+		return new IrradianceSampleVector();
 	}
 
 	void prepare() {
 		m_scene = static_cast<Scene *>(getResource("scene"));
-		m_integrator = static_cast<SampleIntegrator *>(m_scene->getIntegrator());
-		Properties props;
-		props.setLong("sampleCount", m_sampleCount);
-		props.setPluginName("hammersley");
-		m_sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(MTS_CLASS(Sampler), props));
-		props.setPluginName("independent");
-		m_independentSampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(MTS_CLASS(Sampler), props));
-		m_scene->wakeup(m_resources);
-		const Subsurface *ss = m_scene->getSubsurfaceIntegrators()[m_ssIndex];
-		m_shapes = ss->getShapes();
-		for (size_t i=0; i<m_shapes.size(); ++i)
-			m_areaPDF.put(m_shapes[i]->getSurfaceArea());
-		m_areaPDF.build();
+		m_integrator = static_cast<SamplingIntegrator *>(m_scene->getIntegrator());
+		m_sampler = static_cast<Sampler *>(getResource("sampler"));
+		m_scene->wakeup(NULL, m_resources);
 	}
 
 	void process(const WorkUnit *workUnit, WorkResult *workResult, 
 		const bool &stop) {
-		const RangeWorkUnit *range = static_cast<const RangeWorkUnit *>(workUnit);
-		IrradianceRecordVector *result = static_cast<IrradianceRecordVector *>(workResult);
-		const SampleIntegrator *integrator = m_integrator.get();
-		ref<Camera> camera = m_scene->getCamera();
+		const PositionSampleVector &positions = *static_cast<const PositionSampleVector *>(workUnit);
+		IrradianceSampleVector *result = static_cast<IrradianceSampleVector *>(workResult);
+		const SamplingIntegrator *integrator = m_integrator.get();
+		Float time = m_scene->getSensor()->getShutterOpen();
 
 		result->clear();
-		for (size_t i=range->getRangeStart(); i<=range->getRangeEnd(); ++i) {
-			m_sampler->setSampleIndex(i);
-			Point2 sample = m_sampler->next2D();
 
-			Float expSamples;
-			unsigned int index = m_areaPDF.sampleReuse(sample.x, expSamples);
-			expSamples *= m_sampleCount;
-			ShapeSamplingRecord sRec;
-			Float pdf = m_shapes[index]->sampleArea(sRec, sample) * expSamples;
-			Float time = camera->getShutterOpen() + m_sampler->next1D() * camera->getShutterOpenTime();
+		for (size_t i=0; i<positions.size(); ++i) {
+			/* Create a fake intersection record */
+			const PositionSample &sample = positions[i];
+			Intersection its;
+			its.p = sample.p;
+			its.shFrame = Frame(sample.n);
+			its.shape = m_scene->getShapes()[sample.shapeIndex].get();
+			its.time = time;
+			its.hasUVPartials = false;
 
 			result->put(IrradianceSample(
-				sRec.p,
-				integrator->E(m_scene.get(), sRec.p, sRec.n, time, 
-					camera->getMedium(), m_independentSampler,
-					m_irrSamples, m_irrIndirect), 1/pdf
+				its.p,
+				integrator->E(m_scene.get(), its, its.shape->getExteriorMedium(), m_sampler,
+					m_irrSamples, m_irrIndirect)
 			));
 		}
 	}
 
 	ref<WorkProcessor> clone() const {
-		return new IrradianceSamplingWorker(m_sampleCount, m_ssIndex, m_irrSamples, m_irrIndirect);
+		return new IrradianceSamplingWorker(m_irrSamples, m_irrIndirect);
 	}
 
 	MTS_DECLARE_CLASS()
@@ -109,18 +91,38 @@ protected:
 	virtual ~IrradianceSamplingWorker() { }
 private:
 	ref<Scene> m_scene;
-	ref<Camera> m_camera;
-	ref<Sampler> m_sampler, m_independentSampler;
-	ref<SampleIntegrator> m_integrator;
-	DiscretePDF m_areaPDF;
-	std::vector<Shape *> m_shapes;
-	size_t m_sampleCount;
-	int m_ssIndex;
+	ref<Sampler> m_sampler;
+	ref<SamplingIntegrator> m_integrator;
 	int m_irrSamples;
 	bool m_irrIndirect;
 };
 
-void IrradianceRecordVector::load(Stream *stream) {
+void PositionSampleVector::load(Stream *stream) {
+	clear();
+	size_t count = stream->readSize();
+	m_samples.resize(count);
+	for (size_t i=0; i<count; ++i)
+		m_samples[i] = PositionSample(stream);
+}
+
+void PositionSampleVector::save(Stream *stream) const {
+	stream->writeSize(m_samples.size());
+	for (size_t i=0; i<m_samples.size(); ++i)
+		m_samples[i].serialize(stream);
+}
+
+void PositionSampleVector::set(const WorkUnit *workUnit) {
+	m_samples = ((PositionSampleVector *) workUnit)->m_samples;
+}
+
+std::string PositionSampleVector::toString() const {
+	std::ostringstream oss;
+	oss << "PositionSampleVector[size="
+		<< m_samples.size() << "]";
+	return oss.str();
+}
+
+void IrradianceSampleVector::load(Stream *stream) {
 	clear();
 	size_t count = stream->readSize();
 	m_samples.resize(count);
@@ -128,30 +130,29 @@ void IrradianceRecordVector::load(Stream *stream) {
 		m_samples[i] = IrradianceSample(stream);
 }
 
-void IrradianceRecordVector::save(Stream *stream) const {
+void IrradianceSampleVector::save(Stream *stream) const {
 	stream->writeSize(m_samples.size());
 	for (size_t i=0; i<m_samples.size(); ++i)
 		m_samples[i].serialize(stream);
 }
 
-std::string IrradianceRecordVector::toString() const {
+std::string IrradianceSampleVector::toString() const {
 	std::ostringstream oss;
-	oss << "IrradianceRecordVector[size="
+	oss << "IrradianceSampleVector[size="
 		<< m_samples.size() << "]";
 	return oss.str();
 }
 
-IrradianceSamplingProcess::IrradianceSamplingProcess(size_t sampleCount, 
-	size_t granularity, int ssIndex, int irrSamples, bool irrIndirect,
-	const void *progressReporterPayload) 
-	: m_sampleCount(sampleCount), m_granularity(granularity), m_ssIndex(ssIndex), 
-	m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
-	m_resultCount = 0;
+IrradianceSamplingProcess::IrradianceSamplingProcess(PositionSampleVector *positions,
+		size_t granularity, int irrSamples, bool irrIndirect,
+		const void *data) 
+	: m_positionSamples(positions), m_granularity(granularity),
+	  m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
 	m_resultMutex = new Mutex();
-	m_samples = new IrradianceRecordVector();
+	m_irradianceSamples = new IrradianceSampleVector();
+	m_irradianceSamples->reserve(positions->size());
 	m_samplesRequested = 0;
-	m_progress = new ProgressReporter("Sampling irradiance", sampleCount,
-		progressReporterPayload); 
+	m_progress = new ProgressReporter("Sampling irradiance", positions->size(), data); 
 }
 
 IrradianceSamplingProcess::~IrradianceSamplingProcess() {
@@ -160,34 +161,38 @@ IrradianceSamplingProcess::~IrradianceSamplingProcess() {
 }
 
 ref<WorkProcessor> IrradianceSamplingProcess::createWorkProcessor() const {
-	return new IrradianceSamplingWorker(m_sampleCount, m_ssIndex, 
-			m_irrSamples, m_irrIndirect);
+	return new IrradianceSamplingWorker(m_irrSamples, m_irrIndirect);
 }
 
 ParallelProcess::EStatus IrradianceSamplingProcess::generateWork(WorkUnit *unit, int worker) {
-	if (m_samplesRequested == m_sampleCount)
+	if (m_samplesRequested == m_positionSamples->size())
 		return EFailure;
 
 	/* Reserve a sequence of at most 'granularity' samples */
-	size_t workSize = std::min(m_granularity, m_sampleCount - m_samplesRequested);
-	RangeWorkUnit *range = static_cast<RangeWorkUnit *>(unit);
-	range->setRange(m_samplesRequested, m_samplesRequested + workSize - 1);
+	size_t workSize = std::min(m_granularity, m_positionSamples->size() - m_samplesRequested);
+
+	std::vector<PositionSample> &samples = static_cast<PositionSampleVector *>(unit)->get();
+	const std::vector<PositionSample> &source = m_positionSamples->get();
+
+	samples.clear();
+	samples.insert(samples.begin(), 
+			source.begin() + m_samplesRequested,
+			source.begin() + m_samplesRequested + workSize);
 	m_samplesRequested += workSize;
 
 	return ESuccess;
 }
 
 void IrradianceSamplingProcess::processResult(const WorkResult *wr, bool cancelled) {
-	const IrradianceRecordVector *result = static_cast<const IrradianceRecordVector *>(wr);
-	m_resultMutex->lock();
+	const IrradianceSampleVector *result = static_cast<const IrradianceSampleVector *>(wr);
+	LockGuard lock(m_resultMutex);
 	for (size_t i=0; i<result->size(); ++i)
-		m_samples->put((*result)[i]);
-	m_resultCount += result->size();
-	m_progress->update(m_resultCount);
-	m_resultMutex->unlock();
+		m_irradianceSamples->put((*result)[i]);
+	m_progress->update(m_irradianceSamples->size());
 }
 
-MTS_IMPLEMENT_CLASS(IrradianceRecordVector, false, WorkResult);
+MTS_IMPLEMENT_CLASS(PositionSampleVector, false, WorkUnit);
+MTS_IMPLEMENT_CLASS(IrradianceSampleVector, false, WorkResult);
 MTS_IMPLEMENT_CLASS_S(IrradianceSamplingWorker, false, WorkProcessor);
 MTS_IMPLEMENT_CLASS(IrradianceSamplingProcess, false, ParallelProcess);
 MTS_NAMESPACE_END

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SHADER_H)
-#define __SHADER_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_SHADER_H_)
+#define __MITSUBA_RENDER_SHADER_H_
 
 #include <mitsuba/mitsuba.h>
 
@@ -43,7 +44,7 @@ public:
 };
 
 /**
- * \brief Shader base class for use with a VPL-style renderer.
+ * \brief %Shader base class for use with a VPL-style renderer.
  *
  * Subclasses can implement one of various things, such as a BSDF, 
  * a light source, or a texture.
@@ -55,7 +56,7 @@ public:
 	enum EShaderType {
 		EBSDFShader = 0,
 		ETextureShader,
-		ELuminaireShader
+		EEmitterShader
 	};
 
 	enum EFlags {
@@ -68,6 +69,11 @@ public:
 	/// Return a list of flags
 	inline uint32_t getFlags() const { return m_flags; }
 
+	/**
+	 * \brief For transparent objects, this function returns
+	 * the alpha blending weight
+	 */
+	virtual Float getAlpha() const;
 
 	// List other shaders, on which this instance depends
 	virtual void putDependencies(std::vector<Shader *> &deps);
@@ -132,4 +138,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __SHADER_H */
+#endif /* __MITSUBA_RENDER_SHADER_H_ */

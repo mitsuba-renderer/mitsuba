@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -22,6 +22,11 @@
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
 #include "microfacet.h"
+
+#if defined(_MSC_VER)
+/// Don't warn about potential divide by zero errors
+#pragma warning(disable : 4723)
+#endif
 
 MTS_NAMESPACE_BEGIN
 
@@ -109,7 +114,7 @@ public:
 			" (%s) rough transmittance samples from \"%s\"", 2*m_etaSamples,
 			m_alphaSamples, m_thetaSamples, 
 			memString((m_transSize + m_diffTransSize) * sizeof(float)).c_str(),
-			sourceFile.file_string().c_str());
+			sourceFile.string().c_str());
 
 		m_trans = new Float[m_transSize];
 		m_diffTrans = new Float[m_diffTransSize];

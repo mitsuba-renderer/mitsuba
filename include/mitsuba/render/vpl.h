@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,15 +16,17 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__VPL_H)
-#define __VPL_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_VPL_H_)
+#define __MITSUBA_RENDER_VPL_H_
 
 #include <mitsuba/render/scene.h>
 
 MTS_NAMESPACE_BEGIN
 
 enum EVPLType {
-	ELuminaireVPL = 0,
+	EPointEmitterVPL = 0,
+	EDirectionalEmitterVPL,
 	ESurfaceVPL	
 };
 
@@ -40,7 +42,8 @@ struct VPL {
 	EVPLType type;
 	Spectrum P;
 	Intersection its;
-	const Luminaire *luminaire;
+	const Emitter *emitter;
+	Float emitterScale;
 
 	std::string toString() const;
 };
@@ -64,4 +67,4 @@ extern MTS_EXPORT_RENDER size_t generateVPLs(const Scene *scene,
 
 MTS_NAMESPACE_END
 
-#endif /* __VPL_H */
+#endif /* __MITSUBA_RENDER_VPL_H_ */

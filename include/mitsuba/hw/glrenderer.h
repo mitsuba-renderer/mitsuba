@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,19 +16,11 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__GLRENDERER_H)
-#define __GLRENDERER_H
+#pragma once
+#if !defined(__MITSUBA_HW_GLRENDERER_H_)
+#define __MITSUBA_HW_GLRENDERER_H_
 
 #include <mitsuba/hw/renderer.h>
-#if defined(__OSX__)
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <OpenGL/glext.h>
-#else
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <GL/glext.h>
-#endif
 
 struct GLEWContextStruct;
 
@@ -42,7 +34,7 @@ MTS_NAMESPACE_BEGIN
  * be sent to the GPU in one batch. This is useful to
  * avoid freezing the OS when dealing with huge inputs.
  */
-#define MTS_GL_MAX_QUEUED_TRIS 500000
+#define MTS_GL_MAX_QUEUED_TRIS 250000
 
 /**
  * \brief OpenGL implementation of the \ref Renderer interface
@@ -70,7 +62,7 @@ public:
 		Bitmap *bitmap = NULL);
 
 	/// Create a new GPU geometry object
-	GPUGeometry *createGPUGeometry(const TriMesh *mesh);
+	GPUGeometry *createGPUGeometry(const Shape *shape);
 
 	/// Create a new GPU program object
 	GPUProgram *createGPUProgram(const std::string &name);
@@ -81,27 +73,29 @@ public:
 	/// Clear the viewport
 	void clear();
 
-	/// Configure the camera
-	void setCamera(const ProjectiveCamera *pCamera);
-
-	/// Configure the camera (supports a pixel offset)
+	/// Configure the camera 
 	void setCamera(const ProjectiveCamera *pCamera,
-		const Point2 &jitter);
+		const Point2 &apertureSample = Point2(0.5f),
+		const Point2 &aaSample = Point2(0.5f),
+		Float timeSample = 0.5f);
 
 	/// Configure the camera (manual)
 	void setCamera(const Matrix4x4 &proj, const Matrix4x4 &view);
+
+	/// Directly set the modelview or projection matrix
+	void setMatrix(EMatrixType type, const Matrix4x4 &value);
+
+	/// Fetch the currently set modelview or projection matrix
+	Matrix4x4 getMatrix(EMatrixType type) const;
 
 	/// Set up the renderer for drawing triangle geometry
 	void beginDrawingMeshes(bool transmitOnlyPositions = false); 
 
 	/// Send a triangle mesh to the renderer
-	void drawTriMesh(const TriMesh *mesh); 
+	void drawMesh(const TriMesh *geo); 
 
-	/// Draw a quad using the given texture
-	void blitTexture(const GPUTexture *texture,
-		bool flipVertically = false, 
-		bool centerHoriz = true, bool centerVert = true,
-		const Vector2i &offset = Vector2i(0, 0));
+	/// Send a triangle mesh to the renderer
+	void drawMesh(const GPUGeometry *geo); 
 
 	/// Clean up the renderer after drawing triangle geometry
 	void endDrawingMeshes(); 
@@ -113,7 +107,13 @@ public:
 	 * Only transmits positions, hence this is mainly useful for
 	 * shadow mapping.
 	 */
-	void drawAll(const std::vector<std::pair<const GPUGeometry *, Transform> > &geo);
+	void drawAll(const std::vector<TransformedGPUGeometry> &allGeometry);
+
+	/// Draw a quad using the given texture
+	void blitTexture(const GPUTexture *texture,
+		bool flipVertically = false, 
+		bool centerHoriz = true, bool centerVert = true,
+		const Vector2i &offset = Vector2i(0, 0));
 
 	/// Blit a screen-sized quad
 	void blitQuad(bool flipVertically);
@@ -134,15 +134,36 @@ public:
 	/// Draw a line between two specified points
 	void drawLine(const Point &a, const Point &b);
 
+	/// Draw a point (2D)
+	void drawPoint(const Point2 &p);
+
+	/// Draw a point (2D, integer coordinates)
+	void drawPoint(const Point2i &p);
+
+	/// Draw a line between two specified points (2D)
+	void drawLine(const Point2 &a, const Point2 &b);
+
+	/// Draw a line between two specified points (2D, integer coordinates)
+	void drawLine(const Point2i &a, const Point2i &b);
+
+	/// Draw a rectangle between two specified points (2D)
+	void drawRectangle(const Point2 &a, const Point2 &b);
+
+	/// Draw a rectangle between two specified points (2D, integer coordinates)
+	void drawRectangle(const Point2i &a, const Point2i &b);
+
+	/// Draw a filled rectangle between two specified points (2D)
+	void drawFilledRectangle(const Point2 &a, const Point2 &b);
+
+	/// Draw a filled rectangle between two specified points (2D, integer coordinates)
+	void drawFilledRectangle(const Point2i &a, const Point2i &b);
+
 	/// Draw an ellipse with the specified center and axes
 	void drawEllipse(const Point &center, 
 			const Vector &axis1, const Vector &axis2);
 
 	/// Draw a wire-frame axis-aligned box
 	void drawAABB(const AABB &aabb);
-
-	/// Set a depth offset for shadow mapping (0 to disable)
-	void setDepthOffset(Float value);
 
 	/// Set the currently active blending mode
 	void setBlendMode(EBlendMode mode);
@@ -156,17 +177,20 @@ public:
 	/// Activate or deactivate depth testing
 	void setDepthTest(bool value);
 
-	/// Activate or deactivate the writing of color information
-	void setColorMask(bool value);
-
+	/// Set the current fixed-function pipeline color
+	void setColor(const Color3 &color, Float alpha = 1.0f);
+	
 	/// Set the current fixed-function pipeline color
 	void setColor(const Spectrum &spec, Float alpha = 1.0f);
 
-	/// Push a view transformation onto the matrix stack
-	void pushTransform(const Transform &trafo);
-	
-	/// Pop the last view transformation from the matrix stack
-	void popTransform();
+	/// Set the depth value that is written by \ref clear()
+	void setClearDepth(Float depth);
+
+	/// Set the color value that is written by \ref clear()
+	void setClearColor(const Color3 &color);
+
+	/// Clear the view and projection transformations
+	void clearTransforms();
 
 	/// Flush outstanding rendering commands
 	void flush();
@@ -176,6 +200,14 @@ public:
 
 	/// Check for any error indications
 	void checkError(bool onlyWarn = true);
+
+	/**
+	 * \brief Send a debug string to the rendering backend
+	 *
+	 * This is mainly useful when an OpenGL trace is captured
+	 * by a tool such as 'apitrace'.
+	 */
+	void debugString(const std::string &text);
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -193,4 +225,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __GLRENDERER_H */
+#endif /* __MITSUBA_HW_GLRENDERER_H_ */

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -31,16 +31,36 @@ StreamAppender::StreamAppender(std::ostream *stream)
 
 StreamAppender::StreamAppender(const std::string &filename)
  : m_fileName(filename), m_isFile(true) {
-	m_stream = new std::ofstream();
-	((std::ofstream *) m_stream)->open(filename.c_str());
+	std::fstream *stream = new std::fstream();
+	stream->open(filename.c_str(),
+		std::fstream::in | std::fstream::out | std::fstream::trunc);
+	m_stream = stream;
 	m_lastMessageWasProgress = false;
+}
+
+void StreamAppender::readLog(std::string &target) {
+	Assert(m_isFile);
+	std::fstream &stream = * ((std::fstream *) m_stream);
+	stream.flush();
+	stream.seekg(0, std::ios::end);
+	std::streamoff size = stream.tellg();
+	Assert(size >= 0);
+	target.resize((size_t) size);
+	stream.seekg(0, std::ios::beg);
+
+	std::istreambuf_iterator<std::string::value_type> it(stream);
+	std::istreambuf_iterator<std::string::value_type> it_eof;
+	target.insert(target.begin(), it, it_eof);
+
+	stream.seekg(0, std::ios::end);
+	Assert(!stream.fail());
 }
 
 void StreamAppender::append(ELogLevel level, const std::string &text) {
 	/* Insert a newline if the last message was a progress message */
 	if (m_lastMessageWasProgress && !m_isFile)
-		std::cout << std::endl;
-	(*m_stream) << text << std::endl;
+		std::cout << endl;
+	(*m_stream) << text << endl;
 	m_lastMessageWasProgress = false;
 }
 	
@@ -71,7 +91,7 @@ std::string StreamAppender::toString() const {
 
 StreamAppender::~StreamAppender() {
 	if (m_isFile) {
-		((std::ofstream *) m_stream)->close();
+		((std::fstream *) m_stream)->close();
 		delete m_stream;
 	}
 }

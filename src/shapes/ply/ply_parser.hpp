@@ -10,7 +10,8 @@
 #include <cctype>
 
 #if defined(__clang__)
-#define MTS_USE_BOOST_TR1 (!__has_feature(cxx_variadic_templates))
+#  define MTS_USE_BOOST_TR1 (!__has_feature(cxx_variadic_templates))
+#  define ADT_WORKAROUND 1
 #else
 #  if defined(_MSC_VER)
 #    if _MSC_VER < 1600
@@ -18,15 +19,15 @@
 #    else
 #      define MTS_USE_BOOST_TR1 0
 #    endif
+#  elif defined(__INTEL_COMPILER) && !defined(__OSX__)
+#    define MTS_USE_BOOST_TR1 1
 #  else
 #    define MTS_USE_BOOST_TR1 0
 #  endif
 #endif
 
-#if defined(__INTEL_COMPILER)
+#if defined(__INTEL_COMPILER) || defined(__INTELLISENSE__)
 #define ADT_WORKAROUND 1
-#else
-#define ADT_WORKAROUND 0
 #endif
 
 #if MTS_USE_BOOST_TR1
@@ -404,13 +405,10 @@ inline void ply::ply_parser::parse_list_property_definition(const std::string& p
 {
   typedef SizeType size_type;
   typedef ScalarType scalar_type;
-  #if !defined(__INTEL_COMPILER)
-  typename
-  #endif
-  #if defined(__INTEL_COMPILER) && defined(__OSX__)
+  #if defined(__INTEL_COMPILER)
     auto list_property_definition_callback = list_property_definition_callbacks_.get<size_type, scalar_type>();
   #else
-    list_property_definition_callback_type<size_type, scalar_type>::type& list_property_definition_callback = list_property_definition_callbacks_.get<size_type, scalar_type>();
+    typename list_property_definition_callback_type<size_type, scalar_type>::type& list_property_definition_callback = list_property_definition_callbacks_.get<size_type, scalar_type>();
   #endif
   typedef typename list_property_begin_callback_type<size_type, scalar_type>::type list_property_begin_callback_type;
   typedef typename list_property_element_callback_type<size_type, scalar_type>::type list_property_element_callback_type;
@@ -590,3 +588,4 @@ return list_property_definition_callbacks.get<SizeType, ScalarType>();
 #endif
 
 #endif // PLY_PLY_PARSER_HPP_INCLUDED
+

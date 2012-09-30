@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -24,7 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{blendbsdf}{Blended material}
- *
+ * \order{16}
  * \parameters{
  *     \parameter{weight}{\Float\Or\Texture}{A floating point value or texture
  *      with values between zero and one. The extreme values zero and one activate the
@@ -34,13 +34,37 @@ MTS_NAMESPACE_BEGIN
  *     mixed according to the specified blending weight}
  * }
  *
+ * \renderings{
+ *     \rendering{A material created by blending between dark rough plastic and
+ *     smooth gold based on a binary bitmap texture (\lstref{blendbsdf})}{bsdf_blendbsdf}
+ * }
+ *
  * This plugin implements a ``blend'' material, which represents 
  * linear combinations of two BSDF instances. It is conceptually very similar
- * to the \pluginref{mixture} plugin. The main difference is that
- * \pluginref{blendbsdf} can interpolate based on a texture.
+ * to the \pluginref{mixturebsdf} plugin. The main difference is that
+ * \pluginref{blendbsdf} can interpolate based on a texture rather than a set 
+ * of constants.
  *
  * Any surface scattering model in Mitsuba (be it smooth, rough, reflecting, or 
  * transmitting) can be mixed with others in this manner to synthesize new models. 
+ *
+ * \begin{xml}[caption=Description of the material shown above,
+ *     label=lst:blendbsdf]
+ * <bsdf type="blendbsdf">
+ *     <texture name="weight" type="bitmap">
+ *         <string name="wrapMode" value="repeat"/>
+ *         <string name="filename" value="pattern.png"/>
+ *     </texture>
+ *
+ *     <bsdf type="conductor">
+ *         <string name="material" value="Au"/>
+ *     </bsdf>
+ * 
+ *     <bsdf type="roughplastic">
+ *         <spectrum name="diffuseReflectance" value="0"/>
+ *     </bsdf>
+ * </bsdf>
+ * \end{xml}
  */
 
 class BlendBSDF : public BSDF {
@@ -106,9 +130,9 @@ public:
 		BSDF::configure();
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		Float weight = std::min((Float) 1.0f, std::max((Float) 0.0f, 
-			m_weight->getValue(bRec.its).average()));
+			m_weight->eval(bRec.its).average()));
 
 		if (bRec.component == -1) {
 			return
@@ -119,17 +143,17 @@ public:
 			int idx = m_indices[bRec.component].first;
 			if (idx == 0)
 				weight = 1-weight;
-			BSDFQueryRecord bRec2(bRec);
+			BSDFSamplingRecord bRec2(bRec);
 			bRec2.component = m_indices[bRec.component].second;
 			return m_bsdfs[idx]->eval(bRec2, measure) * weight;
 		}
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		Spectrum result;
 
 		Float weight = std::min((Float) 1.0f, std::max((Float) 0.0f, 
-			m_weight->getValue(bRec.its).average()));
+			m_weight->eval(bRec.its).average()));
 
 		if (bRec.component == -1) {
 			return
@@ -140,18 +164,18 @@ public:
 			int idx = m_indices[bRec.component].first;
 			if (idx == 0)
 				weight = 1-weight;
-			BSDFQueryRecord bRec2(bRec);
+			BSDFSamplingRecord bRec2(bRec);
 			bRec2.component = m_indices[bRec.component].second;
 			return m_bsdfs[idx]->pdf(bRec2, measure) * weight;
 		}
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &_sample) const {
 		Point2 sample(_sample);
 
 		Float weights[2];
 		weights[1] = std::min((Float) 1.0f, std::max((Float) 0.0f, 
-			m_weight->getValue(bRec.its).average()));
+			m_weight->eval(bRec.its).average()));
 		weights[0] = 1-weights[1];
 
 		if (bRec.component == -1) {
@@ -192,12 +216,12 @@ public:
 		}
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 
 		Float weights[2];
 		weights[1] = std::min((Float) 1.0f, std::max((Float) 0.0f, 
-			m_weight->getValue(bRec.its).average()));
+			m_weight->eval(bRec.its).average()));
 		weights[0] = 1-weights[1];
 
 		if (bRec.component == -1) {
@@ -252,7 +276,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "BlendBSDF[" << endl
-			<< "  name = \"" << getName() << "\"," << endl
+			<< "  id = \"" << getID() << "\"," << endl
 			<< "  weight = " << indent(m_weight->toString()) << endl
 			<< "  bsdfs = {" << endl;
 		for (size_t i=0; i<m_bsdfs.size(); ++i) 

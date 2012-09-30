@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -99,7 +99,7 @@ private:
 class GatherPhotonWorker : public ParticleTracer {
 public:
 	GatherPhotonWorker(GatherPhotonProcess::EGatherType type, size_t granularity,
-		int maxDepth, int rrDepth) : ParticleTracer(maxDepth, rrDepth),
+		int maxDepth, int rrDepth) : ParticleTracer(maxDepth, rrDepth, false),
 		m_type(type), m_granularity(granularity) { }
 
 	GatherPhotonWorker(Stream *stream, InstanceManager *manager) 
@@ -132,27 +132,26 @@ public:
 		m_workResult = NULL;
 	}
 
-	void handleEmission(const EmissionRecord &eRec,
-			const Medium *medium, Float time) {
+	void handleNewParticle() {
 		m_workResult->nextParticle();
 	}
 
-	void handleSurfaceInteraction(int depth, bool caustic,
+	void handleSurfaceInteraction(int depth, bool delta,
 			const Intersection &its, const Medium *medium,
 			const Spectrum &weight) {
-		int bsdfType = its.shape->getBSDF()->getType();
+		int bsdfType = its.getBSDF()->getType();
 		if (!(bsdfType & BSDF::EDiffuseReflection) && !(bsdfType & BSDF::EGlossyReflection))
 			return;
 
-		if ((m_type == GatherPhotonProcess::ECausticPhotons && depth > 1 && caustic)
-		 || (m_type == GatherPhotonProcess::ESurfacePhotons && depth > 1 && !caustic)
+		if ((m_type == GatherPhotonProcess::ECausticPhotons && depth > 1 && delta)
+		 || (m_type == GatherPhotonProcess::ESurfacePhotons && depth > 1 && !delta)
 		 || (m_type == GatherPhotonProcess::EAllSurfacePhotons)) 
 			m_workResult->put(Photon(its.p, its.geoFrame.n, -its.toWorld(its.wi), weight, depth));
 	}
 
-	void handleMediumInteraction(int depth, bool caustic,
+	void handleMediumInteraction(int depth, bool delta,
 			const MediumSamplingRecord &mRec, const Medium *medium,
-			Float time, const Vector &wi, const Spectrum &weight) {
+			const Vector &wi, const Spectrum &weight) {
 		if (m_type == GatherPhotonProcess::EVolumePhotons)
 			m_workResult->put(Photon(mRec.p, Normal(0.0f, 0.0f, 0.0f), -wi, weight, depth));
 	}
@@ -175,7 +174,7 @@ GatherPhotonProcess::GatherPhotonProcess(EGatherType type, size_t photonCount,
 	  m_rrDepth(rrDepth),  m_isLocal(isLocal), m_autoCancel(autoCancel), m_excess(0), m_numShot(0) {
 	m_photonMap = new PhotonMap(photonCount);
 }
-	
+
 bool GatherPhotonProcess::isLocal() const {
 	return m_isLocal;
 }
@@ -188,7 +187,7 @@ void GatherPhotonProcess::processResult(const WorkResult *wr, bool cancelled) {
 	if (cancelled)
 		return;
 	const PhotonVector &vec = *static_cast<const PhotonVector *>(wr);
-	m_resultMutex->lock();
+	LockGuard lock(m_resultMutex);
 
 	size_t nParticles = 0;
 	for (size_t i=0; i<vec.getParticleCount(); ++i) {
@@ -208,20 +207,17 @@ void GatherPhotonProcess::processResult(const WorkResult *wr, bool cancelled) {
 	}
 	m_numShot += nParticles;
 	increaseResultCount(vec.size());
-	m_resultMutex->unlock();
 }
 
 ParallelProcess::EStatus GatherPhotonProcess::generateWork(WorkUnit *unit, int worker) {
 	/* Use the same approach as PBRT for auto canceling */
-	m_resultMutex->lock();
-	if (m_autoCancel && m_numShot > 500000
+	LockGuard lock(m_resultMutex);
+	if (m_autoCancel && m_numShot > 100000
 			&& unsuccessful(m_photonCount, m_photonMap->size(), m_numShot)) {
 		Log(EInfo, "Not enough photons could be collected, giving up");
-		m_resultMutex->unlock();
 		return EFailure;
 	}
 
-	m_resultMutex->unlock();
 	return ParticleProcess::generateWork(unit, worker);
 }
 

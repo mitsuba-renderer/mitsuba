@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
 	This particular file is based on code by Piti Irawan, which is
 	redistributed with permission.
@@ -23,13 +23,15 @@
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/texture.h>
 #include <mitsuba/render/noise.h>
+#include <mitsuba/hw/gpuprogram.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/random.h>
+#include <mitsuba/core/qmc.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/bitmap.h>
-#include <mitsuba/render/scene.h>
 #include "irawan.h"
+#include <mitsuba/render/scene.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -40,10 +42,13 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{repeatU, repeatV}{\Float}{Specifies the number
  *         of weave pattern repetitions over a $[0,1]^2$ region of the UV
  *         parameterization}
- *     \parameter{ksFactor}{\Float}{Multiplicative factor of
- *         the specular component}
- *     \parameter{kdFactor}{\Float}{Multiplicative factor of
- *         the diffuse component}
+ *     \parameter{(\emph{Additional parameters})}{\Spectrum\Or\Float}{
+ *         Weave pattern files may define their own custom parameters; this is
+ *         useful for instance to support changing the color of a weave 
+ *         without having to create a new file every time.
+ *         These parameters must be specified directly to the plugin
+ *         so that they can be appropriately resolved when the pattern file is loaded.
+ *     }
  * }
  *
  * This plugin implements the Irawan \& Marschner BRDF,
@@ -83,7 +88,7 @@ public:
 		fs::path path = fResolver->resolve(props.getString("filename"));
 		if (!fs::exists(path))
 			Log(EError, "Weave pattern file \"%s\" could not be found!",	
-				path.file_string().c_str());
+				path.string().c_str());
 		fs::ifstream in(path);
 		typedef spirit::istream_iterator iterator_type;
 		iterator_type end, begin(in);
@@ -94,7 +99,7 @@ public:
 		bool success = phrase_parse(begin, end, g, sg, m_pattern);
 		if (!success)
 			Log(EError, "Unable to parse the weave pattern file \"%s\"!", 
-				path.file_string().c_str());
+				path.string().c_str());
 
 		/* Some sanity checks */
 		SAssert(m_pattern.pattern.size() == 
@@ -146,12 +151,12 @@ public:
 
 		if (m_specularNormalization == 0) {
 			Intersection its;
-			BSDFQueryRecord bRec(its, NULL, ERadiance);
+			BSDFSamplingRecord bRec(its, NULL, ERadiance);
 			Spectrum result(0.0f);
 			m_initialization = true;
 			for (size_t i=0; i<nSamples; ++i) {
-				bRec.wi = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));
-				bRec.wo = squareToHemispherePSA(Point2(random->nextFloat(), random->nextFloat()));
+				bRec.wi = Warp::squareToCosineHemisphere(Point2(random->nextFloat(), random->nextFloat()));
+				bRec.wo = Warp::squareToCosineHemisphere(Point2(random->nextFloat(), random->nextFloat()));
 				its.uv = Point2(random->nextFloat(), random->nextFloat());
 
 				result += eval(bRec, ESolidAngle) / Frame::cosTheta(bRec.wo);
@@ -181,7 +186,7 @@ public:
 	}
 
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
 			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
@@ -251,20 +256,20 @@ public:
 		Float random1 = 1.0f;
 		Float random2 = 1.0f;
 
+		/* Number of TEA iterations (the more, the better the
+		   quality of the pseudorandom floats) */
+		const int teaIterations = 8;
+
 		if (m_pattern.period > 0.0f) {
 			// generate 1 seed per yarn segment
-			uint64_t seed = (uint64_t) center.x 
-				* (uint64_t) (m_pattern.tileHeight * m_repeatV)
-				+ (uint64_t) center.y;
+			Point2u pos(center);
 
-			ref<Random> random = new Random(seed);
-			random->nextFloat();
 			random1 = Noise::perlinNoise(Point(
 				(center.x * (m_pattern.tileHeight * m_repeatV 
-					+ random->nextFloat()) + center.y) / m_pattern.period, 0, 0));
+					+ sampleTEAFloat(pos.x, 2*pos.y, teaIterations)) + center.y) / m_pattern.period, 0, 0));
 			random2 = Noise::perlinNoise(Point(
 				(center.y * (m_pattern.tileWidth * m_repeatU 
-					+ random->nextFloat()) + center.x) / m_pattern.period, 0, 0));
+					+ sampleTEAFloat(pos.x, 2*pos.y+1, teaIterations)) + center.x) / m_pattern.period, 0, 0));
 			umax = umax + random1 * dUmaxOverDWarp + random2 * dUmaxOverDWeft;
 		}
 
@@ -289,13 +294,11 @@ public:
 			if (m_pattern.fineness > 0.0f) {
 				// Compute random variation and scale specular component.
 				// Generate fineness^2 seeds per 1 unit of texture. 
-				uint64_t seed = (uint64_t) ((center.x + xy.x) * m_pattern.fineness) 
-					* (uint64_t) (m_pattern.tileHeight * m_repeatV * m_pattern.fineness) 
-					+ (uint64_t) ((center.y + xy.y) * m_pattern.fineness);
+				uint32_t index1 = (uint32_t) ((center.x + xy.x) * m_pattern.fineness);
+				uint32_t index2 = (uint32_t) ((center.y + xy.y) * m_pattern.fineness);
 
-				ref<Random> random = new Random(seed);
-				Float xi = random->nextFloat();
-				intensityVariation = std::min(-std::fastlog(xi), (Float) 10.0f);
+				Float xi = sampleTEAFloat(index1, index2, teaIterations);
+				intensityVariation = std::min(-math::fastlog(xi), (Float) 10.0f);
 			}
 			
 			if (!m_initialization)
@@ -315,7 +318,7 @@ public:
 		return result * Frame::cosTheta(bRec.wo);
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
 			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
@@ -327,10 +330,10 @@ public:
 			measure != ESolidAngle)
 			return 0.0f;
 
-		return Frame::cosTheta(bRec.wo) * INV_PI;
+		return Warp::squareToCosineHemispherePdf(bRec.wo);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
 			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
@@ -341,13 +344,14 @@ public:
 			return Spectrum(0.0f);
 
 		/* Lacking a better sampling method, generate cosine-weighted directions */
-		bRec.wo = squareToHemispherePSA(sample);
+		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
 		return eval(bRec, ESolidAngle) * M_PI / Frame::cosTheta(bRec.wo);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection) &&
 			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
@@ -358,10 +362,11 @@ public:
 			return Spectrum(0.0f);
 
 		/* Lacking a better sampling method, generate cosine-weighted directions */
-		bRec.wo = squareToHemispherePSA(sample);
+		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
-		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
+		pdf = Warp::squareToCosineHemispherePdf(bRec.wo);
 		return eval(bRec, ESolidAngle) / pdf;
 	}
 
@@ -491,7 +496,7 @@ public:
 		// v_of_u is location of specular reflection.
 		Float D = (h.y*std::cos(u) - h.z*std::sin(u))
 			/ (std::sqrt(h.x * h.x + std::pow(h.y * std::sin(u) + h.z * std::cos(u), (Float) 2.0f)) * std::tan(psi));
-		Float v_of_u = std::atan2(-h.y * std::sin(u) - h.z * std::cos(u), h.x) + std::acos(D);
+		Float v_of_u = std::atan2(-h.y * std::sin(u) - h.z * std::cos(u), h.x) + math::safe_acos(D);
 
 		// Check if v_of_u within the range of valid v values
 		if (std::abs(D) < 1.0f && std::abs(v_of_u) < M_PI / 2.0f) {
@@ -501,9 +506,9 @@ public:
 			Normal n = normalize(Normal(std::sin(v_of_u), std::sin(u)
 					* std::cos(v_of_u), std::cos(u) * std::cos(v_of_u)));
 
-			Vector t = normalize(Vector(-std::cos(v_of_u) * std::sin(psi),
+			/*Vector t = normalize(Vector(-std::cos(v_of_u) * std::sin(psi),
 					std::cos(u) * std::cos(psi) + std::sin(u) * std::sin(v_of_u) * std::sin(psi), 
-					-std::sin(u) * std::cos(psi) + std::cos(u) * std::sin(v_of_u) * std::sin(psi)));
+					-std::sin(u) * std::cos(psi) + std::cos(u) * std::sin(v_of_u) * std::sin(psi))); */
 
 			// R is radius of curvature.
 			Float R = radiusOfCurvature(std::abs(u), umax, kappa, w, l);
@@ -576,7 +581,7 @@ public:
 	}
 
 	inline Float atanh(Float arg) const {
-		return std::fastlog((1.0f + arg) / (1.0f - arg)) / 2.0f;
+		return math::fastlog((1.0f + arg) / (1.0f - arg)) / 2.0f;
 	}
 
 	// von Mises Distribution
@@ -591,12 +596,12 @@ public:
 					+ t*(0.2659732f + t*(0.0360768f + t*0.0045813f)))));
 		} else {
 			Float t = 3.75f / absB;
-			I0 = std::fastexp(absB) / std::sqrt(absB) * (0.39894228f + t*(0.01328592f
+			I0 = math::fastexp(absB) / std::sqrt(absB) * (0.39894228f + t*(0.01328592f
 				+ t*(0.00225319f + t*(-0.00157565f + t*(0.00916281f + t*(-0.02057706f
 				+ t*(0.02635537f + t*(-0.01647633f + t*0.00392377f))))))));
 		}
 
-		return std::fastexp(b * cos_x) / (2 * M_PI * I0);
+		return math::fastexp(b * cos_x) / (2 * M_PI * I0);
 	}
 
 	/// Attenuation term
@@ -612,6 +617,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "IrawanClothBRDF[" << endl
+			<< "  id = \"" << getID() << "\"," << endl
 			<< "  weavePattern = " << indent(m_pattern.toString()) << "," << endl
 			<< "  repeatU = " << m_repeatU << "," << endl
 			<< "  repeatV = " << m_repeatV << endl
@@ -641,16 +647,22 @@ public:
 		: Shader(renderer, EBSDFShader), m_albedo(albedo) {
 	}
 
+	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+		parameterIDs.push_back(program->getParameterID(evalName + "_albedo", false));
+	}
+
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
+		program->setParameter(parameterIDs[0], m_albedo);
+	}
+
 	void generateCode(std::ostringstream &oss,
 			const std::string &evalName,
 			const std::vector<std::string> &depNames) const {
-		Float r, g, b;
-		m_albedo.toLinearRGB(r, g, b);
-
-		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+		oss << "uniform vec3 " << evalName << "_albedo;" << endl
+			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
 			<< "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
-			<< "    return vec3(" << r << ", " << g << ", " << b << ") * inv_pi * cosTheta(wo);" << endl
+			<< "    return " << evalName << "_albedo * inv_pi * cosTheta(wo);" << endl
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl

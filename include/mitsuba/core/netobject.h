@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__NETOBJECT_H)
-#define __NETOBJECT_H
+#pragma once
+#if !defined(__MITSUBA_CORE_NETOBJECT_H_)
+#define __MITSUBA_CORE_NETOBJECT_H_
 
 #include <mitsuba/core/cobject.h>
 
@@ -42,7 +43,8 @@ public:
 	virtual void bindUsedResources(ParallelProcess *proc) const;
 
 	/// Retrieve any required resources
-	virtual void wakeup(std::map<std::string, SerializableObject *> &params);
+	virtual void wakeup(ConfigurableObject *parent,
+		std::map<std::string, SerializableObject *> &params);
 
 	/// Serialize this object to a stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
@@ -63,4 +65,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __NETOBJECT_H */
+#endif /* __MITSUBA_CORE_NETOBJECT_H_ */

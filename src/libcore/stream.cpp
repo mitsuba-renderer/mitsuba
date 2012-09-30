@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/mitsuba.h>
+#include <mitsuba/core/stream.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -34,28 +35,16 @@ static Stream::EByteOrder getByteOrder() {
 		return Stream::EBigEndian;
 }
 
-static const char *byteOrderToString(Stream::EByteOrder byteOrder) {
-	if (byteOrder == Stream::ELittleEndian)
-		return "little-endian";
-	else if (byteOrder == Stream::EBigEndian)
-		return "big-endian";
-	else
-		return "unknown";
-}
-
-	
 Stream::EByteOrder Stream::m_hostByteOrder = mitsuba::getByteOrder();
 
-Stream::Stream() {
-	m_byteOrder = m_hostByteOrder;
-}
+Stream::Stream() : m_byteOrder(m_hostByteOrder) { }
 
-void Stream::setByteOrder(EByteOrder pOrder) {
-	m_byteOrder = pOrder;
+void Stream::setByteOrder(EByteOrder value) {
+	m_byteOrder = value;
 }
 
 void Stream::skip(size_t amount) {
-	setPos(getPos() + amount);
+	seek(getPos() + amount);
 }
 
 void Stream::writeInt(int value) {
@@ -174,11 +163,30 @@ void Stream::writeUChar(unsigned char value) {
 	write(&value, sizeof(unsigned char));
 }
 
-void Stream::writeSingle(float pFloat) {
+void Stream::writeHalf(half halfValue) {
+	short value = halfValue.bits();
+	if (m_byteOrder != m_hostByteOrder) 
+		value = endianness_swap(value);
+	write(&value, sizeof(short));
+}
+
+void Stream::writeHalfArray(const half *data, size_t size) {
+	BOOST_STATIC_ASSERT(sizeof(half) == 2);
 	if (m_byteOrder != m_hostByteOrder) {
-		pFloat = endianness_swap(pFloat);
+		short *temp = new short[size];
+		for (size_t i=0; i<size; ++i) 
+			temp[i] = endianness_swap(data[i].bits());
+		write(temp, sizeof(short)*size);
+		delete[] temp;
+	} else {
+		write(data, sizeof(half)*size);
 	}
-	write(&pFloat, sizeof(float));
+}
+
+void Stream::writeSingle(float value) {
+	if (m_byteOrder != m_hostByteOrder) 
+		value = endianness_swap(value);
+	write(&value, sizeof(float));
 }
 
 void Stream::writeSingleArray(const float *data, size_t size) {
@@ -332,6 +340,22 @@ unsigned char Stream::readUChar() {
 	return value;
 }
 
+half Stream::readHalf() {
+	half value;
+	read(&value, sizeof(half));
+	if (m_byteOrder != m_hostByteOrder)
+		value.setBits(endianness_swap(value.bits()));
+	return value;
+}
+
+void Stream::readHalfArray(half *data, size_t size) {
+	read(data, sizeof(half)*size);
+	if (m_byteOrder != m_hostByteOrder) {
+		for (size_t i=0; i<size; ++i)
+			data[i].setBits(endianness_swap(data[i].bits()));
+	}
+}
+
 float Stream::readSingle() {
 	float value;
 	read(&value, sizeof(float));
@@ -347,6 +371,7 @@ void Stream::readSingleArray(float *data, size_t size) {
 			data[i] = endianness_swap(data[i]);
 	}
 }
+
 
 double Stream::readDouble() {
 	double value;
@@ -419,11 +444,20 @@ std::string Stream::toString() const {
 	std::ostringstream oss;
 
 	oss << "hostByteOrder="
-		<< byteOrderToString(m_hostByteOrder)
+		<< m_hostByteOrder
 		<< ", byteOrder="
-		<< byteOrderToString(m_byteOrder);
+		<< m_byteOrder;
 
 	return oss.str();
+}
+
+std::ostream &operator<<(std::ostream &os, const Stream::EByteOrder &value) {
+	switch (value) {
+		case Stream::ELittleEndian: os << "little-endian"; break;
+		case Stream::EBigEndian: os << "big-endian"; break;
+		default: os << "invalid"; break;
+	}
+	return os;
 }
 
 MTS_IMPLEMENT_CLASS(Stream, true, Object)

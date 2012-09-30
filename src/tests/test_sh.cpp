@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -41,9 +41,8 @@ public:
 			for (int m=-l; m<=l; ++m)
 				vec1(l, m) = random->nextFloat();
 
-		Vector axis(squareToSphere(Point2(random->nextFloat(), random->nextFloat())));
+		Vector axis(Warp::squareToUniformSphere(Point2(random->nextFloat(), random->nextFloat())));
 		Transform trafo = Transform::rotate(axis, random->nextFloat()*360);
-		Transform inv = trafo.inverse();
 		SHRotation rot(vec1.getBands());
 
 		SHVector::rotation(trafo, rot);
@@ -52,7 +51,7 @@ public:
 		rot(vec1, vec2);
 
 		for (int i=0; i<100; ++i) {
-			Vector dir1(squareToSphere(Point2(random->nextFloat(), random->nextFloat()))), dir2;
+			Vector dir1(Warp::squareToUniformSphere(Point2(random->nextFloat(), random->nextFloat()))), dir2;
 			trafo(dir1, dir2);
 
 			Float value1 = vec1.eval(dir2);

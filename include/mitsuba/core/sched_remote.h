@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,10 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SCHED_REMOTE_H)
-#define __SCHED_REMOTE_H
+#pragma once
+#if !defined(__MITSUBA_CORE_SCHED_REMOTE_H_)
+#define __MITSUBA_CORE_SCHED_REMOTE_H_
 
 #include <mitsuba/core/sched.h>
+#include <set>
 
 /// Default port of <tt>mtssrv</tt>
 #define MTS_DEFAULT_PORT 7554
@@ -71,10 +73,9 @@ protected:
 	void flush();
 
 	inline void signalCompletion() {
-		m_mutex->lock();
+		LockGuard lock(m_mutex);
 		m_inFlight--;
 		m_finishCond->signal();
-		m_mutex->unlock();
 	}
 protected:
 	ref<Mutex> m_mutex;
@@ -148,7 +149,7 @@ public:
 	/// Get an empty work unit from the process (or create one)
 	inline WorkUnit *getEmptyWorkUnit() {
 		ref<WorkUnit> wu;
-		m_mutex->lock();
+		LockGuard lock(m_mutex);
 		if (m_empty.empty()) {
 			wu = m_wp->createWorkUnit();
 			wu->incRef();
@@ -156,22 +157,19 @@ public:
 			wu = m_empty.back();
 			m_empty.pop_back();
 		}
-		m_mutex->unlock();
 		return wu;
 	}
 
 	/// Make a full work unit available to the process
 	inline void putFullWorkUnit(WorkUnit *wu) {
-		m_mutex->lock();
+		LockGuard lock(m_mutex);
 		m_full.push_back(wu);
-		m_mutex->unlock();
 	}
 
 	/// Mark the process as finished
 	inline void setDone() {
-		m_mutex->lock();
+		LockGuard lock(m_mutex);
 		m_done = true;
-		m_mutex->unlock();
 	}
 
 	MTS_DECLARE_CLASS()
@@ -203,7 +201,7 @@ public:
 		EUnknown = 0,
 		ENewProcess,
 		ENewResource,
-		ENewManifoldResource,
+		ENewMultiResource,
 		EBindResource,
 		EWorkUnit,
 		EWorkResult,
@@ -254,4 +252,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __SCHED_REMOTE_H */
+#endif /* __MITSUBA_CORE_SCHED_REMOTE_H_ */

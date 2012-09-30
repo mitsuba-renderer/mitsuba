@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,10 +16,11 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SPIRAL_H)
-#define __SPIRAL_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_SPIRAL_H_)
+#define __MITSUBA_RENDER_SPIRAL_H_
 
-#include <mitsuba/render/block.h>
+#include <mitsuba/render/imageblock.h>
 #include <mitsuba/render/film.h>
 
 #define MTS_BLOCK_SIZE 32
@@ -48,12 +49,12 @@ protected:
 };
 
 /**
- * Class wraps code that generates the spiral of image blocks
- * for rendering.
+ * \brief Generates a spiral of blocks to be rendered
  *
  * \author Adam Arbree
  * Aug 25, 2005
  * RayTracer.java
+ * Used with permission.
  * Copyright 2005 Program of Computer Graphics, Cornell University
  * \ingroup librender
  */
@@ -103,18 +104,7 @@ protected:
 	/// Virtual destructor
 	virtual ~Spiral();
 private:
-	/* variables controling ordering of sub-blocks */
-	int numSubX;             //number of subblocks in x direction
-	int numSubY;             //number of subblocks in y direction
-	int totalSubblocks;    //total number of subblocks to be computed in all passes
-	int subblocksLeft;     //remaining number of subblocks to be computed
-	int curSubX, curSubY;  //current subblock to request
-	int curDir;              //direction to next subblock
-	int movesLeft;           //moves left in this direction
-	int moveLength;          //total moves before next direction change
-	int width, height;
 	int m_activeBlocks;
-	int negOffsetX, negOffsetY;
 	mutable ref<Mutex> m_mutex;
 	std::vector<ImageBlock *> m_openBlocks;
 	std::vector<BlockListener *> m_listeners;

@@ -1,3 +1,24 @@
+mitsuba (0.4.0-1) unstable; urgency=low
+  * New bidirectional rendering algorithms: Bidirectional path tracing,
+    Primary sample space MLT, Path space MLT, Energy redistribution path
+    tracing, Manifold exploration
+  * New framework for representing sensors and emitters
+  * Vastly improved realtime preview that scales to big scenes
+  * Crop/Zoom/Multiple sensor support
+  * Redesigned skylight emitter based on work by Hosek and Wilkie
+  * Improved texturing system with support for high quality resampling,
+    out-of-core textures, and anisotropic texture filtering
+  * Sobol, Halton, and Hammersley Quasi Monte Carlo point set generators
+  * Fixed a handedness problem that affected all cameras
+  * Flexible bitmap I/O with support for many new output formats
+  * Reimplemented dipole subsurface scattering integrator
+  * SSE-based CPU tonemapper & Mersenne Twister implementation
+  * All threading code was mooved over to boost::thread
+  * The build system can now simultaneously deal with several versions of Python
+  * Other new plugins: blendbsdf, thindielectric
+  * New CMake-based build system
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Thu, 27 Sep 2012 00:00:00 -0400
+
 mitsuba (0.3.1-1) unstable; urgency=low
 
   * Photon mapper: The photon mapper had some serious issues in the 

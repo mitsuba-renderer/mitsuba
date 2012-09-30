@@ -87,6 +87,12 @@
     </item>
     <item row="0" column="0" colspan="2">
      <widget class="CustomTabBar" name="tabBar" native="true">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="focusPolicy">
        <enum>Qt::NoFocus</enum>
       </property>
@@ -100,7 +106,7 @@
      <x>0</x>
      <y>0</y>
      <width>605</width>
-     <height>27</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -132,7 +138,7 @@
      <string>&amp;Help</string>
     </property>
     <property name="separatorsCollapsible">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <addaction name="actionReferenceManual"/>
     <addaction name="separator"/>
@@ -145,21 +151,49 @@
     <property name="title">
      <string>&amp;Tools</string>
     </property>
+    <addaction name="actionUpdateCheck"/>
+    <addaction name="actionStartServer"/>
+    <addaction name="separator"/>
+    <addaction name="actionSettings"/>
+    <addaction name="actionEnableCommandLine"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <widget class="QMenu" name="menuCamera">
+     <property name="title">
+      <string>Set Camera</string>
+     </property>
+     <property name="icon">
+      <iconset resource="resources.qrc">
+       <normaloff>:/resources/camera.png</normaloff>:/resources/camera.png</iconset>
+     </property>
+    </widget>
     <widget class="QMenu" name="menuDeveloper">
      <property name="title">
       <string>Developer</string>
      </property>
+     <property name="icon">
+      <iconset resource="resources.qrc">
+       <normaloff>:/resources/devel.png</normaloff>:/resources/devel.png</iconset>
+     </property>
      <addaction name="actionShowKDTree"/>
      <addaction name="actionSceneDescription"/>
     </widget>
-    <addaction name="actionUpdateCheck"/>
-    <addaction name="actionStartServer"/>
+    <addaction name="menuCamera"/>
+    <addaction name="separator"/>
+    <addaction name="actionCrop"/>
+    <addaction name="actionMagnify"/>
+    <addaction name="actionResetView"/>
+    <addaction name="separator"/>
+    <addaction name="actionFocusSelected"/>
+    <addaction name="actionFocusAll"/>
     <addaction name="separator"/>
     <addaction name="menuDeveloper"/>
-    <addaction name="actionSettings"/>
-    <addaction name="actionEnableCommandLine"/>
    </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuView"/>
    <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -467,6 +501,66 @@
   <action name="actionEnableCommandLine">
    <property name="text">
     <string>Command-line access</string>
+   </property>
+  </action>
+  <action name="actionMagnify">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/resources/zoomcrop.png</normaloff>:/resources/zoomcrop.png</iconset>
+   </property>
+   <property name="text">
+    <string>Crop and &amp;Magnify</string>
+   </property>
+   <property name="shortcut">
+    <string>M</string>
+   </property>
+  </action>
+  <action name="actionCrop">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/resources/crop.png</normaloff>:/resources/crop.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Crop</string>
+   </property>
+   <property name="shortcut">
+    <string>C</string>
+   </property>
+  </action>
+  <action name="actionResetView">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/resources/zoom-reset.png</normaloff>:/resources/zoom-reset.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Reset</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
+   </property>
+  </action>
+  <action name="actionFocusSelected">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/resources/zoom.png</normaloff>:/resources/zoom.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Focus Selection</string>
+   </property>
+   <property name="shortcut">
+    <string>F</string>
+   </property>
+  </action>
+  <action name="actionFocusAll">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/resources/zoom-best-fit.png</normaloff>:/resources/zoom-best-fit.png</iconset>
+   </property>
+   <property name="text">
+    <string>Focus &amp;All</string>
+   </property>
+   <property name="shortcut">
+    <string>A</string>
    </property>
   </action>
  </widget>

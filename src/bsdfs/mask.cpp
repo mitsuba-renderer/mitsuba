@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -22,6 +22,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{mask}{Opacity mask}
+ * \order{17}
  * \parameters{
  *     \parameter{opacity}{\Spectrum\Or\Texture}{
  *          Specifies the per-channel opacity (where $1=$ completely opaque)\default{0.5}. 
@@ -39,7 +40,12 @@ MTS_NAMESPACE_BEGIN
  * between perfectly transparent and completely opaque based on the \code{opacity}
  * parameter.
  *
- * The transparency is implemented as a forward-facing Dirac delta distribution.
+ * The transparency is internally implemented as a forward-facing Dirac delta distribution.
+ * Note that the standard \pluginref{path} tracer does not have a good
+ * sampling strategy to deal with this, but the volumetric path tracer
+ * (\pluginref{volpath}) does. It may thus be preferable when rendering scenes
+ * that contain the \pluginref{mask} plugin, even if there is nothing
+ * ``volumetric'' in the scene.
  * \vspace{5mm}
  *
  * \begin{xml}[caption=Material configuration for a transparent leaf,
@@ -96,7 +102,7 @@ public:
 		m_components.clear();
 		for (int i=0; i<m_nestedBSDF->getComponentCount(); ++i)
 			m_components.push_back(m_nestedBSDF->getType(i) | extraFlags);
-		m_components.push_back(EDeltaTransmission | EFrontSide 
+		m_components.push_back(ENull | EFrontSide 
 				| EBackSide | extraFlags);
 
 		m_usesRayDifferentials = m_nestedBSDF->usesRayDifferentials();
@@ -104,23 +110,23 @@ public:
 		BSDF::configure();
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		Spectrum opacity = m_opacity->getValue(bRec.its);
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+		Spectrum opacity = m_opacity->eval(bRec.its);
 
 		if (measure == ESolidAngle)
 			return m_nestedBSDF->eval(bRec, ESolidAngle) * opacity;
-		else if (measure == EDiscrete && std::abs(1-dot(bRec.wi, -bRec.wo)) < Epsilon)
+		else if (measure == EDiscrete && std::abs(1-dot(bRec.wi, -bRec.wo)) < DeltaEpsilon)
 			return Spectrum(1.0f) - opacity;
 		else
 			return Spectrum(0.0f);
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
-		bool sampleTransmission = bRec.typeMask & EDeltaTransmission
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+		bool sampleTransmission = bRec.typeMask & ENull
 			&& (bRec.component == -1 || bRec.component == getComponentCount()-1);
 		bool sampleNested = bRec.component == -1 || bRec.component < getComponentCount()-1;
 
-		Float prob = m_opacity->getValue(bRec.its).getLuminance();
+		Float prob = m_opacity->eval(bRec.its).getLuminance();
 		if (measure == ESolidAngle) {
 			if (!sampleNested)
 				return 0.0f;
@@ -128,7 +134,7 @@ public:
 			if (sampleTransmission)
 				result *= prob;
 			return result;
-		} else if (measure == EDiscrete && std::abs(1-dot(bRec.wi, -bRec.wo)) < Epsilon) {
+		} else if (measure == EDiscrete && std::abs(1-dot(bRec.wi, -bRec.wo)) < DeltaEpsilon) {
 			if (!sampleTransmission)
 				return 0.0f;
 			if (!sampleNested)
@@ -140,30 +146,32 @@ public:
 		}
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &_sample) const {
 		Point2 sample(_sample);
-		Spectrum opacity = m_opacity->getValue(bRec.its);
+		Spectrum opacity = m_opacity->eval(bRec.its);
 		Float prob = opacity.getLuminance();
 
-		bool sampleTransmission = bRec.typeMask & EDeltaTransmission
+		bool sampleTransmission = bRec.typeMask & ENull
 			&& (bRec.component == -1 || bRec.component == getComponentCount()-1);
 		bool sampleNested = bRec.component == -1 || bRec.component < getComponentCount()-1;
 
 		if (sampleTransmission && sampleNested) {
-			if (sample.x <= prob) {
+			if (sample.x < prob) {
 				Float invProb = 1.0f / prob;
 				sample.x *= invProb;
 				return m_nestedBSDF->sample(bRec, sample) * opacity * invProb;
 			} else {
 				bRec.wo = -bRec.wi;
+				bRec.eta = 1.0f;
 				bRec.sampledComponent = getComponentCount()-1;
-				bRec.sampledType = EDeltaTransmission;
+				bRec.sampledType = ENull;
 				return (Spectrum(1.0f) - opacity) / (1-prob);
 			}
 		} else if (sampleTransmission) {
 			bRec.wo = -bRec.wi;
+			bRec.eta = 1.0f;
 			bRec.sampledComponent = getComponentCount()-1;
-			bRec.sampledType = EDeltaTransmission;
+			bRec.sampledType = ENull;
 			return Spectrum(1.0f) - opacity;
 		} else if (sampleNested) {
 			return m_nestedBSDF->sample(bRec, sample) * opacity;
@@ -172,33 +180,35 @@ public:
 		}
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 		Spectrum result(0.0f);
 
-		Spectrum opacity = m_opacity->getValue(bRec.its);
+		Spectrum opacity = m_opacity->eval(bRec.its);
 		Float prob = opacity.getLuminance();
 
-		bool sampleTransmission = bRec.typeMask & EDeltaTransmission
+		bool sampleTransmission = bRec.typeMask & ENull
 			&& (bRec.component == -1 || bRec.component == getComponentCount()-1);
 		bool sampleNested = bRec.component == -1 || bRec.component < getComponentCount()-1;
 
 		if (sampleTransmission && sampleNested) {
-			if (sample.x <= prob) {
+			if (sample.x < prob) {
 				sample.x /= prob;
 				result = m_nestedBSDF->sample(bRec, pdf, sample) * opacity / prob;
 				pdf *= prob;
 			} else {
 				bRec.wo = -bRec.wi;
+				bRec.eta = 1.0f;
 				bRec.sampledComponent = getComponentCount()-1;
-				bRec.sampledType = EDeltaTransmission;
+				bRec.sampledType = ENull;
 				pdf = 1-prob;
 				result = (Spectrum(1.0f) - opacity) / pdf;
 			}
 		} else if (sampleTransmission) {
 			bRec.wo = -bRec.wi;
+			bRec.eta = 1.0f;
 			bRec.sampledComponent = getComponentCount()-1;
-			bRec.sampledType = EDeltaTransmission;
+			bRec.sampledType = ENull;
 			pdf = 1;
 			result = Spectrum(1.0f) - opacity;
 		} else if (sampleNested) {
@@ -217,16 +227,18 @@ public:
 			BSDF::addChild(name, child);
 	}
 
-	Shader *createShader(Renderer *renderer) const;
-
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Mask[" << endl
+   			<< "  id = \"" << getID() << "\"," << endl
 			<< "  opacity = " << indent(m_opacity->toString()) << "," << endl
 			<< "  nestedBSDF = " << indent(m_nestedBSDF.toString()) << endl
 			<< "]";
 		return oss.str();
 	}
+
+	Shader *createShader(Renderer *renderer) const;
+
 	MTS_DECLARE_CLASS()
 protected:
 	ref<Texture> m_opacity;

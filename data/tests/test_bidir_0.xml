@@ -1,0 +1,31 @@
+<scene version="0.4.0">	
+	<integrator type="ptracer"/>
+
+	<shape type="disk">
+		<transform name="toWorld">
+			<translate z="-1"/>
+		</transform>
+		<bsdf type="diffuse"/>
+
+		<sensor type="irradiancemeter">
+			<sampler type="independent">
+				<integer name="sampleCount" value="128000"/>
+			</sampler>
+
+			<film type="mfilm"/>
+		</sensor>
+	</shape>
+
+	<shape type="disk">
+		<boolean name="flipNormals" value="true"/>
+		<bsdf type="diffuse"/>
+
+		<transform name="toWorld">
+			<translate z="1"/>
+		</transform>
+
+		<emitter type="area">
+			<spectrum name="radiance" value="1"/>
+		</emitter>
+	</shape>
+</scene>

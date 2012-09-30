@@ -1,0 +1,15 @@
+<scene version="0.4.0">	
+	<sensor type="radiancemeter">
+		<transform name="toWorld">
+			<lookAt origin="0, 0, -1" target="0, 0, 0"/>
+		</transform>
+	</sensor>
+
+	<emitter type="collimated">
+		<spectrum name="power" value="1"/>
+
+		<transform name="toWorld">
+			<lookAt origin="0, 0, 1" target="0, 0, 0"/>
+		</transform>
+	</emitter>
+</scene>

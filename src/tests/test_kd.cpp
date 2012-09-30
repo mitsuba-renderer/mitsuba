@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -95,7 +95,7 @@ public:
 		ref<ShapeKDTree> tree = new ShapeKDTree();
 		tree->addShape(mesh);
 		tree->build();
-		BSphere bsphere(tree->getBSphere());
+		BSphere bsphere = tree->getAABB().getBSphere();
 
 		bsphere = BSphere(Point(-0.016840, 0.110154, -0.001537), .2f);
 
@@ -112,8 +112,8 @@ public:
 			for (size_t i=0; i<nRays; ++i) {
 				Point2 sample1(random->nextFloat(), random->nextFloat()),
 					sample2(random->nextFloat(), random->nextFloat());
-				Point p1 = bsphere.center + squareToSphere(sample1) * bsphere.radius;
-				Point p2 = bsphere.center + squareToSphere(sample2) * bsphere.radius;
+				Point p1 = bsphere.center + Warp::squareToUniformSphere(sample1) * bsphere.radius;
+				Point p2 = bsphere.center + Warp::squareToUniformSphere(sample2) * bsphere.radius;
 				Ray r(p1, normalize(p2-p1), 0.0f);
 				Intersection its;
 

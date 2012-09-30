@@ -1,4 +1,4 @@
-Import('mainEnv', 'resources', 'hasCollada', 'stubs')
+Import('mainEnv', 'hasCollada', 'stubs')
 
 converter_objects = []
 
@@ -19,6 +19,6 @@ if hasCollada:
 		colladaEnv.StaticObject('converter.cpp')
 	]
 	colladaEnv.Program('mtsimport', stubs + ['mtsimport.cpp'] 
-		+ resources + converter_objects)
+		+ converter_objects)
 
 Return('converter_objects')

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,25 +16,29 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__TRIMESH_H)
-#define __TRIMESH_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_TRIMESH_H_)
+#define __MITSUBA_RENDER_TRIMESH_H_
 
 #include <mitsuba/core/triangle.h>
-#include <mitsuba/core/pdf.h>
+#include <mitsuba/core/pmf.h>
 #include <mitsuba/render/shape.h>
-#include <boost/filesystem/fstream.hpp>
-
-namespace fs = boost::filesystem;
 
 MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Simple tangent space storage for surfaces
+ *
+ * Note that the \ref dpdu and \ref dpdv vectors are not
+ * necessarily orthogonal.
+ *
  * \ingroup librender
  */
 struct TangentSpace {
-	/// Position partials wrt. the UV parameterization
+	/// Position partial with respect to the U parameter of the local chart
 	Vector dpdu;
+
+	/// Position partial with respect to the V parameter of the local chart
 	Vector dpdv;
 
 	inline TangentSpace() { }
@@ -56,8 +60,10 @@ public:
 	/// Create a new, empty triangle mesh with the specified state
 	TriMesh(const std::string &name, 
 			size_t triangleCount, size_t vertexCount,
-			bool hasNormals, bool hasTexcoords, 
-			bool hasVertexColors, bool flipNormals = false,
+			bool hasNormals = false,
+			bool hasTexcoords = false, 
+			bool hasVertexColors = false, 
+			bool flipNormals = false,
 			bool faceNormals = false);
 
 	/// Unserialize a triangle mesh
@@ -77,14 +83,17 @@ public:
 	//! @{ \name General query functions
 	// =============================================================
 
-	/// Return the name of this mesh
-	virtual std::string getName() const;
+	/// Return the name of this shape (e.g. the filename)
+	std::string getName() const;
 
 	/// Return the total surface area
-	virtual Float getSurfaceArea() const;
+	Float getSurfaceArea() const;
 
 	/// Return a bounding box containing the mesh
-	virtual AABB getAABB() const;
+	AABB getAABB() const;
+
+	/// Return a bounding box containing the mesh
+	inline AABB &getAABB() { return m_aabb; }
 
 	/**
 	 * \brief Create a triangle mesh approximation of this shape
@@ -124,9 +133,9 @@ public:
 	inline bool hasVertexNormals() const { return m_normals != NULL; };
 
 	/// Return the vertex colors (const version)
-	inline const Spectrum *getVertexColors() const { return m_colors; };
+	inline const Color3 *getVertexColors() const { return m_colors; };
 	/// Return the vertex colors
-	inline Spectrum *getVertexColors() { return m_colors; };
+	inline Color3 *getVertexColors() { return m_colors; };
 	/// Does the mesh have vertex colors?
 	inline bool hasVertexColors() const { return m_colors != NULL; };
 
@@ -137,12 +146,12 @@ public:
 	/// Does the mesh have vertex texture coordinates?
 	inline bool hasVertexTexcoords() const { return m_texcoords != NULL; };
 
-	/// Return the vertex tangents (const version)
-	inline const TangentSpace *getVertexTangents() const { return m_tangents; };
-	/// Return the vertex tangents
-	inline TangentSpace *getVertexTangents() { return m_tangents; };
-	/// Does the mesh have vertex tangents?
-	inline bool hasVertexTangents() const { return m_tangents != NULL; };
+	/// Return the per-triangle UV tangents (const version)
+	inline const TangentSpace *getUVTangents() const { return m_tangents; };
+	/// Return the per-triangle UV tangents 
+	inline TangentSpace *getUVTangents() { return m_tangents; };
+	/// Does the mesh have UV tangent information?
+	inline bool hasUVTangents() const { return m_tangents != NULL; };
 
 	//! @}
 	// =============================================================
@@ -151,15 +160,35 @@ public:
 	//! @{ \name Sampling routines
 	// =============================================================
 
-	/// Sample a point on the mesh
-	Float sampleArea(ShapeSamplingRecord &sRec, const Point2 &sample) const;
+	/**
+	 * \brief Sample a point on the surface of this shape instance
+	 * (with respect to the area measure)
+	 *
+	 * The returned sample density will be uniform over the surface.
+	 *
+	 * \param pRec
+	 *     A position record, which will be used to return the sampled
+	 *     position, as well as auxilary information about the sample.
+	 *
+	 * \param sample
+	 *     A uniformly distributed 2D vector
+	 */
+	void samplePosition(PositionSamplingRecord &pRec, 
+			const Point2 &sample) const;
 
 	/**
-	 * \brief Return the probability density of sampling the 
-	 * given point using \ref sampleArea()
+	 * \brief Query the probability density of \ref samplePosition() for
+	 * a particular point on the surface.
+	 *
+	 * This method will generally return the inverse of the surface area.
+	 *
+	 * \param pRec
+	 *     A position record, which will be used to return the sampled
+	 *     position, as well as auxilary information about the sample.
 	 */
-	Float pdfArea(const ShapeSamplingRecord &sRec) const;
-	
+
+	Float pdfPosition(const PositionSamplingRecord &pRec) const;
+
 	//! @}
 	// =============================================================
 	
@@ -168,19 +197,21 @@ public:
 	// =============================================================
 
 	/**
-	 * \brief Generate tangent space basis vectors. 
+	 * \brief Generate per-triangle space basis vectors from
+	 * a user-specified set of UV coordinates
 	 *
-	 * Returns true upon success. A failure is caused by
-	 * missing texture coordinates
+	 * Will throw an exception when no UV coordinates are 
+	 * associated with the mesh.
 	 */
-	bool computeTangentSpaceBasis();
+	void computeUVTangents();
 
 	/// Generate surface normals
 	void computeNormals();
 
 	/**
-	 * \brief Regenerate the triangulation so that adjacent faces
-	 * with an angle greater than \a maxAngle degrees become disconnected.
+	 * \brief Rebuild the mesh so that adjacent faces
+	 * with a dihedral angle greater than \c maxAngle degrees 
+	 * are topologically disconnected.
 	 * 
 	 * On the other hand, if the angle is less than \a maxAngle, the code
 	 * ensures that the faces  reference the same vertices.
@@ -213,6 +244,44 @@ public:
 	 */
 	virtual void configure();
 
+	/**
+	 * \brief Return the derivative of the normal vector with
+	 * respect to the UV parameterization
+	 *
+	 * This can be used to compute Gaussian and principal curvatures,
+	 * amongst other things.
+	 *
+	 * \param its
+	 *     Intersection record associated with the query
+	 * \param dndu
+	 *     Parameter used to store the partial derivative of the 
+	 *     normal vector with respect to \c u
+	 * \param dndv
+	 *     Parameter used to store the partial derivative of the 
+	 *     normal vector with respect to \c v
+	 * \param shadingFrame
+	 *     Specifies whether to compute the derivative of the
+	 *     geometric or shading normal of the surface
+	 */
+	void getNormalDerivative(const Intersection &its,
+		Vector &dndu, Vector &dndv, bool shadingFrame) const;
+
+	/**
+	 * \brief Return the number of primitives (triangles, hairs, ..)
+	 * contributed to the scene by this shape
+	 *
+	 * Does not include instanced geometry
+	 */
+	size_t getPrimitiveCount() const;
+
+	/**
+	 * \brief Return the number of primitives (triangles, hairs, ..)
+	 * contributed to the scene by this shape
+	 *
+	 * Includes instanced geometry
+	 */
+	size_t getEffectivePrimitiveCount() const;
+
 	/// Export an Wavefront OBJ version of this file
 	void writeOBJ(const fs::path &path) const;
 	
@@ -229,24 +298,33 @@ protected:
 
 	/// Virtual destructor
 	virtual ~TriMesh();
+	
+	/// Load a Mitsuba compressed triangle mesh substream
+	void loadCompressed(Stream *stream, int idx = 0);
+
+	/// Prepare internal tables for sampling uniformly wrt. area
+	void prepareSamplingTable();
 protected:
 	std::string m_name;
 	AABB m_aabb;
-	DiscretePDF m_areaPDF;
 	Triangle *m_triangles;
 	Point *m_positions;
 	Normal *m_normals;
 	Point2 *m_texcoords;
 	TangentSpace *m_tangents;
-	Spectrum *m_colors;
+	Color3 *m_colors;
 	size_t m_triangleCount;
 	size_t m_vertexCount;
 	bool m_flipNormals;
 	bool m_faceNormals;
+
+	/* Surface and distribution -- generated on demand */
+	DiscreteDistribution m_areaDistr;
 	Float m_surfaceArea;
 	Float m_invSurfaceArea;
+	ref<Mutex> m_mutex;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __TRIMESH_H */
+#endif /* __MITSUBA_RENDER_TRIMESH_H_ */

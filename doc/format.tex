@@ -1,4 +1,5 @@
 \section{Scene file format}
+\label{sec:format}
 Mitsuba uses a very simple and general XML-based format to represent scenes.  
 Since the framework's philosophy is to represent discrete blocks of functionality as plugins, 
 a scene file can essentially be interpreted as description that determines which 
@@ -44,8 +45,8 @@ a sphere configured with a radius of 10 world-space units. Mitsuba ships with
 a large number of plugins; please refer to the next chapter for a detailed
 overview of them.
 
-The most common scene setup is to declare an integrator, some geometry, a camera, a film, a sampler  
-and one or more luminaires. Here is a more complex example:
+The most common scene setup is to declare an integrator, some geometry, a sensor (e.g. a camera), a film, a sampler  
+and one or more emitters. Here is a more complex example:
 \begin{xml}
 <?xml version="1.0" encoding="utf-8"?>
 
@@ -56,7 +57,7 @@ and one or more luminaires. Here is a more complex example:
 	</integrator>
 
 	<!-- Instantiate a perspective camera with 45 degrees field of view -->
-	<camera type="perspective">
+	<sensor type="perspective">
 		<!-- Rotate the camera around the Y axis by 180 degrees -->
 		<transform name="toWorld">
 			<rotate y="1" angle="180"/>
@@ -70,11 +71,11 @@ and one or more luminaires. Here is a more complex example:
 		</sampler>
 
 		<!-- Generate an EXR image at HD resolution -->
-		<film type="exrfilm">
+		<film type="hdrfilm">
 			<integer name="width" value="1920"/>
 			<integer name="height" value="1080"/>
 		</film>
-	</camera>
+	</sensor>
 
 	<!-- Add a dragon mesh made of rough glass (stored as OBJ file) -->
 	<shape type="obj">
@@ -94,19 +95,19 @@ and one or more luminaires. Here is a more complex example:
 			<translate x="5" x="-3" z="1"/>
 		</transform>
 
-		<!-- This mesh is an area luminaire -->
-		<luminaire type="area">
+		<!-- This mesh is an area emitter -->
+		<emitter type="area">
 			<rgb name="intensity" value="100,400,100"/>
-		</luminaire>
+		</emitter>
 	</shape>
 </scene>
 \end{xml}
-This example introduces several new object types (\code{integrator, camera, bsdf, sampler, film}, and \code{luminaire})
+This example introduces several new object types (\code{integrator, sensor, bsdf, sampler, film}, and \code{emitter})
 and property types (\code{integer}, \code{transform}, and \code{rgb}). 
 As you can see in the example, objects are usually declared at the top level except if there is some
 inherent relation that links them to another object. For instance, BSDFs are usually specific to a certain geometric object, so 
 they appear as a child object of a shape. Similarly, the sampler and film affect the way in which
-rays are generated from the camera and how it records the resulting radiance samples, hence they are nested inside it.
+rays are generated from the sensor and how it records the resulting radiance samples, hence they are nested inside it.
 
 \subsection{Property types}
 This section documents all of the ways in which properties can be supplied to objects. If you are more
@@ -209,12 +210,20 @@ are allowed. Here is an example:
 ...
 \end{xml}
 
-Finally, it is also possible to specify the spectral distribution of a black body emitter, where the temperature is given in Kelvin.
+\renderings{
+	\fbox{\includegraphics[width=10cm]{images/blackbody}}
+	\hfill\,
+	\caption{\label{fig:blackbody}A few simulated 
+	black body emitters over a range of temperature values}
+}
+\label{sec:blackbody}
+Finally, it is also possible to specify the spectral distribution of a black body emitter (\figref{blackbody}), 
+where the temperature is given in Kelvin.
 \begin{xml}
 <blackbody name="spectrumProperty" temperature="5000K"/>
 \end{xml}
 Note that attaching a black body spectrum to the \texttt{intensity} property
-of a luminaire introduces physical units into the rendering process of 
+of a emitter introduces physical units into the rendering process of 
 Mitsuba, which is ordinarily a unitless system\footnote{This means that the 
 units of pixel values in a rendering are completely dependent on the units of 
 the user input, including the unit of world-space distance and the units of 
@@ -222,15 +231,11 @@ the light source emission profile.}.
 
 Specifically, the black body spectrum has units of power ($W$) per 
 unit area ($m^{-2}$) per steradian ($sr^{-1}$) per unit wavelength ($nm^{-1}$).
-Assuming that the scene is modeled in units of meters, 
-the spectral power distribution of pixels rendered by a perspective 
-camera will then have the exact same units (i.e. $W\cdot m^{-2}\cdot sr^{-1} \cdot nm^{-1}$).
-
-If these units are inconsistent with your scene, you may use the
-optional \texttt{multiplier} attribute: 
+If these units are inconsistent with your scene description, you may use the
+optional \texttt{scale} attribute to adjust them, e.g.:
 \begin{xml}
-<!-- Oops, the scene is modeled in centimeters, not meters -->
-<blackbody name="spectrumProperty" temperature="5000K" multiplier="0.01"/>
+<!-- Scale black body radiance by a factor of 1/1000 -->
+<blackbody name="spectrumProperty" temperature="5000K" scale="1e-3"/>
 \end{xml}
 
 \subsubsection{Vectors, Positions}
@@ -258,7 +263,7 @@ choices are available:
 \begin{xml}
 <translate x="-1" y="3" z="4"/>
 \end{xml}
-\item Rotations around a specified direction. The angle is given in degrees, e.g.
+\item Counter-clockwise rotations around a specified axis. The angle is given in degrees, e.g.
 \begin{xml}
 <rotate x="0.701" y="0.701" z="0" angle="180"/>
 \end{xml}
@@ -271,12 +276,12 @@ choices are available:
 \begin{xml}
 <matrix value="0 -0.53 0 -1.79 0.92 0 0 8.03 0 0 0.53 0 0 0 0 1"/>
 \end{xml}
-\item LookAt transformations --- this is primarily useful for setting up cameras (and spot lights). The \code{origin} coordinates
+\item lookat transformations --- this is primarily useful for setting up cameras (and spot lights). The \code{origin} coordinates
 specify the camera origin, \code{target} is the point that the camera will look at, and the 
 (optional) \code{up} parameter determines the ``upward'' direction in the final rendered image.
 The \code{up} parameter is not needed for spot lights.
 \begin{xml}
-<lookAt origin="10, 50, -800" target="0, 0, 0" up="0, 1, 0"/>
+<lookat origin="10, 50, -800" target="0, 0, 0" up="0, 1, 0"/>
 \end{xml}
 \end{itemize}
 Cordinates that are zero (for \code{translate} and \code{rotate}) or one (for \code{scale})
@@ -332,3 +337,13 @@ This lets you include different parts of a scene configuration by changing the c
 \begin{xml}
 <include filename="nested-scene-$\texttt{\$}$version.xml"/>
 \end{xml}
+\subsection{Aliases}
+Sometimes, it can be useful to associate an object (e.g. a scattering model)
+with multiple identifiers. This can be accomplished using the \code{alias
+as=..} keyword:
+\begin{xml}
+	<bsdf type="diffuse" id="myMaterial1"/>
+	<alias id="myMaterial1" as="myMaterial2"/>
+\end{xml}
+After this statement, the diffuse scattering model will be bound to
+\emph{both} identifiers ``\code{myMaterial1}'' and ``\code{myMaterial2}''.

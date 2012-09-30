@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -30,20 +30,17 @@ public:
 		: QStringListModel(parent), m_supportsSinglePass(supportsSinglePass) {
 		QStringList tmp;
 		tmp << "Disable"
-			<< "OpenGL"
-			<< "OpenGL (single pass)"
-			<< "Coherent ray tracing"
-			<< "Standard ray tracing";
+			<< "OpenGL";
 		setStringList(tmp);
 	}
 
 	Qt::ItemFlags flags(const QModelIndex &index) const {
 		if (index.row() == 2 && !m_supportsSinglePass)
 			return Qt::NoItemFlags;
-#if !defined(MTS_HAS_COHERENT_RT)
-		if (index.row() == 3)
-			return Qt::NoItemFlags;
-#endif
+//#if !defined(MTS_HAS_COHERENT_RT)
+//		if (index.row() == 3)
+//			return Qt::NoItemFlags;
+//#endif
 		return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
 	}
 private:
@@ -175,7 +172,7 @@ void PreviewSettingsDialog::on_diffuseSourcesBox_stateChanged(int state) {
 }
 
 void PreviewSettingsDialog::on_previewMethodCombo_activated(int index) {
-	bool visible = index != ERayTrace && index != ERayTraceCoherent;
+	bool visible = true; //index != ERayTrace && index != ERayTraceCoherent;
 	ui->shadowResolutionCombo->setVisible(visible);
 	ui->shadowResolutionLabel->setVisible(visible);
 	emit previewMethodChanged((EPreviewMethod) index);
@@ -217,12 +214,28 @@ PreviewSettingsDialog::~PreviewSettingsDialog() {
 }
 
 void PreviewSettingsDialog::changeEvent(QEvent *e) {
-    QDialog::changeEvent(e);
-    switch (e->type()) {
-    case QEvent::LanguageChange:
+	QDialog::changeEvent(e);
+	switch (e->type()) {
+	case QEvent::LanguageChange:
 		ui->retranslateUi(this);
-        break;
-    default:
-        break;
-    }
+		break;
+	default:
+		break;
+	}
+}
+
+void PreviewSettingsDialog::setPreviewEnabled(bool enabled) {
+	ui->previewLabel->setEnabled(enabled);
+	ui->previewMethodLabel->setEnabled(enabled);
+	ui->previewMethodCombo->setEnabled(enabled);
+	ui->pathLengthLabel->setEnabled(enabled);
+	ui->pathLengthSlider->setEnabled(enabled);
+	ui->pathLengthEdit->setEnabled(enabled);
+	ui->clampingLabel->setEnabled(enabled);
+	ui->clampingSlider->setEnabled(enabled);
+	ui->shadowResolutionLabel->setEnabled(enabled);
+	ui->shadowResolutionCombo->setEnabled(enabled);
+	ui->diffuseLabel->setEnabled(enabled);
+	ui->diffuseSourcesBox->setEnabled(enabled);
+	ui->diffuseReceiversBox->setEnabled(enabled);
 }

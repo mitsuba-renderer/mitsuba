@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -17,11 +17,14 @@
 */
 
 #include <mitsuba/hw/gpuprogram.h>
+#include <boost/filesystem/fstream.hpp>
 
 MTS_NAMESPACE_BEGIN
 
 GPUProgram::GPUProgram(const std::string &name)
- : m_name(name), m_maxVertices(0), m_bound(false) {
+ : m_name(name), m_inputGeometryType(ETriangles),
+   m_outputGeometryType(ETriangleStrips), 
+   m_maxVertices(0), m_bound(false) {
 }
 
 GPUProgram::~GPUProgram() {
@@ -31,7 +34,7 @@ void GPUProgram::setSourceFile(EType type, const fs::path &path) {
 	fs::ifstream ifs(path);
 	if (ifs.fail() || ifs.bad()) 
 		Log(EError, "Unable to load GPU program \"%s\"",
-			path.file_string().c_str());
+			path.string().c_str());
 	std::string code, line;
 
 	while (getline(ifs, line)) {

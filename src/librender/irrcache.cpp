@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -26,6 +26,7 @@ HemisphereSampler::HemisphereSampler(uint32_t M, uint32_t N) : m_M(M), m_N(N) {
 	m_uk = new Vector[m_N];
 	m_vk = new Vector[m_N];
 	m_vkMinus = new Vector[m_N];
+	m_random = new Random();
 }
 
 HemisphereSampler::~HemisphereSampler() {
@@ -35,20 +36,21 @@ HemisphereSampler::~HemisphereSampler() {
 	delete[] m_vkMinus;
 }
 
-void HemisphereSampler::generateDirections(const Intersection &its, Sampler *sampler) {
+void HemisphereSampler::generateDirections(const Intersection &its) {
 	for (uint32_t j=0; j<m_M; j++) {
 		for (uint32_t k=0; k<m_N; k++) {
 			SampleEntry &entry = m_entries[j*m_N + k];
-			Point2 sample = sampler->independent2D();
+			Point2 sample(m_random->nextFloat(), m_random->nextFloat());
 
 			/* Sample uniformly wrt. projected solid angles */
-			Float sinTheta2 = (j+sample.x)/m_M;
-			Float cosTheta = std::sqrt(std::max((Float) 0, 1-sinTheta2));
-			Float sinTheta = std::sqrt(sinTheta2);
-			Float phi = 2*M_PI*(k+sample.y)/m_N;
+			Float sinTheta2 = (j+sample.x)/m_M,
+			      cosTheta = math::safe_sqrt(1 - sinTheta2),
+			      sinTheta = std::sqrt(sinTheta2),
+			      sinPhi, cosPhi;
 
-			entry.d  = its.geoFrame.toWorld(Vector(sinTheta*std::cos(phi), 
-				sinTheta*std::sin(phi), cosTheta));
+			math::sincos(2*M_PI*(k+sample.y)/m_N, &sinPhi, &cosPhi);
+			entry.d  = its.shFrame.toWorld(Vector(
+				sinTheta*cosPhi, sinTheta*sinPhi, cosTheta));
 			entry.cosTheta = cosTheta;
 			entry.sinTheta = sinTheta;
 			entry.dist = -1;
@@ -63,13 +65,13 @@ void HemisphereSampler::generateDirections(const Intersection &its, Sampler *sam
 			  vkMinus = (2*M_PI*k)/m_N + M_PI/2;
 
 		/* v_k plane vectors (centered) */
-		m_vk[k] = its.geoFrame.toWorld(Vector(std::cos(vk), std::sin(vk), 0));
+		m_vk[k] = its.shFrame.toWorld(Vector(std::cos(vk), std::sin(vk), 0));
 
 		/* v_{k-} (positioned at the start of the cell intervals) */
-		m_vkMinus[k] = its.geoFrame.toWorld(Vector(std::cos(vkMinus), std::sin(vkMinus), 0));
+		m_vkMinus[k] = its.shFrame.toWorld(Vector(std::cos(vkMinus), std::sin(vkMinus), 0));
 
 		/* u_k plane vectors (centered) */
-		m_uk[k] = its.geoFrame.toWorld(Vector(std::cos(phi), std::sin(phi), 0));
+		m_uk[k] = its.shFrame.toWorld(Vector(std::cos(phi), std::sin(phi), 0));
 	}
 }
 
@@ -185,14 +187,14 @@ struct irr_interp_functor {
 	}
 
 	void operator()(const IrradianceCache::Record *sample) {
-		Float weight = sample->getWeight(its.p, its.geoFrame.n, kappa);
+		Float weight = sample->getWeight(its.p, its.shFrame.n, kappa);
 
 		if (weight == 0)
 			return;
 
 		Spectrum extrapolated = sample->E;
 		if (gradients) {
-			Vector crossN = cross(sample->n, its.geoFrame.n);
+			Vector crossN = cross(sample->n, its.shFrame.n);
 			Vector diff = its.p - sample->p;
 
 			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
@@ -226,7 +228,6 @@ IrradianceCache::IrradianceCache(const AABB &aabb)
 	useGradients(true);
 	clampNeighbor(true);
 	clampScreen(true);
-	clampInfluence(0.005f, 64 * 0.005f);
 }
 
 IrradianceCache::IrradianceCache(Stream *stream, InstanceManager *manager) : 
@@ -234,8 +235,6 @@ IrradianceCache::IrradianceCache(Stream *stream, InstanceManager *manager) :
 	m_mutex = new Mutex();
 	m_kappa = stream->readFloat();
 	m_sceneSize = stream->readFloat();
-	m_minDist = stream->readFloat();
-	m_maxDist = stream->readFloat();
 	m_clampScreen = stream->readBool();
 	m_clampNeighbor = stream->readBool();
 	m_useGradients = stream->readBool();
@@ -261,8 +260,6 @@ void IrradianceCache::serialize(Stream *stream, InstanceManager *manager) const 
 	m_octree.getAABB().serialize(stream);
 	stream->writeFloat(m_kappa);
 	stream->writeFloat(m_sceneSize);
-	stream->writeFloat(m_minDist);
-	stream->writeFloat(m_maxDist);
 	stream->writeBool(m_clampScreen);
 	stream->writeBool(m_clampNeighbor);
 	stream->writeBool(m_useGradients);
@@ -284,7 +281,7 @@ IrradianceCache::Record *IrradianceCache::put(const RayDifferential &ray, const 
 	}
 	Float R0_min = 0, R0_max = std::numeric_limits<Float>::infinity();
 
-	/* Clamping suggested by Tabellion and Lamourlette ("An Approximate Global 
+	/* Clamping recommended by Tabellion and Lamourlette ("An Approximate Global 
 	   Illumination System for Computer Generated Films") */
 	if (m_clampScreen && ray.hasDifferentials) {
 		const Float d = -dot(its.geoFrame.n, Vector(its.p));
@@ -304,9 +301,6 @@ IrradianceCache::Record *IrradianceCache::put(const RayDifferential &ray, const 
 			R0_max = 20.0f*sqrtArea;
 		}
 	}
-
-	R0_min = std::max(R0_min, m_minDist);
-	R0_max = std::min(R0_max, m_maxDist);
 
 	if (m_useGradients) {
 		/* Limit R0 by the gradient magnitude [Krivanek et al.] */
@@ -334,7 +328,7 @@ IrradianceCache::Record *IrradianceCache::put(const RayDifferential &ray, const 
 
 	Record *record = new Record();
 	record->p = its.p;
-	record->n = its.geoFrame.n;
+	record->n = its.shFrame.n;
 	record->E = E;
 	record->R0 = std::min(R0_max, std::max(R0_min, R0));
 	record->originalR0 = R0;
@@ -354,9 +348,8 @@ void IrradianceCache::insert(Record *record) {
 		record->p-Vector(1,1,1)*validRadius,
 		record->p+Vector(1,1,1)*validRadius
 	));
-	m_mutex->lock();
+	LockGuard lock(m_mutex);
 	m_records.push_back(record);
-	m_mutex->unlock();
 }
 
 static StatsCounter irradHits("Irradiance cache", "Hits");
@@ -377,21 +370,12 @@ bool IrradianceCache::get(const Intersection &its, Spectrum &E) const {
 	return false;
 }
 
-void IrradianceCache::clampInfluence(Float min, Float max) {
-	Assert(min > 0.0f && min < 1.0f && max > 0.0f
-		&& max <= 1.0f && min < max);
-	m_minDist = min * m_sceneSize;
-	m_maxDist = max * m_sceneSize;
-}
-
 std::string IrradianceCache::toString() const {
 	std::ostringstream oss;
 	oss << "IrradianceCache[" << endl
 		<< "  records = " << m_records.size() << "," << endl
 		<< "  quality = " << m_kappa << "," << endl
 		<< "  sceneSize = " << m_sceneSize << "," << endl
-		<< "  minDist = " << m_minDist << "," << endl
-		<< "  maxDist = " << m_maxDist << "," << endl
 		<< "  clampScreen = " << m_clampScreen << "," << endl
 		<< "  clampNeighbor = " << m_clampNeighbor << "," << endl
 		<< "  useGradients = " << m_useGradients << endl

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,12 +18,13 @@
 
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/hw/basicshader.h>
+#include <mitsuba/core/warp.h>
 #include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{ward}{Anisotropic Ward BRDF}
- * \order{13}
+ * \order{14}
  * \parameters{
  *     \parameter{variant}{\String}{
  *         Determines the variant of the Ward model to use:
@@ -35,8 +36,8 @@ MTS_NAMESPACE_BEGIN
  *             Does not always conserve energy. 
  *             \item \code{balanced}: Improved version of the \code{ward-duer}
  *             model with energy balance at all angles \cite{Geisler2010New}.
- *             \vspace{-4mm}
  *         \end{enumerate}
+ *         Default: \texttt{balanced}
  *     }
  *     \parameter{alphaU, alphaV}{\Float\Or\Texture}{
  *         Specifies the anisotropic roughness values along the tangent and 
@@ -68,7 +69,7 @@ MTS_NAMESPACE_BEGIN
  * Like the Phong BRDF, the Ward model does not take the Fresnel reflectance
  * of the material into account. In an experimental study by Ngan et al. 
  * \cite{Ngan2005Experimental}, the Ward model performed noticeably worse than
- * models based on microfacets.
+ * models based on microfacet theory.
  *
  * For this reason, it is usually preferable to switch to a microfacet model 
  * that incorporates knowledge about the material's index of refraction. In Mitsuba, 
@@ -170,11 +171,11 @@ public:
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_diffuseReflectance->getValue(its);
+		return m_diffuseReflectance->eval(its);
 	}
 
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
 			return Spectrum(0.0f);
@@ -187,8 +188,8 @@ public:
 		Spectrum result(0.0f);
 		if (hasSpecular) {
 			Vector H = bRec.wi+bRec.wo;
-			Float alphaU = m_alphaU->getValue(bRec.its).average();
-			Float alphaV = m_alphaV->getValue(bRec.its).average();
+			Float alphaU = m_alphaU->eval(bRec.its).average();
+			Float alphaV = m_alphaV->eval(bRec.its).average();
 			
 			Float factor1 = 0.0f;
 			switch (m_modelVariant) {
@@ -210,21 +211,21 @@ public:
 
 			Float factor2 = H.x / alphaU, factor3 = H.y / alphaV;
 			Float exponent = -(factor2*factor2+factor3*factor3)/(H.z*H.z);
-			Float specRef = factor1 * std::fastexp(exponent);
+			Float specRef = factor1 * math::fastexp(exponent);
 			/* Important to prevent numeric issues when evaluating the
 			   sampling density of the Ward model in places where it takes
 			   on miniscule values (Veach-MLT does this for instance) */
 			if (specRef > 1e-10f)
-				result += m_specularReflectance->getValue(bRec.its) * specRef;
+				result += m_specularReflectance->eval(bRec.its) * specRef;
 		}
 
 		if (hasDiffuse) 
-			result += m_diffuseReflectance->getValue(bRec.its) * INV_PI;
+			result += m_diffuseReflectance->eval(bRec.its) * INV_PI;
 
 		return result * Frame::cosTheta(bRec.wo);
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
 			return 0.0f;
@@ -237,19 +238,19 @@ public:
 		Float diffuseProb = 0.0f, specProb = 0.0f;
 
 		if (hasSpecular) {
-			Float alphaU = m_alphaU->getValue(bRec.its).average();
-			Float alphaV = m_alphaV->getValue(bRec.its).average();
+			Float alphaU = m_alphaU->eval(bRec.its).average();
+			Float alphaV = m_alphaV->eval(bRec.its).average();
 			Vector H = normalize(bRec.wi+bRec.wo);
 			Float factor1 = 1.0f / (4.0f * M_PI * alphaU * alphaV * 
 				dot(H, bRec.wi) * std::pow(Frame::cosTheta(H), 3));
 			Float factor2 = H.x / alphaU, factor3 = H.y / alphaV;
 
 			Float exponent = -(factor2*factor2+factor3*factor3)/(H.z*H.z);
-			specProb = factor1 * std::fastexp(exponent);
+			specProb = factor1 * math::fastexp(exponent);
 		}
 
 		if (hasDiffuse) 
-			diffuseProb = Frame::cosTheta(bRec.wo) * INV_PI;
+			diffuseProb = Warp::squareToCosineHemispherePdf(bRec.wo);
 
 		if (hasDiffuse && hasSpecular)
 			return m_specularSamplingWeight * specProb + 
@@ -262,7 +263,7 @@ public:
 			return 0.0f;
 	}
 
-	inline Spectrum sample(BSDFQueryRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+	inline Spectrum sample(BSDFSamplingRecord &bRec, Float &_pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 
 		bool hasSpecular = (bRec.typeMask & EGlossyReflection)
@@ -286,22 +287,21 @@ public:
 		}
 
 		if (choseSpecular) {
-			Float alphaU = m_alphaU->getValue(bRec.its).average();
-			Float alphaV = m_alphaV->getValue(bRec.its).average();
+			Float alphaU = m_alphaU->eval(bRec.its).average();
+			Float alphaV = m_alphaV->eval(bRec.its).average();
 
 			Float phiH = std::atan(alphaV/alphaU 
 				* std::tan(2.0f * M_PI * sample.y));
 			if (sample.y > 0.5f)
 				phiH += M_PI;
 			Float cosPhiH = std::cos(phiH);
-			Float sinPhiH = std::sqrt(std::max((Float) 0.0f, 
-				1.0f-cosPhiH*cosPhiH));
+			Float sinPhiH = math::safe_sqrt(1.0f-cosPhiH*cosPhiH);
 
-			Float thetaH = std::atan(std::sqrt(std::max((Float) 0.0f, 
-				-std::fastlog(sample.x) / (
+			Float thetaH = std::atan(math::safe_sqrt(
+				-math::fastlog(sample.x) / (
 					(cosPhiH*cosPhiH) / (alphaU*alphaU) +
 					(sinPhiH*sinPhiH) / (alphaV*alphaV)
-			))));
+			)));
 			Vector H = sphericalDirection(thetaH, phiH);
 			bRec.wo = H * (2.0f * dot(bRec.wi, H)) - bRec.wi;
 
@@ -311,10 +311,11 @@ public:
 			if (Frame::cosTheta(bRec.wo) <= 0.0f)
 				return Spectrum(0.0f);
 		} else {
-			bRec.wo = squareToHemispherePSA(sample);
+			bRec.wo = Warp::squareToCosineHemisphere(sample);
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EDiffuseReflection;
 		}
+		bRec.eta = 1.0f;
 
 		_pdf = pdf(bRec, ESolidAngle);
 
@@ -324,7 +325,7 @@ public:
 			return eval(bRec, ESolidAngle) / _pdf;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		Float pdf;
 		return Ward::sample(bRec, pdf, sample);
 	}
@@ -356,12 +357,22 @@ public:
 		manager->serialize(stream, m_alphaV.get());
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		Assert(component == 0 || component == 1);
+
+		if (component == 0)
+			return 0.5f * (m_alphaU->eval(its).average()
+				+ m_alphaV->eval(its).average());
+		else
+			return std::numeric_limits<Float>::infinity();
+	}
+
 	Shader *createShader(Renderer *renderer) const; 
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Ward[" << endl
-			<< "  name = \"" << getName() << "\"," << endl
+			<< "  id = \"" << getID() << "\"," << endl
 			<< "  variant = ";
 
 		switch (m_modelVariant) {

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,6 +18,7 @@
 
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/hw/basicshader.h>
+#include <mitsuba/core/warp.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -71,7 +72,7 @@ MTS_NAMESPACE_BEGIN
  * \pluginref{roughconductor}).
  *
  * To get an intuition about the effect of the 
- * parameter $\alpha$, consider the following approximate differentiation: 
+ * parameter $\alpha$, consider the following approximate classification: 
  * a value of $\alpha=0.001-0.01$ corresponds to a material 
  * with slight imperfections on an otherwise smooth surface (for such small
  * values, the model will behave identically to \pluginref{diffuse}), $\alpha=0.1$ 
@@ -121,10 +122,10 @@ public:
 	}
 
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_reflectance->getValue(its);
+		return m_reflectance->eval(its);
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (!(bRec.typeMask & EGlossyReflection) || measure != ESolidAngle
 			|| Frame::cosTheta(bRec.wi) <= 0
 			|| Frame::cosTheta(bRec.wo) <= 0)
@@ -137,7 +138,7 @@ public:
 		   the match is not as good anymore */
 		const Float conversionFactor = 1 / std::sqrt((Float) 2);
 
-		Float sigma = m_alpha->getValue(bRec.its).average() 
+		Float sigma = m_alpha->eval(bRec.its).average() 
 			* conversionFactor;
 
 		const Float sigma2 = sigma*sigma;
@@ -168,14 +169,14 @@ public:
 				tanBeta = sinThetaO / Frame::cosTheta(bRec.wo);
 			}
 	
-			return m_reflectance->getValue(bRec.its)
+			return m_reflectance->eval(bRec.its)
 				* (INV_PI * Frame::cosTheta(bRec.wo) * (A + B
 				* std::max(cosPhiDiff, (Float) 0.0f) * sinAlpha * tanBeta));
 		} else {
 			Float sinThetaI = Frame::sinTheta(bRec.wi),
 				  sinThetaO = Frame::sinTheta(bRec.wo),
-				  thetaI = std::acos(Frame::cosTheta(bRec.wi)),
-				  thetaO = std::acos(Frame::cosTheta(bRec.wo)),
+				  thetaI = math::safe_acos(Frame::cosTheta(bRec.wi)),
+				  thetaO = math::safe_acos(Frame::cosTheta(bRec.wo)),
 				  alpha = std::max(thetaI, thetaO),
 				  beta = std::min(thetaI, thetaO);
 	
@@ -204,10 +205,10 @@ public:
 	
 			/* Compute tan(0.5 * (alpha+beta)) using the half-angle formulae */
 			Float tanHalf = (sinAlpha + sinBeta) / (
-					std::sqrt(std::max((Float) 0.0f, 1.0f - sinAlpha * sinAlpha)) +
-					std::sqrt(std::max((Float) 0.0f, 1.0f - sinBeta  * sinBeta)));
+					math::safe_sqrt(1.0f - sinAlpha * sinAlpha) +
+					math::safe_sqrt(1.0f - sinBeta  * sinBeta));
 	
-			Spectrum rho = m_reflectance->getValue(bRec.its),
+			Spectrum rho = m_reflectance->eval(bRec.its),
 					 snglScat = rho * (C1 + cosPhiDiff * C2 * tanBeta +
 					    (1.0f - std::abs(cosPhiDiff)) * C3 * tanHalf),
 					 dblScat = rho * rho * (C4 * (1.0f - cosPhiDiff*tmp3*tmp3));
@@ -216,34 +217,36 @@ public:
 		}
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (!(bRec.typeMask & EGlossyReflection) || measure != ESolidAngle
 			|| Frame::cosTheta(bRec.wi) <= 0 
 			|| Frame::cosTheta(bRec.wo) <= 0)
 			return 0.0f;
 
-		return Frame::cosTheta(bRec.wo) * INV_PI;
+		return Warp::squareToCosineHemispherePdf(bRec.wo);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		if (!(bRec.typeMask & EGlossyReflection) || Frame::cosTheta(bRec.wi) <= 0) 
 			return Spectrum(0.0f);
 
-		bRec.wo = squareToHemispherePSA(sample);
+		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
 		return eval(bRec, ESolidAngle) /
-			(Frame::cosTheta(bRec.wo) * INV_PI);
+			Warp::squareToCosineHemispherePdf(bRec.wo);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (!(bRec.typeMask & EGlossyReflection) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 		
-		bRec.wo = squareToHemispherePSA(sample);
+		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
-		pdf = Frame::cosTheta(bRec.wo) * INV_PI;
+		pdf = Warp::squareToCosineHemispherePdf(bRec.wo);
 		return eval(bRec, ESolidAngle) / pdf;
 	}
 
@@ -268,10 +271,14 @@ public:
 		stream->writeBool(m_useFastApprox);
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		return std::numeric_limits<Float>::infinity();
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "RoughDiffuse[" << endl
-			<< "  name = \"" << getName() << "\"," << endl
+			<< "  id = \"" << getID() << "\"," << endl
 			<< "  reflectance = " << indent(m_reflectance->toString()) << "," << endl
 			<< "  alpha = " << indent(m_alpha->toString()) << "," << endl
 			<< "  useFastApprox = " << m_useFastApprox << endl

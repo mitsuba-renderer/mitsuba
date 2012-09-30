@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/core/triangle.h>
+#include <mitsuba/core/warp.h>
 
 MTS_NAMESPACE_BEGIN
 
@@ -26,10 +27,10 @@ Point Triangle::sample(const Point *positions, const Normal *normals,
 	const Point &p1 = positions[idx[1]];
 	const Point &p2 = positions[idx[2]];
 
-	Point2 bary = squareToTriangle(sample);
+	Point2 bary = Warp::squareToUniformTriangle(sample);
 	Vector sideA = p1 - p0, sideB = p2 - p0;
 	Point p = p0 + (sideA * bary.x) + (sideB * bary.y);	
-	
+
 	if (normals) {
 		const Normal &n0 = normals[idx[0]];
 		const Normal &n1 = normals[idx[1]];

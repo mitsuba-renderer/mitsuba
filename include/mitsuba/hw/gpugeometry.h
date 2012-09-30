@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,12 +16,15 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__GPUGEOMETRY_H)
-#define __GPUGEOMETRY_H
+#pragma once
+#if !defined(__MITSUBA_HW_GPUGEOMETRY_H_)
+#define __MITSUBA_HW_GPUGEOMETRY_H_
 
 #include <mitsuba/hw/renderer.h>
 
 MTS_NAMESPACE_BEGIN
+
+class Shader;
 
 /** \brief Abstract geometry storage on a graphics card
  * \ingroup libhw
@@ -52,6 +55,15 @@ public:
 	/// Free the geometry object from GPU memory
 	virtual void cleanup() = 0;
 
+	/// Return an (auxiliary) shader instance associated with the geometry
+	inline Shader *getShader() { return m_shader; }
+
+	/// Return an (auxiliary) shader instance associated with the geometry
+	inline const Shader *getShader() const { return m_shader; }
+
+	/// Set an (auxiliary) shader instance associated with the geometry
+	inline void setShader(Shader *shader) { m_shader = shader; }
+
 	/// Return a string representation
 	std::string toString() const;
 
@@ -61,8 +73,9 @@ protected:
 	virtual ~GPUGeometry();
 protected:
 	ref<const TriMesh> m_mesh;
+	Shader *m_shader;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __GPUGEOMETRY_H */
+#endif /* __MITSUBA_HW_GPUGEOMETRY_H_ */

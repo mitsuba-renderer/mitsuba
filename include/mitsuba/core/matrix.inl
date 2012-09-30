@@ -135,8 +135,6 @@ template <int M, int N, typename T> T Matrix<M, N, T>::cholDet() const {
 	return d*d;
 }
 
-
-
 template <int M, int N, typename T> bool Matrix<M, N, T>::invert(Matrix &target) const {
 	BOOST_STATIC_ASSERT(M == N);
 

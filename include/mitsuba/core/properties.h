@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,14 +16,16 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__PROPERTIES_H)
-#define __PROPERTIES_H
+#pragma once
+#if !defined(__MITSUBA_CORE_PROPERTIES_H_)
+#define __MITSUBA_CORE_PROPERTIES_H_
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/transform.h>
-#include <boost/variant.hpp>
 
 MTS_NAMESPACE_BEGIN
+
+struct PropertyElement;
 
 /** \brief Associative parameter map for constructing 
  * subclasses of \ref ConfigurableObject.
@@ -72,19 +74,25 @@ public:
 	};
 
 	/// Construct an empty property container
-	Properties() : m_id("unnamed") { }
-
+	Properties();
+	
 	/// Construct an empty property container and set the plugin name
-	Properties(const std::string &pluginName) : m_pluginName(pluginName), m_id("unnamed") { }
+	Properties(const std::string &pluginName);
+
+	/// Copy constructor
+	Properties(const Properties &props);
+
+	/// Release all memory
+	~Properties();
 
 	/// Set the associated plugin name
 	inline void setPluginName(const std::string &name) { m_pluginName = name; }
 	/// Get the associated plugin name
 	inline const std::string &getPluginName() const { return m_pluginName; }
 	
-	/// Returns the associated ID (or the string "unnamed")
+	/// Returns the associated identifier (or the string "unnamed")
 	inline const std::string &getID() const { return m_id; }
-	/// Set the associated ID
+	/// Set the associated identifier
 	inline void setID(const std::string &id) { m_id = id; }
 
 	/// Set a boolean value
@@ -165,16 +173,12 @@ public:
 	std::string getString(const std::string &name, const std::string &defVal) const;
 
 	/// Store an array containing the names of all stored properties
-	inline void putNames(std::vector<std::string> &results) const {
-		for (std::map<std::string, Element>::const_iterator it = m_elements.begin();
-			it != m_elements.end(); ++it) 
-			results.push_back((*it).first);
-	}
+	void putPropertyNames(std::vector<std::string> &results) const;
 	
 	/// Return an array containing the names of all stored properties
-	inline std::vector<std::string> getNames() const {
+	inline std::vector<std::string> getPropertyNames() const {
 		std::vector<std::string> results;
-		putNames(results);
+		putPropertyNames(results);
 		return results;
 	}
 
@@ -186,6 +190,12 @@ public:
 
 	/// Verify if a value with the specified name exists
 	bool hasProperty(const std::string &name) const;
+	
+	/**
+	 * \brief Remove a property with the specified name
+	 * \return \c true upon success
+	 */
+	bool removeProperty(const std::string &name);
 
 	/// Return the property of a type
 	EPropertyType getType(const std::string &name) const;
@@ -193,24 +203,16 @@ public:
 	/// Return the list of un-queried attributed
 	std::vector<std::string> getUnqueried() const;
 
+	/// Assignment operator
+	void operator=(const Properties &props);
+
 	/// Return a string representation
 	std::string toString() const;
 private:
-	/// \cond
-	typedef boost::variant<
-		bool, int64_t, Float, Point, Vector, Transform,
-		Spectrum, std::string, Data> ElementData;
-
-	struct Element {
-		ElementData data;
-		mutable bool queried;
-	};
-	/// \endcond
-
-	std::map<std::string, Element> m_elements;
+	std::map<std::string, PropertyElement> *m_elements;
 	std::string m_pluginName, m_id;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __PROPERTIES_H */
+#endif /* __MITSUBA_CORE_PROPERTIES_H_ */

@@ -6,5 +6,6 @@ plugins += env.SharedLibrary('gridtexture', ['gridtexture.cpp'])
 plugins += env.SharedLibrary('checkerboard', ['checkerboard.cpp'])
 plugins += env.SharedLibrary('vertexcolors', ['vertexcolors.cpp'])
 plugins += env.SharedLibrary('wireframe', ['wireframe.cpp'])
+plugins += env.SharedLibrary('curvature', ['curvature.cpp'])
 
 Export('plugins')

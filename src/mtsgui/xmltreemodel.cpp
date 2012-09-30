@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -132,14 +132,12 @@ void TreeItem::setProperty(const std::string &name, const Properties &props) {
 
 void TreeItem::setProperties(const Properties &props) {
 	std::vector<std::string> propertyNames;
-	props.putNames(propertyNames);
+	props.putPropertyNames(propertyNames);
 
 	for (std::vector<std::string>::const_iterator it = propertyNames.begin();
 		it != propertyNames.end(); ++it) 
 		setProperty(*it, props);
 }
-
-
 
 void TreeItem::putProperties(Properties &props) const {
 	for (int i=0; i<m_childItems.size(); ++i) {
@@ -232,7 +230,6 @@ void XMLTreeModel::setProperties(TreeItem *item, const Properties &props) {
 			createIndex(item->row(), 1, item->child(childCount-1)));
 	}
 }
-
 
 void XMLTreeModel::populate(const QString &className, TreeItem *parent) {
 	QDomElement plugin;

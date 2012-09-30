@@ -1,23 +1,36 @@
 Import('env', 'sys', 'os', 'hasPython')
 
-pythonEnv = env.Clone()
-pythonEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_PYTHON']])
-pythonEnv['SHLIBPREFIX']=''
-pythonEnv.RelaxCompilerSettings()
+for ver in hasPython:
+	sver = ver.replace('.', '')
 
-if pythonEnv.has_key('PYTHONINCLUDE'):
-	pythonEnv.Prepend(CPPPATH=pythonEnv['PYTHONINCLUDE'])
-if pythonEnv.has_key('PYTHONLIBDIR'):
-	pythonEnv.Prepend(LIBPATH=pythonEnv['PYTHONLIBDIR'])
-if pythonEnv.has_key('PYTHONLIB'):
-	pythonEnv.Prepend(LIBS=pythonEnv['PYTHONLIB'])
-if pythonEnv.has_key('XERCESINCLUDE'):
-	pythonEnv.Prepend(CPPPATH=pythonEnv['XERCESINCLUDE'])
-if pythonEnv.has_key('XERCESLIBDIR'):
-	pythonEnv.Prepend(LIBPATH=pythonEnv['XERCESLIBDIR'])
-if pythonEnv.has_key('XERCESLIB'):
-	pythonEnv.Prepend(LIBS=pythonEnv['XERCESLIB'])
+	pythonEnv = env.Clone()
+	if pythonEnv.has_key('PYTHON'+sver+'INCLUDE'):
+		pythonEnv.Prepend(CPPPATH=pythonEnv['PYTHON'+sver+'INCLUDE'])
+	if pythonEnv.has_key('PYTHON'+sver+'LIBDIR'):
+		pythonEnv.Prepend(LIBPATH=pythonEnv['PYTHON'+sver+'LIBDIR'])
+	if pythonEnv.has_key('PYTHON'+sver+'LIB'):
+		pythonEnv.Prepend(LIBS=pythonEnv['PYTHON'+sver+'LIB'])
 
-if hasPython:
-	libpython = pythonEnv.SharedLibrary('mitsuba', 
-		['core.cpp', 'render.cpp']);
+	pythonEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_PYTHON']])
+	pythonEnv['SHLIBPREFIX']=''
+	pythonEnv.RelaxCompilerSettings()
+
+	if pythonEnv.has_key('XERCESINCLUDE'):
+		pythonEnv.Prepend(CPPPATH=pythonEnv['XERCESINCLUDE'])
+	if pythonEnv.has_key('XERCESLIBDIR'):
+		pythonEnv.Prepend(LIBPATH=pythonEnv['XERCESLIBDIR'])
+	if pythonEnv.has_key('XERCESLIB'):
+		pythonEnv.Prepend(LIBS=pythonEnv['XERCESLIB'])
+
+	if sys.platform != 'win32':
+		# Python has serious aliasing issues. Disable -fstrict-aliasing only for this library
+		pythonEnv.Append(CXXFLAGS = ['-fno-strict-aliasing']);
+		pythonEnv.RemoveFlags(['-fstrict-aliasing', '-ftree-vectorize']);
+	
+	if sys.platform == 'darwin':
+		pythonEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@loader_path/../../Contents/Frameworks'])
+
+	if hasPython:
+		libcore_obj = pythonEnv.SharedObject('core_'+ver, 'core.cpp')
+		librender_obj = pythonEnv.SharedObject('render_'+ver, 'render.cpp')
+		libpython = pythonEnv.SharedLibrary('mitsuba_python'+ver, [libcore_obj, librender_obj]);

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -17,6 +17,12 @@
 */
 
 #include <mitsuba/core/platform.h>
+
+// Mitsuba's "Assert" macro conflicts with Xerces' XSerializeEngine::Assert(...).
+// This becomes a problem when using a PCH which contains mitsuba/core/logger.h
+#if defined(Assert)
+# undef Assert
+#endif
 #include <xercesc/parsers/SAXParser.hpp>
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/sstream.h>
@@ -27,14 +33,16 @@
 #include <mitsuba/core/version.h>
 #include <mitsuba/core/appender.h>
 #include <mitsuba/render/util.h>
+#include <mitsuba/render/testcase.h>
 #include <mitsuba/render/renderjob.h>
 #include <mitsuba/render/scenehandler.h>
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <stdexcept>
 
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 #include <mitsuba/core/getopt.h>
+#include <winsock2.h>
 #else
 #include <signal.h>
 #endif
@@ -64,12 +72,13 @@ void help() {
 	cout <<  "   -n name     Assign a node name to this instance (Default: host name)" << endl << endl;
 	cout <<  "   -t          Execute all testcases" << endl << endl;
 	cout <<  "   -v          Be more verbose" << endl << endl;
+	cout <<  "   -w          Treat warnings as errors" << endl << endl;
 
 	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
 	std::ostringstream utilities, testcases;
 
 	cout << "[ Loading plugin list .. ]" << endl << endl;
-	
+
 	testcases << "The following testcases are available:" << endl << endl;
 	utilities << endl << "The following utilities are available:" << endl << endl;
 
@@ -77,7 +86,7 @@ void help() {
 	std::set<std::string> seen;
 
 	for (size_t i=0; i<dirPaths.size(); ++i) {
-		fs::path dirPath = fs::complete(dirPaths[i]);
+		fs::path dirPath = fs::absolute(dirPaths[i]);
 
 		if (!fs::exists(dirPath) || !fs::is_directory(dirPath))
 			break;
@@ -87,8 +96,8 @@ void help() {
 		for (; it != end; ++it) {
 			if (!fs::is_regular_file(it->status()))
 				continue;
-			std::string extension(boost::to_lower_copy(it->path().extension()));
-#if defined(WIN32)
+			std::string extension(boost::to_lower_copy(it->path().extension().string()));
+#if defined(__WINDOWS__)
 			if (extension != ".dll")
 				continue;
 #elif defined(__OSX__)
@@ -100,7 +109,7 @@ void help() {
 #else
 #error Unknown operating system!
 #endif
-			std::string shortName = it->path().stem();
+			std::string shortName = it->path().stem().string();
 			if (seen.find(shortName) != seen.end())
 				continue;
 			seen.insert(shortName);
@@ -131,13 +140,13 @@ int mtsutil(int argc, char **argv) {
 
 	try {
 		/* Default settings */
-		int nprocs = getProcessorCount();
+		int nprocs = getCoreCount();
 		std::string nodeName = getHostName(),
 					networkHosts = "", destFile="";
 		bool quietMode = false;
 		ELogLevel logLevel = EInfo;
 		FileResolver *fileResolver = Thread::getThread()->getFileResolver();
-		bool testCaseMode = false;
+		bool testCaseMode = false, treatWarningsAsErrors = false;
 
 		if (argc < 2) {
 			help();
@@ -146,12 +155,12 @@ int mtsutil(int argc, char **argv) {
 
 		optind = 1;
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "+a:c:s:n:p:qhvt")) != -1) {
+		while ((optchar = getopt(argc, argv, "+a:c:s:n:p:qhwvt")) != -1) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
-						for (unsigned int i=0; i<paths.size(); ++i) 
-							fileResolver->addPath(paths[i]);
+						for (int i=(int) paths.size()-1; i>=0; --i) 
+							fileResolver->prependPath(paths[i]);
 					}
 					break;
 				case 'c':
@@ -159,6 +168,9 @@ int mtsutil(int argc, char **argv) {
 					break;
 				case 't':
 					testCaseMode = true;
+					break;
+				case 'w':
+					treatWarningsAsErrors = true;
 					break;
 				case 's': {
 						std::ifstream is(optarg);
@@ -176,7 +188,10 @@ int mtsutil(int argc, char **argv) {
 					nodeName = optarg;
 					break;
 				case 'v':
-					logLevel = EDebug;
+					if (logLevel != EDebug)
+						logLevel = EDebug;
+					else
+						logLevel = ETrace;
 					break;
 				case 'p':
 					nprocs = strtol(optarg, &end_ptr, 10);
@@ -196,7 +211,8 @@ int mtsutil(int argc, char **argv) {
 		/* Configure the logging subsystem */
 		ref<Logger> log = Thread::getThread()->getLogger();
 		log->setLogLevel(logLevel);
-	
+		log->setErrorLevel(treatWarningsAsErrors ? EWarn : EError);
+
 		/* Initialize OpenMP */
 		Thread::initializeOpenMP(nprocs);
 
@@ -252,7 +268,7 @@ int mtsutil(int argc, char **argv) {
 				scheduler->registerWorker(new RemoteWorker(formatString("net%i", i), stream));
 			} catch (std::runtime_error &e) {
 				if (hostName.find("@") != std::string::npos) {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 					SLog(EWarn, "Please ensure that passwordless authentication "
 						"using plink.exe and pageant.exe is enabled (see the documentation for more information)");
 #else
@@ -270,9 +286,9 @@ int mtsutil(int argc, char **argv) {
 			std::vector<fs::path> dirPaths = fileResolver->resolveAll("plugins");
 			std::set<std::string> seen;
 			int executed = 0, succeeded = 0;
-		
+
 			for (size_t i=0; i<dirPaths.size(); ++i) {
-				fs::path dirPath = fs::complete(dirPaths[i]);
+				fs::path dirPath = fs::absolute(dirPaths[i]);
 
 				if (!fs::exists(dirPath) || !fs::is_directory(dirPath))
 					break;
@@ -282,8 +298,8 @@ int mtsutil(int argc, char **argv) {
 				for (; it != end; ++it) {
 					if (!fs::is_regular_file(it->status()))
 						continue;
-					std::string extension(boost::to_lower_copy(it->path().extension()));
-#if defined(WIN32)
+					std::string extension(boost::to_lower_copy(it->path().extension().string()));
+#if defined(__WINDOWS__)
 					if (extension != ".dll")
 						continue;
 #elif defined(__OSX__)
@@ -295,7 +311,7 @@ int mtsutil(int argc, char **argv) {
 #else
 #error Unknown operating system!
 #endif
-					std::string shortName = it->path().stem();
+					std::string shortName = it->path().stem().string();
 					if (seen.find(shortName) != seen.end() || !boost::starts_with(shortName, "test_"))
 						continue;
 					seen.insert(shortName);
@@ -326,7 +342,7 @@ int mtsutil(int argc, char **argv) {
 			fs::path pluginName(argv[optind]);
 
 			/* Build the full plugin file name */
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 			pluginName.replace_extension(".dll");
 #elif defined(__OSX__)
 			pluginName.replace_extension(".dylib");
@@ -340,7 +356,7 @@ int mtsutil(int argc, char **argv) {
 			if (!fs::exists(fullName)) {
 				/* Plugin not found! */
 				SLog(EError, "Utility \"%s\" not found (run \"mtsutil\" without arguments to "
-					"see a list of available utilities)", fullName.file_string().c_str());
+					"see a list of available utilities)", fullName.string().c_str());
 			}
 
 			SLog(EInfo, "Loading utility \"%s\" ..", argv[optind]);
@@ -348,7 +364,7 @@ int mtsutil(int argc, char **argv) {
 			if (!plugin->isUtility())
 				SLog(EError, "This plugin does not implement the 'Utility' interface!");
 			Statistics::getInstance()->logPlugin(argv[optind], plugin->getDescription());
-		
+
 			ref<Utility> utility = plugin->createUtility();
 
 			int retval = utility->run(argc-optind, argv+optind);
@@ -358,7 +374,7 @@ int mtsutil(int argc, char **argv) {
 			return retval;
 		}
 	} catch (const std::exception &e) {
-		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
+		std::cerr << "Caught a critical exeption: " << e.what() << endl;
 	} catch (...) {
 		std::cerr << "Caught a critical exeption of unknown type!" << endl;
 	}
@@ -369,16 +385,18 @@ int mtsutil(int argc, char **argv) {
 int mts_main(int argc, char **argv) {
 	/* Initialize the core framework */
 	Class::staticInitialization();
+	Object::staticInitialization();
 	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
 	Spectrum::staticInitialization();
+	Bitmap::staticInitialization();
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
 	SceneHandler::staticInitialization();
 
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
@@ -387,7 +405,7 @@ int mts_main(int argc, char **argv) {
 		SLog(EError, "Could not find the required version of winsock.dll!");
 #endif
 
-#if !defined(WIN32)
+#if defined(__LINUX__) || defined(__OSX__)
 	/* Correct number parsing on some locales (e.g. ru_RU) */
 	setlocale(LC_NUMERIC, "C");
 #endif
@@ -398,14 +416,16 @@ int mts_main(int argc, char **argv) {
 	SceneHandler::staticShutdown();
 	SHVector::staticShutdown();
 	Scheduler::staticShutdown();
+	Bitmap::staticShutdown();
 	Spectrum::staticShutdown();
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();
 	PluginManager::staticShutdown();
+	Object::staticShutdown();
 	Class::staticShutdown();
-	
-#ifdef WIN32
+
+#if defined(__WINDOWS__)
 	/* Shut down WINSOCK2 */
 	WSACleanup();
 #endif

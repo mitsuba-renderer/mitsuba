@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -67,6 +67,15 @@ static StatsCounter avgSampleIterations("Micro-flake model",
  * Note: this phase function must be used with a medium that specifies
  * the local fiber orientation at different points in space. Please
  * refer to \pluginref{heterogeneous} for details.
+ *
+ * \vspace{1cm}
+ *
+ * \renderings{
+ *   \fbox{\includegraphics[width=\textwidth]{images/medium_knitpatterns}}
+ *   \caption{A range of different knit patterns, rendered using the
+ *   \pluginref{heterogeneous} and \pluginref{microflake} plugins. Courtesy
+ *   of Yuksel et al. \cite{Yuksel2012Stitch}.}
+ * }
  */
 class MicroflakePhaseFunction : public PhaseFunction {
 public:
@@ -78,16 +87,22 @@ public:
 	MicroflakePhaseFunction(Stream *stream, InstanceManager *manager) 
 		: PhaseFunction(stream, manager) {
 		m_fiberDistr = GaussianFiberDistribution(stream->readFloat());
+		configure();
 	}
 
 	virtual ~MicroflakePhaseFunction() { }
+
+	void configure() {
+		PhaseFunction::configure();
+		m_type = EAnisotropic | ENonSymmetric;
+	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		PhaseFunction::serialize(stream, manager);
 		stream->writeFloat(m_fiberDistr.getStdDev());
 	}
 
-	Float eval(const PhaseFunctionQueryRecord &pRec) const {
+	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
 		if (pRec.mRec.orientation.isZero()) {
 			/* What to do when the local orientation is undefined */
 			#if 0
@@ -110,11 +125,11 @@ public:
 				/ m_fiberDistr.sigmaT(Frame::cosTheta(wi));
 	}
 
-	inline Float sample(PhaseFunctionQueryRecord &pRec, Sampler *sampler) const {
+	inline Float sample(PhaseFunctionSamplingRecord &pRec, Sampler *sampler) const {
 		if (pRec.mRec.orientation.isZero()) {
 			/* What to do when the local orientation is undefined */
 			#if 0
-				pRec.wo = squareToSphere(sampler->next2D());
+				pRec.wo = Warp::squareToUniformSphere(sampler->next2D());
 				return 1.0f;
 			#else
 				return 0.0f;
@@ -155,7 +170,7 @@ public:
 		return 1.0f;
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec, 
+	Float sample(PhaseFunctionSamplingRecord &pRec, 
 			Float &pdf, Sampler *sampler) const {
 		if (sample(pRec, sampler) == 0) {
 			pdf = 0; return 0.0f;

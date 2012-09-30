@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__PARTICLEPROC_H)
-#define __PARTICLEPROC_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_PARTICLEPROC_H_)
+#define __MITSUBA_RENDER_PARTICLEPROC_H_
 
 #include <mitsuba/render/scene.h>
 
@@ -138,22 +139,36 @@ public:
 
 	//! @}
 	// =============================================================
-	
+
 	/**
 	 * \brief Handle a particle emission event
 	 *
 	 * To be overridden in a subclass. The default implementation
 	 * does nothing
 	 *
-	 * \param eRec
-	 *    Emission sampling record
+	 * \param pRec
+	 *    Position sampling record associated with the emission event
 	 * \param medium
 	 *    Pointer to the current medium
-	 * \param time
-	 *    Time value associated with the particle
+	 * \param weight
+	 *    Initial weight/power of the particle
 	 */
-	virtual void handleEmission(const EmissionRecord &eRec,
-			const Medium *medium, Float time);
+	virtual void handleEmission(const PositionSamplingRecord &pRec,
+			const Medium *medium, const Spectrum &weight);
+
+	/**
+	 * \brief Handle a 'new particle generated' event
+	 *
+	 * To be overridden in a subclass. The default implementation
+	 * does nothing.
+	 *
+	 * Note that this event will only be delivered if
+	 * <tt>emissionEvents=false</tt>. In that case, it is a
+	 * substitute to let the subclass know that a new particle
+	 * was created, but without providing detailed information
+	 * about the emission.
+	 */
+	virtual void handleNewParticle();
 
 	/**
      * \brief Handle a surface interaction event
@@ -164,18 +179,20 @@ public:
 	 * \param depth 
 	 *    Depth of the interaction in path space (with 1
 	 *    corresponding to the first bounce) 
-	 * \param caustic
-	 *    Is this a caustic path? (This flag is \c false when there
-	 *    was any non-specular interaction on the path so far)
+	 * \param delta 
+	 *    Denotes if the previous scattering event was a degenerate
+	 *    specular reflection or refraction.
 	 * \param its
 	 *    Associated intersection record
 	 * \param medium
 	 *    Pointer to the current medium \a before the surface
 	 *    interaction
 	 * \param weight
-	 *    Particle weight along the preceding subpath
+	 *    Weight/power of the particle after having gone through
+	 *    all preceding interactions except for the current surface
+	 *    interaction.
      */
-	virtual void handleSurfaceInteraction(int depth, bool caustic,
+	virtual void handleSurfaceInteraction(int depth, bool delta,
 		const Intersection &its, const Medium *medium,
 		const Spectrum &weight);
 
@@ -188,27 +205,26 @@ public:
 	 * \param depth 
 	 *    Depth of the interaction in path space (with 1
 	 *    corresponding to the first bounce) 
-	 * \param caustic
-	 *    Is this a caustic path? (This flag is \c false when there
-	 *    was any non-specular interaction on the path so far)
+	 * \param delta 
+	 *    Denotes if the previous scattering event was a degenerate
+	 *    specular reflection or refraction.
 	 * \param mRec
 	 *    Associated medium sampling record
 	 * \param medium
 	 *    Pointer to the current medium
-	 * \param time
-	 *    Time value associated with the particle
 	 * \param weight
-	 *    Particle weight along the preceding subpath
+	 *    Weight/power of the particle after having gone through
+	 *    all preceding interactions except for the current medium
+	 *    interaction.
      */
-	virtual void handleMediumInteraction(int depth, bool caustic,
+	virtual void handleMediumInteraction(int depth, bool delta,
 		const MediumSamplingRecord &mRec, const Medium *medium,
-		Float time, const Vector &wi, const Spectrum &weight);
+		const Vector &wi, const Spectrum &weight);
 
 	MTS_DECLARE_CLASS()
 protected:
 	/// Protected constructor
-	inline ParticleTracer(int maxDepth, int rrDepth) 
-		: m_maxDepth(maxDepth), m_rrDepth(rrDepth) { }
+	ParticleTracer(int maxDepth, int rrDepth, bool emissionEvents);
 	/// Protected constructor
 	ParticleTracer(Stream *stream, InstanceManager *manager);
 	/// Virtual destructor
@@ -218,8 +234,9 @@ protected:
 	ref<Sampler> m_sampler;
 	int m_maxDepth;
 	int m_rrDepth;
+	bool m_emissionEvents;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __PARTICLEPROC_H */
+#endif /* __MITSUBA_RENDER_PARTICLEPROC_H_ */

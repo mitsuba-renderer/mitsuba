@@ -55,9 +55,9 @@
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Debug\</IntDir>
-    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32-debug.py</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32-debug.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32-debug.py</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32-debug.py -c</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win32-msvc2010-debug.py</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win32-msvc2010-debug.py -c &amp;&amp; scons --parallelize --cfg=build\config-win32-msvc2010-debug.py</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win32-msvc2010-debug.py -c</NMakeCleanCommandLine>
     <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\dist\mtsgui.exe</NMakeOutput>
     <NMakePreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
@@ -66,9 +66,9 @@
     <NMakeForcedUsingAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(NMakeForcedUsingAssemblies)</NMakeForcedUsingAssemblies>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Release\</IntDir>
-    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32.py</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32.py</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win32.py -c</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win32-msvc2010.py</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win32-msvc2010.py -c &amp;&amp; scons --parallelize --cfg=build\config-win32-msvc2010.py</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win32-msvc2010.py -c</NMakeCleanCommandLine>
     <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\dist\mtsgui.exe</NMakeOutput>
     <NMakePreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">WIN32;NDEBUG;SINGLE_PRECISION;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
@@ -77,9 +77,9 @@
     <NMakeForcedUsingAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(NMakeForcedUsingAssemblies)</NMakeForcedUsingAssemblies>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Debug\</IntDir>
-    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64-debug.py</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64-debug.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64-debug.py</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64-debug.py -c</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2010-debug.py</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2010-debug.py -c &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2010-debug.py</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2010-debug.py -c</NMakeCleanCommandLine>
     <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dist\mtsgui.exe</NMakeOutput>
     <NMakePreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
@@ -88,9 +88,9 @@
     <NMakeForcedUsingAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(NMakeForcedUsingAssemblies)</NMakeForcedUsingAssemblies>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Release\</IntDir>
-    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64.py</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64.py -c &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64.py</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-msvc2010-win64.py -c</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2010.py</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2010.py -c &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2010.py</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2010.py -c</NMakeCleanCommandLine>
     <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\dist\mtsgui.exe</NMakeOutput>
     <NMakePreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">WIN32;NDEBUG;SINGLE_PRECISION;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
@@ -111,867 +111,1033 @@
     </Filter>
   </ItemGroup>
   <ItemGroup Label="Header Files">
-  <ClInclude Include="..\.\src\bsdfs\ior.h">
+  <ClInclude Include="..\src\converter\converter.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\bsdfs\irawan.h">
+		<ClInclude Include="..\src\bsdfs\irawan.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\bsdfs\microfacet.h">
+		<ClInclude Include="..\src\bsdfs\rtrans.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\converter\converter.h">
+		<ClInclude Include="..\src\bsdfs\microfacet.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\films\banner.h">
+		<ClInclude Include="..\src\bsdfs\ior.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\integrators\misc\irrcache_proc.h">
+		<ClInclude Include="..\src\samplers\faure.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\integrators\path\ptracer_proc.h">
+		<ClInclude Include="..\src\samplers\sobolseq.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\integrators\photonmapper\bre.h">
+		<ClInclude Include="..\src\libhw\veramono14_dsc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\libhw\vera14_dsc.h">
+		<ClInclude Include="..\src\libhw\vera14_dsc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\libhw\vera14_png.h">
+		<ClInclude Include="..\src\libhw\veramono14_png.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\libhw\veramono14_dsc.h">
+		<ClInclude Include="..\src\libhw\vera14_png.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\libhw\veramono14_png.h">
+		<ClInclude Include="..\src\medium\materials.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\libpython\base.h">
+		<ClInclude Include="..\src\medium\maxexp.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\luminaires\sun.h">
+		<ClInclude Include="..\src\emitters\sunsky\sunmodel.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\medium\materials.h">
+		<ClInclude Include="..\src\emitters\sunsky\skymodeldata.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\medium\maxexp.h">
+		<ClInclude Include="..\src\emitters\sunsky\skymodel.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\aboutdlg.h">
+		<ClInclude Include="..\src\subsurface\irrproc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\acknowledgmentdlg.h">
+		<ClInclude Include="..\src\subsurface\bluenoise.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\addserverdlg.h">
+		<ClInclude Include="..\src\subsurface\irrtree.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\common.h">
+		<ClInclude Include="..\src\mtsgui\previewsettingsdlg_cocoa.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\glwidget.h">
+		<ClInclude Include="..\src\mtsgui\locateresourcedlg.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\importdlg.h">
+		<ClInclude Include="..\src\mtsgui\sceneimporter.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\loaddlg.h">
+		<ClInclude Include="..\src\mtsgui\loaddlg.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\locateresourcedlg.h">
+		<ClInclude Include="..\src\mtsgui\common.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\logwidget.h">
+		<ClInclude Include="..\src\mtsgui\sceneloader.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\mainwindow.h">
+		<ClInclude Include="..\src\mtsgui\glwidget.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\preview.h">
+		<ClInclude Include="..\src\mtsgui\tabbar.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\previewsettingsdlg.h">
+		<ClInclude Include="..\src\mtsgui\sceneinfodlg.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\previewsettingsdlg_cocoa.h">
+		<ClInclude Include="..\src\mtsgui\xmltreemodel.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\preview_proc.h">
+		<ClInclude Include="..\src\mtsgui\importdlg.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\programsettingsdlg.h">
+		<ClInclude Include="..\src\mtsgui\server.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\rendersettingsdlg.h">
+		<ClInclude Include="..\src\mtsgui\simdtonemap.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\save.h">
+		<ClInclude Include="..\src\mtsgui\aboutdlg.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\sceneimporter.h">
+		<ClInclude Include="..\src\mtsgui\logwidget.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\sceneinfodlg.h">
+		<ClInclude Include="..\src\mtsgui\updatedlg.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\sceneloader.h">
+		<ClInclude Include="..\src\mtsgui\preview.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\server.h">
+		<ClInclude Include="..\src\mtsgui\addserverdlg.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\tabbar.h">
+		<ClInclude Include="..\src\mtsgui\save.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\updatedlg.h">
+		<ClInclude Include="..\src\mtsgui\upgrade.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\upgrade.h">
+		<ClInclude Include="..\src\mtsgui\acknowledgmentdlg.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\mtsgui\xmltreemodel.h">
+		<ClInclude Include="..\src\mtsgui\rendersettingsdlg.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\phase\microflake_fiber.h">
+		<ClInclude Include="..\src\mtsgui\previewsettingsdlg.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\shapes\hair.h">
+		<ClInclude Include="..\src\mtsgui\mainwindow.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\shapes\instance.h">
+		<ClInclude Include="..\src\mtsgui\programsettingsdlg.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\shapes\shapegroup.h">
+		<ClInclude Include="..\src\phase\microflake_fiber.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\subsurface\irrproc.h">
+		<ClInclude Include="..\src\films\banner.h">
 			</ClInclude>
-		<ClInclude Include="..\.\src\subsurface\irrtree.h">
+		<ClInclude Include="..\src\shapes\shapegroup.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\bidir\rsampler.h">
+		<ClInclude Include="..\src\shapes\hair.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\aabb.h">
+		<ClInclude Include="..\src\shapes\instance.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\aabb_sse.h">
+		<ClInclude Include="..\src\integrators\misc\irrcache_proc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\appender.h">
+		<ClInclude Include="..\src\integrators\pssmlt\pssmlt_sampler.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\atomic.h">
+		<ClInclude Include="..\src\integrators\pssmlt\pssmlt.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\bitmap.h">
+		<ClInclude Include="..\src\integrators\pssmlt\pssmlt_proc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\brent.h">
+		<ClInclude Include="..\src\integrators\photonmapper\bre.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\bsphere.h">
+		<ClInclude Include="..\src\integrators\mlt\mlt.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\chisquare.h">
+		<ClInclude Include="..\src\integrators\mlt\mlt_proc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\class.h">
+		<ClInclude Include="..\src\integrators\bdpt\bdpt_proc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\cobject.h">
+		<ClInclude Include="..\src\integrators\bdpt\bdpt.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\constants.h">
+		<ClInclude Include="..\src\integrators\bdpt\bdpt_wr.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\cstream.h">
+		<ClInclude Include="..\src\integrators\erpt\erpt.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\formatter.h">
+		<ClInclude Include="..\src\integrators\erpt\erpt_proc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\frame.h">
+		<ClInclude Include="..\src\integrators\ptracer\ptracer_proc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\fresolver.h">
+		<ClInclude Include="..\src\libpython\base.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\fstream.h">
+		<ClInclude Include="..\include\mitsuba\render\sahkdtree3.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\fwd.h">
+		<ClInclude Include="..\include\mitsuba\render\irrcache.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\getopt.h">
+		<ClInclude Include="..\include\mitsuba\render\emitter.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\kdtree.h">
+		<ClInclude Include="..\include\mitsuba\render\imageblock.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\lock.h">
+		<ClInclude Include="..\include\mitsuba\render\common.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\logger.h">
+		<ClInclude Include="..\include\mitsuba\render\particleproc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\lrucache.h">
+		<ClInclude Include="..\include\mitsuba\render\fwd.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\matrix.h">
+		<ClInclude Include="..\include\mitsuba\render\sahkdtree2.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\matrix.inl">
+		<ClInclude Include="..\include\mitsuba\render\rectwu.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\mempool.h">
+		<ClInclude Include="..\include\mitsuba\render\spiral.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\mmap.h">
+		<ClInclude Include="..\include\mitsuba\render\scene.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\mstream.h">
+		<ClInclude Include="..\include\mitsuba\render\records.inl">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\netobject.h">
+		<ClInclude Include="..\include\mitsuba\render\phase.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\normal.h">
+		<ClInclude Include="..\include\mitsuba\render\range.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\object.h">
+		<ClInclude Include="..\include\mitsuba\render\gatherproc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\octree.h">
+		<ClInclude Include="..\include\mitsuba\render\vpl.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\pdf.h">
+		<ClInclude Include="..\include\mitsuba\render\scenehandler.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\platform.h">
+		<ClInclude Include="..\include\mitsuba\render\skdtree.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\plugin.h">
+		<ClInclude Include="..\include\mitsuba\render\testcase.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\point.h">
+		<ClInclude Include="..\include\mitsuba\render\renderjob.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\properties.h">
+		<ClInclude Include="..\include\mitsuba\render\renderproc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\quad.h">
+		<ClInclude Include="..\include\mitsuba\render\sensor.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\quat.h">
+		<ClInclude Include="..\include\mitsuba\render\shader.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\random.h">
+		<ClInclude Include="..\include\mitsuba\render\triaccel.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\ray.h">
+		<ClInclude Include="..\include\mitsuba\render\volume.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\ref.h">
+		<ClInclude Include="..\include\mitsuba\render\integrator.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\sched.h">
+		<ClInclude Include="..\include\mitsuba\render\subsurface.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\sched_remote.h">
+		<ClInclude Include="..\include\mitsuba\render\texture.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\serialization.h">
+		<ClInclude Include="..\include\mitsuba\render\track.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\sfcurve.h">
+		<ClInclude Include="..\include\mitsuba\render\triaccel_sse.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\shvector.h">
+		<ClInclude Include="..\include\mitsuba\render\bsdf.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\spectrum.h">
+		<ClInclude Include="..\include\mitsuba\render\trimesh.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\spline.h">
+		<ClInclude Include="..\include\mitsuba\render\imageproc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\sse.h">
+		<ClInclude Include="..\include\mitsuba\render\medium.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\sshstream.h">
+		<ClInclude Include="..\include\mitsuba\render\photonmap.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\sstream.h">
+		<ClInclude Include="..\include\mitsuba\render\shape.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\statistics.h">
+		<ClInclude Include="..\include\mitsuba\render\gkdtree.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\stl.h">
+		<ClInclude Include="..\include\mitsuba\render\sampler.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\stream.h">
+		<ClInclude Include="..\include\mitsuba\render\noise.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\thread.h">
+		<ClInclude Include="..\include\mitsuba\render\renderqueue.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\timer.h">
+		<ClInclude Include="..\include\mitsuba\render\mipmap.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\tls.h">
+		<ClInclude Include="..\include\mitsuba\render\film.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\transform.h">
+		<ClInclude Include="..\include\mitsuba\render\util.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\triangle.h">
+		<ClInclude Include="..\include\mitsuba\render\photon.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\util.h">
+		<ClInclude Include="..\include\mitsuba\core\transform.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\vector.h">
+		<ClInclude Include="..\include\mitsuba\core\ref.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\version.h">
+		<ClInclude Include="..\include\mitsuba\core\octree.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\wavelet.h">
+		<ClInclude Include="..\include\mitsuba\core\quad.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\core\zstream.h">
+		<ClInclude Include="..\include\mitsuba\core\sshstream.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\basicshader.h">
+		<ClInclude Include="..\include\mitsuba\core\quat.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\device.h">
+		<ClInclude Include="..\include\mitsuba\core\plugin.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\font.h">
+		<ClInclude Include="..\include\mitsuba\core\vector.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\glgeometry.h">
+		<ClInclude Include="..\include\mitsuba\core\spectrum.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\glprogram.h">
+		<ClInclude Include="..\include\mitsuba\core\sched.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\glrenderer.h">
+		<ClInclude Include="..\include\mitsuba\core\platform.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\glsync.h">
+		<ClInclude Include="..\include\mitsuba\core\qmc.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\gltexture.h">
+		<ClInclude Include="..\include\mitsuba\core\frame.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\glxdevice.h">
+		<ClInclude Include="..\include\mitsuba\core\formatter.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\glxrenderer.h">
+		<ClInclude Include="..\include\mitsuba\core\ray_sse.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\gpugeometry.h">
+		<ClInclude Include="..\include\mitsuba\core\ssevector.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\gpuprogram.h">
+		<ClInclude Include="..\include\mitsuba\core\fwd.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\gpusync.h">
+		<ClInclude Include="..\include\mitsuba\core\aabb.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\gputexture.h">
+		<ClInclude Include="..\include\mitsuba\core\fresolver.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\nsgldevice.h">
+		<ClInclude Include="..\include\mitsuba\core\serialization.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\nsglkeys.h">
+		<ClInclude Include="..\include\mitsuba\core\rfilter.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\nsglrenderer.h">
+		<ClInclude Include="..\include\mitsuba\core\vmf.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\nsglsession.h">
+		<ClInclude Include="..\include\mitsuba\core\version.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\renderer.h">
+		<ClInclude Include="..\include\mitsuba\core\cstream.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\session.h">
+		<ClInclude Include="..\include\mitsuba\core\mempool.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\viewer.h">
+		<ClInclude Include="..\include\mitsuba\core\random.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\vpl.h">
+		<ClInclude Include="..\include\mitsuba\core\pmf.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\wgldevice.h">
+		<ClInclude Include="..\include\mitsuba\core\barray.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\wglrenderer.h">
+		<ClInclude Include="..\include\mitsuba\core\half.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\wglsession.h">
+		<ClInclude Include="..\include\mitsuba\core\matrix.inl">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\x11device.h">
+		<ClInclude Include="..\include\mitsuba\core\ssemath.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\hw\x11session.h">
+		<ClInclude Include="..\include\mitsuba\core\normal.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\mitsuba.h">
+		<ClInclude Include="..\include\mitsuba\core\simplecache.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\bsdf.h">
+		<ClInclude Include="..\include\mitsuba\core\atomic.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\camera.h">
+		<ClInclude Include="..\include\mitsuba\core\kdtree.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\common.h">
+		<ClInclude Include="..\include\mitsuba\core\sse.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\film.h">
+		<ClInclude Include="..\include\mitsuba\core\logger.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\fwd.h">
+		<ClInclude Include="..\include\mitsuba\core\mmap.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\gatherproc.h">
+		<ClInclude Include="..\include\mitsuba\core\shvector.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\gkdtree.h">
+		<ClInclude Include="..\include\mitsuba\core\zstream.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\imageblock.h">
+		<ClInclude Include="..\include\mitsuba\core\sfcurve.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\imageproc.h">
+		<ClInclude Include="..\include\mitsuba\core\statistics.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\integrator.h">
+		<ClInclude Include="..\include\mitsuba\core\thread.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\irrcache.h">
+		<ClInclude Include="..\include\mitsuba\core\aabb_sse.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\luminaire.h">
+		<ClInclude Include="..\include\mitsuba\core\cobject.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\medium.h">
+		<ClInclude Include="..\include\mitsuba\core\point.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\mipmap.h">
+		<ClInclude Include="..\include\mitsuba\core\tls.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\mipmap3d.h">
+		<ClInclude Include="..\include\mitsuba\core\properties.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\noise.h">
+		<ClInclude Include="..\include\mitsuba\core\fstream.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\particleproc.h">
+		<ClInclude Include="..\include\mitsuba\core\matrix.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\phase.h">
+		<ClInclude Include="..\include\mitsuba\core\sstream.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\photon.h">
+		<ClInclude Include="..\include\mitsuba\core\lrucache.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\photonmap.h">
+		<ClInclude Include="..\include\mitsuba\core\brent.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\preview.h">
+		<ClInclude Include="..\include\mitsuba\core\chisquare.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\range.h">
+		<ClInclude Include="..\include\mitsuba\core\sched_remote.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\records.inl">
+		<ClInclude Include="..\include\mitsuba\core\getopt.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\rectwu.h">
+		<ClInclude Include="..\include\mitsuba\core\object.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\renderjob.h">
+		<ClInclude Include="..\include\mitsuba\core\stream.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\renderproc.h">
+		<ClInclude Include="..\include\mitsuba\core\ray.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\renderqueue.h">
+		<ClInclude Include="..\include\mitsuba\core\timer.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\rfilter.h">
+		<ClInclude Include="..\include\mitsuba\core\bsphere.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\sahkdtree3.h">
+		<ClInclude Include="..\include\mitsuba\core\mstream.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\sampler.h">
+		<ClInclude Include="..\include\mitsuba\core\netobject.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\scene.h">
+		<ClInclude Include="..\include\mitsuba\core\triangle.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\scenehandler.h">
+		<ClInclude Include="..\include\mitsuba\core\class.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\shader.h">
+		<ClInclude Include="..\include\mitsuba\core\stl.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\shape.h">
+		<ClInclude Include="..\include\mitsuba\core\warp.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\skdtree.h">
+		<ClInclude Include="..\include\mitsuba\core\util.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\spiral.h">
+		<ClInclude Include="..\include\mitsuba\core\appender.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\subsurface.h">
+		<ClInclude Include="..\include\mitsuba\core\lock.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\testcase.h">
+		<ClInclude Include="..\include\mitsuba\core\constants.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\texture.h">
+		<ClInclude Include="..\include\mitsuba\core\bitmap.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\track.h">
+		<ClInclude Include="..\include\mitsuba\hw\nsglrenderer.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\triaccel.h">
+		<ClInclude Include="..\include\mitsuba\hw\viewer.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\triaccel_sse.h">
+		<ClInclude Include="..\include\mitsuba\hw\renderer.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\trimesh.h">
+		<ClInclude Include="..\include\mitsuba\hw\nsglsession.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\util.h">
+		<ClInclude Include="..\include\mitsuba\hw\glxrenderer.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\volume.h">
+		<ClInclude Include="..\include\mitsuba\hw\x11device.h">
 			</ClInclude>
-		<ClInclude Include="..\.\include\mitsuba\render\vpl.h">
+		<ClInclude Include="..\include\mitsuba\hw\wglsession.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\glgeometry.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\x11session.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\vpl.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\nsglkeys.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\glprogram.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\gputexture.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\basicshader.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\device.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\wglrenderer.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\gltexture.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\nsgldevice.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\gpusync.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\gpuprogram.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\gpugeometry.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\glrenderer.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\glxdevice.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\session.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\font.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\glsync.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\wgldevice.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\pathsampler.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\common.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\mutator.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\mut_caustic.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\vertex.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\mempool.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\mut_lens.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\manifold.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\mut_mchain.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\mut_manifold.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\path.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\rsampler.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\geodist2.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\mut_bidir.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\edge.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\bidir\util.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\mitsuba.h">
 			</ClInclude>
 		</ItemGroup>
   <ItemGroup Label="Source Files">
-  <ClCompile Include="..\.\src\bsdfs\bump.cpp">
+  <ClCompile Include="..\src\converter\mtsimport.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\coating.cpp">
+		<ClCompile Include="..\src\converter\obj.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\conductor.cpp">
+		<ClCompile Include="..\src\converter\collada.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\dielectric.cpp">
+		<ClCompile Include="..\src\converter\converter.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\difftrans.cpp">
+		<ClCompile Include="..\src\bsdfs\plastic.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\diffuse.cpp">
+		<ClCompile Include="..\src\bsdfs\thindielectric.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\dipolebrdf.cpp">
+		<ClCompile Include="..\src\bsdfs\irawan.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\hk.cpp">
+		<ClCompile Include="..\src\bsdfs\phong.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\irawan.cpp">
+		<ClCompile Include="..\src\bsdfs\ward.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\mask.cpp">
+		<ClCompile Include="..\src\bsdfs\bump.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\mixturebsdf.cpp">
+		<ClCompile Include="..\src\bsdfs\null.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\phong.cpp">
+		<ClCompile Include="..\src\bsdfs\mixturebsdf.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\plastic.cpp">
+		<ClCompile Include="..\src\bsdfs\conductor.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\roughcoating.cpp">
+		<ClCompile Include="..\src\bsdfs\dielectric.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\roughconductor.cpp">
+		<ClCompile Include="..\src\bsdfs\hk.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\roughdielectric.cpp">
+		<ClCompile Include="..\src\bsdfs\twosided.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\roughdiffuse.cpp">
+		<ClCompile Include="..\src\bsdfs\diffuse.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\roughplastic.cpp">
+		<ClCompile Include="..\src\bsdfs\difftrans.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\sssbrdf.cpp">
+		<ClCompile Include="..\src\bsdfs\mask.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\twosided.cpp">
+		<ClCompile Include="..\src\bsdfs\roughcoating.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\bsdfs\ward.cpp">
+		<ClCompile Include="..\src\bsdfs\roughconductor.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\cameras\environment.cpp">
+		<ClCompile Include="..\src\bsdfs\blendbsdf.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\cameras\orthographic.cpp">
+		<ClCompile Include="..\src\bsdfs\coating.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\cameras\perspective.cpp">
+		<ClCompile Include="..\src\bsdfs\roughdiffuse.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\converter\collada.cpp">
+		<ClCompile Include="..\src\bsdfs\roughdielectric.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\converter\converter.cpp">
+		<ClCompile Include="..\src\bsdfs\roughplastic.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\converter\mtsimport.cpp">
+		<ClCompile Include="..\src\librender\trimesh.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\converter\obj.cpp">
+		<ClCompile Include="..\src\librender\irrcache.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\films\exrfilm.cpp">
+		<ClCompile Include="..\src\librender\texture.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\films\mfilm.cpp">
+		<ClCompile Include="..\src\librender\subsurface.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\films\pngfilm.cpp">
+		<ClCompile Include="..\src\librender\film.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\direct\direct.cpp">
+		<ClCompile Include="..\src\librender\shader.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\misc\errctrl.cpp">
+		<ClCompile Include="..\src\librender\testcase.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\misc\irrcache.cpp">
+		<ClCompile Include="..\src\librender\medium.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\misc\irrcache_proc.cpp">
+		<ClCompile Include="..\src\librender\photonmap.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\path\path.cpp">
+		<ClCompile Include="..\src\librender\track.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\path\ptracer.cpp">
+		<ClCompile Include="..\src\librender\renderjob.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\path\ptracer_proc.cpp">
+		<ClCompile Include="..\src\librender\intersection.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\path\volpath.cpp">
+		<ClCompile Include="..\src\librender\util.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\path\volpath_simple.cpp">
+		<ClCompile Include="..\src\librender\particleproc.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\photonmapper\bre.cpp">
+		<ClCompile Include="..\src\librender\imageproc.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\photonmapper\photonmapper.cpp">
+		<ClCompile Include="..\src\librender\gatherproc.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\photonmapper\ppm.cpp">
+		<ClCompile Include="..\src\librender\noise.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\photonmapper\sppm.cpp">
+		<ClCompile Include="..\src\librender\emitter.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\integrators\vpl\vpl.cpp">
+		<ClCompile Include="..\src\librender\integrator.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libbidir\rsampler.cpp">
+		<ClCompile Include="..\src\librender\rectwu.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\aabb.cpp">
+		<ClCompile Include="..\src\librender\phase.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\appender.cpp">
+		<ClCompile Include="..\src\librender\scenehandler.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\bitmap.cpp">
+		<ClCompile Include="..\src\librender\skdtree.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\brent.cpp">
+		<ClCompile Include="..\src\librender\scene.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\chisquare.cpp">
+		<ClCompile Include="..\src\librender\common.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\class.cpp">
+		<ClCompile Include="..\src\librender\renderqueue.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\cstream.cpp">
+		<ClCompile Include="..\src\librender\renderproc.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\formatter.cpp">
+		<ClCompile Include="..\src\librender\vpl.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\fresolver.cpp">
+		<ClCompile Include="..\src\librender\photon.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\fstream.cpp">
+		<ClCompile Include="..\src\librender\shape.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\getopt.c">
+		<ClCompile Include="..\src\librender\sensor.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\lock.cpp">
+		<ClCompile Include="..\src\librender\bsdf.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\logger.cpp">
+		<ClCompile Include="..\src\librender\sampler.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\mmap.cpp">
+		<ClCompile Include="..\src\librender\volume.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\mstream.cpp">
+		<ClCompile Include="..\src\librender\imageblock.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\object.cpp">
+		<ClCompile Include="..\src\samplers\stratified.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\platform_win32.cpp">
+		<ClCompile Include="..\src\samplers\independent.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\plugin.cpp">
+		<ClCompile Include="..\src\samplers\ldsampler.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\properties.cpp">
+		<ClCompile Include="..\src\samplers\hammersley.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\quad.cpp">
+		<ClCompile Include="..\src\samplers\sobolseq.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\random.cpp">
+		<ClCompile Include="..\src\samplers\faure.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\sched.cpp">
+		<ClCompile Include="..\src\samplers\halton.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\sched_remote.cpp">
+		<ClCompile Include="..\src\samplers\sobol.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\serialization.cpp">
+		<ClCompile Include="..\src\sensors\telecentric.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\shvector.cpp">
+		<ClCompile Include="..\src\sensors\spherical.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\spectrum.cpp">
+		<ClCompile Include="..\src\sensors\irradiancemeter.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\spline.cpp">
+		<ClCompile Include="..\src\sensors\radiancemeter.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\sshstream.cpp">
+		<ClCompile Include="..\src\sensors\fluencemeter.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\sstream.cpp">
+		<ClCompile Include="..\src\sensors\perspective.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\statistics.cpp">
+		<ClCompile Include="..\src\sensors\orthographic.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\stream.cpp">
+		<ClCompile Include="..\src\sensors\thinlens.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\thread.cpp">
+		<ClCompile Include="..\src\libhw\gpuprogram.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\timer.cpp">
+		<ClCompile Include="..\src\libhw\wgldevice.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\transform.cpp">
+		<ClCompile Include="..\src\libhw\glgeometry.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\triangle.cpp">
+		<ClCompile Include="..\src\libhw\gputexture.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\util.cpp">
+		<ClCompile Include="..\src\libhw\glrenderer.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\wavelet.cpp">
+		<ClCompile Include="..\src\libhw\glprogram.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libcore\zstream.cpp">
+		<ClCompile Include="..\src\libhw\device.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\basicshader.cpp">
+		<ClCompile Include="..\src\libhw\glsync.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\device.cpp">
+		<ClCompile Include="..\src\libhw\wglsession.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\font.cpp">
+		<ClCompile Include="..\src\libhw\session.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\glgeometry.cpp">
+		<ClCompile Include="..\src\libhw\x11session.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\glprogram.cpp">
+		<ClCompile Include="..\src\libhw\gltexture.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\glrenderer.cpp">
+		<ClCompile Include="..\src\libhw\font.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\glsync.cpp">
+		<ClCompile Include="..\src\libhw\wglrenderer.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\gltexture.cpp">
+		<ClCompile Include="..\src\libhw\gpusync.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\glxdevice.cpp">
+		<ClCompile Include="..\src\libhw\renderer.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\glxrenderer.cpp">
+		<ClCompile Include="..\src\libhw\gpugeometry.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\gpugeometry.cpp">
+		<ClCompile Include="..\src\libhw\viewer.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\gpuprogram.cpp">
+		<ClCompile Include="..\src\libhw\glxrenderer.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\gpusync.cpp">
+		<ClCompile Include="..\src\libhw\glxdevice.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\gputexture.cpp">
+		<ClCompile Include="..\src\libhw\x11device.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\renderer.cpp">
+		<ClCompile Include="..\src\libhw\vpl.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\session.cpp">
+		<ClCompile Include="..\src\libhw\basicshader.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\viewer.cpp">
+		<ClCompile Include="..\src\mitsuba\mitsuba.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\vpl.cpp">
+		<ClCompile Include="..\src\mitsuba\mtsutil.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\wgldevice.cpp">
+		<ClCompile Include="..\src\mitsuba\mtssrv.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\wglrenderer.cpp">
+		<ClCompile Include="..\src\libcore\platform_win32.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\wglsession.cpp">
+		<ClCompile Include="..\src\libcore\plugin.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\x11device.cpp">
+		<ClCompile Include="..\src\libcore\sshstream.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libhw\x11session.cpp">
+		<ClCompile Include="..\src\libcore\vmf.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libpython\core.cpp">
+		<ClCompile Include="..\src\libcore\chisquare.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\libpython\render.cpp">
+		<ClCompile Include="..\src\libcore\lock.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\bsdf.cpp">
+		<ClCompile Include="..\src\libcore\cstream.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\camera.cpp">
+		<ClCompile Include="..\src\libcore\warp.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\common.cpp">
+		<ClCompile Include="..\src\libcore\shvector.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\film.cpp">
+		<ClCompile Include="..\src\libcore\triangle.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\gatherproc.cpp">
+		<ClCompile Include="..\src\libcore\ssemath.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\imageblock.cpp">
+		<ClCompile Include="..\src\libcore\statistics.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\imageproc.cpp">
+		<ClCompile Include="..\src\libcore\rfilter.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\integrator.cpp">
+		<ClCompile Include="..\src\libcore\fmtconv.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\intersection.cpp">
+		<ClCompile Include="..\src\libcore\appender.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\irrcache.cpp">
+		<ClCompile Include="..\src\libcore\mstream.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\luminaire.cpp">
+		<ClCompile Include="..\src\libcore\transform.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\medium.cpp">
+		<ClCompile Include="..\src\libcore\timer.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\mipmap.cpp">
+		<ClCompile Include="..\src\libcore\zstream.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\mipmap3d.cpp">
+		<ClCompile Include="..\src\libcore\logger.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\noise.cpp">
+		<ClCompile Include="..\src\libcore\formatter.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\particleproc.cpp">
+		<ClCompile Include="..\src\libcore\bitmap.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\phase.cpp">
+		<ClCompile Include="..\src\libcore\thread.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\photon.cpp">
+		<ClCompile Include="..\src\libcore\spectrum.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\photonmap.cpp">
+		<ClCompile Include="..\src\libcore\serialization.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\preview.cpp">
+		<ClCompile Include="..\src\libcore\half.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\rectwu.cpp">
+		<ClCompile Include="..\src\libcore\util.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\renderjob.cpp">
+		<ClCompile Include="..\src\libcore\sched_remote.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\renderproc.cpp">
+		<ClCompile Include="..\src\libcore\sstream.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\renderqueue.cpp">
+		<ClCompile Include="..\src\libcore\stream.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\rfilter.cpp">
+		<ClCompile Include="..\src\libcore\fstream.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\sampler.cpp">
+		<ClCompile Include="..\src\libcore\aabb.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\scene.cpp">
+		<ClCompile Include="..\src\libcore\brent.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\scenehandler.cpp">
+		<ClCompile Include="..\src\libcore\properties.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\shader.cpp">
+		<ClCompile Include="..\src\libcore\random.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\shape.cpp">
+		<ClCompile Include="..\src\libcore\class.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\skdtree.cpp">
+		<ClCompile Include="..\src\libcore\quad.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\subsurface.cpp">
+		<ClCompile Include="..\src\libcore\mmap.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\testcase.cpp">
+		<ClCompile Include="..\src\libcore\getopt.c">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\texture.cpp">
+		<ClCompile Include="..\src\libcore\object.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\track.cpp">
+		<ClCompile Include="..\src\libcore\tls.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\trimesh.cpp">
+		<ClCompile Include="..\src\libcore\fresolver.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\util.cpp">
+		<ClCompile Include="..\src\libcore\qmc.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\volume.cpp">
+		<ClCompile Include="..\src\libcore\sched.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\librender\vpl.cpp">
+		<ClCompile Include="..\src\tests\test_spectrum.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\luminaires\area.cpp">
+		<ClCompile Include="..\src\tests\test_chisquare.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\luminaires\collimated.cpp">
+		<ClCompile Include="..\src\tests\test_quad.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\luminaires\constant.cpp">
+		<ClCompile Include="..\src\tests\test_la.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\luminaires\directional.cpp">
+		<ClCompile Include="..\src\tests\test_sh.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\luminaires\envmap.cpp">
+		<ClCompile Include="..\src\tests\test_random.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\luminaires\point.cpp">
+		<ClCompile Include="..\src\tests\test_kd.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\luminaires\sky.cpp">
+		<ClCompile Include="..\src\tests\test_dgeom.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\luminaires\spot.cpp">
+		<ClCompile Include="..\src\tests\test_rtrans.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\luminaires\sun.cpp">
+		<ClCompile Include="..\src\tests\test_samplers.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\luminaires\sunsky.cpp">
+		<ClCompile Include="..\src\medium\heterogeneous.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\medium\heterogeneous.cpp">
+		<ClCompile Include="..\src\medium\homogeneous.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\medium\homogeneous.cpp">
+		<ClCompile Include="..\src\emitters\spot.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mitsuba\mitsuba.cpp">
+		<ClCompile Include="..\src\emitters\envmap.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mitsuba\mtssrv.cpp">
+		<ClCompile Include="..\src\emitters\sunsky\skymodel.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mitsuba\mtsutil.cpp">
+		<ClCompile Include="..\src\emitters\area.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\aboutdlg.cpp">
+		<ClCompile Include="..\src\emitters\point.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\acknowledgmentdlg.cpp">
+		<ClCompile Include="..\src\emitters\directional.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\addserverdlg.cpp">
+		<ClCompile Include="..\src\emitters\sky.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\glwidget.cpp">
+		<ClCompile Include="..\src\emitters\sun.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\importdlg.cpp">
+		<ClCompile Include="..\src\emitters\collimated.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\loaddlg.cpp">
+		<ClCompile Include="..\src\emitters\sunsky.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\locateresourcedlg.cpp">
+		<ClCompile Include="..\src\emitters\constant.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\logwidget.cpp">
+		<ClCompile Include="..\src\subsurface\irrproc.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\main.cpp">
+		<ClCompile Include="..\src\subsurface\bluenoise.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\mainwindow.cpp">
+		<ClCompile Include="..\src\subsurface\irrtree.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\preview.cpp">
+		<ClCompile Include="..\src\subsurface\dipole.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\previewsettingsdlg.cpp">
+		<ClCompile Include="..\src\rfilters\box.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\previewsettingsdlg_cocoa.cpp">
+		<ClCompile Include="..\src\rfilters\mitchell.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\preview_proc.cpp">
+		<ClCompile Include="..\src\rfilters\lanczos.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\programsettingsdlg.cpp">
+		<ClCompile Include="..\src\rfilters\tent.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\rendersettingsdlg.cpp">
+		<ClCompile Include="..\src\rfilters\catmullrom.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\save.cpp">
+		<ClCompile Include="..\src\rfilters\gaussian.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\sceneimporter.cpp">
+		<ClCompile Include="..\src\volume\volcache.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\sceneinfodlg.cpp">
+		<ClCompile Include="..\src\volume\gridvolume.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\sceneloader.cpp">
+		<ClCompile Include="..\src\volume\hgridvolume.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\server.cpp">
+		<ClCompile Include="..\src\volume\constvolume.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\symlinks_auth.cpp">
+		<ClCompile Include="..\src\mtsgui\previewsettingsdlg_cocoa.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\symlinks_install.c">
+		<ClCompile Include="..\src\mtsgui\tabbar.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\tabbar.cpp">
+		<ClCompile Include="..\src\mtsgui\sceneimporter.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\updatedlg.cpp">
+		<ClCompile Include="..\src\mtsgui\upgrade.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\upgrade.cpp">
+		<ClCompile Include="..\src\mtsgui\main.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\mtsgui\xmltreemodel.cpp">
+		<ClCompile Include="..\src\mtsgui\programsettingsdlg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\phase\hg.cpp">
+		<ClCompile Include="..\src\mtsgui\symlinks_auth.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\phase\isotropic.cpp">
+		<ClCompile Include="..\src\mtsgui\save.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\phase\kkay.cpp">
+		<ClCompile Include="..\src\mtsgui\symlinks_install.c">
 			</ClCompile>
-		<ClCompile Include="..\.\src\phase\microflake.cpp">
+		<ClCompile Include="..\src\mtsgui\aboutdlg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\phase\mixturephase.cpp">
+		<ClCompile Include="..\src\mtsgui\previewsettingsdlg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\phase\rayleigh.cpp">
+		<ClCompile Include="..\src\mtsgui\acknowledgmentdlg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\rfilters\box.cpp">
+		<ClCompile Include="..\src\mtsgui\importdlg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\rfilters\catmullrom.cpp">
+		<ClCompile Include="..\src\mtsgui\simdtonemap.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\rfilters\gaussian.cpp">
+		<ClCompile Include="..\src\mtsgui\qtmain_win.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\rfilters\mitchell.cpp">
+		<ClCompile Include="..\src\mtsgui\logwidget.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\rfilters\wsinc.cpp">
+		<ClCompile Include="..\src\mtsgui\sceneinfodlg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\samplers\halton.cpp">
+		<ClCompile Include="..\src\mtsgui\sceneloader.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\samplers\hammersley.cpp">
+		<ClCompile Include="..\src\mtsgui\server.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\samplers\independent.cpp">
+		<ClCompile Include="..\src\mtsgui\preview.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\samplers\ldsampler.cpp">
+		<ClCompile Include="..\src\mtsgui\glwidget.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\samplers\stratified.cpp">
+		<ClCompile Include="..\src\mtsgui\mainwindow.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\shapes\animatedinstance.cpp">
+		<ClCompile Include="..\src\mtsgui\addserverdlg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\shapes\cylinder.cpp">
+		<ClCompile Include="..\src\mtsgui\xmltreemodel.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\shapes\hair.cpp">
+		<ClCompile Include="..\src\mtsgui\rendersettingsdlg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\shapes\instance.cpp">
+		<ClCompile Include="..\src\mtsgui\loaddlg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\shapes\obj.cpp">
+		<ClCompile Include="..\src\mtsgui\updatedlg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\shapes\ply\ply.cpp">
+		<ClCompile Include="..\src\mtsgui\locateresourcedlg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\shapes\ply\ply_parser.cpp">
+		<ClCompile Include="..\src\phase\kkay.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\shapes\serialized.cpp">
+		<ClCompile Include="..\src\phase\microflake.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\shapes\shapegroup.cpp">
+		<ClCompile Include="..\src\phase\mixturephase.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\shapes\sphere.cpp">
+		<ClCompile Include="..\src\phase\hg.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\subsurface\adipole.cpp">
+		<ClCompile Include="..\src\phase\rayleigh.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\subsurface\dipole.cpp">
+		<ClCompile Include="..\src\phase\isotropic.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\subsurface\irrproc.cpp">
+		<ClCompile Include="..\src\utils\tonemap.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\subsurface\irrtree.cpp">
+		<ClCompile Include="..\src\utils\rdielprec.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\subsurface\marschner.cpp">
+		<ClCompile Include="..\src\utils\addimages.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\tests\test_chisquare.cpp">
+		<ClCompile Include="..\src\utils\ttest.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\tests\test_kd.cpp">
+		<ClCompile Include="..\src\utils\kdbench.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\tests\test_la.cpp">
+		<ClCompile Include="..\src\utils\uflakefit.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\tests\test_quad.cpp">
+		<ClCompile Include="..\src\utils\joinrgb.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\tests\test_samplers.cpp">
+		<ClCompile Include="..\src\utils\cylclip.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\tests\test_sh.cpp">
+		<ClCompile Include="..\src\films\mfilm.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\tests\test_spectrum.cpp">
+		<ClCompile Include="..\src\films\tiledhdrfilm.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\textures\bitmap.cpp">
+		<ClCompile Include="..\src\films\hdrfilm.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\textures\checkerboard.cpp">
+		<ClCompile Include="..\src\films\ldrfilm.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\textures\gridtexture.cpp">
+		<ClCompile Include="..\src\shapes\ply\ply_parser.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\textures\scale.cpp">
+		<ClCompile Include="..\src\shapes\serialized.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\textures\vertexcolors.cpp">
+		<ClCompile Include="..\src\shapes\obj.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\utils\addimages.cpp">
+		<ClCompile Include="..\src\shapes\shapegroup.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\utils\cylclip.cpp">
+		<ClCompile Include="..\src\shapes\instance.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\utils\joinrgb.cpp">
+		<ClCompile Include="..\src\shapes\rectangle.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\utils\kdbench.cpp">
+		<ClCompile Include="..\src\shapes\hair.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\utils\tonemap.cpp">
+		<ClCompile Include="..\src\shapes\ply.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\utils\ttest.cpp">
+		<ClCompile Include="..\src\shapes\animatedinstance.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\utils\uflakefit.cpp">
+		<ClCompile Include="..\src\shapes\cylinder.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\volume\constvolume.cpp">
+		<ClCompile Include="..\src\shapes\sphere.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\volume\gridvolume.cpp">
+		<ClCompile Include="..\src\shapes\disk.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\volume\hgridvolume.cpp">
+		<ClCompile Include="..\src\integrators\vpl\vpl.cpp">
 			</ClCompile>
-		<ClCompile Include="..\.\src\volume\volcache.cpp">
+		<ClCompile Include="..\src\integrators\misc\adaptive.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\misc\irrcache.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\misc\irrcache_proc.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\direct\direct.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\direct\ao.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\pssmlt\pssmlt.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\pssmlt\pssmlt_sampler.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\pssmlt\pssmlt_proc.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\photonmapper\ppm.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\photonmapper\photonmapper.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\photonmapper\bre.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\photonmapper\sppm.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\path\path.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\path\volpath_simple.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\path\volpath.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\mlt\mlt_proc.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\mlt\mlt.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\bdpt\bdpt_wr.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\bdpt\bdpt_proc.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\bdpt\bdpt.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\erpt\erpt.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\erpt\erpt_proc.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\ptracer\ptracer.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\integrators\ptracer\ptracer_proc.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\textures\curvature.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\textures\vertexcolors.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\textures\checkerboard.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\textures\bitmap.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\textures\scale.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\textures\gridtexture.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\textures\wireframe.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\edge.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\vertex.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\manifold.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\verification.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\rsampler.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\mut_bidir.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\mut_mchain.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\util.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\path.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\pathsampler.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\mut_lens.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\mut_caustic.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\common.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libbidir\mut_manifold.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libpython\core.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libpython\render.cpp">
 			</ClCompile>
 		</ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets"/>

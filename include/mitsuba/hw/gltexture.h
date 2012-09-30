@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__GLTEXTURE_H)
-#define __GLTEXTURE_H
+#pragma once
+#if !defined(__MITSUBA_HW_GLTEXTURE_H_)
+#define __MITSUBA_HW_GLTEXTURE_H_
 
 #include <mitsuba/hw/glrenderer.h>
 #include <mitsuba/hw/gputexture.h>
@@ -37,6 +38,13 @@ public:
 
 	/// Refresh (re-upload) the texture
 	void refresh();
+	
+	/**
+	 * \brief Refresh (re-upload) a subregion of the texture
+	 *
+	 * Note: this is only implemented for 2D textures
+	 */
+	void refresh(const Point2i &offset, const Vector2i &size);
 
 	/// Free the texture from GPU memory
 	void cleanup();
@@ -106,7 +114,7 @@ public:
 	void clear();
 
 	/// Assuming that this is a 2D RGB framebuffer, read a single pixel from the GPU
-	Spectrum getPixel(int x, int y) const;
+	Color3 getPixel(int x, int y) const;
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -119,15 +127,15 @@ protected:
 	/// Configure texture filtering
 	void configureTexture();
 
-	GLuint m_id;
-	GLuint m_glType;
-	GLuint m_format;
-	GLuint m_internalFormat;
-	GLuint m_dataFormat;
-	GLuint m_fboId, m_depthId;
+	uint32_t m_id;
+	uint32_t m_glType;
+	uint32_t m_format;
+	uint32_t m_internalFormat;
+	uint32_t m_dataFormat;
+	uint32_t m_fboId, m_depthId;
 	mutable bool m_needsUpdate;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __GLTEXTURE_H */
+#endif /* __MITSUBA_HW_GLTEXTURE_H_ */

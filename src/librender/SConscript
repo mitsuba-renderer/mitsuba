@@ -10,20 +10,18 @@ if renderEnv.has_key('XERCESLIB'):
 	renderEnv.Prepend(LIBS=renderEnv['XERCESLIB'])
 
 librender = renderEnv.SharedLibrary('mitsuba-render', [
-	'bsdf.cpp', 'camera.cpp', 'film.cpp', 'integrator.cpp',
-	'skdtree.cpp', 'luminaire.cpp', 'medium.cpp', 'renderjob.cpp', 
-	'imageproc.cpp', 'rectwu.cpp', 'renderproc.cpp', 
-	'imageblock.cpp', 'particleproc.cpp', 'renderqueue.cpp', 
-	'mipmap.cpp',  'scene.cpp',  'subsurface.cpp', 'texture.cpp',
-	'shape.cpp', 'trimesh.cpp', 'rfilter.cpp', 'sampler.cpp', 
-	'util.cpp', 'irrcache.cpp', 'testcase.cpp', 'preview.cpp',
-	'photonmap.cpp', 'gatherproc.cpp', 'mipmap3d.cpp', 'volume.cpp', 
+	'bsdf.cpp', 'film.cpp', 'integrator.cpp', 'emitter.cpp', 'sensor.cpp',
+	'skdtree.cpp', 'medium.cpp', 'renderjob.cpp', 'imageproc.cpp', 
+	'rectwu.cpp', 'renderproc.cpp', 'imageblock.cpp', 'particleproc.cpp',
+	'renderqueue.cpp', 'scene.cpp',  'subsurface.cpp', 'texture.cpp', 
+	'shape.cpp', 'trimesh.cpp', 'sampler.cpp', 'util.cpp', 'irrcache.cpp', 
+	'testcase.cpp', 'photonmap.cpp', 'gatherproc.cpp', 'volume.cpp', 
 	'vpl.cpp', 'shader.cpp', 'scenehandler.cpp', 'intersection.cpp', 
 	'track.cpp', 'common.cpp', 'phase.cpp', 'noise.cpp', 'photon.cpp'
 ])
 
 if sys.platform == "darwin":
-	renderEnv.AddPostAction(librender, 'install_name_tool -id @loader_path/../Frameworks/libmitsuba-render.dylib $TARGET')
+	renderEnv.AddPostAction(librender, 'install_name_tool -id @rpath/libmitsuba-render.dylib $TARGET')
 
 env.Append(LIBS=['mitsuba-render'])
 env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'librender')])

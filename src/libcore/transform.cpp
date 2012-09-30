@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -63,33 +63,32 @@ Transform Transform::scale(const Vector &v) {
 }
 
 Transform Transform::rotate(const Vector &axis, Float angle) {
+	Float sinTheta, cosTheta;
+
 	/* Make sure that the axis is normalized */
 	Vector naxis = normalize(axis);
-
-	Float rotAngle = degToRad(angle);
-	Float sinAngle = std::sin(rotAngle);
-	Float cosAngle = std::cos(rotAngle);
+	math::sincos(degToRad(angle), &sinTheta, &cosTheta);
+	
 	Matrix4x4 result;
+	result(0, 0) = naxis.x * naxis.x + (1.0f - naxis.x * naxis.x) * cosTheta;
+	result(0, 1) = naxis.x * naxis.y * (1.0f - cosTheta) - naxis.z * sinTheta;
+	result(0, 2) = naxis.x * naxis.z * (1.0f - cosTheta) + naxis.y * sinTheta;
+	result(0, 3) = 0;
 
-	result.m[0][0] = naxis.x * naxis.x + (1.f - naxis.x * naxis.x) * cosAngle;
-	result.m[0][1] = naxis.x * naxis.y * (1.f - cosAngle) - naxis.z * sinAngle;
-	result.m[0][2] = naxis.x * naxis.z * (1.f - cosAngle) + naxis.y * sinAngle;
-	result.m[0][3] = 0;
+	result(1, 0) = naxis.x * naxis.y * (1.0f - cosTheta) + naxis.z * sinTheta;
+	result(1, 1) = naxis.y * naxis.y + (1.0f - naxis.y * naxis.y) * cosTheta;
+	result(1, 2) = naxis.y * naxis.z * (1.0f - cosTheta) - naxis.x * sinTheta;
+	result(1, 3) = 0;
 
-	result.m[1][0] = naxis.x * naxis.y * (1.f - cosAngle) + naxis.z * sinAngle;
-	result.m[1][1] = naxis.y * naxis.y + (1.f - naxis.y * naxis.y) * cosAngle;
-	result.m[1][2] = naxis.y * naxis.z * (1.f - cosAngle) - naxis.x * sinAngle;
-	result.m[1][3] = 0;
+	result(2, 0) = naxis.x * naxis.z * (1.0f - cosTheta) - naxis.y * sinTheta;
+	result(2, 1) = naxis.y * naxis.z * (1.0f - cosTheta) + naxis.x * sinTheta;
+	result(2, 2) = naxis.z * naxis.z + (1.0f - naxis.z * naxis.z) * cosTheta;
+	result(2, 3) = 0;
 
-	result.m[2][0] = naxis.x * naxis.z * (1.f - cosAngle) - naxis.y * sinAngle;
-	result.m[2][1] = naxis.y * naxis.z * (1.f - cosAngle) + naxis.x * sinAngle;
-	result.m[2][2] = naxis.z * naxis.z + (1.f - naxis.z * naxis.z) * cosAngle;
-	result.m[2][3] = 0;
-
-	result.m[3][0] = 0;
-	result.m[3][1] = 0;
-	result.m[3][2] = 0;
-	result.m[3][3] = 1;
+	result(3, 0) = 0;
+	result(3, 1) = 0;
+	result(3, 2) = 0;
+	result(3, 3) = 1;
 
 	/* The matrix is orthonormal */
 	Matrix4x4 transp;
@@ -106,21 +105,21 @@ Transform Transform::perspective(Float fov, Float clipNear, Float clipFar) {
 	 *  
 	 *  Camera-space depths are not mapped linearly!
 	 */
-
 	Float recip = 1.0f / (clipFar - clipNear);
-
-	Matrix4x4 trafo(
-		1,   0,   0,   0,
-		0,   1,   0,   0,
-		0,   0,   clipFar * recip, -clipNear * clipFar * recip,
-		0,   0,   1,   0
-	);
 
 	/* Perform a scale so that the field of view is mapped
 	 * to the interval [-1, 1] */
 	Float cot = 1.0f / std::tan(degToRad(fov / 2.0f));
 
-	return Transform::scale(Vector(cot, cot, 1.0f)) * Transform(trafo);
+	Matrix4x4 trafo(
+		cot,  0,    0,   0,
+		0,    cot,  0,   0,
+		0,    0,    clipFar * recip, -clipNear * clipFar * recip,
+		0,    0,    1,   0
+	);
+
+
+	return Transform(trafo);
 }
 
 Transform Transform::glPerspective(Float fov, Float clipNear, Float clipFar) {
@@ -159,7 +158,7 @@ Transform Transform::orthographic(Float clipNear, Float clipFar) {
 
 Transform Transform::glOrthographic(Float clipNear, Float clipFar) {
 	Float a = -2.0f / (clipFar - clipNear),
-	      b = (clipFar + clipNear) / (clipFar - clipNear);
+	      b = -(clipFar + clipNear) / (clipFar - clipNear);
 
 	Matrix4x4 trafo(
 		1, 0, 0, 0,
@@ -170,23 +169,48 @@ Transform Transform::glOrthographic(Float clipNear, Float clipFar) {
 	return Transform(trafo);
 }
 
+Transform Transform::glOrthographic(Float clipLeft, Float clipRight,
+		Float clipBottom, Float clipTop, Float clipNear, Float clipFar) {
+	Float fx =  2.0f / (clipRight - clipLeft),
+	      fy =  2.0f / (clipTop - clipBottom),
+	      fz = -2.0f / (clipFar - clipNear),
+	      tx = -(clipRight + clipLeft) / (clipRight - clipLeft),
+	      ty = -(clipTop + clipBottom) / (clipTop - clipBottom),
+	      tz = -(clipFar + clipNear) / (clipFar - clipNear);
+
+	Matrix4x4 trafo(
+		fx,  0,  0,  tx,
+		 0, fy,  0,  ty,
+		 0,  0, fz,  tz,
+		 0,  0,  0,   1
+	);
+
+	return Transform(trafo);
+}
 
 Transform Transform::lookAt(const Point &p, const Point &t, const Vector &up) {
-	Matrix4x4 result;
-
 	Vector dir = normalize(t-p);
-	Vector left = normalize(cross(normalize(up), dir));
-
-	/* Generate a new, orthogonalized up vector */
+	Vector left = normalize(cross(up, dir));
 	Vector newUp = cross(dir, left);
 
-	/* Store as columns */
-	result.m[0][0] = left.x;  result.m[1][0] = left.y;  result.m[2][0] = left.z;  result.m[3][0] = 0;
-	result.m[0][1] = newUp.x; result.m[1][1] = newUp.y; result.m[2][1] = newUp.z; result.m[3][1] = 0;
-	result.m[0][2] = dir.x;   result.m[1][2] = dir.y;   result.m[2][2] = dir.z;   result.m[3][2] = 0;
-	result.m[0][3] = p.x;     result.m[1][3] = p.y;     result.m[2][3] = p.z;     result.m[3][3] = 1;
+	Matrix4x4 result, inverse;
+	result(0, 0)  = left.x;  result(1, 0)  = left.y;  result(2, 0)  = left.z;  result(3, 0)  = 0;
+	result(0, 1)  = newUp.x; result(1, 1)  = newUp.y; result(2, 1)  = newUp.z; result(3, 1)  = 0;
+	result(0, 2)  = dir.x;   result(1, 2)  = dir.y;   result(2, 2)  = dir.z;   result(3, 2)  = 0;
+	result(0, 3)  = p.x;     result(1, 3)  = p.y;     result(2, 3)  = p.z;     result(3, 3)  = 1;
 
-	return Transform(result);
+	/* The inverse is simple to compute for this matrix, so do it directly here */
+	Vector q(
+		result(0, 0) * p.x + result(1, 0) * p.y + result(2, 0) * p.z,
+		result(0, 1) * p.x + result(1, 1) * p.y + result(2, 1) * p.z,
+		result(0, 2) * p.x + result(1, 2) * p.y + result(2, 2) * p.z);
+
+	inverse(0, 0) = left.x; inverse(1, 0) = newUp.x; inverse(2, 0) = dir.x; inverse(3, 0) = 0;
+	inverse(0, 1) = left.y; inverse(1, 1) = newUp.y; inverse(2, 1) = dir.y; inverse(3, 1) = 0;
+	inverse(0, 2) = left.z; inverse(1, 2) = newUp.z; inverse(2, 2) = dir.z; inverse(3, 2) = 0;
+	inverse(0, 3) = -q.x;   inverse(1, 3) = -q.y;    inverse(2, 3) = -q.z;  inverse(3, 3) = 1;
+
+	return Transform(result, inverse);
 }
 
 Transform Transform::fromFrame(const Frame &frame) {
@@ -363,7 +387,7 @@ static void eig3_evals(const Matrix3x3 &A, double root[3]) {
 
 	// Convert the unique matrix entries to double precision.
 	double a00 = (double) A(0, 0), a01 = (double) A(0, 1), a02 = (double) A(0, 2),
-		a11 = (double) A(1, 1), a12 = (double) A(1, 2), a22 = (double) A(2, 2);
+	       a11 = (double) A(1, 1), a12 = (double) A(1, 2), a22 = (double) A(2, 2);
 
 	// The characteristic equation is x^3 - c2*x^2 + c1*x - c0 = 0.  The
 	// eigenvalues are the roots to this equation, all guaranteed to be

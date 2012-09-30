@@ -243,12 +243,14 @@ def generate(env):
 	Builder = SCons.Builder.Builder
 	splitext = SCons.Util.splitext
 
-	env['QTDIR']  = _detect(env)
+	env['QTDIR']  = env.GetBuildPath(_detect(env))
+
 	# TODO: 'Replace' should be 'SetDefault'
 #	env.SetDefault(
 	env.Replace(
 		QTDIR  = _detect(env),
 		QT4_BINPATH = os.path.join('$QTDIR', 'bin'),
+		QT4_LIBPATH = os.path.join('$QTDIR', 'lib'),
 		# TODO: This is not reliable to QTDIR value changes but needed in order to support '-qt4' variants
 		QT4_MOC = locateQt4Command(env,'moc', env['QTDIR']),
 		QT4_UIC = locateQt4Command(env,'uic', env['QTDIR']),
@@ -281,14 +283,14 @@ def generate(env):
 		QT4_MOCINCFLAGS = '$( ${_concat(QT4_MOCINCPREFIX, QT4_MOCCPPPATH, INCSUFFIX, __env__, RDirs)} $)',
 
 		# Commands for the qt support ...
-		QT4_UICCOM = '$QT4_UIC $QT4_UICFLAGS -o $TARGET $SOURCE',
-		QT4_MOCFROMHCOM = '$QT4_MOC $QT4_MOCFROMHFLAGS $QT4_MOCINCFLAGS -o $TARGET $SOURCE',
+		QT4_UICCOM = '"$QT4_UIC" $QT4_UICFLAGS -o $TARGET $SOURCE',
+		QT4_MOCFROMHCOM = '"$QT4_MOC" $QT4_MOCFROMHFLAGS $QT4_MOCINCFLAGS -o $TARGET $SOURCE',
 		QT4_MOCFROMCXXCOM = [
 			'$QT4_MOC $QT4_MOCFROMCXXFLAGS $QT4_MOCINCFLAGS -o $TARGET $SOURCE',
 			Action(checkMocIncluded,None)],
-		QT4_LUPDATECOM = '$QT4_LUPDATE $SOURCE -ts $TARGET',
-		QT4_LRELEASECOM = '$QT4_LRELEASE $SOURCE',
-		QT4_RCCCOM = '$QT4_RCC $QT4_QRCFLAGS $SOURCE -o $TARGET',
+		QT4_LUPDATECOM = '"$QT4_LUPDATE" $SOURCE -ts $TARGET',
+		QT4_LRELEASECOM = '"$QT4_LRELEASE" $SOURCE',
+		QT4_RCCCOM = '"$QT4_RCC" $QT4_QRCFLAGS $SOURCE -o $TARGET',
 		)
 
 	# Translation builder
@@ -459,11 +461,11 @@ def enable_modules(self, modules, debug=False, crosscompiling=False) :
 			self.AppendUnique(CPPPATH=[os.path.join("$QTDIR","include","qt4","QtAssistant")])
 			pcmodules.remove("QtAssistant")
 			pcmodules.append("QtAssistantClient")
-		if sys.platform == "linux2":
+		if sys.platform == 'linux2':
 			self.ParseConfig('pkg-config %s --libs --cflags'% ' '.join(pcmodules))
-		else:
+		elif sys.platform == 'darwin':
 			for module in pcmodules:
-				self.AppendUnique(CPPPATH="/Library/Frameworks/%s.framework/Versions/4/Headers" % module)
+				#self.AppendUnique(CPPPATH="$QTDIR/frameworks/%s.framework/Versions/4/Headers" % module)
 				self.Append(LINKFLAGS=['-framework', module])
 		self["QT4_MOCCPPPATH"] = self["CPPPATH"]
 		return
@@ -493,37 +495,6 @@ def enable_modules(self, modules, debug=False, crosscompiling=False) :
 			self["QT4_MOCCPPPATH"] = self["CPPPATH"]
 		self.AppendUnique(LIBPATH=[os.path.join('$QTDIR','lib')])
 		return
-	"""
-	if sys.platform=="darwin" :
-		# TODO: Test debug version on Mac
-		self.AppendUnique(LIBPATH=[os.path.join('$QTDIR','lib')])
-		self.AppendUnique(LINKFLAGS="-F$QTDIR/lib")
-		self.AppendUnique(LINKFLAGS="-L$QTDIR/lib") #TODO clean!
-		if debug : debugSuffix = 'd'
-		for module in modules :
-#			self.AppendUnique(CPPPATH=[os.path.join("$QTDIR","include")])
-#			self.AppendUnique(CPPPATH=[os.path.join("$QTDIR","include",module)])
-# port qt4-mac:
-			self.AppendUnique(CPPPATH=[os.path.join("$QTDIR","include", "qt4")])
-			self.AppendUnique(CPPPATH=[os.path.join("$QTDIR","include", "qt4", module)])
-			if module in staticModules :
-				self.AppendUnique(LIBS=[module+debugSuffix]) # TODO: Add the debug suffix
-				self.AppendUnique(LIBPATH=[os.path.join("$QTDIR","lib")])
-			else :
-#				self.Append(LINKFLAGS=['-framework', module])
-# port qt4-mac:
-				self.Append(LIBS=module)
-		if 'QtOpenGL' in modules:
-			self.AppendUnique(LINKFLAGS="-F/System/Library/Frameworks")
-			self.Append(LINKFLAGS=['-framework', 'AGL']) #TODO ughly kludge to avoid quotes
-			self.Append(LINKFLAGS=['-framework', 'OpenGL'])
-		self["QT4_MOCCPPPATH"] = self["CPPPATH"]
-		return
-# This should work for mac but doesn't
-#	env.AppendUnique(FRAMEWORKPATH=[os.path.join(env['QTDIR'],'lib')])
-#	env.AppendUnique(FRAMEWORKS=['QtCore','QtGui','QtOpenGL', 'AGL'])
-	"""
-
 
 def exists(env):
 	return _detect(env)

@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -22,6 +22,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{homogeneous}{Homogeneous participating medium}
+ * \order{1}
  * \parameters{
  *     \parameter{material}{\String}{
  *         Name of a material preset, see 
@@ -39,9 +40,9 @@ MTS_NAMESPACE_BEGIN
  *         These parameters are mutually exclusive with \code{sigmaA} and \code{sigmaS}
  *         \default{configured based on \code{material}}
  *     }
- *     \parameter{\footnotesize{densityMultiplier}}{\Float}{
- *         Optional multiplier that will be applied to the \code{sigma*} parameters.
- *         Provided for convenience when accomodating data based on different units,
+ *     \parameter{\footnotesize{scale}}{\Float}{
+ *         Optional scale factor that will be applied to the \code{sigma*} parameters.
+ *         It is provided for convenience when accomodating data based on different units,
  *         or to simply tweak the density of the medium. \default{1}
  *     }
  *     \parameter{\Unnamed}{\Phase}{
@@ -66,10 +67,15 @@ MTS_NAMESPACE_BEGIN
  * All scattering parameters (named \code{sigma*}) should
  * be provided in inverse scene units. For instance, when a world-space 
  * distance of 1 unit corresponds to a meter, the scattering coefficents should
- * have units of inverse meters. For convenience, the \code{densityMultiplier}
+ * have units of inverse meters. For convenience, the \code{scale}
  * parameter can be used to correct the units. For instance, when the scene is
  * in meters and the coefficients are in inverse millimeters, set 
- * \code{densityMultiplier} to \code{1000}.
+ * \code{scale} to \code{1000}.
+ *
+ * \renderings{
+ *    \rendering{A squishy ball rendered with subsurface scattering and
+ *    a dielectric BSDF (courtesy of Chanxi Zheng)}{medium_homogeneous_squishy.jpg}
+ * }
  *
  * \begin{xml}[caption=Declaration of a forward scattering medium with high albedo]
  * <medium id="myMedium" type="homogeneous">
@@ -111,16 +117,14 @@ MTS_NAMESPACE_BEGIN
  *          This table lists all supported medium material presets. The
  *          values are from Jensen et al. \cite{Jensen2001Practical} using
  *          units of $\frac{1}{mm}$, so remember to set
- *          \code{densityMultiplier} appropriately when your scene is not
+ *          \code{scale} appropriately when your scene is not
  *          in units of millimeters.
  *          These material names can be used with the plugins
  *          \pluginref{homogeneous},\
- *          \pluginref{dipole},\
- *          \pluginref{hk}, and
- *          \pluginref{sssbrdf}.
+ *          \pluginref{dipole}, and \
+ *          \pluginref{hk}
  *     }
  * \end{table}
-
  */
 class HomogeneousMedium : public Medium {
 public:
@@ -136,7 +140,7 @@ public:
 	};
 
 	HomogeneousMedium(const Properties &props) 
-		: Medium(props), m_maxExpDist(NULL) {
+			: Medium(props), m_samplingDensity(0.0f), m_maxExpDist(NULL) {
 		std::string strategy = props.getString("strategy", "balance");
 
 		/**
@@ -164,7 +168,7 @@ public:
 					(Float) 0.5f);
 			}
 		}
-
+		
 		if (strategy == "balance") {
 			m_strategy = EBalance;
 		} else if (strategy == "single") {
@@ -211,7 +215,7 @@ public:
 	HomogeneousMedium(Stream *stream, InstanceManager *manager)
 		: Medium(stream, manager), m_maxExpDist(NULL) {
 		m_strategy = (ESamplingStrategy) stream->readInt();
-		m_samplingDensity= stream->readFloat();
+		m_samplingDensity = stream->readFloat();
 		m_mediumSamplingWeight = stream->readFloat();
 
 		if (m_strategy == EMaximum) {
@@ -232,7 +236,7 @@ public:
 	void configure() {
 		Medium::configure();
 		m_albedo = 0;
-		for (size_t i=0; i<SPECTRUM_SAMPLES; ++i) {
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
 			if (m_sigmaT[i] != 0)
 				m_albedo = std::max(m_albedo, m_sigmaS[i]/m_sigmaT[i]);
 		}
@@ -245,12 +249,12 @@ public:
 		stream->writeFloat(m_mediumSamplingWeight);
 	}
 
-	Spectrum getTransmittance(const Ray &ray, Sampler *) const {
+	Spectrum evalTransmittance(const Ray &ray, Sampler *) const {
 		Float negLength = ray.mint - ray.maxt;
 		Spectrum transmittance;
-		for (size_t i=0; i<SPECTRUM_SAMPLES; ++i)
+		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
 			transmittance[i] = m_sigmaT[i] != 0 
-				? std::fastexp(m_sigmaT[i] * negLength) : (Float) 1.0f;
+				? math::fastexp(m_sigmaT[i] * negLength) : (Float) 1.0f;
 		return transmittance;
 	}
 
@@ -267,7 +271,7 @@ public:
 						* SPECTRUM_SAMPLES), SPECTRUM_SAMPLES-1);
 					samplingDensity = m_sigmaT[channel];
 				}
-				sampledDistance = -std::fastlog(1-rand) / samplingDensity;
+				sampledDistance = -math::fastlog(1-rand) / samplingDensity;
 			} else {
 				sampledDistance = m_maxExpDist->sample(1-rand, mRec.pdfSuccess);
 			}
@@ -275,7 +279,6 @@ public:
 			/* Don't generate a medium interaction */
 			sampledDistance = std::numeric_limits<Float>::infinity();
 		}
-
 		Float distSurf = ray.maxt - ray.mint;
 		bool success = true;
 
@@ -284,7 +287,13 @@ public:
 			mRec.p = ray(mRec.t);
 			mRec.sigmaA = m_sigmaA;
 			mRec.sigmaS = m_sigmaS;
-			mRec.albedo = m_mediumSamplingWeight;
+			mRec.time = ray.time;
+			mRec.medium = this;
+			
+			/* Fail if there is no forward progress 
+			   (e.g. due to roundoff errors) */
+			if (mRec.p == ray.o)
+				success = false;
 		} else {
 			sampledDistance = distSurf;
 			success = false;
@@ -299,7 +308,7 @@ public:
 				mRec.pdfFailure = 0;
 				mRec.pdfSuccess = 0;
 				for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-					Float tmp = std::fastexp(-m_sigmaT[i] * sampledDistance);
+					Float tmp = math::fastexp(-m_sigmaT[i] * sampledDistance);
 					mRec.pdfFailure += tmp;
 					mRec.pdfSuccess += m_sigmaT[i] * tmp;
 				}
@@ -309,7 +318,7 @@ public:
 
 			case ESingle:
 			case EManual:
-				mRec.pdfFailure = std::fastexp(-samplingDensity * sampledDistance);
+				mRec.pdfFailure = math::fastexp(-samplingDensity * sampledDistance);
 				mRec.pdfSuccess = samplingDensity * mRec.pdfFailure;
 				break;
 
@@ -320,16 +329,19 @@ public:
 		mRec.transmittance = (m_sigmaT * (-sampledDistance)).exp();
 		mRec.pdfSuccessRev = mRec.pdfSuccess = mRec.pdfSuccess * m_mediumSamplingWeight;
 		mRec.pdfFailure = m_mediumSamplingWeight * mRec.pdfFailure + (1-m_mediumSamplingWeight);
+		mRec.medium = this;
+		if (mRec.transmittance.max() < 1e-20)
+			mRec.transmittance = Spectrum(0.0f);
 
 		return success;
 	}
 
-	void pdfDistance(const Ray &ray, MediumSamplingRecord &mRec) const {
+	void eval(const Ray &ray, MediumSamplingRecord &mRec) const {
 		Float distance = ray.maxt - ray.mint;
 		switch (m_strategy) {
 			case EManual: 
 			case ESingle: {
-					Float temp = std::fastexp(-m_samplingDensity * distance);
+					Float temp = math::fastexp(-m_samplingDensity * distance);
 					mRec.pdfSuccess = m_samplingDensity * temp;
 					mRec.pdfFailure = temp;
 				}
@@ -339,7 +351,7 @@ public:
 					mRec.pdfSuccess = 0;
 					mRec.pdfFailure = 0;
 					for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-						Float temp = std::fastexp(-m_sigmaT[i] * distance);
+						Float temp = math::fastexp(-m_sigmaT[i] * distance);
 						mRec.pdfSuccess += m_sigmaT[i] * temp;
 						mRec.pdfFailure += temp;
 					}
@@ -356,9 +368,16 @@ public:
 			default:
 				Log(EError, "Unknown sampling strategy!");
 		}
+
 		mRec.transmittance = (m_sigmaT * (-distance)).exp();
 		mRec.pdfSuccess = mRec.pdfSuccessRev = mRec.pdfSuccess * m_mediumSamplingWeight;
 		mRec.pdfFailure = mRec.pdfFailure * m_mediumSamplingWeight + (1-m_mediumSamplingWeight);
+		mRec.sigmaA = m_sigmaA;
+		mRec.sigmaS = m_sigmaS;
+		mRec.time = ray.time;
+		mRec.medium = this;
+		if (mRec.transmittance.max() < 1e-20)
+			mRec.transmittance = Spectrum(0.0f);
 	}
 
 	bool isHomogeneous() const {
@@ -374,6 +393,7 @@ public:
 			<< "  mediumSamplingWeight = " << m_mediumSamplingWeight << "," << endl
 			<< "  samplingDensity = " << m_samplingDensity << "," << endl
 			<< "  strategy = ";
+
 		switch (m_strategy) {
 			case ESingle: oss << "single," << endl; break;
 			case EManual: oss << "manual," << endl; break;

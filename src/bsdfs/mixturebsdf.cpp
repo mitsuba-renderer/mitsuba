@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -23,15 +23,18 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{mixturebsdf}{Mixture material}
- *
+ * \order{15}
  * \parameters{
  *     \parameter{weights}{\String}{A comma-separated list of BSDF weights}
  *     \parameter{\Unnamed}{\BSDF}{Multiple BSDF instances that should be
  *     mixed according to the specified weights}
  * }
  * \renderings{
- *     \rendering{An admittedly not particularly realistic linear combination of
- *     diffuse and specular BSDFs (\lstref{mixture-example})}{bsdf_mixture_test}
+ *     \medrendering{Smooth glass}{bsdf_mixturebsdf_smooth}
+ *     \medrendering{Rough glass}{bsdf_mixturebsdf_rough}
+ *     \medrendering{An mixture of 70% smooth glass and 30% rough glass
+ *     results in a more realistic smooth material with imperfections
+ *     (\lstref{mixture-example})}{bsdf_mixturebsdf_result}
  * }
  *
  * This plugin implements a ``mixture'' material, which represents  
@@ -40,22 +43,20 @@ MTS_NAMESPACE_BEGIN
  * be mixed with others in this manner to synthesize new models. There
  * is no limit on how many models can be mixed, but their combination
  * weights must be non-negative and sum to a value of one or less to ensure
- * energy balance.
+ * energy balance. When they sum to less than one, the material will
+ * absorb a proportional amount of the incident illlumination.
  *
  * \vspace{4mm}
  * \begin{xml}[caption={A material definition for a mixture of 70% smooth
- *     chromium, 20% of a greenish rough diffuse material (and 10% absorption)},
+ *     and 30% rough glass},
  *     label=lst:mixture-example]
  * <bsdf type="mixturebsdf">
- *     <string name="weights" value="0.7, 0.2"/>
+ *     <string name="weights" value="0.7, 0.3"/>
  *
- *     <bsdf type="conductor">
- *         <string name="material" value="Cr"/>
- *     </bsdf>
+ *     <bsdf type="dielectric"/>
  *
- *     <bsdf type="roughdiffuse">
- *         <rgb name="reflectance" value=".7 1 .7"/>
- *         <float name="alpha" value="0.4"/>
+ *     <bsdf type="roughroughdielectric">
+ *         <float name="alpha" value="0.3"/>
  *     </bsdf>
  * </bsdf>
  * \end{xml}
@@ -143,7 +144,7 @@ public:
 		for (size_t i=0; i<m_bsdfs.size(); ++i)
 			componentCount += m_bsdfs[i]->getComponentCount();
 
-		m_pdf = DiscretePDF(m_bsdfs.size());
+		m_pdf = DiscreteDistribution(m_bsdfs.size());
 		m_components.reserve(componentCount);
 		m_components.clear();
 		m_indices.reserve(componentCount);
@@ -164,13 +165,13 @@ public:
 
 			offset += bsdf->getComponentCount();
 			m_usesRayDifferentials |= bsdf->usesRayDifferentials();
-			m_pdf[i] = m_weights[i];
+			m_pdf.append(m_weights[i]);
 		}
-		m_pdf.build();
+		m_pdf.normalize();
 		BSDF::configure();
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		Spectrum result(0.0f);
 
 		if (bRec.component == -1) {
@@ -179,7 +180,7 @@ public:
 		} else {
 			/* Pick out an individual component */
 			int idx = m_indices[bRec.component].first;
-			BSDFQueryRecord bRec2(bRec);
+			BSDFSamplingRecord bRec2(bRec);
 			bRec2.component = m_indices[bRec.component].second;
 			return m_bsdfs[idx]->eval(bRec2, measure) * m_weights[idx];
 		}
@@ -187,7 +188,7 @@ public:
 		return result;
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		Float result = 0.0f;
 
 		if (bRec.component == -1) {
@@ -196,7 +197,7 @@ public:
 		} else {
 			/* Pick out an individual component */
 			int idx = m_indices[bRec.component].first;
-			BSDFQueryRecord bRec2(bRec);
+			BSDFSamplingRecord bRec2(bRec);
 			bRec2.component = m_indices[bRec.component].second;
 			return m_bsdfs[idx]->pdf(bRec2, measure);
 		}
@@ -204,7 +205,7 @@ public:
 		return result;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &_sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &_sample) const {
 		Point2 sample(_sample);
 		if (bRec.component == -1) {
 			/* Choose a component based on the normalized weights */
@@ -240,7 +241,7 @@ public:
 		}
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &_sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &_sample) const {
 		Point2 sample(_sample);
 		if (bRec.component == -1) {
 			/* Choose a component based on the normalized weights */
@@ -288,7 +289,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "MixtureBSDF[" << endl
-			<< "  name = \"" << getName() << "\"," << endl
+   			<< "  id = \"" << getID() << "\"," << endl
 			<< "  weights = {";
 		for (size_t i=0; i<m_bsdfs.size(); ++i) {
 			oss << " " << m_weights[i];
@@ -312,7 +313,7 @@ private:
 	std::vector<std::pair<int, int> > m_indices;
 	std::vector<int> m_offsets;
 	std::vector<BSDF *> m_bsdfs;
-	DiscretePDF m_pdf;
+	DiscreteDistribution m_pdf;
 };
 
 // ================ Hardware shader implementation ================ 
@@ -404,7 +405,7 @@ public:
 			if (!m_bsdfShader[i])
 				continue;
 			parameterIDs.push_back(
-				program->getParameterID(formatString("%s_weight_%i", evalName.c_str(), ctr++)));
+				program->getParameterID(formatString("%s_weight_%i", evalName.c_str(), ctr++), false));
 		}
 	}
 

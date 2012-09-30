@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,7 +20,10 @@
 #define __GLWIDGET_H
 
 #include "common.h"
-#include <QGLWidget>
+#if MTS_SSE
+#include "simdtonemap.h"
+#endif
+#include <QtOpenGL/QGLWidget>
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/render/vpl.h>
 #include <mitsuba/hw/renderer.h>
@@ -37,6 +40,12 @@ class PreviewThread;
 class GLWidget : public QGLWidget {
 	Q_OBJECT
 public:
+	enum ECropType {
+		ENone = 0,
+		ECrop,
+		ECropAndMagnify
+	};
+
 	GLWidget(QWidget *parent = 0);
 	virtual ~GLWidget();
 	QSize sizeHint() const;
@@ -59,8 +68,19 @@ public:
 	void setScrollBars(QScrollBar *hScroll, QScrollBar *vScroll);
 	inline void ignoreResizeEvents(bool value) { m_ignoreResizeEvents = value; }
 	void updateScrollBars();
+	void keyPressEvent(QKeyEvent *event);
 	inline const QString &getErrorString() const { return m_errorString; }
 	inline bool isUsingSoftwareFallback() const { return m_softwareFallback; }
+	inline bool hasSelection() const { return m_aabb.isValid(); }
+	inline bool hasFastSoftwareFallback() const {
+#if MTS_SSE
+		return true;
+#else
+		return false;
+#endif
+    }
+
+	void startCrop(ECropType type);
 
 signals:
 	void beginRendering();
@@ -68,6 +88,8 @@ signals:
 	void quit();
 	void statusMessage(const QString &status);
 	void loadFileRequest(const QString &fileName);
+	void crop(int type, int x, int y, int width, int height);
+	void selectionChanged();
 
 public slots:
 	void timerImpulse();
@@ -94,7 +116,6 @@ protected:
 	void mouseMoveEvent(QMouseEvent *event);
 	void mouseReleaseEvent(QMouseEvent *event);
 	void mouseDoubleClickEvent(QMouseEvent *event);
-	void keyPressEvent(QKeyEvent *event);
 	void keyReleaseEvent(QKeyEvent *event);
 	void focusOutEvent(QFocusEvent *event);
 	void resizeEvent(QResizeEvent *event);
@@ -106,8 +127,52 @@ protected:
 	void reveal(const AABB &aabb);
 	Float autoFocus() const;
 
+	inline ProjectiveCamera *getProjectiveCamera() {
+		Sensor *sensor = m_context->scene->getSensor();
+		return (sensor->getType() & Sensor::EProjectiveCamera) ?
+			static_cast<ProjectiveCamera *>(sensor) : NULL;
+	}
+
+	inline const ProjectiveCamera *getProjectiveCamera() const {
+		const Sensor *sensor = m_context->scene->getSensor();
+		return (sensor->getType() & Sensor::EProjectiveCamera) ?
+			static_cast<const ProjectiveCamera *>(sensor) : NULL;
+	}
+
+	inline PerspectiveCamera *getPerspectiveCamera() {
+		Sensor *sensor = m_context->scene->getSensor();
+		return (sensor->getType() & Sensor::EPerspectiveCamera) ?
+			static_cast<PerspectiveCamera *>(sensor) : NULL;
+	}
+
+	inline const PerspectiveCamera *getPerspectiveCamera() const {
+		const Sensor *sensor = m_context->scene->getSensor();
+		return (sensor->getType() & Sensor::EPerspectiveCamera) ?
+			static_cast<const PerspectiveCamera *>(sensor) : NULL;
+	}
+
+	inline Transform getInverseViewTransform() const {
+		const ProjectiveCamera *camera = getProjectiveCamera();
+		return camera->getInverseViewTransform(
+			camera->getShutterOpen() + 0.5f * camera->getShutterOpenTime()
+		);
+	}
+
+	inline bool isRightHanded() {
+		return getInverseViewTransform().det3x3() > 0;
+	}
+
+	inline void setInverseViewTransform(const Transform &trafo) {
+		/* Preserve the handedness of the current camera transformation */
+		if (getInverseViewTransform().det3x3() * trafo.det3x3() > 0)		
+			getProjectiveCamera()->setInverseViewTransform(trafo);
+		else 
+			getProjectiveCamera()->setInverseViewTransform(trafo *
+				Transform::scale(Vector(-1,1,1)));
+	}
+
+#if defined(__WINDOWS__)
 	/* Masquerade QGLWidget as a GL device for libhw */
-#if defined(WIN32)
 	class QtDevice : public WGLDevice {
 	public:
 		QtDevice(QGLWidget *widget) : WGLDevice(NULL), m_widget(widget) { }
@@ -129,11 +194,20 @@ protected:
 		QGLWidget *m_widget;
 	};
 private:
+	static void setSourceFromResource(GPUProgram *program,
+		GPUProgram::EType type, const QString &resourceName);
+	
+	GPUProgram* createGPUProgram(const std::string &name,
+		const QString &vertexResource, const QString &fragmentResource);
+
 	ref<Renderer> m_renderer;
 	ref<PreviewThread> m_preview;
 	ref<GPUTexture> m_logoTexture, m_framebuffer, m_luminanceBuffer[2];
 	ref<GPUProgram> m_gammaTonemap, m_reinhardTonemap;
 	ref<GPUProgram> m_downsamplingProgram, m_luminanceProgram;
+#if MTS_SSE
+	ref<TonemapCPU> m_cpuTonemap;
+#endif
 	ref<QtDevice> m_device;
 	ref<Font> m_font;
 	ref<Bitmap> m_fallbackBitmap;
@@ -146,15 +220,18 @@ private:
 	QTimer *m_movementTimer, *m_redrawTimer;
 	QScrollBar *m_hScroll, *m_vScroll;
 	ref<Timer> m_clock, m_wheelTimer, m_animationTimer;
+	ref<Timer> m_statusTimer;
+	std::string m_statusMessage;
 	bool m_framebufferChanged, m_mouseDrag;
 	bool m_leftKeyDown, m_rightKeyDown;
 	bool m_upKeyDown, m_downKeyDown, m_animation;
 	bool m_invertMouse, m_didSetCursor;
 	bool m_ignoreScrollEvents, m_ignoreResizeEvents;
-	bool m_softwareFallback;
+	bool m_softwareFallback, m_cropping;
+	Point2i m_cropStart, m_cropEnd;
 	ENavigationMode m_navigationMode;
+	ECropType m_cropType;
 	QString m_errorString;
-	Transform m_storedViewTransform;
 	AABB m_aabb;
 };
 

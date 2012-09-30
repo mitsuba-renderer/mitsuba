@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -23,30 +23,43 @@ MTS_NAMESPACE_BEGIN
 GPUTexture::GPUTexture(const std::string &name, Bitmap *bitmap)
  : m_name(name) {
 	m_filterType = EMipMapLinear;
-	m_wrapType = EClampToEdge;
+	m_wrapTypeU = m_wrapTypeV = EClampToEdge;
 	m_mipmapped = true;
 	m_maxAnisotropy = 0.0f;
 	m_fbType = ENone;
 	m_samples = 1;
 	m_depthMode = ECompare;
+	m_borderColor = Spectrum(0.0f);
+	m_size = Point3i(0);
 
 	if (bitmap != NULL) {
 		setBitmap(0, bitmap);
 	} else {
 		m_type = ETexture2D;
-		m_format = ER8G8B8;
+		m_pixelFormat = ERGB;
+		m_componentFormat = EUInt8;
 	}
 }
 
 GPUTexture::~GPUTexture() {
-	for (unsigned int i=0; i<m_bitmaps.size(); i++) {
+	for (size_t i=0; i<m_bitmaps.size(); i++) {
 		if (m_bitmaps[i] != NULL)
 			m_bitmaps[i]->decRef();
 	}
 }
 
-void GPUTexture::disassociate() {
-	m_textureUnits.cleanup();
+void GPUTexture::initAndRelease() {
+	init();
+	release();
+}
+
+void GPUTexture::release() {
+	for (size_t i=0; i<m_bitmaps.size(); i++) {
+		if (m_bitmaps[i] == NULL)
+			continue;
+		m_bitmaps[i]->decRef();
+		m_bitmaps[i] = NULL;
+	}
 }
 
 void GPUTexture::setBitmap(unsigned int slot, Bitmap *bitmap) {
@@ -63,21 +76,38 @@ void GPUTexture::setBitmap(unsigned int slot, Bitmap *bitmap) {
 		else
 			m_type = ETexture2D;
 
-		switch (bitmap->getBitsPerPixel()) {
-			case 8: m_format = EL8; break;
-			case 16: m_format = EL8A8; break;
-			case 24: m_format = ER8G8B8; break;
-			case 32: m_format = ER8G8B8A8; break;
-			case 96: m_format = EFloat32RGB; break;
-			case 128: m_format = EFloat32RGBA; break;
+		switch (bitmap->getPixelFormat()) {
+			case Bitmap::ELuminance: m_pixelFormat = ELuminance; break;
+			case Bitmap::ELuminanceAlpha: m_pixelFormat = ELuminanceAlpha; break;
+			case Bitmap::ERGB: m_pixelFormat = ERGB; break;
+			case Bitmap::ERGBA: m_pixelFormat = ERGBA; break;
+#if SPECTRUM_SAMPLES == 3
+			case Bitmap::ESpectrum: m_pixelFormat = ERGB; break;
+			case Bitmap::ESpectrumAlpha: m_pixelFormat = ERGBA; break;
+#endif
 			default:
-				Log(EError, "Invalid bpp for texture creation!");
+				Log(EError, "Unsupported pixel format %i!",
+					(int) bitmap->getPixelFormat());
+		}
+
+		switch (bitmap->getComponentFormat()) {
+			case Bitmap::EUInt8: m_componentFormat = EUInt8; break;
+			case Bitmap::EUInt16: m_componentFormat = EUInt16; break;
+			case Bitmap::EUInt32: m_componentFormat = EUInt32; break;
+			case Bitmap::EFloat16: m_componentFormat = EFloat16; break;
+			case Bitmap::EFloat32: m_componentFormat = EFloat32; break;
+			case Bitmap::EFloat64: m_componentFormat = EFloat64; break;
+			default:
+				Log(EError, "Unsupported component format %i!",
+					(int) bitmap->getComponentFormat());
 		}
 	}
 
 	if (m_bitmaps[slot] != NULL)
 		m_bitmaps[slot]->decRef();
+
 	m_bitmaps[slot] = bitmap;
+
 	if (bitmap != NULL)
 		bitmap->incRef();
 }
@@ -90,9 +120,9 @@ void GPUTexture::setFrameBufferType(EFrameBufferType type) {
 		case EColorAndDepthBuffer:
 			break;
 		case EDepthBuffer:	
-			m_format = EDepth;
+			m_pixelFormat = EDepth;
 			m_mipmapped = false;
-			m_wrapType = EClamp;
+			m_wrapTypeU = m_wrapTypeV = EClamp;
 			m_filterType = ELinear;
 			break;
 		default:
@@ -112,99 +142,110 @@ const Bitmap *GPUTexture::getBitmap(unsigned int slot) const {
 	return m_bitmaps[slot];
 }
 
-static const char *toString(GPUTexture::ETextureType type) {
-    switch (type) {
-		case GPUTexture::ETexture1D: return "texture1D";
-		case GPUTexture::ETexture2D: return "texture2D";
-		case GPUTexture::ETexture3D: return "texture3D";
-		case GPUTexture::ETextureCubeMap: return "textureCubeMap";
-        default: SLog(EError, "Invalid texture type"); return NULL;
-    }
-}
+namespace detail {
+	static const char *toString(GPUTexture::ETextureType type) {
+		switch (type) {
+			case GPUTexture::ETexture1D: return "texture1D";
+			case GPUTexture::ETexture2D: return "texture2D";
+			case GPUTexture::ETexture3D: return "texture3D";
+			case GPUTexture::ETextureCubeMap: return "textureCubeMap";
+			default: SLog(EError, "Invalid texture type"); return NULL;
+		}
+	}
 
-static const char *toString(GPUTexture::ETextureFormat format) {
-    switch (format) {
-		case GPUTexture::EFloat32L: return "Float32L";
-		case GPUTexture::EFloat16L: return "Float16L";
-		case GPUTexture::EFloat32RGBA: return "Float32RGBA";
-		case GPUTexture::EFloat16RGBA: return "Float16RGBA";
-		case GPUTexture::EFloat32RGB: return "Float32RGB";
-		case GPUTexture::EFloat16RGB: return "Float16RGB";
-		case GPUTexture::ER8G8B8: return "R8G8B8";
-		case GPUTexture::ER8G8B8A8: return "R8G8B8A8";
-		case GPUTexture::EL8: return "L8";
-		case GPUTexture::EL8A8: return "L8A8";
-		case GPUTexture::EDepth: return "depth";
-        default: SLog(EError, "Invalid texture format"); return NULL;
-    }
-}
+	static const char *toString(GPUTexture::EPixelFormat format) {
+		switch (format) {
+			case GPUTexture::EDepth: return "depth";
+			case GPUTexture::ELuminance: return "luminance";
+			case GPUTexture::ELuminanceAlpha: return "luminance-alpha";
+			case GPUTexture::ERGB: return "rgb";
+			case GPUTexture::ERGBA: return "rgba";
+			default: SLog(EError, "Invalid pixel format"); return NULL;
+		}
+	}
 
-static const char *toString(GPUTexture::EFilterType filter) {
-    switch (filter) {		
-		case GPUTexture::ENearest: return "nearest";
-		case GPUTexture::ELinear: return "linear";
-		case GPUTexture::EMipMapNearest: return "mipMapNearest";
-		case GPUTexture::EMipMapLinear: return "mipMapLinear";
-        default: SLog(EError, "Invalid texture filter type"); return NULL;
-    }
-}
+	static const char *toString(GPUTexture::EComponentFormat format) {
+		switch (format) {
+			case GPUTexture::EUInt8: return "uint8";
+			case GPUTexture::EUInt16: return "uint16";
+			case GPUTexture::EUInt32: return "uint32";
+			case GPUTexture::EFloat16: return "float16";
+			case GPUTexture::EFloat32: return "float32";
+			case GPUTexture::EFloat64: return "float64";
+			default: SLog(EError, "Invalid component format"); return NULL;
+		}
+	}
 
-static const char *toString(GPUTexture::EWrapType wrap) {
-    switch (wrap) {		
-		case GPUTexture::EClamp: return "clamp";
-		case GPUTexture::EClampToEdge: return "clampToEdge";
-		case GPUTexture::EClampToBorder: return "clampToBorder";
-		case GPUTexture::ERepeat: return "repeat";
-		case GPUTexture::EMirroredRepeat: return "mirroredRepeat";
-        default: SLog(EError, "Invalid texture wrap type"); return NULL;
-    }
-}
+	static const char *toString(GPUTexture::EFilterType filter) {
+		switch (filter) {		
+			case GPUTexture::ENearest: return "nearest";
+			case GPUTexture::ELinear: return "linear";
+			case GPUTexture::EMipMapNearest: return "mipMapNearest";
+			case GPUTexture::EMipMapLinear: return "mipMapLinear";
+			default: SLog(EError, "Invalid texture filter type"); return NULL;
+		}
+	}
 
-static const char *toString(GPUTexture::EFrameBufferType fbType) {
-    switch (fbType) {		
-		case GPUTexture::ENone: return "none";
-		case GPUTexture::EDepthBuffer: return "depthBuffer";
-		case GPUTexture::EColorBuffer: return "colorBuffer";
-		case GPUTexture::EColorAndDepthBuffer: return "colorAndDepthBuffer";
-        default: SLog(EError, "Invalid framebuffer type"); return NULL;
-    }
-}
+	static const char *toString(GPUTexture::EWrapType wrap) {
+		switch (wrap) {		
+			case GPUTexture::EClamp: return "clamp";
+			case GPUTexture::EClampToEdge: return "clampToEdge";
+			case GPUTexture::EClampToBorder: return "clampToBorder";
+			case GPUTexture::ERepeat: return "repeat";
+			case GPUTexture::EMirror: return "mirroredRepeat";
+			default: SLog(EError, "Invalid texture wrap type"); return NULL;
+		}
+	}
 
-static const char *toString(GPUTexture::EDepthMode depthMode) {
-    switch (depthMode) {		
-		case GPUTexture::ENormal: return "normal";
-		case GPUTexture::ECompare: return "compare";
-        default: SLog(EError, "Invalid depth read mode"); return NULL;
-    }
-}
+	static const char *toString(GPUTexture::EFrameBufferType fbType) {
+		switch (fbType) {		
+			case GPUTexture::ENone: return "none";
+			case GPUTexture::EDepthBuffer: return "depthBuffer";
+			case GPUTexture::EColorBuffer: return "colorBuffer";
+			case GPUTexture::EColorAndDepthBuffer: return "colorAndDepthBuffer";
+			default: SLog(EError, "Invalid framebuffer type"); return NULL;
+		}
+	}
+
+	static const char *toString(GPUTexture::EDepthMode depthMode) {
+		switch (depthMode) {		
+			case GPUTexture::ENormal: return "normal";
+			case GPUTexture::ECompare: return "compare";
+			default: SLog(EError, "Invalid depth read mode"); return NULL;
+		}
+	}
+};
 
 std::string GPUTexture::toString() const {
 	std::ostringstream oss;
 	oss << "GPUTexture[" << endl
 		<< "  name = '" << m_name << "'," << endl
-		<< "  type = " << mitsuba::toString(m_type) << "," << endl
-		<< "  fbType = " << mitsuba::toString(m_fbType) << "," << endl
-		<< "  format = " << mitsuba::toString(m_format) << "," << endl
+		<< "  type = " << detail::toString(m_type) << "," << endl
+		<< "  pixelFormat = " << detail::toString(m_pixelFormat) << "," << endl
+		<< "  componentFormat = " << detail::toString(m_componentFormat) << "," << endl
+		<< "  fbType = " << detail::toString(m_fbType) << "," << endl
 		<< "  size = " << m_size.toString() << "," << endl
-		<< "  filterType = " << mitsuba::toString(m_filterType) << "," << endl
-		<< "  wrapType = " << mitsuba::toString(m_wrapType) << "," << endl;
+		<< "  filterType = " << detail::toString(m_filterType) << "," << endl
+		<< "  wrapType = [" << detail::toString(m_wrapTypeU) 
+		<< ", " << detail::toString(m_wrapTypeV) << "]," << endl;
 
 	if (m_samples > 1)
 		oss << "  samples = " << m_samples << "," << endl;
 	if (m_fbType == EDepthBuffer)
-		oss << "  depthMode = " << mitsuba::toString(m_depthMode) << "," << endl;
+		oss << "  depthMode = " << detail::toString(m_depthMode) << "," << endl;
 
 	oss << "  mipmapped = " << m_mipmapped << "," << endl
+		<< "  samples = " << m_samples << "," << endl
 		<< "  maxAnisotropy = " << m_maxAnisotropy;
 	if (m_bitmaps.size() > 0) {
 		oss << "," << endl;
 		oss << "  bitmaps = {" << endl;
-		for (unsigned int i=0; i<m_bitmaps.size(); i++) {
+		for (size_t i=0; i<m_bitmaps.size(); i++) {
 			oss << "    " << i << " => ";
 			if (m_bitmaps[i] == NULL)
 				oss << "null";
 			else
-				oss << indent(m_bitmaps[i]->toString());
+				oss << indent(m_bitmaps[i]->toString(), 2);
 			if (i != m_bitmaps.size() - 1)
 				oss << ",";
 			oss << endl;

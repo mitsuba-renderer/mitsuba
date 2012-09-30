@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -22,7 +22,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{bump}{Bump map modifier}
- * \order{11}
+ * \order{12}
  * \icon{bsdf_bump}
  *
  * \parameters{
@@ -120,33 +120,28 @@ public:
 	}
 
 	void perturbIntersection(const Intersection &its, Intersection &target) const {
-		/* Determine the step size for the finite difference computation */
-		Float du = 0.5f * std::abs(its.dudx) + std::abs(its.dudy),
-			  dv = 0.5f * std::abs(its.dvdx) + std::abs(its.dvdy);
-		if (du == 0) du = Epsilon;
-		if (dv == 0) dv = Epsilon;
+		const Float eps = Epsilon;
 
 		/* Compute the U and V displacementment derivatives */
-		Float displacement, displacementU, displacementV;
 		target = its;
-		displacement = m_displacement->getValue(target).getLuminance();
-		target.p = its.p + its.dpdu * du;
-		target.uv = its.uv + Point2(du, 0);
-		displacementU = m_displacement->getValue(target).getLuminance();
-		target.p = its.p + its.dpdv * dv;
-		target.uv = its.uv + Point2(0, dv);
-		displacementV = m_displacement->getValue(target).getLuminance();
+		Float disp = m_displacement->eval(target, false).getLuminance();
+		target.p = its.p + its.dpdu * eps;
+		target.uv = its.uv + Point2(eps, 0);
+		Float dispU = m_displacement->eval(target, false).getLuminance();
+		target.p = its.p + its.dpdv * eps;
+		target.uv = its.uv + Point2(0, eps);
+		Float dispV = m_displacement->eval(target, false).getLuminance();
 		target.p = its.p;
 		target.uv = its.uv;
-		Float dDisplaceDu = (displacementU - displacement) / du;
-		Float dDisplaceDv = (displacementV - displacement) / dv;
+		Float dDispDu = (dispU - disp) / eps;
+		Float dDispDv = (dispV - disp) / eps;
 
 		/* Build a perturbed frame -- ignores the usually 
 		   negligible normal derivative term */
 		Vector dpdu = its.dpdu + its.shFrame.n * (
-				dDisplaceDu - dot(its.shFrame.n, its.dpdu));
+				dDispDu - dot(its.shFrame.n, its.dpdu));
 		Vector dpdv = its.dpdv + its.shFrame.n * (
-				dDisplaceDv - dot(its.shFrame.n, its.dpdv));
+				dDispDv - dot(its.shFrame.n, its.dpdv));
 
 		dpdu = normalize(dpdu);
 		dpdv = normalize(dpdv - dpdu * dot(dpdv, dpdu));
@@ -159,14 +154,14 @@ public:
 			target.shFrame.n *= -1;
 	}
 
-	Spectrum eval(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		const Intersection& its = bRec.its;
 		Intersection perturbed;
 		perturbIntersection(its, perturbed);
 
-		BSDFQueryRecord perturbedQuery(perturbed,
+		BSDFSamplingRecord perturbedQuery(perturbed,
 			perturbed.toLocal(its.toWorld(bRec.wi)),
-			perturbed.toLocal(its.toWorld(bRec.wo)), bRec.quantity);
+			perturbed.toLocal(its.toWorld(bRec.wo)), bRec.mode);
 		if (Frame::cosTheta(bRec.wo) * Frame::cosTheta(perturbedQuery.wo) <= 0)
 			return Spectrum(0.0f);
 		perturbedQuery.sampler = bRec.sampler;
@@ -175,29 +170,29 @@ public:
 		return m_nested->eval(perturbedQuery, measure);
 	}
 
-	Float pdf(const BSDFQueryRecord &bRec, EMeasure measure) const {
+	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		const Intersection& its = bRec.its;
 		Intersection perturbed;
 		perturbIntersection(its, perturbed);
 		
-		BSDFQueryRecord perturbedQuery(perturbed,
+		BSDFSamplingRecord perturbedQuery(perturbed,
 			perturbed.toLocal(its.toWorld(bRec.wi)),
-			perturbed.toLocal(its.toWorld(bRec.wo)), bRec.quantity);
+			perturbed.toLocal(its.toWorld(bRec.wo)), bRec.mode);
 		if (Frame::cosTheta(bRec.wo) * Frame::cosTheta(perturbedQuery.wo) <= 0)
 			return 0;
-		perturbedQuery.quantity = bRec.quantity;
+		perturbedQuery.mode = bRec.mode;
 		perturbedQuery.sampler = bRec.sampler;
 		perturbedQuery.typeMask = bRec.typeMask;
 		perturbedQuery.component = bRec.component;
 		return m_nested->pdf(perturbedQuery, measure);
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		const Intersection& its = bRec.its;
 		Intersection perturbed;
 		perturbIntersection(its, perturbed);
 
-		BSDFQueryRecord perturbedQuery(perturbed, bRec.sampler, bRec.quantity);
+		BSDFSamplingRecord perturbedQuery(perturbed, bRec.sampler, bRec.mode);
 		perturbedQuery.wi = perturbed.toLocal(its.toWorld(bRec.wi));
 		perturbedQuery.sampler = bRec.sampler;
 		perturbedQuery.typeMask = bRec.typeMask;
@@ -213,12 +208,12 @@ public:
 		return result;
 	}
 
-	Spectrum sample(BSDFQueryRecord &bRec, Float &pdf, const Point2 &sample) const {
+	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
 		const Intersection& its = bRec.its;
 		Intersection perturbed;
 		perturbIntersection(its, perturbed);
 
-		BSDFQueryRecord perturbedQuery(perturbed, bRec.sampler, bRec.quantity);
+		BSDFSamplingRecord perturbedQuery(perturbed, bRec.sampler, bRec.mode);
 		perturbedQuery.wi = perturbed.toLocal(its.toWorld(bRec.wi));
 		perturbedQuery.typeMask = bRec.typeMask;
 		perturbedQuery.component = bRec.component;
@@ -235,17 +230,17 @@ public:
 		return result;
 	}
 
-	Shader *createShader(Renderer *renderer) const;
-
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "BumpMap[" << endl
-			<< "  name = \"" << getName() << "\"," << endl
+			<< "  id = \"" << getID() << "\"," << endl
 			<< "  displacement = " << indent(m_displacement->toString()) << endl
 			<< "  nested = " << indent(m_nested->toString()) << endl
 			<< "]";
 		return oss.str();
 	}
+
+	Shader *createShader(Renderer *renderer) const;
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -304,6 +299,20 @@ public:
 			<< "}" << endl
 			<< endl
 			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+			<< "    float du = abs(dFdx(uv.x)), dv = abs(dFdx(uv.y));" << endl
+			<< "    if (du == 0.0) du = 0.001;" << endl
+			<< "    if (dv == 0.0) dv = 0.001;" << endl
+			<< "    float displacement = " << depNames[1] << "(uv)[0];" << endl
+			<< "    float displacementU = " << depNames[1] << "(uv + vec2(du, 0.0))[0];" << endl
+			<< "    float displacementV = " << depNames[1] << "(uv + vec2(0.0, dv))[0];" << endl
+			<< "    float dfdu = (displacementU - displacement)/du;" << endl
+			<< "    float dfdv = (displacementV - displacement)/dv;" << endl
+			<< "    vec3 dpdu = normalize(vec3(1.0, 0.0, dfdu));" << endl
+			<< "    vec3 dpdv = vec3(0.0, 1.0, dfdv);" << endl
+			<< "    dpdv = normalize(dpdv - dot(dpdu, dpdv)*dpdu);" << endl
+			<< "    vec3 n = cross(dpdu, dpdv);" << endl
+			<< "    wi = vec3(dot(wi, dpdu), dot(wi, dpdv), dot(wi, n));" << endl
+			<< "    wo = vec3(dot(wo, dpdu), dot(wo, dpdv), dot(wo, n));" << endl
 			<< "    return " << depNames[0] << "_diffuse(uv, wi, wo);" << endl
 			<< "}" << endl;
 	}

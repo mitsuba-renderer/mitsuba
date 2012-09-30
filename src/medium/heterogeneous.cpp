@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -45,6 +45,7 @@ static StatsCounter earlyExits("Heterogeneous volume",
 #endif
 
 /*!\plugin{heterogeneous}{Heterogeneous participating medium}
+ * \order{2}
  * \parameters{
  *     \parameter{method}{\String}{
  *         Specifies the sampling method that is used to generate
@@ -75,8 +76,8 @@ static StatsCounter earlyExits("Heterogeneous volume",
  *         Optional: volumetric data source that supplies the 
  *         local particle orientations throughout the medium
  *     }
- *     \parameter{\footnotesize{densityMultiplier}}{\Float}{
- *         Optional multiplier that will be applied to the \code{density} parameter.
+ *     \parameter{scale}{\Float}{
+ *         Optional scale factor that will be applied to the \code{density} parameter.
  *         Provided for convenience when accomodating data based on different units,
  *         or to simply tweak the density of the medium. \default{1}
  *     }
@@ -93,7 +94,7 @@ static StatsCounter earlyExits("Heterogeneous volume",
  *     \medrendering{200}{medium_heterogeneous_density_200}
  *     \medrendering{1000}{medium_heterogeneous_density_1000}
  *     \vspace{-2mm}
- *     \caption{Renderings of an index-matched medium using different density multipliers (\lstref{hetvolume})}
+ *     \caption{Renderings of an index-matched medium using different scale factors (\lstref{hetvolume})}
  * }
  * 
  * This plugin provides a flexible heterogeneous medium implementation, which 
@@ -110,7 +111,7 @@ static StatsCounter earlyExits("Heterogeneous volume",
  *
  * Another nested spectrum-valued \code{albedo} volume must also be provided, which is 
  * used to compute the scattering coefficient $\sigma_s$ using the expression
- * $\sigma_s = \code{density} * \code{albedo}$ (i.e. 'albedo' contains the 
+ * $\sigma_s = \code{scale} * \code{density} * \code{albedo}$ (i.e. 'albedo' contains the 
  * single-scattering albedo of the medium.
  * 
  * Optionally, one can also provide an vector-valued \code{orientation} volume,
@@ -139,7 +140,7 @@ static StatsCounter earlyExits("Heterogeneous volume",
  *     <phase type="isotropic"/>
  *
  *     <!-- Scale the density values as desired -->
- *     <float name="densityMultiplier" value="200"/>
+ *     <float name="scale" value="200"/>
  *  </medium>
  *
  * <!-- Attach the index-matched medium to a shape in the scene -->
@@ -182,11 +183,14 @@ public:
 	HeterogeneousMedium(const Properties &props) 
 		: Medium(props) {
 		m_stepSize = props.getFloat("stepSize", 0);
-		m_densityMultiplier = props.getFloat("densityMultiplier", 1);
+		m_scale = props.getFloat("scale", 1);
 		if (props.hasProperty("sigmaS") || props.hasProperty("sigmaA"))
 			Log(EError, "The 'sigmaS' and 'sigmaA' properties are only supported by "
 				"homogeneous media. Please use nested volume instances to supply "
 				"these parameters");
+
+		if (props.hasProperty("densityMultiplier"))
+			Log(EError, "The 'densityMultiplier' parameter has been deprecated and is now called 'scale'.");
 
 		std::string method = boost::to_lower_copy(props.getString("method", "woodcock"));
 		if (method == "woodcock")
@@ -201,7 +205,7 @@ public:
 	HeterogeneousMedium(Stream *stream, InstanceManager *manager) 
 		: Medium(stream, manager) {
 		m_method = (EIntegrationMethod) stream->readInt();
-		m_densityMultiplier = stream->readFloat();
+		m_scale = stream->readFloat();
 		m_density = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_albedo = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_orientation = static_cast<VolumeDataSource *>(manager->getInstance(stream));
@@ -213,7 +217,7 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Medium::serialize(stream, manager);
 		stream->writeInt(m_method);
-		stream->writeFloat(m_densityMultiplier);
+		stream->writeFloat(m_scale);
 		manager->serialize(stream, m_density.get());
 		manager->serialize(stream, m_albedo.get());
 		manager->serialize(stream, m_orientation.get());
@@ -232,7 +236,7 @@ public:
 
 		/* Assumes that the density medium does not 
 		   contain values greater than one! */
-		m_maxDensity = m_densityMultiplier * m_density->getMaximumFloatValue();
+		m_maxDensity = m_scale * m_density->getMaximumFloatValue();
 		if (m_anisotropicMedium)
 			m_maxDensity *= m_phaseFunction->sigmaDirMax();
 		m_invMaxDensity = 1.0f/m_maxDensity;
@@ -330,9 +334,9 @@ public:
 			+ lookupDensity(pLast, ray.d);
 
 		#if defined(HETVOL_EARLY_EXIT)
-			const Float stopAfterDensity = -std::fastlog(Epsilon);
+			const Float stopAfterDensity = -math::fastlog(Epsilon);
 			const Float stopValue = stopAfterDensity*3.0f/(stepSize
-					* m_densityMultiplier);
+					* m_scale);
 		#endif
 
 		p += increment;
@@ -367,7 +371,7 @@ public:
 			p = next;
 		}
 
-		return integratedDensity * m_densityMultiplier
+		return integratedDensity * m_scale
 			* stepSize * (1.0f / 3.0f);
 	}
 
@@ -440,14 +444,14 @@ public:
 		uint32_t nSteps = (uint32_t) std::ceil(length / (2*m_stepSize));
 		Float stepSize = length / nSteps,
 			  multiplier = (1.0f / 6.0f) * stepSize
-				  * m_densityMultiplier;
+				  * m_scale;
 		Vector fullStep = ray.d * stepSize,
 			   halfStep = fullStep * .5f;
 
 		Float node1 = lookupDensity(p, ray.d);
 
 		if (ray.mint == mint)
-			densityAtMinT = node1 * m_densityMultiplier;
+			densityAtMinT = node1 * m_scale;
 		else
 			densityAtMinT = 0.0f;
 
@@ -474,7 +478,7 @@ public:
 				Float a = 0, b = stepSize, x = a,
 					  fx = integratedDensity - desiredDensity,
 					  stepSizeSqr = stepSize * stepSize,
-					  temp = m_densityMultiplier / stepSizeSqr;
+					  temp = m_scale / stepSizeSqr;
 				int it = 1;
 
 				#if defined(HETVOL_STATISTICS)
@@ -539,13 +543,13 @@ public:
 		return false;
 	}
 
-	Spectrum getTransmittance(const Ray &ray, Sampler *sampler) const {
+	Spectrum evalTransmittance(const Ray &ray, Sampler *sampler) const {
 		if (m_method == ESimpsonQuadrature || sampler == NULL) {
-			return Spectrum(std::fastexp(-integrateDensity(ray)));
+			return Spectrum(math::fastexp(-integrateDensity(ray)));
 		} else {
 			/* When Woodcock tracking is selected as the sampling method,
-			   we can use this method to get a noisy estimate of 
-			   the transmittance */
+			   we can use this method to get a noisy (but unbiased) estimate
+			   of the transmittance */
 			Float mint, maxt;
 			if (!m_densityAABB.rayIntersect(ray, mint, maxt))
 				return Spectrum(1.0f);
@@ -561,14 +565,14 @@ public:
 			for (int i=0; i<nSamples; ++i) {
 				Float t = mint;
 				while (true) {
-					t -= std::fastlog(1-sampler->next1D()) * m_invMaxDensity;
+					t -= math::fastlog(1-sampler->next1D()) * m_invMaxDensity;
 					if (t >= maxt) {
 						result += 1;
 						break;
 					}
 				
 					Point p = ray(t);
-					Float density = lookupDensity(p, ray.d) * m_densityMultiplier;
+					Float density = lookupDensity(p, ray.d) * m_scale;
 					
 					#if defined(HETVOL_STATISTICS)
 						++avgRayMarchingStepsTransmittance;
@@ -588,7 +592,7 @@ public:
 		bool success = false;
 
 		if (m_method == ESimpsonQuadrature) {
-			Float desiredDensity = -std::fastlog(1-sampler->next1D());
+			Float desiredDensity = -math::fastlog(1-sampler->next1D());
 			if (invertDensityIntegral(ray, desiredDensity, integratedDensity, 
 					mRec.t, densityAtMinT, densityAtT)) {
 				mRec.p = ray(mRec.t);
@@ -596,16 +600,16 @@ public:
 				Spectrum albedo = m_albedo->lookupSpectrum(mRec.p);
 				mRec.sigmaS = albedo * densityAtT;
 				mRec.sigmaA = Spectrum(densityAtT) - mRec.sigmaS;
-				mRec.albedo = albedo.max();
 				mRec.orientation = m_orientation != NULL 
 					? m_orientation->lookupVector(mRec.p) : Vector(0.0f);
 			}
 
-			Float expVal = std::fastexp(-integratedDensity);
+			Float expVal = math::fastexp(-integratedDensity);
 			mRec.pdfFailure = expVal;
 			mRec.pdfSuccess = expVal * densityAtT;
 			mRec.pdfSuccessRev = expVal * densityAtMinT;
 			mRec.transmittance = Spectrum(expVal);
+			mRec.time = ray.time;
 		} else {
 			/* The following information is invalid when
 			   using Woodcock-tracking */
@@ -613,6 +617,7 @@ public:
 			mRec.pdfSuccess = 1.0f;
 			mRec.pdfSuccessRev = 1.0f;
 			mRec.transmittance = Spectrum(1.0f);
+			mRec.time = ray.time;
 			
 			#if defined(HETVOL_STATISTICS)
 				avgRayMarchingStepsSampling.incrementBase();
@@ -626,12 +631,12 @@ public:
 
 			Float t = mint, densityAtT = 0;
 			while (true) {
-				t -= std::fastlog(1-sampler->next1D()) * m_invMaxDensity;
+				t -= math::fastlog(1-sampler->next1D()) * m_invMaxDensity;
 				if (t >= maxt)
 					break;
 
 				Point p = ray(t);
-				densityAtT = lookupDensity(p, ray.d) * m_densityMultiplier;
+				densityAtT = lookupDensity(p, ray.d) * m_scale;
 				#if defined(HETVOL_STATISTICS)
 					++avgRayMarchingStepsSampling;
 				#endif
@@ -641,31 +646,41 @@ public:
 					Spectrum albedo = m_albedo->lookupSpectrum(p);
 					mRec.sigmaS = albedo * densityAtT;
 					mRec.sigmaA = Spectrum(densityAtT) - mRec.sigmaS;
-					mRec.albedo = albedo.max();
-					mRec.transmittance = albedo/mRec.sigmaS;
+					mRec.transmittance = Spectrum(densityAtT != 0.0f ? 1.0f / densityAtT : 0);
 					mRec.orientation = m_orientation != NULL 
 						? m_orientation->lookupVector(p) : Vector(0.0f);
+					mRec.medium = this;
 					success = true;
 					break;
 				}
 			}
 		}
+		mRec.medium = this;
 
 		return success && mRec.pdfSuccess > 0;
 	}
 
-	void pdfDistance(const Ray &ray, MediumSamplingRecord &mRec) const {
+	void eval(const Ray &ray, MediumSamplingRecord &mRec) const {
 		if (m_method == ESimpsonQuadrature) {
-			Float expVal = std::fastexp(-integrateDensity(ray));
-
+			Float expVal = math::fastexp(-integrateDensity(ray));
+			Float mintDensity = lookupDensity(ray(ray.mint), ray.d) * m_scale;
+			Float maxtDensity = 0.0f;
+			Spectrum maxtAlbedo(0.0f);
+			if (ray.maxt < std::numeric_limits<Float>::infinity()) {
+				Point p = ray(ray.maxt);
+				maxtDensity = lookupDensity(p, ray.d) * m_scale;
+				maxtAlbedo = m_albedo->lookupSpectrum(p);
+			}
 			mRec.transmittance = Spectrum(expVal);
 			mRec.pdfFailure = expVal;
-			mRec.pdfSuccess = expVal * 
-				lookupDensity(ray(ray.maxt), ray.d) * m_densityMultiplier;
-			mRec.pdfSuccessRev = expVal * 
-				lookupDensity(ray(ray.mint), ray.d) * m_densityMultiplier;
+			mRec.pdfSuccess = expVal * maxtDensity;
+			mRec.pdfSuccessRev = expVal * mintDensity;
+			mRec.sigmaS = maxtAlbedo * maxtDensity;
+			mRec.sigmaA = Spectrum(maxtDensity) - mRec.sigmaS;
+			mRec.time = ray.time;
+			mRec.medium = this;
 		} else {
-			Log(EError, "pdfDistance(): unsupported integration method!");
+			Log(EError, "eval(): unsupported integration method!");
 		}
 	}
 
@@ -680,7 +695,7 @@ public:
 			<< "  albedo = " << indent(m_albedo.toString()) << "," << endl
 			<< "  orientation = " << indent(m_orientation.toString()) << "," << endl
 			<< "  stepSize = " << m_stepSize << "," << endl
-			<< "  densityMultiplier = " << m_densityMultiplier << endl
+			<< "  scale = " << m_scale << endl
 			<< "]";
 		return oss.str();
 	}
@@ -703,7 +718,7 @@ protected:
 	ref<VolumeDataSource> m_density;
 	ref<VolumeDataSource> m_albedo;
 	ref<VolumeDataSource> m_orientation;
-	Float m_densityMultiplier;
+	Float m_scale;
 	bool m_anisotropicMedium;
 	Float m_stepSize;
 	AABB m_densityAABB;

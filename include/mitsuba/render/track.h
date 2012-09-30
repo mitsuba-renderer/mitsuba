@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,10 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__ANIMATION_TRACK_H)
-#define __ANIMATION_TRACK_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_TRACK_H_)
+#define __MITSUBA_RENDER_TRACK_H_
 
 #include <mitsuba/core/quat.h>
+#include <mitsuba/core/simplecache.h>
 
 MTS_NAMESPACE_BEGIN
 	
@@ -33,11 +35,19 @@ class MTS_EXPORT_RENDER AbstractAnimationTrack : public Object {
 	template<typename T> friend class AnimationTrack;
 public:
 	enum EType {
-		EInvalid = 0,
-		ETranslationX, ETranslationY, ETranslationZ, ETranslationXYZ, 
-		EScaleX, EScaleY, EScaleZ, EScaleXYZ,
-		ERotationX, ERotationY, ERotationZ,
-		ERotationQuat
+		EInvalid        = 0,
+		ETranslationX   = 1,  
+		ETranslationY   = 2, 
+		ETranslationZ   = 3, 
+		ETranslationXYZ = 4, 
+		EScaleX         = 5, 
+		EScaleY         = 6, 
+		EScaleZ         = 7, 
+		EScaleXYZ       = 8,
+		ERotationX      = 9,
+		ERotationY      = 10,
+		ERotationZ      = 11,
+		ERotationQuat   = 12
 	};
 
 	/// Return the type of this track
@@ -78,7 +88,7 @@ public:
 		: AbstractAnimationTrack(type, nKeyframes), m_values(nKeyframes) { }
 
 	AnimationTrack(EType type, Stream *stream) 
-		: AbstractAnimationTrack(type, (size_t) stream->readUInt()) {
+		: AbstractAnimationTrack(type, stream->readSize()) {
 		m_values.resize(m_times.size());
 		stream->readFloatArray(&m_times[0], m_times.size());
 		for (size_t i=0; i<m_values.size(); ++i)
@@ -87,14 +97,14 @@ public:
 
 	/// Set the value of a certain keyframe
 	inline void setValue(size_t idx, const value_type &value) { m_values[idx] = value; }
-	
+
 	/// Return the value of a certain keyframe
 	inline const value_type &getValue(size_t idx) const { return m_values[idx]; }
 
 	/// Serialize to a binary data stream
-	void serialize(Stream *stream) const {
+	inline void serialize(Stream *stream) const {
 		stream->writeUInt(m_type);
-		stream->writeUInt((uint32_t) m_times.size());
+		stream->writeSize(m_times.size());
 		stream->writeFloatArray(&m_times[0], m_times.size());
 		for (size_t i=0; i<m_values.size(); ++i)
 			serialize(stream, m_values[i]);
@@ -105,59 +115,62 @@ public:
 		SAssert(m_times.size() > 0);
 		std::vector<Float>::const_iterator entry = 
 				std::lower_bound(m_times.begin(), m_times.end(), time);
-		int idx0 = (int) (entry - m_times.begin()) - 1;
-		int idx1 = idx0 + 1;
-		idx0 = std::max(idx0, 0); idx1 = std::min(idx1, (int) m_times.size() - 1);
+		size_t idx0 = (size_t) std::max(
+				(ptrdiff_t) (entry - m_times.begin()) - 1,
+				(ptrdiff_t) 0);
+		size_t idx1 = std::min(idx0+1, m_times.size()-1);
 		Float t = 0.5f;
-		if (m_times[idx0] != m_times[idx1])
+		if (m_times[idx0] != m_times[idx1]) {
+			time = std::max(m_times[idx0], std::min(m_times[idx1], time));
 			t = (time-m_times[idx0]) / (m_times[idx1]-m_times[idx0]);
+		}
 		return lerp(idx0, idx1, t);
 	}
 protected:
 	/// Evaluate the animation track using linear interpolation
-	value_type lerp(int idx0, int idx1, Float t) const;
+	inline value_type lerp(size_t idx0, size_t idx1, Float t) const;
 
-	void unserialize(Stream *stream, value_type &value) {
+	inline void unserialize(Stream *stream, value_type &value) {
 		value = stream->readElement<value_type>();
 	}
 
-	void serialize(Stream *stream, const value_type &value) const {
+	inline void serialize(Stream *stream, const value_type &value) const {
 		stream->writeElement<value_type>(value);
 	}
 private:
 	std::vector<value_type> m_values;
 };
 	
-template<typename T> T AnimationTrack<T>::lerp(int idx0, int idx1, Float t) const {
+template<typename T> inline T AnimationTrack<T>::lerp(size_t idx0, size_t idx1, Float t) const {
 	return m_values[idx0] * (1-t) + m_values[idx1] * t;
 }
 
 /// Partial specialization for quaternions (uses \ref slerp())
-template<> Quaternion AnimationTrack<Quaternion>::lerp(int idx0, int idx1, Float t) const {
+template<> inline Quaternion AnimationTrack<Quaternion>::lerp(size_t idx0, size_t idx1, Float t) const {
 	return slerp(m_values[idx0], m_values[idx1], t);
 }
 
-template<> void AnimationTrack<Point>::unserialize(Stream *stream, Point &value) {
+template<> inline void AnimationTrack<Point>::unserialize(Stream *stream, Point &value) {
 	value = Point(stream);
 }
 
-template<> void AnimationTrack<Point>::serialize(Stream *stream, const Point &value) const {
+template<> inline void AnimationTrack<Point>::serialize(Stream *stream, const Point &value) const {
 	value.serialize(stream);
 }
 
-template<> void AnimationTrack<Vector>::unserialize(Stream *stream, Vector &value) {
+template<> inline void AnimationTrack<Vector>::unserialize(Stream *stream, Vector &value) {
 	value = Vector(stream);
 }
 
-template<> void AnimationTrack<Vector>::serialize(Stream *stream, const Vector &value) const {
+template<> inline void AnimationTrack<Vector>::serialize(Stream *stream, const Vector &value) const {
 	value.serialize(stream);
 }
 
-template<> void AnimationTrack<Quaternion>::unserialize(Stream *stream, Quaternion &value) {
+template<> inline void AnimationTrack<Quaternion>::unserialize(Stream *stream, Quaternion &value) {
 	value = Quaternion(stream);
 }
 
-template<> void AnimationTrack<Quaternion>::serialize(Stream *stream, const Quaternion &value) const {
+template<> inline void AnimationTrack<Quaternion>::serialize(Stream *stream, const Quaternion &value) const {
 	value.serialize(stream);
 }
 
@@ -166,11 +179,29 @@ template<> void AnimationTrack<Quaternion>::serialize(Stream *stream, const Quat
  * \ingroup librender
  */
 class MTS_EXPORT_RENDER AnimatedTransform : public Object {
+protected:
+	/// Internal functor used by \ref eval() and \ref SimpleCache
+	struct MTS_EXPORT_RENDER TransformFunctor {
+	public:
+		inline TransformFunctor(const std::vector<AbstractAnimationTrack *> &tracks)
+			: m_tracks(tracks) {}
+
+		void operator()(const Float &time, Transform &trafo) const;
+	private:
+		const std::vector<AbstractAnimationTrack *> &m_tracks;
+	};
 public:
-	/// Create a new animated transform
-	AnimatedTransform() { }
-	
-	/// Unseraizlie a animated transform
+	/**
+	 * \brief Create a new animated transformation
+	 *
+	 * When the transformation is constant (i.e. there are no 
+	 * animation tracks), the supplied parameter specifies the
+	 * target value.
+	 */
+	AnimatedTransform(const Transform &trafo = Transform()) 
+		: m_transform(trafo) { }
+
+	/// Unserialized an animated transformation from a binary data stream
 	AnimatedTransform(Stream *stream);
 
 	/// Return the number of associated animation tracks
@@ -182,25 +213,97 @@ public:
 	/// Append an animation track
 	void addTrack(AbstractAnimationTrack *track);
 
-	/// Compute the transformation at the specified time value
-	void eval(Float t, Transform &trafo) const;
+	/**
+	 * \brief Compute the transformation for the specified time value
+	 *
+	 * Note that the returned reference leads to a thread-local cache.
+	 * This means that it will become invalidated at the next call
+	 * to this function.
+	 */
+	inline const Transform &eval(Float t) const {
+		if (m_tracks.size() == 0)
+			return m_transform;
+		else
+			return m_cache.get(TransformFunctor(m_tracks), t);
+	}
+
+	/// Is the animation static?
+	inline bool isStatic() const { return m_tracks.size() == 0; }
+
+	/// Transform a point by an affine / non-projective matrix
+	inline Point transformAffine(Float t, const Point &p) const {
+		return eval(t).transformAffine(p);
+	}
+
+	/// Transform a point by an affine / non-projective matrix (no temporaries)
+	inline void transformAffine(Float t, const Point &p, Point &dest) const {
+		eval(t).transformAffine(p, dest);
+	}
+
+	/// Transform a ray by an affine / non-projective matrix
+	inline Ray transformAffine(Float t, const Ray &r) const {
+		return eval(t).transformAffine(r);
+	}
+
+	/// Transform a ray by an affine / non-projective matrix (no temporaries)
+	inline void transformAffine(Float t, const Ray &r, Ray &dest) const {
+		eval(t).transformAffine(r, dest);
+	}
+
+	/// Matrix-vector multiplication for points in 3d space
+	inline Point operator()(Float t, const Point &p) const {
+		return eval(t).transformAffine(p);
+	}
+
+	/// Matrix-vector multiplication for points in 3d space (no temporaries)
+	inline void operator()(Float t, const Point &p, Point &dest) const {
+		eval(t).operator()(p, dest);
+	}
+
+	/// Matrix-vector multiplication for vectors in 3d space
+	inline Vector operator()(Float t, const Vector &v) const {
+		return eval(t).operator()(v);
+	}
+
+	/// Matrix-vector multiplication for vectors in 3d space (no temporaries)
+	inline void operator()(Float t, const Vector &v, Vector &dest) const {
+		eval(t).operator()(v, dest);
+	}
+
+	/// Matrix-vector multiplication for normals in 3d space
+	inline Normal operator()(Float t, const Normal &n) const {
+		return eval(t).operator()(n);
+	}
+
+	/// Matrix-vector multiplication for normals in 3d space (no temporaries)
+	inline void operator()(Float t, const Normal &n, Normal &dest) const {
+		eval(t).operator()(n, dest);
+	}
+
+	/// \brief Transform a ray
+	inline Ray operator()(Float t, const Ray &r) const {
+		return eval(t).operator()(r);
+	}
+
+	/// Transform a ray (no temporaries)
+	inline void operator()(Float t, const Ray &r, Ray &dest) const {
+		eval(t).operator()(r, dest);
+	}
 
 	/// Serialize to a binary data stream
 	void serialize(Stream *stream) const;
 
 	/// Return the extents along the time axis
-	void computeTimeBounds(Float &min, Float &max) const {
-		min = std::numeric_limits<Float>::infinity();
-		max = -std::numeric_limits<Float>::infinity();
+	AABB1 getTimeBounds() const;
 
-		for (size_t i=0; i<m_tracks.size(); ++i) {
-			AbstractAnimationTrack *track = m_tracks[i];
-			size_t size = track->getSize();
-			SAssert(size > 0);
-			min = std::min(min, track->getTime(0));
-			max = std::max(max, track->getTime(size-1));
-		}
-	}
+	/// Return an axis-aligned box bounding the amount of translation
+	AABB getTranslationBounds() const;
+
+	/// Compute the spatial bounds of a transformed (static) AABB
+	AABB getSpatialBounds(const AABB &aabb) const;
+
+	/// Return a human-readable string description
+	std::string toString() const;
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -208,8 +311,10 @@ protected:
 	virtual ~AnimatedTransform();
 private:
 	std::vector<AbstractAnimationTrack *> m_tracks;
+	mutable SimpleCache<Float, Transform> m_cache;
+	Transform m_transform;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __ANIMATION_TRACK_H */
+#endif /* __MITSUBA_RENDER_TRACK_H_ */

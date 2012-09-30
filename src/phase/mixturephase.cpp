@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -28,8 +28,8 @@ MTS_NAMESPACE_BEGIN
  *     mixed according to the specified weights}
  * }
  *
- * This plugin implements a ``mixture'' scattering model, which represents  
- * linear combinations of multiple phase functions. There is no
+ * This plugin implements a ``mixture'' scattering model analogous to \pluginref{mixturebsdf}, 
+ * which represents linear combinations of multiple phase functions. There is no
  * limit on how many phase function can be mixed, but their combination
  * weights must be non-negative and sum to a value of one or less to ensure
  * energy balance.
@@ -109,14 +109,14 @@ public:
 				m_weights[i] *= scale;
 		}
 
-		m_pdf = DiscretePDF(m_phaseFunctions.size());
+		m_pdf = DiscreteDistribution(m_phaseFunctions.size());
 		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
-			m_pdf[i] = m_weights[i];
-		m_pdf.build();
+			m_pdf.append(m_weights[i]);
+		m_pdf.normalize();
 		PhaseFunction::configure();
 	}
 
-	Float eval(const PhaseFunctionQueryRecord &pRec) const {
+	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
 		Float result = 0.0f;
 
 		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
@@ -125,7 +125,7 @@ public:
 		return result;
 	}
 
-	Float pdf(const PhaseFunctionQueryRecord &pRec) const {
+	Float pdf(const PhaseFunctionSamplingRecord &pRec) const {
 		Float result = 0.0f;
 
 		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
@@ -134,7 +134,7 @@ public:
 		return result;
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec, Sampler *sampler) const {
+	Float sample(PhaseFunctionSamplingRecord &pRec, Sampler *sampler) const {
 		/* Choose a component based on the normalized weights */
 		size_t entry = m_pdf.sample(sampler->next1D());
 
@@ -156,7 +156,7 @@ public:
 		return result / pdf;
 	}
 
-	Float sample(PhaseFunctionQueryRecord &pRec, Float &pdf, Sampler *sampler) const {
+	Float sample(PhaseFunctionSamplingRecord &pRec, Float &pdf, Sampler *sampler) const {
 		/* Choose a component based on the normalized weights */
 		size_t entry = m_pdf.sample(sampler->next1D());
 
@@ -209,7 +209,7 @@ public:
 private:
 	std::vector<Float> m_weights;
 	std::vector<PhaseFunction *> m_phaseFunctions;
-	DiscretePDF m_pdf;
+	DiscreteDistribution m_pdf;
 };
 
 MTS_IMPLEMENT_CLASS_S(MixturePhase, false, PhaseFunction)

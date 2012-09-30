@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,14 +16,16 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SHANDLER_H)
-#define __SHANDLER_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_SCENEHANDLER_H_)
+#define __MITSUBA_RENDER_SCENEHANDLER_H_
 
 #include <xercesc/sax/HandlerBase.hpp>
 #include <xercesc/sax/AttributeList.hpp>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/version.h>
+#include <boost/unordered_map.hpp>
 #include <stack>
 #include <map>
 
@@ -34,19 +36,36 @@ XERCES_CPP_NAMESPACE_END
 XERCES_CPP_NAMESPACE_USE
 MTS_NAMESPACE_BEGIN
 
+#ifdef _MSC_VER
+// Disable warning 4275: non dll-interface used as base for dll-interface class
+// Can be safely ignored when deriving from a type in the Standard C++ Library
+# pragma warning( push )
+# pragma warning( disable : 4275 )
+#endif
+
 /**
  * \brief This exception is thrown when attempting to load an outdated file
  * \ingroup librender
  */
-class VersionException : public std::runtime_error {
+class MTS_EXPORT_RENDER VersionException : public std::runtime_error {
 public:
-	inline VersionException(const std::string &str, const Version &version)
-		: std::runtime_error(str), m_version(version) { }
+	VersionException(const std::string &str, const Version &version) :
+		std::runtime_error(str), m_version(version) { }
+
+	/* For stupid and subtle reasons when compiling with GCC, it is important 
+	   that this class has a virtual member. This will ensure that its typeid
+	   structure is in librender, which is important for throwing exceptions
+	   across DLL boundaries */
+	virtual ~VersionException() throw ();
 
 	inline const Version &getVersion() const { return m_version; }
 private:
 	Version m_version;
 };
+
+#ifdef _MSC_VER
+# pragma warning( pop )
+#endif
 
 /**
  * \brief XML parser for Mitsuba scene files. To be used with the
@@ -70,6 +89,10 @@ public:
 	static ref<Scene> loadScene(const fs::path &filename,
 		const ParameterMap &params= ParameterMap());
 
+	/// Convenience method -- load a scene from a given string
+	static ref<Scene> loadSceneFromString(const std::string &string,
+		const ParameterMap &params= ParameterMap());
+	
 	/// Initialize Xerces-C++ (needs to be called once at program startup)
 	static void staticInitialization();
 
@@ -86,7 +109,7 @@ public:
 		AttributeList& attributes
 	);
 	virtual void endElement(const XMLCh* const name);
-	virtual void characters(const XMLCh* const chars, const unsigned int length);
+	virtual void characters(const XMLCh* const chars, const XMLSize_t length);
 
 	inline const Scene *getScene() const { return m_scene.get(); }
 	inline Scene *getScene() { return m_scene; }
@@ -121,16 +144,36 @@ private:
 		std::vector<std::pair<std::string, ConfigurableObject *> > children;
 	};
 
+	/**
+	 * Enumeration of all possible tags that can be encountered in a
+	 * Mitsuba scene file
+	 */
+	enum ETag {
+		EScene, EShape, ESampler, EFilm,
+		EIntegrator, ETexture, ESensor,
+		EEmitter, ESubsurface, EMedium,
+		EVolume, EPhase, EBSDF, ERFilter,
+		ENull, EReference, EInteger, EFloat,
+		EBoolean, EString, ETranslate, ERotate,
+		ELookAt, EScale, EMatrix, EPoint,
+		EVector, ERGB, ESRGB, EBlackBody,
+		ESpectrum, ETransform, EInclude, EAlias
+	};
+	
+	typedef std::pair<ETag, const Class *> TagEntry;
+	typedef boost::unordered_map<std::string, TagEntry> TagMap;
+	
 	const SAXParser *m_parser;
 	ref<Scene> m_scene;
 	ParameterMap m_params;
 	NamedObjectMap *m_namedObjects;
 	PluginManager *m_pluginManager;
 	std::stack<ParseContext> m_context;
+	TagMap m_tags;
 	Transform m_transform;
 	bool m_isIncludedFile;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __SHANDLER_H */
+#endif /* __MITSUBA_RENDER_SCENEHANDLER_H_ */

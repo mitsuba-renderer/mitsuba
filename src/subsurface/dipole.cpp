@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -18,8 +18,11 @@
 
 #include <mitsuba/render/scene.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/sse.h>
+#include <mitsuba/core/ssemath.h>
 #include "../medium/materials.h"
 #include "irrtree.h"
+#include "bluenoise.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -28,45 +31,47 @@ MTS_NAMESPACE_BEGIN
  * caused by a number of dipole sources
  */
 struct IsotropicDipoleQuery {
-#if !defined(MTS_SSE) || (SPECTRUM_SAMPLES != 3)
+#if !defined(MTS_SSE) || SPECTRUM_SAMPLES != 3
 	inline IsotropicDipoleQuery(const Spectrum &zr, const Spectrum &zv, 
-		const Spectrum &sigmaTr, Float Fdt, const Point &p) 
-		: zr(zr), zv(zv), sigmaTr(sigmaTr), result(0.0f), Fdt(Fdt), p(p) {
-			count = 0;
+		const Spectrum &sigmaTr, const Point &p) 
+		: zr(zr), zv(zv), sigmaTr(sigmaTr), result(0.0f), p(p) {
 	}
 
 	inline void operator()(const IrradianceSample &sample) {
 		Spectrum rSqr = Spectrum((p - sample.p).lengthSquared());
+
 		/* Distance to the real source */
 		Spectrum dr = (rSqr + zr*zr).sqrt();
+
 		/* Distance to the image point source */
 		Spectrum dv = (rSqr + zv*zv).sqrt();
+
 		Spectrum C1 = zr * (sigmaTr + Spectrum(1.0f) / dr);
 		Spectrum C2 = zv * (sigmaTr + Spectrum(1.0f) / dv);
 
 		/* Do not include the reduced albedo - will be canceled out later */
-		Spectrum dMo = Spectrum(0.25f * INV_PI) *
+		Spectrum dMo = Spectrum(INV_FOURPI) *
 			 (C1 * ((-sigmaTr * dr).exp()) / (dr * dr)
 			+ C2 * ((-sigmaTr * dv).exp()) / (dv * dv));
-		result += dMo * sample.E * (sample.area * Fdt);
-		count++;
+
+		result += dMo * sample.E * sample.area;
 	}
 
 	inline const Spectrum &getResult() const {
 		return result;
 	}
 
-	Spectrum zr, zv, sigmaTr, result;
+	const Spectrum &zr, &zv, &sigmaTr;
+	Spectrum result;
 #else
 	inline IsotropicDipoleQuery(const Spectrum &_zr, const Spectrum &_zv, 
-		const Spectrum &_sigmaTr, Float Fdt, const Point &p) : Fdt(Fdt), p(p) {
+		const Spectrum &_sigmaTr, const Point &p) : p(p) {
 		zr = _mm_set_ps(_zr[0], _zr[1], _zr[2], 0);
 		zv = _mm_set_ps(_zv[0], _zv[1], _zv[2], 0);
 		sigmaTr = _mm_set_ps(_sigmaTr[0], _sigmaTr[1], _sigmaTr[2], 0);
 		zrSqr = _mm_mul_ps(zr, zr);
 		zvSqr = _mm_mul_ps(zv, zv);
 		result.ps = _mm_setzero_ps();
-		count = 0;
 	}
 
 	inline void operator()(const IrradianceSample &sample) {
@@ -76,14 +81,14 @@ struct IsotropicDipoleQuery {
 			dvSqr = _mm_add_ps(zvSqr, lengthSquared),
 			dr = _mm_sqrt_ps(drSqr), dv = _mm_sqrt_ps(dvSqr), 
 			one = _mm_set1_ps(1.0f),
-			factor = _mm_mul_ps(_mm_set1_ps(0.25f*INV_PI*sample.area * Fdt),
+			factor = _mm_mul_ps(_mm_set1_ps(INV_FOURPI*sample.area),
 				_mm_set_ps(sample.E[0], sample.E[1], sample.E[2], 0)),
 			C1fac = _mm_div_ps(_mm_mul_ps(zr, _mm_add_ps(sigmaTr, _mm_div_ps(one, dr))), drSqr),
-			C2fac = _mm_div_ps(_mm_mul_ps(zv, _mm_add_ps(sigmaTr, _mm_div_ps(one, dv))), dvSqr);
-		SSEVector temp1(_mm_mul_ps(dr, sigmaTr)), temp2(_mm_mul_ps(dv, sigmaTr));
-		const __m128
-			exp1 = _mm_set_ps(expf(-temp1.f[3]), expf(-temp1.f[2]), expf(-temp1.f[1]), 0),
-			exp2 = _mm_set_ps(expf(-temp2.f[3]), expf(-temp2.f[2]), expf(-temp2.f[1]), 0);
+			C2fac = _mm_div_ps(_mm_mul_ps(zv, _mm_add_ps(sigmaTr, _mm_div_ps(one, dv))), dvSqr),
+			sigmaTrNeg = negate_ps(sigmaTr),
+			exp1 = math::exp_ps(_mm_mul_ps(dr, sigmaTrNeg)),
+			exp2 = math::exp_ps(_mm_mul_ps(dv, sigmaTrNeg));
+
 		result.ps = _mm_add_ps(result.ps, _mm_mul_ps(factor, _mm_add_ps(
 			_mm_mul_ps(C1fac, exp1), _mm_mul_ps(C2fac, exp2))));
 	}
@@ -99,47 +104,189 @@ struct IsotropicDipoleQuery {
 	SSEVector result;
 #endif
 
-	int count;
-	Float Fdt;
 	Point p;
 };
 
 static ref<Mutex> irrOctreeMutex = new Mutex();
 static int irrOctreeIndex = 0;
 
-/**
- * Subsurface scattering integrator using Jensen's fast hierarchical 
- * dipole approximation scheme.
+/*!\plugin{dipole}{Dipole-based subsurface scattering model}
+ * \parameters{
+ *     \parameter{material}{\String}{
+ *         Name of a material preset, see 
+ *         \tblref{medium-coefficients}. \default{\texttt{skin1}}
+ *     }
+ *     \parameter{sigmaA, sigmaS}{\Spectrum}{
+ *         Absorption and scattering
+ *         coefficients of the medium in inverse scene units.
+ *         These parameters are mutually exclusive with \code{sigmaT} and \code{albedo}
+ *         \default{configured based on \code{material}}
+ *     }
+ *     \parameter{sigmaT, albedo}{\Spectrum}{
+ *         Extinction coefficient in inverse scene units 
+ *         and a (unitless) single-scattering albedo.
+ *         These parameters are mutually exclusive with \code{sigmaA} and \code{sigmaS}
+ *         \default{configured based on \code{material}}
+ *     }
+ *     \parameter{scale}{\Float}{
+ *         Optional scale factor that will be applied to the \code{sigma*} parameters.
+ *         It is provided for convenience when accomodating data based on different units,
+ *         or to simply tweak the density of the medium. \default{1}}
+ *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
+ *      numerically or using a known material name. \default{based on \code{material}}}
+ *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
+ *      numerically or using a known material name. \default{based on \code{material}}}
+ *     \parameter{irrSamples}{\Integer}{
+ *         Number of samples to use when estimating the
+ *         irradiance at a point on the surface \default{16}
+ *     }
+ * }
  *
- * ("A Rapid Hierarhical Rendering Technique for Translucent 
- *   Materials" by Herik Wann Jensen and Juan Buhler, in SIGGRAPH 02)
+ * \renderings{
+ *    \rendering{The material test ball rendered with the \code{skimmilk} 
+ *    material preset}{subsurface_dipole.jpg}
+ *    \rendering{The material test ball rendered with the \code{skin1} 
+ *    material preset}{subsurface_dipole_2.jpg}
+ * }
+ * \renderings{
+ *    \rendering{\code{scale=1}}{subsurface_dipole_dragon.jpg}
+ *    \rendering{\code{scale=0.2}}{subsurface_dipole_dragon2.jpg}
+ *    \caption{The dragon model rendered with the \code{skin2} 
+ *    material preset (model courtesy of XYZ RGB). The \code{scale}
+ *    parameter is useful to communicate the relative size of 
+ *    an object to the viewer.}
+ * }
+
+ * This plugin implements the classic dipole subsurface scattering model
+ * from radiative transport and medical physics \cite{Eason1978Theory, 
+ * Farrell1992Diffusion} in the form proposed by Jensen et al. 
+ * \cite{Jensen2001Practical}. It relies on the assumption that light entering
+ * a material will undergo many (i.e. hundreds) of internal scattering
+ * events, such that diffusion theory becomes applicable. In this
+ * case\footnote{and after making several fairly strong simplifications:
+ * the geometry is assumed to be a planar half-space, and the internal
+ * scattering from the material boundary is only considered approximately.}
+ * a simple analytic solution of the subsurface scattering profile is available
+ * that enables simulating this effect without having to account for the vast
+ * numbers of internal scattering events individually.
+ *
+ * For each \code{dipole} instance in the scene, the plugin adds a pre-process pass 
+ * to the rendering that computes the irradiance on a large set of sample positions
+ * spread uniformly over the surface in question. The locations of these
+ * points are chosen using a technique by Bowers et al. \cite{Bowers2010Parallel} 
+ * that creates particularly well-distributed (blue noise) samples. Later during 
+ * rendering, these  illumination samples are convolved with the diffusion profile 
+ * using a fast hierarchical technique proposed by Jensen and Buhler \cite{Jensen2005Rapid}.
+ *
+ * There are several different ways of configuring the medium properties. 
+ * Either, a material preset can be loaded using the \code{material} 
+ * parameter---see \tblref{medium-coefficients} for details. Alternatively, 
+ * when specifying parameters by hand, they can either be provided using 
+ * the scattering and absorption coefficients, or by declaring the extinction 
+ * coefficient and single scattering albedo (whichever is more convenient). 
+ * Mixing these parameter initialization methods is not allowed.
+ *
+ * All scattering parameters (named \code{sigma*}) should
+ * be provided in inverse scene units. For instance, when a world-space 
+ * distance of 1 unit corresponds to a meter, the scattering coefficents must
+ * be in units of inverse meters. For convenience, the \code{scale}
+ * parameter can be used to correct this. For instance, when the scene is
+ * in meters and the coefficients are in inverse millimeters, set 
+ * \code{scale=1000}.
+ * 
+ * Note that a subsurface integrator can be associated with an \code{id}
+ * and shared by several shapes using the reference mechanism introduced in
+ * \secref{format}. This can be useful when an object is made up of many
+ * separate sub-shapes.
+ *
+ * \renderings{
+ *    \medrendering{Rendered using \pluginref{dipole}}{subsurface_dipole_bad1.jpg}
+ *    \medrendering{Rendered using \pluginref{homogeneous}}{subsurface_dipole_bad2.jpg}
+ *    \medrendering{\code{irrSamples} set too low}{subsurface_dipole_bad3.jpg}
+ *    \caption{Two problem cases that may occur when rendering with the \pluginref{dipole}:
+ *     \textbf{(a)-(b)}: These two renderings show a glass ball filled with diluted milk
+ *     rendered using diffusion theory and radiative transport, respectively.
+ *     The former produces an incorrect result, since the assumption of
+ *     many scattering events breaks down.
+ *     \textbf{(c)}: When the number of irradiance samples is too low, the
+ *     resulting noise becomes visible as ``blotchy'' artifacts in the
+ *     rendering.}
+ * }
+ *
+ * \subsubsection*{Typical material setup}
+ * To create a realistic material with subsurface scattering, it is necessary
+ * to associate the underlying shape with an appropriately configured surface
+ * and subsurface scattering model. Both should be aware of the material's 
+ * index of refraction. 
+ *
+ * Because the \pluginref{dipole} plugin is responsible for all internal
+ * scattering, the surface scattering model should only account for specular
+ * reflection due to the index of refraction change. There are two models
+ * in Mitsuba that can do this: \pluginref{plastic} and
+ * \pluginref{roughplastic} (for smooth and rough interfaces, respectively). 
+ * An example is given on the next page.
+ * \pagebreak
+ * \begin{xml}
+ * <shape type="...">
+ *     <subsurface type="dipole">
+ *         <string name="intIOR" value="water"/>
+ *         <string name="extIOR" value="air"/>
+ *         <rgb name="sigmaS" value="87.2, 127.2, 143.2"/>
+ *         <rgb name="sigmaA" value="1.04, 5.6, 11.6"/>
+ *         <integer name="irrSamples" value="64"/>
+ *     </subsurface>
+ *
+ *     <bsdf type="plastic">
+ *         <string name="intIOR" value="water"/>
+ *         <string name="extIOR" value="air"/>
+ *         <!-- Note: the diffuse component must be disabled! -->
+ *         <spectrum name="diffuseReflectance" value="0"/>
+ *     </bsdf>
+ * <shape>
+ * \end{xml}
+ *
+ * \remarks{
+ *    \item This plugin only implements the multiple scattering component of
+ *    the dipole model, i.e. single scattering is omitted. Furthermore, the 
+ *    numerous assumptions built into the underlying theory can cause severe
+ *    inaccuracies.
+ *
+ *    For this reason, this plugin is the right choice for making pictures 
+ *    that ``look nice'', but it should be avoided when the output must hold
+ *    up to real-world measurements. In this case, please use participating media 
+ *    (\secref{media}).
+ *
+ *   \item It is quite important that the \code{sigma*} parameters have the right units.
+ *   For instance: if the \code{sigmaT} parameter is accidentally set to a value that
+ *   is too small by a factor of 1000, the plugin will attempt to create
+ *   one million times as many irradiance samples, which will likely cause 
+ *   the rendering process to crash with an ``out of memory'' failure.
+ * }
  */
+
 class IsotropicDipole : public Subsurface {
 public:
 	IsotropicDipole(const Properties &props) 
 		: Subsurface(props) {
-		irrOctreeMutex->lock();
-		m_octreeIndex = irrOctreeIndex++;
-		irrOctreeMutex->unlock();
-		
+		{
+			LockGuard lock(irrOctreeMutex);
+			m_octreeIndex = irrOctreeIndex++;
+		}
+
 		/* How many samples should be taken when estimating 
 		   the irradiance at a given point in the scene? */
-		m_irrSamples = props.getInteger("irrSamples", 32);
-				
-		/* When estimating the irradiance at a given point, should indirect illumination be included
-		   in the final estimate? */
+		m_irrSamples = props.getInteger("irrSamples", 16);
+
+		/* When estimating the irradiance at a given point, 
+		   should indirect illumination be included in the final estimate? */
 		m_irrIndirect = props.getBoolean("irrIndirect", true);
 
 		/* Multiplicative factor, which can be used to adjust the number of
 		   irradiance samples */
-		m_sampleMultiplier = props.getFloat("sampleMultiplier", 2.0f);
+		m_sampleMultiplier = props.getFloat("sampleMultiplier", 1.0f);
+
 		/* Error threshold - lower means better quality */
-		m_minDelta= props.getFloat("quality", 0.1f);
-		/* Max. depth of the created octree */
-		m_maxDepth = props.getInteger("maxDepth", 40);
-		/* Multiplicative factor for the subsurface term */
-		m_ssFactor = props.getSpectrum("ssFactor", Spectrum(1.0f));
-		m_maxDepth = props.getInteger("maxDepth", 40);
+		m_quality = props.getFloat("quality", 0.2f);
 	
 		/* Asymmetry parameter of the phase function */
 		m_g = props.getFloat("g", 0);
@@ -153,12 +300,10 @@ public:
 	 : Subsurface(stream, manager) {
 		m_sigmaS = Spectrum(stream);
 		m_sigmaA = Spectrum(stream);
-		m_ssFactor = Spectrum(stream);
 		m_g = stream->readFloat();
 		m_eta = stream->readFloat();
 		m_sampleMultiplier = stream->readFloat();
-		m_minDelta = stream->readFloat();
-		m_maxDepth = stream->readInt();
+		m_quality = stream->readFloat();
 		m_octreeIndex = stream->readInt();
 		m_irrSamples = stream->readInt();
 		m_irrIndirect = stream->readBool();
@@ -181,12 +326,10 @@ public:
 		Subsurface::serialize(stream, manager);
 		m_sigmaS.serialize(stream);
 		m_sigmaA.serialize(stream);
-		m_ssFactor.serialize(stream);
 		stream->writeFloat(m_g);
 		stream->writeFloat(m_eta);
 		stream->writeFloat(m_sampleMultiplier);
-		stream->writeFloat(m_minDelta);
-		stream->writeInt(m_maxDepth);
+		stream->writeFloat(m_quality);
 		stream->writeInt(m_octreeIndex);
 		stream->writeInt(m_irrSamples);
 		stream->writeBool(m_irrIndirect);
@@ -194,134 +337,115 @@ public:
 
 	Spectrum Lo(const Scene *scene, Sampler *sampler,
 			const Intersection &its, const Vector &d, int depth) const {
-		if (!m_ready || m_ssFactor.isZero())
+		if (!m_ready || dot(its.shFrame.n, d) < 0)
 			return Spectrum(0.0f);
-		IsotropicDipoleQuery query(m_zr, m_zv, m_sigmaTr, m_Fdt, its.p);
-	
-		const Normal &n = its.shFrame.n;
-		m_octree->execute(query);
+		IsotropicDipoleQuery query(m_zr, m_zv, m_sigmaTr, its.p);
 
-		if (m_eta == 1.0f) {
-			return query.getResult() * m_ssFactor * INV_PI;
-		} else {
-			Float Ft = 1.0f - fresnel(absDot(n, d));
-			return query.getResult() * m_ssFactor * INV_PI * (Ft / m_Fdr);
-		}
+		m_octree->performQuery(query);
+		Spectrum result(query.getResult() * INV_PI);
+
+		if (m_eta != 1.0f)
+			result *= 1.0f - fresnelDielectricExt(dot(its.shFrame.n, d), m_eta);
+
+		return result;
 	}
 
 	void configure() {
-		m_sigmaSPrime = m_sigmaS * (1-m_g);
+		m_sigmaSPrime = m_sigmaS * (1 - m_g);
 		m_sigmaTPrime = m_sigmaSPrime + m_sigmaA;
 
-		/* Mean-free path (avg. distance traveled through the medium) */
-		m_mfp = Spectrum(1.0f) / m_sigmaTPrime;
-
-		/* Also find the smallest mean-free path for all wavelengths */
-		m_minMFP = std::numeric_limits<Float>::max();
+		/* Find the smallest mean-free path over all wavelengths */
+		Spectrum mfp = Spectrum(1.0f) / m_sigmaTPrime;
+		m_radius = std::numeric_limits<Float>::max();
 		for (int lambda=0; lambda<SPECTRUM_SAMPLES; lambda++)
-			m_minMFP = std::min(m_minMFP, m_mfp[lambda]);
+			m_radius = std::min(m_radius, mfp[lambda]);
 
-		/* Average reflectance due to mismatched indices of refraction
-		   at the boundary - [Groenhuis et al. 1983]*/
-		m_Fdr = -1.440f / (m_eta * m_eta) + 0.710f / m_eta 
-			+ 0.668f + 0.0636f * m_eta;
+		/* Average diffuse reflectance due to mismatched indices of refraction */
+		m_Fdr = fresnelDiffuseReflectance(1 / m_eta);
 
-		/* Reduced albedo */
-		m_alphaPrime = m_sigmaSPrime / m_sigmaTPrime;
-
-		/* Average transmittance at the boundary */
-		m_Fdt = 1.0f - m_Fdr;
-
-		if (m_eta == 1.0f) {
-			m_Fdr = (Float) 0.0f;
-			m_Fdt = (Float) 1.0f;
-		}
-
-		/* Approximate dipole boundary condition term */
-		m_A = (1 + m_Fdr) / m_Fdt;
+		/* Dipole boundary condition distance term */
+		Float A = (1 + m_Fdr) / (1 - m_Fdr);
 
 		/* Effective transport extinction coefficient */
 		m_sigmaTr = (m_sigmaA * m_sigmaTPrime * 3.0f).sqrt();
 
-		/* Diffusion coefficient */
-		m_D = Spectrum(1.0f) / (m_sigmaTPrime * 3.0f);
-
-		/* Distance of the dipole point sources to the surface */
-		m_zr = m_mfp; 
-		m_zv = m_mfp * (1.0f + 4.0f/3.0f * m_A);
-	}
-
-	/// Unpolarized fresnel reflection term for dielectric materials
-	Float fresnel(Float cosThetaI) const {
-		Float g = std::sqrt(m_eta*m_eta - 1.0f + cosThetaI * cosThetaI);
-		Float temp1 = (g - cosThetaI)/(g + cosThetaI);
-		Float temp2 = (cosThetaI * (g + cosThetaI) - 1) / 
-			(cosThetaI * (g - cosThetaI) + 1.0f);
-		return 0.5f * temp1 * temp1 * (1.0f + temp2 * temp2);
+		/* Distance of the two dipole point sources to the surface */
+		m_zr = mfp; 
+		m_zv = mfp * (1.0f + 4.0f/3.0f * A);
 	}
 
 	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
-		int sceneResID, int cameraResID, int samplerResID) {
+		int sceneResID, int cameraResID, int _samplerResID) {
 		if (m_ready)
 			return true;
 
 		if (!scene->getIntegrator()->getClass()
-				->derivesFrom(MTS_CLASS(SampleIntegrator))) {
-			Log(EError, "The dipole subsurface integrator requires "
+				->derivesFrom(MTS_CLASS(SamplingIntegrator)))
+			Log(EError, "The dipole subsurface scattering model requires "
 				"a sampling-based surface integrator!");
-		}
-
-		m_octree = new IrradianceOctree(m_maxDepth, m_minDelta, 
-			scene->getKDTree()->getAABB());
-
-		Float sa = 0;
-		for (std::vector<Shape *>::iterator it = m_shapes.begin(); 
-			it != m_shapes.end(); ++it) 
-			sa += (*it)->getSurfaceArea();
-		size_t sampleCount = (size_t) std::ceil(sa / (M_PI * m_minMFP * m_minMFP)
-			* m_sampleMultiplier);
-		Log(EInfo, "Generating " SIZE_T_FMT " irradiance samples..", sampleCount);
 
 		ref<Scheduler> sched = Scheduler::getInstance();
+		ref<Timer> timer = new Timer();
 
-		/* This could be a bit more elegant.. - inform the irradiance
-		   sampler about the index of this subsurface integrator */
-		std::vector<Subsurface *> ssIntegrators
-			= scene->getSubsurfaceIntegrators();
-		int index = -1;
-		for (size_t i=0; i<ssIntegrators.size(); ++i) {
-			if (ssIntegrators[i] == this) {
-				index = (int) i;
-				break;
-			}
-		}
-		Assert(index != -1);
+		AABB aabb;
+		Float sa;
 
+		ref<PositionSampleVector> points = new PositionSampleVector();
+		/* It is necessary to increase the sampling resolution to
+		   prevent low-frequency noise in the output */
+		Float actualRadius = m_radius / std::sqrt(m_sampleMultiplier * 20);
+		blueNoisePointSet(scene, m_shapes, actualRadius, points, sa, aabb, job);
+
+		/* 2. gather irradiance in parallel */
 		ref<IrradianceSamplingProcess> proc = new IrradianceSamplingProcess(
-			sampleCount, (size_t) std::ceil(sampleCount/100.0f), index, 
-			m_irrSamples, m_irrIndirect, job);
+			points, 1024, m_irrSamples, m_irrIndirect, job);
+
+		/* Create a sampler instance for every core */
+		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
+			createObject(MTS_CLASS(Sampler), Properties("independent")));
+		std::vector<SerializableObject *> samplers(sched->getCoreCount());
+		for (size_t i=0; i<sched->getCoreCount(); ++i) {
+			ref<Sampler> clonedSampler = sampler->clone();
+			clonedSampler->incRef();
+			samplers[i] = clonedSampler.get();
+		}
+
+		int samplerResID = sched->registerMultiResource(samplers);
 
 		proc->bindResource("scene", sceneResID);
+		proc->bindResource("sampler", samplerResID);
 		scene->bindUsedResources(proc);
 		m_proc = proc;
 		sched->schedule(proc);
 		sched->wait(proc);
 		m_proc = NULL;
+		for (size_t i=0; i<samplers.size(); ++i)
+			samplers[i]->decRef();
+
+		sched->unregisterResource(samplerResID);
 		if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 			return false;
 
-		const IrradianceRecordVector &results = *proc->getSamples();
-		for (size_t i=0; i<results.size(); ++i) 
-			m_octree->addSample(results[i]);
+		Log(EDebug, "Done gathering (took %i ms), clustering ..", timer->getMilliseconds());
+		timer->reset();
 
-		m_octree->preprocess();
+		std::vector<IrradianceSample> &samples = proc->getIrradianceSampleVector()->get();
+		sa /= samples.size();
+		
+		for (size_t i=0; i<samples.size(); ++i) 
+			samples[i].area = sa;
+
+		m_octree = new IrradianceOctree(aabb, m_quality, samples);
+
+		Log(EDebug, "Done clustering (took %i ms).", timer->getMilliseconds());
 		m_octreeResID = Scheduler::getInstance()->registerResource(m_octree);
 
 		m_ready = true;
 		return true;
 	}
 
-	void wakeup(std::map<std::string, SerializableObject *> &params) {
+	void wakeup(ConfigurableObject *parent,
+		std::map<std::string, SerializableObject *> &params) {
 		std::string octreeName = formatString("irrOctree%i", m_octreeIndex);
 		if (!m_octree.get() && params.find(octreeName) != params.end()) {
 			m_octree = static_cast<IrradianceOctree *>(params[octreeName]);
@@ -335,18 +459,17 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	Float m_minMFP, m_sampleMultiplier;
-	Float m_Fdr, m_Fdt, m_A, m_minDelta, m_g, m_eta;
+	Float m_radius, m_sampleMultiplier;
+	Float m_Fdr, m_quality, m_g, m_eta;
 	Spectrum m_sigmaS, m_sigmaA;
-	Spectrum m_mfp, m_sigmaTr, m_zr, m_zv, m_alphaPrime;
-	Spectrum m_sigmaSPrime, m_sigmaTPrime, m_D, m_ssFactor;
+	Spectrum m_sigmaTr, m_zr, m_zv;
+	Spectrum m_sigmaSPrime, m_sigmaTPrime;
 	ref<IrradianceOctree> m_octree;
 	ref<ParallelProcess> m_proc;
 	int m_octreeResID, m_octreeIndex;
-	int m_maxDepth;
 	int m_irrSamples;
 	bool m_irrIndirect;
-	bool m_ready, m_requireSample;
+	bool m_ready;
 };
 
 MTS_IMPLEMENT_CLASS_S(IsotropicDipole, false, Subsurface)

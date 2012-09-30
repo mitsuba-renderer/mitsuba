@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,13 +20,38 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Stratified sample generator. Given a resolution $R$ and a depth $D$, it 
- * generates $R*R$ samples, each of which can be queried for up to $D$ 1- 
- * or 2-dimensional vectors by an integrator. The returned 1D/2D-vectors 
- * of a particular depth have the property of being stratified over all 
- * $R*R$ samples. When the maximum depth is exceeded, independent sampling 
- * takes over.
+/*!\plugin{stratified}{Stratified sampler}
+ * \order{2}
+ * \parameters{
+ *     \parameter{sampleCount}{\Integer}{
+ *       Number of samples per pixel; should be a perfect square
+ *       (e.g. 1, 4, 9, 16, 25, etc.), or it will be rounded up to the
+ *       next one \default{4}
+ *     }
+ *     \parameter{dimension}{\Integer}{
+ *       Effective dimension, up to which stratified samples are provided. The
+ *       number here is to be interpreted as the number of subsequent 1D or 2D sample 
+ *       requests that can be satisfied using ``good'' samples. Higher high values 
+ *       increase both storage and computational costs.
+ *       \default{4}
+ *     }
+ * }
+ * \renderings{
+ *     \unframedrendering{A projection of the first 1024 points
+ *     onto the first two dimensions.}{sampler_stratified}
+ *     \unframedrendering{The same samples shown together with the 
+ *     underlying strata for illustrative purposes}{sampler_stratified_strata}
+ * }
+ * 
+ * The stratified sample generator divides the domain into a discrete number
+ * of strata and produces a sample within each one of them. This generally leads to less 
+ * sample clumping when compared to the independent sampler, as well as better 
+ * convergence. Due to internal storage costs, stratified samples are only provided up to a 
+ * certain dimension, after which independent sampling takes over.
+ *
+ * Like the \pluginref{independent} sampler, multicore and network renderings
+ * will generally produce different images in subsequent runs due to the nondeterminism
+ * introduced by the operating system scheduler.
  */
 class StratifiedSampler : public Sampler {
 public:
@@ -48,14 +73,14 @@ public:
 
 		m_resolution = (int) i;
 
-		/* Depth, up to which which stratified samples are guaranteed to be available. */
-		m_depth = props.getInteger("depth", 3);
+		/* Dimension, up to which which stratified samples are guaranteed to be available. */
+		m_maxDimension = props.getInteger("dimension", 4);
 
 		m_sampleCount = m_resolution*m_resolution;
-		m_permutations1D = new uint32_t*[m_depth];
-		m_permutations2D = new uint32_t*[m_depth];
+		m_permutations1D = new uint32_t*[m_maxDimension];
+		m_permutations2D = new uint32_t*[m_maxDimension];
 
-		for (int i=0; i<m_depth; i++) {
+		for (int i=0; i<m_maxDimension; i++) {
 			m_permutations1D[i] = new uint32_t[m_sampleCount];
 			m_permutations2D[i] = new uint32_t[m_sampleCount];
 		}
@@ -67,12 +92,12 @@ public:
 
 	StratifiedSampler(Stream *stream, InstanceManager *manager) 
 	 : Sampler(stream, manager) {
-		m_depth = stream->readInt();
+		m_maxDimension = stream->readInt();
 		m_resolution = stream->readInt();
 		m_random = static_cast<Random *>(manager->getInstance(stream));
-		m_permutations1D = new uint32_t*[m_depth];
-		m_permutations2D = new uint32_t*[m_depth];
-		for (int i=0; i<m_depth; i++) {
+		m_permutations1D = new uint32_t*[m_maxDimension];
+		m_permutations2D = new uint32_t*[m_maxDimension];
+		for (int i=0; i<m_maxDimension; i++) {
 			m_permutations1D[i] = new uint32_t[m_sampleCount];
 			m_permutations2D[i] = new uint32_t[m_sampleCount];
 		}
@@ -83,13 +108,13 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Sampler::serialize(stream, manager);
 
-		stream->writeInt(m_depth);
+		stream->writeInt(m_maxDimension);
 		stream->writeInt(m_resolution);
 		manager->serialize(stream, m_random.get());
 	}
 
 	virtual ~StratifiedSampler() {
-		for (int i=0; i<m_depth; i++) {
+		for (int i=0; i<m_maxDimension; i++) {
 			delete[] m_permutations1D[i];
 			delete[] m_permutations2D[i];
 		}
@@ -100,15 +125,15 @@ public:
 	ref<Sampler> clone() {
 		ref<StratifiedSampler> sampler = new StratifiedSampler();
 		sampler->m_sampleCount = m_sampleCount;
-		sampler->m_depth = m_depth;
+		sampler->m_maxDimension = m_maxDimension;
 		sampler->m_resolution = m_resolution;
 		sampler->m_invResolution = m_invResolution;
 		sampler->m_invResolutionSquare = m_invResolutionSquare;
 		sampler->m_random = new Random(m_random);
 
-		sampler->m_permutations1D = new uint32_t*[m_depth];
-		sampler->m_permutations2D = new uint32_t*[m_depth];
-		for (int i=0; i<m_depth; i++) {
+		sampler->m_permutations1D = new uint32_t*[m_maxDimension];
+		sampler->m_permutations2D = new uint32_t*[m_maxDimension];
+		for (int i=0; i<m_maxDimension; i++) {
 			sampler->m_permutations1D[i] = new uint32_t[m_sampleCount];
 			sampler->m_permutations2D[i] = new uint32_t[m_sampleCount];
 		}
@@ -119,8 +144,8 @@ public:
 		return sampler.get();
 	}
 
-	void generate() {
-		for (int i=0; i<m_depth; i++) {
+	void generate(const Point2i &) {
+		for (int i=0; i<m_maxDimension; i++) {
 			for (size_t j=0; j<m_sampleCount; j++)
 				m_permutations1D[i][j] = (uint32_t) j;
 			m_random->shuffle(&m_permutations1D[i][0], &m_permutations1D[i][m_sampleCount]);
@@ -137,36 +162,36 @@ public:
 				m_req2D[i] * m_sampleCount, 2);
 
 		m_sampleIndex = 0;
-		m_sampleDepth1D = m_sampleDepth2D = 0;
-		m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
+		m_dimension1D = m_dimension2D = 0;
+		m_dimension1DArray = m_dimension2DArray = 0;
 	}
 
 	void setSampleIndex(size_t sampleIndex) {
 		m_sampleIndex = sampleIndex;
-		m_sampleDepth1D = m_sampleDepth2D = 0;
-		m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
+		m_dimension1D = m_dimension2D = 0;
+		m_dimension1DArray = m_dimension2DArray = 0;
 	}
 
 	void advance() {
 		m_sampleIndex++;
-		m_sampleDepth1D = m_sampleDepth2D = 0;
-		m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
+		m_dimension1D = m_dimension2D = 0;
+		m_dimension1DArray = m_dimension2DArray = 0;
 	}
 
 	Float next1D() {
 		Assert(m_sampleIndex < m_sampleCount);
-		if (m_sampleDepth1D < m_depth) {
-			int k = m_permutations1D[m_sampleDepth1D++][m_sampleIndex];
+		if (m_dimension1D < m_maxDimension) {
+			int k = m_permutations1D[m_dimension1D++][m_sampleIndex];
 			return (k + m_random->nextFloat()) * m_invResolutionSquare;
 		} else {
 			return m_random->nextFloat();
 		}
 	}
-
+ 
 	Point2 next2D() {
 		Assert(m_sampleIndex < m_sampleCount);
-		if (m_sampleDepth2D < m_depth) {
-			int k = m_permutations2D[m_sampleDepth2D++][m_sampleIndex];
+		if (m_dimension2D < m_maxDimension) {
+			int k = m_permutations2D[m_dimension2D++][m_sampleIndex];
 			int x = k % m_resolution;
 			int y = k / m_resolution;
 			return Point2(
@@ -181,25 +206,14 @@ public:
 		}
 	}
 
-	Float independent1D() {
-		return m_random->nextFloat();
-	}
-
-	Point2 independent2D() {
-		return Point2(
-			m_random->nextFloat(),
-			m_random->nextFloat()
-		);
-	}
-
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "StratifiedSampler[" << endl
 			<< "  resolution = " << m_resolution << "," << endl
 			<< "  sampleCount = " << m_sampleCount << "," << endl
-			<< "  depth = " << m_depth << "," << endl
+			<< "  dimension = " << m_maxDimension << "," << endl
 			<< "  sampleIndex = " << m_sampleIndex << "," << endl
-			<< "  sampleDepth = " << m_depth << endl
+			<< "  dimension = " << m_maxDimension << endl
 			<< "]"; 
 		return oss.str();
 	}
@@ -208,12 +222,12 @@ public:
 private:
 	ref<Random> m_random;
 	int m_resolution;
-	int m_depth;
+	int m_maxDimension;
 	Float m_invResolution, m_invResolutionSquare;
 	uint32_t **m_permutations1D, **m_permutations2D;
-	int m_sampleDepth1D, m_sampleDepth2D;
+	int m_dimension1D, m_dimension2D;
 };
 
 MTS_IMPLEMENT_CLASS_S(StratifiedSampler, false, Sampler)
-MTS_EXPORT_PLUGIN(StratifiedSampler, "Stratified sampling");
+MTS_EXPORT_PLUGIN(StratifiedSampler, "Stratified sampler");
 MTS_NAMESPACE_END

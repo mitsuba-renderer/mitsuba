@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -26,10 +26,11 @@
 #include <mitsuba/core/version.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/bitmap.h>
 #include <fstream>
 #include <stdexcept>
 
-#ifdef WIN32
+#ifdef __WINDOWS__
 #include <io.h>
 #include <ws2tcpip.h>
 #include <mitsuba/core/getopt.h>
@@ -55,7 +56,7 @@ using namespace mitsuba;
 static bool running = true;
 static SOCKET sock = INVALID_SOCKET;
 
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 BOOL CtrlHandler(DWORD type) {
 	switch (type) {
 		case CTRL_C_EVENT:
@@ -93,7 +94,7 @@ int mts_main(int argc, char **argv) {
 
 	try {
 		/* Default settings */
-		int nprocs = getProcessorCount(),
+		int nprocs = getCoreCount(),
 			listenPort = MTS_DEFAULT_PORT;
 		std::string nodeName = getHostName(),
 					networkHosts = "";
@@ -109,8 +110,8 @@ int mts_main(int argc, char **argv) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
-						for (unsigned int i=0; i<paths.size(); ++i) 
-							fileResolver->addPath(paths[i]);
+						for (int i=(int)paths.size()-1; i>=0; --i) 
+							fileResolver->prependPath(paths[i]);
 					}
 					break;
 				case 'c':
@@ -208,7 +209,7 @@ int mts_main(int argc, char **argv) {
 		SLog(EInfo, "Mitsuba version %s, Copyright (c) " MTS_YEAR " Wenzel Jakob",
 			Version(MTS_VERSION).toStringComplete().c_str());
 
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 		/* Custom handler for Ctrl-C signals */
 		SetConsoleCtrlHandler((PHANDLER_ROUTINE) CtrlHandler, TRUE);
 #endif
@@ -251,7 +252,7 @@ int mts_main(int argc, char **argv) {
 				scheduler->registerWorker(new RemoteWorker(formatString("net%i", i), stream));
 			} catch (std::runtime_error &e) {
 				if (hostName.find("@") != std::string::npos) {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 					SLog(EWarn, "Please ensure that passwordless authentication "
 						"using plink.exe and pageant.exe is enabled (see the documentation for more information)");
 #else
@@ -299,7 +300,7 @@ int mts_main(int argc, char **argv) {
 			/* Bind the socket to the port number */
 			if (bind(sock, p->ai_addr, (socklen_t) p->ai_addrlen) == -1) {
 				SocketStream::handleError(formatString("bind(%s:%i)", hostName.c_str(), listenPort), EError);
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 				closesocket(sock);
 #else
 				close(sock);
@@ -317,7 +318,7 @@ int mts_main(int argc, char **argv) {
 			SocketStream::handleError("bind");
 		SLog(EInfo, "Enter mtssrv -h for more options");
 
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 		SLog(EInfo, "%s: Listening on port %i.. Send Ctrl-C to stop.", hostName.c_str(), listenPort);
 #else
 		/* Avoid zombies processes */
@@ -348,7 +349,7 @@ int mts_main(int argc, char **argv) {
 
 			SOCKET newSocket = accept(sock, (struct sockaddr *) &sockaddr, &addrlen);
 			if (newSocket == INVALID_SOCKET) {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 				if(!running)
 					break;
 #else
@@ -363,13 +364,13 @@ int mts_main(int argc, char **argv) {
 				scheduler, nodeName, new SocketStream(newSocket), true);
 			backend->start();
 		}
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 		SLog(EInfo, "Caught signal - shutting down..");
 #else
 		close(sock);
 #endif
 	} catch (const std::exception &e) {
-		std::cerr << "Caught a critical exeption: " << e.what() << std::endl;
+		std::cerr << "Caught a critical exeption: " << e.what() << endl;
 	} catch (...) {
 		std::cerr << "Caught a critical exeption of unknown type!" << endl;
 	}
@@ -383,15 +384,17 @@ int mts_main(int argc, char **argv) {
 int main(int argc, char **argv) {
 	/* Initialize the core framework */
 	Class::staticInitialization();
+	Object::staticInitialization();
 	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
 	Spectrum::staticInitialization();
+	Bitmap::staticInitialization();
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
 
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
@@ -400,7 +403,7 @@ int main(int argc, char **argv) {
 		SLog(EError, "Could not find the required version of winsock.dll!");
 #endif
 
-#if !defined(WIN32)
+#if defined(__LINUX__) || defined(__OSX__)
 	setlocale(LC_NUMERIC, "C");
 #endif
 
@@ -409,15 +412,17 @@ int main(int argc, char **argv) {
 	/* Shutdown the core framework */
 	SHVector::staticShutdown();
 	Scheduler::staticShutdown();
+	Bitmap::staticShutdown();
 	Spectrum::staticShutdown();
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();
 	PluginManager::staticShutdown();
+	Object::staticShutdown();
 	Class::staticShutdown();
 	
 
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	/* Shut down WINSOCK2 */
 	WSACleanup();
 #endif

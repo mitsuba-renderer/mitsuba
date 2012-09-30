@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,26 +16,27 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__TRIACCEL_SSE_H)
-#define __TRIACCEL_SSE_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_TRIACCEL_SSE_H_)
+#define __MITSUBA_RENDER_TRIACCEL_SSE_H_
 
 #include <mitsuba/render/trimesh.h>
 
 MTS_NAMESPACE_BEGIN
 
-FINLINE __m128 TriAccel::rayIntersectPacket(const RayPacket4 &packet, 
-	__m128 mint, __m128 maxt, __m128 inactive, Intersection4 &its) const {
+FINLINE __m128 rayIntersectPacket(const TriAccel &tri, const RayPacket4 &packet, 
+	__m128 mint, __m128 maxt, __m128 inactive, Intersection4 &its) {
 	static const MM_ALIGN16 int waldModulo[4] = { 1, 2, 0, 1 };
-	const int ku = waldModulo[k], kv = waldModulo[k+1];
+	const int ku = waldModulo[tri.k], kv = waldModulo[tri.k+1];
 
 	/* Get the u and v components */
 	const __m128 
-		o_u = packet.o[ku].ps, o_v = packet.o[kv].ps, o_k = packet.o[k].ps,
-		d_u = packet.d[ku].ps, d_v = packet.d[kv].ps, d_k = packet.d[k].ps;
+		o_u = packet.o[ku].ps, o_v = packet.o[kv].ps, o_k = packet.o[tri.k].ps,
+		d_u = packet.d[ku].ps, d_v = packet.d[kv].ps, d_k = packet.d[tri.k].ps;
 
 	/* Extract data from the first cache line */
 	const __m128 
-		line1 = _mm_load_ps((const float *) this),
+		line1 = _mm_load_ps((const float *) &tri),
 		n_u = splat_ps(line1, 1),
 		n_v = splat_ps(line1, 2),
 		n_d = splat_ps(line1, 3);
@@ -62,7 +63,7 @@ FINLINE __m128 TriAccel::rayIntersectPacket(const RayPacket4 &packet,
 
 	/* Extract data from the second cache line */
 	const __m128 
-		line2 = _mm_load_ps(&this->a_u),
+		line2 = _mm_load_ps(&tri.a_u),
 		a_u   = splat_ps(line2, 0),
 		a_v   = splat_ps(line2, 1),
 		b_nu  = splat_ps(line2, 2),
@@ -74,7 +75,7 @@ FINLINE __m128 TriAccel::rayIntersectPacket(const RayPacket4 &packet,
 
 	/* Extract data from the third cache line */
 	const __m128 
-		line3     = _mm_load_ps(&this->c_nu),
+		line3     = _mm_load_ps(&tri.c_nu),
 		c_nu      = splat_ps(line3, 0),
 		c_nv      = splat_ps(line3, 1);
 	const __m128i
@@ -111,5 +112,5 @@ FINLINE __m128 TriAccel::rayIntersectPacket(const RayPacket4 &packet,
 
 MTS_NAMESPACE_END
 
-#endif /* __TRIACCEL_SSE_H */
+#endif /* __MITSUBA_RENDER_TRIACCEL_SSE_H_ */
 

@@ -1,12 +1,19 @@
 Import('env', 'sys', 'os')
 
 bidirEnv = env.Clone()
-bidirEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_BIDIR']] )
+bidirEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_BIDIR']])
 
-libbidir = bidirEnv.SharedLibrary('mitsuba-bidir', ['rsampler.cpp'])
+#bidirEnv.RemoveFlags(['-O3'])
+#bidirEnv.Append(CXXFLAGS = ['-O0']);
+
+libbidir = bidirEnv.SharedLibrary('mitsuba-bidir', [
+	'common.cpp', 'rsampler.cpp', 'vertex.cpp', 'edge.cpp',
+	'path.cpp', 'verification.cpp', 'util.cpp', 'pathsampler.cpp',
+	'mut_bidir.cpp', 'mut_lens.cpp', 'mut_caustic.cpp', 
+	'mut_mchain.cpp', 'manifold.cpp', 'mut_manifold.cpp'
+])
+
+env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'libbidir')])
 
 if sys.platform == "darwin":
-	bidirEnv.AddPostAction(libbidir, 'install_name_tool -id @loader_path/../Frameworks/libmitsuba-bidir.dylib $TARGET')
-
-env.Append(LIBS=['mitsuba-bidir'])
-env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'libbidir')])
+	bidirEnv.AddPostAction(libbidir, 'install_name_tool -id @rpath/libmitsuba-bidir.dylib $TARGET')

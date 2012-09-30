@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
 	This particular file is based on code by Piti Irawan, which is
 	redistributed with permission.
@@ -27,6 +27,7 @@
 #include <boost/spirit/include/phoenix_bind.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
 #include <boost/spirit/include/phoenix_stl.hpp>
+#include <boost/spirit/home/qi/numeric/real.hpp>
 #include <boost/spirit/home/phoenix/bind/bind_member_variable.hpp>
 #include <boost/spirit/home/phoenix/bind/bind_member_function.hpp>
 #include <boost/spirit/home/phoenix/statement/if.hpp>
@@ -275,14 +276,24 @@ template <typename Iterator> struct SkipGrammar : qi::grammar<Iterator> {
 	qi::rule<Iterator> start;
 };
 
+#if defined(SINGLE_PRECISION)
+	#define Float_ qi::float_
+#else
+	#define Float_ qi::double_
+#endif
+
 template <typename Iterator> struct YarnGrammar : qi::grammar<Iterator, Yarn(), SkipGrammar<Iterator> > {
 	YarnGrammar(const Properties &props) 
 			: YarnGrammar::base_type(start), props(props) {
 		using namespace qi::labels;
 		using qi::float_;
+		using qi::double_;
 		using qi::char_;
 		using qi::lit;
 		using qi::_val;
+		using qi::_1;
+		using qi::_2;
+		using qi::_3;
 
 		type = (qi::string("warp") | qi::string("weft"))
 			[ ph::if_else(_1 == "warp", _val = Yarn::EWarp, _val = Yarn::EWeft ) ];
@@ -290,11 +301,11 @@ template <typename Iterator> struct YarnGrammar : qi::grammar<Iterator, Yarn(), 
 		identifier = qi::lexeme[ lit('$') >> (qi::alpha | char_('_')) 
 			>> *(qi::alnum | char_('_')) ];
 
-		spec = ((lit("{") >> float_ >> lit(",") >> float_ >> lit(",") >> float_ >> lit("}")) 
+		spec = ((lit("{") >> Float_ >> lit(",") >> Float_ >> lit(",") >> Float_ >> lit("}")) 
 					[ ph::bind(&Spectrum::fromLinearRGB, _val, _1, _2, _3, Spectrum::EReflectance) ])
 		     | (identifier [ _val = ph::bind(&Properties::getSpectrum, ph::ref(props), _1)]);
 
-		flt = (float_ [ _val = _1 ])
+		flt = (Float_ [ _val = _1 ])
 		    | (identifier [ _val = ph::bind(&Properties::getFloat, ph::ref(props), _1)]);
 
 		start = lit("yarn")
@@ -317,7 +328,7 @@ template <typename Iterator> struct YarnGrammar : qi::grammar<Iterator, Yarn(), 
 	qi::rule<Iterator, Yarn::EYarnType(), SkipGrammar<Iterator> > type;
 	qi::rule<Iterator, Yarn(), SkipGrammar<Iterator> > start;
 	qi::rule<Iterator, Spectrum(), SkipGrammar<Iterator> > spec;
-	qi::rule<Iterator, float(), SkipGrammar<Iterator> > flt;
+	qi::rule<Iterator, Float(), SkipGrammar<Iterator> > flt;
 	qi::rule<Iterator, std::string()> identifier;
 	const Properties &props;
 };
@@ -327,10 +338,12 @@ template <typename Iterator> struct WeavePatternGrammar : qi::grammar<Iterator, 
 			: WeavePatternGrammar::base_type(start), yarn(props), props(props) {
 		using namespace qi::labels;
 		using qi::float_;
+		using qi::double_;
 		using qi::uint_;
 		using qi::char_;
 		using qi::lit;
 		using qi::_val;
+		using qi::_1;
 		using ph::push_back;
 
 		pattern = lit("pattern") >> lit("{")
@@ -342,7 +355,7 @@ template <typename Iterator> struct WeavePatternGrammar : qi::grammar<Iterator, 
 		identifier = qi::lexeme[ lit('$') >> (qi::alpha | char_('_')) 
 			>> *(qi::alnum | char_('_')) ];
 
-		flt = (float_ [ _val = _1 ])
+		flt = (Float_ [ _val = _1 ])
 		      | (identifier [ _val = ph::bind(&Properties::getFloat, ph::ref(props), _1)]);
 
 		start = lit("weave") >> lit("{") >> (
@@ -370,7 +383,7 @@ template <typename Iterator> struct WeavePatternGrammar : qi::grammar<Iterator, 
 	qi::rule<Iterator, WeavePattern(), SkipGrammar<Iterator> > start;
 	qi::rule<Iterator, std::vector<uint32_t>(), SkipGrammar<Iterator> > pattern;
 	qi::rule<Iterator, std::string(), SkipGrammar<Iterator> > name;
-	qi::rule<Iterator, float(), SkipGrammar<Iterator> > flt;
+	qi::rule<Iterator, Float(), SkipGrammar<Iterator> > flt;
 	qi::rule<Iterator, std::string()> identifier;
 	YarnGrammar<Iterator> yarn;
 	const Properties &props;

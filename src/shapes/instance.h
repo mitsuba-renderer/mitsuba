@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -35,8 +35,8 @@ public:
 	/// Serialize to a binary data stream
 	void serialize(Stream *stream, InstanceManager *manager) const;
 
-	/** \brief Configure this object (called _once_ after construction
-	   and addition of all child ConfigurableObjects.) */
+	/** \brief Configure this object (called \a once after construction
+	   and addition of all child \ref ConfigurableObject instances).) */
 	void configure();
 
 	/// Return the object-to-world transformation used by this instance
@@ -67,7 +67,13 @@ public:
 	void fillIntersectionRecord(const Ray &ray, 
 		const void *temp, Intersection &its) const;
 	
-	
+	void getNormalDerivative(const Intersection &its,
+		Vector &dndu, Vector &dndv, bool shadingFrame) const;
+
+	size_t getPrimitiveCount() const;
+
+	size_t getEffectivePrimitiveCount() const;
+
 	//! @}
 	// =============================================================
 
@@ -75,6 +81,7 @@ public:
 private:
 	ref<ShapeGroup> m_shapeGroup;
 	Transform m_objectToWorld, m_worldToObject;
+	Float m_invScale;
 };
 
 MTS_NAMESPACE_END

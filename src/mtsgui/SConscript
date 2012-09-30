@@ -1,4 +1,4 @@
-Import('env', 'os', 'glob', 'sys', 'hasQt', 'hasCollada', 'mainEnv', 
+Import('env', 'os', 'glob', 'sys', 'hasQt', 'hasCollada', 'hasBreakpad', 'mainEnv', 
 	'resources', 'converter_objects')
 
 # For running Uic & Moc (below)
@@ -19,10 +19,14 @@ def scanFiles(dir, accept=["*.cpp"], reject=[]) :
 	sources = map((lambda a : os.path.basename(a)), sources)
 	return unique(sources)
 
+
 if hasQt:
 	qtEnv = mainEnv.Clone()
 	qtEnv.Append(CPPPATH=['#src/mtsgui'])
+	if qtEnv.has_key('QTINCLUDE'):
+		qtEnv.Prepend(CPPPATH=qtEnv['QTINCLUDE'])
 	qtEnv.EnableQt4Modules(['QtGui', 'QtCore', 'QtOpenGL', 'QtXml', 'QtXmlPatterns', 'QtNetwork'])
+
 	if sys.platform == 'win32':
 		index = qtEnv['CXXFLAGS'].index('_CONSOLE')
 		del qtEnv['CXXFLAGS'][index-1]
@@ -32,10 +36,17 @@ if hasQt:
 		qtEnv.Append(CXXFLAGS=['/D', '_WINDOWS'])
 		qtEnv.Append(LINKFLAGS=['/SUBSYSTEM:WINDOWS'])
 		qtEnv.Append(LIBS=['qtmain'])
+		if hasBreakpad:
+			qtEnv.Append(CPPPATH=['#dependencies/include/breakpad'])
+			qtEnv.Append(LIBS=['breakpad_common', 'breakpad_exception_handler', 'breakpad_crash_generation_client',
+				'breakpad_crash_report_sender', 'wininet'])
 	elif sys.platform == 'darwin':
-		qtEnv.Append(LINKFLAGS=['-Fdependencies/darwin', '-framework',
+		qtEnv.Append(LINKFLAGS=['-Fdependencies/frameworks', '-framework',
 			'BWToolkitFramework', '-framework', 'Security'])
+		if hasBreakpad:
+			qtEnv.Append(LINKFLAGS=['-framework', 'Breakpad'])
 		qtEnv.Append(CPPFLAGS=['-I', '/System/Library/Frameworks/Security.framework/Headers'])
+		qtEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks'])
 
 	bpath = env.GetBuildPath('#src/mtsgui')
 	qtInterfaces = [qtEnv.Uic4(uic) for uic in scanFiles(bpath, ['*.ui'])]
@@ -55,16 +66,18 @@ if hasQt:
 		mainEnv_osx.ConfigureForObjectiveCPP()
 		qtEnv_osx.ConfigureForObjectiveCPP()
 		mainEnv_osx.Program('symlinks_install', ['symlinks_install.c'])
-		qtEnv_osx['CXXFLAGS'].append(['-Fdependencies/darwin', '-framework', 'BWToolkitFramework'])
+		qtEnv_osx['CXXFLAGS'].append(['-Fdependencies/frameworks', '-framework', 'BWToolkitFramework', '-framework', 'Breakpad'])
 		qtSources += qtEnv_osx.StaticObject('previewsettingsdlg_cocoa_impl.mm')
+		if hasBreakpad:
+			qtSources += qtEnv_osx.StaticObject('breakpad.mm')
 	else:
 		qtSources = [x for x in qtSources if (not isinstance(x, str) or 'cocoa' not in x)]
 	mtsgui = qtEnv.Program('mtsgui', qtSources)
 	if sys.platform == 'darwin':
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @loader_path/../Frameworks/QtGui $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @loader_path/../Frameworks/QtCore $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtOpenGL.framework/Versions/4/QtOpenGL @loader_path/../Frameworks/QtOpenGL $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtXml.framework/Versions/4/QtXml @loader_path/../Frameworks/QtXml $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtNetwork.framework/Versions/4/QtNetwork @loader_path/../Frameworks/QtNetwork $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtXmlPatterns.framework/Versions/4/QtXmlPatterns @loader_path/../Frameworks/QtXmlPatterns $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @rpath/QtGui $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtOpenGL.framework/Versions/4/QtOpenGL @rpath/QtOpenGL $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtXml.framework/Versions/4/QtXml @rpath/QtXml $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtNetwork.framework/Versions/4/QtNetwork @rpath/QtNetwork $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtXmlPatterns.framework/Versions/4/QtXmlPatterns @rpath/QtXmlPatterns $TARGET')
 

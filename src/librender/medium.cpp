@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -75,7 +75,8 @@ std::string MediumSamplingRecord::toString() const {
 		<< "  pdfFailure = " << pdfFailure << "," << endl
 		<< "  pdfSuccess = " << pdfSuccess << "," << endl
 		<< "  pdfSuccessRev = " << pdfSuccessRev << "," << endl
-		<< "  transmittance = " << transmittance.toString() << endl
+		<< "  transmittance = " << transmittance.toString() << "," << endl
+		<< "  medium = " << indent(medium ? medium->toString().c_str() : "null") << endl
 		<< "]";
 	return oss.str();
 }

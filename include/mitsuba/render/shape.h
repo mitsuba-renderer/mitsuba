@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,9 +16,11 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SHAPE_H)
-#define __SHAPE_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_SHAPE_H_)
+#define __MITSUBA_RENDER_SHAPE_H_
 
+#include <mitsuba/render/common.h>
 #include <mitsuba/core/cobject.h>
 #include <mitsuba/core/transform.h>
 #include <mitsuba/core/frame.h>
@@ -26,50 +28,22 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Data record, which holds sampling-related information
- *  for a shape.
- * \ingroup librender
- */
-struct MTS_EXPORT_RENDER ShapeSamplingRecord {
-public:
-	/// Create a sampling record (does no initialization!)
-	inline ShapeSamplingRecord() { }
-
-	/// Initialize a sampling record from the specified position and normal
-	inline ShapeSamplingRecord(const Point &p, const Normal &n)
-		: p(p), n(n) { }
-	
-	/// Initialize a sampling record from the specified intersection record
-	inline ShapeSamplingRecord(const Intersection &its);
-
-	/// Return a string representation
-	std::string toString() const;
-public:
-	/// Sampled surface position
-	Point p;
-
-	/// Sampled surface normal
-	Normal n;
-};
-
 /** \brief Container for all information related to
  * a surface intersection
  * \ingroup librender
+ * \ingroup libpython
  */
 struct MTS_EXPORT_RENDER Intersection {
 public:
 	inline Intersection() :
-		t(std::numeric_limits<Float>::infinity()), 
-		shape(NULL) { }
+		shape(NULL), t(std::numeric_limits<Float>::infinity()) { }
 
-	/* Convert a vector expressed inside the shading frame into world
-	   coordinates */
+	/// Convert a local shading-space vector into world space
 	inline Vector toWorld(const Vector &v) const {
 		return shFrame.toWorld(v);
 	}
 
-	/* Convert a vector expressed inside world coordinates frame into 
-	   shading frame coordinates */
+	/// Convert a world-space vector into local shading coordinates
 	inline Vector toLocal(const Vector &v) const {
 		return shFrame.toLocal(v);
 	}
@@ -79,8 +53,11 @@ public:
 		return t != std::numeric_limits<Float>::infinity();
 	}
 
-	/// Is the intersected shape also a luminaire?
-	inline bool isLuminaire() const;
+	/// Is the intersected shape also a emitter?
+	inline bool isEmitter() const;
+
+	/// Is the intersected shape also a sensor?
+	inline bool isSensor() const;
 
 	/// Does the intersected shape have a subsurface integrator?
 	inline bool hasSubsurface() const;
@@ -106,27 +83,34 @@ public:
 	inline const Medium *getTargetMedium(Float cosTheta) const;
 
 	/**
-	 * Returns the BSDF of the intersected shape. The
-	 * parameter ray must match the one used to create
-	 * the intersection record. Computes texture coordinate
-	 * partials if this is required by the BSDF.
-	 * Should only be called if there is a valid
+	 * \brief Returns the BSDF of the intersected shape. 
+	 *
+	 * The parameter ray must match the one used to create the intersection 
+	 * record. This function computes texture coordinate partials if this is
+	 * required by the BSDF (e.g. for texture filtering).
+	 *
+	 * \remark This function should only be called if there is a valid
 	 * intersection!
 	 */
 	inline const BSDF *getBSDF(const RayDifferential &ray);
 
+	/// Returns the BSDF of the intersected shape
+	inline const BSDF *getBSDF() const;
+
 	/**
-	 * Returns radiance emitted into direction d.
-	 * Should only be called if the intersected
-	 * shape is indeed a luminaire!
+	 * \brief Returns radiance emitted into direction d.
+	 *
+	 * \remark This function should only be called if the 
+	 * intersected shape is actually an emitter.
 	 */
 	inline Spectrum Le(const Vector &d) const;
 
 	/**
-	 * Returns radiance from a subsurface integrator
+	 * \brief Returns radiance from a subsurface integrator
 	 * emitted into direction d.
-	 * Should only be called if the intersected
-	 * shape does indeed have a subsurface integrator!
+	 *
+	 * \remark Should only be called if the intersected
+	 * shape is actually a subsurface integrator.
 	 */
 	inline Spectrum LoSub(const Scene *scene, Sampler *sampler,
 			const Vector &d, int depth=0) const;
@@ -137,6 +121,9 @@ public:
 	/// Return a string representation
 	std::string toString() const;
 public:
+	/// Pointer to the associated shape
+	const Shape *shape;
+
 	/// Distance traveled along the ray
 	Float t;
 
@@ -152,10 +139,10 @@ public:
 	/// UV surface coordinates
 	Point2 uv;
 
-	/// Position partials wrt. the texture space parameterization
+	/// Position partials wrt. the UV parameterization
 	Vector dpdu, dpdv;
 
-	/// Texture coordinate mapping partials wrt. changes in screen-space
+	/// UV partials wrt. changes in screen-space
 	Float dudx, dudy, dvdx, dvdy;
 
 	/// Time value associated with the intersection
@@ -164,17 +151,17 @@ public:
 	/// Interpolated vertex color
 	Spectrum color;
 
-	/// Incident direction in the local frame
+	/// Incident direction in the local shading frame
 	Vector wi;
-
-	/// Affected shape
-	const Shape *shape;
 
 	/// Have texture coordinate partials been computed
 	bool hasUVPartials : 1;
 
 	/// Primitive index, e.g. the triangle ID (if applicable)
 	uint32_t primIndex : 31;
+
+	/// Stores a pointer to the parent instance, if applicable
+	const Shape *instance;
 };
 
 /** \brief Abstract base class of all shapes
@@ -186,8 +173,9 @@ public:
 	//! @{ \name Query functions to be implemented in subclasses
 	// =============================================================
 
-	/// Return the name of this shape
+	/// Return the name of this shape (e.g. the filename)
 	virtual std::string getName() const;
+
 
 	/// Is this a compound shape consisting of several sub-objects?
 	virtual bool isCompound() const;
@@ -271,6 +259,45 @@ public:
 			const void *temp, Intersection &its) const;
 
 	/**
+	 * \brief Return the derivative of the normal vector with
+	 * respect to the UV parameterization
+	 *
+	 * This can be used to compute Gaussian and principal curvatures,
+	 * amongst other things.
+	 *
+	 * \param its
+	 *     Intersection record associated with the query
+	 * \param dndu
+	 *     Parameter used to store the partial derivative of the 
+	 *     normal vector with respect to \c u
+	 * \param dndv
+	 *     Parameter used to store the partial derivative of the 
+	 *     normal vector with respect to \c v
+	 * \param shadingFrame
+	 *     Specifies whether to compute the derivative of the
+	 *     geometric normal \a or the shading normal of the surface
+	 */
+	virtual void getNormalDerivative(const Intersection &its,
+		Vector &dndu, Vector &dndv, bool shadingFrame = true) const;
+
+	/**
+	 * \brief Compute the Gaussian and mean curvature at the given
+	 * surface intersection.
+	 *
+	 * \param its
+	 *     Intersection record associated with the query
+	 * \param H
+	 *     Parameter used to store the mean curvature
+	 * \param K
+	 *     Parameter used to store the Gaussian curvature
+	 * \param shadingFrame
+	 *     Specifies whether to compute the curvature based on the
+	 *     geometric normal \a or the shading normal of the surface
+	 */
+	void getCurvature(const Intersection &its, Float &H, Float &K, 
+		bool shadingFrame = true) const;
+
+	/**
 	 * \brief Return the internal kd-tree of this shape (if any)
 	 *
 	 * This function is used by the kd-tree visualization in
@@ -285,38 +312,77 @@ public:
 	// =============================================================
 	//! @{ \name Sampling routines
 	// =============================================================
+
 	/**
-	 * \brief Sample a point on the shape
+	 * \brief Sample a point on the surface of this shape instance
+	 * (with respect to the area measure)
 	 *
-	 * Should be uniform wrt. surface area. Returns the 
-	 * associated probability density
+	 * The returned sample density will be uniform over the surface.
+	 *
+	 * \param pRec
+	 *     A position record, which will be used to return the sampled
+	 *     position, as well as auxilary information about the sample.
+	 *
+	 * \param sample
+	 *     A uniformly distributed 2D vector
 	 */
-	virtual Float sampleArea(ShapeSamplingRecord &sRec, 
+	virtual void samplePosition(PositionSamplingRecord &pRec, 
 			const Point2 &sample) const;
 
 	/**
-	 * Return the probability density of sampling the 
-	 * given point using sampleArea()
-	 */
-	virtual Float pdfArea(const ShapeSamplingRecord &sRec) const;
-
-	/**
-	 * \brief Sample a point on the shape and return the associated
-	 * probability with respect to solid angle at \c x.
+	 * \brief Query the probability density of \ref samplePosition() for
+	 * a particular point on the surface.
 	 *
-	 * Should ideally be uniform wrt. solid angle as seen 
-	 * from \a x. The default implementation, just uses
-	 * \ref sampleArea, which can produce high variance.
+	 * This method will generally return the inverse of the surface area.
+	 *
+	 * \param pRec
+	 *     A position record, which will be used to return the sampled
+	 *     position, as well as auxilary information about the sample.
 	 */
-	virtual Float sampleSolidAngle(ShapeSamplingRecord &sRec, 
-			const Point &x, const Point2 &sample) const;
+
+	virtual Float pdfPosition(const PositionSamplingRecord &pRec) const;
 
 	/**
-	 * \brief Return the probability density of sampling the given 
-	 * point using \ref sampleSolidAngle().
+	 * \brief Sample a point on the surface of this shape instance
+	 * (with respect to the solid angle measure)
+	 *
+	 * The sample density should ideally be uniform in direction as seen from
+	 * the reference point \c dRec.p. 
+	 *
+	 * This general approach for sampling positions is named "direct" sampling 
+	 * throughout Mitsuba motivated by direct illumination rendering techniques,
+	 * which represent the most important application.
+	 *
+	 * When no implementation of this function is supplied, the \ref Shape 
+	 * class will revert to the default approach, which piggybacks on 
+	 * \ref sampleArea(). This usually results in a a suboptimal sample 
+	 * placement, which can manifest itself in the form of high variance 
+	 *
+	 * \param dRec
+	 *    A direct sampling record that specifies the reference point and a 
+	 *    time value. After the function terminates, it will be populated 
+	 *    with the position sample and related information
+	 *
+	 * \param sample
+	 *     A uniformly distributed 2D vector
 	 */
-	virtual Float pdfSolidAngle(const ShapeSamplingRecord &sRec, 
-			const Point &x) const;
+	virtual void sampleDirect(DirectSamplingRecord &dRec, 
+			const Point2 &sample) const;
+
+	/**
+	 * \brief Query the probability density of \ref sampleDirect() for
+	 * a particular point on the surface.
+	 *
+	 * \param dRec
+	 *    A direct sampling record, which specifies the query 
+	 *    location. Note that this record need not be completely 
+	 *    filled out. The important fields are \c p, \c n, \c ref,
+	 *    \c dist, \c d, \c measure, and \c uv.
+	 *
+	 * \param p
+	 *     An arbitrary point used to define the solid angle measure
+	 */
+	virtual Float pdfDirect(const DirectSamplingRecord &dRec) const;
 
 	//! @}
 	// =============================================================
@@ -325,8 +391,6 @@ public:
 	//! @{ \name Miscellaneous
 	// =============================================================
 	
-	/// Does the shape act as an occluder?
-	inline bool isOccluder() const { return m_occluder; }
 	/// Does the surface of this shape mark a medium transition?
 	inline bool isMediumTransition() const { return m_interiorMedium.get() || m_exteriorMedium.get(); }
 	/// Return the medium that lies on the interior of this shape (\c NULL == vacuum)
@@ -345,14 +409,21 @@ public:
 	/// Return the associated sub-surface integrator 
 	inline const Subsurface *getSubsurface() const { return m_subsurface.get(); }
 
-	/// Is this shape also an area luminaire?
-	inline bool isLuminaire() const { return m_luminaire.get() != NULL; }
-	/// Return the associated luminaire (if any)
-	inline Luminaire *getLuminaire() { return m_luminaire; }
-	/// Return the associated luminaire (if any)
-	inline const Luminaire *getLuminaire() const { return m_luminaire.get(); }
-	/// Set the luminaire of this shape
-	inline void setLuminaire(Luminaire *luminaire) { m_luminaire = luminaire; }
+	/// Is this shape also an area emitter?
+	inline bool isEmitter() const { return m_emitter.get() != NULL; }
+	/// Return the associated emitter (if any)
+	inline Emitter *getEmitter() { return m_emitter; }
+	/// Return the associated emitter (if any)
+	inline const Emitter *getEmitter() const { return m_emitter.get(); }
+	/// Set the emitter of this shape
+	inline void setEmitter(Emitter *emitter) { m_emitter = emitter; }
+
+	/// Is this shape also an area sensor?
+	inline bool isSensor() const { return m_sensor.get() != NULL; }
+	/// Return the associated sensor (if any)
+	inline Sensor *getSensor() { return m_sensor; }
+	/// Return the associated sensor (if any)
+	inline const Sensor *getSensor() const { return m_sensor.get(); }
 
 	/// Does the shape have a BSDF?
 	inline bool hasBSDF() const { return m_bsdf.get() != NULL; }
@@ -361,15 +432,43 @@ public:
 	/// Return the shape's BSDF
 	inline BSDF *getBSDF() { return m_bsdf.get(); }
 	/// Set the BSDF of this shape
-	inline void setBSDF(BSDF *bsdf) { m_bsdf = bsdf; m_occluder = (bsdf != NULL); }
+	inline void setBSDF(BSDF *bsdf) { m_bsdf = bsdf; }
 
-	/// Called once after parsing
+	/**
+	 * \brief Return the number of primitives (triangles, hairs, ..)
+	 * contributed to the scene by this shape
+	 *
+	 * Does not include instanced geometry
+	 */
+	virtual size_t getPrimitiveCount() const = 0;
+
+	/**
+	 * \brief Return the number of primitives (triangles, hairs, ..)
+	 * contributed to the scene by this shape
+	 *
+	 * Includes instanced geometry
+	 */
+	virtual size_t getEffectivePrimitiveCount() const = 0;
+
+	/// Copy attachments (BSDF, Emitter, ..) from another shape
+	void copyAttachments(Shape *shape);
+
+	//! @}
+	// =============================================================
+	
+	// =============================================================
+	//! @{ \name ConfigurableObject interface 
+	// =============================================================
+
+	/// Called once after constructing the object
 	virtual void configure();
+
 	/// Serialize this shape to a stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
-	/// Add a child (e.g. a luminaire/sub surface integrator) to this shape
+	/// Add a child (e.g. a emitter/sub surface integrator) to this shape
 	void addChild(const std::string &name, ConfigurableObject *child);
+	
 	/// Add an unnamed child
 	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
@@ -389,17 +488,14 @@ protected:
 protected:
 	ref<BSDF> m_bsdf;
 	ref<Subsurface> m_subsurface;
-	ref<Luminaire> m_luminaire;
+	ref<Emitter> m_emitter;
+	ref<Sensor> m_sensor;
 	ref<Medium> m_interiorMedium;
 	ref<Medium> m_exteriorMedium;
-	bool m_occluder;
 };
-
-inline ShapeSamplingRecord::ShapeSamplingRecord(const Intersection &its)
-	: p(its.p), n(its.geoFrame.n) { }
 
 MTS_NAMESPACE_END
 
-#endif /* __SHAPE_H */
+#endif /* __MITSUBA_RENDER_SHAPE_H_ */
 
 

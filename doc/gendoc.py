@@ -14,7 +14,7 @@ def findOrderID(filename):
 			return int(match.group(1))
 	return 1000
 
-def process(target, filename):
+def extract(target, filename):
 	f = open(filename)
 	inheader = False
 	for line in f.readlines():
@@ -36,55 +36,62 @@ def process(target, filename):
 			target.write(line + '\n')
 	f.close()
 
-# Traverse all source directories and find any plugin code
-def traverse(target, dirname, files):
-	suffix = os.path.split(dirname)[1]
-	if 'lib' in suffix or suffix == 'tests' \
-		or suffix == 'mitsuba' or suffix == 'utils' \
-		or suffix == 'converter' or suffix == 'qtgui':
-		return
+pyVer = int(platform.python_version_tuple()[0])
 
-	ordering = []
-	for filename in files:
-		if '.cpp' == os.path.splitext(filename)[1]:
-			fname = os.path.join(dirname, filename)
-			ordering = ordering + [(findOrderID(fname), fname)]
+# Traverse source directories and process any found plugin code
+def process(path, target):
+	def capture(fileList, dirname, files):
+		suffix = os.path.split(dirname)[1]
+		if 'lib' in suffix or suffix == 'tests' \
+			or suffix == 'mitsuba' or suffix == 'utils' \
+			or suffix == 'converter' or suffix == 'mtsgui':
+			return
+		for filename in files:
+			if '.cpp' == os.path.splitext(filename)[1]:
+				fname = os.path.join(dirname, filename)
+				fileList += [fname]
+
+	fileList = []
+	# Wrap the walk function to make this work in python 2 and 3.
+	if pyVer >= 3:
+		os.walk(path, capture, fileList)
+	else:
+		os.path.walk(path, capture, fileList)
+
+	ordering = [(findOrderID(fname), fname) for fname in fileList]
 	ordering = sorted(ordering, key = lambda entry: entry[0])
 
 	for entry in ordering:
-		process(target, entry[1])
-
-# Wrap the walk function to make this work in python 2 and 3.
-pyVer = int(platform.python_version_tuple()[0])
-def walk(path, visit, arg):
-	if pyVer >= 3:
-		os.walk(path, visit, arg)
-	else:
-		os.path.walk(path, visit, arg)
+		extract(target, entry[1])
 
 os.chdir(os.path.dirname(__file__))
 f = open('plugins_generated.tex', 'w')
-f.write('\section{Plugin reference}\n')
 f.write('\input{section_shapes}\n')
-walk('../src/shapes', traverse, f)
+process('../src/shapes', f)
 f.write('\input{section_bsdf}\n')
-walk('../src/bsdfs', traverse, f)
+process('../src/bsdfs', f)
 f.write('\input{section_textures}\n')
-walk('../src/textures', traverse, f)
+process('../src/textures', f)
 f.write('\input{section_subsurface}\n')
-walk('../src/subsurface', traverse, f)
+process('../src/subsurface', f)
 f.write('\input{section_media}\n')
-walk('../src/medium', traverse, f)
+process('../src/medium', f)
 f.write('\input{section_phase}\n')
-walk('../src/phase', traverse, f)
+process('../src/phase', f)
 f.write('\input{section_volumes}\n')
-walk('../src/volume', traverse, f)
-f.write('\input{section_luminaires}\n')
-walk('../src/luminaires', traverse, f)
+process('../src/volume', f)
+f.write('\input{section_emitters}\n')
+process('../src/emitters', f)
+f.write('\input{section_sensors}\n')
+process('../src/sensors', f)
 f.write('\input{section_integrators}\n')
-walk('../src/integrators', traverse, f)
+process('../src/integrators', f)
+f.write('\input{section_samplers}\n')
+process('../src/samplers', f)
 f.write('\input{section_films}\n')
-walk('../src/films', traverse, f)
+process('../src/films', f)
+f.write('\input{section_rfilters}\n')
 f.close()
 os.system('bibtex main.aux')
-os.system('pdflatex main.tex | grep -i warning')
+os.system('pdflatex main.tex')
+#os.system('pdflatex main.tex | grep -i warning | grep -v "Package \(typearea\|hyperref\)"')

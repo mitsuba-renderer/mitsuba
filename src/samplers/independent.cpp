@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -20,14 +20,37 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
- * Independent sampling - returns independent uniformly distributed
- * random numbers on <tt>[0, 1)x[0, 1)</tt>.
+/*!\plugin{independent}{Independent sampler}
+ * \order{1}
+ * \parameters{
+ *     \parameter{sampleCount}{\Integer}{
+ *       Number of samples per pixel \default{4}
+ *     }
+ * }
+ *
+ * \renderings{
+ *     \unframedrendering{A projection of the first 1024 points
+ *     onto the first two dimensions. Note the sample clumping.}{sampler_independent}
+ * }
+ * 
+ * The independent sampler produces a stream of independent and uniformly
+ * distributed pseudorandom numbers. Internally, it relies on a fast SIMD version
+ * of the Mersenne Twister random number generator \cite{Saito2008SIMD}.
+ *
+ * This is the most basic sample generator; because no precautions are taken to avoid 
+ * sample clumping, images produced using this plugin will usually take longer to converge.
+ * In theory, this sampler is initialized using a deterministic procedure, which means
+ * that subsequent runs of Mitsuba should create the same image. In practice, when 
+ * rendering with multiple threads and/or machines, this is not true anymore, since the 
+ * ordering of samples is influenced by the operating system scheduler.
+ *
+ * Note that the Metropolis-type integrators implemented in Mitsuba are incompatible with
+ * the more sophisticated sample generators shown in this section. They \emph{require} this 
+ * specific sampler and refuse to work otherwise.
  */
 class IndependentSampler : public Sampler {
 public:
-	IndependentSampler() : Sampler(Properties()) {
-	}
+	IndependentSampler() : Sampler(Properties()) { }
 
 	IndependentSampler(const Properties &props) : Sampler(props) {
 		/* Number of samples per pixel when used with a sampling-based integrator */
@@ -56,7 +79,7 @@ public:
 		return sampler.get();
 	}
 
-	void generate() {
+	void generate(const Point2i &) {
 		for (size_t i=0; i<m_req1D.size(); i++)
 			for (size_t j=0; j<m_sampleCount * m_req1D[i]; ++j)
 				m_sampleArrays1D[i][j] = m_random->nextFloat();
@@ -66,26 +89,14 @@ public:
 					m_random->nextFloat(),
 					m_random->nextFloat());
 		m_sampleIndex = 0;
-		m_sampleDepth1DArray = m_sampleDepth2DArray = 0;
+		m_dimension1DArray = m_dimension2DArray = 0;
 	}
-	
+
 	Float next1D() {
 		return m_random->nextFloat();
 	}
 
 	Point2 next2D() {
-		/// Enforce a specific order of evaluation
-		Float value1 = m_random->nextFloat();
-		Float value2 = m_random->nextFloat();
-		return Point2(value1, value2);
-	}
-	
-	Float independent1D() {
-		return m_random->nextFloat();
-	}
-
-	Point2 independent2D() {
-		/// Enforce a specific order of evaluation
 		Float value1 = m_random->nextFloat();
 		Float value2 = m_random->nextFloat();
 		return Point2(value1, value2);
@@ -105,5 +116,5 @@ private:
 };
 
 MTS_IMPLEMENT_CLASS_S(IndependentSampler, false, Sampler)
-MTS_EXPORT_PLUGIN(IndependentSampler, "Independent sampling");
+MTS_EXPORT_PLUGIN(IndependentSampler, "Independent sampler");
 MTS_NAMESPACE_END

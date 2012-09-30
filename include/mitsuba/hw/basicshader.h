@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__BASIC_SHADER_H)
-#define __BASIC_SHADER_H
+#pragma once
+#if !defined(__MITSUBA_HW_BASICSHADER_H_)
+#define __MITSUBA_HW_BASICSHADER_H_
 
 #include <mitsuba/render/texture.h>
 #include <mitsuba/hw/gpuprogram.h>
@@ -44,7 +45,7 @@ public:
 
 	ConstantSpectrumTexture(Stream *stream, InstanceManager *manager);
 
-	inline Spectrum getValue(const Intersection &its) const {
+	inline Spectrum eval(const Intersection &its, bool /* unused */) const {
 		return m_value;
 	}
 
@@ -65,9 +66,7 @@ public:
 	}
 
 	inline std::string toString() const {
-		std::ostringstream oss;
-		oss << "ConstantSpectrumTexture[value=" << m_value.toString() << "]";
-		return oss.str();
+		return m_value.toString();
 	}
 
 	inline bool usesRayDifferentials() const {
@@ -97,7 +96,7 @@ public:
 
 	ConstantFloatTexture(Stream *stream, InstanceManager *manager);
 
-	inline Spectrum getValue(const Intersection &its) const {
+	inline Spectrum eval(const Intersection &its, bool /* unused */) const {
 		return Spectrum(m_value);
 	}
 
@@ -119,7 +118,7 @@ public:
 
 	inline std::string toString() const {
 		std::ostringstream oss;
-		oss << "ConstantFloatTexture[value=" << m_value << "]";
+		oss << m_value;
 		return oss.str();
 	}
 
@@ -149,8 +148,8 @@ public:
 
 	SpectrumAdditionTexture(Stream *stream, InstanceManager *manager);
 
-	inline Spectrum getValue(const Intersection &its) const {
-		return m_a->getValue(its) + m_b->getValue(its);
+	inline Spectrum eval(const Intersection &its, bool /* unused */) const {
+		return m_a->eval(its) + m_b->eval(its);
 	}
 
 	inline Spectrum getAverage() const {
@@ -206,8 +205,8 @@ public:
 
 	SpectrumSubtractionTexture(Stream *stream, InstanceManager *manager);
 
-	inline Spectrum getValue(const Intersection &its) const {
-		return m_a->getValue(its) - m_b->getValue(its);
+	inline Spectrum eval(const Intersection &its, bool /* unused */) const {
+		return m_a->eval(its) - m_b->eval(its);
 	}
 
 	inline Spectrum getAverage() const {
@@ -263,8 +262,8 @@ public:
 
 	SpectrumProductTexture(Stream *stream, InstanceManager *manager);
 
-	inline Spectrum getValue(const Intersection &its) const {
-		return m_a->getValue(its) * m_b->getValue(its);
+	inline Spectrum eval(const Intersection &its, bool /* unused */) const {
+		return m_a->eval(its) * m_b->eval(its);
 	}
 
 	inline Spectrum getAverage() const {
@@ -310,4 +309,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __BASIC_SHADER_H */
+#endif /* __MITSUBA_HW_BASICSHADER_H_ */

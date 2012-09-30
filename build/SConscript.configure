@@ -23,63 +23,71 @@ if not os.path.exists(configFile):
 	print '\nA configuration file must be selected! Have a look at http://www.mitsuba-renderer.org/docs.html'
 	Exit(1)
 
-if not os.path.exists(GetBuildPath('#dependencies')):
-	print '\nThe build dependency files are missing -- please check them out'
-	print 'from Mercurial by running the following command *inside* the '
-	print 'Mitsuba directory:\n'
-	print '$ hg clone https://www.mitsuba-renderer.org/hg/dependencies\n'
+needsBuildDependencies = (sys.platform == 'win32' or sys.platform == 'darwin')
+
+if needsBuildDependencies and not os.path.exists(GetBuildPath('#dependencies')):
+	print '\nThe required build dependency files are missing. Please see the documentation'
+	print 'at http://www.mitsuba-renderer.org/docs.html for details on how to get them.\n'
 	Exit(1)
+
+python_versions = ["2.6", "2.7", "3.0", "3.1", "3.2"]
 
 # Parse configuration options
 vars = Variables(configFile)
-vars.Add('BUILDDIR',      'Target directory for intermediate files')
-vars.Add('DISTDIR',       'Target directory for the final build')
-vars.Add('CXX',           'C++ compiler')
-vars.Add('CC',            'C compiler')
-vars.Add('CXXFLAGS',      'C++ flags')
-vars.Add('SHCXXFLAGS',    'Extra C++ flags (for shared libraries)')
-vars.Add('CCFLAGS',       'Extra C++ flags (for C files)')
-vars.Add('LINK',          'Linker')
-vars.Add('LINKFLAGS',     'Linker flags')
-vars.Add('SHLINKFLAGS',   'Linker flags (dynamic libraries)')
-vars.Add('BASEINCLUDE',   'Base include path')
-vars.Add('BASELIB',       'Base libraries')
-vars.Add('BASELIBDIR',    'Base library search path')
-vars.Add('PYTHONINCLUDE', 'Python include path')
-vars.Add('PYTHONLIB',     'Python libraries')
-vars.Add('PYTHONLIBDIR',  'Python library path')
-vars.Add('XERCESINCLUDE', 'Xerces-C include path')
-vars.Add('XERCESLIB',     'Xerces-C libraries')
-vars.Add('XERCESLIBDIR',  'Xerces-C library path')
-vars.Add('OEXRINCLUDE',   'OpenEXR include path')
-vars.Add('OEXRLIB',       'OpenEXR libraries')
-vars.Add('OEXRFLAGS',     'OpenEXR-related compiler flags')
-vars.Add('OEXRLIBDIR',    'OpenEXR library path')
-vars.Add('PNGINCLUDE',    'libpng include path')
-vars.Add('PNGLIB',        'libpng libraries')
-vars.Add('PNGLIBDIR',     'libpng library path')
-vars.Add('JPEGINCLUDE',   'libjpeg include path')
-vars.Add('JPEGLIB',       'libjpeg libraries')
-vars.Add('JPEGLIBDIR',    'libjpeg library path')
-vars.Add('COLLADAINCLUDE','COLLADA DOM include path')
-vars.Add('COLLADALIB',    'COLLADA DOM libraries')
-vars.Add('COLLADALIBDIR', 'COLLADA DOM library path')
-vars.Add('SHLIBPREFIX',   'Prefix for shared libraries')
-vars.Add('SHLIBSUFFIX',   'Suffix for shared libraries')
-vars.Add('LIBPREFIX',     'Prefix for windows library files')
-vars.Add('LIBSUFFIX',     'Suffix for windows library files')
-vars.Add('PROGSUFFIX',    'Suffix for executables')
-vars.Add('GLLIB',         'OpenGL+GLEW libraries')
-vars.Add('GLINCLUDE',     'OpenGL+GLEW include path')
-vars.Add('GLFLAGS',       'OpenGL+GLEW-related compiler flags')
-vars.Add('GLLIBDIR',      'OpenGL+GLEW library path')
-vars.Add('BOOSTINCLUDE',  'Boost include path')
-vars.Add('BOOSTLIB',      'Boost libraries')
-vars.Add('BOOSTLIBDIR',   'Boost library path')
-vars.Add('TARGET_ARCH',   'Target architecture')
-vars.Add('MSVC_VERSION',  'MS Visual C++ compiler version')
-vars.Add('QTDIR',         'Qt installation directory')
-vars.Add('INTEL_COMPILER','Should the Intel C++ compiler be used?')
+vars.Add('BUILDDIR',        'Target directory for intermediate files')
+vars.Add('DISTDIR',         'Target directory for the final build')
+vars.Add('CXX',             'C++ compiler')
+vars.Add('CC',              'C compiler')
+vars.Add('CXXFLAGS',        'C++ flags')
+vars.Add('SHCXXFLAGS',      'Extra C++ flags (for shared libraries)')
+vars.Add('CCFLAGS',         'Extra C++ flags (for C files)')
+vars.Add('LINK',            'Linker')
+vars.Add('LINKFLAGS',       'Linker flags')
+vars.Add('SHLINKFLAGS',     'Linker flags (dynamic libraries)')
+vars.Add('BASEINCLUDE',     'Base include path')
+vars.Add('BASELIB',         'Base libraries')
+vars.Add('BASELIBDIR',      'Base library search path')
+
+for ver in python_versions:
+	key = ver.replace('.', '')
+	vars.Add('PYTHON' + key + 'INCLUDE', 'Python '+ ver +' include path')
+	vars.Add('PYTHON' + key + 'LIB',     'Python '+ ver +' libraries')
+	vars.Add('PYTHON' + key + 'LIBDIR',  'Python '+ ver +' library path')
+
+vars.Add('EIGENINCLUDE',    'Eigen 3.x include path')
+vars.Add('XERCESINCLUDE',   'Xerces-C include path')
+vars.Add('XERCESLIB',       'Xerces-C libraries')
+vars.Add('XERCESLIBDIR',    'Xerces-C library path')
+vars.Add('OEXRINCLUDE',     'OpenEXR include path')
+vars.Add('OEXRLIB',         'OpenEXR libraries')
+vars.Add('OEXRFLAGS',       'OpenEXR-related compiler flags')
+vars.Add('OEXRLIBDIR',      'OpenEXR library path')
+vars.Add('PNGINCLUDE',      'libpng include path')
+vars.Add('PNGLIB',          'libpng libraries')
+vars.Add('PNGLIBDIR',       'libpng library path')
+vars.Add('JPEGINCLUDE',     'libjpeg include path')
+vars.Add('JPEGLIB',         'libjpeg libraries')
+vars.Add('JPEGLIBDIR',      'libjpeg library path')
+vars.Add('COLLADAINCLUDE',  'COLLADA DOM include path')
+vars.Add('COLLADALIB',      'COLLADA DOM libraries')
+vars.Add('COLLADALIBDIR',   'COLLADA DOM library path')
+vars.Add('SHLIBPREFIX',     'Prefix for shared libraries')
+vars.Add('SHLIBSUFFIX',     'Suffix for shared libraries')
+vars.Add('LIBPREFIX',       'Prefix for windows library files')
+vars.Add('LIBSUFFIX',       'Suffix for windows library files')
+vars.Add('PROGSUFFIX',      'Suffix for executables')
+vars.Add('GLLIB',           'OpenGL+GLEW libraries')
+vars.Add('GLINCLUDE',       'OpenGL+GLEW include path')
+vars.Add('GLFLAGS',         'OpenGL+GLEW-related compiler flags')
+vars.Add('GLLIBDIR',        'OpenGL+GLEW library path')
+vars.Add('BOOSTINCLUDE',    'Boost include path')
+vars.Add('BOOSTLIB',        'Boost libraries')
+vars.Add('BOOSTLIBDIR',     'Boost library path')
+vars.Add('TARGET_ARCH',     'Target architecture')
+vars.Add('MSVC_VERSION',    'MS Visual C++ compiler version')
+vars.Add('QTDIR',           'Qt installation directory')
+vars.Add('QTINCLUDE',       'Additional Qt include directory')
+vars.Add('INTEL_COMPILER',  'Should the Intel C++ compiler be used?')
 
 try:
 	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt4', 'icl12'], toolpath=['#data/scons'])
@@ -91,7 +99,7 @@ except Exception:
 	hasQt = False
 
 hasCollada=True
-hasPython = True
+hasPython = []
 
 env.Append(CPPPATH=env['BASEINCLUDE'])
 env.Append(CPPFLAGS=[])
@@ -105,6 +113,12 @@ if env.has_key('BOOSTLIB'):
 	env.Prepend(LIBS=env['BOOSTLIB'])
 if env.has_key('BASELIBDIR'):
 	env.Append(LIBPATH=env['BASELIBDIR'])
+if env.has_key('OEXRINCLUDE'):
+	env.Prepend(CPPPATH=env['OEXRINCLUDE'])
+if env.has_key('OEXRLIBDIR'):
+	env.Prepend(LIBPATH=env['OEXRLIBDIR'])
+if env.has_key('EIGENINCLUDE'):
+	env.Prepend(CPPPATH=env['EIGENINCLUDE'])
 
 env.Decider('MD5-timestamp')
 
@@ -149,8 +163,6 @@ if env.has_key('COLLADAINCLUDE'):
 	env.Prepend(CPPPATH=env['COLLADAINCLUDE'])
 if env.has_key('COLLADALIBDIR'):
 	env.Prepend(LIBPATH=env['COLLADALIBDIR'])
-if env.has_key('PYTHONINCLUDE'):
-	env.Prepend(CPPPATH=env['PYTHONINCLUDE'])
 
 if not conf.CheckCXX():
 	print 'Could not compile a simple C++ fragment, verify that ' + \
@@ -159,25 +171,50 @@ if not conf.CheckCXX():
 		'contain more information.'
 	Exit(1)
 if not conf.CheckCHeader(['png.h']):
-	print 'libpng is missing (install libpng12-dev)'
-	Exit(1)
+	print 'libpng is missing (install libpng12-dev for PNG I/O support)'
+else:
+	env.Append(CPPDEFINES = [['MTS_HAS_LIBPNG', 1]] )
+
 if not conf.CheckCHeader(['stdio.h', 'jpeglib.h']):
-	print 'libjpeg is missing (install libjpeg62-dev)'
-	Exit(1)
+	print 'libjpeg is missing (install libjpeg62-dev for JPEG I/O support)'
+else:
+	env.Append(CPPDEFINES = [['MTS_HAS_LIBJPEG', 1]] )
+
 if not conf.CheckCXXHeader('ImfRgba.h'):
-	print 'OpenEXR is missing (install libopenexr-dev)'
-	Exit(1)
+	print 'OpenEXR is missing (install libopenexr-dev for OpenEXR I/O support)'
+else:
+	env.Append(CPPDEFINES = [['MTS_HAS_OPENEXR', 1]] )
+
 if not conf.CheckCXXHeader('xercesc/dom/DOMLSParser.hpp'):
 	print 'Xerces-C++ 3.x must be installed (install libxerces-c-dev)!'
 	Exit(1)
 if not conf.CheckCXXHeader('dae.h'):
 	hasCollada = False
 	print 'COLLADA DOM is missing: not building the COLLADA importer'
-if not conf.CheckCXXHeader('pyconfig.h'):
-	hasPython = False
-	print 'Python is missing: not building the python support library'
-if not conf.CheckCXXHeader('boost/math/distributions/students_t.hpp'):
-	print 'Boost is missing (install libboost-dev)!'
+
+hasBreakpad = '-DMTS_HAS_BREAKPAD' in env['CCFLAGS'] or 'MTS_HAS_BREAKPAD' in env['CXXFLAGS']
+
+hasPython = []
+for ver in python_versions:
+	key = 'PYTHON' + ver.replace('.', '') + 'INCLUDE'
+	if key not in env:
+		continue
+	includePath = env[key]
+	env.Append(CPPPATH=includePath)
+	if conf.CheckCXXHeader('pyconfig.h'):
+		hasPython += [ ver ]
+	else:
+		print 'Python ' + ver + ' is missing: not building wrappers'
+	env['CPPPATH'][:] = [ x for x in env['CPPPATH'] if x not in includePath ]
+
+if not conf.CheckCXXHeader('boost/version.hpp'):
+	print 'Boost is missing (install libboost-all-dev)!'
+	Exit(1)
+if not conf.TryCompile("#include <boost/version.hpp>\n#if BOOST_VERSION < 104400\n#error Boost is outdated!\n#endif", ".cpp"):
+	print 'Boost is outdated (you will need version 1.44 or newer)!'
+	Exit(1)
+if not conf.CheckCXXHeader('Eigen/Core'):
+	print 'Eigen 3.x is missing (install libeigen3-dev)!'
 	Exit(1)
 if sys.platform == 'win32':
 	if not (conf.CheckCHeader(['windows.h', 'GL/gl.h']) \
@@ -231,28 +268,29 @@ else:
 	print MTS_VERSION
 Export('MTS_VERSION')
 
-versionFilename = GetBuildPath('#dependencies/version')
-versionMismatch = False
+if needsBuildDependencies:
+	versionFilename = GetBuildPath('#dependencies/version')
+	versionMismatch = False
 
-if not os.path.exists(versionFilename):
-	versionMismatch = True
-	depVersion = "<unknown>"
-else:
-	with open(versionFilename) as f:
-		depVersion = f.readline().strip()
-		if MTS_VERSION != depVersion:
-			versionMismatch = True
+	if not os.path.exists(versionFilename):
+		versionMismatch = True
+		depVersion = "<unknown>"
+	else:
+		with open(versionFilename) as f:
+			depVersion = f.readline().strip()
+			if MTS_VERSION != depVersion:
+				versionMismatch = True
 
-if versionMismatch:
-		print '\nThe dependency directory and your Mitsuba codebase have different version'
-		print 'numbers! Your copy of Mitsuba has version %s, whereas the dependencies ' % MTS_VERSION
-		print 'have version %s. Please bring them into sync, either by running\n' % depVersion
-		print '$ hg update -r v%s\n' % depVersion 
-		print 'in the Mitsuba directory, or by running\n'
-		print '$ cd dependencies'
-		print '$ hg pull'
-		print '$ hg update -r v%s\n' % MTS_VERSION
-		Exit(1)
+	if versionMismatch:
+			print '\nThe dependency directory and your Mitsuba codebase have different version'
+			print 'numbers! Your copy of Mitsuba has version %s, whereas the dependencies ' % MTS_VERSION
+			print 'have version %s. Please bring them into sync, either by running\n' % depVersion
+			print '$ hg update -r v%s\n' % depVersion 
+			print 'in the Mitsuba directory, or by running\n'
+			print '$ cd dependencies'
+			print '$ hg pull'
+			print '$ hg update -r v%s\n' % MTS_VERSION
+			Exit(1)
 
 env = conf.Finish()
 
@@ -262,21 +300,30 @@ Export('dist')
 def osxlibinst_build_function(self, target, source, pkgname = None, use_own = None):
 	inst = self.Install(target, source)
 	prefix, name = os.path.split(source)
-	self.AddPostAction(inst, 'install_name_tool -id @loader_path/../Frameworks/' + name + ' $TARGET')
+	self.AddPostAction(inst, 'install_name_tool -id @rpath/' + name + ' $TARGET')
 	return inst
 
 def osxlibinst_as_build_function(self, target, source, pkgname = None, use_own = None):
 	inst = self.InstallAs(target, source)
 	prefix, name = os.path.split(source)
-	self.AddPostAction(inst, 'install_name_tool -id @loader_path/../Frameworks/' + name + ' $TARGET')
+	self.AddPostAction(inst, 'install_name_tool -id @rpath/' + name + ' $TARGET')
 	return inst
 
 def remove_flag(env, flag):
-	try:
+	success = False
+	if flag in env['CXXFLAGS']:
 		env['CXXFLAGS'].remove(flag)
-		return True
-	except:
-		return False
+		success = True
+	if flag in env['SHCXXFLAGS']:
+		env['SHCXXFLAGS'].remove(flag)
+		success = True
+	if flag in env['CFLAGS']:
+		env['CFLAGS'].remove(flag)
+		success = True
+	if flag in env['LINKFLAGS']:
+		env['LINKFLAGS'].remove(flag)
+		success = True
+	return success
 
 def match_pattern(x, patterns):
 	match = False
@@ -289,6 +336,7 @@ def match_pattern(x, patterns):
 def remove_flags(env, patterns):
 	env['CCFLAGS'][:] = [ x for x in env['CCFLAGS'] if not match_pattern(x, patterns) ]
 	env['CXXFLAGS'][:] = [ x for x in env['CXXFLAGS'] if not match_pattern(x, patterns) ]
+	env['SHCXXFLAGS'][:] = [ x for x in env['SHCXXFLAGS'] if not match_pattern(x, patterns) ]
 	env['LINKFLAGS'][:] = [ x for x in env['LINKFLAGS'] if not match_pattern(x, patterns) ]
 
 def append_flag(env, value):
@@ -316,7 +364,7 @@ def relax_compiler_settings(env):
 	# Relax the compiler settings when compiling heavy templated code
 	# (e.g. Boost::Spirit parsers, etc., which don't necessarily have
 	# to be that fast)
-	env.RemoveFlags(['-g', '/Z7', '-ipo', '/GL'])
+	env.RemoveFlags(['-g', '/Z7', '/Zi', '-ipo', '/GL', '/DEBUG'])
 	if env.RemoveFlag('-O3'):
 		env.AppendFlag('-Os')
 	if env.RemoveFlag('/O2'):
@@ -335,6 +383,6 @@ if sys.platform == 'win32':
 	env['LINKCOM'] = [env['LINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;1']
 	env['SHLINKCOM'] = [env['SHLINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;2']
 
-env.Export('hasQt', 'hasCollada', 'hasPython', 'resources')
+env.Export('hasQt', 'hasCollada', 'hasPython', 'resources', 'hasBreakpad')
 
 Return('env')

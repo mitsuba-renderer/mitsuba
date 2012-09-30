@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__MEDIUM_H)
-#define __MEDIUM_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_MEDIUM_H_)
+#define __MITSUBA_RENDER_MEDIUM_H_
 
 #include <mitsuba/core/netobject.h>
 #include <mitsuba/core/aabb.h>
@@ -32,17 +33,15 @@ MTS_NAMESPACE_BEGIN
  */
 struct MTS_EXPORT_RENDER MediumSamplingRecord {
 public:
-	inline MediumSamplingRecord() { }
-
-	/// Return a string representation
-	std::string toString() const;
-public:
 
 	/// Traveled distance
 	Float t;
 
 	/// Location of the scattering interaction
 	Point p;
+
+	/// Time value associated with the medium scattering event
+	Float time;
 
 	/// Local particle orientation at \ref p
 	Vector orientation;
@@ -76,17 +75,26 @@ public:
 
 	/**
 	 * When the \ref Medium::sampleDistance() is successful, this function
-	 * returns the probability of not having generated a medium interaction
+	 * returns the probability of \a not having generated a medium interaction
 	 * until \ref t. Otherwise, it records the probability of
 	 * not generating any interactions in the whole interval [mint, maxt].
 	 * This probability is assumed to be symmetric with respect to
 	 * sampling from the other direction, which is why there is no
-	 * \a pdfFailureRev field.
+	 * \c pdfFailureRev field.
 	 */
 	Float pdfFailure;
 
-	/// Max. single scattering albedo over all spectral samples
-	Float albedo;
+	/// Pointer to the associated medium
+	const Medium *medium;
+
+public:
+	inline MediumSamplingRecord() : medium(NULL) { }
+
+	/// Return a pointer to the phase function
+	inline const PhaseFunction *getPhaseFunction() const;
+
+	/// Return a string representation
+	std::string toString() const;
 };
 
 /** \brief Abstract participating medium 
@@ -123,7 +131,7 @@ public:
 	 * For convenience, it also stores the transmittance along the 
 	 * supplied ray segment within \a mRec.
 	 */
-	virtual void pdfDistance(const Ray &ray, 
+	virtual void eval(const Ray &ray, 
 		MediumSamplingRecord &mRec) const = 0;
 
 	//! @}
@@ -140,7 +148,7 @@ public:
 	 * [mint, maxt] associated with the ray. It is assumed
 	 * that the ray has a normalized direction value.
 	 */
-	virtual Spectrum getTransmittance(const Ray &ray,
+	virtual Spectrum evalTransmittance(const Ray &ray,
 		Sampler *sampler = NULL) const = 0;
 
 	/// Return the phase function of this medium
@@ -165,8 +173,8 @@ public:
 	//! @{ \name Miscellaneous
 	// =============================================================
 
-	/** \brief Configure the object (called _once_ after construction
-	   and addition of all child ConfigurableObjects. */
+	/** \brief Configure the object (called \a once after construction
+	   and addition of all child \ref ConfigurableObject instances). */
 	virtual void configure();
 
 	/// Serialize this medium to a stream
@@ -202,4 +210,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __MEDIUM_H */
+#endif /* __MITSUBA_RENDER_MEDIUM_H_ */

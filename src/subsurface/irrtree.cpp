@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,138 +16,87 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "irrtree.h"
 #include <mitsuba/core/statistics.h>
+#include "irrtree.h"
 
 MTS_NAMESPACE_BEGIN
 
-IrradianceOctree::IrradianceOctree(int maxDepth, Float threshold, const AABB &bounds) 
- : m_maxDepth(maxDepth), m_threshold(threshold) {
-	m_root = new OctreeNode(bounds);
-	m_numSamples = 0;
+static StatsCounter statsNumSamples("SSS Irradiance Octree", "Created samples");
+static StatsCounter statsNumNodes("SSS Irradiance Octree", "Created nodes");
+
+IrradianceOctree::IrradianceOctree(const AABB &bounds, Float solidAngleThreshold, std::vector<IrradianceSample> &records)
+	: StaticOctree<IrradianceSample, IrradianceSample>(bounds), m_solidAngleThreshold(solidAngleThreshold) {
+
+	m_items.swap(records);
+
+	build();
+	propagate(m_root);
 }
 
-IrradianceOctree::IrradianceOctree(Stream *stream, InstanceManager *manager) : 
-		SerializableObject(stream, manager) {
-	m_root = new OctreeNode(AABB(stream));
-	m_threshold = stream->readFloat();
-	m_maxDepth = stream->readInt();
-	m_numSamples = 0;
-	unsigned int numSamples = stream->readUInt();
+IrradianceOctree::IrradianceOctree(Stream *stream, InstanceManager *manager) {
+	m_aabb = AABB(stream);
+	m_solidAngleThreshold = stream->readFloat();
 
-	for (unsigned int i=0; i<numSamples; ++i)
-		addSample(IrradianceSample(stream));
-	preprocess();
-}
+	size_t items = stream->readSize();
+	m_items.resize(items);
 
-IrradianceOctree::~IrradianceOctree() {
-	delete m_root;
+	for (size_t i=0; i<items; ++i)
+		m_items[i] = IrradianceSample(stream);
+
+	build();
+	propagate(m_root);
 }
 
 void IrradianceOctree::serialize(Stream *stream, InstanceManager *manager) const {
-	m_root->aabb.serialize(stream);
-	stream->writeFloat(m_threshold);
-	stream->writeInt(m_maxDepth);
-	stream->writeUInt(m_numSamples);
-	m_root->serialize(stream);
-}
-	
-	
-void IrradianceOctree::addSample(const IrradianceSample &sample) {
-	static StatsCounter numSamples("SSS IrradianceOctree", "Number of samples");
-	++numSamples;
-	++m_numSamples;
-	if (!sample.E.isValid())
-		Log(EWarn, "Invalid sample: %s", sample.E.toString().c_str());
-	else
-		addSample(m_root, sample, 0);
+	m_aabb.serialize(stream);
+	stream->writeFloat(m_solidAngleThreshold);
+
+	stream->writeSize(m_items.size());
+	for (size_t i=0; i<m_items.size(); ++i)
+		m_items[i].serialize(stream);
 }
 
-void IrradianceOctree::dumpOBJ(const std::string &filename) const {
-	std::ofstream os(filename.c_str());
-	os << "o IrrSamples" << endl;
-	m_root->dumpOBJ(os);
-	/// Need to generate some fake geometry so that blender will import the points
-	for (unsigned int i=3; i<=m_numSamples; i++) 
-		os << "f " << i << " " << i-1 << " " << i-2 << endl;
-	os.close();
-}
+void IrradianceOctree::propagate(OctreeNode *node) {
+	IrradianceSample &repr = node->data;
 
-void IrradianceOctree::addSample(OctreeNode *node, const IrradianceSample &sample, int depth) {
-	static StatsCounter nodesCreated("SSS IrradianceOctree", "Number of created nodes");
-
-	node->samples.push_back(sample);
-	if (node->leaf && (m_maxDepth == depth || node->samples.size() < 8)) 
-		return;
-
-	node->leaf = false;
-
-	for (sample_iterator it = node->samples.begin();
-		it != node->samples.end(); ++it) {
-		const IrradianceSample &s = *it;
-		Point center = node->aabb.getCenter();
-		int nodeId = (s.p.x > center.x ? 1 : 0) +
-			(s.p.y > center.y ? 2 : 0) +
-			(s.p.z > center.z ? 4 : 0);
-
-		if (!node->children[nodeId]) {
-			AABB childAABB(center, center);
-			childAABB.expandBy(node->aabb.getCorner(nodeId));
-			node->children[nodeId] = new OctreeNode(childAABB);
-			++nodesCreated;
-		}
-
-		addSample(node->children[nodeId], s, depth + 1);
-	}
-	std::vector<IrradianceSample> empty;
-	node->samples.swap(empty);
-}
-
-void IrradianceOctree::preprocess(OctreeNode *node) {
 	/* Initialize the cluster values */
-	node->cluster.E = Spectrum(0.0f);
-	node->cluster.area = 0.0f;
-	node->cluster.p = Point(0.0f, 0.0f, 0.0f);
-	Float combinedWeight = 0.0f;
+	repr.E = Spectrum(0.0f);
+	repr.area = 0.0f;
+	repr.p = Point(0.0f, 0.0f, 0.0f);
+	Float weightSum = 0.0f;
 
-	if (!node->samples.empty()) {
-		/* Leaf node */
-		for (sample_iterator it = node->samples.begin();
-			it != node->samples.end(); ++it) {
-			const IrradianceSample &sample = *it;
-			node->cluster.E += sample.E * sample.area;
-			node->cluster.area += sample.area;
-
-			Float pointWeight = sample.E.average() * sample.area;
-			node->cluster.p += sample.p * pointWeight;
-			combinedWeight += pointWeight;
+	if (node->leaf) {
+		/* Inner node */
+		for (uint32_t i=0; i<node->count; ++i) {
+			const IrradianceSample &sample = m_items[i+node->offset];
+			repr.E += sample.E * sample.area;
+			repr.area += sample.area;
+			Float weight = sample.E.getLuminance() * sample.area;
+			repr.p += sample.p * weight;
+			weightSum += weight;
 		}
-		node->cluster.E /= node->cluster.area;
-		if (combinedWeight != 0)
-			node->cluster.p /= combinedWeight;
+		statsNumSamples += node->count;
 	} else {
-		int numChildren = 0;
 		/* Inner node */
 		for (int i=0; i<8; i++) {
 			OctreeNode *child = node->children[i];
 			if (!child)
 				continue;
-			numChildren++;
-			preprocess(child);
-			/* Point repulsion not used, weight everything by area */
-			node->cluster.E += child->cluster.E * child->cluster.area;
-			node->cluster.area += child->cluster.area;
-
-			Float pointWeight = child->cluster.E.average() * child->cluster.area;
-			node->cluster.p += child->cluster.p * pointWeight;
-			combinedWeight += pointWeight;
+			propagate(child);
+			repr.E += child->data.E * child->data.area;
+			repr.area += child->data.area;
+			Float weight = child->data.E.getLuminance() * child->data.area;
+			repr.p += child->data.p * weight;
+			weightSum += weight;
 		}
-		if (combinedWeight != 0)
-			node->cluster.p /= combinedWeight;
-		if (node->cluster.area != 0)
-			node->cluster.E /= node->cluster.area;
 	}
+	if (repr.area != 0)
+		repr.E /= repr.area;
+	if (weightSum != 0)
+		repr.p /= weightSum;
+	
+	++statsNumNodes;
 }
 
-MTS_IMPLEMENT_CLASS_S(IrradianceOctree, false, SerializableObject)
+
 MTS_NAMESPACE_END

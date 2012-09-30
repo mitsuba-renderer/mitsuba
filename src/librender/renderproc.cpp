@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -26,13 +26,11 @@ MTS_NAMESPACE_BEGIN
 class BlockRenderer : public WorkProcessor {
 public:
 	BlockRenderer(int blockSize, int borderSize) 
-	 : m_blockSize(blockSize), m_borderSize(borderSize) {
-	}
+	 : m_blockSize(blockSize), m_borderSize(borderSize) { }
 
 	BlockRenderer(Stream *stream, InstanceManager *manager) {
 		m_blockSize = stream->readInt();
 		m_borderSize = stream->readInt();
-		m_collectStatistics = stream->readBool();
 	}
 
 	ref<WorkUnit> createWorkUnit() const {
@@ -40,22 +38,26 @@ public:
 	}
 
 	ref<WorkResult> createWorkResult() const {
-		return new ImageBlock(Vector2i(m_blockSize, m_blockSize), m_borderSize, 
-			true, true, true, m_collectStatistics);
+		return new ImageBlock(Bitmap::ESpectrumAlphaWeight,
+			Vector2i(m_blockSize), 
+			m_sensor->getFilm()->getReconstructionFilter());
 	}
 
 	void prepare() {
-		m_scene = new Scene(static_cast<Scene *>(getResource("scene")));
+		Scene *scene = static_cast<Scene *>(getResource("scene"));
+		m_scene = new Scene(scene);
 		/// Variance estimates are required when executing a T-test on the rendered data
-		m_collectStatistics = (m_scene->getTestType() == Scene::ETTest);
 		m_sampler = static_cast<Sampler *>(getResource("sampler"));
-		m_camera = static_cast<Camera *>(getResource("camera"));
-		m_integrator = static_cast<SampleIntegrator *>(getResource("integrator"));
-		m_scene->setCamera(m_camera);
+		m_sensor = static_cast<Sensor *>(getResource("sensor"));
+		m_integrator = static_cast<SamplingIntegrator *>(getResource("integrator"));
+		m_scene->removeSensor(scene->getSensor());
+		m_scene->addSensor(m_sensor);
+		m_scene->setSensor(m_sensor);
 		m_scene->setSampler(m_sampler);
 		m_scene->setIntegrator(m_integrator);
-		m_integrator->wakeup(m_resources);
-		m_scene->wakeup(m_resources);
+		m_integrator->wakeup(m_scene, m_resources);
+		m_scene->wakeup(m_scene, m_resources);
+		m_scene->initializeBidirectional();
 	}
 
 	void process(const WorkUnit *workUnit, WorkResult *workResult, 
@@ -69,9 +71,9 @@ public:
 
 		block->setOffset(rect->getOffset());
 		block->setSize(rect->getSize());
-		m_hilbertCurve.initialize(rect->getSize());
-		m_integrator->renderBlock(m_scene, m_camera, m_sampler, 
-			block, stop, &m_hilbertCurve.getPoints());
+		m_hilbertCurve.initialize(TVector2<uint8_t>(rect->getSize()));
+		m_integrator->renderBlock(m_scene, m_sensor, m_sampler, 
+			block, stop, m_hilbertCurve.getPoints());
 
 #ifdef MTS_DEBUG_FP
 		disableFPExceptions();
@@ -81,7 +83,6 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		stream->writeInt(m_blockSize);
 		stream->writeInt(m_borderSize);
-		stream->writeBool(m_collectStatistics);
 	}
 
 	ref<WorkProcessor> clone() const {
@@ -93,21 +94,17 @@ protected:
 	virtual ~BlockRenderer() { }
 private:
 	ref<Scene> m_scene;
-	ref<Camera> m_camera;
+	ref<Sensor> m_sensor;
 	ref<Sampler> m_sampler;
-	ref<SampleIntegrator> m_integrator;
+	ref<SamplingIntegrator> m_integrator;
 	int m_blockSize;
 	int m_borderSize;
-	int m_collectStatistics;
-	HilbertCurve2D<int> m_hilbertCurve;
+	HilbertCurve2D<uint8_t> m_hilbertCurve;
 };
 
-
 BlockedRenderProcess::BlockedRenderProcess(const RenderJob *parent, RenderQueue *queue,
-		int blockSize) : m_queue(queue), m_progress(NULL) {
+		int blockSize) : m_queue(queue), m_parent(parent), m_resultCount(0), m_progress(NULL) {
 	m_blockSize = blockSize;
-	m_parent = parent;
-	m_resultCount = 0;
 	m_resultMutex = new Mutex();
 }
 
@@ -122,10 +119,10 @@ ref<WorkProcessor> BlockedRenderProcess::createWorkProcessor() const {
 
 void BlockedRenderProcess::processResult(const WorkResult *result, bool cancelled) {
 	const ImageBlock *block = static_cast<const ImageBlock *>(result);
-	m_resultMutex->lock();
-	m_film->putImageBlock(block);
+	UniqueLock lock(m_resultMutex);
+	m_film->put(block);
 	m_progress->update(++m_resultCount);
-	m_resultMutex->unlock();
+	lock.unlock();
 	m_queue->signalWorkEnd(m_parent, block);
 }
 
@@ -137,20 +134,23 @@ ParallelProcess::EStatus BlockedRenderProcess::generateWork(WorkUnit *unit, int 
 }
 
 void BlockedRenderProcess::bindResource(const std::string &name, int id) {
-	if (name == "camera") {
-		m_film = static_cast<Camera *>(Scheduler::getInstance()->getResource(id))->getFilm();
-		const TabulatedFilter *filter = m_film->getTabulatedFilter();
-		m_borderSize = (int) std::ceil(std::max(filter->getFilterSize().x,
-			filter->getFilterSize().y) - (Float) 0.5);
+	if (name == "sensor") {
+		m_film = static_cast<Sensor *>(Scheduler::getInstance()->getResource(id))->getFilm();
+		m_borderSize = m_film->getReconstructionFilter()->getBorderSize();
 
-		Point2i offset = m_film->getCropOffset();
+		Point2i offset = Point2i(0, 0);
 		Vector2i size = m_film->getCropSize();
-		if (m_film->hasHighQualityEdges()) {	
+
+		if (m_film->hasHighQualityEdges()) {
 			offset.x -= m_borderSize;
 			offset.y -= m_borderSize;
 			size.x += 2 * m_borderSize;
 			size.y += 2 * m_borderSize;
 		}
+
+		if (m_blockSize < m_borderSize)
+			Log(EError, "The block size must be larger than the image reconstruction filter radius!");
+
 		BlockedImageProcess::init(offset, size, m_blockSize);
 		if (m_progress)
 			delete m_progress;

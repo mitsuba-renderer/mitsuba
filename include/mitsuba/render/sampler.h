@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,8 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__SAMPLER_H)
-#define __SAMPLER_H
+#pragma once
+#if !defined(__MITSUBA_RENDER_SAMPLER_H_)
+#define __MITSUBA_RENDER_SAMPLER_H_
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/random.h>
@@ -33,7 +34,7 @@ MTS_NAMESPACE_BEGIN
  * algorithm can then request subsequent 1D or 2D components of this point 
  * using the \ref next1D() and \ref next2D() functions. Some implementations
  * make certain guarantees about the stratification of the first n components
- * with respect to the other points that are sampled within a pixel. (the 
+ * with respect to the other points that are sampled within a pixel (the 
  * low-discrepancy and stratified samplers do this for instance). 
  *
  * The general interaction between a sampler and a rendering algorithm is as 
@@ -60,24 +61,48 @@ MTS_NAMESPACE_BEGIN
  * See the file \c direct.cpp for an example.
  *
  * \ingroup librender
+ * \ingroup libpython
  */
 class MTS_EXPORT_RENDER Sampler : public ConfigurableObject {
 public:
 	/**
-	 * Create a clone of this sampler. The clone is allowed to be different
-	 * to some extent, e.g. a pseudorandom generator should be based on a
-	 * different random seed compared to the original. All other parameters,
-	 * are copied exactly.
+	 * \brief Create a clone of this sampler
+	 *
+	 * The clone is allowed to be different to some extent, e.g. a pseudorandom 
+	 * generator should be based on a different random seed compared to the 
+	 * original. All other parameters, are copied exactly.
+	 *
+	 * The default implementation throws an exception.
 	 */
-	virtual ref<Sampler> clone() = 0;
+	virtual ref<Sampler> clone();
 
 	/**
-	 * Generate new samples - called initially and every time the generated 
-	 * samples have been exhausted. When used in conjunction with a 
-	 * SampleIntegrator, this will be called before starting to render 
-	 * each pixel.
+	 * \brief Set the film size in pixels
+	 *
+	 * When this sampler is used to render an image using a \c SampleIntegrator,
+	 * the camera implementation will call this method to inform the sampler
+	 * about the dimensions of the target film in pixels. Some samplers might
+	 * choose to use this hint to further improve stratification, but this is
+	 * entirely optional. The default implementation does nothing.
+	 *
+	 * \param res
+	 *    Resolution of the target film
+	 * \param blocked
+	 *    Will the rendering be blocked, i.e. parallelized over many 
+	 *    rectangular image regions?
 	 */
-	virtual void generate();
+	virtual void setFilmResolution(const Vector2i &res, bool blocked);
+
+	/**
+	 * \brief Generate new samples
+	 * 
+	 * This function is called initially and every time the generated 
+	 * samples have been exhausted. When used in conjunction with a 
+	 * \ref SamplingIntegrator, this will be called before starting to 
+	 * render each pixel, and the argument denotes the pixel position.
+	 * Otherwise, some dummy value should be provided, e.g. Point2i(-1)
+	 */
+	virtual void generate(const Point2i &offset);
 
 	/// Advance to the next sample
 	virtual void advance();
@@ -92,12 +117,13 @@ public:
 	virtual Point2 next2D() = 0;
 
 	/**
-	 * Retrieve the next 2D array of values from the current sample.
-	 * Note that this is different from just calling <tt>next2D()</tt>
+	 * \brief Retrieve the next 2D array of values from the current sample.
+	 *
+	 * Note that this is different from just calling \ref next2D()
 	 * repeatedly - this function will generally return a set of 2D vectors,
 	 * which are not only well-laid out over all samples at the current pixel,
 	 * but also with respect to each other. Note that this 2D array has to be
-	 * requested initially using <tt>request2DArray</tt> and later, they have 
+	 * requested initially using \ref request2DArray() and later, they have 
 	 * to be retrieved in the same same order and size configuration as the 
 	 * requests. An exception is thrown when a mismatch is detected.
 	 *
@@ -105,36 +131,26 @@ public:
 	 * rendering technique with "n" pixel samples and "m" shading samples,
 	 * while ensuring that the "n*m" sampled positions on an area light source
 	 * are all well-stratified with respect to each other.
+	 *
+	 * \remark This function is currently not exposed by the Python API
 	 */
-	Point2 *next2DArray(unsigned int size);
+	Point2 *next2DArray(size_t size);
 
 	/// Same as above, but 1D
-	Float *next1DArray(unsigned int size);
+	Float *next1DArray(size_t size);
 
 	/**
-	 * Request that a 2D array will be made available for 
-	 * later consumption by next2DArray(). This must be called
-	 * before generate(). See 'next2DArray' for a description
+	 * \brief Request that a 2D array will be made available for 
+	 * later consumption by \ref next2DArray(). 
+	 *
+	 * This function must be called before \ref generate(). 
+	 * See \ref next2DArray() for a more detailed description
 	 * of this feature.
 	 */
-	virtual void request2DArray(unsigned int size);
+	virtual void request2DArray(size_t size);
 
-	/// Same as above, but 1D
-	virtual void request1DArray(unsigned int size);
-
-	/**
-	 * Return an uniformly distributed number on [0, 1).
-	 * Throws an error when the underlying implementation is 
-	 * fully deterministic (e.g. QMC).
-	 */
-	virtual Float independent1D() = 0;
-
-	/**
-	 * Return an uniformly distributed 2D vector on [0, 1)x[0, 1).
-	 * Throws an error when the underlying implementation is 
-	 * fully deterministic (e.g. QMC).
-	 */
-	virtual Point2 independent2D() = 0;
+	/// Same as \ref request2DArray(), but in 1D
+	virtual void request1DArray(size_t size);
 
 	/// Return total number of samples
 	inline size_t getSampleCount() const { return m_sampleCount; }
@@ -144,12 +160,6 @@ public:
 
 	/// Serialize this sampler to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
-
-	/// Return the properties of this sampler
-	inline const Properties &getProperties() const { return m_properties; }
-
-	/// Return a string description
-	virtual std::string toString() const = 0;
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -164,13 +174,12 @@ protected:
 protected:
 	size_t m_sampleCount;
 	size_t m_sampleIndex;
-	std::vector<unsigned int> m_req1D, m_req2D;
+	std::vector<size_t> m_req1D, m_req2D;
 	std::vector<Float *> m_sampleArrays1D;
 	std::vector<Point2 *> m_sampleArrays2D;
-	int m_sampleDepth1DArray, m_sampleDepth2DArray;
-	Properties m_properties;
+	size_t m_dimension1DArray, m_dimension2DArray;
 };
 
 MTS_NAMESPACE_END
 
-#endif /* __SAMPLER_H */
+#endif /* __MITSUBA_RENDER_SAMPLER_H_ */

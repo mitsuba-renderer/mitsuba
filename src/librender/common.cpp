@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -17,11 +17,12 @@
 */
 
 #include <mitsuba/render/common.h>
+#include <mitsuba/core/cobject.h>
 
 MTS_NAMESPACE_BEGIN
 
-std::ostream &operator<<(std::ostream &os, const ETransportMode &quantity) {
-	switch (quantity) {
+std::ostream &operator<<(std::ostream &os, const ETransportMode &mode) {
+	switch (mode) {
 		case EImportance: os << "importance"; break;
 		case ERadiance:   os << "radiance"; break;
 		default:          os << "invalid"; break;
@@ -32,12 +33,60 @@ std::ostream &operator<<(std::ostream &os, const ETransportMode &quantity) {
 std::ostream &operator<<(std::ostream &os, const EMeasure &measure) {
 	switch (measure) {
 		case ESolidAngle: os << "solidAngle"; break;
-		case EInterval:   os << "interval"; break;
+		case ELength:     os << "length"; break;
+		case EArea:       os << "area"; break;
 		case EDiscrete:   os << "discrete"; break;
 		default:          os << "invalid"; break;
 	};
 	return os;
 }
 
+std::string PositionSamplingRecord::toString() const {
+	std::ostringstream oss;
+	oss << "PositionSamplingRecord[" << endl
+		<< "  p = " << p.toString() << "," << endl
+		<< "  time = " << time << "," << endl
+		<< "  n = " << n.toString() << "," << endl
+		<< "  uv = " << uv.toString() << "," << endl
+		<< "  pdf = " << pdf << "," << endl
+		<< "  measure = " << measure;
+	if (object) {
+		oss << "," << endl;
+		oss << "  object = " << indent(object->toString());
+	}
+	oss << endl << "]";
+	return oss.str();
+}
+
+std::string DirectionSamplingRecord::toString() const {
+	std::ostringstream oss;
+	oss << "DirectionSamplingRecord[" << endl
+		<< "  d = " << d.toString() << "," << endl
+		<< "  pdf = " << pdf << "," << endl
+		<< "  measure = " << measure << endl
+		<< "]";
+	return oss.str();
+}
+
+std::string DirectSamplingRecord::toString() const {
+	std::ostringstream oss;
+	oss << "DirectSamplingRecord[" << endl
+		<< "  p = " << p.toString() << "," << endl
+		<< "  time = " << time << "," << endl
+		<< "  n = " << n.toString() << "," << endl
+		<< "  ref = " << ref.toString() << "," << endl
+		<< "  refN = " << refN.toString() << "," << endl
+		<< "  d = " << d.toString() << "," << endl
+		<< "  dist = " << dist << "," << endl
+		<< "  uv = " << uv.toString() << "," << endl
+		<< "  pdf = " << pdf << "," << endl
+		<< "  measure = " << measure;
+	if (object) {
+		oss << "," << endl;
+		oss << "  object = " << indent(object->toString());
+	}
+	oss << endl << "]";
+	return oss.str();
+}
 
 MTS_NAMESPACE_END

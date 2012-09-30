@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2010 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -9,15 +9,16 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__REPLAYABLE_SAMPLER_H)
-#define __REPLAYABLE_SAMPLER_H
+#pragma once
+#if !defined(__MITSUBA_BIDIR_RSAMPLER_H_)
+#define __MITSUBA_BIDIR_RSAMPLER_H_
 
 #include <mitsuba/render/sampler.h>
 
@@ -52,7 +53,7 @@ public:
 
 	/* Does nothing in this implementation */
 	virtual void advance();
-	virtual void generate();
+	virtual void generate(const Point2i &pos);
 
 	/// Manually set the current sample index
 	virtual void setSampleIndex(size_t sampleIndex);
@@ -64,20 +65,8 @@ public:
 	virtual Point2 next2D();
 
 	/* Unsupported by this implementation */
-	virtual void request2DArray(unsigned int size);
-	virtual void request1DArray(unsigned int size);
-
-	/**
-	 * Return an uniformly distributed number on [0, 1).
-	 * Undefined for purely deterministic samplers.
-	 */
-	virtual Float independent1D();
-
-	/**
-	 * Return an uniformly distributed 2D vector on [0, 1)x[0, 1).
-	 * Undefined for purely deterministic samplers.
-	 */
-	virtual Point2 independent2D();
+	virtual void request2DArray(size_t size);
+	virtual void request1DArray(size_t size);
 
 	/// Serialize this sampler to disk
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
@@ -106,4 +95,4 @@ protected:
 
 MTS_NAMESPACE_END
 
-#endif /* __REPLAYABLE_SAMPLER_H */
+#endif /* __MITSUBA_BIDIR_RSAMPLER_H_ */

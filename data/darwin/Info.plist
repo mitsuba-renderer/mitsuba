@@ -70,5 +70,25 @@
 	<string>MTS_VERSION</string>
 	<key>CSResourcesFileMapped</key>
 	<true/>
+	<key>BreakpadProductDisplay</key>
+	<string>Mitsuba</string>
+	<key>BreakpadProduct</key>
+	<string>Mitsuba/OSX</string>
+	<key>BreakpadVersion</key>
+	<string>MTS_VERSION</string>
+	<key>BreakpadURL</key>
+	<string>http://www.mitsuba-renderer.org/bugreport.php</string>
+	<key>BreakpadReportInterval</key>
+	<string>10</string>
+	<key>BreakpadSkipConfirm</key>
+	<string>NO</string>
+	<key>BreakpadSendAndExit</key>
+	<string>YES</string>
+	<key>BreakpadRequestEmail</key>
+	<string>YES</string>
+	<key>BreakpadRequestComments</key>
+	<string>YES</string>
+	<key>BreakpadVendor</key>
+	<string>the Mitsuba authors</string>
 </dict>
 </plist>

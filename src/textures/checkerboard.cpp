@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -24,20 +24,22 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{checkerboard}{Checkerboard}
+ * \order{2}
  * \parameters{
  *     \parameter{color0, color1}{\Spectrum}{
  *       Color values for the two differently-colored patches
  *       \default{0.4 and 0.2}
  *     }
- *     \parameter{uscale, vscale}{\Float}{
- *       Multiplicative factors that should be applied to UV values before a lookup
- *     }
  *     \parameter{uoffset, voffset}{\Float}{
  *       Numerical offset that should be applied to UV values before a lookup
  *     }
+ *     \parameter{uscale, vscale}{\Float}{
+ *       Multiplicative factors that should be applied to UV values before a lookup
+ *     }
  * }
  * \renderings{
- *     \rendering{Checkerboard applied to the material test object}{tex_checkerboard}
+ *     \rendering{Checkerboard applied to the material test object
+ *                as well as the ground plane}{tex_checkerboard}
  * }
  * This plugin implements a simple procedural checkerboard texture with
  * customizable colors.
@@ -61,7 +63,7 @@ public:
 		m_color1.serialize(stream);
 	}
 
-	inline Spectrum getValue(const Point2 &uv) const {
+	inline Spectrum eval(const Point2 &uv) const {
 		int x = 2*modulo((int) (uv.x * 2), 2) - 1, 
 			y = 2*modulo((int) (uv.y * 2), 2) - 1;
 
@@ -71,8 +73,10 @@ public:
 			return m_color1;
 	}
 
-	Spectrum getValue(const Point2 &uv, Float dudx, Float dudy, Float dvdx, Float dvdy) const {
-		return Checkerboard::getValue(uv);
+	Spectrum eval(const Point2 &uv,
+			const Vector2 &d0, const Vector2 &d1) const {
+		/* Filtering is currently not supported */
+		return Checkerboard::eval(uv);
 	}
 
 	bool usesRayDifferentials() const {

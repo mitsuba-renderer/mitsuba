@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -16,13 +16,13 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__PLUGIN_H)
-#define __PLUGIN_H
+#pragma once
+#if !defined(__MITSUBA_CORE_PLUGIN_H_)
+#define __MITSUBA_CORE_PLUGIN_H_
 
 #include <mitsuba/mitsuba.h>
 #include <boost/filesystem.hpp>
-
-namespace fs = boost::filesystem;
+#include <boost/scoped_ptr.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -36,9 +36,6 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE Plugin {
-	typedef void *(*CreateInstanceFunc)(const Properties &props);
-	typedef void *(*CreateUtilityFunc)();
-	typedef char *(*GetDescriptionFunc)();
 public:
 	/// Load a plugin from the supplied path
 	Plugin(const std::string &shortName, const fs::path &path);
@@ -47,7 +44,7 @@ public:
 	virtual ~Plugin();
 	
 	/// Is this a configurable object plugin or an utility plugin?
-	inline bool isUtility() const { return m_isUtility; }
+	bool isUtility() const;
 
 	/// Return an instance of the class implemented by this plugin 
 	ConfigurableObject *createInstance(const Properties &props) const;
@@ -59,27 +56,18 @@ public:
 	std::string getDescription() const;
 	
 	/// Return the path of this plugin
-	inline const fs::path &getPath() const { return m_path; }
+	const fs::path &getPath() const;
 	
 	/// Return a short name of this plugin
-	inline const std::string &getShortName() const { return m_shortName; }
+	const std::string &getShortName() const;
 protected:
 	/// Resolve the given symbol and return a pointer
 	void *getSymbol(const std::string &sym);
 	/// Check whether a certain symbol is provided by the plugin
 	bool hasSymbol(const std::string &sym) const;
 private:
-#if defined(WIN32)
-	HMODULE m_handle;
-#else
-	void *m_handle;
-#endif
-	std::string m_shortName;
-	fs::path m_path;
-	bool m_isUtility;
-	GetDescriptionFunc m_getDescription;
-	CreateInstanceFunc m_createInstance;
-	CreateUtilityFunc m_createUtility;
+	struct PluginPrivate;
+	boost::scoped_ptr<PluginPrivate> d;
 };
 
 /**
@@ -109,7 +97,7 @@ private:
  *         Vector(0, 1, 0)
  *     ),
  *     "film" : {
- *         "type" : "pngfilm",
+ *         "type" : "ldrfilm",
  *         "width" : 1920,
  *         "height" : 1080
  *     }
@@ -119,7 +107,7 @@ private:
  * The above snippet constructs a \ref Camera instance from a
  * plugin named \c perspective.so/dll/dylib and adds a child object
  * named \c film, which is a \ref Film instance loaded from the
- * plugin \c pngfilm.so/dll/dylib. By the time the function
+ * plugin \c ldrfilm.so/dll/dylib. By the time the function
  * returns, the object hierarchy has already been assembled, and the
  * \ref ConfigurableObject::configure() methods of every object
  * has been called.
@@ -188,4 +176,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __PLUGIN_H */
+#endif /* __MITSUBA_CORE_PLUGIN_H_ */

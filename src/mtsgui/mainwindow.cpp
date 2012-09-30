@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -31,7 +31,7 @@
 #include "server.h"
 #include "save.h"
 #include "upgrade.h"
-#include <QtNetwork>
+#include <QtNetwork/QtNetwork>
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/sshstream.h>
@@ -40,7 +40,7 @@
 #include <mitsuba/core/fstream.h>
 
 #if !defined(WIN32)
-#include <QX11Info>
+#include <QtGui/QX11Info>
 #include <pwd.h>
 #endif
 
@@ -77,6 +77,25 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	SLog(EInfo, "Mitsuba version %s, Copyright (c) " MTS_YEAR " Wenzel Jakob",
 		Version(MTS_VERSION).toStringComplete().c_str());
+
+#if SPECTRUM_SAMPLES == 3
+	SLog(EInfo, "Configured for RGB-based rendering");
+#else
+	std::ostringstream oss;
+	oss << std::fixed;
+	oss.precision(2);
+	for (int i=0; i<SPECTRUM_SAMPLES; i++) {
+		std::pair<Float, Float> bin = Spectrum::getBinCoverage(i);
+		if (i < SPECTRUM_SAMPLES) {
+			oss << bin.first << "-" << bin.second << " nm";
+			if (i+1<SPECTRUM_SAMPLES)
+				oss << ", ";
+		}
+	}
+	
+	SLog(EInfo, "Configured for spectral rendering using "
+		"the wavelength discretization %s", oss.str().c_str());
+#endif
 
 	m_currentChild = NULL;
 	ui->setupUi(this);
@@ -137,6 +156,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	updateRecentFileActions();
 
 	ui->tabBar->setDocumentMode(true);
+	ui->tabBar->setElideMode(Qt::ElideRight);
+	ui->tabBar->setUsesScrollButtons(true);
 	ui->tabBar->setTabsClosable(true);
 	ui->tabBar->setMovable(true);
 	ui->tabBar->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -145,7 +166,9 @@ MainWindow::MainWindow(QWidget *parent) :
 	connect(ui->glView, SIGNAL(quit()), this, SLOT(on_actionExit_triggered()));
 	connect(ui->glView, SIGNAL(beginRendering()), this, SLOT(on_actionRender_triggered()));
 	connect(ui->glView, SIGNAL(stopRendering()), this, SLOT(updateUI()));
-	connect(ui->glView, SIGNAL(statusMessage(const QString &)), this, SLOT(onStatusMessage(const QString &)));
+	connect(ui->glView, SIGNAL(statusMessage(const QString &)), this, SLOT(onStatusMessage(const QString &)),
+		Qt::QueuedConnection);
+	connect(ui->glView, SIGNAL(selectionChanged()), this, SLOT(onSelectionChanged()));
 
 	/* Load defaults from app settings file */
 	ui->glView->setInvertMouse(settings.value("invertMouse", false).toBool());
@@ -165,6 +188,8 @@ MainWindow::MainWindow(QWidget *parent) :
 		this, SLOT(onJobFinished(const RenderJob *, bool)), Qt::QueuedConnection);
 	connect(m_renderListener, SIGNAL(workEnd(const RenderJob *, const ImageBlock *)), 
 		this, SLOT(onWorkEnd(const RenderJob *, const ImageBlock *)), Qt::DirectConnection);
+	connect(m_renderListener, SIGNAL(workCanceled(const RenderJob *, const Point2i &, const Vector2i &)), 
+		this, SLOT(onWorkCanceled(const RenderJob *, const Point2i &, const Vector2i &)), Qt::DirectConnection);
 	connect(m_renderListener, SIGNAL(workBegin(const RenderJob *, const RectangularWorkUnit *, int)),
         this, SLOT(onWorkBegin(const RenderJob *, const RectangularWorkUnit *, int)), Qt::DirectConnection);
 	connect(m_renderListener, SIGNAL(refresh()), this, SLOT(onRefresh()), Qt::QueuedConnection);
@@ -206,9 +231,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	m_networkManager = new QNetworkAccessManager(this);
 
-	if (ui->glView->isUsingSoftwareFallback())
+	if (ui->glView->isUsingSoftwareFallback() &&
+	    !ui->glView->getErrorString().isEmpty()) {
 		QMessageBox::warning(this, tr("Insufficient OpenGL capabilities"),
 			ui->glView->getErrorString(), QMessageBox::Ok);
+	}
 
 	connect(m_networkManager, SIGNAL(finished(QNetworkReply *)), this, SLOT(onNetworkFinished(QNetworkReply *)));
 	m_checkForUpdates = settings.value("checkForUpdates", true).toBool();
@@ -235,7 +262,7 @@ MainWindow::~MainWindow() {
 void MainWindow::initWorkers() {
 	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	ref<Scheduler> scheduler = Scheduler::getInstance();
-	int localWorkerCount = settings.value("localWorkers", getProcessorCount()).toInt();
+	int localWorkerCount = settings.value("localWorkers", getCoreCount()).toInt();
 	m_workerPriority = (Thread::EThreadPriority)
 		settings.value("workerPriority", (int) Thread::ELowPriority).toInt();
 	for (int i=0; i<localWorkerCount; ++i)
@@ -370,21 +397,12 @@ void MainWindow::onNetworkFinished(QNetworkReply *reply) {
 	}
 }
 
-void MainWindow::onBugReportError() {
-	m_bugStatus = 2;
-}
-
-void MainWindow::onBugReportSubmitted() {
-	if (m_bugStatus == 0)
-		m_bugStatus = 1;
-}
-
 void MainWindow::on_actionImport_triggered() {
 #if defined(MTS_HAS_COLLADA)
 	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
 	ref<FileResolver> newResolver = resolver->clone();
-	for (int i=0; i<m_searchPaths.size(); ++i)
-		newResolver->addPath(m_searchPaths[i].toStdString());
+	for (int i=(int) m_searchPaths.size()-1; i>=0; --i) 
+		newResolver->prependPath(m_searchPaths[i].toStdString());
 
 	ImportDialog *dialog = new ImportDialog(this, newResolver);
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -414,6 +432,8 @@ void MainWindow::on_actionDuplicateTab_triggered() {
 		currentIndex = m_contextIndex;
 	SceneContext *currentContext = m_context[currentIndex];
 	SceneContext *newContext = new SceneContext(currentContext);
+	if (currentContext->renderJob)
+		newContext->windowSize -= currentContext->sizeIncrease;
 
 	m_contextMutex.lock();
 	m_context.append(newContext);
@@ -436,11 +456,20 @@ void MainWindow::on_actionShowKDTree_triggered() {
 	SceneContext *currentContext = m_context[currentIndex];
 	bool checked = ui->actionShowKDTree->isChecked();
 	currentContext->showKDTree = checked;
-	if (currentContext->previewMethod != EOpenGL &&
-		currentContext->previewMethod != EOpenGLSinglePass)
+	if (currentContext->previewMethod != EOpenGL)
 		ui->glView->setPreviewMethod(EOpenGL);
 	else
 		ui->glView->resetPreview();
+}
+
+void MainWindow::on_actionFocusSelected_triggered() {
+	QKeyEvent event(QEvent::KeyPress, Qt::Key_F, Qt::NoModifier);
+	ui->glView->keyPressEvent(&event);
+}
+
+void MainWindow::on_actionFocusAll_triggered() {
+	QKeyEvent event(QEvent::KeyPress, Qt::Key_A, Qt::NoModifier);
+	ui->glView->keyPressEvent(&event);
 }
 
 void MainWindow::on_actionSceneDescription_triggered() {
@@ -511,8 +540,9 @@ void MainWindow::onProgressMessage(const RenderJob *job, const QString &name,
 
 void MainWindow::on_actionOpen_triggered() {
 	QFileDialog *dialog = new QFileDialog(this, Qt::Sheet);
-	dialog->setNameFilter(tr("All supported formats (*.xml *.exr);;"
-			"Mitsuba scenes (*.xml);;EXR images (*.exr)"));
+	dialog->setNameFilter(tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.png *.jpg *.jpeg);;"
+			"Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm);;Low "
+			"dynamic-range images (*.png *.jpg *.jpeg)"));
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
 	dialog->setAcceptMode(QFileDialog::AcceptOpen);
 	dialog->setViewMode(QFileDialog::Detail);
@@ -560,11 +590,11 @@ void MainWindow::onClearRecent() {
 SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
 	fs::path filename = resolver->resolve(qFileName.toStdString());
-	fs::path filePath = fs::complete(filename).parent_path();
+	fs::path filePath = fs::absolute(filename).parent_path();
 	ref<FileResolver> newResolver = resolver->clone();
-	newResolver->addPath(filePath);
-	for (int i=0; i<m_searchPaths.size(); ++i)
-		newResolver->addPath(m_searchPaths[i].toStdString());
+	for (int i=(int) m_searchPaths.size()-1; i>=0; --i) 
+		newResolver->prependPath(m_searchPaths[i].toStdString());
+	newResolver->prependPath(filePath);
 	LoadDialog *loaddlg = new LoadDialog(this);
 	SceneContext *result = NULL;
 	ref<SceneLoader> loadingThread;
@@ -574,7 +604,7 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	loaddlg->show();
 
 retry:
-	loadingThread = new SceneLoader(newResolver, filename.file_string(),
+	loadingThread = new SceneLoader(newResolver, filename.string(),
 		m_parameters);
 	loadingThread->start();
 
@@ -615,7 +645,7 @@ retry:
 
 				UpgradeManager upgradeMgr(newResolver);
 				try {
-					upgradeMgr.performUpgrade(filename.file_string().c_str(), version);
+					upgradeMgr.performUpgrade(filename.string().c_str(), version);
 					goto retry;
 				} catch (const std::exception &ex) {
 					QMessageBox::critical(this, tr("Unable to update %1").arg(qFileName),
@@ -693,6 +723,13 @@ void MainWindow::updateRecentFileActions() {
 		m_actRecent[j]->setVisible(false);
 }
 
+void MainWindow::onSelectionChanged() {
+	int index = ui->tabBar->currentIndex();
+	SceneContext *context = index != -1 ? m_context[index] : NULL;
+	bool isInactiveScene = (context && context->scene) ? context->renderJob == NULL : false;
+	ui->actionFocusSelected->setEnabled(isInactiveScene && ui->glView->hasSelection());
+}
+
 void MainWindow::updateUI() {
 	int index = ui->tabBar->currentIndex();
 	bool hasTab = (index != -1);
@@ -703,7 +740,8 @@ void MainWindow::updateUI() {
 	bool hasScene = hasTab && context->scene != NULL;
 	bool isInactive = hasTab ? context->renderJob == NULL : false;
 	bool isInactiveScene = (hasTab && hasScene) ? context->renderJob == NULL : false;
-	bool fallback = ui->glView->isUsingSoftwareFallback();
+	bool slowFallback = ui->glView->isUsingSoftwareFallback() &&
+		!ui->glView->hasFastSoftwareFallback();
 
 	ui->actionStop->setEnabled(isShowingRendering);
 	if (isShowingRendering && !isRendering)
@@ -720,20 +758,27 @@ void MainWindow::updateUI() {
 	ui->actionClose->setEnabled(hasTab);
 	ui->actionDuplicateTab->setEnabled(hasTab);
 	ui->actionAdjustSize->setEnabled(hasTab);
-	ui->actionShowKDTree->setEnabled(hasTab);
-	ui->actionShowKDTree->setChecked(hasTab && context->showKDTree);
-	ui->actionSceneDescription->setEnabled(hasTab);
+	ui->actionShowKDTree->setEnabled(hasScene);
+	ui->actionShowKDTree->setChecked(hasScene && context->showKDTree);
+	ui->actionSceneDescription->setEnabled(hasScene);
+	ui->actionResetView->setEnabled(hasScene);
+	ui->actionMagnify->setEnabled(hasScene);
+	ui->actionCrop->setEnabled(hasScene);
+	ui->menuCamera->setEnabled(hasScene);
+	ui->actionFocusAll->setEnabled(isInactiveScene);
+	ui->actionFocusSelected->setEnabled(isInactiveScene && ui->glView->hasSelection());
+
 #if !defined(__OSX__)
-	ui->actionPreviewSettings->setEnabled(!fallback && hasTab);
+	ui->actionPreviewSettings->setEnabled(!slowFallback && hasTab);
 #else
 	bool isVisible = m_previewSettings != NULL && m_previewSettings->isVisible();
-	ui->actionPreviewSettings->setEnabled(hasTab && !isVisible && !fallback);
+	ui->actionPreviewSettings->setEnabled(hasTab && !isVisible && !slowFallback);
 #endif
 
 	if (isRendering) {
 		if (!m_progress->isVisible()) {
-			QGridLayout *centralLayout = static_cast<QGridLayout *>(centralWidget()->layout());
-			centralLayout->addWidget(m_progressWidget, 3, 0, 1, 3);
+			static_cast<QGridLayout *>(centralWidget()->layout())->
+				addWidget(m_progressWidget, 3, 0, 1, 3);
 			m_progressWidget->show();
 		}
 		m_progress->setValue(context->progress);
@@ -788,8 +833,10 @@ void MainWindow::on_tabBar_tabMoved(int from, int to) {
 }
 
 void MainWindow::on_tabBar_currentChanged(int index) {
-	if (m_lastTab != NULL) 
+	if (m_lastTab != NULL) { 
 		m_lastTab->windowSize = size();
+		m_lastTab->wasRendering = m_lastTab->renderJob != NULL;
+	}
 
 	ui->glView->ignoreResizeEvents(true);
 	if (ui->tabBar->currentIndex() != -1)
@@ -816,10 +863,15 @@ void MainWindow::on_tabBar_currentChanged(int index) {
 	m_statusMessage = "";
 	updateStatus();
 	updateUI();
+	ui->menuCamera->clear();
 
 	if (index != -1) {
-		const QSize &windowSize = m_context[index]->windowSize;
+		SceneContext *context = m_context[index];
+		QSize windowSize = context->windowSize;
+
 		if (windowSize.isValid()) {
+			if (context->wasRendering && !context->renderJob)
+				windowSize -= context->sizeIncrease;
 #if defined(__LINUX__)
 			int error = (sizeHint()-windowSize).height();
 			if (error > 0 && error <= 5)
@@ -833,10 +885,26 @@ void MainWindow::on_tabBar_currentChanged(int index) {
 			adjustSize();
 		}
 
-		m_lastTab = m_context[index];
+		m_lastTab = context;
+	
+		const Scene *scene = context->scene;
+		if (scene) {
+			const ref_vector<Sensor> &sensors = scene->getSensors();
+			for (size_t i = 0; i < sensors.size(); ++i) {
+				const Sensor *sensor = sensors[i].get();
+				const Properties &props = sensor->getProperties();
+				QAction *act = new QAction(ui->menuCamera);
+				act->setText(formatString("\"%s\" (%s)", 
+					props.getID().c_str(), props.getPluginName().c_str()).c_str());
+				act->setData(qVariantFromValue((void *) sensor));
+				ui->menuCamera->addAction(act);
+				connect(act, SIGNAL(triggered()), this, SLOT(onActivateCamera()));
+			}
+		}
 	} else {
 		adjustSize();
 		m_lastTab = NULL;
+		ui->menuCamera->clear();
 	}
 	ui->glView->setFocus();
 }
@@ -894,6 +962,106 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 	event->accept();
 }
 
+void MainWindow::on_actionCrop_triggered() {
+	ui->glView->startCrop(GLWidget::ECrop);
+}
+
+void MainWindow::on_actionMagnify_triggered() {
+	ui->glView->startCrop(GLWidget::ECropAndMagnify);
+}
+	
+void MainWindow::on_glView_crop(int type, int x, int y, int width, int height) {
+	int currentIndex = ui->tabBar->currentIndex();
+	if (currentIndex < 0)
+		return;
+	SceneContext *context = m_context[currentIndex];
+	Scene *scene = context->scene;
+
+	ref<Sensor> oldSensor = scene->getSensor();
+	ref<Film> oldFilm = scene->getFilm();
+
+	Properties sensorProps = oldSensor->getProperties();
+	Properties filmProps = oldSensor->getFilm()->getProperties();
+	Vector2i oldSize = oldFilm->getSize();
+	Point2i oldCropOffset = oldFilm->getCropOffset();
+	Vector2i oldCropSize = oldFilm->getCropSize();
+
+	if (type == GLWidget::ECrop) {
+		filmProps.setInteger("cropOffsetX", x + oldCropOffset.x, false);
+		filmProps.setInteger("cropOffsetY", y + oldCropOffset.y, false);
+		filmProps.setInteger("cropWidth", width, false);
+		filmProps.setInteger("cropHeight", height, false);
+	} else if (type == GLWidget::ECropAndMagnify) {
+		int maxOldSize = std::max(oldCropSize.x, oldCropSize.y);
+		int maxNewSize = std::max(width, height);
+		Float magnification = maxOldSize / (Float) maxNewSize;
+
+		width = floorToInt(width*magnification);
+		height = floorToInt(height*magnification);
+
+		filmProps.setInteger("cropOffsetX", floorToInt(magnification 
+				* (x + oldCropOffset.x)), false);
+		filmProps.setInteger("cropOffsetY", floorToInt(magnification 
+				* (y + oldCropOffset.y)), false);
+		filmProps.setInteger("cropWidth", width);
+		filmProps.setInteger("cropHeight", height);
+		filmProps.setInteger("width", ceilToInt(oldSize.x*magnification), false);
+		filmProps.setInteger("height", ceilToInt(oldSize.y*magnification), false);
+	} else {
+		width = context->originalSize.x;
+		height = context->originalSize.y;
+		filmProps.removeProperty("cropOffsetX");
+		filmProps.removeProperty("cropOffsetY");
+		filmProps.removeProperty("cropWidth");
+		filmProps.removeProperty("cropHeight");
+		filmProps.setInteger("width", width, false);
+		filmProps.setInteger("height", height, false);
+	}
+
+	if (oldCropOffset == Point2i(0) && 
+		Vector2i(width, height) == oldCropSize)
+		return;
+
+	on_tabBar_currentChanged(-1);
+	ref<PluginManager> pluginMgr = PluginManager::getInstance();
+	ref<Sensor> newSensor = static_cast<Sensor *> 
+		(pluginMgr->createObject(MTS_CLASS(Sensor), sensorProps));
+	ref<Film> newFilm = static_cast<Film *> (
+		pluginMgr->createObject(MTS_CLASS(Film), filmProps));
+
+	newFilm->addChild(oldFilm->getReconstructionFilter());
+	newFilm->configure();
+	newSensor->addChild(oldSensor->getSampler());
+	newSensor->addChild(newFilm);
+	newSensor->setMedium(oldSensor->getMedium());
+	newSensor->configure();
+
+	scene->removeSensor(oldSensor);
+	scene->addSensor(newSensor);
+	scene->setSensor(newSensor);
+
+	context->framebuffer = new Bitmap(Bitmap::ERGBA, 
+		Bitmap::EFloat32, Vector2i(width, height));
+	context->framebuffer->clear();
+	context->scrollOffset = Vector2i(0, 0);
+	context->mode = EPreview;
+	context->windowSize = QSize();
+
+	if (context->previewBuffer.buffer) {
+		context->previewBuffer.buffer->decRef();
+		context->previewBuffer.buffer = NULL;
+		context->previewBuffer.vplSampleOffset = 0;
+	}
+
+	qApp->processEvents();
+	on_tabBar_currentChanged(currentIndex);
+	adjustSize();
+}
+
+void MainWindow::on_actionResetView_triggered() {
+	on_glView_crop(GLWidget::ENone);
+}
+
 bool MainWindow::isActive() {
 	if (isActiveWindow() || m_activeWindowHack)
 		return true;
@@ -907,7 +1075,7 @@ bool MainWindow::isActive() {
 }
 
 void MainWindow::drawHLine(SceneContext *ctx, int x1, int y, int x2, const float *color) {
-	float *framebuffer = ctx->framebuffer->getFloatData();
+	float *framebuffer = ctx->framebuffer->getFloat32Data();
 	int fbOffset = (x1 + y*ctx->framebuffer->getWidth())*4;
 	for (int x=x1; x<=x2; x++) {
 		framebuffer[fbOffset] = color[0];
@@ -918,7 +1086,7 @@ void MainWindow::drawHLine(SceneContext *ctx, int x1, int y, int x2, const float
 }
 
 void MainWindow::drawVLine(SceneContext *ctx, int x, int y1, int y2, const float *color) {
-	float *framebuffer = ctx->framebuffer->getFloatData();
+	float *framebuffer = ctx->framebuffer->getFloat32Data();
 	int width = ctx->framebuffer->getWidth(), fbOffset = (x + y1*width)*4;
 	for (int y=y1; y<=y2; y++) {
 		framebuffer[fbOffset] = color[0];
@@ -982,6 +1150,7 @@ void MainWindow::on_actionPreviewSettings_triggered() {
 	connect(&d, SIGNAL(toneMappingMethodChanged(EToneMappingMethod)), ui->glView, SLOT(setToneMappingMethod(EToneMappingMethod)));
 	connect(&d, SIGNAL(diffuseReceiversChanged(bool)), ui->glView, SLOT(setDiffuseReceivers(bool)));
 	connect(&d, SIGNAL(diffuseSourcesChanged(bool)), ui->glView, SLOT(setDiffuseSources(bool)));
+	d.setPreviewEnabled(!ui->glView->isUsingSoftwareFallback());
 	d.setMaximumSize(d.minimumSize());
 	d.exec();
 	QSettings settings("mitsuba-renderer.org", "mtsgui");
@@ -1011,6 +1180,7 @@ void MainWindow::on_actionPreviewSettings_triggered() {
 		connect(m_previewSettings, SIGNAL(close()), this, SLOT(onPreviewSettingsClose()));
 		connect(m_previewSettings, SIGNAL(diffuseReceiversChanged(bool)), ui->glView, SLOT(setDiffuseReceivers(bool)));
 		connect(m_previewSettings, SIGNAL(diffuseSourcesChanged(bool)), ui->glView, SLOT(setDiffuseSources(bool)));
+		m_previewSettings->setPreviewEnabled(!ui->glView->isUsingSoftwareFallback());
 	}
 	SceneContext *ctx = NULL;
 	if (ui->tabBar->currentIndex() != -1)
@@ -1175,14 +1345,16 @@ void MainWindow::on_actionRender_triggered() {
 	int index = ui->tabBar->currentIndex();
 	if (index == -1)
 		return;
+
 	SceneContext *context = m_context[index];
-	if (context->renderJob != NULL)
+	Scene *scene = context->scene;
+
+	if (context->renderJob != NULL || scene == NULL)
 		return;
 
-	Scene *scene = context->scene;
 	scene->setBlockSize(m_blockSize);
 	context->renderJob = new RenderJob("rend", scene, m_renderQueue,  
-		context->sceneResID, -1, -1, false);
+		context->sceneResID, -1, -1, false, true);
 	context->cancelMode = ERender;
 	if (context->mode != ERender)
 		ui->glView->downloadFramebuffer();
@@ -1236,8 +1408,11 @@ inline float toSRGB(float value) {
 
 void MainWindow::on_actionExportImage_triggered() {
 	QFileDialog *dialog = new QFileDialog(this, tr("Export image .."),
-		"", tr("All supported formats (*.exr *.png *.jpg *.jpeg);;Linear EXR image (*.exr)"
-			";; Tonemapped 8-bit image (*.png *.jpg *.jpeg)"));
+	    "", tr("All supported formats (*.exr *.hdr *.rgbe *.pfm *.png *.jpg *.jpeg);;"
+	           "High dynamic range OpenEXR image (*.exr);;"
+	           "High dynamic range Radiance RGBE image (*.rgbe *.hdr);;"
+	           "High dynamic range Portable Float Map image (*.pfm);;"
+	           "Tonemapped low dynamic range image (*.png *.jpg *.jpeg)"));
 
 	QSettings settings("mitsuba-renderer.org", "mtsgui");
 	dialog->setViewMode(QFileDialog::Detail);
@@ -1273,13 +1448,17 @@ void MainWindow::onExportDialogClose(int reason) {
 		settings.setValue("fileDialogState", dialog->saveState());
 
 		if (fileName.endsWith(".exr")) {
-			format = Bitmap::EEXR;
+			format = Bitmap::EOpenEXR;
 		} else if (fileName.endsWith(".png")) {
 			format = Bitmap::EPNG;
+		} else if (fileName.endsWith(".hdr") || fileName.endsWith(".rgbe")) {
+			format = Bitmap::ERGBE;
 		} else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
 			format = Bitmap::EJPEG;
+		} else if (fileName.endsWith(".pfm")) {
+			format = Bitmap::EPFM;
 		} else {
-			SLog(EError, "Unknown file type -- the filename must end in either .exr, .png, .jpg, or .jpeg");
+			SLog(EError, "Unknown file type -- the filename must end in either .exr, .rgbe, .hdr, .pfm, .png, .jpg, or .jpeg");
 			return;
 		}
 
@@ -1289,78 +1468,25 @@ void MainWindow::onExportDialogClose(int reason) {
 		if (ctx->mode == EPreview)
 			ui->glView->downloadFramebuffer();
 
-		if (format == Bitmap::EEXR) {
-			ctx->framebuffer->save(format, fs);
-		} else {
-			int width = ctx->framebuffer->getWidth();
-			int height = ctx->framebuffer->getHeight();
-			ref<Bitmap> temp = new Bitmap(width, height, 32);
-			float *source = ctx->framebuffer->getFloatData();
-			uint8_t *target = temp->getData();
-			float invGamma = 1.0f/(float) ctx->gamma;
-			float exposure = std::pow(2.0f, (float) ctx->exposure);
-			Float reinhardKey = 0;
-			Float invWpSqr = std::pow((Float) 2, (Float) ctx->reinhardBurn);
+		ref<Bitmap> bitmap = ctx->framebuffer;
+		if (format != Bitmap::EOpenEXR && format != Bitmap::ERGBE && format != Bitmap::EPFM) {
+			/* Tonemap the image */
 			if (ctx->toneMappingMethod == EReinhard) {
-				Float avgLogLuminance = 0;
-				for (int y=0; y<height; ++y) {
-					for (int x=0; x<width; ++x) {
-						Spectrum spec;
-						spec.fromLinearRGB(source[(y*width+x)*4+0], 
-							source[(y*width+x)*4+1], source[(y*width+x)*4+2]);
-						avgLogLuminance += std::fastlog(0.001f+spec.getLuminance());
-					}
-				}
-				avgLogLuminance = std::fastexp(avgLogLuminance/(width*height));
-				reinhardKey = ctx->reinhardKey / avgLogLuminance;
+				Float logAvgLuminance = 0, maxLuminance = 0; /* Unused */
+
+				Float burn = (ctx->reinhardBurn + 10) / 20.0f;
+				bitmap = bitmap->clone();
+				bitmap->tonemapReinhard(logAvgLuminance, maxLuminance, 
+					ctx->reinhardKey, burn);
 			}
-			
 
-			for (int y=0; y<height; ++y) {
-				for (int x=0; x<width; ++x) {
-					float r, g, b, a = source[3];
-
-					if (ctx->toneMappingMethod == EGamma) {
-						r = source[0]*exposure;
-						g = source[1]*exposure;
-						b = source[2]*exposure;
-					} else {
-						Spectrum spec;
-						Float X, Y, Z;
-						spec.fromLinearRGB(source[0], source[1], source[2]);
-						spec.toXYZ(X, Y, Z);
-						Float normalization = 1/(X + Y + Z);
-						Float x = X*normalization, y = Y*normalization;
-						Float Lp = Y * reinhardKey;
-						Y = Lp * (1.0f + Lp*invWpSqr) / (1.0f + Lp);
-						X = x * (Y/y); 
-						Z = (Y/y) * (1.0 - x - y);
-						spec.fromXYZ(X, Y, Z);
-						Float rF, gF, bF;
-						spec.toLinearRGB(rF, gF, bF);
-						r = rF; g = gF; b = bF; 
-					}
-
-					if (ctx->srgb) {
-						r = toSRGB(r);
-						g = toSRGB(g);
-						b = toSRGB(b);
-					} else {
-						r = std::pow(r, invGamma);
-						g = std::pow(g, invGamma);
-						b = std::pow(b, invGamma);
-					}
-
-					*target++ = (uint8_t) std::min(255, std::max(0, (int) (r*255)));
-					*target++ = (uint8_t) std::min(255, std::max(0, (int) (g*255)));
-					*target++ = (uint8_t) std::min(255, std::max(0, (int) (b*255)));
-					*target++ = (uint8_t) std::min(255, std::max(0, (int) (a*255)));
-					source += 4;
-				}
-			}
-			temp->setGamma(ctx->srgb ? -1 : ctx->gamma);
-			temp->save(format, fs);
+			bitmap = bitmap->convert(Bitmap::ERGB, Bitmap::EUInt8, 
+				ctx->srgb ? (Float) -1 : ctx->gamma, 
+				ctx->toneMappingMethod == EReinhard 
+				? (Float) 1.0f : std::pow((Float) 2.0f, ctx->exposure));
 		}
+
+		bitmap->write(format, fs);
 	}
 }
 
@@ -1401,14 +1527,14 @@ void MainWindow::onSaveAsDialogClose(int reason) {
 		settings.setValue("fileDialogState", dialog->saveState());
 		saveScene(this, context, fileName);
 		fs::path pathName = fileName.toStdString(),
-			     complete = fs::complete(pathName),
-			     baseName = fs::basename(pathName);
+			     complete = fs::absolute(pathName),
+			     baseName = pathName.stem();
 		context->fileName = fileName;
 		context->shortName = QFileInfo(fileName).fileName();
 		context->scene->setSourceFile(pathName);
-		context->scene->setDestinationFile(baseName.file_string());
+		context->scene->setDestinationFile(baseName.string());
 		ui->tabBar->setTabText(currentIndex, context->shortName);
-		addRecentFile(complete.file_string().c_str());
+		addRecentFile(complete.string().c_str());
 	}
 }
 
@@ -1439,7 +1565,7 @@ void MainWindow::onJobFinished(const RenderJob *job, bool cancelled) {
 				ui->glView->resumePreview();
 		}
 	}
-	refresh(job, NULL);
+	refresh(job);
 	context->renderJob = NULL;
 	updateUI();
 	if (ui->tabBar->currentIndex() != -1 &&
@@ -1455,7 +1581,7 @@ void MainWindow::onStatusMessage(const QString &status) {
 void MainWindow::updateStatus() {
 	if (m_statusMessage == "")
 		setWindowTitle(tr("Mitsuba renderer"));
-	else
+	else 
 		setWindowTitle(tr("Mitsuba renderer [%1]").arg(m_statusMessage));
 }
     
@@ -1468,7 +1594,7 @@ void MainWindow::on_actionStartServer_triggered() {
 
 void MainWindow::on_actionEnableCommandLine_triggered() {
 	if (QMessageBox::question(this, tr("Enable command line access"),
-		tr("<p>If you proceed, Mitsuba will create symbolic links in <tt>/usr/bin</tt> and <tt>/Library/Python/2.6/site-packages</tt>, "
+		tr("<p>If you proceed, Mitsuba will create symbolic links in <tt>/usr/bin</tt> and <tt>/Library/Python/{2.6,2.7}/site-packages</tt>, "
 			"which enable command line and Python usage. Note that you will have to "
 			"repeat this process every time the Mitsuba application is moved.</p>"
 			"<p>Create links?</p>"),
@@ -1497,12 +1623,9 @@ void MainWindow::onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu
 	SceneContext *context = getContext(job, false);
 	if (context == NULL)
 		return;
-	VisualWorkUnit vwu;
+	VisualWorkUnit vwu(wu->getOffset(), wu->getSize(), worker);
 	/* This is not executed in the event loop -- take some precautions */
 	m_contextMutex.lock();
-	vwu.offset = wu->getOffset();
-	vwu.size = wu->getSize();
-	vwu.worker = worker;
 	context->workUnits.insert(vwu);
 	drawVisualWorkUnit(context, vwu);
 	bool isCurrentView = ui->tabBar->currentIndex() < m_context.size() &&
@@ -1513,9 +1636,7 @@ void MainWindow::onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu
 }
 
 void MainWindow::drawVisualWorkUnit(SceneContext *context, const VisualWorkUnit &vwu) {
-	Film *film = context->scene->getFilm();
-	Point2i co = film->getCropOffset();
-	int ox = vwu.offset.x - co.x, oy = vwu.offset.y - co.y,
+	int ox = vwu.offset.x, oy = vwu.offset.y,
 		ex = ox + vwu.size.x, ey = oy + vwu.size.y;
 	const float *color = NULL;
 
@@ -1557,84 +1678,70 @@ void MainWindow::drawVisualWorkUnit(SceneContext *context, const VisualWorkUnit 
 	drawVLine(context, ox, ey - 4, ey - 1, color);
 }
 
-void MainWindow::onWorkEnd(const RenderJob *job, const ImageBlock *block) {
-	int ox = block->getOffset().x, oy = block->getOffset().y,
-		ex = ox + block->getSize().x, ey = oy + block->getSize().y;
-	VisualWorkUnit vwu;
-	vwu.offset = block->getOffset();
-	vwu.size = block->getSize();
+void MainWindow::onWorkCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size) {
 	SceneContext *context = getContext(job, false);
 	if (context == NULL)
 		return;
-	Film *film = context->scene->getFilm();
-	Point2i co = film->getCropOffset();
-	Bitmap *bitmap = context->framebuffer;
-	float *framebuffer = bitmap->getFloatData();
-	Float r, g, b;
+	VisualWorkUnit vwu(offset, size);
+	if (context->workUnits.find(vwu) != context->workUnits.end())
+		context->workUnits.erase(vwu);
+	m_contextMutex.lock();
+	m_contextMutex.unlock();
+}
 
-	for (int y = oy; y < ey; ++y) {
-		int fbOffset = (ox - co.x + (y - co.y)*bitmap->getWidth())*4;
-		for (int x = ox; x < ex; ++x) {
-			film->getValue(x, y).toLinearRGB(r, g, b);
-			framebuffer[fbOffset] = (float) r;
-			framebuffer[fbOffset+1] = (float) g;
-			framebuffer[fbOffset+2] = (float) b;
-			framebuffer[fbOffset+3] = 1;
-			fbOffset += 4;
-		}
-	}
+void MainWindow::onWorkEnd(const RenderJob *job, const ImageBlock *block) {
+	SceneContext *context = getContext(job, false);
+	if (context == NULL)
+		return;
+
+	// int border = block->getBorderSize();
+	int border = 0; // produces a more appealing preview
+
+	Point2i offset(
+		std::max(0, block->getOffset().x - border),
+		std::max(0, block->getOffset().y - border));
+
+	Bitmap *target = context->framebuffer;
+	Vector2i size(
+		std::min(target->getWidth(),  offset.x + block->getSize().x + 2 * border)-offset.x,
+		std::min(target->getHeight(), offset.y + block->getSize().y + 2 * border)-offset.y);
+
+	context->scene->getFilm()->develop(offset, size, offset, target);
 
 	/* This is executed by worker threads -- take some precautions */
 	m_contextMutex.lock();
 	bool isCurrentView = ui->tabBar->currentIndex() < m_context.size() &&
 		m_context[ui->tabBar->currentIndex()] == context;
+	VisualWorkUnit vwu(block->getOffset(), block->getSize());
 	if (context->workUnits.find(vwu) != context->workUnits.end()) {
 		context->workUnits.erase(vwu);
 	} else if (!context->cancelled) {
 		SLog(EWarn, "Internal error: unable to find previously scheduled"
 				" rectangular work unit.");
 	}
+	for (std::set<VisualWorkUnit, block_comparator>::const_iterator it =
+		context->workUnits.begin(); it != context->workUnits.end(); ++it) 
+		drawVisualWorkUnit(context, *it);
 	m_contextMutex.unlock();
 	if (isCurrentView)
 		emit updateView();
 }
 
 void MainWindow::onRefresh() {
-	const QRenderListener::RefreshRequest *req = m_renderListener->acquireRefreshRequest();
+	const RenderJob *req = m_renderListener->acquireRefreshRequest();
 	if (req)
-		refresh(req->first, req->second);
+		refresh(req);
 	m_renderListener->releaseRefreshRequest();
 }
 
-void MainWindow::refresh(const RenderJob *job, const Bitmap *_bitmap) {
+void MainWindow::refresh(const RenderJob *job) {
 	SceneContext *context = getContext(job, false);
 	if (context == NULL)
 		return;
 
-	Film *film = context->scene->getFilm();
-	Point2i co = film->getCropOffset();
-	Bitmap *bitmap = context->framebuffer;
-	float *framebuffer = bitmap->getFloatData();
-
-	if (_bitmap != NULL) {
-		SAssert(bitmap->getWidth() == _bitmap->getWidth());
-		SAssert(bitmap->getHeight() == _bitmap->getHeight());
-		SAssert(bitmap->getBitsPerPixel() == _bitmap->getBitsPerPixel());
-		memcpy(framebuffer, _bitmap->getFloatData(),
-			bitmap->getWidth() * bitmap->getHeight() * 4 * sizeof(float));
-	} else {
-		Float r, g, b;
-		for (int y = 0; y < bitmap->getHeight(); ++y) {
-			int fbOffset = y*bitmap->getWidth()*4;
-			for (int x = 0; x < bitmap->getWidth(); ++x) {
-				film->getValue(x + co.x, y + co.y).toLinearRGB(r, g, b);
-				framebuffer[fbOffset] = (float) r;
-				framebuffer[fbOffset+1] = (float) g;
-				framebuffer[fbOffset+2] = (float) b;
-				fbOffset += 4;
-			}
-		}
-	}
+	Bitmap *target = context->framebuffer;
+	context->scene->getFilm()->develop(Point2i(0, 0), 
+		target->getSize(), Point2i(0, 0), target);
 
 	/* This is executed by worker threads -- take some precautions */
 	m_contextMutex.lock();
@@ -1646,6 +1753,35 @@ void MainWindow::refresh(const RenderJob *job, const Bitmap *_bitmap) {
 	m_contextMutex.unlock();
 	if (isCurrentView)
 		emit updateView();
+}
+
+void MainWindow::onActivateCamera() {
+	int index = ui->tabBar->currentIndex();
+	if (index == -1 || m_context[index]->scene == NULL)
+		return;
+	QAction *action = qobject_cast<QAction *>(sender());
+	Sensor *sensor = static_cast<Sensor *>(action->data().value<void *>());
+	SceneContext *context = m_context[index];
+	on_tabBar_currentChanged(-1);
+	Vector2i size = sensor->getFilm()->getSize();
+	context->scene->setSensor(sensor);
+
+	context->framebuffer = new Bitmap(Bitmap::ERGBA, 
+		Bitmap::EFloat32, size);
+	context->framebuffer->clear();
+	context->scrollOffset = Vector2i(0, 0);
+	context->mode = EPreview;
+	context->windowSize = QSize();
+
+	if (context->previewBuffer.buffer) {
+		context->previewBuffer.buffer->decRef();
+		context->previewBuffer.buffer = NULL;
+		context->previewBuffer.vplSampleOffset = 0;
+	}
+
+	on_tabBar_currentChanged(index);
+	updateUI();
+	adjustSize();
 }
 
 void MainWindow::on_glView_loadFileRequest(const QString &string) {
@@ -1701,18 +1837,18 @@ SceneContext::SceneContext(SceneContext *ctx) {
 		ref<Thread> thread = Thread::getThread();
 		ref<FileResolver> oldResolver = thread->getFileResolver();
 		ref<FileResolver> newResolver = oldResolver->clone();
-		newResolver->addPath(fs::complete(ctx->scene->getSourceFile()).parent_path());
+		newResolver->prependPath(fs::absolute(ctx->scene->getSourceFile()).parent_path());
 		thread->setFileResolver(newResolver);
 
 		scene = new Scene(ctx->scene);
 		ref<PluginManager> pluginMgr = PluginManager::getInstance();
-		ref<PerspectiveCamera> oldCamera = static_cast<PerspectiveCamera *>(ctx->scene->getCamera());
-		ref<PerspectiveCamera> camera = static_cast<PerspectiveCamera *> 
-			(pluginMgr->createObject(MTS_CLASS(Camera), oldCamera->getProperties()));
+		ref<Sensor> oldSensor = static_cast<Sensor *>(ctx->scene->getSensor());
+		ref<Sensor> newSensor = static_cast<Sensor *> 
+			(pluginMgr->createObject(MTS_CLASS(Sensor), oldSensor->getProperties()));
 		ref<Sampler> sampler = static_cast<Sampler *> 
 			(pluginMgr->createObject(MTS_CLASS(Sampler), ctx->scene->getSampler()->getProperties()));
 		ref<Film> film = static_cast<Film *> 
-			(pluginMgr->createObject(MTS_CLASS(Film), oldCamera->getFilm()->getProperties()));
+			(pluginMgr->createObject(MTS_CLASS(Film), oldSensor->getFilm()->getProperties()));
 		const Integrator *oldIntegrator = ctx->scene->getIntegrator();
 		ref<Integrator> currentIntegrator;
 
@@ -1734,19 +1870,20 @@ SceneContext::SceneContext(SceneContext *ctx) {
 			integratorList[i]->configure();
 
 		ref<ReconstructionFilter> rfilter = static_cast<ReconstructionFilter *> 
-			(pluginMgr->createObject(MTS_CLASS(ReconstructionFilter), oldCamera->getFilm()->
+			(pluginMgr->createObject(MTS_CLASS(ReconstructionFilter), oldSensor->getFilm()->
 				getReconstructionFilter()->getProperties()));
 
 		rfilter->configure();
 		film->addChild(rfilter);
 		film->configure();
 		sampler->configure();
-		camera->addChild(sampler);
-		camera->addChild(film);
-		camera->setViewTransform(oldCamera->getViewTransform());
-		camera->setFov(oldCamera->getFov());
-		camera->configure();
-		scene->setCamera(camera);
+		newSensor->addChild(sampler);
+		newSensor->setMedium(oldSensor->getMedium());
+		newSensor->addChild(film);
+		newSensor->configure();
+		scene->removeSensor(oldSensor);
+		scene->addSensor(newSensor);
+		scene->setSensor(newSensor);
 		scene->setSampler(sampler);
 		scene->configure();
 		sceneResID = ctx->sceneResID;
@@ -1761,6 +1898,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 	movementScale = ctx->movementScale;
 	up = ctx->up;
 	renderJob = NULL;
+	wasRendering = false;
 	cancelled = false;
 	progress = 0.0f;
 	framebuffer = ctx->framebuffer->clone();
@@ -1784,16 +1922,15 @@ SceneContext::SceneContext(SceneContext *ctx) {
 	shownKDTreeLevel = ctx->shownKDTreeLevel;
 	selectedShape = ctx->selectedShape;
 	selectionMode = ctx->selectionMode;
+	originalSize = ctx->originalSize;
 	doc = ctx->doc.cloneNode(true).toDocument();
 }
 
 SceneContext::~SceneContext() {
 	if (scene && sceneResID != -1)
 		Scheduler::getInstance()->unregisterResource(sceneResID);
-	if (previewBuffer.buffer) {
-		previewBuffer.buffer->disassociate();
+	if (previewBuffer.buffer) 
 		previewBuffer.buffer->decRef();
-	}
 	if (previewBuffer.sync) 
 		previewBuffer.sync->decRef();
 }

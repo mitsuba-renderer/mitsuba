@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2011 by Wenzel Jakob and others.
+    Copyright (c) 2007-2012 by Wenzel Jakob and others.
 
     Mitsuba is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -45,11 +45,10 @@ public:
 	AnimatedInstance(const Properties &props) : Shape(props) {
 		FileResolver *fResolver = Thread::getThread()->getFileResolver();
 		fs::path path = fResolver->resolve(props.getString("filename"));
-		m_name = path.filename();
+		m_name = path.filename().string();
 
 		Log(EInfo, "Loading animation track from \"%s\"", m_name.c_str());
 		ref<FileStream> fs = new FileStream(path, FileStream::EReadOnly);
-		m_occluder = true;
 		m_transform = new AnimatedTransform(fs);
 	}
 
@@ -57,7 +56,6 @@ public:
 		: Shape(stream, manager) {
 		m_shapeGroup = static_cast<ShapeGroup *>(manager->getInstance(stream));
 		m_transform = new AnimatedTransform(stream);
-		m_occluder = true;
 		configure();
 	}
 
@@ -71,20 +69,7 @@ public:
 		if (!m_shapeGroup)
 			Log(EError, "A reference to a 'shapegroup' must be specified!");
 		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
-		const AABB &aabb = kdtree->getAABB();
-		Float minT, maxT;
-		m_transform->computeTimeBounds(minT, maxT);
-
-		/* Compute approximate bounds */
-		int nSteps = 100;
-		Float step = (maxT-minT) / (nSteps-1);
-		Transform objectToWorld;
-
-		for (int i=0; i<nSteps; ++i) {
-			m_transform->eval(minT + step * i, objectToWorld);
-			for (int j=0; j<8; ++j)
-				m_aabb.expandBy(objectToWorld(aabb.getCorner(j)));
-		}
+		m_aabb = m_transform->getSpatialBounds(kdtree->getAABB());
 	}
 
 	AABB getAABB() const {
@@ -113,36 +98,57 @@ public:
 			Float maxt, Float &t, void *temp) const {
 		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		Ray ray;
-		Transform objectToWorld, worldToObject;
-		m_transform->eval(_ray.time, objectToWorld);
-		worldToObject = objectToWorld.inverse();
-		worldToObject(_ray, ray);
+		const Transform &objectToWorld = m_transform->eval(_ray.time);
+		Transform worldToObject = objectToWorld.inverse();
+		worldToObject.transformAffine(_ray, ray);
 		return kdtree->rayIntersect(ray, mint, maxt, t, temp);
 	}
 
 	bool rayIntersect(const Ray &_ray, Float mint, Float maxt) const {
 		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		Ray ray;
-		Transform objectToWorld, worldToObject;
-		m_transform->eval(_ray.time, objectToWorld);
-		worldToObject = objectToWorld.inverse();
-		worldToObject(_ray, ray);
+		const Transform &objectToWorld = m_transform->eval(_ray.time);
+		Transform worldToObject = objectToWorld.inverse();
+		worldToObject.transformAffine(_ray, ray);
 		return kdtree->rayIntersect(ray, mint, maxt);
 	}
 
-	void fillIntersectionRecord(const Ray &ray, 
+	void fillIntersectionRecord(const Ray &_ray, 
 		const void *temp, Intersection &its) const {
 		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
-		Transform objectToWorld;
-		m_transform->eval(ray.time, objectToWorld);
+		const Transform &objectToWorld = m_transform->eval(_ray.time);
+
+		Ray ray;
+		objectToWorld.inverse()(_ray, ray);
 		kdtree->fillIntersectionRecord<false>(ray, temp, its);
+
 		its.shFrame.n = normalize(objectToWorld(its.shFrame.n));
 		its.shFrame.s = normalize(objectToWorld(its.shFrame.s));
 		its.shFrame.t = normalize(objectToWorld(its.shFrame.t));
 		its.geoFrame = Frame(normalize(objectToWorld(its.geoFrame.n)));
-		its.wi = its.shFrame.toLocal(-ray.d);
 		its.dpdu = objectToWorld(its.dpdu);
 		its.dpdv = objectToWorld(its.dpdv);
+		its.wi = normalize(its.shFrame.toLocal(-_ray.d));
+		its.instance = this;
+	}
+
+	void getNormalDerivative(const Intersection &its,
+		Vector &dndu, Vector &dndv, bool shadingFrame) const {
+		const Transform &objectToWorld = m_transform->eval(its.time);
+		its.shape->getNormalDerivative(its, dndu, dndv, shadingFrame);
+
+		/* The following will probably be incorrect for 
+		non-rigid transformations */
+		dndu = objectToWorld(dndu);
+		dndv = objectToWorld(dndv);
+	}
+
+	size_t getPrimitiveCount() const {
+		return 0;
+	}
+
+	size_t getEffectivePrimitiveCount() const {
+		return m_shapeGroup->getPrimitiveCount();
 	}
 
 	MTS_DECLARE_CLASS()
