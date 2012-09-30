@@ -532,13 +532,13 @@
 		<param name="bidirectionalMutation" readableName="Bidirectional mutation" type="boolean" default="true" importance="1">
 			Selectively enable/disable the bidirectional mutation
 		</param>
-		<param name="lensPerturbation" readableName="Lens perturbation" type="boolean" default="false" importance="1">
+		<param name="lensPerturbation" readableName="Lens perturbation" type="boolean" default="true" importance="1">
 			Selectively enable/disable the lens perturbation
 		</param>
-		<param name="causticPerturbation" readableName="Caustic perturbation" type="boolean" default="false" importance="1">
+		<param name="causticPerturbation" readableName="Caustic perturbation" type="boolean" default="true" importance="1">
 			Selectively enable/disable the caustic perturbation
 		</param>
-		<param name="multiChainPerturbation" readableName="Multi-chain perturbation" type="boolean" default="false" importance="1">
+		<param name="multiChainPerturbation" readableName="Multi-chain perturbation" type="boolean" default="true" importance="1">
 			Selectively enable/disable the multi-chain perturbation
 		</param>
 		<param name="manifoldPerturbation" readableName="Manifold perturbation" type="boolean" default="false" importance="1">
@@ -592,16 +592,16 @@
 		<param name="bidirectionalMutation" readableName="Bidirectional mutation" type="boolean" default="false" importance="1">
 			Selectively enable/disable the bidirectional mutation
 		</param>
-		<param name="lensPerturbation" readableName="Lens perturbation" type="boolean" default="false" importance="1">
+		<param name="lensPerturbation" readableName="Lens perturbation" type="boolean" default="true" importance="1">
 			Selectively enable/disable the lens perturbation
 		</param>
-		<param name="causticPerturbation" readableName="Caustic perturbation" type="boolean" default="false" importance="1">
+		<param name="causticPerturbation" readableName="Caustic perturbation" type="boolean" default="true" importance="1">
 			Selectively enable/disable the caustic perturbation
 		</param>
-		<param name="multiChainPerturbation" readableName="Multi-chain perturbation" type="boolean" default="false" importance="1">
+		<param name="multiChainPerturbation" readableName="Multi-chain perturbation" type="boolean" default="true" importance="1">
 			Selectively enable/disable the multi-chain perturbation
 		</param>
-		<param name="manifoldPerturbation" readableName="Manifold perturbation" type="boolean" default="true" importance="1">
+		<param name="manifoldPerturbation" readableName="Manifold perturbation" type="boolean" default="false" importance="1">
 			Selectively enable/disable the manifold perturbation
 		</param>
 		<param name="probFactor" readableName="Probability factor" type="float" default="50" importance="1">

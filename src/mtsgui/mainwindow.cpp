@@ -432,6 +432,8 @@ void MainWindow::on_actionDuplicateTab_triggered() {
 		currentIndex = m_contextIndex;
 	SceneContext *currentContext = m_context[currentIndex];
 	SceneContext *newContext = new SceneContext(currentContext);
+	if (currentContext->renderJob)
+		newContext->windowSize -= currentContext->sizeIncrease;
 
 	m_contextMutex.lock();
 	m_context.append(newContext);

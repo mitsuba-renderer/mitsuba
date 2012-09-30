@@ -143,7 +143,8 @@ public:
 		#endif
 		for (size_t mutationCtr=0; mutationCtr < m_config.nMutations
 				&& !stop; ++mutationCtr) {
-			if (wu->getTimeout() > 0 && (mutationCtr % 8192) == 0 && (int) timer->getMilliseconds() > wu->getTimeout())
+			if (wu->getTimeout() > 0 && (mutationCtr % 8192) == 0 && 
+					(int) timer->getMilliseconds() > wu->getTimeout())
 				break;
 
 			/* Query all mutators for their suitability */
@@ -203,7 +204,26 @@ public:
 				suitabilities.normalize();
 				Float Qyx = mutator->Q(*proposed, *current, muRec.reverse()) * suitabilities[mutatorIdx];
 
-				Float a = std::min((Float) 1, Qyx / Qxy);
+				Float a;
+				if (!m_config.importanceMap) {
+					a = std::min((Float) 1, Qyx / Qxy);
+				} else {
+					const Float *luminanceValues = m_config.importanceMap->getFloatData();
+					const Point2 &curPos = current->getSamplePosition();
+					const Point2 &propPos = proposed->getSamplePosition();
+					Vector2i size = m_config.importanceMap->getSize();
+					Point2i curPosI(
+						std::min(std::max(0, (int) curPos.x), size.x-1),
+						std::min(std::max(0, (int) curPos.y), size.y-1));
+					Point2i propPosI(
+						std::min(std::max(0, (int) propPos.x), size.x-1),
+						std::min(std::max(0, (int) propPos.y), size.y-1));
+					
+					Float curValue = luminanceValues[curPosI.x + curPosI.y * size.x];
+					Float propValue = luminanceValues[propPosI.x + propPosI.y * size.x];
+
+					a = std::min((Float) 1, (Qyx * curValue) / (Qxy * propValue));
+				}
 
 				#if defined(MTS_BD_DEBUG_HEAVY)
 					if (!proposed->verify(m_scene, EImportance, oss)) {
@@ -327,8 +347,14 @@ void MLTProcess::develop() {
 
 	/* Compute the luminance correction factor */
 	Float avgLuminance = 0;
-	for (size_t i=0; i<pixelCount; ++i)
-		avgLuminance += accum[i].getLuminance();
+	if (importanceMap) {
+		for (size_t i=0; i<pixelCount; ++i)
+			avgLuminance += accum[i].getLuminance() * importanceMap[i];
+	} else {
+		for (size_t i=0; i<pixelCount; ++i)
+			avgLuminance += accum[i].getLuminance();
+	}
+
 	avgLuminance /= (Float) pixelCount;
 	Float luminanceFactor = m_config.luminance / avgLuminance;
 	

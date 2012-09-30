@@ -290,6 +290,7 @@ void PSSMLTProcess::develop() {
 		for (size_t i=0; i<pixelCount; ++i)
 			avgLuminance += accum[i].getLuminance();
 	}
+
 	avgLuminance /= (Float) pixelCount;
 	Float luminanceFactor = m_config.luminance / avgLuminance;
 	

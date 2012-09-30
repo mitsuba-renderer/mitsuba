@@ -40,10 +40,6 @@ MTS_NAMESPACE_BEGIN
  *	       \code{2} will lead to single-bounce (direct-only) illumination, 
  *	       and so on. \default{\code{-1}}
  *	   }
- *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after 
- *	      which the implementation will start to use the ``russian roulette'' 
- *	      path termination criterion. \default{\code{5}}
- *	   }
  *	   \parameter{luminanceSamples}{\Integer}{
  *	      MLT-type algorithms create output images that are only
  *	      \emph{relative}. The algorithm can e.g. determine that a certain pixel
@@ -53,23 +49,78 @@ MTS_NAMESPACE_BEGIN
  *	      number of samples. \default{\code{100000} samples}
  *     }
  *     \parameter{twoStage}{\Boolean}{Use two-stage MLT?
- *       See below for details. \default{{\footnotesize\code{false}}}}
- *	   \parameter{bidirectional\showbreak Mutation, [lens,caustic,multiChain]\showbreak Perturbation}{\Boolean}{
- *	     These parameters can be used to choose the mutation strategies that
- *	     should be used. By default, only the bidirectional mutation is
- *	     enabled.
+ *       See \pluginref{pssmlt} for details.\!\default{{\footnotesize\code{false}}}\!}
+ *	   \parameter{bidirectional\showbreak\newline Mutation,\vspace{1mm}
+ *	      [lens,multiChain,\newline caustic,manifold]\showbreak\newline Perturbation}{\Boolean}{
+ *	     These parameters can be used to pick the individual mutation and perturbation 
+ *	     strategies that will be used to explore path space. By default, the original set
+ *	     by Veach and Guibas is enabled (i.e. everything except the manifold
+ *	     perturbation). It is possible to extend
+ *	     this integrator with additional custom perturbations strategies if needed.
  *	   }
+ *	   \parameter{lambda}{\Float}{
+ *	       Jump size of the manifold perturbation \default{50}}
  * }
- * Metropolis Light Transport is a seminal rendering technique proposed by Veach and 
+ * Metropolis Light Transport (MLT) is a seminal rendering technique proposed by Veach and 
  * Guibas \cite{Veach1997Metropolis}, which applies the Metropolis-Hastings
- * algorithm to the problem of light transport in the path-space setting.
- * 
+ * algorithm to the path-space formulation of light transport.
+ * Please refer to the \pluginref{pssmlt} page for a general description of MLT-type
+ * algorithms and a list of caveats that also apply to this plugin.
+ *
+ * Like \pluginref{pssmlt}, this integrator explores the space of light paths,
+ * searching with preference for those that carry a significant amount of
+ * energy from an emitter to the sensor. The main difference is that PSSMLT
+ * does this exploration by piggybacking on another rendering technique and
+ * ``manipulating'' the random number stream that drives it, whereas MLT does
+ * not use such an indirection: it operates directly on the actual light
+ * paths. 
+ *
+ * This means that the algorithm has access to considerably more 
+ * information about the problem to be solved, which allows it to perform a
+ * directed exploration of certain classes of light paths. The main downside 
+ * is that the implementation is rather complex, which may make it more
+ * susceptible to unforeseen problems. 
+ * Mitsuba reproduces the full MLT
+ * algorithm except for the lens subpath mutation\footnote{In experiments, 
+ * it was not found to produce sigificant convergence improvements and was 
+ * subsequently removed.}. In addition, the plugin also provides the
+ * manifold perturbation proposed by Jakob and Marschner \cite{Jakob2012Manifold}.
+ *
  * \renderings{
- *    \vspace{-2mm}
  *    \includegraphics[width=\textwidth]{images/integrator_mlt_sketch.pdf}\hfill\,
- *    \vspace{-3mm}
- *    \caption{The available mutation types}
  * }
+ *
+ * To explore the space of light paths, MLT iteratively makes changes
+ * to a light path, which can either be large-scale \emph{mutations} or small-scale
+ * \emph{perturbations}. Roughly speaking, the \emph{bidirectional mutation} is used 
+ * to jump between different classes of light paths, and each one of the perturbations is 
+ * responsible for efficiently exploring some of these classes.
+ * All mutation and perturbation strategies can be mixed and matched as
+ * desired, though for the algorithm to work properly, the bidirectional
+ * mutation must be active and perturbations should be selected
+ * as required based on the types of light paths that are present in the
+ * input scene. The following perturbations are available:
+ *
+ * \begin{enumerate}[(a)]
+ * \item \emph{Lens perturbation}: this perturbation slightly varies the outgoing
+ * direction at the camera and propagates the resulting ray until it encounters
+ * the first non-specular object. The perturbation then attempts to create a connection to the 
+ * (unchanged) remainder of the path.
+ * \item \emph{Caustic perturbation}: essentially a lens perturbation
+ * that proceeds in the opposite direction.
+ * \item \emph{Multi-chain perturbation}: used when there are several chains
+ * of specular interactions, as seen in the swimming pool example above.
+ * After an initial lens perturbation, a cascade of additional perturbations
+ * is required until a connection to the (unchanged)
+ * remainder of the path can finally be established.
+ * \item \emph{Manifold perturbation}: this perturbation was designed to
+ * subsume and extend the previous three approaches.
+ * It creates a perturbation at an arbitrary
+ * position along the path, proceeding in either direction. Upon encountering
+ * a chain of specular interactions, it numerically solves for a
+ * connection path (as opposed to the cascading mechanism employed by the
+ * multi-chain perturbation). 
+ * \end{enumerate}
  */
 class MLT : public Integrator {
 public:
@@ -130,17 +181,17 @@ public:
 		m_config.bidirectionalMutation = props.getBoolean("bidirectionalMutation", true);
 
 		/* Selectively enable/disable the lens perturbation */
-		m_config.lensPerturbation = props.getBoolean("lensPerturbation", false);
+		m_config.lensPerturbation = props.getBoolean("lensPerturbation", true);
 
 		/* Selectively enable/disable the caustic perturbation */
-		m_config.causticPerturbation = props.getBoolean("causticPerturbation", false);
+		m_config.causticPerturbation = props.getBoolean("causticPerturbation", true);
 
 		/* Selectively enable/disable the multi-chain perturbation */
-		m_config.multiChainPerturbation = props.getBoolean("multiChainPerturbation", false);
+		m_config.multiChainPerturbation = props.getBoolean("multiChainPerturbation", true);
 
 		/* Selectively enable/disable the manifold perturbation */ 
 		m_config.manifoldPerturbation = props.getBoolean("manifoldPerturbation", false);
-		m_config.probFactor = props.getFloat("probFactor", 50);
+		m_config.probFactor = props.getFloat("probFactor", props.getFloat("lambda", 50));
 
 		/* Stop MLT after X seconds -- useful for equal-time comparisons */
 		m_config.timeout = props.getInteger("timeout", 0);

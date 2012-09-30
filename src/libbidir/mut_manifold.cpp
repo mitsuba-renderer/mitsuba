@@ -239,9 +239,6 @@ bool ManifoldPerturbation::sampleMutation(
 		}
 	}
 
-	cout << source.toString() << endl;
-	cout << "a=" << a << ", b=" << b << ", c=" << c << endl;
-
 	ETransportMode mode = (step == 1) ? EImportance : ERadiance;
 	int l = std::min(a, c), m = std::max(a, c);
 	int q = std::min(b, b+step);
@@ -589,13 +586,6 @@ bool ManifoldPerturbation::sampleMutation(
 			}
 		}
 	}
-	cout << "BEFORE: " << q << endl;
-	cout << source.vertex(q)->toString() << endl;
-	cout << " and " << source.vertex(q+1)->toString() << endl;
-	cout << "AFTER: " << endl;
-	cout << proposal.vertex(q)->toString() << endl;
-	cout << " and " << proposal.vertex(q+1)->toString() << endl;
-
 	if (!PathVertex::connect(m_scene, 
 			proposal.vertexOrNull(q-1),
 			proposal.edgeOrNull(q-1),

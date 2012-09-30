@@ -408,21 +408,27 @@ void GLWidget::timerImpulse() {
 	}
 
 	if (!(m_mouseDrag && m_navigationMode == EStandard) && !m_animation) {
-		Float moveSpeed = m_context->movementScale
+		ProjectiveCamera *camera = getProjectiveCamera();
+
+		Float delta = m_context->movementScale
 			* m_clock->getMilliseconds();
 
 		if (m_leftKeyDown)
 			setInverseViewTransform(getInverseViewTransform() *
-				Transform::translate(Vector(moveSpeed,0,0)));
+				Transform::translate(Vector(delta,0,0)));
 		if (m_rightKeyDown)
 			setInverseViewTransform(getInverseViewTransform() *
-				Transform::translate(Vector(-moveSpeed,0,0)));
-		if (m_downKeyDown)
+				Transform::translate(Vector(-delta,0,0)));
+		if (m_downKeyDown) {
 			setInverseViewTransform(getInverseViewTransform() *
-				Transform::translate(Vector(0,0,-moveSpeed)));
-		if (m_upKeyDown)
+				Transform::translate(Vector(0,0,-delta)));
+			camera->setFocusDistance(camera->getFocusDistance() + delta);
+		}
+		if (m_upKeyDown) {
 			setInverseViewTransform(getInverseViewTransform() *
-				Transform::translate(Vector(0,0,moveSpeed)));
+				Transform::translate(Vector(0,0,delta)));
+			camera->setFocusDistance(camera->getFocusDistance() - delta);
+		}
 	}
 
 	m_clock->reset();
