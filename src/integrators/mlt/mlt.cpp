@@ -22,14 +22,50 @@
 
 MTS_NAMESPACE_BEGIN
 
-/**
+/*!\plugin{mlt}{Path Space Metropolis Light Transport}
  * \order{10}
- * Veach-style Metropolis Light Transport implementation with support for
- * bidirectional mutations, lens perturbations, caustic perturbations and 
- * multi-chain perturbations. Several optimizations are also implemented, 
- * namely separate direct illumination, two-stage MLT, 
- * and importance sampling of mutation strategies. For details, see the 
- * respective parameter descriptions.
+ * \parameters{
+ *	   \parameter{directSamples}{\Integer}{
+ *	       By default, this plugin renders the direct illumination component 
+ *	       separately using an optimized direct illumination sampling strategy 
+ *	       that uses low-discrepancy number sequences for superior performance
+ *	       (in other words, it is \emph{not} rendered by MLT). This
+ *	       parameter specifies the number of samples allocated to that method. To
+ *	       force PSSMLT to be responsible for the direct illumination
+ *	       component as well, set this parameter to \code{-1}. \default{16}
+ *	   }
+ *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
+ *         in the generated output image (where \code{-1} corresponds to $\infty$).
+ *	       A value of \code{1} will only render directly visible light sources.
+ *	       \code{2} will lead to single-bounce (direct-only) illumination, 
+ *	       and so on. \default{\code{-1}}
+ *	   }
+ *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after 
+ *	      which the implementation will start to use the ``russian roulette'' 
+ *	      path termination criterion. \default{\code{5}}
+ *	   }
+ *	   \parameter{luminanceSamples}{\Integer}{
+ *	      MLT-type algorithms create output images that are only
+ *	      \emph{relative}. The algorithm can e.g. determine that a certain pixel
+ *	      is approximately twice as bright as another one, but the absolute
+ *	      scale is unknown. To recover it, this plugin computes
+ *	      the average luminance arriving at the sensor by generating a
+ *	      number of samples. \default{\code{100000} samples}
+ *     }
+ *     \parameter{twoStage}{\Boolean}{Use two-stage MLT?
+ *       See below for details. \default{{\footnotesize\code{false}}}}
+ *	   \parameter{\footnotesize bidirectional\showbreak Mutation, 
+ *	     [lens,caustic,multiChain,manifold]Perturbation, 
+ *	   causticPerturbation, multiChain\showbreak Perturbation, manifoldPerturbation}{\Boolean}{
+ *	     These parameters can be used to choose the mutation strategies that
+ *	     should be used. By default, only the bidirectional mutation is
+ *	     enabled.
+ *	   }
+ * }
+ * Metropolis Light Transport is a seminal rendering technique proposed by Veach and 
+ * Guibas \cite{Veach1997Metropolis}, which applies the Metropolis-Hastings
+ * algorithm to the problem of light transport in the path-space setting.
+ *
  */
 class MLT : public Integrator {
 public:
@@ -101,6 +137,8 @@ public:
 		/* Selectively enable/disable the manifold perturbation */ 
 		m_config.manifoldPerturbation = props.getBoolean("manifoldPerturbation", false);
 		m_config.probFactor = props.getFloat("probFactor", 50);
+
+		/* Stop MLT after X seconds -- useful for equal-time comparisons */
 		m_config.timeout = props.getInteger("timeout", 0);
 	}
 

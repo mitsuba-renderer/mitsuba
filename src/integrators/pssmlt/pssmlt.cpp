@@ -225,7 +225,7 @@ public:
 		m_config.directSampling = props.getBoolean(
 				"directSampling", true);
 
-		/* Recommended mutation sizes in the primary sample space */
+		/* Recommended mutation sizes in primary sample space */
 		m_config.mutationSizeLow  = props.getFloat("mutationSizeLow",  1.0f/1024.0f);
 		m_config.mutationSizeHigh = props.getFloat("mutationSizeHigh", 1.0f/64.0f);
 		Assert(m_config.mutationSizeLow > 0 && m_config.mutationSizeHigh > 0 &&
@@ -241,6 +241,8 @@ public:
 		   possible, while ensuring that there are enough units to keep all 
 		   workers busy. */
 		m_config.workUnits = props.getInteger("workUnits", -1);
+
+		/* Stop MLT after X seconds -- useful for equal-time comparisons */
 		m_config.timeout = props.getInteger("timeout", 0);
 	}
 
