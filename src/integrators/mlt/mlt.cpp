@@ -25,6 +25,12 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{mlt}{Path Space Metropolis Light Transport}
  * \order{10}
  * \parameters{
+ *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
+ *         in the generated output image (where \code{-1} corresponds to $\infty$).
+ *	       A value of \code{1} will only render directly visible light sources.
+ *	       \code{2} will lead to single-bounce (direct-only) illumination, 
+ *	       and so on. \default{\code{-1}}
+ *	   }
  *	   \parameter{directSamples}{\Integer}{
  *	       By default, the implementation renders direct illumination component
  *	       separately using the \pluginref{direct} plugin, which
@@ -33,12 +39,6 @@ MTS_NAMESPACE_BEGIN
  *	       parameter specifies the number of samples allocated to that method. To
  *	       force MLT to be responsible for the direct illumination
  *	       component as well, set this to \code{-1}. \default{16}
- *	   }
- *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
- *         in the generated output image (where \code{-1} corresponds to $\infty$).
- *	       A value of \code{1} will only render directly visible light sources.
- *	       \code{2} will lead to single-bounce (direct-only) illumination, 
- *	       and so on. \default{\code{-1}}
  *	   }
  *	   \parameter{luminanceSamples}{\Integer}{
  *	      MLT-type algorithms create output images that are only
@@ -111,8 +111,9 @@ MTS_NAMESPACE_BEGIN
  * \item \emph{Multi-chain perturbation}: used when there are several chains
  * of specular interactions, as seen in the swimming pool example above.
  * After an initial lens perturbation, a cascade of additional perturbations
- * is required until a connection to the (unchanged)
- * remainder of the path can finally be established.
+ * is required until a connection to the 
+ * remainder of the path can finally be established. Depending on the 
+ * path type, the entire path may be changed by this.
  * \item \emph{Manifold perturbation}: this perturbation was designed to
  * subsume and extend the previous three approaches.
  * It creates a perturbation at an arbitrary

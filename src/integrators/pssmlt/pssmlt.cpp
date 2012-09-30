@@ -38,6 +38,12 @@ MTS_NAMESPACE_BEGIN
  *	    \vspace{-4mm}
  *	    \end{itemize}
  *	   }
+ *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
+ *         in the generated output image (where \code{-1} corresponds to $\infty$).
+ *	       A value of \code{1} will only render directly visible light sources.
+ *	       \code{2} will lead to single-bounce (direct-only) illumination, 
+ *	       and so on. \default{\code{-1}}
+ *	   }
  *	   \parameter{directSamples}{\Integer}{
  *	       By default, this plugin renders the direct illumination component 
  *	       separately using an optimized direct illumination sampling strategy 
@@ -46,12 +52,6 @@ MTS_NAMESPACE_BEGIN
  *	       parameter specifies the number of samples allocated to that method. To
  *	       force PSSMLT to be responsible for the direct illumination
  *	       component as well, set this parameter to \code{-1}. \default{16}
- *	   }
- *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
- *         in the generated output image (where \code{-1} corresponds to $\infty$).
- *	       A value of \code{1} will only render directly visible light sources.
- *	       \code{2} will lead to single-bounce (direct-only) illumination, 
- *	       and so on. \default{\code{-1}}
  *	   }
  *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after 
  *	      which the implementation will start to use the ``russian roulette'' 
