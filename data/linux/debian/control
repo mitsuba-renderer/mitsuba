@@ -13,11 +13,7 @@ Homepage: http://www.mitsuba-renderer.org
 
 Package: mitsuba
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libqt4-core, libqt4-gui, 
-	libqt4-network, libqt4-opengl, libqt4-xml, libpng12-0, libjpeg62, 
-	libilmbase6, libopenexr6, libxerces-c3.1, libboost-filesystem1.46.0, 
-	libboost-system1.46.0, libboost-python1.46.0, libglewmx1.5, 
-	libxxf86vm1, collada-dom, libgl1-mesa-glx, libglu1-mesa
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Mitsuba renderer 
  Mitsuba is an extensible rendering framework written in portable C++. It implements unbiased as well as biased techniques and contains heavy optimizations targeted towards current CPU architectures. 
  .
