@@ -195,7 +195,7 @@ using another version.
 
 First, run
 \begin{shell}
-$\text{\$}$ yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel libpng-devel libjpeg-devel collada-dom-devel
+$\text{\$}$ sudo yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel libpng-devel libjpeg-devel collada-dom-devel eigen3-devel
 \end{shell}
 Afterwards, simply run
 \begin{shell}
@@ -215,7 +215,7 @@ Having set up everything, you can now move on to \secref{basics}.
 \subsubsection{Creating Fedora Core packages}
 To create \code{RPM} packages, you will need to install the \code{RPM} development tools:
 \begin{shell}
-$\text{\$}$ yum install rpmdevtools
+$\text{\$}$ sudo yum install rpmdevtools
 \end{shell}
 Once this is done, run the following command in your home directory:
 \begin{shell}
@@ -247,6 +247,9 @@ $\text{\$}$ makepkg PKGBUILD
 <..compiling..>
 $\text{\$}$ sudo pacman -U <generated package file>
 \end{shell}
+Finally, Eigen 3 must be installed. Again, there is a binary package on the
+Mitsuba website and the corresponding \code{PKGBUILD} can be obtained here:
+\url{http://aur.archlinux.org/packages.php?ID=47884}.
 Once all dependencies are taken care of, simply run
 \begin{shell}
 $\text{\$}$ scons

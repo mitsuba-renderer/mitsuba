@@ -18,7 +18,7 @@
 
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/sfcurve.h>
-#include <mitsuba/bidir/path.h>
+#include <mitsuba/bidir/util.h>
 #include "bdpt_proc.h"
 
 MTS_NAMESPACE_BEGIN
@@ -175,6 +175,8 @@ public:
 					*vsEdge = emitterSubpath.edgeOrNull(s-1),
 					*vtEdge = sensorSubpath.edgeOrNull(t-1);
 
+				RestoreMeasureHelper rmh0(vs), rmh1(vt);
+
 				/* Will be set to true if direct sampling was used */
 				bool sampleDirect = false;
 
@@ -215,16 +217,14 @@ public:
 					if (s == 1) {
 						if (vt->isDegenerate())
 							continue;
-
 						/* Generate a position on an emitter using direct sampling */
 						value = radianceWeights[t] * vt->sampleDirect(scene, m_sampler, 
 							&tempEndpoint, &tempEdge, &tempSample, EImportance);
-
 						if (value.isZero())
 							continue;
 						vs = &tempSample; vsPred = &tempEndpoint; vsEdge = &tempEdge;
 						value *= vt->eval(scene, vtPred, vs, ERadiance);
-
+						vt->measure = EArea;
 					} else {
 						if (vs->isDegenerate())
 							continue;
@@ -235,6 +235,7 @@ public:
 							continue;
 						vt = &tempSample; vtPred = &tempEndpoint; vtEdge = &tempEdge;
 						value *= vs->eval(scene, vsPred, vt, EImportance);
+						vs->measure = EArea;
 					}
 
 					sampleDirect = true;
@@ -246,6 +247,10 @@ public:
 					value = importanceWeights[s] * radianceWeights[t] *
 						vs->eval(scene, vsPred, vt, EImportance) *
 						vt->eval(scene, vtPred, vs, ERadiance);
+
+					/* Temporarily force vertex measure to EArea. Needed to
+					   handle BSDFs with diffuse + specular components */
+					vs->measure = vt->measure = EArea;
 				}
 
 				/* Attempt to connect the two endpoints, which could result in
@@ -273,6 +278,7 @@ public:
 						emitterSubpath.swapEndpoints(vsPred, vsEdge, vs);
 				}
 
+				/* Compute the multiple importance sampling weight */
 				Float miWeight = Path::miWeight(scene, emitterSubpath, &connectionEdge,
 					sensorSubpath, s, t, m_config.sampleDirect, m_config.lightImage);
 

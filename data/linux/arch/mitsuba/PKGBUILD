@@ -17,7 +17,6 @@ _hgrepo="mitsuba"
 
 build() {
 	cd ${_hgrepo}
-	hg update bidir-0.4.0 # TODO: remove
 	cp build/config-linux-gcc.py config.py
 
 	scons --jobs=$[${MAKEFLAGS/-j/} - 1]

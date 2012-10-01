@@ -102,7 +102,7 @@ public:
 		/* Indicates if the gathering steps should be canceled if not enough photons are generated. */
 		m_autoCancelGathering = props.getBoolean("autoCancelGathering", true);
 		m_mutex = new Mutex();
-		if (m_maxDepth <= 1) 
+		if (m_maxDepth <= 1 && m_maxDepth != -1) 
 			Log(EError, "Maximum depth must be set to \"2\" or higher!");
 	}
 
@@ -150,6 +150,7 @@ public:
 		m_gatherBlocks.clear();
 		m_running = true;
 		m_totalEmitted = 0;
+		m_totalPhotons = 0;
 
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(Sampler), Properties("independent")));
@@ -179,8 +180,6 @@ public:
 			clonedSampler->incRef();
 			samplers[i] = clonedSampler.get();
 		}
-
-		Thread::initializeOpenMP(Scheduler::getInstance()->getLocalWorkerCount());
 
 		int samplerResID = sched->registerMultiResource(samplers);
 
@@ -223,7 +222,7 @@ public:
 		for (int i=0; i<(int) m_gatherBlocks.size(); ++i) {
 			std::vector<GatherPoint> &gatherPoints = m_gatherBlocks[i];
 			#if defined(MTS_OPENMP)
-				Sampler *sampler = static_cast<Sampler *>(samplers[omp_get_thread_num()]);
+				Sampler *sampler = static_cast<Sampler *>(samplers[mts_omp_get_thread_num()]);
 			#else
 				Sampler *sampler = static_cast<Sampler *>(samplers[0]);
 			#endif
@@ -258,7 +257,7 @@ public:
 							if (gatherPoint.its.isEmitter())
 								gatherPoint.emission += weight * gatherPoint.its.Le(-ray.d);
 
-							if (depth >= m_maxDepth) {
+							if (depth >= m_maxDepth && m_maxDepth != -1) {
 								gatherPoint.depth = -1;
 								break;
 							}
@@ -270,7 +269,7 @@ public:
 							   a glossy material */
 							if ((bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseReflection || 
 								(bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseTransmission ||
-								depth + 1 > m_maxDepth) {
+								(depth + 1 > m_maxDepth && m_maxDepth != -1)) {
 								gatherPoint.weight = weight;
 								gatherPoint.depth = depth;
 								break;
@@ -302,13 +301,14 @@ public:
 
 	void photonMapPass(int it, RenderQueue *queue, const RenderJob *job,  
 			Film *film, int sceneResID, int sensorResID, int samplerResID) {
-		Log(EInfo, "Performing a photon mapping pass %i", it);
+		Log(EInfo, "Performing a photon mapping pass %i (" SIZE_T_FMT " photons so far)", 
+				it, m_totalPhotons);
 		ref<Scheduler> sched = Scheduler::getInstance();
 
 		/* Generate the global photon map */
 		ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 			GatherPhotonProcess::EAllSurfacePhotons, m_photonCount,
-			m_granularity, m_maxDepth-1, m_rrDepth, true,
+			m_granularity, m_maxDepth == -1 ? -1 : m_maxDepth-1, m_rrDepth, true,
 			m_autoCancelGathering, job);
 
 		proc->bindResource("scene", sceneResID);
@@ -325,6 +325,7 @@ public:
 
 		Log(EInfo, "Gathering ..");
 		m_totalEmitted += proc->getShotParticles();
+		m_totalPhotons += photonMap->size();
 		film->clear();
 		#if defined(MTS_OPENMP)
 			#pragma omp parallel for schedule(dynamic)
@@ -340,7 +341,7 @@ public:
 
 				if (gp.depth != -1) {
 					M = (Float) photonMap->estimateRadianceRaw(
-						gp.its, gp.radius, flux, m_maxDepth-gp.depth);
+						gp.its, gp.radius, flux, m_maxDepth == -1 ? INT_MAX : m_maxDepth-gp.depth);
 				} else {
 					M = 0;
 					flux = Spectrum(0.0f);
@@ -391,7 +392,7 @@ private:
 	Float m_initialRadius, m_alpha;
 	int m_photonCount, m_granularity;
 	int m_maxDepth, m_rrDepth;
-	size_t m_totalEmitted;
+	size_t m_totalEmitted, m_totalPhotons;
 	bool m_running;
 	bool m_autoCancelGathering;
 };

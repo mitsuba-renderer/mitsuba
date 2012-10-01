@@ -240,6 +240,7 @@ bool PathVertex::sampleNext(const Scene *scene, Sampler *sampler,
 					return false;
 
 				ray.time = mRec.time;
+				ray.mint = 0;
 				ray.setOrigin(mRec.p);
 				ray.setDirection(pRec.wo);
 				measure = ESolidAngle;
@@ -740,6 +741,11 @@ bool PathVertex::propagatePerturbation(const Scene *scene, const PathVertex *pre
 	/* Compute the reverse quantities */
 	bRec.reverse();
 	pdf[1-mode] = bsdf->pdf(bRec, EDiscrete);
+	if (pdf[1-mode] == 0) {
+		/* This can happen rarely due to roundoff errors -- be strict */
+		return false;
+	}
+
 	if (!(bsdf->getType() & BSDF::ENonSymmetric))
 		weight[1-mode] = weight[mode];
 	else

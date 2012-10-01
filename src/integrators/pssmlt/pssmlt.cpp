@@ -9,7 +9,7 @@
 
     Mitsuba is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -17,7 +17,6 @@
 */
 
 #include <mitsuba/bidir/util.h>
-#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/plugin.h>
 #include "pssmlt_proc.h"
 #include "pssmlt_sampler.h"
@@ -30,7 +29,7 @@ MTS_NAMESPACE_BEGIN
  *	   \parameter{bidirectional}{\Boolean}{
  *	   PSSMLT works in conjunction with another rendering
  *	   technique that is endowed with Markov Chain-based sample generation.
- *	   Two choices are available:
+ *	   Two choices are available (Default: \code{true}):
  *	    \begin{itemize}
  *	    \item \code{true}: Operate on top of a fully-fleged bidirectional
  *	      path tracer with multiple importance sampling.
@@ -45,6 +44,15 @@ MTS_NAMESPACE_BEGIN
  *	       \code{2} will lead to single-bounce (direct-only) illumination, 
  *	       and so on. \default{\code{-1}}
  *	   }
+ *	   \parameter{directSamples}{\Integer}{
+ *	       By default, this plugin renders the direct illumination component 
+ *	       separately using an optimized direct illumination sampling strategy 
+ *	       that uses low-discrepancy number sequences for superior performance
+ *	       (in other words, it is \emph{not} rendered by PSSMLT). This
+ *	       parameter specifies the number of samples allocated to that method. To
+ *	       force PSSMLT to be responsible for the direct illumination
+ *	       component as well, set this parameter to \code{-1}. \default{16}
+ *	   }
  *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after 
  *	      which the implementation will start to use the ``russian roulette'' 
  *	      path termination criterion. \default{\code{5}}
@@ -57,6 +65,8 @@ MTS_NAMESPACE_BEGIN
  *	      the average luminance arriving at the sensor by generating a
  *	      number of samples. \default{\code{100000} samples}
  *     }
+ *     \parameter{twoStage}{\Boolean}{Use two-stage MLT?
+ *       See below for details. \default{{\footnotesize\code{false}}}}
  *	   \parameter{pLarge}{\Float}{
  *	     Rate at which the implementation tries to replace the current path
  *	     with a completely new one. Usually, there is little need to change
@@ -64,10 +74,18 @@ MTS_NAMESPACE_BEGIN
  *	   }
  * }
  * Primary Sample Space Metropolis Light Transport (PSSMLT) is a rendering
- * technique based on Markov Chain Monte Carlo (MCMC) integration. It
- * is based on work by Kelemen et al. \cite{Kelemen2002Simple}.
- *
- * In contrast to simple methods like \pluginref{path} tracing that render
+ * technique developed by Kelemen et al. \cite{Kelemen2002Simple} which is
+ * based on Markov Chain Monte Carlo (MCMC) integration.
+ * \renderings{
+ *    \vspace{-2mm}
+ *    \includegraphics[width=11cm]{images/integrator_pssmlt_sketch.pdf}\hfill\,
+ *    \vspace{-3mm}
+ *    \caption{PSSMLT piggybacks on a rendering method that can turn points
+ *    in the primary sample space (i.e. ``random numbers'') into paths. By
+ *    performing small jumps in primary sample space, it can explore the neighborhood
+ *    of a path\vspace{-5mm}}
+ * }
+ * In contrast to simple methods like path tracing that render
  * images by performing a na\"ive and memoryless random search for light paths, 
  * PSSMLT actively searches for \emph{relevant} light paths (as is the case 
  * for other MCMC methods). Once such a path is found, the algorithm tries to 
@@ -79,28 +97,62 @@ MTS_NAMESPACE_BEGIN
  *
  * An interesting aspect of PSSMLT is that it performs this exploration
  * of light paths by perturbing the ``random numbers'' that were initially
- * used to construct the path. After regenerating the path with the 
- * perturbed numbers, it ends up in a slightly different configuration, and
+ * used to construct the path. Subsequent regeneration of the path using the 
+ * perturbed numbers yields a new path in a slightly different configuration, and
  * this process repeats over and over again.
- * The path regeneration step is fairly arbitrary and this is what makes
+ * The path regeneration step is fairly general and this is what makes
  * the method powerful: in particular, it is possible to use PSSMLT as a
- * layer on top of an existing method, which creates a new ``metropolized''
- * rendering algorithm that is enhanced with a certain degree of adaptiveness as 
- * described above.
+ * layer on top of an existing method to create a new ``metropolized''
+ * version of the rendering algorithm that is enhanced with a certain 
+ * degree of adaptiveness as described earlier.
  *
  * The PSSMLT implementation in Mitsuba can operate on top of either a simple 
- * volumetric path tracer or a fully-fledged bidirectional path tracer with 
- * multiple importance sampling, and this choice is controlled by the 
- * \code{bidirectional} flag.
+ * unidirectional volumetric path tracer or a fully-fledged bidirectional path 
+ * tracer with  multiple importance sampling, and this choice is controlled by the 
+ * \code{bidirectional} flag. The unidirectional path tracer is generally 
+ * much faster, but it produces lower-quality samples. Depending on the input, either may be preferable.
+ * \vspace{-7mm}
+ * \paragraph{Caveats:}
+ * There are a few general caveats about MLT-type algorithms that are good
+ * to know. The first one is that they only render ``relative'' output images,
+ * meaning that there is a missing scale factor that must be applied to
+ * obtain proper scene radiance values. The implementation in Mitsuba relies
+ * on an additional Monte Carlo estimator to recover this scale factor. By 
+ * default, it uses 100K samples (controlled by the \code{luminanceSamples} 
+ * parameter), which should be adequate for most applications.
  *
- * \remarks{
- *    \item This integrator does not work with dipole-style subsurface scattering models.
- * }
+ * The second caveat is that the amount of computational expense
+ * associated with a pixel in the output image is roughly proportional to
+ * its intensity. This means that when a bright object (e.g. the sun) is
+ * visible in a rendering, most resources are committed to rendering the
+ * sun disk at the cost of increased variance everywhere else. Since this is 
+ * usually not desired, the \code{twoStage} parameter can be used to
+ * enable \emph{Two-stage MLT} in this case. 
+ *
+ * In this mode of operation, the renderer first creates a low-resolution 
+ * version of the output image to determine the approximate distribution of 
+ * luminance values. The second stage then performs the actual rendering, while
+ * using the previously collected information to ensure that
+ * the amount of time spent rendering each pixel is uniform.
+ *
+ * The third caveat is that, while PSMLT can work with scenes that are extremely
+ * difficult for other methods to handle, it is not particularly efficient
+ * when rendering simple things such as direct illumination (which is more easily
+ * handled by a brute-force type algorithm). By default, the
+ * implementation in Mitsuba therefore delegates this to such a method
+ * (with the desired quality being controlled by the \code{directSamples} parameter).
+ * In very rare cases when direct illumination paths are very difficult to find,
+ * it is preferable to disable this separation so that PSSMLT is responsible
+ * for everything. This can be accomplished by setting
+ * \code{directSamples=-1}.
  */
 
 class PSSMLT : public Integrator {
 public:
 	PSSMLT(const Properties &props) : Integrator(props) {
+		/* Note: a bunch of the parameters below are not publicly exposed,
+		   because there is really little sense for most users to ever change them. */
+
 		/* Longest visualized path length (<tt>-1</tt>=infinite). 
 		   A value of <tt>1</tt> will visualize only directly visible light 
 		   sources. <tt>2</tt> will lead to single-bounce (direct-only) 
@@ -149,24 +201,14 @@ public:
 		   MLT variant. The default is 0.3. */
 		m_config.pLarge = props.getFloat("pLarge", 0.3f);
 
-		/* Should direct illumination be handled separately? (i.e. not
-		   using MLT) This is usually the right way to go, since direct
-		   illumination is easily handled using more optimized rendering
-		   techniques that can make use of low-discrepancy point sets.
-		   This in turn lets MLT focus on the more difficult parts of the
-		   light transport. On the other hand, some scenes use very
-		   hard to find paths even for direct illumination, in which case
-		   it may make more sense to set this property to 'false' */
-		m_config.separateDirect = props.getBoolean("separateDirect",
-				true);
-
-		/* When 'separateDirect' is set to 'true', this parameter can
-		   be used to specify the samples per pixel used to render the
-		   direct component. Should be a power of two (otherwise, it will
+		/* This parameter can be used to specify the samples per pixel used to 
+		   render the direct component. Should be a power of two (otherwise, it will
 		   be rounded to the next one). When set to zero or less, the
 		   direct illumination component will be hidden, which is useful
-		   for analyzing the component rendered by MLT. */
+		   for analyzing the component rendered by MLT. When set to -1, 
+		   PSSMLT will handle direct illumination as well */
 		m_config.directSamples = props.getInteger("directSamples", 16);
+		m_config.separateDirect = m_config.directSamples >= 0;
 
 		/* Should the multiple importance sampling-based weight computation by 
 		   Kelemen et al. be used? Otherwise, the implementation falls back
@@ -178,12 +220,12 @@ public:
 		   a good idea. Note that this setting only applies when the 
 		   bidirectional path tracer is used internally. The optimization
 		   affects all paths, not just the ones contributing direct illumination,
-		   hence it is completely independent of the <tt>separateDirect</tt>
+		   hence it is completely unrelated to the <tt>separateDirect</tt>
 		   parameter. */
 		m_config.directSampling = props.getBoolean(
 				"directSampling", true);
 
-		/* Recommended mutation sizes in the primary sample space */
+		/* Recommended mutation sizes in primary sample space */
 		m_config.mutationSizeLow  = props.getFloat("mutationSizeLow",  1.0f/1024.0f);
 		m_config.mutationSizeHigh = props.getFloat("mutationSizeHigh", 1.0f/64.0f);
 		Assert(m_config.mutationSizeLow > 0 && m_config.mutationSizeHigh > 0 &&
@@ -199,6 +241,8 @@ public:
 		   possible, while ensuring that there are enough units to keep all 
 		   workers busy. */
 		m_config.workUnits = props.getInteger("workUnits", -1);
+
+		/* Stop MLT after X seconds -- useful for equal-time comparisons */
 		m_config.timeout = props.getInteger("timeout", 0);
 	}
 
@@ -262,11 +306,6 @@ public:
 				return false;
 			}
 			Log(EInfo, "First MLT stage took %i ms", timer->getMilliseconds());
-
-			std::string debugFile = "mlt_stage1.exr";
-			Log(EInfo, "Writing upsampled luminances to \"%s\"", debugFile.c_str());
-			ref<FileStream> fs = new FileStream(debugFile, FileStream::ETruncReadWrite);
-			m_config.importanceMap->write(Bitmap::EOpenEXR, fs);
 		}
 
 		bool nested = m_config.twoStage && m_config.firstStage;
@@ -277,9 +316,12 @@ public:
 			nested ? "nested " : "", cropSize.x, cropSize.y,
 			nCores, nCores == 1 ? "core" : "cores", sampleCount);
 
+		size_t desiredMutationsPerWorkUnit = 
+			m_config.technique == PathSampler::EBidirectional ? 100000 : 200000;
+
 		if (m_config.workUnits <= 0) 
 			m_config.workUnits = (size_t) std::ceil((cropSize.x * cropSize.y
-				* sampleCount) / 200000.0f);
+				* sampleCount) / (Float) desiredMutationsPerWorkUnit);
 
 		m_config.nMutations = (cropSize.x * cropSize.y *
 			sampleCount) / m_config.workUnits;

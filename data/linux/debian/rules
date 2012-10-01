@@ -30,7 +30,7 @@ binary-arch:
 	scons -j 2
 	dh_installdirs
 	dh_auto_install
-	cat debian/mitsuba.install.template | sed -e s/PYTHONVERSION/$(PYTHONVERSION)/ > debian/mitsuba.install
+	cat debian/mitsuba.install.template | sed -e s/PYTHONVERSION/$(PYTHONVERSION)/g > debian/mitsuba.install
 	dh_install
 	dh_installmenu
 	dh_compress
