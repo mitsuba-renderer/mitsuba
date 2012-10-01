@@ -174,8 +174,18 @@ private:
 	boost::scoped_ptr<ThreadPrivate> d;
 };
 
-/// Variant of \c omp_get_max_threads that works on all platforms
+#if defined(MTS_OPENMP)
+#if defined(__OSX__)
+/// Variant of \c omp_get_max_threads that works on OSX
 extern MTS_EXPORT_CORE int mts_omp_get_max_threads();
+
+/// Variant of \c omp_get_thread_num that works on OSX
+extern MTS_EXPORT_CORE int mts_omp_get_thread_num();
+#else
+#define mts_omp_get_max_threads omp_get_max_threads
+#define mts_omp_get_thread_num omp_get_thread_num
+#endif
+#endif
 
 MTS_NAMESPACE_END
 

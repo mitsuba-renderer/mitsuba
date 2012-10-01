@@ -57,7 +57,7 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 	#endif
 	for (int i=0; i<(int) m_photonCount; ++i) {
 		#if defined(MTS_OPENMP)
-			int tid = omp_get_thread_num();
+			int tid = mts_omp_get_thread_num();
 		#else
 			int tid = 0;
 		#endif

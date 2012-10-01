@@ -114,7 +114,7 @@ void blueNoisePointSet(const Scene *scene, const std::vector<Shape *> &shapes,
 	#endif
 	for (int i=0; i<nsamples; ++i) {
 		#if defined(MTS_OPENMP)
-			int tid = omp_get_thread_num();
+			int tid = mts_omp_get_thread_num();
 		#else
 			int tid = 0;
 		#endif

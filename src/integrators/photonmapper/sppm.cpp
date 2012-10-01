@@ -181,8 +181,6 @@ public:
 			samplers[i] = clonedSampler.get();
 		}
 
-		Thread::initializeOpenMP(Scheduler::getInstance()->getLocalWorkerCount());
-
 		int samplerResID = sched->registerMultiResource(samplers);
 
 #ifdef MTS_DEBUG_FP
@@ -224,7 +222,7 @@ public:
 		for (int i=0; i<(int) m_gatherBlocks.size(); ++i) {
 			std::vector<GatherPoint> &gatherPoints = m_gatherBlocks[i];
 			#if defined(MTS_OPENMP)
-				Sampler *sampler = static_cast<Sampler *>(samplers[omp_get_thread_num()]);
+				Sampler *sampler = static_cast<Sampler *>(samplers[mts_omp_get_thread_num()]);
 			#else
 				Sampler *sampler = static_cast<Sampler *>(samplers[0]);
 			#endif
