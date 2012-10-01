@@ -42,7 +42,7 @@ if hasQt:
 				'breakpad_crash_report_sender', 'wininet'])
 	elif sys.platform == 'darwin':
 		qtEnv.Append(LINKFLAGS=['-Fdependencies/frameworks', '-framework',
-			'BWToolkitFramework', '-framework', 'Security'])
+			'BWToolkitFramework', '-framework', 'Security', '-framework', 'CoreFoundation'])
 		if hasBreakpad:
 			qtEnv.Append(LINKFLAGS=['-framework', 'Breakpad'])
 		qtEnv.Append(CPPFLAGS=['-I', '/System/Library/Frameworks/Security.framework/Headers'])
