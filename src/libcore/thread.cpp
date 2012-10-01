@@ -411,9 +411,9 @@ int mts_omp_get_thread_num() {
 void Thread::staticInitialization() {
 #if defined(__OSX__)
 	__mts_autorelease_init();
-#endif
 #if defined(MTS_OPENMP)
 	__omp_threadCount = omp_get_max_threads();
+#endif
 #endif
 	detail::initializeGlobalTLS();
 	detail::initializeLocalTLS();
@@ -473,7 +473,9 @@ void Thread::initializeOpenMP(size_t threadCount) {
 
 	#pragma omp parallel
 	{
-		pthread_setspecific(__omp_key, reinterpret_cast<void *>(counter));
+		#if defined(__OSX__)
+			pthread_setspecific(__omp_key, reinterpret_cast<void *>(counter));
+		#endif
 		detail::initializeLocalTLS();
 		Thread *thread = Thread::getThread();
 		if (!thread) {
