@@ -174,6 +174,9 @@ private:
 	boost::scoped_ptr<ThreadPrivate> d;
 };
 
+/// Variant of \c omp_get_max_threads that works on all platforms
+extern MTS_EXPORT_CORE int mts_omp_get_max_threads();
+
 MTS_NAMESPACE_END
 
 #endif /* __MITSUBA_CORE_THREAD_H_ */

@@ -68,7 +68,7 @@ void blueNoisePointSet(const Scene *scene, const std::vector<Shape *> &shapes,
 	int kmax = 8; /* Perform 8 trial runs */
 
 	#if defined(MTS_OPENMP)
-		int nproc = omp_get_max_threads();
+		int nproc = mts_omp_get_max_threads();
 	#else
 		int nproc = 1;
 	#endif

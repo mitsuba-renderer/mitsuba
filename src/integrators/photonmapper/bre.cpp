@@ -43,7 +43,7 @@ BeamRadianceEstimator::BeamRadianceEstimator(const PhotonMap *pmap, size_t looku
 
 	Log(EInfo, "Computing photon radii ..");
 	#if defined(MTS_OPENMP)
-		int tcount = omp_get_max_threads();
+		int tcount = mts_omp_get_max_threads();
 	#else
 		int tcount = 1;
 	#endif

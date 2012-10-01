@@ -390,9 +390,26 @@ std::string Thread::toString() const {
 	return oss.str();
 }
 
+#if defined(MTS_OPENMP)
+static int __omp_threadCount = 0;
+#endif
+static std::vector<Thread *> __unmanagedThreads;
+static boost::mutex __unmanagedMutex;
+
+#if defined(MTS_OPENMP)
+int mts_omp_get_max_threads() {
+	/* This function exists to sidestep an annoying
+	   implementation bug that causes crashes on OSX */
+	return __omp_threadCount;
+}
+#endif
+
 void Thread::staticInitialization() {
 #if defined(__OSX__)
 	__mts_autorelease_init();
+#endif
+#if defined(MTS_OPENMP)
+	__omp_threadCount = omp_get_max_threads();
 #endif
 	detail::initializeGlobalTLS();
 	detail::initializeLocalTLS();
@@ -404,9 +421,6 @@ void Thread::staticInitialization() {
 	mainThread->d->fresolver = new FileResolver();
 	ThreadPrivate::self->set(mainThread);
 }
-
-static std::vector<Thread *> __unmanagedThreads;
-static boost::mutex __unmanagedMutex;
 
 Thread *Thread::registerUnmanagedThread(const std::string &name) {
 	Thread *thread = getThread();
@@ -443,6 +457,7 @@ void Thread::initializeOpenMP(size_t threadCount) {
 	ref<Logger> logger = Thread::getThread()->getLogger();
 	ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
 
+	__omp_threadCount = threadCount;
 	omp_set_num_threads((int) threadCount);
 	omp_set_dynamic(false);
 
