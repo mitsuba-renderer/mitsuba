@@ -229,19 +229,20 @@ void PluginManager::ensurePluginLoaded(const std::string &name) {
 		return;
 
 	/* Build the full plugin file name */
+	fs::path shortName = fs::path("plugins/") / name;
 #if defined(WIN32)
-	std::string shortName = std::string("plugins/") + name + std::string(".dll");
+	shortName.replace_extension(".dll");
 #elif defined(__OSX__)
-	std::string shortName = std::string("plugins/") + name + std::string(".dylib");
+	shortName.replace_extension(".dylib");
 #else
-	std::string shortName = std::string("plugins/") + name + std::string(".so");
+	shortName.replace_extension(".so");
 #endif
 	const FileResolver *resolver = Thread::getThread()->getFileResolver();
 	fs::path path = resolver->resolve(shortName);
 
 	if (fs::exists(path)) {
 		Log(EInfo, "Loading plugin \"%s\" ..", shortName.c_str());
-		m_plugins[name] = new Plugin(shortName, path.string());
+		m_plugins[name] = new Plugin(shortName.string(), path.string());
 		return;
 	}
 
