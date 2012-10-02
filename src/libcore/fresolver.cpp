@@ -29,7 +29,7 @@ FileResolver::FileResolver() {
 	MTS_AUTORELEASE_END() 
 #elif defined(__WINDOWS__)
 	WCHAR lpFilename[MAX_PATH];
-	const DWORD nSize = static_cast<DWORD>(sizeof(lpFilename)/sizeof(TCHAR));
+	const DWORD nSize = static_cast<DWORD>(sizeof(lpFilename)/sizeof(WCHAR));
 	if (GetModuleFileNameW(NULL, lpFilename, nSize) != 0 &&
 			GetLastError() == ERROR_SUCCESS)
 		prependPath(fs::path(lpFilename).parent_path());
