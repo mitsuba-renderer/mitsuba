@@ -863,7 +863,7 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 		domCommon_float_or_param_type* shininess = phong->getShininess();
 		bool isDiffuse = false;
 
-		if (specular->getColor().cast()) {
+		if (specular && specular->getColor().cast()) {
 			domFloat4 &colValue = specular->getColor()->getValue();
 			if (colValue.get(0) == colValue.get(1) &&
 				colValue.get(1) == colValue.get(2) &&
@@ -899,7 +899,7 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 		domCommon_float_or_param_type* shininess = blinn->getShininess();
 		bool isDiffuse = false;
 
-		if (specular->getColor().cast()) {
+		if (specular && specular->getColor().cast()) {
 			domFloat4 &colValue = specular->getColor()->getValue();
 			if (colValue.get(0) == colValue.get(1) &&
 				colValue.get(1) == colValue.get(2) &&
