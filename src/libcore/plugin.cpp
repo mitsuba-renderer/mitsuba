@@ -229,7 +229,7 @@ void PluginManager::ensurePluginLoaded(const std::string &name) {
 		return;
 
 	/* Build the full plugin file name */
-	fs::path shortName = fs::path("plugins/") / name;
+	fs::path shortName = fs::path("plugins") / name;
 #if defined(WIN32)
 	shortName.replace_extension(".dll");
 #elif defined(__OSX__)
