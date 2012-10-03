@@ -111,7 +111,7 @@ void FileStream::open(const fs::path &path, EFileMode mode) {
 		break;
 	}
 
-	d->file = CreateFile(path.string().c_str(), dwDesiredAccess, 
+	d->file = CreateFileW(path.c_str(), dwDesiredAccess, 
 		FILE_SHARE_WRITE | FILE_SHARE_READ, 0, 
 		dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
 

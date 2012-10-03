@@ -2,6 +2,7 @@
 
 #if defined(__WINDOWS__)
 # include <windows.h>
+# include <vector>
 #endif
 
 MTS_NAMESPACE_BEGIN
@@ -28,13 +29,25 @@ FileResolver::FileResolver() {
 	prependPath(__mts_bundlepath());
 	MTS_AUTORELEASE_END() 
 #elif defined(__WINDOWS__)
-	WCHAR lpFilename[MAX_PATH];
-	const DWORD nSize = static_cast<DWORD>(sizeof(lpFilename)/sizeof(WCHAR));
-	if (GetModuleFileNameW(NULL, lpFilename, nSize) != 0 &&
-			GetLastError() == ERROR_SUCCESS)
+	std::vector<WCHAR> lpFilename(MAX_PATH);
+
+	// Try to get the path with the default MAX_PATH length (260 chars)
+	DWORD nSize = GetModuleFileNameW(NULL, &lpFilename[0], MAX_PATH);
+
+	// Adjust the buffer size in case if was too short
+	while (nSize == lpFilename.size()) {
+		lpFilename.resize(nSize * 2);
+		nSize = GetModuleFileNameW(NULL, &lpFilename[0], nSize);
+	}
+
+	// There is an error if and only if the function returns 0
+	if (nSize != 0) {
 		prependPath(fs::path(lpFilename).parent_path());
-	else
-		Log(EError, "Could not detect the executable path!");
+	}
+	else {
+		const std::string msg(lastErrorText());
+		Log(EError, "Could not detect the executable path! (%s)", msg.c_str());
+	}
 #endif
 }
 

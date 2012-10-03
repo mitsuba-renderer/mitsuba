@@ -117,6 +117,10 @@ static bool minidumpCallbackWindows(const wchar_t *dump_path,
 class MitsubaApplication : public QApplication {
 public:
 	MitsubaApplication(int &argc, char **argv) : QApplication(argc, argv) {
+		setOrganizationName("mitsuba-renderer.org");
+		setOrganizationDomain("mitsuba-renderer.org");
+		setApplicationName("mtsgui");
+		setApplicationVersion(MTS_VERSION);
 	}
 
 	bool event(QEvent *event) {

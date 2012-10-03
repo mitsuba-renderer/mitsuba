@@ -161,7 +161,7 @@ void GeometryConverter::convert(const fs::path &inputFile,
 			xmlString.length(), "bufID", false);
 		Wrapper4InputSource *wrapper = new Wrapper4InputSource(memBufIS, false);
 		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *doc = parser->parse(wrapper);
-		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.string().c_str());
+		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *adj = parser->parseURI(adjustmentFile.c_str());
 		if (adj == NULL)
 			SLog(EError, "Could not parse adjustments file!");
 

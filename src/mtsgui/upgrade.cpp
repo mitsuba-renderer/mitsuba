@@ -41,10 +41,10 @@ public:
 			descr = descr.mid(paragraphStart+3, paragraphEnd-paragraphStart-3);
 
 		if (loc.isNull())
-			SLog(EWarn, "%s", descr.toStdString().c_str());
+			SLog(EWarn, "%s", qPrintable(descr));
 		else
-			SLog(EWarn, "%s (line %i, column %i, url=%s)", descr.toStdString().c_str(),
-				loc.line(), loc.column(), id.toString().toStdString().c_str());
+			SLog(EWarn, "%s (line %i, column %i, url=%s)", qPrintable(descr),
+				loc.line(), loc.column(), qPrintable(id.toString()));
 		
 		if (type == QtFatalMsg)
 			m_fatalError = true;
@@ -86,7 +86,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 	if (backupFilename.endsWith(".xml", Qt::CaseInsensitive))
 		backupFilename.replace(backupFilename.length()-4, 4, ".bak");
 	SLog(EInfo, "Saving a backup copy of \"%s\" as \"%s\"",
-		filename.toStdString().c_str(), backupFilename.toStdString().c_str());
+		qPrintable(filename), qPrintable(backupFilename));
 
 	QFile file(filename), backupFile(backupFilename);
 	if (backupFile.exists())
@@ -97,7 +97,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		
 	if (!file.open(QIODevice::ReadOnly))
 		SLog(EError, "Unable to open \"%s\" with read access -- stopping "
-			"the upgrade operation.", filename.toStdString().c_str());
+			"the upgrade operation.", qPrintable(filename));
 	QByteArray inputArray = file.readAll(), outputArray;
 	file.close();
 		
@@ -115,11 +115,11 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 
 		SLog(EInfo, "Applying transformation \"%s\" ..", 
 			m_transformations[i].second.filename().string().c_str());
-		std::string trafoFilename = m_transformations[i].second.string();
-		QFile trafoFile(trafoFilename.c_str());
+		QString trafoFilename = fromFsPath(m_transformations[i].second);
+		QFile trafoFile(trafoFilename);
 		if (!trafoFile.open(QIODevice::ReadOnly | QIODevice::Text))
 			SLog(EError, "Unable to open the stylesheet \"%s\" -- stopping "
-				"the upgrade operation.", trafoFilename.c_str());
+				"the upgrade operation.", qPrintable(trafoFilename));
 		
 		QXmlQuery query(QXmlQuery::XSLT20);
 		query.setMessageHandler(&handler);
@@ -127,7 +127,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		query.setQuery(&trafoFile);
 		if (!query.isValid())
 			SLog(EError, "Unable to parse the stylesheet \"%s\" -- stopping "
-				"the upgrade operation.", trafoFilename.c_str());
+				"the upgrade operation.", qPrintable(trafoFilename));
 
 		SLog(EInfo, "Transformation is ready, running it now..");
 		QXmlFormatter formatter(query, &outputBuffer);
@@ -152,11 +152,11 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 	
 	/* Done, write back to disk */
 	SLog(EInfo, "Successfully applied %i transformations, writing the result "
-		"to \"%s\" ..", nTransformations, filename.toStdString().c_str());
+		"to \"%s\" ..", nTransformations, qPrintable(filename));
 
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
 		SLog(EError, "Unable to open \"%s\" with write access -- stopping "
-			"the upgrade operation.", filename.toStdString().c_str());
+			"the upgrade operation.", qPrintable(filename));
 	}
 
 	int line, column;
@@ -164,7 +164,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 	QDomDocument doc;
 	if (!doc.setContent(inputArray, &errorMsg, &line, &column))
 		SLog(EError, "Unable to parse file: error %s at line %i, colum %i",
-			errorMsg.toStdString().c_str(), line, column);
+			qPrintable(errorMsg), line, column);
 	QDomElement root = doc.documentElement();
 
 	/* Search for include nodes */
@@ -173,10 +173,10 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		QDomElement e = n.toElement();
 		if (!e.isNull()) {
 			if (e.tagName() == "include") {
-				fs::path path = m_resolver->resolve(e.attribute("filename").toStdString());
+				fs::path path = m_resolver->resolve(toFsPath(e.attribute("filename")));
 				SLog(EInfo, "Recursively upgrading include file \"%s\" ..",
 						path.string().c_str());
-				performUpgrade(path.string().c_str(), version);
+				performUpgrade(fromFsPath(path), version);
 			}
 		}
 		n = n.nextSibling();

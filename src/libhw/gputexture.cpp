@@ -29,7 +29,7 @@ GPUTexture::GPUTexture(const std::string &name, Bitmap *bitmap)
 	m_fbType = ENone;
 	m_samples = 1;
 	m_depthMode = ECompare;
-	m_borderColor = Spectrum(0.0f);
+	m_borderColor = Color3(static_cast<Float>(0));
 	m_size = Point3i(0);
 
 	if (bitmap != NULL) {

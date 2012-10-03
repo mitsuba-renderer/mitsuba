@@ -3,7 +3,8 @@ if (NOT MTS_VERSION)
   message(FATAL_ERROR "Use the top level configuration file")
 endif()
 
-include_directories(${COLLADA_INCLUDE_DIRS} ${XERCES_INCLUDE_DIRS})
+include_directories(${COLLADA_INCLUDE_DIRS} ${XERCES_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_BINARY_DIR})
 
 set(SRCS
   collada.cpp

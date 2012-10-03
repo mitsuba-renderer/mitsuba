@@ -45,6 +45,31 @@
 # include <fenv.h>
 #endif
 
+// SSE is not enabled in general when using double precision, however it is
+// required in OS X for FP exception handling
+#if defined(__OSX__) && !defined(MTS_SSE)
+#include <xmmintrin.h>
+#undef enable_fpexcept_sse
+#undef query_fpexcept_sse
+#undef disable_fpexcept_sse
+
+namespace {
+inline void enable_fpexcept_sse() {
+	_MM_SET_EXCEPTION_MASK(_MM_GET_EXCEPTION_MASK() &
+		~(_MM_MASK_INVALID | _MM_MASK_DIV_ZERO));
+}
+inline unsigned int query_fpexcept_sse() {
+	return (~_MM_GET_EXCEPTION_MASK() & 
+		(_MM_MASK_INVALID | _MM_MASK_DIV_ZERO));
+}
+inline void disable_fpexcept_sse() {
+	_MM_SET_EXCEPTION_MASK(_MM_GET_EXCEPTION_MASK() |
+		_MM_MASK_INVALID | _MM_MASK_DIV_ZERO);
+}
+} // namespace
+
+#endif
+
 MTS_NAMESPACE_BEGIN
 
 // -----------------------------------------------------------------------
@@ -174,19 +199,13 @@ bool enableFPExceptions() {
 	cw &= ~(_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 	_controlfp(cw, _MCW_EM);
 #elif defined(__OSX__)
-#if !defined(MTS_SSE)
-#warning SSE must be enabled to handle FP exceptions on OSX
-#else
 	exceptionsWereEnabled = query_fpexcept_sse() != 0;
-#endif
 #else
 	exceptionsWereEnabled = 
 		fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 	feenableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 #endif
-#if defined(MTS_SSE)
 	enable_fpexcept_sse();
-#endif
 	return exceptionsWereEnabled;
 }
 
@@ -199,19 +218,13 @@ bool disableFPExceptions() {
 	cw |= _EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW;
 	_controlfp(cw, _MCW_EM);
 #elif defined(__OSX__)
-#if !defined(MTS_SSE)
-#warning SSE must be enabled to handle FP exceptions on OSX
-#else
 	exceptionsWereEnabled = query_fpexcept_sse() != 0;
-#endif
 #else
 	exceptionsWereEnabled = 
 		fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 	fedisableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 #endif
-#if defined(MTS_SSE)
 	disable_fpexcept_sse();
-#endif
 	return exceptionsWereEnabled;
 }
 
@@ -221,11 +234,7 @@ void restoreFPExceptions(bool oldState) {
 	uint32_t cw = _controlfp(0, 0);
 	currentState = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 #elif defined(__OSX__)
-#if !defined(MTS_SSE)
-#warning SSE must be enabled to handle FP exceptions on OSX
-#else
 	currentState = query_fpexcept_sse() != 0;
-#endif
 #else
 	currentState = fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 #endif

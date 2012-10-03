@@ -376,6 +376,14 @@ macro (PVT_PCH_USE pch_header_filename pch_filename target_name srcs_var
         OBJECT_DEPENDS "${pch_filename}")
     endif()
   endforeach ()
+  
+  # On non-MSVC add the base directory with the PCH to the include list in
+  # order to allow builds using absolute paths
+  # FIXME: this is coupled with the internal behavior of PVT_ADD_PCH_RULE
+  if (NOT PCH_MSVC)
+    set_property(TARGET ${target_name} APPEND PROPERTY
+      INCLUDE_DIRECTORIES "${CMAKE_CURRENT_BINARY_DIR}")
+  endif()
 endmacro ()
 
 

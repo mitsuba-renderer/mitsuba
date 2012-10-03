@@ -323,7 +323,7 @@ int mts_main(int argc, char **argv) {
 		parser->setDoSchema(true);
 		parser->setValidationSchemaFullChecking(true);
 		parser->setValidationScheme(SAXParser::Val_Always);
-		parser->setExternalNoNamespaceSchemaLocation(schemaPath.string().c_str());
+		parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
 		#if !defined(__OSX__)
 			/// Not supported on OSX
 			parser->setCalculateSrcOfs(true);
@@ -355,7 +355,7 @@ int mts_main(int argc, char **argv) {
 
 			SLog(EInfo, "Parsing scene description from \"%s\" ..", argv[i]);
 
-			parser->parse(filename.string().c_str());
+			parser->parse(filename.c_str());
 			ref<Scene> scene = handler->getScene();
 
 			scene->setSourceFile(filename);
