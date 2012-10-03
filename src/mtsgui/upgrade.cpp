@@ -115,11 +115,11 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 
 		SLog(EInfo, "Applying transformation \"%s\" ..", 
 			m_transformations[i].second.filename().string().c_str());
-		std::string trafoFilename = m_transformations[i].second.string();
-		QFile trafoFile(trafoFilename.c_str());
+		QString trafoFilename = fromFsPath(m_transformations[i].second);
+		QFile trafoFile(trafoFilename);
 		if (!trafoFile.open(QIODevice::ReadOnly | QIODevice::Text))
 			SLog(EError, "Unable to open the stylesheet \"%s\" -- stopping "
-				"the upgrade operation.", trafoFilename.c_str());
+				"the upgrade operation.", qPrintable(trafoFilename));
 		
 		QXmlQuery query(QXmlQuery::XSLT20);
 		query.setMessageHandler(&handler);
@@ -127,7 +127,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		query.setQuery(&trafoFile);
 		if (!query.isValid())
 			SLog(EError, "Unable to parse the stylesheet \"%s\" -- stopping "
-				"the upgrade operation.", trafoFilename.c_str());
+				"the upgrade operation.", qPrintable(trafoFilename));
 
 		SLog(EInfo, "Transformation is ready, running it now..");
 		QXmlFormatter formatter(query, &outputBuffer);

@@ -589,7 +589,7 @@ void MainWindow::onClearRecent() {
 
 SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
-	fs::path filename = resolver->resolve(qFileName.toStdString());
+	fs::path filename = resolver->resolve(toFsPath(qFileName));
 	fs::path filePath = fs::absolute(filename).parent_path();
 	ref<FileResolver> newResolver = resolver->clone();
 	for (int i=(int) m_searchPaths.size()-1; i>=0; --i) 
@@ -604,8 +604,7 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	loaddlg->show();
 
 retry:
-	loadingThread = new SceneLoader(newResolver, filename.string(),
-		m_parameters);
+	loadingThread = new SceneLoader(newResolver, filename, m_parameters);
 	loadingThread->start();
 
 	while (loadingThread->isRunning()) {
@@ -1462,7 +1461,7 @@ void MainWindow::onExportDialogClose(int reason) {
 			return;
 		}
 
-		ref<FileStream> fs = new FileStream(qPrintable(fileName), 
+		ref<FileStream> fs = new FileStream(toFsPath(fileName),
 			FileStream::ETruncReadWrite);
 
 		if (ctx->mode == EPreview)

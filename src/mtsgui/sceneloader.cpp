@@ -29,9 +29,10 @@
 #include <mitsuba/core/fstream.h>
 #include <boost/algorithm/string.hpp>
 
-SceneLoader::SceneLoader(FileResolver *resolver, const std::string &filename,
+SceneLoader::SceneLoader(FileResolver *resolver, const fs::path &filename,
 	const std::map<std::string, std::string, SimpleStringOrdering> &parameters) 
-	: Thread("load"), m_resolver(resolver), m_filename(filename), m_parameters(parameters) {
+	: Thread("load"), m_resolver(resolver), m_filename(fromFsPath(filename)),
+	  m_parameters(parameters) {
 	m_wait = new WaitFlag();
 	m_versionError = false;
 }
@@ -42,7 +43,8 @@ SceneLoader::~SceneLoader() {
 void SceneLoader::run() {
 	Thread::getThread()->setFileResolver(m_resolver);
 	SAXParser* parser = new SAXParser();
-	std::string lowerCase = boost::to_lower_copy(m_filename);
+	QFileInfo fileInfo(m_filename);
+	QString suffix = fileInfo.suffix().toLower();
 
 	SceneHandler *handler = new SceneHandler(parser, m_parameters);
 	m_result = new SceneContext();
@@ -62,19 +64,17 @@ void SceneLoader::run() {
 		m_result->diffuseSources = settings.value("preview_diffuseSources", true).toBool();
 		m_result->diffuseReceivers = settings.value("preview_diffuseReceivers", false).toBool();
 
-		if (boost::ends_with(lowerCase, ".exr") || boost::ends_with(lowerCase, ".png") 
-			|| boost::ends_with(lowerCase, ".jpg") || boost::ends_with(lowerCase, ".jpeg")
-			|| boost::ends_with(lowerCase, ".hdr") || boost::ends_with(lowerCase, ".rgbe")
-			|| boost::ends_with(lowerCase, ".pfm")) {
+		if (suffix == "exr" || suffix == "png"  || suffix == "jpg" || suffix == "jpeg" ||
+		    suffix == "hdr" || suffix == "rgbe" || suffix == "pfm") {
 			/* This is an image, not a scene */
-			ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
+			ref<FileStream> fs = new FileStream(toFsPath(m_filename), FileStream::EReadOnly);
 			ref<Bitmap> bitmap = new Bitmap(Bitmap::EAuto, fs);
 			bitmap = bitmap->convert(Bitmap::ERGBA, Bitmap::EFloat32);
 
 			m_result->mode = ERender;
 			m_result->framebuffer = bitmap;
-			m_result->fileName = QString(m_filename.c_str());
-			m_result->shortName = QFileInfo(m_filename.c_str()).fileName();
+			m_result->fileName = m_filename;
+			m_result->shortName = fileInfo.fileName();
 			m_result->scrollOffset = Vector2i(0, 0);
 			m_result->pathLength = 2;
 		} else {
@@ -84,7 +84,7 @@ void SceneLoader::run() {
 			parser->setDoSchema(true);
 			parser->setValidationSchemaFullChecking(true);
 			parser->setValidationScheme(SAXParser::Val_Always);
-			parser->setExternalNoNamespaceSchemaLocation(schemaPath.string().c_str());
+			parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
 			#if !defined(__OSX__)
 				/// Not supported on OSX
 				parser->setCalculateSrcOfs(true);
@@ -96,18 +96,18 @@ void SceneLoader::run() {
 			parser->setErrorHandler(handler);
 
 			fs::path 
-				filename = m_filename,
+				filename = toFsPath(m_filename),
 				filePath = fs::absolute(filename).parent_path(),
 				baseName = filename.stem();
 
-			SLog(EInfo, "Parsing scene description from \"%s\" ..", m_filename.c_str());
+			SLog(EInfo, "Parsing scene description from \"%s\" ..", qPrintable(m_filename));
 
 			if (!fs::exists(filename))
 				SLog(EError, "Unable to load scene \"%s\": file not found!",
-					m_filename.c_str());
+					qPrintable(m_filename));
 
 			try {
-				parser->parse(m_filename.c_str());
+				parser->parse(filename.c_str());
 			} catch (const VersionException &ex) {
 				m_versionError = true;
 				m_version = ex.getVersion();
@@ -116,7 +116,7 @@ void SceneLoader::run() {
 
 			ref<Scene> scene = handler->getScene();
 
-			scene->setSourceFile(m_filename);
+			scene->setSourceFile(filename);
 			scene->setDestinationFile(filePath / baseName);
 			scene->initialize();
 
@@ -132,9 +132,9 @@ void SceneLoader::run() {
 			Sensor *sensor = scene->getSensor();
 
 			/* Also generate a DOM representation for the Qt-based GUI */
-			QFile file(m_filename.c_str());
+			QFile file(m_filename);
 			if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-				Log(EError, "Unable to open the file \"%s\"", m_filename.c_str());
+				Log(EError, "Unable to open the file \"%s\"", qPrintable(m_filename));
 			QString errorMsg;
 			int line, column;
 			if (!m_result->doc.setContent(&file, &errorMsg, &line, &column))
@@ -148,8 +148,8 @@ void SceneLoader::run() {
 			m_result->mode = EPreview;
 			m_result->framebuffer = new Bitmap(Bitmap::ERGBA, Bitmap::EFloat32, size);
 			m_result->framebuffer->clear();
-			m_result->fileName = QString(m_filename.c_str());
-			m_result->shortName = QFileInfo(m_filename.c_str()).fileName();
+			m_result->fileName = m_filename;
+			m_result->shortName = fileInfo.fileName();
 			if (sensor->getClass()->derivesFrom(MTS_CLASS(PerspectiveCamera))) {
 				m_result->up = static_cast<PerspectiveCamera *>(sensor)->getInverseViewTransform(
 					sensor->getShutterOpen() + 0.5f * sensor->getShutterOpenTime())(Vector(0, 1, 0));

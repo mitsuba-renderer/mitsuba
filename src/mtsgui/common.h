@@ -26,6 +26,7 @@
 #include <mitsuba/render/vpl.h>
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/version.h>
+#include <boost/filesystem/path.hpp>
 #include <set>
 
 using namespace mitsuba;
@@ -228,5 +229,24 @@ public:
 		e->ignore();
 	}
 };
+
+inline QString fromFsPath(const fs::path &path) {
+#if defined(__WINDOWS__)
+# if defined(_MSC_VER) && _MSC_VER >= 1600
+	static_assert(sizeof(QChar) == sizeof(fs::path::value_type), "Incompatible!");
+# endif
+	return QString(reinterpret_cast<const QChar*>(path.c_str()));
+#else
+	return QString(path.c_str());
+#endif
+}
+
+inline fs::path toFsPath(const QString &str) {
+#if defined(__WINDOWS__)
+	return fs::path(reinterpret_cast<const fs::path::value_type*>(str.constData()));
+#else
+	return fs::path(qPrintable(str));
+#endif
+}
 
 #endif // QTGUI_COMMON_H

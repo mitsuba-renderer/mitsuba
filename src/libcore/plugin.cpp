@@ -241,7 +241,7 @@ void PluginManager::ensurePluginLoaded(const std::string &name) {
 
 	if (fs::exists(path)) {
 		Log(EInfo, "Loading plugin \"%s\" ..", shortName.c_str());
-		m_plugins[name] = new Plugin(shortName, path.string());
+		m_plugins[name] = new Plugin(shortName, path);
 		return;
 	}
 
