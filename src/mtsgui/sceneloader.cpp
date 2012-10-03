@@ -139,7 +139,7 @@ void SceneLoader::run() {
 			int line, column;
 			if (!m_result->doc.setContent(&file, &errorMsg, &line, &column))
 				SLog(EError, "Unable to parse file: error %s at line %i, colum %i",
-					errorMsg.toStdString().c_str(), line, column);
+					qPrintable(errorMsg), line, column);
 
 			m_result->scene = scene;
 			m_result->sceneResID = Scheduler::getInstance()->registerResource(scene);

@@ -128,7 +128,7 @@ void ImportDialog::accept() {
 	dialog->show();
 	progressBar->show();
 
-	fs::path filePath = fs::absolute(fs::path(sourceFile.toStdString())).parent_path();
+	fs::path filePath = fs::absolute(toFsPath(sourceFile)).parent_path();
 	ref<FileResolver> resolver = m_resolver->clone();
 	resolver->prependPath(filePath);
 
@@ -136,8 +136,8 @@ void ImportDialog::accept() {
 	size_t initialWarningCount = logger->getWarningCount();
 
 	ref<SceneImporter> importingThread = new SceneImporter(
-		resolver, sourceFile.toStdString(), directory.toStdString(),
-		targetScene.toStdString(), adjustmentFile.toStdString(),
+		resolver, toFsPath(sourceFile), toFsPath(directory),
+		toFsPath(targetScene), toFsPath(adjustmentFile),
 		ui->sRGBButton->isChecked());
 	importingThread->start();
 
@@ -162,7 +162,7 @@ void ImportDialog::accept() {
 			QMessageBox::warning(this, tr("Scene Import"),
 				tr("Encountered %1 warnings while importing -- please see "
 				"the log for details.").arg(warningCount), QMessageBox::Ok);
-		((MainWindow *) parent())->loadFile(QString(importingThread->getResult().string().c_str()));
+		((MainWindow *) parent())->loadFile(fromFsPath(importingThread->getResult()));
 	} else {
 		QMessageBox::critical(this, tr("Scene Import"),
 			tr("Conversion failed -- please see the log for details."),
@@ -171,10 +171,10 @@ void ImportDialog::accept() {
 }
 
 void ImportDialog::onLocateResource(const fs::path &path, fs::path *target) {
-	LocateResourceDialog locateResource(this, path.string().c_str());
+	LocateResourceDialog locateResource(this, fromFsPath(path));
 	locateResource.setWindowModality(Qt::ApplicationModal);
 	if (locateResource.exec()) {
-		fs::path newPath(locateResource.getFilename().toStdString());
+		fs::path newPath(toFsPath(locateResource.getFilename()));
 		if (fs::exists(newPath))
 			*target = newPath;
 	}

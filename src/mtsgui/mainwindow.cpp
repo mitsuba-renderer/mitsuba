@@ -402,7 +402,7 @@ void MainWindow::on_actionImport_triggered() {
 	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
 	ref<FileResolver> newResolver = resolver->clone();
 	for (int i=(int) m_searchPaths.size()-1; i>=0; --i) 
-		newResolver->prependPath(m_searchPaths[i].toStdString());
+		newResolver->prependPath(toFsPath(m_searchPaths[i]));
 
 	ImportDialog *dialog = new ImportDialog(this, newResolver);
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -593,7 +593,7 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	fs::path filePath = fs::absolute(filename).parent_path();
 	ref<FileResolver> newResolver = resolver->clone();
 	for (int i=(int) m_searchPaths.size()-1; i>=0; --i) 
-		newResolver->prependPath(m_searchPaths[i].toStdString());
+		newResolver->prependPath(toFsPath(m_searchPaths[i]));
 	newResolver->prependPath(filePath);
 	LoadDialog *loaddlg = new LoadDialog(this);
 	SceneContext *result = NULL;
@@ -644,7 +644,7 @@ retry:
 
 				UpgradeManager upgradeMgr(newResolver);
 				try {
-					upgradeMgr.performUpgrade(filename.string().c_str(), version);
+					upgradeMgr.performUpgrade(fromFsPath(filename), version);
 					goto retry;
 				} catch (const std::exception &ex) {
 					QMessageBox::critical(this, tr("Unable to update %1").arg(qFileName),
@@ -1525,15 +1525,15 @@ void MainWindow::onSaveAsDialogClose(int reason) {
         QString fileName = dialog->selectedFiles().value(0);
 		settings.setValue("fileDialogState", dialog->saveState());
 		saveScene(this, context, fileName);
-		fs::path pathName = fileName.toStdString(),
+		fs::path pathName = toFsPath(fileName),
 			     complete = fs::absolute(pathName),
 			     baseName = pathName.stem();
 		context->fileName = fileName;
 		context->shortName = QFileInfo(fileName).fileName();
 		context->scene->setSourceFile(pathName);
-		context->scene->setDestinationFile(baseName.string());
+		context->scene->setDestinationFile(baseName);
 		ui->tabBar->setTabText(currentIndex, context->shortName);
-		addRecentFile(complete.string().c_str());
+		addRecentFile(fromFsPath(complete));
 	}
 }
 
