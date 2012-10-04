@@ -39,6 +39,10 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{radius}{\Float}{
  *	     Radius of the cylinder in object-space units \default{1}
  *	   }
+ *     \parameter{flipNormals}{\Boolean}{
+ *	      Is the cylinder inverted, i.e. should the normal vectors
+ *		  be flipped? \default{\code{false}, i.e. the normals point outside}
+ *	   }
  *     \parameter{toWorld}{\Transform}{
  *	      Specifies an optional linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
@@ -73,6 +77,7 @@ private:
 	Transform m_objectToWorld;
 	Transform m_worldToObject;
 	Float m_radius, m_length, m_invSurfaceArea;
+	bool m_flipNormals;
 public:
 	Cylinder(const Properties &props) : Shape(props) {
 		Float radius = props.getFloat("radius", 1.0f);
@@ -87,6 +92,9 @@ public:
 
 		if (props.hasProperty("toWorld"))
 			m_objectToWorld = props.getTransform("toWorld") * m_objectToWorld;
+
+		/// Are the cylinder normals pointing inwards? default: no
+		m_flipNormals = props.getBoolean("flipNormals", false);
 
 		// Remove the scale from the object-to-world transform
 		m_radius = m_objectToWorld(Vector(1,0,0)).length();
@@ -104,6 +112,7 @@ public:
 		m_objectToWorld = Transform(stream);
 		m_radius = stream->readFloat();
 		m_length = stream->readFloat();
+		m_flipNormals = stream->readBool();
 		m_worldToObject = m_objectToWorld.inverse();
 		m_invSurfaceArea = 1/(2*M_PI*m_radius*m_length);
 	}
@@ -113,6 +122,7 @@ public:
 		m_objectToWorld.serialize(stream);
 		stream->writeFloat(m_radius);
 		stream->writeFloat(m_length);
+		stream->writeBool(m_flipNormals);
 	}
 
 	bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *temp) const {
@@ -204,6 +214,8 @@ public:
 		its.dpdu = m_objectToWorld(dpdu);
 		its.dpdv = m_objectToWorld(dpdv);
 		its.geoFrame.n = Normal(normalize(m_objectToWorld(cross(dpdu, dpdv))));
+		if (m_flipNormals)
+			its.geoFrame.n *= -1;
 		its.geoFrame.s = normalize(its.dpdu);
 		its.geoFrame.t = normalize(its.dpdv);
 		its.shFrame = its.geoFrame;
@@ -218,6 +230,9 @@ public:
 
 		Point p(cosTheta*m_radius, sinTheta*m_radius, sample.x * m_length);
 		Normal n(cosTheta, sinTheta, 0.0f);
+
+		if (m_flipNormals)
+			n *= -1;
 
 		pRec.p = m_objectToWorld(p);
 		pRec.n = normalize(m_objectToWorld(n));

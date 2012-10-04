@@ -1760,6 +1760,8 @@ void MainWindow::onActivateCamera() {
 		return;
 	QAction *action = qobject_cast<QAction *>(sender());
 	Sensor *sensor = static_cast<Sensor *>(action->data().value<void *>());
+	if (!sensor)
+		return;
 	SceneContext *context = m_context[index];
 	on_tabBar_currentChanged(-1);
 	Vector2i size = sensor->getFilm()->getSize();

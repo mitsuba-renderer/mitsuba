@@ -36,15 +36,13 @@ MTS_NAMESPACE_BEGIN
 //  Abstract plugin module implementation
 // -----------------------------------------------------------------------
 
-namespace
-{
-typedef void *(*CreateInstanceFunc)(const Properties &props);
-typedef void *(*CreateUtilityFunc)();
-typedef char *(*GetDescriptionFunc)();
+namespace {
+	typedef void *(*CreateInstanceFunc)(const Properties &props);
+	typedef void *(*CreateUtilityFunc)();
+	typedef char *(*GetDescriptionFunc)();
 }
 
-struct Plugin::PluginPrivate
-{
+struct Plugin::PluginPrivate {
 #if defined(WIN32)
 	HMODULE handle;
 #else
@@ -57,14 +55,12 @@ struct Plugin::PluginPrivate
 	CreateInstanceFunc createInstance;
 	CreateUtilityFunc createUtility;
 
-	PluginPrivate(const std::string &sn, const fs::path &p) :
-	shortName(sn), path(p)
-	{}
+	PluginPrivate(const std::string &sn, const fs::path &p)
+	: shortName(sn), path(p) {}
 };
 
 Plugin::Plugin(const std::string &shortName, const fs::path &path) 
- : d(new PluginPrivate(shortName, path))
-{
+ : d(new PluginPrivate(shortName, path)) {
 #if defined(_WIN32)
 	d->handle = LoadLibraryW(path.c_str());
 	if (!d->handle) {
@@ -229,19 +225,21 @@ void PluginManager::ensurePluginLoaded(const std::string &name) {
 		return;
 
 	/* Build the full plugin file name */
+	fs::path shortName = fs::path("plugins") / name;
 #if defined(WIN32)
-	std::string shortName = std::string("plugins/") + name + std::string(".dll");
+	shortName.replace_extension(".dll");
 #elif defined(__OSX__)
-	std::string shortName = std::string("plugins/") + name + std::string(".dylib");
+	shortName.replace_extension(".dylib");
 #else
-	std::string shortName = std::string("plugins/") + name + std::string(".so");
+	shortName.replace_extension(".so");
 #endif
+
 	const FileResolver *resolver = Thread::getThread()->getFileResolver();
 	fs::path path = resolver->resolve(shortName);
 
 	if (fs::exists(path)) {
 		Log(EInfo, "Loading plugin \"%s\" ..", shortName.c_str());
-		m_plugins[name] = new Plugin(shortName, path);
+		m_plugins[name] = new Plugin(shortName.string(), path);
 		return;
 	}
 
