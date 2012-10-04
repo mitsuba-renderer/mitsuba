@@ -26,7 +26,10 @@ for ver in hasPython:
 		# Python has serious aliasing issues. Disable -fstrict-aliasing only for this library
 		pythonEnv.Append(CXXFLAGS = ['-fno-strict-aliasing']);
 		pythonEnv.RemoveFlags(['-fstrict-aliasing', '-ftree-vectorize']);
-	
+	else:
+		# Create an OBJ file with many addressable sections (or compilation may fail on Windows)
+		pythonEnv.Append(CXXFLAGS = ['/bigobj'])
+
 	if sys.platform == 'darwin':
 		pythonEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@loader_path/../../Contents/Frameworks'])
 
