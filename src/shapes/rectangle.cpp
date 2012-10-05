@@ -119,7 +119,7 @@ public:
 	}
 
 	Float getSurfaceArea() const {
-		return 4 * m_dpdu.length() * m_dpdv.length();
+		return m_dpdu.length() * m_dpdv.length();
 	}
 
 	inline bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *temp) const {
