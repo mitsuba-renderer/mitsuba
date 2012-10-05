@@ -173,7 +173,7 @@ public:
 
 		Spectrum value = 
 			sunRadiance * (2 * M_PI * (1-std::cos(theta))) *
-			(bitmap->getWidth() * bitmap->getHeight()) 
+			static_cast<Float>(bitmap->getWidth() * bitmap->getHeight()) 
 			/ (2 * M_PI * M_PI * nSamples);
 
 		for (size_t i=0; i<nSamples; ++i) {
