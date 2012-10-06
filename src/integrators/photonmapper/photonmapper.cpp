@@ -207,7 +207,7 @@ public:
 		bool hasDelta = false;
 		for (size_t i=0; i<scene->getShapes().size(); ++i) {
 			const BSDF *bsdf = scene->getShapes()[i]->getBSDF();
-			if (bsdf->getType() & BSDF::EDelta)
+			if (bsdf && bsdf->getType() & BSDF::EDelta)
 				hasDelta = true;
 		}
 
