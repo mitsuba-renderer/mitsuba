@@ -813,25 +813,25 @@ public:
 protected:
 	struct CoordinateOrdering : public std::binary_function<IndexType, IndexType, bool> {
 	public:
-		inline CoordinateOrdering(std::vector<NodeType> &nodes, int axis) 
+		inline CoordinateOrdering(const std::vector<NodeType> &nodes, int axis) 
 			: m_nodes(nodes), m_axis(axis) { }
 		inline bool operator()(const IndexType &i1, const IndexType &i2) const {
 			return m_nodes[i1].getPosition()[m_axis] < m_nodes[i2].getPosition()[m_axis];
 		}
 	private:
-		std::vector<NodeType> &m_nodes;
+		const std::vector<NodeType> &m_nodes;
 		int m_axis;
 	};
 
 	struct LessThanOrEqual : public std::unary_function<IndexType, bool> {
 	public:
-		inline LessThanOrEqual(std::vector<NodeType> &nodes, int axis, Scalar value) 
+		inline LessThanOrEqual(const std::vector<NodeType> &nodes, int axis, Scalar value) 
 			: m_nodes(nodes), m_axis(axis), m_value(value) { }
 		inline bool operator()(const IndexType &i) const {
 			return m_nodes[i].getPosition()[m_axis] <= m_value;
 		}
 	private:
-		std::vector<NodeType> &m_nodes;
+		const std::vector<NodeType> &m_nodes;
 		int m_axis;
 		Scalar m_value;
 	};
