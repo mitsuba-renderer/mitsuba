@@ -476,6 +476,7 @@ void Scene::addChild(const std::string &name, ConfigurableObject *child) {
 		m_integrator = static_cast<Integrator *>(child);
 	} else if (cClass->derivesFrom(MTS_CLASS(Texture))
 			|| cClass->derivesFrom(MTS_CLASS(BSDF))
+			|| cClass->derivesFrom(MTS_CLASS(Subsurface))
 			|| cClass->derivesFrom(MTS_CLASS(PhaseFunction))) {
 		m_objects.push_back(static_cast<ConfigurableObject *>(child));
 	} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
