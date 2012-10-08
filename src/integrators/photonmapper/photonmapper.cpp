@@ -205,8 +205,9 @@ public:
 			m_volumePhotons = 0;
 
 		bool hasDelta = false;
-		for (size_t i=0; i<scene->getShapes().size(); ++i) {
-			const BSDF *bsdf = scene->getShapes()[i]->getBSDF();
+		const ref_vector<Shape> &shapes = scene->getShapes();
+		for (size_t i=0; i<shapes.size(); ++i) {
+			const BSDF *bsdf = shapes[i]->getBSDF();
 			if (bsdf && bsdf->getType() & BSDF::EDelta)
 				hasDelta = true;
 		}

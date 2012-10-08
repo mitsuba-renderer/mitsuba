@@ -28,7 +28,7 @@ for ver in hasPython:
 		pythonEnv.RemoveFlags(['-fstrict-aliasing', '-ftree-vectorize']);
 	else:
 		# Create an OBJ file with many addressable sections (or compilation may fail on Windows)
-		pythonEnv.Append(CXXFLAGS = ['/bigobj'])
+		pythonEnv.Append(CPPFLAGS = ['/bigobj'])
 
 	if sys.platform == 'darwin':
 		pythonEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@loader_path/../../Contents/Frameworks'])
