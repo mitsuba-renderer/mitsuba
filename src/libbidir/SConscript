@@ -3,8 +3,8 @@ Import('env', 'sys', 'os')
 bidirEnv = env.Clone()
 bidirEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_BIDIR']])
 
-#bidirEnv.RemoveFlags(['-O3'])
-#bidirEnv.Append(CXXFLAGS = ['-O0']);
+# bidirEnv.RemoveFlags(['-O3'])
+# bidirEnv.Append(CXXFLAGS = ['-O0']);
 
 libbidir = bidirEnv.SharedLibrary('mitsuba-bidir', [
 	'common.cpp', 'rsampler.cpp', 'vertex.cpp', 'edge.cpp',

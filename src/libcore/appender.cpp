@@ -44,7 +44,10 @@ void StreamAppender::readLog(std::string &target) {
 	stream.flush();
 	stream.seekg(0, std::ios::end);
 	std::streamoff size = stream.tellg();
-	Assert(size >= 0);
+	if (size == 0) {
+		target.clear();
+		return;
+	}
 	target.resize((size_t) size);
 	stream.seekg(0, std::ios::beg);
 

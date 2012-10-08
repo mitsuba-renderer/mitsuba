@@ -3,7 +3,7 @@ Section: graphics
 Priority: optional
 Maintainer: Wenzel Jakob <wenzel@cs.cornell.edu>
 Build-Depends: debhelper (>= 7), build-essential, scons, qt4-dev-tools,
-	libpng12-dev, libjpeg62-dev, libilmbase-dev, libopenexr-dev, 
+	libpng12-dev, libjpeg-dev, libilmbase-dev, libopenexr-dev, 
 	libxerces-c-dev, libboost-dev, libglewmx1.5-dev, libxxf86vm-dev,
 	collada-dom-dev, libboost-system-dev, libboost-filesystem-dev,
 	libboost-python-dev, libboost-thread-dev, libgl1-mesa-dev, 
@@ -23,7 +23,7 @@ Description: Mitsuba renderer
 
 Package: mitsuba-dev
 Architecture: any
-Depends: qt4-dev-tools, libpng12-dev, libjpeg62-dev, libilmbase-dev, 
+Depends: qt4-dev-tools, libpng12-dev, libjpeg-dev, libilmbase-dev, 
 	libopenexr-dev, libxerces-c-dev, libboost-dev, libglewmx1.5-dev, 
 	libxxf86vm-dev, collada-dom-dev, libboost-system-dev, 
 	libboost-filesystem-dev, libboost-python-dev, libboost-thread-dev,

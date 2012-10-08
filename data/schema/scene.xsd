@@ -7,6 +7,7 @@
 				<xsd:element name="sensor" type="sensor"/>
 				<xsd:element name="texture" type="texture"/>
 				<xsd:element name="bsdf" type="bsdf"/>
+				<xsd:element name="subsurface" type="object"/>
 				<xsd:element name="integrator" type="integrator"/>
 				<xsd:element name="emitter" type="emitter"/>
 				<xsd:element name="shape" type="shape"/>

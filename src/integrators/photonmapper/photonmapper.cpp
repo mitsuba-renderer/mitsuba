@@ -197,17 +197,18 @@ public:
 		SamplingIntegrator::configureSampler(scene, sampler);
 		if (m_directSamples > 1)
 			sampler->request2DArray(m_directSamples);
-		int glossySamples = std::max(m_directSamples, m_glossySamples);
-		if (glossySamples > 1)
-			sampler->request2DArray(glossySamples);
+		int bsdfSamples = std::max(m_directSamples, m_glossySamples);
+		if (bsdfSamples > 1)
+			sampler->request2DArray(bsdfSamples);
 
 		if (scene->getMedia().size() == 0)
 			m_volumePhotons = 0;
 
 		bool hasDelta = false;
-		for (size_t i=0; i<scene->getShapes().size(); ++i) {
-			const BSDF *bsdf = scene->getShapes()[i]->getBSDF();
-			if (bsdf->getType() & BSDF::EDelta)
+		const ref_vector<Shape> &shapes = scene->getShapes();
+		for (size_t i=0; i<shapes.size(); ++i) {
+			const BSDF *bsdf = shapes[i]->getBSDF();
+			if (bsdf && bsdf->getType() & BSDF::EDelta)
 				hasDelta = true;
 		}
 
@@ -442,7 +443,7 @@ public:
 		}
 
 		if ((bsdfType & BSDF::EDelta) && (bsdfType & ~BSDF::EDelta) == 0 && rRec.depth < m_maxSpecularDepth && !cacheQuery) {
-			if (RadianceQueryRecord::EIndirectSurfaceRadiance) {
+			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) {
 				int compCount = bsdf->getComponentCount();
 				RadianceQueryRecord rRec2;
 				for (int i=0; i<compCount; i++) {
@@ -493,34 +494,36 @@ public:
 			}
 
 			DirectSamplingRecord dRec(its);
-			for (int i=0; i<numEmitterSamples; ++i) {
-				int interactions = m_maxDepth - rRec.depth - 1;
-				Spectrum value = scene->sampleAttenuatedEmitterDirect(
-						dRec, its, rRec.medium, interactions, 
-						sampleArray[i], rRec.sampler);
-
-				/* Estimate the direct illumination if this is requested */
-				if (!value.isZero()) {
-					const Emitter *emitter = static_cast<const Emitter *>(dRec.object);
-					
-					/* Allocate a record for querying the BSDF */
-					BSDFSamplingRecord bRec(its, its.toLocal(dRec.d));
+			if (bsdf->getType() & BSDF::ESmooth) {
+				for (int i=0; i<numEmitterSamples; ++i) {
+					int interactions = m_maxDepth - rRec.depth - 1;
+					Spectrum value = scene->sampleAttenuatedEmitterDirect(
+							dRec, its, rRec.medium, interactions, 
+							sampleArray[i], rRec.sampler);
 	
-					/* Evaluate BSDF * cos(theta) */
-					const Spectrum bsdfVal = bsdf->eval(bRec);
+					/* Estimate the direct illumination if this is requested */
+					if (!value.isZero()) {
+						const Emitter *emitter = static_cast<const Emitter *>(dRec.object);
+						
+						/* Allocate a record for querying the BSDF */
+						BSDFSamplingRecord bRec(its, its.toLocal(dRec.d));
+		
+						/* Evaluate BSDF * cos(theta) */
+						const Spectrum bsdfVal = bsdf->eval(bRec);
+		
+						if (!bsdfVal.isZero()) {
+							/* Calculate prob. of having sampled that direction
+							   using BSDF sampling */
+							Float bsdfPdf = (emitter->isOnSurface()
+									&& dRec.measure == ESolidAngle
+									&& interactions == 0) 
+									? bsdf->pdf(bRec) : (Float) 0.0f;
 	
-					if (!bsdfVal.isZero()) {
-						/* Calculate prob. of having sampled that direction
-						   using BSDF sampling */
-						Float bsdfPdf = (emitter->isOnSurface()
-								&& dRec.measure == ESolidAngle
-								&& interactions == 0) 
-								? bsdf->pdf(bRec) : (Float) 0.0f;
-
-						/* Weight using the power heuristic */
-						const Float weight = miWeight(dRec.pdf * numEmitterSamples, 
-								bsdfPdf * numBSDFSamples) * weightLum;
-						LiSurf += value * bsdfVal * weight;
+							/* Weight using the power heuristic */
+							const Float weight = miWeight(dRec.pdf * numEmitterSamples, 
+									bsdfPdf * numBSDFSamples) * weightLum;
+							LiSurf += value * bsdfVal * weight;
+						}
 					}
 				}
 			}
@@ -550,9 +553,6 @@ public:
 				/* Trace a ray in this direction */
 				RayDifferential bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);
 
-				rRec2.recursiveQuery(rRec, 
-					RadianceQueryRecord::ERadianceNoEmission);
-
 				Spectrum value;
 				bool hitEmitter = false;
 				if (scene->rayIntersect(bsdfRay, bsdfIts)) {
@@ -567,16 +567,11 @@ public:
 					const Emitter *env = scene->getEnvironmentEmitter();
 
 					if (env) {
-						value = env->evalEnvironment(ray);
-						if (env->fillDirectSamplingRecord(dRec, ray))
+						value = env->evalEnvironment(bsdfRay);
+						if (env->fillDirectSamplingRecord(dRec, bsdfRay))
 							hitEmitter = true;
 					}
 				}
-
-				if (its.isMediumTransition())
-					rRec2.medium = its.getTargetMedium(bsdfRay.d);
-
-				rRec2.type ^= RadianceQueryRecord::EIntersection;
 
 				if (hitEmitter) {
 					const Float emitterPdf = (!(bRec.sampledType & BSDF::EDelta)) ? 
@@ -592,9 +587,19 @@ public:
 				}
 
 				/* Recurse */
-				if (!isDiffuse && (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) && !cacheQuery) 
+				if (!isDiffuse && (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) && !cacheQuery) {
+					rRec2.recursiveQuery(rRec, 
+						RadianceQueryRecord::ERadianceNoEmission);
+					rRec2.type ^= RadianceQueryRecord::EIntersection;
+
+					if (its.isMediumTransition())
+						rRec2.medium = its.getTargetMedium(bsdfRay.d);
+
 					LiSurf += bsdfVal * m_parentIntegrator->Li(bsdfRay, rRec2) * weightBSDF;
+				}
 			}
+			if (true)
+				return LiSurf;
 		} else if (!isDiffuse && (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) && !cacheQuery) {
 			int numBSDFSamples = (rRec.depth > 1 || adaptiveQuery) ? 1 : m_glossySamples;
 			Float weightBSDF;

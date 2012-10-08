@@ -356,22 +356,27 @@ bool PathEdge::pathConnect(const Scene *scene, const PathEdge *predEdge,
 			ray.mint = Epsilon;
 			ray.maxt = remaining * lengthFactor;
 
-			PathVertex *vertex = pool.allocVertex();
 			const BSDF *bsdf = its.getBSDF();
 			
 			/* Account for the ENull interaction */
 			Vector wo = its.toLocal(ray.d);
 			BSDFSamplingRecord bRec(its, -wo, wo, ERadiance);
 			bRec.component = BSDF::ENull;
+			Float nullPdf = bsdf->pdf(bRec, EDiscrete);
+			if (nullPdf == 0) {
+				result.release(pool);
+				return false;
+			}
 
+			PathVertex *vertex = pool.allocVertex();
 			vertex->type = PathVertex::ESurfaceInteraction;
 			vertex->degenerate = !(bsdf->hasComponent(BSDF::ESmooth) 
 				|| its.shape->isEmitter() || its.shape->isSensor());
 			vertex->measure = EDiscrete;
 			vertex->componentType = BSDF::ENull;
-			vertex->pdf[EImportance] = vertex->pdf[ERadiance] = bsdf->pdf(bRec, EDiscrete);
+			vertex->pdf[EImportance] = vertex->pdf[ERadiance] = nullPdf;
 			vertex->weight[EImportance] = vertex->weight[ERadiance] 
-				= bsdf->eval(bRec, EDiscrete) / vertex->pdf[EImportance];
+				= bsdf->eval(bRec, EDiscrete) / nullPdf;
 			vertex->rrWeight = 1.0f;
 			vertex->getIntersection() = its;
 			result.append(vertex);
@@ -505,6 +510,9 @@ bool PathEdge::pathConnectAndCollapse(const Scene *scene, const PathEdge *predEd
 			BSDFSamplingRecord bRec(its, -wo, wo, ERadiance);
 			bRec.component = BSDF::ENull;
 			Float nullPdf = bsdf->pdf(bRec, EDiscrete);
+			if (nullPdf == 0)
+				return false;
+
 			Spectrum nullWeight = bsdf->eval(bRec, EDiscrete) / nullPdf;
 
 			weight[EImportance] *= nullWeight;

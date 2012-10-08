@@ -157,7 +157,7 @@ std::pair<int, int> Path::alternatingRandomWalkFromPixel(const Scene *scene, Sam
 
 			if (curVertexT->sampleNext(scene, sampler, predVertexT,
 					predEdgeT, succEdgeT, succVertexT, ERadiance, 
-					rrStart != -1 && s >= rrStart,&throughputT)) {
+					rrStart != -1 && t >= rrStart, &throughputT)) {
 				sensorPath.append(succEdgeT, succVertexT);
 				predVertexT = curVertexT;
 				curVertexT = succVertexT;

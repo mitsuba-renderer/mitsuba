@@ -266,8 +266,8 @@ public:
 			nCores, nCores == 1 ? "core" : "cores", sampleCount);
 
 		if (m_config.workUnits <= 0)
-			m_config.workUnits = (size_t) std::ceil((cropSize.x 
-				* cropSize.y * sampleCount) / 200000.0f);
+			m_config.workUnits = std::max((size_t) std::ceil((cropSize.x 
+				* cropSize.y * sampleCount) / 200000.0f), (size_t) 1);
 
 		m_config.nMutations = (cropSize.x * cropSize.y *
 			sampleCount) / m_config.workUnits;

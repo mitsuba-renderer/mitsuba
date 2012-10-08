@@ -97,8 +97,12 @@ public:
 		      sunScale = props.getFloat("sunScale", scale),
 		      skyScale = props.getFloat("skyScale", scale);
 
+		const Transform &trafo = m_worldTransform->eval(0);
+
 		Properties skyProps(props);
 		skyProps.removeProperty("toWorld");
+		if (props.hasProperty("sunDirection"))
+			skyProps.setVector("sunDirection", trafo.inverse()(props.getVector("sunDirection")));
 		skyProps.setPluginName("sky");
 		skyProps.setFloat("scale", skyScale, false);
 
@@ -198,7 +202,6 @@ public:
 		bitmapData.ptr = (uint8_t *) bitmap.get();
 		bitmapData.size = sizeof(Bitmap);
 		envProps.setData("bitmap", bitmapData);
-		const Transform &trafo = m_worldTransform->eval(0);
 		envProps.setTransform("toWorld", trafo);
 		envProps.setFloat("samplingWeight", m_samplingWeight);
 		m_emitter = static_cast<Emitter *>(

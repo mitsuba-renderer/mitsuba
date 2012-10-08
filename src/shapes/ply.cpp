@@ -105,7 +105,7 @@ public:
 		/* Load the geometry */
 		Log(EInfo, "Loading geometry from \"%s\" ..", filePath.filename().string().c_str());
 		if (!fs::exists(filePath))
-			Log(EError, "PLY file \"%s\" could not be found!", filePath.c_str());
+			Log(EError, "PLY file \"%s\" could not be found!", filePath.string().c_str());
 
 		m_triangleCount = m_vertexCount = 0;
 		m_vertexCtr = m_triangleCtr = m_triangleIdxCtr = 0;

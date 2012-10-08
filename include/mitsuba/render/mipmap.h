@@ -652,10 +652,9 @@ public:
 			Float level = std::max((Float) 0.0f, log2(minorRadius));
 			int ilevel = (int) level;
 			Float a = level - ilevel;
-			Assert(A > 0);
 
 			/* Switch to bilinear interpolation, be wary of round-off errors */
-			if (majorRadius < 1 || A < 0 || C < 0)
+			if (majorRadius < 1 || !(A > 0 && C > 0))
 				return evalBilinear(ilevel, uv);
 			else
 				return evalEWA(ilevel,   uv, A, B, C) * (1.0f-a) +

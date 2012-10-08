@@ -186,12 +186,12 @@ public:
 
 			Log(EInfo, "Loading texture \"%s\"", m_filename.filename().string().c_str());
 			if (!fs::exists(m_filename))
-				Log(EError, "Texture file \"%s\" could not be found!", m_filename.c_str());
+				Log(EError, "Texture file \"%s\" could not be found!", m_filename.string().c_str());
 
 			boost::system::error_code ec;
 			timestamp = (uint64_t) fs::last_write_time(m_filename, ec);
 			if (ec.value())
-				Log(EError, "Could not determine modification time of \"%s\"!", m_filename.c_str());
+				Log(EError, "Could not determine modification time of \"%s\"!", m_filename.string().c_str());
 
 			cacheFile = m_filename;
 			cacheFile.replace_extension(".mip");
