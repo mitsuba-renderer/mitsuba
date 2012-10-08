@@ -192,7 +192,6 @@ private slots:
 	void updateUI();
 	void updateStatus();
 	void onPreviewSettingsClose();
-	void onOpenDialogClose(int reason);
 	void onSaveAsDialogClose(int reason);
 	void onExportDialogClose(int reason);
 	void onRenderSettingsClose(int reason);

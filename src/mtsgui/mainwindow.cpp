@@ -539,34 +539,20 @@ void MainWindow::onProgressMessage(const RenderJob *job, const QString &name,
 }
 
 void MainWindow::on_actionOpen_triggered() {
-	QFileDialog *dialog = new QFileDialog(this, Qt::Sheet);
-	dialog->setNameFilter(tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.png *.jpg *.jpeg);;"
-			"Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm);;Low "
-			"dynamic-range images (*.png *.jpg *.jpeg)"));
-	dialog->setAttribute(Qt::WA_DeleteOnClose);
-	dialog->setAcceptMode(QFileDialog::AcceptOpen);
-	dialog->setViewMode(QFileDialog::Detail);
-	dialog->setWindowModality(Qt::WindowModal);
 	QSettings settings;
-	dialog->restoreState(settings.value("fileDialogState").toByteArray());
-	connect(dialog, SIGNAL(finished(int)), this, SLOT(onOpenDialogClose(int)));
-	m_currentChild = dialog;
-	// prevent a tab drawing artifact on Qt/OSX
-	m_activeWindowHack = true;
-	dialog->show();
-	qApp->processEvents();
-	m_activeWindowHack = false;
-}
+	QStringList fileNames = QFileDialog::getOpenFileNames(this, QString(),
+		settings.value("fileDir").toString(),
+		tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.png *.jpg *.jpeg);;"
+		   "Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm);;"
+		   "Low dynamic-range images (*.png *.jpg *.jpeg)"));
 
-void MainWindow::onOpenDialogClose(int reason) {
-	QSettings settings;
-	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
-	m_currentChild = NULL;
-	if (reason == QDialog::Accepted) {
-		QStringList fileNames = dialog->selectedFiles();
-		settings.setValue("fileDialogState", dialog->saveState());
-		for (int i=0; i<fileNames.size(); ++i)
-			loadFile(fileNames[i]);
+	QStringList::ConstIterator it = fileNames.constBegin();
+	if (it != fileNames.constEnd()) {
+		QFileInfo info(*it);
+		settings.setValue("fileDir", info.absolutePath());
+	}
+	for ( ; it != fileNames.constEnd(); ++it) {
+		loadFile(*it);
 	}
 }
 
