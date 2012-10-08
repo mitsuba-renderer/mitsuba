@@ -89,7 +89,7 @@ MTS_NAMESPACE_BEGIN
  *	\item[\code{0x1000}] The subsequent content is represented in single precision\vspace{-2mm}
  *	\item[\code{0x2000}] The subsequent content is represented in double precision
  * \end{description}\\[-4mm]
- * \code{string}&A null-terminated string (latin-1), which denotes the name of the shape.\\
+ * \code{string}&A null-terminated string (utf-8), which denotes the name of the shape.\\
  * \code{uint64}&Number of vertices in the mesh\\
  * \code{uint64}&Number of triangles in the mesh\\
  * \code{array}&Array of all vertex positions (X, Y, Z, X, Y, Z, ...) 
