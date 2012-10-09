@@ -377,13 +377,25 @@ public:
 
 	Texture *loadTexture(const FileResolver *fileResolver, 
 			std::map<std::string, Texture *> &cache, 
-			const fs::path &mtlPath, const std::string &filename) {
+			const fs::path &mtlPath, std::string filename) {
+		/* Prevent Linux/OSX fs::path handling issues for DAE files created on Windows */
+		for (size_t i=0; i<filename.length(); ++i) {
+			if (filename[i] == '\\')
+				filename[i] = '/';
+		}
+
 		if (cache.find(filename) != cache.end())
 			return cache[filename];
+
 		fs::path path = fileResolver->resolve(filename);
-		if (!fs::exists(path))
-			Log(EError, "Unable to find texture \"%s\" referenced from \"%s\"!", 
-				path.string().c_str(), mtlPath.string().c_str());
+		if (!fs::exists(path)) {
+			path = fileResolver->resolve(fs::path(filename).filename());
+			if (!fs::exists(path)) {
+				Log(EWarn, "Unable to find texture \"%s\" referenced from \"%s\"!", 
+					path.string().c_str(), mtlPath.string().c_str());
+				return new ConstantSpectrumTexture(Spectrum(0.0f));
+			}
+		}
 		Properties props("bitmap");
 		props.setString("filename", path.string());
 		ref<Texture> texture = static_cast<Texture *> (PluginManager::getInstance()->
@@ -424,7 +436,7 @@ public:
 				if (mtlName != "") 
 					addMaterial(mtlName, diffuse, specular, exponent, bump, mask, illum);
 
-				mtlName = trim(line.substr(7, line.length()-7));
+				mtlName = trim(line.substr(6, line.length()-6));
 		
 				specular = new ConstantSpectrumTexture(Spectrum(0.0f));
 				diffuse = new ConstantSpectrumTexture(Spectrum(0.0f));

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>353</width>
-    <height>273</height>
+    <width>358</width>
+    <height>282</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -234,9 +234,9 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QRadioButton" name="linearButton">
+       <widget class="QRadioButton" name="sRGBButton">
         <property name="text">
-         <string>Linear</string>
+         <string>sRGB</string>
         </property>
         <property name="checked">
          <bool>true</bool>
@@ -244,9 +244,12 @@
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="sRGBButton">
+       <widget class="QRadioButton" name="linearButton">
         <property name="text">
-         <string>sRGB</string>
+         <string>Linear</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
