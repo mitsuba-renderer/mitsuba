@@ -21,6 +21,7 @@
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/sshstream.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/appender.h>
 #include <mitsuba/core/version.h>
@@ -389,6 +390,7 @@ int main(int argc, char **argv) {
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
+	FileStream::staticInitialization();
 	Spectrum::staticInitialization();
 	Bitmap::staticInitialization();
 	Scheduler::staticInitialization();
@@ -414,6 +416,7 @@ int main(int argc, char **argv) {
 	Scheduler::staticShutdown();
 	Bitmap::staticShutdown();
 	Spectrum::staticShutdown();
+	FileStream::staticShutdown();
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();

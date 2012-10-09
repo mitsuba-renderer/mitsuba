@@ -23,6 +23,7 @@
 #include <mitsuba/core/sched.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/appender.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/render/scenehandler.h>
@@ -168,6 +169,7 @@ int main(int argc, char *argv[]) {
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
+	FileStream::staticInitialization();
 	Thread::initializeOpenMP(getCoreCount());
 	Spectrum::staticInitialization();
 	Bitmap::staticInitialization();
@@ -312,6 +314,7 @@ int main(int argc, char *argv[]) {
 	Scheduler::staticShutdown();
 	Bitmap::staticShutdown();
 	Spectrum::staticShutdown();
+	FileStream::staticShutdown();
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();

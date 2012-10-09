@@ -23,6 +23,7 @@
 # include <unistd.h>
 #else
 # include <windows.h>
+# include <boost/filesystem/detail/utf8_codecvt_facet.hpp>
 #endif
 
 MTS_NAMESPACE_BEGIN
@@ -357,6 +358,29 @@ bool FileStream::canRead() const {
 bool FileStream::canWrite() const {
 	AssertEx(d->file != 0, "No file is currently open");
 	return d->write;
+}
+
+#if defined(__WINDOWS__)
+static boost::filesystem::detail::utf8_codecvt_facet *__facet = NULL;
+#endif
+
+void FileStream::staticInitialization() {
+#if defined(__WINDOWS__)
+	/* On Linux + MacOS, strings are assumed to be in UTF-8. On
+	   Windows, they still are, but fs::path is UTF-16. So we need
+	   a codecvt_facet to take care of the necessary conversions */
+	std::locale global_loc = std::locale(); 
+	__facet = new boost::filesystem::detail::utf8_codecvt_facet();
+	std::locale locale(global_loc, __facet);
+	boost::filesystem::path::imbue(locale); 
+#endif
+}
+
+void FileStream::staticShutdown() {
+#if defined(__WINDOWS__)
+	boost::filesystem::path::imbue(std::locale());
+	/* Can't delete __facet unfortunately, or we risk a crash .. oh well.. */
+#endif
 }
 
 MTS_IMPLEMENT_CLASS(FileStream, false, Stream)

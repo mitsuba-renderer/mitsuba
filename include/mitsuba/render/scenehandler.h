@@ -31,10 +31,11 @@
 
 XERCES_CPP_NAMESPACE_BEGIN
 class SAXParser;
+class XMLTranscoder;
 XERCES_CPP_NAMESPACE_END
 
-XERCES_CPP_NAMESPACE_USE
 MTS_NAMESPACE_BEGIN
+namespace xercesc = XERCES_CPP_NAMESPACE;
 
 #ifdef _MSC_VER
 // Disable warning 4275: non dll-interface used as base for dll-interface class
@@ -76,13 +77,14 @@ private:
  * \ingroup librender
  * \ingroup libpython
  */
-class MTS_EXPORT_RENDER SceneHandler : public HandlerBase {
+class MTS_EXPORT_RENDER SceneHandler : public xercesc::HandlerBase {
 public:
 	typedef std::map<std::string, ConfigurableObject *> NamedObjectMap;
 	typedef std::map<std::string, std::string, SimpleStringOrdering> ParameterMap;
 
-	SceneHandler(const SAXParser *parser, const ParameterMap &params,
-			NamedObjectMap *objects = NULL, bool isIncludedFile = false);
+	SceneHandler(const xercesc::SAXParser *parser, 
+			const ParameterMap &params, NamedObjectMap *objects = NULL, 
+			bool isIncludedFile = false);
 	virtual ~SceneHandler();
 
 	/// Convenience method -- load a scene from a given filename 
@@ -106,7 +108,7 @@ public:
 	virtual void endDocument();
 	virtual void startElement(
 		const XMLCh* const name,
-		AttributeList& attributes
+		xercesc::AttributeList& attributes
 	);
 	virtual void endElement(const XMLCh* const name);
 	virtual void characters(const XMLCh* const chars, const XMLSize_t length);
@@ -117,16 +119,12 @@ public:
 	// -----------------------------------------------------------------------
 	//  Implementation of the SAX ErrorHandler interface
 	// -----------------------------------------------------------------------
-	void warning(const SAXParseException& exc);
-	void error(const SAXParseException& exc);
-	void fatalError(const SAXParseException& exc);
+	void warning(const xercesc::SAXParseException& exc);
+	void error(const xercesc::SAXParseException& exc);
+	void fatalError(const xercesc::SAXParseException& exc);
 protected:
-	inline std::string transcode(const XMLCh * const xmlName) const {
-		char *value = XMLString::transcode(xmlName);
-		std::string result(value);
-		XMLString::release(&value);
-		return result;
-	}
+	std::string transcode(const XMLCh * input) const;
+
 	Float parseFloat(const std::string &name, const std::string &str,
 			Float defVal = -1) const;
 
@@ -163,7 +161,8 @@ private:
 	typedef std::pair<ETag, const Class *> TagEntry;
 	typedef boost::unordered_map<std::string, TagEntry> TagMap;
 	
-	const SAXParser *m_parser;
+	const xercesc::SAXParser *m_parser;
+	xercesc::XMLTranscoder* m_transcoder;
 	ref<Scene> m_scene;
 	ParameterMap m_params;
 	NamedObjectMap *m_namedObjects;

@@ -29,6 +29,8 @@
 #include <mitsuba/core/fstream.h>
 #include <boost/algorithm/string.hpp>
 
+XERCES_CPP_NAMESPACE_USE
+
 SceneLoader::SceneLoader(FileResolver *resolver, const fs::path &filename,
 	const std::map<std::string, std::string, SimpleStringOrdering> &parameters) 
 	: Thread("load"), m_resolver(resolver), m_filename(fromFsPath(filename)),
@@ -100,11 +102,11 @@ void SceneLoader::run() {
 				filePath = fs::absolute(filename).parent_path(),
 				baseName = filename.stem();
 
-			SLog(EInfo, "Parsing scene description from \"%s\" ..", qPrintable(m_filename));
+			SLog(EInfo, "Parsing scene description from \"%s\" ..", filename.string().c_str());
 
 			if (!fs::exists(filename))
 				SLog(EError, "Unable to load scene \"%s\": file not found!",
-					qPrintable(m_filename));
+					filename.string().c_str());
 
 			try {
 				parser->parse(filename.c_str());
@@ -134,7 +136,7 @@ void SceneLoader::run() {
 			/* Also generate a DOM representation for the Qt-based GUI */
 			QFile file(m_filename);
 			if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-				Log(EError, "Unable to open the file \"%s\"", qPrintable(m_filename));
+				Log(EError, "Unable to open the file \"%s\"", filename.string().c_str());
 			QString errorMsg;
 			int line, column;
 			if (!m_result->doc.setContent(&file, &errorMsg, &line, &column))

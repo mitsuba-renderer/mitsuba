@@ -320,8 +320,8 @@ public:
 			m_config.technique == PathSampler::EBidirectional ? 100000 : 200000;
 
 		if (m_config.workUnits <= 0) 
-			m_config.workUnits = std::max((size_t) std::ceil((cropSize.x 
-				* cropSize.y * sampleCount) / 200000.0f), (size_t) 1);
+			m_config.workUnits = std::max((int) std::ceil((cropSize.x 
+				* cropSize.y * sampleCount) / 200000.0f), 1);
 
 		m_config.nMutations = (cropSize.x * cropSize.y *
 			sampleCount) / m_config.workUnits;

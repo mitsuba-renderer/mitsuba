@@ -30,6 +30,7 @@
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/version.h>
 #include <mitsuba/core/appender.h>
 #include <mitsuba/render/util.h>
@@ -390,6 +391,7 @@ int mts_main(int argc, char **argv) {
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
+	FileStream::staticInitialization();
 	Spectrum::staticInitialization();
 	Bitmap::staticInitialization();
 	Scheduler::staticInitialization();
@@ -418,6 +420,7 @@ int mts_main(int argc, char **argv) {
 	Scheduler::staticShutdown();
 	Bitmap::staticShutdown();
 	Spectrum::staticShutdown();
+	FileStream::staticShutdown();
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();
