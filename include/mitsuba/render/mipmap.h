@@ -219,6 +219,17 @@ public:
 
 		m_pyramid[0].cleanup();
 		m_pyramid[0].init((Value *) bitmap->getData(), m_minimum, m_maximum, m_average);
+
+		if (m_minimum.min() < 0) {
+			Log(EWarn, "The texture contains negative pixel values! These will be clamped!");
+			Value *value = (Value *) bitmap->getData();
+
+			for (size_t i=0, count=bitmap->getPixelCount(); i<count; ++i) 
+				(*value++).clampNegative();
+
+			m_pyramid[0].init((Value *) bitmap->getData(), m_minimum, m_maximum, m_average);
+		}
+
 		m_sizeRatio[0] = Vector2(1, 1);
 
 		/* 3. Progressively downsample until only a 1x1 image is left */

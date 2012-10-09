@@ -277,11 +277,6 @@ public:
 					rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy, 
 					createCache ? cacheFile : fs::path(), timestamp);
 		}
-
-		if ((m_mipmap1 && m_mipmap1->getMinimum().min() < 0) ||
-		    (m_mipmap3 && m_mipmap3->getMinimum().min() < 0))
-			Log(EError, "\"%s\": The texture map contains negative pixel values! This is not allowed.",
-				m_filename.string().c_str());
 	}
 
 	inline ReconstructionFilter::EBoundaryCondition parseWrapMode(const std::string &wrapMode) {
