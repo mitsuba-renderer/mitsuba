@@ -886,7 +886,7 @@ void GLWidget::paintGL() {
 	m_renderer->setDepthMask(true);
 	if (m_context == NULL) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		m_renderer->clear();
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		m_renderer->setBlendMode(Renderer::EBlendAlpha);
 		m_renderer->blitTexture(m_logoTexture);
 		m_renderer->setBlendMode(Renderer::EBlendNone);
