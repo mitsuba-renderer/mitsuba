@@ -181,6 +181,10 @@ public:
 				std::numeric_limits<Float>::infinity(), Spectrum::EIlluminant);
 		}
 
+		if (m_mipmap->getMinimum().min() < 0)
+			Log(EError, "\"%s\": The environment map contains negative pixel values! This is not allowed.",
+				m_filename.string().c_str());
+
 		if (props.hasProperty("intensityScale"))
 			Log(EError, "The 'intensityScale' parameter has been deprecated and is now called scale.");
 
