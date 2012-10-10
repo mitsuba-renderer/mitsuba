@@ -104,7 +104,7 @@ if sys.platform == 'win32':
 	installTargets += env.Install(distDir, '#data/windows/README.txt')
 
 	if 'REDIST_PATH' in env:
-		install(distDir, ['libmmd.dll', 'libiomp5md.dll'], prefix = env['REDIST_PATH'])
+		install(distDir, ['libmmd.dll', 'libiomp5md.dll', 'svml_dispmd.dll'], prefix = env['REDIST_PATH'])
 
 	if hasQt:
 		install(distDir, ['mtsgui/mtsgui.exe'])
