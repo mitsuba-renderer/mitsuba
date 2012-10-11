@@ -41,11 +41,15 @@ StreamAppender::StreamAppender(const std::string &filename)
 void StreamAppender::readLog(std::string &target) {
 	Assert(m_isFile);
 	std::fstream &stream = * ((std::fstream *) m_stream);
+	if (!stream.good()) {
+		target = "";
+		return;
+	}
 	stream.flush();
 	stream.seekg(0, std::ios::end);
 	std::streamoff size = stream.tellg();
-	if (size == 0) {
-		target.clear();
+	if (stream.fail() || size == 0) {
+		target = "";
 		return;
 	}
 	target.resize((size_t) size);
@@ -62,7 +66,7 @@ void StreamAppender::readLog(std::string &target) {
 void StreamAppender::append(ELogLevel level, const std::string &text) {
 	/* Insert a newline if the last message was a progress message */
 	if (m_lastMessageWasProgress && !m_isFile)
-		std::cout << endl;
+		(*m_stream) << endl;
 	(*m_stream) << text << endl;
 	m_lastMessageWasProgress = false;
 }
@@ -70,8 +74,8 @@ void StreamAppender::append(ELogLevel level, const std::string &text) {
 void StreamAppender::logProgress(Float progress, const std::string &name,
 	const std::string &formatted, const std::string &eta, const void *ptr) {
 	if (!m_isFile) {
-		std::cout << formatted;
-		std::cout.flush();
+		(*m_stream) << formatted;
+		m_stream->flush();
 	}
 	m_lastMessageWasProgress = true;
 }
