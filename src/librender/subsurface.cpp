@@ -46,8 +46,6 @@ void Subsurface::setParent(ConfigurableObject *parent) {
 		if (std::find(m_shapes.begin(), m_shapes.end(), shape) == m_shapes.end()) {
 			m_shapes.push_back(shape);
 		}
-	} else {
-		Log(EError, "IsotropicDipole: Invalid child node!");
 	}
 }
 
