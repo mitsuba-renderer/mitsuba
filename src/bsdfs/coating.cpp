@@ -379,6 +379,11 @@ public:
 		return SmoothCoating::sample(bRec, pdf, sample);
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		return component < (int) m_components.size()
+			? m_nested->getRoughness(its, component) : (Float) 0;
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SmoothCoating[" << endl

@@ -614,6 +614,12 @@ public:
 		return al / (4.0f * M_PI) * c1 * c2 / (c1 + c2);
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		/* For lack of a better value, treat this material as diffuse 
+		   in Manifold Exploration */
+		return std::numeric_limits<Float>::infinity();
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "IrawanClothBRDF[" << endl

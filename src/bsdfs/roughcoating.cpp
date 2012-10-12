@@ -437,6 +437,12 @@ public:
 		return RoughCoating::sample(bRec, pdf, sample);
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		return component < (int) m_components.size()
+			? m_nested->getRoughness(its, component)
+			: m_alpha->getAverage().average();
+	}
+
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(BSDF))) {
 			if (m_nested != NULL)

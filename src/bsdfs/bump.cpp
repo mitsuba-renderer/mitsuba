@@ -230,6 +230,10 @@ public:
 		return result;
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		return m_nested->getRoughness(its, component);
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "BumpMap[" << endl
