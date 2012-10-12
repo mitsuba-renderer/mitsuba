@@ -125,25 +125,26 @@ public:
 	inline bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *temp) const {
 		Ray ray;
 		m_worldToObject.transformAffine(_ray, ray);
-		Float hit = -ray.o.z/ray.d.z;
+		Float hit = -ray.o.z / ray.d.z;
 
 		if (hit < mint || hit > maxt)
 			return false;
 
 		Point local = ray(hit);
 
-		if (std::abs(local.x) > 1 || std::abs(local.y) > 1)
-			return false;
+		if (std::abs(local.x) <= 1 && std::abs(local.y) <= 1) {
+			t = hit;
 
-		t = hit;
+			if (temp) {
+				Float *data = static_cast<Float *>(temp);
+				data[0] = local.x;
+				data[1] = local.y;
+			}
 
-		if (temp) {
-			Float *data = static_cast<Float *>(temp);
-			data[0] = local.x;
-			data[1] = local.y;
+			return true;
 		}
 
-		return true;
+		return false;
 	}
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt) const {

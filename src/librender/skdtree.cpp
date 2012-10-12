@@ -128,6 +128,11 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 		if (EXPECT_TAKEN(maxt > mint)) {
 			if (rayIntersectHavran<false>(ray, mint, maxt, its.t, temp)) {
 				fillIntersectionRecord<true>(ray, temp, its);
+				if (std::isnan(its.t)) {
+					cout << ray.toString() << endl;
+					cout << its.toString() << endl;
+					Log(EError, "Whaat?!");
+				}
 				return true;
 			}
 		}
