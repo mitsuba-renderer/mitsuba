@@ -44,7 +44,7 @@
 #include <signal.h>
 #endif
 
-XERCES_CPP_NAMESPACE_USE
+using XERCES_CPP_NAMESPACE::SAXParser;
 
 using namespace mitsuba;
 

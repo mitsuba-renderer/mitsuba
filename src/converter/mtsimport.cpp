@@ -41,8 +41,6 @@
 #include <mitsuba/core/getopt.h>
 #endif
 
-XERCES_CPP_NAMESPACE_USE
-
 class ConsoleGeometryConverter : public GeometryConverter {
 public:
 	inline ConsoleGeometryConverter() {
@@ -163,6 +161,7 @@ int mts_main(int argc, char **argv) {
 	int retval;
 	
 	/* Initialize Xerces-C */
+	XERCES_CPP_NAMESPACE_USE
 	try {
 		XMLPlatformUtils::Initialize();
 	} catch(const XMLException &toCatch) {

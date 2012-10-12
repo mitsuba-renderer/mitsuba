@@ -23,7 +23,6 @@
 #if defined(Assert)
 # undef Assert
 #endif
-#include <xercesc/parsers/SAXParser.hpp>
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/sshstream.h>
