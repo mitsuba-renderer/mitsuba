@@ -261,6 +261,12 @@ public:
 		}
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		int bsdfIndex = m_indices[component].first;
+		component = m_indices[component].second;
+		return m_bsdfs[bsdfIndex]->getRoughness(its, component);
+	}
+
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(BSDF))) {
 			BSDF *bsdf = static_cast<BSDF *>(child);

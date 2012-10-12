@@ -263,6 +263,15 @@ public:
 		manager->serialize(stream, m_exponent.get());
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		Assert(component == 0 || component == 1);
+		/* Find the Beckmann-equivalent roughness */
+		if (component == 0)
+			return std::sqrt(2 / (2+m_exponent->eval(its).average()));
+		else
+			return std::numeric_limits<Float>::infinity();
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Phong[" << endl

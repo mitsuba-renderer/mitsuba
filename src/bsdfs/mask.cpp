@@ -218,6 +218,10 @@ public:
 		return result;
 	}
 
+	Float getRoughness(const Intersection &its, int component) const {
+		return m_nestedBSDF->getRoughness(its, component);
+	}
+
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "opacity") 
 			m_opacity = static_cast<Texture *>(child);

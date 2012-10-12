@@ -1,5 +1,5 @@
 Name:		mitsuba
-Version:	0.3.1
+Version:	0.4.1
 Release:	1%{?dist}
 Summary:	Mitsuba renderer 
 Group:		Applications/Graphics
@@ -7,7 +7,7 @@ License:	GPL-3
 URL:		http://www.mitsuba-renderer.org
 Source:		%{name}-%{version}.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
-BuildRequires:	gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel
+BuildRequires:	gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel eigen3-devel
 Requires:	boost qt4 OpenEXR-libs xerces-c python libGLEWmx collada-dom
 %description
 Mitsuba is an extensible rendering framework written in portable C++. It implements unbiased as well as biased techniques and contains heavy optimizations targeted towards current CPU architectures. 
@@ -24,7 +24,7 @@ building custom plugins and other extensions for Mitsuba.
 %prep
 %setup -q
 %build
-cp build/config-linux.py config.py
+cat build/config-linux-gcc.py | sed -e "s/\(boost_[^']*\)/\1-mt/g" > config.py
 scons
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -36,13 +36,13 @@ mkdir -p $RPM_BUILD_ROOT/usr/share/pixmaps
 mkdir -p $RPM_BUILD_ROOT/usr/share/applications
 mkdir -p $RPM_BUILD_ROOT/usr/include
 strip dist/lib* dist/mtsgui dist/mitsuba dist/mtssrv dist/mtsutil
-strip dist/plugins/* dist/python/*
+strip dist/plugins/* dist/python/*/*
 cp dist/libmitsuba-*.so $RPM_BUILD_ROOT%{_libdir}
 cp dist/mtsgui $RPM_BUILD_ROOT%{_bindir}
 cp dist/mitsuba $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtssrv $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtsutil $RPM_BUILD_ROOT%{_bindir}
-cp dist/python/mitsuba.so $RPM_BUILD_ROOT%{_libdir}/python2.7/lib-dynload
+cp dist/python/2.7/mitsuba.so $RPM_BUILD_ROOT%{_libdir}/python2.7/lib-dynload
 cp dist/plugins/* $RPM_BUILD_ROOT/usr/share/mitsuba/plugins
 cp -Rdp dist/data $RPM_BUILD_ROOT/usr/share/mitsuba/data
 cp src/mtsgui/resources/mitsuba48.png $RPM_BUILD_ROOT/usr/share/pixmaps
@@ -61,6 +61,12 @@ rm -rf $RPM_BUILD_ROOT
 %files devel
 /usr/include/*
 %changelog
+
+* Wed Oct 10 2012 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.1%{?dist}
+- Upgrade to version 0.4.1
+
+* Thu Sep 27 2012 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.0%{?dist}
+- Upgrade to version 0.4.0
 
 * Fri Apr 13 2012 Wenzel Jakob <wenzel@cs.cornell.edu> 0.3.1%{?dist}
 - Upgrade to version 0.3.1

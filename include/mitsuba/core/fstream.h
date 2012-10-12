@@ -99,6 +99,19 @@ public:
 	//! @}
 	// =============================================================
 
+	// =============================================================
+	//! @{ \name Miscellaneous
+	// =============================================================
+
+	/// Initialize the file I/O layer (unicode conversions etc.)
+	static void staticInitialization();
+
+	/// Release resources taken up by staticInitialization()
+	static void staticShutdown();
+
+	//! @}
+	// =============================================================
+
 	MTS_DECLARE_CLASS()
 protected:
 	/** \brief Virtual destructor

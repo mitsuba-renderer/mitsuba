@@ -178,7 +178,7 @@ public:
 		Spectrum *target = (Spectrum *) bitmap->getFloatData();
 		Spectrum value = 
 			m_radiance * (2 * M_PI * (1-std::cos(m_theta))) *
-			static_cast<Float>(bitmap->getWidth() * bitmap->getHeight()) 
+			static_cast<Float>(bitmap->getWidth() * bitmap->getHeight())
 			/ (2 * M_PI * M_PI * nSamples);
 
 		for (size_t i=0; i<nSamples; ++i) {
@@ -192,7 +192,7 @@ public:
 				std::min(std::max(0, (int) (sphCoords.azimuth * factor.x)), bitmap->getWidth()-1),
 				std::min(std::max(0, (int) (sphCoords.elevation * factor.y)), bitmap->getHeight()-1));
 
-			target[pos.x + pos.y * bitmap->getWidth()] += value / sinTheta;
+			target[pos.x + pos.y * bitmap->getWidth()] += value / std::max(1e-3f, sinTheta);
 		}
 
 		/* Instantiate a nested envmap plugin */

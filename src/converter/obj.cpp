@@ -30,6 +30,12 @@ std::set<std::string> availableTextures;
 
 void referenceTexture(GeometryConverter *cvt, std::ostream &os, const std::string &parameter, 
 		const std::string &indent, const fs::path &textureDir, std::string filename) {
+	/* Prevent Linux/OSX fs::path handling issues for OBJ files created on Windows */
+	for (size_t i=0; i<filename.length(); ++i) {
+		if (filename[i] == '\\')
+			filename[i] = '/';
+	}
+
 	fs::path path = fs::path(filename);
 	fs::path targetPath = textureDir / path.filename();
 	std::string textureName = targetPath.filename().string();
@@ -75,7 +81,7 @@ void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mt
 		const std::string &diffuseMap, const std::string maskMap) {
 	if (mtlName == "") 
 		return;
-	SLog(EInfo, "Copying material \"%s\" ..", mtlName.c_str());
+	SLog(EInfo, "Importing material \"%s\" ..", mtlName.c_str());
 	std::string indent = "";
 
 	if (maskMap != "") {

@@ -27,6 +27,7 @@
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/appender.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/shvector.h>
@@ -42,6 +43,8 @@
 #else
 #include <signal.h>
 #endif
+
+XERCES_CPP_NAMESPACE_USE
 
 using namespace mitsuba;
 
@@ -402,6 +405,7 @@ int main(int argc, char **argv) {
 	Statistics::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
+	FileStream::staticInitialization();
 	Spectrum::staticInitialization();
 	Bitmap::staticInitialization();
 	Scheduler::staticInitialization();
@@ -430,6 +434,7 @@ int main(int argc, char **argv) {
 	Scheduler::staticShutdown();
 	Bitmap::staticShutdown();
 	Spectrum::staticShutdown();
+	FileStream::staticShutdown();
 	Logger::staticShutdown();
 	Thread::staticShutdown();
 	Statistics::staticShutdown();

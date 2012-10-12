@@ -37,7 +37,7 @@ public:
 
     void append(ELogLevel level, const std::string &message) {
 		if (!m_ignoreMessages) {
-			emit textMessage(level, QString::fromLatin1(message.c_str()));
+			emit textMessage(level, QString::fromUtf8(message.c_str()));
 			if (level >= EWarn)
 				floodCheck();
 		}
@@ -47,8 +47,8 @@ public:
 		const std::string &formatted, const std::string &eta,
 		const void *ptr) {
 		emit progressMessage((RenderJob *) ptr, 
-			QString::fromLatin1(name.c_str()), (float) progress,
-			QString::fromLatin1(eta.c_str()));
+			QString::fromUtf8(name.c_str()), (float) progress,
+			QString::fromUtf8(eta.c_str()));
 	}
 
 	void floodCheck() {

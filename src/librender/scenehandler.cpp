@@ -23,14 +23,19 @@
 #if defined(Assert)
 # undef Assert
 #endif
+
 #include <xercesc/parsers/SAXParser.hpp>
 #include <xercesc/framework/MemBufInputSource.hpp>
+#include <xercesc/util/TransService.hpp>
 #include <mitsuba/render/scenehandler.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/scene.h>
 #include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
+XERCES_CPP_NAMESPACE_USE
+
+#define TRANSCODE_BLOCKSIZE 2048
 
 #if !defined(__OSX__)
 	#define XMLLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
@@ -94,9 +99,15 @@ SceneHandler::SceneHandler(const SAXParser *parser,
 	m_tags["transform"]  = TagEntry(ETransform,  (Class *) NULL);
 	m_tags["include"]    = TagEntry(EInclude,    (Class *) NULL);
 	m_tags["alias"]      = TagEntry(EAlias,      (Class *) NULL);
+
+
+	XMLTransService::Codes failReason; 
+	m_transcoder = XMLPlatformUtils::fgTransService->makeNewTranscoderFor(
+			"UTF-8", failReason, TRANSCODE_BLOCKSIZE);
 }
 
 SceneHandler::~SceneHandler() {
+	delete m_transcoder;
 	clear();
 	if (!m_isIncludedFile)
 		delete m_namedObjects;
@@ -110,6 +121,28 @@ void SceneHandler::clear() {
 				it->second->decRef();
 		m_namedObjects->clear();
 	}
+}
+
+std::string SceneHandler::transcode(const XMLCh * input) const {
+	XMLSize_t charsToBeConsumed = XMLString::stringLen(input);
+	char output[TRANSCODE_BLOCKSIZE + 4]; 
+	XMLSize_t totalCharsConsumed = 0;
+	std::string result;
+
+	while (totalCharsConsumed < charsToBeConsumed) {
+		XMLSize_t charsConsumed = 0;
+		XMLSize_t charsProduced = m_transcoder->transcodeTo(input,
+			std::min((XMLSize_t) 2048, charsToBeConsumed - totalCharsConsumed), 
+			(XMLByte *) output, TRANSCODE_BLOCKSIZE, charsConsumed,
+			XMLTranscoder::UnRep_RepChar);
+
+		totalCharsConsumed += charsConsumed;
+		output[charsProduced] = '\0';
+		input += charsConsumed;
+		result += output;
+	}
+
+	return result;
 }
 
 // -----------------------------------------------------------------------

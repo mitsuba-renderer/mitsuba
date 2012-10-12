@@ -86,7 +86,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 	if (backupFilename.endsWith(".xml", Qt::CaseInsensitive))
 		backupFilename.replace(backupFilename.length()-4, 4, ".bak");
 	SLog(EInfo, "Saving a backup copy of \"%s\" as \"%s\"",
-		qPrintable(filename), qPrintable(backupFilename));
+		QStringToUTF8(filename), QStringToUTF8(backupFilename));
 
 	QFile file(filename), backupFile(backupFilename);
 	if (backupFile.exists())
@@ -97,7 +97,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		
 	if (!file.open(QIODevice::ReadOnly))
 		SLog(EError, "Unable to open \"%s\" with read access -- stopping "
-			"the upgrade operation.", qPrintable(filename));
+			"the upgrade operation.", QStringToUTF8(filename));
 	QByteArray inputArray = file.readAll(), outputArray;
 	file.close();
 		
@@ -119,7 +119,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		QFile trafoFile(trafoFilename);
 		if (!trafoFile.open(QIODevice::ReadOnly | QIODevice::Text))
 			SLog(EError, "Unable to open the stylesheet \"%s\" -- stopping "
-				"the upgrade operation.", qPrintable(trafoFilename));
+				"the upgrade operation.", QStringToUTF8(trafoFilename));
 		
 		QXmlQuery query(QXmlQuery::XSLT20);
 		query.setMessageHandler(&handler);
@@ -127,7 +127,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		query.setQuery(&trafoFile);
 		if (!query.isValid())
 			SLog(EError, "Unable to parse the stylesheet \"%s\" -- stopping "
-				"the upgrade operation.", qPrintable(trafoFilename));
+				"the upgrade operation.", QStringToUTF8(trafoFilename));
 
 		SLog(EInfo, "Transformation is ready, running it now..");
 		QXmlFormatter formatter(query, &outputBuffer);
@@ -152,11 +152,11 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 	
 	/* Done, write back to disk */
 	SLog(EInfo, "Successfully applied %i transformations, writing the result "
-		"to \"%s\" ..", nTransformations, qPrintable(filename));
+		"to \"%s\" ..", nTransformations, QStringToUTF8(filename));
 
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
 		SLog(EError, "Unable to open \"%s\" with write access -- stopping "
-			"the upgrade operation.", qPrintable(filename));
+			"the upgrade operation.", QStringToUTF8(filename));
 	}
 
 	int line, column;
@@ -164,7 +164,7 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 	QDomDocument doc;
 	if (!doc.setContent(inputArray, &errorMsg, &line, &column))
 		SLog(EError, "Unable to parse file: error %s at line %i, colum %i",
-			qPrintable(errorMsg), line, column);
+			QStringToUTF8(errorMsg), line, column);
 	QDomElement root = doc.documentElement();
 
 	/* Search for include nodes */

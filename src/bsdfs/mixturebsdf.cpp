@@ -285,6 +285,12 @@ public:
 			BSDF::addChild(name, child);
 		}
 	}
+	
+	Float getRoughness(const Intersection &its, int component) const {
+		int bsdfIndex = m_indices[component].first;
+		component = m_indices[component].second;
+		return m_bsdfs[bsdfIndex]->getRoughness(its, component);
+	}
 
 	std::string toString() const {
 		std::ostringstream oss;
@@ -417,7 +423,6 @@ public:
 			program->setParameter(parameterIDs[ctr++], m_weights[i]);
 		}
 	}
-
 
 	MTS_DECLARE_CLASS()
 private:

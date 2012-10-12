@@ -1,3 +1,17 @@
+mitsuba (0.4.1-1) unstable; urgency=low
+  * negative pixel values in textures and environment maps are handled more gracefully.
+  * minor robustness improvements to the OBJ and COLLADA importers.
+  * fixed the Ubuntu packages so that they don't depend on a specific version of the libjpeg development headers.
+  * fixed a stack overflow issue in the bidirectional path tracer, as well as some other crash-causing bugs that were found via the Breakpad reports.
+  * fixed an issue where sun and sky interpreted the combination of a 'toWorld' transform and explicit 'sunDirection' differently, causing misalignment.
+  * fixed a photon mapper regression involving environment maps.
+  * Edgar Velázquez-Armendáriz rewrote a piece of initialization code that prevented Mitsuba from running on Windows XP.
+  * Sean Bell contributed an improved setpath.sh script, which adds ZSH autocompletion on Linux.
+  * fixed some issues in the bidirectional abstraction layer when dealing with alpha masks.
+  * fixed a bug where the rectangle shape produced incorrect results when used as an area light.
+  * on OSX, the python bindings could not be loaded due to invalid library import paths - this now works.
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Wed, 10 Oct 2012 00:00:00 -0400
+
 mitsuba (0.4.0-1) unstable; urgency=low
   * New bidirectional rendering algorithms: Bidirectional path tracing,
     Primary sample space MLT, Path space MLT, Energy redistribution path

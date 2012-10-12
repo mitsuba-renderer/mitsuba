@@ -289,13 +289,15 @@ Float Path::miWeight(const Scene *scene, const Path &emitterSubpath,
 	for (int i=0; i<=s; ++i) {
 		const PathVertex *v = emitterSubpath.vertex(i);
 		connectable[pos] = v->isConnectable();
-		isNull[pos++] = v->isNullInteraction();
+		isNull[pos] = v->isNullInteraction() && !connectable[pos];
+		pos++;
 	}
 
 	for (int i=t; i>=0; --i) {
 		const PathVertex *v = sensorSubpath.vertex(i);
 		connectable[pos] = v->isConnectable();
-		isNull[pos++] = v->isNullInteraction();
+		isNull[pos] = v->isNullInteraction() && !connectable[pos];
+		pos++;
 	}
 
 	if (k <= 3)
