@@ -204,6 +204,7 @@ public:
 				if (suitabilities.normalize() == 0) {
 					/* No mutator can handle this path -- give up */
 					accumulatedWeight += m_config.chainLength - it;
+					break;
 				}
 
 				mutatorIdx = (int) suitabilities.sample(m_indepSampler->next1D());

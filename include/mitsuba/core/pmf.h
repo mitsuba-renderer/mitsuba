@@ -124,8 +124,15 @@ public:
 	inline size_t sample(Float sampleValue) const {
 		std::vector<Float>::const_iterator entry = 
 				std::lower_bound(m_cdf.begin(), m_cdf.end(), sampleValue);
-		size_t index = (size_t) std::max((ptrdiff_t) 0, entry - m_cdf.begin() - 1);
-		return std::min(index, m_cdf.size()-2);
+		size_t index = std::min(m_cdf.size()-2,
+			(size_t) std::max((ptrdiff_t) 0, entry - m_cdf.begin() - 1));
+
+		/* Handle a rare corner-case where a entry has probability 0
+		   but is sampled nonetheless */
+		while (operator[](index) == 0 && index < m_cdf.size()-1)
+			++index;
+
+		return index;
 	}
 
 	/**
