@@ -505,7 +505,7 @@ public:
 		Assert(component == 0 || component == 1);
 
 		if (component == 0)
-			return m_alpha->getAverage().average();
+			return m_alpha->eval(its).average();
 		else
 			return std::numeric_limits<Float>::infinity();
 	}

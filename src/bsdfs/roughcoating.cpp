@@ -440,7 +440,7 @@ public:
 	Float getRoughness(const Intersection &its, int component) const {
 		return component < (int) m_components.size()
 			? m_nested->getRoughness(its, component)
-			: m_alpha->getAverage().average();
+			: m_alpha->eval(its).average();
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
