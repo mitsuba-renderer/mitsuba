@@ -92,39 +92,40 @@ struct MTS_EXPORT_CORE Triangle {
 	 */
 	FINLINE static bool rayIntersect(const Point &p0, const Point &p1, const Point &p2, 
 		const Ray &ray, Float &u, Float &v, Float &t) {
-		/* find vectors for two edges sharing v[0] */
+		/* Find vectors for two edges sharing */
 		Vector edge1 = p1 - p0, edge2 = p2 - p0;
 
-		/* begin calculating determinant - also used to calculate U parameter */
+		/* Begin calculating determinant - also used to calculate U parameter */
 		Vector pvec = cross(ray.d, edge2);
 
-		/* if determinant is near zero, ray lies in plane of triangle */
 		Float det = dot(edge1, pvec);
-
 		if (det == 0)
 			return false;
 		Float inv_det = 1.0f / det;
 
-		/* calculate distance from v[0] to ray origin */
+		/* Calculate distance from v[0] to ray origin */
 		Vector tvec = ray.o - p0;
 
-		/* calculate U parameter and test bounds */
+		/* Calculate U parameter and test bounds */
 		u = dot(tvec, pvec) * inv_det;
 		if (u < 0.0 || u > 1.0)
 			return false;
 
-		/* prepare to test V parameter */
+		/* Prepare to test V parameter */
 		Vector qvec = cross(tvec, edge1);
 
-		/* calculate V parameter and test bounds */
+		/* Calculate V parameter and test bounds */
 		v = dot(ray.d, qvec) * inv_det;
-		if (v < 0.0 || u + v > 1.0)
-			return false;
 
-		/* ray intersects triangle -> compute t */
-		t = dot(edge2, qvec) * inv_det;
+		/* Inverted comparison (to catch NaNs) */
+		if (v >= 0.0 && u + v <= 1.0) {
+			/* ray intersects triangle -> compute t */
+			t = dot(edge2, qvec) * inv_det;
 
-		return true;
+			return true;
+		}
+
+		return false;
 	}
 	
 	/** \brief Ray-triangle intersection test
