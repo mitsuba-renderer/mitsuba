@@ -193,7 +193,6 @@ private slots:
 	void updateStatus();
 	void onPreviewSettingsClose();
 	void onSaveAsDialogClose(int reason);
-	void onExportDialogClose(int reason);
 	void onRenderSettingsClose(int reason);
 	void onImportDialogClose(int reason);
 	void onSceneInformationClose(int reason);

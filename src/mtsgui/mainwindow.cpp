@@ -1392,45 +1392,18 @@ inline float toSRGB(float value) {
 }
 
 void MainWindow::on_actionExportImage_triggered() {
-	QFileDialog *dialog = new QFileDialog(this, tr("Export image .."),
-	    "", tr("All supported formats (*.exr *.hdr *.rgbe *.pfm *.png *.jpg *.jpeg);;"
-	           "High dynamic range OpenEXR image (*.exr);;"
-	           "High dynamic range Radiance RGBE image (*.rgbe *.hdr);;"
-	           "High dynamic range Portable Float Map image (*.pfm);;"
-	           "Tonemapped low dynamic range image (*.png *.jpg *.jpeg)"));
-
 	QSettings settings;
-	dialog->setViewMode(QFileDialog::Detail);
-	dialog->setAcceptMode(QFileDialog::AcceptSave);
-
-#if defined(__OSX__)
-	dialog->setOption(QFileDialog::DontUseNativeDialog, true);
-#endif
-
-	dialog->restoreState(settings.value("fileDialogState").toByteArray());
-	dialog->setAttribute(Qt::WA_DeleteOnClose);
-	dialog->setWindowModality(Qt::WindowModal);
-	connect(dialog, SIGNAL(finished(int)), this, SLOT(onExportDialogClose(int)));
-	m_currentChild = dialog;
-	// prevent a tab drawing artifact on Qt/OSX
-	m_activeWindowHack = true;
-	dialog->show();
-	qApp->processEvents();
-	m_activeWindowHack = false;
-}
-
-void MainWindow::onExportDialogClose(int reason) {
-	int currentIndex = ui->tabBar->currentIndex();
-	SceneContext *ctx = m_context[currentIndex];
-
-	QSettings settings;
-	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
-	m_currentChild = NULL;
-
-    if (reason == QDialog::Accepted) {
-        QString fileName = dialog->selectedFiles().value(0);
+	const QString fileName = QFileDialog::getSaveFileName(this,
+		tr("Export image..."), settings.value("exportFileDir").toString(),
+		tr("All supported formats (*.exr *.hdr *.rgbe *.pfm *.png *.jpg *.jpeg);;"
+	        "High dynamic range OpenEXR image (*.exr);;"
+	        "High dynamic range Radiance RGBE image (*.rgbe *.hdr);;"
+	        "High dynamic range Portable Float Map image (*.pfm);;"
+	        "Tonemapped low dynamic range image (*.png *.jpg *.jpeg)"));
+	
+	if (!fileName.isEmpty()) {
 		Bitmap::EFileFormat format;
-		settings.setValue("fileDialogState", dialog->saveState());
+		settings.setValue("exportFileDir", QFileInfo(fileName).absolutePath());
 
 		if (fileName.endsWith(".exr")) {
 			format = Bitmap::EOpenEXR;
@@ -1443,12 +1416,16 @@ void MainWindow::onExportDialogClose(int reason) {
 		} else if (fileName.endsWith(".pfm")) {
 			format = Bitmap::EPFM;
 		} else {
-			SLog(EError, "Unknown file type -- the filename must end in either .exr, .rgbe, .hdr, .pfm, .png, .jpg, or .jpeg");
+			SLog(EError, "Unknown file type -- the filename must end in either"
+				" .exr, .rgbe, .hdr, .pfm, .png, .jpg, or .jpeg");
 			return;
 		}
 
 		ref<FileStream> fs = new FileStream(toFsPath(fileName),
 			FileStream::ETruncReadWrite);
+
+		const int currentIndex = ui->tabBar->currentIndex();
+		const SceneContext *ctx = m_context[currentIndex];
 
 		if (ctx->mode == EPreview)
 			ui->glView->downloadFramebuffer();
