@@ -648,7 +648,7 @@ retry:
 					goto retry;
 				} catch (const std::exception &ex) {
 					QMessageBox::critical(this, tr("Unable to update %1").arg(qFileName),
-						QString(ex.what()), QMessageBox::Ok);
+						QString::fromUtf8(ex.what()), QMessageBox::Ok);
 				}
 			} else {
 				QMessageBox::critical(this, tr("Unable to load %1").arg(qFileName),
@@ -656,7 +656,7 @@ retry:
 			}
 		} else {
 			QMessageBox::critical(this, tr("Unable to load %1").arg(qFileName),
-				QString(loadingThread->getError().c_str()),
+				QString::fromUtf8(loadingThread->getError().c_str()),
 				QMessageBox::Ok);
 		}
 	}
