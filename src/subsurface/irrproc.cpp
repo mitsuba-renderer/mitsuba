@@ -26,18 +26,20 @@ MTS_NAMESPACE_BEGIN
 /* Parallel irradiance sampling implementation (worker) */
 class IrradianceSamplingWorker : public WorkProcessor {
 public:
-	IrradianceSamplingWorker(int irrSamples, bool irrIndirect) 
-		: m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
+	IrradianceSamplingWorker(int irrSamples, bool irrIndirect, Float time) 
+		: m_irrSamples(irrSamples), m_irrIndirect(irrIndirect), m_time(time) {
 	}
 
 	IrradianceSamplingWorker(Stream *stream, InstanceManager *manager) {
 		m_irrSamples = stream->readInt();
 		m_irrIndirect = stream->readBool();
+		m_time = stream->readFloat();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		stream->writeInt(m_irrSamples);
 		stream->writeBool(m_irrIndirect);
+		stream->writeFloat(m_time);
 	}
 
 	ref<WorkUnit> createWorkUnit() const {
@@ -50,8 +52,8 @@ public:
 
 	void prepare() {
 		m_scene = static_cast<Scene *>(getResource("scene"));
-		m_integrator = static_cast<SamplingIntegrator *>(m_scene->getIntegrator());
 		m_sampler = static_cast<Sampler *>(getResource("sampler"));
+		m_integrator = static_cast<SamplingIntegrator *>(getResource("integrator"));
 		m_scene->wakeup(NULL, m_resources);
 	}
 
@@ -60,7 +62,6 @@ public:
 		const PositionSampleVector &positions = *static_cast<const PositionSampleVector *>(workUnit);
 		IrradianceSampleVector *result = static_cast<IrradianceSampleVector *>(workResult);
 		const SamplingIntegrator *integrator = m_integrator.get();
-		Float time = m_scene->getSensor()->getShutterOpen();
 
 		result->clear();
 
@@ -71,7 +72,7 @@ public:
 			its.p = sample.p;
 			its.shFrame = Frame(sample.n);
 			its.shape = m_scene->getShapes()[sample.shapeIndex].get();
-			its.time = time;
+			its.time = m_time;
 			its.hasUVPartials = false;
 
 			result->put(IrradianceSample(
@@ -83,7 +84,7 @@ public:
 	}
 
 	ref<WorkProcessor> clone() const {
-		return new IrradianceSamplingWorker(m_irrSamples, m_irrIndirect);
+		return new IrradianceSamplingWorker(m_irrSamples, m_irrIndirect, m_time);
 	}
 
 	MTS_DECLARE_CLASS()
@@ -95,6 +96,7 @@ private:
 	ref<SamplingIntegrator> m_integrator;
 	int m_irrSamples;
 	bool m_irrIndirect;
+	Float m_time;
 };
 
 void PositionSampleVector::load(Stream *stream) {
@@ -144,10 +146,10 @@ std::string IrradianceSampleVector::toString() const {
 }
 
 IrradianceSamplingProcess::IrradianceSamplingProcess(PositionSampleVector *positions,
-		size_t granularity, int irrSamples, bool irrIndirect,
+		size_t granularity, int irrSamples, bool irrIndirect, Float time,
 		const void *data) 
 	: m_positionSamples(positions), m_granularity(granularity),
-	  m_irrSamples(irrSamples), m_irrIndirect(irrIndirect) {
+	  m_irrSamples(irrSamples), m_irrIndirect(irrIndirect), m_time(time) {
 	m_resultMutex = new Mutex();
 	m_irradianceSamples = new IrradianceSampleVector();
 	m_irradianceSamples->reserve(positions->size());
@@ -161,7 +163,7 @@ IrradianceSamplingProcess::~IrradianceSamplingProcess() {
 }
 
 ref<WorkProcessor> IrradianceSamplingProcess::createWorkProcessor() const {
-	return new IrradianceSamplingWorker(m_irrSamples, m_irrIndirect);
+	return new IrradianceSamplingWorker(m_irrSamples, m_irrIndirect, m_time);
 }
 
 ParallelProcess::EStatus IrradianceSamplingProcess::generateWork(WorkUnit *unit, int worker) {

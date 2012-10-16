@@ -194,7 +194,7 @@ class IrradianceSamplingProcess : public ParallelProcess {
 public:
 	IrradianceSamplingProcess(PositionSampleVector *positions,
 		size_t granularity, int irrSamples, bool irrIndirect, 
-		const void *data);
+		Float time, const void *data);
 
 	inline IrradianceSampleVector *getIrradianceSampleVector() {
 		return m_irradianceSamples.get();
@@ -223,6 +223,7 @@ private:
 	size_t m_samplesRequested, m_granularity;
 	int m_irrSamples;
 	bool m_irrIndirect;
+	Float m_time;
 	ref<Mutex> m_resultMutex;
 	ProgressReporter *m_progress;
 	AABB m_aabb;
