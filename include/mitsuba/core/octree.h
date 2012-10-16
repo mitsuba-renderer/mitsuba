@@ -231,7 +231,7 @@ protected:
 		return result;
 	}
 
-	inline StaticOctree() { }
+	inline StaticOctree() : m_root(NULL) { }
 protected:
 	AABB m_aabb;
 	std::vector<Item> m_items;

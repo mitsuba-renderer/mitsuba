@@ -42,6 +42,7 @@ public:
 		performQuery(m_aabb, m_root, query);
 	}
 
+	MTS_DECLARE_CLASS()
 protected:
 	/// Propagate irradiance approximations througout the tree
 	void propagate(OctreeNode *node);

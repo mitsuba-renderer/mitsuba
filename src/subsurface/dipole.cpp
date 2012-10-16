@@ -437,7 +437,7 @@ public:
 
 		std::vector<IrradianceSample> &samples = proc->getIrradianceSampleVector()->get();
 		sa /= samples.size();
-		
+
 		for (size_t i=0; i<samples.size(); ++i) 
 			samples[i].area = sa;
 

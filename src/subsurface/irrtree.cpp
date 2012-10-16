@@ -35,6 +35,8 @@ IrradianceOctree::IrradianceOctree(const AABB &bounds, Float solidAngleThreshold
 
 IrradianceOctree::IrradianceOctree(Stream *stream, InstanceManager *manager) {
 	m_aabb = AABB(stream);
+	m_maxDepth = stream->readUInt();
+	m_maxItems = stream->readUInt();
 	m_solidAngleThreshold = stream->readFloat();
 
 	size_t items = stream->readSize();
@@ -49,6 +51,8 @@ IrradianceOctree::IrradianceOctree(Stream *stream, InstanceManager *manager) {
 
 void IrradianceOctree::serialize(Stream *stream, InstanceManager *manager) const {
 	m_aabb.serialize(stream);
+	stream->writeUInt(m_maxDepth);
+	stream->writeUInt(m_maxItems);
 	stream->writeFloat(m_solidAngleThreshold);
 
 	stream->writeSize(m_items.size());
@@ -98,5 +102,5 @@ void IrradianceOctree::propagate(OctreeNode *node) {
 	++statsNumNodes;
 }
 
-
+MTS_IMPLEMENT_CLASS_S(IrradianceOctree, false, SerializableObject)
 MTS_NAMESPACE_END

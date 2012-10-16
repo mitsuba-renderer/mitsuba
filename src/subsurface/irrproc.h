@@ -114,6 +114,7 @@ public:
 	inline IrradianceSample(Stream *stream) {
 		p = Point(stream);
 		E = Spectrum(stream);
+		area = stream->readFloat();
 	}
 
 	/**
@@ -127,6 +128,7 @@ public:
 	inline void serialize(Stream *stream) const {
 		p.serialize(stream);
 		E.serialize(stream);
+		stream->writeFloat(area);
 	}
 
 	/// Return the position (used by the octree code)
