@@ -51,8 +51,8 @@
 #define ONE_MINUS_EPS_FLT 0.999999940395355225f
 #define ONE_MINUS_EPS_DBL 0.999999999999999888
 #else
-#define ONE_MINUS_EPS_FLT 0x1.fffffffffffff7p-1
-#define ONE_MINUS_EPS_DBL 0x1.fffffep-1f
+#define ONE_MINUS_EPS_FLT 0x1.fffffep-1f
+#define ONE_MINUS_EPS_DBL 0x1.fffffffffffff7p-1
 #endif
 
 #ifdef SINGLE_PRECISION
