@@ -411,6 +411,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	Properties sensorProps = oldSensor->getProperties();
 
 	if (oldSensor->getClass()->derivesFrom(MTS_CLASS(PerspectiveCamera))) {
+		sensorProps.removeProperty("focalLength");
 		sensorProps.setString("fovAxis", "y", false);
 		sensorProps.setFloat("fov", 
 			static_cast<const PerspectiveCamera *>(oldSensor.get())->getYFov(), false);

@@ -175,7 +175,7 @@ std::string Properties::toString() const {
 				oss << boost::get<Point>(data).toString();
 				break;
 			case ETransform:
-				oss << boost::get<Transform>(data).toString();
+				oss << indent(boost::get<Transform>(data).toString());
 				break;
 			case ESpectrum:
 				oss << boost::get<Spectrum>(data).toString();
