@@ -37,20 +37,23 @@
 		</param>
 		<param name="strictNormals" readableName="Strict surface normals" type="boolean" default="false" importance="1">
 			<p>
-			This parameter specifies the action to be taken when the geometric
-			and shading normals of a surface don't agree on whether a ray is on
-			the front or back-side of a surface.
+				Be strict about potential inconsistencies involving shading normals?
 			</p>
-			<p>
-			When <tt>strictNormals</tt> is set to <tt>false</tt>, the shading normal has 
-			precedence, and rendering proceeds normally at the risk of
-			introducing small light leaks (this is the default).
-			</p>
-			<p>
-			When <tt>strictNormals</tt> is set to <tt>true</tt>, the random walk is
-			terminated when encountering such a situation. This may
-			produce silhouette darkening on badly tesselated meshes.
-			</p>
+			<p>Triangle meshes often rely on interpolated shading normals
+			to suppress the inherently faceted appearance of the underlying geometry. These
+			"fake" normals are not without problems, however. They can lead to paradoxical
+			situations where a light ray impinges on an object from a direction that is classified as "outside"
+			according to the shading normal, and "inside" according to the true geometric normal.</p>
+			<p>The <tt>strictNormals</tt>
+			parameter specifies the intended behavior when such cases arise. The default (<tt>false</tt>, i.e. "carry on") 
+			gives precedence to information given by the shading normal and considers such light paths to be valid.
+			This can theoretically cause light "leaks" through boundaries, but it is not much of a problem in practice.</p>
+			<p>When set to <tt>true</tt>, the path tracer detects inconsistencies and ignores these paths. When objects
+			are poorly tesselated, this latter option may cause them to lose a significant amount of the incident 
+			radiation (or, in other words, they will look dark).
+			The bidirectional integrators in Mitsuba (BDPT, PSSMLT, MLT, ..)
+			implicitly have <tt>strictNormals</tt> activated. Hence, another use of this parameter
+			is to match renderings created by these methods.</p>
 		</param>
 	</plugin>
 
@@ -159,33 +162,48 @@
 
 	<plugin type="integrator" name="direct" readableName="Direct illumination"
 			show="true" className="MIDirectIntegrator" extends="SampleIntegrator">
-		<descr>
-			Direct-only integrator using multiple importance sampling.
-			Takes a user-specifiable amount of luminaire
-			and BSDF samples and combines them using the power heuristic
-			By setting one of the strategies to zero, this 
-			plugin can effectively be turned into a luminaire sampling or
-			BSDF sampling-based integrator. Ignores participating media
-			if they are present.
+			<descr>
+				<p>This integrator implements a direct illumination technique that makes use
+				of <em>multiple importance sampling</em>: for each pixel sample, the 
+				integrator generates a user-specifiable number of BSDF and emitter
+				samples and combines them using the power heuristic. Usually, the BSDF
+				sampling technique works very well on glossy objects but does badly 
+				everywhere else, while the opposite is true for the emitter sampling 
+				technique. By combining these approaches, one
+				can obtain a rendering technique that works well in both cases.</p>
+
+				<p>The number of samples spent on either technique is configurable, hence 
+				it is also possible to turn this plugin into an emitter sampling-only 
+				or BSDF sampling-only integrator.</p>
+
+				<p>For best results, combine the direct illumination integrator with the
+				low-discrepancy sample generator. Generally, the number
+				of pixel samples of the sample generator can be kept relatively 
+				low (e.g. <tt>sampleCount=4</tt>), whereas the emitter and BSDF sample
+				parameters of this integrator should be increased until the variance in
+				the output renderings is acceptable.</p>
 		</descr>
 		<param name="emitterSamples" readableName="Emitter samples" type="integer" default="1">Number of samples to take using the emitter sampling technique</param>
 		<param name="bsdfSamples" readableName="BSDF samples" type="integer" default="1">Number of samples to take using the BSDF sampling technique</param>
 		<param name="strictNormals" readableName="Strict surface normals" type="boolean" default="false" importance="1">
 			<p>
-			This parameter specifies the action to be taken when the geometric
-			and shading normals of a surface don't agree on whether a ray is on
-			the front or back-side of a surface.
+				Be strict about potential inconsistencies involving shading normals?
 			</p>
-			<p>
-			When <tt>strictNormals</tt> is set to <tt>false</tt>, the shading normal has 
-			precedence, and rendering proceeds normally at the risk of
-			introducing small light leaks (this is the default).
-			</p>
-			<p>
-			When <tt>strictNormals</tt> is set to <tt>true</tt>, the random walk is
-			terminated when encountering such a situation. This may
-			produce silhouette darkening on badly tesselated meshes.
-			</p>
+			<p>Triangle meshes often rely on interpolated shading normals
+			to suppress the inherently faceted appearance of the underlying geometry. These
+			"fake" normals are not without problems, however. They can lead to paradoxical
+			situations where a light ray impinges on an object from a direction that is classified as "outside"
+			according to the shading normal, and "inside" according to the true geometric normal.</p>
+			<p>The <tt>strictNormals</tt>
+			parameter specifies the intended behavior when such cases arise. The default (<tt>false</tt>, i.e. "carry on") 
+			gives precedence to information given by the shading normal and considers such light paths to be valid.
+			This can theoretically cause light "leaks" through boundaries, but it is not much of a problem in practice.</p>
+			<p>When set to <tt>true</tt>, the path tracer detects inconsistencies and ignores these paths. When objects
+			are poorly tesselated, this latter option may cause them to lose a significant amount of the incident 
+			radiation (or, in other words, they will look dark).
+			The bidirectional integrators in Mitsuba (BDPT, PSSMLT, MLT, ..)
+			implicitly have <tt>strictNormals</tt> activated. Hence, another use of this parameter
+			is to match renderings created by these methods.</p>
 		</param>
 	</plugin>
 
@@ -202,27 +220,26 @@
 	<plugin type="integrator" name="volpath_simple" readableName = "Volumetric path tracer (Simple)"
 			show="true" className="SimpleVolumetricPathTracer" extends="MonteCarloIntegrator">
 		<descr>
-			Volumetric path tracer, which solves the full radiative transfer
-			equation in the presence of participating media. 
-			Simplified version without multiple importance sampling - this 
-			version can be significantly faster than the extended
-			version when when rendering heterogeneous participating media using the 
-			[Coleman et al.] sampling technique, as fewer attenuation
-			evaluations will be performed.
+			This plugin provides a basic volumetric path tracer that can be used to
+			compute approximate solutions to the radiative transfer equation. This
+			particular integrator is named "simple" because it does not make use of
+			multiple importance sampling. This results in a potentially
+			faster execution time. On the other hand, it also means that this
+			plugin will likely not perform well when given a scene that contains
+			highly glossy materials. In this case, please use the extended volumetric
+			path tracer or one of the bidirectional techniques.
 		</descr>
 	</plugin>
 
 	<plugin type="integrator" name="volpath" readableName = "Volumetric path tracer (Extended)"
 			show="true" className="VolumetricPathTracer" extends="MonteCarloIntegrator">
 		<descr>
-			Volumetric path tracer, which solves the full radiative transfer
-			equation in the presence of participating media. Estimates single
-			scattering using both phase function and luminaire sampling and
-			combines the two with multiple importance sampling and the power
-			heuristic. Afterwards, the phase function sample is reused to
-			recursively estimate the multiple scattering component, which saves an
-			intersection computation.
-			On surfaces, this integrator behaves exactly like the MI path tracer.
+			This plugin provides a volumetric path tracer that can be used to
+			compute approximate solutions to the radiative transfer equation. 
+			Its implementation makes use of multiple importance sampling to
+			combine BSDF and phase function sampling with direct illumination 
+			sampling strategies. On surfaces, this integrator behaves exactly 
+			like the standard path tracer.
 		</descr>
 	</plugin>
 
@@ -250,7 +267,12 @@
 			hitting it via ray tracing. This is one of the worst conceivable rendering
 			and not recommended for any applications. It is mainly included for 
 			debugging purposes.</p>
-		 </descr>
+
+			<p>The number of traced particles is given by the number of "samples per
+			pixel" of the sample generator times the pixel count of the output image. 
+			For instance, 16 samples per pixel on a 512x512 image will cause 4M particles
+			to be generated.</p>
+		</descr>
 		<param name="granularity" readableName="Work unit granularity" type="integer" default="200000" importance="1">
 			Specifies the work unit granularity used to parallize the
 			the particle tracing task (default: 200K samples per work unit).
