@@ -72,7 +72,7 @@
 		   leads to <tt>14x(2*14)=392</tt> samples 
 		</param>
 		<param name="quality" readableName="Quality" type="float" default="1">
-		   Quality setting (\kappa in the [Tabellion et al.] paper).
+		   Quality setting ("kappa" in the [Tabellion et al.] paper).
 		   A value of 1 should be adequate in most cases.
 		</param>
 		<param name="gradients" readableName="Irradiance gradients" type="boolean" default="true">
@@ -196,10 +196,10 @@
 	<plugin type="integrator" name="path" readableName="Path tracer"
 			show="true" className="MIPathTracer" extends="MonteCarloIntegrator">
 		<descr>
-			Extended path tracer -- uses multiple importance sampling to combine 
-			two sampling strategies, namely BSDF and luminaire sampling. This class also
-			supports volumetric absorption, but does not attempt to solve the
-			full radiative transfer equation (see <tt>volpath</tt> if this is needed).
+			This integrator implements a basic path tracer with multiple importance sampling and is a <em>good
+			default choice</em> when there is no strong reason to prefer another method.
+			It does not account for participating media, such as fog or smoke&mdash;see 
+			the volumetric path tracer if this is needed.
 		</descr>
 	</plugin>
  
@@ -395,7 +395,7 @@
 			when rendering scenes involving depth-of-field, motion blur, and glossy reflections.</p>
 
 			<p>Note that this integrator ignores the sampler
-			configuration---hence, the usual steps of choosing a sample generator and a desired 
+			configuration&mdash;hence, the usual steps of choosing a sample generator and a desired 
 			number of samples per pixel are not necessary. As with PPM, once started, 
 			the rendering process continues indefinitely until it is manually stopped.</p>
 		</descr>
@@ -437,7 +437,7 @@
 			are explicitly represented by surfaces in the scene so that they can be 
 			intersected by random walks started at emitters.</p>
 
-			<p>Bidirectional path tracing is a relatively "heavy" rendering technique---for
+			<p>Bidirectional path tracing is a relatively "heavy" rendering technique&mdash;for
 			the same number of samples per pixel, it is easily 3-4 times slower than regular
 			path tracing. However, it usually makes up for this by producing considerably
 			lower-variance radiance estimates (i.e. the output images have less noise).</p>
@@ -586,11 +586,27 @@
 	<plugin type="integrator" name="mlt" readableName="Path Space MLT" show="true"
 			className="MLT" extends="Integrator">
 		<descr>
-			Veach-style Metropolis Light Transport implementation with support for
-			bidirectional mutations, lens perturbations, caustic perturbations and
-			multi-chain perturbations. Several optimizations are also implemented, namely
-			separate direct illumination, two-stage MLT, and importance sampling of 
-			mutation strategies. For details, see the respective parameter descriptions.
+			<p>Metropolis Light Transport (MLT) is a seminal rendering technique proposed by Veach and 
+			Guibas, which applies the Metropolis-Hastings
+			algorithm to the path-space formulation of light transport.
+			Please refer to the PSSMLT documentation for a general description of MLT-type
+			algorithms and a list of caveats that also apply to this plugin.</p>
+
+			<p>Like PSSMLT, this integrator explores the space of light paths,
+			searching with preference for those that carry a significant amount of
+			energy from an emitter to the sensor. The main difference is that PSSMLT
+			does this exploration by piggybacking on another rendering technique and
+			"manipulating" the random number stream that drives it, whereas MLT does
+			not use such an indirection: it operates directly on the actual light
+			paths. </p>
+
+			<p>This means that the algorithm has access to considerably more 
+			information about the problem to be solved, which allows it to perform a
+			directed exploration of certain classes of light paths. The main downside 
+			is that the implementation is rather complex, which may make it more
+			susceptible to unforeseen problems.  Mitsuba reproduces the full MLT
+			algorithm except for the lens subpath mutation. In addition, the plugin also provides the
+			manifold perturbation proposed by Jakob and Marschner.</p>
 		</descr>
 		<param name="maxDepth" readableName="Maximum depth" type="integer" default="-1">
 			Specifies the longest path depth in the generated output image (where <tt>-1</tt>
@@ -598,26 +614,24 @@
 			2 will lead to single-bounce (direct-only) illumination, and so on.
 		</param>
 		<param name="directSamples" readableName="Direct samples" type="integer" default="16">
-		   When <tt>separateDirect</tt> is set to <tt>true</tt>, this parameter can
-		   be used to specify the samples per pixel used to render the
-		   direct component. Should be a power of two (otherwise, it will be
-		   rounded to the next one). When set to zero or less, the
-		   direct illumination component will be hidden, which is useful
-		   for analyzing the component rendered by MLT.
+	       By default, this plugin renders the direct illumination component 
+	       separately using an optimized direct illumination sampling strategy 
+	       that uses low-discrepancy number sequences for superior performance
+		   (in other words, it is <em>not</em> rendered by MLT). This
+	       parameter specifies the number of samples allocated to that method. To
+	       force MLT to be responsible for the direct illumination
+		   component as well, set this parameter to <tt>-1</tt>.
 	   </param>
-		<param name="twoStage" readableName="Two-stage MLT" type="boolean" default="false">
-		   This setting can be very useful to reduce noise in dark regions
-		   of the image: it activates two-stage MLT, where a nested MLT renderer
-		   first creates a tiny version of the output image. In a second pass, 
-		   the full version is then rendered, while making use of information 
-		   about the image-space luminance distribution found in the first
-		   pass. Two-stage MLT is very useful in making the noise characteristics
-		   more uniform over time image -- specifically, since MLT tends to get
-		   stuck in very bright regions at the cost of the remainder of the image.
+	   <param name="twoStage" readableName="Two-stage MLT" type="boolean" default="false">
+		   Use two-stage MLT? Please see the documentation for details.
 		</param>
 		<param name="luminanceSamples" readableName="Luminance samples" type="integer" default="100000" importance="1">
-			Number of samples used to estimate the total luminance 
-			received by the camera's sensor.
+			MLT-type algorithms create output images that are only
+			<em>relative</em> The algorithm can e.g. determine that a certain pixel
+			is approximately twice as bright as another one, but the absolute
+			scale is unknown. To recover it, this plugin computes
+			the average luminance arriving at the sensor by generating a
+			number of samples. 
 		</param>
 		<param name="bidirectionalMutation" readableName="Bidirectional mutation" type="boolean" default="true" importance="1">
 			Selectively enable/disable the bidirectional mutation
@@ -635,26 +649,33 @@
 			Selectively enable/disable the manifold perturbation
 		</param>
 		<param name="probFactor" readableName="Probability factor" type="float" default="50" importance="1">
-			Manifold perturbation: probability factor ("lambda")
-		</param>
-		<param name="timeout" readableName="Timeout" type="integer" default="0" importance="1">
-			If set to a nonzero value, the rendering process will automatically be stopped after this many seconds.
+			Probability factor ("lambda") of the manifold perturbation
 		</param>
 	</plugin>
 
 	<plugin type="integrator" name="erpt" readableName="Energy redistribution path tracing" show="true"
 			className="EnergyRedistributionPathTracer" extends="Integrator">
 		<descr>
-			Energy redistribution path tracing as proposed by Cline et al.
+			<p>Energy Redistribution Path Tracing (ERPT) by Cline et al. 
+				combines Path Tracing with the perturbation strategies of Metropolis Light Transport.</p>
+
+			<p>An initial set of <em>seed paths</em> is generated using a standard bidirectional 
+			path tracer, and for each one, a MLT-style Markov Chain is subsequently started 
+			and executed for some number of steps.
+			This has the effect of redistributing the energy of the individual samples
+			over a larger area, hence the name of this method.</p>
+		
+			<p>This plugin shares all the perturbation strategies of the MLT plugin, and
+			the same rules for selecting them apply. In contrast to the original
+			paper by Cline et al., the Mitsuba implementation uses a bidirectional
+			(rather than an unidirectional) bidirectional path tracer to create seed paths.
+			Also, since they add bias to the output, this plugin does not use the image 
+			post-processing filters proposed by the authors.</p>
 		</descr>
 		<param name="maxDepth" readableName="Maximum depth" type="integer" default="-1">
 			Specifies the longest path depth in the generated output image (where <tt>-1</tt>
 			corresponds to ∞). A value of 1 will only render directly visible light sources. 
 			2 will lead to single-bounce (direct-only) illumination, and so on.
-		</param>
-		<param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="5" importance="1">
-			Specifies the minimum path depth, after which the implementation will start to use the 
-			"russian roulette" path termination criterion (set to <tt>-1</tt> to disable). 
 		</param>
 		<param name="numChains" readableName="Average number of chains" type="float" default="1">
 		    Specifies the number of Markov Chains that, on average, are
@@ -668,12 +689,13 @@
 			Specifies the number of mutations to be performed in each Markov Chain
 		</param>
 		<param name="directSamples" readableName="Direct samples" type="integer" default="16">
-		   When <tt>separateDirect</tt> is set to <tt>true</tt>, this parameter can
-		   be used to specify the samples per pixel used to render the
-		   direct component. Should be a power of two (otherwise, it will be
-		   rounded to the next one). When set to zero or less, the
-		   direct illumination component will be hidden, which is useful
-		   for analyzing the component rendered by MLT.
+	       By default, this plugin renders the direct illumination component 
+	       separately using an optimized direct illumination sampling strategy 
+	       that uses low-discrepancy number sequences for superior performance
+		   (in other words, it is <em>not</em> rendered by ERPT). This
+	       parameter specifies the number of samples allocated to that method. To
+	       force ERPT to be responsible for the direct illumination
+		   component as well, set this parameter to <tt>-1</tt>.
 	   </param>
 		<param name="luminanceSamples" readableName="Luminance samples" type="integer" default="15000" importance="1">
 			Number of samples used to estimate the average contribution of a
@@ -695,22 +717,13 @@
 			Selectively enable/disable the manifold perturbation
 		</param>
 		<param name="probFactor" readableName="Probability factor" type="float" default="50" importance="1">
-			Manifold perturbation: probability factor ("lambda")
+			Probability factor ("lambda") of the manifold perturbation
 		</param>
-	</plugin>
-	<plugin type="medium" className="Medium" abstract="true">
-		<shortDescr>Base class of all participating media</shortDescr>
-		<descr>
-			Base class of all participating media -- By default, the parameters are set to 
-			the skim milk data from "A Practical Model for Subsurface scattering" (Jensen et al.)
-		</descr>
-		<param name="sigmaS" type="spectrum" default="0.7, 1.22, 1.9">Scattering coefficient</param>
-		<param name="sigmaT" type="spectrum" default="0.0014, 0.0025, 0.0142">Absorption coefficient</param>
-		<param name="sizeMultiplier" type="float" default="1">Scattering/absorption coefficient multiplier - can be used to convert these to world-space units.</param>
-		<child type="phase" count="1">
-			Specifies the phase function of the medium. If none is specified,
-			the default (<tt>isotropic</tt>) is chosen.
-		</child>
+		<param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="5" importance="1">
+			When creating seed paths, this parameter specifies the minimum path depth, after which the 
+			implementation will start to use the 
+			"russian roulette" path termination criterion (set to <tt>-1</tt> to disable). 
+		</param>
 	</plugin>
 
 	<plugin type="rfilter" readableName="Box filter" name="box" show="true" className="BoxFilter" extends="ReconstructionFilter">
