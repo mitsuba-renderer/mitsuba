@@ -669,6 +669,8 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 			source.vertex(a)->pdf[mode] * m_probFactor * m_probFactor);
 
 		Float pdf = source.vertex(a+step)->perturbPositionPdf(proposal.vertex(a+step), stddev);
+		if (pdf == 0)
+			return 0.0f;
 
 		weight /= pdf;
 	}

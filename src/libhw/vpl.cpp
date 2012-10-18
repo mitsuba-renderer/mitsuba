@@ -563,6 +563,7 @@ void VPLShaderManager::unbind() {
 void VPLShaderManager::drawAllGeometryForVPL(const VPL &vpl, const Sensor *sensor) {
 	const Emitter *currentEmitter = NULL;
 	const BSDF *currentBSDF = NULL;
+	bool currentHasNormals = false;
 
 	m_renderer->setDepthTest(true);
 
@@ -579,12 +580,12 @@ void VPLShaderManager::drawAllGeometryForVPL(const VPL &vpl, const Sensor *senso
 		const Matrix4x4 &trafo = (*it).second;
 		const BSDF *bsdf = geo->getTriMesh()->getBSDF();
 		const Emitter *emitter = geo->getTriMesh()->getEmitter();
+		bool hasNormals = !geo->getTriMesh()->hasVertexNormals();
 
 		nTriangles += geo->getTriMesh()->getTriangleCount();
 
-		if (emitter != currentEmitter || bsdf != currentBSDF) {
-			bool hasNormals = !geo->getTriMesh()->hasVertexNormals();
-			currentBSDF = bsdf; currentEmitter = emitter;
+		if (emitter != currentEmitter || bsdf != currentBSDF || hasNormals != currentHasNormals) {
+			currentBSDF = bsdf; currentEmitter = emitter; currentHasNormals = hasNormals;
 
 			if (m_currentProgram.program) {
 				m_currentProgram.program->unbind();

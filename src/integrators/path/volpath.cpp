@@ -44,7 +44,9 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  * This plugin provides a volumetric path tracer that can be used to
  * compute approximate solutions to the radiative transfer equation. 
  * Its implementation makes use of multiple importance sampling to
- * combine BSDF and emitter sampling strategies.
+ * combine BSDF and phase function sampling with direct illumination 
+ * sampling strategies. On surfaces, this integrator behaves exactly 
+ * like the standard path tracer.
  *
  * \remarks{
  *    \item This integrator will generally perform poorly when rendering 

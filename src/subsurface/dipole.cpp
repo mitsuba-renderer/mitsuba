@@ -396,9 +396,11 @@ public:
 		Float actualRadius = m_radius / std::sqrt(m_sampleMultiplier * 20);
 		blueNoisePointSet(scene, m_shapes, actualRadius, points, sa, aabb, job);
 
-		/* 2. gather irradiance in parallel */
+		/* 2. Gather irradiance in parallel */
+		const Sensor *sensor = scene->getSensor();
 		ref<IrradianceSamplingProcess> proc = new IrradianceSamplingProcess(
-			points, 1024, m_irrSamples, m_irrIndirect, job);
+			points, 1024, m_irrSamples, m_irrIndirect, 
+			sensor->getShutterOpen() + 0.5f * sensor->getShutterOpenTime(), job);
 
 		/* Create a sampler instance for every core */
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
@@ -411,8 +413,11 @@ public:
 		}
 
 		int samplerResID = sched->registerMultiResource(samplers);
+		int integratorResID = sched->registerResource(
+			const_cast<Integrator *>(scene->getIntegrator()));
 
 		proc->bindResource("scene", sceneResID);
+		proc->bindResource("integrator", integratorResID);
 		proc->bindResource("sampler", samplerResID);
 		scene->bindUsedResources(proc);
 		m_proc = proc;
@@ -423,6 +428,7 @@ public:
 			samplers[i]->decRef();
 
 		sched->unregisterResource(samplerResID);
+		sched->unregisterResource(integratorResID);
 		if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 			return false;
 
@@ -431,7 +437,7 @@ public:
 
 		std::vector<IrradianceSample> &samples = proc->getIrradianceSampleVector()->get();
 		sa /= samples.size();
-		
+
 		for (size_t i=0; i<samples.size(); ++i) 
 			samples[i].area = sa;
 

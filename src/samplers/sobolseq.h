@@ -54,7 +54,7 @@ inline float sampleSingle(
 			result ^= Matrices::matrices32[i];
 	}
 
-	return result * (1.f / (1ULL << 32));
+	return std::min(result * (1.0f / (1ULL << 32)), ONE_MINUS_EPS_FLT);
 }
 
 // Compute one component of the Sobol'-sequence, where the component
@@ -77,7 +77,7 @@ inline double sampleDouble(
 			result ^= Matrices::matrices64[i];
 	}
 
-	return result * (1.0 / (1ULL << Matrices::size));
+	return std::min(result * (1.0 / (1ULL << Matrices::size)), ONE_MINUS_EPS_DBL);
 }
 
 // Call sampleSingle or sampleDouble depending on the compilation options

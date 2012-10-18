@@ -1054,8 +1054,12 @@ void loadImage(ColladaContext &ctx, domImage &image) {
 	}
 
 	SLog(EDebug, "Converting texture \"%s\" ..", identifier.c_str());
+	
+	std::string uri = image.getInit_from()->getValue().str();
+	std::string filename = cdom::uriToFilePath(uri);
+	if (filename.empty()) /* When uriToFilePath fails, try to use the path as is */
+		filename = uri;
 
-	std::string filename = cdom::uriToFilePath(image.getInit_from()->getValue().str());
 	/* Prevent Linux/OSX fs::path handling issues for DAE files created on Windows */
 	for (size_t i=0; i<filename.length(); ++i) {
 		if (filename[i] == '\\')

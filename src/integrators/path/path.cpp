@@ -37,7 +37,7 @@ static StatsCounter avgPathLength("Path tracer", "Average path length", EAverage
  *	      path termination criterion. \default{\code{5}}
  *	   }
  *     \parameter{strictNormals}{\Boolean}{Be strict about potential
- *        inconsistencies involving shading normals? See \pluginref{path}
+ *        inconsistencies involving shading normals? See the description below
  *        for details.\default{no, i.e. \code{false}}}
  * }
  *

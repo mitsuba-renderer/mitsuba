@@ -219,10 +219,27 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				if (its.isMediumTransition())
 					medium = its.getTargetMedium(woDotGeoN);
 
+#if 0
+				/* This is somewhat unfortunate: for accuracy, we'd really want the
+				   correction factor below to match the path tracing interpretation 
+				   of a scene with surface normals. However, this factor can become
+				   extremely large, which adds unacceptable variance to output
+				   renderings.
+
+				   So for now, it is disabled. The adjoint particle tracer and the
+				   photon mapping variants still use this factor for the last 
+				   bounce -- just not for the intermediate ones, which introduces
+				   a small (though in practice not noticeable) amount of error. This 
+				   is also what the implementation of SPPM by Toshiya Hachisuka does.
+	
+				   Ultimately, we'll need better adjoint BSDF sampling strategies 
+				   that incorporate these extra terms */
+
 				/* Adjoint BSDF for shading normals -- [Veach, p. 155] */
 				throughput *= std::abs(
 					(Frame::cosTheta(bRec.wi) * woDotGeoN)/
 					(Frame::cosTheta(bRec.wo) * wiDotGeoN));
+#endif
 
 				ray.setOrigin(its.p);
 				ray.setDirection(wo);

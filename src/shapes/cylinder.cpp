@@ -210,12 +210,12 @@ public:
 
 		Vector dpdu = Vector(-local.y, local.x, 0) * (2*M_PI);
 		Vector dpdv = Vector(0, 0, m_length);
+		if (m_flipNormals)
+			dpdu *= -1;
 		its.shape = this;
 		its.dpdu = m_objectToWorld(dpdu);
 		its.dpdv = m_objectToWorld(dpdv);
-		its.geoFrame.n = Normal(normalize(m_objectToWorld(cross(dpdu, dpdv))));
-		if (m_flipNormals)
-			its.geoFrame.n *= -1;
+		its.geoFrame.n = Normal(normalize(cross(its.dpdu, its.dpdv)));
 		its.geoFrame.s = normalize(its.dpdu);
 		its.geoFrame.t = normalize(its.dpdv);
 		its.shFrame = its.geoFrame;
@@ -452,9 +452,9 @@ public:
 			Float cosPhi = std::cos(phi * dPhi);
 			uint32_t idx0 = (uint32_t) vertexIdx, idx1 = idx0+1;
 			uint32_t idx2 = (vertexIdx+2) % (2*phiSteps), idx3 = idx2+1;
-			normals[vertexIdx] = m_objectToWorld(Normal(cosPhi, sinPhi, 0));
+			normals[vertexIdx] = m_objectToWorld(Normal(cosPhi, sinPhi, 0) * (m_flipNormals ? (Float) -1 : (Float) 1));
 			vertices[vertexIdx++] = m_objectToWorld(Point(cosPhi*m_radius, sinPhi*m_radius, 0));
-			normals[vertexIdx] = m_objectToWorld(Normal(cosPhi, sinPhi, 0));
+			normals[vertexIdx] = m_objectToWorld(Normal(cosPhi, sinPhi, 0) * (m_flipNormals ? (Float) -1 : (Float) 1));
 			vertices[vertexIdx++] = m_objectToWorld(Point(cosPhi*m_radius, sinPhi*m_radius, m_length));
 
 			triangles[triangleIdx].idx[0] = idx0;

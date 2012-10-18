@@ -255,12 +255,11 @@ public:
 				if (triangles.size() > 0) {
 					/// make sure that we have unique names
 					if (geomNames.find(targetName) != geomNames.end())
-						name = formatString("%s_%i", targetName.c_str(), geomIdx);
+						targetName = formatString("%s_%i", targetName.c_str(), geomIdx++);
+					geomNames.insert(targetName);
 					createMesh(targetName, vertices, normals, texcoords, 
 						triangles, materialName, objectToWorld, vertexBuffer);
 					triangles.clear();
-					geomNames.insert(name);
-					geomIdx++;
 				} else {
 					nameBeforeGeometry = true;
 				}
@@ -270,12 +269,11 @@ public:
 				if (triangles.size() > 0) {
 					/// make sure that we have unique names
 					if (geomNames.find(name) != geomNames.end())
-						name = formatString("%s_%i", name.c_str(), geomIdx);
+						name = formatString("%s_%i", name.c_str(), geomIdx++);
+					geomNames.insert(name);
 					createMesh(name, vertices, normals, texcoords, 
 						triangles, materialName, objectToWorld, vertexBuffer);
 					triangles.clear();
-					geomNames.insert(name);
-					geomIdx++;
 					name = m_name;
 				}
 
@@ -472,7 +470,7 @@ public:
 				std::string filename;
 				iss >> filename;
 				mask = loadTexture(fileResolver, cache, mtlPath, filename);
-			} else if (buf == "d" || buf == "Tr") {
+			} else if (buf == "d" /* || buf == "Tr" */) {
 				Float value;
 				iss >> value;
 				if (value == 1)
@@ -501,7 +499,6 @@ public:
 			Texture *exponent, Texture *bump, Texture *mask, int model) {
 		ref<BSDF> bsdf;
 		Properties props;
-		props.setID(name);
 
 		if (model == 2 && (specular->getMaximum().isZero() || exponent->getMaximum().isZero()))
 			model = 1;
@@ -554,6 +551,7 @@ public:
 			bsdf = maskedBSDF;
 		}
 
+		bsdf->setID(name);
 		addChild(name, bsdf);
 	}
 
