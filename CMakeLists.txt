@@ -85,8 +85,13 @@ endif()
 # Additional files to add to main executables
 if(APPLE)
   set(MTS_DARWIN_STUB "${CMAKE_CURRENT_SOURCE_DIR}/src/mitsuba/darwin_stub.mm")
+  set(MTS_WINDOWS_STUB "")
+elseif(WIN32)
+  set(MTS_DARWIN_STUB "")
+  set(MTS_WINDOWS_STUB "${CMAKE_CURRENT_SOURCE_DIR}/data/windows/wmain_stub.cpp")
 else()
   set(MTS_DARWIN_STUB "")
+  set(MTS_WINDOWS_STUB "")
 endif()
 
 

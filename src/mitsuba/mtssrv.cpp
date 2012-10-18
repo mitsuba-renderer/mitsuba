@@ -90,7 +90,7 @@ void collect_zombies(int s) {
 }
 #endif
 
-int mts_main(int argc, char **argv) {
+int mtssrv(int argc, char **argv) {
 	char optchar, *end_ptr = NULL;
 
 	try {
@@ -382,7 +382,7 @@ int mts_main(int argc, char **argv) {
 	return 0;
 }
 
-int main(int argc, char **argv) {
+int mts_main(int argc, char **argv) {
 	/* Initialize the core framework */
 	Class::staticInitialization();
 	Object::staticInitialization();
@@ -409,7 +409,7 @@ int main(int argc, char **argv) {
 	setlocale(LC_NUMERIC, "C");
 #endif
 
-	int retval = mts_main(argc, argv);
+	int retval = mtssrv(argc, argv);
 
 	/* Shutdown the core framework */
 	SHVector::staticShutdown();
@@ -432,3 +432,9 @@ int main(int argc, char **argv) {
 
 	return retval;
 }
+
+#if !defined(__WINDOWS__)
+int main(int argc, char **argv) {
+	return mts_main(argc, argv);
+}
+#endif

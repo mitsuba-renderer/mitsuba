@@ -6,9 +6,10 @@ import os
 resources = []
 plugins = []
 stubs = []
+winstubs = []
 
 Export('SCons', 'sys', 'os', 'glob', 'resources', 
-	'plugins', 'stubs')
+	'plugins', 'stubs', 'winstubs')
 
 # Configure the build framework
 env = SConscript('build/SConscript.configure')
@@ -18,6 +19,9 @@ Export('env')
 if sys.platform == 'win32':
 	# Set an application icon on Windows
 	resources += [ env.RES('data/windows/mitsuba_res.rc') ]
+	# Convert the command line args from UTF-8 to UTF-16
+	winstubs += [os.path.abspath('data/windows/wmain_stub.cpp')]
+	Export('winstubs')
 
 def build(scriptFile, exports = [], duplicate = 0):
 	dirname = '/'.join(os.path.dirname(scriptFile).split('/')[1:])
