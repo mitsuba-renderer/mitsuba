@@ -1,19 +1,5 @@
 <?xml version="1.0"?>
 <documentation version="2.0.2">
-	<plugin type="scene" className="Scene">
-		<shortDescr>Scene root element</shortDescr>
-		<descr>Tweaking the kd-tree construction parameters is generally not required.</descr>
-		<param name="kdClip" type="boolean" default="true">kd-tree construction: Enable primitive clipping? Generally leads to a significant improvement of the resulting tree.</param>
-		<param name="kdIntersectionCost" type="float" default="20">kd-tree construction: Relative cost of a triangle intersection operation in the surface area heuristic.</param>
-		<param name="kdTraversalCost" type="float" default="15">kd-tree construction: Relative cost of a kd-tree traversal operation in the surface area heuristic.</param>
-		<param name="kdEmptyBonus" type="float" default="0.8">kd-tree construction: Bonus factor for cutting away regions of empty space</param>
-		<param name="kdStopPrims" type="integer" default="8">kd-tree construction: A kd-tree node containing this many or fewer primitives will not be split</param>
-		<child type="integrator" count="1">Requires an integrator</child>
-		<child type="camera" count="1">Requires a camera</child>
-		<child type="luminaire" count="+">Requires one or more luminaires</child>
-		<child type="shape" count="+">Requires one or more shapes</child>
-	</plugin>
-
 	<plugin type="integrator" className="SampleIntegrator" abstract="true">
 		<shortDescr>Base class of all sampling-based integrators</shortDescr>
 		<descr>Base class of all sampling-based integrators</descr>
@@ -299,17 +285,33 @@
 	<plugin type="integrator" name="vpl" readableName = "Virtual point light renderer"
 			show="true" className="VPLIntegrator" extends="Integrator">
 		<descr>
-			Rasterization-based global illuminated technique using hardware
-			accelerated renderings of the scene under point source illumination. Based on 
-			"Instant Radiosity" by Alexander Keller in Computer Graphics Proceedings, 
-			Annual Conference Series, SIGGRAPH 97, pp. 49-56. 
+			<p>This integrator implements a hardware-accelerated global illumination 
+			rendering technique based on the Instant Radiosity method by Keller.
+			This is the same approach that is also used in
+			Mitsuba's real-time preview; the reason for providing it as a separate
+			integrator plugin is to enable automated (e.g. scripted) usage.</p>
+			
+			<p>The method roughly works as follows: during a pre-process pass, any present direct 
+			and indirect illumination is converted into a set of <em>virtual point light</em> 
+			sources (VPLs). The scene is then separately rendered many times, each time using 
+			a different VPL as a source of illumination. All of the renderings created in this
+			manner are accumulated to create the final output image.</p>
+			
+			<p>Because the individual rendering steps can be exectuted on a
+			graphics card, it is possible to render many (i.e. 100-1000) VPLs 
+			per second. The method is not without problems, however. In particular,
+			it performs poorly when rendering glossy materials, and it produces
+			artifacts in corners and creases . Mitsuba automatically limits
+			the "glossyness" of materials to reduce the effects of the former
+			problem. A clamping parameter is provided to control the latter
+			(see the documentation for details). The number of samples per pixel specified to
+			the sampler is interpreted as the number of VPLs that should be rendered.</p>
 		</descr>
-		<param name="vplCount" readableName="Number of VPLs" type="integer" default="1000">Total number of virtual point lights that should be rendered</param>
-		<param name="shadowMapResolution" readableName="Shadow Map Resolution" type="integer" default="512">Shadow map resolution</param>
+		<param name="shadowMapResolution" readableName="Shadow Map Resolution" type="integer" default="512">Resolution of the shadow maps that are used to compute the point-to-point visibility</param>
 		<param name="maxDepth" readableName="Maximum depth" type="integer" default="-1">
-			Longest visualized path length (<tt>-1</tt>=infinite). When a positive value is
-			specified, it must be greater or equal to <tt>2</tt>, which corresponds to single-bounce
-			(direct-only) illumination.
+			Specifies the longest path depth in the generated output image (where <tt>-1</tt>
+			corresponds to ∞). A value of 1 will only render directly visible light sources. 
+			2 will lead to single-bounce (direct-only) illumination, and so on.
 		</param>
 		<param name="clamping" readableName="Clamping factor" type="float" default="0.1">Relative clamping factor (0=no clamping, 1=full clamping)</param>
 	</plugin>
@@ -326,6 +328,9 @@
 				unless an extremely large number of photons is used. A simple remedy is to combine the photon mapper with
 				an irradiance cache, which performs <em>final gathering</em> to remove these artifacts. Due to its caching nature,
 				the rendering process will be faster as well.</p>
+ 
+				<p>When the scene contains homogeneous participating media, the Beam Radiance Estimate by Jarosz et al. 
+				is used to estimate the illumination due to volumetric scattering.</p>
 		</descr>
 		<param name="directSamples" readableName="Direct samples" type="integer" default="16">Number of luminaire samples for direct illumination</param>
 		<param name="glossySamples" readableName="Glossy samples" type="integer" default="32">Number of glossy samples for direct illumination</param>
@@ -350,17 +355,31 @@
 	<plugin type="integrator" name="ppm" readableName="Progressive photon mapper"
 			show="true" className="ProgressivePhotonMapIntegrator" extends="Integrator">
 		<descr>
-			 Progressive photon mapping implementation. Only handles surface
-			 interactions. Parallelization is limited to the local cores.
+			<p>This plugin implements the progressive photon mapping algorithm by Hachisuka et al. 
+			Progressive photon mapping is a variant of photon
+			mapping that alternates between photon shooting and gathering passes that involve
+			a relatively small (e.g. 250K) numbers of photons that are subsequently discarded.</p>
+
+			<p>This is done in a way such that the variance and bias of the resulting output 
+			vanish as the number of passes tends to infinity. The progressive nature of this
+			method enables renderings with an effectively arbitrary number of photons
+			without exhausting the available system memory.</p>
+
+			<p>The desired sample count specified in the sample generator configuration 
+			determines how many photon query points are created per pixel. It should not be
+			set too high, since the rendering time is approximately proportional to
+			this number. For good results, use between 2-4 samples along with the 
+			low-discrepancy sampler. Once started, the rendering process continues indefinitely 
+			until it is manually stopped.</p>
 		</descr>
 		<param name="maxDepth" readableName="Maximum depth" type="integer" default="-1">
-			Longest visualized path length (<tt>-1</tt>=infinite). When a positive value is
-			specified, it must be greater or equal to <tt>2</tt>, which corresponds to single-bounce
-			(direct-only) illumination.
+			Specifies the longest path depth in the generated output image (where <tt>-1</tt>
+			corresponds to ∞). A value of 1 will only render directly visible light sources. 
+			2 will lead to single-bounce (direct-only) illumination, and so on.
 		</param>
-		<param name="initialRadius" readableName="Initial radius" type="float" default="0">Initial photon query radius (0 = infer based on scene size and camera resolution)</param>
+		<param name="initialRadius" readableName="Initial radius" type="float" default="0">Initial photon query radius (<tt>0</tt> = infer based on scene size and camera resolution)</param>
 		<param name="photonCount" readableName="Photons per iteration" type="integer" default="250000">Number of photons to shoot in each iteration</param>
-		<param name="granularity" readableName="Work unit granularity" importance="1" type="integer" default="0">Granularity of photon tracing work units (in shot particles, 0 => decide automatically)</param>
+		<param name="granularity" readableName="Work unit granularity" importance="1" type="integer" default="0">Granularity of photon tracing work units (in numbers of traced particles, <tt>0</tt> = decide automatically)</param>
 		<param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="5" importance="1">
 			Specifies the minimum path depth, after which the implementation will start to use the 
 			"russian roulette" path termination criterion when tracing photons (set to <tt>-1</tt> to disable). 
@@ -371,17 +390,23 @@
 	<plugin type="integrator" name="sppm" readableName="Stochastic progressive photon mapper"
 			show="true" className="StochasticProgressivePhotonMapIntegrator" extends="Integrator">
 		<descr>
-			 Stochastic progressive photon mapping implementation. Only handles surface
-			 interactions. Parallelization is limited to the local cores.
+			<p>This integrator implements stochastic progressive photon mapping (PPM) by Hachisuka et al. 
+			This algorithm is an extension of progressive photon mapping that improves convergence 
+			when rendering scenes involving depth-of-field, motion blur, and glossy reflections.</p>
+
+			<p>Note that this integrator ignores the sampler
+			configuration---hence, the usual steps of choosing a sample generator and a desired 
+			number of samples per pixel are not necessary. As with PPM, once started, 
+			the rendering process continues indefinitely until it is manually stopped.</p>
 		</descr>
 		<param name="maxDepth" readableName="Maximum depth" type="integer" default="-1">
-			Longest visualized path length (<tt>-1</tt>=infinite). When a positive value is
-			specified, it must be greater or equal to <tt>2</tt>, which corresponds to single-bounce
-			(direct-only) illumination.
+			Specifies the longest path depth in the generated output image (where <tt>-1</tt>
+			corresponds to ∞). A value of 1 will only render directly visible light sources. 
+			2 will lead to single-bounce (direct-only) illumination, and so on.
 		</param>
-		<param name="initialRadius" readableName="Initial radius" type="float" default="0">Initial photon query radius (0 = infer based on scene size and camera resolution)</param>
+		<param name="initialRadius" readableName="Initial radius" type="float" default="0">Initial photon query radius (<tt>0</tt> = infer based on scene size and camera resolution)</param>
 		<param name="photonCount" readableName="Photons per iteration" type="integer" default="250000">Number of photons to shoot in each iteration</param>
-		<param name="granularity" readableName="Work unit granularity" importance="1" type="integer" default="0">Granularity of photon tracing work units (in shot particles, 0 => decide automatically)</param>
+		<param name="granularity" readableName="Work unit granularity" importance="1" type="integer" default="0">Granularity of photon tracing work units (in numbers of traced particles, <tt>0</tt> = decide automatically)</param>
 		<param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="5" importance="1">
 			Specifies the minimum path depth, after which the implementation will start to use the 
 			"russian roulette" path termination criterion (set to <tt>-1</tt> to disable). 
@@ -462,52 +487,95 @@
 
 	<plugin type="integrator" name="pssmlt" readableName="Primary Sample Space MLT" show="true"
 			className="PSSMLT" extends="Integrator">
-		<descr>
-			Kelemen-style Metropolis Light Transport implementation. This
-			integrator can operate on top of either a simple path tracer or a 
-			fully-fledged bidirectional path tracer with multiple importance 
-			sampling. Various optimizations are implemented, namely stratified 
-			mutations, separate direct illumination, two-stage MLT, and the 
-			improved weights proposed by Kelemen et al. For details, see 
-			the respective parameter descriptions.
+			<descr>
+				<p>Primary Sample Space Metropolis Light Transport (PSSMLT) is a rendering
+				technique developed by Kelemen et al. which is
+				based on Markov Chain Monte Carlo (MCMC) integration.</p>
+
+				<p>In contrast to simple methods like path tracing that render
+				images by performing a naive and memoryless random search for light paths, 
+				PSSMLT actively searches for <em>relevant</em> light paths (as is the case 
+				for other MCMC methods). Once such a path is found, the algorithm tries to 
+				explore neighboring paths to amortize the cost of the search. This can
+				significantly improve the convergence rate of difficult input.
+				Scenes that were already relatively easy to render usually don't benefit
+				much from PSSMLT, since the MCMC data management causes additional 
+				computational overheads.</p>
+
+				<p>The PSSMLT implementation in Mitsuba can operate on top of either a simple 
+				unidirectional volumetric path tracer or a fully-fledged bidirectional path 
+				tracer with  multiple importance sampling, and this choice is controlled by the 
+				<tt>bidirectional</tt> flag. The unidirectional path tracer is generally 
+				much faster, but it produces lower-quality samples. Depending on the input, either may be preferable.</p>
+
+				<p><b>Caveats</b>:
+				There are a few general caveats about MLT-type algorithms that are good
+				to know. The first one is that they only render "relative" output images,
+				meaning that there is a missing scale factor that must be applied to
+				obtain proper scene radiance values. The implementation in Mitsuba relies
+				on an additional Monte Carlo estimator to recover this scale factor. By 
+				default, it uses 100K samples (controlled by the <tt>luminanceSamples</tt> 
+				parameter), which should be adequate for most applications.</p>
+
+				<p>The second caveat is that the amount of computational expense
+				associated with a pixel in the output image is roughly proportional to
+				its intensity. This means that when a bright object (e.g. the sun) is
+				visible in a rendering, most resources are committed to rendering the
+				sun disk at the cost of increased variance everywhere else. Since this is 
+				usually not desired, the <tt>twoStage</tt> parameter can be used to
+				enable <em>Two-stage MLT</em> in this case. </p>
+
+				<p>In this mode of operation, the renderer first creates a low-resolution 
+				version of the output image to determine the approximate distribution of 
+				luminance values. The second stage then performs the actual rendering, while
+				using the previously collected information to ensure that
+				the amount of time spent rendering each pixel is uniform.</p>
+
+				<p>The third caveat is that, while PSMLT can work with scenes that are extremely
+				difficult for other methods to handle, it is not particularly efficient
+				when rendering simple things such as direct illumination (which is more easily
+				handled by a brute-force type algorithm). By default, the
+				implementation in Mitsuba therefore delegates this to such a method
+				(with the desired quality being controlled by the <tt>directSamples</tt> parameter).
+				In very rare cases when direct illumination paths are very difficult to find,
+				it is preferable to disable this separation so that PSSMLT is responsible
+				for everything. This can be accomplished by setting
+				<tt>directSamples=-1</tt>.</p>
 		</descr>
+	    <param name="bidirectional" readableName="Bidirectional" type="boolean" default="true"> 
+		   If set to <tt>true</tt>, the MLT algorithm runs on top of a
+		   bidirectional path tracer with multiple importance sampling.
+		   Otherwise, the implementation reverts to a unidirectional path tracer.
+		</param>
 		<param name="maxDepth" readableName="Maximum depth" type="integer" default="-1">
 			Specifies the longest path depth in the generated output image (where <tt>-1</tt>
 			corresponds to ∞). A value of 1 will only render directly visible light sources. 
 			2 will lead to single-bounce (direct-only) illumination, and so on.
 		</param>
 		<param name="directSamples" readableName="Direct samples" type="integer" default="16">
-		   When <tt>separateDirect</tt> is set to <tt>true</tt>, this parameter can
-		   be used to specify the samples per pixel used to render the
-		   direct component. Should be a power of two (otherwise, it will be
-		   rounded to the next one). When set to zero or less, the
-		   direct illumination component will be hidden, which is useful
-		   for analyzing the component rendered by MLT.
+	       By default, this plugin renders the direct illumination component 
+	       separately using an optimized direct illumination sampling strategy 
+	       that uses low-discrepancy number sequences for superior performance
+		   (in other words, it is <em>not</em> rendered by PSSMLT). This
+	       parameter specifies the number of samples allocated to that method. To
+	       force PSSMLT to be responsible for the direct illumination
+		   component as well, set this parameter to <tt>-1</tt>.
 	   </param>
-	   <param name="bidirectional" readableName="Bidirectional" type="boolean" default="true"> 
-		   If set to <tt>true</tt>, the MLT algorithm runs on top of a
-		   bidirectional path tracer with multiple importance sampling.
-		   Otherwise, the implementation reverts to a basic path tracer.
-		   Generally, the bidirectional path tracer should be noticably
-		   better, so it's best to this setting at its default.
-		</param>
-		<param name="twoStage" readableName="Two-stage MLT" type="boolean" default="false">
-		   This setting can be very useful to reduce noise in dark regions
-		   of the image: it activates two-stage MLT, where a nested MLT renderer
-		   first creates a tiny version of the output image. In a second pass, 
-		   the full version is then rendered, while making use of information 
-		   about the image-space luminance distribution found in the first
-		   pass. Two-stage MLT is very useful in making the noise characteristics
-		   more uniform over time image -- specifically, since MLT tends to get
-		   stuck in very bright regions at the cost of the remainder of the image.
+	   <param name="twoStage" readableName="Two-stage MLT" type="boolean" default="false">
+		   Use two-stage MLT? Please see the documentation for details.
 		</param>
 		<param name="luminanceSamples" readableName="Luminance samples" type="integer" default="100000" importance="1">
-			Number of samples used to estimate the total luminance 
-			received by the camera's sensor.
+			MLT-type algorithms create output images that are only
+			<em>relative</em> The algorithm can e.g. determine that a certain pixel
+			is approximately twice as bright as another one, but the absolute
+			scale is unknown. To recover it, this plugin computes
+			the average luminance arriving at the sensor by generating a
+			number of samples. 
 		</param>
 		<param name="pLarge" readableName="Large step probability" type="float" default="0.3" importance="1">
-		   Probability of creating large mutations in the [Kelemen et. al] 
-		   MLT variant. The default is 0.3.
+			Rate at which the implementation tries to replace the current path
+			with a completely new one. Usually, there is little need to change
+			this.
 		</param>
 		<param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="5" importance="1">
 			Specifies the minimum path depth, after which the implementation will start to use the 
@@ -643,249 +711,6 @@
 			Specifies the phase function of the medium. If none is specified,
 			the default (<tt>isotropic</tt>) is chosen.
 		</child>
-	</plugin>
-
-	<plugin type="medium" name="homogeneous" className="HomogeneousMedium" extends="Medium">
-		<shortDescr>Homogeneous participating medium</shortDescr>
-		<descr>
-			Homogeneous participating medium. An arbitrary (manifold) shape
-			must be specified as a child object.
-		</descr>
-		<child type="shape" count="1">Specifies the shape of the medium</child>
-	</plugin>
-
-	<plugin type="medium" name="heterogeneous" className="HeterogeneousMedium" extends="Medium">
-		<shortDescr>Heterogeneous participating medium</shortDescr>
-		<descr>
-			Heterogeneous medium class using trilinear interpolation, 
-			Simpson quadrature and one of several possible sampling
-			strategies. Data files have to be provided in an ASCII
-			format as follows:<br/>
-			<ul>
-				<li> The first three numbers determine the X,Y and Z resolution,
-				each of which has to be larger than 2.</li>
-				<li>The next six numbers determine the minimum X, Y and Z
-				as well as the maximum X, Y and Z values of the enclosing
-				axis-aligned bounding box.</li>
-				<li>Afterwards, (xres*yres*zres) density samples follow in 
-				XYZ order, (e.g. the second entry has coordinate x=2)</li>
-			</ul>
-		</descr>
-
-		<param name="filename" type="string">File containing sampled volume densities</param>
-
-		<param name="strategy" type="string" default="standard">
-			Specifies the used strategy - the four choices are:
-			<ul>
-				<li><tt>standard</tt>: generate a 'desired' accumulated density by sampling an
-					exponentially distributed random variable. Afterwards, try to find the
-					distance, at which this much density has been accumulated. Here, the
-					composite Simpson's rule is used to integrate density along the ray.</li>
-				<li><tt>coleman</tt>: Sampling technique by [Coleman et al., 1967]. Only for media with
-					a wavelength-independent extinction coefficient.</li>
-				<li><tt>uniform</tt>: Naive variant for verification purposes: uniformly 
-					sample a distance along the ray segment, which intersects the volume</li>
-				<li><tt>double</tt>: Double integral approach - stupid and slow, but it also works..</li>
-			</ul>
-		</param>
-
-		<param name="stepSizeFactor" type="float" default="1">
-			While integrating density along a ray, approximately one sample
-			per voxel is taken - that number can be changed here
-		</param>
-
-		<param name="sigma" type="float" default="min(sigmaA+sigmaS)">
-			Can be used to override the extinction coefficient used to sample distances 
-			in the in-scatter line integral. By default, the smallest spectral sample of 
-			<tt>sigmaA+sigmaT</tt> is used.
-		</param>
-	</plugin>
-
-
-	<plugin type="phase" name="isotropic" className="IsotropicPhaseFunction" extends="PhaseFunction">
-		<shortDescr>Isotropic phase function</shortDescr>
-		<descr>
-			Basic isotropic phase function
-		</descr>
-	</plugin>
-
-	<plugin type="phase" name="hg" className="HGPhaseFunction" extends="PhaseFunction">
-		<shortDescr>Henyey-Greenstein phase function</shortDescr>
-		<descr>
-			Phase function by Henyey and Greenstein (1941). Parameterizable
-			from backward- through isotropic- to forward scattering.
-		</descr>
-		<param name="g" type="float" default="0.8">
-			Asymmetry parameter of the Henyey-Greenstein phase function. Must
-			lie in [-1, 1] where &gt;0 is forward scattering and &lt;0 is backward
-			scattering.
-		</param>
-	</plugin>
-
-	<plugin type="luminaire" className="Luminaire" abstract="true">
-		<shortDescr>Abstract luminaire</shortDescr>
-		<descr>Abstract implementation of a luminaire. Supports emission and shadow ray sampling and computes related probabilities.</descr>
-		<param name="toWorld" type="transform" default="identity">Affine luminaire space to world space transformation</param>
-	</plugin>
-
-	<plugin type="luminaire" name="area" className="AreaLuminaire" extends="Luminaire">
-		<shortDescr>Lambertian area luminaire</shortDescr>
-		<descr>
-			Lambertian area light source - can be attached to an arbitrary shape
-			contained inside the scene. Shadow rays are generally sampled
-			uniformly with respect to surface area, which may lead to high
-			variance (e.g. many of the generated samples are facing away
-			from the point to be shaded). 
-			When the shape in question is a sphere, rays are sampled uniformly 
-			wrt. solid angle, which significantly reduces the variance.
-			Thus, spheres are recommended whenever there is some flexibility 
-			in choosing the luminaire shape.
-		</descr>
-		<param name="intensity" type="spectrum" default="1">Intensity of the luminaire</param>
-	</plugin>
-
-	<plugin type="luminaire" name="collimated" className="CollimatedBeamLuminaire" extends="Luminaire">
-		<shortDescr>Collimated beam luminaire</shortDescr>
-		<descr>Collimated beam with a configurable thickness. Points from <tt>(0,0,0)-&gt;(0,0,1)</tt> by default - 
-			use the <tt>toWorld</tt> parameter to change this. 
-		</descr>
-		<param name="radius" type="float" default="0.01">World-space beam radius</param>
-		<param name="intensity" type="spectrum" default="power/surfaceArea">Intensity of the luminaire. 
-			Specify only one of <tt>intensity</tt> and <tt>power.</tt></param>
-		<param name="power" type="spectrum" default="1">Power of the luminaire. 
-			Specify only one of <tt>intensity</tt> and <tt>power.</tt></param>
-	</plugin>
-
-	<plugin type="luminaire" name="point" className="PointLuminaire" extends="Luminaire">
-		<shortDescr>Isotropic point source</shortDescr>
-		<descr>Positioned at <tt>(0,0,0)</tt> by default - use the
-			<tt>toWorld</tt> parameter to change this.</descr>
-		<param name="intensity" type="spectrum" default="1">Intensity of the luminaire</param>
-	</plugin>
-
-	<plugin type="luminaire" name="spot" className="SpotLuminaire" extends="Luminaire">
-		<shortDescr>VRML SpotLight-equivalent luminaire</shortDescr>
-		<descr>
-			In its local coordinate system, the spot light is positioned at the origin and points into the positive Z
-			direction. Its intensity linearly ramps up between <tt>cutoffAngle</tt>
-			and <tt>beamWidth</tt>, after which it remains at the maximum value.
-		</descr>
-		<param name="intensity" type="spectrum" default="1">Intensity of the luminaire</param>
-		<param name="cutoffAngle" type="float" default="20">Cutoff angle in degrees</param>
-		<param name="beamWidth" type="float" default="cutoffAngle * 3/4">Beam width in degrees</param>
-	</plugin>
-
-	<plugin type="luminaire" name="constant" className="ConstantLuminaire" extends="Luminaire">
-		<shortDescr>Constant background luminaire</shortDescr>
-		<descr>Simulates a diffuse, infinitely far-away emitter</descr>
-		<param name="intensity" type="spectrum" default="1">Intensity of the luminaire</param>
-	</plugin>
-
-	<plugin type="luminaire" name="envmap" className="EnvMapLuminaire" extends="Luminaire">
-		<shortDescr>Environment map luminaire</shortDescr>
-		<descr>
-			Basic environment map implementation without importance sampling.
-			Uses the scene's bounding sphere to simulate an infinitely far-away
-			light source. Expects an EXR image in latitude-longitude (equirectangular) format.
-		</descr>
-		<param name="intensity" type="spectrum" default="1">Intensity of the luminaire</param>
-	</plugin>
-
-	<plugin type="camera" className="Camera" abstract="true">
-		<shortDescr>Camera base class</shortDescr>
-		<descr>
-			A camera turns a sample on the image plane into a 3D ray. 
-			For this, it requires two supporting objects: a <tt>Sampler</tt> and a <tt>Film</tt> instance.
-		</descr>
-		<param name="toWorld" type="transform" default="identity">Affine camera space to world space transformation</param>
-	</plugin>
- 
-	<plugin type="camera" className="PinholeCamera" abstract="true" extends="Camera">
-		<shortDescr>Pinhole camera base class</shortDescr>
-		<descr>
-			Provides solid angle computation
-			routines useful for importance-based integrators.
-		</descr>
-		<param name="fov" type="float" default="90">Field of view of the camera (in degrees)</param>
-		<param name="mapSmallerSide" type="boolean" default="true">Specifies which side of the image plane should cover the field of view specified in the <tt>fov</tt> parameter</param>
-	</plugin>
-
-	<plugin type="camera" name="perspective" className="PerspectiveCamera" extends="PinholeCamera">
-		<shortDescr>Perspective camera model</shortDescr>
-		<descr>
-			Depth of field can optionally be activated by specifying both focal 
-			distance and lens radius (uses a thin lens approximation)
-		</descr>
-		<param name="focalDistance" type="float" default="0">Distance to the focal plane</param>
-		<param name="lensRadius" type="float" default="0">World-space lens radius</param>
-		<param name="nearClip" type="float" default="1e-2">Near clipping plane distance</param>
-		<param name="farClip" type="float" default="1e4">Far clipping plane distance</param>
-	</plugin>
-
-	<plugin type="camera" name="orthographic" className="OrthographicCamera" extends="Camera">
-		<shortDescr>Orthographic camera model</shortDescr>
-		<descr>
-			Simple orthographic camera model
-		</descr>
-		<param name="nearClip" type="float" default="1e-2">Near clipping plane distance</param>
-		<param name="farClip" type="float" default="1e4">Far clipping plane distance</param>
-		<param name="mapSmallerSide" type="boolean" default="true">Specifies which side of the image plane 
-			maps to normalized device coordinates in <tt>[0,1]</tt>
-		</param>
-	</plugin>
-	
-	<plugin type="film" className="Film" abstract="true">
-		<shortDescr>Abstract Film base class</shortDescr>
-		<descr>Used to store samples generated by an Integrator.</descr>
-		<param name="width" type="integer" default="512">Horizontal sensor resolution in pixels</param>
-		<param name="height" type="integer" default="512">Vertical sensor resolution in pixels</param>
-		<param name="cropOffsetX" type="integer" default="0">Horizontal pixel position of the crop window relative to the upper left corner</param>
-		<param name="cropOffsetY" type="integer" default="0">Vertical pixel position of the crop window relative to the upper left corner</param>
-		<param name="cropWidth" type="integer" default="width">Width of the crop window in pixels</param>
-		<param name="cropWeight" type="integer" default="height">Height of the crop window in pixels</param>
-		<param name="highQualityEdges" type="boolean" default="false">
-			If set to true, regions slightly outside of the film plane will also be sampled, which
-			improves the image quality at the edges especially with large reconstruction filters.
-		</param>
-	</plugin>
-
-	<plugin type="film" name="hdrfilm" className="HDRFilm" extends="Film">
-		<shortDescr>High dynamic-range film</shortDescr>
-		<descr>
-			Simple film implementation, which stores the captured image
-			as an RGBA-based high dynamic-range EXR file.
-			No gamma correction is applied and spectral radiance values
-			are converted to linear RGB using the CIE 1931 XYZ color matching 
-			functions and ITU-R Rec. BT.709
-		</descr>
-		<param name="alpha" type="boolean" default="true">Should an alpha channel be added to the output image?</param>
-		<param name="banner" type="boolean" default="true">Should a program logo be added to the output image?</param>
-	</plugin>
-
-	<plugin type="film" name="ldrfilm" className="LDRFilm" extends="Film">
-		<shortDescr>PNG low dynamic-range film</shortDescr>
-		<descr>
-			Simple film implementation, which stores the captured image
-			as an RGBA-based low dynamic-range PNG file with gamma correction.
-			Spectral radiance values are converted to linear RGB using 
-			the CIE 1931 XYZ color matching functions and ITU-R Rec. BT.709
-		</descr>
-		<param name="alpha" type="boolean" default="true">Should an alpha channel be added to the output image?</param>
-		<param name="bpp" type="integer" default="24/32, dep. on alpha">Bits per pixel including alpha (must be 8, 16, 24 or 32)</param>
-		<param name="gamma" type="float" default="-1">Gamma value for the correction. Negative values switch to sRGB</param>
-	</plugin>
-
-	<plugin type="film" name="mfilm" className="MFilm" extends="Film">
-		<shortDescr>MATLAB film</shortDescr>
-		<descr>
-			Debugging film, which dumps raw luminance values as a 2D array in
-			MATLAB M-file format. When test case mode is active, the film writes 
-			a triple (luminance, variance, sample count) for every pixel.
-		</descr>
-		<param name="spectra" type="boolean" default="false">Should all spectral samples be exported? In this case, 
-			each pixel will generate several numbers (matching the configured discretization of the color spectrum).
-			By default, Mitsuba exports the luminances found using the CIE XYZ color matching curves.
-		</param>
 	</plugin>
 
 	<plugin type="rfilter" readableName="Box filter" name="box" show="true" className="BoxFilter" extends="ReconstructionFilter">

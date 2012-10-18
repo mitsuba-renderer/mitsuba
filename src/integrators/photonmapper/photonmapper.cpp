@@ -75,7 +75,7 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * When the scene contains participating media, the Beam Radiance Estimate \cite{Jarosz2008Beam}
- * is used to estimate the illumination due to volumetric scattering.
+ * by Jarosz et al. is used to estimate the illumination due to volumetric scattering.
  *
  * \remarks{
  *     \item Currently, only homogeneous participating media are supported by this implementation
