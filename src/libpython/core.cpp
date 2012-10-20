@@ -19,12 +19,15 @@
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/render/scenehandler.h>
 #include <mitsuba/render/scene.h>
+#include <boost/algorithm/string.hpp>
 
 #if defined(__LINUX__)
 # if !defined(_GNU_SOURCE)
 #  define _GNU_SOURCE
 # endif
 # include <dlfcn.h>
+#elif defined(__OSX__)
+# include <mach-o/dyld.h>
 #endif
 
 using namespace mitsuba;
@@ -53,8 +56,17 @@ void initializeFramework() {
 		if (info.dli_fname)
 			sharedLibraryPath = fs::path(info.dli_fname);
 	#elif defined(__OSX__)
-
+		uint32_t imageCount = _dyld_image_count();
+		for (uint32_t i=0; i<imageCount; ++i) {
+			const char *imageName = _dyld_get_image_name(i);
+			if (boost::ends_with(imageName, "mitsuba.so"))
+				sharedLibraryPath = fs::path(imageName);
+		}
 	#endif
+
+	if (!sharedLibraryPath.empty())
+		Thread::getThread()->getFileResolver()->prependPath(
+			sharedLibraryPath.parent_path().parent_path().parent_path());
 }
 
 void shutdownFramework() {

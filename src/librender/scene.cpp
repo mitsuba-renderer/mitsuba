@@ -738,7 +738,6 @@ bool Scene::rayIntersectAll(const Ray &ray, Intersection &its) const {
 		const Shape *shape = m_specialShapes[i].get();
 
 		if (shape->rayIntersect(ray, mint, maxt, tempT, buffer)) {
-			its.time = ray.time;
 			its.t = tempT;
 			shape->fillIntersectionRecord(ray, buffer, its);
 			result = true;

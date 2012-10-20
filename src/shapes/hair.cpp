@@ -843,6 +843,7 @@ void HairShape::fillIntersectionRecord(const Ray &ray,
 	its.wi = its.toLocal(-ray.d);
 	its.hasUVPartials = false;
 	its.instance = this;
+	its.time = ray.time;
 }
 
 ref<TriMesh> HairShape::createTriMesh() {

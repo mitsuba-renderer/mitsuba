@@ -425,11 +425,11 @@ protected:
 			its.hasUVPartials = false;
 			its.primIndex = cache->primIndex;
 			its.instance = NULL;
+			its.time = ray.time;
 		} else {
 			shape->fillIntersectionRecord(ray,
 				reinterpret_cast<const uint8_t*>(temp) + 8, its);
 		}
-		its.time = ray.time;
 	}
 
 	/// Plain shadow ray query (used by the 'instance' plugin)

@@ -190,6 +190,7 @@ public:
 		its.wi = its.toLocal(-ray.d);
  		its.hasUVPartials = false;
 		its.instance = NULL;
+		its.time = ray.time;
 	}
 
 	ref<TriMesh> createTriMesh() {

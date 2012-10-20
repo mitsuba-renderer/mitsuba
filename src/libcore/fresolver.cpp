@@ -26,7 +26,9 @@ FileResolver::FileResolver() {
 	}
 #elif defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
-	prependPath(__mts_bundlepath());
+	fs::path path = __mts_bundlepath();
+	if (path.filename() != fs::path("Python.app"))
+		prependPath(path);
 	MTS_AUTORELEASE_END()
 #elif defined(__WINDOWS__)
 	std::vector<WCHAR> lpFilename(MAX_PATH);
