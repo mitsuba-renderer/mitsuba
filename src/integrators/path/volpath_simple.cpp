@@ -29,11 +29,11 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
  *         in the generated output image (where \code{-1} corresponds to $\infty$).
  *	       A value of \code{1} will only render directly visible light sources.
- *	       \code{2} will lead to single-bounce (direct-only) illumination, 
+ *	       \code{2} will lead to single-bounce (direct-only) illumination,
  *	       and so on. \default{\code{-1}}
  *	   }
- *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after 
- *	      which the implementation will start to use the ``russian roulette'' 
+ *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after
+ *	      which the implementation will start to use the ``russian roulette''
  *	      path termination criterion. \default{\code{5}}
  *	   }
  *     \parameter{strictNormals}{\Boolean}{Be strict about potential
@@ -51,12 +51,12 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  * or one of the bidirectional techniques.
  *
  * \remarks{
- *    \item This integrator performs poorly when rendering 
+ *    \item This integrator performs poorly when rendering
  *      participating media that have a different index of refraction compared
  *      to the surrounding medium.
  *    \item This integrator has difficulties rendering
  *      scenes that contain relatively glossy materials (\pluginref{volpath} is preferable in this case).
- *    \item This integrator has poor convergence properties when rendering 
+ *    \item This integrator has poor convergence properties when rendering
  *    caustics and similar effects. In this case, \pluginref{bdpt} or
  *    one of the photon mappers may be preferable.
  * }
@@ -79,7 +79,7 @@ public:
 		bool scattered = false;
 		Float eta = 1.0f;
 
-		/* Perform the first ray intersection (or ignore if the 
+		/* Perform the first ray intersection (or ignore if the
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
 		Spectrum throughput(1.0f);
@@ -144,7 +144,7 @@ public:
 				scene->rayIntersect(ray, its);
 				scattered = true;
 			} else {
-				/* Sample 
+				/* Sample
 					tau(x, y) * (Surface integral). This happens with probability mRec.pdfFailure
 					Account for this and multiply by the proper per-color-channel transmittance.
 				*/
@@ -153,9 +153,9 @@ public:
 					throughput *= mRec.transmittance / mRec.pdfFailure;
 
 				if (!its.isValid()) {
-					/* If no intersection could be found, possibly return 
+					/* If no intersection could be found, possibly return
 					   attenuated radiance from a background luminaire */
-					if (rRec.type & RadianceQueryRecord::EEmittedRadiance) 
+					if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
 						Li += throughput * scene->evalEnvironment(ray);
 					break;
 				}
@@ -171,17 +171,17 @@ public:
 				/* Prevent light leaks due to the use of shading normals */
 				Float wiDotGeoN = -dot(its.geoFrame.n, ray.d),
 					  wiDotShN  = Frame::cosTheta(its.wi);
-				if (m_strictNormals && wiDotGeoN * wiDotShN < 0) 
+				if (m_strictNormals && wiDotGeoN * wiDotShN < 0)
 					break;
 
 				/* ==================================================================== */
 				/*                     Direct illumination sampling                     */
 				/* ==================================================================== */
-				
+
 				const BSDF *bsdf = its.getBSDF(ray);
 
 				/* Estimate the direct illumination if this is requested */
-				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
+				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance &&
 						(bsdf->getType() & BSDF::ESmooth)) {
 					DirectSamplingRecord dRec(its);
 					int maxInteractions = m_maxDepth - rRec.depth - 1;
@@ -210,7 +210,7 @@ public:
 				/* Sample BSDF * cos(theta) */
 				BSDFSamplingRecord bRec(its, rRec.sampler, ERadiance);
 				Spectrum bsdfVal = bsdf->sample(bRec, rRec.nextSample2D());
-				if (bsdfVal.isZero()) 
+				if (bsdfVal.isZero())
 					break;
 
 				/* Recursively gather indirect illumination? */
@@ -223,8 +223,12 @@ public:
 				if ((rRec.depth < m_maxDepth || m_maxDepth < 0) &&
 					(rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) &&
 					(bRec.sampledType & BSDF::EDelta) &&
-					!((bRec.sampledType & BSDF::ENull) && scattered)) 
+					!((bRec.sampledType & BSDF::ENull) && scattered)) {
 					recursiveType |= RadianceQueryRecord::EEmittedRadiance;
+					scattered = false;
+				} else {
+					scattered |= bRec.sampledType != BSDF::ENull;
+				}
 
 				/* Potentially stop the recursion if there is nothing more to do */
 				if (recursiveType == 0)
@@ -236,28 +240,27 @@ public:
 				Float woDotGeoN = dot(its.geoFrame.n, wo);
 				if (woDotGeoN * Frame::cosTheta(bRec.wo) <= 0 && m_strictNormals)
 					break;
-	
+
 				/* Keep track of the throughput, medium, and relative
 				   refractive index along the path */
 				throughput *= bsdfVal;
 				eta *= bRec.eta;
 				if (its.isMediumTransition())
 					rRec.medium = its.getTargetMedium(wo);
-	
+
 				/* In the next iteration, trace a ray in this direction */
 				ray = Ray(its.p, wo, ray.time);
 				scene->rayIntersect(ray, its);
-				scattered |= bRec.sampledType != BSDF::ENull; 
 			}
 
 			if (rRec.depth++ >= m_rrDepth) {
 				/* Russian roulette: try to keep path weights equal to one,
-				   while accounting for the solid angle compression at refractive 
-				   index boundaries. Stop with at least some probability to avoid 
+				   while accounting for the solid angle compression at refractive
+				   index boundaries. Stop with at least some probability to avoid
 				   getting stuck (e.g. due to total internal reflection) */
 
 				Float q = std::min(throughput.max() * eta * eta, (Float) 0.95f);
-				if (rRec.nextSample1D() >= q) 
+				if (rRec.nextSample1D() >= q)
 					break;
 				throughput /= q;
 			}
