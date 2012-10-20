@@ -1,8 +1,8 @@
 \section{Python integration}
 \label{sec:python}
-A recent feature of Mitsuba is a simple Python interface to the renderer API. 
+A recent feature of Mitsuba is a simple Python interface to the renderer API.
 While the interface is still limited at this point, it can already be
-used for many useful purposes. To access the API, start your Python 
+used for many useful purposes. To access the API, start your Python
 interpreter and enter
 \begin{python}
 import mitsuba
@@ -33,16 +33,50 @@ import mitsuba
 For an overview of the currently exposed API subset, please refer
 to the following page: \url{http://www.mitsuba-renderer.org/api/group__libpython.html}.
 
+\subsubsection{Accessing signatures in an interactive Python shell}
+The plugin exports comprehensive Python-style docstrings, hence
+the following is an alternative and convenient way of getting information on
+classes, function, or entire namespaces when running an interactive Python shell.
+\begin{shell}
+>>> help(mitsuba.core.Bitmap) # (can be applied to namespaces, classes, functions, etc.)
+
+ class Bitmap(Object)
+  |  Method resolution order:
+  |      Bitmap
+  |      Object
+  |      Boost.Python.instance
+  |      __builtin__.object
+  |
+  |  Methods defined here:
+  |  __init__(...)
+  |      __init__( (object)arg1, (EPixelFormat)arg2, (EComponentFormat)arg3, (Vector2i)arg4) -> None :
+  |          C++ signature :
+  |              void __init__(_object*,mitsuba::Bitmap::EPixelFormat,mitsuba::Bitmap::EComponentFormat,mitsuba::TVector2<int>)
+  |
+  |      __init__( (object)arg1, (EFileFormat)arg2, (Stream)arg3) -> None :
+  |          C++ signature :
+  |              void __init__(_object*,mitsuba::Bitmap::EFileFormat,mitsuba::Stream*)
+  |
+  |  clear(...)
+  |      clear( (Bitmap)arg1) -> None :
+  |          C++ signature :
+  |              void clear(mitsuba::Bitmap {lvalue})
+...
+\end{shell}
+The docstrings list the currently exported functionality, as well as C++ and Python signatures, but they
+don't document what these functions actually do. The web API documentation is the preferred source for
+this information.
+
 \subsection{Basics}
 Generally, the Python API tries to mimic the C++ API as closely as possible.
 Where applicable, the Python classes and methods replicate overloaded operators,
-overridable virtual function calls, and default arguments. Under rare circumstances, 
-some features are inherently non-portable due to fundamental differences between the 
+overridable virtual function calls, and default arguments. Under rare circumstances,
+some features are inherently non-portable due to fundamental differences between the
 two programming languages. In this case, the API documentation will contain further
 information.
 
 Mitsuba's linear algebra-related classes are usable with essentially the
-same syntax as their C++ versions --- for example, the following snippet 
+same syntax as their C++ versions --- for example, the following snippet
 creates and rotates a unit vector.
 \begin{python}
 import mitsuba
@@ -64,7 +98,7 @@ certain things with the help of the Python bindings.
 
 \subsubsection{Loading a scene}
 The following script demonstrates how to use the
-\code{FileResolver} and \code{SceneHandler} classes to 
+\code{FileResolver} and \code{SceneHandler} classes to
 load a Mitsuba scene from an XML file:
 \begin{python}
 import mitsuba
@@ -78,7 +112,7 @@ fileResolver = Thread.getThread().getFileResolver()
 # Register any searchs path needed to load scene resources (optional)
 fileResolver.appendPath('<path to scene directory>')
 
-# Optional: supply parameters that can be accessed 
+# Optional: supply parameters that can be accessed
 # by the scene (e.g. as $\text{\color{lstcomment}\itshape\texttt{\$}}$myParameter)
 paramMap = StringMap()
 paramMap['myParameter'] = 'value'
@@ -140,9 +174,9 @@ scheduler.start()
 \end{python}
 
 \subsubsection{Constructing custom scenes from Python}
-Dynamically constructing Mitsuba scenes entails loading a series of external 
-plugins, instantiating them with custom parameters, and finally assembling 
-them into an object graph. 
+Dynamically constructing Mitsuba scenes entails loading a series of external
+plugins, instantiating them with custom parameters, and finally assembling
+them into an object graph.
 For instance, the following snippet shows how to create a basic
 perspective sensor with a film that writes PNG images:
 \begin{python}
@@ -174,8 +208,8 @@ sensor.addChild('film', film)
 # Now, the sensor can be configured
 sensor.configure()
 \end{python}
-The above code fragment uses the plugin manager to construct a 
-\code{Sensor} instance from an external plugin named 
+The above code fragment uses the plugin manager to construct a
+\code{Sensor} instance from an external plugin named
 \texttt{perspective.so/dll/dylib} and adds a child object
 named \texttt{film}, which is a \texttt{Film} instance loaded from the
 plugin \texttt{ldrfilm.so/dll/dylib}.
@@ -184,7 +218,7 @@ finally the  plugin's \code{configure()} method must be called.
 
 Creating scenes in this manner ends up being rather laborious.
 Since Python comes with a powerful dynamically-typed dictionary
-primitive, Mitsuba additionally provides a more ``pythonic'' 
+primitive, Mitsuba additionally provides a more ``pythonic''
 alternative that makes use of this facility:
 \begin{python}
 from mitsuba.core import *
@@ -206,12 +240,12 @@ sensor = pmgr.create({
 \end{python}
 This code does exactly the same as the previous snippet.
 By the time \code{PluginManager.create} returns, the object
-hierarchy has already been assembled, and the 
+hierarchy has already been assembled, and the
 \code{configure()} method of every object
 has been called.
 
 Finally, here is an full example that creates a basic scene
-which can be rendered. It describes a sphere lit by a point 
+which can be rendered. It describes a sphere lit by a point
 light, rendered using the direct illumination integrator.
 \begin{python}
 from mitsuba.core import *
@@ -284,7 +318,7 @@ from mitsuba.core import *
 class MyFormatter(Formatter):
 	def format(self, logLevel, sourceClass, sourceThread, message, filename, line):
 		return '%s (log level: %s, thread: %s, class %s, file %s, line %i)' % \
-				(message, str(logLevel), sourceThread.getName(), sourceClass, 
+				(message, str(logLevel), sourceThread.getName(), sourceClass,
 				 filename, line)
 
 class MyAppender(Appender):
