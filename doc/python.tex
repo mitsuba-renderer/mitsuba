@@ -9,18 +9,27 @@ import mitsuba
 \end{python}
 For this to work on MacOS X, you will first have to run the ``\emph{Apple
 Menu}$\to$\emph{Command-line access}'' menu item from within Mitsuba.
-On Windows and non-packaged Linux builds, you may have to update the extension
-search path before issuing the \code{import} command, e.g.:
+On Windows and \emph{non-packaged} Linux builds, you may have to explicitly
+specify the required extension search path before issuing the \code{import} command, e.g.:
 \begin{python}
-import sys
+import os, sys
 
-# Update the extension search path
-# (may vary depending on your setup)
-sys.path.append('dist')
-sys.path.append('dist/python')
+# Specify the extension search path on Linux/Windows (may vary depending on your
+# setup. If you compiled from  source, 'path-to-mitsuba-directory' should be the
+# 'dist' subdirectory)
+
+# NOTE: On Windows, specify these paths using FORWARD slashes (i.e. '/' instead of
+# '\' to avoid pitfalls with string escaping)
+
+# Configure the search path for the Python extension module
+sys.path.append('path-to-mitsuba-directory/python/<python version, e.g. 2.7>')
+
+# Ensure that Python will be able to find the Mitsuba core libraries
+os.environ['PATH'] = 'path-to-mitsuba-directory' + os.pathsep + os.environ['PATH']
 
 import mitsuba
 \end{python}
+
 For an overview of the currently exposed API subset, please refer
 to the following page: \url{http://www.mitsuba-renderer.org/api/group__libpython.html}.
 
