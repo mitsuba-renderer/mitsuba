@@ -76,7 +76,7 @@ public:
 		MediumSamplingRecord mRec;
 		RayDifferential ray(r);
 		Spectrum Li(0.0f);
-		bool scattered = false;
+		bool nullChain = true;
 		Float eta = 1.0f;
 
 		/* Perform the first ray intersection (or ignore if the
@@ -142,7 +142,7 @@ public:
 				ray = Ray(mRec.p, pRec.wo, ray.time);
 				ray.mint = 0;
 				scene->rayIntersect(ray, its);
-				scattered = true;
+				nullChain = false;
 			} else {
 				/* Sample
 					tau(x, y) * (Surface integral). This happens with probability mRec.pdfFailure
@@ -219,15 +219,17 @@ public:
 					(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance))
 					recursiveType |= RadianceQueryRecord::ERadianceNoEmission;
 
-				/* Recursively gather direct illumination? */
+				/* Recursively gather direct illumination? This is a bit more
+				   complicated by the fact that this integrator can create connection
+				   through index-matched medium transitions (ENull scattering events) */
 				if ((rRec.depth < m_maxDepth || m_maxDepth < 0) &&
 					(rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) &&
 					(bRec.sampledType & BSDF::EDelta) &&
-					!((bRec.sampledType & BSDF::ENull) && scattered)) {
+					(!(bRec.sampledType & BSDF::ENull) || nullChain)) {
 					recursiveType |= RadianceQueryRecord::EEmittedRadiance;
-					scattered = false;
+					nullChain = true;
 				} else {
-					scattered |= bRec.sampledType != BSDF::ENull;
+					nullChain &= bRec.sampledType == BSDF::ENull;
 				}
 
 				/* Potentially stop the recursion if there is nothing more to do */
