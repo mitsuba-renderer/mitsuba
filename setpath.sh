@@ -11,7 +11,7 @@ if [ "$BASH_VERSION" ]; then
 	MITSUBA_DIR=$(dirname "$BASH_SOURCE")
 	export MITSUBA_DIR=$(builtin cd "$MITSUBA_DIR"; builtin pwd)
 elif [ "$ZSH_VERSION" ]; then
-	export MITSUBA_DIR=$(dirname "$0")
+	export MITSUBA_DIR=$(dirname "$0:A")
 
 	# Zsh autocomplete for mitsuba, mtsutil, and mtssrv
 	mitsuba_plugins=$(ls -1 "$MITSUBA_DIR/dist/plugins" | grep -oE '\w+.so' | sed 's/.so$//')
