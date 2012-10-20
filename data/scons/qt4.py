@@ -97,7 +97,7 @@ class _Automoc:
 
 	def __init__(self, objBuilderName):
 		self.objBuilderName = objBuilderName
-		
+
 	def __call__(self, target, source, env):
 		"""
 		Smart autoscan function. Gets the list of objects for the Program
@@ -112,25 +112,25 @@ class _Automoc:
 			debug = int(env.subst('$QT4_DEBUG'))
 		except ValueError:
 			debug = 0
-		
+
 		# some shortcuts used in the scanner
 		splitext = SCons.Util.splitext
 		objBuilder = getattr(env, self.objBuilderName)
 
 		# some regular expressions:
 		# Q_OBJECT detection
-		q_object_search = re.compile(r'[^A-Za-z0-9]Q_OBJECT[^A-Za-z0-9]') 
+		q_object_search = re.compile(r'[^A-Za-z0-9]Q_OBJECT[^A-Za-z0-9]')
 		# cxx and c comment 'eater'
 		#comment = re.compile(r'(//.*)|(/\*(([^*])|(\*[^/]))*\*/)')
 		# CW: something must be wrong with the regexp. See also bug #998222
 		#	 CURRENTLY THERE IS NO TEST CASE FOR THAT
-		
+
 		# The following is kind of hacky to get builders working properly (FIXME)
 		objBuilderEnv = objBuilder.env
 		objBuilder.env = env
 		mocBuilderEnv = env.Moc4.env
 		env.Moc4.env = env
-		
+
 		# make a deep copy for the result; MocH objects will be appended
 		out_sources = source[:]
 
@@ -146,7 +146,7 @@ class _Automoc:
 			cpp = obj.sources[0]
 			if not splitext(str(cpp))[1] in cxx_suffixes:
 				if debug:
-					print "scons: qt: '%s' is no cxx file. Discarded." % str(cpp) 
+					print "scons: qt: '%s' is no cxx file. Discarded." % str(cpp)
 				# c or fortran source
 				continue
 			#cpp_contents = comment.sub('', cpp.get_contents())
@@ -236,7 +236,7 @@ def generate(env):
 		if not (fullpath is None) : return fullpath
 
 		raise Exception("Qt4 command '" + command + "' not found. Tried: " + ', '.join(triedPaths))
-		
+
 
 	CLVar = SCons.Util.CLVar
 	Action = SCons.Action.Action
@@ -416,7 +416,7 @@ def enable_modules(self, modules, debug=False, crosscompiling=False) :
 		'QtMultimedia',
 		]
 	pclessModules = [
-# in qt <= 4.3 designer and designerComponents are pcless, on qt4.4 they are not, so removed.	
+# in qt <= 4.3 designer and designerComponents are pcless, on qt4.4 they are not, so removed.
 #		'QtDesigner',
 #		'QtDesignerComponents',
 	]
@@ -446,7 +446,7 @@ def enable_modules(self, modules, debug=False, crosscompiling=False) :
 		try : self.AppendUnique(CPPDEFINES=moduleDefines[module])
 		except: pass
 	debugSuffix = ''
-	if sys.platform in ["darwin", "linux2"] and not crosscompiling :
+	if (sys.platform=='darwin' or sys.platform.startswith('linux2')) and not crosscompiling :
 		if debug : debugSuffix = '_debug'
 		for module in modules :
 			if module not in pclessModules : continue
@@ -461,7 +461,7 @@ def enable_modules(self, modules, debug=False, crosscompiling=False) :
 			self.AppendUnique(CPPPATH=[os.path.join("$QTDIR","include","qt4","QtAssistant")])
 			pcmodules.remove("QtAssistant")
 			pcmodules.append("QtAssistantClient")
-		if sys.platform == 'linux2':
+		if sys.platform.startswith('linux'):
 			self.ParseConfig('pkg-config %s --libs --cflags'% ' '.join(pcmodules))
 		elif sys.platform == 'darwin':
 			for module in pcmodules:
