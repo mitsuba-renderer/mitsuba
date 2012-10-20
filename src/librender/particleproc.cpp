@@ -222,7 +222,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 #if 0
 				/* This is somewhat unfortunate: for accuracy, we'd really want the
 				   correction factor below to match the path tracing interpretation
-				   of a scene with surface normals. However, this factor can become
+				   of a scene with shading normals. However, this factor can become
 				   extremely large, which adds unacceptable variance to output
 				   renderings.
 
